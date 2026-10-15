@@ -81,6 +81,7 @@ import {
 import { matchesElementRef } from '@genoffice/pptx-engine/identity'
 import { buildPagePptx, parsePageSpec } from '@genoffice/pipelines/slides'
 import { fillMissingRunFonts, parseFontRoles } from './ai-default-fonts'
+import { convertOdpToPptx } from '../../../../packages/odf2ooxml/src'
 import { sniffImageMime } from './media-mime'
 import {
   newPasteCascade,
@@ -170,6 +171,7 @@ import { unplayableAudioCodec } from './mp4-audio-sniff'
 import { audioFrame, videoFrame, videoSize, type Point, type Size } from './video-size'
 import { AUDIO_EXTS, VIDEO_EXTS } from '../shared/media-kinds'
 import { baseName } from '../shared/base-name'
+import { OPENABLE_DECK_EXTENSIONS, deckExtension } from '../shared/deck-open-formats'
 import type {
   AddChartOp,
   AddCommentOp,
@@ -976,6 +978,59 @@ async function recoveredOpenBytes(
 }
 
 /**
+ * An .odp opens only as a converted .pptx deck: confirm the lossy import,
+ * pick the destination (the sibling .pptx by default), convert, write the
+ * file and open it — the explicit-destination flow the PDF "Export as
+ * PowerPoint" path already uses, so every later Save lands in the copy the
+ * user chose. Anything that is not an .odp passes through unchanged; null
+ * cancels the open.
+ */
+async function preparePresentationForOpen(filePath: string): Promise<string | null> {
+  const extension = deckExtension(filePath)
+  if (extension !== 'odp' && extension !== 'otp') return filePath
+  const parent = dialogParent()
+  const options = {
+    type: 'warning' as const,
+    message: tm('odpImportMsg', { ext: extension }),
+    detail: tm('odpImportDetail'),
+    buttons: [tm('odpImportConvertBtn'), tm('btnCancel')],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true,
+  }
+  const { response } = parent
+    ? await dialog.showMessageBox(parent, options)
+    : await dialog.showMessageBox(options)
+  if (response !== 0) return null
+  const r = await showSaveDialogWithMemory(
+    dialog,
+    parent,
+    {
+      defaultPath: join(dirname(filePath), basename(filePath).replace(/\.(odp|otp)$/i, '.pptx')),
+      filters: [{ name: 'PowerPoint', extensions: ['pptx'] }],
+    },
+    getDraftsDir(),
+  )
+  if (r.canceled || !r.filePath) return null
+  try {
+    const result = await convertOdpToPptx(new Uint8Array(await readFile(filePath)))
+    // atomic like every deck save: a plain write leaves a truncated .pptx
+    // where the user expects a deck if the process dies mid-write
+    await atomicWriteFile(r.filePath, Buffer.from(result.pptx))
+  } catch {
+    const errorOptions = {
+      type: 'error' as const,
+      message: tm('odpImportFailedTitle'),
+      detail: tm('odpImportFailedBody'),
+    }
+    if (parent) await dialog.showMessageBox(parent, errorOptions)
+    else await dialog.showMessageBox(errorOptions)
+    return null
+  }
+  return r.filePath
+}
+
+/**
  * A copy chosen for restoring could not be opened and the deck opens from
  * its file instead. Choosing it marked the copy loaded (undecided), yet no
  * tab holds it: undecided it would make every later quit look abnormal. It
@@ -1577,25 +1632,24 @@ export function registerSlidesIpc(): void {
     const parent = dialogParent()
     const options = {
       properties: ['openFile' as const],
-      filters: [{ name: 'PowerPoint', extensions: ['pptx', 'ppt'] }],
+      filters: [{ name: 'PowerPoint', extensions: [...OPENABLE_DECK_EXTENSIONS] }],
     }
     const r = await showOpenDialogWithMemory(dialog, parent, options)
     if (r.canceled || !r.filePaths[0]) return null
-    const prepared = await preparePptxOpen(r.filePaths[0])
+    const deckPath = await preparePresentationForOpen(r.filePaths[0])
+    if (!deckPath) return null
+    const prepared = await preparePptxOpen(deckPath)
     if (prepared === 'rejected') return null
-    return openAndBuild(
-      e.sender,
-      r.filePaths[0],
-      fitWidthPx,
-      prepared === 'plain' ? undefined : prepared,
-    )
+    return openAndBuild(e.sender, deckPath, fitWidthPx, prepared === 'plain' ? undefined : prepared)
   })
 
   ipcMain.handle('slides:open-path', async (e, path: string, fitWidthPx: number) => {
     if (!path || !existsSync(path)) return null
-    const prepared = await preparePptxOpen(path)
+    const deckPath = await preparePresentationForOpen(path)
+    if (!deckPath) return null
+    const prepared = await preparePptxOpen(deckPath)
     if (prepared === 'rejected') return null
-    return openAndBuild(e.sender, path, fitWidthPx, prepared === 'plain' ? undefined : prepared)
+    return openAndBuild(e.sender, deckPath, fitWidthPx, prepared === 'plain' ? undefined : prepared)
   })
 
   ipcMain.handle('slides:consume-pending-open', async (e, fitWidthPx: number) => {
@@ -1610,18 +1664,20 @@ export function registerSlidesIpc(): void {
         if (pendingByWc.get(e.sender.id) === queued) pendingByWc.delete(e.sender.id)
         if (pendingOpenPath === queued) pendingOpenPath = null
       }
-      // A legacy .ppt (possibly misnamed .pptx) can never parse, and an encrypted
-      // deck whose prompt was cancelled will not open: tell the user and drop it,
-      // or every relaunch restores a blank tab
-      const prepared = await preparePptxOpen(queued)
-      if (prepared === 'rejected') {
+      // An .odp/.otp whose import was declined, a legacy .ppt (possibly
+      // misnamed .pptx) that can never parse, and an encrypted deck whose
+      // prompt was cancelled will not open: tell the user and drop it, or
+      // every relaunch restores a blank tab
+      const deckPath = await preparePresentationForOpen(queued)
+      const prepared = deckPath ? await preparePptxOpen(deckPath) : 'rejected'
+      if (!deckPath || prepared === 'rejected') {
         dropQueued()
         return null
       }
       // Clear the queue only after a successful open: keep it on parse failure or a mid-flight renderer reload, so a remount can retry
       const result = await openAndBuild(
         e.sender,
-        queued,
+        deckPath,
         fitWidthPx,
         prepared === 'plain' ? undefined : prepared,
       )

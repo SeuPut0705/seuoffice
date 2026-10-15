@@ -158,9 +158,9 @@ describe('partitionDropPayload', () => {
   })
 
   it('treats a dropped .odt as openable (the Word tab opens it), not as unsupported', () => {
-    const result = partitionDropPayload(['/docs/report.odt', 'C:/x/Y.ODT', 'z.odp'])
+    const result = partitionDropPayload(['/docs/report.odt', 'C:/x/Y.ODT', 'z.ppt'])
     expect(result.supported).toEqual(['/docs/report.odt', 'C:/x/Y.ODT'])
-    expect(result.unsupportedExts).toEqual(['odp'])
+    expect(result.unsupportedExts).toEqual(['ppt'])
     expect(OPENABLE_DOC_RE.test('a.odt')).toBe(true)
     expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.odt')).toBe(false)
   })
@@ -172,11 +172,18 @@ describe('partitionDropPayload', () => {
   })
 
   it('treats a dropped .ods as openable (the spreadsheet tab converts it), not as unsupported', () => {
-    const result = partitionDropPayload(['/data/budget.ods', 'C:/x/BUDGET.ODS', 'z.odp'])
+    const result = partitionDropPayload(['/data/budget.ods', 'C:/x/BUDGET.ODS', 'z.ppt'])
     expect(result.supported).toEqual(['/data/budget.ods', 'C:/x/BUDGET.ODS'])
-    expect(result.unsupportedExts).toEqual(['odp'])
+    expect(result.unsupportedExts).toEqual(['ppt'])
     expect(OPENABLE_DOC_RE.test('a.ods')).toBe(true)
     expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.ods')).toBe(false)
+  })
+
+  it('treats a dropped .odp/.otp as openable (Slides imports a .pptx copy), not as unsupported', () => {
+    const result = partitionDropPayload(['/decks/plan.odp', 'C:/x/DECK.OTP'])
+    expect(result.supported).toEqual(['/decks/plan.odp', 'C:/x/DECK.OTP'])
+    expect(result.unsupportedExts).toEqual([])
+    expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.odp')).toBe(false)
   })
 
   it('routes dropped mind maps, a FreeMind / Freeplane map included, as openable', () => {

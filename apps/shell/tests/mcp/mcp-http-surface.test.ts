@@ -308,6 +308,11 @@ describe('MCP surface over Streamable HTTP (/mcp)', () => {
         'tsv',
         'ods',
       ])
+      expect(infoJson.families.find((f) => f.family === 'pptx')!.editor.open).toEqual([
+        'pptx',
+        'odp',
+        'otp',
+      ])
 
       // the diagram tools take their schema from DIAGRAM_OPS over the wire: an
       // op the planner would judge passes the schema, an unknown op name does not

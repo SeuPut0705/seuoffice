@@ -30,6 +30,7 @@
     "@genoffice/docx2hwp": "*",
     "@genoffice/drawio-model": "*",
     "@genoffice/file-parse": "*",
+    "@genoffice/odf2ooxml": "*",
     "@genoffice/odt-engine": "*",
     "@genoffice/pdf2docx": "*",
     "@genoffice/pipelines": "*",

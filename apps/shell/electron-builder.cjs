@@ -351,7 +351,8 @@ function ensureThirdPartyNotices() {
 // it, so Windows takes none of the four as the extension's default. A Visio
 // drawing is only imported (as a new diagram), and an ODS spreadsheet opens as
 // a converted .xlsx copy that saves as .xlsx (decision 0119), so both keep
-// their program too.
+// their program too; so does an ODP presentation or template, which opens as a
+// converted .pptx copy (Windows does not list those in "Open with" yet).
 // They are still offered in Explorer's "Open with": build/installer.nsh
 // writes a product-own ProgId with a document icon for each (the per-type
 // icon, or the xlsx icon for .ods), so choosing this app for them shows the
@@ -367,6 +368,8 @@ const WIN_OPEN_WITH_ONLY_EXTS = new Set([
   'epub',
   'vsdx',
   'ods',
+  'odp',
+  'otp',
 ])
 // NSIS registers each association under a ProgId taken from its `name`
 // (HKCU\Software\Classes\<name>). The upstream app registers the bare names
@@ -442,6 +445,23 @@ const FILE_ASSOCIATIONS = [
     rank: 'Alternate',
     icon: 'xlsx',
     mimeType: 'application/vnd.oasis.opendocument.spreadsheet',
+  },
+  {
+    // Open With only, like .ods: opens as a converted .pptx copy, never written back
+    ext: 'odp',
+    name: 'OpenDocument Presentation',
+    role: 'Editor',
+    rank: 'Alternate',
+    icon: 'pptx',
+    mimeType: 'application/vnd.oasis.opendocument.presentation',
+  },
+  {
+    ext: 'otp',
+    name: 'OpenDocument Presentation Template',
+    role: 'Editor',
+    rank: 'Alternate',
+    icon: 'pptx',
+    mimeType: 'application/vnd.oasis.opendocument.presentation-template',
   },
   {
     ext: 'pdf',

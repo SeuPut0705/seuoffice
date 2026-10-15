@@ -19,7 +19,7 @@ describe('format registry', () => {
   it('mirrors the shell open routing for the mcp-driven families', () => {
     expect(formatFamily('docx').editorOpen).toEqual(['docx', 'odt'])
     expect(formatFamily('xlsx').editorOpen).toEqual(['xlsx', 'xlsm', 'xls', 'csv', 'tsv', 'ods'])
-    expect(formatFamily('pptx').editorOpen).toEqual(['pptx'])
+    expect(formatFamily('pptx').editorOpen).toEqual(['pptx', 'odp', 'otp'])
   })
 
   it('opens every Word-family extension in the tab the shell routes it to', () => {
@@ -44,6 +44,16 @@ describe('format registry', () => {
     expect(sheet.editorSave).not.toContain('ods')
     expect(sheet.mcp?.save).not.toContain('ods')
     expect(appForPath('/x/budget.ods')).toBe('sheets')
+  })
+
+  it('keeps .odp/.otp open-only: they open as a .pptx copy and save as .pptx', () => {
+    const deck = formatFamily('pptx')
+    for (const ext of ['odp', 'otp']) {
+      expect(deck.editorOpen).toContain(ext)
+      expect(deck.editorSave).not.toContain(ext)
+      expect(deck.mcp?.save).not.toContain(ext)
+      expect(appForPath(`/x/deck.${ext}`)).toBe('slides')
+    }
   })
 
   it('keeps the editor-only families (md/html/xmind/epub/drawio) without an mcp block', () => {

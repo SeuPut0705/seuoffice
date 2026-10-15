@@ -9,7 +9,9 @@ const ODT_RE = /\.odt$/i
 // ODS_RE lets the rename gate tell the ODF package from the other sheet forms
 const ODS_RE = /\.ods$/i
 const XLSX_RE = /\.(xlsx|xlsm|xls|csv|tsv|ods)$/i
-const PPTX_RE = /\.pptx$/i
+// .odp and its .otp template open in Slides through the import filter (a converted .pptx copy)
+const ODP_RE = /\.(odp|otp)$/i
+const PPTX_RE = /\.(pptx|odp|otp)$/i
 const PDF_RE = /\.pdf$/i
 const HTML_RE = /\.html?$/i
 // XMind maps, and a FreeMind / Freeplane map imported as a new map
@@ -73,6 +75,8 @@ export function renameStaysInApp(from: string, newName: string): boolean {
   // .ods is its own container (an ODF package, opened as a converted .xlsx
   // copy), so renaming it into or out of any other sheet form breaks the file
   if (current === 'sheets' && ODS_RE.test(from) !== ODS_RE.test(newName)) return false
+  // likewise an .odp/.otp is an ODF package that Slides only imports as a .pptx copy
+  if (current === 'slides' && ODP_RE.test(from) !== ODP_RE.test(newName)) return false
   // each diagram form keeps its own bytes (XML, a picture holding it, a Visio
   // drawing), and so does each map form (.xmind, an imported .mm): renaming one
   // into another leaves a file that no longer opens

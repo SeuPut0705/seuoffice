@@ -80,7 +80,9 @@ export const FORMAT_FAMILIES: readonly FormatFamily[] = [
   {
     family: 'pptx',
     label: 'presentation',
-    editorOpen: ['pptx'],
+    // .odp/.otp open as converted copies and save as .pptx, so they are
+    // open-only formats like .ods: they must not appear in editorSave
+    editorOpen: ['pptx', 'odp', 'otp'],
     editorSave: ['pptx'],
     editorExport: ['pdf'],
     mcp: { generate: 'pptx', save: ['pptx'] },
