@@ -66,6 +66,7 @@ import {
   type ContextTabRequest,
 } from './components/context-tabs'
 import { SlideShowView } from './components/SlideShowView'
+import type { NarrationTake } from './narration/use-recording'
 import { IconNotes, IconPlayBoxed } from './components/icons'
 import { PresenterView } from './components/PresenterView'
 import { CustomShowDialog } from './components/CustomShowDialog'
@@ -568,6 +569,7 @@ export function App() {
   const [findOpen, setFindOpen] = useState(false)
   /** Per-page dwell seconds awaiting confirmation after rehearsal (non-null shows the "save?" confirmation dialog) */
   const [pendingRehearse, setPendingRehearse] = useState<number[] | null>(null)
+  const [pendingRecording, setPendingRecording] = useState<NarrationTake | null>(null)
   const [showRuler, setShowRuler] = useState(false)
   const [showGrid, setShowGrid] = useState(false)
   const [showGuides, setShowGuides] = useState(false)
@@ -2038,6 +2040,19 @@ export function App() {
     [],
   )
   const saveRehearseTimings = useCallback(() => showActions.saveRehearseTimings(ctxRef.current), [])
+  const startRecordShow = useCallback(
+    (fromStart: boolean) => showActions.startRecordShow(ctxRef.current, fromStart),
+    [],
+  )
+  const onRecordDone = useCallback(
+    (take: Promise<NarrationTake | null>) => showActions.onRecordDone(ctxRef.current, take),
+    [],
+  )
+  const saveRecording = useCallback(() => showActions.saveRecording(ctxRef.current), [])
+  const clearNarration = useCallback(
+    (all: boolean) => void showActions.clearNarration(ctxRef.current, all),
+    [],
+  )
   const startPresenterView = useCallback(
     (fromStart: boolean) => showActions.startPresenterView(ctxRef.current, fromStart),
     [],
@@ -3336,6 +3351,8 @@ export function App() {
     setCustomShowDlgOpen,
     pendingRehearse,
     setPendingRehearse,
+    pendingRecording,
+    setPendingRecording,
     sections,
     setSections,
     renamingSec,
@@ -3612,6 +3629,8 @@ export function App() {
         onPresenterView={startPresenterView}
         onCustomShow={() => setCustomShowDlgOpen(true)}
         onRehearse={startRehearseShow}
+        onRecord={startRecordShow}
+        onClearNarration={clearNarration}
         currentHidden={!!slide?.hidden}
         onToggleHidden={() => void toggleHidden()}
         inkTool={inkTool}
@@ -4801,6 +4820,8 @@ export function App() {
           customOrder={slideShow.customOrder}
           rehearseMode={slideShow.rehearse}
           onRehearseDone={onRehearseDone}
+          recordMode={slideShow.record}
+          onRecordDone={onRecordDone}
           onExit={exitSlideShow}
         />
       )}
@@ -4935,6 +4956,23 @@ export function App() {
               <button onClick={() => setPendingRehearse(null)}>{t('appRehearseDiscard')}</button>
               <button className="primary" onClick={() => void saveRehearseTimings()}>
                 {t('appRehearseSave')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingRecording && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <h2>{t('appRecordTitle')}</h2>
+            <p className="rehearse-summary">
+              {t('appRecordSummary', { duration: formatClock(pendingRecording.endMs) })}
+            </p>
+            <div className="modal-actions">
+              <button onClick={() => setPendingRecording(null)}>{t('appRecordDiscard')}</button>
+              <button className="primary" onClick={() => void saveRecording()}>
+                {t('appRecordSave')}
               </button>
             </div>
           </div>
