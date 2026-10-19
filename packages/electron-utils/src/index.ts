@@ -60,6 +60,7 @@ export { numberedExportPaths } from './numbered-export-paths'
 export {
   DEFAULT_SAVE_DIR_KEY,
   configuredDefaultSaveDir,
+  createDirLevels,
   defaultSaveDirFallback,
   documentsDirOrFallback,
   isUsableSaveDir,

@@ -160,17 +160,13 @@ The installer is unsigned on purpose; this project has no signing certificate.
 The full release procedure, from the version bump to the GitHub release, is in
 [docs/releasing.ko.md](docs/releasing.ko.md) (Korean).
 
-`dist:win` expects the xlsx sidecar at the MinGW cross-compilation path.
-Building on Windows leaves it under the MSVC target instead, so stage it
-first:
-
-```bash
-cargo build --release --target x86_64-pc-windows-gnu   # from apps/sheets/native/xlsx-engine
-```
-
-or copy an existing `target/release/xlsx-sidecar.exe` to
-`target/x86_64-pc-windows-gnu/release/`. Packaging also compiles the OCR
-helper (`win-ocr.exe`), which needs the Windows 10/11 SDK.
+`dist:win` takes the xlsx sidecar from the MinGW cross-compilation path when it
+is there (that is what the release pipeline builds). On a Windows host the plain
+`npm run build:all` compiles it with the host toolchain into
+`target/release/xlsx-sidecar.exe` instead, and packaging accepts that build as
+long as the host architecture matches the packaged one (`GENOFFICE_WIN_ARM64=1`
+still needs a cross build for `aarch64-pc-windows-msvc`). Packaging also
+compiles the OCR helper (`win-ocr.exe`), which needs the Windows 10/11 SDK.
 
 The macOS and Linux build scripts (`npm run dist:mac`, `npm run dist:linux`)
 and their packaging files are inherited from upstream and kept, but this
