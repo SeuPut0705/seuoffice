@@ -15,6 +15,7 @@ import {
   listNotes,
   listTableStyles,
   listRevisions,
+  countRevisionsElsewhere,
   listStyles,
   openDocumentFile,
   saveDocument,
@@ -205,7 +206,15 @@ async function read(
       detail.html = blockRangeHtml(doc, s, e)
     }
     if (flagBool(args, 'comments')) detail.comments = listComments(doc)
-    if (flagBool(args, 'revisions')) detail.revisions = listRevisions(doc)
+    if (flagBool(args, 'revisions')) {
+      detail.revisions = listRevisions(doc)
+      const elsewhere = await countRevisionsElsewhere(doc)
+      if (elsewhere)
+        detail.revisionsElsewhere = {
+          count: elsewhere,
+          note: 'tracked changes in headers, footers, footnotes or endnotes (not listed); accept_changes / reject_changes with all: true or author / type / before include them',
+        }
+    }
     if (flagBool(args, 'styles')) detail.styles = listStyles(doc)
     if (flagBool(args, 'header-footer')) detail.headerFooter = headerFooterState(doc)
     if (flagBool(args, 'sections')) detail.sections = listSections(doc)

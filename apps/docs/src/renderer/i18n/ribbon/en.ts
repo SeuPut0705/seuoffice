@@ -241,6 +241,7 @@ export const en = {
   ribbonTableColsLabel: 'Number of columns',
   ribbonTableRowsLabel: 'Number of rows',
   ribbonTableHandleTip: 'Select table; drag to move it',
+  ribbonTableResizeTip: 'Drag to resize the table',
   ribbonTableDeleteMenu: 'Delete',
   ribbonSelectRow: 'Select Row',
   ribbonSelectColumn: 'Select Column',

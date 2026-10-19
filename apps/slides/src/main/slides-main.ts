@@ -2145,9 +2145,10 @@ export function registerSlidesIpc(): void {
       // append/replace_at/insert_at: land the extracted pages as insertSlidePptx ops
       // (earlier pages are untouched; landing shows up in the op journal like any edit).
       const readCloudPage = async (marker: string): Promise<{ bytes: Uint8Array }> => {
-        if (!marker.startsWith(CLOUD_PAGE_PREFIX)) throw new Error('expected a cloud page marker')
+        if (!marker.startsWith(CLOUD_PAGE_PREFIX))
+          throw new Error('expected a generated page marker')
         const path = marker.slice(CLOUD_PAGE_PREFIX.length)
-        if (!issuedCloudPages.has(path)) throw new Error('unknown cloud page marker')
+        if (!issuedCloudPages.has(path)) throw new Error('unknown generated page marker')
         return { bytes: new Uint8Array(await readFile(path)) }
       }
       const assembleDeck = async (): Promise<{ bytes: Uint8Array }> => {

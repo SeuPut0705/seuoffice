@@ -215,7 +215,7 @@ export function createOpenDocumentTools(deps: OpenDocumentsDeps): McpToolDefinit
         'A mind map (kind "mindmap") reads as its outline text; there is no tool that edits one. ' +
         'PDF tabs are listed and can be closed, but this tool does not read or save them: the ' +
         'pdf app is a viewer, so an open PDF has no live editable content. Read a PDF with ' +
-        'read_pdf (and search it with search_pdf); it cannot be written back. Closing one just ' +
+        'read_pdf; it cannot be written back. Closing one just ' +
         'drops the tab — a PDF with unsaved annotations (its only unsaved state) must be closed ' +
         'with unsaved:"discard". HWP tabs can be read ' +
         '(paragraphs as lines, tables as " | " rows) but not edited or saved here: "close" on ' +

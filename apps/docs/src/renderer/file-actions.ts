@@ -177,6 +177,8 @@ export interface FileActionContext {
   setHfVariantsDirty: (value: HfVariantKey[]) => void
   sectionHfEdits: Record<string, HeaderFooter>
   setSectionHfEdits: (value: Record<string, HeaderFooter>) => void
+  /** laid-out page total, written as the cached NUMPAGES result */
+  pageCount?: number
   /** Link to Previous switched on per `${sectionIdx}:${kind}` */
   hfLinks: Record<string, true>
   setHfLinks: (value: Record<string, true>) => void
@@ -901,6 +903,7 @@ export async function buildDocBytes(
     links: ctx.hfLinks,
   })
   const bytes = await saveDocx(doc.parsed, saveBlocks, {
+    pageCount: ctx.pageCount,
     section: ctx.sectionDirty && ctx.section ? ctx.section : undefined,
     sectionStartType: ctx.trailingStartType ?? undefined,
     pgNumType: ctx.pgNumEdit ?? undefined,

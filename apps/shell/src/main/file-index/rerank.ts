@@ -1,6 +1,11 @@
 import { basename, dirname } from 'node:path'
 import { withoutUnsavedFiles } from '@genoffice/electron-utils/unsaved-files'
-import type { DecisionEndpoint, FileSearchRerank, FileSearchSettings } from '../../shared/home-api'
+import {
+  isCloudflareEndpoint,
+  type DecisionEndpoint,
+  type FileSearchRerank,
+  type FileSearchSettings,
+} from '../../shared/home-api'
 import {
   evaluate,
   isLocalEndpoint,
@@ -123,7 +128,7 @@ export class SearchReranker {
     // local servers (Kev, Rizzo Flow, a custom URL) run without credentials
     if (!settings.rerank || (!isLocalEndpoint(settings.endpoint) && !opts.key)) return null
     if (settings.endpoint === 'custom' && !settings.customBaseUrl.trim()) return null
-    if (settings.endpoint === 'cloudflare' && !settings.cloudflareAccountId.trim()) return null
+    if (isCloudflareEndpoint(settings.endpoint) && !settings.cloudflareAccountId.trim()) return null
     // the index holds a file as it was last saved; one being edited may carry a
     // withholding mark that has not reached the disk, so its excerpt stays here
     const savedOnly = await withoutUnsavedFiles(paths, (path) => path)

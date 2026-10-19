@@ -1,10 +1,13 @@
 import { clipText } from '../preview'
 import type { Editor } from '@tiptap/core'
+import JSZip from 'jszip'
 import {
+  applyTrackedChangesXml,
   BLANK_BULLET_NUM_ID,
   BLANK_ORDERED_NUM_ID,
   buildBlankDocx,
   compareDocuments,
+  countTrackedChangesXml,
   findChartWorkbookPath,
   nextNoteId,
   parseChartPartXml,
@@ -22,6 +25,7 @@ import {
   type HeaderFooter,
   type HfPartInfo,
   type NoteInfo,
+  type RevisionXmlFilter,
   type SaveOptions,
   type StyleUpsert,
   type PictureWatermarkSpec,
@@ -147,6 +151,9 @@ interface SideState {
   notesDirty: boolean
   /** block-level content controls to write on save: wrap a range of body blocks in one new control, or unwrap the control with a tag */
   contentControls?: SaveOptions['contentControls']
+  /** header / footer / footnote / endnote part XML by zip path, loaded on the first accept_changes / reject_changes */
+  revisionParts: Map<string, string> | null
+  revisionPartsDirty: Set<string>
 }
 
 export interface OpenDocument {
@@ -203,6 +210,8 @@ function sideStateOf(parsed: Parsed): SideState {
     footnotes: [...parsed.footnotes],
     endnotes: [...parsed.endnotes],
     notesDirty: false,
+    revisionParts: null,
+    revisionPartsDirty: new Set(),
   }
 }
 
@@ -260,6 +269,9 @@ export async function saveDocument(doc: OpenDocument): Promise<Uint8Array> {
     endnotes: side.notesDirty ? side.endnotes : undefined,
     contentControls: side.contentControls,
     ...(await chartPartPatches(doc, plan.chartPatches)),
+  }
+  for (const path of side.revisionPartsDirty) {
+    options.partXml = { ...options.partXml, [path]: side.revisionParts!.get(path)! }
   }
   const docx = await saveDocx(doc.parsed, sectionEdits.saveBlocks, options)
   return doc.odt ? saveOdtBytes(doc.odt, docx) : docx
@@ -368,6 +380,77 @@ function setContentControl(
   }
   return {
     output: `wrap blocks ${start}-${end} in a content control${spec.tag ? ` tagged ${spec.tag}` : ''}`,
+  }
+}
+
+const REVISION_PART_RE = /^word\/(?:header\d*|footer\d*|footnotes|endnotes)\.xml$/
+
+async function revisionParts(doc: OpenDocument): Promise<Map<string, string>> {
+  if (doc.side.revisionParts) return doc.side.revisionParts
+  const zip = await JSZip.loadAsync(doc.parsed.internal.originalBytes)
+  const parts = new Map<string, string>()
+  for (const [name, entry] of Object.entries(zip.files)) {
+    if (REVISION_PART_RE.test(name) && !entry.dir) parts.set(name, await entry.async('string'))
+  }
+  doc.side.revisionParts = parts
+  return parts
+}
+
+/** tracked changes outside the body (headers, footers, footnotes, endnotes) */
+export async function countRevisionsElsewhere(doc: OpenDocument): Promise<number> {
+  let n = 0
+  for (const xml of (await revisionParts(doc)).values()) n += countTrackedChangesXml(xml)
+  return n
+}
+
+/**
+ * accept_changes / reject_changes: the body goes through the editor; the parts it
+ * never loads are rewritten as XML. Positional selectors (ids, blockIndex,
+ * blockRange) address the body only.
+ */
+async function applyRevisionOp(
+  doc: OpenDocument,
+  op: Record<string, unknown>,
+  mode: 'accept' | 'reject',
+): Promise<{ output?: string; error?: string }> {
+  const { op: _op, ...input } = op
+  const ops = doc.mods.revisionOps
+  const sel = ops.validateSelector(input)
+  if ('error' in sel) return { error: sel.error }
+  const bodyOnly = !!sel.ids || sel.blockIndex !== undefined || !!sel.blockRange
+  const body = ops.applyRevisionSelection(doc.editor, sel, mode)
+  let elsewhere = 0
+  if (!bodyOnly) {
+    const filter: RevisionXmlFilter = {
+      ...(sel.author !== undefined ? { author: sel.author } : {}),
+      ...(sel.type !== undefined ? { type: sel.type } : {}),
+      ...(sel.before !== undefined ? { before: sel.before } : {}),
+    }
+    for (const [path, xml] of await revisionParts(doc)) {
+      const r = applyTrackedChangesXml(xml, mode, filter)
+      if (r.xml === xml) continue
+      elsewhere += r.applied
+      doc.side.revisionParts!.set(path, r.xml)
+      doc.side.revisionPartsDirty.add(path)
+    }
+  }
+  if ('error' in body && elsewhere === 0) return { error: body.error }
+  const verb = mode === 'accept' ? 'Accepted' : 'Rejected'
+  const done = 'error' in body ? [] : body.entries
+  const parts: string[] = []
+  if (done.length)
+    parts.push(`${done.length} tracked change(s) (${done.map((e) => e.id).join(', ')})`)
+  if (elsewhere) parts.push(`${elsewhere} in headers, footers and notes`)
+  const left = ops.listRevisionEntries(doc.editor.state.doc)
+  const leftElsewhere = await countRevisionsElsewhere(doc)
+  const still: string[] = []
+  if (left.length) still.push(`Still ${ops.describePending(left)}`)
+  if (leftElsewhere)
+    still.push(
+      `${left.length ? 'and' : 'Still'} ${leftElsewhere} in headers, footers and notes${bodyOnly ? ' (ids address the body; all: true or author / type / before reach them)' : ''}`,
+    )
+  return {
+    output: `${verb} ${parts.join(' and ')}. ${still.length ? `${still.join(' ')}.` : 'No tracked changes remain.'}`,
   }
 }
 
@@ -872,6 +955,8 @@ export async function applyDocOps(
       outcome = await setPictureWatermark(doc, op, opts)
     } else if (name === 'wrap_content_control' || name === 'unwrap_content_control') {
       outcome = setContentControl(doc, op, name)
+    } else if (name === 'accept_changes' || name === 'reject_changes') {
+      outcome = await applyRevisionOp(doc, op, name === 'accept_changes' ? 'accept' : 'reject')
     } else {
       const call = HTML_TOOLS.has(name)
         ? { id: `genoffice-${index}`, name, input: htmlToolInput(doc, name, op) }
@@ -931,6 +1016,8 @@ function copySide(side: SideState): SideState {
     styleUpserts: new Map(side.styleUpserts),
     footnotes: [...side.footnotes],
     endnotes: [...side.endnotes],
+    revisionParts: side.revisionParts && new Map(side.revisionParts),
+    revisionPartsDirty: new Set(side.revisionPartsDirty),
   }
 }
 
