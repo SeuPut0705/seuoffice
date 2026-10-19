@@ -452,6 +452,9 @@ export interface CellImageState {
   readonly id: string
   readonly row: number
   readonly column: number
+  /// Session-embedded bytes (a data URL); file pictures resolve through the
+  /// media IPC by id instead.
+  readonly dataUrl?: string | undefined
 }
 
 /// In-cell rich-value pictures ("place picture in cell"): one pass-through
@@ -472,7 +475,7 @@ export function installCellImages(
     const componentKey = `cell-image-${sessionId}-${sheetId}-${image.id}`
     disposables.push(
       runtime.univerAPI.registerComponent(componentKey, () => (
-        <CellImage sessionId={sessionId} imageId={image.id} />
+        <CellImage sessionId={sessionId} imageId={image.id} dataUrl={image.dataUrl} />
       )),
     )
     const range =
@@ -494,15 +497,23 @@ export function installCellImages(
 function CellImage({
   sessionId,
   imageId,
+  dataUrl,
 }: {
   readonly sessionId: string
   readonly imageId: string
+  readonly dataUrl?: string | undefined
 }): React.JSX.Element | null {
-  const { url, unavailable } = useWorkbookMediaUrl(sessionId, imageId)
-  if (unavailable || !url) return null
+  // Session embeds carry their bytes inline; only file pictures round-trip
+  // through the media IPC.
+  const { url, unavailable } = useWorkbookMediaUrl(
+    dataUrl === undefined ? sessionId : undefined,
+    imageId,
+  )
+  const source = dataUrl ?? url
+  if (source === null || (dataUrl === undefined && unavailable)) return null
   return (
     <div className="xlsx-cell-image">
-      <img src={url} alt="" />
+      <img src={source} alt="" />
     </div>
   )
 }
@@ -2398,6 +2409,9 @@ function visualMenuItems(
     'separator',
     { label: t('appVisualSizeProperties'), action: command('visual:size') },
     ...(isChart ? [] : [{ label: t('appVisualHyperlink'), action: command('visual:hyperlink') }]),
+    ...(kind === 'image'
+      ? [{ label: t('appVisualEmbedInCell'), action: command('visual:embed-in-cell') }]
+      : []),
     'separator',
     { label: t(isChart ? 'appDeleteChart' : 'appVisualDelete'), action: onDelete },
   ]

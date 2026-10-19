@@ -179,6 +179,10 @@ export function resolveWorkbookSave(
     shape: addition.shape,
     image: addition.image,
   }))
+  const cellImageAdditions = (request.cellImageAdditions ?? []).map(({ sheetId, ...addition }) => ({
+    sheetName: resolveSheetName(sheetId),
+    ...addition,
+  }))
   const tableAdditions = request.tableAdditions.map((table) => ({
     sheetName: resolveSheetName(table.sheetId),
     area: table.area,
@@ -263,6 +267,7 @@ export function resolveWorkbookSave(
     workbookProtectionState: request.workbookProtectionState,
     protectedRangeStates,
     visualAdditions,
+    cellImageAdditions,
     pageSetupStates,
     noteStates,
     tableAdditions,

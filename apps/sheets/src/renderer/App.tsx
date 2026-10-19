@@ -114,6 +114,7 @@ import {
   useSkillTemplates,
   templateDocumentOf,
   type TemplateDocument,
+  ImageViewer,
   type AiTokenUsageView,
   type AiScopeQuoteData,
   type DriveAttachPicked,
@@ -600,6 +601,7 @@ import {
 import { VisualDialog, type SizeDialogResult } from './VisualDialogs'
 
 import {
+  cellImageAddAt,
   createEditJournal,
   isSheetRemoved,
   hyperlinkEditAt,
@@ -638,6 +640,8 @@ import { EquationDialog } from './EquationDialog'
 import { IconsDialog } from './IconsDialog'
 import { RecommendedChartsDialog } from './RecommendedChartsDialog'
 import { installPictureTransfer } from './picture-paste'
+import { installCellImagePreview } from './cell-image-preview'
+import { workbookMediaDataUrl } from './workbook-media'
 import { installWheelZoomSteps } from './wheel-zoom'
 import { ScreenshotDialog } from './ScreenshotDialog'
 import { SymbolDialog } from './SymbolDialog'
@@ -1005,6 +1009,8 @@ export function App({
     kind: VisualDialogKind
     visualId: string
   } | null>(null)
+  /// Data URL of the cell picture opened in the full-size viewer, if any.
+  const [viewImage, setViewImage] = useState<string | null>(null)
   const visualCommandRef = useRef<(command: string, visualId: string) => void>(() => undefined)
   const [selectedTable, setSelectedTable] = useState<SelectedTableRibbon | null>(null)
   const [tableCreatedSeq, setTableCreatedSeq] = useState(0)
@@ -1282,6 +1288,17 @@ export function App({
       setPendingEdits,
       openDialog: (kind, visualId) => setVisualDialog({ kind, visualId }),
       resyncChart: (state, editKey) => queueChartRefResync(visualSyncContext(), state, editKey),
+      refreshCellImages: () => {
+        const runtime = univerRef.current
+        if (runtime) {
+          queueSparklineInstall(
+            runtime,
+            lazyWorkbookRef,
+            sparklineDisposablesRef,
+            sparklineTimerRef,
+          )
+        }
+      },
     }
   }
   visualCommandRef.current = (command, visualId) =>
@@ -3688,6 +3705,39 @@ export function App({
           },
         })
       : () => undefined
+    // Double-click on a cell picture opens the viewer instead of the editor.
+    const openCellImagePreview = (row: number, column: number): boolean => {
+      const state = lazyWorkbookRef.current
+      const worksheet = runtime.univerAPI.getActiveWorkbook()?.getActiveSheet()
+      if (!state || !worksheet) return false
+      const sheetId = worksheet.getSheetId()
+      const session = cellImageAddAt(state.editJournal, sheetId, row, column)
+      if (session) {
+        setViewImage(session.dataUrl)
+        return true
+      }
+      const fileImage = state.file.sheets
+        .find((sheet) => sheet.id === sheetId)
+        ?.cellImages?.find((image) => image.row === row && image.column === column)
+      if (!fileImage) return false
+      void window.desktopApi
+        .readWorkbookMedia({ sessionId: state.file.sessionId, visualId: fileImage.id })
+        .then(async (media) => {
+          const next = await workbookMediaDataUrl(media)
+          if (next) setViewImage(next)
+        })
+        .catch((reason: unknown) => {
+          console.warn(`cell picture preview unavailable (${fileImage.id})`, reason)
+        })
+      return true
+    }
+    const disposeCellImagePreview = gridHost
+      ? installCellImagePreview(gridHost, {
+          isCellEditing: () => editingCellRef.current,
+          cellAtPoint: (x, y) => cellAtClientPoint(runtime, x, y),
+          openPreview: openCellImagePreview,
+        })
+      : () => undefined
     const disposeWheelZoom = gridHost
       ? installWheelZoomSteps(gridHost, {
           isCellEditing: () => editingCellRef.current,
@@ -3829,6 +3879,7 @@ export function App({
       if (contentTimer) clearTimeout(contentTimer)
       contentDisposable.dispose()
       disposePictureTransfer()
+      disposeCellImagePreview()
       disposeWheelZoom()
       if (visualInstallTimerRef.current) clearTimeout(visualInstallTimerRef.current)
       disposeVisuals(visualDisposablesRef.current)
@@ -5769,6 +5820,21 @@ export function App({
             shapeEditRef.current(visualDialogTarget.id, changes as ShapeEditChanges)
           }}
           onClose={() => setVisualDialog(null)}
+        />
+      )}
+      {viewImage && (
+        <ImageViewer
+          src={viewImage}
+          lang={getLang()}
+          labels={{
+            zoomIn: t('appZoomIn'),
+            zoomOut: t('appZoomOut'),
+            actualSize: t('appImgActualSize'),
+            fitToWindow: t('appImgFitWindow'),
+            save: t('appImgSaveAs'),
+            close: t('appImgClose'),
+          }}
+          onClose={() => setViewImage(null)}
         />
       )}
       {chartDialog && chartDialogTarget && chartDialog.kind === 'format' && (
