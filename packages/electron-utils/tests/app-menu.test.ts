@@ -26,11 +26,14 @@ import {
   aboutMenuItem,
   appMenuLabels,
   appMenuPopupTemplate,
+  appMenuTemplate,
   checkUpdatesMenuItem,
   editMenuTemplate,
   helpCheckUpdatesItems,
   helpMenuTemplate,
+  setSettingsInvoker,
   setUpdateCheckInvoker,
+  settingsMenuItem,
   viewMenuTemplate,
   windowMenuTemplate,
   type AppMenuLabels,
@@ -67,6 +70,7 @@ const submenuOf = (tpl: { submenu?: unknown }): Item[] => tpl.submenu as Item[]
 beforeEach(() => {
   vi.clearAllMocks()
   setUpdateCheckInvoker(null)
+  setSettingsInvoker(null)
 })
 
 describe('appMenuLabels', () => {
@@ -300,5 +304,79 @@ describe('checkUpdatesMenuItem / manual update check wiring', () => {
     } finally {
       setUiLang('zh')
     }
+  })
+})
+
+describe('settingsMenuItem', () => {
+  it('carries the Settings label and the ⌘, accelerator', () => {
+    const item = settingsMenuItem(en) as Item & { click: () => void }
+    expect(item.label).toBe('Settings…')
+    expect(item.accelerator).toBe('CmdOrCtrl+,')
+  })
+
+  it('routes the click to the registered action', () => {
+    const invoke = vi.fn()
+    setSettingsInvoker(invoke)
+    ;(settingsMenuItem(en) as { click: () => void }).click()
+    expect(invoke).toHaveBeenCalledOnce()
+  })
+
+  it('falls back to the app own preferences when nothing is registered', () => {
+    const fallback = vi.fn()
+    ;(settingsMenuItem(en, fallback) as { click: () => void }).click()
+    expect(fallback).toHaveBeenCalledOnce()
+  })
+
+  it('prefers the registered action over the fallback', () => {
+    const invoke = vi.fn()
+    const fallback = vi.fn()
+    setSettingsInvoker(invoke)
+    ;(settingsMenuItem(en, fallback) as { click: () => void }).click()
+    expect(invoke).toHaveBeenCalledOnce()
+    expect(fallback).not.toHaveBeenCalled()
+  })
+
+  it('no-ops without an action, and does not throw', () => {
+    expect(() => (settingsMenuItem(en) as { click: () => void }).click()).not.toThrow()
+  })
+
+  it('is localized', () => {
+    expect((settingsMenuItem(appMenuLabels('zh')) as Item).label).toBe('设置…')
+  })
+})
+
+describe('appMenuTemplate', () => {
+  it('puts the Settings entry right after About on macOS', () => {
+    const tpl = appMenuTemplate('darwin', en, { extra: [settingsMenuItem(en)] })!
+    const items = submenuOf(tpl)
+    expect(items[0]!.role).toBe('about')
+    expect(items[1]!.label).toBe(en.settings)
+    expect(items[1]!.accelerator).toBe('CmdOrCtrl+,')
+  })
+
+  it('keeps the native macOS roles around it', () => {
+    const tpl = appMenuTemplate('darwin', en, { extra: [settingsMenuItem(en)] })!
+    expect(submenuOf(tpl).map((i) => i.role ?? i.type)).toEqual([
+      'about',
+      undefined,
+      'separator',
+      'services',
+      'separator',
+      'hide',
+      'hideOthers',
+      'unhide',
+      'separator',
+      'quit',
+    ])
+  })
+
+  it('always carries a label — Electron rejects an item with neither label, role nor type', () => {
+    expect(appMenuTemplate('darwin', en)!.label).toBeTruthy()
+    expect(appMenuTemplate('darwin', en, { appLabel: 'Other' })!.label).toBe('Other')
+  })
+
+  it('has no application menu off macOS', () => {
+    expect(appMenuTemplate('win32', en)).toBeUndefined()
+    expect(appMenuTemplate('linux', en)).toBeUndefined()
   })
 })
