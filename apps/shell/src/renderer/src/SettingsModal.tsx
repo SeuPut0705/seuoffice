@@ -30,6 +30,7 @@ import {
   MIN_MAX_OUTPUT_TOKENS,
   activeCustomEndpoint,
   clampMaxOutputTokens,
+  providerPickerModels,
   customEndpointLabel,
   isSubscriptionProvider,
   keyProviderModels,
@@ -592,7 +593,11 @@ function AiModelPane({
   /** an API-key provider: the fixed catalog plus what the vendor listed for the key (decision 0087) */
   const keyProvider = !meta?.needsBaseUrl && !isSubscriptionProvider(provider)
   const modelOptions = keyProvider
-    ? keyProviderModels(provider, config.model, config.models)
+    ? providerPickerModels(
+        provider,
+        keyProviderModels(provider, config.model, config.models),
+        config.model,
+      )
     : (meta?.models ?? [])
 
   const touch = () => {

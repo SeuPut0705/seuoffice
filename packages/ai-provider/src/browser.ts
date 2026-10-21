@@ -114,6 +114,7 @@ export {
   clampMaxOutputTokens,
   headlessSubscriptionOn,
   withMigratedSubscriptionNoticeVersion,
+  providerPickerModels,
 } from './providers'
 export {
   activeCustomEndpoint,
