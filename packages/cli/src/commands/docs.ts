@@ -13,6 +13,7 @@ import {
   listComments,
   listFields,
   listNotes,
+  listProperties,
   listTableStyles,
   listRevisions,
   countRevisionsElsewhere,
@@ -78,6 +79,10 @@ export const docsCommand: CommandDef = {
     {
       name: 'notes',
       description: 'read: list footnotes and endnotes (ids for delete_note, anchored block index)',
+    },
+    {
+      name: 'properties',
+      description: 'read: the document properties of the file (core, app, custom)',
     },
     {
       name: 'ops',
@@ -220,6 +225,7 @@ async function read(
     if (flagBool(args, 'sections')) detail.sections = listSections(doc)
     if (flagBool(args, 'fields')) detail.fields = listFields(doc)
     if (flagBool(args, 'notes')) detail.notes = listNotes(doc)
+    if (flagBool(args, 'properties')) detail.properties = listProperties(doc)
     return { summary: `${basename(path)}: ${count} blocks`, detail }
   } finally {
     closeDocument(doc)
