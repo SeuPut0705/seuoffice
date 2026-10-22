@@ -1,6 +1,6 @@
 import { scriptFontHtml } from './editor/script-fonts'
 import { carryDocSeen } from './ai/tools'
-import { DOC_CSS_COMMITTED_EVENT } from './editor/cjk-punct-shrink'
+import { DOC_CSS_COMMITTED_EVENT, WRAP_WIDTHS_COMMITTED_EVENT } from './editor/cjk-punct-shrink'
 import { justifyShrinkPluginKey } from './editor/justify-shrink'
 import {
   useCallback,
@@ -124,6 +124,7 @@ import { applyHfText, hfEditText } from './editor/hf-text'
 import {
   insertHfField,
   insertHfInstrField,
+  insertHfPicture,
   mountHfEditor,
   type HfEditorHandle,
 } from './editor/hf-editor'
@@ -148,7 +149,7 @@ import { HeaderFooterArea } from './components/HeaderFooterArea'
 import { PageFootnotes, PageEndnotes } from './components/PageNoteAreas'
 import { noteMarkText, type NoteKind } from './note-format'
 import { PaginationPreview } from './components/PaginationPreview'
-import { paraPaginationMeta, tableWidowOff } from './editor/para-flags'
+import { imageParaPaginationMeta, paraPaginationMeta, tableWidowOff } from './editor/para-flags'
 import { PrintDialog } from './components/PrintDialog'
 import {
   appendEndnotesBlock,
@@ -192,6 +193,7 @@ import {
   sectionGridPitchSpecs,
   docCharSpacePt,
   sectionCharSpaceSpecs,
+  singleByteCharSpacePt,
   type ColumnBlockPlacement,
   sectionBidi,
   sectionColGeom,
@@ -215,12 +217,14 @@ import {
   GAP_BAND,
   alignGapHfStrips,
   alignTableGapFills,
+  leadDropsSpaceBefore,
   clearFloatShifts,
   floatFlowChangedMeta,
   insideFloatTable,
   setFloatVShifts,
   setOversizeClips,
   setPageGaps,
+  canvasZoomOf,
   rowFillsSig,
   setRowFills,
   syncAnchorBands,
@@ -307,6 +311,7 @@ import {
 import { ToastHost } from './components/toast'
 import { FormatChangeHost } from './components/FormatChangeDialog'
 import {
+  imageSizeOf,
   AI_REWRITE_ACK_KEY,
   LinkInsertModal,
   TableInsertModal,
@@ -434,6 +439,7 @@ import {
   singleInlineEditIndex,
   type FastPassBlock,
 } from './editor/pagination-fast-path'
+import { FollowUpChain } from './pagination-loop'
 
 /** min gap between whole-document pagination passes while a phased open streams its tail */
 const STREAMING_PASS_GAP_MS = 1500
@@ -448,7 +454,6 @@ const EDIT_PASS_DEBOUNCE_MAX_MS = 2000
 const FOLLOW_UP_PASS_DELAY_MS = 100
 const WORD_COUNT_THROTTLE_MS = 400
 /** consecutive follow-up passes a pass may schedule for itself */
-const MAX_FOLLOW_UP_PASSES = 6
 /** 30s recovery ticks skipped after a failed copy write (as the slides editor does) */
 const RECOVERY_BACKOFF_TICKS = 10
 import { runHeadlessDocumentExport } from './headless-export'
@@ -3454,6 +3459,8 @@ export function App() {
   // w:docGrid charSpace character grid: uniform per-character letter-spacing
   // delta (pt); mixed docs deliver it per block via sectionCharSpaceSpecs
   const charSpacePt = useMemo(() => docCharSpacePt(sections), [sections])
+  // balanceSingleByteDoubleByteWidth: single-byte characters get half the delta
+  const balancedGrid = doc?.parsed.balanceDbcsSpacing === true
 
   // page color: Word lays out one extra blank Normal paragraph under section 1's header
   const hfPhantom = useMemo(
@@ -3494,7 +3501,11 @@ export function App() {
   const effBottomSingle = section ? effectiveBottomPx(section, singleHfPx.footerPx) : 0
   const canvasSection = sections[0]?.settings ?? section
   const canvasBox = canvasSection ? sectionPageBox(canvasSection) : null
-  const canvasTop = section ? canvasContentTopPx(sections, section, singleHfPx.headerPx) : 0
+  // the canvas's first page draws the titlePg first-page header: its body
+  // starts under that strip, as the preview slicer already assumes
+  const canvasTop = section
+    ? canvasContentTopPx(sections, section, singleHfPx.firstHeaderPx ?? singleHfPx.headerPx)
+    : 0
   const canvasBottom = canvasSection ? effectiveBottomPx(canvasSection, singleHfPx.footerPx) : 0
 
   // titlePg: the document's first page renders the first-page header/footer
@@ -3606,9 +3617,11 @@ export function App() {
           ...(fnExtra > 0 ? { footnoteExtraPx: fnExtra, footnoteBands: fnBands } : {}),
         }
       }
-      const styleDisplay = (b.styleId ? doc?.parsed.styles.get(b.styleId) : defaultParaStyle)
-        ?.display
-      const flags = paraPaginationMeta(b.format, styleDisplay, doc?.parsed.docDefaults)
+      const styleOf = (id: string | undefined) =>
+        (id ? doc?.parsed.styles.get(id) : defaultParaStyle)?.display
+      const flags = b.format
+        ? paraPaginationMeta(b.format)
+        : imageParaPaginationMeta(b.originalXml, styleOf, doc?.parsed.docDefaults)
       const fnBands = footnoteBandsOf(b)
       const fnExtra = fnBands.reduce((s, band) => s + band.heightPx, 0)
       if (!flags && fnExtra === 0) return undefined
@@ -3784,7 +3797,7 @@ export function App() {
         assignSections(blocks, live)
         s = sliceWithLineSplit(
           blocks,
-          colGeomsFor(sectionGeoms(live, hfHeightsOf(live))),
+          colGeomsFor(sectionGeoms(live, hfHeightsOf(live), evenOddHf)),
           totalHeight,
           factor,
           blockMetaOf,
@@ -3836,6 +3849,7 @@ export function App() {
     hfHeightsOf,
     measureSingleFlow,
     colGeomsFor,
+    evenOddHf,
   ])
 
   // status-bar page number: real page slicing (same algorithm as the pagination preview). Edits remeasure with debounce; scrolling only relocates
@@ -3849,7 +3863,7 @@ export function App() {
     }
     const scroller = document.querySelector('.editor-scroll')
     if (!scroller) return
-    const factor = zoom / 100
+    let factor = zoom / 100
     const mTopPx = canvasTop
     // shared paper = the widest section's page; narrower pages are centered on it
     const paperWPx = paperWidthPx(sections, sections[0]?.settings ?? section)
@@ -3858,20 +3872,22 @@ export function App() {
     const contentH = twipsToPx(section.pageHeight) - effTopSingle - effBottomSingle
     let slices: PageSlice[] = []
     let timer: number | null = null
-    let suppressSig = ''
     let rowFillSig = ''
     // passes a pass schedules for itself (widths / suppression applied late);
     // a document whose column widths never settle must not paginate forever
-    let followUps = 0
+    const chain = new FollowUpChain()
     let selfScheduled = false
+    // set by the cleanup: document.fonts.ready and other promise callbacks of
+    // this run can still fire after the effect was re-created (zoom change)
+    // and would schedule a pass of this stale closure next to the live one
+    let disposed = false
     let retrigger: string[] = []
-    // several reasons in one pass debounce into one follow-up: count passes, not reasons
-    // decoration-only re-decisions (justify shrink, float flow) arrive after a
-    // pass and re-run it from the changed block: they count against the same
-    // cap, or a flip-flopping decision paginates forever
+    // several reasons in one pass debounce into one follow-up; decoration-only
+    // re-decisions (justify shrink, float flow) arrive after a pass and re-run
+    // it from the changed block, through the same chain
     const followUpAt = (why: string, dirtyIndex: number | null) => {
       retrigger.push(why)
-      if (followUps >= MAX_FOLLOW_UP_PASSES) return
+      if (chain.request(why, dirtyIndex) !== 'run') return
       selfScheduled = true
       onUpdate(null, dirtyIndex, true)
     }
@@ -3942,6 +3958,7 @@ export function App() {
     let fastEdits: Set<number> | null = new Set()
     let fastPasses = 0
     let fastReject = ''
+    let gapBoundaryMismatch = 0
     const sameBox = (a: BlockBox, b: BlockBox) =>
       a.el === b.el &&
       Math.abs(a.top - b.top) < 0.01 &&
@@ -4065,6 +4082,7 @@ export function App() {
       return blocksKeepSlicing(items, slices, factor) || reject('geometry')
     }
     const remeasure = () => {
+      if (disposed) return
       timer = null
       lastPassAt = performance.now()
       const edited = fastEdits
@@ -4072,16 +4090,40 @@ export function App() {
       const dirty = dirtyFrom
       dirtyFrom = Infinity
       try {
-        if (edited && edited.size > 0 && tryFastPass(edited)) {
+        const zoomEl = scroller.querySelector<HTMLElement>('.doc-zoom')
+        // the canvas zoom as applied, not this closure's: a pass reaching the
+        // DOM through a late async callback must never read a zoomed canvas at
+        // factor 1 (split-row fills then land in zoomed px and rows overlap)
+        const liveZoom = canvasZoomOf(zoomEl, zoom / 100)
+        const swapZoom = zoomEl !== null && Math.abs(liveZoom - 1) > 0.0001
+        const scrollTop = scroller.scrollTop
+        const scrollLeft = scroller.scrollLeft
+        if (swapZoom) {
+          zoomEl.style.zoom = '1'
+          factor = 1
+        }
+        let fast = false
+        try {
+          fast = Boolean(edited && edited.size > 0 && tryFastPass(edited))
+          if (!fast) {
+            if (!edited) fastReject = 'trigger'
+            else if (edited.size === 0) fastReject = 'none'
+            remeasurePass(dirty)
+          }
+        } finally {
+          if (swapZoom) {
+            zoomEl.style.zoom = String(liveZoom)
+            factor = liveZoom
+            scroller.scrollTop = scrollTop
+            scroller.scrollLeft = scrollLeft
+          }
+        }
+        if (fast) {
           fastPasses++
           const dbg = (window as unknown as Record<string, Record<string, unknown>>).__pageDebug
           if (dbg) dbg.fastPasses = fastPasses
-          locate()
-          return
         }
-        if (!edited) fastReject = 'trigger'
-        else if (edited.size === 0) fastReject = 'none'
-        remeasurePass(dirty)
+        locate()
       } finally {
         lastPassMs = performance.now() - lastPassAt
         // a pass that threw between the add and the pre-setPageGaps remove
@@ -4092,7 +4134,8 @@ export function App() {
     const remeasurePass = (dirty: number | null) => {
       const pm = pmEl()
       if (!pm) return
-      followUps = selfScheduled ? followUps + 1 : 0
+      if (selfScheduled) chain.beginPass()
+      else chain.reset()
       selfScheduled = false
       retrigger = []
       const tStart = performance.now()
@@ -4172,7 +4215,7 @@ export function App() {
         const s = secList
           ? sliceWithLineSplit(
               blocks,
-              colGeomsFor(sectionGeoms(secList, hfHs!)),
+              colGeomsFor(sectionGeoms(secList, hfHs!, evenOddHf)),
               flowH,
               factor,
               blockMetaOf,
@@ -4649,7 +4692,9 @@ export function App() {
                     ? { ...notesMetrics, marginBottom: notesMetrics.marginBottom + pad }
                     : notesMetrics,
                 ...(pullUp > 0.5 ? { pullUp } : {}),
-                ...(blocks[i].breakBefore || (i > 0 && blocks[i - 1].breakAfter)
+                ...(blocks[i].breakBefore ||
+                (i > 0 && blocks[i - 1].breakAfter) ||
+                leadDropsSpaceBefore(blocks, i)
                   ? { suppressLeadMt: true }
                   : {}),
                 ...(notes ? { notes, notesKey } : {}),
@@ -4694,15 +4739,19 @@ export function App() {
               const elTop = b.el.getBoundingClientRect().top
               let matched = false
               let cutRow: Element | null = null
+              // the previous pass's gap rows sit exactly at their cut: matching one
+              // resolves to the table, not a row, and the boundary is silently lost
               for (const tr of Array.from(b.el.querySelectorAll('tr')).filter(
                 (r) =>
-                  !r.closest('.doc-nested-table') && !r.classList.contains('page-repeat-header'),
+                  !r.closest('.doc-nested-table') &&
+                  !r.classList.contains('page-repeat-header') &&
+                  !r.classList.contains('page-gap'),
               )) {
                 const trTop = tr.getBoundingClientRect().top
                 const gapsAbove = gapRects.reduce((s, g) => (g.top <= trTop ? s + g.height : s), 0)
                 const off = (trTop - elTop - gapsAbove) / factor
                 // last real row starting at/above the cut = the row the cut falls inside
-                if (!tr.classList.contains('page-gap') && off <= cutOff + 0.5) cutRow = tr
+                if (off <= cutOff + 0.5) cutRow = tr
                 if (Math.abs(off - cutOff) < 1.5) {
                   matched = true
                   try {
@@ -4869,10 +4918,12 @@ export function App() {
           }
           // silently dropped boundaries merge two pages into one giant page — surface them
           const boundaries = slices.slice(1).filter((s, k) => s.start !== slices[k].start).length
-          if (gaps.length + overlayCutAnchors.length !== boundaries)
+          if (gaps.length + overlayCutAnchors.length !== boundaries) {
+            gapBoundaryMismatch++
             console.warn(
               `[pagination] ${gaps.length + overlayCutAnchors.length} page gaps built for ${boundaries} boundaries`,
             )
+          }
           // TOC page numbers: the file's cached PAGEREF results are stale (generators
           // write them against a layout that never matches; Word silently refreshes on
           // open, we never write back). Backfill the display from the live layout —
@@ -5023,7 +5074,9 @@ export function App() {
           viewMode === 'print' && !readMode && secList ? sectionGridPitchSpecs(blocks, secList) : []
         // sections disagreeing on the docGrid charSpace delta: per-block letter-spacing vars
         const charSpecs =
-          viewMode === 'print' && !readMode && secList ? sectionCharSpaceSpecs(blocks, secList) : []
+          viewMode === 'print' && !readMode && secList
+            ? sectionCharSpaceSpecs(blocks, secList, doc.parsed.balanceDbcsSpacing === true)
+            : []
         // sections disagreeing on the top margin: per-block --doc-margin-top for page-relative anchors
         const topSpecs =
           viewMode === 'print' && !readMode && secList ? sectionTopMarginSpecs(blocks, secList) : []
@@ -5129,12 +5182,6 @@ export function App() {
         )
         stage('sheets+annotations')
         tSetGaps = performance.now() - tSet0
-        // suppression collapses the DOM after this pass sliced; one follow-up remeasure re-syncs (sig goes stable, no loop)
-        const sig = gaps.reduce((s, g, n) => (g.suppressLeadMt ? `${s},${n}` : s), '')
-        if (sig !== suppressSig) {
-          suppressSig = sig
-          followUp('suppress')
-        }
         // a fill just applied to a split row changed the table height under the slices
         const fSig = rowFillsSig(rowFills)
         if (fSig !== rowFillSig) {
@@ -5146,11 +5193,16 @@ export function App() {
         const wSig = [...secWSpecs, ...colSpecs, ...vertSpecs]
           .map((s) => `${Math.round(s.widthPx ?? -1)}:${Math.round(s.contentWPx ?? -1)}`)
           .join(',')
+        let wrapWidthsChanged = false
         if (wSig !== secWidthSig) {
           secWidthSig = wSig
+          wrapWidthsChanged = true
           followUp('width')
         }
-        if (colGranted) followUp('columns')
+        if (colGranted) {
+          wrapWidthsChanged = true
+          followUp('columns')
+        }
         // freshly applied per-block letter-spacing changes line breaks the same way
         const cSig =
           charSpecs.length === 0
@@ -5158,8 +5210,12 @@ export function App() {
             : `${charSpecs.length}:${[...new Set(charSpecs.map((s) => s.charSpacePt))].join(',')}`
         if (cSig !== charSpaceSig) {
           charSpaceSig = cSig
+          wrapWidthsChanged = true
           followUp('charSpace')
         }
+        // the shrink loops measured line breaks the new widths just moved;
+        // their re-decision rides the follow-up pass already scheduled
+        if (wrapWidthsChanged) document.dispatchEvent(new Event(WRAP_WIDTHS_COMMITTED_EVENT))
         // the last page paints as a full sheet like the ones above it:
         // extend the canvas to that page's paper bottom, measured from the last gap
         const gapEls = pm.querySelectorAll('.page-gap:not(.page-gap-carry)')
@@ -5191,6 +5247,7 @@ export function App() {
           slices,
           fastPasses,
           fastReject,
+          gapBoundaryMismatch,
           carriedSamples,
           resumePasses,
           resumeReject,
@@ -5198,7 +5255,12 @@ export function App() {
           resumeDiag,
           colMode,
           retrigger,
-          followUps,
+          retriggerLog: chain.log,
+          followUps: chain.passes,
+          // live: a refusal after the last pass must be visible too
+          get loopStops() {
+            return chain.stops
+          },
           colSpecs: colSpecs.map((s) => ({
             w: s.widthPx === undefined ? null : Math.round(s.widthPx),
             dx: Math.round(s.dx),
@@ -5263,6 +5325,7 @@ export function App() {
       dirtyIndex: number | null = fastIndex,
       isFollowUp = false,
     ) => {
+      if (disposed) return
       if (fastIndex === null) fastEdits = null
       else fastEdits?.add(fastIndex)
       dirtyFrom = dirtyIndex === null || dirtyFrom === null ? null : Math.min(dirtyFrom, dirtyIndex)
@@ -5364,6 +5427,7 @@ export function App() {
     }
     editor?.on('transaction', onShrinkTr)
     return () => {
+      disposed = true
       if (timer) window.clearTimeout(timer)
       if (hfTimer) window.clearTimeout(hfTimer)
       document.fonts.removeEventListener('loadingdone', onLoadingDone)
@@ -6356,6 +6420,17 @@ export function App() {
       case 'field':
         if (sub) insertHfInstrField(sub, action.instr, fieldValue(action.instr))
         break
+      case 'picture':
+        if (sub) {
+          void (async () => {
+            const picked = await window.desktop.pickImage()
+            if (!picked || !hfEditorRef.current) return
+            const dataUrl = `data:${picked.mime};base64,${picked.base64}`
+            const natural = await imageSizeOf(dataUrl)
+            insertHfPicture(sub, { dataUrl, widthPx: natural.width, heightPx: natural.height })
+          })()
+        }
+        break
       case 'linkToPrevious':
         if (cur) setHfLink(cur.section, cur.kind, cur.variant, action.on)
         if (!action.on) refocus()
@@ -6420,6 +6495,7 @@ export function App() {
       exportHtmlTo: (path: string) => exportHtml(path),
       exportHwpTo: (path: string) => exportHwp(path),
       exportMarkdownTo: (path: string) => exportMarkdown(path),
+      subEditor: () => getActiveSubEditor(),
     }
   }, [editor, openRecent, save, status, exportPdf, exportHtml, exportHwp, exportMarkdown])
 
@@ -7512,7 +7588,16 @@ export function App() {
       )}
       {doc && charSpacePt != null && (
         // w:docGrid charSpace: every character advances natural width + this delta
-        <style>{`.doc-page { --doc-char-space:${Math.round(charSpacePt * 10000) / 10000}pt }`}</style>
+        <style>{`.doc-page { --doc-char-space:${Math.round(charSpacePt * 10000) / 10000}pt${
+          balancedGrid
+            ? `; --doc-char-space-sb:${Math.round(singleByteCharSpacePt(charSpacePt, true) * 10000) / 10000}pt`
+            : ''
+        } }`}</style>
+      )}
+      {doc && balancedGrid && (
+        // full-width spans take the whole delta back (halfwidth kana stay single-byte);
+        // an inline run letter-spacing still wins
+        <style>{`.doc-page .doc-east-asian-font:not(.doc-east-asian-halfwidth, [style*='letter-spacing'] .doc-east-asian-font, .page-gap-hf *) { letter-spacing: var(--doc-char-space, normal) }`}</style>
       )}
       {doc && section && (
         // over-wide tables may spill into the margins (Word/LO), capped at the paper edge

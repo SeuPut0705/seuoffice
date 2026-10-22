@@ -7,6 +7,7 @@ import {
   engineResultKeepsCache,
   formulaKeepsCache,
   hasUsableCachedValue,
+  overlayBetraysCache,
   recalcResultKeepsCache,
   setRecalculableNames,
   setSupportedFunctionProbe,
@@ -120,10 +121,6 @@ describe('formulaKeepsCache with the engine registry probe', () => {
     install()
     expect(formulaKeepsCache('IFERROR(FOOBARFN(A1),0)', false)).toBe(false)
     expect(formulaKeepsCache('FOOBARFN(A1)', false)).toBe(false)
-    // The pre-existing classes keep the cell cache-only regardless.
-    expect(formulaKeepsCache('IFERROR(__xludf.DUMMYFUNCTION("X"),0)', false)).toBe(true)
-    expect(formulaKeepsCache('DOLLAR(A1)', false)).toBe(true)
-    expect(formulaKeepsCache('A1*TaxRate', false)).toBe(true)
   })
 
   it('assumes every function is supported until a probe is installed', () => {
@@ -299,4 +296,32 @@ describe('recalcResultKeepsCache', () => {
     expect(recalcResultKeepsCache('#NAME?', 'FOO(A1)', 1, true)).toBe(true)
     expect(recalcResultKeepsCache('#ERROR!', undefined, 1, true)).toBe(true)
   })
+})
+
+describe('overlayBetraysCache', () => {
+  it('flags a clean value that differs from a usable cache', () => {
+    // IFERROR(D14/D8,0) over a SUMPRODUCT the engine lacks: laundered 0.
+    expect(overlayBetraysCache(0, 0.6785714285714286)).toBe(true)
+    expect(overlayBetraysCache('0', 0.6785714285714286)).toBe(true)
+    expect(overlayBetraysCache('', 'text result')).toBe(true)
+  })
+
+  it('confirms a value that matches the cache', () => {
+    expect(overlayBetraysCache(56, 56)).toBe(false)
+    expect(overlayBetraysCache('56', 56)).toBe(false)
+    expect(overlayBetraysCache('found', 'found')).toBe(false)
+  })
+
+  it('lets the engine speak where the file cached nothing usable', () => {
+    expect(overlayBetraysCache(0, undefined)).toBe(false)
+    expect(overlayBetraysCache(42, '#N/A')).toBe(false)
+  })
+})
+
+describe('formulaKeepsCache with defined names and table references', () => {
+  it('keeps the cached result of a name-referencing formula', () => {
+    expect(formulaKeepsCache('VLOOKUP(F5,table_data,2,FALSE)', true)).toBe(true)
+    expect(formulaKeepsCache('SUM(rng_data)', true)).toBe(true)
+  })
+
 })

@@ -88,6 +88,12 @@ export function usesEastAsianRules(eastAsiaLang: string | null | undefined): boo
   return !eastAsiaLang || /^(ja|zh)(-|$)/i.test(eastAsiaLang)
 }
 
+/** the shrink decoration carries the compressed spacing: the natural base lives on its nearest other ancestor */
+export function spacingHost(el: Element | null): Element | null {
+  while (el && el.classList.contains('doc-cjkshrink')) el = el.parentElement
+  return el
+}
+
 /** decoration style compressing one glyph by perChar px (baseLs: inherited letter-spacing it replaces) */
 export function shrinkStyle(ch: string, perChar: number, baseLs: number): string {
   const px = (v: number) => Math.round(v * 100) / 100
@@ -124,6 +130,9 @@ export interface CjkPunctShrinkStorage {
 
 /** dispatched on document after the doc-scoped <style> commits (App) */
 export const DOC_CSS_COMMITTED_EVENT = 'genoffice:doc-css'
+/** the paginator applied per-block wrap widths (section widths, columns,
+ *  letter-spacing): the line breaks the shrink loops measured are stale */
+export const WRAP_WIDTHS_COMMITTED_EVENT = 'genoffice:wrap-widths'
 
 export function measuresAlignment(textAlign: string, legacyLayout: boolean): boolean {
   return textAlign === 'justify' || legacyLayout
@@ -144,6 +153,8 @@ interface CharBox {
   ea: boolean
   /** natural advance (layout px), independent of active decorations */
   width: number
+  /** inherited letter-spacing (px) included in width */
+  ls: number
   top: number
   bottom: number
   left: number
@@ -381,6 +392,7 @@ class CjkPunctShrinkView {
     this.measure()
     document.fonts?.addEventListener('loadingdone', this.onFontsLoaded)
     document.addEventListener(DOC_CSS_COMMITTED_EVENT, this.onDocCss)
+    document.addEventListener(WRAP_WIDTHS_COMMITTED_EVENT, this.onDocCss)
     document.addEventListener(PHASED_CONTENT_SETTLED_EVENT, this.onPhasedSettled)
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => {
@@ -421,6 +433,7 @@ class CjkPunctShrinkView {
   destroy() {
     document.fonts?.removeEventListener('loadingdone', this.onFontsLoaded)
     document.removeEventListener(DOC_CSS_COMMITTED_EVENT, this.onDocCss)
+    document.removeEventListener(WRAP_WIDTHS_COMMITTED_EVENT, this.onDocCss)
     document.removeEventListener(PHASED_CONTENT_SETTLED_EVENT, this.onPhasedSettled)
     this.resizeObserver?.disconnect()
     if (this.retryRaf) cancelAnimationFrame(this.retryRaf)
@@ -553,15 +566,18 @@ class CjkPunctShrinkView {
     const chars: CharBox[] = []
     let breakPositions: number[] = []
     const paraFont = fontOf(cs)
-    const fontCache = new Map<Element, string>()
-    const fontAt = (parent: Element | null): string => {
-      if (!parent) return paraFont
-      let font = fontCache.get(parent)
-      if (!font) {
-        font = fontOf(window.getComputedStyle(parent))
-        fontCache.set(parent, font)
+    // balanced grids give full-width spans a larger letter-spacing than the paragraph
+    const styleCache = new Map<Element, { font: string; ls: number }>()
+    const styleAt = (el: Element | null): { font: string; ls: number } => {
+      const parent = spacingHost(el)
+      if (!parent) return { font: paraFont, ls: baseLs }
+      let st = styleCache.get(parent)
+      if (!st) {
+        const pcs = window.getComputedStyle(parent)
+        st = { font: fontOf(pcs), ls: parseFloat(pcs.letterSpacing) || 0 }
+        styleCache.set(parent, st)
       }
-      return font
+      return st
     }
     const eaOf = (child: ProseMirrorNode): boolean => {
       const runLang = child.marks.find((m) => m.type.name === 'docTextStyle')?.attrs.eaLang as
@@ -574,18 +590,19 @@ class CjkPunctShrinkView {
       breakPositions = mapped.breaks
       const range = charRange()
       for (const slot of mapped.slots) {
-        const font = fontAt(slot.dom.parentElement)
+        const { font, ls } = styleAt(slot.dom.parentElement)
         const data = slot.dom.data
         for (let i = 0; i < data.length; i++) {
           range.setStart(slot.dom, i)
           range.setEnd(slot.dom, i + 1)
           const r = range.getBoundingClientRect()
-          const width = charAdvancePx(font, data[i]) + baseLs
+          const width = charAdvancePx(font, data[i]) + ls
           chars.push({
             ch: data[i],
             from: slot.from + i,
             ea: slot.ea,
             width,
+            ls,
             top: r.top,
             bottom: r.bottom,
             left: r.left,
@@ -627,12 +644,14 @@ class CjkPunctShrinkView {
             dp.node.nodeType === Node.TEXT_NODE
               ? dp.node.parentElement
               : (dp.node as Element | null)
-          const width = charAdvancePx(fontAt(parent), child.text[i]) + baseLs
+          const st = styleAt(parent)
+          const width = charAdvancePx(st.font, child.text[i]) + st.ls
           chars.push({
             ch: child.text[i],
             from,
             ea,
             width,
+            ls: st.ls,
             top: a.top,
             bottom: a.bottom,
             left: a.left,

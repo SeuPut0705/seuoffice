@@ -2820,6 +2820,7 @@ export function App({
         if (
           event.id !== SET_RANGE_VALUES_MUTATION &&
           event.id !== SET_NUMFMT_MUTATION &&
+          event.id !== REMOVE_NUMFMT_MUTATION &&
           !rowColumn &&
           !merge &&
           !axisAttr &&
@@ -4703,6 +4704,29 @@ export function App({
     )
   }
 
+  /// A clicked ribbon button keeps DOM focus, so arrow-key cell navigation
+  /// dies until the user clicks the grid — Excel hands the keyboard straight
+  /// back. Only the button that issued the command is sent back: text fields
+  /// commit on blur (focus is already moving on, e.g. Tab to the next box) and
+  /// the More Colors native input applies live while its picker stays open.
+  /// Two frames let a dialog or panel the command opened claim focus first.
+  function handleRibbonCommandFromRibbon(command: string): void {
+    const source = document.activeElement
+    handleRibbonCommand(command)
+    if (!(source instanceof HTMLElement) || !source.closest('[data-ribbon-body]')) return
+    if (source.matches('input, select, textarea, [contenteditable="true"]')) return
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        const active = document.activeElement
+        // a palette swatch unmounts when the popover closes, dropping focus to body
+        const dropped = !source.isConnected && (active === null || active === document.body)
+        if (active !== source && !dropped) return
+        source.blur()
+        focusSheetGrid()
+      }),
+    )
+  }
+
   function handleRibbonCommand(command: string): void {
     if (!ribbonCommandAllowed(lazyWorkbookRef.current?.file.readOnly === true, command)) return
     if (command === 'ai-ask-selection') {
@@ -5054,6 +5078,7 @@ export function App({
         engineOverBudget: recalcOverBudgetAtOpen(selected.fileBytes, cellCounts.gridCells),
         formulaCells: new Map(),
         overlay: new Map(),
+        incompleteRuns: new Set(),
         follow: new Map(),
         running: false,
         lastRunAt: 0,
@@ -5952,7 +5977,7 @@ export function App({
         onAiCitation={handleAiCitation}
         canUndo={univerHist.canUndo || (!lazyWorkbookRef.current && adapterRef.current.canUndo)}
         canRedo={univerHist.canRedo}
-        onCommand={handleRibbonCommand}
+        onCommand={handleRibbonCommandFromRibbon}
         presenting={presenting}
         onIsCellEditing={isCellEditing}
         zoomPercent={zoomPercent}

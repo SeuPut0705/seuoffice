@@ -2780,6 +2780,7 @@ async function runFormulaRecalc(
     const formulaTextBySheet = state.formulaText.get(sheetId)
     const sharedBySheet = state.sharedFormulaGroups.get(sheetId)
     const cachedBySheet = state.cachedFormulaValues.get(sheetId)
+    const candidates: { key: string; cell: PinnedClosureCell; cached: CachedFormulaValue }[] = []
     for (const cell of result.cells) {
       if (cell.sheetId !== sheetId || !cell.isFormula) continue
       // The user's own journaled edits stay authoritative on screen.
@@ -2787,22 +2788,40 @@ async function runFormulaRecalc(
       const key = `${cell.row}:${cell.column}`
       const formulaText =
         formulaTextBySheet?.get(key) ?? sharedBySheet?.textAt(cell.row, cell.column)
+      const cached = cachedBySheet?.get(key)
+      if (recalcResultKeepsCache(cell.formatted, formulaText, cached, edits.length > 0)) {
+        unsupported += 1
+        continue
+      }
+      candidates.push({
+        key,
+        cell: {
+          v: cell.number ?? cell.formatted,
+          ...(cell.isError ? { isError: true } : {}),
+        },
+        cached,
+      })
+    }
+    // A run that had to keep any cache evaluated an incomplete model: an
+    // unsupported precedent is #NAME? inside the engine, and a dependent
+    // that wraps it (IFERROR(x,0)) comes back as a clean wrong value no
+    // per-cell check can flag. Before any session edit the file's cached
+    // results are Excel's own, so a differing value over a usable cache is
+    // noise from the gap, not news — the cache stays.
+    const incompleteRun = unsupported > 0
+    for (const candidate of candidates) {
       if (
-        recalcResultKeepsCache(
-          cell.formatted,
-          formulaText,
-          cachedBySheet?.get(key),
-          edits.length > 0,
-        )
+        incompleteRun &&
+        edits.length === 0 &&
+        overlayBetraysCache(candidate.cell.v, candidate.cached)
       ) {
         unsupported += 1
         continue
       }
-      overlay.set(`${cell.row}:${cell.column}`, {
-        v: cell.number ?? cell.formatted,
-        ...(cell.isError ? { isError: true } : {}),
-      })
+      overlay.set(candidate.key, candidate.cell)
     }
+    if (incompleteRun) state.recalc.incompleteRuns.add(sheetId)
+    else state.recalc.incompleteRuns.delete(sheetId)
     state.recalc.overlay.set(sheetId, overlay)
     state.recalc.follow.set(sheetId, { anchorRow: viewportStartRow, complete: windowComplete })
     const loaded = state.loadedRanges.get(sheetId)
@@ -4343,6 +4362,22 @@ export function recalcResultKeepsCache(
   if (engineResultKeepsCache(formatted, formulaText)) return true
   if (hasEdits) return false
   return (formatted === '' || EXCEL_ERROR_LITERALS.has(formatted)) && hasUsableCachedValue(cached)
+}
+
+type CachedFormulaValue = string | number | boolean | undefined
+
+/// True when an engine value would replace a usable file-cached result with
+/// something different. Only consulted on an incomplete-model run with no
+/// session edits, where the cached value is Excel's own result: a clean
+/// number equal to the cache confirms it, a differing one is a laundered
+/// artifact of the gap (IFERROR over an unsupported precedent).
+export function overlayBetraysCache(
+  value: string | number | boolean | null | undefined,
+  cached: CachedFormulaValue,
+): boolean {
+  if (!hasUsableCachedValue(cached)) return false
+  if (value === null || value === undefined) return true
+  return String(value) !== String(cached)
 }
 
 /// A cached formula value installed as bare `{ f, v }` lets Univer coerce

@@ -779,6 +779,8 @@ function bundledCliRunner(): ReturnType<typeof createCliRunner> {
     entry: app.isPackaged
       ? join(process.resourcesPath, 'cli', 'genoffice.cjs')
       : join(APPS_ROOT, '..', 'packages', 'cli', 'dist', 'genoffice.cjs'),
+    // the sheets engine the app itself runs; the CLI's own lookup only knows the packaged layout and a checkout
+    env: existsSync(SIDECAR_BIN) ? { XLSX_SIDECAR_PATH: SIDECAR_BIN } : {},
   })
   return cliRunner
 }

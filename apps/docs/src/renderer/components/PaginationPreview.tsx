@@ -769,6 +769,55 @@ export function collectCellPageBoxes(pm: HTMLElement): CellPageBox[] {
   return out
 }
 
+/** run-anchored front/behind picture with a page/margin-relative X, drawn once
+ *  per owning page at page coordinates (the column clone would clip it) */
+export interface PageRelXPicture {
+  page: number
+  offX: number
+  fromPaperEdge: boolean
+  /** content-area Y of the picture top on its page (unclamped; the render pins it to the paper) */
+  topY: number
+  behind: boolean
+  html: string
+}
+
+/** the inline transform's leading translate(...) (anchor offset, may nest calc()) */
+export function stripLeadingTranslate(transform: string): string {
+  const m = /^\s*translate\(/.exec(transform)
+  if (!m) return transform
+  let depth = 0
+  for (let i = m[0].length - 1; i < transform.length; i++) {
+    if (transform[i] === '(') depth++
+    else if (transform[i] === ')' && --depth === 0) return transform.slice(i + 1).trim()
+  }
+  return ''
+}
+
+export function pageRelXPictureHtml(img: HTMLElement): string {
+  const copy = img.cloneNode(false) as HTMLElement
+  // the overlay sits at the page position: drop the anchor offset, keep rotation/flip
+  const xf = stripLeadingTranslate(copy.style.transform)
+  if (xf) copy.style.transform = xf
+  else copy.style.removeProperty('transform')
+  copy.style.left = '0px'
+  copy.style.top = '0px'
+  delete copy.dataset.pvOverlaid
+  return copy.outerHTML
+}
+
+/** hoisted boxes show in the body window owning their anchor only (data-pin-win
+ *  stamped at hoist time, data-pv-win on each body clone of a regioned page) */
+export function hoistWindowCss(wins: ReadonlyMap<number, ReadonlySet<string>>): string {
+  const rules: string[] = []
+  for (const [pg, keys] of wins) {
+    for (const key of keys) {
+      const w = `.pv-page[data-pv-page="${pg}"] .pv-content[data-pv-win]:not([data-pv-win="${key}"]) [data-pv-hoist='1'][data-pin-win="${key}"]`
+      rules.push(`${w} > .doc-textbox,${w} > .doc-img-wrap{visibility:hidden;}`)
+    }
+  }
+  return rules.join('\n')
+}
+
 export function pinnedCloneCss(pageCount: number): string {
   const rules: string[] = []
   for (let i = 0; i < pageCount; i++) {
@@ -934,6 +983,7 @@ export function PaginationPreview({
   const { t } = useI18n()
   const [slices, setSlices] = useState<PageSlice[]>([])
   const [splitCss, setSplitCss] = useState('')
+  const [hoistWinCss, setHoistWinCss] = useState('')
   const [vertCss, setVertCss] = useState('')
   const [leakCss, setLeakCss] = useState('')
   const [pageNotes, setPageNotes] = useState<PageNoteItem[][]>([])
@@ -1088,7 +1138,7 @@ export function PaginationPreview({
               : {}),
           }
         })
-        const geoms = sectionGeoms(live, hfHs)
+        const geoms = sectionGeoms(live, hfHs, hf.evenOddHf)
         liveGeoms = geoms
         liveHfHs = hfHs
         // when the canvas column layout is inactive, measure as full-width single flow; the geometry drops column flow to match
@@ -1242,8 +1292,10 @@ export function PaginationPreview({
         delete el.dataset.pvHoist
         delete el.dataset.pvHoistSlot
         delete el.dataset.pinPage
+        delete el.dataset.pinWin
         el.style.removeProperty('--pv-hoist-dy')
       }
+      const hoistWins = new Map<number, Set<string>>()
       // the hoist translate uses each page's own top margin (a titlePg first page
       // renders the first-variant header), so the paper clamp must too
       const hoistFirsts = sectionFirstPages(computed)
@@ -1285,6 +1337,12 @@ export function PaginationPreview({
         wrap.dataset.pvHoist = '1'
         wrap.dataset.pvHoistSlot = slot
         wrap.dataset.pinPage = String(pg)
+        // a regioned page clones the flow once per column window; the escaped
+        // boxes would paint once per window, each copy over the earlier
+        // windows' text, so only the anchor's own window keeps them
+        const winKey = win.start.toFixed(1)
+        wrap.dataset.pinWin = winKey
+        ;(hoistWins.get(pg) ?? hoistWins.set(pg, new Set()).get(pg)!).add(winKey)
         const dy = hoistPaperClamp(
           win.dy,
           hoistPageTopPx(pg, slice.section),
@@ -1295,6 +1353,7 @@ export function PaginationPreview({
       applyLiftTops(computed, blocks)
       applyLeadSpills(computed, blocks, liveGeoms)
       setSplitCss(rowSplitCss(splitOut.rowSplits ?? [], blocks, computed))
+      setHoistWinCss(hoistWindowCss(hoistWins))
       setVertCss(
         liveGeoms.some((g) => g.vertical) ? verticalPageCss(blocks, computed, live, liveGeoms) : '',
       )
@@ -1463,6 +1522,7 @@ export function PaginationPreview({
       </div>
       <style>{pinnedCloneCss(slices.length)}</style>
       {splitCss && <style>{splitCss}</style>}
+      {hoistWinCss && <style>{hoistWinCss}</style>}
       {vertCss && <style>{vertCss}</style>}
       {leakCss && <style>{leakCss}</style>}
       {/* aria-hidden: the cloned page stack is a visual print preview; exposing
@@ -1819,6 +1879,8 @@ export function PaginationPreview({
                                 >
                                   <div
                                     className="doc-page pv-content"
+                                    data-pv-body=""
+                                    data-pv-win={col.start.toFixed(1)}
                                     dangerouslySetInnerHTML={{
                                       __html: cloneKids
                                         ? prunedCloneHtml(
@@ -1870,6 +1932,8 @@ export function PaginationPreview({
                     >
                       <div
                         className="doc-page pv-content"
+                        data-pv-body=""
+                        data-pv-win={slice.start.toFixed(1)}
                         dangerouslySetInnerHTML={{
                           __html: cloneKids
                             ? prunedCloneHtml(
