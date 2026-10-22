@@ -13,6 +13,8 @@ export const AI_SEARCH_PROVIDERS: AiSearchProviderMeta[] = [
   // exa/firecrawl: AI-search APIs without an image endpoint (like Tavily/Parallel)
   { id: 'exa', label: 'Exa', keyPlaceholder: 'Exa API key', imageSearch: false },
   { id: 'firecrawl', label: 'Firecrawl', keyPlaceholder: 'fc-...', imageSearch: false },
+  // keenable: keyless like Parallel; a key only raises the rate limits
+  { id: 'keenable', label: 'Keenable', keyPlaceholder: 'Keenable API key', imageSearch: false },
 ]
 
 export function defaultAiSearchSettings(): AiSearchSettings {
@@ -25,6 +27,7 @@ export function defaultAiSearchSettings(): AiSearchSettings {
       parallel: { apiKey: '' },
       exa: { apiKey: '' },
       firecrawl: { apiKey: '' },
+      keenable: { apiKey: '' },
     },
   }
 }
@@ -35,7 +38,15 @@ export function resolveAiSearchSettings(
   const defaults = defaultAiSearchSettings()
   if (!stored) return defaults
   const providers = { ...defaults.providers }
-  for (const id of ['serper', 'serply', 'tavily', 'parallel', 'exa', 'firecrawl'] as const) {
+  for (const id of [
+    'serper',
+    'serply',
+    'tavily',
+    'parallel',
+    'exa',
+    'firecrawl',
+    'keenable',
+  ] as const) {
     const key = stored.providers?.[id]?.apiKey
     if (typeof key === 'string') providers[id] = { apiKey: key.trim() }
   }
@@ -43,8 +54,8 @@ export function resolveAiSearchSettings(
 }
 
 /**
- * The selected search provider when it can run: Parallel always (it answers
- * keylessly), any other provider once its key is stored. Null when nothing
+ * The selected search provider when it can run: Parallel and Keenable always
+ * (they answer keylessly), any other provider once its key is stored. Null when nothing
  * usable is selected, which leaves the search to the keyless free chain.
  */
 export function activeSearchProvider(
@@ -53,7 +64,7 @@ export function activeSearchProvider(
   const search = settings.search
   if (!search) return null
   if (!AI_SEARCH_PROVIDERS.some((m) => m.id === search.provider)) return null
-  if (search.provider === 'parallel') return 'parallel'
+  if (search.provider === 'parallel' || search.provider === 'keenable') return search.provider
   // Trim-aware: a whitespace-only key from in-memory settings selects nothing
   // instead of sending `Bearer    ` to the search backend.
   return search.providers?.[search.provider]?.apiKey?.trim() ? search.provider : null

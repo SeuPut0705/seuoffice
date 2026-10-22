@@ -9,7 +9,7 @@
  */
 
 import { normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider'
-import { selectedSearchKey } from './search-tools'
+import { keylessSearchBackend, selectedSearchKey } from './search-tools'
 import {
   SCREEN_TOOL_CONTEXT,
   imageGenerationUnavailableMessage,
@@ -79,7 +79,7 @@ export function aiToolCapabilities(
   const video = resolveVideoAnalysisRoute(resolved)
 
   return {
-    webSearch: search ? via('key', search) : via('free', 'parallel'),
+    webSearch: search ? via('key', search) : via('free', keylessSearchBackend(resolved)),
     imageSearch: imageSearchKeyed ? via('key', search) : via('free', 'duckduckgo'),
     imageGeneration:
       image.kind === 'none'

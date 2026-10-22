@@ -13,6 +13,7 @@ afterEach(() => {
   delete process.env.TAVILY_API_KEY
   delete process.env.EXA_API_KEY
   delete process.env.FIRECRAWL_API_KEY
+  delete process.env.KEENABLE_API_KEY
 })
 
 function mockFetch(
@@ -472,6 +473,73 @@ describe('webSearch (Firecrawl)', () => {
   })
 })
 
+describe('webSearch (Keenable)', () => {
+  it('calls the free endpoint with the app title when selected without a key', async () => {
+    const urls: string[] = []
+    let init: RequestInit | undefined
+    mockFetch((url, i) => {
+      urls.push(url)
+      init = i
+      return {
+        ok: true,
+        json: {
+          results: [
+            { title: 'A', url: 'https://a.com', description: '', snippet: 'page text '.repeat(80) },
+            { title: '', url: 'https://b.com', description: '', snippet: 'short' },
+            { title: 'C', url: 'javascript:alert(1)', snippet: 'dropped' },
+          ],
+        },
+      }
+    })
+    const r = await webSearch('q', 5, { keenableKey: '', prefer: 'keenable' })
+    expect(urls).toEqual(['https://api.keenable.ai/v1/search/public'])
+    expect(init?.headers).toEqual({
+      'Content-Type': 'application/json',
+      'X-Keenable-Title': 'GenOffice',
+    })
+    expect(JSON.parse(String(init?.body))).toEqual({ query: 'q', max_results: 5 })
+    expect(r.method).toBe('keenable')
+    expect(r.results).toHaveLength(2)
+    expect(r.results[0]?.snippet).toHaveLength(500)
+    expect(r.results[1]).toEqual({ title: 'https://b.com', url: 'https://b.com', snippet: 'short' })
+  })
+
+  it('sends the key to the keyed endpoint when one is set', async () => {
+    const urls: string[] = []
+    const keys: string[] = []
+    mockFetch((url, init) => {
+      urls.push(url)
+      keys.push(String((init?.headers as Record<string, string>)['X-API-Key']))
+      return { ok: true, json: { results: [{ title: 'A', url: 'https://a.com', snippet: 's' }] } }
+    })
+    const r = await webSearch('q', 3, { keenableKey: 'kn-1', prefer: 'keenable' })
+    expect(r.method).toBe('keenable')
+    expect(urls).toEqual(['https://api.keenable.ai/v1/search'])
+    expect(keys).toEqual(['kn-1'])
+  })
+
+  it('stays out of the default chain without a key', async () => {
+    const urls: string[] = []
+    mockFetch((url) => {
+      urls.push(url)
+      if (url === 'https://search.parallel.ai/mcp') return { ok: false }
+      return {
+        ok: true,
+        text: '<a class="result__a" href="/l/?uddg=https%3A%2F%2Fx.com">X Title</a>',
+      }
+    })
+    const r = await webSearch('q', 3)
+    expect(r.method).toBe('duckduckgo')
+    expect(urls.some((u) => u.includes('keenable.ai'))).toBe(false)
+  })
+
+  it('a keenable failure falls through to the next backend', async () => {
+    mockFetch(() => ({ ok: false }))
+    const r = await webSearch('q', 2, { keenableKey: '', prefer: 'keenable' })
+    expect(r.method).not.toBe('keenable')
+  })
+})
+
 describe('search-tools', () => {
   it('maps the settings block onto SearchOptions', () => {
     const base = defaultAiSettings()
@@ -483,6 +551,7 @@ describe('search-tools', () => {
       parallelKey: '',
       exaKey: '',
       firecrawlKey: '',
+      keenableKey: '',
     }
     // nothing selected: the keyless chain
     const free = { ...none, prefer: 'parallel' }
@@ -498,6 +567,7 @@ describe('search-tools', () => {
           parallel: { apiKey: '' },
           exa: { apiKey: '' },
           firecrawl: { apiKey: '' },
+          keenable: { apiKey: '' },
         },
       },
     }
@@ -517,6 +587,7 @@ describe('search-tools', () => {
           parallel: { apiKey: '' },
           exa: { apiKey: '' },
           firecrawl: { apiKey: '' },
+          keenable: { apiKey: '' },
         },
       },
     }
@@ -536,6 +607,7 @@ describe('search-tools', () => {
           parallel: { apiKey: '' },
           exa: { apiKey: 'e' },
           firecrawl: { apiKey: '' },
+          keenable: { apiKey: '' },
         },
       },
     }
@@ -555,6 +627,7 @@ describe('search-tools', () => {
           parallel: { apiKey: '' },
           exa: { apiKey: '' },
           firecrawl: { apiKey: 'fc-1' },
+          keenable: { apiKey: '' },
         },
       },
     }
@@ -575,10 +648,17 @@ describe('search-tools', () => {
           parallel: { apiKey: '' },
           exa: { apiKey: '' },
           firecrawl: { apiKey: '' },
+          keenable: { apiKey: '' },
         },
       },
     }
     expect(searchOptionsFromSettings(empty)).toEqual(free)
+    // keenable stays selected without a key (free endpoint), the keyless chain behind it
+    const keenable = {
+      ...base,
+      search: { ...empty.search, provider: 'keenable' as const },
+    }
+    expect(searchOptionsFromSettings(keenable)).toEqual({ ...none, prefer: 'keenable' })
   })
 
   it('reports a rejected key as a failure instead of the silent free fallback', async () => {
@@ -613,5 +693,11 @@ describe('search-tools', () => {
         : { ok: false },
     )
     expect(await testSearchProvider('firecrawl', 'right')).toEqual({ ok: true })
+    mockFetch((url) =>
+      url === 'https://api.keenable.ai/v1/search/public'
+        ? { ok: true, json: { results: [{ title: 'A', url: 'https://a.com', snippet: 's' }] } }
+        : { ok: false },
+    )
+    expect(await testSearchProvider('keenable', '')).toEqual({ ok: true })
   })
 })

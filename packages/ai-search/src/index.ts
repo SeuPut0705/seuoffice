@@ -1,10 +1,11 @@
 /**
  * Search utilities (main process) — Serper Google API first,
- * then Serply, Tavily, Parallel (whose free Search MCP answers keyless), Exa and Firecrawl,
- * before the DuckDuckGo last resort. Runs in the main process
- * (Node fetch / child process) to avoid renderer CORS; the Serper key reuses SERPER_API_KEY,
- * the Serply key reuses SERPLY_API_KEY, the Tavily key reuses TAVILY_API_KEY, Parallel uses
- * PARALLEL_API_KEY, Exa uses EXA_API_KEY and Firecrawl uses FIRECRAWL_API_KEY.
+ * then Serply, Tavily, Parallel (whose free Search MCP answers keyless), Exa, Firecrawl and
+ * Keenable (keyless only when selected), before the DuckDuckGo last resort. Runs in the main
+ * process (Node fetch / child process) to avoid renderer CORS; the Serper key reuses
+ * SERPER_API_KEY, the Serply key reuses SERPLY_API_KEY, the Tavily key reuses TAVILY_API_KEY,
+ * Parallel uses PARALLEL_API_KEY, Exa uses EXA_API_KEY, Firecrawl uses FIRECRAWL_API_KEY and
+ * Keenable uses KEENABLE_API_KEY.
  * Without any key that leaves the free route: Parallel's Search MCP, then DuckDuckGo.
  */
 
@@ -34,6 +35,7 @@ const TAVILY_KEY = () => process.env.TAVILY_API_KEY ?? ''
 const PARALLEL_KEY = () => process.env.PARALLEL_API_KEY ?? ''
 const EXA_KEY = () => process.env.EXA_API_KEY ?? ''
 const FIRECRAWL_KEY = () => process.env.FIRECRAWL_API_KEY ?? ''
+const KEENABLE_KEY = () => process.env.KEENABLE_API_KEY ?? ''
 
 /**
  * Backend selection for one search. A key left out defaults to its SERPER_API_KEY /
@@ -48,8 +50,9 @@ export interface SearchOptions {
   parallelKey?: string
   exaKey?: string
   firecrawlKey?: string
+  keenableKey?: string
   /** which backend to try first (default serper) */
-  prefer?: 'serper' | 'serply' | 'tavily' | 'parallel' | 'exa' | 'firecrawl'
+  prefer?: 'serper' | 'serply' | 'tavily' | 'parallel' | 'exa' | 'firecrawl' | 'keenable'
 }
 
 const SEARCH_BACKENDS = new Set([
@@ -59,6 +62,7 @@ const SEARCH_BACKENDS = new Set([
   'parallel',
   'exa',
   'firecrawl',
+  'keenable',
 ] as const)
 
 /** The environment key of one backend: a developer's stand-in for the key of the provider selected in settings. */
@@ -70,6 +74,7 @@ export function searchEnvKey(backend: NonNullable<SearchOptions['prefer']>): str
     parallel: PARALLEL_KEY,
     exa: EXA_KEY,
     firecrawl: FIRECRAWL_KEY,
+    keenable: KEENABLE_KEY,
   }
   return keys[backend]().trim()
 }
@@ -83,6 +88,7 @@ function normalizeOptions(opts: boolean | SearchOptions | undefined): Required<S
     parallelKey: o.parallelKey ?? PARALLEL_KEY(),
     exaKey: o.exaKey ?? EXA_KEY(),
     firecrawlKey: o.firecrawlKey ?? FIRECRAWL_KEY(),
+    keenableKey: o.keenableKey ?? KEENABLE_KEY(),
     // `prefer` arrives from an ipc payload cast with `as`; an unknown id would make the
     // dispatch call a missing function.
     prefer:
@@ -378,6 +384,61 @@ async function firecrawlWebSearch(
   }
 }
 
+/** The keyless endpoint identifies the calling app by this header instead of a key. */
+const KEENABLE_TITLE = 'GenOffice'
+const KEENABLE_SNIPPET_CHARS = 500
+
+/**
+ * Keenable's search API: with a key /v1/search, without one the free /v1/search/public
+ * (rate-limited per IP). The keyless call runs only when Keenable is the selected provider,
+ * so the default chain never reaches it. `snippet` carries raw page text (`description` is
+ * empty), capped like Exa's text pass. Results only, no synthesized answer.
+ */
+async function keenableWebSearch(
+  key: string,
+  query: string,
+  maxResults: number,
+  keyless: boolean,
+): Promise<WebSearchResponse | null> {
+  key = key.trim()
+  if (!key && !keyless) return null
+  try {
+    return await fetchWithTimeout(
+      key ? 'https://api.keenable.ai/v1/search' : 'https://api.keenable.ai/v1/search/public',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Keenable-Title': KEENABLE_TITLE,
+          ...(key ? { 'X-API-Key': key } : {}),
+        },
+        body: JSON.stringify({ query, max_results: maxResults }),
+      },
+      async (resp) => {
+        if (!resp.ok) return null
+        const data = asRecord(await resp.json())
+        const raw: unknown[] = Array.isArray(data.results) ? data.results : []
+        const results: WebSearchResult[] = []
+        for (const item of raw) {
+          if (results.length >= maxResults) break
+          const o = asRecord(item)
+          const url = typeof o.url === 'string' ? o.url : ''
+          if (!/^https?:\/\//i.test(url)) continue
+          const text = String(o.snippet || o.description || '').trim()
+          results.push({
+            title: typeof o.title === 'string' && o.title ? o.title : url,
+            url,
+            snippet: text.slice(0, KEENABLE_SNIPPET_CHARS),
+          })
+        }
+        return results.length ? { results, method: 'keenable' } : null
+      },
+    )
+  } catch {
+    return null
+  }
+}
+
 // ── Web search ──────────────────────────────────────────────────────
 
 /**
@@ -410,10 +471,11 @@ export async function webSearch(
     parallel: () => parallelWebSearch(o.parallelKey, q, max),
     exa: () => exaWebSearch(o.exaKey, q, max),
     firecrawl: () => firecrawlWebSearch(o.firecrawlKey, q, max),
+    keenable: () => keenableWebSearch(o.keenableKey, q, max, o.prefer === 'keenable'),
   }
   const order = [
     o.prefer,
-    ...(['serper', 'serply', 'tavily', 'parallel', 'exa', 'firecrawl'] as const).filter(
+    ...(['serper', 'serply', 'tavily', 'parallel', 'exa', 'firecrawl', 'keenable'] as const).filter(
       (id) => id !== o.prefer,
     ),
   ]

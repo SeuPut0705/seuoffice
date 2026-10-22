@@ -1511,11 +1511,13 @@ function AiMediaPane({
         <div className="set-field-desc set-ai-note">
           {search.provider === 'parallel'
             ? t('setAiSearchParallelHint')
-            : search.provider === 'serply'
-              ? t('setAiSearchSerplyHint')
-              : searchMeta?.imageSearch
-                ? t('setAiSearchSerperHint')
-                : t('setAiSearchTavilyHint')}
+            : search.provider === 'keenable'
+              ? t('setAiSearchKeenableHint')
+              : search.provider === 'serply'
+                ? t('setAiSearchSerplyHint')
+                : searchMeta?.imageSearch
+                  ? t('setAiSearchSerperHint')
+                  : t('setAiSearchTavilyHint')}
         </div>
         {keyRow('set-ai-search-key', searchKey, searchMeta?.keyPlaceholder ?? 'API Key', (v) =>
           setSearch({

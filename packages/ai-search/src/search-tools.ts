@@ -3,7 +3,8 @@
  * ai-settings.json live and turns the search provider choice into
  * SearchOptions. The default is the keyless chain (free Parallel MCP, then
  * DuckDuckGo); a key provider the user selected runs first, with that chain
- * behind it.
+ * behind it. Keenable's free endpoint only runs when Keenable is the selected
+ * provider.
  */
 
 import {
@@ -24,10 +25,19 @@ const NO_SEARCH_KEYS = {
   parallelKey: '',
   exaKey: '',
   firecrawlKey: '',
+  keenableKey: '',
 } satisfies SearchOptions
 
-/** The keyless chain and nothing else: free Parallel search, then DuckDuckGo. */
-const FREE_SEARCH_OPTIONS: SearchOptions = { ...NO_SEARCH_KEYS, prefer: 'parallel' }
+/**
+ * The backend the keyless chain starts on: Keenable when it is the selected
+ * provider (its free endpoint runs only then), else free Parallel search; the
+ * rest of the keyless chain and DuckDuckGo follow either way.
+ */
+export function keylessSearchBackend(
+  settings: Pick<AiSettings, 'search'>,
+): 'parallel' | 'keenable' {
+  return settings.search?.provider === 'keenable' ? 'keenable' : 'parallel'
+}
 
 /**
  * The key search provider the user selected, with the key it runs on, or null
@@ -50,7 +60,7 @@ export function selectedSearchKey(
 
 export function searchOptionsFromSettings(settings: AiSettings): SearchOptions {
   const selected = selectedSearchKey(settings)
-  if (!selected) return { ...FREE_SEARCH_OPTIONS }
+  if (!selected) return { ...NO_SEARCH_KEYS, prefer: keylessSearchBackend(settings) }
   return {
     ...NO_SEARCH_KEYS,
     [`${selected.provider}Key`]: selected.key,
@@ -72,7 +82,8 @@ export async function testSearchProvider(
   apiKey: string,
 ): Promise<{ ok: boolean; error?: string }> {
   apiKey = apiKey.trim()
-  if (!apiKey && provider !== 'parallel') return { ok: false, error: 'API key is empty' }
+  if (!apiKey && provider !== 'parallel' && provider !== 'keenable')
+    return { ok: false, error: 'API key is empty' }
   const options: SearchOptions = {
     serperKey: provider === 'serper' ? apiKey : '',
     serplyKey: provider === 'serply' ? apiKey : '',
@@ -80,6 +91,7 @@ export async function testSearchProvider(
     parallelKey: provider === 'parallel' ? apiKey : '',
     exaKey: provider === 'exa' ? apiKey : '',
     firecrawlKey: provider === 'firecrawl' ? apiKey : '',
+    keenableKey: provider === 'keenable' ? apiKey : '',
     prefer: provider,
   }
   const r = await webSearch('GenOffice', 1, options)
