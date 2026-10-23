@@ -175,6 +175,7 @@ import {
 } from '@genoffice/xlsx-gateway/gateway/xlsx-package-io'
 import { parsePivotDefinition } from '@genoffice/xlsx-gateway/gateway/xlsx-pivot'
 import { listWorkbookQueries } from '@genoffice/xlsx-gateway/gateway/xlsx-connections'
+import { readWorkbookRedactionPart } from './workbook-redactions'
 import type {
   AttachmentAddResult,
   AttachmentImageResult,
@@ -199,6 +200,8 @@ import {
   workbookPivotRequestSchema,
   workbookQueriesRequestSchema,
   workbookQueriesResultSchema,
+  workbookRedactionsRequestSchema,
+  workbookRedactionsResultSchema,
   localImageRequestSchema,
   localImageResultSchema,
   screenCaptureRequestSchema,
@@ -4494,6 +4497,18 @@ export function registerSheetsIpc(): void {
           ? readArchiveEntryText(entry.client, session.snapshotPath, path)
           : Promise.resolve(undefined),
       ),
+    )
+  })
+
+  ipcMain.handle(IPC_CHANNELS.readWorkbookRedactions, async (event, input: unknown) => {
+    const entry = sessionFor(event)
+    const request = workbookRedactionsRequestSchema.parse(input)
+    const session = entry.sessions.get(request.sessionId)
+    if (!session) throw new Error('Unknown workbook session.')
+    // A damaged part answers `unreadable` rather than an empty list: reporting
+    // "nothing is withheld" would hand the model the values it holds.
+    return workbookRedactionsResultSchema.parse(
+      await readWorkbookRedactionPart(entry.client, session.snapshotPath),
     )
   })
 

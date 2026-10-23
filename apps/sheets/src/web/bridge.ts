@@ -327,6 +327,13 @@ const desktopApi: WebDesktopApi = {
     reportOpened()
     return result
   },
+  readWorkbookRedactions: async (request) => {
+    const session = current
+    if (!session || session.sessionId !== request.sessionId) {
+      throw new Error('Unknown workbook session.')
+    }
+    return engine().readRedactions(session.engineName)
+  },
   closeWorkbook: async (sessionId) => {
     // a save already closed the session it replaced
     if (current?.sessionId !== sessionId) return

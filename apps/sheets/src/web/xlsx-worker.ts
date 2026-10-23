@@ -2,6 +2,7 @@
 // Workbook bytes land in the preopened /work directory; requests are the sidecar's JSON protocol.
 import wasmUrl from './generated/xlsx-wasm.wasm?url'
 import { ConsoleStdout, File, OpenFile, PreopenDirectory, WASI } from '@seuoffice/web-platform/wasi'
+import type { RedactionPartRead } from '../main/workbook-redactions'
 import type { ResolvedWorkbookSave } from '../main/workbook-save-resolve'
 
 const PROTOCOL_VERSION = 1
@@ -11,6 +12,7 @@ export type WorkerRequest =
   | { id: number; kind: 'drop'; name: string }
   | { id: number; kind: 'call'; request: unknown }
   | { id: number; kind: 'save'; source: string; target: string; save: ResolvedWorkbookSave }
+  | { id: number; kind: 'redactions'; source: string }
 
 export type WorkerReply =
   { id: number; ok: true; result?: unknown } | { id: number; ok: false; error: string }
@@ -112,6 +114,14 @@ async function save(message: Extract<WorkerRequest, { kind: 'save' }>): Promise<
   return saveWorkbook({ command, work, scratch }, message.source, message.target, message.save)
 }
 
+async function redactions(
+  message: Extract<WorkerRequest, { kind: 'redactions' }>,
+): Promise<RedactionPartRead> {
+  // with the planner, which the viewer does not load (see save)
+  const { readRedactions } = await import('./xlsx-save')
+  return readRedactions({ command, work, scratch }, message.source)
+}
+
 function fail(id: number, error: unknown): void {
   scope.postMessage({
     id,
@@ -136,6 +146,13 @@ scope.addEventListener('message', (event) => {
   if (message.kind === 'save') {
     save(message).then(
       (result) => scope.postMessage({ id, ok: true, result }, [result.bytes.buffer]),
+      (error: unknown) => fail(id, error),
+    )
+    return
+  }
+  if (message.kind === 'redactions') {
+    redactions(message).then(
+      (result) => scope.postMessage({ id, ok: true, result }),
       (error: unknown) => fail(id, error),
     )
     return

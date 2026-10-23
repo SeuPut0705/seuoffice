@@ -10,6 +10,7 @@ import {
 } from '@genoffice/xlsx-gateway/gateway/xlsx-package-io'
 import { MAX_PATCH_ENTRY_BYTES } from '@genoffice/xlsx-gateway/shared/edit-schemas'
 import { File } from '@seuoffice/web-platform/wasi'
+import { readRedactionEntries, type RedactionPartRead } from '../main/workbook-redactions'
 import type { ResolvedWorkbookSave } from '../main/workbook-save-resolve'
 
 /** The worker's engine: one protocol command, and the files behind /work and /save */
@@ -71,6 +72,7 @@ export async function saveWorkbook(
       save.tabColorStates ?? [],
       save.tableEdits ?? [],
       save.cellImageAdditions ?? [],
+      save.redactionStates ?? [],
     )
     const result = (await engine.command('save_archive', {
       sourcePath,
@@ -93,6 +95,18 @@ export async function saveWorkbook(
   } finally {
     engine.scratch.clear()
   }
+}
+
+/** The cells the reader withheld from the model in /work/<source>, read as the desktop open reads them */
+export async function readRedactions(
+  engine: EngineFiles,
+  source: string,
+): Promise<RedactionPartRead> {
+  const sourcePath = `/work/${source}`
+  const { entries: manifest } = (await engine.command('archive_manifest', {
+    path: sourcePath,
+  })) as { entries: ArchiveEntry[] }
+  return readRedactionEntries(entrySource(engine, sourcePath, manifest))
 }
 
 /** The entries of the engine's copy, read through the engine (as createSidecarEntrySource does) */

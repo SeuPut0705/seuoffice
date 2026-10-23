@@ -94,6 +94,12 @@ const ALLOW = [
       'XML namespace written into saved documents: changing it would stop reading redactions made with the original',
   },
   {
+    path: /^packages\/xlsx-gateway\/(?:src\/gateway|tests)\/xlsx-redaction(?:\.test)?\.ts$/,
+    span: /https:\/\/schemas\.genspark\.ai\/genoffice\/2026\/relationships\/redactions?\b/g,
+    reason:
+      'relationship type of the hidden-cells part written into saved workbooks: changing it would stop reading marks made with the original',
+  },
+  {
     path: /^apps\/sheets\/native\/xlsx-engine\/src\/(?:lib|tests)\.rs$/,
     span: /genspark-ai-excel-/g,
     reason:
