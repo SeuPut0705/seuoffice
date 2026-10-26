@@ -367,7 +367,7 @@ const EXT_RE = /^\.[a-z0-9]{1,10}$/
 const UNTITLED_ID_RE = /^[A-Za-z0-9_-]{1,64}$/
 const FILE_COPY_RE = /^[0-9a-f]{16}\.[a-z0-9]{1,10}$/
 const UNTITLED_COPY_RE = /^[A-Za-z0-9_-]{1,64}\.[a-z0-9]{1,10}$/
-const TEMP_RE = /^\..+\.[0-9a-f]{12}\.tmp$/
+const TEMP_RE = /^.+\.[0-9a-f]{12}\.tmp$/
 
 const KIND_DEFAULT_EXT: Record<RecoveryEditorKind, string> = {
   docs: '.docx',

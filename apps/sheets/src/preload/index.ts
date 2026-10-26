@@ -2304,9 +2304,9 @@ function parseSaveRequest(input: WorkbookSaveRequest): WorkbookSaveRequest {
     )
   )
     invalid('protected-range states: malformed entry')
-  cappedArray('redaction states', input.redactionStates, 1_000)
+  if (input.redactionStates !== null) cappedArray('redaction states', input.redactionStates, 1_000)
   if (
-    input.redactionStates.some(
+    (input.redactionStates ?? []).some(
       (state) =>
         !isRecord(state) ||
         typeof state.sheetName !== 'string' ||
@@ -2354,7 +2354,7 @@ function parseSaveRequest(input: WorkbookSaveRequest): WorkbookSaveRequest {
     input.themeState === null &&
     input.workbookProtectionState === null &&
     input.protectedRangeStates.length === 0 &&
-    input.redactionStates.length === 0
+    (input.redactionStates?.length ?? 0) === 0
   )
     invalid('no changes to save')
   if (input.sheetOps.length > 0 && input.sheetOrder.length === 0)

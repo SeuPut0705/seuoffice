@@ -54,6 +54,6 @@
   },
   "dependencies": {
     "parse5": "^8.0.1",
-    "undici": "^6.29.0"
+    "undici": "^6.29.1"
   }
 }

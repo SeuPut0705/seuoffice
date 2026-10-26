@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { closeSync, fsyncSync, openSync, readFileSync, writeFileSync } from 'node:fs'
 import { rename, rm } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 
 import JSZip from 'jszip'
 import { assertZipInflatesWithinLimits } from '@genoffice/zip-gate'
@@ -803,7 +803,7 @@ export async function applyCellEditsToXlsx(
   pageSetupStates: readonly SheetPageSetupState[] = [],
   noteStates: readonly SheetNoteState[] = [],
   formulaValues: readonly SheetFormulaValues[] = [],
-  redactionStates: readonly SheetRedactionState[] = [],
+  redactionStates: readonly SheetRedactionState[] | null = null,
 ): Promise<XlsxMutation> {
   const plan = await planCellEditsToXlsx(
     await createBufferEntrySource(source),
@@ -963,8 +963,9 @@ export async function planCellEditsToXlsx(
   cellImageAdditions: readonly SheetCellImageAddition[] = [],
   // Last, deliberately: every caller written against an older order would
   // otherwise see `tabColorStates` or a cell image land here and a parsed
-  // table edit parsed as a tab colour.
-  redactionStates: readonly SheetRedactionState[] = [],
+  // table edit parsed as a tab colour. null = the caller does not know the
+  // marks (CLI, the second phase of a split save), so the part stays as it is.
+  redactionStates: readonly SheetRedactionState[] | null = null,
 ): Promise<MutationPlan> {
   // A pending pivot pins final coordinates for its source and output; shifts
   // on either sheet, and sheet renames (worksheetSource@sheet), would desync
@@ -1268,16 +1269,19 @@ export async function planCellEditsToXlsx(
   // Withheld cells travel in a package part of their own, so they are written
   // here rather than with the worksheets. A sheet renamed or removed in this
   // same save takes its marks with it first — see rekeyRedactionStates.
-  // Unconditional, including for an empty list. Clearing the last mark has to
-  // remove the part, and a call guarded on "there is something to write" is
-  // exactly the call that never happens when the reader un-hides everything.
-  const rekeyed = rekeyRedactionStates(
-    redactionStates,
-    sheetPlan?.renames ?? [],
-    sheetPlan?.removals ?? [],
-    structuralOps,
-  )
-  await applyRedactionPart(pkg, touchedEntries, rekeyed)
+  // An empty list clears the part (the reader un-hid everything); null leaves
+  // it untouched, because a caller that never loaded the marks must not drop
+  // them.
+  const rekeyed =
+    redactionStates === null
+      ? null
+      : rekeyRedactionStates(
+          redactionStates,
+          sheetPlan?.renames ?? [],
+          sheetPlan?.removals ?? [],
+          structuralOps,
+        )
+  if (rekeyed !== null) await applyRedactionPart(pkg, touchedEntries, rekeyed)
 
   const editsBySheet = groupBySheet(edits)
   const fillsBySheet = groupBySheet(bulkConstantFills)
@@ -1765,11 +1769,13 @@ export async function planCellEditsToXlsx(
   // the sheet list this save actually produced, not the one it started from.
   // (The part above is the record; this is only what survives a reader that
   // rebuilds the package and drops the part — see applyRedactionNameMirror.)
-  workbookXml = applyRedactionNameMirror(
-    workbookXml,
-    rekeyed,
-    parseSheetElements(workbookXml).map((sheet) => sheet.name),
-  )
+  if (rekeyed !== null) {
+    workbookXml = applyRedactionNameMirror(
+      workbookXml,
+      rekeyed,
+      parseSheetElements(workbookXml).map((sheet) => sheet.name),
+    )
+  }
 
   if (workbookXml !== originalWorkbookXml) {
     pkg.write(workbookPath, workbookXml)
@@ -2175,7 +2181,7 @@ export async function syncFileBestEffort(path: string): Promise<void> {
 }
 
 export async function writeXlsxAtomically(path: string, buffer: Buffer): Promise<void> {
-  const temporaryPath = join(dirname(path), `.${crypto.randomUUID()}.tmp.xlsx`)
+  const temporaryPath = join(dirname(path), `${basename(path)}.${crypto.randomUUID()}.tmp`)
   try {
     writeFileSync(temporaryPath, buffer, { flag: 'wx' })
     await syncFileBestEffort(temporaryPath)

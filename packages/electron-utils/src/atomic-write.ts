@@ -29,7 +29,7 @@ const sleepSync = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuf
 
 /**
  * Most bytes of the target's name a temp name carries. The temp name adds
- * `.` + `.` + 12 hex + `.tmp` (18 bytes) and Linux and macOS cap a file name
+ * `.` + 12 hex + `.tmp` (17 bytes) and Linux and macOS cap a file name
  * at 255 bytes, so a long Hangul name (3 bytes a letter) must be shortened
  * or the temp file cannot be created even though the target itself exists.
  */
@@ -48,11 +48,15 @@ function nameHead(name: string, maxBytes: number): string {
   return head
 }
 
-/** a fresh `.<name>.<12 hex>.tmp` path in the target's folder (a long name is cut short) */
+/**
+ * a fresh `<name>.<12 hex>.tmp` path in the target's folder (a long name is cut short).
+ * No leading dot: the macOS SMB client marks dot-files hidden and the flag
+ * survives the rename onto the real document (genoffice#2145).
+ */
 export const tempPathBeside = (filePath: string) =>
   join(
     dirname(filePath),
-    `.${nameHead(basename(filePath), TEMP_NAME_MAX_BYTES)}.${randomBytes(6).toString('hex')}.tmp`,
+    `${nameHead(basename(filePath), TEMP_NAME_MAX_BYTES)}.${randomBytes(6).toString('hex')}.tmp`,
   )
 
 async function syncFileBestEffort(path: string): Promise<void> {

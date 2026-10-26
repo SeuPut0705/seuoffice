@@ -131,7 +131,7 @@ describe('CLI output save failure recovery', () => {
         }
         const rescue = readdirSync(dir).filter((name) => name !== 'document.docx')
         expect(rescue).toHaveLength(1)
-        expect(rescue[0]).toMatch(/^\.document\.docx\.[a-f0-9]{12}\.tmp$/)
+        expect(rescue[0]).toMatch(/^document\.docx\.[a-f0-9]{12}\.tmp$/)
         // the error names the rescue copy, so the caller can find the finished edit
         expect(thrown).toBeInstanceOf(CliError)
         expect((thrown as CliError).message).toContain(error.message)
@@ -170,7 +170,7 @@ describe('CLI output save failure recovery', () => {
     expect(failed.json()).toMatchObject({ status: 'error', error: 'conversion_failed' })
     expect(readFileSync(target).toString()).toBe('PK')
     const rescue = readdirSync(dir).filter((name) =>
-      /^\.source\.docx\.[a-f0-9]{12}\.tmp$/.test(name),
+      /^source\.docx\.[a-f0-9]{12}\.tmp$/.test(name),
     )
     expect(rescue).toHaveLength(1)
     expect(failed.json().detail).toEqual({ rescue_path: join(dir, rescue[0]!) })

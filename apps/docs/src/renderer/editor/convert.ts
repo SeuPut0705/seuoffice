@@ -4,6 +4,7 @@ import {
   setPPrChange,
   stripPPrChange,
   stripParaMarkRevision,
+  resolveParaMarkRPrChange,
   paraMarkColor,
   stripParaMarkColor,
   ommlToLatex,
@@ -927,6 +928,9 @@ function blockToPmNode(
           pPrChange: block.pPrChangeInfo ? JSON.stringify(block.pPrChangeInfo) : null,
           paraMarkDel: block.paraMarkDel ? JSON.stringify(block.paraMarkDel) : null,
           paraMarkIns: block.paraMarkIns ? JSON.stringify(block.paraMarkIns) : null,
+          paraMarkRPrChange: block.paraMarkRPrChange
+            ? JSON.stringify(block.paraMarkRPrChange)
+            : null,
           blockRevision: block.blockRevision ?? null,
           ...formatAttrs(block.format, block.runs),
         },
@@ -949,6 +953,9 @@ function blockToPmNode(
           pPrChange: block.pPrChangeInfo ? JSON.stringify(block.pPrChangeInfo) : null,
           paraMarkDel: block.paraMarkDel ? JSON.stringify(block.paraMarkDel) : null,
           paraMarkIns: block.paraMarkIns ? JSON.stringify(block.paraMarkIns) : null,
+          paraMarkRPrChange: block.paraMarkRPrChange
+            ? JSON.stringify(block.paraMarkRPrChange)
+            : null,
           blockRevision: block.blockRevision ?? null,
           ...formatAttrs(block.format, block.runs),
         },
@@ -970,6 +977,9 @@ function blockToPmNode(
           pPrChange: block.pPrChangeInfo ? JSON.stringify(block.pPrChangeInfo) : null,
           paraMarkDel: block.paraMarkDel ? JSON.stringify(block.paraMarkDel) : null,
           paraMarkIns: block.paraMarkIns ? JSON.stringify(block.paraMarkIns) : null,
+          paraMarkRPrChange: block.paraMarkRPrChange
+            ? JSON.stringify(block.paraMarkRPrChange)
+            : null,
           blockRevision: block.blockRevision ?? null,
           ...formatAttrs(block.format, block.runs),
         },
@@ -3512,6 +3522,11 @@ function applyRawPPr(generated: GeneratedBlock, original: Block): void {
     rawPPr = stripParaMarkRevision(rawPPr, 'del')
   if (generated.paraMarkIns === null && original.paraMarkIns)
     rawPPr = stripParaMarkRevision(rawPPr, 'ins')
+  if (original.paraMarkRPrChange) {
+    if (generated.paraMarkRPrChange === null) rawPPr = resolveParaMarkRPrChange(rawPPr, 'accept')
+    else if (generated.paraMarkRPrChange?.includes('"resolved":"reject"'))
+      rawPPr = resolveParaMarkRPrChange(rawPPr, 'reject')
+  }
   const markColor = paraMarkColor(rawPPr)
   if (markColor && generated.runs.some((r) => r.text)) {
     const hasColor = (runs: Run[] | undefined) =>
@@ -3714,10 +3729,13 @@ export function pmNodeToGeneratedBlock(node: PmNode): GeneratedBlock {
 }
 
 /** null = no pending paragraph-mark revision; applyRawPPr strips the record the original carried */
-function paraMarkRevisions(node: PmNode): Pick<GeneratedBlock, 'paraMarkDel' | 'paraMarkIns'> {
+function paraMarkRevisions(
+  node: PmNode,
+): Pick<GeneratedBlock, 'paraMarkDel' | 'paraMarkIns' | 'paraMarkRPrChange'> {
   return {
     paraMarkDel: (node.attrs?.paraMarkDel as string | null | undefined) ?? null,
     paraMarkIns: (node.attrs?.paraMarkIns as string | null | undefined) ?? null,
+    paraMarkRPrChange: (node.attrs?.paraMarkRPrChange as string | null | undefined) ?? null,
   }
 }
 
@@ -4172,6 +4190,7 @@ export function signatureOfBlock(block: Block): string {
     pPrChange: block.pPrChangeInfo ? JSON.stringify(block.pPrChangeInfo) : null,
     paraMarkDel: block.paraMarkDel ? JSON.stringify(block.paraMarkDel) : null,
     paraMarkIns: block.paraMarkIns ? JSON.stringify(block.paraMarkIns) : null,
+    paraMarkRPrChange: block.paraMarkRPrChange ? JSON.stringify(block.paraMarkRPrChange) : null,
     blockRevision: block.blockRevision ?? null,
   })
 }
@@ -4192,6 +4211,7 @@ export function signatureOfGenerated(block: GeneratedBlock): string {
     pPrChange: block.pPrChange ?? null,
     paraMarkDel: block.paraMarkDel ?? null,
     paraMarkIns: block.paraMarkIns ?? null,
+    paraMarkRPrChange: block.paraMarkRPrChange ?? null,
     blockRevision: block.blockRevision ?? null,
   })
 }

@@ -135,8 +135,8 @@ describe('atomicWriteFile', () => {
     // the fallback failed, so the completed temp is kept as the rescue copy
     const leftovers = readdirSync(dir).sort()
     expect(leftovers).toHaveLength(2)
-    expect(leftovers[0]).toMatch(/^\.a\.docx\..{12}\.tmp$/)
-    expect(leftovers[1]).toBe('a.docx')
+    expect(leftovers[0]).toBe('a.docx')
+    expect(leftovers[1]).toMatch(/^a\.docx\..{12}\.tmp$/)
   })
 })
 
@@ -270,7 +270,7 @@ describe('atomicWriteVia', () => {
     expect(readdirSync(dir)).toEqual(['a.pptx'])
   })
 
-  // Same fallback contract as atomicWriteFile (#1878): a mount that refuses
+  // Same fallback contract as atomicWriteFile (genoffice#1878): a mount that refuses
   // rename-over-existing still receives the completed temp, copied in place.
   it('falls back to an in-place copy when the mount refuses the rename', async () => {
     dir = mkdtempSync(join(tmpdir(), 'eu-av-'))
@@ -370,12 +370,12 @@ describe('writeJsonAtomic', () => {
 describe('tempPathBeside', () => {
   it('keeps a short name whole and a long Hangul name within the 255-byte file-name limit', () => {
     expect(basename(tempPathBeside(join('dir', 'a.docx')))).toMatch(
-      /^\.a\.docx\.[0-9a-f]{12}\.tmp$/,
+      /^a\.docx\.[0-9a-f]{12}\.tmp$/,
     )
     const name = `${'가'.repeat(100)}😀.docx`
     const temp = basename(tempPathBeside(join('dir', name)))
     expect(Buffer.byteLength(temp)).toBeLessThanOrEqual(255)
-    expect(temp).toMatch(/^\..+\.[0-9a-f]{12}\.tmp$/)
+    expect(temp).toMatch(/^.+\.[0-9a-f]{12}\.tmp$/)
     // a lone surrogate would not survive the trip through UTF-8
     expect(Buffer.from(temp).toString('utf-8')).toBe(temp)
   })
