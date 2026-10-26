@@ -170,6 +170,7 @@ export type DecisionEndpoint =
   | 'perplexity-flash'
   | 'liquid'
   | 'liquid-ultra'
+  | 'openai'
   | 'cloudflare'
   | 'cloudflare-flash'
   | 'kev'

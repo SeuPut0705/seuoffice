@@ -59,6 +59,7 @@ test('Jev reranking lives under AI > Advanced > AI Media & Search, saves with it
           'perplexity-flash': '',
           liquid: '',
           'liquid-ultra': '',
+          openai: '',
           cloudflare: '',
           'cloudflare-flash': '',
           kev: '',
