@@ -4113,6 +4113,39 @@ export function registerSheetsIpc(): void {
     }
   })
 
+  // Review › Change Password: the encrypted file gets its saved contents again
+  // under the new password. The session's plaintext snapshot is those contents
+  // (the renderer saves pending edits first), so nothing is decrypted here.
+  ipcMain.handle(IPC_CHANNELS.updateWorkbookPassword, async (event, input: unknown) => {
+    const { sessionId, newPassword } = z
+      .object({
+        sessionId: z.string().uuid(),
+        newPassword: z.string().min(1).max(1024),
+      })
+      .strict()
+      .parse(input)
+    const entry = sessionFor(event)
+    const session = entry.sessions.get(sessionId)
+    if (!session) throw new Error('Unknown workbook session.')
+    const encryptedPath = session.restoreTarget
+    if (session.password === undefined || encryptedPath === undefined) {
+      throw new Error('This workbook is not protected by an open password.')
+    }
+    const currentSha = await sha256File(encryptedPath).catch(() => undefined)
+    if (currentSha !== undefined && currentSha !== session.restoreTargetSha) {
+      throw new Error(tm('errDiskChanged'))
+    }
+    const encryptedBytes = encryptOoxml(await readFile(session.snapshotPath), newPassword)
+    await atomicWriteFile(encryptedPath, encryptedBytes)
+    const diskState = await recordDiskState(encryptedPath)
+    entry.sessions.set(sessionId, {
+      ...session,
+      password: newPassword,
+      restoreTargetSha: createHash('sha256').update(encryptedBytes).digest('hex'),
+      ...(diskState === null ? {} : { diskState: { path: encryptedPath, state: diskState } }),
+    })
+  })
+
   ipcMain.handle(IPC_CHANNELS.reopenWorkbook, async (event, path: unknown) => {
     const validated = z.string().min(1).parse(path)
     // A converted, restored, new or decrypted workbook is more than its path:
@@ -5912,6 +5945,8 @@ async function openWorkbookSession(
       // an encrypted workbook's restoreTarget is the file itself, not a restore
       restoredFromRecovery: restoreTarget !== undefined && password === undefined,
       automaticRecoveryDisabled,
+      // a converted encrypted .xls has no encrypted package to rewrite until its Save As
+      ...(password !== undefined && restoreTarget !== undefined ? { passwordProtected: true } : {}),
     })
   } catch (error) {
     if (staged !== undefined) await client.close(staged.opened.sessionId).catch(() => undefined)

@@ -857,6 +857,9 @@ export const workbookFileSchema = z
     /// string-based patcher to rewrite safely every 30 seconds. Manual Save
     /// remains available; only the background crash-recovery copy is disabled.
     automaticRecoveryDisabled: z.boolean().optional(),
+    /// The file on disk is an Office-encrypted package whose open password this
+    /// session holds (decision 0041), so Review › Change Password can rewrite it.
+    passwordProtected: z.boolean().optional(),
     /// Theme palette as #RRGGBB in theme index order [lt1, dk1, lt2, dk2,
     /// accent1-6, hlink, folHlink]; absent without a readable theme.
     themeColors: z.array(z.string()).length(12).optional(),
@@ -3247,6 +3250,8 @@ export interface DesktopApi {
    */
   onChromePressed(handler: () => void): () => void
   selectWorkbook(): Promise<WorkbookFile | null>
+  /** Review › Change Password: re-encrypt the open file's saved contents with a new open password */
+  updateWorkbookPassword(sessionId: string, newPassword: string): Promise<void>
   /** multi-select xlsx picker; each file opens a secondary sidecar session for merge reads */
   selectWorkbooksForMerge(): Promise<WorkbookFile[] | null>
   /** open explicit spreadsheet paths (chat attachments) as merge-source sessions */

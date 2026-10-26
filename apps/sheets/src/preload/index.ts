@@ -187,6 +187,17 @@ const desktopApi: DesktopApi = {
     const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.selectWorkbook)
     return result === null ? null : parseWorkbookFile(result)
   },
+  async updateWorkbookPassword(sessionId, newPassword) {
+    if (
+      !isUuid(sessionId) ||
+      typeof newPassword !== 'string' ||
+      newPassword.length === 0 ||
+      newPassword.length > 1024
+    ) {
+      throw new Error('Invalid workbook password update request.')
+    }
+    await ipcRenderer.invoke(IPC_CHANNELS.updateWorkbookPassword, { sessionId, newPassword })
+  },
   async selectWorkbooksForMerge() {
     const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.selectWorkbooksForMerge)
     if (result === null) return null
@@ -1302,6 +1313,7 @@ function parseWorkbookFile(input: unknown): WorkbookFile {
     ...(csvPath === undefined ? {} : { csvPath }),
     ...(emptyCsv === undefined ? {} : { emptyCsv }),
     ...(restoredFromRecovery === undefined ? {} : { restoredFromRecovery }),
+    ...(input.passwordProtected === true ? { passwordProtected: true } : {}),
     ...(themeColors === undefined ? {} : { themeColors: themeColors as string[] }),
     ...(parsedThemeFonts === undefined ? {} : { themeFonts: parsedThemeFonts }),
     ...(typeof input.normalFontName === 'string' && input.normalFontName !== ''

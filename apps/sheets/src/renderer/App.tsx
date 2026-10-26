@@ -653,6 +653,7 @@ import { planStillMatches } from './lazy-plan'
 import { lastSurvivingScreenLine, netAxisDelta, screenToFile } from './view-transform'
 import { selectionFormatEquals, toSelectionFormat, type SelectionFormat } from './selection-format'
 import { ExcelShell, type SelectedShapeRibbon } from './ExcelShell'
+import { ChangeWorkbookPasswordDialog } from './ChangeWorkbookPasswordDialog'
 import { odsConversionNoticeOf, type OdsConversionNotice } from './ods-import'
 import { ToastHost } from './toast'
 import { showToast } from './toast-bus'
@@ -958,6 +959,7 @@ export function App({
   /// cancelled, so instead of a silent no-op the user gets an explicit offer
   /// to fully load the workbook first.
   const [fullLoadPrompt, setFullLoadPrompt] = useState<'ask' | 'tooLarge' | null>(null)
+  const [changeWorkbookPasswordOpen, setChangeWorkbookPasswordOpen] = useState(false)
   const [message, setMessage] = useState(t('appReadyInitial'))
   const sheetTabActions = useMemo(
     () => createSheetTabActions({ univerRef, lazyWorkbookRef, notify: setMessage }),
@@ -4996,6 +4998,10 @@ export function App({
 
   function handleRibbonCommand(command: string): void {
     if (!ribbonCommandAllowed(lazyWorkbookRef.current?.file.readOnly === true, command)) return
+    if (command === 'workbook-change-password') {
+      if (lazyWorkbookRef.current?.file.passwordProtected) setChangeWorkbookPasswordOpen(true)
+      return
+    }
     if (command === 'ai-ask-selection') {
       const range = univerRef.current?.univerAPI.getActiveWorkbook()?.getActiveRange()
       if (!range) return
@@ -5727,6 +5733,38 @@ export function App({
       (targetPath) => handleExportOdsImpl(odsExportContext(), targetPath),
     )
   }
+  /**
+   * Review › Change Password. The new password goes onto the file's saved
+   * contents, so pending edits are saved first; both run under the save gate
+   * and the AI run's save refusal, like any other write of the workbook.
+   * Answers the dialog's error text, or null when the file was rewritten.
+   */
+  async function updateWorkbookPassword(newPassword: string): Promise<string | null> {
+    try {
+      return await guardedSave(
+        saveGateRef.current,
+        () => aiRunSaveRefusal('save'),
+        async (): Promise<string | null> => {
+          if (!(await commitActiveEditor())) return t('appSaveFailed')
+          if (!lazyWorkbookRef.current?.file.passwordProtected) {
+            return t('appWorkbookNotPasswordProtected')
+          }
+          const saved = await handleSaveImpl(saveContext(), 'save', true)
+          const current = lazyWorkbookRef.current
+          if (!current) return t('appWorkbookNotReady')
+          if (!saved.ok && journalSize(current.editJournal) > 0) {
+            return saved.error ?? t('appSaveFailed')
+          }
+          if (!current.file.passwordProtected) return t('appWorkbookNotPasswordProtected')
+          await window.desktopApi.updateWorkbookPassword(current.file.sessionId, newPassword)
+          setMessage(t('appWorkbookPasswordChanged'))
+          return null
+        },
+      )
+    } catch (error: unknown) {
+      return error instanceof Error ? stripIpcErrorWrapper(error.message) : t('appSaveFailed')
+    }
+  }
   closeSaveRef.current = async () => {
     if (!(await commitActiveEditor())) {
       window.desktopApi?.reportCloseSaveResult?.(false)
@@ -6315,6 +6353,7 @@ export function App({
         onUnprotectSheet={unprotectActiveSheet}
         sheetTabActions={sheetTabActions}
         onGetWorkbookProtection={workbookProtectionEcho}
+        passwordProtected={workbookFile?.passwordProtected === true}
         spellcheckOn={spellcheckOn}
         formulaBarVisible={formulaBarVisible}
         crossHighlightVisible={crossHighlightVisible}
@@ -6357,6 +6396,12 @@ export function App({
         <div className="workbook-opening-screen" role="status" aria-live="polite">
           {t('appOpeningWorkbook')}
         </div>
+      )}
+      {changeWorkbookPasswordOpen && (
+        <ChangeWorkbookPasswordDialog
+          onSubmit={updateWorkbookPassword}
+          onClose={() => setChangeWorkbookPasswordOpen(false)}
+        />
       )}
       <ThreadedCommentsPane getRuntime={getRuntime} />
       <NotePicturesPane
