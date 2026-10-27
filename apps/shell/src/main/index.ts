@@ -36,6 +36,7 @@ import type {
   WebContents,
 } from 'electron'
 import { atomicWriteFile } from './atomic-write'
+import { registerAiNamingIpc } from './ai-naming-service'
 import { tabStripOverlay } from './title-bar-overlay'
 import { shellWindowBackground } from './window-background'
 import { installPointerSize } from './pointer-size'
@@ -9592,6 +9593,9 @@ ipcMain.handle('slides:open-font-settings', () => {
   tabManager?.openHomeTab()
   win.webContents.send(HOME_CHANNELS.openSettings, { section: 'general', field: 'slidesAiFonts' })
 })
+// Model file naming. Registered here beside the other AI wiring so every
+// window type can reach it.
+registerAiNamingIpc(() => currentLang())
 registerProjectIpc()
 registerDocsIpc()
 registerHomeIpc()
