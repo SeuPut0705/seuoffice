@@ -727,6 +727,7 @@ export const id = {
   appExportPdfTitle: 'Ekspor sebagai PDF',
   appSaveTitle: 'Simpan (⌘S)',
   appSaveAs: 'Simpan Sebagai',
+  aiNameFile: 'Beri nama dengan AI…',
   appUndo: 'Urungkan',
   appRedo: 'Ulangi',
   appQuickAccessCustomize: 'Sesuaikan Bilah Alat Akses Cepat',

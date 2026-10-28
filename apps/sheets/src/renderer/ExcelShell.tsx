@@ -369,6 +369,8 @@ interface ExcelShellProps {
   /// file-backed session (the in-memory demo workbook has nowhere to copy).
   readonly canSaveAs: boolean
   readonly onSaveAs: () => void
+  /** Ask the model for a name, then open Save As with it prefilled */
+  readonly onNameWithAi: () => void
   /// QAT redo (workbook history, same path as the app menu's ⇧⌘Z); undo
   /// shares the AI panel's onUndo above.
   readonly onRedo: () => void
@@ -629,6 +631,7 @@ export function ExcelShell({
   onSave,
   canSaveAs,
   onSaveAs,
+  onNameWithAi,
   onRedo,
   canUndo,
   canRedo,
@@ -997,6 +1000,12 @@ export function ExcelShell({
   > = {
     save: { title: t('appSaveTitle'), icon: <SaveIcon />, disabled: !canSave, run: onSave },
     'save-as': { title: saveAsTitle, icon: <SaveAsIcon />, disabled: !canSaveAs, run: onSaveAs },
+    'name-with-ai': {
+      title: t('aiNameFile'),
+      icon: <AiMark />,
+      disabled: !canSaveAs,
+      run: onNameWithAi,
+    },
     undo: { title: t('appUndo'), icon: <UndoIcon />, disabled: !canUndo, run: () => onUndo() },
     redo: { title: t('appRedo'), icon: <RedoIcon />, disabled: !canRedo, run: onRedo },
   }

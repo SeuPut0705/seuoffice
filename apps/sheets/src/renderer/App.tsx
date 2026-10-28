@@ -404,6 +404,7 @@ import {
   type WorkbookReadContext,
 } from './ai/workbook-readers'
 import { NO_REDACTIONS, sanitizeLabel, type RedactionIndex } from './ai/redact'
+import { modelSaveAsName } from './file-naming'
 import { redactionSessionFor } from './ai/redact-load'
 import { RedactDialog } from './components/RedactDialog'
 import { installRedactMenu, type SelectionRequest } from './redact-menu'
@@ -5711,6 +5712,7 @@ export function App({
     mode: 'save' | 'save-as' | 'recovery' | 'template' | 'ods',
     quiet = false,
     explicitTarget?: { path: string; overwrite: boolean },
+    defaultName?: string,
   ): Promise<SaveOutcome> {
     // Manual and AI saves take the same gate as the timers: a recovery copy
     // written beside a real save would outlive it as a phantom Restore prompt.
@@ -5731,7 +5733,7 @@ export function App({
       () =>
         guardedSave(gate, refusal, async (): Promise<SaveOutcome> => {
           if (!(await commitActiveEditor())) return { ok: false }
-          return handleSaveImpl(saveContext(), mode, quiet, explicitTarget)
+          return handleSaveImpl(saveContext(), mode, quiet, explicitTarget, defaultName)
         }),
       (targetPath) => handleExportOdsImpl(odsExportContext(), targetPath),
     )
@@ -5767,6 +5769,22 @@ export function App({
     } catch (error: unknown) {
       return error instanceof Error ? stripIpcErrorWrapper(error.message) : t('appSaveFailed')
     }
+  }
+
+  /**
+   * Ask the model to name this workbook, on request, then open Save As with its
+   * answer prefilled.
+   *
+   * The stem goes into the dialog rather than renaming the file on disk: a
+   * workbook that may be open in another window, referenced from a note, or
+   * synced is not something to move behind the reader's back. A declined or
+   * empty answer leaves the dialog on the workbook's current name, so this is a
+   * no-op rather than a failure.
+   */
+  async function nameWithAi(): Promise<void> {
+    const stem = await modelSaveAsName(readContext())
+    if (!stem) return
+    await handleSave('save-as', false, undefined, stem)
   }
   closeSaveRef.current = async () => {
     if (!(await commitActiveEditor())) {
@@ -6333,6 +6351,7 @@ export function App({
         onSave={() => void handleSave('save')}
         canSaveAs={workbookFile !== null}
         onSaveAs={() => void handleSave('save-as')}
+        onNameWithAi={() => void nameWithAi()}
         onRedo={handleRedo}
         autoSave={autoSave}
         onAutoSaveChange={setAutoSave}

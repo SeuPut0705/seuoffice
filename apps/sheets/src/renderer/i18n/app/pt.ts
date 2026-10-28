@@ -766,6 +766,7 @@ export const pt = {
   appExportPdfTitle: 'Exportar como PDF',
   appSaveTitle: 'Salvar (⌘S)',
   appSaveAs: 'Salvar Como',
+  aiNameFile: 'Nomear com IA…',
   appUndo: 'Desfazer',
   appRedo: 'Refazer',
   appQuickAccessCustomize: 'Personalizar a Barra de Ferramentas de Acesso Rápido',

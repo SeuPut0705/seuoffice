@@ -670,6 +670,7 @@ export const he = {
   appExportPdfTitle: 'ייצא כ-PDF',
   appSaveTitle: 'שמור (⌘S)',
   appSaveAs: 'שמירה בשם',
+  aiNameFile: 'מתן שם באמצעות AI…',
   appUndo: 'בטל',
   appRedo: 'בצע שוב',
   appQuickAccessCustomize: 'התאמה אישית של סרגל הכלים לגישה מהירה',

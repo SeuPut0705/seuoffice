@@ -4850,10 +4850,18 @@ export function registerSheetsIpc(): void {
         session.csvSourcePath?.replace(/\.[^.]+$/, '.xlsx') ??
         session.restoreTarget ??
         session.path
+      // A name the model proposed for the reader's own request prefills the
+      // dialog rather than replacing it: the reader still chooses where the
+      // file goes, and cancelling still cancels. Without one, the dialog opens
+      // on the name the save would have offered anyway.
+      const proposed = request.defaultName ? sanitizeAutoRenameBase(request.defaultName) : null
+      const named = proposed
+        ? join(dirname(suggestion), `${proposed}.${macroEnabled ? 'xlsm' : 'xlsx'}`)
+        : suggestion
       const selection = await saveFileDialog(event, {
         // with copy formats on offer the suggestion carries no extension: the
         // file type chosen in the dialog supplies it
-        defaultPath: offerCopies ? sheetsSaveAsSuggestion(suggestion) : suggestion,
+        defaultPath: offerCopies ? sheetsSaveAsSuggestion(named) : named,
         // the workbook's own type first, then the copies (CSV, ODS, PDF)
         filters: sheetsSaveAsFilters(macroEnabled, offerCopies, (key) => tm(key)),
         // CSV import: explain why the save goes through .xlsx (CSV keeps values only)

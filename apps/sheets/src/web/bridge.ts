@@ -399,5 +399,6 @@ export function installBridges(): void {
   )
   installWebBridge('nativeSpell', createWebBridge('nativeSpell', {}))
   installWebBridge('__genofficeDebugHooks', createWebBridge('__genofficeDebugHooks', {}))
+  // aiNamingApi stays absent: suggestFileName reads a missing one as "no shell" and offers no name
   if (editMode()) onHostSaveRequest(saveForHost)
 }

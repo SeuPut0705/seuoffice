@@ -727,6 +727,7 @@ export const ms = {
   appExportPdfTitle: 'Eksport sebagai PDF',
   appSaveTitle: 'Simpan (⌘S)',
   appSaveAs: 'Simpan Sebagai',
+  aiNameFile: 'Namakan dengan AI…',
   appUndo: 'Buat Asal',
   appRedo: 'Buat Semula',
   appQuickAccessCustomize: 'Sesuaikan Bar Alat Capaian Pantas',

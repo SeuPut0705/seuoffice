@@ -752,6 +752,7 @@ export const pl = {
   appExportPdfTitle: 'Eksportuj jako PDF',
   appSaveTitle: 'Zapisz (⌘S)',
   appSaveAs: 'Zapisz jako',
+  aiNameFile: 'Nazwij za pomocą AI…',
   appUndo: 'Cofnij',
   appRedo: 'Wykonaj ponownie',
   appQuickAccessCustomize: 'Dostosuj pasek narzędzi Szybki dostęp',

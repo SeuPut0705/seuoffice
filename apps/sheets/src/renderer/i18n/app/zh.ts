@@ -654,6 +654,7 @@ export const zh = {
   appExportPdfTitle: '导出为 PDF',
   appSaveTitle: '保存（⌘S）',
   appSaveAs: '另存为',
+  aiNameFile: '用 AI 命名…',
   appUndo: '撤销',
   appRedo: '重做',
   appQuickAccessCustomize: '自定义快速访问工具栏',

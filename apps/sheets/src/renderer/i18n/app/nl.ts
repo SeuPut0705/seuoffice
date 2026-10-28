@@ -765,6 +765,7 @@ export const nl = {
   appExportPdfTitle: 'Exporteren als PDF',
   appSaveTitle: 'Opslaan (⌘S)',
   appSaveAs: 'Opslaan als',
+  aiNameFile: 'Naam geven met AI…',
   appUndo: 'Ongedaan maken',
   appRedo: 'Opnieuw',
   appQuickAccessCustomize: 'Werkbalk Snelle toegang aanpassen',

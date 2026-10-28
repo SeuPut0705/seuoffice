@@ -639,6 +639,7 @@ export const zhTW = {
   appExportPdfTitle: '匯出為 PDF',
   appSaveTitle: '儲存（⌘S）',
   appSaveAs: '另存新檔',
+  aiNameFile: '用 AI 命名…',
   appUndo: '復原',
   appRedo: '取消復原',
   appQuickAccessCustomize: '自訂快速存取工具列',
