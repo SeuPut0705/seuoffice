@@ -385,6 +385,7 @@ export function installBridges(): void {
   installWebBridge('slidesApi', createWebBridge<SlidesApi>('slidesApi', slidesApi))
   installWebBridge('desktop', createWebBridge<DesktopFilesApi>('desktop', desktopFiles))
   // aiOfficeDriveAi, aiOfficeOutbound, aiOfficeMcpTools, aiOfficeUserSkills, aiOfficeDocs,
-  // projectApi, projectFolderApi and aiOfficeSplit stay absent: their callers probe the window
-  // for them and read a missing one as "no shell", where an empty bridge would read as a broken one
+  // projectApi, projectFolderApi, aiOfficeSplit and aiNamingApi stay absent: their callers probe
+  // the window for them and read a missing one as "no shell", where an empty bridge would read as
+  // a broken one
 }
