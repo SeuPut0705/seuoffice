@@ -333,6 +333,7 @@ const shellBridges: Record<string, object> = {
   ),
   aiOfficeDocs: absent('list', 'available', 'pick'),
   aiOfficeSubscription: absent('statuses', 'onChanged'),
+  aiNamingApi: absent('suggestFileName'),
   // the AI panel calls these without probing, and every call site already swallows a rejection
   projectApi: {
     loadChat: unsupported('docs.project-chat'),

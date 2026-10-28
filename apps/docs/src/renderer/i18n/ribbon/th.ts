@@ -65,6 +65,7 @@ export const th = {
   ribbonOpen: 'เปิด…',
   ribbonSave: 'บันทึก',
   ribbonSaveAs: 'บันทึกเป็น…',
+  ribbonNameWithAi: 'ตั้งชื่อด้วย AI…',
   ribbonPaste: 'วาง',
   ribbonCutTip: 'ตัด (⌘X)',
   ribbonCopyTip: 'คัดลอก (⌘C)',

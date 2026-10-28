@@ -67,6 +67,7 @@ export const nl = {
   ribbonOpen: 'Openen…',
   ribbonSave: 'Opslaan',
   ribbonSaveAs: 'Opslaan als…',
+  ribbonNameWithAi: 'Naam geven met AI…',
   ribbonPaste: 'Plakken',
   ribbonCutTip: 'Knippen (⌘X)',
   ribbonCopyTip: 'Kopiëren (⌘C)',

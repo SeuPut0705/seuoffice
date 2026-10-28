@@ -424,6 +424,7 @@ import {
   printDoc as printDocImpl,
   save as saveImpl,
   saveIntoProject as saveIntoProjectImpl,
+  suggestedSaveAsName,
   templateDocBytes,
   writeRecoveryCopy as writeRecoveryCopyImpl,
   forgetRecoveryCopy,
@@ -2457,6 +2458,19 @@ export function App() {
     },
     [],
   )
+
+  /**
+   * The reader asked the model for a name on a document that already has one.
+   *
+   * The stem is a proposal for the Save As dialog, never a rename: the dialog
+   * is where the reader confirms, and moving a file that may be open elsewhere
+   * or synced is not ours to do quietly.
+   */
+  const nameWithAi = useCallback(async () => {
+    const proposed = await suggestedSaveAsName(fileCtxRef.current)
+    if (!proposed) return
+    await saveImpl(fileCtxRef.current, true, false, proposed)
+  }, [])
 
   // inserting a section break needs one save for the new section to take effect; the
   // flag is consumed in the render after state commit, guaranteeing the save closure
@@ -6995,6 +7009,7 @@ export function App() {
     onOpen: () => void openFile(),
     onSave: () => void save(false),
     onSaveAs: () => void save(true),
+    onNameWithAi: () => void nameWithAi(),
     onToggleAi: () => setShowAi((v) => !v),
     onSection: (next: SectionSettings) => {
       // text columns are off in an ODT document

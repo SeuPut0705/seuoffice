@@ -66,6 +66,7 @@ export const hi = {
   ribbonOpen: 'खोलें…',
   ribbonSave: 'सहेजें',
   ribbonSaveAs: 'इस रूप में सहेजें…',
+  ribbonNameWithAi: 'AI से नाम दें…',
   ribbonPaste: 'चिपकाएँ',
   ribbonCutTip: 'काटें (⌘X)',
   ribbonCopyTip: 'प्रतिलिपि बनाएँ (⌘C)',

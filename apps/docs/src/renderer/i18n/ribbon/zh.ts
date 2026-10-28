@@ -66,6 +66,7 @@ export const zh = {
   ribbonOpen: '打开…',
   ribbonSave: '保存',
   ribbonSaveAs: '另存为…',
+  ribbonNameWithAi: '以 AI 命名…',
   // Home · Clipboard
   ribbonPaste: '粘贴',
   ribbonCutTip: '剪切 (⌘X)',

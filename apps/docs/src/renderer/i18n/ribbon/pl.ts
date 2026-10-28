@@ -66,6 +66,7 @@ export const pl = {
   ribbonOpen: 'Otwórz…',
   ribbonSave: 'Zapisz',
   ribbonSaveAs: 'Zapisz jako…',
+  ribbonNameWithAi: 'Nadaj nazwę za pomocą AI…',
   ribbonPaste: 'Wklej',
   ribbonCutTip: 'Wytnij (⌘X)',
   ribbonCopyTip: 'Kopiuj (⌘C)',

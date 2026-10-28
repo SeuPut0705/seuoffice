@@ -63,6 +63,7 @@ export const zhTW = {
   ribbonOpen: '開啟…',
   ribbonSave: '儲存',
   ribbonSaveAs: '另存新檔…',
+  ribbonNameWithAi: '以 AI 命名…',
   ribbonPaste: '貼上',
   ribbonCutTip: '剪下 (⌘X)',
   ribbonCopyTip: '複製 (⌘C)',

@@ -65,6 +65,7 @@ export const ru = {
   ribbonOpen: 'Открыть…',
   ribbonSave: 'Сохранить',
   ribbonSaveAs: 'Сохранить как…',
+  ribbonNameWithAi: 'Назвать с помощью ИИ…',
   ribbonPaste: 'Вставить',
   ribbonCutTip: 'Вырезать (⌘X)',
   ribbonCopyTip: 'Копировать (⌘C)',

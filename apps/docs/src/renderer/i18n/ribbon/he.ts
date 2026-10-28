@@ -64,6 +64,7 @@ export const he = {
   ribbonOpen: 'פתח…',
   ribbonSave: 'שמור',
   ribbonSaveAs: 'שמירה בשם…',
+  ribbonNameWithAi: 'שם באמצעות AI…',
   ribbonPaste: 'הדבק',
   ribbonCutTip: 'גזור (⌘X)',
   ribbonCopyTip: 'העתק (⌘C)',

@@ -68,6 +68,7 @@ export const ja = {
   ribbonOpen: '開く…',
   ribbonSave: '保存',
   ribbonSaveAs: '名前を付けて保存…',
+  ribbonNameWithAi: 'AI で名前をつける…',
   // Home · Clipboard
   ribbonPaste: '貼り付け',
   ribbonCutTip: '切り取り (⌘X)',

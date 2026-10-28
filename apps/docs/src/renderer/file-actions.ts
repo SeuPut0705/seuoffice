@@ -7,6 +7,8 @@
  */
 import type { Editor } from '@tiptap/core'
 import { history } from '@tiptap/pm/history'
+import { suggestFileName } from '@genoffice/ui'
+import { modelTextOf, type RedactableNode } from './ai/redact-view'
 import {
   applyPageNumType,
   applySectionSettings,
@@ -801,6 +803,48 @@ function deriveAutoFileName(editor: Editor): string | null {
   return null
 }
 
+/** The document's own text, as the model may read it. Never the raw document. */
+function modelTextOfDocument(editor: Editor): string {
+  // A name is read off the opening of a document; 8k characters is far past
+  // anything a stem could name, and bounds the walk on the UI thread.
+  return modelTextOf(editor.getJSON() as RedactableNode, { maxChars: 8000 })
+}
+
+/**
+ * A file name from a bare stem, in the shape the save path expects.
+ *
+ * The stem is an untrusted string — a model's answer, or nothing at all — so it
+ * goes through the same sanitizer as a heading: a name carrying a separator, a
+ * control character or a reserved Windows device word would otherwise become a
+ * path the save silently refuses, or worse, writes somewhere else.
+ */
+function docxNameFromStem(stem: string): string | null {
+  const base = sanitizeFileBaseName(stem)
+  return base ? `${base}.docx` : null
+}
+
+/**
+ * Ask the model to name this document, on request.
+ *
+ * The result is the file name offered in the Save As dialog rather than a
+ * rename: moving a file that may be open elsewhere, referenced from a note, or
+ * synced is not something to do behind the reader's back. The dialog is the
+ * confirmation. Returns '' when there is nothing usable, which leaves the
+ * dialog on the name the document already has.
+ *
+ * The text handed over is `modelTextOf`, never the editor's document. A selection
+ * the reader hid from the model stays hidden from this call too — the file name
+ * is the one thing that reaches them after the model has seen the rest of the
+ * document, so a leak here would survive the redaction it was meant to outlive.
+ */
+export async function suggestedSaveAsName(ctx: FileActionContext): Promise<string> {
+  const { editor } = ctx
+  if (!editor) return ''
+  const stem = await suggestFileName({ content: modelTextOfDocument(editor) })
+  // a full file name, extension and all, because this is what the save dialog takes
+  return docxNameFromStem(stem) ?? ''
+}
+
 /**
  * The document as a skill's template (spec 5.6): the file a save would write
  * now, whole (lazily served pictures put back), in its own format (an ODT
@@ -1068,6 +1112,24 @@ export function noteDocumentSwapped(): void {
 
 export function currentDocGeneration(): number {
   return docGeneration
+}
+
+/**
+ * The name a Save As dialog opens on.
+ *
+ * A name the caller proposed for this pass leads, then the name derived from
+ * the document's own first heading, then the name the document already has.
+ *
+ * Named rather than inlined so the precedence is stated once and testable: a
+ * proposal that never reaches the dialog is a manual trigger that does nothing
+ * silently, which is exactly how this shipped before it had a call site.
+ */
+export function dialogNameFor(
+  proposed: string | undefined,
+  derived: string | null,
+  current: string,
+): string {
+  return proposed ?? derived ?? current
 }
 
 export function save(
@@ -1357,9 +1419,23 @@ async function saveOnce(
       if (result.dataUrl) fullBytes = await fetchDocBytes(result.dataUrl)
       if (!doc.filePath) pathlessDocSavedPath = savedPath
     } else if (saveAs || !savedPath) {
-      // A never-saved document still called "Untitled" gets a name derived from its first heading
+      // A never-saved document still called "Untitled" gets a name derived from its
+      // first heading. The model is not asked here: a name the reader never saw is
+      // hard to trust, and a save must not wait on a model round-trip.
+      //
+      // A caller that already carries a name — the AI's create_document writing a
+      // document under the title it was given — asks no question either: the name
+      // is settled, and a model call here would only be a second opinion nobody
+      // asked for.
       const autoName =
-        !doc.filePath && doc.fileName === t('appUntitledDocx') ? deriveAutoFileName(editor) : null
+        !newDocName && !doc.filePath && doc.fileName === t('appUntitledDocx')
+          ? deriveAutoFileName(editor)
+          : null
+      // `newDocName` is a name the caller proposed for this pass — the manual
+      // trigger's model stem — so it leads the dialog's default on both
+      // branches. It is a proposal, not a decision: the dialog is the
+      // confirmation, and nothing is renamed on disk behind the reader.
+      const dialogName = dialogNameFor(newDocName, autoName, doc.fileName)
       // Save As and a new document's first save show the dialog. The source path
       // identifies the desired password state to snapshot.
       let result: Awaited<ReturnType<typeof window.desktop.saveDocxAs>>
@@ -1368,7 +1444,7 @@ async function saveOnce(
         // a restored copy whose file went missing suggests that file's place
         // Save As proper also lists the export formats; a first save does not
         const pick = await window.desktop.pickSaveAsPath(
-          autoName ?? doc.fileName,
+          dialogName,
           doc.filePath ?? doc.saveAsDefaultPath ?? null,
           format,
           saveAs,
@@ -1386,10 +1462,7 @@ async function saveOnce(
         result = await window.desktop.saveDocxAs(pick.path, await fileBytes(), doc.filePath)
       } else {
         // a pathless document is always a new docx
-        result = await window.desktop.saveDocxNew(
-          newDocName ?? autoName ?? doc.fileName,
-          await fileBytes(),
-        )
+        result = await window.desktop.saveDocxNew(dialogName, await fileBytes())
       }
       if (!result.ok) {
         if (result.error) {

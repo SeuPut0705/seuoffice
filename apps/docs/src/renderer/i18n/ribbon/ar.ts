@@ -65,6 +65,7 @@ export const ar = {
   ribbonOpen: 'فتح…',
   ribbonSave: 'حفظ',
   ribbonSaveAs: 'حفظ باسم…',
+  ribbonNameWithAi: 'تسمية بالذكاء الاصطناعي…',
   ribbonPaste: 'لصق',
   ribbonCutTip: 'قص (⌘X)',
   ribbonCopyTip: 'نسخ (⌘C)',

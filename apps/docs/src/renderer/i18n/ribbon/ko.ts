@@ -67,6 +67,7 @@ export const ko = {
   ribbonOpen: '열기…',
   ribbonSave: '저장',
   ribbonSaveAs: '다른 이름으로 저장…',
+  ribbonNameWithAi: 'AI로 이름 지정…',
   // Home · Clipboard
   ribbonPaste: '붙여넣기',
   ribbonCutTip: '잘라내기 (⌘X)',

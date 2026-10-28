@@ -66,6 +66,7 @@ export const ms = {
   ribbonOpen: 'Buka…',
   ribbonSave: 'Simpan',
   ribbonSaveAs: 'Simpan Sebagai…',
+  ribbonNameWithAi: 'Namakan dengan AI…',
   ribbonPaste: 'Tampal',
   ribbonCutTip: 'Potong (⌘X)',
   ribbonCopyTip: 'Salin (⌘C)',
