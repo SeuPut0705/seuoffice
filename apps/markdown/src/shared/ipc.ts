@@ -279,6 +279,13 @@ export interface SaveMarkdownRequest {
    * Its presence also offers Word, ODT and page images in the dialog (`exportAs`).
    */
   pdfHtml?: string
+  /**
+   * Name offered in the save dialog: the model's proposal (the ribbon's "Name
+   * with AI"), or for a document that has never been saved its first heading.
+   * It prefills the dialog rather than replacing it, so the reader still
+   * chooses the location.
+   */
+  defaultName?: string
 }
 
 /**
