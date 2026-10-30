@@ -180,7 +180,8 @@ export function safeEntry(key: string, value: Json, how: Safety = {}): Json {
 /**
  * Every key of `object` judged, whatever shape it has: a node (`type` and
  * `attrs`) gets no pass for its other keys. `inline`: the attributes of an
- * inline formula, whose markup is the inline form of its OMML; a display
+ * inline formula, whose markup is the inline form of its OMML (display
+ * math-style when its `display` attribute is set); a display
  * equation's (`formulaDisplay`) is the block form. `step`: `object` is the
  * step itself, whose `value` an attribute step judges as the attribute it sets.
  */
@@ -215,7 +216,7 @@ function safeObject(object: JsonObject, how: Safety, inline = false, step = fals
       markup === null
         ? null
         : typeof markup === 'string' && markup && omml
-          ? rebuilt(omml, inline)
+          ? rebuilt(omml, inline, inline && object.display === true)
           : ''
     if (mathml !== markup) out = { ...out, mathml }
   }
@@ -286,11 +287,11 @@ function drawingOnly(markup: string): boolean {
 
 /** MathML from OMML, memoised: every step that copies an equation (a paste, an undo) asks again */
 const mathml = new Map<string, string>()
-function rebuilt(omml: string, inline: boolean): string {
-  const key = `${inline ? 'i' : 'b'}${omml}`
+function rebuilt(omml: string, inline: boolean, display: boolean): string {
+  const key = `${inline ? (display ? 'd' : 'i') : 'b'}${omml}`
   let markup = mathml.get(key)
   if (markup === undefined) {
-    markup = inline ? inlineMathML(omml) : ommlToMathML(omml)
+    markup = inline ? inlineMathML(omml, display) : ommlToMathML(omml)
     if (mathml.size >= 2000) mathml.clear()
     mathml.set(key, markup)
   }

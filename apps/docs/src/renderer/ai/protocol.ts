@@ -11,9 +11,11 @@ import {
   type TableModel,
 } from '@genoffice/docx-engine'
 import { pmTableToModel, tableModelToPmNode, type PmMark, type PmNode } from '../editor/convert'
+import { wordTableCell, wordTableModel } from '../editor/new-table'
 import { equationBlockJson, inlineEquationNodeJson } from '../editor/equation'
 import { inheritFrom, inheritTableFormatting, sameBlockRole } from './inherit-formatting'
-import { TRACK_IGNORE, type RevisionRange } from '../editor/revisions'
+import { TRACK_AUTHOR, TRACK_IGNORE, type RevisionRange } from '../editor/revisions'
+import { AI_REVISION_AUTHOR } from './revision-author'
 import { countWords, documentTextForWordCount, leafTextForWordCount } from '../word-count'
 import { blockRangePositions, isTrackedDeleted, liveText } from './doc-utils'
 import {
@@ -26,6 +28,7 @@ import {
 import { opSignatures } from './ops'
 import { pageSetupContextLines, type AiSectionState } from './page-setup'
 import { listRevisionEntries } from './revision-ops'
+import type { StoryRevision } from '../editor/story-revisions'
 
 export { blockRangePositions, isTrackedDeleted, liveText }
 
@@ -795,9 +798,6 @@ const REVISIONS_CONTEXT_MAX = 200
 const REVISION_KIND_LABEL: Record<RevisionRange['kind'], string> = {
   ins: 'inserted',
   del: 'deleted',
-  // ins+del marks on the same text: added while tracking, then deleted —
-  // never part of the base document; both accept and reject remove it
-  both: 'inserted then deleted (not in the base document)',
   pPrChange: 'paragraph formatting changed',
   paraMarkDel: 'paragraph mark deleted (joins the next paragraph)',
   paraMarkIns: 'paragraph mark inserted',
@@ -811,18 +811,27 @@ const REVISION_KIND_LABEL: Record<RevisionRange['kind'], string> = {
   cellDel: 'table cell deleted',
   blockIns: 'block inserted',
   blockDel: 'block deleted',
+  tblPrChange: 'table formatting changed',
+  tblGridChange: 'table grid changed',
+  trPrChange: 'table row formatting changed',
+  tblPrExChange: 'table row exceptions changed',
+  tcPrChange: 'table cell formatting changed',
+  cellMerge: 'table cells merged',
+  numberingChange: 'numbering changed',
+  sectPrChange: 'section formatting changed',
 }
 
 /** flat listing of every pending tracked change; backs the read_revisions tool */
-export function buildRevisionsContext(editor: Editor): string {
-  const revisions = listRevisionEntries(editor.state.doc)
+export function buildRevisionsContext(editor: Editor, stories?: StoryRevision[]): string {
+  const revisions = listRevisionEntries(editor.state.doc, stories)
   if (revisions.length === 0) return '(the document has no tracked revisions)'
   const shown = revisions.slice(0, REVISIONS_CONTEXT_MAX)
   const lines = shown.map((rev) => {
     const date = rev.date ? ` on ${rev.date.slice(0, 10)}` : ''
     const excerpt = rev.text ? `: "${clip(rev.text, 200)}"` : ''
     const change = rev.change ? ` (${rev.change})` : ''
-    return `- ${rev.id} | block ${rev.blockIndex} | ${REVISION_KIND_LABEL[rev.kind]} by ${rev.author || 'unknown'}${date}${change}${excerpt}`
+    const where = rev.location ? `in ${rev.location}` : `block ${rev.blockIndex}`
+    return `- ${rev.id} | ${where} | ${REVISION_KIND_LABEL[rev.kind]} by ${rev.author || 'unknown'}${date}${change}${excerpt}`
   })
   const header = `Tracked revisions (${revisions.length} pending; deleted text shows what will disappear on accept; ids are positional and renumber after every edit):`
   const overflow =
@@ -1176,21 +1185,12 @@ function parseTable(el: Element): PmNode | null {
   if (cols === 0) return null
   const headerRow = rawRows[0].some((c) => c.tagName.toLowerCase() === 'th')
   const rows: TableCell[][] = rawRows.map((cells, r) => {
-    const isHeader = headerRow && r === 0
-    const row: TableCell[] = cells.map((cell) => ({
-      paras: cellParas(cell),
-      ...(isHeader ? { bold: true, fill: TABLE_HEADER_FILL } : {}),
-    }))
-    while (row.length < cols)
-      row.push({ paras: [''], ...(isHeader ? { bold: true, fill: TABLE_HEADER_FILL } : {}) })
+    const style = headerRow && r === 0 ? { bold: true, fill: TABLE_HEADER_FILL } : undefined
+    const row = cells.map((cell) => wordTableCell(cellParas(cell), style))
+    while (row.length < cols) row.push(wordTableCell([''], style))
     return row
   })
-  // equal column grid, like the ribbon insert and the save-path backfill
-  // (pmTableToModel): without colWidthsPct the table renders with no <colgroup>,
-  // leaving the fixed-layout column grid to the browser — fragile against
-  // spanning pagination widgets and different from what a save/reload shows
-  const table: TableModel = { rows, colWidthsPct: Array.from({ length: cols }, () => 100 / cols) }
-  return tableModelToPmNode(table)
+  return tableModelToPmNode(wordTableModel(rows, cols))
 }
 
 /** <pre> -> mono/shaded paragraph; newlines preserved as hard breaks */
@@ -1546,7 +1546,9 @@ export function replaceBlockRange(
     editor.view.dispatch(tr)
     return true
   }
-  editor.view.dispatch(editor.state.tr.replaceWith(from, to, pmNodes))
+  editor.view.dispatch(
+    editor.state.tr.replaceWith(from, to, pmNodes).setMeta(TRACK_AUTHOR, AI_REVISION_AUTHOR),
+  )
   return true
 }
 
@@ -1579,6 +1581,7 @@ export function replaceInlineRange(
     tr.setSelection(TextSelection.create(tr.doc, from, from + inserted))
     const block = tr.doc.nodeAt(blockPos)
     if (block) tr.setNodeMarkup(blockPos, undefined, { ...block.attrs, aiChanged: true })
+    tr.setMeta(TRACK_AUTHOR, AI_REVISION_AUTHOR)
   }
   editor.view.dispatch(tr)
 }
@@ -1615,7 +1618,7 @@ export function insertBlocksAfter(
       offset += node.nodeSize
     }
     tr.setMeta(TRACK_IGNORE, true)
-  }
+  } else tr.setMeta(TRACK_AUTHOR, AI_REVISION_AUTHOR)
   editor.view.dispatch(tr)
   return true
 }

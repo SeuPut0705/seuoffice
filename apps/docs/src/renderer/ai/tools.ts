@@ -15,6 +15,7 @@ import { executeOps, opNames } from './ops'
 import { odtGuardRefusalText, odtToolRefusal, startOdtToolCall } from './odt-tools'
 import { clipExcerpt, repliesOf, resolveCommentAnchor } from './comment-ops'
 import { redactTextBetween } from './redact-view'
+import { insertPictureAtSelection } from '../editor/insert-picture'
 import {
   PAGE_SETUP_TOOL,
   SECTION_BREAK_TOOL,
@@ -51,6 +52,7 @@ import {
   describePending,
   listRevisionEntries,
   validateSelector,
+  type StoryRevisionAccess,
 } from './revision-ops'
 import {
   buildNotesContext,
@@ -701,6 +703,10 @@ export interface AiHeaderFooterAccess {
 export interface AiDocExtras {
   styles?: AiStyleAccess
   watermark?: AiWatermarkAccess
+  /** protection (read-only or enforced tracked changes) forbids accepting / rejecting revisions */
+  revisionsLocked?: boolean
+  /** tracked changes in notes, header / footer parts and textboxes */
+  storyRevisions?: StoryRevisionAccess
 }
 
 /**
@@ -1299,22 +1305,14 @@ async function insertImageBytes(
     // freshness baseline stale, so only our own insertion may mark the doc
     // seen. Checked right before the write — there is no async gap after.
     const userEditedDuringFetch = editedExternally(editor)
-    editor
-      .chain()
-      .focus()
-      .insertContent({
-        type: 'docProtected',
-        attrs: {
-          docxIndex: null,
-          blockType: 'image',
-          label: labels.blockLabel,
-          imageDataUrl: dataUrl,
-          imageWidthPx: w,
-          imageHeightPx: h,
-          genImage: { base64, mime, widthPx: w, heightPx: h },
-        },
-      })
-      .run()
+    insertPictureAtSelection(editor, {
+      dataUrl,
+      base64,
+      mime,
+      widthPx: w,
+      heightPx: h,
+      label: labels.blockLabel,
+    })
     if (!userEditedDuringFetch) markDocSeen(editor)
     return {
       output: `Inserted the image (${w}×${h}px).`,
@@ -1892,7 +1890,7 @@ function executeSyncTool(
 
     case 'read_revisions':
       return {
-        output: buildRevisionsContext(editor),
+        output: buildRevisionsContext(editor, extras?.storyRevisions?.list()),
         mutated: false,
         summary: t('aiSumReadRevisions'),
       }
@@ -1901,11 +1899,16 @@ function executeSyncTool(
     case 'reject_changes': {
       const mode = call.name === 'accept_changes' ? 'accept' : 'reject'
       const summary = t(mode === 'accept' ? 'aiSumAcceptChanges' : 'aiSumRejectChanges')
+      if (extras?.revisionsLocked)
+        return fail(
+          summary,
+          'document protection enforces tracked changes (or read-only editing): revisions cannot be accepted or rejected until the protection is removed',
+        )
       const sel = validateSelector(call.input)
       if ('error' in sel) return fail(summary, sel.error)
-      const r = applyRevisionSelection(editor, sel, mode)
+      const r = applyRevisionSelection(editor, sel, mode, extras?.storyRevisions)
       if ('error' in r) return fail(summary, r.error)
-      const left = listRevisionEntries(editor.state.doc)
+      const left = listRevisionEntries(editor.state.doc, extras?.storyRevisions?.list())
       const verb = mode === 'accept' ? 'Accepted' : 'Rejected'
       return {
         output: `${verb} ${r.entries.length} tracked change(s) (${r.entries.map((e) => e.id).join(', ')}). ${left.length ? `Still ${describePending(left)}.` : 'No tracked changes remain.'}`,
@@ -2138,10 +2141,8 @@ function executeSyncTool(
         return fail(summaryOf(), 'view must be "default", "first" or "even"')
       }
       if (typeof call.input.text !== 'string') return fail(summaryOf(), 'text must be a string')
-      // a doubly escaped newline arrives as the two characters backslash-n; a footer must not show it literally
-      const text = call.input.text.includes('\n')
-        ? call.input.text
-        : call.input.text.replace(/\\n/g, '\n')
+      // a doubly escaped newline was already undone with the other plain-text arguments (NEW_PLAIN_TEXT)
+      const text = call.input.text
       if (text.length > 2000) {
         return fail(summaryOf(), 'text is too long for a header/footer (2000 characters max)')
       }

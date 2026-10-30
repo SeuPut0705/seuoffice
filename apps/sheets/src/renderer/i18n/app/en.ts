@@ -389,7 +389,7 @@ export const en = {
   appTableOverlapsSession: 'The range overlaps table "{name}" created this session.',
   appTableOverlapsFile: 'The range overlaps table "{name}" in the file.',
   appTableAlreadyInTable:
-    'The selection is already in table "{name}". Pick a style from Table Design to change it.',
+    'The selection is already in table "{name}" — pick a style from Table Design to change it.',
   appTablesNeedFile: 'Open an XLSX file first — tables are written into the file.',
   appTableSelectRange: 'Select the data range first — headers in its first row.',
   appTableCreated: 'Table created — save with ⌘S.',

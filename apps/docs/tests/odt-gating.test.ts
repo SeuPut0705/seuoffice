@@ -574,7 +574,12 @@ describe('comments in an ODT document', () => {
       )
     })
     expect(host.textContent).toContain('메모 내용')
-    const actions = [...host.querySelectorAll<HTMLButtonElement>('.comment-thread-actions button')]
+    // Resolve sits in the card head and Reply is the inline box under the thread
+    const actions = [
+      ...host.querySelectorAll<HTMLButtonElement | HTMLInputElement>(
+        '.comment-resolve, .comment-reply-input',
+      ),
+    ]
     expect(actions).toHaveLength(2)
     for (const button of actions) {
       expect(button.disabled).toBe(true)

@@ -3,6 +3,7 @@
 import type { SectionInfo, SectionSettings, TextFlowDirection } from '@genoffice/docx-engine'
 
 import { mirrorShiftPx } from './page-margins'
+import { hfHasVariant, hfVariantReservedPx, type HfVariant } from './pagination-hf'
 import { columnLineSplits } from './pagination-slices'
 import type {
   BlockBox,
@@ -73,6 +74,27 @@ export function effectiveBottomPx(set: SectionSettings, footerPx: number): numbe
   return Math.max(twipsToPx(set.marginBottom), footerPx > 0 ? dist + footerPx : 0)
 }
 
+/** Single-section slicing geometry of the first-page / even-page variants: the
+ *  page renders the variant's strips (pageHfOf), so its capacity must follow
+ *  their push-down. An even capacity equal to the default one is omitted. */
+export function singleVariantGeomOf(
+  set: SectionSettings,
+  hf: SectionHfHeights,
+): Pick<SectionGeom, 'firstContentHeight' | 'evenContentHeight'> {
+  const capacity = (variant: HfVariant) => {
+    const { headerPx, footerPx } = hfVariantReservedPx(hf, variant)
+    return (
+      twipsToPx(set.pageHeight) - effectiveTopPx(set, headerPx) - effectiveBottomPx(set, footerPx)
+    )
+  }
+  const base = capacity('default')
+  const even = hfHasVariant(hf, 'even') ? capacity('even') : undefined
+  return {
+    ...(hfHasVariant(hf, 'first') ? { firstContentHeight: capacity('first') } : {}),
+    ...(even !== undefined && Math.abs(even - base) > 0.01 ? { evenContentHeight: even } : {}),
+  }
+}
+
 /** Typed line-grid pitch (pt) of one section (w:docGrid lines/linesAndChars), else null */
 export function sectionGridPitchPt(s: SectionInfo): number | null {
   const g = s.settings.docGrid
@@ -135,14 +157,21 @@ export function docCharSpacePt(sections: SectionInfo[]): number | null {
 }
 
 /** Nothing Word produces is narrower than this; smaller "columns" are the
- *  degenerate state of corrupt cols metadata, not a layout (#1952). */
+ *  degenerate state of corrupt cols metadata, not a layout (genoffice#1952). */
 const MIN_USABLE_COL_PX = 36
+
+/** Narrowest wrap width a block takes from its landing column. PDF-converter
+ *  output keeps formula numbers in a gutter-sized column; a paragraph the
+ *  engine lands there (its measured top fell into that slot) would wrap one
+ *  glyph per line and grow tall enough to stay there, so it wraps at the
+ *  region's widest column instead (genoffice#1970). */
+const MIN_BLOCK_WRAP_PX = 72
 
 /** Column count of a section (w:cols w:num; covers equal and explicit-width columns).
  *  A count that would divide the content width below `MIN_USABLE_COL_PX` per
  *  column (or past Word's 45-column ceiling) is corrupt metadata: rendering it
  *  collapses every column to one-or-two characters beside a blank page (the
- *  catastrophic shape reported in #1952) — one-column flow is the fallback. */
+ *  catastrophic shape reported in genoffice#1952) — one-column flow is the fallback. */
 export function sectionColumns(s: SectionInfo): number {
   const num = Math.max(1, s.settings.columns ?? 1)
   if (num === 1) return 1
@@ -179,8 +208,8 @@ export function sectionColGeom(s: SectionInfo): {
   if (cols > 1 && /<w:cols[^>]*w:equalWidth="0"/.test(s.sectPrXml ?? '')) {
     const colsXml = /<w:cols\b[^>]*>([\s\S]*?)<\/w:cols>/.exec(s.sectPrXml ?? '')?.[1] ?? ''
     const list = Array.from(colsXml.matchAll(/<w:col\b([^>]*)\/?>/g), (m) => ({
-      w: twipsToPx(parseInt(/w:w="(\d+)"/.exec(m[1])?.[1] ?? '0', 10)),
-      space: twipsToPx(parseInt(/w:space="(\d+)"/.exec(m[1])?.[1] ?? '0', 10)),
+      w: twipsToPx(parseFloat(/w:w="([\d.]+)"/.exec(m[1])?.[1] ?? '0')),
+      space: twipsToPx(parseFloat(/w:space="([\d.]+)"/.exec(m[1])?.[1] ?? '0')),
     }))
     // a list entry below the usable floor (CNKI/PDF-converter output sometimes
     // carries one) must not drag the real columns down with it
@@ -251,6 +280,7 @@ export function columnLayoutSpecs(
     end: number
     section: number
     widthPx: number | undefined
+    widestPx: number
     dx: number
     dy: number
     natural: boolean
@@ -263,6 +293,7 @@ export function columnLayoutSpecs(
         end: slice.end,
         section: -1,
         widthPx: undefined,
+        widestPx: 0,
         dx: 0,
         dy: 0,
         natural: true,
@@ -282,6 +313,7 @@ export function columnLayoutSpecs(
         x += geom.widths[c] + (geom.gaps[c] ?? 0)
       }
       const totalW = x
+      const widestPx = Math.max(...geom.widths)
       for (let c = 0; c < region.columns.length; c++) {
         const col = region.columns[c]
         const w = geom.widths[Math.min(c, geom.widths.length - 1)]
@@ -293,6 +325,7 @@ export function columnLayoutSpecs(
           end: col.end,
           section: region.section,
           widthPx,
+          widestPx,
           dx,
           dy,
           // untouched single-column region at its natural place: no decorations
@@ -321,7 +354,8 @@ export function columnLayoutSpecs(
         })
         continue
       }
-      if (widthPx !== undefined) {
+      if (widthPx !== undefined && isGutter(b.el, widthPx, col.widestPx)) widthPx = col.widestPx
+      else if (widthPx !== undefined) {
         const bottom = b.top + b.height - (b.footnoteExtraPx ?? 0) - (b.spaceAfterPx ?? 0)
         for (let j = k + 1; j < cols.length && cols[j].start < bottom - 0.5; j++) {
           const next = cols[j]
@@ -435,6 +469,11 @@ function blockColumnWidth(el: HTMLElement, colW: number): number {
   return Math.max(0, colW - blockInlineExtraPx(el))
 }
 
+/** landing column too narrow to hold the block's text while the region has a real column */
+function isGutter(el: HTMLElement, colW: number, widestPx: number): boolean {
+  return blockColumnWidth(el, colW) < MIN_BLOCK_WRAP_PX && widestPx > colW
+}
+
 /** horizontal margins/padding/borders the block loses from its column width (0 for tables and fixed-width blocks) */
 export function blockInlineExtraPx(el: HTMLElement): number {
   if (isTableBlock(el) || el.style.width) return 0
@@ -535,6 +574,40 @@ export function sectionTopMarginSpecs(
     if (t !== undefined) specs.push({ el: b.el, dx: 0, dy: 0, marginTopPx: t })
   }
   return specs
+}
+
+/**
+ * First block of every section that opens a new page (nextPage/evenPage/oddPage).
+ * A w:tblpPr table floated at the bottom of the previous section's last page is
+ * a CSS float whose box reaches past the section break in the DOM; a table
+ * opening the next section would then be pushed below it and the pagination
+ * would charge that band to the new page. Word never carries a float across a
+ * page, so the block clears it (the cleared position is the page boundary).
+ */
+export function sectionPageStartSpecs(
+  blocks: BlockBox[],
+  sections: SectionInfo[],
+): ColumnBlockPlacement[] {
+  const specs: ColumnBlockPlacement[] = []
+  for (let i = 1; i < sections.length; i++) {
+    const s = sections[i]
+    if (s.startType === 'continuous' || s.startType === 'nextColumn') continue
+    const first = blocks.find((b) => b.docxIndex === s.firstBlockIndex && b.el)
+    if (first?.el) specs.push({ el: first.el, dx: 0, dy: 0, sectionPageStart: true })
+  }
+  return specs
+}
+
+/** edge-triggered: the pass whose wrap widths or section-start clears differ
+ *  from the last pass's follows up once with them in the DOM */
+export function wrapWidthSig(specs: ColumnBlockPlacement[]): string {
+  return specs
+    .map((s) =>
+      s.sectionPageStart
+        ? `clear:${s.el.dataset.idx ?? '?'}`
+        : `${Math.round(s.widthPx ?? -1)}:${Math.round(s.contentWPx ?? -1)}`,
+    )
+    .join(',')
 }
 
 /**
@@ -787,24 +860,32 @@ export function sectionGeoms(
     const set = s.settings
     const hf = hfHeights?.[i]
     const vertical = sectionVertical(set)
-    const firstContentHeight =
-      !vertical && (hf?.firstHeaderPx !== undefined || hf?.firstFooterPx !== undefined)
-        ? twipsToPx(set.pageHeight) -
-          effectiveTopPx(set, hf.firstHeaderPx ?? 0) -
-          effectiveBottomPx(set, hf.firstFooterPx ?? 0)
-        : undefined
-    const bodyH =
-      twipsToPx(set.pageHeight) -
-      effectiveTopPx(set, hf?.headerPx ?? 0) -
-      effectiveBottomPx(set, hf?.footerPx ?? 0)
+    const hfOf = (variant: HfVariant) =>
+      hf ? hfVariantReservedPx(hf, variant) : { headerPx: 0, footerPx: 0 }
+    const bodyHOf = (variant: HfVariant) => {
+      const { headerPx, footerPx } = hfOf(variant)
+      return (
+        twipsToPx(set.pageHeight) - effectiveTopPx(set, headerPx) - effectiveBottomPx(set, footerPx)
+      )
+    }
+    const firstBodyH = hf && hfHasVariant(hf, 'first') ? bodyHOf('first') : undefined
+    const firstContentHeight = vertical ? undefined : firstBodyH
+    const bodyH = bodyHOf('default')
+    const evenBodyH = hf && hfHasVariant(hf, 'even') ? bodyHOf('even') : undefined
     const bodyW = twipsToPx(set.pageWidth - set.marginLeft - set.marginRight)
     return {
       // vertical text fills the page sideways: lines are bodyH long and stack across bodyW
       contentHeight: vertical ? bodyW : bodyH,
       ...(firstContentHeight !== undefined ? { firstContentHeight } : {}),
+      ...(!vertical && evenBodyH !== undefined && Math.abs(evenBodyH - bodyH) > 0.01
+        ? { evenContentHeight: evenBodyH }
+        : {}),
+      ...(vertical && firstBodyH !== undefined ? { firstBodyHeight: firstBodyH } : {}),
+      ...(vertical && evenBodyH !== undefined ? { evenBodyHeight: evenBodyH } : {}),
+      ...(s.pageNumberStart !== undefined ? { pageNumberStart: s.pageNumberStart } : {}),
       contentWidth: vertical ? bodyH : bodyW,
       ...(vertical ? { vertical } : {}),
-      topPx: effectiveTopPx(set, hf?.headerPx ?? 0),
+      topPx: effectiveTopPx(set, hfOf('default').headerPx),
       pageHeightPx: twipsToPx(set.pageHeight),
       forceBreak,
       startType: s.startType,
@@ -904,7 +985,8 @@ export function foldSectionStartSpaceBefore(blocks: BlockBox[], geoms: SectionGe
     const sec = block.section ?? 0
     if (!block.el || sec === (prev.section ?? sec) || !geoms[sec]?.forceBreak) continue
     const after = prev.spaceAfterPx ?? 0
-    const sb = Math.min(parseFloat(getComputedStyle(block.el).marginTop) || 0, after)
+    const margin = block.marginBeforePx ?? (parseFloat(getComputedStyle(block.el).marginTop) || 0)
+    const sb = Math.min(margin, after)
     if (sb <= 0.5) continue
     prev.spaceAfterPx = after - sb
     prev.height -= sb
