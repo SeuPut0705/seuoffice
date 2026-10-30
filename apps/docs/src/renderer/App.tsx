@@ -5957,6 +5957,9 @@ export function App() {
         case 'save-as':
           void save(true)
           break
+        case 'name-with-ai':
+          void nameWithAi()
+          break
         case 'undo':
           editor?.chain().focus().undo().run()
           break
@@ -6141,6 +6144,7 @@ export function App() {
     openFile,
     openRecent,
     save,
+    nameWithAi,
     exportPdf,
     exportHtml,
     exportHwp,
