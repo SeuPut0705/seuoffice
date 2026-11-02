@@ -9,6 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import type { Editor } from '@tiptap/core'
+import type { PageCut } from '../pagination-cuts'
 import type { Node as PmNode } from '@tiptap/pm/model'
 import { TextSelection, type Transaction } from '@tiptap/pm/state'
 import { collectHeadings, type HeadingRef, type HeadingStyles } from '../editor/headings'
@@ -144,12 +145,15 @@ export function NavPane({
   zoom,
   pageInfo,
   onClose,
+  cuts,
 }: {
   editor: Editor
   doc: PmNode
   /** canvas zoom factor (1 = 100%) */
   zoom: number
   pageInfo: { current: number; total: number }
+  /** the current pass's page cuts for the thumbnails (page edges) */
+  cuts?: () => readonly PageCut[] | undefined
   onClose: () => void
 }) {
   const { t } = useI18n()
@@ -622,6 +626,7 @@ export function NavPane({
             width={bodyW}
             layoutVersion={layoutVersion}
             currentPage={pageInfo.current}
+            cuts={cuts}
             hitPositions={hitPositions}
           />
         )}

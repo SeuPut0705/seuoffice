@@ -2472,10 +2472,7 @@ async function openFileDialog(event: IpcMainInvokeEvent, options: OpenDialogOpti
 async function saveFileDialog(event: IpcMainInvokeEvent, options: SaveDialogOptions) {
   // before any pick is remembered, bare-name suggestions anchor in the
   // configurable default save folder instead of Electron's Downloads pin
-  return showSaveDialogWithMemory(
-    dialog,
-    dialogParent(event),
-    options,
+  return showSaveDialogWithMemory(dialog, dialogParent(event), options, () =>
     configuredDefaultSaveDir(app),
   )
 }

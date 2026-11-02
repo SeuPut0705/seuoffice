@@ -76,6 +76,8 @@ import {
   type RecoveryEditorContract,
   type RecoveryIdentity,
   readHwpDefaultFormat,
+  readLegacyImportSkip,
+  writeLegacyImportSkip,
 } from '@genoffice/electron-utils'
 import { aiRunRefusal } from '@genoffice/electron-utils/ai-run-guard'
 import {
@@ -292,6 +294,7 @@ const tMain = createI18n({
     dlgOpenDoc: '打开文档',
     filterWord: 'Word 文档',
     filterOdt: 'OpenDocument 文本',
+    importSkipConfirm: '下次直接转换，不再提示',
     docImportMsg: '转换 .{ext} 文档？',
     docImportDetail:
       'GenOffice 只编辑 .docx，不编辑 Word 97-2003 旧版 .doc。正文、标题、列表、表格和图片会转换过来；脚注、批注和文本框不会完整保留。原文件不会被修改，转换出的 .docx 是一份独立副本，之后的保存都写入它。', // public-hygiene: allow
@@ -434,6 +437,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Open Document',
     filterWord: 'Word Documents',
     filterOdt: 'OpenDocument Text',
+    importSkipConfirm: 'Convert without asking next time',
     docImportMsg: 'Convert this .{ext} document?',
     docImportDetail:
       'GenOffice edits .docx, not Word 97-2003 documents. Body text, headings, lists, tables and images carry over; footnotes, comments and text boxes are not fully preserved. The original file is never changed; the converted .docx is a separate copy that later saves write to.',
@@ -576,6 +580,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Mở tài liệu',
     filterWord: 'Tài liệu Word',
     filterOdt: 'Văn bản OpenDocument',
+    importSkipConfirm: 'Lần sau chuyển đổi ngay, không hỏi lại',
     docImportMsg: 'Chuyển đổi tài liệu .{ext} này?',
     docImportDetail:
       'GenOffice chỉnh sửa .docx chứ không chỉnh sửa tài liệu Word 97-2003 (.doc). Nội dung, tiêu đề, danh sách, bảng và hình ảnh được chuyển đổi; chú thích cuối trang, bình luận và hộp văn bản không được giữ đầy đủ. Tệp gốc không bao giờ bị sửa; bản .docx sau chuyển đổi là một bản sao độc lập để tiếp tục chỉnh sửa và lưu.',
@@ -719,6 +724,7 @@ const tMain = createI18n({
     dlgOpenDoc: '文書を開く',
     filterWord: 'Word 文書',
     filterOdt: 'OpenDocument テキスト',
+    importSkipConfirm: '次回から確認せずに変換する',
     docImportMsg: 'この .{ext} 文書を変換しますか？',
     docImportDetail:
       'GenOffice は Word 97-2003 形式（.doc）ではなく .docx を編集します。本文・見出し・リスト・表・画像は変換されますが、脚注・コメント・テキストボックスは完全には保持されません。元のファイルは変更されず、変換後の .docx は独立したコピーとして以後の保存先になります。',
@@ -862,6 +868,7 @@ const tMain = createI18n({
     dlgOpenDoc: '문서 열기',
     filterWord: 'Word 문서',
     filterOdt: 'OpenDocument 텍스트',
+    importSkipConfirm: '다음부터 묻지 않고 변환',
     docImportMsg: '이 .{ext} 문서를 변환할까요?',
     docImportDetail:
       'GenOffice은 Word 97-2003(.doc) 문서가 아니라 .docx를 편집합니다. 본문, 제목, 목록, 표, 이미지는 변환되지만 각주, 메모, 텍스트 상자는 완전히 유지되지 않습니다. 원본 파일은 변경되지 않으며, 변환된 .docx는 이후 저장이 기록되는 독립적인 사본입니다.',
@@ -1005,6 +1012,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Ouvrir un document',
     filterWord: 'Documents Word',
     filterOdt: 'Texte OpenDocument',
+    importSkipConfirm: 'La prochaine fois, convertir sans demander',
     docImportMsg: 'Convertir ce document .{ext} ?',
     docImportDetail:
       'GenOffice modifie des .docx, pas de documents Word 97-2003 (.doc). Le texte, les titres, les listes, les tableaux et les images sont convertis ; les notes de bas de page, les commentaires et les zones de texte ne sont pas entièrement conservés. Le fichier d’origine n’est jamais modifié ; le .docx converti est une copie distincte où s’effectuent les enregistrements suivants.',
@@ -1149,6 +1157,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Dokument öffnen',
     filterWord: 'Word-Dokumente',
     filterOdt: 'OpenDocument-Text',
+    importSkipConfirm: 'Nächstes Mal ohne Nachfrage konvertieren',
     docImportMsg: 'Dieses .{ext}-Dokument konvertieren?',
     docImportDetail:
       'GenOffice bearbeitet .docx, nicht Word 97-2003-Dokumente (.doc). Text, Überschriften, Listen, Tabellen und Bilder werden übernommen; Fußnoten, Kommentare und Textfelder werden nicht vollständig bewahrt. Die Originaldatei bleibt unverändert; die konvertierte .docx-Kopie ist eigenständig, und spätere Speicherungen landen in ihr.',
@@ -1293,6 +1302,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Abrir documento',
     filterWord: 'Documentos de Word',
     filterOdt: 'Texto OpenDocument',
+    importSkipConfirm: 'La próxima vez, convertir sin preguntar',
     docImportMsg: '¿Convertir este documento .{ext}?',
     docImportDetail:
       'GenOffice edita .docx, no documentos de Word 97-2003 (.doc). El texto, los títulos, las listas, las tablas y las imágenes se convierten; las notas al pie, los comentarios y los cuadros de texto no se conservan por completo. El archivo original nunca se modifica; el .docx convertido es una copia independiente en la que se guardan los cambios posteriores.',
@@ -1437,6 +1447,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'เปิดเอกสาร',
     filterWord: 'เอกสาร Word',
     filterOdt: 'ข้อความ OpenDocument',
+    importSkipConfirm: 'ครั้งถัดไปแปลงทันทีโดยไม่ต้องถาม',
     docImportMsg: 'แปลงเอกสาร .{ext} นี้ไหม?',
     docImportDetail:
       'GenOffice แก้ไข .docx ไม่ใช่เอกสาร Word 97-2003 (.doc) ข้อความ หัวข้อ รายการ ตาราง และรูปภาพจะถูกแปลง ส่วนเชิงอรรถ ความคิดเห็น และกล่องข้อความจะไม่ถูกเก็บไว้ทั้งหมด ไฟล์ต้นทางจะไม่ถูกแก้ไข และไฟล์ .docx ที่แปลงแล้วเป็นสำเนาแยกต่างหากที่การบันทึกครั้งต่อไปจะเขียนลง',
@@ -1580,6 +1591,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Buka Dokumen',
     filterWord: 'Dokumen Word',
     filterOdt: 'Teks OpenDocument',
+    importSkipConfirm: 'Lain kali langsung konversi tanpa bertanya',
     docImportMsg: 'Konversi dokumen .{ext} ini?',
     docImportDetail:
       'GenOffice mengedit .docx, bukan dokumen Word 97-2003 (.doc). Teks isi, judul, daftar, tabel, dan gambar ikut dikonversi; catatan kaki, komentar, dan kotak teks tidak sepenuhnya dipertahankan. File asli tidak pernah diubah; salinan .docx hasil konversi berdiri sendiri dan penyimpanan berikutnya ditulis ke sana.',
@@ -1723,6 +1735,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Открыть документ',
     filterWord: 'Документы Word',
     filterOdt: 'Текст OpenDocument',
+    importSkipConfirm: 'В следующий раз конвертировать без запроса',
     docImportMsg: 'Преобразовать этот документ .{ext}?',
     docImportDetail:
       'GenOffice редактирует .docx, а не документы Word 97-2003 (.doc). Текст, заголовки, списки, таблицы и изображения переносятся; сноски, примечания и надписи сохраняются не полностью. Исходный файл никогда не изменяется; преобразованный .docx — отдельная копия, в которую записывается дальнейшее сохранение.',
@@ -1866,6 +1879,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'فتح مستند',
     filterWord: 'مستندات Word',
     filterOdt: 'نص OpenDocument',
+    importSkipConfirm: 'في المرة القادمة، حوّل دون سؤال',
     docImportMsg: 'تحويل مستند .{ext} هذا؟',
     docImportDetail:
       'يحرّر GenOffice ملفات ‎.docx ولا يحرّر مستندات Word 97-2003 (‎.doc). يُحوَّل النص والعناوين والقوائم والجداول والصور؛ أما الحواشي السفلية والتعليقات ومربعات النص فلا تُحفظ بالكامل. لا يتغيّر الملف الأصلي أبدًا؛ والملف ‎.docx المحوَّل نسخة مستقلة تُكتب فيها عمليات الحفظ اللاحقة.',
@@ -2009,6 +2023,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Abrir Documento',
     filterWord: 'Documentos do Word',
     filterOdt: 'Texto OpenDocument',
+    importSkipConfirm: 'Da próxima vez, converter sem perguntar',
     docImportMsg: 'Converter este documento .{ext}?',
     docImportDetail:
       'O GenOffice edita .docx, não documentos do Word 97-2003 (.doc). Texto, títulos, listas, tabelas e imagens são convertidos; notas de rodapé, comentários e caixas de texto não são preservados por completo. O arquivo original nunca é alterado; o .docx convertido é uma cópia independente em que os salvamentos seguintes são gravados.',
@@ -2152,6 +2167,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Apri documento',
     filterWord: 'Documenti Word',
     filterOdt: 'Testo OpenDocument',
+    importSkipConfirm: 'La prossima volta converti senza chiedere',
     docImportMsg: 'Convertire questo documento .{ext}?',
     docImportDetail:
       'GenOffice modifica .docx, non documenti Word 97-2003 (.doc). Testo, titoli, elenchi, tabelle e immagini vengono convertiti; note a piè di pagina, commenti e caselle di testo non sono conservati completamente. Il file originale non viene mai modificato; il .docx convertito è una copia indipendente su cui vengono salvate le modifiche successive.',
@@ -2295,6 +2311,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Otwórz dokument',
     filterWord: 'Dokumenty programu Word',
     filterOdt: 'Tekst OpenDocument',
+    importSkipConfirm: 'Następnym razem konwertuj bez pytania',
     docImportMsg: 'Skonwertować ten dokument .{ext}?',
     docImportDetail:
       'GenOffice edytuje .docx, a nie dokumenty Word 97-2003 (.doc). Tekst, nagłówki, listy, tabele i obrazy są konwertowane; przypisy, komentarze i pola tekstowe nie są zachowywane w całości. Plik oryginalny nigdy nie jest zmieniany; skonwertowany .docx to niezależna kopia, do której trafiają kolejne zapisy.',
@@ -2438,6 +2455,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Otevřít dokument',
     filterWord: 'Dokumenty Wordu',
     filterOdt: 'Text OpenDocument',
+    importSkipConfirm: 'Příště převést bez ptaní',
     docImportMsg: 'Převést tento dokument .{ext}?',
     docImportDetail:
       'GenOffice upravuje .docx, nikoli dokumenty Word 97-2003 (.doc). Text, nadpisy, seznamy, tabulky a obrázky se převedou; poznámky pod čarou, komentáře a textová pole se nepřevezmou úplně. Původní soubor se nikdy nemění; převedený .docx je samostatná kopie, do níž se dalším ukládáním zapisuje.',
@@ -2581,6 +2599,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Document openen',
     filterWord: 'Word-documenten',
     filterOdt: 'OpenDocument-tekst',
+    importSkipConfirm: 'Volgende keer converteren zonder te vragen',
     docImportMsg: 'Dit .{ext}-document converteren?',
     docImportDetail:
       'GenOffice bewerkt .docx, geen Word 97-2003-documenten (.doc). Tekst, koppen, lijsten, tabellen en afbeeldingen worden omgezet; voetnoten, opmerkingen en tekstvakken niet volledig. Het oorspronkelijke bestand wordt nooit gewijzigd; de omgezette .docx is een zelfstandige kopie waarin volgende opslaan-acties terechtkomen.',
@@ -2724,6 +2743,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'Buka Dokumen',
     filterWord: 'Dokumen Word',
     filterOdt: 'Teks OpenDocument',
+    importSkipConfirm: 'Lain kali terus tukar tanpa bertanya',
     docImportMsg: 'Tukar dokumen .{ext} ini?',
     docImportDetail:
       'GenOffice menyunting .docx, bukan dokumen Word 97-2003 (.doc). Teks kandungan, tajuk, senarai, jadual dan imej ditukar; nota kaki, komen dan kotak teks tidak dikekalkan sepenuhnya. Fail asal tidak pernah diubah; salinan .docx yang ditukar ialah salinan berasingan tempat simpanan seterusnya ditulis.',
@@ -2867,6 +2887,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'פתיחת מסמך',
     filterWord: 'מסמכי Word',
     filterOdt: 'טקסט OpenDocument',
+    importSkipConfirm: 'בפעם הבאה להמיר בלי לשאול',
     docImportMsg: 'להמיר את מסמך ה‑.{ext} הזה?',
     docImportDetail:
       'GenOffice עורך קבצי ‎.docx ולא מסמכי Word 97-2003 (‎.doc). טקסט, כותרות, רשימות, טבלאות ותמונות מומרים; הערות שוליים, תגובות ותיבות טקסט לא נשמרים במלואם. קובץ המקור לעולם אינו משתנה; קובץ ה‑.docx שהומר הוא עותק נפרד שאליו נכתבות השמירות הבאות.',
@@ -3010,6 +3031,7 @@ const tMain = createI18n({
     dlgOpenDoc: 'दस्तावेज़ खोलें',
     filterWord: 'Word दस्तावेज़',
     filterOdt: 'OpenDocument टेक्स्ट',
+    importSkipConfirm: 'अगली बार बिना पूछे बदलें',
     docImportMsg: 'इस .{ext} दस्तावेज़ को बदलें?',
     docImportDetail:
       'GenOffice Word 97-2003 (.doc) दस्तावेज़ नहीं, .docx संपादित करता है। मुख्य पाठ, शीर्षक, सूचियाँ, तालिकाएँ और चित्र बदल दिए जाते हैं; फुटनोट, टिप्पणियाँ और टेक्स्ट बॉक्स पूरी तरह नहीं रखे जाते। मूल फ़ाइल कभी नहीं बदलती; बदली हुई .docx एक स्वतंत्र प्रति है जिसमें आगे के सेव लिखे जाते हैं।',
@@ -3153,6 +3175,7 @@ const tMain = createI18n({
     dlgOpenDoc: '開啟文件',
     filterWord: 'Word 文件',
     filterOdt: 'OpenDocument 文字',
+    importSkipConfirm: '下次直接轉換，不再提示',
     docImportMsg: '轉換這個 .{ext} 文件？',
     docImportDetail:
       'GenOffice 只編輯 .docx，不編輯 Word 97-2003 舊版 .doc。內文、標題、清單、表格與圖片會轉換過來；註腳、註解與文字方塊不會完整保留。原始檔案不會被修改，轉換後的 .docx 是獨立副本，之後的儲存都寫入它。', // public-hygiene: allow
@@ -3476,6 +3499,7 @@ function readJson<T>(path: string, fallback: T): T {
 // ---- recent files ----
 
 const RECENT_PATH = () => userDataPath('recent.json')
+const APP_SETTINGS_PATH = () => join(app.getPath('userData'), 'app-settings.json')
 
 // the home screen lists all of these; the File menu shows only the first few
 const RECENT_LIMIT = 100
@@ -4023,19 +4047,29 @@ async function prepareDocumentForOpen(
 ): Promise<string | null> {
   if (!isWord97Path(filePath)) return filePath
   const extension = filePath.slice(-3).toLowerCase()
-  const options = {
-    type: 'warning' as const,
-    message: tm('docImportMsg', { ext: extension }),
-    detail: tm('docImportDetail'),
-    buttons: [tm('docImportConvertBtn'), tm('btnCancel')],
-    defaultId: 0,
-    cancelId: 1,
-    noLink: true,
+  if (!readLegacyImportSkip(APP_SETTINGS_PATH(), 'word97')) {
+    const options = {
+      type: 'warning' as const,
+      message: tm('docImportMsg', { ext: extension }),
+      detail: tm('docImportDetail'),
+      buttons: [tm('docImportConvertBtn'), tm('btnCancel')],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+      checkboxLabel: tm('importSkipConfirm'),
+    }
+    const { response, checkboxChecked } = parent
+      ? await dialog.showMessageBox(parent, options)
+      : await dialog.showMessageBox(options)
+    if (response !== 0) return null
+    if (checkboxChecked) {
+      try {
+        writeLegacyImportSkip(APP_SETTINGS_PATH(), 'word97', true)
+      } catch {
+        /* unwritable settings: ask again next time */
+      }
+    }
   }
-  const { response } = parent
-    ? await dialog.showMessageBox(parent, options)
-    : await dialog.showMessageBox(options)
-  if (response !== 0) return null
   const picked = await showSaveDialogWithMemory(
     dialog,
     parent,

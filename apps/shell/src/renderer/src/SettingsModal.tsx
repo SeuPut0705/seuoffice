@@ -1706,6 +1706,7 @@ export function SettingsModal({
   const [defaultAppFailed, setDefaultAppFailed] = useState(false)
   const [aiPrefs, setAiPrefs] = useState<AiPanelPrefs>(DEFAULT_AI_PANEL_PREFS)
   const [authorName, setAuthorName] = useState<AuthorNameSetting>({ value: '', fallback: '' })
+  const [legacyImportPrompt, setLegacyImportPrompt] = useState(true)
   const [appVersion, setAppVersion] = useState('')
   const [updateState, setUpdateState] = useState<UpdateUiState | null>(null)
   // one live view of the two subscription connections for the whole dialog
@@ -1737,6 +1738,9 @@ export function SettingsModal({
     })
     void window.aiOffice.getAiPanelPrefs?.().then((prefs) => {
       if (alive) setAiPrefs(prefs)
+    })
+    void window.aiOffice.getLegacyImportPrompt?.().then((v) => {
+      if (alive) setLegacyImportPrompt(v)
     })
     void window.aiOffice.getAuthorName?.().then((v) => {
       if (alive) setAuthorName(v)
@@ -2050,6 +2054,25 @@ export function SettingsModal({
                     onBlur={commitAuthorName}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') e.currentTarget.blur()
+                    }}
+                  />
+                </div>
+                <div className="set-field">
+                  <div className="set-field-text">
+                    <div className="set-field-stack">
+                      <div className="set-field-label">{t('setLegacyImportPrompt')}</div>
+                      <div className="set-field-desc">{t('setLegacyImportPromptDesc')}</div>
+                    </div>
+                  </div>
+                  <button
+                    className="set-switch"
+                    role="switch"
+                    aria-checked={legacyImportPrompt}
+                    aria-label={t('setLegacyImportPrompt')}
+                    onClick={() => {
+                      const next = !legacyImportPrompt
+                      setLegacyImportPrompt(next)
+                      void window.aiOffice.setLegacyImportPrompt?.(next).then(setLegacyImportPrompt)
                     }}
                   />
                 </div>

@@ -203,6 +203,9 @@ export const strings = {
     aiFontSizeXLarge: '特大',
     aiFontSizeCustom: '自定义',
     setAiSpellcheck: 'AI 对话拼写检查',
+    setLegacyImportPrompt: '打开旧格式前先提示',
+    setLegacyImportPromptDesc:
+      '打开 .doc、.odt、.hwp、.ods、.odp 等旧格式文件时，先说明哪些内容会转换过来。关闭后直接进入另存为。',
     setDefaultApp: '设为 Office 文档默认程序',
     setDefaultAppDesc: '双击 .docx、.xlsx、.pptx 文件时用 GenOffice 打开。',
     setDefaultAppIs: 'GenOffice 已是默认程序。',
@@ -783,6 +786,9 @@ export const strings = {
     aiFontSizeXLarge: 'Extra large',
     aiFontSizeCustom: 'Custom',
     setAiSpellcheck: 'Spell check in AI chat',
+    setLegacyImportPrompt: 'Ask before converting legacy files',
+    setLegacyImportPromptDesc:
+      'Explain what carries over before opening .doc, .odt, .hwp, .ods or .odp files. When off, Save As opens right away.',
     setDefaultApp: 'Default app for Office documents',
     setDefaultAppDesc: 'Open .docx, .xlsx and .pptx files in GenOffice when double-clicked.',
     setDefaultAppIs: 'GenOffice is already the default.',
@@ -1387,6 +1393,9 @@ export const strings = {
     aiFontSizeXLarge: 'Rất lớn',
     aiFontSizeCustom: 'Tùy chỉnh',
     setAiSpellcheck: 'Kiểm tra chính tả trong trò chuyện AI',
+    setLegacyImportPrompt: 'Hỏi trước khi chuyển đổi tệp cũ',
+    setLegacyImportPromptDesc:
+      'Giải thích nội dung được giữ lại trước khi mở tệp .doc, .odt, .hwp, .ods hoặc .odp. Khi tắt, hộp thoại Lưu dưới dạng mở ngay.',
     setDefaultApp: 'Ứng dụng mặc định cho tài liệu Office',
     setDefaultAppDesc: 'Mở các tệp .docx, .xlsx và .pptx bằng GenOffice khi bấm đúp.',
     setDefaultAppIs: 'GenOffice đã là ứng dụng mặc định.',
@@ -2000,6 +2009,9 @@ export const strings = {
     aiFontSizeXLarge: '特大',
     aiFontSizeCustom: 'カスタム',
     setAiSpellcheck: 'AI チャットのスペルチェック',
+    setLegacyImportPrompt: '旧形式ファイルの変換前に確認する',
+    setLegacyImportPromptDesc:
+      '.doc、.odt、.hwp、.ods、.odp を開く前に、引き継がれる内容を説明します。オフにすると直接「名前を付けて保存」が開きます。',
     setDefaultApp: 'Office 文書の既定のアプリ',
     setDefaultAppDesc:
       '.docx、.xlsx、.pptx ファイルをダブルクリックしたとき GenOffice で開きます。',
@@ -2619,6 +2631,9 @@ export const strings = {
     aiFontSizeXLarge: '더 크게',
     aiFontSizeCustom: '사용자 지정',
     setAiSpellcheck: 'AI 채팅 맞춤법 검사',
+    setLegacyImportPrompt: '이전 형식 파일 변환 전 확인',
+    setLegacyImportPromptDesc:
+      '.doc, .odt, .hwp, .ods, .odp 파일을 열기 전에 어떤 내용이 유지되는지 안내합니다. 끄면 바로 다른 이름으로 저장이 열립니다.',
     setDefaultApp: 'Office 문서 기본 앱',
     setDefaultAppDesc: '.docx, .xlsx, .pptx 파일을 두 번 클릭하면 GenOffice로 엽니다.',
     setDefaultAppIs: 'GenOffice가 이미 기본 앱입니다.',
@@ -3226,6 +3241,9 @@ export const strings = {
     aiFontSizeXLarge: 'Très grande',
     aiFontSizeCustom: 'Personnalisé',
     setAiSpellcheck: 'Correction orthographique dans le chat IA',
+    setLegacyImportPrompt: 'Demander avant de convertir les anciens fichiers',
+    setLegacyImportPromptDesc:
+      'Explique ce qui est conservé avant d’ouvrir un fichier .doc, .odt, .hwp, .ods ou .odp. Désactivé, Enregistrer sous s’ouvre directement.',
     setDefaultApp: 'Application par défaut pour les documents Office',
     setDefaultAppDesc: 'Ouvrir les fichiers .docx, .xlsx et .pptx dans GenOffice par double-clic.',
     setDefaultAppIs: 'GenOffice est déjà l’application par défaut.',
@@ -3857,6 +3875,9 @@ export const strings = {
     aiFontSizeXLarge: 'Sehr groß',
     aiFontSizeCustom: 'Benutzerdefiniert',
     setAiSpellcheck: 'Rechtschreibprüfung im KI-Chat',
+    setLegacyImportPrompt: 'Vor dem Konvertieren alter Dateien nachfragen',
+    setLegacyImportPromptDesc:
+      'Erklärt vor dem Öffnen von .doc-, .odt-, .hwp-, .ods- oder .odp-Dateien, was übernommen wird. Ausgeschaltet öffnet sich direkt „Speichern unter“.',
     setDefaultApp: 'Standard-App für Office-Dokumente',
     setDefaultAppDesc: '.docx-, .xlsx- und .pptx-Dateien per Doppelklick in GenOffice öffnen.',
     setDefaultAppIs: 'GenOffice ist bereits die Standard-App.',
@@ -4491,6 +4512,9 @@ export const strings = {
     aiFontSizeXLarge: 'Muy grande',
     aiFontSizeCustom: 'Personalizado',
     setAiSpellcheck: 'Corrección ortográfica en el chat de IA',
+    setLegacyImportPrompt: 'Preguntar antes de convertir archivos antiguos',
+    setLegacyImportPromptDesc:
+      'Explica qué se conserva antes de abrir archivos .doc, .odt, .hwp, .ods u .odp. Desactivado, se abre directamente Guardar como.',
     setDefaultApp: 'App predeterminada para documentos de Office',
     setDefaultAppDesc: 'Abrir archivos .docx, .xlsx y .pptx en GenOffice al hacer doble clic.',
     setDefaultAppIs: 'GenOffice ya es la app predeterminada.',
@@ -5109,6 +5133,9 @@ export const strings = {
     aiFontSizeXLarge: 'ใหญ่มาก',
     aiFontSizeCustom: 'กำหนดเอง',
     setAiSpellcheck: 'ตรวจการสะกดในแชท AI',
+    setLegacyImportPrompt: 'ถามก่อนแปลงไฟล์รูปแบบเก่า',
+    setLegacyImportPromptDesc:
+      'อธิบายว่าเนื้อหาใดจะถูกแปลงมาก่อนเปิดไฟล์ .doc, .odt, .hwp, .ods หรือ .odp เมื่อปิด จะเปิดบันทึกเป็นทันที',
     setDefaultApp: 'แอปเริ่มต้นสำหรับเอกสาร Office',
     setDefaultAppDesc: 'เปิดไฟล์ .docx, .xlsx และ .pptx ด้วย GenOffice เมื่อดับเบิลคลิก',
     setDefaultAppIs: 'GenOffice เป็นแอปเริ่มต้นอยู่แล้ว',
@@ -5718,6 +5745,9 @@ export const strings = {
     aiFontSizeXLarge: 'Sangat besar',
     aiFontSizeCustom: 'Kustom',
     setAiSpellcheck: 'Pemeriksaan ejaan di obrolan AI',
+    setLegacyImportPrompt: 'Tanya sebelum mengonversi file lama',
+    setLegacyImportPromptDesc:
+      'Jelaskan apa yang ikut terbawa sebelum membuka file .doc, .odt, .hwp, .ods, atau .odp. Jika nonaktif, Simpan Sebagai langsung terbuka.',
     setDefaultApp: 'Aplikasi default untuk dokumen Office',
     setDefaultAppDesc: 'Buka file .docx, .xlsx, dan .pptx di GenOffice saat diklik dua kali.',
     setDefaultAppIs: 'GenOffice sudah menjadi aplikasi default.',
@@ -6338,6 +6368,9 @@ export const strings = {
     aiFontSizeXLarge: 'Очень крупный',
     aiFontSizeCustom: 'Другой',
     setAiSpellcheck: 'Проверка орфографии в чате ИИ',
+    setLegacyImportPrompt: 'Спрашивать перед конвертацией старых файлов',
+    setLegacyImportPromptDesc:
+      'Перед открытием файлов .doc, .odt, .hwp, .ods или .odp поясняет, что будет перенесено. Если выключено, сразу открывается «Сохранить как».',
     setDefaultApp: 'Приложение по умолчанию для документов Office',
     setDefaultAppDesc: 'Открывать файлы .docx, .xlsx и .pptx в GenOffice по двойному щелчку.',
     setDefaultAppIs: 'GenOffice уже является приложением по умолчанию.',
@@ -6957,6 +6990,9 @@ export const strings = {
     aiFontSizeXLarge: 'كبير جدًا',
     aiFontSizeCustom: 'مخصص',
     setAiSpellcheck: 'التدقيق الإملائي في محادثة الذكاء الاصطناعي',
+    setLegacyImportPrompt: 'السؤال قبل تحويل الملفات القديمة',
+    setLegacyImportPromptDesc:
+      'يوضح ما سيتم نقله قبل فتح ملفات .doc أو .odt أو .hwp أو .ods أو .odp. عند الإيقاف يُفتح «حفظ باسم» مباشرة.',
     setDefaultApp: 'التطبيق الافتراضي لمستندات Office',
     setDefaultAppDesc: 'فتح ملفات .docx و.xlsx و.pptx في GenOffice عند النقر المزدوج.',
     setDefaultAppIs: 'GenOffice هو التطبيق الافتراضي بالفعل.',
@@ -7558,6 +7594,9 @@ export const strings = {
     aiFontSizeXLarge: 'Muito grande',
     aiFontSizeCustom: 'Personalizado',
     setAiSpellcheck: 'Verificação ortográfica no chat de IA',
+    setLegacyImportPrompt: 'Perguntar antes de converter arquivos antigos',
+    setLegacyImportPromptDesc:
+      'Explica o que é preservado antes de abrir arquivos .doc, .odt, .hwp, .ods ou .odp. Desativado, Salvar como abre diretamente.',
     setDefaultApp: 'App padrão para documentos do Office',
     setDefaultAppDesc: 'Abrir arquivos .docx, .xlsx e .pptx no GenOffice ao clicar duas vezes.',
     setDefaultAppIs: 'O GenOffice já é o app padrão.',
@@ -8174,6 +8213,9 @@ export const strings = {
     aiFontSizeXLarge: 'Molto grande',
     aiFontSizeCustom: 'Personalizzato',
     setAiSpellcheck: 'Controllo ortografico nella chat IA',
+    setLegacyImportPrompt: 'Chiedi prima di convertire i file legacy',
+    setLegacyImportPromptDesc:
+      'Spiega cosa viene mantenuto prima di aprire file .doc, .odt, .hwp, .ods o .odp. Se disattivato, Salva con nome si apre subito.',
     setDefaultApp: 'App predefinita per i documenti Office',
     setDefaultAppDesc: 'Apri i file .docx, .xlsx e .pptx in GenOffice con un doppio clic.',
     setDefaultAppIs: 'GenOffice è già l’app predefinita.',
@@ -8790,6 +8832,9 @@ export const strings = {
     aiFontSizeXLarge: 'Bardzo duży',
     aiFontSizeCustom: 'Niestandardowy',
     setAiSpellcheck: 'Sprawdzanie pisowni w czacie AI',
+    setLegacyImportPrompt: 'Pytaj przed konwersją starych plików',
+    setLegacyImportPromptDesc:
+      'Wyjaśnia, co zostanie przeniesione przed otwarciem plików .doc, .odt, .hwp, .ods lub .odp. Po wyłączeniu od razu otwiera się Zapisz jako.',
     setDefaultApp: 'Domyślna aplikacja dla dokumentów Office',
     setDefaultAppDesc: 'Otwieraj pliki .docx, .xlsx i .pptx w GenOffice po dwukrotnym kliknięciu.',
     setDefaultAppIs: 'GenOffice jest już aplikacją domyślną.',
@@ -9696,6 +9741,9 @@ export const strings = {
     aiFontSizeXLarge: 'Extra velké',
     aiFontSizeCustom: 'Vlastní',
     setAiSpellcheck: 'Kontrola pravopisu v chatu AI',
+    setLegacyImportPrompt: 'Ptát se před převodem starších souborů',
+    setLegacyImportPromptDesc:
+      'Před otevřením souborů .doc, .odt, .hwp, .ods nebo .odp vysvětlí, co se převede. Při vypnutí se rovnou otevře Uložit jako.',
     setDefaultApp: 'Výchozí aplikace pro dokumenty Office',
     setDefaultAppDesc: 'Otevírat soubory .docx, .xlsx a .pptx v GenOffice poklepáním.',
     setDefaultAppIs: 'GenOffice už je výchozí aplikací.',
@@ -10006,6 +10054,9 @@ export const strings = {
     aiFontSizeXLarge: 'Extra groot',
     aiFontSizeCustom: 'Aangepast',
     setAiSpellcheck: 'Spellingcontrole in AI-chat',
+    setLegacyImportPrompt: 'Vragen voor het converteren van oude bestanden',
+    setLegacyImportPromptDesc:
+      'Legt uit wat behouden blijft voordat een .doc-, .odt-, .hwp-, .ods- of .odp-bestand wordt geopend. Uitgeschakeld opent direct Opslaan als.',
     setDefaultApp: 'Standaardapp voor Office-documenten',
     setDefaultAppDesc: '.docx-, .xlsx- en .pptx-bestanden in GenOffice openen bij dubbelklikken.',
     setDefaultAppIs: 'GenOffice is al de standaardapp.',
@@ -10618,6 +10669,9 @@ export const strings = {
     aiFontSizeXLarge: 'Sangat besar',
     aiFontSizeCustom: 'Tersuai',
     setAiSpellcheck: 'Semakan ejaan dalam sembang AI',
+    setLegacyImportPrompt: 'Tanya sebelum menukar fail lama',
+    setLegacyImportPromptDesc:
+      'Terangkan apa yang dikekalkan sebelum membuka fail .doc, .odt, .hwp, .ods atau .odp. Jika dimatikan, Simpan Sebagai terus dibuka.',
     setDefaultApp: 'Apl lalai untuk dokumen Office',
     setDefaultAppDesc: 'Buka fail .docx, .xlsx dan .pptx dalam GenOffice apabila diklik dua kali.',
     setDefaultAppIs: 'GenOffice sudah menjadi apl lalai.',
@@ -11228,6 +11282,9 @@ export const strings = {
     aiFontSizeXLarge: 'גדול מאוד',
     aiFontSizeCustom: 'מותאם אישית',
     setAiSpellcheck: 'בדיקת איות בצ׳אט ה-AI',
+    setLegacyImportPrompt: 'לשאול לפני המרת קבצים ישנים',
+    setLegacyImportPromptDesc:
+      'מסביר מה יישמר לפני פתיחת קובצי ‎.doc, ‎.odt, ‎.hwp, ‎.ods או ‎.odp. כשכבוי, „שמירה בשם” נפתח מיד.',
     setDefaultApp: 'אפליקציית ברירת המחדל למסמכי Office',
     setDefaultAppDesc: 'פתיחת קובצי .docx‏, .xlsx ו‑.pptx ב‑GenOffice בלחיצה כפולה.',
     setDefaultAppIs: 'GenOffice היא כבר ברירת המחדל.',
@@ -11819,6 +11876,9 @@ export const strings = {
     aiFontSizeXLarge: 'बहुत बड़ा',
     aiFontSizeCustom: 'कस्टम',
     setAiSpellcheck: 'AI चैट में वर्तनी जाँच',
+    setLegacyImportPrompt: 'पुरानी फ़ाइलें बदलने से पहले पूछें',
+    setLegacyImportPromptDesc:
+      '.doc, .odt, .hwp, .ods या .odp फ़ाइलें खोलने से पहले बताता है कि क्या-क्या बदला जाएगा। बंद होने पर सीधे “इस रूप में सहेजें” खुलता है।',
     setDefaultApp: 'Office दस्तावेज़ों के लिए डिफ़ॉल्ट ऐप',
     setDefaultAppDesc: '.docx, .xlsx और .pptx फ़ाइलें डबल-क्लिक करने पर GenOffice में खोलें।',
     setDefaultAppIs: 'GenOffice पहले से डिफ़ॉल्ट ऐप है।',
@@ -12414,6 +12474,9 @@ export const strings = {
     aiFontSizeXLarge: '特大',
     aiFontSizeCustom: '自訂',
     setAiSpellcheck: 'AI 對話拼字檢查',
+    setLegacyImportPrompt: '開啟舊格式前先提示',
+    setLegacyImportPromptDesc:
+      '開啟 .doc、.odt、.hwp、.ods、.odp 等舊格式檔案時，先說明哪些內容會轉換過來。關閉後直接進入另存新檔。',
     setDefaultApp: '設為 Office 文件預設程式',
     setDefaultAppDesc: '雙擊 .docx、.xlsx、.pptx 檔案時用 GenOffice 開啟。',
     setDefaultAppIs: 'GenOffice 已是預設程式。',

@@ -383,6 +383,8 @@ export interface HomeApi {
   openMcpLogFile(): Promise<void>
   /** name on comments and tracked changes; `value` is the stored override ('' = use `fallback`, the OS account) */
   getAuthorName(): Promise<AuthorNameSetting>
+  getLegacyImportPrompt(): Promise<boolean>
+  setLegacyImportPrompt(prompt: boolean): Promise<boolean>
   /** persist; broadcasts 'app:author-name-changed' (the effective name) to all web contents */
   setAuthorName(value: string): Promise<AuthorNameSetting>
   /** AI panel text size + chat-input spellcheck (persisted in userData/app-settings.json) */
@@ -626,6 +628,8 @@ export const HOME_CHANNELS = {
   clearMcpLogs: 'home:clear-mcp-logs',
   openMcpLogFile: 'home:open-mcp-log-file',
   getAuthorName: 'home:get-author-name',
+  getLegacyImportPrompt: 'home:get-legacy-import-prompt',
+  setLegacyImportPrompt: 'home:set-legacy-import-prompt',
   setAuthorName: 'home:set-author-name',
   getAiPanelPrefs: 'home:get-ai-panel-prefs',
   setAiPanelPrefs: 'home:set-ai-panel-prefs',

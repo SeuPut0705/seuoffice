@@ -118,6 +118,8 @@ import {
   resetAppShuttingDown,
   resumeDiscardedCopies,
   type RecoveryUntitledIdentity,
+  readLegacyImportPrompt,
+  writeLegacyImportPrompt,
 } from '@genoffice/electron-utils'
 import { SPLIT_PANE_CHANNELS } from '@genoffice/electron-utils/split-pane-bridge'
 import { createMainProcessProxyDispatcher } from '@genoffice/electron-utils/main-proxy'
@@ -6760,6 +6762,14 @@ function registerHomeIpc(): void {
         wc.send('app:author-name-changed', effective)
     }
     return authorNameSetting()
+  })
+
+  ipcMain.handle(HOME_CHANNELS.getLegacyImportPrompt, (): boolean =>
+    readLegacyImportPrompt(APP_SETTINGS_PATH()),
+  )
+  ipcMain.handle(HOME_CHANNELS.setLegacyImportPrompt, (_event, prompt: unknown): boolean => {
+    writeLegacyImportPrompt(APP_SETTINGS_PATH(), prompt !== false)
+    return readLegacyImportPrompt(APP_SETTINGS_PATH())
   })
 
   ipcMain.handle(HOME_CHANNELS.getAutoSaveDefault, (): AutoSaveDefault => currentAutoSaveDefault())

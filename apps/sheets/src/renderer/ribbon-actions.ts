@@ -1631,7 +1631,14 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
     switch (name) {
       case 'bold':
         // An explicit :on/:off argument sets absolutely (Format Cells
-        // dialog); no argument keeps ribbon toggle behavior.
+        // dialog); no argument keeps ribbon toggle behavior. In the cell
+        // editor the toggle works on the selected characters only — the
+        // whole-cell write would overwrite that key on every rich-text run
+        // (the inline command derives the toggle from the selection itself).
+        if (!argument && cellEditorHoldsText(runtime)) {
+          void runtime.univerAPI.executeCommand(SetInlineFormatBoldCommand.id)
+          break
+        }
         range.setFontWeight(
           argument
             ? argument === 'on'
@@ -1643,6 +1650,10 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
         )
         break
       case 'italic':
+        if (!argument && cellEditorHoldsText(runtime)) {
+          void runtime.univerAPI.executeCommand(SetInlineFormatItalicCommand.id)
+          break
+        }
         range.setFontStyle(
           argument
             ? argument === 'on'
@@ -1654,6 +1665,10 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
         )
         break
       case 'underline': {
+        if (!argument && cellEditorHoldsText(runtime)) {
+          void runtime.univerAPI.executeCommand(SetInlineFormatUnderlineCommand.id)
+          break
+        }
         if (argument === 'double') {
           // Toggle: Excel's double-underline button removes an existing
           // double underline. setValue merges the style patch range-wide.
@@ -1698,6 +1713,10 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
         break
       }
       case 'strike':
+        if (!argument && cellEditorHoldsText(runtime)) {
+          void runtime.univerAPI.executeCommand(SetInlineFormatStrikethroughCommand.id)
+          break
+        }
         range.setFontLine(
           argument
             ? argument === 'on'
@@ -1894,6 +1913,12 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
         range.setNumberFormat(argument)
         break
       case 'font-family': {
+        if (cellEditorHoldsText(runtime)) {
+          void runtime.univerAPI.executeCommand(SetInlineFormatFontFamilyCommand.id, {
+            value: argument,
+          })
+          break
+        }
         const undoTopBefore = topUndoElement(runtime)
         range.setFontFamily(argument)
         if (argument.length > 0 && argument.length <= 128) {
@@ -1907,6 +1932,14 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
           name === 'font-size-step'
             ? stepFontSize(range.getFontSize() ?? 11, argument === '-1' ? -1 : 1)
             : Number(argument)
+        if (cellEditorHoldsText(runtime)) {
+          if (Number.isFinite(sizePt) && sizePt > 0 && sizePt <= 409) {
+            void runtime.univerAPI.executeCommand(SetInlineFormatFontSizeCommand.id, {
+              value: sizePt,
+            })
+          }
+          break
+        }
         const undoTopBefore = topUndoElement(runtime)
         range.setFontSize(sizePt)
         if (Number.isFinite(sizePt) && sizePt > 0 && sizePt <= 409) {
@@ -1940,6 +1973,16 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
         break
       }
       case 'font-color':
+        // In the cell editor the swatch colors the selected characters only
+        // (or arms the typing color at a collapsed caret), as Excel does —
+        // the whole-cell write below would force this color onto every run
+        // of a rich-text cell, erasing the other runs' own colors.
+        if (cellEditorHoldsText(runtime)) {
+          void runtime.univerAPI.executeCommand(SetInlineFormatTextColorCommand.id, {
+            value: argument === 'auto' ? null : argument,
+          })
+          break
+        }
         // 'auto' clears the explicit color back to the default (Excel's
         // Automatic); null is the documented reset, same as setBackground
         range.setFontColor((argument === 'auto' ? null : argument) as unknown as string)

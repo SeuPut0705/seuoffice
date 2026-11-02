@@ -231,3 +231,12 @@ export {
   type SaveConflictOptions,
   type SaveDiskState,
 } from './save-conflict'
+export {
+  LEGACY_IMPORT_KINDS,
+  LEGACY_IMPORT_SKIP_KEY,
+  readLegacyImportPrompt,
+  readLegacyImportSkip,
+  writeLegacyImportPrompt,
+  writeLegacyImportSkip,
+  type LegacyImportKind,
+} from './legacy-import-prefs'
