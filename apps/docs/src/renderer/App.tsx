@@ -100,6 +100,7 @@ import {
   type PictureWatermarkSpec,
   type Watermark,
   type WatermarkSpec,
+  type CommentImage,
 } from '@genoffice/docx-engine'
 import type {
   AiDocContent,
@@ -3322,7 +3323,7 @@ export function App() {
   }, [editor])
 
   const submitNewComment = useCallback(
-    (text: string) => submitNewCommentImpl(reviewCtxRef.current, text),
+    (text: string, image?: CommentImage) => submitNewCommentImpl(reviewCtxRef.current, text, image),
     [],
   )
   const replyToComment = useCallback(
