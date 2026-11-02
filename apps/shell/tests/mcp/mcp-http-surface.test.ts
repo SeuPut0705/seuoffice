@@ -49,13 +49,20 @@ const DEFAULT_NAMES = [
   'read_document',
   'read_docx',
   'read_hwp',
+  'read_docx_properties',
   'read_pdf',
   'read_sheet',
   'replace_blocks',
   'save_session',
 ].sort()
 
-const BACKGROUND_NAMES = [...DEFAULT_NAMES, 'create_docx', 'create_pptx', 'create_xlsx'].sort()
+const BACKGROUND_NAMES = [
+  ...DEFAULT_NAMES,
+  'create_docx',
+  'create_pptx',
+  'create_xlsx',
+  'fill_template',
+].sort()
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
