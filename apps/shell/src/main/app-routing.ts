@@ -5,6 +5,8 @@ import type { DocumentTabKind } from '../shared/tabs-api'
 const DOCX_RE = /\.docx$/i
 // OpenDocument text opens in the Word tab too (apps/docs docFormatOfPath picks the format)
 const ODT_RE = /\.odt$/i
+// legacy Word 97-2003 .doc/.dot open in the Word tab as a converted .docx copy
+const WORD97_RE = /\.(doc|dot)$/i
 // .ods opens as a converted .xlsx copy in the spreadsheet tab (decision 0119);
 // ODS_RE lets the rename gate tell the ODF package from the other sheet forms
 const ODS_RE = /\.ods$/i
@@ -28,6 +30,7 @@ const TEXT_RE = /\.(md|markdown|txt|json)$/i
 export {
   DOCX_RE,
   ODT_RE,
+  WORD97_RE,
   ODS_RE,
   XLSX_RE,
   PPTX_RE,
@@ -52,7 +55,7 @@ export function documentExtension(name: string): string {
 }
 
 export function appForPath(path: string): DocumentTabKind | undefined {
-  if (DOCX_RE.test(path) || ODT_RE.test(path)) return 'docs'
+  if (DOCX_RE.test(path) || ODT_RE.test(path) || WORD97_RE.test(path)) return 'docs'
   if (XLSX_RE.test(path)) return 'sheets'
   if (PPTX_RE.test(path)) return 'slides'
   if (PDF_RE.test(path)) return 'pdf'
@@ -72,6 +75,8 @@ export function renameStaysInApp(from: string, newName: string): boolean {
   // .docx and .odt share the Word tab but not the bytes: renaming one into the
   // other leaves a file the Word editor reads as corrupt
   if (current === 'docs' && ODT_RE.test(from) !== ODT_RE.test(newName)) return false
+  // a Word 97-2003 binary is no .docx/.odt either, only imported as a copy
+  if (current === 'docs' && WORD97_RE.test(from) !== WORD97_RE.test(newName)) return false
   // .ods is its own container (an ODF package, opened as a converted .xlsx
   // copy), so renaming it into or out of any other sheet form breaks the file
   if (current === 'sheets' && ODS_RE.test(from) !== ODS_RE.test(newName)) return false

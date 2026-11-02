@@ -31,6 +31,7 @@ import { createDirLevels } from '@genoffice/electron-utils'
 export const TREE_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
   'docx',
   'doc',
+  'dot',
   'odt',
   'xlsx',
   'xlsm',

@@ -366,7 +366,10 @@ function ensureThirdPartyNotices() {
 // drawing is only imported (as a new diagram), and an ODS spreadsheet opens as
 // a converted .xlsx copy that saves as .xlsx (decision 0119), so both keep
 // their program too; so does an ODP presentation or template, which opens as a
-// converted .pptx copy (Windows does not list those in "Open with" yet).
+// converted .pptx copy (Windows does not list those in "Open with" yet). The
+// legacy Word 97-2003 .doc/.dot open as a converted .docx copy and must not be
+// taken from Word either; mac/Linux declare them for Open With, and every
+// platform reaches them through the app's own Open dialog.
 // They are still offered in Explorer's "Open with": build/installer.nsh
 // writes a product-own ProgId with a document icon for each (the per-type
 // icon, or the xlsx icon for .ods), so choosing this app for them shows the
@@ -384,6 +387,8 @@ const WIN_OPEN_WITH_ONLY_EXTS = new Set([
   'ods',
   'odp',
   'otp',
+  'doc',
+  'dot',
 ])
 // NSIS registers each association under a ProgId taken from its `name`
 // (HKCU\Software\Classes\<name>). The upstream app registers the bare names
@@ -400,6 +405,22 @@ const FILE_ASSOCIATIONS = [
     role: 'Editor',
     icon: 'docx',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  },
+  {
+    // import-only: opens as a converted .docx copy, the app never writes .doc
+    ext: 'doc',
+    name: 'Word 97-2003 Document',
+    role: 'Editor',
+    icon: 'docx',
+    mimeType: 'application/msword',
+  },
+  {
+    // import-only: the template opens as a converted .docx copy
+    ext: 'dot',
+    name: 'Word 97-2003 Template',
+    role: 'Editor',
+    icon: 'docx',
+    mimeType: 'application/msword',
   },
   {
     ext: 'xlsx',

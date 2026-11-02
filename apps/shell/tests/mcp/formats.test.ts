@@ -17,7 +17,7 @@ import {
 
 describe('format registry', () => {
   it('mirrors the shell open routing for the mcp-driven families', () => {
-    expect(formatFamily('docx').editorOpen).toEqual(['docx', 'odt'])
+    expect(formatFamily('docx').editorOpen).toEqual(['docx', 'odt', 'doc', 'dot'])
     expect(formatFamily('xlsx').editorOpen).toEqual(['xlsx', 'xlsm', 'xls', 'csv', 'tsv', 'ods'])
     expect(formatFamily('pptx').editorOpen).toEqual(['pptx', 'odp', 'otp'])
   })
@@ -178,7 +178,7 @@ describe('capabilityReport', () => {
       'drawio',
     ])
     const docx = report.find((r) => r.family === 'docx')!
-    expect(docx.editor.open).toEqual(['docx', 'odt'])
+    expect(docx.editor.open).toEqual(['docx', 'odt', 'doc', 'dot'])
     expect(docx.editor.export).toEqual(['pdf'])
     expect(docx.mcp).toEqual({ generate: 'docx', save: ['docx'], read: 'docx' })
     // editor-only family carries no mcp key

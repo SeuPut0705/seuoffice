@@ -84,6 +84,11 @@ describe('appForPath', () => {
     expect(appForPath('C:/x/REPORT.ODT')).toBe('docs')
   })
 
+  it('opens legacy Word 97-2003 files in the Word tab (as converted copies)', () => {
+    expect(appForPath('/x/legacy.doc')).toBe('docs')
+    expect(appForPath('/x/TEMPLATE.DOT')).toBe('docs')
+  })
+
   it('opens an OpenDocument spreadsheet in the spreadsheet tab only', () => {
     expect(appForPath('/x/a.ods')).toBe('sheets')
     expect(appForPath('C:/x/BUDGET.ODS')).toBe('sheets')
@@ -159,6 +164,14 @@ describe('renameStaysInApp', () => {
     expect(renameStaysInApp('/x/a.odt', 'b.odt')).toBe(true)
     expect(renameStaysInApp('/x/a.odt', 'b.ODT')).toBe(true)
     expect(renameStaysInApp('/x/a.odt', 'a.pdf')).toBe(false)
+  })
+
+  it('refuses a rename between .doc/.dot and .docx/.odt: same tab, different bytes', () => {
+    expect(renameStaysInApp('/x/legacy.doc', 'legacy.docx')).toBe(false)
+    expect(renameStaysInApp('/x/a.docx', 'a.doc')).toBe(false)
+    expect(renameStaysInApp('/x/a.odt', 'a.dot')).toBe(false)
+    expect(renameStaysInApp('/x/legacy.doc', 'legacy.dot')).toBe(true)
+    expect(renameStaysInApp('/x/legacy.doc', 'legacy.pdf')).toBe(false)
   })
 
   it('refuses a rename between .ods and another spreadsheet form: same tab, different bytes', () => {

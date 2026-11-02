@@ -11,11 +11,23 @@ export function docFormatOfPath(filePath: string): DocFormat | null {
   return null
 }
 
+/**
+ * Legacy Word 97-2003 `.doc`/`.dot`: the Word editor opens one only as a
+ * converted `.docx` copy (docs-main prepareDocumentForOpen), never in place.
+ */
+export function isWord97Path(filePath: string): boolean {
+  return /\.(doc|dot)$/i.test(filePath)
+}
+
 export function findDocxPath(argv: readonly string[]): string | null {
   return (
     argv.find((arg) => {
       const value = arg.trim()
-      return value.length > 0 && !value.startsWith('-') && docFormatOfPath(value) !== null
+      return (
+        value.length > 0 &&
+        !value.startsWith('-') &&
+        (docFormatOfPath(value) !== null || isWord97Path(value))
+      )
     }) ?? null
   )
 }

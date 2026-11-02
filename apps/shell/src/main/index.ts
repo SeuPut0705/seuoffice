@@ -460,6 +460,7 @@ import {
   DOCX_RE,
   HTML_RE,
   ODT_RE,
+  WORD97_RE,
   MINDMAP_RE,
   HWP_RE,
   EPUB_RE,
@@ -4818,7 +4819,7 @@ function ensureFileIndexer(): FileIndexer | null {
 }
 
 const SEARCH_EXT_FAMILY: Record<string, readonly string[]> = {
-  docx: ['docx', 'doc', 'odt'],
+  docx: ['docx', 'doc', 'dot', 'odt'],
   xlsx: ['xlsx', 'xlsm', 'xls', 'csv', 'tsv', 'ods'],
   pptx: ['pptx', 'ppt', 'odp', 'otp'],
   md: ['md', 'markdown', 'txt', 'json'],
@@ -5533,13 +5534,15 @@ function createShellWindow(): void {
 // ---- routing: one dispatch function for every open path ----
 
 /**
- * Single source of truth for the open-dialog filter. Includes the
- * legacy .doc/.ppt binaries so they are selectable and surface the explicit
- * "not supported" dialog via openDocumentPath instead of being grayed out.
+ * Single source of truth for the open-dialog filter. Includes the still-legacy
+ * .ppt binary so it is selectable and surfaces the explicit "not supported"
+ * dialog via openDocumentPath instead of being grayed out; .doc/.dot route into
+ * the docs import filter.
  */
 const OPEN_DIALOG_EXTENSIONS = [
   'docx',
   'doc',
+  'dot',
   'odt',
   'xlsx',
   'xlsm',
@@ -5654,7 +5657,7 @@ function routeDocumentPath(filePath: string): boolean {
   // a detached editor window already shows this file — focus it, never a second copy
   if (focusDetachedByPath(filePath)) return true
   if (!tabManager) return false
-  if (DOCX_RE.test(filePath) || ODT_RE.test(filePath)) {
+  if (DOCX_RE.test(filePath) || ODT_RE.test(filePath) || WORD97_RE.test(filePath)) {
     recordRecentFile(filePath)
     const existing = tabManager.findDocsTabByPath(filePath)
     if (existing) tabManager.activateTab(existing)
@@ -6517,7 +6520,7 @@ function registerHomeIpc(): void {
       title: tm('dlgOpenTitle'),
       filters: [
         { name: tm('filterSupported'), extensions: OPEN_DIALOG_EXTENSIONS },
-        { name: tm('filterWord'), extensions: ['docx', 'doc'] },
+        { name: tm('filterWord'), extensions: ['docx', 'doc', 'dot'] },
         { name: tm('filterOdt'), extensions: ['odt'] },
         { name: tm('filterExcel'), extensions: ['xlsx', 'xlsm', 'xls', 'csv', 'tsv', 'ods'] },
         { name: tm('filterPpt'), extensions: ['pptx', 'ppt', 'odp', 'otp'] },

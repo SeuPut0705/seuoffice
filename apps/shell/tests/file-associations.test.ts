@@ -65,10 +65,19 @@ describe('packaged file associations', () => {
     }
   })
 
-  it('keeps plain text and JSON off the Windows list, where NSIS would make the app their default', () => {
+  it('gives the legacy Word associations the Word mimeType', () => {
+    for (const ext of ['doc', 'dot']) {
+      const association = fileAssociations.find((entry) => entry.ext === ext)
+      expect(association, `no file association declared for .${ext}`).toBeTruthy()
+      expect(association!.mimeType).toBe('application/msword')
+    }
+  })
+
+  it('keeps plain text, JSON and legacy .doc/.dot off the Windows list, where NSIS would make the app their default', () => {
     const winExts = config.win.fileAssociations.map((entry: { ext: string }) => entry.ext)
-    expect(winExts).not.toContain('txt')
-    expect(winExts).not.toContain('json')
+    for (const ext of ['txt', 'json', 'doc', 'dot']) {
+      expect(winExts, `.${ext} must not become a Windows default opener`).not.toContain(ext)
+    }
     // a PC with Hancom Office keeps it as the opener for its own formats
     expect(winExts).not.toContain('hwp')
     expect(winExts).not.toContain('hwpx')
