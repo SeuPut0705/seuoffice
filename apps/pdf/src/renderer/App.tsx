@@ -172,6 +172,7 @@ import {
   remapOutlineTree,
 } from './heading-outline'
 import { printPdf } from './print'
+import { readFileBytes } from './file-bytes'
 import { mayChangeProtection } from './protection-gate'
 import { PasswordDialog } from './PasswordDialog'
 import { PropertiesDialog } from './PropertiesDialog'
@@ -1580,11 +1581,10 @@ export default function App() {
       saved?: SavedSnapshot,
       waitForPageNos: number[] = [],
     ) => {
-      const data = await window.pdfApi.readFile(path)
-      const bytes = new Uint8Array(data)
-      // getDocument transfers the buffer to its worker, leaving `data` and `bytes`
-      // empty here: take what is needed from them first
-      const byteLength = data.byteLength
+      const bytes = await readFileBytes(window.pdfApi, path)
+      // getDocument transfers the buffer to its worker, leaving `bytes` empty
+      // here: take what is needed from it first
+      const byteLength = bytes.byteLength
       const xfaMarker = hasXfaMarker(bytes)
       setFormHasXfa(xfaMarker)
       if (!saved) {
@@ -1641,7 +1641,7 @@ export default function App() {
           // handler must accept it too before the document counts as editable
           const password = passwordRef.current ?? ''
           const outcome = await window.pdfApi.decryptPdf(
-            new Uint8Array(await window.pdfApi.readFile(path)),
+            await readFileBytes(window.pdfApi, path),
             password,
           )
           if (outcome.ok) {
@@ -1686,9 +1686,7 @@ export default function App() {
           // down with it. Show the lost one blank, as Acrobat does, from patched bytes
           // in memory; the view stays read-only since saving would see the damage.
           const { patchMissingPageKids } = await import('./page-tree-patch')
-          const patched = await patchMissingPageKids(
-            new Uint8Array(await window.pdfApi.readFile(path)),
-          )
+          const patched = await patchMissingPageKids(await readFileBytes(window.pdfApi, path))
           if (patched) {
             const retry = getDocument({
               data: patched.bytes,
@@ -2070,7 +2068,7 @@ export default function App() {
           // reports it like a password failure, and the answer has to name the
           // real reason instead of looping the prompt
           try {
-            const raw = new Uint8Array(await window.pdfApi.readFile(path))
+            const raw = await readFileBytes(window.pdfApi, path)
             const probe = await window.pdfApi.decryptPdf(raw, '')
             if (!probe.ok && probe.reason === 'certificate-encryption') {
               showNotice(t('pwCertEncrypted'))
@@ -8104,8 +8102,8 @@ export default function App() {
         setPrinting(true)
         try {
           const data =
-            (await collabRef.current?.shownFile()) ?? (await window.pdfApi.readFile(filePath))
-          const pdoc = await getDocument({ data: new Uint8Array(data), ...DOC_OPTS }).promise
+            (await collabRef.current?.shownFile()) ?? (await readFileBytes(window.pdfApi, filePath))
+          const pdoc = await getDocument({ data, ...DOC_OPTS }).promise
           try {
             await printPdf(pdoc, pages, { includeAnnotations })
           } finally {
@@ -11059,9 +11057,9 @@ export default function App() {
             api={aiReadApi}
             session={jobSession}
             openPageRenderer={async () => {
-              const data = await window.pdfApi.readFile(filePath)
+              const data = await readFileBytes(window.pdfApi, filePath)
               const task = getDocument({
-                data: new Uint8Array(data),
+                data,
                 password: passwordRef.current,
                 ...DOC_OPTS,
               })
