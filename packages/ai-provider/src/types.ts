@@ -35,8 +35,11 @@ export type AiProviderId =
   | 'atlascloud'
   | 'runcrate'
   | 'cloudgpu'
+  | 'siliconflow'
+  | 'ppio'
   | 'opencode-zen'
   | 'opencode-go'
+  | 'commandcode'
   | 'custom'
   /** seuoffice: an HTTP gateway speaking `gateway-complete`; its token comes per request, never from settings */
   | 'gateway'
