@@ -73,6 +73,9 @@ export const IPC_CHANNELS = {
   reopenWorkbook: 'workbook:reopen',
   readWorkbookRowOutline: 'workbook:read-row-outline',
   recalcWorkbook: 'workbook:recalc',
+  listExternalLinks: 'workbook:list-external-links',
+  updateExternalLinks: 'workbook:update-external-links',
+  revealLinkSource: 'shell:reveal-link-source',
   readWorkbookMedia: 'workbook:read-media',
   readPivotDefinition: 'workbook:read-pivot-definition',
   /** Data › Queries & Connections: the workbook's connections, read-only (xl/connections.xml) */
