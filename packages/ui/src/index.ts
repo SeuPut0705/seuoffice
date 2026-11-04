@@ -261,6 +261,27 @@ export {
 export { COLOR_SWATCH_NAMES, colorSwatchName } from './strings-color-names'
 export { installScreenTips } from './screentip'
 export {
+  SentAttachments,
+  truncateCardName,
+  formatAttachmentSize,
+  AttachmentCardIcon,
+  ATTACHMENT_CARD_ICONS,
+  ATTACHMENT_IMAGE_EXTS,
+  fileImageIcon,
+  fileGeneralIcon,
+  fileDocumentIcon,
+  type AiAttachmentLike,
+} from './ai-attachments'
+export {
+  AI_PANEL_WIDTH_DEFAULT,
+  AI_PANEL_WIDTH_MIN,
+  AI_PANEL_WIDTH_MAX,
+  maxAiPanelWidth,
+  clampAiPanelWidth,
+  loadAiPanelWidth,
+  saveAiPanelWidth,
+} from './ai-panel-width'
+export {
   installPopoverDismiss,
   useDismissablePopover,
   type PopoverDismissOptions,

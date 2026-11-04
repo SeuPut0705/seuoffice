@@ -22,7 +22,7 @@ import { setModuleLang, t } from '../src/renderer/i18n/locale'
 import { ODT_OFF_FEATURES, isOdtSession, odtOffProps, refuseInOdt } from '../src/renderer/odt-gate'
 import { AGENT_TOOLS, executeTool } from '../src/renderer/ai/tools'
 import { createDocsSkill } from '../src/renderer/ai/docs-skill'
-import { ATTACHMENT_CARD_ICONS } from '../src/renderer/ai/AiPanel'
+import { ATTACHMENT_CARD_ICONS } from '@genoffice/ui'
 import { CommentsPanel } from '../src/renderer/components/CommentsPanel'
 import { ProtectDialog } from '../src/renderer/components/ProtectDialog'
 import {
