@@ -12,6 +12,12 @@ import type { SlidesAiFonts } from '@genoffice/ui/slides-ai-fonts'
 import type { RenderSlide } from '@genoffice/pptx-render'
 import type { CustGeomPathCmd, SlideComment, SectionInfo } from '@genoffice/pptx-engine'
 import type { FontSizeStep } from '@genoffice/pptx-ops/font-size'
+import type { PrintDuplex, PrintJobOptions, PrinterInfo } from '@genoffice/electron-utils/print-job'
+import type { PrinterOption } from '@genoffice/electron-utils/printer-options'
+
+export type { PrintDuplex, PrintJobOptions, PrinterInfo }
+export type { PrinterOption }
+
 import type { LayoutSkeleton } from '../renderer/ai/layout-skeleton'
 import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
 import type { AiToolCapabilities } from '@genoffice/ai-search'
@@ -1320,6 +1326,9 @@ export interface PrintSlidesOp {
   orientation?: 'portrait' | 'landscape'
   /** Border around full-page slides */
   frame?: boolean
+  /** A printer the dialog picked: present = print silently with these job
+   *  options (macOS routes through lp); absent = the system print dialog. */
+  job?: PrintJobOptions
 }
 
 /** Show sync state from presenter view -> audience window (absolute state mirror; audience seek is idempotent) */
@@ -1809,8 +1818,12 @@ export interface SlidesApi {
   savePicture: (op: SavePictureOp) => Promise<SavePictureResult>
   /** Main process printToPDF via a hidden window, written to disk */
   exportPdf: (op: ExportPdfOp) => Promise<ExportPdfResult>
-  /** Print (system dialog; cancel counts as ok=false without an error) */
+  /** Print: with job = silent (macOS named printers spool through lp); without = system dialog */
   printSlides: (op: PrintSlidesOp) => Promise<{ ok: boolean; error?: string }>
+  /** installed printers for the in-app print dialog */
+  listPrinters: () => Promise<PrinterInfo[]>
+  /** the driver option groups a queue advertises (quality, color, media type); empty when none */
+  printerOptions: (queue: string) => Promise<PrinterOption[]>
   /** Save the deck in place. auto marks the AutoSave timer's own pass: while a
    *  sibling split-view copy moved the disk past this one, an auto save defers
    *  silently (`reason: 'external-modified'`) where a user's save asks first.

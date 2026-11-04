@@ -148,10 +148,12 @@ const EDIT_MEMBERS = [
 const SAVE_MEMBERS = [
   'exportImages',
   'exportPdf',
+  'listPrinters',
   'pickExportDir',
   'pickExportPdfPath',
   'pickPictureFile',
   'printSlides',
+  'printerOptions',
   'save',
   'saveAs',
   'saveIntoProject',
