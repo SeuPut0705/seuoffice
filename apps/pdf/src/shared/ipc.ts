@@ -45,6 +45,9 @@ export const PDF_TOOLS_HANDOFF = [
 ] as const
 export type PdfToolsHandoffTool = (typeof PDF_TOOLS_HANDOFF)[number]
 
+/** largest slice readFileChunk hands over IPC; the renderer loops over them */
+export const PDF_READ_CHUNK_BYTES = 8 * 1024 * 1024
+
 export const PDF_CHANNELS = {
   consumePending: 'pdf:consume-pending',
   readFile: 'pdf:read-file',

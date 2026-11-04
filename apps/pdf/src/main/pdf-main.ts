@@ -44,7 +44,12 @@ import type {
 import { brandText, createI18n, getUiLang } from '@genoffice/i18n'
 import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@genoffice/ai-search'
 import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
-import { PDF_CHANNELS, PDF_TOOLS_HANDOFF, type PdfToolsHandoffTool } from '../shared/ipc'
+import {
+  PDF_CHANNELS,
+  PDF_READ_CHUNK_BYTES,
+  PDF_TOOLS_HANDOFF,
+  type PdfToolsHandoffTool,
+} from '../shared/ipc'
 import { CertificateEncryptionError, WrongPasswordError, decryptDocument } from './pdf-crypt'
 import {
   buildExportImagePaths,
@@ -146,8 +151,6 @@ import type { PdfNoteResult, PdfRecoveryCopyResult } from '../shared/ipc'
 import { createPdfRecovery, pdfLooksEncrypted } from './pdf-recovery'
 import { copiedPagesOf, heldCopiedPages, holdCopiedPages } from './page-clipboard'
 import { ResultStore, documentHashOfFile } from '../../../../packages/pdf-structure/src/store'
-/** the largest slice readFileChunk hands over IPC (the renderer loops) */
-const PDF_READ_CHUNK_MAX_BYTES = 8 * 1024 * 1024
 
 const tDlg = createI18n({
   zh: {
@@ -1667,7 +1670,7 @@ function registerPdfIpc(): void {
       }
       const from = typeof start === 'number' && Number.isInteger(start) && start >= 0 ? start : -1
       const to = typeof end === 'number' && Number.isInteger(end) && end >= from ? end : -1
-      if (from < 0 || to < 0 || to - from > PDF_READ_CHUNK_MAX_BYTES) {
+      if (from < 0 || to < 0 || to - from > PDF_READ_CHUNK_BYTES) {
         throw new Error('pdf: invalid chunk range')
       }
       // a view restored from a recovery copy shows the copy until it is saved
