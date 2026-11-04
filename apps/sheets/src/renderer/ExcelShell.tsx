@@ -89,7 +89,11 @@ import { scrollRibbonOnWheel } from './ribbon-wheel'
 
 import type { ChartSeriesVisualState } from '@genoffice/xlsx-gateway/domain/chart-visual'
 import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
-import type { AttachmentMeta, WorkbookQueriesResult } from '../shared/desktop-api'
+import type {
+  AttachmentMeta,
+  WorkbookConnection as QueryConnection,
+  WorkbookQueriesResult,
+} from '../shared/desktop-api'
 import {
   AiChatPanel,
   type AiChatMessage,
@@ -482,6 +486,8 @@ interface ExcelShellProps {
   readonly pageLayout: PageLayoutEcho
   /// Manual-recalc mode echo for the Calculation Options menu.
   readonly calcManual: boolean
+  /// The workbook's refreshable web queries.
+  readonly queryConnections: readonly QueryConnection[]
   /// Formula view (sheetView/@showFormulas) of the active sheet: the sheet
   /// renders formulas instead of their values.
   readonly showFormulas: boolean
@@ -646,6 +652,7 @@ export function ExcelShell({
   onGetCreateTableRange,
   pageLayout,
   calcManual,
+  queryConnections,
   showFormulas,
   onGoalSeek,
   onDataTable,
@@ -1127,6 +1134,7 @@ export function ExcelShell({
               .map((entry) => entry.name)
           }}
           calcManual={calcManual}
+          queryConnections={queryConnections}
           showFormulas={showFormulas}
           onRefreshPivot={onRefreshPivot}
           onIsSelectionInPivot={onIsSelectionInPivot}
@@ -2137,6 +2145,7 @@ function Ribbon({
   onAiToggle,
   onListNames,
   calcManual,
+  queryConnections,
   showFormulas,
   onRefreshPivot,
   onIsSelectionInPivot,
@@ -2165,6 +2174,8 @@ function Ribbon({
   readonly onListNames: () => readonly string[]
   /** Manual-recalc mode echo for the Calculation Options menu. */
   readonly calcManual: boolean
+  /** The workbook's refreshable web queries, listed under Data ▸ Get data. */
+  readonly queryConnections: readonly QueryConnection[]
   /** Open the AI panel and immediately send the given prompt */
   readonly onAiRun: (prompt: string) => void
   /** AI side panel visibility (docs/slides parity: the entry button toggles it) */
@@ -3272,6 +3283,22 @@ function Ribbon({
           </div>
           {/* four rows overflow the band; the fourth starts a second column */}
           <div className="row-stack">
+            {queryConnections.length > 0 ? (
+              <span className="styles-row" data-tip={t('appQueryConnectionsTitle')}>
+                <ToolSymbol symbol="⟳" />
+                {t('appRefreshQuery')}
+                <CaretIcon />
+                <MenuSelect
+                  cover
+                  label={t('appRefreshQuery')}
+                  options={queryConnections.map((c) => ({
+                    value: `query-refresh:${c.id}`,
+                    label: `${c.name} — ${queryConnectionHost(c.source)}`,
+                  }))}
+                  onPick={onCommand}
+                />
+              </span>
+            ) : null}
             <button
               className="styles-row as-button"
               data-tip={t('appQueriesConnectionsTitle')}
@@ -4919,4 +4946,14 @@ function RibbonButton({
 
 function fillSeriesDefaultType(numberFormat: string | undefined): FillSeriesType {
   return numberFormat && numberFormatLabel(numberFormat) === 'Date' ? 'date' : 'linear'
+}
+
+/// The host a query reads from, shown next to its name so the reader can see
+/// where a refresh would go before they ask for one.
+function queryConnectionHost(source: string): string {
+  try {
+    return new URL(source).host
+  } catch {
+    return source
+  }
 }

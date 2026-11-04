@@ -390,6 +390,9 @@ const desktopApi: WebDesktopApi = {
   exportPdf: unsupported('sheets.export'),
   exportCsv: unsupported('sheets.export'),
   printWorkbook: unsupported('sheets.print'),
+  // a web query is fetched by main through its SSRF gate: the page lists none, so Refresh query stays hidden
+  listWorkbookConnections: async () => ({ connections: [] }),
+  refreshWorkbookConnection: unsupported('sheets.queryRefresh'),
 }
 
 export function installBridges(): void {
