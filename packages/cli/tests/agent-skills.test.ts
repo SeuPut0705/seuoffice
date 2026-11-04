@@ -102,9 +102,10 @@ describe('detectAgents', () => {
       'gemini',
       'copilot',
       'opencode',
+      'dsh',
       'windsurf',
     ])
-    for (const id of ['codex', 'cursor', 'gemini', 'copilot', 'opencode'] as const) {
+    for (const id of ['codex', 'cursor', 'gemini', 'copilot', 'opencode', 'dsh'] as const) {
       expect(isSharedReader(id)).toBe(true)
       expect(installRowFor(id)).toBe('agents')
     }
