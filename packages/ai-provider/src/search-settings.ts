@@ -8,6 +8,7 @@ import type {
 export const AI_SEARCH_PROVIDERS: AiSearchProviderMeta[] = [
   { id: 'serper', label: 'Serper', keyPlaceholder: 'Serper API key', imageSearch: true },
   { id: 'serply', label: 'Serply', keyPlaceholder: 'Serply API key', imageSearch: true },
+  { id: 'searchapi', label: 'SearchApi', keyPlaceholder: 'SearchApi API key', imageSearch: true },
   { id: 'tavily', label: 'Tavily', keyPlaceholder: 'tvly-...', imageSearch: false },
   { id: 'parallel', label: 'Parallel', keyPlaceholder: 'Parallel API key', imageSearch: false },
   // exa/firecrawl: AI-search APIs without an image endpoint (like Tavily/Parallel)
@@ -23,6 +24,7 @@ export function defaultAiSearchSettings(): AiSearchSettings {
     providers: {
       serper: { apiKey: '' },
       serply: { apiKey: '' },
+      searchapi: { apiKey: '' },
       tavily: { apiKey: '' },
       parallel: { apiKey: '' },
       exa: { apiKey: '' },
@@ -41,6 +43,7 @@ export function resolveAiSearchSettings(
   for (const id of [
     'serper',
     'serply',
+    'searchapi',
     'tavily',
     'parallel',
     'exa',

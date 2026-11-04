@@ -410,6 +410,7 @@ export const strings = {
     setSecAiMedia: '生图、媒体与搜索',
     setAiSearchSerperHint: 'Serper 用你的 key 同时提供网页与图片搜索。',
     setAiSearchSerplyHint: 'Serply 用你的 key 同时提供网页与图片搜索。',
+    setAiSearchSearchApiHint: 'SearchApi 用你的 key 同时提供网页与图片搜索。',
     setAiSearchTavilyHint: 'Tavily 用你的 key 提供网页搜索；图片搜索改用免费来源。',
     setAiSearchParallelHint:
       '留空 API key 即可免费使用 Parallel 搜索（用量有限）。填写 key 可使用你的 Parallel 账户。图片搜索使用其他来源。',
@@ -1004,6 +1005,7 @@ export const strings = {
     setSecAiMedia: 'AI Media & Search',
     setAiSearchSerperHint: 'Serper serves both web and image search with your key.',
     setAiSearchSerplyHint: 'Serply serves both web and image search with your key.',
+    setAiSearchSearchApiHint: 'SearchApi serves both web and image search with your key.',
     setAiSearchTavilyHint:
       'Tavily serves web search with your key; image search falls back to free sources.',
     setAiSearchParallelHint:
@@ -1610,6 +1612,7 @@ export const strings = {
     setSecAiMedia: 'Phương tiện AI & Tìm kiếm',
     setAiSearchSerperHint: 'Serper cung cấp cả tìm kiếm web và hình ảnh bằng khóa của bạn.',
     setAiSearchSerplyHint: 'Serply cung cấp cả tìm kiếm web và hình ảnh bằng key của bạn.',
+    setAiSearchSearchApiHint: 'SearchApi cung cấp cả tìm kiếm web và hình ảnh bằng key của bạn.',
     setAiSearchTavilyHint:
       'Tavily cung cấp tìm kiếm web bằng khóa của bạn; tìm kiếm hình ảnh sẽ chuyển sang dùng các nguồn miễn phí.',
     setAiSearchParallelHint:
@@ -2224,6 +2227,7 @@ export const strings = {
     setSecAiMedia: 'AI メディアと検索',
     setAiSearchSerperHint: 'Serper はあなたのキーで Web 検索と画像検索の両方を提供します。',
     setAiSearchSerplyHint: 'Serply はあなたのキーで Web 検索と画像検索の両方を提供します。',
+    setAiSearchSearchApiHint: 'SearchApi はあなたのキーで Web 検索と画像検索の両方を提供します。',
     setAiSearchTavilyHint:
       'Tavily はあなたのキーで Web 検索を提供します。画像検索は無料ソースにフォールバックします。',
     setAiSearchParallelHint:
@@ -2834,6 +2838,7 @@ export const strings = {
     setSecAiMedia: 'AI 미디어 및 검색',
     setAiSearchSerperHint: 'Serper는 내 키로 웹 검색과 이미지 검색을 모두 제공합니다.',
     setAiSearchSerplyHint: 'Serply는 내 키로 웹 검색과 이미지 검색을 모두 제공합니다.',
+    setAiSearchSearchApiHint: 'SearchApi는 내 키로 웹 검색과 이미지 검색을 모두 제공합니다.',
     setAiSearchTavilyHint:
       'Tavily는 내 키로 웹 검색을 제공합니다. 이미지 검색은 무료 소스로 대체됩니다.',
     setAiSearchParallelHint:
@@ -3456,6 +3461,8 @@ export const strings = {
       "Serper assure la recherche web et la recherche d'images avec votre clé.",
     setAiSearchSerplyHint:
       "Serply assure la recherche web et la recherche d'images avec votre clé.",
+    setAiSearchSearchApiHint:
+      "SearchApi assure la recherche web et la recherche d'images avec votre clé.",
     setAiSearchTavilyHint:
       "Tavily assure la recherche web avec votre clé ; la recherche d'images se rabat sur des sources gratuites.",
     setAiSearchParallelHint:
@@ -4087,6 +4094,7 @@ export const strings = {
     setSecAiMedia: 'KI-Medien & Suche',
     setAiSearchSerperHint: 'Serper liefert mit deinem Schlüssel Web- und Bildsuche.',
     setAiSearchSerplyHint: 'Serply liefert mit deinem Schlüssel Web- und Bildsuche.',
+    setAiSearchSearchApiHint: 'SearchApi liefert mit deinem Schlüssel Web- und Bildsuche.',
     setAiSearchTavilyHint:
       'Tavily liefert mit deinem Schlüssel die Websuche; die Bildsuche greift auf kostenlose Quellen zurück.',
     setAiSearchParallelHint:
@@ -4718,6 +4726,7 @@ export const strings = {
     setSecAiMedia: 'Medios de IA y búsqueda',
     setAiSearchSerperHint: 'Serper ofrece búsqueda web y de imágenes con tu clave.',
     setAiSearchSerplyHint: 'Serply ofrece búsqueda web y de imágenes con tu clave.',
+    setAiSearchSearchApiHint: 'SearchApi ofrece búsqueda web y de imágenes con tu clave.',
     setAiSearchTavilyHint:
       'Tavily ofrece búsqueda web con tu clave; la búsqueda de imágenes recurre a fuentes gratuitas.',
     setAiSearchParallelHint:
@@ -5327,6 +5336,7 @@ export const strings = {
     setSecAiMedia: 'สื่อ AI และการค้นหา',
     setAiSearchSerperHint: 'Serper ให้บริการค้นหาเว็บและภาพด้วยคีย์ของคุณ',
     setAiSearchSerplyHint: 'Serply ให้บริการค้นหาเว็บและภาพด้วยคีย์ของคุณ',
+    setAiSearchSearchApiHint: 'SearchApi ให้บริการค้นหาเว็บและภาพด้วยคีย์ของคุณ',
     setAiSearchTavilyHint:
       'Tavily ให้บริการค้นหาเว็บด้วยคีย์ของคุณ ส่วนการค้นหาภาพจะใช้แหล่งข้อมูลฟรีแทน',
     setAiSearchParallelHint:
@@ -5943,6 +5953,7 @@ export const strings = {
     setSecAiMedia: 'Media & Pencarian AI',
     setAiSearchSerperHint: 'Serper menyediakan pencarian web dan gambar dengan kunci Anda.',
     setAiSearchSerplyHint: 'Serply menyediakan pencarian web dan gambar dengan kunci Anda.',
+    setAiSearchSearchApiHint: 'SearchApi menyediakan pencarian web dan gambar dengan kunci Anda.',
     setAiSearchTavilyHint:
       'Tavily menyediakan pencarian web dengan kunci Anda; pencarian gambar memakai sumber gratis.',
     setAiSearchParallelHint:
@@ -6563,6 +6574,8 @@ export const strings = {
     setSecAiMedia: 'Медиа и поиск ИИ',
     setAiSearchSerperHint: 'Serper обеспечивает веб-поиск и поиск изображений с вашим ключом.',
     setAiSearchSerplyHint: 'Serply обеспечивает веб-поиск и поиск изображений с вашим ключом.',
+    setAiSearchSearchApiHint:
+      'SearchApi обеспечивает веб-поиск и поиск изображений с вашим ключом.',
     setAiSearchTavilyHint:
       'Tavily обеспечивает веб-поиск с вашим ключом; поиск изображений использует бесплатные источники.',
     setAiSearchParallelHint:
@@ -7175,6 +7188,7 @@ export const strings = {
     setSecAiMedia: 'وسائط الذكاء الاصطناعي والبحث',
     setAiSearchSerperHint: 'يوفّر Serper البحث في الويب والصور بمفتاحك.',
     setAiSearchSerplyHint: 'يوفّر Serply البحث في الويب والصور بمفتاحك.',
+    setAiSearchSearchApiHint: 'يوفّر SearchApi البحث في الويب والصور بمفتاحك.',
     setAiSearchTavilyHint:
       'يوفّر Tavily البحث في الويب بمفتاحك؛ ويعود البحث في الصور إلى مصادر مجانية.',
     setAiSearchParallelHint:
@@ -7789,6 +7803,7 @@ export const strings = {
     setSecAiMedia: 'Mídia e busca de IA',
     setAiSearchSerperHint: 'O Serper oferece busca na web e de imagens com a sua chave.',
     setAiSearchSerplyHint: 'O Serply oferece busca na web e de imagens com a sua chave.',
+    setAiSearchSearchApiHint: 'A SearchApi oferece busca na web e de imagens com a sua chave.',
     setAiSearchTavilyHint:
       'O Tavily oferece busca na web com a sua chave; a busca de imagens recorre a fontes gratuitas.',
     setAiSearchParallelHint:
@@ -8404,6 +8419,7 @@ export const strings = {
     setSecAiMedia: 'Media e ricerca IA',
     setAiSearchSerperHint: 'Serper offre ricerca web e di immagini con la tua chiave.',
     setAiSearchSerplyHint: 'Serply offre ricerca web e di immagini con la tua chiave.',
+    setAiSearchSearchApiHint: 'SearchApi offre ricerca web e di immagini con la tua chiave.',
     setAiSearchTavilyHint:
       'Tavily offre la ricerca web con la tua chiave; la ricerca di immagini ricorre a fonti gratuite.',
     setAiSearchParallelHint:
@@ -9018,6 +9034,7 @@ export const strings = {
     setSecAiMedia: 'Media i wyszukiwanie AI',
     setAiSearchSerperHint: 'Serper zapewnia wyszukiwanie w sieci i obrazów z Twoim kluczem.',
     setAiSearchSerplyHint: 'Serply zapewnia wyszukiwanie w sieci i obrazów z Twoim kluczem.',
+    setAiSearchSearchApiHint: 'SearchApi zapewnia wyszukiwanie w sieci i obrazów z Twoim kluczem.',
     setAiSearchTavilyHint:
       'Tavily zapewnia wyszukiwanie w sieci z Twoim kluczem; wyszukiwanie obrazów używa darmowych źródeł.',
     setAiSearchParallelHint:
@@ -9567,6 +9584,7 @@ export const strings = {
     setSecAiMedia: 'AI média a vyhledávání',
     setAiSearchSerperHint: 'Serper zajišťuje webové i obrázkové vyhledávání s vaším klíčem.',
     setAiSearchSerplyHint: 'Serply zajišťuje webové i obrázkové vyhledávání s vaším klíčem.',
+    setAiSearchSearchApiHint: 'SearchApi zajišťuje webové i obrázkové vyhledávání s vaším klíčem.',
     setAiSearchTavilyHint:
       'Tavily zajišťuje webové vyhledávání s vaším klíčem; obrázkové vyhledávání použije bezplatné zdroje.',
     setAiSearchParallelHint:
@@ -10235,6 +10253,7 @@ export const strings = {
     setSecAiMedia: 'AI-media en zoeken',
     setAiSearchSerperHint: 'Serper levert web- en afbeeldingszoeken met je sleutel.',
     setAiSearchSerplyHint: 'Serply levert web- en afbeeldingszoeken met je sleutel.',
+    setAiSearchSearchApiHint: 'SearchApi levert web- en afbeeldingszoeken met je sleutel.',
     setAiSearchTavilyHint:
       'Tavily levert webzoeken met je sleutel; afbeeldingszoeken valt terug op gratis bronnen.',
     setAiSearchParallelHint:
@@ -10850,6 +10869,7 @@ export const strings = {
     setSecAiMedia: 'Media & Carian AI',
     setAiSearchSerperHint: 'Serper menyediakan carian web dan imej dengan kunci anda.',
     setAiSearchSerplyHint: 'Serply menyediakan carian web dan imej dengan kunci anda.',
+    setAiSearchSearchApiHint: 'SearchApi menyediakan carian web dan imej dengan kunci anda.',
     setAiSearchTavilyHint:
       'Tavily menyediakan carian web dengan kunci anda; carian imej menggunakan sumber percuma.',
     setAiSearchParallelHint:
@@ -11447,6 +11467,7 @@ export const strings = {
     setSecAiMedia: 'מדיה וחיפוש AI',
     setAiSearchSerperHint: 'Serper מספק חיפוש באינטרנט ובתמונות עם המפתח שלך.',
     setAiSearchSerplyHint: 'Serply מספק חיפוש באינטרנט ובתמונות עם המפתח שלך.',
+    setAiSearchSearchApiHint: 'SearchApi מספק חיפוש באינטרנט ובתמונות עם המפתח שלך.',
     setAiSearchTavilyHint:
       'Tavily מספק חיפוש באינטרנט עם המפתח שלך; חיפוש תמונות חוזר למקורות חינמיים.',
     setAiSearchParallelHint:
@@ -12045,6 +12066,7 @@ export const strings = {
     setSecAiMedia: 'AI मीडिया और खोज',
     setAiSearchSerperHint: 'Serper आपकी कुंजी से वेब और इमेज खोज दोनों देता है।',
     setAiSearchSerplyHint: 'Serply आपकी कुंजी से वेब और इमेज खोज दोनों देता है।',
+    setAiSearchSearchApiHint: 'SearchApi आपकी कुंजी से वेब और इमेज खोज दोनों देता है।',
     setAiSearchTavilyHint:
       'Tavily आपकी कुंजी से वेब खोज देता है; इमेज खोज मुफ़्त स्रोतों पर लौट जाती है।',
     setAiSearchParallelHint:
@@ -12627,6 +12649,7 @@ export const strings = {
     setSecAiMedia: '生圖、媒體與搜尋',
     setAiSearchSerperHint: 'Serper 用你的 key 同時提供網頁與圖片搜尋。',
     setAiSearchSerplyHint: 'Serply 用你的 key 同時提供網頁與圖片搜尋。',
+    setAiSearchSearchApiHint: 'SearchApi 用你的 key 同時提供網頁與圖片搜尋。',
     setAiSearchTavilyHint: 'Tavily 用你的 key 提供網頁搜尋；圖片搜尋改用免費來源。',
     setAiSearchParallelHint:
       '留空 API key 即可免費使用 Parallel 搜尋（用量有限）。填寫 key 可使用你的 Parallel 帳戶。圖片搜尋使用其他來源。',

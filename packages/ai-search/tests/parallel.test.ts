@@ -15,7 +15,13 @@ const fallback = () =>
 let dir: string
 
 beforeEach(() => {
-  for (const key of ['SERPER_API_KEY', 'SERPLY_API_KEY', 'TAVILY_API_KEY', 'PARALLEL_API_KEY'])
+  for (const key of [
+    'SERPER_API_KEY',
+    'SERPLY_API_KEY',
+    'SEARCHAPI_API_KEY',
+    'TAVILY_API_KEY',
+    'PARALLEL_API_KEY',
+  ])
     vi.stubEnv(key, '')
   dir = mkdtempSync(join(tmpdir(), 'genoffice-parallel-'))
 })

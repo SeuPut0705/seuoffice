@@ -21,6 +21,7 @@ type KeySearchProviderId = NonNullable<SearchOptions['prefer']>
 const NO_SEARCH_KEYS = {
   serperKey: '',
   serplyKey: '',
+  searchapiKey: '',
   tavilyKey: '',
   parallelKey: '',
   exaKey: '',
@@ -87,6 +88,7 @@ export async function testSearchProvider(
   const options: SearchOptions = {
     serperKey: provider === 'serper' ? apiKey : '',
     serplyKey: provider === 'serply' ? apiKey : '',
+    searchapiKey: provider === 'searchapi' ? apiKey : '',
     tavilyKey: provider === 'tavily' ? apiKey : '',
     parallelKey: provider === 'parallel' ? apiKey : '',
     exaKey: provider === 'exa' ? apiKey : '',
