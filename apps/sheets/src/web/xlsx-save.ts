@@ -72,6 +72,7 @@ export async function saveWorkbook(
       save.tabColorStates ?? [],
       save.tableEdits ?? [],
       save.cellImageAdditions ?? [],
+      save.externalLinkOps ?? null,
       save.redactionStates ?? null,
     )
     const result = (await engine.command('save_archive', {

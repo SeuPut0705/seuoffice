@@ -371,6 +371,11 @@ const desktopApi: WebDesktopApi = {
   onRecoveryNotice: unsubscribe,
   onRecoveryWriteNow: unsubscribe,
   onMcpCommand: unsubscribe,
+  // cross-workbook range picking needs other workbook tabs: the page has none
+  onWorkbookPickArmed: unsubscribe,
+  onWorkbookPickCancelled: unsubscribe,
+  onWorkbookPickSelected: unsubscribe,
+  listWorkbookTabs: async () => ({ tabs: [] }),
   // An AI run applies, reverts and re-applies its edits as one proposal and vetoes everything else
   // meanwhile, remote edits included, so co-editing turns it off
   aiStream: (...args) =>

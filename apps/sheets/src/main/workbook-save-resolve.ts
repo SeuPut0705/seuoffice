@@ -316,5 +316,6 @@ export function resolveWorkbookSave(
     // The marks ride in a package part of their own; the gateway re-keys them
     // for the renames and removals `sheetPlan` carries.
     redactionStates,
+    externalLinkOps: request.externalLinkOps,
   }
 }

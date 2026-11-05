@@ -244,6 +244,7 @@ import {
   authorizeMcpSheetWrite,
   sendSheetsMenuAction,
   sheetsFileRenamed,
+  setSheetsActivateTabHook,
   setSheetsCloseTabHook,
   setSheetsExtraFileMenuItems,
   setSheetsDocumentLinkMenuItems,
@@ -5255,6 +5256,11 @@ function createShellWindow(): void {
   setSheetsShellWindow(win)
   setDocsHostWindowHook((wc) => detachedWindowForWebContents(wc.id))
   setSheetsHostWindowHook((wc) => detachedWindowForWebContents(wc.id))
+  // the cross-workbook range picker returns focus to the editing tab
+  setSheetsActivateTabHook((wcId) => {
+    const tabId = tabManager?.tabIdForWebContents(wcId)
+    if (tabId !== undefined) tabManager?.activateTab(tabId)
+  })
   setSlidesShellWindow(win)
   setSlidesHostWindowHook((wc) => detachedWindowForWebContents(wc.id))
   setSlidesShowBleed((wc, on) => manager.setContentBleed(wc, on))
