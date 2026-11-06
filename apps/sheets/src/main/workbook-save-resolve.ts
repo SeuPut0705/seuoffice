@@ -232,6 +232,18 @@ export function resolveWorkbookSave(
     sheetName: resolveSheetName(sheetId),
     ...group,
   }))
+  // Slicer panels: same sheetId → sheet name mapping as the other
+  // additions; part paths stay package-absolute.
+  const slicerState =
+    request.slicerState === null
+      ? null
+      : {
+          slicers: request.slicerState.slicers.map(({ sheetId, ...control }) => ({
+            ...control,
+            sheetName: resolveSheetName(sheetId),
+          })),
+          removals: [...request.slicerState.removals],
+        }
   // Recalculated formula values: sheetId → file sheet name, the same
   // resolution the cell edits use.
   const formulaValuesBySheet = new Map<
@@ -296,6 +308,7 @@ export function resolveWorkbookSave(
     tableEdits,
     pivotAdditions,
     sparklineAdditions,
+    slicerState,
     formulaValues,
     pivotCacheRefreshPaths: request.pivotCacheRefreshPaths,
     // Output-area expansion from layout growth: sheetId → sheet name; the part

@@ -182,8 +182,9 @@ import {
 } from '@genoffice/xlsx-gateway/gateway/xlsx-connection-refresh'
 import type { PartReader } from '@genoffice/xlsx-gateway/gateway/xlsx-connections'
 import { parsePivotDefinition } from '@genoffice/xlsx-gateway/gateway/xlsx-pivot'
+import { parseSlicerState } from '@genoffice/xlsx-gateway/gateway/xlsx-slicer'
 import { listWorkbookQueries } from '@genoffice/xlsx-gateway/gateway/xlsx-connections'
-import { readWorkbookRedactionPart } from './workbook-redactions'
+import { manifestNamesSchema, readWorkbookRedactionPart } from './workbook-redactions'
 import type {
   AttachmentAddResult,
   AttachmentImageResult,
@@ -237,6 +238,8 @@ import {
   saveEditsChunkArraySchema,
   workbookSaveEditsChunkSchema,
   workbookSaveRequestSchema,
+  workbookSlicerStateRequestSchema,
+  workbookSlicerStateResultSchema,
   type WorkbookCreateDocumentResult,
   type WorkbookSaveRequest,
 } from '../shared/desktop-api'
@@ -4693,6 +4696,46 @@ export function registerSheetsIpc(): void {
       readArchiveEntryText(entry.client, session.snapshotPath, request.cachePath),
     ])
     return workbookPivotDefinitionSchema.parse(parsePivotDefinition(pivotXml, cacheXml))
+  })
+
+  ipcMain.handle(IPC_CHANNELS.readSlicerState, async (event, input: unknown) => {
+    const entry = sessionFor(event)
+    const request = workbookSlicerStateRequestSchema.parse(input)
+    const session = entry.sessions.get(request.sessionId)
+    if (!session) throw new Error('Unknown workbook session.')
+    // The slicer parts are read from the session snapshot in one sidecar
+    // extraction; the gateway parser does the rest.
+    const manifest = manifestNamesSchema.parse(
+      await entry.client.archiveManifest(session.snapshotPath),
+    )
+    const names = manifest.entries.map((archiveEntry) => archiveEntry.name)
+    const hasSlicerParts = names.some((name) =>
+      /^xl\/(?:slicers|timelines)\/[^/]+\.xml$/.test(name),
+    )
+    if (!hasSlicerParts) return []
+    // Worksheet parts and their rels are keys/lookups for the parser (host
+    // sheets, pivot binding), so both ride the paths() view; only the XML
+    // texts below are actually extracted.
+    const wanted = names.filter(
+      (name) =>
+        name === 'xl/workbook.xml' ||
+        name === 'xl/_rels/workbook.xml.rels' ||
+        /^xl\/(?:slicers|timelines|slicerCaches|timelineCaches|pivotTables)\/[^/]+\.xml$/.test(
+          name,
+        ) ||
+        /^xl\/worksheets\/(?:_rels\/)?[^/]+\.xml(?:\.rels)?$/.test(name),
+    )
+    const texts = await readArchiveEntriesText(entry.client, session.snapshotPath, wanted)
+    return workbookSlicerStateResultSchema.parse(
+      await parseSlicerState({
+        paths: async () => names,
+        readText: async (path) => {
+          const text = texts.get(path)
+          if (text === undefined) throw new Error(`Workbook is missing ${path}.`)
+          return text
+        },
+      }),
+    )
   })
 
   // The workbook's refreshable web queries: the walk follows both shapes Excel

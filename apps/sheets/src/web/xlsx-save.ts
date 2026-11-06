@@ -74,6 +74,7 @@ export async function saveWorkbook(
       save.cellImageAdditions ?? [],
       save.externalLinkOps ?? null,
       save.redactionStates ?? null,
+      save.slicerState ?? null,
     )
     const result = (await engine.command('save_archive', {
       sourcePath,
