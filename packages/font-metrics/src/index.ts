@@ -3,3 +3,4 @@ export { findFontCovering, findSystemFont, isFamilyInstalled, isTruetype } from 
 export { configureMetricsCache, familyVerticalMetrics, type FaceVerticalMetrics } from './metrics'
 export { familyInfoFor, type FamilyInfo } from './family-info'
 export { configureExtraFontDirs } from './sfnt'
+export { appleFontAssetRoots } from './sfnt'
