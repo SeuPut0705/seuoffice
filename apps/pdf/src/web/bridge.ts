@@ -152,6 +152,7 @@ const pdfApi: Partial<PdfApi> = {
   getAutoSaveDefault: async () => NO_AUTO_SAVE_DEFAULT,
   onAutoSaveDefaultChanged: unsubscribe,
   getUsername: async () => '',
+  onUsernameChanged: unsubscribe,
   getAiSettings: webAiSettings,
   aiStream: ai.aiStream,
   aiStreamCancel: ai.aiStreamCancel,

@@ -269,6 +269,13 @@ const api: PdfApi = {
       (value) => value === true,
       () => false,
     ),
+  onUsernameChanged: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, name: unknown) => {
+      if (typeof name === 'string') handler(name)
+    }
+    ipcRenderer.on(PDF_CHANNELS.authorNameChanged, listener)
+    return () => ipcRenderer.removeListener(PDF_CHANNELS.authorNameChanged, listener)
+  },
   setDirty: (dirty) => ipcRenderer.send(PDF_CHANNELS.dirtyChanged, dirty),
   onCloseSaveRequest: (handler) => {
     const listener = (_e: unknown, opts?: { flushAll?: boolean }) =>
