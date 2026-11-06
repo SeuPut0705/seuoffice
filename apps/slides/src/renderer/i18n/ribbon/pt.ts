@@ -19,7 +19,7 @@ export const pt = {
   ribbonChangeShape: 'Alterar Forma',
   ribbonGroupShapeStyle: 'Estilos de Forma',
   ribbonShapeStyleTip:
-    'Estilos de forma predefinidos: combinações de preenchimento e contorno (incluindo tracejado)',
+    'Estilos de forma padrão: combinações de preenchimento e contorno (incluindo tracejado)',
   ribbonLineSolid: 'Sólida',
   ribbonLineDash: 'Tracejada',
   ribbonLineDot: 'Pontilhada',

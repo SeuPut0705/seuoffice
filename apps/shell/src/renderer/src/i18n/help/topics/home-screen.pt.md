@@ -1,6 +1,6 @@
-# O ecrã Início: onde ficam os seus arquivos
+# A tela Início: onde ficam os seus arquivos
 
-O ecrã Início é a página inicial do GenOffice: uma barra de navegação à esquerda e, à direita, as listas de arquivos e os cartões de criação rápida.
+A tela Início é a página inicial do GenOffice: uma barra de navegação à esquerda e, à direita, as listas de arquivos e os cartões de criação rápida.
 
 ## Navegação na barra lateral
 
@@ -18,16 +18,16 @@ Não há aqui nenhuma entrada Lixeira. Os arquivos excluídos vão para a lixeir
 
 Cada linha mostra um ícone, o nome do arquivo, a data de modificação e mais. O **menu ⋯** da linha oferece:
 
-- **Abrir**, e **Mostrar na pasta** para localizar o ficheiro no seu gestor de ficheiros.
+- **Abrir**, e **Mostrar na pasta** para localizar o arquivo no seu gerenciador de arquivos.
 - **Copiar caminho**.
-- **Mover para pasta…**: abre um seletor de pastas e move mesmo o ficheiro; se o destino já tiver um ficheiro com esse nome, pode ignorar, substituir ou renomear.
+- **Mover para pasta…**: abre um seletor de pastas e move mesmo o arquivo; se o destino já tiver um arquivo com esse nome, pode ignorar, substituir ou renomear.
 - **Renomear**: no próprio local, com a extensão preservada automaticamente.
-- **Adicionar aos favoritos / Remover dos favoritos** — os favoritos sobrevivem aos reinícios e acompanham o ficheiro quando o renomeia.
+- **Adicionar aos favoritos / Remover dos favoritos** — os favoritos sobrevivem aos reinícios e acompanham o arquivo quando o renomeia.
 - **Duplicar**: cria uma cópia na mesma pasta.
-- **Excluir**: move o ficheiro para a lixeira do sistema — não é uma exclusão definitiva.
-- **Remover da lista**, na vista **Recentes** de nível superior, para eliminar uma entrada sem tocar no ficheiro.
+- **Excluir**: move o arquivo para a lixeira do sistema — não é uma exclusão definitiva.
+- **Remover da lista**, na vista **Recentes** de nível superior, para eliminar uma entrada sem tocar no arquivo.
 
-### Vários ficheiros ao mesmo tempo
+### Vários arquivos ao mesmo tempo
 
 Marque a caixa de uma linha, ou faça ⌘/ctrl-clique, para construir uma seleção; a caixa do cabeçalho seleciona tudo o que está listado de momento, e uma barra acima da lista indica (**{n} selecionados**) quantos estão selecionados e oferece **Mover para pasta…** e **Excluir arquivos** para todo o conjunto. Também pode arrastar uma seleção múltipla para uma pasta na barra lateral.
 
@@ -40,23 +40,23 @@ A caixa de pesquisa no topo corresponde a duas coisas ao mesmo tempo:
 
 ## Cartões de início rápido
 
-Os cartões acima das listas criam um documento novo num só passo. Clicar num cartão cria um arquivo desse tipo e abre o respetivo editor — comece a escrever de imediato, ou deixe o AI fazer o rascunho por si (todos os editores têm um **botão de IA** no friso e **Perguntar à IA** no menu de contexto da seleção).
+Os cartões acima das listas criam um documento novo em um só passo. Clicar em um cartão cria um arquivo desse tipo e abre o respectivo editor — comece a escrever de imediato, ou deixe o AI fazer o rascunho por si (todos os editores têm um **botão de IA** na faixa de opções e **Perguntar à IA** no menu de contexto da seleção).
 
-O arquivo novo vai parar à pasta atualmente selecionada na barra lateral; se não houver nenhuma seleção, vai para a pasta predefinida.
+O arquivo novo vai parar à pasta atualmente selecionada na barra lateral; se não houver nenhuma seleção, vai para a pasta padrão.
 
 Para ocultar cartões ou mudar a ordem, use **Novos documentos no Início** em Configurações → Geral. Um tipo desativado só sai dos cartões e dos menus Novo; os arquivos desse tipo continuam abrindo normalmente. No Início, ⌘N/Ctrl+N cria o primeiro tipo ainda visível.
 
 O que faz cada cartão:
 
 - **AI Docs** (.docx): um documento de texto em branco no editor Docs. O arquivo só é gravado no disco no **primeiro salvamento**; e os documentos novos abrem com o painel de IA expandido (desligue em Configurações → "Abrir o painel de IA em novos documentos").
-- **AI Sheets** (.xlsx): uma folha de cálculo em branco no editor Sheets. Até você salvar, não existe arquivo no disco — o nome fica reservado para o primeiro salvamento; após a primeira geração pela IA, o arquivo também pode ser renomeado automaticamente a partir do seu conteúdo.
+- **AI Sheets** (.xlsx): uma planilha em branco no editor Sheets. Até você salvar, não existe arquivo no disco — o nome fica reservado para o primeiro salvamento; após a primeira geração pela IA, o arquivo também pode ser renomeado automaticamente a partir do seu conteúdo.
 - **AI Slides** (.pptx): uma apresentação em branco no editor Slides.
 - **AI Markdown** (.md): um documento Markdown em branco no editor Markdown.
 - **AI HTML** (.html): uma página web em branco no editor HTML.
 - **AI PDF** (.pdf): diferente dos restantes — cria **imediatamente** um PDF em branco verdadeiro de uma página na pasta de destino e abre-o como um ficheiro normal (o editor de PDF trabalha sobre ficheiros reais). Bom para anotar, ocultar partes do documento ou acrescentar texto; o arquivo pode ser renomeado automaticamente a partir do conteúdo no primeiro salvamento.
 - **Abrir arquivo local**: um seletor de arquivos do sistema para Word (.docx/.doc/.odt), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown) e páginas web (.html/.htm). É possível selecionar vários; cada arquivo recebe a sua própria guia. Arquivos de texto (.txt, .json) também abrem aqui — entram na visão de código do editor Markdown.
 
-> Dica: Arquivo ▸ Novo na barra de menus cria os mesmos tipos de documento (⌘N/Ctrl+N usa por omissão um documento de texto); arrastar um arquivo para a janela abre-o.
+> Dica: Arquivo ▸ Novo na barra de menus cria os mesmos tipos de documento (⌘N/Ctrl+N usa por padrão um documento de texto); arrastar um arquivo para a janela abre-o.
 
 ## Pergunte à sua base de conhecimento
 

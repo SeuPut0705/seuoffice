@@ -7402,11 +7402,11 @@ export const strings = {
     askSend: 'Enviar',
     askStop: 'Parar',
     askHeroTagline:
-      'Marque com estrela os arquivos que você lê com frequência e a IA poderá pesquisá-los e citar a fonte — clique numa citação para abrir.',
+      'Marque com estrela os arquivos que você lê com frequência e a IA poderá pesquisá-los e citar a fonte — clique em uma citação para abrir.',
     askStep1Title: 'Marcar arquivos',
     askStep1Desc: 'Em Recentes ou Pastas, clique na estrela da linha do arquivo',
     askStep2Title: 'Faça perguntas',
-    askStep2Desc: 'Pergunte como num chat, sem abrir nenhum documento antes',
+    askStep2Desc: 'Pergunte como em um chat, sem abrir nenhum documento antes',
     askStep3Title: 'Abrir citações',
     askStep3Desc: 'As respostas citam o arquivo de origem; clique para ir até ele',
     askCtaRecents: 'Marcar de Recentes',

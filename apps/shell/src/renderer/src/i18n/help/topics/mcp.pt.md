@@ -1,14 +1,14 @@
 # Ligar um agente de programação
 
-O GenOffice fala o Model Context Protocol, por isso um agente de programação consegue ler, escrever e renderizar os seus documentos através dos mesmos motores que a aplicação usa. O agente não está a adivinhar um formato de ficheiro: recebe os esquemas tipados das operações a partir das mesmas definições contra as quais o executor valida.
+O GenOffice fala o Model Context Protocol, por isso um agente de programação consegue ler, escrever e renderizar os seus documentos através dos mesmos motores que o aplicativo usa. O agente não está a adivinhar um formato de arquivo: recebe os esquemas tipados das operações a partir das mesmas definições contra as quais o executor valida.
 
-## Registá-lo a partir da aplicação
+## Registrá-lo a partir do aplicativo
 
 É em **Configurações ▸ Integrações** que isto se faz. O painel tem duas metades, e pode usar uma ou as duas.
 
 **A skill.** Uma linha por cada agente de programação encontrado nesta máquina — Claude Code, a pasta compartilhada `~/.agents` (lida pelo Codex, Cursor, Gemini CLI, Copilot CLI e OpenCode), Windsurf —, cada uma com **Instalar**, **Atualizar** e **Desinstalar**, a que se juntam **Instalar em outra pasta…**, **Baixar skill (zip)** e **Copiar caminho**. Se o seu assistente não estiver na lista, indique ao GenOffice uma pasta de onde ele lê o `SKILL.md`, ou grave o zip e deixe o assistente instalá-lo. A skill e o MCP podem andar lado a lado: o assistente escolhe um dos dois, e fazem exatamente as mesmas coisas. Uma cópia instalada antes na pasta própria de uma dessas cinco ferramentas continua listada sob a linha da pasta compartilhada e segue sendo atualizada; quando a pasta compartilhada tiver a skill, você pode remover essa cópia.
 
-**MCP.** São oferecidas duas vias: **Iniciado pelo assistente (recomendado)**, em que acrescenta a configuração apresentada ao seu cliente e o assistente arranca o servidor sozinho, e o **Servidor HTTP local**, que a aplicação executa por si. De qualquer forma, o assistente acaba a falar com o GenOffice e nunca escreve um comando.
+**MCP.** São oferecidas duas vias: **Iniciado pelo assistente (recomendado)**, em que acrescenta a configuração apresentada ao seu cliente e o assistente arranca o servidor sozinho, e o **Servidor HTTP local**, que o aplicativo executa por si. De qualquer forma, o assistente acaba a falar com o GenOffice e nunca escreve um comando.
 
 **Experimente** Abra um chat novo no seu assistente e peça com suas palavras, por exemplo:
 
@@ -16,9 +16,9 @@ O GenOffice fala o Model Context Protocol, por isso um agente de programação c
 - “Monte uma apresentação de 6 slides sobre nossos resultados do 3º trimestre”
 - “Converta budget.xlsx para PDF e abra no GenOffice”
 
-## Registá-lo a partir da linha de comando
+## Registrá-lo a partir da linha de comando
 
-A mesma coisa a partir de um terminal — esta é a via avançada, e a que deve usar quando o agente está num sítio onde o painel o não consegue encontrar:
+A mesma coisa a partir de um terminal — esta é a via avançada, e a que deve usar quando o agente está em um local onde o painel o não consegue encontrar:
 
 ```sh
 ieumoffice mcp install all
@@ -32,7 +32,7 @@ ieumoffice mcp install cursor    # just one
 ieumoffice mcp uninstall cursor  # take it back out
 ```
 
-Um agente instalado num sítio fora do comum precisa de `--dir <path>`; e `--force` reescreve uma entrada que já lá está.
+Um agente instalado em um local fora do comum precisa de `--dir <path>`; e `--force` reescreve uma entrada que já lá está.
 
 `ieumoffice mcp --help` põe num único ecrã tudo aquilo que o servidor aceita: as formas de instalar, remover e listar, a publicação por HTTP e as duas opções de esquema.
 
@@ -46,7 +46,7 @@ ieumoffice mcp --http 8765 --token <secret>
 
 `--host <addr>` muda o endereço onde escuta. Passe o mesmo token ao cliente.
 
-Por HTTP os ficheiros também viajam: `PUT /files/<name>` envia um, todas as ferramentas aceitam um URL `http(s)` no lugar de um caminho, e os resultados voltam como URLs de transferência — e, quando são pequenos o suficiente, como recursos incorporados. As operações, especificações e Markdown passam sempre embutidos.
+Por HTTP os arquivos também viajam: `PUT /files/<name>` envia um, todas as ferramentas aceitam um URL `http(s)` no lugar de um caminho, e os resultados voltam como URLs de transferência — e, quando são pequenos o suficiente, como recursos incorporados. As operações, especificações e Markdown passam sempre embutidos.
 
 ## O que o agente recebe
 
@@ -91,16 +91,16 @@ GENOFFICE_MCP_COMPACT_SCHEMAS=1 ieumoffice mcp
 
 Um agente que não conhece o vocabulário das operações vai adivinhar. A skill traz a referência e os guias de design — o mesmo material que o `ieumoffice guide` imprime —, de modo que o assistente escreve operações cuja especificação leu mesmo. Instale-a a partir do painel acima, ou com `ieumoffice skill` a partir de um terminal.
 
-## O que consegue alcançar na aplicação
+## O que consegue alcançar no aplicativo
 
-O servidor não se limita aos ficheiros em disco. Enquanto o GenOffice estiver a correr, o agente também pode trabalhar através da janela:
+O servidor não se limita aos arquivos em disco. Enquanto o GenOffice estiver em execução, o agente também pode trabalhar através da janela:
 
-- **`open_in_genoffice`** abre um ficheiro num separador e dá-lhe o foco.
-- **`open_documents`** lista todos os documentos que tem abertos — id, tipo, caminho e se têm alterações por guardar —, e depois lê o conteúdo atual de um deles, guarda-o no próprio sítio ou fecha-o, guardando primeiro, a não ser que lhe peça para descartar.
-- **As ferramentas de conteúdo** recebem esse id (ou o caminho) como argumento `document`, pelo que uma alteração aterra no separador que já tem aberto e a janela muda para o mostrar.
+- **`open_in_genoffice`** abre um arquivo em uma guia e coloca o foco nela.
+- **`open_documents`** lista todos os documentos que tem abertos — id, tipo, caminho e se têm alterações não salvas —, e depois lê o conteúdo atual de um deles, salva-o no próprio local ou fecha-o, salvando primeiro, a não ser que lhe peça para descartar.
+- **As ferramentas de conteúdo** recebem esse id (ou o caminho) como argumento `document`, por isso uma alteração aterra na guia que você já tem aberta e a janela muda para o mostrar.
 
-Ficam fora do alcance duas coisas: não existe painel de IA, e a janela de atualização da aplicação não se aplica.
+Ficam fora do alcance duas coisas: não existe painel de IA, e a janela de atualização do aplicativo não se aplica.
 
 ## O painel Servidor HTTP local
 
-Em **Servidor HTTP local**, a aplicação executa o servidor por si própria em vez de o deixar ao assistente: um interruptor de ativação, um campo **Porta**, um indicador **Em execução / Parado** e a **Geração em segundo plano** (escrever os documentos diretamente num caminho sem abrir a interface), mais o **Exemplo de configuração do cliente** para copiar. Abrir **Avançado** acrescenta os dois URLs de ligação — Streamable HTTP e o mais antigo, de SSE —, um URL de **Verificação de integridade** e um interruptor de **Registo** que anota a atividade do servidor e das ferramentas num ficheiro local que pode **Abrir**, **Atualizar** ou **Limpar** a partir daí. Escuta apenas em localhost.
+Em **Servidor HTTP local**, o aplicativo executa o servidor por conta própria em vez de o deixar ao assistente: um interruptor de ativação, um campo **Porta**, um indicador **Em execução / Parado** e a **Geração em segundo plano** (escrever os documentos diretamente em um caminho sem abrir a interface), mais o **Exemplo de configuração do cliente** para copiar. Abrir **Avançado** acrescenta os dois URLs de ligação — Streamable HTTP e o mais antigo, de SSE —, um URL de **Verificação de integridade** e um interruptor de **Registro** que anota a atividade do servidor e das ferramentas em um arquivo local que pode **Abrir**, **Atualizar** ou **Limpar** a partir daí. Escuta apenas em localhost.

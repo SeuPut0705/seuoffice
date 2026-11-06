@@ -65,7 +65,7 @@ export const pt = {
   ribbonPainterTip:
     'Pincel de Formatação: clique para aplicar uma vez, clique duas vezes para manter até Esc',
   ribbonPainterActiveTip:
-    'Pincel de Formatação ativado: clique numa palavra ou arraste sobre o texto para aplicar (Esc ou clique novamente para cancelar)',
+    'Pincel de Formatação ativado: clique em uma palavra ou arraste sobre o texto para aplicar (Esc ou clique novamente para cancelar)',
   ribbonCopyFormat: 'Copiar formatação',
   ribbonPasteFormat: 'Colar formatação',
   ribbonGroupClipboard: 'Área de Transferência',
@@ -805,7 +805,7 @@ export const pt = {
   ribbonZoomDialogTip: 'Abrir a caixa de diálogo Zoom para escolher um nível ou modo de ajuste',
   ribbonZoomTo: 'Zoom para',
   ribbonZoomTextWidth: 'Largura do texto',
-  ribbonZoomPercent: 'Percentagem',
+  ribbonZoomPercent: 'Porcentagem',
   ribbonZoomOut: 'Reduzir',
   ribbonZoomIn: 'Ampliar',
   ribbonZoom100Tip: 'Zoom de 100%',
