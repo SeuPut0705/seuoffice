@@ -158,9 +158,9 @@ describe('partitionDropPayload', () => {
   })
 
   it('treats a dropped .odt as openable (the Word tab opens it), not as unsupported', () => {
-    const result = partitionDropPayload(['/docs/report.odt', 'C:/x/Y.ODT', 'z.ppt'])
+    const result = partitionDropPayload(['/docs/report.odt', 'C:/x/Y.ODT', 'z.rtf'])
     expect(result.supported).toEqual(['/docs/report.odt', 'C:/x/Y.ODT'])
-    expect(result.unsupportedExts).toEqual(['ppt'])
+    expect(result.unsupportedExts).toEqual(['rtf'])
     expect(OPENABLE_DOC_RE.test('a.odt')).toBe(true)
     expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.odt')).toBe(false)
   })
@@ -172,18 +172,19 @@ describe('partitionDropPayload', () => {
   })
 
   it('treats a dropped .ods as openable (the spreadsheet tab converts it), not as unsupported', () => {
-    const result = partitionDropPayload(['/data/budget.ods', 'C:/x/BUDGET.ODS', 'z.ppt'])
+    const result = partitionDropPayload(['/data/budget.ods', 'C:/x/BUDGET.ODS', 'z.rtf'])
     expect(result.supported).toEqual(['/data/budget.ods', 'C:/x/BUDGET.ODS'])
-    expect(result.unsupportedExts).toEqual(['ppt'])
+    expect(result.unsupportedExts).toEqual(['rtf'])
     expect(OPENABLE_DOC_RE.test('a.ods')).toBe(true)
     expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.ods')).toBe(false)
   })
 
-  it('treats a dropped .odp/.otp as openable (Slides imports a .pptx copy), not as unsupported', () => {
-    const result = partitionDropPayload(['/decks/plan.odp', 'C:/x/DECK.OTP'])
-    expect(result.supported).toEqual(['/decks/plan.odp', 'C:/x/DECK.OTP'])
+  it('treats a dropped .odp/.otp/.ppt as openable (Slides imports a .pptx copy), not as unsupported', () => {
+    const result = partitionDropPayload(['/decks/plan.odp', 'C:/x/DECK.OTP', '/decks/old.PPT'])
+    expect(result.supported).toEqual(['/decks/plan.odp', 'C:/x/DECK.OTP', '/decks/old.PPT'])
     expect(result.unsupportedExts).toEqual([])
     expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.odp')).toBe(false)
+    expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.ppt')).toBe(false)
   })
 
   it('routes dropped mind maps, a FreeMind / Freeplane map included, as openable', () => {

@@ -92,6 +92,7 @@ import { matchesElementRef } from '@genoffice/pptx-engine/identity'
 import { buildPagePptx, parsePageSpec } from '@genoffice/pipelines/slides'
 import { fillMissingRunFonts, parseFontRoles } from './ai-default-fonts'
 import { convertOdpToPptx } from '../../../../packages/odf2ooxml/src'
+import { convertPptToPptx } from '../../../../packages/ppt2pptx/src'
 import { sniffImageMime } from './media-mime'
 import {
   newPasteCascade,
@@ -1004,13 +1005,20 @@ async function recoveredOpenBytes(
  */
 async function preparePresentationForOpen(filePath: string): Promise<string | null> {
   const extension = deckExtension(filePath)
-  if (extension !== 'odp' && extension !== 'otp') return filePath
+  if (extension !== 'odp' && extension !== 'otp' && extension !== 'ppt') return filePath
+  // a legacy .ppt rides the same flow as the ODF decks: confirm the lossy
+  // import, pick the destination, convert, write atomically and open the copy
+  const legacyPpt = extension === 'ppt'
+  const detailKey = legacyPpt ? 'pptImportDetail' : 'odpImportDetail'
+  const failedTitleKey = legacyPpt ? 'pptImportFailedTitle' : 'odpImportFailedTitle'
+  const failedBodyKey = legacyPpt ? 'pptImportFailedBody' : 'odpImportFailedBody'
+  const skipFormat = legacyPpt ? 'ppt' : 'odp'
   const parent = dialogParent()
-  if (!readLegacyImportSkip(APP_SETTINGS_PATH(), 'odp')) {
+  if (!readLegacyImportSkip(APP_SETTINGS_PATH(), skipFormat)) {
     const options = {
       type: 'warning' as const,
       message: tm('odpImportMsg', { ext: extension }),
-      detail: tm('odpImportDetail'),
+      detail: tm(detailKey),
       buttons: [tm('odpImportConvertBtn'), tm('btnCancel')],
       defaultId: 0,
       cancelId: 1,
@@ -1023,7 +1031,7 @@ async function preparePresentationForOpen(filePath: string): Promise<string | nu
     if (response !== 0) return null
     if (checkboxChecked) {
       try {
-        writeLegacyImportSkip(APP_SETTINGS_PATH(), 'odp', true)
+        writeLegacyImportSkip(APP_SETTINGS_PATH(), skipFormat, true)
       } catch {
         /* unwritable settings: ask again next time */
       }
@@ -1033,22 +1041,28 @@ async function preparePresentationForOpen(filePath: string): Promise<string | nu
     dialog,
     parent,
     {
-      defaultPath: join(dirname(filePath), basename(filePath).replace(/\.(odp|otp)$/i, '.pptx')),
+      defaultPath: join(
+        dirname(filePath),
+        basename(filePath).replace(/\.(odp|otp|ppt)$/i, '.pptx'),
+      ),
       filters: [{ name: 'PowerPoint', extensions: ['pptx'] }],
     },
     getDraftsDir(),
   )
   if (r.canceled || !r.filePath) return null
   try {
-    const result = await convertOdpToPptx(new Uint8Array(await readFile(filePath)))
-    // atomic like every deck save: a plain write leaves a truncated .pptx
-    // where the user expects a deck if the process dies mid-write
-    await atomicWriteFile(r.filePath, Buffer.from(result.pptx))
+    const source = new Uint8Array(await readFile(filePath))
+    const out = legacyPpt
+      ? (await convertPptToPptx(source)).bytes
+      : (await convertOdpToPptx(source)).pptx
+    // atomic like the Docs and shell copies: a plain write leaves a truncated
+    // .pptx where the user expects a deck if the process dies mid-write
+    await atomicWriteFile(r.filePath, Buffer.from(out))
   } catch {
     const errorOptions = {
       type: 'error' as const,
-      message: tm('odpImportFailedTitle'),
-      detail: tm('odpImportFailedBody'),
+      message: tm(failedTitleKey),
+      detail: tm(failedBodyKey),
     }
     if (parent) await dialog.showMessageBox(parent, errorOptions)
     else await dialog.showMessageBox(errorOptions)

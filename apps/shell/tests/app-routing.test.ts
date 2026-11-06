@@ -189,6 +189,14 @@ describe('renameStaysInApp', () => {
     expect(renameStaysInApp('/x/a.pptx', 'a.odp')).toBe(false)
   })
 
+  it('refuses a rename between .ppt and .pptx/.odp: same tab, different bytes', () => {
+    expect(appForPath('/x/OLD.PPT')).toBe('slides')
+    expect(renameStaysInApp('/x/old.ppt', 'old.pptx')).toBe(false)
+    expect(renameStaysInApp('/x/a.pptx', 'a.ppt')).toBe(false)
+    expect(renameStaysInApp('/x/a.odp', 'a.ppt')).toBe(false)
+    expect(renameStaysInApp('/x/old.ppt', 'renamed.ppt')).toBe(true)
+  })
+
   it('stays put when the file was never openable to begin with', () => {
     // no app to stay in, so this gate is not what blocks it
     expect(renameStaysInApp('/x/a.xyz', 'a.anything')).toBe(true)

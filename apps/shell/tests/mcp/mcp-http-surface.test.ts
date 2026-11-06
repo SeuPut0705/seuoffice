@@ -320,6 +320,7 @@ describe('MCP surface over Streamable HTTP (/mcp)', () => {
         'pptx',
         'odp',
         'otp',
+        'ppt',
       ])
 
       // the diagram tools take their schema from DIAGRAM_OPS over the wire: an

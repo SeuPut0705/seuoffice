@@ -39,6 +39,16 @@ describe('collectLaunchPaths', () => {
     ).toEqual(['/tmp/letter.Doc'])
   })
 
+  it('accepts a legacy PowerPoint .ppt in either case (Slides imports a .pptx copy)', () => {
+    expect(LAUNCHABLE_EXTS).toContain('ppt')
+    expect(
+      collectLaunchPaths(['IeumOffice.app', '/tmp/old.ppt', '/tmp/OLD2.PPT'], undefined, () => true),
+    ).toEqual(['/tmp/old.ppt', '/tmp/OLD2.PPT'])
+    expect(
+      collectLaunchPaths(['IeumOffice.exe'], { launchPaths: ['/tmp/deck.Ppt'] }, () => true),
+    ).toEqual(['/tmp/deck.Ppt'])
+  })
+
   it('accepts a .tsv from argv or the second-instance payload', () => {
     expect(
       collectLaunchPaths(['GenOffice.app', '/data/variants.tsv'], undefined, () => true),

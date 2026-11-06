@@ -13,7 +13,9 @@ const ODS_RE = /\.ods$/i
 const XLSX_RE = /\.(xlsx|xlsm|xls|csv|tsv|ods)$/i
 // .odp and its .otp template open in Slides through the import filter (a converted .pptx copy)
 const ODP_RE = /\.(odp|otp)$/i
-const PPTX_RE = /\.(pptx|odp|otp)$/i
+// a legacy PowerPoint 97-2003 .ppt opens in Slides as a converted .pptx copy too
+const PPT_RE = /\.ppt$/i
+const PPTX_RE = /\.(pptx|ppt|odp|otp)$/i
 const PDF_RE = /\.pdf$/i
 const HTML_RE = /\.html?$/i
 // XMind maps, and a FreeMind / Freeplane map imported as a new map
@@ -82,6 +84,8 @@ export function renameStaysInApp(from: string, newName: string): boolean {
   if (current === 'sheets' && ODS_RE.test(from) !== ODS_RE.test(newName)) return false
   // likewise an .odp/.otp is an ODF package that Slides only imports as a .pptx copy
   if (current === 'slides' && ODP_RE.test(from) !== ODP_RE.test(newName)) return false
+  // and a PowerPoint 97-2003 binary is neither a .pptx nor an ODF package
+  if (current === 'slides' && PPT_RE.test(from) !== PPT_RE.test(newName)) return false
   // each diagram form keeps its own bytes (XML, a picture holding it, a Visio
   // drawing), and so does each map form (.xmind, an imported .mm): renaming one
   // into another leaves a file that no longer opens

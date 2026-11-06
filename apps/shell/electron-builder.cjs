@@ -434,9 +434,10 @@ function ensureThirdPartyNotices() {
 // a converted .xlsx copy that saves as .xlsx (decision 0119), so both keep
 // their program too; so does an ODP presentation or template, which opens as a
 // converted .pptx copy (Windows does not list those in "Open with" yet). The
-// legacy Word 97-2003 .doc/.dot open as a converted .docx copy and must not be
-// taken from Word either; mac/Linux declare them for Open With, and every
-// platform reaches them through the app's own Open dialog.
+// legacy Word 97-2003 .doc/.dot and PowerPoint 97-2003 .ppt open as a
+// converted .docx/.pptx copy and must not be taken from Word or PowerPoint
+// either; mac/Linux declare them for Open With, and every platform reaches
+// them through the app's own Open dialog.
 // They are still offered in Explorer's "Open with": build/installer.nsh
 // writes a product-own ProgId with a document icon for each (the per-type
 // icon, or the xlsx icon for .ods), so choosing this app for them shows the
@@ -456,6 +457,7 @@ const WIN_OPEN_WITH_ONLY_EXTS = new Set([
   'otp',
   'doc',
   'dot',
+  'ppt',
 ])
 // NSIS registers each association under a ProgId taken from its `name`
 // (HKCU\Software\Classes\<name>). The upstream app registers the bare names
@@ -564,6 +566,14 @@ const FILE_ASSOCIATIONS = [
     rank: 'Alternate',
     icon: 'pptx',
     mimeType: 'application/vnd.oasis.opendocument.presentation-template',
+  },
+  {
+    // import-only: opens as a converted .pptx copy, the app never writes .ppt
+    ext: 'ppt',
+    name: 'PowerPoint 97-2003 Presentation',
+    role: 'Editor',
+    icon: 'pptx',
+    mimeType: 'application/vnd.ms-powerpoint',
   },
   {
     ext: 'pdf',

@@ -6,6 +6,7 @@ import { assertOptionValues, flagBool, flagString, type ParsedArgs } from '../ar
 import { csvToXlsx, sheetNameFromStem } from '../formats/csv'
 import { convertHwp } from '../formats/hwp'
 import { convertLegacyDoc } from '../formats/legacy-doc'
+import { convertLegacyPpt } from '../formats/legacy-ppt'
 import { convertOdp } from '../formats/odf'
 import { convertPdf, type PdfTarget } from '../formats/pdf'
 import { convertLegacyWorkbook, convertToOds, sheetToCsv } from '../formats/xlsx'
@@ -59,6 +60,7 @@ const NODE_ROUTES: Record<string, readonly string[]> = {
   // an ODF presentation or template becomes a .pptx through the import filter
   odp: ['pptx'],
   otp: ['pptx'],
+  ppt: ['pptx'],
   md: ['docx', 'html'],
   markdown: ['docx', 'html'],
   docx: ['md', 'hwp', 'hwpx'],
@@ -285,6 +287,10 @@ async function run(
   }
   if (from === 'doc' || from === 'dot') {
     const r = await convertLegacyDoc(readInput(input))
+    return { bytes: r.bytes, detail: r.detail }
+  }
+  if (from === 'ppt') {
+    const r = await convertLegacyPpt(readInput(input))
     return { bytes: r.bytes, detail: r.detail }
   }
   const r = await convertLegacyWorkbook(input, output)

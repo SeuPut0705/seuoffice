@@ -36,6 +36,7 @@
     "@genoffice/odt-engine": "*",
     "@genoffice/pdf2docx": "*",
     "@genoffice/pipelines": "*",
+    "@genoffice/ppt2pptx": "*",
     "@genoffice/pptx-engine": "*",
     "@genoffice/pptx-ops": "*",
     "@genoffice/pptx-render": "*",

@@ -5542,10 +5542,9 @@ function createShellWindow(): void {
 // ---- routing: one dispatch function for every open path ----
 
 /**
- * Single source of truth for the open-dialog filter. Includes the still-legacy
- * .ppt binary so it is selectable and surfaces the explicit "not supported"
- * dialog via openDocumentPath instead of being grayed out; .doc/.dot route into
- * the docs import filter.
+ * Single source of truth for the open-dialog filter. The legacy .doc/.dot and
+ * .ppt binaries route into the docs and slides import filters (each opens as a
+ * converted .docx/.pptx copy).
  */
 const OPEN_DIALOG_EXTENSIONS = [
   'docx',

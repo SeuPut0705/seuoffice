@@ -71,11 +71,14 @@ describe('packaged file associations', () => {
       expect(association, `no file association declared for .${ext}`).toBeTruthy()
       expect(association!.mimeType).toBe('application/msword')
     }
+    const ppt = fileAssociations.find((entry) => entry.ext === 'ppt')
+    expect(ppt, 'no file association declared for .ppt').toBeTruthy()
+    expect(ppt!.mimeType).toBe('application/vnd.ms-powerpoint')
   })
 
-  it('keeps plain text, JSON and legacy .doc/.dot off the Windows list, where NSIS would make the app their default', () => {
+  it('keeps plain text, JSON and legacy .doc/.dot/.ppt off the Windows list, where NSIS would make the app their default', () => {
     const winExts = config.win.fileAssociations.map((entry: { ext: string }) => entry.ext)
-    for (const ext of ['txt', 'json', 'doc', 'dot']) {
+    for (const ext of ['txt', 'json', 'doc', 'dot', 'ppt']) {
       expect(winExts, `.${ext} must not become a Windows default opener`).not.toContain(ext)
     }
     // a PC with Hancom Office keeps it as the opener for its own formats
