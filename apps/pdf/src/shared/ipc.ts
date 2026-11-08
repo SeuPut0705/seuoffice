@@ -1890,4 +1890,7 @@ export interface PdfApi {
    */
   aiStreamCancel(requestId: string, scope?: 'request'): Promise<void>
   onAiStream(handler: (chunk: AiStreamChunk) => void): () => void
+  /** Set when the embedding host opened the document for viewing only: the view is
+      read-only and the ribbon shows this text (seuoffice web view mode) */
+  readOnlyReason?: string
 }

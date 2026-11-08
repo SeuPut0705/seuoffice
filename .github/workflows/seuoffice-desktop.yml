@@ -1,0 +1,559 @@
+name: seuoffice desktop release
+
+# Builds the seuoffice desktop packages on GitHub-hosted runners and publishes
+# them to a GitHub release (decision 0008). seuoffice ships two packages only:
+#   Apple Silicon Mac  dmg + update zip   (macos-latest, an arm64 runner)
+#   x64 Windows        NSIS installer     (windows-latest)
+# apps/shell/electron-builder.seuoffice.cjs holds the release targets and
+# refuses any other platform or CPU.
+#
+# Each platform is packaged twice from one compiled app, one pass per update
+# channel (SEUOFFICE_UPDATE_CHANNEL, see apps/shell/electron-builder.cjs):
+#   latest  feeds latest.yml / latest-mac.yml. General installs; their updater
+#           also takes GitHub pre-releases.
+#   stable  feeds stable.yml / stable-mac.yml, file names end in -stable. Its
+#           updater only takes the release GitHub marks Latest.
+#
+# Release model. A tag vX.Y.Z creates (or refreshes) a GitHub PRE-RELEASE that
+# carries both platforms and both channels, so general installs get it at once.
+# The workflow never promotes it. The owner promotes it to stable by hand once
+# checked:
+#   gh release edit vX.Y.Z --prerelease=false --latest
+#
+# Signing (repository secrets):
+#   Windows  WIN_CSC_LINK (base64 PFX or https URL), WIN_CSC_KEY_PASSWORD
+#   Mac      CSC_LINK, CSC_KEY_PASSWORD (Developer ID Application certificate),
+#            APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID (notarization)
+# A platform without its secrets is built unsigned (Mac: signed ad hoc) and only
+# uploaded as a workflow artifact for testing. The release job refuses to run
+# unless both platforms are signed: the first published release must be signed,
+# because a signed release locks every later update to its signer.
+#
+# A run started by hand (workflow_dispatch) builds and uploads the artifacts
+# only, unless it is started on a v* tag.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: seuoffice-desktop-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      # the provenance attestation: an OIDC token and the right to store it
+      id-token: write
+      attestations: write
+    outputs:
+      signed: ${{ steps.signing.outputs.signed }}
+    env:
+      # never pick up a certificate from the runner: only WIN_CSC_* signs
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
+        with:
+          toolchain: stable
+
+      - name: Cache cargo (xlsx-sidecar)
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: apps/sheets/native/xlsx-engine
+
+      - name: Cache electron binaries
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
+          key: electron-win-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: electron-win-${{ runner.arch }}-
+
+      # signed=true only when both secrets are non-empty; the values are read
+      # from the environment and never printed
+      - name: Detect the signing certificate
+        id: signing
+        env:
+          HAS_LINK: ${{ secrets.WIN_CSC_LINK != '' }}
+          HAS_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD != '' }}
+        run: |
+          set -euo pipefail
+          signed=false
+          if [ "$HAS_LINK" = "true" ] && [ "$HAS_PASSWORD" = "true" ]; then
+            signed=true
+          fi
+          echo "signed=$signed" >> "$GITHUB_OUTPUT"
+          echo "signed=$signed"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # build:all builds the sheets module, which builds the xlsx sidecar for
+      # this host (target/release/xlsx-sidecar.exe)
+      - name: Build apps
+        run: npm run build:all
+        # the Google Drive client goes into the shell build; without it the
+        # build ships without Drive
+        env:
+          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
+
+      # the Windows config reads the sidecar from the x86_64-pc-windows-gnu
+      # folder (docs/releasing.ko.md, 4-(2)); the hand build copies it the same way
+      - name: Place the xlsx sidecar
+        run: |
+          set -euo pipefail
+          engine=apps/sheets/native/xlsx-engine/target
+          mkdir -p "$engine/x86_64-pc-windows-gnu/release"
+          cp "$engine/release/xlsx-sidecar.exe" "$engine/x86_64-pc-windows-gnu/release/"
+
+      # pass 1, the latest channel: builds the JS too
+      - name: Package (latest channel)
+        run: npm run dist:win -w @genoffice/shell -- --config electron-builder.seuoffice.cjs --publish never
+        env:
+          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+      # pass 2, the stable channel: reuses the JS pass 1 built, only repackages
+      - name: Package (stable channel)
+        working-directory: apps/shell
+        run: npx electron-builder --win --config electron-builder.seuoffice.cjs --publish never
+        env:
+          SEUOFFICE_UPDATE_CHANNEL: stable
+          BUILD_DIR: release-stable
+          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+      # a release build should carry the Drive client; say so when it does not
+      - name: The Google Drive client is in the build
+        env:
+          HAS_CLIENT: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID != '' }}
+        run: |
+          if [ "$HAS_CLIENT" != "true" ]; then
+            echo "::warning::GENOFFICE_GOOGLE_CLIENT_ID is not set; this build ships without Google Drive"
+            exit 0
+          fi
+          grep -rqs "apps.googleusercontent.com" apps/shell/out/main || {
+            echo "::error::the Google Drive client did not reach the shell build"
+            exit 1
+          }
+
+      - name: Check the installers, their feeds and the bundled programs
+        env:
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        run: |
+          set -euo pipefail
+          shell=apps/shell
+          latest="$shell/release"
+          stable="$shell/release-stable"
+          unpacked="$latest/win-unpacked"
+
+          for bin in \
+            "$unpacked/seuoffice.exe" \
+            "$unpacked/resources/native/xlsx-sidecar.exe" \
+            "$unpacked/resources/ocr/win-ocr.exe" \
+            "$unpacked/resources/cli/genoffice.cjs" \
+            "$unpacked/resources/cli/ieumoffice.cmd"; do
+            test -f "$bin" || { echo "missing: $bin"; exit 1; }
+          done
+          # x64 only: no ARM64 installer may slip in
+          if find "$latest" "$stable" -maxdepth 1 -name '*arm64*' | grep -q .; then
+            echo "::error::an arm64 Windows package was built"
+            exit 1
+          fi
+
+          # exact whole-line match, tolerant of CRLF
+          has_line() { tr -d '\r' < "$1" | grep -Fxq -- "$2"; }
+
+          version=$(node -p "require('./apps/shell/package.json').version")
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::package.json version is $version, but the tag is $GITHUB_REF_NAME"
+            exit 1
+          fi
+
+          check_flavor() {
+            local dir=$1 channel=$2 feed=$3 installer=$4
+            test -f "$dir/$installer" || { echo "missing: $dir/$installer"; exit 1; }
+            test -f "$dir/$installer.blockmap" || { echo "missing: $dir/$installer.blockmap"; exit 1; }
+            test -f "$dir/$feed" || { echo "missing: $dir/$feed"; exit 1; }
+            local built
+            built=$(sed -n 's/^version: *//p' "$dir/$feed" | tr -d "'\"\r")
+            [ "$built" = "$version" ] || { echo "$feed says $built, package.json $version"; exit 1; }
+            has_line "$dir/$feed" "path: $installer" || { echo "$feed path is not $installer"; exit 1; }
+            local update="$dir/win-unpacked/resources/app-update.yml"
+            test -f "$update" || { echo "missing: $update"; exit 1; }
+            for line in "channel: $channel" "repo: seuoffice" "owner: SeuPut0705"; do
+              has_line "$update" "$line" || { echo "$update lacks '$line'"; exit 1; }
+            done
+          }
+          check_flavor "$latest" latest latest.yml "seuoffice-Setup-$version.exe"
+          check_flavor "$stable" stable stable.yml "seuoffice-Setup-$version-stable.exe"
+
+          # every signable file must be signed, or none: a half-signed build fails
+          expected=NotSigned
+          if [ "$SIGNED" = "true" ]; then
+            expected=Valid
+          else
+            echo "::warning::No Windows signing certificate: this build is for testing only and cannot be released."
+          fi
+          for file in \
+            "$latest/seuoffice-Setup-$version.exe" \
+            "$stable/seuoffice-Setup-$version-stable.exe" \
+            "$unpacked/seuoffice.exe" \
+            "$unpacked/resources/native/xlsx-sidecar.exe"; do
+            status=$(powershell -NoProfile -Command "(Get-AuthenticodeSignature -LiteralPath '$file').Status" | tr -d '\r')
+            echo "$status  $file"
+            [ "$status" = "$expected" ] || { echo "::error::$file is $status, expected $expected"; exit 1; }
+          done
+
+      # The packaged app itself, run without a window: a Markdown and a CSV file
+      # (the latter through the xlsx sidecar) are exported to PDF
+      - name: Smoke test the packaged app
+        run: |
+          set -euo pipefail
+          exe="apps/shell/release/win-unpacked/seuoffice.exe"
+          work="$RUNNER_TEMP/smoke"
+          mkdir -p "$work"
+          printf '# Smoke test\n\nHello from the Windows build.\n' > "$work/note.md"
+          printf 'name,count\napple,3\npear,5\n' > "$work/table.csv"
+          for input in note.md table.csv; do
+            "$exe" --headless-export "$work/$input" --to pdf --out "$work/$input.pdf" --json
+            test -s "$work/$input.pdf"
+          done
+
+      # one flat folder, so the artifact has no release/ and release-stable/ levels
+      - name: Collect the release files
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./apps/shell/package.json').version")
+          mkdir -p release-files
+          cp "apps/shell/release/seuoffice-Setup-$version.exe" \
+            "apps/shell/release/seuoffice-Setup-$version.exe.blockmap" \
+            "apps/shell/release/latest.yml" \
+            "apps/shell/release-stable/seuoffice-Setup-$version-stable.exe" \
+            "apps/shell/release-stable/seuoffice-Setup-$version-stable.exe.blockmap" \
+            "apps/shell/release-stable/stable.yml" \
+            release-files/
+          ls -la release-files
+
+      # where the installers came from: this repository, this commit, this workflow
+      - name: Attest the build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            release-files/seuoffice-Setup-*.exe
+            release-files/latest.yml
+            release-files/stable.yml
+
+      - name: Upload the release files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: seuoffice-windows-x64
+          path: release-files/
+          if-no-files-found: error
+          retention-days: 14
+
+  mac:
+    # an Apple Silicon runner: the release Mac package is arm64 only
+    runs-on: macos-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    outputs:
+      signed: ${{ steps.signing.outputs.signed }}
+    env:
+      # never pick up a keychain identity: only CSC_LINK signs, else ad hoc
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
+        with:
+          toolchain: stable
+
+      - name: Cache cargo (xlsx-sidecar)
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: apps/sheets/native/xlsx-engine
+
+      - name: Cache electron binaries
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+          key: electron-mac-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: electron-mac-${{ runner.arch }}-
+
+      # signed=true only when the certificate and the notarization credentials
+      # are all there. A certificate without them fails the packaging step
+      # (electron-builder.seuoffice.cjs); nothing here prints a value.
+      - name: Detect the signing certificate
+        id: signing
+        env:
+          HAS_LINK: ${{ secrets.CSC_LINK != '' }}
+          HAS_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD != '' }}
+          HAS_APPLE_ID: ${{ secrets.APPLE_ID != '' }}
+          HAS_APP_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD != '' }}
+          HAS_TEAM: ${{ secrets.APPLE_TEAM_ID != '' }}
+        run: |
+          set -euo pipefail
+          signed=false
+          if [ "$HAS_LINK" = "true" ] && [ "$HAS_PASSWORD" = "true" ] &&
+            [ "$HAS_APPLE_ID" = "true" ] && [ "$HAS_APP_PASSWORD" = "true" ] && [ "$HAS_TEAM" = "true" ]; then
+            signed=true
+          fi
+          echo "signed=$signed" >> "$GITHUB_OUTPUT"
+          echo "signed=$signed"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # build:all builds the sheets module, which builds the xlsx sidecar for
+      # this arm64 host (target/release/xlsx-sidecar, where the mac config reads it)
+      - name: Build apps
+        run: npm run build:all
+        env:
+          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
+
+      # pass 1, the latest channel: builds the JS too
+      - name: Package (latest channel)
+        run: npm run dist:mac -w @genoffice/shell -- --config electron-builder.seuoffice.cjs --publish never
+        env:
+          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      # pass 2, the stable channel: reuses the JS pass 1 built, only repackages
+      - name: Package (stable channel)
+        working-directory: apps/shell
+        run: npx electron-builder --mac --config electron-builder.seuoffice.cjs --publish never
+        env:
+          SEUOFFICE_UPDATE_CHANNEL: stable
+          BUILD_DIR: release-stable
+          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: The Google Drive client is in the build
+        env:
+          HAS_CLIENT: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID != '' }}
+        run: |
+          if [ "$HAS_CLIENT" != "true" ]; then
+            echo "::warning::GENOFFICE_GOOGLE_CLIENT_ID is not set; this build ships without Google Drive"
+            exit 0
+          fi
+          grep -rqs "apps.googleusercontent.com" apps/shell/out/main || {
+            echo "::error::the Google Drive client did not reach the shell build"
+            exit 1
+          }
+
+      - name: Check the apps, their feeds, CPU and signatures
+        env:
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./apps/shell/package.json').version")
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::package.json version is $version, but the tag is $GITHUB_REF_NAME"
+            exit 1
+          fi
+          if [ "$SIGNED" != "true" ]; then
+            echo "::warning::No Developer ID certificate or notarization credentials: this build is signed ad hoc, for testing only, and cannot be released."
+          fi
+
+          check_flavor() {
+            local dir=$1 channel=$2 feed=$3 suffix=$4
+            local app="$dir/mac-arm64/seuoffice.app"
+            local plist="$app/Contents/Info.plist"
+            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = seuoffice
+            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = com.seuput.seuoffice
+            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")" = "$version"
+            # arm64 only: the app binary holds no other CPU, and no Intel package was made
+            test "$(lipo -archs "$app/Contents/MacOS/seuoffice")" = arm64
+            for bin in "$app/Contents/Resources/native/xlsx-sidecar" "$app/Contents/Resources/ocr/vision-ocr"; do
+              lipo -archs "$bin" | grep -qw arm64 || { echo "not arm64: $bin"; exit 1; }
+            done
+            if find "$dir" -maxdepth 1 \( -name '*x64*' -o -name '*universal*' -o -name mac \) | grep -q .; then
+              echo "::error::an Intel or universal Mac package was built in $dir"
+              exit 1
+            fi
+            local dmg="$dir/seuoffice-$version-arm64$suffix.dmg"
+            local zip="seuoffice-$version-arm64-mac$suffix.zip"
+            test -f "$dmg" || { echo "missing: $dmg"; exit 1; }
+            test -f "$dir/$zip" || { echo "missing: $dir/$zip"; exit 1; }
+            test -f "$dir/$feed" || { echo "missing: $dir/$feed"; exit 1; }
+            local built
+            built=$(sed -n 's/^version: *//p' "$dir/$feed" | tr -d "'\"")
+            [ "$built" = "$version" ] || { echo "$feed says $built, package.json $version"; exit 1; }
+            grep -qF "url: $zip" "$dir/$feed" || { echo "$feed does not name $zip"; exit 1; }
+            local update="$app/Contents/Resources/app-update.yml"
+            for line in "channel: $channel" "repo: seuoffice" "owner: SeuPut0705"; do
+              grep -Fxq -- "$line" "$update" || { echo "$update lacks '$line'"; exit 1; }
+            done
+
+            codesign --verify --deep --strict --verbose=2 "$app"
+            # read the whole report first: grep -q quitting early would break the pipe
+            local signature
+            signature="$(codesign -dv --verbose=2 "$app" 2>&1)"
+            if [ "$SIGNED" = "true" ]; then
+              grep -q 'Authority=Developer ID Application' <<<"$signature" || { echo "$signature"; exit 1; }
+              spctl --assess --type execute --verbose=2 "$app"
+              xcrun stapler validate "$dmg"
+            else
+              grep -q 'Signature=adhoc' <<<"$signature" || { echo "$signature"; exit 1; }
+            fi
+          }
+          check_flavor apps/shell/release latest latest-mac.yml ''
+          check_flavor apps/shell/release-stable stable stable-mac.yml -stable
+
+      # The packaged app itself, run without a window: a Markdown and a CSV file
+      # (the latter through the xlsx sidecar) are exported to PDF
+      - name: Smoke test the packaged app
+        run: |
+          set -euo pipefail
+          exe="apps/shell/release/mac-arm64/seuoffice.app/Contents/MacOS/seuoffice"
+          work="$RUNNER_TEMP/smoke"
+          mkdir -p "$work"
+          printf '# Smoke test\n\nHello from the macOS build.\n' > "$work/note.md"
+          printf 'name,count\napple,3\npear,5\n' > "$work/table.csv"
+          for input in note.md table.csv; do
+            "$exe" --headless-export "$work/$input" --to pdf --out "$work/$input.pdf" --json
+            test -s "$work/$input.pdf"
+          done
+
+      - name: Collect the release files
+        run: |
+          set -euo pipefail
+          mkdir -p release-files
+          for dir in apps/shell/release apps/shell/release-stable; do
+            cp "$dir"/*.dmg "$dir"/*.zip "$dir"/*.blockmap "$dir"/*-mac.yml release-files/
+          done
+          ls -la release-files
+
+      - name: Attest the build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            release-files/*.dmg
+            release-files/*.zip
+            release-files/*-mac.yml
+
+      - name: Upload the release files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: seuoffice-mac-arm64
+          path: release-files/
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    # the one job that writes: a pre-release carrying both platforms, from a tag
+    needs: [windows, mac]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: write
+    env:
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      # first, before any release is touched
+      - name: Refuse an unsigned build
+        env:
+          WINDOWS_SIGNED: ${{ needs.windows.outputs.signed }}
+          MAC_SIGNED: ${{ needs.mac.outputs.signed }}
+        run: |
+          if [ "$WINDOWS_SIGNED" != "true" ] || [ "$MAC_SIGNED" != "true" ]; then
+            echo "::error::Windows signed: $WINDOWS_SIGNED, Mac signed and notarized: $MAC_SIGNED. An unsigned build is never released. Set the signing secrets (decision 0008) and run again. The first published release must be signed, because a signed release later locks updates to its signer."
+            exit 1
+          fi
+
+      - name: Publish the pre-release
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::not a version tag: $TAG"; exit 1; }
+          gh run download "$GITHUB_RUN_ID" --name seuoffice-windows-x64 --dir dist
+          gh run download "$GITHUB_RUN_ID" --name seuoffice-mac-arm64 --dir dist
+          version=${TAG#v}
+          for feed in latest.yml stable.yml latest-mac.yml stable-mac.yml; do
+            built=$(sed -n 's/^version: *//p' "dist/$feed" | tr -d "'\"\r")
+            [ "$built" = "$version" ] || { echo "::error::$feed says $built, but the tag is $TAG"; exit 1; }
+          done
+          files=(
+            "dist/seuoffice-Setup-$version.exe"
+            "dist/seuoffice-Setup-$version.exe.blockmap"
+            "dist/seuoffice-Setup-$version-stable.exe"
+            "dist/seuoffice-Setup-$version-stable.exe.blockmap"
+            "dist/latest.yml"
+            "dist/stable.yml"
+            "dist/seuoffice-$version-arm64.dmg"
+            "dist/seuoffice-$version-arm64-stable.dmg"
+            "dist/seuoffice-$version-arm64-mac.zip"
+            "dist/seuoffice-$version-arm64-mac.zip.blockmap"
+            "dist/seuoffice-$version-arm64-mac-stable.zip"
+            "dist/seuoffice-$version-arm64-mac-stable.zip.blockmap"
+            "dist/latest-mac.yml"
+            "dist/stable-mac.yml"
+          )
+          for file in "${files[@]}"; do
+            test -f "$file" || { echo "::error::missing: $file"; exit 1; }
+          done
+          # an existing release keeps its pre-release and latest state
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+          else
+            gh release create "$TAG" --verify-tag --prerelease --title "$TAG" \
+              --notes "seuoffice $TAG for Apple Silicon Mac and x64 Windows. Pre-release: the general (latest) update channel gets it now. Promote it to the stable channel with: gh release edit $TAG --prerelease=false --latest" \
+              "${files[@]}"
+          fi
+          gh release view "$TAG" --json assets --jq '.assets[].name'

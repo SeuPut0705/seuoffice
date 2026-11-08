@@ -21,7 +21,7 @@ const NODE_SHIMS: Record<string, string> = {
 
 const escape = (text: string): string => text.replace(/[/]/g, '\\/')
 
-/** Point Node built-ins and electron at the browser shims */
+/** Point Node built-ins and electron at the browser shims, and the template fonts at the web folder */
 export function seuofficeWebAliases(): Alias[] {
   return [
     ...Object.entries(NODE_SHIMS).map(([id, stem]) => ({
@@ -30,6 +30,10 @@ export function seuofficeWebAliases(): Alias[] {
     })),
     { find: /^node:buffer$/, replacement: 'buffer' },
     { find: /^electron$/, replacement: shim('electron') },
+    {
+      find: /^@genoffice\/ui\/template-fonts$/,
+      replacement: fileURLToPath(new URL('./template-fonts.ts', import.meta.url)),
+    },
   ]
 }
 

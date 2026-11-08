@@ -12,10 +12,12 @@ export type AiProtocol =
   | 'codex-app-server'
   | 'claude-code-cli'
   | 'chatgpt-responses'
+  /** seuoffice decision 0009: chat-completions shape, the caller's token per request */
+  | 'gateway-complete'
 
 export interface ProviderCapabilities {
-  /** How the provider authenticates: user key, the Codex / Claude Code CLI's existing login, or the app's own ChatGPT sign-in. */
-  auth: 'api-key' | 'codex-chatgpt' | 'claude-subscription' | 'chatgpt-plan'
+  /** How the provider authenticates: user key, the Codex / Claude Code CLI's existing login, the app's own ChatGPT sign-in, or a token handed over per request. */
+  auth: 'api-key' | 'codex-chatgpt' | 'claude-subscription' | 'chatgpt-plan' | 'gateway-token'
   /** chat models accept image input (declarative; for custom endpoints it is assumed, not known) */
   vision: boolean
 }
@@ -431,6 +433,18 @@ export const AI_PROVIDER_ADAPTERS: Record<AiProviderId, ProviderAdapter> = {
         protocol: 'openai-compatible',
         baseUrl: normalizeBaseUrl(config.baseUrl, ''),
         ...(modelHasFixedSampling(config.model) ? { omitTemperature: true } : {}),
+      }
+    },
+  },
+  gateway: {
+    meta: metaOf('gateway'),
+    capabilities: { auth: 'gateway-token', vision: true },
+    // no URL resolves to '' rather than throwing: the settings screen reads every
+    // provider's default endpoint, and the request itself refuses an empty URL
+    resolveEndpoint(config) {
+      return {
+        protocol: 'gateway-complete',
+        baseUrl: config.baseUrl?.trim() ? normalizeBaseUrl(config.baseUrl, '') : '',
       }
     },
   },

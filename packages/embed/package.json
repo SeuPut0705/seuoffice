@@ -2,13 +2,41 @@
   "name": "@seuoffice/embed",
   "version": "0.1.0",
   "license": "Apache-2.0",
-  "private": true,
-  "type": "module",
   "description": "Open a document in a seuoffice iframe from its bytes and file name",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SeuPut0705/seuoffice.git",
+    "directory": "packages/embed"
+  },
+  "homepage": "https://github.com/SeuPut0705/seuoffice#readme",
+  "bugs": {
+    "url": "https://github.com/SeuPut0705/seuoffice/issues"
+  },
+  "private": false,
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "seuoffice-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "node ../../scripts/seuoffice-prepack.mjs && npm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

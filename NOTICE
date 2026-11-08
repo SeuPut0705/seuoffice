@@ -94,7 +94,8 @@ The Korean font pairings of the templates referred to k-slide
 Slide design template fonts
 
 packages/ui/template-fonts holds the fonts the design templates use. It
-ships once in the installer as resources/template-fonts. Every file is the
+ships once in the installer as resources/template-fonts and once in the web
+build as template-fonts/. Every file is the
 original distributor's, unmodified, except the two Noto Serif KR faces, whose
 CFF outlines are converted to TrueType (names and metrics unchanged); all are
 licensed under the SIL Open Font License, Version 1.1. Each family's license text sits beside its files, and
@@ -178,6 +179,12 @@ published HWP format document:
 
 (This product was developed with reference to Hancom's published document on
 the Hangul document file format (.hwp).)
+
+The web build ships the studio's old-Hangul face, rhwp's
+assets/fonts/RHWPOldHangul-Regular.woff2: a subset of Adobe Source Han Serif K,
+Copyright 2017-2022 Adobe, renamed RHWP Old Hangul, under the SIL Open Font
+License, Version 1.1. The license text ships beside it as
+hwp/studio/fonts/SourceHanSerifK-OFL.txt.
 
 Hanja dictionary
 

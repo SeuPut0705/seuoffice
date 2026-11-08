@@ -125,6 +125,7 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
   const view = container.ownerDocument.defaultView ?? window
   const base = new URL(options.baseUrl)
   const mode = options.mode ?? 'view'
+  const editing = options.mode === 'edit' ? options : undefined
   const query = new URLSearchParams({ mode, lang: options.lang ?? 'ko' })
   iframe.src = new URL(`${app}/index.html?${query}`, base).href
   iframe.style.width = '100%'
@@ -135,6 +136,8 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
   let sent = false
   let shown = false
   let nextRequestId = 1
+  // one store at a time, in arrival order: a slow older save must never land after a newer one
+  let storing = Promise.resolve()
   const saveRequests = new Map<
     number,
     { resolve: () => void; reject: (error: SeuofficeEmbedError) => void }
@@ -176,14 +179,10 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
     } else if (data.type === 'error') {
       const code = isPageErrorCode(data.code) ? data.code : 'open_failed'
       settle(new SeuofficeEmbedError(code, String(data.message ?? code)))
-    } else if (data.type === 'save' && options.mode === 'edit') {
-      void store(options, data, post)
-    } else if (
-      data.type === 'dirty' &&
-      options.mode === 'edit' &&
-      typeof data.dirty === 'boolean'
-    ) {
-      options.onDirtyChange?.(data.dirty)
+    } else if (data.type === 'save' && editing) {
+      storing = storing.then(() => store(editing, data, post))
+    } else if (data.type === 'dirty' && editing && typeof data.dirty === 'boolean') {
+      editing.onDirtyChange?.(data.dirty)
     } else if (data.type === 'request_save_done' && typeof data.requestId === 'number') {
       const request = saveRequests.get(data.requestId)
       if (!request) return

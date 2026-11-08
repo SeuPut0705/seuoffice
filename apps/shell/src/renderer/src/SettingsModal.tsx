@@ -883,33 +883,36 @@ function AiModelPane({ t }: { t: TFunc }) {
         </div>
       ) : (
         <>
-          <div className="set-field">
-            <div className="set-field-text">
-              <div className="set-field-stack">
-                <label className="set-field-label" htmlFor="set-ai-key">
-                  {t('setAiApiKey')}
-                </label>
-                <div className="set-field-desc">{t('setAiKeyHint')}</div>
+          {/* a gateway's token comes per request and is never a setting (seuoffice decision 0008) */}
+          {!meta?.requestToken && (
+            <div className="set-field">
+              <div className="set-field-text">
+                <div className="set-field-stack">
+                  <label className="set-field-label" htmlFor="set-ai-key">
+                    {t('setAiApiKey')}
+                  </label>
+                  <div className="set-field-desc">{t('setAiKeyHint')}</div>
+                </div>
               </div>
+              <input
+                id="set-ai-key"
+                className="set-input"
+                type="password"
+                value={config.apiKey}
+                placeholder={meta?.keyPlaceholder ?? 'API Key'}
+                spellCheck={false}
+                autoComplete="off"
+                onChange={(e) => updateConfig({ apiKey: e.target.value.trim() })}
+              />
             </div>
-            <input
-              id="set-ai-key"
-              className="set-input"
-              type="password"
-              value={config.apiKey}
-              placeholder={meta?.keyPlaceholder ?? 'API Key'}
-              spellCheck={false}
-              autoComplete="off"
-              onChange={(e) => updateConfig({ apiKey: e.target.value.trim() })}
-            />
-          </div>
+          )}
           <div className="set-field">
             <div className="set-field-text">
               <div className="set-field-stack">
                 <label className="set-field-label" htmlFor="set-ai-base-url">
                   {t('setAiBaseUrl')}
                 </label>
-                {!meta?.needsBaseUrl && (
+                {!meta?.needsBaseUrl && !meta?.requestToken && (
                   <div className="set-field-desc">{t('setAiBaseUrlHint')}</div>
                 )}
               </div>
@@ -919,7 +922,9 @@ function AiModelPane({ t }: { t: TFunc }) {
               className="set-input"
               type="text"
               value={config.baseUrl ?? ''}
-              placeholder={meta?.needsBaseUrl ? 'https://…/v1' : meta?.defaultBaseUrl}
+              placeholder={
+                meta?.needsBaseUrl || meta?.requestToken ? 'https://…/v1' : meta?.defaultBaseUrl
+              }
               spellCheck={false}
               onChange={(e) => updateConfig({ baseUrl: e.target.value.trim() })}
             />

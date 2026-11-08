@@ -126,6 +126,35 @@ describe('editing', () => {
     return { doc, dirty, replies }
   }
 
+  it('stores saves one at a time in the order the page sent them', async () => {
+    const started: number[] = []
+    const finishers: Array<() => void> = []
+    const { doc, replies } = openForEdit((file) => {
+      started.push(file.bytes[0]!)
+      return new Promise<void>((resolve) => finishers.push(resolve))
+    })
+    post(doc.iframe.contentWindow, ORIGIN, {
+      type: 'save',
+      saveId: 1,
+      fileName: 'memo.hwpx',
+      bytes: new Uint8Array([1]).buffer,
+    })
+    post(doc.iframe.contentWindow, ORIGIN, {
+      type: 'save',
+      saveId: 2,
+      fileName: 'memo.hwpx',
+      bytes: new Uint8Array([2]).buffer,
+    })
+    await vi.waitFor(() => expect(started).toEqual([1]))
+    // the newer save waits: a slow older store must not land after it
+    expect(replies()).toEqual([])
+    finishers[0]!()
+    await vi.waitFor(() => expect(started).toEqual([1, 2]))
+    finishers[1]!()
+    await vi.waitFor(() => expect(replies().map((m) => m.saveId)).toEqual([1, 2]))
+    doc.destroy()
+  })
+
   it('opens the page in edit mode and stores what the page saves under the opened name', async () => {
     const stored: { fileName: string; bytes: number[] }[] = []
     const { doc, replies } = openForEdit(async (file) => {
