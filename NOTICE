@@ -180,6 +180,12 @@ published HWP format document:
 (This product was developed with reference to Hancom's published document on
 the Hangul document file format (.hwp).)
 
+The web build ships the studio's old-Hangul face, rhwp's
+assets/fonts/RHWPOldHangul-Regular.woff2: a subset of Adobe Source Han Serif K,
+Copyright 2017-2022 Adobe, renamed RHWP Old Hangul, under the SIL Open Font
+License, Version 1.1. The license text ships beside it as
+hwp/studio/fonts/SourceHanSerifK-OFL.txt.
+
 Hanja dictionary
 
 The HWP/HWPX editor's Convert to Hanja uses data/hanja/hanja.txt from libhangul
