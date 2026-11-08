@@ -32,10 +32,12 @@
     "prepack": "node ../../scripts/seuoffice-prepack.mjs --require dist/index.html"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@seuoffice/embed": "*",
     "@seuoffice/web-platform": "*",
-    "@playwright/test": "^1.61.1",
+    "officecrypto-tool": "^0.0.19",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.2.108",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
   }
