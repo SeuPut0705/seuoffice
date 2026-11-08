@@ -1,17 +1,16 @@
 // @vitest-environment jsdom
-import { IUniverInstanceService, LocaleType, LogLevel, Univer } from '@univerjs/core'
-import { FUniver } from '@univerjs/core/lib/facade'
-import { UniverSheetsPlugin } from '@univerjs/sheets'
-import '@univerjs/sheets/facade'
 import { afterEach, describe, expect, it } from 'vitest'
 
+import { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
 import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import { createProposalBackend } from '../src/renderer/ai/proposal-backend'
 import {
   aiRunOpenRefusal,
   aiRunSaveRefusal,
   beginAgentWrite,
   installAiRunLockGuard,
   lockForAiRun,
+  type AiRunLockHold,
   personEditVetoed,
   unlockAfterAiRun,
 } from '../src/renderer/ai/run-lock'
@@ -23,11 +22,21 @@ import {
   type TurnProposal,
 } from '../src/renderer/ai/turn-proposal'
 import { createSaveGate, guardedSave } from '../src/renderer/save-scheduler'
-import { aiRunLock, type UniverRuntime } from '../src/renderer/univer-state'
-import { dropRedoStack } from '../src/renderer/undo-carry'
+import { bootWorkbook, cellOf, setCell } from './univer-workbook'
+import { aiRunLock, type LazyWorkbookState, type UniverRuntime } from '../src/renderer/univer-state'
+
+/** The test stands for one run (or Accept) at a time: it holds the lock and gives it back. */
+let currentHold: AiRunLockHold | null = null
+const holdLock = (): void => {
+  currentHold = lockForAiRun()
+}
+const releaseLock = (): void => {
+  if (currentHold) unlockAfterAiRun(currentHold)
+  currentHold = null
+}
 
 afterEach(() => {
-  unlockAfterAiRun()
+  releaseLock()
   aiRunLock.stranded = false
   aiRunLock.agentWriting = 0
 })
@@ -55,7 +64,7 @@ describe('a save while an AI run is in flight', () => {
     const document = { cells: { A1: 10 } }
     const { save, written } = savePath(document)
 
-    lockForAiRun()
+    holdLock()
     document.cells.A1 = 99 // the run's live edit
     const refused = await Promise.all([save(), save(), save()]) // save, autosave tick, recovery copy
 
@@ -68,11 +77,11 @@ describe('a save while an AI run is in flight', () => {
     const document = { cells: { A1: 10 } }
     const { save, written } = savePath(document)
 
-    lockForAiRun()
+    holdLock()
     document.cells.A1 = 99
     expect((await save()).ok).toBe(false)
     document.cells.A1 = 10 // the revert
-    unlockAfterAiRun()
+    releaseLock()
 
     expect((await save()).ok).toBe(true)
     expect(written).toEqual([JSON.stringify({ A1: 10 })])
@@ -91,7 +100,7 @@ describe('a save while an AI run is in flight', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0)) // the first save is under way
     const queued = save()
-    lockForAiRun()
+    holdLock()
     document.cells.A1 = 99
     finishFirst()
 
@@ -103,9 +112,9 @@ describe('a save while an AI run is in flight', () => {
   it('stays refused while edits of a run could not be taken back out', async () => {
     const { save, written } = savePath({ cells: { A1: 10 } })
 
-    lockForAiRun()
+    holdLock()
     aiRunLock.stranded = true
-    unlockAfterAiRun()
+    releaseLock()
 
     const outcome = await save()
     expect(outcome.ok).toBe(false)
@@ -113,37 +122,6 @@ describe('a save while an AI run is in flight', () => {
     expect(written).toEqual([])
   })
 })
-
-function bootWorkbook(): UniverRuntime {
-  const univer = new Univer({
-    logLevel: LogLevel.SILENT,
-    locale: LocaleType.EN_US,
-    locales: { [LocaleType.EN_US]: {} },
-  })
-  univer.registerPlugin(UniverSheetsPlugin)
-  const univerAPI = FUniver.newAPI(univer)
-  univerAPI.createWorkbook({
-    id: 'wb',
-    sheetOrder: ['sheet-1'],
-    sheets: {
-      'sheet-1': {
-        id: 'sheet-1',
-        name: 'Sheet1',
-        cellData: { 0: { 0: { v: 10 } }, 1: { 0: { v: 20 } } },
-      },
-    },
-  })
-  // undo works on the focused unit; createWorkbook does not focus what it created
-  univer.__getInjector().get(IUniverInstanceService).focusUnit('wb')
-  return { univer, univerAPI } as unknown as UniverRuntime
-}
-
-const cellOf = (runtime: UniverRuntime, address: string): unknown =>
-  runtime.univerAPI.getActiveWorkbook()?.getActiveSheet()?.getRange(address).getValue()
-
-const setCell = (runtime: UniverRuntime, address: string, value: number): void => {
-  runtime.univerAPI.getActiveWorkbook()?.getActiveSheet()?.getRange(address).setValue(value)
-}
 
 describe('the person editing the workbook while an AI run is in flight', () => {
   it('is blocked, leaves the workbook as the run has it, and Reject returns the pre-run document', async () => {
@@ -154,7 +132,7 @@ describe('the person editing the workbook while an AI run is in flight', () => {
     const before = [cellOf(runtime, 'A1'), cellOf(runtime, 'A2')]
     expect(before).toEqual([10, 5])
 
-    lockForAiRun()
+    holdLock()
     // the run writes through its own path
     const endAgentWrite = beginAgentWrite()
     setCell(runtime, 'A1', 11)
@@ -177,28 +155,22 @@ describe('the person editing the workbook while an AI run is in flight', () => {
     const endRevert = beginAgentWrite()
     await runtime.univerAPI.undo()
     endRevert()
-    unlockAfterAiRun()
+    releaseLock()
 
     expect([cellOf(runtime, 'A1'), cellOf(runtime, 'A2')]).toEqual(before)
   })
 
-  /** The app's backend for holdRun over a real Univer: its undo is the run's own write. */
-  const univerHoldBackend = (runtime: UniverRuntime): ProposalBackend => ({
-    undoCapacity: 20,
-    undoCellBudget: Number.POSITIVE_INFINITY,
-    unundoableOps: new Set<string>(),
-    undo: async (steps) => {
-      const end = beginAgentWrite()
-      try {
-        for (let step = 0; step < steps; step += 1) await runtime.univerAPI.undo()
-      } finally {
-        end()
-      }
-    },
-    watch: () => () => false,
-    apply: async () => ({ ok: false, undoSteps: 0 }),
-    dropRedo: () => dropRedoStack(runtime),
-  })
+  /** The app's own backend (ai/proposal-backend.ts) over a real Univer workbook. */
+  const univerHoldBackend = (runtime: UniverRuntime): ProposalBackend =>
+    createProposalBackend({
+      lazyWorkbookRef: { current: {} as LazyWorkbookState },
+      univerRef: { current: runtime },
+      adapterRef: { current: new InMemoryWorkbookAdapter({ revision: 0, sheets: [] }) },
+      lazyPreviewRef: { current: null },
+      blankBaselineRef: { current: null },
+      autoApplySafePlan: async () => ({ ok: false, undoSteps: 0 }),
+      afterBlankUndo: () => undefined,
+    })
   const planOf = (id: string): ChangePlan => ({
     transactionId: id,
     baseRevision: 0,
@@ -213,7 +185,7 @@ describe('the person editing the workbook while an AI run is in flight', () => {
     const runtime = bootWorkbook()
     installAiRunLockGuard(runtime, () => undefined)
 
-    lockForAiRun()
+    holdLock()
     const endAgentWrite = beginAgentWrite()
     setCell(runtime, 'A1', 11) // the run's edit
     endAgentWrite()
@@ -221,7 +193,7 @@ describe('the person editing the workbook while an AI run is in flight', () => {
       plans: [planOf('t1')],
       undoSteps: 1,
     })
-    unlockAfterAiRun()
+    releaseLock()
     expect(held.kind).toBe('pending')
 
     await runtime.univerAPI.redo() // the person's Redo while the proposal is pending
@@ -235,12 +207,12 @@ describe('the person editing the workbook while an AI run is in flight', () => {
     await runtime.univerAPI.undo() // and their undo of it
     expect(cellOf(runtime, 'A2')).toBe(20)
 
-    lockForAiRun() // a read-only or failed AI turn
+    holdLock() // a read-only or failed AI turn
     const held = await holdRun(univerHoldBackend(runtime), {
       plans: [],
       undoSteps: 0,
     })
-    unlockAfterAiRun()
+    releaseLock()
     expect(held.kind).toBe('none')
 
     await runtime.univerAPI.redo()
@@ -251,15 +223,15 @@ describe('the person editing the workbook while an AI run is in flight', () => {
     const runtime = bootWorkbook()
     installAiRunLockGuard(runtime, () => undefined)
 
-    lockForAiRun()
-    unlockAfterAiRun()
+    holdLock()
+    releaseLock()
     setCell(runtime, 'A2', 42)
 
     expect(cellOf(runtime, 'A2')).toBe(42)
   })
 
   it('cannot open the cell editor, but a plain click on a cell is not an edit', () => {
-    lockForAiRun()
+    holdLock()
 
     expect(
       personEditVetoed(
@@ -279,7 +251,7 @@ describe('the person editing the workbook while an AI run is in flight', () => {
   })
 
   it('lets the formula engine restate what the run wrote', () => {
-    lockForAiRun()
+    holdLock()
 
     expect(
       personEditVetoed(
@@ -332,7 +304,7 @@ describe('the person typing at the grid while an AI apply is paused in an async 
     const before = [cellOf(runtime, 'A1'), cellOf(runtime, 'A2'), cellOf(runtime, 'B1')]
     const { element, seen } = grid(runtime)
 
-    lockForAiRun()
+    holdLock()
     // the AI apply: it writes, then waits on an async step with its write flag up
     let resume: () => void = () => undefined
     const paused = new Promise<void>((resolve) => {
@@ -369,7 +341,7 @@ describe('the person typing at the grid while an AI apply is paused in an async 
     await runtime.univerAPI.undo()
     await runtime.univerAPI.undo()
     endRevert()
-    unlockAfterAiRun()
+    releaseLock()
 
     expect([cellOf(runtime, 'A1'), cellOf(runtime, 'A2'), cellOf(runtime, 'B1')]).toEqual(before)
     element.remove()
@@ -386,7 +358,7 @@ describe('the person typing at the grid while an AI apply is paused in an async 
     const panelKeys: string[] = []
     input.addEventListener('keydown', () => panelKeys.push('keydown'))
 
-    lockForAiRun()
+    holdLock()
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }))
     const save = new KeyboardEvent('keydown', {
       key: 's',
@@ -395,7 +367,7 @@ describe('the person typing at the grid while an AI apply is paused in an async 
       cancelable: true,
     })
     element.dispatchEvent(save)
-    unlockAfterAiRun()
+    releaseLock()
     element.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true }))
 
     expect(panelKeys).toEqual(['keydown'])
@@ -479,8 +451,8 @@ describe('Accept of a held proposal', () => {
     }
 
     // what handleAcceptProposal does around accept()
-    lockForAiRun()
-    const accepting = accept(backend, pending).finally(unlockAfterAiRun)
+    holdLock()
+    const accepting = accept(backend, pending).finally(releaseLock)
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(cellOf(runtime, 'C1')).toBe(3) // the second re-apply is paused after its write
 
@@ -524,10 +496,10 @@ describe('opening a file over the workbook', () => {
   it('is refused with the lock notice while a run or an Accept holds the workbook, and allowed otherwise', () => {
     expect(aiRunOpenRefusal()).toBeNull()
 
-    lockForAiRun()
+    holdLock()
     expect(aiRunOpenRefusal()).toMatch(/AI is working/)
 
-    unlockAfterAiRun()
+    releaseLock()
     expect(aiRunOpenRefusal()).toBeNull()
   })
 })

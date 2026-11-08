@@ -357,6 +357,8 @@ export const ko = {
   appUndoFailed: '실행 취소할 수 없습니다.',
   appAiRunLocked: 'AI가 이 통합 문서를 고치는 중입니다. 끝난 뒤에 변경을 받아들이거나 거부하세요.',
   appSaveBlockedAiRun: 'AI가 이 통합 문서를 고치는 동안에는 저장할 수 없습니다.',
+  appSaveBlockedProposal:
+    'AI가 제안한 변경을 검토하는 중에는 저장할 수 없습니다. 먼저 받아들이거나 거부하세요.',
   appAiRunStranded:
     'AI가 고친 내용 일부를 통합 문서에서 되돌리지 못했습니다. 저장하기 전에 실행 취소하세요.',
   appAutoFilterCreateFailed: '자동 필터를 만들 수 없습니다.',

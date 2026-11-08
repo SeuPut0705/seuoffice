@@ -268,7 +268,8 @@ export const aiBulkUndoGate = { active: false, dropped: false, cells: 0, pushed:
 ///   active:       from the start of a run until its edits are reverted
 ///   agentWriting: depth of the scopes writing for the run itself (its applies, its revert, an Accept)
 ///   stranded:     a run's edits could not be taken back out; saves stay refused
-export const aiRunLock = { active: false, agentWriting: 0, stranded: false }
+///   proposalPending: a held proposal awaits Accept or Reject; a save would reopen the file and drop it
+export const aiRunLock = { active: false, agentWriting: 0, stranded: false, proposalPending: false }
 
 export interface UndoRedoItemLike {
   readonly unitID: string

@@ -175,17 +175,6 @@ export function richCellText(cell: unknown): string | null {
   return typeof stream === 'string' ? stream.replace(/\r\n$/, '').replace(/\r/g, '\n') : null
 }
 
-/**
- * Operations whose apply only writes the edit journal: no Univer command runs, so
- * no undo step takes them back. An AI run cannot hold them for review.
- */
-export const JOURNAL_ONLY_OPS: ReadonlySet<string> = new Set([
-  'protect_sheet',
-  'set_page_setup',
-  'add_sparkline',
-  'delete_table',
-])
-
 const SHEET_LIFECYCLE_OPS = new Set([
   'add_sheet',
   'delete_sheet',

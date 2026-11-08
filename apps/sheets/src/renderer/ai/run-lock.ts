@@ -15,6 +15,7 @@ import { t } from '../i18n/locale'
 import { showToast } from '../toast-bus'
 import { aiRunLock, journalSuppression, type UniverRuntime } from '../univer-state'
 import { VISUAL_UNDO_COMMAND_ID } from '../undo-carry'
+import type { TurnProposal } from './turn-proposal'
 
 const OPEN_CELL_EDITOR = 'sheet.operation.set-cell-edit-visible'
 /** the formula engine's own bookkeeping: derived from what the run wrote, never a person's edit */
@@ -124,15 +125,33 @@ if (typeof window !== 'undefined') {
   }
 }
 
-/** Takes the workbook for a run; from here on the person's edits and every save are refused. */
-export function lockForAiRun(): void {
+/** One claim on the workbook; only the claimant's own release ends it. */
+export type AiRunLockHold = symbol
+
+const holds = new Set<AiRunLockHold>()
+
+/**
+ * Takes the workbook for a run (or an Accept); from here on the person's edits and every save
+ * are refused. The workbook stays taken until every claim is released, so a late release of an
+ * abandoned run cannot hand the workbook to the person under a newer run.
+ */
+export function lockForAiRun(): AiRunLockHold {
+  const hold = Symbol('ai-run-hold')
+  holds.add(hold)
   aiRunLock.active = true
   lastNoticeAt = 0
+  return hold
 }
 
-/** Gives the workbook back once the run's edits are out of it (or could not be taken out). */
-export function unlockAfterAiRun(): void {
-  aiRunLock.active = false
+/** Gives the workbook back once this claim's edits are out of it (or could not be taken out). */
+export function unlockAfterAiRun(hold: AiRunLockHold): void {
+  holds.delete(hold)
+  aiRunLock.active = holds.size > 0
+}
+
+/** Tells the save path whether a held proposal awaits the person's Accept or Reject. */
+export function setProposalPending(proposal: TurnProposal): void {
+  aiRunLock.proposalPending = proposal.kind === 'pending'
 }
 
 /**
@@ -155,9 +174,19 @@ export function aiRunOpenRefusal(): string | null {
   return aiRunLock.active ? t('appAiRunLocked') : null
 }
 
-/** Why a save must not write the workbook right now, or null when it may. */
-export function aiRunSaveRefusal(): string | null {
+/** The ways a save can be asked for; the two that write the file reopen it afterwards. */
+export type SaveRefusalMode = 'save' | 'save-as' | 'recovery' | 'template'
+
+/**
+ * Why a save must not write the workbook right now, or null when it may. A copy (recovery,
+ * template, export) leaves the open workbook alone; a save reopens the file and with it drops
+ * the held proposal, so it waits for the person's Accept or Reject.
+ */
+export function aiRunSaveRefusal(mode?: SaveRefusalMode): string | null {
   if (aiRunLock.active) return t('appSaveBlockedAiRun')
   if (aiRunLock.stranded) return t('appAiRunStranded')
+  if (aiRunLock.proposalPending && (mode === 'save' || mode === 'save-as')) {
+    return t('appSaveBlockedProposal')
+  }
   return null
 }

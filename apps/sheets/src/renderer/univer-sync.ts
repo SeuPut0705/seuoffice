@@ -18,6 +18,7 @@ import {
   ICommandService,
   type IRange,
   type IStyleData,
+  type IWorkbookData,
   IUndoRedoService,
   IUniverInstanceService,
   LifecycleStages,
@@ -255,21 +256,42 @@ export function loadSnapshotIntoUniver(
   }
 }
 
+/// Drops the open workbook and its undo steps. Rebuilds reuse the same unitId ('new-workbook'):
+/// the previous grid's undo steps go too, so ⌘Z falls through to the adapter's revision history
+/// instead of replaying stale mutations onto the rebuilt content.
+function disposeActiveWorkbook(runtime: UniverRuntime, workbookId: string): void {
+  const activeWorkbook = runtime.univerAPI.getActiveWorkbook()
+  if (activeWorkbook) {
+    clearUnitUndoHistory(runtime, activeWorkbook.getId())
+    runtime.univerAPI.disposeUnit(activeWorkbook.getId())
+  }
+  clearUnitUndoHistory(runtime, workbookId)
+}
+
+/// Puts a workbook the grid itself saved (`FWorkbook.save()`) back in place of the open one.
+/// Same load convention as loadSnapshotIntoUniver: no journal entries, a fresh undo stack.
+export function loadWorkbookDataIntoUniver(
+  runtime: UniverRuntime | null,
+  data: IWorkbookData,
+): void {
+  if (!runtime) return
+  journalSuppression.active = true
+  try {
+    disposeActiveWorkbook(runtime, data.id)
+    runtime.univerAPI.createWorkbook(data)
+    focusCreatedUnit(runtime, data.id)
+  } finally {
+    journalSuppression.active = false
+  }
+}
+
 function loadSnapshotIntoUniverInner(
   runtime: UniverRuntime,
   snapshot: WorkbookSnapshot,
   workbookId: string,
   workbookName: string,
 ): void {
-  const activeWorkbook = runtime.univerAPI.getActiveWorkbook()
-  if (activeWorkbook) {
-    clearUnitUndoHistory(runtime, activeWorkbook.getId())
-    runtime.univerAPI.disposeUnit(activeWorkbook.getId())
-  }
-  // Rebuilds reuse the same unitId ('new-workbook'): drop the previous grid's
-  // undo steps so ⌘Z falls through to the adapter's revision history instead
-  // of replaying stale mutations onto the rebuilt content.
-  clearUnitUndoHistory(runtime, workbookId)
+  disposeActiveWorkbook(runtime, workbookId)
 
   runtime.univerAPI.createWorkbook({
     id: workbookId,
