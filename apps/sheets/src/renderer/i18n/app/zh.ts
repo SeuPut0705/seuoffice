@@ -311,6 +311,13 @@ export const zh = {
   appAppliedJournaled: '已应用——改动已记录，⌘S 保存进文件。',
   appUndoCommitted: '撤销已提交（第 {revision} 版）。',
   appUndoFailed: '无法撤销。',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appSaveBlockedProposal:
+    "Can't save while the AI's changes wait for your review. Accept or reject them first.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: '无法创建自动筛选。',
   appAutoFilterRemoveFailed: '无法移除自动筛选。',
   // Insert chart

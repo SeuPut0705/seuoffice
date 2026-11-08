@@ -178,6 +178,13 @@ export const pt = {
   aiReverted: 'Alterações desfeitas',
   aiRevertRefused:
     'Não foi possível desfazer estas alterações de uma vez. Se o documento foi editado depois, use o Desfazer do editor (Ctrl+Z).',
+  aiProposalTitle: 'Alterações propostas: {count}',
+  aiAccept: 'Aceitar',
+  aiReject: 'Rejeitar',
+  aiProposalHint:
+    'O documento permanece como estava até você aceitar. Aceite ou rejeite estas alterações antes de enviar outro pedido.',
+  aiProposalStale:
+    'O documento mudou depois que estas edições foram retidas, por isso não foram aplicadas. O documento permanece inalterado.',
   memoTitle: 'Comentários',
   memoOpen: 'Comentários',
   memoAdd: 'Adicionar comentário',
@@ -214,6 +221,10 @@ export const pt = {
   memoErrDelete: 'Não foi possível excluir o comentário.',
   memoErrTooLong: 'O comentário é muito longo. Pode ter até 100.000 caracteres.',
   memoErrLoad: 'Não foi possível ler a lista de comentários.',
+  saveAiRunning:
+    'Não é possível salvar enquanto a IA edita o documento. Tente novamente quando ela terminar.',
+  aiRunStranded:
+    'Não foi possível desfazer as edições da IA no documento. Este documento não será salvo. Feche-o sem salvar e abra-o novamente.',
   memoSaveBlocked: 'Salve ou cancele primeiro o comentário que está escrevendo.',
   memoRemoved: 'Comentários excluídos com o texto: {count}. Pressione Ctrl+Z para desfazer.',
   memoNotCopied: 'O comentário não foi copiado.',
@@ -262,6 +273,8 @@ export const pt = {
   checkAskAi: 'Entregar a correção à IA',
   checkHandedOff: 'O pedido está no campo da IA. Reveja e envie.',
   checkFixFailed: 'Não foi possível alterar.',
+  checkAiRunning:
+    'Não é possível alterar a fonte enquanto a IA edita o documento. Tente novamente quando terminar.',
   easyWordsLabel: 'Explicar com palavras simples',
   easyWordsPrompt:
     'Explique em português o texto selecionado abaixo para que alguém que precisa de textos fáceis de ler também entenda. Use palavras do dia a dia e frases curtas, e não deixe de fora nenhum fato, número ou condição. Não altere o documento.\n\nTexto selecionado:\n{text}',

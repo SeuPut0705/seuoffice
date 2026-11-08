@@ -179,6 +179,13 @@ export const de = {
   aiReverted: 'Änderungen zurückgenommen',
   aiRevertRefused:
     'Diese Änderungen konnten nicht zusammen zurückgenommen werden. Wurde das Dokument danach bearbeitet, verwenden Sie „Rückgängig“ im Editor (Ctrl+Z).',
+  aiProposalTitle: 'Vorgeschlagene Änderungen: {count}',
+  aiAccept: 'Übernehmen',
+  aiReject: 'Ablehnen',
+  aiProposalHint:
+    'Das Dokument bleibt unverändert, bis Sie übernehmen. Übernehmen oder lehnen Sie diese Änderungen ab, bevor Sie eine weitere Anfrage senden.',
+  aiProposalStale:
+    'Das Dokument wurde geändert, nachdem diese Änderungen zurückgehalten wurden, daher wurden sie nicht angewendet. Das Dokument ist unverändert.',
   memoTitle: 'Kommentare',
   memoOpen: 'Kommentare',
   memoAdd: 'Kommentar hinzufügen',
@@ -218,6 +225,10 @@ export const de = {
   memoErrDelete: 'Der Kommentar konnte nicht gelöscht werden.',
   memoErrTooLong: 'Der Kommentar ist zu lang. Er kann bis zu 100.000 Zeichen enthalten.',
   memoErrLoad: 'Die Kommentarliste konnte nicht gelesen werden.',
+  saveAiRunning:
+    'Während die KI das Dokument bearbeitet, kann nicht gespeichert werden. Versuchen Sie es nach dem Ende erneut.',
+  aiRunStranded:
+    'Die Änderungen der KI konnten nicht aus dem Dokument zurückgenommen werden. Dieses Dokument wird nicht gespeichert. Schließen Sie es ohne Speichern und öffnen Sie es erneut.',
   memoSaveBlocked: 'Speichern oder verwerfen Sie zuerst den Kommentar, den Sie schreiben.',
   memoRemoved: 'Kommentare mit dem Text gelöscht: {count}. Mit Ctrl+Z rückgängig machen.',
   memoNotCopied: 'Der Kommentar wurde nicht kopiert.',
@@ -266,6 +277,8 @@ export const de = {
   checkAskAi: 'Das Beheben der KI übergeben',
   checkHandedOff: 'Die Anfrage steht im KI-Feld. Prüfen und senden.',
   checkFixFailed: 'Die Änderung war nicht möglich.',
+  checkAiRunning:
+    'Solange die KI das Dokument bearbeitet, lässt sich die Schriftart nicht ändern. Versuchen Sie es danach erneut.',
   easyWordsLabel: 'In einfachen Worten erklären',
   easyWordsPrompt:
     'Erkläre den unten ausgewählten Text auf Deutsch so, dass ihn auch jemand versteht, der leicht verständliche Texte braucht. Verwende Alltagswörter und kurze Sätze und lass keine Tatsache, Zahl oder Bedingung weg. Ändere das Dokument nicht.\n\nAusgewählter Text:\n{text}',

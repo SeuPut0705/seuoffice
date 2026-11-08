@@ -176,6 +176,13 @@ export const pl = {
   aiReverted: 'Zmiany cofnięte',
   aiRevertRefused:
     'Nie udało się cofnąć tych zmian za jednym razem. Jeśli dokument był potem edytowany, użyj polecenia Cofnij w edytorze (Ctrl+Z).',
+  aiProposalTitle: 'Proponowane zmiany: {count}',
+  aiAccept: 'Zaakceptuj',
+  aiReject: 'Odrzuć',
+  aiProposalHint:
+    'Dokument pozostaje bez zmian, dopóki nie zaakceptujesz. Zaakceptuj lub odrzuć te zmiany przed wysłaniem kolejnej prośby.',
+  aiProposalStale:
+    'Dokument zmienił się po wstrzymaniu tych zmian, więc nie zostały zastosowane. Dokument pozostaje bez zmian.',
   memoTitle: 'Komentarze',
   memoOpen: 'Komentarze',
   memoAdd: 'Dodaj komentarz',
@@ -211,6 +218,9 @@ export const pl = {
   memoErrDelete: 'Nie udało się usunąć komentarza.',
   memoErrTooLong: 'Komentarz jest za długi. Może zawierać do 100 000 znaków.',
   memoErrLoad: 'Nie udało się odczytać listy komentarzy.',
+  saveAiRunning: 'Nie można zapisać, gdy AI edytuje dokument. Spróbuj ponownie po zakończeniu.',
+  aiRunStranded:
+    'Nie udało się cofnąć edycji AI w dokumencie. Ten dokument nie zostanie zapisany. Zamknij go bez zapisywania i otwórz ponownie.',
   memoSaveBlocked: 'Najpierw zapisz lub anuluj komentarz, który piszesz.',
   memoRemoved: 'Usunięto komentarze wraz z tekstem: {count}. Naciśnij Ctrl+Z, aby cofnąć.',
   memoNotCopied: 'Komentarz nie został skopiowany.',
@@ -260,6 +270,8 @@ export const pl = {
   checkAskAi: 'Zleć poprawki AI',
   checkHandedOff: 'Prośba jest w polu AI. Sprawdź ją i wyślij.',
   checkFixFailed: 'Nie udało się zmienić.',
+  checkAiRunning:
+    'Nie można zmienić czcionki, gdy AI edytuje dokument. Spróbuj ponownie po zakończeniu.',
   easyWordsLabel: 'Wyjaśnij prostymi słowami',
   easyWordsPrompt:
     'Wyjaśnij po polsku zaznaczony poniżej tekst tak, aby zrozumiała go także osoba, która potrzebuje tekstu łatwego do czytania. Używaj codziennych słów i krótkich zdań i nie pomijaj żadnego faktu, liczby ani warunku. Nie zmieniaj dokumentu.\n\nZaznaczony tekst:\n{text}',

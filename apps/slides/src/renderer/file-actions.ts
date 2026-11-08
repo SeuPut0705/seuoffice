@@ -102,6 +102,14 @@ export async function save(getCtx: () => ActionCtx, auto = false): Promise<boole
       const saved = t('appStatusSaved')
       ctx.setStatus(saved)
       if (!auto) showToast(saved)
+    } else if (r.reason === 'ai-review') {
+      // an AI run's edits wait for review: nothing was written. The AutoSave pass stays quiet
+      // (it retries every tick); a save the person asked for says why it did nothing.
+      if (!auto) {
+        const held = t('aiRunLocked')
+        ctx.setStatus(held)
+        showToast(held, 'error')
+      }
     } else if (r.reason === 'external-modified') {
       // the split-view guard sat this write out: the AutoSave pass deferred by
       // itself, or the user cancelled the overwrite prompt. The disk copy
@@ -166,6 +174,10 @@ export async function saveAs(getCtx: () => ActionCtx): Promise<void> {
       const saved = t('appStatusSavedAs')
       ctx.setStatus(saved)
       showToast(saved)
+    } else if (r.reason === 'ai-review') {
+      const held = t('aiRunLocked')
+      ctx.setStatus(held)
+      showToast(held, 'error')
     } else if (r.error) {
       // a canceled dialog returns ok:false without error — only real write
       // failures surface, matching the docs/sheets save-as feedback

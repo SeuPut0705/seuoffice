@@ -30,6 +30,12 @@ export const ja = {
   aiUndo: '元に戻す',
   aiPreviewAria: '変更プレビュー',
   aiProposedChanges: '変更案',
+  aiProposalAccept: 'Accept',
+  aiProposalReject: 'Reject',
+  aiProposalDismiss: 'Dismiss',
+  aiProposalPending: 'Accept or reject the changes above before sending another request.',
+  aiProposalStale:
+    'The workbook changed after these edits were proposed, so they were not applied. Ask again to redo them.',
   aiChangeStructure: '構造',
   aiChangeFormat: '書式',
   aiChangeSheet: 'シート',

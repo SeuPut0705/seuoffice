@@ -372,6 +372,13 @@ export const ja = {
   appAppliedJournaled: '適用しました — 変更は記録済みです。⌘S でファイルに保存します。',
   appUndoCommitted: '元に戻す操作をコミットしました（リビジョン {revision}）。',
   appUndoFailed: '元に戻せません。',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appSaveBlockedProposal:
+    "Can't save while the AI's changes wait for your review. Accept or reject them first.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'オートフィルターを作成できません。',
   appAutoFilterRemoveFailed: 'オートフィルターを削除できません。',
   // Insert chart

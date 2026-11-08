@@ -764,6 +764,14 @@ export interface DeckChange {
   order?: string[]
 }
 
+/** Pushed to every window attached to a session whenever its history or AI-run state changes. */
+export interface HistoryChange {
+  canUndo: boolean
+  canRedo: boolean
+  /** An AI run's unaccepted edits are in the deck: the window is read-only until the run is held. */
+  aiRunActive: boolean
+}
+
 export interface PasteSlideResult extends SlideUpdate {
   /** First pasted slide ('picture': the anchor slide the bitmaps landed on) */
   index: number
@@ -1405,6 +1413,8 @@ export interface SlidesApi {
     mode?: 'replace' | 'append' | 'replace_at' | 'insert_at',
     atIndex?: number,
     deckName?: string,
+    /** the panel began a reviewed run for this request: refused when that run is no longer open */
+    aiRunExpected?: boolean,
   ) => Promise<
     | (OpenResult & {
         appendedFrom?: number
@@ -1697,6 +1707,16 @@ export interface SlidesApi {
   applyTxn: (op: ApplyTxnOp) => Promise<ApplyTxnResult | null>
   /** Roll the deck back to an AI rollback point; returns the restored full RenderSlide array, null when the id is unknown */
   aiSnapshotRestore: (id: number) => Promise<RenderSlide[] | null>
+  /** AI edit review: record the deck before an AI request's first edit (call right after beginHistoryBatch) */
+  aiRunBegin: () => Promise<boolean>
+  /** AI edit review: end of the request. When it changed the deck, the deck goes back to its pre-run state
+      and the run's result is held as a proposal; returns the restored full RenderSlide array (null: nothing held) */
+  aiRunHold: () => Promise<RenderSlide[] | null>
+  /** Apply the held proposal as one undo step unless the deck changed since the revert (null: refused);
+      snapshotId is the AI rollback point of the reply's undo control */
+  aiProposalAccept: () => Promise<{ slides: RenderSlide[]; snapshotId: number } | null>
+  /** Drop the held proposal; the deck stays at its pre-run state */
+  aiProposalReject: () => Promise<boolean>
   /** Undo/redo (main-process snapshot history): returns the restored full RenderSlide array, null when nothing to undo */
   undo: () => Promise<RenderSlide[] | null>
   redo: () => Promise<RenderSlide[] | null>
@@ -1743,12 +1763,13 @@ export interface SlidesApi {
   printSlides: (op: PrintSlidesOp) => Promise<{ ok: boolean; error?: string }>
   /** Save the deck in place. auto marks the AutoSave timer's own pass: while a
    *  sibling split-view copy moved the disk past this one, an auto save defers
-   *  silently (`reason: 'external-modified'`) where a user's save asks first. */
+   *  silently (`reason: 'external-modified'`) where a user's save asks first.
+   *  While an AI run's edits wait for review nothing is written (`reason: 'ai-review'`). */
   save: (auto?: boolean) => Promise<{
     ok: boolean
     path?: string
     error?: string
-    reason?: 'external-modified'
+    reason?: 'external-modified' | 'ai-review'
     slides?: RenderSlide[]
   }>
   /**
@@ -1760,6 +1781,7 @@ export interface SlidesApi {
     ok: boolean
     path?: string
     error?: string
+    reason?: 'ai-review'
     slides?: RenderSlide[]
     exportAs?: 'pdf' | 'png'
   }>
@@ -1779,7 +1801,7 @@ export interface SlidesApi {
   /** The close guard chose "Save": the main process asks the renderer to run the full save flow */
   onCloseSaveRequest: (handler: () => void) => () => void
   /** Undo/redo stack occupancy pushed by the main process (drives the QAT button gray states) */
-  onHistoryChanged: (handler: (state: { canUndo: boolean; canRedo: boolean }) => void) => () => void
+  onHistoryChanged: (handler: (state: HistoryChange) => void) => () => void
   /** Another window attached to the same file changed the deck (shared session): fresh render state to apply */
   onDeckChanged: (handler: (state: DeckChange) => void) => () => void
   reportCloseSaveResult: (ok: boolean) => void
@@ -1844,6 +1866,8 @@ export interface SlidesApi {
     wPx: number
     hPx: number
     fitWidthPx: number
+    /** the panel began a reviewed run for this request: refused when that run is no longer open */
+    aiRunExpected?: boolean
   }) => Promise<{ slide: RenderSlide; sourceId: string } | null>
   /** Download a URL and swap it into an existing picture in place (frame/z-order/effects survive) */
   replacePictureUrl: (op: {
@@ -1854,6 +1878,8 @@ export interface SlidesApi {
     base64?: string
     ext?: string
     keepSrcRect?: boolean
+    /** the panel began a reviewed run for this request: refused when that run is no longer open */
+    aiRunExpected?: boolean
   }) => Promise<RenderSlide | null>
   /** AI image generation/editing, returns the image URL (or an error text when no image route is available) */
   generateImage: (op: {

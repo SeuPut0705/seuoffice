@@ -92,6 +92,7 @@ import type { AttachmentMeta, WorkbookQueriesResult } from '../shared/desktop-ap
 import {
   AiChatPanel,
   type AiChatMessage,
+  type AiProposalPanel,
   type AiPanelProject,
   type AiPanelSubscription,
 } from './ai/AiChatPanel'
@@ -261,6 +262,8 @@ interface ExcelShellProps {
   readonly presenting: boolean
   readonly prompt: string
   readonly preview: ChangePlan | null
+  /** the last AI run's edits held for review (Accept / Reject) */
+  readonly aiProposal: AiProposalPanel
   readonly selectionFormat: SelectionFormat | null
   readonly formatPainterActive: boolean
   /// True when the workbook has any cell content (the one-click AI action
@@ -516,6 +519,7 @@ export function ExcelShell({
   prompt,
   presenting,
   preview,
+  aiProposal,
   selectionFormat,
   formatPainterActive,
   sheetHasContent,
@@ -1081,6 +1085,7 @@ export function ExcelShell({
           onRemoveAttachment={onRemoveAttachment}
           prompt={prompt}
           preview={preview}
+          proposalPanel={aiProposal}
           aiBusy={aiBusy}
           sessionUsage={sessionUsage}
           subscription={aiSubscription}
@@ -1089,7 +1094,7 @@ export function ExcelShell({
           onSendQueued={(text, atts, skillUse) => {
             // the panel asks the send gate first: a message stays queued while it asks to
             // connect or shows the first-use notice
-            if (aiBusy) return false
+            if (aiBusy || aiProposal.proposal.kind === 'pending') return false
             onSend(text, atts, undefined, skillUse)
             return true
           }}

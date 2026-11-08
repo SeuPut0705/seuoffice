@@ -177,6 +177,13 @@ export const cs = {
   aiReverted: 'Změny vráceny',
   aiRevertRefused:
     'Tyto změny se nepodařilo vrátit najednou. Pokud byl dokument poté upraven, použijte příkaz Zpět v editoru (Ctrl+Z).',
+  aiProposalTitle: 'Navržené změny: {count}',
+  aiAccept: 'Přijmout',
+  aiReject: 'Odmítnout',
+  aiProposalHint:
+    'Dokument zůstává beze změny, dokud nepřijmete. Před odesláním další žádosti tyto změny přijměte nebo odmítněte.',
+  aiProposalStale:
+    'Dokument se po pozdržení těchto změn změnil, proto nebyly použity. Dokument zůstává beze změny.',
   memoTitle: 'Komentáře',
   memoOpen: 'Komentáře',
   memoAdd: 'Přidat komentář',
@@ -211,6 +218,10 @@ export const cs = {
   memoErrDelete: 'Komentář se nepodařilo smazat.',
   memoErrTooLong: 'Komentář je příliš dlouhý. Může mít až 100 000 znaků.',
   memoErrLoad: 'Seznam komentářů se nepodařilo načíst.',
+  saveAiRunning:
+    'Během úprav dokumentu umělou inteligencí nelze ukládat. Zkuste to znovu po dokončení.',
+  aiRunStranded:
+    'Úpravy umělé inteligence se nepodařilo z dokumentu vrátit. Tento dokument se neuloží. Zavřete ho bez uložení a otevřete znovu.',
   memoSaveBlocked: 'Nejprve uložte nebo zrušte komentář, který píšete.',
   memoRemoved: 'Komentáře smazané s textem: {count}. Stiskněte Ctrl+Z pro vrácení.',
   memoNotCopied: 'Komentář nebyl zkopírován.',
@@ -258,6 +269,7 @@ export const cs = {
   checkAskAi: 'Předat opravy AI',
   checkHandedOff: 'Požadavek je v poli AI. Zkontrolujte ho a odešlete.',
   checkFixFailed: 'Změnu se nepodařilo provést.',
+  checkAiRunning: 'Písmo nelze změnit, dokud AI upravuje dokument. Zkuste to znovu po dokončení.',
   easyWordsLabel: 'Vysvětlit jednoduše',
   easyWordsPrompt:
     'Vysvětli česky níže vybraný text tak, aby mu porozuměl i člověk, který potřebuje snadno čitelný text. Používej běžná slova a krátké věty a nevynechej žádný fakt, číslo ani podmínku. Dokument neměň.\n\nVybraný text:\n{text}',

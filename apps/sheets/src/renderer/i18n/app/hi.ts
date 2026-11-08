@@ -357,6 +357,13 @@ export const hi = {
   appAppliedJournaled: 'लागू किया गया — परिवर्तन दर्ज किए गए हैं; ⌘S से सहेजें।',
   appUndoCommitted: 'पूर्ववत करना संशोधन {revision} के रूप में प्रतिबद्ध हुआ।',
   appUndoFailed: 'पूर्ववत नहीं किया जा सका।',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appSaveBlockedProposal:
+    "Can't save while the AI's changes wait for your review. Accept or reject them first.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'ऑटोफ़िल्टर नहीं बनाया जा सका।',
   appAutoFilterRemoveFailed: 'ऑटोफ़िल्टर हटाया नहीं जा सका।',
   appSelectDataRangeFirst: 'पहले डेटा श्रेणी चुनें।',

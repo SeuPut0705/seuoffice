@@ -178,6 +178,13 @@ export const fr = {
   aiReverted: 'Modifications annulées',
   aiRevertRefused:
     'Ces modifications n’ont pas pu être annulées d’un coup. Si le document a été modifié depuis, utilisez l’annulation de l’éditeur (Ctrl+Z).',
+  aiProposalTitle: 'Modifications proposées : {count}',
+  aiAccept: 'Accepter',
+  aiReject: 'Refuser',
+  aiProposalHint:
+    'Le document reste tel quel tant que vous n’acceptez pas. Acceptez ou refusez ces modifications avant d’envoyer une autre demande.',
+  aiProposalStale:
+    'Le document a changé après la mise en attente de ces modifications ; elles n’ont donc pas été appliquées. Le document est inchangé.',
   memoTitle: 'Commentaires',
   memoOpen: 'Commentaires',
   memoAdd: 'Ajouter un commentaire',
@@ -217,6 +224,10 @@ export const fr = {
   memoErrDelete: 'Le commentaire n’a pas pu être supprimé.',
   memoErrTooLong: 'Le commentaire est trop long. Il peut contenir jusqu’à 100 000 caractères.',
   memoErrLoad: 'La liste des commentaires n’a pas pu être lue.',
+  saveAiRunning:
+    'L’enregistrement est impossible pendant que l’IA modifie le document. Réessayez une fois qu’elle a terminé.',
+  aiRunStranded:
+    'Les modifications de l’IA n’ont pas pu être retirées du document. Ce document ne sera pas enregistré. Fermez-le sans enregistrer, puis rouvrez-le.',
   memoSaveBlocked: 'Enregistrez ou annulez d’abord le commentaire en cours de rédaction.',
   memoRemoved: 'Commentaires supprimés avec le texte : {count}. Appuyez sur Ctrl+Z pour annuler.',
   memoNotCopied: 'Le commentaire n’a pas été copié.',
@@ -265,6 +276,8 @@ export const fr = {
   checkAskAi: "Confier la correction à l'IA",
   checkHandedOff: "La demande est dans le champ de l'IA. Vérifiez-la, puis envoyez-la.",
   checkFixFailed: 'La modification a échoué.',
+  checkAiRunning:
+    "La police ne peut pas être modifiée pendant que l'IA modifie le document. Réessayez quand elle a terminé.",
   easyWordsLabel: 'Expliquer simplement',
   easyWordsPrompt:
     "Explique en français le texte sélectionné ci-dessous pour qu'une personne qui a besoin d'un texte facile à lire puisse le comprendre. Utilise des mots de tous les jours et des phrases courtes, et n'oublie aucun fait, chiffre ou condition. Ne modifie pas le document.\n\nTexte sélectionné :\n{text}",

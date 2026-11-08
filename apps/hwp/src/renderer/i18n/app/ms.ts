@@ -176,6 +176,13 @@ export const ms = {
   aiReverted: 'Perubahan dibuat asal',
   aiRevertRefused:
     'Perubahan ini tidak dapat dibuat asal sekali gus. Jika dokumen disunting selepas itu, gunakan Buat Asal milik editor (Ctrl+Z).',
+  aiProposalTitle: 'Perubahan yang dicadangkan: {count}',
+  aiAccept: 'Terima',
+  aiReject: 'Tolak',
+  aiProposalHint:
+    'Dokumen kekal seperti asal sehingga anda menerima. Terima atau tolak perubahan ini sebelum menghantar permintaan lain.',
+  aiProposalStale:
+    'Dokumen berubah selepas suntingan ini ditahan, jadi ia tidak digunakan. Dokumen tidak berubah.',
   memoTitle: 'Komen',
   memoOpen: 'Komen',
   memoAdd: 'Tambah komen',
@@ -211,6 +218,10 @@ export const ms = {
   memoErrDelete: 'Komen tidak dapat dipadam.',
   memoErrTooLong: 'Komen terlalu panjang. Maksimum 100,000 aksara.',
   memoErrLoad: 'Senarai komen tidak dapat dibaca.',
+  saveAiRunning:
+    'Tidak boleh menyimpan semasa AI sedang menyunting dokumen. Cuba lagi selepas selesai.',
+  aiRunStranded:
+    'Suntingan AI tidak dapat ditarik balik daripada dokumen. Dokumen ini tidak akan disimpan. Tutup tanpa menyimpan dan buka semula.',
   memoSaveBlocked: 'Simpan atau batalkan komen yang sedang ditulis dahulu.',
   memoRemoved: 'Komen dipadam bersama teks: {count}. Tekan Ctrl+Z untuk buat asal.',
   memoNotCopied: 'Komen tidak disalin.',
@@ -259,6 +270,8 @@ export const ms = {
   checkAskAi: 'Serahkan pembaikan kepada AI',
   checkHandedOff: 'Permintaan ada dalam kotak AI. Semak kemudian hantar.',
   checkFixFailed: 'Tidak dapat menukar.',
+  checkAiRunning:
+    'Fon tidak boleh ditukar semasa AI sedang menyunting dokumen. Cuba lagi selepas selesai.',
   easyWordsLabel: 'Terangkan dengan kata mudah',
   easyWordsPrompt:
     'Terangkan teks yang dipilih di bawah dalam bahasa Melayu supaya orang yang memerlukan teks mudah dibaca juga boleh memahaminya. Gunakan perkataan harian dan ayat pendek, dan jangan tinggalkan sebarang fakta, nombor atau syarat. Jangan ubah dokumen.\n\nTeks yang dipilih:\n{text}',

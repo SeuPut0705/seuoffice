@@ -30,6 +30,12 @@ export const th = {
   aiUndo: 'เลิกทำ',
   aiPreviewAria: 'ตัวอย่างการเปลี่ยนแปลง',
   aiProposedChanges: 'การเปลี่ยนแปลงที่เสนอ',
+  aiProposalAccept: 'Accept',
+  aiProposalReject: 'Reject',
+  aiProposalDismiss: 'Dismiss',
+  aiProposalPending: 'Accept or reject the changes above before sending another request.',
+  aiProposalStale:
+    'The workbook changed after these edits were proposed, so they were not applied. Ask again to redo them.',
   aiChangeStructure: 'โครงสร้าง',
   aiChangeFormat: 'รูปแบบ',
   aiChangeSheet: 'แผ่นงาน',

@@ -174,6 +174,13 @@ export const en = {
   aiReverted: 'Changes undone',
   aiRevertRefused:
     'These changes could not be undone together. If the document was edited afterwards, use the editor’s own Undo (Ctrl+Z).',
+  aiProposalTitle: 'Proposed changes: {count}',
+  aiAccept: 'Accept',
+  aiReject: 'Reject',
+  aiProposalHint:
+    'The document stays as it was until you accept. Accept or reject these changes before sending another request.',
+  aiProposalStale:
+    'The document changed after these edits were held, so they were not applied. The document is unchanged.',
   memoTitle: 'Memos',
   memoOpen: 'Memos',
   memoAdd: 'Add memo',
@@ -208,6 +215,10 @@ export const en = {
   memoErrDelete: 'The memo could not be deleted.',
   memoErrTooLong: 'The memo is too long. It can hold up to 100,000 characters.',
   memoErrLoad: 'The memo list could not be read.',
+  saveAiRunning:
+    'Saving is paused while the AI is editing this document. Try again when it finishes.',
+  aiRunStranded:
+    'The AI’s edits could not be taken back out of the document. This document will not be saved. Close it without saving and open it again.',
   memoSaveBlocked: 'Save or cancel the memo you are writing first.',
   memoRemoved: 'Memos deleted: {count}. Press Ctrl+Z to undo.',
   memoNotCopied: 'The memo was not copied.',
@@ -256,6 +267,8 @@ export const en = {
   checkAskAi: 'Hand the fixing to the AI',
   checkHandedOff: 'The request is in the AI box. Read it, then send it.',
   checkFixFailed: 'Could not make the change.',
+  checkAiRunning:
+    'The font cannot be changed while the AI is editing the document. Try again when it is done.',
   easyWordsLabel: 'Explain in plain words',
   easyWordsPrompt:
     'Explain the selected text below in English so that someone who needs easy-to-read text can understand it. Use everyday words and short sentences, and leave out no fact, number or condition. Do not change the document.\n\nSelected text:\n{text}',

@@ -56,7 +56,8 @@ import {
   structuralDeleteFormulaError,
   type StreamedRefSheet,
 } from './plan-operations'
-import { aiBulkUndoGate, journalSuppression } from './univer-state'
+import { beginAgentWrite } from './ai/run-lock'
+import { aiBulkUndoGate, aiRunLock, journalSuppression } from './univer-state'
 import { isVeryHiddenSheet } from './very-hidden-sheets'
 import { effectiveSheetProtection, mergeSheetProtectionAllow } from './sheet-protection'
 import {
@@ -164,6 +165,8 @@ export interface ApplyPlanOptions {
   /** Ribbon/dialog caller: gate refusals show their localized string instead
    * of the model-facing reason. */
   userFacing?: boolean
+  /** The AI run's own apply: it passes the run lock that refuses everyone else. */
+  agentWrite?: boolean
 }
 
 export function richCellText(cell: unknown): string | null {
@@ -393,6 +396,12 @@ async function applyChangePlanNow(
   options: ApplyPlanOptions,
 ): Promise<ApplyOutcome> {
   const { runtime, workbook, state, lazyWorkbookRef, setMessage, setPendingEdits } = ctx
+  // The workbook belongs to the AI run in flight: nobody else's apply (ribbon, dialog, MCP) lands in it.
+  if (aiRunLock.active && !options.agentWrite) {
+    const reason = t('appAiRunLocked')
+    setMessage(reason)
+    return { ok: false, reason }
+  }
   const plannedOps = plan.structuralChanges.map((structural) => structural.op)
   const notices: string[] = []
   let imageData: Map<string, LoadedImage>
@@ -413,6 +422,7 @@ async function applyChangePlanNow(
   const stale = options.verifyBeforeApply?.()
   if (stale) return stale
   const undoBatch = beginUndoBatch(runtime)
+  let endAgentWrite = options.agentWrite ? beginAgentWrite() : null
   let anyApplied = false
   try {
     // Structural and layout changes go through the same facade commands as
@@ -478,14 +488,18 @@ async function applyChangePlanNow(
           state.closure.pinned,
         )
       }
-      if (
-        streamedNeeds.size > 0 &&
-        !(await pinStreamedPrecedents(runtime, lazyWorkbookRef, streamedNeeds))
-      ) {
-        throw new Error(
-          'The cells referenced by the formulas could not be loaded from the streamed workbook — ' +
-            'the formulas were not written; retry in a moment.',
-        )
+      if (streamedNeeds.size > 0) {
+        // loading cells is not a write of the run: the flag stays down while the person's input could land
+        endAgentWrite?.()
+        endAgentWrite = null
+        const pinned = await pinStreamedPrecedents(runtime, lazyWorkbookRef, streamedNeeds)
+        if (options.agentWrite) endAgentWrite = beginAgentWrite()
+        if (!pinned) {
+          throw new Error(
+            'The cells referenced by the formulas could not be loaded from the streamed workbook — ' +
+              'the formulas were not written; retry in a moment.',
+          )
+        }
       }
     }
     for (const change of plan.cellChanges) {
@@ -539,6 +553,7 @@ async function applyChangePlanNow(
       ? { ok: false, reason, partiallyApplied: true, undoDropped: aiBulkUndoGate.dropped }
       : { ok: false, reason }
   } finally {
+    endAgentWrite?.()
     undoBatch.settle()
   }
 }

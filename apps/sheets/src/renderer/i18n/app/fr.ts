@@ -390,6 +390,13 @@ export const fr = {
   appAppliedJournaled: 'Appliqué — les modifications sont journalisées ; enregistrez avec ⌘S.',
   appUndoCommitted: 'Annulation validée (révision {revision}).',
   appUndoFailed: "Impossible d'annuler.",
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appSaveBlockedProposal:
+    "Can't save while the AI's changes wait for your review. Accept or reject them first.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'Impossible de créer le filtre automatique.',
   appAutoFilterRemoveFailed: 'Impossible de supprimer le filtre automatique.',
   appSelectDataRangeFirst: "Sélectionnez d'abord la plage de données.",

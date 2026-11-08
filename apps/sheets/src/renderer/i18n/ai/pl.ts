@@ -30,6 +30,12 @@ export const pl = {
   aiUndo: 'Cofnij',
   aiPreviewAria: 'Podgląd zmian',
   aiProposedChanges: 'Proponowane zmiany',
+  aiProposalAccept: 'Accept',
+  aiProposalReject: 'Reject',
+  aiProposalDismiss: 'Dismiss',
+  aiProposalPending: 'Accept or reject the changes above before sending another request.',
+  aiProposalStale:
+    'The workbook changed after these edits were proposed, so they were not applied. Ask again to redo them.',
   aiChangeStructure: 'Struktura',
   aiChangeFormat: 'Format',
   aiChangeSheet: 'Arkusz',

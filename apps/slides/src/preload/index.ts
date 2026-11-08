@@ -18,6 +18,7 @@ import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
 import type { TemplateSelectionInput } from '../shared/template-selection'
 import type {
   DeckChange,
+  HistoryChange,
   AddChartOp,
   AddElementOp,
   AiRunFailure,
@@ -231,6 +232,7 @@ const api: SlidesApi = {
     mode?: 'replace' | 'append' | 'replace_at' | 'insert_at',
     atIndex?: number,
     deckName?: string,
+    aiRunExpected?: boolean,
   ) =>
     ipcRenderer.invoke(
       'slides:land-generated-pages',
@@ -239,6 +241,7 @@ const api: SlidesApi = {
       mode,
       atIndex,
       deckName,
+      aiRunExpected,
     ),
   localGeneratePage: (op: { specJson: string; defaultFonts?: { title: string; body: string } }) =>
     ipcRenderer.invoke('slides:local-page-generate', op),
@@ -408,6 +411,10 @@ const api: SlidesApi = {
   applyEditScript: (op: ApplyEditScriptOp) => ipcRenderer.invoke('slides:apply-edit-script', op),
   applyTxn: (op: ApplyTxnOp) => ipcRenderer.invoke('slides:apply-txn', op),
   aiSnapshotRestore: (id: number) => ipcRenderer.invoke('slides:ai-snapshot-restore', id),
+  aiRunBegin: () => ipcRenderer.invoke('slides:ai-run-begin'),
+  aiRunHold: () => ipcRenderer.invoke('slides:ai-run-hold'),
+  aiProposalAccept: () => ipcRenderer.invoke('slides:ai-proposal-accept'),
+  aiProposalReject: () => ipcRenderer.invoke('slides:ai-proposal-reject'),
   undo: () => ipcRenderer.invoke('slides:undo'),
   redo: () => ipcRenderer.invoke('slides:redo'),
   pickExportDir: () => ipcRenderer.invoke('slides:pick-export-dir'),
@@ -425,9 +432,8 @@ const api: SlidesApi = {
     ipcRenderer.on('slides:close-save-request', listener)
     return () => ipcRenderer.removeListener('slides:close-save-request', listener)
   },
-  onHistoryChanged: (handler: (state: { canUndo: boolean; canRedo: boolean }) => void) => {
-    const listener = (_e: IpcRendererEvent, state: { canUndo: boolean; canRedo: boolean }) =>
-      handler(state)
+  onHistoryChanged: (handler: (state: HistoryChange) => void) => {
+    const listener = (_e: IpcRendererEvent, state: HistoryChange) => handler(state)
     ipcRenderer.on('slides:history-changed', listener)
     return () => ipcRenderer.removeListener('slides:history-changed', listener)
   },
@@ -484,6 +490,7 @@ const api: SlidesApi = {
     wPx: number
     hPx: number
     fitWidthPx: number
+    aiRunExpected?: boolean
   }) => ipcRenderer.invoke('ai:insert-image-url', op),
   replacePictureUrl: (op: {
     slideIndex: number
@@ -493,6 +500,7 @@ const api: SlidesApi = {
     base64?: string
     ext?: string
     keepSrcRect?: boolean
+    aiRunExpected?: boolean
   }) => ipcRenderer.invoke('ai:replace-picture-url', op),
   generateImage: (op: {
     prompt: string

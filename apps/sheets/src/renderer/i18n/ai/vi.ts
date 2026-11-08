@@ -31,6 +31,12 @@ export const vi = {
   aiUndo: 'Hoàn tác',
   aiPreviewAria: 'Xem trước thay đổi',
   aiProposedChanges: 'Thay đổi đề xuất',
+  aiProposalAccept: 'Accept',
+  aiProposalReject: 'Reject',
+  aiProposalDismiss: 'Dismiss',
+  aiProposalPending: 'Accept or reject the changes above before sending another request.',
+  aiProposalStale:
+    'The workbook changed after these edits were proposed, so they were not applied. Ask again to redo them.',
   aiChangeStructure: 'Cấu trúc',
   aiChangeFormat: 'Định dạng',
   aiChangeSheet: 'Trang tính',

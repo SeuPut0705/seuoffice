@@ -94,6 +94,16 @@ import { MemoApprovalGate, memoApprovalPreview } from './memo-approval'
 import { unfinishedSteps, type RunStep } from './unfinished-steps'
 import { useSubscriptionConnection } from './subscription-client'
 import { createElectronTransport } from './transport'
+import {
+  NO_PROPOSAL,
+  RunHold,
+  RunEndedError,
+  StrandedError,
+  accept,
+  reject,
+  type HoldState,
+  type TurnProposal,
+} from './turn-proposal'
 
 const PANEL_WIDTH_KEY = 'hwp-ai-panel-width'
 const PANEL_WIDTH_DEFAULT = 360
@@ -129,15 +139,23 @@ interface ToolActivity {
 }
 
 /**
- * What one run changed in the document. Each item is one step of the editor's
- * undo history, so the run is taken back by undoing that many steps, and only
- * while nothing else has been changed since the run began.
+ * What one run changed in the document. Each step is one step of the editor's undo history, so
+ * the run is taken back by undoing that many steps, and only while nothing else has been
+ * changed since the run began.
  */
 interface RunChanges {
+  /** what the tools said they changed, as far as their answers came back */
   items: HwpChange[]
+  /** the steps the run made in the editor, as the plugin counted them: what a revert takes back */
+  steps: number
   /** the editor's count of changes made by anyone else, read when the run began */
   foreign: number
-  state: 'applied' | 'reverted' | 'refused'
+  state: 'applied' | 'reverted' | 'refused' | 'stranded'
+  /**
+   * The run held out of the document until the person accepts it. While it is held `state`
+   * is 'reverted' (the document does not have the run); an accept makes it 'applied'.
+   */
+  proposal: TurnProposal
 }
 
 interface ChatEntry {
@@ -151,6 +169,8 @@ interface ChatEntry {
   undelivered?: boolean
   tools?: ToolActivity[]
   changes?: RunChanges
+  /** set on the reply a run ended in, until that run is out of the document (`endRun`) */
+  endedRun?: object
   /** labels of the edits this run left undone, shown under its last reply */
   unfinished?: string[]
   /** attachments this message took from the composer (echoed read-only; a retry sends them again) */
@@ -218,6 +238,7 @@ export function AiPanel({
   onSkillHandoff,
   prefill,
   onPrefillTaken,
+  onRunHold,
 }: {
   /** the document operations of the open editor */
   bridge: AgentBridge
@@ -238,6 +259,12 @@ export function AiPanel({
    * request runs once even when the panel mounts again with the same props
    */
   onPrefillTaken?: (taken: AiPrefill) => void
+  /**
+   * What an AI run does to the document: it holds it from its send until its edits are taken
+   * back out for review ('held' then 'free'), or is stuck in it ('stranded'). The app's saves
+   * wait on it.
+   */
+  onRunHold: (state: HoldState) => void
 }): ReactElement {
   const { lang, t } = useI18n()
   const [chat, setChat] = useState<ChatEntry[]>([])
@@ -654,6 +681,26 @@ export function AiPanel({
   const runForeignRef = useRef<number | null>(null)
   /** the user took the previous run back: the model is told with the next message */
   const revertedNoteDueRef = useRef(false)
+  /**
+   * The document while a run is on it: the app writes nothing and the person cannot edit
+   * (turn-proposal.ts RunHold). The app's saves wait on `onRunHold`.
+   */
+  const onRunHoldRef = useRef(onRunHold)
+  onRunHoldRef.current = onRunHold
+  const runHoldRef = useRef<RunHold | null>(null)
+  if (!runHoldRef.current) {
+    runHoldRef.current = new RunHold(
+      () => bridgeRef.current,
+      (state) => onRunHoldRef.current?.(state),
+    )
+  }
+  const runHold = runHoldRef.current
+
+  /** The conversation was reset: a run still on the document is taken back out and dropped. */
+  const abandonRun = (): void => {
+    runChangesRef.current = []
+    runHold.abandon(runForeignRef.current)
+  }
 
   const patchLast = (patch: Partial<ChatEntry> | ((last: ChatEntry) => Partial<ChatEntry>)) => {
     setChat((prev) => {
@@ -665,18 +712,47 @@ export function AiPanel({
     })
   }
 
-  /** What the finished run changed, for its last reply; absent when it changed nothing. */
-  const takeRunChanges = (): { changes: RunChanges } | Record<string, never> => {
+  /**
+   * A run ended (it finished, was stopped or failed). The document stays locked and unsaved
+   * until the run is out of it; then what the run made is shown on the reply it ended in, as a
+   * proposal the person answers. What is taken out is what the plugin counted, which includes a
+   * change whose answer was still on its way when the run ended: the proposal lists the changes
+   * the tools reported, and counts the rest. Returns the mark the reply carries until then.
+   */
+  const endRun = (): object => {
+    const ended = {}
+    const foreign = runForeignRef.current
     const items = runChangesRef.current
     runChangesRef.current = []
-    if (items.length === 0) return {}
-    // the plugin marked each change on the pages as it made it
-    setMarksShown(true)
-    const foreign = runForeignRef.current
-    // a run whose starting point is unknown cannot be checked, so it is not offered for undo
-    return {
-      changes: { items, foreign: foreign ?? -1, state: foreign === null ? 'refused' : 'applied' },
-    }
+    setReverting(true)
+    void runHold.hold(foreign).then((proposal) => {
+      if (!mountedRef.current) return
+      const changes: RunChanges | null =
+        proposal.kind === 'pending'
+          ? { items, steps: proposal.steps, foreign: proposal.foreign, state: 'reverted', proposal }
+          : proposal.kind === 'stranded'
+            ? {
+                items,
+                steps: items.length,
+                foreign: foreign ?? -1,
+                state: 'stranded',
+                proposal: NO_PROPOSAL,
+              }
+            : null
+      setChat((prev) =>
+        prev.map((entry) => {
+          if (entry.endedRun !== ended) return entry
+          const { endedRun: _ended, ...reply } = entry
+          return changes ? { ...reply, changes } : reply
+        }),
+      )
+      // the marks were drawn on the document the run had: it is back to what it was, or the run
+      // is still in it
+      if (proposal.kind === 'pending') clearMarks()
+      else if (proposal.kind === 'stranded') setMarksShown(true)
+      setReverting(false)
+    })
+    return ended
   }
 
   /**
@@ -826,7 +902,7 @@ export function AiPanel({
           const final = truncated
             ? [base, tGlobal('aiTruncatedNote')].filter(Boolean).join('\n\n')
             : base
-          const changed = takeRunChanges()
+          const ended = endRun()
           persistMessage('assistant', final, runToolsRef.current)
           runToolsRef.current = []
           // decided from the tool results, not from what the reply says it did
@@ -837,7 +913,7 @@ export function AiPanel({
             text: final || (last.tools?.length ? last.text : tGlobal('aiNoReply')),
             // A stop mid-tool can leave a running placeholder behind — drop it
             tools: last.tools?.filter((tl) => !tl.running),
-            ...changed,
+            endedRun: ended,
             ...(unfinished.length > 0 ? { unfinished } : {}),
           }))
           setBusy(false)
@@ -852,7 +928,7 @@ export function AiPanel({
             refreshSubscriptionRef.current()
           }
           // a run can fail after it already changed the document: those changes stay listed
-          const changed = takeRunChanges()
+          const ended = endRun()
           setChat((prev) => {
             const next = [...prev]
             for (let i = next.length - 1; i >= 0; i--) {
@@ -871,7 +947,7 @@ export function AiPanel({
                 isError: true,
                 ...(blocked ? { blocked } : {}),
                 tools: last.tools?.filter((tl) => !tl.running),
-                ...changed,
+                endedRun: ended,
               }
             }
             return next
@@ -890,7 +966,11 @@ export function AiPanel({
       // a question still on screen cannot be answered after the panel is gone
       memoGateRef.current?.cancel()
       loopRef.current?.cancel()
+      // a run that has not reached the loop yet ends nowhere else; one that has ends through
+      // the loop's `onDone`, which takes its edits out and lets the document go
+      if (!loopRef.current?.busy) abandonRun()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- abandonRun reads refs only
   }, [])
 
   useEffect(() => memoGateRef.current!.subscribe(setMemoApproval), [])
@@ -916,6 +996,10 @@ export function AiPanel({
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight })
   }
 
+  /** a run is held as a proposal that nobody has accepted or rejected yet */
+  const proposalPending = (): boolean =>
+    chatNowRef.current.some((entry) => entry.changes?.proposal.kind === 'pending')
+
   /** the attachments of the run in progress, for a retry of it */
   const runAttachmentsRef = useRef<AttachmentMeta[]>([])
   /** the skills of the run in progress: a retry sends the same skill text */
@@ -932,7 +1016,9 @@ export function AiPanel({
   ): boolean => {
     const instruction = text.trim()
     const loop = loopRef.current
-    if (!instruction || !loop || loop.busy || reverting) return false
+    // a dropped run's undo still on its way: the new run waits for it (RunHold.settling)
+    if (!instruction || !loop || loop.busy || reverting || runHold.settling || proposalPending())
+      return false
     // A request made during a status check or in front of the first-connection notice is
     // held and starts by itself once the way is clear; in front of "not connected" nothing
     // is kept. Either way nothing is sent now and the text stays with the caller.
@@ -995,18 +1081,22 @@ export function AiPanel({
     runSkillUseRef.current = skillUse
     runStepsRef.current = []
     skillRef.current!.beginRun()
+    // from here until the run is taken back out of the document: the app writes nothing, and
+    // (once the lock is in) the person cannot edit
+    const generation = runHold.begin()
     setBusy(true)
     void (async () => {
       try {
-        const [settings, foreign, images] = await Promise.all([
+        const [settings, images] = await Promise.all([
           window.hwpApi.getAiSettings(),
-          bridgeRef.current.foreignChanges().catch(() => null),
           sentAtts.length > 0 ? collectImages(sentAtts) : Promise.resolve([]),
           skillRef.current!.refreshContext(),
         ])
         settingsRef.current = settings
-        runForeignRef.current = foreign
-        if (!mountedRef.current) return
+        if (!mountedRef.current) {
+          runHold.release(generation)
+          return
+        }
         setAiSettings(settings)
         const noted = revertedNoteDueRef.current
         revertedNoteDueRef.current = false
@@ -1016,18 +1106,31 @@ export function AiPanel({
         await projectRef.current?.prepareSend()
         if (!mountedRef.current) {
           projectRef.current?.finishSend()
+          runHold.release(generation)
           return
         }
+        // The person's edits are shut out first, so the count of the editor's foreign changes
+        // read next is the one the run starts from. A run that cannot be locked in, or whose
+        // start cannot be read, is not started: it could not be taken back out afterwards.
+        runForeignRef.current = await runHold.lock(generation)
         loop.run(
           noted ? `${REVERTED_NOTE}\n\n${asked}` : asked,
           images.length > 0 ? images : undefined,
         )
       } catch (err) {
         projectRef.current?.finishSend()
+        runHold.release(generation)
+        // reset (new chat, another chat opened) before the run began: the screen is already clean
+        if (err instanceof RunEndedError) return
         if (!mountedRef.current) return
         patchLast({
           streaming: false,
-          text: err instanceof Error ? err.message : String(err),
+          text:
+            err instanceof StrandedError
+              ? t('aiRunStranded')
+              : err instanceof Error
+                ? err.message
+                : String(err),
           isError: true,
         })
         setBusy(false)
@@ -1084,7 +1187,10 @@ export function AiPanel({
   const sendPrompt = (): void => {
     const text = prompt.trim()
     if (!text) return
-    skills.withSkills(text, (skillUse) => send(text, undefined, undefined, skillUse))
+    skills.withSkills(text, (skillUse) => {
+      // a held run has to be answered first: its card is the way on
+      if (!send(text, undefined, undefined, skillUse) && proposalPending()) showWhatHoldsTheSend()
+    })
   }
 
   /** "Continue with …" on a blocked run: that provider becomes the selection, then the request reruns */
@@ -1098,12 +1204,14 @@ export function AiPanel({
   }
 
   // The editor's history is one stack: only the newest run still in the document can be
-  // taken back, and a run that could not be taken back whole blocks the ones under it.
+  // taken back, and a run that could not be taken back whole blocks the ones under it. A run
+  // held as a proposal sits on the redo stack, so an undo under it would lose it.
   const revertableIdx = (() => {
     for (let i = chat.length - 1; i >= 0; i--) {
-      const state = chat[i]!.changes?.state
-      if (state === 'applied') return i
-      if (state === 'refused') return -1
+      const changes = chat[i]!.changes
+      if (changes?.proposal.kind === 'pending') return -1
+      if (changes?.state === 'applied') return i
+      if (changes?.state === 'refused' || changes?.state === 'stranded') return -1
     }
     return -1
   })()
@@ -1129,15 +1237,51 @@ export function AiPanel({
       setReverting(false)
     }
     setReverting(true)
-    bridgeRef.current.undo(changes.items.length, changes.foreign).then(
+    bridgeRef.current.undo(changes.steps, changes.foreign).then(
       (result) => settle(result.ok ? 'reverted' : 'refused'),
       () => settle('refused'),
     )
   }
 
+  /** Replace what the card of reply `idx` holds. */
+  const patchChanges = (idx: number, patch: Partial<RunChanges>): void => {
+    setChat((prev) =>
+      prev.map((entry, i) =>
+        i === idx && entry.changes ? { ...entry, changes: { ...entry.changes, ...patch } } : entry,
+      ),
+    )
+  }
+
+  /** The run of reply `idx` goes into the document: the change card turns into an applied run. */
+  const acceptRun = (idx: number): void => {
+    const proposal = chat[idx]?.changes?.proposal
+    if (proposal?.kind !== 'pending' || busy || reverting) return
+    setReverting(true)
+    void accept(bridgeRef.current, proposal).then((outcome) => {
+      if (!mountedRef.current) return
+      if (outcome.kind === 'applied') {
+        patchChanges(idx, { state: 'applied', foreign: outcome.foreign, proposal: NO_PROPOSAL })
+      } else {
+        patchChanges(idx, { proposal: outcome.proposal })
+        // the model was told it made these edits: they are not in the document
+        revertedNoteDueRef.current = true
+      }
+      setReverting(false)
+    })
+  }
+
+  /** The run of reply `idx` stays out of the document. */
+  const rejectRun = (idx: number): void => {
+    const proposal = chat[idx]?.changes?.proposal
+    if (proposal?.kind !== 'pending' || busy || reverting) return
+    patchChanges(idx, { proposal: reject() })
+    revertedNoteDueRef.current = true
+  }
+
   /** Today's "new chat": the screen, the loop and everything the conversation carried start over. */
   const resetConversation = (): void => {
     stop()
+    abandonRun()
     msgQueue.clear()
     sendGate.reset()
     loopRef.current?.reset()
@@ -1456,6 +1600,9 @@ export function AiPanel({
                   changes={entry.changes}
                   canRevert={i === revertableIdx && !busy && !reverting}
                   onRevert={() => revert(i)}
+                  canAnswer={!busy && !reverting}
+                  onAccept={() => acceptRun(i)}
+                  onReject={() => rejectRun(i)}
                   onClearMarks={i === revertableIdx && marksShown ? clearMarks : null}
                   onShow={(place) => void bridgeRef.current.reveal(place).catch(() => {})}
                 />
@@ -1689,28 +1836,46 @@ export function AiPanel({
   )
 }
 
-/** What a run changed in the document, with the button that takes the whole run back. */
+/**
+ * What a run changed in the document: with the button that takes the whole run back, or, while
+ * the run is held as a proposal, the buttons that accept or reject it.
+ */
 function RunChangesCard({
   changes,
   canRevert,
   onRevert,
+  canAnswer,
+  onAccept,
+  onReject,
   onClearMarks,
   onShow,
 }: {
   changes: RunChanges
   canRevert: boolean
   onRevert: () => void
+  /** the proposal's buttons work now (no run or undo is in flight) */
+  canAnswer: boolean
+  onAccept: () => void
+  onReject: () => void
   /** set while the editor marks these changes on the pages */
   onClearMarks: (() => void) | null
   onShow: (place: AgentPlace) => void
 }): ReactElement {
   const { t } = useI18n()
-  const count = changes.items.reduce((sum, item) => sum + item.count, 0)
+  // a step the run made whose answer never came back is not listed, but is in the document
+  const count =
+    changes.items.reduce((sum, item) => sum + item.count, 0) +
+    Math.max(0, changes.steps - changes.items.length)
+  const proposed = changes.proposal.kind !== 'none'
   return (
-    <div className={`ai-changes ai-changes-${changes.state}`}>
+    <div className={`ai-changes ai-changes-${proposed ? 'proposed' : changes.state}`}>
       <div className="ai-changes-head">
         <span className="ai-changes-title">
-          {changes.state === 'reverted' ? t('aiReverted') : t('aiChangesTitle', { count })}
+          {proposed
+            ? t('aiProposalTitle', { count })
+            : changes.state === 'reverted'
+              ? t('aiReverted')
+              : t('aiChangesTitle', { count })}
         </span>
         {onClearMarks && changes.state === 'applied' && (
           <button className="ai-changes-unmark" onClick={onClearMarks}>
@@ -1721,6 +1886,20 @@ function RunChangesCard({
           <button className="ai-changes-revert" disabled={!canRevert} onClick={onRevert}>
             {t('aiRevert')}
           </button>
+        )}
+        {changes.proposal.kind === 'pending' && (
+          <span className="ai-changes-actions">
+            <button className="ai-changes-revert" disabled={!canAnswer} onClick={onReject}>
+              {t('aiReject')}
+            </button>
+            <button
+              className="ai-changes-revert ai-changes-accept"
+              disabled={!canAnswer}
+              onClick={onAccept}
+            >
+              {t('aiAccept')}
+            </button>
+          </span>
         )}
       </div>
       <ul className="ai-changes-list">
@@ -1742,9 +1921,24 @@ function RunChangesCard({
           </li>
         ))}
       </ul>
+      {changes.proposal.kind === 'pending' && (
+        <div className="ai-changes-note ai-changes-hint" role="status">
+          {t('aiProposalHint')}
+        </div>
+      )}
+      {changes.proposal.kind === 'stale' && (
+        <div className="ai-changes-note" role="status">
+          {t('aiProposalStale')}
+        </div>
+      )}
       {changes.state === 'refused' && (
         <div className="ai-changes-note" role="status">
           {t('aiRevertRefused')}
+        </div>
+      )}
+      {changes.state === 'stranded' && (
+        <div className="ai-changes-note" role="alert">
+          {t('aiRunStranded')}
         </div>
       )}
     </div>

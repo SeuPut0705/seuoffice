@@ -31,6 +31,12 @@ export const pt = {
   aiUndo: 'Desfazer',
   aiPreviewAria: 'Visualização das alterações',
   aiProposedChanges: 'Alterações propostas',
+  aiProposalAccept: 'Accept',
+  aiProposalReject: 'Reject',
+  aiProposalDismiss: 'Dismiss',
+  aiProposalPending: 'Accept or reject the changes above before sending another request.',
+  aiProposalStale:
+    'The workbook changed after these edits were proposed, so they were not applied. Ask again to redo them.',
   aiChangeStructure: 'Estrutura',
   aiChangeFormat: 'Formato',
   aiChangeSheet: 'Planilha',

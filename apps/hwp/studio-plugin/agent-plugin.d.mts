@@ -912,6 +912,15 @@ export type AgentRemoveMemoResult =
 /** The event the plugin fires when a user's own edit took memos away. */
 export declare const MEMO_REMOVED_EVENT: 'ieum:memo-removed'
 
+/** The window function the plugin sets while active: true when a person's redo is to be refused. */
+export declare const REDO_GATE: '__ieumPersonRedoBlocked'
+
+/**
+ * The window function the plugin sets while active: true when a person's edit is to be refused
+ * (an AI run holds the document and the change is not the plugin's own).
+ */
+export declare const RUN_LOCK_GATE: '__ieumPersonEditsBlocked'
+
 /** The event the plugin fires when a paste brought text without the memos copied with it. */
 export declare const MEMO_NOT_COPIED_EVENT: 'ieum:memo-not-copied'
 
@@ -969,6 +978,9 @@ export type AgentRefreshTocResult =
 
 export type AgentUndoResult =
   { ok: boolean; undone: number } | { ok: false; reason: 'changed'; undone: 0 }
+
+export type AgentRedoResult =
+  { ok: boolean; redone: number } | { ok: false; reason: 'changed'; redone: 0 }
 
 /** One picture of the document, as listPictures lists it. */
 export interface AgentPicture {
@@ -1195,6 +1207,8 @@ export interface AgentPluginSurface {
   /** take the marks of the changes made so far off the pages */
   clearMarks(): { ok: true }
   undo(steps: number, expectedForeign: number): AgentUndoResult
+  /** put back the last `steps` undone changes, only while `expectedForeign` is still the foreign count */
+  redo(steps: number, expectedForeign: number): AgentRedoResult
   /** the memos of the document in document order, with their pages and anchor rectangles */
   listMemos(): AgentMemoList
   /** whether the selection (or the caret) may carry a memo anchor */
@@ -1216,6 +1230,29 @@ export interface AgentPluginSurface {
   selectMemo(id: number | null): { ok: true; id: number | null }
   /** take the editor's input away while the app's memo modal is open */
   setMemoLock(locked: boolean): { ok: true; locked: boolean }
+  /**
+   * hold the document for an AI run, or let it go: while held, a person's input is taken away
+   * from the editor and refused wherever an edit goes in; the plugin's own changes are not.
+   * Holding starts the run's count of changes; a change past what the editor can take back out
+   * of its history whole (half its snapshot store) is refused with RUN_TOO_LARGE.
+   */
+  setRunLock(locked: boolean): { ok: true; locked: boolean } | { ok: false; reason: 'stranded' }
+  /**
+   * an AI run could not be taken out of the document: the lock stays on for good, and no other
+   * run can start, until the editor is closed
+   */
+  strandRun(): { ok: true; stranded: true }
+  /**
+   * an AI run was taken out of the document and waits on the editor's redo stack (`steps` of
+   * it; 0 when none does): the person's own redo is refused meanwhile, so it cannot come back
+   * without a yes. The plugin's own `redo` is not. Lifts by itself once a change empties the stack.
+   */
+  setHeldRun(steps: number): { ok: true; steps: number }
+  /**
+   * how many changes the run that holds the document has made (0 when none does): the plugin's
+   * own count, which includes a change whose answer has not reached the app yet
+   */
+  runSteps(): number
 }
 
 /** Pages drawn for printing: SVG, and each page's size in CSS pixels. */

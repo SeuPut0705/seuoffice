@@ -53,10 +53,11 @@ export type SaveOutcome =
    * `protected`: the document has a password this save path cannot keep.
    * `tracked`: the document has tracked changes this save path cannot keep.
    * `verify`: the engine could not read back what it was about to write.
+   * `ai`: an AI run holds the document, so its unaccepted edits would have been written.
    */
   | {
       kind: 'failed'
-      reason: 'protected' | 'tracked' | 'verify' | 'export' | 'write'
+      reason: 'protected' | 'tracked' | 'verify' | 'export' | 'write' | 'ai'
       detail?: string
     }
 
@@ -95,12 +96,16 @@ async function measuredTabs(
  * Export HWPX with the memo list the bytes correspond to. The editor is locked while both
  * happen, so no keystroke can add or remove a memo between the list and the export. If the
  * lock cannot be taken, the list is not trusted (only raw memo records are checked) but the
- * save still goes ahead; a save never fails over this.
+ * save still goes ahead; a save never fails over this. Null when an AI run took hold of the
+ * document before the export was posted.
  */
-async function exportHwpxWithMemos(editor: SaveEditorPort): Promise<{
+async function exportHwpxWithMemos(
+  editor: SaveEditorPort,
+  isHeld: () => boolean,
+): Promise<{
   bytes: Uint8Array
   memos: MemoSnapshot[] | null
-}> {
+} | null> {
   let locked = false
   try {
     await editor.setMemoLock(true)
@@ -108,9 +113,10 @@ async function exportHwpxWithMemos(editor: SaveEditorPort): Promise<{
   } catch {
     // fall through: export without a list
   }
-  if (!locked) return { bytes: await editor.exportHwpx(), memos: null }
+  if (!locked) return isHeld() ? null : { bytes: await editor.exportHwpx(), memos: null }
   try {
     const memos = await editor.listMemos().catch(() => null)
+    if (isHeld()) return null
     const bytes = await editor.exportHwpx()
     return { bytes, memos }
   } finally {
@@ -130,7 +136,17 @@ export async function runSave(
   mode: SaveMode,
   /** the app's own 30-second save: a copy-pair conflict stands down instead of asking */
   automatic = false,
+  /**
+   * An AI run holds the document: its edits are in the editor but are not the person's yet, so
+   * nothing may be exported while it does.
+   */
+  isHeld: () => boolean = () => false,
 ): Promise<SaveOutcome> {
+  const refuseHeld = (): SaveOutcome => {
+    api.abortSave()
+    return { kind: 'failed', reason: 'ai' }
+  }
+  if (isHeld()) return refuseHeld()
   // before any dialog: a protected document is not saved under any name
   try {
     if (await editor.isPasswordProtected()) {
@@ -155,15 +171,21 @@ export async function runSave(
   let bytes: Uint8Array
   let memos: MemoSnapshot[] | null | undefined
   try {
+    // each export is posted to the editor only after a look at the flag: the editor takes its
+    // messages in order, so one posted while no run held the document runs before any change
+    // a run that starts afterwards makes
+    if (isHeld()) return refuseHeld()
     if (begin.format === 'hwp') {
       const verify = await editor.exportHwpVerify()
       if (!verify.recovered || verify.pageCountBefore !== verify.pageCountAfter) {
         api.abortSave()
         return { kind: 'failed', reason: 'verify' }
       }
+      if (isHeld()) return refuseHeld()
       bytes = await editor.exportHwp()
     } else {
-      const exported = await exportHwpxWithMemos(editor)
+      const exported = await exportHwpxWithMemos(editor, isHeld)
+      if (!exported) return refuseHeld()
       bytes = exported.bytes
       memos = exported.memos
     }

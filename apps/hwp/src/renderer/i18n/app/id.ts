@@ -176,6 +176,13 @@ export const id = {
   aiReverted: 'Perubahan dibatalkan',
   aiRevertRefused:
     'Perubahan ini tidak dapat dibatalkan sekaligus. Jika dokumen diedit setelahnya, gunakan Urungkan milik editor (Ctrl+Z).',
+  aiProposalTitle: 'Perubahan yang diusulkan: {count}',
+  aiAccept: 'Terima',
+  aiReject: 'Tolak',
+  aiProposalHint:
+    'Dokumen tetap seperti semula sampai Anda menerima. Terima atau tolak perubahan ini sebelum mengirim permintaan lain.',
+  aiProposalStale:
+    'Dokumen berubah setelah suntingan ini ditahan, jadi tidak diterapkan. Dokumen tidak berubah.',
   memoTitle: 'Komentar',
   memoOpen: 'Komentar',
   memoAdd: 'Tambahkan komentar',
@@ -211,6 +218,10 @@ export const id = {
   memoErrDelete: 'Komentar tidak dapat dihapus.',
   memoErrTooLong: 'Komentar terlalu panjang. Maksimal 100.000 karakter.',
   memoErrLoad: 'Daftar komentar tidak dapat dibaca.',
+  saveAiRunning:
+    'Tidak dapat menyimpan saat AI sedang menyunting dokumen. Coba lagi setelah selesai.',
+  aiRunStranded:
+    'Suntingan AI tidak dapat ditarik kembali dari dokumen. Dokumen ini tidak akan disimpan. Tutup tanpa menyimpan lalu buka lagi.',
   memoSaveBlocked: 'Simpan atau batalkan komentar yang sedang ditulis terlebih dahulu.',
   memoRemoved: 'Komentar terhapus bersama teks: {count}. Tekan Ctrl+Z untuk membatalkan.',
   memoNotCopied: 'Komentar tidak disalin.',
@@ -259,6 +270,8 @@ export const id = {
   checkAskAi: 'Serahkan perbaikan ke AI',
   checkHandedOff: 'Permintaan ada di kotak AI. Periksa lalu kirim.',
   checkFixFailed: 'Tidak dapat mengubah.',
+  checkAiRunning:
+    'Font tidak dapat diubah saat AI sedang mengedit dokumen. Coba lagi setelah selesai.',
   easyWordsLabel: 'Jelaskan dengan kata sederhana',
   easyWordsPrompt:
     'Jelaskan teks yang dipilih di bawah ini dalam bahasa Indonesia agar orang yang membutuhkan teks mudah dibaca juga bisa memahaminya. Gunakan kata sehari-hari dan kalimat pendek, dan jangan lewatkan satu pun fakta, angka, atau syarat. Jangan ubah dokumen.\n\nTeks yang dipilih:\n{text}',

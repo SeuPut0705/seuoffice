@@ -16,15 +16,13 @@ import {
   type HistorySnapshot,
   type Session,
 } from '../main/session-state'
-import type { SlidesApi } from '../shared/ipc'
+import type { HistoryChange, SlidesApi } from '../shared/ipc'
 import { currentSession, forPage, renderDeck } from './session'
-
-type HistoryState = { canUndo: boolean; canRedo: boolean }
 
 /** session-state.ts MAX_HISTORY */
 const MAX_HISTORY = 50
 
-const historyListeners = new Set<(state: HistoryState) => void>()
+const historyListeners = new Set<(state: HistoryChange) => void>()
 
 /**
  * Which history state the deck shows and which one the host last stored. A snapshot restore
@@ -77,7 +75,12 @@ function isDirty(session: Session): boolean {
  */
 function settle(session: Session): void {
   pruneMediaSources(session)
-  const state = { canUndo: session.undoStack.length > 0, canRedo: session.redoStack.length > 0 }
+  // the web has no AI (WebUnsupportedError('slides.ai')), so no run ever holds the deck
+  const state: HistoryChange = {
+    canUndo: session.undoStack.length > 0,
+    canRedo: session.redoStack.length > 0,
+    aiRunActive: false,
+  }
   for (const listener of historyListeners) listener(state)
   reportDirty(isDirty(session))
 }

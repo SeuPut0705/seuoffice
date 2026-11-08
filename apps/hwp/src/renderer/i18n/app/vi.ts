@@ -175,6 +175,13 @@ export const vi = {
   aiReverted: 'Đã hoàn tác thay đổi',
   aiRevertRefused:
     'Không thể hoàn tác các thay đổi này cùng lúc. Nếu tài liệu đã được sửa sau đó, hãy dùng Hoàn tác của trình soạn thảo (Ctrl+Z).',
+  aiProposalTitle: 'Thay đổi được đề xuất: {count}',
+  aiAccept: 'Chấp nhận',
+  aiReject: 'Từ chối',
+  aiProposalHint:
+    'Tài liệu giữ nguyên cho đến khi bạn chấp nhận. Hãy chấp nhận hoặc từ chối các thay đổi này trước khi gửi yêu cầu khác.',
+  aiProposalStale:
+    'Tài liệu đã thay đổi sau khi các chỉnh sửa này được giữ lại nên chúng chưa được áp dụng. Tài liệu không thay đổi.',
   memoTitle: 'Ghi chú',
   memoOpen: 'Ghi chú',
   memoAdd: 'Thêm ghi chú',
@@ -209,6 +216,9 @@ export const vi = {
   memoErrDelete: 'Không thể xóa ghi chú.',
   memoErrTooLong: 'Ghi chú quá dài. Tối đa 100.000 ký tự.',
   memoErrLoad: 'Không thể đọc danh sách ghi chú.',
+  saveAiRunning: 'Không thể lưu khi AI đang chỉnh sửa tài liệu. Hãy thử lại sau khi hoàn tất.',
+  aiRunStranded:
+    'Không thể hoàn tác các chỉnh sửa của AI trong tài liệu. Tài liệu này sẽ không được lưu. Hãy đóng mà không lưu rồi mở lại.',
   memoSaveBlocked: 'Hãy lưu hoặc hủy ghi chú đang viết trước.',
   memoRemoved: 'Đã xóa ghi chú cùng văn bản: {count}. Nhấn Ctrl+Z để hoàn tác.',
   memoNotCopied: 'Ghi chú không được sao chép.',
@@ -256,6 +266,8 @@ export const vi = {
   checkAskAi: 'Giao việc sửa cho AI',
   checkHandedOff: 'Yêu cầu đã ở trong ô AI. Hãy xem lại rồi gửi.',
   checkFixFailed: 'Không thể thay đổi.',
+  checkAiRunning:
+    'Không thể đổi phông chữ khi AI đang chỉnh sửa tài liệu. Hãy thử lại sau khi AI hoàn tất.',
   easyWordsLabel: 'Giải thích bằng lời dễ hiểu',
   easyWordsPrompt:
     'Hãy giải thích đoạn văn được chọn dưới đây bằng tiếng Việt để cả người cần văn bản dễ đọc cũng hiểu được. Dùng từ ngữ hằng ngày và câu ngắn, không bỏ sót bất kỳ sự kiện, con số hay điều kiện nào. Không sửa tài liệu.\n\nĐoạn văn được chọn:\n{text}',

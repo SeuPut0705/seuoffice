@@ -77,6 +77,14 @@
  *   goes through studio-plugin/hancom-keys.mjs (quickCorrectTyped) before the editor puts it
  *   in the document, so what is pasted, dropped or still composing is left alone.
  *
+ * studio-ai-run-lock
+ *   While an AI run holds the document (its edits wait for a yes), the studio's edit gate
+ *   refuses every edit that is not the app's plugin's own, so the person's typing cannot
+ *   end up among the run's changes. The plugin also stops the person's input events in the
+ *   editor frame (RUN_LOCK_EVENTS); the gate is for what slips past them. A run taken out
+ *   of the document waits on the editor's redo stack, so the studio's redo asks the plugin
+ *   first and does nothing while the run waits there (REDO_GATE).
+ *
  * studio-format-copy-safety, studio-format-copy, studio-format-copy-state
  *   The studio's format copy takes the cell's field name and form-edit flag with
  *   the cell's look; copying a plain cell over a named cell in a cell block
@@ -161,7 +169,7 @@
  */
 
 import { CLIPBOARD_HTML_MODULE } from '../studio-plugin/clipboard-html.mjs'
-import { EASY_WORDS_COMMAND } from '../studio-plugin/agent-plugin.mjs'
+import { EASY_WORDS_COMMAND, REDO_GATE, RUN_LOCK_GATE } from '../studio-plugin/agent-plugin.mjs'
 import { HANCOM_KEYS_MODULE, studioCommandIds } from '../studio-plugin/hancom-keys.mjs'
 import { PC_FONTS_MODULE } from '../studio-plugin/pc-fonts.mjs'
 import { READ_ONLY_MODULE } from '../studio-plugin/read-only.mjs'
@@ -1271,6 +1279,36 @@ const PATCHES = {
       },
     ],
   },
+  // While an AI run holds the document, the studio's one edit gate refuses what is not the
+  // plugin's own (agent-plugin.mjs RUN_LOCK_GATE). The record of an edit already made stays
+  // allowed, as in form mode: dropping it would leave an edit no undo knows. A run taken out
+  // of the document waits on the redo stack: every route to a redo (Ctrl+Y, menu, toolbar)
+  // ends in handleRedo, which asks the plugin (REDO_GATE) before it redoes anything.
+  // Applied after studio-read-only-operations, which edits the same gate: this one anchors on
+  // the signature alone so it lands whatever that patch put under it.
+  'studio-ai-run-lock': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]input-handler\.ts$/,
+    edits: [
+      {
+        find: '  private isOperationAllowedInEditMode(desc: OperationDescriptor): boolean {',
+        replace: [
+          '  private isOperationAllowedInEditMode(desc: OperationDescriptor): boolean {',
+          `    if (desc.kind !== 'record' && (globalThis as any).${RUN_LOCK_GATE}?.() === true) return false;`,
+        ].join('\n'),
+      },
+      {
+        find: [
+          '  private handleRedo(): void {',
+          "    this.withCommandErrorBoundary('redo', () => {",
+        ].join('\n'),
+        replace: [
+          '  private handleRedo(): void {',
+          `    if ((globalThis as any).${REDO_GATE}?.() === true) return;`,
+          "    this.withCommandErrorBoundary('redo', () => {",
+        ].join('\n'),
+      },
+    ],
+  },
   'studio-read-only-commands': {
     file: /[\\/]rhwp-studio[\\/]src[\\/]command[\\/]dispatcher\.ts$/,
     edits: [
@@ -1387,6 +1425,7 @@ export const STUDIO_PATCHES = /** @type {const} */ ([
   'studio-missing-font-marks',
   'studio-read-only-commands',
   'studio-read-only-operations',
+  'studio-ai-run-lock',
   'studio-read-only-document',
 ])
 

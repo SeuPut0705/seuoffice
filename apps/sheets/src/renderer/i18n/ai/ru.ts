@@ -31,6 +31,12 @@ export const ru = {
   aiUndo: 'Отменить',
   aiPreviewAria: 'Предварительный просмотр изменений',
   aiProposedChanges: 'Предлагаемые изменения',
+  aiProposalAccept: 'Accept',
+  aiProposalReject: 'Reject',
+  aiProposalDismiss: 'Dismiss',
+  aiProposalPending: 'Accept or reject the changes above before sending another request.',
+  aiProposalStale:
+    'The workbook changed after these edits were proposed, so they were not applied. Ask again to redo them.',
   aiChangeStructure: 'Структура',
   aiChangeFormat: 'Формат',
   aiChangeSheet: 'Лист',

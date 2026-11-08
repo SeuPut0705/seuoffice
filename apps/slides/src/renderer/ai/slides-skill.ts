@@ -118,10 +118,14 @@ export interface DeckAccess {
    * memory, never persisted or journaled.
    */
   onProgress?(event: DeckProgressEvent): void
+  /** Whether the open deck is a file on disk (not an untitled draft). Replacing such a deck wholesale makes the new session an untitled draft that no proposal can revert, so generate_deck refuses replace mode there. */
+  deckHasPath?(): boolean
   /** Land generated pages: each pageMarkers entry redeems a one-slide pptx, merged into / replacing the current deck. Returns total page count or an error.
    *  mode="insert_at" inserts a single page at position insertAt (later pages shift) — used to re-insert failed pages at their original position.
    *  On pipeline failure it automatically falls back to element-level mode; fallbackReason explains why (ok is still true).
    *  deckName = presentation name derived from user input, used as the file name when the new draft is saved (instead of "Untitled-timestamp"). */
+  /** Whether this panel began a reviewed AI run for the current request. A main-process write whose run is gone (held, reverted, replaced) must be refused, not applied to the unlocked deck. False for a handed-over run, which makes a new document with nothing to review. */
+  aiRunExpected?(): boolean
   landGeneratedPages?(
     pageMarkers: string[],
     mode?: 'replace' | 'append' | 'insert_at',
@@ -1839,9 +1843,11 @@ async function executeTool(
         if (!/^(https?|file):\/\//.test(url)) return fail(t('aiFailInsertImage'), 'Invalid url')
         payload = { url }
       }
+      if (signal?.aborted) return fail(t('aiFailInsertImage'), t('aiErrStopped'))
       const r = await window.slidesApi.insertImageUrl({
         slideIndex: idx,
         ...payload,
+        ...(access.aiRunExpected?.() ? { aiRunExpected: true } : {}),
         xPx: Number(call.input.x),
         yPx: Number(call.input.y),
         wPx: Number(call.input.w),
@@ -1891,10 +1897,12 @@ async function executeTool(
         if (!/^(https?|file):\/\//.test(url)) return fail(t(failKey), 'Invalid url')
         payload = { url }
       }
+      if (signal?.aborted) return fail(t(failKey), t('aiErrStopped'))
       const updated = await window.slidesApi.replacePictureUrl({
         slideIndex: idx,
         sourceId,
         ...payload,
+        ...(access.aiRunExpected?.() ? { aiRunExpected: true } : {}),
         ...(call.input.keepCrop ? { keepSrcRect: true } : {}),
       })
       if (!updated)
@@ -2070,6 +2078,8 @@ async function executeTool(
         }
       }
       await runRegen(access.generatePageLocal)
+      // Stop during the build: the page is dropped, never written into a deck the run no longer holds
+      if (signal?.aborted) return fail(t('aiFailRegen'), t('aiErrStopped'))
       if (!marker) {
         if (regenStopKind)
           return fail(
@@ -2141,6 +2151,12 @@ async function executeTool(
       const canvasH = 720
       const insertMode: 'replace' | 'append' =
         call.input.insert_mode === 'append' ? 'append' : 'replace'
+      if (insertMode === 'replace' && access.deckHasPath?.()) {
+        return fail(
+          t('aiFailGenDeck'),
+          'Replacing the whole open presentation is not available. Nothing was generated and the deck is unchanged. To rebuild it, call generate_deck with insert_mode:"append" for the new pages, then delete the old pages with the page tools (apply_ops deleteSlide); the person reviews the result as one proposal.',
+        )
+      }
       const PLAN_BATCH = 12 // Per-batch planning cap (kept slightly conservative against truncation)
       const GEN_BATCH = 2 // Per-page generation concurrency (opus large output + proxy concurrent streams time out easily; lowered to 2, stability first)
       const BACKOFF_MS = access.retryBackoffMs ?? 2000 // Retry backoff base (rate limits/overload are mostly transient; immediate retries would hit them again)
@@ -2692,7 +2708,8 @@ async function executeTool(
           if (cancelled() || stopKind) break
           let marker = markerByIndex[idx]
           if (!marker) marker = await genOne(pages[idx]!, idx + 1)
-          if (stopKind) break
+          // Stop during the build: the page is dropped, never landed into a deck the run no longer holds
+          if (cancelled() || stopKind) break
           if (!marker) {
             pageProgressItems[idx] = {
               ...pageProgressItems[idx]!,

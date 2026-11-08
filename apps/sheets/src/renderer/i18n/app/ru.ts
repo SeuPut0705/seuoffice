@@ -365,6 +365,13 @@ export const ru = {
   appAppliedJournaled: 'Применено — изменения записаны в журнал; сохраните с помощью ⌘S.',
   appUndoCommitted: 'Отмена зафиксирована (версия {revision}).',
   appUndoFailed: 'Не удаётся отменить.',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appSaveBlockedProposal:
+    "Can't save while the AI's changes wait for your review. Accept or reject them first.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'Не удаётся создать автофильтр.',
   appAutoFilterRemoveFailed: 'Не удаётся удалить автофильтр.',
   appSelectDataRangeFirst: 'Сначала выделите диапазон данных.',

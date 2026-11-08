@@ -151,6 +151,53 @@ export function undoStackDepth(runtime: UniverRuntime | null): number {
   }
 }
 
+/// Univer's undo stack keeps this many items per unit (STACK_CAPACITY in
+/// @univerjs/core, which does not export it): older items are dropped.
+export const UNIVER_UNDO_CAPACITY = 20
+
+/// What the undo stack held at one moment, for counting later pushes. The
+/// stack keeps at most 20 items, so a full stack keeps its depth when an edit
+/// lands; the identity of its newest item still changes.
+export interface UndoMark {
+  readonly depth: number
+  readonly top: unknown
+}
+
+export function undoMark(runtime: UniverRuntime | null): UndoMark {
+  if (!runtime) return { depth: 0, top: undefined }
+  try {
+    const unitId = runtime.univerAPI.getActiveWorkbook()?.getId()
+    const stack = unitId ? undoRedoService(runtime)._undoStacks?.get(unitId) : undefined
+    return { depth: stack?.length ?? 0, top: stack?.at(-1) }
+  } catch {
+    return { depth: 0, top: undefined }
+  }
+}
+
+/// Undo steps pushed since `before`. An AI batch merges into one item, so a
+/// full stack that only swapped its newest item still counts one step.
+export function undoStepsSince(runtime: UniverRuntime | null, before: UndoMark): number {
+  const now = undoMark(runtime)
+  if (now.depth > before.depth) return now.depth - before.depth
+  return now.top !== before.top ? 1 : 0
+}
+
+/// Empties the active unit's redo stack. A held AI run is undone onto it, and a
+/// person's Redo must not bring the run back without Accept (Accept re-applies
+/// the recorded plans instead). Never throws.
+export function dropRedoStack(runtime: UniverRuntime | null): void {
+  if (!runtime) return
+  try {
+    const unitId = runtime.univerAPI.getActiveWorkbook()?.getId()
+    const service = undoRedoService(runtime)
+    if (!unitId || !service._redoStacks?.has(unitId)) return
+    service._redoStacks.set(unitId, [])
+    service._updateStatus?.()
+  } catch {
+    // nothing to drop
+  }
+}
+
 /// Snapshot the active unit's undo stack, rewritten against the saved file's
 /// unitId. Must run while the pre-save unit is still alive (style pool).
 /// Returns null when there is nothing carriable; never throws.

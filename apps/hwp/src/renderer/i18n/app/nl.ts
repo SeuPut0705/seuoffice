@@ -176,6 +176,13 @@ export const nl = {
   aiReverted: 'Wijzigingen ongedaan gemaakt',
   aiRevertRefused:
     'Deze wijzigingen konden niet in één keer ongedaan worden gemaakt. Is het document daarna bewerkt, gebruik dan Ongedaan maken van de editor (Ctrl+Z).',
+  aiProposalTitle: 'Voorgestelde wijzigingen: {count}',
+  aiAccept: 'Accepteren',
+  aiReject: 'Weigeren',
+  aiProposalHint:
+    'Het document blijft zoals het was totdat je accepteert. Accepteer of weiger deze wijzigingen voordat je een nieuw verzoek verstuurt.',
+  aiProposalStale:
+    'Het document is veranderd nadat deze wijzigingen waren vastgehouden, dus ze zijn niet toegepast. Het document is ongewijzigd.',
   memoTitle: 'Opmerkingen',
   memoOpen: 'Opmerkingen',
   memoAdd: 'Opmerking toevoegen',
@@ -216,6 +223,10 @@ export const nl = {
   memoErrDelete: 'De opmerking kon niet worden verwijderd.',
   memoErrTooLong: 'De opmerking is te lang. Er passen maximaal 100.000 tekens in.',
   memoErrLoad: 'De opmerkingenlijst kon niet worden gelezen.',
+  saveAiRunning:
+    'Opslaan kan niet terwijl de AI het document bewerkt. Probeer het opnieuw als het klaar is.',
+  aiRunStranded:
+    'De wijzigingen van de AI konden niet uit het document worden teruggehaald. Dit document wordt niet opgeslagen. Sluit het zonder op te slaan en open het opnieuw.',
   memoSaveBlocked: 'Sla de opmerking die u schrijft eerst op of annuleer die.',
   memoRemoved: 'Opmerkingen met de tekst verwijderd: {count}. Druk op Ctrl+Z om ongedaan te maken.',
   memoNotCopied: 'De opmerking is niet gekopieerd.',
@@ -265,6 +276,8 @@ export const nl = {
   checkAskAi: 'Het herstellen aan de AI geven',
   checkHandedOff: 'Het verzoek staat in het AI-veld. Controleer het en verstuur het.',
   checkFixFailed: 'De wijziging is niet gelukt.',
+  checkAiRunning:
+    'Het lettertype kan niet worden gewijzigd terwijl de AI het document bewerkt. Probeer het opnieuw als de AI klaar is.',
   easyWordsLabel: 'Uitleggen in eenvoudige woorden',
   easyWordsPrompt:
     'Leg de hieronder geselecteerde tekst in het Nederlands uit, zodat ook iemand die makkelijk leesbare tekst nodig heeft hem begrijpt. Gebruik gewone woorden en korte zinnen en laat geen feit, getal of voorwaarde weg. Wijzig het document niet.\n\nGeselecteerde tekst:\n{text}',

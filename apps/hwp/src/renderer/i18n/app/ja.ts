@@ -175,6 +175,13 @@ export const ja = {
   aiReverted: '元に戻しました',
   aiRevertRefused:
     'まとめて元に戻せませんでした。その後に文書を編集した場合は、エディターの「元に戻す」（Ctrl+Z）を使ってください。',
+  aiProposalTitle: '変更の提案: {count} か所',
+  aiAccept: '受け入れる',
+  aiReject: '拒否',
+  aiProposalHint:
+    '受け入れるまで文書は変わりません。次の依頼を送る前に、これらの変更を受け入れるか拒否してください。',
+  aiProposalStale:
+    '変更を保留した後に文書が編集されたため、適用しませんでした。文書はそのままです。',
   memoTitle: 'コメント',
   memoOpen: 'コメント',
   memoAdd: 'コメントを追加',
@@ -209,6 +216,9 @@ export const ja = {
   memoErrDelete: 'コメントを削除できませんでした。',
   memoErrTooLong: 'コメントが長すぎます。100,000 文字まで入力できます。',
   memoErrLoad: 'コメント一覧を読み取れませんでした。',
+  saveAiRunning: 'AIが文書を編集している間は保存できません。終わってからもう一度お試しください。',
+  aiRunStranded:
+    'AIの編集を文書から元に戻せませんでした。この文書は保存されません。保存せずに閉じて、もう一度開いてください。',
   memoSaveBlocked: '先に作成中のコメントを保存するか、キャンセルしてください。',
   memoRemoved: '文字と一緒にコメント {count} 件が削除されました。Ctrl+Z で元に戻せます。',
   memoNotCopied: 'コメントはコピーされませんでした。',
@@ -257,6 +267,8 @@ export const ja = {
   checkAskAi: 'AI に修正を任せる',
   checkHandedOff: 'AI の入力欄に依頼を入れました。確認して送信してください。',
   checkFixFailed: '変更できませんでした。',
+  checkAiRunning:
+    'AI が文書を編集している間はフォントを変更できません。終わってからもう一度お試しください。',
   easyWordsLabel: 'やさしい言葉で説明',
   easyWordsPrompt:
     '下の選んだ文章を、やさしい文章が必要な人にもわかるように日本語で説明してください。ふだん使う言葉と短い文で書き、事実・数字・条件はひとつも落とさないでください。文書は変更しないでください。\n\n選んだ文章:\n{text}',

@@ -178,6 +178,13 @@ export const it = {
   aiReverted: 'Modifiche annullate',
   aiRevertRefused:
     'Non è stato possibile annullare queste modifiche in un colpo solo. Se il documento è stato modificato in seguito, usa Annulla dell’editor (Ctrl+Z).',
+  aiProposalTitle: 'Modifiche proposte: {count}',
+  aiAccept: 'Accetta',
+  aiReject: 'Rifiuta',
+  aiProposalHint:
+    'Il documento resta com’è finché non accetti. Accetta o rifiuta queste modifiche prima di inviare un’altra richiesta.',
+  aiProposalStale:
+    'Il documento è cambiato dopo che queste modifiche sono state trattenute, quindi non sono state applicate. Il documento è invariato.',
   memoTitle: 'Commenti',
   memoOpen: 'Commenti',
   memoAdd: 'Aggiungi commento',
@@ -216,6 +223,10 @@ export const it = {
   memoErrDelete: 'Non è stato possibile eliminare il commento.',
   memoErrTooLong: 'Il commento è troppo lungo. Può contenere fino a 100.000 caratteri.',
   memoErrLoad: 'Non è stato possibile leggere l’elenco dei commenti.',
+  saveAiRunning:
+    'Non è possibile salvare mentre l’IA modifica il documento. Riprova quando ha finito.',
+  aiRunStranded:
+    'Non è stato possibile annullare le modifiche dell’IA nel documento. Questo documento non verrà salvato. Chiudilo senza salvare e riaprilo.',
   memoSaveBlocked: 'Salva o annulla prima il commento che stai scrivendo.',
   memoRemoved: 'Commenti eliminati con il testo: {count}. Premi Ctrl+Z per annullare.',
   memoNotCopied: 'Il commento non è stato copiato.',
@@ -264,6 +275,8 @@ export const it = {
   checkAskAi: "Affida la correzione all'IA",
   checkHandedOff: "La richiesta è nel campo dell'IA. Controllala e inviala.",
   checkFixFailed: 'Non è stato possibile modificare.',
+  checkAiRunning:
+    "Non è possibile cambiare il carattere mentre l'IA modifica il documento. Riprova al termine.",
   easyWordsLabel: 'Spiega con parole semplici',
   easyWordsPrompt:
     'Spiega in italiano il testo selezionato qui sotto in modo che lo capisca anche chi ha bisogno di testi facili da leggere. Usa parole di tutti i giorni e frasi brevi, e non tralasciare nessun fatto, numero o condizione. Non modificare il documento.\n\nTesto selezionato:\n{text}',

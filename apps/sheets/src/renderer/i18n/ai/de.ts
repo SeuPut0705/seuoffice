@@ -32,6 +32,12 @@ export const de = {
   aiUndo: 'Rückgängig',
   aiPreviewAria: 'Änderungsvorschau',
   aiProposedChanges: 'Vorgeschlagene Änderungen',
+  aiProposalAccept: 'Accept',
+  aiProposalReject: 'Reject',
+  aiProposalDismiss: 'Dismiss',
+  aiProposalPending: 'Accept or reject the changes above before sending another request.',
+  aiProposalStale:
+    'The workbook changed after these edits were proposed, so they were not applied. Ask again to redo them.',
   aiChangeStructure: 'Struktur',
   aiChangeFormat: 'Format',
   aiChangeSheet: 'Blatt',

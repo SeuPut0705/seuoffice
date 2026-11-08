@@ -357,6 +357,13 @@ export const cs = {
   appAppliedJournaled: 'Použito — změny jsou zaznamenány v žurnálu; uložte pomocí ⌘S.',
   appUndoCommitted: 'Krok zpět potvrzen jako revize {revision}.',
   appUndoFailed: 'Nelze vzít zpět.',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appSaveBlockedProposal:
+    "Can't save while the AI's changes wait for your review. Accept or reject them first.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'Automatický filtr nelze vytvořit.',
   appAutoFilterRemoveFailed: 'Automatický filtr nelze odebrat.',
   appSelectDataRangeFirst: 'Nejprve vyberte oblast dat.',

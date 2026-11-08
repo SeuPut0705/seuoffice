@@ -30,6 +30,12 @@ export const id = {
   aiUndo: 'Urungkan',
   aiPreviewAria: 'Pratinjau perubahan',
   aiProposedChanges: 'Perubahan yang diusulkan',
+  aiProposalAccept: 'Accept',
+  aiProposalReject: 'Reject',
+  aiProposalDismiss: 'Dismiss',
+  aiProposalPending: 'Accept or reject the changes above before sending another request.',
+  aiProposalStale:
+    'The workbook changed after these edits were proposed, so they were not applied. Ask again to redo them.',
   aiChangeStructure: 'Struktur',
   aiChangeFormat: 'Format',
   aiChangeSheet: 'Lembar',
