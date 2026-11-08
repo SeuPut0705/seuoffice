@@ -1,3 +1,5 @@
 ts	phase	decision	why	evidence	result
 2026-11-09T00:30:00Z	frame	남은 1.5-5단계를 단위 13개(U0-U12)로 나누고 사람만 할 수 있는 일 6개를 따로 적었다	npm 계정, 서명 인증서, 한컴 한글 확인, 유유 쪽 잠금, 게이트웨이 주소는 이 세션이 할 수 없다	docs/seuoffice/계획-1.5-5단계.md	open
 2026-11-09T00:45:00Z	U0	embed에 편집 모드와 저장 계약을 넣었다: mode edit, onSave, onDirtyChange, save(), 페이지 쪽 saveToHost, reportDirty, onHostSaveRequest	다섯 앱의 웹 저장이 같은 계약 위에서 따로 진행되게 하려고 먼저 만들었다. 편집 모드에서 onSave가 없으면 타입 오류가 나게 해 잘못된 조합을 막았다	packages/embed/src/index.ts, packages/web-platform/src/embed-channel.ts	embed 12, web-platform 12 시험 통과
+2026-11-09T01:20:00Z	U12	동시 편집은 실시간 공동 편집 대신 붙이는 쪽 잠금으로 정했다(결정 0008)	다섯 앱의 문서 모델이 모두 달라 공유 연산 층을 붙이면 상위 따라가기가 깨진다. 2단계 저장 계약으로 잠금 흐름이 다 된다	docs/seuoffice/decisions/0008-동시-편집.md	5단계 완료
+2026-11-09T01:00:00Z	dispatch	U1 U2 U3 U4 U5 U7 U8을 각자 작업 트리 세션으로 보냈다. U6 U9는 자리가 나면 보낸다	PC 자원(15코어 24GB)에서 웹 빌드와 Playwright가 동시에 너무 많이 돌지 않게 7개로 묶었다	~/.seuoffice-program/common-brief.md, feat/* 가지 7개	open

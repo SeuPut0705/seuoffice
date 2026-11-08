@@ -38,6 +38,8 @@ const doc = openDocument(viewer, {
 await doc.save() // 닫기 전에 붙이는 쪽에서 저장을 시킬 때. 실패하면 SeuofficeEmbedError(code: save_failed)
 ```
 
+잠금은 붙이는 쪽이 가진다(결정 0008). 잠금에 만료 시간을 두고 편집 화면이 열린 동안 연장한다. `onSave`에서는 잠금이 아직 자기 것인지, 열 때 받은 판 위에 저장하는지 확인하고, 아니면 거절한다. 넘겨 달라는 요청이 오면 `doc.save()` 뒤 잠금을 푼다.
+
 운영에서 지킬 것:
 
 - seuoffice 쪽 페이지는 CSP에 `script-src 'self' 'wasm-unsafe-eval'`, `worker-src 'self' blob:`이 있어야 한다(pdf.js, rhwp, 엑셀 엔진이 WASM과 워커를 쓴다).
