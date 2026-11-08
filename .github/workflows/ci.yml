@@ -7,10 +7,13 @@ name: CI
 # one, and it uses no repository secret.
 
 on:
+  # seuoffice: a Markdown-only change skips this ~100 minute gate; the seuoffice workflow still runs
   push:
     branches: [main]
+    paths-ignore: ['**/*.md']
   pull_request:
     branches: [main]
+    paths-ignore: ['**/*.md']
   workflow_dispatch:
 
 concurrency:
