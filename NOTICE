@@ -232,4 +232,24 @@ Contact
 
 Trademark and copyright reports and licensing questions: pblsketch@gmail.com
 
-seuoffice is a modified version of IeumOffice (https://github.com/pblsketch/ieumoffice, imported at commit aea1414), which is itself a modified version of GenOffice. seuoffice modifications Copyright 2026 SeuPut. Changes are recorded in docs/seuoffice/upstream-edits.md and the repository history.
+seuoffice modifications
+
+seuoffice (https://github.com/SeuPut0705/seuoffice) is a modified version of
+IeumOffice (https://github.com/pblsketch/ieumoffice, imported at commit
+aea1414), which is itself a modified version of GenOffice
+(https://github.com/genspark-ai/genoffice). The notices above for GenOffice,
+IeumOffice and every bundled component apply to seuoffice unchanged.
+seuoffice modifications Copyright 2026 SeuPut, licensed under the Apache
+License, Version 2.0. Changes to upstream files are listed in
+docs/seuoffice/upstream-edits.md; the repository history records every change.
+
+The HWP/HWPX engine in vendor/rhwp-core is rhwp, Copyright (c) 2025-2026
+Edward Kim, MIT License (vendor/rhwp-core/LICENSE), with the IeumOffice
+patches in vendor/rhwp-core/patches.
+
+seuoffice does not include GenOffice's ee/ directory or anything under the
+GenOffice Enterprise License.
+
+seuoffice is not affiliated with, sponsored by or endorsed by Mainfunc, Inc.
+or the IeumOffice contributors. The names GenOffice and IeumOffice
+(이음오피스) identify the original works only.
