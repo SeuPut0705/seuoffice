@@ -78,8 +78,8 @@ export const constants = {
   defaultCipherList:
     'TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:DHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA256:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!SRP:!CAMELLIA',
 }
-export const createCipheriv = nodeStub('crypto.createCipheriv')
-export const createDecipheriv = nodeStub('crypto.createDecipheriv')
+export const createCipheriv = impl.createCipheriv
+export const createDecipheriv = impl.createDecipheriv
 export const createDiffieHellman = nodeStub('crypto.createDiffieHellman')
 export const createDiffieHellmanGroup = nodeStub('crypto.createDiffieHellmanGroup')
 export const createECDH = nodeStub('crypto.createECDH')
@@ -104,7 +104,7 @@ export const getCiphers = nodeStub('crypto.getCiphers')
 export const getCurves = nodeStub('crypto.getCurves')
 export const getDiffieHellman = nodeStub('crypto.getDiffieHellman')
 export const getFips = nodeStub('crypto.getFips')
-export const getHashes = nodeStub('crypto.getHashes')
+export const getHashes = impl.getHashes
 export const getRandomValues = impl.getRandomValues
 export const hash = nodeStub('crypto.hash')
 export const hkdf = nodeStub('crypto.hkdf')

@@ -1,7 +1,8 @@
+import * as node from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createWebBridge } from '../src/bridge'
 import { WebUnsupportedError } from '../src/errors'
-import { createHash } from '../src/shims/crypto'
+import { createCipheriv, createDecipheriv, createHash } from '../src/shims/crypto'
 import * as fs from '../src/shims/fs'
 import { crc32, deflateRawSync, deflateSync, inflateRawSync, inflateSync } from '../src/shims/zlib'
 
@@ -36,6 +37,65 @@ describe('crypto shim', () => {
 
   it('throws for an algorithm the web build lacks', () => {
     expect(() => createHash('whirlpool')).toThrow(WebUnsupportedError)
+  })
+
+  // Node's ciphers are the oracle: the desktop crypt modules were written against them
+  const run = (
+    cipher: {
+      setAutoPadding(on: boolean): unknown
+      update(d: Uint8Array): Uint8Array
+      final(): Uint8Array
+    },
+    pad: boolean,
+    data: Uint8Array,
+    cuts: number[],
+  ): Buffer => {
+    cipher.setAutoPadding(pad)
+    const parts: Uint8Array[] = []
+    let from = 0
+    for (const cut of [...cuts, data.length]) {
+      parts.push(cipher.update(data.subarray(from, cut)))
+      from = cut
+    }
+    parts.push(cipher.final())
+    return Buffer.concat(parts)
+  }
+
+  it.each([
+    ['aes-128-cbc', true],
+    ['aes-256-cbc', true],
+    ['aes-256-cbc', false],
+    ['aes-128-ecb', false],
+    ['aes-192-ecb', true],
+  ] as const)('agrees with node for %s (padding %s) across split updates', (name, pad) => {
+    const bits = Number(name.split('-')[1])
+    const key = node.randomBytes(bits / 8)
+    const iv = name.endsWith('cbc') ? node.randomBytes(16) : null
+    for (const length of pad ? [0, 1, 15, 16, 17, 100] : [0, 16, 48, 4096]) {
+      const data = node.randomBytes(length)
+      const cuts = [Math.min(length, 5), Math.min(length, 21)]
+      const expected = run(node.createCipheriv(name, key, iv), pad, data, [])
+      const sealed = run(createCipheriv(name, key, iv), pad, data, cuts)
+      expect(sealed.equals(expected)).toBe(true)
+      const opened = run(createDecipheriv(name, key, iv), pad, sealed, cuts)
+      expect(opened.equals(data)).toBe(true)
+    }
+  })
+
+  it('refuses a padded ciphertext whose padding does not check out', () => {
+    const key = node.randomBytes(16)
+    const iv = node.randomBytes(16)
+    // a whole block ending in 0 encrypted without padding: 0 is never a pad count
+    const plain = Buffer.alloc(16, 7)
+    plain[15] = 0
+    const sealed = run(node.createCipheriv('aes-128-cbc', key, iv), false, plain, [])
+    expect(() => run(createDecipheriv('aes-128-cbc', key, iv), true, sealed, [])).toThrow()
+  })
+
+  it('throws for a cipher the web build lacks', () => {
+    expect(() => createCipheriv('aes-128-gcm', new Uint8Array(16), new Uint8Array(12))).toThrow(
+      WebUnsupportedError,
+    )
   })
 })
 
