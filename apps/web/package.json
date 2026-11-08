@@ -2,22 +2,41 @@
   "name": "@seuoffice/web",
   "version": "0.1.0",
   "license": "Apache-2.0",
-  "private": true,
-  "type": "module",
   "description": "seuoffice in the browser: a launcher page and the suite apps built as static files",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SeuPut0705/seuoffice.git",
+    "directory": "apps/web"
+  },
+  "homepage": "https://github.com/SeuPut0705/seuoffice#readme",
+  "bugs": {
+    "url": "https://github.com/SeuPut0705/seuoffice/issues"
+  },
+  "private": false,
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "preview": "vite preview --port 5300 --strictPort",
     "test": "playwright test",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@seuoffice/embed": "*",
-    "@seuoffice/web-platform": "*"
+    "typecheck": "tsc --noEmit",
+    "prepack": "node ../../scripts/seuoffice-prepack.mjs --require dist/index.html"
   },
   "devDependencies": {
+    "@seuoffice/embed": "*",
+    "@seuoffice/web-platform": "*",
     "@playwright/test": "^1.61.1",
     "fflate": "^0.8.3",
+    "pdf-lib": "^1.17.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
   }

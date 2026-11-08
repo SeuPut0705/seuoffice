@@ -3,8 +3,13 @@ import { defaultAiSettings } from '../../../../packages/ai-provider/src/provider
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
   createWebBridge,
+  documentByPath,
+  editMode,
   installWebBridge,
+  onHostSaveRequest,
+  reportDirty,
   reportOpened,
+  saveToHost,
   unsupported,
   waitForDocument,
   webLanguage,
@@ -25,6 +30,49 @@ const toBase64 = (bytes: Uint8Array): string => {
 
 // the document handed in by the embed, given to the renderer once (like the desktop's one-shot consume)
 let pendingConsumed = false
+
+/** the reason the host gave for refusing the last save, for a host-asked save to report back */
+let lastSaveError: string | undefined
+
+/**
+ * The desktop main process writes the renderer's bytes after inlining lazily
+ * served pictures and applying an open password. The web has neither (the
+ * document opens whole and passwords are refused), so the bytes go to the
+ * host as built.
+ */
+const saveDocxToHost: DesktopApi['saveDocx'] = async (path, data) => {
+  const doc = documentByPath(path)
+  if (!doc) return { ok: false, error: 'save target is not an opened document' }
+  try {
+    await saveToHost(doc.fileName, new Uint8Array(data))
+    return { ok: true }
+  } catch (error) {
+    lastSaveError = error instanceof Error ? error.message : String(error)
+    return { ok: false, error: lastSaveError }
+  }
+}
+
+// The renderer's close-guard "Save" runs its full save until the document is
+// persisted and reports the outcome; a host-asked save runs the same flow.
+let closeSaveHandler: (() => void) | undefined
+let settleCloseSave: ((ok: boolean) => void) | undefined
+let hostSaves: Promise<void> = Promise.resolve()
+
+function runHostSave(): Promise<void> {
+  const run = async (): Promise<void> => {
+    const handler = closeSaveHandler
+    if (!handler) throw new Error('the document is not open yet')
+    lastSaveError = undefined
+    const ok = await new Promise<boolean>((resolve) => {
+      settleCloseSave = resolve
+      handler()
+    })
+    if (!ok) throw new Error(lastSaveError ?? 'the document was not saved')
+  }
+  const pass = hostSaves.then(run)
+  hostSaves = pass.catch(() => {})
+  return pass
+}
 
 const desktop: Partial<DesktopApi> = {
   getLanguage: async () => webLanguage() as Awaited<ReturnType<DesktopApi['getLanguage']>>,
@@ -81,7 +129,17 @@ const desktop: Partial<DesktopApi> = {
   onRecoveryCopyDropped: unsubscribe,
   onZoteroRequest: unsubscribe,
   onCloseCheck: unsubscribe,
-  onCloseSaveRequest: unsubscribe,
+  onCloseSaveRequest: (handler) => {
+    closeSaveHandler = handler
+    return () => {
+      if (closeSaveHandler === handler) closeSaveHandler = undefined
+    }
+  },
+  reportCloseSaveResult: (ok) => {
+    settleCloseSave?.(ok)
+    settleCloseSave = undefined
+  },
+  reportDirty,
   onMenuCommand: unsubscribe,
   consumeHeadlessExport: async () => null,
   // no password-protected files on the web, so no password intents to track
@@ -89,7 +147,8 @@ const desktop: Partial<DesktopApi> = {
   discardDocPasswordIntents: async () => ({ ok: true }),
   openDocxDecrypt: unsupported('docs.decrypt'),
   setDocPassword: unsupported('docs.decrypt'),
-  saveDocx: unsupported('docs.save'),
+  // the host stores a save only when it opened the document for editing
+  saveDocx: editMode() ? saveDocxToHost : unsupported('docs.save'),
   saveDocxAs: unsupported('docs.save'),
   saveDocxNew: unsupported('docs.save'),
   saveDocxTo: unsupported('docs.save'),
@@ -172,4 +231,5 @@ export function installBridges(): void {
   for (const [name, members] of Object.entries(shellBridges)) {
     installWebBridge(name, createWebBridge(name, members))
   }
+  if (editMode()) onHostSaveRequest(runHostSave)
 }

@@ -2,7 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
-    "types": ["node", "vite/client"]
+    "types": ["node", "vite/client"],
+    "customConditions": ["seuoffice-source"]
   },
   "include": ["src", "tests", "vite.config.ts", "playwright.config.ts", "../*/vite.web.config.ts"]
 }

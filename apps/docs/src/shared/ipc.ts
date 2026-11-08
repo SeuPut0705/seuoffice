@@ -812,6 +812,8 @@ export interface DesktopApi {
   /** Close guard chose "Save": main process asks the renderer to run the full save flow */
   onCloseSaveRequest(handler: () => void): () => void
   reportCloseSaveResult(ok: boolean): void
+  /** hosts that track unsaved changes (the web embed) hear each change of the flag; absent on the desktop */
+  reportDirty?(dirty: boolean): void
   /** keep the native View menu's checkbox items in sync with renderer state */
   /** `odt`: the tab shows an ODT document (menu entries of switched-off features are disabled) */
   reportViewMenuState(state: { aiSidebar: boolean; darkCanvas: boolean; odt?: boolean }): void

@@ -3,6 +3,7 @@ import { withOutputCapFallback } from './output-cap'
 import { streamAnthropic } from './protocols/anthropic'
 import { streamGemini } from './protocols/gemini'
 import { streamOpenAiCompatible } from './protocols/openai-compatible'
+import { streamGatewayComplete } from './protocols/gateway-complete'
 import { streamOpenAiResponses } from './protocols/openai-responses'
 import { streamCodexAppServer } from './codex-app-server'
 import { streamClaudeCodeCli } from './claude-code-cli'
@@ -78,6 +79,10 @@ export async function streamForProvider(
       case 'openai-responses':
         return streamOpenAiResponses(baseUrl, config, system, messages, tools, cap, cb, {
           bodyExtras: endpoint.bodyExtras,
+        })
+      case 'gateway-complete':
+        return streamGatewayComplete(baseUrl, config, system, messages, tools, cap, cb, {
+          ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
         })
     }
   })
