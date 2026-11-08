@@ -139,12 +139,15 @@ interface ToolActivity {
 }
 
 /**
- * What one run changed in the document. Each item is one step of the editor's
- * undo history, so the run is taken back by undoing that many steps, and only
- * while nothing else has been changed since the run began.
+ * What one run changed in the document. Each step is one step of the editor's undo history, so
+ * the run is taken back by undoing that many steps, and only while nothing else has been
+ * changed since the run began.
  */
 interface RunChanges {
+  /** what the tools said they changed, as far as their answers came back */
   items: HwpChange[]
+  /** the steps the run made in the editor, as the plugin counted them: what a revert takes back */
+  steps: number
   /** the editor's count of changes made by anyone else, read when the run began */
   foreign: number
   state: 'applied' | 'reverted' | 'refused' | 'stranded'
@@ -166,6 +169,8 @@ interface ChatEntry {
   undelivered?: boolean
   tools?: ToolActivity[]
   changes?: RunChanges
+  /** set on the reply a run ended in, until that run is out of the document (`endRun`) */
+  endedRun?: object
   /** labels of the edits this run left undone, shown under its last reply */
   unfinished?: string[]
   /** attachments this message took from the composer (echoed read-only; a retry sends them again) */
@@ -693,9 +698,8 @@ export function AiPanel({
 
   /** The conversation was reset: a run still on the document is taken back out and dropped. */
   const abandonRun = (): void => {
-    const items = runChangesRef.current
     runChangesRef.current = []
-    runHold.abandon(items.length, runForeignRef.current)
+    runHold.abandon(runForeignRef.current)
   }
 
   const patchLast = (patch: Partial<ChatEntry> | ((last: ChatEntry) => Partial<ChatEntry>)) => {
@@ -708,23 +712,47 @@ export function AiPanel({
     })
   }
 
-  /** What the finished run changed, for its last reply; absent when it changed nothing. */
-  const takeRunChanges = (): { changes: RunChanges } | Record<string, never> => {
+  /**
+   * A run ended (it finished, was stopped or failed). The document stays locked and unsaved
+   * until the run is out of it; then what the run made is shown on the reply it ended in, as a
+   * proposal the person answers. What is taken out is what the plugin counted, which includes a
+   * change whose answer was still on its way when the run ended: the proposal lists the changes
+   * the tools reported, and counts the rest. Returns the mark the reply carries until then.
+   */
+  const endRun = (): object => {
+    const ended = {}
+    const foreign = runForeignRef.current
     const items = runChangesRef.current
     runChangesRef.current = []
-    if (items.length === 0) return {}
-    // the plugin marked each change on the pages as it made it
-    setMarksShown(true)
-    const foreign = runForeignRef.current
-    // a run whose starting point is unknown cannot be checked, so it is not offered for undo
-    return {
-      changes: {
-        items,
-        foreign: foreign ?? -1,
-        state: foreign === null ? 'refused' : 'applied',
-        proposal: NO_PROPOSAL,
-      },
-    }
+    setReverting(true)
+    void runHold.hold(foreign).then((proposal) => {
+      if (!mountedRef.current) return
+      const changes: RunChanges | null =
+        proposal.kind === 'pending'
+          ? { items, steps: proposal.steps, foreign: proposal.foreign, state: 'reverted', proposal }
+          : proposal.kind === 'stranded'
+            ? {
+                items,
+                steps: items.length,
+                foreign: foreign ?? -1,
+                state: 'stranded',
+                proposal: NO_PROPOSAL,
+              }
+            : null
+      setChat((prev) =>
+        prev.map((entry) => {
+          if (entry.endedRun !== ended) return entry
+          const { endedRun: _ended, ...reply } = entry
+          return changes ? { ...reply, changes } : reply
+        }),
+      )
+      // the marks were drawn on the document the run had: it is back to what it was, or the run
+      // is still in it
+      if (proposal.kind === 'pending') clearMarks()
+      else if (proposal.kind === 'stranded') setMarksShown(true)
+      setReverting(false)
+    })
+    return ended
   }
 
   /**
@@ -874,7 +902,7 @@ export function AiPanel({
           const final = truncated
             ? [base, tGlobal('aiTruncatedNote')].filter(Boolean).join('\n\n')
             : base
-          const changed = takeRunChanges()
+          const ended = endRun()
           persistMessage('assistant', final, runToolsRef.current)
           runToolsRef.current = []
           // decided from the tool results, not from what the reply says it did
@@ -885,11 +913,9 @@ export function AiPanel({
             text: final || (last.tools?.length ? last.text : tGlobal('aiNoReply')),
             // A stop mid-tool can leave a running placeholder behind — drop it
             tools: last.tools?.filter((tl) => !tl.running),
-            ...changed,
+            endedRun: ended,
             ...(unfinished.length > 0 ? { unfinished } : {}),
           }))
-          if (changed.changes) holdChanges(changed.changes)
-          else runHold.release()
           setBusy(false)
           projectRef.current?.finishSend()
         },
@@ -902,7 +928,7 @@ export function AiPanel({
             refreshSubscriptionRef.current()
           }
           // a run can fail after it already changed the document: those changes stay listed
-          const changed = takeRunChanges()
+          const ended = endRun()
           setChat((prev) => {
             const next = [...prev]
             for (let i = next.length - 1; i >= 0; i--) {
@@ -921,13 +947,11 @@ export function AiPanel({
                 isError: true,
                 ...(blocked ? { blocked } : {}),
                 tools: last.tools?.filter((tl) => !tl.running),
-                ...changed,
+                endedRun: ended,
               }
             }
             return next
           })
-          if (changed.changes) holdChanges(changed.changes)
-          else runHold.release()
           setBusy(false)
           projectRef.current?.finishSend()
         },
@@ -1213,7 +1237,7 @@ export function AiPanel({
       setReverting(false)
     }
     setReverting(true)
-    bridgeRef.current.undo(changes.items.length, changes.foreign).then(
+    bridgeRef.current.undo(changes.steps, changes.foreign).then(
       (result) => settle(result.ok ? 'reverted' : 'refused'),
       () => settle('refused'),
     )
@@ -1252,41 +1276,6 @@ export function AiPanel({
     if (proposal?.kind !== 'pending' || busy || reverting) return
     patchChanges(idx, { proposal: reject() })
     revertedNoteDueRef.current = true
-  }
-
-  /**
-   * A run ended with changes in the document: take them back out and hold them as a proposal.
-   * The document stayed locked against the person's edits for the whole run, so the editor's
-   * history holds only the run on top; the document is let go once the run is out of it.
-   * When the editor cannot take the run out whole it is stranded: the document stays locked
-   * and unsaved for good, and the card says to close it without saving.
-   */
-  const holdChanges = (changes: RunChanges): void => {
-    if (changes.state !== 'applied') {
-      runHold.release()
-      return
-    }
-    setReverting(true)
-    // the document is let go once the run is out of it, whether or not the panel is still shown
-    void runHold.hold(changes.items.length, changes.foreign).then((proposal) => {
-      if (!mountedRef.current) return
-      setChat((prev) =>
-        prev.map((entry) =>
-          entry.changes === changes
-            ? {
-                ...entry,
-                changes:
-                  proposal.kind === 'pending'
-                    ? { ...changes, state: 'reverted', proposal }
-                    : { ...changes, state: 'stranded' },
-              }
-            : entry,
-        ),
-      )
-      // the marks were drawn on the document the run had; it is back to what it was
-      if (proposal.kind === 'pending') clearMarks()
-      setReverting(false)
-    })
   }
 
   /** Today's "new chat": the screen, the loop and everything the conversation carried start over. */
@@ -1873,7 +1862,10 @@ function RunChangesCard({
   onShow: (place: AgentPlace) => void
 }): ReactElement {
   const { t } = useI18n()
-  const count = changes.items.reduce((sum, item) => sum + item.count, 0)
+  // a step the run made whose answer never came back is not listed, but is in the document
+  const count =
+    changes.items.reduce((sum, item) => sum + item.count, 0) +
+    Math.max(0, changes.steps - changes.items.length)
   const proposed = changes.proposal.kind !== 'none'
   return (
     <div className={`ai-changes ai-changes-${proposed ? 'proposed' : changes.state}`}>

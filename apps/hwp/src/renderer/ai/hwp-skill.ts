@@ -1626,6 +1626,34 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
   /** delete_paragraph calls (find, occurrence) refused for hitting one of those, this run */
   let refusedDeletes = new Set<string>()
 
+  /**
+   * What one tool call may touch: the editor, and the list of changes of the run it began in.
+   * The run's signal is aborted when the run ends (Stop, New chat, the panel closed, a failure),
+   * so a call still working then (a picture being measured, a download) reaches the editor with
+   * nothing and reports no change, not even into a run that has started since. A write that got
+   * to the editor before the run ended is counted by the plugin, which is what the hold takes out.
+   */
+  const ownedBy = (
+    signal: AbortSignal | undefined,
+  ): { bridge: AgentBridge; deps: HwpSkillDeps } => {
+    if (!signal) return { bridge: deps.bridge, deps }
+    return {
+      bridge: new Proxy(deps.bridge, {
+        get: (target, method: keyof AgentBridge) => {
+          const call = target[method]
+          if (typeof call !== 'function') return call
+          return (...args: unknown[]) =>
+            signal.aborted
+              ? Promise.reject(
+                  new Error('the request has ended; this call did not reach the document'),
+                )
+              : (call as (...rest: unknown[]) => unknown).apply(target, args)
+        },
+      }),
+      deps: { ...deps, onChange: (change) => (signal.aborted ? undefined : deps.onChange(change)) },
+    }
+  }
+
   type ChangeOutcome<T> =
     { kind: 'done'; result: T } | { kind: 'declined' | 'changed'; refusal: AgentMemoRemovalRefusal }
 
@@ -1739,8 +1767,9 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
     base64: string,
     mime: string,
     what: string,
-    _signal: AbortSignal | undefined,
+    signal: AbortSignal | undefined,
   ): Promise<ToolExecution> => {
+    const { bridge, deps } = ownedBy(signal)
     const place = placeArgs(call)
     if (!place) return bad(call, WHERE_HELP)
     const ext = sniffPictureExt(base64)
@@ -1801,6 +1830,7 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
   }
 
   const run = async (call: AgentToolCall, signal?: AbortSignal): Promise<ToolExecution> => {
+    const { bridge, deps } = ownedBy(signal)
     switch (call.name) {
       case 'read_document': {
         const text = await bridge.readText()

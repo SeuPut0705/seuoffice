@@ -101,10 +101,14 @@ export function reject(): TurnProposal {
   return NO_PROPOSAL
 }
 
-/** What a run holding the document needs of the plugin: the proposal's calls and the lock. */
+/**
+ * What a run holding the document needs of the plugin: the proposal's calls, the lock, and the
+ * count of changes the run made (which no answer still in flight can leave out).
+ */
 export interface RunBackend extends ProposalBackend {
   setRunLock(locked: boolean): Promise<{ ok: boolean }>
   strandRun(): Promise<unknown>
+  runSteps(): Promise<number>
 }
 
 /** What the app is told of the document: a run is on it, nobody is, or a run is stuck in it. */
@@ -132,11 +136,13 @@ export class RunEndedError extends Error {
  *   - the app writes nothing (`onHold('held')`: save, autosave, recovery copy, export read it),
  *   - the person cannot edit (the plugin's run lock), so the editor's history holds only the
  *     run on top of what was there, and what the person did before is not swept into a revert.
- * A run ends in `release()` (nothing changed, a failed start, the run taken back out by
- * `hold`, or dropped by `abandon`) or, when the editor cannot take it out, in `strand()`: the
- * run is in the document, so the app writes nothing and the person stays locked out for good.
- * Nothing leaves that phase; the plugin keeps it too, so a panel that is mounted again cannot
- * lift it. It ends with the document: a tab's editor holds one document for its whole life.
+ * A run ends in `release()` (a failed start, or the run taken back out by `hold` or dropped by
+ * `abandon`, which find out what it made from the plugin: a change whose answer is still on
+ * its way to the app is in the document all the same) or, when the editor cannot take it out,
+ * in `strand()`: the run is in the document, so the app writes nothing and the person stays
+ * locked out for good. Nothing leaves that phase; the plugin keeps it too, so a panel that is
+ * mounted again cannot lift it. It ends with the document: a tab's editor holds one document
+ * for its whole life.
  */
 export class RunHold {
   private phase: 'idle' | 'running' | 'holding' | 'abandoning' | 'stranded' = 'idle'
@@ -226,15 +232,14 @@ export class RunHold {
   }
 
   /**
-   * The run ended with `steps` changes: take them out as a proposal, then let the document go.
-   * When they cannot be taken out whole the run is stranded and the proposal says so.
+   * The run ended (it finished, was stopped or failed): take what it made out of the document
+   * as a proposal, then let the document go. What it made is what the plugin counted under the
+   * lock; the panel's own count only has the changes it was answered for. When none can be
+   * taken out whole the run is stranded and the proposal says so; `none` when it made nothing.
    */
-  async hold(steps: number, foreign: number): Promise<TurnProposal> {
+  async hold(foreign: number | null): Promise<TurnProposal> {
     this.phase = 'holding'
-    const proposal = await holdRun(this.backend(), steps, foreign)
-    if (proposal.kind === 'stranded') this.strand()
-    else this.release()
-    return proposal
+    return this.takeOut(foreign)
   }
 
   /**
@@ -244,26 +249,33 @@ export class RunHold {
    * ends here: a prepared send that has not reached the loop stops before it runs, and a new
    * run waits (`settling`) until this one's edits are out.
    */
-  abandon(steps: number, foreign: number | null): void {
+  abandon(foreign: number | null): void {
     if (this.phase !== 'running') return
     this.generation += 1
-    if (steps === 0 || foreign === null) {
+    if (foreign === null) {
       this.release()
       return
     }
     this.phase = 'abandoning'
-    void this.backend()
-      .undo(steps, foreign)
-      .then(
-        async (undone) => {
-          if (!undone.ok) return this.strand()
-          // the dropped run waits on the redo stack as a rejected one does
-          await this.backend()
-            .setHeldRun(steps)
-            .catch(() => undefined)
-          this.release()
-        },
-        () => this.strand(),
-      )
+    void this.takeOut(foreign)
+  }
+
+  /** Take the run out of the document, then free it, or strand it when it cannot come out. */
+  private async takeOut(foreign: number | null): Promise<TurnProposal> {
+    const proposal = await this.proposalOfRun(foreign)
+    if (proposal.kind === 'stranded') this.strand()
+    else this.release()
+    return proposal
+  }
+
+  private async proposalOfRun(foreign: number | null): Promise<TurnProposal> {
+    try {
+      const steps = await this.backend().runSteps()
+      if (steps === 0) return NO_PROPOSAL
+      // a run whose starting point is unknown cannot be checked, so it cannot be taken out
+      return foreign === null ? STRANDED : await holdRun(this.backend(), steps, foreign)
+    } catch {
+      return STRANDED
+    }
   }
 }

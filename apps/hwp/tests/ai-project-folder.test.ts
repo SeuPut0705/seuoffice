@@ -236,6 +236,8 @@ describe('hwp AI panel: the run holds the document', () => {
           return { ok: true, locked }
         }
         if (method === 'foreignChanges') return 0
+        // the run changed nothing in the document behind it
+        if (method === 'runSteps') return 0
         throw new Error('no editor in this test')
       },
     })

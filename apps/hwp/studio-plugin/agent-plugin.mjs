@@ -8339,6 +8339,15 @@ export const agentPlugin = {
         return { ok: true, steps: heldRun }
       }),
 
+      /**
+       * How many changes the run that holds the document has made (0 when none does). It is
+       * the plugin's own count, taken the moment the editor makes a change, so it includes a
+       * change whose answer has not reached the app yet: the calls reach the editor in the
+       * order they were made, so a call made before this one is counted. What the app takes
+       * a run back out by, since its own count only has the changes it was answered for.
+       */
+      runSteps: guarded(() => (runLocked ? runSteps : 0)),
+
       /** Take the marks of the changes made so far off the pages. */
       clearMarks: guarded(() => {
         marks = []
@@ -8391,6 +8400,8 @@ export const agentPlugin = {
         // an undo can bring memos back, and moves their anchors
         syncMemos({ notify: false })
         refreshMemoAnchors()
+        // the run's changes that are no longer in the document are no longer its changes
+        if (runLocked) runSteps = Math.max(0, runSteps - undone)
         return { ok: undone === steps, undone }
       }),
 

@@ -5,6 +5,8 @@
  * while a run is in flight no save writes the document, the person cannot edit, and a run
  * too large to be taken back out is refused before it applies.
  */
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -13,7 +15,7 @@ import { defaultAiSettings } from '@genoffice/ai-provider'
 import { AiPanel } from '../src/renderer/ai/AiPanel'
 import type { AgentBridge } from '../src/renderer/ai/agent-bridge'
 import { t } from '../src/renderer/i18n/locale'
-import { HoldTracker, runPrintJob } from '../src/renderer/print-flow'
+import { createAiHoldWiring, runPrintJob } from '../src/renderer/print-flow'
 import { fakeProjectFolder } from './fake-project-folder'
 import { runSave, type SaveEditorPort, type SaveOutcome } from '../src/renderer/save-flow'
 import {
@@ -249,7 +251,7 @@ describe('a save while an AI run is in flight', () => {
     expect(ports.exports).toHaveLength(0)
 
     // the run is taken out of the document, and then the app may write again
-    expect((await hold.hold(run.items.length, run.foreign)).kind).toBe('pending')
+    expect((await hold.hold(run.foreign)).kind).toBe('pending')
     expect(flag.held).toBe(false)
     const saved = await runSave(ports.port, ports.api, 'save', false, () => flag.held)
     expect(saved.kind).toBe('saved')
@@ -338,7 +340,7 @@ describe('the person editing while an AI run is in flight', () => {
     expect(typed).toBe(false)
     expect(same(run.live, during!)).toBe(true)
     // the run was held with nothing of the person's in it
-    const proposal = await hold.hold(run.items.length, run.foreign)
+    const proposal = await hold.hold(run.foreign)
     expect(proposal.kind).toBe('pending')
     expect(same(editor.bytes(), original)).toBe(true)
     expect(editor.lines()).toEqual(LINES)
@@ -351,7 +353,7 @@ describe('the person editing while an AI run is in flight', () => {
     const { hold } = takeHold(editor)
 
     const run = await runRequest(editor, EDITS, { hold })
-    const proposal = await hold.hold(run.items.length, run.foreign)
+    const proposal = await hold.hold(run.foreign)
 
     expect(proposal.kind).toBe('pending')
     expect(same(editor.bytes(), withTyping)).toBe(true)
@@ -387,7 +389,7 @@ describe('the person editing while an AI run is in flight', () => {
     })
     for (const name of typing) expect(seen[name], name).toBe(true)
 
-    await hold.hold(run.items.length, run.foreign)
+    await hold.hold(run.foreign)
     for (const name of typing) expect(fire(name).defaultPrevented, name).toBe(false)
     // and the document takes the person's typing again
     expect(editor.typeIn()).toBe(true)
@@ -469,7 +471,7 @@ describe('a run that cannot be taken back out', () => {
     expect(run.items).toHaveLength(limit)
     expect(editor.lines().filter((line) => line.startsWith('추가'))).toHaveLength(limit)
 
-    const proposal = await hold.hold(run.items.length, run.foreign)
+    const proposal = await hold.hold(run.foreign)
     expect(proposal).toMatchObject({ kind: 'pending', steps: limit })
     expect(same(editor.bytes(), original)).toBe(true)
   })
@@ -479,6 +481,7 @@ describe('the hold a run takes on the document', () => {
   function backend(over: Partial<RunBackend> = {}) {
     const calls: string[] = []
     const base: RunBackend = {
+      runSteps: async () => 2,
       foreignChanges: async () => 3,
       undo: async (steps) => {
         calls.push(`undo ${steps}`)
@@ -539,8 +542,8 @@ describe('the hold a run takes on the document', () => {
     const { calls, backend: b } = backend()
     const { hold } = holdOf(b)
     hold.begin()
-    const held = hold.hold(2, 3)
-    hold.abandon(2, 3)
+    const held = hold.hold(3)
+    hold.abandon(3)
     await held
     expect(calls.filter((call) => call.startsWith('undo'))).toEqual(['undo 2'])
   })
@@ -554,7 +557,7 @@ describe('the hold a run takes on the document', () => {
     })
     const { told, hold } = holdOf(b)
     hold.begin()
-    expect(await hold.hold(2, 3)).toEqual({ kind: 'stranded' })
+    expect(await hold.hold(3)).toEqual({ kind: 'stranded' })
     expect(told).toEqual(['held', 'stranded'])
     expect(calls).toEqual(['strand'])
     // nothing lets it go
@@ -571,13 +574,13 @@ describe('the hold a run takes on the document', () => {
     })
     const first = holdOf(thrown.backend)
     first.hold.begin()
-    expect(await first.hold.hold(1, 0)).toEqual({ kind: 'stranded' })
+    expect(await first.hold.hold(0)).toEqual({ kind: 'stranded' })
     expect(first.told).toEqual(['held', 'stranded'])
 
     const refused = backend({ undo: async () => ({ ok: false, reason: 'changed', undone: 0 }) })
     const second = holdOf(refused.backend)
     second.hold.begin()
-    second.hold.abandon(1, 0)
+    second.hold.abandon(0)
     await vi.waitFor(() => expect(second.told).toEqual(['held', 'stranded']))
     expect(refused.calls).toEqual(['strand'])
   })
@@ -589,6 +592,47 @@ describe('the hold a run takes on the document', () => {
     await expect(hold.lock(generation)).rejects.toBeInstanceOf(StrandedError)
     hold.release()
     expect(told).toEqual(['held', 'stranded'])
+  })
+
+  it('takes out what the plugin counted, and lets go without an undo when it counted nothing', async () => {
+    const counted = backend({ runSteps: async () => 4 })
+    const first = holdOf(counted.backend)
+    first.hold.begin()
+    expect(await first.hold.hold(3)).toMatchObject({ kind: 'pending', steps: 4 })
+    expect(counted.calls).toEqual(['undo 4', 'held 4', 'lock false'])
+
+    const nothing = backend({ runSteps: async () => 0 })
+    const second = holdOf(nothing.backend)
+    second.hold.begin()
+    expect(await second.hold.hold(3)).toEqual({ kind: 'none' })
+    expect(second.told).toEqual(['held', 'free'])
+    expect(nothing.calls).toEqual(['lock false'])
+  })
+
+  it('frees a dropped run that made no change without an undo', async () => {
+    const { calls, backend: b } = backend({ runSteps: async () => 0 })
+    const { told, hold } = holdOf(b)
+    hold.begin()
+    hold.abandon(3)
+    await vi.waitFor(() => expect(told).toEqual(['held', 'free']))
+    expect(calls).toEqual(['lock false'])
+  })
+
+  it('strands a run it cannot count or place, instead of letting go of it', async () => {
+    const unreadable = backend({
+      runSteps: async () => {
+        throw new Error('the editor did not answer')
+      },
+    })
+    const first = holdOf(unreadable.backend)
+    first.hold.begin()
+    expect(await first.hold.hold(3)).toEqual({ kind: 'stranded' })
+    expect(first.told).toEqual(['held', 'stranded'])
+
+    // a start that could not be read cannot be checked, so what the run made cannot come out
+    const unknown = holdOf(backend().backend)
+    unknown.hold.begin()
+    expect(await unknown.hold.hold(null)).toEqual({ kind: 'stranded' })
   })
 })
 
@@ -613,7 +657,7 @@ describe('a run that cannot be taken out of the document', () => {
     const run = await runRequest(editor, EDITS, { hold })
     const withRun = editor.bytes()
 
-    expect(await hold.hold(run.items.length, run.foreign)).toEqual({ kind: 'stranded' })
+    expect(await hold.hold(run.foreign)).toEqual({ kind: 'stranded' })
     expect(redo).not.toHaveBeenCalled()
     expect(flag.state).toBe('stranded')
     // the part that did not come out is still in the document: nothing was put back
@@ -640,7 +684,7 @@ describe('a run taken out of the document and waiting on the redo stack', () => 
     const original = editor.bytes()
     const { hold } = takeHold(editor)
     const run = await runRequest(editor, EDITS, { hold })
-    const proposal = await hold.hold(run.items.length, run.foreign)
+    const proposal = await hold.hold(run.foreign)
     if (proposal.kind !== 'pending') throw new Error('the run was not held')
     return { editor, original, run, proposal }
   }
@@ -687,10 +731,10 @@ describe('a PDF export in flight when the person sends an AI request', () => {
     const editor = openEditor()
     const original = editor.bytes()
     const panel = await mountPanel(editor.bridge)
-    // the app's flag, set from the panel's onRunHold as App.setAiHold sets it
-    // the panel's onRunHold feeds the app's own tracker, exactly as App does
-    const hold = new HoldTracker()
-    panel.onRunHold((state) => hold.set(state))
+    // the app's own wiring of the hold (createAiHoldWiring, which App builds all three of its
+    // ends from): the panel reports into it, and the print job's ports take their hold from it
+    const wiring = createAiHoldWiring()
+    panel.onRunHold(wiring.onRunHold)
     // the run ends by itself and is taken back out before the paused batch comes back
     transport.finish = true
 
@@ -710,13 +754,12 @@ describe('a PDF export in flight when the person sends an AI request', () => {
     }
     const dispatched = vi.fn(async () => ({ ok: true as const }))
     const exporting = runPrintJob(
-      {
+      wiring.printPorts({
         ready: true,
-        hold,
         printing: { current: false },
         bridge,
         api: { printPages: dispatched } as unknown as Pick<HwpApi, 'printPages'>,
-      },
+      }),
       'pdf',
       () => {},
     )
@@ -724,13 +767,24 @@ describe('a PDF export in flight when the person sends an AI request', () => {
 
     // the person sends an AI request through the real panel; the run takes the document
     await panel.send()
-    expect(hold.epoch()).toBeGreaterThan(0)
+    expect(wiring.tracker.epoch()).toBeGreaterThan(0)
     // the run finishes and is reverted and released: the hold is off again
-    await vi.waitFor(() => expect(hold.isHeld()).toBe(false))
+    await vi.waitFor(() => expect(wiring.tracker.isHeld()).toBe(false))
     expect(same(editor.bytes(), original)).toBe(true)
     resume.resolve()
 
     expect(await exporting).toEqual({ ok: false, error: expect.stringMatching(/AI request/) })
     expect(dispatched).not.toHaveBeenCalled()
+  })
+})
+
+describe('the hold the panel reports in the app', () => {
+  it('is the one the saves read and the print jobs take: App builds all three from one factory', () => {
+    const app = readFileSync(resolve(process.cwd(), 'src/renderer/App.tsx'), 'utf8')
+    expect(app).toContain('createAiHoldWiring()')
+    expect(app).not.toContain('new HoldTracker')
+    expect(app).toMatch(/const aiHold = aiHoldWiring\.tracker/)
+    expect(app).toMatch(/runPrintJob\(\s*aiHoldWiring\.printPorts\(/)
+    expect(app).toMatch(/onRunHold=\{aiHoldWiring\.onRunHold\}/)
   })
 })

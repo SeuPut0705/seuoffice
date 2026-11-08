@@ -152,3 +152,26 @@ export async function runPrintJob(
     ports.printing.current = false
   }
 }
+
+/**
+ * The app's side of the AI run's hold, made once per window: the one record of the hold and
+ * the two things that must feed from or read it. The app builds all three from here, so a hold
+ * the panel reports is the one saves, exports and print jobs see; none can be given another.
+ */
+export interface AiHoldWiring {
+  /** the one record of the hold: what the app's saves, copies and exports read */
+  tracker: HoldTracker
+  /** the AI dock's `onRunHold`: tells the tracker */
+  onRunHold: (state: HoldState) => void
+  /** a print or PDF job's ports, with the tracker as their hold */
+  printPorts: (ports: Omit<PrintJobPorts, 'hold'>) => PrintJobPorts
+}
+
+export function createAiHoldWiring(): AiHoldWiring {
+  const tracker = new HoldTracker()
+  return {
+    tracker,
+    onRunHold: (state) => tracker.set(state),
+    printPorts: (ports) => ({ ...ports, hold: tracker }),
+  }
+}

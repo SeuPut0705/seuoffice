@@ -1248,6 +1248,11 @@ export interface AgentPluginSurface {
    * without a yes. The plugin's own `redo` is not. Lifts by itself once a change empties the stack.
    */
   setHeldRun(steps: number): { ok: true; steps: number }
+  /**
+   * how many changes the run that holds the document has made (0 when none does): the plugin's
+   * own count, which includes a change whose answer has not reached the app yet
+   */
+  runSteps(): number
 }
 
 /** Pages drawn for printing: SVG, and each page's size in CSS pixels. */

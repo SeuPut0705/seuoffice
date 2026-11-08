@@ -14,7 +14,6 @@ import {
 import { HwpAiDock } from './ai/AiDock'
 import { DocCheckPanel } from './check/DocCheckPanel'
 import { createAgentBridge } from './ai/agent-bridge'
-import type { HoldState } from './ai/turn-proposal'
 import { afterPrefillTaken, easyWordsRequest, type AiPrefill } from './ai/easy-words'
 import {
   DIRTY_EVENT,
@@ -30,7 +29,7 @@ import { MEMO_INSERT_EVENT, memoNoticeOf, type MemoNotice } from './MemoPanel'
 import { MemoSide, MemoToggle, memoPanelInitiallyOpen, rememberMemoPanelOpen } from './MemoSide'
 import { openDocumentsDroppedOn } from './editor-drop'
 import { hwpPresentationKeyOf } from './presentation-keys'
-import { HoldTracker, runPrintJob } from './print-flow'
+import { createAiHoldWiring, runPrintJob, type AiHoldWiring } from './print-flow'
 import { PrintPreview } from './preview/PrintPreview'
 import {
   RECOVERY_TICK_MS,
@@ -140,10 +139,11 @@ export default function App() {
    * save, copy or export of the document may be made meanwhile (ai/AiPanel.tsx onRunHold). A
    * stuck run is never let go of: the document is closed without saving.
    */
-  const aiHoldRef = useRef<HoldTracker | null>(null)
-  if (!aiHoldRef.current) aiHoldRef.current = new HoldTracker()
-  const aiHold = aiHoldRef.current
-  const setAiHold = useCallback((state: HoldState) => aiHold.set(state), [aiHold])
+  const aiHoldRef = useRef<AiHoldWiring | null>(null)
+  if (!aiHoldRef.current) aiHoldRef.current = createAiHoldWiring()
+  // the panel's report, the saves' reading and the print jobs' hold are all this one
+  const aiHoldWiring = aiHoldRef.current
+  const aiHold = aiHoldWiring.tracker
   /** resolved when the save in flight finishes, so a manual save can queue behind an autosave */
   const savingDoneRef = useRef<Promise<void> | null>(null)
   /** last key, click or paste in the editor (autosave waits for a pause) */
@@ -736,19 +736,18 @@ export default function App() {
       path?: string,
     ): Promise<PrintResult> => {
       return runPrintJob(
-        {
+        aiHoldWiring.printPorts({
           ready: phase === 'ready',
-          hold: aiHold,
           printing: printingRef,
           bridge: agentBridge,
           api: window.hwpApi,
-        },
+        }),
         mode,
         onProgress,
         path,
       )
     },
-    [phase, agentBridge, aiHold],
+    [phase, agentBridge, aiHoldWiring],
   )
 
   useEffect(() => {
@@ -1071,7 +1070,7 @@ export default function App() {
             templateDocument={templateDocument}
             prefill={aiPrefill}
             onPrefillTaken={takeAiPrefill}
-            onRunHold={setAiHold}
+            onRunHold={aiHoldWiring.onRunHold}
           />
         )}
         {phase === 'ready' && (

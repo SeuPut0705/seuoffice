@@ -211,6 +211,7 @@ const READING_CALLS: ReadonlySet<string> = new Set([
   'setRunLock',
   'strandRun',
   'setHeldRun',
+  'runSteps',
 ])
 
 /**
