@@ -231,3 +231,102 @@ describe('the person editing the workbook while an AI run is in flight', () => {
     ).toBe(true)
   })
 })
+
+describe('the person typing at the grid while an AI apply is paused in an async step', () => {
+  const grid = (runtime: UniverRuntime) => {
+    const element = document.createElement('div')
+    document.body.append(element)
+    const seen: string[] = []
+    // what the grid does with the person's input: each one edits a cell
+    element.addEventListener('keydown', () => {
+      seen.push('keydown')
+      setCell(runtime, 'A2', 99)
+    })
+    element.addEventListener('paste', () => {
+      seen.push('paste')
+      setCell(runtime, 'B1', 7)
+    })
+    element.addEventListener('pointerdown', () => seen.push('pointerdown'))
+    return { element, seen }
+  }
+
+  it('never reaches the grid, so Reject returns the pre-run document and the earlier edit survives', async () => {
+    const runtime = bootWorkbook()
+    installAiRunLockGuard(runtime, () => undefined)
+    setCell(runtime, 'A2', 5) // the person's edit before the run
+    const before = [cellOf(runtime, 'A1'), cellOf(runtime, 'A2'), cellOf(runtime, 'B1')]
+    const { element, seen } = grid(runtime)
+
+    lockForAiRun()
+    // the AI apply: it writes, then waits on an async step with its write flag up
+    let resume: () => void = () => undefined
+    const paused = new Promise<void>((resolve) => {
+      resume = resolve
+    })
+    const apply = (async () => {
+      const endAgentWrite = beginAgentWrite()
+      setCell(runtime, 'A1', 11)
+      await paused
+      setCell(runtime, 'C1', 3)
+      endAgentWrite()
+    })()
+    await Promise.resolve()
+
+    // the person types, pastes and clicks at the grid while the apply is paused
+    for (const event of [
+      new KeyboardEvent('keydown', { key: 'x', bubbles: true, cancelable: true }),
+      new Event('paste', { bubbles: true, cancelable: true }),
+      new Event('pointerdown', { bubbles: true, cancelable: true }),
+    ]) {
+      element.dispatchEvent(event)
+      expect(event.defaultPrevented).toBe(true)
+    }
+    expect(seen).toEqual([])
+    expect(cellOf(runtime, 'A2')).toBe(5)
+    expect(cellOf(runtime, 'B1')).toBeNull()
+
+    resume()
+    await apply
+    expect([cellOf(runtime, 'A1'), cellOf(runtime, 'C1')]).toEqual([11, 3])
+
+    // Reject: the run's own revert takes out exactly its two writes
+    const endRevert = beginAgentWrite()
+    await runtime.univerAPI.undo()
+    await runtime.univerAPI.undo()
+    endRevert()
+    unlockAfterAiRun()
+
+    expect([cellOf(runtime, 'A1'), cellOf(runtime, 'A2'), cellOf(runtime, 'B1')]).toEqual(before)
+    element.remove()
+  })
+
+  it('leaves the AI panel and the save shortcut alone, and the grid free after the run', () => {
+    const runtime = bootWorkbook()
+    const { element, seen } = grid(runtime)
+    const panel = document.createElement('aside')
+    panel.className = 'copilot'
+    const input = document.createElement('textarea')
+    panel.append(input)
+    document.body.append(panel)
+    const panelKeys: string[] = []
+    input.addEventListener('keydown', () => panelKeys.push('keydown'))
+
+    lockForAiRun()
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }))
+    const save = new KeyboardEvent('keydown', {
+      key: 's',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    element.dispatchEvent(save)
+    unlockAfterAiRun()
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true }))
+
+    expect(panelKeys).toEqual(['keydown'])
+    expect(save.defaultPrevented).toBe(false)
+    expect(seen).toEqual(['keydown', 'keydown'])
+    element.remove()
+    panel.remove()
+  })
+})

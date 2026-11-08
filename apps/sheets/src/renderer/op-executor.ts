@@ -433,7 +433,7 @@ async function applyChangePlanNow(
   const stale = options.verifyBeforeApply?.()
   if (stale) return stale
   const undoBatch = beginUndoBatch(runtime)
-  const endAgentWrite = options.agentWrite ? beginAgentWrite() : null
+  let endAgentWrite = options.agentWrite ? beginAgentWrite() : null
   let anyApplied = false
   try {
     // Structural and layout changes go through the same facade commands as
@@ -499,14 +499,18 @@ async function applyChangePlanNow(
           state.closure.pinned,
         )
       }
-      if (
-        streamedNeeds.size > 0 &&
-        !(await pinStreamedPrecedents(runtime, lazyWorkbookRef, streamedNeeds))
-      ) {
-        throw new Error(
-          'The cells referenced by the formulas could not be loaded from the streamed workbook — ' +
-            'the formulas were not written; retry in a moment.',
-        )
+      if (streamedNeeds.size > 0) {
+        // loading cells is not a write of the run: the flag stays down while the person's input could land
+        endAgentWrite?.()
+        endAgentWrite = null
+        const pinned = await pinStreamedPrecedents(runtime, lazyWorkbookRef, streamedNeeds)
+        if (options.agentWrite) endAgentWrite = beginAgentWrite()
+        if (!pinned) {
+          throw new Error(
+            'The cells referenced by the formulas could not be loaded from the streamed workbook — ' +
+              'the formulas were not written; retry in a moment.',
+          )
+        }
       }
     }
     for (const change of plan.cellChanges) {

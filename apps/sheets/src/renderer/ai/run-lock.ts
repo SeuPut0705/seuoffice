@@ -5,12 +5,14 @@
  * so anything else that touches the workbook in that time is lost or leaks:
  * a person's edit would be swept into the revert, and a save would write the
  * run's unaccepted edits. This lock closes both:
- *   - the person's edits are vetoed before they run (the run's own writes pass),
+ *   - the person's input is stopped at the DOM while the run is in flight, and their
+ *     commands are vetoed again before they run (the run's own writes pass the veto),
  *   - every save path refuses (save-scheduler.ts `guardedSave`).
  */
 import { CommandType } from '@univerjs/core'
 
 import { t } from '../i18n/locale'
+import { showToast } from '../toast-bus'
 import { aiRunLock, journalSuppression, type UniverRuntime } from '../univer-state'
 import { VISUAL_UNDO_COMMAND_ID } from '../undo-carry'
 
@@ -57,9 +59,75 @@ export function installAiRunLockGuard(
   })
 }
 
+/** Events that start an edit, a selection change or a command; wheel and mouse moves stay free. */
+const BLOCKED_DOM_EVENTS = [
+  'keydown',
+  'keypress',
+  'beforeinput',
+  'paste',
+  'cut',
+  'drop',
+  'dragover',
+  'dragstart',
+  'pointerdown',
+  'mousedown',
+  'mouseup',
+  'click',
+  'dblclick',
+  'contextmenu',
+  'touchstart',
+] as const
+
+/** The refusal is explained once per burst of blocked input, not on every click. */
+const NOTICE_GAP_MS = 3000
+let lastNoticeAt = 0
+
+/** The AI panel's own root: the person keeps typing, stopping and undoing there. */
+const AI_PANEL_SELECTOR = '.copilot'
+
+function insideAiPanel(target: EventTarget | null): boolean {
+  const el =
+    target instanceof Element ? target : target instanceof Node ? target.parentElement : null
+  return !!el?.closest(AI_PANEL_SELECTOR)
+}
+
+/** ⌘S / Ctrl+S still reach the save command, whose refusal says why nothing was written. */
+function isSaveShortcut(e: Event): boolean {
+  return (
+    e instanceof KeyboardEvent &&
+    (e.metaKey || e.ctrlKey) &&
+    !e.altKey &&
+    e.key.toLowerCase() === 's'
+  )
+}
+
+/**
+ * The person's input is stopped at the window, before the grid or any control sees it, so it
+ * cannot land while the run's own async writes are in progress (the command veto cannot tell
+ * those apart: it lets the run's commands through). Added when this module loads, so it runs
+ * before any component's own window listener.
+ */
+function blockPersonInput(e: Event): void {
+  if (!aiRunLock.active || insideAiPanel(e.target) || isSaveShortcut(e)) return
+  e.stopImmediatePropagation()
+  e.preventDefault()
+  const now = Date.now()
+  if (now - lastNoticeAt < NOTICE_GAP_MS) return
+  lastNoticeAt = now
+  showToast(t('appAiRunLocked'), 'error')
+}
+
+if (typeof window !== 'undefined') {
+  // not passive: touchstart is passive by default on window, which would ignore preventDefault
+  for (const type of BLOCKED_DOM_EVENTS) {
+    window.addEventListener(type, blockPersonInput, { capture: true, passive: false })
+  }
+}
+
 /** Takes the workbook for a run; from here on the person's edits and every save are refused. */
 export function lockForAiRun(): void {
   aiRunLock.active = true
+  lastNoticeAt = 0
 }
 
 /** Gives the workbook back once the run's edits are out of it (or could not be taken out). */
