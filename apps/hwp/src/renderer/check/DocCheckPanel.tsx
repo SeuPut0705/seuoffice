@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import {
   ADMINISTRATION_RULES,
   audit,
@@ -11,6 +11,7 @@ import type { AgentDocumentProfile } from '../../../studio-plugin/agent-plugin.m
 import type { AgentBridge } from '../ai/agent-bridge'
 import { useI18n } from '../i18n/locale'
 import type { HwpFormat } from '../../shared/ipc'
+import type { HoldTracker } from '../print-flow'
 
 /**
  * The checks that are off by default: they fire on most documents that were written
@@ -34,6 +35,12 @@ const REREAD_DELAY_MS = 1200
 
 interface Props {
   bridge: AgentBridge
+  /**
+   * The app's record of an AI run's hold on the document. The font fix is the person's edit made
+   * from this window, which the editor's run lock does not reach: while a run holds the
+   * document it would be counted as one of the run's steps and held out with it, so it waits.
+   */
+  aiHold: Pick<HoldTracker, 'isHeld' | 'subscribe'>
   format: HwpFormat
   onClose: () => void
   /** Hands a request to the AI panel's input box; it is not sent. */
@@ -48,8 +55,9 @@ interface Props {
  * panel works with AI turned off. The font fix is a plain edit; everything else is handed
  * to the AI as a request the user reads before sending.
  */
-export function DocCheckPanel({ bridge, format, onClose, onHandOff, revision = 0 }: Props) {
+export function DocCheckPanel({ bridge, aiHold, format, onClose, onHandOff, revision = 0 }: Props) {
   const { t } = useI18n()
+  const aiHeld = useSyncExternalStore(aiHold.subscribe, () => aiHold.isHeld())
   const [profile, setProfile] = useState<AgentDocumentProfile | null>(null)
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState(true)
@@ -112,6 +120,8 @@ export function DocCheckPanel({ bridge, format, onClose, onHandOff, revision = 0
 
   const replaceFont = useCallback(
     async (from: string) => {
+      // read now, not from the last render: a run may have taken the document since
+      if (aiHold.isHeld()) return
       setFixing(from)
       setFailed(false)
       try {
@@ -123,7 +133,7 @@ export function DocCheckPanel({ bridge, format, onClose, onHandOff, revision = 0
         setFixing(null)
       }
     },
-    [bridge, run],
+    [aiHold, bridge, run],
   )
 
   const handOff = useCallback(() => {
@@ -197,13 +207,18 @@ export function DocCheckPanel({ bridge, format, onClose, onHandOff, revision = 0
                         <button
                           type="button"
                           className="doc-check-fix"
-                          disabled={fixing !== null}
+                          disabled={fixing !== null || aiHeld}
                           onClick={() => void replaceFont(place.label)}
                         >
                           {t('checkReplaceWith', { font: REPLACEMENT_FONT })}
                         </button>
                       </div>
                     ))}
+                    {aiHeld && (
+                      <p className="doc-check-note" role="status">
+                        {t('checkAiRunning')}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   finding.places.length > 0 && (

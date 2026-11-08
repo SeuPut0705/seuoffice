@@ -276,6 +276,8 @@ export const fr = {
   checkAskAi: "Confier la correction à l'IA",
   checkHandedOff: "La demande est dans le champ de l'IA. Vérifiez-la, puis envoyez-la.",
   checkFixFailed: 'La modification a échoué.',
+  checkAiRunning:
+    "La police ne peut pas être modifiée pendant que l'IA modifie le document. Réessayez quand elle a terminé.",
   easyWordsLabel: 'Expliquer simplement',
   easyWordsPrompt:
     "Explique en français le texte sélectionné ci-dessous pour qu'une personne qui a besoin d'un texte facile à lire puisse le comprendre. Utilise des mots de tous les jours et des phrases courtes, et n'oublie aucun fait, chiffre ou condition. Ne modifie pas le document.\n\nTexte sélectionné :\n{text}",

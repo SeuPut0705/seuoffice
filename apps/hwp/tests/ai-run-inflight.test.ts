@@ -5,10 +5,12 @@
  * hears of it when the answer comes back. Against the real panel, the real hwp skill and the
  * real plugin over a real rhwp document (see ai-run-harness.ts), the run must never be let
  * go of with an edit of its still in the document, and a call the skill makes after the run
- * ended must never reach the editor.
+ * ended must never reach the editor. The person's own edits from the app window (the document
+ * check's font fix, the memo panel) are never counted into a run's steps while it holds the
+ * document.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, createElement } from 'react'
+import { act, createElement, type ComponentProps } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import type { AgentStreamCallbacks } from '@genoffice/agent-core'
 import { defaultAiSettings } from '@genoffice/ai-provider'
@@ -16,6 +18,8 @@ import { AiPanel } from '../src/renderer/ai/AiPanel'
 import type { AgentBridge } from '../src/renderer/ai/agent-bridge'
 import { t } from '../src/renderer/i18n/locale'
 import type { HoldState } from '../src/renderer/ai/turn-proposal'
+import { DocCheckPanel } from '../src/renderer/check/DocCheckPanel'
+import { createAiHoldWiring } from '../src/renderer/print-flow'
 import { fakeProjectFolder } from './fake-project-folder'
 import { LINES, openEditor, same, useEngine, type TestEditor } from './ai-run-harness'
 
@@ -83,7 +87,11 @@ beforeEach(() => {
   transport.turns = []
 })
 
+let checkRoot: Root | null = null
+
 afterEach(() => {
+  if (checkRoot) act(() => checkRoot!.unmount())
+  checkRoot = null
   if (root) act(() => root!.unmount())
   root = null
   container = null
@@ -194,6 +202,27 @@ async function mountPanel(bridge: AgentBridge, hwpApi: Record<string, unknown> =
     reject: () => click('.ai-changes-actions .ai-changes-revert:not(.ai-changes-accept)'),
     /** the person's answer to the run is waiting on the card */
     hasProposal: () => container!.querySelector('.ai-changes-accept') !== null,
+    /**
+     * The document check panel, in the same frame (the app window, which the editor's run lock
+     * does not cover), over `bridge` and the app's record of the hold.
+     */
+    async mountCheck(checked: AgentBridge, aiHold: ComponentProps<typeof DocCheckPanel>['aiHold']) {
+      const box = panelWindow.document.createElement('div')
+      panelWindow.document.body.appendChild(box)
+      checkRoot = createRoot(box)
+      await act(async () => {
+        checkRoot!.render(
+          createElement(DocCheckPanel, {
+            bridge: checked,
+            format: 'hwp',
+            onClose: () => undefined,
+            aiHold,
+          }),
+        )
+      })
+      await settle()
+      return box
+    },
     unmount: async () => {
       await act(async () => root!.unmount())
       root = null
@@ -485,5 +514,106 @@ describe('Stop pressed while a picture is being measured, and a new request star
     await panel.accept()
     expect(editor.lines()).toContain('첫 번째 문단입니다.')
     expect((await editor.bridge.listPictures()).count).toBe(0)
+  })
+})
+
+describe('the document check panel while an AI run holds the document', () => {
+  /** a document that uses a font the check offers to replace */
+  async function fontDocument() {
+    const editor = openEditor()
+    await editor.bridge.formatText('첫째', null, false, { font: '휴먼명조' })
+    return editor
+  }
+  /** the bridge the panel gets, with the writes it makes counted */
+  function countingWrites(editor: TestEditor) {
+    const writes = vi.fn()
+    const bridge = new Proxy(editor.bridge, {
+      get: (target, name) => {
+        if (name !== 'replaceFont') return target[name as keyof AgentBridge]
+        return (...args: Parameters<AgentBridge['replaceFont']>) => {
+          writes()
+          return target.replaceFont(...args)
+        }
+      },
+    })
+    return { bridge, writes }
+  }
+
+  it('refuses the font fix without touching the editor, and does it once the run is out', async () => {
+    const editor = await fontDocument()
+    transport.turns = [[INSERT]]
+    const wiring = createAiHoldWiring()
+    const { bridge, writes } = countingWrites(editor)
+    const panel = await mountPanel(bridge)
+    panel.onRunHold(wiring.onRunHold)
+    const check = await panel.mountCheck(bridge, wiring.tracker)
+    const fix = () => check.querySelector<HTMLButtonElement>('.doc-check-fix')
+    await vi.waitFor(() => expect(fix()).not.toBeNull())
+
+    // the run makes its change and waits on the model: it holds the document
+    await panel.send()
+    await vi.waitFor(() => expect(editor.lines()).toContain(AI_PARAGRAPH))
+    expect(await editor.bridge.runSteps()).toBe(1)
+
+    await act(async () => fix()!.click())
+    await settle()
+    // the fix is not made: the run's steps are its own, and the person is told why
+    expect(writes).not.toHaveBeenCalled()
+    expect(await editor.bridge.runSteps()).toBe(1)
+    expect(fix()!.disabled).toBe(true)
+    expect(check.textContent).toContain(t('checkAiRunning'))
+
+    // the run is out of the document: the fix works, and the notice is gone
+    await panel.stop()
+    expect(panel.held.at(-1)).toBe('free')
+    expect(check.textContent).not.toContain(t('checkAiRunning'))
+    await act(async () => fix()!.click())
+    await settle()
+    expect(writes).toHaveBeenCalledTimes(1)
+    expect(fix()).toBeNull()
+  })
+
+  it('refuses at the click too, when the run took the document after the last render', async () => {
+    const editor = await fontDocument()
+    const { bridge, writes } = countingWrites(editor)
+    let held = false
+    // the panel is never told of the change: what it drew still says the document is free
+    const panel = await mountPanel(bridge)
+    const check = await panel.mountCheck(bridge, { isHeld: () => held, subscribe: () => () => {} })
+    held = true
+    await act(async () => check.querySelector<HTMLButtonElement>('.doc-check-fix')!.click())
+    await settle()
+    expect(writes).not.toHaveBeenCalled()
+  })
+
+  it('leaves the memo panel to the plugin: its memo calls are refused under the run lock', async () => {
+    const editor = openEditor()
+    const anchor = {
+      place: 'body',
+      sectionIndex: 0,
+      paraIndex: 1,
+      startCharIdx: 0,
+      endCharIdx: 2,
+    } as never
+    const made = await editor.bridge.insertMemo(anchor, 'person', 'a note')
+    if (!made.ok) throw new Error('the memo was not made')
+    const before = editor.bytes()
+
+    await editor.bridge.setRunLock(true)
+    const elsewhere = { ...(anchor as object), paraIndex: 2 } as never
+    expect(await editor.bridge.insertMemo(elsewhere, 'person', 'another')).toEqual({
+      ok: false,
+      reason: 'edit_locked',
+    })
+    expect(await editor.bridge.setMemo(made.id, 'changed')).toEqual({
+      ok: false,
+      reason: 'edit_locked',
+    })
+    expect(await editor.bridge.removeMemo(made.id)).toEqual({ ok: false, reason: 'edit_locked' })
+    expect(same(editor.bytes(), before)).toBe(true)
+    expect(await editor.bridge.runSteps()).toBe(0)
+
+    await editor.bridge.setRunLock(false)
+    expect(await editor.bridge.setMemo(made.id, 'changed')).toEqual({ ok: true })
   })
 })

@@ -40,18 +40,22 @@ export interface HoldWatch {
 
 /**
  * The app's one record of the AI run's hold on the document, fed by the panel's `onRunHold`:
- * what its saves, copies and exports read, and what a print job watches. A stranded run is
- * never let go of.
+ * what its saves, copies and exports read, what a print job watches, and what a panel that
+ * must not edit meanwhile (the document check) draws itself from. A stranded run is never let
+ * go of.
  */
 export class HoldTracker implements HoldWatch {
   private held = false
   private stranded = false
   private turnedOn = 0
+  private readonly listeners = new Set<() => void>()
 
   set(state: HoldState): void {
+    const before = this.held
     if (state !== 'free') this.turnedOn += 1
     if (state === 'stranded') this.stranded = true
     this.held = this.stranded || state === 'held'
+    if (this.held !== before) for (const listener of [...this.listeners]) listener()
   }
 
   isHeld(): boolean {
@@ -64,6 +68,12 @@ export class HoldTracker implements HoldWatch {
 
   epoch(): number {
     return this.turnedOn
+  }
+
+  /** `listener` is called each time the document turns held or free; the returned call stops it. */
+  subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener)
+    return () => void this.listeners.delete(listener)
   }
 }
 

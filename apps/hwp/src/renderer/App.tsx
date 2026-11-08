@@ -1089,6 +1089,7 @@ export default function App() {
           {phase === 'ready' && checkOpen && (
             <DocCheckPanel
               bridge={agentBridge}
+              aiHold={aiHold}
               format={docFormat}
               revision={docRevision}
               onClose={() => setCheckOpen(false)}

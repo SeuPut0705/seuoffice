@@ -273,6 +273,8 @@ export const pt = {
   checkAskAi: 'Entregar a correção à IA',
   checkHandedOff: 'O pedido está no campo da IA. Reveja e envie.',
   checkFixFailed: 'Não foi possível alterar.',
+  checkAiRunning:
+    'Não é possível alterar a fonte enquanto a IA edita o documento. Tente novamente quando terminar.',
   easyWordsLabel: 'Explicar com palavras simples',
   easyWordsPrompt:
     'Explique em português o texto selecionado abaixo para que alguém que precisa de textos fáceis de ler também entenda. Use palavras do dia a dia e frases curtas, e não deixe de fora nenhum fato, número ou condição. Não altere o documento.\n\nTexto selecionado:\n{text}',

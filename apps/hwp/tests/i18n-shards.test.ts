@@ -27,6 +27,7 @@ describe('hwp renderer strings', () => {
       expect(strings[lang].aiEmptyBody, lang).not.toBe(strings.en.aiEmptyBody)
       expect(strings[lang].aiRevertRefused, lang).not.toBe(strings.en.aiRevertRefused)
       expect(strings[lang].checkTitle, lang).not.toBe(strings.en.checkTitle)
+      expect(strings[lang].checkAiRunning, lang).not.toBe(strings.en.checkAiRunning)
     }
   })
 
