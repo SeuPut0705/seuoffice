@@ -4,6 +4,7 @@ import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
   createWebBridge,
   documentByPath,
+  editMode,
   installWebBridge,
   reportOpened,
   unsupported,
@@ -13,6 +14,7 @@ import {
 import { setUiLang } from '@genoffice/i18n'
 import { getPrivateFontData, listPrivateFontFaces } from '../main/fonts'
 import type { DesktopFilesApi, OpenResult, SlidesApi } from '../shared/ipc'
+import { deckEdits, installHostSave } from './deck-edits'
 import { deckReads } from './deck-reads'
 import { openPptxForWeb, renderDeck } from './session'
 
@@ -262,6 +264,9 @@ const slidesApi: Partial<SlidesApi> = {
   aiSubscription: undefined,
   aiToolCapabilities: undefined,
   templateBytes: undefined,
+  // a page the host lets edit: what deck-edits.ts carries over replaces the refusals and the
+  // read-only answers above
+  ...(editMode() ? deckEdits : {}),
 }
 
 /** Chat attachments are local files; the page has none to hand over */
@@ -276,6 +281,7 @@ const desktopFiles: Partial<DesktopFilesApi> = {
 
 export function installBridges(): void {
   setUiLang(webLanguage() as SlidesLang)
+  if (editMode()) installHostSave()
   installWebBridge('slidesApi', createWebBridge<SlidesApi>('slidesApi', slidesApi))
   installWebBridge('desktop', createWebBridge<DesktopFilesApi>('desktop', desktopFiles))
   // aiOfficeDriveAi, aiOfficeOutbound, aiOfficeMcpTools, aiOfficeUserSkills, aiOfficeDocs,

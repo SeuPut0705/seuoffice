@@ -12,11 +12,12 @@ import {
   getFontMetrics,
   readSlideMedia,
   resetFontMetrics,
+  type Session,
 } from '../main/session-state'
 import { shapedMetricsReady } from '../main/shaped-metrics'
 import type { RenderSlide } from '@genoffice/pptx-render'
 import type { OpenResult } from '../shared/ipc'
-import { currentDeck, setDeck } from './deck-reads'
+import { setDeck } from './deck-reads'
 import { putFile } from './memfs'
 import { loadTemplateFontsFor } from './template-fonts'
 
@@ -91,36 +92,42 @@ function mediaUrlFor(url: string): string {
   return URL.createObjectURL(new Blob([media.body.slice()], { type: media.mime }))
 }
 
+/** Desktop media URL to the page URL standing for it, kept for the page's lifetime */
+const pageUrls = new Map<string, string>()
+
 /** Replace every media URL string in the tree, one blob per distinct URL */
-function resolveMedia(value: unknown, urls: Map<string, string>): unknown {
+function resolveMedia(value: unknown): unknown {
   if (typeof value === 'string') {
     if (!value.startsWith(MEDIA_SCHEME)) return value
-    let resolved = urls.get(value)
-    if (resolved === undefined) urls.set(value, (resolved = mediaUrlFor(value)))
+    let resolved = pageUrls.get(value)
+    if (resolved === undefined) pageUrls.set(value, (resolved = mediaUrlFor(value)))
     return resolved
   }
   if (value === null || typeof value !== 'object' || ArrayBuffer.isView(value)) return value
   if (Array.isArray(value)) {
-    for (let i = 0; i < value.length; i++) value[i] = resolveMedia(value[i], urls)
+    for (let i = 0; i < value.length; i++) value[i] = resolveMedia(value[i])
     return value
   }
   const record = value as Record<string, unknown>
-  for (const key of Object.keys(record)) record[key] = resolveMedia(record[key], urls)
+  for (const key of Object.keys(record)) record[key] = resolveMedia(record[key])
   return value
 }
 
-let fitWidth = 0
-
-function layOut(opened: OpenedPptx): RenderSlide[] {
-  const slides = buildAllRenderSlides(opened, fitWidth)
-  resolveMedia(slides, new Map())
-  return slides
+/** Render state built by the desktop helpers, with its media URLs made reachable from the page */
+export function forPage<T>(rendered: T): T {
+  return resolveMedia(rendered) as T
 }
 
-/** Every slide of the open deck, laid out for the width the renderer opened it with */
+let session: Session | undefined
+
+/** The open deck with its history, in the shape the desktop's main process keeps per window */
+export function currentSession(): Session | undefined {
+  return session
+}
+
+/** Every slide of the open deck, laid out for the width the renderer last asked for */
 export function renderDeck(): RenderSlide[] | null {
-  const opened = currentDeck()
-  return opened ? layOut(opened) : null
+  return session ? forPage(buildAllRenderSlides(session.opened, session.fitWidthPx)) : null
 }
 
 /**
@@ -145,11 +152,16 @@ export async function openPptxForWeb(
     if (await loadTemplateFontsFor(opened.archive)) resetFontMetrics()
     adoptEmbeddedFonts(opened)
     setDeck(opened)
-    fitWidth = fitWidthPx
-    const slides = layOut(opened)
+    session = {
+      path: doc.virtualPath,
+      opened,
+      fitWidthPx,
+      undoStack: [],
+      redoStack: [],
+    }
     return {
       path: doc.virtualPath,
-      slides,
+      slides: renderDeck() ?? [],
       size: { cx: opened.deck.size.cx, cy: opened.deck.size.cy },
       defaultFont: deckDefaultFont(opened),
     }
