@@ -5,7 +5,11 @@ import { md5, sha1 } from '@noble/hashes/legacy.js'
 import { sha256, sha384, sha512 } from '@noble/hashes/sha2.js'
 import { WebUnsupportedError } from '../../errors'
 
-type Input = string | ArrayBuffer | ArrayBufferView
+/**
+ * Node's inputs plus plain byte arrays: outside Node, cfb hands out arrays
+ * and officecrypto-tool hashes them, as browser crypto polyfills allow.
+ */
+type Input = string | ArrayBuffer | ArrayBufferView | readonly number[]
 type Encoding = 'hex' | 'base64' | 'utf8' | 'utf-8' | 'latin1' | 'binary'
 type DigestEncoding = 'hex' | 'base64'
 
@@ -15,7 +19,9 @@ type Algorithm = keyof typeof ALGORITHMS
 function bytes(input: Input, encoding?: Encoding): Uint8Array {
   if (typeof input === 'string') return Buffer.from(input, encoding ?? 'utf8')
   if (input instanceof ArrayBuffer) return new Uint8Array(input)
-  return new Uint8Array(input.buffer, input.byteOffset, input.byteLength)
+  if (ArrayBuffer.isView(input))
+    return new Uint8Array(input.buffer, input.byteOffset, input.byteLength)
+  return Uint8Array.from(input)
 }
 
 function algorithm(name: string): (typeof ALGORITHMS)[Algorithm] {

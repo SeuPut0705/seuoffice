@@ -33,6 +33,10 @@ describe('crypto shim', () => {
       'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
     )
     expect(createHash('md5').update('abc').digest('hex')).toBe('900150983cd24fb0d6963f7d28e17f72')
+    // cfb's byte arrays outside Node hash as their bytes
+    expect(createHash('md5').update([0x61, 0x62, 0x63]).digest('hex')).toBe(
+      '900150983cd24fb0d6963f7d28e17f72',
+    )
   })
 
   it('throws for an algorithm the web build lacks', () => {
