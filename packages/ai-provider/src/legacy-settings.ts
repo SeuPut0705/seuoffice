@@ -133,7 +133,7 @@ export function normalizeAiSettings(
       AI_PROVIDERS.map((m): AiProviderId => m.id),
     ),
   }
-  // a per-request token is never a setting (seuoffice decision 0008): one put in the file is dropped
+  // a per-request token is never a setting (seuoffice decision 0009): one put in the file is dropped
   for (const meta of AI_PROVIDERS) {
     if (meta.requestToken) providers[meta.id] = { ...providers[meta.id], apiKey: '' }
   }

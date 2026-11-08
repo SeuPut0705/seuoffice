@@ -12,7 +12,7 @@ export type AiProtocol =
   | 'codex-app-server'
   | 'claude-code-cli'
   | 'chatgpt-responses'
-  /** seuoffice decision 0008: chat-completions shape, the caller's token per request */
+  /** seuoffice decision 0009: chat-completions shape, the caller's token per request */
   | 'gateway-complete'
 
 export interface ProviderCapabilities {

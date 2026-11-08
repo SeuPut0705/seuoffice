@@ -22,7 +22,7 @@ import {
 import { setAiTransientRetryDelays } from '../src/fetch'
 
 /**
- * A local gateway speaking `gateway-complete` (seuoffice decision 0008): it
+ * A local gateway speaking `gateway-complete` (seuoffice decision 0009): it
  * records what arrived and answers with chat-completions SSE, or a JSON body
  * when the request is not streamed.
  */

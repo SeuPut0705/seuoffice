@@ -81,7 +81,7 @@
   - 로그인을 띄우려면 앱이 `SubscriptionIpcSetup.chatGptSignIn`(브라우저 열기, 돌아왔을 때의 페이지)을 준다. 없으면 로그인은 `unsupported`다. 편집기 뒷단 셋이 같은 값을 넘긴다.
 - **상태가 없을 때.** `auto`와 보내기 문지기는 `subscriptionStateOf`로 읽는다. CLI의 상태가 없으면 `checking`(기다린다), ChatGPT의 상태가 없으면 `signed-out`이다. `subscriptionStatusMapOf`도 답이 왔는데 `chatgpt`가 없으면 `signed-out`으로 채운다.
 - CLI만의 표와 함수(찾기, 설치, 업데이트, 로그인 창, 종량 허용)는 `AiSubscriptionCliId`로 받는다. `chatgpt`가 들어오면 `invalid`로 답한다.
-- **AI 게이트웨이(seuoffice 결정 0008).** 제공자 `gateway`는 프로토콜 `gateway-complete`(OpenAI chat-completions 모양, `src/protocols/gateway-complete.ts`)로 간다. 토큰은 설정이 아니다. 요청마다 `setGatewayTokenProvider`로 등록한 공급자(없으면 환경 변수 `SEUOFFICE_AI_GATEWAY_TOKEN`)에게 묻고 그 요청의 `Authorization` 머리글에만 싣는다. `sanitizeAiSettings`·`normalizeAiSettings`는 `requestToken` 제공자의 `apiKey`를 비운다. 토큰을 `AiProviderConfig`에 담아 저장하거나 로그·오류 글에 싣는 길을 만들지 않는다. 주소만 있으면 설정된 것이고, `auto`의 후보가 아니다.
+- **AI 게이트웨이(seuoffice 결정 0009).** 제공자 `gateway`는 프로토콜 `gateway-complete`(OpenAI chat-completions 모양, `src/protocols/gateway-complete.ts`)로 간다. 토큰은 설정이 아니다. 요청마다 `setGatewayTokenProvider`로 등록한 공급자(없으면 환경 변수 `SEUOFFICE_AI_GATEWAY_TOKEN`)에게 묻고 그 요청의 `Authorization` 머리글에만 싣는다. `sanitizeAiSettings`·`normalizeAiSettings`는 `requestToken` 제공자의 `apiKey`를 비운다. 토큰을 `AiProviderConfig`에 담아 저장하거나 로그·오류 글에 싣는 길을 만들지 않는다. 주소만 있으면 설정된 것이고, `auto`의 후보가 아니다.
 
 ## 이 모듈의 방식
 

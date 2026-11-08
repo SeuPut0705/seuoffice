@@ -1,5 +1,5 @@
 /**
- * `gateway-complete` (seuoffice decision 0008): an HTTP gateway that speaks the
+ * `gateway-complete` (seuoffice decision 0009): an HTTP gateway that speaks the
  * OpenAI chat-completions request and SSE shape, authenticated with the
  * caller's token. The token is asked for on every request and goes only into
  * that request's Authorization header: it is never part of the settings, so
