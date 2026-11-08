@@ -1303,6 +1303,18 @@ const PATCHES = {
           `import { STUDIO_READ_ONLY } from '${READ_ONLY_MODULE}';`,
       },
       {
+        // dropped before the command error boundary, which would report every typed key
+        find: [
+          '  executeOperation(desc: OperationDescriptor): void {',
+          "    this.withCommandErrorBoundary(desc.kind === 'snapshot' ? desc.operationType : desc.command.type, () => {",
+        ].join('\n'),
+        replace: [
+          '  executeOperation(desc: OperationDescriptor): void {',
+          '    if (STUDIO_READ_ONLY) return;',
+          "    this.withCommandErrorBoundary(desc.kind === 'snapshot' ? desc.operationType : desc.command.type, () => {",
+        ].join('\n'),
+      },
+      {
         find: [
           '  private isOperationAllowedInEditMode(desc: OperationDescriptor): boolean {',
           "    if (this.editMode !== 'form') return true;",
