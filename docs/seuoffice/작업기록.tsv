@@ -28,3 +28,5 @@ ts	phase	decision	why	evidence	result
 2026-11-09T06:30:00Z	U7	feat/xlsx-web-save를 합치고 결정 번호를 0014로 바꿨다	단위 보고: native:test 304+7, 웹 시험 25 통과. 보기 모드 차단을 네 겹으로 넓힌 것은 Univer 플러그인 변경과 오른쪽 단추 편집이 셀 가드를 피했기 때문	Merge feat/xlsx-web-save	합친 main 검증 대기
 2026-11-09T06:31:00Z	U10	feat/web-encrypted-docs를 합치고 결정 번호를 0015로 바꿨다. apps/web devDependencies 충돌(fflate, officecrypto-tool)은 둘 다 남기고 package-lock은 다시 만들었다	두 가지가 같은 줄 근처에 의존성을 더했다	Merge feat/web-encrypted-docs	합친 main 검증 대기
 2026-11-09T02:30:00+09:00	harness	웹 시험의 저장 단추 찾기를 ⌘S와 Ctrl+S 둘 다 받게 고쳤다	GitHub(Linux)에서 seuoffice 워크플로가 save-docs 2건으로 실패했다. 단추 이름이 Mac에서만 ⌘S이고 다른 곳은 Ctrl+S다(packages/i18n platformShortcuts)	run 42504474202, 8dfa5a224	로컬 22 통과, CI 확인 대기
+2026-11-09T03:16:00+09:00	U11	U11 가지를 합치기 전에 다른 모델(reviewer)로 독립 검토했고, 받아들이지 않은 AI 편집이 디스크에 쓰이는 길 2개와 잠금이 남는 길 1개를 찾아 단위 세션에 고치게 했다	단위가 처음 낸 ok를 스스로 거둔 뒤에도 6.8천 줄 변경이라 자기 보고만으로 합치지 않았다	~/.seuoffice-program/U11-review.md, history://U11Review	합치기 보류
+2026-11-09T03:00:00+09:00	harness	합친 main(6302652)에서 CI와 seuoffice 워크플로가 모두 통과했다	상위 CI 첫 녹색 뒤에도 웹 시험 Linux 실패를 하나 고친 뒤 다시 확인	run 42505228828, 42505228923	녹색
