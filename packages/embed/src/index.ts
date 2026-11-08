@@ -8,20 +8,20 @@
 
 export type SeuofficeApp = 'docs' | 'sheets' | 'slides' | 'pdf' | 'hwp'
 
-const APP_BY_EXTENSION: Record<string, SeuofficeApp> = {
-  pdf: 'pdf',
-  docx: 'docs',
-  xlsx: 'sheets',
-  pptx: 'slides',
-  hwp: 'hwp',
-  hwpx: 'hwp',
-}
+const APP_BY_EXTENSION: ReadonlyMap<string, SeuofficeApp> = new Map([
+  ['pdf', 'pdf'],
+  ['docx', 'docs'],
+  ['xlsx', 'sheets'],
+  ['pptx', 'slides'],
+  ['hwp', 'hwp'],
+  ['hwpx', 'hwp'],
+])
 
 /** The suite app that opens this file, by extension; null when none does */
 export function appForFileName(fileName: string): SeuofficeApp | null {
   const dot = fileName.lastIndexOf('.')
   if (dot < 0) return null
-  return APP_BY_EXTENSION[fileName.slice(dot + 1).toLowerCase()] ?? null
+  return APP_BY_EXTENSION.get(fileName.slice(dot + 1).toLowerCase()) ?? null
 }
 
 export const MAX_EMBED_BYTES = 50 * 1024 * 1024

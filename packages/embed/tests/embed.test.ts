@@ -32,6 +32,10 @@ describe('appForFileName', () => {
     expect(appForFileName('x.doc')).toBeNull()
     expect(appForFileName('noext')).toBeNull()
     expect(appForFileName('r.tar.pdf')).toBe('pdf')
+    // inherited object keys are not extensions
+    expect(appForFileName('x.constructor')).toBeNull()
+    expect(appForFileName('x.__proto__')).toBeNull()
+    expect(appForFileName('x.toString')).toBeNull()
   })
 })
 
