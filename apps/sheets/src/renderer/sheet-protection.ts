@@ -402,6 +402,39 @@ export function rangesTouchLockedCell(
   return false
 }
 
+/// Ribbon commands a read-only open (the web viewer) still runs: they look,
+/// navigate or copy and never write the edit journal. Prefixed ids end in ':'.
+const READ_ONLY_RIBBON_COMMANDS = [
+  'copy',
+  'find',
+  'goto-open',
+  'comment-next',
+  'comment-prev',
+  'comments-pane-toggle',
+  'trace-precedents',
+  'trace-dependents',
+  'remove-arrows',
+  'watch-window',
+  'workbook-statistics',
+  'toggle-cross-highlight',
+  'toggle-formula-bar',
+  'toggle-page-break-preview',
+  'zoom-in',
+  'zoom-out',
+  'zoom-reset',
+  'zoom-to-selection',
+  'zoom:',
+]
+
+/// Whether a ribbon command may run on this workbook; everything else is an
+/// edit the renderer journals itself, past the Univer command guard.
+export function ribbonCommandAllowed(state: LazyWorkbookState | null, command: string): boolean {
+  if (!state?.file.readOnly) return true
+  return READ_ONLY_RIBBON_COMMANDS.some((allowed) =>
+    allowed.endsWith(':') ? command.startsWith(allowed) : command === allowed,
+  )
+}
+
 export interface SheetProtectionGuardDeps {
   readonly getState: () => LazyWorkbookState | null
   readonly notify: (message: string) => void

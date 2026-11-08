@@ -131,3 +131,28 @@ test('view mode keeps the workbook as it is and saves nothing', async ({ page })
   await expect(saveButton(frame)).toBeDisabled()
   expect(downloads).toBe(0)
 })
+
+/** The Insert tab's text box: an edit the renderer journals itself, outside Univer's commands */
+async function insertTextBox(frame: FrameLocator) {
+  await frame
+    .getByRole('tab', { name: '삽입' })
+    .or(frame.getByText('삽입', { exact: true }))
+    .first()
+    .click()
+  await frame
+    .getByRole('button', { name: /텍스트 상자/ })
+    .first()
+    .click()
+}
+
+test('a text box inserts in edit mode and not in view mode', async ({ page }) => {
+  const editing = await open(page, FIXTURE, true)
+  await insertTextBox(editing)
+  await unsaved(page)
+  await expect(saveButton(editing)).toBeEnabled()
+
+  const viewing = await open(page, FIXTURE, false)
+  await insertTextBox(viewing)
+  await page.waitForTimeout(1000)
+  await expect(saveButton(viewing)).toBeDisabled()
+})
