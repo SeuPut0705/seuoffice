@@ -184,21 +184,44 @@ const hwpApi: Partial<HwpApi> = {
   ...(canSave ? saveApi : {}),
 }
 
+/** As long as the desktop main process waits for a requested save (hwp-main.ts `requestHwpSave`) */
+const HOST_SAVE_TIMEOUT_MS = 120_000
+
+/** One save the host asked for, settled by the next save that ends (or the timeout) */
+function saveForHost(): Promise<void> {
+  if (saveListeners.size === 0) {
+    return Promise.reject(new Error('hwp: the document is not ready to save'))
+  }
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(
+      () => settleSave(false, 'hwp: the save did not finish in time'),
+      HOST_SAVE_TIMEOUT_MS,
+    )
+    hostSave = {
+      resolve: () => {
+        clearTimeout(timer)
+        resolve()
+      },
+      reject: (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    }
+    // the host asks for the bytes, so the save runs even when nothing changed: the renderer
+    // answers 'saveAs' without asking the editor, and here both modes write the opened name
+    requestSave('saveAs')
+  })
+}
+
 export function installBridges(): void {
   installWebBridge('hwpApi', createWebBridge<HwpApi>('hwpApi', hwpApi))
   if (!canSave) return
   watchSaveKey(() => requestSave('save'))
-  // the host asks for the bytes, so the save runs even when nothing changed: the renderer
-  // answers 'saveAs' without asking the editor, and here both modes write the opened name
-  onHostSaveRequest(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        if (saveListeners.size === 0) {
-          reject(new Error('hwp: the document is not ready to save'))
-          return
-        }
-        hostSave = { resolve, reject }
-        requestSave('saveAs')
-      }),
-  )
+  // one host request at a time, in arrival order: a second one waits for the first to settle
+  let hostQueue: Promise<unknown> = Promise.resolve()
+  onHostSaveRequest(() => {
+    const run = hostQueue.then(saveForHost)
+    hostQueue = run.catch(() => {})
+    return run
+  })
 }
