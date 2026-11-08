@@ -116,13 +116,16 @@ async function editorDirty(page: Page): Promise<boolean> {
   })
 }
 
-/** The status bar's count of the document's characters, once it settled */
+/**
+ * The status bar's count of the document's characters, once it settled. With a selection the
+ * item reads "selected / total"; the total is the last number.
+ */
 async function documentCount(page: Page, studio: FrameLocator): Promise<string> {
   const count = studio.locator('#ieum-sb-char-count')
   await expect(count).toHaveText(/\d/, { timeout: 10_000 })
   // the count follows a change after a pause and an idle moment (char-count.mjs)
   await page.waitForTimeout(3_000)
-  return (await count.textContent()) ?? ''
+  return /[\d,]+(?=\D*$)/.exec((await count.textContent()) ?? '')?.[0] ?? ''
 }
 
 test('a document opened for viewing can be neither changed nor saved', async ({ page }) => {
@@ -132,8 +135,10 @@ test('a document opened for viewing can be neither changed nor saved', async ({ 
   page.on('download', (download) => downloads.push(download))
   const before = await documentCount(page, studio)
 
-  // typing, deleting, splitting a paragraph, pasting and formatting the whole document
+  // typing (keys, and text the input method hands over), deleting, splitting a paragraph,
+  // pasting and formatting the whole document
   await typeInDocument(page, 'SEUWEBV')
+  await page.keyboard.insertText('가나다')
   await page.keyboard.press('Backspace')
   await page.keyboard.press('Delete')
   await page.keyboard.press('Enter')
