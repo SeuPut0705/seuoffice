@@ -4366,6 +4366,7 @@ export function App({
       undoCapacity: lazyWorkbookRef.current ? UNIVER_UNDO_CAPACITY : Number.POSITIVE_INFINITY,
       undoCellBudget: lazyWorkbookRef.current ? AI_UNDO_CELL_BUDGET : Number.POSITIVE_INFINITY,
       unundoableOps: lazyWorkbookRef.current ? JOURNAL_ONLY_OPS : new Set<string>(),
+      dropRedo: () => dropRedoStack(univerRef.current),
       undo: async (steps) => {
         // the revert is a write of the run itself: the person's veto lets it through
         const endAgentWrite = beginAgentWrite()
@@ -4428,10 +4429,7 @@ export function App({
    */
   async function holdAndUnlock(record: RunRecord): Promise<TurnProposal> {
     try {
-      const held = await holdRun(proposalBackend(), await record.settle())
-      // the run now sits on the redo stack: a person's Redo must not bring it back unaccepted
-      dropRedoStack(univerRef.current)
-      return held
+      return await holdRun(proposalBackend(), await record.settle())
     } catch (error: unknown) {
       aiRunLock.stranded = true
       throw error
@@ -4478,9 +4476,7 @@ export function App({
       setProposal(next)
       accepted = next.kind === 'none'
       if (!accepted) {
-        // plans applied before the refusal were rolled back onto the redo stack: drop them
-        // there too, and no Undo to offer
-        dropRedoStack(univerRef.current)
+        // plans applied before the refusal were rolled back: no Undo to offer
         patchLastAssistant(({ autoApplied: _autoApplied, ...entry }) => entry)
       }
     } catch (error: unknown) {

@@ -5,6 +5,7 @@ import { UniverSheetsPlugin } from '@univerjs/sheets'
 import '@univerjs/sheets/facade'
 import { afterEach, describe, expect, it } from 'vitest'
 
+import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import {
   aiRunOpenRefusal,
   aiRunSaveRefusal,
@@ -16,6 +17,7 @@ import {
 } from '../src/renderer/ai/run-lock'
 import {
   accept,
+  holdRun,
   type AppliedOutcome,
   type ProposalBackend,
   type TurnProposal,
@@ -180,6 +182,33 @@ describe('the person editing the workbook while an AI run is in flight', () => {
     expect([cellOf(runtime, 'A1'), cellOf(runtime, 'A2')]).toEqual(before)
   })
 
+  /** The app's backend for holdRun over a real Univer: its undo is the run's own write. */
+  const univerHoldBackend = (runtime: UniverRuntime): ProposalBackend => ({
+    undoCapacity: 20,
+    undoCellBudget: Number.POSITIVE_INFINITY,
+    unundoableOps: new Set<string>(),
+    undo: async (steps) => {
+      const end = beginAgentWrite()
+      try {
+        for (let step = 0; step < steps; step += 1) await runtime.univerAPI.undo()
+      } finally {
+        end()
+      }
+    },
+    watch: () => () => false,
+    apply: async () => ({ ok: false, undoSteps: 0 }),
+    dropRedo: () => dropRedoStack(runtime),
+  })
+  const planOf = (id: string): ChangePlan => ({
+    transactionId: id,
+    baseRevision: 0,
+    cellChanges: [],
+    sheetRenames: [],
+    structuralChanges: [],
+    formatChanges: [],
+    warnings: [],
+  })
+
   it("cannot bring a held run back with the person's Redo", async () => {
     const runtime = bootWorkbook()
     installAiRunLockGuard(runtime, () => undefined)
@@ -187,13 +216,35 @@ describe('the person editing the workbook while an AI run is in flight', () => {
     lockForAiRun()
     const endAgentWrite = beginAgentWrite()
     setCell(runtime, 'A1', 11) // the run's edit
-    await runtime.univerAPI.undo() // the hold takes it back out
     endAgentWrite()
-    dropRedoStack(runtime)
+    const held = await holdRun(univerHoldBackend(runtime), {
+      plans: [planOf('t1')],
+      undoSteps: 1,
+    })
     unlockAfterAiRun()
+    expect(held.kind).toBe('pending')
 
     await runtime.univerAPI.redo() // the person's Redo while the proposal is pending
     expect(cellOf(runtime, 'A1')).toBe(10)
+  })
+
+  it("keeps the person's own Redo after an AI turn that changed nothing", async () => {
+    const runtime = bootWorkbook()
+    installAiRunLockGuard(runtime, () => undefined)
+    setCell(runtime, 'A2', 5) // the person's edit
+    await runtime.univerAPI.undo() // and their undo of it
+    expect(cellOf(runtime, 'A2')).toBe(20)
+
+    lockForAiRun() // a read-only or failed AI turn
+    const held = await holdRun(univerHoldBackend(runtime), {
+      plans: [],
+      undoSteps: 0,
+    })
+    unlockAfterAiRun()
+    expect(held.kind).toBe('none')
+
+    await runtime.univerAPI.redo()
+    expect(cellOf(runtime, 'A2')).toBe(5)
   })
 
   it('edits again once the run is over', () => {

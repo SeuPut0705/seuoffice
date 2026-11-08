@@ -40,6 +40,12 @@ export interface ProposalBackend {
   watch(plans: readonly ChangePlan[]): () => boolean
   /** Applies one plan through the app's guarded apply path. */
   apply(plan: ChangePlan): Promise<AppliedOutcome>
+  /**
+   * Empties the redo stack. Called only right after this module undid AI steps
+   * onto it, so a person's Redo cannot bring them back unaccepted; the person's
+   * own redo history is left alone otherwise.
+   */
+  dropRedo?(): void
 }
 
 export type TurnProposal =
@@ -179,6 +185,7 @@ export async function holdRun(backend: ProposalBackend, run: RunSummary): Promis
   }
   if (run.undoSteps === 0) return NO_PROPOSAL
   await backend.undo(run.undoSteps)
+  backend.dropRedo?.()
   if (run.plans.length === 0) return NO_PROPOSAL
   return { kind: 'pending', plans: run.plans, changed: backend.watch(run.plans) }
 }
@@ -199,7 +206,10 @@ export async function accept(
     const outcome = await backend.apply(plan)
     applied += outcome.undoSteps
     if (!outcome.ok) {
-      if (applied > 0) await backend.undo(applied)
+      if (applied > 0) {
+        await backend.undo(applied)
+        backend.dropRedo?.()
+      }
       return stale
     }
   }
