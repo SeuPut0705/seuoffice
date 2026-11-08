@@ -1017,7 +1017,7 @@ describe('manual download fallback', () => {
     expect(openExternal).toHaveBeenCalledTimes(1)
     expect(openExternal).toHaveBeenCalledWith(GITHUB_LATEST_RELEASE_URL)
     expect(GITHUB_LATEST_RELEASE_URL).toBe(
-      'https://github.com/pblsketch/openoffice/releases/latest',
+      'https://github.com/SeuPut0705/seuoffice/releases/latest',
     )
   })
 
@@ -1038,7 +1038,7 @@ describe('manual download fallback', () => {
     actions.onOpenDownload()
     expect(openExternal).toHaveBeenCalledWith(githubReleaseTagUrl('0.3.0-beta.1'))
     expect(githubReleaseTagUrl('0.3.0-beta.1')).toBe(
-      'https://github.com/pblsketch/openoffice/releases/tag/v0.3.0-beta.1',
+      'https://github.com/SeuPut0705/seuoffice/releases/tag/v0.3.0-beta.1',
     )
   })
 })

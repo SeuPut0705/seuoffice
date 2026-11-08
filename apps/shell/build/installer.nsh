@@ -32,7 +32,7 @@
 ; write .odt's default value (APP_ASSOCIATE) and take over the user's ODT
 ; program, so ODT is registered here instead. ODT opens in the Word tab, so the
 ; ProgId borrows the Word icon the installer already places for .docx.
-!define GENOFFICE_ODT_PROGID "IeumOffice.OpenDocumentText"
+!define GENOFFICE_ODT_PROGID "seuoffice.OpenDocumentText"
 
 !macro GenOfficeRegisterOpenWithOdt
   WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODT_PROGID}" "" "OpenDocument Text"
@@ -60,12 +60,12 @@
 ; mind-map, book or diagram icon instead of the bare app icon. The ProgIds match
 ; the name-to-ProgId rule electron-builder.cjs uses for its Windows list
 ; (see tests/product-identity.test.ts).
-!define GENOFFICE_HWP_PROGID "IeumOffice.HWPDocument"
-!define GENOFFICE_HWPX_PROGID "IeumOffice.HWPXDocument"
-!define GENOFFICE_MINDMAP_PROGID "IeumOffice.MindMap"
-!define GENOFFICE_EPUB_PROGID "IeumOffice.EPUBBook"
+!define GENOFFICE_HWP_PROGID "seuoffice.HWPDocument"
+!define GENOFFICE_HWPX_PROGID "seuoffice.HWPXDocument"
+!define GENOFFICE_MINDMAP_PROGID "seuoffice.MindMap"
+!define GENOFFICE_EPUB_PROGID "seuoffice.EPUBBook"
 ; a Visio drawing opens as a new diagram (it is never written), with the diagram icon
-!define GENOFFICE_VSDX_PROGID "IeumOffice.VSDXDrawing"
+!define GENOFFICE_VSDX_PROGID "seuoffice.VSDXDrawing"
 
 !macro GenOfficeRegisterOpenWithHwp
   WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWP_PROGID}" "" "HWP Document"
@@ -129,48 +129,48 @@
 
 ; Windows' "Default apps" page picks an app by its registered capabilities and
 ; records the ProgId the app declared for the type. Without this entry Windows
-; only knows the bare IeumOffice.exe application and records
-; Applications\IeumOffice.exe, whose icon is the app logo: a .hwp chosen that way
+; only knows the bare seuoffice.exe application and records
+; Applications\seuoffice.exe, whose icon is the app logo: a .hwp chosen that way
 ; shows the logo instead of hwp.ico, while a .hwpx chosen from our Open-With
 ; ProgId shows the document icon. Registering capabilities does not change any
 ; default by itself; it makes the user's choice land on the per-type ProgId
 ; (whose DefaultIcon is the document icon). The .hwp/.hwpx/.xmind/.epub/.vsdx/.odt ProgIds
 ; are the product-own Open-With ones defined above; the rest are the ProgIds
 ; electron-builder writes for the Windows file associations.
-!define GENOFFICE_CAPABILITIES_KEY "Software\IeumOffice\Capabilities"
+!define GENOFFICE_CAPABILITIES_KEY "Software\seuoffice\Capabilities"
 
 !macro GenOfficeRegisterApplicationCapabilities
   WriteRegStr SHELL_CONTEXT "Software\RegisteredApplications" "${PRODUCT_NAME}" "${GENOFFICE_CAPABILITIES_KEY}"
   WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}" "ApplicationName" "${PRODUCT_NAME}"
   WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}" "ApplicationIcon" "$appExe,0"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".docx" "IeumOffice.WordDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xlsx" "IeumOffice.ExcelWorkbook"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xlsm" "IeumOffice.ExcelMacroEnabledWorkbook"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xls" "IeumOffice.Excel972003Workbook"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".pptx" "IeumOffice.PowerPointPresentation"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".csv" "IeumOffice.CSVDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".tsv" "IeumOffice.TSVDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".pdf" "IeumOffice.PDFDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".md" "IeumOffice.MarkdownDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".markdown" "IeumOffice.MarkdownDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".html" "IeumOffice.HTMLDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".htm" "IeumOffice.HTMLDocument"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".docx" "seuoffice.WordDocument"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xlsx" "seuoffice.ExcelWorkbook"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xlsm" "seuoffice.ExcelMacroEnabledWorkbook"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xls" "seuoffice.Excel972003Workbook"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".pptx" "seuoffice.PowerPointPresentation"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".csv" "seuoffice.CSVDocument"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".tsv" "seuoffice.TSVDocument"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".pdf" "seuoffice.PDFDocument"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".md" "seuoffice.MarkdownDocument"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".markdown" "seuoffice.MarkdownDocument"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".html" "seuoffice.HTMLDocument"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".htm" "seuoffice.HTMLDocument"
   WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".hwp" "${GENOFFICE_HWP_PROGID}"
   WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".hwpx" "${GENOFFICE_HWPX_PROGID}"
   WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xmind" "${GENOFFICE_MINDMAP_PROGID}"
   WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".epub" "${GENOFFICE_EPUB_PROGID}"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".drawio" "IeumOffice.Diagram"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".dio" "IeumOffice.Diagram"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".drawio" "seuoffice.Diagram"
+  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".dio" "seuoffice.Diagram"
   WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".vsdx" "${GENOFFICE_VSDX_PROGID}"
   WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".odt" "${GENOFFICE_ODT_PROGID}"
 !macroend
 
 !macro GenOfficeUnregisterApplicationCapabilities
-  ; only our registration and our key; a future sibling under Software\IeumOffice
+  ; only our registration and our key; a future sibling under Software\seuoffice
   ; keeps that parent alive
   DeleteRegValue SHELL_CONTEXT "Software\RegisteredApplications" "${PRODUCT_NAME}"
   DeleteRegKey SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}"
-  DeleteRegKey /ifempty SHELL_CONTEXT "Software\IeumOffice"
+  DeleteRegKey /ifempty SHELL_CONTEXT "Software\seuoffice"
 !macroend
 
 ; An update the app starts in this installer's own window ("Restart & Install",
@@ -223,9 +223,9 @@
 !macro customInstall
   Push "$INSTDIR\resources\cli"
   Call GenOfficeAddToUserPath
-  !insertmacro GenOfficeRegisterShellNew "docx" "IeumOffice.WordDocument"
-  !insertmacro GenOfficeRegisterShellNew "xlsx" "IeumOffice.ExcelWorkbook"
-  !insertmacro GenOfficeRegisterShellNew "pptx" "IeumOffice.PowerPointPresentation"
+  !insertmacro GenOfficeRegisterShellNew "docx" "seuoffice.WordDocument"
+  !insertmacro GenOfficeRegisterShellNew "xlsx" "seuoffice.ExcelWorkbook"
+  !insertmacro GenOfficeRegisterShellNew "pptx" "seuoffice.PowerPointPresentation"
   !insertmacro GenOfficeRegisterOpenWithOdt
   !insertmacro GenOfficeRegisterOpenWithHwp
   !insertmacro GenOfficeRegisterOpenWithHwpx
@@ -240,9 +240,9 @@
   Push "$INSTDIR\resources\cli"
   Call un.GenOfficeRemoveFromUserPath
   Push $0
-  !insertmacro GenOfficeUnregisterShellNew "docx" "IeumOffice.WordDocument"
-  !insertmacro GenOfficeUnregisterShellNew "xlsx" "IeumOffice.ExcelWorkbook"
-  !insertmacro GenOfficeUnregisterShellNew "pptx" "IeumOffice.PowerPointPresentation"
+  !insertmacro GenOfficeUnregisterShellNew "docx" "seuoffice.WordDocument"
+  !insertmacro GenOfficeUnregisterShellNew "xlsx" "seuoffice.ExcelWorkbook"
+  !insertmacro GenOfficeUnregisterShellNew "pptx" "seuoffice.PowerPointPresentation"
   !insertmacro GenOfficeUnregisterOpenWithOdt
   !insertmacro GenOfficeUnregisterOpenWithHwp
   !insertmacro GenOfficeUnregisterOpenWithHwpx

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS, PRODUCT_NAME } from '@genoffice/i18n'
 import { docPickerStrings, docPickerText } from '../src/renderer/src/i18n/strings-doc-picker'
 import {
   DOC_PICK_GROUPS,
@@ -39,10 +39,11 @@ describe('doc-picker strings', () => {
   it('writes the product name as the GenOffice token, localized at output', () => {
     for (const lang of LANGS) {
       const dict = docPickerStrings[lang] as Record<string, string>
-      for (const value of Object.values(dict)) expect(value, lang).not.toMatch(/IeumOffice/)
+      for (const value of Object.values(dict))
+        expect(value, lang).not.toMatch(/IeumOffice|이음오피스/)
     }
-    expect(docPickerText('ko', 'docPickTitle')).toContain('이음오피스')
-    expect(docPickerText('en', 'docPickTitle')).toContain('IeumOffice')
+    for (const lang of LANGS)
+      expect(docPickerText(lang, 'docPickTitle'), lang).toContain(PRODUCT_NAME)
   })
 })
 

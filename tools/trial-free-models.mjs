@@ -43,7 +43,7 @@ if (!existsSync(join(root, 'apps/shell/out/main/index.js'))) {
 }
 
 function storedKey() {
-  const path = join(process.env.APPDATA ?? '', 'IeumOffice', 'ai-settings.json')
+  const path = join(process.env.APPDATA ?? '', 'seuoffice', 'ai-settings.json')
   try {
     const key = JSON.parse(readFileSync(path, 'utf8'))?.providers?.openrouter?.apiKey
     if (typeof key === 'string' && key.trim()) return key.trim()

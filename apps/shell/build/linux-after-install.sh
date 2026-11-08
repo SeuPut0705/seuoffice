@@ -2,12 +2,12 @@
 # deb/rpm post-install. Replaces electron-builder's default template, so its
 # chrome-sandbox and AppArmor steps are repeated here (genoffice#2150).
 set -e
-app="/opt/IeumOffice"
+app="/opt/seuoffice"
 # Chromium aborts when the SUID helper exists without 4755; Chrome's deb sets it unconditionally.
 [ -f "$app/chrome-sandbox" ] && { chown root:root "$app/chrome-sandbox" 2>/dev/null || true; chmod 4755 "$app/chrome-sandbox" 2>/dev/null || true; }
 # Ubuntu 24.04+ restricts unprivileged userns; --skip-kernel-load doubles as the abi/4.0 check.
 profile_src="$app/resources/apparmor-profile"
-profile_dst="/etc/apparmor.d/ieumoffice"
+profile_dst="/etc/apparmor.d/seuoffice"
 if [ -f "$profile_src" ] && apparmor_status --enabled >/dev/null 2>&1; then
   if apparmor_parser --skip-kernel-load --debug "$profile_src" >/dev/null 2>&1; then
     cp -f "$profile_src" "$profile_dst"
@@ -21,7 +21,7 @@ fi
 # icons (spreadsheet, presentation, text, pdf...) for all 21 types we claim
 # (genoffice#2126). Dropping the line lets each type fall back to its
 # freedesktop generic-icon; the glob/MimeType associations are untouched.
-mime="/usr/share/mime/packages/ieumoffice.xml"
+mime="/usr/share/mime/packages/seuoffice.xml"
 if [ -f "$mime" ] && grep -q '<icon name="x-office-document"' "$mime"; then
   sed -i '/<icon name="x-office-document"/d' "$mime"
 fi
@@ -38,9 +38,9 @@ if [ -d "$shell_new" ]; then
   mkdir -p "$templates_dir"
   for ext in docx xlsx pptx; do
     case "$ext" in
-      docx) name="IeumOffice Document.docx" ;;
-      xlsx) name="IeumOffice Spreadsheet.xlsx" ;;
-      pptx) name="IeumOffice Presentation.pptx" ;;
+      docx) name="seuoffice Document.docx" ;;
+      xlsx) name="seuoffice Spreadsheet.xlsx" ;;
+      pptx) name="seuoffice Presentation.pptx" ;;
     esac
     # cp -f is the fallback for a busybox install(1) without -m. A template
     # that cannot be written must not fail the whole package install.
@@ -56,7 +56,7 @@ link="/usr/bin/ieumoffice"
 [ -x "$launcher" ] || exit 0
 if [ -L "$link" ]; then
   case "$(readlink "$link")" in
-    /opt/IeumOffice/*) ;;
+    /opt/seuoffice/*) ;;
     *) [ -e "$link" ] && { echo "ieumoffice: $link is another program, left as is; run: ln -s $launcher $link" >&2; exit 0; } ;;
   esac
 elif [ -e "$link" ]; then

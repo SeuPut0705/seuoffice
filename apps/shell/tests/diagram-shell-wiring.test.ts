@@ -310,7 +310,7 @@ describe('the default-app list', () => {
       ).toMatchObject({
         uti: 'com.jgraph.drawio',
         mime: 'application/vnd.jgraph.mxfile',
-        progId: 'IeumOffice.Diagram',
+        progId: 'seuoffice.Diagram',
       })
     }
     expect(OFFICE_TYPES.map((type) => type.ext)).not.toContain('vsdx')

@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pblsketch/openoffice.git"
+    "url": "git+https://github.com/SeuPut0705/seuoffice.git"
   },
   "workspaces": [
     "apps/*",

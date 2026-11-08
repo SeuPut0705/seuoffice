@@ -2606,7 +2606,7 @@ export const strings = {
     setAiSpellcheckDesc: 'AI 채팅 입력란에 입력할 때 잘못된 단어에 밑줄을 표시합니다.',
     setAiPanelStart: 'AI 패널',
     setAiPanelStartDesc:
-      '이음오피스를 켜거나 문서를 열 때 AI 패널을 어떻게 시작할지 정합니다. "사용 안 함"은 패널과 측면 단추를 숨기지만, 리본이나 메뉴의 AI 작업으로는 열 수 있습니다.',
+      'GenOffice를 켜거나 문서를 열 때 AI 패널을 어떻게 시작할지 정합니다. "사용 안 함"은 패널과 측면 단추를 숨기지만, 리본이나 메뉴의 AI 작업으로는 열 수 있습니다.',
     aiPanelStartOff: '사용 안 함',
     aiPanelStartCollapsed: '접힌 채로',
     aiPanelStartLast: '마지막 상태',
