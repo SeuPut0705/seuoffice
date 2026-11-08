@@ -4,13 +4,8 @@
 /// Values only, like the CSV import: colspan/rowspan become merges and `<br>`
 /// becomes a line break; styles and scripts are dropped.
 
-import {
-  MAX_CSV_COLS,
-  MAX_CSV_ROWS,
-  decodeCsvBuffer,
-  isNumericCell,
-  xlsxBufferFromSheets,
-} from './csv-import'
+import { MAX_CSV_COLS, MAX_CSV_ROWS, decodeCsvBuffer, isNumericCell } from './csv-import'
+import { xlsxBufferFromSheets } from './csv-import-xlsx'
 
 /// A workbook with more cells than this would not be usable in the grid and
 /// would hold the main process too long while parsing a mislabelled page.

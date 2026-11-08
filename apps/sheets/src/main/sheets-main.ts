@@ -140,11 +140,11 @@ import {
   sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
 } from '@genoffice/ai-provider/subscription'
+import { decodeCsvBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import'
 import {
   csvToXlsxBufferForOpen,
-  decodeCsvBuffer,
   sheetCsvToXlsxBuffer,
-} from '@genoffice/xlsx-gateway/gateway/csv-import'
+} from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
 import {
   abortMediaCalls,
   aiToolCapabilities,

@@ -5,12 +5,8 @@
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 
-import {
-  buildWorksheetXml,
-  csvToXlsxBufferForOpen,
-  parseCsv,
-  quotedTextFormula,
-} from '../src/gateway/csv-import'
+import { buildWorksheetXml, parseCsv, quotedTextFormula } from '../src/gateway/csv-import'
+import { csvToXlsxBufferForOpen } from '../src/gateway/csv-import-xlsx'
 import { htmlTablesToXlsxBuffer, parseHtmlTables } from '../src/gateway/html-import'
 
 async function sheetXml(buffer: Buffer): Promise<string> {
