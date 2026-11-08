@@ -72,6 +72,7 @@ import { createBlankPptx, openPptx } from '@genoffice/pptx-engine'
 import { registerAiIpc } from '../src/main/ai-ipc'
 import { applySessionTxn, registerSlidesIpc, trackSlidesWebContents } from '../src/main/slides-main'
 import { sessions, takeSnapshot, type Session } from '../src/main/session-state'
+import { trackWrite } from '../src/main/ai-proposal'
 
 const OWNER = 1
 const OTHER = 2
@@ -173,6 +174,27 @@ describe('a window that goes away while it owns an AI run', () => {
     wc.emit('destroyed')
     expect(session.aiRun).toBeDefined()
   })
+
+  for (const event of ['destroyed', 'render-process-gone'] as const) {
+    it(`${event} while its run waits for a save: no run is begun for it`, async () => {
+      const wc = fakeWindow(OWNER)
+      trackSlidesWebContents(wc as never)
+      // the project's TS lib predates Promise.withResolvers
+      let finishWrite!: () => void
+      const write = trackWrite(session, () => new Promise<void>((r) => (finishWrite = r)))
+      // the begin handler reads the window, then waits for the save
+      const begin = ipc(OWNER, 'slides:ai-run-begin') as Promise<boolean>
+
+      wc.emit(event, {}, { reason: 'crashed' }) // the owner goes while the save still writes
+      finishWrite()
+      await write
+
+      expect(await begin).toBe(false)
+      expect(session.aiRun).toBeUndefined()
+      // the surviving window is not locked out
+      expect(await ipc(OTHER, 'slides:ai-run-begin')).toBe(true)
+    })
+  }
 })
 
 describe('a tool write that finishes after its run ended', () => {

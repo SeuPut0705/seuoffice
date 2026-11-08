@@ -213,11 +213,18 @@ export function acceptAiProposal(session: Session): number | null {
 }
 
 /**
+ * Bumped every time a window's runs are dropped (it went away, crashed or reloaded), so a run
+ * begin that was still waiting for writes can tell its window is no longer the one that asked.
+ */
+const windowLives = new Map<number, number>()
+
+/**
  * The window that owns a run (or the proposal it left) is gone, crashed or reloaded: nobody
  * is left to settle it, and the deck would stay read-only for every window attached to it.
  * The run is reverted and dropped, as a reject would.
  */
 export function dropAiRunOf(session: Session, owner: number): void {
+  windowLives.set(owner, (windowLives.get(owner) ?? 0) + 1)
   if (session.aiRun?.owner === owner) holdAiRun(session, owner)
   if (session.aiProposal?.owner === owner) session.aiProposal = undefined
 }
@@ -234,10 +241,16 @@ export function registerAiProposalIpc(): void {
     buildAllRenderSlides(session.opened, session.fitWidthPx)
 
   // A write that started before the run may still be serializing the live deck: the run
-  // records its starting point only once those finished, so they never carry its edits.
+  // records its starting point only once those finished, so they never carry its edits. The
+  // asking window may go away during that wait; a run begun for it then would lock the deck
+  // for every other window with nobody left to settle it.
   ipcMain.handle('slides:ai-run-begin', async (e) => {
     const session = sessionOf(e)
+    const life = windowLives.get(e.sender.id) ?? 0
     if (!session || !(await settleWrites(session))) return false
+    const sender = e.sender as { id: number; isDestroyed?: () => boolean }
+    if (sender.isDestroyed?.() || sessionOf(e) !== session) return false
+    if ((windowLives.get(e.sender.id) ?? 0) !== life) return false
     return beginAiRun(session, e.sender.id)
   })
 
