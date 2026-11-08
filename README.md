@@ -35,7 +35,7 @@ await doc.opened // 실패하면 SeuofficeEmbedError(code: unsupported_format | 
 - seuoffice는 스풋(GitHub SeuPut0705)의 개인 자산이다. 스풋 개인 시간과 비용으로 만들며, 유유헬스케어와의 계약 산출물이 아니다. 유유헬스케어는 seuoffice를 가져다 쓰는 사용자다.
 - 유유헬스케어 저장소(`yuyuhealthcare/yuyu-mos`)의 코드·설정·데이터는 이 저장소에 가져오지 않는다. 유유 실데이터와 고객 원본 문서도 넣지 않는다. 시험은 모의 문서와 권리가 확인된 문서로 한다.
 - 유유 메신저·업무 앱에 seuoffice를 연결하는 코드(첨부를 보기 창에 넘기는 일, 권한 확인)는 yuyu-mos 쪽에 있다. seuoffice는 "바이트 + 파일 이름 → 화면" 부품(`@seuoffice/embed`)과 정적 웹 묶음을 내놓는다.
-- 저장소는 비공개다. 공개 여부는 1단계(웹 보기) 뒤 다시 정한다.
+- 저장소 전체를 Apache-2.0으로 공개한다(`docs/seuoffice/decisions/0007-전부-공개.md`). 유유헬스케어는 판 번호가 붙은 `@seuoffice/*` 묶음과 유유용 안정 판 PC 프로그램을 받아 쓰며, 따로 사용 허락 문서는 없다.
 
 ## 개발
 

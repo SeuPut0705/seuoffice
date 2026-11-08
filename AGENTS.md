@@ -1,6 +1,6 @@
 # seuoffice 작업 규칙
 
-seuoffice는 웹과 PC(Windows)에서 문서를 보고 고치고 AI로 편집하는 오피스다. 이음오피스(IeumOffice, Apache-2.0, GenOffice의 한국어 포크)를 통째로 포크해 웹에서도 돌게 개조한다. 스풋(GitHub SeuPut0705)의 개인 자산이고 저장소는 비공개다.
+seuoffice는 웹과 PC(Windows)에서 문서를 보고 고치고 AI로 편집하는 오피스다. 이음오피스(IeumOffice, Apache-2.0, GenOffice의 한국어 포크)를 통째로 포크해 웹에서도 돌게 개조한다. 스풋(GitHub SeuPut0705)의 개인 자산이고, 저장소 전체를 Apache-2.0으로 공개한다(결정 0007).
 
 ## 먼저 읽을 것
 
