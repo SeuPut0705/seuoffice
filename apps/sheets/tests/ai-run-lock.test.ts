@@ -6,6 +6,7 @@ import '@univerjs/sheets/facade'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {
+  aiRunOpenRefusal,
   aiRunSaveRefusal,
   beginAgentWrite,
   installAiRunLockGuard,
@@ -13,13 +14,19 @@ import {
   personEditVetoed,
   unlockAfterAiRun,
 } from '../src/renderer/ai/run-lock'
+import {
+  accept,
+  type AppliedOutcome,
+  type ProposalBackend,
+  type TurnProposal,
+} from '../src/renderer/ai/turn-proposal'
 import { createSaveGate, guardedSave } from '../src/renderer/save-scheduler'
 import { aiRunLock, type UniverRuntime } from '../src/renderer/univer-state'
 
 afterEach(() => {
   unlockAfterAiRun()
   aiRunLock.stranded = false
-  aiRunLock.agentWriting = false
+  aiRunLock.agentWriting = 0
 })
 
 /** The save path the app owns: one gate, the refusal of the lock, and a write that sees the document. */
@@ -328,5 +335,131 @@ describe('the person typing at the grid while an AI apply is paused in an async 
     expect(seen).toEqual(['keydown', 'keydown'])
     element.remove()
     panel.remove()
+  })
+})
+
+describe('Accept of a held proposal', () => {
+  it('locks the workbook through a failing re-apply and its rollback, and leaves the pre-run document', async () => {
+    const runtime = bootWorkbook()
+    installAiRunLockGuard(runtime, () => undefined)
+    setCell(runtime, 'A2', 5) // the person's edit before the run
+    const before = [cellOf(runtime, 'A1'), cellOf(runtime, 'A2'), cellOf(runtime, 'C1')]
+
+    const element = document.createElement('div')
+    document.body.append(element)
+    const reached: string[] = []
+    // what the grid does with the person's input: each one edits a cell
+    element.addEventListener('keydown', () => {
+      reached.push('keydown')
+      setCell(runtime, 'A2', 99)
+    })
+    element.addEventListener('paste', () => {
+      reached.push('paste')
+      setCell(runtime, 'B1', 7)
+    })
+    element.addEventListener('pointerdown', () => reached.push('pointerdown'))
+
+    let failSecondApply: () => void = () => undefined
+    const secondApplyPaused = new Promise<void>((resolve) => {
+      failSecondApply = resolve
+    })
+    const plan = (id: string) =>
+      ({
+        transactionId: id,
+        baseRevision: 0,
+        cellChanges: [],
+        sheetRenames: [],
+        structuralChanges: [],
+        formatChanges: [],
+        warnings: [],
+      }) as const
+    let applies = 0
+    const backend: ProposalBackend = {
+      undoCapacity: 20,
+      undoCellBudget: 100_000,
+      unundoableOps: new Set<string>(),
+      // the proposal's own writes pass the veto, the way the app's apply and undo do
+      apply: async (): Promise<AppliedOutcome> => {
+        const end = beginAgentWrite()
+        try {
+          applies += 1
+          if (applies === 1) {
+            setCell(runtime, 'A1', 11)
+            return { ok: true, undoSteps: 1 }
+          }
+          setCell(runtime, 'C1', 3)
+          await secondApplyPaused
+          return { ok: false, reason: 'drifted', undoSteps: 1 }
+        } finally {
+          end()
+        }
+      },
+      undo: async (steps) => {
+        const end = beginAgentWrite()
+        try {
+          for (let step = 0; step < steps; step += 1) await runtime.univerAPI.undo()
+        } finally {
+          end()
+        }
+      },
+      watch: () => () => false,
+    }
+    const pending: Extract<TurnProposal, { kind: 'pending' }> = {
+      kind: 'pending',
+      plans: [plan('p1'), plan('p2')],
+      changed: () => false,
+    }
+
+    // what handleAcceptProposal does around accept()
+    lockForAiRun()
+    const accepting = accept(backend, pending).finally(unlockAfterAiRun)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(cellOf(runtime, 'C1')).toBe(3) // the second re-apply is paused after its write
+
+    const events = [
+      new KeyboardEvent('keydown', { key: 'x', bubbles: true, cancelable: true }),
+      new Event('paste', { bubbles: true, cancelable: true }),
+      new Event('pointerdown', { bubbles: true, cancelable: true }),
+    ]
+    for (const event of events) {
+      element.dispatchEvent(event)
+      expect(event.defaultPrevented).toBe(true)
+    }
+    const written: string[] = []
+    const gate = createSaveGate()
+    const saved = await guardedSave(
+      gate,
+      () => {
+        const reason = aiRunSaveRefusal()
+        return reason === null ? null : { ok: false, error: reason }
+      },
+      async () => {
+        written.push('written')
+        return { ok: true }
+      },
+    )
+    expect(reached).toEqual([])
+    expect(saved.ok).toBe(false)
+    expect(written).toEqual([])
+
+    failSecondApply()
+    const next = await accepting
+
+    expect(next.kind).toBe('stale')
+    expect([cellOf(runtime, 'A1'), cellOf(runtime, 'A2'), cellOf(runtime, 'C1')]).toEqual(before)
+    expect(aiRunLock.active).toBe(false)
+    element.remove()
+  })
+})
+
+describe('opening a file over the workbook', () => {
+  it('is refused with the lock notice while a run or an Accept holds the workbook, and allowed otherwise', () => {
+    expect(aiRunOpenRefusal()).toBeNull()
+
+    lockForAiRun()
+    expect(aiRunOpenRefusal()).toMatch(/AI is working/)
+
+    unlockAfterAiRun()
+    expect(aiRunOpenRefusal()).toBeNull()
   })
 })

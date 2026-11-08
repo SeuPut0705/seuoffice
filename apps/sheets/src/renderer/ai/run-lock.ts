@@ -37,7 +37,7 @@ export interface CommandEventLike {
  * person cannot type into a cell that would then refuse the commit.
  */
 export function personEditVetoed(event: CommandEventLike, workbookId: string | undefined): boolean {
-  if (!aiRunLock.active || aiRunLock.agentWriting || journalSuppression.active) return false
+  if (!aiRunLock.active || aiRunLock.agentWriting > 0 || journalSuppression.active) return false
   // the formula engine's results are derived from what the run wrote
   if ((event.options as { fromFormula?: boolean } | undefined)?.fromFormula) return false
   const params = (event.params ?? {}) as { unitId?: unknown; visible?: unknown }
@@ -136,14 +136,23 @@ export function unlockAfterAiRun(): void {
 }
 
 /**
- * Raises the "the run is writing" flag for the writes the run itself makes
- * (its plan applies and its revert); returns the release.
+ * Raises the "the run is writing" flag for the writes the run itself makes (its plan applies,
+ * its revert, an Accept); returns the release. Scopes nest: the flag stays up until the last
+ * one is released, and a release counts once.
  */
 export function beginAgentWrite(): () => void {
-  aiRunLock.agentWriting = true
+  aiRunLock.agentWriting += 1
+  let released = false
   return () => {
-    aiRunLock.agentWriting = false
+    if (released) return
+    released = true
+    aiRunLock.agentWriting -= 1
   }
+}
+
+/** Why no file may be opened over the workbook right now, or null when one may. */
+export function aiRunOpenRefusal(): string | null {
+  return aiRunLock.active ? t('appAiRunLocked') : null
 }
 
 /** Why a save must not write the workbook right now, or null when it may. */

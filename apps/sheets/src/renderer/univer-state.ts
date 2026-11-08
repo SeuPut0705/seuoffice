@@ -266,9 +266,9 @@ export const aiBulkUndoGate = { active: false, dropped: false, cells: 0, pushed:
 /// run's undo entries are never dropped, because the run's edits must be
 /// revertable at its end.
 ///   active:       from the start of a run until its edits are reverted
-///   agentWriting: raised around the writes of the run itself (and around its revert)
+///   agentWriting: depth of the scopes writing for the run itself (its applies, its revert, an Accept)
 ///   stranded:     a run's edits could not be taken back out; saves stay refused
-export const aiRunLock = { active: false, agentWriting: false, stranded: false }
+export const aiRunLock = { active: false, agentWriting: 0, stranded: false }
 
 export interface UndoRedoItemLike {
   readonly unitID: string

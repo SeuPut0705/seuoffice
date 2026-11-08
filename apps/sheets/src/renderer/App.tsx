@@ -84,6 +84,7 @@ import {
   type TurnProposal,
 } from './ai/turn-proposal'
 import {
+  aiRunOpenRefusal,
   aiRunSaveRefusal,
   beginAgentWrite,
   installAiRunLockGuard,
@@ -1223,7 +1224,7 @@ export function App({
       univerRef,
       lazyWorkbookRef,
       setMessage,
-      openLazyWorkbook,
+      openLazyWorkbook: (file, opts) => openLazyWorkbook(file, { ...opts, afterSave: true }),
       setPendingEdits,
       readCells: (addresses, sheetId) => readCellsImpl(readContext(), addresses, sheetId),
       stashViewRestore: (view) => {
@@ -4365,13 +4366,19 @@ export function App({
       undoCellBudget: lazyWorkbookRef.current ? AI_UNDO_CELL_BUDGET : Number.POSITIVE_INFINITY,
       unundoableOps: lazyWorkbookRef.current ? JOURNAL_ONLY_OPS : new Set<string>(),
       undo: async (steps) => {
-        if (!lazyWorkbookRef.current) {
-          undoAdapterSteps(steps)
-          return
+        // the revert is a write of the run itself: the person's veto lets it through
+        const endAgentWrite = beginAgentWrite()
+        try {
+          if (!lazyWorkbookRef.current) {
+            undoAdapterSteps(steps)
+            return
+          }
+          const api = univerRef.current?.univerAPI
+          if (!api) throw new Error(t('appUndoFailed'))
+          for (let step = 0; step < steps; step += 1) await api.undo()
+        } finally {
+          endAgentWrite()
         }
-        const api = univerRef.current?.univerAPI
-        if (!api) throw new Error(t('appUndoFailed'))
-        for (let step = 0; step < steps; step += 1) await api.undo()
       },
       watch: (plans) => {
         const state = lazyWorkbookRef.current
@@ -4420,13 +4427,7 @@ export function App({
    */
   async function holdAndUnlock(record: RunRecord): Promise<TurnProposal> {
     try {
-      const run = await record.settle()
-      const endAgentWrite = beginAgentWrite()
-      try {
-        return await holdRun(proposalBackend(), run)
-      } finally {
-        endAgentWrite()
-      }
+      return await holdRun(proposalBackend(), await record.settle())
     } catch (error: unknown) {
       aiRunLock.stranded = true
       throw error
@@ -4463,20 +4464,28 @@ export function App({
   async function handleAcceptProposal(): Promise<void> {
     if (proposal.kind !== 'pending' || proposalSettling) return
     setProposalSettling(true)
+    // The re-applies and a rollback are the proposal's own writes: nothing of the person's lands
+    // between them (it would become the newest undo step and the rollback would take it out), and
+    // nothing is saved half-accepted. The lock comes off before the save that follows.
+    lockForAiRun()
+    let accepted = false
     try {
       const next = await acceptProposal(proposalBackend(), proposal)
       setProposal(next)
-      if (next.kind === 'none') {
-        void autoSaveCompletedAiRun()
-      } else {
+      accepted = next.kind === 'none'
+      if (!accepted) {
         // plans applied before the refusal were rolled back: no Undo to offer
         patchLastAssistant(({ autoApplied: _autoApplied, ...entry }) => entry)
       }
     } catch (error: unknown) {
+      // a re-apply or its rollback failed halfway: the workbook may hold part of the proposal
+      aiRunLock.stranded = true
       setMessage(error instanceof Error ? error.message : t('appApplyTxFailed'))
     } finally {
+      unlockAfterAiRun()
       setProposalSettling(false)
     }
+    if (accepted) void autoSaveCompletedAiRun()
   }
 
   /// QAT Redo: workbook history via Univer, same path as the app menu's ⇧⌘Z
@@ -4907,9 +4916,16 @@ export function App({
 
   async function openLazyWorkbook(
     opened: WorkbookFile,
-    opts?: { continueChat?: boolean; onInitialRangeLoaded?: () => void },
+    opts?: {
+      continueChat?: boolean
+      onInitialRangeLoaded?: () => void
+      /** the reopen of a save that began before the run: it finishes under the lock the run took */
+      afterSave?: boolean
+    },
   ): Promise<boolean> {
-    if (!(await commitActiveEditor())) return false
+    if ((!opts?.afterSave && aiRunOpenRefusal() !== null) || !(await commitActiveEditor())) {
+      return false
+    }
     // the bundled faces this workbook names, before its first skeleton measures
     // (the Normal font's digit width sizes every column); bounded like boot fonts
     await Promise.all([
@@ -4919,6 +4935,8 @@ export function App({
       ]),
       untilCellFontsLoaded(registerCellFontAliases(workbookFontFamilies(opened))),
     ])
+    // a run may have started while the faces loaded
+    if (!opts?.afterSave && aiRunOpenRefusal() !== null) return false
     if (opts?.continueChat) chatContinuesRef.current = true
     const selected: WorkbookFile = {
       ...opened,
@@ -5263,6 +5281,13 @@ export function App({
   }
 
   async function handleInspectWorkbook(): Promise<void> {
+    // The workbook belongs to the AI run (or the Accept) in flight: opening a file would replace it
+    // under the run's later tool calls and its revert. Refused before the file dialog opens.
+    const locked = aiRunOpenRefusal()
+    if (locked !== null) {
+      setMessage(locked)
+      return
+    }
     if (workbookOpeningRef.current) return
     workbookOpeningRef.current = true
     setOpeningWorkbook(true)
@@ -5283,7 +5308,7 @@ export function App({
       }
       if (!(await openLazyWorkbook(selected, { onInitialRangeLoaded: finishOpening }))) {
         finishOpening()
-        setMessage(t('appOpenFailed'))
+        setMessage(aiRunLock.active ? t('appAiRunLocked') : t('appOpenFailed'))
         return
       }
       setEmptyCsvNotice(selected.emptyCsv === true)
