@@ -18,6 +18,7 @@ import type { RenderSlide } from '@genoffice/pptx-render'
 import type { OpenResult } from '../shared/ipc'
 import { currentDeck, setDeck } from './deck-reads'
 import { putFile } from './memfs'
+import { loadTemplateFontsFor } from './template-fonts'
 
 const MEDIA_SCHEME = 'genoffice-slide-media://'
 const CFB_MAGIC = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]
@@ -141,6 +142,7 @@ export async function openPptxForWeb(
     await loadFontFiles()
     await shapedMetricsReady()
     const opened = await openPptx(doc.bytes)
+    if (await loadTemplateFontsFor(opened.archive)) resetFontMetrics()
     adoptEmbeddedFonts(opened)
     setDeck(opened)
     fitWidth = fitWidthPx
