@@ -4,7 +4,7 @@
  * before they run: content edits are blocked on locked cells, every other
  * command maps to one of the dialog's permission flags.
  */
-import type { IRange } from '@univerjs/core'
+import { CommandType, type IRange } from '@univerjs/core'
 import { SheetsSelectionsService } from '@univerjs/sheets'
 import {
   DEFAULT_SHEET_PROTECTION_ALLOW,
@@ -424,12 +424,16 @@ const READ_ONLY_RIBBON_COMMANDS = [
   'zoom-reset',
   'zoom-to-selection',
   'zoom:',
+  'ai-open-panel',
+  'ai-toggle-panel',
+  'formula-bar-toggle',
 ]
 
-/// Whether a ribbon command may run on this workbook; everything else is an
-/// edit the renderer journals itself, past the Univer command guard.
-export function ribbonCommandAllowed(state: LazyWorkbookState | null, command: string): boolean {
-  if (!state?.file.readOnly) return true
+/// Whether a ribbon or context-menu command may run; in a read-only open
+/// everything else is an edit (or an edit dialog) the renderer journals
+/// itself, past the Univer command guard.
+export function ribbonCommandAllowed(readOnly: boolean, command: string): boolean {
+  if (!readOnly) return true
   return READ_ONLY_RIBBON_COMMANDS.some((allowed) =>
     allowed.endsWith(':') ? command.startsWith(allowed) : command === allowed,
   )
@@ -440,6 +444,17 @@ export interface SheetProtectionGuardDeps {
   readonly notify: (message: string) => void
 }
 
+/// A mutation of the open workbook that is not the formula engine's own result.
+function writesWorkbook(
+  runtime: UniverRuntime,
+  event: { id: string; type?: CommandType; params?: unknown; options?: unknown },
+): boolean {
+  if (event.type !== CommandType.MUTATION || event.id.startsWith('formula.')) return false
+  if ((event.options as { fromFormula?: boolean } | undefined)?.fromFormula) return false
+  const unitId = (event.params as { unitId?: unknown } | undefined)?.unitId
+  return unitId === runtime.univerAPI.getActiveWorkbook()?.getId()
+}
+
 /// Vetoes commands the active sheet's protection forbids. Loader writes run
 /// under journalSuppression and pass through.
 export function installSheetProtectionGuard(
@@ -448,15 +463,20 @@ export function installSheetProtectionGuard(
 ): { dispose(): void } {
   const injector = runtime.univer.__getInjector()
   return runtime.univerAPI.addEvent(runtime.univerAPI.Event.BeforeCommandExecute, (event) => {
+    if (journalSuppression.active) return
     const kind = commandGuardKind(event.id)
-    if (!kind || journalSuppression.active) return
     const state = deps.getState()
-    // A read-only open (the web viewer) refuses every guarded command, silently
-    // as a viewer does: the protection messages would point at an unprotect.
-    if (state?.file.readOnly) {
+    // A read-only open (the web viewer) changes nothing, silently as a viewer
+    // does: the protection messages would point at an unprotect. Guarded
+    // commands stop at the command; anything else that would still write the
+    // workbook (notes, data validation, drawings…) stops at its mutation.
+    // Loader writes run under journalSuppression and the formula engine's
+    // derived results are fromFormula or formula.* mutations, so both pass.
+    if (state?.file.readOnly && (kind || writesWorkbook(runtime, event))) {
       event.cancel = true
       return
     }
+    if (!kind) return
     const workbook = runtime.univerAPI.getActiveWorkbook()
     const params = (event.params ?? {}) as Record<string, unknown>
     // Commands addressed to a background sheet are checked against it.

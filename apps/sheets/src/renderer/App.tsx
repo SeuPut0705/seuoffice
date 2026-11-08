@@ -4429,7 +4429,7 @@ export function App({
   }
 
   function handleRibbonCommand(command: string): void {
-    if (!ribbonCommandAllowed(lazyWorkbookRef.current, command)) return
+    if (!ribbonCommandAllowed(lazyWorkbookRef.current?.file.readOnly === true, command)) return
     if (command === 'ai-ask-selection') {
       const range = univerRef.current?.univerAPI.getActiveWorkbook()?.getActiveRange()
       if (!range) return
@@ -5613,6 +5613,7 @@ export function App({
         statusBarFuncs={statusBarFuncs}
         onToggleStatusBarFunc={toggleStatusBarStat}
         canSave={pendingEdits > 0 || workbookFile?.unsavedNew === true}
+        readOnly={workbookFile?.readOnly === true}
         onSave={() => void handleSave('save')}
         canSaveAs={workbookFile !== null}
         onSaveAs={() => void handleSave('save-as')}

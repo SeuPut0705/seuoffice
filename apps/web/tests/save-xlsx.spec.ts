@@ -156,3 +156,35 @@ test('a text box inserts in edit mode and not in view mode', async ({ page }) =>
   await page.waitForTimeout(1000)
   await expect(saveButton(viewing)).toBeDisabled()
 })
+
+/** A note through the grid's context menu: Univer's note plugin, outside the ribbon */
+async function addNote(page: Page, frame: FrameLocator, text: string) {
+  // the grid is the tallest canvas (others draw the formula bar or sit off screen);
+  // aim at an empty cell a few columns and rows in, below the headers
+  const canvases = await frame.locator('#univer-container canvas').all()
+  const boxes = await Promise.all(canvases.map((canvas) => canvas.boundingBox()))
+  const grid = boxes.reduce((wide, box) => (box && box.height > (wide?.height ?? 0) ? box : wide))!
+  const at = { x: grid.x + 400, y: grid.y + 160 }
+  const addItem = frame.getByText('노트 추가', { exact: true })
+  // the first right-click after load sometimes opens no menu; click again until it shows
+  await expect(async () => {
+    await page.mouse.click(at.x, at.y)
+    await page.mouse.click(at.x, at.y, { button: 'right' })
+    await expect(addItem).toBeVisible({ timeout: 2000 })
+  }).toPass({ timeout: 20_000 })
+  await addItem.click()
+  await page.keyboard.type(text)
+  // the note commits when it loses focus
+  await page.mouse.click(grid.x + 600, grid.y + 400)
+}
+
+test('a context-menu note adds in edit mode and not in view mode', async ({ page }) => {
+  const editing = await open(page, FIXTURE, true)
+  await addNote(page, editing, 'note-in-edit')
+  await unsaved(page)
+
+  const viewing = await open(page, FIXTURE, false)
+  await addNote(page, viewing, 'note-in-view')
+  await page.waitForTimeout(1000)
+  await expect(saveButton(viewing)).toBeDisabled()
+})
