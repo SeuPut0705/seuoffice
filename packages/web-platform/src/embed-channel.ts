@@ -41,7 +41,9 @@ export function receiveOpen(): Promise<EmbedOpen | null> {
 
 function listen(): Promise<EmbedOpen | null> {
   if (window.parent === window) return Promise.resolve(null)
-  const { promise, resolve } = Promise.withResolvers<EmbedOpen | null>()
+  // the suite apps compile this file against ES2022, which has no Promise.withResolvers
+  let resolve!: (open: EmbedOpen | null) => void
+  const promise = new Promise<EmbedOpen | null>((settle) => (resolve = settle))
   const allowed = allowedOrigins()
   const onMessage = (event: MessageEvent): void => {
     const data = event.data as Record<string, unknown> | null

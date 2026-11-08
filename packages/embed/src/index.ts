@@ -77,7 +77,13 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
     return { iframe, opened, destroy: () => iframe.remove() }
   }
 
-  const { promise: opened, resolve, reject } = Promise.withResolvers<void>()
+  // hosts may compile against ES2022, which has no Promise.withResolvers
+  let resolve!: () => void
+  let reject!: (error: SeuofficeEmbedError) => void
+  const opened = new Promise<void>((onResolve, onReject) => {
+    resolve = onResolve
+    reject = onReject
+  })
   opened.catch(() => {})
   const view = container.ownerDocument.defaultView ?? window
   const base = new URL(options.baseUrl)
