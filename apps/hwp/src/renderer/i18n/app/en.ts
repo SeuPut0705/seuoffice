@@ -174,6 +174,15 @@ export const en = {
   aiReverted: 'Changes undone',
   aiRevertRefused:
     'These changes could not be undone together. If the document was edited afterwards, use the editor’s own Undo (Ctrl+Z).',
+  aiProposalTitle: 'Proposed changes: {count}',
+  aiAccept: 'Accept',
+  aiReject: 'Reject',
+  aiProposalHint:
+    'The document stays as it was until you accept. Accept or reject these changes before sending another request.',
+  aiProposalStale:
+    'The document changed after these edits were held, so they were not applied. The document is unchanged.',
+  aiProposalNotHeld:
+    'These edits could not be held for review because the document was changed during the run. They are already in the document; use the undo button to take them back.',
   memoTitle: 'Memos',
   memoOpen: 'Memos',
   memoAdd: 'Add memo',

@@ -168,6 +168,13 @@ export const zhTW = {
   aiRevert: '復原這些修改',
   aiReverted: '已復原',
   aiRevertRefused: '無法一次復原這些修改。如果之後又編輯過文件，請使用編輯器本身的復原（Ctrl+Z）。',
+  aiProposalTitle: '建議的修改：{count} 處',
+  aiAccept: '接受',
+  aiReject: '拒絕',
+  aiProposalHint: '在你接受之前，文件維持不變。傳送下一個要求前，請先接受或拒絕這些修改。',
+  aiProposalStale: '這些修改被擱置後文件又有變動，因此未套用。文件維持不變。',
+  aiProposalNotHeld:
+    '執行期間文件被修改，無法將這些修改當作建議擱置。它們已寫入文件，若要取回請按復原按鈕。',
   memoTitle: '批註',
   memoOpen: '批註',
   memoAdd: '新增批註',

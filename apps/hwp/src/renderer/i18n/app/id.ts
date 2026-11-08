@@ -176,6 +176,15 @@ export const id = {
   aiReverted: 'Perubahan dibatalkan',
   aiRevertRefused:
     'Perubahan ini tidak dapat dibatalkan sekaligus. Jika dokumen diedit setelahnya, gunakan Urungkan milik editor (Ctrl+Z).',
+  aiProposalTitle: 'Perubahan yang diusulkan: {count}',
+  aiAccept: 'Terima',
+  aiReject: 'Tolak',
+  aiProposalHint:
+    'Dokumen tetap seperti semula sampai Anda menerima. Terima atau tolak perubahan ini sebelum mengirim permintaan lain.',
+  aiProposalStale:
+    'Dokumen berubah setelah suntingan ini ditahan, jadi tidak diterapkan. Dokumen tidak berubah.',
+  aiProposalNotHeld:
+    'Suntingan ini tidak dapat ditahan untuk ditinjau karena dokumen diubah selama proses berjalan. Suntingan sudah ada di dokumen; gunakan tombol urungkan untuk menariknya kembali.',
   memoTitle: 'Komentar',
   memoOpen: 'Komentar',
   memoAdd: 'Tambahkan komentar',

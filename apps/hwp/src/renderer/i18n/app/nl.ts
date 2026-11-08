@@ -176,6 +176,15 @@ export const nl = {
   aiReverted: 'Wijzigingen ongedaan gemaakt',
   aiRevertRefused:
     'Deze wijzigingen konden niet in één keer ongedaan worden gemaakt. Is het document daarna bewerkt, gebruik dan Ongedaan maken van de editor (Ctrl+Z).',
+  aiProposalTitle: 'Voorgestelde wijzigingen: {count}',
+  aiAccept: 'Accepteren',
+  aiReject: 'Weigeren',
+  aiProposalHint:
+    'Het document blijft zoals het was totdat je accepteert. Accepteer of weiger deze wijzigingen voordat je een nieuw verzoek verstuurt.',
+  aiProposalStale:
+    'Het document is veranderd nadat deze wijzigingen waren vastgehouden, dus ze zijn niet toegepast. Het document is ongewijzigd.',
+  aiProposalNotHeld:
+    'Deze wijzigingen konden niet ter beoordeling worden vastgehouden, omdat het document tijdens de uitvoering is gewijzigd. Ze staan al in het document; gebruik de knop Ongedaan maken om ze terug te nemen.',
   memoTitle: 'Opmerkingen',
   memoOpen: 'Opmerkingen',
   memoAdd: 'Opmerking toevoegen',

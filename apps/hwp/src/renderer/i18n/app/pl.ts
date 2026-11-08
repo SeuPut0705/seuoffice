@@ -176,6 +176,15 @@ export const pl = {
   aiReverted: 'Zmiany cofnięte',
   aiRevertRefused:
     'Nie udało się cofnąć tych zmian za jednym razem. Jeśli dokument był potem edytowany, użyj polecenia Cofnij w edytorze (Ctrl+Z).',
+  aiProposalTitle: 'Proponowane zmiany: {count}',
+  aiAccept: 'Zaakceptuj',
+  aiReject: 'Odrzuć',
+  aiProposalHint:
+    'Dokument pozostaje bez zmian, dopóki nie zaakceptujesz. Zaakceptuj lub odrzuć te zmiany przed wysłaniem kolejnej prośby.',
+  aiProposalStale:
+    'Dokument zmienił się po wstrzymaniu tych zmian, więc nie zostały zastosowane. Dokument pozostaje bez zmian.',
+  aiProposalNotHeld:
+    'Nie udało się wstrzymać tych zmian do przeglądu, ponieważ dokument zmieniono w trakcie działania. Są już w dokumencie; cofnij je przyciskiem Cofnij.',
   memoTitle: 'Komentarze',
   memoOpen: 'Komentarze',
   memoAdd: 'Dodaj komentarz',

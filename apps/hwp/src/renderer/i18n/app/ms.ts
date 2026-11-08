@@ -176,6 +176,15 @@ export const ms = {
   aiReverted: 'Perubahan dibuat asal',
   aiRevertRefused:
     'Perubahan ini tidak dapat dibuat asal sekali gus. Jika dokumen disunting selepas itu, gunakan Buat Asal milik editor (Ctrl+Z).',
+  aiProposalTitle: 'Perubahan yang dicadangkan: {count}',
+  aiAccept: 'Terima',
+  aiReject: 'Tolak',
+  aiProposalHint:
+    'Dokumen kekal seperti asal sehingga anda menerima. Terima atau tolak perubahan ini sebelum menghantar permintaan lain.',
+  aiProposalStale:
+    'Dokumen berubah selepas suntingan ini ditahan, jadi ia tidak digunakan. Dokumen tidak berubah.',
+  aiProposalNotHeld:
+    'Suntingan ini tidak dapat ditahan untuk semakan kerana dokumen diubah semasa larian. Ia sudah ada dalam dokumen; gunakan butang buat asal untuk menariknya semula.',
   memoTitle: 'Komen',
   memoOpen: 'Komen',
   memoAdd: 'Tambah komen',

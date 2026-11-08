@@ -1085,6 +1085,22 @@
   color: var(--hwp-error);
 }
 
+/* a run held out of the document: reject and accept sit together at the card's end */
+.ai-changes-actions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+.ai-changes-accept {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ai-changes-hint {
+  color: var(--color-text-secondary);
+}
+
 /* chat attachments: the same rules as the other editors' panels */
 /* attachments (same contract as the docs panel): paperclip in the composer footer,
    chips above the textarea, read-only echo on the sent bubble */

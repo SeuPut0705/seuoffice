@@ -177,6 +177,15 @@ export const cs = {
   aiReverted: 'Změny vráceny',
   aiRevertRefused:
     'Tyto změny se nepodařilo vrátit najednou. Pokud byl dokument poté upraven, použijte příkaz Zpět v editoru (Ctrl+Z).',
+  aiProposalTitle: 'Navržené změny: {count}',
+  aiAccept: 'Přijmout',
+  aiReject: 'Odmítnout',
+  aiProposalHint:
+    'Dokument zůstává beze změny, dokud nepřijmete. Před odesláním další žádosti tyto změny přijměte nebo odmítněte.',
+  aiProposalStale:
+    'Dokument se po pozdržení těchto změn změnil, proto nebyly použity. Dokument zůstává beze změny.',
+  aiProposalNotHeld:
+    'Tyto změny se nepodařilo pozdržet ke schválení, protože se dokument během běhu změnil. Jsou už v dokumentu; vraťte je tlačítkem Zpět.',
   memoTitle: 'Komentáře',
   memoOpen: 'Komentáře',
   memoAdd: 'Přidat komentář',

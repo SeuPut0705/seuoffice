@@ -178,6 +178,15 @@ export const it = {
   aiReverted: 'Modifiche annullate',
   aiRevertRefused:
     'Non è stato possibile annullare queste modifiche in un colpo solo. Se il documento è stato modificato in seguito, usa Annulla dell’editor (Ctrl+Z).',
+  aiProposalTitle: 'Modifiche proposte: {count}',
+  aiAccept: 'Accetta',
+  aiReject: 'Rifiuta',
+  aiProposalHint:
+    'Il documento resta com’è finché non accetti. Accetta o rifiuta queste modifiche prima di inviare un’altra richiesta.',
+  aiProposalStale:
+    'Il documento è cambiato dopo che queste modifiche sono state trattenute, quindi non sono state applicate. Il documento è invariato.',
+  aiProposalNotHeld:
+    'Non è stato possibile trattenere queste modifiche per la revisione perché il documento è stato modificato durante l’esecuzione. Sono già nel documento; usa il pulsante Annulla per toglierle.',
   memoTitle: 'Commenti',
   memoOpen: 'Commenti',
   memoAdd: 'Aggiungi commento',

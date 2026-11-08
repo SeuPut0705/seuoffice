@@ -178,6 +178,15 @@ export const fr = {
   aiReverted: 'Modifications annulées',
   aiRevertRefused:
     'Ces modifications n’ont pas pu être annulées d’un coup. Si le document a été modifié depuis, utilisez l’annulation de l’éditeur (Ctrl+Z).',
+  aiProposalTitle: 'Modifications proposées : {count}',
+  aiAccept: 'Accepter',
+  aiReject: 'Refuser',
+  aiProposalHint:
+    'Le document reste tel quel tant que vous n’acceptez pas. Acceptez ou refusez ces modifications avant d’envoyer une autre demande.',
+  aiProposalStale:
+    'Le document a changé après la mise en attente de ces modifications ; elles n’ont donc pas été appliquées. Le document est inchangé.',
+  aiProposalNotHeld:
+    'Ces modifications n’ont pas pu être mises en attente, car le document a été modifié pendant l’exécution. Elles sont déjà dans le document ; utilisez le bouton d’annulation pour les retirer.',
   memoTitle: 'Commentaires',
   memoOpen: 'Commentaires',
   memoAdd: 'Ajouter un commentaire',

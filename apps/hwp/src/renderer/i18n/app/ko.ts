@@ -174,6 +174,14 @@ export const ko = {
   aiReverted: '되돌렸습니다',
   aiRevertRefused:
     '한꺼번에 되돌리지 못했습니다. 그 뒤에 문서를 고쳤다면 편집기의 실행 취소(Ctrl+Z)를 쓰세요.',
+  aiProposalTitle: '제안된 변경 {count}곳',
+  aiAccept: '받아들이기',
+  aiReject: '거부',
+  aiProposalHint:
+    '받아들이기 전까지 문서는 그대로입니다. 다음 요청을 보내려면 먼저 받아들이거나 거부하세요.',
+  aiProposalStale: '변경을 보류한 뒤 문서가 바뀌어 적용하지 않았습니다. 문서는 그대로입니다.',
+  aiProposalNotHeld:
+    '실행 중에 문서가 바뀌어 이 변경을 제안으로 보류하지 못했습니다. 이미 문서에 반영되어 있으니 되돌리려면 되돌리기 버튼을 쓰세요.',
   memoTitle: '메모',
   memoOpen: '메모',
   memoAdd: '메모 넣기',

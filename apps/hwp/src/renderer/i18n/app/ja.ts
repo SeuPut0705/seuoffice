@@ -175,6 +175,15 @@ export const ja = {
   aiReverted: '元に戻しました',
   aiRevertRefused:
     'まとめて元に戻せませんでした。その後に文書を編集した場合は、エディターの「元に戻す」（Ctrl+Z）を使ってください。',
+  aiProposalTitle: '変更の提案: {count} か所',
+  aiAccept: '受け入れる',
+  aiReject: '拒否',
+  aiProposalHint:
+    '受け入れるまで文書は変わりません。次の依頼を送る前に、これらの変更を受け入れるか拒否してください。',
+  aiProposalStale:
+    '変更を保留した後に文書が編集されたため、適用しませんでした。文書はそのままです。',
+  aiProposalNotHeld:
+    '実行中に文書が編集されたため、この変更を提案として保留できませんでした。すでに文書に反映されています。元に戻すには「変更を元に戻す」ボタンを使ってください。',
   memoTitle: 'コメント',
   memoOpen: 'コメント',
   memoAdd: 'コメントを追加',

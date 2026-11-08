@@ -74,6 +74,7 @@ const METHODS = [
   'mergeCells',
   'splitCell',
   'undo',
+  'redo',
   'listMemos',
   'memoSelection',
   'insertMemo',

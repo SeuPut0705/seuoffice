@@ -175,6 +175,15 @@ export const vi = {
   aiReverted: 'Đã hoàn tác thay đổi',
   aiRevertRefused:
     'Không thể hoàn tác các thay đổi này cùng lúc. Nếu tài liệu đã được sửa sau đó, hãy dùng Hoàn tác của trình soạn thảo (Ctrl+Z).',
+  aiProposalTitle: 'Thay đổi được đề xuất: {count}',
+  aiAccept: 'Chấp nhận',
+  aiReject: 'Từ chối',
+  aiProposalHint:
+    'Tài liệu giữ nguyên cho đến khi bạn chấp nhận. Hãy chấp nhận hoặc từ chối các thay đổi này trước khi gửi yêu cầu khác.',
+  aiProposalStale:
+    'Tài liệu đã thay đổi sau khi các chỉnh sửa này được giữ lại nên chúng chưa được áp dụng. Tài liệu không thay đổi.',
+  aiProposalNotHeld:
+    'Không thể giữ các chỉnh sửa này để xem xét vì tài liệu đã bị thay đổi trong lúc chạy. Chúng đã nằm trong tài liệu; dùng nút hoàn tác để gỡ chúng.',
   memoTitle: 'Ghi chú',
   memoOpen: 'Ghi chú',
   memoAdd: 'Thêm ghi chú',

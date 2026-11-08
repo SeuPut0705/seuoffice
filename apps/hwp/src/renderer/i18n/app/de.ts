@@ -179,6 +179,15 @@ export const de = {
   aiReverted: 'Änderungen zurückgenommen',
   aiRevertRefused:
     'Diese Änderungen konnten nicht zusammen zurückgenommen werden. Wurde das Dokument danach bearbeitet, verwenden Sie „Rückgängig“ im Editor (Ctrl+Z).',
+  aiProposalTitle: 'Vorgeschlagene Änderungen: {count}',
+  aiAccept: 'Übernehmen',
+  aiReject: 'Ablehnen',
+  aiProposalHint:
+    'Das Dokument bleibt unverändert, bis Sie übernehmen. Übernehmen oder lehnen Sie diese Änderungen ab, bevor Sie eine weitere Anfrage senden.',
+  aiProposalStale:
+    'Das Dokument wurde geändert, nachdem diese Änderungen zurückgehalten wurden, daher wurden sie nicht angewendet. Das Dokument ist unverändert.',
+  aiProposalNotHeld:
+    'Diese Änderungen konnten nicht zur Prüfung zurückgehalten werden, weil das Dokument während des Laufs geändert wurde. Sie sind bereits im Dokument; mit der Rückgängig-Schaltfläche nehmen Sie sie zurück.',
   memoTitle: 'Kommentare',
   memoOpen: 'Kommentare',
   memoAdd: 'Kommentar hinzufügen',

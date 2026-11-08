@@ -8203,6 +8203,33 @@ export const agentPlugin = {
         refreshMemoAnchors()
         return { ok: undone === steps, undone }
       }),
+
+      /**
+       * Redo the last `steps` undone changes through the editor's own history, under the same
+       * rule as `undo`: only while `expectedForeign` still equals foreignChanges(). A change
+       * made after the undo empties the editor's redo stack, so the redo then stops short.
+       */
+      redo: guarded((steps, expectedForeign) => {
+        if (!Number.isInteger(steps) || steps < 1 || steps > MAX_UNDO_STEPS) {
+          throw fail('BAD_ARGUMENT', 'steps must be a small positive integer')
+        }
+        if (expectedForeign !== foreign) return { ok: false, reason: 'changed', redone: 0 }
+        let redone = 0
+        own = true
+        text = null
+        try {
+          for (let i = 0; i < steps; i++) {
+            const result = host.automation.execute('edit:redo')
+            if (!result || result.ok !== true) break
+            redone += 1
+          }
+        } finally {
+          own = false
+        }
+        syncMemos({ notify: false })
+        refreshMemoAnchors()
+        return { ok: redone === steps, redone }
+      }),
     }
 
     // The three changes the panel makes are editor commands too: a caller that has only the

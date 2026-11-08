@@ -970,6 +970,9 @@ export type AgentRefreshTocResult =
 export type AgentUndoResult =
   { ok: boolean; undone: number } | { ok: false; reason: 'changed'; undone: 0 }
 
+export type AgentRedoResult =
+  { ok: boolean; redone: number } | { ok: false; reason: 'changed'; redone: 0 }
+
 /** One picture of the document, as listPictures lists it. */
 export interface AgentPicture {
   /** 1-based position in reading order; what readPicture takes */
@@ -1195,6 +1198,8 @@ export interface AgentPluginSurface {
   /** take the marks of the changes made so far off the pages */
   clearMarks(): { ok: true }
   undo(steps: number, expectedForeign: number): AgentUndoResult
+  /** put back the last `steps` undone changes, only while `expectedForeign` is still the foreign count */
+  redo(steps: number, expectedForeign: number): AgentRedoResult
   /** the memos of the document in document order, with their pages and anchor rectangles */
   listMemos(): AgentMemoList
   /** whether the selection (or the caret) may carry a memo anchor */

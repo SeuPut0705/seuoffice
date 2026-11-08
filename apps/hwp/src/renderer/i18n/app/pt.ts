@@ -178,6 +178,15 @@ export const pt = {
   aiReverted: 'Alterações desfeitas',
   aiRevertRefused:
     'Não foi possível desfazer estas alterações de uma vez. Se o documento foi editado depois, use o Desfazer do editor (Ctrl+Z).',
+  aiProposalTitle: 'Alterações propostas: {count}',
+  aiAccept: 'Aceitar',
+  aiReject: 'Rejeitar',
+  aiProposalHint:
+    'O documento permanece como estava até você aceitar. Aceite ou rejeite estas alterações antes de enviar outro pedido.',
+  aiProposalStale:
+    'O documento mudou depois que estas edições foram retidas, por isso não foram aplicadas. O documento permanece inalterado.',
+  aiProposalNotHeld:
+    'Não foi possível reter estas edições para revisão porque o documento foi alterado durante a execução. Elas já estão no documento; use o botão de desfazer para removê-las.',
   memoTitle: 'Comentários',
   memoOpen: 'Comentários',
   memoAdd: 'Adicionar comentário',

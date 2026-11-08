@@ -94,6 +94,7 @@ import { MemoApprovalGate, memoApprovalPreview } from './memo-approval'
 import { unfinishedSteps, type RunStep } from './unfinished-steps'
 import { useSubscriptionConnection } from './subscription-client'
 import { createElectronTransport } from './transport'
+import { NO_PROPOSAL, accept, holdRun, reject, type TurnProposal } from './turn-proposal'
 
 const PANEL_WIDTH_KEY = 'hwp-ai-panel-width'
 const PANEL_WIDTH_DEFAULT = 360
@@ -138,6 +139,13 @@ interface RunChanges {
   /** the editor's count of changes made by anyone else, read when the run began */
   foreign: number
   state: 'applied' | 'reverted' | 'refused'
+  /**
+   * The run held out of the document until the person accepts it. While it is held `state`
+   * is 'reverted' (the document does not have the run); an accept makes it 'applied'.
+   */
+  proposal: TurnProposal
+  /** the run could not be held out of the document and stays applied (it was changed during the run) */
+  notHeld?: boolean
 }
 
 interface ChatEntry {
@@ -675,7 +683,12 @@ export function AiPanel({
     const foreign = runForeignRef.current
     // a run whose starting point is unknown cannot be checked, so it is not offered for undo
     return {
-      changes: { items, foreign: foreign ?? -1, state: foreign === null ? 'refused' : 'applied' },
+      changes: {
+        items,
+        foreign: foreign ?? -1,
+        state: foreign === null ? 'refused' : 'applied',
+        proposal: NO_PROPOSAL,
+      },
     }
   }
 
@@ -840,6 +853,7 @@ export function AiPanel({
             ...changed,
             ...(unfinished.length > 0 ? { unfinished } : {}),
           }))
+          if (changed.changes) holdChanges(changed.changes)
           setBusy(false)
           projectRef.current?.finishSend()
         },
@@ -876,6 +890,7 @@ export function AiPanel({
             }
             return next
           })
+          if (changed.changes) holdChanges(changed.changes)
           setBusy(false)
           projectRef.current?.finishSend()
         },
@@ -916,6 +931,10 @@ export function AiPanel({
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight })
   }
 
+  /** a run is held as a proposal that nobody has accepted or rejected yet */
+  const proposalPending = (): boolean =>
+    chatNowRef.current.some((entry) => entry.changes?.proposal.kind === 'pending')
+
   /** the attachments of the run in progress, for a retry of it */
   const runAttachmentsRef = useRef<AttachmentMeta[]>([])
   /** the skills of the run in progress: a retry sends the same skill text */
@@ -932,7 +951,7 @@ export function AiPanel({
   ): boolean => {
     const instruction = text.trim()
     const loop = loopRef.current
-    if (!instruction || !loop || loop.busy || reverting) return false
+    if (!instruction || !loop || loop.busy || reverting || proposalPending()) return false
     // A request made during a status check or in front of the first-connection notice is
     // held and starts by itself once the way is clear; in front of "not connected" nothing
     // is kept. Either way nothing is sent now and the text stays with the caller.
@@ -1084,7 +1103,10 @@ export function AiPanel({
   const sendPrompt = (): void => {
     const text = prompt.trim()
     if (!text) return
-    skills.withSkills(text, (skillUse) => send(text, undefined, undefined, skillUse))
+    skills.withSkills(text, (skillUse) => {
+      // a held run has to be answered first: its card is the way on
+      if (!send(text, undefined, undefined, skillUse) && proposalPending()) showWhatHoldsTheSend()
+    })
   }
 
   /** "Continue with …" on a blocked run: that provider becomes the selection, then the request reruns */
@@ -1098,12 +1120,14 @@ export function AiPanel({
   }
 
   // The editor's history is one stack: only the newest run still in the document can be
-  // taken back, and a run that could not be taken back whole blocks the ones under it.
+  // taken back, and a run that could not be taken back whole blocks the ones under it. A run
+  // held as a proposal sits on the redo stack, so an undo under it would lose it.
   const revertableIdx = (() => {
     for (let i = chat.length - 1; i >= 0; i--) {
-      const state = chat[i]!.changes?.state
-      if (state === 'applied') return i
-      if (state === 'refused') return -1
+      const changes = chat[i]!.changes
+      if (changes?.proposal.kind === 'pending') return -1
+      if (changes?.state === 'applied') return i
+      if (changes?.state === 'refused') return -1
     }
     return -1
   })()
@@ -1133,6 +1157,70 @@ export function AiPanel({
       (result) => settle(result.ok ? 'reverted' : 'refused'),
       () => settle('refused'),
     )
+  }
+
+  /** Replace what the card of reply `idx` holds. */
+  const patchChanges = (idx: number, patch: Partial<RunChanges>): void => {
+    setChat((prev) =>
+      prev.map((entry, i) =>
+        i === idx && entry.changes ? { ...entry, changes: { ...entry.changes, ...patch } } : entry,
+      ),
+    )
+  }
+
+  /** The run of reply `idx` goes into the document: the change card turns into an applied run. */
+  const acceptRun = (idx: number): void => {
+    const proposal = chat[idx]?.changes?.proposal
+    if (proposal?.kind !== 'pending' || busy || reverting) return
+    setReverting(true)
+    void accept(bridgeRef.current, proposal).then((outcome) => {
+      if (!mountedRef.current) return
+      if (outcome.kind === 'applied') {
+        patchChanges(idx, { state: 'applied', foreign: outcome.foreign, proposal: NO_PROPOSAL })
+      } else {
+        patchChanges(idx, { proposal: outcome.proposal })
+        // the model was told it made these edits: they are not in the document
+        revertedNoteDueRef.current = true
+      }
+      setReverting(false)
+    })
+  }
+
+  /** The run of reply `idx` stays out of the document. */
+  const rejectRun = (idx: number): void => {
+    const proposal = chat[idx]?.changes?.proposal
+    if (proposal?.kind !== 'pending' || busy || reverting) return
+    patchChanges(idx, { proposal: reject() })
+    revertedNoteDueRef.current = true
+  }
+
+  /**
+   * A run ended with changes in the document: take them back out and hold them as a proposal.
+   * When they cannot be taken out (the document was changed during the run) they stay applied,
+   * with a note, and can be undone with the card's button as before.
+   */
+  const holdChanges = (changes: RunChanges): void => {
+    if (changes.state !== 'applied') return
+    setReverting(true)
+    void holdRun(bridgeRef.current, changes.items.length, changes.foreign).then((proposal) => {
+      if (!mountedRef.current) return
+      setChat((prev) =>
+        prev.map((entry) =>
+          entry.changes === changes
+            ? {
+                ...entry,
+                changes:
+                  proposal.kind === 'pending'
+                    ? { ...changes, state: 'reverted', proposal }
+                    : { ...changes, notHeld: true },
+              }
+            : entry,
+        ),
+      )
+      // the marks were drawn on the document the run had; it is back to what it was
+      if (proposal.kind === 'pending') clearMarks()
+      setReverting(false)
+    })
   }
 
   /** Today's "new chat": the screen, the loop and everything the conversation carried start over. */
@@ -1456,6 +1544,9 @@ export function AiPanel({
                   changes={entry.changes}
                   canRevert={i === revertableIdx && !busy && !reverting}
                   onRevert={() => revert(i)}
+                  canAnswer={!busy && !reverting}
+                  onAccept={() => acceptRun(i)}
+                  onReject={() => rejectRun(i)}
                   onClearMarks={i === revertableIdx && marksShown ? clearMarks : null}
                   onShow={(place) => void bridgeRef.current.reveal(place).catch(() => {})}
                 />
@@ -1689,28 +1780,43 @@ export function AiPanel({
   )
 }
 
-/** What a run changed in the document, with the button that takes the whole run back. */
+/**
+ * What a run changed in the document: with the button that takes the whole run back, or, while
+ * the run is held as a proposal, the buttons that accept or reject it.
+ */
 function RunChangesCard({
   changes,
   canRevert,
   onRevert,
+  canAnswer,
+  onAccept,
+  onReject,
   onClearMarks,
   onShow,
 }: {
   changes: RunChanges
   canRevert: boolean
   onRevert: () => void
+  /** the proposal's buttons work now (no run or undo is in flight) */
+  canAnswer: boolean
+  onAccept: () => void
+  onReject: () => void
   /** set while the editor marks these changes on the pages */
   onClearMarks: (() => void) | null
   onShow: (place: AgentPlace) => void
 }): ReactElement {
   const { t } = useI18n()
   const count = changes.items.reduce((sum, item) => sum + item.count, 0)
+  const proposed = changes.proposal.kind !== 'none'
   return (
-    <div className={`ai-changes ai-changes-${changes.state}`}>
+    <div className={`ai-changes ai-changes-${proposed ? 'proposed' : changes.state}`}>
       <div className="ai-changes-head">
         <span className="ai-changes-title">
-          {changes.state === 'reverted' ? t('aiReverted') : t('aiChangesTitle', { count })}
+          {proposed
+            ? t('aiProposalTitle', { count })
+            : changes.state === 'reverted'
+              ? t('aiReverted')
+              : t('aiChangesTitle', { count })}
         </span>
         {onClearMarks && changes.state === 'applied' && (
           <button className="ai-changes-unmark" onClick={onClearMarks}>
@@ -1721,6 +1827,20 @@ function RunChangesCard({
           <button className="ai-changes-revert" disabled={!canRevert} onClick={onRevert}>
             {t('aiRevert')}
           </button>
+        )}
+        {changes.proposal.kind === 'pending' && (
+          <span className="ai-changes-actions">
+            <button className="ai-changes-revert" disabled={!canAnswer} onClick={onReject}>
+              {t('aiReject')}
+            </button>
+            <button
+              className="ai-changes-revert ai-changes-accept"
+              disabled={!canAnswer}
+              onClick={onAccept}
+            >
+              {t('aiAccept')}
+            </button>
+          </span>
         )}
       </div>
       <ul className="ai-changes-list">
@@ -1742,6 +1862,21 @@ function RunChangesCard({
           </li>
         ))}
       </ul>
+      {changes.proposal.kind === 'pending' && (
+        <div className="ai-changes-note ai-changes-hint" role="status">
+          {t('aiProposalHint')}
+        </div>
+      )}
+      {changes.proposal.kind === 'stale' && (
+        <div className="ai-changes-note" role="status">
+          {t('aiProposalStale')}
+        </div>
+      )}
+      {changes.notHeld && (
+        <div className="ai-changes-note" role="status">
+          {t('aiProposalNotHeld')}
+        </div>
+      )}
       {changes.state === 'refused' && (
         <div className="ai-changes-note" role="status">
           {t('aiRevertRefused')}

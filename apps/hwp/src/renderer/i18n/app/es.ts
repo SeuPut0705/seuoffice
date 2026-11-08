@@ -179,6 +179,15 @@ export const es = {
   aiReverted: 'Cambios deshechos',
   aiRevertRefused:
     'No se pudieron deshacer estos cambios de una vez. Si el documento se editó después, usa Deshacer del editor (Ctrl+Z).',
+  aiProposalTitle: 'Cambios propuestos: {count}',
+  aiAccept: 'Aceptar',
+  aiReject: 'Rechazar',
+  aiProposalHint:
+    'El documento no cambia hasta que aceptes. Acepta o rechaza estos cambios antes de enviar otra solicitud.',
+  aiProposalStale:
+    'El documento cambió después de retener estas ediciones, así que no se aplicaron. El documento sigue igual.',
+  aiProposalNotHeld:
+    'No se pudieron retener estas ediciones para su revisión porque el documento cambió durante la ejecución. Ya están en el documento; usa el botón de deshacer para quitarlas.',
   memoTitle: 'Comentarios',
   memoOpen: 'Comentarios',
   memoAdd: 'Añadir comentario',

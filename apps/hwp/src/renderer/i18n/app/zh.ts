@@ -167,6 +167,13 @@ export const zh = {
   aiRevert: '撤销这些修改',
   aiReverted: '已撤销',
   aiRevertRefused: '无法一次撤销这些修改。如果之后又编辑过文档，请使用编辑器自带的撤销（Ctrl+Z）。',
+  aiProposalTitle: '建议的修改：{count} 处',
+  aiAccept: '接受',
+  aiReject: '拒绝',
+  aiProposalHint: '在你接受之前，文档保持不变。发送下一个请求前，请先接受或拒绝这些修改。',
+  aiProposalStale: '这些修改被搁置后文档又有改动，因此没有应用。文档保持不变。',
+  aiProposalNotHeld:
+    '运行期间文档被修改，无法将这些修改作为建议搁置。它们已写入文档，如需撤回请点撤销按钮。',
   memoTitle: '批注',
   memoOpen: '批注',
   memoAdd: '添加批注',
