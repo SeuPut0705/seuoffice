@@ -2183,6 +2183,11 @@ export function registerSlidesIpc(): void {
         return { bytes: await savePptx(base) }
       }
 
+      // The AI run this landing belongs to: if it was held, reverted or replaced while a page
+      // was being read, landing now would write into the held deck or the next run.
+      const landRun = sessions.get(e.sender.id)?.aiRun
+      const runMoved = (): boolean => sessions.get(e.sender.id)?.aiRun !== landRun
+      const runEnded = { error: 'the AI run ended before the generated pages could land' }
       try {
         // Append: extract only the "new pages" and land them into the existing in-memory
         // deck as one per_op transaction. Already-landed pages stay untouched
@@ -2211,6 +2216,7 @@ export function registerSlidesIpc(): void {
               lastErr = pageErr instanceof Error ? pageErr.message : String(pageErr)
             }
           }
+          if (runMoved()) return runEnded
           let merged = 0
           if (sources.length > 0) {
             pushHistory(existing)
@@ -2258,6 +2264,7 @@ export function registerSlidesIpc(): void {
           }
           const one = await readCloudPage(marker)
           const source = await extractMergeSlideSource(one.bytes)
+          if (runMoved()) return runEnded
           if (!source) {
             return { error: tm('errMergeFailed') }
           }
@@ -2299,6 +2306,7 @@ export function registerSlidesIpc(): void {
           }
           const one = await readCloudPage(marker)
           const source = await extractMergeSlideSource(one.bytes)
+          if (runMoved()) return runEnded
           if (!source) {
             return { error: tm('errMergeFailed') }
           }
@@ -2324,6 +2332,7 @@ export function registerSlidesIpc(): void {
         // replace mode: assemble the whole batch into one multi-page pptx as the new deck base.
         const { bytes } = await assembleDeck()
         const opened = await openPptx(bytes)
+        if (runMoved()) return runEnded
         const replaceSession: Session = {
           path: '',
           opened,
@@ -3506,6 +3515,7 @@ export function registerSlidesIpc(): void {
   ipcMain.handle('slides:edit-chart', async (e, op: EditChartOp) => {
     const session = sessions.get(e.sender.id)
     if (!session) return null
+    const run = session.aiRun
     const slide = session.opened.deck.slides[op.slideIndex]
     if (!slide) return null
     // A reparse regenerates element ids: look up the new id by element index; the renderer uses it to keep the selection
@@ -3527,6 +3537,7 @@ export function registerSlidesIpc(): void {
         ? await dialog.showMessageBox(parent, options)
         : await dialog.showMessageBox(options)
       if (r.response !== 0) return null
+      if (session.aiRun !== run || sessions.get(e.sender.id) !== session) return null
     }
     const patch: Parameters<typeof editChartElement>[3] = {
       ...(op.kind ? { kind: op.kind === 'barH' ? 'bar' : op.kind } : {}),
@@ -4258,6 +4269,7 @@ export function registerSlidesIpc(): void {
   ipcMain.handle('slides:add-media-bytes', async (e, op: AddMediaBytesOp) => {
     const session = sessions.get(e.sender.id)
     if (!session || !session.opened.deck.slides[op.slideIndex]) return null
+    const run = session.aiRun
     let bytes: Uint8Array
     try {
       bytes =
@@ -4267,6 +4279,7 @@ export function registerSlidesIpc(): void {
     } catch {
       return null
     }
+    if (session.aiRun !== run || sessions.get(e.sender.id) !== session) return null
     const deckSize = session.opened.deck.size
     const scale = op.fitWidthPx / (deckSize.cx / EMU_PER_PX_96)
     const toEmu = (px: number) => Math.round((px / scale) * EMU_PER_PX_96)
