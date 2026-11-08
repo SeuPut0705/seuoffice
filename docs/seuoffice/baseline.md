@@ -1,7 +1,7 @@
 # 들여온 트리의 검사 기준선
 
 - 날짜: 2026-11-08
-- 커밋: `2b036c8a3a4dac13fc8a4ea68fbca700f92c3b65`(`chore: adapt the imported tree to seuoffice`, 이음오피스 `aea1414` 들여오기 직후)
+- 커밋: `f515c987729275209d760ec5c42f9a1390128f95`(`chore: adapt the imported tree to seuoffice`, 이음오피스 `aea1414` 들여오기 직후. 이력을 고쳐 쓰며 SHA가 바뀌었고, 문서의 로컬 경로 말고는 같다)
 - 환경: macOS arm64, Node 22.22.3(Homebrew `node@22`), npm 10.9.8, rustc·cargo 1.98.1(Homebrew)
 - 방법: 깨끗한 작업 트리(`git worktree`)에서 `npm ci` 뒤 아래 명령을 차례로 돌렸다.
 
@@ -44,16 +44,17 @@ sheets의 Rust 시험(`native:test`: 304 + 7개)과 `native:build`는 통과했�
 
 ## GitHub 상위 CI(`CI` 워크플로)
 
-상위에서 들여온 `.github/workflows/ci.yml`을 GitHub(ubuntu, Node 22)에서 돌린 결과다. 코드 시험이 실패한 적은 없고, 실패는 모두 내려받기 장애, 시간 상한, 이력 고쳐 쓰기 때문이다.
+상위에서 들여온 `.github/workflows/ci.yml`을 GitHub(ubuntu, Node 22)에서 돌린 결과다. 이력을 고쳐 쓴 뒤 옛 커밋을 가리키는 실행 기록은 지웠다.
 
-| 실행                     | 작업   | 결과 | 까닭                                                                                                                                                  |
-| ------------------------ | ------ | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 42474844121 첫 시도      | 둘 다  | 실패 | `npm ci`가 Electron을 GitHub 릴리스에서 받다 504                                                                                                      |
-| 42474844121 두 번째 시도 | `e2e`  | 실패 | `Build apps`에서 draw.io(`draw.war`)를 GitHub 릴리스에서 받다 504                                                                                     |
-| 42474844121 두 번째 시도 | `test` | 끊김 | 작업 시간 상한 45분. 끊기기 전까지 검사 전부와 작업 공간 28개 시험이 통과했고 실패는 0이었다. sheets `native:test`에서 끊겼다                         |
-| 42478878430 첫 시도      | `e2e`  | 통과 | 앱 빌드, markdown 브라우저 시험, Electron 셸 e2e 모두 통과                                                                                            |
-| 42478878430 첫 시도      | `test` | 실패 | `npm ci`가 Electron을 받다 504                                                                                                                        |
-| 42478878430 두 번째 시도 | `test` | 실패 | `Check skill versions`가 `github.event.before`(force-push 전 커밋 `e6371aa`)를 찾지 못함. 이력을 고쳐 쓴 뒤 첫 푸시에서만 생기고 다음 푸시부터는 없다 |
+| 시도           | 작업   | 결과 | 까닭                                                                                                                                                                                           |
+| -------------- | ------ | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 고쳐 쓰기 전 1 | 둘 다  | 실패 | `npm ci`가 Electron을 GitHub 릴리스에서 받다 504                                                                                                                                               |
+| 고쳐 쓰기 전 2 | `e2e`  | 실패 | `Build apps`에서 draw.io(`draw.war`)를 GitHub 릴리스에서 받다 504                                                                                                                              |
+| 고쳐 쓰기 전 2 | `test` | 끊김 | 작업 시간 상한 45분. 끊기기 전까지 검사 전부와 작업 공간 28개 시험이 통과했다. sheets `native:test`에서 끊겼다                                                                                 |
+| 고쳐 쓴 뒤 1   | `e2e`  | 통과 | 앱 빌드, markdown 브라우저 시험, Electron 셸 e2e 모두 통과                                                                                                                                     |
+| 고쳐 쓴 뒤 1   | `test` | 실패 | `npm ci`가 Electron을 받다 504. 다시 돌린 시도는 `Check skill versions`가 force-push 전 커밋을 찾지 못해 실패(고쳐 쓴 뒤 첫 푸시에만 생김)                                                     |
+| 42482304852    | `test` | 실패 | `@genoffice/shell`의 `product-identity` 시험이 `apps/web/src/renderer`를 찾다 실패. seuoffice가 만든 실패라 시험을 고쳤다(`upstream-edits.md`)                                                 |
+| 42482304852    | `e2e`  | 실패 | 335개 통과, 맞춤법 시험 2개 실패(`docs-spell-suggestions`, `docs-spellcheck-reenable`). 같은 트리의 앞 실행에서는 통과했다. 상위 시험이 "맞춤법 검사기는 앱 밖"이라며 재시도 1회를 둔 시험이다 |
 
 - 상위 이음오피스의 같은 작업은 cargo 캐시가 있어 39분쯤 걸린다(이음 run 42455263595). 이 저장소는 캐시가 녹색 실행 뒤에만 저장되어 첫 실행이 더 오래 걸린다. 그래서 `test` 상한을 60분으로 올렸다(`upstream-edits.md`).
 - 리눅스에서는 `@genoffice/ai-provider` 시험이 모두 통과했다. 위 표의 ai-provider 실패 세 건이 이 PC(macOS) 환경 때문이라는 추론과 맞는다.
