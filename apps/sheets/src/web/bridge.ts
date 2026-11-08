@@ -83,16 +83,25 @@ async function adopt(
 // The queued document is handed out once: the renderer asks hasQueuedWorkbook at boot and again after mount.
 let queuedOpened: Promise<WorkbookFile | null> | undefined
 
+// Files under /work get names of their own: a document called like a save target
+// (or any other name) can never be the file a save writes over.
+let engineFiles = 0
+function engineFileName(extension: string): string {
+  engineFiles += 1
+  return `workbook-${engineFiles}${extension}`
+}
+
 async function openQueuedDocument(): Promise<WorkbookFile | null> {
   const doc = await waitForDocument()
   if (!doc) return null
   try {
-    const enginePath = await engine().put(doc.fileName, doc.bytes)
+    const engineName = engineFileName(/\.[^./]+$/.exec(doc.fileName)?.[0].toLowerCase() ?? '')
+    const enginePath = await engine().put(engineName, doc.bytes)
     const opened = await engine().open(enginePath, navigator.language)
     return await adopt(opened, doc.bytes, {
       fileName: doc.fileName,
       virtualPath: doc.virtualPath,
-      engineName: doc.fileName,
+      engineName,
     })
   } catch (error) {
     reportError('open_failed', error instanceof Error ? error.message : String(error))
@@ -102,7 +111,7 @@ async function openQueuedDocument(): Promise<WorkbookFile | null> {
 
 // Large saves stage their cell edits in chunks first, as they do over the desktop IPC.
 const transfers = new SaveEditsTransferStore()
-let savedCount = 0
+
 // Bumps each time the host stored the bytes of a save
 let deliveredCount = 0
 let lastSaveError: string | undefined
@@ -131,8 +140,8 @@ async function saveWorkbookEdits(input: WorkbookSaveRequest): Promise<WorkbookSa
     if (!session || session.sessionId !== request.sessionId) {
       throw new Error('Unknown workbook session.')
     }
-    savedCount += 1
-    const target = `saved-${savedCount}.xlsx`
+    // the saved package keeps the source's type (.xlsm keeps its macros)
+    const target = engineFileName(/\.[^.]+$/.exec(session.engineName)?.[0] ?? '.xlsx')
     const saved = await engine().save(
       session.engineName,
       target,
@@ -169,7 +178,7 @@ let closeSave: (() => void) | undefined
 let closeSaveSettled: ((ok: boolean) => void) | undefined
 
 /** The host's `request_save`: the app's own save, or the workbook as it is when nothing is pending */
-async function saveForHost(): Promise<void> {
+async function runHostSave(): Promise<void> {
   const run = closeSave
   const session = current
   if (!run || !session) throw new Error('the workbook is not open yet')
@@ -182,6 +191,14 @@ async function saveForHost(): Promise<void> {
   closeSaveSettled = undefined
   if (!ok) throw new Error(lastSaveError ?? 'the workbook was not saved')
   if (deliveredCount === delivered) await saveToHost(session.fileName, session.bytes)
+}
+
+// Host requests run one after another: each waits on the single close-save answer.
+let hostSaves: Promise<void> = Promise.resolve()
+function saveForHost(): Promise<void> {
+  const next = hostSaves.then(runHostSave, runHostSave)
+  hostSaves = next.catch(noop)
+  return next
 }
 
 /** Ctrl+S / Cmd+S runs the app's save, as the desktop menu accelerator does */

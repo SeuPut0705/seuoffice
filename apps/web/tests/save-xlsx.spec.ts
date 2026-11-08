@@ -115,6 +115,67 @@ test('Ctrl+S saves in edit mode', async ({ page }) => {
   expectSavedWith(await bytesOf(await download), ['by-shortcut'])
 })
 
+test('a save the host refuses keeps the edits, and the next save stores them', async ({ page }) => {
+  // a host that refuses the first save: answers before the launcher's own listener sees it
+  await page.addInitScript(() => {
+    if (window !== window.top) return
+    let refused = false
+    window.addEventListener('message', (event) => {
+      const data = event.data as { source?: string; type?: string; saveId?: number } | null
+      if (data?.source !== 'seuoffice' || data.type !== 'save' || refused) return
+      refused = true
+      event.stopImmediatePropagation()
+      ;(event.source as Window).postMessage(
+        {
+          source: 'seuoffice',
+          version: 1,
+          type: 'save_failed',
+          saveId: data.saveId,
+          message: 'disk full',
+        },
+        event.origin,
+      )
+    })
+  })
+  const frame = await open(page, FIXTURE, true)
+  await edit(page, frame, 'D2', 'kept-after-refusal')
+  await saveButton(frame).click()
+  await expect(frame.getByText('disk full').first()).toBeVisible()
+  await expect(saveButton(frame)).toBeEnabled()
+  await expect(page.locator('#status')).toContainText('저장 안 함')
+
+  // the session the refused save left behind still saves, with the edit in it
+  const retry = page.waitForEvent('download')
+  await saveButton(frame).click()
+  expectSavedWith(await bytesOf(await retry), ['kept-after-refusal'])
+  await expect(saveButton(frame)).toBeDisabled()
+})
+
+test('a workbook named like an internal save file saves twice', async ({ page }) => {
+  const named = (name: string) => ({ name, buffer: readFileSync(FIXTURE) })
+  const frame = await open(page, named('saved-1.xlsx'), true)
+  await edit(page, frame, 'D2', 'first-of-two')
+  const first = page.waitForEvent('download')
+  await saveButton(frame).click()
+  expect((await first).suggestedFilename()).toBe('saved-1.xlsx')
+  await edit(page, frame, 'D4', 'second-of-two')
+  const second = page.waitForEvent('download')
+  await saveButton(frame).click()
+  expectSavedWith(await bytesOf(await second), ['first-of-two', 'second-of-two'])
+})
+
+test('two host save requests at once both finish', async ({ page }) => {
+  const frame = await open(page, FIXTURE, true)
+  await edit(page, frame, 'D2', 'host-twice')
+  const downloads: Download[] = []
+  page.on('download', (download) => downloads.push(download))
+  await page.locator('#save').click()
+  await page.locator('#save').click()
+  await expect.poll(() => downloads.length, { timeout: 20_000 }).toBe(2)
+  for (const download of downloads) expectSavedWith(await bytesOf(download), ['host-twice'])
+  await expect(page.locator('#status')).not.toContainText('저장 실패')
+})
+
 test('view mode keeps the workbook as it is and saves nothing', async ({ page }) => {
   const frame = await open(page, FIXTURE, false)
   await expect(page.locator('#save')).toBeHidden()
