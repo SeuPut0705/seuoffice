@@ -55,7 +55,7 @@ export const RECOVERY_TICK_MS = 1_000
 export interface RecoveryCopierOptions {
   editor: RecoveryEditorPort
   api: RecoveryCopyApi
-  /** the editor is busy with something that must not share it (a save) */
+  /** the editor is busy with something that must not share it (a save), or an AI run holds edits that are not the person's yet */
   isBusy?: () => boolean
   /** the document holds a restored copy not saved since: unsaved even when the editor says not */
   restoredUnsaved?: () => boolean
@@ -116,6 +116,9 @@ export function createRecoveryCopier(options: RecoveryCopierOptions): RecoveryCo
     // a build that cannot tell protection must not write as if it could
     const isProtected = await editor.isPasswordProtected().catch(() => true)
     if (isProtected) return 'protected'
+    // the checks above awaited: a save or an AI run that began meanwhile must not be copied,
+    // and the export is posted to the editor only after this last look
+    if (options.isBusy?.()) return 'superseded'
     // from here on the document as it is now goes into the copy; a change while it is
     // being exported goes into the next one
     changed = false
@@ -205,6 +208,9 @@ const READING_CALLS: ReadonlySet<string> = new Set([
   'reveal',
   'clearMarks',
   'installFileMenu',
+  'setRunLock',
+  'strandRun',
+  'setHeldRun',
 ])
 
 /**

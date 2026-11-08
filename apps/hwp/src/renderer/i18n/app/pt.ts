@@ -185,8 +185,6 @@ export const pt = {
     'O documento permanece como estava até você aceitar. Aceite ou rejeite estas alterações antes de enviar outro pedido.',
   aiProposalStale:
     'O documento mudou depois que estas edições foram retidas, por isso não foram aplicadas. O documento permanece inalterado.',
-  aiProposalNotHeld:
-    'Não foi possível reter estas edições para revisão porque o documento foi alterado durante a execução. Elas já estão no documento; use o botão de desfazer para removê-las.',
   memoTitle: 'Comentários',
   memoOpen: 'Comentários',
   memoAdd: 'Adicionar comentário',
@@ -223,6 +221,10 @@ export const pt = {
   memoErrDelete: 'Não foi possível excluir o comentário.',
   memoErrTooLong: 'O comentário é muito longo. Pode ter até 100.000 caracteres.',
   memoErrLoad: 'Não foi possível ler a lista de comentários.',
+  saveAiRunning:
+    'Não é possível salvar enquanto a IA edita o documento. Tente novamente quando ela terminar.',
+  aiRunStranded:
+    'Não foi possível desfazer as edições da IA no documento. Este documento não será salvo. Feche-o sem salvar e abra-o novamente.',
   memoSaveBlocked: 'Salve ou cancele primeiro o comentário que está escrevendo.',
   memoRemoved: 'Comentários excluídos com o texto: {count}. Pressione Ctrl+Z para desfazer.',
   memoNotCopied: 'O comentário não foi copiado.',

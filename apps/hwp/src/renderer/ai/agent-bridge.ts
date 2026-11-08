@@ -83,6 +83,9 @@ const METHODS = [
   'showMemoAnchors',
   'selectMemo',
   'setMemoLock',
+  'setRunLock',
+  'strandRun',
+  'setHeldRun',
 ] as const satisfies readonly (keyof AgentPluginSurface)[]
 
 export function createAgentBridge(getEditor: () => AgentBridgeEditor | null): AgentBridge {

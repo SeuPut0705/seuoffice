@@ -12,12 +12,15 @@ import type { AgentStreamCallbacks, AgentStreamRequest } from '@genoffice/agent-
 import { defaultAiSettings, type AiSettings } from '@genoffice/ai-provider'
 import { AiPanel } from '../src/renderer/ai/AiPanel'
 import type { AgentBridge } from '../src/renderer/ai/agent-bridge'
+import type { HoldState } from '../src/renderer/ai/turn-proposal'
 import { t } from '../src/renderer/i18n/locale'
 import { fakeProjectFolder, type FakeProjectFolder } from './fake-project-folder'
 
 const model = vi.hoisted(() => ({
   calls: [] as string[],
   requests: [] as { system: string; tools: string[] }[],
+  /** the model never answers: a run stays in flight */
+  hang: false,
 }))
 
 vi.mock('../src/renderer/ai/transport', () => ({
@@ -25,6 +28,7 @@ vi.mock('../src/renderer/ai/transport', () => ({
     stream: (request: AgentStreamRequest, callbacks: AgentStreamCallbacks) => {
       model.calls.push('stream')
       model.requests.push({ system: request.system, tools: request.tools.map((tool) => tool.name) })
+      if (model.hang) return { cancel: () => undefined }
       setTimeout(() => {
         callbacks.onDelta('Done.')
         callbacks.onDone()
@@ -70,9 +74,17 @@ function projectApiStub() {
   }
 }
 
-/** an editor that is not there: every call fails, the panel swallows it */
+/**
+ * an editor with no document behind it: it takes the run's lock and counts no foreign
+ * changes, and every other call fails, which the panel swallows
+ */
 const NO_EDITOR = new Proxy({} as AgentBridge, {
-  get: () => () => Promise.reject(new Error('no editor in this test')),
+  get: (_target, method) => () =>
+    method === 'setRunLock'
+      ? Promise.resolve({ ok: true, locked: true })
+      : method === 'foreignChanges'
+        ? Promise.resolve(0)
+        : Promise.reject(new Error('no editor in this test')),
 })
 
 let container: HTMLElement
@@ -83,6 +95,7 @@ beforeEach(() => {
   Element.prototype.scrollTo = () => undefined
   model.calls.length = 0
   model.requests.length = 0
+  model.hang = false
   container = document.createElement('div')
   document.body.appendChild(container)
 })
@@ -208,5 +221,82 @@ describe('hwp AI panel: project folder', () => {
     expect(container.querySelectorAll('.ai-msg').length).toBe(0)
     await settle()
     expect(folder.newChats).toEqual([])
+  })
+})
+
+describe('hwp AI panel: the run holds the document', () => {
+  /** an editor whose lock calls are recorded, with no document behind it */
+  function lockableEditor(options: { lockFails?: boolean } = {}) {
+    const locks: boolean[] = []
+    const editor = new Proxy({} as AgentBridge, {
+      get: (_target, method) => async (locked?: boolean) => {
+        if (method === 'setRunLock') {
+          locks.push(locked === true)
+          if (options.lockFails && locked) throw new Error('the editor did not take the lock')
+          return { ok: true, locked }
+        }
+        if (method === 'foreignChanges') return 0
+        throw new Error('no editor in this test')
+      },
+    })
+    return { editor, locks }
+  }
+
+  async function mountWith(editor: AgentBridge, onRunHold: (state: HoldState) => void) {
+    Object.assign(window, {
+      hwpApi: hwpApiStub(),
+      projectApi: projectApiStub(),
+      projectFolderApi: fakeProjectFolder(null).api,
+    })
+    root = createRoot(container)
+    await act(async () => {
+      root!.render(
+        createElement(AiPanel, {
+          bridge: editor,
+          filePath: null,
+          onCollapse: () => undefined,
+          onRunHold,
+        }),
+      )
+    })
+    await settle()
+  }
+
+  it('tells the app from the send until the run ends, and holds the editor meanwhile', async () => {
+    const { editor, locks } = lockableEditor()
+    const held: HoldState[] = []
+    await mountWith(editor, (value) => held.push(value))
+    await sendStarter()
+
+    expect(model.requests).toHaveLength(1)
+    expect(held).toEqual(['held', 'free'])
+    expect(locks).toEqual([true, false])
+  })
+
+  it('does not start a run the editor cannot be locked for, and lets go of the document', async () => {
+    const { editor, locks } = lockableEditor({ lockFails: true })
+    const held: HoldState[] = []
+    await mountWith(editor, (value) => held.push(value))
+    await sendStarter()
+
+    expect(model.requests).toHaveLength(0)
+    expect(held).toEqual(['held', 'free'])
+    expect(locks).toEqual([true, false])
+    expect(container.textContent).toContain('the editor did not take the lock')
+  })
+
+  it('lets go of the document when a new chat is started in the middle of a run', async () => {
+    model.hang = true
+    const { editor, locks } = lockableEditor()
+    const held: HoldState[] = []
+    await mountWith(editor, (value) => held.push(value))
+    await sendStarter()
+    // the run is in flight: the model has not answered
+    expect(held).toEqual(['held'])
+
+    await act(async () => newChatButton()!.click())
+    await settle()
+    expect(held).toEqual(['held', 'free'])
+    expect(locks).toEqual([true, false])
   })
 })

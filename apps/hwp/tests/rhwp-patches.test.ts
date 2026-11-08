@@ -18,7 +18,12 @@ import {
   patchTargets,
   pluginHooks,
 } from '../scripts/rhwp-patches.mjs'
-import { AGENT_PLUGIN_ID, EASY_WORDS_COMMAND } from '../studio-plugin/agent-plugin.mjs'
+import {
+  AGENT_PLUGIN_ID,
+  EASY_WORDS_COMMAND,
+  REDO_GATE,
+  RUN_LOCK_GATE,
+} from '../studio-plugin/agent-plugin.mjs'
 
 const require = createRequire(import.meta.url)
 
@@ -566,6 +571,89 @@ describe('rhwp memo delete-undo patches', () => {
     ).toThrow(/rhwp patch/)
     expect(STUDIO_PATCHES).toContain('studio-memo-anchors')
     expect(STUDIO_PATCHES).toContain('studio-memo-delete-undo')
+  })
+})
+
+describe('rhwp AI run lock patch', () => {
+  // the studio's own gate for edits, with only the lines the patch reads
+  const gate = [
+    'type OperationDescriptor = { kind: string };',
+    'class Handler {',
+    "  editMode: 'normal' | 'form' = 'normal';",
+    '  private isOperationAllowedInEditMode(desc: OperationDescriptor): boolean {',
+    "    if (this.editMode !== 'form') return true;",
+    '    return false;',
+    '  }',
+    '  allowed(desc: OperationDescriptor): boolean {',
+    '    return this.isOperationAllowedInEditMode(desc);',
+    '  }',
+    '  count = 0;',
+    '  private withCommandErrorBoundary(_operation: string, run: () => void): void { run(); }',
+    '  private handleRedo(): void {',
+    "    this.withCommandErrorBoundary('redo', () => {",
+    '      this.count += 1;',
+    '    });',
+    '  }',
+    '  redo(): void { this.handleRedo(); }',
+    '  redone(): number { return this.count; }',
+    '}',
+    '',
+  ].join('\n')
+  const handler = (): {
+    allowed(desc: { kind: string }): boolean
+    redo(): void
+    redone(): number
+  } => {
+    const js = ts.transpileModule(
+      `${applyPatch('studio-ai-run-lock', gate)}\nreturn new Handler()`,
+      {
+        compilerOptions: { target: ts.ScriptTarget.ES2020 },
+      },
+    ).outputText
+    return new Function(js)()
+  }
+  const window = globalThis as unknown as Record<string, unknown>
+
+  it('refuses an edit of the person while the plugin says a run holds the document', () => {
+    window[RUN_LOCK_GATE] = () => true
+    try {
+      const studio = handler()
+      expect(studio.allowed({ kind: 'command' })).toBe(false)
+      expect(studio.allowed({ kind: 'snapshot' })).toBe(false)
+      // an edit already made is only recorded: refusing it would leave one no undo knows
+      expect(studio.allowed({ kind: 'record' })).toBe(true)
+    } finally {
+      delete window[RUN_LOCK_GATE]
+    }
+  })
+
+  it('lets every edit through when no run holds the document, or no plugin is loaded', () => {
+    expect(handler().allowed({ kind: 'command' })).toBe(true)
+    window[RUN_LOCK_GATE] = () => false
+    try {
+      expect(handler().allowed({ kind: 'snapshot' })).toBe(true)
+    } finally {
+      delete window[RUN_LOCK_GATE]
+    }
+  })
+
+  it('does no redo while a run waits on the redo stack, and redoes as before otherwise', () => {
+    window[REDO_GATE] = () => true
+    try {
+      const studio = handler()
+      studio.redo()
+      expect(studio.redone()).toBe(0)
+    } finally {
+      delete window[REDO_GATE]
+    }
+    const studio = handler()
+    studio.redo()
+    expect(studio.redone()).toBe(1)
+  })
+
+  it('fails when the studio text is gone, and is in the studio build', () => {
+    expect(() => applyPatch('studio-ai-run-lock', 'class Handler {}')).toThrow(/rhwp patch/)
+    expect(STUDIO_PATCHES).toContain('studio-ai-run-lock')
   })
 })
 

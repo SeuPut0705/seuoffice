@@ -183,8 +183,6 @@ export const id = {
     'Dokumen tetap seperti semula sampai Anda menerima. Terima atau tolak perubahan ini sebelum mengirim permintaan lain.',
   aiProposalStale:
     'Dokumen berubah setelah suntingan ini ditahan, jadi tidak diterapkan. Dokumen tidak berubah.',
-  aiProposalNotHeld:
-    'Suntingan ini tidak dapat ditahan untuk ditinjau karena dokumen diubah selama proses berjalan. Suntingan sudah ada di dokumen; gunakan tombol urungkan untuk menariknya kembali.',
   memoTitle: 'Komentar',
   memoOpen: 'Komentar',
   memoAdd: 'Tambahkan komentar',
@@ -220,6 +218,10 @@ export const id = {
   memoErrDelete: 'Komentar tidak dapat dihapus.',
   memoErrTooLong: 'Komentar terlalu panjang. Maksimal 100.000 karakter.',
   memoErrLoad: 'Daftar komentar tidak dapat dibaca.',
+  saveAiRunning:
+    'Tidak dapat menyimpan saat AI sedang menyunting dokumen. Coba lagi setelah selesai.',
+  aiRunStranded:
+    'Suntingan AI tidak dapat ditarik kembali dari dokumen. Dokumen ini tidak akan disimpan. Tutup tanpa menyimpan lalu buka lagi.',
   memoSaveBlocked: 'Simpan atau batalkan komentar yang sedang ditulis terlebih dahulu.',
   memoRemoved: 'Komentar terhapus bersama teks: {count}. Tekan Ctrl+Z untuk membatalkan.',
   memoNotCopied: 'Komentar tidak disalin.',

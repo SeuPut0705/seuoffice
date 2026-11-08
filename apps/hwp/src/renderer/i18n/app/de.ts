@@ -186,8 +186,6 @@ export const de = {
     'Das Dokument bleibt unverändert, bis Sie übernehmen. Übernehmen oder lehnen Sie diese Änderungen ab, bevor Sie eine weitere Anfrage senden.',
   aiProposalStale:
     'Das Dokument wurde geändert, nachdem diese Änderungen zurückgehalten wurden, daher wurden sie nicht angewendet. Das Dokument ist unverändert.',
-  aiProposalNotHeld:
-    'Diese Änderungen konnten nicht zur Prüfung zurückgehalten werden, weil das Dokument während des Laufs geändert wurde. Sie sind bereits im Dokument; mit der Rückgängig-Schaltfläche nehmen Sie sie zurück.',
   memoTitle: 'Kommentare',
   memoOpen: 'Kommentare',
   memoAdd: 'Kommentar hinzufügen',
@@ -227,6 +225,10 @@ export const de = {
   memoErrDelete: 'Der Kommentar konnte nicht gelöscht werden.',
   memoErrTooLong: 'Der Kommentar ist zu lang. Er kann bis zu 100.000 Zeichen enthalten.',
   memoErrLoad: 'Die Kommentarliste konnte nicht gelesen werden.',
+  saveAiRunning:
+    'Während die KI das Dokument bearbeitet, kann nicht gespeichert werden. Versuchen Sie es nach dem Ende erneut.',
+  aiRunStranded:
+    'Die Änderungen der KI konnten nicht aus dem Dokument zurückgenommen werden. Dieses Dokument wird nicht gespeichert. Schließen Sie es ohne Speichern und öffnen Sie es erneut.',
   memoSaveBlocked: 'Speichern oder verwerfen Sie zuerst den Kommentar, den Sie schreiben.',
   memoRemoved: 'Kommentare mit dem Text gelöscht: {count}. Mit Ctrl+Z rückgängig machen.',
   memoNotCopied: 'Der Kommentar wurde nicht kopiert.',

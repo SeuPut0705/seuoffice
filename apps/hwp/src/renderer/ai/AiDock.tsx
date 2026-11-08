@@ -24,6 +24,7 @@ import { useI18n } from '../i18n/locale'
 import type { AgentBridge } from './agent-bridge'
 import type { AiPrefill } from './easy-words'
 import { AiPanel } from './AiPanel'
+import type { HoldState } from './turn-proposal'
 
 export interface HwpAiDockProps {
   /** whether the user wants the panel out (a secondary pane still folds it) */
@@ -42,6 +43,8 @@ export interface HwpAiDockProps {
   prefill?: AiPrefill | null
   /** the panel took an `autoRun` request: clear it so it is not sent again */
   onPrefillTaken?: (taken: AiPrefill) => void
+  /** an AI run holds the document, is out of it again, or is stuck in it */
+  onRunHold?: (state: HoldState) => void
 }
 
 /** The panel at the right end, or its rail while collapsed; the panel stays mounted either way. */
@@ -53,6 +56,7 @@ export function HwpAiDock({
   templateDocument,
   prefill,
   onPrefillTaken,
+  onRunHold,
 }: HwpAiDockProps): ReactElement {
   const { lang, t } = useI18n()
   const { role, requestFocus } = useSplitPaneRole()
@@ -77,6 +81,7 @@ export function HwpAiDock({
         templateDocument={templateDocument}
         prefill={prefill ?? null}
         onPrefillTaken={onPrefillTaken}
+        onRunHold={onRunHold}
         onSkillHandoff={() => setOpen(true)}
       />
     </div>

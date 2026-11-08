@@ -14,6 +14,7 @@ import {
 import { HwpAiDock } from './ai/AiDock'
 import { DocCheckPanel } from './check/DocCheckPanel'
 import { createAgentBridge } from './ai/agent-bridge'
+import type { HoldState } from './ai/turn-proposal'
 import { afterPrefillTaken, easyWordsRequest, type AiPrefill } from './ai/easy-words'
 import {
   DIRTY_EVENT,
@@ -134,6 +135,17 @@ export default function App() {
   const hostRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<RhwpEditor | null>(null)
   const savingRef = useRef(false)
+  /**
+   * an AI run holds the document (its edits wait for the person's yes), or is stuck in it: no
+   * save, copy or export of the document may be made meanwhile (ai/AiPanel.tsx onRunHold). A
+   * stuck run is never let go of: the document is closed without saving.
+   */
+  const aiHeldRef = useRef(false)
+  const aiStrandedRef = useRef(false)
+  const setAiHold = useCallback((state: HoldState) => {
+    if (state === 'stranded') aiStrandedRef.current = true
+    aiHeldRef.current = aiStrandedRef.current || state === 'held'
+  }, [])
   /** resolved when the save in flight finishes, so a manual save can queue behind an autosave */
   const savingDoneRef = useRef<Promise<void> | null>(null)
   /** last key, click or paste in the editor (autosave waits for a pause) */
@@ -413,7 +425,13 @@ export default function App() {
       const done = new Promise<void>((resolve) => (release = resolve))
       savingDoneRef.current = done
       try {
-        const outcome = await runSave(savePortOf(editor), window.hwpApi, mode, automatic)
+        const outcome = await runSave(
+          savePortOf(editor),
+          window.hwpApi,
+          mode,
+          automatic,
+          () => aiHeldRef.current,
+        )
         if (outcome.kind === 'export') {
           // a copy, as File > Export as PDF writes it; nothing about the document changes
           await pdfCopyRef.current(outcome.path)
@@ -445,6 +463,16 @@ export default function App() {
           return true
         }
         if (outcome.kind === 'failed') {
+          if (outcome.reason === 'ai') {
+            // the AI's edits are not the document yet: nothing was written
+            if (!automatic) {
+              setNotice({
+                tone: 'error',
+                key: aiStrandedRef.current ? 'aiRunStranded' : 'saveAiRunning',
+              })
+            }
+            return false
+          }
           // a protected or tracked document cannot be saved by this path at all;
           // the manual save explains that once instead of every autosave backoff
           const propertyFailure = outcome.reason === 'protected' || outcome.reason === 'tracked'
@@ -592,7 +620,7 @@ export default function App() {
         isDirty: async () => (await editor.commands.context()).isDirty === true,
       },
       api: window.hwpApi,
-      isBusy: () => savingRef.current,
+      isBusy: () => savingRef.current || aiHeldRef.current,
       restoredUnsaved: () => restoredRef.current,
     })
     copierRef.current = copier
@@ -714,6 +742,8 @@ export default function App() {
       path?: string,
     ): Promise<PrintResult> => {
       if (phase !== 'ready') return { ok: false, error: 'the editor is not ready' }
+      // the pages would show edits the person has not accepted
+      if (aiHeldRef.current) return { ok: false, error: 'an AI request is editing this document' }
       if (printingRef.current) return { ok: false, error: 'already printing' }
       printingRef.current = true
       try {
@@ -851,6 +881,7 @@ export default function App() {
       shouldSave: async () => {
         if (
           savingRef.current ||
+          aiHeldRef.current ||
           memoBlockedRef.current ||
           printingRef.current ||
           presentingRef.current ||
@@ -876,6 +907,14 @@ export default function App() {
         const editor = editorRef.current
         if (!editor || phase !== 'ready') {
           window.hwpApi.sendReadBytesResult({ ok: false, error: 'no document is open in this tab' })
+          return
+        }
+        // an AI run's edits are not the document until the person accepts them
+        if (aiHeldRef.current) {
+          window.hwpApi.sendReadBytesResult({
+            ok: false,
+            error: 'an AI request is editing this document',
+          })
           return
         }
         const exporting = formatRef.current === 'hwpx' ? editor.exportHwpx() : editor.exportHwp()
@@ -998,7 +1037,7 @@ export default function App() {
               copyNameRef.current?.replace(/\.[^.]+$/, '') || skillTemplateText(lang, 'untitled'),
             bytes: async () => {
               const editor = editorRef.current
-              if (!editor) return null
+              if (!editor || aiHeldRef.current) return null
               return formatRef.current === 'hwpx' ? editor.exportHwpx() : editor.exportHwp()
             },
           }),
@@ -1041,6 +1080,7 @@ export default function App() {
             templateDocument={templateDocument}
             prefill={aiPrefill}
             onPrefillTaken={takeAiPrefill}
+            onRunHold={setAiHold}
           />
         )}
         {phase === 'ready' && (

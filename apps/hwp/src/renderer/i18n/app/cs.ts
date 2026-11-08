@@ -184,8 +184,6 @@ export const cs = {
     'Dokument zůstává beze změny, dokud nepřijmete. Před odesláním další žádosti tyto změny přijměte nebo odmítněte.',
   aiProposalStale:
     'Dokument se po pozdržení těchto změn změnil, proto nebyly použity. Dokument zůstává beze změny.',
-  aiProposalNotHeld:
-    'Tyto změny se nepodařilo pozdržet ke schválení, protože se dokument během běhu změnil. Jsou už v dokumentu; vraťte je tlačítkem Zpět.',
   memoTitle: 'Komentáře',
   memoOpen: 'Komentáře',
   memoAdd: 'Přidat komentář',
@@ -220,6 +218,10 @@ export const cs = {
   memoErrDelete: 'Komentář se nepodařilo smazat.',
   memoErrTooLong: 'Komentář je příliš dlouhý. Může mít až 100 000 znaků.',
   memoErrLoad: 'Seznam komentářů se nepodařilo načíst.',
+  saveAiRunning:
+    'Během úprav dokumentu umělou inteligencí nelze ukládat. Zkuste to znovu po dokončení.',
+  aiRunStranded:
+    'Úpravy umělé inteligence se nepodařilo z dokumentu vrátit. Tento dokument se neuloží. Zavřete ho bez uložení a otevřete znovu.',
   memoSaveBlocked: 'Nejprve uložte nebo zrušte komentář, který píšete.',
   memoRemoved: 'Komentáře smazané s textem: {count}. Stiskněte Ctrl+Z pro vrácení.',
   memoNotCopied: 'Komentář nebyl zkopírován.',

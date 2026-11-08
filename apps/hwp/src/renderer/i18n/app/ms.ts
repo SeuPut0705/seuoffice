@@ -183,8 +183,6 @@ export const ms = {
     'Dokumen kekal seperti asal sehingga anda menerima. Terima atau tolak perubahan ini sebelum menghantar permintaan lain.',
   aiProposalStale:
     'Dokumen berubah selepas suntingan ini ditahan, jadi ia tidak digunakan. Dokumen tidak berubah.',
-  aiProposalNotHeld:
-    'Suntingan ini tidak dapat ditahan untuk semakan kerana dokumen diubah semasa larian. Ia sudah ada dalam dokumen; gunakan butang buat asal untuk menariknya semula.',
   memoTitle: 'Komen',
   memoOpen: 'Komen',
   memoAdd: 'Tambah komen',
@@ -220,6 +218,10 @@ export const ms = {
   memoErrDelete: 'Komen tidak dapat dipadam.',
   memoErrTooLong: 'Komen terlalu panjang. Maksimum 100,000 aksara.',
   memoErrLoad: 'Senarai komen tidak dapat dibaca.',
+  saveAiRunning:
+    'Tidak boleh menyimpan semasa AI sedang menyunting dokumen. Cuba lagi selepas selesai.',
+  aiRunStranded:
+    'Suntingan AI tidak dapat ditarik balik daripada dokumen. Dokumen ini tidak akan disimpan. Tutup tanpa menyimpan dan buka semula.',
   memoSaveBlocked: 'Simpan atau batalkan komen yang sedang ditulis dahulu.',
   memoRemoved: 'Komen dipadam bersama teks: {count}. Tekan Ctrl+Z untuk buat asal.',
   memoNotCopied: 'Komen tidak disalin.',

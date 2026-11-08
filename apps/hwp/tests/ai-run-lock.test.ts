@@ -1,0 +1,504 @@
+// @vitest-environment jsdom
+/**
+ * An AI run's edits never land without a yes, and the person's own edits never meet the run.
+ * Against the real hwp skill and plugin over a real rhwp document (see ai-run-harness.ts):
+ * while a run is in flight no save writes the document, the person cannot edit, and a run
+ * too large to be taken back out is refused before it applies.
+ */
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { runSave, type SaveEditorPort, type SaveOutcome } from '../src/renderer/save-flow'
+import {
+  RunHold,
+  StrandedError,
+  accept,
+  reject,
+  type HoldState,
+  type RunBackend,
+} from '../src/renderer/ai/turn-proposal'
+import type { HwpApi } from '../src/shared/ipc'
+import {
+  EDITS,
+  LINES,
+  openEditor,
+  runRequest,
+  same,
+  useEngine,
+  type TestEditor,
+} from './ai-run-harness'
+
+useEngine()
+
+afterEach(() => {
+  document.body.replaceChildren()
+})
+
+/** the panel's side of a run: the state the app's saves read, and the hold over the document */
+function takeHold(editor: TestEditor, backend: RunBackend = editor.bridge as RunBackend) {
+  const flag = { held: false, state: 'free' as HoldState }
+  const hold = new RunHold(
+    () => backend,
+    (state) => {
+      flag.state = state
+      flag.held = state !== 'free'
+    },
+  )
+  return { flag, hold }
+}
+
+/** The editor and the main process a save talks to; what they were asked to write is recorded. */
+function savePorts(editor: TestEditor) {
+  const written: Uint8Array[] = []
+  const exports: Uint8Array[] = []
+  const port: SaveEditorPort = {
+    isPasswordProtected: async () => false,
+    exportHwp: async () => {
+      // the editor takes its messages in order: the bytes are what it holds when this is posted
+      const bytes = editor.bytes()
+      exports.push(bytes)
+      return bytes
+    },
+    exportHwpx: async () => editor.bytes(),
+    exportHwpVerify: async () => ({ pageCountBefore: 1, pageCountAfter: 1, recovered: true }),
+    listMemos: async () => [],
+    setMemoLock: async () => ({ ok: true }),
+    measureTabs: async () => [],
+    notifySaved: async () => undefined,
+  }
+  const api = {
+    beginSave: vi.fn(async () => ({ ok: true as const, path: '/doc.hwp', format: 'hwp' as const })),
+    newTabs: vi.fn(async () => []),
+    commitSave: vi.fn(async (bytes: Uint8Array) => {
+      written.push(bytes)
+      return { ok: true as const, path: '/doc.hwp' }
+    }),
+    abortSave: vi.fn(),
+  }
+  return {
+    port,
+    api: api as unknown as Pick<HwpApi, 'beginSave' | 'newTabs' | 'commitSave' | 'abortSave'>,
+    spies: api,
+    written,
+    exports,
+  }
+}
+
+describe('a save while an AI run is in flight', () => {
+  it('writes nothing, and the save after the run is held writes the document as it was', async () => {
+    const editor = openEditor()
+    const original = editor.bytes()
+    const { flag, hold } = takeHold(editor)
+    const ports = savePorts(editor)
+    let refused: SaveOutcome | null = null
+
+    const run = await runRequest(editor, EDITS, {
+      hold,
+      midRun: async () => {
+        // the run's edits are in the live document: a save now would write them
+        expect(same(editor.bytes(), original)).toBe(false)
+        refused = await runSave(ports.port, ports.api, 'save', false, () => flag.held)
+      },
+    })
+
+    expect(refused).toEqual({ kind: 'failed', reason: 'ai' })
+    expect(ports.spies.commitSave).not.toHaveBeenCalled()
+    expect(ports.spies.abortSave).toHaveBeenCalledTimes(1)
+    expect(ports.exports).toHaveLength(0)
+
+    // the run is taken out of the document, and then the app may write again
+    expect((await hold.hold(run.items.length, run.foreign)).kind).toBe('pending')
+    expect(flag.held).toBe(false)
+    const saved = await runSave(ports.port, ports.api, 'save', false, () => flag.held)
+    expect(saved.kind).toBe('saved')
+    expect(ports.written).toHaveLength(1)
+    expect(same(ports.written[0]!, original)).toBe(true)
+  })
+
+  it('writes the document as it was when the export was asked for before the run began', async () => {
+    const editor = openEditor()
+    const original = editor.bytes()
+    const { flag, hold } = takeHold(editor)
+    const ports = savePorts(editor)
+    // the export is posted (and so reads the document) now, and answers only later
+    const exportPosted = Promise.withResolvers<void>()
+    const exportAnswers = Promise.withResolvers<void>()
+    const exportHwp = ports.port.exportHwp
+    ports.port.exportHwp = async () => {
+      const bytes = await exportHwp()
+      exportPosted.resolve()
+      await exportAnswers.promise
+      return bytes
+    }
+
+    const saving = runSave(ports.port, ports.api, 'save', false, () => flag.held)
+    await exportPosted.promise
+    const run = await runRequest(editor, EDITS, { hold })
+    expect(same(run.live, original)).toBe(false)
+    exportAnswers.resolve()
+
+    expect((await saving).kind).toBe('saved')
+    expect(ports.written).toHaveLength(1)
+    expect(same(ports.written[0]!, original)).toBe(true)
+  })
+
+  it('is refused when the run takes the document while the memo list is read for a HWPX', async () => {
+    const editor = openEditor()
+    const { flag, hold } = takeHold(editor)
+    const ports = savePorts(editor)
+    ports.spies.beginSave.mockImplementation(async () => ({
+      ok: true as const,
+      path: '/doc.hwpx',
+      format: 'hwpx' as const,
+    }))
+    ports.port.listMemos = async () => {
+      hold.begin()
+      return []
+    }
+
+    const outcome = await runSave(ports.port, ports.api, 'saveAs', false, () => flag.held)
+    expect(outcome).toEqual({ kind: 'failed', reason: 'ai' })
+    expect(ports.spies.commitSave).not.toHaveBeenCalled()
+    hold.release()
+  })
+})
+
+describe('the person editing while an AI run is in flight', () => {
+  const fire = (name: string) => {
+    const event = new Event(name, { bubbles: true, cancelable: true })
+    document.body.dispatchEvent(event)
+    return event
+  }
+
+  it('is refused: the typing is not made, and after a reject the document is the one before the run', async () => {
+    const editor = openEditor()
+    const original = editor.bytes()
+    const { hold } = takeHold(editor)
+    let during: Uint8Array | null = null
+    let typed: boolean | null = null
+
+    const run = await runRequest(editor, EDITS, {
+      hold,
+      midRun: async () => {
+        during = editor.bytes()
+        typed = editor.typeIn()
+        // the memo panel is the person's too
+        const memo = await editor.bridge.insertMemo(
+          { place: 'body', sectionIndex: 0, paraIndex: 1, startCharIdx: 0, endCharIdx: 2 } as never,
+          'person',
+          'a note',
+        )
+        expect(memo).toEqual({ ok: false, reason: 'edit_locked' })
+        expect(same(editor.bytes(), during)).toBe(true)
+      },
+    })
+
+    expect(typed).toBe(false)
+    expect(same(run.live, during!)).toBe(true)
+    // the run was held with nothing of the person's in it
+    const proposal = await hold.hold(run.items.length, run.foreign)
+    expect(proposal.kind).toBe('pending')
+    expect(same(editor.bytes(), original)).toBe(true)
+    expect(editor.lines()).toEqual(LINES)
+  })
+
+  it('keeps what the person did before the run: the run is held on top of it', async () => {
+    const editor = openEditor()
+    expect(editor.typeIn()).toBe(true)
+    const withTyping = editor.bytes()
+    const { hold } = takeHold(editor)
+
+    const run = await runRequest(editor, EDITS, { hold })
+    const proposal = await hold.hold(run.items.length, run.foreign)
+
+    expect(proposal.kind).toBe('pending')
+    expect(same(editor.bytes(), withTyping)).toBe(true)
+    expect(editor.lines()[0]).toBe('손으로 제목')
+  })
+
+  it('stops the input events of the editor frame, and lets them through once the run is held', async () => {
+    const editor = openEditor()
+    const { hold } = takeHold(editor)
+    const typing = [
+      'keydown',
+      'beforeinput',
+      'paste',
+      'cut',
+      'drop',
+      'pointerdown',
+      'mousedown',
+      'click',
+    ]
+    const seen: Record<string, boolean> = {}
+    const field = document.createElement('input')
+    document.body.append(field)
+    field.focus()
+    expect(document.activeElement).toBe(field)
+
+    const run = await runRequest(editor, EDITS, {
+      hold,
+      midRun: async () => {
+        for (const name of typing) seen[name] = fire(name).defaultPrevented
+        // a composition in progress does not go on
+        expect(document.activeElement).not.toBe(field)
+      },
+    })
+    for (const name of typing) expect(seen[name], name).toBe(true)
+
+    await hold.hold(run.items.length, run.foreign)
+    for (const name of typing) expect(fire(name).defaultPrevented, name).toBe(false)
+    // and the document takes the person's typing again
+    expect(editor.typeIn()).toBe(true)
+    // and the caret is where they left it
+    expect(document.activeElement).toBe(field)
+  })
+
+  it('has the run dropped when the conversation is reset in the middle of it', async () => {
+    const editor = openEditor()
+    const original = editor.bytes()
+    const { flag, hold } = takeHold(editor)
+
+    await runRequest(editor, EDITS, {
+      hold,
+      midRun: async ({ items, foreign }) => {
+        expect(same(editor.bytes(), original)).toBe(false)
+        hold.abandon(items.length, foreign)
+        // the undo and the release are on their way
+        await vi.waitFor(() => expect(flag.held).toBe(false))
+      },
+    })
+
+    expect(same(editor.bytes(), original)).toBe(true)
+    expect(editor.typeIn()).toBe(true)
+  })
+})
+
+describe('a run that cannot be taken back out', () => {
+  it('is refused before the change that would make it so is applied, and the run still holds', async () => {
+    const editor = openEditor()
+    const original = editor.bytes()
+    const { hold } = takeHold(editor)
+    const limit = editor.runLimit()
+    expect(limit).toBeGreaterThan(1)
+
+    // one more change than the editor's undo store can take back whole, each its own step
+    const calls = Array.from({ length: limit + 1 }, (_, index) => ({
+      name: 'insert_paragraphs',
+      input: { anchor: '끝 문단입니다.', where: 'after', paragraphs: [`추가 ${index}`] },
+    }))
+    const run = await runRequest(editor, calls, { hold })
+
+    // the changes up to the limit applied; the next one was refused and changed nothing
+    expect(run.items).toHaveLength(limit)
+    expect(editor.lines().filter((line) => line.startsWith('추가'))).toHaveLength(limit)
+
+    const proposal = await hold.hold(run.items.length, run.foreign)
+    expect(proposal).toMatchObject({ kind: 'pending', steps: limit })
+    expect(same(editor.bytes(), original)).toBe(true)
+  })
+})
+
+describe('the hold a run takes on the document', () => {
+  function backend(over: Partial<RunBackend> = {}) {
+    const calls: string[] = []
+    const base: RunBackend = {
+      foreignChanges: async () => 3,
+      undo: async (steps) => {
+        calls.push(`undo ${steps}`)
+        return { ok: true, undone: steps }
+      },
+      redo: async (steps) => ({ ok: true, redone: steps }),
+      setHeldRun: async (steps) => {
+        calls.push(`held ${steps}`)
+        return { ok: true, steps }
+      },
+      setRunLock: async (locked) => {
+        calls.push(`lock ${locked}`)
+        return { ok: true, locked }
+      },
+      strandRun: async () => {
+        calls.push('strand')
+        return { ok: true }
+      },
+    }
+    return { calls, backend: { ...base, ...over } as RunBackend }
+  }
+  const holdOf = (b: RunBackend) => {
+    const told: HoldState[] = []
+    return {
+      told,
+      hold: new RunHold(
+        () => b,
+        (state) => told.push(state),
+      ),
+    }
+  }
+
+  it('tells the app at the first moment, and lets go when a run that changed nothing ends', () => {
+    const { calls, backend: b } = backend()
+    const { told, hold } = holdOf(b)
+    hold.begin()
+    expect(told).toEqual(['held'])
+    hold.release()
+    hold.release()
+    expect(told).toEqual(['held', 'free'])
+    expect(calls).toEqual(['lock false'])
+  })
+
+  it('does not start a run whose lock cannot be taken, and lets go of the document', async () => {
+    const { backend: b } = backend({
+      setRunLock: async () => {
+        throw new Error('the editor is not ready')
+      },
+    })
+    const { told, hold } = holdOf(b)
+    hold.begin()
+    await expect(hold.lock()).rejects.toThrow('the editor is not ready')
+    hold.release()
+    expect(told).toEqual(['held', 'free'])
+  })
+
+  it('does not drop a run that is already being held when the conversation is reset', async () => {
+    const { calls, backend: b } = backend()
+    const { hold } = holdOf(b)
+    hold.begin()
+    const held = hold.hold(2, 3)
+    hold.abandon(2, 3)
+    await held
+    expect(calls.filter((call) => call.startsWith('undo'))).toEqual(['undo 2'])
+  })
+
+  it('strands a run the editor cannot take out whole: nothing is put back, nothing is let go', async () => {
+    const { calls, backend: b } = backend({
+      undo: async () => ({ ok: false, reason: 'changed', undone: 1 }),
+      redo: async () => {
+        throw new Error('a partial undo must not be redone')
+      },
+    })
+    const { told, hold } = holdOf(b)
+    hold.begin()
+    expect(await hold.hold(2, 3)).toEqual({ kind: 'stranded' })
+    expect(told).toEqual(['held', 'stranded'])
+    expect(calls).toEqual(['strand'])
+    // nothing lets it go
+    hold.release()
+    expect(told).toEqual(['held', 'stranded'])
+    expect(calls).not.toContain('lock false')
+  })
+
+  it('strands a run whose undo throws, and one dropped by a reset whose undo is refused', async () => {
+    const thrown = backend({
+      undo: async () => {
+        throw new Error('the editor is gone')
+      },
+    })
+    const first = holdOf(thrown.backend)
+    first.hold.begin()
+    expect(await first.hold.hold(1, 0)).toEqual({ kind: 'stranded' })
+    expect(first.told).toEqual(['held', 'stranded'])
+
+    const refused = backend({ undo: async () => ({ ok: false, reason: 'changed', undone: 0 }) })
+    const second = holdOf(refused.backend)
+    second.hold.begin()
+    second.hold.abandon(1, 0)
+    await vi.waitFor(() => expect(second.told).toEqual(['held', 'stranded']))
+    expect(refused.calls).toEqual(['strand'])
+  })
+
+  it('does not start a run in a document the plugin keeps stranded', async () => {
+    const { backend: b } = backend({ setRunLock: async () => ({ ok: false }) })
+    const { told, hold } = holdOf(b)
+    hold.begin()
+    await expect(hold.lock()).rejects.toBeInstanceOf(StrandedError)
+    hold.release()
+    expect(told).toEqual(['held', 'stranded'])
+  })
+})
+
+describe('a run that cannot be taken out of the document', () => {
+  it('leaves saves refused and the person locked out, and the plugin keeps it so', async () => {
+    const editor = openEditor()
+    // the editor's undo stops short: the last step of the run is refused
+    const redo = vi.fn()
+    const stopsShort = new Proxy(editor.bridge, {
+      get: (bridge, method) => {
+        if (method === 'undo') {
+          return async (steps: number, foreign: number) => {
+            await bridge.undo(steps - 1, foreign)
+            return { ok: false, reason: 'changed', undone: steps - 1 }
+          }
+        }
+        return method === 'redo' ? redo : bridge[method as keyof typeof bridge]
+      },
+    }) as unknown as RunBackend
+    const { flag, hold } = takeHold(editor, stopsShort)
+    const ports = savePorts(editor)
+    const run = await runRequest(editor, EDITS, { hold })
+    const withRun = editor.bytes()
+
+    expect(await hold.hold(run.items.length, run.foreign)).toEqual({ kind: 'stranded' })
+    expect(redo).not.toHaveBeenCalled()
+    expect(flag.state).toBe('stranded')
+    // the part that did not come out is still in the document: nothing was put back
+    expect(same(editor.bytes(), withRun)).toBe(false)
+
+    // no save path writes it
+    const outcome = await runSave(ports.port, ports.api, 'save', false, () => flag.held)
+    expect(outcome).toEqual({ kind: 'failed', reason: 'ai' })
+    expect(ports.spies.commitSave).not.toHaveBeenCalled()
+    // the person stays locked out
+    expect(editor.typeIn()).toBe(false)
+    // and so does the next run, even from a panel that is mounted again
+    const again = takeHold(editor)
+    again.hold.begin()
+    await expect(again.hold.lock()).rejects.toBeInstanceOf(StrandedError)
+    again.hold.release()
+    expect(editor.typeIn()).toBe(false)
+  })
+})
+
+describe('a run taken out of the document and waiting on the redo stack', () => {
+  async function pending() {
+    const editor = openEditor()
+    const original = editor.bytes()
+    const { hold } = takeHold(editor)
+    const run = await runRequest(editor, EDITS, { hold })
+    const proposal = await hold.hold(run.items.length, run.foreign)
+    if (proposal.kind !== 'pending') throw new Error('the run was not held')
+    return { editor, original, run, proposal }
+  }
+
+  it("is not brought back by the person's redo, pending or after a reject", async () => {
+    const { editor, original } = await pending()
+    editor.redoByPerson()
+    expect(same(editor.bytes(), original)).toBe(true)
+    // rejecting changes nothing about the stack: the same redo still does nothing
+    expect(reject()).toEqual({ kind: 'none' })
+    editor.redoByPerson()
+    expect(same(editor.bytes(), original)).toBe(true)
+  })
+
+  it("still comes back through the panel's own accept, and the person's redo is theirs again after", async () => {
+    const { editor, original, run, proposal } = await pending()
+    const outcome = await accept(editor.bridge, proposal)
+    expect(outcome.kind).toBe('applied')
+    expect(same(editor.bytes(), run.live)).toBe(true)
+    if (outcome.kind !== 'applied') return
+    // the panel's undo of the applied run, then the person's redo of it
+    expect(await editor.bridge.undo(run.items.length, outcome.foreign)).toMatchObject({ ok: true })
+    expect(same(editor.bytes(), original)).toBe(true)
+    for (let press = 0; press < run.items.length; press++) editor.redoByPerson()
+    expect(same(editor.bytes(), run.live)).toBe(true)
+  })
+
+  it("lifts once the person's own edit has emptied the redo stack", async () => {
+    const { editor } = await pending()
+    expect(editor.typeIn()).toBe(true)
+    const typed = editor.bytes()
+    // nothing of the run is left to revive
+    editor.redoByPerson()
+    expect(same(editor.bytes(), typed)).toBe(true)
+    // and the person's undo and redo of their own typing is not held back
+    await editor.bridge.undo(1, await editor.bridge.foreignChanges())
+    editor.redoByPerson()
+    expect(same(editor.bytes(), typed)).toBe(true)
+  })
+})

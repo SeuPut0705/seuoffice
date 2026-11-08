@@ -180,8 +180,6 @@ export const ko = {
   aiProposalHint:
     '받아들이기 전까지 문서는 그대로입니다. 다음 요청을 보내려면 먼저 받아들이거나 거부하세요.',
   aiProposalStale: '변경을 보류한 뒤 문서가 바뀌어 적용하지 않았습니다. 문서는 그대로입니다.',
-  aiProposalNotHeld:
-    '실행 중에 문서가 바뀌어 이 변경을 제안으로 보류하지 못했습니다. 이미 문서에 반영되어 있으니 되돌리려면 되돌리기 버튼을 쓰세요.',
   memoTitle: '메모',
   memoOpen: '메모',
   memoAdd: '메모 넣기',
@@ -215,6 +213,9 @@ export const ko = {
   memoErrDelete: '메모를 지우지 못했습니다.',
   memoErrTooLong: '메모가 너무 깁니다. 100,000자까지 쓸 수 있습니다.',
   memoErrLoad: '메모 목록을 읽지 못했습니다.',
+  saveAiRunning: 'AI가 문서를 고치는 중에는 저장할 수 없습니다. 끝난 뒤에 다시 시도하세요.',
+  aiRunStranded:
+    'AI 편집을 문서에서 되돌리지 못했습니다. 이 문서는 저장되지 않습니다. 저장하지 않고 닫은 뒤 다시 열어 주세요.',
   memoSaveBlocked: '메모 작성을 먼저 저장하거나 취소해 주세요.',
   memoRemoved: '메모 {count}개가 함께 지워졌습니다. Ctrl+Z로 되돌릴 수 있습니다.',
   memoNotCopied: '메모는 복사되지 않았습니다.',

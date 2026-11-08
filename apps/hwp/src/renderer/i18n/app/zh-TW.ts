@@ -173,8 +173,6 @@ export const zhTW = {
   aiReject: '拒絕',
   aiProposalHint: '在你接受之前，文件維持不變。傳送下一個要求前，請先接受或拒絕這些修改。',
   aiProposalStale: '這些修改被擱置後文件又有變動，因此未套用。文件維持不變。',
-  aiProposalNotHeld:
-    '執行期間文件被修改，無法將這些修改當作建議擱置。它們已寫入文件，若要取回請按復原按鈕。',
   memoTitle: '批註',
   memoOpen: '批註',
   memoAdd: '新增批註',
@@ -208,6 +206,8 @@ export const zhTW = {
   memoErrDelete: '無法刪除批註。',
   memoErrTooLong: '批註過長，最多可輸入 100,000 個字元。',
   memoErrLoad: '無法讀取批註清單。',
+  saveAiRunning: 'AI 正在編輯文件時無法儲存。請在完成後重試。',
+  aiRunStranded: '無法復原 AI 對文件的編輯。此文件不會被儲存。請不儲存直接關閉，然後重新開啟。',
   memoSaveBlocked: '請先儲存或取消正在撰寫的批註。',
   memoRemoved: '已隨文字刪除 {count} 則批註。按 Ctrl+Z 可復原。',
   memoNotCopied: '批註未被複製。',

@@ -185,8 +185,6 @@ export const fr = {
     'Le document reste tel quel tant que vous n’acceptez pas. Acceptez ou refusez ces modifications avant d’envoyer une autre demande.',
   aiProposalStale:
     'Le document a changé après la mise en attente de ces modifications ; elles n’ont donc pas été appliquées. Le document est inchangé.',
-  aiProposalNotHeld:
-    'Ces modifications n’ont pas pu être mises en attente, car le document a été modifié pendant l’exécution. Elles sont déjà dans le document ; utilisez le bouton d’annulation pour les retirer.',
   memoTitle: 'Commentaires',
   memoOpen: 'Commentaires',
   memoAdd: 'Ajouter un commentaire',
@@ -226,6 +224,10 @@ export const fr = {
   memoErrDelete: 'Le commentaire n’a pas pu être supprimé.',
   memoErrTooLong: 'Le commentaire est trop long. Il peut contenir jusqu’à 100 000 caractères.',
   memoErrLoad: 'La liste des commentaires n’a pas pu être lue.',
+  saveAiRunning:
+    'L’enregistrement est impossible pendant que l’IA modifie le document. Réessayez une fois qu’elle a terminé.',
+  aiRunStranded:
+    'Les modifications de l’IA n’ont pas pu être retirées du document. Ce document ne sera pas enregistré. Fermez-le sans enregistrer, puis rouvrez-le.',
   memoSaveBlocked: 'Enregistrez ou annulez d’abord le commentaire en cours de rédaction.',
   memoRemoved: 'Commentaires supprimés avec le texte : {count}. Appuyez sur Ctrl+Z pour annuler.',
   memoNotCopied: 'Le commentaire n’a pas été copié.',

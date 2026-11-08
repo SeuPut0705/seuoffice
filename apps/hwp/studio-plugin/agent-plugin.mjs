@@ -50,6 +50,54 @@ const BEFORE_CHARS = 24
 const BEFORE_LOOKBACK = 20
 /** Most history steps one undo call takes back. */
 const MAX_UNDO_STEPS = 200
+/**
+ * The undo history the editor keeps (rhwp-studio engine/history.ts): every change of this
+ * plugin holds one snapshot of the engine's store, taking a run back out turns each into two,
+ * and the store evicts the oldest past `capacity - SNAPSHOT_HEADROOM`. A run of more changes
+ * than half of that could not be taken back out whole, or put back on accept.
+ */
+const FALLBACK_SNAPSHOT_CAPACITY = 100
+const SNAPSHOT_HEADROOM = 2
+/**
+ * What a person's own input is: the events the editor frame takes it by. While an AI run holds
+ * the document none of them reaches the editor. The window sees them first, so a handler the
+ * studio put on the document earlier (an open dialog's) cannot run before the block does.
+ * A composition in progress is ended by taking focus off the editor when the lock starts.
+ */
+const RUN_LOCK_EVENTS = [
+  'keydown',
+  'keypress',
+  'beforeinput',
+  'input',
+  'change',
+  'compositionstart',
+  'compositionupdate',
+  'compositionend',
+  'paste',
+  'cut',
+  'drop',
+  'dragstart',
+  'pointerdown',
+  'mousedown',
+  'click',
+  'dblclick',
+  'auxclick',
+  'contextmenu',
+]
+/**
+ * The name of the function this plugin puts on the editor frame's window while it is active:
+ * true when a person's edit has to be refused now (an AI run holds the document and the change
+ * is not the plugin's own). The studio's own edit gate asks it (patch studio-ai-run-lock), so
+ * what slips past the input events above is still refused at the one place every edit goes
+ * through.
+ */
+export const RUN_LOCK_GATE = '__ieumPersonEditsBlocked'
+/**
+ * The name of the function this plugin puts on the editor frame's window while it is active:
+ * true when a person's redo has to be refused now (an AI run taken out of the document waits
+ * on the redo stack). The studio's own redo asks it (patch studio-ai-run-lock).
+ */
+export const REDO_GATE = '__ieumPersonRedoBlocked'
 /** Most paragraphs one insert call adds. */
 const MAX_INSERTED_PARAGRAPHS = 100
 /** Most cells a new table holds. */
@@ -4171,6 +4219,8 @@ let stopMarking = null
 let stopMemoLayer = null
 /** Takes the input lock of an open memo modal off the editor again. */
 let stopMemoLock = null
+/** Takes the input block of an AI run off the editor again. */
+let stopRunLock = null
 /** Takes the copy/paste listeners that advise about memos off the editor again. */
 let stopMemoClipboard = null
 /** Closes the channel a copy of memo-bearing text is told on. */
@@ -4209,6 +4259,10 @@ export const agentPlugin = {
     stopMemoLayer = null
     if (stopMemoLock) stopMemoLock()
     stopMemoLock = null
+    if (stopRunLock) stopRunLock()
+    stopRunLock = null
+    delete globalThis[RUN_LOCK_GATE]
+    delete globalThis[REDO_GATE]
     if (stopMemoClipboard) stopMemoClipboard()
     stopMemoClipboard = null
     if (stopMemoChannel) stopMemoChannel()
@@ -4252,6 +4306,26 @@ export const agentPlugin = {
     let memoLayer = null
     let memoCopied = 0
     let memoLocked = false
+    // an AI run holds the document: the person's edits are refused until it is taken back out
+    let runLocked = false
+    // an AI run's edits are stuck in the document: the lock above never ends
+    let runStranded = false
+    // the changes that run has made so far
+    let runSteps = 0
+    // where the person's caret was when the run took the document
+    let runLockFocus = null
+    globalThis[RUN_LOCK_GATE] = () => runLocked && !own
+    // an AI run taken out of the document waits on the editor's redo stack: its steps
+    let heldRun = 0
+    globalThis[REDO_GATE] = () => heldRun > 0 && !own
+    /** Whether the editor has anything to redo; true when it cannot say. */
+    const canRedoNow = () => {
+      try {
+        return host.automation.getContext?.()?.canRedo !== false
+      } catch {
+        return true
+      }
+    }
     // a copy of memo-bearing text made in this instance, and one told on the channel by
     // another instance: a paste that brings neither still needs the app's notice
     const memoInstance = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
@@ -4493,6 +4567,8 @@ export const agentPlugin = {
 
     /** The memo insert/edit/remove calls the panel makes; each is one undo step. */
     const memoCommand = (label, options, run) => {
+      // the memo panel is the person's: it takes no part in a document an AI run holds
+      if (runLocked) return { ok: false, reason: 'edit_locked' }
       try {
         return change(label, run, options)
       } catch (thrown) {
@@ -4523,6 +4599,71 @@ export const agentPlugin = {
         stopMemoLock = null
       }
       return { ok: true, locked: memoLocked }
+    }
+
+    /** The most changes one run holding the document may make (see FALLBACK_SNAPSHOT_CAPACITY). */
+    const runStepLimit = () => {
+      let capacity
+      try {
+        capacity = host.read((doc) => doc.snapshotCapacity?.())
+      } catch {
+        // an engine that cannot tell: the studio falls back to the same number
+      }
+      const known =
+        Number.isInteger(capacity) && capacity > 0 ? capacity : FALLBACK_SNAPSHOT_CAPACITY
+      return Math.max(1, Math.floor((known - SNAPSHOT_HEADROOM) / 2))
+    }
+
+    /**
+     * Hold the editor for an AI run, or let it go. While held, the person's input events never
+     * reach the editor, and the studio's edit gate refuses what slips past them (RUN_LOCK_GATE).
+     * Starting a lock starts the run's count of changes.
+     */
+    const setRunLock = (locked) => {
+      // a run whose edits could not be taken out keeps the document for good
+      if (runStranded)
+        return locked ? { ok: false, reason: 'stranded' } : { ok: true, locked: true }
+      if (locked === runLocked) return { ok: true, locked: runLocked }
+      runLocked = locked
+      if (runLocked) {
+        runSteps = 0
+        // a composition in progress ends here, before the block: it would otherwise go on
+        // putting the person's text into the document
+        const page = globalThis.document
+        const focused = page?.activeElement
+        if (focused && focused !== page.body && typeof focused.blur === 'function') {
+          runLockFocus = focused
+          focused.blur()
+        }
+        const target = globalThis
+        if (typeof target.addEventListener === 'function' && !stopRunLock) {
+          const block = (event) => {
+            if (!runLocked) return
+            event.preventDefault()
+            event.stopPropagation()
+            event.stopImmediatePropagation?.()
+          }
+          for (const name of RUN_LOCK_EVENTS) target.addEventListener(name, block, true)
+          stopRunLock = () => {
+            for (const name of RUN_LOCK_EVENTS) target.removeEventListener(name, block, true)
+          }
+        }
+      } else {
+        if (stopRunLock) stopRunLock()
+        stopRunLock = null
+        // the person goes on typing where they were
+        const back = runLockFocus
+        runLockFocus = null
+        const active = globalThis.document?.activeElement
+        if (back?.isConnected && (!active || active === globalThis.document.body)) {
+          try {
+            back.focus({ preventScroll: true })
+          } catch {
+            // the element cannot take focus any more: a click puts it back
+          }
+        }
+      }
+      return { ok: true, locked: runLocked }
     }
 
     /** Tell the other editor instances that this one copied memo-bearing text. */
@@ -4657,6 +4798,8 @@ export const agentPlugin = {
         }
         // the user's own edit can take a memo away and moves the memo anchors
         memosAfterUserEdit()
+        // an edit of the person's that left nothing to redo has emptied the stack, held run too
+        if (heldRun > 0 && !canRedoNow()) heldRun = 0
       }
     })
 
@@ -5145,6 +5288,19 @@ export const agentPlugin = {
       const approvedMemos = Array.isArray(options?.approvedMemoIds)
         ? new Set(options.approvedMemoIds)
         : null
+      // a run that holds the document may make only as many changes as the editor can take
+      // back out of its history whole: past that the run could no longer be held for review
+      if (runLocked && !MEMO_CHANGES.has(label)) {
+        const limit = runStepLimit()
+        if (runSteps >= limit) {
+          throw fail(
+            'RUN_TOO_LARGE',
+            `this request has already made ${runSteps} changes, the most the editor can take back ` +
+              'for review in one go; this change was not made. Stop here, tell the user what is ' +
+              'done and what is left, and ask them to send the rest as a new request.',
+          )
+        }
+      }
       own = true
       // not left to the editor's event alone: a stale text would send the model after
       // words that are no longer there
@@ -5189,7 +5345,11 @@ export const agentPlugin = {
           }
           throw thrown
         }
+        // a change of the run that holds the document: counted, so the run can be taken back
+        if (runLocked && !MEMO_CHANGES.has(label)) runSteps += 1
         noteChange(label, done.result, done.before, done.after)
+        // a change of the plugin's own empties the editor's redo stack, and the held run with it
+        heldRun = 0
         // a memo the user added, changed or removed in the panel is the user's own edit: an
         // AI run's undo must not take it back in place of the run's changes
         if (MEMO_CHANGES.has(label)) foreign += 1
@@ -8149,6 +8309,36 @@ export const agentPlugin = {
       /** Take the editor's input away while the app's memo modal is open. */
       setMemoLock: guarded((locked) => setMemoLock(locked === true)),
 
+      /**
+       * Hold the document for an AI run (or let it go): a person's input is taken away from the
+       * editor and refused wherever an edit goes in, until the run is taken back out and the
+       * lock is let go. The plugin's own changes are unaffected; the run may make only as many
+       * of them as the editor can take back out of its history whole.
+       */
+      setRunLock: guarded((locked) => setRunLock(locked === true)),
+
+      /**
+       * An AI run could not be taken out of the document: its edits are in a document that
+       * must not be saved. The lock stays on, for good: no later call lets it go or starts
+       * another run, until the editor is closed.
+       */
+      strandRun: guarded(() => {
+        runStranded = true
+        return { ok: true, stranded: true }
+      }),
+
+      /**
+       * An AI run was taken out of the document and waits on the editor's redo stack
+       * (`steps` of it; 0 when none does). While it does, the person's own redo (Ctrl+Y, the
+       * menu, the toolbar: all end in the studio's one redo) is refused, so the run cannot
+       * come back without a yes. This plugin's own `redo` is not. It lifts by itself once
+       * a change empties the stack: the plugin's own, or an edit of the person's.
+       */
+      setHeldRun: guarded((steps) => {
+        heldRun = Number.isInteger(steps) && steps > 0 ? steps : 0
+        return { ok: true, steps: heldRun }
+      }),
+
       /** Take the marks of the changes made so far off the pages. */
       clearMarks: guarded(() => {
         marks = []
@@ -8206,8 +8396,10 @@ export const agentPlugin = {
 
       /**
        * Redo the last `steps` undone changes through the editor's own history, under the same
-       * rule as `undo`: only while `expectedForeign` still equals foreignChanges(). A change
-       * made after the undo empties the editor's redo stack, so the redo then stops short.
+       * rule as `undo`: only while `expectedForeign` still equals foreignChanges(). All or
+       * nothing: when the editor stops short (a change made after the undo empties its redo
+       * stack), the steps that did come back are undone again in the same call, so no caller
+       * ever sees part of a held AI run in the document.
        */
       redo: guarded((steps, expectedForeign) => {
         if (!Number.isInteger(steps) || steps < 1 || steps > MAX_UNDO_STEPS) {
@@ -8222,6 +8414,11 @@ export const agentPlugin = {
             const result = host.automation.execute('edit:redo')
             if (!result || result.ok !== true) break
             redone += 1
+          }
+          while (redone < steps && redone > 0) {
+            const result = host.automation.execute('edit:undo')
+            if (!result || result.ok !== true) break
+            redone -= 1
           }
         } finally {
           own = false

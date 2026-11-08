@@ -181,8 +181,6 @@ export const en = {
     'The document stays as it was until you accept. Accept or reject these changes before sending another request.',
   aiProposalStale:
     'The document changed after these edits were held, so they were not applied. The document is unchanged.',
-  aiProposalNotHeld:
-    'These edits could not be held for review because the document was changed during the run. They are already in the document; use the undo button to take them back.',
   memoTitle: 'Memos',
   memoOpen: 'Memos',
   memoAdd: 'Add memo',
@@ -217,6 +215,10 @@ export const en = {
   memoErrDelete: 'The memo could not be deleted.',
   memoErrTooLong: 'The memo is too long. It can hold up to 100,000 characters.',
   memoErrLoad: 'The memo list could not be read.',
+  saveAiRunning:
+    'Saving is paused while the AI is editing this document. Try again when it finishes.',
+  aiRunStranded:
+    'The AI’s edits could not be taken back out of the document. This document will not be saved. Close it without saving and open it again.',
   memoSaveBlocked: 'Save or cancel the memo you are writing first.',
   memoRemoved: 'Memos deleted: {count}. Press Ctrl+Z to undo.',
   memoNotCopied: 'The memo was not copied.',

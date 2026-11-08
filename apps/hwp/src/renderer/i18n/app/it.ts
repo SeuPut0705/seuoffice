@@ -185,8 +185,6 @@ export const it = {
     'Il documento resta com’è finché non accetti. Accetta o rifiuta queste modifiche prima di inviare un’altra richiesta.',
   aiProposalStale:
     'Il documento è cambiato dopo che queste modifiche sono state trattenute, quindi non sono state applicate. Il documento è invariato.',
-  aiProposalNotHeld:
-    'Non è stato possibile trattenere queste modifiche per la revisione perché il documento è stato modificato durante l’esecuzione. Sono già nel documento; usa il pulsante Annulla per toglierle.',
   memoTitle: 'Commenti',
   memoOpen: 'Commenti',
   memoAdd: 'Aggiungi commento',
@@ -225,6 +223,10 @@ export const it = {
   memoErrDelete: 'Non è stato possibile eliminare il commento.',
   memoErrTooLong: 'Il commento è troppo lungo. Può contenere fino a 100.000 caratteri.',
   memoErrLoad: 'Non è stato possibile leggere l’elenco dei commenti.',
+  saveAiRunning:
+    'Non è possibile salvare mentre l’IA modifica il documento. Riprova quando ha finito.',
+  aiRunStranded:
+    'Non è stato possibile annullare le modifiche dell’IA nel documento. Questo documento non verrà salvato. Chiudilo senza salvare e riaprilo.',
   memoSaveBlocked: 'Salva o annulla prima il commento che stai scrivendo.',
   memoRemoved: 'Commenti eliminati con il testo: {count}. Premi Ctrl+Z per annullare.',
   memoNotCopied: 'Il commento non è stato copiato.',

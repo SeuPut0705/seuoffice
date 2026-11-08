@@ -183,8 +183,6 @@ export const pl = {
     'Dokument pozostaje bez zmian, dopóki nie zaakceptujesz. Zaakceptuj lub odrzuć te zmiany przed wysłaniem kolejnej prośby.',
   aiProposalStale:
     'Dokument zmienił się po wstrzymaniu tych zmian, więc nie zostały zastosowane. Dokument pozostaje bez zmian.',
-  aiProposalNotHeld:
-    'Nie udało się wstrzymać tych zmian do przeglądu, ponieważ dokument zmieniono w trakcie działania. Są już w dokumencie; cofnij je przyciskiem Cofnij.',
   memoTitle: 'Komentarze',
   memoOpen: 'Komentarze',
   memoAdd: 'Dodaj komentarz',
@@ -220,6 +218,9 @@ export const pl = {
   memoErrDelete: 'Nie udało się usunąć komentarza.',
   memoErrTooLong: 'Komentarz jest za długi. Może zawierać do 100 000 znaków.',
   memoErrLoad: 'Nie udało się odczytać listy komentarzy.',
+  saveAiRunning: 'Nie można zapisać, gdy AI edytuje dokument. Spróbuj ponownie po zakończeniu.',
+  aiRunStranded:
+    'Nie udało się cofnąć edycji AI w dokumencie. Ten dokument nie zostanie zapisany. Zamknij go bez zapisywania i otwórz ponownie.',
   memoSaveBlocked: 'Najpierw zapisz lub anuluj komentarz, który piszesz.',
   memoRemoved: 'Usunięto komentarze wraz z tekstem: {count}. Naciśnij Ctrl+Z, aby cofnąć.',
   memoNotCopied: 'Komentarz nie został skopiowany.',

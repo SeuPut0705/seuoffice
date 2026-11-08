@@ -172,8 +172,6 @@ export const zh = {
   aiReject: '拒绝',
   aiProposalHint: '在你接受之前，文档保持不变。发送下一个请求前，请先接受或拒绝这些修改。',
   aiProposalStale: '这些修改被搁置后文档又有改动，因此没有应用。文档保持不变。',
-  aiProposalNotHeld:
-    '运行期间文档被修改，无法将这些修改作为建议搁置。它们已写入文档，如需撤回请点撤销按钮。',
   memoTitle: '批注',
   memoOpen: '批注',
   memoAdd: '添加批注',
@@ -207,6 +205,8 @@ export const zh = {
   memoErrDelete: '无法删除批注。',
   memoErrTooLong: '批注过长，最多可输入 100,000 个字符。',
   memoErrLoad: '无法读取批注列表。',
+  saveAiRunning: 'AI 正在编辑文档时无法保存。请在完成后重试。',
+  aiRunStranded: '无法撤回 AI 对文档的编辑。此文档不会被保存。请不保存直接关闭，然后重新打开。',
   memoSaveBlocked: '请先保存或取消正在编写的批注。',
   memoRemoved: '已随文字删除 {count} 条批注。按 Ctrl+Z 可撤销。',
   memoNotCopied: '批注未被复制。',
