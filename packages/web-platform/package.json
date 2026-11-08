@@ -1,0 +1,33 @@
+{
+  "name": "@seuoffice/web-platform",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser stand-ins for the desktop apps: web bridges, Node and Electron shims, the embed channel and Vite wiring",
+  "exports": {
+    ".": "./src/index.ts",
+    "./vite": "./src/vite.ts",
+    "./globals": "./src/globals.ts",
+    "./wasi": "./src/wasi.ts",
+    "./shims/*": "./src/shims/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/path-browserify": "^1.0.3",
+    "jsdom": "^28.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^4.1.12"
+  },
+  "dependencies": {
+    "@bjorn3/browser_wasi_shim": "^0.4.2",
+    "@noble/hashes": "^2.2.0",
+    "buffer": "^6.0.3",
+    "fflate": "^0.8.3",
+    "path-browserify": "^1.0.1"
+  }
+}
