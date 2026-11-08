@@ -4,6 +4,11 @@
  * The iframe page announces `ready`; this side answers with `open` carrying
  * the bytes, and the page reports `opened` or `error`. Messages are accepted
  * only from the iframe's own window at the seuoffice origin.
+ *
+ * In edit mode the host has taken the document's edit lock before calling
+ * `openDocument`; the page sends `save` with new bytes, this side runs
+ * `onSave` and answers `saved` or `save_failed`. `dirty` reports unsaved
+ * changes, and `save()` asks the page to save (`request_save`).
  */
 
 export type SeuofficeApp = 'docs' | 'sheets' | 'slides' | 'pdf' | 'hwp'
@@ -26,7 +31,8 @@ export function appForFileName(fileName: string): SeuofficeApp | null {
 
 export const MAX_EMBED_BYTES = 50 * 1024 * 1024
 
-export type EmbedErrorCode = 'unsupported_format' | 'too_large' | 'open_failed' | 'timeout'
+export type EmbedErrorCode =
+  'unsupported_format' | 'too_large' | 'open_failed' | 'timeout' | 'save_failed'
 
 export class SeuofficeEmbedError extends Error {
   readonly code: EmbedErrorCode
@@ -38,21 +44,47 @@ export class SeuofficeEmbedError extends Error {
   }
 }
 
-export interface OpenOptions {
+interface BaseOpenOptions {
   /** where the seuoffice web build is served, e.g. https://office.example/ */
   baseUrl: string
   bytes: ArrayBuffer | Uint8Array
   fileName: string
-  mode?: 'view'
   lang?: string
   /** how long to wait for the page to announce itself; default 30000 */
   readyTimeoutMs?: number
 }
 
+/** A document the page saved: same format and file name it was opened with */
+export interface SavedFile {
+  fileName: string
+  bytes: Uint8Array
+}
+
+export interface ViewOptions extends BaseOpenOptions {
+  mode?: 'view'
+}
+
+export interface EditOptions extends BaseOpenOptions {
+  /** open for editing; the host holds the edit lock for this document */
+  mode: 'edit'
+  /** store the saved bytes; resolve when stored, reject with the reason it was not */
+  onSave: (file: SavedFile) => Promise<void>
+  /** called when the page gains or loses unsaved changes */
+  onDirtyChange?: (dirty: boolean) => void
+}
+
+export type OpenOptions = ViewOptions | EditOptions
+
 export interface EmbeddedDocument {
   readonly iframe: HTMLIFrameElement
   /** settles once the document is on screen, or rejects with SeuofficeEmbedError */
   readonly opened: Promise<void>
+  /**
+   * Ask the page to save now; settles after `onSave` stored the bytes.
+   * Rejects with `save_failed` in view mode, before the document opened, or
+   * when the page or `onSave` failed.
+   */
+  save(): Promise<void>
   destroy(): void
 }
 
@@ -74,7 +106,12 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
     const opened = Promise.reject(refusal)
     // a rejection the host never awaits must not surface as unhandled
     opened.catch(() => {})
-    return { iframe, opened, destroy: () => iframe.remove() }
+    return {
+      iframe,
+      opened,
+      save: () => Promise.reject(notSaved('the document did not open')),
+      destroy: () => iframe.remove(),
+    }
   }
 
   // hosts may compile against ES2022, which has no Promise.withResolvers
@@ -87,7 +124,8 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
   opened.catch(() => {})
   const view = container.ownerDocument.defaultView ?? window
   const base = new URL(options.baseUrl)
-  const query = new URLSearchParams({ mode: options.mode ?? 'view', lang: options.lang ?? 'ko' })
+  const mode = options.mode ?? 'view'
+  const query = new URLSearchParams({ mode, lang: options.lang ?? 'ko' })
   iframe.src = new URL(`${app}/index.html?${query}`, base).href
   iframe.style.width = '100%'
   iframe.style.height = '100%'
@@ -95,6 +133,15 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
 
   let settled = false
   let sent = false
+  let shown = false
+  let nextRequestId = 1
+  const saveRequests = new Map<
+    number,
+    { resolve: () => void; reject: (error: SeuofficeEmbedError) => void }
+  >()
+  const post = (message: Record<string, unknown>): void => {
+    iframe.contentWindow?.postMessage({ source: SOURCE, version: VERSION, ...message }, base.origin)
+  }
   const settle = (error?: SeuofficeEmbedError): void => {
     if (settled) return
     settled = true
@@ -124,10 +171,25 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
         [bytes],
       )
     } else if (data.type === 'opened') {
+      shown = true
       settle()
     } else if (data.type === 'error') {
       const code = isPageErrorCode(data.code) ? data.code : 'open_failed'
       settle(new SeuofficeEmbedError(code, String(data.message ?? code)))
+    } else if (data.type === 'save' && options.mode === 'edit') {
+      void store(options, data, post)
+    } else if (
+      data.type === 'dirty' &&
+      options.mode === 'edit' &&
+      typeof data.dirty === 'boolean'
+    ) {
+      options.onDirtyChange?.(data.dirty)
+    } else if (data.type === 'request_save_done' && typeof data.requestId === 'number') {
+      const request = saveRequests.get(data.requestId)
+      if (!request) return
+      saveRequests.delete(data.requestId)
+      if (data.ok === true) request.resolve()
+      else request.reject(notSaved(String(data.message ?? 'the page did not save')))
     }
   }
 
@@ -140,12 +202,49 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
   return {
     iframe,
     opened,
+    save: () => {
+      if (mode !== 'edit') return Promise.reject(notSaved('the document was opened for viewing'))
+      if (!shown) return Promise.reject(notSaved('the document is not open yet'))
+      const requestId = nextRequestId++
+      const done = new Promise<void>((resolve, reject) =>
+        saveRequests.set(requestId, { resolve, reject }),
+      )
+      post({ type: 'request_save', requestId })
+      return done
+    },
     destroy: () => {
       view.removeEventListener('message', onMessage)
       clearTimeout(timer)
+      for (const request of saveRequests.values())
+        request.reject(notSaved('the document was closed'))
+      saveRequests.clear()
       iframe.remove()
     },
   }
+}
+
+async function store(
+  options: EditOptions,
+  data: Record<string, unknown>,
+  post: (message: Record<string, unknown>) => void,
+): Promise<void> {
+  const saveId = data.saveId
+  if (typeof saveId !== 'number' || !(data.bytes instanceof ArrayBuffer)) return
+  try {
+    // the page saves under the name it opened; a different name is not this document
+    await options.onSave({ fileName: options.fileName, bytes: new Uint8Array(data.bytes) })
+    post({ type: 'saved', saveId })
+  } catch (error) {
+    post({
+      type: 'save_failed',
+      saveId,
+      message: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+function notSaved(message: string): SeuofficeEmbedError {
+  return new SeuofficeEmbedError('save_failed', message)
 }
 
 function isPageErrorCode(code: unknown): code is EmbedErrorCode {

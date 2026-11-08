@@ -23,6 +23,21 @@ const doc = openDocument(document.getElementById('viewer')!, {
 await doc.opened // 실패하면 SeuofficeEmbedError(code: unsupported_format | too_large | open_failed | timeout)
 ```
 
+고쳐서 저장하게 하려면 붙이는 쪽이 먼저 그 문서의 편집 잠금을 잡고 `mode: 'edit'`로 연다. 잠금을 못 잡았으면 읽기 모드(기본값)로 연다. 한 문서는 한 사람만 고친다.
+
+```ts
+const doc = openDocument(viewer, {
+  baseUrl,
+  bytes,
+  fileName: '회의록.hwpx',
+  mode: 'edit',
+  // 사용자가 저장하면 같은 형식, 같은 이름의 바이트가 온다. 거절하면 화면에 저장 실패로 보인다.
+  onSave: async ({ fileName, bytes }) => uploadNewVersion(fileName, bytes),
+  onDirtyChange: (dirty) => setUnsaved(dirty),
+})
+await doc.save() // 닫기 전에 붙이는 쪽에서 저장을 시킬 때. 실패하면 SeuofficeEmbedError(code: save_failed)
+```
+
 운영에서 지킬 것:
 
 - seuoffice 쪽 페이지는 CSP에 `script-src 'self' 'wasm-unsafe-eval'`, `worker-src 'self' blob:`이 있어야 한다(pdf.js, rhwp, 엑셀 엔진이 WASM과 워커를 쓴다).

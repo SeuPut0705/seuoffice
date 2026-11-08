@@ -38,6 +38,11 @@ export function viewMode(): boolean {
   return new URLSearchParams(location.search).get('mode') === 'view'
 }
 
+/** `?mode=edit`: the host holds the edit lock and will store what the page saves */
+export function editMode(): boolean {
+  return new URLSearchParams(location.search).get('mode') === 'edit'
+}
+
 /** `?lang=`, Korean by default */
 export function webLanguage(): string {
   return new URLSearchParams(location.search).get('lang') || 'ko'

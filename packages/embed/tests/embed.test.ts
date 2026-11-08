@@ -102,3 +102,121 @@ describe('openDocument', () => {
     doc.destroy()
   })
 })
+
+describe('editing', () => {
+  const ORIGIN = 'https://office.example'
+
+  function openForEdit(onSave: (file: { fileName: string; bytes: Uint8Array }) => Promise<void>) {
+    const dirty: boolean[] = []
+    const doc = openDocument(document.body, {
+      baseUrl: BASE,
+      fileName: 'memo.hwpx',
+      bytes: new Uint8Array([1]),
+      mode: 'edit',
+      onSave,
+      onDirtyChange: (value) => dirty.push(value),
+    })
+    const sent = vi.spyOn(doc.iframe.contentWindow!, 'postMessage').mockImplementation(() => {})
+    post(doc.iframe.contentWindow, ORIGIN, { type: 'ready' })
+    post(doc.iframe.contentWindow, ORIGIN, { type: 'opened' })
+    const replies = () =>
+      sent.mock.calls
+        .map((call) => call[0] as Record<string, unknown>)
+        .filter((m) => m.type !== 'open')
+    return { doc, dirty, replies }
+  }
+
+  it('opens the page in edit mode and stores what the page saves under the opened name', async () => {
+    const stored: { fileName: string; bytes: number[] }[] = []
+    const { doc, replies } = openForEdit(async (file) => {
+      stored.push({ fileName: file.fileName, bytes: Array.from(file.bytes) })
+    })
+    expect(doc.iframe.src).toBe('https://office.example/hwp/index.html?mode=edit&lang=ko')
+    post(doc.iframe.contentWindow, ORIGIN, {
+      type: 'save',
+      saveId: 7,
+      fileName: 'other.hwpx',
+      bytes: new Uint8Array([4, 5]).buffer,
+    })
+    await vi.waitFor(() =>
+      expect(replies()).toEqual([{ source: 'seuoffice', version: 1, type: 'saved', saveId: 7 }]),
+    )
+    expect(stored).toEqual([{ fileName: 'memo.hwpx', bytes: [4, 5] }])
+    doc.destroy()
+  })
+
+  it('tells the page why the host did not store the bytes', async () => {
+    const { doc, replies } = openForEdit(async () => {
+      throw new Error('lock lost')
+    })
+    post(doc.iframe.contentWindow, ORIGIN, {
+      type: 'save',
+      saveId: 1,
+      fileName: 'memo.hwpx',
+      bytes: new ArrayBuffer(1),
+    })
+    await vi.waitFor(() =>
+      expect(replies()).toEqual([
+        { source: 'seuoffice', version: 1, type: 'save_failed', saveId: 1, message: 'lock lost' },
+      ]),
+    )
+    doc.destroy()
+  })
+
+  it('ignores a save from another origin', () => {
+    const onSave = vi.fn(async () => {})
+    const { doc } = openForEdit(onSave)
+    post(doc.iframe.contentWindow, 'https://evil.example', {
+      type: 'save',
+      saveId: 1,
+      fileName: 'memo.hwpx',
+      bytes: new ArrayBuffer(1),
+    })
+    expect(onSave).not.toHaveBeenCalled()
+    doc.destroy()
+  })
+
+  it('forwards dirty changes', () => {
+    const { doc, dirty } = openForEdit(async () => {})
+    post(doc.iframe.contentWindow, ORIGIN, { type: 'dirty', dirty: true })
+    post(doc.iframe.contentWindow, ORIGIN, { type: 'dirty', dirty: false })
+    expect(dirty).toEqual([true, false])
+    doc.destroy()
+  })
+
+  it('save() asks the page and settles with its answer', async () => {
+    const { doc, replies } = openForEdit(async () => {})
+    const first = doc.save()
+    const second = doc.save()
+    const [one, two] = replies() as { requestId: number }[]
+    expect(replies().map((m) => m.type)).toEqual(['request_save', 'request_save'])
+    post(doc.iframe.contentWindow, ORIGIN, {
+      type: 'request_save_done',
+      requestId: two!.requestId,
+      ok: false,
+      message: 'disk full',
+    })
+    post(doc.iframe.contentWindow, ORIGIN, {
+      type: 'request_save_done',
+      requestId: one!.requestId,
+      ok: true,
+    })
+    await expect(first).resolves.toBeUndefined()
+    expect(await codeOf(second)).toBe('save_failed')
+    doc.destroy()
+  })
+
+  it('save() refuses in view mode and rejects pending requests on destroy', async () => {
+    const view = openDocument(document.body, {
+      baseUrl: BASE,
+      fileName: 'a.pdf',
+      bytes: new Uint8Array(1),
+    })
+    expect(await codeOf(view.save())).toBe('save_failed')
+    view.destroy()
+    const { doc } = openForEdit(async () => {})
+    const pending = doc.save()
+    doc.destroy()
+    expect(await codeOf(pending)).toBe('save_failed')
+  })
+})
