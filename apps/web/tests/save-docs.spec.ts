@@ -138,3 +138,23 @@ test('a document opened for viewing cannot be edited or saved', async ({ page })
   await page.waitForTimeout(2_000)
   expect(downloads).toBe(0)
 })
+
+test('a document opened for viewing stays read-only after every way out of Read Mode', async ({
+  page,
+}) => {
+  const frame = await open(page, SIMPLE, false)
+  const editor = frame.locator('.ProseMirror')
+  const tryToEdit = async (): Promise<void> => {
+    await typeAfter(frame, FIRST, ' web edit')
+    await expect(editor).toHaveAttribute('contenteditable', 'false')
+    await expect(editor).not.toContainText('web edit')
+  }
+
+  await editor.click()
+  await editor.press('Escape')
+  await tryToEdit()
+  await frame.getByRole('button', { name: '읽기 모드', exact: true }).click()
+  await tryToEdit()
+  // the in-page "Exit Read Mode" button would offer a way out the host did not grant
+  await expect(frame.locator('.read-exit')).toBeHidden()
+})
