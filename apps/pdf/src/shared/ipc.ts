@@ -86,6 +86,7 @@ export const PDF_CHANNELS = {
   setPageSize: 'pdf:set-page-size',
   splitPages: 'pdf:split-pages',
   cropPages: 'pdf:crop-pages',
+  restoreFile: 'pdf:restore-file',
   exportImages: 'pdf:export-images',
   // Save As › PNG page images: the shell picked the name; the renderer draws the pages
   exportImagesRequest: 'pdf:export-images-request',
@@ -1158,6 +1159,14 @@ export type ReplacePagesResult =
   | { ok: true; canceled: true }
   | { ok: false; error: string }
 
+/** The file put back as it was around a change written in place (Undo and Redo of that change) */
+export interface RestoreFileRequest {
+  path: string
+  bytes: ArrayBuffer
+}
+
+export type RestoreFileResult = { ok: true } | { ok: false; error: string }
+
 /** Resize all pages to a target paper size (points), content scaled to fit; written back in place */
 export interface SetPageSizeRequest {
   path: string
@@ -1822,6 +1831,7 @@ export interface PdfApi {
   setPageSize(request: SetPageSizeRequest): Promise<SetPageSizeResult>
   splitPages(request: SplitPagesRequest): Promise<SplitPagesResult>
   cropPages(request: CropPagesRequest): Promise<CropPagesResult>
+  restoreFile(request: RestoreFileRequest): Promise<RestoreFileResult>
   exportImages(request: ExportImagesRequest): Promise<ExportImagesResult>
   /** Shell Save As › PNG page images → draw every page and export it with `saveAs: true` */
   onExportImagesRequest(handler: () => void): () => void

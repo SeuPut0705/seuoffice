@@ -78,6 +78,8 @@ import type {
   PagePreviewRequest,
   ReplacePagesRequest,
   ReplacePagesResult,
+  RestoreFileRequest,
+  RestoreFileResult,
   SetPageSizeRequest,
   SetPageSizeResult,
   SplitPagesRequest,
@@ -2594,6 +2596,28 @@ function registerPdfIpc(): void {
         )
         await writeOwnFile(e.sender.id, path, () => writePdfAtomically(path, merged))
         return { ok: true, removed, inserted }
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    },
+  )
+
+  ipcMain.handle(
+    PDF_CHANNELS.restoreFile,
+    async (e, request: RestoreFileRequest): Promise<RestoreFileResult> => {
+      const { path, bytes } = request ?? {}
+      // a buffer from the renderer's realm (the web build's worker) fails instanceof
+      if (
+        typeof path !== 'string' ||
+        !allowedByWc.get(e.sender.id)?.has(path) ||
+        Object.prototype.toString.call(bytes) !== '[object ArrayBuffer]'
+      ) {
+        return { ok: false, error: 'pdf: path not granted to this view' }
+      }
+      try {
+        // ieum: through the view's own-write record, like the other in-place page operations
+        await writeOwnFile(e.sender.id, path, () => writePdfAtomically(path, new Uint8Array(bytes)))
+        return { ok: true }
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
