@@ -2,7 +2,8 @@
 //!
 //! The host (a Web Worker) writes the workbook into a preopened directory and
 //! then sends the same JSON requests the desktop sidecar speaks, one buffer in
-//! and one buffer out. Only the commands the web viewer needs are answered.
+//! and one buffer out. Only the commands the web viewer and its save need are
+//! answered: the save plans in the worker and calls the archive commands.
 
 use std::cell::RefCell;
 use std::path::PathBuf;
@@ -10,6 +11,9 @@ use std::sync::atomic::AtomicBool;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use xlsx_sidecar::archive::{
+    EntryContent, archive_manifest, read_entries_to_dir, save_archive, scan_entries_for_text,
+};
 use xlsx_sidecar::{CellRange, SidecarError, WorkbookSessions};
 
 const PROTOCOL_VERSION: u8 = 1;
@@ -38,6 +42,28 @@ enum Command {
     Close {
         #[serde(rename = "sessionId")]
         session_id: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    ArchiveManifest { path: PathBuf },
+    #[serde(rename_all = "camelCase")]
+    ReadEntries {
+        path: PathBuf,
+        entries: Vec<String>,
+        output_dir: PathBuf,
+    },
+    #[serde(rename_all = "camelCase")]
+    ScanEntries {
+        path: PathBuf,
+        entries: Vec<String>,
+        needle: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    SaveArchive {
+        source_path: PathBuf,
+        target_path: PathBuf,
+        replacements: Vec<EntryContent>,
+        removals: Vec<String>,
+        additions: Vec<EntryContent>,
     },
     #[serde(other)]
     Unsupported,
@@ -154,6 +180,35 @@ fn handle(request: Request) -> Response {
             Command::Close { session_id } => sessions
                 .close(&session_id)
                 .and_then(|()| to_json_value(serde_json::json!({ "closed": true }))),
+            Command::ArchiveManifest { path } => archive_manifest(&path)
+                .and_then(|entries| to_json_value(serde_json::json!({ "entries": entries }))),
+            Command::ReadEntries {
+                path,
+                entries,
+                output_dir,
+            } => read_entries_to_dir(&path, &entries, &output_dir)
+                .and_then(|extracted| to_json_value(serde_json::json!({ "entries": extracted }))),
+            Command::ScanEntries {
+                path,
+                entries,
+                needle,
+            } => scan_entries_for_text(&path, &entries, &needle)
+                .and_then(|matches| to_json_value(serde_json::json!({ "matches": matches }))),
+            Command::SaveArchive {
+                source_path,
+                target_path,
+                replacements,
+                removals,
+                additions,
+            } => save_archive(
+                &source_path,
+                &target_path,
+                &replacements,
+                &removals,
+                &additions,
+                &[],
+            )
+            .and_then(to_json_value),
             Command::Unsupported => unreachable!("rejected above"),
         }
     });
