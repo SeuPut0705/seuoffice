@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+# no job here runs Electron; skip its 100 MB download (and its outages)
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+
 jobs:
   guard:
     runs-on: ubuntu-latest
