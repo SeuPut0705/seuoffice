@@ -55,6 +55,7 @@ sheets의 Rust 시험(`native:test`: 304 + 7개)과 `native:build`는 통과했�
 | 고쳐 쓴 뒤 1   | `test` | 실패 | `npm ci`가 Electron을 받다 504. 다시 돌린 시도는 `Check skill versions`가 force-push 전 커밋을 찾지 못해 실패(고쳐 쓴 뒤 첫 푸시에만 생김)                                                     |
 | 42482304852    | `test` | 실패 | `@genoffice/shell`의 `product-identity` 시험이 `apps/web/src/renderer`를 찾다 실패. seuoffice가 만든 실패라 시험을 고쳤다(`upstream-edits.md`)                                                 |
 | 42482304852    | `e2e`  | 실패 | 335개 통과, 맞춤법 시험 2개 실패(`docs-spell-suggestions`, `docs-spellcheck-reenable`). 같은 트리의 앞 실행에서는 통과했다. 상위 시험이 "맞춤법 검사기는 앱 밖"이라며 재시도 1회를 둔 시험이다 |
+| 42487209888    | 둘 다  | 통과 | 셸 시험을 고친 `643e44b` 위의 첫 녹색. 이 저장소에서 상위 `CI`가 끝까지 통과한 첫 실행이다                                                                                                     |
 
 - 상위 이음오피스의 같은 작업은 cargo 캐시가 있어 39분쯤 걸린다(이음 run 42455263595). 이 저장소는 캐시가 녹색 실행 뒤에만 저장되어 첫 실행이 더 오래 걸린다. 그래서 `test` 상한을 60분으로 올렸다(`upstream-edits.md`).
 - 리눅스에서는 `@genoffice/ai-provider` 시험이 모두 통과했다. 위 표의 ai-provider 실패 세 건이 이 PC(macOS) 환경 때문이라는 추론과 맞는다.
