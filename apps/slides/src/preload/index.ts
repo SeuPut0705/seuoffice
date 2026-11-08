@@ -232,6 +232,7 @@ const api: SlidesApi = {
     mode?: 'replace' | 'append' | 'replace_at' | 'insert_at',
     atIndex?: number,
     deckName?: string,
+    aiRunExpected?: boolean,
   ) =>
     ipcRenderer.invoke(
       'slides:land-generated-pages',
@@ -240,6 +241,7 @@ const api: SlidesApi = {
       mode,
       atIndex,
       deckName,
+      aiRunExpected,
     ),
   localGeneratePage: (op: { specJson: string; defaultFonts?: { title: string; body: string } }) =>
     ipcRenderer.invoke('slides:local-page-generate', op),
@@ -488,6 +490,7 @@ const api: SlidesApi = {
     wPx: number
     hPx: number
     fitWidthPx: number
+    aiRunExpected?: boolean
   }) => ipcRenderer.invoke('ai:insert-image-url', op),
   replacePictureUrl: (op: {
     slideIndex: number
@@ -497,6 +500,7 @@ const api: SlidesApi = {
     base64?: string
     ext?: string
     keepSrcRect?: boolean
+    aiRunExpected?: boolean
   }) => ipcRenderer.invoke('ai:replace-picture-url', op),
   generateImage: (op: {
     prompt: string

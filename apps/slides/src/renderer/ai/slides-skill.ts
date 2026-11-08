@@ -124,6 +124,8 @@ export interface DeckAccess {
    *  mode="insert_at" inserts a single page at position insertAt (later pages shift) — used to re-insert failed pages at their original position.
    *  On pipeline failure it automatically falls back to element-level mode; fallbackReason explains why (ok is still true).
    *  deckName = presentation name derived from user input, used as the file name when the new draft is saved (instead of "Untitled-timestamp"). */
+  /** Whether this panel began a reviewed AI run for the current request. A main-process write whose run is gone (held, reverted, replaced) must be refused, not applied to the unlocked deck. False for a handed-over run, which makes a new document with nothing to review. */
+  aiRunExpected?(): boolean
   landGeneratedPages?(
     pageMarkers: string[],
     mode?: 'replace' | 'append' | 'insert_at',
@@ -1841,9 +1843,11 @@ async function executeTool(
         if (!/^(https?|file):\/\//.test(url)) return fail(t('aiFailInsertImage'), 'Invalid url')
         payload = { url }
       }
+      if (signal?.aborted) return fail(t('aiFailInsertImage'), t('aiErrStopped'))
       const r = await window.slidesApi.insertImageUrl({
         slideIndex: idx,
         ...payload,
+        ...(access.aiRunExpected?.() ? { aiRunExpected: true } : {}),
         xPx: Number(call.input.x),
         yPx: Number(call.input.y),
         wPx: Number(call.input.w),
@@ -1893,10 +1897,12 @@ async function executeTool(
         if (!/^(https?|file):\/\//.test(url)) return fail(t(failKey), 'Invalid url')
         payload = { url }
       }
+      if (signal?.aborted) return fail(t(failKey), t('aiErrStopped'))
       const updated = await window.slidesApi.replacePictureUrl({
         slideIndex: idx,
         sourceId,
         ...payload,
+        ...(access.aiRunExpected?.() ? { aiRunExpected: true } : {}),
         ...(call.input.keepCrop ? { keepSrcRect: true } : {}),
       })
       if (!updated)
@@ -2072,6 +2078,8 @@ async function executeTool(
         }
       }
       await runRegen(access.generatePageLocal)
+      // Stop during the build: the page is dropped, never written into a deck the run no longer holds
+      if (signal?.aborted) return fail(t('aiFailRegen'), t('aiErrStopped'))
       if (!marker) {
         if (regenStopKind)
           return fail(
@@ -2700,7 +2708,8 @@ async function executeTool(
           if (cancelled() || stopKind) break
           let marker = markerByIndex[idx]
           if (!marker) marker = await genOne(pages[idx]!, idx + 1)
-          if (stopKind) break
+          // Stop during the build: the page is dropped, never landed into a deck the run no longer holds
+          if (cancelled() || stopKind) break
           if (!marker) {
             pageProgressItems[idx] = {
               ...pageProgressItems[idx]!,

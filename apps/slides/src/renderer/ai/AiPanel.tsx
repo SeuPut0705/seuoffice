@@ -1079,6 +1079,8 @@ export function AiPanel({
   const holdingRef = useRef(false)
   /** The AI run was opened in the main process (aiRunBegin) and not yet held or abandoned */
   const runOpenRef = useRef(false)
+  /** This panel began a reviewed run for the request in flight (or the last one): main refuses AI writes once that run is gone */
+  const runReviewedRef = useRef(false)
   /** An abandoned run is being taken out of the deck: no new request starts before that ends */
   const abandoningRef = useRef(0)
   /** Bumped when the conversation is dropped: a request still preparing (stale) must not start */
@@ -1435,6 +1437,7 @@ export function AiPanel({
       applySlide: (i, updated) => applySlideRef.current(i, updated),
       applyDeck: (all, goTo) => applyDeckRef.current(all, goTo),
       deckHasPath: () => !!deckPathRef.current,
+      aiRunExpected: () => runReviewedRef.current,
       landGeneratedPages: async (
         pageMarkers: string[],
         mode?: 'replace' | 'append' | 'insert_at',
@@ -1448,6 +1451,7 @@ export function AiPanel({
             mode,
             insertAt,
             deckName,
+            runReviewedRef.current,
           )
           if (res && 'slides' in res && Array.isArray(res.slides)) {
             const appendedFrom =
@@ -1499,6 +1503,8 @@ export function AiPanel({
             fitWidthPx,
             'replace_at',
             slideIndex,
+            undefined,
+            runReviewedRef.current,
           )
           if (res && 'slides' in res && Array.isArray(res.slides)) {
             applyDeckRef.current(res.slides, slideIndex)
@@ -1581,6 +1587,8 @@ export function AiPanel({
               specJson: r.text,
               ...(args.defaultFonts ? { defaultFonts: args.defaultFonts } : {}),
             })
+            // Stop / new chat while the page was being built: its marker must not reach a landing
+            if (args.signal?.aborted) return { ok: false, error: tGlobal('aiErrStopped') }
             if (res?.ok && res.marker) return res
             lastErr = res?.error ?? tGlobal('aiErrUnknown')
           } catch (e) {
@@ -2298,6 +2306,7 @@ export function AiPanel({
         runStartingRef.current = false
         await onBeforeRunRef.current?.()
         if (stale()) return
+        runReviewedRef.current = false
         if (await window.slidesApi.beginHistoryBatch()) {
           historyBatchActiveRef.current = true
           // a deck handed over for a project is a new document the AI makes: nothing to review
@@ -2308,6 +2317,7 @@ export function AiPanel({
               throw new Error('the AI run cannot be held for review')
             }
             runOpenRef.current = true
+            runReviewedRef.current = true
           }
         }
         if (stale()) return
@@ -2457,6 +2467,7 @@ export function AiPanel({
       return
     }
     runOpenRef.current = true
+    runReviewedRef.current = true
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i]!
       const ok = await runQueuePage(buildPageInstruction(group, groups.length, i + 1))

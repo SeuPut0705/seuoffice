@@ -303,6 +303,85 @@ describe('slides:land-generated-pages while the run is held meanwhile', () => {
   }
 })
 
+describe('slides:land-generated-pages for a panel run that is no longer open', () => {
+  const expectRun = (marker: string, mode: LandMode) =>
+    ipc('slides:land-generated-pages', [marker], FIT_WIDTH, mode, 0, 'deck', true) as Promise<{
+      error?: string
+    }>
+
+  for (const mode of ['append', 'replace_at', 'insert_at', 'replace'] as const) {
+    it(`${mode}: refused when the panel expects a run and none is open`, async () => {
+      const marker = await generatedPage()
+      const before = slideCount()
+      const result = await expectRun(marker, mode)
+      expect(result.error).toBeDefined()
+      expect(sessions.get(WC)).toBe(session)
+      expect(slideCount()).toBe(before)
+      expect(session.undoStack.length).toBe(0)
+    })
+  }
+
+  it('lands as before when no run is expected (a handed-over run makes a new document)', async () => {
+    const marker = await generatedPage()
+    const before = slideCount()
+    const result = await land(marker, 'append')
+    expect(result.error).toBeUndefined()
+    expect(slideCount()).toBe(before + 1)
+  })
+
+  it('lands while the expected run is open', async () => {
+    const marker = await generatedPage()
+    expect(await ipc('slides:ai-run-begin')).toBe(true)
+    const before = slideCount()
+    const result = await expectRun(marker, 'append')
+    expect(result.error).toBeUndefined()
+    expect(slideCount()).toBe(before + 1)
+  })
+
+  it('insert and replace picture by URL are refused when the expected run is gone', async () => {
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64',
+    ).toString('base64')
+    const before = slideCount()
+    const inserted = await ipc('ai:insert-image-url', {
+      slideIndex: 0,
+      base64: png,
+      ext: 'png',
+      xPx: 10,
+      yPx: 10,
+      wPx: 50,
+      hPx: 50,
+      fitWidthPx: FIT_WIDTH,
+      aiRunExpected: true,
+    })
+    expect(inserted).toBeNull()
+    const replaced = await ipc('ai:replace-picture-url', {
+      slideIndex: 0,
+      sourceId: 'x',
+      base64: png,
+      ext: 'png',
+      aiRunExpected: true,
+    })
+    expect(replaced).toBeNull()
+    expect(slideCount()).toBe(before)
+    expect(session.undoStack.length).toBe(0)
+    expect(session.opened.deck.slides[0]!.elements.length).toBe(0)
+    // the same call without the flag is a valid insert, so the refusal above came from the flag
+    const control = await ipc('ai:insert-image-url', {
+      slideIndex: 0,
+      base64: png,
+      ext: 'png',
+      xPx: 10,
+      yPx: 10,
+      wPx: 50,
+      hPx: 50,
+      fitWidthPx: FIT_WIDTH,
+    })
+    expect(control).not.toBeNull()
+  })
+})
+
 describe('AiPanel with an AI write call still in flight', () => {
   async function startPausedWrite(mode: LandMode): Promise<{
     container: HTMLElement

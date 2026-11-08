@@ -2150,6 +2150,7 @@ export function registerSlidesIpc(): void {
       mode?: 'replace' | 'append' | 'replace_at' | 'insert_at',
       atIndex?: number,
       deckName?: string,
+      aiRunExpected?: boolean,
     ): Promise<
       | (OpenResult & {
           appendedFrom?: number
@@ -2186,8 +2187,11 @@ export function registerSlidesIpc(): void {
       // The AI run this landing belongs to: if it was held, reverted or replaced while a page
       // was being read, landing now would write into the held deck or the next run.
       const landRun = sessions.get(e.sender.id)?.aiRun
-      const runMoved = (): boolean => sessions.get(e.sender.id)?.aiRun !== landRun
+      // a panel that began a reviewed run says so: without that run (held or reverted before this
+      // call arrived) the pages would land in an unlocked deck as an unreviewed AI edit
       const runEnded = { error: 'the AI run ended before the generated pages could land' }
+      if (aiRunExpected && !landRun) return runEnded
+      const runMoved = (): boolean => sessions.get(e.sender.id)?.aiRun !== landRun
       try {
         // Append: extract only the "new pages" and land them into the existing in-memory
         // deck as one per_op transaction. Already-landed pages stay untouched

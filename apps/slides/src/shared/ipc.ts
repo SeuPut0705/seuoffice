@@ -1413,6 +1413,8 @@ export interface SlidesApi {
     mode?: 'replace' | 'append' | 'replace_at' | 'insert_at',
     atIndex?: number,
     deckName?: string,
+    /** the panel began a reviewed run for this request: refused when that run is no longer open */
+    aiRunExpected?: boolean,
   ) => Promise<
     | (OpenResult & {
         appendedFrom?: number
@@ -1864,6 +1866,8 @@ export interface SlidesApi {
     wPx: number
     hPx: number
     fitWidthPx: number
+    /** the panel began a reviewed run for this request: refused when that run is no longer open */
+    aiRunExpected?: boolean
   }) => Promise<{ slide: RenderSlide; sourceId: string } | null>
   /** Download a URL and swap it into an existing picture in place (frame/z-order/effects survive) */
   replacePictureUrl: (op: {
@@ -1874,6 +1878,8 @@ export interface SlidesApi {
     base64?: string
     ext?: string
     keepSrcRect?: boolean
+    /** the panel began a reviewed run for this request: refused when that run is no longer open */
+    aiRunExpected?: boolean
   }) => Promise<RenderSlide | null>
   /** AI image generation/editing, returns the image URL (or an error text when no image route is available) */
   generateImage: (op: {

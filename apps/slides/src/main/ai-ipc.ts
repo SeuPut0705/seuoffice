@@ -396,10 +396,12 @@ export function registerSlidesOnlyAiIpc(): void {
         wPx: number
         hPx: number
         fitWidthPx: number
+        aiRunExpected?: boolean
       },
     ) => {
       const session = sessions.get(e.sender.id)
       if (!session) return null
+      if (op.aiRunExpected && !session.aiRun) return null
       const slide = session.opened.deck.slides[op.slideIndex]
       if (!slide) return null
       // the run this write belongs to: if it ended during the download, its edits are held
@@ -475,10 +477,12 @@ export function registerSlidesOnlyAiIpc(): void {
         base64?: string
         ext?: string
         keepSrcRect?: boolean
+        aiRunExpected?: boolean
       },
     ) => {
       const session = sessions.get(e.sender.id)
       if (!session) return null
+      if (op.aiRunExpected && !session.aiRun) return null
       const slide = session.opened.deck.slides[op.slideIndex]
       if (!slide) return null
       // The AI layer may address the picture by its durable id — translate to the
