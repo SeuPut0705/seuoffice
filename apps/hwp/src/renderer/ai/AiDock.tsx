@@ -43,8 +43,8 @@ export interface HwpAiDockProps {
   prefill?: AiPrefill | null
   /** the panel took an `autoRun` request: clear it so it is not sent again */
   onPrefillTaken?: (taken: AiPrefill) => void
-  /** an AI run holds the document, is out of it again, or is stuck in it */
-  onRunHold?: (state: HoldState) => void
+  /** an AI run holds the document, is out of it again, or is stuck in it (required: the app's saves read it) */
+  onRunHold: (state: HoldState) => void
 }
 
 /** The panel at the right end, or its rail while collapsed; the panel stays mounted either way. */

@@ -259,7 +259,7 @@ export function AiPanel({
    * back out for review ('held' then 'free'), or is stuck in it ('stranded'). The app's saves
    * wait on it.
    */
-  onRunHold?: (state: HoldState) => void
+  onRunHold: (state: HoldState) => void
 }): ReactElement {
   const { lang, t } = useI18n()
   const [chat, setChat] = useState<ChatEntry[]>([])
