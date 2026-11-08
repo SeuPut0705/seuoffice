@@ -725,10 +725,7 @@ async function writeSessionCopy(session: Session, ignoreBackoff: boolean): Promi
       session.password === undefined
         ? recoveryStore.writeCopyStreamed(
             identity,
-            (tempPath) => {
-              assertNoAiRun(session)
-              return savePptxToFile(session.opened, tempPath)
-            },
+            (tempPath) => savePptxToFile(session.opened, tempPath),
             options,
           )
         : recoveryStore.writeCopy(
@@ -1164,8 +1161,9 @@ function deckFileBytes(session: Session, bytes: Uint8Array): Buffer {
  * encrypted as one buffer, so it is assembled in memory, encrypted, then
  * written atomically — its plaintext never touches the disk.
  * Every save funnels through here, so it also refuses while an AI run's
- * unaccepted edits are in the deck; the check repeats right before the deck is
- * serialized because the steps ahead of it await.
+ * unaccepted edits are in the deck. Callers run it inside trackWrite, and an AI
+ * run only begins once no tracked write is in flight, so a run cannot start
+ * between this check and the serialization.
  */
 async function writeDeckFile(session: Session, filePath: string): Promise<void> {
   assertNoAiRun(session)
@@ -1173,13 +1171,9 @@ async function writeDeckFile(session: Session, filePath: string): Promise<void> 
     // savePptxToFile truncates the path it streams into, so the deck goes out
     // through a sibling temp renamed over `filePath` once the stream finished:
     // a save that dies mid-way leaves the previous deck on disk (genoffice#2123)
-    await atomicWriteVia(filePath, (tmp) => {
-      assertNoAiRun(session)
-      return savePptxToFile(session.opened, tmp)
-    })
+    await atomicWriteVia(filePath, (tmp) => savePptxToFile(session.opened, tmp))
     return
   }
-  assertNoAiRun(session)
   await atomicWriteFile(filePath, deckFileBytes(session, await savePptx(session.opened)))
 }
 
