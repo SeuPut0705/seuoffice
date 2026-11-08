@@ -901,6 +901,7 @@ describe('the studio source the build fetched', () => {
     'src/ui/table-cell-props-dialog.ts',
     'src/ui/options-dialog.ts',
     'src/ui/toolbar.ts',
+    'src/command/dispatcher.ts',
     'src/command/registry.ts',
     'src/i18n/locales/ko.ts',
     'src/i18n/locales/en.ts',

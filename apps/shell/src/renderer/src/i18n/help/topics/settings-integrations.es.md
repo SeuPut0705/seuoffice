@@ -37,7 +37,6 @@ Permanece cerrado hasta que se abre; la mayoría nunca lo necesita. La pestaña 
 ## Acerca de
 
 - **Versión**, la dirección del proyecto en GitHub y una línea que nombra el proyecto de código abierto en el que se basa esta aplicación.
-- **Canal de actualización**: Estable o Beta. Cambiarlo surte efecto de inmediato y busca una actualización; no bajará una instalación Beta a Estable.
 
 ## Aplicaciones predeterminadas
 

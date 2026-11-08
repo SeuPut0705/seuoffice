@@ -15,9 +15,9 @@ const today = '2026-10-29'
 describe('memoryHeader', () => {
   it('is one HTML comment line naming the product', () => {
     expect(memoryHeader('ko')).toMatch(/^<!-- .+ -->$/)
-    expect(memoryHeader('ko')).toContain('이음오피스')
+    expect(memoryHeader('ko')).toContain('seuoffice')
     expect(HEADER).toMatch(/^<!-- .+ -->$/)
-    expect(HEADER).toContain('IeumOffice')
+    expect(HEADER).toContain('seuoffice')
   })
 })
 

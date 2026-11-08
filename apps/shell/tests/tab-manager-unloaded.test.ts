@@ -305,7 +305,7 @@ describe('adding an unloaded tab', () => {
     const { opener, open } = makeOpener()
     const id = manager.addUnloadedTab(spec('hwp', '/docs/report.hwp', opener))
     expect(manager.list()).toEqual([
-      { id: 'home', kind: 'home', title: 'IeumOffice', closable: false, active: true },
+      { id: 'home', kind: 'home', title: 'seuoffice', closable: false, active: true },
       {
         id,
         kind: 'hwp',
@@ -772,7 +772,7 @@ describe('hydrateSession (a restored session)', () => {
       ],
     })
     expect(manager.list().map((t) => t.id)).toEqual(['home', ...ids])
-    expect(manager.list().map((t) => t.title)).toEqual(['IeumOffice', 'a.docx', 'b.hwp', 'Draft'])
+    expect(manager.list().map((t) => t.title)).toEqual(['seuoffice', 'a.docx', 'b.hwp', 'Draft'])
     for (const o of openers) expect(o.open).not.toHaveBeenCalled()
     expect(activeId()).toBe('home')
   })

@@ -16,15 +16,9 @@ const pdfjsDir = (sub: string) => normalizePath(join(pdfjsRoot, 'pdfjs-dist', su
 
 /** src/main save stages that need desktop engines; the web save runs without them */
 const DESKTOP_STAGES = new Set(
-  [
-    'pdf-crypt',
-    'atomic-write',
-    'redaction',
-    'text-edit',
-    'image-edit',
-    'annot-delete',
-    'annot-flatten',
-  ].map((stem) => normalizePath(resolve(__dirname, `src/main/${stem}.ts`))),
+  ['atomic-write', 'redaction', 'text-edit', 'image-edit', 'annot-delete', 'annot-flatten'].map(
+    (stem) => normalizePath(resolve(__dirname, `src/main/${stem}.ts`)),
+  ),
 )
 
 function desktopStages(): Plugin {

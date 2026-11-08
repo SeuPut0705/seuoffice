@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 /**
- * The sheets AI panel's "attach from an IeumOffice document" button: the
+ * The sheets AI panel's "attach from a seuoffice document" button: the
  * shell's document picker (window.aiOfficeDocs) hands back paths, and the
  * panel turns them into the same `onDrivePicked` call the Drive button makes.
  * (The picked paths then travel through App.tsx's `handleDrivePicked`, which is

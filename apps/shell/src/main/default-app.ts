@@ -20,31 +20,31 @@ export const OFFICE_TYPES: readonly OfficeType[] = [
     ext: 'docx',
     uti: 'org.openxmlformats.wordprocessingml.document',
     mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    progId: 'IeumOffice.WordDocument',
+    progId: 'seuoffice.WordDocument',
   },
   {
     ext: 'xlsx',
     uti: 'org.openxmlformats.spreadsheetml.sheet',
     mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    progId: 'IeumOffice.ExcelWorkbook',
+    progId: 'seuoffice.ExcelWorkbook',
   },
   {
     ext: 'xlsm',
     uti: 'org.openxmlformats.spreadsheetml.sheet.macroenabled',
     mime: 'application/vnd.ms-excel.sheet.macroEnabled.12',
-    progId: 'IeumOffice.ExcelMacroEnabledWorkbook',
+    progId: 'seuoffice.ExcelMacroEnabledWorkbook',
   },
   {
     ext: 'xls',
     uti: 'com.microsoft.excel.xls',
     mime: 'application/vnd.ms-excel',
-    progId: 'IeumOffice.Excel972003Workbook',
+    progId: 'seuoffice.Excel972003Workbook',
   },
   {
     ext: 'pptx',
     uti: 'org.openxmlformats.presentationml.presentation',
     mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    progId: 'IeumOffice.PowerPointPresentation',
+    progId: 'seuoffice.PowerPointPresentation',
   },
   // draw.io diagrams. macOS knows the type by the identifier draw.io exports;
   // electron-builder.cjs imports the same declaration (mac.extendInfo) so the
@@ -53,17 +53,17 @@ export const OFFICE_TYPES: readonly OfficeType[] = [
     ext: 'drawio',
     uti: 'com.jgraph.drawio',
     mime: 'application/vnd.jgraph.mxfile',
-    progId: 'IeumOffice.Diagram',
+    progId: 'seuoffice.Diagram',
   },
   {
     ext: 'dio',
     uti: 'com.jgraph.drawio',
     mime: 'application/vnd.jgraph.mxfile',
-    progId: 'IeumOffice.Diagram',
+    progId: 'seuoffice.Diagram',
   },
 ]
 
-const LINUX_DESKTOP_ID = 'ieumoffice.desktop'
+const LINUX_DESKTOP_ID = 'seuoffice.desktop'
 const WINDOWS_DEFAULT_APPS_URL = 'ms-settings:defaultapps'
 
 export type RunCommand = (cmd: string, args: string[]) => Promise<string>

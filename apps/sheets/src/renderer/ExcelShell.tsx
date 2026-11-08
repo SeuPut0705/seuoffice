@@ -67,6 +67,7 @@ import {
   numberFormatCategories,
 } from './number-format'
 import { setContextMenuCommandSink, registerPasteSpecialOpener } from './cell-context-menu'
+import { ribbonCommandAllowed } from './sheet-protection'
 import { numberFormatLabel, type SelectionFormat } from './selection-format'
 import { fontFamilyGroups, useSystemFontFamilies } from './system-fonts'
 import {
@@ -342,6 +343,8 @@ interface ExcelShellProps {
   readonly onToggleStatusBarFunc: (func: StatusBarFunc) => void
   /// True when the edit journal has unsaved changes (enables the QAT Save).
   readonly canSave: boolean
+  /// A read-only open (the web viewer): edit commands and edit dialogs stay shut.
+  readonly readOnly?: boolean
   readonly onSave: () => void
   /// Save As remains available for a clean workbook, but requires a real
   /// file-backed session (the in-memory demo workbook has nowhere to copy).
@@ -599,6 +602,7 @@ export function ExcelShell({
   statusBarFuncs,
   onToggleStatusBarFunc,
   canSave,
+  readOnly = false,
   onSave,
   canSaveAs,
   onSaveAs,
@@ -758,6 +762,7 @@ export function ExcelShell({
   onIsCellEditingRef.current = onIsCellEditing
   openingWorkbookRef.current = openingWorkbook
   const dispatchCommand = (command: string): void => {
+    if (!ribbonCommandAllowed(readOnly, command)) return
     if (command === 'format-cells') setShowFormatCells(true)
     else if (command === 'row-height-open') setAxisSizeTarget('row')
     else if (command === 'col-width-open') setAxisSizeTarget('col')

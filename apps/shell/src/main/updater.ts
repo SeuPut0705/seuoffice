@@ -28,14 +28,13 @@ import type { UpdateInfo } from 'electron-updater'
 import { createI18n, getUiLang, htmlLang } from '@genoffice/i18n'
 import { GITHUB_LATEST_RELEASE_URL, githubReleaseTagUrl } from '@genoffice/electron-utils'
 import type {
-  UpdateChannel,
   UpdatePhase,
   UpdateReleaseNotes,
   UpdateUiState,
   UpdateUiStrings,
 } from '../shared/update-api'
+import { packagedUpdateChannel, type BuildUpdateChannel } from './update-build-channel'
 import {
-  clearUpdateState,
   closeUpdateWindow,
   isUpdateWindowOpen,
   pushUpdateState,
@@ -701,12 +700,11 @@ const RECHECK_INTERVAL_MS = 4 * 60 * 60 * 1000
 // on every retry while the error looks like a download failure to the user.
 const MANUAL_FALLBACK_AFTER = 2
 // Where a manual install starts: the repository's own release pages, never a
-// URL taken from remotely fetched update metadata. "Latest" is GitHub's newest
-// full release, so a pre-release (beta channel) gets its own page instead.
+// URL taken from remotely fetched update metadata. The offered version's own
+// page: on the latest channel it may be a pre-release, which GitHub's
+// "Latest" page does not show.
 function manualDownloadUrlFor(version: string | null): string {
-  return version !== null && version.includes('-')
-    ? githubReleaseTagUrl(version)
-    : GITHUB_LATEST_RELEASE_URL
+  return version !== null ? githubReleaseTagUrl(version) : GITHUB_LATEST_RELEASE_URL
 }
 
 // electron-updater error codes that mean "the repository has nothing to offer
@@ -735,18 +733,7 @@ let dismissedVersion: string | null = null
 // exercisable in dev runs too
 let fakeShowAgain: (() => void) | null = null
 let manualCheckInFlight = false
-// set by initAutoUpdater; drops the download state of the channel being left
-let resetDownloadFlow: (() => void) | null = null
-
-// electron-updater feed name per user-facing channel. The platform suffix is
-// appended by electron-updater itself: 'beta' resolves to beta.yml on
-// Windows, beta-mac.yml on macOS, beta-linux.yml on Linux x64. On GitHub the
-// beta channel is the repository's pre-releases (see selectChannel); a
-// release there carries latest.yml whatever its version, and the provider
-// falls back to that file when the release has no beta.yml.
-const CHANNEL_FEED: Record<UpdateChannel, string> = { stable: 'latest', beta: 'beta' }
-
-// true once the packaged-run updater is configured; channel switches before
+// true once the packaged-run updater is configured; a manual check before
 // that (or in dev runs) must not touch electron-updater
 let updaterActive = false
 
@@ -805,24 +792,18 @@ function initialState(
   }
 }
 
-function selectChannel(channel: UpdateChannel): void {
-  autoUpdater.channel = CHANNEL_FEED[channel]
+// The build's channel (update-build-channel.ts) decides which releases count.
+// latest: the newest release in the feed, a pre-release too, through its
+// latest.yml. electron-updater's pre-release search only takes the first
+// entry while its own channel is unset, so it stays unset here.
+// stable: GitHub's Latest release only (allowPrerelease off), through the
+// stable.yml the stable build attaches to every release.
+function selectChannel(channel: BuildUpdateChannel): void {
+  if (channel === 'stable') autoUpdater.channel = 'stable'
   // the channel setter unconditionally flips allowDowngrade to true; force it
-  // back off since a beta user switching to stable must not downgrade
+  // back off: an update never installs an older version
   autoUpdater.allowDowngrade = false
-  // The GitHub provider resolves stable to the repository's "latest" release,
-  // which is never a pre-release, and only looks at pre-releases when this is
-  // on. Set both ways: electron-updater turns it on by itself whenever the
-  // installed version is a pre-release.
-  autoUpdater.allowPrerelease = channel === 'beta'
-}
-
-export function applyUpdateChannel(channel: UpdateChannel): void {
-  if (!updaterActive) return
-  resetDownloadFlow?.()
-  selectChannel(channel)
-  log('channel switched:', channel)
-  autoUpdater.checkForUpdates().catch((err) => log('check failed:', err?.message ?? err))
+  autoUpdater.allowPrerelease = channel === 'latest'
 }
 
 /** User-triggered check (☰ > Check for Updates…, Help on macOS, or the About
@@ -892,9 +873,10 @@ export async function checkForUpdatesNow(): Promise<void> {
 
 export function initAutoUpdater(
   getWindow: () => BrowserWindow | null,
-  initialChannel: UpdateChannel = 'stable',
   /** Settings › "Check for updates automatically"; read at every background check (genoffice#2127) */
   autoCheckEnabled: () => boolean = () => true,
+  /** fixed at packaging time; a parameter so tests can pick it */
+  channel: BuildUpdateChannel = packagedUpdateChannel(),
 ): void {
   if (started) return
   started = true
@@ -924,8 +906,8 @@ export function initAutoUpdater(
   // the installer passes --updated when it reopens the app after an update;
   // without it this launch was the user's own
   const launchedBy = reopenedByInstaller() ? ', reopened by the installer' : ''
-  log('running', app.getVersion(), 'on the', initialChannel, `channel${launchedBy}`)
-  selectChannel(initialChannel)
+  log('running', app.getVersion(), 'on the', channel, `channel${launchedBy}`)
+  selectChannel(channel)
   autoUpdater.autoDownload = false
   // The window shows what changed before the user starts the download
   // (docs/plans/update-details.md). The full changelog collects the bodies of
@@ -1098,26 +1080,6 @@ export function initAutoUpdater(
     downloadInFlight = false
     failedAttempts += 1
     setPhase({ phase: failedAttempts >= MANUAL_FALLBACK_AFTER ? 'manual' : 'error' })
-  }
-
-  // electron-updater cannot discard a finished download, so a package from
-  // the previous channel is made stale instead: it is never installed (not on
-  // quit, not via the window) and the next channel's update-available starts
-  // the flow over from 'available'
-  resetDownloadFlow = () => {
-    if (latestSeenVersion === null) return
-    log('channel switch: dropping', latestSeenVersion, 'in phase', phase)
-    downloadToken?.cancel()
-    downloadToken = null
-    downloadGen += 1
-    latestSeenVersion = null
-    latestSeenNotes = null
-    macStaged = null
-    failedAttempts = 0
-    downloadInFlight = false
-    phase = 'available'
-    percent = 0
-    clearUpdateState()
   }
 
   const actions = {

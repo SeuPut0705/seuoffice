@@ -33,6 +33,7 @@ import {
   FORMAT_COPY_MODULE,
   HANCOM_KEYS_MODULE,
   PC_FONTS_MODULE,
+  READ_ONLY_MODULE,
   STUDIO_PATCHES,
   missingHancomCommands,
   missingPluginHooks,
@@ -93,6 +94,7 @@ const HANCOM_KEYS = join(PLUGIN_DIR, 'hancom-keys.mjs')
 const FORMAT_COPY = join(PLUGIN_DIR, 'format-copy.mjs')
 const CLIPBOARD_HTML = join(PLUGIN_DIR, 'clipboard-html.mjs')
 const PC_FONTS = join(PLUGIN_DIR, 'pc-fonts.mjs')
+const READ_ONLY = join(PLUGIN_DIR, 'read-only.mjs')
 const HANJA_CACHE = join(APP, 'node_modules', '.cache', 'libhangul-hanja')
 const STAMP = join(OUT, '.stamp')
 
@@ -249,6 +251,7 @@ async function buildStudio() {
         [FORMAT_COPY_MODULE]: FORMAT_COPY,
         [CLIPBOARD_HTML_MODULE]: CLIPBOARD_HTML,
         [PC_FONTS_MODULE]: PC_FONTS,
+        [READ_ONLY_MODULE]: READ_ONLY,
       },
     },
     // upstream registers a service worker for its website build; this build

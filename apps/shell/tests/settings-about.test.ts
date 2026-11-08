@@ -125,8 +125,8 @@ describe('Settings → About', () => {
       '본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.',
     )
     expect(text).toContain('rhwp')
-    expect(text).toContain('이음오피스는 Microsoft, 한글과컴퓨터')
-    expect(text).toContain('이음오피스는 Apache License 2.0에 따라 있는 그대로 제공되며')
+    expect(text).toContain('seuoffice는 Microsoft, 한글과컴퓨터')
+    expect(text).toContain('seuoffice는 Apache License 2.0에 따라 있는 그대로 제공되며')
   })
 
   it('has every notice in every UI language, each naming the product by token', () => {

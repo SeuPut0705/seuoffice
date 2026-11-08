@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { expect, test, type Download, type FrameLocator, type Page } from '@playwright/test'
+import {
+  expect,
+  test,
+  type Download,
+  type Frame,
+  type FrameLocator,
+  type Page,
+} from '@playwright/test'
 import init, { HwpDocument } from '@rhwp/core'
 
 const repo = fileURLToPath(new URL('../../..', import.meta.url))
@@ -93,16 +100,86 @@ for (const { name, appSave } of [
   })
 }
 
-test('a document opened for viewing is never saved', async ({ page }) => {
+/** The editor's own frame, where the document lives */
+function studioFrame(page: Page): Frame {
+  const frame = page.frames().find((candidate) => candidate.url().includes('/studio/index.html'))
+  if (!frame) throw new Error('the editor frame is not there')
+  return frame
+}
+
+/** Whether leaving the editor would warn of unsaved changes: its own dirty state */
+async function editorDirty(page: Page): Promise<boolean> {
+  return studioFrame(page).evaluate(() => {
+    const leaving = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(leaving)
+    return leaving.defaultPrevented
+  })
+}
+
+/**
+ * The status bar's count of the document's characters, once it settled. With a selection the
+ * item reads "selected / total"; the total is the last number.
+ */
+async function documentCount(page: Page, studio: FrameLocator): Promise<string> {
+  const count = studio.locator('#ieum-sb-char-count')
+  await expect(count).toHaveText(/\d/, { timeout: 10_000 })
+  // the count follows a change after a pause and an idle moment (char-count.mjs)
+  await page.waitForTimeout(3_000)
+  return /[\d,]+(?=\D*$)/.exec((await count.textContent()) ?? '')?.[0] ?? ''
+}
+
+test('a document opened for viewing can be neither changed nor saved', async ({ page }) => {
   const studio = await openHwp(page, 'memo.hwp', false)
   await expect(page.locator('#save')).toBeHidden()
   const downloads: Download[] = []
   page.on('download', (download) => downloads.push(download))
+  const before = await documentCount(page, studio)
+
+  // typing (keys, and text the input method hands over), deleting, splitting a paragraph,
+  // pasting and formatting the whole document
   await typeInDocument(page, 'SEUWEBV')
+  await page.keyboard.insertText('가나다')
+  await page.keyboard.press('Backspace')
+  await page.keyboard.press('Delete')
+  await page.keyboard.press('Enter')
+  await studioFrame(page).evaluate((text) => {
+    const data = new DataTransfer()
+    data.setData('text/plain', text)
+    const paste = new ClipboardEvent('paste', {
+      clipboardData: data,
+      bubbles: true,
+      cancelable: true,
+    })
+    document.activeElement?.dispatchEvent(paste)
+  }, 'SEUWEBP')
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.press('ControlOrMeta+b')
+  await page.keyboard.press('ControlOrMeta+x')
+  expect(await editorDirty(page)).toBe(false)
+  expect(await documentCount(page, studio)).toBe(before)
+
+  // the editing commands are off in the menu; reading ones stay
+  await studio.locator('#menu-bar .menu-item[data-menu="edit"] .menu-title').click()
+  for (const command of [
+    'edit:undo',
+    'edit:redo',
+    'edit:cut',
+    'edit:paste',
+    'edit:delete',
+    'edit:find-replace',
+  ]) {
+    await expect(studio.locator(`.md-item[data-cmd="${command}"]`)).toHaveClass(/\bdisabled\b/)
+  }
+  for (const command of ['edit:copy', 'edit:find']) {
+    await expect(studio.locator(`.md-item[data-cmd="${command}"]`)).not.toHaveClass(/\bdisabled\b/)
+  }
+  await page.keyboard.press('Escape')
+
   await page.keyboard.press('ControlOrMeta+s')
   await studio.locator('#menu-bar .menu-item[data-menu="file"] .menu-title').click()
   await studio.locator('.md-item[data-cmd="ext:ieum-save"]').click()
   // a save would reach the host within this time in the edit tests
   await page.waitForTimeout(3_000)
   expect(downloads).toEqual([])
+  expect(await editorDirty(page)).toBe(false)
 })

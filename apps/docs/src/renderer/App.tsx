@@ -499,8 +499,11 @@ import {
   type ReviewContext,
 } from './review-actions'
 import { authorName, onAuthorNameChanged } from './author-name'
+import { webViewMode } from './web-view-mode'
 
 const IS_MAC = navigator.platform.toLowerCase().includes('mac')
+// a document the web host opened for viewing never leaves Read Mode
+const WEB_VIEW_LOCKED = webViewMode()
 
 const twipsToPx = (twips: number) => (twips / 1440) * 96
 
@@ -976,7 +979,8 @@ export function App() {
   const [showNav, setShowNav] = useState(() => localStorage.getItem('aidocs.showNav') === '1')
   const closeNav = useCallback(() => setShowNav(false), [])
   const [viewMode, setViewMode] = useState<ViewMode>('print')
-  const [readMode, setReadMode] = useState(false)
+  const [readModeChoice, setReadMode] = useState(false)
+  const readMode = readModeChoice || WEB_VIEW_LOCKED
   /** F5: Read Mode in fullscreen, with the status bar hidden (presentation) */
   const [presenting, setPresenting] = useState(false)
   /** cancels a pending page-fit when the show ends before its timer runs */
@@ -5514,6 +5518,7 @@ export function App() {
   const anyDirtyRef = useRef(false)
   const hasUnsavedChanges = isDocDirty(fileCtxRef.current)
   anyDirtyRef.current = hasUnsavedChanges
+  useEffect(() => window.desktop.reportDirty?.(hasUnsavedChanges), [hasUnsavedChanges])
 
   // close guard: the main process queries dirty state before closing a tab/window; choosing "Save" runs a full save and reports back
   useEffect(() => {
@@ -7934,7 +7939,7 @@ export function App() {
                 </div>
               )}
             </div>
-            {readMode && (
+            {readMode && !WEB_VIEW_LOCKED && (
               <button className="read-exit" onClick={() => setReadMode(false)}>
                 {t('appExitReadMode')}
               </button>

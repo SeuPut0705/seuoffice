@@ -37,7 +37,6 @@ Closed until you open it; most people never need it. The **AI Model** tab holds 
 ## About
 
 - **Version**, the project's GitHub address, and a line naming the open-source project this app is based on.
-- **Update Channel**: Stable or Beta. Changing it takes effect at once and checks for an update; it will not downgrade a Beta install back to Stable.
 
 ## Default app bindings
 

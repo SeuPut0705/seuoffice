@@ -469,7 +469,11 @@ import { installCfDisplayKeyCompare } from './cf-duplicate-key'
 import { installCfFormulaFold } from './cf-formula-fold'
 import { installSheetRenameFix } from './sheet-rename-fix'
 import { installArrowCollapse } from './arrow-collapse-fix'
-import { effectiveSheetProtection, installSheetProtectionGuard } from './sheet-protection'
+import {
+  effectiveSheetProtection,
+  installSheetProtectionGuard,
+  ribbonCommandAllowed,
+} from './sheet-protection'
 import type { SheetProtectionAllow } from '@genoffice/xlsx-gateway/gateway/xlsx-protection'
 import { installCtrlDragFill } from './ctrl-drag-fill'
 import { installContextSubmenuReopenFix } from './context-submenu-reopen-fix'
@@ -3643,7 +3647,11 @@ export function App({
       ? installPictureTransfer(gridHost, {
           isCellEditing: () => editingCellRef.current,
           cellAtPoint: (x, y) => cellAtClientPoint(runtime, x, y),
-          insert: (file, anchor) => handleInsertPictureFile(visualContext(), file, anchor),
+          insert: (file, anchor) => {
+            if (!lazyWorkbookRef.current?.file.readOnly) {
+              handleInsertPictureFile(visualContext(), file, anchor)
+            }
+          },
         })
       : () => undefined
     const disposeWheelZoom = gridHost
@@ -4608,6 +4616,7 @@ export function App({
   }
 
   function handleRibbonCommand(command: string): void {
+    if (!ribbonCommandAllowed(lazyWorkbookRef.current?.file.readOnly === true, command)) return
     if (command === 'ai-ask-selection') {
       const range = univerRef.current?.univerAPI.getActiveWorkbook()?.getActiveRange()
       if (!range) return
@@ -5829,6 +5838,7 @@ export function App({
         statusBarFuncs={statusBarFuncs}
         onToggleStatusBarFunc={toggleStatusBarStat}
         canSave={pendingEdits > 0 || workbookFile?.unsavedNew === true}
+        readOnly={workbookFile?.readOnly === true}
         onSave={() => void handleSave('save')}
         canSaveAs={workbookFile !== null}
         onSaveAs={() => void handleSave('save-as')}

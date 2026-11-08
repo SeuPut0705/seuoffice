@@ -37,7 +37,6 @@ Fica fechado até o abrir; a maioria das pessoas nunca precisa dele. O separador
 ## Sobre
 
 - **Versão**, o endereço do projeto no GitHub e uma linha que indica o projeto de código aberto em que esta aplicação se baseia.
-- **Canal de atualização**: Estável ou Beta. Alterá-lo tem efeito imediato e verifica se existe uma atualização; não reverte uma instalação Beta para Estável.
 
 ## Associações de aplicações predefinidas
 

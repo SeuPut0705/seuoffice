@@ -37,7 +37,6 @@ Tertutup sehingga anda membukanya; kebanyakan orang tidak pernah memerlukannya. 
 ## Perihal
 
 - **Versi**, alamat GitHub projek, dan satu baris yang menamakan projek sumber terbuka yang menjadi asas aplikasi ini.
-- **Saluran Kemas Kini**: Stabil atau Beta. Menukarnya berkuat kuasa serta-merta dan akan menyemak kemas kini; ia tidak akan menurunkan pemasangan Beta kembali ke Stabil.
 
 ## Penetapan sebagai aplikasi lalai
 

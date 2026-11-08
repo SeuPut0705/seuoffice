@@ -37,7 +37,6 @@ Tato část je sbalená, dokud ji neotevřete; většina lidí ji nikdy nepotře
 ## O aplikaci
 
 - **Verze**, adresa projektu na GitHubu a řádek, který uvádí open-source projekt, na kterém je tato aplikace založena.
-- **Kanál aktualizací**: Stabilní nebo Beta. Změna se projeví ihned a vyvolá kontrolu aktualizace; instalaci z kanálu Beta nevrátí zpět na Stabilní.
 
 ## Přiřazení jako výchozí aplikace
 

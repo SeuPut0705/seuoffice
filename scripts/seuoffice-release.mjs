@@ -2,7 +2,9 @@
  * Release helper for the published seuoffice packages, which share one version.
  *
  *   node scripts/seuoffice-release.mjs bump <x.y.z>   set the version in every published package
- *   node scripts/seuoffice-release.mjs check <tag>    fail unless <tag> is v<version> of every published package
+ *   node scripts/seuoffice-release.mjs check <tag>    fail unless <tag> is npm-v<version> of every published package
+ *
+ * The npm packages are tagged npm-v<x.y.z>; plain v<x.y.z> tags belong to the desktop app releases.
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -31,9 +33,9 @@ if (command === 'bump') {
     console.log(`${json.name} -> ${value}`)
   }
 } else if (command === 'check') {
-  const expected = value?.replace(/^v/, '')
-  if (!value?.startsWith('v') || !expected || !SEMVER.test(expected)) {
-    console.error(`tag "${value}" is not v<x.y.z>`)
+  const expected = value?.replace(/^npm-v/, '')
+  if (!value?.startsWith('npm-v') || !expected || !SEMVER.test(expected)) {
+    console.error(`tag "${value}" is not npm-v<x.y.z>`)
     process.exit(1)
   }
   const mismatched = PACKAGE_FILES.map(load).filter(({ json }) => json.version !== expected)

@@ -574,7 +574,7 @@ async function buildMetaXml(zip: JSZip, parsed: ParsedDoc): Promise<string> {
   const modified = field('dcterms:modified').replace(/Z$/, '')
   return (
     `${XML_DECL}<office:document-meta ${NAMESPACES} office:version="${ODF_VERSION}"><office:meta>` +
-    '<meta:generator>IeumOffice</meta:generator>' +
+    '<meta:generator>seuoffice</meta:generator>' +
     (title ? `<dc:title>${escapeXmlText(title)}</dc:title>` : '') +
     (creator ? `<meta:initial-creator>${escapeXmlText(creator)}</meta:initial-creator>` : '') +
     (modifier ? `<dc:creator>${escapeXmlText(modifier)}</dc:creator>` : '') +

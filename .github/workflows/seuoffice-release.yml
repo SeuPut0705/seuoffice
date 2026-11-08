@@ -1,12 +1,13 @@
 name: seuoffice-release
 
-# Publishes @seuoffice/embed and @seuoffice/web to npm when a v<version> tag is pushed.
+# Publishes @seuoffice/embed and @seuoffice/web to npm when an npm-v<version> tag is pushed.
+# Plain v<version> tags release the desktop app (seuoffice-desktop.yml).
 # Authentication is npm trusted publishing (OIDC): no npm token is stored anywhere.
 # One-time setup and the release steps: docs/seuoffice/판-내기.md
 
 on:
   push:
-    tags: ['v*']
+    tags: ['npm-v*']
 
 permissions:
   contents: read

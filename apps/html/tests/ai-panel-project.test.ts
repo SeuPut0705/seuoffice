@@ -119,7 +119,7 @@ function fakeFolderApi(selection: ProjectSelection, context: ProjectContextBundl
         syncFolder: false,
       },
     ]),
-    getDefaultParentFolder: vi.fn(async () => 'C:/Users/me/Documents/IeumOffice'),
+    getDefaultParentFolder: vi.fn(async () => 'C:/Users/me/Documents/seuoffice'),
     getSelection: vi.fn(async () => selection),
     setSelection: vi.fn(async ({ projectId }: { projectId: string | null }) => ({
       projectId,

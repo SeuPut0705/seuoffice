@@ -2,9 +2,9 @@ import { WebUnsupportedError } from '@seuoffice/web-platform'
 
 /**
  * The web build's stand-in for the save stages in src/main that need desktop
- * engines (pdfium with system fonts, Node crypto, the file system). The web
- * config points those modules here; the web save refuses requests that reach
- * them, so a call means a request part the refusal missed.
+ * engines (pdfium with system fonts, the file system). The web config points
+ * those modules here; the web save refuses requests that reach them, so a call
+ * means a request part the refusal missed.
  */
 const desktopOnly =
   (stage: string) =>
@@ -12,10 +12,6 @@ const desktopOnly =
     throw new WebUnsupportedError(`pdf.save ${stage}`)
   }
 
-// ./pdf-crypt
-export const decryptDocument = desktopOnly('decrypt')
-export const encryptDocument = desktopOnly('encrypt')
-export const encryptDocumentWithOriginalProtection = desktopOnly('encrypt')
 // ./atomic-write
 export const writePdfAtomically = desktopOnly('write file')
 // ./redaction

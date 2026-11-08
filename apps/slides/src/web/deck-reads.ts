@@ -25,11 +25,6 @@ export function setDeck(opened: OpenedPptx): void {
   deck = opened
 }
 
-/** The deck the page currently shows */
-export function currentDeck(): OpenedPptx | undefined {
-  return deck
-}
-
 /** XML attribute text to a string (main/slides-main.ts decodeXmlAttr) */
 function decodeXmlAttr(s: string): string {
   const named: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }

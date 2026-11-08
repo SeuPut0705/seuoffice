@@ -14,6 +14,7 @@ import {
   webLanguage,
 } from '@seuoffice/web-platform'
 import type { Lang } from '@genoffice/i18n'
+import { CertificateEncryptionError, WrongPasswordError, decryptDocument } from '../main/pdf-crypt'
 import type { PdfApi, SavePdfRequest, SavePdfResult } from '../shared/ipc'
 import { saveOnWeb, viewOnlyReason } from './save'
 
@@ -38,6 +39,26 @@ async function save(request: SavePdfRequest): Promise<SavePdfResult> {
     : { ok: false as const, error: `seuoffice web: no document at ${request.path}` }
   lastSaveError = result.ok ? undefined : result.error
   return result
+}
+
+/** The desktop decrypt handler over the page's bytes: same results, same refusals */
+const decryptPdf: PdfApi['decryptPdf'] = async (bytes, password) => {
+  try {
+    const opened = await decryptDocument(bytes, password)
+    return {
+      ok: true,
+      bytes: opened.bytes,
+      permissions: opened.permissions,
+      neededPassword: opened.neededPassword,
+      unlockedAs: opened.unlockedAs,
+    }
+  } catch (err) {
+    if (err instanceof WrongPasswordError) return { ok: false, reason: 'wrong-password' }
+    if (err instanceof CertificateEncryptionError) {
+      return { ok: false, reason: 'certificate-encryption' }
+    }
+    return { ok: false, reason: err instanceof Error ? err.message : String(err) }
+  }
 }
 
 // The renderer's own save runs through its close-save request, the way the
@@ -101,7 +122,7 @@ const pdfApi: Partial<PdfApi> = {
   onExportImagesRequest: unsubscribe,
   onConvertDialogRequest: unsubscribe,
   onFileRenamed: unsubscribe,
-  decryptPdf: unsupported('pdf.decrypt'),
+  decryptPdf,
   // pdfium probes and renders of the text, image, insert and redaction tools: the
   // renderer catches each rejection, keeps the edit pending, and the web save
   // refuses it with a message

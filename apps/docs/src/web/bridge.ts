@@ -3,14 +3,28 @@ import { defaultAiSettings } from '../../../../packages/ai-provider/src/provider
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
   createWebBridge,
+  documentByPath,
+  editMode,
   installWebBridge,
+  onHostSaveRequest,
+  reportDirty,
   reportOpened,
+  saveToHost,
   unsupported,
   waitForDocument,
   webLanguage,
 } from '@seuoffice/web-platform'
+import { docFormatOfPath, prepareSaveBytes } from '../main/doc-format'
+import {
+  commitDocPasswordSave,
+  currentDocPasswordIntentRevision,
+  discardDocPasswordIntents,
+  encryptDocx,
+  setDocPassword,
+  snapshotDocPassword,
+} from '../main/docx-encryption'
 import type { DesktopApi } from '../shared/ipc'
-import { openDocxFromBytes } from './open-docx'
+import { WEB_RENDERER, openDecryptedDocx, openDocxFromBytes } from './open-docx'
 
 const noop = (): void => {}
 const unsubscribe = (): (() => void) => noop
@@ -25,6 +39,59 @@ const toBase64 = (bytes: Uint8Array): string => {
 
 // the document handed in by the embed, given to the renderer once (like the desktop's one-shot consume)
 let pendingConsumed = false
+
+/** the reason the host gave for refusing the last save, for a host-asked save to report back */
+let lastSaveError: string | undefined
+
+/**
+ * The desktop save's bytes without its file write: the docx takes the
+ * password the session wants (the opened one unless the user changed it) and
+ * goes to the host. Lazily served pictures are a desktop-only path: the web
+ * document opens whole, so the renderer's bytes are already complete.
+ */
+const saveDocxToHost: DesktopApi['saveDocx'] = async (path, data) => {
+  const doc = documentByPath(path)
+  if (!doc) return { ok: false, error: 'save target is not an opened document' }
+  try {
+    const format = docFormatOfPath(path) ?? 'docx'
+    const passwordState = format === 'docx' ? snapshotDocPassword(WEB_RENDERER, path) : null
+    const { bytes } = await prepareSaveBytes(format, Buffer.from(data), {
+      materialize: async (plain) => ({ bytes: plain, hashes: new Set() }),
+      encrypt: encryptDocx,
+      password: passwordState?.password ?? null,
+    })
+    await saveToHost(doc.fileName, bytes)
+    const passwordIntentPending = passwordState
+      ? commitDocPasswordSave(WEB_RENDERER, passwordState, path)
+      : false
+    return { ok: true, passwordIntentPending }
+  } catch (error) {
+    lastSaveError = error instanceof Error ? error.message : String(error)
+    return { ok: false, error: lastSaveError }
+  }
+}
+
+// The renderer's close-guard "Save" runs its full save until the document is
+// persisted and reports the outcome; a host-asked save runs the same flow.
+let closeSaveHandler: (() => void) | undefined
+let settleCloseSave: ((ok: boolean) => void) | undefined
+let hostSaves: Promise<void> = Promise.resolve()
+
+function runHostSave(): Promise<void> {
+  const run = async (): Promise<void> => {
+    const handler = closeSaveHandler
+    if (!handler) throw new Error('the document is not open yet')
+    lastSaveError = undefined
+    const ok = await new Promise<boolean>((resolve) => {
+      settleCloseSave = resolve
+      handler()
+    })
+    if (!ok) throw new Error(lastSaveError ?? 'the document was not saved')
+  }
+  const pass = hostSaves.then(run)
+  hostSaves = pass.catch(() => {})
+  return pass
+}
 
 const desktop: Partial<DesktopApi> = {
   getLanguage: async () => webLanguage() as Awaited<ReturnType<DesktopApi['getLanguage']>>,
@@ -81,15 +148,38 @@ const desktop: Partial<DesktopApi> = {
   onRecoveryCopyDropped: unsubscribe,
   onZoteroRequest: unsubscribe,
   onCloseCheck: unsubscribe,
-  onCloseSaveRequest: unsubscribe,
+  onCloseSaveRequest: (handler) => {
+    closeSaveHandler = handler
+    return () => {
+      if (closeSaveHandler === handler) closeSaveHandler = undefined
+    }
+  },
+  reportCloseSaveResult: (ok) => {
+    settleCloseSave?.(ok)
+    settleCloseSave = undefined
+  },
+  reportDirty,
   onMenuCommand: unsubscribe,
   consumeHeadlessExport: async () => null,
-  // no password-protected files on the web, so no password intents to track
-  docPasswordIntentRevision: async () => 0,
-  discardDocPasswordIntents: async () => ({ ok: true }),
-  openDocxDecrypt: unsupported('docs.decrypt'),
-  setDocPassword: unsupported('docs.decrypt'),
-  saveDocx: unsupported('docs.save'),
+  // the desktop main process's password state, kept for the page's one renderer
+  docPasswordIntentRevision: async () => currentDocPasswordIntentRevision(),
+  discardDocPasswordIntents: async (throughRevision) => {
+    discardDocPasswordIntents(WEB_RENDERER, throughRevision)
+    return { ok: true }
+  },
+  openDocxDecrypt: async (path, password) => {
+    const doc = documentByPath(path)
+    if (!doc) return { ok: false, reason: 'error', error: 'file not found' }
+    return openDecryptedDocx(doc, password)
+  },
+  // a page holds one document: the prompt answers for the host's, with nothing open to replace
+  confirmDocumentReplace: async () => true,
+  setDocPassword: async (filePath, password) => {
+    setDocPassword(WEB_RENDERER, filePath, password)
+    return { ok: true }
+  },
+  // the host stores a save only when it opened the document for editing
+  saveDocx: editMode() ? saveDocxToHost : unsupported('docs.save'),
   saveDocxAs: unsupported('docs.save'),
   saveDocxNew: unsupported('docs.save'),
   saveDocxTo: unsupported('docs.save'),
@@ -172,4 +262,5 @@ export function installBridges(): void {
   for (const [name, members] of Object.entries(shellBridges)) {
     installWebBridge(name, createWebBridge(name, members))
   }
+  if (editMode()) onHostSaveRequest(runHostSave)
 }

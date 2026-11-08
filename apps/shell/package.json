@@ -1,13 +1,13 @@
 {
   "name": "@genoffice/shell",
-  "productName": "IeumOffice",
+  "productName": "seuoffice",
   "version": "0.12.11",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/pblsketch/openoffice",
+  "homepage": "https://github.com/SeuPut0705/seuoffice",
   "private": true,
-  "description": "IeumOffice",
+  "description": "seuoffice",
   "main": "out/main/index.js",
-  "desktopName": "ieumoffice.desktop",
+  "desktopName": "seuoffice.desktop",
   "scripts": {
     "dev": "electron-vite dev --watch",
     "build": "electron-vite build",
@@ -52,5 +52,5 @@
     "vite": "^7.3.1",
     "vitest": "^4.1.11"
   },
-  "author": "pblsketch <pblsketch@users.noreply.github.com>"
+  "author": "SeuPut <228744781+SeuPut0705@users.noreply.github.com>"
 }

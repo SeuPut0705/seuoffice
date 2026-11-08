@@ -37,7 +37,6 @@ Tertutup sampai Anda membukanya; kebanyakan orang tidak pernah memerlukannya. Ta
 ## Tentang
 
 - **Versi**, alamat GitHub proyek, dan satu baris yang menyebutkan proyek sumber terbuka yang menjadi dasar aplikasi ini.
-- **Saluran Pembaruan**: Stabil atau Beta. Mengubahnya langsung berlaku dan memeriksa pembaruan; ini tidak akan menurunkan instalasi Beta kembali ke Stabil.
 
 ## Pengikatan aplikasi predefinida
 

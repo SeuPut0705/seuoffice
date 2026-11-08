@@ -1,4 +1,4 @@
-// Slides: the AI panel's "attach from an IeumOffice document" button. The
+// Slides: the AI panel's "attach from a seuoffice document" button. The
 // shell's document picker (window.aiOfficeDocs) hands back paths, and they
 // enter the composer's attachment list through the same path a Drive pick takes.
 import { beforeAll, afterEach, describe, expect, it, vi } from 'vitest'

@@ -650,9 +650,8 @@ import {
   setDockHost,
   takeTornTab,
 } from './detached-windows'
-import { applyUpdateChannel, checkForUpdatesNow, initAutoUpdater } from './updater'
+import { checkForUpdatesNow, initAutoUpdater } from './updater'
 import { cancelUpdateRestart, reopenedByInstaller, updateRestartRequested } from './update-restart'
-import { isUpdateChannel, type UpdateChannel } from '../shared/update-api'
 
 /**
  * GenOffice unified shell: ONE Electron app, ONE BrowserWindow, hosting the
@@ -1036,15 +1035,6 @@ function persistLang(lang: Lang): void {
     uiLang = persisted
     setUiLang(persisted)
   })
-}
-
-let cachedUpdateChannel: UpdateChannel | null = null
-
-function currentUpdateChannel(): UpdateChannel {
-  if (cachedUpdateChannel) return cachedUpdateChannel
-  const saved = readAppSettings(APP_SETTINGS_PATH()).updateChannel
-  cachedUpdateChannel = isUpdateChannel(saved) ? saved : 'stable'
-  return cachedUpdateChannel
 }
 
 let cachedAutoUpdateCheck: boolean | null = null
@@ -6602,15 +6592,6 @@ function registerHomeIpc(): void {
     for (const wc of webContents.getAllWebContents()) wc.send('app:language-changed', lang)
   })
 
-  ipcMain.handle(HOME_CHANNELS.getUpdateChannel, (): UpdateChannel => currentUpdateChannel())
-
-  ipcMain.handle(HOME_CHANNELS.setUpdateChannel, (_event, channel: unknown) => {
-    if (!isUpdateChannel(channel) || channel === currentUpdateChannel()) return
-    cachedUpdateChannel = channel
-    writeAppSetting(APP_SETTINGS_PATH(), 'updateChannel', channel)
-    applyUpdateChannel(channel)
-  })
-
   ipcMain.handle(HOME_CHANNELS.getAutoUpdateCheck, () => autoUpdateCheckEnabled())
 
   ipcMain.handle(HOME_CHANNELS.setAutoUpdateCheck, (_event, on: unknown) => {
@@ -10044,7 +10025,7 @@ app.whenReady().then(async () => {
         withProject ? enabled : enabled.filter((skill) => skill.source !== 'project'),
         // not under userData: that folder is protected from sessions, and the
         // copied skills' scripts must be readable to run
-        join(process.env.LOCALAPPDATA ?? tmpdir(), 'IeumOffice', 'agent-skills'),
+        join(process.env.LOCALAPPDATA ?? tmpdir(), 'seuoffice', 'agent-skills'),
       )
     },
     projectSkills: {
@@ -10066,7 +10047,7 @@ app.whenReady().then(async () => {
   installDocumentLinkMenuItems()
   installDockMenu()
   setUpdateCheckInvoker(() => void checkForUpdatesNow())
-  initAutoUpdater(() => shellWindow, currentUpdateChannel(), autoUpdateCheckEnabled)
+  initAutoUpdater(() => shellWindow, autoUpdateCheckEnabled)
   // crash record on this PC (crash-log.jsonl in userData) and, outside
   // headless runs, a prompt when the renderer of an open document dies
   const crashMemory = () =>

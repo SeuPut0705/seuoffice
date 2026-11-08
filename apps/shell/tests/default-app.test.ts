@@ -126,9 +126,7 @@ describe('createDefaultAppService', () => {
     const run = vi.fn<RunCommand>(async (cmd, args) => {
       calls.push([cmd, ...args])
       if (args[0] === 'query')
-        return args[2].includes('spreadsheetml')
-          ? 'wps-office-et.desktop\n'
-          : 'ieumoffice.desktop\n'
+        return args[2].includes('spreadsheetml') ? 'wps-office-et.desktop\n' : 'seuoffice.desktop\n'
       return ''
     })
     const svc = createDefaultAppService({
@@ -150,7 +148,7 @@ describe('createDefaultAppService', () => {
     expect(calls.find((c) => c[1] === 'default')).toEqual([
       'xdg-mime',
       'default',
-      'ieumoffice.desktop',
+      'seuoffice.desktop',
       ...OFFICE_TYPES.map((t) => t.mime),
     ])
   })
@@ -162,10 +160,10 @@ describe('createDefaultAppService', () => {
         if (key.includes('.pptx')) throw new Error('no user choice')
         return key.includes('.docx')
           ? '    ProgId    REG_SZ    Word.Document.12\r\n'
-          : '    ProgId    REG_SZ    IeumOffice.ExcelWorkbook\r\n'
+          : '    ProgId    REG_SZ    seuoffice.ExcelWorkbook\r\n'
       }
       if (key === 'HKCR\\.pptx')
-        return '    (Default)    REG_SZ    IeumOffice.PowerPointPresentation\r\n'
+        return '    (Default)    REG_SZ    seuoffice.PowerPointPresentation\r\n'
       if (key === 'HKCR\\Word.Document.12')
         return '    (Default)    REG_SZ    Microsoft Word Document\r\n'
       throw new Error('missing')

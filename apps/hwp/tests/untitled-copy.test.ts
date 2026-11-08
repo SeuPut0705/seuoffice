@@ -152,7 +152,7 @@ describe('an untitled copy in an HWP tab', () => {
     await call<Promise<BeginSaveResult>>(HWP_CHANNELS.beginSave, plain, 'save')
     const options = showSaveDialog.mock.calls.at(-1)!.at(-1) as { defaultPath: string }
     expect(options.defaultPath).toBe(
-      join(tmpdir(), 'hwp-test-documents', 'IeumOffice', 'Family letter.hwpx'),
+      join(tmpdir(), 'hwp-test-documents', 'seuoffice', 'Family letter.hwpx'),
     )
   })
 
