@@ -37,6 +37,8 @@ export type AiProviderId =
   | 'opencode-zen'
   | 'opencode-go'
   | 'custom'
+  /** seuoffice: an HTTP gateway speaking `gateway-complete`; its token comes per request, never from settings */
+  | 'gateway'
 
 /**
  * Providers that run on the user's own subscription, never on a key: the two
@@ -300,6 +302,11 @@ export interface AiProviderMeta {
   keyPlaceholder: string
   needsBaseUrl?: boolean
   needsCliPath?: boolean
+  /**
+   * the provider authenticates with a token handed over per request
+   * (`setGatewayTokenProvider`), so it has no key in settings; a URL is all it needs
+   */
+  requestToken?: boolean
 }
 
 /** Image generation / media analysis backends (separate from the chat provider) */

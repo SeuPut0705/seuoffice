@@ -102,7 +102,6 @@ import {
   type DocsEditQueueItem,
 } from './edit-queue'
 import { setInactiveSelectionShown } from '../editor/inactive-selection'
-import { applyRevisionsBy } from '../editor/revisions'
 import { DOCS_CONTINUE_INSTRUCTION } from './continuation'
 import { waitForFullContent } from '../phased-content'
 import { currentDocGeneration } from '../file-actions'
@@ -141,7 +140,7 @@ import fileVoiceIcon from '../assets/file-voice.png'
 import fileDocumentIcon from '../assets/file-document.png'
 import fileGeneralIcon from '../assets/file-general.png'
 import { IconNewChat, IconSidebarCollapse } from '../components/icons'
-import { odtOffProps, useOdtSession } from '../odt-gate'
+import { useOdtSession } from '../odt-gate'
 
 interface ToolActivity {
   name: string
@@ -333,9 +332,6 @@ function loadPanelWidth(): number {
     : PANEL_WIDTH_DEFAULT
 }
 
-/** persisted UI preference: highlight AI edits in yellow and ask for confirmation */
-const TRACK_CHANGES_KEY = 'ai-docs-track-changes'
-
 /** Clipboard bitmap MIME → attachment extension (corresponds to ATTACHMENT_IMAGE_EXTS) */
 const PASTE_MIME_EXT: Record<string, string> = {
   'image/png': 'png',
@@ -461,9 +457,6 @@ function SentAttachments({
     </div>
   )
 }
-
-/** author name on AI-generated tracked revisions (accept/reject via Review) */
-export const AI_REVISION_AUTHOR = 'AI Assistant'
 
 interface AiPanelProps {
   /** the document while it can go along as a skill's template (spec 5.7) */
@@ -645,9 +638,6 @@ export function AiPanel({
   const writerEpochRef = useRef(0)
   /** Past conversation restored from JSONL (read-only transcript, not fed to the model) */
   const [historicChat, setHistoricChat] = useState<ChatEntry[]>([])
-  const [trackChanges, setTrackChanges] = useState(
-    () => localStorage.getItem(TRACK_CHANGES_KEY) === '1',
-  )
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const [attachments, setAttachments] = useState<AttachmentMeta[]>([])
   const [attachNotice, setAttachNotice] = useState<string | null>(null)
@@ -845,9 +835,9 @@ export function AiPanel({
   }
   // tracked changes are off in an ODT document: AI edits land as plain edits
   const odtDoc = useOdtSession()
-  const trackOn = trackChanges && !odtDoc
-  const trackChangesRef = useRef(trackOn)
-  trackChangesRef.current = trackOn
+  // AI edits are always tracked revisions, except in ODT which cannot hold them
+  const aiTracksRef = useRef(!odtDoc)
+  aiTracksRef.current = !odtDoc
   const commentsAccessRef = useRef(commentsAccess)
   commentsAccessRef.current = commentsAccess
   const hfAccessRef = useRef(hfAccess)
@@ -1154,7 +1144,6 @@ export function AiPanel({
         createDocsSkill(
           () => editorRef.current,
           numIds,
-          () => (trackChangesRef.current ? { author: AI_REVISION_AUTHOR } : undefined),
           () => commentsAccessRef.current,
           () => hfAccessRef.current,
           () => toolCapabilitiesRef.current?.imageGeneration.available === true,
@@ -1213,8 +1202,8 @@ export function AiPanel({
           if (snapshotBefore && !runSnapshotRef.current) runSnapshotRef.current = snapshotBefore
           if (execution.mutated) {
             // tracking off: accept immediately (same tick, so the yellow never paints);
-            // tracking on: revisions stay pending, handled in the Review tab
-            if (!trackChangesRef.current) clearAiHighlights(true)
+            // tracking on (every docx edit): revisions stay pending, handled in the Review tab
+            if (!aiTracksRef.current) clearAiHighlights(true)
           }
           // mind maps ride the UI-only display side channel onto the message
           const display = execution.display
@@ -1754,19 +1743,6 @@ export function AiPanel({
 
   const removeAttachment = (path: string) =>
     setAttachments((prev) => prev.filter((a) => a.path !== path))
-
-  const acceptChanges = () => {
-    applyRevisionsBy(editorRef.current, AI_REVISION_AUTHOR, 'accept')
-    clearAiHighlights()
-  }
-
-  const toggleTrackChanges = () => {
-    const next = !trackChanges
-    setTrackChanges(next)
-    localStorage.setItem(TRACK_CHANGES_KEY, next ? '1' : '0')
-    // switching off keeps nothing pending: accept whatever is still highlighted
-    if (!next) acceptChanges()
-  }
 
   const rollback = (entryIdx: number, snapshot: ProseMirrorNode) => {
     restoreRollbackSnapshot(editor, snapshot)
@@ -2349,15 +2325,6 @@ export function AiPanel({
               <DriveAttachButton lang={lang} onPicked={attachFromDrive} />
               <DocAttachButton lang={lang} onPicked={attachFromDrive} />
               <McpServerButton lang={lang} />
-              <button
-                className={`ai-track-btn${trackOn ? ' on' : ''}`}
-                onClick={toggleTrackChanges}
-                data-tip={trackOn ? t('aiTrackOnTitle') : t('aiTrackOffTitle')}
-                {...odtOffProps(odtDoc)}
-              >
-                <span className="ai-track-dot" aria-hidden />
-                {t('aiTrackChanges')}
-              </button>
             </>
           }
         />
