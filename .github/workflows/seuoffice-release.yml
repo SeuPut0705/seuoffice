@@ -1,0 +1,39 @@
+name: seuoffice-release
+
+# Publishes @seuoffice/embed and @seuoffice/web to npm when a v<version> tag is pushed.
+# Authentication is npm trusted publishing (OIDC): no npm token is stored anywhere.
+# One-time setup and the release steps: docs/seuoffice/판-내기.md
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - name: Tag matches the package versions
+        run: node scripts/seuoffice-release.mjs check "$GITHUB_REF_NAME"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+      # trusted publishing needs npm 11.5.1 or newer; the npm bundled with Node 22 is older
+      - run: npm install -g npm@^11.5.1
+      # no step here runs Electron: --ignore-scripts skips its 100 MB download
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck -w @seuoffice/embed
+      - run: npm run test -w @seuoffice/embed
+      - run: npm run build -w @seuoffice/web
+      - run: npm publish --provenance --access public -w @seuoffice/embed -w @seuoffice/web

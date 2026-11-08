@@ -51,3 +51,9 @@ _scratch-*
 
 # draw.io release downloaded and verified by vendor/drawio/bundle.mjs
 /vendor/drawio/.cache/
+
+# Copied from the repo root by scripts/seuoffice-prepack.mjs when a seuoffice package is packed
+/packages/embed/LICENSE
+/packages/embed/NOTICE
+/apps/web/LICENSE
+/apps/web/NOTICE

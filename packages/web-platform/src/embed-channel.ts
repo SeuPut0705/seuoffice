@@ -96,7 +96,7 @@ async function answerSaveRequest(requestId: number): Promise<void> {
   }
 }
 
-function reply(message: Record<string, unknown>, transfer?: Transferable[]): void {
+function reply(message: Record<string, unknown>, transfer: Transferable[] = []): void {
   if (!peer) return
   peer.target.postMessage(
     { source: EMBED_SOURCE, version: EMBED_VERSION, ...message },
