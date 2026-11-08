@@ -89,7 +89,12 @@ describe('the pages for print', () => {
       },
     }
     const progress: number[] = []
-    const job = await gatherPrintJob(bridge, 'pdf', (done) => progress.push(done))
+    const job = await gatherPrintJob(
+      bridge,
+      'pdf',
+      (done) => progress.push(done),
+      () => false,
+    )
     expect(progress).toEqual([2, 4, 5])
     expect(job.pages).toHaveLength(5)
     expect(job.images).toEqual([logo])
@@ -109,7 +114,14 @@ describe('the pages for print', () => {
         return result
       },
     }
-    await expect(gatherPrintJob(bridge, 'print', () => {})).rejects.toThrow(/changed/)
+    await expect(
+      gatherPrintJob(
+        bridge,
+        'print',
+        () => {},
+        () => false,
+      ),
+    ).rejects.toThrow(/changed/)
   })
 })
 

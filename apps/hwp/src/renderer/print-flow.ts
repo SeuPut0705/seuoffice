@@ -1,5 +1,5 @@
 import type { AgentBridge } from './ai/agent-bridge'
-import type { PrintJob, PrintMode, PrintPage } from '../shared/ipc'
+import type { HwpApi, PrintJob, PrintMode, PrintPage, PrintResult } from '../shared/ipc'
 
 /**
  * Gathering the pages for a PDF or a print: the plugin draws them a few at a time (each
@@ -39,7 +39,7 @@ export async function gatherPrintJob(
    * on a page. Asked before every batch and before the job is handed over, so a run that
    * starts while the pages are gathered stops the job.
    */
-  isHeld: () => boolean = () => false,
+  isHeld: () => boolean,
 ): Promise<PrintJob> {
   const pages: PrintPage[] = []
   const images: string[] = []
@@ -67,4 +67,47 @@ export async function gatherPrintJob(
     if (batch.pages.length === 0) break
   }
   throw new Error('the pages could not be drawn')
+}
+
+const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error))
+
+/** What a print or PDF job needs of the app: required, so none can be left out. */
+export interface PrintJobPorts {
+  ready: boolean
+  /** The app's one "an AI run holds the document" flag: the one its saves read. */
+  isHeld: () => boolean
+  /** True while a job is in flight; one job at a time. */
+  printing: { current: boolean }
+  bridge: Pick<AgentBridge, 'printPages'>
+  api: Pick<HwpApi, 'printPages'>
+}
+
+/**
+ * One print or PDF job: refused while the editor is not ready, an AI run holds the document
+ * or another job is going; the pages are gathered with the held check (a run that starts
+ * meanwhile stops the job); then handed to the main process. Nothing is dispatched once the
+ * document is held.
+ */
+export async function runPrintJob(
+  ports: PrintJobPorts,
+  mode: PrintMode,
+  onProgress: (done: number, total: number) => void,
+  /** the PDF path Save As picked: no dialog then */
+  path?: string,
+): Promise<PrintResult> {
+  if (!ports.ready) return { ok: false, error: 'the editor is not ready' }
+  // the pages would show edits the person has not accepted
+  if (ports.isHeld()) return { ok: false, error: HELD_ERROR }
+  if (ports.printing.current) return { ok: false, error: 'already printing' }
+  ports.printing.current = true
+  try {
+    const job = await gatherPrintJob(ports.bridge, mode, onProgress, ports.isHeld)
+    return await (path === undefined
+      ? ports.api.printPages(job)
+      : ports.api.printPages(job, { path }))
+  } catch (error) {
+    return { ok: false, error: errorText(error) }
+  } finally {
+    ports.printing.current = false
+  }
 }

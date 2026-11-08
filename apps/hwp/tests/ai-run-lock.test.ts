@@ -13,6 +13,7 @@ import { defaultAiSettings } from '@genoffice/ai-provider'
 import { AiPanel } from '../src/renderer/ai/AiPanel'
 import type { AgentBridge } from '../src/renderer/ai/agent-bridge'
 import { t } from '../src/renderer/i18n/locale'
+import { runPrintJob } from '../src/renderer/print-flow'
 import { fakeProjectFolder } from './fake-project-folder'
 import { runSave, type SaveEditorPort, type SaveOutcome } from '../src/renderer/save-flow'
 import {
@@ -665,5 +666,50 @@ describe('a run taken out of the document and waiting on the redo stack', () => 
     await editor.bridge.undo(1, await editor.bridge.foreignChanges())
     editor.redoByPerson()
     expect(same(editor.bytes(), typed)).toBe(true)
+  })
+})
+
+describe('a PDF export in flight when the person sends an AI request', () => {
+  it('is stopped by the real panel send: nothing is dispatched to the main process', async () => {
+    const editor = openEditor()
+    const panel = await mountPanel(editor.bridge)
+    // the app's flag, set from the panel's onRunHold as App.setAiHold sets it
+    const isHeld = () => panel.held.length > 0 && panel.held.at(-1) !== 'free'
+
+    // the export is under way: page 1 is drawn, page 2 waits
+    const resume = Promise.withResolvers<void>()
+    let calls = 0
+    const bridge = {
+      printPages: async (from: number) => {
+        calls += 1
+        if (calls === 2) await resume.promise
+        return {
+          pageCount: 3,
+          from,
+          pages: [{ svg: '<svg/>', width: 10, height: 10 }],
+        }
+      },
+    }
+    const dispatched = vi.fn(async () => ({ ok: true as const }))
+    const exporting = runPrintJob(
+      {
+        ready: true,
+        isHeld,
+        printing: { current: false },
+        bridge,
+        api: { printPages: dispatched } as unknown as Pick<HwpApi, 'printPages'>,
+      },
+      'pdf',
+      () => {},
+    )
+    await vi.waitFor(() => expect(calls).toBe(2))
+
+    // the person sends an AI request through the real panel; the run takes the document
+    await panel.send()
+    expect(isHeld()).toBe(true)
+    resume.resolve()
+
+    expect(await exporting).toEqual({ ok: false, error: expect.stringMatching(/AI request/) })
+    expect(dispatched).not.toHaveBeenCalled()
   })
 })
