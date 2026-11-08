@@ -44,6 +44,8 @@ export interface TestEditor {
   lines(): string[]
   /** how many changes the engine's undo store lets one run take back out whole */
   runLimit(): number
+  /** how many steps the editor's history holds now */
+  historyDepth(): number
   /** what the person typing does, through the studio's edit gate; false when the gate refused it */
   typeIn(): boolean
   /** the person's redo (Ctrl+Y, the menu): the studio's handleRedo, which asks the plugin first */
@@ -63,6 +65,9 @@ export function openEditor(): TestEditor {
   // what a save and a reopen leave is the state every comparison starts from
   doc = new HwpDocument(doc.exportHwp())
 
+  // The editor's undo store holds a bounded number of snapshots (two per step: before and
+  // after) and drops the oldest past `capacity - 2`: the rule the plugin's run limit assumes.
+  const historyLimit = Math.floor((doc.snapshotCapacity() - 2) / 2)
   const undoStack: Uint8Array[] = []
   const redoStack: Uint8Array[] = []
   const listeners: (() => void)[] = []
@@ -78,6 +83,8 @@ export function openEditor(): TestEditor {
       try {
         const result = fn({ doc: () => doc, deferPagination: () => {} } as never)
         undoStack.push(before)
+        // the oldest step falls off a full store, and can no longer be undone
+        while (undoStack.length > historyLimit) undoStack.shift()
         // a new change ends what could be redone
         redoStack.length = 0
         emit()
@@ -129,7 +136,8 @@ export function openEditor(): TestEditor {
         .readText()
         .split(/\r?\n/)
         .filter((line) => line.length > 0),
-    runLimit: () => Math.floor((doc.snapshotCapacity() - 2) / 2),
+    runLimit: () => historyLimit,
+    historyDepth: () => undoStack.length,
     typeIn: () => {
       try {
         host.transaction('typing', () => doc.insertText(0, 0, 0, '손으로 '))
@@ -203,8 +211,8 @@ export async function runRequest(editor: TestEditor, calls: ToolCall[], options:
   })
   let foreign: number
   if (options.hold) {
-    options.hold.begin()
-    foreign = await options.hold.lock()
+    const generation = options.hold.begin()
+    foreign = await options.hold.lock(generation)
   } else {
     foreign = await editor.bridge.foreignChanges()
   }

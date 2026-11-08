@@ -118,6 +118,14 @@ export class StrandedError extends Error {
   }
 }
 
+/** The send that asked for the lock was reset before the run started. */
+export class RunEndedError extends Error {
+  constructor() {
+    super('the request was cancelled before it started')
+    this.name = 'RunEndedError'
+  }
+}
+
 /**
  * The document while an AI run is on it, from the send until the run is out of the document
  * again. The run edits the live document, so for that time:
@@ -131,37 +139,75 @@ export class StrandedError extends Error {
  * lift it. It ends with the document: a tab's editor holds one document for its whole life.
  */
 export class RunHold {
-  private phase: 'idle' | 'running' | 'holding' | 'stranded' = 'idle'
+  private phase: 'idle' | 'running' | 'holding' | 'abandoning' | 'stranded' = 'idle'
+  /** the send that owns the hold now: a late release or lock of an older send is ignored */
+  private generation = 0
 
   constructor(
     private readonly backend: () => RunBackend,
     private readonly onHold: (state: HoldState) => void,
   ) {}
 
-  /** A run is on the document, from the first moment: nothing is awaited before this. */
-  begin(): void {
+  /** A dropped run's undo is still on its way: no new run may start before it is done. */
+  get settling(): boolean {
+    return this.phase === 'abandoning'
+  }
+
+  /** `generation` is still the send that owns the hold, and it has not ended. */
+  isCurrent(generation: number): boolean {
+    return generation === this.generation && this.phase === 'running'
+  }
+
+  /**
+   * A run is on the document, from the first moment: nothing is awaited before this. Returns the
+   * send's generation: `lock` and `release` of that send only act while it is the current one.
+   */
+  begin(): number {
+    this.generation += 1
     if (this.phase !== 'stranded') this.phase = 'running'
     this.onHold('held')
+    return this.generation
   }
 
   /**
    * Shut the person out and read the editor's foreign-change count, which the run's undo
    * checks. Throws when either cannot be done: a run that could not be taken back out is not
-   * started, and the caller releases. Throws `StrandedError` while an earlier run is stuck.
+   * started, and the caller releases. Throws `StrandedError` while an earlier run is stuck,
+   * and `RunEndedError` when this send was reset before the lock was in (the lock is lifted
+   * again and the hold is left to whoever ended the send).
    */
-  async lock(): Promise<number> {
+  async lock(generation: number): Promise<number> {
+    if (this.phase === 'stranded') throw new StrandedError()
+    if (!this.isCurrent(generation)) throw new RunEndedError()
     const backend = this.backend()
     const locked = await backend.setRunLock(true)
     if (!locked.ok) {
-      this.phase = 'stranded'
-      this.onHold('stranded')
+      if (this.generation === generation) {
+        this.phase = 'stranded'
+        this.onHold('stranded')
+      }
       throw new StrandedError()
     }
-    return backend.foreignChanges()
+    if (!this.isCurrent(generation)) {
+      // the send was reset while the lock was being taken: the lock is no longer wanted,
+      // unless a newer send holds the document
+      if (this.phase === 'idle') void backend.setRunLock(false).catch(() => undefined)
+      throw new RunEndedError()
+    }
+    // the app writes nothing from here: said again, in case anything freed it meanwhile
+    this.onHold('held')
+    const foreign = await backend.foreignChanges()
+    // a reset in the meantime has already given the document back
+    if (!this.isCurrent(generation)) throw new RunEndedError()
+    return foreign
   }
 
-  /** The run is out of the document, or never made a change: the person and the app have it back. */
-  release(): void {
+  /**
+   * The run is out of the document, or never made a change: the person and the app have it back.
+   * With a `generation`, only the send that owns the hold can free it.
+   */
+  release(generation?: number): void {
+    if (generation !== undefined && generation !== this.generation) return
     if (this.phase === 'idle' || this.phase === 'stranded') return
     this.phase = 'idle'
     this.onHold('free')
@@ -194,14 +240,18 @@ export class RunHold {
   /**
    * The conversation was reset while the run was in flight, which ends the loop without a word:
    * nobody will answer for its edits, so they are taken back out and dropped. Does nothing once
-   * the run has ended and is being held. An undo the editor refuses strands the run.
+   * the run has ended and is being held. An undo the editor refuses strands the run. The send
+   * ends here: a prepared send that has not reached the loop stops before it runs, and a new
+   * run waits (`settling`) until this one's edits are out.
    */
   abandon(steps: number, foreign: number | null): void {
     if (this.phase !== 'running') return
+    this.generation += 1
     if (steps === 0 || foreign === null) {
       this.release()
       return
     }
+    this.phase = 'abandoning'
     void this.backend()
       .undo(steps, foreign)
       .then(

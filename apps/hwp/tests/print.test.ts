@@ -12,6 +12,7 @@ import { agentPlugin, type AgentPluginHost } from '../studio-plugin/agent-plugin
 import { badJob, imageFile, ownIds, printableHtml, sideMm } from '../src/main/print-document'
 import { gatherPrintJob, sharePictures } from '../src/renderer/print-flow'
 import type { AgentBridge } from '../src/renderer/ai/agent-bridge'
+import { RunHold, type RunBackend } from '../src/renderer/ai/turn-proposal'
 
 const require = createRequire(import.meta.url)
 
@@ -109,6 +110,56 @@ describe('the pages for print', () => {
       },
     }
     await expect(gatherPrintJob(bridge, 'print', () => {})).rejects.toThrow(/changed/)
+  })
+})
+
+describe('a print or PDF job in flight when an AI run takes the document', () => {
+  it('stops: pages drawn while the run edits are never handed over', async () => {
+    const { plugin, doc } = open(60)
+    expect(doc.pageCount()).toBe(60)
+    // the app's state, set as the panel's RunHold sets it (App.tsx setAiHold)
+    let held = false
+    const hold = new RunHold(
+      () => ({}) as RunBackend,
+      (state) => {
+        held = state !== 'free'
+      },
+    )
+    let calls = 0
+    const bridge: Pick<AgentBridge, 'printPages'> = {
+      printPages: async (from) => {
+        calls += 1
+        // the person sends an AI request right after the first batch
+        if (calls === 2) hold.begin()
+        // the plugin draws a few pages per call (time-boxed); a few here
+        const batch = plugin.printPages(from)
+        return { ...batch, pages: batch.pages.slice(0, 5) }
+      },
+    }
+    await expect(
+      gatherPrintJob(
+        bridge,
+        'pdf',
+        () => {},
+        () => held,
+      ),
+    ).rejects.toThrow(/AI request is editing/)
+    // it did not go on drawing pages for the run's edits
+    expect(calls).toBe(2)
+  })
+
+  it('still gathers everything when no run takes the document', async () => {
+    const { plugin } = open(60)
+    const bridge: Pick<AgentBridge, 'printPages'> = {
+      printPages: async (from) => plugin.printPages(from),
+    }
+    const job = await gatherPrintJob(
+      bridge,
+      'pdf',
+      () => {},
+      () => false,
+    )
+    expect(job.pages).toHaveLength(60)
   })
 })
 

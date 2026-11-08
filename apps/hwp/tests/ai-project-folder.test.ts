@@ -269,7 +269,8 @@ describe('hwp AI panel: the run holds the document', () => {
     await sendStarter()
 
     expect(model.requests).toHaveLength(1)
-    expect(held).toEqual(['held', 'free'])
+    // the lock says it again once it is in
+    expect(held).toEqual(['held', 'held', 'free'])
     expect(locks).toEqual([true, false])
   })
 
@@ -292,11 +293,71 @@ describe('hwp AI panel: the run holds the document', () => {
     await mountWith(editor, (value) => held.push(value))
     await sendStarter()
     // the run is in flight: the model has not answered
+    expect(held).toEqual(['held', 'held'])
+
+    await act(async () => newChatButton()!.click())
+    await settle()
+    expect(held).toEqual(['held', 'held', 'free'])
+    expect(locks).toEqual([true, false])
+  })
+
+  /** a promise the test settles by hand */
+  function deferred() {
+    let open!: () => void
+    const promise = new Promise<void>((resolve) => (open = resolve))
+    return { promise, open }
+  }
+
+  it('does not run a request whose chat was reset while it was being prepared, and keeps the document held until then', async () => {
+    const { editor, locks } = lockableEditor()
+    const held: HoldState[] = []
+    await mountWith(editor, (value) => held.push(value))
+    // the request is still reading the settings when "new chat" is pressed
+    const settings = deferred()
+    const api = window.hwpApi as unknown as { getAiSettings: () => Promise<AiSettings> }
+    api.getAiSettings = async () => {
+      await settings.promise
+      return keySettings()
+    }
+    await sendStarter()
     expect(held).toEqual(['held'])
 
     await act(async () => newChatButton()!.click())
     await settle()
     expect(held).toEqual(['held', 'free'])
-    expect(locks).toEqual([true, false])
+
+    settings.open()
+    await settle()
+    // the prepared request stopped before the loop: no run, and the document stays free
+    expect(model.requests).toHaveLength(0)
+    expect(held).toEqual(['held', 'free'])
+    expect(locks).not.toContain(true)
+  })
+
+  it('does not run a request reset while the editor was being locked, and lifts the lock again', async () => {
+    const { editor, locks } = lockableEditor()
+    const lock = deferred()
+    const slow = new Proxy(editor, {
+      get: (target, method) =>
+        method === 'setRunLock'
+          ? async (locked?: boolean) => {
+              if (locked) await lock.promise
+              return (target as unknown as Record<string, (l?: boolean) => Promise<unknown>>)
+                .setRunLock!(locked)
+            }
+          : (target as unknown as Record<string | symbol, unknown>)[method],
+    })
+    const held: HoldState[] = []
+    await mountWith(slow, (value) => held.push(value))
+    await sendStarter()
+    expect(held).toEqual(['held'])
+
+    await act(async () => newChatButton()!.click())
+    await settle()
+    lock.open()
+    await settle()
+    expect(model.requests).toHaveLength(0)
+    expect(held).toEqual(['held', 'free'])
+    expect(locks.at(-1)).toBe(false)
   })
 })

@@ -30,7 +30,7 @@ import { MEMO_INSERT_EVENT, memoNoticeOf, type MemoNotice } from './MemoPanel'
 import { MemoSide, MemoToggle, memoPanelInitiallyOpen, rememberMemoPanelOpen } from './MemoSide'
 import { openDocumentsDroppedOn } from './editor-drop'
 import { hwpPresentationKeyOf } from './presentation-keys'
-import { gatherPrintJob } from './print-flow'
+import { HELD_ERROR, gatherPrintJob } from './print-flow'
 import { PrintPreview } from './preview/PrintPreview'
 import {
   RECOVERY_TICK_MS,
@@ -743,11 +743,12 @@ export default function App() {
     ): Promise<PrintResult> => {
       if (phase !== 'ready') return { ok: false, error: 'the editor is not ready' }
       // the pages would show edits the person has not accepted
-      if (aiHeldRef.current) return { ok: false, error: 'an AI request is editing this document' }
+      if (aiHeldRef.current) return { ok: false, error: HELD_ERROR }
       if (printingRef.current) return { ok: false, error: 'already printing' }
       printingRef.current = true
       try {
-        const job = await gatherPrintJob(agentBridge, mode, onProgress)
+        // an AI run that starts while the pages are gathered stops the job (print-flow.ts)
+        const job = await gatherPrintJob(agentBridge, mode, onProgress, () => aiHeldRef.current)
         return await (path === undefined
           ? window.hwpApi.printPages(job)
           : window.hwpApi.printPages(job, { path }))

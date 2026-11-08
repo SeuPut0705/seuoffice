@@ -97,6 +97,7 @@ import { createElectronTransport } from './transport'
 import {
   NO_PROPOSAL,
   RunHold,
+  RunEndedError,
   StrandedError,
   accept,
   reject,
@@ -991,7 +992,9 @@ export function AiPanel({
   ): boolean => {
     const instruction = text.trim()
     const loop = loopRef.current
-    if (!instruction || !loop || loop.busy || reverting || proposalPending()) return false
+    // a dropped run's undo still on its way: the new run waits for it (RunHold.settling)
+    if (!instruction || !loop || loop.busy || reverting || runHold.settling || proposalPending())
+      return false
     // A request made during a status check or in front of the first-connection notice is
     // held and starts by itself once the way is clear; in front of "not connected" nothing
     // is kept. Either way nothing is sent now and the text stays with the caller.
@@ -1056,7 +1059,7 @@ export function AiPanel({
     skillRef.current!.beginRun()
     // from here until the run is taken back out of the document: the app writes nothing, and
     // (once the lock is in) the person cannot edit
-    runHold.begin()
+    const generation = runHold.begin()
     setBusy(true)
     void (async () => {
       try {
@@ -1067,7 +1070,7 @@ export function AiPanel({
         ])
         settingsRef.current = settings
         if (!mountedRef.current) {
-          runHold.release()
+          runHold.release(generation)
           return
         }
         setAiSettings(settings)
@@ -1079,20 +1082,22 @@ export function AiPanel({
         await projectRef.current?.prepareSend()
         if (!mountedRef.current) {
           projectRef.current?.finishSend()
-          runHold.release()
+          runHold.release(generation)
           return
         }
         // The person's edits are shut out first, so the count of the editor's foreign changes
         // read next is the one the run starts from. A run that cannot be locked in, or whose
         // start cannot be read, is not started: it could not be taken back out afterwards.
-        runForeignRef.current = await runHold.lock()
+        runForeignRef.current = await runHold.lock(generation)
         loop.run(
           noted ? `${REVERTED_NOTE}\n\n${asked}` : asked,
           images.length > 0 ? images : undefined,
         )
       } catch (err) {
         projectRef.current?.finishSend()
-        runHold.release()
+        runHold.release(generation)
+        // reset (new chat, another chat opened) before the run began: the screen is already clean
+        if (err instanceof RunEndedError) return
         if (!mountedRef.current) return
         patchLast({
           streaming: false,

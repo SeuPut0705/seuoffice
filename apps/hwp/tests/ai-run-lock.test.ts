@@ -5,7 +5,15 @@
  * while a run is in flight no save writes the document, the person cannot edit, and a run
  * too large to be taken back out is refused before it applies.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, createElement } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
+import type { AgentStreamCallbacks } from '@genoffice/agent-core'
+import { defaultAiSettings } from '@genoffice/ai-provider'
+import { AiPanel } from '../src/renderer/ai/AiPanel'
+import type { AgentBridge } from '../src/renderer/ai/agent-bridge'
+import { t } from '../src/renderer/i18n/locale'
+import { fakeProjectFolder } from './fake-project-folder'
 import { runSave, type SaveEditorPort, type SaveOutcome } from '../src/renderer/save-flow'
 import {
   RunHold,
@@ -28,9 +36,131 @@ import {
 
 useEngine()
 
-afterEach(() => {
-  document.body.replaceChildren()
+/**
+ * The model of the panel tests: the first request edits the document through tool calls, and
+ * the next one never answers, so the run stays in flight.
+ */
+const transport = vi.hoisted(() => ({ streams: 0 }))
+vi.mock('../src/renderer/ai/transport', () => ({
+  createElectronTransport: () => ({
+    stream: (_request: unknown, callbacks: AgentStreamCallbacks) => {
+      transport.streams += 1
+      if (transport.streams === 1) {
+        setTimeout(() => {
+          callbacks.onToolCall({
+            id: 't0',
+            name: 'insert_paragraphs',
+            input: { anchor: '끝 문단입니다.', where: 'after', paragraphs: ['AI가 넣은 문단'] },
+          })
+          callbacks.onDone()
+        }, 0)
+      }
+      return { cancel: () => undefined }
+    },
+  }),
+}))
+
+let container: HTMLElement | null = null
+let root: Root | null = null
+
+beforeEach(() => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  Element.prototype.scrollTo = () => undefined
+  transport.streams = 0
 })
+
+afterEach(() => {
+  if (root) act(() => root!.unmount())
+  root = null
+  container = null
+  document.body.replaceChildren()
+  delete (window as unknown as Record<string, unknown>).hwpApi
+  delete (window as unknown as Record<string, unknown>).projectApi
+  delete (window as unknown as Record<string, unknown>).projectFolderApi
+  vi.unstubAllGlobals()
+})
+
+async function settle(turns = 10): Promise<void> {
+  for (let turn = 0; turn < turns; turn++) {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+  }
+}
+
+/** The AI panel over `bridge`, with the app's side (the hold state) and the buttons a person presses. */
+async function mountPanel(bridge: AgentBridge) {
+  const settings = defaultAiSettings()
+  const keyed = {
+    ...settings,
+    provider: 'openai' as const,
+    providers: { ...settings.providers, openai: { apiKey: 'sk-test', model: 'some-model' } },
+  }
+  Object.assign(window, {
+    hwpApi: {
+      getAiSettings: async () => keyed,
+      setAiSettings: async () => undefined,
+      onAiSettingsChanged: () => () => undefined,
+      openAiModelSettings: async () => undefined,
+      setAiPanelPrefs: async () => ({}),
+      pickAttachments: async () => ({ accepted: [], rejected: [] }),
+      addAttachmentPaths: async () => ({ accepted: [], rejected: [] }),
+      addPastedImage: async () => ({ accepted: [], rejected: [] }),
+      getPathForFile: () => '',
+      readAttachmentImage: async () => ({ ok: false }),
+      aiToolCapabilities: async () => ({ imageGeneration: { available: false } }),
+    },
+    projectApi: {
+      resolveChat: async () => ({ projectId: 'doc-store', chatId: 'doc-chat' }),
+      loadChat: async () => [],
+      appendChat: async () => undefined,
+      rebindChat: async () => null,
+    },
+    projectFolderApi: fakeProjectFolder(null).api,
+  })
+  // the panel lives in its own frame, as in the app: the editor's run lock blocks the input
+  // events of the editor's window only, never the panel's
+  const frame = document.createElement('iframe')
+  document.body.appendChild(frame)
+  const panelWindow = frame.contentWindow as unknown as Window & typeof globalThis
+  panelWindow.Element.prototype.scrollTo = () => undefined
+  container = panelWindow.document.createElement('div')
+  panelWindow.document.body.appendChild(container)
+  const held: HoldState[] = []
+  root = createRoot(container)
+  await act(async () => {
+    root!.render(
+      createElement(AiPanel, {
+        bridge,
+        filePath: null,
+        onCollapse: () => undefined,
+        onRunHold: (state: HoldState) => held.push(state),
+      }),
+    )
+  })
+  await settle()
+  return {
+    held,
+    /** a starter fills the input; the send button sends it */
+    async send() {
+      const box = container!
+      const starter = box.querySelector<HTMLButtonElement>('.ai-starter')
+      if (starter) await act(async () => starter.click())
+      await act(async () => {
+        box.querySelector<HTMLButtonElement>('.ai-send-btn:not(.ai-stop-btn)')!.click()
+      })
+      await settle()
+    },
+    async newChat() {
+      await act(async () => {
+        container!
+          .querySelector<HTMLButtonElement>(`button[aria-label="${t('aiNewChat')}"]`)!
+          .click()
+      })
+      await settle()
+    },
+  }
+}
 
 /** the panel's side of a run: the state the app's saves read, and the hold over the document */
 function takeHold(editor: TestEditor, backend: RunBackend = editor.bridge as RunBackend) {
@@ -251,27 +381,62 @@ describe('the person editing while an AI run is in flight', () => {
     expect(document.activeElement).toBe(field)
   })
 
-  it('has the run dropped when the conversation is reset in the middle of it', async () => {
+  it('has the run dropped when "new chat" is pressed in the middle of it, through the real panel', async () => {
     const editor = openEditor()
     const original = editor.bytes()
-    const { flag, hold } = takeHold(editor)
+    const panel = await mountPanel(editor.bridge)
+    await panel.send()
+    // the run's edits are in the live document and the model has not finished
+    await vi.waitFor(() => expect(same(editor.bytes(), original)).toBe(false))
+    expect(panel.held.at(-1)).toBe('held')
+    expect(editor.typeIn()).toBe(false)
 
-    await runRequest(editor, EDITS, {
-      hold,
-      midRun: async ({ items, foreign }) => {
-        expect(same(editor.bytes(), original)).toBe(false)
-        hold.abandon(items.length, foreign)
-        // the undo and the release are on their way
-        await vi.waitFor(() => expect(flag.held).toBe(false))
-      },
-    })
+    await panel.newChat()
+    await vi.waitFor(() => expect(panel.held.at(-1)).toBe('free'))
 
     expect(same(editor.bytes(), original)).toBe(true)
     expect(editor.typeIn()).toBe(true)
   })
+
+  it('does not start a new run before the dropped one is out of the document, and a late release does not free the new one', async () => {
+    const editor = openEditor()
+    const original = editor.bytes()
+    // the editor's undo of the dropped run comes late
+    const undone = Promise.withResolvers<void>()
+    const slowUndo = new Proxy(editor.bridge, {
+      get: (bridge, method) =>
+        method === 'undo'
+          ? async (...args: Parameters<typeof bridge.undo>) => {
+              await undone.promise
+              return bridge.undo(...args)
+            }
+          : bridge[method as keyof typeof bridge],
+    })
+    const panel = await mountPanel(slowUndo)
+    await panel.send()
+    await vi.waitFor(() => expect(same(editor.bytes(), original)).toBe(false))
+
+    await panel.newChat()
+    // the dropped run is still in the document: a second request is not started over it
+    const streams = transport.streams
+    await panel.send()
+    expect(transport.streams).toBe(streams)
+    expect(panel.held.at(-1)).toBe('held')
+
+    undone.resolve()
+    await vi.waitFor(() => expect(panel.held.at(-1)).toBe('free'))
+    expect(same(editor.bytes(), original)).toBe(true)
+  })
 })
 
 describe('a run that cannot be taken back out', () => {
+  it('is what the editor history does: a full store drops its oldest step', () => {
+    const editor = openEditor()
+    const limit = editor.runLimit()
+    for (let index = 0; index < limit + 3; index++) expect(editor.typeIn()).toBe(true)
+    expect(editor.historyDepth()).toBe(limit)
+  })
+
   it('is refused before the change that would make it so is applied, and the run still holds', async () => {
     const editor = openEditor()
     const original = editor.bytes()
@@ -350,8 +515,8 @@ describe('the hold a run takes on the document', () => {
       },
     })
     const { told, hold } = holdOf(b)
-    hold.begin()
-    await expect(hold.lock()).rejects.toThrow('the editor is not ready')
+    const generation = hold.begin()
+    await expect(hold.lock(generation)).rejects.toThrow('the editor is not ready')
     hold.release()
     expect(told).toEqual(['held', 'free'])
   })
@@ -406,8 +571,8 @@ describe('the hold a run takes on the document', () => {
   it('does not start a run in a document the plugin keeps stranded', async () => {
     const { backend: b } = backend({ setRunLock: async () => ({ ok: false }) })
     const { told, hold } = holdOf(b)
-    hold.begin()
-    await expect(hold.lock()).rejects.toBeInstanceOf(StrandedError)
+    const generation = hold.begin()
+    await expect(hold.lock(generation)).rejects.toBeInstanceOf(StrandedError)
     hold.release()
     expect(told).toEqual(['held', 'stranded'])
   })
@@ -448,8 +613,8 @@ describe('a run that cannot be taken out of the document', () => {
     expect(editor.typeIn()).toBe(false)
     // and so does the next run, even from a panel that is mounted again
     const again = takeHold(editor)
-    again.hold.begin()
-    await expect(again.hold.lock()).rejects.toBeInstanceOf(StrandedError)
+    const generation = again.hold.begin()
+    await expect(again.hold.lock(generation)).rejects.toBeInstanceOf(StrandedError)
     again.hold.release()
     expect(editor.typeIn()).toBe(false)
   })

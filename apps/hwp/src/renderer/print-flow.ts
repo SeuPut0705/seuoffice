@@ -27,16 +27,26 @@ export function sharePictures(svg: string, images: string[], known: Map<string, 
 /** Calls of printPages one job makes at most: a plugin that stops moving must not hang it. */
 const MAX_PRINT_CALLS = 10_000
 
+/** The error of a job stopped because an AI run took the document while it gathered pages. */
+export const HELD_ERROR = 'an AI request is editing this document'
+
 export async function gatherPrintJob(
   bridge: Pick<AgentBridge, 'printPages'>,
   mode: PrintMode,
   onProgress: (done: number, total: number) => void,
+  /**
+   * True while an AI run holds the document: its edits are not accepted yet and must not be
+   * on a page. Asked before every batch and before the job is handed over, so a run that
+   * starts while the pages are gathered stops the job.
+   */
+  isHeld: () => boolean = () => false,
 ): Promise<PrintJob> {
   const pages: PrintPage[] = []
   const images: string[] = []
   const known = new Map<string, number>()
   let total = 0
   for (let calls = 0; calls < MAX_PRINT_CALLS; calls++) {
+    if (isHeld()) throw new Error(HELD_ERROR)
     const batch = await bridge.printPages(pages.length)
     // a page count that moved under the job (an edit while gathering) stops it: the pages
     // gathered so far no longer belong with the ones still to come
@@ -49,7 +59,11 @@ export async function gatherPrintJob(
       pages.push({ ...page, svg: sharePictures(page.svg, images, known) })
     }
     onProgress(pages.length, total)
-    if (pages.length >= total) return { mode, pages, images }
+    if (pages.length >= total) {
+      // the last batch may have been drawn after a run took the document
+      if (isHeld()) throw new Error(HELD_ERROR)
+      return { mode, pages, images }
+    }
     if (batch.pages.length === 0) break
   }
   throw new Error('the pages could not be drawn')
