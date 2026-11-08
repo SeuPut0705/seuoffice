@@ -124,6 +124,28 @@ test('a save the host refuses keeps the PDF unsaved with the host’s reason', a
   await expect(page.locator('#status')).not.toContainText('저장 안 함')
 })
 
+test('a text edit, which needs the desktop engine, is refused and kept unsaved', async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  const app = await open(page, FIXTURE, true)
+  let downloads = 0
+  page.on('download', () => downloads++)
+
+  await app.locator('.ribbon-tab', { hasText: '편집' }).first().click()
+  await app.getByRole('button', { name: '텍스트 편집', exact: true }).click()
+  await app.getByText(KEPT_TEXT).first().click()
+  await page.keyboard.press('End')
+  await page.keyboard.type(' Edited')
+  await page.keyboard.press('ControlOrMeta+s')
+
+  await expect(app.locator('.tb-save-error')).toHaveAttribute('data-tip', /텍스트 편집/)
+  await expect(page.locator('#status')).toContainText('저장 안 함')
+  expect(downloads).toBe(0)
+  expect(errors).toEqual([])
+})
+
 test('a PDF opened for viewing can be neither changed nor saved', async ({ page }) => {
   const app = await open(page, FIXTURE, false)
   await expect(page.locator('#save')).toBeHidden()

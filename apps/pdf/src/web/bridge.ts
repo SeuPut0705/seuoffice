@@ -102,6 +102,19 @@ const pdfApi: Partial<PdfApi> = {
   onConvertDialogRequest: unsubscribe,
   onFileRenamed: unsubscribe,
   decryptPdf: unsupported('pdf.decrypt'),
+  // pdfium probes and renders of the text, image, insert and redaction tools: the
+  // renderer catches each rejection, keeps the edit pending, and the web save
+  // refuses it with a message
+  validateTextEdits: unsupported('pdf.validateTextEdits'),
+  pagePreviewPng: unsupported('pdf.pagePreviewPng'),
+  pageImagePng: unsupported('pdf.pageImagePng'),
+  listPageImages: unsupported('pdf.listPageImages'),
+  canDrawText: unsupported('pdf.canDrawText'),
+  requestRedactionCopy: unsupported('pdf.redaction'),
+  // signatures reused across documents live in the desktop app data folder
+  listSavedSignatures: unsupported('pdf.savedSignatures'),
+  addSavedSignature: unsupported('pdf.savedSignatures'),
+  removeSavedSignature: unsupported('pdf.savedSignatures'),
   save: editing ? save : unsupported('pdf.save'),
   // the host keeps edits only in edit mode; elsewhere the view is read-only
   readOnlyReason: editing ? undefined : viewOnlyReason(),
