@@ -10,10 +10,6 @@ on:
 permissions:
   contents: read
 
-# no job here runs Electron; skip its 100 MB download (and its outages)
-env:
-  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-
 jobs:
   guard:
     runs-on: ubuntu-latest
@@ -25,7 +21,8 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
+      # no job here runs Electron: --ignore-scripts skips its 100 MB download (and its outages)
+      - run: npm ci --ignore-scripts
       - run: npm run check:no-genspark
       - run: npm run check:english-comments
 
@@ -41,7 +38,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-wasip1
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - run: npm run typecheck -w @seuoffice/web-platform -w @seuoffice/embed -w @seuoffice/web
       - run: npm run test -w @seuoffice/web-platform -w @seuoffice/embed
