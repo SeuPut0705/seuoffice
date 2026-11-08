@@ -16,6 +16,7 @@ import {
 } from '@seuoffice/web-platform'
 import type { WebDocument } from '@seuoffice/web-platform'
 import type { Lang } from '@genoffice/i18n'
+import { READ_ONLY_ATTRIBUTE } from '../../studio-plugin/read-only.mjs'
 import { hwpFormatOfPath } from '../shared/ipc'
 import type { CommitSaveResult, HwpApi, HwpFormat, SaveMode } from '../shared/ipc'
 import { openHwpFromBytes } from './open-hwp'
@@ -202,7 +203,12 @@ function saveForHost(): Promise<void> {
 
 export function installBridges(): void {
   installWebBridge('hwpApi', createWebBridge<HwpApi>('hwpApi', hwpApi))
-  if (!canSave) return
+  if (!canSave) {
+    // a page the host does not store saves from shows the document and cannot change it;
+    // set before the renderer makes the editor's frame, which reads it once at start-up
+    document.documentElement.setAttribute(READ_ONLY_ATTRIBUTE, '')
+    return
+  }
   watchSaveKey(() => requestSave('save'))
   // One host request at a time, in arrival order. The next one starts only once the save before
   // it has really ended, even when its host stopped waiting: a late end would settle the next one.
