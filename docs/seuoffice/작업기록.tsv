@@ -30,3 +30,8 @@ ts	phase	decision	why	evidence	result
 2026-11-09T02:30:00+09:00	harness	웹 시험의 저장 단추 찾기를 ⌘S와 Ctrl+S 둘 다 받게 고쳤다	GitHub(Linux)에서 seuoffice 워크플로가 save-docs 2건으로 실패했다. 단추 이름이 Mac에서만 ⌘S이고 다른 곳은 Ctrl+S다(packages/i18n platformShortcuts)	run 42504474202, 8dfa5a224	로컬 22 통과, CI 확인 대기
 2026-11-09T03:16:00+09:00	U11	U11 가지를 합치기 전에 다른 모델(reviewer)로 독립 검토했고, 받아들이지 않은 AI 편집이 디스크에 쓰이는 길 2개와 잠금이 남는 길 1개를 찾아 단위 세션에 고치게 했다	단위가 처음 낸 ok를 스스로 거둔 뒤에도 6.8천 줄 변경이라 자기 보고만으로 합치지 않았다	~/.seuoffice-program/U11-review.md, history://U11Review	합치기 보류
 2026-11-09T03:00:00+09:00	harness	합친 main(6302652)에서 CI와 seuoffice 워크플로가 모두 통과했다	상위 CI 첫 녹색 뒤에도 웹 시험 Linux 실패를 하나 고친 뒤 다시 확인	run 42505228828, 42505228923	녹색
+2026-11-09T03:35:00+09:00	audit	작업기록 시각을 바로잡는다: 'Z'로 적은 앞 행들의 시각은 실제 시각이 아니다(추정해 적었다). 실제 작업은 2026-11-09 00:31-03:35 KST이고, 행의 실제 순서는 git 커밋 순서를 따른다	교차 모델 기록 검토가 30행 중 27행이 미래 시각임을 찾았다. 기록은 고치지 않고 이 행으로 대체한다	history://TrailReview, git log --first-parent 978ad8682..main	기록 정정
+2026-11-09T03:25:00+09:00	U7	feat/xlsx-web-save의 마지막 커밋 43b31353a를 합쳤다	앞 합치기(e6c5dbe20)가 이 커밋이 생기기 30초 전에 이뤄져 빠졌다. 엔진 파일 이름 충돌과 호스트 저장 요청 경합 수정이 main에 없었다(교차 검토 발견)	a575041d7	sheets typecheck 0. 웹 시험은 05:00 KST 뒤
+2026-11-09T03:26:00+09:00	U4b	웹 보기 모드에서 한글 문서가 고쳐지는 결함을 고치는 세션을 열었다. 로드맵 2단계를 완료에서 진행 중으로 되돌렸다	save-hwp 보기 모드 시험이 입력 뒤 다운로드만 보고 문서 변경은 보지 않았다(교차 검토 발견). 계획 끝의 정의 2번을 한글이 채우지 못한다	fix/hwp-web-view-readonly, 로드맵.md 2단계	open
+2026-11-09T03:28:00+09:00	U1	@seuoffice/web 묶음 크기를 웹 글꼴 뒤에 다시 쟀다: 압축 59.4MB, 풀면 161MB, 559파일	U1 dry-run(41MB)은 웹 글꼴(U9)을 더하기 전 값이었다	apps/web npm pack --dry-run	레지스트리 한도 확인 안 함
+2026-11-09T03:29:00+09:00	U2	서명 비밀값 없이 seuoffice-desktop 워크플로를 workflow_dispatch로 돌렸다	한 번도 돈 적이 없었다(교차 검토 발견). Mac arm64·Windows 빌드와 서명 없을 때 릴리스를 막는지 GitHub에서 확인한다	run 42509796311	결과 대기
