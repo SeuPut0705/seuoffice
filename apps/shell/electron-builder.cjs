@@ -1001,7 +1001,11 @@ config.dmg.sign = false
 // Every dmg names its CPU (decision 0065). electron-builder leaves the arch
 // out of an x64 name, which would make the Intel dmg the one without a label;
 // the arm64 name stays the one the site and the README point at.
-config.dmg.artifactName = '${productName}-${version}-${arch}.${ext}'
+// The stable build's dmg and update zip sit in the same release as the
+// general ones, so they carry the channel in their names.
+const stableSuffix = UPDATE_CHANNEL === 'stable' ? '-stable' : ''
+config.dmg.artifactName = `\${productName}-\${version}-\${arch}${stableSuffix}.\${ext}`
+if (stableSuffix) config.mac.artifactName = '${productName}-${version}-${arch}-mac-stable.${ext}'
 
 // Auto-update feed: the releases of the public repository. Always configured,
 // so every installer carries an app-update.yml and can update itself — the
