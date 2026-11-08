@@ -341,6 +341,11 @@ export const ar = {
   appAppliedJournaled: 'تم التطبيق — سُجّلت التغييرات؛ احفظ بـ ⌘S.',
   appUndoCommitted: 'تم تثبيت التراجع (الإصدار {revision}).',
   appUndoFailed: 'يتعذر التراجع.',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'يتعذر إنشاء التصفية التلقائية.',
   appAutoFilterRemoveFailed: 'يتعذر إزالة التصفية التلقائية.',
   appSelectDataRangeFirst: 'حدد نطاق بيانات أولاً.',

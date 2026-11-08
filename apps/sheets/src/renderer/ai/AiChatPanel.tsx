@@ -966,12 +966,6 @@ export function AiChatPanel({
           </PlanPreview>
         )}
 
-        {proposal?.kind === 'unheld' && (
-          <div className="ai-auto-applied">
-            <span className="ai-auto-applied-text">{t('aiProposalNotHeld')}</span>
-          </div>
-        )}
-
         {/* no provider can run: how to connect, in place of an error */}
         {subscription.connectChoice && (
           <AiConnectPrompt

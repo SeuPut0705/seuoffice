@@ -355,6 +355,10 @@ export const ko = {
   appAppliedJournaled: '적용했습니다 — 변경 내용이 기록되었습니다. ⌘S로 파일에 저장합니다.',
   appUndoCommitted: '실행 취소를 커밋했습니다(리비전 {revision}).',
   appUndoFailed: '실행 취소할 수 없습니다.',
+  appAiRunLocked: 'AI가 이 통합 문서를 고치는 중입니다. 끝난 뒤에 변경을 받아들이거나 거부하세요.',
+  appSaveBlockedAiRun: 'AI가 이 통합 문서를 고치는 동안에는 저장할 수 없습니다.',
+  appAiRunStranded:
+    'AI가 고친 내용 일부를 통합 문서에서 되돌리지 못했습니다. 저장하기 전에 실행 취소하세요.',
   appAutoFilterCreateFailed: '자동 필터를 만들 수 없습니다.',
   appAutoFilterRemoveFailed: '자동 필터를 제거할 수 없습니다.',
   // Insert chart

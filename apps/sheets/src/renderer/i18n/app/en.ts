@@ -344,6 +344,11 @@ export const en = {
   appAppliedJournaled: 'Applied — the changes are journaled; save with ⌘S.',
   appUndoCommitted: 'Undo committed as revision {revision}.',
   appUndoFailed: 'Unable to undo.',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'Unable to create the auto-filter.',
   appAutoFilterRemoveFailed: 'Unable to remove the auto-filter.',
   appSelectDataRangeFirst: 'Select the data range first.',

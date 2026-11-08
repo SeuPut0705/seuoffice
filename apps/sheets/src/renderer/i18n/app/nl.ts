@@ -375,6 +375,11 @@ export const nl = {
   appAppliedJournaled: 'Toegepast — de wijzigingen zijn vastgelegd; sla op met ⌘S.',
   appUndoCommitted: 'Ongedaan maken doorgevoerd als revisie {revision}.',
   appUndoFailed: 'Kan niet ongedaan maken.',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'Kan het AutoFilter niet maken.',
   appAutoFilterRemoveFailed: 'Kan het AutoFilter niet verwijderen.',
   appSelectDataRangeFirst: 'Selecteer eerst het gegevensbereik.',

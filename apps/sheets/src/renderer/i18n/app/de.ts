@@ -383,6 +383,11 @@ export const de = {
   appAppliedJournaled: 'Angewendet — die Änderungen sind protokolliert; mit ⌘S speichern.',
   appUndoCommitted: 'Rückgängig übernommen (Revision {revision}).',
   appUndoFailed: 'Rückgängigmachen nicht möglich.',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'AutoFilter kann nicht erstellt werden.',
   appAutoFilterRemoveFailed: 'AutoFilter kann nicht entfernt werden.',
   appSelectDataRangeFirst: 'Wählen Sie zuerst den Datenbereich aus.',

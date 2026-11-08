@@ -355,6 +355,11 @@ export const ms = {
   appAppliedJournaled: 'Digunakan — perubahan telah direkodkan; simpan dengan ⌘S.',
   appUndoCommitted: 'Buat asal disahkan sebagai semakan {revision}.',
   appUndoFailed: 'Tidak dapat membuat asal.',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'Tidak dapat mencipta AutoPenapis.',
   appAutoFilterRemoveFailed: 'Tidak dapat mengalih keluar AutoPenapis.',
   appSelectDataRangeFirst: 'Pilih julat data dahulu.',

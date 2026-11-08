@@ -337,6 +337,11 @@ export const th = {
   appAppliedJournaled: 'นำไปใช้แล้ว — การเปลี่ยนแปลงถูกบันทึกไว้ บันทึกด้วย ⌘S',
   appUndoCommitted: 'ยืนยันการเลิกทำแล้ว (รุ่นที่ {revision})',
   appUndoFailed: 'เลิกทำไม่ได้',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'สร้างตัวกรองอัตโนมัติไม่ได้',
   appAutoFilterRemoveFailed: 'นำตัวกรองอัตโนมัติออกไม่ได้',
   appSelectDataRangeFirst: 'เลือกช่วงข้อมูลก่อน',

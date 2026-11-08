@@ -324,6 +324,11 @@ export const he = {
   appAppliedJournaled: 'הוחל — השינויים נרשמו; שמור עם ⌘S.',
   appUndoCommitted: 'הביטול בוצע כגרסה {revision}.',
   appUndoFailed: 'לא ניתן לבטל.',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'לא ניתן ליצור את הסינון האוטומטי.',
   appAutoFilterRemoveFailed: 'לא ניתן להסיר את הסינון האוטומטי.',
   appSelectDataRangeFirst: 'בחר תחילה את טווח הנתונים.',

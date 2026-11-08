@@ -309,6 +309,11 @@ export const zhTW = {
   appAppliedJournaled: '已套用——變更已記錄，⌘S 儲存進檔案。',
   appUndoCommitted: '復原已提交（第 {revision} 版）。',
   appUndoFailed: '無法復原。',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: '無法建立自動篩選。',
   appAutoFilterRemoveFailed: '無法移除自動篩選。',
   appSelectDataRangeFirst: '請先選取資料範圍。',

@@ -261,6 +261,15 @@ export const AI_UNDO_CELL_BUDGET = 100_000
 /// the activation; `dropped` reports the batch entry was discarded.
 export const aiBulkUndoGate = { active: false, dropped: false, cells: 0, pushed: 0 }
 
+/// The AI run lock. While a run is in flight the workbook belongs to the run:
+/// the person's edits are vetoed (ai/run-lock.ts), saves are refused, and the
+/// run's undo entries are never dropped, because the run's edits must be
+/// revertable at its end.
+///   active:       from the start of a run until its edits are reverted
+///   agentWriting: raised around the writes of the run itself (and around its revert)
+///   stranded:     a run's edits could not be taken back out; saves stay refused
+export const aiRunLock = { active: false, agentWriting: false, stranded: false }
+
 export interface UndoRedoItemLike {
   readonly unitID: string
   readonly redoMutations?: readonly { params?: unknown }[]
@@ -303,7 +312,8 @@ export function installJournalSuppressionUndoFilter(): void {
     if (aiBulkUndoGate.active) {
       if (aiBulkUndoGate.dropped) return
       aiBulkUndoGate.cells += undoPayloadCells(item, AI_UNDO_CELL_BUDGET + 1)
-      if (aiBulkUndoGate.cells > AI_UNDO_CELL_BUDGET) {
+      // A run's undo entries are its revert: only an edit outside a run may go without one.
+      if (aiBulkUndoGate.cells > AI_UNDO_CELL_BUDGET && !aiRunLock.active) {
         aiBulkUndoGate.dropped = true
         // Chunks already merged into the stack-top batch entry must go too —
         // keeping them would make undo revert only part of the operation.

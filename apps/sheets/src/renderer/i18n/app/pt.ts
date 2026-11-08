@@ -380,6 +380,11 @@ export const pt = {
   appAppliedJournaled: 'Aplicado — as alterações foram registradas; salve com ⌘S.',
   appUndoCommitted: 'Desfazer confirmado como revisão {revision}.',
   appUndoFailed: 'Não foi possível desfazer.',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'Não foi possível criar o AutoFiltro.',
   appAutoFilterRemoveFailed: 'Não foi possível remover o AutoFiltro.',
   appSelectDataRangeFirst: 'Selecione o intervalo de dados primeiro.',

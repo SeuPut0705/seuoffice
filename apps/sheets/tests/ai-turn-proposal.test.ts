@@ -3,13 +3,10 @@ import {
   type AgentMessage,
   type AgentStreamCallbacks,
   type AgentTransport,
+  type ToolExecution,
 } from '@genoffice/agent-core'
 import { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
-import type {
-  ApplyOutcome,
-  ChangePlan,
-  WorkbookSnapshot,
-} from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { ChangePlan, WorkbookSnapshot } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import { describe, expect, it } from 'vitest'
 
 import { createWorkbookSkill } from '../src/renderer/ai/workbook-skill'
@@ -17,6 +14,7 @@ import type { SheetsSkillDeps } from '../src/renderer/ai/tools'
 import {
   accept,
   holdRun,
+  planUndoCells,
   proposalPreview,
   rebasePlan,
   reject,
@@ -61,11 +59,34 @@ function documentOf(adapter: InMemoryWorkbookAdapter): unknown {
   return structuredClone(adapter.getSnapshot().sheets)
 }
 
-/** A demo workbook the way the app drives it: the adapter applies and undoes whole plans. */
-function demoWorkbook() {
+/**
+ * A demo workbook the way the app drives it: the adapter applies and undoes whole plans,
+ * and a plan the run's revert could not reach is refused before it applies (App.autoApplySafePlan).
+ */
+function demoWorkbook(
+  limits: Partial<Pick<ProposalBackend, 'undoCapacity' | 'undoCellBudget'>> = {},
+) {
   const adapter = new InMemoryWorkbookAdapter(SNAPSHOT)
   const record = new RunRecord()
   let transactions = 0
+
+  const backend: ProposalBackend = {
+    undoCapacity: Number.POSITIVE_INFINITY,
+    undoCellBudget: Number.POSITIVE_INFINITY,
+    unundoableOps: new Set<string>(),
+    ...limits,
+    undo: async (steps) => {
+      for (let step = 0; step < steps; step += 1) adapter.undo()
+    },
+    watch: () => {
+      const revision = adapter.getSnapshot().revision
+      return () => adapter.getSnapshot().revision !== revision
+    },
+    apply: async (plan) => {
+      adapter.apply(rebasePlan(plan, adapter.getSnapshot().revision))
+      return { ok: true, undoSteps: 1 }
+    },
+  }
 
   const deps: SheetsSkillDeps = {
     getActiveSheetInfo: () => {
@@ -102,6 +123,10 @@ function demoWorkbook() {
         summary,
         operations,
       })
+      const refusal = record.refusal(plan, backend)
+      if (refusal !== null) {
+        return { ok: true, plan, applied: Promise.resolve({ ok: false, reason: refusal }) }
+      }
       adapter.apply(plan)
       const applied: Promise<AppliedOutcome> = Promise.resolve({ ok: true, undoSteps: 1 })
       record.track(plan, applied)
@@ -109,20 +134,8 @@ function demoWorkbook() {
     },
   }
 
-  const backend: ProposalBackend = {
-    undoCapacity: Number.POSITIVE_INFINITY,
-    undo: async (steps) => {
-      for (let step = 0; step < steps; step += 1) adapter.undo()
-    },
-    watch: () => {
-      const revision = adapter.getSnapshot().revision
-      return () => adapter.getSnapshot().revision !== revision
-    },
-    apply: async (plan) => {
-      adapter.apply(rebasePlan(plan, adapter.getSnapshot().revision))
-      return { ok: true, undoSteps: 1 }
-    },
-  }
+  /** What each tool call of the runs answered, in order. */
+  const toolResults: ToolExecution[] = []
 
   /** One AI run through the real AgentLoop and the real workbook skill. */
   async function runAi(script: Array<(cb: AgentStreamCallbacks) => void>): Promise<void> {
@@ -131,13 +144,17 @@ function demoWorkbook() {
       const loop = new AgentLoop({
         transport: scriptedTransport(script),
         skill: createWorkbookSkill(deps),
-        events: { onDone: () => resolve(), onError: (e) => reject(new Error(e)) },
+        events: {
+          onToolExecuted: ({ execution }) => toolResults.push(execution),
+          onDone: () => resolve(),
+          onError: (e) => reject(new Error(e)),
+        },
       })
       loop.run('Total the row and rename the sheet')
     })
   }
 
-  return { adapter, record, backend, runAi, deps }
+  return { adapter, record, backend, runAi, deps, toolResults }
 }
 
 /** A run of three tool calls: each plan is built on top of the earlier ones' edits. */
@@ -272,6 +289,61 @@ describe('AI run held as a proposal', () => {
     expect(proposal.kind).toBe('none')
     expect(documentOf(adapter)).toEqual(before)
   })
+
+  it('refuses an oversized plan before it applies, and the run still holds', async () => {
+    // one cell per change here: the budget stands for the 100k cells of the real undo gate
+    const { adapter, record, backend, runAi, toolResults } = demoWorkbook({ undoCellBudget: 3 })
+    const before = documentOf(adapter)
+
+    await runAi([
+      proposeCall('small', 'Fill one cell', [
+        { op: 'set_cell', sheetId: 'sheet-1', address: 'C1', value: 30 },
+      ]),
+      proposeCall('big', 'Fill many cells', [
+        { op: 'set_cell', sheetId: 'sheet-1', address: 'D1', value: 1 },
+        { op: 'set_cell', sheetId: 'sheet-1', address: 'D2', value: 2 },
+        { op: 'set_cell', sheetId: 'sheet-1', address: 'D3', value: 3 },
+        { op: 'set_cell', sheetId: 'sheet-1', address: 'D4', value: 4 },
+      ]),
+      (cb) => {
+        cb.onDelta('Done.')
+        cb.onDone()
+      },
+    ])
+
+    expect(toolResults[0]?.isError).toBeFalsy()
+    expect(toolResults[1]?.isError).toBe(true)
+    expect(toolResults[1]?.output).toContain('the workbook is UNCHANGED')
+    expect(toolResults[1]?.output).toContain('smaller changes')
+    const proposal = await holdRun(backend, await record.settle())
+    expect(proposal.kind === 'pending' && proposal.plans.length).toBe(1)
+    expect(documentOf(adapter)).toEqual(before)
+  })
+
+  it('refuses the plan past the undo steps the app keeps, and the run still holds', async () => {
+    const { adapter, record, backend, runAi, toolResults } = demoWorkbook({ undoCapacity: 2 })
+    const before = documentOf(adapter)
+    const cell = (id: string, address: string) =>
+      proposeCall(id, `Fill ${address}`, [
+        { op: 'set_cell', sheetId: 'sheet-1', address, value: 1 },
+      ])
+
+    await runAi([
+      cell('a', 'C1'),
+      cell('b', 'C2'),
+      cell('c', 'C3'),
+      (cb) => {
+        cb.onDelta('Done.')
+        cb.onDone()
+      },
+    ])
+
+    expect(toolResults.map((result) => Boolean(result.isError))).toEqual([false, false, true])
+    expect(toolResults[2]?.output).toContain('2 of the 2 undo steps')
+    const proposal = await holdRun(backend, await record.settle())
+    expect(proposal.kind === 'pending' && proposal.plans.length).toBe(2)
+    expect(documentOf(adapter)).toEqual(before)
+  })
 })
 
 describe('RunRecord', () => {
@@ -288,6 +360,8 @@ describe('RunRecord', () => {
     const undone: number[] = []
     const backend: ProposalBackend = {
       undoCapacity: 20,
+      undoCellBudget: 100_000,
+      unundoableOps: new Set<string>(),
       undo: async (steps) => {
         undone.push(steps)
       },
@@ -314,33 +388,81 @@ describe('RunRecord', () => {
     ])
   })
 
-  it('leaves a run applied and says so when an edit of it cannot be undone', async () => {
-    const record = new RunRecord()
-    const outcome: ApplyOutcome & { undoSteps: number } = {
-      ok: true,
-      undoSteps: 0,
-      undoDropped: true,
+  it('refuses a plan the undo history could not record, before it applies', () => {
+    const { backend } = backendCounting()
+    const wide: ChangePlan = {
+      ...plan('wide'),
+      structuralChanges: [
+        { op: { op: 'clear_range', sheetId: 'sheet-1', range: 'A1:Z1000' }, label: 'clear' },
+      ],
     }
-    record.track(plan('huge'), Promise.resolve(outcome))
-    const { backend, undone } = backendCounting()
 
-    const proposal = await holdRun(backend, await record.settle())
+    const refusal = new RunRecord().refusal(wide, { ...backend, undoCellBudget: 100 })
 
-    expect(proposal.kind).toBe('unheld')
-    expect(undone).toEqual([])
+    expect(refusal).toContain('26000 cells')
+    expect(refusal).toContain('smaller changes')
   })
 
-  it('does not hold a run with more undo steps than the backend keeps', async () => {
+  it('counts the cells of every kind of change a plan carries', () => {
+    expect(
+      planUndoCells({
+        ...plan('mixed'),
+        cellChanges: [
+          { sheetId: 's', address: 'A1', before: { value: null }, after: { value: 1 } },
+          { sheetId: 's', address: 'A2', before: { value: null }, after: { value: 1 } },
+        ],
+        formatChanges: [{ sheetId: 's', range: 'A1:B5', format: { bold: true }, label: 'bold' }],
+        structuralChanges: [
+          {
+            op: {
+              op: 'copy_range',
+              sheetId: 's',
+              source: 'A1:B2',
+              target: 'D1',
+            },
+            label: 'copy',
+          },
+        ],
+      }),
+    ).toBe(2 + 10 + 4)
+  })
+
+  it('refuses a plan the app cannot record in its undo at all', () => {
+    const { backend } = backendCounting()
+    const protect: ChangePlan = {
+      ...plan('protect'),
+      structuralChanges: [
+        { op: { op: 'protect_sheet', sheetId: 'sheet-1', protected: true }, label: 'protect' },
+      ],
+    }
+
+    const refusal = new RunRecord().refusal(protect, {
+      ...backend,
+      unundoableOps: new Set(['protect_sheet']),
+    })
+
+    expect(refusal).toContain('protect_sheet')
+  })
+
+  it('refuses the plan that would push the run past the undo steps the app keeps', () => {
+    const record = new RunRecord()
+    for (let index = 0; index < 20; index += 1) {
+      record.track(plan(`p${index}`), Promise.resolve({ ok: true, undoSteps: 1 }))
+    }
+    const { backend } = backendCounting()
+
+    expect(record.refusal(plan('one-too-many'), backend)).toContain('20 of the 20 undo steps')
+    expect(new RunRecord().refusal(plan('first'), backend)).toBeNull()
+  })
+
+  it('throws instead of reverting part of a run that outgrew the undo it was checked against', async () => {
     const record = new RunRecord()
     for (let index = 0; index < 21; index += 1) {
       record.track(plan(`p${index}`), Promise.resolve({ ok: true, undoSteps: 1 }))
     }
     const { backend, undone } = backendCounting()
 
-    const proposal = await holdRun(backend, await record.settle())
-
-    // a revert of the newest 20 would leave the first plan applied while the card claims a proposal
-    expect(proposal.kind).toBe('unheld')
+    await expect(holdRun(backend, await record.settle())).rejects.toThrow('21 undo steps')
     expect(undone).toEqual([])
   })
 

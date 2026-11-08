@@ -352,6 +352,11 @@ export const id = {
   appAppliedJournaled: 'Diterapkan — perubahan tercatat di jurnal; simpan dengan ⌘S.',
   appUndoCommitted: 'Pengurungan dikomit (revisi {revision}).',
   appUndoFailed: 'Tidak dapat mengurungkan.',
+  appAiRunLocked:
+    'The AI is working on this workbook. Wait until it finishes, then accept or reject its changes.',
+  appSaveBlockedAiRun: "Can't save while the AI is working on this workbook.",
+  appAiRunStranded:
+    "Some of the AI's changes could not be taken back out of the workbook. Undo them before saving.",
   appAutoFilterCreateFailed: 'Tidak dapat membuat FilterOtomatis.',
   appAutoFilterRemoveFailed: 'Tidak dapat menghapus FilterOtomatis.',
   appSelectDataRangeFirst: 'Pilih rentang data dahulu.',

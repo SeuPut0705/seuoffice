@@ -29,6 +29,24 @@ export function createSaveGate(): SaveGate {
   }
 }
 
+/**
+ * Every save, Save As, autosave, recovery copy and template export enters the
+ * gate through here. `refusal` says why the workbook must not be written right
+ * now (an AI run holds edits no one accepted) or null. It is checked again when
+ * the save's turn comes, because a save queued behind another can start after
+ * a run has begun; a save already past that check finished before the run's
+ * first edit (a run waits for the gate to drain before it starts).
+ */
+export function guardedSave<T>(
+  gate: SaveGate,
+  refusal: () => T | null,
+  write: () => Promise<T>,
+): Promise<T> {
+  const early = refusal()
+  if (early !== null) return Promise.resolve(early)
+  return gate.run(async () => refusal() ?? (await write()))
+}
+
 export interface SaveTickState {
   /** a save of either kind is currently running */
   saveInFlight: boolean

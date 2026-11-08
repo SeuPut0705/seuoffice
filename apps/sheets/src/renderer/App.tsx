@@ -39,7 +39,8 @@ import {
   runHeadlessRendererExport,
 } from '@genoffice/electron-utils/headless-export'
 import {
-  aiBulkUndoGate,
+  AI_UNDO_CELL_BUDGET,
+  aiRunLock,
   commitActiveCellEditor,
   installJournalSuppressionUndoFilter,
   installLoadAutoHeightGate,
@@ -57,7 +58,12 @@ import {
   hashSheetPassword,
   type SheetPasswordHash,
 } from '@genoffice/xlsx-gateway/gateway/xlsx-protection-hash'
-import { applyChangePlan, planFromOps, type OpExecutorContext } from './op-executor'
+import {
+  applyChangePlan,
+  JOURNAL_ONLY_OPS,
+  planFromOps,
+  type OpExecutorContext,
+} from './op-executor'
 import { installSheetsMcpBridge, type McpSheetHandlers } from './mcp-bridge'
 import { renameChartRefsForSheet } from './workbook-ops'
 import {
@@ -78,6 +84,13 @@ import {
   type TurnProposal,
 } from './ai/turn-proposal'
 import {
+  aiRunSaveRefusal,
+  beginAgentWrite,
+  installAiRunLockGuard,
+  lockForAiRun,
+  unlockAfterAiRun,
+} from './ai/run-lock'
+import {
   registerCellFontAliases,
   untilCellFontsLoaded,
   workbookFontFamilies,
@@ -89,7 +102,7 @@ import {
   undoStepsSince,
   UNIVER_UNDO_CAPACITY,
 } from './undo-carry'
-import { createSaveGate, shouldRunSaveTick } from './save-scheduler'
+import { createSaveGate, guardedSave, shouldRunSaveTick } from './save-scheduler'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   useAutoSavePref,
@@ -1947,7 +1960,8 @@ export function App({
     // Released in onDone/onError, which own the rest of the run teardown.
     setAiRunScope(aiScopeDismissed ? null : aiScope)
     aiApplyPromisesRef.current = []
-    runRecordRef.current = new RunRecord()
+    const record = new RunRecord()
+    runRecordRef.current = record
     setProposal(NO_PROPOSAL)
     runLastTextRef.current = ''
     runMutatedRef.current = false
@@ -1964,7 +1978,18 @@ export function App({
       .then(async (images) => {
         // the chosen project's context, read now and fixed for this request (spec 5.4)
         await projectRef.current?.prepareSend()
+        await commitActiveEditor()
+        // A new chat made while the run was starting took the record: this run is abandoned.
+        // Whoever holds the record unlocks the workbook, so the lock is taken in the same turn as this check.
+        if (runRecordRef.current !== record) {
+          runStartingRef.current = false
+          return
+        }
+        lockForAiRun()
+        // A save in flight finishes with the document as it is now (guardedSave refuses the queued ones).
+        await saveGateRef.current.run(() => Promise.resolve())
         runStartingRef.current = false
+        if (runRecordRef.current !== record) return
         if (images) loop.run(instruction, images)
         else loop.run(instruction)
       })
@@ -2042,12 +2067,9 @@ export function App({
     const abandoned = runRecordRef.current
     runRecordRef.current = null
     if (abandoned) {
-      void abandoned
-        .settle()
-        .then((run) => holdRun(proposalBackend(), run))
-        .catch((error: unknown) =>
-          setMessage(error instanceof Error ? error.message : t('appUndoFailed')),
-        )
+      void holdAndUnlock(abandoned).catch((error: unknown) =>
+        setMessage(error instanceof Error ? error.message : t('appUndoFailed')),
+      )
     }
     // servers off in this chat and "always allow in this chat" go too (user MCP spec 7.6)
     windowMcpState()?.newConversation()
@@ -3301,6 +3323,8 @@ export function App({
         }
       },
     )
+    // The workbook belongs to the AI run in flight: the person's edits are vetoed until its revert.
+    const aiRunLockDisposable = installAiRunLockGuard(runtime, setMessage)
     const structuralDisposable = runtime.univerAPI.addEvent(
       runtime.univerAPI.Event.BeforeCommandExecute,
       (event) => {
@@ -3747,6 +3771,7 @@ export function App({
       calcEndDisposable.dispose()
       journalDisposable.dispose()
       structuralDisposable.dispose()
+      aiRunLockDisposable.dispose()
       selectionDisposable.dispose()
       formatEchoDisposable.dispose()
       clickDisposable.dispose()
@@ -4006,9 +4031,17 @@ export function App({
    * When apply fails, the preview card stays up as a manual fallback.
    */
   function autoApplySafePlan(plan: ChangePlan): Promise<AppliedOutcome> {
-    const applying = applyPlanLive(plan)
     // The AI run in flight records every plan it applies, to hold them as a proposal when it ends.
-    runRecordRef.current?.track(plan, applying)
+    const record = runRecordRef.current
+    // A plan the run's revert could not reach is refused before it applies (turn-proposal.ts).
+    const refusal = record?.refusal(plan, proposalBackend()) ?? null
+    if (refusal !== null) {
+      lazyPreviewRef.current = null
+      setPreview(null)
+      return Promise.resolve({ ok: false, reason: refusal, undoSteps: 0 })
+    }
+    const applying = applyPlanLive(plan)
+    record?.track(plan, applying)
     return applying
   }
 
@@ -4024,6 +4057,7 @@ export function App({
     const state = lazyWorkbookRef.current
     if (state) {
       const undoBefore = undoMark(univerRef.current)
+      const journalBefore = journalSize(state.editJournal)
       // Lazy path reads lazyPreviewRef (a ref, already set by the caller) —
       // safe to invoke synchronously right after propose.
       const apply = handleLazyApply(state).then((outcome): AppliedOutcome => {
@@ -4044,12 +4078,18 @@ export function App({
           lazyPreviewRef.current = null
           setPreview(null)
         }
-        // The gate keeps the flag of the batch that just applied (ok means it began one).
-        return {
-          ...outcome,
-          undoSteps,
-          ...(outcome.ok && aiBulkUndoGate.dropped ? { undoDropped: true } : {}),
+        // An edit that wrote the journal but pushed no undo step stays in the workbook through
+        // the run's revert: refuse to save it, and say so.
+        if (
+          outcome.ok &&
+          undoSteps === 0 &&
+          aiRunLock.active &&
+          journalSize(state.editJournal) > journalBefore
+        ) {
+          aiRunLock.stranded = true
+          setMessage(t('appAiRunStranded'))
         }
+        return { ...outcome, undoSteps }
       })
       aiApplyPromisesRef.current.push(apply.then((outcome) => outcome.ok))
       return apply
@@ -4057,6 +4097,7 @@ export function App({
     // Non-lazy path: apply the passed plan directly (setPreview is async, so we
     // cannot rely on the preview state within the same tick).
     let committedSteps = 0
+    const endAgentWrite = beginAgentWrite()
     try {
       const receipt = adapterRef.current.apply(plan)
       committedSteps = 1
@@ -4133,6 +4174,8 @@ export function App({
       const reason = error instanceof Error ? error.message : t('appApplyTxFailed')
       setMessage(reason)
       return { ok: false, reason, undoSteps: committedSteps }
+    } finally {
+      endAgentWrite()
     }
   }
 
@@ -4172,6 +4215,7 @@ export function App({
       stored.plan,
       opExecutorContext(runtime, workbook, state),
       {
+        agentWrite: true,
         verifyBeforeApply: () => {
           if (lazyPreviewRef.current !== stored || lazyWorkbookRef.current !== state) {
             verified = { ok: false, reason: t('appApplyTxFailed') }
@@ -4261,11 +4305,18 @@ export function App({
   }
 
   function handleUndo(steps?: number): void {
+    // The run in flight is taken back out by the run's own revert, not by the person's undo.
+    if (aiRunLock.active) {
+      setMessage(t('appAiRunLocked'))
+      return
+    }
     const count =
       typeof steps === 'number' && Number.isFinite(steps) ? Math.max(1, Math.floor(steps)) : 1
     const fromAiBatch = typeof steps === 'number'
     const clearInlineUndo = () => {
       if (!fromAiBatch) return
+      // the run's edits the revert could not reach are out now
+      aiRunLock.stranded = false
       patchLastAssistant(({ autoApplied: _autoApplied, ...entry }) => entry)
     }
     // Mirror ⌘Z: interactive grid edits live on Univer's undo stack even in a
@@ -4311,6 +4362,8 @@ export function App({
     return {
       // the demo adapter keeps every revision; Univer keeps only its newest few undo items
       undoCapacity: lazyWorkbookRef.current ? UNIVER_UNDO_CAPACITY : Number.POSITIVE_INFINITY,
+      undoCellBudget: lazyWorkbookRef.current ? AI_UNDO_CELL_BUDGET : Number.POSITIVE_INFINITY,
+      unundoableOps: lazyWorkbookRef.current ? JOURNAL_ONLY_OPS : new Set<string>(),
       undo: async (steps) => {
         if (!lazyWorkbookRef.current) {
           undoAdapterSteps(steps)
@@ -4361,30 +4414,50 @@ export function App({
   }
 
   /**
+   * Takes the run's edits back out of the workbook and gives the workbook back to
+   * the person. A revert that fails leaves edits no one accepted in the workbook:
+   * saves stay refused (aiRunLock.stranded) until they are undone or another file opens.
+   */
+  async function holdAndUnlock(record: RunRecord): Promise<TurnProposal> {
+    try {
+      const run = await record.settle()
+      const endAgentWrite = beginAgentWrite()
+      try {
+        return await holdRun(proposalBackend(), run)
+      } finally {
+        endAgentWrite()
+      }
+    } catch (error: unknown) {
+      aiRunLock.stranded = true
+      throw error
+    } finally {
+      unlockAfterAiRun()
+    }
+  }
+
+  /**
    * Run end: waits for the plans still applying, then takes the run's edits back
-   * out of the workbook and holds them as a proposal. A run that edited nothing
-   * (or whose edits no undo can take back) does the run's auto-save as before.
+   * out of the workbook and holds them as a proposal. Nothing is saved here: the
+   * run's edits are out of the workbook until the person accepts them.
    */
   async function finishAiRun(): Promise<void> {
     const record = runRecordRef.current
     runRecordRef.current = null
+    aiApplyPromisesRef.current = []
+    // a new chat took the record of an abandoned run and reverts it itself
+    if (!record) return
     try {
-      const held = record ? await holdRun(proposalBackend(), await record.settle()) : NO_PROPOSAL
+      const held = await holdAndUnlock(record)
       if (held.kind === 'pending') {
-        // the edits are out of the workbook until accepted: nothing to save, no inline Undo for them
-        aiApplyPromisesRef.current = []
         patchLastAssistant(({ autoApplied: _autoApplied, ...entry }) => entry)
         setProposal(held)
-        return
       }
-      // the edits stayed in the workbook: say so on the card, and save them as before
-      if (held.kind === 'unheld') setProposal(held)
     } catch (error: unknown) {
-      // the workbook may hold part of the run: keep the inline Undo and do not save it
-      setMessage(error instanceof Error ? error.message : t('appUndoFailed'))
-      return
+      // the workbook may hold part of the run: keep the inline Undo
+      setMessage(
+        `${t('appAiRunStranded')} ${error instanceof Error ? error.message : t('appUndoFailed')}`,
+      )
     }
-    await autoSaveCompletedAiRun()
   }
 
   async function handleAcceptProposal(): Promise<void> {
@@ -4409,6 +4482,10 @@ export function App({
   /// QAT Redo: workbook history via Univer, same path as the app menu's ⇧⌘Z
   /// (the demo adapter has no redo, matching the menu's behavior).
   function handleRedo(): void {
+    if (aiRunLock.active) {
+      setMessage(t('appAiRunLocked'))
+      return
+    }
     void univerRef.current?.univerAPI.redo()
   }
 
@@ -4531,7 +4608,14 @@ export function App({
       visualArrangeContext,
       pivotContext,
       handlePageLayoutCommand: (rest) => handlePageLayoutCommandImpl(pageLayoutContext(), rest),
-      handleExportPdf: () => handleExportPdfImpl(pageLayoutContext()),
+      handleExportPdf: () => {
+        const refusal = aiRunSaveRefusal()
+        if (refusal !== null) {
+          setMessage(refusal)
+          return Promise.resolve(false)
+        }
+        return handleExportPdfImpl(pageLayoutContext())
+      },
     }
   }
 
@@ -4995,6 +5079,7 @@ export function App({
     lazyPreviewRef.current = null
     // a proposal of the previous workbook cannot apply to this one
     setProposal(NO_PROPOSAL)
+    aiRunLock.stranded = false
     setPendingEdits(0)
     // Slicers/timelines belong to the previous workbook's session only;
     // switching files invalidates them.
@@ -5218,7 +5303,15 @@ export function App({
     // written beside a real save would outlive it as a phantom Restore prompt.
     const gate = saveGateRef.current
     if (mode === 'recovery' && gate.busy) return { ok: false }
-    return gate.run(async () => {
+    // While an AI run holds edits no one accepted, nothing writes the workbook: not a save,
+    // an autosave, a recovery copy, a template export or the close-save prompt.
+    const refusal = (): SaveOutcome | null => {
+      const reason = aiRunSaveRefusal()
+      if (reason === null) return null
+      if (mode !== 'recovery' && mode !== 'template' && !quiet) setMessage(reason)
+      return { ok: false, error: reason }
+    }
+    return guardedSave(gate, refusal, async () => {
       if (!(await commitActiveEditor())) return { ok: false }
       return handleSaveImpl(saveContext(), mode, quiet, explicitTarget)
     })
@@ -5258,16 +5351,20 @@ export function App({
       void handleInspectWorkbook()
     } else if (action === 'print') {
       void openPrintPreviewHost(pageLayoutContext()).then(setPrintHost)
-    } else if (action === 'export-pdf') {
-      void handleExportPdfImpl(pageLayoutContext())
-    } else if (action === 'export-csv') {
-      void handleExportCsvImpl(csvExportContext())
+    } else if (action === 'export-pdf' || action === 'export-csv') {
+      // an export writes the workbook as it stands: not while the run's edits are in it
+      const refusal = aiRunSaveRefusal()
+      if (refusal !== null) setMessage(refusal)
+      else if (action === 'export-pdf') void handleExportPdfImpl(pageLayoutContext())
+      else void handleExportCsvImpl(csvExportContext())
     } else if (action === 'undo' || action === 'redo') {
       // The shell's own text fields (AI prompt, dialog inputs) keep native
       // text undo; everywhere else ⌘Z means workbook history.
       const active = document.activeElement
       if (active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement) {
         document.execCommand(action)
+      } else if (aiRunLock.active) {
+        setMessage(t('appAiRunLocked'))
       } else if (action === 'undo') {
         void univerRef.current?.univerAPI.undo()
       } else {

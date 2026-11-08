@@ -56,7 +56,8 @@ import {
   structuralDeleteFormulaError,
   type StreamedRefSheet,
 } from './plan-operations'
-import { aiBulkUndoGate, journalSuppression } from './univer-state'
+import { beginAgentWrite } from './ai/run-lock'
+import { aiBulkUndoGate, aiRunLock, journalSuppression } from './univer-state'
 import { isVeryHiddenSheet } from './very-hidden-sheets'
 import { effectiveSheetProtection, mergeSheetProtectionAllow } from './sheet-protection'
 import {
@@ -164,6 +165,8 @@ export interface ApplyPlanOptions {
   /** Ribbon/dialog caller: gate refusals show their localized string instead
    * of the model-facing reason. */
   userFacing?: boolean
+  /** The AI run's own apply: it passes the run lock that refuses everyone else. */
+  agentWrite?: boolean
 }
 
 export function richCellText(cell: unknown): string | null {
@@ -171,6 +174,17 @@ export function richCellText(cell: unknown): string | null {
     ?.dataStream
   return typeof stream === 'string' ? stream.replace(/\r\n$/, '').replace(/\r/g, '\n') : null
 }
+
+/**
+ * Operations whose apply only writes the edit journal: no Univer command runs, so
+ * no undo step takes them back. An AI run cannot hold them for review.
+ */
+export const JOURNAL_ONLY_OPS: ReadonlySet<string> = new Set([
+  'protect_sheet',
+  'set_page_setup',
+  'add_sparkline',
+  'delete_table',
+])
 
 const SHEET_LIFECYCLE_OPS = new Set([
   'add_sheet',
@@ -393,6 +407,12 @@ async function applyChangePlanNow(
   options: ApplyPlanOptions,
 ): Promise<ApplyOutcome> {
   const { runtime, workbook, state, lazyWorkbookRef, setMessage, setPendingEdits } = ctx
+  // The workbook belongs to the AI run in flight: nobody else's apply (ribbon, dialog, MCP) lands in it.
+  if (aiRunLock.active && !options.agentWrite) {
+    const reason = t('appAiRunLocked')
+    setMessage(reason)
+    return { ok: false, reason }
+  }
   const plannedOps = plan.structuralChanges.map((structural) => structural.op)
   const notices: string[] = []
   let imageData: Map<string, LoadedImage>
@@ -413,6 +433,7 @@ async function applyChangePlanNow(
   const stale = options.verifyBeforeApply?.()
   if (stale) return stale
   const undoBatch = beginUndoBatch(runtime)
+  const endAgentWrite = options.agentWrite ? beginAgentWrite() : null
   let anyApplied = false
   try {
     // Structural and layout changes go through the same facade commands as
@@ -539,6 +560,7 @@ async function applyChangePlanNow(
       ? { ok: false, reason, partiallyApplied: true, undoDropped: aiBulkUndoGate.dropped }
       : { ok: false, reason }
   } finally {
+    endAgentWrite?.()
     undoBatch.settle()
   }
 }

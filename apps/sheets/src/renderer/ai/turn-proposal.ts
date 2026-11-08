@@ -10,6 +10,11 @@
  * recorded ChangePlans (cell diff, formats, renames, structural ops), not a
  * second copy of the document.
  */
+import { parseRange, rangeCellCount } from '@genoffice/xlsx-gateway/domain/cell-address'
+import {
+  copyTargetBounds,
+  type CopyRangeOperation,
+} from '@genoffice/xlsx-gateway/domain/workbook-dsl'
 import type { ApplyOutcome, ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 
 /** An apply result that also says how many undo steps the apply left behind. */
@@ -19,8 +24,12 @@ export interface AppliedOutcome extends ApplyOutcome {
 
 /** What the app lends the state machine: its undo, its staleness guard and its apply path. */
 export interface ProposalBackend {
-  /** How many undo steps the backend keeps; a run with more cannot be taken back out in full. */
+  /** How many undo steps the backend keeps; the run's plans must fit in it. */
   readonly undoCapacity: number
+  /** The most cells one plan may touch and still be recorded in the backend's undo. */
+  readonly undoCellBudget: number
+  /** Operations whose apply no undo step takes back (they only write the edit journal). */
+  readonly unundoableOps: ReadonlySet<string>
   /** Undoes the newest `steps` undo steps of the open workbook. */
   undo(steps: number): Promise<void>
   /**
@@ -42,11 +51,8 @@ export type TurnProposal =
       readonly changed: () => boolean
     }
   | { readonly kind: 'stale'; readonly plans: readonly ChangePlan[] }
-  /** the run's edits stayed in the workbook: no undo can take them all back out */
-  | { readonly kind: 'unheld' }
 
 export const NO_PROPOSAL: TurnProposal = { kind: 'none' }
-const UNHELD: TurnProposal = { kind: 'unheld' }
 
 /** What one run left in the workbook, as seen when it ended. */
 export interface RunSummary {
@@ -54,8 +60,6 @@ export interface RunSummary {
   readonly plans: readonly ChangePlan[]
   /** undo steps of everything the run committed, including the part of a batch that failed midway */
   readonly undoSteps: number
-  /** some edit landed that no undo step takes back (too large for the undo history) */
-  readonly irreversible: boolean
 }
 
 interface RecordedPlan {
@@ -83,29 +87,96 @@ export class RunRecord {
     )
   }
 
+  /**
+   * Why the run cannot take this plan and still be taken back out, or null.
+   * Asked before the plan applies: a plan the undo would not record, or one
+   * past the steps the undo keeps, would leave edits no revert can reach.
+   */
+  refusal(plan: ChangePlan, backend: ProposalBackend): string | null {
+    const noUndo = plan.structuralChanges.find(({ op }) => backend.unundoableOps.has(op.op))
+    if (noUndo) {
+      return (
+        `The ${noUndo.op.op} operation is not recorded in the undo history, and every change of this run must stay undoable until the user accepts it. ` +
+        'Nothing was applied: leave that change out and tell the user to make it themselves.'
+      )
+    }
+    const cells = planUndoCells(plan)
+    if (cells > backend.undoCellBudget) {
+      return (
+        `This change touches about ${cells} cells, more than the ${backend.undoCellBudget} the undo history can hold, ` +
+        'and every change of this run must stay undoable until the user accepts it. Nothing was applied: ' +
+        'make smaller changes (split the range across several batches).'
+      )
+    }
+    // an apply still in flight may add a step; a settled one left exactly the steps it reports
+    const used = this.entries.reduce((steps, entry) => steps + (entry.outcome?.undoSteps ?? 1), 0)
+    if (used + 1 > backend.undoCapacity) {
+      return (
+        `This run already used ${used} of the ${backend.undoCapacity} undo steps it may use, and every change of this run must stay undoable until the user accepts it. ` +
+        'Nothing was applied: finish with what has been done, or combine the remaining changes into fewer batches next time.'
+      )
+    }
+    return null
+  }
+
   async settle(): Promise<RunSummary> {
     await Promise.all(this.pending)
     const plans: ChangePlan[] = []
     let undoSteps = 0
-    let irreversible = false
     for (const { plan, outcome } of this.entries) {
       if (!outcome) continue
       undoSteps += outcome.undoSteps
-      if (outcome.undoDropped) irreversible = true
       if (outcome.ok) plans.push(plan)
     }
-    return { plans, undoSteps, irreversible }
+    return { plans, undoSteps }
   }
+}
+
+/** Range-level operations whose undo item stores the cells they write (the rest keep a small mutation). */
+const CELL_PAYLOAD_RANGE_OPS: ReadonlySet<string> = new Set([
+  'clear_range',
+  'convert_to_values',
+  'find_replace',
+  'sort_range',
+])
+
+/**
+ * Cells the undo history would store for a plan: the target area of every cell,
+ * format and cell-writing range change. Row and column inserts and deletes and
+ * the ops that write no cell (merge, filter, validation) are not counted; the
+ * undo gate never drops an entry during a run (univer-state.ts).
+ */
+export function planUndoCells(plan: ChangePlan): number {
+  const area = (range: string): number => rangeCellCount(parseRange(range))
+  let cells = 0
+  for (const change of plan.cellChanges) cells += area(change.address)
+  for (const change of plan.formatChanges) cells += area(change.range)
+  for (const { op } of plan.structuralChanges) {
+    const bulk = op as { op: string; range?: unknown; source?: unknown; target?: unknown }
+    if (CELL_PAYLOAD_RANGE_OPS.has(bulk.op) && typeof bulk.range === 'string') {
+      cells += area(bulk.range)
+    } else if (bulk.op === 'fill_range' && typeof bulk.target === 'string') {
+      cells += area(bulk.target)
+    } else if (bulk.op === 'copy_range' || bulk.op === 'move_range') {
+      cells += rangeCellCount(copyTargetBounds(op as CopyRangeOperation))
+      if (bulk.op === 'move_range' && typeof bulk.source === 'string') cells += area(bulk.source)
+    }
+  }
+  return cells
 }
 
 /**
  * Takes the run's edits back out and holds the plans as a proposal. A run that
- * changed nothing yields none. A run with an edit that never reached the undo
- * history, or with more undo steps than the backend keeps, is left applied and
- * reported as unheld: a partial revert would pass for a held proposal.
+ * changed nothing yields none. `RunRecord.refusal` keeps every plan inside the
+ * backend's undo, so a run that still outgrows it broke that guard: it throws
+ * rather than revert a part of the run and pass for a held proposal.
  */
 export async function holdRun(backend: ProposalBackend, run: RunSummary): Promise<TurnProposal> {
-  if (run.irreversible || run.undoSteps > backend.undoCapacity) return UNHELD
+  if (run.undoSteps > backend.undoCapacity) {
+    throw new Error(
+      `The run left ${run.undoSteps} undo steps; the undo keeps ${backend.undoCapacity}.`,
+    )
+  }
   if (run.undoSteps === 0) return NO_PROPOSAL
   await backend.undo(run.undoSteps)
   if (run.plans.length === 0) return NO_PROPOSAL
