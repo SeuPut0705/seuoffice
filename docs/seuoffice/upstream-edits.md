@@ -4,4 +4,8 @@
 
 | 파일 | 까닭 | 커밋 제목 |
 |---|---|---|
-| 아직 없음 | | |
+| `.github/workflows/growth.yml`(삭제) | 상위 프로젝트 운영용. 매시간 이 저장소에 커밋하고 비공개 Actions 시간을 쓴다 | chore: adapt the imported tree to seuoffice |
+| `.github/workflows/free-models.yml`(삭제) | 상위 프로젝트 운영용 주간 작업 | chore: adapt the imported tree to seuoffice |
+| `.github/CODEOWNERS` | 검토자를 `@pblsketch`에서 `@SeuPut0705`로 | chore: adapt the imported tree to seuoffice |
+| `tools/check-no-genspark.mjs` | `ALLOW`에 `docs/seuoffice/`와 인계 문서 항목 추가(상위 프로젝트 이름과 주소를 인용하는 기록) | chore: adapt the imported tree to seuoffice |
+| `NOTICE` | 끝에 seuoffice 수정 고지 단락 추가 | chore: adapt the imported tree to seuoffice |

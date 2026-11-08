@@ -116,6 +116,10 @@ const ALLOW = [
     path: 'packages/cli/tests/check-no-genspark.test.ts',
     reason: 'the tests of this tool feed it the text it must find',
   },
+  {
+    path: /^docs\/(?:seuoffice\/|인계-2026-11-08\.md$)/,
+    reason: 'seuoffice records that cite the upstream projects by name and address',
+  },
 ]
 
 /** Never text, whatever the first bytes look like */
