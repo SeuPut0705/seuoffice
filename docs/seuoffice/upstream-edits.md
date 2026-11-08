@@ -9,3 +9,4 @@
 | `.github/CODEOWNERS` | 검토자를 `@pblsketch`에서 `@SeuPut0705`로 | chore: adapt the imported tree to seuoffice |
 | `tools/check-no-genspark.mjs` | `ALLOW`에 `docs/seuoffice/`와 인계 문서 항목 추가(상위 프로젝트 이름과 주소를 인용하는 기록) | chore: adapt the imported tree to seuoffice |
 | `NOTICE` | 끝에 seuoffice 수정 고지 단락 추가 | chore: adapt the imported tree to seuoffice |
+| `apps/markdown/tests/source-splice.test.ts` | `git ls-files`를 `core.quotepath=off`로 읽게 함. seuoffice의 한글 파일 이름이 따옴표로 감싸져 시험이 실패했다 | test(markdown): read repository paths unquoted |

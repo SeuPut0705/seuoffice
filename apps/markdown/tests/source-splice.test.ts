@@ -258,7 +258,11 @@ describe('source splice', () => {
   // 294 topic bodies, which is what pushed it over on this branch.
   it('round-trips every markdown file in the repository', { timeout: 120_000 }, () => {
     const root = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim()
-    const files = execSync('git ls-files -- "*.md"', { cwd: root, encoding: 'utf8' })
+    // quotepath off: git would otherwise quote and octal-escape non-ASCII file names
+    const files = execSync('git -c core.quotepath=off ls-files -- "*.md"', {
+      cwd: root,
+      encoding: 'utf8',
+    })
       .split('\n')
       .filter(Boolean)
     expect(files.length).toBeGreaterThan(20)
