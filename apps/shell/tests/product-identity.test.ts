@@ -72,7 +72,8 @@ describe('one product name', () => {
   })
 
   it('titles every window document with the product name before any script runs', () => {
-    const apps = readdirSync(join(ROOT, 'apps'))
+    // seuoffice: apps/web is the browser launcher, not an Electron window
+    const apps = readdirSync(join(ROOT, 'apps')).filter((app) => app !== 'web')
     const pages = apps.flatMap((app) => {
       const dir = join(ROOT, 'apps', app, 'src/renderer')
       return readdirSync(dir)
