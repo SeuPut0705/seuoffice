@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  IeumOffice AI button mark (reference drawing).
+
+  A rounded-square speech bubble holding a ring: the two shapes of the app
+  icon recomposed as "the assistant you talk to". Single colour, drawn with
+  `currentColor` so it follows the surrounding text colour in both themes.
+
+  Geometry adapted from the Lucide icons `message-square` and `circle`
+  (ISC License, https://lucide.dev); see NOTICE.
+
+  The shipping copy is the React component packages/ui/src/AiMark.tsx, which
+  inlines the same two shapes. Keep the two files in sync by hand.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M7 3.5h10a3.5 3.5 0 0 1 3.5 3.5v7a3.5 3.5 0 0 1-3.5 3.5h-6l-4.2 3.4a.6.6 0 0 1-1-.5v-3.1A3.5 3.5 0 0 1 3.5 14V7A3.5 3.5 0 0 1 7 3.5z"/>
+  <circle cx="12" cy="10.5" r="2.6"/>
+</svg>

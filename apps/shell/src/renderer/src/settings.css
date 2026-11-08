@@ -1,0 +1,1462 @@
+/* Settings modal (opened from the account menu): two-pane dialog matched to
+   GenMail's settings window (values read from its packaged CSS) — borderless
+   header/nav, label-left / control-right rows with hairline dividers.
+   Chrome colors use semantic tokens only (see CLAUDE.md theming rules). */
+
+.set-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5vh 24px;
+  background: var(--color-bg-overlay);
+  backdrop-filter: blur(6px);
+}
+
+.set-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, 100%);
+  height: min(720px, 90vh);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-modal-strong);
+  overflow: hidden;
+}
+
+.set-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+}
+
+.set-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.set-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.set-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.set-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.set-nav {
+  flex-shrink: 0;
+  width: 232px;
+  padding: 8px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.set-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.set-nav-item svg {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.set-nav-item:hover:not(.active) {
+  background: var(--bg-content);
+}
+
+.set-nav-item.active {
+  background: var(--bg-hover);
+  font-weight: 600;
+}
+
+.set-nav-item.active svg {
+  color: var(--text-primary);
+}
+
+.set-nav-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.set-pane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 28px 24px;
+  overflow-y: auto;
+  /* height of the sticky title row, so focus/scroll-into-view lands below it */
+  scroll-padding-top: 49px;
+}
+
+/* the pane scrolls, so rows must keep their natural height: .set-field's
+   explicit min-height would otherwise let flex shrink collapse tall rows
+   (multi-line stacks) below their content and overlap the next row */
+.set-pane > * {
+  flex-shrink: 0;
+}
+
+.set-pane-title {
+  margin: 8px 0 18px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/* title row pinned to the top of the scrolling pane so the test/save actions
+   and their result pill stay in view however long the form is */
+.set-pane-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 -28px 12px;
+  padding: 8px 28px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface);
+}
+
+.set-pane-head .set-pane-title {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.set-pane-actions {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.set-pane-actions .set-ai-status {
+  margin-right: 0;
+}
+
+.set-field {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 52px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.set-field:last-child {
+  border-bottom: none;
+}
+
+.set-field-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.set-field-label {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-primary);
+}
+
+.set-field-value {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: right;
+  user-select: text;
+  word-break: break-all;
+}
+
+/* stacked label + secondary description (analytics toggle row) */
+.set-field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.set-field-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+/* MCP service row: the label + description + status stack reads better with the
+   switch aligned to the label line instead of centered against three lines */
+.set-field-top {
+  align-items: flex-start;
+}
+
+.set-field-top .set-switch {
+  margin-top: 2px;
+}
+
+/* MCP pane: running/stopped line with a status dot */
+.set-mcp-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.set-status-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+}
+
+.set-status-dot.running {
+  background: var(--success);
+}
+
+.set-status-dot.error {
+  background: var(--danger);
+}
+
+/* MCP pane: client config example — heading row with the copy button, then the
+   snippet on its own full-width row (a side-by-side flex row squeezes the
+   tall snippet against the button) */
+.set-config-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.set-config-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+/* MCP pane: compact action group in a config/log head row */
+.set-btn-row {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+/* MCP pane: copyable config snippet */
+.set-code {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  overflow-x: auto;
+  white-space: pre;
+  user-select: text;
+}
+
+/* MCP pane: in-pane log viewer — fixed height, scrolls, follows the tail */
+.set-log {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.set-log-empty {
+  color: var(--text-tertiary);
+}
+
+/* on/off switch (analytics toggle) */
+.set-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 11px;
+  background: var(--bg-hover-strong);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.set-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-modal-strong);
+  transition: left 0.15s ease;
+}
+
+.set-switch[aria-checked='true'] {
+  background: var(--color-btn-primary);
+}
+
+.set-switch[aria-checked='true']::after {
+  left: 20px;
+}
+
+.set-switch:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* GenMail-style select pill: the visible layer is just the current value +
+   chevron (width hugs the content); the real <select> sits on top invisibly
+   and only supplies the click target and the native popup. */
+.set-select-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.set-select-wrap:hover,
+.set-select-wrap:focus-within {
+  background: var(--bg-hover);
+}
+
+.set-select-text {
+  font-size: 14px;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.set-select-wrap::after {
+  content: '';
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  margin-top: -4px;
+  border-right: 1.5px solid var(--text-primary);
+  border-bottom: 1.5px solid var(--text-primary);
+  transform: rotate(45deg);
+}
+
+.set-select {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  font: inherit;
+  cursor: pointer;
+  /* the element is invisible, but the OS popup that opens on click reads its
+     computed color/background to render the option list */
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+.set-select option {
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+/* Shared dropdown (@genoffice/ui gs-dd) in settings rows: borderless text
+ * trigger matching the old .set-select-wrap look */
+.set-dd {
+  flex-shrink: 0;
+}
+
+.set-dd .gs-dd-btn {
+  height: auto;
+  gap: 6px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.set-dd .gs-dd-btn:hover,
+.set-dd .gs-dd-btn:focus-visible {
+  background: var(--bg-hover);
+}
+
+.set-dd .gs-dd-pop {
+  min-width: 180px;
+}
+
+.set-dd .gs-dd-item {
+  font-size: 13px;
+}
+
+/* provider mark in the AI provider dropdown (trigger value + option rows are
+   flex containers from gs-dd); every mark follows the text color */
+.set-provider-logo {
+  flex-shrink: 0;
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  color: var(--text-primary);
+}
+
+.set-provider-logo svg {
+  width: 100%;
+  height: 100%;
+}
+
+.set-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.set-btn:hover {
+  background: var(--bg-hover-strong);
+}
+
+.set-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.set-btn.primary {
+  border-color: var(--color-btn-primary);
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
+}
+
+.set-btn.primary:hover {
+  background: var(--color-btn-primary-hover);
+}
+
+.set-btn.danger {
+  color: var(--danger);
+}
+
+.set-pane-footer {
+  margin-top: auto;
+  padding-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ── AI model pane ── */
+
+.set-input {
+  flex-shrink: 0;
+  width: 46%;
+  min-width: 200px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+.set-num {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.set-num-input {
+  width: 64px;
+  min-width: 0;
+  text-align: right;
+}
+
+.set-input:focus {
+  outline: none;
+  border-color: var(--accent, var(--text-primary));
+}
+
+.set-input::placeholder {
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
+.set-ai-note {
+  padding: 8px 0 2px;
+  line-height: 1.5;
+}
+
+/* feedback pill: spinner while testing, green on success/saved, red on failure */
+.set-ai-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-right: auto; /* status hugs the left edge, action buttons stay right */
+  padding: 4px 10px 4px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--surface-subtle);
+}
+
+.set-ai-status.ok {
+  color: var(--success);
+  border-color: var(--success-border);
+  background: var(--success-bg);
+}
+
+.set-ai-status.err {
+  color: var(--danger);
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.set-ai-status-icon {
+  flex-shrink: 0;
+}
+
+.set-ai-status-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.set-ai-spin {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--text-secondary);
+  border-radius: 50%;
+  animation: set-ai-spin 0.8s linear infinite;
+}
+
+@keyframes set-ai-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.set-pane-subtitle {
+  margin: 28px 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.set-pane-subhead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 28px 0 4px;
+}
+
+.set-pane-subhead .set-pane-subtitle {
+  margin: 0;
+}
+
+.set-pane-subhead .set-ai-status {
+  margin-right: 0;
+  padding: 2px 8px 2px 6px;
+  font-size: 12px;
+}
+
+/* ── Integrations pane ── */
+
+.set-intg-hero {
+  margin: 8px 0 4px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--surface-subtle);
+}
+
+.set-intg-hero-title {
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.set-intg-hero-steps {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: intg-step;
+}
+
+.set-intg-hero-steps li {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-primary);
+  counter-increment: intg-step;
+}
+
+.set-intg-hero-steps li::before,
+.set-intg-step-no {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-btn-primary);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-btn-primary-text);
+}
+
+.set-intg-hero-steps li::before {
+  content: counter(intg-step);
+}
+
+.set-intg-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.set-intg-version {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+.set-intg-lead {
+  padding: 4px 0 8px;
+}
+
+/* which way a part goes: who uses whom (the two MCP parts point opposite ways) */
+.set-intg-who {
+  padding: 2px 0 0;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.set-intg-warn {
+  padding: 0 0 8px;
+  color: var(--danger);
+}
+
+.set-intg-row {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.set-intg-row .set-field {
+  border-bottom: none;
+}
+
+.set-intg-row[data-state='installed'] .set-intg-state {
+  color: var(--success);
+}
+
+/* an older copy in a tool's own folder, listed under the shared row that now serves that tool */
+.set-intg-row-legacy {
+  padding-left: 16px;
+}
+
+.set-intg-legacy {
+  color: var(--text-muted);
+}
+
+.set-intg-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.set-intg-details {
+  margin-top: 10px;
+}
+
+.set-intg-details > summary {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.set-intg-details > summary:hover {
+  color: var(--text);
+}
+
+.set-intg-cli {
+  margin-top: 24px;
+}
+
+/* the two routes (CLI, MCP) as numbered parts with a rule between them */
+.set-intg-part {
+  margin-top: 8px;
+}
+
+.set-intg-part + .set-intg-part {
+  margin-top: 28px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.set-intg-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 22px 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.set-intg-mcp-http {
+  margin-top: 8px;
+}
+
+.set-mcp-advanced {
+  margin-top: 16px;
+}
+
+.set-intg-code-block {
+  align-items: flex-start;
+}
+
+.set-intg-code-block code {
+  white-space: pre;
+  word-break: normal;
+  overflow-x: auto;
+}
+
+.set-intg-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.set-intg-option:last-of-type {
+  border-bottom: none;
+}
+
+.set-intg-option .set-field-stack {
+  flex: 1;
+}
+
+.set-intg-option-letter {
+  flex-shrink: 0;
+  width: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.set-intg-code {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 6px 6px 6px 10px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+}
+
+.set-intg-code code {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text);
+  user-select: text;
+  word-break: break-all;
+}
+
+.set-intg-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.set-intg-example {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px 8px 12px;
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.set-intg-example-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+  user-select: text;
+}
+
+/* the path about to be written, shown before any write happens */
+.set-intg-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+}
+
+.set-intg-confirm .set-field-desc {
+  word-break: break-all;
+}
+
+.set-intg-notice {
+  padding: 0 0 10px;
+}
+
+.set-intg-path {
+  text-align: left;
+}
+
+/* Settings → About: the one-click update entry next to the version row */
+.set-update-btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.set-update-btn:hover,
+.set-update-btn:focus-visible {
+  filter: brightness(0.95);
+}
+
+.set-ai-endpoint-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.set-ai-endpoint-row .set-dd {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── AI section: subscription connection first, keys under Advanced ── */
+
+/* the web-reading block: its title and Save/Clear share one head row */
+.set-read-url-head {
+  justify-content: space-between;
+}
+
+.set-sub-title {
+  margin-top: 0;
+}
+
+/* "Use for free" follows the subscription cards as a second group */
+.set-sub-title.free-ai-title {
+  margin-top: 20px;
+}
+
+/* the two connect cards (@genoffice/ui ai-sub-card) stacked, with room before the rows */
+.set-sub-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 6px;
+}
+
+/* a login or install that could not be started, under its card */
+.set-sub-failed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--danger);
+}
+
+.set-link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.set-link:hover {
+  color: var(--text-primary);
+}
+
+/* notices from @genoffice/ui sit between rows: keep them off the hairlines */
+.set-pane .ai-sub-notice {
+  margin: 8px 0;
+}
+
+/* "Advanced" disclosure: a heading-weight toggle with a caret that turns when open */
+.set-adv-toggle {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  margin: 24px 0 4px;
+  padding: 4px 8px 4px 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.set-adv-toggle:hover {
+  background: var(--bg-hover);
+}
+
+.set-adv-toggle svg {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform 0.15s ease;
+}
+
+.set-adv-toggle[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+
+.set-adv-warning {
+  color: var(--danger);
+}
+
+/* the warning that has to be passed before automatic requests may use a subscription */
+.set-adv-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+  background: var(--danger-bg);
+}
+
+/* the two key areas inside Advanced */
+.set-adv-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 16px 0 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.set-adv-tab {
+  margin-bottom: -1px;
+  padding: 6px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.set-adv-tab:hover {
+  color: var(--text-primary);
+}
+
+.set-adv-tab.active {
+  border-bottom-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+/* ── Local AI card ── */
+
+.set-local-ai {
+  margin: 18px 0 4px;
+}
+
+.set-local-empty {
+  padding: 8px 0 10px;
+}
+
+.set-local-unavailable {
+  padding: 4px 0 8px;
+  font-size: 12px;
+}
+
+.set-local-servers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 6px;
+}
+
+.set-local-server {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-subtle);
+}
+
+.set-local-server-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.set-local-server-main:focus-visible {
+  outline: 2px solid var(--accent, var(--text-primary));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.set-local-server-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.set-local-server-address {
+  font-size: 12px;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.set-local-server-status,
+.set-local-server-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.set-local-server[data-state='online'] .set-local-server-status {
+  color: var(--success);
+}
+
+.set-local-server[data-state='offline'] .set-local-server-status,
+.set-local-server[data-state='error'] .set-local-server-status {
+  color: var(--danger);
+}
+
+.set-local-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--bg-hover);
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.set-local-badge.in-use {
+  border-color: var(--success-border);
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.set-local-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.set-local-add {
+  padding: 2px 0 6px;
+}
+
+.set-local-form {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.set-local-form-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.set-local-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.set-local-models {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.set-local-model {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.set-local-model:hover {
+  background: var(--bg-hover);
+}
+
+.set-local-model[aria-pressed='true'] {
+  border-color: var(--accent, var(--text-primary));
+}
+
+.set-local-model-id {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.set-local-models-empty {
+  padding: 4px 0 8px;
+}
+
+.set-local-profile {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-subtle);
+}
+
+/* a context length can reach 10,000,000; the generic 64px field clips it */
+.set-local-profile .set-num-input {
+  width: 112px;
+}
+
+.set-local-source {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.set-local-notes {
+  width: 46%;
+  min-height: 56px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.set-local-warning {
+  padding: 4px 0;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.set-local-warning-block {
+  padding: 2px 0 6px;
+}
+
+.set-local-tests {
+  margin: 4px 0 8px;
+}
+
+.set-local-test-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.set-local-test-row[data-state='pass'] span:last-child {
+  color: var(--success);
+}
+
+.set-local-test-row[data-state='fail'] span:last-child {
+  color: var(--danger);
+}
+
+.set-local-test-row[data-state='skip'] span:last-child,
+.set-local-test-row[data-state='unconfirmed'] span:last-child {
+  color: var(--text-secondary);
+}
+
+.set-local-invalid {
+  padding: 2px 0 6px;
+  color: var(--danger);
+}
+
+.set-local-actions {
+  justify-content: space-between;
+}
+
+/* Settings → General: which new-document entries home lists, and their order */
+.set-home-kinds-body {
+  flex: 1;
+  gap: 10px;
+}
+
+.set-home-kinds-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.set-home-kinds-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.set-home-kind {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 4px 10px 4px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.set-home-kind:last-child {
+  border-bottom: none;
+}
+
+.set-home-kind-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.set-home-kind-name.off {
+  color: var(--text-tertiary);
+}
+
+.set-home-kind-sub {
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.set-home-kind-move {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.set-home-kind-move:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.set-home-kind-move:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.set-home-kind .set-switch {
+  margin-left: 6px;
+}
+
+/* Settings › General "AI slide fonts": four mode cards, each drawn in its own fonts */
+.set-slides-fonts-body {
+  flex: 1;
+  gap: 12px;
+}
+
+.set-slides-fonts-modes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.set-slides-font-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--surface);
+  font: inherit;
+  color: var(--text-primary);
+  text-align: start;
+  cursor: pointer;
+}
+
+.set-slides-font-card:hover {
+  background: var(--bg-hover);
+}
+
+.set-slides-font-card:focus-visible {
+  outline: 2px solid var(--accent, var(--text-primary));
+  outline-offset: 1px;
+}
+
+.set-slides-font-card.selected {
+  border-color: var(--accent, var(--text-primary));
+  background: var(--surface-subtle);
+}
+
+.set-slides-font-card-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.set-slides-font-card.selected .set-slides-font-card-name {
+  color: var(--text-primary);
+}
+
+.set-slides-font-sample-title,
+.set-slides-font-sample-body,
+.set-slides-font-card-desc {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.set-slides-font-sample-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.set-slides-font-sample-body {
+  font-size: 13px;
+}
+
+.set-slides-font-card-desc {
+  font-size: 13px;
+  line-height: 2.6;
+  color: var(--text-secondary);
+}
+
+.set-slides-fonts-pickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+
+.set-slides-fonts-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.set-slides-fonts-picker-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}

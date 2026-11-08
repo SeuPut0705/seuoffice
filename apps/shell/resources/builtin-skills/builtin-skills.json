@@ -1,0 +1,65 @@
+[
+  {
+    "name": "meeting-minutes",
+    "source": "github/awesome-copilot",
+    "path": "skills/meeting-minutes",
+    "commit": "613efc8c21d9b3ce642dff361d17006cd9967e28",
+    "license": "MIT",
+    "agentOnly": false,
+    "modified": false
+  },
+  {
+    "name": "internal-comms",
+    "source": "anthropics/skills",
+    "path": "skills/internal-comms",
+    "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+    "license": "Apache-2.0",
+    "agentOnly": false,
+    "modified": false
+  },
+  {
+    "name": "humanizer",
+    "source": "blader/humanizer",
+    "path": "",
+    "commit": "8c307f367c91bd974002f10f2be2965d642c13df",
+    "license": "MIT",
+    "agentOnly": false,
+    "modified": false
+  },
+  {
+    "name": "copy-editing",
+    "source": "coreyhaines31/marketingskills",
+    "path": "skills/copy-editing",
+    "commit": "e85f3cbc2e4a79bf33b2a12e9bdd9087d414735b",
+    "license": "MIT",
+    "agentOnly": false,
+    "modified": false
+  },
+  {
+    "name": "find-skills",
+    "source": "vercel-labs/skills",
+    "path": "skills/find-skills",
+    "commit": "a80e4c9d12d607631249d4d7d059f835d4b2f13a",
+    "license": "MIT",
+    "agentOnly": true,
+    "modified": true
+  },
+  {
+    "name": "administration-report",
+    "source": "ieumoffice",
+    "path": "",
+    "commit": "",
+    "license": "Apache-2.0",
+    "agentOnly": false,
+    "modified": false
+  },
+  {
+    "name": "administration-report-draft",
+    "source": "ieumoffice",
+    "path": "",
+    "commit": "",
+    "license": "Apache-2.0",
+    "agentOnly": false,
+    "modified": false
+  }
+]

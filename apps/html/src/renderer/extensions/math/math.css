@@ -1,0 +1,117 @@
+.html-math-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: var(--color-bg-overlay);
+}
+.html-math-dialog {
+  box-sizing: border-box;
+  width: min(760px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--hx-pop-shadow);
+}
+.html-math-dialog header,
+.html-math-dialog footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.html-math-dialog header {
+  justify-content: space-between;
+}
+.html-math-dialog h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.html-math-dialog p,
+.html-math-dialog small {
+  color: var(--text-muted);
+}
+.html-math-dialog button {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.html-math-dialog button:hover {
+  background: var(--hover);
+}
+.html-math-dialog button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.html-math-dialog button.primary {
+  background: var(--accent);
+  color: var(--surface);
+}
+.html-math-field math-field {
+  display: block;
+  min-height: 70px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 24px;
+  --selection-background-color: var(--accent-soft);
+  --caret-color: var(--accent);
+}
+.html-math-templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+.html-math-source {
+  display: grid;
+  gap: 6px;
+}
+.html-math-source textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  background: var(--surface);
+  font-family: monospace;
+  line-height: 1.5;
+}
+.html-math-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+.html-math-display input {
+  width: auto;
+}
+.html-math-preview {
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  min-height: 55px;
+}
+.html-math-preview code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.html-math-dialog footer {
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+.html-math-dialog footer small {
+  margin-right: auto;
+}

@@ -1,0 +1,233 @@
+GenOffice
+Copyright 2026 Mainfunc, Inc.
+
+This product includes software developed at Mainfunc, Inc.
+
+Bundled third-party components are listed in THIRD-PARTY-NOTICES.txt, which
+tools/gen-third-party-notices.mjs generates at packaging time. It is not
+checked into this repository; in a release build it ships inside the
+application bundle (Contents/Resources on macOS, resources/ on Windows),
+starting with the full text of this file, next to LICENSE.txt (the Apache
+License 2.0), NOTICE.txt (this file) and LICENSE-UNICODE.txt. Run
+`node tools/gen-third-party-notices.mjs` to produce it from a source
+checkout.
+
+Bundled fonts and their licenses are documented in
+apps/docs/src/renderer/fonts/README.md. The slide design templates' fonts
+are listed under "Slide design template fonts" below.
+
+Unicode Character Database
+
+apps/pdf/src/shared/radicals.ts contains a generated mapping derived from
+Unicode Character Database 17.0.0, EquivalentUnifiedIdeograph.txt
+(2025-08-01):
+https://www.unicode.org/Public/17.0.0/ucd/EquivalentUnifiedIdeograph.txt
+
+Copyright © 1991-2026 Unicode, Inc. This data is distributed under Unicode
+License v3. The complete copyright and permission notice is reproduced in
+LICENSE-UNICODE.txt.
+
+Office Open XML schemas
+
+tools/ooxml-validate/schemas contains the ISO/IEC 29500-4:2016 (ECMA-376
+Part 4, Transitional) XML Schema files for PresentationML and DrawingML, as
+distributed in the python-docx repository (ref/xsd), with one marked local
+amendment (see tools/ooxml-validate/README.md). They are used only by tests
+and development tooling and are not shipped in the application.
+
+IeumOffice brand artwork
+
+The IeumOffice app icon, logo lockup and AI button mark are original
+compositions for this project: the sources in apps/shell/build/brand, the icon
+and logo files tools/gen-brand-assets.mjs derives from them, and
+packages/ui/src/AiMark.tsx. Their geometry is adapted from the Lucide icon set
+(https://lucide.dev), icons `circle`, `square`, `link` and `message-square`.
+
+Lucide is distributed under the ISC License, Copyright (c) Lucide Icons and
+Contributors. The `circle`, `square` and `link` icons are derived from the
+Feather project and are distributed under the MIT License, Copyright (c)
+2013-present Cole Bemis. Both licenses permit use, modification and
+redistribution provided their copyright and permission notices are kept; the
+full texts are at https://github.com/lucide-icons/lucide/blob/main/LICENSE.
+
+The wordmark in the logo lockup is set in Roboto Bold 2.137, Copyright 2011
+Google Inc., licensed under the Apache License, Version 2.0, and converted to
+outlines.
+
+Slide design templates
+
+The twelve built-in slide design templates in
+packages/pipelines/src/slides/templates (coral, blue-professional,
+monochrome, neo-grid-bold, block-frame, raw-grid, studio, signal, grove,
+editorial-tri-tone, emerald-editorial, vellum) are re-authored from the
+designs in frontend-slides (https://github.com/zarazhangrui/frontend-slides),
+folder bold-template-pack/, read at commit
+9906a34d640d2111f724544cbc50f7f130569ae1. The templates' style texts and
+sample covers are based on those designs. frontend-slides is distributed
+under the MIT License:
+
+  MIT License
+
+  Copyright (c) 2025 Zara Zhang
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+The Korean font pairings of the templates referred to k-slide
+(https://k-slide.web.app).
+
+Slide design template fonts
+
+packages/ui/template-fonts holds the fonts the design templates use. It
+ships once in the installer as resources/template-fonts. Every file is the
+original distributor's, unmodified, except the two Noto Serif KR faces, whose
+CFF outlines are converted to TrueType (names and metrics unchanged); all are
+licensed under the SIL Open Font License, Version 1.1. Each family's license text sits beside its files, and
+packages/ui/template-fonts/README.md records the license evidence and the
+exact source of every file. All files were downloaded on 2026-10-14.
+
+- Pretendard 1.309 (release v1.3.9), SIL OFL 1.1 with Reserved Font Name
+  "Pretendard", https://github.com/orioncactus/pretendard
+- Noto Serif KR 2.003, SIL OFL 1.1 (Reserved Font Name "Source"), outlines
+  converted to TrueType, https://github.com/notofonts/noto-cjk
+- Black Han Sans 1.001, SIL OFL 1.1,
+  https://github.com/google/fonts/tree/main/ofl/blackhansans
+- Do Hyeon 1.001, SIL OFL 1.1,
+  https://github.com/google/fonts/tree/main/ofl/dohyeon
+- Gowun Dodum 2.000, SIL OFL 1.1,
+  https://github.com/yangheeryu/Gowun-Dodum
+- Gowun Batang 2.000, SIL OFL 1.1,
+  https://github.com/yangheeryu/Gowun-Batang
+- Bebas Neue 2.000, SIL OFL 1.1,
+  https://github.com/google/fonts/tree/main/ofl/bebasneue
+- Space Grotesk 2.000, SIL OFL 1.1,
+  https://github.com/floriankarsten/space-grotesk
+- Playfair Display 1.203, SIL OFL 1.1 with Reserved Font Name
+  "Playfair Display", https://github.com/google/fonts/tree/main/ofl/playfairdisplay
+- Archivo Black 1.006, SIL OFL 1.1,
+  https://github.com/google/fonts/tree/main/ofl/archivoblack
+
+Built-in skills
+
+apps/shell/resources/builtin-skills holds the five skills shipped with the
+app. It ships in the installer as resources/builtin-skills. Each folder is the
+upstream skill as read at the commit below, with its license file beside it;
+builtin-skills.json in the same folder records the same source, path, commit
+and license. Only the files listed for each skill were taken.
+
+- meeting-minutes: https://github.com/github/awesome-copilot, path
+  skills/meeting-minutes (SKILL.md), read at commit
+  613efc8c21d9b3ce642dff361d17006cd9967e28. MIT License, Copyright GitHub,
+  Inc.; the repository's LICENSE is copied as meeting-minutes/LICENSE.
+  Unmodified.
+- internal-comms: https://github.com/anthropics/skills, path
+  skills/internal-comms (SKILL.md, LICENSE.txt, examples/), read at commit
+  dbd4588f9e1033efb41dad4bef2f7947c8993d44. Apache License, Version 2.0,
+  Copyright 2026 Anthropic, PBC; the full text is internal-comms/LICENSE.txt.
+  Unmodified.
+- humanizer: https://github.com/blader/humanizer, repository root (SKILL.md,
+  LICENSE), read at commit 8c307f367c91bd974002f10f2be2965d642c13df. MIT
+  License, Copyright (c) 2025 Siqi Chen. Unmodified.
+- copy-editing: https://github.com/coreyhaines31/marketingskills, path
+  skills/copy-editing (SKILL.md, references/), read at commit
+  e85f3cbc2e4a79bf33b2a12e9bdd9087d414735b. MIT License, Copyright (c) 2025
+  Corey Haines; the repository's LICENSE is copied as copy-editing/LICENSE.
+  Unmodified.
+- find-skills: https://github.com/vercel-labs/skills, path skills/find-skills
+  (SKILL.md), read at commit a80e4c9d12d607631249d4d7d059f835d4b2f13a. MIT
+  License, Copyright (c) 2026 Vercel, Inc.; the repository's LICENSE is copied
+  as find-skills/LICENSE. Modified: appended a section for IeumOffice
+  ("In IeumOffice") at the end of SKILL.md.
+
+IeumOffice modifications
+
+IeumOffice (https://github.com/pblsketch/openoffice) is a modified version of
+GenOffice (https://github.com/genspark-ai/genoffice), the work this file's
+opening notice refers to. Files of the original work have been changed, added
+and removed by the IeumOffice contributors; the repository history records
+each change. The modifications are licensed under the Apache License, Version
+2.0, like the original work.
+
+IeumOffice is not affiliated with, sponsored by or endorsed by Mainfunc, Inc.
+The names GenOffice and Genspark and their logos belong to their owners and
+are used here only to identify the original work.
+
+Hangul (HWP) document format
+
+The HWP/HWPX editor is built on rhwp (https://github.com/edwardkim/rhwp,
+MIT License). As required by Hancom Inc. for software developed with its
+published HWP format document:
+
+본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여
+개발하였습니다.
+
+(This product was developed with reference to Hancom's published document on
+the Hangul document file format (.hwp).)
+
+Hanja dictionary
+
+The HWP/HWPX editor's Convert to Hanja uses data/hanja/hanja.txt from libhangul
+(https://github.com/libhangul/libhangul), cut down at build time. That file is
+distributed under the following license:
+
+Copyright (c) 2005,2006 Choe Hwanjin
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+3. Neither the name of the author nor the names of its contributors
+   may be used to endorse or promote products derived from this software
+   without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+Trademarks
+
+IeumOffice is not affiliated with, sponsored by or endorsed by Microsoft
+Corporation, Hancom Inc., Adobe Inc., XMind Ltd., Google LLC, Anthropic or
+OpenAI. "Microsoft", "Windows", "Word", "Excel" and "PowerPoint" are
+trademarks of Microsoft Corporation. "한글" (Hangul), "한컴" (Hancom), "HWP"
+and "HWPX" are registered trademarks of Hancom Inc. "XMind" is a trademark of
+XMind Ltd. "Google Drive" is a trademark of Google LLC. "Claude" is a
+trademark of Anthropic; "Codex" and "ChatGPT" are trademarks of OpenAI. These
+and other product names are used only to say which files IeumOffice opens and
+what it works with. The file-type icons and the AI provider marks in the app
+are original drawings, not those companies' logos.
+
+The Apache License 2.0 grants no rights to the names or logos "IeumOffice",
+"이음오피스" or "GenOffice" (section 6).
+
+Contact
+
+Trademark and copyright reports and licensing questions: pblsketch@gmail.com

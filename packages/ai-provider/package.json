@@ -1,0 +1,37 @@
+{
+  "name": "@genoffice/ai-provider",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "Multi-provider LLM streaming + one-shot chat client (Claude/Gemini/DeepSeek/OpenAI/custom), shared by AI Docs and future apps (Excel / PPT)",
+  "exports": {
+    ".": "./src/index.ts",
+    "./browser": "./src/browser.ts",
+    "./codex-app-server": "./src/codex-app-server.ts",
+    "./custom-models": "./src/custom-models.ts",
+    "./key-models": "./src/key-model-refresh.ts",
+    "./local-models": "./src/local-models.ts",
+    "./local-test": "./src/local-test.ts",
+    "./free-connect": "./src/free-connect.ts",
+    "./subscription": "./src/subscription.ts",
+    "./claude-code-cli": "./src/claude-code-cli.ts",
+    "./agent-session": "./src/agent-session.ts",
+    "./codex-image": "./src/codex-image.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@genoffice/agent-core": "*",
+    "@genoffice/i18n": "*",
+    "@genoffice/zip-gate": "*",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}

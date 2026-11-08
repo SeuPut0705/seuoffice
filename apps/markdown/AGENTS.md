@@ -1,0 +1,62 @@
+# apps/markdown (`@genoffice/markdown`)
+
+Markdown 에디터다. 일반 `.md` 파일 위에서 TipTap 블록 편집기를 돌리고, 일반 텍스트와 JSON은 원문 편집기로 연다. AI는 공용 배선 위에 Markdown용 skill을 얹은 얇은 구성이다.
+
+## 맡은 범위
+
+- 렌더러(`src/renderer/`): 블록 편집기와 확장(`editor/`), Markdown 직렬화와 블록 단위 저장(`markdown/roundtripSerializer.ts`, `markdown/sourceSplice.ts`), 원문 편집기(`source/`), 내보내기 화면(`export/`).
+- 메인 프로세스(`src/main/markdown-main.ts`와 주변): 열기·저장, 문서가 소유한 자산 폴더 관리(`asset-lifecycle.ts`), 이미지 호스트 업로드(`image-host.ts`), 이미지 내보내기 세션(`image-export.ts`), PDF 인쇄(`print-pdf.ts`), 변환 임시 세션(`conversion-lifecycle.ts`), ODT 내보내기(`odt-export.ts`), PDF 편집기의 "노트에 넣기"를 받는 대기열(`note-append.ts`, 화면 쪽은 `src/renderer/note-append.ts`).
+- 공유 계약 `src/shared/`: IPC(`ipc.ts`의 `MARKDOWN_CHANNELS`), 열기 방식 판정(`text-mode.ts`), 원문 형식 보존(`source-text.ts`).
+- Markdown의 AI: 패널(`src/renderer/ai/AiPanel.tsx`), skill과 도구(`markdown-skill.ts`, `tools.ts`, `doc-writer.ts`, `search-skill.ts`), 막힌 실행과 이미지 도구 판정(`ai-connection.ts`), 연결 상태(`subscription-client.ts`), 가림 표시(`src/renderer/editor/redact.ts`).
+
+## 맡지 않는 것 (경계)
+
+- AI 요청의 실행은 이 모듈의 범위가 아니다. 공용 `ai:*` 채널과 구독 IPC 채널은 `apps/docs/src/main/docs-main.ts`의 `registerAiIpc`가 등록하고 이 모듈은 등록하지 않는다. 단독 실행(`startMarkdownStandalone`)에는 AI 핸들러가 없어 패널의 연결 상태가 `checking`에 머문다.
+- 제공자 선택은 `packages/ai-provider`, 보내기 규칙과 연결 카드·알림은 `packages/ui`, 가림 규칙의 공통 부분(표식 생성·검사, 범위의 모델용 글)은 `packages/agent-core`의 범위다. 이 모듈의 `redact.ts`는 Markdown에 필요한 명세만 넘긴다.
+- docx 생성 자체는 `packages/docx-engine`의 범위다. "변환해서 문서 에디터로 열기"로 만든 docx는 shell이 문서 탭으로 보낸다.
+- 탭, 창, 구독 프로그램의 수명은 `apps/shell`의 범위다.
+
+## 항상 지켜야 하는 것
+
+- 한 단어를 고친 저장이 파일 전체를 다시 쓰지 않는다. 저장은 원문을 최상위 블록으로 나눠 바뀐 블록만 다시 직렬화한다(`sourceSplice.ts`). 전체 재직렬화는 목록 기호, 강조 표기, 빈 줄을 정규화하고 스키마가 담지 못하는 것(링크 참조 정의, 각주 정의, 원시 HTML 블록)을 떨어뜨린다. 사용자가 git으로 관리하는 노트에 무관한 diff를 만든다.
+- 원문 편집에서는 BOM, 줄 끝 형식, 끝 개행이 바이트 그대로 살아남아야 한다(`source-text.ts`). 일반 텍스트와 JSON은 블록 편집기로 열지 않는다(`text-mode.ts`). 블록 편집기는 `---`, `*x*`, `1.`을 다르게 해석하고 줄 끝을 정규화해 고치지 않은 파일을 다시 써 버린다.
+- 문서 옆에 두는 파일의 이름을 바꾸지 않는다. 문서와 같은 폴더의 `assets/` 안에 앱이 소유한 파일 목록 `.genoffice-assets.json`(`ASSET_MANIFEST_FILENAME`)이 있고, 이것으로 "앱이 넣은 이미지"와 "사용자가 넣은 파일"을 구분한다. 이름을 바꾸면 기존 문서의 자산을 더는 앱의 것으로 알아보지 못한다. 앱이 넣지 않은 파일은 지우지 않는다.
+- 가려진 범위는 실제 글자 위의 표시다. 문서와 디스크의 파일은 원래 글자를 그대로 갖고, 모델에게 직렬화될 때만 `{{label}}`로 나간다. 변환은 Markdown 직렬화 전에 JSON에서 한다(`redactJson`). 텍스트 노드에 걸린 mark는 직렬화기가 mark의 렌더 함수로 보내지 않아, 직렬화 뒤에 바꾸려 하면 아무 일도 일어나지 않는다. `redactJson`은 throw하지 않고 모르는 노드는 통과시킨다. 모델의 편집은 표식이 쪼개지지 않았는지 검사한 뒤에만 받아들인다.
+- 이 모듈이 갖는 AI 채널은 `markdown:ai-generate-image` 하나다. 호출할 때 `{ path: 'screen', statuses: sharedSubscriptionStatuses() }`를 넘기고 로컬 경로는 문서 폴더와 붙여 넣기 임시 폴더로 제한한다. 가용성은 `AI_TOOL_CAPABILITIES_CHANNEL`(문서 에디터의 메인이 등록한 채널과 같은 이름이어야 한다)로 묻고, 답이 없으면 이미지 도구를 내놓지 않는다.
+- 구독 API의 채널 이름과 판독 함수는 `@genoffice/ai-provider/browser`의 것을 쓰고 사본을 만들지 않는다. 보내기 판단은 `useAiSendGate`만 쓴다. 다른 제공자로 저절로 넘어가는 코드를 넣지 않는다.
+- 이미지 호스트의 자격 증명은 메인 프로세스에만 둔다. 업로드는 메인에서 하고 로컬 `assets/` 사본을 대체 경로로 유지한다.
+- ODT로 내보내기(`'odt'` 요청, `markdown:export-odt`)는 docx 내보내기가 만든 바로 그 바이트(`exportDocxBytes`)를 `@genoffice/odt-engine`의 `docxToOdt`로 바꾼 것이다. ODT용 문서를 따로 만들지 않는다. 그래서 가린 범위도 docx 내보내기와 똑같이 다뤄진다(가림은 모델에게만 적용되고 내보낸 파일에는 원래 글자가 들어간다). ODT 경로가 docx보다 더 드러내는 것이 없다.
+- **다른 이름으로 저장에서 고른 Markdown 밖의 형식은 저장이 아니라 사본 내보내기다.** 저장 창은 화면에 그릴 문서가 있을 때만(`mode: 'saveAs'`이고 렌더러가 `pdfHtml`을 보냈을 때) Markdown·TXT·JSON 다음에 PDF, Word(`.docx`), ODT, 쪽 이미지(`.png`)를 내놓고, 제안 이름에는 확장자를 붙이지 않는다(확장자 없는 답은 `.md`). `.pdf`는 뒷단이 그 HTML을 PDF로 써서 연 뒤(`markdown:export-pdf`와 같은 렌더) `{ ok: true, path, exported: 'pdf' }`로 답한다. `.docx`·`.odt`·`.png`는 뒷단이 그 경로를 이 화면에 한 번만 허락해 두고(`saveAsExportTargets`) 아무것도 쓰지 않은 채 `{ ok: true, path, exportAs }`로 답하며, 화면이 내보내기 메뉴의 코드(`runExport`)를 그 경로(`saveAsTarget`)로 돌린다. 이때 두 번째 저장 창·폴더 창은 뜨지 않고, 허락받지 않은 경로는 거절한다. 쪽 이미지는 한 쪽이면 입력한 이름 그대로, 여러 쪽이면 같은 폴더에 `이름-01.png`, `이름-02.png`…(`numberedExportPaths`)로 쓴다. 어느 경우든 문서의 경로·바뀜 상태·복구 사본·자산은 그대로라 다음 저장은 계속 원래 `.md`에 쓴다. `exported`·`exportAs`를 저장 성공으로 다루면 탭이 사본을 가리키게 되므로 화면은 이 값을 먼저 본다. 텍스트·JSON 원문 편집기의 Save As에는 내보내기 형식을 내놓지 않는다(그 내보내기들은 블록 편집기의 화면이 있어야 한다).
+- ODT 내보내기 순서: 저장 창(`.odt`) → docx → ODT → `report`가 비어 있지 않으면 "바뀌는 것·빠지는 것" 확인 창(뒷단의 `dialog.showMessageBox`, 문구는 `odt-export.ts`의 21개 언어 사전) → 쓰기. 취소하면 아무것도 쓰지 않는다. 테마 부분이 있다는 것만으로는 보고하지 않으므로, 보통의 마크다운 문서는 확인 창 없이 바로 쓴다. 편집 화면 그림(`renderedObjects`)은 넘기지 않고, 수식은 엔진의 이름표 상자가 된다.
+- **"노트에 넣기"(결정 0043)는 노트 파일에 쓰지 않는다.** 셸이 노트 탭의 webContents에 글을 맡기면(`queueMarkdownNoteAppendFor`, 알림 `markdown:note-append-ready`), 그 탭의 화면이 `markdown:note-append-take`로 한 번만 가져가 블록 편집기의 문서 **끝에** 되돌릴 수 있는 편집으로 넣고 "바뀜" 상태로 만든다. 저장은 사람이 그 탭에서 한다. 이 편집기는 바깥에서 바뀐 파일을 다시 읽지 않으므로, 파일에 직접 쓰면 열린 탭과 디스크가 어긋난다. 맡긴 글은 그 노트 파일을 보여 주는 탭만 가져간다. 제목 없는 탭, 다른 파일을 보여 주는 탭, 원문 편집기로 연 파일, 가져간 뒤 다시 불러온 탭, 먼저 닫힌 탭은 아무것도 받지 않는다.
+- 미리 보기와 내보내기의 문서 스타일은 문서 내용이다. 크롬 색 토큰은 리본·패널 같은 UI에만 쓴다.
+
+## 이 모듈의 방식
+
+- **발표 모드는 문서만 남긴다.** F5는 HTML 전체화면으로 열고 리본·AI 창·개요/백링크 패널·상태 표시줄을 숨긴다. 원문 보기(`sourceViewOpen`)가 열려 있었으면 닫았다가 발표가 끝날 때 다시 연다. 발표 중에는 편집기를 읽기 전용으로 둔다(`editor.setEditable(false)`). Esc·F5로 끝나며, OS에서 전체화면이 풀려도 같은 복원을 한다. `.txt`·`.json`처럼 블록 편집기가 없는 파일은 발표하지 않는다. 키 판정은 `@genoffice/ui`의 `presentationKeyOf` 하나다.
+- 링크는 `window.open`으로 열고, 그 창구는 메인이 `shell.openExternal`로 넘긴다. 편집 중에는 Ctrl/Cmd+클릭, 발표(F5)처럼 읽기 전용일 때는 그냥 클릭이다(`linkOpen.ts`의 `externalLinkTarget`이 http·https·mailto만 통과시킨다). 앵커의 기본 이동은 막는다. 편집 중에 링크를 그냥 처음 클릭하면 Ctrl/⌘+클릭 안내를 한 번 띄운다(`linkOpenHint`).
+- 메인 코드는 shell 번들에 들어간다(`../../../markdown/src/main/markdown-main`을 상대 경로로 import한다). `src/main`을 고친 뒤에는 shell을 다시 빌드한다.
+- 경로는 뷰별로 허가된 것만 다룬다. 새 창을 만들 때 `grantAndTrack`으로 열 파일을 등록한다.
+- 위키 링크의 바탕 폴더(vault)는 기본 저장 폴더(`configuredDefaultSaveDir`)다. `[[` 자동 완성(`wikiSuggest.ts`, 목록은 `wiki-notes.ts`, `#` 뒤 제목·블록 id는 `wiki-heads.ts`)과 `![[넣기]]`(`wikiEmbed.ts`)는 이 폴더를 읽기만 한다. `![[넣기]]`가 화면에 실제로 불러오는 것은 그림 하나다. `md-asset` 처리기는 열린 문서의 폴더 아래 그림과, vault 아래 그림(실제 경로로 풀어도 vault 안일 때만)을 내준다. 노트를 넣으면 카드만 보이고 그 노트의 글은 읽지 않는다.
+- 없는 노트를 가리키는 링크에서 노트를 만드는 일(`wiki-create.ts`, `markdown:create-wiki-note`)은 빈 파일 하나를 쓴다. 폴더가 붙은 이름은 vault 아래에, 맨 이름은 열린 문서 옆에 만든다. `..`, 절대 경로, Windows 장치 이름(`CON`, `NUL`, `COM1` 등), 노트가 아닌 확장자(`.md`·`.markdown`·`.txt` 밖, 예: `[[tool.exe]]`)는 거절하고, 이미 있는 파일은 열기만 하고 덮어쓰지 않는다(배타적 만들기).
+- TipTap 패키지는 `electron.vite.config.ts`의 `dedupe`로 이 앱의 사본 하나에 고정한다. 문서 에디터가 다른 버전을 쓰고 npm이 일부를 저장소 루트로 올리기 때문에, 고정하지 않으면 번들에 코어가 둘 들어간다. TipTap 확장을 추가하면 이 목록에도 넣는다.
+- 패널은 다른 에디터와 같은 부품으로 조립한다(`AiConnectPrompt`, `AiFirstConnectionNotice`, `AiBlockedNotice`, `aiRunErrorText`). 막힌 실행의 원인은 전송이 기록한 마지막 실패가 그 메시지의 실패일 때만 쓴다.
+- `odt-export.ts`는 HTML 편집기의 같은 이름 파일과 내용이 같다. 한쪽을 고치면 다른 쪽도 고친다.
+- 복구 사본: 저장하지 않은 변경이 있으면 화면이 약 30초마다 저장할 때 쓸 글자 그대로를 뒷단에 넘기고(`src/renderer/recovery-copy.ts`, 자동 저장 스위치와 무관), 뒷단이 공용 저장소로 `<userData>/markdown-autosave`에 둔다(`src/main/recovery.ts`). 원본 파일과 사용자 폴더에는 쓰지 않는다(제목 없는 문서 포함). 저장(자동 저장·다른 이름·MCP 포함)은 사본을 지우고, "저장 안 함"과 MCP의 저장 없이 닫기는 `dontSave`로, 깨끗하게 닫힌 탭은 자기가 쓴 사본만 지운다. 화면이 죽은 탭과 앱이 끝나는 중의 닫기는 지우지 않는다. 사본이 있는 파일을 열면 내용을 읽기 전에 `recoveryOpen`이 공용 물음(Esc는 되살리기)을 거치고, 되살린 글은 원래 경로를 저장 대상으로 둔 채 "바뀜" 상태로 열린다. 껍데기 앱은 `markdownRecoveryEditor`(약속), `markdownRecoveryIdentity`, `setMarkdownRecoveryTitleSource`를 쓴다. `recovery.ts`와 `recovery-copy.ts`는 HTML 편집기의 같은 이름 파일과 내용이 같다.
+- 문자열은 `src/renderer/i18n/strings.ts` 한 파일에 21개 언어가 있고 `zh`가 키 집합을 정한다. 구독 연결 문장과 AI 진입 이름은 `@genoffice/ui`의 것을 쓴다.
+- 편집 화면의 다이어그램(mermaid·wavedrom)은 원래 크기로 그린다. 글 폭보다 넓은 그림은 줄이지 않고 그림 상자 안에서 가로로 넘긴다. mermaid는 `width="100%"`와 `max-width`로 그림을 글 폭에 맞춰 줄이므로 `pinMermaidNaturalSize`가 그 크기를 픽셀 값으로 박는다. 인쇄·PDF·쪽 이미지는 `printHtml.ts`의 CSS(`max-width: 100%`)가 쪽 폭에 맞춰 줄인다. 그림에 인라인 `max-width`를 남기면 이 CSS를 이겨 인쇄한 그림이 쪽 밖으로 나간다.
+- 제목 개요 창(`OutlinePane.tsx`)은 열림 여부를 `mdapp.showOutline`에 기억한다. 제목이 없는 문서에서도 열 수 있고(빈 상태 안내), Ctrl+Shift+O로 여닫는다. 파일을 열 때 `collectOutline`으로 한 번 채워 두어 첫 편집 전에도 제목 목록이 보인다.
+- 리본 오른쪽의 보기 도구(원문 보기부터 맞춤법 검사까지)는 창이 좁아 띠에 다 들어가지 않으면 끝에서부터 "더 보기"(⋯) 단추 뒤로 들어간다(`ribbon-overflow.ts`의 `useRibbonFold`). AI 가리기 단추는 접지 않고 맨 끝에 둔다. 켜져 있는지에 따라 모델에 보내는 글이 달라지므로 어느 폭에서나 상태가 보여야 한다. 몇 개를 넣을지는 지금 폭만으로 정한다(슬라이드 리본의 그룹 접기와 같은 방식, 펼칠 때는 8px 여유를 더 요구해 경계에서 깜빡이지 않는다). 기능을 빼지 않고 자리만 옮긴다. 보기 도구를 다 넣어도 넘치면(독일어·러시아어·아랍어처럼 AI 단추 이름이 긴 언어) AI 단추가 끝에서부터 이름을 감추고 그림만 남긴다. 이름 글자는 지우지 않고 폭 0으로 잘라 두므로 단추의 이름(접근성)과 풍선 도움말은 그대로다. 이 단계도 같은 계산에 이어 붙인 것이고(`foldCount`의 `labelSavings`), 폭은 그려진 대로 재므로 화면 언어가 바뀌면 처음부터 다시 잰다. 이렇게 해도 넘치는 좁은 창은 예전처럼 띠가 가로로 넘어간다. 더 보기·테마 메뉴는 Esc로 닫히고(겹쳐 열렸으면 나중에 연 것부터), 단추에 `aria-expanded`가 있다. 리본 안의 펼침 메뉴는 `position: fixed`와 앵커로 띄운다. `.ribbon-body`가 두 방향 모두 잘라 `absolute` 메뉴는 띠 아래에서 잘린다.
+- 편집 화면 글꼴(리본의 글꼴 상자)은 이 PC의 보기 설정이고 `.md` 파일에 쓰지 않는다. `mdapp.editorFont`(localStorage, 없으면 기본 글꼴)에 기억하고, `main.tsx`가 첫 그림 전에 문서 뿌리에 `data-md-font`와 `--md-editor-font`로 건다(`editor-font.ts`). 본문·제목·목록이 따르고 문서 테마의 글꼴보다 앞선다. 코드 블록·수식·다이어그램, 원문 보기, 인쇄·PDF·내보내기는 따르지 않는다. 목록은 다른 편집기와 같은 후보(`fontFamiliesFor`)와 PC 글꼴이다.
+
+## 테스트
+
+- 실행: `npm run test -w @genoffice/markdown`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/markdown`. 환경은 `jsdom`이다.
+- 저장 경로를 바꾸면 "고치지 않은 블록의 바이트가 그대로인지"를 테스트한다. 링크 참조 정의, 각주, 원시 HTML 블록, CRLF 파일, BOM이 있는 파일을 포함한다.
+- 가림을 바꾸면 쪼개진 표식, 가려진 범위를 가로지르는 선택, 모르는 노드 형태에서 원문이 모델용 글에 남지 않는지 테스트한다.
+- 노트에 넣기(`tests/note-append.test.ts`, `tests/note-append-editor.test.ts`): 그 노트를 보여 주는 탭만 한 번 가져가는지, 문서 끝에 넣고 바뀜이 되는지, 파일은 그대로인지.
+- Save As › PDF(`tests/save-as-pdf.test.ts`, `tests/save-as-pdf-wiring.test.ts`): 고른 `.pdf`가 PDF로만 쓰이고 Markdown 원본·경로가 그대로인지, 다음 저장이 계속 `.md`로 가는지, 화면에 그릴 문서가 없으면 PDF 선택지를 내놓지 않는지.
+- Save As의 다른 형식(`tests/save-as-formats.test.ts`, `tests/save-as-formats-wiring.test.ts`): 형식 목록과 순서, Word·ODT·쪽 이미지가 허락받은 경로에만 두 번째 창 없이 쓰이는지, 쪽 이미지의 번호 붙은 이름, 문서의 경로·바뀜 상태·복구 사본이 그대로인지.
+- AI 배선: 가용성 답이 없을 때 이미지 도구가 빠지는지, 막힌 실행 판정, 핸들러가 없을 때의 연결 상태. 이 모듈의 테스트는 제공자를 부르지 않는다.
+- Windows에서 `tests/image-export.test.ts`의 "disposes only the closing renderer's unfinished export" 한 건은 변경과 무관하게 실패한다(경로가 `/`로 시작하는지 비교한다).
+- `node_modules`를 다른 체크아웃에 연결한 git worktree에서는 `ai-tools`·`slash-and-image` 테스트가 katex 모듈 해석 오류로 실패한다. 원래 체크아웃에서는 통과한다.

@@ -1,0 +1,81 @@
+import type { zh } from './zh'
+
+export const es = {
+  arButton: 'Lectura de páginas con IA',
+  arButtonTip:
+    'Haz que la IA lea a partir de su imagen las páginas escaneadas o ilegibles y guarda el resultado',
+  arMenuRead: 'Leer páginas con IA…',
+  arMenuDelete: 'Eliminar los resultados de IA guardados de este documento…',
+  arTitle: 'Leer páginas con IA',
+  arIntro:
+    'Cada página elegida se envía a la IA como imagen, una a una, para leer su texto, tablas y fórmulas. El resultado se guarda en este equipo y se usa en la conversión a Markdown y EPUB, en la ventana de IA y en la búsqueda.',
+  arAnalyzing: 'Revisando el documento…',
+  arAnalyzingProgress: 'Revisando el documento… página {done} de {total}',
+  arAnalyzeFailed: 'No se pudo analizar el documento.',
+  arPreselectNote:
+    'Ya están elegidas las páginas escaneadas, las páginas cuyo texto no se puede leer bien y las páginas cuyas notas no se pudieron enlazar. Añade tú las páginas con tablas o fórmulas.',
+  arNoPreselect: 'No hubo páginas que preseleccionar. Añade tú las páginas que quieres leer.',
+  arReasonScanned: 'escaneada',
+  arReasonDegraded: 'texto ilegible',
+  arReasonFootnote: 'notas sin enlazar',
+  arReasonAdded: 'añadida por ti',
+  arAlreadyRead: 'ya leída · se omite',
+  arPageLabel: 'Página {page}',
+  arAddLabel: 'Añadir páginas',
+  arAddPlaceholder: 'p. ej. 3, 7-9',
+  arAdd: 'Añadir',
+  arSelectedCount: 'Páginas elegidas: {count}',
+  arNext: 'Siguiente',
+  arBack: 'Atrás',
+  arCancel: 'Cancelar',
+  arStart: 'Empezar',
+  arConfirmTitle: 'Comprueba antes de empezar',
+  arConfirmCalls: 'Llamadas a la IA: {calls} (una por página)',
+  arConfirmSkipped: 'Páginas ya leídas, no se envían: {count}',
+  arConfirmProvider: 'IA que se usará: {provider}',
+  arConfirmPaid: '{provider} cobrará por esto',
+  arConfirmSends: 'Las imágenes de las páginas se envían a esta IA.',
+  arConfirmNothing: 'Todas las páginas elegidas ya se leyeron. No hay nada que enviar.',
+  arChecking: 'Comprobando la conexión con la IA…',
+  arVisionProvider:
+    '{provider} no puede leer imágenes, así que la lectura de páginas con IA no puede empezar. Elige en Configuración una IA que lea imágenes.',
+  arVisionModel:
+    'El modelo elegido ({model}) no puede leer imágenes, así que la lectura de páginas con IA no puede empezar. Elige en Configuración un modelo que lea imágenes.',
+  arVisionUnknown: 'No se pudo determinar qué IA usar, así que no se puede empezar.',
+  arRouteChanged: 'La conexión con la IA cambió. Vuelve a comprobar los datos y luego empieza.',
+  arRunning: 'La IA está leyendo páginas… {done} de {total}',
+  arRunningPage: 'leyendo la página {page}',
+  arStop: 'Detener',
+  arStopping: 'Deteniendo…',
+  arDone: 'La lectura con IA terminó. Páginas leídas: {count}.',
+  arFailedPages: 'Páginas no leídas: {pages}',
+  arStoppedCancelled:
+    'Lectura con IA detenida. Las páginas leídas se guardaron y puedes continuar más tarde.',
+  arStoppedFailures:
+    'La lectura con IA se detuvo porque fallaron varias llamadas seguidas. Las páginas leídas se guardaron.',
+  arStoppedStore:
+    'La lectura con IA se detuvo porque no se pudo guardar el resultado. Puede que el disco esté lleno.',
+  arLostPages: 'Páginas recibidas pero no guardadas: {pages}',
+  arStoppedError: 'La lectura con IA se detuvo: {reason}',
+  arStartFailed: 'No se pudo empezar la lectura con IA: {reason}',
+  arClose: 'Cerrar',
+  arBusy:
+    'Ya hay una tarea de IA en curso en este documento ({done}/{total}). Vuelve a intentarlo cuando termine o se detenga.',
+  arUnavailable: 'La lectura de páginas con IA no está disponible en esta ventana.',
+  arDeleteConfirm:
+    '¿Eliminar todos los resultados de IA guardados de este documento (lecturas con IA, traducciones, tarjetas de pasaje, sugerencias de resaltado y el resumen)? No se puede deshacer.',
+  arDeleted: 'Se eliminaron los resultados de IA guardados de este documento.',
+  arDeleteFailed: 'No se pudieron eliminar los resultados de IA guardados.',
+  arDeleteBusy: 'Hay una tarea de IA en curso, así que ahora no se puede eliminar nada.',
+  jobResumeAiRead: 'Lectura con IA sin terminar {percent} % — ¿continuar?',
+  jobResumeTranslate: 'Traducción sin terminar ({language}) {percent} % — ¿continuar?',
+  jobResumeHighlight: 'Resaltado con IA sin terminar {percent} % — ¿continuar?',
+  arDeleteAlsoBoth:
+    'También se eliminarán las traducciones corregidas a mano ({edited}) y las tarjetas de pasaje ({cards}).',
+  arDeleteAlsoEdited: 'También se eliminarán las traducciones corregidas a mano ({count}).',
+  arDeleteAlsoCards: 'También se eliminarán las tarjetas de pasaje ({count}).',
+  jobResumeContinue: 'Continuar',
+  jobResumeLater: 'Más tarde',
+  searchAiRead: 'Encontrado en el texto leído por la IA',
+  searchAiReadTip: 'El texto leído por la IA no tiene posiciones; solo se va a la página',
+} satisfies Record<keyof typeof zh, string>

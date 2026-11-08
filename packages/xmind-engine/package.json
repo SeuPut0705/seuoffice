@@ -1,0 +1,26 @@
+{
+  "name": "@genoffice/xmind-engine",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "mind map file engine: open .xmind archives behind the zip gate, keep every part the editor does not model, reconcile the edited view back into the source tree, and convert maps to and from outline text",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@genoffice/i18n": "*",
+    "@genoffice/zip-gate": "*",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}

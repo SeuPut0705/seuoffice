@@ -1,0 +1,423 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import type { OpenDocumentTab } from '../../src/shared/tabs-api'
+import { McpServerService } from '../../src/main/mcp/mcp-server'
+import {
+  closeSavePath,
+  createOpenDocumentTools,
+  documentFormat,
+  resolveOpenDocument,
+  type OpenDocumentsControl,
+} from '../../src/main/mcp/tools/open-documents-tools'
+
+/**
+ * `open_documents` over a real MCP session: the list/read/save/close actions
+ * against a fake control, plus the pure helpers (target resolution, the default
+ * save path an untitled dirty document is written to before closing).
+ */
+
+let service: McpServerService | undefined
+let client: Client | undefined
+let dir: string
+
+async function freePort(): Promise<number> {
+  const { createServer } = await import('node:http')
+  return new Promise((resolvePort, reject) => {
+    const server = createServer()
+    server.on('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address()
+      const port = typeof address === 'object' && address ? address.port : 0
+      server.close(() => resolvePort(port))
+    })
+  })
+}
+
+beforeEach(async () => {
+  dir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-open-docs-'))
+})
+
+afterEach(async () => {
+  await client?.close()
+  client = undefined
+  await service?.stop()
+  service = undefined
+  await rm(dir, { recursive: true, force: true })
+})
+
+async function startService(control?: OpenDocumentsControl): Promise<void> {
+  const port = await freePort()
+  service = new McpServerService({
+    port,
+    tools: createOpenDocumentTools({ defaultSaveDir: () => dir, ...(control ? { control } : {}) }),
+  })
+  await service.start()
+  client = new Client({ name: 'open-documents-test', version: '0.0.0' })
+  await client.connect(new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`)))
+}
+
+/** callTool's result carries the payload on `.content`; accept either shape */
+function textOf(result: unknown): string {
+  const content = (result as { content?: unknown })?.content ?? result
+  const parts = Array.isArray(content) ? content : [content]
+  return parts.map((part) => (part as { text?: string } | undefined)?.text ?? '').join('')
+}
+
+/** the handler serializes its return value as JSON text */
+function jsonOf(result: unknown): Record<string, unknown> {
+  return JSON.parse(textOf(result)) as Record<string, unknown>
+}
+
+/** a document as the tab manager reports it */
+function doc(overrides: Partial<OpenDocumentTab> & { id: string }): OpenDocumentTab {
+  return {
+    kind: 'markdown',
+    title: 'notes.md',
+    active: false,
+    dirty: false,
+    ...overrides,
+  } as OpenDocumentTab
+}
+
+/** the six-open-document scenario: three the user opened, one per family edge case */
+const DOCUMENTS: OpenDocumentTab[] = [
+  doc({ id: 't1', kind: 'docs', title: 'one.docx', filePath: 'C:/docs/one.docx', dirty: true }),
+  doc({ id: 't2', kind: 'sheets', title: 'two.xlsx', filePath: 'C:/docs/two.xlsx' }),
+  doc({
+    id: 't3',
+    kind: 'slides',
+    title: 'three.pptx',
+    filePath: 'C:/docs/three.pptx',
+    dirty: true,
+  }),
+  doc({ id: 't4', kind: 'markdown', title: 'four.md', filePath: 'C:/docs/four.md' }),
+  doc({ id: 't5', kind: 'html', title: 'five.html', filePath: 'C:/docs/five.html' }),
+  doc({ id: 't6', kind: 'pdf', title: 'six.pdf', filePath: 'C:/docs/six.pdf' }),
+  doc({ id: 't7', kind: 'docs', title: 'Untitled', dirty: true, active: true }),
+  doc({
+    id: 't8',
+    kind: 'mindmap',
+    title: 'plan.xmind',
+    filePath: 'C:/maps/plan.xmind',
+    dirty: true,
+  }),
+  doc({ id: 't9', kind: 'epub', title: 'novel.epub', filePath: 'C:/books/novel.epub' }),
+]
+
+function controlOf(overrides: Partial<OpenDocumentsControl> = {}): OpenDocumentsControl {
+  return {
+    list: vi.fn(async () => DOCUMENTS),
+    read: vi.fn(async (tab: OpenDocumentTab) => ({ content: `live:${tab.id}` })),
+    close: vi.fn(async () => ({})),
+    save: vi.fn(async () => ({ savedPath: 'C:/docs/four.md' })),
+    ...overrides,
+  }
+}
+
+describe('resolveOpenDocument', () => {
+  it('matches by exact tab id first', () => {
+    expect(resolveOpenDocument(DOCUMENTS, 't3')?.id).toBe('t3')
+  })
+
+  it('matches by path, including a path spelled differently', () => {
+    const other = resolve(DOCUMENTS[0]!.filePath!)
+    expect(resolveOpenDocument(DOCUMENTS, other)?.id).toBe('t1')
+  })
+
+  it('returns undefined when nothing matches', () => {
+    expect(resolveOpenDocument(DOCUMENTS, 'C:/docs/nope.docx')).toBeUndefined()
+  })
+})
+
+describe('closeSavePath', () => {
+  it('reuses the document path when it has one', () => {
+    expect(closeSavePath(DOCUMENTS[0]!, () => dir)).toBe('C:/docs/one.docx')
+  })
+
+  it('reports a Word tab holding an .odt as format "odt"', () => {
+    const odt = doc({ id: 'o1', kind: 'docs', title: 'form.odt', filePath: 'C:/docs/Form.ODT' })
+    expect(documentFormat(odt)).toBe('odt')
+    expect(documentFormat(doc({ id: 'u', kind: 'docs', title: 'Untitled' }))).toBe('docx')
+  })
+
+  it('reuses an ODT document path as it is', () => {
+    const odt = doc({ id: 'o1', kind: 'docs', title: 'form.odt', filePath: 'C:/docs/form.odt' })
+    expect(closeSavePath(odt, () => 'C:/unused')).toBe('C:/docs/form.odt')
+  })
+
+  it('falls back to the default folder for an untitled document, with its extension', () => {
+    const target = closeSavePath(DOCUMENTS[6]!, () => dir)
+    expect(target.startsWith(resolve(dir))).toBe(true)
+    expect(target.endsWith('.docx')).toBe(true)
+  })
+
+  it('never hands back a path that already exists', async () => {
+    const { writeFile } = await import('node:fs/promises')
+    const first = closeSavePath(DOCUMENTS[6]!, () => dir)
+    await writeFile(first, 'x')
+    // a second untitled close must not overwrite the first
+    expect(closeSavePath(DOCUMENTS[6]!, () => dir)).not.toBe(first)
+  })
+
+  // Regression: the extension used to come from generateExtension(), which only
+  // answers for families that have a headless create_* tool — so closing an
+  // untitled html document threw instead of resolving a target. Every family
+  // must resolve its own save extension here.
+  it.each([
+    ['docs', '.docx'],
+    ['sheets', '.xlsx'],
+    ['slides', '.pptx'],
+    ['markdown', '.md'],
+    ['html', '.html'],
+    ['pdf', '.pdf'],
+    ['mindmap', '.xmind'],
+  ] as const)('resolves an untitled %s document to a %s target', (kind, ext) => {
+    const untitled = doc({ id: `untitled-${kind}`, kind, title: `untitled ${kind}`, dirty: true })
+    const target = closeSavePath(untitled, () => dir)
+    expect(target.startsWith(resolve(dir))).toBe(true)
+    expect(target.endsWith(ext)).toBe(true)
+  })
+})
+
+describe('open_documents tool', () => {
+  it('lists every open document with type, path and unsaved state', async () => {
+    await startService(controlOf())
+    const result = jsonOf(
+      await client!.callTool({ name: 'open_documents', arguments: { action: 'list' } }),
+    )
+    const documents = result.documents as Array<Record<string, unknown>>
+    expect(documents).toHaveLength(DOCUMENTS.length)
+
+    const first = documents[0]!
+    expect(first.id).toBe('t1')
+    expect(first.type).toBe('Word document')
+    expect(first.path).toBe('C:/docs/one.docx')
+    expect(first.saved).toBe(true)
+    expect(first.dirty).toBe(true)
+
+    expect(first.format).toBe('docx')
+
+    // an untitled document reports no path and saved:false
+    const untitled = documents.find((d) => d.id === 't7')!
+    expect(untitled.path).toBeNull()
+    expect(untitled.saved).toBe(false)
+    expect(untitled.active).toBe(true)
+    // a never-saved Word tab is kept as the family's own format
+    expect(untitled.format).toBe('docx')
+
+    // the family vocabulary carries through for every kind
+    const types = Object.fromEntries(documents.map((d) => [d.id, d.type]))
+    expect(types).toMatchObject({
+      t2: 'spreadsheet',
+      t3: 'presentation',
+      t4: 'Markdown document',
+      t5: 'HTML page',
+      t6: 'PDF document',
+      t8: 'mind map',
+      t9: 'e-book',
+    })
+    // a book tab keeps its own kind and format
+    expect(documents.find((d) => d.id === 't9')).toMatchObject({
+      kind: 'epub',
+      format: 'epub',
+      path: 'C:/books/novel.epub',
+      saved: true,
+      dirty: false,
+    })
+    // a mind map tab keeps its own kind
+    expect(documents.find((d) => d.id === 't8')).toMatchObject({
+      kind: 'mindmap',
+      path: 'C:/maps/plan.xmind',
+      saved: true,
+      dirty: true,
+    })
+  })
+
+  it('reads one document by path and reports its live content', async () => {
+    const read = vi.fn(async (tab: OpenDocumentTab) => ({ content: `live:${tab.id}` }))
+    await startService(controlOf({ read }))
+    const result = jsonOf(
+      await client!.callTool({
+        name: 'open_documents',
+        arguments: { action: 'read', target: 'C:/docs/four.md' },
+      }),
+    )
+    expect(result.id).toBe('t4')
+    expect(result.dirty).toBe(false)
+    expect(result.content).toEqual({ content: 'live:t4' })
+    expect(read).toHaveBeenCalledTimes(1)
+  })
+
+  it('reads a mind map as the outline text its control returns', async () => {
+    const outline = '# Sheet 1\n\n- Plan\n  - unsaved topic\n'
+    const read = vi.fn(async () => outline)
+    await startService(controlOf({ read }))
+    const result = jsonOf(
+      await client!.callTool({
+        name: 'open_documents',
+        arguments: { action: 'read', target: 'C:/maps/plan.xmind' },
+      }),
+    )
+    expect(result).toEqual({
+      id: 't8',
+      type: 'mind map',
+      kind: 'mindmap',
+      title: 'plan.xmind',
+      path: 'C:/maps/plan.xmind',
+      dirty: true,
+      content: outline,
+    })
+    expect(read).toHaveBeenCalledWith(expect.objectContaining({ id: 't8', kind: 'mindmap' }))
+  })
+
+  it('reads an untitled document by its tab id', async () => {
+    await startService(controlOf())
+    const result = jsonOf(
+      await client!.callTool({
+        name: 'open_documents',
+        arguments: { action: 'read', target: 't7' },
+      }),
+    )
+    expect(result.id).toBe('t7')
+    expect(result.path).toBeNull()
+  })
+
+  it('saves an open document in place, reporting where it landed and leaving it open', async () => {
+    const save = vi.fn(async () => ({ savedPath: 'C:/docs/four.md' }))
+    await startService(controlOf({ save }))
+    const result = jsonOf(
+      await client!.callTool({
+        name: 'open_documents',
+        arguments: { action: 'save', target: 'C:/docs/four.md' },
+      }),
+    )
+    expect(result.saved).toBe(true)
+    expect(result.savedTo).toBe('C:/docs/four.md')
+    // saving is not closing: no `closed` flag, and the control's save was the one called
+    expect(result.closed).toBeUndefined()
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: 't4' }))
+  })
+
+  it('refuses to save a PDF, naming the reason', async () => {
+    await startService(controlOf())
+    const result = await client!.callTool({
+      name: 'open_documents',
+      arguments: { action: 'save', target: 'C:/docs/six.pdf' },
+    })
+    expect(result.isError).toBe(true)
+    expect(textOf(result.content)).toContain('viewer')
+  })
+
+  it('closes with save by default, reporting where it was saved', async () => {
+    const close = vi.fn(async () => ({ savedPath: 'C:/docs/three.pptx' }))
+    await startService(controlOf({ close }))
+    const result = jsonOf(
+      await client!.callTool({
+        name: 'open_documents',
+        arguments: { action: 'close', target: 'C:/docs/three.pptx' },
+      }),
+    )
+    expect(result.closed).toBe(true)
+    expect(result.savedTo).toBe('C:/docs/three.pptx')
+    expect(close).toHaveBeenCalledWith(expect.objectContaining({ id: 't3' }), { unsaved: 'save' })
+  })
+
+  it('passes discard through and flags that changes were dropped', async () => {
+    const close = vi.fn(async () => ({}))
+    await startService(controlOf({ close }))
+    const result = jsonOf(
+      await client!.callTool({
+        name: 'open_documents',
+        arguments: { action: 'close', target: 't3', unsaved: 'discard' },
+      }),
+    )
+    expect(close).toHaveBeenCalledWith(expect.objectContaining({ id: 't3' }), {
+      unsaved: 'discard',
+    })
+    expect(result.discardedUnsavedChanges).toBe(true)
+  })
+
+  it('refuses to read a PDF, naming the reason', async () => {
+    await startService(controlOf())
+    const result = await client!.callTool({
+      name: 'open_documents',
+      arguments: { action: 'read', target: 'C:/docs/six.pdf' },
+    })
+    expect(result.isError).toBe(true)
+    expect(textOf(result.content)).toContain('viewer')
+  })
+
+  it('reads an open book, its unsaved edits included', async () => {
+    const read = vi.fn(async (tab: OpenDocumentTab) => `# Chapter 1 of ${tab.title}`)
+    await startService(controlOf({ read }))
+    const result = await client!.callTool({
+      name: 'open_documents',
+      arguments: { action: 'read', target: 'C:/books/novel.epub' },
+    })
+    expect(result.isError).toBeFalsy()
+    expect(textOf(result.content)).toContain('# Chapter 1 of novel.epub')
+    expect(read).toHaveBeenCalledWith(expect.objectContaining({ id: 't9', kind: 'epub' }))
+  })
+
+  it('lists an open HWP document and reads its live content', async () => {
+    const hwp = doc({ id: 't8', kind: 'hwp', title: 'eight.hwpx', filePath: 'C:/docs/eight.hwpx' })
+    const read = vi.fn(async () => '제목\n구분 | 연락처')
+    await startService(controlOf({ list: vi.fn(async () => [hwp]), read }))
+    const listed = await client!.callTool({ name: 'open_documents', arguments: { action: 'list' } })
+    expect(textOf(listed.content)).toContain('HWP document')
+    const result = await client!.callTool({
+      name: 'open_documents',
+      arguments: { action: 'read', target: 'C:/docs/eight.hwpx' },
+    })
+    expect(result.isError).toBeFalsy()
+    expect(textOf(result.content)).toContain('구분 | 연락처')
+    expect(read).toHaveBeenCalledWith(hwp)
+  })
+
+  it('lists an unknown target as an error that names what is open', async () => {
+    await startService(controlOf())
+    const result = await client!.callTool({
+      name: 'open_documents',
+      arguments: { action: 'close', target: 'C:/docs/missing.docx' },
+    })
+    expect(result.isError).toBe(true)
+    const message = textOf(result.content)
+    expect(message).toContain('no open document matches')
+    expect(message).toContain('C:/docs/one.docx')
+  })
+
+  it('requires a target for read, save and close', async () => {
+    await startService(controlOf())
+    for (const action of ['read', 'save', 'close']) {
+      const result = await client!.callTool({ name: 'open_documents', arguments: { action } })
+      expect(result.isError).toBe(true)
+      expect(textOf(result.content)).toContain('needs a target')
+    }
+  })
+
+  it('explains an empty workspace instead of failing silently', async () => {
+    await startService(controlOf({ list: vi.fn(async () => []) }))
+    const listed = jsonOf(
+      await client!.callTool({ name: 'open_documents', arguments: { action: 'list' } }),
+    )
+    expect(listed.documents).toEqual([])
+
+    const closed = await client!.callTool({
+      name: 'open_documents',
+      arguments: { action: 'close', target: 'x.md' },
+    })
+    expect(closed.isError).toBe(true)
+    expect(textOf(closed.content)).toContain('no document is open')
+  })
+
+  it('reports a clear error when the app is not running', async () => {
+    await startService(undefined)
+    const result = await client!.callTool({ name: 'open_documents', arguments: { action: 'list' } })
+    expect(result.isError).toBe(true)
+    expect(textOf(result.content)).toContain('IeumOffice is not running')
+  })
+})

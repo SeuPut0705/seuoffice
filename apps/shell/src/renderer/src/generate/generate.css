@@ -1,0 +1,415 @@
+/* The generate window. Chrome colours come from @genoffice/ui/tokens.css;
+ * the shell's brand accent and this window's notice tint are defined here,
+ * with light, dark and system-dark values. */
+:root {
+  --accent: #0f7fff;
+  --accent-hover: #0e72e5;
+  --accent-soft: #eaf0fd;
+  --gen-notice-bg: #fff7e6;
+  --gen-notice-border: #f3d69a;
+  --gen-notice-text: #7a4b00;
+  --gen-on-accent: #ffffff;
+}
+
+[data-theme='dark'] {
+  --accent: #3f99ff;
+  --accent-hover: #5ba5ff;
+  --accent-soft: #24354d;
+  --gen-notice-bg: #3a2f17;
+  --gen-notice-border: #6b5424;
+  --gen-notice-text: #f2d398;
+  --gen-on-accent: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    --accent: #3f99ff;
+    --accent-hover: #5ba5ff;
+    --accent-soft: #24354d;
+    --gen-notice-bg: #3a2f17;
+    --gen-notice-border: #6b5424;
+    --gen-notice-text: #f2d398;
+    --gen-on-accent: #ffffff;
+  }
+}
+
+:root {
+  --ui-cjk: 'Microsoft YaHei', 'PingFang SC';
+}
+
+:root:lang(ja) {
+  --ui-cjk: 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'Hiragino Sans';
+}
+
+:root:lang(ko) {
+  --ui-cjk: 'Malgun Gothic', 'Apple SD Gothic Neo';
+}
+
+:root:lang(zh-TW) {
+  --ui-cjk: 'Microsoft JhengHei', 'PingFang TC';
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    'Segoe UI',
+    -apple-system,
+    var(--ui-cjk),
+    sans-serif;
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.gen-boot {
+  height: 100%;
+  background: var(--surface);
+}
+
+.gen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.gen-head {
+  /* the window's title band: titleBarStyle 'hidden' on Windows/Linux draws the
+     caption buttons over this row, so it must be draggable and match the
+     overlay height (GENERATE_TITLE_BAR_HEIGHT in main/generate/title-bar.ts) */
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 22px;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.gen-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.gen-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 22px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gen-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gen-label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.gen-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gen-kinds {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: var(--radius-8);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+}
+
+.gen-kind {
+  flex: 1;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-6);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* 8.6: "convert without AI", under the AI kinds */
+.gen-convert {
+  margin-top: 10px;
+}
+
+/* a conversion carries no request text: its section steps aside */
+.gen-section[hidden] {
+  display: none;
+}
+
+.gen-kind:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.gen-kind.active {
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--border-strong);
+}
+
+.gen-kind:focus-visible,
+.gen-btn:focus-visible,
+.gen-icon-btn:focus-visible,
+.gen-request:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.gen-list,
+.gen-sublist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.gen-list {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-8);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.gen-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.gen-item:first-child {
+  border-top: none;
+}
+
+.gen-item-unsaved .gen-item-name {
+  color: var(--danger);
+}
+
+.gen-item-checking {
+  color: var(--text-tertiary);
+}
+
+.gen-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gen-item-size {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.gen-total {
+  color: var(--text-secondary);
+  text-align: end;
+}
+
+.gen-empty {
+  padding: 14px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-8);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.gen-sublabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.gen-subitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.gen-subitem-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.gen-reason {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.gen-excluded .gen-item-name {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.gen-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-8);
+  background: var(--gen-notice-bg);
+  border: 1px solid var(--gen-notice-border);
+  color: var(--gen-notice-text);
+  line-height: 1.45;
+}
+
+.gen-callout-block {
+  flex-direction: column;
+  align-items: stretch;
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--text);
+}
+
+.gen-callout-title {
+  font-weight: 600;
+  color: var(--danger);
+}
+
+.gen-callout-body {
+  color: var(--text-secondary);
+}
+
+.gen-notices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gen-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.gen-blocker {
+  color: var(--danger);
+}
+
+.gen-request {
+  width: 100%;
+  resize: vertical;
+  min-height: 84px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-8);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.5;
+}
+
+.gen-request::placeholder {
+  color: var(--text-tertiary);
+}
+
+.gen-hint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.gen-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 22px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.gen-foot-hint {
+  flex: 1;
+  min-width: 0;
+}
+
+.gen-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.gen-btn {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-8);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.gen-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.gen-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.gen-btn-small {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.gen-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--gen-on-accent);
+  font-weight: 600;
+}
+
+.gen-btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.gen-icon-btn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-6);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.gen-icon-btn:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}

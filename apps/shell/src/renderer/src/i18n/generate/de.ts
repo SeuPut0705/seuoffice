@@ -1,0 +1,62 @@
+import type { zh } from './zh'
+
+export const de = {
+  windowTitle: 'Neues Dokument erstellen',
+  kindLabel: 'Was erstellen',
+  kindSlides: 'Präsentation (PPT)',
+  kindHtml: 'Webseite (HTML)',
+  kindMindmap: 'Mindmap',
+  materialsLabel: 'Material',
+  addMaterials: 'Dateien hinzufügen…',
+  removeMaterial: 'Entfernen',
+  totalLine: '{n} Dateien · insgesamt {size}',
+  totalLineOne: '{n} Datei · insgesamt {size}',
+  excludedLabel: 'Nicht als Material verwendet',
+  reasonMissing: 'Die Datei wurde nicht gefunden.',
+  reasonUnsupported: 'Dieser Dateityp kann nicht verwendet werden.',
+  reasonTooLarge: 'Größer als {mb} MB.',
+  reasonUnreadable: 'Die Datei konnte nicht gelesen werden.',
+  reasonUntitled:
+    'Dieses Dokument wurde noch nie gespeichert. Speichern Sie es zuerst, um es zu verwenden.',
+  unsavedTitle: 'Zuerst speichern',
+  unsavedBody:
+    'Diese Dateien haben ungespeicherte Änderungen. Speichern Sie sie, um sie als Material zu verwenden.',
+  saveMaterial: 'Speichern',
+  showMaterial: 'Zum Tab',
+  savingMaterial: 'Wird gespeichert…',
+  saveFailed: 'Speichern fehlgeschlagen. Speichern Sie die Datei in ihrem Tab.',
+  requestLabel: 'Was Sie möchten (optional)',
+  requestHint: 'Leer lassen, um die im Feld angezeigte Anfrage zu verwenden.',
+  noticeUsage: 'Das verbraucht viel vom Limit Ihres Abonnements.',
+  noticeLong:
+    'Bei langem Material werden die hinteren Teile möglicherweise weniger berücksichtigt.',
+  tooMany: 'Es können bis zu {max} Dateien verwendet werden. Entfernen Sie einige.',
+  noReadable: 'Es gibt noch keine verwendbare Datei.',
+  emptyMaterials: 'Noch kein Material. Fügen Sie Dateien hinzu.',
+  make: 'Erstellen',
+  making: 'Wird geöffnet…',
+  cancel: 'Abbrechen',
+  checking: 'Dateien werden geprüft…',
+  makeFailed: 'Das neue Dokument konnte nicht geöffnet werden. Versuchen Sie es erneut.',
+  makeHint: 'Ein neuer Tab öffnet sich, und die KI dieses Editors erstellt das Dokument.',
+  dialogAddTitle: 'Material hinzufügen',
+  filterSupported: 'Unterstützte Dateien',
+  homeMakeFromGroup: 'Neues Dokument aus dieser Gruppe erstellen',
+  homeMakeFromSelection: 'Neues Dokument erstellen',
+  homeMakeFromFile: 'Neues Dokument aus dieser Datei erstellen',
+  untitled: 'Unbenannt',
+  convertLabel: 'Ohne KI umwandeln',
+  convertToMarkdown: 'Markdown-Dokument',
+  convertToSlides: 'Präsentationsgerüst (PPT)',
+  convertToMindmap: 'Mindmap',
+  convertHint:
+    'Ohne KI – vom Limit Ihres Abonnements wird nichts verbraucht. Das Ergebnis öffnet sich in einem neuen, noch nicht gespeicherten Tab.',
+  noticeRedacted:
+    'Ausgeblendete Stellen werden als ihre Beschriftung übernommen, nicht als ursprünglicher Text.',
+  convertUnreadable: 'Das Material konnte nicht gelesen werden, daher wurde nichts umgewandelt.',
+  convertRedactionFailed:
+    'Die ausgeblendeten Stellen des Materials konnten nicht verarbeitet werden, daher wurde nichts umgewandelt.',
+  convertTooManySlides:
+    'Die Mindmap hat zu viele Hauptzweige für eine Präsentation (bis zu {max} Folien).',
+  convertFailed: 'Die Umwandlung ist fehlgeschlagen. Versuchen Sie es noch einmal.',
+} satisfies Record<keyof typeof zh, string>

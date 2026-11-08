@@ -1,0 +1,74 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pblsketch <239486537+pblsketch@users.noreply.github.com>
+Date: Wed, 4 Nov 2026 00:00:00 +0900
+Subject: [PATCH 18/30] fix(layout): 문단 기준 위아래 표를 그려진 글줄 원점에 두고 표 뒤 간격을 한글처럼 잰다
+
+조판이 저장 호스트 줄로 정한 문단 기준 위아래 표 자리를 그리기는 col_area.y만
+더해 썼다. 호스트 글줄은 그리기 흐름의 문단 원점에 그려지므로, 두 커서가 어긋나면
+(쪽 첫 문단 앞 간격을 조판만 빼거나, 앞 문단의 줄 간격·뒤 간격이 표 문단 진입 때
+조판 커서에 아직 없으면) 표만 올라가 글줄을 덮었다. 같은 저장 줄 계산을 그리기
+원점으로 다시 해서 표·문단 끝 흐름·다음 문단 앞 간격 판정을 함께 옮긴다. 글 없는
+문단의 표(앵커가 곧 문단 시작인 자리)도 같다. 조판이 계산 뒤 표를 위로 올린 자리와
+원점을 함께 넘긴 자리는 그대로 둔다.
+
+글 있는 문단의 표가 문단 흐름을 끝내면 한글은 그 문단의 뒤 간격을 표 아래에 두지
+않고, 다음 문단 첫 줄을 표 아래끝에서 시작한다(앞 간격도 두지 않음). MS 워드 호환 문서
+(호환 문서 대상 2, HWPX applyPrevspacingBeneathObject)만 다음 문단의 앞 간격을
+둔다. 그런 문단의 NextLine 문단 끝에서 뒤 간격을 빼고, 조판이 그 자리에 후속 줄 원점을
+건다. 글 없는 문단의 표는 저장 프레임 분할 경로와 맞물려 종전 회계를 둔다.
+
+Ported onto devel 7d06d5c70: part of (2) only. (1) Dropped: devel already draws the paragraph-relative table at the drawn host line. On the app's Hancom-saved fixture para-float-tail-table.hwpx, devel puts the table 1100HU below the second host line, and the layout-frame shift (`stored_host_placement_in_layout_frame`) moved tables away from that in devel's own issue_6950_paragraph_end_topbottom_anchor tests (5 failures). (2) Kept the half that drops the host's space after below the table, in typeset (section/controls.rs) and in paint (the NextLine paragraph end). Dropped the half that starts the next line exactly at the table bottom (`stored_successor_line_origin` in table/block/entry.rs) and the MS Word compatibility flag that only gated it. Devel binds that origin to the next paragraph's stored ladder, which broke issue_6718 page 4 (102px over the body) and issue_6950. So the next line is still that paragraph's space before (4px on the fixture) below Hangul's place.
+---
+ src/renderer/layout.rs                   | 12 ++++++++++++
+ src/renderer/typeset/section/controls.rs | 15 +++++++++++----
+ 2 files changed, 23 insertions(+), 4 deletions(-)
+
+diff --git a/src/renderer/layout.rs b/src/renderer/layout.rs
+index 0bd2a630226f2d44e7854d1abef16cb6f40346b6..8904717404625a6e85cc7bc27b2381937943d131 100644
+--- a/src/renderer/layout.rs
++++ b/src/renderer/layout.rs
+@@ -10809,6 +10809,18 @@ impl LayoutEngine {
+                                 | super::float_placement::ParagraphFloatFlow::EmptyHost
+                         )
+                     {
++                        // 조판과 같다 — 글 있는 문단의 표가 흐름을 끝내면 표 아래끝에 뒤 간격을
++                        // 두지 않는다.
++                        let spacing_after = if placement.flow
++                            == super::float_placement::ParagraphFloatFlow::NextLine
++                            && paragraphs
++                                .get(owner)
++                                .is_some_and(para_has_non_whitespace_text)
++                        {
++                            0.0
++                        } else {
++                            spacing_after
++                        };
+                         new_y =
+                             col_area.y + placement.paragraph_end(new_y - col_area.y, spacing_after);
+                         hcursor.min_flow_floor = hcursor.min_flow_floor.max(new_y);
+diff --git a/src/renderer/typeset/section/controls.rs b/src/renderer/typeset/section/controls.rs
+index 73ce0289b50beb794b9e8a3658ee4dc2c188997d..0c1c9ff212ac12a7d1a65aa9782322835e335d52 100644
+--- a/src/renderer/typeset/section/controls.rs
++++ b/src/renderer/typeset/section/controls.rs
+@@ -789,10 +789,17 @@ impl TypesetEngine {
+         // #6950: text and its tail table may be emitted in paint order rather
+         // than logical order. Finish the paragraph after ALL its controls;
+         // post-text must not return flow to a position above its own table.
+-        let spacing_after = styles
+-            .para_styles
+-            .get(para.para_shape_id as usize)
+-            .map_or(0.0, |style| style.spacing_after);
++        // 한글은 글 있는 문단의 위아래 표 아래끝에 그 문단의 뒤 간격을 더하지 않는다 —
++        // 뒤 간격은 글줄 끝에만 붙는다(저장 사다리, 한글 2024 재저장 실험). 글 없는
++        // 문단의 표는 저장 프레임 분할 경로와 맞물려 종전 회계를 둔다.
++        let spacing_after = if crate::renderer::typeset::para_has_non_whitespace_text(para) {
++            0.0
++        } else {
++            styles
++                .para_styles
++                .get(para.para_shape_id as usize)
++                .map_or(0.0, |style| style.spacing_after)
++        };
+         st.finish_paragraph_float_flow(para_idx, spacing_after);
+ 
+         Ok(())

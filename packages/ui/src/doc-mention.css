@@ -1,0 +1,96 @@
+/* The AI input's `@` document list (see DocMentionPicker.tsx), placed where the
+ * skill list sits. Every rule is anchored on an .ai-doc-mention- root; colors
+ * are tokens only. */
+
+/* zero-height anchor placed right above the input: the list grows upward from it */
+.ai-doc-mention-anchor {
+  position: relative;
+  height: 0;
+}
+
+.ai-doc-mention-picker {
+  /* tunable: how many rows show before the list scrolls */
+  --ai-doc-mention-visible-rows: 8;
+  --ai-doc-mention-row-height: 28px;
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 4px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-8);
+  background: var(--surface);
+  box-shadow: var(--shadow-menu);
+  font-size: var(--text-caption);
+  color: var(--text);
+}
+
+.ai-doc-mention-picker .ai-doc-mention-rows {
+  max-height: calc(var(--ai-doc-mention-visible-rows) * var(--ai-doc-mention-row-height));
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.ai-doc-mention-picker .ai-doc-mention-group-label {
+  padding: 6px 10px 2px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.ai-doc-mention-picker .ai-doc-mention-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  min-height: var(--ai-doc-mention-row-height);
+  box-sizing: border-box;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.ai-doc-mention-picker .ai-doc-mention-row.is-active {
+  background: var(--bg-hover-strong);
+}
+
+.ai-doc-mention-picker .ai-doc-mention-row.is-disabled {
+  cursor: default;
+  color: var(--text-tertiary);
+}
+
+.ai-doc-mention-picker .ai-doc-mention-name {
+  flex-shrink: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-doc-mention-picker .ai-doc-mention-row.is-disabled .ai-doc-mention-name {
+  color: var(--text-tertiary);
+}
+
+.ai-doc-mention-picker .ai-doc-mention-dir {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-doc-mention-picker .ai-doc-mention-reason {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.ai-doc-mention-picker .ai-doc-mention-more {
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}

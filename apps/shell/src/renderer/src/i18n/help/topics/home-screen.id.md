@@ -1,0 +1,68 @@
+# Layar Beranda: tempat file Anda berada
+
+Beranda adalah halaman awal GenOffice: bilah navigasi di sebelah kiri, daftar file dan kartu pembuatan cepat di sebelah kanan.
+
+## Navigasi bilah sisi
+
+- **Terbaru**: file yang baru saja Anda buka. Setiap baris diberi cap waktu — hari ini, kemarin, atau tanggalnya.
+- **Berbintang**: file yang Anda beri bintang. Arahkan kursor ke baris file lalu klik bintang untuk menambah atau menghapusnya. **Pindahkan ke grup** di menu ⋯ menyortir berkas berbintang ke grup bernama; tampilan Berbintang menyaring menurutnya.
+- **Panduan Pengguna**: membuka panduan ini.
+- **Ask AI**: panel basis pengetahuan — ajukan pertanyaan dan dapatkan jawaban yang mengutip berkas berbintang Anda (lihat di bawah).
+- **Proyek**: folder (proyek) yang bisa dikerjakan AI. Buat proyek atau gunakan folder yang ada, lalu buka salah satunya untuk mengelola instruksi, memori, file, dan obrolannya. Lihat [Proyek](help://projects).
+- **Folder**: direktori yang Anda tambahkan ke bilah sisi dengan **Tambah folder…**, atau Anda seret ke sana dari aplikasi file. Masing-masing menjadi akar yang bisa Anda buka, buat subfolder di dalamnya, ganti namanya, dan hapus; akar yang jadi luring ditampilkan sebagai tidak tersedia dan bisa dilepas dari daftar. **Folder baru** membuat folder lagi.
+- **Baris di bagian bawah**: menunjukkan apakah AI sudah terhubung — **Hubungkan AI**, atau nama langganan yang terhubung — dan membuka Pengaturan.
+
+Tidak ada entri Sampah di sini. File yang dihapus masuk ke tempat sampah sistem, dan memulihkannya adalah urusan sistem operasi.
+
+## Daftar file
+
+Setiap baris menampilkan ikon, nama file, waktu modifikasi, dan lainnya. **Menu ⋯** pada baris menyediakan:
+
+- **Buka**, dan **Tampilkan di folder** untuk menemukan file di aplikasi file Anda.
+- **Salin jalur**.
+- **Pindahkan ke folder…**: membuka pemilih folder dan benar-benar memindahkan file; jika di tujuan sudah ada file dengan nama yang sama, Anda bisa melewati, menimpa, atau mengganti namanya.
+- **Ganti nama**: langsung di tempat, ekstensi dipertahankan otomatis.
+- **Beri bintang / Hapus bintang** — bintang bertahan setelah aplikasi ditutup dan mengikuti file ketika Anda menggantinya nama.
+- **Duplikat**: membuat salinan di folder yang sama.
+- **Hapus**: memindahkan file ke tempat sampah sistem — bukan penghapusan permanen.
+- **Hapus dari daftar**, pada tampilan **Terbaru** tingkat atas, untuk membuang sebuah entri tanpa menyentuh filenya.
+
+### Beberapa file sekaligus
+
+Centang kotak pada sebuah baris, atau ⌘/ctrl-klik, untuk menyusun sebuah pilihan; kotak di header memilih semuanya yang saat ini terdaftar, dan sebuah bilah di atas daftar melaporkan berapa yang dipilih (**{n} dipilih**) dengan **Pindahkan ke folder…** dan **Hapus file** untuk seluruh rangkaian. Anda juga bisa menyeret pilihan ganda ke sebuah folder di bilah sisi.
+
+## Pencarian
+
+Kotak pencarian di atas mencocokkan dua hal sekaligus:
+
+- **Nama file**: penyaringan cepat berdasarkan nama.
+- **Isi file**: GenOffice mengindeks file Anda di latar belakang (teks di dalam docx/odt/xlsx/pptx/pdf/md/html), sehingga mencari teks isi pun menemukan file. Cakupan dan sakelarnya ada di pengaturan pencarian.
+
+## Kartu Mulai cepat
+
+Kartu di atas daftar membuat dokumen baru dalam satu langkah. Mengklik kartu membuat file bertipe tersebut dan membuka editornya — langsung mulai menulis, atau biarkan AI yang membuat drafannya (setiap editor punya **tombol AI** di pita, dan **Tanya AI** di menu konteks pilihan).
+
+File baru akan masuk ke folder yang sedang dipilih di bilah sisi; jika tidak ada yang dipilih, file masuk ke folder bawaan.
+
+Untuk menyembunyikan kartu atau mengubah urutannya, pilih di **Dokumen baru di Beranda** pada Pengaturan → Umum. Jenis yang dimatikan hanya hilang dari kartu dan menu Baru; file jenis itu tetap terbuka seperti biasa. Di Beranda, ⌘N/Ctrl+N membuat jenis pertama yang masih tampil.
+
+Apa yang dilakukan tiap kartu:
+
+- **AI Docs** (.docx): dokumen teks kosong di editor Docs. File baru ditulis ke disk saat **penyimpanan pertama**; dokumen baru terbuka dengan panel AI terbentang (nonaktifkan lewat Pengaturan → "Buka panel AI di dokumen baru").
+- **AI Sheets** (.xlsx): spreadsheet kosong di editor Sheets. Sebelum Anda menyimpan, belum ada file di disk — namanya dicadangkan untuk penyimpanan pertama; setelah generasi AI pertama, file juga bisa diberi nama otomatis dari isinya.
+- **AI Slides** (.pptx): presentasi kosong di editor Slides.
+- **AI Markdown** (.md): dokumen Markdown kosong di editor Markdown.
+- **AI HTML** (.html): halaman web kosong di editor HTML.
+- **AI PDF** (.pdf): berbeda dari yang lain — kartu ini **segera** membuat PDF kosong satu halaman yang sungguhan di folder tujuan dan membukanya sebagai file biasa (editor PDF bekerja pada file asli). Bagus untuk memberi anotasi, menutupi bagian, atau menambahkan teks; file bisa diberi nama otomatis dari isinya saat penyimpanan pertama.
+- **Buka File Lokal**: pemilih file sistem untuk Word (.docx/.doc/.odt), Excel (.xlsx/.xlsm/.xls/.csv/.tsv), PowerPoint (.pptx/.ppt), PDF, Markdown (.md/.markdown), dan halaman web (.html/.htm). Bisa memilih banyak file sekaligus; tiap file mendapat tabnya sendiri. Berkas teks (.txt, .json) juga terbuka di sini — mereka masuk ke tampilan sumber editor Markdown.
+
+> Tip: menu Arquivo ▸ Novo di bilah menu membuat jenis dokumen yang sama (⌘N/Ctrl+N memakai dokumen teks secara bawaan); menyeret file ke jendela akan membukanya.
+
+## Tanya basis pengetahuan Anda
+
+- Bintangi berkas dulu (jenis apa pun yang aplikasi baca); kepala panel menghitung korpus, dan basis kosong mengajak Anda membintangi sesuatu.
+- Jawaban mengutip berkas sumbernya; klik kutipan untuk membuka berkas di editornya.
+- Memerlukan AI yang terhubung; lihat [Koneksi langganan](help://subscription). Percakapan hanya hidup di memori — menutup aplikasi mengakhirinya.
+- Pilih proyek di bawah kotak masukan, maka file di folder itu ikut dicari dan dibaca, dan obrolannya disimpan di folder tersebut sehingga bisa dilanjutkan di editor lain. Tanpa proyek, obrolan hanya hidup di memori, seperti di atas.
+- Pencarian berjalan di indeks berkas lokal, seperti pencarian Beranda; berkas yang hilang diam-diam keluar dari korpus.
+- Grup hanya merapikan daftar Berbintang — basis pengetahuan selalu mencakup semua berkas berbintang.

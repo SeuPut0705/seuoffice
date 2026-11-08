@@ -1,0 +1,91 @@
+import type { zh } from './zh'
+
+export const en = {
+  windowTitle: 'Agent',
+  homeCardSub: 'Work in a folder with Claude Code or Codex',
+  intro:
+    'The agent runs your Claude Code or Codex in a folder you choose. It can read the files there, create new ones, use your skills, run scripts and change documents open in GenOffice.',
+  folderLabel: 'Project folder',
+  folderPick: 'Choose a folder…',
+  folderNone: 'No folder chosen',
+  recentLabel: 'Recent folders',
+  providerLabel: 'Program',
+  providerClaude: 'Claude Code',
+  providerCodex: 'Codex',
+  providerClaudeNote:
+    'On Windows, commands you allow run without isolation and can reach your whole PC and the internet.',
+  providerCodexNote:
+    'Commands run in Codex’s isolated space: only the project folder can be written, and there is no internet.',
+  providerBlocked: 'Not available yet: Codex cannot yet be kept from reading its own sign-in file.',
+  connChecking: 'Checking the connection…',
+  connUnavailable: 'Not connected. Sign in under Settings → AI.',
+  connMetered: 'Signed in with a pay-per-use login you accepted.',
+  modeLabel: 'When to ask you',
+  modeAskCommands: 'Ask before every command',
+  modeAskCommandsDesc:
+    'Reading and writing files in the project folder goes ahead. Running a command or script asks first.',
+  modeAskWrites: 'Ask before writing and commands',
+  modeAskWritesDesc:
+    'Only reading goes ahead. Writing a file and running a command both ask first.',
+  modeTrust: 'Trust this project',
+  modeTrustDesc:
+    'Nothing asks. Codex still stays in its isolated space; Claude Code’s own reviewer checks each action instead of you.',
+  warningTitle: 'Before you start',
+  warningCommands:
+    'Commands the agent runs can change files and use the internet. A document someone sent you can contain hidden instructions.',
+  warningRedaction:
+    'Parts you hid from AI stay hidden only in documents open in GenOffice. Files the agent reads from the folder are sent as they are.',
+  warningUsage:
+    'An agent works in many steps and uses more of your subscription than the AI panel.',
+  warningAccept: 'I understand',
+  start: 'Start',
+  starting: 'Starting…',
+  stop: 'Stop',
+  newSession: 'New session',
+  send: 'Send',
+  inputPlaceholder: 'What should the agent do?',
+  you: 'You',
+  agent: 'Agent',
+  startedLine: '{program} started in {folder}',
+  skillsLine: '{n} skills available',
+  skillsLineOne: '{n} skill available',
+  toolRunning: 'Working',
+  toolDone: 'Done',
+  toolFailed: 'Failed',
+  toolDenied: 'Declined',
+  actRead: 'Read',
+  actWrite: 'Write',
+  actCommand: 'Run',
+  actAppTool: 'Edit an open document',
+  actSkill: 'Use a skill',
+  actOther: 'Use a tool',
+  openFile: 'Open',
+  permTitle: 'The agent asks to:',
+  permCommand: 'Run this command',
+  permWrite: 'Write this file',
+  permRead: 'Read a file outside the project folder',
+  permOther: 'Use the tool “{tool}”',
+  permReason: 'Reason: {reason}',
+  permAllow: 'Allow',
+  permDeny: 'Decline',
+  turnFailed: 'The agent could not finish this request.',
+  ended: 'The session has ended.',
+  errBadFolder:
+    'This folder cannot be used. Choose a folder of your own work: not a drive, not your home folder, and not a folder of sign-in or app data.',
+  errNotConnected: 'This program is not connected. Sign in under Settings → AI and try again.',
+  errNotAccepted: 'Read the notes above and confirm them first.',
+  errUnsafeTools: 'The program started with tools the app did not give it, so it was stopped.',
+  errRateLimit: 'Your subscription limit is used up. Try again later.',
+  errSignedOut: 'The program is signed out. Sign in under Settings → AI.',
+  errMetered: 'The program is signed in with a pay-per-use login you have not accepted.',
+  errSandboxUnavailable:
+    'Codex cannot open the sandbox that keeps its commands contained on this PC, so it did not start. Update Windows, or choose Claude Code.',
+  errNeedsUpdate: 'The program is too old for agent mode. Update it and try again.',
+  errNotInstalled: 'The program is not installed.',
+  errGeneric: 'Something went wrong. Try again.',
+  documentsUnprotected:
+    'Documents opened after the session started ({n}) are outside the program’s own write protection. Stop and start the session again to protect them.',
+  connOff: 'Turned off in this app. Turn it back on under Settings → AI.',
+  errOffInApp:
+    'This program is turned off in this app, so nothing more was sent. Turn it back on under Settings → AI.',
+} satisfies Record<keyof typeof zh, string>

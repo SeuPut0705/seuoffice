@@ -1,0 +1,467 @@
+/* The agent window. Chrome colours come from @genoffice/ui/tokens.css; the
+ * shell's brand accent and this window's notice tint are defined here, with
+ * light, dark and system-dark values. */
+:root {
+  --accent: #0f7fff;
+  --accent-hover: #0e72e5;
+  --accent-soft: #eaf0fd;
+  --agent-notice-bg: #fff7e6;
+  --agent-notice-border: #f3d69a;
+  --agent-notice-text: #7a4b00;
+  --agent-on-accent: #ffffff;
+}
+
+[data-theme='dark'] {
+  --accent: #3f99ff;
+  --accent-hover: #5ba5ff;
+  --accent-soft: #24354d;
+  --agent-notice-bg: #3a2f17;
+  --agent-notice-border: #6b5424;
+  --agent-notice-text: #f2d398;
+  --agent-on-accent: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    --accent: #3f99ff;
+    --accent-hover: #5ba5ff;
+    --accent-soft: #24354d;
+    --agent-notice-bg: #3a2f17;
+    --agent-notice-border: #6b5424;
+    --agent-notice-text: #f2d398;
+    --agent-on-accent: #ffffff;
+  }
+}
+
+:root {
+  --ui-cjk: 'Microsoft YaHei', 'PingFang SC';
+}
+
+:root:lang(ja) {
+  --ui-cjk: 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'Hiragino Sans';
+}
+
+:root:lang(ko) {
+  --ui-cjk: 'Malgun Gothic', 'Apple SD Gothic Neo';
+}
+
+:root:lang(zh-TW) {
+  --ui-cjk: 'Microsoft JhengHei', 'PingFang TC';
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    'Segoe UI',
+    -apple-system,
+    var(--ui-cjk),
+    sans-serif;
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.agent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.agent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 20px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.agent-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.agent-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.agent-intro {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.agent-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.agent-label {
+  font-weight: 600;
+}
+
+.agent-folder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-folder-path {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-6);
+  background: var(--surface-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.agent-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agent-link {
+  border: none;
+  background: transparent;
+  padding: 2px 0;
+  text-align: left;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-link:hover {
+  text-decoration: underline;
+}
+
+.agent-choice {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-8);
+  cursor: pointer;
+}
+
+.agent-choice[data-selected='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.agent-choice[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.agent-choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agent-choice-note {
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.agent-notice {
+  padding: 10px 12px;
+  border: 1px solid var(--agent-notice-border);
+  border-radius: var(--radius-8);
+  background: var(--agent-notice-bg);
+  color: var(--agent-notice-text);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 1.45;
+}
+
+.agent-notice p {
+  margin: 0;
+}
+
+.agent-error {
+  padding: 8px 10px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-6);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.agent-btn {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-6);
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.agent-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.agent-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.agent-btn-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--agent-on-accent);
+}
+
+.agent-btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.agent-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agent-msg-who {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.agent-msg-text {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.agent-msg[data-who='you'] .agent-msg-text {
+  padding: 6px 10px;
+  border-radius: var(--radius-8);
+  background: var(--surface-subtle);
+}
+
+.agent-tool {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* only the detail gives way to a long path: the label and the "Open" button keep their width */
+.agent-tool > :not(.agent-tool-detail) {
+  flex: none;
+}
+
+.agent-tool-status {
+  min-width: 52px;
+  color: var(--text-muted);
+}
+
+.agent-tool[data-status='failed'] .agent-tool-status,
+.agent-tool[data-status='denied'] .agent-tool-status {
+  color: var(--danger);
+}
+
+.agent-tool-detail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: Consolas, 'Cascadia Mono', monospace;
+}
+
+.agent-system {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.agent-perm {
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-8);
+  background: var(--accent-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.agent-perm-detail {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: var(--radius-6);
+  background: var(--surface);
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.agent-perm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.agent-foot {
+  display: flex;
+  gap: 8px;
+  padding: 10px 20px 14px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.agent-input {
+  flex: 1;
+  min-height: 56px;
+  max-height: 160px;
+  resize: vertical;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-6);
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.agent-foot-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* skills (spec 6.2 to 6.5): the input with its `/` list and chips */
+.agent-input-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.agent-msg-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.agent-msg-skill {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.agent-skill-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.agent-skill-template {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agent-skill-template select {
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-6);
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.agent-install {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-8);
+  background: var(--surface-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.agent-install-address {
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+/* the settings' skill preview dialog, reused for an install a session proposed */
+.agent .set-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.agent .set-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.agent .set-btn.primary {
+  background: var(--accent);
+  color: var(--agent-on-accent);
+}
+
+.agent .set-field-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+/* a project folder's own skills on the start screen (decision 0064) */
+.agent-project-skills {
+  margin: 4px 0;
+  padding-left: 18px;
+  max-height: 140px;
+  overflow-y: auto;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

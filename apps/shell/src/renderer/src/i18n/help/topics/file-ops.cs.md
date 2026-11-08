@@ -1,0 +1,52 @@
+# Práce se soubory: přejmenování, odstranění, export
+
+Tato kapitola popisuje práci se soubory společnou všem editorům; vlastní možnosti exportu každého editoru najdete v jeho kapitole.
+
+Nabídka **⋯** na řádku (objeví se po najetí na řádek souboru) sdružuje tyto akce:
+
+![Nabídka ⋯ na řádku souboru](img/file-ops.png)
+
+## Přejmenování
+
+Dvě vstupní místa, jedna sada kontrol:
+
+- **⋯ ▸ Přejmenovat** na řádku domovské stránky.
+- **Dvojklik na kartu souboru** přejmenuje přímo na místě (viz [Karty a správa oken](help://tabs-and-windows)).
+
+Pravidla: přípona se zachovává automaticky; nepovolené znaky, tečky na konci a rezervované názvy (CON, NUL a podobně) se odmítnou s hlášením; překrytí názvu ve stejné složce se rovněž zablokuje. Přejmenuje se skutečný soubor na disku a seznamy nedávných a oblíbených se aktualizují.
+
+## Odstranění
+
+- **⋯ ▸ Odstranit** na domovské stránce: zeptá se, které soubory, a přesune je do **systémového koše**, odkud je může obnovit operační systém. GenOffice si pro tuto věc nepřidržuje vlastní zpět — obnova je v kompetenci koše, ne oznámení.
+
+## Duplikování
+
+**⋯ ▸ Duplikovat** vytvoří ve stejné složce kopii souboru <jméno>; při kolizi názvů se automaticky připojí číslo. Kopie přibude do **Nedávné** místo toho, aby se sama otevřela — je na jeden klik od vás, ne před vámi.
+
+## Uložit a Uložit jako
+
+- **⌘S / ctrl+S** uloží aktuální soubor; soubor bez názvu se nejdřív zeptá na umístění a název.
+- Ve většině editorů nabízí seznam typů souborů v okně Uložit jako také exportní formáty (PDF, obrázky, jiné formáty dokumentů). Volba jednoho z nich zapíše jen kopii; otevřený dokument a jeho karta zůstávají u původního souboru. Obrázky více stránek se rozdělí na `název-01.png`, `název-02.png`, ….
+- **Uložit jako…** zapíše nový soubor a originál ponechá nedotčený; další úpravy se týkají nového souboru.
+- Každé uložení je atomické (dočasný soubor + přejmenování); ukončení uprostřed zápisu soubor nepoškodí.
+- Automatické ukládání se řídí přepínačem v každém editoru; nový dokument bez vlastního souboru začne až po prvním uložení (viz [Rychlý start](help://getting-started)).
+
+## Export do PDF
+
+- **Docs**: Soubor ▸ Exportovat jako PDF… (nebo tlačítko na pásku), s aktuálním stránkováním.
+- **Slides**: export rastruje stránku po stránce, u velkých prezentací s ukazatelem průběhu.
+- **Sheets**: export používá stránkování pro tisk.
+- Exporty se vykreslují ve skrytém okně a ukládají tam, kam zvolíte.
+
+## Export do Wordu a obrázků
+
+- **Exportovat jako Word…** u PDF: převede PDF na soubor .docx (místní převod; složitá rozvržení se překládají, jak nejlépe lze).
+- **Docs** umí exportovat stránky jako obrázky (PNG na stránku).
+
+## Tisk
+
+Soubor ▸ Tisk… v každém editoru (⌘P/ctrl+P) otevře systémové okno tisku; soubory PDF se tisknou s aktuálním pořadím stránek a otočením.
+
+## Kam putují soubory bez názvu
+
+Umístění, které zvolíte při prvním uložení, je jejich domovem. Do té doby nemá dokument vlastní soubor: jeho neuložený obsah existuje jen jako kopie pro obnovení v datové složce aplikace, takže se dá vrátit, i když se aplikace náhle vypne (viz [Karty a správa oken](help://tabs-and-windows)). Automatické ukládání se ujme až po tomto prvním uložení.

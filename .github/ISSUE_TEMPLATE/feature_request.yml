@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest a new capability or an improvement
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: app
+    attributes:
+      label: App
+      options:
+        - Docs (docs)
+        - Sheets (sheets)
+        - Slides (slides)
+        - PDF (pdf)
+        - Markdown (markdown)
+        - HTML (html)
+        - Mind map (mindmap)
+        - Shell / home screen
+        - AI panel / subscription connection / providers
+        - Command line / MCP / agent skill
+        - Whole suite
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do that is currently hard or impossible?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you like it to work? Alternatives you considered are welcome too.

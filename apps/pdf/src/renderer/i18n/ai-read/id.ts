@@ -1,0 +1,81 @@
+import type { zh } from './zh'
+
+export const id = {
+  arButton: 'Baca halaman dengan AI',
+  arButtonTip:
+    'Minta AI membaca halaman hasil pindai atau yang tidak terbaca dari gambar halamannya, lalu simpan hasilnya',
+  arMenuRead: 'Baca halaman dengan AI…',
+  arMenuDelete: 'Hapus hasil AI yang disimpan untuk dokumen ini…',
+  arTitle: 'Baca halaman dengan AI',
+  arIntro:
+    'Setiap halaman yang dipilih dikirim ke AI sebagai gambar, satu per satu, untuk membaca teks, tabel, dan rumusnya. Hasilnya disimpan di PC ini dan dipakai untuk konversi Markdown dan EPUB, jendela AI, dan pencarian.',
+  arAnalyzing: 'Memeriksa dokumen…',
+  arAnalyzingProgress: 'Memeriksa dokumen… halaman {done} dari {total}',
+  arAnalyzeFailed: 'Dokumen tidak dapat dianalisis.',
+  arPreselectNote:
+    'Halaman hasil pindai, halaman yang teksnya tidak dapat dibaca dengan benar, dan halaman yang catatan kakinya tidak dapat ditautkan sudah dipilih. Tambahkan sendiri halaman yang berisi tabel atau rumus.',
+  arNoPreselect:
+    'Tidak ada halaman yang perlu dipilih lebih dulu. Tambahkan sendiri halaman yang akan dibaca.',
+  arReasonScanned: 'hasil pindai',
+  arReasonDegraded: 'teks tidak terbaca',
+  arReasonFootnote: 'catatan kaki tidak tertaut',
+  arReasonAdded: 'ditambahkan oleh Anda',
+  arAlreadyRead: 'sudah dibaca · dilewati',
+  arPageLabel: 'Halaman {page}',
+  arAddLabel: 'Tambah halaman',
+  arAddPlaceholder: 'mis. 3, 7-9',
+  arAdd: 'Tambah',
+  arSelectedCount: '{count} halaman dipilih',
+  arNext: 'Berikutnya',
+  arBack: 'Kembali',
+  arCancel: 'Batal',
+  arStart: 'Mulai',
+  arConfirmTitle: 'Periksa sebelum mulai',
+  arConfirmCalls: 'Panggilan AI: {calls} (satu per halaman)',
+  arConfirmSkipped: '{count} halaman yang sudah dibaca tidak dikirim',
+  arConfirmProvider: 'AI yang dipakai: {provider}',
+  arConfirmPaid: '{provider} akan mengenakan biaya',
+  arConfirmSends: 'Gambar halaman dikirim ke AI ini.',
+  arConfirmNothing: 'Semua halaman yang dipilih sudah dibaca. Tidak ada yang perlu dikirim.',
+  arChecking: 'Memeriksa koneksi AI…',
+  arVisionProvider:
+    '{provider} tidak dapat membaca gambar, jadi pembacaan halaman dengan AI tidak dapat dimulai. Pilih AI yang dapat membaca gambar di Pengaturan.',
+  arVisionModel:
+    'Model yang dipilih ({model}) tidak dapat membaca gambar, jadi pembacaan halaman dengan AI tidak dapat dimulai. Pilih model yang dapat membaca gambar di Pengaturan.',
+  arVisionUnknown: 'AI yang akan dipakai tidak dapat ditentukan, jadi tidak dapat dimulai.',
+  arRouteChanged: 'Koneksi AI berubah. Periksa lagi rinciannya, lalu mulai.',
+  arRunning: 'AI sedang membaca halaman… {done} dari {total}',
+  arRunningPage: 'membaca halaman {page}',
+  arStop: 'Hentikan',
+  arStopping: 'Menghentikan…',
+  arDone: 'Pembacaan AI selesai. {count} halaman telah dibaca.',
+  arFailedPages: 'Halaman yang tidak terbaca: {pages}',
+  arStoppedCancelled:
+    'Pembacaan AI dihentikan. Halaman yang sudah dibaca disimpan dan Anda dapat melanjutkannya nanti.',
+  arStoppedFailures:
+    'Pembacaan AI berhenti karena beberapa panggilan berturut-turut gagal. Halaman yang sudah dibaca disimpan.',
+  arStoppedStore: 'Pembacaan AI berhenti karena hasilnya tidak dapat disimpan. Disk mungkin penuh.',
+  arLostPages: 'Halaman yang diterima tetapi tidak tersimpan: {pages}',
+  arStoppedError: 'Pembacaan AI berhenti: {reason}',
+  arStartFailed: 'Pembacaan AI tidak dapat dimulai: {reason}',
+  arClose: 'Tutup',
+  arBusy:
+    'Sudah ada tugas AI yang berjalan untuk dokumen ini ({done}/{total}). Coba lagi setelah tugas itu selesai atau dihentikan.',
+  arUnavailable: 'Pembacaan halaman dengan AI tidak tersedia di jendela ini.',
+  arDeleteConfirm:
+    'Hapus semua hasil AI yang disimpan untuk dokumen ini (hasil baca AI, terjemahan, kartu kutipan, saran sorotan, dan ikhtisar)? Tindakan ini tidak dapat dibatalkan.',
+  arDeleted: 'Hasil AI yang disimpan untuk dokumen ini telah dihapus.',
+  arDeleteFailed: 'Hasil AI yang disimpan tidak dapat dihapus.',
+  arDeleteBusy: 'Ada tugas AI yang sedang berjalan, jadi tidak ada yang dapat dihapus sekarang.',
+  jobResumeAiRead: 'Pembacaan AI belum selesai {percent}% — lanjutkan?',
+  jobResumeTranslate: 'Terjemahan belum selesai ({language}) {percent}% — lanjutkan?',
+  jobResumeHighlight: 'Sorotan AI belum selesai {percent}% — lanjutkan?',
+  arDeleteAlsoBoth:
+    'Ikut terhapus: {edited} terjemahan yang diedit manual dan {cards} kartu kutipan.',
+  arDeleteAlsoEdited: 'Ikut terhapus: {count} terjemahan yang diedit manual.',
+  arDeleteAlsoCards: 'Ikut terhapus: {count} kartu kutipan.',
+  jobResumeContinue: 'Lanjutkan',
+  jobResumeLater: 'Nanti',
+  searchAiRead: 'Ditemukan di teks yang dibaca AI',
+  searchAiReadTip: 'Teks yang dibaca AI tidak punya posisi, jadi hanya menuju ke halamannya',
+} satisfies Record<keyof typeof zh, string>

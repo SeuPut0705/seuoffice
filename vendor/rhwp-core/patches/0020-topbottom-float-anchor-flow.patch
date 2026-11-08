@@ -1,0 +1,592 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pblsketch <239486537+pblsketch@users.noreply.github.com>
+Date: Wed, 4 Nov 2026 00:00:00 +0900
+Subject: [PATCH 10/30] fix(typeset): 종이·쪽 기준 자리차지 개체를 계상하지 않은 저장 조판을 한글 2024처럼 다시 나눈다
+
+종이·쪽 기준 자리차지(TopAndBottom) 도형·그림을 앵커한 문단이 그 개체 밴드 안에서
+시작하면, 그리는 쪽(`calculate_shape_reserved_heights` + `shape_jumped`)은 앵커
+문단부터 개체 아래로 내린다. 쪽 나누기(typeset)는 이 판정이 없어 저장 위치를 그대로
+따라갔다. 예전 한글이 개체를 계상하지 않고 저장한 문서(앵커 줄이 개체 안쪽에 저장됨)
+에서 두 흐름이 갈라져, 뒤 글자처럼 취급 표가 typeset 이 확정한 저장 자리에 그려져
+내려간 제목 줄 위에 겹치고, 쪽 끝 줄은 본문 아래로 넘쳤다.
+
+1. typeset 도 그리는 쪽과 같은 개체·같은 판정(비-TAC 도형·그림, 단과 수평으로 겹침,
+   개체 위끝이 단 위 1/3 안, 앵커 글이 개체 위에 들어가면 내리지 않음)으로 앵커 문단의
+   흐름을 개체 아래끝에 맞춘다. 개체가 쪽 끝까지 내려오면(표지 전면 그림) 앵커 줄은 이
+   쪽 끝에 남겨 개체를 이 쪽에 두고 뒤 내용을 다음 쪽에서 잇는다.
+2. 앵커의 저장 줄이 개체 안쪽이면(`first_stale_topbottom_float_anchor`) 그 뒤 저장 쪽
+   경계는 다른 조판의 것이다. 이 구역의 뒤 문단은 `--compat 2024` 의 회수 규칙과 같이,
+   저장 vpos 리셋·되감김이 가리키는 쪽 경계를 첫 줄이 잔여에 들어가면 덮는다.
+3. 그런 구역에서 저장 되감김을 같은 쪽에 이어 놓으면 그 쪽의 남은 저장 좌표를 트림·후방
+   스냅의 근거로 쓰지 않고(조판), 앞 줄 끝으로 대체한 목표에서 앞 간격을 사전 차감하지
+   않는다(조판·그리기 공용 `HeightCursor`). 차감하면 트림한 간격이 영영 복원되지 않아
+   쪽 끝 개체가 본문 밖으로 나가고, 쪽 중간에 온 제목이 앞 간격만큼 위에 붙었다.
+
+저장 줄이 이미 개체 아래인 문서는 1 의 흐름 원점만 맞고 2·3 은 꺼진 채다.
+
+IeumOffice patch onto v0.8.7 (not proposed upstream yet).
+
+Ported onto devel 7d06d5c70: devel's #7696 band (`register_page_anchored_topbottom_band`) already starts the paragraphs after the anchor below the box, but it leaves the anchor's own line inside the box and has no stale-boundary rules, so the app's Hancom-checked fixture split 33/17 lines instead of 32/18. Kept all three parts. The anchor alignment now also records its start in devel's `page_band_flow_starts`, because devel's paint no longer jumps the anchor itself (`shape_reserved`) and otherwise drew the title lines 15.6px above the typeset place. The stale-boundary override follows devel's `!saved_object_frame_reset` guard in whole_fit.rs. The HeightCursor exception joins devel's reworked `skip_prededuct` list. Same files otherwise.
+---
+ src/renderer/height_cursor.rs                 |  10 ++
+ src/renderer/layout.rs                        |  14 ++
+ src/renderer/typeset.rs                       | 218 ++++++++++++++++++++++++++
+ src/renderer/typeset/paragraph/split_entry.rs |   7 +-
+ src/renderer/typeset/paragraph/whole_fit.rs   |   6 +-
+ src/renderer/typeset/section/flow.rs          |  48 ++++++
+ src/renderer/typeset/section/stored_reset.rs  |   7 +-
+ src/renderer/typeset/section/vpos.rs          |  27 ++++
+ src/renderer/typeset/state.rs                 |   2 +
+ src/renderer/typeset/state/commands.rs        |  11 ++
+ src/renderer/typeset/state/data.rs            |   5 +
+ src/renderer/typeset/state/transition.rs      |   1 +
+ 12 files changed, 350 insertions(+), 6 deletions(-)
+
+diff --git a/src/renderer/height_cursor.rs b/src/renderer/height_cursor.rs
+index 43ecef264d9aa535c247905d4e39cbc73e1d24d9..a90e6ea9ba1e5f646a66651b8a63b9cd7eae5d7a 100644
+--- a/src/renderer/height_cursor.rs
++++ b/src/renderer/height_cursor.rs
+@@ -273,6 +273,9 @@ pub(crate) struct HeightCursor {
+     /// 간격을 그리는 문단 경로를 타지 않으므로 `vpos_corrected_end_y` 의 `sb_N` 사전 차감
+     /// 대상이 아니다. layout 만 세운다.
+     pub curr_item_is_table_fragment: bool,
++    /// 이 문단이 저장 사다리가 종이·쪽 기준 자리차지 개체를 계상하지 않은 앵커 뒤에 있다
++    /// (`first_stale_topbottom_float_anchor`). 그 뒤의 저장 되감김은 다른 조판의 쪽 경계다.
++    pub stale_stored_page_boundaries: bool,
+     /// [#7665] 미주 흐름에서 **미주의 첫 문단**(렌더가 번호 장식을 붙이는 문단, 조판 `ep_idx == 0`)
+     /// 인 전역 문단 번호. 새 문항 제목 판정은 이 소유 경계로 한다 — 첫 문단이 「문」 으로
+     /// 시작하는지(번호 장식 `문1)` 의 대리값)로 읽으면 같은 미주 안 `문서…` 본문도 제목이 된다.
+@@ -345,6 +348,7 @@ impl HeightCursor {
+             trimmed_prev_spacing_before_px: 0.0,
+             session_edited: false,
+             curr_item_is_table_fragment: false,
++            stale_stored_page_boundaries: false,
+             endnote_note_first_paras: Default::default(),
+             endnote_tail_leading_hu: Default::default(),
+             seed_lazy_base_from_next_stored: false,
+@@ -1779,8 +1783,14 @@ impl HeightCursor {
+             && paragraphs.get(item_para).is_some_and(|current| {
+                 rebuilt_ladder_omits_spacing_before(prev_para, current, curr_sb, self.dpi)
+             });
++        // 낡은 저장 쪽 경계(`stale_stored_page_boundaries`)의 되감김을 흐름이 같은 쪽에 이어
++        // 놓으면, 목표는 앞 줄 끝(`prev_vpos_end`)이다. 그 값은 이 문단의 앞 간격 **앞**
++        // (문단 상단)이라, 앞 간격을 사전 차감하면 그만큼 위로 되감겨 앞 줄에 붙는다.
++        let rewind_falls_back_to_prev_end =
++            self.stale_stored_page_boundaries && vpos_rewind && vpos_end == prev_vpos_end;
+         let skip_prededuct = self.skip_spacing_before_prededuct
+             || rebuilt_before_not_consumed
++            || rewind_falls_back_to_prev_end
+             || inline_host_without_stored_anchor
+             || table_host_line_is_top_after_table_host;
+         // This rebuilt axis omits paragraph-before bands already consumed by
+diff --git a/src/renderer/layout.rs b/src/renderer/layout.rs
+index 89a2fbbc838c42c68ddc687ea47a1a1ad1d7cd05..1165b5dd87dda56d35544be64d8b4d30b4495a93 100644
+--- a/src/renderer/layout.rs
++++ b/src/renderer/layout.rs
+@@ -8197,6 +8197,18 @@ impl LayoutEngine {
+         );
+         hcursor.suppress_hwpx_stale_forward = self.profile.get().hwpx_stored_layout();
+         hcursor.stored_equation_reflow = self.profile.get().hwp5_container();
++        // 저장 사다리가 종이·쪽 기준 자리차지 개체를 계상하지 않은 앵커(조판과 같은 판정) —
++        // 그 뒤 문단의 저장 되감김은 낡은 쪽 경계다.
++        let stale_topbottom_anchor = if col_content.endnote_flow {
++            None
++        } else {
++            crate::renderer::typeset::first_stale_topbottom_float_anchor(
++                paragraphs,
++                col_area,
++                &layout.body_area,
++                self.dpi,
++            )
++        };
+         // 쪽 첫 문단(제목 표 host 포함)이 제목 표 아래에서 시작하면 그 문단도 저장 위치
+         // (쪽 원점 + 첫 vpos)에 둔다.
+         if page_square_preserves_source_origin {
+@@ -8918,6 +8930,8 @@ impl LayoutEngine {
+                 };
+                 hcursor.curr_item_is_table_fragment =
+                     matches!(item, PageItem::PartialTable { .. }) && !opening_host_owns_lead;
++                hcursor.stale_stored_page_boundaries =
++                    stale_topbottom_anchor.is_some_and(|anchor| item_para > anchor);
+                 if !hcursor.bind_stored_frame_successor(
+                     y_offset,
+                     item_para,
+diff --git a/src/renderer/typeset.rs b/src/renderer/typeset.rs
+index c4bc500dec92443b0d8fcfd27a57bbf34f46445c..6d049e1e3e638d0c840108696c4f17eeccc6a4b4 100755
+--- a/src/renderer/typeset.rs
++++ b/src/renderer/typeset.rs
+@@ -6588,6 +6588,137 @@ impl TypesetEngine {
+     }
+ }
+ 
++/// 종이·쪽 기준 자리차지(TopAndBottom) 도형·그림을 앵커한 문단이 그 개체 밴드
++/// 안에서 시작하면, 그리는 쪽은 앵커 문단부터 개체 아래로 내린다(layout
++/// `calculate_shape_reserved_heights` 와 `shape_jumped`). 저장 사다리가 개체를
++/// 계상하지 않은 문서(개체 안쪽에 앵커 줄을 저장)는 typeset 이 저장 위치를 그대로
++/// 따라가 두 흐름이 갈라진다 — 뒤 글자처럼 취급 표는 typeset 이 확정한 자리에
++/// 그려져 내려간 제목 줄 위에 겹치고, 쪽 끝 줄은 본문 아래로 넘친다. 한글 2024 도
++/// 앵커 문단부터 개체 아래에 놓고 넘친 줄을 다음 쪽으로 보낸다.
++///
++/// 그리는 쪽과 같은 개체·같은 판정을 쓴다: 비-TAC 도형·그림, 수평으로 단과 겹침,
++/// 개체 위끝이 단 위 1/3 안, 앵커 문단 글이 개체 위에 들어가면 내리지 않음.
++/// `flow_y` 와 돌려주는 값은 단 상단 기준 px 이다. 이미 개체 아래면 `None`.
++pub(crate) fn topbottom_float_anchor_flow_bottom(
++    para: &Paragraph,
++    anchor_text_height: f64,
++    flow_y: f64,
++    col: &crate::renderer::page_layout::LayoutRect,
++    body: &crate::renderer::page_layout::LayoutRect,
++    dpi: f64,
++) -> Option<f64> {
++    use crate::model::shape::{HorzAlign, HorzRelTo, TextWrap, VertAlign, VertRelTo};
++    // layout `calc_shape_bottom_y` 와 같은 (아래끝, 위끝).
++    let geometry = |common: &crate::model::shape::CommonObjAttr| -> (f64, f64) {
++        let v_offset = hwpunit_to_px(common.vertical_offset as i32, dpi);
++        let shape_h = hwpunit_to_px(common.height as i32, dpi);
++        let (ref_y, ref_h) = match common.vert_rel_to {
++            VertRelTo::Paper => (0.0_f64, body.y + body.height + body.y),
++            VertRelTo::Page => (body.y, body.height),
++            VertRelTo::Para => (col.y, col.height),
++        };
++        let top = match common.vert_align {
++            VertAlign::Top | VertAlign::Inside => ref_y + v_offset,
++            VertAlign::Center => ref_y + (ref_h - shape_h) / 2.0 + v_offset,
++            VertAlign::Bottom | VertAlign::Outside => ref_y + ref_h - shape_h - v_offset,
++        };
++        let margin_bottom = hwpunit_to_px(common.margin.bottom as i32, dpi);
++        (top + shape_h + margin_bottom, top)
++    };
++    // layout `check_horizontal_overlap` 과 같다.
++    let overlaps_column = |common: &crate::model::shape::CommonObjAttr| -> bool {
++        let h_offset = hwpunit_to_px(common.horizontal_offset as i32, dpi);
++        let shape_w = hwpunit_to_px(common.width as i32, dpi);
++        let (ref_x, ref_w) = match common.horz_rel_to {
++            HorzRelTo::Paper => (0.0_f64, body.x + body.width + body.x),
++            HorzRelTo::Page => (body.x, body.width),
++            _ => (col.x, col.width),
++        };
++        let x = match common.horz_align {
++            HorzAlign::Left | HorzAlign::Inside => ref_x + h_offset,
++            HorzAlign::Center => ref_x + (ref_w - shape_w) / 2.0 + h_offset,
++            HorzAlign::Right | HorzAlign::Outside => ref_x + ref_w - shape_w - h_offset,
++        };
++        x + shape_w >= col.x && x <= col.x + col.width
++    };
++    fn float_common(ctrl: &Control) -> Option<&crate::model::shape::CommonObjAttr> {
++        match ctrl {
++            Control::Shape(s) if !s.common().treat_as_char => Some(s.common()),
++            Control::Picture(p) if !p.common.treat_as_char => Some(&p.common),
++            _ => None,
++        }
++    }
++    let bottom = para
++        .controls
++        .iter()
++        .filter_map(float_common)
++        .filter(|common| {
++            matches!(common.text_wrap, TextWrap::TopAndBottom)
++                && !matches!(common.vert_rel_to, VertRelTo::Para)
++                && overlaps_column(common)
++        })
++        .map(geometry)
++        .filter(|&(_, top)| top <= col.y + col.height / 3.0)
++        .map(|(bottom, _)| bottom)
++        .reduce(f64::max)?;
++    let y = col.y + flow_y;
++    if bottom <= y {
++        return None;
++    }
++    // 그리는 쪽은 앵커의 첫 자리차지 개체 위끝으로 "개체 위에 들어감"을 잰다.
++    let first_top = para
++        .controls
++        .iter()
++        .filter_map(float_common)
++        .find(|common| matches!(common.text_wrap, TextWrap::TopAndBottom))
++        .map(|common| geometry(common).1);
++    if first_top.is_some_and(|top| anchor_text_height + 4.0 <= top - y) {
++        return None;
++    }
++    Some(bottom - col.y)
++}
++
++/// 저장 사다리가 종이·쪽 기준 자리차지 개체를 계상하지 않은 첫 앵커 문단 — 그 문단의 저장
++/// 첫 줄이 자기 개체 밴드 안에 있다(`topbottom_float_anchor_flow_bottom` 이 내릴 자리).
++/// 한글 2024 는 이 문단부터 다시 조판하므로 그 뒤의 저장 쪽 경계·되감김은 다른 조판의 것이다.
++/// 저장 줄이 쪽마다 되감기지 않는 사다리(누적 좌표)는 줄이 개체 밴드에 들지 않아 해당하지 않는다.
++pub(crate) fn first_stale_topbottom_float_anchor(
++    paragraphs: &[Paragraph],
++    col: &crate::renderer::page_layout::LayoutRect,
++    body: &crate::renderer::page_layout::LayoutRect,
++    dpi: f64,
++) -> Option<usize> {
++    paragraphs.iter().position(|para| {
++        if !para
++            .controls
++            .iter()
++            .any(|ctrl| matches!(ctrl, Control::Shape(_) | Control::Picture(_)))
++        {
++            return false;
++        }
++        let mut stored = para
++            .line_segs
++            .iter()
++            .filter(|seg| !is_synthetic_line_seg(seg));
++        let Some(first) = stored.next() else {
++            return false;
++        };
++        let text_height: f64 = std::iter::once(first)
++            .chain(stored)
++            .map(|seg| hwpunit_to_px(seg.line_height + seg.line_spacing, dpi))
++            .sum();
++        topbottom_float_anchor_flow_bottom(
++            para,
++            text_height,
++            hwpunit_to_px(first.vertical_pos, dpi),
++            col,
++            body,
++            dpi,
++        )
++        .is_some()
++    })
++}
++
+ /// Task #321: 단일 문단의 컨트롤에서 body-wide TopAndBottom 표/도형이 차지하는 높이 계산.
+ ///
+ /// col 1+ advance 시 current_height 시작값으로 사용하여 layout의 `body_wide_reserved`
+@@ -6801,6 +6932,93 @@ mod issue_3780_line_advance_oob {
+ mod tests {
+     use crate::renderer::float_placement::native_empty_host_rowbreak_line_advance_hu;
+ 
++    #[test]
++    fn paper_topbottom_float_moves_its_anchor_flow_below_the_box() {
++        use super::topbottom_float_anchor_flow_bottom;
++        use crate::model::image::Picture;
++        use crate::model::shape::{CommonObjAttr, HorzRelTo, TextWrap, VertRelTo};
++        use crate::renderer::page_layout::LayoutRect;
++        use crate::renderer::{hwpunit_to_px, DEFAULT_DPI};
++
++        // 본문 (100, 100) 폭 600·높이 900 px, 종이 기준 상자 위끝 120 px·높이 150 px.
++        let body = LayoutRect {
++            x: 100.0,
++            y: 100.0,
++            width: 600.0,
++            height: 900.0,
++        };
++        let px_to_hu = |px: f64| (px * 7200.0 / DEFAULT_DPI).round() as u32;
++        let anchor = |wrap, vert, treat_as_char, top_px: f64| Paragraph {
++            controls: vec![Control::Picture(Box::new(Picture {
++                common: CommonObjAttr {
++                    treat_as_char,
++                    text_wrap: wrap,
++                    vert_rel_to: vert,
++                    horz_rel_to: HorzRelTo::Paper,
++                    vertical_offset: px_to_hu(top_px),
++                    horizontal_offset: px_to_hu(110.0),
++                    width: px_to_hu(500.0),
++                    height: px_to_hu(150.0),
++                    ..Default::default()
++                },
++                ..Default::default()
++            }))],
++            ..Default::default()
++        };
++        let bottom = 120.0 + hwpunit_to_px(px_to_hu(150.0) as i32, DEFAULT_DPI);
++        let jump = |para: &Paragraph, text_h: f64, flow_y: f64| {
++            topbottom_float_anchor_flow_bottom(para, text_h, flow_y, &body, &body, DEFAULT_DPI)
++        };
++
++        // 앵커 줄(본문 위 30 px)이 상자 안에서 시작한다 — 상자 아래끝으로 내린다.
++        let para = anchor(TextWrap::TopAndBottom, VertRelTo::Paper, false, 120.0);
++        let moved = jump(&para, 20.0, 30.0).expect("anchor moves below the box");
++        assert!((moved - (bottom - body.y)).abs() < 0.01, "moved to {moved}");
++        // 이미 상자 아래면 그대로다.
++        assert_eq!(jump(&para, 20.0, bottom - body.y + 1.0), None);
++        // 앵커 글이 상자 위에 들어가면 내리지 않는다(그리는 쪽과 같다).
++        let low = anchor(TextWrap::TopAndBottom, VertRelTo::Paper, false, 300.0);
++        assert_eq!(jump(&low, 20.0, 30.0), None);
++        // 단 위 1/3 아래에서 시작하는 개체, 문단 기준, 글자처럼 취급, 어울림은 대상이 아니다.
++        let at = |wrap, vert, treat_as_char, top_px| {
++            jump(&anchor(wrap, vert, treat_as_char, top_px), 400.0, 30.0)
++        };
++        assert_eq!(
++            at(TextWrap::TopAndBottom, VertRelTo::Paper, false, 450.0),
++            None
++        );
++        assert_eq!(
++            at(TextWrap::TopAndBottom, VertRelTo::Para, false, 0.0),
++            None
++        );
++        assert_eq!(
++            at(TextWrap::TopAndBottom, VertRelTo::Paper, true, 120.0),
++            None
++        );
++        assert_eq!(at(TextWrap::Square, VertRelTo::Paper, false, 120.0), None);
++
++        // 저장 첫 줄이 상자 안이면 그 문단이 낡은 사다리의 앵커다. 상자 아래 저장 줄은 아니다.
++        use super::first_stale_topbottom_float_anchor;
++        use crate::model::paragraph::LineSeg;
++        let stored_at = |mut para: Paragraph, top_px: f64| {
++            para.line_segs = vec![LineSeg {
++                vertical_pos: px_to_hu(top_px) as i32,
++                line_height: 1000,
++                line_spacing: 600,
++                ..Default::default()
++            }];
++            para
++        };
++        let plain = stored_at(Paragraph::default(), 0.0);
++        let inside = stored_at(para.clone(), 30.0);
++        let below = stored_at(para.clone(), bottom - body.y + 1.0);
++        let stale = |paras: &[Paragraph]| {
++            first_stale_topbottom_float_anchor(paras, &body, &body, DEFAULT_DPI)
++        };
++        assert_eq!(stale(&[plain.clone(), inside]), Some(1));
++        assert_eq!(stale(&[plain, below]), None);
++    }
++
+     #[test]
+     fn fullpage_image_single_page_policy_requires_strict_majority() {
+         assert!(!super::has_majority_fullpage_images(0, 0));
+diff --git a/src/renderer/typeset/paragraph/split_entry.rs b/src/renderer/typeset/paragraph/split_entry.rs
+index 44ca45bad59c02fcd41b1a06ffc12b33f155a391..a52818b65a4d0ff1b5eaf6333ddc59dfa53df4ee 100644
+--- a/src/renderer/typeset/paragraph/split_entry.rs
++++ b/src/renderer/typeset/paragraph/split_entry.rs
+@@ -17,6 +17,7 @@ pub(in crate::renderer::typeset) struct SplitEntryPage<'a> {
+     pub body_height: f64,
+     pub stored_ladder_spacing_omitted: bool,
+     pub hangul2024_reclaimed: f64,
++    pub stale_stored_page_boundaries: bool,
+ }
+ 
+ pub(in crate::renderer::typeset) struct SplitEntryFit {
+@@ -154,8 +155,10 @@ pub(in crate::renderer::typeset) fn inspect_entry(
+     // [compat 2024] near-top 저장 리셋(stored_whole_para_reset)도 2022 쪽
+     // 경계 신호다 — 앵커 줄 회수가 있고 첫 줄(빈 문단은 0)이 회수 보너스로
+     // 들어가면 덮는다 (reset-trigger/되감김과 같은 규칙, 제3의 경계 지점).
+-    let hangul2024_split_refit = page.profile.hangul2024_layout()
+-        && page.hangul2024_reclaimed > 0.0
++    // 저장 쪽 경계가 낡은 구역(`stale_stored_page_boundaries`)도 같은 규칙으로 덮는다.
++    let hangul2024_split_refit = ((page.profile.hangul2024_layout()
++        && page.hangul2024_reclaimed > 0.0)
++        || page.stale_stored_page_boundaries)
+         && stored_whole_para_reset
+         && page.current_height < available
+         && {
+diff --git a/src/renderer/typeset/paragraph/whole_fit.rs b/src/renderer/typeset/paragraph/whole_fit.rs
+index 607878c1afb9cd3453ee1e6dbad5d5a35cdb7c96..2f3be70c5376c8ce56f3dc4e237c62a597a1a6a5 100644
+--- a/src/renderer/typeset/paragraph/whole_fit.rs
++++ b/src/renderer/typeset/paragraph/whole_fit.rs
+@@ -53,6 +53,7 @@ pub(in crate::renderer::typeset) struct WholeFitPage<'a> {
+     pub body_height: f64,
+     pub visible_float_exclusions: &'a [VisibleFloatExclusion],
+     pub hangul2024_reclaimed: f64,
++    pub stale_stored_page_boundaries: bool,
+ }
+ 
+ pub(super) struct WholeFitEvidence {
+@@ -282,10 +283,11 @@ pub(super) fn inspect(
+     // [compat 2024] 앵커 줄 회수분이 있거나 앞선 경계를 이미 덮은 상태에서
+     // 이 문단의 첫 줄이 (회수 보너스 포함) 들어가면 저장 되감김(=2022 조판의
+     // 쪽 경계)을 덮는다. 회수도 선행 덮음도 없으면 종전 동작 그대로.
++    // 저장 쪽 경계가 낡은 구역(`stale_stored_page_boundaries`)도 같은 규칙으로 덮는다.
+     let hangul2024_rewind_override = stored_vpos_rewind_break
+         && !saved_object_frame_reset
+-        && page.profile.hangul2024_layout()
+-        && page.hangul2024_reclaimed > 0.0
++        && ((page.profile.hangul2024_layout() && page.hangul2024_reclaimed > 0.0)
++            || page.stale_stored_page_boundaries)
+         && {
+             // 빈 문단 need=0 / 실문단 첫 줄 (위 reset-trigger 와 같은 규칙).
+             let need: f64 = if !para_has_visible_text(para) && para.controls.is_empty() {
+diff --git a/src/renderer/typeset/section/flow.rs b/src/renderer/typeset/section/flow.rs
+index b0d5e0418915be6c9d5a5d4abd2652225b284e7e..71ad6126cf9f6f4bbd88d66ccc4bbc67e5cde53e 100644
+--- a/src/renderer/typeset/section/flow.rs
++++ b/src/renderer/typeset/section/flow.rs
+@@ -253,6 +253,54 @@ impl TypesetEngine {
+                 st.record_stored_column_origin(Some((0, 0.0)));
+                 st.record_vpos_origin_provenance(true);
+             }
++            // 종이·쪽 기준 자리차지 개체의 앵커 문단은 그리는 쪽처럼 개체 아래에서 시작한다.
++            // 저장 사다리가 개체를 계상하지 않았으면 뒤 흐름도 내려간 자리를 따른다.
++            if st.col_count == 1 {
++                let column = st.inline_flow_column();
++                let anchor_text_height = composed
++                    .get(para_idx)
++                    .map(|comp| {
++                        comp.lines
++                            .iter()
++                            .map(|line| {
++                                hwpunit_to_px(line.line_height + line.line_spacing, self.dpi)
++                            })
++                            .sum::<f64>()
++                    })
++                    .unwrap_or(f64::MAX);
++                if let Some(bottom) = crate::renderer::typeset::topbottom_float_anchor_flow_bottom(
++                    para,
++                    anchor_text_height,
++                    st.current_height,
++                    &column,
++                    &st.layout.body_area,
++                    self.dpi,
++                ) {
++                    // 앵커의 저장 줄이 개체 안쪽이면(쪽 안 저장 좌표가 개체 바닥 위) 저장
++                    // 사다리가 개체를 계상하지 않은 조판이다 — 이 구역의 뒤 저장 쪽 경계도 낡았다.
++                    // 저장 줄이 이미 개체 아래인데 흐름 원점만 달랐던 쪽은 해당하지 않는다.
++                    let stored_inside_box = para
++                        .line_segs
++                        .iter()
++                        .find(|seg| !is_synthetic_line_seg(seg))
++                        .is_some_and(|seg| {
++                            hwpunit_to_px(seg.vertical_pos, self.dpi) + 1.0 < bottom
++                        });
++                    if stored_inside_box {
++                        st.mark_stale_stored_page_boundaries();
++                    }
++                    // 개체가 쪽 끝까지 내려오면(표지 전면 그림) 한글은 개체를 이 쪽에 두고 뒤
++                    // 내용을 다음 쪽에서 잇는다. 앵커 문단까지 넘기면 개체가 함께 다음 쪽으로
++                    // 가 이 쪽이 빈다. 앵커 줄은 이 쪽 끝에 남기고 뒤 문단이 넘치게 한다.
++                    let anchor_stays_on_page =
++                        (st.available_height() - anchor_text_height).max(st.current_height);
++                    let start = bottom.min(anchor_stays_on_page);
++                    st.align_flow_to(start);
++                    // 그리는 쪽도 앵커 문단을 같은 시작에서 그린다(#7696 의 밴드 시작과 같은 통로).
++                    st.record_page_band_flow_start(para_idx, start);
++                    st.mark_vpos_ladder_dirty();
++                }
++            }
+             if let Some(crate::model::control::Control::Table(prev_table)) =
+                 st.current_items.last().and_then(|item| match item {
+                     PageItem::Table {
+diff --git a/src/renderer/typeset/section/stored_reset.rs b/src/renderer/typeset/section/stored_reset.rs
+index 1c2e35d78018a17e7a24d9ccced4521c92451dca..dce1167309f4dcfae784db102dd6583a81f4707a 100644
+--- a/src/renderer/typeset/section/stored_reset.rs
++++ b/src/renderer/typeset/section/stored_reset.rs
+@@ -394,8 +394,11 @@ impl TypesetEngine {
+                 // 통째로 못 들어가면 일반 분할 경로가 첫 줄부터 채운다(한글
+                 // 2024 의 fresh 흐름과 같은 결정). 회수도 선행 덮음도 없는
+                 // 문서/쪽에서는 종전 동작 그대로.
+-                let hangul2024_refit =
+-                    st.profile.hangul2024_layout() && st.hangul2024_reclaimed > 0.0 && {
++                // 저장 쪽 경계가 낡은 구역(`stale_stored_page_boundaries`)도 같은 규칙으로 덮는다.
++                let hangul2024_refit = ((st.profile.hangul2024_layout()
++                    && st.hangul2024_reclaimed > 0.0)
++                    || st.stale_stored_page_boundaries)
++                    && {
+                         // 빈 문단(텍스트·컨트롤 없음)은 한글이 쪽 하단
+                         // 여백으로 흘려도 되는 존재라 need=0, 실문단은 첫 줄
+                         // (통째로 못 들어가면 일반 분할이 첫 줄부터 채운다 —
+diff --git a/src/renderer/typeset/section/vpos.rs b/src/renderer/typeset/section/vpos.rs
+index f6e2d150bafb0b764c8fdaba6bfa20a7aed6ed16..d614927c78d174100f5414e0ababbc7d39f4676a 100644
+--- a/src/renderer/typeset/section/vpos.rs
++++ b/src/renderer/typeset/section/vpos.rs
+@@ -57,6 +57,7 @@ impl TypesetEngine {
+             stored_boundary_spacing_before: 0.0,
+             session_edited: self.profile.get().session_edited(),
+             curr_item_is_table_fragment: false,
++            stale_stored_page_boundaries: st.stale_stored_page_boundaries,
+             // 본문 조판: 미주 제목 갈래는 `suppress_large_forward_jump` 아래에서만 발화한다.
+             endnote_note_first_paras: Default::default(),
+             endnote_tail_leading_hu: Default::default(),
+@@ -311,6 +312,32 @@ impl TypesetEngine {
+         {
+             y = y.max(st.current_height - hc.stored_boundary_spacing_before);
+         }
++        // 저장 쪽 경계가 낡은 구역에서 저장 사다리가 이 문단에서 앞 문단 마지막 줄보다 위로
++        // 되감겼는데(예전 조판이 여기서 새 쪽을 열었다) 이 쪽에 이어 놓는다면, 이 쪽의 남은
++        // 저장 좌표는 흐름의 좌표가 아니다.
++        // 그리는 쪽은 순차 흐름을 따르므로, 문단 간격 트림(뒤 스냅이 되돌린다는 전제)과
++        // 후방 스냅을 끈다 — 끄지 않으면 트림한 간격이 영영 복원되지 않아 쪽 끝 줄이 본문
++        // 아래로 넘친다. 쪽이 바뀌면 전환이 이 표시를 지운다.
++        if st.stale_stored_page_boundaries && !st.current_items.is_empty() && para_idx > 0 {
++            let stored = |seg: &&crate::model::paragraph::LineSeg| {
++                seg.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
++            };
++            let prev_last = paragraphs[para_idx - 1]
++                .line_segs
++                .iter()
++                .rev()
++                .find(stored)
++                .map(|seg| seg.vertical_pos);
++            let curr_first = paragraphs
++                .get(para_idx)
++                .and_then(|para| para.line_segs.iter().find(stored))
++                .map(|seg| seg.vertical_pos);
++            if let (Some(prev_last), Some(curr_first)) = (prev_last, curr_first) {
++                if curr_first < prev_last {
++                    st.mark_vpos_ladder_dirty();
++                }
++            }
++        }
+         // [#2243] dirty 저장-앵커 사다리의 역스냅 금지 — 저장 lineseg 누락 문단의
+         // fresh 재계산 성장분을 낡은 기계 v0 가 되돌리지 못하게 한다(전방만 허용).
+         // [#2279 OMIT-sa] spacing-누락 문서군은 합성(비저장) base 사다리도 동일 —
+diff --git a/src/renderer/typeset/state.rs b/src/renderer/typeset/state.rs
+index 266226ad1fdd5d90cde93b1b1d98f7491b6e4079..71790c3a94a1992e06c0b02e06638012cde47025 100644
+--- a/src/renderer/typeset/state.rs
++++ b/src/renderer/typeset/state.rs
+@@ -763,6 +763,7 @@ impl TypesetState {
+             body_height: self.base_available_height(),
+             visible_float_exclusions: &self.data.visible_float_exclusions,
+             hangul2024_reclaimed: self.data.hangul2024_reclaimed,
++            stale_stored_page_boundaries: self.data.stale_stored_page_boundaries,
+         }
+     }
+ 
+@@ -908,6 +909,7 @@ impl TypesetState {
+             body_height: self.base_available_height(),
+             stored_ladder_spacing_omitted: self.data.stored_ladder_spacing_omitted,
+             hangul2024_reclaimed: self.data.hangul2024_reclaimed,
++            stale_stored_page_boundaries: self.data.stale_stored_page_boundaries,
+         }
+     }
+ 
+diff --git a/src/renderer/typeset/state/commands.rs b/src/renderer/typeset/state/commands.rs
+index b245d6eed692c76486425ea1a881ab4e4c95e07c..085bf58775cde6bd37daeb11920cccfee5130633 100644
+--- a/src/renderer/typeset/state/commands.rs
++++ b/src/renderer/typeset/state/commands.rs
+@@ -1047,6 +1047,17 @@ impl TypesetState {
+ }
+ 
+ impl TypesetState {
++    pub(in crate::renderer::typeset) fn mark_stale_stored_page_boundaries(&mut self) {
++        self.data.stale_stored_page_boundaries = true;
++    }
++    /// 앵커 문단이 측정에서 확정한 시작(단 상단 기준 px). 그리는 쪽이 같은 시작을 쓴다.
++    pub(in crate::renderer::typeset) fn record_page_band_flow_start(
++        &mut self,
++        para_index: usize,
++        start: f64,
++    ) {
++        self.data.page_band_flow_starts.insert(para_index, start);
++    }
+     pub(in crate::renderer::typeset) fn record_reclaimed_host_spacing(&mut self, height: f64) {
+         self.data.hangul2024_reclaimed += height;
+     }
+diff --git a/src/renderer/typeset/state/data.rs b/src/renderer/typeset/state/data.rs
+index 48684cacdde2fb1eb55d4ccd55fb6f75871bac98..bfc208362ac63eed983cc78ad5cc3eb745885417 100644
+--- a/src/renderer/typeset/state/data.rs
++++ b/src/renderer/typeset/state/data.rs
+@@ -50,6 +50,11 @@ pub(in crate::renderer::typeset) struct StateView {
+     /// 되감김 쪽-경계 신호를 재적합으로 덮을 자격 판정에 쓴다 — 회수가 없던
+     /// 쪽에서는 되감김 신호를 그대로 존중해 여타 문서 동작을 바꾸지 않는다.
+     pub(in crate::renderer::typeset) hangul2024_reclaimed: f64,
++    /// 이 구역의 저장 쪽 경계가 낡았다 — 종이·쪽 기준 자리차지 개체의 앵커 줄이 개체 안쪽에
++    /// 저장돼 있어(개체를 계상하지 않은 예전 조판) 흐름을 개체 아래로 내렸다. 그 뒤 저장
++    /// vpos 리셋·되감김은 다른 조판의 쪽 경계이므로, `hangul2024_reclaimed` 처럼 첫 줄이
++    /// 잔여에 들어가면 덮는다. 구역마다 새 상태라 구역 끝까지 유지된다.
++    pub(in crate::renderer::typeset) stale_stored_page_boundaries: bool,
+     /// [compat 2024] 저장 리셋/되감김 신호를 덮은 빈 문단의 인덱스 — 그 문단만
+     /// place 적합을 우회해 쪽 하단 여백으로 흘린다(이웃 빈 문단까지 흘리면
+     /// 2024 보다 한 문단 과적재, idx22 실측).
+diff --git a/src/renderer/typeset/state/transition.rs b/src/renderer/typeset/state/transition.rs
+index 950b5c984fcedecd9c764a21a06e65d2ed671061..452c26916d843f6cda1686153ac629cc005e9880 100644
+--- a/src/renderer/typeset/state/transition.rs
++++ b/src/renderer/typeset/state/transition.rs
+@@ -29,6 +29,7 @@ impl TypesetState {
+                 prev_body_bottom_vpos: None,
+                 flow_underrun: 0.0,
+                 hangul2024_reclaimed: 0.0,
++                stale_stored_page_boundaries: false,
+                 hangul2024_spill_para: None,
+                 stored_ladder_spacing_omitted: false,
+                 omit_fresh_recalc_doc: false,

@@ -1,0 +1,34 @@
+{
+  "thinkingmachines/inkling:free": {
+    "date": "2026-10-14",
+    "reason": "짧은 확인 403: only available on agentic harnesses"
+  },
+  "cohere/north-mini-code:free": {
+    "date": "2026-10-15",
+    "reason": "요청 B가 모델을 계속 부르며 240초 안에 끝나지 않음"
+  },
+  "poolside/laguna-s-2.1:free": {
+    "date": "2026-10-15",
+    "reason": "요청 A: AI 서비스가 혼잡합니다 (제공 회사의 429)"
+  },
+  "google/gemma-4-26b-a4b-it:free": {
+    "date": "2026-10-15",
+    "reason": "짧은 확인 429: 두 번 모두 제공 회사가 혼잡"
+  },
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": {
+    "date": "2026-10-15",
+    "reason": "짧은 확인 한 번에 59초"
+  },
+  "liquid/lfm-2.5-2.6b:free": {
+    "date": "2026-10-15",
+    "reason": "시험하지 않음: 2.6B로 도구 루프에 너무 작음"
+  },
+  "poolside/laguna-xs-2.1:free": {
+    "date": "2026-10-15",
+    "reason": "시험하지 않음: 떨어진 laguna-s의 작은 형제 모델"
+  },
+  "thinkingmachines/inkling-small:free": {
+    "date": "2026-10-15",
+    "reason": "짧은 확인 403: only available on agentic harnesses"
+  }
+}

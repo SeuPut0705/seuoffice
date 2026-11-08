@@ -1,0 +1,106 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pblsketch <239486537+pblsketch@users.noreply.github.com>
+Date: Wed, 4 Nov 2026 00:00:00 +0900
+Subject: [PATCH 15/30] fix(renderer): 쪽 번호를 그릴 쪽을 쪽 번호 위치와 감추기로만 정한다
+
+쪽 번호 새로 시작(NewNumber)이 있는 구역에서 첫 발화 앞 쪽의 쪽 번호를 모두
+감추던 규칙(#634)을 없앤다. 225쪽 보고서는 쪽 번호 위치가 1쪽 첫 문단, 새 번호가
+9쪽에 있다. 한컴 한글 2024는 감추기가 없는 3·5쪽에 "- 3 -", "- 5 -"를 그리는데
+엔진은 1~8쪽 번호를 모두 감췄다.
+
+그 규칙이 맞아 보이던 견본(hwp3-sample16, nested_group_vectors 등)은 쪽 번호
+위치가 새 번호와 같은 문단에 있었다. 한글 2024로 생성 견본을 인쇄해 확인한 규칙을
+따른다.
+
+- 쪽 번호 위치는 구역 전체가 아니라 그 컨트롤이 놓인 쪽부터 걸린다. 앞 쪽에는 걸지
+  않는다. 한 구역에 형식이 다른 것이 여럿이면 쪽마다 맞는 것을 쓴다(hwp3-sample10
+  앞부분 "- i -").
+- 표 셀 안의 쪽 번호 위치도 바깥 표가 놓인 쪽부터 건다(156492236_규제샌드박스_min은
+  1쪽 표 셀에만 있다).
+- 구역의 첫 쪽 번호 위치 앞 쪽은 앞 구역의 쪽 번호 위치를 잇는다(chemical-labeling
+  5구역 66~85쪽). 종전에는 쪽 번호 위치가 하나도 없는 구역만 이었다.
+- 한 쪽에 감추기가 여럿이면 문서 순서로 마지막 것을 쓴다. 종전에는 처음 것만 써서
+  표 셀의 머리말 감추기가 뒤의 쪽 번호·전체 감추기를 가렸다(tac-img-02 1쪽,
+  chemical-labeling 1쪽, 사용자 워크북의 장 표지 쪽). 항목별로 합치면 안 된다 —
+  [전체, 머리말만] 순이면 한글은 꼬리말과 쪽 번호를 그린다.
+
+저장 결과는 바뀌지 않는다. rhwp samples 1205개와 사용자 문서 127개를 고치기 전후
+엔진으로 비교했다. 바뀐 쪽은 쪽 번호가 생기거나 빠지거나 형식이 바뀐 쪽과, 마지막
+감추기를 따라 꼬리말이 감춰진 쪽뿐이다. 쪽 수와 본문 배치는 그대로다.
+
+시험: tests/cases/page_number_before_new_number.rs (생성 견본 여섯, 기대값은 한글
+2024 인쇄 결과)
+
+IeumOffice patch onto v0.8.7 (not proposed upstream yet).
+
+Ported onto devel 7d06d5c70: devel already applies a page number position from its own page (`PageControlEvents::active_position`), lets the last hide on a page win, and does not let NewNumber hide a page that has a position. The app's six Hancom-printed page-number fixtures pass on devel. Kept only the missing parts. Positions inside table cells now become events at the table's page; devel used them only through the section-wide fallback, which drew them from page 1. A position in an unplaced paragraph applies from the section's first page instead of never. In rendering.rs the previous section's position carries to the pages before the section's first own position; devel only carried it when the section had none. The `finalize_pages` signature and the NewNumber fallback stay as devel has them; with every position collected, that fallback no longer has a position to show.
+---
+ src/document_core/queries/rendering.rs | 13 +++++++------
+ src/renderer/page_number.rs            | 17 +++++++++++++----
+ 2 files changed, 20 insertions(+), 10 deletions(-)
+
+diff --git a/src/document_core/queries/rendering.rs b/src/document_core/queries/rendering.rs
+index ef338246531ec90b0a0ac4145b4c13a374b52870..8aa4d871af5247b90db0ec0f73b985555ba9c7ef 100644
+--- a/src/document_core/queries/rendering.rs
++++ b/src/document_core/queries/rendering.rs
+@@ -5855,13 +5855,14 @@ impl DocumentCore {
+                 storage,
+             )?;
+ 
+-            // 구역 간 page_number_pos 상속: 이 구역에 PageNumberPos가 없으면 이전 구역 값 사용
+-            let section_has_own_pnp = result.pages.iter().any(|p| p.page_number_pos.is_some());
+-            if !section_has_own_pnp {
+-                if let Some(ref prev_pnp) = carry_page_number_pos {
+-                    for page in &mut result.pages {
+-                        page.page_number_pos = Some(crate::storage::try_clone(prev_pnp, storage)?);
++            // 구역 간 page_number_pos 상속: 이 구역의 첫 쪽 번호 위치가 놓인 쪽 앞 쪽들은
++            // 이전 구역 값을 쓴다(구역에 쪽 번호 위치가 없으면 모든 쪽).
++            if let Some(ref prev_pnp) = carry_page_number_pos {
++                for page in result.pages.iter_mut() {
++                    if page.page_number_pos.is_some() {
++                        break;
+                     }
++                    page.page_number_pos = Some(crate::storage::try_clone(prev_pnp, storage)?);
+                 }
+             }
+ 
+diff --git a/src/renderer/page_number.rs b/src/renderer/page_number.rs
+index e79d6505ec6e8e022ee57f2a4e44ed0fcc26e6e8..50618fa1b6992d37b304845c6236694126241655 100644
+--- a/src/renderer/page_number.rs
++++ b/src/renderer/page_number.rs
+@@ -180,15 +180,19 @@ impl PageControlEvents {
+                         | Control::Table(_)
+                 ) {
+                     let items = by_paragraph.get(&pi).map(Vec::as_slice).unwrap_or(&[]);
+-                    // 미배치 NewNumber도 남겨 첫 발화 전 번호 숨김 계약을 보존한다.
+-                    let page =
+-                        control_page_with_storage(para, ci, items, storage)?.unwrap_or(usize::MAX);
++                    let page = control_page_with_storage(para, ci, items, storage)?;
+                     if let Control::PageNumberPos(position) = control {
++                        // 배치되지 않은 문단의 쪽 번호 위치는 종전처럼 구역 첫 쪽부터 건다.
+                         storage.push(
+                             &mut events.positions,
+-                            (page, crate::storage::try_clone(position, storage)?),
++                            (
++                                page.unwrap_or(0),
++                                crate::storage::try_clone(position, storage)?,
++                            ),
+                         )?;
+                     } else {
++                        // 미배치 NewNumber·감추기는 어느 쪽에도 걸리지 않는다(usize::MAX).
++                        let page = page.unwrap_or(usize::MAX);
+                         events.collect_control_with_storage(control, page, storage)?;
+                     }
+                 }
+@@ -221,6 +225,11 @@ impl PageControlEvents {
+             Control::NewNumber(number) if number.number_type == AutoNumberType::Page => {
+                 storage.push(&mut self.new_numbers, (page, number.number))?;
+             }
++            // 표 셀 안의 쪽 번호 위치도 바깥 표가 처음 놓인 쪽부터 건다.
++            Control::PageNumberPos(position) => storage.push(
++                &mut self.positions,
++                (page, crate::storage::try_clone(position, storage)?),
++            )?,
+             // #6206: 셀 안 metadata는 외부 표의 첫 배치 쪽에 적용하는 기존 계약 유지.
+             Control::Table(table) => {
+                 for cell in &table.cells {

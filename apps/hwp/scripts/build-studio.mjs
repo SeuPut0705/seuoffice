@@ -1,0 +1,282 @@
+/**
+ * Builds the rhwp-studio editor that the HWP renderer hosts in an iframe.
+ *
+ * rhwp publishes its engine (`@rhwp/core`, prebuilt WASM) and its embed SDK
+ * (`@rhwp/editor`) on npm, but not the studio itself, and the SDK's default is
+ * to load the studio from the project's public website. The app must work
+ * offline and send nothing out, so the studio is built here from the pinned
+ * upstream tag and shipped inside the renderer.
+ *
+ * Output: public/studio (git-ignored; the renderer's vite publicDir, so it is
+ * copied into the renderer build and served by the dev server). It stays out of
+ * src/ so the tools that walk the source tree never read a generated bundle. The source checkout is cached under node_modules/.cache, and
+ * the build is skipped when the stamp matches.
+ */
+import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { createRequire } from 'node:module'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { build } from 'vite'
+import {
+  AGENT_PLUGIN_MODULE,
+  CLIPBOARD_HTML_MODULE,
+  FORMAT_COPY_MODULE,
+  HANCOM_KEYS_MODULE,
+  PC_FONTS_MODULE,
+  STUDIO_PATCHES,
+  missingHancomCommands,
+  missingPluginHooks,
+  rhwpPatches,
+} from './rhwp-patches.mjs'
+import { HANJA_COMMIT, writeHanjaDictionary } from './hanja-dict.mjs'
+
+const SCRIPTS = dirname(fileURLToPath(import.meta.url))
+const APP = resolve(SCRIPTS, '..')
+const require = createRequire(join(APP, 'package.json'))
+
+const REPO = 'https://github.com/edwardkim/rhwp.git'
+/**
+ * The studio is built from the tag the engine was built from. The engine is the
+ * patched build in vendor/rhwp-core (decision 0050), which names its tag.
+ */
+const CORE_DIR = dirname(require.resolve('@rhwp/core'))
+const core = JSON.parse(readFileSync(join(CORE_DIR, 'package.json'), 'utf8'))
+const VERSION = core.version
+const TAG = core.rhwp.tag
+/**
+ * Set when the engine is pinned to a commit on an upstream branch ahead of a
+ * release; TAG is then only the name of that pin (the cache folder).
+ */
+const BRANCH = core.rhwp.branch
+/** Commit each supported tag must resolve to; a moved tag stops the build. */
+const PINNED_COMMITS = {
+  'v0.8.7': '1a76570e833917d15817415a53c09ad61ab3203f',
+  'devel-7d06d5c70': '7d06d5c706f1d89f1662e739abf2b1b25d2a98e4',
+}
+/**
+ * Only what the build reads. The repository also carries gigabytes of sample
+ * documents; `public/fonts` is a symlink into a font set whose licenses are not
+ * all on this project's allowlist, and `public/samples` is demo content.
+ */
+const SPARSE_PATTERNS = [
+  '/LICENSE',
+  '/THIRD_PARTY_LICENSES.md',
+  '/rhwp-studio/index.html',
+  '/rhwp-studio/src/',
+  '/rhwp-studio/public/',
+  '!/rhwp-studio/public/fonts',
+  '!/rhwp-studio/public/samples',
+  '/npm/hwpctrl-ocx/src/',
+  // modules the studio shares with the other rhwp front ends (forms, PDF import)
+  '/rhwp-shared/',
+  // the advance widths of the enclosed-character glyphs; the fonts beside it stay out
+  '/assets/fonts/enclosed-pua-metrics.json',
+  // the CanvasKit renderer's shader, which the engine's Skia renderer shares
+  '/src/renderer/square_gradient.sksl',
+]
+
+const CACHE = join(APP, 'node_modules', '.cache', 'rhwp-studio', TAG)
+const OUT = join(APP, 'public', 'studio')
+const PLUGIN_DIR = join(APP, 'studio-plugin')
+const AGENT_PLUGIN = join(PLUGIN_DIR, 'agent-plugin.mjs')
+const HANCOM_KEYS = join(PLUGIN_DIR, 'hancom-keys.mjs')
+const FORMAT_COPY = join(PLUGIN_DIR, 'format-copy.mjs')
+const CLIPBOARD_HTML = join(PLUGIN_DIR, 'clipboard-html.mjs')
+const PC_FONTS = join(PLUGIN_DIR, 'pc-fonts.mjs')
+const HANJA_CACHE = join(APP, 'node_modules', '.cache', 'libhangul-hanja')
+const STAMP = join(OUT, '.stamp')
+
+function git(args, cwd) {
+  return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'inherit'] })
+    .toString()
+    .trim()
+}
+
+/** The plugin's modules, in a fixed order. */
+function pluginModules() {
+  return readdirSync(PLUGIN_DIR)
+    .filter((name) => name.endsWith('.mjs'))
+    .sort()
+}
+
+function stampValue() {
+  const hash = createHash('sha256')
+  hash.update(TAG)
+  for (const file of ['build-studio.mjs', 'rhwp-patches.mjs', 'hanja-dict.mjs']) {
+    hash.update(readFileSync(join(SCRIPTS, file)))
+  }
+  // the app's own plugin and the Hangul keys are compiled into the studio: every module of
+  // studio-plugin/, so a new one cannot be left out of the stamp
+  for (const file of pluginModules()) {
+    hash.update(file)
+    hash.update(readFileSync(join(PLUGIN_DIR, file)))
+  }
+  hash.update(HANJA_COMMIT)
+  // and so is the engine: a rebuilt WASM must reach the studio
+  hash.update(readFileSync(join(CORE_DIR, 'rhwp_bg.wasm')))
+  return hash.digest('hex')
+}
+
+function fetchSource() {
+  const pinned = PINNED_COMMITS[TAG]
+  if (!pinned) {
+    throw new Error(
+      `rhwp-studio: no pinned commit for ${TAG}; add it to PINNED_COMMITS after reviewing the release`,
+    )
+  }
+  if (existsSync(join(CACHE, '.git')) && git(['rev-parse', 'HEAD'], CACHE) === pinned) {
+    // same commit; re-apply the patterns in case this script widened them since the checkout
+    git(['sparse-checkout', 'set', '--no-cone', ...SPARSE_PATTERNS], CACHE)
+    return
+  }
+  rmSync(CACHE, { recursive: true, force: true })
+  mkdirSync(dirname(CACHE), { recursive: true })
+  console.log(`rhwp-studio: fetching ${TAG} from ${REPO}`)
+  if (BRANCH) {
+    // a branch moves on; fetch the pinned commit itself
+    mkdirSync(CACHE, { recursive: true })
+    git(['init', '--quiet'], CACHE)
+    git(['remote', 'add', 'origin', REPO], CACHE)
+    git(['fetch', '--quiet', '--depth', '1', '--filter=blob:none', 'origin', pinned], CACHE)
+    git(['sparse-checkout', 'set', '--no-cone', ...SPARSE_PATTERNS], CACHE)
+    git(['checkout', '--quiet', 'FETCH_HEAD'], CACHE)
+  } else {
+    git(
+      [
+        'clone',
+        '--depth',
+        '1',
+        '--branch',
+        TAG,
+        '--filter=blob:none',
+        '--no-checkout',
+        REPO,
+        CACHE,
+      ],
+      dirname(CACHE),
+    )
+    git(['sparse-checkout', 'set', '--no-cone', ...SPARSE_PATTERNS], CACHE)
+    git(['checkout', '--quiet', TAG], CACHE)
+  }
+  const head = git(['rev-parse', 'HEAD'], CACHE)
+  if (head !== pinned) {
+    rmSync(CACHE, { recursive: true, force: true })
+    throw new Error(`rhwp-studio: ${TAG} resolved to ${head}, expected ${pinned}`)
+  }
+}
+
+/** Stop the build when the fetched studio no longer has what the app's plugin reaches into. */
+function checkPluginHooks() {
+  const missing = missingPluginHooks((file) => {
+    try {
+      return readFileSync(join(CACHE, 'rhwp-studio', file), 'utf8')
+    } catch {
+      return null
+    }
+  })
+  if (missing.length > 0) {
+    throw new Error(
+      `rhwp-studio ${TAG}: the editor no longer has what the app's plugin uses to show a change, ` +
+        `read the selection, select a word and mark its changes, or what the Hangul keys use ` +
+        `(see pluginHooks and hancomHooks in rhwp-patches.mjs):\n  ` +
+        missing.join('\n  '),
+    )
+  }
+  const commands = join(CACHE, 'rhwp-studio', 'src', 'command', 'commands')
+  const sources = readdirSync(commands)
+    .filter((file) => file.endsWith('.ts'))
+    .map((file) => readFileSync(join(commands, file), 'utf8'))
+    .join('\n')
+  const gone = missingHancomCommands(sources)
+  if (gone.length > 0) {
+    throw new Error(
+      `rhwp-studio ${TAG}: the editor no longer has the commands the Hangul keys run ` +
+        `(studio-plugin/hancom-keys.mjs): ${gone.join(', ')}`,
+    )
+  }
+}
+
+async function buildStudio() {
+  const studio = join(CACHE, 'rhwp-studio')
+  const wasmPkg = dirname(require.resolve('@rhwp/core'))
+  // rhwp-shared reaches the engine by its place in the rhwp repository (`../../pkg/rhwp.js`,
+  // from the PDF import worker too); that is the patched engine here as well
+  const sharedEngine = {
+    name: 'rhwp-shared-engine',
+    resolveId(source, importer) {
+      if (!importer || !/[\\/]rhwp-shared[\\/]/.test(importer)) return null
+      const file = /^(?:\.\.\/)+pkg\/(.+)$/.exec(source)?.[1]
+      return file ? join(wasmPkg, file) : null
+    },
+  }
+  await build({
+    configFile: false,
+    root: studio,
+    base: './',
+    logLevel: 'warn',
+    define: {
+      __APP_VERSION__: JSON.stringify(VERSION),
+      // no CDN web fonts: the app makes no request the user did not ask for
+      __RHWP_DISABLE_EXTERNAL_WEBFONTS__: 'true',
+      __RHWP_HWPCTRL__: 'true',
+      // no studio AI assistant: it would call a paid API from the editor; the app's AI panel
+      // is the only way to the AI (security.md), and the branch drops the assistant's code
+      __RHWP_AI__: 'false',
+    },
+    resolve: {
+      alias: {
+        '@': join(studio, 'src'),
+        '@wasm': wasmPkg,
+        '@rhwp/hwpctrl/studio-plugin': join(
+          CACHE,
+          'npm',
+          'hwpctrl-ocx',
+          'src',
+          'studio-plugin.mjs',
+        ),
+        [AGENT_PLUGIN_MODULE]: AGENT_PLUGIN,
+        [HANCOM_KEYS_MODULE]: HANCOM_KEYS,
+        [FORMAT_COPY_MODULE]: FORMAT_COPY,
+        [CLIPBOARD_HTML_MODULE]: CLIPBOARD_HTML,
+        [PC_FONTS_MODULE]: PC_FONTS,
+      },
+    },
+    // upstream registers a service worker for its website build; this build
+    // leaves that plugin out, a custom scheme cannot register one
+    plugins: [rhwpPatches(...STUDIO_PATCHES), sharedEngine],
+    worker: { format: 'es', plugins: () => [sharedEngine] },
+    build: { outDir: OUT, emptyOutDir: true, chunkSizeWarningLimit: 4096 },
+  })
+  // the licenses travel with the build: rhwp's own, and the list of what its WASM links in
+  copyFileSync(join(CACHE, 'LICENSE'), join(OUT, 'LICENSE-rhwp.txt'))
+  copyFileSync(join(CACHE, 'THIRD_PARTY_LICENSES.md'), join(OUT, 'THIRD-PARTY-LICENSES-rhwp.md'))
+  // the Hanja dictionary the editor reads on the first conversion, with its notice
+  await writeHanjaDictionary(HANJA_CACHE, join(OUT, 'hanja'))
+}
+
+const force = process.argv.includes('--force')
+const stamp = stampValue()
+if (
+  !force &&
+  existsSync(join(OUT, 'index.html')) &&
+  existsSync(STAMP) &&
+  readFileSync(STAMP, 'utf8') === stamp
+) {
+  console.log(`rhwp-studio: ${TAG} is up to date`)
+} else {
+  fetchSource()
+  checkPluginHooks()
+  await buildStudio()
+  writeFileSync(STAMP, stamp)
+  console.log(`rhwp-studio: built ${TAG} into ${OUT}`)
+}

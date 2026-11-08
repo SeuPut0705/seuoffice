@@ -1,0 +1,67 @@
+name: Growth
+
+# Growth snapshot from public GitHub signals (release downloads, stars, forks),
+# written to the summary the README badge reads and to a tracked JSON history.
+# No repository secrets and no in-app telemetry; the automatic GITHUB_TOKEN only
+# lifts the unauthenticated rate limit. Runs on the default branch so the commit
+# lands where the daily branch-off starts from.
+#
+# Hourly so the badge tracks the live numbers the site reads from the API; the
+# history keeps one entry per day because mergeSnapshot replaces the same date.
+
+on:
+  schedule:
+    # Every hour; the offset avoids the top-of-hour cron crunch.
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: growth-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    # Snapshots must keep appending on the deployment host's default branch;
+    # forks and feature branches would fork the history.
+    if: github.repository == 'pblsketch/openoffice'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Record growth snapshot
+        run: npm run growth
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Commit the updated history
+        run: |
+          if git diff --quiet -- docs/tracking/growth-history.json docs/tracking/growth-latest.json; then
+            echo "No history change to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/tracking/growth-history.json docs/tracking/growth-latest.json
+          git commit -m "chore: record the $(date -u +'%F %H:%M') growth snapshot"
+          # Hourly runs can race with a release or a manual push; rebase and retry.
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin main && git push; then
+              exit 0
+            fi
+            echo "Push failed (attempt $attempt); retrying after rebase."
+            sleep 5
+          done
+          echo "Could not push the growth snapshot." >&2
+          exit 1

@@ -1,0 +1,58 @@
+{
+  "name": "@genoffice/electron-utils",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared helpers for the Electron main processes (no Electron dependency, pure TS)",
+  "exports": {
+    ".": "./src/index.ts",
+    "./ai-run-guard": "./src/ai-run-guard.ts",
+    "./atomic-write": "./src/atomic-write.ts",
+    "./drop-open": "./src/drop-open.ts",
+    "./doc-attach-bridge": "./src/doc-attach-bridge.ts",
+    "./doc-attach-channels": "./src/doc-attach-channels.ts",
+    "./drive-ai-bridge": "./src/drive-ai-bridge.ts",
+    "./drive-ai-channels": "./src/drive-ai-channels.ts",
+    "./outbound-bridge": "./src/outbound-bridge.ts",
+    "./outbound-channels": "./src/outbound-channels.ts",
+    "./project-folder-bridge": "./src/project-folder-bridge.ts",
+    "./generated-images": "./src/generated-images.ts",
+    "./mcp-tools-bridge": "./src/mcp-tools-bridge.ts",
+    "./mcp-tools-channels": "./src/mcp-tools-channels.ts",
+    "./numbered-export-paths": "./src/numbered-export-paths.ts",
+    "./font-store": "./src/font-store.ts",
+    "./office-encryption": "./src/office-encryption.ts",
+    "./headless-export": "./src/headless-export.ts",
+    "./print-cups": "./src/print-cups.ts",
+    "./print-job": "./src/print-job.ts",
+    "./print-window": "./src/print-window.ts",
+    "./remote-image": "./src/remote-image.ts",
+    "./fetch-image-bytes": "./src/fetch-image-bytes.ts",
+    "./renderer-protocol": "./src/renderer-protocol.ts",
+    "./renderer-scheme": "./src/renderer-scheme.ts",
+    "./safe-external-url": "./src/safe-external-url.ts",
+    "./safe-remote-url": "./src/safe-remote-url.ts",
+    "./split-pane-bridge": "./src/split-pane-bridge.ts",
+    "./generate-handoff": "./src/generate-handoff.ts",
+    "./unsaved-files": "./src/unsaved-files.ts",
+    "./user-skills-bridge": "./src/user-skills-bridge.ts",
+    "./user-skills-channels": "./src/user-skills-channels.ts",
+    "./template-font-response": "./src/template-font-response.ts",
+    "./template-fonts-dir": "./src/template-fonts-dir.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "officecrypto-tool": "^0.0.19",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "parse5": "^8.0.1",
+    "undici": "^6.29.0"
+  }
+}

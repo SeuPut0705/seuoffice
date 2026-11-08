@@ -1,0 +1,53 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly
+labels: [bug]
+body:
+  - type: dropdown
+    id: app
+    attributes:
+      label: App
+      description: Which part of the suite is affected?
+      options:
+        - Docs (docs)
+        - Sheets (sheets)
+        - Slides (slides)
+        - PDF (pdf)
+        - Markdown (markdown)
+        - HTML (html)
+        - Mind map (mindmap)
+        - Shell / home screen
+        - AI panel / subscription connection / providers
+        - Command line / MCP / agent skill
+        - Build / packaging
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and OS
+      description: >
+        App version (Settings → About, or the commit you built) and operating
+        system. For an AI problem, also say which connection was in use
+        (Claude subscription, Codex subscription, or an API-key provider).
+      placeholder: '0.11.0 on Windows 11'
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: >
+        What did you do, what did you expect, and what happened instead?
+        If a document triggers the bug, attach a minimal sample file if
+        possible (please remove anything confidential first).
+      placeholder: Steps to reproduce, expected behavior, actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: >
+        Console output, stack traces, or screenshots, if any. Never paste API
+        keys or anything from a Claude or Codex login.

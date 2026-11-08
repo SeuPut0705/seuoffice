@@ -1,0 +1,81 @@
+import type { zh } from './zh'
+
+export const it = {
+  arButton: 'Lettura pagine con IA',
+  arButtonTip:
+    "Fai leggere all'IA, dall'immagine della pagina, le pagine scansionate o illeggibili e conserva il risultato",
+  arMenuRead: "Leggi pagine con l'IA…",
+  arMenuDelete: 'Elimina i risultati IA conservati di questo documento…',
+  arTitle: "Leggi pagine con l'IA",
+  arIntro:
+    "Ogni pagina scelta viene inviata all'IA come immagine, una alla volta, per leggerne testo, tabelle e formule. Il risultato resta su questo PC e serve per la conversione in Markdown ed EPUB, la finestra IA e la ricerca.",
+  arAnalyzing: 'Analisi del documento…',
+  arAnalyzingProgress: 'Analisi del documento… pagina {done} di {total}',
+  arAnalyzeFailed: 'Impossibile analizzare il documento.',
+  arPreselectNote:
+    'Le pagine scansionate, quelle il cui testo non si legge correttamente e quelle le cui note non è stato possibile collegare sono già scelte. Aggiungi tu le pagine con tabelle o formule.',
+  arNoPreselect: 'Nessuna pagina da preselezionare. Aggiungi tu le pagine da leggere.',
+  arReasonScanned: 'scansionata',
+  arReasonDegraded: 'testo illeggibile',
+  arReasonFootnote: 'note non collegate',
+  arReasonAdded: 'aggiunta da te',
+  arAlreadyRead: 'già letta · saltata',
+  arPageLabel: 'Pagina {page}',
+  arAddLabel: 'Aggiungi pagine',
+  arAddPlaceholder: 'es. 3, 7-9',
+  arAdd: 'Aggiungi',
+  arSelectedCount: 'Pagine scelte: {count}',
+  arNext: 'Avanti',
+  arBack: 'Indietro',
+  arCancel: 'Annulla',
+  arStart: 'Avvia',
+  arConfirmTitle: 'Controlla prima di avviare',
+  arConfirmCalls: "Chiamate all'IA: {calls} (una per pagina)",
+  arConfirmSkipped: 'Pagine già lette, non inviate: {count}',
+  arConfirmProvider: 'IA usata: {provider}',
+  arConfirmPaid: '{provider} addebiterà un costo',
+  arConfirmSends: 'Le immagini delle pagine vengono inviate a questa IA.',
+  arConfirmNothing: 'Tutte le pagine scelte sono già state lette. Non c’è nulla da inviare.',
+  arChecking: "Verifica della connessione all'IA…",
+  arVisionProvider:
+    '{provider} non legge le immagini, quindi la lettura delle pagine con IA non può partire. Scegli nelle Impostazioni un’IA che legga le immagini.',
+  arVisionModel:
+    'Il modello scelto ({model}) non legge le immagini, quindi la lettura delle pagine con IA non può partire. Scegli nelle Impostazioni un modello che legga le immagini.',
+  arVisionUnknown: 'Impossibile stabilire quale IA usare, quindi non si può avviare.',
+  arRouteChanged: "La connessione all'IA è cambiata. Ricontrolla i dati, poi avvia.",
+  arRunning: "L'IA sta leggendo le pagine… {done} di {total}",
+  arRunningPage: 'lettura della pagina {page}',
+  arStop: 'Interrompi',
+  arStopping: 'Interruzione…',
+  arDone: 'Lettura con IA completata. Pagine lette: {count}.',
+  arFailedPages: 'Pagine non lette: {pages}',
+  arStoppedCancelled:
+    'Lettura con IA interrotta. Le pagine lette sono conservate e potrai continuare più tardi.',
+  arStoppedFailures:
+    'Lettura con IA interrotta dopo diverse chiamate fallite di seguito. Le pagine lette sono conservate.',
+  arStoppedStore:
+    'Lettura con IA interrotta perché non è stato possibile conservare il risultato. Il disco potrebbe essere pieno.',
+  arLostPages: 'Pagine ricevute ma non conservate: {pages}',
+  arStoppedError: 'Lettura con IA interrotta: {reason}',
+  arStartFailed: 'Impossibile avviare la lettura con IA: {reason}',
+  arClose: 'Chiudi',
+  arBusy:
+    'Su questo documento è già in corso un’attività IA ({done}/{total}). Riprova quando sarà finita o interrotta.',
+  arUnavailable: 'La lettura delle pagine con IA non è disponibile in questa finestra.',
+  arDeleteConfirm:
+    'Eliminare tutti i risultati IA conservati per questo documento (letture IA, traduzioni, schede dei passaggi, suggerimenti di evidenziazione e panoramica)? L’operazione non si può annullare.',
+  arDeleted: 'I risultati IA conservati di questo documento sono stati eliminati.',
+  arDeleteFailed: 'Impossibile eliminare i risultati IA conservati.',
+  arDeleteBusy: 'È in corso un’attività IA, quindi ora non si può eliminare nulla.',
+  jobResumeAiRead: 'Lettura con IA non finita {percent}% — continuare?',
+  jobResumeTranslate: 'Traduzione non finita ({language}) {percent}% — continuare?',
+  jobResumeHighlight: 'Evidenziazione IA non finita {percent}% — continuare?',
+  arDeleteAlsoBoth:
+    'Verranno eliminate anche le traduzioni corrette a mano ({edited}) e le schede dei passi ({cards}).',
+  arDeleteAlsoEdited: 'Verranno eliminate anche le traduzioni corrette a mano ({count}).',
+  arDeleteAlsoCards: 'Verranno eliminate anche le schede dei passi ({count}).',
+  jobResumeContinue: 'Continua',
+  jobResumeLater: 'Più tardi',
+  searchAiRead: "Trovato nel testo letto dall'IA",
+  searchAiReadTip: "Il testo letto dall'IA non ha posizioni, quindi si va solo alla pagina",
+} satisfies Record<keyof typeof zh, string>

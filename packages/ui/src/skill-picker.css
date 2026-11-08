@@ -1,0 +1,172 @@
+/* The AI panel's skill list (`/`, `$`) and skill chips (see SkillPicker.tsx).
+ * Every rule is anchored on an .ai-skill- root; colors are tokens only. */
+
+/* zero-height anchor placed right above the input: the list grows upward from it */
+.ai-skill-anchor {
+  position: relative;
+  height: 0;
+}
+
+.ai-skill-picker {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 4px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-8);
+  background: var(--surface);
+  box-shadow: var(--shadow-menu);
+  font-size: var(--text-caption);
+  color: var(--text);
+}
+
+.ai-skill-picker .ai-skill-picker-rows {
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.ai-skill-picker .ai-skill-picker-row {
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.ai-skill-picker .ai-skill-picker-row.is-active {
+  background: var(--bg-hover-strong);
+}
+
+.ai-skill-picker .ai-skill-picker-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ai-skill-picker .ai-skill-picker-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-skill-picker .ai-skill-picker-source {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.ai-skill-picker .ai-skill-picker-badge {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-6);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.ai-skill-picker .ai-skill-picker-desc {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-skill-picker .ai-skill-picker-manage {
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+/* chips in the composer, where attachments sit */
+.ai-skill-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px 0;
+}
+
+.ai-skill-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ai-skill-chip-list.ai-msg-skill-chips {
+  margin-bottom: 6px;
+}
+
+.ai-skill-chip-list .ai-skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-12);
+  background: var(--surface-subtle);
+  font-size: var(--text-caption);
+  color: var(--text-primary);
+}
+
+.ai-skill-chip-list .ai-skill-chip-mark {
+  color: var(--text-tertiary);
+}
+
+.ai-skill-chip-list .ai-skill-chip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-skill-chip-list .ai-skill-chip-source {
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.ai-skill-chip-list .ai-skill-chip.is-missing {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.ai-skill-chip-list .ai-skill-chip.is-missing .ai-skill-chip-title {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.ai-skill-chip-list .ai-skill-chip-missing {
+  color: var(--danger);
+  white-space: nowrap;
+}
+
+.ai-skill-chip-list .ai-skill-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.ai-skill-chip-list .ai-skill-chip-remove:hover {
+  background: var(--hover);
+  color: var(--text-primary);
+}
+
+.ai-skill-chips .ai-skill-chip-note {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
+.ai-skill-chips .ai-skill-chip-note.is-error {
+  color: var(--danger);
+}

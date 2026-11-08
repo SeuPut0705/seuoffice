@@ -1,0 +1,448 @@
+/* Subscription-connection parts shared by the six editors and the shell: the
+ * connect card, the not-connected prompt, the blocked-run notice and the
+ * notices (see AiSubscriptionCard.tsx, AiBlockedNotice.tsx,
+ * AiSubscriptionNotices.tsx). Chrome tokens only. Every rule sits under an
+ * `ai-sub-` name so no app stylesheet reaches these parts by accident. */
+
+.ai-sub-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-8);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.ai-sub-card.compact {
+  gap: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.ai-sub-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ai-sub-card-mark {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: var(--icon-muted);
+}
+
+.ai-sub-card-name {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.ai-sub-card-status {
+  min-width: 0;
+  margin-inline-start: auto;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: end;
+}
+
+.ai-sub-card[data-tone='ok'] .ai-sub-card-status {
+  color: var(--success);
+}
+
+.ai-sub-card[data-tone='warning'] .ai-sub-card-status,
+.ai-sub-card[data-tone='error'] .ai-sub-card-status {
+  color: var(--danger);
+}
+
+/* the signed-in account and its plan: only the card in Settings shows it */
+.ai-sub-account {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-sub-note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ai-sub-detail {
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-sub-path {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-sub-path-label {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ai-sub-path-value {
+  margin: 0;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  text-align: start;
+  /* a path has no spaces to wrap at */
+  overflow-wrap: anywhere;
+}
+
+.ai-sub-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.ai-sub-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-6);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ai-sub-btn:hover {
+  background: var(--hover);
+}
+
+.ai-sub-btn.primary {
+  border-color: var(--color-btn-primary);
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
+}
+
+.ai-sub-btn.primary:hover {
+  border-color: var(--color-btn-primary-hover);
+  background: var(--color-btn-primary-hover);
+}
+
+.ai-sub-btn:focus-visible,
+.ai-sub-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.ai-sub-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ai-sub-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ai-sub-link:hover {
+  color: var(--text);
+}
+
+/* shown in an AI panel in place of an error while no provider can run */
+.ai-sub-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.ai-sub-prompt-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-sub-prompt-mark {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: var(--icon-muted);
+}
+
+.ai-sub-prompt-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ai-sub-prompt-body {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* nothing is connected: the free connections in Settings are the other way in */
+.ai-sub-free {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+/* a run that stopped because its connection cannot go on */
+.ai-sub-blocked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-8);
+  background: var(--danger-bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.ai-sub-blocked-reason {
+  margin: 0;
+}
+
+/* notices: first connection, the Codex line, the cost warning, a cut input */
+.ai-sub-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-8);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+/* inside a menu: small print under the group it belongs to, without a box of its own */
+.ai-sub-notice.compact {
+  padding: 0 8px 4px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.ai-sub-notice.warning {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--text);
+}
+
+.ai-sub-notice-text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.ai-sub-first {
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+}
+
+.ai-sub-first-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ai-sub-first-list {
+  margin: 0;
+  padding-inline-start: 18px;
+  color: var(--text-secondary);
+}
+
+.ai-sub-first-list li + li {
+  margin-top: 2px;
+}
+
+/* the connect guide: which AI the user has, then that one path's steps and card */
+.ai-sub-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-sub-guide-question {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ai-sub-guide-paths {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-sub-guide-path {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-8);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: start;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ai-sub-guide-path:hover {
+  border-color: var(--border-strong);
+  background: var(--hover);
+}
+
+.ai-sub-guide-path:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.ai-sub-guide-path-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-sub-guide-path-title {
+  min-width: 0;
+  font-weight: 600;
+}
+
+.ai-sub-guide-badge {
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-6);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.ai-sub-guide-badge[data-badge='guideBadgeReady'] {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.ai-sub-guide-badge[data-badge='guideBadgeCheck'] {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+.ai-sub-guide-path-body,
+.ai-sub-guide-need {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ai-sub-guide-open {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-sub-guide-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.ai-sub-guide-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-sub-guide-step-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.ai-sub-guide-step[data-done] {
+  color: var(--text-secondary);
+}
+
+.ai-sub-guide-step[data-done] .ai-sub-guide-step-mark {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.ai-sub-guide-step[aria-current='step'] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ai-sub-guide-step[aria-current='step'] .ai-sub-guide-step-mark {
+  border-color: var(--color-btn-primary);
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
+}
+
+.ai-sub-guide-back {
+  align-self: flex-start;
+}
+
+.ai-sub-guide-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}

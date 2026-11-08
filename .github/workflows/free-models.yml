@@ -1,0 +1,47 @@
+name: Free models
+
+# Weekly look at OpenRouter's public model list against the free models the app
+# offers (OPENROUTER_FREE_MODELS in packages/ai-provider/src/free-ai.ts). Reads
+# no key and spends no free request. When an offered model is gone or a new
+# free model with tool support is there to try, the run fails with the report
+# in its summary; GitHub mails a failed scheduled run to the repository owner
+# (the repository has issues turned off). Trying a model in the app spends a
+# real key's free requests and is done by hand (docs/operations.md, "무료 모델 점검").
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Mondays 09:00 KST
+  workflow_dispatch:
+
+concurrency:
+  group: free-models
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Compare with OpenRouter
+        run: |
+          set +e
+          node tools/check-free-models.mjs > report.md
+          code=$?
+          set -e
+          cat report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" -eq 1 ]; then
+            echo "::error title=Free models::OpenRouter's free models changed; see the run summary"
+          fi
+          exit "$code"

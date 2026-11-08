@@ -1,0 +1,81 @@
+import type { zh } from './zh'
+
+export const pl = {
+  arButton: 'Czytanie stron przez AI',
+  arButtonTip: 'Niech AI odczyta zeskanowane lub nieczytelne strony z ich obrazu i zachowa wynik',
+  arMenuRead: 'Czytaj strony przez AI…',
+  arMenuDelete: 'Usuń zachowane wyniki AI tego dokumentu…',
+  arTitle: 'Czytaj strony przez AI',
+  arIntro:
+    'Każda wybrana strona jest wysyłana do AI jako obraz, po jednej, aby odczytać tekst, tabele i wzory. Wynik zostaje na tym komputerze i służy do konwersji na Markdown i EPUB, w oknie AI i w wyszukiwaniu.',
+  arAnalyzing: 'Przeglądanie dokumentu…',
+  arAnalyzingProgress: 'Przeglądanie dokumentu… strona {done} z {total}',
+  arAnalyzeFailed: 'Nie udało się przeanalizować dokumentu.',
+  arPreselectNote:
+    'Zeskanowane strony, strony, których tekstu nie da się poprawnie odczytać, oraz strony, których przypisów nie udało się powiązać, są już wybrane. Strony z tabelami lub wzorami dodaj samodzielnie.',
+  arNoPreselect: 'Nie było stron do wstępnego wyboru. Dodaj samodzielnie strony do odczytania.',
+  arReasonScanned: 'zeskanowana',
+  arReasonDegraded: 'tekst nieczytelny',
+  arReasonFootnote: 'przypisy niepowiązane',
+  arReasonAdded: 'dodana przez Ciebie',
+  arAlreadyRead: 'już odczytana · pominięta',
+  arPageLabel: 'Strona {page}',
+  arAddLabel: 'Dodaj strony',
+  arAddPlaceholder: 'np. 3, 7-9',
+  arAdd: 'Dodaj',
+  arSelectedCount: 'Wybrano stron: {count}',
+  arNext: 'Dalej',
+  arBack: 'Wstecz',
+  arCancel: 'Anuluj',
+  arStart: 'Rozpocznij',
+  arConfirmTitle: 'Sprawdź przed rozpoczęciem',
+  arConfirmCalls: 'Wywołania AI: {calls} (jedno na stronę)',
+  arConfirmSkipped: 'Już odczytane strony ({count}) nie są wysyłane',
+  arConfirmProvider: 'Używana AI: {provider}',
+  arConfirmPaid: '{provider} pobierze za to opłatę',
+  arConfirmSends: 'Obrazy stron są wysyłane do tej AI.',
+  arConfirmNothing: 'Wszystkie wybrane strony zostały już odczytane. Nie ma nic do wysłania.',
+  arChecking: 'Sprawdzanie połączenia z AI…',
+  arVisionProvider:
+    '{provider} nie odczytuje obrazów, więc czytanie stron przez AI nie może się rozpocząć. Wybierz w Ustawieniach AI, która odczytuje obrazy.',
+  arVisionModel:
+    'Wybrany model ({model}) nie odczytuje obrazów, więc czytanie stron przez AI nie może się rozpocząć. Wybierz w Ustawieniach model, który odczytuje obrazy.',
+  arVisionUnknown: 'Nie udało się ustalić, której AI użyć, więc nie można rozpocząć.',
+  arRouteChanged: 'Połączenie z AI się zmieniło. Sprawdź ponownie dane, a potem rozpocznij.',
+  arRunning: 'AI czyta strony… {done} z {total}',
+  arRunningPage: 'czytanie strony {page}',
+  arStop: 'Zatrzymaj',
+  arStopping: 'Zatrzymywanie…',
+  arDone: 'Czytanie przez AI zakończone. Odczytano stron: {count}.',
+  arFailedPages: 'Nieodczytane strony: {pages}',
+  arStoppedCancelled:
+    'Czytanie przez AI zatrzymane. Odczytane strony zostały zachowane i możesz kontynuować później.',
+  arStoppedFailures:
+    'Czytanie przez AI zatrzymane po kilku kolejnych nieudanych wywołaniach. Odczytane strony zostały zachowane.',
+  arStoppedStore:
+    'Czytanie przez AI zatrzymane, bo nie udało się zachować wyniku. Dysk może być pełny.',
+  arLostPages: 'Odebrane, ale niezachowane strony: {pages}',
+  arStoppedError: 'Czytanie przez AI zatrzymane: {reason}',
+  arStartFailed: 'Nie udało się rozpocząć czytania przez AI: {reason}',
+  arClose: 'Zamknij',
+  arBusy:
+    'Dla tego dokumentu trwa już zadanie AI ({done}/{total}). Spróbuj ponownie, gdy się zakończy lub zostanie zatrzymane.',
+  arUnavailable: 'Czytanie stron przez AI nie jest dostępne w tym oknie.',
+  arDeleteConfirm:
+    'Usunąć wszystkie wyniki AI zachowane dla tego dokumentu (odczyty AI, tłumaczenia, karty fragmentów, sugestie wyróżnień i przegląd)? Tej operacji nie można cofnąć.',
+  arDeleted: 'Zachowane wyniki AI tego dokumentu zostały usunięte.',
+  arDeleteFailed: 'Nie udało się usunąć zachowanych wyników AI.',
+  arDeleteBusy: 'Trwa zadanie AI, więc teraz nie można nic usunąć.',
+  jobResumeAiRead: 'Niedokończone czytanie przez AI {percent}% — kontynuować?',
+  jobResumeTranslate: 'Niedokończone tłumaczenie ({language}) {percent}% — kontynuować?',
+  jobResumeHighlight: 'Niedokończone wyróżnianie przez AI {percent}% — kontynuować?',
+  arDeleteAlsoBoth:
+    'Zostaną też usunięte tłumaczenia poprawione ręcznie ({edited}) i karty fragmentów ({cards}).',
+  arDeleteAlsoEdited: 'Zostaną też usunięte tłumaczenia poprawione ręcznie ({count}).',
+  arDeleteAlsoCards: 'Zostaną też usunięte karty fragmentów ({count}).',
+  jobResumeContinue: 'Kontynuuj',
+  jobResumeLater: 'Później',
+  searchAiRead: 'Znaleziono w tekście odczytanym przez AI',
+  searchAiReadTip:
+    'Tekst odczytany przez AI nie ma pozycji, więc następuje tylko przejście do strony',
+} satisfies Record<keyof typeof zh, string>

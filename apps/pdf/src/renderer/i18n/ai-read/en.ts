@@ -1,0 +1,81 @@
+import type { zh } from './zh'
+
+export const en = {
+  arButton: 'AI page reading',
+  arButtonTip:
+    'Have the AI read scanned or unreadable pages from their page images and keep the result',
+  arMenuRead: 'Read pages with AI…',
+  arMenuDelete: "Delete this document's stored AI results…",
+  arTitle: 'Read pages with AI',
+  arIntro:
+    'Each chosen page is sent to the AI as an image, one page at a time, to read its text, tables and formulas. The result is kept on this PC and used for Markdown and EPUB conversion, the AI window and search.',
+  arAnalyzing: 'Looking through the document…',
+  arAnalyzingProgress: 'Looking through the document… page {done} of {total}',
+  arAnalyzeFailed: 'The document could not be analyzed.',
+  arPreselectNote:
+    'Scanned pages, pages whose text cannot be read properly and pages whose footnotes could not be linked are already chosen. Add pages with tables or formulas yourself.',
+  arNoPreselect: 'No page needed choosing. Add the pages to read yourself.',
+  arReasonScanned: 'scanned',
+  arReasonDegraded: 'text not readable',
+  arReasonFootnote: 'footnotes not linked',
+  arReasonAdded: 'added by you',
+  arAlreadyRead: 'already read · skipped',
+  arPageLabel: 'Page {page}',
+  arAddLabel: 'Add pages',
+  arAddPlaceholder: 'e.g. 3, 7-9',
+  arAdd: 'Add',
+  arSelectedCount: 'Pages chosen: {count}',
+  arNext: 'Next',
+  arBack: 'Back',
+  arCancel: 'Cancel',
+  arStart: 'Start',
+  arConfirmTitle: 'Check before starting',
+  arConfirmCalls: 'AI calls: {calls} (one per page)',
+  arConfirmSkipped: 'Pages already read, not sent: {count}',
+  arConfirmProvider: 'AI used: {provider}',
+  arConfirmPaid: '{provider} will charge for this',
+  arConfirmSends: 'The page images are sent to this AI.',
+  arConfirmNothing: 'Every chosen page has already been read. There is nothing to send.',
+  arChecking: 'Checking the AI connection…',
+  arVisionProvider:
+    '{provider} cannot read images, so AI page reading cannot start. Choose an AI that reads images in Settings.',
+  arVisionModel:
+    'The chosen model ({model}) cannot read images, so AI page reading cannot start. Choose a model that reads images in Settings.',
+  arVisionUnknown: 'The AI to use could not be determined, so this cannot start.',
+  arRouteChanged: 'The AI connection changed. Check the details again, then start.',
+  arRunning: 'The AI is reading pages… {done} of {total}',
+  arRunningPage: 'reading page {page}',
+  arStop: 'Stop',
+  arStopping: 'Stopping…',
+  arDone: 'AI reading finished. Pages read: {count}.',
+  arFailedPages: 'Pages not read: {pages}',
+  arStoppedCancelled:
+    'AI reading stopped. The pages read so far are kept and you can continue later.',
+  arStoppedFailures:
+    'AI reading stopped after several calls in a row failed. The pages read so far are kept.',
+  arStoppedStore:
+    'AI reading stopped because the result could not be stored. The disk may be full.',
+  arLostPages: 'Pages received but not stored: {pages}',
+  arStoppedError: 'AI reading stopped: {reason}',
+  arStartFailed: 'AI reading could not start: {reason}',
+  arClose: 'Close',
+  arBusy:
+    'An AI job is already running on this document ({done}/{total}). Try again once it ends or is stopped.',
+  arUnavailable: 'AI page reading is not available in this window.',
+  arDeleteConfirm:
+    'Delete every AI result stored for this document (AI readings, translations, passage cards, highlight suggestions and the overview)? This cannot be undone.',
+  arDeleted: 'The stored AI results of this document were deleted.',
+  arDeleteFailed: 'The stored AI results could not be deleted.',
+  arDeleteBusy: 'An AI job is running, so nothing can be deleted now.',
+  jobResumeAiRead: 'Unfinished AI reading {percent}% — continue?',
+  jobResumeTranslate: 'Unfinished translation ({language}) {percent}% — continue?',
+  jobResumeHighlight: 'Unfinished AI highlights {percent}% — continue?',
+  arDeleteAlsoBoth:
+    'This also deletes hand-edited translations ({edited}) and passage cards ({cards}).',
+  arDeleteAlsoEdited: 'This also deletes hand-edited translations ({count}).',
+  arDeleteAlsoCards: 'This also deletes passage cards ({count}).',
+  jobResumeContinue: 'Continue',
+  jobResumeLater: 'Later',
+  searchAiRead: 'Found in AI-read text',
+  searchAiReadTip: 'AI-read text has no positions, so this only goes to the page',
+} satisfies Record<keyof typeof zh, string>

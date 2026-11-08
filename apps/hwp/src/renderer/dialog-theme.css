@@ -1,0 +1,397 @@
+/**
+ * App-side half of the HWP dialog design system.
+ *
+ * The editor's settings dialogs live inside the rhwp-studio iframe and get
+ * their skin from studio-plugin/dialog-theme.mjs. The memo editor is an app
+ * modal (MemoPanel.tsx), outside that iframe, so it reads the same token names
+ * from this file. Keep the values in sync with the iframe token block; the
+ * unit test compares the two.
+ *
+ * Colours may appear as raw values only on custom-property definition lines
+ * (see tools/check-theme-colors.mjs). Everything below the token blocks uses
+ * the tokens.
+ */
+
+:root {
+  --ieum-dialog-font:
+    'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Segoe UI', sans-serif;
+
+  --ieum-dialog-surface: #fdfdfb;
+  --ieum-dialog-surface-sunken: #f5f6f8;
+  --ieum-dialog-title-surface: #f1f4f8;
+  --ieum-dialog-field-surface: #ffffff;
+
+  --ieum-dialog-ink: #24292f;
+  --ieum-dialog-ink-muted: #667085;
+  --ieum-dialog-ink-hint: #6f7889;
+  --ieum-dialog-ink-disabled: #98a1af;
+  --ieum-dialog-title-ink: #1f2937;
+
+  --ieum-dialog-line: #d8dee7;
+  --ieum-dialog-line-soft: #e7ebf0;
+  --ieum-dialog-field-line: #c7cfda;
+
+  --ieum-dialog-accent: #2f6fd0;
+  --ieum-dialog-accent-strong: #245bb0;
+  --ieum-dialog-accent-soft: #eaf1fc;
+  --ieum-dialog-accent-line: #b9cdf0;
+  --ieum-dialog-accent-ink: #ffffff;
+  --ieum-dialog-focus: #2f6fd0;
+  --ieum-dialog-danger: #b42318;
+
+  --ieum-dialog-radius: 8px;
+  --ieum-dialog-radius-control: 4px;
+  --ieum-dialog-shadow-color: rgba(20, 30, 48, 0.24);
+  --ieum-dialog-shadow-soft: rgba(20, 30, 48, 0.12);
+  --ieum-dialog-shadow:
+    0 24px 64px var(--ieum-dialog-shadow-color), 0 3px 10px var(--ieum-dialog-shadow-soft);
+  --ieum-dialog-overlay: rgba(16, 24, 40, 0.34);
+  --ieum-dialog-control-shadow: 0 1px 1px rgba(20, 30, 48, 0.04);
+  --ieum-dialog-primary-shadow-color: rgba(20, 30, 48, 0.18);
+  --ieum-dialog-primary-highlight: rgba(255, 255, 255, 0.18);
+  --ieum-dialog-primary-shadow:
+    0 1px 2px var(--ieum-dialog-primary-shadow-color),
+    inset 0 1px 0 var(--ieum-dialog-primary-highlight);
+  --ieum-dialog-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ieum-dialog-field-shadow: inset 0 1px 2px rgba(20, 30, 48, 0.06);
+}
+
+[data-theme='dark'] {
+  --ieum-dialog-surface: #2a2f36;
+  --ieum-dialog-surface-sunken: #242930;
+  --ieum-dialog-title-surface: #323841;
+  --ieum-dialog-field-surface: #22272e;
+
+  --ieum-dialog-ink: #e7ebf1;
+  --ieum-dialog-ink-muted: #aeb8c6;
+  --ieum-dialog-ink-hint: #a6b0be;
+  --ieum-dialog-ink-disabled: #7f8997;
+  --ieum-dialog-title-ink: #eef2f7;
+
+  --ieum-dialog-line: #454d58;
+  --ieum-dialog-line-soft: #39414b;
+  --ieum-dialog-field-line: #525c6a;
+
+  --ieum-dialog-accent: #7aa7f0;
+  --ieum-dialog-accent-strong: #b7d0ff;
+  --ieum-dialog-accent-soft: #2a3b55;
+  --ieum-dialog-accent-line: #3f5a80;
+  --ieum-dialog-accent-ink: #111a2b;
+  --ieum-dialog-focus: #8bb8ff;
+  --ieum-dialog-danger: #ff9a8f;
+
+  --ieum-dialog-shadow-color: rgba(0, 0, 0, 0.55);
+  --ieum-dialog-shadow-soft: rgba(0, 0, 0, 0.4);
+  --ieum-dialog-shadow:
+    0 28px 80px var(--ieum-dialog-shadow-color), 0 2px 8px var(--ieum-dialog-shadow-soft);
+  --ieum-dialog-overlay: rgba(0, 0, 0, 0.52);
+  --ieum-dialog-control-shadow: 0 1px 1px rgba(0, 0, 0, 0.22);
+  --ieum-dialog-primary-shadow-color: rgba(0, 0, 0, 0.35);
+  --ieum-dialog-primary-highlight: rgba(255, 255, 255, 0.3);
+  --ieum-dialog-primary-shadow:
+    0 1px 3px var(--ieum-dialog-primary-shadow-color),
+    inset 0 1px 0 var(--ieum-dialog-primary-highlight);
+  --ieum-dialog-field-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --ieum-dialog-surface: #2a2f36;
+    --ieum-dialog-surface-sunken: #242930;
+    --ieum-dialog-title-surface: #323841;
+    --ieum-dialog-field-surface: #22272e;
+
+    --ieum-dialog-ink: #e7ebf1;
+    --ieum-dialog-ink-muted: #aeb8c6;
+    --ieum-dialog-ink-hint: #a6b0be;
+    --ieum-dialog-ink-disabled: #7f8997;
+    --ieum-dialog-title-ink: #eef2f7;
+
+    --ieum-dialog-line: #454d58;
+    --ieum-dialog-line-soft: #39414b;
+    --ieum-dialog-field-line: #525c6a;
+
+    --ieum-dialog-accent: #7aa7f0;
+    --ieum-dialog-accent-strong: #b7d0ff;
+    --ieum-dialog-accent-soft: #2a3b55;
+    --ieum-dialog-accent-line: #3f5a80;
+    --ieum-dialog-accent-ink: #111a2b;
+    --ieum-dialog-focus: #8bb8ff;
+    --ieum-dialog-danger: #ff9a8f;
+
+    --ieum-dialog-shadow-color: rgba(0, 0, 0, 0.55);
+    --ieum-dialog-shadow-soft: rgba(0, 0, 0, 0.4);
+    --ieum-dialog-shadow:
+      0 28px 80px var(--ieum-dialog-shadow-color), 0 2px 8px var(--ieum-dialog-shadow-soft);
+    --ieum-dialog-overlay: rgba(0, 0, 0, 0.52);
+    --ieum-dialog-control-shadow: 0 1px 1px rgba(0, 0, 0, 0.22);
+    --ieum-dialog-primary-shadow-color: rgba(0, 0, 0, 0.35);
+    --ieum-dialog-primary-highlight: rgba(255, 255, 255, 0.3);
+    --ieum-dialog-primary-shadow:
+      0 1px 3px var(--ieum-dialog-primary-shadow-color),
+      inset 0 1px 0 var(--ieum-dialog-primary-highlight);
+    --ieum-dialog-field-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   The memo editor modal (MemoPanel.tsx)
+   ───────────────────────────────────────────────────────────── */
+@keyframes ieum-memo-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.memo-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.memo-modal-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--ieum-dialog-overlay);
+  opacity: 1;
+}
+
+.memo-modal {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: min(680px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid var(--ieum-dialog-line);
+  border-radius: var(--ieum-dialog-radius);
+  background: var(--ieum-dialog-surface);
+  color: var(--ieum-dialog-ink);
+  box-shadow: var(--ieum-dialog-shadow);
+  font-family: var(--ieum-dialog-font);
+  font-size: 12px;
+  line-height: 1.45;
+  animation: ieum-memo-dialog-in 180ms var(--ieum-dialog-ease) both;
+}
+
+.memo-modal-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  min-height: 46px;
+  padding-inline: 20px 10px;
+  background: var(--ieum-dialog-title-surface);
+  border-bottom: 1px solid var(--ieum-dialog-line);
+  color: var(--ieum-dialog-title-ink);
+}
+
+.memo-modal-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.memo-modal .memo-icon-button {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ieum-dialog-radius-control);
+  background: transparent;
+  color: var(--ieum-dialog-ink-muted);
+  cursor: pointer;
+}
+
+.memo-modal .memo-icon-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ieum-dialog-ink) 8%, transparent);
+  color: var(--ieum-dialog-ink);
+}
+
+.memo-modal .memo-icon-button:focus-visible {
+  outline: 2px solid var(--ieum-dialog-focus);
+  outline-offset: 2px;
+}
+
+.memo-modal-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 18px 20px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.memo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.memo-field-label {
+  color: var(--ieum-dialog-ink-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.memo-author-value {
+  color: var(--ieum-dialog-ink);
+  font-size: 12px;
+}
+
+.memo-selection {
+  padding: 8px 10px;
+  border: 1px solid var(--ieum-dialog-line-soft);
+  border-radius: var(--ieum-dialog-radius-control);
+  background: var(--ieum-dialog-surface-sunken);
+  color: var(--ieum-dialog-ink-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.memo-textarea {
+  min-height: 180px;
+  padding: 10px 12px;
+  border: 1px solid var(--ieum-dialog-field-line);
+  border-radius: var(--ieum-dialog-radius-control);
+  background: var(--ieum-dialog-field-surface);
+  color: var(--ieum-dialog-ink);
+  box-shadow: var(--ieum-dialog-field-shadow);
+  font-family: var(--ieum-dialog-font);
+  font-size: 12px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.memo-textarea:focus-visible {
+  border-color: var(--ieum-dialog-focus);
+  outline: none;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--ieum-dialog-focus) 18%, transparent),
+    var(--ieum-dialog-field-shadow);
+}
+
+.memo-textarea:disabled {
+  background: var(--ieum-dialog-surface-sunken);
+  border-color: var(--ieum-dialog-line-soft);
+  color: var(--ieum-dialog-ink-disabled);
+  cursor: not-allowed;
+}
+
+.memo-modal-error {
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--ieum-dialog-danger) 35%, transparent);
+  border-radius: var(--ieum-dialog-radius-control);
+  background: color-mix(in srgb, var(--ieum-dialog-danger) 8%, var(--ieum-dialog-surface));
+  color: var(--ieum-dialog-danger);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.memo-modal-detail {
+  display: block;
+  margin-top: 2px;
+  color: var(--ieum-dialog-ink-hint);
+  font-size: 11px;
+}
+
+.memo-modal-warning {
+  color: var(--ieum-dialog-danger);
+  font-size: 11px;
+}
+
+.memo-modal-foot {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 20px 15px;
+  background: var(--ieum-dialog-surface-sunken);
+  border-top: 1px solid var(--ieum-dialog-line-soft);
+}
+
+.memo-save-hint {
+  color: var(--ieum-dialog-ink-muted);
+  font-size: 11px;
+}
+
+.memo-modal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.memo-modal-actions .memo-button {
+  min-width: 74px;
+  min-height: 30px;
+  padding: 0 16px;
+  border: 1px solid var(--ieum-dialog-field-line);
+  border-radius: var(--ieum-dialog-radius-control);
+  background: var(--ieum-dialog-field-surface);
+  color: var(--ieum-dialog-ink);
+  font-family: var(--ieum-dialog-font);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--ieum-dialog-control-shadow);
+}
+
+.memo-modal-actions .memo-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ieum-dialog-ink) 5%, var(--ieum-dialog-field-surface));
+  border-color: var(--ieum-dialog-field-line);
+}
+
+.memo-modal-actions .memo-button:focus-visible {
+  outline: 2px solid var(--ieum-dialog-focus);
+  outline-offset: 2px;
+}
+
+.memo-modal-actions .memo-button-primary {
+  border-color: var(--ieum-dialog-accent);
+  background: var(--ieum-dialog-accent);
+  color: var(--ieum-dialog-accent-ink);
+  box-shadow: var(--ieum-dialog-primary-shadow);
+}
+
+.memo-modal-actions .memo-button-primary:hover:not(:disabled) {
+  border-color: var(--ieum-dialog-accent-strong);
+  background: var(--ieum-dialog-accent-strong);
+}
+
+.memo-modal-actions .memo-button-primary:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--ieum-dialog-focus) 40%, transparent);
+  outline-offset: 1px;
+}
+
+.memo-modal-actions .memo-button:disabled,
+.memo-modal-actions .memo-button:disabled:hover {
+  border-color: var(--ieum-dialog-line-soft);
+  background: var(--ieum-dialog-surface-sunken);
+  color: var(--ieum-dialog-ink-disabled);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memo-modal {
+    animation: none;
+  }
+}

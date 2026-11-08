@@ -1,0 +1,29 @@
+{
+  "name": "@genoffice/pdf-structure",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "PDF document tree on top of the pdf2docx IR: reflow outputs (Markdown, EPUB), embedded images, AI page reading, translation and the result store",
+  "exports": {
+    ".": "./src/index.ts",
+    "./store": "./src/store/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@embedpdf/pdfium": "^2.15.1",
+    "jszip": "^3.10.1",
+    "katex": "^0.18.2",
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "saxes": "^6.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}

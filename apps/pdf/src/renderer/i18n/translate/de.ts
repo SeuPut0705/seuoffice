@@ -1,0 +1,118 @@
+import type { zh } from './zh'
+
+export const de = {
+  trButton: 'Dokument übersetzen',
+  trButtonTip:
+    'Das ganze Dokument mit KI übersetzen und als PDF-, Markdown- oder EPUB-Datei speichern',
+  trTitle: 'Dokument übersetzen',
+  trIntro:
+    'Die KI übersetzt den Text der gewählten Seiten in Paketen von Blöcken. Die Übersetzung wird auf diesem PC aufbewahrt, sodass eine abgebrochene Übersetzung später fortgesetzt und in anderen Formaten gespeichert werden kann.',
+  trLanguage: 'Übersetzen in',
+  trFormats: 'Speichern als (ein oder mehrere Formate)',
+  trFormatPdf: 'Übersetztes PDF',
+  trFormatMd: 'Übersetztes Markdown',
+  trFormatEpub: 'Übersetztes EPUB',
+  trBilingual:
+    'Zweisprachig: in Markdown und EPUB folgt auf jeden Absatz des Originals seine Übersetzung, im PDF steht jede übersetzte Seite neben ihrer Originalseite',
+  trPdfEncrypted:
+    'Dieses Dokument ist verschlüsselt, daher kann kein übersetztes PDF hineingeschrieben werden. Markdown und EPUB sind weiterhin möglich.',
+  trPdfScript:
+    'Ein übersetztes PDF ist für die Sprache {language} nicht möglich: Die PDF-Ausgabe kann diese Schrift nicht setzen. Markdown und EPUB sind weiterhin möglich.',
+  trFormatRequired: 'Wählen Sie mindestens ein Format.',
+  trNoBlocks: 'Auf den gewählten Seiten gibt es keinen Text zum Übersetzen.',
+  trNoBlocksScanned:
+    'Diese Seiten scheinen gescannt zu sein. Lassen Sie sie zuerst von der KI lesen und übersetzen Sie dann.',
+  trBlocksCount: '{count} Textblöcke zu übersetzen',
+  trConfirmLanguage: 'Zielsprache: {language}',
+  trConfirmCalls: 'KI-Aufrufe: {calls} ({blocks} Blöcke, in Paketen gesendet)',
+  trConfirmDone:
+    '{done} von {total} Blöcken sind bereits übersetzt und werden nicht erneut gesendet',
+  trConfirmSends: 'Der Text der gewählten Seiten wird an diese KI gesendet.',
+  trRightsNotice: 'Übersetzen Sie nur Dokumente, für die Sie die Rechte haben.',
+  trProviderChange:
+    'Die gespeicherte Übersetzung wurde mit {stored} erstellt. Wenn Sie mit {next} fortfahren, mischen sich zwei KIs in einer Übersetzung.',
+  trProviderUnknown: 'einer unbekannten KI',
+  trConfirmNothing:
+    'Alle Blöcke der gewählten Seiten sind bereits übersetzt. Es wird nichts gesendet; die Dateien werden aus der gespeicherten Übersetzung geschrieben.',
+  trStart: 'Übersetzung starten',
+  trExport: 'Dateien speichern',
+  trExportPartial: 'Bisherigen Stand exportieren',
+  trLater: 'Später fortsetzen',
+  trRestart: 'Von vorn neu übersetzen…',
+  trRestartConfirm:
+    'Die gespeicherte Übersetzung ({language}, {count} Blöcke) ersetzen und alle Blöcke neu übersetzen? Die gespeicherte Übersetzung lässt sich nicht wiederherstellen.',
+  trRestartYes: 'Neu übersetzen',
+  trUnavailable: 'Die Dokumentübersetzung ist in diesem Fenster nicht verfügbar.',
+  trStartFailed: 'Die Übersetzung konnte nicht starten: {reason}',
+  trPickTitle: 'Übersetztes {format} speichern',
+  trRunning: 'Übersetzung ({language})… {done}/{total} Blöcke',
+  trRunningPage: 'Gerade auf Seite {page}',
+  trDone: 'Übersetzung ({language}) abgeschlossen: {count} Blöcke.',
+  trStoppedCancelled: 'Übersetzung angehalten. Die fertigen Blöcke bleiben gespeichert.',
+  trStoppedFailures:
+    'Übersetzung angehalten, weil KI-Aufrufe mehrmals hintereinander fehlschlugen. Die fertigen Blöcke bleiben gespeichert.',
+  trStoppedError: 'Übersetzung angehalten: {reason}',
+  trStoppedProgress: '{done} von {total} Blöcken sind übersetzt.',
+  trLostBlocks: '{count} übersetzte Blöcke kamen an, konnten aber nicht gespeichert werden.',
+  trWriting: '{format}-Datei wird geschrieben…',
+  trWritingProgress: '{format}-Datei wird geschrieben… {done}/{total}',
+  trWriteFailed: 'Die {format}-Datei konnte nicht geschrieben werden: {reason}',
+  trReportTitle: 'Ergebnis der Übersetzung',
+  trReportPartialTitle: 'Bisherige Übersetzung gespeichert',
+  trReportTranslated: '{language}: {translated} von {total} Blöcken übersetzt',
+  trReportPending: '{count} Blöcke sind noch nicht übersetzt und bleiben in der Ausgangssprache.',
+  trReportNone: 'Alle Blöcke wurden übersetzt.',
+  trReportUntranslated: 'Blöcke in der Ausgangssprache',
+  trReportOverflowed:
+    'Blöcke, die aus Platzmangel in der Ausgangssprache blieben: {count} (Seiten {pages})',
+  trReportOriginalPages: 'Unverändert gelassene Seiten',
+  trReportFiles: 'Gespeicherte Dateien',
+  trReasonLine: '{reason}: Seiten {pages} ({count} Blöcke)',
+  trReasonPlaceholder: 'die Übersetzung hat Formatierungsmarken verloren',
+  trReasonEmpty: 'die KI lieferte eine leere Übersetzung',
+  trReasonMissing: 'die KI hat den Block ausgelassen',
+  trReasonFont: 'keine installierte Schrift kann die Übersetzung darstellen',
+  trReasonScript: 'die PDF-Ausgabe kann diese Schrift nicht setzen',
+  trReasonPageKept: 'seine Seite blieb unverändert',
+  trReasonTextNotFound: 'der Originaltext wurde im PDF nicht gefunden',
+  trReasonSharedText: 'der Originaltext ist mit anderem Text verbunden',
+  trReasonTextInForm: 'der Originaltext liegt in einem wiederverwendbaren Objekt',
+  trReasonNoPosition: 'seine Stelle auf der gescannten Seite wurde nicht gefunden',
+  trReasonOther: 'anderer Grund',
+  trPageLine: 'Seite {page}: {reason}',
+  trPageOcr: 'gescannte Seite, und Windows-OCR ist nicht verfügbar',
+  trPageScannedNoText: 'gescannte Seite ohne Text',
+  trPageNotEditable: 'ihr Text lässt sich nicht bearbeiten',
+  trPageVertical: 'senkrechter oder gedrehter Text',
+  trPageToc: 'gedrucktes Inhaltsverzeichnis',
+  trFormatStore: 'Nur aufbewahren (keine Datei)',
+  trRestartEditedCount: '{count} Absätze wurden von einer Person bearbeitet.',
+  trRestartDiscardEdited: 'Auch die {count} von einer Person bearbeiteten Absätze löschen',
+  trRestartKeepEdited: 'Bearbeitete Absätze behalten',
+  trMode: 'Art',
+  trModeTranslate: 'Übersetzung',
+  trModeEasy: 'Einfache Sprache',
+  trPdfEasy:
+    'Eine Erklärung in einfacher Sprache ist länger als das Original und passt nicht an seinen Platz. Markdown und EPUB gehen.',
+  trEasyFormatMd: 'Markdown in einfacher Sprache',
+  trEasyFormatEpub: 'EPUB in einfacher Sprache',
+  trEasyBilingual:
+    'Original, dann Erklärung: Nach jedem Absatz des Originals folgt seine Erklärung in einfacher Sprache (aus: nur die Erklärung)',
+  trEasyFileWord: 'einfache Sprache',
+  trEasyPickTitle: '{format} in einfacher Sprache speichern',
+  trConfirmEasyLanguage: 'Sprache der Erklärung: {language}',
+  trEasyConfirmDone:
+    '{done} von {total} Blöcken sind schon erklärt und werden nicht erneut gesendet',
+  trEasyConfirmNothing:
+    'Alle Blöcke der gewählten Seiten sind schon erklärt. Es wird nichts gesendet; die Dateien werden aus der gespeicherten Erklärung geschrieben.',
+  trEasyProviderChange:
+    'Die gespeicherte Erklärung wurde mit {stored} erstellt. Wenn Sie mit {next} fortfahren, mischen sich zwei KIs in einer Erklärung.',
+  trEasyStart: 'Erklärung starten',
+  trEasyRestart: 'Von vorn neu erklären…',
+  trEasyRestartConfirm:
+    'Die gespeicherte Erklärung auf {language} ({count} Blöcke) löschen und alle Blöcke neu erklären? Gelöschte Erklärungen lassen sich nicht wiederherstellen.',
+  trEasyRestartYes: 'Neu erklären',
+  trEasyRunning: 'Erklärung in einfacher Sprache auf {language}… {done}/{total} Blöcke',
+  trEasyDone: 'Die Erklärung in einfacher Sprache auf {language} ist fertig ({count} Blöcke).',
+  trResumeEasy: 'Unfertige Erklärung in einfacher Sprache ({language}) {percent} % — fortsetzen?',
+} satisfies Record<keyof typeof zh, string>
