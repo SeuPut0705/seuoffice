@@ -95,6 +95,47 @@ export function assertNoAiRun(session: Session): void {
 }
 
 /**
+ * Run one serializing write of the live deck (a save, a recovery copy, template bytes) and
+ * count it as in flight until it settles, commit steps included. Refuses while a run is
+ * open (the check and the write's first step share one task), so a write never starts after
+ * the run recorded its starting point.
+ */
+export async function trackWrite<T>(session: Session, write: () => Promise<T>): Promise<T> {
+  assertNoAiRun(session)
+  const running = write()
+  const writes = (session.writesInFlight ??= new Set())
+  const entry = running.then(
+    () => undefined,
+    () => undefined,
+  )
+  writes.add(entry)
+  void entry.then(() => writes.delete(entry))
+  return await running
+}
+
+/** How long a run's start waits for writes that began before it */
+const WRITE_SETTLE_MS = 30_000
+
+/**
+ * Wait until no write is in flight. True when the session is quiet; false on timeout. The
+ * check and the caller's next synchronous step share one task, so no write can start between.
+ */
+async function settleWrites(session: Session): Promise<boolean> {
+  const deadline = Date.now() + WRITE_SETTLE_MS
+  while (session.writesInFlight?.size) {
+    const left = deadline - Date.now()
+    if (left <= 0) return false
+    let timer: NodeJS.Timeout | undefined
+    const timeout = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, left)
+    })
+    await Promise.race([Promise.all([...session.writesInFlight]), timeout])
+    clearTimeout(timer)
+  }
+  return true
+}
+
+/**
  * Record the deck before an AI request's first edit. Returns false, and the run must not
  * start, when it could not be reverted: another window's run is still open, or the deck
  * is in master view (its edits live in a separate model a snapshot cannot revert). A run
@@ -180,9 +221,12 @@ export function registerAiProposalIpc(): void {
   const deckOf = (session: Session): RenderSlide[] =>
     buildAllRenderSlides(session.opened, session.fitWidthPx)
 
-  ipcMain.handle('slides:ai-run-begin', (e) => {
+  // A write that started before the run may still be serializing the live deck: the run
+  // records its starting point only once those finished, so they never carry its edits.
+  ipcMain.handle('slides:ai-run-begin', async (e) => {
     const session = sessionOf(e)
-    return session ? beginAiRun(session, e.sender.id) : false
+    if (!session || !(await settleWrites(session))) return false
+    return beginAiRun(session, e.sender.id)
   })
 
   ipcMain.handle('slides:ai-run-hold', (e): RenderSlide[] | null => {

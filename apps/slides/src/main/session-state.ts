@@ -96,6 +96,8 @@ export interface Session {
   aiRun?: AiRun
   /** An AI run's edits taken out of the deck until the person accepts or rejects them (ai-proposal.ts) */
   aiProposal?: AiProposal
+  /** Serializing writes of the live deck that have not settled; an AI run waits for them (ai-proposal.ts) */
+  writesInFlight?: Set<Promise<void>>
   /** Edits that only touch archive entries (notes/comments; element-level dirty cannot detect them), reset after save */
   metaDirty?: boolean
   /** An untitled copy (a skill template's, spec 5.7): its first save asks where instead of using the drafts folder */

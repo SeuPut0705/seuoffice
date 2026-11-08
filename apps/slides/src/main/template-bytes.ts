@@ -41,14 +41,19 @@ export async function deckTemplateBytes(
   return { bytes: await savePptx(opened), redacted: deckHasRedaction(opened) }
 }
 
-/** Registers `slides:template-bytes`. Called once, with the editor's other channels. */
+/**
+ * Registers `slides:template-bytes`. Called once, with the editor's other channels. `track`
+ * runs the serialization as an in-flight write of the view's deck (refused while an AI run's
+ * unaccepted edits are in it; a refusal answers null).
+ */
 export function registerSlidesTemplateBytesIpc(
   ipc: Pick<IpcMain, 'handle'>,
   openedOf: (webContentsId: number) => OpenedPptx | undefined,
+  track: <T>(webContentsId: number, write: () => Promise<T>) => Promise<T>,
 ): void {
   ipc.handle('slides:template-bytes', async (e) => {
     try {
-      return await deckTemplateBytes(openedOf(e.sender.id))
+      return await track(e.sender.id, () => deckTemplateBytes(openedOf(e.sender.id)))
     } catch {
       return null
     }

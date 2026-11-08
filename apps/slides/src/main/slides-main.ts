@@ -330,7 +330,12 @@ const issuedCloudPages = new Set<string>()
 import { registerPresenterIpc } from './presenter-show'
 import { registerAttachmentIpc } from './attachments-ipc'
 import { registerGenerateHandoffIpc } from './generate-handoff-ipc'
-import { AI_REVIEW_SAVE_REASON, assertNoAiRun, registerAiProposalIpc } from './ai-proposal'
+import {
+  AI_REVIEW_SAVE_REASON,
+  assertNoAiRun,
+  registerAiProposalIpc,
+  trackWrite,
+} from './ai-proposal'
 import { registerSlidesTemplateBytesIpc } from './template-bytes'
 import { openSlidesSeed } from './seed-deck'
 import { queueSlidesSeedFor } from './seed-queue'
@@ -510,25 +515,26 @@ function syncAttachedPaths(session: Session, path: string): void {
  * caller's (the MCP tool layer guards clobbering); this commits the save side
  * effects: session path, recents, attached-surface titles, dirty-flag reset.
  */
-export async function saveSessionDeckTo(session: Session, filePath: string): Promise<void> {
-  assertNoAiRun(session)
-  // the caller supplies an arbitrary absolute path, so its parent may not exist
-  // yet (the dialog-driven paths always land in an existing folder)
-  await mkdir(dirname(filePath), { recursive: true })
-  const metaRevAtSave = session.metaRev ?? 0
-  const previousPath = session.path
-  await writeDeckFile(session, filePath)
-  followTemplateSelection(session, session.path, filePath)
-  session.path = filePath
-  session.diskState = (await recordDiskState(filePath)) ?? undefined
-  await pushRecent(filePath)
-  syncAttachedPaths(session, filePath)
-  commitSaved(session.opened)
-  if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
-  // mirror slides:save-as: the saved deck's recovery copies are gone — only
-  // now that the deck reads as saved, so a copy written during the steps
-  // above (it still looked unsaved) goes too
-  recoveryCopiesSaved(session, previousPath)
+export function saveSessionDeckTo(session: Session, filePath: string): Promise<void> {
+  return trackWrite(session, async () => {
+    // the caller supplies an arbitrary absolute path, so its parent may not exist
+    // yet (the dialog-driven paths always land in an existing folder)
+    await mkdir(dirname(filePath), { recursive: true })
+    const metaRevAtSave = session.metaRev ?? 0
+    const previousPath = session.path
+    await writeDeckFile(session, filePath)
+    followTemplateSelection(session, session.path, filePath)
+    session.path = filePath
+    session.diskState = (await recordDiskState(filePath)) ?? undefined
+    await pushRecent(filePath)
+    syncAttachedPaths(session, filePath)
+    commitSaved(session.opened)
+    if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
+    // mirror slides:save-as: the saved deck's recovery copies are gone — only
+    // now that the deck reads as saved, so a copy written during the steps
+    // above (it still looked unsaved) goes too
+    recoveryCopiesSaved(session, previousPath)
+  })
 }
 
 const RECENT_PATH = () => join(app.getPath('userData'), 'slides-recent.json')
@@ -715,9 +721,9 @@ async function writeSessionCopy(session: Session, ignoreBackoff: boolean): Promi
     // a plain deck streams to a temp file in the copy folder, as a save does,
     // instead of assembling the whole package in memory every 30s; a password
     // deck has to be encrypted as one buffer (its plaintext never hits the disk)
-    const result =
+    const result = await trackWrite(session, async () =>
       session.password === undefined
-        ? await recoveryStore.writeCopyStreamed(
+        ? recoveryStore.writeCopyStreamed(
             identity,
             (tempPath) => {
               assertNoAiRun(session)
@@ -725,11 +731,12 @@ async function writeSessionCopy(session: Session, ignoreBackoff: boolean): Promi
             },
             options,
           )
-        : await recoveryStore.writeCopy(
+        : recoveryStore.writeCopy(
             identity,
             deckFileBytes(session, await savePptx(session.opened)),
             options,
-          )
+          ),
+    )
     autosaveBackoff.delete(key)
     if (result === 'written') copyMarks.set(session, mark)
   } catch (error) {
@@ -4945,23 +4952,27 @@ export function registerSlidesIpc(): void {
       if (verdict === 'cancel') return { ok: false, reason: 'external-modified' }
     }
     try {
-      const metaRevAtSave = session.metaRev ?? 0
-      await writeDeckFile(session, session.path)
-      // the saved bytes are the new baseline for the split-view guard
-      session.diskState = (await recordDiskState(session.path)) ?? undefined
-      recoveryCopiesSaved(session, previousPath)
-      // Bake the saved patches back into the in-memory model (clears dirty, syncs
-      // anchor.originalXml with disk) — a full reopen would re-read and unzip the
-      // whole package, doubling save latency on large decks. Element ids survive,
-      // but the renderer still expects the render tree in the response.
-      commitSaved(session.opened)
-      if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
-      return {
-        ok: true,
-        path: session.path,
-        slides: buildAllRenderSlides(session.opened, session.fitWidthPx),
-      }
+      return await trackWrite(session, async () => {
+        const metaRevAtSave = session.metaRev ?? 0
+        await writeDeckFile(session, session.path)
+        // the saved bytes are the new baseline for the split-view guard
+        session.diskState = (await recordDiskState(session.path)) ?? undefined
+        recoveryCopiesSaved(session, previousPath)
+        // Bake the saved patches back into the in-memory model (clears dirty, syncs
+        // anchor.originalXml with disk) — a full reopen would re-read and unzip the
+        // whole package, doubling save latency on large decks. Element ids survive,
+        // but the renderer still expects the render tree in the response.
+        commitSaved(session.opened)
+        if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
+        return {
+          ok: true,
+          path: session.path,
+          slides: buildAllRenderSlides(session.opened, session.fitWidthPx),
+        }
+      })
     } catch (err) {
+      // a run began while the save waited on a dialog: nothing was written
+      if (session.aiRun) return { ok: false, reason: AI_REVIEW_SAVE_REASON }
       return { ok: false, error: String(err) }
     }
   })
@@ -4979,28 +4990,30 @@ export function registerSlidesIpc(): void {
     }
     const fileName = projectDeckFileName(session.firstSaveName)
     try {
-      const metaRevAtSave = session.metaRev ?? 0
-      const written = await write(
-        e.sender.id,
-        fileName,
-        deckFileBytes(session, await savePptx(session.opened)),
-      )
-      // no project chosen, or a save that asked where landed meanwhile
-      if (!written || session.path) return { ok: false, skipped: true }
-      session.path = written
-      session.askPathOnFirstSave = false
-      followTemplateSelection(session, '', written)
-      await pushRecent(written)
-      slidesOpenedHook?.(e.sender, written)
-      session.diskState = (await recordDiskState(written)) ?? undefined
-      recoveryCopiesSaved(session, '')
-      commitSaved(session.opened)
-      if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
-      return {
-        ok: true,
-        path: written,
-        slides: buildAllRenderSlides(session.opened, session.fitWidthPx),
-      }
+      return await trackWrite(session, async () => {
+        const metaRevAtSave = session.metaRev ?? 0
+        const written = await write(
+          e.sender.id,
+          fileName,
+          deckFileBytes(session, await savePptx(session.opened)),
+        )
+        // no project chosen, or a save that asked where landed meanwhile
+        if (!written || session.path) return { ok: false, skipped: true }
+        session.path = written
+        session.askPathOnFirstSave = false
+        followTemplateSelection(session, '', written)
+        await pushRecent(written)
+        slidesOpenedHook?.(e.sender, written)
+        session.diskState = (await recordDiskState(written)) ?? undefined
+        recoveryCopiesSaved(session, '')
+        commitSaved(session.opened)
+        if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
+        return {
+          ok: true,
+          path: written,
+          slides: buildAllRenderSlides(session.opened, session.fitWidthPx),
+        }
+      })
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
@@ -5031,25 +5044,29 @@ export function registerSlidesIpc(): void {
     }
     const target = pick.path
     try {
-      const metaRevAtSave = session.metaRev ?? 0
-      const previousPath = session.path
-      await writeDeckFile(session, target)
-      followTemplateSelection(session, session.path, target)
-      session.path = target
-      session.diskState = (await recordDiskState(target)) ?? undefined
-      await pushRecent(target)
-      syncAttachedPaths(session, target)
-      commitSaved(session.opened)
-      if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
-      // after the deck reads as saved: a copy a pass wrote while the steps
-      // above awaited (the deck still looked unsaved) is removed too
-      recoveryCopiesSaved(session, previousPath)
-      return {
-        ok: true,
-        path: target,
-        slides: buildAllRenderSlides(session.opened, session.fitWidthPx),
-      }
+      return await trackWrite(session, async () => {
+        const metaRevAtSave = session.metaRev ?? 0
+        const previousPath = session.path
+        await writeDeckFile(session, target)
+        followTemplateSelection(session, session.path, target)
+        session.path = target
+        session.diskState = (await recordDiskState(target)) ?? undefined
+        await pushRecent(target)
+        syncAttachedPaths(session, target)
+        commitSaved(session.opened)
+        if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
+        // after the deck reads as saved: a copy a pass wrote while the steps
+        // above awaited (the deck still looked unsaved) is removed too
+        recoveryCopiesSaved(session, previousPath)
+        return {
+          ok: true,
+          path: target,
+          slides: buildAllRenderSlides(session.opened, session.fitWidthPx),
+        }
+      })
     } catch (err) {
+      // a run began while the dialog was open: nothing was written
+      if (session.aiRun) return { ok: false, reason: AI_REVIEW_SAVE_REASON }
       return { ok: false, error: String(err) }
     }
   })
@@ -5243,11 +5260,16 @@ export function registerSlidesIpc(): void {
   registerGenerateHandoffIpc()
   // ── AI edit review (slides:ai-run-*, slides:ai-proposal-*) ──
   registerAiProposalIpc()
-  // "Save as template" serializes the live deck too: not while an AI run's edits wait for review
-  registerSlidesTemplateBytesIpc(ipcMain, (wcId) => {
-    const session = sessions.get(wcId)
-    return session && !session.aiRun ? session.opened : undefined
-  })
+  // "Save as template" serializes the live deck too: counted as a write, refused while an AI
+  // run's edits wait for review
+  registerSlidesTemplateBytesIpc(
+    ipcMain,
+    (wcId) => sessions.get(wcId)?.opened,
+    (wcId, write) => {
+      const session = sessions.get(wcId)
+      return session ? trackWrite(session, write) : write()
+    },
+  )
 
   // ── Presenter-view multi-screen show (registered inside registerSlidesIpc: shell
   // aggregate mode only calls this function) ──

@@ -3,7 +3,7 @@
  * them, no save path writes them and the person cannot edit (so nothing of theirs is swept
  * into the revert). Drives the real main-process handlers and the renderer's read-only lock.
  */
-import { existsSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { setImmediate as setImmediatePromise } from 'node:timers/promises'
@@ -16,6 +16,8 @@ const hoisted = vi.hoisted(() => ({
   /** what the main process pushed to the editor window, by channel */
   pushed: [] as Array<{ channel: string; payload: unknown }>,
   onPush: null as ((channel: string, payload: unknown) => void) | null,
+  /** runs inside the engine's streaming writer before it reads the live deck */
+  serializeGate: null as (() => Promise<void>) | null,
 }))
 const handlers = hoisted.handlers
 
@@ -75,6 +77,17 @@ vi.mock('electron', () => ({
   desktopCapturer: { getSources: async () => [] },
   WebContentsView: class {},
 }))
+// pass-through spy with a seam: the streaming writer reads the live deck only after the gate
+vi.mock('@genoffice/pptx-engine', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@genoffice/pptx-engine')>()
+  return {
+    ...actual,
+    savePptxToFile: async (...args: Parameters<typeof actual.savePptxToFile>) => {
+      await hoisted.serializeGate?.()
+      return actual.savePptxToFile(...args)
+    },
+  }
+})
 // The shaping chain loads a harfbuzz wasm that cannot resolve in the unit-test env
 vi.mock('../src/main/shaped-metrics', () => ({
   shapedMetricsReady: async () => {},
@@ -170,6 +183,7 @@ beforeAll(() => {
 
 beforeEach(async () => {
   sessions.clear()
+  rmSync(join(hoisted.userDataDir, 'slides-autosave'), { recursive: true, force: true })
   hoisted.pushed.length = 0
   hoisted.onPush = null
   showSaveDialog.mockClear()
@@ -275,6 +289,83 @@ describe('a save while an AI run is in flight', () => {
     expect(await requestSlidesClose(contents as never)).toBe(false)
     expect(showMessageBox).toHaveBeenCalled()
     expect(existsSync(deckPath)).toBe(false)
+  })
+})
+
+/** A write that began before the run: its serialization is held at the engine's writer */
+describe('a write that started before the run', () => {
+  interface PausedWrite {
+    reached: Promise<void>
+    release: () => void
+  }
+  /** Holds the next serialization of the live deck until `release` */
+  function pauseNextSerialization(): PausedWrite {
+    let release = () => {}
+    let reached = () => {}
+    const reachedPromise = new Promise<void>((resolve) => {
+      reached = resolve
+    })
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    hoisted.serializeGate = async () => {
+      hoisted.serializeGate = null
+      reached()
+      await held
+    }
+    return { reached: reachedPromise, release }
+  }
+
+  it('finishes before the run records its starting point, so it never carries AI edits', async () => {
+    const pause = pauseNextSerialization()
+    const saving = call('slides:save')
+    await pause.reached
+
+    let begun: boolean | null = null
+    const beginning = call('slides:ai-run-begin').then((ok) => (begun = ok))
+    await tick()
+    // the run waits: it has not recorded anything while the save is in flight
+    expect(begun).toBeNull()
+    expect(session.aiRun).toBeUndefined()
+    // and a second save in that gap is also counted, so the run still waits
+    const secondSave = call('slides:save')
+
+    pause.release()
+    expect(await saving).toMatchObject({ ok: true })
+    await secondSave
+    expect(await beginning).toBe(true)
+    expect(session.aiRun).toBeDefined()
+
+    aiEdits()
+    expect(await slideXml(deckPath)).not.toContain(AI_TEXT)
+    expect(await call('slides:ai-run-hold')).not.toBeNull()
+    expect(JSON.stringify(deckState().slides)).not.toContain(AI_TEXT)
+    expect(await slideXml(deckPath)).not.toContain(AI_TEXT)
+  })
+
+  it('does the same for a recovery copy that is still streaming', async () => {
+    const pause = pauseNextSerialization()
+    const pass = runSlidesRecoveryPass()
+    await pause.reached
+
+    const beginning = call('slides:ai-run-begin')
+    await tick()
+    expect(session.aiRun).toBeUndefined()
+
+    pause.release()
+    await pass
+    expect(await beginning).toBe(true)
+    aiEdits()
+
+    const copies = recoveryCopies()
+    expect(copies.size).toBe(1)
+    for (const bytes of copies.values()) {
+      const zip = await JSZip.loadAsync(bytes)
+      const xml = await zip.file('ppt/slides/slide1.xml')!.async('string')
+      expect(xml).toContain('First point')
+      expect(xml).not.toContain(AI_TEXT)
+    }
+    expect(await call('slides:ai-run-hold')).not.toBeNull()
   })
 })
 
