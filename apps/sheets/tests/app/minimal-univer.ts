@@ -14,6 +14,8 @@ export const commitGate = {
     })
     return release
   },
+  /** Calls to let through before the next one reports that the editor could not commit (null: never). */
+  failAfter: null as number | null,
 }
 
 /**
@@ -68,6 +70,13 @@ export function univerStateWithGatedCommit<T extends { commitActiveCellEditor: u
       const held = commitGate.held
       commitGate.held = null
       await held
+      if (commitGate.failAfter !== null) {
+        if (commitGate.failAfter === 0) {
+          commitGate.failAfter = null
+          return false
+        }
+        commitGate.failAfter -= 1
+      }
       return commit(...args)
     },
   }

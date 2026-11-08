@@ -31,7 +31,12 @@ export interface ProposalBackend {
   /** Operations whose apply no undo step takes back (they only write the edit journal). */
   readonly unundoableOps: ReadonlySet<string>
   /** Undoes the newest `steps` undo steps of the open workbook. */
-  undo(steps: number): Promise<void>
+  undo(steps: number, checkpoint?: unknown): Promise<void>
+  /**
+   * Captures what an undo cannot rebuild by itself (a blank workbook's grid) as it stands now.
+   * Passed back to `undo` it makes that undo restore this moment, not the run's start.
+   */
+  checkpoint?(): unknown
   /**
    * Marks the workbook as it stands now. The returned check reports whether
    * the workbook has changed since (a person edited it, another file was
@@ -201,13 +206,15 @@ export async function accept(
 ): Promise<TurnProposal> {
   const stale: TurnProposal = { kind: 'stale', plans: proposal.plans }
   if (proposal.changed()) return stale
+  // the rollback restores the workbook as it is now, not as the run left it at its start
+  const checkpoint = backend.checkpoint?.()
   let applied = 0
   for (const plan of proposal.plans) {
     const outcome = await backend.apply(plan)
     applied += outcome.undoSteps
     if (!outcome.ok) {
       if (applied > 0) {
-        await backend.undo(applied)
+        await backend.undo(applied, checkpoint)
         backend.dropRedo?.()
       }
       return stale

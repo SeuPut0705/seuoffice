@@ -92,7 +92,8 @@ export function createProposalBackend(deps: ProposalBackendDeps): ProposalBacken
     undoCellBudget: lazyWorkbookRef.current ? AI_UNDO_CELL_BUDGET : Number.POSITIVE_INFINITY,
     unundoableOps: lazyWorkbookRef.current ? JOURNAL_ONLY_OPS : new Set<string>(),
     dropRedo: () => dropRedoStack(univerRef.current),
-    undo: async (steps) => {
+    checkpoint: () => (lazyWorkbookRef.current ? null : captureBlankBaseline(univerRef.current)),
+    undo: async (steps, checkpoint) => {
       // the revert is a write of the run itself: the person's veto lets it through
       const endAgentWrite = beginAgentWrite()
       try {
@@ -102,7 +103,7 @@ export function createProposalBackend(deps: ProposalBackendDeps): ProposalBacken
               univerRef.current,
               adapterRef.current,
               steps,
-              deps.blankBaselineRef.current,
+              (checkpoint as BlankBaseline | null | undefined) ?? deps.blankBaselineRef.current,
             ),
           )
           return
