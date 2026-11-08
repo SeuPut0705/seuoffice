@@ -29,6 +29,7 @@ import { tiffToPng } from './tiff-decode'
 import { neutralizeJpegOrientation } from './jpeg-orientation'
 import { displayMime } from './media-mime'
 import type { SlideUpdate } from '../shared/ipc'
+import type { AiProposal, AiRun } from './ai-proposal'
 
 export interface RuntimePaths {
   preloadPath: string
@@ -91,6 +92,10 @@ export interface Session {
   }
   /** Rollback points for the AI panel's Snapshots list, keyed by id (one per AI run that edited the deck). */
   aiSnapshots?: Map<number, HistorySnapshot>
+  /** The deck as the running AI request found it, so its edits can be held as a proposal (ai-proposal.ts) */
+  aiRun?: AiRun
+  /** An AI run's edits taken out of the deck until the person accepts or rejects them (ai-proposal.ts) */
+  aiProposal?: AiProposal
   /** Edits that only touch archive entries (notes/comments; element-level dirty cannot detect them), reset after save */
   metaDirty?: boolean
   /** An untitled copy (a skill template's, spec 5.7): its first save asks where instead of using the drafts folder */
@@ -336,6 +341,9 @@ export function carryHistoryForReplacement(
   replacement.redoStack = previous.redoStack
   replacement.historyBatch = previous.historyBatch
   replacement.aiSnapshots = previous.aiSnapshots
+  // A replaced untitled deck keeps its identity (no path, same recovery slot), so the run can
+  // still be held; a file-backed deck becomes an untitled draft, which a snapshot cannot revert.
+  if (!previous.path) replacement.aiRun = previous.aiRun
   scheduleHistoryNotify(replacement)
 }
 

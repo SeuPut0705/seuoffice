@@ -1,0 +1,106 @@
+/* AI edit review card: the proposed changes of one AI request, held until accepted or rejected */
+.turn-proposal {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.turn-proposal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.turn-proposal-count {
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.turn-proposal-note {
+  margin-top: 6px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.turn-proposal-stale {
+  margin-top: 6px;
+  color: var(--slides-ai-error);
+  font-size: 12.5px;
+}
+
+.turn-proposal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.turn-proposal-change-title {
+  margin-bottom: 3px;
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
+
+.turn-proposal-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.turn-proposal-thumb {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.turn-proposal-thumb canvas,
+.turn-proposal-thumb .konvajs-content {
+  border: 1px solid var(--border);
+}
+
+.turn-proposal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.turn-proposal-btn {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.turn-proposal-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.turn-proposal-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.turn-proposal-btn-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--slides-on-accent);
+}
+
+.turn-proposal-btn-primary:hover:not(:disabled) {
+  background: var(--accent-dark);
+}

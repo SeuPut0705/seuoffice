@@ -81,6 +81,15 @@ import { templateSelectionState } from './template-selection-state'
 import { TemplateStartGallery } from './TemplateGallery'
 import { TemplatePicker } from './TemplatePicker'
 import { EditQueueCard } from './EditQueueCard'
+import { TurnProposalCard } from './TurnProposalCard'
+import {
+  NO_PROPOSAL,
+  accept as acceptProposal,
+  holdRun,
+  reject as rejectProposal,
+  slidesApiBackend,
+  type ProposalState,
+} from './turn-proposal'
 import { deriveDeckProgressView, type DeckProgressSnapshot } from './deck-progress-view'
 import {
   buildPageInstruction,
@@ -542,7 +551,7 @@ export function AiPanel({
     busy,
     submit: (text, meta) => {
       // the QC pass edits the deck with busy=false: refuse and let the pump retry
-      if (qcRunningRef.current || runStartingRef.current) return false
+      if (qcRunningRef.current || runStartingRef.current || proposalPending()) return false
       const loop = loopRef.current
       if (!loop || loop.busy) return false
       // nothing can run right now: the message stays queued, and in front of "not connected"
@@ -1053,6 +1062,9 @@ export function AiPanel({
   const runQcPassRef = useRef<() => Promise<void>>(() => Promise.resolve())
   /** DeckAccess reused by the QC pass (same executors as the main loop's slides skill) */
   const accessRef = useRef<DeckAccess | null>(null)
+  /** Path of the open deck; the AI refuses to replace a deck that is a file on disk */
+  const deckPathRef = useRef(currentFilePath)
+  deckPathRef.current = currentFilePath
   /** Wall-clock start of the current run, drives the elapsed badge */
   const runStartedAtRef = useRef(0)
   const historyBatchActiveRef = useRef(false)
@@ -1060,6 +1072,15 @@ export function AiPanel({
   /** This run's rollback batch — carried onto the QC entry when a QC pass
       follows (mid-turn segments never show the action toolbar) */
   const runSnapshotIdRef = useRef<number | null>(null)
+  /** AI edit review: the last request's edits, held out of the deck until the person accepts or rejects them */
+  const [proposal, setProposalState] = useState<ProposalState>(NO_PROPOSAL)
+  const proposalRef = useRef<ProposalState>(NO_PROPOSAL)
+  /** A request ended and its edits are being taken out of the deck: no new request starts until that settles */
+  const holdingRef = useRef(false)
+  /** The post-generation QC pass of the run that just ended: it edits the deck, so the hold waits for it */
+  const qcPromiseRef = useRef<Promise<void>>(Promise.resolve())
+  /** Lowest rollback id the request in flight registered; those points describe held edits, not the deck */
+  const runSnapshotFloorRef = useRef<number | null>(null)
 
   const patchLastAssistant = (
     patch: Partial<ChatEntry> | ((last: ChatEntry) => Partial<ChatEntry>),
@@ -1092,7 +1113,56 @@ export function AiPanel({
     const id = await window.slidesApi.endHistoryBatch()
     if (typeof id !== 'number') return
     runSnapshotIdRef.current = id
+    runSnapshotFloorRef.current = Math.min(runSnapshotFloorRef.current ?? id, id)
     patchLastAssistant({ snapshotId: id })
+  }
+
+  const setProposal = (next: ProposalState) => {
+    proposalRef.current = next
+    setProposalState(next)
+  }
+  const proposalPending = () => holdingRef.current || proposalRef.current.kind !== 'none'
+
+  /**
+   * End of a request (after its QC pass): when it changed the deck, take its edits back out and
+   * show them as a proposal. A failed hold leaves the deck as the run left it.
+   */
+  const holdRunEdits = async () => {
+    holdingRef.current = true
+    try {
+      await qcPromiseRef.current
+      const held = await holdRun(slidesApiBackend(window.slidesApi), slidesRef.current)
+      const floor = runSnapshotFloorRef.current
+      if (held.deck) {
+        applyDeckRef.current(held.deck, Math.min(currentRef.current, held.deck.length - 1))
+        if (floor != null) {
+          setChat((prev) =>
+            prev.map((e) =>
+              e.snapshotId != null && e.snapshotId >= floor ? { ...e, snapshotId: undefined } : e,
+            ),
+          )
+        }
+      }
+      setProposal(held.state)
+    } catch (err) {
+      console.warn('[slides-ai] holding the run failed', err)
+    } finally {
+      runSnapshotFloorRef.current = null
+      holdingRef.current = false
+    }
+  }
+
+  const acceptHeldEdits = async () => {
+    const accepted = await acceptProposal(proposalRef.current, slidesApiBackend(window.slidesApi))
+    setProposal(accepted.state)
+    if (!accepted.deck) return
+    applyDeckRef.current(accepted.deck, Math.min(currentRef.current, accepted.deck.length - 1))
+    // the reply's undo control works on accepted edits like on any applied reply
+    if (accepted.snapshotId != null) patchLastAssistant({ snapshotId: accepted.snapshotId })
+  }
+
+  const rejectHeldEdits = async () => {
+    setProposal(await rejectProposal(proposalRef.current, slidesApiBackend(window.slidesApi)))
   }
 
   const rollback = async (snapshotId: number) => {
@@ -1305,6 +1375,7 @@ export function AiPanel({
       getCommentSummary: () => getCommentSummaryRef.current?.() ?? { total: 0, pages: [] },
       applySlide: (i, updated) => applySlideRef.current(i, updated),
       applyDeck: (all, goTo) => applyDeckRef.current(all, goTo),
+      deckHasPath: () => !!deckPathRef.current,
       landGeneratedPages: async (
         pageMarkers: string[],
         mode?: 'replace' | 'append' | 'insert_at',
@@ -1813,12 +1884,14 @@ export function AiPanel({
               !cancelled && qcPagesRef.current.length > 0
                 ? runQcPassRef.current()
                 : Promise.resolve()
+            qcPromiseRef.current = qc
             // a handed-over run that ended well: the deck goes into the project after its check
             if (handedDone) void qc.finally(() => onHandedRunDoneRef.current?.())
             // After the batch closes, so the next queued page opens a fresh one
             const resolveQueueRun = queueRunResolverRef.current
             queueRunResolverRef.current = null
             resolveQueueRun?.(!cancelled)
+            if (!resolveQueueRun) void holdRunEdits()
           })
           // Persist the assistant message (deckProgress not stored; tools store the whole run's full activity) —
           // side effects outside the updater (StrictMode double-invokes updaters, duplicating history writes)
@@ -1865,6 +1938,7 @@ export function AiPanel({
             const resolveQueueRun = queueRunResolverRef.current
             queueRunResolverRef.current = null
             resolveQueueRun?.(false)
+            if (!resolveQueueRun) void holdRunEdits()
           })
         },
       },
@@ -2055,7 +2129,15 @@ export function AiPanel({
     // so duplicate triggers must be blocked synchronously (e.g. StrictMode double-running the preset autoRun effect),
     // otherwise two sets of bubbles get pushed and the earlier assistant placeholder stays at "thinking" forever.
     // qcRunningRef: the post-generation QC pass edits the deck outside the main loop — no concurrent runs
-    if (!instruction || !loop || loop.busy || runStartingRef.current || qcRunningRef.current) return
+    if (
+      !instruction ||
+      !loop ||
+      loop.busy ||
+      runStartingRef.current ||
+      qcRunningRef.current ||
+      proposalPending()
+    )
+      return
     // Nothing can run yet: the composer shows the connect prompt or the first-connection
     // notice instead of an error, and keeps its text. A request made in front of the notice
     // (or while the status check is still running) is held and starts once the way is clear;
@@ -2149,7 +2231,14 @@ export function AiPanel({
         // Clear the flag before run: loop.run sets running synchronously, leaving no re-entry window
         runStartingRef.current = false
         await onBeforeRunRef.current?.()
-        if (await window.slidesApi.beginHistoryBatch()) historyBatchActiveRef.current = true
+        if (await window.slidesApi.beginHistoryBatch()) {
+          historyBatchActiveRef.current = true
+          // a deck handed over for a project is a new document the AI makes: nothing to review
+          if (!handedRunRef.current.armed) {
+            runSnapshotFloorRef.current = null
+            await window.slidesApi.aiRunBegin()
+          }
+        }
         // the chosen project's context for this request (after the send gate, right before the run)
         await projectPanelRef.current.prepareSend()
         loop.run(modelInstruction, images)
@@ -2157,7 +2246,10 @@ export function AiPanel({
       .catch(() => {
         runStartingRef.current = false
         projectPanelRef.current.finishSend()
-        void finishHistoryBatch().finally(() => setBusy(false))
+        void finishHistoryBatch().finally(() => {
+          setBusy(false)
+          void holdRunEdits()
+        })
       })
   }
 
@@ -2165,7 +2257,13 @@ export function AiPanel({
   const runQueuePage = (instruction: string) =>
     new Promise<boolean>((resolve) => {
       const loop = loopRef.current
-      if (!loop || loop.busy || runStartingRef.current || qcRunningRef.current) {
+      if (
+        !loop ||
+        loop.busy ||
+        runStartingRef.current ||
+        qcRunningRef.current ||
+        proposalPending()
+      ) {
         resolve(false)
         return
       }
@@ -2227,7 +2325,14 @@ export function AiPanel({
   const sendEditQueue = async () => {
     const items = editQueue ?? []
     const loop = loopRef.current
-    if (items.length === 0 || !loop || loop.busy || runStartingRef.current || qcRunningRef.current)
+    if (
+      items.length === 0 ||
+      !loop ||
+      loop.busy ||
+      runStartingRef.current ||
+      qcRunningRef.current ||
+      proposalPending()
+    )
       return
     // same gate as runWith: the queue stays as it is until a provider can run
     if (!sendGate.admitQueued(() => {})) return
@@ -2261,12 +2366,16 @@ export function AiPanel({
     // Unrunnable entries leave the queue right away: re-resolving them would fail
     // the same way, and the transcript already explains why
     if (skipped.length > 0) onQueueConsume?.(skipped.map((r) => r.item.key))
+    // the whole queue is one request: its pages edit the live deck, the edits are held at the end
+    runSnapshotFloorRef.current = null
+    await window.slidesApi.aiRunBegin().catch(() => false)
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i]!
       const ok = await runQueuePage(buildPageInstruction(group, groups.length, i + 1))
       if (!ok) break // stopped or failed: the remaining pages stay queued for a retry
       onQueueConsume?.(group.entries.map((e) => e.item.key))
     }
+    await holdRunEdits()
   }
 
   /**
@@ -2344,6 +2453,9 @@ export function AiPanel({
           })
         }
         const batchId = batchOpened ? await window.slidesApi.endHistoryBatch() : null
+        if (typeof batchId === 'number') {
+          runSnapshotFloorRef.current = Math.min(runSnapshotFloorRef.current ?? batchId, batchId)
+        }
         if (controller.signal.aborted) break
         if (result.error) {
           // QC is optional polish. Keep provider/network details in diagnostics instead of
@@ -2449,6 +2561,7 @@ export function AiPanel({
   /** the conversation on screen, in the loop and in the composer's helpers goes away */
   const resetConversation = () => {
     sendGate.reset()
+    if (proposalRef.current.kind !== 'none') void rejectHeldEdits()
     msgQueue.clear()
     dismissClarify()
     qcAbortRef.current?.abort()
@@ -2861,6 +2974,14 @@ export function AiPanel({
             </div>
           )
         })}
+        {proposal.kind !== 'none' && (
+          <TurnProposalCard
+            state={proposal}
+            images={images}
+            onAccept={acceptHeldEdits}
+            onReject={rejectHeldEdits}
+          />
+        )}
         {skillTemplates.notes}
         {/* an MCP tool waiting for the person's yes (user MCP spec 7.4) */}
         <McpPermissionCard lang={lang} />
@@ -2907,6 +3028,9 @@ export function AiPanel({
             />
           )}
           {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
+          {proposal.kind === 'pending' && (
+            <div className="turn-proposal-note">{t('aiProposalBlocked')}</div>
+          )}
           {sendGate.connectChoice && (
             <AiConnectPrompt
               choice={sendGate.connectChoice}
@@ -3089,7 +3213,7 @@ export function AiPanel({
                 <button
                   className="ai-send-btn"
                   onClick={run}
-                  disabled={!input.trim()}
+                  disabled={!input.trim() || proposal.kind !== 'none'}
                   data-tip={t('aiSend')}
                   aria-label={t('aiSend')}
                 >

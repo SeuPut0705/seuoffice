@@ -330,6 +330,7 @@ const issuedCloudPages = new Set<string>()
 import { registerPresenterIpc } from './presenter-show'
 import { registerAttachmentIpc } from './attachments-ipc'
 import { registerGenerateHandoffIpc } from './generate-handoff-ipc'
+import { registerAiProposalIpc } from './ai-proposal'
 import { registerSlidesTemplateBytesIpc } from './template-bytes'
 import { openSlidesSeed } from './seed-deck'
 import { queueSlidesSeedFor } from './seed-queue'
@@ -5220,6 +5221,8 @@ export function registerSlidesIpc(): void {
 
   // ── Generate hand-off from the shell's "make" window (slides:handoff-*) ──
   registerGenerateHandoffIpc()
+  // ── AI edit review (slides:ai-run-*, slides:ai-proposal-*) ──
+  registerAiProposalIpc()
   registerSlidesTemplateBytesIpc(ipcMain, (wcId) => sessions.get(wcId)?.opened)
 
   // ── Presenter-view multi-screen show (registered inside registerSlidesIpc: shell

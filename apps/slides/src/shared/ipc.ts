@@ -1697,6 +1697,16 @@ export interface SlidesApi {
   applyTxn: (op: ApplyTxnOp) => Promise<ApplyTxnResult | null>
   /** Roll the deck back to an AI rollback point; returns the restored full RenderSlide array, null when the id is unknown */
   aiSnapshotRestore: (id: number) => Promise<RenderSlide[] | null>
+  /** AI edit review: record the deck before an AI request's first edit (call right after beginHistoryBatch) */
+  aiRunBegin: () => Promise<boolean>
+  /** AI edit review: end of the request. When it changed the deck, the deck goes back to its pre-run state
+      and the run's result is held as a proposal; returns the restored full RenderSlide array (null: nothing held) */
+  aiRunHold: () => Promise<RenderSlide[] | null>
+  /** Apply the held proposal as one undo step unless the deck changed since the revert (null: refused);
+      snapshotId is the AI rollback point of the reply's undo control */
+  aiProposalAccept: () => Promise<{ slides: RenderSlide[]; snapshotId: number } | null>
+  /** Drop the held proposal; the deck stays at its pre-run state */
+  aiProposalReject: () => Promise<boolean>
   /** Undo/redo (main-process snapshot history): returns the restored full RenderSlide array, null when nothing to undo */
   undo: () => Promise<RenderSlide[] | null>
   redo: () => Promise<RenderSlide[] | null>

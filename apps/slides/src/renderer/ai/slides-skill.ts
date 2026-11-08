@@ -118,6 +118,8 @@ export interface DeckAccess {
    * memory, never persisted or journaled.
    */
   onProgress?(event: DeckProgressEvent): void
+  /** Whether the open deck is a file on disk (not an untitled draft). Replacing such a deck wholesale makes the new session an untitled draft that no proposal can revert, so generate_deck refuses replace mode there. */
+  deckHasPath?(): boolean
   /** Land generated pages: each pageMarkers entry redeems a one-slide pptx, merged into / replacing the current deck. Returns total page count or an error.
    *  mode="insert_at" inserts a single page at position insertAt (later pages shift) — used to re-insert failed pages at their original position.
    *  On pipeline failure it automatically falls back to element-level mode; fallbackReason explains why (ok is still true).
@@ -2141,6 +2143,12 @@ async function executeTool(
       const canvasH = 720
       const insertMode: 'replace' | 'append' =
         call.input.insert_mode === 'append' ? 'append' : 'replace'
+      if (insertMode === 'replace' && access.deckHasPath?.()) {
+        return fail(
+          t('aiFailGenDeck'),
+          'Replacing the whole open presentation is not available. Nothing was generated and the deck is unchanged. To rebuild it, call generate_deck with insert_mode:"append" for the new pages, then delete the old pages with the page tools (apply_ops deleteSlide); the person reviews the result as one proposal.',
+        )
+      }
       const PLAN_BATCH = 12 // Per-batch planning cap (kept slightly conservative against truncation)
       const GEN_BATCH = 2 // Per-page generation concurrency (opus large output + proxy concurrent streams time out easily; lowered to 2, stability first)
       const BACKOFF_MS = access.retryBackoffMs ?? 2000 // Retry backoff base (rate limits/overload are mostly transient; immediate retries would hit them again)
