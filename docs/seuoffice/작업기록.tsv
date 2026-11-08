@@ -41,3 +41,4 @@ ts	phase	decision	why	evidence	result
 2026-11-09T05:20:42+09:00	U11	2차 독립 재검토: 1차 지적 8건 중 7건이 닫혔고(1건은 결정에 남은 일), 한글 쓰기 호출 중 멈춤 P1과 슬라이드 생성 페이지 P2를 새로 찾아 단위에 넘겼다. 합치기 보류	받아들이지 않은 AI 편집이 남는 길이 아직 있다. P1은 검토자가 실제 패널과 플러그인으로 재현했다	~/.seuoffice-program/U11-review.md 2차 절, history://U11Review	합치기 보류
 2026-11-09T06:10:00+09:00	U11	feat/ai-review-hwp-sheets-slides를 합쳤다	3차 독립 재검토가 막을 것 없음을 냈고 재현 시험 17개 파일이 새 가지 끝에서 통과했다	Merge 5019db40c, history://U11Review	합친 main 검증 대기
 2026-11-09T06:56:25+09:00	U11	U11을 합친 뒤 CI의 ui 시험(editors-user-mcp)이 실패해서, 시트와 슬라이드에서 AI 대화를 지울 때 MCP 대화 상태도 바로 새로 시작하게 고쳤다. 슬라이드 패널이 사라질 때도 같다	U11이 loop.reset() 근처에 실행 되돌리기를 끼워 넣어 MCP 초기화가 떨어졌고, 패널 사라짐에는 MCP 초기화가 없었다. 로컬에서 시험이 먼저 실패하는 것을 확인했다	run 42524322598, fea3cf939, packages/ui/tests/editors-user-mcp.test.ts	ui 41, slides AI 34, sheets AI 4 통과
+2026-11-09T07:30:51+09:00	close	U0~U12와 교차 검토 후속을 모두 합친 main(57835a7ad)에서 CI와 seuoffice 워크플로가 모두 통과했다	끝의 정의 8번	run 42527683470, 42527683449	녹색. 사람 몫만 남음
