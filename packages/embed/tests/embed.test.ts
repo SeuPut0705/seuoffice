@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { appForFileName, openDocument, SeuofficeEmbedError } from '../src/index'
 
 const BASE = 'https://office.example/'
@@ -83,5 +83,18 @@ describe('openDocument', () => {
     expect(await codeOf(doc.opened)).toBe('open_failed')
     doc.destroy()
     expect(document.querySelector('iframe')).toBeNull()
+  })
+
+  it('sends only the bytes of a Buffer view and leaves the caller storage intact', () => {
+    const backing = new Uint8Array([0xaa, 1, 2, 3, 0xbb])
+    // Buffer#slice returns a view, unlike Uint8Array#slice
+    const view = Buffer.from(backing.buffer, 1, 3)
+    const doc = openDocument(document.body, { baseUrl: BASE, fileName: 'a.pdf', bytes: view })
+    const sent = vi.spyOn(doc.iframe.contentWindow!, 'postMessage').mockImplementation(() => {})
+    post(doc.iframe.contentWindow, 'https://office.example', { type: 'ready' })
+    const message = sent.mock.calls[0]![0] as { bytes: ArrayBuffer }
+    expect(Array.from(new Uint8Array(message.bytes))).toEqual([1, 2, 3])
+    expect(Array.from(backing)).toEqual([0xaa, 1, 2, 3, 0xbb])
+    doc.destroy()
   })
 })

@@ -110,8 +110,14 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
     if (data.type === 'ready' && !sent) {
       sent = true
       clearTimeout(timer)
-      const bytes =
-        options.bytes instanceof ArrayBuffer ? options.bytes.slice(0) : options.bytes.slice().buffer
+      // an exact fresh copy: a view's slice() may share its backing buffer (Buffer#slice does)
+      const source =
+        options.bytes instanceof ArrayBuffer
+          ? new Uint8Array(options.bytes)
+          : new Uint8Array(options.bytes.buffer, options.bytes.byteOffset, options.bytes.byteLength)
+      const copy = new Uint8Array(source.byteLength)
+      copy.set(source)
+      const bytes = copy.buffer
       iframe.contentWindow!.postMessage(
         { source: SOURCE, version: VERSION, type: 'open', fileName: options.fileName, bytes },
         base.origin,
