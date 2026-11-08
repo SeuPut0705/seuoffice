@@ -150,12 +150,21 @@
  *   font box showed its name as if it were there. The menu marks such an entry and the box
  *   underlines such a name, with a tooltip saying the file keeps the font's name
  *   (studio-plugin/pc-fonts.mjs, in the words the app gives).
+ *
+ * studio-read-only-commands, studio-read-only-operations, studio-read-only-document
+ *   A page that opened a document only to show it (the web build's view mode) gets an editor
+ *   that cannot change it (studio-plugin/read-only.mjs). The studio has no such mode: its form
+ *   mode still lets fields, form objects, object drags and plugin edits through. In a studio
+ *   whose parent asked for it, the command gate keeps only the commands that read, the input
+ *   handler refuses every edit operation, and the engine document throws on every call that
+ *   would change it. A studio nobody asked stays as it was.
  */
 
 import { CLIPBOARD_HTML_MODULE } from '../studio-plugin/clipboard-html.mjs'
 import { EASY_WORDS_COMMAND } from '../studio-plugin/agent-plugin.mjs'
 import { HANCOM_KEYS_MODULE, studioCommandIds } from '../studio-plugin/hancom-keys.mjs'
 import { PC_FONTS_MODULE } from '../studio-plugin/pc-fonts.mjs'
+import { READ_ONLY_MODULE } from '../studio-plugin/read-only.mjs'
 
 /** Must equal RENDERER_SCHEME in packages/electron-utils/src/renderer-scheme.ts. */
 export const APP_SCHEME = 'genoffice-app'
@@ -177,6 +186,9 @@ export { CLIPBOARD_HTML_MODULE }
 
 /** Module specifier the studio-pc-fonts patch imports; build-studio.mjs aliases it. */
 export { PC_FONTS_MODULE }
+
+/** Module specifier the studio-read-only-* patches import; build-studio.mjs aliases it. */
+export { READ_ONLY_MODULE }
 
 const PATCHES = {
   'sdk-scheme': {
@@ -1259,6 +1271,68 @@ const PATCHES = {
       },
     ],
   },
+  'studio-read-only-commands': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]command[\\/]dispatcher\.ts$/,
+    edits: [
+      {
+        find: "import type { EventBus } from '@/core/event-bus';",
+        replace:
+          "import type { EventBus } from '@/core/event-bus';\n" +
+          `import { STUDIO_READ_ONLY, readOnlyAllows } from '${READ_ONLY_MODULE}';`,
+      },
+      {
+        find: [
+          'function isBlockedInFormMode(commandId: string, ctx: EditorContext): boolean {',
+          '  if (!ctx.isFormMode) return false;',
+        ].join('\n'),
+        replace: [
+          'function isBlockedInFormMode(commandId: string, ctx: EditorContext): boolean {',
+          '  if (STUDIO_READ_ONLY && !readOnlyAllows(commandId)) return true;',
+          '  if (!ctx.isFormMode) return false;',
+        ].join('\n'),
+      },
+    ],
+  },
+  'studio-read-only-operations': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]engine[\\/]input-handler\.ts$/,
+    edits: [
+      {
+        find: "import { WasmBridge } from '@/core/wasm-bridge';",
+        replace:
+          "import { WasmBridge } from '@/core/wasm-bridge';\n" +
+          `import { STUDIO_READ_ONLY } from '${READ_ONLY_MODULE}';`,
+      },
+      {
+        find: [
+          '  private isOperationAllowedInEditMode(desc: OperationDescriptor): boolean {',
+          "    if (this.editMode !== 'form') return true;",
+        ].join('\n'),
+        replace: [
+          '  private isOperationAllowedInEditMode(desc: OperationDescriptor): boolean {',
+          '    if (STUDIO_READ_ONLY) return false;',
+          "    if (this.editMode !== 'form') return true;",
+        ].join('\n'),
+      },
+    ],
+  },
+  'studio-read-only-document': {
+    file: /[\\/]rhwp-studio[\\/]src[\\/]core[\\/]wasm-bridge\.ts$/,
+    edits: [
+      {
+        find: "import init, { HwpDocument, version } from '@wasm/rhwp.js';",
+        replace:
+          "import init, { HwpDocument, version } from '@wasm/rhwp.js';\n" +
+          `import { STUDIO_READ_ONLY, readOnlyDocument } from '${READ_ONLY_MODULE}';`,
+      },
+      {
+        find: ['    this.doc = nextDoc;', '    this._fileName = nextFileName;'].join('\n'),
+        replace: [
+          '    this.doc = STUDIO_READ_ONLY ? readOnlyDocument(nextDoc) : nextDoc;',
+          '    this._fileName = nextFileName;',
+        ].join('\n'),
+      },
+    ],
+  },
 }
 
 /** The patches the studio build applies, in order; the SDK's own is applied by the renderer builds. */
@@ -1299,6 +1373,9 @@ export const STUDIO_PATCHES = /** @type {const} */ ([
   'studio-pdf-import-options',
   'studio-pc-fonts',
   'studio-missing-font-marks',
+  'studio-read-only-commands',
+  'studio-read-only-operations',
+  'studio-read-only-document',
 ])
 
 /** Whether a patch is written against this file. */
