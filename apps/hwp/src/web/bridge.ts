@@ -36,7 +36,7 @@ let opened: { doc: WebDocument; hwp: OpenedHwp } | null = null
 let pendingFormat: HwpFormat | null = null
 /** the renderer's save handlers; the editor's File menu, Ctrl+S and the host send to them */
 const saveListeners = new Set<(mode: SaveMode) => void>()
-/** a save the host asked for, answered by the next save that ends */
+/** the save a host request started, settled when that save ends */
 let hostSave: { resolve: () => void; reject: (error: Error) => void } | null = null
 
 function requestSave(mode: SaveMode): void {
@@ -187,26 +187,13 @@ const hwpApi: Partial<HwpApi> = {
 /** As long as the desktop main process waits for a requested save (hwp-main.ts `requestHwpSave`) */
 const HOST_SAVE_TIMEOUT_MS = 120_000
 
-/** One save the host asked for, settled by the next save that ends (or the timeout) */
+/** One save the host asked for: settles when that save ends, however late */
 function saveForHost(): Promise<void> {
   if (saveListeners.size === 0) {
     return Promise.reject(new Error('hwp: the document is not ready to save'))
   }
   return new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(
-      () => settleSave(false, 'hwp: the save did not finish in time'),
-      HOST_SAVE_TIMEOUT_MS,
-    )
-    hostSave = {
-      resolve: () => {
-        clearTimeout(timer)
-        resolve()
-      },
-      reject: (error) => {
-        clearTimeout(timer)
-        reject(error)
-      },
-    }
+    hostSave = { resolve, reject }
     // the host asks for the bytes, so the save runs even when nothing changed: the renderer
     // answers 'saveAs' without asking the editor, and here both modes write the opened name
     requestSave('saveAs')
@@ -217,11 +204,29 @@ export function installBridges(): void {
   installWebBridge('hwpApi', createWebBridge<HwpApi>('hwpApi', hwpApi))
   if (!canSave) return
   watchSaveKey(() => requestSave('save'))
-  // one host request at a time, in arrival order: a second one waits for the first to settle
-  let hostQueue: Promise<unknown> = Promise.resolve()
+  // One host request at a time, in arrival order. The next one starts only once the save before
+  // it has really ended, even when its host stopped waiting: a late end would settle the next one.
+  let previous: Promise<unknown> = Promise.resolve()
   onHostSaveRequest(() => {
-    const run = hostQueue.then(saveForHost)
-    hostQueue = run.catch(() => {})
-    return run
+    let refused = false
+    // a request refused while it still waited for its turn starts no save
+    const saved = previous.then(() => (refused ? undefined : saveForHost()))
+    previous = saved.catch(() => {})
+    return new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        refused = true
+        reject(new Error('hwp: the save did not finish in time'))
+      }, HOST_SAVE_TIMEOUT_MS)
+      saved.then(
+        () => {
+          clearTimeout(timer)
+          resolve()
+        },
+        (error: unknown) => {
+          clearTimeout(timer)
+          reject(error)
+        },
+      )
+    })
   })
 }

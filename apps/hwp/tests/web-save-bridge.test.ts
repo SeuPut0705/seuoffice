@@ -69,4 +69,38 @@ describe('host save requests in edit mode', () => {
     await expect(host.saveRequest!()).rejects.toThrow('disk full at host')
     await expect(host.saveRequest!()).resolves.toBeUndefined()
   }, 5_000)
+
+  it('a request past the time limit is refused, and its late save does not settle the next one', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const events: string[] = []
+      let releaseA!: () => void
+      host.saveToHost
+        .mockImplementationOnce(
+          () =>
+            new Promise<void>((resolve) => {
+              releaseA = () => {
+                events.push('A stored')
+                resolve()
+              }
+            }),
+        )
+        .mockImplementationOnce(async () => {
+          events.push('B stored')
+        })
+      const a = host.saveRequest!()
+      const aRefused = expect(a).rejects.toThrow('did not finish in time')
+      await vi.waitFor(() => expect(host.saveToHost).toHaveBeenCalledTimes(1))
+      await vi.advanceTimersByTimeAsync(60_000)
+      const b = host.saveRequest!().then(() => events.push('B settled'))
+      // A's limit passes while its save is still with the host
+      await vi.advanceTimersByTimeAsync(60_001)
+      await aRefused
+      releaseA()
+      await b
+      expect(events).toEqual(['A stored', 'B stored', 'B settled'])
+    } finally {
+      vi.useRealTimers()
+    }
+  }, 5_000)
 })
