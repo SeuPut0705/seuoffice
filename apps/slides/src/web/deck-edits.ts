@@ -13,6 +13,7 @@ import {
   rebuildSlide,
   restoreSnapshot,
   takeSnapshot,
+  type HistorySnapshot,
   type Session,
 } from '../main/session-state'
 import type { SlidesApi } from '../shared/ipc'
@@ -25,9 +26,44 @@ const MAX_HISTORY = 50
 
 const historyListeners = new Set<(state: HistoryState) => void>()
 
-/** slides:is-dirty */
+/**
+ * Which history state the deck shows and which one the host last stored. A snapshot restore
+ * brings back the dirty flags of the moment it was taken, which a save in between made stale:
+ * undoing past a save restores flags that read clean, and only the revision tells the deck
+ * no longer matches the host's copy.
+ */
+interface Revisions {
+  shown: number
+  saved: number
+}
+const revisions = new WeakMap<Session, Revisions>()
+const snapshotRevisions = new WeakMap<HistorySnapshot, number>()
+let lastRevision = 0
+
+function revisionsOf(session: Session): Revisions {
+  let found = revisions.get(session)
+  if (!found) revisions.set(session, (found = { shown: 0, saved: 0 }))
+  return found
+}
+
+/** takeSnapshot, remembering the revision the snapshot holds */
+function snapshot(session: Session): HistorySnapshot {
+  const snap = takeSnapshot(session)
+  snapshotRevisions.set(snap, revisionsOf(session).shown)
+  return snap
+}
+
+/** restoreSnapshot, and the deck shows the snapshot's revision again */
+function restore(session: Session, snap: HistorySnapshot): void {
+  restoreSnapshot(session, snap)
+  revisionsOf(session).shown = snapshotRevisions.get(snap)!
+}
+
+/** slides:is-dirty, and whether the deck is still the state the host stored */
 function isDirty(session: Session): boolean {
+  const { shown, saved } = revisionsOf(session)
   return (
+    shown !== saved ||
     !!session.metaDirty ||
     session.opened.deck.slides.some(
       (s) => s.structureDirty || s.elements.some((el) => el.dirty || el.dirtyTransform),
@@ -48,9 +84,10 @@ function settle(session: Session): void {
 
 /** session-state.ts pushHistory, without the main-process notify it schedules */
 function pushHistory(session: Session): void {
-  session.undoStack.push(takeSnapshot(session))
+  session.undoStack.push(snapshot(session))
   while (session.undoStack.length > MAX_HISTORY) session.undoStack.shift()
   session.redoStack = []
+  revisionsOf(session).shown = ++lastRevision
 }
 
 /**
@@ -65,7 +102,9 @@ function sessionTxn(session: Session, req: TxnRequest): TxnResult | null {
   pushHistory(session)
   const r = runTxn(session.opened, req)
   if (!r.applied) {
-    session.undoStack.pop()
+    // the executor already rolled the deck back to the snapshot's state
+    const snap = session.undoStack.pop()!
+    revisionsOf(session).shown = snapshotRevisions.get(snap)!
     return null
   }
   return r
@@ -98,9 +137,11 @@ const saveDeck: SlidesApi['save'] = async (auto) => {
   lastSaveError = ''
   try {
     const metaRevAtSave = session.metaRev ?? 0
+    const shownAtSave = revisionsOf(session).shown
     await saveToHost(doc.fileName, await savePptx(session.opened))
     commitSaved(session.opened)
     if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
+    revisionsOf(session).saved = shownAtSave
     return { ok: true, slides: renderDeck() ?? [] }
   } catch (error) {
     lastSaveError = error instanceof Error ? error.message : String(error)
@@ -234,16 +275,16 @@ export const deckEdits: Partial<SlidesApi> = {
     edit((session) => {
       const snap = session.undoStack.pop()
       if (!snap) return null
-      session.redoStack.push(takeSnapshot(session))
-      restoreSnapshot(session, snap)
+      session.redoStack.push(snapshot(session))
+      restore(session, snap)
       return renderDeck()
     }),
   redo: () =>
     edit((session) => {
       const snap = session.redoStack.pop()
       if (!snap) return null
-      session.undoStack.push(takeSnapshot(session))
-      restoreSnapshot(session, snap)
+      session.undoStack.push(snapshot(session))
+      restore(session, snap)
       return renderDeck()
     }),
   isDirty: async () => {

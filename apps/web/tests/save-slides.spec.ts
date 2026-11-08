@@ -185,6 +185,26 @@ test('undo and redo step through edits before a save', async ({ page }) => {
   ])
 })
 
+test('undoing past a save leaves the presentation unsaved', async ({ page }) => {
+  const frame = await open(page, true)
+  await frame.locator('.thumb').nth(1).click()
+  await page.keyboard.press('Delete')
+  await expect(frame.locator('.thumb')).toHaveCount(4)
+  const saved = page.waitForEvent('download')
+  await page.keyboard.press('ControlOrMeta+S')
+  expect(await reopen(await saved)).toHaveLength(4)
+  await expect(page.locator('#status')).toHaveText(FILE_NAME)
+
+  await page.keyboard.press('ControlOrMeta+Z')
+  await expect(frame.locator('.thumb')).toHaveCount(5)
+  await expect(page.locator('#status')).toContainText('저장 안 함')
+
+  // redoing back to what the host stored is clean again
+  await page.keyboard.press('ControlOrMeta+Shift+Z')
+  await expect(frame.locator('.thumb')).toHaveCount(4)
+  await expect(page.locator('#status')).toHaveText(FILE_NAME)
+})
+
 test('without edit mode the presentation cannot be changed or saved', async ({ page }) => {
   const frame = await open(page, false)
   let downloads = 0
