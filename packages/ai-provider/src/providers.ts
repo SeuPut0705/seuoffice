@@ -467,6 +467,15 @@ export const AI_PROVIDERS: AiProviderMeta[] = [
     keyPlaceholder: 'API Key',
     needsBaseUrl: true,
   },
+  {
+    id: 'gateway',
+    label: 'AI Gateway',
+    // the model is a hint the gateway may override; empty lets it choose
+    models: [],
+    defaultModel: '',
+    keyPlaceholder: '',
+    requestToken: true,
+  },
 ]
 
 /**

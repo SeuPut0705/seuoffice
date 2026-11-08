@@ -334,14 +334,15 @@ describe('provider registry', () => {
     ).toBe('https://mirror/v1')
   })
 
-  it('only the subscription providers authenticate without an API key', () => {
-    const subscription: Record<string, string> = {
+  it('only the subscription providers and the gateway authenticate without an API key', () => {
+    const keyless: Record<string, string> = {
       codex: 'codex-chatgpt',
       'claude-code': 'claude-subscription',
       chatgpt: 'chatgpt-plan',
+      gateway: 'gateway-token',
     }
     for (const [id, adapter] of Object.entries(AI_PROVIDER_ADAPTERS)) {
-      expect(adapter.capabilities.auth).toBe(subscription[id] ?? 'api-key')
+      expect(adapter.capabilities.auth).toBe(keyless[id] ?? 'api-key')
     }
   })
 

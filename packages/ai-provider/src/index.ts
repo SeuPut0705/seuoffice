@@ -269,6 +269,8 @@ export type { FreeAiConnectResult, FreeAiProviderId, FreeAiQuota } from './free-
 export { parseOutputCapRejection } from './output-cap'
 export { AiCreditsError, sseLines, streamForProvider } from './stream'
 export type { StreamCallbacks, StreamForProviderOptions } from './stream'
+export { GATEWAY_TOKEN_ENV, setGatewayTokenProvider } from './protocols/gateway-complete'
+export type { GatewayTokenProvider } from './protocols/gateway-complete'
 export {
   AI_CHAT_RESPONSE_TIMEOUT_MS,
   AI_CONNECT_TIMEOUT_MS,

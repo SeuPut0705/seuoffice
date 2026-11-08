@@ -7,6 +7,7 @@
 - 파일을 연다(`new HwpDocument(bytes)`). `.hwp`는 앱 열기와 같이 추적 변경을 먼저 걷어낸다(`tracked-changes.ts`). 암호 문서와 배포용 문서는 "제외"로 센다.
 - 같은 형식으로 내보낸다(`exportHwp()` 또는 `exportHwpx()`).
 - 앱 저장 경로(`hwp-main.ts` 의 `commitSave`)가 쓰는 `applySaveFixes`를 같은 순서로 부른다. 열 때 얻은 구역 꼬리와 필드 종류(`sectionTailsOf`, `fieldKindsOf`)를 바탕으로 넘긴다. 탭 너비는 편집기가 재는 값이라 시험에는 없어 넘기지 않는다.
+- 웹 저장 경로(`apps/hwp/src/web/`)도 같은 파일마다 돈다. 웹 열기(`openHwpFromBytes`, 편집 모드)가 편집기에 주는 바이트와 저장 바탕(구역 꼬리, 필드 종류)이 데스크톱 열기와 같은지, 웹 저장(`webSaveBytes`)이 같은 내보낸 바이트에서 데스크톱 `applySaveFixes`와 바이트까지 같은 결과를 내는지 본다. 어긋나면 불일치로 센다. 웹 열기가 바탕을 남기지 않게 바꿔 돌리면 `.hwp` 8건이 모두 실패했다.
 - 저장한 바이트를 다시 열고 다음을 연 직후 값과 견준다. 쪽 수(`pageCount()`), 구역 수(`getSectionCount()`), 구역별 문단 수(`getParagraphCount(i)`), 글 전체(`getTextFileText()`, 줄끝은 `\n`으로 맞춤), 다시 열 때 예외 여부.
 - 바이트가 원본과 같은지도 적는다(열 때 값이 아니라 원본 파일 기준).
 - 대상은 `apps/hwp/tests/fixtures/` 36개와 `e2e/assets/hwp-picture-table.hwp` 1개, 모두 37개다. 환경 변수 `SEUOFFICE_HWP_CORPUS`가 가리키는 저장소 밖 폴더도 잴 수 있다.

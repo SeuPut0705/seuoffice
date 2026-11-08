@@ -2093,13 +2093,15 @@ export default function App() {
       bound by the /P the file carries: modifying denied means read-only. A file shown
       with blank stand-ins for lost pages is read-only too: the save pipeline reads the
       damaged file, whose pages no longer line up with the view. */
+  const hostReadOnlyReason = window.pdfApi.readOnlyReason
   const readOnly =
     status === 'ready' &&
-    (documentDamaged ||
+    (hostReadOnlyReason !== undefined ||
+      documentDamaged ||
       (documentEncrypted &&
         (!sessionUnlocked ||
           (diskLock !== null && !diskLock.unlockedAsOwner && !diskLock.modifying))))
-  const readOnlyReason = documentDamaged ? t('roDamaged') : t('roEncrypted')
+  const readOnlyReason = hostReadOnlyReason ?? (documentDamaged ? t('roDamaged') : t('roEncrypted'))
   /** Only the owner password may change or lift protection: a user-password
       session, even one allowed to modify the content, must not be able to strip
       the owner's password. A plain document has no protection to lose. */
