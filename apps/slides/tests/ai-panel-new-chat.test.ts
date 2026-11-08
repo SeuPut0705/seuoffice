@@ -250,4 +250,84 @@ describe('AiPanel new chat during a run (slides)', () => {
     expect(session.aiRun).toBeUndefined()
     expect(slideCount()).toBe(before)
   })
+
+  /** aiRunBegin held open (the real handler runs once released), like a begin waiting for a save */
+  function pauseRunBegin(): { release: () => Promise<void> } {
+    let go!: () => void
+    const gate = new Promise<void>((resolve) => (go = resolve))
+    let pending: Promise<unknown> = Promise.resolve()
+    const api = window.slidesApi as unknown as Record<string, () => unknown>
+    api.aiRunBegin = () => (pending = gate.then(() => ipc('slides:ai-run-begin')))
+    return {
+      release: async () => {
+        go()
+        await pending
+        await flush()
+      },
+    }
+  }
+
+  const clickNewChat = (container: HTMLElement) =>
+    act(async () =>
+      container
+        .querySelector<HTMLElement>('.ai-header-btn:not([class*=" "])')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    )
+
+  it('new chat while the run is still being prepared never starts the request', async () => {
+    const begin = pauseRunBegin()
+    const container = mount()
+    await flush()
+    expect(agentHarness.run).not.toHaveBeenCalled()
+
+    await clickNewChat(container)
+    await begin.release()
+    await flush()
+
+    expect(agentHarness.run).not.toHaveBeenCalled()
+    expect(session.aiRun).toBeUndefined()
+    expect(container.querySelector('.turn-proposal')).toBeNull()
+  })
+
+  it('unmounting while the run is still being prepared never starts the request', async () => {
+    const begin = pauseRunBegin()
+    mount()
+    await flush()
+    const { root, container } = mountedRoots.pop()!
+    act(() => root.unmount())
+    container.remove()
+    await begin.release()
+    await flush()
+
+    expect(agentHarness.run).not.toHaveBeenCalled()
+    expect(session.aiRun).toBeUndefined()
+  })
+
+  it('a later send works after the abandoned preparation', async () => {
+    const begin = pauseRunBegin()
+    const container = mount()
+    await flush()
+    await clickNewChat(container)
+    await begin.release()
+    await flush()
+    // the begin stub of the next send is the real handler again
+    ;(window.slidesApi as unknown as Record<string, () => unknown>).aiRunBegin = () =>
+      ipc('slides:ai-run-begin')
+
+    const textarea = container.querySelector<HTMLTextAreaElement>('textarea[data-slides-ai-input]')!
+    const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!
+    act(() => {
+      setValue.call(textarea, 'second try')
+      textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () =>
+      textarea.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+      ),
+    )
+    await flush()
+
+    expect(agentHarness.run).toHaveBeenCalledTimes(1)
+    expect(session.aiRun).toBeDefined()
+  })
 })

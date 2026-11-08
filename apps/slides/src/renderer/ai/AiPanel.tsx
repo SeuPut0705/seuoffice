@@ -1080,7 +1080,11 @@ export function AiPanel({
   /** The AI run was opened in the main process (aiRunBegin) and not yet held or abandoned */
   const runOpenRef = useRef(false)
   /** An abandoned run is being taken out of the deck: no new request starts before that ends */
-  const abandoningRef = useRef(false)
+  const abandoningRef = useRef(0)
+  /** Bumped when the conversation is dropped: a request still preparing (stale) must not start */
+  const sendGenerationRef = useRef(0)
+  const preparingRef = useRef(0)
+  const prepPromiseRef = useRef<Promise<unknown>>(Promise.resolve())
   const holdPromiseRef = useRef<Promise<void>>(Promise.resolve())
   /** Latest abandonRun, for the unmount cleanup */
   const abandonRunRef = useRef<() => void>(() => {})
@@ -1169,9 +1173,20 @@ export function AiPanel({
    * as a reject. A new request waits until that settled.
    */
   const abandonRun = () => {
-    if (!runOpenRef.current && !holdingRef.current) return
-    abandoningRef.current = true
+    // a request still in its preparation stops at its next step (see runWith)
+    sendGenerationRef.current++
+    runStartingRef.current = false
+    if (
+      !runOpenRef.current &&
+      !holdingRef.current &&
+      !historyBatchActiveRef.current &&
+      preparingRef.current === 0
+    ) {
+      return
+    }
+    abandoningRef.current++
     const inFlight = holdPromiseRef.current
+    const preparing = prepPromiseRef.current
     // a queue submission waits for its page's end, which never comes
     const resolveQueueRun = queueRunResolverRef.current
     queueRunResolverRef.current = null
@@ -1179,15 +1194,20 @@ export function AiPanel({
     void (async () => {
       try {
         await inFlight
-        if (runOpenRef.current) {
-          await finishHistoryBatch()
-          await holdRunEdits()
-        }
-        if (proposalRef.current.kind !== 'none') await rejectHeldEdits()
+        await preparing
+        await dropStaleRun()
       } finally {
-        abandoningRef.current = false
+        abandoningRef.current--
       }
     })()
+  }
+  /** Take an abandoned conversation's open run out of the deck and discard it as a reject */
+  const dropStaleRun = async () => {
+    if (runOpenRef.current || historyBatchActiveRef.current) {
+      await finishHistoryBatch()
+      if (runOpenRef.current) await holdRunEdits()
+    }
+    if (proposalRef.current.kind !== 'none') await rejectHeldEdits()
   }
   abandonRunRef.current = abandonRun
 
@@ -2252,7 +2272,11 @@ export function AiPanel({
     persistMessage('user', shown, undefined, sentAtts, scope, skillUse.chips)
     // a run that cannot be reverted at its end must not edit the deck at all
     let runRefused = false
-    void collectImageAttachments(sentAtts)
+    const sendGeneration = sendGenerationRef.current
+    /** The conversation was dropped while this request was still being prepared */
+    const stale = () => sendGeneration !== sendGenerationRef.current
+    preparingRef.current++
+    const prep = collectImageAttachments(sentAtts)
       .then(async (images) => {
         // AI Beautify sends the current slide's rendering along, so the model sees what it edits;
         // the note rides on the model instruction only — the chat bubble stays the localized preset text
@@ -2269,9 +2293,11 @@ export function AiPanel({
             modelInstruction += `\n\n(${NO_SCREENSHOT_NOTE})`
           }
         }
+        if (stale()) return
         // Clear the flag before run: loop.run sets running synchronously, leaving no re-entry window
         runStartingRef.current = false
         await onBeforeRunRef.current?.()
+        if (stale()) return
         if (await window.slidesApi.beginHistoryBatch()) {
           historyBatchActiveRef.current = true
           // a deck handed over for a project is a new document the AI makes: nothing to review
@@ -2284,11 +2310,17 @@ export function AiPanel({
             runOpenRef.current = true
           }
         }
+        if (stale()) return
         // the chosen project's context for this request (after the send gate, right before the run)
         await projectPanelRef.current.prepareSend()
+        if (stale()) {
+          projectPanelRef.current.finishSend()
+          return
+        }
         loop.run(modelInstruction, images)
       })
       .catch(() => {
+        if (stale()) return
         runStartingRef.current = false
         projectPanelRef.current.finishSend()
         if (runRefused) patchLastAssistant({ streaming: false, error: t('aiRunLocked') })
@@ -2297,6 +2329,11 @@ export function AiPanel({
           void holdRunEdits()
         })
       })
+      .then(() => (stale() ? dropStaleRun() : undefined))
+      .finally(() => {
+        preparingRef.current--
+      })
+    prepPromiseRef.current = prep
   }
 
   /** One page of a queue submission — runWith's bookkeeping minus the composer and the user bubble */
