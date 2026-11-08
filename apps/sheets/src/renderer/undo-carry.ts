@@ -182,6 +182,22 @@ export function undoStepsSince(runtime: UniverRuntime | null, before: UndoMark):
   return now.top !== before.top ? 1 : 0
 }
 
+/// Empties the active unit's redo stack. A held AI run is undone onto it, and a
+/// person's Redo must not bring the run back without Accept (Accept re-applies
+/// the recorded plans instead). Never throws.
+export function dropRedoStack(runtime: UniverRuntime | null): void {
+  if (!runtime) return
+  try {
+    const unitId = runtime.univerAPI.getActiveWorkbook()?.getId()
+    const service = undoRedoService(runtime)
+    if (!unitId || !service._redoStacks?.has(unitId)) return
+    service._redoStacks.set(unitId, [])
+    service._updateStatus?.()
+  } catch {
+    // nothing to drop
+  }
+}
+
 /// Snapshot the active unit's undo stack, rewritten against the saved file's
 /// unitId. Must run while the pre-save unit is still alive (style pool).
 /// Returns null when there is nothing carriable; never throws.

@@ -99,6 +99,7 @@ import {
 import { isNumericIdentifierText } from './cell-warning'
 import {
   consumePendingUndoCarry,
+  dropRedoStack,
   undoMark,
   undoStepsSince,
   UNIVER_UNDO_CAPACITY,
@@ -4427,7 +4428,10 @@ export function App({
    */
   async function holdAndUnlock(record: RunRecord): Promise<TurnProposal> {
     try {
-      return await holdRun(proposalBackend(), await record.settle())
+      const held = await holdRun(proposalBackend(), await record.settle())
+      // the run now sits on the redo stack: a person's Redo must not bring it back unaccepted
+      dropRedoStack(univerRef.current)
+      return held
     } catch (error: unknown) {
       aiRunLock.stranded = true
       throw error
@@ -4474,7 +4478,9 @@ export function App({
       setProposal(next)
       accepted = next.kind === 'none'
       if (!accepted) {
-        // plans applied before the refusal were rolled back: no Undo to offer
+        // plans applied before the refusal were rolled back onto the redo stack: drop them
+        // there too, and no Undo to offer
+        dropRedoStack(univerRef.current)
         patchLastAssistant(({ autoApplied: _autoApplied, ...entry }) => entry)
       }
     } catch (error: unknown) {

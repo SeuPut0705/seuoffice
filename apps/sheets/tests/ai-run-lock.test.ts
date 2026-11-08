@@ -22,6 +22,7 @@ import {
 } from '../src/renderer/ai/turn-proposal'
 import { createSaveGate, guardedSave } from '../src/renderer/save-scheduler'
 import { aiRunLock, type UniverRuntime } from '../src/renderer/univer-state'
+import { dropRedoStack } from '../src/renderer/undo-carry'
 
 afterEach(() => {
   unlockAfterAiRun()
@@ -177,6 +178,22 @@ describe('the person editing the workbook while an AI run is in flight', () => {
     unlockAfterAiRun()
 
     expect([cellOf(runtime, 'A1'), cellOf(runtime, 'A2')]).toEqual(before)
+  })
+
+  it("cannot bring a held run back with the person's Redo", async () => {
+    const runtime = bootWorkbook()
+    installAiRunLockGuard(runtime, () => undefined)
+
+    lockForAiRun()
+    const endAgentWrite = beginAgentWrite()
+    setCell(runtime, 'A1', 11) // the run's edit
+    await runtime.univerAPI.undo() // the hold takes it back out
+    endAgentWrite()
+    dropRedoStack(runtime)
+    unlockAfterAiRun()
+
+    await runtime.univerAPI.redo() // the person's Redo while the proposal is pending
+    expect(cellOf(runtime, 'A1')).toBe(10)
   })
 
   it('edits again once the run is over', () => {
