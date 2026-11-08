@@ -57,20 +57,25 @@ async function inkedShare(page: Page, png: Buffer): Promise<number> {
   }, png.toString('base64'))
 }
 
-const OPENS: Array<{ file: string; text?: string }> = [
+/** `worker`: a Vite-bundled worker the app starts, which needs the Node globals too */
+const OPENS: Array<{ file: string; text?: string; worker?: string }> = [
   {
     file: 'apps/pdf/tests/fixtures/plain-sample.pdf',
     text: 'This line must survive the round trip.',
   },
   // "first paragraph." in the fixture's Chinese text
-  { file: 'fixtures/generated/simple.docx', text: '\u7b2c\u4e00\u6bb5\u3002' },
-  { file: 'XLSX' },
+  {
+    file: 'fixtures/generated/simple.docx',
+    text: '\u7b2c\u4e00\u6bb5\u3002',
+    worker: 'parse-worker',
+  },
+  { file: 'XLSX', worker: 'xlsx-worker' },
   { file: 'packages/pptx-engine/tests/fixtures/01_standard_business.pptx' },
   { file: 'apps/hwp/tests/fixtures/memo.hwp' },
   { file: 'apps/hwp/tests/fixtures/memo.hwpx' },
 ]
 
-for (const { file, text } of OPENS) {
+for (const { file, text, worker } of OPENS) {
   test(`opens ${file}`, async ({ page }) => {
     const path = file === 'XLSX' ? firstXlsx() : at(file)
     const problems = watch(page)
@@ -83,6 +88,15 @@ for (const { file, text } of OPENS) {
       .toBeGreaterThanOrEqual(0.005)
     if (text)
       await expect(page.frameLocator('#viewer iframe').getByText(text).first()).toBeVisible()
+    if (worker) {
+      const running = page.workers().find((candidate) => candidate.url().includes(worker))
+      expect(running, `${worker} is running`).toBeDefined()
+      const globals = await running!.evaluate(() => [
+        typeof Buffer,
+        typeof globalThis.process?.nextTick,
+      ])
+      expect(globals).toEqual(['function', 'function'])
+    }
     expect(problems.errors).toEqual([])
     expect(problems.missing).toEqual([])
   })

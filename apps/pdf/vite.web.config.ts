@@ -1,7 +1,11 @@
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
-import { seuofficeWebAliases, seuofficeWebPlugins } from '@seuoffice/web-platform/vite'
+import {
+  seuofficeWebAliases,
+  seuofficeWebPlugins,
+  seuofficeWebWorker,
+} from '@seuoffice/web-platform/vite'
 import { defineConfig, normalizePath } from 'vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 
@@ -31,5 +35,5 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2022',
   },
-  worker: { format: 'es' },
+  worker: seuofficeWebWorker(),
 })

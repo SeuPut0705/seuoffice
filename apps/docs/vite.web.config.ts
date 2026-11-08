@@ -1,6 +1,10 @@
 import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
-import { seuofficeWebAliases, seuofficeWebPlugins } from '@seuoffice/web-platform/vite'
+import {
+  seuofficeWebAliases,
+  seuofficeWebPlugins,
+  seuofficeWebWorker,
+} from '@seuoffice/web-platform/vite'
 import { defineConfig, type Plugin } from 'vite'
 
 // The Docs app for the browser: the renderer from src/renderer behind the web desktop bridge in src/web.
@@ -46,5 +50,5 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2022',
   },
-  worker: { format: 'es' },
+  worker: seuofficeWebWorker(),
 })

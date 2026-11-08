@@ -44,18 +44,22 @@ function assetSuffixCompat(): Plugin {
     },
   }
 }
-
-/** Worker entry modules get the Node globals the page entry imports itself */
-function workerGlobals(): Plugin {
+/** Worker bundle entries get the Node globals that the page entry imports itself */
+function workerEntryGlobals(): Plugin {
   return {
-    name: 'seuoffice:worker-globals',
+    name: 'seuoffice:worker-entry-globals',
     transform(code, id) {
-      if (!id.includes('?worker_file')) return null
+      if (!this.getModuleInfo(id)?.isEntry) return null
       return { code: `import '@seuoffice/web-platform/globals'\n${code}`, map: null }
     },
   }
 }
 
 export function seuofficeWebPlugins(): Plugin[] {
-  return [assetSuffixCompat(), workerGlobals()]
+  return [assetSuffixCompat()]
+}
+
+/** `worker` options for an app's web config: workers are bundled separately and need their own plugins */
+export function seuofficeWebWorker(): { format: 'es'; plugins: () => Plugin[] } {
+  return { format: 'es', plugins: () => [assetSuffixCompat(), workerEntryGlobals()] }
 }
