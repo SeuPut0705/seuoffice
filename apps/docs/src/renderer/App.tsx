@@ -5513,6 +5513,7 @@ export function App() {
   const anyDirtyRef = useRef(false)
   const hasUnsavedChanges = isDocDirty(fileCtxRef.current)
   anyDirtyRef.current = hasUnsavedChanges
+  useEffect(() => window.desktop.reportDirty?.(hasUnsavedChanges), [hasUnsavedChanges])
 
   // close guard: the main process queries dirty state before closing a tab/window; choosing "Save" runs a full save and reports back
   useEffect(() => {
