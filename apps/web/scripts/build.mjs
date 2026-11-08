@@ -17,7 +17,7 @@ const web = resolve(here, '..')
 const repo = resolve(web, '../..')
 
 /** suite apps in the web bundle, in build order */
-const APPS = ['pdf', 'hwp', 'docs', 'slides']
+const APPS = ['pdf', 'hwp', 'docs', 'slides', 'sheets']
 
 function run(command, args) {
   const result = spawnSync(command, args, {

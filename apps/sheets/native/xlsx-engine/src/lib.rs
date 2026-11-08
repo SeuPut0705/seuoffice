@@ -168,7 +168,12 @@ fn create_cache_directory(
     session_id: &str,
     cancelled: &AtomicBool,
 ) -> Result<CacheDirectory, SidecarError> {
-    let path = std::env::temp_dir().join(format!("genspark-ai-excel-{session_id}"));
+    // WASI has no host temp dir; the web host preopens /tmp
+    #[cfg(target_os = "wasi")]
+    let base = PathBuf::from("/tmp");
+    #[cfg(not(target_os = "wasi"))]
+    let base = std::env::temp_dir();
+    let path = base.join(format!("genspark-ai-excel-{session_id}"));
     let directory = CacheDirectory::create(path)?;
     if cancelled.load(Ordering::Acquire) {
         return Err(SidecarError::cancelled());
@@ -684,6 +689,15 @@ impl WorkbookSession {
         if runtime.handle.is_some() {
             return Ok(());
         }
+        // No thread handle on WASI: a finished or failed inline index is the marker
+        if cfg!(target_os = "wasi") {
+            let (lock, _) = &*runtime.state;
+            if let Ok(index) = lock.lock() {
+                if index.complete || index.error.is_some() {
+                    return Ok(());
+                }
+            }
+        }
         let path = self.path.clone();
         let worksheet_path = runtime.worksheet_path.clone();
         let cache_directory = self.cache_directory.clone();
@@ -701,30 +715,37 @@ impl WorkbookSession {
                 .collect(),
         );
         let cancelled = Arc::clone(&self.cancelled);
+        let index_job = move || {
+            let result = index_worksheet(
+                &path,
+                &worksheet_path,
+                sheet_index,
+                &cache_directory,
+                &shared_strings,
+                &styled_xfs,
+                &color_context,
+                &rich_image_cells,
+                &state,
+                &cancelled,
+            );
+            let (lock, condition) = &*state;
+            if let Ok(mut index) = lock.lock() {
+                match result {
+                    Ok(()) => index.complete = true,
+                    Err(error) => index.error = Some(error.to_string()),
+                }
+                condition.notify_all();
+            }
+        };
+        // WASI has no threads: index the whole sheet on the calling thread, so
+        // the state is complete before the first read_range waits on it.
+        if cfg!(target_os = "wasi") {
+            index_job();
+            return Ok(());
+        }
         let handle = thread::Builder::new()
             .name(format!("xlsx-index-{sheet_index}"))
-            .spawn(move || {
-                let result = index_worksheet(
-                    &path,
-                    &worksheet_path,
-                    sheet_index,
-                    &cache_directory,
-                    &shared_strings,
-                    &styled_xfs,
-                    &color_context,
-                    &rich_image_cells,
-                    &state,
-                    &cancelled,
-                );
-                let (lock, condition) = &*state;
-                if let Ok(mut index) = lock.lock() {
-                    match result {
-                        Ok(()) => index.complete = true,
-                        Err(error) => index.error = Some(error.to_string()),
-                    }
-                    condition.notify_all();
-                }
-            })?;
+            .spawn(index_job)?;
         runtime.handle = Some(handle);
         Ok(())
     }
