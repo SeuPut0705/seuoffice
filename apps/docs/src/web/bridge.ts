@@ -14,8 +14,17 @@ import {
   waitForDocument,
   webLanguage,
 } from '@seuoffice/web-platform'
+import { docFormatOfPath, prepareSaveBytes } from '../main/doc-format'
+import {
+  commitDocPasswordSave,
+  currentDocPasswordIntentRevision,
+  discardDocPasswordIntents,
+  encryptDocx,
+  setDocPassword,
+  snapshotDocPassword,
+} from '../main/docx-encryption'
 import type { DesktopApi } from '../shared/ipc'
-import { openDocxFromBytes } from './open-docx'
+import { WEB_RENDERER, openDecryptedDocx, openDocxFromBytes } from './open-docx'
 
 const noop = (): void => {}
 const unsubscribe = (): (() => void) => noop
@@ -35,17 +44,27 @@ let pendingConsumed = false
 let lastSaveError: string | undefined
 
 /**
- * The desktop main process writes the renderer's bytes after inlining lazily
- * served pictures and applying an open password. The web has neither (the
- * document opens whole and passwords are refused), so the bytes go to the
- * host as built.
+ * The desktop save's bytes without its file write: the docx takes the
+ * password the session wants (the opened one unless the user changed it) and
+ * goes to the host. Lazily served pictures are a desktop-only path: the web
+ * document opens whole, so the renderer's bytes are already complete.
  */
 const saveDocxToHost: DesktopApi['saveDocx'] = async (path, data) => {
   const doc = documentByPath(path)
   if (!doc) return { ok: false, error: 'save target is not an opened document' }
   try {
-    await saveToHost(doc.fileName, new Uint8Array(data))
-    return { ok: true }
+    const format = docFormatOfPath(path) ?? 'docx'
+    const passwordState = format === 'docx' ? snapshotDocPassword(WEB_RENDERER, path) : null
+    const { bytes } = await prepareSaveBytes(format, Buffer.from(data), {
+      materialize: async (plain) => ({ bytes: plain, hashes: new Set() }),
+      encrypt: encryptDocx,
+      password: passwordState?.password ?? null,
+    })
+    await saveToHost(doc.fileName, bytes)
+    const passwordIntentPending = passwordState
+      ? commitDocPasswordSave(WEB_RENDERER, passwordState, path)
+      : false
+    return { ok: true, passwordIntentPending }
   } catch (error) {
     lastSaveError = error instanceof Error ? error.message : String(error)
     return { ok: false, error: lastSaveError }
@@ -142,11 +161,23 @@ const desktop: Partial<DesktopApi> = {
   reportDirty,
   onMenuCommand: unsubscribe,
   consumeHeadlessExport: async () => null,
-  // no password-protected files on the web, so no password intents to track
-  docPasswordIntentRevision: async () => 0,
-  discardDocPasswordIntents: async () => ({ ok: true }),
-  openDocxDecrypt: unsupported('docs.decrypt'),
-  setDocPassword: unsupported('docs.decrypt'),
+  // the desktop main process's password state, kept for the page's one renderer
+  docPasswordIntentRevision: async () => currentDocPasswordIntentRevision(),
+  discardDocPasswordIntents: async (throughRevision) => {
+    discardDocPasswordIntents(WEB_RENDERER, throughRevision)
+    return { ok: true }
+  },
+  openDocxDecrypt: async (path, password) => {
+    const doc = documentByPath(path)
+    if (!doc) return { ok: false, reason: 'error', error: 'file not found' }
+    return openDecryptedDocx(doc, password)
+  },
+  // a page holds one document: the prompt answers for the host's, with nothing open to replace
+  confirmDocumentReplace: async () => true,
+  setDocPassword: async (filePath, password) => {
+    setDocPassword(WEB_RENDERER, filePath, password)
+    return { ok: true }
+  },
   // the host stores a save only when it opened the document for editing
   saveDocx: editMode() ? saveDocxToHost : unsupported('docs.save'),
   saveDocxAs: unsupported('docs.save'),

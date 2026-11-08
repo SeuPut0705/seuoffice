@@ -44,8 +44,11 @@ const IMPL = {
     'unzipSync',
   ],
   crypto: [
+    'createCipheriv',
+    'createDecipheriv',
     'createHash',
     'createHmac',
+    'getHashes',
     'getRandomValues',
     'randomBytes',
     'randomUUID',
