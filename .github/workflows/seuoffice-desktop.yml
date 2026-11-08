@@ -356,7 +356,12 @@ jobs:
 
       # pass 1, the latest channel: builds the JS too
       - name: Package (latest channel)
-        run: npm run dist:mac -w @genoffice/shell -- --config electron-builder.seuoffice.cjs --publish never
+        # an empty secret arrives as "" and electron-builder reads CSC_LINK="" as a path: unset the empty ones
+        run: |
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            [ -n "${!name}" ] || unset "$name"
+          done
+          npm run dist:mac -w @genoffice/shell -- --config electron-builder.seuoffice.cjs --publish never
         env:
           GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
           GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
@@ -369,7 +374,11 @@ jobs:
       # pass 2, the stable channel: reuses the JS pass 1 built, only repackages
       - name: Package (stable channel)
         working-directory: apps/shell
-        run: npx electron-builder --mac --config electron-builder.seuoffice.cjs --publish never
+        run: |
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            [ -n "${!name}" ] || unset "$name"
+          done
+          npx electron-builder --mac --config electron-builder.seuoffice.cjs --publish never
         env:
           SEUOFFICE_UPDATE_CHANNEL: stable
           BUILD_DIR: release-stable
