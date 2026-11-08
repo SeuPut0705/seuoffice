@@ -37,7 +37,6 @@ Repliée tant que vous ne l’ouvrez pas ; la plupart des gens n’en ont jamais
 ## À propos
 
 - **Version**, l’adresse GitHub du projet et une ligne qui nomme le projet open source sur lequel cette application est basée.
-- **Canal de mise à jour** : Stable ou Bêta. Une modification prend effet immédiatement et déclenche une recherche de mise à jour ; elle ne rétrograde pas une installation Bêta vers Stable.
 
 ## Associations d’applications par défaut
 

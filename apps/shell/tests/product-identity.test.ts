@@ -309,11 +309,30 @@ describe('coexistence with the upstream app on one machine', () => {
 describe('repository coordinates', () => {
   it('feeds auto-update from the GitHub releases of the product repository', () => {
     expect(config.publish).toEqual([
-      { provider: 'github', owner: GITHUB_REPO_OWNER, repo: GITHUB_REPO_NAME },
+      { provider: 'github', owner: GITHUB_REPO_OWNER, repo: GITHUB_REPO_NAME, channel: 'latest' },
     ])
     // no environment variable switches the feed on or moves it elsewhere
     const withOldEnv = loadBuilderConfig({ GENOFFICE_UPDATE_URL: 'https://updates.example.test/x' })
     expect(withOldEnv.publish).toEqual(config.publish)
+  })
+
+  it('packages the stable build with its own feed and installer name', () => {
+    const stable = loadBuilderConfig({ SEUOFFICE_UPDATE_CHANNEL: 'stable' })
+    expect(stable.publish).toEqual([{ ...config.publish[0], channel: 'stable' }])
+    // both builds' installers are attached to one release
+    expect(stable.nsis.artifactName).toBe('${productName}-Setup-${version}-stable.${ext}')
+    expect(stable.nsis.artifactName).not.toBe(config.nsis.artifactName)
+    // everything installed on the machine stays the same product
+    expect(stable.appId).toBe(config.appId)
+    expect(stable.productName).toBe(config.productName)
+  })
+
+  it('refuses a channel that has no feed', () => {
+    for (const channel of ['beta', 'Stable', 'latest ']) {
+      expect(() => loadBuilderConfig({ SEUOFFICE_UPDATE_CHANNEL: channel }), channel).toThrow(
+        /SEUOFFICE_UPDATE_CHANNEL/,
+      )
+    }
   })
 
   it('names the same repository in the package metadata', () => {

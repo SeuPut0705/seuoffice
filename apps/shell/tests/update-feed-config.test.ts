@@ -84,7 +84,7 @@ describe('unsigned Windows builds can update', () => {
     // (app-builder-lib PublishManager.getAppUpdatePublishConfiguration)
     const config = loadBuilderConfig()
     expect(config.publish).toEqual([
-      { provider: 'github', owner: PRODUCT_REPO_OWNER, repo: PRODUCT_REPO_NAME },
+      { provider: 'github', owner: PRODUCT_REPO_OWNER, repo: PRODUCT_REPO_NAME, channel: 'latest' },
     ])
     expect(config.win.signtoolOptions).toBeUndefined()
     expect(config.win.azureSignOptions).toBeUndefined()

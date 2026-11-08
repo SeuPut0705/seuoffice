@@ -195,7 +195,6 @@ vi.mock('../src/main/update-window', () => ({
   closeUpdateWindow: () => closeUpdateWindow(),
   isUpdateWindowOpen: () => updateWindow.open,
   setUpdateParentWindow: () => {},
-  clearUpdateState: () => closeUpdateWindow(),
 }))
 
 const FIRST_CHECK_DELAY_MS = 15_000
@@ -478,7 +477,6 @@ describe('initAutoUpdater', () => {
     const { initAutoUpdater, checkForUpdatesNow } = await loadUpdater()
     initAutoUpdater(
       () => null,
-      'stable',
       () => auto,
     )
     vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS + RECHECK_INTERVAL_MS)
@@ -715,10 +713,10 @@ describe('initAutoUpdater', () => {
     expect(showUpdateWindow).not.toHaveBeenCalled()
   })
 
-  it('defaults to the stable (latest) feed channel', async () => {
+  it('reads only the Latest release through stable.yml on a stable build', async () => {
     const { initAutoUpdater } = await loadUpdater()
-    initAutoUpdater(() => null)
-    expect(updaterState.channel).toBe('latest')
+    initAutoUpdater(() => null, undefined, 'stable')
+    expect(updaterState.channel).toBe('stable')
     // must never allow a downgrade, despite electron-updater's channel setter
     // side effect
     expect(updaterState.allowDowngrade).toBe(false)
@@ -727,116 +725,22 @@ describe('initAutoUpdater', () => {
     expect(updaterState.allowPrerelease).toBe(false)
   })
 
-  it('starts on the beta feed when the beta channel is passed in', async () => {
+  it('takes the newest release, pre-releases included, on a latest build', async () => {
     const { initAutoUpdater } = await loadUpdater()
-    initAutoUpdater(() => null, 'beta')
-    expect(updaterState.channel).toBe('beta')
-    // must never allow a downgrade, despite electron-updater's channel setter
-    // side effect
-    expect(updaterState.allowDowngrade).toBe(false)
-    // on GitHub the beta channel is the repository's pre-releases
-    expect(updaterState.allowPrerelease).toBe(true)
-  })
-
-  it('applyUpdateChannel switches the feed and re-checks immediately', async () => {
-    const { initAutoUpdater, applyUpdateChannel } = await loadUpdater()
-    initAutoUpdater(() => null)
-    expect(checkForUpdates).not.toHaveBeenCalled()
-    applyUpdateChannel('beta')
-    expect(updaterState.channel).toBe('beta')
-    expect(updaterState.allowDowngrade).toBe(false)
-    expect(updaterState.allowPrerelease).toBe(true)
-    expect(checkForUpdates).toHaveBeenCalledTimes(1)
-    applyUpdateChannel('stable')
-    expect(updaterState.channel).toBe('latest')
-    expect(updaterState.allowDowngrade).toBe(false)
-    expect(updaterState.allowPrerelease).toBe(false)
-    expect(checkForUpdates).toHaveBeenCalledTimes(2)
-  })
-
-  it('applyUpdateChannel drops a downloaded package of the previous channel', async () => {
-    const { initAutoUpdater, applyUpdateChannel } = await loadUpdater()
-    initAutoUpdater(() => null)
-    const available = updaterState.listeners.get('update-available')!
-    available({ version: '0.2.0' })
-    lastShownActions().onDownload()
-    updaterState.listeners.get('update-downloaded')!({ version: '0.2.0' })
-    lastShownActions().onLater()
-
-    applyUpdateChannel('beta')
-    // the stale package must not install on quit or via a stale window action
-    lastShownActions().onInstall()
-    vi.advanceTimersByTime(0)
-    expect(appQuit).not.toHaveBeenCalled()
-    quitCompletes()
-    expect(install).not.toHaveBeenCalled()
-
-    // the new channel's version is offered from scratch, not swallowed
-    available({ version: '0.3.0-beta.1' })
-    expect(showUpdateWindow).toHaveBeenCalledTimes(2)
-    expect(lastShownState().phase).toBe('available')
-    expect(lastShownState().version).toBe('0.3.0-beta.1')
-    lastShownActions().onDownload()
-    expect(downloadUpdate).toHaveBeenCalledTimes(2)
-    // a late completion of the old channel's download is ignored
-    updaterState.listeners.get('update-downloaded')!({ version: '0.2.0' })
-    expect(pushUpdateState).not.toHaveBeenLastCalledWith(
-      expect.objectContaining({ phase: 'downloaded' }),
-    )
-    updaterState.listeners.get('update-downloaded')!({ version: '0.3.0-beta.1' })
-    expect(pushUpdateState).toHaveBeenLastCalledWith({
-      phase: 'downloaded',
-      percent: 100,
-      visibleInstall: false,
-    })
-    lastShownActions().onInstall()
-    vi.advanceTimersByTime(0)
-    quitCompletes()
-    expect(install).toHaveBeenCalledWith(false, true)
-  })
-
-  it('applyUpdateChannel cancels an in-flight download and shields the new one from its leftovers', async () => {
-    let rejectOld: (err: Error) => void = () => {}
-    downloadUpdate.mockImplementationOnce(() => new Promise((_, reject) => (rejectOld = reject)))
-    downloadUpdate.mockImplementation(() => new Promise(() => {}))
-    const { initAutoUpdater, applyUpdateChannel } = await loadUpdater()
-    initAutoUpdater(() => null)
-    const available = updaterState.listeners.get('update-available')!
-    available({ version: '0.2.0' })
-    lastShownActions().onDownload()
-    updaterState.listeners.get('download-progress')!({ percent: 37 })
-    const oldToken = downloadUpdate.mock.calls[0][0]!
-
-    applyUpdateChannel('beta')
-    expect(closeUpdateWindow).toHaveBeenCalledTimes(1)
-    expect(oldToken.cancelled).toBe(true)
-    // progress still trickling out of the dropped request is ignored
-    updaterState.listeners.get('download-progress')!({ percent: 40 })
-    expect(pushUpdateState).not.toHaveBeenCalledWith({ phase: 'downloading', percent: 40 })
-
-    available({ version: '0.3.0-beta.1' })
-    expect(showUpdateWindow).toHaveBeenCalledTimes(2)
-    expect(lastShownState().phase).toBe('available')
-    expect(lastShownState().percent).toBe(0)
-    lastShownActions().onDownload()
-    expect(downloadUpdate).toHaveBeenCalledTimes(2)
-    expect(downloadUpdate.mock.calls[1][0]).not.toBe(oldToken)
-
-    // the dropped request's late rejection must not fail the new download
-    rejectOld(new Error('cancelled'))
-    await flushAsync()
-    expect(pushUpdateState).not.toHaveBeenCalledWith({ phase: 'error' })
-    updaterState.listeners.get('download-progress')!({ percent: 5 })
-    expect(pushUpdateState).toHaveBeenLastCalledWith({ phase: 'downloading', percent: 5 })
-  })
-
-  it('applyUpdateChannel is a no-op before the real updater is active', async () => {
-    appState.isPackaged = false
-    const { initAutoUpdater, applyUpdateChannel } = await loadUpdater()
-    initAutoUpdater(() => null)
-    applyUpdateChannel('beta')
+    initAutoUpdater(() => null, undefined, 'latest')
+    // left unset: with a channel of its own electron-updater skips every
+    // release whose version has no pre-release tag
     expect(updaterState.channel).toBeNull()
-    expect(checkForUpdates).not.toHaveBeenCalled()
+    expect(updaterState.allowDowngrade).toBe(false)
+    expect(updaterState.allowPrerelease).toBe(true)
+  })
+
+  it('stays on stable when the packaged channel cannot be read', async () => {
+    // a unit run has no resources/app-update.yml
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    expect(updaterState.channel).toBe('stable')
+    expect(updaterState.allowPrerelease).toBe(false)
   })
 })
 
@@ -917,7 +821,7 @@ describe('an installer that did not update the app', () => {
     updaterState.listeners.get('update-available')!({ version: '0.2.0' })
     expect(lastShownState().phase).toBe('manual')
     lastShownActions().onOpenDownload()
-    expect(openExternal).toHaveBeenCalledWith(GITHUB_LATEST_RELEASE_URL)
+    expect(openExternal).toHaveBeenCalledWith(githubReleaseTagUrl('0.2.0'))
   })
 
   it('forgets an attempt that did update the app', async () => {
@@ -1011,13 +915,15 @@ describe('manual download fallback', () => {
     return actions
   }
 
-  it("opens the latest release page of the product's repository", async () => {
+  // the offered version may be a release not yet promoted (latest channel),
+  // which GitHub's "Latest" page would not show
+  it("opens the offered version's release page of the product's repository", async () => {
     const actions = await failTwiceIntoManual({ version: '0.2.0' })
     actions.onOpenDownload()
     expect(openExternal).toHaveBeenCalledTimes(1)
-    expect(openExternal).toHaveBeenCalledWith(GITHUB_LATEST_RELEASE_URL)
-    expect(GITHUB_LATEST_RELEASE_URL).toBe(
-      'https://github.com/SeuPut0705/seuoffice/releases/latest',
+    expect(openExternal).toHaveBeenCalledWith(githubReleaseTagUrl('0.2.0'))
+    expect(githubReleaseTagUrl('0.2.0')).toBe(
+      'https://github.com/SeuPut0705/seuoffice/releases/tag/v0.2.0',
     )
   })
 
@@ -1025,21 +931,12 @@ describe('manual download fallback', () => {
     const actions = await failTwiceIntoManual({
       version: '0.2.0',
       files: [
-        { url: 'https://attacker.example/IeumOffice-Setup-0.2.0.exe' },
-        { url: 'IeumOffice-Setup-0.2.0.exe' },
+        { url: 'https://attacker.example/seuoffice-Setup-0.2.0.exe' },
+        { url: 'seuoffice-Setup-0.2.0.exe' },
       ],
     })
     actions.onOpenDownload()
-    expect(openExternal).toHaveBeenCalledWith(GITHUB_LATEST_RELEASE_URL)
-  })
-
-  it('opens the release page of a pre-release, which is never the "latest" one', async () => {
-    const actions = await failTwiceIntoManual({ version: '0.3.0-beta.1' })
-    actions.onOpenDownload()
-    expect(openExternal).toHaveBeenCalledWith(githubReleaseTagUrl('0.3.0-beta.1'))
-    expect(githubReleaseTagUrl('0.3.0-beta.1')).toBe(
-      'https://github.com/SeuPut0705/seuoffice/releases/tag/v0.3.0-beta.1',
-    )
+    expect(openExternal).toHaveBeenCalledWith(githubReleaseTagUrl('0.2.0'))
   })
 })
 
@@ -1218,28 +1115,30 @@ describe('macOS: the app installs its own update (decision 0097)', () => {
 })
 
 describe('GitHub Releases feed', () => {
-  const STABLE_ONLY: FakeGitHub = {
+  // every release carries both builds' feeds: latest.yml (general build) and
+  // stable.yml (the stable build), and stays a pre-release until promoted
+  const feeds = (version: string): Record<string, string> => ({
+    'latest.yml': version,
+    'stable.yml': version,
+  })
+  const PROMOTED: FakeGitHub = {
     tags: ['v0.2.0'],
     latest: 'v0.2.0',
-    assets: { 'v0.2.0': { 'latest.yml': '0.2.0' } },
+    assets: { 'v0.2.0': feeds('0.2.0') },
   }
-  // electron-builder names the feed file latest.yml for every version it
-  // packages for the github provider (it derives a channel file name from a
-  // pre-release version only for other providers), so that is what a
-  // pre-release built from this repository carries
-  const BETA_AHEAD: FakeGitHub = {
-    tags: ['v0.3.0-beta.1', 'v0.2.0'],
+  const UNPROMOTED_AHEAD: FakeGitHub = {
+    tags: ['v0.3.0', 'v0.2.0'],
     latest: 'v0.2.0',
-    assets: {
-      'v0.3.0-beta.1': { 'latest.yml': '0.3.0-beta.1' },
-      'v0.2.0': { 'latest.yml': '0.2.0' },
-    },
+    assets: { 'v0.3.0': feeds('0.3.0'), 'v0.2.0': feeds('0.2.0') },
   }
 
-  async function firstCheck(github: FakeGitHub, channel?: 'stable' | 'beta'): Promise<string[]> {
+  async function firstCheck(
+    github: FakeGitHub,
+    channel: 'stable' | 'latest' = 'stable',
+  ): Promise<string[]> {
     const requested = checkAgainstGitHub(github)
     const { initAutoUpdater } = await loadUpdater()
-    initAutoUpdater(() => null, channel)
+    initAutoUpdater(() => null, undefined, channel)
     vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS)
     await flushAsync()
     return requested
@@ -1250,12 +1149,12 @@ describe('GitHub Releases feed', () => {
     setPlatform('win32')
   })
 
-  it("offers the repository's latest release from its latest.yml", async () => {
-    const requested = await firstCheck(STABLE_ONLY)
+  it("offers a stable build the repository's Latest release from its stable.yml", async () => {
+    const requested = await firstCheck(PROMOTED)
     expect(requested).toEqual([
       `${RELEASES_PATH}.atom`,
       `${RELEASES_PATH}/latest`,
-      `${RELEASES_PATH}/download/v0.2.0/latest.yml`,
+      `${RELEASES_PATH}/download/v0.2.0/stable.yml`,
     ])
     expect(showUpdateWindow).toHaveBeenCalledTimes(1)
     expect(lastShownState().phase).toBe('available')
@@ -1263,65 +1162,44 @@ describe('GitHub Releases feed', () => {
     expect(showMessageBox).not.toHaveBeenCalled()
   })
 
-  it('keeps a pre-release away from the stable channel', async () => {
-    await firstCheck(BETA_AHEAD)
+  it('keeps a release the owner has not promoted away from a stable build', async () => {
+    await firstCheck(UNPROMOTED_AHEAD)
     expect(showUpdateWindow).toHaveBeenCalledTimes(1)
     expect(lastShownState().version).toBe('0.2.0')
   })
 
-  it('offers a pre-release on the beta channel', async () => {
-    const requested = await firstCheck(BETA_AHEAD, 'beta')
-    // no "latest" lookup: the newest entry of the release list is taken, and
-    // its beta.yml is asked for before the latest.yml it actually carries
+  it('offers a latest build the newest release before it is promoted', async () => {
+    const requested = await firstCheck(UNPROMOTED_AHEAD, 'latest')
+    // no "Latest" lookup: the newest entry of the release list is taken
     expect(requested).toEqual([
       `${RELEASES_PATH}.atom`,
-      `${RELEASES_PATH}/download/v0.3.0-beta.1/beta.yml`,
-      `${RELEASES_PATH}/download/v0.3.0-beta.1/latest.yml`,
+      `${RELEASES_PATH}/download/v0.3.0/latest.yml`,
     ])
     expect(showUpdateWindow).toHaveBeenCalledTimes(1)
-    expect(lastShownState().version).toBe('0.3.0-beta.1')
+    expect(lastShownState().version).toBe('0.3.0')
   })
 
-  it('still follows full releases on the beta channel', async () => {
+  it('offers a latest build a promoted release as well', async () => {
     const requested = await firstCheck(
       {
-        tags: ['v0.4.0', 'v0.3.0-beta.1'],
+        tags: ['v0.4.0', 'v0.3.0'],
         latest: 'v0.4.0',
-        assets: {
-          'v0.4.0': { 'latest.yml': '0.4.0' },
-          'v0.3.0-beta.1': { 'latest.yml': '0.3.0-beta.1' },
-        },
+        assets: { 'v0.4.0': feeds('0.4.0'), 'v0.3.0': feeds('0.3.0') },
       },
-      'beta',
+      'latest',
     )
-    expect(requested.slice(-2)).toEqual([
-      `${RELEASES_PATH}/download/v0.4.0/beta.yml`,
-      `${RELEASES_PATH}/download/v0.4.0/latest.yml`,
-    ])
+    expect(requested.at(-1)).toBe(`${RELEASES_PATH}/download/v0.4.0/latest.yml`)
     expect(lastShownState().version).toBe('0.4.0')
   })
 
-  // the rehearsal docs/releasing.ko.md describes: a release ticked "pre-release"
-  // on GitHub is not the repository's latest one, whatever its version says
-  it('shows a release marked pre-release on GitHub to the beta channel only', async () => {
-    const rehearsal: FakeGitHub = {
-      tags: ['v0.2.0'],
-      latest: null,
-      assets: { 'v0.2.0': { 'latest.yml': '0.2.0' } },
-    }
-    await firstCheck(rehearsal)
+  it('shows a stable build nothing while the only release awaits promotion', async () => {
+    await firstCheck({ tags: ['v0.2.0'], latest: null, assets: { 'v0.2.0': feeds('0.2.0') } })
     expect(showUpdateWindow).not.toHaveBeenCalled()
     expect(showMessageBox).not.toHaveBeenCalled()
-
-    const { applyUpdateChannel } = await loadUpdater()
-    applyUpdateChannel('beta')
-    await flushAsync()
-    expect(showUpdateWindow).toHaveBeenCalledTimes(1)
-    expect(lastShownState().version).toBe('0.2.0')
   })
 
   it('drives the download phases for a release found on GitHub', async () => {
-    await firstCheck(STABLE_ONLY)
+    await firstCheck(PROMOTED)
     lastShownActions().onDownload()
     expect(pushUpdateState).toHaveBeenLastCalledWith({ phase: 'downloading', percent: 0 })
     updaterState.listeners.get('download-progress')!({ percent: 64 })
@@ -1342,7 +1220,7 @@ describe('GitHub Releases feed', () => {
     await firstCheck({
       tags: ['v0.2.0'],
       latest: 'v0.2.0',
-      assets: { 'v0.2.0': { 'latest.yml': '0.2.0' } },
+      assets: { 'v0.2.0': feeds('0.2.0') },
       notes: {
         'v0.2.0':
           '<p>새 기능</p><ul><li><strong>하나</strong></li><li>둘</li></ul><script>alert(1)</script>',
@@ -1370,7 +1248,7 @@ describe('GitHub Releases feed', () => {
     await firstCheck({
       tags: ['v0.2.0'],
       latest: 'v0.2.0',
-      assets: { 'v0.2.0': { 'latest.yml': '0.2.0' } },
+      assets: { 'v0.2.0': feeds('0.2.0') },
       notes: { 'v0.2.0': 'No content.' },
     })
     expect(lastShownState().releaseNotes).toBeNull()
@@ -1396,17 +1274,17 @@ describe('quiet failure', () => {
       manualAnswer: 'up-to-date',
     },
     {
-      name: 'only a pre-release exists and the channel is stable',
+      name: 'the only release awaits promotion and the build is stable',
       arrange: () =>
         checkAgainstGitHub({
-          tags: ['v0.2.0-beta.1'],
+          tags: ['v0.2.0'],
           latest: null,
-          assets: { 'v0.2.0-beta.1': { 'latest.yml': '0.2.0-beta.1' } },
+          assets: { 'v0.2.0': { 'stable.yml': '0.2.0' } },
         }),
       manualAnswer: 'up-to-date',
     },
     {
-      name: 'the latest release carries no latest.yml',
+      name: 'the Latest release carries no stable.yml',
       arrange: () => checkAgainstGitHub({ tags: ['v0.2.0'], latest: 'v0.2.0', assets: {} }),
       manualAnswer: 'up-to-date',
     },
@@ -1459,7 +1337,7 @@ describe('quiet failure', () => {
       checkAgainstGitHub({
         tags: ['v0.2.0'],
         latest: 'v0.2.0',
-        assets: { 'v0.2.0': { 'latest.yml': '0.2.0' } },
+        assets: { 'v0.2.0': { 'stable.yml': '0.2.0' } },
       })
       vi.advanceTimersByTime(RECHECK_INTERVAL_MS)
       await flushAsync()

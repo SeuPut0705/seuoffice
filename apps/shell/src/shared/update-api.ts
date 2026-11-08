@@ -108,11 +108,3 @@ export interface UpdateWindowApi {
   openDownload(): void
   onState(handler: (state: UpdateUiState) => void): () => void
 }
-
-/** user-selectable update channel: 'stable' follows the repository's latest
- * full release, 'beta' also its pre-releases */
-export type UpdateChannel = 'stable' | 'beta'
-
-export function isUpdateChannel(v: unknown): v is UpdateChannel {
-  return v === 'stable' || v === 'beta'
-}

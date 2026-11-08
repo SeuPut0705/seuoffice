@@ -37,7 +37,6 @@ Resta chiusa finché non la apri; alla maggior parte delle persone non serve mai
 ## Informazioni
 
 - **Versione**, l'indirizzo GitHub del progetto e una riga che indica il progetto open source su cui si basa questa app.
-- **Canale di aggiornamento**: Stabile o Beta. Modificarlo ha effetto immediato e controlla la presenza di un aggiornamento; non riporta un'installazione Beta alla versione Stabile.
 
 ## Associazioni come app predefinita
 

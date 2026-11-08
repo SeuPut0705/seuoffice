@@ -166,9 +166,6 @@ export const strings = {
     setAutoUpdateCheck: '自动检查更新',
     setAutoUpdateCheckDesc:
       '关闭后，启动时和后台都不再检查新版本；仍可在“帮助 › 检查更新”中手动检查。',
-    updateChannel: '更新通道',
-    channelStable: '稳定版',
-    channelBeta: 'Beta 版',
     theme: '主题',
     themeLight: '浅色',
     themeDark: '深色',
@@ -736,9 +733,6 @@ export const strings = {
     setAutoUpdateCheck: 'Check for updates automatically',
     setAutoUpdateCheckDesc:
       'When off, GenOffice no longer checks for new versions at launch or in the background. You can still check from Help › Check for Updates.',
-    updateChannel: 'Update Channel',
-    channelStable: 'Stable',
-    channelBeta: 'Beta',
     theme: 'Theme',
     themeLight: 'Light',
     themeDark: 'Dark',
@@ -1334,9 +1328,6 @@ export const strings = {
     setAutoUpdateCheck: 'Tự động kiểm tra cập nhật',
     setAutoUpdateCheckDesc:
       'Khi tắt, GenOffice không còn kiểm tra phiên bản mới khi khởi động hoặc chạy nền. Bạn vẫn có thể kiểm tra trong Trợ giúp › Kiểm tra bản cập nhật.',
-    updateChannel: 'Kênh cập nhật',
-    channelStable: 'Ổn định',
-    channelBeta: 'Beta',
     theme: 'Giao diện',
     themeLight: 'Sáng',
     themeDark: 'Tối',
@@ -1940,9 +1931,6 @@ export const strings = {
     setAutoUpdateCheck: 'アップデートを自動で確認',
     setAutoUpdateCheckDesc:
       'オフにすると、起動時やバックグラウンドで新しいバージョンを確認しなくなります。「ヘルプ › 更新を確認」から手動で確認できます。',
-    updateChannel: '更新チャネル',
-    channelStable: '安定版',
-    channelBeta: 'ベータ版',
     theme: 'テーマ',
     themeLight: 'ライト',
     themeDark: 'ダーク',
@@ -2553,9 +2541,6 @@ export const strings = {
     setAutoUpdateCheck: '자동으로 업데이트 확인',
     setAutoUpdateCheckDesc:
       '끄면 앱을 켤 때와 쓰는 동안 새 버전을 저절로 확인하지 않습니다. 메뉴의 "업데이트 확인…"으로 직접 확인할 수 있습니다.',
-    updateChannel: '업데이트 채널',
-    channelStable: '안정 버전',
-    channelBeta: '베타 버전',
     theme: '테마',
     themeLight: '라이트',
     themeDark: '다크',
@@ -3153,9 +3138,6 @@ export const strings = {
     setAutoUpdateCheck: 'Rechercher automatiquement les mises à jour',
     setAutoUpdateCheckDesc:
       'Désactivé, GenOffice ne recherche plus de nouvelle version au démarrage ni en arrière-plan. Vous pouvez toujours vérifier via Aide › Rechercher des mises à jour.',
-    updateChannel: 'Canal de mise à jour',
-    channelStable: 'Stable',
-    channelBeta: 'Bêta',
     theme: 'Thème',
     themeLight: 'Clair',
     themeDark: 'Sombre',
@@ -3776,9 +3758,6 @@ export const strings = {
     setAutoUpdateCheck: 'Automatisch nach Updates suchen',
     setAutoUpdateCheckDesc:
       'Wenn aus, sucht GenOffice weder beim Start noch im Hintergrund nach neuen Versionen. Über Hilfe › Nach Updates suchen können Sie weiterhin selbst prüfen.',
-    updateChannel: 'Update-Kanal',
-    channelStable: 'Stabil',
-    channelBeta: 'Beta',
     theme: 'Thema',
     themeLight: 'Hell',
     themeDark: 'Dunkel',
@@ -4402,9 +4381,6 @@ export const strings = {
     setAutoUpdateCheck: 'Buscar actualizaciones automáticamente',
     setAutoUpdateCheckDesc:
       'Si está desactivado, GenOffice deja de buscar nuevas versiones al iniciar y en segundo plano. Puede seguir comprobándolo en Ayuda › Buscar actualizaciones.',
-    updateChannel: 'Canal de actualización',
-    channelStable: 'Estable',
-    channelBeta: 'Beta',
     theme: 'Tema',
     themeLight: 'Claro',
     themeDark: 'Oscuro',
@@ -5013,9 +4989,6 @@ export const strings = {
     setAutoUpdateCheck: 'ตรวจหาอัปเดตโดยอัตโนมัติ',
     setAutoUpdateCheckDesc:
       'เมื่อปิด GenOffice จะไม่ตรวจหาเวอร์ชันใหม่ตอนเปิดโปรแกรมหรือในเบื้องหลัง คุณยังตรวจเองได้จาก วิธีใช้ › ตรวจหาการอัปเดต',
-    updateChannel: 'ช่องทางอัปเดต',
-    channelStable: 'เสถียร',
-    channelBeta: 'เบต้า',
     theme: 'ธีม',
     themeLight: 'สว่าง',
     themeDark: 'มืด',
@@ -5614,9 +5587,6 @@ export const strings = {
     setAutoUpdateCheck: 'Periksa pembaruan secara otomatis',
     setAutoUpdateCheckDesc:
       'Jika dimatikan, GenOffice tidak lagi memeriksa versi baru saat dijalankan atau di latar belakang. Anda tetap bisa memeriksa dari Bantuan › Periksa Pembaruan.',
-    updateChannel: 'Saluran Pembaruan',
-    channelStable: 'Stabil',
-    channelBeta: 'Beta',
     theme: 'Tema',
     themeLight: 'Terang',
     themeDark: 'Gelap',
@@ -6226,9 +6196,6 @@ export const strings = {
     setAutoUpdateCheck: 'Автоматически проверять обновления',
     setAutoUpdateCheckDesc:
       'Если выключено, GenOffice не проверяет новые версии при запуске и в фоне. Проверить вручную можно через Справка › Проверить обновления.',
-    updateChannel: 'Канал обновлений',
-    channelStable: 'Стабильный',
-    channelBeta: 'Бета',
     theme: 'Тема',
     themeLight: 'Светлая',
     themeDark: 'Тёмная',
@@ -6837,9 +6804,6 @@ export const strings = {
     setAutoUpdateCheck: 'التحقق من التحديثات تلقائيًا',
     setAutoUpdateCheckDesc:
       'عند الإيقاف، لن يتحقق GenOffice من الإصدارات الجديدة عند التشغيل أو في الخلفية. يمكنك التحقق يدويًا من تعليمات › التحقق من التحديثات.',
-    updateChannel: 'قناة التحديث',
-    channelStable: 'مستقر',
-    channelBeta: 'تجريبي',
     theme: 'المظهر',
     themeLight: 'فاتح',
     themeDark: 'داكن',
@@ -7432,9 +7396,6 @@ export const strings = {
     setAutoUpdateCheck: 'Verificar atualizações automaticamente',
     setAutoUpdateCheckDesc:
       'Desligado, o GenOffice deixa de procurar novas versões ao iniciar e em segundo plano. Você ainda pode verificar em Ajuda › Procurar atualizações.',
-    updateChannel: 'Canal de atualização',
-    channelStable: 'Estável',
-    channelBeta: 'Beta',
     theme: 'Tema',
     themeLight: 'Claro',
     themeDark: 'Escuro',
@@ -8040,9 +8001,6 @@ export const strings = {
     setAutoUpdateCheck: 'Controlla automaticamente gli aggiornamenti',
     setAutoUpdateCheckDesc:
       "Se disattivato, GenOffice non cerca più nuove versioni all'avvio o in background. Puoi comunque controllare da Aiuto › Controlla aggiornamenti.",
-    updateChannel: 'Canale di aggiornamento',
-    channelStable: 'Stabile',
-    channelBeta: 'Beta',
     theme: 'Tema',
     themeLight: 'Chiaro',
     themeDark: 'Scuro',
@@ -8648,9 +8606,6 @@ export const strings = {
     setAutoUpdateCheck: 'Automatycznie sprawdzaj aktualizacje',
     setAutoUpdateCheckDesc:
       'Po wyłączeniu GenOffice nie sprawdza nowych wersji przy uruchomieniu ani w tle. Nadal możesz sprawdzić ręcznie w Pomoc › Sprawdź aktualizacje.',
-    updateChannel: 'Kanał aktualizacji',
-    channelStable: 'Stabilny',
-    channelBeta: 'Beta',
     theme: 'Motyw',
     themeLight: 'Jasny',
     themeDark: 'Ciemny',
@@ -9250,9 +9205,6 @@ export const strings = {
     setAutoUpdateCheck: 'Automaticky kontrolovat aktualizace',
     setAutoUpdateCheckDesc:
       'Po vypnutí GenOffice nekontroluje nové verze při spuštění ani na pozadí. Ručně můžete zkontrolovat v Nápověda › Zkontrolovat aktualizace.',
-    updateChannel: 'Kanál aktualizací',
-    channelStable: 'Stabilní',
-    channelBeta: 'Beta',
     theme: 'Motiv',
     themeLight: 'Světlý',
     themeDark: 'Tmavý',
@@ -9850,9 +9802,6 @@ export const strings = {
     setAutoUpdateCheck: 'Automatisch controleren op updates',
     setAutoUpdateCheckDesc:
       'Uitgeschakeld controleert GenOffice niet meer op nieuwe versies bij het starten of op de achtergrond. Je kunt nog steeds controleren via Help › Controleren op updates.',
-    updateChannel: 'Updatekanaal',
-    channelStable: 'Stabiel',
-    channelBeta: 'Bèta',
     theme: 'Thema',
     themeLight: 'Licht',
     themeDark: 'Donker',
@@ -10454,9 +10403,6 @@ export const strings = {
     setAutoUpdateCheck: 'Semak kemas kini secara automatik',
     setAutoUpdateCheckDesc:
       'Apabila dimatikan, GenOffice tidak lagi menyemak versi baharu semasa dimulakan atau di latar belakang. Anda masih boleh menyemak melalui Bantuan › Semak Kemas Kini.',
-    updateChannel: 'Saluran Kemas Kini',
-    channelStable: 'Stabil',
-    channelBeta: 'Beta',
     theme: 'Tema',
     themeLight: 'Cerah',
     themeDark: 'Gelap',
@@ -11058,9 +11004,6 @@ export const strings = {
     setAutoUpdateCheck: 'בדיקת עדכונים אוטומטית',
     setAutoUpdateCheckDesc:
       'כשהאפשרות כבויה, GenOffice לא בודקת גרסאות חדשות בהפעלה או ברקע. עדיין אפשר לבדוק ידנית דרך עזרה › בדוק עדכונים.',
-    updateChannel: 'ערוץ עדכונים',
-    channelStable: 'יציב',
-    channelBeta: 'בטא',
     theme: 'ערכת נושא',
     themeLight: 'בהיר',
     themeDark: 'כהה',
@@ -11640,9 +11583,6 @@ export const strings = {
     setAutoUpdateCheck: 'अपडेट अपने-आप जाँचें',
     setAutoUpdateCheckDesc:
       'बंद होने पर GenOffice शुरू होते समय या बैकग्राउंड में नए संस्करण नहीं जाँचता। आप फिर भी सहायता › अपडेट जांचें से जाँच सकते हैं।',
-    updateChannel: 'अपडेट चैनल',
-    channelStable: 'स्थिर',
-    channelBeta: 'बीटा',
     theme: 'थीम',
     themeLight: 'लाइट',
     themeDark: 'डार्क',
@@ -12232,9 +12172,6 @@ export const strings = {
     setAutoUpdateCheck: '自動檢查更新',
     setAutoUpdateCheckDesc:
       '關閉後，啟動時與背景都不再檢查新版本；仍可在「說明 › 檢查更新」中手動檢查。',
-    updateChannel: '更新通道',
-    channelStable: '穩定版',
-    channelBeta: 'Beta 版',
     theme: '主題',
     themeLight: '淺色',
     themeDark: '深色',

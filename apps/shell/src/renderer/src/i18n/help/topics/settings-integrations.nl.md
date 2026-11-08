@@ -37,7 +37,6 @@ Dicht tot je het opent; de meeste mensen hebben het nooit nodig. Het tabblad **A
 ## Over
 
 - **Versie**, het GitHub-adres van het project en een regel die vermeldt op welk opensourceproject deze app is gebaseerd.
-- **Updatekanaal**: Stabiel of Bèta. Wijzigen gaat meteen in en controleert op een update; een Bèta-installatie wordt niet teruggezet naar Stabiel.
 
 ## Standaardapp-koppelingen
 

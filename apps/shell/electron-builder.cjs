@@ -30,6 +30,18 @@ const REPO_OWNER = 'SeuPut0705'
 const REPO_NAME = 'seuoffice'
 const MAINTAINER = 'SeuPut <228744781+SeuPut0705@users.noreply.github.com>'
 
+// SEUOFFICE_UPDATE_CHANNEL — which releases the packaged app updates from,
+// fixed when it is packaged (docs/seuoffice/decisions, product name and update
+// channels). "latest" (default) follows every published release, pre-releases
+// included; "stable" follows only the release GitHub marks Latest, which the
+// owner promotes after checking it. The channel names the update feed file
+// (latest.yml / stable.yml) and is written into resources/app-update.yml,
+// where src/main/update-build-channel.ts reads it back.
+const UPDATE_CHANNEL = process.env.SEUOFFICE_UPDATE_CHANNEL || 'latest'
+if (UPDATE_CHANNEL !== 'latest' && UPDATE_CHANNEL !== 'stable') {
+  throw new Error(`SEUOFFICE_UPDATE_CHANNEL must be "latest" or "stable", got "${UPDATE_CHANNEL}"`)
+}
+
 // GENOFFICE_MAC_X64=1 — package the Intel (x64) dmg/zip alongside arm64.
 // The release build on GitHub's Mac runner sets it (.github/workflows/
 // mac-build.yml, decision 0065); both are the same unsigned beta, signed ad
@@ -915,9 +927,8 @@ const config = {
     allowToChangeInstallationDirectory: true,
     // no spaces: GitHub Releases rewrites them in asset names, and the update
     // feed must name the file exactly as it is downloaded
-    artifactName: winArm64
-      ? '${productName}-Setup-${version}-arm64.${ext}'
-      : '${productName}-Setup-${version}.${ext}',
+    // the stable build's installer sits in the same release as the general one
+    artifactName: `\${productName}-Setup-\${version}${winArm64 ? '-arm64' : ''}${UPDATE_CHANNEL === 'stable' ? '-stable' : ''}.\${ext}`,
   },
   beforePack: async (context) => {
     ensurePlatformHelpers()
@@ -1003,6 +1014,7 @@ config.publish = [
     provider: 'github',
     owner: REPO_OWNER,
     repo: REPO_NAME,
+    channel: UPDATE_CHANNEL,
   },
 ]
 
