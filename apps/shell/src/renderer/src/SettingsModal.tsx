@@ -883,7 +883,7 @@ function AiModelPane({ t }: { t: TFunc }) {
         </div>
       ) : (
         <>
-          {/* a gateway's token comes per request and is never a setting (seuoffice decision 0008) */}
+          {/* a gateway's token comes per request and is never a setting (seuoffice decision 0009) */}
           {!meta?.requestToken && (
             <div className="set-field">
               <div className="set-field-text">

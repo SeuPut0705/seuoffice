@@ -1,7 +1,7 @@
 name: seuoffice desktop release
 
 # Builds the seuoffice desktop packages on GitHub-hosted runners and publishes
-# them to a GitHub release (decision 0008). seuoffice ships two packages only:
+# them to a GitHub release (decision 0013). seuoffice ships two packages only:
 #   Apple Silicon Mac  dmg + update zip   (macos-latest, an arm64 runner)
 #   x64 Windows        NSIS installer     (windows-latest)
 # apps/shell/electron-builder.seuoffice.cjs holds the release targets and
@@ -514,7 +514,7 @@ jobs:
           MAC_SIGNED: ${{ needs.mac.outputs.signed }}
         run: |
           if [ "$WINDOWS_SIGNED" != "true" ] || [ "$MAC_SIGNED" != "true" ]; then
-            echo "::error::Windows signed: $WINDOWS_SIGNED, Mac signed and notarized: $MAC_SIGNED. An unsigned build is never released. Set the signing secrets (decision 0008) and run again. The first published release must be signed, because a signed release later locks updates to its signer."
+            echo "::error::Windows signed: $WINDOWS_SIGNED, Mac signed and notarized: $MAC_SIGNED. An unsigned build is never released. Set the signing secrets (decision 0013) and run again. The first published release must be signed, because a signed release later locks updates to its signer."
             exit 1
           fi
 

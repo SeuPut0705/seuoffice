@@ -1,6 +1,6 @@
 /**
  * seuoffice release packaging, layered over the upstream electron-builder.cjs
- * (decision 0008). Pass it with `--config electron-builder.seuoffice.cjs`; a
+ * (decision 0013). Pass it with `--config electron-builder.seuoffice.cjs`; a
  * plain `electron-builder` run keeps the upstream config, so development
  * builds are unchanged.
  *
