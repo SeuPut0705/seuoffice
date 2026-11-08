@@ -124,15 +124,20 @@ test('a save the host refuses keeps the PDF unsaved with the host’s reason', a
   await expect(page.locator('#status')).not.toContainText('저장 안 함')
 })
 
-test('a PDF opened for viewing is never saved', async ({ page }) => {
+test('a PDF opened for viewing can be neither changed nor saved', async ({ page }) => {
   const app = await open(page, FIXTURE, false)
   await expect(page.locator('#save')).toBeHidden()
   let downloads = 0
   page.on('download', () => downloads++)
 
-  await rotateFirstPage(app)
+  await app.locator('.ribbon-tab', { hasText: '페이지' }).click()
+  await expect(app.getByRole('button', { name: '오른쪽으로 회전' })).toBeDisabled()
+  await app.locator('.ribbon-tab', { hasText: '주석' }).click()
+  await expect(app.getByRole('button', { name: '사각형', exact: true })).toBeDisabled()
+  await expect(app.locator('.tb-readonly')).toBeVisible()
+
   await pressSave(page, app)
-  await expect(app.locator('.tb-save-error')).toBeVisible()
-  await expect(app.locator('.tb-save-ok')).toBeHidden()
+  await expect(app.locator('.tb-save-pending')).toBeHidden()
+  await expect(app.locator('.tb-save-error')).toBeHidden()
   expect(downloads).toBe(0)
 })

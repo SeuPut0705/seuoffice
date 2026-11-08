@@ -34,13 +34,9 @@ function refusal(parts: typeof DESKTOP_ONLY): string {
   return `${names} cannot be saved on the web: undo them or save in the desktop app`
 }
 
-/** A page the host opened for viewing keeps its edits on screen and never stores them */
-export async function refuseViewOnly(): Promise<SavePdfResult> {
-  const error =
-    webLanguage() === 'ko'
-      ? '보기 전용으로 연 문서라 저장할 수 없습니다.'
-      : 'the document is open for viewing only'
-  return { ok: false, error }
+/** What a view the host opened for reading shows in place of the editing tools */
+export function viewOnlyReason(): string {
+  return webLanguage() === 'ko' ? '보기 전용으로 연 문서입니다' : 'Opened for viewing only'
 }
 
 /**

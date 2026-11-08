@@ -15,7 +15,7 @@ import {
 } from '@seuoffice/web-platform'
 import type { Lang } from '@genoffice/i18n'
 import type { PdfApi, SavePdfRequest, SavePdfResult } from '../shared/ipc'
-import { refuseViewOnly, saveOnWeb } from './save'
+import { saveOnWeb, viewOnlyReason } from './save'
 
 const noop = (): void => {}
 const unsubscribe = (): (() => void) => noop
@@ -102,7 +102,9 @@ const pdfApi: Partial<PdfApi> = {
   onConvertDialogRequest: unsubscribe,
   onFileRenamed: unsubscribe,
   decryptPdf: unsupported('pdf.decrypt'),
-  save: editing ? save : refuseViewOnly,
+  save: editing ? save : unsupported('pdf.save'),
+  // the host keeps edits only in edit mode; elsewhere the view is read-only
+  readOnlyReason: editing ? undefined : viewOnlyReason(),
   // desktop-only services: undefined turns their features off, as without a shell
   structure: undefined,
   store: undefined,
