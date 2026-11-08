@@ -330,7 +330,7 @@ const issuedCloudPages = new Set<string>()
 import { registerPresenterIpc } from './presenter-show'
 import { registerAttachmentIpc } from './attachments-ipc'
 import { registerGenerateHandoffIpc } from './generate-handoff-ipc'
-import { registerAiProposalIpc } from './ai-proposal'
+import { AI_REVIEW_SAVE_REASON, assertNoAiRun, registerAiProposalIpc } from './ai-proposal'
 import { registerSlidesTemplateBytesIpc } from './template-bytes'
 import { openSlidesSeed } from './seed-deck'
 import { queueSlidesSeedFor } from './seed-queue'
@@ -511,6 +511,7 @@ function syncAttachedPaths(session: Session, path: string): void {
  * effects: session path, recents, attached-surface titles, dirty-flag reset.
  */
 export async function saveSessionDeckTo(session: Session, filePath: string): Promise<void> {
+  assertNoAiRun(session)
   // the caller supplies an arbitrary absolute path, so its parent may not exist
   // yet (the dialog-driven paths always land in an existing folder)
   await mkdir(dirname(filePath), { recursive: true })
@@ -691,6 +692,8 @@ async function writeSessionCopy(session: Session, ignoreBackoff: boolean): Promi
   // window close is cancelled (the tab stays open: copies resume at the next
   // pass) or the deck is opened again; asking it first spares the serializing.
   if (!sessionIsOpen(session)) return
+  // the deck holds an AI run's unaccepted edits: no copy until the run is reverted or accepted
+  if (session.aiRun) return
   const identity = recoveryIdentityOf(session)
   if (recoveryStore.isDiscarded(identity)) return
   const key = recoveryStore.copyPath(identity)
@@ -716,7 +719,10 @@ async function writeSessionCopy(session: Session, ignoreBackoff: boolean): Promi
       session.password === undefined
         ? await recoveryStore.writeCopyStreamed(
             identity,
-            (tempPath) => savePptxToFile(session.opened, tempPath),
+            (tempPath) => {
+              assertNoAiRun(session)
+              return savePptxToFile(session.opened, tempPath)
+            },
             options,
           )
         : await recoveryStore.writeCopy(
@@ -727,6 +733,8 @@ async function writeSessionCopy(session: Session, ignoreBackoff: boolean): Promi
     autosaveBackoff.delete(key)
     if (result === 'written') copyMarks.set(session, mark)
   } catch (error) {
+    // a run that began while the copy was starting is not a failing slot: no backoff
+    if (session.aiRun) return
     autosaveBackoff.set(key, AUTOSAVE_BACKOFF_TICKS)
     console.warn('[slides] recovery copy failed, retrying in ~5 min:', error)
   }
@@ -1148,15 +1156,23 @@ function deckFileBytes(session: Session, bytes: Uint8Array): Buffer {
  * (savePptxToFile) through a sibling temp; an encrypted one has to be
  * encrypted as one buffer, so it is assembled in memory, encrypted, then
  * written atomically — its plaintext never touches the disk.
+ * Every save funnels through here, so it also refuses while an AI run's
+ * unaccepted edits are in the deck; the check repeats right before the deck is
+ * serialized because the steps ahead of it await.
  */
 async function writeDeckFile(session: Session, filePath: string): Promise<void> {
+  assertNoAiRun(session)
   if (session.password === undefined) {
     // savePptxToFile truncates the path it streams into, so the deck goes out
     // through a sibling temp renamed over `filePath` once the stream finished:
     // a save that dies mid-way leaves the previous deck on disk (genoffice#2123)
-    await atomicWriteVia(filePath, (tmp) => savePptxToFile(session.opened, tmp))
+    await atomicWriteVia(filePath, (tmp) => {
+      assertNoAiRun(session)
+      return savePptxToFile(session.opened, tmp)
+    })
     return
   }
+  assertNoAiRun(session)
   await atomicWriteFile(filePath, deckFileBytes(session, await savePptx(session.opened)))
 }
 
@@ -4839,7 +4855,8 @@ export function registerSlidesIpc(): void {
   ipcMain.handle('slides:undo', (e) => {
     const session = sessions.get(e.sender.id)
     // Undo disabled in master view: the masterEdit.slide model cannot roll back with snapshots (v1 trade-off; undoable after exiting)
-    if (!session || session.masterEdit) return null
+    // and during an AI run: it would swap the history the run is reverted from (and close the run's own batch)
+    if (!session || session.masterEdit || session.aiRun) return null
     settleStaleHistoryBatch(session)
     if (session.undoStack.length === 0) return null
     session.redoStack.push(takeSnapshot(session))
@@ -4851,7 +4868,7 @@ export function registerSlidesIpc(): void {
 
   ipcMain.handle('slides:redo', (e) => {
     const session = sessions.get(e.sender.id)
-    if (!session || session.masterEdit) return null
+    if (!session || session.masterEdit || session.aiRun) return null
     settleStaleHistoryBatch(session)
     if (session.redoStack.length === 0) return null
     session.undoStack.push(takeSnapshot(session))
@@ -4875,6 +4892,8 @@ export function registerSlidesIpc(): void {
   ipcMain.handle('slides:save', async (e, auto?: unknown) => {
     const session = sessions.get(e.sender.id)
     if (!session) return { ok: false, error: 'no file open' }
+    // an AI run's edits wait for review: nothing is written, and no dialog asks where
+    if (session.aiRun) return { ok: false, reason: AI_REVIEW_SAVE_REASON }
     const previousPath = session.path
     // An untitled deck asks where its first save goes (decision 0061: nothing
     // lands in the user's folders unasked — template copies, AI-generated decks
@@ -4955,7 +4974,7 @@ export function registerSlidesIpc(): void {
   ipcMain.handle('slides:save-into-project', async (e) => {
     const session = sessions.get(e.sender.id)
     const write = runtime.writeNewDocument
-    if (!session || session.path || session.masterEdit || !write) {
+    if (!session || session.path || session.masterEdit || session.aiRun || !write) {
       return { ok: false, skipped: true }
     }
     const fileName = projectDeckFileName(session.firstSaveName)
@@ -4990,6 +5009,7 @@ export function registerSlidesIpc(): void {
   ipcMain.handle('slides:save-as', async (e, defaultName: string) => {
     const session = sessions.get(e.sender.id)
     if (!session) return { ok: false, error: 'no file open' }
+    if (session.aiRun) return { ok: false, reason: AI_REVIEW_SAVE_REASON }
     const parent = dialogParent()
     const options = {
       // with copy formats on offer the suggestion carries no extension: the
@@ -5223,7 +5243,11 @@ export function registerSlidesIpc(): void {
   registerGenerateHandoffIpc()
   // ── AI edit review (slides:ai-run-*, slides:ai-proposal-*) ──
   registerAiProposalIpc()
-  registerSlidesTemplateBytesIpc(ipcMain, (wcId) => sessions.get(wcId)?.opened)
+  // "Save as template" serializes the live deck too: not while an AI run's edits wait for review
+  registerSlidesTemplateBytesIpc(ipcMain, (wcId) => {
+    const session = sessions.get(wcId)
+    return session && !session.aiRun ? session.opened : undefined
+  })
 
   // ── Presenter-view multi-screen show (registered inside registerSlidesIpc: shell
   // aggregate mode only calls this function) ──

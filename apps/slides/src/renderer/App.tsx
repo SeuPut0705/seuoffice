@@ -120,6 +120,7 @@ import type { ChartPresetDef, IconDef, SmartArtDef } from './insert-presets'
 import { IconAiBeautify, IconAiFactCheck, IconAiImage } from './components/icons'
 import { ToastHost } from './components/toast'
 import { showToast } from './components/toast-bus'
+import { isAiRunLocked, setAiRunLocked } from './ai-run-lock'
 import { t, useI18n } from './i18n/locale'
 import { AiPanel } from './ai/AiPanel'
 import { useAiDock } from './ai/use-ai-dock'
@@ -977,9 +978,18 @@ export function App() {
     })
   }, [save])
 
-  // Undo/redo stack occupancy pushed by the main process: the QAT buttons grey out when empty
+  // Undo/redo stack occupancy pushed by the main process: the QAT buttons grey out when empty.
+  // The same notice says whether an AI run's unaccepted edits are in the deck: then the deck is
+  // read-only for the person in this window (ai-run-lock.ts)
   const [histState, setHistState] = useState({ canUndo: false, canRedo: false })
-  useEffect(() => window.slidesApi.onHistoryChanged?.(setHistState), [])
+  useEffect(
+    () =>
+      window.slidesApi.onHistoryChanged?.(({ canUndo, canRedo, aiRunActive }) => {
+        setHistState({ canUndo, canRedo })
+        setAiRunLocked(aiRunActive)
+      }),
+    [],
+  )
 
   // Shared session (a second window on the same file): apply the other window's
   // edits without touching local selection or an open editor — the ids are stable,
@@ -995,6 +1005,16 @@ export function App() {
   useEffect(() => {
     setDeckRefresh(refreshDeck)
     return () => setDeckRefresh(null)
+  }, [refreshDeck])
+  // An AI run left open by a renderer that went away (reload, crash) would keep the deck read-only
+  // and unsaveable: this window has no panel yet, so nothing is running — revert it before use.
+  // A run another window began is not this window's to revert (the main process refuses).
+  useEffect(() => {
+    void Promise.resolve(window.slidesApi.aiRunHold?.())
+      .then((held) => {
+        if (held) refreshDeck()
+      })
+      .catch(() => {})
   }, [refreshDeck])
   useEffect(
     () =>
@@ -2431,6 +2451,11 @@ export function App() {
   // Menu commands. Cut/copy/paste dispatch by context: text mode goes back to the native clipboard, canvas mode uses the element clipboard
   useEffect(() => {
     return window.slidesApi.onMenuCommand((cmd) => {
+      // An AI run's edits are in the deck: only save (refused with its reason) and zoom still act
+      if (isAiRunLocked() && cmd !== 'save' && cmd !== 'save-as' && !cmd.startsWith('zoom-')) {
+        showToast(t('aiRunLocked'), 'error')
+        return
+      }
       // Master view: only allow save (undo/clipboard etc. target normal pages, not applicable inside the master)
       if (masterItems) {
         if (cmd === 'save') void save()

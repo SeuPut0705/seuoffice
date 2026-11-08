@@ -228,6 +228,8 @@ export function scheduleHistoryNotify(session: Session): void {
       webContents.fromId(id)?.send('slides:history-changed', {
         canUndo: session.undoStack.length > 0,
         canRedo: session.redoStack.length > 0,
+        // an AI run's unaccepted edits are in the deck: every attached window is read-only
+        aiRunActive: session.aiRun !== undefined,
       })
     }
   })

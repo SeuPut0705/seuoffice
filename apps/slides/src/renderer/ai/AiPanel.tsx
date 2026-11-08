@@ -1125,7 +1125,8 @@ export function AiPanel({
 
   /**
    * End of a request (after its QC pass): when it changed the deck, take its edits back out and
-   * show them as a proposal. A failed hold leaves the deck as the run left it.
+   * show them as a proposal. A failed hold leaves the run open in the main process: the deck
+   * stays read-only and nothing is saved until the window is reloaded, which reverts the run.
    */
   const holdRunEdits = async () => {
     holdingRef.current = true
@@ -2211,6 +2212,8 @@ export function AiPanel({
     setBusy(true)
     // Persist the user message (store display text + attachment metadata; loop.restore rebuilds model context on file reopen)
     persistMessage('user', shown, undefined, sentAtts, scope, skillUse.chips)
+    // a run that cannot be reverted at its end must not edit the deck at all
+    let runRefused = false
     void collectImageAttachments(sentAtts)
       .then(async (images) => {
         // AI Beautify sends the current slide's rendering along, so the model sees what it edits;
@@ -2236,7 +2239,10 @@ export function AiPanel({
           // a deck handed over for a project is a new document the AI makes: nothing to review
           if (!handedRunRef.current.armed) {
             runSnapshotFloorRef.current = null
-            await window.slidesApi.aiRunBegin()
+            if (!(await window.slidesApi.aiRunBegin().catch(() => false))) {
+              runRefused = true
+              throw new Error('the AI run cannot be held for review')
+            }
           }
         }
         // the chosen project's context for this request (after the send gate, right before the run)
@@ -2246,6 +2252,7 @@ export function AiPanel({
       .catch(() => {
         runStartingRef.current = false
         projectPanelRef.current.finishSend()
+        if (runRefused) patchLastAssistant({ streaming: false, error: t('aiRunLocked') })
         void finishHistoryBatch().finally(() => {
           setBusy(false)
           void holdRunEdits()
@@ -2368,7 +2375,11 @@ export function AiPanel({
     if (skipped.length > 0) onQueueConsume?.(skipped.map((r) => r.item.key))
     // the whole queue is one request: its pages edit the live deck, the edits are held at the end
     runSnapshotFloorRef.current = null
-    await window.slidesApi.aiRunBegin().catch(() => false)
+    if (!(await window.slidesApi.aiRunBegin().catch(() => false))) {
+      // nothing was edited and nothing will be: the queue stays for a retry
+      setChat((prev) => [...prev, { role: 'assistant', text: '', error: t('aiRunLocked') }])
+      return
+    }
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i]!
       const ok = await runQueuePage(buildPageInstruction(group, groups.length, i + 1))

@@ -3,6 +3,12 @@
  * ends the edits are taken back out with the snapshot history and held as a proposal
  * the person accepts or rejects. Nothing here keeps a second document model: the
  * proposal is two ordinary history snapshots (the pre-run deck and the run's result).
+ *
+ * While a run is open (`session.aiRun`, from `beginAiRun` until `holdAiRun`) the deck
+ * holds edits nobody accepted, so the open run fails closed: every save path refuses
+ * (`assertNoAiRun`), the person's windows are read-only (the history notice carries
+ * `aiRunActive`), and undo/redo are refused. A run that cannot be begun is refused
+ * before it edits anything, so every applied run can be reverted.
  */
 import { ipcMain } from 'electron'
 import type { RenderSlide } from '@genoffice/pptx-render'
@@ -21,10 +27,15 @@ import {
 
 /** The deck as an AI request found it, recorded before its first edit. */
 export interface AiRun {
+  /** The window that began the run: only it may hold the run, another window's run is refused */
+  owner: number
   before: HistorySnapshot
   /** Copies of both stacks: the run's edits may trim or replace the live arrays. */
   undo: HistorySnapshot[]
   redo: HistorySnapshot[]
+  /** Journal and notes counters at the start: edits that left no undo step still count as a change. */
+  opSeq: number
+  metaRev: number
   /** AI rollback points that existed before the run; later ones describe held futures. */
   knownSnapshots: Set<number>
 }
@@ -71,32 +82,64 @@ function sameStack(a: HistorySnapshot[], b: HistorySnapshot[]): boolean {
   return a.length === b.length && a.every((snap, i) => snap === b[i])
 }
 
+/** `reason` a save returns while an AI run's edits wait for review (nothing was written) */
+export const AI_REVIEW_SAVE_REASON = 'ai-review'
+
 /**
- * Record the deck before an AI request's first edit (replaces any earlier record). A proposal
- * still held from an earlier request is dropped: the panel only starts a request after the
- * person settled it, so one left here belongs to a panel that is gone.
+ * Backstop for every serializer of the deck: throws while a run is open, so no save,
+ * recovery copy or export of the live deck can carry unaccepted AI edits.
  */
-export function beginAiRun(session: Session): void {
+export function assertNoAiRun(session: Session): void {
+  if (session.aiRun)
+    throw new Error('An AI request is editing this deck; saving waits for your review')
+}
+
+/**
+ * Record the deck before an AI request's first edit. Returns false, and the run must not
+ * start, when it could not be reverted: another window's run is still open, or the deck
+ * is in master view (its edits live in a separate model a snapshot cannot revert). A run
+ * of this window that was never held (its panel is gone) is reverted first, so its edits
+ * never become the next run's starting point. A proposal still held from an earlier
+ * request is dropped: the panel only starts a request after the person settled it.
+ */
+export function beginAiRun(session: Session, owner: number): boolean {
+  if (session.masterEdit) return false
+  if (session.aiRun) {
+    if (session.aiRun.owner !== owner) return false
+    holdAiRun(session, owner)
+  }
   session.aiProposal = undefined
   session.aiRun = {
+    owner,
     before: takeSnapshot(session),
     undo: session.undoStack.slice(),
     redo: session.redoStack.slice(),
+    opSeq: session.opSeq ?? 0,
+    metaRev: session.metaRev ?? 0,
     knownSnapshots: new Set(session.aiSnapshots?.keys()),
   }
+  scheduleHistoryNotify(session)
+  return true
 }
 
 /**
  * End of an AI request: when it changed the deck, put the deck back to its pre-run
  * state (undo and redo stacks too) and keep the run's result as the session's pending
  * proposal. Returns false when there was nothing to hold; the deck is untouched then.
- * Call after the run's history batches are closed.
+ * A history batch the run left open is dropped: the revert replaces both stacks, so the
+ * batch has nothing left to collapse. Only the window that began the run can hold it.
  */
-export function holdAiRun(session: Session): boolean {
+export function holdAiRun(session: Session, owner: number): boolean {
   const run = session.aiRun
+  if (!run || run.owner !== owner) return false
   session.aiRun = undefined
-  if (!run || session.historyBatch || session.masterEdit) return false
-  if (sameStack(session.undoStack, run.undo)) return false
+  session.historyBatch = undefined
+  scheduleHistoryNotify(session)
+  const changed =
+    !sameStack(session.undoStack, run.undo) ||
+    (session.opSeq ?? 0) !== run.opSeq ||
+    (session.metaRev ?? 0) !== run.metaRev
+  if (!changed) return false
   const after = takeSnapshot(session)
   session.undoStack.splice(0, session.undoStack.length, ...run.undo)
   session.redoStack = run.redo
@@ -105,7 +148,6 @@ export function holdAiRun(session: Session): boolean {
     if (!run.knownSnapshots.has(id)) session.aiSnapshots?.delete(id)
   }
   session.aiProposal = { before: run.before, after, marker: markerOf(session) }
-  scheduleHistoryNotify(session)
   scheduleDeckBroadcast(session)
   return true
 }
@@ -118,7 +160,7 @@ export function holdAiRun(session: Session): boolean {
  */
 export function acceptAiProposal(session: Session): number | null {
   const proposal = session.aiProposal
-  if (!proposal || session.historyBatch || session.masterEdit) return null
+  if (!proposal || session.historyBatch || session.masterEdit || session.aiRun) return null
   if (!sameMarker(proposal.marker, markerOf(session))) return null
   session.aiProposal = undefined
   pushHistory(session)
@@ -140,14 +182,12 @@ export function registerAiProposalIpc(): void {
 
   ipcMain.handle('slides:ai-run-begin', (e) => {
     const session = sessionOf(e)
-    if (!session) return false
-    beginAiRun(session)
-    return true
+    return session ? beginAiRun(session, e.sender.id) : false
   })
 
   ipcMain.handle('slides:ai-run-hold', (e): RenderSlide[] | null => {
     const session = sessionOf(e)
-    return session && holdAiRun(session) ? deckOf(session) : null
+    return session && holdAiRun(session, e.sender.id) ? deckOf(session) : null
   })
 
   ipcMain.handle(

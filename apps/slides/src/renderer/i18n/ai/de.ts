@@ -103,6 +103,8 @@ export const de = {
   aiProposalStale:
     'The document changed in the meantime, so the proposal was not applied. The document is unchanged.',
   aiProposalBlocked: 'Accept or reject the proposed changes before sending a new request.',
+  aiRunLocked:
+    'The deck is read-only while an AI request is editing it. Saving waits until you accept or reject its changes.',
   aiProposalBefore: 'Before',
   aiProposalAfter: 'After',
   aiProposalAdded: 'New slide',

@@ -18,6 +18,7 @@ import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
 import type { TemplateSelectionInput } from '../shared/template-selection'
 import type {
   DeckChange,
+  HistoryChange,
   AddChartOp,
   AddElementOp,
   AiRunFailure,
@@ -429,9 +430,8 @@ const api: SlidesApi = {
     ipcRenderer.on('slides:close-save-request', listener)
     return () => ipcRenderer.removeListener('slides:close-save-request', listener)
   },
-  onHistoryChanged: (handler: (state: { canUndo: boolean; canRedo: boolean }) => void) => {
-    const listener = (_e: IpcRendererEvent, state: { canUndo: boolean; canRedo: boolean }) =>
-      handler(state)
+  onHistoryChanged: (handler: (state: HistoryChange) => void) => {
+    const listener = (_e: IpcRendererEvent, state: HistoryChange) => handler(state)
     ipcRenderer.on('slides:history-changed', listener)
     return () => ipcRenderer.removeListener('slides:history-changed', listener)
   },

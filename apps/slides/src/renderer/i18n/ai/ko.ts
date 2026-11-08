@@ -100,6 +100,8 @@ export const ko = {
   aiProposalDismiss: '닫기',
   aiProposalStale: '그사이 문서가 바뀌어 적용하지 못했습니다. 문서는 그대로입니다.',
   aiProposalBlocked: '변경 제안을 받아들이거나 거부한 뒤에 새 요청을 보낼 수 있습니다.',
+  aiRunLocked:
+    'AI가 편집하는 동안 덱은 읽기 전용입니다. 변경 사항을 받아들이거나 거부한 뒤에 저장할 수 있습니다.',
   aiProposalBefore: '이전',
   aiProposalAfter: '이후',
   aiProposalAdded: '새 슬라이드',

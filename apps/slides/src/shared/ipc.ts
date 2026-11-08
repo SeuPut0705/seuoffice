@@ -764,6 +764,14 @@ export interface DeckChange {
   order?: string[]
 }
 
+/** Pushed to every window attached to a session whenever its history or AI-run state changes. */
+export interface HistoryChange {
+  canUndo: boolean
+  canRedo: boolean
+  /** An AI run's unaccepted edits are in the deck: the window is read-only until the run is held. */
+  aiRunActive: boolean
+}
+
 export interface PasteSlideResult extends SlideUpdate {
   /** First pasted slide ('picture': the anchor slide the bitmaps landed on) */
   index: number
@@ -1753,12 +1761,13 @@ export interface SlidesApi {
   printSlides: (op: PrintSlidesOp) => Promise<{ ok: boolean; error?: string }>
   /** Save the deck in place. auto marks the AutoSave timer's own pass: while a
    *  sibling split-view copy moved the disk past this one, an auto save defers
-   *  silently (`reason: 'external-modified'`) where a user's save asks first. */
+   *  silently (`reason: 'external-modified'`) where a user's save asks first.
+   *  While an AI run's edits wait for review nothing is written (`reason: 'ai-review'`). */
   save: (auto?: boolean) => Promise<{
     ok: boolean
     path?: string
     error?: string
-    reason?: 'external-modified'
+    reason?: 'external-modified' | 'ai-review'
     slides?: RenderSlide[]
   }>
   /**
@@ -1770,6 +1779,7 @@ export interface SlidesApi {
     ok: boolean
     path?: string
     error?: string
+    reason?: 'ai-review'
     slides?: RenderSlide[]
     exportAs?: 'pdf' | 'png'
   }>
@@ -1789,7 +1799,7 @@ export interface SlidesApi {
   /** The close guard chose "Save": the main process asks the renderer to run the full save flow */
   onCloseSaveRequest: (handler: () => void) => () => void
   /** Undo/redo stack occupancy pushed by the main process (drives the QAT button gray states) */
-  onHistoryChanged: (handler: (state: { canUndo: boolean; canRedo: boolean }) => void) => () => void
+  onHistoryChanged: (handler: (state: HistoryChange) => void) => () => void
   /** Another window attached to the same file changed the deck (shared session): fresh render state to apply */
   onDeckChanged: (handler: (state: DeckChange) => void) => () => void
   reportCloseSaveResult: (ok: boolean) => void
