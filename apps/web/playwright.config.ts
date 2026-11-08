@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
+// SEUOFFICE_WEB_PORT lets several checkouts run this suite on one machine at once
+const port = Number(process.env.SEUOFFICE_WEB_PORT ?? 5300)
+
 /** Opens every supported format through the built launcher (run `npm run build` first). */
 export default defineConfig({
   testDir: './tests',
@@ -9,10 +12,10 @@ export default defineConfig({
   timeout: 60_000,
   workers: 1,
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  use: { baseURL: 'http://localhost:5300/', viewport: { width: 1400, height: 900 } },
+  use: { baseURL: `http://localhost:${port}/`, viewport: { width: 1400, height: 900 } },
   webServer: {
-    command: 'npm run preview',
-    port: 5300,
+    command: `npx vite preview --port ${port} --strictPort`,
+    port,
     reuseExistingServer: false,
     timeout: 60_000,
   },

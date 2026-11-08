@@ -111,7 +111,8 @@ import {
   type MailMergeResponse,
 } from './mail-merge/output'
 import { ZoteroDocumentController } from './zotero/controller'
-import { AiPanel, AI_REVISION_AUTHOR } from './ai/AiPanel'
+import { AiPanel } from './ai/AiPanel'
+import { AI_REVISION_AUTHOR } from './ai/docs-skill'
 import { useAiDock } from './ai/use-ai-dock'
 import type { AiCommentsAccess, AiDocExtras, AiHeaderFooterAccess } from './ai/tools'
 import type { AiStyleInfo } from './ai/style-ops'

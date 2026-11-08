@@ -541,7 +541,6 @@ describe('insert_image freshness baseline', () => {
         undefined,
         undefined,
         undefined,
-        undefined,
         () => ({
           pathOf: (name) => (name === 'probe.png' ? 'C:/tmp/probe.png' : null),
           names: () => ['probe.png'],
@@ -565,7 +564,6 @@ describe('insert_image freshness baseline', () => {
     const skill = createDocsSkill(
       () => editor,
       () => NUM_IDS,
-      undefined,
       undefined,
       undefined,
       undefined,
@@ -749,14 +747,18 @@ describe('partial selection: context markers and replace_selection', () => {
     })
     expect(exec.isError).toBeFalsy()
     expect(exec.mutated).toBe(true)
-    expect(editor.state.doc.child(1).textContent).toBe(
-      'SunSpark is an AI-native productivity suite.',
-    )
-    expect(editor.state.doc.child(1).attrs.aiChanged).toBe(true)
+    // the edit is a tracked revision: the replaced span stays as struck-through text
+    let live = ''
+    editor.state.doc.child(1).descendants((node) => {
+      if (node.isText && !node.marks.some((m) => m.type.name === 'del')) live += node.text
+    })
+    expect(live).toBe('SunSpark is an AI-native productivity suite.')
+    expect(editor.state.doc.child(1).attrs.aiChanged).toBeFalsy() // tracked revisions replace the yellow highlight
     expect(editor.state.doc.child(3).textContent).toBe('This document is for reference only.')
-    // the new text is selected so a follow-up scope:'selection' command targets it
-    expect(editor.state.selection.from).toBe(SEL.from)
-    expect(editor.state.selection.to).toBe(SEL.from + 'AI-native productivity'.length)
+    // the new text is selected so a follow-up scope:'selection' command targets it;
+    // the replaced span stays before it as struck-through text
+    expect(editor.state.selection.from).toBe(SEL.to)
+    expect(editor.state.selection.to).toBe(SEL.to + 'AI-native productivity'.length)
   })
 
   it('replace_selection inherits the formatting of the replaced text unless the fragment styles it', async () => {
