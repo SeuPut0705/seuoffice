@@ -418,6 +418,12 @@ export function installSheetProtectionGuard(
     const kind = commandGuardKind(event.id)
     if (!kind || journalSuppression.active) return
     const state = deps.getState()
+    // A read-only open (the web viewer) refuses every guarded command, silently
+    // as a viewer does: the protection messages would point at an unprotect.
+    if (state?.file.readOnly) {
+      event.cancel = true
+      return
+    }
     const workbook = runtime.univerAPI.getActiveWorkbook()
     const params = (event.params ?? {}) as Record<string, unknown>
     // Commands addressed to a background sheet are checked against it.

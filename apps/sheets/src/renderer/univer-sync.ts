@@ -685,6 +685,8 @@ export function normalizeLinkTarget(input: string): string | null {
 /// toggled, else the file's. Gates sheet add/remove/rename/reorder/hide.
 export function workbookStructureLocked(state: LazyWorkbookState | null): boolean {
   if (!state) return false
+  // a read-only open (the web viewer) keeps the sheet list as it is
+  if (state.file.readOnly) return true
   return (
     state.editJournal.workbookProtection.desired ??
     state.file.workbookProtection?.lockStructure ??
