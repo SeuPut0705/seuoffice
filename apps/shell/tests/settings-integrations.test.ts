@@ -5,6 +5,7 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { PRODUCT_REPO_SLUG } from '@genoffice/i18n'
 import type { HomeApi } from '../src/shared/home-api'
 import type { IntegrationsApi, IntegrationsStatus } from '../src/shared/integrations-api'
 import { mcpClaudeCommand, mcpConfigJson, mcpLaunch } from '../src/renderer/src/IntegrationsPane'
@@ -62,8 +63,8 @@ function baseStatus(): IntegrationsStatus {
       status: 'missing',
       location: '/usr/local/bin/ieumoffice',
       manual:
-        'sudo ln -sf /Applications/IeumOffice.app/Contents/Resources/cli/ieumoffice /usr/local/bin/ieumoffice',
-      launcherDir: '/Applications/IeumOffice.app/Contents/Resources/cli',
+        'sudo ln -sf /Applications/seuoffice.app/Contents/Resources/cli/ieumoffice /usr/local/bin/ieumoffice',
+      launcherDir: '/Applications/seuoffice.app/Contents/Resources/cli',
       ephemeral: false,
       version: '0.4.0',
     },
@@ -151,7 +152,7 @@ describe('Settings → Integrations', () => {
       "Older copy in Codex's own folder. Codex now reads the skill from the shared folder (~/.agents); once it is installed there, you can remove this copy.",
     )
     // CLI block: launcher path, PATH state in plain words, the manual command as copyable code
-    expect(host.textContent).toContain('/Applications/IeumOffice.app/Contents/Resources/cli')
+    expect(host.textContent).toContain('/Applications/seuoffice.app/Contents/Resources/cli')
     expect(host.textContent).toContain("not on your terminal's PATH")
     expect(host.querySelector('.set-intg-cli code')?.textContent).toContain('sudo ln -sf')
     expect(host.textContent).toContain('skill 2.1.0')
@@ -160,16 +161,16 @@ describe('Settings → Integrations', () => {
     expect(host.textContent).toContain('Pick any one of these three ways')
     // the same three prompts appear under both the CLI and the MCP part
     expect(host.querySelectorAll('.set-intg-example')).toHaveLength(6)
-    expect(host.textContent).toContain('npx skills add pblsketch/openoffice')
+    expect(host.textContent).toContain(`npx skills add ${PRODUCT_REPO_SLUG}`)
     // MCP block: the launcher itself while genoffice is not on the PATH, as a command and as JSON
     const mcp = [...host.querySelectorAll('.set-intg-mcp code')].map((c) => c.textContent)
     expect(mcp[0]).toBe(
-      'claude mcp add --transport stdio ieumoffice -- /Applications/IeumOffice.app/Contents/Resources/cli/ieumoffice mcp',
+      'claude mcp add --transport stdio ieumoffice -- /Applications/seuoffice.app/Contents/Resources/cli/ieumoffice mcp',
     )
     expect(JSON.parse(mcp[1]!)).toEqual({
       mcpServers: {
         ieumoffice: {
-          command: '/Applications/IeumOffice.app/Contents/Resources/cli/ieumoffice',
+          command: '/Applications/seuoffice.app/Contents/Resources/cli/ieumoffice',
           args: ['mcp'],
         },
       },
@@ -181,12 +182,12 @@ describe('Settings → Integrations', () => {
     expect(
       mcpLaunch({
         status: 'present',
-        launcherDir: '/Applications/IeumOffice.app/Contents/Resources/cli',
+        launcherDir: '/Applications/seuoffice.app/Contents/Resources/cli',
       }),
     ).toEqual({ command: 'ieumoffice', args: ['mcp'] })
-    const winDir = 'C:\\Users\\Jane Doe\\AppData\\Local\\Programs\\IeumOffice\\resources\\cli'
+    const winDir = 'C:\\Users\\Jane Doe\\AppData\\Local\\Programs\\seuoffice\\resources\\cli'
     const win = {
-      command: `${winDir}\\..\\..\\IeumOffice.exe`,
+      command: `${winDir}\\..\\..\\seuoffice.exe`,
       args: [`${winDir}\\genoffice.cjs`, 'mcp'],
       env: { ELECTRON_RUN_AS_NODE: '1' },
     }

@@ -20,7 +20,7 @@ const BUILD = join(__dirname, '..', 'build')
 /** The scripts hardcode the package paths; a copy with the two roots swapped runs against a temp tree. */
 function makeRoot() {
   const root = mkdtempSync(join(tmpdir(), 'genoffice-postinst-'))
-  const opt = join(root, 'opt', 'IeumOffice')
+  const opt = join(root, 'opt', 'seuoffice')
   const bin = join(root, 'usr', 'bin')
   mkdirSync(join(opt, 'resources', 'cli'), { recursive: true })
   mkdirSync(bin, { recursive: true })
@@ -30,7 +30,7 @@ function makeRoot() {
   const script = (name: string) => {
     const file = join(root, name)
     const body = readFileSync(join(BUILD, name), 'utf-8')
-      .replaceAll('/opt/IeumOffice', opt)
+      .replaceAll('/opt/seuoffice', opt)
       .replaceAll('/usr/bin/', `${bin}/`)
     writeFileSync(file, body)
     return (arg = '') => {

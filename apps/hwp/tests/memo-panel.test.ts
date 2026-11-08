@@ -213,7 +213,7 @@ describe('the author of a new memo', () => {
     expect(authorNameOf({ value: '   ', fallback: ' pc ' })).toBe('pc')
     expect(authorNameOf({ value: '', fallback: '' })).toBe(MEMO_FALLBACK_AUTHOR)
     expect(authorNameOf(null)).toBe(MEMO_FALLBACK_AUTHOR)
-    expect(MEMO_FALLBACK_AUTHOR).toBe('IeumOffice')
+    expect(MEMO_FALLBACK_AUTHOR).toBe('seuoffice')
   })
 
   it('takes out separators and control characters and cuts at 64 units', () => {

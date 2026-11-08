@@ -31,7 +31,7 @@ async function workbook(dir: string): Promise<string> {
 describe('GUI-open documents', () => {
   it('locates the shell userData directory and honours the override', () => {
     expect(genofficeUserDataDir({ GENOFFICE_USER_DATA: '/u' })).toBe('/u')
-    expect(basename(genofficeUserDataDir({}))).toBe('IeumOffice')
+    expect(basename(genofficeUserDataDir({}))).toBe('seuoffice')
   })
 
   it("resolves this product's own folders, never the upstream app's", () => {
@@ -40,9 +40,9 @@ describe('GUI-open documents', () => {
     const packaged = genofficeUserDataDir(env)
     const dev = genofficeDevUserDataDir(env)
     expect(packaged.startsWith(root)).toBe(true)
-    expect(basename(packaged)).toBe('IeumOffice')
+    expect(basename(packaged)).toBe('seuoffice')
     // the unpacked shell keeps its profile beside the installed one (apps/shell/src/main/index.ts)
-    expect(dev).toBe(join(dirname(packaged), 'IeumOffice-Dev'))
+    expect(dev).toBe(join(dirname(packaged), 'seuoffice-Dev'))
     for (const dir of [packaged, dev]) expect(basename(dir)).not.toMatch(/^GenOffice/)
 
     // a registry the upstream app left in its own folder is not this app's to read

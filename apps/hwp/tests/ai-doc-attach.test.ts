@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-// The HWP AI panel's "attach from an IeumOffice document" button. The shell's
+// The HWP AI panel's "attach from a seuoffice document" button. The shell's
 // document picker (window.aiOfficeDocs) hands back paths, and they enter the
 // composer's attachment list through the same path a Drive pick takes. The
 // panel's editor bridge is never really present here, so its polling simply

@@ -18,10 +18,10 @@ if [ -n "$GENOFFICE_NODE" ]; then
 fi
 
 case "$here" in
-  */Contents/Resources/cli) app="$here/../../MacOS/IeumOffice" ;;
+  */Contents/Resources/cli) app="$here/../../MacOS/seuoffice" ;;
   */resources/cli)
     # Linux install, or the Windows install reached from Git Bash / MSYS
-    if [ -x "$here/../../IeumOffice.exe" ]; then app="$here/../../IeumOffice.exe"; else app="$here/../../ieumoffice"; fi
+    if [ -x "$here/../../seuoffice.exe" ]; then app="$here/../../seuoffice.exe"; else app="$here/../../seuoffice"; fi
     ;;
   *) app="" ;;
 esac

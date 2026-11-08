@@ -194,13 +194,6 @@ export function pushUpdateState(patch: Partial<UpdateUiState>): void {
   broadcastState()
 }
 
-/** Forget the known update (channel switch): About stops offering it and open-for-update answers false. */
-export function clearUpdateState(): void {
-  closeUpdateWindow()
-  currentState = null
-  broadcastState()
-}
-
 export function closeUpdateWindow(): void {
   if (updateWin && !updateWin.isDestroyed()) {
     closingProgrammatically = true

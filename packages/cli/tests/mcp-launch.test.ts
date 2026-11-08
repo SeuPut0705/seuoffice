@@ -5,9 +5,9 @@ import { isGenofficeLauncher, mcpSnippet, readMcpEntry, writeMcpEntry } from '..
 import { mcpLaunch, mcpLaunchFromLauncher, type McpLaunch } from '../src/mcp-launch'
 import { tempDir } from './helpers'
 
-const WIN_DIR = 'C:\\Users\\Jane Doe\\AppData\\Local\\Programs\\IeumOffice\\resources\\cli'
+const WIN_DIR = 'C:\\Users\\Jane Doe\\AppData\\Local\\Programs\\seuoffice\\resources\\cli'
 const WIN_APP: McpLaunch = {
-  command: `${WIN_DIR}\\..\\..\\IeumOffice.exe`,
+  command: `${WIN_DIR}\\..\\..\\seuoffice.exe`,
   args: [`${WIN_DIR}\\genoffice.cjs`, 'mcp'],
   env: { ELECTRON_RUN_AS_NODE: '1' },
 }
@@ -15,15 +15,15 @@ const WIN_APP: McpLaunch = {
 describe('mcp launch entry', () => {
   it('is the absolute launcher on macOS and Linux', () => {
     expect(
-      mcpLaunchFromLauncher('/Applications/IeumOffice.app/Contents/Resources/cli/ieumoffice'),
+      mcpLaunchFromLauncher('/Applications/seuoffice.app/Contents/Resources/cli/ieumoffice'),
     ).toEqual({
-      command: '/Applications/IeumOffice.app/Contents/Resources/cli/ieumoffice',
+      command: '/Applications/seuoffice.app/Contents/Resources/cli/ieumoffice',
       args: ['mcp'],
     })
   })
 
   it('uses the absolute launcher while the linked dir is still off the PATH (genoffice#1019)', () => {
-    const launcherDir = '/Applications/IeumOffice.app/Contents/Resources/cli'
+    const launcherDir = '/Applications/seuoffice.app/Contents/Resources/cli'
     expect(mcpLaunch({ status: 'present', launcherDir })).toEqual({
       command: 'ieumoffice',
       args: ['mcp'],
@@ -38,7 +38,7 @@ describe('mcp launch entry', () => {
   })
 
   it('runs the packaged Windows app as Node on the bundle, exactly as the app snippet does', () => {
-    const exists = (p: string) => p === `${WIN_DIR}\\..\\..\\IeumOffice.exe`
+    const exists = (p: string) => p === `${WIN_DIR}\\..\\..\\seuoffice.exe`
     const fromCli = mcpLaunchFromLauncher(`${WIN_DIR}\\ieumoffice.cmd`, { exists })
     expect(fromCli).toEqual(WIN_APP)
     expect(fromCli).toEqual(mcpLaunch({ status: 'missing', launcherDir: WIN_DIR }))
@@ -60,9 +60,9 @@ describe('mcp launch entry', () => {
   })
 
   it('recognises every launcher shape as ours', () => {
-    expect(isGenofficeLauncher('/opt/IeumOffice/resources/cli/ieumoffice')).toBe(true)
-    expect(isGenofficeLauncher('C:\\IeumOffice\\resources\\cli\\ieumoffice.cmd')).toBe(true)
-    expect(isGenofficeLauncher('C:\\Program Files\\IeumOffice\\IeumOffice.exe')).toBe(true)
+    expect(isGenofficeLauncher('/opt/seuoffice/resources/cli/ieumoffice')).toBe(true)
+    expect(isGenofficeLauncher('C:\\seuoffice\\resources\\cli\\ieumoffice.cmd')).toBe(true)
+    expect(isGenofficeLauncher('C:\\Program Files\\seuoffice\\seuoffice.exe')).toBe(true)
     expect(isGenofficeLauncher(WIN_APP.command, WIN_APP.args)).toBe(true)
     expect(
       isGenofficeLauncher('node', ['C:\\src\\packages\\cli\\dist\\genoffice.cjs', 'mcp']),
@@ -123,11 +123,11 @@ describe('mcp launch entry', () => {
     expect(mcpSnippet('codex', WIN_APP)).toContain('[mcp_servers.ieumoffice.env]')
   })
 
-  it('treats the app snippet entry (IeumOffice.exe on genoffice.cjs) as ours, not occupied', () => {
+  it('treats the app snippet entry (seuoffice.exe on genoffice.cjs) as ours, not occupied', () => {
     const home = tempDir()
     const file = join(home, 'mcp.json')
     writeFileSync(file, JSON.stringify({ mcpServers: { ieumoffice: WIN_APP } }))
-    const posix = { command: '/opt/IeumOffice/resources/cli/ieumoffice', args: ['mcp'] }
+    const posix = { command: '/opt/seuoffice/resources/cli/ieumoffice', args: ['mcp'] }
     expect(readMcpEntry('cursor', file, posix)).toEqual({
       status: 'stale',
       command: WIN_APP.command,

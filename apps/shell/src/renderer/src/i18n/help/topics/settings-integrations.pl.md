@@ -37,7 +37,6 @@ Ta część pozostaje zwinięta, dopóki jej nie otworzysz; większość osób n
 ## O aplikacji
 
 - **Wersja**, adres projektu w serwisie GitHub oraz wiersz z nazwą projektu open source, na którym ta aplikacja jest oparta.
-- **Kanał aktualizacji**: Stabilny lub Beta. Zmiana działa natychmiast i sprawdza, czy jest aktualizacja; nie cofnie instalacji Beta do kanału Stabilnego.
 
 ## Powiązanie z aplikacją domyślną
 

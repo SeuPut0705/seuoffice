@@ -24,12 +24,13 @@ export const UPSTREAM_NAME_LITERAL = `{{${UPSTREAM_PRODUCT_NAME}}}`
  * productName, the userData folder, the default save folder), which must stay
  * the same whatever the UI language is.
  */
-export const PRODUCT_NAME = 'IeumOffice'
+export const PRODUCT_NAME = 'seuoffice'
 
-/** Languages that show a localized product name instead of PRODUCT_NAME. */
-const LOCALIZED_PRODUCT_NAMES: Readonly<Record<string, string>> = {
-  ko: '이음오피스',
-}
+/**
+ * Languages that show a localized product name instead of PRODUCT_NAME.
+ * seuoffice has no localized name yet, so every language shows PRODUCT_NAME.
+ */
+const LOCALIZED_PRODUCT_NAMES: Readonly<Record<string, string>> = {}
 
 /** The product name as shown in a UI language (a Lang or a raw locale tag). */
 export function productName(lang: string | null | undefined): string {
@@ -46,8 +47,8 @@ export const USER_DATA_DIR_NAME = PRODUCT_NAME
 export const DEV_USER_DATA_DIR_NAME = `${PRODUCT_NAME}-Dev`
 
 /** The product's public GitHub repository: issues, releases and update checks all point here. */
-export const PRODUCT_REPO_OWNER = 'pblsketch'
-export const PRODUCT_REPO_NAME = 'openoffice'
+export const PRODUCT_REPO_OWNER = 'SeuPut0705'
+export const PRODUCT_REPO_NAME = 'seuoffice'
 /** `owner/repo`; the URLs built from it live in @genoffice/electron-utils (github-menu.ts) */
 export const PRODUCT_REPO_SLUG = `${PRODUCT_REPO_OWNER}/${PRODUCT_REPO_NAME}`
 

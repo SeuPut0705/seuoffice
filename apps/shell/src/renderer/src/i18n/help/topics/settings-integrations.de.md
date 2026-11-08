@@ -37,7 +37,6 @@ Geschlossen, bis Sie den Bereich öffnen; die meisten brauchen ihn nie. Der Tab 
 ## Über
 
 - **Version**, die GitHub-Adresse des Projekts und eine Zeile, die das Open-Source-Projekt nennt, auf dem diese App basiert.
-- **Update-Kanal**: Stabil oder Beta. Eine Änderung wirkt sofort und prüft auf ein Update; eine Beta-Installation wird nicht auf Stabil zurückgestuft.
 
 ## Standard-App-Zuordnungen
 

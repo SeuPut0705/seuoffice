@@ -1,5 +1,5 @@
 /**
- * The mindmap AI panel's "attach from an IeumOffice document" button: the
+ * The mindmap AI panel's "attach from a seuoffice document" button: the
  * shell's document picker (window.aiOfficeDocs) hands back paths, and they
  * enter the composer's attachment list through the same path a Drive pick
  * takes (mindmapApi.addAttachmentPaths). No provider is ever reached.

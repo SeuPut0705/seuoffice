@@ -17,7 +17,7 @@ import type {
   FreeAiProviderId,
   FreeAiQuota,
 } from '@genoffice/ai-provider'
-import type { UpdateChannel, UpdateUiState } from './update-api'
+import type { UpdateUiState } from './update-api'
 import type { KbFileInfo, KbReadPage, KbSearchHit } from '@genoffice/agent-core'
 import type { AiPanelPrefs } from '@genoffice/ui/ai-panel-prefs'
 import type { SlidesAiFonts } from '@genoffice/ui/slides-ai-fonts'
@@ -321,10 +321,6 @@ export interface HomeApi {
   getLanguage(): Promise<UiLanguage>
   /** switch + persist the UI language; main rebuilds its menus to match */
   setLanguage(lang: UiLanguage): Promise<void>
-  /** current update channel (persisted in userData/app-settings.json; default 'stable') */
-  getUpdateChannel(): Promise<UpdateChannel>
-  /** switch + persist the update channel; triggers an immediate update check */
-  setUpdateChannel(channel: UpdateChannel): Promise<void>
   /** whether the launch and periodic background update checks run (default on) */
   getAutoUpdateCheck(): Promise<boolean>
   setAutoUpdateCheck(on: boolean): Promise<void>
@@ -595,8 +591,6 @@ export const HOME_CHANNELS = {
   folderChanged: 'home:folder-changed',
   getLanguage: 'home:get-language',
   setLanguage: 'home:set-language',
-  getUpdateChannel: 'home:get-update-channel',
-  setUpdateChannel: 'home:set-update-channel',
   getAutoUpdateCheck: 'home:get-auto-update-check',
   setAutoUpdateCheck: 'home:set-auto-update-check',
   openSettings: 'home:open-settings',

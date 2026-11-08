@@ -19,16 +19,28 @@ const { join } = require('node:path')
 // folder, the executable name, the userData folder and the Windows ProgIds.
 // None of them may coincide with the upstream GenOffice app, so both can be
 // installed on one machine without touching each other's registration.
-const APP_ID = 'io.github.pblsketch.ieumoffice'
-const PRODUCT_NAME = 'IeumOffice'
+const APP_ID = 'com.seuput.seuoffice'
+const PRODUCT_NAME = 'seuoffice'
 // package.json "name" of the packaged app (the workspace keeps upstream's
 // "@genoffice/shell"): electron-builder and electron-updater name the per-user
 // folder that caches the installer and downloaded updates after it
 // (<local app data>/<name>-updater), so a shared name is a shared folder.
-const PACKAGED_APP_NAME = 'ieumoffice'
-const REPO_OWNER = 'pblsketch'
-const REPO_NAME = 'openoffice'
-const MAINTAINER = 'pblsketch <pblsketch@users.noreply.github.com>'
+const PACKAGED_APP_NAME = 'seuoffice'
+const REPO_OWNER = 'SeuPut0705'
+const REPO_NAME = 'seuoffice'
+const MAINTAINER = 'SeuPut <228744781+SeuPut0705@users.noreply.github.com>'
+
+// SEUOFFICE_UPDATE_CHANNEL — which releases the packaged app updates from,
+// fixed when it is packaged (docs/seuoffice/decisions, product name and update
+// channels). "latest" (default) follows every published release, pre-releases
+// included; "stable" follows only the release GitHub marks Latest, which the
+// owner promotes after checking it. The channel names the update feed file
+// (latest.yml / stable.yml) and is written into resources/app-update.yml,
+// where src/main/update-build-channel.ts reads it back.
+const UPDATE_CHANNEL = process.env.SEUOFFICE_UPDATE_CHANNEL || 'latest'
+if (UPDATE_CHANNEL !== 'latest' && UPDATE_CHANNEL !== 'stable') {
+  throw new Error(`SEUOFFICE_UPDATE_CHANNEL must be "latest" or "stable", got "${UPDATE_CHANNEL}"`)
+}
 
 // GENOFFICE_MAC_X64=1 — package the Intel (x64) dmg/zip alongside arm64.
 // The release build on GitHub's Mac runner sets it (.github/workflows/
@@ -348,7 +360,7 @@ const WIN_OPEN_WITH_ONLY_EXTS = new Set(['txt', 'json', 'xmind', 'hwp', 'hwpx', 
 // (HKCU\Software\Classes\<name>). The upstream app registers the bare names
 // below ("Word Document"), so sharing them would let either install overwrite
 // the other's open command and either uninstall delete it: Windows gets
-// product-scoped ProgIds instead ("IeumOffice.WordDocument"). The same ids are
+// product-scoped ProgIds instead ("seuoffice.WordDocument"). The same ids are
 // spelled out in src/main/default-app.ts and build/installer.nsh.
 const winProgId = (name) => `${PRODUCT_NAME}.${name.replace(/[^A-Za-z0-9]/g, '')}`
 const FILE_ASSOCIATIONS = [
@@ -709,8 +721,8 @@ const config = {
     // Two separate arch packages (NOT universal): arm64 keeps the exact
     // artifact names and update-feed entries it always had, x64 (via
     // GENOFFICE_MAC_X64=1, see includeMacX64 above) adds the Intel package:
-    // IeumOffice-<v>-x64.dmg (config.dmg.artifactName below) and the
-    // arch-less IeumOffice-<v>-mac.zip. Both zips land in one latest-mac.yml,
+    // seuoffice-<v>-x64.dmg (config.dmg.artifactName below) and the
+    // arch-less seuoffice-<v>-mac.zip. Both zips land in one latest-mac.yml,
     // which a Mac install only reads for the version. Dual-arch packs ship the
     // same lipo fat xlsx-sidecar (see assertUniversalSidecar above).
     target: [
@@ -816,22 +828,22 @@ const config = {
     fileAssociations: FILE_ASSOCIATIONS,
     // Icon SET directory, not the single 1024px png: electron-builder does
     // not resize a lone png, so deb/rpm would install only
-    // hicolor/1024x1024/apps/ieumoffice.png — a size absent from the hicolor
+    // hicolor/1024x1024/apps/seuoffice.png — a size absent from the hicolor
     // theme index, leaving GNOME/KDE launchers on the generic fallback icon
     // (upstream issue #90). The set ships every standard raster size.
     icon: 'build/icons',
     // mac and win name the binary from productName; linux instead derives it
     // from package.json "name", and "@genoffice/shell" sanitizes to the
     // invalid "@genofficeshell". Setting it explicitly also makes the
-    // generated ieumoffice.desktop match the WM_CLASS Electron reports (it
+    // generated seuoffice.desktop match the WM_CLASS Electron reports (it
     // takes that from the executable basename), so the running window links
     // back to its launcher entry.
     executableName: PACKAGED_APP_NAME,
     // Electron takes its X11 app_id from package.json "desktopName"
-    // (ieumoffice.desktop); syncDesktopName makes electron-builder name the
+    // (seuoffice.desktop); syncDesktopName makes electron-builder name the
     // .desktop file and its StartupWMClass from the same value. Without it
-    // StartupWMClass falls back to productName ("IeumOffice"), which does not
-    // match the "ieumoffice" WM_CLASS the window actually reports — and X11
+    // StartupWMClass falls back to productName, which need not match the
+    // "seuoffice" WM_CLASS the window actually reports — and X11
     // compares case-sensitively, so the taskbar shows an unlinked window.
     syncDesktopName: true,
     extraResources: [
@@ -854,11 +866,11 @@ const config = {
   // Same "@genoffice/shell" problem as executableName above: the default deb
   // artifact name derives from package.json "name", and the scope's "/" makes
   // fpm treat "@genoffice" as a directory. Spell the published name out
-  // (ieumoffice_<version>_amd64.deb) and pin the control Package field so apt
+  // (seuoffice_<version>_amd64.deb) and pin the control Package field so apt
   // treats successive releases as upgrades of the same package and never
   // collides with an upstream genoffice deb install.
   deb: {
-    artifactName: 'ieumoffice_${version}_${arch}.deb',
+    artifactName: 'seuoffice_${version}_${arch}.deb',
     packageName: PACKAGED_APP_NAME,
     // Ubuntu 24.04 (and Debian 13) rebuilt part of the X/GTK stack for 64-bit
     // time_t and renamed those packages with a "t64" suffix: where the old
@@ -897,7 +909,7 @@ const config = {
   // the rpm is a GitHub-Release download only, so latest-linux.yml lists
   // AppImage + deb.
   rpm: {
-    artifactName: 'ieumoffice-${version}.${arch}.rpm',
+    artifactName: 'seuoffice-${version}.${arch}.rpm',
     packageName: PACKAGED_APP_NAME,
     publish: null,
     afterInstall: 'build/linux-after-install.sh',
@@ -915,9 +927,8 @@ const config = {
     allowToChangeInstallationDirectory: true,
     // no spaces: GitHub Releases rewrites them in asset names, and the update
     // feed must name the file exactly as it is downloaded
-    artifactName: winArm64
-      ? '${productName}-Setup-${version}-arm64.${ext}'
-      : '${productName}-Setup-${version}.${ext}',
+    // the stable build's installer sits in the same release as the general one
+    artifactName: `\${productName}-Setup-\${version}${winArm64 ? '-arm64' : ''}${UPDATE_CHANNEL === 'stable' ? '-stable' : ''}.\${ext}`,
   },
   beforePack: async (context) => {
     ensurePlatformHelpers()
@@ -990,7 +1001,11 @@ config.dmg.sign = false
 // Every dmg names its CPU (decision 0065). electron-builder leaves the arch
 // out of an x64 name, which would make the Intel dmg the one without a label;
 // the arm64 name stays the one the site and the README point at.
-config.dmg.artifactName = '${productName}-${version}-${arch}.${ext}'
+// The stable build's dmg and update zip sit in the same release as the
+// general ones, so they carry the channel in their names.
+const stableSuffix = UPDATE_CHANNEL === 'stable' ? '-stable' : ''
+config.dmg.artifactName = `\${productName}-\${version}-\${arch}${stableSuffix}.\${ext}`
+if (stableSuffix) config.mac.artifactName = '${productName}-${version}-${arch}-mac-stable.${ext}'
 
 // Auto-update feed: the releases of the public repository. Always configured,
 // so every installer carries an app-update.yml and can update itself — the
@@ -1003,6 +1018,7 @@ config.publish = [
     provider: 'github',
     owner: REPO_OWNER,
     repo: REPO_NAME,
+    channel: UPDATE_CHANNEL,
   },
 ]
 

@@ -37,7 +37,6 @@ Mục này đóng cho đến khi bạn mở ra; hầu hết mọi người khôn
 ## Giới thiệu
 
 - **Phiên bản**, địa chỉ GitHub của dự án, và một dòng ghi tên dự án nguồn mở mà ứng dụng này dựa trên.
-- **Kênh cập nhật**: Ổn định hoặc Beta. Đổi kênh sẽ có hiệu lực ngay và kiểm tra bản cập nhật; nó sẽ không hạ bản cài đặt Beta về lại Ổn định.
 
 ## Đăng ký ứng dụng mặc định
 

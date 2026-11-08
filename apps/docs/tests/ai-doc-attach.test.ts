@@ -1,4 +1,4 @@
-// The docs AI panel's "attach from an IeumOffice document" button: a shell
+// The docs AI panel's "attach from a seuoffice document" button: a shell
 // document picker (window.aiOfficeDocs) hands back paths, and they enter the
 // composer's attachment list through the same path a Drive pick takes.
 import { act, createElement } from 'react'
@@ -108,9 +108,7 @@ describe('docs AI panel: attach from a document', () => {
         await flush()
 
         expect(added).toHaveBeenCalledWith(['/docs/report.txt'])
-        const chips = [
-          ...container.querySelectorAll('.ai-attachments .ai-attachment-card-name'),
-        ]
+        const chips = [...container.querySelectorAll('.ai-attachments .ai-attachment-card-name')]
         expect(chips.map((chip) => chip.textContent)).toEqual(['report.txt'])
       } finally {
         cleanup()
