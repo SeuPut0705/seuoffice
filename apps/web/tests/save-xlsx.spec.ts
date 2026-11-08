@@ -40,7 +40,9 @@ const nameBox = (frame: FrameLocator) => frame.locator('input.univer-appearance-
 // the app's own "fully loaded, every cell editable" line; typing earlier is refused while cells stream in
 const loaded = (frame: FrameLocator) =>
   expect(frame.locator('footer.status-bar')).toContainText('모두 로드', { timeout: 20_000 })
-const saveButton = (frame: FrameLocator) => frame.getByRole('button', { name: '저장(⌘S)' })
+// the label names the shortcut: ⌘S on a Mac, Ctrl+S elsewhere (CI runs Linux)
+const saveButton = (frame: FrameLocator) =>
+  frame.getByRole('button', { name: /^저장 ?\((⌘|Ctrl\+)S\)$/ })
 const unsaved = (page: Page, timeout?: number) =>
   expect(page.locator('#status')).toContainText('저장 안 함', { timeout })
 

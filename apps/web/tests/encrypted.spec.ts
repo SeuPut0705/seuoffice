@@ -123,7 +123,8 @@ async function typeAfter(frame: FrameLocator, anchor: string, text: string): Pro
 
 async function docxSave(page: Page, frame: FrameLocator): Promise<Buffer> {
   const download = page.waitForEvent('download')
-  await frame.getByRole('button', { name: '저장 (⌘S)' }).click()
+  // the label names the shortcut: ⌘S on a Mac, Ctrl+S elsewhere (CI runs Linux)
+  await frame.getByRole('button', { name: /^저장 \((⌘|Ctrl\+)S\)$/ }).click()
   const bytes = await downloaded(download)
   await expect(page.locator('#status')).toHaveText('locked.docx')
   return bytes

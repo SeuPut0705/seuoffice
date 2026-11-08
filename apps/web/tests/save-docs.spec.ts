@@ -40,7 +40,9 @@ async function saved(download: Download): Promise<Block[]> {
 const texts = (blocks: Block[]): string[] =>
   blocks.map((block) => (block.runs ?? []).map((run) => run.text).join(''))
 
-const appSave = (frame: FrameLocator) => frame.getByRole('button', { name: '저장 (⌘S)' })
+// the label names the shortcut: ⌘S on a Mac, Ctrl+S elsewhere (CI runs Linux)
+const appSave = (frame: FrameLocator) =>
+  frame.getByRole('button', { name: /^저장 \((⌘|Ctrl\+)S\)$/ })
 
 test('an edited docx saves through the app and through the host', async ({ page }) => {
   const frame = await open(page, SIMPLE, true)
