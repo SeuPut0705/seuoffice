@@ -94,7 +94,8 @@ The Korean font pairings of the templates referred to k-slide
 Slide design template fonts
 
 packages/ui/template-fonts holds the fonts the design templates use. It
-ships once in the installer as resources/template-fonts. Every file is the
+ships once in the installer as resources/template-fonts and once in the web
+build as template-fonts/. Every file is the
 original distributor's, unmodified, except the two Noto Serif KR faces, whose
 CFF outlines are converted to TrueType (names and metrics unchanged); all are
 licensed under the SIL Open Font License, Version 1.1. Each family's license text sits beside its files, and

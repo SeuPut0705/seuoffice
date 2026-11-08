@@ -7,7 +7,7 @@
  * rhwp studio (needs network for the first run).
  */
 import { spawnSync } from 'node:child_process'
-import { rmSync } from 'node:fs'
+import { cpSync, rmSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'vite'
@@ -40,3 +40,9 @@ for (const app of APPS) {
 
 console.log('\n[web] building the launcher')
 await build({ configFile: resolve(web, 'vite.config.ts') })
+
+// The design templates' fonts once for every app (templateFontUrl in
+// packages/web-platform/src/template-fonts.ts), with their licenses and readme
+cpSync(resolve(repo, 'packages/ui/template-fonts'), resolve(web, 'dist/template-fonts'), {
+  recursive: true,
+})
