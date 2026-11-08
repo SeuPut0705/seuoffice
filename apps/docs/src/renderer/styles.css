@@ -9214,46 +9214,6 @@ body.docs-crop-active
   filter: brightness(0.7);
 }
 
-/* track-changes pill: quiet gray when off, guide-blue tinted when on */
-.ai-track-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 24px;
-  padding: 0 10px;
-  flex-shrink: 0;
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-30);
-  background: none;
-  color: var(--color-text-secondary);
-  font-size: var(--text-caption);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.ai-track-btn:hover {
-  background: var(--color-bg-subtle);
-  color: var(--color-text-primary);
-}
-
-.ai-track-btn .ai-track-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-border-strong);
-}
-
-.ai-track-btn.on {
-  border-color: var(--docs-brand-ring);
-  background: var(--docs-brand-ghost-weak);
-  color: var(--color-brand-secondary);
-}
-
-.ai-track-btn.on .ai-track-dot {
-  background: var(--color-brand-secondary);
-}
-
 /* attachment chips above the composer */
 .ai-attachments {
   display: flex;

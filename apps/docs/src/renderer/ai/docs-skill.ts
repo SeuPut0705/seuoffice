@@ -2,13 +2,7 @@ import { placeholderInstruction } from './redact'
 import { redactLabelsOf } from './redact-view'
 import type { Editor } from '@tiptap/core'
 import { attachedImageNote, type AgentSkill } from '@genoffice/agent-core'
-import {
-  AGENT_SYSTEM_PROMPT,
-  buildDocContext,
-  getSelectionScope,
-  type AiTrack,
-  type NumIds,
-} from './protocol'
+import { AGENT_SYSTEM_PROMPT, buildDocContext, getSelectionScope, type NumIds } from './protocol'
 import type { AiDocWriter } from './doc-writer'
 import type { AiPageSetupAccess } from './page-setup'
 import {
@@ -32,15 +26,24 @@ const IMAGE_GEN_OFF_NOTE =
 const MEDIA_ANALYSIS_OFF_NOTE =
   '\n\nNote: analyze_media is currently unavailable (no media provider: no AI connection that can look at pictures and no media API key in Settings). You cannot see what a picture inside the document shows — tell the user that instead of guessing at its content.'
 
+/** author name on AI-generated tracked revisions (accept/reject via Review) */
+export const AI_REVISION_AUTHOR = 'AI Assistant'
+
+/** tools the AI never gets: resolving tracked changes is the person's call (the CLI keeps them) */
+const PERSON_ONLY_TOOLS = new Set(['accept_changes', 'reject_changes'])
+
 /**
  * The docx capability as an AgentSkill: document skeleton context, the five
  * document tools, and the local executor. Future apps register their own
  * skills (Excel / PPT) against the same agent loop.
+ *
+ * Every AI edit is recorded as a tracked revision by AI_REVISION_AUTHOR; a
+ * person accepts or rejects them in the Review tab. ODT cannot hold
+ * revisions, so edits there stay plain.
  */
 export function createDocsSkill(
   getEditor: () => Editor,
   getNumIds: () => NumIds,
-  getTrack?: () => AiTrack | undefined,
   getComments?: () => AiCommentsAccess | undefined,
   getHf?: () => AiHeaderFooterAccess | undefined,
   /** live predicate (the main process's tool capabilities: a subscription or a media key); false hides generate_image */
@@ -92,7 +95,7 @@ export function createDocsSkill(
     },
     get tools() {
       const hidden = mediaToolsOff()
-      const tools = hidden.size === 0 ? AGENT_TOOLS : AGENT_TOOLS.filter((t) => !hidden.has(t.name))
+      const tools = AGENT_TOOLS.filter((t) => !hidden.has(t.name) && !PERSON_ONLY_TOOLS.has(t.name))
       // an ODT document: tools for switched-off features are not offered
       return odtToolFilter(tools) as AgentToolDef[]
     },
@@ -108,12 +111,19 @@ export function createDocsSkill(
         getPageSetup?.()?.list(),
       )
     },
-    executeTool: (call, signal) =>
-      executeTool(
+    executeTool: async (call, signal) => {
+      if (PERSON_ONLY_TOOLS.has(call.name)) {
+        return {
+          output: `${call.name} is not available to the AI: a person accepts or rejects tracked changes in the Review tab`,
+          isError: true,
+          summary: call.name,
+        }
+      }
+      return executeTool(
         getEditor(),
         call,
         getNumIds(),
-        getTrack?.(),
+        isOdtSession() ? undefined : { author: AI_REVISION_AUTHOR },
         signal,
         frozen,
         getComments?.(),
@@ -123,6 +133,7 @@ export function createDocsSkill(
         getExtras?.(),
         getNotes?.(),
         getAttachments?.(),
-      ),
+      )
+    },
   }
 }

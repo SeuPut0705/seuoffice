@@ -126,17 +126,22 @@ export function normalizeAiSettings(
       : DEFAULT_AI_PROVIDER_SELECTION
   const fallback = defaultAiSettings()
   const readUrl = readUrlSettingsOf(resolved.readUrl)
+  const providers: AiSettings['providers'] = {
+    ...fallback.providers,
+    ...knownEntries<Partial<AiSettings['providers']>>(
+      resolved.providers,
+      AI_PROVIDERS.map((m): AiProviderId => m.id),
+    ),
+  }
+  // a per-request token is never a setting (seuoffice decision 0008): one put in the file is dropped
+  for (const meta of AI_PROVIDERS) {
+    if (meta.requestToken) providers[meta.id] = { ...providers[meta.id], apiKey: '' }
+  }
   return {
     ...resolved,
     ...(readUrl ? { readUrl } : {}),
     provider: selection,
-    providers: {
-      ...fallback.providers,
-      ...knownEntries<Partial<AiSettings['providers']>>(
-        resolved.providers,
-        AI_PROVIDERS.map((m): AiProviderId => m.id),
-      ),
-    },
+    providers,
     media: normalizeMedia(resolved.media ?? fallback.media!),
     search: normalizeSearch(resolved.search ?? fallback.search!),
     meteredAccepted: sanitizeMeteredAccepted(resolved.meteredAccepted),
