@@ -9,6 +9,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { basename, dirname, join, resolve } from 'node:path'
+import { isDeepStrictEqual } from 'node:util'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import * as CFB from 'cfb'
 import init, { HwpDocument } from '@rhwp/core'
@@ -19,6 +20,8 @@ import { sectionTailsOf } from '../src/main/section-tails'
 import { hasTrackedChanges, withoutTrackedChanges } from '../src/main/tracked-changes'
 import { bytesMatchFormat } from '../src/main/save-plan'
 import type { SaveBase } from '../src/main/save-fixes'
+import { openHwpFromBytes } from '../src/web/open-hwp'
+import { webSaveBytes } from '../src/web/save-hwp'
 import type { HwpFormat } from '../src/shared/ipc'
 
 const require = createRequire(import.meta.url)
@@ -146,6 +149,20 @@ function measure(path: string, label: string, known: string | undefined): Row {
   const saved = applySaveFixes(exported, format, undefined, base)
   if (saved.tailsSkipped !== undefined) {
     row.note = `${row.note} section tails skipped: ${JSON.stringify(saved.tailsSkipped)}`.trim()
+  }
+  // the web save (src/web): its open hands the editor the same bytes and keeps the base, and
+  // its commit writes exactly what the desktop writes, so the shape below holds for both
+  const name = basename(path)
+  const web = openHwpFromBytes(
+    { id: 'corpus', fileName: name, bytes: original, virtualPath: `/web/corpus/${name}` },
+    true,
+  )
+  const webSaved = web ? webSaveBytes(web.base, format, exported.slice(), undefined) : null
+  if (!web || Buffer.compare(web.bytes, bytes) !== 0 || !isDeepStrictEqual(web.base, base)) {
+    return { ...row, verdict: 'mismatch', note: `${row.note} web open differs`.trim() }
+  }
+  if (!webSaved?.ok || Buffer.compare(webSaved.bytes, saved.bytes) !== 0) {
+    return { ...row, verdict: 'mismatch', note: `${row.note} web save differs`.trim() }
   }
 
   let after: Shape
