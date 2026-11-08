@@ -28,3 +28,28 @@ jobs:
       - run: npm ci
       - run: npm run check:no-genspark
       - run: npm run check:english-comments
+
+  web:
+    runs-on: ubuntu-latest
+    needs: guard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run typecheck -w @seuoffice/web-platform -w @seuoffice/embed -w @seuoffice/web
+      - run: npm run test -w @seuoffice/web-platform -w @seuoffice/embed
+      - run: npm run build -w @seuoffice/web
+      - run: npm run test -w @seuoffice/web
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-test-results
+          path: apps/web/test-results
+          if-no-files-found: ignore

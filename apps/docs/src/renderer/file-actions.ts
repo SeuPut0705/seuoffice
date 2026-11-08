@@ -61,6 +61,7 @@ import {
 } from './doc-state'
 import { hfSaveOptions } from './hf-sections'
 import { fetchDocBytes } from './doc-bytes'
+import { webViewMode } from './web-view-mode'
 import { parseDocxOffThread, parseOdtOffThread } from './parse-off-thread'
 import { captureRenderedObjects } from './odt-objects'
 import {
@@ -575,7 +576,7 @@ export async function loadFile(
     ctx.setMirrorMargins(parsed.mirrorMargins ?? false)
     ctx.setMirrorMarginsDirty(false)
     ctx.setShowComments(hasUnanchoredComments(parsed.comments, parsed.blocks))
-    ctx.setReadMode(tier === 'readOnly')
+    ctx.setReadMode(tier === 'readOnly' || webViewMode())
     ctx.setLargeDocSpellOff(tier !== 'normal')
     ctx.setComments(parsed.comments)
     ctx.setCommentsDirty(false)
