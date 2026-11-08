@@ -1,0 +1,50 @@
+import { resolve } from 'node:path'
+import react from '@vitejs/plugin-react'
+import { seuofficeWebAliases, seuofficeWebPlugins } from '@seuoffice/web-platform/vite'
+import { defineConfig, type Plugin } from 'vite'
+
+// The Docs app for the browser: the renderer from src/renderer behind the web desktop bridge in src/web.
+// Same package-source mapping as the renderer block of electron.vite.config.ts (specific entries first).
+const localAlias = {
+  '@genoffice/docx-engine/lazy-media': resolve(
+    __dirname,
+    '../../packages/docx-engine/src/lazy-media.ts',
+  ),
+  '@genoffice/docx-engine/zip-splice': resolve(
+    __dirname,
+    '../../packages/docx-engine/src/zip-splice.ts',
+  ),
+  '@genoffice/docx-engine': resolve(__dirname, '../../packages/docx-engine/src/index.ts'),
+  '@genoffice/odt-engine': resolve(__dirname, '../../packages/odt-engine/src/index.ts'),
+}
+
+// The renderer entry imports './template-fonts' for desktop-only font files; the web build swaps in a no-op.
+const webTemplateFonts = (): Plugin => ({
+  name: 'seuoffice-web-template-fonts',
+  enforce: 'pre',
+  resolveId(source, importer) {
+    if (source === './template-fonts' && importer?.endsWith('/src/renderer/main.tsx')) {
+      return resolve(__dirname, 'src/web/template-fonts.web.ts')
+    }
+    return null
+  },
+})
+
+export default defineConfig({
+  root: resolve(__dirname, 'src/web'),
+  base: './',
+  plugins: [react(), webTemplateFonts(), ...seuofficeWebPlugins()],
+  resolve: {
+    alias: [
+      ...Object.entries(localAlias).map(([find, replacement]) => ({ find, replacement })),
+      ...seuofficeWebAliases(),
+    ],
+  },
+  define: { 'process.env.NODE_ENV': JSON.stringify('production') },
+  build: {
+    outDir: resolve(__dirname, '../web/dist/docs'),
+    emptyOutDir: true,
+    target: 'es2022',
+  },
+  worker: { format: 'es' },
+})
