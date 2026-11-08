@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self' blob: data:; frame-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>seuoffice</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        font-family: system-ui, sans-serif;
+      }
+      header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 8px 12px;
+      }
+      #viewer {
+        flex: 1;
+        min-height: 0;
+      }
+      #drop-hint {
+        margin: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <label
+        >파일 열기 <input id="file" type="file" accept=".pdf,.docx,.xlsx,.pptx,.hwp,.hwpx"
+      /></label>
+      <span id="status" role="status"></span>
+    </header>
+    <main id="viewer"><p id="drop-hint">여기에 파일을 끌어 놓으세요</p></main>
+    <script type="module" src="./src/launcher.ts"></script>
+  </body>
+</html>
