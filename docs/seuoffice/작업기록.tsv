@@ -12,3 +12,6 @@ ts	phase	decision	why	evidence	result
 2026-11-09T03:50:00Z	U4	feat/hwp-web-save를 합쳤다. 단위가 찾은 120초 제한 경합은 합치기 전에 고치게 했다	늦게 끝난 저장이 다음 요청을 성공으로 끝낼 수 있었다. 재현 시험이 먼저 실패하고 고친 뒤 통과했다	888bc23ce, apps/hwp/tests/web-save-bridge.test.ts	웹 시험 11, 왕복 40 통과(단위 보고)
 2026-11-09T03:55:00Z	U8	feat/pdf-web-save를 합치고 결정 번호를 0010으로 바꿨다	번호 겹침	Merge feat/pdf-web-save	웹 시험 12 통과(단위 보고)
 2026-11-09T02:40:00Z	harness	웹 시험 포트를 SEUOFFICE_WEB_PORT로 받게 하고 단위마다 포트를 나눴다	여러 작업 트리가 5300을 동시에 잡아 웹 시험이 막혔다(U3 보고)	60386bfcd	5391 포트로 8 통과
+2026-11-09T12:00:00Z	U5	docx 웹 저장은 렌더러가 만든 바이트를 브리지 saveDocx가 그대로 saveToHost로 넘기게 했다. 호스트 저장 요청은 렌더러의 닫기 저장 흐름(onCloseSaveRequest)을 재사용한다	docx 바이트는 렌더러에서 docx-engine으로 만들고 메인은 지연 그림 채우기와 암호화만 한다. 웹은 문서를 통째로 열고 암호를 거절하니 둘 다 필요 없다	apps/docs/src/web/bridge.ts, apps/web/tests/save-docs.spec.ts	웹 시험 12건, docs 시험 4095건 통과
+2026-11-09T14:00:00Z	U5	웹 보기 모드 잠금을 데스크톱 읽기 모드 켜고 끄기와 따로 두었다(App.tsx WEB_VIEW_LOCKED). file-actions.ts의 webViewMode 편집은 걷어냈다	Esc나 상태 표시줄 버튼이 readMode를 꺼 보기 모드 문서가 편집 가능해졌다. 고치기 전 빌드에서 새 시험이 contenteditable true로 실패했다	apps/docs/src/renderer/App.tsx, apps/web/tests/save-docs.spec.ts	웹 시험 13건, docs 시험 4097건 통과
+2026-11-09T04:30:00Z	U5	feat/docx-web-save를 합쳤다	단위 보고: 웹 시험 13, docs 4097 통과, 보기 모드 잠금 재현 시험이 고치기 전 실패	Merge feat/docx-web-save	합친 main 검증 대기
