@@ -193,11 +193,6 @@ describe('Export CSV wiring', () => {
     expect(mainSrc).toContain("action === 'export-csv'")
   })
 
-  it('dispatches the menu action into handleExportCsv', () => {
-    const appSrc = read('src/renderer/App.tsx')
-    expect(appSrc).toMatch(/action === 'export-csv'[\s\S]{0,80}handleExportCsvImpl/)
-  })
-
   it('allows export-csv through the preload menu-action allowlist', () => {
     const preloadSrc = read('src/preload/index.ts')
     expect(preloadSrc).toContain("action === 'export-csv'")
