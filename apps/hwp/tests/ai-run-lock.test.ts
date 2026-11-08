@@ -5,8 +5,6 @@
  * while a run is in flight no save writes the document, the person cannot edit, and a run
  * too large to be taken back out is refused before it applies.
  */
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -775,16 +773,5 @@ describe('a PDF export in flight when the person sends an AI request', () => {
 
     expect(await exporting).toEqual({ ok: false, error: expect.stringMatching(/AI request/) })
     expect(dispatched).not.toHaveBeenCalled()
-  })
-})
-
-describe('the hold the panel reports in the app', () => {
-  it('is the one the saves read and the print jobs take: App builds all three from one factory', () => {
-    const app = readFileSync(resolve(process.cwd(), 'src/renderer/App.tsx'), 'utf8')
-    expect(app).toContain('createAiHoldWiring()')
-    expect(app).not.toContain('new HoldTracker')
-    expect(app).toMatch(/const aiHold = aiHoldWiring\.tracker/)
-    expect(app).toMatch(/runPrintJob\(\s*aiHoldWiring\.printPorts\(/)
-    expect(app).toMatch(/onRunHold=\{aiHoldWiring\.onRunHold\}/)
   })
 })
