@@ -98,7 +98,8 @@ export function subscriptionConnection(
 
 /**
  * A key provider with enough filled in to send a request: a model plus a key,
- * or for a self-hosted endpoint a model plus a base URL. Subscription
+ * or for a self-hosted endpoint a model plus a base URL. A gateway needs only
+ * its URL: the model is a hint and the token comes per request. Subscription
  * providers and removed ids are never "configured".
  */
 export function isKeyProviderConfigured(
@@ -109,6 +110,7 @@ export function isKeyProviderConfigured(
   const meta = AI_PROVIDERS.find((m) => m.id === provider)
   const config = settings.providers?.[provider]
   if (!meta || !config) return false
+  if (meta.requestToken) return !!config.baseUrl?.trim()
   if (!config.model?.trim()) return false
   if (meta.needsBaseUrl) return !!config.baseUrl?.trim()
   return !!config.apiKey?.trim()

@@ -2,6 +2,7 @@ import { chatAnthropic } from './protocols/anthropic'
 import { chatGemini } from './protocols/gemini'
 import { chatOpenAiCompatible } from './protocols/openai-compatible'
 import { chatOpenAiResponses } from './protocols/openai-responses'
+import { chatGatewayComplete } from './protocols/gateway-complete'
 import { ResponseBodyTooLargeError } from './protocols/shared'
 import { chatCodexAppServer } from './codex-app-server'
 import { chatClaudeCodeCli } from './claude-code-cli'
@@ -58,6 +59,8 @@ export async function chatForProvider(
         return chatOpenAiResponses(wd, endpoint.baseUrl, config, system, user, {
           bodyExtras: endpoint.bodyExtras,
         })
+      case 'gateway-complete':
+        return chatGatewayComplete(wd, endpoint.baseUrl, config, system, user)
     }
   })
   return result.catch((e) => {

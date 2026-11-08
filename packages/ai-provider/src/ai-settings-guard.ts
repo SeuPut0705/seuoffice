@@ -189,7 +189,10 @@ export function sanitizeAiSettings(input: unknown): AiSettings | null {
   const providers = {} as AiSettings['providers']
   for (const [id, config] of Object.entries(raw.providers as Record<string, unknown>)) {
     if (!PROVIDER_IDS.includes(id as AiProviderId)) continue
-    ;(providers as Record<string, AiProviderConfig>)[id] = sanitizeProviderConfig(config)
+    const clean = sanitizeProviderConfig(config)
+    // a per-request token is never a setting (seuoffice decision 0008)
+    if (AI_PROVIDER_ADAPTERS[id as AiProviderId].meta.requestToken) clean.apiKey = ''
+    ;(providers as Record<string, AiProviderConfig>)[id] = clean
   }
   const settings: AiSettings = {
     provider: provider as AiProviderSelection,
