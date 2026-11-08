@@ -2620,6 +2620,8 @@ export function AiPanel({
       qcAbortRef.current?.abort()
       // the panel is going away mid-run (new file, remount): nobody is left to settle it
       loopRef.current?.reset()
+      // the chat goes with the panel: its MCP choices too (user MCP spec 7.6)
+      windowMcpState()?.newConversation()
       abandonRunRef.current()
     },
     [],
@@ -2673,10 +2675,10 @@ export function AiPanel({
     dismissClarify()
     qcAbortRef.current?.abort()
     loopRef.current?.reset()
-    // a reset loop never reports the run's end: take the run's edits back out here
-    abandonRun()
     // servers off in this chat and "always allow in this chat" go too (user MCP spec 7.6)
     windowMcpState()?.newConversation()
+    // a reset loop never reports the run's end: take the run's edits back out here
+    abandonRun()
     setBusy(false)
     setChat([])
     // Same as docs (#195): the restored transcript is painted above the live

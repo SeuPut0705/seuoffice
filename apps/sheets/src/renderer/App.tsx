@@ -2078,14 +2078,14 @@ export function App({
   function resetConversation(): void {
     sendGate.reset()
     agentLoopRef.current?.reset()
+    // servers off in this chat and "always allow in this chat" go too (user MCP spec 7.6)
+    windowMcpState()?.newConversation()
     // A run abandoned mid-way never reaches onDone: take its edits back out as a rejected proposal would.
     runSession
       .end()
       ?.catch((error: unknown) =>
         setMessage(error instanceof Error ? error.message : t('appUndoFailed')),
       )
-    // servers off in this chat and "always allow in this chat" go too (user MCP spec 7.6)
-    windowMcpState()?.newConversation()
     setAiRunScope(undefined)
     setAiBusy(false)
     setChat([])
