@@ -2,13 +2,24 @@
 // Workbook bytes land in the preopened /work directory; requests are the sidecar's JSON protocol.
 import wasmUrl from './generated/xlsx-wasm.wasm?url'
 import { ConsoleStdout, File, OpenFile, PreopenDirectory, WASI } from '@seuoffice/web-platform/wasi'
+import type { ResolvedWorkbookSave } from '../main/workbook-save-resolve'
+
+const PROTOCOL_VERSION = 1
 
 export type WorkerRequest =
   | { id: number; kind: 'put'; name: string; bytes: ArrayBuffer }
+  | { id: number; kind: 'drop'; name: string }
   | { id: number; kind: 'call'; request: unknown }
+  | { id: number; kind: 'save'; source: string; target: string; save: ResolvedWorkbookSave }
 
 export type WorkerReply =
   { id: number; ok: true; result?: unknown } | { id: number; ok: false; error: string }
+
+/** The result of a `save` request; the bytes are the saved package */
+export interface WorkerSaveResult {
+  bytes: Uint8Array
+  touchedEntries: readonly string[]
+}
 
 interface EngineExports {
   memory: WebAssembly.Memory
@@ -17,12 +28,19 @@ interface EngineExports {
   seu_call(pointer: number, length: number): bigint
 }
 
+interface SidecarResponse {
+  ok: boolean
+  result?: unknown
+  error?: { code: string; message: string }
+}
+
 const scope = self as unknown as {
-  postMessage(message: WorkerReply): void
+  postMessage(message: WorkerReply, transfer?: Transferable[]): void
   addEventListener(type: 'message', listener: (event: MessageEvent<WorkerRequest>) => void): void
 }
 
 const work = new Map<string, File>()
+const scratch = new Map<string, File>()
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
@@ -46,6 +64,7 @@ async function startEngine(): Promise<EngineExports> {
       ConsoleStdout.lineBuffered((line) => console.warn(line)),
       new PreopenDirectory('/work', work),
       new PreopenDirectory('/tmp', new Map()),
+      new PreopenDirectory('/save', scratch),
     ],
     { debug: false },
   )
@@ -73,6 +92,34 @@ async function call(request: unknown): Promise<unknown> {
   return JSON.parse(text)
 }
 
+let nextRequestId = 0
+
+/** One protocol command from inside the worker; rejects with the engine's message */
+async function command(name: string, fields: Record<string, unknown>): Promise<unknown> {
+  const response = (await call({
+    version: PROTOCOL_VERSION,
+    requestId: `worker-${nextRequestId++}`,
+    command: name,
+    ...fields,
+  })) as SidecarResponse
+  if (!response.ok) throw new Error(response.error?.message ?? `xlsx engine: ${name} failed`)
+  return response.result
+}
+
+async function save(message: Extract<WorkerRequest, { kind: 'save' }>): Promise<WorkerSaveResult> {
+  // the planner and its OOXML code load on the first save, not with the viewer
+  const { saveWorkbook } = await import('./xlsx-save')
+  return saveWorkbook({ command, work, scratch }, message.source, message.target, message.save)
+}
+
+function fail(id: number, error: unknown): void {
+  scope.postMessage({
+    id,
+    ok: false,
+    error: error instanceof Error ? error.message : String(error),
+  })
+}
+
 scope.addEventListener('message', (event) => {
   const message = event.data
   const { id } = message
@@ -81,13 +128,20 @@ scope.addEventListener('message', (event) => {
     scope.postMessage({ id, ok: true })
     return
   }
+  if (message.kind === 'drop') {
+    work.delete(message.name)
+    scope.postMessage({ id, ok: true })
+    return
+  }
+  if (message.kind === 'save') {
+    save(message).then(
+      (result) => scope.postMessage({ id, ok: true, result }, [result.bytes.buffer]),
+      (error: unknown) => fail(id, error),
+    )
+    return
+  }
   call(message.request).then(
     (result) => scope.postMessage({ id, ok: true, result }),
-    (error: unknown) =>
-      scope.postMessage({
-        id,
-        ok: false,
-        error: error instanceof Error ? error.message : String(error),
-      }),
+    (error: unknown) => fail(id, error),
   )
 })

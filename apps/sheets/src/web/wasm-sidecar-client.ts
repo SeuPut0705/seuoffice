@@ -4,7 +4,8 @@ import {
   type WorkbookRangeRequest,
   type WorkbookRangeResult,
 } from '../shared/desktop-api'
-import type { WorkerReply, WorkerRequest } from './xlsx-worker'
+import type { ResolvedWorkbookSave } from '../main/workbook-save-resolve'
+import type { WorkerReply, WorkerRequest, WorkerSaveResult } from './xlsx-worker'
 
 const PROTOCOL_VERSION = 1
 
@@ -87,5 +88,22 @@ export class WasmSidecarClient {
 
   async close(sessionId: string): Promise<void> {
     await this.send('close', { sessionId })
+  }
+
+  /** Forgets /work/<name>; a workbook still open in the engine must be closed first */
+  async drop(name: string): Promise<void> {
+    const reply = await this.post({ kind: 'drop', name })
+    if (!reply.ok) throw new Error(reply.error)
+  }
+
+  /** Writes /work/<target>: /work/<source> with the save's edits, untouched entries copied as they are */
+  async save(
+    source: string,
+    target: string,
+    save: ResolvedWorkbookSave,
+  ): Promise<WorkerSaveResult> {
+    const reply = await this.post({ kind: 'save', source, target, save })
+    if (!reply.ok) throw new Error(reply.error)
+    return reply.result as WorkerSaveResult
   }
 }
