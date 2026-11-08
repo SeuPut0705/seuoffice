@@ -30,7 +30,7 @@ import { MEMO_INSERT_EVENT, memoNoticeOf, type MemoNotice } from './MemoPanel'
 import { MemoSide, MemoToggle, memoPanelInitiallyOpen, rememberMemoPanelOpen } from './MemoSide'
 import { openDocumentsDroppedOn } from './editor-drop'
 import { hwpPresentationKeyOf } from './presentation-keys'
-import { runPrintJob } from './print-flow'
+import { HoldTracker, runPrintJob } from './print-flow'
 import { PrintPreview } from './preview/PrintPreview'
 import {
   RECOVERY_TICK_MS,
@@ -140,12 +140,10 @@ export default function App() {
    * save, copy or export of the document may be made meanwhile (ai/AiPanel.tsx onRunHold). A
    * stuck run is never let go of: the document is closed without saving.
    */
-  const aiHeldRef = useRef(false)
-  const aiStrandedRef = useRef(false)
-  const setAiHold = useCallback((state: HoldState) => {
-    if (state === 'stranded') aiStrandedRef.current = true
-    aiHeldRef.current = aiStrandedRef.current || state === 'held'
-  }, [])
+  const aiHoldRef = useRef<HoldTracker | null>(null)
+  if (!aiHoldRef.current) aiHoldRef.current = new HoldTracker()
+  const aiHold = aiHoldRef.current
+  const setAiHold = useCallback((state: HoldState) => aiHold.set(state), [aiHold])
   /** resolved when the save in flight finishes, so a manual save can queue behind an autosave */
   const savingDoneRef = useRef<Promise<void> | null>(null)
   /** last key, click or paste in the editor (autosave waits for a pause) */
@@ -425,12 +423,8 @@ export default function App() {
       const done = new Promise<void>((resolve) => (release = resolve))
       savingDoneRef.current = done
       try {
-        const outcome = await runSave(
-          savePortOf(editor),
-          window.hwpApi,
-          mode,
-          automatic,
-          () => aiHeldRef.current,
+        const outcome = await runSave(savePortOf(editor), window.hwpApi, mode, automatic, () =>
+          aiHold.isHeld(),
         )
         if (outcome.kind === 'export') {
           // a copy, as File > Export as PDF writes it; nothing about the document changes
@@ -468,7 +462,7 @@ export default function App() {
             if (!automatic) {
               setNotice({
                 tone: 'error',
-                key: aiStrandedRef.current ? 'aiRunStranded' : 'saveAiRunning',
+                key: aiHold.isStranded() ? 'aiRunStranded' : 'saveAiRunning',
               })
             }
             return false
@@ -502,7 +496,7 @@ export default function App() {
         if (savingDoneRef.current === done) savingDoneRef.current = null
       }
     },
-    [t, showMemoBlocked],
+    [t, showMemoBlocked, aiHold],
   )
 
   // the embedded editor drops its own Save and Print, so its File menu gets the app's: they
@@ -620,7 +614,7 @@ export default function App() {
         isDirty: async () => (await editor.commands.context()).isDirty === true,
       },
       api: window.hwpApi,
-      isBusy: () => savingRef.current || aiHeldRef.current,
+      isBusy: () => savingRef.current || aiHold.isHeld(),
       restoredUnsaved: () => restoredRef.current,
     })
     copierRef.current = copier
@@ -672,7 +666,7 @@ export default function App() {
       for (const name of pageEvents) window.removeEventListener(name, elsewhere, { capture: true })
       if (copierRef.current === copier) copierRef.current = null
     }
-  }, [phase])
+  }, [phase, aiHold])
 
   // saves asked for by the menu, the shortcut and the close prompt
   useEffect(() => {
@@ -744,7 +738,7 @@ export default function App() {
       return runPrintJob(
         {
           ready: phase === 'ready',
-          isHeld: () => aiHeldRef.current,
+          hold: aiHold,
           printing: printingRef,
           bridge: agentBridge,
           api: window.hwpApi,
@@ -754,7 +748,7 @@ export default function App() {
         path,
       )
     },
-    [phase, agentBridge],
+    [phase, agentBridge, aiHold],
   )
 
   useEffect(() => {
@@ -878,7 +872,7 @@ export default function App() {
       shouldSave: async () => {
         if (
           savingRef.current ||
-          aiHeldRef.current ||
+          aiHold.isHeld() ||
           memoBlockedRef.current ||
           printingRef.current ||
           presentingRef.current ||
@@ -894,7 +888,7 @@ export default function App() {
       save: () => save('save', true),
     })
     return () => handle.stop()
-  }, [autoSave, phase, filePath, save])
+  }, [autoSave, phase, filePath, save, aiHold])
 
   // the document as it is now, for a reader outside the editor (the MCP tool that reads
   // open documents): exported in its own format, never written anywhere
@@ -907,7 +901,7 @@ export default function App() {
           return
         }
         // an AI run's edits are not the document until the person accepts them
-        if (aiHeldRef.current) {
+        if (aiHold.isHeld()) {
           window.hwpApi.sendReadBytesResult({
             ok: false,
             error: 'an AI request is editing this document',
@@ -920,7 +914,7 @@ export default function App() {
           (error) => window.hwpApi.sendReadBytesResult({ ok: false, error: detailOf(error) }),
         )
       }),
-    [phase],
+    [phase, aiHold],
   )
 
   // keep the editor's own chrome on the app theme
@@ -1034,11 +1028,11 @@ export default function App() {
               copyNameRef.current?.replace(/\.[^.]+$/, '') || skillTemplateText(lang, 'untitled'),
             bytes: async () => {
               const editor = editorRef.current
-              if (!editor || aiHeldRef.current) return null
+              if (!editor || aiHold.isHeld()) return null
               return formatRef.current === 'hwpx' ? editor.exportHwpx() : editor.exportHwp()
             },
           }),
-    [phase, filePath, lang],
+    [phase, filePath, lang, aiHold],
   )
 
   return (

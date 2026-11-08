@@ -13,7 +13,7 @@ import { defaultAiSettings } from '@genoffice/ai-provider'
 import { AiPanel } from '../src/renderer/ai/AiPanel'
 import type { AgentBridge } from '../src/renderer/ai/agent-bridge'
 import { t } from '../src/renderer/i18n/locale'
-import { runPrintJob } from '../src/renderer/print-flow'
+import { HoldTracker, runPrintJob } from '../src/renderer/print-flow'
 import { fakeProjectFolder } from './fake-project-folder'
 import { runSave, type SaveEditorPort, type SaveOutcome } from '../src/renderer/save-flow'
 import {
@@ -41,7 +41,7 @@ useEngine()
  * The model of the panel tests: the first request edits the document through tool calls, and
  * the next one never answers, so the run stays in flight.
  */
-const transport = vi.hoisted(() => ({ streams: 0 }))
+const transport = vi.hoisted(() => ({ streams: 0, finish: false }))
 vi.mock('../src/renderer/ai/transport', () => ({
   createElectronTransport: () => ({
     stream: (_request: unknown, callbacks: AgentStreamCallbacks) => {
@@ -53,6 +53,12 @@ vi.mock('../src/renderer/ai/transport', () => ({
             name: 'insert_paragraphs',
             input: { anchor: '끝 문단입니다.', where: 'after', paragraphs: ['AI가 넣은 문단'] },
           })
+          callbacks.onDone()
+        }, 0)
+      }
+      if (transport.streams > 1 && transport.finish) {
+        setTimeout(() => {
+          callbacks.onDelta('Done.')
           callbacks.onDone()
         }, 0)
       }
@@ -68,6 +74,7 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   Element.prototype.scrollTo = () => undefined
   transport.streams = 0
+  transport.finish = false
 })
 
 afterEach(() => {
@@ -128,6 +135,7 @@ async function mountPanel(bridge: AgentBridge) {
   container = panelWindow.document.createElement('div')
   panelWindow.document.body.appendChild(container)
   const held: HoldState[] = []
+  const listeners: ((state: HoldState) => void)[] = []
   root = createRoot(container)
   await act(async () => {
     root!.render(
@@ -135,13 +143,18 @@ async function mountPanel(bridge: AgentBridge) {
         bridge,
         filePath: null,
         onCollapse: () => undefined,
-        onRunHold: (state: HoldState) => held.push(state),
+        onRunHold: (state: HoldState) => {
+          held.push(state)
+          for (const listener of listeners) listener(state)
+        },
       }),
     )
   })
   await settle()
   return {
     held,
+    /** the app's side: told of every hold change besides the log */
+    onRunHold: (listener: (state: HoldState) => void) => listeners.push(listener),
     /** a starter fills the input; the send button sends it */
     async send() {
       const box = container!
@@ -672,9 +685,14 @@ describe('a run taken out of the document and waiting on the redo stack', () => 
 describe('a PDF export in flight when the person sends an AI request', () => {
   it('is stopped by the real panel send: nothing is dispatched to the main process', async () => {
     const editor = openEditor()
+    const original = editor.bytes()
     const panel = await mountPanel(editor.bridge)
     // the app's flag, set from the panel's onRunHold as App.setAiHold sets it
-    const isHeld = () => panel.held.length > 0 && panel.held.at(-1) !== 'free'
+    // the panel's onRunHold feeds the app's own tracker, exactly as App does
+    const hold = new HoldTracker()
+    panel.onRunHold((state) => hold.set(state))
+    // the run ends by itself and is taken back out before the paused batch comes back
+    transport.finish = true
 
     // the export is under way: page 1 is drawn, page 2 waits
     const resume = Promise.withResolvers<void>()
@@ -694,7 +712,7 @@ describe('a PDF export in flight when the person sends an AI request', () => {
     const exporting = runPrintJob(
       {
         ready: true,
-        isHeld,
+        hold,
         printing: { current: false },
         bridge,
         api: { printPages: dispatched } as unknown as Pick<HwpApi, 'printPages'>,
@@ -706,7 +724,10 @@ describe('a PDF export in flight when the person sends an AI request', () => {
 
     // the person sends an AI request through the real panel; the run takes the document
     await panel.send()
-    expect(isHeld()).toBe(true)
+    expect(hold.epoch()).toBeGreaterThan(0)
+    // the run finishes and is reverted and released: the hold is off again
+    await vi.waitFor(() => expect(hold.isHeld()).toBe(false))
+    expect(same(editor.bytes(), original)).toBe(true)
     resume.resolve()
 
     expect(await exporting).toEqual({ ok: false, error: expect.stringMatching(/AI request/) })

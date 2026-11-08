@@ -89,12 +89,10 @@ describe('the pages for print', () => {
       },
     }
     const progress: number[] = []
-    const job = await gatherPrintJob(
-      bridge,
-      'pdf',
-      (done) => progress.push(done),
-      () => false,
-    )
+    const job = await gatherPrintJob(bridge, 'pdf', (done) => progress.push(done), {
+      isHeld: () => false,
+      epoch: () => 0,
+    })
     expect(progress).toEqual([2, 4, 5])
     expect(job.pages).toHaveLength(5)
     expect(job.images).toEqual([logo])
@@ -115,12 +113,7 @@ describe('the pages for print', () => {
       },
     }
     await expect(
-      gatherPrintJob(
-        bridge,
-        'print',
-        () => {},
-        () => false,
-      ),
+      gatherPrintJob(bridge, 'print', () => {}, { isHeld: () => false, epoch: () => 0 }),
     ).rejects.toThrow(/changed/)
   })
 })
@@ -149,12 +142,7 @@ describe('a print or PDF job in flight when an AI run takes the document', () =>
       },
     }
     await expect(
-      gatherPrintJob(
-        bridge,
-        'pdf',
-        () => {},
-        () => held,
-      ),
+      gatherPrintJob(bridge, 'pdf', () => {}, { isHeld: () => held, epoch: () => 0 }),
     ).rejects.toThrow(/AI request is editing/)
     // it did not go on drawing pages for the run's edits
     expect(calls).toBe(2)
@@ -165,12 +153,10 @@ describe('a print or PDF job in flight when an AI run takes the document', () =>
     const bridge: Pick<AgentBridge, 'printPages'> = {
       printPages: async (from) => plugin.printPages(from),
     }
-    const job = await gatherPrintJob(
-      bridge,
-      'pdf',
-      () => {},
-      () => false,
-    )
+    const job = await gatherPrintJob(bridge, 'pdf', () => {}, {
+      isHeld: () => false,
+      epoch: () => 0,
+    })
     expect(job.pages).toHaveLength(60)
   })
 })
