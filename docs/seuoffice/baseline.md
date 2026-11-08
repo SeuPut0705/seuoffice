@@ -41,3 +41,17 @@ sheets의 Rust 시험(`native:test`: 304 + 7개)과 `native:build`는 통과했�
 `@genoffice/markdown`의 실패는 seuoffice가 만들었다. 이 시험은 `git ls-files -- "*.md"`로 저장소의 Markdown 파일을 읽는데, git은 한글 파일 이름(`docs/seuoffice/로드맵.md` 등)을 따옴표와 8진수로 감싸 내놓는다(`core.quotepath`). 다음 커밋 `test(markdown): read repository paths unquoted`에서 시험이 `git -c core.quotepath=off`로 경로를 읽게 고친다.
 
 기준선을 위해 코드를 고치지 않았다.
+
+## GitHub 상위 CI(`CI` 워크플로)
+
+상위에서 들여온 `.github/workflows/ci.yml`을 GitHub(ubuntu, Node 22)에서 돌린 결과다. 이 저장소에서 아직 한 번도 끝까지 통과하지 못했다. 코드 시험이 실패한 적은 없고, 모두 내려받기 장애나 시간 상한 때문이다.
+
+| 실행                     | 작업   | 결과 | 까닭                                                                                                                          |
+| ------------------------ | ------ | ---- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 42474844121 첫 시도      | 둘 다  | 실패 | `npm ci`가 Electron을 GitHub 릴리스에서 받다 504                                                                              |
+| 42474844121 두 번째 시도 | `e2e`  | 실패 | `Build apps`에서 draw.io(`draw.war`)를 GitHub 릴리스에서 받다 504                                                             |
+| 42474844121 두 번째 시도 | `test` | 끊김 | 작업 시간 상한 45분. 끊기기 전까지 검사 전부와 작업 공간 28개 시험이 통과했고 실패는 0이었다. sheets `native:test`에서 끊겼다 |
+
+- 상위 이음오피스의 같은 작업은 cargo 캐시가 있어 39분쯤 걸린다(이음 run 42455263595). 이 저장소는 캐시가 녹색 실행 뒤에만 저장되어 첫 실행이 더 오래 걸린다. 그래서 `test` 상한을 60분으로 올렸다(`upstream-edits.md`).
+- 리눅스에서는 `@genoffice/ai-provider` 시험이 모두 통과했다. 위 표의 ai-provider 실패 세 건이 이 PC(macOS) 환경 때문이라는 추론과 맞는다.
+- 끊겨서 돌지 않은 작업 공간(slides, pdf, hwp, shell, markdown 등)과 `e2e`는 다음 실행에서 확인한다.
