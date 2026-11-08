@@ -53,6 +53,8 @@ export interface HistoryMarker {
 }
 
 export interface AiProposal {
+  /** The window whose run produced it: its panel is the only one that shows it */
+  owner: number
   before: HistorySnapshot
   after: HistorySnapshot
   marker: HistoryMarker
@@ -188,7 +190,7 @@ export function holdAiRun(session: Session, owner: number): boolean {
   for (const id of [...(session.aiSnapshots?.keys() ?? [])]) {
     if (!run.knownSnapshots.has(id)) session.aiSnapshots?.delete(id)
   }
-  session.aiProposal = { before: run.before, after, marker: markerOf(session) }
+  session.aiProposal = { owner, before: run.before, after, marker: markerOf(session) }
   scheduleDeckBroadcast(session)
   return true
 }
@@ -208,6 +210,16 @@ export function acceptAiProposal(session: Session): number | null {
   restoreSnapshot(session, proposal.after)
   scheduleDeckBroadcast(session)
   return registerAiSnapshot(session, proposal.before)
+}
+
+/**
+ * The window that owns a run (or the proposal it left) is gone, crashed or reloaded: nobody
+ * is left to settle it, and the deck would stay read-only for every window attached to it.
+ * The run is reverted and dropped, as a reject would.
+ */
+export function dropAiRunOf(session: Session, owner: number): void {
+  if (session.aiRun?.owner === owner) holdAiRun(session, owner)
+  if (session.aiProposal?.owner === owner) session.aiProposal = undefined
 }
 
 export function rejectAiProposal(session: Session): boolean {

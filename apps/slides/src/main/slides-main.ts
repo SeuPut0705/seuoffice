@@ -333,6 +333,7 @@ import { registerGenerateHandoffIpc } from './generate-handoff-ipc'
 import {
   AI_REVIEW_SAVE_REASON,
   assertNoAiRun,
+  dropAiRunOf,
   registerAiProposalIpc,
   trackWrite,
 } from './ai-proposal'
@@ -446,7 +447,7 @@ async function handleRendererFreeze(wc: WebContents): Promise<void> {
   }
 }
 
-function trackSlidesWebContents(wc: WebContents): void {
+export function trackSlidesWebContents(wc: WebContents): void {
   windowRefs.activeWebContents = wc
   wc.on('unresponsive', () => void handleRendererFreeze(wc))
   // The AI panel opens links via window.open; route them to the system
@@ -456,7 +457,18 @@ function trackSlidesWebContents(wc: WebContents): void {
     if (target) void shell.openExternal(target)
     return { action: 'deny' }
   })
+  // The window's AI run (and any proposal it left) has no panel to settle it once the page is
+  // gone, crashed or reloading: revert and drop it so the deck is not locked for the others
+  const dropAiRun = () => {
+    const session = sessions.get(wc.id)
+    if (session) dropAiRunOf(session, wc.id)
+  }
+  wc.on('render-process-gone', dropAiRun)
+  wc.on('did-start-navigation', (details: { isMainFrame: boolean; isSameDocument: boolean }) => {
+    if (details.isMainFrame && !details.isSameDocument) dropAiRun()
+  })
   wc.once('destroyed', () => {
+    dropAiRun()
     releaseSlidesRecovery(wc.id)
     sessions.delete(wc.id)
     pendingByWc.delete(wc.id)

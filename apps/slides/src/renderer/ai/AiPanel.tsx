@@ -1077,6 +1077,13 @@ export function AiPanel({
   const proposalRef = useRef<ProposalState>(NO_PROPOSAL)
   /** A request ended and its edits are being taken out of the deck: no new request starts until that settles */
   const holdingRef = useRef(false)
+  /** The AI run was opened in the main process (aiRunBegin) and not yet held or abandoned */
+  const runOpenRef = useRef(false)
+  /** An abandoned run is being taken out of the deck: no new request starts before that ends */
+  const abandoningRef = useRef(false)
+  const holdPromiseRef = useRef<Promise<void>>(Promise.resolve())
+  /** Latest abandonRun, for the unmount cleanup */
+  const abandonRunRef = useRef<() => void>(() => {})
   /** The post-generation QC pass of the run that just ended: it edits the deck, so the hold waits for it */
   const qcPromiseRef = useRef<Promise<void>>(Promise.resolve())
   /** Lowest rollback id the request in flight registered; those points describe held edits, not the deck */
@@ -1121,15 +1128,18 @@ export function AiPanel({
     proposalRef.current = next
     setProposalState(next)
   }
-  const proposalPending = () => holdingRef.current || proposalRef.current.kind !== 'none'
+  const proposalPending = () =>
+    holdingRef.current || abandoningRef.current || proposalRef.current.kind !== 'none'
 
   /**
    * End of a request (after its QC pass): when it changed the deck, take its edits back out and
    * show them as a proposal. A failed hold leaves the run open in the main process: the deck
    * stays read-only and nothing is saved until the window is reloaded, which reverts the run.
    */
-  const holdRunEdits = async () => {
+  const holdRunEdits = (): Promise<void> => (holdPromiseRef.current = holdRunEditsNow())
+  const holdRunEditsNow = async () => {
     holdingRef.current = true
+    runOpenRef.current = false
     try {
       await qcPromiseRef.current
       const held = await holdRun(slidesApiBackend(window.slidesApi), slidesRef.current)
@@ -1152,6 +1162,34 @@ export function AiPanel({
       holdingRef.current = false
     }
   }
+
+  /**
+   * The conversation was dropped (new chat, another chat, unmount) while a run was open: the
+   * loop will not report its end, so take the run's edits out of the deck here and discard them
+   * as a reject. A new request waits until that settled.
+   */
+  const abandonRun = () => {
+    if (!runOpenRef.current && !holdingRef.current) return
+    abandoningRef.current = true
+    const inFlight = holdPromiseRef.current
+    // a queue submission waits for its page's end, which never comes
+    const resolveQueueRun = queueRunResolverRef.current
+    queueRunResolverRef.current = null
+    resolveQueueRun?.(false)
+    void (async () => {
+      try {
+        await inFlight
+        if (runOpenRef.current) {
+          await finishHistoryBatch()
+          await holdRunEdits()
+        }
+        if (proposalRef.current.kind !== 'none') await rejectHeldEdits()
+      } finally {
+        abandoningRef.current = false
+      }
+    })()
+  }
+  abandonRunRef.current = abandonRun
 
   const acceptHeldEdits = async () => {
     const accepted = await acceptProposal(proposalRef.current, slidesApiBackend(window.slidesApi))
@@ -2243,6 +2281,7 @@ export function AiPanel({
               runRefused = true
               throw new Error('the AI run cannot be held for review')
             }
+            runOpenRef.current = true
           }
         }
         // the chosen project's context for this request (after the send gate, right before the run)
@@ -2380,6 +2419,7 @@ export function AiPanel({
       setChat((prev) => [...prev, { role: 'assistant', text: '', error: t('aiRunLocked') }])
       return
     }
+    runOpenRef.current = true
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i]!
       const ok = await runQueuePage(buildPageInstruction(group, groups.length, i + 1))
@@ -2527,7 +2567,15 @@ export function AiPanel({
   }
 
   // Abort a QC pass still running when the panel unmounts (new file / panel remount by key)
-  useEffect(() => () => qcAbortRef.current?.abort(), [])
+  useEffect(
+    () => () => {
+      qcAbortRef.current?.abort()
+      // the panel is going away mid-run (new file, remount): nobody is left to settle it
+      loopRef.current?.reset()
+      abandonRunRef.current()
+    },
+    [],
+  )
 
   const retry = () =>
     runWith(
@@ -2577,6 +2625,8 @@ export function AiPanel({
     dismissClarify()
     qcAbortRef.current?.abort()
     loopRef.current?.reset()
+    // a reset loop never reports the run's end: take the run's edits back out here
+    abandonRun()
     // servers off in this chat and "always allow in this chat" go too (user MCP spec 7.6)
     windowMcpState()?.newConversation()
     setBusy(false)

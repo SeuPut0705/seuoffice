@@ -402,6 +402,9 @@ export function registerSlidesOnlyAiIpc(): void {
       if (!session) return null
       const slide = session.opened.deck.slides[op.slideIndex]
       if (!slide) return null
+      // the run this write belongs to: if it ended during the download, its edits are held
+      // or dropped and a late write would make the proposal stale (or land in the next run)
+      const run = session.aiRun
       try {
         let buf: Buffer
         let ext: string
@@ -423,6 +426,7 @@ export function registerSlidesOnlyAiIpc(): void {
           if (!kind) return null
           ext = kind
         }
+        if (session.aiRun !== run) return null
         const baseWidthPx = session.opened.deck.size.cx / EMU_PER_PX_96
         const scale = op.fitWidthPx / baseWidthPx
         const toEmu = (px: number) => Math.round((px / scale) * EMU_PER_PX_96)
@@ -482,6 +486,8 @@ export function registerSlidesOnlyAiIpc(): void {
       const targetId =
         slide.elements.find((el) => matchesElementRef(el, String(op.sourceId)))?.id ??
         String(op.sourceId)
+      // same guard as ai:insert-image-url: no write after the run it belongs to ended
+      const run = session.aiRun
       try {
         let buf: Buffer
         let ext: string
@@ -497,6 +503,7 @@ export function registerSlidesOnlyAiIpc(): void {
           if (!kind) return null
           ext = kind
         }
+        if (session.aiRun !== run) return null
         pushHistory(session)
         const ok = replacePictureBytes(
           session.opened,
