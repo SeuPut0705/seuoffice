@@ -24,13 +24,12 @@ async function open(page: Page, file: string, edit: boolean): Promise<FrameLocat
   return frame
 }
 
-/** Type at the end of the paragraph that holds `anchor` (a click past its last character) */
+/** Type at the end of the paragraph that holds `anchor` (click into it, then the platform's line-end key) */
 async function typeAfter(frame: FrameLocator, anchor: string, text: string): Promise<void> {
-  const paragraph = frame.locator('.ProseMirror').getByText(anchor, { exact: true }).first()
-  const box = await paragraph.boundingBox()
-  if (!box) throw new Error(`${anchor} is not on screen`)
-  await paragraph.click({ position: { x: box.width - 2, y: box.height / 2 } })
-  await frame.owner().page().keyboard.type(text)
+  await frame.locator('.ProseMirror').getByText(anchor, { exact: true }).first().click()
+  const keyboard = frame.owner().page().keyboard
+  await keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowRight' : 'End')
+  await keyboard.type(text)
 }
 
 async function saved(download: Download): Promise<Block[]> {
