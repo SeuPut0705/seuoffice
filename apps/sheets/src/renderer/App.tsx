@@ -39,6 +39,7 @@ import {
   runHeadlessRendererExport,
 } from '@genoffice/electron-utils/headless-export'
 import {
+  aiBulkUndoGate,
   commitActiveCellEditor,
   installJournalSuppressionUndoFilter,
   installLoadAutoHeightGate,
@@ -66,12 +67,28 @@ import {
   type PlanContext,
 } from './plan-operations'
 import {
+  accept as acceptProposal,
+  holdRun,
+  NO_PROPOSAL,
+  rebasePlan,
+  reject as rejectProposal,
+  RunRecord,
+  type AppliedOutcome,
+  type ProposalBackend,
+  type TurnProposal,
+} from './ai/turn-proposal'
+import {
   registerCellFontAliases,
   untilCellFontsLoaded,
   workbookFontFamilies,
 } from './cell-font-fallback'
 import { isNumericIdentifierText } from './cell-warning'
-import { consumePendingUndoCarry, undoStackDepth } from './undo-carry'
+import {
+  consumePendingUndoCarry,
+  undoMark,
+  undoStepsSince,
+  UNIVER_UNDO_CAPACITY,
+} from './undo-carry'
 import { createSaveGate, shouldRunSaveTick } from './save-scheduler'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
@@ -302,8 +319,6 @@ import { createWorkbookSkill } from './ai/workbook-skill'
 import { findWorkbookCells, selectWorkbookRange } from './ai/workbook-search'
 import { traceWorkbookDependents, traceWorkbookPrecedents } from './ai/formula-audit'
 import { createFilesSkill } from './ai/files-skill'
-import { createMergeSkill } from './ai/merge-skill'
-import { mergeAttachedWorkbooks } from './merge-workbooks'
 import { createSearchSkill } from './ai/search-skill'
 import { createImageSkill } from './ai/image-skill'
 import { ATTACHMENT_IMAGE_EXTS } from '../shared/desktop-api'
@@ -1651,6 +1666,11 @@ export function App({
   const runLastTextRef = useRef('')
   /** true once any tool of the run mutated the workbook */
   const runMutatedRef = useRef(false)
+  /** Records the plans the run in flight applies, so its edits can be held as a proposal when it ends. */
+  const runRecordRef = useRef<RunRecord | null>(null)
+  /** The last run's edits, taken back out of the workbook and waiting for Accept or Reject. */
+  const [proposal, setProposal] = useState<TurnProposal>(NO_PROPOSAL)
+  const [proposalSettling, setProposalSettling] = useState(false)
 
   const agentTransportRef = useRef<ReturnType<typeof createElectronTransport> | null>(null)
   if (!agentTransportRef.current) {
@@ -1700,14 +1720,8 @@ export function App({
       skill: composeWithDrive('sheets+files', '', () => agentLoopRef.current?.messages ?? [], [
         createWorkbookSkill(sheetsSkillDeps()),
         createFilesSkill(availableAttachments),
-        createMergeSkill({
-          getAttachments: availableAttachments,
-          mergePaths: (paths) => {
-            const runtime = univerRef.current
-            if (!runtime) throw new Error(t('appMergeWorkbooksFailed'))
-            return mergeAttachedWorkbooks({ runtime, lazyWorkbookRef, setMessage }, paths)
-          },
-        }),
+        // merge_attached_workbooks (ai/merge-skill.ts) is not offered: it lands sheets in the
+        // open workbook with no undo step, so its run could not be held for review
         createSearchSkill(),
         createImageSkill(
           () => imageGenRef.current,
@@ -1846,7 +1860,7 @@ export function App({
           }
           setAiRunScope(undefined)
           projectRef.current?.finishSend()
-          void autoSaveCompletedAiRun().finally(() => setAiBusy(false))
+          void finishAiRun().finally(() => setAiBusy(false))
         },
         onError: (error) => {
           // a run its connection cannot carry on gets the blocked notice instead of the error line
@@ -1878,7 +1892,7 @@ export function App({
           })
           setAiRunScope(undefined)
           projectRef.current?.finishSend()
-          void autoSaveCompletedAiRun().finally(() => setAiBusy(false))
+          void finishAiRun().finally(() => setAiBusy(false))
         },
       },
     })
@@ -1933,6 +1947,8 @@ export function App({
     // Released in onDone/onError, which own the rest of the run teardown.
     setAiRunScope(aiScopeDismissed ? null : aiScope)
     aiApplyPromisesRef.current = []
+    runRecordRef.current = new RunRecord()
+    setProposal(NO_PROPOSAL)
     runLastTextRef.current = ''
     runMutatedRef.current = false
     streamErrorRef.current = null
@@ -2022,6 +2038,17 @@ export function App({
   function resetConversation(): void {
     sendGate.reset()
     agentLoopRef.current?.reset()
+    // A run abandoned mid-way never reaches onDone: take its edits back out as a rejected proposal would.
+    const abandoned = runRecordRef.current
+    runRecordRef.current = null
+    if (abandoned) {
+      void abandoned
+        .settle()
+        .then((run) => holdRun(proposalBackend(), run))
+        .catch((error: unknown) =>
+          setMessage(error instanceof Error ? error.message : t('appUndoFailed')),
+        )
+    }
     // servers off in this chat and "always allow in this chat" go too (user MCP spec 7.6)
     windowMcpState()?.newConversation()
     setAiRunScope(undefined)
@@ -2038,6 +2065,7 @@ export function App({
     sentAttachmentsRef.current = []
     setPreview(null)
     lazyPreviewRef.current = null
+    setProposal(NO_PROPOSAL)
   }
 
   /** "New chat": a new chat of the chosen project, or (no project) today's reset (spec 5.3.7) */
@@ -3755,7 +3783,8 @@ export function App({
     onAdmitted?: () => void,
   ): void {
     const instruction = (overrideInstruction ?? prompt).trim()
-    if (!instruction || aiBusy) return
+    // a held proposal must be accepted or rejected before the next request
+    if (!instruction || aiBusy || proposal.kind === 'pending') return
     // a retried message that carried skills sends the same skill text again
     const skillUse =
       retryIndex !== undefined &&
@@ -3976,9 +4005,16 @@ export function App({
    * — auto-apply never bypasses the "workbook changed since preview" check.
    * When apply fails, the preview card stays up as a manual fallback.
    */
-  async function autoApplySafePlan(plan: ChangePlan): Promise<ApplyOutcome> {
+  function autoApplySafePlan(plan: ChangePlan): Promise<AppliedOutcome> {
+    const applying = applyPlanLive(plan)
+    // The AI run in flight records every plan it applies, to hold them as a proposal when it ends.
+    runRecordRef.current?.track(plan, applying)
+    return applying
+  }
+
+  async function applyPlanLive(plan: ChangePlan): Promise<AppliedOutcome> {
     if (!(await commitActiveEditor())) {
-      return { ok: false, reason: t('appApplyTxFailed') }
+      return { ok: false, reason: t('appApplyTxFailed'), undoSteps: 0 }
     }
     const opCount =
       plan.cellChanges.length +
@@ -3987,12 +4023,13 @@ export function App({
       plan.structuralChanges.length
     const state = lazyWorkbookRef.current
     if (state) {
-      const undoDepthBefore = undoStackDepth(univerRef.current)
+      const undoBefore = undoMark(univerRef.current)
       // Lazy path reads lazyPreviewRef (a ref, already set by the caller) —
       // safe to invoke synchronously right after propose.
-      const apply = handleLazyApply(state).then((outcome) => {
+      const apply = handleLazyApply(state).then((outcome): AppliedOutcome => {
+        // A failed batch can still have committed part of itself (one undo step).
+        const undoSteps = undoStepsSince(univerRef.current, undoBefore)
         if (outcome.ok) {
-          const undoSteps = Math.max(0, undoStackDepth(univerRef.current) - undoDepthBefore)
           // Patch last assistant message with inline undo button.
           patchLastAssistant((entry) => ({
             ...entry,
@@ -4007,16 +4044,25 @@ export function App({
           lazyPreviewRef.current = null
           setPreview(null)
         }
-        return outcome
+        // The gate keeps the flag of the batch that just applied (ok means it began one).
+        return {
+          ...outcome,
+          undoSteps,
+          ...(outcome.ok && aiBulkUndoGate.dropped ? { undoDropped: true } : {}),
+        }
       })
       aiApplyPromisesRef.current.push(apply.then((outcome) => outcome.ok))
       return apply
     }
     // Non-lazy path: apply the passed plan directly (setPreview is async, so we
     // cannot rely on the preview state within the same tick).
+    let committedSteps = 0
     try {
       const receipt = adapterRef.current.apply(plan)
+      committedSteps = 1
       const prunedRevision = pruneEmptyDefaultSheet(plan)
+      // the empty default sheet's removal is a second adapter revision
+      if (prunedRevision !== null) committedSteps = 2
       // Row/column shifts and new sheets can't be patched cell-by-cell into
       // the existing Univer grid — rebuild the demo workbook from the snapshot.
       if (plan.structuralChanges.length > 0 || prunedRevision !== null) {
@@ -4078,15 +4124,15 @@ export function App({
         ...entry,
         autoApplied: {
           opCount: (entry.autoApplied?.opCount ?? 0) + opCount,
-          undoSteps: (entry.autoApplied?.undoSteps ?? 0) + 1,
+          undoSteps: (entry.autoApplied?.undoSteps ?? 0) + committedSteps,
         },
       }))
-      return Promise.resolve({ ok: true })
+      return { ok: true, undoSteps: committedSteps }
     } catch (error: unknown) {
       // Fall back to leaving the preview up so the user can Apply manually.
       const reason = error instanceof Error ? error.message : t('appApplyTxFailed')
       setMessage(reason)
-      return Promise.resolve({ ok: false, reason })
+      return { ok: false, reason, undoSteps: committedSteps }
     }
   }
 
@@ -4235,23 +4281,128 @@ export function App({
       return
     }
     try {
-      let receipt = adapterRef.current.undo()
-      for (let step = 1; step < count; step += 1) receipt = adapterRef.current.undo()
-      // Rebuild instead of patching: undo can remove cells and reverse
-      // structural changes, neither of which syncUniver can express.
-      loadSnapshotIntoUniver(
-        univerRef.current,
-        adapterRef.current.getSnapshot(),
-        'new-workbook',
-        'Untitled',
-      )
-      queueDemoVisualInstallForActiveSheet()
-      setRevision(receipt.revision)
-      setPreview(null)
-      setMessage(t('appUndoCommitted', { revision: receipt.revision }))
+      undoAdapterSteps(count)
       clearInlineUndo()
     } catch (error: unknown) {
       setMessage(error instanceof Error ? error.message : t('appUndoFailed'))
+    }
+  }
+
+  /** Rolls the blank workbook back by `count` adapter revisions and rebuilds the grid from it. */
+  function undoAdapterSteps(count: number): void {
+    let receipt = adapterRef.current.undo()
+    for (let step = 1; step < count; step += 1) receipt = adapterRef.current.undo()
+    // Rebuild instead of patching: undo can remove cells and reverse
+    // structural changes, neither of which syncUniver can express.
+    loadSnapshotIntoUniver(
+      univerRef.current,
+      adapterRef.current.getSnapshot(),
+      'new-workbook',
+      'Untitled',
+    )
+    queueDemoVisualInstallForActiveSheet()
+    setRevision(receipt.revision)
+    setPreview(null)
+    setMessage(t('appUndoCommitted', { revision: receipt.revision }))
+  }
+
+  /** The app's undo, staleness guard and guarded apply path, lent to the AI proposal (ai/turn-proposal.ts). */
+  function proposalBackend(): ProposalBackend {
+    return {
+      // the demo adapter keeps every revision; Univer keeps only its newest few undo items
+      undoCapacity: lazyWorkbookRef.current ? UNIVER_UNDO_CAPACITY : Number.POSITIVE_INFINITY,
+      undo: async (steps) => {
+        if (!lazyWorkbookRef.current) {
+          undoAdapterSteps(steps)
+          return
+        }
+        const api = univerRef.current?.univerAPI
+        if (!api) throw new Error(t('appUndoFailed'))
+        for (let step = 0; step < steps; step += 1) await api.undo()
+      },
+      watch: (plans) => {
+        const state = lazyWorkbookRef.current
+        const runtime = univerRef.current
+        if (!state) {
+          // the adapter's compare-and-swap revision is the demo workbook's guard
+          const revision = adapterRef.current.getSnapshot().revision
+          return () =>
+            lazyWorkbookRef.current !== null ||
+            adapterRef.current.getSnapshot().revision !== revision
+        }
+        const mark = undoMark(runtime)
+        return () => {
+          if (lazyWorkbookRef.current !== state || univerRef.current !== runtime) return true
+          // a person's edit lands on the undo stack; the first plan must still find its "before" cells
+          if (undoStepsSince(runtime, mark) > 0) return true
+          try {
+            const workbook = runtime?.univerAPI.getActiveWorkbook()
+            return !workbook || !planStillMatches(plans[0]!, lazyWorkbookCellReader(workbook))
+          } catch {
+            return true
+          }
+        }
+      },
+      apply: (plan) => {
+        const state = lazyWorkbookRef.current
+        if (!state) {
+          return autoApplySafePlan(rebasePlan(plan, adapterRef.current.getSnapshot().revision))
+        }
+        const sheetId = univerRef.current?.univerAPI
+          .getActiveWorkbook()
+          ?.getActiveSheet()
+          ?.getSheetId()
+        if (!sheetId)
+          return Promise.resolve({ ok: false, reason: t('appApplyTxFailed'), undoSteps: 0 })
+        lazyPreviewRef.current = { sessionId: state.file.sessionId, sheetId, plan }
+        return autoApplySafePlan(plan)
+      },
+    }
+  }
+
+  /**
+   * Run end: waits for the plans still applying, then takes the run's edits back
+   * out of the workbook and holds them as a proposal. A run that edited nothing
+   * (or whose edits no undo can take back) does the run's auto-save as before.
+   */
+  async function finishAiRun(): Promise<void> {
+    const record = runRecordRef.current
+    runRecordRef.current = null
+    try {
+      const held = record ? await holdRun(proposalBackend(), await record.settle()) : NO_PROPOSAL
+      if (held.kind === 'pending') {
+        // the edits are out of the workbook until accepted: nothing to save, no inline Undo for them
+        aiApplyPromisesRef.current = []
+        patchLastAssistant(({ autoApplied: _autoApplied, ...entry }) => entry)
+        setProposal(held)
+        return
+      }
+      // the edits stayed in the workbook: say so on the card, and save them as before
+      if (held.kind === 'unheld') setProposal(held)
+    } catch (error: unknown) {
+      // the workbook may hold part of the run: keep the inline Undo and do not save it
+      setMessage(error instanceof Error ? error.message : t('appUndoFailed'))
+      return
+    }
+    await autoSaveCompletedAiRun()
+  }
+
+  async function handleAcceptProposal(): Promise<void> {
+    if (proposal.kind !== 'pending' || proposalSettling) return
+    setProposalSettling(true)
+    try {
+      const next = await acceptProposal(proposalBackend(), proposal)
+      setProposal(next)
+      if (next.kind === 'none') {
+        void autoSaveCompletedAiRun()
+      } else {
+        // plans applied before the refusal were rolled back: no Undo to offer
+        patchLastAssistant(({ autoApplied: _autoApplied, ...entry }) => entry)
+      }
+    } catch (error: unknown) {
+      setMessage(error instanceof Error ? error.message : t('appApplyTxFailed'))
+    } finally {
+      setProposalSettling(false)
     }
   }
 
@@ -4842,6 +4993,8 @@ export function App({
     setRevision(0)
     setPreview(null)
     lazyPreviewRef.current = null
+    // a proposal of the previous workbook cannot apply to this one
+    setProposal(NO_PROPOSAL)
     setPendingEdits(0)
     // Slicers/timelines belong to the previous workbook's session only;
     // switching files invalidates them.
@@ -5512,6 +5665,12 @@ export function App({
         openingWorkbook={openingWorkbook}
         prompt={prompt}
         preview={preview}
+        aiProposal={{
+          proposal,
+          settling: proposalSettling,
+          onAccept: () => void handleAcceptProposal(),
+          onReject: () => setProposal(rejectProposal()),
+        }}
         sheetHasContent={sheetHasContent}
         pageLayout={activePageLayout}
         printHost={printHost}

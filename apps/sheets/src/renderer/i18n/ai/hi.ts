@@ -31,6 +31,14 @@ export const hi = {
   aiUndo: 'पूर्ववत करें',
   aiPreviewAria: 'बदलाव पूर्वावलोकन',
   aiProposedChanges: 'प्रस्तावित बदलाव',
+  aiProposalAccept: 'Accept',
+  aiProposalReject: 'Reject',
+  aiProposalDismiss: 'Dismiss',
+  aiProposalPending: 'Accept or reject the changes above before sending another request.',
+  aiProposalStale:
+    'The workbook changed after these edits were proposed, so they were not applied. Ask again to redo them.',
+  aiProposalNotHeld:
+    'This run was too large to hold as a proposal, so its changes went into the workbook as they are. Undo may not be able to revert all of them.',
   aiChangeStructure: 'संरचना',
   aiChangeFormat: 'स्वरूप',
   aiChangeSheet: 'शीट',

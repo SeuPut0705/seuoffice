@@ -30,6 +30,14 @@ export const ko = {
   aiUndo: '실행 취소',
   aiPreviewAria: '변경 미리 보기',
   aiProposedChanges: '변경 제안',
+  aiProposalAccept: '받아들이기',
+  aiProposalReject: '거부',
+  aiProposalDismiss: '닫기',
+  aiProposalPending: '위 변경을 받아들이거나 거부한 뒤에 다음 요청을 보낼 수 있습니다.',
+  aiProposalStale:
+    '제안한 뒤 통합 문서가 바뀌어 이 변경은 적용하지 않았습니다. 다시 요청해 주세요.',
+  aiProposalNotHeld:
+    '이 실행은 변경이 너무 커서 제안으로 붙잡지 못하고 문서에 그대로 들어갔습니다. 실행 취소로 모두 되돌리지 못할 수 있습니다.',
   aiChangeStructure: '구조',
   aiChangeFormat: '서식',
   aiChangeSheet: '시트',

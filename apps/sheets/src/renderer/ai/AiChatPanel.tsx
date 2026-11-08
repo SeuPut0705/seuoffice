@@ -52,6 +52,7 @@ import type {
 import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import type { AiBlockedRun } from './subscription-state'
 import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import { proposalPreview, type TurnProposal } from './turn-proposal'
 import { ATTACHMENT_IMAGE_EXTS, type AttachmentMeta } from '../../shared/desktop-api'
 import { useI18n, type TFunc } from '../i18n/locale'
 import { createFileNav, Markdown } from '@genoffice/ui'
@@ -332,6 +333,15 @@ const NO_METERED_ACCEPTED: Pick<AiSettings, 'meteredAccepted'> = {}
 /** an older blocked reply offers no connection to continue on */
 const NO_STATUSES: AiSubscriptionStatuses = {}
 
+/** The held AI proposal of the last run: its change card and the person's two answers. */
+export interface AiProposalPanel {
+  readonly proposal: TurnProposal
+  /** an Accept is re-applying the plans: both buttons wait */
+  readonly settling: boolean
+  readonly onAccept: () => void
+  readonly onReject: () => void
+}
+
 export function AiChatPanel({
   isOpen,
   focusRequest = 0,
@@ -353,6 +363,7 @@ export function AiChatPanel({
   onSendQueued,
   prompt,
   preview,
+  proposalPanel,
   aiBusy,
   sessionUsage,
   subscription,
@@ -401,6 +412,8 @@ export function AiChatPanel({
   readonly onRemoveAttachment: (path: string) => void
   readonly prompt: string
   readonly preview: ChangePlan | null
+  /** a run's edits held for review; absent: none are held */
+  readonly proposalPanel?: AiProposalPanel | undefined
   readonly aiBusy: boolean
   /** tokens billed across the session, shown beside the composer */
   readonly sessionUsage?: AiTokenUsageView | undefined
@@ -593,7 +606,7 @@ export function AiChatPanel({
     if (stickToBottomRef.current) {
       chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight })
     }
-  }, [chat, preview])
+  }, [chat, preview, proposalPanel?.proposal])
 
   const resizeCleanupRef = useRef<(() => void) | null>(null)
   useEffect(() => () => resizeCleanupRef.current?.(), [])
@@ -661,7 +674,9 @@ export function AiChatPanel({
     )
   }
 
-  const canSend = prompt.trim().length > 0 && !aiBusy
+  const proposal = proposalPanel?.proposal
+  // a held proposal blocks the next request until the person answers it
+  const canSend = prompt.trim().length > 0 && !aiBusy && proposal?.kind !== 'pending'
 
   /** [B12](sheetnav://B12) links in answers jump the grid to the cited range */
   const citationNav = { scheme: SHEET_NAV_SCHEME, onNavigate: onCitation }
@@ -914,52 +929,47 @@ export function AiChatPanel({
         {/* an MCP tool waiting for the person's yes (user MCP spec 7.4) */}
         <McpPermissionCard lang={lang} />
 
-        {preview && (
-          <section className="preview ai-preview-card" aria-label={t('aiPreviewAria')}>
-            <h3>{t('aiProposedChanges')}</h3>
-            {preview.structuralChanges.map((change, index) => (
-              <div className="change" key={`structural-${index}`}>
-                <strong>{t('aiChangeStructure')}</strong>
-                <span>{change.label}</span>
-              </div>
-            ))}
-            {preview.formatChanges.map((change, index) => (
-              <div className="change" key={`format-${index}`}>
-                <strong>{t('aiChangeFormat')}</strong>
-                <span>{change.label}</span>
-              </div>
-            ))}
-            {preview.cellChanges.slice(0, MAX_PREVIEW_CELL_ROWS).map((change) => (
-              <div className="change" key={`${change.sheetId}-${change.address}`}>
-                <strong>{change.address}</strong>
-                <span>
-                  {formatCell(change.before, t)} → {formatCell(change.after, t)}
-                </span>
-              </div>
-            ))}
-            {preview.cellChanges.length > MAX_PREVIEW_CELL_ROWS && (
+        {preview && <PlanPreview plan={preview} t={t} />}
+
+        {proposalPanel && (proposal?.kind === 'pending' || proposal?.kind === 'stale') && (
+          <PlanPreview plan={proposalPreview(proposal.plans)} t={t}>
+            {proposal.kind === 'stale' && (
               <div className="change">
-                <strong>…</strong>
-                <span>
-                  {t('aiMoreCells', { count: preview.cellChanges.length - MAX_PREVIEW_CELL_ROWS })}
-                </span>
+                <strong>⚠</strong>
+                <span>{t('aiProposalStale')}</span>
               </div>
             )}
-            {preview.sheetRenames.map((rename) => (
-              <div className="change" key={rename.sheetId}>
-                <strong>{t('aiChangeSheet')}</strong>
-                <span>
-                  {rename.before} → {rename.after}
-                </span>
-              </div>
-            ))}
-            {preview.warnings.map((warning) => (
-              <div className="change" key={warning}>
-                <strong>⚠</strong>
-                <span>{warning}</span>
-              </div>
-            ))}
-          </section>
+            <div className="preview-actions">
+              {proposal.kind === 'pending' ? (
+                <>
+                  <button
+                    className="ai-undo-btn"
+                    disabled={proposalPanel.settling}
+                    onClick={proposalPanel.onReject}
+                  >
+                    {t('aiProposalReject')}
+                  </button>
+                  <button
+                    className="ai-undo-btn"
+                    disabled={proposalPanel.settling}
+                    onClick={proposalPanel.onAccept}
+                  >
+                    {t('aiProposalAccept')}
+                  </button>
+                </>
+              ) : (
+                <button className="ai-undo-btn" onClick={proposalPanel.onReject}>
+                  {t('aiProposalDismiss')}
+                </button>
+              )}
+            </div>
+          </PlanPreview>
+        )}
+
+        {proposal?.kind === 'unheld' && (
+          <div className="ai-auto-applied">
+            <span className="ai-auto-applied-text">{t('aiProposalNotHeld')}</span>
+          </div>
         )}
 
         {/* no provider can run: how to connect, in place of an error */}
@@ -994,6 +1004,9 @@ export function AiChatPanel({
           )}
         {project?.hint}
         {project?.notices}
+        {proposal?.kind === 'pending' && (
+          <div className="ai-attach-notice">{t('aiProposalPending')}</div>
+        )}
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         {/* Above the input card, not inside its footer: the reset time is long and
             would otherwise squeeze the attach/send buttons in a narrow panel. */}
@@ -1177,6 +1190,66 @@ function formatCell(
   if (cell.formula) return cell.formula
   if (cell.value === null) return t('aiCellEmpty')
   return String(cell.value)
+}
+
+/** The cell diff, formats, renames and structural changes of one ChangePlan; `children` follow it. */
+function PlanPreview({
+  plan,
+  t,
+  children,
+}: {
+  readonly plan: ChangePlan
+  readonly t: TFunc
+  readonly children?: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <section className="preview ai-preview-card" aria-label={t('aiPreviewAria')}>
+      <h3>{t('aiProposedChanges')}</h3>
+      {plan.structuralChanges.map((change, index) => (
+        <div className="change" key={`structural-${index}`}>
+          <strong>{t('aiChangeStructure')}</strong>
+          <span>{change.label}</span>
+        </div>
+      ))}
+      {plan.formatChanges.map((change, index) => (
+        <div className="change" key={`format-${index}`}>
+          <strong>{t('aiChangeFormat')}</strong>
+          <span>{change.label}</span>
+        </div>
+      ))}
+      {plan.cellChanges.slice(0, MAX_PREVIEW_CELL_ROWS).map((change) => (
+        <div className="change" key={`${change.sheetId}-${change.address}`}>
+          <strong>{change.address}</strong>
+          <span>
+            {formatCell(change.before, t)} → {formatCell(change.after, t)}
+          </span>
+        </div>
+      ))}
+      {plan.cellChanges.length > MAX_PREVIEW_CELL_ROWS && (
+        <div className="change">
+          <strong>…</strong>
+          <span>
+            {t('aiMoreCells', { count: plan.cellChanges.length - MAX_PREVIEW_CELL_ROWS })}
+          </span>
+        </div>
+      )}
+      {plan.sheetRenames.map((rename) => (
+        <div className="change" key={rename.sheetId}>
+          <strong>{t('aiChangeSheet')}</strong>
+          <span>
+            {rename.before} → {rename.after}
+          </span>
+        </div>
+      ))}
+      {plan.warnings.map((warning) => (
+        <div className="change" key={warning}>
+          <strong>⚠</strong>
+          <span>{warning}</span>
+        </div>
+      ))}
+      {children}
+    </section>
+  )
 }
 
 function Svg({ size, children }: { size: number; children: React.ReactNode }): React.JSX.Element {

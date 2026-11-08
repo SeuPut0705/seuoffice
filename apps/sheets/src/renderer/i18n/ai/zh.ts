@@ -29,6 +29,14 @@ export const zh = {
   aiUndo: '撤销',
   aiPreviewAria: '变更预览',
   aiProposedChanges: '拟定变更',
+  aiProposalAccept: 'Accept',
+  aiProposalReject: 'Reject',
+  aiProposalDismiss: 'Dismiss',
+  aiProposalPending: 'Accept or reject the changes above before sending another request.',
+  aiProposalStale:
+    'The workbook changed after these edits were proposed, so they were not applied. Ask again to redo them.',
+  aiProposalNotHeld:
+    'This run was too large to hold as a proposal, so its changes went into the workbook as they are. Undo may not be able to revert all of them.',
   aiChangeStructure: '结构',
   aiChangeFormat: '格式',
   aiChangeSheet: '工作表',
