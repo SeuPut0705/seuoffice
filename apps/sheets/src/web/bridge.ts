@@ -322,6 +322,8 @@ const desktopApi: WebDesktopApi = {
     queuedOpened = openQueuedDocument()
     return queuedOpened
   },
+  // the web open path runs no delimited import in the page: no bar, nothing to stop
+  onImportProgress: unsubscribe,
   readWorkbookRange: async (request) => {
     const result = await engine().readRange(request)
     reportOpened()
