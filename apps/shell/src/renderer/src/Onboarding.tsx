@@ -138,7 +138,10 @@ export function Onboarding({
   useEffect(() => {
     if (!offersDefaultApp || !appStatus?.manualOnly) return
     const refresh = () => {
-      void window.aiOffice.getDefaultAppStatus?.().then(setAppStatus)
+      void window.aiOffice
+        .getDefaultAppStatus?.()
+        .then(setAppStatus)
+        .catch(() => {})
     }
     window.addEventListener('focus', refresh)
     return () => window.removeEventListener('focus', refresh)
