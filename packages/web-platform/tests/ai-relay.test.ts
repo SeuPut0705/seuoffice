@@ -8,6 +8,7 @@ const HOST = location.origin
 let host: Window
 let sent: Record<string, unknown>[]
 let relay: typeof RelayModule
+let channel: typeof ChannelModule
 
 function fromHost(data: Record<string, unknown>, origin = HOST): void {
   window.dispatchEvent(
@@ -23,7 +24,7 @@ function fromHost(data: Record<string, unknown>, origin = HOST): void {
 async function openPage(ai: boolean): Promise<void> {
   // the channel keeps one host per page load, so each test loads fresh copies
   vi.resetModules()
-  const channel: typeof ChannelModule = await import('../src/embed-channel')
+  channel = await import('../src/embed-channel')
   relay = await import('../src/ai-relay')
   const opening = channel.receiveOpen()
   fromHost({ type: 'open', fileName: 'memo.docx', bytes: new ArrayBuffer(1), ai })
@@ -318,5 +319,21 @@ describe('AI through the embed host', () => {
       data: new TextEncoder().encode(sse({ choices: [{ index: 0, delta: { content: 'late' } }] })),
     })
     expect(chunks).toEqual(settled)
+  })
+})
+
+describe('the channel transport', () => {
+  it('drops bytes not read yet when the request aborts after the host finished sending', async () => {
+    await openPage(true)
+    const controller = new AbortController()
+    const responding = channel.requestAiFromHost({}, controller.signal)
+    const { requestId } = await aiRequest()
+    fromHost({ type: 'ai_chunk', requestId, data: new TextEncoder().encode(GATEWAY_SSE) })
+    fromHost({ type: 'ai_end', requestId })
+    const response = await responding
+    controller.abort()
+    await expect(response.text()).rejects.toMatchObject({ name: 'AbortError' })
+    // the host already finished: there is nothing for it to stop
+    expect(sent.some((m) => m.type === 'ai_cancel')).toBe(false)
   })
 })
