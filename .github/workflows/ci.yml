@@ -248,11 +248,24 @@ jobs:
       # Pixel baselines (docs-visual.spec.ts) depend on the font stack: pin
       # Calibri/Cambria metric-compatible faces and CJK glyphs so renders are
       # reproducible across runner images and contributor machines.
+      # seuoffice: the three packages are 62 MB, and on a slow mirror the download
+      # alone took 8 min (133 kB/s, run 42696128307), so they are kept in a cache
+      # and installed from it. Raise v1 to take newer packages from the archive.
+      - name: Cache document font packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/font-debs
+          key: e2e-font-debs-ubuntu-22.04-v1
+
       - name: Install document fonts (visual baselines)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            fonts-crosextra-carlito fonts-crosextra-caladea fonts-noto-cjk
+          if ! ls ~/font-debs/*.deb >/dev/null 2>&1; then
+            sudo apt-get update
+            mkdir -p ~/font-debs
+            (cd ~/font-debs && apt-get download \
+              fonts-crosextra-carlito fonts-crosextra-caladea fonts-noto-cjk)
+          fi
+          sudo dpkg -i ~/font-debs/*.deb
 
       # CSS layout tests use standalone Chromium in addition to Electron.
       # Keep the pinned document font stack unchanged: --with-deps adds fonts
@@ -262,7 +275,8 @@ jobs:
         run: npx playwright install chromium
 
       - name: Markdown browser tests
-        if: matrix.shard == 1
+        # seuoffice: on the shard whose Electron share is shortest
+        if: matrix.shard == 4
         run: npx playwright test --config apps/markdown/playwright.config.ts
 
       # Electron needs a display server on Linux runners. DEBUG=pw:browser
