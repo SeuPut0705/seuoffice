@@ -35,20 +35,19 @@ distributed in the python-docx repository (ref/xsd), with one marked local
 amendment (see tools/ooxml-validate/README.md). They are used only by tests
 and development tooling and are not shipped in the application.
 
-IeumOffice brand artwork
+SeuOffice brand artwork
 
-The IeumOffice app icon, logo lockup and AI button mark are original
-compositions for this project: the sources in apps/shell/build/brand, the icon
-and logo files tools/gen-brand-assets.mjs derives from them, and
-packages/ui/src/AiMark.tsx. Their geometry is adapted from the Lucide icon set
-(https://lucide.dev), icons `circle`, `square`, `link` and `message-square`.
+The SeuOffice app icon and logo lockup are original compositions for this
+project: the sources in apps/shell/build/brand and the icon and logo files
+tools/gen-brand-assets.mjs derives from them. The AI button mark
+(apps/shell/build/brand/ai-mark.svg, packages/ui/src/AiMark.tsx) is an original
+composition whose geometry is adapted from the Lucide icon set
+(https://lucide.dev), icon `message-square`.
 
 Lucide is distributed under the ISC License, Copyright (c) Lucide Icons and
-Contributors. The `circle`, `square` and `link` icons are derived from the
-Feather project and are distributed under the MIT License, Copyright (c)
-2013-present Cole Bemis. Both licenses permit use, modification and
-redistribution provided their copyright and permission notices are kept; the
-full texts are at https://github.com/lucide-icons/lucide/blob/main/LICENSE.
+Contributors. The ISC License permits use, modification and redistribution
+provided its copyright and permission notice is kept; the full text is at
+https://github.com/lucide-icons/lucide/blob/main/LICENSE.
 
 The wordmark in the logo lockup is set in Roboto Bold 2.137, Copyright 2011
 Google Inc., licensed under the Apache License, Version 2.0, and converted to

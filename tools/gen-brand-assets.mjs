@@ -1,10 +1,10 @@
 /**
- * Regenerates every file derived from the IeumOffice brand sources in
+ * Regenerates every file derived from the SeuOffice brand sources in
  * apps/shell/build/brand/:
  *
  *   app-icon.svg        -> app / installer icons (png, ico, icns, Linux size
  *                          set) and the in-app app-icon.png copies
- *   app-icon-small.svg  -> the same icon redrawn bolder for slots of 32 px and
+ *   app-icon-small.svg  -> the same S redrawn bolder for slots of 32 px and
  *                          below (optional: without it app-icon.svg is used)
  *   logo-lockup.svg     -> the shell sidebar logo (copied verbatim)
  *

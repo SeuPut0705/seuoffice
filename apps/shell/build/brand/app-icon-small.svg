@@ -1,30 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  IeumOffice app icon, small optical size (16-32 px slots).
+  SeuOffice app icon, small optical size (16-32 px slots).
 
-  Same mark as app-icon.svg, redrawn bolder on a 64-unit grid (one pixel at
-  16 px, two at 32 px) so every stroke edge lands on a pixel boundary and the
-  ring and the rounded square stay distinct in a taskbar or title bar. The
-  over/under gaps are dropped because they would be thinner than a pixel.
+  Same S as app-icon.svg with a bolder stroke (150 instead of 116 units) so the
+  two curves stay solid at one or two pixels per stroke edge in a taskbar or
+  title bar.
 
   Used by tools/gen-brand-assets.mjs for canvases of 32 px and below.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs>
-    <clipPath id="ieum-upper"><rect width="1024" height="512"/></clipPath>
-    <clipPath id="ieum-lower"><rect y="512" width="1024" height="512"/></clipPath>
-    <mask id="ieum-under-ring" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
-      <rect width="1024" height="1024" fill="#fff"/>
-      <circle cx="384" cy="512" r="192" fill="none" stroke="#000" stroke-width="128" clip-path="url(#ieum-upper)"/>
-    </mask>
-    <mask id="ieum-under-square" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
-      <rect width="1024" height="1024" fill="#fff"/>
-      <rect x="448" y="320" width="384" height="384" rx="100" fill="none" stroke="#000" stroke-width="128" clip-path="url(#ieum-lower)"/>
-    </mask>
-  </defs>
   <rect width="1024" height="1024" rx="230" fill="#4338CA"/>
-  <g fill="none" stroke-width="128">
-    <rect x="448" y="320" width="384" height="384" rx="100" stroke="#FFB020" mask="url(#ieum-under-ring)"/>
-    <circle cx="384" cy="512" r="192" stroke="#FFFFFF" mask="url(#ieum-under-square)"/>
+  <g fill="none" stroke-width="150" stroke-linecap="round">
+    <path d="M 668 352 A 156 146 0 1 0 512 512" stroke="#FFFFFF"/>
+    <path d="M 512 512 A 156 146 0 1 1 356 672" stroke="#FFB020"/>
   </g>
 </svg>
