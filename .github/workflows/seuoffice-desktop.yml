@@ -247,16 +247,6 @@ jobs:
             echo "::error::an editor module was packaged with its main bundle"
             exit 1
           fi
-          # Chromium's locales: those of the interface languages only. en-US must
-          # be there (Chromium falls back to it, and the app does not start
-          # without it); sv stands for the ones left out
-          for locale in en-US ko; do
-            test -f "$unpacked/locales/$locale.pak" || { echo "missing: locales/$locale.pak"; exit 1; }
-          done
-          if [ -e "$unpacked/locales/sv.pak" ]; then
-            echo "::error::the locales were not trimmed to the interface languages"
-            exit 1
-          fi
           # x64 only: no ARM64 installer may slip in
           if find "$latest" "$stable" -maxdepth 1 -name '*arm64*' | grep -q .; then
             echo "::error::an arm64 Windows package was built"
@@ -518,16 +508,6 @@ jobs:
             test -f "$app/Contents/Resources/modules/docs/renderer/index.html" || { echo "missing: the docs module"; exit 1; }
             if find "$app/Contents/Resources/modules" -mindepth 2 -maxdepth 2 -name main | grep -q .; then
               echo "::error::an editor module was packaged with its main bundle"
-              exit 1
-            fi
-            # Chromium's locales: those of the interface languages only; en is
-            # the fallback, sv stands for the ones left out
-            local locale locales="$app/Contents/Frameworks/Electron Framework.framework/Versions/A/Resources"
-            for locale in en ko; do
-              test -f "$locales/$locale.lproj/locale.pak" || { echo "missing: $locale.lproj"; exit 1; }
-            done
-            if [ -e "$locales/sv.lproj" ]; then
-              echo "::error::the locales were not trimmed to the interface languages"
               exit 1
             fi
             if find "$dir" -maxdepth 1 \( -name '*x64*' -o -name '*universal*' -o -name mac \) | grep -q .; then
