@@ -1,7 +1,12 @@
+import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { openPptx } from '@genoffice/pptx-engine'
 import { expect, test, type FrameLocator, type Page } from '@playwright/test'
 import type * as Embed from '@seuoffice/embed'
+import initRhwp, { HwpDocument } from '@rhwp/core'
 import { strFromU8, unzipSync } from 'fflate'
 import { build, type Rollup } from 'vite'
 
@@ -95,6 +100,8 @@ interface HostState {
   asked: number
   /** the bytes of each document the page saved to the host */
   saves: number[][]
+  /** the last unsaved-changes flag the page reported */
+  dirty: boolean | undefined
 }
 
 /** The host page's globals: the embed script, the open document and what the host saw */
@@ -102,6 +109,8 @@ type HostWindow = Window & {
   SeuofficeEmbed: typeof Embed
   hostState: HostState
   embedded: Embed.EmbeddedDocument
+  /** with `stallSaves`: let the held saves, and every later one, be stored */
+  releaseSaves: () => void
 }
 
 /** Stands in a canned reply for the active sheet's id, which the app names in the prompt */
@@ -111,11 +120,12 @@ const SHEET_ID = '__SHEET_ID__'
  * Open the host page and embed `file`. `replies` are the gateway's answers in
  * order (the last one repeats); `'hang'` answers one text piece and then
  * waits until the request is aborted. Without `replies` the host offers no AI.
+ * With `stallSaves` the host holds every save until the page calls `releaseSaves()`.
  */
 async function openHost(
   page: Page,
   file: string,
-  options: { mode: 'view' | 'edit'; replies?: string[] },
+  options: { mode: 'view' | 'edit'; replies?: string[]; stallSaves?: boolean },
 ): Promise<FrameLocator> {
   await page.route('**/ai-host.html', (route) =>
     route.fulfill({
@@ -128,11 +138,16 @@ async function openHost(
   const bytes = [...(await readFile(file))]
   const fileName = file.slice(file.lastIndexOf('/') + 1)
   await page.evaluate(
-    async ({ bytes, fileName, mode, replies, sheetId }) => {
+    async ({ bytes, fileName, mode, replies, sheetId, stallSaves }) => {
       // the globals this page's scripts put there
       const host = window as unknown as HostWindow
       const embed = host.SeuofficeEmbed
-      const state: HostState = { bodies: [], aborted: 0, asked: 0, saves: [] }
+      const state: HostState = { bodies: [], aborted: 0, asked: 0, saves: [], dirty: undefined }
+      let release = (): void => {}
+      const saveGate = stallSaves
+        ? new Promise<void>((done) => (release = done))
+        : Promise.resolve()
+      host.releaseSaves = () => release()
       window.addEventListener('message', (event: MessageEvent<{ type?: string }>) => {
         if (event.data?.type === 'ai_request') state.asked++
       })
@@ -170,14 +185,27 @@ async function openHost(
           ? embed.openDocument(viewer, {
               ...base,
               mode,
-              onSave: async ({ bytes }) => void state.saves.push([...bytes]),
+              onSave: async ({ bytes }) => {
+                await saveGate
+                state.saves.push([...bytes])
+              },
+              onDirtyChange: (dirty) => {
+                state.dirty = dirty
+              },
               ...(ai ? { ai } : {}),
             })
           : embed.openDocument(viewer, { ...base, ...(ai ? { ai } : {}) })
       host.embedded = doc
       await doc.opened
     },
-    { bytes, fileName, mode: options.mode, replies: options.replies, sheetId: SHEET_ID },
+    {
+      bytes,
+      fileName,
+      mode: options.mode,
+      replies: options.replies,
+      sheetId: SHEET_ID,
+      stallSaves: options.stallSaves === true,
+    },
   )
   return page.frameLocator('#viewer iframe')
 }
@@ -298,15 +326,305 @@ test('sheets: the AI edit is held as a proposal until it is accepted', async ({ 
   expect(savedHasAiText(saves[0]!)).toBe(true)
 })
 
-// slides cannot hold a web AI run for review yet (no deck history on the web), so even a host
-// that offers AI leaves its panel unconnected rather than failing every request
-test('slides: AI stays unconnected on the web even when the host offers it', async ({ page }) => {
-  const frame = await openHost(page, PPTX, { mode: 'edit', replies: [textReply('안녕하세요')] })
+/** The text bodies of a saved deck's first slide, read back with the engine the app saves with */
+async function savedFirstSlide(bytes: number[]): Promise<string[]> {
+  const opened = await openPptx(new Uint8Array(bytes))
+  return opened.deck.slides[0]!.elements.flatMap((el) =>
+    'text' in el && el.text
+      ? [el.text.paragraphs.map((p) => p.runs.map((r) => r.text).join('')).join('\n')]
+      : [],
+  )
+}
+
+/** What these tests use of the slides page's bridge (pptx-render RenderSlide, shared/ipc.ts) */
+type SlidesPage = Window & {
+  slidesApi: {
+    getRenderSlides(): Promise<Array<{
+      nodes: Array<{ text?: { lines: Array<{ runs: Array<{ text: string }> }> } }>
+    }> | null>
+    editText(op: {
+      slideIndex: number
+      sourceId: string
+      paragraphs: Array<{ runs: Array<{ text: string }> }>
+    }): Promise<unknown>
+    beginHistoryBatch(): Promise<boolean>
+    endHistoryBatch(): Promise<number | null>
+    undo(): Promise<unknown>
+  }
+}
+
+/** The first slide's text as the page draws it now */
+async function shownFirstSlide(page: Page): Promise<string[]> {
+  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!
+  return frame.evaluate(async () => {
+    const slides = await (window as unknown as SlidesPage).slidesApi.getRenderSlides()
+    return (slides?.[0]?.nodes ?? []).flatMap((node) =>
+      node.text ? [node.text.lines.map((l) => l.runs.map((r) => r.text).join('')).join('\n')] : [],
+    )
+  })
+}
+
+/** An `apply_ops` call that rewrites slide 1's subtitle */
+const setSubtitle = (text: string): string =>
+  toolReply('부제를 바꾸겠습니다.', 'apply_ops', {
+    ops: [
+      {
+        op: 'setText',
+        target: { slide: 0, el: 'sp_1' },
+        paragraphs: [{ runs: [{ text }] }],
+      },
+    ],
+  })
+
+async function askSlides(frame: FrameLocator, prompt: string): Promise<void> {
   await expect(frame.locator('.thumb')).toHaveCount(5, { timeout: 30_000 })
   const input = frame.locator('.ai-input-box textarea')
   if (!(await input.isVisible())) await frame.locator('.stage-ai-btn').click()
-  await input.fill('제목을 바꿔 줘')
+  await input.fill(prompt)
   await input.press('Enter')
-  await expect(frame.getByText('AI를 쓰려면 먼저 연결하세요')).toBeVisible()
-  expect((await hostState(page)).asked).toBe(0)
+}
+
+/** The host's save: 'saved' or 'refused' */
+const hostSave = (page: Page): Promise<string> =>
+  page.evaluate(() =>
+    (window as unknown as HostWindow).embedded.save().then(
+      () => 'saved',
+      () => 'refused',
+    ),
+  )
+
+test('slides: the AI edit is held as a proposal until it is accepted, and a reject leaves the deck', async ({
+  page,
+}) => {
+  const frame = await openHost(page, PPTX, {
+    mode: 'edit',
+    // run 1 edits, then its next turn waits until stopped; run 2 edits and finishes
+    replies: [setSubtitle('AI 2027'), 'hang', setSubtitle('AI 2099'), textReply('바꿨습니다.')],
+  })
+  await askSlides(frame, '부제를 바꿔 줘')
+
+  // the run's edit is in the deck while it runs: the host cannot store that deck
+  await expect.poll(async () => (await hostState(page)).bodies.length, { timeout: 30_000 }).toBe(2)
+  expect(await hostSave(page)).toBe('refused')
+  expect((await hostState(page)).saves).toHaveLength(0)
+
+  // stopping ends the run: its edit is taken out and held as a proposal
+  await frame.locator('button.ai-stop-btn').click()
+  const proposal = frame.getByRole('group', { name: '변경 제안' })
+  await expect(proposal).toBeVisible({ timeout: 30_000 })
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+  // a host save meanwhile stores the deck as it was before the run
+  expect(await hostSave(page)).toBe('saved')
+  expect(await savedFirstSlide((await hostState(page)).saves[0]!)).toEqual([
+    'Q3 Business Review',
+    'Fiscal Year 2026',
+  ])
+
+  await proposal.getByRole('button', { name: '받아들이기' }).click()
+  await expect(proposal).toHaveCount(0)
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'AI 2027'])
+  expect(await hostSave(page)).toBe('saved')
+  expect(await savedFirstSlide((await hostState(page)).saves[1]!)).toEqual([
+    'Q3 Business Review',
+    'AI 2027',
+  ])
+
+  // a second run, rejected: the deck and its save stay as accepted
+  await askSlides(frame, '부제를 다시 바꿔 줘')
+  await expect(proposal).toBeVisible({ timeout: 30_000 })
+  await proposal.getByRole('button', { name: '거부' }).click()
+  await expect(proposal).toHaveCount(0)
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'AI 2027'])
+  expect(await hostSave(page)).toBe('saved')
+  expect(await savedFirstSlide((await hostState(page)).saves[2]!)).toEqual([
+    'Q3 Business Review',
+    'AI 2027',
+  ])
+})
+
+test('slides: in view mode the AI answers but cannot edit the deck', async ({ page }) => {
+  const frame = await openHost(page, PPTX, {
+    mode: 'view',
+    replies: [setSubtitle('AI 2027'), textReply('이 문서는 읽기 전용입니다.')],
+  })
+  await askSlides(frame, '부제를 바꿔 줘')
+  await expect(frame.locator('.ai-msg-assistant').last()).toContainText('읽기 전용입니다', {
+    timeout: 30_000,
+  })
+  // the edit tool was refused and its error went back to the model
+  const { bodies } = await hostState(page)
+  expect(bodies[1]!.messages.some((m) => m.role === 'tool')).toBe(true)
+  await expect(frame.getByRole('group', { name: '변경 제안' })).toHaveCount(0)
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+})
+
+const HWPX = `${repo}apps/hwp/tests/fixtures/memo.hwpx`
+
+/** The document's text as the engine reads it back */
+async function hwpText(bytes: number[]): Promise<string> {
+  const require = createRequire(import.meta.url)
+  const wasm = join(dirname(require.resolve('@rhwp/core')), 'rhwp_bg.wasm')
+  await initRhwp({ module_or_path: readFileSync(wasm) })
+  const doc = new HwpDocument(new Uint8Array(bytes))
+  try {
+    return doc.getTextFileText().replace(/\r\n?/g, '\n')
+  } finally {
+    doc.free()
+  }
+}
+
+test('hwp: the AI edit is held as a proposal until it is accepted', async ({ page }) => {
+  const frame = await openHost(page, HWPX, {
+    mode: 'edit',
+    replies: [
+      toolReply('문단을 바꾸겠습니다.', 'replace_text', {
+        find: '본문 메모 앵커',
+        replace: '호스트를 거친 AI 문장',
+      }),
+      textReply('바꿨습니다.'),
+    ],
+  })
+  await expect(frame.locator('.hwp-app[data-phase="ready"]')).toHaveCount(1, { timeout: 60_000 })
+  const input = frame.locator('.ai-input-box textarea')
+  if (!(await input.isVisible())) await frame.locator('.ai-entry').click()
+  await input.fill('첫 문장을 바꿔 줘')
+  await input.press('Enter')
+
+  const proposal = frame.locator('.ai-changes-proposed')
+  await expect(proposal).toBeVisible({ timeout: 30_000 })
+  // held, not applied: a host save now stores the document as it was before the run
+  expect(await hostSave(page)).toBe('saved')
+  const held = await hwpText((await hostState(page)).saves[0]!)
+  expect(held).toContain('본문 메모 앵커')
+  expect(held).not.toContain('호스트를 거친 AI 문장')
+
+  await proposal.getByRole('button', { name: '받아들이기' }).click()
+  await expect(proposal).toHaveCount(0)
+  expect(await hostSave(page)).toBe('saved')
+  const accepted = await hwpText((await hostState(page)).saves[1]!)
+  expect(accepted).toContain('호스트를 거친 AI 문장')
+  expect(accepted).not.toContain('본문 메모 앵커')
+})
+
+test('slides: a new chat during a run drops the run and leaves the deck as before', async ({
+  page,
+}) => {
+  const frame = await openHost(page, PPTX, {
+    mode: 'edit',
+    replies: [setSubtitle('AI 2027'), 'hang'],
+  })
+  await askSlides(frame, '부제를 바꿔 줘')
+  await expect.poll(async () => (await hostState(page)).bodies.length, { timeout: 30_000 }).toBe(2)
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'AI 2027'])
+
+  await frame.getByRole('button', { name: '새 대화' }).click()
+  await expect.poll(() => shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+  await expect(frame.getByRole('group', { name: '변경 제안' })).toHaveCount(0)
+  // the deck is no longer held: the host stores it, without the dropped edit
+  expect(await hostSave(page)).toBe('saved')
+  expect(await savedFirstSlide((await hostState(page)).saves[0]!)).toEqual([
+    'Q3 Business Review',
+    'Fiscal Year 2026',
+  ])
+})
+
+test('slides: a host save that never finishes delays a run only for a bounded time', async ({
+  page,
+}) => {
+  // the page's timers run on a clock the test moves: the wait for the save ends by its deadline
+  await page.clock.install()
+  const frame = await openHost(page, PPTX, {
+    mode: 'edit',
+    stallSaves: true,
+    replies: [setSubtitle('AI 2027')],
+  })
+  await expect(frame.locator('.thumb')).toHaveCount(5, { timeout: 30_000 })
+  // the host asks for a save it will never finish storing
+  await page.evaluate(() => {
+    void (window as unknown as HostWindow).embedded.save().catch(() => {})
+  })
+  await askSlides(frame, '부제를 바꿔 줘')
+  // the run waits for that save before it begins; a new chat drops it during that wait
+  await frame.getByRole('button', { name: '새 대화' }).click()
+  await page.clock.fastForward(31_000)
+  // the panel is not stuck behind the dropped run: the next request is answered, here by the
+  // same bounded wait refusing to begin a run the save could still carry
+  await askSlides(frame, '부제를 바꿔 줘')
+  await page.clock.fastForward(31_000)
+  await expect(
+    frame.getByText('AI가 편집하는 동안 덱은 읽기 전용입니다', { exact: false }),
+  ).toBeVisible()
+  expect((await hostState(page)).bodies).toHaveLength(0)
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+})
+
+// slides-main.ts slides:undo closes a history batch an AI request left open before it undoes.
+// On the web the batch stays open while the run waits for a host save; a person who undoes and
+// edits meanwhile must not lose a step when that batch is closed after the wait gave up.
+test('slides: undo closes an AI batch the run never began, as on the desktop', async ({ page }) => {
+  const frame = await openHost(page, PPTX, { mode: 'edit' })
+  await expect(frame.locator('.thumb')).toHaveCount(5, { timeout: 30_000 })
+  const app = page.frames().find((candidate) => candidate !== page.mainFrame())!
+  await app.evaluate(async () => {
+    const api = (window as unknown as SlidesPage).slidesApi
+    const write = (text: string) =>
+      api.editText({ slideIndex: 0, sourceId: 'sp_1', paragraphs: [{ runs: [{ text }] }] })
+    await write('one')
+    await api.beginHistoryBatch()
+    await api.undo()
+    await write('two')
+    await write('three')
+    await api.endHistoryBatch()
+    await api.undo()
+  })
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'two'])
+})
+
+test('slides: a new chat while the run waits for a save leaves nothing behind once it lands', async ({
+  page,
+}) => {
+  const frame = await openHost(page, PPTX, {
+    mode: 'edit',
+    stallSaves: true,
+    replies: [setSubtitle('AI 2027')],
+  })
+  await expect(frame.locator('.thumb')).toHaveCount(5, { timeout: 30_000 })
+  await page.evaluate(() => {
+    void (window as unknown as HostWindow).embedded.save().catch(() => {})
+  })
+  await askSlides(frame, '부제를 바꿔 줘')
+  await frame.getByRole('button', { name: '새 대화' }).click()
+  // the save lands: the run's wait succeeds after its conversation was already dropped
+  await page.evaluate(() => (window as unknown as HostWindow).releaseSaves())
+  await expect.poll(async () => (await hostState(page)).saves.length).toBe(1)
+  // nothing holds the deck: the next save is stored, and no AI request was ever sent
+  await expect.poll(() => hostSave(page)).toBe('saved')
+  expect((await hostState(page)).bodies).toHaveLength(0)
+  await expect(frame.getByRole('group', { name: '변경 제안' })).toHaveCount(0)
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+})
+
+test('slides: the host sees unsaved changes follow the proposal, its acceptance and a rollback', async ({
+  page,
+}) => {
+  const frame = await openHost(page, PPTX, {
+    mode: 'edit',
+    replies: [setSubtitle('AI 2027'), textReply('바꿨습니다.')],
+  })
+  const dirty = async () => (await hostState(page)).dirty
+  await askSlides(frame, '부제를 바꿔 줘')
+  const proposal = frame.getByRole('group', { name: '변경 제안' })
+  await expect(proposal).toBeVisible({ timeout: 30_000 })
+  // held: the deck is the one the host stored
+  await expect.poll(dirty).toBe(false)
+
+  await proposal.getByRole('button', { name: '받아들이기' }).click()
+  await expect.poll(dirty).toBe(true)
+  expect(await hostSave(page)).toBe('saved')
+  await expect.poll(dirty).toBe(false)
+
+  // the reply's rollback puts the pre-run deck back: no longer the stored one
+  await frame.locator('.ai-rollback-btn').click()
+  await expect.poll(() => shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+  await expect.poll(dirty).toBe(true)
 })

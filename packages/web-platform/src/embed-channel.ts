@@ -44,12 +44,16 @@ type AiAnswerPart =
 /**
  * One AI request to the host. `settle` answers the fetch-shaped promise with
  * the first message and is gone after that; `parts` feed the response body.
+ * The request stays in `aiRequests` until its body is read to the end, so an
+ * abort still drops bytes not read yet; `wireDone` marks that the host sent
+ * its last message, after which nothing more from the host counts.
  */
 interface AiRequest {
   settle: { resolve: (response: Response) => void; reject: (error: Error) => void } | undefined
   parts: AiAnswerPart[]
   wake: (() => void) | undefined
   body: ReadableStream<Uint8Array>
+  wireDone: boolean
 }
 const aiRequests = new Map<string, AiRequest>()
 
@@ -147,23 +151,27 @@ async function answerSaveRequest(requestId: number): Promise<void> {
 /** The host's answer to one AI request, in arrival order */
 function onAiAnswer(requestId: string, data: Record<string, unknown>): void {
   const request = aiRequests.get(requestId)
-  if (!request) return
+  if (!request || request.wireDone) return
   const settle = request.settle
   request.settle = undefined
   if (data.type === 'ai_error') {
-    aiRequests.delete(requestId)
+    request.wireDone = true
     const message = String(data.message ?? 'the host could not reach the AI gateway')
     if (!settle) {
       // after the bytes already sent: the protocol reads those first, then fails
       pushAiPart(request, { kind: 'error', error: new Error(message) })
-    } else if (typeof data.status === 'number' && data.status >= 400 && data.status <= 599) {
-      // the gateway's refusal reaches the protocol as that HTTP answer, as on the desktop
-      settle.resolve(
-        new Response(message, { status: data.status, headers: aiHeaders(data.headers) }),
-      )
     } else {
-      // the host's request failed before an answer: what a failed fetch looks like
-      settle.reject(new TypeError(message))
+      // the body is never read: the request ends here
+      aiRequests.delete(requestId)
+      if (typeof data.status === 'number' && data.status >= 400 && data.status <= 599) {
+        // the gateway's refusal reaches the protocol as that HTTP answer, as on the desktop
+        settle.resolve(
+          new Response(message, { status: data.status, headers: aiHeaders(data.headers) }),
+        )
+      } else {
+        // the host's request failed before an answer: what a failed fetch looks like
+        settle.reject(new TypeError(message))
+      }
     }
     return
   }
@@ -174,7 +182,7 @@ function onAiAnswer(requestId: string, data: Record<string, unknown>): void {
     const { buffer, byteOffset, byteLength } = data.data
     pushAiPart(request, { kind: 'bytes', bytes: new Uint8Array(buffer, byteOffset, byteLength) })
   } else if (data.type === 'ai_end') {
-    aiRequests.delete(requestId)
+    request.wireDone = true
     pushAiPart(request, { kind: 'end' })
   }
 }
@@ -188,7 +196,8 @@ function cancelAiRequest(requestId: string): void {
   const request = aiRequests.get(requestId)
   if (!request) return
   aiRequests.delete(requestId)
-  reply({ type: 'ai_cancel', requestId })
+  // a host that already finished has nothing left to stop
+  if (!request.wireDone) reply({ type: 'ai_cancel', requestId })
   request.settle?.reject(abortError())
   request.settle = undefined
   // bytes not read yet are dropped: the reader sees the cancel next
@@ -206,7 +215,8 @@ function cancelAllAiRequests(): void {
  * the content type and Retry-After the gateway sent. A non-2xx gateway answer
  * resolves with that status and the gateway's text; a host that could not
  * call the gateway rejects like a failed fetch. Aborting `signal`, cancelling
- * the body or leaving the page tells the host to stop (`ai_cancel`).
+ * the body or leaving the page tells the host to stop (`ai_cancel`), and
+ * drops bytes not read yet even when the host already finished sending.
  */
 export function requestAiFromHost(body: unknown, signal?: AbortSignal | null): Promise<Response> {
   if (!peer) return Promise.reject(new TypeError('no host to ask: the page is not embedded'))
@@ -216,6 +226,7 @@ export function requestAiFromHost(body: unknown, signal?: AbortSignal | null): P
     settle: undefined,
     parts: [],
     wake: undefined,
+    wireDone: false,
     // pulled one part per read, so an error after some bytes lets the reader take those first
     body: new ReadableStream<Uint8Array>(
       {
@@ -225,8 +236,13 @@ export function requestAiFromHost(body: unknown, signal?: AbortSignal | null): P
           }
           request.wake = undefined
           const part = request.parts.shift()!
-          if (part.kind === 'bytes') controller.enqueue(part.bytes)
-          else if (part.kind === 'end') controller.close()
+          if (part.kind === 'bytes') {
+            controller.enqueue(part.bytes)
+            return
+          }
+          // the last part is read: nothing can cancel this request any more
+          aiRequests.delete(requestId)
+          if (part.kind === 'end') controller.close()
           else controller.error(part.error)
         },
         cancel: () => cancelAiRequest(requestId),

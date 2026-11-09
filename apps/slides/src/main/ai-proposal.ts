@@ -122,7 +122,7 @@ const WRITE_SETTLE_MS = 30_000
  * Wait until no write is in flight. True when the session is quiet; false on timeout. The
  * check and the caller's next synchronous step share one task, so no write can start between.
  */
-async function settleWrites(session: Session): Promise<boolean> {
+export async function settleWrites(session: Session): Promise<boolean> {
   const deadline = Date.now() + WRITE_SETTLE_MS
   while (session.writesInFlight?.size) {
     const left = deadline - Date.now()

@@ -1,5 +1,3 @@
-// not in the package's browser entry; providers.ts itself is browser-safe
-import { defaultAiSettings } from '../../../../packages/ai-provider/src/providers'
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
   createAiStreamBridge,
@@ -10,6 +8,7 @@ import {
   reportOpened,
   unsupported,
   waitForDocument,
+  webAiSettings,
   webLanguage,
 } from '@seuoffice/web-platform'
 import { setUiLang } from '@genoffice/i18n'
@@ -39,17 +38,11 @@ const EDIT_MEMBERS = [
   'addSlideWithLayout',
   'addSmartArt',
   'addTable',
-  'aiProposalAccept',
-  'aiProposalReject',
-  'aiRunBegin',
-  'aiRunHold',
-  'aiSnapshotRestore',
   'applyEditScript',
   'applyHeaderFooter',
   'applyTheme',
   'applyTxn',
   'batchEditTransform',
-  'beginHistoryBatch',
   'cancelTransformPreview',
   'changeShape',
   'clipboardExternal',
@@ -76,7 +69,6 @@ const EDIT_MEMBERS = [
   'editText',
   'editTransform',
   'editTransformMulti',
-  'endHistoryBatch',
   'findReplace',
   'flipElements',
   'groupElements',
@@ -197,9 +189,7 @@ function reportFirst(result: OpenResult | null): OpenResult | null {
 
 let pendingTaken = false
 
-// AI turns would go to the embed host (decision 0017), but a web AI run cannot be held for
-// review yet: `beginHistoryBatch` and `aiRunBegin` are refused below. Until they work the
-// settings report nothing connected, so the panel asks to connect instead of failing each run.
+// AI turns go to the embed host, which calls its gateway (decision 0017)
 const ai = createAiStreamBridge()
 
 const slidesApi: Partial<SlidesApi> = {
@@ -231,7 +221,7 @@ const slidesApi: Partial<SlidesApi> = {
   getAutoSaveDefault: async () => NO_AUTO_SAVE_DEFAULT,
   getAiPanelPrefs: async () => DEFAULT_AI_PANEL_PREFS,
   setAiPanelPrefs: async () => DEFAULT_AI_PANEL_PREFS,
-  getAiSettings: async () => defaultAiSettings(),
+  getAiSettings: webAiSettings,
   getRecentFiles: async () => [],
   getChartColorSchemes: async () => null,
   getChartData: async () => null,
@@ -247,6 +237,15 @@ const slidesApi: Partial<SlidesApi> = {
   aiStreamCancel: ai.aiStreamCancel,
   onAiStream: ai.onAiStream,
   aiLogRunFailure: async () => {},
+  // a read-only deck holds no AI run: the panel answers without one, and its editing tools are
+  // refused (deck-edits.ts replaces these in edit mode)
+  beginHistoryBatch: async () => false,
+  endHistoryBatch: async () => null,
+  aiRunBegin: async () => false,
+  aiRunHold: async () => null,
+  aiProposalAccept: async () => null,
+  aiProposalReject: async () => false,
+  aiSnapshotRestore: async () => null,
   headlessExportDone: noop,
   setAutoSavePref: noop,
   reportCloseSaveResult: noop,
