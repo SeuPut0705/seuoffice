@@ -1,19 +1,15 @@
 # Instalar o GenOffice
 
-Todas as versões são publicadas na [página de lançamentos](https://github.com/pblsketch/ieumoffice/releases/latest) do projeto no GitHub. A versão para Windows é publicada juntamente com versões para Mac e Linux, lançadas como beta. O programador não consegue testar diretamente as versões para Mac e Linux; são confirmadas através dos relatos dos utilizadores.
+Todas as versões são publicadas na [página de lançamentos](https://github.com/SeuPut0705/seuoffice/releases/latest) do projeto no GitHub.
 
 ## Escolher o ficheiro para a sua máquina
 
-| Plataforma                              | Requisitos                                     | Ficheiro                          |
-| --------------------------------------- | ---------------------------------------------- | --------------------------------- |
-| **Windows**                             | Windows 10 ou posterior, Intel/AMD de 64 bits  | `GenOffice-Setup-<version>.exe`   |
-| **Mac (beta)**, Apple Silicon           | macOS 12 ou posterior, chip M1 ou mais recente | `GenOffice-<version>-arm64.dmg`   |
-| **Mac (beta)**, Intel                   | macOS 12 ou posterior, processador Intel       | `GenOffice-<version>-x64.dmg`     |
-| **Linux (beta)**, qualquer distribuição | 64 bits (x86_64)                               | `GenOffice-<version>.AppImage`    |
-| **Linux (beta)**, família Ubuntu/Debian | 64 bits (x86_64)                               | `ieumoffice_<version>_amd64.deb`  |
-| **Linux (beta)**, Fedora/RHEL/openSUSE  | 64 bits (x86_64)                               | `ieumoffice-<version>.x86_64.rpm` |
+| Plataforma             | Requisitos                                     | Ficheiro                        |
+| ---------------------- | ---------------------------------------------- | ------------------------------- |
+| **Windows**            | Windows 10 ou posterior, Intel/AMD de 64 bits  | `GenOffice-Setup-<version>.exe` |
+| **Mac**, Apple Silicon | macOS 12 ou posterior, chip M1 ou mais recente | `GenOffice-<version>-arm64.dmg` |
 
-Para ver que Mac tem, abra o menu Apple ▸ **Acerca deste Mac**. Se em «Chip» aparecer Apple M…, escolha o ficheiro que termina em `-arm64.dmg`; se em «Processador» aparecer Intel …, escolha o que termina em `-x64.dmg`. Os outros ficheiros da página de lançamentos (`.zip`, `.yml`, `.blockmap`) são os que a própria aplicação usa para se atualizar; não precisa de os transferir. As versões mais antigas permanecem na página de lançamentos.
+Os outros ficheiros da página de lançamentos (`.zip`, `.yml`, `.blockmap`) são os que a própria aplicação usa para se atualizar; não precisa de os transferir. As versões mais antigas permanecem na página de lançamentos.
 
 ## No Windows
 
@@ -50,7 +46,7 @@ O Microsoft Defender SmartScreen mostra esta janela na primeira vez que vê um i
 
 Quando o Controle Inteligente de Aplicativos do Windows 11 está ativado, impede os instaladores sem assinatura e não oferece o caminho de **Mais informações**. A Microsoft indica que não há forma de permitir uma única aplicação: a única opção é desativar o Controle Inteligente de Aplicativos, em **Segurança do Windows ▸ Controle de aplicativos e navegador ▸ Configurações do Controle Inteligente de Aplicativos**. Isso retira esta proteção também a todas as outras aplicações. Com as atualizações recentes do Windows, é possível voltar a ativá-lo sem reinstalar o Windows.
 
-## Num Mac (beta)
+## Num Mac
 
 Precisa do macOS 12 (Monterey) ou posterior. A versão para Mac não tem assinatura de programador da Apple, por isso, na primeira vez que a abre, o macOS diz que não consegue verificar se a aplicação está livre de software malicioso e não a abre. Permita-a uma só vez, como abaixo.
 
@@ -67,31 +63,18 @@ Se o macOS disser que a aplicação «está danificada e não pode ser aberta»,
 xattr -dr com.apple.quarantine /Applications/GenOffice.app
 ```
 
-Se o macOS disser que a aplicação não é suportada neste Mac, verifique duas coisas:
-
-- Um Mac Intel não consegue executar o ficheiro para Apple Silicon (`-arm64.dmg`). Veja «Processador» em **Acerca deste Mac**, apague a aplicação que instalou e instale antes o ficheiro `-x64.dmg`.
-- O macOS 11 ou anterior não consegue executar o GenOffice. **Acerca deste Mac** também mostra a versão do macOS.
+Se o macOS disser que a aplicação não é suportada neste Mac, consulte **Acerca deste Mac**. O GenOffice só funciona num Mac com Apple Silicon (M1 ou posterior) e macOS 12 ou posterior; não funciona num Mac Intel nem com macOS 11 ou anterior.
 
 Ainda num Mac:
 
 - Os cartões de ligação da IA não têm botão de instalação. Siga a ligação para o guia oficial de instalação no cartão para instalar o Claude Code ou o Codex. O aplicativo de desktop do Claude não é o Claude Code, então é preciso instalar o Claude Code mesmo que o aplicativo de desktop já esteja instalado.
 - O início de sessão termina no navegador. Se o navegador pedir para colar um código, execute você mesmo `claude auth login` ou `codex login` no Terminal. Consulte [Conexão por assinatura](help://subscription).
 
-## No Linux (beta)
-
-- **AppImage**: torne-o executável (`chmod +x GenOffice-<version>.AppImage`) e execute o ficheiro. Não há passo de instalação.
-- **deb**: instale com `sudo apt install ./ieumoffice_<version>_amd64.deb`.
-- **rpm**: instale com `sudo dnf install ./ieumoffice-<version>.x86_64.rpm`. No openSUSE, use `sudo zypper install ./ieumoffice-<version>.x86_64.rpm`.
-
-Os pacotes deb e rpm instalam-se em `/opt/GenOffice` e ligam o comando de terminal `/usr/bin/ieumoffice`. Tal como num Mac, os cartões de ligação da IA não têm botão de instalação e, quando um início de sessão pede um código, é você que executa `claude auth login` ou `codex login` num terminal.
-
 ## Atualizações
 
 - O GenOffice procura uma versão mais recente na mesma página de lançamentos do GitHub. Quando é publicada uma, **Configurações ▸ Sobre** propõe-na: clique em **Atualizar para …**, aguarde a transferência e depois clique em **Reiniciar e instalar**. No Windows, uma janela mostra o progresso da instalação; ao terminar, o GenOffice abre de novo com os documentos que estavam abertos. No Mac, o aplicativo fecha, é substituído pela nova versão e abre de novo com os documentos que estavam abertos. Isso vale para um aplicativo na pasta Aplicativos; um aplicativo aberto direto da imagem de disco indica a página de download. A atualização só é instalada quando você pressiona esse botão, nunca ao simplesmente fechar o aplicativo.
-- No Linux só o AppImage se atualiza sozinho. Com uma instalação deb ou rpm, a aplicação avisa-o da nova versão e abre a página de transferência; instale o novo ficheiro da mesma forma.
 - **Menu (☰) ▸ Procurar atualizações…** verifica sempre que o pedir. Num Mac, é **Ajuda ▸ Procurar atualizações…**.
 - Quando a verificação falha — sem rede, ou ainda nada publicado —, não acontece nada e a aplicação continua a funcionar como antes.
-- **Canal de atualização**, também em Configurações ▸ Sobre, é Estável ou Beta. Alterá-lo tem efeito imediato e verifica se existe uma atualização; não reverte uma instalação Beta para Estável.
 - As atualizações também não têm assinatura digital. Antes de instalar uma, a aplicação compara o ficheiro transferido com a soma de verificação publicada com essa versão.
 - Se **Reiniciar e instalar** fechar a aplicação mas a nova versão não aparecer, o próximo arranque avisa disso e volta a oferecer a atualização. Desta vez o instalador abre na sua própria janela, para que o possa acompanhar e responder a um pedido de administrador. Se mesmo assim não funcionar, a janela de atualização aponta para a página de transferência; instalar com o ficheiro obtido aí mantém as suas definições e documentos. O que o atualizador fez fica registado em `update-log.txt`, na pasta de dados da aplicação (escreva `%APPDATA%\GenOffice` na barra de endereço do Explorador de Ficheiros para a abrir). Anexe esse ficheiro ao comunicar o problema.
 

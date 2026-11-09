@@ -1,19 +1,15 @@
 # Installer GenOffice
 
-Chaque version est publiée sur la [page Releases](https://github.com/pblsketch/ieumoffice/releases/latest) du projet sur GitHub. La version Windows est accompagnée de versions Mac et Linux publiées en bêta. Le développeur ne peut pas tester directement les versions Mac et Linux ; elles sont confirmées grâce aux retours des utilisateurs.
+Chaque version est publiée sur la [page Releases](https://github.com/SeuPut0705/seuoffice/releases/latest) du projet sur GitHub.
 
 ## Choisir le fichier pour votre machine
 
-| Plateforme                              | Prérequis                                               | Fichier                           |
-| --------------------------------------- | ------------------------------------------------------- | --------------------------------- |
-| **Windows**                             | Windows 10 ou version ultérieure, Intel/AMD 64 bits     | `GenOffice-Setup-<version>.exe`   |
-| **Mac (bêta)**, Apple Silicon           | macOS 12 ou version ultérieure, puce M1 ou plus récente | `GenOffice-<version>-arm64.dmg`   |
-| **Mac (bêta)**, Intel                   | macOS 12 ou version ultérieure, processeur Intel        | `GenOffice-<version>-x64.dmg`     |
-| **Linux (bêta)**, toute distribution    | 64 bits (x86_64)                                        | `GenOffice-<version>.AppImage`    |
-| **Linux (bêta)**, famille Ubuntu/Debian | 64 bits (x86_64)                                        | `ieumoffice_<version>_amd64.deb`  |
-| **Linux (bêta)**, Fedora/RHEL/openSUSE  | 64 bits (x86_64)                                        | `ieumoffice-<version>.x86_64.rpm` |
+| Plateforme             | Prérequis                                               | Fichier                         |
+| ---------------------- | ------------------------------------------------------- | ------------------------------- |
+| **Windows**            | Windows 10 ou version ultérieure, Intel/AMD 64 bits     | `GenOffice-Setup-<version>.exe` |
+| **Mac**, Apple Silicon | macOS 12 ou version ultérieure, puce M1 ou plus récente | `GenOffice-<version>-arm64.dmg` |
 
-Pour savoir quel Mac vous avez, ouvrez le menu Pomme ▸ **À propos de ce Mac**. Si « Puce » indique Apple M…, prenez le fichier qui se termine par `-arm64.dmg` ; si « Processeur » indique Intel …, prenez celui qui se termine par `-x64.dmg`. Les autres fichiers de la page Releases (`.zip`, `.yml`, `.blockmap`) servent à l’application elle-même pour se mettre à jour ; vous n’avez pas besoin de les télécharger. Les versions antérieures restent sur la page Releases.
+Les autres fichiers de la page Releases (`.zip`, `.yml`, `.blockmap`) servent à l’application elle-même pour se mettre à jour ; vous n’avez pas besoin de les télécharger. Les versions antérieures restent sur la page Releases.
 
 ## Sous Windows
 
@@ -50,7 +46,7 @@ Microsoft Defender SmartScreen affiche cette fenêtre la première fois qu’il 
 
 Lorsque le Contrôle intelligent des applications de Windows 11 est activé, il arrête les installeurs non signés et ne propose aucun chemin par **Informations complémentaires**. Selon Microsoft, il n’est pas possible d’autoriser une seule application : la seule option est de désactiver le Contrôle intelligent des applications, sous **Sécurité Windows ▸ Contrôle des applications et du navigateur ▸ Paramètres du Contrôle intelligent des applications**. Cela retire aussi cette protection pour toutes les autres applications. Avec les mises à jour récentes de Windows, il peut être réactivé sans réinstaller Windows.
 
-## Sur un Mac (bêta)
+## Sur un Mac
 
 Il vous faut macOS 12 (Monterey) ou version ultérieure. La version Mac n’a pas de signature de développeur Apple : la première fois que vous l’ouvrez, macOS indique qu’il ne peut pas vérifier que l’application est exempte de logiciels malveillants et ne l’ouvre pas. Autorisez-la une seule fois, comme ci-dessous.
 
@@ -67,31 +63,18 @@ Si macOS indique que l’application « est endommagée et ne peut pas être ouv
 xattr -dr com.apple.quarantine /Applications/GenOffice.app
 ```
 
-Si macOS indique que l’application n’est pas prise en charge sur ce Mac, vérifiez deux choses :
-
-- Un Mac Intel ne peut pas exécuter le fichier pour Apple Silicon (`-arm64.dmg`). Regardez « Processeur » dans **À propos de ce Mac**, supprimez l’application installée et installez plutôt le fichier `-x64.dmg`.
-- macOS 11 ou antérieur ne peut pas exécuter GenOffice. **À propos de ce Mac** affiche aussi la version de macOS.
+Si macOS indique que l’application n’est pas prise en charge sur ce Mac, consultez **À propos de ce Mac**. GenOffice ne fonctionne que sur un Mac Apple Silicon (puce M1 ou plus récente) avec macOS 12 ou version ultérieure ; il ne fonctionne pas sur un Mac Intel ni avec macOS 11 ou antérieur.
 
 Également sur un Mac :
 
 - Les cartes de connexion IA n’ont pas de bouton d’installation. Suivez le lien du guide d’installation officiel sur la carte pour installer Claude Code ou Codex. L’application de bureau Claude n’est pas Claude Code, il faut donc installer Claude Code même si l’application de bureau est déjà là.
 - La connexion se termine dans le navigateur. Si le navigateur vous demande de coller un code, exécutez vous-même `claude auth login` ou `codex login` dans le Terminal. Voir [Connexion par abonnement](help://subscription).
 
-## Sous Linux (bêta)
-
-- **AppImage** : rendez-le exécutable (`chmod +x GenOffice-<version>.AppImage`) et lancez le fichier. Il n’y a pas d’étape d’installation.
-- **deb** : installez avec `sudo apt install ./ieumoffice_<version>_amd64.deb`.
-- **rpm** : installez avec `sudo dnf install ./ieumoffice-<version>.x86_64.rpm`. Sous openSUSE, utilisez `sudo zypper install ./ieumoffice-<version>.x86_64.rpm`.
-
-Les paquets deb et rpm s’installent dans `/opt/GenOffice` et lient la commande de terminal `/usr/bin/ieumoffice`. Comme sur un Mac, les cartes de connexion IA n’ont pas de bouton d’installation, et lorsqu’une connexion demande un code, vous exécutez vous-même `claude auth login` ou `codex login` dans un terminal.
-
 ## Mises à jour
 
 - GenOffice cherche une version plus récente sur la même page GitHub Releases. Lorsqu’il y en a une, **Paramètres ▸ À propos** la propose : appuyez sur **Mettre à jour vers …**, attendez la fin du téléchargement, puis appuyez sur **Redémarrer et installer**. Sous Windows, une fenêtre affiche la progression de l'installation ; à la fin, GenOffice se rouvre avec les documents que vous aviez ouverts. Sur Mac, l'app se ferme, est remplacée par la nouvelle version et se rouvre avec les documents que vous aviez ouverts. Cela vaut pour une app placée dans le dossier Applications ; une app ouverte directement depuis l'image disque vous renvoie plutôt à la page de téléchargement. La mise à jour ne s'installe que lorsque vous appuyez sur ce bouton, jamais à la simple fermeture de l'application.
-- Sous Linux, seul l’AppImage se met à jour tout seul. Avec une installation deb ou rpm, l’application vous signale la nouvelle version et ouvre la page de téléchargement ; installez le nouveau fichier de la même manière.
 - **Menu (☰) ▸ Rechercher les mises à jour** lance la vérification quand vous le demandez. Sur un Mac, c’est **Aide ▸ Rechercher les mises à jour**.
 - Lorsque la vérification échoue — pas de réseau, ou rien de publié pour l’instant —, il ne se passe rien et l’application continue de fonctionner comme avant.
-- **Canal de mise à jour**, également sous Paramètres ▸ À propos, vaut Stable ou Bêta. Une modification prend effet immédiatement et déclenche une recherche de mise à jour ; elle ne rétrograde pas une installation Bêta vers Stable.
 - Les mises à jour ne sont pas signées non plus. Avant d’en installer une, l’application compare le fichier téléchargé à la somme de contrôle publiée avec cette version.
 - Si **Redémarrer et installer** ferme l'application sans que la nouvelle version apparaisse, le lancement suivant le signale et propose de nouveau la mise à jour. Cette fois, le programme d'installation s'ouvre dans sa propre fenêtre : vous pouvez le suivre et répondre à une demande d'autorisation administrateur. Si cela ne suffit pas, la fenêtre de mise à jour renvoie vers la page de téléchargement ; installer avec le fichier obtenu là conserve vos paramètres et vos documents. Ce qu'a fait la mise à jour est consigné dans `update-log.txt`, dans le dossier de données de l'application (tapez `%APPDATA%\GenOffice` dans la barre d'adresse de l'Explorateur de fichiers pour l'ouvrir). Joignez ce fichier quand vous signalez le problème.
 

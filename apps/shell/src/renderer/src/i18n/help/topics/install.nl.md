@@ -1,19 +1,15 @@
 # GenOffice installeren
 
-Elke versie wordt gepubliceerd op de [Releases-pagina](https://github.com/pblsketch/ieumoffice/releases/latest) van het project op GitHub. De Windows-versie wordt gepubliceerd samen met Mac- en Linux-versies, die als bèta worden uitgebracht. De ontwikkelaar kan de Mac- en Linux-versies niet rechtstreeks testen; ze worden bevestigd via meldingen van gebruikers.
+Elke versie wordt gepubliceerd op de [Releases-pagina](https://github.com/SeuPut0705/seuoffice/releases/latest) van het project op GitHub.
 
 ## Kies het bestand voor je computer
 
-| Platform                                | Vereisten                                | Bestand                           |
-| --------------------------------------- | ---------------------------------------- | --------------------------------- |
-| **Windows**                             | Windows 10 of nieuwer, 64-bits Intel/AMD | `GenOffice-Setup-<version>.exe`   |
-| **Mac (bèta)**, Apple Silicon           | macOS 12 of nieuwer, M1-chip of nieuwer  | `GenOffice-<version>-arm64.dmg`   |
-| **Mac (bèta)**, Intel                   | macOS 12 of nieuwer, Intel-processor     | `GenOffice-<version>-x64.dmg`     |
-| **Linux (bèta)**, elke distributie      | 64-bits (x86_64)                         | `GenOffice-<version>.AppImage`    |
-| **Linux (bèta)**, Ubuntu/Debian-familie | 64-bits (x86_64)                         | `ieumoffice_<version>_amd64.deb`  |
-| **Linux (bèta)**, Fedora/RHEL/openSUSE  | 64-bits (x86_64)                         | `ieumoffice-<version>.x86_64.rpm` |
+| Platform               | Vereisten                                | Bestand                         |
+| ---------------------- | ---------------------------------------- | ------------------------------- |
+| **Windows**            | Windows 10 of nieuwer, 64-bits Intel/AMD | `GenOffice-Setup-<version>.exe` |
+| **Mac**, Apple Silicon | macOS 12 of nieuwer, M1-chip of nieuwer  | `GenOffice-<version>-arm64.dmg` |
 
-Om te zien welke Mac je hebt, open je het Apple-menu ▸ **Over deze Mac**. Staat bij "Chip" Apple M…, neem dan het bestand dat eindigt op `-arm64.dmg`; staat bij "Processor" Intel …, neem dan het bestand dat eindigt op `-x64.dmg`. De andere bestanden op de Releases-pagina (`.zip`, `.yml`, `.blockmap`) gebruikt de app zelf om bij te werken; die hoef je niet te downloaden. Oudere versies blijven op de Releases-pagina staan.
+De andere bestanden op de Releases-pagina (`.zip`, `.yml`, `.blockmap`) gebruikt de app zelf om bij te werken; die hoef je niet te downloaden. Oudere versies blijven op de Releases-pagina staan.
 
 ## Op Windows
 
@@ -50,7 +46,7 @@ Microsoft Defender SmartScreen toont dit venster de eerste keer dat het een inst
 
 Als Slim app-beheer van Windows 11 aan staat, houdt het installatieprogramma's zonder handtekening tegen en biedt het geen route via **Meer informatie**. Microsoft zegt dat er geen manier is om één enkele app toe te staan: de enige optie is Slim app-beheer uit te schakelen, onder **Windows-beveiliging ▸ App- en browserbeheer ▸ Instellingen voor Slim app-beheer**. Daarmee verdwijnt deze bescherming ook voor alle andere apps. Met recente Windows-updates kan het weer worden ingeschakeld zonder Windows opnieuw te installeren.
 
-## Op een Mac (bèta)
+## Op een Mac
 
 Je hebt macOS 12 (Monterey) of nieuwer nodig. De Mac-versie heeft geen ontwikkelaarshandtekening van Apple, dus de eerste keer dat je hem opent, zegt macOS dat niet kan worden gecontroleerd of de app vrij is van malware en opent het hem niet. Sta hem eenmalig toe, zoals hieronder.
 
@@ -67,31 +63,18 @@ Zegt macOS dat de app "beschadigd is en niet kan worden geopend", verplaats hem 
 xattr -dr com.apple.quarantine /Applications/GenOffice.app
 ```
 
-Zegt macOS dat de app niet wordt ondersteund op deze Mac, controleer dan twee dingen:
-
-- Een Intel-Mac kan het Apple Silicon-bestand (`-arm64.dmg`) niet uitvoeren. Kijk bij "Processor" onder **Over deze Mac**, verwijder de app die je hebt geïnstalleerd en installeer in plaats daarvan het `-x64.dmg`-bestand.
-- macOS 11 of ouder kan GenOffice niet uitvoeren. **Over deze Mac** toont ook de macOS-versie.
+Zegt macOS dat de app niet wordt ondersteund op deze Mac, kijk dan bij **Over deze Mac**. GenOffice werkt alleen op een Mac met Apple Silicon (M1 of nieuwer) en macOS 12 of nieuwer; op een Intel-Mac of met macOS 11 of ouder werkt het niet.
 
 Verder op een Mac:
 
 - De AI-verbindingskaarten hebben geen installatieknop. Volg de link naar de officiële installatiegids op de kaart om Claude Code of Codex te installeren. De Claude-desktopapp is niet Claude Code, dus Claude Code moet je ook apart installeren als de desktopapp er al is.
 - Inloggen wordt in de browser afgerond. Vraagt de browser je een code te plakken, voer dan zelf `claude auth login` of `codex login` uit in Terminal. Zie [Abonnementsverbinding](help://subscription).
 
-## Op Linux (bèta)
-
-- **AppImage**: maak het uitvoerbaar (`chmod +x GenOffice-<version>.AppImage`) en voer het bestand uit. Er is geen installatiestap.
-- **deb**: installeer met `sudo apt install ./ieumoffice_<version>_amd64.deb`.
-- **rpm**: installeer met `sudo dnf install ./ieumoffice-<version>.x86_64.rpm`. Gebruik op openSUSE `sudo zypper install ./ieumoffice-<version>.x86_64.rpm`.
-
-De deb- en rpm-pakketten installeren naar `/opt/GenOffice` en koppelen het terminalcommando `/usr/bin/ieumoffice`. Net als op een Mac hebben de AI-verbindingskaarten geen installatieknop, en als inloggen om een code vraagt, voer je zelf `claude auth login` of `codex login` uit in een terminal.
-
 ## Updates
 
 - GenOffice zoekt op dezelfde Releases-pagina op GitHub naar een nieuwere versie. Zodra er een is gepubliceerd, biedt **Instellingen ▸ Over** die aan: druk op **Bijwerken naar …**, wacht tot de download klaar is en druk dan op **Herstarten en installeren**. Op Windows toont een venster de voortgang van de installatie; daarna opent GenOffice opnieuw met de documenten die u open had. Op een Mac sluit de app, wordt die vervangen door de nieuwe versie en opent hij opnieuw met de documenten die u open had. Dat werkt voor een app in de map Apps; een app die rechtstreeks vanuit de schijfkopie is geopend, verwijst in plaats daarvan naar de downloadpagina. De update wordt alleen geïnstalleerd als u op die knop drukt, nooit bij het gewoon sluiten van de app.
-- Op Linux werkt alleen de AppImage zichzelf bij. Bij een deb- of rpm-installatie meldt de app de nieuwe versie en opent hij de downloadpagina; installeer het nieuwe bestand op dezelfde manier.
 - **Menu (☰) ▸ Controleren op updates…** controleert wanneer jij dat wilt. Op een Mac is het **Help ▸ Controleren op updates…**.
 - Mislukt de controle — geen netwerk, of er is nog niets gepubliceerd — dan gebeurt er niets en blijft de app werken zoals voorheen.
-- **Updatekanaal**, ook onder Instellingen ▸ Over, staat op Stabiel of Bèta. Wijzigen gaat meteen in en controleert op een update; een Bèta-installatie wordt niet teruggezet naar Stabiel.
 - Ook updates hebben geen digitale handtekening. Vóór het installeren vergelijkt de app het gedownloade bestand met de controlesom die bij die release is gepubliceerd.
 - Als **Herstarten en installeren** de app sluit maar de nieuwe versie niet verschijnt, meldt de volgende start dat en biedt de update opnieuw aan. Deze keer opent het installatieprogramma in een eigen venster, zodat u het kunt volgen en een vraag om beheerderstoestemming kunt beantwoorden. Lukt ook dat niet, dan verwijst het updatevenster naar de downloadpagina; installeren met het bestand van daar behoudt uw instellingen en documenten. Wat de updater heeft gedaan, staat in `update-log.txt` in de gegevensmap van de app (typ `%APPDATA%\GenOffice` in de adresbalk van Verkenner om die te openen). Voeg dat bestand toe wanneer u het probleem meldt.
 
