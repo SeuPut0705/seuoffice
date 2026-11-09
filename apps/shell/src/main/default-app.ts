@@ -73,6 +73,8 @@ export interface DefaultAppDeps {
   /** packaged app only: dev builds run inside Electron.app and must never claim the types */
   packaged: boolean
   exePath: string
+  /** the value name build/installer.nsh writes under Software\RegisteredApplications */
+  registeredAppName: string
   run: RunCommand
   openExternal: (url: string) => Promise<void>
   readFile?: (path: string) => string
@@ -265,6 +267,27 @@ export function createDefaultAppService(deps: DefaultAppDeps): DefaultAppService
     }
   }
 
+  // Windows 11 (21H2/22H2 with the 2023-04 update, 23H2 and later) opens the
+  // app's own page when told where the installer registered it: HKCU for a
+  // per-user install, HKLM for an all-users one. Older builds show the list.
+  async function windowsDefaultAppsUrl(): Promise<string> {
+    const scopes = [
+      ['HKCU', 'registeredAppUser'],
+      ['HKLM', 'registeredAppMachine'],
+    ] as const
+    for (const [hive, param] of scopes) {
+      try {
+        const key = `${hive}\\Software\\RegisteredApplications`
+        if (parseRegValue(await deps.run('reg', ['query', key, '/v', deps.registeredAppName]))) {
+          return `${WINDOWS_DEFAULT_APPS_URL}?${param}=${encodeURIComponent(deps.registeredAppName)}`
+        }
+      } catch {
+        // not registered in this hive
+      }
+    }
+    return WINDOWS_DEFAULT_APPS_URL
+  }
+
   async function set(): Promise<DefaultAppStatus> {
     if (!deps.packaged) return UNSUPPORTED
     try {
@@ -273,7 +296,7 @@ export function createDefaultAppService(deps: DefaultAppDeps): DefaultAppService
       } else if (deps.platform === 'linux') {
         await deps.run('xdg-mime', ['default', LINUX_DESKTOP_ID, ...mimes])
       } else if (deps.platform === 'win32') {
-        await deps.openExternal(WINDOWS_DEFAULT_APPS_URL)
+        await deps.openExternal(await windowsDefaultAppsUrl())
       }
     } catch {
       // status() below reports whatever actually stuck

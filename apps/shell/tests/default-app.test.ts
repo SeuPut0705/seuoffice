@@ -91,6 +91,7 @@ describe('createDefaultAppService', () => {
   const base = {
     packaged: true,
     exePath: '/Applications/GenOffice.app/Contents/MacOS/GenOffice',
+    registeredAppName: 'SeuOffice',
     openExternal: vi.fn(async () => {}),
   }
 
@@ -198,6 +199,41 @@ describe('createDefaultAppService', () => {
     })
     const svc = createDefaultAppService({ ...base, platform: 'win32', run })
     expect(await svc.status()).toEqual({ state: 'other', others: upstream, manualOnly: true })
+  })
+
+  describe('windows: opens the Default apps page of this app', () => {
+    const registered = '    SeuOffice    REG_SZ    Software\\seuoffice\\Capabilities\r\n'
+
+    async function openedUrl(hives: { HKCU?: boolean; HKLM?: boolean }): Promise<string> {
+      const run = vi.fn<RunCommand>(async (_cmd, args) => {
+        const hive = /^(HKCU|HKLM)\\Software\\RegisteredApplications$/.exec(args[1])?.[1]
+        if (hive === 'HKCU' || hive === 'HKLM') {
+          expect(args.slice(2)).toEqual(['/v', 'SeuOffice'])
+          if (hives[hive]) return registered
+        }
+        throw new Error('missing')
+      })
+      const openExternal = vi.fn(async (_url: string) => {})
+      await createDefaultAppService({ ...base, platform: 'win32', run, openExternal }).set()
+      expect(openExternal).toHaveBeenCalledTimes(1)
+      return openExternal.mock.calls[0]![0]
+    }
+
+    it('a per-user install names its HKCU registration', async () => {
+      expect(await openedUrl({ HKCU: true })).toBe(
+        'ms-settings:defaultapps?registeredAppUser=SeuOffice',
+      )
+    })
+
+    it('an all-users install names its HKLM registration', async () => {
+      expect(await openedUrl({ HKLM: true })).toBe(
+        'ms-settings:defaultapps?registeredAppMachine=SeuOffice',
+      )
+    })
+
+    it('falls back to the general page when neither hive has the registration', async () => {
+      expect(await openedUrl({})).toBe('ms-settings:defaultapps')
+    })
   })
 
   it('reports unknown instead of throwing when the probe fails', async () => {

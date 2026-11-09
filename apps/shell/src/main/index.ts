@@ -6978,6 +6978,7 @@ function registerHomeIpc(): void {
     platform: process.platform,
     packaged: app.isPackaged,
     exePath: app.getPath('exe'),
+    registeredAppName: PRODUCT_NAME,
     run: execFileRunner,
     openExternal: (url) => shell.openExternal(url),
   })
