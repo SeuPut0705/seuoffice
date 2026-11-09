@@ -691,7 +691,8 @@ const tUpd = createI18n({
 })
 
 const FIRST_CHECK_DELAY_MS = 15_000
-const RECHECK_INTERVAL_MS = 4 * 60 * 60 * 1000
+// hourly: the latest channel gets a release for every green push to main
+const RECHECK_INTERVAL_MS = 60 * 60 * 1000
 
 // After this many failed download/apply attempts for the same version the
 // dialog stops offering "retry" and guides the user to a manual download

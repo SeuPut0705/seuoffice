@@ -198,7 +198,7 @@ vi.mock('../src/main/update-window', () => ({
 }))
 
 const FIRST_CHECK_DELAY_MS = 15_000
-const RECHECK_INTERVAL_MS = 4 * 60 * 60 * 1000
+const RECHECK_INTERVAL_MS = 60 * 60 * 1000
 
 let platformSpy: { restore: () => void } | null = null
 
