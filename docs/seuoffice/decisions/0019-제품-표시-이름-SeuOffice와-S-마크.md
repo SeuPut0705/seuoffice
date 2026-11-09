@@ -22,6 +22,10 @@
 
 ## 결과
 
-- 이미 깐 v0.12.11과 이어진다. 사용자 데이터 폴더(`seuoffice` → `SeuOffice`), 기본 저장 폴더, Windows ProgId와 레지스트리 키는 대소문자만 다르다. 두 배포 플랫폼(Mac 기본 APFS, Windows)은 대소문자를 가리지 않으므로 같은 폴더와 키다. Mac 자체 업데이트(`apps/shell/src/main/mac-update.ts`)는 받은 zip 안의 `.app`을 이름과 상관없이 설치된 자리에 옮긴다. 그래서 업데이트로 받은 Mac 앱의 폴더 이름은 `seuoffice.app`으로 남는다. 새로 설치해야 `SeuOffice.app`이 된다. Windows도 업데이트는 원래 설치 폴더에 그대로 깐다.
-- 대소문자를 가리는 APFS 볼륨에 Mac 앱을 깐 사용자는 업데이트 뒤 새 데이터 폴더를 보게 된다. 드문 설정이라 옮기는 코드는 넣지 않았다.
+- 이미 깐 v0.12.11과 이어지도록 기계 이름은 소문자 `seuoffice`로 둔다. `USER_DATA_DIR_NAME`은 `PRODUCT_NAME`을 따르지 않고 `'seuoffice'`로 적는다. 설치된 앱은 켤 때 `app.setName('seuoffice')`를 부르고 사용자 데이터 폴더를 `<appData>/seuoffice`에 고정한다. 준비가 끝나면 `app.setName('SeuOffice')`로 표시 이름을 돌려놓는다(`apps/shell/src/main/index.ts`).
+  - 까닭: Electron은 Mac 키체인 항목 `"<앱 이름> Safe Storage"`에 safeStorage 키를 둔다. 키체인 이름은 대소문자를 가린다. 앱 이름이 `SeuOffice`가 되면 업데이트된 앱이 키를 못 찾고 새 키를 만들어, Drive 연결과 MCP 비밀값을 조용히 잃는다. Drive 캐시 목록도 절대 경로를 대소문자를 가려 비교하므로, 폴더 경로 문자열이 바뀌면 올리지 않은 수정본을 버린다(독립 검토에서 찾음).
+  - 확인: 저장소의 Electron 43.7.6으로 시험 앱을 돌렸다. 시작할 때 `setName`으로 준 이름이 키체인 항목과 userData에 쓰이고, 준비 뒤 이름을 바꿔도 키체인 항목은 그대로였다. 메뉴의 "종료" 같은 글자는 바뀐 표시 이름을 따랐다.
+- Windows 파일 연결 ProgId와 레지스트리 키도 `seuoffice`(`PACKAGED_APP_NAME`)로 둔다. `installer.nsh`와 `default-app.ts`가 소문자로 적어 둔 것과 맞춘다.
+- Mac 자체 업데이트(`apps/shell/src/main/mac-update.ts`)는 번들 ID와 판만 비교하고, 받은 zip 안의 `.app`을 이름과 상관없이 설치된 자리에 옮긴다. 그래서 업데이트로 받은 Mac 앱의 폴더 이름은 `seuoffice.app`으로 남는다. 새로 설치해야 `SeuOffice.app`이 된다. Windows는 원래 설치 폴더에 그대로 깔고, 옛 바로가기 이름 `seuoffice`가 남을 수 있다.
+- 리눅스 패키지(릴리스하지 않음)는 `/opt/SeuOffice`에 깔린다. CLI와 설치 뒤 스크립트가 그 경로를 쓴다.
 - 0013의 "제품 이름" 절에서 소문자 이름과 설치 파일 이름을 적은 줄은 이 결정으로 바뀐다.
