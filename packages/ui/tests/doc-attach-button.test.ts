@@ -45,7 +45,7 @@ describe('doc-attach strings', () => {
     }
     // the dictionary keeps the upstream token; the button produces the product name
     expect(DOC_ATTACH_STRINGS.en.label).toBe('Attach from GenOffice documents')
-    expect(brandText(DOC_ATTACH_STRINGS.ko.label, 'ko')).toBe('seuoffice 문서에서 첨부')
+    expect(brandText(DOC_ATTACH_STRINGS.ko.label, 'ko')).toBe('SeuOffice 문서에서 첨부')
   })
 })
 

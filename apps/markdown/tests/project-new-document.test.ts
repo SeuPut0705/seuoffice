@@ -134,7 +134,7 @@ describe('the AI silent first save of a never-saved note', () => {
     expect(result).toMatchObject({ ok: true, path: join(project, 'Q3_Plan.md') })
     expect(written).toEqual([[contents.id, 'Q3_Plan.md', '# Plan']])
     expect(readFileSync(join(project, 'Q3_Plan.md'), 'utf8')).toBe('# Plan')
-    expect(existsSync(join(appDir, 'seuoffice', 'Q3_Plan.md'))).toBe(false)
+    expect(existsSync(join(appDir, 'SeuOffice', 'Q3_Plan.md'))).toBe(false)
   })
 
   it('lands in the default save folder as before without a project', async () => {
@@ -168,7 +168,7 @@ describe('the AI silent first save of a never-saved note', () => {
       suggestedName: 'Plan',
     })
     expect(result).toMatchObject({ ok: false })
-    expect(existsSync(join(appDir, 'seuoffice', 'Plan.md'))).toBe(false)
+    expect(existsSync(join(appDir, 'SeuOffice', 'Plan.md'))).toBe(false)
   })
 })
 
