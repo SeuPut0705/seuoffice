@@ -44,7 +44,7 @@ ieumoffice sheet check book.xlsx --json                # formula errors, missing
 ieumoffice sheet links book.xlsx                       # external [n] links: stored path, resolved path, reachable, source sheets
 ieumoffice sheet links book.xlsx --update              # re-read reachable sources and write the computed values as the formulas' cached <v> (formulas untouched; unreachable links keep their cache)
 ieumoffice sheet links book.xlsx --break 1,2           # break links: formulas become their cached values, the links' parts are removed and surviving links renumber
-ieumoffice create --type docx --from report.md --out report.docx      # or --from fragment.html (restricted HTML); the new file carries Word-like docProps/core.xml + app.xml
+ieumoffice create --type docx --from report.md --out report.docx      # or --from fragment.html (restricted HTML); the new file carries Word-like docProps/core.xml + app.xml; --no-generator-fields drops the Application / AppVersion stamps
 ieumoffice convert notes.md --to docx|html
 ieumoffice convert report.docx --to html               # the Word editor's standalone-HTML export
 ieumoffice convert page.html --to docx                 # html2docx, same as the HTML app's Export as Word
