@@ -1,7 +1,6 @@
-// not in the package's browser entry; providers.ts itself is browser-safe
-import { defaultAiSettings } from '../../../../packages/ai-provider/src/providers'
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
+  createAiStreamBridge,
   createWebBridge,
   documentByPath,
   editMode,
@@ -9,6 +8,7 @@ import {
   reportOpened,
   unsupported,
   waitForDocument,
+  webAiSettings,
   webLanguage,
 } from '@seuoffice/web-platform'
 import { setUiLang } from '@genoffice/i18n'
@@ -175,7 +175,6 @@ const AI_MEMBERS = [
   'setAiSettings',
   'setTemplateSelection',
   'webSearch',
-  'aiStream',
 ] as const satisfies ReadonlyArray<keyof SlidesApi>
 
 function unsupportedMembers(
@@ -196,6 +195,9 @@ function reportFirst(result: OpenResult | null): OpenResult | null {
 }
 
 let pendingTaken = false
+
+// AI turns go to the embed host, which calls its gateway (decision 0017)
+const ai = createAiStreamBridge()
 
 const slidesApi: Partial<SlidesApi> = {
   ...unsupportedMembers('slides.edit', EDIT_MEMBERS),
@@ -226,7 +228,7 @@ const slidesApi: Partial<SlidesApi> = {
   getAutoSaveDefault: async () => NO_AUTO_SAVE_DEFAULT,
   getAiPanelPrefs: async () => DEFAULT_AI_PANEL_PREFS,
   setAiPanelPrefs: async () => DEFAULT_AI_PANEL_PREFS,
-  getAiSettings: async () => defaultAiSettings(),
+  getAiSettings: webAiSettings,
   getRecentFiles: async () => [],
   getChartColorSchemes: async () => null,
   getChartData: async () => null,
@@ -238,7 +240,9 @@ const slidesApi: Partial<SlidesApi> = {
   hasSlideClipboard: async () => false,
   clipboardProbe: async () => false,
   setShowFullScreen: async () => {},
-  aiStreamCancel: async () => {},
+  aiStream: ai.aiStream,
+  aiStreamCancel: ai.aiStreamCancel,
+  onAiStream: ai.onAiStream,
   aiLogRunFailure: async () => {},
   headlessExportDone: noop,
   setAutoSavePref: noop,
@@ -260,7 +264,6 @@ const slidesApi: Partial<SlidesApi> = {
   onMenuCommand: unsubscribe,
   onOpened: unsubscribe,
   onRenamed: unsubscribe,
-  onAiStream: unsubscribe,
   onAudienceNav: unsubscribe,
   onShowInk: unsubscribe,
   onShowSync: unsubscribe,

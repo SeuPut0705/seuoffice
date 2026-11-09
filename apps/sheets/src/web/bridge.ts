@@ -1,6 +1,6 @@
-import { defaultAiSettings } from '../../../../packages/ai-provider/src/providers'
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
+  createAiStreamBridge,
   createWebBridge,
   editMode,
   installWebBridge,
@@ -12,6 +12,7 @@ import {
   unsupported,
   waitForDocument,
   WebUnsupportedError,
+  webAiSettings,
   webLanguage,
 } from '@seuoffice/web-platform'
 import {
@@ -217,6 +218,9 @@ function onSaveShortcut(callback: (action: MenuAction) => void): () => void {
 // A member set to undefined turns its feature off: the renderer feature-detects it, as without a shell.
 type WebDesktopApi = { [K in keyof DesktopApi]?: DesktopApi[K] | undefined }
 
+// AI turns go to the embed host, which calls its gateway (decision 0017)
+const ai = createAiStreamBridge()
+
 const desktopApi: WebDesktopApi = {
   getLanguage: async () => webLanguage() as Awaited<ReturnType<DesktopApi['getLanguage']>>,
   onLanguageChanged: unsubscribe,
@@ -228,7 +232,7 @@ const desktopApi: WebDesktopApi = {
   onAiPanelPrefsChanged: unsubscribe,
   getAutoSaveDefault: async () => NO_AUTO_SAVE_DEFAULT,
   onAutoSaveDefaultChanged: unsubscribe,
-  getAiSettings: async () => defaultAiSettings(),
+  getAiSettings: webAiSettings,
   onAiSettingsChanged: unsubscribe,
   getUserDisplayName: async () => '',
   onUserDisplayNameChanged: unsubscribe,
@@ -281,7 +285,9 @@ const desktopApi: WebDesktopApi = {
   onRecoveryNotice: unsubscribe,
   onRecoveryWriteNow: unsubscribe,
   onMcpCommand: unsubscribe,
-  onAiStream: unsubscribe,
+  aiStream: ai.aiStream,
+  aiStreamCancel: ai.aiStreamCancel,
+  onAiStream: ai.onAiStream,
   reportMcpResult: noop,
   signalMcpReady: noop,
   headlessExportDone: noop,

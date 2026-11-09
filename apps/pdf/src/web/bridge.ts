@@ -1,7 +1,6 @@
-// not in the package's browser entry; providers.ts itself is browser-safe
-import { defaultAiSettings } from '../../../../packages/ai-provider/src/providers'
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
+  createAiStreamBridge,
   createWebBridge,
   documentByPath,
   editMode,
@@ -11,6 +10,7 @@ import {
   reportOpened,
   unsupported,
   waitForDocument,
+  webAiSettings,
   webLanguage,
 } from '@seuoffice/web-platform'
 import type { Lang } from '@genoffice/i18n'
@@ -80,6 +80,9 @@ function saveForHost(): Promise<void> {
   })
 }
 
+// AI turns go to the embed host, which calls its gateway (decision 0017)
+const ai = createAiStreamBridge()
+
 const pdfApi: Partial<PdfApi> = {
   consumePending: async () => (await waitForDocument())?.virtualPath ?? null,
   readFile: async (path) => {
@@ -96,7 +99,10 @@ const pdfApi: Partial<PdfApi> = {
   getAutoSaveDefault: async () => NO_AUTO_SAVE_DEFAULT,
   onAutoSaveDefaultChanged: unsubscribe,
   getUsername: async () => '',
-  getAiSettings: async () => defaultAiSettings(),
+  getAiSettings: webAiSettings,
+  aiStream: ai.aiStream,
+  aiStreamCancel: ai.aiStreamCancel,
+  onAiStream: ai.onAiStream,
   onAiSettingsChanged: unsubscribe,
   imageGenerationAvailable: async () => false,
   listDigitalSignatures: async () => [],
