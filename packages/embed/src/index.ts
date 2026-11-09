@@ -294,6 +294,21 @@ async function store(
 const MAX_AI_ERROR_CHARS = 64 * 1024
 
 /**
+ * The response headers the page's protocol code reads. Nothing else crosses:
+ * cookies and whatever else the gateway sent stay with the host.
+ */
+const RELAYED_AI_HEADERS = ['content-type', 'retry-after'] as const
+
+function relayedHeaders(response: Response): Record<string, string> {
+  const headers: Record<string, string> = {}
+  for (const name of RELAYED_AI_HEADERS) {
+    const value = response.headers.get(name)
+    if (value !== null) headers[name] = value
+  }
+  return headers
+}
+
+/**
  * One AI request: the host's response streamed to the page as raw bytes.
  * Nothing is posted after an abort: the page cancelled, or the frame is gone.
  */
@@ -310,6 +325,7 @@ async function relayAi(
       await response.body?.cancel().catch(() => {})
       return
     }
+    const headers = relayedHeaders(response)
     if (!response.ok) {
       const text = await response.text().catch(() => '')
       if (!signal.aborted) {
@@ -317,11 +333,14 @@ async function relayAi(
           type: 'ai_error',
           requestId,
           status: response.status,
+          headers,
           message: text.slice(0, MAX_AI_ERROR_CHARS),
         })
       }
       return
     }
+    // the first message of an answer carries its headers, whichever message it is
+    let first: { headers: Record<string, string> } | Record<string, never> = { headers }
     if (response.body) {
       const reader = response.body.getReader()
       // a cancel stops the read even when the host's fetch ignored the signal
@@ -333,13 +352,14 @@ async function relayAi(
           if (done || signal.aborted) break
           // a fresh copy the page owns: the reader may reuse or share its buffer
           const data = new Uint8Array(value)
-          post({ type: 'ai_chunk', requestId, data }, [data.buffer])
+          post({ type: 'ai_chunk', requestId, data, ...first }, [data.buffer])
+          first = {}
         }
       } finally {
         signal.removeEventListener('abort', stop)
       }
     }
-    if (!signal.aborted) post({ type: 'ai_end', requestId })
+    if (!signal.aborted) post({ type: 'ai_end', requestId, ...first })
   } catch (error) {
     if (signal.aborted) return
     post({

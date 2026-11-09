@@ -94,6 +94,7 @@ describe('relaying AI requests to the host', () => {
         type: 'ai_error',
         requestId: 'r1',
         status: 500,
+        headers: { 'content-type': 'text/plain;charset=UTF-8' },
         message: '{"error":{"message":"boom"}}',
       },
     ])
@@ -186,6 +187,82 @@ describe('relaying AI requests to the host', () => {
     const { doc, messages, ask } = openWithAi(undefined)
     ask('r1')
     await vi.waitFor(() => expect(messages().some((m) => m.type === 'ai_error')).toBe(true))
+    doc.destroy()
+  })
+
+  it('passes on only the content type and Retry-After, with the first answer', async () => {
+    const { doc, messages, ask } = openWithAi({
+      request: async () =>
+        new Response('{"choices":[]}', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': '3',
+            'Set-Cookie': 'session=secret',
+            'X-Upstream-Token': 'secret',
+          },
+        }),
+    })
+    ask('r1')
+    await vi.waitFor(() => expect(messages().some((m) => m.type === 'ai_end')).toBe(true))
+    const relayed = messages().filter((m) => m.requestId === 'r1')
+    expect(relayed[0]!.headers).toEqual({ 'content-type': 'application/json', 'retry-after': '3' })
+    expect(relayed.slice(1).every((m) => m.headers === undefined)).toBe(true)
+    doc.destroy()
+  })
+
+  it('passes on Retry-After with a refusal', async () => {
+    const { doc, messages, ask } = openWithAi({
+      request: async () =>
+        new Response('busy', { status: 429, headers: { 'Retry-After': '3600' } }),
+    })
+    ask('r1')
+    await vi.waitFor(() => expect(messages().some((m) => m.type === 'ai_error')).toBe(true))
+    const error = messages().find((m) => m.type === 'ai_error')!
+    expect(error.status).toBe(429)
+    expect(error.headers).toEqual({
+      'content-type': 'text/plain;charset=UTF-8',
+      'retry-after': '3600',
+    })
+    doc.destroy()
+  })
+
+  it('ignores an AI request that arrives before the page asked for its document', () => {
+    const request = vi.fn(async () => sseResponse([]))
+    const doc = openDocument(document.body, {
+      baseUrl: BASE,
+      fileName: 'memo.docx',
+      bytes: new Uint8Array([1]),
+      ai: { request },
+    })
+    vi.spyOn(doc.iframe.contentWindow!, 'postMessage').mockImplementation(() => {})
+    post(doc.iframe.contentWindow, ORIGIN, { type: 'ai_request', requestId: 'r1', body: {} })
+    expect(request).not.toHaveBeenCalled()
+    doc.destroy()
+  })
+
+  it('drops an answer that comes after the cancel when the host ignored the signal', async () => {
+    let finish!: (response: Response) => void
+    let cancelled = false
+    const { doc, messages, ask } = openWithAi({
+      request: () => new Promise<Response>((resolve) => (finish = resolve)),
+    })
+    ask('r1')
+    await vi.waitFor(() => expect(finish).toBeDefined())
+    post(doc.iframe.contentWindow, ORIGIN, { type: 'ai_cancel', requestId: 'r1' })
+    finish(
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(encoder.encode('data: {"a":1}\n\n'))
+          },
+          cancel() {
+            cancelled = true
+          },
+        }),
+      ),
+    )
+    await vi.waitFor(() => expect(cancelled).toBe(true))
+    expect(messages().filter((m) => m.requestId === 'r1')).toEqual([])
     doc.destroy()
   })
 })
