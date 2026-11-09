@@ -16,9 +16,9 @@
 # shell profile edits, no other program is touched.
 set -eu
 
-REPO=pblsketch/openoffice
+REPO=pblsketch/ieumoffice
 # bumped by the release step together with the published archive
-DEFAULT_VERSION=0.12.11
+DEFAULT_VERSION=0.12.12
 NODE_VERSION=22.12.0
 MARKER='# ieumoffice launcher (command-line install)'
 

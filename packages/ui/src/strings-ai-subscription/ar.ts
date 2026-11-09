@@ -17,6 +17,8 @@ export const ar = {
   cardErrNeedsUpdatePath: 'الملف الذي يشغّله هذا التطبيق:',
   cardErrNeedsUpdateWindows:
     'تحديث {provider} داخل WSL (Ubuntu) أو في مجلد آخر لا يغيّر هذا الملف. شغّل {command} في Windows PowerShell.',
+  claudeDesktopNote:
+    'تطبيق Claude لسطح المكتب ليس Claude Code الذي يشغّله هذا التطبيق. Claude Code برنامج منفصل يُستخدم في الطرفية، لذلك لا يغيّره تثبيت تطبيق سطح المكتب أو تحديثه.',
   cardErrTimeout: 'لم يستجب برنامج {provider} في الوقت المحدد. تحقق مرة أخرى بعد قليل.',
   cardErrFailed: 'حدث خطأ أثناء التحقق من {provider}. تحقق مرة أخرى.',
   actionInstall: 'تثبيت',
@@ -51,6 +53,8 @@ export const ar = {
   errSignedOut: 'انتهت صلاحية تسجيل الدخول إلى {provider}. سجّل الدخول مجددًا للمتابعة.',
   errRateLimit: 'تم استنفاد حد اشتراك {provider}.',
   errRateLimitReset: 'تم استنفاد حد اشتراك {provider}. سيُعاد تعيينه في {time}.',
+  errChatGptAppLimit:
+    'استنفد هذا التطبيق استخدام ChatGPT المتاح له. قد يكون الحد هو حد خطتك كلها أو حدًّا عُيّن لهذا التطبيق. تحقّق من الإعدادات ← الاستخدام في ChatGPT.',
   errUnsafeTools:
     'بدأ برنامج {provider} وأدواته الخاصة مفعَّلة، لذلك أُوقف التشغيل حفاظًا على الأمان.',
   errMeteredNotAccepted:
@@ -154,6 +158,8 @@ export const ar = {
     'سجّلت الدخول في المتصفح، لكن OpenAI لم تقبل هذا الاتصال، أو تعذّر التحقق من ردّها. تأكد من صحة تاريخ هذا الكمبيوتر ووقته، ثم اضغط مرة أخرى للبدء من جديد.',
   chatgptLoginNetworkNote:
     'تعذّر إكمال تسجيل الدخول: لم يمكن الوصول إلى OpenAI أو لم يُفتح أي متصفح. تحقق من الاتصال بالإنترنت (بما في ذلك شبكة الشركة أو VPN أو الوكيل)، ثم اضغط مرة أخرى.',
+  chatgptLoginWorkspacePolicyNote:
+    'ينتمي حساب ChatGPT هذا إلى مساحة عمل تديرها شركة أو مدرسة، ولا تسمح OpenAI للتطبيقات باستخدام خطة ChatGPT الخاصة بمساحة العمل. لا يملك مسؤول مساحة العمل أي إعداد للسماح لهذا التطبيق، لذا لن يفيد تسجيل الدخول مرة أخرى. سجّل الدخول بحساب ChatGPT شخصي (Go أو Plus أو Pro)، أو اتصل عبر بطاقة Codex.',
   chatgptLoginNotAllowedNote:
     'لم تسمح لهذا التطبيق باستخدام خطتك في ChatGPT، أو عاد المتصفح من تسجيل الدخول بفشل. اضغط مرة أخرى وسجّل الدخول ثم اسمح بذلك في صفحة الإذن.',
   chatgptSigningInNote:

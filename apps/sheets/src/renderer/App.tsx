@@ -449,6 +449,7 @@ import { installFilteredCopyHook } from './filtered-copy'
 import { installFilterRangeOutlineSuppression } from './filter-range-outline'
 import { createSheetTabActions } from './sheet-tab-actions'
 import { installVeryHiddenSheetGuard } from './very-hidden-sheets'
+import { installNewSheetNaming } from './new-sheet-name'
 import { installFormulaBarAutosize } from './formula-bar-autosize'
 import { createFunctionArgumentsHost, installFxButtonHook } from './function-arguments-runtime'
 import {
@@ -506,6 +507,7 @@ import { installCopyAnimationIdle } from './copy-animation-idle'
 import { installNumberAsTextAlertSeverity } from './number-as-text-alert'
 import { installFormulaStreamHold } from './formula-stream-hold'
 import { installRichTextBidiFix } from './rich-text-bidi-fix'
+import { installHanjaCompositionRestart } from './hanja-composition-restart'
 import { installRtlTextDirectionFix } from './rtl-text-fix'
 import { installRtlGridMirror } from './rtl-grid-mirror'
 import { installVertAlignRender } from './vert-align-render'
@@ -1390,6 +1392,14 @@ export function App({
     send: (text, use) => {
       handleSend(text, undefined, undefined, use)
     },
+    // a template skill called in a workbook with content asks where to run
+    hasContent: () => sheetHasContent,
+    // a template copy that brought the asking document: it goes in as an attachment
+    attach: async (paths) => {
+      const added = await window.desktopApi.addAttachmentPaths([...paths])
+      mergeAttachments(added)
+      return (added?.accepted.length ?? 0) > 0
+    },
     onTaken: () => setOpenAiRequest((n) => n + 1),
     setComposer: setPrompt,
   })
@@ -2264,6 +2274,8 @@ export function App({
     installFilterRangeOutlineSuppression(runtime)
     const selectionAppearance = installSelectionAppearance(runtime)
     installVeryHiddenSheetGuard(runtime, lazyWorkbookRef)
+    // Sheet2, Sheet3 after Sheet1 whatever the UI language (issue #389)
+    installNewSheetNaming(runtime)
     loadSnapshotIntoUniver(runtime, initialSnapshot, 'new-workbook', 'Untitled')
     univerRef.current = runtime
     // The hidden spare can have a canvas/editor before Univer finishes booting.
@@ -2341,6 +2353,8 @@ export function App({
     // registers it; without this the View tab's toggle would silently no-op.
     installRightToLeftCommand(runtime)
     installRichTextBidiFix()
+    // The Hanja key on a composing letter (ㅁ → ※) must replace it, not type it twice (#443).
+    installHanjaCompositionRestart()
     // Excel's "Center Across Selection": center anchor text over its run of
     // blank same-format neighbors instead of folding it inside one cell.
     installCenterContinuousRender()

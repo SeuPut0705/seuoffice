@@ -28,7 +28,7 @@ import {
   AI_QUEUE_LABELS,
   AiSubscriptionUsageLine,
   aiSubscriptionText,
-  AiTypingIndicator,
+  AiReplyProgress,
   AiUsageChip,
   addTokenUsage,
   type AiTokenUsageView,
@@ -514,6 +514,14 @@ export function AiPanel({
     cards: skillCards,
     busy,
     send: (text, use) => send(text, undefined, use),
+    // a template skill called in a map with content asks where to run
+    hasContent: () => host.session() !== null && blankNewMapSheet(host) === null,
+    // a template copy that brought the asking document: it goes in as an attachment
+    attach: async (paths) => {
+      const added = (await aiApi().addAttachmentPaths?.(paths)) ?? null
+      mergeAttachments(added)
+      return (added?.accepted.length ?? 0) > 0
+    },
     onTaken: onSkillHandoff,
     // a template copy's request: the map goes into the project once it ends well
     onHandedRun: ({ preview }) => {
@@ -1850,11 +1858,7 @@ export function AiPanel({
               key={i}
               className={`ai-msg ai-msg-assistant${entry.isError ? ' ai-msg-error' : ''}${entry.streaming ? ' ai-msg-streaming' : ''}`}
             >
-              {!entry.text && entry.streaming ? (
-                <span className="ai-typing-row">
-                  <AiTypingIndicator label={hasTools ? t('aiWorking') : t('aiThinking')} />
-                </span>
-              ) : entry.blocked ? (
+              {entry.blocked ? (
                 <AiBlockedNotice
                   kind={entry.blocked.kind}
                   provider={entry.blocked.provider}
@@ -1882,6 +1886,7 @@ export function AiPanel({
                   <AiUsageChip usage={entry.usage} lang={lang} />
                 </div>
               )}
+              <AiReplyProgress reply={entry} thinking={t('aiThinking')} working={t('aiWorking')} />
               {showToolbar && (
                 <div className="ai-msg-toolbar">
                   <button

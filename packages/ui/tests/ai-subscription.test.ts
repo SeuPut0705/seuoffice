@@ -102,6 +102,22 @@ describe('the ChatGPT card (decision 0081)', () => {
     expect(
       after({ reason: 'denied', step: 'callback-error', oauthError: 'access_denied' }),
     ).toEqual(['chatgptLoginNotAllowedNote', 'loginNote'])
+    // a workspace that does not allow third-party plan use has nothing the user can
+    // allow on the consent page: the card must not send them back there
+    expect(
+      after({
+        reason: 'denied',
+        step: 'callback-error',
+        oauthError: '3p_delegated_access_policy_denied',
+      }),
+    ).toEqual(['chatgptLoginWorkspacePolicyNote', 'loginNote'])
+    expect(
+      after({
+        reason: 'denied',
+        step: 'token-refused',
+        oauthError: '3p_delegated_access_policy_denied',
+      }),
+    ).toEqual(['chatgptLoginWorkspacePolicyNote', 'loginNote'])
     expect(after({ reason: 'timeout' })).toEqual(['chatgptLoginUnfinishedNote', 'loginNote'])
     expect(after()).toEqual(['chatgptLoginUnfinishedNote', 'loginNote'])
     // the button is the same: one more sign-in, from the start
@@ -310,7 +326,7 @@ describe('aiSubscriptionCardView', () => {
       state: 'error',
       tone: 'error',
       statusKey: 'cardError',
-      noteKeys: [],
+      noteKeys: ['claudeDesktopNote'],
       detailKey: 'cardErrNeedsUpdate',
       actions: ['recheck'],
       links: [],
@@ -382,7 +398,50 @@ describe('aiSubscriptionCardView', () => {
     expect(updatable.programPath).toBe(windows.programPath)
     expect(updatable.pathNoteKeys).toEqual(['cardErrNeedsUpdateWindows'])
     expect(updatable.actions).toEqual(['update', 'recheck'])
-    expect(updatable.noteKeys).toEqual(['updateNote'])
+    expect(updatable.noteKeys).toEqual(['claudeDesktopNote', 'updateNote'])
+  })
+
+  it('error: a Claude below the floor that Homebrew installed is updated with Homebrew', () => {
+    const outdated = (programPath: string) =>
+      aiSubscriptionCardView(
+        status('claude-code', 'error', {
+          version: '2.1.97',
+          error:
+            'needs-update: Claude Code 2.1.97 is too old; version 2.1.248 or newer is required',
+          programPath,
+        }),
+        { terminalWindows: false },
+      ).detailParams?.command
+    expect(outdated('/opt/homebrew/Caskroom/claude-code/2.1.97/claude')).toBe(
+      'brew upgrade claude-code',
+    )
+    expect(outdated('/usr/local/Caskroom/claude-code@latest/2.1.220/claude')).toBe(
+      'brew upgrade claude-code@latest',
+    )
+    expect(
+      outdated('/opt/homebrew/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe'),
+    ).toBe('claude update')
+    expect(outdated('/Users/me/.local/share/claude/versions/2.1.97')).toBe('claude update')
+  })
+
+  it('Claude not installed or too old: says the Claude desktop app is not Claude Code', () => {
+    expect(aiSubscriptionCardView(status('claude-code', 'not-installed')).noteKeys).toEqual([
+      'claudeDesktopNote',
+      'installNote',
+      'installReturnNote',
+    ])
+    const outdated = status('claude-code', 'error', {
+      version: '2.1.97',
+      error: 'needs-update: Claude Code 2.1.97 is too old; version 2.1.248 or newer is required',
+    })
+    expect(aiSubscriptionCardView(outdated).noteKeys).toEqual(['claudeDesktopNote'])
+    expect(
+      aiSubscriptionCardView({ ...outdated, error: 'failed: Claude Code could not be run' })
+        .noteKeys,
+    ).toEqual([])
+    expect(
+      aiSubscriptionCardView(status('codex', 'error', { error: 'needs-update: old' })).noteKeys,
+    ).toEqual([])
   })
 
   it('error: the status text itself is never part of the view', () => {
@@ -498,6 +557,12 @@ describe('aiSubscriptionCardView', () => {
         actions: ['install-help'],
         links: ['install-help'],
       })
+    })
+
+    it('not-installed Claude: the official instructions, and that the desktop app is not Claude Code', () => {
+      const view = aiSubscriptionCardView(status('claude-code', 'not-installed'), noWindows)
+      expect(view.noteKeys).toEqual(['claudeDesktopNote'])
+      expect(view.actions).toEqual(['install-help'])
     })
 
     it('a browser sign-in under way: where to sign in, with no window to open', () => {
@@ -752,6 +817,27 @@ describe('aiRunErrorText', () => {
         aiRunErrorText(lang, { kind: 'rate-limit', provider: 'claude-code', resetsAt }, now),
         lang,
       ).toContain(formatAiResetTime(lang, resetsAt, now))
+    }
+  })
+
+  it('does not call a ChatGPT limit the whole plan, nor give it a reset time', () => {
+    // OpenAI: the code may come from a limit set for this app alone
+    const text = aiRunErrorText('en', { kind: 'rate-limit', provider: 'chatgpt', resetsAt }, now)
+    expect(text).toBe(
+      'This app has used up the ChatGPT usage it can draw on. The limit may be your whole plan’s or one set for this app. Check Settings → Usage in ChatGPT.',
+    )
+    expect(text).not.toContain(time)
+    expect(aiRunErrorText('ko', { kind: 'rate-limit', provider: 'chatgpt' })).toBe(
+      'ChatGPT에서 이 앱이 쓸 수 있는 사용량을 다 썼습니다. 요금제 전체의 한도이거나 이 앱에 정해 둔 한도일 수 있습니다. ChatGPT 설정 → 사용량에서 확인하세요.',
+    )
+    for (const lang of LANGS) {
+      const worded = aiRunErrorText(lang, { kind: 'rate-limit', provider: 'chatgpt' })
+      expect(worded, lang).toContain('ChatGPT')
+      expect(worded, lang).not.toMatch(/[{}]/)
+      if (lang !== 'en')
+        expect(worded, lang).not.toBe(
+          aiRunErrorText('en', { kind: 'rate-limit', provider: 'chatgpt' }),
+        )
     }
   })
 

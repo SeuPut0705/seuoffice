@@ -18,6 +18,8 @@ export const ms = {
   cardErrNeedsUpdatePath: 'Fail yang dijalankan oleh aplikasi ini:',
   cardErrNeedsUpdateWindows:
     'Mengemas kini {provider} di dalam WSL (Ubuntu) atau dalam folder lain tidak mengubah fail ini. Jalankan {command} dalam Windows PowerShell.',
+  claudeDesktopNote:
+    'Aplikasi desktop Claude bukan Claude Code yang dijalankan oleh aplikasi ini. Claude Code ialah program berasingan yang digunakan dalam terminal, jadi memasang atau mengemas kini aplikasi desktop tidak mengubahnya.',
   cardErrTimeout:
     'Program {provider} tidak menjawab dalam masa yang ditetapkan. Semak semula sebentar lagi.',
   cardErrFailed: 'Masalah berlaku semasa menyemak {provider}. Semak semula.',
@@ -55,6 +57,8 @@ export const ms = {
   errRateLimit: 'Had langganan {provider} telah habis digunakan.',
   errRateLimitReset:
     'Had langganan {provider} telah habis digunakan. Had ditetapkan semula pada {time}.',
+  errChatGptAppLimit:
+    'Apl ini telah menghabiskan penggunaan ChatGPT yang boleh digunakannya. Had itu mungkin had seluruh pelan anda atau had yang ditetapkan untuk apl ini. Semak dalam ChatGPT di Tetapan → Penggunaan.',
   errUnsafeTools:
     'Program {provider} bermula dengan alatnya sendiri masih aktif, jadi proses dihentikan demi keselamatan.',
   errMeteredNotAccepted:
@@ -163,6 +167,8 @@ export const ms = {
     'Anda sudah log masuk dalam pelayar, tetapi OpenAI tidak menerima sambungan ini, atau jawapannya tidak dapat disemak. Pastikan tarikh dan masa PC ini betul, kemudian tekan sekali lagi untuk bermula semula.',
   chatgptLoginNetworkNote:
     'Log masuk tidak dapat diselesaikan: OpenAI tidak dapat dihubungi atau tiada pelayar dibuka. Semak sambungan internet (termasuk rangkaian syarikat, VPN atau proksi), kemudian tekan sekali lagi.',
+  chatgptLoginWorkspacePolicyNote:
+    'Akaun ChatGPT ini tergolong ruang kerja yang diurus oleh syarikat atau sekolah, dan OpenAI tidak membenarkan aplikasi menggunakan pelan ChatGPT ruang kerja. Pentadbir ruang kerja tiada tetapan untuk membenarkan aplikasi ini, jadi log masuk semula tidak akan membantu. Log masuk dengan akaun ChatGPT peribadi (Go, Plus, atau Pro), atau sambung melalui kad Codex.',
   chatgptLoginNotAllowedNote:
     'Anda tidak membenarkan aplikasi ini menggunakan pelan ChatGPT anda, atau pelayar kembali daripada log masuk dengan kegagalan. Tekan sekali lagi, log masuk dan benarkan di halaman kebenaran.',
   chatgptSigningInNote:

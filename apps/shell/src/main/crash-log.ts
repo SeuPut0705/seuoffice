@@ -1,4 +1,5 @@
 import { appendFileSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import type { AgentProvider } from '../shared/agent-api'
 
 /**
  * A small crash record kept on this PC only. When a renderer, the GPU process
@@ -6,7 +7,12 @@ import { appendFileSync, readFileSync, statSync, writeFileSync } from 'node:fs'
  * uncaught error, one JSON line goes to `<userData>/crash-log.jsonl`: the time,
  * what ended, Chromium's reason word, the exit code, and which editor it was,
  * plus a few memory figures in whole megabytes. A `low-memory` line records the
- * same figures when the PC runs short of memory while an AI request is running.
+ * same figures when the PC, or the main process's JavaScript heap, runs short
+ * of memory. A `main-gone` line, written at the next launch, records that the
+ * main process itself ended without its quit path, with the last figures its
+ * heartbeat saw (crash-heartbeat.ts).
+ * An `agent-start` line records an agent session that did not start: the
+ * program, the failure's code, and the thrown error's class and code.
  * Nothing else is accepted — no document text, path, file name, URL or error
  * message (those can carry a path) — and nothing is ever sent anywhere.
  */
@@ -16,7 +22,13 @@ export const CRASH_LOG_FILE = 'crash-log.jsonl'
 export const CRASH_LOG_MAX_BYTES = 64 * 1024
 
 export type CrashKind =
-  'renderer' | 'child-process' | 'main-exception' | 'main-rejection' | 'low-memory'
+  | 'renderer'
+  | 'child-process'
+  | 'main-exception'
+  | 'main-rejection'
+  | 'low-memory'
+  | 'main-gone'
+  | 'agent-start'
 
 /** memory at the time of the entry; whole numbers only */
 export interface CrashMemory {
@@ -30,6 +42,12 @@ export interface CrashMemory {
   aiStreams?: number
   /** subscription CLI processes the app is running */
   cliChildren?: number
+  /** resident memory of the main process alone, MB */
+  mainMB?: number
+  /** the main process's JavaScript heap in use, MB */
+  heapMB?: number
+  /** the size that heap may not pass, MB (past it the main process ends) */
+  heapLimitMB?: number
 }
 
 export interface CrashEntry extends CrashMemory {
@@ -41,6 +59,13 @@ export interface CrashEntry extends CrashMemory {
   editor?: string
   /** child-process type ('GPU', 'Utility', …) */
   process?: string
+  program?: AgentProvider
+  /** `errorReason` of what was thrown */
+  cause?: string
+  /** main-gone: minutes the gone run had been up at its last heartbeat */
+  upMin?: number
+  /** main-gone: minutes from that heartbeat to this launch */
+  beatAgeMin?: number
 }
 
 // short identifier-like words only: anything else (a message, a path) is dropped
@@ -50,7 +75,18 @@ function safeWord(value: unknown): string | undefined {
   return typeof value === 'string' && SAFE_WORD.test(value) ? value : undefined
 }
 
-const MEMORY_FIELDS = ['appMB', 'freeMB', 'totalMB', 'aiStreams', 'cliChildren'] as const
+const COUNT_FIELDS = [
+  'appMB',
+  'freeMB',
+  'totalMB',
+  'aiStreams',
+  'cliChildren',
+  'mainMB',
+  'heapMB',
+  'heapLimitMB',
+  'upMin',
+  'beatAgeMin',
+] as const
 
 /** one log line, holding only the allowed fields */
 export function crashLine(entry: CrashEntry, now: Date = new Date()): string {
@@ -64,7 +100,11 @@ export function crashLine(entry: CrashEntry, now: Date = new Date()): string {
   if (editor) line.editor = editor
   const proc = safeWord(entry.process)
   if (proc) line.process = proc
-  for (const key of MEMORY_FIELDS) {
+  const program = safeWord(entry.program)
+  if (program) line.program = program
+  const cause = safeWord(entry.cause)
+  if (cause) line.cause = cause
+  for (const key of COUNT_FIELDS) {
     const value = entry[key]
     if (typeof value === 'number' && Number.isInteger(value) && value >= 0) line[key] = value
   }

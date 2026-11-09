@@ -18,6 +18,8 @@ export const nl = {
   cardErrNeedsUpdatePath: 'Bestand dat deze app uitvoert:',
   cardErrNeedsUpdateWindows:
     'Als je {provider} in WSL (Ubuntu) of in een andere map bijwerkt, verandert dit bestand niet. Voer {command} uit in Windows PowerShell.',
+  claudeDesktopNote:
+    'De Claude-desktopapp is niet Claude Code, dat deze app uitvoert. Claude Code is een apart programma voor de terminal, dus de desktopapp installeren of bijwerken verandert het niet.',
   cardErrTimeout:
     'Het programma {provider} heeft niet op tijd gereageerd. Controleer het zo dadelijk opnieuw.',
   cardErrFailed: 'Er ging iets mis bij het controleren van {provider}. Controleer het opnieuw.',
@@ -56,6 +58,8 @@ export const nl = {
   errRateLimit: 'De limiet van het abonnement {provider} is bereikt.',
   errRateLimitReset:
     'De limiet van het abonnement {provider} is bereikt. Deze wordt om {time} hersteld.',
+  errChatGptAppLimit:
+    'Deze app heeft het ChatGPT-gebruik opgebruikt waarover hij beschikt. Dat kan de limiet van je hele abonnement zijn of een limiet die voor deze app is ingesteld. Controleer het in ChatGPT onder Instellingen → Gebruik.',
   errUnsafeTools:
     'Het programma {provider} is gestart met eigen hulpmiddelen ingeschakeld; de uitvoering is uit veiligheid gestopt.',
   errMeteredNotAccepted:
@@ -164,6 +168,8 @@ export const nl = {
     'Je bent in de browser aangemeld, maar OpenAI heeft deze verbinding niet geaccepteerd, of het antwoord kon niet worden gecontroleerd. Controleer of de datum en tijd van deze pc kloppen en druk dan nogmaals om opnieuw te beginnen.',
   chatgptLoginNetworkNote:
     'Het aanmelden kon niet worden afgerond: OpenAI was niet bereikbaar of er ging geen browser open. Controleer de internetverbinding (ook een bedrijfsnetwerk, VPN of proxy) en druk dan nogmaals.',
+  chatgptLoginWorkspacePolicyNote:
+    'Dit ChatGPT-account hoort bij een werkruimte die door een bedrijf of school wordt beheerd, en OpenAI staat apps niet toe het ChatGPT-abonnement van een werkruimte te gebruiken. De beheerder van de werkruimte heeft geen instelling om deze app toe te staan, dus opnieuw inloggen helpt niet. Log in met een persoonlijk ChatGPT-account (Go, Plus of Pro) of maak verbinding via de Codex-kaart.',
   chatgptLoginNotAllowedNote:
     'Je hebt deze app niet toegestaan je ChatGPT-abonnement te gebruiken, of de browser kwam met een fout terug van het aanmelden. Druk nogmaals, meld je aan en geef toestemming op de toestemmingspagina.',
   chatgptSigningInNote:

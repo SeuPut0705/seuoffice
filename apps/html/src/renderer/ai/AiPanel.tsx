@@ -91,7 +91,7 @@ import {
   AiQueueStrip,
   AI_QUEUE_LABELS,
   AiScopeQuote,
-  AiTypingIndicator,
+  AiReplyProgress,
   AiUsageChip,
   addTokenUsage,
   createFileNav,
@@ -578,6 +578,14 @@ export function AiPanel({
     cards: skillCards,
     busy,
     send: (text, use) => send(text, undefined, false, undefined, undefined, use),
+    // a template skill called in a page with content asks where to run
+    hasContent: () => !isDocEmpty(deps.access.getText()),
+    // a template copy that brought the asking document: it goes in as an attachment
+    attach: async (paths) => {
+      const added = (await window.htmlApi.addAttachmentPaths(paths)) ?? null
+      mergeAttachments(added)
+      return (added?.accepted.length ?? 0) > 0
+    },
     onTaken: onSkillHandoff,
     setComposer: setPrompt,
   })
@@ -2283,21 +2291,7 @@ export function AiPanel({
               key={i}
               className={`ai-msg ai-msg-assistant${entry.isError ? ' ai-msg-error' : ''}${entry.streaming ? ' ai-msg-streaming' : ''}`}
             >
-              {!entry.text && entry.streaming ? (
-                <span className="ai-typing-row">
-                  {/* no clock while a card waits on the person; the indicator counts from 0 again after */}
-                  {isLast && panelWait ? (
-                    <span className="ai-clarify-chip" role="status">
-                      <span className="ai-clarify-chip-eyebrow">{t(WAIT_LABEL[panelWait])}</span>
-                      <span className="ai-clarify-chip-arrow" aria-hidden>
-                        ↓
-                      </span>
-                    </span>
-                  ) : (
-                    <AiTypingIndicator label={hasTools ? t('aiWorking') : t('aiThinking')} />
-                  )}
-                </span>
-              ) : entry.blocked ? (
+              {entry.blocked ? (
                 <AiBlockedNotice
                   kind={entry.blocked.kind}
                   provider={entry.blocked.provider}
@@ -2324,6 +2318,22 @@ export function AiPanel({
                 <div className="ai-message-usage">
                   <AiUsageChip usage={entry.usage} lang={lang} />
                 </div>
+              )}
+              {entry.streaming && isLast && panelWait ? (
+                <span className="ai-typing-row">
+                  <span className="ai-clarify-chip" role="status">
+                    <span className="ai-clarify-chip-eyebrow">{t(WAIT_LABEL[panelWait])}</span>
+                    <span className="ai-clarify-chip-arrow" aria-hidden>
+                      ↓
+                    </span>
+                  </span>
+                </span>
+              ) : (
+                <AiReplyProgress
+                  reply={entry}
+                  thinking={t('aiThinking')}
+                  working={t('aiWorking')}
+                />
               )}
               {showToolbar && (
                 <div className="ai-msg-toolbar">

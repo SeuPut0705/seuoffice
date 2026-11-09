@@ -256,7 +256,12 @@ function cliCardView(
   if (status.signingIn) return signingInCardView(status, terminalWindows, options)
   const view = connectionCardView(status, terminalWindows)
   if (status.state === 'not-installed' && !terminalWindows) {
-    return { ...view, noteKeys: [], actions: ['install-help'], links: ['install-help'] }
+    return {
+      ...view,
+      noteKeys: desktopAppNoteOf(status.provider),
+      actions: ['install-help'],
+      links: ['install-help'],
+    }
   }
   if (view.detailKey && subscriptionStatusErrorKind(status) === 'needs-update') {
     // the copy a Linux terminal under WSL updates is not the one Windows runs;
@@ -288,14 +293,31 @@ function cliCardView(
 }
 
 /**
+ * OpenAI's answers when the ChatGPT account belongs to a workspace that does not
+ * let another app spend its plan. No workspace setting can allow this app: plan
+ * use outside ChatGPT is offered only on personal plans, so pressing sign-in
+ * again leads to the same page. The chatgpt note says so instead of pointing at
+ * a consent choice the user never had.
+ */
+const CHATGPT_WORKSPACE_POLICY_OAUTH_ERRORS: ReadonlySet<string> = new Set([
+  '3p_delegated_access_policy_denied',
+])
+
+/**
  * What the ChatGPT card says after a sign-in that ended without a connection:
  * why, when the main side knows; the plain "did not finish" otherwise (it ran
  * out of time, or an older main side gave no reason).
  */
 function chatGptLoginFailedNoteKey(status: AiSubscriptionStatus): AiSubscriptionStringKey {
+  const failure = status.loginFailure
+  // a workspace that does not allow third-party plan use has nothing the user can
+  // allow, whether OpenAI refused at the callback or at the token endpoint
+  if (failure?.oauthError && CHATGPT_WORKSPACE_POLICY_OAUTH_ERRORS.has(failure.oauthError)) {
+    return 'chatgptLoginWorkspacePolicyNote'
+  }
   // the browser came back with an error: most often the user did not allow the app
-  if (status.loginFailure?.step === 'callback-error') return 'chatgptLoginNotAllowedNote'
-  switch (status.loginFailure?.reason) {
+  if (failure?.step === 'callback-error') return 'chatgptLoginNotAllowedNote'
+  switch (failure?.reason) {
     case 'no-plan':
       return 'chatgptLoginNoPlanNote'
     case 'denied':
@@ -428,6 +450,10 @@ function connectionCardView(
   }
 }
 
+function desktopAppNoteOf(provider: AiSubscriptionProviderId): AiSubscriptionStringKey[] {
+  return provider === 'claude-code' ? ['claudeDesktopNote'] : []
+}
+
 function connectionCardParts(
   status: AiSubscriptionStatus,
   terminalWindows: boolean,
@@ -441,7 +467,7 @@ function connectionCardParts(
         ...base,
         tone: 'neutral',
         statusKey: 'cardNotInstalled',
-        noteKeys: ['installNote', 'installReturnNote'],
+        noteKeys: [...desktopAppNoteOf(status.provider), 'installNote', 'installReturnNote'],
         actions: ['install', 'install-help'],
       }
     case 'signed-out': {
@@ -514,7 +540,7 @@ function connectionCardParts(
         ...base,
         tone: 'error',
         statusKey: 'cardError',
-        noteKeys: [],
+        noteKeys: kind === 'needs-update' ? desktopAppNoteOf(status.provider) : [],
         ...(outdated
           ? { detailKey: 'cardErrNeedsUpdateVersion', detailParams: outdated }
           : { detailKey: STATUS_ERROR_KEYS[kind ?? 'failed'] }),
@@ -710,6 +736,9 @@ export function aiRunErrorText(
     case 'signed-out':
       return aiSubscriptionText(lang, 'errSignedOut', { provider })
     case 'rate-limit':
+      // OpenAI: this error may be a limit set for this app, not the whole
+      // plan, and it does not tell when usage comes back
+      if (cause.provider === 'chatgpt') return aiSubscriptionText(lang, 'errChatGptAppLimit')
       return hasTime
         ? aiSubscriptionText(lang, 'errRateLimitReset', { provider, time })
         : aiSubscriptionText(lang, 'errRateLimit', { provider })

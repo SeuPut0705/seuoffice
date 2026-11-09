@@ -1,6 +1,6 @@
 # GenOffice のインストール
 
-すべてのバージョンは、GitHub にあるプロジェクトの [Releases ページ](https://github.com/pblsketch/openoffice/releases/latest) で公開されています。Windows 版に加えて、Mac 版と Linux 版もベータとして公開しています。Mac 版と Linux 版は開発者自身が動作を確認しているわけではなく、利用者からの報告で確認しています。
+すべてのバージョンは、GitHub にあるプロジェクトの [Releases ページ](https://github.com/pblsketch/ieumoffice/releases/latest) で公開されています。Windows 版に加えて、Mac 版と Linux 版もベータとして公開しています。Mac 版と Linux 版は開発者自身が動作を確認しているわけではなく、利用者からの報告で確認しています。
 
 ## 自分のマシンに合わせてファイルを選ぶ
 
@@ -74,7 +74,7 @@ macOS が、このアプリはこの Mac ではサポートされていないと
 
 Mac ではほかにも次の点に注意してください。
 
-- AI 接続のカードにはインストールボタンがありません。カードにある公式のインストールガイドのリンクに従って、Claude Code や Codex をインストールしてください。
+- AI 接続のカードにはインストールボタンがありません。カードにある公式のインストールガイドのリンクに従って、Claude Code や Codex をインストールしてください。Claude デスクトップアプリは Claude Code ではないため、デスクトップアプリがあっても Claude Code は別にインストールする必要があります。
 - サインインはブラウザーで完了します。ブラウザーでコードを貼り付けるよう求められたら、ターミナル で `claude auth login` または `codex login` をご自身で実行してください。[サブスクリプションの接続](help://subscription) を参照してください。
 
 ## Linux で（ベータ）

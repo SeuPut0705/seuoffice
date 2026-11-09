@@ -1,6 +1,6 @@
 # 安裝 GenOffice
 
-每個版本都發布在專案 GitHub 的 [Releases 頁面](https://github.com/pblsketch/openoffice/releases/latest)上。除了 Windows 版，也以 Beta 形式發布 Mac 版和 Linux 版。Mac 版和 Linux 版開發者沒有親自測試，而是透過使用者的回報來確認。
+每個版本都發布在專案 GitHub 的 [Releases 頁面](https://github.com/pblsketch/ieumoffice/releases/latest)上。除了 Windows 版，也以 Beta 形式發布 Mac 版和 Linux 版。Mac 版和 Linux 版開發者沒有親自測試，而是透過使用者的回報來確認。
 
 ## 選擇適合你電腦的檔案
 
@@ -74,7 +74,7 @@ xattr -dr com.apple.quarantine /Applications/GenOffice.app
 
 在 Mac 上還要注意：
 
-- AI 連線卡片上沒有安裝按鈕。請依照卡片上的官方安裝指南連結來安裝 Claude Code 或 Codex。
+- AI 連線卡片上沒有安裝按鈕。請依照卡片上的官方安裝指南連結來安裝 Claude Code 或 Codex。Claude 桌面應用程式不是 Claude Code，所以即使裝了桌面應用程式，也需要另外安裝 Claude Code。
 - 登入會在瀏覽器中完成。如果瀏覽器要求你貼上代碼，請自己在「終端機」中執行 `claude auth login` 或 `codex login`。請見[訂閱連線](help://subscription)。
 
 ## 在 Linux 上（Beta）

@@ -18,7 +18,7 @@ import { join } from 'node:path'
 import { readSlidesAiFonts } from './ai-default-fonts'
 import {
   sanitizeAiSettings,
-  withStoredSubscriptionOff,
+  withStoredUnknownFields,
   setAiUserAgent,
   setRescueFetch,
   type AiSettings,
@@ -27,6 +27,7 @@ import {
   sealAiSecrets,
 } from '@genoffice/ai-provider'
 import { shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
+import { withStoredMainFields } from '@genoffice/ai-provider/key-models'
 import {
   ensureSubscriptionIpc,
   sharedSubscriptionStatuses,
@@ -73,9 +74,13 @@ import { registerTemplateSelectionIpc } from './template-selection-ipc'
 
 const AI_SETTINGS_PATH = () => join(app.getPath('userData'), 'ai-settings.json')
 
-/** the only write of the settings file: keys and tokens go to disk sealed (decision 0063) */
+/**
+ * The only write of the settings file: keys and tokens go to disk sealed
+ * (decision 0063), and fields a newer build wrote stay as they are.
+ */
 function writeAiSettingsFile(settings: unknown): void {
-  writeJsonAtomic(AI_SETTINGS_PATH(), sealAiSecrets(settings))
+  const stored = readJson<unknown>(AI_SETTINGS_PATH(), {})
+  writeJsonAtomic(AI_SETTINGS_PATH(), sealAiSecrets(withStoredUnknownFields(settings, stored)))
 }
 
 /**
@@ -187,8 +192,9 @@ export function registerAiIpc(): void {
       console.warn('[ai] rejected invalid ai:set-settings payload')
       return
     }
-    // only the Settings card turns a CLI off or on (decision 0114): the file's switch is kept
-    writeAiSettingsFile(withStoredSubscriptionOff(sanitized, readAiSettings()))
+    // the live model lists (decision 0087) and the CLIs turned off (decision 0114) are the
+    // main process's: the file's copy is kept
+    writeAiSettingsFile(withStoredMainFields(sanitized, readAiSettings()))
     broadcastToWindows('ai:settings-changed')
   })
 

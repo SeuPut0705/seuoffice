@@ -1,6 +1,6 @@
 # Memasang GenOffice
 
-Setiap versi dipublikasikan di [halaman Rilis](https://github.com/pblsketch/openoffice/releases/latest) proyek ini di GitHub. Build Windows dipublikasikan bersama build Mac dan Linux yang dirilis sebagai beta. Pengembang tidak dapat menguji build Mac dan Linux secara langsung; keduanya dipastikan lewat laporan para pengguna.
+Setiap versi dipublikasikan di [halaman Rilis](https://github.com/pblsketch/ieumoffice/releases/latest) proyek ini di GitHub. Build Windows dipublikasikan bersama build Mac dan Linux yang dirilis sebagai beta. Pengembang tidak dapat menguji build Mac dan Linux secara langsung; keduanya dipastikan lewat laporan para pengguna.
 
 ## Pilih berkas untuk komputer Anda
 
@@ -74,7 +74,7 @@ Jika macOS menyatakan aplikasi tidak didukung di Mac ini, periksa dua hal:
 
 Juga di Mac:
 
-- Kartu koneksi AI tidak punya tombol instal. Ikuti tautan panduan instalasi resmi di kartu untuk memasang Claude Code atau Codex.
+- Kartu koneksi AI tidak punya tombol instal. Ikuti tautan panduan instalasi resmi di kartu untuk memasang Claude Code atau Codex. Aplikasi desktop Claude bukan Claude Code, jadi Claude Code tetap harus dipasang terpisah walaupun aplikasi desktopnya sudah ada.
 - Proses masuk diselesaikan di peramban. Jika peramban meminta Anda menempelkan kode, jalankan sendiri `claude auth login` atau `codex login` di Terminal. Lihat [Koneksi langganan](help://subscription).
 
 ## Di Linux (beta)

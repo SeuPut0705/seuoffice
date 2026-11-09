@@ -893,11 +893,15 @@ function installFileShortcuts(wc: WebContents): void {
       // it took them (a cell block, a selected table), and otherwise the key goes on
       event.preventDefault()
       const key = input.code === 'KeyE' ? 'ctrl-e' : input.code === 'KeyC' ? 'ctrl-c' : 'ctrl-x'
-      void editorTakes(wc, key).then((taken) => {
+      // macOS turns Cmd+C/X into copy/cut only through the menu's roles, which
+      // never see a resent key, so copy stopped working there (2026-11-02 report).
+      // The editor's Cmd+C/X also take a selected table, which the page's copy
+      // event does not carry (issue #311).
+      const mac = process.platform === 'darwin' && key !== 'ctrl-e'
+      const asked = mac ? (key === 'ctrl-c' ? 'cmd-c' : 'cmd-x') : key
+      void editorTakes(wc, asked).then((taken) => {
         if (taken) return
-        // macOS turns Cmd+C/X into copy/cut only through the menu's roles, which
-        // never see a resent key, so copy stopped working there (2026-11-02 report)
-        if (process.platform === 'darwin' && key !== 'ctrl-e') {
+        if (mac) {
           if (key === 'ctrl-c') wc.copy()
           else wc.cut()
           return
@@ -991,7 +995,9 @@ export async function editorTakes(
     | 'ctrl-shift-tab'
     | 'ctrl-e'
     | 'ctrl-c'
-    | 'ctrl-x',
+    | 'ctrl-x'
+    | 'cmd-c'
+    | 'cmd-x',
 ): Promise<boolean> {
   if (wc.isDestroyed()) return false
   const frame = wc.mainFrame?.framesInSubtree.find((f) => /\/studio\//.test(f.url))
@@ -1019,9 +1025,15 @@ function grantAndTrack(
     openPathByWc.set(wcId, openPath)
     allowedByWc.set(wcId, new Set([openPath]))
     if (options.untitledCopy) {
+      // a PDF opened to be imported is named as the document it becomes, in the
+      // format Settings picks for new documents
+      const converted = typeof options.untitledCopy === 'object' ? options.untitledCopy : null
+      const name = converted
+        ? `${converted.baseName}.${readHwpDefaultFormat(app)}`
+        : basename(openPath)
       untitledCopyByWc.set(wcId, {
-        name: basename(openPath),
-        format: hwpFormatOfPath(openPath) ?? 'hwp',
+        name,
+        format: hwpFormatOfPath(name) ?? 'hwp',
       })
     } else {
       savePathByWc.set(wcId, openPath)
@@ -1070,8 +1082,10 @@ export interface HwpViewOptions {
   /**
    * `openPath` is a copy to open as a new, untitled document (a skill
    * template's, spec 5.7): it is read like a file, saved like a new document.
+   * `{ baseName }` is a PDF copy the editor imports (PDF converter menu,
+   * decision 0116): the new document is named `baseName` with the default format.
    */
-  untitledCopy?: boolean | undefined
+  untitledCopy?: boolean | { baseName: string } | undefined
 }
 
 export function createHwpView(

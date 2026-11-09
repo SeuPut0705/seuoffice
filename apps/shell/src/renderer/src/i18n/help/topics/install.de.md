@@ -1,6 +1,6 @@
 # GenOffice installieren
 
-Jede Version wird auf der [Releases-Seite](https://github.com/pblsketch/openoffice/releases/latest) des Projekts auf GitHub veröffentlicht. Zur Windows-Version gibt es Mac- und Linux-Versionen, die als Beta erscheinen. Die Mac- und Linux-Versionen kann der Entwickler nicht selbst testen; sie werden anhand von Rückmeldungen der Nutzer bestätigt.
+Jede Version wird auf der [Releases-Seite](https://github.com/pblsketch/ieumoffice/releases/latest) des Projekts auf GitHub veröffentlicht. Zur Windows-Version gibt es Mac- und Linux-Versionen, die als Beta erscheinen. Die Mac- und Linux-Versionen kann der Entwickler nicht selbst testen; sie werden anhand von Rückmeldungen der Nutzer bestätigt.
 
 ## Die Datei für Ihren Rechner wählen
 
@@ -74,7 +74,7 @@ Meldet macOS, die App werde auf diesem Mac nicht unterstützt, prüfen Sie zwei 
 
 Außerdem auf dem Mac:
 
-- Die KI-Verbindungskarten haben keine Installationsschaltfläche. Folgen Sie dem Link zur offiziellen Installationsanleitung auf der Karte, um Claude Code oder Codex zu installieren.
+- Die KI-Verbindungskarten haben keine Installationsschaltfläche. Folgen Sie dem Link zur offiziellen Installationsanleitung auf der Karte, um Claude Code oder Codex zu installieren. Die Claude-Desktop-App ist nicht Claude Code, daher muss Claude Code auch dann eigens installiert werden, wenn die Desktop-App vorhanden ist.
 - Die Anmeldung wird im Browser abgeschlossen. Fordert der Browser Sie auf, einen Code einzufügen, führen Sie `claude auth login` oder `codex login` selbst im Terminal aus. Siehe [Abonnement-Verbindung](help://subscription).
 
 ## Unter Linux (Beta)

@@ -17,6 +17,8 @@ export const he = {
   cardErrNeedsUpdatePath: 'הקובץ שהאפליקציה הזו מריצה:',
   cardErrNeedsUpdateWindows:
     'עדכון {provider} בתוך WSL (Ubuntu) או בתיקייה אחרת לא משנה את הקובץ הזה. הריצו {command} ב-Windows PowerShell.',
+  claudeDesktopNote:
+    'אפליקציית Claude לשולחן העבודה אינה Claude Code, שהאפליקציה הזו מפעילה. Claude Code היא תוכנה נפרדת שמשתמשים בה בטרמינל, ולכן התקנה או עדכון של אפליקציית שולחן העבודה לא משנים אותה.',
   cardErrTimeout: 'התוכנה {provider} לא ענתה בזמן. בדקו שוב בעוד רגע.',
   cardErrFailed: 'משהו השתבש במהלך הבדיקה של {provider}. בדקו שוב.',
   actionInstall: 'התקנה',
@@ -51,6 +53,8 @@ export const he = {
   errSignedOut: 'תוקף הכניסה אל {provider} פג. היכנסו שוב כדי להמשיך.',
   errRateLimit: 'מכסת המינוי של {provider} נוצלה במלואה.',
   errRateLimitReset: 'מכסת המינוי של {provider} נוצלה במלואה. היא תתאפס ב-{time}.',
+  errChatGptAppLimit:
+    'האפליקציה הזו ניצלה את השימוש ב-ChatGPT שעומד לרשותה. ייתכן שזו המגבלה של כל התוכנית או מגבלה שהוגדרה לאפליקציה הזו. בדקו ב-ChatGPT תחת הגדרות ← שימוש.',
   errUnsafeTools:
     'התוכנה {provider} הופעלה כשהכלים שלה עצמה פעילים, ולכן ההרצה נעצרה מטעמי בטיחות.',
   errMeteredNotAccepted:
@@ -151,6 +155,8 @@ export const he = {
     'נכנסתם בדפדפן, אבל OpenAI לא קיבלה את החיבור הזה, או שלא ניתן היה לאמת את התשובה שלה. ודאו שהתאריך והשעה במחשב הזה נכונים, ולחצו שוב כדי להתחיל מחדש.',
   chatgptLoginNetworkNote:
     'לא ניתן היה להשלים את הכניסה: לא הייתה גישה ל-OpenAI או שלא נפתח דפדפן. בדקו את החיבור לאינטרנט (כולל רשת ארגונית, VPN או פרוקסי) ולחצו שוב.',
+  chatgptLoginWorkspacePolicyNote:
+    'חשבון ה-ChatGPT הזה שייך למרחב עבודה שמנוהל על ידי חברה או בית ספר, ו-OpenAI אינה מאפשרת לאפליקציות להשתמש בתוכנית ה-ChatGPT של מרחב עבודה. למנהל מרחב העבודה אין הגדרה שמאפשרת את האפליקציה הזו, ולכן התחברות חוזרת לא תעזור. התחברו עם חשבון ChatGPT אישי (Go, Plus או Pro), או התחברו דרך כרטיס Codex.',
   chatgptLoginNotAllowedNote:
     'לא אישרתם לאפליקציה הזו להשתמש בתוכנית ה-ChatGPT שלכם, או שהדפדפן חזר מהכניסה עם כישלון. לחצו שוב, היכנסו ואשרו בדף ההרשאה.',
   chatgptSigningInNote:

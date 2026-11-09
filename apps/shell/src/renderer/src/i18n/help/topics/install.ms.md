@@ -1,6 +1,6 @@
 # Pemasangan GenOffice
 
-Setiap versi diterbitkan pada [halaman Keluaran](https://github.com/pblsketch/openoffice/releases/latest) projek ini di GitHub. Binaan Windows diterbitkan bersama binaan Mac dan Linux yang dikeluarkan sebagai beta. Pembangun tidak dapat menguji binaan Mac dan Linux secara langsung; kedua-duanya disahkan melalui laporan pengguna.
+Setiap versi diterbitkan pada [halaman Keluaran](https://github.com/pblsketch/ieumoffice/releases/latest) projek ini di GitHub. Binaan Windows diterbitkan bersama binaan Mac dan Linux yang dikeluarkan sebagai beta. Pembangun tidak dapat menguji binaan Mac dan Linux secara langsung; kedua-duanya disahkan melalui laporan pengguna.
 
 ## Memilih fail untuk mesin anda
 
@@ -74,7 +74,7 @@ Jika macOS menyatakan aplikasi itu tidak disokong pada Mac ini, semak dua perkar
 
 Juga pada Mac:
 
-- Kad sambungan AI tiada butang pasang. Ikut pautan panduan pemasangan rasmi pada kad itu untuk memasang Claude Code atau Codex.
+- Kad sambungan AI tiada butang pasang. Ikut pautan panduan pemasangan rasmi pada kad itu untuk memasang Claude Code atau Codex. Aplikasi desktop Claude bukan Claude Code, jadi Claude Code perlu dipasang berasingan walaupun aplikasi desktop sudah ada.
 - Log masuk diselesaikan dalam pelayar. Jika pelayar meminta anda menampal kod, jalankan sendiri `claude auth login` atau `codex login` dalam Terminal. Lihat [Sambungan langganan](help://subscription).
 
 ## Pada Linux (beta)

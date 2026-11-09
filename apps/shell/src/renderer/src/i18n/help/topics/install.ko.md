@@ -1,6 +1,6 @@
 # GenOffice 설치
 
-모든 버전은 GitHub에 있는 프로젝트의 [Releases 페이지](https://github.com/pblsketch/openoffice/releases/latest)에 올라옵니다. Windows판과 함께 Mac판과 Linux판이 베타로 올라옵니다. Mac판과 Linux판은 개발자가 직접 확인하지 못하고 사용자들의 보고로 확인합니다.
+모든 버전은 GitHub에 있는 프로젝트의 [Releases 페이지](https://github.com/pblsketch/ieumoffice/releases/latest)에 올라옵니다. Windows판과 함께 Mac판과 Linux판이 베타로 올라옵니다. Mac판과 Linux판은 개발자가 직접 확인하지 못하고 사용자들의 보고로 확인합니다.
 
 ## 내 컴퓨터에 맞는 파일 고르기
 
@@ -74,7 +74,7 @@ xattr -dr com.apple.quarantine /Applications/GenOffice.app
 
 Mac에서 그 밖에 다른 점:
 
-- AI 연결 카드에 설치 단추가 없습니다. 카드의 공식 설치 안내 링크를 따라 Claude Code나 Codex를 설치합니다.
+- AI 연결 카드에 설치 단추가 없습니다. 카드의 공식 설치 안내 링크를 따라 Claude Code나 Codex를 설치합니다. Claude 데스크톱 앱은 Claude Code가 아니므로, 데스크톱 앱이 있어도 Claude Code는 따로 설치해야 합니다.
 - 로그인은 브라우저에서 끝납니다. 브라우저가 코드를 붙여 넣으라고 하면 터미널에서 `claude auth login` 또는 `codex login`을 직접 실행합니다. [구독 연결](help://subscription)을 보세요.
 
 ## Linux에서 (베타)
