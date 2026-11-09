@@ -14,10 +14,13 @@ name: seuoffice desktop release
 #   stable  feeds stable.yml / stable-mac.yml, file names end in -stable. Its
 #           updater only takes the release GitHub marks Latest.
 #
-# Release model. A tag vX.Y.Z creates (or refreshes) a GitHub PRE-RELEASE that
-# carries both platforms and both channels, so general installs get it at once.
-# The workflow never promotes it. The owner promotes it to stable by hand once
-# checked:
+# Release model. Every push to main that touches more than docs builds the next
+# version (the highest v* tag plus one patch, or apps/shell/package.json when
+# that is higher) while CI runs, and publishes it as a GitHub PRE-RELEASE only
+# once the CI and seuoffice workflows pass on the same commit. General
+# (latest) installs get it at once; only the ten newest pre-releases are kept.
+# A tag vX.Y.Z pushed by hand does the same for that version. The workflow
+# never promotes a release. The owner promotes one to stable once checked:
 #   gh release edit vX.Y.Z --prerelease=false --latest
 #
 # Signing (repository secrets):
@@ -31,12 +34,15 @@ name: seuoffice desktop release
 # staging, not Squirrel). Once a signed release is out, never publish an
 # unsigned one again: a signed install only takes updates from its signer.
 #
-# A run started by hand (workflow_dispatch) builds and uploads the artifacts
-# only, unless it is started on a v* tag.
+# A run started by hand (workflow_dispatch) on a branch builds and uploads the
+# artifacts only, at the package.json version.
 
 on:
   push:
+    branches: [main]
     tags: ['v*']
+    # a superset of CI's paths-ignore, so CI always runs for a commit this builds
+    paths-ignore: ['**/*.md', 'docs/**']
   workflow_dispatch:
 
 concurrency:
@@ -47,7 +53,45 @@ permissions:
   contents: read
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+      publish: ${{ steps.pick.outputs.publish }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Pick the version
+        id: pick
+        run: |
+          set -euo pipefail
+          base=$(node -p "require('./apps/shell/package.json').version")
+          publish=false
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            version=${GITHUB_REF_NAME#v}
+            publish=true
+          elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            highest=$(git ls-remote --tags --refs origin 'refs/tags/v*' | sed 's#.*refs/tags/v##' |
+              grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
+            if [ -z "$highest" ] || [ "$(printf '%s\n%s\n' "$highest" "$base" | sort -V | tail -n 1)" != "$highest" ]; then
+              version=$base
+            else
+              IFS=. read -r major minor patch <<< "$highest"
+              version="$major.$minor.$((patch + 1))"
+            fi
+            publish=true
+          else
+            version=$base
+          fi
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::not a version: $version"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "version $version, publish $publish"
+
   windows:
+    needs: version
     runs-on: windows-latest
     timeout-minutes: 120
     permissions:
@@ -112,6 +156,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # after npm ci, which refuses a package.json that disagrees with the lockfile
+      - name: Stamp the version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: node -e "const fs=require('fs'),f='apps/shell/package.json',p=JSON.parse(fs.readFileSync(f,'utf8'));p.version=process.env.VERSION;fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
+
       # build:all builds the sheets module, which builds the xlsx sidecar for
       # this host (target/release/xlsx-sidecar.exe)
       - name: Build apps
@@ -131,9 +181,11 @@ jobs:
           mkdir -p "$engine/x86_64-pc-windows-gnu/release"
           cp "$engine/release/xlsx-sidecar.exe" "$engine/x86_64-pc-windows-gnu/release/"
 
-      # pass 1, the latest channel: builds the JS too
+      # pass 1, the latest channel: Build apps already compiled the shell, so
+      # only the notices are made here (dist:win would compile it again)
       - name: Package (latest channel)
-        run: npm run dist:win -w @genoffice/shell -- --config electron-builder.seuoffice.cjs --publish never
+        working-directory: apps/shell
+        run: npm run notices && npx electron-builder --win --config electron-builder.seuoffice.cjs --publish never
         env:
           GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
           GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
@@ -282,6 +334,7 @@ jobs:
           retention-days: 14
 
   mac:
+    needs: version
     # an Apple Silicon runner: the release Mac package is arm64 only
     runs-on: macos-latest
     timeout-minutes: 120
@@ -348,6 +401,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Stamp the version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: node -e "const fs=require('fs'),f='apps/shell/package.json',p=JSON.parse(fs.readFileSync(f,'utf8'));p.version=process.env.VERSION;fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
+
       # build:all builds the sheets module, which builds the xlsx sidecar for
       # this arm64 host (target/release/xlsx-sidecar, where the mac config reads it)
       - name: Build apps
@@ -356,14 +414,17 @@ jobs:
           GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
           GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
 
-      # pass 1, the latest channel: builds the JS too
+      # pass 1, the latest channel: Build apps already compiled the shell, so
+      # only the notices are made here (dist:mac would compile it again)
       - name: Package (latest channel)
+        working-directory: apps/shell
         # an empty secret arrives as "" and electron-builder reads CSC_LINK="" as a path: unset the empty ones
         run: |
           for name in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
             [ -n "${!name}" ] || unset "$name"
           done
-          npm run dist:mac -w @genoffice/shell -- --config electron-builder.seuoffice.cjs --publish never
+          npm run notices
+          npx electron-builder --mac --config electron-builder.seuoffice.cjs --publish never
         env:
           GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
           GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
@@ -505,19 +566,47 @@ jobs:
           retention-days: 14
 
   release:
-    # the one job that writes: a pre-release carrying both platforms, from a tag
-    needs: [windows, mac]
-    if: startsWith(github.ref, 'refs/tags/v')
+    # the one job that writes: a pre-release carrying both platforms, once CI passed
+    needs: [version, windows, mac]
+    if: needs.version.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # mostly waiting: the packages finish well before the CI workflow does
+    timeout-minutes: 120
     permissions:
       actions: read
       contents: write
     env:
-      TAG: ${{ github.ref_name }}
+      TAG: v${{ needs.version.outputs.version }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
+      # nothing is published for a commit the test workflows reject; a re-run of
+      # this job after a CI re-run waits again
+      - name: Wait for CI and seuoffice on this commit
+        run: |
+          set -euo pipefail
+          start=$SECONDS
+          for workflow in ci.yml seuoffice.yml; do
+            while :; do
+              run=$(gh run list --workflow "$workflow" --commit "$GITHUB_SHA" --event push --limit 1 \
+                --json status,conclusion,url --jq '.[0] // empty | [.status, .conclusion, .url] | @tsv')
+              if [ -z "$run" ]; then
+                if [ $((SECONDS - start)) -gt 900 ]; then
+                  echo "::error::no $workflow run for $GITHUB_SHA"
+                  exit 1
+                fi
+              else
+                IFS=$'\t' read -r status conclusion url <<< "$run"
+                if [ "$status" = "completed" ]; then
+                  [ "$conclusion" = "success" ] || { echo "::error::$workflow is $conclusion: $url"; exit 1; }
+                  echo "$workflow passed: $url"
+                  break
+                fi
+              fi
+              sleep 60
+            done
+          done
+
       # first, before any release is touched: the notes say how each platform is signed
       - name: Write the release notes
         env:
@@ -585,8 +674,20 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "${files[@]}" --clobber
           else
-            gh release create "$TAG" --verify-tag --prerelease --title "$TAG" \
+            if [ "$GITHUB_REF_TYPE" = "tag" ]; then where=(--verify-tag); else where=(--target "$GITHUB_SHA"); fi
+            gh release create "$TAG" "${where[@]}" --prerelease --title "$TAG" \
               --notes-file notes.md \
               "${files[@]}"
           fi
           gh release view "$TAG" --json assets --jq '.assets[].name'
+
+      # pre-releases are the general channel's history; stable releases are never touched
+      - name: Keep the ten newest pre-releases
+        run: |
+          set -euo pipefail
+          gh release list --limit 200 --json tagName,isPrerelease,createdAt \
+            --jq '[.[] | select(.isPrerelease)] | sort_by(.createdAt) | reverse | .[10:] | .[].tagName' |
+            while read -r old; do
+              echo "deleting pre-release $old"
+              gh release delete "$old" --yes --cleanup-tag
+            done
