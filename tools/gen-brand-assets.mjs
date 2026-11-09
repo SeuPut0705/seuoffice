@@ -4,7 +4,7 @@
  *
  *   app-icon.svg        -> app / installer icons (png, ico, icns, Linux size
  *                          set) and the in-app app-icon.png copies
- *   app-icon-small.svg  -> the same S redrawn bolder for slots of 32 px and
+ *   app-icon-small.svg  -> the same mark with a larger spark for slots of 32 px and
  *                          below (optional: without it app-icon.svg is used)
  *   logo-lockup.svg     -> the shell sidebar logo (copied verbatim)
  *

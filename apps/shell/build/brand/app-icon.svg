@@ -2,9 +2,10 @@
 <!--
   SeuOffice app icon (source of truth).
 
-  The mark is the S of SeuOffice drawn as two strokes that meet in the middle
-  of the letter: the upper curve in white, the lower curve in amber, on an
-  indigo tile.
+  The symbol is three rounded cards fanned out like a hand of documents (amber,
+  violet, indigo: the formats SeuOffice opens), with a white four-point spark
+  on the top card for AI editing. No letters, so it reads the same in every
+  language. Drawn from the concept the owner chose (decision 0019).
 
   Every raster/container icon in the repo is derived from this file:
     node tools/gen-brand-assets.mjs
@@ -12,9 +13,11 @@
   insets the whole drawing for the macOS variants.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <rect width="1024" height="1024" rx="230" fill="#4338CA"/>
-  <g fill="none" stroke-width="116" stroke-linecap="round">
-    <path d="M 668 352 A 156 146 0 1 0 512 512" stroke="#FFFFFF"/>
-    <path d="M 512 512 A 156 146 0 1 1 356 672" stroke="#FFB020"/>
+  <rect width="1024" height="1024" rx="230" fill="#FFFFFF"/>
+  <g transform="translate(14 -24)">
+    <rect x="-200" y="-200" width="400" height="400" rx="92" fill="#FFB020" transform="translate(412 590) rotate(-26)"/>
+    <rect x="-200" y="-200" width="400" height="400" rx="92" fill="#6D5DF6" transform="translate(500 534) rotate(-12)"/>
+    <rect x="-210" y="-210" width="420" height="420" rx="96" fill="#4338CA" transform="translate(612 470)"/>
+    <path d="M0 -1 C0.12 -0.28 0.28 -0.12 1 0 C0.28 0.12 0.12 0.28 0 1 C-0.12 0.28 -0.28 0.12 -1 0 C-0.28 -0.12 -0.12 -0.28 0 -1 Z" fill="#FFFFFF" transform="translate(690 390) scale(78)"/>
   </g>
 </svg>

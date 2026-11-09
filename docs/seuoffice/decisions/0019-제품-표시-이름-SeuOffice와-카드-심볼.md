@@ -1,8 +1,8 @@
-# 0019 제품 표시 이름 SeuOffice와 S 마크
+# 0019 제품 표시 이름 SeuOffice와 카드 심볼
 
 - 날짜: 2026-11-09
 - 상태: 확정
-- 결정한 사람: 스풋(이름 `SeuOffice`, 마크 시안 A). 바꾸는 범위는 메인 세션이 정했다.
+- 결정한 사람: 스풋(이름 `SeuOffice`, 글자가 아닌 심볼, 이미지 생성 시안 중 "펼친 카드 + 별"). 바꾸는 범위는 메인 세션이 정했다.
 
 ## 맥락
 
@@ -11,14 +11,14 @@
 ## 결정
 
 - 사람이 보는 제품 이름은 모든 언어에서 `SeuOffice`다. 한 곳에서만 정한다. `packages/i18n/src/product.ts`의 `PRODUCT_NAME`이고, `apps/shell/electron-builder.cjs`와 `apps/shell/package.json`의 `productName`이 이 값을 따라 적는다(`product-identity.test.ts`가 셋이 같은지 확인한다). 창 제목, Mac 메뉴와 앱 이름, 설치 프로그램 이름, 설치 파일 이름(`SeuOffice-Setup-<판>.exe`, `SeuOffice-<판>-arm64.dmg`), 웹 페이지 제목, 릴리스 본문이 모두 이 값을 쓴다.
-- 앱 아이콘과 사이드바 로고의 마크는 이음오피스 마크 대신 SeuOffice의 S로 바꾼다. 보라 바탕(`#4338CA`)에 흰 윗획과 주황(`#FFB020`) 아랫획 두 개로 S를 그린다. 원본은 `apps/shell/build/brand/app-icon.svg`이고, 다른 아이콘은 모두 `tools/gen-brand-assets.mjs`가 여기서 만든다. 사이드바 로고는 같은 S를 한 색으로 그리고 그 옆에 "SeuOffice" 글자를 둔다. AI 단추 마크와 파일 종류 아이콘에는 이름이 없어 그대로 둔다.
+- 앱 아이콘과 사이드바 로고의 마크는 이음오피스 마크 대신 글자 없는 심볼로 바꾼다. 흰 타일 위에 둥근 카드 세 장(주황 `#FFB020`, 보라 `#6D5DF6`, 남색 `#4338CA`)을 부채처럼 펼치고, 맨 위 카드에 흰 네 갈래 별(AI)을 둔다. 여러 문서 형식과 AI 편집을 뜻한다. 이미지 생성으로 시안을 뽑아 스풋이 고른 것을 SVG로 다시 그렸다. 원본은 `apps/shell/build/brand/app-icon.svg`이고, 32px 이하용 `app-icon-small.svg`는 별을 키웠다. 다른 아이콘은 모두 `tools/gen-brand-assets.mjs`가 여기서 만든다. 사이드바 로고는 같은 카드를 검정 한 색(카드 사이는 흰 틈)으로 그리고 그 옆에 "SeuOffice" 글자를 둔다. AI 단추 마크와 파일 종류 아이콘은 그대로 둔다.
 - 내부 이름은 바꾸지 않는다: `appId` `com.seuput.seuoffice`, `PACKAGED_APP_NAME` `seuoffice`(업데이트 캐시 폴더, 리눅스 실행 파일), 패키지 이름, 저장소 이름, embed 통로 표지 `seuoffice`, 업데이트 피드 파일 이름, 명령 이름(`genoffice`, `ieumoffice`), `~/.genoffice`, `~/.ieumoffice`, MCP 서버 설정 이름.
 
 ## 버린 대안
 
 - **표시 이름만 따로 두고 `PRODUCT_NAME`은 소문자로 둔다.** 이렇게 하면 사용자 데이터 폴더와 레지스트리 이름은 글자 그대로 같다. 하지만 Mac 메뉴 막대와 Dock, 설치 프로그램은 electron-builder `productName`을 쓰므로 거기에 소문자가 남는다. 표시 이름과 등록 이름이 둘로 갈려 새 코드가 어느 쪽을 쓸지 매번 골라야 한다.
 - **이음오피스 마크를 그대로 쓴다.** Apache-2.0으로 파일은 쓸 수 있지만, 마크가 "이음"을 뜻해서 다른 제품으로 보이지 않는다. 0013 맥락처럼 상위 이름과 상징을 쓸 권리는 라이선스에 없다.
-- **문서 위에 S를 얹은 시안 B.** 오피스 앱인 것은 잘 드러나지만, 16~32px에서 S가 작아 알아보기 어렵다.
+- **S 글자 마크.** 처음에 S 두 획 마크를 넣었으나, 스풋이 글자가 아닌 심볼을 원했다. 이미지 생성 심볼 시안 중 "겹친 두 문서 + 별", "접힌 종이"는 고르지 않았고, "물결 액자"는 흔한 사진 아이콘과 닮아 뺐다.
 
 ## 결과
 
