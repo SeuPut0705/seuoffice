@@ -3,7 +3,7 @@
 seuoffice를 브라우저에서 돌리는 정적 파일 묶음이다. 패키지에는 빌드 결과인 `dist/`만 들어 있다. 호스트는 `dist/` 안의 파일을 그대로 한 주소(`baseUrl`) 아래에 서빙한다. 서버 코드는 필요 없다.
 
 ```sh
-npm install @seuoffice/web @seuoffice/embed
+# 설치는 @seuoffice/embed README처럼 GitHub 릴리스 주소로 한다(npm 레지스트리에는 없다)
 # dist/ 를 호스트의 정적 경로로 복사하거나 그대로 서빙한다. 예:
 cp -r node_modules/@seuoffice/web/dist ./public/seuoffice
 ```

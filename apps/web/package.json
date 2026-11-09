@@ -20,10 +20,6 @@
     "LICENSE",
     "NOTICE"
   ],
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "preview": "vite preview --port 5300 --strictPort",

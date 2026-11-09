@@ -5,7 +5,9 @@ name: seuoffice desktop release
 #   Apple Silicon Mac  dmg + update zip   (macos-latest, an arm64 runner)
 #   x64 Windows        NSIS installer     (windows-latest)
 # apps/shell/electron-builder.seuoffice.cjs holds the release targets and
-# refuses any other platform or CPU.
+# refuses any other platform or CPU. The same release also carries the web
+# packages @seuoffice/embed and @seuoffice/web as npm pack tarballs (job web);
+# nothing goes to an npm registry.
 #
 # Each platform is packaged twice from one compiled app, one pass per update
 # channel (SEUOFFICE_UPDATE_CHANNEL, see apps/shell/electron-builder.cjs):
@@ -567,9 +569,67 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # The web packages for hosts that embed seuoffice (decision 0021): npm pack
+  # tarballs at the release's version, attached to the same GitHub release
+  # instead of an npm registry. A host installs them by URL.
+  web:
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
+        with:
+          toolchain: stable
+          targets: wasm32-wasip1
+
+      # no step here runs Electron: --ignore-scripts skips its download
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Stamp the version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          node -e "const fs=require('fs');for(const f of ['packages/embed/package.json','apps/web/package.json']){const p=JSON.parse(fs.readFileSync(f,'utf8'));p.version=process.env.VERSION;fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n')}"
+
+      - name: Build the web bundle
+        run: npm run build -w @seuoffice/web
+
+      # prepack copies LICENSE and NOTICE in and builds the embed library
+      - name: Pack
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir web-packages
+          npm pack -w @seuoffice/embed -w @seuoffice/web --pack-destination web-packages
+          for name in embed web; do
+            test -f "web-packages/seuoffice-$name-$VERSION.tgz" || { echo "::error::missing seuoffice-$name-$VERSION.tgz"; exit 1; }
+          done
+          ls -la web-packages
+
+      - name: Upload the web packages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: seuoffice-web-packages
+          path: web-packages/
+          if-no-files-found: error
+          retention-days: 14
+
   release:
     # the one job that writes: a pre-release carrying both platforms, once CI passed
-    needs: [version, windows, mac]
+    needs: [version, windows, mac, web]
     if: needs.version.outputs.publish == 'true'
     runs-on: ubuntu-latest
     # mostly waiting: the packages finish well before the CI workflow does
@@ -633,6 +693,8 @@ jobs:
             fi
             echo
             echo "자동 업데이트는 두 플랫폼 모두 이 릴리스의 피드 파일로 돈다. 판 번호 없는 SeuOffice-mac-arm64.dmg와 SeuOffice-windows-x64.exe는 안정 채널 설치 파일의 사본이고, 이 릴리스가 안정 채널로 올라가면 README의 다운로드 버튼이 이 둘을 받는다."
+            echo
+            echo "웹에 붙이는 묶음 seuoffice-embed-*.tgz와 seuoffice-web-*.tgz도 이 릴리스에 있다. 붙이는 쪽은 안정 판의 주소로 설치한다(docs/seuoffice/판-내기.md). 미리보기 판은 10개가 넘으면 지워지므로 고정하지 않는다."
           } > notes.md
           cat notes.md
 
@@ -662,6 +724,7 @@ jobs:
           fi
           gh run download "$GITHUB_RUN_ID" --name seuoffice-windows-x64 --dir dist
           gh run download "$GITHUB_RUN_ID" --name seuoffice-mac-arm64 --dir dist
+          gh run download "$GITHUB_RUN_ID" --name seuoffice-web-packages --dir dist
           version=${TAG#v}
           for feed in latest.yml stable.yml latest-mac.yml stable-mac.yml; do
             built=$(sed -n 's/^version: *//p' "dist/$feed" | tr -d "'\"\r")
@@ -682,6 +745,8 @@ jobs:
             "dist/SeuOffice-$version-arm64-mac-stable.zip.blockmap"
             "dist/latest-mac.yml"
             "dist/stable-mac.yml"
+            "dist/seuoffice-embed-$version.tgz"
+            "dist/seuoffice-web-$version.tgz"
           )
           for file in "${files[@]}"; do
             test -f "$file" || { echo "::error::missing: $file"; exit 1; }

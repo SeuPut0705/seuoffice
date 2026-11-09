@@ -30,10 +30,6 @@
     "LICENSE",
     "NOTICE"
   ],
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepack": "node ../../scripts/seuoffice-prepack.mjs && npm run build",

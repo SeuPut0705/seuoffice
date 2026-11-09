@@ -5,7 +5,11 @@
 seuoffice 웹 묶음(`@seuoffice/web`)을 호스트가 직접 정적 파일로 서빙하고, 그 주소를 `baseUrl`로 넘긴다. 이 패키지는 그 웹 묶음과 같은 버전을 쓴다. 호스트는 두 패키지를 같은 정확한 버전으로 고정한다.
 
 ```sh
-npm install @seuoffice/embed @seuoffice/web
+# 안정 판 하나를 골라 같은 판의 두 묶음을 릴리스 주소로 설치한다(npm 레지스트리에는 없다)
+V=0.12.15
+npm install \
+  https://github.com/SeuPut0705/seuoffice/releases/download/v$V/seuoffice-embed-$V.tgz \
+  https://github.com/SeuPut0705/seuoffice/releases/download/v$V/seuoffice-web-$V.tgz
 ```
 
 ## 보기
