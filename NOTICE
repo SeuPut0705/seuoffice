@@ -42,11 +42,13 @@ project: the sources in apps/shell/build/brand and the icon and logo files
 tools/gen-brand-assets.mjs derives from them. The AI button mark
 (apps/shell/build/brand/ai-mark.svg, packages/ui/src/AiMark.tsx) is an original
 composition whose geometry is adapted from the Lucide icon set
-(https://lucide.dev), icon `message-square`.
+(https://lucide.dev), icons `circle` and `message-square`.
 
 Lucide is distributed under the ISC License, Copyright (c) Lucide Icons and
-Contributors. The ISC License permits use, modification and redistribution
-provided its copyright and permission notice is kept; the full text is at
+Contributors. The `circle` icon is derived from the Feather project and is
+distributed under the MIT License, Copyright (c) 2013-present Cole Bemis. Both
+licenses permit use, modification and redistribution provided their copyright
+and permission notices are kept; the full texts are at
 https://github.com/lucide-icons/lucide/blob/main/LICENSE.
 
 The wordmark in the logo lockup is set in Roboto Bold 2.137, Copyright 2011
