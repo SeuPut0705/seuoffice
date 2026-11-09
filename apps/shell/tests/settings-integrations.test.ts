@@ -187,7 +187,7 @@ describe('Settings → Integrations', () => {
     ).toEqual({ command: 'ieumoffice', args: ['mcp'] })
     const winDir = 'C:\\Users\\Jane Doe\\AppData\\Local\\Programs\\seuoffice\\resources\\cli'
     const win = {
-      command: `${winDir}\\..\\..\\seuoffice.exe`,
+      command: `${winDir}\\..\\..\\SeuOffice.exe`,
       args: [`${winDir}\\genoffice.cjs`, 'mcp'],
       env: { ELECTRON_RUN_AS_NODE: '1' },
     }

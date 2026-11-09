@@ -143,7 +143,7 @@ export interface AppLaunch {
 }
 
 /**
- * How to start the IeumOffice GUI: the app binary that hosts this CLI, an installed app, or the dev checkout.
+ * How to start the SeuOffice GUI: the app binary that hosts this CLI, an installed app, or the dev checkout.
  * Only this product's own install locations are probed: an upstream GenOffice on the machine is never started.
  */
 export function appLaunch(env: NodeJS.ProcessEnv = process.env): AppLaunch | null {
@@ -186,7 +186,7 @@ export function installedAppBinaries(
       ].filter(Boolean)
     default:
       // /usr/bin/genoffice is the upstream app's name: never a place to look for ours
-      return [...(shipped ? [shipped] : []), `/opt/${APP_BINARY_NAME}/${LINUX_APP_BINARY}`]
+      return [...(shipped ? [shipped] : []), `/opt/${LINUX_APP_BINARY}/${LINUX_APP_BINARY}`]
   }
 }
 

@@ -29,7 +29,7 @@ describe('productName', () => {
   })
 
   it('has one PRODUCT_NAME definition that is not an upstream name', () => {
-    expect(PRODUCT_NAME).toBe('seuoffice')
+    expect(PRODUCT_NAME).toBe('SeuOffice')
     expect(PRODUCT_NAME).not.toBe(UPSTREAM_PRODUCT_NAME)
     expect(PRODUCT_NAME).not.toBe('IeumOffice')
     expect(productName('en')).toBe(PRODUCT_NAME)
@@ -38,21 +38,21 @@ describe('productName', () => {
 
 describe('brandText', () => {
   it('swaps the upstream name for the product name of the language', () => {
-    expect(brandText('Welcome to GenOffice', 'en')).toBe('Welcome to seuoffice')
+    expect(brandText('Welcome to GenOffice', 'en')).toBe('Welcome to SeuOffice')
     expect(brandText('GenOffice에 오신 것을 환영합니다', 'ko')).toBe(
-      'seuoffice에 오신 것을 환영합니다',
+      'SeuOffice에 오신 것을 환영합니다',
     )
-    expect(brandText('GenOffice のインストール', 'ja')).toBe('seuoffice のインストール')
-    expect(brandText('关于 GenOffice', 'zh')).toBe('关于 seuoffice')
+    expect(brandText('GenOffice のインストール', 'ja')).toBe('SeuOffice のインストール')
+    expect(brandText('关于 GenOffice', 'zh')).toBe('关于 SeuOffice')
   })
 
   it('replaces every occurrence, including sub-app names and compounds', () => {
     expect(brandText('GenOffice Docs and GenOffice Sheets', 'en')).toBe(
-      'seuoffice Docs and seuoffice Sheets',
+      'SeuOffice Docs and SeuOffice Sheets',
     )
-    expect(brandText('GenOffice Markdown', 'ko')).toBe('seuoffice Markdown')
-    expect(brandText('das GenOffice-Fenster', 'de')).toBe('das seuoffice-Fenster')
-    expect(brandText("GenOffice's window", 'en')).toBe("seuoffice's window")
+    expect(brandText('GenOffice Markdown', 'ko')).toBe('SeuOffice Markdown')
+    expect(brandText('das GenOffice-Fenster', 'de')).toBe('das SeuOffice-Fenster')
+    expect(brandText("GenOffice's window", 'en')).toBe("SeuOffice's window")
   })
 
   it('returns strings without the name untouched', () => {
@@ -73,23 +73,23 @@ describe('brandText', () => {
       'GenOffice를 바탕으로 만들었습니다',
     )
     expect(brandText('GenOffice is based on {{GenOffice}}.', 'en')).toBe(
-      'seuoffice is based on GenOffice.',
+      'SeuOffice is based on GenOffice.',
     )
     expect(brandText('GenOffice는 {{GenOffice}}를 바탕으로 합니다.', 'ko')).toBe(
-      'seuoffice는 GenOffice를 바탕으로 합니다.',
+      'SeuOffice는 GenOffice를 바탕으로 합니다.',
     )
   })
 
   it('uses the product name inside file and folder names in every language', () => {
     expect(brandText('chmod +x GenOffice-<version>.AppImage', 'ko')).toBe(
-      'chmod +x seuoffice-<version>.AppImage',
+      'chmod +x SeuOffice-<version>.AppImage',
     )
-    expect(brandText('문서/GenOffice 폴더', 'ko')).toBe('문서/seuoffice 폴더')
-    expect(brandText('%APPDATA%\\GenOffice', 'ko')).toBe('%APPDATA%\\seuoffice')
-    expect(brandText('GenOffice.exe를 실행합니다', 'ko')).toBe('seuoffice.exe를 실행합니다')
+    expect(brandText('문서/GenOffice 폴더', 'ko')).toBe('문서/SeuOffice 폴더')
+    expect(brandText('%APPDATA%\\GenOffice', 'ko')).toBe('%APPDATA%\\SeuOffice')
+    expect(brandText('GenOffice.exe를 실행합니다', 'ko')).toBe('SeuOffice.exe를 실행합니다')
     // a sentence-ending period is not a file extension
-    expect(brandText('이것은 GenOffice. 다음 문장', 'ko')).toBe('이것은 seuoffice. 다음 문장')
-    expect(brandText('GenOffice.', 'ko')).toBe('seuoffice.')
+    expect(brandText('이것은 GenOffice. 다음 문장', 'ko')).toBe('이것은 SeuOffice. 다음 문장')
+    expect(brandText('GenOffice.', 'ko')).toBe('SeuOffice.')
   })
 
   it('leaves identifiers that merely contain the name alone', () => {
@@ -116,9 +116,9 @@ describe('createI18n product name', () => {
   const t = createI18n(dicts)
 
   it('renders the product name of the requested language', () => {
-    expect(t('en', 'about')).toBe('About seuoffice')
-    expect(t('zh', 'about')).toBe('关于 seuoffice')
-    expect(t('ko', 'about')).toBe('seuoffice 정보')
+    expect(t('en', 'about')).toBe('About SeuOffice')
+    expect(t('zh', 'about')).toBe('关于 SeuOffice')
+    expect(t('ko', 'about')).toBe('SeuOffice 정보')
   })
 
   it('keeps the upstream name in the acknowledgement', () => {
@@ -129,20 +129,20 @@ describe('createI18n product name', () => {
 
   it('never rewrites interpolated values (a file may be called GenOffice)', () => {
     expect(t('en', 'open', { name: 'GenOffice notes.docx' })).toBe(
-      'Open GenOffice notes.docx in seuoffice',
+      'Open GenOffice notes.docx in SeuOffice',
     )
-    expect(t('ko', 'open', { name: 'GenOffice.docx' })).toBe('seuoffice에서 GenOffice.docx 열기')
+    expect(t('ko', 'open', { name: 'GenOffice.docx' })).toBe('SeuOffice에서 GenOffice.docx 열기')
   })
 
   it('brands the fallback text of a language without its own entry', () => {
-    expect(t('fr', 'about')).toBe('About seuoffice')
+    expect(t('fr', 'about')).toBe('About SeuOffice')
   })
 })
 
 describe('registered names derived from the product name', () => {
   it('names the userData folders after the product name', () => {
-    expect(USER_DATA_DIR_NAME).toBe('seuoffice')
-    expect(DEV_USER_DATA_DIR_NAME).toBe('seuoffice-Dev')
+    expect(USER_DATA_DIR_NAME).toBe('SeuOffice')
+    expect(DEV_USER_DATA_DIR_NAME).toBe('SeuOffice-Dev')
     expect(USER_DATA_DIR_NAME).not.toBe(UPSTREAM_PRODUCT_NAME)
   })
 

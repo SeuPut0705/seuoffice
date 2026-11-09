@@ -178,8 +178,8 @@ describe('coexistence with the upstream app on one machine', () => {
     // packaged: Electron's default userData is <appData>/<productName>;
     // unpacked runs set DEV_USER_DATA_DIR_NAME explicitly (src/main/index.ts).
     // The single-instance lock lives in userData, so it is separate as well.
-    expect(USER_DATA_DIR_NAME).toBe('seuoffice')
-    expect(DEV_USER_DATA_DIR_NAME).toBe('seuoffice-Dev')
+    expect(USER_DATA_DIR_NAME).toBe('SeuOffice')
+    expect(DEV_USER_DATA_DIR_NAME).toBe('SeuOffice-Dev')
     const main = readFileSync(join(SHELL, 'src/main/index.ts'), 'utf8')
     expect(main).toContain(
       "app.setPath('userData', join(app.getPath('appData'), DEV_USER_DATA_DIR_NAME))",
@@ -235,7 +235,7 @@ describe('coexistence with the upstream app on one machine', () => {
     expect(entry, '.xmind is not offered on mac / Linux').toBeTruthy()
     // the same derivation electron-builder.cjs applies to the Windows list;
     // the NSIS Open-With ProgId (build/installer.nsh) spells the same value out
-    const progId = `${PRODUCT_NAME}.${entry!.name.replace(/[^A-Za-z0-9]/g, '')}`
+    const progId = `${config.extraMetadata.name}.${entry!.name.replace(/[^A-Za-z0-9]/g, '')}`
     expect(progId).toMatch(/^seuoffice\.[A-Za-z][A-Za-z0-9]*$/)
     expect(progId.length, progId).toBeLessThanOrEqual(39)
     expect(UPSTREAM.progIds).not.toContain(progId)
@@ -258,7 +258,7 @@ describe('coexistence with the upstream app on one machine', () => {
     expect(entry, '.epub is not offered on mac / Linux').toBeTruthy()
     // the same derivation electron-builder.cjs applies to the Windows list;
     // the NSIS Open-With ProgId (build/installer.nsh) spells the same value out
-    const progId = `${PRODUCT_NAME}.${entry!.name.replace(/[^A-Za-z0-9]/g, '')}`
+    const progId = `${config.extraMetadata.name}.${entry!.name.replace(/[^A-Za-z0-9]/g, '')}`
     expect(progId).toMatch(/^seuoffice\.[A-Za-z][A-Za-z0-9]*$/)
     expect(progId.length, progId).toBeLessThanOrEqual(39)
     expect(UPSTREAM.progIds).not.toContain(progId)
@@ -274,7 +274,7 @@ describe('coexistence with the upstream app on one machine', () => {
       (candidate: { ext: string }) => candidate.ext === 'vsdx',
     ) as { name: string } | undefined
     expect(entry, '.vsdx is not offered on mac / Linux').toBeTruthy()
-    const progId = `${PRODUCT_NAME}.${entry!.name.replace(/[^A-Za-z0-9]/g, '')}`
+    const progId = `${config.extraMetadata.name}.${entry!.name.replace(/[^A-Za-z0-9]/g, '')}`
     expect(progId).toMatch(/^seuoffice\.[A-Za-z][A-Za-z0-9]*$/)
     expect(progId.length, progId).toBeLessThanOrEqual(39)
     expect(UPSTREAM.progIds).not.toContain(progId)

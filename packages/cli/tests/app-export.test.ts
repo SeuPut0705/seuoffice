@@ -138,7 +138,7 @@ describe('exportViaApp', () => {
     ).rejects.toMatchObject({
       code: 4,
       reason: 'app_crashed',
-      message: 'seuoffice crashed (SIGSEGV) while exporting /tmp/a.docx: boom',
+      message: 'SeuOffice crashed (SIGSEGV) while exporting /tmp/a.docx: boom',
     })
   })
 

@@ -267,13 +267,13 @@ describe('checkUpdatesMenuItem / manual update check wiring', () => {
   it('About dialog copy button still copies name + version', async () => {
     electronMock.showMessageBox.mockResolvedValue({ response: 1 })
     await (aboutMenuItem(en) as { click: () => Promise<void> }).click()
-    expect(electronMock.writeText).toHaveBeenCalledWith('seuoffice 1.2.3')
+    expect(electronMock.writeText).toHaveBeenCalledWith('SeuOffice 1.2.3')
   })
 
   it('names the product in the About entry of every language', () => {
-    expect(en.about).toBe('About seuoffice')
-    expect(appMenuLabels('ko').about).toBe('seuoffice 정보')
-    expect(appMenuLabels('ja').about).toBe('seuoffice について')
+    expect(en.about).toBe('About SeuOffice')
+    expect(appMenuLabels('ko').about).toBe('SeuOffice 정보')
+    expect(appMenuLabels('ja').about).toBe('SeuOffice について')
     for (const lang of [...LANGS, 'vi']) {
       const about = appMenuLabels(lang).about
       expect(about, lang).not.toContain('GenOffice')

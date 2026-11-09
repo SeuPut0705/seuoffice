@@ -46,7 +46,7 @@ export interface LauncherLaunchOptions {
 /**
  * `mcp install`: always the absolute launcher, never the bare name. On Windows
  * the packaged app is run as Node (same entry as the app's snippet); a checkout
- * has no IeumOffice.exe beside it and runs the bundle on the system node, as the
+ * has no SeuOffice.exe beside it and runs the bundle on the system node, as the
  * bin/ieumoffice script does. An upstream GenOffice.exe is never started.
  */
 export function mcpLaunchFromLauncher(

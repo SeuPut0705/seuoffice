@@ -94,7 +94,7 @@ describe('Settings default-app row', () => {
 
     await click(button)
     expect(set).toHaveBeenCalledTimes(1)
-    expect(row()?.textContent).toContain('seuoffice is already the default.')
+    expect(row()?.textContent).toContain('SeuOffice is already the default.')
     expect(row()!.querySelector<HTMLButtonElement>('button')!.disabled).toBe(true)
   })
 
@@ -103,7 +103,7 @@ describe('Settings default-app row', () => {
       getDefaultAppStatus: async () => ({ state: 'other', others: [], manualOnly: false }),
     })
     const field = row()!
-    expect(field.textContent).toContain('Open .docx, .xlsx and .pptx files in seuoffice')
+    expect(field.textContent).toContain('Open .docx, .xlsx and .pptx files in SeuOffice')
     expect(field.querySelector<HTMLButtonElement>('button')!.disabled).toBe(false)
   })
 

@@ -246,7 +246,7 @@ describe('MCP surface over Streamable HTTP (/mcp)', () => {
         formats: string[]
         families: Array<{ family: string; editor: { open: string[] }; mcp?: unknown }>
       }
-      expect(infoJson.name).toBe('seuoffice')
+      expect(infoJson.name).toBe('SeuOffice')
       expect(infoJson.version).toBe('0.9.0-acceptance')
       expect(infoJson.defaultSaveDir).toBe(workDir)
       // background generation is off here, so create_docx/create_pptx/create_xlsx
@@ -583,7 +583,7 @@ describe('MCP surface over Streamable HTTP (/mcp)', () => {
       result?: { content?: Array<{ text?: string }> }
     }
     const infoText = (callBody.result?.content ?? []).map((c) => c.text ?? '').join('')
-    expect(infoText).toContain('seuoffice')
+    expect(infoText).toContain('SeuOffice')
     console.log('[tools/call get_app_info] ok,', infoText.length, 'chars')
 
     // a bad session id is refused, not silently accepted

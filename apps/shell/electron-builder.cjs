@@ -20,7 +20,7 @@ const { join } = require('node:path')
 // None of them may coincide with the upstream GenOffice app, so both can be
 // installed on one machine without touching each other's registration.
 const APP_ID = 'com.seuput.seuoffice'
-const PRODUCT_NAME = 'seuoffice'
+const PRODUCT_NAME = 'SeuOffice'
 // package.json "name" of the packaged app (the workspace keeps upstream's
 // "@genoffice/shell"): electron-builder and electron-updater name the per-user
 // folder that caches the installer and downloaded updates after it
@@ -362,7 +362,7 @@ const WIN_OPEN_WITH_ONLY_EXTS = new Set(['txt', 'json', 'xmind', 'hwp', 'hwpx', 
 // the other's open command and either uninstall delete it: Windows gets
 // product-scoped ProgIds instead ("seuoffice.WordDocument"). The same ids are
 // spelled out in src/main/default-app.ts and build/installer.nsh.
-const winProgId = (name) => `${PRODUCT_NAME}.${name.replace(/[^A-Za-z0-9]/g, '')}`
+const winProgId = (name) => `${PACKAGED_APP_NAME}.${name.replace(/[^A-Za-z0-9]/g, '')}`
 const FILE_ASSOCIATIONS = [
   {
     ext: 'docx',
@@ -721,8 +721,8 @@ const config = {
     // Two separate arch packages (NOT universal): arm64 keeps the exact
     // artifact names and update-feed entries it always had, x64 (via
     // GENOFFICE_MAC_X64=1, see includeMacX64 above) adds the Intel package:
-    // seuoffice-<v>-x64.dmg (config.dmg.artifactName below) and the
-    // arch-less seuoffice-<v>-mac.zip. Both zips land in one latest-mac.yml,
+    // SeuOffice-<v>-x64.dmg (config.dmg.artifactName below) and the
+    // arch-less SeuOffice-<v>-mac.zip. Both zips land in one latest-mac.yml,
     // which a Mac install only reads for the version. Dual-arch packs ship the
     // same lipo fat xlsx-sidecar (see assertUniversalSidecar above).
     target: [

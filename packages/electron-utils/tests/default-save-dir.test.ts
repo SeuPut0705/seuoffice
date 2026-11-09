@@ -100,8 +100,8 @@ describe('configuredDefaultSaveDir', () => {
     const app = {
       getPath: (name: 'userData' | 'documents') => (name === 'userData' ? userData : documents),
     }
-    expect(configuredDefaultSaveDir(app)).toBe(join(documents, 'seuoffice'))
-    expect(existsSync(join(documents, 'seuoffice'))).toBe(true)
+    expect(configuredDefaultSaveDir(app)).toBe(join(documents, 'SeuOffice'))
+    expect(existsSync(join(documents, 'SeuOffice'))).toBe(true)
     // the upstream app's folder is its own: never created or reused here
     expect(existsSync(join(documents, 'GenOffice'))).toBe(false)
   })
@@ -124,18 +124,18 @@ describe('a blocked Documents folder', () => {
     mkdirSync(userData, { recursive: true })
     mkdirSync(documents, { recursive: true })
     // a file where the folder should be: neither creatable nor writable as a folder
-    writeFileSync(join(documents, 'seuoffice'), 'x')
-    expect(configuredDefaultSaveDir(appAt(userData, documents, home))).toBe(join(home, 'seuoffice'))
+    writeFileSync(join(documents, 'SeuOffice'), 'x')
+    expect(configuredDefaultSaveDir(appAt(userData, documents, home))).toBe(join(home, 'SeuOffice'))
     expect(defaultSaveDirFallback()).toEqual({
-      blocked: join(documents, 'seuoffice'),
-      using: join(home, 'seuoffice'),
+      blocked: join(documents, 'SeuOffice'),
+      using: join(home, 'SeuOffice'),
     })
   })
 
   it('skips the blocked folder for a while instead of retrying on every call, then picks it up', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
-    const blocked = join(root, 'Documents', 'seuoffice')
-    const next = join(root, 'home', 'seuoffice')
+    const blocked = join(root, 'Documents', 'SeuOffice')
+    const next = join(root, 'home', 'SeuOffice')
     mkdirSync(join(root, 'Documents'))
     writeFileSync(blocked, 'x')
     expect(resolveDefaultSaveDir(null, [blocked, next])).toBe(next)
@@ -173,9 +173,9 @@ describe('a Documents folder the OS cannot report', () => {
     const home = join(root, 'home')
     mkdirSync(userData, { recursive: true })
     expect(configuredDefaultSaveDir(appWithout(userData, home, ['documents']))).toBe(
-      join(home, 'seuoffice'),
+      join(home, 'SeuOffice'),
     )
-    expect(existsSync(join(home, 'seuoffice'))).toBe(true)
+    expect(existsSync(join(home, 'SeuOffice'))).toBe(true)
     expect(defaultSaveDirFallback()).toBeNull()
   })
 
@@ -191,7 +191,7 @@ describe('a Documents folder the OS cannot report', () => {
     const userData = join(root, 'userData')
     mkdirSync(userData, { recursive: true })
     expect(configuredDefaultSaveDir(appWithout(userData, root, ['documents', 'home']))).toBe(
-      join(userData, 'seuoffice'),
+      join(userData, 'SeuOffice'),
     )
   })
 

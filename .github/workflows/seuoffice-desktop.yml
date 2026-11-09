@@ -177,7 +177,7 @@ jobs:
           unpacked="$latest/win-unpacked"
 
           for bin in \
-            "$unpacked/seuoffice.exe" \
+            "$unpacked/SeuOffice.exe" \
             "$unpacked/resources/native/xlsx-sidecar.exe" \
             "$unpacked/resources/ocr/win-ocr.exe" \
             "$unpacked/resources/cli/genoffice.cjs" \
@@ -214,8 +214,8 @@ jobs:
               has_line "$update" "$line" || { echo "$update lacks '$line'"; exit 1; }
             done
           }
-          check_flavor "$latest" latest latest.yml "seuoffice-Setup-$version.exe"
-          check_flavor "$stable" stable stable.yml "seuoffice-Setup-$version-stable.exe"
+          check_flavor "$latest" latest latest.yml "SeuOffice-Setup-$version.exe"
+          check_flavor "$stable" stable stable.yml "SeuOffice-Setup-$version-stable.exe"
 
           # every signable file must be signed, or none: a half-signed build fails
           expected=NotSigned
@@ -225,9 +225,9 @@ jobs:
             echo "::warning::No Windows signing certificate: this build is unsigned (SmartScreen warns on install)."
           fi
           for file in \
-            "$latest/seuoffice-Setup-$version.exe" \
-            "$stable/seuoffice-Setup-$version-stable.exe" \
-            "$unpacked/seuoffice.exe" \
+            "$latest/SeuOffice-Setup-$version.exe" \
+            "$stable/SeuOffice-Setup-$version-stable.exe" \
+            "$unpacked/SeuOffice.exe" \
             "$unpacked/resources/native/xlsx-sidecar.exe"; do
             status=$(powershell -NoProfile -Command "(Get-AuthenticodeSignature -LiteralPath '$file').Status" | tr -d '\r')
             echo "$status  $file"
@@ -239,7 +239,7 @@ jobs:
       - name: Smoke test the packaged app
         run: |
           set -euo pipefail
-          exe="apps/shell/release/win-unpacked/seuoffice.exe"
+          exe="apps/shell/release/win-unpacked/SeuOffice.exe"
           work="$RUNNER_TEMP/smoke"
           mkdir -p "$work"
           printf '# Smoke test\n\nHello from the Windows build.\n' > "$work/note.md"
@@ -255,11 +255,11 @@ jobs:
           set -euo pipefail
           version=$(node -p "require('./apps/shell/package.json').version")
           mkdir -p release-files
-          cp "apps/shell/release/seuoffice-Setup-$version.exe" \
-            "apps/shell/release/seuoffice-Setup-$version.exe.blockmap" \
+          cp "apps/shell/release/SeuOffice-Setup-$version.exe" \
+            "apps/shell/release/SeuOffice-Setup-$version.exe.blockmap" \
             "apps/shell/release/latest.yml" \
-            "apps/shell/release-stable/seuoffice-Setup-$version-stable.exe" \
-            "apps/shell/release-stable/seuoffice-Setup-$version-stable.exe.blockmap" \
+            "apps/shell/release-stable/SeuOffice-Setup-$version-stable.exe" \
+            "apps/shell/release-stable/SeuOffice-Setup-$version-stable.exe.blockmap" \
             "apps/shell/release-stable/stable.yml" \
             release-files/
           ls -la release-files
@@ -269,7 +269,7 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
-            release-files/seuoffice-Setup-*.exe
+            release-files/SeuOffice-Setup-*.exe
             release-files/latest.yml
             release-files/stable.yml
 
@@ -421,13 +421,13 @@ jobs:
 
           check_flavor() {
             local dir=$1 channel=$2 feed=$3 suffix=$4
-            local app="$dir/mac-arm64/seuoffice.app"
+            local app="$dir/mac-arm64/SeuOffice.app"
             local plist="$app/Contents/Info.plist"
-            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = seuoffice
+            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = SeuOffice
             test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = com.seuput.seuoffice
             test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")" = "$version"
             # arm64 only: the app binary holds no other CPU, and no Intel package was made
-            test "$(lipo -archs "$app/Contents/MacOS/seuoffice")" = arm64
+            test "$(lipo -archs "$app/Contents/MacOS/SeuOffice")" = arm64
             for bin in "$app/Contents/Resources/native/xlsx-sidecar" "$app/Contents/Resources/ocr/vision-ocr"; do
               lipo -archs "$bin" | grep -qw arm64 || { echo "not arm64: $bin"; exit 1; }
             done
@@ -435,8 +435,8 @@ jobs:
               echo "::error::an Intel or universal Mac package was built in $dir"
               exit 1
             fi
-            local dmg="$dir/seuoffice-$version-arm64$suffix.dmg"
-            local zip="seuoffice-$version-arm64-mac$suffix.zip"
+            local dmg="$dir/SeuOffice-$version-arm64$suffix.dmg"
+            local zip="SeuOffice-$version-arm64-mac$suffix.zip"
             test -f "$dmg" || { echo "missing: $dmg"; exit 1; }
             test -f "$dir/$zip" || { echo "missing: $dir/$zip"; exit 1; }
             test -f "$dir/$feed" || { echo "missing: $dir/$feed"; exit 1; }
@@ -469,7 +469,7 @@ jobs:
       - name: Smoke test the packaged app
         run: |
           set -euo pipefail
-          exe="apps/shell/release/mac-arm64/seuoffice.app/Contents/MacOS/seuoffice"
+          exe="apps/shell/release/mac-arm64/SeuOffice.app/Contents/MacOS/SeuOffice"
           work="$RUNNER_TEMP/smoke"
           mkdir -p "$work"
           printf '# Smoke test\n\nHello from the macOS build.\n' > "$work/note.md"
@@ -526,7 +526,7 @@ jobs:
         run: |
           set -euo pipefail
           {
-            echo "seuoffice $TAG — Apple Silicon Mac, x64 Windows."
+            echo "SeuOffice $TAG — Apple Silicon Mac, x64 Windows."
             echo
             echo "미리보기(pre-release)라 일반 채널(latest) 설치본이 바로 받는다. 안정 채널로 올리려면: \`gh release edit $TAG --prerelease=false --latest\`"
             echo
@@ -557,18 +557,18 @@ jobs:
             [ "$built" = "$version" ] || { echo "::error::$feed says $built, but the tag is $TAG"; exit 1; }
           done
           files=(
-            "dist/seuoffice-Setup-$version.exe"
-            "dist/seuoffice-Setup-$version.exe.blockmap"
-            "dist/seuoffice-Setup-$version-stable.exe"
-            "dist/seuoffice-Setup-$version-stable.exe.blockmap"
+            "dist/SeuOffice-Setup-$version.exe"
+            "dist/SeuOffice-Setup-$version.exe.blockmap"
+            "dist/SeuOffice-Setup-$version-stable.exe"
+            "dist/SeuOffice-Setup-$version-stable.exe.blockmap"
             "dist/latest.yml"
             "dist/stable.yml"
-            "dist/seuoffice-$version-arm64.dmg"
-            "dist/seuoffice-$version-arm64-stable.dmg"
-            "dist/seuoffice-$version-arm64-mac.zip"
-            "dist/seuoffice-$version-arm64-mac.zip.blockmap"
-            "dist/seuoffice-$version-arm64-mac-stable.zip"
-            "dist/seuoffice-$version-arm64-mac-stable.zip.blockmap"
+            "dist/SeuOffice-$version-arm64.dmg"
+            "dist/SeuOffice-$version-arm64-stable.dmg"
+            "dist/SeuOffice-$version-arm64-mac.zip"
+            "dist/SeuOffice-$version-arm64-mac.zip.blockmap"
+            "dist/SeuOffice-$version-arm64-mac-stable.zip"
+            "dist/SeuOffice-$version-arm64-mac-stable.zip.blockmap"
             "dist/latest-mac.yml"
             "dist/stable-mac.yml"
           )

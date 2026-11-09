@@ -24,11 +24,11 @@ export const UPSTREAM_NAME_LITERAL = `{{${UPSTREAM_PRODUCT_NAME}}}`
  * productName, the userData folder, the default save folder), which must stay
  * the same whatever the UI language is.
  */
-export const PRODUCT_NAME = 'seuoffice'
+export const PRODUCT_NAME = 'SeuOffice'
 
 /**
  * Languages that show a localized product name instead of PRODUCT_NAME.
- * seuoffice has no localized name yet, so every language shows PRODUCT_NAME.
+ * SeuOffice has no localized name yet, so every language shows PRODUCT_NAME.
  */
 const LOCALIZED_PRODUCT_NAMES: Readonly<Record<string, string>> = {}
 

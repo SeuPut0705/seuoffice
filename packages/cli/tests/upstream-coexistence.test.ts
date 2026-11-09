@@ -56,7 +56,7 @@ const OURS: McpLaunch = {
 }
 const OURS_WINDOWS: McpLaunch = {
   command:
-    'C:\\Users\\u\\AppData\\Local\\Programs\\seuoffice\\resources\\cli\\..\\..\\seuoffice.exe',
+    'C:\\Users\\u\\AppData\\Local\\Programs\\seuoffice\\resources\\cli\\..\\..\\SeuOffice.exe',
   args: ['C:\\Users\\u\\AppData\\Local\\Programs\\seuoffice\\resources\\cli\\genoffice.cjs', 'mcp'],
   env: { ELECTRON_RUN_AS_NODE: '1' },
 }
@@ -512,12 +512,12 @@ describe('finding the app', () => {
   it('looks only where this product installs', () => {
     const env = { LOCALAPPDATA: 'C:\\Users\\u\\AppData\\Local', ProgramFiles: 'C:\\Program Files' }
     expect(installedAppBinaries(env, 'win32', null)).toEqual([
-      join(env.LOCALAPPDATA, 'Programs', 'seuoffice', 'seuoffice.exe'),
-      join(env.ProgramFiles, 'seuoffice', 'seuoffice.exe'),
+      join(env.LOCALAPPDATA, 'Programs', 'SeuOffice', 'SeuOffice.exe'),
+      join(env.ProgramFiles, 'SeuOffice', 'SeuOffice.exe'),
     ])
     expect(installedAppBinaries({}, 'darwin', null).map(posix)).toEqual([
-      '/Applications/seuoffice.app/Contents/MacOS/seuoffice',
-      posix(join(homedir(), 'Applications/seuoffice.app/Contents/MacOS/seuoffice')),
+      '/Applications/SeuOffice.app/Contents/MacOS/SeuOffice',
+      posix(join(homedir(), 'Applications/SeuOffice.app/Contents/MacOS/SeuOffice')),
     ])
     expect(installedAppBinaries({}, 'linux', null).map(posix)).toEqual(['/opt/seuoffice/seuoffice'])
     for (const platform of ['win32', 'darwin', 'linux'] as const) {
@@ -526,18 +526,18 @@ describe('finding the app', () => {
       for (const p of found) {
         expect(p).not.toMatch(/GenOffice|\/genoffice$/)
         expect(p).not.toBe('/usr/bin/genoffice')
-        expect(p).toMatch(/\/seuoffice(\.app)?\//)
+        expect(p).toMatch(/\/seuoffice(\.app)?\//i)
       }
     }
   })
 
   it('resolves the binary of the install that ships this CLI', () => {
     expect(appBinaryForResources(join('D:\\Apps\\seuoffice', 'resources'), 'win32')).toBe(
-      join('D:\\Apps\\seuoffice', 'seuoffice.exe'),
+      join('D:\\Apps\\seuoffice', 'SeuOffice.exe'),
     )
     expect(
       posix(appBinaryForResources('/Volumes/Work/seuoffice.app/Contents/Resources', 'darwin')),
-    ).toBe('/Volumes/Work/seuoffice.app/Contents/MacOS/seuoffice')
+    ).toBe('/Volumes/Work/seuoffice.app/Contents/MacOS/SeuOffice')
     expect(posix(appBinaryForResources('/opt/seuoffice/resources', 'linux'))).toBe(
       '/opt/seuoffice/seuoffice',
     )
@@ -546,7 +546,7 @@ describe('finding the app', () => {
   it('starts the MCP server on our app binary, never on an upstream one beside the launcher', () => {
     const dir = 'C:\\Users\\Jane Doe\\AppData\\Local\\Programs\\seuoffice\\resources\\cli'
     expect(mcpLaunch({ status: 'present', launcherDir: dir })).toEqual({
-      command: `${dir}\\..\\..\\seuoffice.exe`,
+      command: `${dir}\\..\\..\\SeuOffice.exe`,
       args: [`${dir}\\genoffice.cjs`, 'mcp'],
       env: { ELECTRON_RUN_AS_NODE: '1' },
     })
@@ -565,9 +565,9 @@ describe('finding the app', () => {
       command: 'node',
       args: [`${dir}\\genoffice.cjs`, 'mcp'],
     })
-    const ours = (p: string) => p === `${dir}\\..\\..\\seuoffice.exe`
+    const ours = (p: string) => p === `${dir}\\..\\..\\SeuOffice.exe`
     expect(mcpLaunchFromLauncher(`${dir}\\ieumoffice.cmd`, { exists: ours }).command).toBe(
-      `${dir}\\..\\..\\seuoffice.exe`,
+      `${dir}\\..\\..\\SeuOffice.exe`,
     )
   })
 })
@@ -605,7 +605,7 @@ describe('what the CLI prints and tells agents to run', () => {
     expect((await run(['--version'])).stdout).toMatch(/^ieumoffice \d+\.\d+\.\d+/)
     const help = (await run(['help'])).stdout
     expect(help).toContain('Usage: ieumoffice <command> [options]')
-    expect(help).toMatch(/^ieumoffice \S+ — seuoffice command line/)
+    expect(help).toMatch(/^ieumoffice \S+ — SeuOffice command line/)
     expect(help).not.toMatch(OLD_NAME)
 
     const unknown = await run(['no-such-command'])
@@ -641,7 +641,7 @@ describe('what the CLI prints and tells agents to run', () => {
 
   it('names it in what the MCP server tells a client', () => {
     expect(INSTRUCTIONS).not.toMatch(OLD_NAME)
-    expect(INSTRUCTIONS).toContain('seuoffice')
+    expect(INSTRUCTIONS).toContain('SeuOffice')
     expect(remoteInstructions('http://h:1')).not.toMatch(OLD_NAME)
     for (const tool of resolveTools(defaultRegistry())) {
       expect(tool.description, tool.name).not.toMatch(OLD_NAME)
@@ -665,12 +665,12 @@ describe('what the CLI prints and tells agents to run', () => {
     expect(readdirSync(bin).sort()).toEqual(['ieumoffice', 'ieumoffice.cmd'])
     const sh = readFileSync(join(bin, 'ieumoffice'), 'utf-8')
     const cmd = readFileSync(join(bin, 'ieumoffice.cmd'), 'utf-8')
-    expect(sh).toContain('MacOS/seuoffice')
-    expect(sh).toContain('seuoffice.exe')
+    expect(sh).toContain('MacOS/SeuOffice')
+    expect(sh).toContain('SeuOffice.exe')
     expect(sh).toContain('"$here/../../seuoffice"')
     expect(sh).not.toContain('"$here/../../ieumoffice"')
     expect(sh).not.toContain('"$here/../../genoffice"')
-    expect(cmd).toContain('seuoffice.exe')
+    expect(cmd).toContain('SeuOffice.exe')
     expect(sh).not.toMatch(/GenOffice/)
     expect(cmd).not.toMatch(/GenOffice/)
   })
