@@ -9,6 +9,13 @@
  * `openDocument`; the page sends `save` with new bytes, this side runs
  * `onSave` and answers `saved` or `save_failed`. `dirty` reports unsaved
  * changes, and `save()` asks the page to save (`request_save`).
+ *
+ * With `ai`, the `open` message says the host offers AI. The page sends
+ * `ai_request` with a gateway-complete request body (decision 0009); this
+ * side hands it to `ai.request`, which adds the host's own token and calls
+ * the gateway, and streams the answer back as `ai_chunk` bytes, then
+ * `ai_end`, or `ai_error` (with the HTTP status for a non-2xx answer).
+ * `ai_cancel` aborts that request; `destroy()` aborts every request.
  */
 
 export type SeuofficeApp = 'docs' | 'sheets' | 'slides' | 'pdf' | 'hwp'
@@ -52,6 +59,18 @@ interface BaseOpenOptions {
   lang?: string
   /** how long to wait for the page to announce itself; default 30000 */
   readyTimeoutMs?: number
+  /** offer AI to the page; without it the page shows AI as not connected */
+  ai?: AiRelay
+}
+
+/**
+ * The host's call to its AI gateway. `body` is the page's gateway-complete
+ * request body (OpenAI chat completions); the host adds its own token, posts
+ * it, and returns the gateway's response. Abort the request when `signal`
+ * aborts. The page never sees the token.
+ */
+export interface AiRelay {
+  request(body: unknown, signal: AbortSignal): Promise<Response>
 }
 
 /** A document the page saved: same format and file name it was opened with */
@@ -142,8 +161,13 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
     number,
     { resolve: () => void; reject: (error: SeuofficeEmbedError) => void }
   >()
-  const post = (message: Record<string, unknown>): void => {
-    iframe.contentWindow?.postMessage({ source: SOURCE, version: VERSION, ...message }, base.origin)
+  // in-flight AI requests by the page's request id; aborting one ends its host fetch
+  const aiRequests = new Map<string, AbortController>()
+  const post = (message: Record<string, unknown>, transfer: Transferable[] = []): void => {
+    iframe.contentWindow?.postMessage(
+      { source: SOURCE, version: VERSION, ...message },
+      { targetOrigin: base.origin, transfer },
+    )
   }
   const settle = (error?: SeuofficeEmbedError): void => {
     if (settled) return
@@ -169,7 +193,14 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
       copy.set(source)
       const bytes = copy.buffer
       iframe.contentWindow!.postMessage(
-        { source: SOURCE, version: VERSION, type: 'open', fileName: options.fileName, bytes },
+        {
+          source: SOURCE,
+          version: VERSION,
+          type: 'open',
+          fileName: options.fileName,
+          bytes,
+          ai: options.ai !== undefined,
+        },
         base.origin,
         [bytes],
       )
@@ -189,6 +220,21 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
       saveRequests.delete(data.requestId)
       if (data.ok === true) request.resolve()
       else request.reject(notSaved(String(data.message ?? 'the page did not save')))
+    } else if (data.type === 'ai_request' && sent && typeof data.requestId === 'string') {
+      const requestId = data.requestId
+      if (aiRequests.has(requestId)) return
+      if (!options.ai) {
+        post({ type: 'ai_error', requestId, message: 'this host does not offer AI' })
+        return
+      }
+      const controller = new AbortController()
+      aiRequests.set(requestId, controller)
+      void relayAi(options.ai, requestId, data.body, controller.signal, post).finally(() => {
+        if (aiRequests.get(requestId) === controller) aiRequests.delete(requestId)
+      })
+    } else if (data.type === 'ai_cancel' && typeof data.requestId === 'string') {
+      aiRequests.get(data.requestId)?.abort()
+      aiRequests.delete(data.requestId)
     }
   }
 
@@ -217,6 +263,8 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
       for (const request of saveRequests.values())
         request.reject(notSaved('the document was closed'))
       saveRequests.clear()
+      for (const controller of aiRequests.values()) controller.abort()
+      aiRequests.clear()
       iframe.remove()
     },
   }
@@ -237,6 +285,66 @@ async function store(
     post({
       type: 'save_failed',
       saveId,
+      message: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+/** an error answer's body is cut to this many characters before it goes to the page */
+const MAX_AI_ERROR_CHARS = 64 * 1024
+
+/**
+ * One AI request: the host's response streamed to the page as raw bytes.
+ * Nothing is posted after an abort: the page cancelled, or the frame is gone.
+ */
+async function relayAi(
+  ai: AiRelay,
+  requestId: string,
+  body: unknown,
+  signal: AbortSignal,
+  post: (message: Record<string, unknown>, transfer?: Transferable[]) => void,
+): Promise<void> {
+  try {
+    const response = await ai.request(body, signal)
+    if (signal.aborted) {
+      await response.body?.cancel().catch(() => {})
+      return
+    }
+    if (!response.ok) {
+      const text = await response.text().catch(() => '')
+      if (!signal.aborted) {
+        post({
+          type: 'ai_error',
+          requestId,
+          status: response.status,
+          message: text.slice(0, MAX_AI_ERROR_CHARS),
+        })
+      }
+      return
+    }
+    if (response.body) {
+      const reader = response.body.getReader()
+      // a cancel stops the read even when the host's fetch ignored the signal
+      const stop = (): void => void reader.cancel().catch(() => {})
+      signal.addEventListener('abort', stop, { once: true })
+      try {
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done || signal.aborted) break
+          // a fresh copy the page owns: the reader may reuse or share its buffer
+          const data = new Uint8Array(value)
+          post({ type: 'ai_chunk', requestId, data }, [data.buffer])
+        }
+      } finally {
+        signal.removeEventListener('abort', stop)
+      }
+    }
+    if (!signal.aborted) post({ type: 'ai_end', requestId })
+  } catch (error) {
+    if (signal.aborted) return
+    post({
+      type: 'ai_error',
+      requestId,
       message: error instanceof Error ? error.message : String(error),
     })
   }
