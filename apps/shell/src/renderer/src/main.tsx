@@ -1,6 +1,7 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { htmlDir, htmlLang, productName } from '@genoffice/i18n'
+import type { DefaultAppStatus } from '../../shared/home-api'
 import { AppFrame } from './AppFrame'
 import { LocaleProvider } from './locale'
 import '@genoffice/ui/tokens.css'
@@ -23,14 +24,31 @@ if (IS_MAC) document.body.classList.add('vib')
 // non-mac: the tab strip doubles as the title bar (caption buttons overlay it)
 document.body.classList.add(IS_MAC ? 'mac' : 'overlay-title-bar')
 
+// the first-run guide offers the default-app step only when the status is known
+// as it opens; a probe slower than this opens the guide without the step
+const DEFAULT_APP_STATUS_WAIT_MS = 1500
+
+function firstRunDefaultAppStatus(): Promise<DefaultAppStatus | null> {
+  return Promise.race([
+    Promise.resolve(window.aiOffice.getDefaultAppStatus?.()).then(
+      (status) => status ?? null,
+      () => null,
+    ),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), DEFAULT_APP_STATUS_WAIT_MS)),
+  ])
+}
+
 // resolve the persisted language, first-run flag, and theme before first paint
 // so the UI never flashes (home showing briefly before the onboarding overlay)
 void Promise.all([
   window.aiOffice.getLanguage(),
   // if the flag is unreadable, skip onboarding rather than block the home screen
-  window.aiOffice.onboardingSeen().catch(() => true),
+  window.aiOffice
+    .onboardingSeen()
+    .catch(() => true)
+    .then(async (seen) => ({ seen, defaultApp: seen ? null : await firstRunDefaultAppStatus() })),
   window.aiOffice.getTheme().catch(() => 'system' as const),
-]).then(([lang, onboardingSeen, theme]) => {
+]).then(([lang, firstRun, theme]) => {
   document.documentElement.lang = htmlLang(lang)
   document.documentElement.dir = htmlDir(lang)
   // the window (taskbar) title follows the page title
@@ -62,7 +80,10 @@ void Promise.all([
             <HelpScreen />
           </React.Suspense>
         ) : (
-          <AppFrame initialOnboardingSeen={onboardingSeen} />
+          <AppFrame
+            initialOnboardingSeen={firstRun.seen}
+            initialDefaultAppStatus={firstRun.defaultApp}
+          />
         )}
       </LocaleProvider>
     </React.StrictMode>,

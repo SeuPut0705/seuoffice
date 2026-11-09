@@ -129,6 +129,10 @@
   margin-left: -4px;
 }
 
+.onb-art-doc {
+  margin-left: -14px;
+}
+
 .onb-title {
   margin: 0;
   font-size: 28px;
@@ -175,6 +179,58 @@
 
 .onb-connect-failed {
   margin: -2px 2px 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--danger);
+}
+
+/* the default-app step: who opens documents now, one button, Windows' two steps */
+.onb-default-app {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.onb-default-app-status {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--onb-text-primary);
+}
+
+.onb-default-app-btn {
+  padding: 9px 18px;
+  border: none;
+  border-radius: 12px;
+  background: var(--onb-bg-subtle);
+  color: var(--onb-text-primary);
+  font-size: 14px;
+  letter-spacing: -0.154px;
+  cursor: pointer;
+  transition: background var(--onb-transition);
+}
+
+.onb-default-app-btn:hover:not(:disabled) {
+  background: var(--onb-border-default);
+}
+
+.onb-default-app-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.onb-default-app-steps {
+  margin: 0;
+  padding-inline-start: 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--onb-text-secondary);
+}
+
+.onb-default-app-failed {
+  margin: 0;
   font-size: 12px;
   line-height: 1.45;
   color: var(--danger);
@@ -304,14 +360,16 @@
 .onb-next:focus,
 .onb-back:focus,
 .onb-skip:focus,
-.onb-dot:focus {
+.onb-dot:focus,
+.onb-default-app-btn:focus {
   outline: none;
 }
 
 .onb-next:focus-visible,
 .onb-back:focus-visible,
 .onb-skip:focus-visible,
-.onb-dot:focus-visible {
+.onb-dot:focus-visible,
+.onb-default-app-btn:focus-visible {
   outline: 2px solid var(--onb-brand);
   outline-offset: 2px;
 }

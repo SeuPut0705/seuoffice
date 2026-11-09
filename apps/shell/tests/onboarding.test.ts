@@ -11,12 +11,12 @@ import { aiSubscriptionText } from '@genoffice/ui'
 import { Onboarding } from '../src/renderer/src/Onboarding'
 import { LocaleProvider } from '../src/renderer/src/locale'
 import {
-  ONBOARDING_CONNECT_STEP,
-  ONBOARDING_STEPS,
   isLastOnboardingStep,
   nextOnboardingStep,
+  onboardingSteps,
   previousOnboardingStep,
 } from '../src/renderer/src/onboarding-steps'
+import type { DefaultAppStatus } from '../src/shared/home-api'
 import { strings } from '../src/renderer/src/strings'
 import type { SubscriptionConnection } from '../src/renderer/src/subscription-client'
 
@@ -72,6 +72,7 @@ interface RenderOptions {
   connection?: SubscriptionConnection
   noticeDue?: boolean
   onNoticeAcknowledge?: () => void
+  defaultApp?: DefaultAppStatus | null
 }
 
 function renderOnboarding(options: RenderOptions = {}): void {
@@ -85,6 +86,7 @@ function renderOnboarding(options: RenderOptions = {}): void {
           connection: options.connection ?? connectionOf(statuses('not-installed', 'signed-out')),
           noticeDue: options.noticeDue ?? false,
           onNoticeAcknowledge: options.onNoticeAcknowledge ?? vi.fn(),
+          defaultApp: options.defaultApp ?? null,
         }),
       ),
     )
@@ -104,24 +106,127 @@ async function click(selector: string): Promise<void> {
 const activeStep = (): string | null =>
   host.querySelector<HTMLElement>('.onb-slide.active')?.dataset.step ?? null
 
+const OTHER_MANUAL: DefaultAppStatus = { state: 'other', others: ['Word'], manualOnly: true }
+const OTHER_CLAIMABLE: DefaultAppStatus = {
+  state: 'other',
+  others: ['WPS Office'],
+  manualOnly: false,
+}
+const IS_DEFAULT: DefaultAppStatus = { state: 'default', others: [], manualOnly: false }
+
 describe('onboarding steps', () => {
-  it('are exactly welcome, connect, done', () => {
-    expect(ONBOARDING_STEPS).toEqual(['welcome', 'connect', 'done'])
-    expect(ONBOARDING_CONNECT_STEP).toBe(1)
+  it('offer the default-app step only while another app or nobody known holds the documents', () => {
+    const withStep = ['welcome', 'connect', 'defaultApp', 'done']
+    const without = ['welcome', 'connect', 'done']
+    expect(onboardingSteps({ defaultApp: OTHER_MANUAL })).toEqual(withStep)
+    expect(onboardingSteps({ defaultApp: OTHER_CLAIMABLE })).toEqual(withStep)
+    expect(
+      onboardingSteps({ defaultApp: { state: 'unknown', others: [], manualOnly: true } }),
+    ).toEqual(withStep)
+    expect(onboardingSteps({ defaultApp: IS_DEFAULT })).toEqual(without)
+    expect(
+      onboardingSteps({ defaultApp: { state: 'unsupported', others: [], manualOnly: false } }),
+    ).toEqual(without)
+    // still being read when the guide opened
+    expect(onboardingSteps({ defaultApp: null })).toEqual(without)
   })
 
-  it('advance one by one and finish after the last, whatever the connection', () => {
-    expect(nextOnboardingStep(0)).toBe(1)
-    expect(nextOnboardingStep(1)).toBe(2)
-    expect(nextOnboardingStep(2)).toBeNull()
-    expect(isLastOnboardingStep(1)).toBe(false)
-    expect(isLastOnboardingStep(2)).toBe(true)
+  it.each([
+    ['three', onboardingSteps({ defaultApp: null })],
+    ['four', onboardingSteps({ defaultApp: OTHER_MANUAL })],
+  ])('advance and go back one by one over %s steps', (_count, steps) => {
+    const last = steps.length - 1
+    for (let i = 0; i < last; i++) {
+      expect(nextOnboardingStep(i, steps)).toBe(i + 1)
+      expect(isLastOnboardingStep(i, steps)).toBe(false)
+    }
+    expect(nextOnboardingStep(last, steps)).toBeNull()
+    expect(isLastOnboardingStep(last, steps)).toBe(true)
+    for (let i = last; i > 0; i--) expect(previousOnboardingStep(i, steps)).toBe(i - 1)
+    expect(previousOnboardingStep(0, steps)).toBe(0)
+  })
+})
+
+describe('Onboarding default-app step', () => {
+  function stubDefaultApp(read: DefaultAppStatus, set: () => Promise<DefaultAppStatus>) {
+    const api = {
+      getDefaultAppStatus: vi.fn(async () => read),
+      setDefaultApp: vi.fn(set),
+    }
+    vi.stubGlobal('aiOffice', api)
+    return api
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
-  it('go back one by one and stop at the first', () => {
-    expect(previousOnboardingStep(2)).toBe(1)
-    expect(previousOnboardingStep(1)).toBe(0)
-    expect(previousOnboardingStep(0)).toBe(0)
+  const step = () => host.querySelector<HTMLElement>('.onb-slide[data-step="defaultApp"]')!
+  const button = () => step().querySelector<HTMLButtonElement>('.onb-default-app-btn')!
+  const state = () => step().querySelector<HTMLElement>('.onb-default-app')!.dataset.state
+
+  async function goToDefaultAppStep(): Promise<void> {
+    await click('.onb-next')
+    await click('.onb-next')
+    expect(activeStep()).toBe('defaultApp')
+  }
+
+  it('sits between connect and done, with a dot of its own, and never holds Next', async () => {
+    stubDefaultApp(OTHER_MANUAL, async () => OTHER_MANUAL)
+    renderOnboarding({ defaultApp: OTHER_MANUAL })
+    expect(
+      Array.from(host.querySelectorAll<HTMLElement>('.onb-slide')).map((el) => el.dataset.step),
+    ).toEqual(['welcome', 'connect', 'defaultApp', 'done'])
+    expect(host.querySelectorAll('.onb-dot')).toHaveLength(4)
+    await goToDefaultAppStep()
+    expect(host.querySelector<HTMLButtonElement>('.onb-next')!.disabled).toBe(false)
+    await click('.onb-next')
+    expect(activeStep()).toBe('done')
+  })
+
+  it('on Windows opens the system page, explains it, and notices the change on return', async () => {
+    const api = stubDefaultApp(OTHER_MANUAL, async () => OTHER_MANUAL)
+    renderOnboarding({ defaultApp: OTHER_MANUAL })
+    await goToDefaultAppStep()
+    expect(step().querySelector('.onb-default-app-status')!.textContent).toContain('Word')
+    expect(step().querySelectorAll('.onb-default-app-steps li')).toHaveLength(2)
+
+    await click('.onb-slide[data-step="defaultApp"] .onb-default-app-btn')
+    expect(api.setDefaultApp).toHaveBeenCalledTimes(1)
+    expect(state()).toBe('other')
+
+    api.getDefaultAppStatus.mockResolvedValue({ ...IS_DEFAULT, manualOnly: true })
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(state()).toBe('default')
+    expect(button().disabled).toBe(true)
+    expect(step().querySelector('.onb-default-app-steps')).toBeNull()
+    expect(step().querySelector('.onb-default-app-failed')).toBeNull()
+  })
+
+  it('on the Mac claims the documents in one click', async () => {
+    const api = stubDefaultApp(OTHER_CLAIMABLE, async () => IS_DEFAULT)
+    renderOnboarding({ defaultApp: OTHER_CLAIMABLE })
+    await goToDefaultAppStep()
+    expect(step().querySelector('.onb-default-app-steps')).toBeNull()
+
+    await click('.onb-slide[data-step="defaultApp"] .onb-default-app-btn')
+    expect(api.setDefaultApp).toHaveBeenCalledTimes(1)
+    expect(state()).toBe('default')
+    expect(button().disabled).toBe(true)
+    expect(step().querySelector('.onb-default-app-failed')).toBeNull()
+  })
+
+  it('on the Mac says so when the claim did not stick', async () => {
+    stubDefaultApp(OTHER_CLAIMABLE, async () => OTHER_CLAIMABLE)
+    renderOnboarding({ defaultApp: OTHER_CLAIMABLE })
+    await goToDefaultAppStep()
+    await click('.onb-slide[data-step="defaultApp"] .onb-default-app-btn')
+    expect(state()).toBe('other')
+    expect(step().querySelector('.onb-default-app-failed')).not.toBeNull()
+    expect(button().disabled).toBe(false)
   })
 })
 
@@ -318,11 +423,15 @@ describe('Onboarding', () => {
   })
 
   it('carries no credits offer, community call, star hint or statistics notice', async () => {
-    renderOnboarding({ connection: connectionOf(statuses('ready', 'ready')) })
+    renderOnboarding({
+      connection: connectionOf(statuses('ready', 'ready')),
+      defaultApp: OTHER_MANUAL,
+    })
     const text = () => host.textContent ?? ''
-    for (let step = 0; step < ONBOARDING_STEPS.length; step++) {
+    const count = host.querySelectorAll('.onb-dot').length
+    for (let step = 0; step < count; step++) {
       expect(text()).not.toMatch(/credit|github|\bstars?\b|statistic|analytics/i)
-      if (step < ONBOARDING_STEPS.length - 1) await click('.onb-next')
+      if (step < count - 1) await click('.onb-next')
     }
     expect(host.querySelector('[role="switch"]')).toBeNull()
     expect(host.querySelector('.onb-offer, .onb-star, .onb-consent, .onb-join')).toBeNull()

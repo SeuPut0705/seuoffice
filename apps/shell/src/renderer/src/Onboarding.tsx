@@ -12,13 +12,13 @@ import { FreeAiCards, useAiSettings as useFreeAiSettings } from './FreeAiCards'
 import { FREE_AI_PROVIDER_NAMES } from './free-ai-cards'
 import { useI18n } from './locale'
 import {
-  ONBOARDING_CONNECT_STEP,
-  ONBOARDING_STEPS,
   isLastOnboardingStep,
   nextOnboardingStep,
+  onboardingSteps,
   previousOnboardingStep,
 } from './onboarding-steps'
 import type { OnboardingStepId } from './onboarding-steps'
+import type { DefaultAppStatus } from '../../shared/home-api'
 import type { SubscriptionConnection } from './subscription-client'
 import { usableSubscriptionProviders } from './subscription-status'
 import './onboarding.css'
@@ -31,6 +31,9 @@ interface OnboardingProps {
   /** a subscription can be used and the first-connection notice was not acknowledged yet */
   noticeDue: boolean
   onNoticeAcknowledge: () => void
+  /** read before the onboarding opened (null if not known by then): decides,
+   *  once, whether the default-app step is offered */
+  defaultApp: DefaultAppStatus | null
 }
 
 /* exact vectors from the design spec:
@@ -44,6 +47,20 @@ function SlideArt({ step }: { step: OnboardingStepId }) {
     return (
       <span className="onb-art onb-art-badge onb-art-ai" aria-hidden="true">
         <AiMark size={58} />
+      </span>
+    )
+  }
+  if (step === 'defaultApp') {
+    return (
+      <span className="onb-art onb-art-badge onb-art-doc" aria-hidden="true">
+        <svg viewBox="0 0 60 60" fill="none" stroke="currentColor" strokeWidth="4">
+          <path
+            d="M15 8.5C15 7.39543 15.8954 6.5 17 6.5H35.5L47 18V51.5C47 52.6046 46.1046 53.5 45 53.5H17C15.8954 53.5 15 52.6046 15 51.5V8.5Z"
+            strokeLinejoin="round"
+          />
+          <path d="M35 6.5V18.5H47" strokeLinejoin="round" />
+          <path d="M23 31H39M23 40H33" strokeLinecap="round" />
+        </svg>
       </span>
     )
   }
@@ -69,14 +86,20 @@ export function Onboarding({
   connection,
   noticeDue,
   onNoticeAcknowledge,
+  defaultApp,
 }: OnboardingProps) {
   const { t, lang } = useI18n()
+  // fixed for the whole run so the dots never change under the user
+  const [steps] = useState(() => onboardingSteps({ defaultApp }))
   const [index, setIndex] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const [appStatus, setAppStatus] = useState(defaultApp)
+  const [appBusy, setAppBusy] = useState(false)
+  const [appFailed, setAppFailed] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
-  const isLast = isLastOnboardingStep(index)
+  const isLast = isLastOnboardingStep(index, steps)
   // the notice waits for the step that is about the connection
-  const noticeOpen = noticeDue && index >= ONBOARDING_CONNECT_STEP
+  const noticeOpen = noticeDue && index >= steps.indexOf('connect')
   const freeSettings = useFreeAiSettings()
   const freeConnected = FREE_AI_PROVIDERS.some(
     (provider) => freeSettings !== null && freeAiConnected(freeSettings, provider),
@@ -91,6 +114,7 @@ export function Onboarding({
   const titles: Record<OnboardingStepId, string> = {
     welcome: t('onbTitle1'),
     connect: t('onbConnectTitle'),
+    defaultApp: t('onbDefaultAppTitle'),
     done: t('onbDoneTitle'),
   }
 
@@ -102,11 +126,35 @@ export function Onboarding({
       .finally(() => setSubmitting(false))
   }
 
-  // never waits for a connection: the connect step is left like any other
+  // never waits for a connection or a default: every step is left like any other
   const next = () => {
-    const target = nextOnboardingStep(index)
+    const target = nextOnboardingStep(index, steps)
     if (target === null) finish()
     else setIndex(target)
+  }
+
+  // Windows only opens the system page; re-read ownership when the user comes back
+  const offersDefaultApp = steps.includes('defaultApp')
+  useEffect(() => {
+    if (!offersDefaultApp || !appStatus?.manualOnly) return
+    const refresh = () => {
+      void window.aiOffice.getDefaultAppStatus?.().then(setAppStatus)
+    }
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
+  }, [offersDefaultApp, appStatus?.manualOnly])
+
+  const claimDefaultApp = () => {
+    setAppBusy(true)
+    setAppFailed(false)
+    void window.aiOffice
+      .setDefaultApp()
+      .then((st) => {
+        setAppStatus(st)
+        if (!st.manualOnly && st.state !== 'default') setAppFailed(true)
+      })
+      .catch(() => setAppFailed(true))
+      .finally(() => setAppBusy(false))
   }
 
   // move focus into the dialog on mount so keyboard users start inside it
@@ -166,7 +214,7 @@ export function Onboarding({
       const buttonFocused =
         event.target instanceof HTMLElement && event.target.closest('button') !== null
       if ((event.key === 'Enter' && !buttonFocused) || event.key === 'ArrowRight') next()
-      if (event.key === 'ArrowLeft') setIndex((i) => previousOnboardingStep(i))
+      if (event.key === 'ArrowLeft') setIndex((i) => previousOnboardingStep(i, steps))
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -219,6 +267,45 @@ export function Onboarding({
         </>
       )
     }
+    if (step === 'defaultApp') {
+      if (!appStatus) return null
+      const isDefault = appStatus.state === 'default'
+      return (
+        <>
+          <p className="onb-body onb-body-lead">{t('onbDefaultAppBody')}</p>
+          <div className="onb-default-app" data-state={appStatus.state}>
+            {isDefault ? (
+              <p className="onb-default-app-status">{t('setDefaultAppIs')}</p>
+            ) : (
+              appStatus.others.length > 0 && (
+                <p className="onb-default-app-status">
+                  {t('setDefaultAppOther', { app: appStatus.others.join(', ') })}
+                </p>
+              )
+            )}
+            <button
+              className="onb-default-app-btn"
+              disabled={appBusy || isDefault}
+              onClick={claimDefaultApp}
+            >
+              {appStatus.manualOnly ? t('setDefaultAppOpenSettings') : t('setDefaultAppSet')}
+            </button>
+            {appStatus.manualOnly && !isDefault && (
+              <ol className="onb-default-app-steps">
+                <li>{t('onbDefaultAppWinStep1')}</li>
+                <li>{t('onbDefaultAppWinStep2')}</li>
+              </ol>
+            )}
+            {appFailed && (
+              <p className="onb-default-app-failed" role="alert">
+                {t('setDefaultAppFailed')}
+              </p>
+            )}
+          </div>
+          <p className="onb-note">{t('onbDefaultAppLaterNote')}</p>
+        </>
+      )
+    }
     return (
       <>
         <p className="onb-subtitle" data-connected={connected.length > 0}>
@@ -234,18 +321,13 @@ export function Onboarding({
   }
 
   return (
-    <div
-      className="onb-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label={titles[ONBOARDING_STEPS[index]!]}
-    >
+    <div className="onb-overlay" role="dialog" aria-modal="true" aria-label={titles[steps[index]!]}>
       <div className="onb-card" ref={cardRef} tabIndex={-1}>
         {/* all slides stay mounted, stacked in one grid cell: the card locks to
             the tallest slide's height for the language, so the footer and its
             buttons never move between steps. Inactive slides are inert. */}
         <div className="onb-stage">
-          {ONBOARDING_STEPS.map((step, i) => (
+          {steps.map((step, i) => (
             <div
               className={`onb-slide${i === index ? ' active' : ''}`}
               key={step}
@@ -261,11 +343,11 @@ export function Onboarding({
 
         <div className="onb-footer">
           <div className="onb-dots">
-            {ONBOARDING_STEPS.map((step, i) => (
+            {steps.map((step, i) => (
               <button
                 key={step}
                 className={`onb-dot${i === index ? ' active' : ''}`}
-                aria-label={t('onbStepAria', { n: i + 1, total: ONBOARDING_STEPS.length })}
+                aria-label={t('onbStepAria', { n: i + 1, total: steps.length })}
                 aria-current={i === index}
                 onClick={() => setIndex(i)}
               />
@@ -279,7 +361,7 @@ export function Onboarding({
               <button
                 className="onb-back"
                 disabled={submitting}
-                onClick={() => setIndex(previousOnboardingStep(index))}
+                onClick={() => setIndex(previousOnboardingStep(index, steps))}
               >
                 {t('onbBack')}
               </button>

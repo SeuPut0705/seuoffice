@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
+import type { DefaultAppStatus } from '../../shared/home-api'
 import type { SplitViewState } from '../../shared/split-view-api'
 import { useFirstConnectionNotice } from './FirstConnectionNotice'
 import { Home } from './Home'
@@ -16,6 +17,8 @@ import { useSubscriptionConnection } from './subscription-client'
 interface AppFrameProps {
   /** resolved before first paint (main.tsx) so home never flashes under the overlay */
   initialOnboardingSeen: boolean
+  /** read before first paint on a first run only; null when not known in time */
+  initialDefaultAppStatus: DefaultAppStatus | null
 }
 
 /** The shell renderer's viewport: the same CSS px space the pane bounds use. */
@@ -164,7 +167,7 @@ function SplitDivider({ split, viewport }: { split: SplitViewState; viewport: Vi
   )
 }
 
-export function AppFrame({ initialOnboardingSeen }: AppFrameProps) {
+export function AppFrame({ initialOnboardingSeen, initialDefaultAppStatus }: AppFrameProps) {
   const [homeActive, setHomeActive] = useState(true)
   const [showOnboarding, setShowOnboarding] = useState(!initialOnboardingSeen)
   const split = useSplitView()
@@ -220,6 +223,7 @@ export function AppFrame({ initialOnboardingSeen }: AppFrameProps) {
           connection={connection}
           noticeDue={notice.due}
           onNoticeAcknowledge={notice.acknowledge}
+          defaultApp={initialDefaultAppStatus}
         />
       )}
     </div>

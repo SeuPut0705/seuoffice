@@ -210,6 +210,13 @@ export const strings = {
     setDefaultAppSet: '设为默认',
     setDefaultAppOpenSettings: '打开系统设置',
     setDefaultAppFailed: '设置失败，请在系统设置中手动更改。',
+    onbDefaultAppTitle: '用 GenOffice 打开文档',
+    onbDefaultAppBody:
+      '让 Word 文档、Excel 工作簿、PowerPoint 演示文稿和 draw.io 图表在双击时用 GenOffice 打开。',
+    onbDefaultAppWinStep1:
+      '在 Windows 设置中打开 GenOffice（如果没有直接打开它的页面，请在应用列表中找到它）。',
+    onbDefaultAppWinStep2: '点击页面顶部的按钮设为默认，或为每种文件类型选择 GenOffice。',
+    onbDefaultAppLaterNote: '可以跳过这一步，之后在“设置 → 通用”中完成。',
     setAiSpellcheckDesc: '在 AI 对话输入框中输入时标出拼写错误的单词。',
     setAiPanelStart: 'AI 面板',
     setAiPanelStartDesc:
@@ -781,6 +788,14 @@ export const strings = {
     setDefaultAppSet: 'Make default',
     setDefaultAppOpenSettings: 'Open system settings',
     setDefaultAppFailed: 'Could not change it. Please set it in the system settings.',
+    onbDefaultAppTitle: 'Open documents with GenOffice',
+    onbDefaultAppBody:
+      'Make GenOffice the app that opens Word documents, Excel workbooks, PowerPoint presentations and draw.io diagrams when you double-click them.',
+    onbDefaultAppWinStep1:
+      'In Windows Settings, open GenOffice (find it in the list of apps if its page does not open by itself).',
+    onbDefaultAppWinStep2:
+      'Set it as the default with the button at the top, or pick GenOffice for each file type.',
+    onbDefaultAppLaterNote: 'You can skip this step and do it later in Settings → General.',
     setAiSpellcheckDesc: 'Underline misspelled words while typing in the AI chat input.',
     setAiPanelStart: 'AI panel',
     setAiPanelStartDesc:
@@ -1376,6 +1391,14 @@ export const strings = {
     setDefaultAppSet: 'Đặt làm mặc định',
     setDefaultAppOpenSettings: 'Mở cài đặt hệ thống',
     setDefaultAppFailed: 'Không thể thay đổi. Vui lòng đặt trong cài đặt hệ thống.',
+    onbDefaultAppTitle: 'Mở tài liệu bằng GenOffice',
+    onbDefaultAppBody:
+      'Đặt GenOffice làm ứng dụng mở tài liệu Word, sổ làm việc Excel, bản trình bày PowerPoint và sơ đồ draw.io khi bấm đúp.',
+    onbDefaultAppWinStep1:
+      'Trong Cài đặt Windows, mở GenOffice (tìm trong danh sách ứng dụng nếu trang của nó không tự mở).',
+    onbDefaultAppWinStep2:
+      'Đặt làm mặc định bằng nút ở trên cùng, hoặc chọn GenOffice cho từng loại tệp.',
+    onbDefaultAppLaterNote: 'Bạn có thể bỏ qua bước này và làm sau trong Cài đặt → Chung.',
     setAiSpellcheckDesc: 'Gạch chân các từ sai chính tả khi nhập vào ô trò chuyện AI.',
     setAiPanelStart: 'Bảng AI',
     setAiPanelStartDesc:
@@ -1980,6 +2003,14 @@ export const strings = {
     setDefaultAppSet: '既定にする',
     setDefaultAppOpenSettings: 'システム設定を開く',
     setDefaultAppFailed: '変更できませんでした。システム設定で設定してください。',
+    onbDefaultAppTitle: 'GenOffice で文書を開く',
+    onbDefaultAppBody:
+      'Word 文書、Excel ブック、PowerPoint プレゼンテーション、draw.io 図をダブルクリックしたとき GenOffice で開くようにします。',
+    onbDefaultAppWinStep1:
+      'Windows の設定で GenOffice を開きます（そのページが自動で開かない場合は、アプリの一覧から探してください）。',
+    onbDefaultAppWinStep2:
+      '上部のボタンで既定に設定するか、ファイルの種類ごとに GenOffice を選びます。',
+    onbDefaultAppLaterNote: 'この手順はスキップして、あとで「設定 → 一般」から行えます。',
     setAiSpellcheckDesc: 'AI チャットの入力欄で入力中にスペルミスの単語に下線を表示します。',
     setAiPanelStart: 'AI パネル',
     setAiPanelStartDesc:
@@ -2588,6 +2619,14 @@ export const strings = {
     setDefaultAppSet: '기본으로 설정',
     setDefaultAppOpenSettings: '시스템 설정 열기',
     setDefaultAppFailed: '변경할 수 없습니다. 시스템 설정에서 직접 설정해 주세요.',
+    onbDefaultAppTitle: '문서를 GenOffice로 열기',
+    onbDefaultAppBody:
+      'Word 문서, Excel 통합 문서, PowerPoint 프레젠테이션, draw.io 다이어그램을 두 번 클릭하면 GenOffice로 열리게 합니다.',
+    onbDefaultAppWinStep1:
+      'Windows 설정에서 GenOffice를 엽니다(그 페이지가 바로 열리지 않으면 앱 목록에서 찾으세요).',
+    onbDefaultAppWinStep2:
+      '맨 위의 버튼으로 기본값으로 설정하거나, 파일 형식마다 GenOffice를 고릅니다.',
+    onbDefaultAppLaterNote: '이 단계는 건너뛰고 나중에 설정 → 일반에서 해도 됩니다.',
     setAiSpellcheckDesc: 'AI 채팅 입력란에 입력할 때 잘못된 단어에 밑줄을 표시합니다.',
     setAiPanelStart: 'AI 패널',
     setAiPanelStartDesc:
@@ -3186,6 +3225,15 @@ export const strings = {
     setDefaultAppSet: 'Définir par défaut',
     setDefaultAppOpenSettings: 'Ouvrir les réglages système',
     setDefaultAppFailed: 'Modification impossible. Définissez-la dans les réglages système.',
+    onbDefaultAppTitle: 'Ouvrir les documents avec GenOffice',
+    onbDefaultAppBody:
+      'Faites de GenOffice l’application qui ouvre les documents Word, classeurs Excel, présentations PowerPoint et diagrammes draw.io par double-clic.',
+    onbDefaultAppWinStep1:
+      'Dans les Paramètres Windows, ouvrez GenOffice (cherchez-le dans la liste des applications si sa page ne s’ouvre pas d’elle-même).',
+    onbDefaultAppWinStep2:
+      'Définissez-le par défaut avec le bouton en haut, ou choisissez GenOffice pour chaque type de fichier.',
+    onbDefaultAppLaterNote:
+      'Vous pouvez passer cette étape et le faire plus tard dans Paramètres → Général.',
     setAiSpellcheckDesc: 'Souligne les mots mal orthographiés pendant la saisie dans le chat IA.',
     setAiPanelStart: 'Panneau IA',
     setAiPanelStartDesc:
@@ -3806,6 +3854,15 @@ export const strings = {
     setDefaultAppSet: 'Als Standard festlegen',
     setDefaultAppOpenSettings: 'Systemeinstellungen öffnen',
     setDefaultAppFailed: 'Änderung nicht möglich. Bitte in den Systemeinstellungen festlegen.',
+    onbDefaultAppTitle: 'Dokumente mit GenOffice öffnen',
+    onbDefaultAppBody:
+      'Legen Sie GenOffice als App fest, die Word-Dokumente, Excel-Arbeitsmappen, PowerPoint-Präsentationen und draw.io-Diagramme per Doppelklick öffnet.',
+    onbDefaultAppWinStep1:
+      'Öffnen Sie in den Windows-Einstellungen GenOffice (suchen Sie es in der App-Liste, falls seine Seite nicht von selbst aufgeht).',
+    onbDefaultAppWinStep2:
+      'Legen Sie es mit der Schaltfläche oben als Standard fest oder wählen Sie GenOffice für jeden Dateityp.',
+    onbDefaultAppLaterNote:
+      'Sie können diesen Schritt überspringen und ihn später unter Einstellungen → Allgemein erledigen.',
     setAiSpellcheckDesc:
       'Unterstreicht falsch geschriebene Wörter beim Tippen im KI-Chat-Eingabefeld.',
     setAiPanelStart: 'KI-Panel',
@@ -4429,6 +4486,15 @@ export const strings = {
     setDefaultAppSet: 'Establecer como predeterminada',
     setDefaultAppOpenSettings: 'Abrir ajustes del sistema',
     setDefaultAppFailed: 'No se pudo cambiar. Configúralo en los ajustes del sistema.',
+    onbDefaultAppTitle: 'Abre los documentos con GenOffice',
+    onbDefaultAppBody:
+      'Haz que GenOffice abra los documentos de Word, libros de Excel, presentaciones de PowerPoint y diagramas de draw.io al hacer doble clic.',
+    onbDefaultAppWinStep1:
+      'En Configuración de Windows, abre GenOffice (búscalo en la lista de aplicaciones si su página no se abre sola).',
+    onbDefaultAppWinStep2:
+      'Establécelo como predeterminado con el botón de arriba o elige GenOffice para cada tipo de archivo.',
+    onbDefaultAppLaterNote:
+      'Puedes omitir este paso y hacerlo más tarde en Configuración → General.',
     setAiSpellcheckDesc:
       'Subraya las palabras mal escritas al escribir en el cuadro del chat de IA.',
     setAiPanelStart: 'Panel de IA',
@@ -5036,6 +5102,14 @@ export const strings = {
     setDefaultAppSet: 'ตั้งเป็นค่าเริ่มต้น',
     setDefaultAppOpenSettings: 'เปิดการตั้งค่าระบบ',
     setDefaultAppFailed: 'เปลี่ยนไม่สำเร็จ โปรดตั้งค่าในการตั้งค่าระบบ',
+    onbDefaultAppTitle: 'เปิดเอกสารด้วย GenOffice',
+    onbDefaultAppBody:
+      'ตั้งให้ GenOffice เปิดเอกสาร Word, เวิร์กบุ๊ก Excel, งานนำเสนอ PowerPoint และไดอะแกรม draw.io เมื่อดับเบิลคลิก',
+    onbDefaultAppWinStep1:
+      'ในการตั้งค่า Windows ให้เปิด GenOffice (หากหน้าของแอปไม่เปิดขึ้นเอง ให้ค้นหาในรายการแอป)',
+    onbDefaultAppWinStep2:
+      'ตั้งเป็นค่าเริ่มต้นด้วยปุ่มด้านบน หรือเลือก GenOffice ให้กับไฟล์แต่ละประเภท',
+    onbDefaultAppLaterNote: 'คุณสามารถข้ามขั้นตอนนี้แล้วทำภายหลังได้ที่ การตั้งค่า → ทั่วไป',
     setAiSpellcheckDesc: 'ขีดเส้นใต้คำที่สะกดผิดขณะพิมพ์ในช่องแชท AI',
     setAiPanelStart: 'แผง AI',
     setAiPanelStartDesc:
@@ -5635,6 +5709,15 @@ export const strings = {
     setDefaultAppSet: 'Jadikan default',
     setDefaultAppOpenSettings: 'Buka pengaturan sistem',
     setDefaultAppFailed: 'Tidak dapat mengubahnya. Atur di pengaturan sistem.',
+    onbDefaultAppTitle: 'Buka dokumen dengan GenOffice',
+    onbDefaultAppBody:
+      'Jadikan GenOffice aplikasi yang membuka dokumen Word, buku kerja Excel, presentasi PowerPoint, dan diagram draw.io saat diklik dua kali.',
+    onbDefaultAppWinStep1:
+      'Di Pengaturan Windows, buka GenOffice (cari di daftar aplikasi jika halamannya tidak terbuka sendiri).',
+    onbDefaultAppWinStep2:
+      'Jadikan default dengan tombol di bagian atas, atau pilih GenOffice untuk setiap jenis file.',
+    onbDefaultAppLaterNote:
+      'Anda dapat melewati langkah ini dan melakukannya nanti di Pengaturan → Umum.',
     setAiSpellcheckDesc: 'Garis bawahi kata yang salah eja saat mengetik di kotak obrolan AI.',
     setAiPanelStart: 'Panel AI',
     setAiPanelStartDesc:
@@ -6244,6 +6327,15 @@ export const strings = {
     setDefaultAppSet: 'Сделать по умолчанию',
     setDefaultAppOpenSettings: 'Открыть системные настройки',
     setDefaultAppFailed: 'Не удалось изменить. Задайте в системных настройках.',
+    onbDefaultAppTitle: 'Открывайте документы в GenOffice',
+    onbDefaultAppBody:
+      'Сделайте GenOffice приложением, которое открывает документы Word, книги Excel, презентации PowerPoint и диаграммы draw.io по двойному щелчку.',
+    onbDefaultAppWinStep1:
+      'В параметрах Windows откройте GenOffice (найдите его в списке приложений, если его страница не открылась сама).',
+    onbDefaultAppWinStep2:
+      'Сделайте его приложением по умолчанию кнопкой вверху или выберите GenOffice для каждого типа файлов.',
+    onbDefaultAppLaterNote:
+      'Этот шаг можно пропустить и выполнить позже в разделе «Настройки → Общие».',
     setAiSpellcheckDesc: 'Подчёркивать слова с ошибками при вводе в поле чата ИИ.',
     setAiPanelStart: 'Панель ИИ',
     setAiPanelStartDesc:
@@ -6852,6 +6944,13 @@ export const strings = {
     setDefaultAppSet: 'تعيين كافتراضي',
     setDefaultAppOpenSettings: 'فتح إعدادات النظام',
     setDefaultAppFailed: 'تعذّر التغيير. يرجى تعيينه من إعدادات النظام.',
+    onbDefaultAppTitle: 'افتح المستندات باستخدام GenOffice',
+    onbDefaultAppBody:
+      'اجعل GenOffice التطبيق الذي يفتح مستندات Word ومصنفات Excel وعروض PowerPoint التقديمية ومخططات draw.io عند النقر المزدوج.',
+    onbDefaultAppWinStep1:
+      'في إعدادات Windows، افتح GenOffice (ابحث عنه في قائمة التطبيقات إذا لم تُفتح صفحته تلقائيًا).',
+    onbDefaultAppWinStep2: 'عيّنه افتراضيًا بالزر في أعلى الصفحة، أو اختر GenOffice لكل نوع ملف.',
+    onbDefaultAppLaterNote: 'يمكنك تخطي هذه الخطوة والقيام بها لاحقًا من الإعدادات ← عام.',
     setAiSpellcheckDesc:
       'وضع خط تحت الكلمات الخاطئة إملائيًا أثناء الكتابة في حقل محادثة الذكاء الاصطناعي.',
     setAiPanelStart: 'لوحة الذكاء الاصطناعي',
@@ -7444,6 +7543,15 @@ export const strings = {
     setDefaultAppSet: 'Definir como padrão',
     setDefaultAppOpenSettings: 'Abrir configurações do sistema',
     setDefaultAppFailed: 'Não foi possível alterar. Defina nas configurações do sistema.',
+    onbDefaultAppTitle: 'Abra documentos com o GenOffice',
+    onbDefaultAppBody:
+      'Faça do GenOffice o app que abre documentos do Word, pastas de trabalho do Excel, apresentações do PowerPoint e diagramas do draw.io ao clicar duas vezes.',
+    onbDefaultAppWinStep1:
+      'Nas Configurações do Windows, abra o GenOffice (procure-o na lista de apps se a página dele não abrir sozinha).',
+    onbDefaultAppWinStep2:
+      'Defina-o como padrão com o botão no topo ou escolha o GenOffice para cada tipo de arquivo.',
+    onbDefaultAppLaterNote:
+      'Você pode pular esta etapa e fazer isso depois em Configurações → Geral.',
     setAiSpellcheckDesc:
       'Sublinha palavras com erros ortográficos ao digitar na caixa do chat de IA.',
     setAiPanelStart: 'Painel de IA',
@@ -8049,6 +8157,15 @@ export const strings = {
     setDefaultAppSet: 'Imposta come predefinita',
     setDefaultAppOpenSettings: 'Apri impostazioni di sistema',
     setDefaultAppFailed: 'Impossibile modificare. Impostala nelle impostazioni di sistema.',
+    onbDefaultAppTitle: 'Apri i documenti con GenOffice',
+    onbDefaultAppBody:
+      'Rendi GenOffice l’app che apre documenti Word, cartelle di lavoro Excel, presentazioni PowerPoint e diagrammi draw.io con un doppio clic.',
+    onbDefaultAppWinStep1:
+      'Nelle Impostazioni di Windows, apri GenOffice (cercalo nell’elenco delle app se la sua pagina non si apre da sola).',
+    onbDefaultAppWinStep2:
+      'Impostalo come predefinito con il pulsante in alto oppure scegli GenOffice per ogni tipo di file.',
+    onbDefaultAppLaterNote:
+      'Puoi saltare questo passaggio e farlo più tardi in Impostazioni → Generale.',
     setAiSpellcheckDesc: 'Sottolinea le parole errate durante la digitazione nella chat IA.',
     setAiPanelStart: 'Pannello IA',
     setAiPanelStartDesc:
@@ -8654,6 +8771,15 @@ export const strings = {
     setDefaultAppSet: 'Ustaw jako domyślną',
     setDefaultAppOpenSettings: 'Otwórz ustawienia systemu',
     setDefaultAppFailed: 'Nie udało się zmienić. Ustaw w ustawieniach systemu.',
+    onbDefaultAppTitle: 'Otwieraj dokumenty w GenOffice',
+    onbDefaultAppBody:
+      'Ustaw GenOffice jako aplikację, która otwiera dokumenty Word, skoroszyty Excel, prezentacje PowerPoint i diagramy draw.io po dwukrotnym kliknięciu.',
+    onbDefaultAppWinStep1:
+      'W Ustawieniach systemu Windows otwórz GenOffice (znajdź go na liście aplikacji, jeśli jego strona nie otworzy się sama).',
+    onbDefaultAppWinStep2:
+      'Ustaw go jako domyślny przyciskiem u góry albo wybierz GenOffice dla każdego typu pliku.',
+    onbDefaultAppLaterNote:
+      'Możesz pominąć ten krok i zrobić to później w sekcji Ustawienia → Ogólne.',
     setAiSpellcheckDesc: 'Podkreśla błędnie napisane słowa podczas pisania w polu czatu AI.',
     setAiPanelStart: 'Panel AI',
     setAiPanelStartDesc:
@@ -9548,6 +9674,14 @@ export const strings = {
     setDefaultAppSet: 'Nastavit jako výchozí',
     setDefaultAppOpenSettings: 'Otevřít nastavení systému',
     setDefaultAppFailed: 'Změna se nezdařila. Nastavte ji v nastavení systému.',
+    onbDefaultAppTitle: 'Otevírejte dokumenty v GenOffice',
+    onbDefaultAppBody:
+      'Nastavte GenOffice jako aplikaci, která po poklepání otevírá dokumenty Word, sešity Excel, prezentace PowerPoint a diagramy draw.io.',
+    onbDefaultAppWinStep1:
+      'V Nastavení Windows otevřete GenOffice (pokud se jeho stránka neotevře sama, najděte ho v seznamu aplikací).',
+    onbDefaultAppWinStep2:
+      'Nastavte ho jako výchozí tlačítkem nahoře, nebo zvolte GenOffice pro každý typ souboru.',
+    onbDefaultAppLaterNote: 'Tento krok můžete přeskočit a udělat to později v Nastavení → Obecné.',
     setAiSpellcheckDesc: 'Podtrhávat překlepy při psaní do vstupního pole chatu AI.',
     setAiPanelStart: 'Panel AI',
     setAiPanelStartDesc:
@@ -9850,6 +9984,15 @@ export const strings = {
     setDefaultAppSet: 'Als standaard instellen',
     setDefaultAppOpenSettings: 'Systeeminstellingen openen',
     setDefaultAppFailed: 'Wijzigen is niet gelukt. Stel dit in via de systeeminstellingen.',
+    onbDefaultAppTitle: 'Documenten openen met GenOffice',
+    onbDefaultAppBody:
+      'Maak GenOffice de app die Word-documenten, Excel-werkmappen, PowerPoint-presentaties en draw.io-diagrammen opent als je erop dubbelklikt.',
+    onbDefaultAppWinStep1:
+      'Open GenOffice in Windows-instellingen (zoek het in de lijst met apps als de pagina niet vanzelf opent).',
+    onbDefaultAppWinStep2:
+      'Stel het in als standaard met de knop bovenaan, of kies GenOffice voor elk bestandstype.',
+    onbDefaultAppLaterNote:
+      'Je kunt deze stap overslaan en het later doen via Instellingen → Algemeen.',
     setAiSpellcheckDesc:
       'Onderstreept verkeerd gespelde woorden tijdens het typen in het AI-chatveld.',
     setAiPanelStart: 'AI-paneel',
@@ -10451,6 +10594,15 @@ export const strings = {
     setDefaultAppSet: 'Jadikan lalai',
     setDefaultAppOpenSettings: 'Buka tetapan sistem',
     setDefaultAppFailed: 'Tidak dapat mengubahnya. Tetapkan dalam tetapan sistem.',
+    onbDefaultAppTitle: 'Buka dokumen dengan GenOffice',
+    onbDefaultAppBody:
+      'Jadikan GenOffice apl yang membuka dokumen Word, buku kerja Excel, persembahan PowerPoint dan rajah draw.io apabila diklik dua kali.',
+    onbDefaultAppWinStep1:
+      'Dalam Tetapan Windows, buka GenOffice (cari dalam senarai apl jika halamannya tidak terbuka sendiri).',
+    onbDefaultAppWinStep2:
+      'Jadikannya lalai dengan butang di bahagian atas, atau pilih GenOffice untuk setiap jenis fail.',
+    onbDefaultAppLaterNote:
+      'Anda boleh langkau langkah ini dan melakukannya kemudian di Tetapan → Umum.',
     setAiSpellcheckDesc:
       'Gariskan perkataan yang salah ejaan semasa menaip dalam kotak sembang AI.',
     setAiPanelStart: 'Panel AI',
@@ -11050,6 +11202,14 @@ export const strings = {
     setDefaultAppSet: 'הגדרה כברירת מחדל',
     setDefaultAppOpenSettings: 'פתיחת הגדרות המערכת',
     setDefaultAppFailed: 'לא ניתן לשנות. יש להגדיר בהגדרות המערכת.',
+    onbDefaultAppTitle: 'פתיחת מסמכים ב-GenOffice',
+    onbDefaultAppBody:
+      'הגדירו את GenOffice כאפליקציה שפותחת מסמכי Word, חוברות עבודה של Excel, מצגות PowerPoint ודיאגרמות draw.io בלחיצה כפולה.',
+    onbDefaultAppWinStep1:
+      'בהגדרות Windows, פתחו את GenOffice (חפשו אותה ברשימת האפליקציות אם הדף שלה לא נפתח מעצמו).',
+    onbDefaultAppWinStep2:
+      'הגדירו אותה כברירת מחדל בלחצן שבראש הדף, או בחרו ב-GenOffice לכל סוג קובץ.',
+    onbDefaultAppLaterNote: 'אפשר לדלג על השלב הזה ולעשות זאת מאוחר יותר דרך הגדרות ← כללי.',
     setAiSpellcheckDesc: 'סימון מילים עם שגיאות כתיב בעת הקלדה בתיבת הצ׳אט של ה-AI.',
     setAiPanelStart: 'חלונית AI',
     setAiPanelStartDesc:
@@ -11631,6 +11791,14 @@ export const strings = {
     setDefaultAppSet: 'डिफ़ॉल्ट बनाएँ',
     setDefaultAppOpenSettings: 'सिस्टम सेटिंग खोलें',
     setDefaultAppFailed: 'बदला नहीं जा सका। कृपया सिस्टम सेटिंग में सेट करें।',
+    onbDefaultAppTitle: 'दस्तावेज़ GenOffice में खोलें',
+    onbDefaultAppBody:
+      'GenOffice को वह ऐप बनाएँ जो डबल-क्लिक करने पर Word दस्तावेज़, Excel वर्कबुक, PowerPoint प्रस्तुतियाँ और draw.io आरेख खोले।',
+    onbDefaultAppWinStep1:
+      'Windows सेटिंग में GenOffice खोलें (अगर उसका पेज अपने-आप न खुले तो ऐप की सूची में उसे ढूँढें)।',
+    onbDefaultAppWinStep2:
+      'ऊपर दिए बटन से उसे डिफ़ॉल्ट बनाएँ, या हर फ़ाइल प्रकार के लिए GenOffice चुनें।',
+    onbDefaultAppLaterNote: 'आप इस चरण को छोड़कर बाद में सेटिंग्स → सामान्य में यह कर सकते हैं।',
     setAiSpellcheckDesc: 'AI चैट इनपुट में टाइप करते समय गलत वर्तनी वाले शब्दों को रेखांकित करें।',
     setAiPanelStart: 'AI पैनल',
     setAiPanelStartDesc:
@@ -12216,6 +12384,13 @@ export const strings = {
     setDefaultAppSet: '設為預設',
     setDefaultAppOpenSettings: '開啟系統設定',
     setDefaultAppFailed: '設定失敗，請在系統設定中手動更改。',
+    onbDefaultAppTitle: '用 GenOffice 開啟文件',
+    onbDefaultAppBody:
+      '讓 Word 文件、Excel 活頁簿、PowerPoint 簡報和 draw.io 圖表在按兩下時用 GenOffice 開啟。',
+    onbDefaultAppWinStep1:
+      '在 Windows 設定中開啟 GenOffice（如果沒有直接開啟它的頁面，請在應用程式清單中找到它）。',
+    onbDefaultAppWinStep2: '按頁面頂端的按鈕設為預設，或為每種檔案類型選擇 GenOffice。',
+    onbDefaultAppLaterNote: '可以略過這個步驟，之後在「設定 → 一般」中完成。',
     setAiSpellcheckDesc: '在 AI 對話輸入框中輸入時標示拼錯的單字。',
     setAiPanelStart: 'AI 面板',
     setAiPanelStartDesc:
