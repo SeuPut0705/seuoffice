@@ -4,4 +4,4 @@
  * number itself stays a plain release number (updates compare it), so the mark
  * lives here alone; set it to false for the first build that is not a beta.
  */
-export const RELEASE_IS_BETA = true
+export const RELEASE_IS_BETA = false
