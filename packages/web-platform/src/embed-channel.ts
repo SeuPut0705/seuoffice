@@ -37,20 +37,39 @@ let nextSaveId = 1
 const pendingSaves = new Map<number, { resolve: () => void; reject: (error: Error) => void }>()
 let saveRequestHandler: (() => Promise<void>) | undefined
 
+/** One piece of a host's answer, read by the response body in arrival order */
+type AiAnswerPart =
+  { kind: 'bytes'; bytes: Uint8Array } | { kind: 'end' } | { kind: 'error'; error: Error }
+
 /**
- * One AI request to the host: `waiting` until the first answer settles the
- * fetch-shaped promise, then `streaming` into the response body.
+ * One AI request to the host. `settle` answers the fetch-shaped promise with
+ * the first message and is gone after that; `parts` feed the response body.
  */
-type AiRequestState =
-  | {
-      phase: 'waiting'
-      resolve: (response: Response) => void
-      reject: (error: Error) => void
-      body: ReadableStreamDefaultController<Uint8Array>
-      response: Response
-    }
-  | { phase: 'streaming'; body: ReadableStreamDefaultController<Uint8Array> }
-const aiRequests = new Map<string, AiRequestState>()
+interface AiRequest {
+  settle: { resolve: (response: Response) => void; reject: (error: Error) => void } | undefined
+  parts: AiAnswerPart[]
+  wake: (() => void) | undefined
+  body: ReadableStream<Uint8Array>
+}
+const aiRequests = new Map<string, AiRequest>()
+
+/** The response headers the protocol code reads; the host sends no others */
+const AI_HEADER_NAMES = ['content-type', 'retry-after']
+
+function aiHeaders(value: unknown): Headers {
+  const headers = new Headers()
+  if (!value || typeof value !== 'object') return headers
+  for (const name of AI_HEADER_NAMES) {
+    const header: unknown = Reflect.get(value, name)
+    if (typeof header === 'string') headers.set(name, header)
+  }
+  return headers
+}
+
+function pushAiPart(request: AiRequest, part: AiAnswerPart): void {
+  request.parts.push(part)
+  request.wake?.()
+}
 
 /** Origins allowed to send `open`: this page's own and the build-time list */
 export function allowedOrigins(): Set<string> {
@@ -82,6 +101,8 @@ function listen(): Promise<EmbedOpen | null> {
     window.removeEventListener('message', onOpen)
     peer = { target: event.source as Window, origin: event.origin }
     window.addEventListener('message', onHostMessage)
+    // a page that goes away stops reading: the host should stop paying for the answers
+    window.addEventListener('pagehide', cancelAllAiRequests)
     resolve({ fileName: data.fileName, bytes: data.bytes, ai: data.ai === true })
   }
   window.addEventListener('message', onOpen)
@@ -125,35 +146,36 @@ async function answerSaveRequest(requestId: number): Promise<void> {
 
 /** The host's answer to one AI request, in arrival order */
 function onAiAnswer(requestId: string, data: Record<string, unknown>): void {
-  const state = aiRequests.get(requestId)
-  if (!state) return
+  const request = aiRequests.get(requestId)
+  if (!request) return
+  const settle = request.settle
+  request.settle = undefined
   if (data.type === 'ai_error') {
     aiRequests.delete(requestId)
     const message = String(data.message ?? 'the host could not reach the AI gateway')
-    if (state.phase === 'streaming') {
-      state.body.error(new Error(message))
-    } else if (typeof data.status === 'number' && data.status >= 200 && data.status <= 599) {
+    if (!settle) {
+      // after the bytes already sent: the protocol reads those first, then fails
+      pushAiPart(request, { kind: 'error', error: new Error(message) })
+    } else if (typeof data.status === 'number' && data.status >= 400 && data.status <= 599) {
       // the gateway's refusal reaches the protocol as that HTTP answer, as on the desktop
-      state.body.close()
-      state.resolve(new Response(message, { status: data.status }))
+      settle.resolve(
+        new Response(message, { status: data.status, headers: aiHeaders(data.headers) }),
+      )
     } else {
       // the host's request failed before an answer: what a failed fetch looks like
-      state.body.close()
-      state.reject(new TypeError(message))
+      settle.reject(new TypeError(message))
     }
     return
   }
-  if (state.phase === 'waiting') {
-    aiRequests.set(requestId, { phase: 'streaming', body: state.body })
-    state.resolve(state.response)
-  }
+  if (data.type !== 'ai_chunk' && data.type !== 'ai_end') return
+  settle?.resolve(new Response(request.body, { status: 200, headers: aiHeaders(data.headers) }))
   if (data.type === 'ai_chunk' && ArrayBuffer.isView(data.data)) {
     // isView, not instanceof: the bytes may come from another realm's Uint8Array
     const { buffer, byteOffset, byteLength } = data.data
-    state.body.enqueue(new Uint8Array(buffer, byteOffset, byteLength))
+    pushAiPart(request, { kind: 'bytes', bytes: new Uint8Array(buffer, byteOffset, byteLength) })
   } else if (data.type === 'ai_end') {
     aiRequests.delete(requestId)
-    state.body.close()
+    pushAiPart(request, { kind: 'end' })
   }
 }
 
@@ -161,44 +183,62 @@ function abortError(): Error {
   return new DOMException('The AI request was cancelled', 'AbortError')
 }
 
+/** Stop one request here and tell the host: nothing it sends for it counts any more */
+function cancelAiRequest(requestId: string): void {
+  const request = aiRequests.get(requestId)
+  if (!request) return
+  aiRequests.delete(requestId)
+  reply({ type: 'ai_cancel', requestId })
+  request.settle?.reject(abortError())
+  request.settle = undefined
+  // bytes not read yet are dropped: the reader sees the cancel next
+  request.parts.length = 0
+  pushAiPart(request, { kind: 'error', error: abortError() })
+}
+
+function cancelAllAiRequests(): void {
+  for (const requestId of [...aiRequests.keys()]) cancelAiRequest(requestId)
+}
+
 /**
  * Send one gateway-complete request body to the host and read its answer as
- * a fetch Response: the SSE bytes stream into the body as they arrive. A
- * non-2xx gateway answer resolves with that status and the gateway's text; a
- * host that could not call the gateway rejects like a failed fetch. Aborting
- * `signal` or cancelling the body tells the host to stop (`ai_cancel`).
+ * a fetch Response: the SSE bytes stream into the body as they arrive, with
+ * the content type and Retry-After the gateway sent. A non-2xx gateway answer
+ * resolves with that status and the gateway's text; a host that could not
+ * call the gateway rejects like a failed fetch. Aborting `signal`, cancelling
+ * the body or leaving the page tells the host to stop (`ai_cancel`).
  */
 export function requestAiFromHost(body: unknown, signal?: AbortSignal | null): Promise<Response> {
   if (!peer) return Promise.reject(new TypeError('no host to ask: the page is not embedded'))
   if (signal?.aborted) return Promise.reject(abortError())
   const requestId = crypto.randomUUID()
-  const cancel = (): void => {
-    if (!aiRequests.delete(requestId)) return
-    reply({ type: 'ai_cancel', requestId })
+  const request: AiRequest = {
+    settle: undefined,
+    parts: [],
+    wake: undefined,
+    // pulled one part per read, so an error after some bytes lets the reader take those first
+    body: new ReadableStream<Uint8Array>(
+      {
+        pull: async (controller) => {
+          while (request.parts.length === 0) {
+            await new Promise<void>((resolve) => (request.wake = resolve))
+          }
+          request.wake = undefined
+          const part = request.parts.shift()!
+          if (part.kind === 'bytes') controller.enqueue(part.bytes)
+          else if (part.kind === 'end') controller.close()
+          else controller.error(part.error)
+        },
+        cancel: () => cancelAiRequest(requestId),
+      },
+      { highWaterMark: 0 },
+    ),
   }
-  let controller!: ReadableStreamDefaultController<Uint8Array>
-  const stream = new ReadableStream<Uint8Array>({
-    start: (c) => void (controller = c),
-    cancel,
+  const settled = new Promise<Response>((resolve, reject) => {
+    request.settle = { resolve, reject }
   })
-  const response = new Response(stream, {
-    status: 200,
-    headers: { 'Content-Type': 'text/event-stream' },
-  })
-  const settled = new Promise<Response>((resolve, reject) =>
-    aiRequests.set(requestId, { phase: 'waiting', resolve, reject, body: controller, response }),
-  )
-  signal?.addEventListener(
-    'abort',
-    () => {
-      const state = aiRequests.get(requestId)
-      if (!state) return
-      cancel()
-      if (state.phase === 'waiting') state.reject(abortError())
-      state.body.error(abortError())
-    },
-    { once: true },
-  )
+  aiRequests.set(requestId, request)
+  signal?.addEventListener('abort', () => cancelAiRequest(requestId), { once: true })
   reply({ type: 'ai_request', requestId, body })
   return settled
 }

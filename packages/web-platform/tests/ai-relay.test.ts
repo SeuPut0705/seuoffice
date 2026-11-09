@@ -206,4 +206,117 @@ describe('AI through the embed host', () => {
     ).rejects.toThrow(TypeError)
     expect(sent).toEqual([])
   })
+
+  it('reads a 2xx JSON answer the way the desktop does, by its content type', async () => {
+    await openPage(true)
+    const { chunks, done } = await turn()
+    const { requestId } = await aiRequest()
+    const json = JSON.stringify({
+      choices: [{ message: { role: 'assistant', content: 'plain JSON answer' } }],
+    })
+    fromHost({
+      type: 'ai_chunk',
+      requestId,
+      data: new TextEncoder().encode(json),
+      headers: { 'content-type': 'application/json' },
+    })
+    fromHost({ type: 'ai_end', requestId })
+    await done
+    expect(chunks.filter((c) => c.type === 'delta').map((c) => c.text)).toEqual([
+      'plain JSON answer',
+    ])
+    expect(chunks.at(-1)?.type).toBe('done')
+  })
+
+  it('does not resend a 429 whose Retry-After is longer than the protocol waits', async () => {
+    await openPage(true)
+    const { chunks, done } = await turn()
+    const { requestId } = await aiRequest()
+    fromHost({
+      type: 'ai_error',
+      requestId,
+      status: 429,
+      message: '{"error":{"message":"slow down"}}',
+      headers: { 'retry-after': '3600' },
+    })
+    await done
+    expect(sent.filter((m) => m.type === 'ai_request')).toHaveLength(1)
+    expect(chunks.at(-1)?.type).toBe('error')
+  })
+
+  it('cancels every request in flight when the page goes away', async () => {
+    await openPage(true)
+    const bridge = relay.createAiStreamBridge()
+    const settings = await relay.webAiSettings()
+    const ask = (requestId: string) =>
+      void bridge.aiStream({
+        requestId,
+        settings,
+        system: '',
+        messages: [{ role: 'user', text: 'hi' }],
+      })
+    ask('a')
+    ask('b')
+    await vi.waitFor(() => expect(sent.filter((m) => m.type === 'ai_request')).toHaveLength(2))
+    const ids = sent.filter((m) => m.type === 'ai_request').map((m) => m.requestId)
+    window.dispatchEvent(new Event('pagehide'))
+    // earlier tests' page copies may cancel their own leftovers too; these two must be among them
+    expect(sent.filter((m) => m.type === 'ai_cancel').map((m) => m.requestId)).toEqual(
+      expect.arrayContaining(ids),
+    )
+  })
+
+  it('ends a turn whose answer breaks off mid-stream as an error after the text so far', async () => {
+    await openPage(true)
+    const { chunks, done } = await turn()
+    const { requestId } = await aiRequest()
+    fromHost({
+      type: 'ai_chunk',
+      requestId,
+      data: new TextEncoder().encode(sse({ choices: [{ index: 0, delta: { content: 'Hel' } }] })),
+    })
+    fromHost({ type: 'ai_error', requestId, message: 'gateway connection reset' })
+    await done
+    expect(chunks.map((c) => c.type)).toEqual(['delta', 'error'])
+    expect(chunks[1]!.error).toContain('gateway connection reset')
+  })
+
+  it('turns a host that could not call the gateway into an error, not an answer', async () => {
+    await openPage(true)
+    const { chunks, done } = await turn()
+    const { requestId } = await aiRequest()
+    fromHost({ type: 'ai_error', requestId, message: 'signed out' })
+    await done
+    expect(chunks).toHaveLength(1)
+    expect(chunks[0]!.type).toBe('error')
+    expect(chunks[0]!.error).toContain('signed out')
+  })
+
+  it('stops before the first byte: the host hears ai_cancel and nothing later counts', async () => {
+    await openPage(true)
+    const { chunks, done, bridge } = await turn()
+    const { requestId } = await aiRequest()
+    await bridge.aiStreamCancel('t1')
+    await done
+    expect(sent).toContainEqual(expect.objectContaining({ type: 'ai_cancel', requestId }))
+    fromHost({ type: 'ai_chunk', requestId, data: new TextEncoder().encode(GATEWAY_SSE) })
+    fromHost({ type: 'ai_end', requestId })
+    expect(chunks).toEqual([{ requestId: 't1', type: 'done' }])
+  })
+
+  it('ignores bytes that arrive after ai_end', async () => {
+    await openPage(true)
+    const { chunks, done } = await turn()
+    const { requestId } = await aiRequest()
+    fromHost({ type: 'ai_chunk', requestId, data: new TextEncoder().encode(GATEWAY_SSE) })
+    fromHost({ type: 'ai_end', requestId })
+    await done
+    const settled = [...chunks]
+    fromHost({
+      type: 'ai_chunk',
+      requestId,
+      data: new TextEncoder().encode(sse({ choices: [{ index: 0, delta: { content: 'late' } }] })),
+    })
+    expect(chunks).toEqual(settled)
+  })
 })
