@@ -100,6 +100,8 @@ interface HostState {
   asked: number
   /** the bytes of each document the page saved to the host */
   saves: number[][]
+  /** the last unsaved-changes flag the page reported */
+  dirty: boolean | undefined
 }
 
 /** The host page's globals: the embed script, the open document and what the host saw */
@@ -107,6 +109,8 @@ type HostWindow = Window & {
   SeuofficeEmbed: typeof Embed
   hostState: HostState
   embedded: Embed.EmbeddedDocument
+  /** with `stallSaves`: let the held saves, and every later one, be stored */
+  releaseSaves: () => void
 }
 
 /** Stands in a canned reply for the active sheet's id, which the app names in the prompt */
@@ -116,7 +120,7 @@ const SHEET_ID = '__SHEET_ID__'
  * Open the host page and embed `file`. `replies` are the gateway's answers in
  * order (the last one repeats); `'hang'` answers one text piece and then
  * waits until the request is aborted. Without `replies` the host offers no AI.
- * With `stallSaves` the host never finishes storing a save.
+ * With `stallSaves` the host holds every save until the page calls `releaseSaves()`.
  */
 async function openHost(
   page: Page,
@@ -138,7 +142,12 @@ async function openHost(
       // the globals this page's scripts put there
       const host = window as unknown as HostWindow
       const embed = host.SeuofficeEmbed
-      const state: HostState = { bodies: [], aborted: 0, asked: 0, saves: [] }
+      const state: HostState = { bodies: [], aborted: 0, asked: 0, saves: [], dirty: undefined }
+      let release = (): void => {}
+      const saveGate = stallSaves
+        ? new Promise<void>((done) => (release = done))
+        : Promise.resolve()
+      host.releaseSaves = () => release()
       window.addEventListener('message', (event: MessageEvent<{ type?: string }>) => {
         if (event.data?.type === 'ai_request') state.asked++
       })
@@ -176,9 +185,13 @@ async function openHost(
           ? embed.openDocument(viewer, {
               ...base,
               mode,
-              onSave: stallSaves
-                ? () => new Promise<void>(() => {})
-                : async ({ bytes }) => void state.saves.push([...bytes]),
+              onSave: async ({ bytes }) => {
+                await saveGate
+                state.saves.push([...bytes])
+              },
+              onDirtyChange: (dirty) => {
+                state.dirty = dirty
+              },
               ...(ai ? { ai } : {}),
             })
           : embed.openDocument(viewer, { ...base, ...(ai ? { ai } : {}) })
@@ -323,12 +336,20 @@ async function savedFirstSlide(bytes: number[]): Promise<string[]> {
   )
 }
 
-/** What these tests read of the slides page's bridge (pptx-render RenderSlide) */
+/** What these tests use of the slides page's bridge (pptx-render RenderSlide, shared/ipc.ts) */
 type SlidesPage = Window & {
   slidesApi: {
     getRenderSlides(): Promise<Array<{
       nodes: Array<{ text?: { lines: Array<{ runs: Array<{ text: string }> }> } }>
     }> | null>
+    editText(op: {
+      slideIndex: number
+      sourceId: string
+      paragraphs: Array<{ runs: Array<{ text: string }> }>
+    }): Promise<unknown>
+    beginHistoryBatch(): Promise<boolean>
+    endHistoryBatch(): Promise<number | null>
+    undo(): Promise<unknown>
   }
 }
 
@@ -535,4 +556,75 @@ test('slides: a host save that never finishes delays a run only for a bounded ti
   ).toBeVisible()
   expect((await hostState(page)).bodies).toHaveLength(0)
   expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+})
+
+// slides-main.ts slides:undo closes a history batch an AI request left open before it undoes.
+// On the web the batch stays open while the run waits for a host save; a person who undoes and
+// edits meanwhile must not lose a step when that batch is closed after the wait gave up.
+test('slides: undo closes an AI batch the run never began, as on the desktop', async ({ page }) => {
+  const frame = await openHost(page, PPTX, { mode: 'edit' })
+  await expect(frame.locator('.thumb')).toHaveCount(5, { timeout: 30_000 })
+  const app = page.frames().find((candidate) => candidate !== page.mainFrame())!
+  await app.evaluate(async () => {
+    const api = (window as unknown as SlidesPage).slidesApi
+    const write = (text: string) =>
+      api.editText({ slideIndex: 0, sourceId: 'sp_1', paragraphs: [{ runs: [{ text }] }] })
+    await write('one')
+    await api.beginHistoryBatch()
+    await api.undo()
+    await write('two')
+    await write('three')
+    await api.endHistoryBatch()
+    await api.undo()
+  })
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'two'])
+})
+
+test('slides: a new chat while the run waits for a save leaves nothing behind once it lands', async ({
+  page,
+}) => {
+  const frame = await openHost(page, PPTX, {
+    mode: 'edit',
+    stallSaves: true,
+    replies: [setSubtitle('AI 2027')],
+  })
+  await expect(frame.locator('.thumb')).toHaveCount(5, { timeout: 30_000 })
+  await page.evaluate(() => {
+    void (window as unknown as HostWindow).embedded.save().catch(() => {})
+  })
+  await askSlides(frame, '부제를 바꿔 줘')
+  await frame.getByRole('button', { name: '새 대화' }).click()
+  // the save lands: the run's wait succeeds after its conversation was already dropped
+  await page.evaluate(() => (window as unknown as HostWindow).releaseSaves())
+  await expect.poll(async () => (await hostState(page)).saves.length).toBe(1)
+  // nothing holds the deck: the next save is stored, and no AI request was ever sent
+  await expect.poll(() => hostSave(page)).toBe('saved')
+  expect((await hostState(page)).bodies).toHaveLength(0)
+  await expect(frame.getByRole('group', { name: '변경 제안' })).toHaveCount(0)
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+})
+
+test('slides: the host sees unsaved changes follow the proposal, its acceptance and a rollback', async ({
+  page,
+}) => {
+  const frame = await openHost(page, PPTX, {
+    mode: 'edit',
+    replies: [setSubtitle('AI 2027'), textReply('바꿨습니다.')],
+  })
+  const dirty = async () => (await hostState(page)).dirty
+  await askSlides(frame, '부제를 바꿔 줘')
+  const proposal = frame.getByRole('group', { name: '변경 제안' })
+  await expect(proposal).toBeVisible({ timeout: 30_000 })
+  // held: the deck is the one the host stored
+  await expect.poll(dirty).toBe(false)
+
+  await proposal.getByRole('button', { name: '받아들이기' }).click()
+  await expect.poll(dirty).toBe(true)
+  expect(await hostSave(page)).toBe('saved')
+  await expect.poll(dirty).toBe(false)
+
+  // the reply's rollback puts the pre-run deck back: no longer the stored one
+  await frame.locator('.ai-rollback-btn').click()
+  await expect.poll(() => shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+  await expect.poll(dirty).toBe(true)
 })

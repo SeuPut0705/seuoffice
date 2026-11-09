@@ -27,6 +27,7 @@ import {
   registerAiSnapshot,
   restoreAiSnapshot,
   restoreSnapshot,
+  settleStaleHistoryBatch,
   takeSnapshot,
   type HistorySnapshot,
   type Session,
@@ -321,8 +322,10 @@ export const deckEdits: Partial<SlidesApi> = {
     })) ?? false,
   undo: () =>
     edit((session) => {
-      // slides-main.ts slides:undo: an open run reverts from its own recorded history
+      // slides-main.ts slides:undo: an open run reverts from its own recorded history, and a
+      // batch a request left open closes first so it never collapses the person's later steps
       if (session.aiRun) return null
+      settleStaleHistoryBatch(session)
       const snap = session.undoStack.pop()
       if (!snap) return null
       session.redoStack.push(snapshot(session))
@@ -332,6 +335,7 @@ export const deckEdits: Partial<SlidesApi> = {
   redo: () =>
     edit((session) => {
       if (session.aiRun) return null
+      settleStaleHistoryBatch(session)
       const snap = session.redoStack.pop()
       if (!snap) return null
       session.undoStack.push(snapshot(session))
