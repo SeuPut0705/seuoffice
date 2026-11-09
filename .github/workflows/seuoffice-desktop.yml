@@ -24,10 +24,12 @@ name: seuoffice desktop release
 #   Windows  WIN_CSC_LINK (base64 PFX or https URL), WIN_CSC_KEY_PASSWORD
 #   Mac      CSC_LINK, CSC_KEY_PASSWORD (Developer ID Application certificate),
 #            APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID (notarization)
-# A platform without its secrets is built unsigned (Mac: signed ad hoc) and only
-# uploaded as a workflow artifact for testing. The release job refuses to run
-# unless both platforms are signed: the first published release must be signed,
-# because a signed release locks every later update to its signer.
+# A platform without its secrets is built unsigned (Mac: signed ad hoc). The
+# owner runs seuoffice unsigned for now (decision 0013), so the release job
+# publishes either way and says in the notes which platforms are signed. The
+# app updates itself unsigned on both platforms (Mac: the app's own zip
+# staging, not Squirrel). Once a signed release is out, never publish an
+# unsigned one again: a signed install only takes updates from its signer.
 #
 # A run started by hand (workflow_dispatch) builds and uploads the artifacts
 # only, unless it is started on a v* tag.
@@ -220,7 +222,7 @@ jobs:
           if [ "$SIGNED" = "true" ]; then
             expected=Valid
           else
-            echo "::warning::No Windows signing certificate: this build is for testing only and cannot be released."
+            echo "::warning::No Windows signing certificate: this build is unsigned (SmartScreen warns on install)."
           fi
           for file in \
             "$latest/seuoffice-Setup-$version.exe" \
@@ -414,7 +416,7 @@ jobs:
             exit 1
           fi
           if [ "$SIGNED" != "true" ]; then
-            echo "::warning::No Developer ID certificate or notarization credentials: this build is signed ad hoc, for testing only, and cannot be released."
+            echo "::warning::No Developer ID certificate or notarization credentials: this build is signed ad hoc (Gatekeeper asks the user to allow it)."
           fi
 
           check_flavor() {
@@ -516,16 +518,32 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
-      # first, before any release is touched
-      - name: Refuse an unsigned build
+      # first, before any release is touched: the notes say how each platform is signed
+      - name: Write the release notes
         env:
           WINDOWS_SIGNED: ${{ needs.windows.outputs.signed }}
           MAC_SIGNED: ${{ needs.mac.outputs.signed }}
         run: |
-          if [ "$WINDOWS_SIGNED" != "true" ] || [ "$MAC_SIGNED" != "true" ]; then
-            echo "::error::Windows signed: $WINDOWS_SIGNED, Mac signed and notarized: $MAC_SIGNED. An unsigned build is never released. Set the signing secrets (decision 0013) and run again. The first published release must be signed, because a signed release later locks updates to its signer."
-            exit 1
-          fi
+          set -euo pipefail
+          {
+            echo "seuoffice $TAG — Apple Silicon Mac, x64 Windows."
+            echo
+            echo "미리보기(pre-release)라 일반 채널(latest) 설치본이 바로 받는다. 안정 채널로 올리려면: \`gh release edit $TAG --prerelease=false --latest\`"
+            echo
+            if [ "$WINDOWS_SIGNED" = "true" ]; then
+              echo "- Windows: 서명됨."
+            else
+              echo "- Windows: 서명 없음. 설치할 때 'Windows의 PC 보호' 창이 뜨면 '추가 정보' → '실행'을 누른다."
+            fi
+            if [ "$MAC_SIGNED" = "true" ]; then
+              echo "- Mac: Developer ID 서명과 공증됨."
+            else
+              echo "- Mac: 서명 없음(ad hoc). dmg에서 응용 프로그램 폴더로 옮긴 뒤 처음 열 때 막히면, 시스템 설정 → 개인정보 보호 및 보안 → '그래도 열기'를 누른다."
+            fi
+            echo
+            echo "자동 업데이트는 두 플랫폼 모두 이 릴리스의 피드 파일로 돈다."
+          } > notes.md
+          cat notes.md
 
       - name: Publish the pre-release
         run: |
@@ -562,7 +580,7 @@ jobs:
             gh release upload "$TAG" "${files[@]}" --clobber
           else
             gh release create "$TAG" --verify-tag --prerelease --title "$TAG" \
-              --notes "seuoffice $TAG for Apple Silicon Mac and x64 Windows. Pre-release: the general (latest) update channel gets it now. Promote it to the stable channel with: gh release edit $TAG --prerelease=false --latest" \
+              --notes-file notes.md \
               "${files[@]}"
           fi
           gh release view "$TAG" --json assets --jq '.assets[].name'
