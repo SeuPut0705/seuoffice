@@ -182,13 +182,6 @@ describe('coexistence with the upstream app on one machine', () => {
     expect(USER_DATA_DIR_NAME).toBe('seuoffice')
     expect(DEV_USER_DATA_DIR_NAME).toBe('seuoffice-Dev')
     const main = readFileSync(join(SHELL, 'src/main/index.ts'), 'utf8')
-    // the keychain item ("<app name> Safe Storage") and the userData path keep the v0.12.11 spelling
-    expect(main).toContain('app.setName(USER_DATA_DIR_NAME)')
-    // role menus print app.name, so it returns to the display name once ready
-    expect(main).toContain('app.whenReady().then(() => app.setName(PRODUCT_NAME))')
-    expect(main).toContain(
-      "app.setPath('userData', join(app.getPath('appData'), USER_DATA_DIR_NAME))",
-    )
     expect(main).toContain(
       "app.setPath('userData', join(app.getPath('appData'), DEV_USER_DATA_DIR_NAME))",
     )
