@@ -14,7 +14,8 @@
  * already reads). Without CSC_LINK it stays signed ad hoc, as upstream.
  *
  * Size: the editor modules' own main bundles stay out of the package (see
- * withoutModuleMains).
+ * withoutModuleMains), and of Chromium's locales only those of the interface
+ * languages (see ELECTRON_LANGUAGES).
  */
 
 const { Arch } = require('electron-builder')
@@ -79,10 +80,65 @@ function withoutModuleMains(extraResources) {
   return entries
 }
 
+/**
+ * Chromium brings its own strings (context menus, the spelling menu, form and
+ * dialog texts) in 55 locales; the interface exists in 21 languages (LANGS in
+ * packages/i18n/src/index.ts). Only the locales of those languages ship, with
+ * every regional variant Chromium has of them: language -> regions, '' being
+ * the bare name.
+ *
+ * English stays whatever LANGS says: Chromium falls back to en-US for any
+ * other system language, and the Windows app does not start without
+ * locales/en-US.pak.
+ */
+const UI_LOCALES = {
+  ar: [''],
+  cs: [''],
+  de: [''],
+  en: ['', 'US', 'GB'],
+  es: ['', '419'],
+  fr: [''],
+  he: [''],
+  hi: [''],
+  id: [''],
+  it: [''],
+  ja: [''],
+  ko: [''],
+  ms: [''],
+  nl: [''],
+  pl: [''],
+  pt: ['BR', 'PT'],
+  ru: [''],
+  th: [''],
+  vi: [''],
+  zh: ['CN', 'TW'],
+}
+
+const MAC_GENDERS = ['FEMININE', 'MASCULINE', 'NEUTER']
+
+/**
+ * electron-builder keeps a locale file only when its name, lower-cased and
+ * without the extension, equals a listed name or is the start of one up to a
+ * `-` or `_` (`en-US` also keeps `en`, never the other way round). The file
+ * names differ by platform, so each locale is listed in both spellings:
+ *   Windows  locales/<name>.pak        en-US, en-GB, es-419, pt-BR, zh-CN
+ *   Mac      <name>.lproj              en, en_GB, es_419, pt_BR, zh_CN
+ *            <name>_<GENDER>.lproj     Chromium's gendered strings, one small
+ *                                      folder per grammatical gender
+ */
+const ELECTRON_LANGUAGES = Object.entries(UI_LOCALES).flatMap(([language, regions]) =>
+  regions.flatMap((region) => {
+    if (!region) return [language, ...MAC_GENDERS.map((gender) => `${language}_${gender}`)]
+    const mac = `${language}_${region}`
+    return [`${language}-${region}`, mac, ...MAC_GENDERS.map((gender) => `${mac}_${gender}`)]
+  }),
+)
+
 /** @type {import('electron-builder').Configuration} */
 const config = {
   ...shared,
   extraResources: withoutModuleMains(shared.extraResources),
+  electronLanguages: ELECTRON_LANGUAGES,
   mac,
   dmg: { ...base.dmg, sign: macSigned },
   win: { ...base.win, target: [{ target: 'nsis', arch: [RELEASE_ARCH.win32] }] },

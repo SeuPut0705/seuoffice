@@ -1,6 +1,8 @@
+import { existsSync, readdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { LANGS } from '@genoffice/i18n'
 
 const require = createRequire(import.meta.url)
 const SHELL = resolve(import.meta.dirname, '..')
@@ -138,6 +140,80 @@ describe('what the package leaves out', () => {
     delete require.cache[OVERLAY]
     require.cache[BASE]!.exports = { ...upstream, extraResources: renamed }
     expect(() => require(OVERLAY)).toThrow(/modules\//)
+  })
+})
+
+// The locale files Electron 43 carries. Windows: locales/<name>.pak. Mac:
+// <name>.lproj, `-` written `_`, en-US as plain `en`, and one folder more per
+// grammatical gender.
+const WINDOWS_LOCALES = [
+  ...['af', 'am', 'ar', 'bg', 'bn', 'ca', 'cs', 'da', 'de', 'el', 'en-GB', 'en-US', 'es', 'es-419'],
+  ...['et', 'fa', 'fi', 'fil', 'fr', 'gu', 'he', 'hi', 'hr', 'hu', 'id', 'it', 'ja', 'kn', 'ko'],
+  ...['lt', 'lv', 'ml', 'mr', 'ms', 'nb', 'nl', 'pl', 'pt-BR', 'pt-PT', 'ro', 'ru', 'sk', 'sl'],
+  ...['sr', 'sv', 'sw', 'ta', 'te', 'th', 'tr', 'uk', 'ur', 'vi', 'zh-CN', 'zh-TW'],
+]
+const MAC_LOCALES = WINDOWS_LOCALES.flatMap((name) => {
+  const folder = name === 'en-US' ? 'en' : name.replace('-', '_')
+  return [folder, `${folder}_FEMININE`, `${folder}_MASCULINE`, `${folder}_NEUTER`]
+})
+
+/**
+ * The locale files electron-builder leaves in the package for a wanted list:
+ * the rule of removeUnusedLanguagesIfNeeded (app-builder-lib, ElectronFramework.js).
+ */
+function shipped(files: readonly string[], wanted: readonly string[]): string[] {
+  const names = wanted.map((name) => name.trim().toLowerCase())
+  return files.filter((file) => {
+    const locale = file.toLowerCase()
+    return names.some(
+      (name) => name === locale || name.startsWith(`${locale}-`) || name.startsWith(`${locale}_`),
+    )
+  })
+}
+
+describe('the Chromium locales in the package', () => {
+  const uiLanguages = new Set(LANGS.map((lang) => lang.split('-')[0]))
+  const ofUiLanguage = (locale: string) => uiLanguages.has(locale.split(/[-_]/)[0]!)
+
+  it('are every regional variant of the interface languages and nothing else, on Windows', () => {
+    const kept = shipped(WINDOWS_LOCALES, loadRelease().electronLanguages)
+    expect(kept).toEqual(WINDOWS_LOCALES.filter(ofUiLanguage))
+    for (const lang of LANGS) {
+      expect(
+        kept.some((locale) => locale === lang || locale.startsWith(`${lang}-`)),
+        lang,
+      ).toBe(true)
+    }
+    expect(kept.length).toBeLessThan(WINDOWS_LOCALES.length)
+  })
+
+  it('are the same languages on the Mac, with their gendered strings', () => {
+    const kept = shipped(MAC_LOCALES, loadRelease().electronLanguages)
+    expect(kept).toEqual(MAC_LOCALES.filter(ofUiLanguage))
+    expect(kept).toContain('ko_FEMININE')
+    expect(kept).toContain('zh_TW')
+  })
+
+  it('always include English, which Chromium falls back to and Windows cannot start without', () => {
+    const wanted = loadRelease().electronLanguages
+    expect(shipped(WINDOWS_LOCALES, wanted)).toContain('en-US')
+    expect(shipped(MAC_LOCALES, wanted)).toContain('en')
+  })
+
+  // a locale a newer Electron adds must be decided on here, not dropped or kept by accident
+  const dist = join(dirname(require.resolve('electron/package.json')), 'dist')
+  const frameworkResources = join(
+    dist,
+    'Electron.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Resources',
+  )
+  const installed = existsSync(frameworkResources)
+    ? { dir: frameworkResources, ext: '.lproj', known: MAC_LOCALES }
+    : { dir: join(dist, 'locales'), ext: '.pak', known: WINDOWS_LOCALES }
+  it.skipIf(!existsSync(installed.dir))('cover the locale files of the installed Electron', () => {
+    const files = readdirSync(installed.dir)
+      .filter((file) => file.endsWith(installed.ext))
+      .map((file) => basename(file, installed.ext))
+    expect(files.sort()).toEqual([...installed.known].sort())
   })
 })
 
