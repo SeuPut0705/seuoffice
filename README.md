@@ -40,6 +40,29 @@ await doc.save() // 닫기 전에 붙이는 쪽에서 저장을 시킬 때. 실�
 
 잠금은 붙이는 쪽이 가진다(결정 0008). 잠금에 만료 시간을 두고 편집 화면이 열린 동안 연장한다. `onSave`에서는 잠금이 아직 자기 것인지, 열 때 받은 판 위에 저장하는지 확인하고, 아니면 거절한다. 넘겨 달라는 요청이 오면 `doc.save()` 뒤 잠금을 푼다.
 
+문서 안 AI 도우미를 켜려면 `ai`를 넘긴다(보기·고치기 둘 다). 페이지는 토큰을 갖지 않는다. AI 한 턴마다 OpenAI Chat Completions 요청 본문(`gateway-complete`, 결정 0009)을 붙이는 쪽에 넘기고, 붙이는 쪽이 자기 로그인 토큰으로 게이트웨이를 불러 응답을 그대로 돌려준다(결정 0017).
+
+```ts
+const doc = openDocument(viewer, {
+  baseUrl,
+  bytes,
+  fileName: '회의록.docx',
+  mode: 'edit',
+  onSave,
+  ai: {
+    request: (body, signal) =>
+      fetch(`${gatewayUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal, // 사용자가 멈추거나 doc.destroy()하면 끊긴다
+      }),
+  },
+})
+```
+
+`ai`를 주지 않으면 AI는 "연결 안 됨"으로 보이고 아무 요청도 오지 않는다. AI를 쓸 수 있는 사람에게만 `ai`를 주고, 사람·문서마다 요청 수와 토큰 양을 붙이는 쪽에서 제한한다. 거절은 429 같은 2xx가 아닌 응답으로 돌려주면 페이지가 데스크톱과 같은 문구로 보인다. 응답 머리글은 `Content-Type`과 `Retry-After`만 페이지로 간다. 오류 본문에 토큰을 싣지 않는다. 지금 웹에서 AI가 도는 형식은 docx, hwp/hwpx, xlsx, pdf이고 pptx는 아직 "연결 안 됨"이다.
+
 운영에서 지킬 것:
 
 - seuoffice 쪽 페이지는 CSP에 `script-src 'self' 'wasm-unsafe-eval'`, `worker-src 'self' blob:`이 있어야 한다(pdf.js, rhwp, 엑셀 엔진이 WASM과 워커를 쓴다).
