@@ -2,20 +2,35 @@
 // mode: the same transactions, history snapshots and autofit write-back, run against the deck the
 // page opened. A save packs the deck with the engine's writer and hands the bytes to the host.
 // Only the members listed here edit on the web; the rest of the editing family stays unsupported.
+// AI runs are held for review as on the desktop (decision 0012): main/ai-proposal.ts begins,
+// holds, accepts and rejects them against this deck; this file keeps the page's revisions in step.
 import { commitSaved, savePptx } from '@genoffice/pptx-engine'
 import { runTxn, type TxnRequest, type TxnResult } from '@genoffice/pptx-ops'
 import { documentByPath, onHostSaveRequest, reportDirty, saveToHost } from '@seuoffice/web-platform'
+import {
+  AI_REVIEW_SAVE_REASON,
+  acceptAiProposal,
+  beginAiRun,
+  holdAiRun,
+  rejectAiProposal,
+  trackWrite,
+} from '../main/ai-proposal'
 import { applyAutofitResize, syncAutofitScale } from '../main/autofit-writeback'
 import {
+  beginHistoryBatch,
   buildSlideUpdate,
+  endHistoryBatch,
   markMetaDirty,
   pruneMediaSources,
   rebuildSlide,
+  registerAiSnapshot,
+  restoreAiSnapshot,
   restoreSnapshot,
   takeSnapshot,
   type HistorySnapshot,
   type Session,
 } from '../main/session-state'
+import { applyTxnToSession } from '../main/session-txn'
 import type { HistoryChange, SlidesApi } from '../shared/ipc'
 import { currentSession, forPage, renderDeck } from './session'
 
@@ -57,6 +72,11 @@ function restore(session: Session, snap: HistorySnapshot): void {
   revisionsOf(session).shown = snapshotRevisions.get(snap)!
 }
 
+/** A snapshot the desktop helpers took: it holds the deck at `revision` */
+function remember(snap: HistorySnapshot | undefined, revision: number): void {
+  if (snap && !snapshotRevisions.has(snap)) snapshotRevisions.set(snap, revision)
+}
+
 /** slides:is-dirty, and whether the deck is still the state the host stored */
 function isDirty(session: Session): boolean {
   const { shown, saved } = revisionsOf(session)
@@ -75,11 +95,11 @@ function isDirty(session: Session): boolean {
  */
 function settle(session: Session): void {
   pruneMediaSources(session)
-  // the web has no AI (WebUnsupportedError('slides.ai')), so no run ever holds the deck
   const state: HistoryChange = {
     canUndo: session.undoStack.length > 0,
     canRedo: session.redoStack.length > 0,
-    aiRunActive: false,
+    // an AI run's unaccepted edits are in the deck: the renderer keeps it read-only meanwhile
+    aiRunActive: session.aiRun !== undefined,
   }
   for (const listener of historyListeners) listener(state)
   reportDirty(isDirty(session))
@@ -113,6 +133,28 @@ function sessionTxn(session: Session, req: TxnRequest): TxnResult | null {
   return r
 }
 
+/** The page's one renderer, standing for the desktop window that owns a run */
+const PAGE_WINDOW = 1
+
+/**
+ * ai-proposal.ts holdAiRun, keeping the revisions: the deck shows its pre-run revision again,
+ * and the held result keeps the run's, so accepting it shows the run's state as unsaved.
+ */
+function holdRun(session: Session): boolean {
+  const run = session.aiRun
+  const runRevision = revisionsOf(session).shown
+  if (!run || !holdAiRun(session, PAGE_WINDOW)) return false
+  revisionsOf(session).shown = snapshotRevisions.get(run.before)!
+  remember(session.aiProposal?.after, runRevision)
+  return true
+}
+
+/** Wait for every save that began before now; true when the same deck is still open */
+async function settleWrites(session: Session): Promise<boolean> {
+  while (session.writesInFlight?.size) await Promise.all([...session.writesInFlight])
+  return currentSession() === session
+}
+
 const slidePaths = (session: Session): string[] => session.opened.deck.slides.map((s) => s.path)
 
 /** Run an edit against the open deck and report the settled state; null without a deck */
@@ -138,11 +180,19 @@ const saveDeck: SlidesApi['save'] = async (auto) => {
   const doc = session && documentByPath(session.path)
   if (!session || !doc) return { ok: false, error: 'no file open' }
   lastSaveError = ''
+  // slides-main.ts slides:save: an AI run's edits wait for review, so nothing is written
+  if (session.aiRun) {
+    lastSaveError = 'an AI request is editing this presentation; accept or reject it first'
+    return { ok: false, reason: AI_REVIEW_SAVE_REASON }
+  }
   try {
     const metaRevAtSave = session.metaRev ?? 0
     const shownAtSave = revisionsOf(session).shown
-    await saveToHost(doc.fileName, await savePptx(session.opened))
-    commitSaved(session.opened)
+    // counted as in flight until stored, so a run begins only after it (ai-proposal.ts)
+    await trackWrite(session, async () => {
+      await saveToHost(doc.fileName, await savePptx(session.opened))
+      commitSaved(session.opened)
+    })
     if ((session.metaRev ?? 0) === metaRevAtSave) session.metaDirty = false
     revisionsOf(session).saved = shownAtSave
     return { ok: true, slides: renderDeck() ?? [] }
@@ -276,6 +326,8 @@ export const deckEdits: Partial<SlidesApi> = {
     })) ?? false,
   undo: () =>
     edit((session) => {
+      // slides-main.ts slides:undo: an open run reverts from its own recorded history
+      if (session.aiRun) return null
       const snap = session.undoStack.pop()
       if (!snap) return null
       session.redoStack.push(snapshot(session))
@@ -284,10 +336,72 @@ export const deckEdits: Partial<SlidesApi> = {
     }),
   redo: () =>
     edit((session) => {
+      if (session.aiRun) return null
       const snap = session.redoStack.pop()
       if (!snap) return null
       session.undoStack.push(snapshot(session))
       restore(session, snap)
+      return renderDeck()
+    }),
+  // slides:apply-txn, the AI's batch edit tool: the desktop's core with the page's history
+  applyTxn: (req) =>
+    edit((session) => {
+      const r = applyTxnToSession(session, req, {
+        push: pushHistory,
+        drop: (s) => {
+          const snap = s.undoStack.pop()!
+          revisionsOf(s).shown = snapshotRevisions.get(snap)!
+        },
+        run: (s, txn) => runTxn(s.opened, txn),
+      })
+      return r?.slides ? { ...r, slides: forPage(r.slides) } : r
+    }),
+  // slides:history-batch-begin/-end: one AI request's edits collapse into one rollback point
+  beginHistoryBatch: async () =>
+    (await edit((session) => {
+      beginHistoryBatch(session)
+      remember(session.historyBatch?.before, revisionsOf(session).shown)
+      return true
+    })) ?? false,
+  endHistoryBatch: () =>
+    edit((session) => {
+      const before = endHistoryBatch(session)
+      return before ? registerAiSnapshot(session, before) : null
+    }),
+  // ai-proposal.ts registerAiProposalIpc, for the page's one window
+  aiRunBegin: async () => {
+    const session = currentSession()
+    if (!session || !(await settleWrites(session))) return false
+    return (
+      (await edit((s) => {
+        // a run this page left open is reverted first, so it never becomes the next start
+        if (s.aiRun) holdRun(s)
+        if (!beginAiRun(s, PAGE_WINDOW)) return false
+        remember(s.aiRun?.before, revisionsOf(s).shown)
+        return true
+      })) ?? false
+    )
+  },
+  aiRunHold: () => edit((session) => (holdRun(session) ? renderDeck() : null)),
+  aiProposalAccept: () =>
+    edit((session) => {
+      const shown = revisionsOf(session).shown
+      const after = session.aiProposal?.after
+      const snapshotId = acceptAiProposal(session)
+      if (snapshotId === null || !after) return null
+      // the pre-accept deck became an undo step; the deck now shows the run's result
+      remember(session.undoStack.at(-1), shown)
+      revisionsOf(session).shown = snapshotRevisions.get(after) ?? ++lastRevision
+      return { slides: renderDeck() ?? [], snapshotId }
+    }),
+  aiProposalReject: async () => (await edit((session) => rejectAiProposal(session))) ?? false,
+  aiSnapshotRestore: (id) =>
+    edit((session) => {
+      if (session.historyBatch || session.aiRun) return null
+      const shown = revisionsOf(session).shown
+      if (!restoreAiSnapshot(session, id)) return null
+      remember(session.undoStack.at(-1), shown)
+      revisionsOf(session).shown = ++lastRevision
       return renderDeck()
     }),
   isDirty: async () => {

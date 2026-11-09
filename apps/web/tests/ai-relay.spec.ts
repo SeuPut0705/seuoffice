@@ -1,7 +1,12 @@
+import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { openPptx } from '@genoffice/pptx-engine'
 import { expect, test, type FrameLocator, type Page } from '@playwright/test'
 import type * as Embed from '@seuoffice/embed'
+import initRhwp, { HwpDocument } from '@rhwp/core'
 import { strFromU8, unzipSync } from 'fflate'
 import { build, type Rollup } from 'vite'
 
@@ -298,15 +303,174 @@ test('sheets: the AI edit is held as a proposal until it is accepted', async ({ 
   expect(savedHasAiText(saves[0]!)).toBe(true)
 })
 
-// slides cannot hold a web AI run for review yet (no deck history on the web), so even a host
-// that offers AI leaves its panel unconnected rather than failing every request
-test('slides: AI stays unconnected on the web even when the host offers it', async ({ page }) => {
-  const frame = await openHost(page, PPTX, { mode: 'edit', replies: [textReply('안녕하세요')] })
+/** The text bodies of a saved deck's first slide, read back with the engine the app saves with */
+async function savedFirstSlide(bytes: number[]): Promise<string[]> {
+  const opened = await openPptx(new Uint8Array(bytes))
+  return opened.deck.slides[0]!.elements.flatMap((el) =>
+    'text' in el && el.text
+      ? [el.text.paragraphs.map((p) => p.runs.map((r) => r.text).join('')).join('\n')]
+      : [],
+  )
+}
+
+/** What these tests read of the slides page's bridge (pptx-render RenderSlide) */
+type SlidesPage = Window & {
+  slidesApi: {
+    getRenderSlides(): Promise<Array<{
+      nodes: Array<{ text?: { lines: Array<{ runs: Array<{ text: string }> }> } }>
+    }> | null>
+  }
+}
+
+/** The first slide's text as the page draws it now */
+async function shownFirstSlide(page: Page): Promise<string[]> {
+  const frame = page.frames().find((candidate) => candidate !== page.mainFrame())!
+  return frame.evaluate(async () => {
+    const slides = await (window as unknown as SlidesPage).slidesApi.getRenderSlides()
+    return (slides?.[0]?.nodes ?? []).flatMap((node) =>
+      node.text ? [node.text.lines.map((l) => l.runs.map((r) => r.text).join('')).join('\n')] : [],
+    )
+  })
+}
+
+/** An `apply_ops` call that rewrites slide 1's subtitle */
+const setSubtitle = (text: string): string =>
+  toolReply('부제를 바꾸겠습니다.', 'apply_ops', {
+    ops: [
+      {
+        op: 'setText',
+        target: { slide: 0, el: 'sp_1' },
+        paragraphs: [{ runs: [{ text }] }],
+      },
+    ],
+  })
+
+async function askSlides(frame: FrameLocator, prompt: string): Promise<void> {
   await expect(frame.locator('.thumb')).toHaveCount(5, { timeout: 30_000 })
   const input = frame.locator('.ai-input-box textarea')
   if (!(await input.isVisible())) await frame.locator('.stage-ai-btn').click()
-  await input.fill('제목을 바꿔 줘')
+  await input.fill(prompt)
   await input.press('Enter')
-  await expect(frame.getByText('AI를 쓰려면 먼저 연결하세요')).toBeVisible()
-  expect((await hostState(page)).asked).toBe(0)
+}
+
+/** The host's save: 'saved' or 'refused' */
+const hostSave = (page: Page): Promise<string> =>
+  page.evaluate(() =>
+    (window as unknown as HostWindow).embedded.save().then(
+      () => 'saved',
+      () => 'refused',
+    ),
+  )
+
+test('slides: the AI edit is held as a proposal until it is accepted, and a reject leaves the deck', async ({
+  page,
+}) => {
+  const frame = await openHost(page, PPTX, {
+    mode: 'edit',
+    // run 1 edits, then its next turn waits until stopped; run 2 edits and finishes
+    replies: [setSubtitle('AI 2027'), 'hang', setSubtitle('AI 2099'), textReply('바꿨습니다.')],
+  })
+  await askSlides(frame, '부제를 바꿔 줘')
+
+  // the run's edit is in the deck while it runs: the host cannot store that deck
+  await expect.poll(async () => (await hostState(page)).bodies.length, { timeout: 30_000 }).toBe(2)
+  expect(await hostSave(page)).toBe('refused')
+  expect((await hostState(page)).saves).toHaveLength(0)
+
+  // stopping ends the run: its edit is taken out and held as a proposal
+  await frame.locator('button.ai-stop-btn').click()
+  const proposal = frame.getByRole('group', { name: '변경 제안' })
+  await expect(proposal).toBeVisible({ timeout: 30_000 })
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+  // a host save meanwhile stores the deck as it was before the run
+  expect(await hostSave(page)).toBe('saved')
+  expect(await savedFirstSlide((await hostState(page)).saves[0]!)).toEqual([
+    'Q3 Business Review',
+    'Fiscal Year 2026',
+  ])
+
+  await proposal.getByRole('button', { name: '받아들이기' }).click()
+  await expect(proposal).toHaveCount(0)
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'AI 2027'])
+  expect(await hostSave(page)).toBe('saved')
+  expect(await savedFirstSlide((await hostState(page)).saves[1]!)).toEqual([
+    'Q3 Business Review',
+    'AI 2027',
+  ])
+
+  // a second run, rejected: the deck and its save stay as accepted
+  await askSlides(frame, '부제를 다시 바꿔 줘')
+  await expect(proposal).toBeVisible({ timeout: 30_000 })
+  await proposal.getByRole('button', { name: '거부' }).click()
+  await expect(proposal).toHaveCount(0)
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'AI 2027'])
+  expect(await hostSave(page)).toBe('saved')
+  expect(await savedFirstSlide((await hostState(page)).saves[2]!)).toEqual([
+    'Q3 Business Review',
+    'AI 2027',
+  ])
+})
+
+test('slides: in view mode the AI answers but cannot edit the deck', async ({ page }) => {
+  const frame = await openHost(page, PPTX, {
+    mode: 'view',
+    replies: [setSubtitle('AI 2027'), textReply('이 문서는 읽기 전용입니다.')],
+  })
+  await askSlides(frame, '부제를 바꿔 줘')
+  await expect(frame.locator('.ai-msg-assistant').last()).toContainText('읽기 전용입니다', {
+    timeout: 30_000,
+  })
+  // the edit tool was refused and its error went back to the model
+  const { bodies } = await hostState(page)
+  expect(bodies[1]!.messages.some((m) => m.role === 'tool')).toBe(true)
+  await expect(frame.getByRole('group', { name: '변경 제안' })).toHaveCount(0)
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+})
+
+const HWPX = `${repo}apps/hwp/tests/fixtures/memo.hwpx`
+
+/** The document's text as the engine reads it back */
+async function hwpText(bytes: number[]): Promise<string> {
+  const require = createRequire(import.meta.url)
+  const wasm = join(dirname(require.resolve('@rhwp/core')), 'rhwp_bg.wasm')
+  await initRhwp({ module_or_path: readFileSync(wasm) })
+  const doc = new HwpDocument(new Uint8Array(bytes))
+  try {
+    return doc.getTextFileText().replace(/\r\n?/g, '\n')
+  } finally {
+    doc.free()
+  }
+}
+
+test('hwp: the AI edit is held as a proposal until it is accepted', async ({ page }) => {
+  const frame = await openHost(page, HWPX, {
+    mode: 'edit',
+    replies: [
+      toolReply('문단을 바꾸겠습니다.', 'replace_text', {
+        find: '본문 메모 앵커',
+        replace: '호스트를 거친 AI 문장',
+      }),
+      textReply('바꿨습니다.'),
+    ],
+  })
+  await expect(frame.locator('.hwp-app[data-phase="ready"]')).toHaveCount(1, { timeout: 60_000 })
+  const input = frame.locator('.ai-input-box textarea')
+  if (!(await input.isVisible())) await frame.locator('.ai-entry').click()
+  await input.fill('첫 문장을 바꿔 줘')
+  await input.press('Enter')
+
+  const proposal = frame.locator('.ai-changes-proposed')
+  await expect(proposal).toBeVisible({ timeout: 30_000 })
+  // held, not applied: a host save now stores the document as it was before the run
+  expect(await hostSave(page)).toBe('saved')
+  const held = await hwpText((await hostState(page)).saves[0]!)
+  expect(held).toContain('본문 메모 앵커')
+  expect(held).not.toContain('호스트를 거친 AI 문장')
+
+  await proposal.getByRole('button', { name: '받아들이기' }).click()
+  await expect(proposal).toHaveCount(0)
+  expect(await hostSave(page)).toBe('saved')
+  const accepted = await hwpText((await hostState(page)).saves[1]!)
+  expect(accepted).toContain('호스트를 거친 AI 문장')
+  expect(accepted).not.toContain('본문 메모 앵커')
 })
