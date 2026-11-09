@@ -116,11 +116,12 @@ const SHEET_ID = '__SHEET_ID__'
  * Open the host page and embed `file`. `replies` are the gateway's answers in
  * order (the last one repeats); `'hang'` answers one text piece and then
  * waits until the request is aborted. Without `replies` the host offers no AI.
+ * With `stallSaves` the host never finishes storing a save.
  */
 async function openHost(
   page: Page,
   file: string,
-  options: { mode: 'view' | 'edit'; replies?: string[] },
+  options: { mode: 'view' | 'edit'; replies?: string[]; stallSaves?: boolean },
 ): Promise<FrameLocator> {
   await page.route('**/ai-host.html', (route) =>
     route.fulfill({
@@ -133,7 +134,7 @@ async function openHost(
   const bytes = [...(await readFile(file))]
   const fileName = file.slice(file.lastIndexOf('/') + 1)
   await page.evaluate(
-    async ({ bytes, fileName, mode, replies, sheetId }) => {
+    async ({ bytes, fileName, mode, replies, sheetId, stallSaves }) => {
       // the globals this page's scripts put there
       const host = window as unknown as HostWindow
       const embed = host.SeuofficeEmbed
@@ -175,14 +176,23 @@ async function openHost(
           ? embed.openDocument(viewer, {
               ...base,
               mode,
-              onSave: async ({ bytes }) => void state.saves.push([...bytes]),
+              onSave: stallSaves
+                ? () => new Promise<void>(() => {})
+                : async ({ bytes }) => void state.saves.push([...bytes]),
               ...(ai ? { ai } : {}),
             })
           : embed.openDocument(viewer, { ...base, ...(ai ? { ai } : {}) })
       host.embedded = doc
       await doc.opened
     },
-    { bytes, fileName, mode: options.mode, replies: options.replies, sheetId: SHEET_ID },
+    {
+      bytes,
+      fileName,
+      mode: options.mode,
+      replies: options.replies,
+      sheetId: SHEET_ID,
+      stallSaves: options.stallSaves === true,
+    },
   )
   return page.frameLocator('#viewer iframe')
 }
@@ -495,4 +505,34 @@ test('slides: a new chat during a run drops the run and leaves the deck as befor
     'Q3 Business Review',
     'Fiscal Year 2026',
   ])
+})
+
+test('slides: a host save that never finishes delays a run only for a bounded time', async ({
+  page,
+}) => {
+  // the page's timers run on a clock the test moves: the wait for the save ends by its deadline
+  await page.clock.install()
+  const frame = await openHost(page, PPTX, {
+    mode: 'edit',
+    stallSaves: true,
+    replies: [setSubtitle('AI 2027')],
+  })
+  await expect(frame.locator('.thumb')).toHaveCount(5, { timeout: 30_000 })
+  // the host asks for a save it will never finish storing
+  await page.evaluate(() => {
+    void (window as unknown as HostWindow).embedded.save().catch(() => {})
+  })
+  await askSlides(frame, '부제를 바꿔 줘')
+  // the run waits for that save before it begins; a new chat drops it during that wait
+  await frame.getByRole('button', { name: '새 대화' }).click()
+  await page.clock.fastForward(31_000)
+  // the panel is not stuck behind the dropped run: the next request is answered, here by the
+  // same bounded wait refusing to begin a run the save could still carry
+  await askSlides(frame, '부제를 바꿔 줘')
+  await page.clock.fastForward(31_000)
+  await expect(
+    frame.getByText('AI가 편집하는 동안 덱은 읽기 전용입니다', { exact: false }),
+  ).toBeVisible()
+  expect((await hostState(page)).bodies).toHaveLength(0)
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
 })

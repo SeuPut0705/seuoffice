@@ -13,6 +13,7 @@ import {
   beginAiRun,
   holdAiRun,
   rejectAiProposal,
+  settleWrites,
   trackWrite,
 } from '../main/ai-proposal'
 import { applyAutofitResize, syncAutofitScale } from '../main/autofit-writeback'
@@ -147,12 +148,6 @@ function holdRun(session: Session): boolean {
   revisionsOf(session).shown = snapshotRevisions.get(run.before)!
   remember(session.aiProposal?.after, runRevision)
   return true
-}
-
-/** Wait for every save that began before now; true when the same deck is still open */
-async function settleWrites(session: Session): Promise<boolean> {
-  while (session.writesInFlight?.size) await Promise.all([...session.writesInFlight])
-  return currentSession() === session
 }
 
 const slidePaths = (session: Session): string[] => session.opened.deck.slides.map((s) => s.path)
@@ -371,7 +366,9 @@ export const deckEdits: Partial<SlidesApi> = {
   // ai-proposal.ts registerAiProposalIpc, for the page's one window
   aiRunBegin: async () => {
     const session = currentSession()
-    if (!session || !(await settleWrites(session))) return false
+    // ai-proposal.ts slides:ai-run-begin: saves that began first finish first, but a host
+    // that never answers holds the run back only until the desktop's deadline
+    if (!session || !(await settleWrites(session)) || currentSession() !== session) return false
     return (
       (await edit((s) => {
         // a run this page left open is reverted first, so it never becomes the next start
