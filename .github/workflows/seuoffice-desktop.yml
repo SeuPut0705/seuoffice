@@ -240,6 +240,13 @@ jobs:
             "$unpacked/resources/cli/ieumoffice.cmd"; do
             test -f "$bin" || { echo "missing: $bin"; exit 1; }
           done
+          # the editor modules ship without their own main bundles, which the
+          # packaged shell never loads (electron-builder.seuoffice.cjs)
+          test -f "$unpacked/resources/modules/docs/renderer/index.html" || { echo "missing: the docs module"; exit 1; }
+          if find "$unpacked/resources/modules" -mindepth 2 -maxdepth 2 -name main | grep -q .; then
+            echo "::error::an editor module was packaged with its main bundle"
+            exit 1
+          fi
           # x64 only: no ARM64 installer may slip in
           if find "$latest" "$stable" -maxdepth 1 -name '*arm64*' | grep -q .; then
             echo "::error::an arm64 Windows package was built"
@@ -496,6 +503,13 @@ jobs:
             for bin in "$app/Contents/Resources/native/xlsx-sidecar" "$app/Contents/Resources/ocr/vision-ocr"; do
               lipo -archs "$bin" | grep -qw arm64 || { echo "not arm64: $bin"; exit 1; }
             done
+            # the editor modules ship without their own main bundles, which the
+            # packaged shell never loads (electron-builder.seuoffice.cjs)
+            test -f "$app/Contents/Resources/modules/docs/renderer/index.html" || { echo "missing: the docs module"; exit 1; }
+            if find "$app/Contents/Resources/modules" -mindepth 2 -maxdepth 2 -name main | grep -q .; then
+              echo "::error::an editor module was packaged with its main bundle"
+              exit 1
+            fi
             if find "$dir" -maxdepth 1 \( -name '*x64*' -o -name '*universal*' -o -name mac \) | grep -q .; then
               echo "::error::an Intel or universal Mac package was built in $dir"
               exit 1

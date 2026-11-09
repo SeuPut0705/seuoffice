@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
@@ -76,6 +76,68 @@ describe('the seuoffice release packages', () => {
     expect(stable.dmg.artifactName).not.toBe(latest.dmg.artifactName)
     expect(stable.mac.artifactName).toContain('-stable')
     expect(stable.nsis.artifactName).not.toBe(latest.nsis.artifactName)
+  })
+})
+
+interface ResourceEntry {
+  from: string
+  to: string
+  filter?: string[]
+}
+
+/** Whether electron-builder copies `file` of an extraResources folder, by its own matcher. */
+function copies(entry: ResourceEntry, file: string): boolean {
+  const { FileMatcher } = require('app-builder-lib/out/fileMatcher')
+  const from = resolve(SHELL, entry.from)
+  const matcher = new FileMatcher(from, entry.to, (text: string) => text, entry.filter)
+  return matcher.createFilter()(join(from, ...file.split('/')), { isDirectory: () => false })
+}
+
+const moduleEntries = (config: { extraResources: Array<ResourceEntry | string> }) =>
+  config.extraResources.filter(
+    (entry): entry is ResourceEntry => typeof entry === 'object' && entry.to.startsWith('modules/'),
+  )
+
+describe('what the package leaves out', () => {
+  it('ships each editor module without its own main bundle', () => {
+    const modules = moduleEntries(loadRelease())
+    // every module upstream ships is still shipped
+    expect(modules.map((entry) => entry.to)).toEqual(
+      moduleEntries(require(BASE)).map((entry) => entry.to),
+    )
+    for (const entry of modules) {
+      for (const kept of [
+        'preload/index.js',
+        'renderer/index.html',
+        // "main" in a file name or deeper in the tree is not the main bundle
+        'renderer/assets/main-BIN7Lf9i.js',
+        'renderer/main/index.js',
+      ]) {
+        expect(copies(entry, kept), `${entry.to}/${kept}`).toBe(true)
+      }
+      for (const dropped of ['main/index.js', 'main/chunks/pdf.worker-NB1PBVQH.js']) {
+        expect(copies(entry, dropped), `${entry.to}/${dropped}`).toBe(false)
+      }
+    }
+  })
+
+  it('keeps the diagram module as upstream trims it: draw.io and the bridge in, the stamp out', () => {
+    const diagram = moduleEntries(loadRelease()).find((entry) => entry.to === 'modules/diagram')!
+    expect(copies(diagram, 'drawio/js/main.js')).toBe(true)
+    expect(copies(diagram, 'bridge/bridge.js')).toBe(true)
+    expect(copies(diagram, 'drawio.stamp.json')).toBe(false)
+  })
+
+  it('refuses an upstream resource list that names no module', () => {
+    const upstream = require(BASE)
+    const renamed = upstream.extraResources.map((entry: ResourceEntry | string) =>
+      typeof entry === 'object' && entry.to.startsWith('modules/')
+        ? { ...entry, to: entry.to.replace('modules/', 'editors/') }
+        : entry,
+    )
+    delete require.cache[OVERLAY]
+    require.cache[BASE]!.exports = { ...upstream, extraResources: renamed }
+    expect(() => require(OVERLAY)).toThrow(/modules\//)
   })
 })
 

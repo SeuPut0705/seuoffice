@@ -12,6 +12,9 @@
  * is signed with the hardened runtime and notarized (APPLE_ID,
  * APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID, the names build/notarize-dmg.js
  * already reads). Without CSC_LINK it stays signed ad hoc, as upstream.
+ *
+ * Size: the editor modules' own main bundles stay out of the package (see
+ * withoutModuleMains).
  */
 
 const { Arch } = require('electron-builder')
@@ -50,9 +53,36 @@ if (macSigned) {
 
 const { linux: _linux, deb: _deb, rpm: _rpm, appImage: _appImage, ...shared } = base
 
+/**
+ * Upstream ships each editor module as extraResources `modules/<app>`, the
+ * whole electron-vite out/ tree: main/, preload/, renderer/. The packaged shell
+ * reads only a module's preload/ and renderer/ (and the diagram module's
+ * drawio/ and bridge/): every editor's main code is already inside the shell's
+ * own main bundle, and a module's out/main is what that editor runs on when it
+ * is started alone in development. Left out, the ten main/ folders save
+ * 67.7 MB installed and 15.2 MB of the Mac zip.
+ *
+ * Derived from the upstream list rather than repeated, and refusing a list with
+ * no module entry: a renamed upstream destination must not bring the bytes back
+ * unnoticed.
+ */
+function withoutModuleMains(extraResources) {
+  let modules = 0
+  const entries = extraResources.map((entry) => {
+    if (typeof entry !== 'object' || !String(entry.to).startsWith('modules/')) return entry
+    modules += 1
+    return { ...entry, filter: [...[entry.filter ?? '**/*'].flat(), '!main/**'] }
+  })
+  if (modules === 0) {
+    throw new Error('electron-builder.cjs lists no extraResources under modules/: nothing to trim')
+  }
+  return entries
+}
+
 /** @type {import('electron-builder').Configuration} */
 const config = {
   ...shared,
+  extraResources: withoutModuleMains(shared.extraResources),
   mac,
   dmg: { ...base.dmg, sign: macSigned },
   win: { ...base.win, target: [{ target: 'nsis', arch: [RELEASE_ARCH.win32] }] },
