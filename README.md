@@ -1,14 +1,70 @@
-# SeuOffice
+<p align="center">
+  <img src="apps/shell/build/brand/app-icon.svg" width="96" height="96" alt="SeuOffice">
+</p>
 
-웹과 PC에서 문서(PDF, 워드, 엑셀, 파워포인트, 한글)를 보고 고치고 AI로 편집하는 오피스. 이음오피스를 바탕으로 웹에서도 돌게 개조하고 있다. 지금 단계와 계획은 `docs/seuoffice/로드맵.md`에 있다.
+<h1 align="center">SeuOffice</h1>
+
+<p align="center">
+  웹과 PC에서 PDF, 워드, 엑셀, 파워포인트, 한글 문서를 보고 고치고, AI로 편집하는 오피스
+</p>
+
+<p align="center">
+  <a href="https://github.com/SeuPut0705/seuoffice/releases/latest/download/SeuOffice-mac-arm64.dmg"><img src="docs/seuoffice/readme/download-mac.svg" width="300" alt="macOS 다운로드 (Apple Silicon)"></a>
+  &nbsp;
+  <a href="https://github.com/SeuPut0705/seuoffice/releases/latest/download/SeuOffice-windows-x64.exe"><img src="docs/seuoffice/readme/download-windows.svg" width="300" alt="Windows 다운로드 (x64)"></a>
+</p>
+
+<p align="center">
+  <sub>Apple Silicon Mac · Windows x64 · 무료 · Apache-2.0 · <a href="https://github.com/SeuPut0705/seuoffice/releases">모든 판과 미리보기 판</a></sub>
+</p>
+
+<p align="center">
+  <img src="docs/seuoffice/readme/hero.jpg" width="820" alt="노트북과 브라우저에서 PDF, DOCX, XLSX, PPTX, HWP 문서를 여는 SeuOffice">
+</p>
+
+## 할 수 있는 일
+
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/seuoffice/readme/web-and-pc.jpg" width="220" alt=""></td>
+    <td align="center" width="33%"><img src="docs/seuoffice/readme/ai-review.jpg" width="220" alt=""></td>
+    <td align="center" width="33%"><img src="docs/seuoffice/readme/edit-lock.jpg" width="220" alt=""></td>
+  </tr>
+  <tr>
+    <td valign="top"><b>웹과 PC에서 같은 편집기</b><br>PC 앱과 똑같은 편집기가 브라우저에서도 돈다. 변환 서버 없이 정적 파일만 쓰고, 다른 웹 앱 안에 끼워 넣을 수 있다.</td>
+    <td valign="top"><b>AI가 고치고, 사람이 받아들인다</b><br>워드는 AI 편집이 변경 추적으로 남는다. 한글, 엑셀, 파워포인트는 AI가 고친 것이 제안으로 남고, 사람이 받아들여야 문서에 들어간다.</td>
+    <td valign="top"><b>한 문서는 한 사람이 고친다</b><br>편집 잠금을 가진 한 사람만 고치고 저장한다. 나머지 사람은 같은 문서를 읽기 모드로 본다.</td>
+  </tr>
+</table>
+
+| 형식            | 보기 | 고치고 같은 형식으로 저장 |   AI 편집    |
+| --------------- | :--: | :-----------------------: | :----------: |
+| PDF             |  ✅  |            ✅             |      ✅      |
+| 워드 docx       |  ✅  |            ✅             | ✅ 변경 추적 |
+| 엑셀 xlsx       |  ✅  |            ✅             |   ✅ 제안    |
+| 파워포인트 pptx |  ✅  |            ✅             |   ✅ 제안    |
+| 한글 hwp, hwpx  |  ✅  |            ✅             |   ✅ 제안    |
+
+지금 단계와 계획은 `docs/seuoffice/로드맵.md`에 있다.
+
+## 설치
+
+위 단추로 받는다. 두 플랫폼 모두 앱이 스스로 새 판을 받아 바꾼다.
+
+지금은 코드 서명 없이 낸다(결정 0013). 처음 열 때 운영체제가 한 번 막는다.
+
+- **Mac**: dmg를 열어 SeuOffice를 응용 프로그램 폴더로 옮긴다. 처음 열 때 막히면 시스템 설정 → 개인정보 보호 및 보안에서 "그래도 열기"를 누른다.
+- **Windows**: 설치 파일을 실행했을 때 "Windows의 PC 보호" 창이 뜨면 "추가 정보" → "실행"을 누른다.
 
 ## 웹에서 열기
 
-다섯 형식(PDF, docx, xlsx, pptx, hwp/hwpx)을 스위트 앱 그대로 브라우저에서 읽기 모드로 연다. 변환 서버 없이 정적 파일만 쓴다.
+다섯 형식을 스위트 앱 그대로 브라우저에서 연다. 변환 서버 없이 정적 파일만 쓴다.
 
 - 빌드: `npm run build -w @seuoffice/web`. 결과는 `apps/web/dist/`이고, 첫 빌드는 rhwp 스튜디오를 GitHub에서 받으며 엑셀 엔진을 `wasm32-wasip1`로 빌드한다.
 - 미리보기: `npm run preview -w @seuoffice/web` → http://localhost:5300. 파일을 고르거나 끌어 놓으면 열린다.
 - 시험: `npm run test -w @seuoffice/web`(Playwright, 빌드 뒤).
+
+## 다른 웹 앱에 붙이기
 
 다른 웹 앱에 붙일 때는 `@seuoffice/embed`를 쓴다.
 
