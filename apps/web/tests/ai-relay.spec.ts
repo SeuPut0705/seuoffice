@@ -474,3 +474,25 @@ test('hwp: the AI edit is held as a proposal until it is accepted', async ({ pag
   expect(accepted).toContain('호스트를 거친 AI 문장')
   expect(accepted).not.toContain('본문 메모 앵커')
 })
+
+test('slides: a new chat during a run drops the run and leaves the deck as before', async ({
+  page,
+}) => {
+  const frame = await openHost(page, PPTX, {
+    mode: 'edit',
+    replies: [setSubtitle('AI 2027'), 'hang'],
+  })
+  await askSlides(frame, '부제를 바꿔 줘')
+  await expect.poll(async () => (await hostState(page)).bodies.length, { timeout: 30_000 }).toBe(2)
+  expect(await shownFirstSlide(page)).toEqual(['Q3 Business Review', 'AI 2027'])
+
+  await frame.getByRole('button', { name: '새 대화' }).click()
+  await expect.poll(() => shownFirstSlide(page)).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+  await expect(frame.getByRole('group', { name: '변경 제안' })).toHaveCount(0)
+  // the deck is no longer held: the host stores it, without the dropped edit
+  expect(await hostSave(page)).toBe('saved')
+  expect(await savedFirstSlide((await hostState(page)).saves[0]!)).toEqual([
+    'Q3 Business Review',
+    'Fiscal Year 2026',
+  ])
+})
