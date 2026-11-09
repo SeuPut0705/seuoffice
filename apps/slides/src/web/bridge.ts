@@ -2,6 +2,7 @@
 import { defaultAiSettings } from '../../../../packages/ai-provider/src/providers'
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
+  createAiStreamBridge,
   createWebBridge,
   documentByPath,
   editMode,
@@ -175,7 +176,6 @@ const AI_MEMBERS = [
   'setAiSettings',
   'setTemplateSelection',
   'webSearch',
-  'aiStream',
 ] as const satisfies ReadonlyArray<keyof SlidesApi>
 
 function unsupportedMembers(
@@ -196,6 +196,11 @@ function reportFirst(result: OpenResult | null): OpenResult | null {
 }
 
 let pendingTaken = false
+
+// AI turns would go to the embed host (decision 0017), but a web AI run cannot be held for
+// review yet: `beginHistoryBatch` and `aiRunBegin` are refused below. Until they work the
+// settings report nothing connected, so the panel asks to connect instead of failing each run.
+const ai = createAiStreamBridge()
 
 const slidesApi: Partial<SlidesApi> = {
   ...unsupportedMembers('slides.edit', EDIT_MEMBERS),
@@ -238,7 +243,9 @@ const slidesApi: Partial<SlidesApi> = {
   hasSlideClipboard: async () => false,
   clipboardProbe: async () => false,
   setShowFullScreen: async () => {},
-  aiStreamCancel: async () => {},
+  aiStream: ai.aiStream,
+  aiStreamCancel: ai.aiStreamCancel,
+  onAiStream: ai.onAiStream,
   aiLogRunFailure: async () => {},
   headlessExportDone: noop,
   setAutoSavePref: noop,
@@ -260,7 +267,6 @@ const slidesApi: Partial<SlidesApi> = {
   onMenuCommand: unsubscribe,
   onOpened: unsubscribe,
   onRenamed: unsubscribe,
-  onAiStream: unsubscribe,
   onAudienceNav: unsubscribe,
   onShowInk: unsubscribe,
   onShowSync: unsubscribe,

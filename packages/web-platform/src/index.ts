@@ -16,3 +16,4 @@ export {
   saveToHost,
   type EmbedOpenErrorCode,
 } from './embed-channel'
+export { createAiStreamBridge, hostOffersAi, webAiSettings, type AiStreamBridge } from './ai-relay'

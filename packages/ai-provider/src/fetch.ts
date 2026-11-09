@@ -19,6 +19,16 @@ export function setRescueFetch(fn: FetchLike | null): void {
 }
 
 /**
+ * seuoffice web: the page has no network path to a gateway, so it routes AI
+ * requests through its embed host instead. Null keeps the global fetch.
+ */
+let primaryFetch: FetchLike | null = null
+
+export function setAiFetch(fn: FetchLike | null): void {
+  primaryFetch = fn
+}
+
+/**
  * Node's fetch announces itself as a bare `node`, which gateways that watch
  * for anonymous automation treat as abusive traffic (OpenCode Go requires
  * clients to identify themselves and flags "broad" user agents). Main
@@ -133,7 +143,7 @@ async function fetchOnce(url: string, init: RequestInit): Promise<Response> {
   const signal = init.signal as AbortSignal | null | undefined
   let response: Response
   try {
-    response = await fetch(url, init)
+    response = await (primaryFetch ?? fetch)(url, init)
   } catch (primaryError) {
     if (!rescueFetch || signal?.aborted) throw primaryError
     console.warn('[ai-provider] fetch failed, retrying via rescue fetch:', String(primaryError))

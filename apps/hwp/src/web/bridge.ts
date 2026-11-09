@@ -1,7 +1,6 @@
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
-// not in the package's browser entry; providers.ts itself is browser-safe
-import { defaultAiSettings } from '../../../../packages/ai-provider/src/providers'
 import {
+  createAiStreamBridge,
   createWebBridge,
   documentByPath,
   editMode,
@@ -12,6 +11,7 @@ import {
   saveToHost,
   unsupported,
   waitForDocument,
+  webAiSettings,
   webLanguage,
 } from '@seuoffice/web-platform'
 import type { WebDocument } from '@seuoffice/web-platform'
@@ -109,6 +109,9 @@ const saveApi: Partial<HwpApi> = {
   },
 }
 
+// AI turns go to the embed host, which calls its gateway (decision 0017)
+const ai = createAiStreamBridge()
+
 const hwpApi: Partial<HwpApi> = {
   consumePending: async () => (await waitForDocument())?.virtualPath ?? null,
   untitledCopy: async () => null,
@@ -132,7 +135,7 @@ const hwpApi: Partial<HwpApi> = {
   onAiPanelPrefsChanged: unsubscribe,
   getAutoSaveDefault: async () => NO_AUTO_SAVE_DEFAULT,
   onAutoSaveDefaultChanged: unsubscribe,
-  getAiSettings: async () => defaultAiSettings(),
+  getAiSettings: webAiSettings,
   onAiSettingsChanged: unsubscribe,
   getAuthorName: async () => ({ value: '', fallback: '' }),
   getMemoModalOpen: async () => false,
@@ -159,14 +162,15 @@ const hwpApi: Partial<HwpApi> = {
   onReadBytesRequest: unsubscribe,
   onRecoveryFlush: unsubscribe,
   onRecoveryReset: unsubscribe,
-  onAiStream: unsubscribe,
   beginSave: unsupported('hwp.save'),
   commitSave: unsupported('hwp.save'),
   newTabs: unsupported('hwp.save'),
   recoveryNewTabs: unsupported('hwp.save'),
   recoveryWrite: unsupported('hwp.save'),
   printPages: unsupported('hwp.print'),
-  aiStream: unsupported('hwp.ai'),
+  aiStream: ai.aiStream,
+  aiStreamCancel: ai.aiStreamCancel,
+  onAiStream: ai.onAiStream,
   // desktop-only services: undefined turns their features off, as without a shell
   aiSubscription: undefined,
   pickAttachments: undefined,
@@ -181,7 +185,6 @@ const hwpApi: Partial<HwpApi> = {
   imageSearch: undefined,
   generateImage: undefined,
   fetchImage: undefined,
-  aiStreamCancel: undefined,
   ...(canSave ? saveApi : {}),
 }
 
