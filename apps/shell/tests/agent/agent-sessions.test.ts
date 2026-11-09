@@ -30,6 +30,7 @@ import {
   openableProjectFile,
   projectFolderProblem,
 } from '../../src/main/agent/agent-sessions'
+import { sweepAgentSessionFolders } from '../../src/main/agent/agent-session-folders'
 import {
   AGENT_RECENT_LIMIT,
   normalizeAgentPrefs,
@@ -453,7 +454,7 @@ describe('starting a session', () => {
         projectRoot: signedOut.project,
         mode: 'ask-commands',
       }),
-    ).toEqual({ ok: false, reason: 'not-connected' })
+    ).toEqual({ ok: false, failure: { reason: 'not-connected' } })
     const half = manager({
       statuses: {
         codex: {
@@ -466,10 +467,7 @@ describe('starting a session', () => {
     })
     expect(
       await half.m.start(1, { provider: 'codex', projectRoot: half.project, mode: 'ask-commands' }),
-    ).toEqual({
-      ok: false,
-      reason: 'not-connected',
-    })
+    ).toEqual({ ok: false, failure: { reason: 'not-connected' } })
     expect(half.codex).not.toHaveBeenCalled()
   })
 
@@ -477,10 +475,7 @@ describe('starting a session', () => {
     const { m, home, claude } = manager()
     expect(
       await m.start(1, { provider: 'claude-code', projectRoot: home, mode: 'ask-commands' }),
-    ).toEqual({
-      ok: false,
-      reason: 'bad-folder',
-    })
+    ).toEqual({ ok: false, failure: { reason: 'bad-folder' } })
     expect(claude).not.toHaveBeenCalled()
   })
 
@@ -492,7 +487,10 @@ describe('starting a session', () => {
       projectRoot: project,
       mode: 'ask-commands',
     })
-    expect(result).toMatchObject({ ok: false, reason: 'start-failed', kind: 'unsafe-tools' })
+    expect(result).toMatchObject({
+      ok: false,
+      failure: { reason: 'run-error', kind: 'unsafe-tools' },
+    })
     expect(mcpStop).toHaveBeenCalled()
   })
 })
@@ -504,7 +502,7 @@ describe('a program turned off in this app (decision 0114)', () => {
     })
     expect(
       await m.start(1, { provider: 'claude-code', projectRoot: project, mode: 'ask-commands' }),
-    ).toEqual({ ok: false, reason: 'not-connected' })
+    ).toEqual({ ok: false, failure: { reason: 'not-connected' } })
     expect(claude).not.toHaveBeenCalled()
   })
 
@@ -517,7 +515,7 @@ describe('a program turned off in this app (decision 0114)', () => {
     })
     expect(
       await m.start(1, { provider: 'claude-code', projectRoot: project, mode: 'ask-commands' }),
-    ).toEqual(expect.objectContaining({ ok: false, reason: 'start-failed', kind: 'off-in-app' }))
+    ).toEqual({ ok: false, failure: { reason: 'run-error', kind: 'off-in-app' } })
     expect(claude).not.toHaveBeenCalled()
     expect(mcpStop).toHaveBeenCalledTimes(1)
   })
@@ -531,7 +529,7 @@ describe('a program turned off in this app (decision 0114)', () => {
     })
     expect(
       await m.start(1, { provider: 'claude-code', projectRoot: project, mode: 'ask-commands' }),
-    ).toEqual(expect.objectContaining({ ok: false, reason: 'start-failed', kind: 'off-in-app' }))
+    ).toEqual({ ok: false, failure: { reason: 'run-error', kind: 'off-in-app' } })
     expect(session.stopped).toBe(1)
     expect(mcpStop).toHaveBeenCalledTimes(1)
   })
@@ -673,6 +671,23 @@ describe('driving a session', () => {
     expect(existsSync(sessionDir), 'gone when the quit hook returns').toBe(false)
     expect(session.stopped, 'the program is stopped once').toBe(1)
   })
+
+  it('leaves a session folder another start keeps while this app runs, and removes once it is gone', async () => {
+    const tmp = temp()
+    for (const name of ['TMP', 'TEMP', 'TMPDIR']) vi.stubEnv(name, tmp)
+    try {
+      const { m, project, claude } = manager()
+      await m.start(3, { provider: 'claude-code', projectRoot: project, mode: 'ask-commands' })
+      const { sessionDir } = claude.mock.calls[0]![0]
+      await sweepAgentSessionFolders({ parent: tmp })
+      expect(existsSync(sessionDir), 'kept while its app runs').toBe(true)
+      // the app ended without quitting: its process is gone and its folder is still there
+      await sweepAgentSessionFolders({ parent: tmp, alive: () => false })
+      expect(existsSync(sessionDir), 'removed once its app is gone').toBe(false)
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
 })
 
 describe('a window that closes, or an app that quits, while the session is being prepared', () => {
@@ -768,7 +783,7 @@ describe('a window that closes, or an app that quits, while the session is being
         const reached = (step: Step): boolean => STEPS.indexOf(pauseAt) >= STEPS.indexOf(step)
         if (pauseAt === 'runner') expect(p.session.stopped, 'the program it got ends').toBe(1)
         else expect(p.claude, 'no program is started').not.toHaveBeenCalled()
-        expect(result).toMatchObject({ ok: false })
+        expect(result).toEqual({ ok: false, failure: { reason: 'stopped' } })
         expect(p.startAppMcp).toHaveBeenCalledTimes(reached('app-mcp') ? 1 : 0)
         expect(p.mcpStop, 'the app MCP server is closed once').toHaveBeenCalledTimes(
           reached('app-mcp') ? 1 : 0,

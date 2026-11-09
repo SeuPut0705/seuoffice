@@ -17,6 +17,8 @@ export const ko = {
   cardErrNeedsUpdatePath: '이 앱이 실행하는 파일:',
   cardErrNeedsUpdateWindows:
     'WSL(Ubuntu)이나 다른 폴더에 설치된 {provider}를 업데이트해도 이 파일은 바뀌지 않습니다. Windows PowerShell에서 {command}를 실행하세요.',
+  claudeDesktopNote:
+    'Claude 데스크톱 앱은 이 앱이 실행하는 Claude Code가 아닙니다. Claude Code는 터미널에서 쓰는 별도 프로그램이라, 데스크톱 앱을 설치하거나 업데이트해도 바뀌지 않습니다.',
   cardErrTimeout: '{provider} 프로그램이 제때 응답하지 않았습니다. 잠시 뒤 다시 확인하세요.',
   cardErrFailed: '{provider} 연결을 확인하는 중에 문제가 생겼습니다. 다시 확인해 보세요.',
   actionInstall: '설치',
@@ -50,6 +52,8 @@ export const ko = {
   errSignedOut: '{provider} 로그인이 풀렸습니다. 다시 로그인한 뒤 계속하세요.',
   errRateLimit: '{provider} 구독 한도를 모두 썼습니다.',
   errRateLimitReset: '{provider} 구독 한도를 모두 썼습니다. {time}에 초기화됩니다.',
+  errChatGptAppLimit:
+    'ChatGPT에서 이 앱이 쓸 수 있는 사용량을 다 썼습니다. 요금제 전체의 한도이거나 이 앱에 정해 둔 한도일 수 있습니다. ChatGPT 설정 → 사용량에서 확인하세요.',
   errUnsafeTools:
     '{provider} 프로그램이 자체 도구를 켠 채로 시작되어, 안전을 위해 실행을 멈췄습니다.',
   errMeteredNotAccepted:
@@ -152,6 +156,8 @@ export const ko = {
     '브라우저에서는 로그인했지만 OpenAI가 이 연결을 받아 주지 않았거나, 돌아온 답이 확인되지 않았습니다. 이 PC의 날짜와 시각이 맞는지 확인한 뒤 다시 누르면 처음부터 시작합니다.',
   chatgptLoginNetworkNote:
     'OpenAI에 연결하지 못했거나 브라우저를 열지 못해 로그인을 마치지 못했습니다. 인터넷 연결(회사망, VPN, 프록시 포함)을 확인하고 다시 누르세요.',
+  chatgptLoginWorkspacePolicyNote:
+    '이 ChatGPT 계정은 회사나 학교가 관리하는 작업 공간에 속해 있어, OpenAI가 이 앱에서 작업 공간의 ChatGPT 요금제를 쓰는 것을 허용하지 않습니다. 작업 공간 관리자가 이 앱을 허용할 수 있는 설정은 없어서 다시 로그인해도 결과가 같습니다. 개인 ChatGPT 계정(Go, Plus, Pro)으로 로그인하거나, Codex 카드로 연결해 보세요.',
   chatgptLoginNotAllowedNote:
     '이 앱이 ChatGPT 요금제를 쓰도록 허용하지 않았거나, 브라우저가 로그인 실패로 돌아왔습니다. 다시 누르고 로그인한 뒤 허용 화면에서 허용하세요.',
   chatgptSigningInNote:

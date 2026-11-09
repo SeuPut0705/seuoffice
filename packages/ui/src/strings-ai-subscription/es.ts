@@ -18,6 +18,8 @@ export const es = {
   cardErrNeedsUpdatePath: 'Archivo que ejecuta esta aplicación:',
   cardErrNeedsUpdateWindows:
     'Actualizar {provider} dentro de WSL (Ubuntu) o en otra carpeta no cambia este archivo. Ejecuta {command} en Windows PowerShell.',
+  claudeDesktopNote:
+    'La aplicación de escritorio de Claude no es Claude Code, que es lo que ejecuta esta aplicación. Claude Code es un programa aparte que se usa en una terminal, así que instalar o actualizar la aplicación de escritorio no lo cambia.',
   cardErrTimeout: 'El programa {provider} no respondió a tiempo. Comprueba de nuevo en un momento.',
   cardErrFailed: 'Algo salió mal al comprobar {provider}. Comprueba de nuevo.',
   actionInstall: 'Instalar',
@@ -55,6 +57,8 @@ export const es = {
   errRateLimit: 'Se ha agotado el límite de la suscripción de {provider}.',
   errRateLimitReset:
     'Se ha agotado el límite de la suscripción de {provider}. Se restablece a las {time}.',
+  errChatGptAppLimit:
+    'Esta aplicación ha agotado el uso de ChatGPT del que puede disponer. Puede ser el límite de todo tu plan o uno fijado para esta aplicación. Revísalo en ChatGPT, en Configuración → Uso.',
   errUnsafeTools:
     'El programa {provider} se inició con sus propias herramientas activadas, así que la ejecución se detuvo por seguridad.',
   errMeteredNotAccepted:
@@ -164,6 +168,8 @@ export const es = {
     'Iniciaste sesión en el navegador, pero OpenAI no aceptó esta conexión o no se pudo comprobar su respuesta. Comprueba que la fecha y la hora de este PC sean correctas y vuelve a pulsar para empezar de nuevo.',
   chatgptLoginNetworkNote:
     'No se pudo terminar el inicio de sesión: no se pudo contactar con OpenAI o no se abrió ningún navegador. Revisa la conexión a internet (incluida la red de la empresa, una VPN o un proxy) y vuelve a pulsar.',
+  chatgptLoginWorkspacePolicyNote:
+    'Esta cuenta de ChatGPT pertenece a un espacio de trabajo gestionado por una empresa o un centro educativo, y OpenAI no permite que las aplicaciones usen el plan ChatGPT de un espacio de trabajo. El administrador del espacio de trabajo no tiene ningún ajuste para permitir esta aplicación, así que volver a iniciar sesión no servirá. Inicia sesión con una cuenta personal de ChatGPT (Go, Plus o Pro) o conéctate con la tarjeta de Codex.',
   chatgptLoginNotAllowedNote:
     'No permitiste que esta aplicación use tu plan de ChatGPT, o el navegador volvió del inicio de sesión con un error. Vuelve a pulsar, inicia sesión y permítelo en la página de autorización.',
   chatgptSigningInNote:

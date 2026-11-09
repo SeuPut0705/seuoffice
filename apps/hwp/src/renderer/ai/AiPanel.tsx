@@ -14,7 +14,7 @@ import {
   type AiScopeQuoteData,
   AiSubscriptionUsageLine,
   AiToolsUnsupportedNotice,
-  AiTypingIndicator,
+  AiReplyProgress,
   Markdown,
   aiPanelWidthAtPointer,
   aiSubscriptionText,
@@ -401,6 +401,18 @@ export function AiPanel({
     cards: skillCards,
     busy,
     send: (text, use) => send(text, undefined, undefined, use),
+    // a template skill called in a document with content asks where to run
+    hasContent: async () => {
+      if ((await bridge.readText()).trim() !== '') return true
+      const [tables, pictures] = await Promise.all([bridge.listTables(), bridge.listPictures()])
+      return tables.count > 0 || pictures.count > 0
+    },
+    // a template copy that brought the asking document: it goes in as an attachment
+    attach: async (paths) => {
+      const added = (await window.hwpApi.addAttachmentPaths(paths)) ?? null
+      mergeAttachments(added)
+      return (added?.accepted.length ?? 0) > 0
+    },
     onTaken: onSkillHandoff,
     setComposer: setPrompt,
   })
@@ -1567,11 +1579,7 @@ export function AiPanel({
               key={i}
               className={`ai-msg ai-msg-assistant${entry.isError && !blocked ? ' ai-msg-error' : ''}${entry.streaming ? ' ai-msg-streaming' : ''}`}
             >
-              {!entry.text && entry.streaming ? (
-                <span className="ai-typing-row">
-                  <AiTypingIndicator label={hasTools ? t('aiWorking') : t('aiThinking')} />
-                </span>
-              ) : blocked ? (
+              {blocked ? (
                 <AiBlockedNotice
                   kind={blocked.kind}
                   provider={blocked.provider}
@@ -1607,6 +1615,7 @@ export function AiPanel({
                   onShow={(place) => void bridgeRef.current.reveal(place).catch(() => {})}
                 />
               )}
+              <AiReplyProgress reply={entry} thinking={t('aiThinking')} working={t('aiWorking')} />
               {showToolbar && (
                 <div className="ai-msg-toolbar">
                   <button

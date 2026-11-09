@@ -130,7 +130,7 @@ import {
   setRescueFetch,
   streamForProvider,
   subscriptionOffIn,
-  withStoredSubscriptionOff,
+  withStoredUnknownFields,
   type AiChatRequest,
   type AiSettings,
   type AiStreamChunk,
@@ -142,7 +142,7 @@ import {
 } from '@genoffice/ai-provider'
 import { listCodexModels, shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
 import { listCustomModelsForIpc } from '@genoffice/ai-provider/custom-models'
-import { createKeyModelRefresher, withStoredKeyModels } from '@genoffice/ai-provider/key-models'
+import { createKeyModelRefresher, withStoredMainFields } from '@genoffice/ai-provider/key-models'
 import {
   ensureSubscriptionIpc,
   initSubscriptionChildTracking,
@@ -4035,9 +4035,13 @@ const TWIPS_PER_INCH = 1440
 
 const SETTINGS_PATH = () => userDataPath('ai-settings.json')
 
-/** the only write of the settings file: keys and tokens go to disk sealed (decision 0063) */
+/**
+ * The only write of the settings file: keys and tokens go to disk sealed
+ * (decision 0063), and fields a newer build wrote stay as they are.
+ */
 function writeAiSettingsFile(settings: unknown): void {
-  writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(settings))
+  const stored = readJson<unknown>(SETTINGS_PATH(), {})
+  writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(withStoredUnknownFields(settings, stored)))
 }
 
 /** how long after start the key providers are first asked for their models */
@@ -4117,8 +4121,7 @@ function writeRendererAiSettings(settings: unknown): boolean {
   // so the renderer's copy is sanitized before it touches disk.
   const sanitized = sanitizeAiSettings(settings)
   if (!sanitized) return false
-  const stored = storedAiSettings()
-  writeAiSettingsFile(withStoredSubscriptionOff(withStoredKeyModels(sanitized, stored), stored))
+  writeAiSettingsFile(withStoredMainFields(sanitized, storedAiSettings()))
   broadcastAiSettingsChanged()
   keyModelRefresher.refreshChanged()
   return true

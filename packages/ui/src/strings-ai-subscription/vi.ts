@@ -18,6 +18,8 @@ export const vi = {
   cardErrNeedsUpdatePath: 'Tệp mà ứng dụng này chạy:',
   cardErrNeedsUpdateWindows:
     'Cập nhật {provider} trong WSL (Ubuntu) hoặc ở thư mục khác không làm thay đổi tệp này. Hãy chạy {command} trong Windows PowerShell.',
+  claudeDesktopNote:
+    'Ứng dụng Claude cho máy tính không phải là Claude Code mà ứng dụng này chạy. Claude Code là một chương trình riêng dùng trong terminal, nên cài đặt hay cập nhật ứng dụng máy tính không làm thay đổi nó.',
   cardErrTimeout: 'Chương trình {provider} không trả lời kịp thời. Hãy kiểm tra lại sau giây lát.',
   cardErrFailed: 'Đã xảy ra sự cố khi kiểm tra {provider}. Hãy kiểm tra lại.',
   actionInstall: 'Cài đặt',
@@ -53,6 +55,8 @@ export const vi = {
   errRateLimit: 'Đã dùng hết giới hạn của gói đăng ký {provider}.',
   errRateLimitReset:
     'Đã dùng hết giới hạn của gói đăng ký {provider}. Giới hạn sẽ được đặt lại lúc {time}.',
+  errChatGptAppLimit:
+    'Ứng dụng này đã dùng hết lượng ChatGPT mà nó được dùng. Đó có thể là giới hạn của cả gói hoặc giới hạn đặt riêng cho ứng dụng này. Hãy kiểm tra trong ChatGPT tại Cài đặt → Mức sử dụng.',
   errUnsafeTools:
     'Chương trình {provider} khởi động khi các công cụ riêng của nó vẫn bật, nên lượt chạy đã bị dừng để đảm bảo an toàn.',
   errMeteredNotAccepted:
@@ -160,6 +164,8 @@ export const vi = {
     'Bạn đã đăng nhập trong trình duyệt, nhưng OpenAI không chấp nhận kết nối này, hoặc không kiểm tra được phản hồi trả về. Hãy kiểm tra ngày giờ của máy tính này cho đúng, rồi nhấn lại để bắt đầu lại từ đầu.',
   chatgptLoginNetworkNote:
     'Không thể hoàn tất đăng nhập: không kết nối được tới OpenAI hoặc không mở được trình duyệt. Hãy kiểm tra kết nối internet (kể cả mạng công ty, VPN hoặc proxy), rồi nhấn lại.',
+  chatgptLoginWorkspacePolicyNote:
+    'Tài khoản ChatGPT này thuộc một không gian làm việc do công ty hoặc trường học quản lý, và OpenAI không cho phép ứng dụng dùng gói ChatGPT của không gian làm việc. Quản trị viên không gian làm việc không có cài đặt nào để cho phép ứng dụng này, nên đăng nhập lại sẽ không giúp được. Hãy đăng nhập bằng tài khoản ChatGPT cá nhân (Go, Plus hoặc Pro), hoặc kết nối qua thẻ Codex.',
   chatgptLoginNotAllowedNote:
     'Bạn chưa cho phép ứng dụng này dùng gói ChatGPT của bạn, hoặc trình duyệt quay lại từ bước đăng nhập với lỗi. Nhấn lại, đăng nhập rồi cho phép ở trang cấp quyền.',
   chatgptSigningInNote:

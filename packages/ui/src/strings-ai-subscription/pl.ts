@@ -18,6 +18,8 @@ export const pl = {
   cardErrNeedsUpdatePath: 'Plik uruchamiany przez tę aplikację:',
   cardErrNeedsUpdateWindows:
     'Aktualizacja {provider} w WSL (Ubuntu) lub w innym folderze nie zmienia tego pliku. Uruchom {command} w Windows PowerShell.',
+  claudeDesktopNote:
+    'Aplikacja desktopowa Claude to nie Claude Code, który uruchamia ta aplikacja. Claude Code to osobny program używany w terminalu, więc instalacja lub aktualizacja aplikacji desktopowej go nie zmienia.',
   cardErrTimeout: 'Program {provider} nie odpowiedział na czas. Sprawdź ponownie za chwilę.',
   cardErrFailed: 'Podczas sprawdzania {provider} wystąpił problem. Sprawdź ponownie.',
   actionInstall: 'Zainstaluj',
@@ -54,6 +56,8 @@ export const pl = {
   errSignedOut: 'Logowanie do {provider} wygasło. Zaloguj się ponownie, aby kontynuować.',
   errRateLimit: 'Limit subskrypcji {provider} został wyczerpany.',
   errRateLimitReset: 'Limit subskrypcji {provider} został wyczerpany. Odnowi się o {time}.',
+  errChatGptAppLimit:
+    'Ta aplikacja wykorzystała dostępne dla niej użycie ChatGPT. Może to być limit całego planu albo limit ustawiony dla tej aplikacji. Sprawdź w ChatGPT w Ustawienia → Użycie.',
   errUnsafeTools:
     'Program {provider} uruchomił się z włączonymi własnymi narzędziami, więc ze względów bezpieczeństwa zatrzymano działanie.',
   errMeteredNotAccepted:
@@ -163,6 +167,8 @@ export const pl = {
     'Zalogowano się w przeglądarce, ale OpenAI nie przyjęło tego połączenia albo nie udało się sprawdzić jego odpowiedzi. Sprawdź, czy data i godzina na tym komputerze są prawidłowe, a potem naciśnij ponownie, aby zacząć od nowa.',
   chatgptLoginNetworkNote:
     'Nie udało się dokończyć logowania: nie można połączyć się z OpenAI albo nie otworzyła się przeglądarka. Sprawdź połączenie z internetem (także sieć firmową, VPN lub proxy), a potem naciśnij ponownie.',
+  chatgptLoginWorkspacePolicyNote:
+    'To konto ChatGPT należy do obszaru roboczego zarządzanego przez firmę lub szkołę, a OpenAI nie pozwala aplikacjom korzystać z planu ChatGPT obszaru roboczego. Administrator obszaru roboczego nie ma ustawienia, które pozwoliłoby na tę aplikację, więc ponowne logowanie nic nie da. Zaloguj się na osobiste konto ChatGPT (Go, Plus lub Pro) albo połącz się przez kartę Codex.',
   chatgptLoginNotAllowedNote:
     'Ta aplikacja nie dostała zgody na korzystanie z Twojego planu ChatGPT albo przeglądarka wróciła z logowania z błędem. Naciśnij ponownie, zaloguj się i wyraź zgodę na stronie zgody.',
   chatgptSigningInNote:

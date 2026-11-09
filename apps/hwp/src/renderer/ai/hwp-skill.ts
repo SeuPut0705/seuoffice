@@ -1,5 +1,7 @@
 import {
   attachedImageNote,
+  undoDoubledEscapes,
+  undoDoubledEscapesInList,
   type AgentSkill,
   type AgentToolCall,
   type AgentToolDef,
@@ -157,7 +159,7 @@ const SYSTEM_PROMPT = [
   '- Add new paragraphs next to an existing one, in the body or inside a table cell, or at the end of the document (insert_paragraphs). Remove a paragraph (delete_paragraph).',
   '- Add a table of plain-text cells, with a header row when the first row names the columns (insert_table).',
   '- Add a picture in a new paragraph after or before an anchor paragraph, or at the end: a real picture found on the web (image_search, then insert_image with its address) or an illustration the app draws (generate_image). A picture is saved inside the document, so it travels with the file. Only insert pictures the user asked for.',
-  '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), write text into its cells, many at once (fill_cells), tick the choice boxes of a form (check_boxes), add or remove rows and columns (add_to_table, remove_from_table), and remove a whole table (delete_table).',
+  '- Work on the tables that are already there: list them (list_tables), read one cell by cell (read_table), write text into its cells, many at once (fill_cells), tick the choice boxes of a form (check_boxes), add or remove rows and columns (add_to_table, remove_from_table), and remove a whole table (delete_table). After writing into cells, check that their text fits (check_layout): text that runs past the bottom of a cell is cut off in print.',
   '- Change formatting: bold, italic, underline, strikethrough, font, font size, text colour, highlight and the character style of a piece of text (format_text); alignment, line spacing, first-line indent, margins, space above and below and the paragraph style of a paragraph, and the character formatting of a whole paragraph (format_paragraph); the background colour of table cells (format_cells).',
   '- Use one font instead of another everywhere in the document, body and table cells (replace_font). The format check hands the font names over; without it, ask which font the user means.',
   '- Work with the styles of the document: see what one looks like (read_style), add a paragraph or character style (create_style), and change a style: its name, the style that follows it and its look (edit_style).',
@@ -799,6 +801,26 @@ const TOOLS: AgentToolDef[] = [
     inputSchema: { type: 'object', properties: {} },
   },
   {
+    name: 'check_layout',
+    description:
+      'List the table cells whose text does not fit where it is drawn: a row keeps the height the file gives it, so a line that runs past the bottom of its cell is cut off on the page and in print. Each with the table number, row and column, page, and how far past the edge in mm. Call it after writing into table cells; shorten the text or change the table when a cell is listed. A long document is checked in parts; call again with from_table and from_row to go on.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        from_table: {
+          type: 'integer',
+          minimum: 1,
+          description: 'table number from list_tables to start from (default 1)',
+        },
+        from_row: {
+          type: 'integer',
+          minimum: 1,
+          description: 'row of from_table to start from (default 1)',
+        },
+      },
+    },
+  },
+  {
     name: 'read_table',
     description: `Read one table cell by cell: each cell as row.col with its text, empty cells included. A merged cell is listed once with the places it spans. A long table comes in parts of about ${READ_TABLE_HINT} cells; call again with from_row to go on.`,
     inputSchema: {
@@ -1272,9 +1294,60 @@ const isWhere = (value: unknown): value is AgentWhere =>
 const isTextList = (value: unknown): value is string[] =>
   Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === 'string')
 
-/** Text of a change as the panel lists it: one line, cut when long. */
+/**
+ * The call with `undoDoubledEscapes` applied to the new text it writes: cell, note and
+ * paragraph text, replacements, table rows, field values and a contents title. The text
+ * a call looks for (find, anchor, after) is left alone: a document that already shows
+ * `\n` must still be found and cleaned up.
+ */
+function withDoubledEscapesUndone(call: AgentToolCall): AgentToolCall {
+  const input = { ...call.input }
+  const fix = (key: string) => {
+    if (typeof input[key] === 'string') input[key] = undoDoubledEscapes(input[key])
+  }
+  switch (call.name) {
+    case 'fill_cells':
+      if (Array.isArray(input.cells)) {
+        input.cells = input.cells.map((cell: unknown) => {
+          if (typeof cell !== 'object' || cell === null) return cell
+          const text = (cell as { text?: unknown }).text
+          return typeof text === 'string' ? { ...cell, text: undoDoubledEscapes(text) } : cell
+        })
+      }
+      break
+    case 'insert_note':
+    case 'edit_note':
+      fix('text')
+      break
+    case 'replace_text':
+    case 'replace_all':
+      fix('replace')
+      break
+    case 'insert_paragraphs':
+    case 'replace_selection':
+      input.paragraphs = undoDoubledEscapesInList(input.paragraphs)
+      break
+    case 'insert_table':
+      if (Array.isArray(input.rows)) input.rows = input.rows.map(undoDoubledEscapesInList)
+      break
+    case 'fill_field':
+      fix('value')
+      break
+    case 'insert_toc':
+      fix('title')
+      break
+    default:
+      return call
+  }
+  return { ...call, input }
+}
+
+/** Text of a change as the panel lists it: one line, line breaks shown as ⏎, cut when long. */
 function changeText(text: string): string {
-  const flat = text.replace(/\s+/g, ' ').trim()
+  const flat = text
+    .trim()
+    .replace(/\s*[\r\n]\s*/g, ' ⏎ ')
+    .replace(/\s+/g, ' ')
   return flat.length > CHANGE_TEXT_CHARS ? `${flat.slice(0, CHANGE_TEXT_CHARS)}…` : flat
 }
 
@@ -2493,6 +2566,49 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
           summary: label('aiToolTables', { count: listed.count }),
         }
       }
+      case 'check_layout': {
+        const place = ['from_table', 'from_row'].map((key) => call.input[key])
+        if (
+          !place.every(
+            (value) =>
+              value === undefined ||
+              (typeof value === 'number' && Number.isInteger(value) && value >= 1),
+          )
+        ) {
+          return bad(call, 'from_table and from_row must be whole numbers from 1')
+        }
+        const [fromTable, fromRow] = place as (number | undefined)[]
+        const checked = await bridge.checkLayout(fromTable ?? null, fromRow ?? null)
+        const lines = checked.cells.map(
+          (cell) =>
+            `table ${cell.table}, row ${cell.row}, col ${cell.col} (page ${cell.page}): the text runs ${cell.over} mm past the bottom of the cell and is cut off: ${quote(cell.text)}`,
+        )
+        const from = checked.from
+        const scope =
+          from.table === 1 && from.row === 1 ? '' : ` from table ${from.table}, row ${from.row}`
+        // `next` is the first row this call did not measure
+        const until = checked.next
+          ? `, stopping before table ${checked.next.table}, row ${checked.next.row}`
+          : ''
+        const head =
+          lines.length === 0
+            ? `Every table cell's text fits${scope}${until} (${checked.measured} cell(s) of ${checked.tables} table(s) measured).`
+            : `${lines.length} cell(s) do not fit${scope}${until}:`
+        const tail = [
+          ...(checked.next
+            ? [
+                `[not finished: table ${checked.next.table} from row ${checked.next.row} on is not measured yet; call check_layout with from_table ${checked.next.table} and from_row ${checked.next.row}]`,
+              ]
+            : []),
+          ...(checked.partial
+            ? ['(the document is large: tables inside cells near the end were not found)']
+            : []),
+        ]
+        return {
+          output: [head, ...lines, ...tail].join('\n'),
+          summary: label('aiToolLayout', { count: lines.length }),
+        }
+      }
       case 'read_table': {
         const table = call.input.table
         if (typeof table !== 'number') return bad(call, 'table must be a number from list_tables')
@@ -3560,7 +3676,7 @@ export function createHwpSkill(deps: HwpSkillDeps): HwpSkill {
       buildContext: () => [context, selectionContext()].filter(Boolean).join('\n\n'),
       executeTool: async (call, signal) => {
         try {
-          return await run(call, signal)
+          return await run(withDoubledEscapesUndone(call), signal)
         } catch (error) {
           // the editor refused or is gone: the model gets the cause and can say so
           return bad(call, error instanceof Error ? error.message : String(error))

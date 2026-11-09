@@ -2,9 +2,10 @@
 /**
  * The in-app switch that turns a subscription CLI off (decision 0114) lives in
  * ai-settings.json beside the key providers' sealed keys (decision 0063). Every
- * write the docs main makes must keep both: a window saving a copy it read
- * before the switch moved, the switch itself, and the metered "use anyway"
- * answer. The subscription service, the CLIs and the network are mocked.
+ * write the docs main makes must keep both, and the key providers' live model
+ * lists (decision 0087): a window saving a copy it read before the switch
+ * moved, the switch itself, and the metered "use anyway" answer. The
+ * subscription service, the CLIs and the network are mocked.
  */
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -155,4 +156,59 @@ it('keeps a CLI off when the metered "use anyway" answer is written', async () =
   expect(text).not.toContain(KEY)
   expect(written.meteredAccepted?.['claude-code']).toBe(true)
   expect(written.subscriptionOff).toEqual({ codex: true })
+})
+
+it('keeps the fields a newer build wrote, and the key sealed, on every write', async () => {
+  setAiSecretCodec(codec)
+  const newer = {
+    futureTop: { mode: 'x' },
+    providers: {
+      custom: {
+        apiKey: codec.seal(KEY),
+        baseUrl: 'https://example.invalid/v1',
+        futureField: 'kept',
+        effort: 3,
+      },
+    },
+  }
+  seed(newer)
+  const copy = await read()
+  expect(copy.providers.custom).not.toHaveProperty('futureField')
+  expect(copy.providers.custom).not.toHaveProperty('effort')
+
+  await state.handlers.get('ai:set-settings')!({}, { ...copy, internetTools: false })
+  await state.setup!.setMeteredAccepted('codex', true)
+
+  const { text, written } = onDisk()
+  expect(text).not.toContain(KEY)
+  expect(written.internetTools).toBe(false)
+  expect(written.meteredAccepted?.codex).toBe(true)
+  expect((written as unknown as Record<string, unknown>).futureTop).toEqual({ mode: 'x' })
+  expect(written.providers.custom).toMatchObject({
+    apiKey: codec.seal(KEY),
+    futureField: 'kept',
+  })
+})
+
+it("keeps each key provider's live model list when a window saves without it", async () => {
+  setAiSecretCodec(codec)
+  const models = ['gpt-live-a', 'gpt-live-b']
+  const modelEfforts = { 'gpt-live-a': { efforts: ['low', 'high'] } }
+  seed({
+    subscriptionOff: { codex: true },
+    providers: { openai: { apiKey: codec.seal(KEY), model: 'gpt-live-a', models, modelEfforts } },
+  })
+  const copy = await read()
+  const { models: _models, modelEfforts: _efforts, ...openai } = copy.providers.openai!
+
+  await state.handlers.get('ai:set-settings')!(
+    {},
+    { ...copy, internetTools: false, providers: { ...copy.providers, openai } },
+  )
+
+  const { text, written } = onDisk()
+  expect(text).not.toContain(KEY)
+  expect(written.internetTools).toBe(false)
+  expect(written.subscriptionOff).toEqual({ codex: true })
+  expect(written.providers.openai).toMatchObject({ apiKey: codec.seal(KEY), models, modelEfforts })
 })

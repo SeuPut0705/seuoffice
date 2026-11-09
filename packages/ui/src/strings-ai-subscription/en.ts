@@ -17,6 +17,8 @@ export const en = {
   cardErrNeedsUpdatePath: 'The file this app runs:',
   cardErrNeedsUpdateWindows:
     'Updating {provider} inside WSL (Ubuntu) or in another folder does not change this file. Run {command} in Windows PowerShell.',
+  claudeDesktopNote:
+    'The Claude desktop app is not Claude Code, which this app runs. Claude Code is a separate program used in a terminal, so installing or updating the desktop app does not change it.',
   cardErrTimeout: 'The {provider} program did not answer in time. Check again in a moment.',
   cardErrFailed: 'Something went wrong while checking {provider}. Check again.',
   actionInstall: 'Install',
@@ -52,6 +54,8 @@ export const en = {
   errSignedOut: 'The {provider} sign-in has expired. Sign in again to continue.',
   errRateLimit: 'The {provider} subscription limit has been used up.',
   errRateLimitReset: 'The {provider} subscription limit has been used up. It resets at {time}.',
+  errChatGptAppLimit:
+    'This app has used up the ChatGPT usage it can draw on. The limit may be your whole plan’s or one set for this app. Check Settings → Usage in ChatGPT.',
   errUnsafeTools:
     'The {provider} program started with its own tools turned on, so the run was stopped for safety.',
   errMeteredNotAccepted:
@@ -157,6 +161,8 @@ export const en = {
     'You signed in in the browser, but OpenAI did not accept this connection, or its answer could not be checked. Make sure the date and time on this PC are right, then press it again to start over.',
   chatgptLoginNetworkNote:
     'The sign-in could not finish: OpenAI could not be reached, or no browser opened. Check the internet connection (including a company network, VPN or proxy), then press it again.',
+  chatgptLoginWorkspacePolicyNote:
+    'This ChatGPT account belongs to a workspace run by a company or school, and OpenAI does not let apps use a workspace’s ChatGPT plan. The workspace admin has no setting to allow it, so signing in again will not help. Sign in with a personal ChatGPT account (Go, Plus, or Pro), or connect through the Codex card instead.',
   chatgptLoginNotAllowedNote:
     'This app was not allowed to use your ChatGPT plan, or the browser came back from the sign-in with a failure. Press it again, sign in, and allow it on the consent page.',
   chatgptSigningInNote:

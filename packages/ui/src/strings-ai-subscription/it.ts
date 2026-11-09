@@ -18,6 +18,8 @@ export const it = {
   cardErrNeedsUpdatePath: 'File eseguito da questa app:',
   cardErrNeedsUpdateWindows:
     'Aggiornare {provider} dentro WSL (Ubuntu) o in un’altra cartella non modifica questo file. Esegui {command} in Windows PowerShell.',
+  claudeDesktopNote:
+    "L'app desktop di Claude non è Claude Code, che è ciò che questa app esegue. Claude Code è un programma separato che si usa nel terminale, quindi installare o aggiornare l'app desktop non lo modifica.",
   cardErrTimeout:
     'Il programma {provider} non ha risposto in tempo. Verifica di nuovo tra un momento.',
   cardErrFailed:
@@ -57,6 +59,8 @@ export const it = {
   errRateLimit: 'Il limite dell’abbonamento {provider} è stato raggiunto.',
   errRateLimitReset:
     'Il limite dell’abbonamento {provider} è stato raggiunto. Si azzera alle {time}.',
+  errChatGptAppLimit:
+    'Questa app ha esaurito l’utilizzo di ChatGPT a sua disposizione. Può trattarsi del limite dell’intero piano o di un limite impostato per questa app. Controlla in ChatGPT, in Impostazioni → Utilizzo.',
   errUnsafeTools:
     'Il programma {provider} è stato avviato con i propri strumenti attivi, quindi l’esecuzione è stata interrotta per sicurezza.',
   errMeteredNotAccepted:
@@ -165,6 +169,8 @@ export const it = {
     'Hai effettuato l’accesso nel browser, ma OpenAI non ha accettato questo collegamento, oppure non è stato possibile verificarne la risposta. Controlla che data e ora di questo PC siano corrette, poi premi di nuovo per ricominciare.',
   chatgptLoginNetworkNote:
     'Non è stato possibile completare l’accesso: OpenAI non era raggiungibile oppure non si è aperto alcun browser. Controlla la connessione a Internet (compresi rete aziendale, VPN o proxy), poi premi di nuovo.',
+  chatgptLoginWorkspacePolicyNote:
+    'Questo account ChatGPT appartiene a uno spazio di lavoro gestito da un’azienda o una scuola e OpenAI non consente alle app di usare il piano ChatGPT di uno spazio di lavoro. L’amministratore dello spazio di lavoro non ha un’impostazione per consentire questa app, quindi accedere di nuovo non servirà. Accedi con un account ChatGPT personale (Go, Plus o Pro) oppure collegati dalla scheda Codex.',
   chatgptLoginNotAllowedNote:
     'Non hai consentito a questa app di usare il tuo piano ChatGPT, oppure il browser è tornato dall’accesso con un errore. Premi di nuovo, accedi e consenti nella pagina di autorizzazione.',
   chatgptSigningInNote:

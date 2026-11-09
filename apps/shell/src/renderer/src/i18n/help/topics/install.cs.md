@@ -1,19 +1,15 @@
 # Instalace GenOffice
 
-Každá verze je zveřejněna na [stránce Releases](https://github.com/pblsketch/openoffice/releases/latest) projektu na GitHubu. Verze pro Windows vychází spolu s verzemi pro Mac a Linux, které vycházejí jako beta. Verze pro Mac a Linux vývojář nemůže přímo testovat; potvrzují se hlášeními uživatelů.
+Každá verze je zveřejněna na [stránce Releases](https://github.com/SeuPut0705/seuoffice/releases/latest) projektu na GitHubu.
 
 ## Vyberte soubor pro svůj počítač
 
-| Platforma                              | Požadavky                                   | Soubor                            |
-| -------------------------------------- | ------------------------------------------- | --------------------------------- |
-| **Windows**                            | Windows 10 nebo novější, 64bitový Intel/AMD | `GenOffice-Setup-<version>.exe`   |
-| **Mac (beta)**, Apple Silicon          | macOS 12 nebo novější, čip M1 nebo novější  | `GenOffice-<version>-arm64.dmg`   |
-| **Mac (beta)**, Intel                  | macOS 12 nebo novější, procesor Intel       | `GenOffice-<version>-x64.dmg`     |
-| **Linux (beta)**, libovolná distribuce | 64bitový (x86_64)                           | `GenOffice-<version>.AppImage`    |
-| **Linux (beta)**, rodina Ubuntu/Debian | 64bitový (x86_64)                           | `ieumoffice_<version>_amd64.deb`  |
-| **Linux (beta)**, Fedora/RHEL/openSUSE | 64bitový (x86_64)                           | `ieumoffice-<version>.x86_64.rpm` |
+| Platforma              | Požadavky                                   | Soubor                          |
+| ---------------------- | ------------------------------------------- | ------------------------------- |
+| **Windows**            | Windows 10 nebo novější, 64bitový Intel/AMD | `GenOffice-Setup-<version>.exe` |
+| **Mac**, Apple Silicon | macOS 12 nebo novější, čip M1 nebo novější  | `GenOffice-<version>-arm64.dmg` |
 
-Chcete-li zjistit, jaký máte Mac, otevřete nabídku Apple ▸ **O tomto Macu**. Pokud je u položky „Čip“ uvedeno Apple M…, vezměte soubor končící na `-arm64.dmg`; pokud je u položky „Procesor“ uvedeno Intel …, vezměte soubor končící na `-x64.dmg`. Ostatní soubory na stránce Releases (`.zip`, `.yml`, `.blockmap`) používá k aktualizaci sama aplikace; stahovat je nemusíte. Starší verze zůstávají na stránce Releases.
+Ostatní soubory na stránce Releases (`.zip`, `.yml`, `.blockmap`) používá k aktualizaci sama aplikace; stahovat je nemusíte. Starší verze zůstávají na stránce Releases.
 
 ## V systému Windows
 
@@ -50,7 +46,7 @@ Microsoft Defender SmartScreen zobrazí toto okno, když poprvé vidí nepodepsa
 
 Když je ve Windows 11 zapnuté inteligentní ovládání aplikací (Smart App Control), zastavuje nepodepsané instalátory a nenabízí cestu přes **Další informace**. Microsoft uvádí, že jednu aplikaci povolit nelze: jedinou možností je inteligentní ovládání aplikací vypnout, a to v **Zabezpečení Windows ▸ Ovládání aplikací a prohlížeče ▸ Nastavení inteligentního ovládání aplikací**. Tím tuto ochranu odeberete i všem ostatním aplikacím. S nejnovějšími aktualizacemi Windows ho lze znovu zapnout bez přeinstalace Windows.
 
-## Na Macu (beta)
+## Na Macu
 
 Potřebujete macOS 12 (Monterey) nebo novější. Verze pro Mac nemá vývojářský podpis Apple, takže při prvním otevření macOS oznámí, že nemůže ověřit, zda aplikace neobsahuje malware, a neotevře ji. Povolíte ji jednou, jak je uvedeno níže.
 
@@ -67,31 +63,18 @@ Pokud macOS hlásí, že aplikace „je poškozená a nelze ji otevřít“, nep
 xattr -dr com.apple.quarantine /Applications/GenOffice.app
 ```
 
-Pokud macOS hlásí, že aplikace na tomto Macu není podporována, zkontrolujte dvě věci:
-
-- Mac s procesorem Intel nedokáže spustit soubor pro Apple Silicon (`-arm64.dmg`). Podívejte se na „Procesor“ v okně **O tomto Macu**, nainstalovanou aplikaci smažte a místo ní nainstalujte soubor `-x64.dmg`.
-- V macOS 11 nebo starším GenOffice nespustíte. Verzi macOS také ukazuje **O tomto Macu**.
+Pokud macOS hlásí, že aplikace na tomto Macu není podporována, zkontrolujte **O tomto Macu**. GenOffice běží jen na Macu s Apple Silicon (M1 nebo novější) s macOS 12 nebo novějším; na Macu s procesorem Intel ani s macOS 11 či starším nefunguje.
 
 Dále na Macu:
 
-- Karty připojení AI nemají tlačítko instalace. Claude Code nebo Codex nainstalujete podle odkazu na oficiální návod k instalaci na kartě.
+- Karty připojení AI nemají tlačítko instalace. Claude Code nebo Codex nainstalujete podle odkazu na oficiální návod k instalaci na kartě. Desktopová aplikace Claude není Claude Code, takže Claude Code je potřeba nainstalovat zvlášť, i když desktopovou aplikaci už máte.
 - Přihlášení se dokončí v prohlížeči. Pokud vás prohlížeč požádá o vložení kódu, spusťte sami v Terminálu `claude auth login` nebo `codex login`. Viz [Připojení předplatného](help://subscription).
-
-## V Linuxu (beta)
-
-- **AppImage**: nastavte mu právo ke spuštění (`chmod +x GenOffice-<version>.AppImage`) a soubor spusťte. Žádný krok instalace není.
-- **deb**: nainstalujte příkazem `sudo apt install ./ieumoffice_<version>_amd64.deb`.
-- **rpm**: nainstalujte příkazem `sudo dnf install ./ieumoffice-<version>.x86_64.rpm`. V openSUSE použijte `sudo zypper install ./ieumoffice-<version>.x86_64.rpm`.
-
-Balíčky deb a rpm se instalují do `/opt/GenOffice` a propojují příkaz terminálu `/usr/bin/ieumoffice`. Stejně jako na Macu nemají karty připojení AI tlačítko instalace, a když přihlášení požádá o kód, spustíte sami v terminálu `claude auth login` nebo `codex login`.
 
 ## Aktualizace
 
 - GenOffice hledá novější verzi na stejné stránce Releases na GitHubu. Jakmile je nějaká zveřejněna, nabídne ji **Nastavení ▸ O aplikaci**: stiskněte **Aktualizovat na …**, počkejte na stažení a potom stiskněte **Restartovat a nainstalovat**. Ve Windows se zobrazí okno s průběhem instalace; po dokončení se GenOffice znovu otevře i s dokumenty, které jste měli otevřené. Na Macu se aplikace zavře, nahradí se novou verzí a znovu se otevře s dokumenty, které jste měli otevřené. Platí to pro aplikaci ve složce Aplikace; aplikace otevřená přímo z obrazu disku místo toho odkáže na stránku pro stažení. Aktualizace se nainstaluje jen po stisknutí tohoto tlačítka, nikdy při pouhém zavření aplikace.
-- V Linuxu se sama aktualizuje jen AppImage. U instalace z deb nebo rpm vás aplikace na novou verzi upozorní a otevře stránku pro stažení; nový soubor nainstalujte stejným způsobem.
 - **Nabídka (☰) ▸ Zkontrolovat aktualizace…** provede kontrolu, kdykoli o ni požádáte. Na počítači Mac je to **Nápověda ▸ Zkontrolovat aktualizace…**.
 - Když kontrola selže — chybí síť, nebo ještě nic nebylo zveřejněno — nic se nestane a aplikace funguje dál jako dosud.
-- **Kanál aktualizací**, rovněž v Nastavení ▸ O aplikaci, je Stabilní nebo Beta. Změna se projeví ihned a vyvolá kontrolu aktualizace; instalaci z kanálu Beta nevrátí zpět na Stabilní.
 - Ani aktualizace nejsou digitálně podepsané. Před instalací aplikace porovná stažený soubor s kontrolním součtem zveřejněným u daného vydání.
 - Pokud **Restartovat a nainstalovat** aplikaci zavře, ale nová verze se neobjeví, při dalším spuštění to aplikace oznámí a nabídne aktualizaci znovu. Tentokrát se instalátor otevře ve vlastním okně, takže uvidíte jeho průběh a můžete odpovědět na žádost o oprávnění správce. Pokud ani to nepomůže, okno aktualizace odkáže na stránku pro stažení; instalace ze souboru staženého odtud zachová vaše nastavení i dokumenty. Co aktualizace udělala, se zapisuje do `update-log.txt` ve složce dat aplikace (zadejte `%APPDATA%\GenOffice` do adresního řádku Průzkumníka souborů a otevře se). Při hlášení problému tento soubor přiložte.
 

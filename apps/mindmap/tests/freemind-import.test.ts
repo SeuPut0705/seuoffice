@@ -255,6 +255,111 @@ describe('pictures', () => {
     if (opened.status !== 'ok') throw new Error(opened.status)
     expect(JSON.stringify(opened.session.document.sheets)).not.toContain('iVBORw0KGgo')
   })
+
+  it('give a topic the first name any of its pictures has', async () => {
+    const richPicture = (html: string, after = ''): string =>
+      `<node><richcontent TYPE="NODE"><html><head/><body><p>${html}</p></body></html></richcontent>${after}</node>`
+    const file = bytes(
+      `<map version="1.0.1"><node TEXT="Root">` +
+        richPicture(
+          '<img src="data:image/png;base64,AAAA" />',
+          '<hook URI="Images/scan.png" NAME="ExternalObject"/>',
+        ) +
+        richPicture('<img src="data:image/png;base64,AAAA" /><img src="second.png" />') +
+        `<node TEXT=""><hook URI="data:image/png;base64,AAAA" NAME="ExternalObject"/></node>` +
+        `</node></map>`,
+    )
+    const [sheet] = await importAndReopen(file, 'Pictures')
+    expect(sheet!.root.children.map((child) => child.title)).toEqual([
+      'scan.png',
+      'second.png',
+      PICTURE,
+    ])
+  })
+
+  it('never put control characters in a title; a line break or tab in a name becomes a space', async () => {
+    const richPicture = (src: string): string =>
+      `<node><richcontent TYPE="NODE"><html><head/><body><p><img src="${src}" /></p></body></html></richcontent></node>`
+    const htmlText = (html: string): string =>
+      `<node TEXT="${`<html><body>${html}</body></html>`.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')}"/>`
+    const file = bytes(
+      `<map version="1.0.1"><node TEXT="Root">` +
+        richPicture('Images/a%00b%1B.png') +
+        richPicture('Images/line%0A%0Abreak%09tab.png') +
+        richPicture('Images/%C2%85next%C2%9F.png') +
+        `<node TEXT=""><hook URI="Images/hook%0D%0Aname%7F.png" NAME="ExternalObject"/></node>` +
+        htmlText('<img alt="Bell&#7; ring">') +
+        htmlText('<p>Escape&#27;d text</p>') +
+        `</node></map>`,
+    )
+    const [sheet] = await importAndReopen(file, 'Pictures')
+    expect(sheet!.root.children.map((child) => child.title)).toEqual([
+      'ab.png',
+      'line break tab.png',
+      'next.png',
+      'hook name.png',
+      'Bell ring',
+      'Escaped text',
+    ])
+  })
+})
+
+describe('characters that change how text reads', () => {
+  const richPicture = (img: string): string =>
+    `<node><richcontent TYPE="NODE"><html><head/><body><p>${img}</p></body></html></richcontent></node>`
+
+  it('leave out direction overrides, embeddings and isolates in titles and notes, and control characters in plain text', async () => {
+    const file = bytes(
+      `<map version="1.0.1"><node TEXT="Root">` +
+        richPicture('<img src="Images/photo%E2%80%AEgnp.exe" />') +
+        richPicture('<img src="x.png" alt="&#x2067;Plan&#x2069; &#x202D;A" />') +
+        `<node TEXT=""><hook URI="Images/scan%E2%81%A6cod.exe" NAME="ExternalObject"/></node>` +
+        `<node TEXT="report&#x202E;fdp.exe"/>` +
+        `<node TEXT="a&#x85;b&#x9F;c&#x7F;"/>` +
+        `<node TEXT="line one&#10;line&#x202C; two"/>` +
+        `<node><richcontent TYPE="NODE">plain&#x202B; rich&#10;&#x80;second</richcontent></node>` +
+        `<node TEXT="Notes">` +
+        `<richcontent TYPE="NOTE">first&#x202A; line&#10;second&#x85; line</richcontent></node>` +
+        `<node TEXT="HTML note"><richcontent TYPE="NOTE"><html><body><p>to&#x2068;do</p><p>done&#x202E;!</p></body></html></richcontent></node>` +
+        `</node></map>`,
+    )
+    const [sheet] = await importAndReopen(file, 'Bidi')
+    expect(sheet!.root.children.map(shown)).toEqual([
+      { title: 'photognp.exe' },
+      { title: 'Plan A' },
+      { title: 'scancod.exe' },
+      { title: 'reportfdp.exe' },
+      { title: 'abc' },
+      { title: 'line one\nline two' },
+      { title: 'plain rich\nsecond' },
+      { title: 'Notes', note: 'first line\nsecond line' },
+      { title: 'HTML note', note: 'todo\ndone!' },
+    ])
+  })
+
+  it('keep the marks right-to-left text needs and the joiners emoji and scripts need', async () => {
+    const kept = [
+      'مرحبا\u200F 2024',
+      'שלום\u200F!',
+      'abc\u200E def',
+      '👩\u200D💻 개발',
+      'می\u200Cخواهم',
+      'long\u200Bword',
+    ]
+    const file = bytes(
+      `<map version="1.0.1"><node TEXT="Root">` +
+        kept.map((text) => `<node TEXT="${text}"/>`).join('') +
+        richPicture(`<img src="x.png" alt="${kept[0]}" />`) +
+        `<node TEXT="Note"><richcontent TYPE="NOTE">${kept[1]}&#10;${kept[3]}</richcontent></node>` +
+        `</node></map>`,
+    )
+    const [sheet] = await importAndReopen(file, 'Kept')
+    expect(sheet!.root.children.map(shown)).toEqual([
+      ...kept.map((title) => ({ title })),
+      { title: kept[0] },
+      { title: 'Note', note: `${kept[1]}\n${kept[3]}` },
+    ])
+  })
 })
 
 describe('rich text layout', () => {

@@ -36,7 +36,7 @@ import {
   AiQueueStrip,
   AI_QUEUE_LABELS,
   AiScopeQuote,
-  AiTypingIndicator,
+  AiReplyProgress,
   AiUsageChip,
   addTokenUsage,
   createFileNav,
@@ -320,6 +320,11 @@ export function AiPanel({
     cards: skillCards,
     busy,
     send: (text, use) => send(text, undefined, undefined, use),
+    // a template skill called in a document with content asks where to run
+    hasContent: () => {
+      const doc = deps.getSnapshot()
+      return doc.body.trim() !== '' || doc.frontmatter.trim() !== ''
+    },
     onTaken: onSkillHandoff,
     setComposer: setPrompt,
   })
@@ -1375,11 +1380,7 @@ export function AiPanel({
               key={i}
               className={`ai-msg ai-msg-assistant${entry.isError && !blocked ? ' ai-msg-error' : ''}${entry.streaming ? ' ai-msg-streaming' : ''}`}
             >
-              {!entry.text && entry.streaming ? (
-                <span className="ai-typing-row">
-                  <AiTypingIndicator label={hasTools ? t('aiWorking') : t('aiThinking')} />
-                </span>
-              ) : blocked ? (
+              {blocked ? (
                 <AiBlockedNotice
                   kind={blocked.kind}
                   provider={blocked.provider}
@@ -1429,6 +1430,7 @@ export function AiPanel({
                   <AiUsageChip usage={entry.usage} lang={lang} />
                 </div>
               )}
+              <AiReplyProgress reply={entry} thinking={t('aiThinking')} working={t('aiWorking')} />
               {showToolbar && (
                 <div className="ai-msg-toolbar">
                   <button

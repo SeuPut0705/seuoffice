@@ -18,6 +18,8 @@ export const cs = {
   cardErrNeedsUpdatePath: 'Soubor, který tato aplikace spouští:',
   cardErrNeedsUpdateWindows:
     'Aktualizace programu {provider} ve WSL (Ubuntu) nebo v jiné složce tento soubor nezmění. Spusťte {command} ve Windows PowerShellu.',
+  claudeDesktopNote:
+    'Desktopová aplikace Claude není Claude Code, který tato aplikace spouští. Claude Code je samostatný program pro terminál, takže instalace ani aktualizace desktopové aplikace ho nezmění.',
   cardErrTimeout: 'Program {provider} neodpověděl včas. Zkontrolujte to za chvíli znovu.',
   cardErrFailed: 'Při kontrole {provider} došlo k potížím. Zkontrolujte to znovu.',
   actionInstall: 'Nainstalovat',
@@ -52,6 +54,8 @@ export const cs = {
   errSignedOut: 'Přihlášení k {provider} vypršelo. Přihlaste se znovu a pokračujte.',
   errRateLimit: 'Limit předplatného {provider} je vyčerpán.',
   errRateLimitReset: 'Limit předplatného {provider} je vyčerpán. Obnoví se v {time}.',
+  errChatGptAppLimit:
+    'Tato aplikace vyčerpala využití ChatGPT, které může čerpat. Může jít o limit celého tarifu, nebo o limit nastavený pro tuto aplikaci. Zkontrolujte Nastavení → Využití v ChatGPT.',
   errUnsafeTools:
     'Program {provider} se spustil se zapnutými vlastními nástroji, proto byl běh z bezpečnostních důvodů zastaven.',
   errMeteredNotAccepted:
@@ -158,6 +162,8 @@ export const cs = {
     'V prohlížeči jste se přihlásili, ale OpenAI toto připojení nepřijalo, nebo se jeho odpověď nepodařilo ověřit. Zkontrolujte, že datum a čas na tomto počítači jsou správně, a stiskněte tlačítko znovu, abyste začali od začátku.',
   chatgptLoginNetworkNote:
     'Přihlášení se nepodařilo dokončit: OpenAI nebylo dostupné, nebo se neotevřel prohlížeč. Zkontrolujte připojení k internetu (včetně firemní sítě, VPN nebo proxy) a stiskněte tlačítko znovu.',
+  chatgptLoginWorkspacePolicyNote:
+    'Tento účet ChatGPT patří do pracovního prostoru spravovaného firmou nebo školou a OpenAI nedovoluje aplikacím používat tarif ChatGPT pracovního prostoru. Správce pracovního prostoru nemá žádné nastavení, kterým by tuto aplikaci povolil, takže nové přihlášení nepomůže. Přihlaste se osobním účtem ChatGPT (Go, Plus nebo Pro) nebo se připojte přes kartu Codex.',
   chatgptLoginNotAllowedNote:
     'Této aplikaci jste nepovolili používat váš tarif ChatGPT, nebo se prohlížeč vrátil z přihlášení s chybou. Stiskněte tlačítko znovu, přihlaste se a na stránce souhlasu to povolte.',
   chatgptSigningInNote:

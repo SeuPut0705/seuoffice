@@ -5102,6 +5102,24 @@ button {
   white-space: nowrap;
 }
 
+/* ── Another program changed the open file (issue #405) ── */
+
+.pdf-disk-change-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--pdf-prop-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.pdf-disk-change-bar > span {
+  flex: 1;
+  min-width: 0;
+}
+
 .pdf-sig-dialog {
   min-width: 520px;
   max-width: 640px;
@@ -5379,6 +5397,22 @@ button {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.pdf-job-provider {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pdf-job-provider > span {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+}
+
+.pdf-job-provider > select {
+  max-width: 220px;
 }
 
 .pdf-ai-read-paid {

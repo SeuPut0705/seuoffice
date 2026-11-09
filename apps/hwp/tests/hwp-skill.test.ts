@@ -145,6 +145,12 @@ function setup(
     replaceFont: vi.fn(async () => ({ ok: true as const, ranges: 3, paragraphs: 2 })),
     formatParagraph: vi.fn(async () => ({ ok: true as const, inTable: false })),
     listTables: vi.fn(async () => ({ count: 0, partial: false, tables: [] })),
+    checkLayout: vi.fn(async () => ({
+      tables: 2,
+      from: { table: 1, row: 1 },
+      cells: [],
+      measured: 12,
+    })),
     readTable: vi.fn(async () => ({
       ok: true as const,
       table: 1,
@@ -1453,6 +1459,59 @@ describe('tables that are already in the document', () => {
     expect(result.summary).toBe('aiToolNotDone:{"what":"aiTableName:{\\"table\\":5}"}')
   })
 
+  it('says every cell fits when check_layout lists none', async () => {
+    const { call, bridge } = setup()
+    const result = await call('check_layout')
+    expect(bridge.checkLayout).toHaveBeenCalledWith(null, null)
+    expect(result.output).toBe("Every table cell's text fits (12 cell(s) of 2 table(s) measured).")
+    expect(result.summary).toBe('aiToolLayout:{"count":0}')
+  })
+
+  it('lists the cells that are cut off and where to go on', async () => {
+    const { call, bridge } = setup({
+      checkLayout: vi.fn(async () => ({
+        tables: 4,
+        from: { table: 2, row: 30 },
+        cells: [{ table: 2, row: 31, col: 2, page: 3, over: 2.5, text: '서울시 종로구' }],
+        measured: 400,
+        next: { table: 3, row: 1 },
+      })),
+    })
+    const result = await call('check_layout', { from_table: 2, from_row: 30 })
+    expect(bridge.checkLayout).toHaveBeenCalledWith(2, 30)
+    expect(result.output.split('\n')).toEqual([
+      '1 cell(s) do not fit from table 2, row 30, stopping before table 3, row 1:',
+      'table 2, row 31, col 2 (page 3): the text runs 2.5 mm past the bottom of the cell and is cut off: 서울시 종로구',
+      '[not finished: table 3 from row 1 on is not measured yet; call check_layout with from_table 3 and from_row 1]',
+    ])
+    expect(result.summary).toBe('aiToolLayout:{"count":1}')
+  })
+
+  it('names the row a call stopped before when it stops inside a table', async () => {
+    const { call } = setup({
+      checkLayout: vi.fn(async () => ({
+        tables: 1,
+        from: { table: 1, row: 1 },
+        cells: [],
+        measured: 120,
+        next: { table: 1, row: 41 },
+      })),
+    })
+    const result = await call('check_layout')
+    expect(result.output.split('\n')).toEqual([
+      "Every table cell's text fits, stopping before table 1, row 41 (120 cell(s) of 1 table(s) measured).",
+      '[not finished: table 1 from row 41 on is not measured yet; call check_layout with from_table 1 and from_row 41]',
+    ])
+  })
+
+  it('refuses a place to start from that is not a whole number from 1', async () => {
+    const { call, bridge } = setup()
+    const result = await call('check_layout', { from_table: 0 })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('from_table and from_row must be whole numbers from 1')
+    expect(bridge.checkLayout).not.toHaveBeenCalled()
+  })
+
   it('fills cells in one call and reports one change', async () => {
     const { call, changes, bridge } = setup()
     const cells = [
@@ -2019,7 +2078,7 @@ describe('footnotes and endnotes', () => {
       {
         kind: 'note',
         from: 'aiNoteFootnote:{"number":2}',
-        to: '「국가인권위원회법」 제1조 둘째 줄',
+        to: '「국가인권위원회법」 제1조 ⏎ 둘째 줄',
         count: 1,
         place: PLACE,
       },
@@ -2246,6 +2305,7 @@ describe('the skill as the model sees it', () => {
       'split_cell',
       'format_cells',
       'list_tables',
+      'check_layout',
       'read_table',
       'fill_cells',
       'check_boxes',
@@ -2593,5 +2653,91 @@ describe('document-wide settings', () => {
     expect(bridge.formatting).toHaveBeenCalledWith('AAAA')
     const missing = await call({ attachment: '없는.hwpx' })
     expect(missing.isError).toBe(true)
+  })
+})
+
+// gemini-3.5-flash-lite was seen sending a line break escaped twice: the text arrived
+// holding a backslash and an "n", and a table cell showed `\n` as two characters
+describe('a line break the model escaped twice', () => {
+  it('becomes paragraphs of the cell, and the panel shows it as ⏎', async () => {
+    const { call, changes, bridge } = setup()
+    await call('fill_cells', {
+      table: 2,
+      cells: [
+        { row: 4, col: 1, text: '사이버 도박·딥페이크 예방' },
+        {
+          row: 4,
+          col: 2,
+          text: String.raw`1. 도박은 하지 않습니다.\n2. 딥페이크는 범죄입니다.\n3. 117에 알립니다.`,
+        },
+      ],
+    })
+    expect(bridge.fillCells).toHaveBeenCalledWith(
+      2,
+      [
+        { row: 4, col: 1, text: '사이버 도박·딥페이크 예방' },
+        {
+          row: 4,
+          col: 2,
+          text: '1. 도박은 하지 않습니다.\n2. 딥페이크는 범죄입니다.\n3. 117에 알립니다.',
+        },
+      ],
+      false,
+    )
+    expect(changes[0]?.to).toBe(
+      '사이버 도박·딥페이크 예방 | 1. 도박은 하지 않습니다. ⏎ 2. 딥페이크는 범죄입니다. ⏎ 3. 117에 알립니다.',
+    )
+  })
+
+  it('leaves a real line break as it is', async () => {
+    const { call, bridge } = setup()
+    const cells = [{ row: 1, col: 1, text: '첫 줄\n둘째 줄' }]
+    await call('fill_cells', { table: 1, cells })
+    expect(bridge.fillCells).toHaveBeenCalledWith(1, cells, false)
+  })
+
+  it('leaves text that also holds a real line break as it is', async () => {
+    const { call, bridge } = setup()
+    const cells = [{ row: 1, col: 1, text: '첫 줄\n' + String.raw`둘째 줄\n셋째 줄` }]
+    await call('fill_cells', { table: 1, cells })
+    expect(bridge.fillCells).toHaveBeenCalledWith(1, cells, false)
+  })
+
+  it('leaves a path with a backslash as it is', async () => {
+    const { call, bridge } = setup()
+    const cells = [
+      { row: 1, col: 1, text: String.raw`자료는 C:\new 폴더에 있습니다` },
+      { row: 1, col: 2, text: String.raw`\\server\new 에 올립니다` },
+    ]
+    await call('fill_cells', { table: 1, cells })
+    expect(bridge.fillCells).toHaveBeenCalledWith(1, cells, false)
+  })
+
+  it('becomes paragraphs of a note', async () => {
+    const { call, bridge } = setup()
+    await call('insert_note', { kind: 'footnote', after: '본문', text: String.raw`첫 줄\n둘째 줄` })
+    expect(bridge.insertNote).toHaveBeenCalledWith('footnote', '본문', null, '첫 줄\n둘째 줄')
+  })
+
+  it('in new text that must stay one line is refused like a real one', async () => {
+    const { call, bridge } = setup()
+    const result = await call('replace_text', { find: '본문', replace: String.raw`첫 줄\n둘째 줄` })
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('a replacement stays inside one paragraph')
+    expect(bridge.replaceText).not.toHaveBeenCalled()
+    const item = await call('insert_paragraphs', {
+      where: 'after',
+      anchor: '본문',
+      paragraphs: [String.raw`한 줄\n두 줄`],
+    })
+    expect(item.output).toContain('Pass every line as its own string in paragraphs')
+    expect(bridge.insertParagraphs).not.toHaveBeenCalled()
+  })
+
+  it('in the text a call looks for is searched as written, so a broken cell can be cleaned up', async () => {
+    const { call, bridge } = setup()
+    const result = await call('replace_all', { find: String.raw`\n`, replace: ' ' })
+    expect(result.isError).toBeFalsy()
+    expect(bridge.replaceAllText).toHaveBeenCalledWith(String.raw`\n`, ' ')
   })
 })

@@ -91,7 +91,7 @@ EPUB 편집기 화면 ── epub:read-chapter·apply-edits·save 등 ──→ 
 4. 뒷단은 저장된 설정을 정리하고(`normalizeAiSettings`), 연결 상태와 함께 제공자를 정한다(`selectAiProvider`). 쓸 제공자가 없으면 모델을 부르지 않고 오류 종류(`not-connected` 등)를 돌려준다.
 5. 제공자가 정해지면 그 제공자의 연결부로 넘긴다.
    - Claude 구독: 차례마다 Claude Code 프로그램을 하나 새로 띄운다. 빈 임시 폴더에서, 내장 도구를 모두 끈 채로. 표준 입력으로 지시문과 대화를 넣고 표준 출력의 조각을 읽는다. 답이 끝나면 프로그램도 끝난다.
-   - Codex 구독: Codex의 `app-server`를 띄워 두고 차례마다 임시 대화를 연다. 쓰지 않은 채 2분이 지나면 스스로 끝낸다.
+   - Codex 구독: Codex의 `app-server`를 띄워 두고 차례마다 임시 대화를 연다. 쓰지 않은 채 2분이 지나면 스스로 끝낸다. 이 앱에서 Codex를 끄면 바로 끝낸다(답하던 중이면 그 답 뒤에).
    - 키 방식 제공자: 그 회사의 주소로 직접 요청한다.
 6. 뒷단은 글 조각, 도구 호출 요청, 사용량, "입력을 줄였다"는 알림, 오류(종류·제공자·풀리는 시각)를 화면으로 흘려보낸다.
 7. 모델이 도구 호출을 요청하면 **화면 쪽의 앱이** 그 도구를 실행한다(문서 읽기·고치기, 검색 등). 결과를 대화에 붙여 3으로 돌아간다. 도구 호출이 없으면 반복이 끝난다.
@@ -161,7 +161,7 @@ EPUB 편집기 화면 ── epub:read-chapter·apply-edits·save 등 ──→ 
 
 - 스킬을 읽고 쓰는 일은 모두 껍데기 앱 뒷단의 게이트웨이(`apps/shell/src/main/user-skills/`)가 한다. 편집기 렌더러는 파일 시스템을 만지지 않고 다리(`aiOfficeUserSkills`, `@genoffice/electron-utils/user-skills-bridge`)로 부른다.
 - 기본 AI 창: 입력칸의 `/`·`$` 목록과 칩은 `@genoffice/ui`(`useComposerSkills`)에 있다. 보낼 때 칩의 본문을 요청 글에 붙인다. AI가 스스로 쓰는 도구(`use_skill`, `read_skill_file`, `propose_skill`)는 `@genoffice/agent-core`의 기능 묶음(`createBridgedUserSkillsSkill`)이고 편집기의 도구 반복에서 돈다. 구독 프로그램은 여전히 앱 밖에 닿는 도구가 없다(도구 0개, 문서 편집 차례는 응답 형식을 맡는 `StructuredOutput` 하나, 결정 0082).
-- 양식: 양식 스킬을 부르면 뒷단(`templateTabs`)이 양식 사본을 그 형식 편집기의 제목 없는 새 탭으로 열고, 넘겨주기(`queueSkillHandoffFor`/`takeSkillHandoff`)로 요청과 칩을 그 탭의 AI 창에 넘긴다. 받는 창은 보내기 전 문지기를 거쳐 실행한다.
+- 양식: 양식 스킬을 부르면 뒷단(`templateTabs`)이 양식 사본을 그 형식 편집기의 제목 없는 새 탭으로 열고, 넘겨주기(`queueSkillHandoffFor`/`takeSkillHandoff`)로 요청과 칩을 그 탭의 AI 창에 넘긴다. 받는 창은 보내기 전 문지기를 거쳐 실행한다. 내용이 있는 문서에서는 먼저 어디에서 할지 묻고, 새 문서를 고르면 저장된 지금 문서의 경로가 넘겨주기의 `attach`로 가서 받는 창의 첨부가 된다(결정 0118).
 - 에이전트 창: 세션을 시작할 때 켜진 스킬이 묶음으로 복사된다(위 "에이전트 모드의 흐름"). 세션 MCP 서버의 `propose_skill`·`propose_skill_install`은 창에 카드와 미리보기를 띄우기만 한다.
 
 ## 사용자 MCP 서버가 지나는 길 (결정 0100)
@@ -289,7 +289,7 @@ PDF 편집기 화면 ── pdfApi.structure.* ──→ 셸 메인(pdf-structur
 
 - 사용자 PC의 **Claude Code**(2.1.248 이상)와 **Codex** 프로그램. 없으면 구독 연결이 "설치되지 않음"이 되고 나머지 기능은 그대로 동작한다.
 - 무료 검색: Parallel의 무료 검색, 실패하면 DuckDuckGo.
-- GitHub 릴리스(`pblsketch/openoffice`): 자동 업데이트와 설치 파일 배포.
+- GitHub 릴리스(`pblsketch/ieumoffice`): 자동 업데이트와 설치 파일 배포.
 - 키 방식 제공자와 키 방식 검색·이미지 서비스, 파일 검색 재정렬 서비스, 마크다운 편집기의 이미지 올리기 대상: 사용자가 설정에 넣은 경우에만.
 - 사용자 MCP 서버(결정 0100): 사람이 등록한 서버에만, AI가 그 도구를 부를 때 닿는다. 내 PC 서버의 실행 환경은 사람이 "받기"를 눌렀을 때만 받는다. Node.js는 `nodejs.org`, uv는 `github.com/astral-sh/uv`의 릴리스, Python은 uv가 자기 목록대로 받는다(python-build-standalone 빌드).
 - 주소로 문서 읽기(`read_url`·`read-url`): 입력한 주소가 그 사이트로 간다. 비공개 GitHub 파일을 읽을 때의 GitHub 읽기 토큰은 `api.github.com`에만 실린다.

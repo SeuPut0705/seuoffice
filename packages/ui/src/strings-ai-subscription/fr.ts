@@ -18,6 +18,8 @@ export const fr = {
   cardErrNeedsUpdatePath: 'Fichier exécuté par cette application :',
   cardErrNeedsUpdateWindows:
     'Mettre à jour {provider} dans WSL (Ubuntu) ou dans un autre dossier ne modifie pas ce fichier. Exécutez {command} dans Windows PowerShell.',
+  claudeDesktopNote:
+    "L'application de bureau Claude n'est pas Claude Code, que cette application exécute. Claude Code est un programme distinct utilisé dans un terminal, donc installer ou mettre à jour l'application de bureau ne le modifie pas.",
   cardErrTimeout:
     "Le programme {provider} n'a pas répondu à temps. Vérifiez à nouveau dans un instant.",
   cardErrFailed:
@@ -57,6 +59,8 @@ export const fr = {
   errRateLimit: 'La limite de l’abonnement {provider} est atteinte.',
   errRateLimitReset:
     'La limite de l’abonnement {provider} est atteinte. Réinitialisation à {time}.',
+  errChatGptAppLimit:
+    'Cette application a épuisé l’utilisation de ChatGPT dont elle dispose. Il peut s’agir de la limite de tout votre forfait ou d’une limite fixée pour cette application. Vérifiez dans ChatGPT, sous Paramètres → Utilisation.',
   errUnsafeTools:
     'Le programme {provider} a démarré avec ses propres outils activés ; l’exécution a été arrêtée par sécurité.',
   errMeteredNotAccepted:
@@ -166,6 +170,8 @@ export const fr = {
     'Vous vous êtes connecté dans le navigateur, mais OpenAI n’a pas accepté cette connexion, ou sa réponse n’a pas pu être vérifiée. Vérifiez que la date et l’heure de ce PC sont justes, puis appuyez de nouveau pour recommencer.',
   chatgptLoginNetworkNote:
     'La connexion n’a pas pu aboutir : OpenAI était injoignable ou aucun navigateur ne s’est ouvert. Vérifiez la connexion Internet (y compris réseau d’entreprise, VPN ou proxy), puis appuyez de nouveau.',
+  chatgptLoginWorkspacePolicyNote:
+    'Ce compte ChatGPT appartient à un espace de travail géré par une entreprise ou un établissement scolaire, et OpenAI n’autorise pas les applications à utiliser le forfait ChatGPT d’un espace de travail. L’administrateur de l’espace de travail n’a aucun réglage pour autoriser cette application ; vous reconnecter ne changera rien. Connectez-vous avec un compte ChatGPT personnel (Go, Plus ou Pro) ou passez par la carte Codex.',
   chatgptLoginNotAllowedNote:
     'Vous n’avez pas autorisé cette application à utiliser votre forfait ChatGPT, ou le navigateur est revenu de la connexion avec un échec. Appuyez de nouveau, connectez-vous et autorisez-la sur la page d’autorisation.',
   chatgptSigningInNote:

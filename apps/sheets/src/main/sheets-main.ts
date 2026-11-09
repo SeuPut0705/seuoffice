@@ -117,10 +117,10 @@ import {
   type AiSettings,
   type AiStreamChunk,
   sealAiSecrets,
-  withStoredSubscriptionOff,
+  withStoredUnknownFields,
 } from '@genoffice/ai-provider'
 import { shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
-import { withStoredKeyModels } from '@genoffice/ai-provider/key-models'
+import { withStoredMainFields } from '@genoffice/ai-provider/key-models'
 import {
   ensureSubscriptionIpc,
   sharedSubscriptionStatuses,
@@ -2752,9 +2752,13 @@ function readJson<T>(path: string, fallback: T): T {
 
 const SETTINGS_PATH = () => userDataPath('ai-settings.json')
 
-/** the only write of the settings file: keys and tokens go to disk sealed (decision 0063) */
+/**
+ * The only write of the settings file: keys and tokens go to disk sealed
+ * (decision 0063), and fields a newer build wrote stay as they are.
+ */
 function writeAiSettingsFile(settings: unknown): void {
-  writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(settings))
+  const stored = readJson<unknown>(SETTINGS_PATH(), {})
+  writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(withStoredUnknownFields(settings, stored)))
 }
 
 // Dev-only automation hooks: a fixed CDP port for driving the app from test
@@ -4542,9 +4546,7 @@ export function registerSheetsAiIpc(): void {
     // the live model lists (decision 0087) and the CLIs turned off (decision 0114) are the
     // main process's: the file's copy is kept
     const stored = aiSettingsFromStored(readJson<unknown>(SETTINGS_PATH(), {}))
-    writeAiSettingsFile(
-      withStoredSubscriptionOff(withStoredKeyModels(settings as AiSettings, stored), stored),
-    )
+    writeAiSettingsFile(withStoredMainFields(settings as AiSettings, stored))
     broadcastAiSettingsChanged()
   })
 

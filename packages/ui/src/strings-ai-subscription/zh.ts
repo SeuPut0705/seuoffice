@@ -15,6 +15,8 @@ export const zh = {
   cardErrNeedsUpdatePath: '此应用运行的文件：',
   cardErrNeedsUpdateWindows:
     '在 WSL（Ubuntu）或其他文件夹中更新 {provider} 不会更改此文件。请在 Windows PowerShell 中运行 {command}。',
+  claudeDesktopNote:
+    'Claude 桌面应用不是本应用运行的 Claude Code。Claude Code 是在终端中使用的独立程序，安装或更新桌面应用不会改变它。',
   cardErrTimeout: '{provider} 程序未及时响应。请稍后重新检查。',
   cardErrFailed: '检查 {provider} 时出现问题。请重新检查。',
   actionInstall: '安装',
@@ -46,6 +48,8 @@ export const zh = {
   errSignedOut: '{provider} 的登录已失效。请重新登录后继续。',
   errRateLimit: '{provider} 的订阅额度已用完。',
   errRateLimitReset: '{provider} 的订阅额度已用完，将于 {time} 重置。',
+  errChatGptAppLimit:
+    '本应用可用的 ChatGPT 用量已用完。这可能是整个套餐的额度，也可能是为本应用设定的额度。请在 ChatGPT 的“设置 → 用量”中查看。',
   errUnsafeTools: '{provider} 程序启动时带有自身的工具，为安全起见已停止本次运行。',
   errMeteredNotAccepted:
     '{provider} 连接是按量付费的登录，你尚未允许使用。请在连接设置中选择“仍然使用”。',
@@ -138,6 +142,8 @@ export const zh = {
     '已在浏览器中登录，但 OpenAI 没有接受此连接，或返回的应答未通过检查。请确认这台电脑的日期和时间正确，然后再按一次重新开始。',
   chatgptLoginNetworkNote:
     '无法连接 OpenAI 或未能打开浏览器，登录没有完成。请检查网络连接（包括公司网络、VPN 或代理），然后再按一次。',
+  chatgptLoginWorkspacePolicyNote:
+    '此 ChatGPT 账户属于公司或学校管理的工作区，OpenAI 不允许应用使用工作区的 ChatGPT 套餐。工作区管理员没有可以允许此应用的设置，因此重新登录也不会有帮助。请使用个人 ChatGPT 账户（Go、Plus 或 Pro）登录，或改用 Codex 卡片连接。',
   chatgptLoginNotAllowedNote:
     '你没有允许本应用使用 ChatGPT 套餐，或者浏览器带着登录失败返回了。请再按一次，登录后在授权页面允许。',
   chatgptSigningInNote:
