@@ -16,6 +16,7 @@ const DOCX = `${repo}fixtures/generated/simple.docx`
 const XLSX = fileURLToPath(
   new URL('../../sheets/fixtures/generated/compatibility-edit.xlsx', import.meta.url),
 )
+const PPTX = `${repo}packages/pptx-engine/tests/fixtures/01_standard_business.pptx`
 
 const sse = (value: unknown): string => `data: ${JSON.stringify(value)}\n\n`
 const DONE = 'data: [DONE]\n\n'
@@ -295,4 +296,17 @@ test('sheets: the AI edit is held as a proposal until it is accepted', async ({ 
   const { saves } = await hostState(page)
   expect(saves).toHaveLength(1)
   expect(savedHasAiText(saves[0]!)).toBe(true)
+})
+
+// slides cannot hold a web AI run for review yet (no deck history on the web), so even a host
+// that offers AI leaves its panel unconnected rather than failing every request
+test('slides: AI stays unconnected on the web even when the host offers it', async ({ page }) => {
+  const frame = await openHost(page, PPTX, { mode: 'edit', replies: [textReply('안녕하세요')] })
+  await expect(frame.locator('.thumb')).toHaveCount(5, { timeout: 30_000 })
+  const input = frame.locator('.ai-input-box textarea')
+  if (!(await input.isVisible())) await frame.locator('.stage-ai-btn').click()
+  await input.fill('제목을 바꿔 줘')
+  await input.press('Enter')
+  await expect(frame.getByText('AI를 쓰려면 먼저 연결하세요')).toBeVisible()
+  expect((await hostState(page)).asked).toBe(0)
 })

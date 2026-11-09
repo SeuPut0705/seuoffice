@@ -1,3 +1,5 @@
+// not in the package's browser entry; providers.ts itself is browser-safe
+import { defaultAiSettings } from '../../../../packages/ai-provider/src/providers'
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
   createAiStreamBridge,
@@ -8,7 +10,6 @@ import {
   reportOpened,
   unsupported,
   waitForDocument,
-  webAiSettings,
   webLanguage,
 } from '@seuoffice/web-platform'
 import { setUiLang } from '@genoffice/i18n'
@@ -196,7 +197,9 @@ function reportFirst(result: OpenResult | null): OpenResult | null {
 
 let pendingTaken = false
 
-// AI turns go to the embed host, which calls its gateway (decision 0017)
+// AI turns would go to the embed host (decision 0017), but a web AI run cannot be held for
+// review yet: `beginHistoryBatch` and `aiRunBegin` are refused below. Until they work the
+// settings report nothing connected, so the panel asks to connect instead of failing each run.
 const ai = createAiStreamBridge()
 
 const slidesApi: Partial<SlidesApi> = {
@@ -228,7 +231,7 @@ const slidesApi: Partial<SlidesApi> = {
   getAutoSaveDefault: async () => NO_AUTO_SAVE_DEFAULT,
   getAiPanelPrefs: async () => DEFAULT_AI_PANEL_PREFS,
   setAiPanelPrefs: async () => DEFAULT_AI_PANEL_PREFS,
-  getAiSettings: webAiSettings,
+  getAiSettings: async () => defaultAiSettings(),
   getRecentFiles: async () => [],
   getChartColorSchemes: async () => null,
   getChartData: async () => null,
