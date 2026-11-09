@@ -1,4 +1,4 @@
-# seuoffice
+# SeuOffice
 
 웹과 PC에서 문서(PDF, 워드, 엑셀, 파워포인트, 한글)를 보고 고치고 AI로 편집하는 오피스. 이음오피스를 바탕으로 웹에서도 돌게 개조하고 있다. 지금 단계와 계획은 `docs/seuoffice/로드맵.md`에 있다.
 
@@ -65,16 +65,16 @@ const doc = openDocument(viewer, {
 
 운영에서 지킬 것:
 
-- seuoffice 쪽 페이지는 CSP에 `script-src 'self' 'wasm-unsafe-eval'`, `worker-src 'self' blob:`이 있어야 한다(pdf.js, rhwp, 엑셀 엔진이 WASM과 워커를 쓴다).
-- 붙이는 쪽 페이지는 `frame-src`에 seuoffice 출처를 넣는다.
-- 다른 출처에서 문서를 보내려면 seuoffice를 빌드할 때 `VITE_SEUOFFICE_EMBED_ORIGINS`(쉼표로 구분한 출처 목록)를 준다. 목록에 없는 출처가 보낸 문서는 받지 않는다.
+- SeuOffice 쪽 페이지는 CSP에 `script-src 'self' 'wasm-unsafe-eval'`, `worker-src 'self' blob:`이 있어야 한다(pdf.js, rhwp, 엑셀 엔진이 WASM과 워커를 쓴다).
+- 붙이는 쪽 페이지는 `frame-src`에 SeuOffice 출처를 넣는다.
+- 다른 출처에서 문서를 보내려면 SeuOffice를 빌드할 때 `VITE_SEUOFFICE_EMBED_ORIGINS`(쉼표로 구분한 출처 목록)를 준다. 목록에 없는 출처가 보낸 문서는 받지 않는다.
 - 파일 크기 상한은 50MiB(`MAX_EMBED_BYTES`)다.
 
 ## 소유와 경계
 
-- seuoffice는 스풋(GitHub SeuPut0705)의 개인 자산이다. 스풋 개인 시간과 비용으로 만들며, 유유헬스케어와의 계약 산출물이 아니다. 유유헬스케어는 seuoffice를 가져다 쓰는 사용자다.
+- SeuOffice는 스풋(GitHub SeuPut0705)의 개인 자산이다. 스풋 개인 시간과 비용으로 만들며, 유유헬스케어와의 계약 산출물이 아니다. 유유헬스케어는 SeuOffice를 가져다 쓰는 사용자다.
 - 유유헬스케어 저장소(`yuyuhealthcare/yuyu-mos`)의 코드·설정·데이터는 이 저장소에 가져오지 않는다. 유유 실데이터와 고객 원본 문서도 넣지 않는다. 시험은 모의 문서와 권리가 확인된 문서로 한다.
-- 유유 메신저·업무 앱에 seuoffice를 연결하는 코드(첨부를 보기 창에 넘기는 일, 권한 확인)는 yuyu-mos 쪽에 있다. seuoffice는 "바이트 + 파일 이름 → 화면" 부품(`@seuoffice/embed`)과 정적 웹 묶음을 내놓는다.
+- 유유 메신저·업무 앱에 SeuOffice를 연결하는 코드(첨부를 보기 창에 넘기는 일, 권한 확인)는 yuyu-mos 쪽에 있다. SeuOffice는 "바이트 + 파일 이름 → 화면" 부품(`@seuoffice/embed`)과 정적 웹 묶음을 내놓는다.
 - 저장소 전체를 Apache-2.0으로 공개한다(`docs/seuoffice/decisions/0007-전부-공개.md`). 유유헬스케어는 판 번호가 붙은 `@seuoffice/*` 묶음과 유유용 안정 판 PC 프로그램을 받아 쓰며, 따로 사용 허락 문서는 없다.
 
 ## 개발

@@ -59,7 +59,7 @@
 - 로그인된 계정(이메일)은 설정 → AI의 카드에만 그린다. 계정 구역의 요약 줄에도, 다른 화면에도 넣지 않는다. 저장하거나 기록에 남기지 않는다.
 - **의견 보내기는 세 줄만 보여 주고 복사한 뒤 설문을 연다.** 화면에 보이는 것도, 클립보드에 들어가는 것도 제품 버전·운영체제·화면 언어뿐이다. 문서 내용·경로·파일 이름·열린 탭·계정·크래시 기록은 넣지 않는다. 앱이 스스로 보내는 것은 없고, 여는 곳은 `src/main/feedback.ts`의 `FEEDBACK_SURVEY_URL` 하나뿐이다. 그 값은 저장소 주인이 게시한 설문 주소이며, 설문 항목을 고쳐도 주소는 그대로다. `tests/feedback.test.ts`가 지킨다.
 - preload는 로그인·설치 실패의 원문 오류를 렌더러에 넘기지 않는다(`subscriptionLaunchResultOf`). 실행 파일 경로가 들어 있을 수 있어서다. 화면은 번역된 일반 문장을 쓴다.
-- PC에 등록되는 이름은 이 제품의 것이고 원본 GenOffice와 겹치지 않는다. 앱 id `io.github.pblsketch.ieumoffice`, 제품 이름 `IeumOffice`, 패키징된 앱 이름 `ieumoffice`(업데이트 캐시 폴더 이름이 여기서 나온다), userData는 설치본 `<appData>/IeumOffice`, 패키징되지 않은 실행 `<appData>/IeumOffice-Dev`다. 원본 앱의 프로필 폴더를 물려받거나 읽지 않는다. `electron-builder.cjs`의 상수, `package.json`의 `productName`, `packages/i18n`의 상수는 서로 같아야 한다.
+- PC에 등록되는 이름은 이 제품의 것이고 원본 GenOffice와 겹치지 않는다. 앱 id `com.seuput.seuoffice`, 제품 이름 `SeuOffice`, 패키징된 앱 이름 `seuoffice`(업데이트 캐시 폴더 이름과 Linux 실행 파일 이름이 여기서 나온다), userData는 설치본 `<appData>/SeuOffice`, 패키징되지 않은 실행 `<appData>/SeuOffice-Dev`다. Windows ProgId·레지스트리 키는 패키징된 앱 이름(소문자)을 쓴다. 원본 앱의 프로필 폴더를 물려받거나 읽지 않는다. `electron-builder.cjs`의 상수, `package.json`의 `productName`, `packages/i18n`의 상수는 서로 같아야 한다.
 - 원본이 PC에 등록한 것(`genoffice` 명령, `~/.genoffice`, 원본의 MCP 항목과 스킬 폴더)은 건드리지 않는다. 실행기 위치 기록은 `~/.ieumoffice/launcher`에만 쓴다.
 - 패키징되지 않은 실행은 설치본과 userData·단일 인스턴스 잠금을 공유하지 않는다. 공유하면 개발 실행이 조용히 종료되면서 인자를 설치된 앱으로 넘겨 버린다. 테스트 드라이버는 `GENOFFICE_USER_DATA`로 임시 폴더를 지정한다.
 - headless 진입은 모듈 최상위에서 처리한다. `parseHeadlessExportArgv`와 `setHeadlessMode(true)`가 에디터 모듈이 무엇이든 등록하기 전에 실행되어야 한다. 구독 상태 확인은 첫 `statuses` 요청 때 시작하므로 headless 실행은 벤더 프로그램을 띄우지 않는다. 이 순서를 깨는 "시작 시 미리 확인"을 넣지 않는다.
