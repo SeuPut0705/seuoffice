@@ -26,6 +26,12 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # seuoffice: the workspaces' tests run as four shares on four runners at once
+    # (tools/seuoffice-test-shard.mjs); lint and typecheck run on the first only
+    strategy:
+      fail-fast: false
+      matrix:
+        share: [1, 2, 3, 4]
     # seuoffice: 60, not 45; a cold cargo cache (saved only after a green run) pushes the suite past 45
     timeout-minutes: 60
     steps:
@@ -129,9 +135,11 @@ jobs:
         run: npm run check:no-genspark
 
       - name: Lint
+        if: matrix.share == 1
         run: npm run lint
 
       - name: Typecheck
+        if: matrix.share == 1
         run: npm run typecheck
 
       - name: Regenerate test fixtures
@@ -162,7 +170,7 @@ jobs:
           npm run fixtures -w @genoffice/sheets
 
       - name: Test
-        run: npm test
+        run: node tools/seuoffice-test-shard.mjs ${{ matrix.share }} 4
 
       # Preservation gate: a no-op-adjacent edit through the OOXML gateway must
       # leave every untouched package entry byte-identical (fails closed otherwise).
@@ -175,6 +183,11 @@ jobs:
     # 22.04, not -latest: 24.04's AppArmor hardening blocks Electron renderer
     # spawn under xvfb even with --no-sandbox and the userns sysctl lifted
     runs-on: ubuntu-22.04
+    # seuoffice: the Electron suite runs as six Playwright shards on six runners at once
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
     # A cold font install took 24m in #124; leave room for the full serial
     # Electron suite as well as setup. Individual test timeouts stay unchanged.
     timeout-minutes: 60
@@ -249,6 +262,7 @@ jobs:
         run: npx playwright install chromium
 
       - name: Markdown browser tests
+        if: matrix.shard == 1
         run: npx playwright test --config apps/markdown/playwright.config.ts
 
       # Electron needs a display server on Linux runners. DEBUG=pw:browser
@@ -257,13 +271,13 @@ jobs:
       - name: E2E (Electron shell)
         env:
           DEBUG: 'pw:browser'
-        run: xvfb-run --auto-servernum -- npm run test:e2e
+        run: xvfb-run --auto-servernum -- npm run test:e2e -- --shard=${{ matrix.shard }}/6
 
       - name: Upload E2E artifacts on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: e2e-artifacts
+          name: e2e-artifacts-${{ matrix.shard }}
           path: |
             e2e/artifacts
             e2e/test-results
