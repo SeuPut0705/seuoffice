@@ -541,7 +541,7 @@ jobs:
               echo "- Mac: 서명 없음(ad hoc). dmg에서 응용 프로그램 폴더로 옮긴 뒤 처음 열 때 막히면, 시스템 설정 → 개인정보 보호 및 보안 → '그래도 열기'를 누른다."
             fi
             echo
-            echo "자동 업데이트는 두 플랫폼 모두 이 릴리스의 피드 파일로 돈다."
+            echo "자동 업데이트는 두 플랫폼 모두 이 릴리스의 피드 파일로 돈다. 판 번호 없는 SeuOffice-mac-arm64.dmg와 SeuOffice-windows-x64.exe는 안정 채널 설치 파일의 사본이고, 이 릴리스가 안정 채널로 올라가면 README의 다운로드 버튼이 이 둘을 받는다."
           } > notes.md
           cat notes.md
 
@@ -575,6 +575,12 @@ jobs:
           for file in "${files[@]}"; do
             test -f "$file" || { echo "::error::missing: $file"; exit 1; }
           done
+          # Version-less copies of the stable-channel installers: the README download
+          # buttons point at releases/latest/download/<name>, which follows the release
+          # promoted to the stable channel.
+          cp "dist/SeuOffice-Setup-$version-stable.exe" dist/SeuOffice-windows-x64.exe
+          cp "dist/SeuOffice-$version-arm64-stable.dmg" dist/SeuOffice-mac-arm64.dmg
+          files+=(dist/SeuOffice-windows-x64.exe dist/SeuOffice-mac-arm64.dmg)
           # an existing release keeps its pre-release and latest state
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "${files[@]}" --clobber
