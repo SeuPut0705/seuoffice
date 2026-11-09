@@ -125,6 +125,7 @@ const doc = openDocument(viewer, {
 - 붙이는 쪽 페이지는 `frame-src`에 SeuOffice 출처를 넣는다.
 - 다른 출처에서 문서를 보내려면 SeuOffice를 빌드할 때 `VITE_SEUOFFICE_EMBED_ORIGINS`(쉼표로 구분한 출처 목록)를 준다. 목록에 없는 출처가 보낸 문서는 받지 않는다.
 - 파일 크기 상한은 50MiB(`MAX_EMBED_BYTES`)다.
+- 정적 파일은 압축해서 보낸다(brotli나 gzip). `application/wasm`과 글꼴(`font/ttf`, `font/otf`)은 서버 기본 압축 목록에 없는 경우가 많으니 직접 넣는다. 압축하지 않으면 한글 문서를 처음 열 때 30.8MB를 받고, brotli면 9.6MB다(`apps/web/README.md`에 형식별 값).
 
 ## 소유와 경계
 
