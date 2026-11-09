@@ -30,7 +30,7 @@ function makeRoot() {
   const script = (name: string) => {
     const file = join(root, name)
     const body = readFileSync(join(BUILD, name), 'utf-8')
-      .replaceAll('/opt/seuoffice', opt)
+      .replaceAll('/opt/SeuOffice', opt)
       .replaceAll('/usr/bin/', `${bin}/`)
     writeFileSync(file, body)
     return (arg = '') => {

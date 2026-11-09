@@ -21,7 +21,7 @@ link="/usr/bin/ieumoffice"
 # same ownership rule as the post-install: only a link into our install dir is ours
 if [ -L "$link" ]; then
   case "$(readlink "$link")" in
-    /opt/seuoffice/*) rm -f "$link" ;;
+    /opt/SeuOffice/*) rm -f "$link" ;;
   esac
 fi
 # Drop the KDE "Create New" templates the post-install step installed. Only

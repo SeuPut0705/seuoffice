@@ -126,7 +126,7 @@ describe.skipIf(process.platform === 'win32')('Linux post-install scripts in a s
       writeFileSync(
         file,
         readFileSync(join(BUILD_DIR, name), 'utf-8')
-          .replaceAll('/opt/seuoffice', app)
+          .replaceAll('/opt/SeuOffice', app)
           .replaceAll('/usr/share/templates', templates)
           .replaceAll('/usr/bin/', `${bin}/`),
       )

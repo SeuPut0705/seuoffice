@@ -186,7 +186,7 @@ export function installedAppBinaries(
       ].filter(Boolean)
     default:
       // /usr/bin/genoffice is the upstream app's name: never a place to look for ours
-      return [...(shipped ? [shipped] : []), `/opt/${LINUX_APP_BINARY}/${LINUX_APP_BINARY}`]
+      return [...(shipped ? [shipped] : []), `/opt/${APP_BINARY_NAME}/${LINUX_APP_BINARY}`]
   }
 }
 

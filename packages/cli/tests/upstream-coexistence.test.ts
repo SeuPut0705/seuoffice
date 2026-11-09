@@ -519,7 +519,7 @@ describe('finding the app', () => {
       '/Applications/SeuOffice.app/Contents/MacOS/SeuOffice',
       posix(join(homedir(), 'Applications/SeuOffice.app/Contents/MacOS/SeuOffice')),
     ])
-    expect(installedAppBinaries({}, 'linux', null).map(posix)).toEqual(['/opt/seuoffice/seuoffice'])
+    expect(installedAppBinaries({}, 'linux', null).map(posix)).toEqual(['/opt/SeuOffice/seuoffice'])
     for (const platform of ['win32', 'darwin', 'linux'] as const) {
       const found = installedAppBinaries(env, platform, null).map(posix)
       expect(found.length).toBeGreaterThan(0)
