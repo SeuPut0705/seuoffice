@@ -18,3 +18,6 @@ scope.process ??= {
     queueMicrotask(() => callback(...args)),
 }
 scope.global ??= globalThis
+// the slides session code defers its history notices with setImmediate: a macrotask, as in Node
+scope.setImmediate ??= (callback: (...args: unknown[]) => void, ...args: unknown[]) =>
+  setTimeout(callback, 0, ...args)
