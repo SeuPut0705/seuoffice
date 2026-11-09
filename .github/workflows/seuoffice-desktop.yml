@@ -45,8 +45,10 @@ on:
     paths-ignore: ['**/*.md', 'docs/**']
   workflow_dispatch:
 
+# Every publishing run (main pushes and v* tags) shares one queue, so two runs
+# never pick or write the same version at once; a hand-started run keeps its ref's.
 concurrency:
-  group: seuoffice-desktop-${{ github.ref }}
+  group: ${{ github.event_name == 'push' && 'seuoffice-desktop-publish' || format('seuoffice-desktop-{0}', github.ref) }}
   cancel-in-progress: false
 
 permissions:
@@ -638,6 +640,26 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::not a version tag: $TAG"; exit 1; }
+          # The commit a tag names, peeled through an annotated tag; empty when there is none.
+          # A failed API call fails the caller's assignment, so set -e stops the step
+          # instead of the failure reading as "no tag" (a $(...) does not inherit -e).
+          tag_commit() {
+            local ref type sha
+            ref=$(gh api "repos/$GH_REPO/git/matching-refs/tags/$1" \
+              --jq ".[] | select(.ref == \"refs/tags/$1\") | .object.type + \" \" + .object.sha") || return 1
+            [ -n "$ref" ] || return 0
+            read -r type sha <<< "$ref"
+            if [ "$type" = "tag" ]; then sha=$(gh api "repos/$GH_REPO/git/tags/$sha" --jq .object.sha) || return 1; fi
+            echo "$sha"
+          }
+          # The version belongs to this commit or to nobody yet: a tag pushed by hand, or
+          # a later commit that already published this number (a re-run of an old job),
+          # is never written over.
+          owner=$(tag_commit "$TAG")
+          if [ -n "$owner" ] && [ "$owner" != "$GITHUB_SHA" ]; then
+            echo "::error::$TAG already names $owner, not this commit $GITHUB_SHA"
+            exit 1
+          fi
           gh run download "$GITHUB_RUN_ID" --name seuoffice-windows-x64 --dir dist
           gh run download "$GITHUB_RUN_ID" --name seuoffice-mac-arm64 --dir dist
           version=${TAG#v}
@@ -678,6 +700,13 @@ jobs:
             gh release create "$TAG" "${where[@]}" --prerelease --title "$TAG" \
               --notes-file notes.md \
               "${files[@]}"
+            # a tag pushed between the check above and the create wins the name: take ours back out
+            owner=$(tag_commit "$TAG")
+            if [ "$owner" != "$GITHUB_SHA" ]; then
+              gh release delete "$TAG" --yes
+              echo "::error::$TAG was tagged on $owner while this run published; release removed"
+              exit 1
+            fi
           fi
           gh release view "$TAG" --json assets --jq '.assets[].name'
 
