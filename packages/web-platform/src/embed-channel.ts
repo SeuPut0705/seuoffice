@@ -5,6 +5,11 @@
  * `save` with the document's bytes and waits for `saved` or `save_failed`;
  * it reports `dirty` changes, and answers the host's `request_save` with
  * `request_save_done` after running its own save.
+ *
+ * When `open` says the host offers AI, `requestAiFromHost` sends one
+ * gateway-complete request body as `ai_request`; the host answers with raw
+ * SSE bytes in `ai_chunk`, then `ai_end`, or `ai_error`, and the page sends
+ * `ai_cancel` when it stops reading.
  */
 
 export const EMBED_SOURCE = 'seuoffice'
@@ -15,6 +20,8 @@ export type EmbedOpenErrorCode = 'unsupported_format' | 'too_large' | 'open_fail
 export interface EmbedOpen {
   fileName: string
   bytes: ArrayBuffer
+  /** the host relays AI requests to its gateway (`ai_request`) */
+  ai: boolean
 }
 
 interface Peer {
@@ -29,6 +36,21 @@ let lastDirty: boolean | undefined
 let nextSaveId = 1
 const pendingSaves = new Map<number, { resolve: () => void; reject: (error: Error) => void }>()
 let saveRequestHandler: (() => Promise<void>) | undefined
+
+/**
+ * One AI request to the host: `waiting` until the first answer settles the
+ * fetch-shaped promise, then `streaming` into the response body.
+ */
+type AiRequestState =
+  | {
+      phase: 'waiting'
+      resolve: (response: Response) => void
+      reject: (error: Error) => void
+      body: ReadableStreamDefaultController<Uint8Array>
+      response: Response
+    }
+  | { phase: 'streaming'; body: ReadableStreamDefaultController<Uint8Array> }
+const aiRequests = new Map<string, AiRequestState>()
 
 /** Origins allowed to send `open`: this page's own and the build-time list */
 export function allowedOrigins(): Set<string> {
@@ -60,7 +82,7 @@ function listen(): Promise<EmbedOpen | null> {
     window.removeEventListener('message', onOpen)
     peer = { target: event.source as Window, origin: event.origin }
     window.addEventListener('message', onHostMessage)
-    resolve({ fileName: data.fileName, bytes: data.bytes })
+    resolve({ fileName: data.fileName, bytes: data.bytes, ai: data.ai === true })
   }
   window.addEventListener('message', onOpen)
   // ready carries no data, so any parent may hear it
@@ -82,6 +104,11 @@ function onHostMessage(event: MessageEvent): void {
     else pending.reject(new Error(String(data.message ?? 'the host did not save the document')))
   } else if (data.type === 'request_save' && typeof data.requestId === 'number') {
     void answerSaveRequest(data.requestId)
+  } else if (
+    (data.type === 'ai_chunk' || data.type === 'ai_end' || data.type === 'ai_error') &&
+    typeof data.requestId === 'string'
+  ) {
+    onAiAnswer(data.requestId, data)
   }
 }
 
@@ -94,6 +121,86 @@ async function answerSaveRequest(requestId: number): Promise<void> {
     const message = error instanceof Error ? error.message : String(error)
     reply({ type: 'request_save_done', requestId, ok: false, message })
   }
+}
+
+/** The host's answer to one AI request, in arrival order */
+function onAiAnswer(requestId: string, data: Record<string, unknown>): void {
+  const state = aiRequests.get(requestId)
+  if (!state) return
+  if (data.type === 'ai_error') {
+    aiRequests.delete(requestId)
+    const message = String(data.message ?? 'the host could not reach the AI gateway')
+    if (state.phase === 'streaming') {
+      state.body.error(new Error(message))
+    } else if (typeof data.status === 'number' && data.status >= 200 && data.status <= 599) {
+      // the gateway's refusal reaches the protocol as that HTTP answer, as on the desktop
+      state.body.close()
+      state.resolve(new Response(message, { status: data.status }))
+    } else {
+      // the host's request failed before an answer: what a failed fetch looks like
+      state.body.close()
+      state.reject(new TypeError(message))
+    }
+    return
+  }
+  if (state.phase === 'waiting') {
+    aiRequests.set(requestId, { phase: 'streaming', body: state.body })
+    state.resolve(state.response)
+  }
+  if (data.type === 'ai_chunk' && ArrayBuffer.isView(data.data)) {
+    // isView, not instanceof: the bytes may come from another realm's Uint8Array
+    const { buffer, byteOffset, byteLength } = data.data
+    state.body.enqueue(new Uint8Array(buffer, byteOffset, byteLength))
+  } else if (data.type === 'ai_end') {
+    aiRequests.delete(requestId)
+    state.body.close()
+  }
+}
+
+function abortError(): Error {
+  return new DOMException('The AI request was cancelled', 'AbortError')
+}
+
+/**
+ * Send one gateway-complete request body to the host and read its answer as
+ * a fetch Response: the SSE bytes stream into the body as they arrive. A
+ * non-2xx gateway answer resolves with that status and the gateway's text; a
+ * host that could not call the gateway rejects like a failed fetch. Aborting
+ * `signal` or cancelling the body tells the host to stop (`ai_cancel`).
+ */
+export function requestAiFromHost(body: unknown, signal?: AbortSignal | null): Promise<Response> {
+  if (!peer) return Promise.reject(new TypeError('no host to ask: the page is not embedded'))
+  if (signal?.aborted) return Promise.reject(abortError())
+  const requestId = crypto.randomUUID()
+  const cancel = (): void => {
+    if (!aiRequests.delete(requestId)) return
+    reply({ type: 'ai_cancel', requestId })
+  }
+  let controller!: ReadableStreamDefaultController<Uint8Array>
+  const stream = new ReadableStream<Uint8Array>({
+    start: (c) => void (controller = c),
+    cancel,
+  })
+  const response = new Response(stream, {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  })
+  const settled = new Promise<Response>((resolve, reject) =>
+    aiRequests.set(requestId, { phase: 'waiting', resolve, reject, body: controller, response }),
+  )
+  signal?.addEventListener(
+    'abort',
+    () => {
+      const state = aiRequests.get(requestId)
+      if (!state) return
+      cancel()
+      if (state.phase === 'waiting') state.reject(abortError())
+      state.body.error(abortError())
+    },
+    { once: true },
+  )
+  reply({ type: 'ai_request', requestId, body })
+  return settled
 }
 
 function reply(message: Record<string, unknown>, transfer: Transferable[] = []): void {

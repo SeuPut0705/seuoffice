@@ -17,6 +17,8 @@ const NODE_SHIMS: Record<string, string> = {
   net: 'net',
   'stream/promises': 'stream-promises',
   url: 'url',
+  string_decoder: 'string-decoder',
+  http: 'http',
 }
 
 const escape = (text: string): string => text.replace(/[/]/g, '\\/')

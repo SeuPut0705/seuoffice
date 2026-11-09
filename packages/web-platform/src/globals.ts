@@ -12,6 +12,8 @@ scope.process ??= {
   platform: 'browser',
   versions: {},
   cwd: () => '/web',
+  // the AI provider's subscription code reads its start time when it loads
+  uptime: () => performance.now() / 1000,
   nextTick: (callback: (...args: unknown[]) => void, ...args: unknown[]) =>
     queueMicrotask(() => callback(...args)),
 }

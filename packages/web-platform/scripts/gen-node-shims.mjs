@@ -29,6 +29,9 @@ const MODULES = {
   net: 'net',
   'stream/promises': 'stream-promises',
   url: 'url',
+  // the AI provider's subscription CLIs and login server, which the web never runs
+  string_decoder: 'string-decoder',
+  http: 'http',
 }
 
 /** exports implemented in src/shims/impl/<stem>.ts */
