@@ -56,13 +56,14 @@ const UPSTREAM = {
 
 describe('one product name', () => {
   it('is what the installer, the Electron app name and the UI agree on', () => {
-    // Electron names the app (and its userData folder) after package.json
-    // "productName"; electron-builder names the installer and the executable
-    // after its own. Both have to be the name the UI shows.
+    // Electron names the app after package.json "productName"; electron-builder
+    // names the installer and the executable after its own. Both have to be the
+    // name the UI shows. The userData folder is the one exception: it keeps the
+    // v0.12.11 machine name, which differs from the display name only in case.
     expect(config.productName).toBe(PRODUCT_NAME)
     expect(shellPackage.productName).toBe(PRODUCT_NAME)
     expect(productName('en')).toBe(PRODUCT_NAME)
-    expect(USER_DATA_DIR_NAME).toBe(shellPackage.productName)
+    expect(USER_DATA_DIR_NAME).toBe(PRODUCT_NAME.toLowerCase())
   })
 
   it('names the installer process with the product name', () => {
@@ -175,12 +176,19 @@ describe('coexistence with the upstream app on one machine', () => {
   })
 
   it('keeps its settings and data in its own folders', () => {
-    // packaged: Electron's default userData is <appData>/<productName>;
+    // packaged: index.ts pins userData to <appData>/USER_DATA_DIR_NAME (the v0.12.11 profile);
     // unpacked runs set DEV_USER_DATA_DIR_NAME explicitly (src/main/index.ts).
     // The single-instance lock lives in userData, so it is separate as well.
-    expect(USER_DATA_DIR_NAME).toBe('SeuOffice')
-    expect(DEV_USER_DATA_DIR_NAME).toBe('SeuOffice-Dev')
+    expect(USER_DATA_DIR_NAME).toBe('seuoffice')
+    expect(DEV_USER_DATA_DIR_NAME).toBe('seuoffice-Dev')
     const main = readFileSync(join(SHELL, 'src/main/index.ts'), 'utf8')
+    // the keychain item ("<app name> Safe Storage") and the userData path keep the v0.12.11 spelling
+    expect(main).toContain('app.setName(USER_DATA_DIR_NAME)')
+    // role menus print app.name, so it returns to the display name once ready
+    expect(main).toContain('app.whenReady().then(() => app.setName(PRODUCT_NAME))')
+    expect(main).toContain(
+      "app.setPath('userData', join(app.getPath('appData'), USER_DATA_DIR_NAME))",
+    )
     expect(main).toContain(
       "app.setPath('userData', join(app.getPath('appData'), DEV_USER_DATA_DIR_NAME))",
     )

@@ -68,7 +68,13 @@ import menuDiagramIcon2x from './assets/menu-diagram@2x.png?asset'
 import menuHomeIcon1x from './assets/menu-home.png?asset'
 import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
 import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoffice/i18n'
-import { DEV_USER_DATA_DIR_NAME, PRODUCT_CONTACT_EMAIL, productName } from '@genoffice/i18n'
+import {
+  DEV_USER_DATA_DIR_NAME,
+  PRODUCT_CONTACT_EMAIL,
+  PRODUCT_NAME,
+  USER_DATA_DIR_NAME,
+  productName,
+} from '@genoffice/i18n'
 import {
   DEFAULT_SAVE_DIR_KEY,
   defaultSaveDirFallback,
@@ -673,10 +679,20 @@ if (!app.isPackaged) {
   } else {
     // One token, no space: a space breaks unquoted shell expansions, rsync
     // targets and .desktop Exec= lines (genoffice#1817). The name follows the
-    // packaged profile's (Electron's default <appData>/<productName>), and both
-    // are this product's own: a profile of the upstream app is never adopted.
+    // packaged profile's, and both are this product's own: a profile of the
+    // upstream app is never adopted.
     app.setPath('userData', join(app.getPath('appData'), DEV_USER_DATA_DIR_NAME))
   }
+} else {
+  // The installed app keeps v0.12.11's machine name while Electron reads it:
+  // productName ("SeuOffice") would otherwise rename the userData folder and
+  // the macOS keychain item "<app name> Safe Storage", orphaning stored tokens
+  // and saved absolute paths. Electron fixes the keychain name before ready, so
+  // the name goes back to the display one once ready; role-based menus (appMenu:
+  // "Quit <app name>") and anything else that prints app.name then read SeuOffice.
+  app.setName(USER_DATA_DIR_NAME)
+  app.setPath('userData', join(app.getPath('appData'), USER_DATA_DIR_NAME))
+  void app.whenReady().then(() => app.setName(PRODUCT_NAME))
 }
 
 /**

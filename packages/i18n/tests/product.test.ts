@@ -141,8 +141,8 @@ describe('createI18n product name', () => {
 
 describe('registered names derived from the product name', () => {
   it('names the userData folders after the product name', () => {
-    expect(USER_DATA_DIR_NAME).toBe('SeuOffice')
-    expect(DEV_USER_DATA_DIR_NAME).toBe('SeuOffice-Dev')
+    expect(USER_DATA_DIR_NAME).toBe('seuoffice')
+    expect(DEV_USER_DATA_DIR_NAME).toBe('seuoffice-Dev')
     expect(USER_DATA_DIR_NAME).not.toBe(UPSTREAM_PRODUCT_NAME)
   })
 

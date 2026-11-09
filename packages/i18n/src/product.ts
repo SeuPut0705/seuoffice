@@ -20,9 +20,9 @@ export const UPSTREAM_NAME_LITERAL = `{{${UPSTREAM_PRODUCT_NAME}}}`
 
 /**
  * The product name in every language without a localized one. Also the name
- * everything registered on the user's machine derives from (the installer's
- * productName, the userData folder, the default save folder), which must stay
- * the same whatever the UI language is.
+ * the installer registers on the user's machine (its productName, the default
+ * save folder), which must stay the same whatever the UI language is. The
+ * userData folder and keychain name are USER_DATA_DIR_NAME, not this.
  */
 export const PRODUCT_NAME = 'SeuOffice'
 
@@ -40,11 +40,18 @@ export function productName(lang: string | null | undefined): string {
     : PRODUCT_NAME
 }
 
-/** Electron userData folder name of the installed app (under the per-user app-data root). */
-export const USER_DATA_DIR_NAME = PRODUCT_NAME
+/**
+ * The machine name of the installed app: the userData folder under the per-user
+ * app-data root, and (through app.setName) the macOS keychain item
+ * "<name> Safe Storage" that holds the key for stored secrets. Spelled as in
+ * v0.12.11, not derived from PRODUCT_NAME: an updated install must keep finding
+ * its profile, its keychain key, and the absolute paths saved under it, and
+ * macOS keychain lookups and path comparisons in the app are case-sensitive.
+ */
+export const USER_DATA_DIR_NAME = 'seuoffice'
 
 /** userData folder name of an unpacked (development) run, kept apart from the installed app's. */
-export const DEV_USER_DATA_DIR_NAME = `${PRODUCT_NAME}-Dev`
+export const DEV_USER_DATA_DIR_NAME = `${USER_DATA_DIR_NAME}-Dev`
 
 /** The product's public GitHub repository: issues, releases and update checks all point here. */
 export const PRODUCT_REPO_OWNER = 'SeuPut0705'
