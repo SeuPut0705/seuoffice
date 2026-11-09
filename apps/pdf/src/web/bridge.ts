@@ -119,6 +119,10 @@ const pdfApi: Partial<PdfApi> = {
     }
   },
   sendCloseSaveResult: (ok) => closeSaveAnswers.shift()?.(ok),
+  // the page's document comes from the host, not a file another program can change
+  watchDiskFile: async () => false,
+  onDiskFileChanged: unsubscribe,
+  discardForDiskReload: async () => false,
   // menu and shell requests that never arrive on the web
   onSaveAsFlow: unsubscribe,
   onRecoveryFlushRequest: unsubscribe,
