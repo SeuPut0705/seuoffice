@@ -1,6 +1,6 @@
 # Correspondence: collab-protocol
 
-Sync commit: `2a5d2d8c7168a3ade355d289de5940ba37ab3aec` (stamped by `verify-all.ts formal --only collab-protocol --stamp`, the same value as `syncCommit` in `formal/manifest.json`). The two fixes landed in `97d1fea` ("fix(collab): fence reconnects by attempt number and pin the two model-check findings"); between it and `2a5d2d8` the covered files only gained a display name (`welcome.name`, `status.self`), which no action reads. The `@code` line numbers are those of `2a5d2d8`.
+Sync commit: `5d5ca3609b167fec4b7cee695c68a3060a109956` (`git log -1 -- packages/collab/src`; the same value as `syncCommit` of `collab-protocol` in `formal/manifest.json`). **No behavioural change since `2a5d2d8c7168a3ade355d289de5940ba37ab3aec`; TLC not rerun.** The last TLC run (matrix, mutations, `verify-all.ts --stamp`) was against `2a5d2d8`. Between `2a5d2d8` and `5d5ca3609` the covered files changed only in comments and in fields no action reads: `server/store.ts` gained doc comment lines on the `CollabStore` contract (the code moved 6 lines down), and `embed/src/collab.ts` gained the `exportTimeoutMs` option of `CollabRelay` (the code moved 2 lines down). `decide.ts`, `server.ts`, `engine.ts`, `wire.ts` and `web-platform/src/collab-link.ts` did not change. The `@code` line numbers are those of `5d5ca3609`, which equals HEAD for every covered file. Earlier: the two fixes landed in `97d1fea` ("fix(collab): fence reconnects by attempt number and pin the two model-check findings"); between it and `2a5d2d8` the covered files only gained a display name (`welcome.name`, `status.self`), which no action reads.
 
 History: the model was written first, from the design contract (`local://collab-design.md`, sections 2, 4, 5, workflow W3), before `packages/collab` existed. It found F1 and F2 in the design. The code then took both fixes, and the drift step (W6, 2026-11-10) compared every action with that commit. Each `@code` tag in `tla/CollabProtocol.tla` now names the `path:lines` of the handler it stands for.
 
@@ -13,7 +13,7 @@ History: the model was written first, from the design contract (`local://collab-
 | `change`, `ack` and `stale` are handled only after `welcome` (`Joined`); one of them before `welcome` is a protocol error (`RecvEarly`) | `engine.ts:414-422`. `HelloAnsweredFirst` shows nothing reaches a socket before its welcome |
 | Own change for a doomed in-flight, and an ack past `confirmed + 1` or for a doomed in-flight, are protocol errors (`RecvChangeError`, new `RecvAckError`) | `engine.ts:493`, `engine.ts:505`. Before, the model confirmed or ignored them. `FramesCovered` and the new `AcksCovered` show neither frame arrives |
 | A submit carries a prefix of `pending`, not all of it | `submit` cuts `pending` into chunks of at most `SUBMIT_CHUNK_BYTES` (`engine.ts:582-601`); the model lets the prefix have any length |
-| The link's `connectId` fence is now code, not an assumption | `collab-link.ts:36-49` drops every open, frame and close tagged with an older connect; `embed/src/collab.ts:116-124` forwards only the current connection's frames; `engine.ts:303-308` ignores frames while no connection is open. `Cut` carries these tags |
+| The link's `connectId` fence is now code, not an assumption | `collab-link.ts:36-49` drops every open, frame and close tagged with an older connect; `embed/src/collab.ts:118-126` forwards only the current connection's frames; `engine.ts:303-308` ignores frames while no connection is open. `Cut` carries these tags |
 
 None of these changes broke a frozen property (see `evidence/matrix.log`). The frozen block of the spec is byte for byte the one frozen before modelling.
 
@@ -23,13 +23,13 @@ One consequence for the mutations: dropping the `base === head` check used to fa
 
 | Model element | Code | Kind | Abstraction | Notes |
 |---|---|---|---|---|
-| `log` | `StoredEpoch.log`, `store.ts:95-107` | variable | a change is `[c, s, b, ops]`; `author` and the epoch are left out; `b` is model-only bookkeeping for P5 | one epoch, never reset |
+| `log` | `StoredEpoch.log`, `store.ts:101-113` | variable | a change is `[c, s, b, ops]`; `author` and the epoch are left out; `b` is model-only bookkeeping for P5 | one epoch, never reset |
 | `open[c]` | sockets of client `c` in stage `live` (`server.ts:237-239`) | variable | a socket is its connection number | the server never notices a close here: a close it notices only makes later frames of that socket "never delivered" |
 | `welcomed[c]` | `EpochState.clients.get(client).attempt` (`server.ts:146,403`) | variable | per process; a second process (A8) does not share it | |
 | `c2s[c][k]` | frames client `c` sent on connection `k` | variable | one in-order queue per connection | old connections keep their queue: late delivery |
 | `s2c[c]` | frames toward the engine's current connection | variable | frames toward any other connection are dropped at once | the connectId fence (`Cut` tags) |
-| `SrvHello(c, k)` | `decide.ts:58-73`, `server.ts:352-364`, `391-425`, `428-443`, `300-304` | action | welcome plus the whole catch-up is one step; no `need_base`/`base`/`peers` frames | assumption A2 |
-| `SrvSubmit(c, k)` | `decide.ts:88-99`, `store.ts:95-107`, `server.ts:463-507` | action | `canEdit` everywhere, no frame too large, store never fails | duplicate checked before base, as `store.ts:100-101`; the catch-up before `ack`/`stale` never sends anything in one process (every live socket is at head) |
+| `SrvHello(c, k)` | `decide.ts:58-73`, `server.ts:352-364`, `391-426`, `429-444`, `300-304` | action | welcome plus the whole catch-up is one step; no `need_base`/`base`/`peers` frames | assumption A2 |
+| `SrvSubmit(c, k)` | `decide.ts:88-99`, `store.ts:101-113`, `server.ts:463-507` | action | `canEdit` everywhere, no frame too large, store never fails | duplicate checked before base, as `store.ts:105-107`; the catch-up before `ack`/`stale` never sends anything in one process (every live socket is at head) |
 | `SrvIgnore(c, k)` | `server.ts:548-549` | action | | |
 | `MakeOp(c)` | `engine.ts:325-331` | action | one op per step; ops are ids `<<c, i>>` | |
 | `SendNext(c)` | `engine.ts:578-603` | action | any non-empty prefix of `pending`; a separate step after every handler | `settle` runs `submit` at the end of every event: the model only adds interleavings; `waitFor` and `held` not modeled (below) |
@@ -37,13 +37,13 @@ One consequence for the mutations: dropping the `base === head` check used to fa
 | `DropEffects` | `engine.ts:650-676` | operator | the strike count that fails the session after 3 errors is not modeled | every error action is unreachable (coverage) |
 | `RecvWelcome(c)` | `engine.ts:447-467` | action | `catchHead` is `target` | the resumed welcome's epoch, client and start checks (`engine.ts:451`) always pass in the model |
 | `RecvEarly(c)` | `engine.ts:414-422` | action | | unreachable |
-| `RecvChangeOld`, `RecvChangeMine`, `RecvChangeForeign`, `RecvChangeError` | `engine.ts:486-499`, `523-530`, `328-330` | actions | a change frame carries only `v`; the client reads the immutable `log[v]`; `integrate` and the `integrated` event are one step | the engine guarantees the `integrated` event comes back before any other (`engine.ts:11-13`) |
+| `RecvChangeOld`, `RecvChangeMine`, `RecvChangeForeign`, `RecvChangeError` | `engine.ts:486-499`, `528-535`, `332-334` | actions | a change frame carries only `v`; the client reads the immutable `log[v]`; `integrate` and the `integrated` event are one step | the engine guarantees the `integrated` event comes back before any other (`engine.ts:11-13`) |
 | `RecvAck`, `RecvAckOther`, `RecvAckError` | `engine.ts:501-508` | actions | | |
 | `RecvStale`, `RecvStaleOther` | `engine.ts:510-517` | actions | `waitFor` is not a variable | `StaleAfterCatchUp` shows `confirmed >= stale.head` when the stale is handled, and `confirmed` never decreases, so `waitFor` never blocks |
-| `RecvSuperseded(c)` | `engine.ts:431-432`, `626-638` | action | | |
+| `RecvSuperseded(c)` | `engine.ts:431-432`, `631-643` | action | | |
 | `CaughtUp(c)` | `engine.ts:469-484` | action | a step of its own; the code runs it inside the welcome and change handlers | only adds interleavings |
-| `Reconnect(c)` | `engine.ts:309-312`, `278-295` | action | backoff is fairness, not time; a connect that fails before `open` is a `Cut` after the hello | a cut after the hello is the harder case: its hello may still arrive |
-| `Cut(c)` | `collab-link.ts:36-49`, `embed/src/collab.ts:116-124`, `engine.ts:300-308` | action (environment) | at most `MaxCuts` in the whole run | |
+| `Reconnect(c)` | `engine.ts:309-312`, `282-299` | action | backoff is fairness, not time; a connect that fails before `open` is a `Cut` after the hello | a cut after the hello is the harder case: its hello may still arrive |
+| `Cut(c)` | `collab-link.ts:36-49`, `embed/src/collab.ts:118-126`, `engine.ts:300-308` | action (environment) | at most `MaxCuts` in the whole run | |
 | `RogueSubmit(c)` | none: a misbehaving engine | action (environment) | only in `MC_rogue.cfg` | |
 | `view[c]`, `copies[c]` | none (history for P2, P3, P5) | variables | | |
 
@@ -60,9 +60,9 @@ One consequence for the mutations: dropping the `base === head` check used to fa
 
 Each is a place a bug could hide.
 
-- A1: `store.append` is one atomic operation per document, and the server handles one frame of a document at a time. `memoryStore` holds it (`store.ts:95-107` has no `await`), and `enqueue` chains every frame of a document (`server.ts:201-224`). A host's durable store must keep it too; the model does not check that store.
+- A1: `store.append` is one atomic operation per document, and the server handles one frame of a document at a time. `memoryStore` holds it (`store.ts:101-113` has no `await`), and `enqueue` chains every frame of a document (`server.ts:201-224`). A host's durable store must keep it too; the model does not check that store. Since `5d5ca3609` the package ships `storeContract` (`conformance/store-contract.ts`) for a host to test its own store against the `CollabStore` contract; whether it exercises concurrent appends was not checked here.
 - A2: welcome and the whole catch-up go out before any live change of that document reaches the socket. `welcome` and `catchUp` run inside the same chained task (`server.ts:391-444`), so another frame of the document cannot interleave. Holds in one process.
-- A3: after the engine's link closes, no frame of that socket reaches the engine, and no frame of the engine reaches that socket. This is now code: the connectId fence (`collab-link.ts:36-49`, `embed/src/collab.ts:116-124,152-155`). Not checked: another `CollabLink` implementation must give the same guarantee.
+- A3: after the engine's link closes, no frame of that socket reaches the engine, and no frame of the engine reaches that socket. This is now code: the connectId fence (`collab-link.ts:36-49`, `embed/src/collab.ts:118-126,154-157`). Not checked: another `CollabLink` implementation must give the same guarantee.
 - A4: each connection is in order and never drops or duplicates single frames without closing (a WebSocket relayed over `postMessage`).
 - A5: `integrate` keeps the op ids of `local` and their order; editor semantics are not checked.
 - A6: one epoch, every principal has `canEdit`, no frame too large, no save, export, fingerprint, `diverged` or `peers`, the editor is attached (`held` stays empty), the store never fails. Every client starts welcomed at version 0 on connection 1.

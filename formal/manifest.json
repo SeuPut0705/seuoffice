@@ -18,7 +18,7 @@
 				"packages/web-platform/src/collab-link.ts",
 				"packages/embed/src/collab.ts"
 			],
-			"syncCommit": "2a5d2d8c7168a3ade355d289de5940ba37ab3aec"
+			"syncCommit": "5d5ca3609b167fec4b7cee695c68a3060a109956"
 		},
 		{
 			"id": "collab-protocol-deep",

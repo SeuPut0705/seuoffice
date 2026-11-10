@@ -162,7 +162,7 @@ SrvHello(c, k) ==
     /\ UNCHANGED <<log, clientVars, cuts>>
 
 \* @code packages/collab/src/server/decide.ts:88-99 decideSubmit: a welcomed socket's submit becomes an append request
-\* @code packages/collab/src/server/store.ts:95-107 memoryStore append: duplicate (checked first) | stale | appended, in one step
+\* @code packages/collab/src/server/store.ts:101-113 memoryStore append: duplicate (checked first) | stale | appended, in one step
 \* @code packages/collab/src/server/server.ts:463-507 onSubmit: ack to the sender, change to every other live socket; duplicate: ack only; stale: catch-up then stale
 SrvSubmit(c, k) ==
     /\ c2s[c][k] # <<>>
@@ -415,7 +415,7 @@ CaughtUp(c) ==
 \* connectId fence of the page link and the host relay keeps any later frame of that
 \* socket from the engine; frames the client sent stay in c2s and may still reach the server.
 \* @code packages/web-platform/src/collab-link.ts:36-49 frames tagged with an older connectId are dropped; collab_close ends the connection
-\* @code packages/embed/src/collab.ts:116-124 the host relays only the current connection's frames and reports its close
+\* @code packages/embed/src/collab.ts:118-126 the host relays only the current connection's frames and reports its close
 \* @code packages/collab/src/client/engine.ts:300-308 close: offline; frames while no connection is open are ignored
 Cut(c) ==
     /\ cuts < MaxCuts
