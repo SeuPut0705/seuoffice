@@ -125,6 +125,12 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
+  // The host is gone with its test, and a page whose host is gone talks to no one. The page's
+  // session and its timers live on (a real page ends with its document), so without this they
+  // would reach the next test's server through this host, and jsdom's own postMessage once
+  // vitest restores the spy after the file: it throws on the options form the channel uses.
+  vi.restoreAllMocks()
+  host.postMessage = () => {}
   await server.close()
   delete window.seuCollab
   Object.defineProperty(window, 'parent', { value: window, configurable: true })
