@@ -343,7 +343,8 @@
   gap: 6px;
 }
 
-.skl-read-toggle {
+/* over .set-link's inherited font, which would follow the dialog's text size */
+.skl-read .skl-read-toggle {
   font-size: 12px;
 }
 
