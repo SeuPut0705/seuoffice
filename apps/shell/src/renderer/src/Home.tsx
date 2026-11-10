@@ -866,10 +866,11 @@ function GroupPicker({ groups, count, onCancel, onPick, onCreate, onRemove }: Gr
 }
 
 // ── Settings entry (bottom-left) ─────────────────────────
-// Shows the AI that requests run on (homeAiEntry). Clicking it opens the
-// settings modal (SettingsModal.tsx) on its AI section, where the connect
-// cards live; the other preferences (language, theme, save location, update
-// channel) are one click away in the same dialog.
+// Shows the AI that requests run on (homeAiEntry) and the word "Settings":
+// the AI's name alone did not say this is the way into Settings. Clicking it
+// opens the settings modal (SettingsModal.tsx) on its AI section, where the
+// connect cards live; the other preferences (language, theme, save location,
+// update channel) are one click away in the same dialog.
 
 function AccountEntry({
   connection,
@@ -988,6 +989,7 @@ function AccountEntry({
           <span className="account-name">{label}</span>
           {stateText && <span className="account-sub">{stateText}</span>}
         </span>
+        <span className="account-settings">{t('settings')}</span>
         <svg
           className="account-chevron"
           width="14"
@@ -1090,6 +1092,7 @@ export function Home({
   aiSettings,
   noticeDue,
   onNoticeAcknowledge,
+  welcomeOpen = false,
 }: {
   /** the live subscription connection (AppFrame owns the one instance) */
   connection: SubscriptionConnection
@@ -1098,6 +1101,12 @@ export function Home({
   /** a subscription can be used and the first-connection notice was not acknowledged yet */
   noticeDue: boolean
   onNoticeAcknowledge: () => void
+  /**
+   * The first-run welcome window is up, over this screen. A request to open
+   * Settings (a dropped skill file asks for one) waits until it closes, so the
+   * dialog does not open behind it.
+   */
+  welcomeOpen?: boolean
 }) {
   const i18n = useI18n()
   const { t, lang } = i18n
@@ -3488,7 +3497,7 @@ export function Home({
           aiSettings={aiSettings}
           onOpenChange={handleSettingsOpenChange}
           onFileSearchSettingsChange={() => setRerankSettingsTick((n) => n + 1)}
-          openRequest={settingsRequest}
+          openRequest={welcomeOpen ? null : settingsRequest}
         />
       </aside>
       <div className="sidebar-resizer" onPointerDown={onSidebarResizeStart} />

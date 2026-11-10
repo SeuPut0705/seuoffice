@@ -210,6 +210,7 @@ export function AppFrame({ initialOnboardingSeen }: AppFrameProps) {
           // during the onboarding its connect step shows the notice instead
           noticeDue={notice.due && !showOnboarding}
           onNoticeAcknowledge={notice.acknowledge}
+          welcomeOpen={showOnboarding}
         />
       </div>
       {/* editor WebContentsViews paint above ALL shell DOM, so the overlay only
