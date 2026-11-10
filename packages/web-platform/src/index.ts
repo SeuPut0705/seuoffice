@@ -24,4 +24,5 @@ export {
   type CollabLinkEvent,
   type CollabStatus,
 } from './collab-link'
+export { joinPageCollab, type PageCollab } from './collab-page'
 export { createAiStreamBridge, hostOffersAi, webAiSettings, type AiStreamBridge } from './ai-relay'

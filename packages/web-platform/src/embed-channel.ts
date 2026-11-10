@@ -19,7 +19,8 @@
 export const EMBED_SOURCE = 'seuoffice'
 export const EMBED_VERSION = 1
 
-export type EmbedOpenErrorCode = 'unsupported_format' | 'too_large' | 'open_failed'
+export type EmbedOpenErrorCode =
+  'unsupported_format' | 'too_large' | 'open_failed' | 'collab_unavailable'
 
 export interface EmbedOpen {
   fileName: string

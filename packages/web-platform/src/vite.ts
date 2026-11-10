@@ -32,6 +32,11 @@ export function seuofficeWebAliases(): Alias[] {
     })),
     { find: /^node:buffer$/, replacement: 'buffer' },
     { find: /^electron$/, replacement: shim('electron') },
+    // the co-editing engine from its source, as the workspace builds every seuoffice package
+    {
+      find: /^@seuoffice\/collab\/client$/,
+      replacement: fileURLToPath(new URL('../../collab/src/client/index.ts', import.meta.url)),
+    },
     {
       find: /^@genoffice\/ui\/template-fonts$/,
       replacement: fileURLToPath(new URL('./template-fonts.ts', import.meta.url)),
