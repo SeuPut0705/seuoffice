@@ -6,8 +6,15 @@
  */
 import { describe, expect, it } from 'vitest'
 import type { Json } from '@seuoffice/collab/client'
-import { draw, highlight, ink, note, stamp } from './collab/actions'
-import { Room, blankFile, fileBytes, openHeadless } from './collab/headless'
+import { suggestionMarkup } from '../src/renderer/highlight/locate'
+import { PDFJS_ANNOT_TEXT, toSavedNote } from '../src/renderer/note-threads'
+import { signatureDrawingForField } from '../src/renderer/signature-field'
+import { DEFAULT_HEADER_FOOTER, DEFAULT_WATERMARK } from '../src/renderer/stamps'
+import type { DrawingInput, FormFieldInput } from '../src/shared/ipc'
+import { addBlankPage, draw, highlight, ink, note, picture, stamp } from './collab/actions'
+import { Room, blankFile, fileBytes, openHeadless, type HeadlessPdf } from './collab/headless'
+import { DATE_FORMATS } from '../src/renderer/FormDesignLayer'
+import { WireError } from '../src/web/collab-wire'
 
 const PAGES = 3
 const open = () => openHeadless(fileBytes(blankFile(PAGES)))
@@ -352,6 +359,31 @@ describe('shapes the app does not make are not taken', () => {
     expect(() => page.adapter.decode({ id: 7, puts: [] } as Json)).toThrow()
     expect(() => page.adapter.decode({ id: 'x', puts: [], extra: true } as Json)).toThrow()
   })
+
+  const dateFieldPut = (dateFormat: string) => ({
+    b: 'formFields',
+    id: 'f',
+    v: {
+      id: 'f',
+      input: { name: 'd', kind: 'text', pageIndex: 0, rect: [10, 60, 200, 90], dateFormat },
+    },
+  })
+
+  it.each([
+    'y) >> /Fo << /S /JavaScript /JS (app.alert(1)) >> /Zz << /JS (',
+    'dd.mm.yyyy',
+    'YYYY-MM-DD',
+    '',
+  ])('a date format the form designer does not offer: %j', (dateFormat) => {
+    const page = open()
+    expect(() =>
+      page.adapter.decode({ id: 'x', puts: [dateFieldPut(dateFormat)] } as Json),
+    ).toThrow(WireError)
+  })
+
+  it.each(DATE_FORMATS)('every date format the form designer offers is taken: %s', (format) => {
+    expect(() => take(dateFieldPut(format))).not.toThrow()
+  })
 })
 
 describe('a link goes only where the app opens links', () => {
@@ -543,5 +575,254 @@ describe('a person’s own change that a peer would not take is not sent', () =>
     room.settle(a)
     expect(a.app.refusals).toEqual([])
     expect(b.print()).toBe(a.print())
+  })
+})
+
+describe('what the app’s own builders and edit ops make travels to a peer', () => {
+  /** `act` on one page of a room of two; nothing is refused and the peer ends the same */
+  function travels(act: (app: HeadlessPdf) => void): void {
+    const room = new Room()
+    const a = room.join()
+    const b = room.join()
+    act(a.app)
+    expect(a.app.refusals).toEqual([])
+    expect(a.local.length).toBeGreaterThan(0)
+    room.settle(a)
+    expect(b.print()).toBe(a.print())
+  }
+  const widget = { id: '31R', fieldName: 'approval', pageIndex: 1, rect: [100, 100, 260, 160] }
+
+  it('a picture signature fitted into a signature field', () => {
+    travels((app) => {
+      const drawing = signatureDrawingForField(
+        { kind: 'image', image: picture(600), width: 400, height: 100 },
+        widget as never,
+        [0, 0, 0],
+      )
+      expect(app.apply([{ op: 'addDrawing', drawing, formWidgetId: widget.id }]).failures).toEqual(
+        [],
+      )
+    })
+  })
+
+  it('a drawn signature fitted into a signature field', () => {
+    travels((app) => {
+      const sig = {
+        kind: 'draw',
+        paths: [
+          [0, 0, 10, 12, 20, 3.5],
+          [5, 5, 9, 9],
+        ],
+        width: 40,
+        height: 20,
+      }
+      const drawing = signatureDrawingForField(sig as never, widget as never, [0.1, 0.1, 0.4])
+      expect(drawing.kind).toBe('ink')
+      expect(app.apply([{ op: 'addDrawing', drawing, formWidgetId: widget.id }]).failures).toEqual(
+        [],
+      )
+    })
+  })
+
+  it('a saved note as pdf.js reads it, rewritten, and a reply to it', () => {
+    travels((app) => {
+      const annot = toSavedNote(
+        {
+          id: '12R',
+          annotationType: PDFJS_ANNOT_TEXT,
+          rect: [10.5, 700.25, 30.5, 720.25],
+          color: new Uint8ClampedArray([255, 200, 33]),
+          titleObj: { str: '김 검토' },
+          contentsObj: { str: 'on disk' },
+          creationDate: "D:20260812175959+09'00'",
+        },
+        0,
+      )!
+      expect(
+        app.apply([
+          { op: 'editSavedNote', annot, contents: 'rewritten' },
+          {
+            op: 'addDrawing',
+            drawing: {
+              kind: 'note',
+              pageIndex: 0,
+              color: annot.color ?? [1, 0.78, 0.13],
+              at: [annot.rect[0], annot.rect[3]],
+              contents: 'a reply',
+              author: undefined,
+              createdMs: Date.now(),
+              replyToSaved: { objNum: annot.objNum, rect: annot.rect, contents: annot.contents },
+            },
+          },
+        ]).failures,
+      ).toEqual([])
+    })
+  })
+
+  it('a note without a colour or a date in the file', () => {
+    travels((app) => {
+      const annot = toSavedNote(
+        { id: '7R', annotationType: PDFJS_ANNOT_TEXT, rect: [0, 0, 20, 20] },
+        2,
+      )!
+      expect(
+        app.apply([{ op: 'editSavedNote', annot, contents: 'now with words' }]).failures,
+      ).toEqual([])
+    })
+  })
+
+  it('an accepted AI highlight', () => {
+    travels((app) => {
+      const markup = suggestionMarkup({
+        found: {
+          origIdx: 1,
+          rects: [
+            [72, 700, 300, 712],
+            [72, 686, 180, 698],
+          ],
+        },
+        label: { name: '핵심 주장', color: [1, 0.87, 0.35] },
+      } as never)!
+      expect(app.apply([{ op: 'addMarkup', markup }]).failures).toEqual([])
+    })
+  })
+
+  it('every drawing tool, then moved', () => {
+    travels((app) => {
+      const drawings: DrawingInput[] = [
+        {
+          kind: 'rect',
+          pageIndex: 0,
+          color: [0.86, 0.22, 0.18],
+          width: 2,
+          rect: [10, 10, 60.5, 40.25],
+        },
+        { kind: 'ellipse', pageIndex: 0, color: [0, 0, 0], width: 1, rect: [10, 10, 60, 40] },
+        // DrawLayer makes the three line tools one way: a line and an arrow carry the empty
+        // label a measurement gets filled in
+        ...(['line', 'arrow'] as const).map(
+          (kind) =>
+            ({
+              kind,
+              pageIndex: 1,
+              color: [0, 0, 0],
+              width: 1.5,
+              from: [0, 0],
+              to: [50, 50],
+              label: '',
+            }) as DrawingInput,
+        ),
+        {
+          kind: 'measure',
+          pageIndex: 1,
+          color: [0, 0, 0],
+          width: 1,
+          from: [0, 0],
+          to: [72, 0],
+          label: '2.54 cm',
+        },
+        { kind: 'caret', pageIndex: 2, color: [0.86, 0.22, 0.18], point: [100, 100] },
+        {
+          kind: 'polygon',
+          pageIndex: 2,
+          color: [0, 0, 0],
+          width: 1,
+          vertices: [
+            [0, 0],
+            [30, 0],
+            [15, 20],
+          ],
+        },
+        { kind: 'link', pageIndex: 0, rect: [0, 0, 40, 12], destPage: 3 },
+        { kind: 'link', pageIndex: 0, rect: [0, 20, 40, 32], url: 'https://www.example.com' },
+        ink(0),
+        stamp(1, 300),
+      ]
+      for (const drawing of drawings) {
+        expect(app.apply([{ op: 'addDrawing', drawing }]).failures).toEqual([])
+      }
+      for (const d of app.state.drawings) {
+        expect(app.apply([{ op: 'moveDrawing', id: d.id, dx: 3.25, dy: -7.5 }]).failures).toEqual(
+          [],
+        )
+      }
+      const picture = app.state.drawings.find((d) => d.input.kind === 'image')!
+      expect(
+        app.apply([{ op: 'setDrawingRect', id: picture.id, rect: [5, 5, 205, 105] }]).failures,
+      ).toEqual([])
+    })
+  })
+
+  it('form design: every field kind, a patch that clears a value, a field of the file moved and removed', () => {
+    travels((app) => {
+      const rect: [number, number, number, number] = [20, 20, 160, 44]
+      const fields: FormFieldInput[] = [
+        {
+          name: 'Text 1',
+          kind: 'text',
+          pageIndex: 0,
+          rect,
+          multiLine: true,
+          maxLen: 40,
+          fontSize: 11,
+        },
+        {
+          name: 'Date 1',
+          kind: 'text',
+          pageIndex: 0,
+          rect,
+          dateFormat: 'yyyy-mm-dd',
+          textAlignment: 'center',
+        },
+        { name: 'Check 1', kind: 'checkbox', pageIndex: 1, rect, checked: true, required: true },
+        { name: 'Group 1', kind: 'radio', pageIndex: 1, rect, exportValue: 'Choice 1' },
+        {
+          name: 'List 1',
+          kind: 'choice',
+          pageIndex: 2,
+          rect,
+          options: ['Option 1', 'Option 2'],
+          value: 'Option 2',
+        },
+        { name: 'Sign 1', kind: 'signature', pageIndex: 2, rect },
+      ]
+      for (const input of fields) {
+        expect(app.apply([{ op: 'addFormField', field: input }]).failures).toEqual([])
+      }
+      const list = app.state.formFields.find((f) => f.input.kind === 'choice')!
+      expect(
+        app.apply([
+          // the selected option goes away: the reducer leaves `value` undefined
+          { op: 'patchFormField', id: list.id, input: { options: ['Option 1', 'Option 3'] } },
+          {
+            op: 'editFormWidget',
+            widgetId: '31R',
+            fieldName: 'approval',
+            input: { rect, required: true },
+          },
+          { op: 'editFormWidget', widgetId: '44R', fieldName: 'old', input: { remove: true } },
+          { op: 'setFormValue', value: { name: 'agree', kind: 'checkbox', checked: true } },
+          { op: 'setFormValue', value: { name: 'city', kind: 'choice', value: '' } },
+        ]).failures,
+      ).toEqual([])
+    })
+  })
+
+  it('a watermark with a footer, document info, and a blank page', () => {
+    travels((app) => {
+      expect(
+        app.apply([
+          {
+            op: 'setStamps',
+            cfg: { wm: { ...DEFAULT_WATERMARK, text: '대외비' }, hf: DEFAULT_HEADER_FOOTER },
+          },
+          {
+            op: 'setMetadata',
+            metadata: { title: '계획', author: '', subject: 'Q3', keywords: 'a, b' },
+          },
+        ]).failures,
+      ).toEqual([])
+      expect(addBlankPage(app, 0)).toBe(true)
+    })
   })
 })

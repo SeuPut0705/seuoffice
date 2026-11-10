@@ -18,7 +18,7 @@ import {
   degrees,
 } from 'pdf-lib'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
-import { openCoEdited, settled, type CoEditor, type CoFile } from './collab'
+import { exportedFile, openCoEdited, settled, type CoEditor, type CoFile } from './collab'
 
 test.setTimeout(240_000)
 
@@ -630,8 +630,16 @@ test('the host’s save takes the comment a person is still typing', async ({ br
   await box.fill('still typing when the host saved')
   await alice.page.locator('#save').click()
   const saved = await savedPdf(alice)
-  const notes = (saved.pdf.getPage(0).node.Annots()?.asArray() ?? [])
-    .map((ref) => saved.pdf.context.lookup(ref, PDFDict))
+  expect(notesOn(saved.pdf, 0)).toEqual(['still typing when the host saved'])
+  expect(saved.version).toBe(await settled([alice, bob]))
+  await expect(bob.frame.getByText('still typing when the host saved').first()).toBeAttached()
+  expect(pageErrors).toEqual([])
+})
+
+/** The contents of every note comment on page `index` of a file */
+const notesOn = (pdf: PDFDocument, index: number): string[] =>
+  (pdf.getPage(index).node.Annots()?.asArray() ?? [])
+    .map((ref) => pdf.context.lookup(ref, PDFDict))
     .filter((annot) => String(annot.get(PDFName.of('Subtype'))) === '/Text')
     .map((annot) => {
       const contents = annot.get(PDFName.of('Contents'))
@@ -639,9 +647,34 @@ test('the host’s save takes the comment a person is still typing', async ({ br
         ? contents.decodeText()
         : String(contents)
     })
-  expect(notes).toEqual(['still typing when the host saved'])
-  expect(saved.version).toBe(await settled([alice, bob]))
-  await expect(bob.frame.getByText('still typing when the host saved').first()).toBeAttached()
+
+test('an export is the document as the person sees it, the comment they are still typing included; nothing is stored', async ({
+  browser,
+}) => {
+  const file = await planPdf()
+  const documentId = freshDocument()
+  const alice = await open(browser, file, documentId, 'alice')
+  const bob = await open(browser, file, documentId, 'bob')
+
+  await tab(alice, '주석')
+  await showFirstPage(alice)
+  await alice.frame.getByRole('button', { name: '메모', exact: true }).click()
+  const layer = (await pageAt(alice, 0).locator('.pdf-draw-layer').boundingBox())!
+  await alice.page.mouse.click(layer.x + layer.width * 0.5, layer.y + layer.height * 0.3)
+  await alice.frame.locator('.pdf-note-draft-box textarea').fill('first words')
+  await edit(alice, () => alice.frame.locator('.pdf-note-draft-actions .primary').click())
+  await settled([alice, bob])
+
+  // she rewrites it, and her host asks for the file while the box is still open
+  await alice.frame.locator('.pdf-note-comment-edit').first().click()
+  await alice.frame.locator('.pdf-note-edit-box textarea').fill('still typing at the export')
+  const exported = await PDFDocument.load(new Uint8Array(await exportedFile(alice)))
+  expect(notesOn(exported, 0)).toEqual(['still typing at the export'])
+  expect(await storedFile(alice)).toBeNull()
+  // what was committed for the export is an edit like any other
+  await settled([alice, bob])
+  await expect(bob.frame.getByText('still typing at the export').first()).toBeAttached()
+  expect(await storedFile(bob)).toBeNull()
   expect(pageErrors).toEqual([])
 })
 

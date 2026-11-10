@@ -108,6 +108,8 @@ export function joinPdfCollab(doc: WebDocument): Promise<PageCollab<PdfCollabHan
       app?.commitDrafts()
       await save()
     },
+    // an export is the document as the person sees it, what they are still typing included
+    commitDrafts: () => app?.commitDrafts(),
     // a protected file asks for its password before anything can attach
     inputBeforeAttach: (target) => target instanceof Element && !!target.closest('.pdf-pwd-dialog'),
     format: FORMAT,

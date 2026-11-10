@@ -19,6 +19,7 @@ import { safeExternalUrl } from '@genoffice/electron-utils/safe-external-url'
 import type { Json } from '@seuoffice/collab/client'
 import type { LocalMarkup } from '../renderer/annotations'
 import type { LocalDrawing } from '../renderer/DrawLayer'
+import { DATE_FORMATS } from '../renderer/FormDesignLayer'
 import type {
   LocalBlankPage,
   LocalFormField,
@@ -242,6 +243,15 @@ const linkShape = shape<Drawing<'link'>>(
   ['url', 'destPage'],
 )
 
+/**
+ * A line or an arrow. The draw layer builds all three line tools one way, so these two come
+ * with the label a measurement gets filled in, empty here.
+ */
+const lineShape = shape<Drawing<'line' | 'arrow'> & { label?: string }>(
+  { kind: anyKind, ...stroked, from: point, to: point, label: text(WIRE_LIMITS.label) },
+  ['formFieldName', 'label'],
+)
+
 const DRAWING: { [K in DrawingInput['kind']]: Check } = {
   ink: shape<Drawing<'ink'>>({ kind: anyKind, ...stroked, paths: strokes }, ['formFieldName']),
   rect: shape<Drawing<'rect'>>({ kind: anyKind, ...stroked, rect }, ['formFieldName']),
@@ -252,12 +262,8 @@ const DRAWING: { [K in DrawingInput['kind']]: Check } = {
     if ((url === undefined) === (destPage === undefined))
       fail('shape', at, 'a link with one target')
   },
-  line: shape<Drawing<'line'>>({ kind: anyKind, ...stroked, from: point, to: point }, [
-    'formFieldName',
-  ]),
-  arrow: shape<Drawing<'arrow'>>({ kind: anyKind, ...stroked, from: point, to: point }, [
-    'formFieldName',
-  ]),
+  line: lineShape,
+  arrow: lineShape,
   measure: shape<Drawing<'measure'>>({
     kind: anyKind,
     pageIndex: page,
@@ -351,7 +357,8 @@ const ITEM: Record<Carried, Check> = {
         checked: flag,
         exportValue: name,
         options: list(WIRE_LIMITS.options, name),
-        dateFormat: name,
+        // the formats the form designer offers; the save writes the format into viewer scripts
+        dateFormat: oneOf(...DATE_FORMATS),
       },
       [
         'required',
