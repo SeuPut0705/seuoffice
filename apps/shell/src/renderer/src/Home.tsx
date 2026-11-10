@@ -878,6 +878,7 @@ function AccountEntry({
   onOpenChange,
   onFileSearchSettingsChange,
   openRequest,
+  overWelcome = false,
 }: {
   connection: SubscriptionConnection
   /** the AI settings as last read; null until the first read answers */
@@ -887,6 +888,8 @@ function AccountEntry({
   onFileSearchSettingsChange?: () => void
   /** a fresh object per request: the home list asks to open the modal on a given block */
   openRequest?: SettingsTarget | null
+  /** the first-run welcome window is up: the modal opens above it */
+  overWelcome?: boolean
 }) {
   const { t, lang } = useI18n()
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -962,6 +965,7 @@ function AccountEntry({
           skillUpdateDue={skillUpdate}
           onSkillUpdateDue={setSkillUpdate}
           target={target}
+          overWelcome={overWelcome}
         />
       )}
       <button
@@ -1093,6 +1097,7 @@ export function Home({
   noticeDue,
   onNoticeAcknowledge,
   welcomeOpen = false,
+  onSettingsOpenChange,
 }: {
   /** the live subscription connection (AppFrame owns the one instance) */
   connection: SubscriptionConnection
@@ -1103,10 +1108,12 @@ export function Home({
   onNoticeAcknowledge: () => void
   /**
    * The first-run welcome window is up, over this screen. A request to open
-   * Settings (a dropped skill file asks for one) waits until it closes, so the
-   * dialog does not open behind it.
+   * Settings (a dropped skill file asks for one) opens at once and above that
+   * window, which is still there to finish when Settings closes.
    */
   welcomeOpen?: boolean
+  /** Settings opened or closed (the welcome window stands down while it is open) */
+  onSettingsOpenChange?: (open: boolean) => void
 }) {
   const i18n = useI18n()
   const { t, lang } = i18n
@@ -1173,9 +1180,13 @@ export function Home({
   // latched once Settings was opened: a connection made there may only be seen
   // here after the dialog closed, and its notice is still owed then
   const [settingsVisited, setSettingsVisited] = useState(false)
-  const handleSettingsOpenChange = useCallback((open: boolean) => {
-    if (open) setSettingsVisited(true)
-  }, [])
+  const handleSettingsOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) setSettingsVisited(true)
+      onSettingsOpenChange?.(open)
+    },
+    [onSettingsOpenChange],
+  )
   useEffect(
     () =>
       window.aiOffice.onOpenSettings?.((target) =>
@@ -3497,7 +3508,8 @@ export function Home({
           aiSettings={aiSettings}
           onOpenChange={handleSettingsOpenChange}
           onFileSearchSettingsChange={() => setRerankSettingsTick((n) => n + 1)}
-          openRequest={welcomeOpen ? null : settingsRequest}
+          openRequest={settingsRequest}
+          overWelcome={welcomeOpen}
         />
       </aside>
       <div className="sidebar-resizer" onPointerDown={onSidebarResizeStart} />

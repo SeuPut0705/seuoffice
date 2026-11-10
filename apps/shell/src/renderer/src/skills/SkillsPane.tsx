@@ -112,25 +112,34 @@ export function SkillsPane({
   useEffect(() => {
     const bridge = userSkillsApi()
     if (!idle || !bridge) return
-    void bridge.takeDropped().then((answer) => {
-      if (!alive.current) {
-        if (answer.ok && answer.preview) void bridge.cancelImport(answer.preview.token)
+    void (async () => {
+      // An entry that opens no dialog (a zip with no skill, a file that could
+      // not be read) leaves this page idle, so nothing would come back for the
+      // one queued behind it: keep taking until a preview opens or none is left
+      for (;;) {
+        const answer = await bridge.takeDropped()
+        if (!alive.current) {
+          if (answer.ok && answer.preview) void bridge.cancelImport(answer.preview.token)
+          return
+        }
+        if (!answer.ok) {
+          const key = failureKey(answer.reason, 'import')
+          if (key) setNotice({ tone: 'error', text: skillsText(lang, key) })
+          // a refusal took nothing off the queue: asking again would never end
+          if (answer.reason === 'not-allowed') return
+          continue
+        }
+        if (!answer.preview) return
+        // a dialog the person opened meanwhile keeps its place
+        if (dialogOpen.current) {
+          void bridge.cancelImport(answer.preview.token)
+          return
+        }
+        setNotice(null)
+        setDialog({ kind: 'preview', preview: answer.preview })
         return
       }
-      if (!answer.ok) {
-        const key = failureKey(answer.reason, 'import')
-        if (key) setNotice({ tone: 'error', text: skillsText(lang, key) })
-        return
-      }
-      if (!answer.preview) return
-      // a dialog the person opened meanwhile keeps its place
-      if (dialogOpen.current) {
-        void bridge.cancelImport(answer.preview.token)
-        return
-      }
-      setNotice(null)
-      setDialog({ kind: 'preview', preview: answer.preview })
-    })
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- lang is read when the answer comes
   }, [idle, droppedTick])
 

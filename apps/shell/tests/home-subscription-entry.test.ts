@@ -103,6 +103,7 @@ function statuses(
 
 interface RenderOptions {
   welcomeOpen?: boolean
+  onSettingsOpenChange?: (open: boolean) => void
   noticeDue?: boolean
   onNoticeAcknowledge?: () => void
   aiSettings?: AiSettings | null
@@ -136,6 +137,9 @@ async function renderHome(map: SubscriptionStatusMap, options: RenderOptions = {
           noticeDue: options.noticeDue ?? false,
           onNoticeAcknowledge: options.onNoticeAcknowledge ?? vi.fn(),
           ...(options.welcomeOpen === undefined ? {} : { welcomeOpen: options.welcomeOpen }),
+          ...(options.onSettingsOpenChange
+            ? { onSettingsOpenChange: options.onSettingsOpenChange }
+            : {}),
         }),
       ),
     )
@@ -286,28 +290,25 @@ describe('the word Settings on the home entry', () => {
 describe('a request for Settings while the welcome window is up', () => {
   const none = statuses({ state: 'signed-out' }, { state: 'signed-out' })
   const dialog = () => host.querySelector('.set-dialog')
+  const overlay = () => host.querySelector('.set-overlay')
 
-  it('waits until the welcome window closes, then opens where it was asked', async () => {
-    await renderHome(none, { welcomeOpen: true })
+  it('opens at once where it was asked, marked to stack above that window', async () => {
+    const onSettingsOpenChange = vi.fn()
+    await renderHome(none, { welcomeOpen: true, onSettingsOpenChange })
     // a skill file dropped on the window: the main process asks for Settings → Skills
     await act(async () => askForSettings!({ section: 'skills' }))
-    expect(dialog()).toBeNull()
-
-    await renderHome(none, { welcomeOpen: false })
     expect(dialog()).not.toBeNull()
     expect(host.querySelector('.set-nav-item.active')?.textContent).toContain('Skills')
+    expect(overlay()!.classList.contains('over-welcome')).toBe(true)
+    // the welcome window is told, so it leaves the keyboard alone meanwhile
+    expect(onSettingsOpenChange).toHaveBeenLastCalledWith(true)
   })
 
-  it('opens at once when no welcome window is up', async () => {
+  it('is not marked when no welcome window is up', async () => {
     await renderHome(none)
     await act(async () => askForSettings!({ section: 'skills' }))
     expect(dialog()).not.toBeNull()
-  })
-
-  it('opens nothing after the welcome window when nothing was asked', async () => {
-    await renderHome(none, { welcomeOpen: true })
-    await renderHome(none, { welcomeOpen: false })
-    expect(dialog()).toBeNull()
+    expect(overlay()!.classList.contains('over-welcome')).toBe(false)
   })
 })
 

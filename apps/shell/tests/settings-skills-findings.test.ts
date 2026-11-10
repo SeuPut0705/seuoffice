@@ -488,6 +488,25 @@ describe('a dropped zip that holds no skill', () => {
     expect(dropped).toBe(ko('failNoSkills'))
     expect(dialog()).toBeNull()
   })
+
+  it('does not hold up a skill file dropped right after it', async () => {
+    const api = bridge()
+    // both were queued before this page opened: the zip with no skill first
+    api.takeDropped
+      .mockResolvedValueOnce({ ok: false, reason: 'no-skills' } as never)
+      .mockResolvedValueOnce({
+        ok: true,
+        preview: previewOf([candidate({ key: 'weekly-report' })]),
+      } as never)
+    await renderPane(api)
+    expect(dialog()!.textContent).toContain('weekly-report')
+  })
+
+  it('stops asking when the window may not manage skills', async () => {
+    const api = bridge({ takeDropped: vi.fn(async () => ({ ok: false, reason: 'not-allowed' })) })
+    await renderPane(api)
+    expect(api.takeDropped).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('the drop overlay', () => {
