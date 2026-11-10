@@ -24,6 +24,7 @@ use crate::SidecarError;
 use crate::odf_cell_styles::StyleBook;
 use crate::odf_number_format::attribute;
 use crate::odf_page::PageBook;
+use crate::odf_pivots::{OdfPivot, PivotReader};
 use crate::xml_util::{decode_cdata, decode_text, general_ref_text, read_zip_string, zip_entry};
 
 pub(crate) const MAX_ROW: u32 = 1_048_576;
@@ -216,6 +217,8 @@ pub(crate) struct OdsFormats {
     pub(crate) sheets: Vec<OdsSheetFormat>,
     pub(crate) ranges: Vec<DatabaseRange>,
     pub(crate) validations: HashMap<String, Validation>,
+    /// The pivot tables, as the document describes them.
+    pub(crate) pivots: Vec<OdfPivot>,
     pub(crate) views: ViewSettings,
     /// Style and validation names the runs refer to by index.
     pub(crate) names: Vec<String>,
@@ -285,6 +288,7 @@ pub(crate) fn read_formats(source: &Path) -> Result<OdsFormats, SidecarError> {
     formats.sheets = parser.sheets;
     formats.ranges = parser.ranges;
     formats.validations = parser.validations;
+    formats.pivots = parser.pivots.pivots;
     formats.names = parser.names.list;
     Ok(formats)
 }
@@ -491,6 +495,8 @@ struct ContentParser {
     scale: Option<(bool, Vec<ScalePoint>, Option<String>)>,
     /// Validation runs still growing downwards, one per column span.
     open_validations: Vec<ValidationRun>,
+    /// The pivot tables; it takes over inside `table:data-pilot-tables`.
+    pivots: PivotReader,
 }
 
 fn attributes<R: BufRead>(
@@ -567,7 +573,7 @@ impl ContentParser {
         name.starts_with(b"draw:")
             || matches!(
                 element.local_name().as_ref(),
-                b"shapes" | b"forms" | b"tracked-changes" | b"dde-links" | b"data-pilot-tables"
+                b"shapes" | b"forms" | b"tracked-changes" | b"dde-links"
             )
             // A table inside a cell is a nested table, not a sheet.
             || (self.cell.is_some() && element.local_name().as_ref() == b"table")
@@ -587,6 +593,14 @@ impl ContentParser {
         element: &BytesStart<'_>,
         empty: bool,
     ) -> Result<(), SidecarError> {
+        // The pivot tables follow the sheets and share element names with
+        // the filters of a database range; their reader takes them whole.
+        if self.pivots.active() || element.local_name().as_ref() == b"data-pilot-tables" {
+            let mut list: Vec<(Vec<u8>, String)> = Vec::new();
+            attributes(reader, element, |key, value| list.push((key.to_vec(), value)))?;
+            self.pivots.start(element.local_name().as_ref(), &list, empty);
+            return Ok(());
+        }
         match element.local_name().as_ref() {
             b"table" => {
                 self.finish_sheet();
@@ -870,6 +884,10 @@ impl ContentParser {
     }
 
     fn end(&mut self, name: &[u8]) {
+        if self.pivots.active() {
+            self.pivots.end(name);
+            return;
+        }
         match name {
             b"table" => self.finish_sheet(),
             b"table-column-group" => {

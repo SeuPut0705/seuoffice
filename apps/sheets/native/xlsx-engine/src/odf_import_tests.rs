@@ -761,4 +761,116 @@ fn a_document_without_drawings_gets_no_drawing_parts() {
     assert!(!has_entry(&target, "xl/drawings/drawing1.xml"));
     assert!(!has_entry(&target, "xl/worksheets/_rels/sheet1.xml.rels"));
     assert!(!read_entry(&target, "[Content_Types].xml").contains("drawing"));
+    // Nor a pivot cache.
+    assert!(!read_entry(&target, "xl/workbook.xml").contains("pivotCaches"));
+    assert!(!has_entry(&target, "xl/pivotCache/pivotCacheDefinition1.xml"));
+}
+
+#[test]
+fn carries_pivot_tables_from_ods() {
+    let text = |value: &str| {
+        format!(r#"<table:table-cell office:value-type="string"><text:p>{value}</text:p></table:table-cell>"#)
+    };
+    let number = |value: &str| {
+        format!(r#"<table:table-cell office:value-type="float" office:value="{value}"><text:p>{value}</text:p></table:table-cell>"#)
+    };
+    let row = |cells: &[String]| format!("<table:table-row>{}</table:table-row>", cells.concat());
+    let pilot = concat!(
+        r#"<table:data-pilot-table table:name="By region" table:application-data="" table:target-range-address="Pivot.A1:Pivot.C6" table:buttons="Pivot.A2 Pivot.B1" table:grand-total="row" table:show-filter-button="false">"#,
+        r#"<table:source-cell-range table:cell-range-address="Data.A1:Data.C4"/>"#,
+        r#"<table:data-pilot-field table:source-field-name="Region" table:orientation="row" table:used-hierarchy="-1" table:function="auto"><table:data-pilot-level><table:data-pilot-subtotals><table:data-pilot-subtotal table:function="auto"/></table:data-pilot-subtotals><table:data-pilot-members><table:data-pilot-member table:name="West" table:display="false"/></table:data-pilot-members></table:data-pilot-level></table:data-pilot-field>"#,
+        r#"<table:data-pilot-field table:source-field-name="Product" table:orientation="column" table:used-hierarchy="-1" table:function="auto"><table:data-pilot-level/></table:data-pilot-field>"#,
+        r#"<table:data-pilot-field table:source-field-name="Amount" table:orientation="data" table:used-hierarchy="-1" table:function="average"><table:data-pilot-level/></table:data-pilot-field>"#,
+        r#"</table:data-pilot-table>"#,
+    );
+    let body = format!(
+        concat!(
+            r#"<table:table table:name="Data"><table:table-column table:number-columns-repeated="3"/>{}{}{}{}</table:table>"#,
+            r#"<table:table table:name="Pivot"><table:table-column/>{}</table:table>"#,
+            r#"<table:data-pilot-tables>{}"#,
+            // Read from a database: there is no range for a workbook to follow.
+            r#"<table:data-pilot-table table:name="From a database" table:target-range-address="Pivot.E1:Pivot.F4"><table:database-source-table table:database-name="db" table:database-table-name="sales"/><table:data-pilot-field table:source-field-name="Region" table:orientation="row" table:function="auto"/></table:data-pilot-table>"#,
+            r#"</table:data-pilot-tables>"#,
+        ),
+        row(&[text("Region"), text("Product"), text("Amount")]),
+        row(&[text("East"), text("Apple"), number("3")]),
+        row(&[text("West"), text("Pear"), number("4")]),
+        row(&[text("East"), text("Pear"), number("5")]),
+        row(&[text("Average of Amount")]),
+        pilot,
+    );
+    let (dir, target) = convert(&Package {
+        body: &body,
+        ..Package::default()
+    });
+
+    // ---- the parts and how they hang together
+    assert!(!has_entry(&target, "xl/pivotTables/pivotTable2.xml"));
+    assert!(!has_entry(&target, "xl/pivotCache/pivotCacheRecords1.xml"));
+    let workbook = read_entry(&target, "xl/workbook.xml");
+    assert!(
+        workbook.ends_with(r#"<pivotCaches><pivotCache cacheId="1" r:id="rId4"/></pivotCaches></workbook>"#),
+        "{workbook}"
+    );
+    assert!(
+        read_entry(&target, "xl/_rels/workbook.xml.rels").contains(r#"<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotCacheDefinition" Target="pivotCache/pivotCacheDefinition1.xml"/>"#)
+    );
+    assert!(!has_entry(&target, "xl/worksheets/_rels/sheet1.xml.rels"));
+    assert!(
+        read_entry(&target, "xl/worksheets/_rels/sheet2.xml.rels").contains(r#"<Relationship Id="rIdPivot1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotTable" Target="../pivotTables/pivotTable1.xml"/>"#)
+    );
+    assert!(
+        read_entry(&target, "xl/pivotTables/_rels/pivotTable1.xml.rels").contains(r#"Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotCacheDefinition" Target="../pivotCache/pivotCacheDefinition1.xml""#)
+    );
+    let types = read_entry(&target, "[Content_Types].xml");
+    for part in [
+        r#"<Override PartName="/xl/pivotTables/pivotTable1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.pivotTable+xml"/>"#,
+        r#"<Override PartName="/xl/pivotCache/pivotCacheDefinition1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheDefinition+xml"/>"#,
+    ] {
+        assert!(types.contains(part), "{part} is missing from {types}");
+    }
+
+    // ---- the cache is rebuilt from the sheet when the workbook is opened
+    let cache = read_entry(&target, "xl/pivotCache/pivotCacheDefinition1.xml");
+    assert_in_order(
+        &cache,
+        &[
+            r#" saveData="0" refreshOnLoad="1" "#,
+            r#"<cacheSource type="worksheet"><worksheetSource ref="A1:C4" sheet="Data"/></cacheSource>"#,
+            r#"<cacheFields count="3"><cacheField name="Region" numFmtId="0"><sharedItems count="1"><s v="West"/></sharedItems></cacheField>"#,
+            r#"<cacheField name="Product" numFmtId="0"><sharedItems/></cacheField><cacheField name="Amount" numFmtId="0"><sharedItems/></cacheField></cacheFields>"#,
+        ],
+    );
+    let table = read_entry(&target, "xl/pivotTables/pivotTable1.xml");
+    assert_in_order(
+        &table,
+        &[
+            r#" name="By region" cacheId="1" "#,
+            r#" colGrandTotals="0" compact="0" compactData="0" outline="0" outlineData="0">"#,
+            r#"<location ref="A1:C6" firstHeaderRow="1" firstDataRow="2" firstDataCol="1"/>"#,
+            r#"<pivotFields count="3"><pivotField axis="axisRow" compact="0" outline="0" showAll="0"><items count="2"><item h="1" x="0"/><item t="default"/></items></pivotField>"#,
+            r#"<pivotField axis="axisCol" compact="0" outline="0" showAll="0" defaultSubtotal="0"><items count="1"><item t="default"/></items></pivotField>"#,
+            r#"<pivotField dataField="1" compact="0" outline="0" showAll="0"/></pivotFields>"#,
+            r#"<rowFields count="1"><field x="0"/></rowFields><rowItems count="1"><i><x/></i></rowItems>"#,
+            r#"<colFields count="1"><field x="1"/></colFields><colItems count="1"><i/></colItems>"#,
+            r#"<dataFields count="1"><dataField name="Average of Amount" fld="2" subtotal="average" baseField="0" baseItem="0"/></dataFields>"#,
+            r#"<pivotTableStyleInfo "#,
+        ],
+    );
+
+    // ---- the engine finds the pivot table, and the export says it again
+    let mut sessions = WorkbookSessions::new();
+    let metadata = sessions.open(&target).unwrap();
+    assert_eq!(metadata.sheets[0].pivot_tables.len(), 0);
+    assert_eq!(metadata.sheets[1].pivot_tables.len(), 1);
+    assert_eq!(metadata.sheets[1].pivot_tables[0].output_ref, "A1:C6");
+    let _ = sessions.close(&metadata.session_id);
+    let back = dir.path().join("back.ods");
+    let result = crate::ods_export::convert_to_ods(&target, &back).unwrap();
+    assert_eq!(result.dropped.pivots, 0);
+    let content = read_entry(&back, "content.xml");
+    assert!(
+        content.contains(&format!("<table:data-pilot-tables>{pilot}</table:data-pilot-tables>")),
+        "{content}"
+    );
 }
