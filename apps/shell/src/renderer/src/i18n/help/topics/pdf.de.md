@@ -82,6 +82,7 @@ Sechs Werkzeuge: **Freihand, Rechteck, Ellipse, Pfeil, Notiz** sowie **Bereich s
 
 - **Als Word exportieren… / PowerPoint… / Excel…** im Menü Datei, oder dieselben drei über **PDF umwandeln** im Menüband — alles lokal, kein Upload. Die .pptx kommt mit einem Foliensatz pro Seite heraus, die .xlsx mit einem Arbeitsblatt pro Seite. Jede fragt nach dem Speicherort.
 - **PDF in HWP** unter **PDF umwandeln** im Menüband macht aus dem PDF ein HWP-Dokument in einem neuen HWP-Tab. Wählen Sie im PDF-Importfenster des Tabs **Importieren** (가져오기); das Dokument entsteht in diesem Tab, und beim ersten Speichern wird nach dem Ort für die .hwp- oder .hwpx-Datei gefragt. Das PDF selbst bleibt unverändert, und die Umwandlung läuft auf diesem PC. Ob der Text als Absätze, die über die Seiten fließen, oder als feste Textfelder übernommen wird, legen Sie in den Optionen (환경 설정) des HWP-Tabs unter PDF-Import fest.
+- Dieselbe Umwandlung lässt sich auch von einem HWP-Tab aus starten. Wählen Sie mit **Datei** ▸ **PDF importieren…** ein PDF; ein neuer HWP-Tab öffnet sich mit demselben PDF-Importfenster. Das Dokument des Tabs, in dem das Menü benutzt wurde, bleibt unverändert.
 - **Druck**: aktuelle Reihenfolge und Drehungen über den Systemdialog; Seitenbereiche werden unterstützt.
 
 ## Speichern

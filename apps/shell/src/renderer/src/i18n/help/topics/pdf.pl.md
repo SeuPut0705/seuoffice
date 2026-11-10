@@ -82,6 +82,7 @@ Sześć narzędzi: **tusz, prostokąt, elipsa, strzałka, notatka**, a ponadto *
 
 - **Eksportuj jako Word… / PowerPoint… / Excel…** w menu Plik albo te same trzy z **Konwertuj PDF** na wstążce — wszystko lokalnie, bez wysyłania na serwer. Plik .pptx wychodzi ze slajdem na stronę, a .xlsx z arkuszem na stronę. Każdy z nich pyta, gdzie zapisać.
 - **PDF na HWP** w menu **Konwertuj PDF** na wstążce zamienia PDF w dokument HWP w nowej karcie HWP. Wybierz **Importuj** (가져오기) w oknie importu PDF, które pokaże karta; dokument powstaje w tej karcie, a pierwsze zapisanie pyta, gdzie umieścić plik .hwp lub .hwpx. Sam PDF zostaje bez zmian, a konwersja odbywa się na tym komputerze. To, czy tekst trafi jako akapity płynące przez strony, czy jako stałe pola tekstowe, wybiera się w opcjach (환경 설정) karty HWP, w sekcji importu PDF.
+- Tę samą konwersję można też rozpocząć z karty HWP. Wybierz PDF poleceniem **Plik** ▸ **Importuj PDF…**, a otworzy się nowa karta HWP z tym samym oknem importu PDF. Dokument karty, w której użyto menu, zostaje bez zmian.
 - **Drukuj**: bieżąca kolejność i obroty przez okno systemowe; obsługiwane są zakresy stron.
 
 ## Zapisywanie
