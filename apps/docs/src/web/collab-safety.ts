@@ -244,7 +244,10 @@ function safeValue(value: Json, key: string, how: Safety): Json {
 
 function safeLink(href: string): boolean {
   // a browser drops tabs, newlines and leading controls before it reads the scheme
-  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(href.replace(/[\u0000-\u0020\u007f]/g, ''))
+  const bare = Array.from(href)
+    .filter((char) => char > ' ' && char !== '\u007f')
+    .join('')
+  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(bare)
   return !scheme || LINK_SCHEMES.has(scheme[1].toLowerCase())
 }
 
