@@ -180,31 +180,39 @@ describe('the server', () => {
     ])
   })
 
-  it('closes the older socket of a client when the client says hello again, whichever hello arrives first', async () => {
+  it('keeps the socket with the highest connection attempt of a client, whatever the accept and hello order', async () => {
     const { server, hello, open } = await setup()
     const first = await open('a')
     const { client, epoch } = first.welcomed()
-    const resume = { ...hello, resume: { epoch, client, v: 0 } }
+    const resume = (attempt: number) => ({ ...hello, resume: { epoch, client, v: 0, attempt } })
 
-    const second = new FakeSocket()
-    server.accept(second, principal('a'))
+    // Accepted before the attempt it lost to, and its hello read after
     const third = new FakeSocket()
     server.accept(third, principal('a'))
-    third.receive(resume)
+    const second = new FakeSocket()
+    server.accept(second, principal('a'))
+    third.receive(resume(3))
     await server.idle()
     expect(first.frames().at(-1)).toEqual({ t: 'error', code: 'superseded' })
-
-    second.receive(resume)
+    second.receive(resume(2))
     await server.idle()
     expect(second.frames()).toEqual([{ t: 'error', code: 'superseded' }])
     expect(third.closed).toBe(false)
+
+    // A newer attempt takes over from the welcomed one
+    const fourth = new FakeSocket()
+    server.accept(fourth, principal('a'))
+    fourth.receive(resume(4))
+    await server.idle()
+    expect(third.frames().at(-1)).toEqual({ t: 'error', code: 'superseded' })
+    expect(fourth.welcomed()).toEqual({ client, epoch })
   })
 
   it('keeps an epoch its last socket left, so a resume continues it, until it idled out saved', async () => {
     const { server, store, clock, hello, open } = await setup()
     const socket = await open('a')
     const { client, epoch } = socket.welcomed()
-    const resume = { ...hello, resume: { epoch, client, v: 0 } }
+    const resume = { ...hello, resume: { epoch, client, v: 0, attempt: 2 } }
     socket.hangUp()
     await server.idle()
 
@@ -244,7 +252,7 @@ describe('the server', () => {
 
     const other = new FakeSocket()
     server.accept(other, principal('other'))
-    other.receive({ ...hello, resume: { epoch, client, v: 0 } })
+    other.receive({ ...hello, resume: { epoch, client, v: 0, attempt: 2 } })
     await server.idle()
     expect(other.welcomed().client).not.toBe(client)
     expect(owner.closed).toBe(false)

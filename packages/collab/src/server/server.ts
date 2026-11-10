@@ -118,8 +118,6 @@ type Stage = 'new' | 'seeding' | 'waiting' | 'live' | 'closed'
 interface Conn {
   readonly socket: ServerSocket
   readonly principal: Principal
-  /** acceptance order: a client opens a new socket only after giving up the old one */
-  readonly accepted: number
   stage: Stage
   hello: HelloFrame | null
   client: string | null
@@ -144,8 +142,8 @@ interface EpochState {
   saved: number
   /** per version, the fingerprint each editing client last reported */
   fingerprints: Map<number, Map<string, string>>
-  /** client id to the user it was issued to */
-  clients: Map<string, string>
+  /** client id to the user it was issued to and the highest connection attempt welcomed */
+  clients: Map<string, { user: string; attempt: number }>
 }
 
 interface Doc {
@@ -180,7 +178,6 @@ export function createServerCore({
   let closing = false
   let busy = 0
   let idleWaiters: (() => void)[] = []
-  let accepted = 0
 
   function docFor(id: string): Doc {
     let doc = docs.get(id)
@@ -356,12 +353,14 @@ export function createServerCore({
     const hello = conn.hello!
     const epoch = await store.load(doc.id)
     const known = epoch ? epochState(doc, epoch) : null
+    const issued = hello.resume ? known?.clients.get(hello.resume.client) : undefined
     const decision = decideHello(epoch, hello, {
       seeding: doc.seeder !== null,
-      owner: hello.resume ? known?.clients.get(hello.resume.client) : undefined,
+      owner: issued?.user,
       user: conn.principal.userId,
       canEdit: conn.principal.canEdit,
       currentHash: conn.principal.fileHash,
+      welcomed: issued?.attempt,
     })
     switch (decision.kind) {
       case 'need_base':
@@ -392,17 +391,16 @@ export function createServerCore({
   async function welcome(
     doc: Doc,
     conn: Conn,
-    { epoch, client: resumed, start, sendBase }: Welcome,
+    { epoch, client: resumed, attempt, start, sendBase }: Welcome,
   ): Promise<void> {
     const client = resumed ?? crypto.randomUUID()
+    // The fence in decideHello let only a newer attempt through, so any other socket of this
+    // client belongs to a connection the client gave up
     for (const other of live(doc)) {
-      if (other.client !== client) continue
-      // The older socket of one client goes, even when its hello is the one that arrived late
-      if (other.accepted > conn.accepted) return reject(doc, conn, 'superseded')
-      await reject(doc, other, 'superseded')
+      if (other.client === client) await reject(doc, other, 'superseded')
     }
     const state = epochState(doc, epoch)
-    state.clients.set(client, conn.principal.userId)
+    state.clients.set(client, { user: conn.principal.userId, attempt })
     if (sendBase) {
       const base = await store.readBase(doc.id, epoch.id)
       send(conn, { t: 'base', bytes: base.byteLength })
@@ -581,7 +579,6 @@ export function createServerCore({
       const conn: Conn = {
         socket,
         principal,
-        accepted: ++accepted,
         stage: 'new',
         hello: null,
         client: null,

@@ -10,9 +10,16 @@ import type { AppendRequest, EpochHead } from './store.js'
 export type HelloDecision =
   | { kind: 'need_base' }
   | { kind: 'wait' }
-  | { kind: 'reject'; code: 'schema_mismatch' | 'reset' | 'forbidden' }
-  /** `client` null: issue a new client id */
-  | { kind: 'welcome'; epoch: EpochHead; client: string | null; start: number; sendBase: boolean }
+  | { kind: 'reject'; code: 'schema_mismatch' | 'reset' | 'forbidden' | 'superseded' }
+  /** `client` null: issue a new client id; `attempt` is the connection attempt welcomed */
+  | {
+      kind: 'welcome'
+      epoch: EpochHead
+      client: string | null
+      attempt: number
+      start: number
+      sendBase: boolean
+    }
 
 export interface HelloContext {
   /** another socket of the document was already asked for the base */
@@ -25,12 +32,14 @@ export interface HelloContext {
   canEdit: boolean
   /** the hash of the file the host holds as current, when it said */
   currentHash: string | undefined
+  /** the highest connection attempt welcomed for `hello.resume.client` in this epoch */
+  welcomed: number | undefined
 }
 
 export function decideHello(
   epoch: EpochHead | null,
   hello: HelloFrame,
-  { seeding, owner, user, canEdit, currentHash }: HelloContext,
+  { seeding, owner, user, canEdit, currentHash, welcomed }: HelloContext,
 ): HelloDecision {
   // Someone else's client id is not this user's to resume or to supersede
   const resume = owner === undefined || owner === user ? hello.resume : undefined
@@ -49,12 +58,24 @@ export function decideHello(
   if (resume) {
     // A version past the head cannot belong to this epoch's log
     if (resume.epoch !== epoch.id || resume.v > epoch.head) return { kind: 'reject', code: 'reset' }
-    return { kind: 'welcome', epoch, client: resume.client, start: resume.v, sendBase: false }
+    // The client opened a newer connection since this one, and the server already took it
+    if (welcomed !== undefined && resume.attempt < welcomed) {
+      return { kind: 'reject', code: 'superseded' }
+    }
+    return {
+      kind: 'welcome',
+      epoch,
+      client: resume.client,
+      attempt: resume.attempt,
+      start: resume.v,
+      sendBase: false,
+    }
   }
   return {
     kind: 'welcome',
     epoch,
     client: null,
+    attempt: 0,
     start: 0,
     sendBase: hello.fileHash !== epoch.baseHash,
   }

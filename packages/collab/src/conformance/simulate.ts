@@ -104,6 +104,8 @@ async function run<Op>(options: SimulateOptions<Op>): Promise<SimulationReport> 
   // queued, so the runs keep idle epochs.
   const net = new SimNetwork({
     limits: { catchUpPage: 1 + Math.floor(random() * 8), idleEpochMs: Infinity },
+    // Half the runs go through a proxy, so sockets are accepted out of the order they opened
+    proxied: random() < 0.5,
   })
   const clients: SimClient<Op>[] = []
   const saves: { version: number; bytes: Uint8Array }[] = []

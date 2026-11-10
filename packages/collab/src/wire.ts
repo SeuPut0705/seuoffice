@@ -15,6 +15,13 @@ export interface Resume {
   epoch: string
   client: string
   v: number
+  /**
+   * Counts the client's connection attempts, one more on every connection it opens. The server
+   * welcomes a client id only on a higher attempt than the last it welcomed, so the hello of a
+   * connection the client already gave up cannot take over from a newer one, whatever order a
+   * proxy or several server processes deliver them in.
+   */
+  attempt: number
 }
 
 export interface HelloFrame {
@@ -150,7 +157,12 @@ export function parseClientFrame(raw: string | Uint8Array): ClientFrame | BytesF
       }
       if (f.resume !== undefined) {
         const r = fields(f.resume)
-        hello.resume = { epoch: id(r.epoch), client: id(r.client), v: count(r.v) }
+        hello.resume = {
+          epoch: id(r.epoch),
+          client: id(r.client),
+          v: count(r.v),
+          attempt: count(r.attempt),
+        }
       }
       return hello
     }

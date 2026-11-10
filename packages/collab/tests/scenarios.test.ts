@@ -182,6 +182,78 @@ describe('a lost connection', () => {
   })
 })
 
+describe('schedules found by the protocol model (formal/collab-protocol)', () => {
+  it('F2: a submit cut off with its connection and doomed during catch-up goes out again with its seq', async () => {
+    const net = new SimNetwork()
+    const a = await join(net, toyLines, 'a')
+    const b = await join(net, toyLines, 'b')
+    await net.run()
+
+    a.editor!.perform(ins('A', 0))
+    const first = a.link.current!
+    // Cut at once; the submit {seq 1, base 0} still travels to the server
+    net.break(first)
+    b.editor!.perform(ins('B', 0))
+    await net.deliverUp(b.link.current!)
+    expect(await opIds(net)).toEqual([['B']])
+    // The old submit is stale now, and the answer goes to the dead connection
+    await net.deliverUp(first)
+    await net.deliverUp(first)
+    expect(first.up).toEqual([])
+
+    expect(net.clock.fire()).toBe(true)
+    await net.settle()
+    const second = a.link.current!
+    await net.deliverUp(second)
+    await net.deliverDown(second)
+    await net.deliverUp(second)
+    await net.deliverDown(second)
+    expect(a.session!.status()).toMatchObject({ phase: 'offline', version: 0, unconfirmed: 1 })
+    // B arrives during catch-up as a foreign change: the in-flight submit is doomed
+    await net.deliverDown(second)
+
+    await net.run()
+    expect(await opIds(net)).toEqual([['B'], ['A']])
+    expect(a.session!.status()).toMatchObject({ phase: 'live', version: 2, unconfirmed: 0 })
+    expect(await shown(a)).toEqual(await shown(b))
+  })
+
+  it('F1: a late hello from a connection the client gave up does not evict its newer connection', async () => {
+    // Behind a proxy the server may accept a later connection first
+    const net = new SimNetwork({ proxied: true })
+    await join(net, toyLines, 'a')
+    const b = await join(net, toyLines, 'b')
+    await net.run()
+
+    b.editor!.perform(ins('B', 0))
+    net.break(b.link.current!, { drop: true })
+    async function reopen() {
+      expect(net.clock.fire()).toBe(true)
+      await net.settle()
+      const connection = b.link.current!
+      // The proxy opens it at once, and the engine says hello with resume
+      await net.deliverDown(connection)
+      return connection
+    }
+    const second = await reopen()
+    // Cut before the server reads its hello
+    net.break(second)
+    const third = await reopen()
+    await net.deliverUp(third)
+    await net.deliverUp(third)
+    // Only now does the server see connection 2, and then its hello
+    await net.deliverUp(second)
+    await net.deliverUp(second)
+
+    await net.run()
+    expect(b.link.current).toBe(third)
+    expect(third.serverOpen).toBe(true)
+    expect(second.serverOpen).toBe(false)
+    expect(b.session!.status()).toMatchObject({ phase: 'live', version: 1, unconfirmed: 0 })
+    expect(await opIds(net)).toEqual([['B']])
+  })
+})
+
 describe('reconnecting', () => {
   it('waits 0.5 s, doubling up to 15 s, and starts over only once a change got through', async () => {
     const net = new SimNetwork()

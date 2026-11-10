@@ -69,6 +69,8 @@ export interface EngineState<Op> {
   detail: string | null
   closed: boolean
   attempts: number
+  /** connections opened so far; every hello with resume names its own, so the newest wins */
+  opened: number
   /** connections in a row that ended in a protocol violation without a change getting through */
   strikes: number
   /** this connection received or confirmed a change */
@@ -181,6 +183,7 @@ export function initialState<Op>(
     detail: null,
     closed: false,
     attempts: 0,
+    opened: 0,
     strikes: 0,
     progressed: false,
     epoch: null,
@@ -276,6 +279,7 @@ function handle<Op>(c: Ctx<Op>, event: EngineEvent<Op>): void {
       if (s.connection !== 'connecting') return
       s.connection = 'hello'
       s.progressed = false
+      s.opened += 1
       c.fx.push({
         type: 'send',
         frame: {
@@ -283,7 +287,9 @@ function handle<Op>(c: Ctx<Op>, event: EngineEvent<Op>): void {
           p: 1,
           format: s.format,
           fileHash: s.fileHash,
-          ...(s.joined ? { resume: { epoch: s.epoch!, client: s.client!, v: top(s) } } : {}),
+          ...(s.joined
+            ? { resume: { epoch: s.epoch!, client: s.client!, v: top(s), attempt: s.opened } }
+            : {}),
         },
       })
       return
@@ -291,9 +297,11 @@ function handle<Op>(c: Ctx<Op>, event: EngineEvent<Op>): void {
       if (s.connection !== 'down') lose(c)
       return
     case 'bad_frame':
-      return drop(c)
     case 'frame':
-      return frame(c, event.frame)
+      // No connection of the engine's is open: the frame comes from a socket it gave up, and a
+      // `superseded` on such a socket is about that socket only
+      if (s.connection === 'down' || s.connection === 'connecting') return
+      return event.type === 'frame' ? frame(c, event.frame) : drop(c)
     case 'timer':
       if (event.name === 'reconnect' && s.connection === 'down') {
         s.connection = 'connecting'

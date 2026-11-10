@@ -120,6 +120,7 @@ export class SimLink implements CollabLink {
     this.connections.push(connection)
     this.current = connection
     this.net.push(connection, 'up', { kind: 'connect' })
+    if (this.net.proxied) this.net.push(connection, 'down', { kind: 'open' })
   }
 
   send(frame: Frame): void {
@@ -189,6 +190,12 @@ export class SimClient<Op, E extends SimulatedEditor<Op> = SimulatedEditor<Op>> 
 
 export interface SimNetworkOptions {
   limits?: Partial<Limits> | undefined
+  /**
+   * A proxy stands between clients and the server: a client's connection opens at once, and the
+   * server accepts the socket only when its `connect` is delivered. Sockets are then accepted in
+   * whatever order the schedule delivers them, not in the order the clients opened them.
+   */
+  proxied?: boolean | undefined
 }
 
 export class SimNetwork {
@@ -203,7 +210,10 @@ export class SimNetwork {
   readonly stats = { breaks: 0, lateFrames: 0 }
   #stamp = 0
 
+  readonly proxied: boolean
+
   constructor(options: SimNetworkOptions = {}) {
+    this.proxied = options.proxied ?? false
     const inner = memoryStore()
     this.store = {
       load: (documentId) => inner.load(documentId),
@@ -265,7 +275,7 @@ export class SimNetwork {
         connection.accepted = true
         connection.serverOpen = true
         this.server.accept(this.#socket(connection), connection.link.principal)
-        this.push(connection, 'down', { kind: 'open' })
+        if (!this.proxied) this.push(connection, 'down', { kind: 'open' })
         break
       case 'frame':
         if (!connection.serverOpen) break

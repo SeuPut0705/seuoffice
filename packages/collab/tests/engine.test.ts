@@ -40,6 +40,12 @@ class StubLink implements CollabLink {
     this.#emit({ type: 'frame', frame: typeof frame === 'string' ? frame : JSON.stringify(frame) })
   }
 
+  /** the host or the network ended the connection */
+  hangUp(): void {
+    this.#state = 'idle'
+    this.#emit({ type: 'close' })
+  }
+
   lastSent(): unknown {
     const text = this.sent.filter((frame) => typeof frame === 'string').at(-1)
     return text === undefined ? undefined : JSON.parse(text)
@@ -156,5 +162,24 @@ describe('a server that keeps breaking the protocol', () => {
     link.deliver(welcome(1))
     link.deliver(gap)
     expect(session.status()).toMatchObject({ phase: 'failed', failure: 'reset' })
+  })
+})
+
+describe('a frame from a socket the engine gave up', () => {
+  it('is nothing, a superseded included, and the next hello names a newer attempt', async () => {
+    const { link, clock, session } = await joined()
+    link.hangUp()
+    link.deliver({ t: 'error', code: 'superseded' })
+    link.deliver('not a frame')
+    expect(session.status()).toMatchObject({ phase: 'offline' })
+
+    expect(reconnected(link, clock)).toBe(true)
+    link.accept()
+    expect(link.lastSent()).toMatchObject({
+      t: 'hello',
+      resume: { epoch: 'e1', client: 'c1', v: 0, attempt: 2 },
+    })
+    link.deliver(welcome(0))
+    expect(session.status().phase).toBe('live')
   })
 })
