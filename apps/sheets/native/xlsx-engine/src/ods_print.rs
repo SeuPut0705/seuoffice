@@ -43,9 +43,9 @@ pub(crate) struct PrintExtras {
 /// this is cut and the extras fall back to their defaults.
 const MAX_TAIL_BYTES: usize = 64 * 1024 * 1024;
 
-/// Reads the extras of one worksheet part. Any failure answers the defaults:
-/// these settings refine the print-out and must not fail an export.
-pub(crate) fn read_print_extras(source: &Path, worksheet_path: &str) -> PrintExtras {
+/// Reads the extras of one worksheet part.
+#[cfg(test)]
+fn read_print_extras(source: &Path, worksheet_path: &str) -> PrintExtras {
     let Some(tail) = worksheet_tail(source, worksheet_path) else {
         return PrintExtras::default();
     };
@@ -54,8 +54,9 @@ pub(crate) fn read_print_extras(source: &Path, worksheet_path: &str) -> PrintExt
 
 /// Everything after the sheet data, without parsing the cells a second time:
 /// the part is inflated in chunks and only searched for the end of
-/// `sheetData`.
-fn worksheet_tail(source: &Path, worksheet_path: &str) -> Option<Vec<u8>> {
+/// `sheetData`. `None` when the part cannot be read or its tail is too large;
+/// what is read from the tail refines the export and must not fail it.
+pub(crate) fn worksheet_tail(source: &Path, worksheet_path: &str) -> Option<Vec<u8>> {
     let mut archive = ZipArchive::new(File::open(source).ok()?).ok()?;
     let mut entry = archive.by_name(worksheet_path).ok()?;
     const NAME: &[u8] = b"sheetData";
@@ -106,7 +107,7 @@ fn worksheet_tail(source: &Path, worksheet_path: &str) -> Option<Vec<u8>> {
     tail
 }
 
-fn parse_print_extras(tail: &[u8]) -> PrintExtras {
+pub(crate) fn parse_print_extras(tail: &[u8]) -> PrintExtras {
     let mut extras = PrintExtras::default();
     let mut reader = Reader::from_reader(tail);
     // The tail starts in the middle of the document, so its end tags have no

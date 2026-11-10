@@ -59,6 +59,9 @@ pub(crate) struct StyleRegistry {
     row_bodies: Vec<String>,
     text_styles: HashMap<String, String>,
     text_bodies: Vec<String>,
+    /// Named styles a conditional format applies, by their properties.
+    conditional_names: HashMap<String, String>,
+    conditional_bodies: Vec<(String, String)>,
     fonts: BTreeSet<String>,
     counter: usize,
 }
@@ -81,6 +84,8 @@ impl StyleRegistry {
             row_bodies: Vec::new(),
             text_styles: HashMap::new(),
             text_bodies: Vec::new(),
+            conditional_names: HashMap::new(),
+            conditional_bodies: Vec::new(),
             fonts,
             counter: 0,
         }
@@ -434,6 +439,37 @@ impl StyleRegistry {
             r#"<style:style style:name="{name}" style:family="text"><style:text-properties{text}/></style:style>"#
         ));
         Some(name)
+    }
+
+    /// The named style a conditional format applies for a differential
+    /// style. A differential style only says what it changes, so it is
+    /// written against an empty base rather than the workbook's default: a
+    /// rule that turns text bold must say so even in a workbook whose default
+    /// is bold.
+    pub(crate) fn conditional_style(&mut self, dxf: &CellStyle) -> String {
+        let base = std::mem::take(&mut self.base);
+        let inner = self.cell_properties(dxf);
+        self.base = base;
+        if let Some(name) = self.conditional_names.get(&inner) {
+            return name.clone();
+        }
+        let name = format!("ConditionalStyle_{}", self.conditional_bodies.len() + 1);
+        self.conditional_names.insert(inner.clone(), name.clone());
+        self.conditional_bodies.push((name.clone(), inner));
+        name
+    }
+
+    /// The conditional styles, for `<office:styles>`: a conditional format
+    /// can only name a style that is not automatic.
+    pub(crate) fn conditional_styles(&self) -> String {
+        self.conditional_bodies
+            .iter()
+            .map(|(name, inner)| {
+                format!(
+                    r#"<style:style style:name="{name}" style:family="table-cell" style:parent-style-name="{DEFAULT_CELL_STYLE}">{inner}</style:style>"#
+                )
+            })
+            .collect()
     }
 
     /// The `<office:automatic-styles>` content: data styles first (the cell

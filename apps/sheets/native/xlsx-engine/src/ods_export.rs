@@ -27,7 +27,10 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
 use crate::odf_formula::{self, Names};
-use crate::ods_print::{PageStyles, print_titles, read_print_extras, split_outside_quotes};
+use crate::ods_print::{
+    PageStyles, parse_print_extras, print_titles, split_outside_quotes, worksheet_tail,
+};
+use crate::ods_rules::{ValidationArea, Validations, conditional_formats_xml, parse_rule_extras};
 use crate::ods_styles::{DEFAULT_CELL_STYLE, ResolvedStyle, StyleRegistry, ValueKind};
 use crate::xlsx_package::escape_xml;
 use crate::{
@@ -71,6 +74,9 @@ const NAMESPACES: &str = concat!(
     r#"xmlns:of="urn:oasis:names:tc:opendocument:xmlns:of:1.2" "#,
     r#"xmlns:xlink="http://www.w3.org/1999/xlink" "#,
     r#"xmlns:dc="http://purl.org/dc/elements/1.1/" "#,
+    // Conditional formats have no element in the standard; this is the
+    // extension namespace the readers of the format share for them.
+    r#"xmlns:calcext="urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0" "#,
 );
 
 /// What the export did, in the shape the protocol returns it. `dropped` counts
@@ -170,16 +176,31 @@ fn write_document(
     let mut counters = Counters::new(metadata, macros);
     let (named, names) = exported_names(metadata);
     let mut database_ranges = String::new();
+    let mut validations = Validations::default();
 
     let body_path = staging.path("body");
     {
         let mut body = BufWriter::new(File::create(&body_path)?);
         for (index, sheet) in metadata.sheets.iter().enumerate() {
             let wide = read_sheet_wide(sessions, &metadata.session_id, sheet)?;
-            counters.count_sheet(&wide, sheet);
-            let extras = worksheet_part(sessions, &metadata.session_id, index)
-                .map(|(package, part)| read_print_extras(&package, &part))
-                .unwrap_or_default();
+            // What the model does not carry is read from the worksheet part
+            // itself, once for the print settings and the rules.
+            let tail = worksheet_part(sessions, &metadata.session_id, index)
+                .and_then(|(package, part)| worksheet_tail(&package, &part));
+            let extras = tail.as_deref().map(parse_print_extras).unwrap_or_default();
+            let rule_extras = tail.as_deref().map(parse_rule_extras).unwrap_or_default();
+            drop(tail);
+            let (areas, lost) = validations.register(&sheet.name, &wide.data_validations, &names);
+            counters.dropped.validations += lost;
+            let (conditional_formats, lost) = conditional_formats_xml(
+                &sheet.name,
+                &wide.conditional_rules,
+                &metadata.dxf_styles,
+                &rule_extras,
+                &names,
+                &mut registry,
+            );
+            counters.dropped.conditional_formats += lost;
             let master = pages.register(wide.page_setup.as_ref(), extras, &mut registry);
             let table_style = format!("ta{}", index + 1);
             table_styles.push(table_style_xml(&table_style, sheet, &master));
@@ -200,6 +221,8 @@ fn write_document(
                 wide: &wide,
                 filtered_rows: filter.filtered_rows,
                 local_names: &local_names,
+                validations: &areas,
+                conditional_formats: &conditional_formats,
             };
             write_table(
                 sessions,
@@ -235,6 +258,7 @@ fn write_document(
         &content_path,
         &registry,
         &table_styles,
+        &validations.xml,
         &body_path,
         metadata,
     )?;
@@ -260,6 +284,7 @@ fn write_content_xml(
     path: &Path,
     registry: &StyleRegistry,
     table_styles: &[String],
+    validations: &str,
     body_path: &Path,
     metadata: &WorkbookMetadata,
 ) -> Result<(), SidecarError> {
@@ -291,6 +316,11 @@ fn write_content_xml(
     } else {
         header.push_str("/>");
     }
+    if !validations.is_empty() {
+        header.push_str(&format!(
+            "<table:content-validations>{validations}</table:content-validations>"
+        ));
+    }
     out.write_all(header.as_bytes())?;
     let mut body = File::open(body_path)?;
     io::copy(&mut body, &mut out)?;
@@ -301,9 +331,10 @@ fn write_content_xml(
 
 fn styles_xml(registry: &StyleRegistry, pages: &PageStyles) -> String {
     format!(
-        r#"<?xml version="1.0" encoding="UTF-8"?><office:document-styles {NAMESPACES}office:version="{ODF_VERSION}"><office:font-face-decls>{}</office:font-face-decls><office:styles>{}</office:styles><office:automatic-styles>{}{}</office:automatic-styles><office:master-styles>{}</office:master-styles></office:document-styles>"#,
+        r#"<?xml version="1.0" encoding="UTF-8"?><office:document-styles {NAMESPACES}office:version="{ODF_VERSION}"><office:font-face-decls>{}</office:font-face-decls><office:styles>{}{}</office:styles><office:automatic-styles>{}{}</office:automatic-styles><office:master-styles>{}</office:master-styles></office:document-styles>"#,
         registry.font_face_decls(),
         registry.default_cell_style(),
+        registry.conditional_styles(),
         pages.layouts,
         pages.text_styles,
         pages.masters,
@@ -537,11 +568,6 @@ impl Counters {
             formulas_dropped: 0,
             dropped,
         }
-    }
-
-    fn count_sheet(&mut self, wide: &RangeResult, _sheet: &SheetMetadata) {
-        self.dropped.conditional_formats += wide.conditional_rules.len() as u32;
-        self.dropped.validations += wide.data_validations.len() as u32;
     }
 
     fn finish(self) -> OdsExportResult {
@@ -895,6 +921,10 @@ struct SheetContext<'a> {
     wide: &'a RangeResult,
     filtered_rows: Option<(usize, usize)>,
     local_names: &'a str,
+    /// The ranges a validation covers, sorted by first row.
+    validations: &'a [ValidationArea],
+    /// The sheet's `calcext:conditional-formats` element, ready to write.
+    conditional_formats: &'a str,
 }
 
 /// One column of the axis, as far as its `table:table-column` is concerned.
@@ -1089,11 +1119,15 @@ fn write_table(
         .rposition(Option::is_some)
         .map(|last| last + 1)
         .unwrap_or(0);
-    let empty_row = if styled_columns == 0 {
-        "<table:table-cell/>".to_owned()
-    } else {
-        empty_cells(0, styled_columns - 1, None, &column_defaults)
-    };
+    let plain_row = empty_row_cells(&[], &column_defaults, styled_columns);
+    // The validations that cover the current row, as column spans. They only
+    // change where a range starts or ends, so the cells of an otherwise empty
+    // row are built once per band and reused.
+    let areas = context.validations;
+    let mut area_cursor = 0;
+    let mut area_active: Vec<&ValidationArea> = Vec::new();
+    let mut spans: Vec<ValidationSpan<'_>> = Vec::new();
+    let mut band_row = plain_row.clone();
 
     let comments: HashMap<(usize, usize), &CommentInfo> = sheet
         .comments
@@ -1105,10 +1139,11 @@ fn write_table(
     let mut sink = RowSink {
         out,
         pending: 0,
+        pending_cells: String::new(),
         wrote_row: false,
         rows: 0,
         fill_to_end: styled_columns > 0,
-        empty_row,
+        plain_row: plain_row.clone(),
     };
     let mut nesting = Nesting::rows();
     let mut row_styles: HashMap<usize, Option<usize>> = HashMap::new();
@@ -1179,6 +1214,18 @@ fn write_table(
                 cursor += 1;
             }
             active.retain(|merge| merge.end_row >= row);
+            let mut band_changed = false;
+            while area_cursor < areas.len() && areas[area_cursor].range.start_row <= row {
+                area_active.push(&areas[area_cursor]);
+                area_cursor += 1;
+                band_changed = true;
+            }
+            let covering = area_active.len();
+            area_active.retain(|area| area.range.end_row >= row);
+            if band_changed || area_active.len() != covering {
+                spans = validation_spans(&area_active);
+                band_row = empty_row_cells(&spans, &column_defaults, styled_columns);
+            }
             let properties = row_properties.get(&row).copied();
             let level = properties
                 .and_then(|properties| properties.outline_level)
@@ -1203,6 +1250,8 @@ fn write_table(
                 columns,
                 links: &links,
                 comments: &comments,
+                validations: &spans,
+                empty_row: &band_row,
             };
             write_row(
                 &mut sink,
@@ -1221,6 +1270,29 @@ fn write_table(
     if !closing.is_empty() {
         sink.raw(&closing)?;
     }
+    // A validation that reaches past the last row of the box still has cells
+    // to mark. The rows below are empty, so each band between two range
+    // boundaries is one repeated row.
+    let mut row = rows;
+    while row < MAX_ROWS {
+        while area_cursor < areas.len() && areas[area_cursor].range.start_row <= row {
+            area_active.push(&areas[area_cursor]);
+            area_cursor += 1;
+        }
+        area_active.retain(|area| area.range.end_row >= row);
+        let next_start = areas.get(area_cursor).map(|area| area.range.start_row);
+        let next_end = area_active.iter().map(|area| area.range.end_row + 1).min();
+        let Some(next) = [next_start, next_end].into_iter().flatten().min() else {
+            break;
+        };
+        let next = next.min(MAX_ROWS);
+        if next <= row {
+            break;
+        }
+        let cells = empty_row_cells(&validation_spans(&area_active), &column_defaults, styled_columns);
+        sink.empty_rows(next - row, &cells)?;
+        row = next;
+    }
     sink.finish()?;
     if !context.local_names.is_empty() {
         write!(
@@ -1229,6 +1301,7 @@ fn write_table(
             context.local_names
         )?;
     }
+    out.write_all(context.conditional_formats.as_bytes())?;
     out.write_all(b"</table:table>")?;
     Ok(())
 }
@@ -1284,18 +1357,31 @@ struct RowSink<'a, W: Write> {
     wrote_row: bool,
     /// Rows written so far, repeats counted.
     rows: usize,
+    /// The cells the pending empty rows share.
+    pending_cells: String,
     /// A column's default cell style runs to the last row of the sheet, and a
     /// reader only paints it on rows the table spells out — so the tail of
     /// the sheet is written as one repeated row instead of being dropped.
     fill_to_end: bool,
-    /// The cells of a row that holds nothing of its own: one empty cell, or
-    /// the styled empties of the columns that carry a default cell style.
-    empty_row: String,
+    /// The cells of a row that holds nothing of its own and sits under no
+    /// validation: one empty cell, or the styled empties of the columns that
+    /// carry a default cell style.
+    plain_row: String,
 }
 
 impl<W: Write> RowSink<'_, W> {
-    fn empty(&mut self) {
-        self.pending += 1;
+    /// `count` rows that hold nothing but `cells`. Neighbours with the same
+    /// cells collapse into one repeated row.
+    fn empty_rows(&mut self, count: usize, cells: &str) -> io::Result<()> {
+        if self.pending > 0 && self.pending_cells != cells {
+            self.flush()?;
+        }
+        if self.pending == 0 {
+            self.pending_cells.clear();
+            self.pending_cells.push_str(cells);
+        }
+        self.pending += count;
+        Ok(())
     }
 
     fn push(&mut self, attributes: &str, cells: &str) -> io::Result<()> {
@@ -1331,7 +1417,7 @@ impl<W: Write> RowSink<'_, W> {
         write!(
             self.out,
             "<table:table-row{repeat}>{}</table:table-row>",
-            self.empty_row
+            self.pending_cells
         )?;
         self.rows += self.pending;
         self.pending = 0;
@@ -1340,8 +1426,15 @@ impl<W: Write> RowSink<'_, W> {
     }
 
     fn finish(&mut self) -> io::Result<()> {
+        // Pending rows that mark a validation are content; plain ones at the
+        // end of the sheet are not.
+        if self.pending > 0 && self.pending_cells != self.plain_row {
+            self.flush()?;
+        }
         if self.fill_to_end && self.rows < MAX_ROWS {
-            self.pending = MAX_ROWS - self.rows;
+            let plain = self.plain_row.clone();
+            self.pending = 0;
+            self.empty_rows(MAX_ROWS - self.rows, &plain)?;
             return self.flush();
         }
         if !self.wrote_row {
@@ -1369,6 +1462,61 @@ struct RowContext<'a> {
     columns: usize,
     links: &'a HashMap<(usize, usize), &'a str>,
     comments: &'a HashMap<(usize, usize), &'a CommentInfo>,
+    /// The validations covering this row, as column spans in column order.
+    validations: &'a [ValidationSpan<'a>],
+    /// The cells of this row if it holds nothing of its own.
+    empty_row: &'a str,
+}
+
+/// First column, last column and the validation's name.
+type ValidationSpan<'a> = (usize, usize, &'a str);
+
+/// The column spans of the validations covering a row. Where two overlap the
+/// one that starts first keeps the cells, so a cell names one validation.
+fn validation_spans<'a>(active: &[&'a ValidationArea]) -> Vec<ValidationSpan<'a>> {
+    let mut spans: Vec<ValidationSpan<'a>> = active
+        .iter()
+        .map(|area| {
+            (
+                area.range.start_column,
+                area.range.end_column.min(MAX_COLUMNS - 1),
+                area.name.as_str(),
+            )
+        })
+        .collect();
+    spans.sort_by_key(|span| span.0);
+    let mut kept: Vec<ValidationSpan<'a>> = Vec::new();
+    for span in spans {
+        if kept.last().is_none_or(|last| span.0 > last.1) {
+            kept.push(span);
+        }
+    }
+    kept
+}
+
+fn validation_at<'a>(spans: &[ValidationSpan<'a>], column: usize) -> Option<&'a str> {
+    spans
+        .iter()
+        .find(|span| span.0 <= column && column <= span.1)
+        .map(|span| span.2)
+}
+
+/// The cells of a row that holds nothing of its own: the styled empties of
+/// the default-styled columns and the marks of the validations covering it.
+fn empty_row_cells(
+    spans: &[ValidationSpan<'_>],
+    column_defaults: &[Option<String>],
+    styled_columns: usize,
+) -> String {
+    let last = spans
+        .last()
+        .map(|span| span.1 + 1)
+        .unwrap_or(0)
+        .max(styled_columns);
+    if last == 0 {
+        return "<table:table-cell/>".to_owned();
+    }
+    empty_cells(0, last - 1, None, column_defaults, spans)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1400,20 +1548,22 @@ fn write_row<W: Write>(
     let attributes = row_attributes(row_context, registry);
     let Some(last) = last else {
         if attributes.is_empty() {
-            sink.empty();
+            sink.empty_rows(1, row_context.empty_row)?;
         } else {
-            let cells = sink.empty_row.clone();
-            sink.push(&attributes, &cells)?;
+            sink.push(&attributes, row_context.empty_row)?;
         }
         return Ok(());
     };
-    // The styled empties of the default-styled columns reach past the last
-    // record of the row.
-    let last = if row_context.styled_columns > 0 {
+    // The styled empties of the default-styled columns and the cells under a
+    // validation reach past the last record of the row.
+    let mut last = if row_context.styled_columns > 0 {
         last.max(row_context.styled_columns - 1)
     } else {
         last
     };
+    if let Some(span) = row_context.validations.last() {
+        last = last.max(span.1);
+    }
 
     let mut xml = String::with_capacity((last + 1) * 48);
     let mut column = 0;
@@ -1452,6 +1602,7 @@ fn write_row<W: Write>(
                         Some(record),
                         style.name.as_deref(),
                         style.kind,
+                        None,
                         None,
                         context,
                         row_context,
@@ -1511,6 +1662,7 @@ fn write_row<W: Write>(
                 style_name.as_deref(),
                 style.kind,
                 anchor,
+                validation_at(row_context.validations, column),
                 context,
                 row_context,
                 column,
@@ -1520,17 +1672,27 @@ fn write_row<W: Write>(
             column += 1;
             continue;
         }
-        let mut run = 1;
-        while column + run <= last && !occupied(cells, cell_index, column + run, active) {
-            run += 1;
-        }
+        // The empty run ends before the next record or merge. Nothing covers
+        // this column, so both lie strictly to its right.
+        let next_record = cells.get(cell_index).map(|cell| cell.column);
+        let next_merge = active
+            .iter()
+            .filter(|merge| merge.start_column > column)
+            .map(|merge| merge.start_column)
+            .min();
+        let end = [next_record, next_merge]
+            .into_iter()
+            .flatten()
+            .min()
+            .map_or(last, |next| (next - 1).min(last));
         xml.push_str(&empty_cells(
             column,
-            column + run - 1,
+            end,
             row_style_name.as_deref(),
             row_context.column_defaults,
+            row_context.validations,
         ));
-        column += run;
+        column = end + 1;
     }
     if let Some(name) = row_style_name.as_deref().filter(|_| last + 1 < MAX_COLUMNS) {
         // The row's own style runs to the last column of the sheet.
@@ -1543,13 +1705,15 @@ fn write_row<W: Write>(
     Ok(())
 }
 
-/// Empty cells for the columns `first..=last`, in runs of one style. A row's
-/// own default style wins over a column's, as it does in the workbook.
+/// Empty cells for the columns `first..=last`, in runs of one style under
+/// one validation. A row's own default style wins over a column's, as it does
+/// in the workbook.
 fn empty_cells(
     first: usize,
     last: usize,
     row_style: Option<&str>,
     column_defaults: &[Option<String>],
+    validations: &[ValidationSpan<'_>],
 ) -> String {
     let style_of = |column: usize| {
         row_style.or_else(|| column_defaults.get(column).and_then(|name| name.as_deref()))
@@ -1558,37 +1722,51 @@ fn empty_cells(
     let mut column = first;
     while column <= last {
         let style = style_of(column);
-        let mut run = 1;
-        while column + run <= last && style_of(column + run) == style {
-            run += 1;
-        }
+        // Past the last column that names a default style nothing changes, so
+        // the run is not walked column by column to the end of the sheet.
+        let style_end = if row_style.is_some() || column >= column_defaults.len() {
+            last
+        } else {
+            let limit = last.min(column_defaults.len() - 1);
+            let mut same = column;
+            while same < limit && style_of(same + 1) == style {
+                same += 1;
+            }
+            if same == column_defaults.len() - 1 && style.is_none() {
+                last
+            } else {
+                same
+            }
+        };
+        let validation = validations
+            .iter()
+            .find(|span| span.0 <= column && column <= span.1);
+        let end = match validation {
+            Some(span) => style_end.min(span.1),
+            None => validations
+                .iter()
+                .find(|span| span.0 > column)
+                .map_or(style_end, |next| style_end.min(next.0 - 1)),
+        };
+        let run = end - column + 1;
         out.push_str("<table:table-cell");
         if let Some(name) = style {
             out.push_str(&format!(r#" table:style-name="{name}""#));
+        }
+        if let Some(span) = validation {
+            out.push_str(&format!(r#" table:content-validation-name="{}""#, span.2));
         }
         if run > 1 {
             out.push_str(&format!(r#" table:number-columns-repeated="{run}""#));
         }
         out.push_str("/>");
-        column += run;
+        column = end + 1;
     }
     out
 }
 
 fn holds_content(record: &CellRecord) -> bool {
     record.value.is_some() || record.formula.is_some()
-}
-
-/// True when the column already has a cell record or sits inside a merge, so
-/// an empty run must stop before it.
-fn occupied(cells: &[&CellRecord], cell_index: usize, column: usize, active: &[&MergedRange]) -> bool {
-    cells[cell_index.min(cells.len())..]
-        .iter()
-        .take_while(|cell| cell.column <= column)
-        .any(|cell| cell.column == column)
-        || active.iter().any(|merge| {
-            merge.start_column <= column && merge.end_column >= column
-        })
 }
 
 fn row_attributes(row_context: &RowContext<'_>, registry: &mut StyleRegistry) -> String {
@@ -1657,6 +1835,7 @@ fn push_cell(
     style_name: Option<&str>,
     kind: ValueKind,
     merge: Option<&MergedRange>,
+    validation: Option<&str>,
     context: &SheetContext<'_>,
     row_context: &RowContext<'_>,
     column: usize,
@@ -1666,6 +1845,9 @@ fn push_cell(
     let mut attributes = String::new();
     if let Some(name) = style_name {
         attributes.push_str(&format!(r#" table:style-name="{name}""#));
+    }
+    if let Some(name) = validation {
+        attributes.push_str(&format!(r#" table:content-validation-name="{name}""#));
     }
     if let Some(merge) = merge {
         let columns = merge.end_column - merge.start_column + 1;
@@ -2424,8 +2606,10 @@ mod tests {
         // The note travels now, so it is no longer among the losses.
         assert_eq!(result.dropped.comments, 0);
         assert_eq!(result.dropped.macros, 0);
+        // The rule names a differential style the workbook does not have, so
+        // there is nothing for it to paint; the validation travels.
         assert_eq!(result.dropped.conditional_formats, 1);
-        assert_eq!(result.dropped.validations, 1);
+        assert_eq!(result.dropped.validations, 0);
         assert_eq!(result.dropped.pivots, 1);
 
         // The sheet with a chart still carries its values.
@@ -2910,5 +3094,80 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
         assert!(!is_iso_date("2010-01-11T09:30:00Z"));
         assert!(!is_iso_date("2010-1-11"));
         assert!(!is_iso_date("not a date"));
+    }
+
+    #[test]
+    fn carries_validations_and_conditional_formats() {
+        let styles = STYLES.replace(
+            "</styleSheet>",
+            r#"<dxfs count="1"><dxf><font><b/><color rgb="FF9C0006"/></font><fill><patternFill><bgColor rgb="FFFFC7CE"/></patternFill></fill></dxf></dxfs></styleSheet>"#,
+        );
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:B3"/><sheetData>"#,
+            r#"<row r="1"><c r="A1"><v>1</v></c></row>"#,
+            r#"<row r="2"><c r="A2"><v>2</v></c><c r="B2" t="inlineStr"><is><t>one</t></is></c></row>"#,
+            r#"<row r="3"><c r="A3"><v>3</v></c></row>"#,
+            r#"</sheetData>"#,
+            r#"<conditionalFormatting sqref="A1:A3"><cfRule type="cellIs" dxfId="0" priority="2" operator="greaterThan"><formula>1</formula></cfRule><cfRule type="aboveAverage" dxfId="0" priority="1" aboveAverage="0"/></conditionalFormatting>"#,
+            r#"<dataValidations count="2">"#,
+            r#"<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="Pick" error="one of the list" sqref="B2:B1048576"><formula1>"one,two"</formula1></dataValidation>"#,
+            r#"<dataValidation type="whole" operator="between" sqref="D1 F1:G1"><formula1>1</formula1><formula2>$A$3</formula2></dataValidation>"#,
+            r#"</dataValidations></worksheet>"#,
+        );
+        let mut entries = single_sheet_entries("", sheet, vec![]);
+        for entry in &mut entries {
+            if entry.0 == "xl/styles.xml" {
+                entry.1 = styles.clone();
+            }
+        }
+        let (result, content, styles, _, _dir) = export(&entries);
+        assert_eq!(result.dropped.validations, 0);
+        assert_eq!(result.dropped.conditional_formats, 0);
+        assert!(
+            content.contains(concat!(
+                r#"<table:content-validations>"#,
+                r#"<table:content-validation table:name="val1" table:condition="of:cell-content-is-in-list(&quot;one&quot;;&quot;two&quot;)" table:allow-empty-cell="true" table:display-list="unsorted" table:base-cell-address="Data.B2">"#,
+                r#"<table:error-message table:message-type="stop" table:title="Pick" table:display="true"><text:p>one of the list</text:p></table:error-message></table:content-validation>"#,
+                r#"<table:content-validation table:name="val2" table:condition="of:cell-content-is-whole-number() and cell-content-is-between(1,[.$A$3])" table:allow-empty-cell="false" table:base-cell-address="Data.D1"/>"#,
+                r#"</table:content-validations><table:table "#,
+            )),
+            "{content}"
+        );
+        // Row 1: the value, then the empty cells the second validation covers.
+        assert!(
+            content.contains(concat!(
+                r#"<text:p>1</text:p></table:table-cell><table:table-cell table:number-columns-repeated="2"/>"#,
+                r#"<table:table-cell table:content-validation-name="val2"/><table:table-cell/>"#,
+                r#"<table:table-cell table:content-validation-name="val2" table:number-columns-repeated="2"/></table:table-row>"#,
+            )),
+            "{content}"
+        );
+        // Row 2: a cell with a value names its validation too.
+        assert!(
+            content.contains(r#"<table:table-cell table:content-validation-name="val1" office:value-type="string"><text:p>one</text:p>"#),
+            "{content}"
+        );
+        // Row 3 and everything below it: the list reaches the last row.
+        assert!(
+            content.contains(concat!(
+                r#"<text:p>3</text:p></table:table-cell><table:table-cell table:content-validation-name="val1"/></table:table-row>"#,
+                r#"<table:table-row table:number-rows-repeated="1048573"><table:table-cell/><table:table-cell table:content-validation-name="val1"/></table:table-row>"#,
+            )),
+            "{content}"
+        );
+        assert!(
+            content.contains(concat!(
+                r#"<calcext:conditional-formats><calcext:conditional-format calcext:target-range-address="Data.A1:Data.A3">"#,
+                r#"<calcext:condition calcext:apply-style-name="ConditionalStyle_1" calcext:value="below-average" calcext:base-cell-address="Data.A1"/>"#,
+                r#"<calcext:condition calcext:apply-style-name="ConditionalStyle_1" calcext:value="&gt;1" calcext:base-cell-address="Data.A1"/>"#,
+                r#"</calcext:conditional-format></calcext:conditional-formats></table:table>"#,
+            )),
+            "{content}"
+        );
+        assert!(
+            styles.contains(r#"<style:style style:name="ConditionalStyle_1" style:family="table-cell" style:parent-style-name="Default">"#),
+            "{styles}"
+        );
     }
 }
