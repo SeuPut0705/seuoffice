@@ -5,6 +5,7 @@ import type { Node as PmNode } from '@tiptap/pm/model'
 import { canJoin } from '@tiptap/pm/transform'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 // the kit from its source: this package's vitest config has no seuoffice-source condition
+import { MAX_CHANGE_BYTES } from '../../../packages/collab/src/client/index'
 import { simulate, type SimulatedEditor } from '../../../packages/collab/src/conformance/index'
 import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 import { blocksToPmDoc } from '../src/renderer/editor/convert'
@@ -62,13 +63,29 @@ afterEach(() => {
 })
 
 /** Side entries held in memory, changed by the simulated user */
-function memorySide(initial: [string, Json][]): SideStore & { set(key: string, value: Json): void } {
+function memorySide(initial: [string, Json][]): SideStore & {
+  set(key: string, value: Json): void
+  readonly all: Map<string, Json>
+} {
   let entries = new Map(initial)
   let changed: (() => void) | null = null
   return {
+    get all() {
+      return entries
+    },
     read: () => new Map(entries),
-    write: (next) => {
-      entries = new Map(next)
+    write({ renames, entries: changes }) {
+      const renamed = new Map<string, Json>()
+      for (const [key, value] of entries) {
+        const to = renames.get(key)
+        if (to === undefined) renamed.set(key, value)
+        else renamed.set(`${key.slice(0, key.indexOf(':'))}:${to}`, { ...(value as object), id: to })
+      }
+      entries = renamed
+      for (const [key, value] of changes) {
+        if (value === null) entries.delete(key)
+        else entries.set(key, value)
+      }
     },
     observe(handler) {
       changed = handler
@@ -100,11 +117,26 @@ const textblocks = (doc: PmNode): { pos: number; node: PmNode }[] => {
  * simulated edit reports (the user's transaction and whatever plugins append)
  * travels as one tagged op, so every op the kit counts is one user action.
  */
-type Kind = 'typeFirst' | 'removeFirst' | 'insert' | 'remove' | 'split' | 'join' | 'span' | 'row' | 'side'
+type Kind =
+  | 'typeFirst'
+  | 'removeFirst'
+  | 'insert'
+  | 'remove'
+  | 'split'
+  | 'join'
+  | 'span'
+  | 'row'
+  | 'side'
+  | 'comment'
+  | 'footnote'
+  | 'picture'
 
 /** text every simulated insert put in, by tag */
 const typed = new Set<string>()
+/** `kind <tag>` of every comment and footnote a simulated user added */
+const added = new Set<string>()
 let last: Editor | null = null
+let lastSide: { readonly all: Map<string, Json> } | null = null
 
 const opener =
   (only: readonly Kind[]) =>
@@ -120,9 +152,11 @@ function openHeadless(bytes: Uint8Array, only: readonly Kind[]): SimulatedEditor
   editors.push(editor)
   last = editor
   const side = memorySide(file.side)
+  lastSide = side
   const inner = createDocsAdapter({
     editor,
     side,
+    maxOpBytes: MAX_CHANGE_BYTES - 4096,
     produce: async (entries) => ({
       fileName: 'memo.json',
       bytes: bytesOf(JSON.stringify({ doc: editor.getJSON(), side: [...entries] })),
@@ -216,6 +250,43 @@ function openHeadless(bytes: Uint8Array, only: readonly Kind[]): SimulatedEditor
     side(r: () => number): boolean {
       const key = r() < 0.5 ? 'section' : `comment:${1 + Math.floor(r() * 3)}`
       side.set(key, r() < 0.15 && key !== 'section' ? null : { value: Math.floor(r() * 100) })
+      return true
+    },
+    comment(r, id) {
+      // a new comment takes the largest id plus one, as the App's nextCommentId does
+      const ids = [...side.all.keys()]
+        .filter((key) => key.startsWith('comment:'))
+        .map((key) => parseInt(key.slice('comment:'.length), 10) || 0)
+      const n = String(Math.max(0, ...ids) + 1)
+      // the commented text is new, so no two comments' ranges replace each other's mark
+      const blocks = textblocks(editor.state.doc)
+      const { pos, node } = blocks[Math.floor(r() * blocks.length)]
+      const at = pos + 1 + Math.floor(r() * (node.content.size + 1))
+      const mark = editor.schema.marks.comment.create({ ids: n })
+      editor.view.dispatch(editor.state.tr.insert(at, editor.schema.text('c', [mark])))
+      side.set(`comment:${n}`, { id: n, text: `<${id}>` })
+      added.add(`comment <${id}>`)
+      return true
+    },
+    footnote(r, id) {
+      const ids = [...side.all.keys()]
+        .filter((key) => key.startsWith('footnote:'))
+        .map((key) => parseInt(key.slice('footnote:'.length), 10) || 0)
+      const n = String(Math.max(0, ...ids) + 1)
+      const blocks = textblocks(editor.state.doc)
+      const { pos, node } = blocks[Math.floor(r() * blocks.length)]
+      const at = pos + 1 + Math.floor(r() * (node.content.size + 1))
+      const ref = editor.schema.nodes.docNoteRef.create({ kind: 'footnote', id: n })
+      editor.view.dispatch(editor.state.tr.insert(at, ref))
+      side.set(`footnote:${n}`, { id: n, text: `<${id}>` })
+      added.add(`footnote <${id}>`)
+      return true
+    },
+    picture(r, id) {
+      // one step well over the old 256 KiB limit on a change, like a pasted picture
+      const blocks = textblocks(editor.state.doc)
+      const { pos } = blocks[Math.floor(r() * blocks.length)]
+      editor.view.dispatch(editor.state.tr.insertText(`<${id}>${'p'.repeat(300 * 1024)}`, pos + 1))
       return true
     },
   }
@@ -315,4 +386,131 @@ describe('the docs adapter under the conformance kit, with real editors', () => 
       expect((await run(all, seed, 4)).ops).toBeGreaterThan(20)
     }, 120_000)
   }
+})
+
+/** Every comment or footnote a simulated user added is there once, referenced from the body */
+function expectEveryAddition(kind: 'comment' | 'footnote'): void {
+  const entries = [...lastSide!.all].filter(([key]) => key.startsWith(`${kind}:`))
+  const texts = entries.map(([, value]) => (value as { text?: string }).text ?? '')
+  const wanted = [...added].filter((item) => item.startsWith(`${kind} `)).map((item) => item.slice(kind.length + 1))
+  expect(texts.filter((text) => text.startsWith('<')).sort()).toEqual(wanted.sort())
+  const referenced = new Set<string>()
+  last!.state.doc.descendants((node) => {
+    for (const mark of node.marks) {
+      if (mark.type.name === 'comment')
+        for (const id of String(mark.attrs.ids).split(/\s+/)) referenced.add(`comment:${id}`)
+    }
+    if (node.type.name === 'docNoteRef') referenced.add(`footnote:${String(node.attrs.id)}`)
+  })
+  for (const [key, value] of entries) {
+    if ((value as { text?: string }).text?.startsWith('<')) expect(referenced).toContain(key)
+  }
+}
+
+describe('ids two people mint at the same moment', () => {
+  for (const seed of SEEDS) {
+    it(`keeps both of two comments added at once (seed ${seed})`, async () => {
+      added.clear()
+      expect((await run(['comment', 'insert'], seed)).ops).toBeGreaterThan(20)
+      expectEveryAddition('comment')
+    }, 120_000)
+
+    it(`keeps both of two footnotes added at once (seed ${seed})`, async () => {
+      added.clear()
+      expect((await run(['footnote', 'insert'], seed)).ops).toBeGreaterThan(20)
+      expectEveryAddition('footnote')
+    }, 120_000)
+  }
+})
+
+describe('large edits', () => {
+  it('carries steps larger than 256 KiB', async () => {
+    const report = await simulate({
+      seed: 7,
+      clients: 2,
+      steps: 120,
+      file: { format: FORMAT, bytes: base },
+      adapterFactory: opener(['picture', 'insert']),
+    })
+    expect(report.ops).toBeGreaterThan(5)
+    expect(last!.state.doc.textContent.length).toBeGreaterThan(256 * 1024)
+  }, 120_000)
+
+  it('refuses an edit larger than one change may be and keeps editing', () => {
+    const { editor, adapter, refused } = headlessPair()
+    const emitted: DocsOp[] = []
+    adapter.listen((ops) => emitted.push(...ops))
+    const before = editor.state.doc
+    editor.view.dispatch(editor.state.tr.insertText('x'.repeat(MAX_CHANGE_BYTES), 1))
+    expect(editor.state.doc).toBe(before)
+    expect(refused).toEqual(['too_large'])
+    editor.view.dispatch(editor.state.tr.insertText('small', 1))
+    expect(editor.state.doc.textContent).toContain('small')
+    expect(emitted).toHaveLength(1)
+  })
+})
+
+/** One editor on the base file with its adapter, outside any network */
+function headlessPair(pendingEdit?: () => { pos: number; commit(): void } | null) {
+  const file = JSON.parse(decoder.decode(base)) as TestFile
+  const editor = new Editor({ extensions: editorExtensions, content: file.doc as never })
+  editors.push(editor)
+  const refused: string[] = []
+  const adapter = createDocsAdapter({
+    editor,
+    side: memorySide(file.side),
+    produce: async () => ({ fileName: 'memo.json', bytes: new Uint8Array() }),
+    maxOpBytes: MAX_CHANGE_BYTES - 4096,
+    pendingEdit,
+    refused: (reason) => refused.push(reason),
+  })
+  return { editor, adapter, refused }
+}
+
+const firstCell = (editor: Editor): { table: number; text: number } => {
+  let table = -1
+  let text = -1
+  editor.state.doc.descendants((node, pos) => {
+    if (table < 0 && node.type.name === 'docTable') table = pos
+    if (table >= 0 && text < 0 && node.isTextblock) text = pos + 1
+    return text < 0
+  })
+  return { table, text }
+}
+
+describe('a table edited in place', () => {
+  it('commits the cell being typed in before a peer’s change to that table redraws it', async () => {
+    let draft: string | null = 'draft'
+    const alice = headlessPair(() => {
+      if (draft === null) return null
+      return {
+        pos: firstCell(alice.editor).table,
+        commit: () => {
+          const text = draft!
+          draft = null
+          alice.editor.view.dispatch(alice.editor.state.tr.insertText(text, firstCell(alice.editor).text))
+        },
+      }
+    })
+    const bob = headlessPair()
+    const fromAlice: DocsOp[] = []
+    const fromBob: DocsOp[] = []
+    alice.adapter.listen((ops) => fromAlice.push(...ops))
+    bob.adapter.listen((ops) => fromBob.push(...ops))
+
+    bob.editor.view.dispatch(bob.editor.state.tr.insertText('peer', firstCell(bob.editor).text))
+    const wire = (op: DocsOp, from = bob.adapter, to = alice.adapter) => to.decode(from.encode(op))
+    expect(alice.adapter.integrate(fromBob.map((op) => wire(op)), [])).toEqual([])
+    // the committed cell text went out after integrate returned, rebased past the peer's
+    expect(fromAlice).toHaveLength(0)
+    await Promise.resolve()
+    expect(fromAlice).toHaveLength(1)
+    expect(alice.editor.state.doc.textContent).toContain('draft')
+    expect(alice.editor.state.doc.textContent).toContain('peer')
+
+    bob.adapter.confirmed?.(fromBob)
+    bob.adapter.integrate(fromAlice.map((op) => wire(op, alice.adapter, bob.adapter)), [])
+    alice.adapter.confirmed?.(fromAlice)
+    expect(await bob.adapter.fingerprint()).toBe(await alice.adapter.fingerprint())
+  })
 })

@@ -10,7 +10,7 @@
  * references (React state is replaced, never mutated), so the App needs no
  * hook of its own.
  */
-import type { CollabAdapter, Json } from '@seuoffice/collab/client'
+import { MAX_CHANGE_BYTES, type CollabAdapter, type Json } from '@seuoffice/collab/client'
 import type { Editor } from '@tiptap/core'
 import { pendingNumberingDirty, type PendingNumbering } from '../renderer/doc-state'
 import { buildDocBytes, type FileActionContext } from '../renderer/file-actions'
@@ -50,6 +50,25 @@ export async function openDocsCollab(
       if (!docx) throw new Error('the document could not be written')
       return { fileName: file.fileName, bytes: await file.finish(docx) }
     },
+    pendingEdit: () => {
+      // a table typed in place keeps its cells' text in the DOM until focus leaves it
+      const active = document.activeElement
+      if (!active?.closest('td[contenteditable="true"]') || !editor.view.dom.contains(active)) {
+        return null
+      }
+      let pos: number | null = null
+      editor.state.doc.descendants((node, at) => {
+        const dom = editor.view.nodeDOM(at)
+        if (!(dom instanceof Node) || !dom.contains(active)) return false
+        if (node.attrs.table || node.attrs.model) pos = at
+        return true
+      })
+      if (pos === null) return null
+      return { pos, commit: () => window.dispatchEvent(new Event('ai-docs-commit-tables')) }
+    },
+    // room for the submit frame and the op's own wrapper around its steps
+    maxOpBytes: MAX_CHANGE_BYTES - 4096,
+    refused: (reason) => console.warn(`[collab] a local edit was refused: ${reason}`),
   })
 }
 
@@ -165,26 +184,66 @@ export function docsSide(context: { readonly current: FileActionContext }): Docs
     ...Object.values(GROUPS).flatMap((names) => names.map((name) => ctx[name])),
     ...Object.values(LISTS).map(({ field }) => ctx[field]),
   ]
+  let awaiting: { refs: unknown[]; until: number } | null = null
 
   return {
     read: () => read(context.current),
 
-    write(entries) {
+    write({ renames, entries }) {
       const ctx = context.current
-      const fields = fieldsOf(entries, base)
-      for (const [name, value] of Object.entries(fields)) {
-        if (name === 'numberingDirty') continue
-        // equal values keep the App's own objects, so nothing re-renders for them
-        if (JSON.stringify(ctx[name as Settable]) === JSON.stringify(value)) continue
-        const setter = ctx[`set${name[0].toUpperCase()}${name.slice(1)}` as keyof FileActionContext]
-        if (typeof setter === 'function') (setter as (next: unknown) => void)(value)
+      const setterOf = (name: string) =>
+        ctx[`set${name[0].toUpperCase()}${name.slice(1)}` as keyof FileActionContext] as
+          | ((next: unknown) => void)
+          | undefined
+      let wrote = false
+      for (const [group, names] of Object.entries(GROUPS)) {
+        const value = entries.get(group)
+        if (!value || typeof value !== 'object' || Array.isArray(value)) continue
+        for (const name of names) {
+          if (JSON.stringify(ctx[name]) === JSON.stringify(value[name])) continue
+          setterOf(name)?.(value[name])
+          wrote = true
+        }
       }
+      for (const name of Object.keys(LISTS) as ListName[]) {
+        const prefix = `${name}:`
+        const own = [...renames].filter(([key]) => key.startsWith(prefix))
+        const changed = [...entries].filter(([key]) => key.startsWith(prefix))
+        if (own.length === 0 && changed.length === 0) continue
+        // on the list as the App holds it now, so an item added since the last read stays
+        setterOf(LISTS[name].field)?.((prev: Array<{ id: string; parentId?: string }>) => {
+          const renamed = new Map(own.map(([key, to]) => [key.slice(prefix.length), to]))
+          let items = prev.map((item) => {
+            const id = renamed.get(item.id) ?? item.id
+            const parentId = item.parentId && (renamed.get(item.parentId) ?? item.parentId)
+            return id === item.id && parentId === item.parentId ? item : { ...item, id, parentId }
+          })
+          for (const [key, value] of changed) {
+            const id = key.slice(prefix.length)
+            const at = items.findIndex((item) => item.id === id)
+            if (value === null) items = items.filter((item) => item.id !== id)
+            else if (at < 0) items = [...items, value as { id: string }]
+            else items = items.map((item, i) => (i === at ? (value as { id: string }) : item))
+          }
+          return items
+        })
+        setterOf(LISTS[name].dirty)?.(true)
+        wrote = true
+      }
+      // the App shows the write on its next render; until then a read is the old state
+      if (wrote) awaiting = { refs: watched(ctx), until: Date.now() + 1000 }
     },
 
     observe(changed) {
       let last = watched(context.current)
       const timer = setInterval(() => {
         const now = watched(context.current)
+        if (awaiting) {
+          if (Date.now() < awaiting.until && now.every((value, i) => value === awaiting!.refs[i])) {
+            return
+          }
+          awaiting = null
+        }
         if (now.every((value, i) => value === last[i])) return
         last = now
         changed()

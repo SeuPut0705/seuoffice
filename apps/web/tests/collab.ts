@@ -10,14 +10,23 @@ export interface CoEditor {
   status(): Promise<{ phase: string; version: number; unconfirmed: number; saved: number; canEdit: boolean }>
 }
 
+/** a file on disk, or one a spec made in memory */
+export type CoFile = string | { name: string; mimeType: string; buffer: Buffer }
+
 /**
  * Open `file` in a fresh browser context as user `user` of co-edited document
  * `documentId`, and wait until the page is live in the session.
  */
 export async function openCoEdited(
   browser: Browser,
-  file: string,
-  options: { documentId: string; user: string; access?: 'edit' | 'view' },
+  file: CoFile,
+  options: {
+    documentId: string
+    user: string
+    access?: 'edit' | 'view'
+    /** what shows the document: the docs editor (default) or a grid canvas */
+    ready?: 'editor' | 'canvas'
+  },
 ): Promise<CoEditor> {
   const access = options.access ?? 'edit'
   const context = await browser.newContext({ viewport: { width: 1400, height: 900 } })
@@ -34,12 +43,14 @@ export async function openCoEdited(
   await expect(page.locator('#status')).not.toContainText('여는 중', { timeout: 30_000 })
   await expect(page.locator('#status')).not.toContainText('오류')
   const frame = page.frameLocator('#viewer iframe')
-  await expect(frame.locator('.ProseMirror')).toBeVisible()
+  const shown =
+    options.ready === 'canvas' ? frame.locator('canvas') : frame.locator('.ProseMirror')
+  await expect(shown.first()).toBeVisible()
   await expect(page.locator('body')).toHaveAttribute('data-collab-phase', 'live', { timeout: 30_000 })
   return {
     page,
     frame,
-    text: () => frame.locator('.ProseMirror').innerText(),
+    text: () => frame.locator('.ProseMirror').first().innerText(),
     status: () =>
       page.evaluate(() => {
         const status = window.seuLauncher?.collab
@@ -69,7 +80,7 @@ export async function settled(editors: CoEditor[]): Promise<number> {
 
 /** Type at the end of the paragraph that holds `anchor` (click into it, then the line-end key) */
 export async function typeAfter(editor: CoEditor, anchor: string, text: string): Promise<void> {
-  await editor.frame.locator('.ProseMirror').getByText(anchor).first().click()
+  await editor.frame.locator('.ProseMirror').first().getByText(anchor).first().click()
   await editor.page.keyboard.press(process.platform === 'darwin' ? 'Meta+ArrowRight' : 'End')
   await editor.page.keyboard.type(text, { delay: 20 })
 }
