@@ -5,18 +5,29 @@ import {
   documentByPath,
   editMode,
   installWebBridge,
+  joinPageCollab,
+  registerCollabCapable,
+  reportError,
   reportOpened,
   unsupported,
   waitForDocument,
+  WebUnsupportedError,
   webAiSettings,
   webLanguage,
+  type PageCollab,
+  type WebDocument,
 } from '@seuoffice/web-platform'
 import { setUiLang } from '@genoffice/i18n'
 import { getPrivateFontData, listPrivateFontFaces } from '../main/fonts'
-import type { DesktopFilesApi, OpenResult, SlidesApi } from '../shared/ipc'
-import { deckEdits, installHostSave } from './deck-edits'
+import type { DeckChange, DesktopFilesApi, OpenResult, SlidesApi } from '../shared/ipc'
+import type { SlidesOp } from './collab-ops'
+import type { SlidesCollabHandles } from './collab-side'
+import { coEditDeck, deckEdits, installHostSave } from './deck-edits'
 import { deckReads } from './deck-reads'
-import { openPptxForWeb, renderDeck } from './session'
+import { currentSession, openPptxForWeb, renderDeck } from './session'
+
+// `ready` must say so before anything asks for the document
+registerCollabCapable()
 
 /** The languages the slides renderer's bridge speaks (narrower than the shared Lang) */
 type SlidesLang = Awaited<ReturnType<SlidesApi['getLanguage']>>
@@ -189,6 +200,49 @@ function reportFirst(result: OpenResult | null): OpenResult | null {
 
 let pendingTaken = false
 
+/** set when the host asked for co-editing and the page joined its session */
+let coEditing: PageCollab<SlidesCollabHandles> | null = null
+
+/** The renderer's deck-changed listeners; only co-editing sends them anything */
+const deckListeners = new Set<(change: DeckChange) => void>()
+
+/** Send the whole deck to the renderer: other people's edits changed it */
+function redrawDeck(): void {
+  const session = currentSession()
+  const slides = renderDeck()
+  if (!session || !slides) return
+  const { cx, cy } = session.opened.deck.size
+  for (const listener of deckListeners) listener({ slides, size: { cx, cy } })
+}
+
+/**
+ * Join the host's co-editing session for `doc` before the deck opens; a later joiner opens the
+ * session's base file, not the host's copy.
+ */
+async function joinSlidesCollab(doc: WebDocument): Promise<void> {
+  const page = await joinPageCollab<SlidesCollabHandles, SlidesOp>({
+    format: { name: 'pptx', schema: 1 },
+    fileName: doc.fileName,
+    bytes: doc.bytes,
+    adapter: async (handles) => {
+      // a page that never co-edits never loads these
+      const { openSlidesCollab } = await import('./collab-side')
+      return openSlidesCollab(handles, {
+        fileName: doc.fileName,
+        path: doc.virtualPath,
+        canEdit: editMode(),
+        editMembers: EDIT_MEMBERS,
+        install: (members) => Object.assign(slidesApi, members),
+        redraw: redrawDeck,
+      })
+    },
+  })
+  if (!page) return
+  coEditing = page
+  doc.bytes = page.baseBytes
+  if (editMode()) coEditDeck(page.save)
+}
+
 // AI turns go to the embed host, which calls its gateway (decision 0017)
 const ai = createAiStreamBridge()
 
@@ -202,10 +256,18 @@ const slidesApi: Partial<SlidesApi> = {
     if (pendingTaken) return null
     pendingTaken = true
     const doc = await waitForDocument()
-    return doc ? reportFirst(await openPptxForWeb(doc, fitWidthPx)) : null
+    if (!doc) return null
+    try {
+      await joinSlidesCollab(doc)
+    } catch (error) {
+      reportError('collab_unavailable', error instanceof Error ? error.message : String(error))
+      return null
+    }
+    return reportFirst(await openPptxForWeb(doc, fitWidthPx))
   },
   openPptxPath: async (path, fitWidthPx) => {
-    const doc = documentByPath(path)
+    // a second open would replace the co-edited deck with the host's file
+    const doc = !coEditing && documentByPath(path)
     return doc ? reportFirst(await openPptxForWeb(doc, fitWidthPx)) : null
   },
   openPptx: unsupported('slides.open-dialog'),
@@ -233,7 +295,11 @@ const slidesApi: Partial<SlidesApi> = {
   hasSlideClipboard: async () => false,
   clipboardProbe: async () => false,
   setShowFullScreen: async () => {},
-  aiStream: ai.aiStream,
+  // an AI run holds and restores whole deck snapshots, which no other co-editing page has
+  aiStream: (...args) =>
+    coEditing
+      ? Promise.reject(new WebUnsupportedError('slides.aiWhileCoEditing'))
+      : ai.aiStream(...args),
   aiStreamCancel: ai.aiStreamCancel,
   onAiStream: ai.onAiStream,
   aiLogRunFailure: async () => {},
@@ -262,7 +328,10 @@ const slidesApi: Partial<SlidesApi> = {
   onFontsChanged: unsubscribe,
   onCloseSaveRequest: unsubscribe,
   onHistoryChanged: unsubscribe,
-  onDeckChanged: unsubscribe,
+  onDeckChanged: (handler) => {
+    deckListeners.add(handler)
+    return () => void deckListeners.delete(handler)
+  },
   onMenuCommand: unsubscribe,
   onOpened: unsubscribe,
   onRenamed: unsubscribe,

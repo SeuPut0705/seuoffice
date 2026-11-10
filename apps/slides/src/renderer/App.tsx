@@ -377,6 +377,10 @@ export function App() {
     if (slides.length) void syncPrivateFonts()
   }, [slides])
   const [path, setPath] = useState<string | null>(null)
+  // Web co-editing: the page's session takes over once the opened deck is on screen
+  useEffect(() => {
+    if (path) void window.seuCollab?.attach({ path })
+  }, [path])
   // Font store changed (local install): re-register FontFaces
   useEffect(
     () =>

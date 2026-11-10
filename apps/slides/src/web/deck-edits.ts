@@ -104,7 +104,8 @@ function settle(session: Session): void {
     aiRunActive: session.aiRun !== undefined,
   }
   for (const listener of historyListeners) listener(state)
-  reportDirty(isDirty(session))
+  // a co-edited page's unsaved flag follows the session (web-platform collab-page.ts)
+  if (!coEditSave) reportDirty(isDirty(session))
 }
 
 /** session-state.ts pushHistory, without the main-process notify it schedules */
@@ -166,12 +167,36 @@ async function edit<T>(run: (session: Session) => T): Promise<T | null> {
 
 let lastSaveError = ''
 
+/** Set while the page co-edits: the session writes the file of one version from its log */
+let coEditSave: (() => Promise<void>) | null = null
+
+/**
+ * Hand saves to a co-editing session. Every later save, the renderer's and the host's (which
+ * still runs the renderer's flow, so an open text edit is committed first), stores the file
+ * the session produces; the page stops reporting its own unsaved flag.
+ */
+export function coEditDeck(save: () => Promise<void>): void {
+  coEditSave = save
+  installHostSave()
+}
+
 /**
  * slides:save for a page whose host stores the document. AutoSave passes are sat out the way the
  * desktop sits out one for an untitled deck: the host decides when its copy changes.
  */
 const saveDeck: SlidesApi['save'] = async (auto) => {
   if (auto === true) return { ok: false, reason: 'external-modified' }
+  if (coEditSave) {
+    lastSaveError = ''
+    try {
+      await coEditSave()
+      // nothing was reopened: the renderer keeps its slides and their ids
+      return { ok: true }
+    } catch (error) {
+      lastSaveError = error instanceof Error ? error.message : String(error)
+      return { ok: false, error: lastSaveError }
+    }
+  }
   const session = currentSession()
   const doc = session && documentByPath(session.path)
   if (!session || !doc) return { ok: false, error: 'no file open' }
