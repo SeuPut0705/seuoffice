@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFString } from 'pdf-lib'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { applySaveRequest } from '../src/main/save-pdf'
+import { dateFormatFromActions } from '../src/renderer/date-format'
 import type { DrawingInput, FormFieldInput, SavePdfRequest } from '../src/shared/ipc'
 
 const LINK_PAYLOAD = 'https://a.example/) /Next << /S /JavaScript /JS (app.alert(1)) >> /Zz ('
@@ -22,7 +23,7 @@ const DATE_PAYLOADS = [
   ')) >> /Fo << /S /JavaScript /JS (app.alert(1)) >> /Zz << /JS ((',
 ]
 
-async function save(over: Partial<SavePdfRequest>): Promise<PDFDocument> {
+async function saveBytes(over: Partial<SavePdfRequest>): Promise<Uint8Array> {
   const doc = await PDFDocument.create()
   doc.addPage([595, 842])
   const bytes = await doc.save({ useObjectStreams: false })
@@ -34,8 +35,11 @@ async function save(over: Partial<SavePdfRequest>): Promise<PDFDocument> {
     stamps: [],
     ...over,
   })
-  return PDFDocument.load(saved)
+  return saved
 }
+
+const save = async (over: Partial<SavePdfRequest>): Promise<PDFDocument> =>
+  PDFDocument.load(await saveBytes(over))
 
 const link = (url: string): DrawingInput => ({
   kind: 'link',
@@ -168,4 +172,18 @@ describe('text in a literal string stays text', () => {
       new Set(['AFDate_FormatEx("yyyy-mm-dd");', 'AFDate_KeystrokeEx("yyyy-mm-dd");']),
     )
   })
+
+  for (const format of ['yyyy년 mm월 dd일', 'yyyy年mm月dd日', 'yyyy-mm-dd', 'm/d/yy h:MM tt']) {
+    it(`the app reads the date format ${JSON.stringify(format)} back from the saved file`, async () => {
+      // the saved bytes as the app opens them: pdf.js annotations, then form-catalog.ts's reader
+      const task = getDocument({ data: await saveBytes({ formFields: [dateField(format)] }) })
+      const viewer = await task.promise
+      const widgets = (await (await viewer.getPage(1)).getAnnotations()).filter(
+        (a: { fieldType?: string }) => a.fieldType === 'Tx',
+      )
+      await task.destroy()
+      expect(widgets).toHaveLength(1)
+      expect(dateFormatFromActions(widgets[0].actions)).toBe(format)
+    })
+  }
 })

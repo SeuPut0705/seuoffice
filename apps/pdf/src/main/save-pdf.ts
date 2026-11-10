@@ -530,10 +530,11 @@ function literalString(text: string): PDFString | PDFHexString {
 }
 
 /**
- * A link address as the 7-bit ASCII a URI action holds: an ASCII address as typed (so
- * saves without such characters stay byte for byte what they were), any other as the
- * URL parser writes it (host in punycode, the rest percent-encoded as UTF-8), and one it
- * cannot parse with only its non-ASCII characters percent-encoded.
+ * A link address as the 7-bit ASCII a URI action holds: an ASCII address as typed (so the
+ * saved bytes of one without `\`, `(` or `)` are what they were before; literalString
+ * escapes those three), any other as the URL parser writes it (host in punycode, the rest
+ * percent-encoded as UTF-8), and one it cannot parse with only its non-ASCII characters
+ * percent-encoded.
  */
 function uriAddress(url: string): string {
   if (!NOT_ASCII.test(url)) return url
