@@ -23,6 +23,7 @@ import { Step, Transform } from '@tiptap/pm/transform'
 import * as pmCollab from 'prosemirror-collab'
 import { TABLE_TRAILING_SKIP } from '../renderer/editor/extensions'
 import { TRACK_IGNORE } from '../renderer/editor/revisions'
+import { safeEntry, safeNode, safeStep } from './collab-safety'
 
 export type DocsOp = { kind: 'steps'; steps: Step[] } | { kind: 'side'; key: string; value: Json }
 
@@ -508,14 +509,16 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
       return { kind: 'steps', steps }
     },
 
+    // a peer's op is untrusted: every value it brings is made safe before anything shows it
     decode(json) {
       if (!json || typeof json !== 'object' || Array.isArray(json)) throw new Error('not a docs op')
       if (json.kind === 'side') {
         if (typeof json.key !== 'string' || !('value' in json)) throw new Error('not a side op')
-        return { kind: 'side', key: json.key, value: json.value }
+        return { kind: 'side', key: json.key, value: safeEntry(json.key, json.value) }
       }
       if (json.kind === 'steps' && Array.isArray(json.steps)) {
-        return { kind: 'steps', steps: json.steps.map((step) => Step.fromJSON(schema, step)) }
+        const steps = json.steps.map((step) => Step.fromJSON(schema, safeStep(step)))
+        return { kind: 'steps', steps }
       }
       throw new Error('not a docs op')
     },
@@ -621,8 +624,14 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
         if (item.prev === undefined) entries.delete(item.op.key)
         else entries.set(item.op.key, item.prev)
       }
-      const text = canonical({ doc: withoutLayout(doc.toJSON() as Json), side: [...entries] })
-      return sha256(text)
+      // the state as a page that received it holds it: a value made safe on arrival
+      // reads the same as the original on the page that made it
+      const body = safeNode(withoutLayout(doc.toJSON() as Json), { hashing: true })
+      const side = [...entries].map(([key, value]) => [
+        key,
+        safeEntry(key, value, { hashing: true }),
+      ])
+      return sha256(canonical({ doc: body, side }))
     },
 
     setEditable(editable) {
