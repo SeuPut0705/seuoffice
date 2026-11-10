@@ -134,7 +134,8 @@ export interface Safety {
  */
 export function safeStep(step: Json): Json {
   wellFormed(step, 0)
-  return safeValue(step, '', {})
+  // only the step itself sets an attribute: a step-shaped object anywhere below is plain data
+  return isObject(step) ? safeObject(step, {}, false, true) : step
 }
 
 /** A node or mark JSON, judged as a step's content is */
@@ -180,12 +181,13 @@ export function safeEntry(key: string, value: Json, how: Safety = {}): Json {
  * Every key of `object` judged, whatever shape it has: a node (`type` and
  * `attrs`) gets no pass for its other keys. `inline`: the attributes of an
  * inline formula, whose markup is the inline form of its OMML; a display
- * equation's (`formulaDisplay`) is the block form.
+ * equation's (`formulaDisplay`) is the block form. `step`: `object` is the
+ * step itself, whose `value` an attribute step judges as the attribute it sets.
  */
-function safeObject(object: JsonObject, how: Safety, inline = false): JsonObject {
+function safeObject(object: JsonObject, how: Safety, inline = false, step = false): JsonObject {
   let out = object
   const node = typeof object.type === 'string'
-  const attrStep = object.stepType === 'attr' || object.stepType === 'docAttr'
+  const attrStep = step && (object.stepType === 'attr' || object.stepType === 'docAttr')
   for (const [key, value] of Object.entries(object)) {
     if (key === 'mathml') continue
     let next: Json

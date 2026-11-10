@@ -369,6 +369,15 @@ describe('a peer’s outside-state entries', () => {
     expect(received('comment:5', comment)).toEqual(comment)
   })
 
+  it('judge a step-shaped object inside an entry by its own keys', () => {
+    // only a real step's `value` is judged as the attribute it names
+    const nested = received('header', {
+      header: { text: 'T', paras: [{ stepType: 'attr', attr: 'text', value: STYLE_ESCAPE }] },
+      headerDirty: true,
+    })
+    expect(JSON.stringify(nested)).not.toMatch(/position:fixed/)
+  })
+
   it('judge every key of a node-shaped wrapper', () => {
     // what the App gets: none of the payloads survive
     const header = received('header', {
@@ -491,8 +500,9 @@ describe('what the app itself makes', () => {
       }
       const doc = asJson(blocksToPmDoc(parsed.blocks))
       expect(safeNode(doc, {}), path).toBe(doc)
-      // the whole body pasted over itself, as a local step
-      const node = schema.nodeFromJSON(doc)
+      // the whole body pasted over itself, as a local step: from the nodes as the editor
+      // holds them, not through JSON, so no value only a round trip would clean is hidden
+      const node = schema.nodeFromJSON(blocksToPmDoc(parsed.blocks))
       const step = new Transform(node).replaceWith(0, node.content.size, node.content).steps[0]
       const json = step.toJSON() as Json
       expect(safeStep(json), path).toBe(json)
