@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
 import { skillEditorsOf } from '@genoffice/agent-core/skill-editors'
-import { skillEditorsSummary } from '@genoffice/ui'
+import { skillEditorsSummary, skillNameBeside } from '@genoffice/ui'
 import type {
   UserSkillImportPreview,
   UserSkillInvokeValue,
@@ -21,12 +21,12 @@ import {
 } from './SkillImport'
 import { SkillUpdateDialog, type ChangedUpdate } from './SkillUpdate'
 import {
-  actionLabelKey,
   failureKey,
   groupLabelKey,
   groupSkills,
   hiddenBuiltinCount,
   listedCount,
+  skillActionLabel,
   skillDisplayDesc,
   skillDisplayTitle,
   skillMcpServersNeeded,
@@ -34,6 +34,7 @@ import {
   sourceLabel,
   unreadableKey,
   userSkillsApi,
+  whereUsedDialogMode,
   type SkillMenuAction,
 } from './skills-model'
 import './skills.css'
@@ -44,7 +45,7 @@ export const SKILLS_HELP_TOPIC = 'skills'
 type Text = (key: SkillsStringKey, params?: Record<string, string | number>) => string
 
 type Dialog =
-  | { kind: 'editor'; mode: SkillEditorMode; view?: UserSkillView }
+  | { kind: 'editor'; mode: SkillEditorMode; view?: UserSkillView; toWhereUsed?: boolean }
   | { kind: 'github' }
   | { kind: 'paste' }
   | { kind: 'bundle' }
@@ -234,6 +235,9 @@ export function SkillsPane({
       case 'edit':
         setDialog({ kind: 'editor', mode: action, view })
         return
+      case 'whereUsed':
+        setDialog({ kind: 'editor', mode: whereUsedDialogMode(view), view, toWhereUsed: true })
+        return
       case 'copyToMine':
         void copyToMine(view, false)
         return
@@ -419,6 +423,7 @@ export function SkillsPane({
                 lang={lang}
                 text={s}
                 usableMcpServers={usableMcpServers}
+                winner={views?.find((other) => other.id === view.shadowedBy)}
                 onToggle={() => void setState(view, { enabled: !view.enabled })}
                 onInvoke={(invoke) => void setState(view, { invoke })}
                 onAction={(action) => runAction(view, action)}
@@ -453,6 +458,7 @@ export function SkillsPane({
           api={api}
           mode={dialog.mode}
           view={dialog.view}
+          toWhereUsed={dialog.toWhereUsed}
           lang={lang}
           locale={dateLocale}
           onClose={() => setDialog(null)}
@@ -522,6 +528,7 @@ function SkillRow({
   lang,
   text,
   usableMcpServers,
+  winner,
   onToggle,
   onInvoke,
   onAction,
@@ -531,6 +538,8 @@ function SkillRow({
   lang: Lang
   text: Text
   usableMcpServers: ReadonlySet<string>
+  /** the enabled skill of the same name that is used instead of this one */
+  winner: UserSkillView | undefined
   onToggle: () => void
   onInvoke: (invoke: UserSkillInvokeValue) => void
   onAction: (action: SkillMenuAction) => void
@@ -557,9 +566,9 @@ function SkillRow({
         <div className="skl-row-text">
           <div className="skl-row-head">
             <span className="skl-row-title">{title}</span>
-            {title !== view.name && (
+            {skillNameBeside(view) && (
               <code className="skl-name" dir="ltr">
-                {view.name}
+                {skillNameBeside(view)}
               </code>
             )}
             <span className="skl-source">{sourceLabel(view, text)}</span>
@@ -575,6 +584,11 @@ function SkillRow({
             </div>
           )}
           {usedIn && <div className="set-field-desc skl-row-editors">{usedIn}</div>}
+          {winner && (
+            <div className="set-field-desc skl-row-shadowed">
+              {text('shadowedNote', { source: sourceLabel(winner, text) })}
+            </div>
+          )}
           {(badges.length > 0 || mcpServers.length > 0) && (
             <div className="skl-badges">
               {badges.map((key) => (
@@ -630,7 +644,7 @@ function SkillRow({
               ariaLabel={text('moreLabel', { title })}
               items={actions.map((action) => ({
                 key: action,
-                label: text(actionLabelKey(action)),
+                label: skillActionLabel(action, lang),
                 onPick: () => onAction(action),
               }))}
             />

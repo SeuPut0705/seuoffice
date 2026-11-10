@@ -111,6 +111,23 @@ describe('autoSkillsSection', () => {
     expect(autoSkillsSection([LIST[2]!, LIST[3]!])).toBe('')
   })
 
+  it('lists a skill that lost its name in an editor its winner is not used in', () => {
+    const list = [
+      entry({ id: 'app:home-letter', editors: ['slides'] }),
+      entry({ id: 'user:home-letter', shadowedBy: 'app:home-letter' }),
+    ]
+    const inSlides = autoSkillsSection(list, { editor: 'slides' })
+    expect(inSlides).toContain('app:home-letter')
+    expect(inSlides).not.toContain('user:home-letter')
+    const inDocs = autoSkillsSection(list, { editor: 'docs' })
+    expect(inDocs).toContain('user:home-letter')
+    expect(inDocs).not.toContain('app:home-letter')
+    // no editor (home ask): the winner alone
+    const anywhere = autoSkillsSection(list)
+    expect(anywhere).toContain('app:home-letter')
+    expect(anywhere).not.toContain('user:home-letter')
+  })
+
   it('cuts each description at the limit', () => {
     const long = 'x'.repeat(AUTO_SKILL_DESCRIPTION_MAX + 50)
     const text = autoSkillsSection([entry({ id: 'app:long', description: long })])

@@ -79,7 +79,7 @@ export const id = {
   fieldBody: 'Petunjuk',
   fieldName: 'Nama',
   nameHint:
-    'Nama yang tampil di daftar skill. Huruf kecil, angka, dan tanda hubung (-), maksimal 64 karakter',
+    'Nama yang dipakai program lain dan panggilan /. Huruf kecil, angka, dan tanda hubung (-), maksimal 64 karakter. Nama yang terisi otomatis boleh dibiarkan apa adanya',
   files: 'File dalam skill',
   filesNone: 'Tidak ada file lain',
   filesHint: 'Buka folder untuk mengubah file-file ini',
@@ -177,4 +177,9 @@ export const id = {
   discardKeep: 'Lanjut mengedit',
   discardClose: 'Buang dan tutup',
   dropOverlaySkills: 'File skill (.zip, SKILL.md) juga bisa dijatuhkan di sini',
+  shadowedNote: 'Skill bernama sama ({source}) dipakai sebagai gantinya',
+  builtinBodyNote:
+    'Petunjuk di bawah adalah teks yang diberikan kepada AI, ditampilkan apa adanya sehingga bisa berbahasa Inggris',
+  pasteUnclosed:
+    'Baris --- penutup tidak ada. Teks mungkin terpotong; salin lagi dari awal sampai akhir.',
 } satisfies Record<keyof typeof zh, string>

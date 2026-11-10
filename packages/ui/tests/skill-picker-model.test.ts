@@ -7,6 +7,7 @@ import {
   removeSkillTrigger,
   skillChipRefsOf,
   skillDisplayName,
+  skillNameBeside,
   skillPickerKeyAction,
   skillTriggerAt,
   withSkillChip,
@@ -255,6 +256,31 @@ describe('skillDisplayName', () => {
   })
 })
 
+describe('skillNameBeside (the name a list shows beside a title)', () => {
+  it('is the name a person chose, beside the title shown in its place', () => {
+    expect(skillNameBeside({ name: 'home-letter', title: '가정통신문', source: 'app' })).toBe(
+      'home-letter',
+    )
+  })
+
+  it('leaves out a name the app made up: it says nothing to a reader', () => {
+    expect(skillNameBeside({ name: 'skill-ehef0a', title: '가정통신문', source: 'app' })).toBe('')
+    expect(skillNameBeside({ name: 'skill-ehef0a-2', title: '가정통신문', source: 'app' })).toBe('')
+  })
+
+  it('is nothing when the name itself is what the list shows', () => {
+    expect(skillNameBeside({ name: 'home-letter', title: '', source: 'app' })).toBe('')
+    expect(skillNameBeside({ name: 'home-letter', title: 'home-letter', source: 'app' })).toBe('')
+    // a made-up name with no title is still the only thing to call the skill by
+    expect(skillDisplayName({ name: 'skill-ehef0a', title: '', source: 'app' })).toBe(
+      'skill-ehef0a',
+    )
+    expect(skillNameBeside({ name: 'meeting-minutes', title: '회의록', source: 'builtin' })).toBe(
+      '',
+    )
+  })
+})
+
 describe('isMadeUpSkillName', () => {
   it('knows the names the app makes up, and not names that only look similar', () => {
     expect(isMadeUpSkillName('skill-a1b2c3')).toBe(true)
@@ -332,6 +358,41 @@ describe('chips', () => {
       { id: 'user:x', source: '', title: 'user:x' },
     ])
     expect(skillChipRefsOf('x')).toEqual([])
+  })
+})
+
+describe('pickerSkillsOf with two enabled skills of one name', () => {
+  // the main process names the winner on the one that lost (`shadowedBy`)
+  const mine = view({ id: 'app:meeting-minutes', name: 'meeting-minutes', title: '' })
+  const builtin = view({
+    id: 'builtin:meeting-minutes',
+    source: 'builtin',
+    name: 'meeting-minutes',
+    shadowedBy: 'app:meeting-minutes',
+  })
+  const ids = (
+    raw: unknown[],
+    surface: Parameters<typeof pickerSkillsOf>[2] = 'panel',
+    editor?: Parameters<typeof pickerSkillsOf>[3],
+  ) => pickerSkillsOf(raw, 'ko', surface, editor).map((s) => s.id)
+
+  it('lists the name once: the skill that won it', () => {
+    expect(ids([builtin, mine])).toEqual(['app:meeting-minutes'])
+    expect(ids([builtin, mine], 'panel', 'docs')).toEqual(['app:meeting-minutes'])
+    expect(ids([builtin, mine], 'agent')).toEqual(['app:meeting-minutes'])
+  })
+
+  it('lists the other again once the winner is off (nothing names a winner then)', () => {
+    const off = { ...mine, enabled: false }
+    expect(ids([{ ...builtin, shadowedBy: undefined }, off])).toEqual(['builtin:meeting-minutes'])
+  })
+
+  it('lists the other in an editor the winner is not used in', () => {
+    const slidesOnly = { ...mine, editors: ['slides'] }
+    expect(ids([builtin, slidesOnly], 'panel', 'slides')).toEqual(['app:meeting-minutes'])
+    expect(ids([builtin, slidesOnly], 'panel', 'docs')).toEqual(['builtin:meeting-minutes'])
+    // no editor (home ask): both are used there, so the winner alone
+    expect(ids([builtin, slidesOnly])).toEqual(['app:meeting-minutes'])
   })
 })
 

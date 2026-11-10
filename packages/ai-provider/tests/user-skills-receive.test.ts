@@ -27,6 +27,7 @@ import {
   SKILL_TEXT_LEAD_LINES,
   skillTextName,
   skillTextOf,
+  skillTextUnclosed,
   skillWarningsInText,
   type SkillFetch,
   type SkillImport,
@@ -229,6 +230,37 @@ describe('pasted and single-file SKILL.md', () => {
       ),
     ).toBe('too-large')
     expect((await listSkillFolderFiles(e.tempDir))?.files).toEqual([])
+  })
+
+  it('says the front matter is not closed when only the first part of a skill was pasted', async () => {
+    const e = env()
+    // cut before the closing --- line, with the greeting and the fence a chat adds
+    const half = 'Here it is:\n```\n---\nname: home-letter\ndescription: Writes a'
+    expect(await kindOf(prepareSkillImport({ kind: 'text', text: half }, e))).toBe(
+      'unclosed-frontmatter',
+    )
+    expect(await kindOf(prepareSkillImport({ kind: 'text', text: '---\nname: x' }, e))).toBe(
+      'unclosed-frontmatter',
+    )
+    // the second part alone opens nothing: it is just not a skill
+    expect(
+      await kindOf(prepareSkillImport({ kind: 'text', text: 'Write the letter.\nThen stop.' }, e)),
+    ).toBe('no-skills')
+    // closed, but without a name: not a skill either
+    expect(
+      await kindOf(prepareSkillImport({ kind: 'text', text: '---\ndescription: x\n---\n' }, e)),
+    ).toBe('no-skills')
+    expect((await listSkillFolderFiles(e.tempDir))?.files).toEqual([])
+  })
+
+  it('tells an unclosed front matter from other text', () => {
+    expect(skillTextUnclosed('---\nname: x')).toBe(true)
+    expect(skillTextUnclosed('---')).toBe(true)
+    expect(skillTextUnclosed('```\n---\nname: x\n```')).toBe(true)
+    expect(skillTextUnclosed('---\nname: x\n---\nbody')).toBe(false)
+    expect(skillTextUnclosed('---\nname: x\n  ---  \n')).toBe(false)
+    expect(skillTextUnclosed('just notes')).toBe(false)
+    expect(skillTextUnclosed('')).toBe(false)
   })
 
   it('shows a name the rule refuses as that problem', async () => {

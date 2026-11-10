@@ -82,7 +82,7 @@ export const fr = {
   fieldBody: 'Instructions',
   fieldName: 'Nom',
   nameHint:
-    'Nom affiché dans la liste des compétences. Lettres minuscules, chiffres et traits d’union (-), 64 caractères maximum',
+    'Nom utilisé par les autres programmes et par l’appel avec /. Lettres minuscules, chiffres et traits d’union (-), 64 caractères maximum. Un nom rempli automatiquement peut rester tel quel',
   files: 'Fichiers de la compétence',
   filesNone: 'Aucun autre fichier',
   filesHint: 'Ouvrez le dossier pour modifier ces fichiers',
@@ -183,4 +183,9 @@ export const fr = {
   discardKeep: 'Continuer la saisie',
   discardClose: 'Abandonner et fermer',
   dropOverlaySkills: 'Vous pouvez aussi déposer des fichiers de compétence (.zip, SKILL.md)',
+  shadowedNote: 'Une compétence du même nom ({source}) est utilisée à la place de celle-ci',
+  builtinBodyNote:
+    'Les instructions ci-dessous sont le texte donné à l’IA, affiché tel quel ; il peut donc être en anglais',
+  pasteUnclosed:
+    'La ligne --- de fermeture manque. Le texte a peut-être été coupé ; copiez-le de nouveau du début à la fin.',
 } satisfies Record<keyof typeof zh, string>

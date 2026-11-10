@@ -2,6 +2,7 @@ import type { Lang } from '@genoffice/i18n'
 import {
   RESERVED_USER_SKILL_NAMES,
   skillEditorsOf,
+  skillStandsBack,
   skillUsedIn,
   type SkillEditorId,
 } from '@genoffice/agent-core'
@@ -187,8 +188,8 @@ export function isMadeUpSkillName(name: string): boolean {
 /**
  * What every list, chip and sentence shows for a skill (decision 0128): the
  * title the person gave it, in any language, when its file carries one; else
- * its name, as coding agents show it. A builtin always shows its name. Where
- * the result differs from the name, lists show the name beside it.
+ * its name, as coding agents show it. A builtin always shows its name. Lists
+ * show the name beside a title (`skillNameBeside`).
  */
 export function skillDisplayName(skill: {
   name: string
@@ -200,11 +201,28 @@ export function skillDisplayName(skill: {
 }
 
 /**
+ * The name a list shows beside what `skillDisplayName` gives: the name a
+ * person chose, when a title is shown in its place. A name the app made up
+ * (`skill-<6 random>`) says nothing to a reader and is left out; '' when
+ * there is nothing to show beside.
+ */
+export function skillNameBeside(skill: {
+  name: string
+  title?: string | undefined
+  source?: string | undefined
+}): string {
+  if (skillDisplayName(skill) === skill.name || isMadeUpSkillName(skill.name)) return ''
+  return skill.name
+}
+
+/**
  * The rows of the list from the bridge's answer: enabled skills only (skills
  * used only when called are listed too), never hidden or unreadable ones;
  * the regular panels leave out agent-only skills, and an editor's panel the
- * skills set for other editors. Rows show the skill's title or name
- * (`skillDisplayName`); builtins use their descriptions in the UI language.
+ * skills set for other editors. Of enabled skills that share a name only the
+ * one that wins it is listed (`skillStandsBack`). Rows show the skill's title
+ * or name (`skillDisplayName`); builtins use their descriptions in the UI
+ * language.
  */
 export function pickerSkillsOf(
   raw: unknown,
@@ -223,6 +241,8 @@ export function pickerSkillsOf(
     if (view.enabled !== true || view.hidden === true || view.unreadable) continue
     if (view.agentOnly === true && surface !== 'agent') continue
     if (surface !== 'agent' && !skillUsedIn(skillEditorsOf(view.editors), editor)) continue
+    // one name, one row: the enabled skill that won the name is the one listed
+    if (skillStandsBack(view, raw, surface === 'agent' ? undefined : editor)) continue
     if (RESERVED_USER_SKILL_NAMES.has(name.toLowerCase())) continue
     const plugin = typeof view.plugin === 'string' ? view.plugin : undefined
     const builtin = source === 'builtin' && isBuiltinSkillName(name)

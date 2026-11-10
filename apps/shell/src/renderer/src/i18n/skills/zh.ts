@@ -74,7 +74,8 @@ export const zh = {
   fieldDescriptionHint: 'AI 会根据这段说明决定是否使用该技能',
   fieldBody: '正文',
   fieldName: '名称',
-  nameHint: '技能列表中显示的名称。小写英文字母、数字和连字符（-），最多 64 个字符',
+  nameHint:
+    '其他程序和 / 调用使用的名称。小写英文字母、数字和连字符（-），最多 64 个字符。自动填入的名称可以保持不变',
   files: '附带文件',
   filesNone: '没有附带文件',
   filesHint: '附带文件请打开文件夹修改',
@@ -165,4 +166,7 @@ export const zh = {
   discardKeep: '继续编辑',
   discardClose: '放弃并关闭',
   dropOverlaySkills: '也可以拖入技能文件（.zip、SKILL.md）',
+  shadowedNote: '改用同名的技能（{source}），不使用此技能',
+  builtinBodyNote: '下面的正文是交给 AI 的指令，按原文显示，因此可能是英文',
+  pasteUnclosed: '缺少结尾的 --- 行。文字可能被截断了，请从头到尾重新复制。',
 }

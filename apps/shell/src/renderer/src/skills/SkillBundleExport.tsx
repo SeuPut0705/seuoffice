@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
+import { skillNameBeside } from '@genoffice/ui'
 import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
 import type { UserSkillView } from '@genoffice/electron-utils/user-skills-channels'
 import { skillsText, type SkillsStringKey } from '../i18n/strings-skills'
@@ -112,7 +113,7 @@ export function SkillBundleExportDialog({
               <div className="skl-candidate-main">
                 <div className="skl-row-head">
                   <span className="skl-row-title">{title}</span>
-                  {title !== v.name && <code className="skl-name">{v.name}</code>}
+                  {skillNameBeside(v) && <code className="skl-name">{skillNameBeside(v)}</code>}
                 </div>
                 {v.template && v.templateExists && (
                   <div className="skl-badges">

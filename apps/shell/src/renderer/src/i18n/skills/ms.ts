@@ -79,7 +79,7 @@ export const ms = {
   fieldBody: 'Arahan',
   fieldName: 'Nama',
   nameHint:
-    'Nama yang dipaparkan dalam senarai kemahiran. Huruf kecil, digit dan tanda sempang (-), sehingga 64 aksara',
+    'Nama yang digunakan oleh program lain dan panggilan /. Huruf kecil, digit dan tanda sempang (-), sehingga 64 aksara. Nama yang diisi secara automatik boleh dibiarkan begitu sahaja',
   files: 'Fail dalam kemahiran',
   filesNone: 'Tiada fail lain',
   filesHint: 'Buka folder untuk mengubah fail ini',
@@ -177,4 +177,9 @@ export const ms = {
   discardKeep: 'Teruskan mengedit',
   discardClose: 'Buang dan tutup',
   dropOverlaySkills: 'Fail kemahiran (.zip, SKILL.md) juga boleh dilepaskan di sini',
+  shadowedNote: 'Kemahiran dengan nama yang sama ({source}) digunakan sebagai ganti',
+  builtinBodyNote:
+    'Arahan di bawah ialah teks yang diberikan kepada AI, dipaparkan seperti yang ditulis, jadi mungkin dalam bahasa Inggeris',
+  pasteUnclosed:
+    'Baris --- penutup tiada. Teks mungkin terpotong; salin semula dari awal hingga akhir.',
 } satisfies Record<keyof typeof zh, string>

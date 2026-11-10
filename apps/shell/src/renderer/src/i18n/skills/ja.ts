@@ -78,7 +78,8 @@ export const ja = {
   fieldDescriptionHint: 'AI はこの説明を読んで、スキルを使うかどうかを判断します',
   fieldBody: '本文',
   fieldName: '名前',
-  nameHint: 'スキル一覧に表示される名前です。英小文字・数字・ハイフン (-) で 64 文字まで',
+  nameHint:
+    'ほかのプログラムや / での呼び出しに使われる名前です。英小文字・数字・ハイフン (-) で 64 文字まで。自動で入った名前はそのままでかまいません',
   files: 'スキル内のファイル',
   filesNone: 'ほかのファイルはありません',
   filesHint: 'これらのファイルを変更するには、フォルダーを開いてください',
@@ -176,4 +177,8 @@ export const ja = {
   discardKeep: '編集を続ける',
   discardClose: '破棄して閉じる',
   dropOverlaySkills: 'スキルファイル（.zip、SKILL.md）もドロップできます',
+  shadowedNote: '同じ名前のスキル（{source}）が代わりに使われます',
+  builtinBodyNote: '下の本文は AI に渡す指示文です。書かれたまま表示するため、英語の場合があります',
+  pasteUnclosed:
+    '前書きを閉じる --- の行がありません。途中で切れている可能性があります。最初から最後までコピーし直してください。',
 } satisfies Record<keyof typeof zh, string>

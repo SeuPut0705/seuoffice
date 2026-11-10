@@ -61,6 +61,7 @@ export {
   skillChipRef,
   skillChipRefsOf,
   skillDisplayName,
+  skillNameBeside,
   skillPickerKeyAction,
   skillSourceLabel,
   skillTriggerAt,

@@ -7,7 +7,7 @@ import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SKILL_WARNING_RULES } from '@genoffice/ai-provider'
 import { LANGS, PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
-import { aiSubscriptionText, builtinSkillDesc } from '@genoffice/ui'
+import { aiSubscriptionText, builtinSkillDesc, skillEditorsText } from '@genoffice/ui'
 import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
 import type {
   UserSkillImportCandidateView,
@@ -329,18 +329,26 @@ describe('skills model', () => {
   })
 
   it('builds the more-menu from what the main process allows', () => {
-    expect(skillMenuActions(builtin)).toEqual(['view', 'copyToMine', 'hide'])
-    expect(skillMenuActions(mine)).toEqual(['view', 'edit', 'export', 'openFolder', 'remove'])
+    expect(skillMenuActions(builtin)).toEqual(['view', 'whereUsed', 'copyToMine', 'hide'])
+    expect(skillMenuActions(mine)).toEqual([
+      'view',
+      'edit',
+      'whereUsed',
+      'export',
+      'openFolder',
+      'remove',
+    ])
     expect(skillMenuActions(fromGitHub)).toEqual([
       'view',
       'edit',
+      'whereUsed',
       'export',
       'checkUpdate',
       'openFolder',
       'remove',
     ])
-    expect(skillMenuActions(claude)).toEqual(['view', 'copyToMine', 'openFolder'])
-    // an unreadable skill has nothing to show
+    expect(skillMenuActions(claude)).toEqual(['view', 'whereUsed', 'copyToMine', 'openFolder'])
+    // an unreadable skill has nothing to show, and no dialog to choose editors in
     expect(skillMenuActions(codex)).toEqual(['openFolder'])
   })
 
@@ -437,16 +445,28 @@ describe('Settings → Skills screen', () => {
 
   it('offers the more-menu items each source allows', async () => {
     await renderPane(bridge([builtin, mine, fromGitHub, claude, plugin]))
-    expect(await openMenu(builtin.id)).toEqual([ko('actView'), ko('actCopy'), ko('actHide')])
+    const whereUsed = skillEditorsText('ko', 'label')
+    expect(await openMenu(builtin.id)).toEqual([
+      ko('actView'),
+      whereUsed,
+      ko('actCopy'),
+      ko('actHide'),
+    ])
     expect(await openMenu(fromGitHub.id)).toEqual([
       ko('actView'),
       ko('actEdit'),
+      whereUsed,
       ko('actExport'),
       ko('actCheckUpdate'),
       ko('actOpenFolder'),
       ko('actRemove'),
     ])
-    expect(await openMenu(plugin.id)).toEqual([ko('actView'), ko('actCopy'), ko('actOpenFolder')])
+    expect(await openMenu(plugin.id)).toEqual([
+      ko('actView'),
+      whereUsed,
+      ko('actCopy'),
+      ko('actOpenFolder'),
+    ])
   })
 
   it('asks before moving an own skill to the trash', async () => {
@@ -637,7 +657,9 @@ describe('Settings → Skills screen', () => {
     expect(dialog.textContent).toContain(ko('titleHint'))
     const name = fields[1] as HTMLInputElement
     expect(name.getAttribute('data-field')).toBe('name')
-    expect(name.placeholder).toBe('meeting-minutes')
+    // an empty name field looks empty: no example that reads like a filled-in value
+    expect(name.placeholder).toBe('')
+    expect(dialog.textContent).not.toContain(ko('nameEmpty'))
     const set = async (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
       await act(async () => {
         const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement
@@ -655,6 +677,11 @@ describe('Settings → Skills screen', () => {
     expect(save.disabled).toBe(true)
     expect(api.suggestName).not.toHaveBeenCalled()
     expect(name.value).toBe('')
+    // Save is off because of the name, and the name field says so
+    const note = () => dialog.querySelector('[data-skill-name-note]')!
+    expect(note().textContent).toBe(ko('nameEmpty'))
+    expect(note().getAttribute('data-skill-name-note')).toBe('problem')
+    expect(note().classList.contains('skl-error')).toBe(true)
     await set(name, 'meeting-notes')
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 400))
@@ -829,6 +856,13 @@ describe('Receiving and handing on skills', () => {
     await click(buttonWithText(ko('pastePreview'), dialog))
     expect(api.importText).toHaveBeenCalledWith('just notes')
     expect(dialog.textContent).toContain(ko('pasteNotSkill'))
+
+    // the first part of a skill only: it does start with --- and a name, so say what is missing
+    api.importText.mockResolvedValueOnce({ ok: false, reason: 'unclosed-frontmatter' })
+    await typeInto(area, '---\nname: report')
+    await click(buttonWithText(ko('pastePreview'), dialog))
+    expect(dialog.textContent).toContain(ko('pasteUnclosed'))
+    expect(dialog.textContent).not.toContain(ko('pasteNotSkill'))
 
     const text = ['---', 'name: report', 'description: d', '---', 'body'].join('\n')
     api.importText.mockResolvedValueOnce({
@@ -1104,6 +1138,115 @@ describe('the title of an own skill in Settings → Skills (decision 0128)', () 
       expect(name, lang).toContain('가정통신문')
       expect(name, lang).toContain('2')
       expect(name, lang).not.toMatch(/[<>:"/\\|?*]/)
+    }
+  })
+})
+
+describe('what the second user test found in Settings → Skills', () => {
+  const madeUp = view({
+    source: 'app',
+    name: 'skill-ehef0a',
+    title: '가정통신문·안내문 쓰기',
+    can: { ...noCan, edit: true, export: true, openFolder: true, remove: true },
+  })
+  const head = (id: string) => row(id).querySelector('.skl-row-head')!
+
+  it('shows a title without the name the app made up, and with a name the person chose', async () => {
+    await renderPane(bridge([madeUp, mine]))
+    expect(head(madeUp.id).querySelector('.skl-name')).toBeNull()
+    expect(head(madeUp.id).textContent).toBe(`가정통신문·안내문 쓰기${ko('sourceApp')}`)
+    expect(head(mine.id).querySelector('.skl-name')!.textContent).toBe('home-letter')
+    // the made-up name still finds the skill
+    await typeInto(host.querySelector<HTMLInputElement>('.skl-search')!, 'skill-e')
+    await flush()
+    expect(host.querySelector(`[data-skill-id="${madeUp.id}"]`)).toBeTruthy()
+    expect(host.querySelector(`[data-skill-id="${mine.id}"]`)).toBeNull()
+  })
+
+  it('says on the row of a skill that lost its name which skill is used instead', async () => {
+    const own = view({
+      source: 'app',
+      name: 'meeting-minutes',
+      can: { ...noCan, edit: true, export: true, openFolder: true, remove: true },
+    })
+    const pushedBack = { ...builtin, shadowedBy: own.id }
+    await renderPane(bridge([pushedBack, own]))
+    const note = row(builtin.id).querySelector('.skl-row-shadowed')
+    expect(note?.textContent).toBe(ko('shadowedNote', { source: ko('sourceApp') }))
+    expect(row(own.id).querySelector('.skl-row-shadowed')).toBeNull()
+  })
+
+  it('says nothing of the kind while only one of the two is on', async () => {
+    const own = view({ source: 'app', name: 'meeting-minutes', enabled: false })
+    await renderPane(bridge([builtin, own]))
+    expect(host.querySelector('.skl-row-shadowed')).toBeNull()
+  })
+
+  it('marks a name that is too long as the reason Save is off', async () => {
+    const api = bridge([])
+    api.checkName.mockResolvedValue({ ok: false, problem: 'too-long' })
+    await renderPane(api)
+    await click(buttonWithText(ko('create')))
+    const dialog = document.querySelector('[role="dialog"]')!
+    await typeInto(dialog.querySelector<HTMLInputElement>('[data-field="name"]')!, 'a'.repeat(70))
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400))
+    })
+    await flush()
+    const note = dialog.querySelector('[data-skill-name-note]')!
+    expect(note.textContent).toBe(ko('nameTooLong'))
+    expect(note.getAttribute('data-skill-name-note')).toBe('problem')
+    expect(note.classList.contains('skl-error')).toBe(true)
+    expect(buttonWithText(ko('save'), dialog)!.disabled).toBe(true)
+  })
+
+  it('shows a builtin’s view with the description the list shows, and says the body is the AI’s text', async () => {
+    const api = bridge([builtin, claude])
+    api.read.mockResolvedValue({
+      ok: true,
+      skill: {
+        id: builtin.id,
+        name: 'meeting-minutes',
+        title: 'meeting-minutes',
+        description: 'Turn raw notes into minutes.',
+        body: '# Meeting minutes',
+        template: undefined,
+        files: [{ rel: 'SKILL.md', size: 10 }],
+      },
+    })
+    await renderPane(api)
+    await openMenu(builtin.id)
+    await click(buttonWithText(ko('actView'), document.querySelector('[role="menu"]')!))
+    let dialog = document.querySelector('[role="dialog"]')!
+    const [description, body] = [...dialog.querySelectorAll('textarea')]
+    expect(description!.value).toBe(builtinSkillDesc('ko', 'meeting-minutes'))
+    expect(row(builtin.id).textContent).toContain(description!.value)
+    // the body stays as written
+    expect(body!.value).toBe('# Meeting minutes')
+    expect(dialog.querySelector('[data-skill-body-note]')!.textContent).toBe(ko('builtinBodyNote'))
+
+    // another source's skill is shown as its file has it, with no such line
+    await click(buttonWithText(ko('close'), dialog))
+    await openMenu(claude.id)
+    await click(buttonWithText(ko('actView'), document.querySelector('[role="menu"]')!))
+    dialog = document.querySelector('[role="dialog"]')!
+    expect(dialog.querySelector('textarea')!.value).toBe('Turn raw notes into minutes.')
+    expect(dialog.querySelector('[data-skill-body-note]')).toBeNull()
+  })
+
+  it('has the new lines in every language, as translations', () => {
+    const keys = ['nameHint', 'shadowedNote', 'builtinBodyNote', 'pasteUnclosed'] as const
+    for (const lang of LANGS) {
+      for (const key of keys) {
+        const words = skillsUiStrings[lang][key]
+        expect(words.trim(), `${lang} ${key}`).not.toBe('')
+        if (lang !== 'en') expect(words, `${lang} ${key}`).not.toBe(skillsUiStrings.en[key])
+      }
+      // the name hint names the / call and the length rule; the shadow note its source
+      expect(skillsUiStrings[lang].nameHint, lang).toContain('/')
+      expect(skillsUiStrings[lang].nameHint, lang).toContain('64')
+      expect(skillsUiStrings[lang].shadowedNote, lang).toContain('{source}')
+      expect(skillsUiStrings[lang].pasteUnclosed, lang).toContain('---')
     }
   })
 })

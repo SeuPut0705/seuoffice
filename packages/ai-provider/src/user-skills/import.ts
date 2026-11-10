@@ -414,6 +414,39 @@ export const SKILL_TEXT_LEAD_LINES = 5
 const FENCE_LINE = /^[ \t]*(?:```|~~~)/
 
 /**
+ * Where the `---` line that opens a front matter stands, when it is within
+ * the lead a pasted text may have, and whether a code fence was opened
+ * before it. `source` has no byte order mark.
+ */
+function frontMatterOpening(source: string): { start: number; fenced: boolean } | undefined {
+  let lead = 0
+  let fenced = false
+  for (let at = 0; at <= source.length && lead <= SKILL_TEXT_LEAD_LINES;) {
+    const end = source.indexOf('\n', at)
+    const line = source.slice(at, end === -1 ? source.length : end).trim()
+    if (line === '---') return { start: at, fenced }
+    if (line !== '') lead++
+    if (FENCE_LINE.test(line)) fenced = true
+    if (end === -1) break
+    at = end + 1
+  }
+  return undefined
+}
+
+/**
+ * Whether a text opens a front matter that is never closed: a `---` line
+ * where `skillTextOf` looks for one, and no `---` line after it. That is what
+ * is left of a skill when only its first part was copied.
+ */
+export function skillTextUnclosed(text: string): boolean {
+  const source = text.replace(/^﻿/, '')
+  const opening = frontMatterOpening(source)
+  if (!opening) return false
+  const lines = source.slice(opening.start).split('\n').slice(1)
+  return !lines.some((line) => line.trim() === '---')
+}
+
+/**
  * The `SKILL.md` text inside what a person pasted or saved. A chat program
  * wraps it in a code fence, and a sender puts a line of greeting before it,
  * so the front matter may start after blank lines, a fence line and a few
@@ -423,24 +456,10 @@ const FENCE_LINE = /^[ \t]*(?:```|~~~)/
  */
 export function skillTextOf(text: string): string | undefined {
   const source = text.startsWith('﻿') ? text.slice(1) : text
-  let start = -1
-  let lead = 0
-  let fenced = false
-  for (let at = 0; at <= source.length && lead <= SKILL_TEXT_LEAD_LINES;) {
-    const end = source.indexOf('\n', at)
-    const line = source.slice(at, end === -1 ? source.length : end).trim()
-    if (line === '---') {
-      start = at
-      break
-    }
-    if (line !== '') lead++
-    if (FENCE_LINE.test(line)) fenced = true
-    if (end === -1) break
-    at = end + 1
-  }
-  if (start === -1) return undefined
-  let rest = source.slice(start).replace(/^[ \t]+/, '')
-  if (fenced) {
+  const opening = frontMatterOpening(source)
+  if (!opening) return undefined
+  let rest = source.slice(opening.start).replace(/^[ \t]+/, '')
+  if (opening.fenced) {
     // the opening fence is gone with the lead; an odd number of fence lines left means its closing one is the last
     const fences = [...rest.matchAll(/^[ \t]*(?:```|~~~).*$/gm)]
     const last = fences[fences.length - 1]
@@ -475,7 +494,12 @@ async function prepareSingleFileImport(
   }
   const skillMd = skillTextOf(text)
   const name = skillMd === undefined ? undefined : parseSkillMd(skillMd)?.name?.trim()
-  if (skillMd === undefined || !name) throw noSkills()
+  if (skillMd === undefined || !name) {
+    if (skillTextUnclosed(text)) {
+      throw new SkillImportError('unclosed-frontmatter', 'The front matter is not closed')
+    }
+    throw noSkills()
+  }
   const work = await makeWorkDir(options.tempDir)
   try {
     const root = join(work, 'text')

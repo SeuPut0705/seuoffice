@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
 import { skillEditorsOf } from '@genoffice/agent-core/skill-editors'
 import {
@@ -20,6 +20,7 @@ import {
   failureKey,
   formatSkillSize,
   nameProblemKey,
+  skillDisplayDesc,
   skillDisplayTitle,
   sourceLabel,
 } from './skills-model'
@@ -61,14 +62,17 @@ function sameDraft(a: SkillDraft, b: SkillDraft): boolean {
  * description and body are edited here; the other files are listed and
  * changed in the folder. A new skill's name follows its title until the
  * person types a name. A name an enabled skill of another source has is
- * asked about before the save. Escape or a click outside asks before it
- * throws away something typed or changed; Cancel is the person's own word
- * and closes at once.
+ * asked about before the save. Whatever keeps Save off because of the name
+ * is said under the name field. Escape, a click outside and Cancel all ask
+ * before they throw away something typed or changed. A builtin's view shows
+ * its description in the UI language, as the list does; its body is the text
+ * the AI is given, as written. `toWhereUsed` opens on the where-used chooser.
  */
 export function SkillEditor({
   api,
   mode,
   view,
+  toWhereUsed = false,
   lang,
   locale,
   onClose,
@@ -77,6 +81,8 @@ export function SkillEditor({
   api: UserSkillsBridge
   mode: SkillEditorMode
   view?: UserSkillView | undefined
+  /** the person asked for "where it is used": bring its chooser into view and focus it */
+  toWhereUsed?: boolean | undefined
   lang: Lang
   locale: string
   onClose: () => void
@@ -118,6 +124,15 @@ export function SkillEditor({
   const viewId = view?.id
   /** a skill the person cannot edit: its where-used choice goes to the settings file at once */
   const choosesInSettings = readOnly && !!view && !view.can.edit && !view.unreadable
+  const whereUsed = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!toWhereUsed || loading) return
+    const chooser = whereUsed.current
+    chooser?.scrollIntoView?.({ block: 'center' })
+    // the mode that is on: every editor, or only the checked ones
+    chooser?.querySelector<HTMLInputElement>('input[type="radio"]:checked')?.focus()
+  }, [toWhereUsed, loading])
 
   useEffect(() => {
     if (mode === 'new' || !viewId) return
@@ -237,8 +252,17 @@ export function SkillEditor({
 
   const label = s(TITLE_KEY[mode])
   const heading = view ? skillDisplayTitle(view) : ''
+  const builtinView = readOnly && view?.source === 'builtin'
   const unsaved =
     !readOnly && !loading && !sameDraft(started, { title, name, description, body, editors })
+  // an empty name keeps Save off: say so once something was typed, unless the
+  // title is about to fill the name in
+  const nameMissing = unsaved && name.trim() === '' && !(nameFollows && title.trim() !== '')
+  const nameReason: SkillsStringKey | null = nameProblem
+    ? nameProblemKey(nameProblem)
+    : nameMissing
+      ? 'nameEmpty'
+      : null
   const closeUnlessUnsaved = () => {
     if (unsaved) setAsking(true)
     else onClose()
@@ -291,7 +315,7 @@ export function SkillEditor({
           </div>
         ) : (
           <>
-            <button type="button" className="set-btn" onClick={onClose}>
+            <button type="button" className="set-btn" onClick={closeUnlessUnsaved}>
               {s('cancel')}
             </button>
             <button
@@ -332,18 +356,20 @@ export function SkillEditor({
                 className="skl-input"
                 data-field="name"
                 value={name}
-                placeholder={mode === 'new' ? 'meeting-minutes' : undefined}
                 spellCheck={false}
                 dir="ltr"
-                aria-invalid={nameProblem ? true : undefined}
+                aria-invalid={nameReason ? true : undefined}
                 onChange={(e) => {
                   setNameFollows(false)
                   setSameNameOn(null)
                   setName(e.target.value)
                 }}
               />
-              <span className={`set-field-desc${nameProblem ? ' skl-error' : ''}`}>
-                {nameProblem ? s(nameProblemKey(nameProblem)) : s('nameHint')}
+              <span
+                className={`set-field-desc${nameReason ? ' skl-error' : ''}`}
+                data-skill-name-note={nameReason ? 'problem' : 'hint'}
+              >
+                {s(nameReason ?? 'nameHint')}
               </span>
             </label>
           )}
@@ -352,7 +378,7 @@ export function SkillEditor({
             <textarea
               className="skl-input skl-textarea-short"
               rows={2}
-              value={description}
+              value={builtinView && view ? skillDisplayDesc(view, lang) : description}
               readOnly={readOnly}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -360,6 +386,11 @@ export function SkillEditor({
           </label>
           <label className="skl-field">
             <span className="skl-field-label">{s('fieldBody')}</span>
+            {builtinView && (
+              <span className="set-field-desc" data-skill-body-note="">
+                {s('builtinBodyNote')}
+              </span>
+            )}
             <textarea
               className="skl-input skl-textarea-body"
               rows={12}
@@ -371,7 +402,7 @@ export function SkillEditor({
           </label>
 
           {(!readOnly || choosesInSettings) && (
-            <div className="skl-field">
+            <div className="skl-field" ref={whereUsed}>
               <SkillEditorsChooser
                 lang={lang}
                 value={editors}

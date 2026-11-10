@@ -39,7 +39,9 @@ export function withSkillEditor(
 /**
  * The "where it is used" chooser of the skill card and the settings editor:
  * every editor, or only the checked ones. Going from every editor to only
- * some starts with all of them checked, so leaving one out is one click.
+ * some starts with none checked: the usual wish is one editor, which is then
+ * one click. "Check all" is there for leaving a few out, "Clear all" for
+ * starting over.
  */
 export function SkillEditorsChooser({
   lang,
@@ -75,11 +77,31 @@ export function SkillEditorsChooser({
             type="radio"
             name={group}
             checked={some}
-            onChange={() => onChange(some ? value : [...SKILL_EDITORS])}
+            onChange={() => onChange(some ? value : [])}
           />
           {t('some')}
         </label>
       </div>
+      {some && (
+        <div className="ai-skill-editors-bulk">
+          <button
+            type="button"
+            data-skill-editors-bulk="all"
+            disabled={value.length === SKILL_EDITORS.length}
+            onClick={() => onChange([...SKILL_EDITORS])}
+          >
+            {t('checkAll')}
+          </button>
+          <button
+            type="button"
+            data-skill-editors-bulk="none"
+            disabled={value.length === 0}
+            onClick={() => onChange([])}
+          >
+            {t('clearAll')}
+          </button>
+        </div>
+      )}
       {some && (
         <div className="ai-skill-editors-list">
           {SKILL_EDITORS.map((editor) => (

@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LANGS } from '@genoffice/i18n'
+import { skillEditorsText } from '@genoffice/ui'
 import type {
   UserSkillImportCandidateView,
   UserSkillImportPreview,
@@ -217,7 +218,7 @@ async function clickOutside(): Promise<void> {
   await flush()
 }
 
-describe('closing the skill editor by Escape or a click outside', () => {
+describe('closing the skill editor by Escape, a click outside or Cancel', () => {
   async function openNew(api: Bridge) {
     await renderPane(api)
     await click(buttonWithText(ko('create')))
@@ -270,11 +271,28 @@ describe('closing the skill editor by Escape or a click outside', () => {
     await type(dialog()!.querySelector('textarea'), '바꾼 설명')
     await pressEscape()
     expect(dialog()!.textContent).toContain(ko('discardAsk'))
-    // Cancel is the person's own word: no question
+    // Cancel asks the same question: it sits beside Save and is easy to hit
     await click(buttonWithText(ko('discardKeep'), dialog()!))
     await click(buttonWithText(ko('cancel'), dialog()!))
+    expect(dialog()!.textContent).toContain(ko('discardAsk'))
+    expect(dialog()!.querySelector('textarea')!.value).toBe('바꾼 설명')
+    await click(buttonWithText(ko('discardClose'), dialog()!))
     expect(dialog()).toBeNull()
     expect(api.save).not.toHaveBeenCalled()
+  })
+
+  it('lets Cancel close at once when nothing was typed, and ask when something was', async () => {
+    await openNew(bridge())
+    await click(buttonWithText(ko('cancel'), dialog()!))
+    expect(dialog()).toBeNull()
+
+    await click(buttonWithText(ko('create')))
+    const body = dialog()!.querySelectorAll('textarea')[1]!
+    await type(body, '회의록을 이렇게 정리한다')
+    await click(buttonWithText(ko('cancel'), dialog()!))
+    expect(dialog()!.textContent).toContain(ko('discardAsk'))
+    await click(buttonWithText(ko('discardKeep'), dialog()!))
+    expect(dialog()!.querySelectorAll('textarea')[1]!.value).toBe('회의록을 이렇게 정리한다')
   })
 })
 
@@ -331,6 +349,7 @@ describe('the row menu near the bottom of the window', () => {
     expect(items).toEqual([
       ko('actView'),
       ko('actEdit'),
+      skillEditorsText('ko', 'label'),
       ko('actExport'),
       ko('actOpenFolder'),
       ko('actRemove'),
@@ -352,12 +371,20 @@ describe('reading a skill in the preview before installing', () => {
     expect(head.textContent).toBe('deck-polish')
   })
 
-  it('still shows the name beside a title that differs from it', async () => {
+  it('still shows the name a person chose beside a title that differs from it', async () => {
+    const box = await openPreview(bridge(), [
+      candidate({ key: 'home-letter', title: '가정통신문' }),
+    ])
+    const head = box.querySelector('.skl-candidate .skl-row-head')!
+    expect(head.textContent).toBe('가정통신문home-letter')
+  })
+
+  it('leaves out a name the app made up: the title alone says what the skill is', async () => {
     const box = await openPreview(bridge(), [
       candidate({ key: 'skill-a8k2p1', title: '가정통신문' }),
     ])
     const head = box.querySelector('.skl-candidate .skl-row-head')!
-    expect(head.textContent).toBe('가정통신문skill-a8k2p1')
+    expect(head.textContent).toBe('가정통신문')
   })
 
   it('opens the SKILL.md body and a text file as read-only text, and says when there is more', async () => {

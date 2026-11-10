@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
+import { skillNameBeside } from '@genoffice/ui'
 import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
 import {
   USER_SKILL_PREVIEW_TEXT_MAX_CHARS,
@@ -44,7 +45,7 @@ export function CandidateSummary({
     <div className="skl-candidate-text">
       <div className="skl-row-head">
         <span className="skl-row-title">{c.title || c.name}</span>
-        {c.title && c.title !== c.name && <code className="skl-name">{c.name}</code>}
+        {skillNameBeside(c) && <code className="skl-name">{skillNameBeside(c)}</code>}
       </div>
       {c.description && <div className="set-field-desc skl-candidate-desc">{c.description}</div>}
       <div className="skl-badges">

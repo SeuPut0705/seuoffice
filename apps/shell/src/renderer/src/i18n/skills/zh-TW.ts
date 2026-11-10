@@ -76,7 +76,8 @@ export const zhTW = {
   fieldDescriptionHint: 'AI 會根據這段說明決定是否使用此技能',
   fieldBody: '內文',
   fieldName: '名稱',
-  nameHint: '技能清單中顯示的名稱。小寫英文字母、數字和連字號（-），最多 64 個字元',
+  nameHint:
+    '其他程式和 / 呼叫使用的名稱。小寫英文字母、數字和連字號（-），最多 64 個字元。自動填入的名稱可以保持不變',
   files: '附帶檔案',
   filesNone: '沒有附帶檔案',
   filesHint: '附帶檔案請開啟資料夾修改',
@@ -168,4 +169,7 @@ export const zhTW = {
   discardKeep: '繼續編輯',
   discardClose: '捨棄並關閉',
   dropOverlaySkills: '也可以拖入技能檔案（.zip、SKILL.md）',
+  shadowedNote: '改用同名的技能（{source}），不使用此技能',
+  builtinBodyNote: '下面的內文是交給 AI 的指令，按原文顯示，因此可能是英文',
+  pasteUnclosed: '缺少結尾的 --- 行。文字可能被截斷了，請從頭到尾重新複製。',
 } satisfies Record<keyof typeof zh, string>

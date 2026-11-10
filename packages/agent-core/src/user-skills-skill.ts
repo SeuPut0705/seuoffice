@@ -1,7 +1,13 @@
 import type { AgentMessage, AgentToolCall, AgentToolDef, ToolExecution } from './types'
 import { RESERVED_USER_SKILL_NAMES } from './user-skill-names'
 import { mcpServerListOf, skillStepsNote } from './skill-mcp-refs'
-import { SKILL_EDITORS, skillEditorsOf, skillUsedIn, type SkillEditorId } from './skill-editors'
+import {
+  SKILL_EDITORS,
+  skillEditorsOf,
+  skillStandsBack,
+  skillUsedIn,
+  type SkillEditorId,
+} from './skill-editors'
 import type { AgentSkill } from './skill'
 
 /**
@@ -205,7 +211,11 @@ function clip(text: string, max: number): string {
 }
 
 /** Whether the model may pick a skill on its own (spec 5.5) */
-function isAutoSkill(skill: UserSkillEntry, editor: SkillEditorId | undefined): boolean {
+function isAutoSkill(
+  skill: UserSkillEntry,
+  all: readonly UserSkillEntry[],
+  editor: SkillEditorId | undefined,
+): boolean {
   return (
     skill.enabled &&
     skillUsedIn(skill.editors, editor) &&
@@ -213,7 +223,7 @@ function isAutoSkill(skill: UserSkillEntry, editor: SkillEditorId | undefined): 
     !skill.unreadable &&
     !skill.agentOnly &&
     skill.invoke === 'auto' &&
-    !skill.shadowedBy &&
+    !skillStandsBack(skill, all, editor) &&
     !RESERVED_USER_SKILL_NAMES.has(skill.name.toLowerCase())
   )
 }
@@ -238,7 +248,7 @@ export function autoSkillsSection(
   const max = options.max ?? AUTO_SKILLS_MAX
   const namesMax = options.namesMax ?? AUTO_SKILLS_NAMES_ONLY_MAX
   const attached = new Set(options.attached ?? [])
-  const listed = skills.filter((s) => isAutoSkill(s, options.editor) && !attached.has(s.id))
+  const listed = skills.filter((s) => isAutoSkill(s, skills, options.editor) && !attached.has(s.id))
   if (listed.length === 0) return ''
   const titleOf = (s: UserSkillEntry) =>
     clip(options.displayTitle?.(s) || s.title || s.name, AUTO_SKILL_TITLE_MAX)

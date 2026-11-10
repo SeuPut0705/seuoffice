@@ -57,7 +57,10 @@
   word-break: break-all;
 }
 
-.skl-error {
+/* `.set-field-desc` (settings.css) has the same weight and comes later in the
+   bundle: name it here too, or a reason under a field shows in the hint's grey */
+.skl-error,
+.set-field-desc.skl-error {
   color: var(--danger);
 }
 
@@ -407,7 +410,8 @@
   font-size: 13px;
 }
 
-.skl-dialog .ai-skill-editors-hint {
+.skl-dialog .ai-skill-editors-hint,
+.skl-dialog .ai-skill-editors-bulk button {
   font-size: 12px;
   line-height: 1.45;
 }

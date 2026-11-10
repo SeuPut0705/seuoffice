@@ -79,7 +79,7 @@ export const es = {
   fieldBody: 'Instrucciones',
   fieldName: 'Nombre',
   nameHint:
-    'Nombre que aparece en la lista de habilidades. Letras minúsculas, números y guiones (-), hasta 64 caracteres',
+    'Nombre que usan otros programas y la llamada con /. Letras minúsculas, números y guiones (-), hasta 64 caracteres. Un nombre rellenado automáticamente puede quedarse como está',
   files: 'Archivos de la habilidad',
   filesNone: 'No hay otros archivos',
   filesHint: 'Abre la carpeta para cambiar estos archivos',
@@ -179,4 +179,9 @@ export const es = {
   discardKeep: 'Seguir editando',
   discardClose: 'Descartar y cerrar',
   dropOverlaySkills: 'También puedes soltar archivos de habilidad (.zip, SKILL.md)',
+  shadowedNote: 'En su lugar se usa la habilidad del mismo nombre ({source})',
+  builtinBodyNote:
+    'Las instrucciones de abajo son el texto que recibe la IA. Se muestran tal cual, por lo que pueden estar en inglés',
+  pasteUnclosed:
+    'Falta la línea --- de cierre. Puede que el texto se haya cortado; cópielo de nuevo de principio a fin.',
 } satisfies Record<keyof typeof zh, string>

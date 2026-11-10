@@ -79,7 +79,7 @@ export const cs = {
   fieldBody: 'Pokyny',
   fieldName: 'Název',
   nameHint:
-    'Název zobrazený v seznamu dovedností. Malá písmena bez diakritiky, číslice a spojovníky (-), nejvýše 64 znaků',
+    'Název, který používají jiné programy a volání přes /. Malá písmena bez diakritiky, číslice a spojovníky (-), nejvýše 64 znaků. Automaticky vyplněný název můžete nechat, jak je',
   files: 'Soubory dovednosti',
   filesNone: 'Žádné další soubory',
   filesHint: 'Tyto soubory změníte po otevření složky',
@@ -177,4 +177,9 @@ export const cs = {
   discardKeep: 'Pokračovat v úpravách',
   discardClose: 'Zahodit a zavřít',
   dropOverlaySkills: 'Přetáhnout sem lze i soubory dovedností (.zip, SKILL.md)',
+  shadowedNote: 'Místo této se používá dovednost se stejným názvem ({source})',
+  builtinBodyNote:
+    'Pokyny níže jsou text, který dostává AI. Zobrazují se beze změny, proto mohou být v angličtině',
+  pasteUnclosed:
+    'Chybí uzavírající řádek ---. Text mohl být oříznut; zkopírujte ho znovu od začátku do konce.',
 } satisfies Record<keyof typeof zh, string>

@@ -2,10 +2,12 @@
 import { act, createElement, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SkillProposal } from '@genoffice/agent-core'
+import { SKILL_EDITORS, type SkillProposal } from '@genoffice/agent-core'
+import { LANGS } from '@genoffice/i18n'
 import { SkillProposalCard, SkillUsedNotes } from '../src/SkillProposalCard'
 import { useSkillProposals, type SkillProposals } from '../src/use-skill-proposals'
 import type { SkillCardBridge, StoredToolRecord } from '../src/skill-card-model'
+import { skillEditorsText } from '../src/strings-skill-editors'
 
 const NEW: SkillProposal = {
   key: 'call-1',
@@ -548,22 +550,71 @@ describe('SkillProposalCard: where the skill is used', () => {
     )
   })
 
-  it('starts with every editor checked when the person goes from every editor to only some', async () => {
+  it('starts with no editor checked when the person goes from every editor to only some', async () => {
     const bridge = fakeBridge()
     renderCard(NEW, bridge)
     await settle()
     act(() => radio('Only these editors').click())
-    const boxes = [...host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
-    expect(boxes.length).toBeGreaterThan(5)
-    expect(boxes.every((box) => box.checked)).toBe(true)
-    expect(button('Save')!.disabled).toBe(false)
-    // leaving one editor out is one click
-    act(() => checkbox('pdf')!.click())
+    const boxes = () => [...host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+    expect(boxes().length).toBeGreaterThan(5)
+    expect(boxes().some((box) => box.checked)).toBe(false)
+    // nothing to save yet, and the chooser says what is missing
+    expect(button('Save')!.disabled).toBe(true)
+    expect(host.textContent).toContain('Choose at least one editor')
+    // the usual wish, one editor, is one click
+    act(() => checkbox('slides')!.click())
     await act(async () => button('Save')!.click())
     await settle()
-    const saved = bridge.saveFromCard.mock.calls[0]![0] as { editors: string[] }
-    expect(saved.editors).not.toContain('pdf')
-    expect(saved.editors).toHaveLength(boxes.length - 1)
+    expect(bridge.saveFromCard).toHaveBeenCalledWith(
+      expect.objectContaining({ editors: ['slides'] }),
+    )
+  })
+
+  it('checks every editor or none with the two small buttons', async () => {
+    const bridge = fakeBridge()
+    renderCard(NEW, bridge)
+    await settle()
+    act(() => radio('Only these editors').click())
+    const boxes = () => [...host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+
+    act(() => button('Check all')!.click())
+    expect(boxes().every((box) => box.checked)).toBe(true)
+    expect(button('Check all')!.disabled).toBe(true)
+    // leaving one out of all of them is one more click
+    act(() => checkbox('pdf')!.click())
+    expect(
+      boxes()
+        .filter((box) => !box.checked)
+        .map((box) => box.value),
+    ).toEqual(['pdf'])
+
+    act(() => button('Clear all')!.click())
+    expect(boxes().some((box) => box.checked)).toBe(false)
+    expect(button('Clear all')!.disabled).toBe(true)
+    expect(button('Save')!.disabled).toBe(true)
+  })
+
+  it('saves with every editor checked', async () => {
+    const bridge = fakeBridge()
+    renderCard(NEW, bridge)
+    await settle()
+    act(() => radio('Only these editors').click())
+    act(() => button('Check all')!.click())
+    await act(async () => button('Save')!.click())
+    await settle()
+    // the main process writes a full list as "every editor" (user-skills-editors.test.ts)
+    expect(bridge.saveFromCard).toHaveBeenCalledWith(
+      expect.objectContaining({ editors: [...SKILL_EDITORS] }),
+    )
+  })
+
+  it('has the two buttons in every language, as translations', () => {
+    for (const lang of LANGS) {
+      const words = [skillEditorsText(lang, 'checkAll'), skillEditorsText(lang, 'clearAll')]
+      expect(words[0], lang).not.toBe(words[1])
+      for (const word of words) expect(word.trim(), lang).not.toBe('')
+      if (lang !== 'en') expect(words, lang).not.toEqual(['Check all', 'Clear all'])
+    }
   })
 
   it('does not save while no editor is checked', async () => {

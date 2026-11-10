@@ -194,6 +194,8 @@ export type UserSkillsFailReason =
   | 'network'
   | 'unsafe'
   | 'no-skills'
+  /** pasted text whose front matter is opened and never closed */
+  | 'unclosed-frontmatter'
   | 'needs-choice'
   | 'not-installable'
   | 'invalid-source'

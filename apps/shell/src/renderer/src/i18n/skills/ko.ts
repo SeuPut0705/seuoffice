@@ -77,7 +77,8 @@ export const ko = {
   fieldDescriptionHint: 'AI는 이 설명을 보고 스킬을 쓸지 정합니다',
   fieldBody: '본문',
   fieldName: '이름',
-  nameHint: '스킬 목록에 보이는 이름입니다. 영문 소문자, 숫자, 하이픈(-)으로 64자까지',
+  nameHint:
+    '다른 프로그램과 / 호출이 쓰는 이름입니다. 영문 소문자, 숫자, 하이픈(-)으로 64자까지. 저절로 채워진 이름은 그대로 두어도 됩니다',
   files: '딸린 파일',
   filesNone: '딸린 파일이 없습니다',
   filesHint: '딸린 파일은 폴더를 열어 고칩니다',
@@ -172,4 +173,8 @@ export const ko = {
   discardKeep: '계속 쓰기',
   discardClose: '버리고 닫기',
   dropOverlaySkills: '스킬 파일(.zip, SKILL.md)도 놓을 수 있습니다',
+  shadowedNote: '같은 이름의 스킬({source})이 대신 쓰입니다',
+  builtinBodyNote: '아래 본문은 AI에게 주는 지시문입니다. 적힌 그대로 보여서 영어일 수 있습니다',
+  pasteUnclosed:
+    '앞머리를 닫는 --- 줄이 없습니다. 글이 중간에서 잘렸을 수 있으니 처음부터 끝까지 다시 복사해 붙여 넣으세요.',
 } satisfies Record<keyof typeof zh, string>

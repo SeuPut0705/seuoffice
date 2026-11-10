@@ -78,7 +78,7 @@ export const pl = {
   fieldBody: 'Instrukcje',
   fieldName: 'Nazwa',
   nameHint:
-    'Nazwa widoczna na liście umiejętności. Małe litery łacińskie, cyfry i łączniki (-), do 64 znaków',
+    'Nazwa używana przez inne programy i przy wywołaniu przez /. Małe litery łacińskie, cyfry i łączniki (-), do 64 znaków. Nazwę wpisaną automatycznie można zostawić bez zmian',
   files: 'Pliki umiejętności',
   filesNone: 'Brak innych plików',
   filesHint: 'Aby zmienić te pliki, otwórz folder',
@@ -177,4 +177,9 @@ export const pl = {
   discardKeep: 'Edytuj dalej',
   discardClose: 'Odrzuć i zamknij',
   dropOverlaySkills: 'Można tu też upuścić pliki umiejętności (.zip, SKILL.md)',
+  shadowedNote: 'Zamiast tej używana jest umiejętność o tej samej nazwie ({source})',
+  builtinBodyNote:
+    'Instrukcje poniżej to tekst przekazywany AI, pokazany bez zmian, dlatego może być po angielsku',
+  pasteUnclosed:
+    'Brakuje zamykającego wiersza ---. Tekst mógł zostać ucięty; skopiuj go jeszcze raz od początku do końca.',
 } satisfies Record<keyof typeof zh, string>

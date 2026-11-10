@@ -80,7 +80,7 @@ export const nl = {
   fieldBody: 'Instructies',
   fieldName: 'Naam',
   nameHint:
-    'Naam in de lijst met vaardigheden. Kleine letters, cijfers en koppeltekens (-), maximaal 64 tekens',
+    'Naam die andere programma’s en de aanroep met / gebruiken. Kleine letters, cijfers en koppeltekens (-), maximaal 64 tekens. Een automatisch ingevulde naam kan zo blijven',
   files: 'Bestanden in de vaardigheid',
   filesNone: 'Geen andere bestanden',
   filesHint: 'Open de map om deze bestanden te wijzigen',
@@ -180,4 +180,9 @@ export const nl = {
   discardKeep: 'Verder bewerken',
   discardClose: 'Weggooien en sluiten',
   dropOverlaySkills: 'Vaardigheidsbestanden (.zip, SKILL.md) kun je hier ook neerzetten',
+  shadowedNote: 'In plaats hiervan wordt de vaardigheid met dezelfde naam ({source}) gebruikt',
+  builtinBodyNote:
+    'De instructies hieronder zijn de tekst die de AI krijgt, getoond zoals die is geschreven; daarom kan die in het Engels zijn',
+  pasteUnclosed:
+    'De afsluitende regel --- ontbreekt. De tekst is misschien afgekapt; kopieer hem opnieuw van begin tot eind.',
 } satisfies Record<keyof typeof zh, string>

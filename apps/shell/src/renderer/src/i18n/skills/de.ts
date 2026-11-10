@@ -81,7 +81,7 @@ export const de = {
   fieldBody: 'Anleitung',
   fieldName: 'Name',
   nameHint:
-    'Name in der Skill-Liste. Kleinbuchstaben, Ziffern und Bindestriche (-), höchstens 64 Zeichen',
+    'Name, den andere Programme und der Aufruf mit / verwenden. Kleinbuchstaben, Ziffern und Bindestriche (-), höchstens 64 Zeichen. Ein automatisch eingetragener Name kann so bleiben',
   files: 'Dateien im Skill',
   filesNone: 'Keine weiteren Dateien',
   filesHint: 'Öffnen Sie den Ordner, um diese Dateien zu ändern',
@@ -181,4 +181,9 @@ export const de = {
   discardKeep: 'Weiter bearbeiten',
   discardClose: 'Verwerfen und schließen',
   dropOverlaySkills: 'Auch Skill-Dateien (.zip, SKILL.md) können hier abgelegt werden',
+  shadowedNote: 'Statt diesem wird der gleichnamige Skill ({source}) verwendet',
+  builtinBodyNote:
+    'Die Anleitung unten ist der Text, den die KI erhält. Er wird unverändert gezeigt und kann daher englisch sein',
+  pasteUnclosed:
+    'Die schließende Zeile --- fehlt. Der Text wurde vielleicht abgeschnitten; kopieren Sie ihn noch einmal von Anfang bis Ende.',
 } satisfies Record<keyof typeof zh, string>

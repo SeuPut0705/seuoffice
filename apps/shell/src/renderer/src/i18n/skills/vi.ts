@@ -79,7 +79,7 @@ export const vi = {
   fieldBody: 'Hướng dẫn',
   fieldName: 'Tên',
   nameHint:
-    'Tên hiển thị trong danh sách kỹ năng. Chữ thường tiếng Anh, chữ số và dấu gạch nối (-), tối đa 64 ký tự',
+    'Tên mà các chương trình khác và lệnh gọi / sử dụng. Chữ thường tiếng Anh, chữ số và dấu gạch nối (-), tối đa 64 ký tự. Tên được điền sẵn có thể giữ nguyên',
   files: 'Tệp trong kỹ năng',
   filesNone: 'Không có tệp nào khác',
   filesHint: 'Mở thư mục để sửa các tệp này',
@@ -177,4 +177,9 @@ export const vi = {
   discardKeep: 'Tiếp tục chỉnh sửa',
   discardClose: 'Bỏ thay đổi và đóng',
   dropOverlaySkills: 'Cũng có thể thả tệp kỹ năng (.zip, SKILL.md) vào đây',
+  shadowedNote: 'Kỹ năng cùng tên ({source}) được dùng thay cho kỹ năng này',
+  builtinBodyNote:
+    'Phần hướng dẫn bên dưới là văn bản đưa cho AI, hiển thị nguyên văn nên có thể bằng tiếng Anh',
+  pasteUnclosed:
+    'Thiếu dòng --- đóng phần đầu. Văn bản có thể đã bị cắt; hãy sao chép lại từ đầu đến cuối.',
 } satisfies Record<keyof typeof zh, string>

@@ -79,7 +79,7 @@ export const en = {
   fieldBody: 'Instructions',
   fieldName: 'Name',
   nameHint:
-    'Shown in the skill list. Lowercase letters, digits and hyphens (-), up to 64 characters',
+    'The name other programs and the / call use. Lowercase letters, digits and hyphens (-), up to 64 characters. A name filled in for you can stay as it is',
   files: 'Files in the skill',
   filesNone: 'No other files',
   filesHint: 'Open the folder to change these files',
@@ -178,4 +178,8 @@ export const en = {
   discardKeep: 'Keep editing',
   discardClose: 'Discard and close',
   dropOverlaySkills: 'Skill files (.zip, SKILL.md) can be dropped too',
+  shadowedNote: 'A skill of the same name ({source}) is used instead of this one',
+  builtinBodyNote: 'The instructions below are the text given to the AI, shown as written',
+  pasteUnclosed:
+    'The closing --- line is missing. The text may have been cut off; copy it again from start to end.',
 } satisfies Record<keyof typeof zh, string>

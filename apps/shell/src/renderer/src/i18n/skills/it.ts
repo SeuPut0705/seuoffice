@@ -79,7 +79,7 @@ export const it = {
   fieldBody: 'Istruzioni',
   fieldName: 'Nome',
   nameHint:
-    'Nome mostrato nell’elenco delle abilità. Lettere minuscole, cifre e trattini (-), fino a 64 caratteri',
+    'Nome usato dagli altri programmi e dalla chiamata con /. Lettere minuscole, cifre e trattini (-), fino a 64 caratteri. Un nome compilato automaticamente può restare così',
   files: "File dell'abilità",
   filesNone: 'Nessun altro file',
   filesHint: 'Apri la cartella per modificare questi file',
@@ -178,4 +178,9 @@ export const it = {
   discardKeep: 'Continua a modificare',
   discardClose: 'Scarta e chiudi',
   dropOverlaySkills: 'Puoi rilasciare anche i file di abilità (.zip, SKILL.md)',
+  shadowedNote: 'Al posto di questa viene usata l’abilità con lo stesso nome ({source})',
+  builtinBodyNote:
+    'Le istruzioni qui sotto sono il testo dato all’IA, mostrato così com’è: per questo può essere in inglese',
+  pasteUnclosed:
+    'Manca la riga --- di chiusura. Il testo potrebbe essere stato tagliato: copialo di nuovo dall’inizio alla fine.',
 } satisfies Record<keyof typeof zh, string>
