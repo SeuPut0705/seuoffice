@@ -31,6 +31,7 @@ import {
   elementRefs,
   encodeOp,
   fingerprint,
+  fitText,
   putState,
   slideIndexOf,
   takeState,
@@ -50,8 +51,11 @@ export interface SlidesCollabOptions {
   fileName: string
   /** other people's edits are about to change the deck: until now it is what the renderer shows */
   changing(): void
-  /** the deck changed under the renderer: draw what changed */
-  refresh(): void
+  /**
+   * The deck changed under the renderer: draw what changed. `replaced` are the slides whose
+   * part now holds another slide than before (deleted, and another made under the freed name).
+   */
+  refresh(replaced: string[]): void
   /** tell the person their edit is not in the deck */
   refused(reason: Refusal): void
 }
@@ -106,11 +110,15 @@ const slideIds = (opened: OpenedPptx): string[] => opened.deck.slides.map(slideD
  * (a new slide takes the highest free number), so an edit made before such a delete must not
  * reach the newcomer that inherited the name.
  */
-function applyRemote(opened: OpenedPptx, remote: SlidesOp[]): Set<string> {
+function applyRemote(
+  opened: OpenedPptx,
+  remote: SlidesOp[],
+  apply: (op: SlidesOp) => unknown,
+): Set<string> {
   const gone = new Set<string>()
   for (const op of remote) {
     const before = op.edit.kind === 'deleteSlides' ? slideIds(opened) : []
-    applyOp(opened, op)
+    apply(op)
     if (before.length === 0) continue
     const after = new Set(slideIds(opened))
     for (const id of before) if (!after.has(id)) gone.add(id)
@@ -124,11 +132,35 @@ export function createSlidesCollab(options: SlidesCollabOptions): SlidesCollab {
   let emit: ((ops: SlidesOp[]) => void) | null = null
   // nothing is reported until the engine says the person may edit
   let frozen = true
-  /** the confirmed deck, as a copy and the confirmed ops after it; null while the deck is it */
-  let confirmed: { state: DeckState; ops: SlidesOp[] } | null = null
+  /**
+   * The confirmed deck, as a copy with who made its slides, and the confirmed ops after it; null
+   * while the deck is it
+   */
+  let confirmed: { state: DeckState; born: Map<string, string>; ops: SlidesOp[] } | null = null
   let unconfirmed = 0
   /** parse-time ids the renderer may still hold, from every state it was shown */
   const seen = new Map<string, ElementRef>()
+  /**
+   * The edit that made each slide the opened file did not hold. A part name comes back when its
+   * slide is deleted and a new one takes the freed number: the name is the same, the slide is not.
+   */
+  let born = new Map<string, string>()
+
+  /** Follow what the edit `id` did to the slides that were `before` */
+  function track(id: string, before: readonly string[]): void {
+    const was = new Set(before)
+    const now = new Set(slideIds(deck()))
+    for (const slide of was) if (!now.has(slide)) born.delete(slide)
+    for (const slide of now) if (!was.has(slide)) born.set(slide, id)
+  }
+
+  /** `applyOp` on the page's deck, followed */
+  function run(op: SlidesOp): Applied | null {
+    const before = slideIds(deck())
+    const applied = applyOp(deck(), op)
+    track(op.id, before)
+    return applied
+  }
 
   /**
    * Apply this person's unconfirmed `local` again on the new confirmed deck. Each op stays (the
@@ -141,18 +173,22 @@ export function createSlidesCollab(options: SlidesCollabOptions): SlidesCollab {
     let dropped = false
     const kept = local.map((original) => {
       const op = renamed(original, to)
-      const applied = applyOp(deck(), op)
+      const applied = run(op)
       const edit = op.edit
       if (!applied) {
         // an edit naming the slide this one made must not land on a peer's slide of that name
         if (createsSlide(edit)) names.set(edit.made, GONE)
-        // told once: an op an earlier replay emptied names no slide left
-        if (renamed(original, () => GONE) !== original) dropped = true
+        // Told once: an op an earlier replay emptied names no slide left. A delete of slides
+        // that are gone already lost nothing.
+        if (edit.kind !== 'deleteSlides' && renamed(original, () => GONE) !== original)
+          dropped = true
         return renamed(op, () => GONE)
       }
-      if (!createsSlide(edit) || !applied.made || applied.made === edit.made) return op
+      if (!createsSlide(edit) || !applied.made) return op
+      // Also under its old name: the name may be one a peer's delete freed, and the edits this
+      // person made on the new slide must not be taken for edits of the deleted one
       names.set(edit.made, applied.made)
-      return { ...op, edit: { ...edit, made: applied.made } }
+      return applied.made === edit.made ? op : { ...op, edit: { ...edit, made: applied.made } }
     })
     if (dropped) options.refused('gone')
     return kept
@@ -172,22 +208,29 @@ export function createSlidesCollab(options: SlidesCollabOptions): SlidesCollab {
     integrate(remote, local) {
       options.changing()
       for (const [key, ref] of elementRefs(deck())) seen.set(key, ref)
+      const shown = new Map(slideIds(deck()).map((slide) => [slide, born.get(slide)]))
       let kept: SlidesOp[] = []
       let gone: Set<string>
       if (local.length === 0) {
-        gone = applyRemote(deck(), remote)
+        gone = applyRemote(deck(), remote, run)
       } else {
         const base = confirmed!
         putState(deck(), base.state)
-        for (const op of base.ops) applyOp(deck(), op)
-        gone = applyRemote(deck(), remote)
-        confirmed = { state: takeState(deck()), ops: [] }
+        born = new Map(base.born)
+        for (const op of base.ops) run(op)
+        gone = applyRemote(deck(), remote, run)
+        confirmed = { state: takeState(deck()), born: new Map(born), ops: [] }
         kept = replay(local, gone)
       }
       for (const [key, ref] of seen) if (gone.has(ref.slide)) seen.delete(key)
       unconfirmed = kept.length
       if (unconfirmed === 0) confirmed = null
-      options.refresh()
+      const now = new Set(slideIds(deck()))
+      options.refresh(
+        [...shown].flatMap(([slide, maker]) =>
+          now.has(slide) && born.get(slide) !== maker ? [slide] : [],
+        ),
+      )
       return kept
     },
 
@@ -224,9 +267,11 @@ export function createSlidesCollab(options: SlidesCollabOptions): SlidesCollab {
         return null
       }
       // the deck is about to stop being the confirmed state: keep that state first
-      const base = confirmed ?? { state: takeState(deck()), ops: [] }
+      const base = confirmed ?? { state: takeState(deck()), born: new Map(born), ops: [] }
+      const before = slideIds(deck())
       const done = apply()
       if (!done) return null
+      track(done.op.id, before)
       confirmed = base
       unconfirmed += 1
       emit([done.op])
@@ -256,9 +301,6 @@ export function textEdit(
   const find = (): TextElement | undefined =>
     session.opened.deck.slides[index]?.elements.find((e) => matchesElementRef(e, at.el)) as
       TextElement | undefined
-  const before = find()
-  const offset = before?.transform.offset
-  const scale = [before?.text?.fontScale, before?.text?.lnSpcReduction]
   syncAutofitScale(
     session,
     index,
@@ -266,15 +308,19 @@ export function textEdit(
     applyAutofitResize(session, index, at.el, rebuildSlide(session, index)),
   )
   const after = find()
-  if (!after) return { op, applied }
+  if (!after?.text) return { op, applied }
+  // The result travels whole, also when this page's layout changed nothing: on another page, or
+  // on this one after a replay, the edit may follow someone else's text of another size
   const fit: Autofit = {}
-  const o = after.transform.offset
-  if (o !== offset) fit.offset = { x: o.x, y: o.y, cx: o.cx, cy: o.cy }
-  if (after.text?.fontScale !== scale[0] || after.text?.lnSpcReduction !== scale[1]) {
-    fit.fontScale = after.text?.fontScale ?? 1
-    fit.lnSpcReduction = after.text?.lnSpcReduction ?? 0
-  }
-  if (!fit.offset && fit.fontScale === undefined) return { op, applied }
+  if (after.text.autofit === 'resize') {
+    const o = after.transform.offset
+    fit.offset = { x: o.x, y: o.y, cx: o.cx, cy: o.cy }
+  } else if (after.text.autofit === 'shrink') {
+    fit.fontScale = after.text.fontScale ?? 1
+    fit.lnSpcReduction = after.text.lnSpcReduction ?? 0
+  } else return { op, applied }
+  // what every other page does with the carried result, so the element is written the same way
+  fitText(session.opened, at, fit)
   return { op: { id, edit: { kind: 'text', at, paragraphs, autofit: fit } }, applied }
 }
 

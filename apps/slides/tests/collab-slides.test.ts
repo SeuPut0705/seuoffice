@@ -70,7 +70,7 @@ import {
   type SlidesOp,
 } from '../src/web/collab-ops'
 
-const FORMAT = { name: 'pptx', schema: 1 }
+const FORMAT = { name: 'pptx', schema: 2 }
 const CREATION_ID =
   /<a:ext uri="\{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236\}"><a16:creationId[^>]*\/><\/a:ext>/g
 
@@ -145,6 +145,8 @@ interface Page {
   remote: SlidesOp[]
   /** what each integrate told the renderer to draw again; filled only when the page draws */
   redraws: SlideUpdate[]
+  /** the slides each integrate reported as other slides under an old name */
+  replaced: string[][]
 }
 
 /** `draws`: the page renders around every integrate, the way collab-side.ts does for the renderer */
@@ -158,6 +160,7 @@ function openPage(opened: OpenedPptx, draws = false): Page {
   }
   const refusals: Refusal[] = []
   const redraws: SlideUpdate[] = []
+  const replaced: string[][] = []
   const render = () => buildAllRenderSlides(session.opened, session.fitWidthPx)
   let shown: Drawn = new Map()
   const collab = createSlidesCollab({
@@ -166,12 +169,13 @@ function openPage(opened: OpenedPptx, draws = false): Page {
     changing: () => {
       if (draws) shown = drawnOf(render())
     },
-    refresh: () => {
+    refresh: (other) => {
+      replaced.push(other)
       if (draws) redraws.push(redrawFrom(shown, render()))
     },
     refused: (reason) => refusals.push(reason),
   })
-  return { session, collab, refusals, remote: [], redraws }
+  return { session, collab, refusals, remote: [], redraws, replaced }
 }
 
 const WORDS = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'iota']
@@ -349,6 +353,11 @@ describe('people editing one deck at once, under the conformance kit', () => {
 describe('the edits themselves', () => {
   const firstBox = (opened: OpenedPptx, slide: number) =>
     opened.deck.slides[slide]!.elements.find(editable)!
+  /** The slide with the highest part number: the name a slide added after its delete takes again */
+  const newestSlide = (opened: OpenedPptx): string =>
+    opened.deck.slides
+      .map(slideDurableId)
+      .sort((x, y) => Number(y.slice(2)) - Number(x.slice(2)))[0]!
 
   it('one edit gives the same file on two pages, also on a slide without creationIds', async () => {
     const a = openPage(cloneDeck(baseDeck))
@@ -441,6 +450,117 @@ describe('the edits themselves', () => {
     a.collab.adapter.integrate(theirs.splice(0), [])
     expect(a.redraws.at(-1)!.order).toEqual([paths[0], added, paths[1], paths[2]])
     expect(a.redraws.at(-1)!.slides).toEqual([])
+  })
+
+  it('two people retype one growing box at once: the box ends at the size of the text that won', async () => {
+    for (const index of [1, 2] as const) {
+      const a = openPage(cloneDeck(baseDeck))
+      const b = openPage(cloneDeck(baseDeck))
+      const late = openPage(cloneDeck(baseDeck))
+      const sentA: SlidesOp[] = []
+      const sentB: SlidesOp[] = []
+      a.collab.adapter.listen((ops) => sentA.push(...ops))
+      a.collab.adapter.setEditable(true)
+      b.collab.adapter.listen((ops) => sentB.push(...ops))
+      b.collab.adapter.setEditable(true)
+      const boxOf = (page: Page) =>
+        page.session.opened.deck.slides[0]!.elements.filter(editable)[index]! as TextElement
+      const fit = (page: Page) => ({
+        ...boxOf(page).transform.offset,
+        fontScale: boxOf(page).text!.fontScale ?? 1,
+        lnSpcReduction: boxOf(page).text!.lnSpcReduction ?? 0,
+      })
+      const type = (page: Page, id: string, paragraphs: EditParagraph[]) => {
+        const at = page.collab.refOf(boxOf(page).id)!
+        expect(page.collab.edit(() => textEdit(page.session, id, at, paragraphs))).not.toBeNull()
+      }
+      // a short text everyone has, at the size its layout gives it
+      type(a, 'u0.0', [{ runs: [{ text: 'short' }] }])
+      b.collab.adapter.integrate(sentA.slice(), [])
+      late.collab.adapter.integrate(sentA.slice(), [])
+      a.collab.adapter.confirmed?.(sentA.splice(0))
+      const small = fit(a)
+      expect(fit(b)).toEqual(small)
+
+      // at one version: b types a long text, a another short one that changes nothing in its layout
+      const long = Array.from({ length: 12 }, (_, i) => ({
+        runs: [{ text: `line ${i} ${WORDS.join(' ')}` }],
+      }))
+      type(b, 'u1.0', long)
+      expect(fit(b)).not.toEqual(small)
+      type(a, 'u0.1', [{ runs: [{ text: 'brief' }] }])
+      expect(fit(a)).toEqual(small)
+      // the server takes b's first
+      b.collab.adapter.confirmed?.(sentB.slice())
+      const kept = a.collab.adapter.integrate(sentB.slice(), sentA.splice(0))
+      b.collab.adapter.integrate(kept, [])
+      late.collab.adapter.integrate([...sentB, ...kept], [])
+      for (const page of [a, b, late]) {
+        expect(textOf(boxOf(page).text!.paragraphs)).toBe('brief')
+        expect(fit(page), `box ${index}`).toEqual(small)
+      }
+      expect(await fingerprint(b.session.opened)).toBe(await fingerprint(a.session.opened))
+      expect(await fingerprint(late.session.opened)).toBe(await fingerprint(a.session.opened))
+    }
+  })
+
+  it('a slide this person made under a part name a peer’s delete freed keeps what was typed on it', () => {
+    const a = openPage(cloneDeck(baseDeck))
+    const sent: SlidesOp[] = []
+    a.collab.adapter.listen((ops) => sent.push(...ops))
+    a.collab.adapter.setEditable(true)
+    const last = newestSlide(a.session.opened)
+    // offline: delete the newest slide, add a blank one (which takes its part name) and type on it
+    a.collab.edit(() => slideEdit(a.session, 'u0.0', { kind: 'deleteSlides', slides: [last] }))
+    const third = slideIdAt(a.session.opened, 2)!
+    const added = a.collab.edit(() =>
+      slideEdit(a.session, 'u0.1', { kind: 'blankSlide', slide: third, before: false, made: '' }),
+    )!
+    expect(added.applied.made).toBe(last)
+    expect(
+      a.collab.edit(() =>
+        slideEdit(a.session, 'u0.2', { kind: 'notes', slide: last, text: 'on my new slide' }),
+      ),
+    ).not.toBeNull()
+    // meanwhile a peer deleted that slide too
+    const theirs: SlidesOp = { id: 'u1.0', edit: { kind: 'deleteSlides', slides: [last] } }
+    const kept = a.collab.adapter.integrate([theirs], sent.splice(0))
+    const slides = a.session.opened.deck.slides
+    expect(slides).toHaveLength(4)
+    const mine = kept[1]!.edit
+    if (mine.kind !== 'blankSlide' || kept[2]!.edit.kind !== 'notes') throw new Error('kinds')
+    expect(kept[2]!.edit.slide).toBe(mine.made)
+    const made = slides.find((slide) => slideDurableId(slide) === mine.made)!
+    expect(getSlideNotes(a.session.opened.archive, made.path)).toBe('on my new slide')
+    // nothing of this person's was lost: the delete both made is not reported as a dropped edit
+    expect(a.refusals).toEqual([])
+    // the slide under that name is the one this page showed before: nothing was replaced
+    expect(a.replaced.at(-1)).toEqual([])
+  })
+
+  it('a slide deleted and another made under its part name in one batch is reported as replaced', () => {
+    const a = openPage(cloneDeck(baseDeck))
+    const b = openPage(cloneDeck(baseDeck))
+    const theirs: SlidesOp[] = []
+    b.collab.adapter.listen((ops) => theirs.push(...ops))
+    b.collab.adapter.setEditable(true)
+    const last = newestSlide(b.session.opened)
+    b.collab.edit(() => slideEdit(b.session, 'u1.0', { kind: 'deleteSlides', slides: [last] }))
+    const third = slideIdAt(b.session.opened, 2)!
+    b.collab.edit(() =>
+      slideEdit(b.session, 'u1.1', { kind: 'blankSlide', slide: third, before: false, made: '' }),
+    )
+    expect(slideIdAt(b.session.opened, 3)).toBe(last)
+    a.collab.adapter.integrate(theirs.slice(0, 1), [])
+    expect(a.replaced.at(-1)).toEqual([])
+    const c = openPage(cloneDeck(baseDeck))
+    c.collab.adapter.integrate(theirs, [])
+    expect(c.replaced.at(-1)).toEqual([last])
+    // a slide that only changed is not another slide
+    const at = b.collab.refOf(firstBox(b.session.opened, 0).id)!
+    b.collab.edit(() => textEdit(b.session, 'u1.2', at, [{ runs: [{ text: 'changed' }] }]))
+    c.collab.adapter.integrate(theirs.slice(2), [])
+    expect(c.replaced.at(-1)).toEqual([])
   })
 
   it('the engine’s random ids are the real ones again after an edit, also one that throws', () => {
@@ -555,5 +675,113 @@ describe('the edits themselves', () => {
       a.session.opened.deck.slides[order.indexOf(id)]!.elements.find(editable) as TextElement
     expect(textOf(box(renamed.made).text!.paragraphs)).toBe('on my copy')
     expect(textOf(box(mine).text!.paragraphs)).toBe('')
+  })
+})
+
+describe('a text box holding a slide number field', () => {
+  let fieldDeck: OpenedPptx
+  beforeAll(async () => {
+    const opened = await openPptx(await createBlankPptx())
+    const added = runTxn(opened, {
+      ops: [
+        {
+          op: 'addElement',
+          target: { slide: 0 },
+          kind: 'textbox',
+          offset: { x: 457200, y: 300000, cx: 3600000, cy: 500000 },
+          paragraphs: [{ runs: [{ text: 'Page ' }, { text: '1', field: 'slidenum' }] }],
+        },
+      ],
+    })
+    expect(added.applied).toBe(true)
+    const bytes = await savePptx(opened)
+    fieldDeck = await openPptx(bytes)
+    expect(fieldDeck.archive.readText(fieldDeck.deck.slides[0]!.path)).toMatch(/<a:fld id="\{/)
+  })
+
+  /** Enter pressed at the end of the box: a second paragraph, so the body is written again */
+  function pressEnter(page: Page, id: string): SlidesOp {
+    page.collab.adapter.listen(() => {})
+    page.collab.adapter.setEditable(true)
+    const box = page.session.opened.deck.slides[0]!.elements.find(editable)!
+    const at = page.collab.refOf(box.id)!
+    const done = page.collab.edit(() =>
+      textEdit(page.session, id, at, [
+        {
+          srcPara: 0,
+          runs: [
+            { text: 'Page ', srcRun: 0 },
+            { text: '1', field: 'slidenum', srcRun: 1 },
+          ],
+        },
+        { srcPara: 0, runs: [{ text: 'more', srcRun: 0 }] },
+      ]),
+    )
+    expect(done).not.toBeNull()
+    return done!.op
+  }
+
+  it('fingerprints the same every time, on every page, and as the saved file reopened', async () => {
+    const a = openPage(cloneDeck(fieldDeck))
+    const b = openPage(cloneDeck(fieldDeck))
+    const op = pressEnter(a, 'u0.0')
+    b.collab.adapter.integrate([decodeOp(encodeOp(op))], [])
+    const first = await fingerprint(a.session.opened)
+    expect(await fingerprint(a.session.opened)).toBe(first)
+    expect(await fingerprint(b.session.opened)).toBe(first)
+
+    const file = await a.collab.adapter.produceFile()
+    const again = await a.collab.adapter.produceFile()
+    const theirs = await b.collab.adapter.produceFile()
+    const reopened = await openPptx(new Uint8Array(file.bytes))
+    const slide = reopened.archive.readText(reopened.deck.slides[0]!.path)!
+    // the edit made the engine write the field again
+    expect(slide).toMatch(/<a:fld id="\{[0-9A-F-]{36}\}" type="slidenum"/)
+    expect(slide).toContain('more')
+    expect(await fingerprint(reopened)).toBe(first)
+    for (const other of [again, theirs]) {
+      const opened = await openPptx(new Uint8Array(other.bytes))
+      expect(opened.archive.readText(opened.deck.slides[0]!.path)).toBe(slide)
+    }
+    // and the page's fingerprint did not move by writing files
+    expect(await fingerprint(a.session.opened)).toBe(first)
+  })
+
+  it('a level change, which bakes the slide while the edit applies, gives every page the same field', async () => {
+    const a = openPage(cloneDeck(fieldDeck))
+    const b = openPage(cloneDeck(fieldDeck))
+    a.collab.adapter.listen(() => {})
+    a.collab.adapter.setEditable(true)
+    const box = a.session.opened.deck.slides[0]!.elements.find(editable)!
+    const at = a.collab.refOf(box.id)!
+    const done = a.collab.edit(() =>
+      textEdit(a.session, 'u0.0', at, [
+        {
+          srcPara: 0,
+          level: 1,
+          runs: [
+            { text: 'Page ', srcRun: 0 },
+            { text: '1', field: 'slidenum', srcRun: 1 },
+          ],
+        },
+        { srcPara: 0, runs: [{ text: 'more', srcRun: 0 }] },
+      ]),
+    )!
+    expect(done.applied.levelDirty).toBe(true)
+    b.collab.adapter.integrate([decodeOp(encodeOp(done.op))], [])
+    expect(await fingerprint(b.session.opened)).toBe(await fingerprint(a.session.opened))
+  })
+
+  it('leaves Math.random as it was, also after an edit that throws', () => {
+    const a = openPage(cloneDeck(fieldDeck))
+    const real = Math.random
+    pressEnter(a, 'u0.0')
+    expect(Math.random).toBe(real)
+    const at = a.collab.refOf(a.session.opened.deck.slides[0]!.elements.find(editable)!.id)!
+    const broken = [{ runs: [{ text: 'x' }], oops: () => {} }] as unknown as EditParagraph[]
+    expect(() =>
+      applyOp(a.session.opened, { id: 'u0.1', edit: { kind: 'text', at, paragraphs: broken } }),
+    ).toThrow()
+    expect(Math.random).toBe(real)
   })
 })

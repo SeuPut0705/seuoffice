@@ -172,12 +172,11 @@ let coEditSave: (() => Promise<void>) | null = null
 
 /**
  * Hand saves to a co-editing session. Every later save, the renderer's and the host's (which
- * still runs the renderer's flow, so an open text edit is committed first), stores the file
- * the session produces; the page stops reporting its own unsaved flag.
+ * runs the renderer's flow, `requestRendererSave`, so an open text edit is committed
+ * first), stores the file the session produces; the page stops reporting its own unsaved flag.
  */
 export function coEditDeck(save: () => Promise<void>): void {
   coEditSave = save
-  installHostSave()
 }
 
 /**
@@ -233,7 +232,7 @@ const hostSaves: Array<(ok: boolean) => void> = []
  * A host save request runs the renderer's full save flow (commit the open text edit and notes,
  * then save), the one the desktop's close guard starts with `slides:close-save-request`.
  */
-function requestRendererSave(): Promise<void> {
+export function requestRendererSave(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!closeSaveHandler) {
       reject(new Error('the presentation is not open yet'))

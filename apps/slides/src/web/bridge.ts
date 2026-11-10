@@ -19,10 +19,10 @@ import {
 } from '@seuoffice/web-platform'
 import { setUiLang } from '@genoffice/i18n'
 import { getPrivateFontData, listPrivateFontFaces } from '../main/fonts'
-import type { DeckChange, DesktopFilesApi, OpenResult, SlideUpdate, SlidesApi } from '../shared/ipc'
+import type { DeckChange, DesktopFilesApi, OpenResult, SlidesApi } from '../shared/ipc'
 import type { SlidesOp } from './collab-ops'
-import type { SlidesCollabHandles } from './collab-side'
-import { coEditDeck, deckEdits, installHostSave } from './deck-edits'
+import type { Redraw, SlidesCollabHandles } from './collab-side'
+import { coEditDeck, deckEdits, installHostSave, requestRendererSave } from './deck-edits'
 import { deckReads } from './deck-reads'
 import { currentSession, openPptxForWeb, renderDeck } from './session'
 
@@ -207,19 +207,21 @@ let coEditing: PageCollab<SlidesCollabHandles> | null = null
 const deckListeners = new Set<(change: DeckChange) => void>()
 
 /**
- * Tell the renderer the deck changed under it: `update` names the order and the slides to draw
- * again (the renderer keeps the others, and a text box open on one of them); without it the
+ * Tell the renderer the deck changed under it. An update names the order and the slides to draw
+ * again (the renderer keeps the others, and a text box open on one of them); without one the
  * whole deck is sent.
  */
-function redrawDeck(update?: SlideUpdate): void {
+function redrawDeck(redraw: Redraw): void {
   const session = currentSession()
-  const slides = update ? update.slides : renderDeck()
+  const slides = redraw.update ? redraw.update.slides : renderDeck()
   if (!session || !slides) return
   const { cx, cy } = session.opened.deck.size
   const change: DeckChange = {
     slides,
     size: { cx, cy },
-    ...(update ? { order: update.order } : {}),
+    ...(redraw.update ? { order: redraw.update.order } : {}),
+    ...(redraw.replaced?.length ? { replaced: redraw.replaced } : {}),
+    ...(redraw.rebuild ? { rebuild: true } : {}),
   }
   for (const listener of deckListeners) listener(change)
 }
@@ -230,9 +232,12 @@ function redrawDeck(update?: SlideUpdate): void {
  */
 async function joinSlidesCollab(doc: WebDocument): Promise<void> {
   const page = await joinPageCollab<SlidesCollabHandles, SlidesOp>({
-    format: { name: 'pptx', schema: 1 },
+    // 2: ids the engine mints while an edit applies come from the edit, field ids included
+    format: { name: 'pptx', schema: 2 },
     fileName: doc.fileName,
     bytes: doc.bytes,
+    // the renderer's own save flow: an open text edit and notes are committed, then the session saves
+    hostSave: () => requestRendererSave(),
     adapter: async (handles) => {
       // a page that never co-edits never loads these
       const { openSlidesCollab } = await import('./collab-side')

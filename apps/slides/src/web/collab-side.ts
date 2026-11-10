@@ -4,6 +4,7 @@
  * synced (text, slides added and deleted, notes); every other edit is refused with a message,
  * as are undo, redo and AI edits, which restore or hold whole deck snapshots no other page has.
  */
+import { slideDurableId } from '@genoffice/pptx-engine'
 import { webLanguage } from '@seuoffice/web-platform'
 import type { CollabAdapter } from '@seuoffice/collab/client'
 import { showToast } from '../renderer/components/toast-bus'
@@ -73,11 +74,23 @@ const READS: Partial<Record<keyof SlidesApi, true>> = {
   nativeClipboard: true,
 }
 
+/** What the renderer is told when the deck changed under it */
+export interface Redraw {
+  /** the order and the slides that draw differently; absent: the whole deck */
+  update?: SlideUpdate
+  /** part paths that now hold another slide than the renderer knew under that path */
+  replaced?: string[]
+  /** the canvas shows something the deck does not hold (a refused drag): build it again */
+  rebuild?: boolean
+}
+
+/** A refused gesture is undone on the canvas once its burst of attempts is over */
+const REBUILD_AFTER_MS = 120
+
 /**
  * The adapter for the deck the page opened at `path`. `editMembers` are the bridge's editing
  * members; `install` puts the co-editing ones on the bridge. After other people's edits
- * `redraw` gets the slides that draw differently and the order; without an update it sends the
- * whole deck.
+ * `redraw` gets the slides that draw differently and the order.
  */
 export function openSlidesCollab(
   handles: SlidesCollabHandles,
@@ -87,13 +100,14 @@ export function openSlidesCollab(
     canEdit: boolean
     editMembers: ReadonlyArray<keyof SlidesApi>
     install(members: Partial<SlidesApi>): void
-    redraw(update?: SlideUpdate): void
+    redraw(change: Redraw): void
   },
 ): CollabAdapter<SlidesOp> {
   const session = currentSession()
   if (!session || session.path !== page.path || handles.path !== page.path) {
     throw new Error('the editor does not show the co-edited presentation')
   }
+  const deck = session.opened
   /** what the renderer shows, read just before other people's edits change the deck */
   let shown: Drawn = new Map()
   const collab = createSlidesCollab({
@@ -102,10 +116,15 @@ export function openSlidesCollab(
     changing: () => {
       shown = drawnOf(renderDeck() ?? [])
     },
-    refresh: () => page.redraw(redrawFrom(shown, renderDeck() ?? [])),
+    refresh: (replaced) =>
+      page.redraw({
+        update: redrawFrom(shown, renderDeck() ?? []),
+        replaced: deck.deck.slides
+          .filter((slide) => replaced.includes(slideDurableId(slide)))
+          .map((slide) => slide.path),
+      }),
     refused: notice,
   })
-  const deck = session.opened
   const newId = (): string => crypto.randomUUID()
   const before = (): string[] => deck.deck.slides.map((s) => s.path)
 
@@ -145,7 +164,7 @@ export function openSlidesCollab(
       // the renderer puts the result on the slide it shows at `slideIndex`: when other people's
       // edits moved this one, it gets the whole deck instead
       if (index === input.slideIndex) return forPage(rebuildSlide(session, index))
-      page.redraw()
+      page.redraw({})
       return null
     },
     addSlide: async (input) => {
@@ -182,6 +201,14 @@ export function openSlidesCollab(
       notice('ai')
       return null
     },
+  }
+
+  /**
+   * An AI run and a history batch hold and restore whole-deck snapshots no other page has. These
+   * are not editing members, so the page's own (deck-edits.ts) would stay in place: none begins,
+   * and there is never one to end, hold, accept, reject or restore.
+   */
+  const held: Partial<SlidesApi> = {
     beginHistoryBatch: async () => false,
     endHistoryBatch: async () => null,
     aiRunBegin: async () => false,
@@ -191,11 +218,19 @@ export function openSlidesCollab(
     aiSnapshotRestore: async () => null,
   }
 
+  let rebuilding: ReturnType<typeof setTimeout> | undefined
   const refuse = (kind: Notice) => async (): Promise<never> => {
     notice(kind)
+    // The canvas may show what the renderer asked for (a handle or a border where it was
+    // dragged). A drag asks many times: the canvas is built again once, after the last refusal.
+    clearTimeout(rebuilding)
+    rebuilding = setTimeout(
+      () => page.redraw({ update: { order: before(), slides: [] }, rebuild: true }),
+      REBUILD_AFTER_MS,
+    )
     throw new Error(NOTICES.en[kind])
   }
-  const members: Partial<SlidesApi> = {}
+  const members: Partial<SlidesApi> = { ...held }
   for (const name of page.editMembers) {
     if (READS[name]) continue
     if (!page.canEdit) Object.assign(members, { [name]: refuse('viewOnly') })

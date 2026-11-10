@@ -7,8 +7,11 @@
  * op transaction the single-user page runs, with two things pinned so every client ends with the
  * same bytes:
  *
- * - the GUIDs the engine mints (`a16:creationId` for an element an edit touches) come from the
- *   edit's own id, so they are the same on every page that applies it;
+ * - the GUIDs the engine mints (`a16:creationId` for an element an edit touches, `a:fld` ids of
+ *   a body it bakes while applying) come from the edit's own id, so they are the same on every
+ *   page that applies it;
+ * - the `a:fld` ids the engine mints anew each time it writes a body with a field come from one
+ *   fixed sequence whenever a slide is written (fingerprint, file), so writing is repeatable;
  * - what the originator's layout decided after a text edit (autofit size or shrink) travels in
  *   the edit, because another page lays text out at another width.
  */
@@ -121,29 +124,49 @@ export function elementRefs(opened: OpenedPptx): Map<string, ElementRef> {
 
 // ── applying ────────────────────────────────────────────────────────────
 
+/** 32 bits from a text */
+function mix(text: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  h ^= h >>> 16
+  h = Math.imul(h, 0x85ebca6b)
+  h ^= h >>> 13
+  return h >>> 0
+}
+
 /** 128 bits from the edit id and a counter, shaped as a version 4 UUID */
 function uuidFrom(seed: string, n: number): string {
   const words: string[] = []
-  for (let salt = 0; salt < 4; salt++) {
-    let h = 0x811c9dc5 ^ salt
-    const text = `${seed}#${n}#${salt}`
-    for (let i = 0; i < text.length; i++) {
-      h ^= text.charCodeAt(i)
-      h = Math.imul(h, 0x01000193)
-    }
-    h ^= h >>> 16
-    h = Math.imul(h, 0x85ebca6b)
-    h ^= h >>> 13
-    words.push((h >>> 0).toString(16).padStart(8, '0'))
-  }
+  for (let salt = 0; salt < 4; salt++)
+    words.push(mix(`${salt}#${seed}#${n}`).toString(16).padStart(8, '0'))
   const hex = words.join('')
   const variant = ((parseInt(hex[16]!, 16) & 0x3) | 0x8).toString(16)
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`
 }
 
 /**
- * Run `apply` with `crypto.randomUUID` answering from `seed`. The engine mints creationIds with
- * it; nothing that renders runs inside, so media URLs keep their real randomness.
+ * Run `work` with `Math.random` answering from `seed`: the same numbers in the same order every
+ * time. The engine draws a field's id (`a:fld`) from it each time it writes a body anew. `work`
+ * is synchronous, or at least draws nothing after its first await.
+ */
+function withRandom<T>(seed: string, work: () => T): T {
+  const real = Math.random
+  let n = 0
+  Math.random = () => mix(`r#${seed}#${n++}`) / 0x100000000
+  try {
+    return work()
+  } finally {
+    Math.random = real
+  }
+}
+
+/**
+ * Run `apply` with `crypto.randomUUID` and `Math.random` answering from `seed`. The engine mints
+ * creationIds with the first and field ids with the second; nothing that renders runs inside,
+ * so media URLs keep their real randomness.
  */
 function seeded<T>(seed: string, apply: () => T): T {
   const crypto = globalThis.crypto
@@ -155,12 +178,19 @@ function seeded<T>(seed: string, apply: () => T): T {
     value: () => uuidFrom(seed, n++),
   })
   try {
-    return apply()
+    return withRandom(seed, apply)
   } finally {
     if (own) Object.defineProperty(crypto, 'randomUUID', own)
     else Reflect.deleteProperty(crypto, 'randomUUID')
   }
 }
+
+/**
+ * Write slides with the ids the engine mints while writing taken from one fixed sequence. The
+ * fingerprint and the file write the same edited slides in the same order, so both get the same
+ * bytes, every time and on every page.
+ */
+const writing = <T>(write: () => T): T => withRandom('write', write)
 
 const isDirty = (el: SlideElement): boolean =>
   !!(
@@ -194,8 +224,11 @@ function created(opened: OpenedPptx, run: () => TxnResult | null): Applied | nul
   return slide ? { made: slideDurableId(slide) } : null
 }
 
-/** The originator's autofit write-back (main/autofit-writeback.ts), from its carried result */
-function fitText(opened: OpenedPptx, at: ElementRef, fit: Autofit): void {
+/**
+ * The originator's autofit write-back (main/autofit-writeback.ts), from its carried result. The
+ * originator runs it too, after its own layout, so every page marks the element the same way.
+ */
+export function fitText(opened: OpenedPptx, at: ElementRef, fit: Autofit): void {
   const slide = opened.deck.slides[slideIndexOf(opened, at.slide)]
   const el = slide?.elements.find((e) => matchesElementRef(e, at.el))
   if (!slide || !el || (el.type !== 'text' && el.type !== 'shape')) return
@@ -327,11 +360,13 @@ export function fingerprint(opened: OpenedPptx): Promise<string> {
   // read now; only the hashing runs later
   const parts = new Map<string, Uint8Array>(opened.archive.entries)
   const encoder = new TextEncoder()
-  for (const slide of opened.deck.slides) {
-    // the slides a save patches (engine buildZip); the others it copies as they are
-    if (slide.structureDirty || slide.elements.some(isDirty))
-      parts.set(slide.path, encoder.encode(patchSlideXml(slide)))
-  }
+  writing(() => {
+    for (const slide of opened.deck.slides) {
+      // the slides a save patches (engine buildZip), in its order; the others it copies as they are
+      if (slide.structureDirty || slide.elements.some(isDirty))
+        parts.set(slide.path, encoder.encode(patchSlideXml(slide)))
+    }
+  })
   const head = `${opened.deck.size.cx}x${opened.deck.size.cy} ${opened.deck.slides.map((s) => s.path).join(',')}`
   return (async () => {
     const lines: string[] = []
@@ -354,10 +389,13 @@ export function deckFile(opened: OpenedPptx): Promise<Uint8Array> {
     entries: new Map(opened.archive.entries),
     originalHash: opened.archive.originalHash,
   })
-  return savePptx({
-    deck: { ...opened.deck, slides: structuredClone(opened.deck.slides) },
-    archive,
-  })
+  // the engine patches every edited slide before its first await (buildZip)
+  return writing(() =>
+    savePptx({
+      deck: { ...opened.deck, slides: structuredClone(opened.deck.slides) },
+      archive,
+    }),
+  )
 }
 
 // ── the wire form ───────────────────────────────────────────────────────

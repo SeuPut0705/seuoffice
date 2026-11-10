@@ -171,7 +171,9 @@ import { handleGlobalKeydown, slideRailHasFocus } from './keyboard-actions'
 import { clickSelection, currentAfterHistory, normalizeSelection } from '../shared/slide-selection'
 import {
   notesBaselineAfterFlush,
+  notesDraftAfterDeckChange,
   notesDraftIndex,
+  notesShownAfterLoad,
   retargetNotesDraft,
   startNotesDraft,
   type LoadedNotes,
@@ -706,7 +708,12 @@ export function App() {
     if (!pending) return
     notesDraftRef.current = null
     const ok = await window.slidesApi.setNotes({ slideIndex: pending.index, text: pending.text })
-    if (!ok) return
+    if (!ok) {
+      // Not taken now (the web holds input while a co-edited save runs): the text stays the
+      // draft for the next flush, unless the person has typed on since
+      notesDraftRef.current ??= pending
+      return
+    }
     setDirty(true)
     // read back: the document normalizes what it stores (trailing empty paragraphs), and the
     // baseline must match what a later getNotes returns
@@ -1022,7 +1029,9 @@ export function App() {
   }, [refreshDeck])
   useEffect(
     () =>
-      window.slidesApi.onDeckChanged?.(({ slides: all, order }) => {
+      window.slidesApi.onDeckChanged?.(({ slides: all, order, replaced = [], rebuild }) => {
+        // an edit was refused after the canvas showed it (a border or a handle where it was dragged)
+        if (rebuild) setCanvasEpoch((n) => n + 1)
         setSlides((current) =>
           order
             ? (mergeBroadcastUpdate(current, { slides: all, order }, refreshDeck) ?? current)
@@ -1030,14 +1039,14 @@ export function App() {
         )
         // Slides before the one on screen may have come or gone: it stays on screen, found by its
         // part, and a notes draft stays with the slide it is for. The position decides only for
-        // a slide that is gone itself.
+        // a slide that is gone itself, or whose part now holds another slide (`replaced`).
         const parts = (order ?? all.map((s) => s.partPath)).map((partPath) => ({ partPath }))
         const shown = ctxRef.current.slides[ctxRef.current.current]?.partPath
-        const kept = shown ? parts.findIndex((p) => p.partPath === shown) : -1
+        const kept =
+          shown && !replaced.includes(shown) ? parts.findIndex((p) => p.partPath === shown) : -1
         setCurrent((c) => (kept >= 0 ? kept : Math.min(c, Math.max(0, parts.length - 1))))
         const draft = notesDraftRef.current
-        const draftAt = draft ? notesDraftIndex(draft, parts) : -1
-        notesDraftRef.current = draft && draftAt >= 0 ? { ...draft, index: draftAt } : null
+        notesDraftRef.current = draft && notesDraftAfterDeckChange(draft, parts, replaced)
         // Notes live outside RenderSlide: with none being typed here, read them again (the
         // change may have written them)
         if (!notesDraftRef.current) setAnnotationsNonce((n) => n + 1)
@@ -2085,7 +2094,8 @@ export function App() {
       .then((t) => {
         if (cancelled) return
         notesLoadedRef.current = { index: current, text: t }
-        setNotesText(t)
+        // a key typed while this read was under way is not replaced by what it started from
+        setNotesText(notesShownAfterLoad(notesDraftRef.current, current, t))
       })
     return () => {
       cancelled = true

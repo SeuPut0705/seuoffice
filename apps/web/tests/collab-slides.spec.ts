@@ -5,9 +5,16 @@
  */
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { getSlideNotes, openPptx, type SlideElement } from '@genoffice/pptx-engine'
+import {
+  addElement,
+  createBlankPptx,
+  getSlideNotes,
+  openPptx,
+  savePptx,
+  type SlideElement,
+} from '@genoffice/pptx-engine'
 import { expect, test, type Browser, type Frame, type Locator } from '@playwright/test'
-import { openCoEdited, settled, type CoEditor } from './collab'
+import { openCoEdited, settled, type CoEditor, type CoFile } from './collab'
 
 const repo = fileURLToPath(new URL('../../..', import.meta.url))
 const FIXTURE = resolve(repo, 'packages/pptx-engine/tests/fixtures/01_standard_business.pptx')
@@ -21,12 +28,28 @@ interface ShownSlide {
   widthPx: number
   nodes: Array<{
     type: string
-    box: { centerX: number; centerY: number }
+    box: { x: number; y: number; w: number; h: number; centerX: number; centerY: number }
     text?: { lines: Array<{ runs: Array<{ text: string }> }> }
+    /** a table's column and row boundaries, from its own corner */
+    gridX?: number[]
+    gridY?: number[]
   }>
 }
 
-type SlidesPage = Window & { slidesApi: { getRenderSlides(): Promise<ShownSlide[] | null> } }
+/** The slides page's bridge, as far as these tests call it */
+interface SlidesBridge {
+  getRenderSlides(): Promise<ShownSlide[] | null>
+  getNotes(index: number): Promise<string>
+  aiRunBegin(): Promise<unknown>
+  aiRunHold(): Promise<unknown>
+  aiProposalAccept(): Promise<unknown>
+  aiProposalReject(): Promise<unknown>
+  aiSnapshotRestore(id: string): Promise<unknown>
+  beginHistoryBatch(): Promise<unknown>
+  endHistoryBatch(): Promise<unknown>
+}
+
+type SlidesPage = Window & { slidesApi: SlidesBridge }
 
 const viewerFrame = (editor: CoEditor): Frame =>
   editor.page.frames().find((candidate) => candidate !== editor.page.mainFrame())!
@@ -58,7 +81,7 @@ async function open(
   documentId: string,
   user: string,
   access: 'edit' | 'view' = 'edit',
-  file: string = FIXTURE,
+  file: CoFile = FIXTURE,
 ): Promise<CoEditor> {
   const editor = await openCoEdited(browser, file, { documentId, user, access, ready: 'canvas' })
   opened.push(editor)
@@ -631,6 +654,21 @@ test('undo and an edit the session cannot carry are refused with a message and c
   await expect.poll(() => shownDeck(bob)).toEqual(deck)
   const own = await ownEdits(alice)
 
+  // an AI run and a history batch hold whole-deck snapshots too: none can begin
+  const answers = await viewerFrame(alice).evaluate(async () => {
+    const api = (window as unknown as SlidesPage).slidesApi
+    return [
+      await api.aiRunBegin(),
+      await api.beginHistoryBatch(),
+      await api.endHistoryBatch(),
+      await api.aiRunHold(),
+      await api.aiProposalAccept(),
+      await api.aiProposalReject(),
+      await api.aiSnapshotRestore('none'),
+    ]
+  })
+  expect(answers).toEqual([false, false, null, null, null, false, null])
+
   // undo would restore a whole-deck snapshot no other page has
   await showSlide(alice, 0)
   await alice.page.keyboard.press('ControlOrMeta+Z')
@@ -669,6 +707,224 @@ test('undo and an edit the session cannot carry are refused with a message and c
     ['Revenue by Region'],
     ['Thank you', 'Questions?'],
   ])
+  expect(unexpectedErrors()).toEqual([])
+})
+
+/** Where on the page a point of slide `index` is, given in the slide's own pixels */
+async function slidePoint(
+  editor: CoEditor,
+  index: number,
+  pick: (slide: ShownSlide) => { x: number; y: number },
+): Promise<{ x: number; y: number }> {
+  const slide = (await viewerFrame(editor).evaluate(() =>
+    (window as unknown as SlidesPage).slidesApi.getRenderSlides(),
+  ))![index]!
+  const stage = (await editor.frame.locator('.stage-rel').boundingBox())!
+  const k = stage.width / slide.widthPx
+  const at = pick(slide)
+  return { x: stage.x + at.x * k, y: stage.y + at.y * k }
+}
+
+async function drag(
+  editor: CoEditor,
+  from: { x: number; y: number },
+  by: { x: number; y: number },
+): Promise<void> {
+  const { mouse } = editor.page
+  await mouse.move(from.x, from.y)
+  await mouse.down()
+  await mouse.move(from.x + by.x, from.y + by.y, { steps: 8 })
+  await mouse.up()
+}
+
+/** One slide with a rounded rectangle (it has a yellow adjust handle) and a plain rectangle */
+async function shapesDeck(): Promise<CoFile> {
+  const deck = await openPptx(await createBlankPptx())
+  const slide = deck.deck.slides[0]!
+  addElement(slide, {
+    kind: 'roundRect',
+    offset: { x: 914400, y: 914400, cx: 3657600, cy: 1828800 },
+    fillColor: '#4F81BD',
+  })
+  addElement(slide, {
+    kind: 'rect',
+    offset: { x: 5486400, y: 3200400, cx: 2743200, cy: 1828800 },
+    fillColor: '#C0504D',
+  })
+  return {
+    name: 'shapes.pptx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    buffer: Buffer.from(await savePptx(deck)),
+  }
+}
+
+/** The bridge members a drag on the canvas ends in */
+const GESTURES = [
+  'editTransform',
+  'editTransformMulti',
+  'setTableColWidth',
+  'setTableRowHeight',
+  'setShapeAdjust',
+  'setShapeGeometry',
+] as const
+type Gesture = (typeof GESTURES)[number]
+type Watched = Window & {
+  asked: Gesture[]
+  slidesApi: Record<Gesture, (input: unknown) => unknown>
+}
+
+/** Record, from now on, which of them the renderer asks for */
+async function watchGestures(editor: CoEditor): Promise<void> {
+  await viewerFrame(editor).evaluate((names) => {
+    const page = window as unknown as Watched
+    page.asked = []
+    for (const name of names) {
+      const real = page.slidesApi[name].bind(page.slidesApi)
+      page.slidesApi[name] = (input) => {
+        page.asked.push(name)
+        return real(input)
+      }
+    }
+  }, GESTURES)
+}
+
+/** What the renderer asked for since the last call, each kind once */
+const asked = (editor: CoEditor): Promise<Gesture[]> =>
+  viewerFrame(editor).evaluate(() => [...new Set((window as unknown as Watched).asked.splice(0))])
+
+/**
+ * Drag from `from` by `by`, twice. The edit is refused both times; the second drag must find
+ * the handle where the first found it, so it asks for the same edit again. A handle left where
+ * it was dropped would make the second drag move the whole object, or do nothing.
+ */
+async function refusedTwice(
+  editor: CoEditor,
+  from: { x: number; y: number },
+  by: { x: number; y: number },
+  wanted: Gesture,
+): Promise<void> {
+  for (const attempt of ['first', 'second']) {
+    await drag(editor, from, by)
+    // the canvas is put back once the burst of refusals is over
+    await editor.page.waitForTimeout(600)
+    expect(await asked(editor), `${attempt} drag`).toEqual([wanted])
+  }
+  expect(await ownEdits(editor)).toBe(0)
+  expect((await editor.status()).version).toBe(0)
+}
+
+test('a refused drag of a table border, an adjust handle or a shape point puts the handle back', async ({
+  browser,
+}) => {
+  const alice = await open(browser, freshDocument(), 'alice')
+  await showSlide(alice, 3)
+  await watchGestures(alice)
+  const table = await nodeAt(alice, 3, { type: 'table' })
+  await alice.page.mouse.click(table.x, table.y)
+  const tableOf = (slide: ShownSlide) => slide.nodes.find((node) => node.type === 'table')!
+  // the border between the first two columns, then the one under the first row
+  const column = await slidePoint(alice, 3, (slide) => {
+    const node = tableOf(slide)
+    return { x: node.box.x + node.gridX![1]!, y: node.box.y + node.box.h * 0.5 }
+  })
+  await refusedTwice(alice, column, { x: 40, y: 0 }, 'setTableColWidth')
+  await expect(
+    alice.frame.getByText(/함께 편집하는 동안에는 이 편집을 쓸 수 없습니다/),
+  ).toBeVisible()
+  const row = await slidePoint(alice, 3, (slide) => {
+    const node = tableOf(slide)
+    return { x: node.box.x + node.box.w * 0.25, y: node.box.y + node.gridY![1]! }
+  })
+  await refusedTwice(alice, row, { x: 0, y: 30 }, 'setTableRowHeight')
+
+  const bob = await open(browser, freshDocument(), 'bob', 'edit', await shapesDeck())
+  await watchGestures(bob)
+  const shapes = (slide: ShownSlide) => slide.nodes.filter((node) => node.type === 'shape')
+  // the rounded rectangle's handle sits on its top edge, a sixth of the shorter side in
+  const rounded = await slidePoint(bob, 0, (slide) => {
+    const { box } = shapes(slide)[0]!
+    return { x: box.centerX, y: box.centerY }
+  })
+  await bob.page.mouse.click(rounded.x, rounded.y)
+  const handle = await slidePoint(bob, 0, (slide) => {
+    const { box } = shapes(slide)[0]!
+    return { x: box.x + Math.min(box.w, box.h) * 0.16667, y: box.y }
+  })
+  await refusedTwice(bob, handle, { x: 50, y: 0 }, 'setShapeAdjust')
+
+  // the plain rectangle's points: its corners
+  const plain = await slidePoint(bob, 0, (slide) => {
+    const { box } = shapes(slide)[1]!
+    return { x: box.centerX, y: box.centerY }
+  })
+  await bob.page.mouse.click(plain.x, plain.y, { button: 'right' })
+  await bob.frame.getByText('점 편집', { exact: true }).click()
+  const corner = await slidePoint(bob, 0, (slide) => {
+    const { box } = shapes(slide)[1]!
+    return { x: box.x, y: box.y }
+  })
+  await refusedTwice(bob, corner, { x: 30, y: 30 }, 'setShapeGeometry')
+})
+
+test('notes written while a save holds input are kept and written once it is over', async ({
+  browser,
+}) => {
+  const documentId = freshDocument()
+  const alice = await open(browser, documentId, 'alice')
+  const bob = await open(browser, documentId, 'bob')
+
+  // her edit cannot be confirmed yet, so her save waits with input held
+  await holdOutgoing(alice, true)
+  await retype(alice, 0, 'Fiscal Year 2026', 'Fiscal Year 2027')
+  await showSlide(alice, 0)
+  await alice.page.keyboard.press('ControlOrMeta+S')
+  await notesBox(alice).click()
+  await alice.page.keyboard.type('Notes while saving')
+  await showSlide(alice, 1)
+  await expect(alice.frame.getByText(/지금은 고칠 수 없습니다/)).toBeVisible()
+  await holdOutgoing(alice, false)
+  await savedDeck(alice)
+
+  // back on the slide the notes are still hers, and they reach the deck
+  await showSlide(alice, 0)
+  await expect(notesBox(alice)).toHaveValue('Notes while saving')
+  await showSlide(alice, 1)
+  await settled([alice, bob])
+  await showSlide(bob, 0)
+  await expect(notesBox(bob)).toHaveValue('Notes while saving')
+  await bob.page.locator('#save').click()
+  const saved = await savedDeck(bob)
+  expect(saved.slides[0]!.notes).toBe('Notes while saving')
+  expect(unexpectedErrors()).toEqual([])
+})
+
+test('a key typed into the notes while they are read again after someone’s edit is kept', async ({
+  browser,
+}) => {
+  const documentId = freshDocument()
+  const alice = await open(browser, documentId, 'alice')
+  const bob = await open(browser, documentId, 'bob')
+  await showSlide(alice, 0)
+  await notesBox(alice).click()
+  // reading the notes takes a while on her page, as it does across processes on the desktop
+  await viewerFrame(alice).evaluate(() => {
+    const api = (window as unknown as SlidesPage).slidesApi
+    const read = api.getNotes.bind(api)
+    api.getNotes = async (index) => {
+      await new Promise((resolve) => setTimeout(resolve, 1_500))
+      return read(index)
+    }
+  })
+  await retype(bob, 1, 'Agenda', 'Agenda by bob')
+  await expect.poll(async () => (await alice.status()).version).toBe(1)
+  await alice.page.keyboard.type('N')
+  await alice.page.waitForTimeout(2_500)
+  await expect(notesBox(alice)).toHaveValue('N')
+  // and it is written when she leaves the slide
+  await showSlide(alice, 2)
+  await settled([alice, bob])
+  await showSlide(bob, 0)
+  await expect(notesBox(bob)).toHaveValue('N')
   expect(unexpectedErrors()).toEqual([])
 })
 

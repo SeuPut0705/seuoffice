@@ -64,3 +64,32 @@ export function retargetNotesDraft(
   if (index < 0 || storedNotes !== draft.base) return null
   return index === draft.index ? draft : { ...draft, index }
 }
+
+/**
+ * The draft after slides came, went or moved under it (another window's or person's change):
+ * it follows its slide. Dropped when that slide is gone, also when its part is in `replaced`:
+ * the part then holds another slide, made under the name the deleted one freed.
+ */
+export function notesDraftAfterDeckChange(
+  draft: NotesDraft,
+  slides: readonly { partPath?: string }[],
+  replaced: readonly string[] = [],
+): NotesDraft | null {
+  if (draft.partPath && replaced.includes(draft.partPath)) return null
+  const index = notesDraftIndex(draft, slides)
+  if (index < 0) return null
+  return index === draft.index ? draft : { ...draft, index }
+}
+
+/**
+ * What the notes box shows once slide `index`'s stored notes were read: the stored text, unless
+ * a draft is waiting for that slide (typed while the read was under way, or kept after a write
+ * the document did not take), which must not be replaced by what it started from.
+ */
+export function notesShownAfterLoad(
+  draft: NotesDraft | null,
+  index: number,
+  stored: string,
+): string {
+  return draft?.index === index ? draft.text : stored
+}
