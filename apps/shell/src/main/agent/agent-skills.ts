@@ -43,16 +43,19 @@ import type { AgentSkillProposalInput } from './agent-mcp'
 
 /**
  * The skills-management calls the agent window may make: the GitHub preview
- * of an install the session proposed, and its Install and Cancel (spec 6.4).
- * Every other management call stays with the settings screen.
+ * of an install the session proposed, reading that preview's own files, and
+ * its Install and Cancel (spec 6.4). Every other management call stays with
+ * the settings screen.
  */
 export const AGENT_WINDOW_MANAGE_CHANNELS: ReadonlySet<string> = new Set([
   USER_SKILLS_CHANNELS.importGitHub,
+  USER_SKILLS_CHANNELS.readImport,
+  USER_SKILLS_CHANNELS.readImportFile,
   USER_SKILLS_CHANNELS.cancelImport,
   USER_SKILLS_CHANNELS.install,
 ])
 
-/** The `canManage` gate of the skills channels: the main window, and the agent window for three */
+/** The `canManage` gate of the skills channels: the main window, and the agent window for its preview */
 export function userSkillsManageGate<S>(windows: {
   isMainWindow(sender: S): boolean
   isAgentWindow(sender: S): boolean

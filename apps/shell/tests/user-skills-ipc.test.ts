@@ -55,6 +55,11 @@ const service = {
     rootLicense: undefined,
     tempDir: undefined,
   })),
+  readImported: vi.fn(async () => ({
+    ok: true,
+    content: { body: { text: 'b', truncated: false }, files: [] },
+  })),
+  readImportedFile: vi.fn(async () => ({ ok: true, file: { text: 'f', truncated: false } })),
   exportBundleTo: vi.fn(async () => ({ ok: true, path: 'p' })),
 }
 
@@ -173,6 +178,45 @@ describe('skills dropped on a window and pasted text', () => {
     expect(taken.preview?.origin).toEqual({ kind: 'zip' })
     expect(service.prepare).toHaveBeenCalledWith({ kind: 'zip', file: 'C:/dl/pack.zip' })
     expect(await call(C.takeDropped, settings)).toEqual({ ok: true, preview: null })
+  })
+
+  it('turns a drop that held no skill into the "no skill found" answer, once', async () => {
+    ipc.queueDropped({ kind: 'no-skills' })
+    expect(mocks.sent.map((entry) => entry.channel)).toEqual([C.dropped, C.dropped])
+    expect(await call(C.takeDropped, settings)).toEqual({ ok: false, reason: 'no-skills' })
+    expect(service.prepare).not.toHaveBeenCalled()
+    expect(await call(C.takeDropped, settings)).toEqual({ ok: true, preview: null })
+  })
+
+  it('reads a previewed import only for the window that previewed it', async () => {
+    const mine = (await call(C.importText, settings, '---\nname: a\n---')) as {
+      preview: { token: string }
+    }
+    const token = mine.preview.token
+    expect(await call(C.readImport, settings, token, 'a')).toMatchObject({
+      ok: true,
+      content: { body: { text: 'b' } },
+    })
+    expect(await call(C.readImportFile, settings, token, 'a', 'notes.md')).toMatchObject({
+      ok: true,
+      file: { text: 'f' },
+    })
+    expect(service.readImportedFile).toHaveBeenCalledWith(expect.anything(), 'a', 'notes.md')
+
+    // another window may pass the gate but never reads someone else's preview
+    expect(await call(C.readImport, agent, token, 'a')).toMatchObject({ reason: 'not-found' })
+    expect(await call(C.readImport, editor, token, 'a')).toMatchObject({ reason: 'not-allowed' })
+    expect(await call(C.readImport, settings, 'unknown', 'a')).toMatchObject({
+      reason: 'not-found',
+    })
+    expect(await call(C.readImport, settings, token, 7)).toMatchObject({ reason: 'invalid' })
+    expect(await call(C.readImportFile, settings, token, 'a', 7)).toMatchObject({
+      reason: 'invalid',
+    })
+    expect(service.readImported).toHaveBeenCalledTimes(1)
+
+    await call(C.cancelImport, settings, token)
+    expect(await call(C.readImport, settings, token, 'a')).toMatchObject({ reason: 'not-found' })
   })
 
   it('previews pasted text from the settings screen only, and refuses what is not text', async () => {

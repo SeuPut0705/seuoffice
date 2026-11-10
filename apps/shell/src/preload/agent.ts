@@ -147,8 +147,10 @@ const SKILLS_CHANNELS = {
   agentNoticeSeen: 'skills:agent-notice-seen',
   changed: 'skills:changed',
   // the GitHub preview of an install a session proposed (spec 6.4): the main
-  // process lets this window make these three management calls and no other
+  // process lets this window make these management calls and no other
   importGitHub: 'skills:import-github',
+  readImport: 'skills:read-import',
+  readImportFile: 'skills:read-import-file',
   cancelImport: 'skills:cancel-import',
   install: 'skills:install',
   // a template preview tab a card opened (spec 6.3)
@@ -168,6 +170,8 @@ type AgentSkillsApi = Pick<
   | 'markAgentNoticeSeen'
   | 'onChanged'
   | 'importGitHub'
+  | 'readImport'
+  | 'readImportFile'
   | 'cancelImport'
   | 'install'
   | 'focusTab'
@@ -245,6 +249,20 @@ const skillsApi: AgentSkillsApi = {
   async importGitHub(address) {
     return resultOf(
       await ipcRenderer.invoke(SKILLS_CHANNELS.importGitHub, String(address)).catch(() => null),
+    )
+  },
+  async readImport(token, key) {
+    return resultOf(
+      await ipcRenderer
+        .invoke(SKILLS_CHANNELS.readImport, String(token), String(key))
+        .catch(() => null),
+    )
+  },
+  async readImportFile(token, key, rel) {
+    return resultOf(
+      await ipcRenderer
+        .invoke(SKILLS_CHANNELS.readImportFile, String(token), String(key), String(rel))
+        .catch(() => null),
     )
   },
   async cancelImport(token) {

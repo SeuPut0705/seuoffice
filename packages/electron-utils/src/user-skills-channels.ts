@@ -29,6 +29,10 @@ export const USER_SKILLS_CHANNELS = {
   importText: 'skills:import-text',
   /** the settings screen takes the next skill file dropped on any window, previewed */
   takeDropped: 'skills:take-dropped',
+  /** a previewed import's skill, opened to read before installing: its SKILL.md and text file list */
+  readImport: 'skills:read-import',
+  /** one text file of a previewed import's skill */
+  readImportFile: 'skills:read-import-file',
   cancelImport: 'skills:cancel-import',
   install: 'skills:install',
   checkUpdate: 'skills:check-update',
@@ -269,6 +273,8 @@ export interface UserSkillImportCandidateView {
   warnings: UserSkillWarningView[]
   warningCount: number
   collision: boolean
+  /** its SKILL.md has nothing after the front matter (absent from an older main process) */
+  emptyBody?: boolean | undefined
   problem: UserSkillUnreadable | 'duplicate' | undefined
 }
 
@@ -283,6 +289,24 @@ export interface UserSkillImportPreview {
     | { kind: 'github'; repo: string; ref: string; commit: string; path: string }
   candidates: UserSkillImportCandidateView[]
   rootLicense: string | undefined
+}
+
+/** Most characters of one file an import preview shows; past it the text is cut and the screen says so */
+export const USER_SKILL_PREVIEW_TEXT_MAX_CHARS = 20_000
+
+/** Text an import preview shows, cut at the display limit */
+export interface UserSkillImportText {
+  text: string
+  /** the file goes on past what is shown */
+  truncated: boolean
+}
+
+/** What an import preview shows when the person opens a found skill to read it */
+export interface UserSkillImportContent {
+  /** SKILL.md after the front matter */
+  body: UserSkillImportText
+  /** the folder's other text files the preview can open, `/` between parts */
+  files: Array<{ rel: string; size: number }>
 }
 
 export type UserSkillCollisionChoice = 'replace' | 'skip'

@@ -201,6 +201,24 @@ export async function readUserSkillFolder(
 }
 
 /**
+ * A skill folder's `SKILL.md` text, read only as a file the folder listing
+ * finds, so a link leading out of the folder is never read. `undefined` when
+ * the folder has none or it cannot be read.
+ */
+export async function readListedSkillMd(dir: string): Promise<string | undefined> {
+  const listed = await listSkillFolderFiles(dir, {
+    files: MAX_USER_SKILL_FILES,
+    bytes: MAX_USER_SKILL_BYTES,
+  })
+  const fold = (rel: string) => (process.platform === 'win32' ? rel.toLowerCase() : rel)
+  const skillMd =
+    listed?.files.find((file) => file.rel === 'SKILL.md') ??
+    listed?.files.find((file) => fold(file.rel) === fold('SKILL.md'))
+  if (!skillMd) return undefined
+  return readFile(skillMd.path, 'utf8').catch(() => undefined)
+}
+
+/**
  * The MCP servers a read SKILL.md refers to (spec 8): its front matter
  * `allowed-tools` (a list or a string) and `mcp__<server>__<tool>` in its body.
  */

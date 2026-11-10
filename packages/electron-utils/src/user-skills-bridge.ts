@@ -13,7 +13,9 @@ import {
   type UserSkillCardSaveInput,
   type UserSkillCollisionChoice,
   type UserSkillContent,
+  type UserSkillImportContent,
   type UserSkillImportPreview,
+  type UserSkillImportText,
   type UserSkillNameProblem,
   type UserSkillPreviewEnded,
   type UserSkillPreviewInput,
@@ -59,6 +61,17 @@ export interface UserSkillsBridge {
   importText(text: string): Promise<UserSkillsResult<{ preview: UserSkillImportPreview }>>
   /** the next skill file dropped on a window, previewed; `null` when none waits */
   takeDropped(): Promise<UserSkillsResult<{ preview: UserSkillImportPreview | null }>>
+  /** a previewed import's skill, opened to read: its SKILL.md body and its text files */
+  readImport(
+    token: string,
+    key: string,
+  ): Promise<UserSkillsResult<{ content: UserSkillImportContent }>>
+  /** one text file of a previewed import's skill */
+  readImportFile(
+    token: string,
+    key: string,
+    rel: string,
+  ): Promise<UserSkillsResult<{ file: UserSkillImportText }>>
   /** drop a previewed import, or stop the one running when no token is given */
   cancelImport(token?: string): Promise<void>
   install(
@@ -162,6 +175,9 @@ export function userSkillsBridge(): UserSkillsBridge {
     importGitHub: (address) => result(C.importGitHub, String(address)),
     importText: (text) => result(C.importText, String(text)),
     takeDropped: () => result(C.takeDropped),
+    readImport: (token, key) => result(C.readImport, String(token), String(key)),
+    readImportFile: (token, key, rel) =>
+      result(C.readImportFile, String(token), String(key), String(rel)),
     cancelImport: async (token) => {
       await ipcRenderer.invoke(C.cancelImport, token).catch(() => undefined)
     },

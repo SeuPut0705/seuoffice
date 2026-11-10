@@ -17,14 +17,18 @@ export interface DroppedFilesDeps {
   skillSourceOf: (path: string) => Promise<DroppedSkillSource | undefined>
   /** hand a skill file to the settings' import preview (opens the settings on Skills) */
   importSkills: (source: DroppedSkillSource) => void
+  /** say that the dropped zip or `SKILL.md` held no skill (the settings' Skills page says it) */
+  noSkillsFound: () => void
 }
 
 /**
  * Open each openable path (last drop wins activation), reveal the shell if
  * anything opened, and surface one combined warning for known-but-unsupported
  * formats instead of letting them disappear silently. A skill file goes to
- * the skills import preview; a zip that holds no skill is left alone as
- * before.
+ * the skills import preview. A zip or `SKILL.md` that holds no skill gets
+ * one notice for the whole drop, and only when the drop gave the app nothing
+ * else to do: beside a document that opened, a skill that was found or an
+ * unsupported-format warning, it stays silent.
  */
 export async function handleDroppedFiles(raw: unknown, deps: DroppedFilesDeps): Promise<void> {
   const { supported, skillFiles, unsupportedExts } = partitionDropPayload(raw)
@@ -32,8 +36,16 @@ export async function handleDroppedFiles(raw: unknown, deps: DroppedFilesDeps): 
   for (const path of supported) opened = deps.openDocumentPath(path) || opened
   if (opened) deps.revealShellWindow()
   if (unsupportedExts.length > 0) deps.showWarning(deps.unsupportedMessage(unsupportedExts))
+  let acted = opened || unsupportedExts.length > 0
+  let missed = false
   for (const path of skillFiles) {
     const source = await deps.skillSourceOf(path).catch(() => undefined)
-    if (source) deps.importSkills(source)
+    if (source) {
+      deps.importSkills(source)
+      acted = true
+    } else {
+      missed = true
+    }
   }
+  if (missed && !acted) deps.noSkillsFound()
 }

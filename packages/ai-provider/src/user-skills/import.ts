@@ -33,6 +33,7 @@ import {
   findSkillUrls,
   isInsideDir,
   listSkillFolderFiles,
+  readListedSkillMd,
   readUserSkillFolder,
   skillContentHash,
   type SkillFolderLimits,
@@ -136,6 +137,8 @@ export interface SkillImportCandidate {
   warningCount: number
   /** a skill of the same name (or a folder of that name) is already in the app's skills folder */
   collision: boolean
+  /** its `SKILL.md` has nothing after the front matter; it can still be installed */
+  emptyBody: boolean
   problem: SkillImportProblem | undefined
 }
 
@@ -257,6 +260,8 @@ export async function describeSkillCandidate(
   const readable = skill.unreadable !== 'too-large'
   const urls = readable ? await findSkillUrls(dir) : []
   const warnings = readable ? await findSkillWarnings(dir) : []
+  const skillMd = skill.unreadable ? undefined : await readListedSkillMd(dir)
+  const body = skillMd === undefined ? undefined : parseSkillMd(skillMd)?.body
   const taken = (existing.get(skill.name.toLowerCase()) ?? []).filter(
     (other) => !ignoreDirs.some((ignored) => isInsideDir(other, ignored)),
   )
@@ -277,6 +282,7 @@ export async function describeSkillCandidate(
     warnings: warnings.slice(0, SKILL_PREVIEW_WARNING_COUNT),
     warningCount: warnings.length,
     collision: taken.length > 0,
+    emptyBody: body !== undefined && body.trim() === '',
     problem: skill.unreadable,
   }
 }
