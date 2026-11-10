@@ -288,6 +288,10 @@ async function workbookToOds(
     validations: result.dropped.validations,
     pivots: result.dropped.pivots,
     comments: result.dropped.comments,
+    macros: result.dropped.macros,
+    shapes: result.dropped.shapes,
+    slicers: result.dropped.slicers,
+    sparklines: result.dropped.sparklines,
   }
   const lost = [
     ...(result.formulasDropped > 0 ? [`${result.formulasDropped} formula(s) kept as values`] : []),
@@ -320,6 +324,14 @@ function odsDroppedLabel(kind: string): string {
       return 'data validation rule(s)'
     case 'pivots':
       return 'pivot table(s)'
+    case 'macros':
+      return 'macro project'
+    case 'shapes':
+      return 'shape(s) and text box(es)'
+    case 'slicers':
+      return 'slicer(s)'
+    case 'sparklines':
+      return 'sparkline(s)'
     default:
       return kind
   }

@@ -23,6 +23,10 @@ const fake = vi.hoisted(() => ({
       validations: 0,
       pivots: 0,
       comments: 0,
+      macros: 0,
+      shapes: 0,
+      slicers: 0,
+      sparklines: 0,
     },
   },
 }))
@@ -66,6 +70,10 @@ beforeEach(() => {
       validations: 0,
       pivots: 0,
       comments: 0,
+      macros: 0,
+      shapes: 0,
+      slicers: 0,
+      sparklines: 0,
     },
   }
 })
@@ -92,6 +100,10 @@ for (const ext of ['xlsx', 'xlsm']) {
         validations: 0,
         pivots: 0,
         comments: 0,
+        macros: 0,
+        shapes: 0,
+        slicers: 0,
+        sparklines: 0,
       },
     })
     expect(r.json().warnings).toBeUndefined()
@@ -112,6 +124,10 @@ it('warns about the features the ODS copy leaves out', async () => {
       validations: 0,
       pivots: 0,
       comments: 5,
+      macros: 1,
+      shapes: 0,
+      slicers: 0,
+      sparklines: 0,
     },
   }
   const input = join(tempDir(), 'book.xlsx')
@@ -127,6 +143,7 @@ it('warns about the features the ODS copy leaves out', async () => {
   expect(r.stdout).toContain('1 charts')
   expect(r.stdout).toContain('2 conditional formatting rule(s)')
   expect(r.stdout).toContain('5 comments')
+  expect(r.stdout).toContain('1 macro project')
 })
 
 it('keeps the legacy .ods → .xlsx route', async () => {

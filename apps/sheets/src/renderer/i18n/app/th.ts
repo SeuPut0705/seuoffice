@@ -1536,5 +1536,4 @@ export const th = {
   // ── ODS import ──
   appOdsImportNotice: 'เปิด ODS เป็นสำเนา xlsx การบันทึกจะเขียนไฟล์ xlsx',
   appOdsFormulasDropped: 'เก็บไว้เฉพาะค่าใน {count} สูตร',
-  saveAsNeedsExtension: 'เพิ่มนามสกุลให้ชื่อไฟล์ เช่น report.xlsx หรือ report.ods',
 } satisfies Record<keyof typeof zh, string>

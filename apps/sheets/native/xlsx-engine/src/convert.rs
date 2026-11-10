@@ -21,7 +21,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-use calamine::{Data, Dimensions, Reader, Sheets, open_workbook_auto};
+use calamine::{Data, Dimensions, Reader, SheetVisible, Sheets, open_workbook_auto};
 
 use crate::SidecarError;
 use crate::escher::{self, Blip, BlipKind};
@@ -148,6 +148,13 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
     } else {
         Vec::new()
     };
+    // The names the document defines travel with it, so a formula that
+    // mentions one keeps calculating instead of being cut down to its value.
+    let (odf_names, odf_defined_names) = if odf {
+        odf_defined_names(workbook.defined_names())
+    } else {
+        (odf_formula::Names::default(), String::new())
+    };
 
     let mut sheet_xmls: Vec<String> = Vec::new();
     let mut cells = 0usize;
@@ -168,7 +175,7 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
                 }
                 let position = (start_row + row as u32, start_col + column as u32);
                 if odf {
-                    let translated = odf_formula::translate(formula);
+                    let translated = odf_formula::translate_with(formula, &odf_names);
                     if translated.is_none() {
                         formulas_dropped += 1;
                     }
@@ -179,6 +186,27 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
             }
         }
         let layout = layouts.get(index);
+        // An array formula keeps its result range: written as an ordinary
+        // formula it would be evaluated for its own cell alone and change the
+        // answer.
+        let arrays: HashMap<(u32, u32), String> = layout
+            .map(|layout| {
+                layout
+                    .arrays
+                    .iter()
+                    .map(|(start, end)| {
+                        let first = cell_reference(start.0, start.1);
+                        let last = cell_reference(end.0, end.1);
+                        let range = if first == last {
+                            first
+                        } else {
+                            format!("{first}:{last}")
+                        };
+                        (*start, range)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
         let sheet_binary = binary.as_ref().and_then(|b| b.sheets.get(index));
         let styles = binary.as_ref().map(|b| &b.styles);
         let columns = match (sheet_binary, styles) {
@@ -240,6 +268,7 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
             &heights,
             &sheet_styles,
             odf,
+            &arrays,
         );
         // sheetPr is the worksheet's first child, ahead of the dimension the
         // document opens with
@@ -265,11 +294,31 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
         })
         .collect();
 
+    // An ODF table says whether it is shown in its style; calamine reads
+    // that. A workbook needs one visible sheet, so a document that hides
+    // every table is opened with all of them showing.
+    let visibility: Vec<SheetVisible> = if odf {
+        workbook
+            .sheets_metadata()
+            .iter()
+            .map(|sheet| sheet.visible)
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let any_visible = visibility
+        .iter()
+        .any(|visible| matches!(visible, SheetVisible::Visible));
     let sheets: Vec<SheetSpec> = names
         .iter()
-        .map(|name| SheetSpec {
+        .enumerate()
+        .map(|(index, name)| SheetSpec {
             name: name.clone(),
-            state: None,
+            state: match visibility.get(index).filter(|_| any_visible) {
+                Some(SheetVisible::Hidden) => Some("hidden"),
+                Some(SheetVisible::VeryHidden) => Some("veryHidden"),
+                _ => None,
+            },
         })
         .collect();
     let styles_xml = if odf {
@@ -280,10 +329,14 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
             _ => STYLES_XML.to_string(),
         }
     };
-    let defined_names = binary
-        .as_ref()
-        .map(|binary| print_defined_names(&binary.print_names, &names))
-        .unwrap_or_default();
+    let defined_names = if odf {
+        odf_defined_names
+    } else {
+        binary
+            .as_ref()
+            .map(|binary| print_defined_names(&binary.print_names, &names))
+            .unwrap_or_default()
+    };
     write_package(target, &sheets, &defined_names, &sheet_xmls, &art, &styles_xml)?;
     Ok(ConvertResult {
         sheets: names.len(),
@@ -480,6 +533,127 @@ fn duration_serial(text: &str) -> Option<f64> {
         return None;
     }
     Some(serial)
+}
+
+/// The serial of an `office:date-value`. Two shapes the shared ISO reader
+/// leaves as text are read here, because an ODF document may hold either:
+///
+/// - a time zone (`2026-03-05T10:20:30Z`, `…+09:00`). A spreadsheet date has
+///   no zone, so the clock is kept as written and the zone is dropped;
+/// - a date before March 1900. Excel counts a 29 February 1900 that no
+///   calendar has, so its serials for January and February 1900 run one
+///   behind the day count; the date keeps the day it names.
+fn odf_date_serial(text: &str) -> Option<f64> {
+    let text = strip_time_zone(text.trim());
+    if let Some(serial) = iso_serial(text) {
+        return Some(serial);
+    }
+    let (date, time) = match text.split_once('T') {
+        Some((date, time)) => (date, Some(time)),
+        None => (text, None),
+    };
+    let mut fields = date.split('-');
+    let year: u32 = fields.next()?.parse().ok()?;
+    let month: u32 = fields.next()?.parse().ok()?;
+    let day: u32 = fields.next()?.parse().ok()?;
+    if fields.next().is_some() || year != 1900 || day == 0 {
+        return None;
+    }
+    let days = match month {
+        1 if day <= 31 => day,
+        2 if day <= 28 => 31 + day,
+        _ => return None,
+    };
+    // The time of day, read off a date the shared reader accepts.
+    let fraction = match time {
+        Some(time) => iso_serial(&format!("1900-03-01T{time}"))? - 61.0,
+        None => 0.0,
+    };
+    Some(f64::from(days) + fraction)
+}
+
+/// `…Z` and `…+09:00` without the zone. Only a suffix behind the time part
+/// is a zone; the hyphens of the date are left alone.
+fn strip_time_zone(text: &str) -> &str {
+    let Some(time_start) = text.find('T') else {
+        return text;
+    };
+    if let Some(stripped) = text.strip_suffix('Z').or_else(|| text.strip_suffix('z')) {
+        return stripped;
+    }
+    match text[time_start..].rfind(['+', '-']) {
+        Some(offset) => &text[..time_start + offset],
+        None => text,
+    }
+}
+
+/// `<definedName>` elements for the names an ODF document defines, and the
+/// set a cell formula may mention. calamine hands each name over with its
+/// `table:cell-range-address` or `table:expression`; a name whose definition
+/// has no Excel spelling is left out of both.
+fn odf_defined_names(pairs: &[(String, String)]) -> (odf_formula::Names, String) {
+    let mut names = odf_formula::Names::default();
+    let mut xml = String::new();
+    let mut seen = std::collections::HashSet::new();
+    let mut pending: Vec<&(String, String)> = Vec::new();
+    let mut accept = |name: &str, formula: &str, names: &mut odf_formula::Names| {
+        xml.push_str(&format!(
+            r#"<definedName name="{}">{}</definedName>"#,
+            escape_xml(name),
+            escape_xml(formula),
+        ));
+        names.insert(name);
+    };
+    for pair in pairs {
+        let (name, definition) = pair;
+        if !is_excel_name(name) || !seen.insert(name.to_uppercase()) {
+            continue;
+        }
+        match odf_formula::excel_range(definition) {
+            Some(range) => accept(name, &range, &mut names),
+            None => pending.push(pair),
+        }
+    }
+    // An expression may mention another name, so the rest is retried until a
+    // pass adds none.
+    loop {
+        let before = pending.len();
+        pending.retain(|(name, definition)| {
+            match odf_formula::translate_expression(definition, &names) {
+                Some(formula) => {
+                    accept(name, &formula, &mut names);
+                    false
+                }
+                None => true,
+            }
+        });
+        if pending.len() == before {
+            break;
+        }
+    }
+    (names, xml)
+}
+
+/// A name Excel accepts as written. The built-in names another application
+/// stores under Excel's own prefix (`_xlnm.Print_Area`) need a sheet scope
+/// this conversion does not carry, so they stay behind.
+fn is_excel_name(name: &str) -> bool {
+    let mut characters = name.chars();
+    let Some(first) = characters.next() else {
+        return false;
+    };
+    (first.is_alphabetic() || first == '_')
+        && !name.starts_with("_xl")
+        && characters.all(|character| character.is_alphanumeric() || matches!(character, '_' | '.'))
+}
+
+/// A duration with its sign: a negative time (`-PT06H00M00S`) is a negative
+/// fraction of a day, not text.
+fn signed_duration_serial(text: &str) -> Option<f64> {
+    match text.strip_prefix('-') {
+        Some(rest) => duration_serial(rest).map(|serial| -serial),
+        None => duration_serial(text),
+    }
 }
 
 /// The strings a spreadsheet stores as an error result. An ODF package keeps
@@ -706,6 +880,7 @@ fn worksheet_xml(
     heights: &RowHeights,
     styles: &SheetStyles,
     odf: bool,
+    arrays: &HashMap<(u32, u32), String>,
 ) -> (String, usize) {
     // Rows carrying values plus rows carrying only formulas or a height.
     let mut rows: HashMap<u32, Vec<(u32, String)>> = HashMap::new();
@@ -717,7 +892,14 @@ fn worksheet_xml(
             .get(&absolute)
             .and_then(|entry| entry.as_deref());
         let style = styles.cells.get(&absolute).copied();
-        if let Some(cell) = cell_xml(absolute, value, formula, style, odf) {
+        if let Some(cell) = cell_xml(
+            absolute,
+            value,
+            formula,
+            style,
+            odf,
+            arrays.get(&absolute).map(String::as_str),
+        ) {
             cells += 1;
             rows.entry(absolute.0).or_default().push((absolute.1, cell));
         }
@@ -832,6 +1014,7 @@ fn cell_xml(
     formula: Option<&str>,
     style: Option<u16>,
     odf: bool,
+    array: Option<&str>,
 ) -> Option<String> {
     let reference = cell_reference(position.0, position.1);
     let head = match style {
@@ -839,7 +1022,10 @@ fn cell_xml(
         None => format!(r#"r="{reference}""#),
     };
     let formula_xml = formula
-        .map(|text| format!("<f>{}</f>", escape_xml(text)))
+        .map(|text| match array {
+            Some(range) => format!(r#"<f t="array" ref="{range}">{}</f>"#, escape_xml(text)),
+            None => format!("<f>{}</f>", escape_xml(text)),
+        })
         .unwrap_or_default();
     let cell = match value {
         Data::Empty => {
@@ -852,6 +1038,14 @@ fn cell_xml(
         // the error text, with or without a formula in front of it (pasting
         // values leaves only the text). Written back as a string, a dependent
         // formula would read text where the source had `#DIV/0!`.
+        // A formula whose stored result is an empty string may be a formula
+        // that failed: one common writer keeps the error text in the cell's
+        // paragraph and an empty `office:string-value`, which is all calamine
+        // reads. Leaving the value out lets the formula speak for itself
+        // rather than pinning a blank over `#DIV/0!`.
+        Data::String(text) if odf && formula.is_some() && text.is_empty() => {
+            format!(r#"<c {head}>{formula_xml}</c>"#)
+        }
         Data::String(text) if odf && is_error_literal(text) => format!(
             r#"<c {head} t="e">{formula_xml}<v>{}</v></c>"#,
             escape_xml(text),
@@ -874,14 +1068,14 @@ fn cell_xml(
         // ODF keeps a date as ISO text (`office:date-value="2026-03-05"`) rather
         // than as a serial, so the text form is turned back into one here: left
         // as text, every imported date would sort and calculate as a string.
-        Data::DateTimeIso(text) => match iso_serial(text) {
+        Data::DateTimeIso(text) => match if odf { odf_date_serial(text) } else { iso_serial(text) } {
             Some(serial) => date_cell(&reference, &formula_xml, serial, style),
             None => text_cell(&head, &formula_xml, text),
         },
         // An ODF time (`office:time-value="PT13H30M"`) is a duration, and as
         // text it would neither sort nor calculate; the serial with a time
         // number format is what Excel stores for a time.
-        Data::DurationIso(text) => match duration_serial(text) {
+        Data::DurationIso(text) => match signed_duration_serial(text) {
             Some(serial) if odf => time_cell(&reference, &formula_xml, serial, style),
             _ => text_cell(&head, &formula_xml, text),
         },
@@ -1388,8 +1582,8 @@ mod tests {
             r#"<table:table-cell office:value-type="date" office:date-value="2026-03-05"><text:p>2026-03-05</text:p></table:table-cell>"#,
             r#"<table:table-cell office:value-type="time" office:time-value="PT13H30M"><text:p>13:30:00</text:p></table:table-cell>"#,
             r##"<table:table-cell table:formula="of:=1/0" office:value-type="string" office:string-value="#DIV/0!"><text:p>#DIV/0!</text:p></table:table-cell>"##,
-            // A datetime with a zone suffix cannot be trusted as a serial; it
-            // stays the text the file wrote.
+            // A datetime with a zone suffix keeps its clock; the zone has no
+            // place in a spreadsheet serial.
             r#"<table:table-cell office:value-type="date" office:date-value="2026-03-05T10:20:30Z"><text:p>2026-03-05T10:20:30Z</text:p></table:table-cell>"#,
             r#"</table:table-row>"#,
             r#"</table:table>"#,
@@ -1428,9 +1622,7 @@ mod tests {
             "{sheet}"
         );
         assert!(
-            sheet.contains(
-                r#"<c r="D2" t="inlineStr"><is><t xml:space="preserve">2026-03-05T10:20:30Z</t></is></c>"#
-            ),
+            sheet.contains(r#"<c r="D2" s="2"><v>46086.43090277"#),
             "{sheet}"
         );
         let styles = read_entry(&target, "xl/styles.xml");
@@ -1463,7 +1655,7 @@ mod tests {
             r#"</table:table-row>"#,
             r#"<table:table-row>"#,
             r#"<table:table-cell table:formula="of:=IF([.A1]&gt;0;&quot;yes&quot;;&quot;no&quot;)" office:value-type="string" office:string-value="yes"><text:p>yes</text:p></table:table-cell>"#,
-            r#"<table:table-cell table:formula="of:={1;2}" office:value-type="float" office:value="0"><text:p>0</text:p></table:table-cell>"#,
+            r#"<table:table-cell table:formula="of:=[.A1]~[.A2]" office:value-type="float" office:value="0"><text:p>0</text:p></table:table-cell>"#,
             r#"</table:table-row>"#,
             r#"</table:table>"#,
         );
@@ -1481,7 +1673,7 @@ mod tests {
             "{sheet}"
         );
         assert!(!sheet.contains("of:"), "{sheet}");
-        // A defined name and an array constant leave their values behind.
+        // An undefined name and a bare union leave their values behind.
         assert!(!sheet.contains("MyName"), "{sheet}");
         assert!(sheet.contains(r#"<c r="B2"><v>7</v></c>"#), "{sheet}");
         assert!(sheet.contains(r#"<c r="B3"><v>0</v></c>"#), "{sheet}");
@@ -1672,5 +1864,104 @@ mod tests {
         // The formats the date cells use are still the minimal stylesheet's.
         assert_eq!(styles.matches(r#"numFmtId="14""#).count(), 1, "{styles}");
         assert_eq!(styles.matches(r#"numFmtId="22""#).count(), 1, "{styles}");
+    }
+
+    #[test]
+    fn odf_dates_keep_their_day_with_a_zone_or_before_march_1900() {
+        assert_eq!(odf_date_serial("2026-03-05"), Some(46086.0));
+        assert_eq!(odf_date_serial("2026-03-05T12:00:00Z"), Some(46086.5));
+        assert_eq!(odf_date_serial("2026-03-05T12:00:00+09:00"), Some(46086.5));
+        assert_eq!(odf_date_serial("2026-03-05T12:00:00-05:00"), Some(46086.5));
+        // Excel shows serial 15 as 15 January 1900, and that is the day the
+        // exporter wrote.
+        assert_eq!(odf_date_serial("1900-01-15"), Some(15.0));
+        assert_eq!(odf_date_serial("1900-02-28T06:00:00"), Some(59.25));
+        assert_eq!(odf_date_serial("1900-03-01"), Some(61.0));
+        assert_eq!(odf_date_serial("1899-12-31"), None);
+        assert_eq!(odf_date_serial("not a date"), None);
+        assert_eq!(signed_duration_serial("-PT06H00M00S"), Some(-0.25));
+        assert_eq!(signed_duration_serial("PT12H"), Some(0.5));
+    }
+
+    #[test]
+    fn carries_names_arrays_hidden_sheets_and_failed_formulas_from_ods() {
+        let styles = r#"<style:style style:name="ta1" style:family="table"><style:table-properties table:display="true"/></style:style><style:style style:name="ta2" style:family="table"><style:table-properties table:display="false"/></style:style>"#;
+        let body = concat!(
+            r#"<table:table table:name="Data" table:style-name="ta1">"#,
+            r#"<table:table-row>"#,
+            r#"<table:table-cell office:value-type="float" office:value="2"><text:p>2</text:p></table:table-cell>"#,
+            r#"<table:table-cell table:formula="of:=Total*Rate" office:value-type="float" office:value="0.5"><text:p>0.5</text:p></table:table-cell>"#,
+            r#"<table:table-cell table:formula="of:=Missing+1" office:value-type="float" office:value="9"><text:p>9</text:p></table:table-cell>"#,
+            r#"</table:table-row>"#,
+            r#"<table:table-row>"#,
+            r#"<table:table-cell office:value-type="float" office:value="3"><text:p>3</text:p></table:table-cell>"#,
+            // An array formula two rows high, and a single-cell one.
+            r#"<table:table-cell table:number-matrix-columns-spanned="1" table:number-matrix-rows-spanned="2" table:formula="of:=[.A1:.A2]*2" office:value-type="float" office:value="4"><text:p>4</text:p></table:table-cell>"#,
+            r#"<table:table-cell table:number-matrix-columns-spanned="1" table:number-matrix-rows-spanned="1" table:formula="of:=SUM([.A1:.A2]*[.A1:.A2])" office:value-type="float" office:value="13"><text:p>13</text:p></table:table-cell>"#,
+            r#"</table:table-row>"#,
+            r#"<table:table-row>"#,
+            r#"<table:table-cell/>"#,
+            r#"<table:table-cell office:value-type="float" office:value="6"><text:p>6</text:p></table:table-cell>"#,
+            // A failed formula as one common writer stores it: the error in
+            // the paragraph, an empty string as the value.
+            r##"<table:table-cell table:formula="of:=1/0" office:value-type="string" office:string-value=""><text:p>#DIV/0!</text:p></table:table-cell>"##,
+            r#"<table:table-cell table:formula="of:=COM.MICROSOFT.IFS([.A1]&gt;1;[.A2])" office:value-type="float" office:value="3"><text:p>3</text:p></table:table-cell>"#,
+            r#"</table:table-row>"#,
+            r#"</table:table>"#,
+            r#"<table:table table:name="Notes" table:style-name="ta2">"#,
+            r#"<table:table-row><table:table-cell office:value-type="float" office:value="1"><text:p>1</text:p></table:table-cell></table:table-row>"#,
+            r#"</table:table>"#,
+            r#"<table:named-expressions>"#,
+            r#"<table:named-range table:name="Total" table:base-cell-address="$Data.$A$1" table:cell-range-address="$Data.$A$1:.$A$2"/>"#,
+            r#"<table:named-expression table:name="Rate" table:base-cell-address="$Data.$A$1" table:expression="0.1"/>"#,
+            r#"<table:named-expression table:name="Scaled" table:base-cell-address="$Data.$A$1" table:expression="SUM(Total)*Rate"/>"#,
+            r#"<table:named-expression table:name="Odd" table:base-cell-address="$Data.$A$1" table:expression="ORG.OPENOFFICE.EASTERSUNDAY(2026)"/>"#,
+            r#"<table:named-range table:name="_xlnm.Print_Area" table:base-cell-address="$Data.$A$1" table:cell-range-address="$Data.$A$1:.$C$3"/>"#,
+            r#"</table:named-expressions>"#,
+        );
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("names.ods");
+        write_ods_fixture(&source, styles, body);
+        let target = dir.path().join("converted.xlsx");
+        let result = convert_to_xlsx(&source, &target).unwrap();
+        assert_eq!(result.formulas_dropped, 1, "only the undefined name");
+
+        let workbook = read_entry(&target, "xl/workbook.xml");
+        assert!(
+            workbook.contains(r#"<definedName name="Total">Data!$A$1:$A$2</definedName>"#),
+            "{workbook}"
+        );
+        assert!(
+            workbook.contains(r#"<definedName name="Rate">0.1</definedName>"#),
+            "{workbook}"
+        );
+        assert!(
+            workbook.contains(r#"<definedName name="Scaled">SUM(Total)*Rate</definedName>"#),
+            "{workbook}"
+        );
+        assert!(!workbook.contains("Odd"), "{workbook}");
+        assert!(!workbook.contains("_xlnm"), "{workbook}");
+        assert!(
+            workbook.contains(r#"<sheet name="Notes" sheetId="2" r:id="rId2" state="hidden"/>"#),
+            "{workbook}"
+        );
+
+        let sheet = read_entry(&target, "xl/worksheets/sheet1.xml");
+        assert!(sheet.contains("<f>Total*Rate</f>"), "{sheet}");
+        assert!(!sheet.contains("Missing"), "{sheet}");
+        assert!(
+            sheet.contains(r#"<f t="array" ref="B2:B3">A1:A2*2</f>"#),
+            "{sheet}"
+        );
+        assert!(
+            sheet.contains(r#"<f t="array" ref="C2">SUM(A1:A2*A1:A2)</f>"#),
+            "{sheet}"
+        );
+        // The failed formula keeps its formula and no value at all.
+        assert!(sheet.contains(r#"<c r="C3"><f>1/0</f></c>"#), "{sheet}");
+        assert!(
+            sheet.contains(r#"<f>_xlfn.IFS(A1&gt;1,A2)</f>"#),
+            "{sheet}"
+        );
     }
 }

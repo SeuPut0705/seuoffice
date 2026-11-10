@@ -340,6 +340,10 @@ const tMain = createI18n({
     odsLossValidations: '数据验证规则:{count}',
     odsLossPivots: '数据透视表:{count}',
     odsLossComments: '批注:{count}',
+    odsLossMacros: '宏:{count}',
+    odsLossShapes: '形状和文本框:{count}',
+    odsLossSlicers: '切片器:{count}',
+    odsLossSparklines: '迷你图:{count}',
     odsContinueBtn: '继续',
     errOdsExportFailed: 'ODS 导出失败:{message}',
     errOdsReopenFailed: '导出的 ODS 文件无法重新打开,已将其删除。工作簿未受影响。',
@@ -421,6 +425,10 @@ const tMain = createI18n({
     odsLossValidations: 'Data validation rules: {count}',
     odsLossPivots: 'Pivot tables: {count}',
     odsLossComments: 'Comments: {count}',
+    odsLossMacros: 'Macros: {count}',
+    odsLossShapes: 'Shapes and text boxes: {count}',
+    odsLossSlicers: 'Slicers: {count}',
+    odsLossSparklines: 'Sparklines: {count}',
     odsContinueBtn: 'Continue',
     errOdsExportFailed: 'The ODS export failed: {message}',
     errOdsReopenFailed:
@@ -507,6 +515,10 @@ const tMain = createI18n({
     odsLossValidations: 'Quy tắc xác thực dữ liệu: {count}',
     odsLossPivots: 'Bảng tổng hợp: {count}',
     odsLossComments: 'Chú thích: {count}',
+    odsLossMacros: 'Macro: {count}',
+    odsLossShapes: 'Hình và hộp văn bản: {count}',
+    odsLossSlicers: 'Bộ cắt dữ liệu: {count}',
+    odsLossSparklines: 'Biểu đồ thu nhỏ: {count}',
     odsContinueBtn: 'Tiếp tục',
     errOdsExportFailed: 'Xuất ODS thất bại: {message}',
     errOdsReopenFailed:
@@ -595,6 +607,10 @@ const tMain = createI18n({
     odsLossValidations: 'データ入力規則: {count}',
     odsLossPivots: 'ピボットテーブル: {count}',
     odsLossComments: 'コメント: {count}',
+    odsLossMacros: 'マクロ: {count}',
+    odsLossShapes: '図形とテキスト ボックス: {count}',
+    odsLossSlicers: 'スライサー: {count}',
+    odsLossSparklines: 'スパークライン: {count}',
     odsContinueBtn: '続行',
     errOdsExportFailed: 'ODS へのエクスポートに失敗しました: {message}',
     errOdsReopenFailed:
@@ -680,6 +696,10 @@ const tMain = createI18n({
     odsLossValidations: '데이터 유효성 검사 규칙: {count}',
     odsLossPivots: '피벗 테이블: {count}',
     odsLossComments: '메모: {count}',
+    odsLossMacros: '매크로: {count}',
+    odsLossShapes: '도형·글상자: {count}',
+    odsLossSlicers: '슬라이서: {count}',
+    odsLossSparklines: '스파크라인: {count}',
     odsContinueBtn: '계속',
     errOdsExportFailed: 'ODS 내보내기에 실패했습니다: {message}',
     errOdsReopenFailed: '내보낸 ODS 파일을 다시 열지 못해 지웠습니다. 워크북은 그대로입니다.',
@@ -768,6 +788,10 @@ const tMain = createI18n({
     odsLossValidations: 'Règles de validation des données : {count}',
     odsLossPivots: 'Tableaux croisés dynamiques : {count}',
     odsLossComments: 'Commentaires : {count}',
+    odsLossMacros: 'Macros : {count}',
+    odsLossShapes: 'Formes et zones de texte : {count}',
+    odsLossSlicers: 'Segments : {count}',
+    odsLossSparklines: 'Graphiques sparkline : {count}',
     odsContinueBtn: 'Continuer',
     errOdsExportFailed: 'L’export ODS a échoué : {message}',
     errOdsReopenFailed:
@@ -859,6 +883,10 @@ const tMain = createI18n({
     odsLossValidations: 'Datenüberprüfungsregeln: {count}',
     odsLossPivots: 'Pivot-Tabellen: {count}',
     odsLossComments: 'Kommentare: {count}',
+    odsLossMacros: 'Makros: {count}',
+    odsLossShapes: 'Formen und Textfelder: {count}',
+    odsLossSlicers: 'Datenschnitte: {count}',
+    odsLossSparklines: 'Sparklines: {count}',
     odsContinueBtn: 'Weiter',
     errOdsExportFailed: 'Der ODS-Export ist fehlgeschlagen: {message}',
     errOdsReopenFailed:
@@ -948,6 +976,10 @@ const tMain = createI18n({
     odsLossValidations: 'Reglas de validación de datos: {count}',
     odsLossPivots: 'Tablas dinámicas: {count}',
     odsLossComments: 'Comentarios: {count}',
+    odsLossMacros: 'Macros: {count}',
+    odsLossShapes: 'Formas y cuadros de texto: {count}',
+    odsLossSlicers: 'Segmentaciones de datos: {count}',
+    odsLossSparklines: 'Minigráficos: {count}',
     odsContinueBtn: 'Continuar',
     errOdsExportFailed: 'La exportación a ODS falló: {message}',
     errOdsReopenFailed:
@@ -1034,6 +1066,10 @@ const tMain = createI18n({
     odsLossValidations: 'กฎการตรวจสอบข้อมูล: {count}',
     odsLossPivots: 'ตารางสรุปข้อมูล: {count}',
     odsLossComments: 'ความคิดเห็น: {count}',
+    odsLossMacros: 'มาโคร: {count}',
+    odsLossShapes: 'รูปร่างและกล่องข้อความ: {count}',
+    odsLossSlicers: 'ตัวแบ่งส่วนข้อมูล: {count}',
+    odsLossSparklines: 'เส้นแบบประกายไฟ: {count}',
     odsContinueBtn: 'ดำเนินการต่อ',
     errOdsExportFailed: 'ส่งออก ODS ล้มเหลว: {message}',
     errOdsReopenFailed: 'เปิดไฟล์ ODS ที่ส่งออกใหม่ไม่ได้ จึงลบไฟล์นั้นแล้ว สมุดงานไม่เปลี่ยนแปลง',
@@ -1119,6 +1155,10 @@ const tMain = createI18n({
     odsLossValidations: 'Aturan validasi data: {count}',
     odsLossPivots: 'Tabel pivot: {count}',
     odsLossComments: 'Komentar: {count}',
+    odsLossMacros: 'Makro: {count}',
+    odsLossShapes: 'Bentuk dan kotak teks: {count}',
+    odsLossSlicers: 'Pemotong: {count}',
+    odsLossSparklines: 'Grafik mini: {count}',
     odsContinueBtn: 'Lanjutkan',
     errOdsExportFailed: 'Ekspor ODS gagal: {message}',
     errOdsReopenFailed:
@@ -1206,6 +1246,10 @@ const tMain = createI18n({
     odsLossValidations: 'Правила проверки данных: {count}',
     odsLossPivots: 'Сводные таблицы: {count}',
     odsLossComments: 'Примечания: {count}',
+    odsLossMacros: 'Макросы: {count}',
+    odsLossShapes: 'Фигуры и надписи: {count}',
+    odsLossSlicers: 'Срезы: {count}',
+    odsLossSparklines: 'Спарклайны: {count}',
     odsContinueBtn: 'Продолжить',
     errOdsExportFailed: 'Не удалось экспортировать в ODS: {message}',
     errOdsReopenFailed:
@@ -1288,6 +1332,10 @@ const tMain = createI18n({
     odsLossValidations: 'قواعد التحقق من البيانات: {count}',
     odsLossPivots: 'الجداول المحورية: {count}',
     odsLossComments: 'التعليقات: {count}',
+    odsLossMacros: 'وحدات الماكرو: {count}',
+    odsLossShapes: 'الأشكال ومربعات النص: {count}',
+    odsLossSlicers: 'مقسّمات طريقة العرض: {count}',
+    odsLossSparklines: 'خطوط المؤشر: {count}',
     odsContinueBtn: 'متابعة',
     errOdsExportFailed: 'فشل تصدير ODS: {message}',
     errOdsReopenFailed: 'تعذر إعادة فتح ملف ODS المصدّر فحُذف. المصنف لم يتغير.',
@@ -1373,6 +1421,10 @@ const tMain = createI18n({
     odsLossValidations: 'Regras de validação de dados: {count}',
     odsLossPivots: 'Tabelas dinâmicas: {count}',
     odsLossComments: 'Comentários: {count}',
+    odsLossMacros: 'Macros: {count}',
+    odsLossShapes: 'Formas e caixas de texto: {count}',
+    odsLossSlicers: 'Segmentações de dados: {count}',
+    odsLossSparklines: 'Minigráficos: {count}',
     odsContinueBtn: 'Continuar',
     errOdsExportFailed: 'Falha ao exportar em ODS: {message}',
     errOdsReopenFailed:
@@ -1463,6 +1515,10 @@ const tMain = createI18n({
     odsLossValidations: 'Regole di convalida dati: {count}',
     odsLossPivots: 'Tabelle pivot: {count}',
     odsLossComments: 'Commenti: {count}',
+    odsLossMacros: 'Macro: {count}',
+    odsLossShapes: 'Forme e caselle di testo: {count}',
+    odsLossSlicers: 'Filtri dei dati: {count}',
+    odsLossSparklines: 'Grafici sparkline: {count}',
     odsContinueBtn: 'Continua',
     errOdsExportFailed: 'Esportazione ODS non riuscita: {message}',
     errOdsReopenFailed:
@@ -1551,6 +1607,10 @@ const tMain = createI18n({
     odsLossValidations: 'Reguły sprawdzania danych: {count}',
     odsLossPivots: 'Tabele przestawne: {count}',
     odsLossComments: 'Komentarze: {count}',
+    odsLossMacros: 'Makra: {count}',
+    odsLossShapes: 'Kształty i pola tekstowe: {count}',
+    odsLossSlicers: 'Fragmentatory: {count}',
+    odsLossSparklines: 'Wykresy przebiegu w czasie: {count}',
     odsContinueBtn: 'Kontynuuj',
     errOdsExportFailed: 'Eksport do ODS nie powiódł się: {message}',
     errOdsReopenFailed:
@@ -1637,6 +1697,10 @@ const tMain = createI18n({
     odsLossValidations: 'Pravidla ověření dat: {count}',
     odsLossPivots: 'Kontingenční tabulky: {count}',
     odsLossComments: 'Komentáře: {count}',
+    odsLossMacros: 'Makra: {count}',
+    odsLossShapes: 'Obrazce a textová pole: {count}',
+    odsLossSlicers: 'Průřezy: {count}',
+    odsLossSparklines: 'Minigrafy: {count}',
     odsContinueBtn: 'Pokračovat',
     errOdsExportFailed: 'Export do ODS selhal: {message}',
     errOdsReopenFailed:
@@ -1727,6 +1791,10 @@ const tMain = createI18n({
     odsLossValidations: 'Regels voor gegevensvalidatie: {count}',
     odsLossPivots: 'Draaitabellen: {count}',
     odsLossComments: 'Opmerkingen: {count}',
+    odsLossMacros: "Macro's: {count}",
+    odsLossShapes: 'Vormen en tekstvakken: {count}',
+    odsLossSlicers: 'Slicers: {count}',
+    odsLossSparklines: 'Sparklines: {count}',
     odsContinueBtn: 'Doorgaan',
     errOdsExportFailed: 'Exporteren naar ODS is mislukt: {message}',
     errOdsReopenFailed:
@@ -1813,6 +1881,10 @@ const tMain = createI18n({
     odsLossValidations: 'Peraturan pengesahan data: {count}',
     odsLossPivots: 'Jadual pangsi: {count}',
     odsLossComments: 'Komen: {count}',
+    odsLossMacros: 'Makro: {count}',
+    odsLossShapes: 'Bentuk dan kotak teks: {count}',
+    odsLossSlicers: 'Penghiris: {count}',
+    odsLossSparklines: 'Carta mini: {count}',
     odsContinueBtn: 'Teruskan',
     errOdsExportFailed: 'Eksport ODS gagal: {message}',
     errOdsReopenFailed:
@@ -1897,6 +1969,10 @@ const tMain = createI18n({
     odsLossValidations: 'כללי אימות נתונים: {count}',
     odsLossPivots: 'טבלאות ציר: {count}',
     odsLossComments: 'הערות: {count}',
+    odsLossMacros: 'פקודות מאקרו: {count}',
+    odsLossShapes: 'צורות ותיבות טקסט: {count}',
+    odsLossSlicers: 'כלי פריסה: {count}',
+    odsLossSparklines: 'גרפים זעירים: {count}',
     odsContinueBtn: 'המשך',
     errOdsExportFailed: 'ייצוא ODS נכשל: {message}',
     errOdsReopenFailed:
@@ -1983,6 +2059,10 @@ const tMain = createI18n({
     odsLossValidations: 'डेटा सत्यापन नियम: {count}',
     odsLossPivots: 'पिवट तालिकाएँ: {count}',
     odsLossComments: 'टिप्पणियाँ: {count}',
+    odsLossMacros: 'मैक्रो: {count}',
+    odsLossShapes: 'आकृतियाँ और टेक्स्ट बॉक्स: {count}',
+    odsLossSlicers: 'स्लाइसर: {count}',
+    odsLossSparklines: 'स्पार्कलाइन: {count}',
     odsContinueBtn: 'जारी रखें',
     errOdsExportFailed: 'ODS निर्यात विफल: {message}',
     errOdsReopenFailed:
@@ -2065,6 +2145,10 @@ const tMain = createI18n({
     odsLossValidations: '資料驗證規則:{count}',
     odsLossPivots: '樞紐分析表:{count}',
     odsLossComments: '註解:{count}',
+    odsLossMacros: '巨集:{count}',
+    odsLossShapes: '圖形和文字方塊:{count}',
+    odsLossSlicers: '交叉分析篩選器:{count}',
+    odsLossSparklines: '走勢圖:{count}',
     odsContinueBtn: '繼續',
     errOdsExportFailed: 'ODS 匯出失敗:{message}',
     errOdsReopenFailed: '匯出的 ODS 檔案無法重新開啟,已將其刪除。活頁簿未受影響。',
@@ -2465,6 +2549,10 @@ const ODS_LOSS_LABELS: Record<OdsLossKind, Parameters<typeof tMain>[1]> = {
   validations: 'odsLossValidations',
   pivots: 'odsLossPivots',
   comments: 'odsLossComments',
+  macros: 'odsLossMacros',
+  shapes: 'odsLossShapes',
+  slicers: 'odsLossSlicers',
+  sparklines: 'odsLossSparklines',
 }
 
 /** One warning listing only what this workbook actually loses, then Continue/Cancel. */
@@ -4462,6 +4550,13 @@ export function registerSheetsIpc(): void {
   ipcMain.handle(IPC_CHANNELS.exportOds, async (event, input: unknown) => {
     const entry = sessionFor(event)
     const request = workbookExportOdsRequestSchema.parse(input)
+    // The pending edits ride along as a save request. An upload they refer to
+    // is taken here, before anything can return early, so a refused or
+    // canceled export does not leave it waiting in memory.
+    const pending =
+      request.workbook === undefined || request.workbook.sessionId !== request.sessionId
+        ? undefined
+        : resolveTransferredEdits(entry, request.workbook)
     const session = entry.sessions.get(request.sessionId)
     if (!session) throw new Error('Unknown workbook session.')
     const parent = dialogParent(event)
@@ -4501,14 +4596,39 @@ export function registerSheetsIpc(): void {
       targetPath = undefined
     }
 
-    const outcome = await exportWorkbookAsOds({
-      sidecar: entry.client,
-      // The saved state, not the live grid: the sidecar converts a real .xlsx
-      // package, and an unsaved workbook's snapshot is that package.
-      sourcePath: session.snapshotPath,
-      targetPath,
-      confirmLoss: (losses) => confirmOdsLoss(parent, losses),
-    })
+    // The sidecar converts a real .xlsx package. With edits pending, that
+    // package is a private copy written through the save writer — the same
+    // one a skill's template uses: no dialog, no session swap, the opened
+    // file and its recovery copy untouched. The export is a copy of what is
+    // on screen, and the workbook stays as unsaved as it was.
+    const copyDirectory =
+      pending === undefined
+        ? undefined
+        : join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+    let outcome: Awaited<ReturnType<typeof exportWorkbookAsOds>>
+    try {
+      let sourcePath = session.snapshotPath
+      if (pending !== undefined && copyDirectory !== undefined) {
+        await mkdir(copyDirectory, { recursive: true })
+        sourcePath = join(copyDirectory, 'export.xlsx')
+        await writeWorkbookTo(entry.client, session, pending, sourcePath)
+      }
+      outcome = await exportWorkbookAsOds({
+        sidecar: entry.client,
+        sourcePath,
+        targetPath,
+        confirmLoss: (losses) => confirmOdsLoss(parent, losses),
+      })
+    } catch (error) {
+      outcome = {
+        status: 'failed',
+        message: error instanceof Error ? error.message : String(error),
+      }
+    } finally {
+      if (copyDirectory !== undefined) {
+        await cleanupImportTempDirectory(app.getPath('temp'), copyDirectory).catch(() => undefined)
+      }
+    }
     if (outcome.status === 'exported') {
       return { canceled: false, path: outcome.path, ...outcome.result }
     }
@@ -4895,6 +5015,10 @@ export function registerSheetsIpc(): void {
                 recoveryOriginalPath: session.recoveryOriginalPath,
                 unsavedRestore: session.unsavedRestore,
                 odsSourcePath: session.odsSourcePath,
+                // still the converted copy of an .ods: the notice and its
+                // dropped-formula count stay with it across the quiet save
+                odsConverted: session.odsConverted,
+                formulasDropped: session.formulasDropped,
                 staged,
               }
             : { odsSourcePath: session.odsSourcePath, staged },

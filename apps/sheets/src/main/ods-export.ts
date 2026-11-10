@@ -1,7 +1,8 @@
 /// Exporting the open workbook as an ODS copy: the sidecar writes a complete
-/// new ODS package from the session's saved .xlsx state, the dropped-feature
-/// warning is asked once, and only then is the finished file moved onto the
-/// chosen target. The written file is opened again through the sidecar's ODS
+/// new ODS package from an .xlsx package of the workbook as it stands (the
+/// caller's private copy with the pending edits written in), the
+/// dropped-feature warning is asked once, and only then is the finished file
+/// moved onto the chosen target. The written file is opened again through the sidecar's ODS
 /// reader before the export counts as done. The open session stays an .xlsx
 /// session throughout — nothing here renames or re-targets it.
 
@@ -24,7 +25,17 @@ export interface OdsExportSidecar {
 }
 
 export type OdsLossKind =
-  'formulas' | 'charts' | 'images' | 'conditionalFormats' | 'validations' | 'pivots' | 'comments'
+  | 'formulas'
+  | 'charts'
+  | 'images'
+  | 'conditionalFormats'
+  | 'validations'
+  | 'pivots'
+  | 'comments'
+  | 'macros'
+  | 'shapes'
+  | 'slicers'
+  | 'sparklines'
 
 export interface OdsLoss {
   readonly kind: OdsLossKind
@@ -32,11 +43,15 @@ export interface OdsLoss {
 }
 
 const DROPPED_KINDS = [
+  'macros',
   'charts',
   'images',
+  'shapes',
   'conditionalFormats',
   'validations',
   'pivots',
+  'slicers',
+  'sparklines',
   'comments',
 ] as const satisfies readonly (keyof OdsDroppedCounts)[]
 
@@ -60,8 +75,8 @@ export type OdsExportOutcome =
   | { readonly status: 'failed'; readonly message: string }
 
 /**
- * Writes `sourcePath` (the session's saved .xlsx state) as a new ODS package at
- * `targetPath`. The conversion lands in a private temp folder first, so a
+ * Writes `sourcePath` (an .xlsx package of the workbook as it stands) as a new
+ * ODS package at `targetPath`. The conversion lands in a private temp folder first, so a
  * conversion that fails or a warning the person cancels leaves the target
  * exactly as it was. `confirmLoss` runs before anything reaches the target.
  */

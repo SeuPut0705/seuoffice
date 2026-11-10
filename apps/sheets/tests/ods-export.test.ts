@@ -57,7 +57,7 @@ function fakeContents(): FakeContents {
 }
 
 /** what the stub ODS writer was asked to convert */
-const convertOdsCalls: { path: string; targetPath: string }[] = []
+const convertOdsCalls: { path: string; targetPath: string; source: string }[] = []
 const dropped = {
   charts: { value: 0 },
   images: { value: 0 },
@@ -65,6 +65,10 @@ const dropped = {
   validations: { value: 0 },
   pivots: { value: 0 },
   comments: { value: 0 },
+  macros: { value: 0 },
+  shapes: { value: 0 },
+  slicers: { value: 0 },
+  sparklines: { value: 0 },
 }
 const formulasDropped = { value: 0 }
 const verify = { sheets: 1, cells: 3, fails: false }
@@ -187,7 +191,8 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
       return { sheets: 1, cells: 3 }
     }
     async convertToOds(input: { path: string; targetPath: string }): Promise<unknown> {
-      convertOdsCalls.push(input)
+      // what the writer was handed, read while the private copy still exists
+      convertOdsCalls.push({ ...input, source: (await readFile(input.path)).toString('utf8') })
       await writeFile(input.targetPath, Buffer.from(ODS_BYTES))
       return {
         sheets: 2,
@@ -200,6 +205,10 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
           validations: dropped.validations.value,
           pivots: dropped.pivots.value,
           comments: dropped.comments.value,
+          macros: dropped.macros.value,
+          shapes: dropped.shapes.value,
+          slicers: dropped.slicers.value,
+          sparklines: dropped.sparklines.value,
         },
       }
     }
@@ -237,6 +246,7 @@ import {
   markSheetsUnsavedNew,
   queueWorkbookForView,
   resetSheetsShuttingDown,
+  sheetsFileRenamed,
 } from '../src/main/sheets-main'
 
 let dir: string
@@ -299,6 +309,11 @@ function exportOdsRequest(sessionId: string, targetPath?: string): unknown {
   return { sessionId, ...(targetPath === undefined ? {} : { targetPath }) }
 }
 
+/** the export as the renderer sends it: the pending edits ride along */
+function exportOdsWithEdits(sessionId: string): unknown {
+  return { sessionId, workbook: saveRequest(sessionId, 'save') }
+}
+
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'genoffice-sheets-ods-export-'))
   userDataDirRef.value = mkdtempSync(join(tmpdir(), 'genoffice-sheets-ods-export-user-'))
@@ -357,6 +372,10 @@ describe('ODS export', () => {
         validations: 0,
         pivots: 0,
         comments: 0,
+        macros: 0,
+        shapes: 0,
+        slicers: 0,
+        sparklines: 0,
       },
     })
     expect(readFileSync(target, 'utf8')).toBe(ODS_BYTES)
@@ -460,6 +479,90 @@ describe('ODS export', () => {
     const exported = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
     expect((exported as { canceled: boolean }).canceled).toBe(false)
     expect(readFileSync(target, 'utf8')).toBe(ODS_BYTES)
+  })
+
+  it('exports the workbook as edited without saving it', async () => {
+    const path = writeWorkbook('Budget.xlsx')
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    const target = join(dir, 'Budget.ods')
+    saveDialogAnswers.push(target)
+
+    const exported = await call(tab, IPC_CHANNELS.exportOds, exportOdsWithEdits(opened.sessionId))
+
+    expect((exported as { canceled: boolean }).canceled).toBe(false)
+    // the writer converted a private copy with the edits written in …
+    expect(convertOdsCalls).toHaveLength(1)
+    expect(basename(convertOdsCalls[0]!.path)).toBe('export.xlsx')
+    expect(convertOdsCalls[0]!.source).toBe('original-bytes-saved')
+    // … which is gone again, while the workbook on disk was never touched
+    expect(existsSync(convertOdsCalls[0]!.path)).toBe(false)
+    expect(readFileSync(path, 'utf8')).toBe('original-bytes')
+    // and the session is the one that was open: it still answers
+    saveDialogAnswers.push(join(dir, 'Again.ods'))
+    const again = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
+    expect((again as { canceled: boolean }).canceled).toBe(false)
+    // without edits the saved state is what gets converted
+    expect(convertOdsCalls[1]!.source).toBe('original-bytes')
+  })
+
+  it('ignores edits that belong to another session', async () => {
+    const path = writeWorkbook('Budget.xlsx')
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    saveDialogAnswers.push(join(dir, 'Budget.ods'))
+
+    await call(tab, IPC_CHANNELS.exportOds, {
+      sessionId: opened.sessionId,
+      workbook: saveRequest('00000000-0000-4000-b000-999999999999', 'save'),
+    })
+
+    expect(convertOdsCalls[0]!.source).toBe('original-bytes')
+  })
+
+  it('names the macros, shapes, slicers and sparklines it leaves behind', async () => {
+    const path = writeWorkbook('Budget.xlsx')
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    dropped.macros.value = 1
+    dropped.shapes.value = 2
+    dropped.slicers.value = 3
+    dropped.sparklines.value = 4
+    saveDialogAnswers.push(join(dir, 'Budget.ods'))
+    messageAnswers.push(0)
+
+    const exported = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
+
+    const warning = messageBoxes.at(-1)
+    expect(warning?.detail).toContain('Macros: 1')
+    expect(warning?.detail).toContain('Shapes and text boxes: 2')
+    expect(warning?.detail).toContain('Slicers: 3')
+    expect(warning?.detail).toContain('Sparklines: 4')
+    expect((exported as { dropped: { macros: number } }).dropped.macros).toBe(1)
+  })
+
+  it('keeps protecting the original .ods after it was renamed', async () => {
+    const original = join(dir, 'report.ods')
+    writeFileSync(original, Buffer.from('ods-original-bytes'))
+    const tab = newTab()
+    queueWorkbookForView(tab as never, original)
+    const opened = (await call(tab, IPC_CHANNELS.selectWorkbook)) as { sessionId: string }
+
+    // the person renames the original on disk; the session follows it
+    const renamed = join(dir, 'result.ods')
+    writeFileSync(renamed, Buffer.from('ods-original-bytes'))
+    rmSync(original)
+    sheetsFileRenamed(tab as never, original, renamed)
+
+    // the renamed original is refused, and the default does not point at it
+    saveDialogAnswers.push(renamed, join(dir, 'result-copy.ods'))
+    const result = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
+
+    expect(saveDialogs).toHaveLength(2)
+    expect(messageBoxes.at(-1)?.message).toMatch(/original ODS file/i)
+    expect(readFileSync(renamed, 'utf8')).toBe('ods-original-bytes')
+    expect((result as { canceled: boolean }).canceled).toBe(false)
+    expect(basename(saveDialogs[0]!.defaultPath!)).not.toBe('result.ods')
   })
 
   it('writes without a warning when nothing is dropped', async () => {
