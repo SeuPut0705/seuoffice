@@ -1,9 +1,10 @@
 /**
  * PDF Converter › PDF to HWP (decision 0116): the PDF opens in a new, untitled Hangul tab,
  * whose editor imports it with its own PDF import dialog. The PDF file is left alone.
+ * The Hangul editor's File › Import PDF starts the same conversion from a Hangul tab.
  */
 import { test, expect } from '@playwright/test'
-import type { Frame, Page } from '@playwright/test'
+import type { ElectronApplication, Frame, Page } from '@playwright/test'
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -20,15 +21,46 @@ async function studioFrame(hwp: Page): Promise<Frame> {
   }
 }
 
-test('PDF to HWP imports the PDF into a new untitled Hangul tab', async () => {
-  test.setTimeout(240_000)
+/** A one-page PDF with a line of text, in a folder of its own. */
+async function samplePdf(): Promise<{ pdfPath: string; original: Buffer }> {
   const dir = await mkdtemp(join(tmpdir(), 'genoffice-hwp-pdf-import-'))
   const pdfPath = join(dir, 'Field notes.pdf')
   const doc = await PDFDocument.create()
   const font = await doc.embedFont(StandardFonts.Helvetica)
   doc.addPage([595, 842]).drawText('Imported from a PDF page', { x: 72, y: 760, size: 14, font })
   await writeFile(pdfPath, await doc.save({ useObjectStreams: false }))
-  const original = await readFile(pdfPath)
+  return { pdfPath, original: await readFile(pdfPath) }
+}
+
+/** The document's text as the app's plugin reads it; null while the editor has none. */
+function documentText(studio: Frame): Promise<string> {
+  return studio
+    .evaluate(async () => {
+      const host = window as unknown as {
+        rhwpStudio: {
+          plugins: { invoke(id: string, name: string, args: unknown[]): unknown }
+        }
+      }
+      return host.rhwpStudio.plugins.invoke('ieum-agent', 'readText', [])
+    })
+    .catch(() => null)
+    .then((text) => JSON.stringify(text))
+}
+
+/** Every Hangul view of the app, in the order the app made them. */
+async function hwpPages(app: ElectronApplication): Promise<Page[]> {
+  const pages: Page[] = []
+  for (const candidate of app.windows()) {
+    const href =
+      candidate.url() || (await candidate.evaluate(() => window.location.href).catch(() => ''))
+    if (href.includes('://hwp/')) pages.push(candidate)
+  }
+  return pages
+}
+
+test('PDF to HWP imports the PDF into a new untitled Hangul tab', async () => {
+  test.setTimeout(240_000)
+  const { pdfPath, original } = await samplePdf()
 
   const launched = await launchShell({
     onboardingSeen: true,
@@ -49,22 +81,7 @@ test('PDF to HWP imports the PDF into a new untitled Hangul tab', async () => {
     await importButton.click()
 
     await expect
-      .poll(
-        async () =>
-          JSON.stringify(
-            await studio
-              .evaluate(async () => {
-                const host = window as unknown as {
-                  rhwpStudio: {
-                    plugins: { invoke(id: string, name: string, args: unknown[]): unknown }
-                  }
-                }
-                return host.rhwpStudio.plugins.invoke('ieum-agent', 'readText', [])
-              })
-              .catch(() => null),
-          ),
-        { timeout: 120_000 },
-      )
+      .poll(() => documentText(studio), { timeout: 120_000 })
       .toContain('Imported from a PDF page')
 
     // a new document named after the PDF, with no file until its first save. With an argv
@@ -75,5 +92,61 @@ test('PDF to HWP imports the PDF into a new untitled Hangul tab', async () => {
     expect(Buffer.compare(await readFile(pdfPath), original)).toBe(0)
   } finally {
     await closeAndSaveVideo(launched, 'hwp-pdf-import')
+  }
+})
+
+test('File > Import PDF in a Hangul tab imports a picked PDF into a new Hangul tab', async () => {
+  test.setTimeout(240_000)
+  const { pdfPath, original } = await samplePdf()
+
+  const launched = await launchShell({ onboardingSeen: true, videoDir: 'hwp-import-pdf-menu' })
+  const { app, page } = launched
+  try {
+    await page.locator('.quick-card', { hasText: 'AI HWP' }).click()
+    const first = await waitForPageWithUrl(app, '://hwp/')
+    await first.waitForSelector('.hwp-app[data-phase="ready"]', { timeout: 90_000 })
+    const firstStudio = await studioFrame(first)
+
+    // the shell asks for the PDF: answer its dialog with the sample, and keep what it asked
+    await app.evaluate(({ dialog }, picked) => {
+      const state = globalThis as unknown as { __openDialogs: unknown[] }
+      state.__openDialogs = []
+      dialog.showOpenDialog = (async (...args: unknown[]) => {
+        state.__openDialogs.push(args[args.length - 1])
+        return { canceled: false, filePaths: [picked] }
+      }) as typeof dialog.showOpenDialog
+    }, pdfPath)
+
+    await firstStudio.locator('#menu-bar .menu-item[data-menu="file"] .menu-title').click()
+    const item = firstStudio.locator('.md-item[data-cmd="ext:ieum-import-pdf"]')
+    await expect(item).toHaveText(/Import PDF…/)
+    await item.click()
+
+    // a second Hangul view: the PDF, behind the editor's own import dialog
+    await expect.poll(async () => (await hwpPages(app)).length, { timeout: 60_000 }).toBe(2)
+    const imported = (await hwpPages(app)).find((candidate) => candidate !== first)!
+    const studio = await studioFrame(imported)
+    const importButton = studio.locator('.dialog-btn-primary', { hasText: '가져오기' })
+    await expect(importButton).toBeVisible({ timeout: 90_000 })
+    await importButton.click()
+    await expect
+      .poll(() => documentText(studio), { timeout: 120_000 })
+      .toContain('Imported from a PDF page')
+
+    // only PDFs were offered, the tab is named after the PDF, and nothing else moved
+    const asked = await app.evaluate(
+      () => (globalThis as unknown as { __openDialogs: unknown[] }).__openDialogs,
+    )
+    expect(asked).toHaveLength(1)
+    expect((asked[0] as { filters: { extensions: string[] }[] }).filters).toMatchObject([
+      { extensions: ['pdf'] },
+    ])
+    const titles = page.locator('.tab-bar .tab-item:not(.tab-home) .tab-title')
+    await expect(titles).toHaveCount(2)
+    await expect(titles.nth(1)).toHaveText('Field notes')
+    expect(await documentText(firstStudio)).not.toContain('Imported from a PDF page')
+    expect(Buffer.compare(await readFile(pdfPath), original)).toBe(0)
+  } finally {
+    await closeAndSaveVideo(launched, 'hwp-import-pdf-menu')
   }
 })

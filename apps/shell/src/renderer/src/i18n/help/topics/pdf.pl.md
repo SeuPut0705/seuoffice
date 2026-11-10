@@ -6,6 +6,7 @@ Edytor PDF ma pięć kart na wstążce: **Narzędzia główne / Adnotacje / Edyc
 
 - Lewy pasek boczny: **miniatury** (kliknij, aby przejść, widoczny zakres wyróżniony) albo **spis treści** (zakładki, jeśli są).
 - Powiększenie: regulator współczynnika w prawym dolnym rogu; ctrl+kółko zmienia powiększenie stopniowo.
+- Powiększenie przy otwieraniu: opcja **Przy otwieraniu** na karcie Widok wybiera początkowy widok nowo otwieranego pliku PDF: dopasowanie do szerokości, dopasowanie do strony albo powiększenie od 50% do 200%. Plik PDF, w którym samodzielnie zmieniono powiększenie, otwiera się ponownie w tym powiększeniu.
 - Przesuwanie widoku: włącz **Narzędzie Rączka** (karty Narzędzia główne i Widok) i przeciągaj, aby przesuwać stronę w każdą stronę. Gdy jest włączone, przeciąganie nie zaznacza tekstu, a zwykłe kliknięcie nadal otwiera łącze. Przeciąganie z wciśniętym środkowym przyciskiem (kółkiem) przesuwa widok bez narzędzia. Esc lub wybór innego narzędzia je wyłącza.
 - Obracanie: dla jednej strony lub wszystkich z menu Strony; obroty są zapisywane w pliku przy zapisie.
 - Wyszukiwanie: ctrl+F na pełnym tekście z podświetleniem wszystkich trafień.
@@ -70,6 +71,7 @@ Sześć narzędzi: **tusz, prostokąt, elipsa, strzałka, notatka**, a ponadto *
 ## Operacje na stronach (Strony)
 
 - **Obróć / usuń / zmień kolejność**: przeciągaj miniatury, aby zmienić kolejność; usuwanie wymaga potwierdzenia.
+- **Wiele stron naraz**: klikaj miniatury z wciśniętym Ctrl lub Shift, aby zaznaczyć kilka stron. Delete je usuwa; Ctrl+C, Ctrl+X i Ctrl+V kopiują, wycinają i wklejają. Skopiowane strony można też wkleić na innej karcie PDF, a wklejenie jest od razu zapisywane w pliku. Jeśli miniatury są zamknięte, otwiera je przycisk przy lewej krawędzi obszaru stron.
 - **Importuj strony**: wciągnij strony z innego pliku PDF. **Wstaw pustą stronę** dodaje pustą stronę.
 - **Zamień strony** podmienia cały zakres na strony skąd indziej; **Przytnij strony** przycina krawędzie, z opcją zastosowania tego do wszystkich stron.
 - **Rozmiar strony** skaluje wszystkie strony do jednego rozmiaru papieru; **Odwróć kolejność** odwraca dokument od końca do początku.
@@ -82,6 +84,7 @@ Sześć narzędzi: **tusz, prostokąt, elipsa, strzałka, notatka**, a ponadto *
 
 - **Eksportuj jako Word… / PowerPoint… / Excel…** w menu Plik albo te same trzy z **Konwertuj PDF** na wstążce — wszystko lokalnie, bez wysyłania na serwer. Plik .pptx wychodzi ze slajdem na stronę, a .xlsx z arkuszem na stronę. Każdy z nich pyta, gdzie zapisać.
 - **PDF na HWP** w menu **Konwertuj PDF** na wstążce zamienia PDF w dokument HWP w nowej karcie HWP. Wybierz **Importuj** (가져오기) w oknie importu PDF, które pokaże karta; dokument powstaje w tej karcie, a pierwsze zapisanie pyta, gdzie umieścić plik .hwp lub .hwpx. Sam PDF zostaje bez zmian, a konwersja odbywa się na tym komputerze. To, czy tekst trafi jako akapity płynące przez strony, czy jako stałe pola tekstowe, wybiera się w opcjach (환경 설정) karty HWP, w sekcji importu PDF.
+- Tę samą konwersję można też rozpocząć z karty HWP. Wybierz PDF poleceniem **Plik** ▸ **Importuj PDF…**, a otworzy się nowa karta HWP z tym samym oknem importu PDF. Dokument karty, w której użyto menu, zostaje bez zmian.
 - **Drukuj**: bieżąca kolejność i obroty przez okno systemowe; obsługiwane są zakresy stron.
 
 ## Zapisywanie

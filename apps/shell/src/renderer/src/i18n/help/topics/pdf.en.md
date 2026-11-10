@@ -6,6 +6,7 @@ The PDF editor has five ribbon tabs: **Home / Annotate / Edit / Page / View**. I
 
 - Left sidebar: **thumbnails** (click to jump, visible range highlighted) or **outline** (bookmarks, when present).
 - Zoom: the ratio control bottom-right; ctrl+wheel steps the zoom.
+- Opening zoom: **On open** on the View tab sets the view a newly opened PDF starts in: fit width, fit page, or a zoom from 50% to 200%. A PDF whose zoom you changed yourself reopens at that zoom.
 - Moving the view: turn on the **Hand tool** (Home and View tabs) and drag to move the page up, down and sideways. While it is on, dragging selects no text and a plain click still follows a link. Dragging with the middle button (wheel) held down moves the view without the tool. Esc or picking another tool turns it off.
 - Rotation: per-page or all pages from the Page menu; rotations are written back on save.
 - Search: ctrl+F full-text with all hits highlighted.
@@ -70,6 +71,7 @@ Six tools: **ink, rectangle, ellipse, arrow, note**, plus the **redaction box** 
 ## Page operations (Page)
 
 - **Rotate / delete / reorder**: drag thumbnails to reorder; deletion confirms.
+- **Several pages at once**: Ctrl-click or Shift-click thumbnails to pick several pages. Delete removes them; Ctrl+C, Ctrl+X and Ctrl+V copy, cut and paste them. Copied pages can be pasted into another PDF tab too, and a paste is saved to the file right away. If the thumbnails are closed, the button on the left edge of the page area brings them back.
 - **Import pages**: pull pages in from another PDF. **Insert blank page** adds an empty one.
 - **Replace pages** swaps a range for pages from elsewhere; **Crop pages** trims, with an option to apply to all.
 - **Page size** rescales every page to one paper size; **Reverse order** flips the document end to end.
@@ -82,6 +84,7 @@ Six tools: **ink, rectangle, ellipse, arrow, note**, plus the **redaction box** 
 
 - **Export as Word… / PowerPoint… / Excel…** in the File menu, or the same three from **PDF Converter** on the ribbon — all local, no upload. The .pptx comes out one slide per page and the .xlsx one worksheet per page. Each asks where to save it.
 - **PDF to HWP** under **PDF Converter** on the ribbon turns the PDF into a Hangul document in a new Hangul tab. Choose **Import** (가져오기) in the PDF import window the tab shows; the document is made in that tab, and its first save asks where to put the .hwp or .hwpx. The PDF itself is left as it was, and the conversion runs on this PC. Whether body text comes in as paragraphs that flow over the pages or as fixed text boxes is set in the Hangul tab's options (환경 설정) under PDF import.
+- The same conversion starts from a Hangul tab too. Pick a PDF with **File** ▸ **Import PDF…**, and a new Hangul tab opens with the same PDF import window. The document of the tab the menu was used in is left as it was.
 - **Print**: current order and rotations through the system dialog; page ranges supported.
 
 ## Saving
