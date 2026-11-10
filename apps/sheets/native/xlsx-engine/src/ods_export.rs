@@ -1414,12 +1414,45 @@ fn write_row<W: Write>(
                 .iter()
                 .find(|merge| merge.start_column <= column && merge.end_column >= column)
             {
-                // A covered corner: ODF wants the covered cells present, and a
+                // A covered cell may still hold a value: some writers put the
+                // merged text in every cell of the range, and Excel keeps
+                // what it finds there for the formulas that point at it. The
+                // cell stays covered and keeps its content.
+                if let Some(record) = cells
+                    .get(cell_index)
+                    .filter(|cell| cell.column == column)
+                    .filter(|cell| holds_content(cell))
+                    .copied()
+                {
+                    cell_index += 1;
+                    let style =
+                        resolve_style(Some(record), row_context, column, context, registry, resolved);
+                    push_cell(
+                        &mut xml,
+                        "table:covered-table-cell",
+                        Some(record),
+                        style.name.as_deref(),
+                        style.kind,
+                        None,
+                        context,
+                        row_context,
+                        column,
+                        registry,
+                        counters,
+                    );
+                    column += 1;
+                    continue;
+                }
+                // Otherwise ODF only wants the covered cells present, and a
                 // repeat count keeps a wide merged banner to one element.
                 let mut run = 1;
                 while column + run <= last
                     && merge.end_column >= column + run
                     && !(merge.start_row == row && merge.start_column == column + run)
+                    && !cells[cell_index.min(cells.len())..]
+                        .iter()
+                        .take_while(|cell| cell.column <= column + run)
+                        .any(|cell| cell.column == column + run && holds_content(cell))
                 {
                     run += 1;
                 }
@@ -1454,6 +1487,7 @@ fn write_row<W: Write>(
             });
             push_cell(
                 &mut xml,
+                "table:table-cell",
                 record,
                 style_name.as_deref(),
                 style.kind,
@@ -1520,6 +1554,10 @@ fn empty_cells(
         column += run;
     }
     out
+}
+
+fn holds_content(record: &CellRecord) -> bool {
+    record.value.is_some() || record.formula.is_some()
 }
 
 /// True when the column already has a cell record or sits inside a merge, so
@@ -1595,6 +1633,7 @@ fn resolve_style(
 #[allow(clippy::too_many_arguments)]
 fn push_cell(
     out: &mut String,
+    element: &str,
     record: Option<&CellRecord>,
     style_name: Option<&str>,
     kind: ValueKind,
@@ -1653,6 +1692,18 @@ fn push_cell(
         }
     });
     let mut body = match record.and_then(|record| record.value.as_ref()) {
+        // A text cell holding nothing is an empty cell, unless a formula
+        // produced the nothing.
+        Some(CellValue::String(text)) if text.is_empty() && formula.is_none() => String::new(),
+        // A date the workbook stores as ISO text (`t="d"`) is the value ODF
+        // stores dates as; written as a string it would stop being a date.
+        Some(CellValue::String(text)) if kind == ValueKind::Date && is_iso_date(text) => {
+            attributes.push_str(&format!(
+                r#" office:value-type="date" office:date-value="{}""#,
+                escape_xml(text)
+            ));
+            format!("<text:p>{}</text:p>", escape_xml(&text.replace('T', " ")))
+        }
         Some(CellValue::String(text)) => {
             attributes.push_str(r#" office:value-type="string""#);
             let runs = record
@@ -1702,15 +1753,19 @@ fn push_cell(
         counters.dropped.comments = counters.dropped.comments.saturating_sub(1);
     }
     if body.is_empty() {
-        out.push_str(&format!("<table:table-cell{attributes}/>"));
+        out.push_str(&format!("<{element}{attributes}/>"));
     } else {
-        out.push_str(&format!(
-            "<table:table-cell{attributes}>{body}</table:table-cell>"
-        ));
+        out.push_str(&format!("<{element}{attributes}>{body}</{element}>"));
     }
-    counters.cells += usize::from(
-        record.is_some_and(|record| record.value.is_some() || record.formula.is_some()),
-    );
+    // An empty text cell was written as an empty cell, so it is not counted
+    // among the cells that hold something.
+    counters.cells += usize::from(record.is_some_and(|record| {
+        record.formula.is_some()
+            || record
+                .value
+                .as_ref()
+                .is_some_and(|value| !matches!(value, CellValue::String(text) if text.is_empty()))
+    }));
 }
 
 /// A note as `office:annotation`: its author and its text, one paragraph per
@@ -1730,6 +1785,37 @@ fn annotation_xml(comment: &CommentInfo) -> String {
     }
     out.push_str("</office:annotation>");
     out
+}
+
+/// `2010-01-11` or `2010-01-11T09:30:00`, digits where digits belong. A zone
+/// suffix is not accepted: a spreadsheet date has none.
+fn is_iso_date(text: &str) -> bool {
+    let bytes = text.as_bytes();
+    let digits = |range: std::ops::Range<usize>| {
+        bytes
+            .get(range)
+            .is_some_and(|part| part.iter().all(u8::is_ascii_digit))
+    };
+    if !(digits(0..4) && bytes.get(4) == Some(&b'-') && digits(5..7) && bytes.get(7) == Some(&b'-') && digits(8..10))
+    {
+        return false;
+    }
+    match bytes.len() {
+        10 => true,
+        length if length >= 19 => {
+            bytes[10] == b'T'
+                && digits(11..13)
+                && bytes[13] == b':'
+                && digits(14..16)
+                && bytes[16] == b':'
+                && digits(17..19)
+                && bytes[19..]
+                    .iter()
+                    .enumerate()
+                    .all(|(index, byte)| if index == 0 { *byte == b'.' } else { byte.is_ascii_digit() })
+        }
+        _ => false,
+    }
 }
 
 fn number_parts(number: f64, attributes: &mut String) -> String {
@@ -2764,5 +2850,46 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
             content.contains(r#"office:value-type="time" office:time-value="PT6H0M0S""#),
             "{content}"
         );
+    }
+
+    #[test]
+    fn covered_cells_keep_their_values_and_iso_dates_stay_dates() {
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:D2"/><sheetData>"#,
+            // A writer that put the merged text in every cell of the range.
+            r#"<row r="1"><c r="A1" t="inlineStr"><is><t>title</t></is></c><c r="B1" t="inlineStr"><is><t>title</t></is></c><c r="C1" s="1"/><c r="D1"><v>7</v></c></row>"#,
+            // An ISO date cell, and a text cell that holds nothing.
+            r#"<row r="2"><c r="A2" s="4" t="d"><v>2010-01-11</v></c><c r="B2" t="inlineStr"><is><t></t></is></c><c r="C2"><f>B1&amp;"!"</f><v>title!</v></c></row>"#,
+            r#"</sheetData><mergeCells count="1"><mergeCell ref="A1:C1"/></mergeCells></worksheet>"#,
+        );
+        let (result, content, _, _, dir) = export(&single_sheet_entries("", sheet, vec![]));
+        assert_eq!(result.cells, 5, "the empty text cell is not a value");
+        assert!(
+            content.contains(
+                r#"<table:table-cell table:number-columns-spanned="3" office:value-type="string"><text:p>title</text:p></table:table-cell><table:covered-table-cell office:value-type="string"><text:p>title</text:p></table:covered-table-cell><table:covered-table-cell/>"#
+            ),
+            "{content}"
+        );
+        assert!(
+            content.contains(r#"office:value-type="date" office:date-value="2010-01-11""#),
+            "{content}"
+        );
+        assert!(
+            content.contains(r#"<text:p>2010-01-11</text:p></table:table-cell><table:table-cell/><table:table-cell table:formula="#),
+            "{content}"
+        );
+        // The covered value is still there for the formula that reads it.
+        let round = dir.path().join("round.xlsx");
+        crate::convert::convert_to_xlsx(&dir.path().join("book.ods"), &round).unwrap();
+        let sheet = read_entry(&round, "xl/worksheets/sheet1.xml");
+        assert!(sheet.contains(r#"<c r="B1" t="inlineStr">"#), "{sheet}");
+        assert!(sheet.contains(r#"<c r="A2" s="1"><v>40189</v></c>"#), "{sheet}");
+
+        assert!(is_iso_date("2010-01-11T09:30:00"));
+        assert!(is_iso_date("2010-01-11T09:30:00.250"));
+        assert!(!is_iso_date("2010-01-11T09:30:00Z"));
+        assert!(!is_iso_date("2010-1-11"));
+        assert!(!is_iso_date("not a date"));
     }
 }
