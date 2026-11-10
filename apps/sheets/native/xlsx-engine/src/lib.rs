@@ -28,8 +28,16 @@ mod cell_images;
 mod escher;
 pub mod external_links;
 mod odf_formula;
+#[cfg(test)]
+mod odf_import_tests;
 mod odf_functions;
+mod odf_cell_styles;
 mod odf_layout;
+mod odf_number_format;
+mod odf_page;
+mod odf_rules;
+mod odf_sheet_format;
+mod odf_sheet_parts;
 pub mod ods_export;
 mod ods_print;
 mod ods_styles;
