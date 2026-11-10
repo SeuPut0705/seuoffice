@@ -35,7 +35,9 @@ function fromHost(data: Record<string, unknown>): void {
  * `collab_connect` opens a socket on the real server, frames go both ways
  * verbatim, and a `save` is stored and answered.
  */
-function playHost(options: { canEdit: boolean }): { stored: { bytes: Uint8Array; version: unknown }[] } {
+function playHost(options: { canEdit: boolean }): {
+  stored: { bytes: Uint8Array; version: unknown }[]
+} {
   const stored: { bytes: Uint8Array; version: unknown }[] = []
   const sockets = new Map<number, { message?: (frame: string | Uint8Array) => void }>()
   vi.spyOn(host, 'postMessage').mockImplementation((message: unknown) => {
@@ -67,7 +69,9 @@ function playHost(options: { canEdit: boolean }): { stored: { bytes: Uint8Array;
       queueMicrotask(() => fromHost({ type: 'collab_open', connectId: id }))
     } else if (data.type === 'collab_frame') {
       const frame = data.frame
-      sockets.get(id)?.message?.(typeof frame === 'string' ? frame : new Uint8Array(frame as ArrayBuffer))
+      sockets
+        .get(id)
+        ?.message?.(typeof frame === 'string' ? frame : new Uint8Array(frame as ArrayBuffer))
     } else if (data.type === 'save') {
       stored.push({ bytes: new Uint8Array(data.bytes as ArrayBuffer), version: data.collabVersion })
       queueMicrotask(() => fromHost({ type: 'saved', saveId: data.saveId }))
@@ -83,7 +87,9 @@ async function open(collab: boolean): Promise<void> {
 }
 
 const statuses = (): CollabStatus[] =>
-  sent.filter((message) => message.type === 'collab_status').map((message) => message.status as CollabStatus)
+  sent
+    .filter((message) => message.type === 'collab_status')
+    .map((message) => message.status as CollabStatus)
 
 function join(editors: ToyEditor<MapOp>[]) {
   return page.joinPageCollab<{ bytes: Uint8Array }, MapOp>({
@@ -137,7 +143,9 @@ describe('joining a co-edited page', () => {
     expect(statuses()).toEqual([])
 
     await window.seuCollab!.attach({ bytes: collab.baseBytes })
-    await vi.waitFor(() => expect(statuses().at(-1)).toMatchObject({ phase: 'live', canEdit: true }))
+    await vi.waitFor(() =>
+      expect(statuses().at(-1)).toMatchObject({ phase: 'live', canEdit: true }),
+    )
     // a second attach is the same session
     await collab.attach({ bytes: collab.baseBytes })
     expect(editors).toHaveLength(1)
@@ -155,7 +163,9 @@ describe('joining a co-edited page', () => {
 
     fromHost({ type: 'request_save', requestId: 7 })
     await vi.waitFor(() =>
-      expect(sent).toContainEqual(expect.objectContaining({ type: 'request_save_done', requestId: 7, ok: true })),
+      expect(sent).toContainEqual(
+        expect.objectContaining({ type: 'request_save_done', requestId: 7, ok: true }),
+      ),
     )
     expect(stored).toHaveLength(1)
     expect(stored[0].version).toBe(2)
@@ -172,7 +182,9 @@ describe('joining a co-edited page', () => {
     await join([])
     fromHost({ type: 'request_save', requestId: 3 })
     await vi.waitFor(() =>
-      expect(sent).toContainEqual(expect.objectContaining({ type: 'request_save_done', requestId: 3, ok: false })),
+      expect(sent).toContainEqual(
+        expect.objectContaining({ type: 'request_save_done', requestId: 3, ok: false }),
+      ),
     )
   })
 
@@ -187,7 +199,9 @@ describe('joining a co-edited page', () => {
     const editors: ToyEditor<MapOp>[] = []
     const collab = (await join(editors))!
     await collab.attach({ bytes: collab.baseBytes })
-    await vi.waitFor(() => expect(statuses().at(-1)).toMatchObject({ phase: 'live', canEdit: false }))
+    await vi.waitFor(() =>
+      expect(statuses().at(-1)).toMatchObject({ phase: 'live', canEdit: false }),
+    )
     expect(editors[0].editable).toBe(false)
   })
 
@@ -204,7 +218,11 @@ describe('joining a co-edited page', () => {
     }))!
     await collab.attach(null)
     expect(sent).toContainEqual(
-      expect.objectContaining({ type: 'error', code: 'collab_unavailable', message: 'an edit kind this editor cannot sync' }),
+      expect.objectContaining({
+        type: 'error',
+        code: 'collab_unavailable',
+        message: 'an edit kind this editor cannot sync',
+      }),
     )
     expect(sent).toContainEqual(expect.objectContaining({ type: 'collab_disconnect' }))
     await expect(collab.save()).rejects.toThrow()
