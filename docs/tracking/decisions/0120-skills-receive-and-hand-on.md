@@ -32,3 +32,10 @@
 - 코어: `packages/ai-provider/src/user-skills/`의 `import.ts`(`SkillImportSource`, `prepareSkillImport`, `prepareTextImport`, `prepareSkillFileImport`, `droppedSkillSourceOf`), `archive.ts`(`skillArchiveLayout`, `readSkillArchiveLayout`), `export.ts`(`buildSkillBundleZip`, `exportSkillBundleZip`), `warnings.ts`, `github.ts`(스킬 목록 사이트 주소).
 - 창구: `skills:import-text`, `skills:take-dropped`, `skills:export-bundle`(설정 화면만), 알림 `skills:dropped`. 끌어 놓기 판정은 `packages/electron-utils`의 `partitionDropPayload`(`skillFiles`)와 껍데기 앱의 `handleDroppedFiles`다.
 - 2단계 이후(쓰는 곳, 판 기록, 함께 쓰는 폴더)는 같은 `SkillImportSource`에 출처를 더한다.
+
+## 덧붙임 (2026-11-10)
+
+처음 쓰는 사람의 시험에서 두 가지가 바뀌었다(결정 0127). 위의 글은 그때의 결정대로 둔다.
+
+- 스킬이 아닌 zip만 끌어 놓으면 이제 설정 → 스킬에 "스킬을 찾지 못했습니다"가 한 번 보인다. 문서와 함께 놓은 zip에는 지금도 아무 말도 하지 않는다. "택하지 않은 것"의 경고 상자는 여전히 띄우지 않는다.
+- 글 붙여넣기는 맨 앞의 빈칸 말고도 코드 울타리 줄과 다른 글 다섯 줄까지를 벗겨 읽는다.
