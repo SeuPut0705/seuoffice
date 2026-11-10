@@ -752,6 +752,8 @@ pub(crate) fn chart_document(
                 r#" chart:label-cell-address="{}""#,
                 escape_xml(&range)
             )),
+            // A series nobody named gets the name a reader makes up for it.
+            None if bound && series.name.is_empty() => {}
             // A name typed into the chart rather than read from a cell.
             None if bound => attributes.push_str(&format!(
                 r#" loext:label-string="{}""#,

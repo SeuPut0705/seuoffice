@@ -202,17 +202,23 @@ fn sheet_frames(
             "chart" => (
                 visual.chart.as_ref().and_then(|chart| {
                     // The model keeps the cell a series is named after only
-                    // when the chart saved no copy of the name. The cell is
-                    // what keeps the name live, so it is read from the part.
+                    // when the chart saved no copy of the name, and gives a
+                    // series without a name the one Excel shows for it. The
+                    // cell is what keeps a name live, and a name nobody gave
+                    // is not one to write, so both are read from the part.
                     let named = package
                         .zip(visual.chart_path.as_deref())
-                        .and_then(|(package, part)| series_name_cells(package, part))
-                        .filter(|cells| cells.len() == chart.series.len())
-                        .map(|cells| {
+                        .and_then(|(package, part)| series_names(package, part))
+                        .filter(|names| names.len() == chart.series.len())
+                        .map(|names| {
                             let mut chart = chart.clone();
-                            for (series, cell) in chart.series.iter_mut().zip(cells) {
-                                if series.name_ref.is_none() {
-                                    series.name_ref = cell;
+                            for (series, name) in chart.series.iter_mut().zip(names) {
+                                match name {
+                                    SeriesName::Cell(cell) if series.name_ref.is_none() => {
+                                        series.name_ref = Some(cell);
+                                    }
+                                    SeriesName::Absent => series.name.clear(),
+                                    _ => {}
                                 }
                             }
                             chart
@@ -247,9 +253,19 @@ fn sheet_frames(
 /// A chart part is a few kilobytes; one past this is not read for names.
 const MAX_CHART_PART_BYTES: u64 = 16 * 1024 * 1024;
 
-/// The formula each series of a chart part takes its name from, in the order
-/// the series appear, `None` for a name typed into the chart.
-fn series_name_cells(package: &Path, part: &str) -> Option<Vec<Option<String>>> {
+/// Where a series of a chart part has its name from.
+#[derive(Debug, PartialEq)]
+enum SeriesName {
+    /// The formula of the cell it is named after.
+    Cell(String),
+    /// Typed into the chart.
+    Typed,
+    /// The series has no name.
+    Absent,
+}
+
+/// How each series of a chart part is named, in the order the series appear.
+fn series_names(package: &Path, part: &str) -> Option<Vec<SeriesName>> {
     use std::io::Read;
     let mut archive = ZipArchive::new(File::open(package).ok()?).ok()?;
     let entry = archive.by_name(part.trim_start_matches('/')).ok()?;
@@ -272,14 +288,19 @@ fn series_name_cells(package: &Path, part: &str) -> Option<Vec<Option<String>>> 
             .descendants()
             .filter(|node| node.is_element() && node.tag_name().name() == "ser")
             .map(|series| {
-                let tx = document.get_node(child(series, "tx")?)?;
-                let reference = document.get_node(child(tx, "strRef")?)?;
-                let formula = document.get_node(child(reference, "f")?)?;
-                formula
-                    .text()
+                let Some(tx) = child(series, "tx").and_then(|id| document.get_node(id)) else {
+                    return SeriesName::Absent;
+                };
+                child(tx, "strRef")
+                    .and_then(|id| document.get_node(id))
+                    .and_then(|reference| child(reference, "f"))
+                    .and_then(|id| document.get_node(id))
+                    .and_then(|formula| formula.text())
                     .map(str::trim)
                     .filter(|formula| !formula.is_empty())
-                    .map(str::to_owned)
+                    .map_or(SeriesName::Typed, |formula| {
+                        SeriesName::Cell(formula.to_owned())
+                    })
             })
             .collect(),
     )
@@ -3811,6 +3832,8 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
             r#"<c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>typed</c:v></c:tx><c:spPr><a:ln><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></a:ln></c:spPr>"#,
             r#"<c:trendline><c:trendlineType val="movingAvg"/><c:period val="2"/></c:trendline>"#,
             r#"<c:cat><c:strRef><c:f>Data!$A$1:$A$2</c:f></c:strRef></c:cat><c:val><c:numRef><c:f>Data!$B$1:$B$2</c:f></c:numRef></c:val></c:ser>"#,
+            // A series nobody named.
+            r#"<c:ser><c:idx val="1"/><c:order val="1"/><c:cat><c:strRef><c:f>Data!$A$1:$A$2</c:f></c:strRef></c:cat><c:val><c:numRef><c:f>Data!$C$1:$C$2</c:f></c:numRef></c:val></c:ser>"#,
             r#"<c:axId val="1"/><c:axId val="2"/></c:lineChart>"#,
             r#"<c:catAx><c:axId val="1"/><c:scaling/><c:delete val="0"/><c:axPos val="b"/><c:crossAx val="2"/></c:catAx>"#,
             r#"<c:valAx><c:axId val="2"/><c:scaling/><c:delete val="0"/><c:axPos val="l"/><c:crossAx val="1"/></c:valAx>"#,
@@ -3884,6 +3907,13 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
             chart.contains(r#" loext:label-string="&quot;typed&quot;" chart:class="chart:line"><chart:regression-curve chart:style-name="ch"#),
             "{chart}"
         );
+        // The second series has no name, and is not given the one a
+        // spreadsheet shows for it.
+        assert!(
+            chart.contains(r#" chart:values-cell-range-address="Data.C1:Data.C2" chart:class="chart:line">"#),
+            "{chart}"
+        );
+        assert!(!chart.contains("Series2"), "{chart}");
     }
 
     #[test]
