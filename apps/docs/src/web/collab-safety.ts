@@ -91,6 +91,11 @@ const UNSAFE_TOKEN =
 const LINK_SCHEMES = new Set(['http', 'https', 'mailto', 'tel', 'ftp', 'file'])
 /** keys that reach an object's prototype when an App or renderer copies the object */
 const RESERVED = new Set(['__proto__', 'constructor', 'prototype'])
+/**
+ * Nesting no document reaches: the deepest fixture (tables nested in tables)
+ * is 53 levels, and Word nests tables far deeper than any of them
+ */
+const MAX_DEPTH = 512
 
 /** A value no rule can make safe */
 export class UnsafeValue extends Error {}
@@ -128,59 +133,33 @@ export interface Safety {
  * nothing needed changing. `Step.fromJSON` still rejects a malformed one.
  */
 export function safeStep(step: Json): Json {
-  ordinaryKeys(step)
-  if (!isObject(step)) return step
-  let out = step
-  if (isObject(step.slice)) {
-    const slice = safeSlice(step.slice)
-    if (slice !== step.slice) out = { ...out, slice }
-  }
-  if (isObject(step.mark)) {
-    const mark = safeNode(step.mark, {})
-    if (mark !== step.mark) out = { ...out, mark }
-  }
-  if ((step.stepType === 'attr' || step.stepType === 'docAttr') && typeof step.attr === 'string') {
-    // no edit sets an equation's markup alone: it always comes with its OMML
-    const value = step.attr === 'mathml' ? '' : safeValue(step.value, step.attr, {})
-    if (value !== step.value) out = { ...out, value }
-  }
-  return out
+  wellFormed(step, 0)
+  return safeValue(step, '', {})
 }
 
-function safeSlice(slice: JsonObject): JsonObject {
-  const content = slice.content
-  if (!Array.isArray(content)) return slice
-  const nodes = content.map((node) => safeNode(node, {}))
-  return nodes.some((node, i) => node !== content[i]) ? { ...slice, content: nodes } : slice
+/** A node or mark JSON, judged as a step's content is */
+export function safeNode(node: Json, how: Safety): Json {
+  wellFormed(node, 0)
+  return safeValue(node, '', how)
 }
 
-/** Throws `UnsafeValue` when an object anywhere in `json` has a key naming the prototype chain */
-function ordinaryKeys(json: Json): void {
-  if (Array.isArray(json)) {
-    for (const item of json) ordinaryKeys(item)
+/**
+ * Throws `UnsafeValue` for what no rule can make safe and the renderer would
+ * trip over on every replay: a key naming the prototype chain, a number JSON
+ * cannot hold (`1e999` parses to Infinity), nesting deeper than any document.
+ */
+function wellFormed(json: Json, depth: number): void {
+  if (depth > MAX_DEPTH) throw new UnsafeValue('nested deeper than any document')
+  if (typeof json === 'number') {
+    if (!Number.isFinite(json)) throw new UnsafeValue(`not a finite number: ${json}`)
+  } else if (Array.isArray(json)) {
+    for (const item of json) wellFormed(item, depth + 1)
   } else if (isObject(json)) {
     for (const [key, value] of Object.entries(json)) {
       if (RESERVED.has(key)) throw new UnsafeValue(`a reserved key: ${key}`)
-      ordinaryKeys(value)
+      wellFormed(value, depth + 1)
     }
   }
-}
-
-/** A node or mark JSON (`{ type, attrs, content, marks }`) with safe attributes */
-export function safeNode(node: Json, how: Safety): Json {
-  if (!isObject(node)) return node
-  let out = node
-  if (isObject(node.attrs)) {
-    const attrs = safeObject(node.attrs, how, node.type === 'docInlineMath')
-    if (attrs !== node.attrs) out = { ...out, attrs }
-  }
-  for (const key of ['content', 'marks'] as const) {
-    const list = node[key]
-    if (!Array.isArray(list)) continue
-    const children = list.map((child) => safeNode(child, how))
-    if (children.some((child, i) => child !== list[i])) out = { ...out, [key]: children }
-  }
-  return out
 }
 
 /**
@@ -191,27 +170,52 @@ export function safeNode(node: Json, how: Safety): Json {
 export function safeEntry(key: string, value: Json, how: Safety = {}): Json {
   for (const part of key.split(':'))
     if (RESERVED.has(part)) throw new UnsafeValue(`a reserved entry key: ${key}`)
-  ordinaryKeys(value)
+  wellFormed(value, 0)
   // the bibliography and Zotero data are free text the App shows through React
   const urlsOnly = how.urlsOnly || key === 'sources' || key === 'zotero'
   return safeValue(value, key, { ...how, urlsOnly })
 }
 
 /**
- * `inline`: the attributes of an inline formula, whose markup is the inline
- * form of its OMML; a display equation's (`formulaDisplay`) is the block form
+ * Every key of `object` judged, whatever shape it has: a node (`type` and
+ * `attrs`) gets no pass for its other keys. `inline`: the attributes of an
+ * inline formula, whose markup is the inline form of its OMML; a display
+ * equation's (`formulaDisplay`) is the block form.
  */
 function safeObject(object: JsonObject, how: Safety, inline = false): JsonObject {
   let out = object
+  const node = typeof object.type === 'string'
+  const attrStep = object.stepType === 'attr' || object.stepType === 'docAttr'
   for (const [key, value] of Object.entries(object)) {
-    const next = safeValue(value, key, how)
+    if (key === 'mathml') continue
+    let next: Json
+    if (key === 'attrs' && node && isObject(value)) {
+      next = safeObject(value, how, object.type === 'docInlineMath')
+    } else if (key === 'value' && attrStep && typeof object.attr === 'string') {
+      // no edit sets an equation's markup alone: it always comes with its OMML
+      next =
+        object.attr === 'mathml'
+          ? value === '' || value === null
+            ? value
+            : ''
+          : safeValue(value, object.attr, how)
+    } else {
+      next = safeValue(value, key, how)
+    }
     if (next !== value) out = { ...out, [key]: next }
   }
-  if (typeof object.mathml === 'string') {
-    // the markup is a pure function of the OMML: the same converter makes it on every page
+  if (Object.hasOwn(object, 'mathml')) {
+    // The markup is a pure function of the OMML: the same converter makes it on every page.
+    // Anything but a string (an array, an object) would reach innerHTML through String().
+    const markup = object.mathml
     const omml = typeof object.omml === 'string' ? object.omml : ''
-    const mathml = object.mathml && omml ? rebuilt(omml, inline) : ''
-    if (mathml !== object.mathml) out = { ...out, mathml }
+    const mathml =
+      markup === null
+        ? null
+        : typeof markup === 'string' && markup && omml
+          ? rebuilt(omml, inline)
+          : ''
+    if (mathml !== markup) out = { ...out, mathml }
   }
   return out
 }
@@ -221,19 +225,17 @@ function safeValue(value: Json, key: string, how: Safety): Json {
     const items = value.map((item) => safeValue(item, key, how))
     return items.some((item, i) => item !== value[i]) ? items : value
   }
-  if (isObject(value)) {
-    // a node model kept in an attribute (a text box's content, a header's paragraphs)
-    if (typeof value.type === 'string' && isObject(value.attrs)) return safeNode(value, how)
-    return safeObject(value, how)
-  }
+  if (isObject(value)) return safeObject(value, how)
   if (typeof value !== 'string') return value
-  if (key === 'mathml') return value
   if (LINK_KEY.test(key)) return safeLink(value) ? value : ''
   if (PICTURE_KEY.test(key)) return safePicture(value)
+  // a numbering format's text is drawn as an attribute and inside a CSS string
+  // (`cssString` escapes quotes and backslashes): only a line break would end that string
+  if (key === 'lvlText') return /[\n\r\f]/.test(value) ? '' : value
   if (how.urlsOnly || FREE_TEXT.has(key) || XML_KEY.test(key)) return value
   const json = jsonIn(value)
   if (json !== undefined) {
-    ordinaryKeys(json)
+    wellFormed(json, 0)
     const next = safeValue(json, key, how)
     return next === json ? value : JSON.stringify(next)
   }

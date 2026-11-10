@@ -151,6 +151,9 @@ function hostile(): { inline: Json[]; block: Json[] } {
   return {
     inline: [
       { ...equation, attrs: { ...equation.attrs, mathml: HOSTILE_MARKUP } },
+      // markup that is not a string still reaches innerHTML through String()
+      { ...equation, attrs: { ...equation.attrs, mathml: [HOSTILE_MARKUP] } },
+      { ...equation, attrs: { ...equation.attrs, mathml: { toString: HOSTILE_MARKUP } } },
       { type: 'docInlineImage', attrs: { dataUrl: HOSTILE_SVG, widthPx: 10, heightPx: 10 } },
       {
         type: 'docInlineImage',
@@ -169,6 +172,20 @@ function hostile(): { inline: Json[]; block: Json[] } {
       {
         ...display,
         attrs: { ...display.attrs, formulaDisplay: { ...formula, mathml: HOSTILE_MARKUP } },
+      },
+      // a node-shaped wrapper: every key of it is still judged
+      {
+        ...display,
+        attrs: {
+          ...display.attrs,
+          formulaDisplay: {
+            type: 'x',
+            attrs: {},
+            tokens: ['x'],
+            omml: '<m:oMath/>',
+            mathml: HOSTILE_MARKUP,
+          },
+        },
       },
     ],
   }
@@ -253,7 +270,8 @@ describe('this person’s own edit holding a value the peers would replace', () 
     )
     expect(alice.editor.state.doc).toBe(before)
     expect(alice.sent).toEqual([])
-    expect(alice.refused).toEqual(Array(7).fill('unsafe'))
+    // one per inline insert, the block insert, the link mark and the attribute change
+    expect(alice.refused).toEqual(Array(inline.length + 3).fill('unsafe'))
     insert(alice, legitimate())
     expect(alice.sent).toHaveLength(1)
     expect(threats(alice.editor)).toEqual([])
@@ -350,6 +368,52 @@ describe('a peer’s outside-state entries', () => {
     const comment = { id: '5', author: "O'Brien", text: 'see <b>this</b>; "quoted"' }
     expect(received('comment:5', comment)).toEqual(comment)
   })
+
+  it('judge every key of a node-shaped wrapper', () => {
+    // what the App gets: none of the payloads survive
+    const header = received('header', {
+      type: 'x',
+      attrs: {},
+      headerDirty: true,
+      header: {
+        text: 'T',
+        paras: [
+          {
+            runs: [
+              {
+                text: 'a',
+                link: { href: 'javascript:alert(1)' },
+                image: {
+                  rule: { colorHex: '000;position:fixed;inset:0;z-index:99999;background:#fff' },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    })
+    expect(JSON.stringify(header)).not.toMatch(/javascript:|position:fixed/)
+  })
+
+  it('keep a numbering format’s text as written, unless it breaks a line', () => {
+    const level = (lvlText: string) => ({
+      numFmt: 'decimal',
+      lvlText,
+      indentLeft: 720,
+      hanging: 360,
+    })
+    const formats = ['<%1>', "'%1'", '{%1}', '%1;', '"%1"']
+    const numbering = { numId: '7', kind: 'ordered', levels: formats.map(level) }
+    expect(received('num:7', numbering)).toEqual(numbering)
+    // the marker goes into a CSS string, which a line break would end
+    const broken = { numId: '8', kind: 'ordered', levels: [level('%1\n;position:fixed')] }
+    expect(received('num:8', broken)).toEqual({ ...broken, levels: [level('')] })
+    // and this person may define one
+    const alice = page()
+    alice.set('num:7', numbering)
+    expect(alice.refused).toEqual([])
+    expect(alice.sent).toEqual([{ kind: 'side', key: 'num:7', value: numbering }])
+  })
 })
 
 describe('keys that name the prototype chain', () => {
@@ -375,6 +439,23 @@ describe('keys that name the prototype chain', () => {
         steps: [{ stepType: 'attr', pos: 0, attr: 'tabStops', value: tabStops }],
       }),
     ).toThrow()
+  })
+
+  it('make decode throw on a number JSON cannot hold, and on nesting deeper than any document', () => {
+    const { adapter } = page()
+    const infinite = JSON.parse(
+      '{"kind":"steps","steps":[{"stepType":"attr","pos":0,"attr":"indentLeft","value":1e999}]}',
+    ) as Json
+    expect(() => adapter.decode(infinite)).toThrow()
+    let deep: Json = 'x'
+    for (let i = 0; i < 1000; i++) deep = { inner: deep }
+    expect(() => adapter.decode({ kind: 'side', key: 'header', value: deep })).toThrow()
+    // a local edit holding either never applies
+    const alice = page()
+    alice.set('header', deep)
+    alice.editor.view.dispatch(alice.editor.state.tr.setNodeAttribute(0, 'indentLeft', Infinity))
+    expect(alice.refused).toEqual(['unsafe', 'unsafe'])
+    expect(alice.sent).toEqual([])
   })
 })
 
