@@ -10,6 +10,10 @@
  * gateway-complete request body as `ai_request`; the host answers with raw
  * SSE bytes in `ai_chunk`, then `ai_end`, or `ai_error`, and the page sends
  * `ai_cancel` when it stops reading.
+ *
+ * `ready` says whether this page can co-edit (`registerCollabCapable`). When
+ * `open` says the host relays co-editing, `collab_*` messages carry the
+ * frames of the host's socket (see collab-link.ts).
  */
 
 export const EMBED_SOURCE = 'seuoffice'
@@ -22,6 +26,8 @@ export interface EmbedOpen {
   bytes: ArrayBuffer
   /** the host relays AI requests to its gateway (`ai_request`) */
   ai: boolean
+  /** the host relays co-editing frames (`collab_connect`) */
+  collab: boolean
 }
 
 interface Peer {
@@ -36,6 +42,9 @@ let lastDirty: boolean | undefined
 let nextSaveId = 1
 const pendingSaves = new Map<number, { resolve: () => void; reject: (error: Error) => void }>()
 let saveRequestHandler: (() => Promise<void>) | undefined
+let collabCapable = false
+let collabMessageHandler: ((data: Record<string, unknown>) => void) | undefined
+let collabOffered = false
 
 /** One piece of a host's answer, read by the response body in arrival order */
 type AiAnswerPart =
@@ -107,11 +116,20 @@ function listen(): Promise<EmbedOpen | null> {
     window.addEventListener('message', onHostMessage)
     // a page that goes away stops reading: the host should stop paying for the answers
     window.addEventListener('pagehide', cancelAllAiRequests)
-    resolve({ fileName: data.fileName, bytes: data.bytes, ai: data.ai === true })
+    collabOffered = data.collab === true
+    resolve({
+      fileName: data.fileName,
+      bytes: data.bytes,
+      ai: data.ai === true,
+      collab: collabOffered,
+    })
   }
   window.addEventListener('message', onOpen)
-  // ready carries no data, so any parent may hear it
-  window.parent.postMessage({ source: EMBED_SOURCE, version: EMBED_VERSION, type: 'ready' }, '*')
+  // ready carries only whether this page co-edits, so any parent may hear it
+  window.parent.postMessage(
+    { source: EMBED_SOURCE, version: EMBED_VERSION, type: 'ready', collab: collabCapable },
+    '*',
+  )
   return promise
 }
 
@@ -134,6 +152,8 @@ function onHostMessage(event: MessageEvent): void {
     typeof data.requestId === 'string'
   ) {
     onAiAnswer(data.requestId, data)
+  } else if (typeof data.type === 'string' && data.type.startsWith('collab_')) {
+    collabMessageHandler?.(data)
   }
 }
 
@@ -259,7 +279,7 @@ export function requestAiFromHost(body: unknown, signal?: AbortSignal | null): P
   return settled
 }
 
-function reply(message: Record<string, unknown>, transfer: Transferable[] = []): void {
+export function reply(message: Record<string, unknown>, transfer: Transferable[] = []): void {
   if (!peer) return
   peer.target.postMessage(
     { source: EMBED_SOURCE, version: EMBED_VERSION, ...message },
@@ -281,9 +301,14 @@ export function reportError(code: EmbedOpenErrorCode, message: string): void {
 
 /**
  * Hand the document's bytes to the host, which stores them. Settles when the
- * host answers: resolves on `saved`, rejects with the host's message.
+ * host answers: resolves on `saved`, rejects with the host's message. A
+ * co-edited save names the exact version the bytes hold.
  */
-export function saveToHost(fileName: string, bytes: Uint8Array): Promise<void> {
+export function saveToHost(
+  fileName: string,
+  bytes: Uint8Array,
+  collab?: { version: number },
+): Promise<void> {
   if (!peer) return Promise.reject(new Error('no host to save to: the page is not embedded'))
   const saveId = nextSaveId++
   // an exact fresh copy the page can transfer without losing its own
@@ -292,7 +317,9 @@ export function saveToHost(fileName: string, bytes: Uint8Array): Promise<void> {
   const settled = new Promise<void>((resolve, reject) =>
     pendingSaves.set(saveId, { resolve, reject }),
   )
-  reply({ type: 'save', saveId, fileName, bytes: copy.buffer }, [copy.buffer])
+  const message: Record<string, unknown> = { type: 'save', saveId, fileName, bytes: copy.buffer }
+  if (collab) message.collabVersion = collab.version
+  reply(message, [copy.buffer])
   return settled
 }
 
@@ -306,4 +333,23 @@ export function reportDirty(dirty: boolean): void {
 /** The app's own save, run when the host asks for one (`request_save`) */
 export function onHostSaveRequest(handler: () => Promise<void>): void {
   saveRequestHandler = handler
+}
+
+/**
+ * Declare that this app co-edits. Call it before anything asks for the
+ * document: `ready` carries the answer, and the host decides from it.
+ */
+export function registerCollabCapable(): void {
+  if (started) throw new Error('registerCollabCapable must run before the page announces ready')
+  collabCapable = true
+}
+
+/** The host's `collab_*` messages, already checked to come from the host */
+export function onCollabMessage(handler: (data: Record<string, unknown>) => void): void {
+  collabMessageHandler = handler
+}
+
+/** Whether the host's `open` asked for co-editing; false before `open` */
+export function hostRelaysCollab(): boolean {
+  return collabOffered
 }

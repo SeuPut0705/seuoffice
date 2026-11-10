@@ -71,6 +71,36 @@ const doc = openDocument(container, {
 - 요청 수와 토큰 양 제한은 호스트가 한다. 도구를 부를 때마다 요청이 하나 더 온다.
 - 응답 머리글은 `Content-Type`과 `Retry-After`만 페이지로 간다. 혼잡 응답에 `Retry-After`를 20초보다 길게 주면 페이지는 다시 보내지 않는다.
 
+## 함께 고치기
+
+`collab`을 넘기면 여러 사람이 같은 문서를 동시에 고친다. 보기·고치기 둘 다 된다. 공동 편집 서버와의 WebSocket은 호스트가 연다. 호스트가 자기 인증으로 연결을 만들고, 이 패키지는 페이지와 그 소켓 사이에서 프레임을 그대로 나른다. 페이지는 문서 주소나 토큰을 모른다.
+
+```ts
+const doc = openDocument(container, {
+  baseUrl: `${location.origin}/seuoffice/`,
+  bytes,
+  fileName: 'report.docx',
+  mode: 'edit',
+  collab: {
+    connect: () => new WebSocket(`${collabUrl}?doc=${documentId}`), // 열리기 전의 소켓을 바로 돌려준다
+    onStatus: (status) => showPeers(status.peers),
+  },
+  onSave: async ({ fileName, bytes, version }) => {
+    await uploadToServer(fileName, bytes, version) // bytes는 정확히 version 판이다
+  },
+})
+
+if (!(await doc.collabCapable)) {
+  // 이 앱은 아직 함께 고치기를 못 한다: 닫고 편집 잠금을 잡은 뒤 collab 없이 다시 연다
+}
+```
+
+- 편집 잠금은 잡지 않는다. 같은 문서를 연 사람은 모두 같은 서버에 붙는다.
+- `connect()`는 페이지가 연결을 원할 때마다 불린다. 끊긴 뒤 다시 붙을 때도 불리고, 그때 이전 소켓은 닫힌다. `connect()`가 실패하거나 소켓에 오류가 나면 페이지는 끊긴 것으로 보고 다시 시도한다.
+- `onSave`는 `version`을 함께 받는다. 그 판보다 오래된 판이 나중에 와도 덮어쓰지 않으려면 호스트가 판 번호를 비교한다.
+- `doc.collabCapable`은 페이지가 `ready`에서 알린 값이다. `false`면 그 앱은 함께 고치기를 못 하니 잠금 방식으로 연다.
+- `doc.destroy()`는 소켓도 닫는다. `collab`을 주지 않으면 공동 편집 메시지는 하나도 오가지 않는다.
+
 ## 오류
 
 `SeuofficeEmbedError.code`: `unsupported_format`, `too_large`(50 MB 초과), `open_failed`, `timeout`, `save_failed`.
