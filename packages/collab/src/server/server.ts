@@ -39,7 +39,7 @@ export interface Principal {
    * The sha-256 hex of the file the host holds as current. When given, a socket may seed a new
    * epoch only from exactly that file; others get `error forbidden`.
    */
-  fileHash?: string
+  fileHash?: string | undefined
 }
 
 /** One accepted WebSocket, adapted by the host from its WebSocket library */
@@ -63,6 +63,12 @@ export interface Limits {
   seedTimeoutMs: number
   /** frames of one socket waiting to be handled; past it the socket is closed */
   maxQueuedFrames: number
+  /**
+   * Size of the frames of one socket waiting to be handled; past it the socket is closed. The
+   * socket's first binary frame (its base upload) is not counted; `maxBaseBytes` bounds it.
+   * Keep it at least `maxChangeBytes`, or one large change can never be received.
+   */
+  maxQueuedBytes: number
 }
 
 const DEFAULT_LIMITS: Limits = {
@@ -72,6 +78,7 @@ const DEFAULT_LIMITS: Limits = {
   idleEpochMs: 10 * 60 * 1000,
   seedTimeoutMs: 30_000,
   maxQueuedFrames: 256,
+  maxQueuedBytes: 32 * 1024 * 1024,
 }
 
 /** setTimeout fires at once for longer delays */
@@ -79,7 +86,7 @@ const MAX_TIMER_MS = 2 ** 31 - 1
 
 export interface CollabServerOptions {
   store: CollabStore
-  limits?: Partial<Limits>
+  limits?: Partial<Limits> | undefined
 }
 
 export interface CollabServer {
@@ -96,7 +103,7 @@ export interface CollabServer {
 }
 
 export interface ServerCoreOptions extends CollabServerOptions {
-  clock?: Clock
+  clock?: Clock | undefined
 }
 
 /** The server plus what the conformance kit needs to step it deterministically */
@@ -121,6 +128,10 @@ interface Conn {
   sent: number
   /** frames received and not yet handled */
   inbox: number
+  /** size of those frames, in string length or bytes */
+  inboxBytes: number
+  /** the socket sent its one binary frame, the base upload */
+  sentBinary: boolean
   /** the socket is being closed for a frame it should not have sent; its later frames are ignored */
   refused: boolean
   /** while seeding: the timer that hands seeding on */
@@ -577,6 +588,8 @@ export function createServerCore({
         epoch: null,
         sent: 0,
         inbox: 0,
+        inboxBytes: 0,
+        sentBinary: false,
         refused: false,
         seedTimer: null,
       }
@@ -587,14 +600,25 @@ export function createServerCore({
         if (tooLarge(frame)) {
           conn.refused = true
           void enqueue(doc, conn, () => reject(doc, conn, 'too_large'))
-        } else if (conn.inbox >= limits.maxQueuedFrames) {
-          conn.refused = true
-          conn.socket.close(1008, 'too many frames')
-          void enqueue(doc, conn, () => remove(doc, conn))
         } else {
+          // A string's length bounds its memory to within a factor of two; no need to encode it
+          const counted =
+            typeof frame === 'string' ? frame.length : conn.sentBinary ? frame.byteLength : 0
+          if (typeof frame !== 'string') conn.sentBinary = true
+          if (
+            conn.inbox >= limits.maxQueuedFrames ||
+            conn.inboxBytes + counted > limits.maxQueuedBytes
+          ) {
+            conn.refused = true
+            conn.socket.close(1008, 'too many frames')
+            void enqueue(doc, conn, () => remove(doc, conn))
+            return
+          }
           conn.inbox += 1
+          conn.inboxBytes += counted
           void enqueue(doc, conn, () => {
             conn.inbox -= 1
+            conn.inboxBytes -= counted
             return onFrame(doc, conn, frame)
           })
         }

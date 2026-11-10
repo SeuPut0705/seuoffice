@@ -101,13 +101,13 @@ function fields(json: Json): Record<string, Json> {
   return json
 }
 
-function index(json: Json): number {
+function index(json: Json | undefined): number {
   if (typeof json !== 'number' || !Number.isSafeInteger(json) || json < 0)
     throw new Error('not an index')
   return json
 }
 
-function name(json: Json): string {
+function name(json: Json | undefined): string {
   if (typeof json !== 'string') throw new Error('not a string')
   return json
 }
@@ -140,7 +140,7 @@ export const toyMap: Toy<MapOp> = toy<Record<string, number>, MapOp>({
   transform: (local) => local,
   random: (_state, random, id) => ({
     id,
-    key: KEYS[Math.floor(random() * KEYS.length)],
+    key: KEYS.charAt(Math.floor(random() * KEYS.length)),
     value: random() < 0.2 ? null : Math.floor(random() * 100),
   }),
   decode(json) {

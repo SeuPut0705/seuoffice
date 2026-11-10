@@ -372,12 +372,15 @@ describe('a failing store', () => {
     }
     const server = createServerCore({ store, clock: new VirtualClock() })
     const hello = { t: 'hello', p: 1, format: FORMAT, fileHash: await sha256(BASE) }
-    const [seeder, unlucky, lucky] = ['a', 'b', 'c'].map((user) => {
+    const greeted = (user: string) => {
       const socket = new FakeSocket()
       server.accept(socket, principal(user))
       socket.receive(hello)
       return socket
-    })
+    }
+    const seeder = greeted('a')
+    const unlucky = greeted('b')
+    const lucky = greeted('c')
     await server.idle()
     seeder.receive(BASE)
     await server.idle()
@@ -400,5 +403,48 @@ describe('inbound frames', () => {
     for (let i = 0; i < 257; i++) socket.receive({ t: 'fingerprint', v: 0, fp: 'same' })
     await server.idle()
     expect(socket.closed).toBe(true)
+  })
+
+  it('closes a socket whose waiting frames hold more than maxQueuedBytes', async () => {
+    const { server, open } = await setup({ maxQueuedBytes: 1000 })
+    const submit = (seq: number) => ({ t: 'submit', seq, base: seq - 1, ops: ['x'.repeat(250)] })
+    const socket = await open('a')
+    for (let seq = 1; seq <= 3; seq++) socket.receive(submit(seq))
+    await server.idle()
+    expect(socket.closed).toBe(false)
+    expect(socket.frames().filter((frame) => frame.t === 'ack')).toHaveLength(3)
+
+    for (let seq = 4; seq <= 7; seq++) socket.receive(submit(seq))
+    await server.idle()
+    expect(socket.closed).toBe(true)
+  })
+
+  it('does not count the base upload, which only maxBaseBytes bounds', async () => {
+    const store = memoryStore()
+    const server = createServerCore({
+      store,
+      limits: { maxQueuedBytes: 1000 },
+      clock: new VirtualClock(),
+    })
+    const base = new Uint8Array(4000).fill(7)
+    const hello = { t: 'hello', p: 1, format: FORMAT, fileHash: await sha256(base) }
+    const seeder = new FakeSocket()
+    server.accept(seeder, principal('a'))
+    seeder.receive(hello)
+    seeder.receive(base)
+    await server.idle()
+    expect(seeder.closed).toBe(false)
+    expect(seeder.frames()[0]).toEqual({ t: 'need_base' })
+    expect(seeder.welcomed()).toBeTruthy()
+
+    // A second binary frame is no base upload and counts like any other frame
+    const other = new FakeSocket()
+    server.accept(other, principal('b'))
+    other.receive(hello)
+    other.receive(base)
+    other.receive(base)
+    await server.idle()
+    expect(other.closed).toBe(true)
+    expect(other.frames()).toEqual([])
   })
 })

@@ -188,7 +188,7 @@ export class SimClient<Op, E extends SimulatedEditor<Op> = SimulatedEditor<Op>> 
 }
 
 export interface SimNetworkOptions {
-  limits?: Partial<Limits>
+  limits?: Partial<Limits> | undefined
 }
 
 export class SimNetwork {
@@ -389,7 +389,8 @@ export function oldest(
 ): Next | undefined {
   let best = than
   for (const connection of connections) {
-    const stamp = connection[direction][0].stamp
+    const stamp = connection[direction][0]?.stamp
+    if (stamp === undefined) continue
     if (!best || stamp < best.stamp) best = { connection, direction, stamp }
   }
   return best

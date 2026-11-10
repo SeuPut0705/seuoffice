@@ -43,7 +43,7 @@ export interface SimulateOptions<Op> {
   /** the file every client opens */
   file: CollabFile
   adapterFactory: (bytes: Uint8Array) => SimulatedEditor<Op>
-  network?: Partial<NetworkFaults>
+  network?: Partial<NetworkFaults> | undefined
 }
 
 export interface SimulationReport {
@@ -117,7 +117,11 @@ async function run<Op>(options: SimulateOptions<Op>): Promise<SimulationReport> 
   let exports = 0
   const exporting = new Set<SimClient<Op>>()
 
-  const pick = <T>(items: T[]): T => items[Math.floor(random() * items.length)]
+  const pick = <T>(items: T[]): T => {
+    const item = items[Math.floor(random() * items.length)]
+    if (item === undefined) throw new Error('picked from an empty list')
+    return item
+  }
 
   // Invariant 4, checked on the wire: after welcome, versions arrive one by one
   net.onDeliver = (connection, raw) => {
@@ -146,7 +150,7 @@ async function run<Op>(options: SimulateOptions<Op>): Promise<SimulationReport> 
     net.break(connection, { drop, hold: !drop && random() < faults.duplicate })
   }
 
-  async function addClient(bytes: Uint8Array): Promise<void> {
+  async function addClient(bytes: Uint8Array): Promise<SimClient<Op>> {
     const index = clients.length
     const principal = {
       documentId: DOCUMENT,
@@ -154,9 +158,13 @@ async function run<Op>(options: SimulateOptions<Op>): Promise<SimulationReport> 
       name: `User ${index}`,
       canEdit: true,
     }
-    clients.push(
-      await net.client(principal, { format: options.file.format, bytes }, options.adapterFactory),
+    const client = await net.client(
+      principal,
+      { format: options.file.format, bytes },
+      options.adapterFactory,
     )
+    clients.push(client)
+    return client
   }
 
   function save(client: SimClient<Op>): void {
@@ -342,9 +350,8 @@ async function run<Op>(options: SimulateOptions<Op>): Promise<SimulationReport> 
     )
   }
 
-  await addClient(options.file.bytes)
+  const late = await addClient(options.file.bytes)
   await quiet()
-  const late = clients[clients.length - 1]
   check(late.session?.status().version === epoch.head, 'the late joiner did not reach the head')
   const lateFp = await late.editor!.fingerprint()
   check(lateFp === final, `the late joiner shows ${lateFp} where version ${epoch.head} is ${final}`)
@@ -374,11 +381,14 @@ async function replay<Op>(
   const fingerprints = new Map<number, string>()
   let at = 0
   for (const version of [...new Set(versions)].sort((a, b) => a - b)) {
-    for (; at < version; at++)
+    for (; at < version; at++) {
+      const change = log[at]
+      if (!change) throw new Error(`the log ends before version ${version}`)
       editor.integrate(
-        log[at].ops.map((op) => editor.decode(op)),
+        change.ops.map((op) => editor.decode(op)),
         [],
       )
+    }
     fingerprints.set(version, await editor.fingerprint())
   }
   return fingerprints

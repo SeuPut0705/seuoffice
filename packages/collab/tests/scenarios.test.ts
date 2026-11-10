@@ -223,7 +223,7 @@ describe('joining', () => {
     const a = await join(net, toyMap, 'a')
     await net.run()
     for (let i = 0; i < 500; i++) {
-      a.editor!.perform({ id: `a${i}`, key: 'abcde'[i % 5], value: i })
+      a.editor!.perform({ id: `a${i}`, key: 'abcde'.charAt(i % 5), value: i })
       await net.run()
     }
 
@@ -759,6 +759,26 @@ describe('getting work out', () => {
     const saving = track(a.session!.save())
     await net.settle()
     expect(codeOf(saving.outcome)).toBe('closed')
+  })
+})
+
+describe('a large edit', () => {
+  it('such as a pasted picture of 1 MiB goes out alone as one change, between small ones', async () => {
+    const net = new SimNetwork()
+    const a = await join(net, toyLines, 'a')
+    const b = await join(net, toyLines, 'b')
+    await net.run()
+    net.break(a.link.current!)
+    a.editor!.perform(ins('before', 0))
+    a.editor!.perform(ins('x'.repeat(1024 * 1024), 0))
+    a.editor!.perform(ins('after', 0))
+    await net.run()
+
+    expect(a.session!.status()).toMatchObject({ phase: 'live', unconfirmed: 0 })
+    const versions = await opIds(net)
+    expect(versions.map((ids) => ids.length)).toEqual([1, 1, 1])
+    expect(versions[1]?.[0]).toBe('x'.repeat(1024 * 1024))
+    expect(await shown(b)).toEqual(await shown(a))
   })
 })
 

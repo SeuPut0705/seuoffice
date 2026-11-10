@@ -511,13 +511,13 @@ function confirm<Op>(c: Ctx<Op>, v: number): void {
   s.nextSeq += 1
 }
 
-/** Foreign changes, in order, from `confirmed + 1` on */
+/** Foreign changes, in order, from `confirmed + 1` on; consecutive, so they end at `confirmed + length` */
 function integrateForeign<Op>(c: Ctx<Op>, changes: Change[]): void {
   const s = c.s
   const local = (s.inflight && !s.inflight.doomed ? s.inflight.ops : []).concat(s.pending)
   if (s.inflight) s.inflight = { ...s.inflight, ops: [], json: [], doomed: true }
   s.pending = []
-  s.confirmed = changes[changes.length - 1].v
+  s.confirmed += changes.length
   c.integrate = { remote: changes.map((change) => change.ops), local }
 }
 

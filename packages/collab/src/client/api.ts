@@ -80,7 +80,7 @@ export interface CollabSession {
 
 export interface CollabOptions {
   /** how long `save()` waits for local edits to be confirmed; default 30000 */
-  saveTimeoutMs?: number
+  saveTimeoutMs?: number | undefined
 }
 
 export type CollabStatus = {
