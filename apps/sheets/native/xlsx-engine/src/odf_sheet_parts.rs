@@ -16,7 +16,7 @@ use crate::odf_layout::OdsSheetLayout;
 use crate::odf_rules;
 use crate::odf_sheet_format::{
     DatabaseRange, FilterCondition, MAX_COLUMN, MAX_ROW, OdsFormats, OdsSheetFormat,
-    parse_cell_address, parse_range_address,
+    parse_cell_address, parse_range_address, split_addresses,
 };
 use crate::xlsx_package::{PartRelationship, SheetExtras, cell_reference, escape_xml};
 
@@ -26,10 +26,15 @@ const MAX_REPEATED_ROWS: u32 = 4_096;
 /// Cells that exist only through their style, per sheet. Past this the rest
 /// keep their values and lose the look of the empty cells around them.
 const MAX_STYLE_ONLY_CELLS: usize = 400_000;
+/// Rows that may carry attributes or a style of their own, per sheet.
+const MAX_ROW_ENTRIES: usize = 300_000;
 /// Cells one merge may spread its frame over.
 const MAX_MERGE_CELLS: u64 = 20_000;
 /// Rows a "hide everything below" sheet may have above the hidden part.
 const MAX_ROWS_ABOVE_HIDDEN_TAIL: u32 = 100_000;
+/// Rows a repeated row may stop short of the last one and still be the
+/// sheet's tail.
+const TAIL_SLACK: u32 = 4;
 const MAX_LINKS: usize = 65_000;
 const MAX_BREAKS: usize = 1_024;
 
@@ -38,6 +43,8 @@ const MAX_BREAKS: usize = 1_024;
 pub(crate) struct OdfSheetXml {
     /// Styles of cells that hold no value.
     pub(crate) cell_styles: HashMap<(u32, u32), u16>,
+    /// Styles of cells that hold a link, which win over the cell's own.
+    pub(crate) link_styles: HashMap<(u32, u32), u16>,
     pub(crate) row_styles: HashMap<u32, u16>,
     /// Extra `<row>` attributes: hidden, outline level, collapsed.
     pub(crate) row_attributes: HashMap<u32, String>,
@@ -50,7 +57,8 @@ pub(crate) struct OdfSheetXml {
     pub(crate) before_merges: String,
     /// Everything that follows the merges, in schema order.
     pub(crate) after_merges: String,
-    /// `<is>` content of cells whose text has runs.
+    /// `<is>` content of cells whose text has runs of its own formatting, or
+    /// spacing the value reader drops.
     pub(crate) rich: HashMap<(u32, u32), String>,
     pub(crate) extras: SheetExtras,
     /// Sheet-scoped `<definedName>` elements.
@@ -162,9 +170,11 @@ pub(crate) fn build(
             .collect(),
     };
     // A style the empty tail of the sheet repeats down to the last row is the
-    // column's own look.
+    // column's own look. Some writers end the sheet with one more row after
+    // the repeated one, so the run may stop a line or two short of the edge.
+    let reaches_end = |last: u32| last + TAIL_SLACK >= MAX_ROW - 1;
     for run in &sheet.rows {
-        if run.last >= MAX_ROW - 1 && run.last - run.first >= MAX_REPEATED_ROWS {
+        if reaches_end(run.last) && run.last - run.first >= MAX_REPEATED_ROWS {
             for cell in &run.cells {
                 let xf = style_xf(xlsx, Some(cell.style));
                 columns.fill(cell.first, cell.last, xf);
@@ -179,7 +189,7 @@ pub(crate) fn build(
         let tall = run.last - run.first >= MAX_REPEATED_ROWS;
         max_row_level = max_row_level.max(run.level);
         if tall {
-            if run.hidden && run.last >= MAX_ROW - 1 && run.first <= MAX_ROWS_ABOVE_HIDDEN_TAIL {
+            if run.hidden && reaches_end(run.last) && run.first <= MAX_ROWS_ABOVE_HIDDEN_TAIL {
                 // "Hide everything below": the rows above are written out
                 // and the sheet's default row is the hidden one.
                 zero_height = true;
@@ -206,9 +216,11 @@ pub(crate) fn build(
         let row_xf = row_xf.or(whole_row);
         for row in run.first..=run.last {
             if let Some(xf) = row_xf.filter(|xf| *xf != 0) {
-                out.row_styles.insert(row, xf);
+                if out.row_styles.len() < MAX_ROW_ENTRIES {
+                    out.row_styles.insert(row, xf);
+                }
             }
-            if !attributes.is_empty() {
+            if !attributes.is_empty() && out.row_attributes.len() < MAX_ROW_ENTRIES {
                 out.row_attributes.insert(row, attributes.clone());
             }
         }
@@ -220,7 +232,10 @@ pub(crate) fn build(
             // A run to the edge of the grid is written as far as the sheet
             // has values; past that there is nothing for it to frame.
             let last = if cell.last >= MAX_COLUMN - 1 {
-                cell.last.min(used_columns.max(cell.first))
+                if cell.first > used_columns {
+                    continue;
+                }
+                used_columns
             } else {
                 cell.last
             };
@@ -362,6 +377,10 @@ pub(crate) fn build(
     let mut targets: HashMap<&str, String> = HashMap::new();
     for ((row, column), href) in sheet.links.iter().take(MAX_LINKS) {
         let reference = cell_reference(*row, *column);
+        let style = sheet.cell_style(*row, *column).and_then(|id| formats.name(id));
+        if let Some(xf) = xlsx.linked_cell(book, style) {
+            out.link_styles.insert((*row, *column), xf);
+        }
         if let Some(location) = href.strip_prefix('#') {
             links.push_str(&format!(
                 r#"<hyperlink ref="{reference}" location="{}"/>"#,
@@ -453,6 +472,15 @@ pub(crate) fn build(
 
     for (position, runs) in &sheet.rich {
         let mut xml = String::new();
+        if runs.iter().all(|(style, _)| style.is_none()) {
+            // Text kept only for its spaces, tabs or line breaks.
+            let text: String = runs.iter().map(|(_, text)| text.as_str()).collect();
+            out.rich.insert(
+                *position,
+                format!(r#"<t xml:space="preserve">{}</t>"#, escape_xml(&text)),
+            );
+            continue;
+        }
         for (style, text) in runs {
             let properties = style
                 .and_then(|id| formats.name(id))
@@ -496,27 +524,6 @@ fn internal_location(location: &str) -> String {
             .map(convert)
             .unwrap_or_else(|| location.to_owned()),
     }
-}
-
-/// Space-separated addresses, with spaces inside quoted sheet names kept.
-fn split_addresses(text: &str) -> Vec<&str> {
-    let mut parts = Vec::new();
-    let mut quoted = false;
-    let mut start = 0;
-    for (index, character) in text.char_indices() {
-        if character == '\'' {
-            quoted = !quoted;
-        } else if character == ' ' && !quoted {
-            if index > start {
-                parts.push(&text[start..index]);
-            }
-            start = index + 1;
-        }
-    }
-    if start < text.len() {
-        parts.push(&text[start..]);
-    }
-    parts
 }
 
 /// `<cols>`: widths from the layout, and style, visibility and outline from

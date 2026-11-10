@@ -145,6 +145,7 @@ fn carries_cell_formatting_from_ods() {
             r##"<style:style style:name="ce1" style:family="table-cell" style:parent-style-name="Heading" style:data-style-name="N1"><style:table-cell-properties fo:border="0.75pt solid #000000" fo:border-bottom="1.5pt double #ff0000" style:vertical-align="middle" fo:wrap-option="wrap" style:text-align-source="fix"/><style:paragraph-properties fo:text-align="center"/><style:text-properties style:font-size-asian="14pt" fo:font-style="italic" fo:color="#0000ff"/></style:style>"##,
             r#"<style:style style:name="ce2" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N2"/>"#,
             r##"<style:style style:name="ce3" style:family="table-cell" style:parent-style-name="Default"><style:table-cell-properties fo:background-color="#ffff00"/></style:style>"##,
+            r#"<style:style style:name="ce4" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N7"/>"#,
         ),
         body: concat!(
             r#"<table:table table:name="Data">"#,
@@ -158,11 +159,16 @@ fn carries_cell_formatting_from_ods() {
             r#"<table:table-cell table:style-name="ce1" office:value-type="date" office:date-value="2026-03-05"><text:p>2026-03-05</text:p></table:table-cell>"#,
             r#"</table:table-row>"#,
             r#"<table:table-row table:default-cell-style-name="Heading"><table:table-cell office:value-type="string"><text:p>row style</text:p></table:table-cell><table:table-cell table:number-columns-repeated="5"/></table:table-row>"#,
+            r#"<table:table-row><table:table-cell table:style-name="ce4" office:value-type="float" office:value="2.5"><text:p>2.5</text:p></table:table-cell><table:table-cell table:number-columns-repeated="5"/></table:table-row>"#,
             r#"</table:table>"#,
         ),
+        // a number format declared beside the page styles, where a header
+        // field put it, is still the one the cell style names
+        page_styles: r#"<number:number-style style:name="N7"><number:number number:decimal-places="1" number:min-decimal-places="1" number:min-integer-digits="1"/></number:number-style>"#,
         ..Package::default()
     });
     let styles = read_entry(&target, "xl/styles.xml");
+    assert!(styles.contains(r#"formatCode="0.0""#), "{styles}");
     // the default cell is the document's, not the importer's own
     assert!(
         styles.contains(r#"<fonts count="3"><font><sz val="10"/><name val="맑은 고딕"/></font>"#),
@@ -307,10 +313,11 @@ fn carries_links_notes_and_text_runs_from_ods() {
     let (_dir, target) = convert(&Package {
         automatic: r##"<style:style style:name="T1" style:family="text"><style:text-properties fo:font-weight="bold" fo:color="#ff0000" style:text-position="super 58%"/></style:style>"##,
         body: concat!(
-            r#"<table:table table:name="Data"><table:table-column table:number-columns-repeated="3"/><table:table-row>"#,
+            r#"<table:table table:name="Data"><table:table-column table:number-columns-repeated="4"/><table:table-row>"#,
             r#"<table:table-cell office:value-type="string"><office:annotation><dc:creator>Kim &amp; Lee</dc:creator><dc:date>2026-01-01T00:00:00</dc:date><text:p>first line</text:p><text:p>second &lt;line&gt;</text:p></office:annotation><text:p><text:a xlink:type="simple" xlink:href="https://example.com/?a=1&amp;b=2">site</text:a></text:p></table:table-cell>"#,
             r##"<table:table-cell office:value-type="string"><text:p><text:a xlink:type="simple" xlink:href="#'My sheet'.B3">jump</text:a></text:p></table:table-cell>"##,
             r#"<table:table-cell office:value-type="string"><text:p>H<text:span text:style-name="T1">2</text:span>O</text:p></table:table-cell>"#,
+            r#"<table:table-cell office:value-type="string"><text:p><text:s text:c="2"/>a<text:s/> b<text:tab/>c<text:line-break/>d</text:p><text:p>e</text:p></table:table-cell>"#,
             r#"</table:table-row></table:table>"#,
             r#"<table:table table:name="My sheet"><table:table-column/><table:table-row><table:table-cell office:value-type="float" office:value="1"><text:p>1</text:p></table:table-cell></table:table-row></table:table>"#,
         ),
@@ -318,12 +325,21 @@ fn carries_links_notes_and_text_runs_from_ods() {
     });
     let sheet = read_entry(&target, "xl/worksheets/sheet1.xml");
     assert!(sheet.contains(r#"<t xml:space="preserve">site</t>"#), "the note is not part of the value: {sheet}");
+    // link text is shown in the link colour, which the cell format has to say
+    let styles = read_entry(&target, "xl/styles.xml");
+    assert!(styles.contains(r#"<color rgb="FF0000FF"/>"#), "{styles}");
+    assert!(sheet.contains(r#"<c r="A1" s="4" t="inlineStr">"#), "{sheet}");
     assert!(
         sheet.contains(r#"<hyperlinks><hyperlink ref="A1" r:id="rIdL1"/><hyperlink ref="B1" location="'My sheet'!B3"/></hyperlinks>"#),
         "{sheet}"
     );
     assert!(
         sheet.contains(r#"<c r="C1" t="inlineStr"><is><r><t xml:space="preserve">H</t></r><r><rPr><b/><color rgb="FFFF0000"/><vertAlign val="superscript"/></rPr><t xml:space="preserve">2</t></r><r><t xml:space="preserve">O</t></r></is></c>"#),
+        "{sheet}"
+    );
+    // spaces, tabs and line breaks ODF writes as elements stay in the text
+    assert!(
+        sheet.contains("<c r=\"D1\" t=\"inlineStr\"><is><t xml:space=\"preserve\">  a  b\tc\nd\ne</t></is></c>"),
         "{sheet}"
     );
     assert_in_order(&sheet, &["<sheetData>", "<hyperlinks>", "<legacyDrawing "]);
@@ -440,7 +456,7 @@ fn carries_validations_and_conditional_formats_from_ods() {
             r#"<table:table table:name="Data"><table:table-column table:number-columns-repeated="3"/>"#,
             r#"<table:table-row table:number-rows-repeated="3"><table:table-cell office:value-type="float" office:value="7"><text:p>7</text:p></table:table-cell><table:table-cell table:content-validation-name="val1"/><table:table-cell/></table:table-row>"#,
             r#"<table:table-row><table:table-cell office:value-type="float" office:value="9"><text:p>9</text:p></table:table-cell><table:table-cell/><table:table-cell table:content-validation-name="val2"/></table:table-row>"#,
-            r##"<calcext:conditional-formats><calcext:conditional-format calcext:target-range-address="Data.A1:Data.A4"><calcext:condition calcext:apply-style-name="Good" calcext:value="&gt;[.C1]" calcext:base-cell-address="Data.A1"/><calcext:condition calcext:apply-style-name="Good" calcext:value="formula-is(MOD(ROW();2)=0)" calcext:base-cell-address="Data.A1"/><calcext:color-scale><calcext:color-scale-entry calcext:value="0" calcext:type="minimum" calcext:color="#ff0000"/><calcext:color-scale-entry calcext:value="50" calcext:type="percentile" calcext:color="#ffff00"/><calcext:color-scale-entry calcext:value="0" calcext:type="maximum" calcext:color="#00ff00"/></calcext:color-scale></calcext:conditional-format></calcext:conditional-formats>"##,
+            r##"<calcext:conditional-formats><calcext:conditional-format calcext:target-range-address="Data.A1:Data.A4 Data.A6:Data.A7"><calcext:condition calcext:apply-style-name="Good" calcext:value="&gt;[.C1]" calcext:base-cell-address="Data.A1"/><calcext:condition calcext:apply-style-name="Good" calcext:value="formula-is(MOD(ROW();2)=0)" calcext:base-cell-address="Data.A1"/><calcext:color-scale><calcext:color-scale-entry calcext:value="0" calcext:type="minimum" calcext:color="#ff0000"/><calcext:color-scale-entry calcext:value="50" calcext:type="percentile" calcext:color="#ffff00"/><calcext:color-scale-entry calcext:value="0" calcext:type="maximum" calcext:color="#00ff00"/></calcext:color-scale></calcext:conditional-format></calcext:conditional-formats>"##,
             r#"</table:table>"#,
         ),
         ..Package::default()
@@ -449,7 +465,7 @@ fn carries_validations_and_conditional_formats_from_ods() {
     assert_in_order(&sheet, &["<sheetData>", "<conditionalFormatting ", "<dataValidations "]);
     assert!(
         sheet.contains(concat!(
-            r#"<conditionalFormatting sqref="A1:A4">"#,
+            r#"<conditionalFormatting sqref="A1:A4 A6:A7">"#,
             r#"<cfRule type="cellIs" operator="greaterThan" dxfId="0" priority="1"><formula>C1</formula></cfRule>"#,
             r#"<cfRule type="expression" dxfId="0" priority="2"><formula>MOD(ROW(),2)=0</formula></cfRule>"#,
             r#"<cfRule type="colorScale" priority="3"><colorScale><cfvo type="min"/><cfvo type="percentile" val="50"/><cfvo type="max"/><color rgb="FFFF0000"/><color rgb="FFFFFF00"/><color rgb="FF00FF00"/></colorScale></cfRule>"#,

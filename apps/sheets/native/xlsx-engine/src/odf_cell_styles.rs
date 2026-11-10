@@ -28,6 +28,8 @@ const XF_DATE_TIME: u16 = 2;
 #[cfg(test)]
 const XF_TIME: u16 = 3;
 const TIME_CODE: &str = "[h]:mm:ss";
+/// The colour link text is shown in when nothing says otherwise.
+const LINK_COLOR: &str = "0000FF";
 /// Excel's ceiling on cell formats, with room to spare.
 const MAX_XFS: usize = 64_000;
 
@@ -530,6 +532,15 @@ impl StyleBook {
         }
     }
 
+    /// Reads only the data styles under `scope`. A cell style may name a
+    /// number format that the document declares among the page styles of
+    /// `styles.xml`, because a header field uses it too.
+    pub(crate) fn read_data_styles(&mut self, scope: Node<'_, '_>) {
+        for node in scope.children().filter(Node::is_element) {
+            self.data.read(node);
+        }
+    }
+
     fn read_style(&mut self, node: Node<'_, '_>) {
         let (Some(name), Some(family)) = (attribute(node, "name"), attribute(node, "family"))
         else {
@@ -668,6 +679,8 @@ pub(crate) struct XlsxStyles {
     named: HashMap<(Option<String>, ValueKind), u16>,
     /// `(style name, edges kept)` for the cells a merge covers.
     covered: HashMap<(String, [bool; 4]), Option<u16>>,
+    /// Style name to the format of a cell that holds a link.
+    linked: HashMap<Option<String>, Option<u16>>,
 }
 
 impl XlsxStyles {
@@ -692,6 +705,7 @@ impl XlsxStyles {
             dxf_index: HashMap::new(),
             named: HashMap::new(),
             covered: HashMap::new(),
+            linked: HashMap::new(),
         };
         let base = book.resolve(None);
         let code = base
@@ -788,6 +802,32 @@ impl XlsxStyles {
             None
         };
         self.covered.insert(key, index);
+        index
+    }
+
+    /// The format of a cell whose text is a link. A reader of the document
+    /// paints link text in the link colour without the cell style saying so;
+    /// Excel paints what the cell format says. `None` when the style already
+    /// names a colour, which stays.
+    pub(crate) fn linked_cell(&mut self, book: &StyleBook, name: Option<&str>) -> Option<u16> {
+        let key = name.map(str::to_owned);
+        if let Some(index) = self.linked.get(&key) {
+            return *index;
+        }
+        let props = book.resolve(name);
+        let index = if matches!(props.font.color, Some(Some(_))) {
+            None
+        } else {
+            let mut props = (*props).clone();
+            props.font.color = Some(Some(LINK_COLOR.to_owned()));
+            let code = props
+                .data_style
+                .as_deref()
+                .and_then(|data| book.data.code(data))
+                .map(|(code, _)| code);
+            Some(self.xf(&props, code.as_deref()))
+        };
+        self.linked.insert(key, index);
         index
     }
 

@@ -298,6 +298,10 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
                     }
                 }
             }
+            // Link text takes the link colour unless its style names one.
+            for (position, xf) in std::mem::take(&mut parts.link_styles) {
+                sheet_styles.cells.insert(position, xf);
+            }
         }
         // A height Excel fitted to the row's fonts is not flagged as set by
         // hand, but it still differs from the sheet default: a title row in a

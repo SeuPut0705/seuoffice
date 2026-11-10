@@ -14,7 +14,7 @@ use crate::odf_cell_styles::{XlsxStyles, hex_color};
 use crate::odf_formula::{self, Names};
 use crate::odf_sheet_format::{
     ConditionalEntry, MAX_COLUMN, MAX_ROW, OdsFormats, OdsSheetFormat, ScalePoint, Validation,
-    parse_cell_address, parse_range_address,
+    parse_cell_address, parse_range_address, split_addresses,
 };
 use crate::xlsx_package::{cell_reference, escape_xml};
 
@@ -74,6 +74,16 @@ fn split_top(text: &str, separator: &str) -> Vec<String> {
     }
     parts.push(current);
     parts
+}
+
+/// The two bounds of a `between`. The standard separates them with a
+/// semicolon; a widely used writer puts a comma there.
+fn bounds_of(arguments: &str) -> Vec<String> {
+    let bounds = split_top(arguments, ";");
+    if bounds.len() == 2 {
+        return bounds;
+    }
+    split_top(arguments, ",")
 }
 
 /// The arguments of `name(…)` when the text is exactly that call.
@@ -312,7 +322,7 @@ fn validation_rule(condition: &str, operands: &Operands<'_>) -> Option<Rule> {
     let between = |name: &str| -> Option<Option<(String, String)>> {
         match call_arguments(range, name) {
             Some(arguments) => {
-                let bounds = split_top(arguments, ";");
+                let bounds = bounds_of(arguments);
                 if bounds.len() != 2 {
                     return Some(None);
                 }
@@ -493,7 +503,7 @@ fn condition_rule(value: &str, operands: &Operands<'_>, anchor: (u32, u32)) -> O
     }
     for (name, operator) in [("between", "between"), ("not-between", "notBetween")] {
         if let Some(arguments) = call_arguments(value, name) {
-            let bounds = split_top(arguments, ";");
+            let bounds = bounds_of(arguments);
             if bounds.len() != 2 {
                 return None;
             }
@@ -613,9 +623,8 @@ pub(crate) fn conditional_formatting_xml(
     let mut out = String::new();
     let mut priority = 0usize;
     for format in &sheet.conditional {
-        let mut areas: Vec<((u32, u32), (u32, u32))> = format
-            .target
-            .split_whitespace()
+        let mut areas: Vec<((u32, u32), (u32, u32))> = split_addresses(&format.target)
+            .into_iter()
             .filter_map(parse_range_address)
             .map(|(_, start, end)| (start, end))
             .collect();
@@ -737,6 +746,8 @@ mod tests {
         assert_eq!(list.formula1.as_deref(), Some(r#""a,b ""x"",c""#));
         let range = rule("of:cell-content-is-in-list([$Data.$A$1:.$A$5])");
         assert_eq!(range.formula1.as_deref(), Some("Data!$A$1:$A$5"));
+        let comma = rule("of:cell-content-is-decimal-number() and cell-content-is-between(2000,2100)");
+        assert_eq!((comma.formula1.as_deref(), comma.formula2.as_deref()), (Some("2000"), Some("2100")));
         let whole = rule("of:cell-content-is-whole-number() and cell-content-is-between(1;10)");
         assert_eq!((whole.kind, whole.operator), (Some("whole"), None));
         assert_eq!((whole.formula1.as_deref(), whole.formula2.as_deref()), (Some("1"), Some("10")));

@@ -10,7 +10,7 @@
 //! read as trees. All of it is best-effort: a part this reader cannot follow
 //! leaves the sheet with its values, the way it converted before.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
@@ -39,7 +39,7 @@ const MAX_OUTLINE_LEVEL: u8 = 7;
 pub(crate) struct ColumnRun {
     pub(crate) first: u32,
     pub(crate) last: u32,
-    /// The column style, for its page break.
+    /// The column style, when it starts a new page.
     pub(crate) style: Option<u32>,
     pub(crate) default_cell: Option<u32>,
     pub(crate) hidden: bool,
@@ -59,6 +59,7 @@ pub(crate) struct CellRun {
 pub(crate) struct RowRun {
     pub(crate) first: u32,
     pub(crate) last: u32,
+    /// The row style, when it starts a new page.
     pub(crate) style: Option<u32>,
     pub(crate) default_cell: Option<u32>,
     pub(crate) hidden: bool,
@@ -175,6 +176,9 @@ pub(crate) struct OdsSheetFormat {
     pub(crate) collapsed_columns: Vec<u32>,
     pub(crate) links: Vec<((u32, u32), String)>,
     pub(crate) notes: Vec<Note>,
+    /// The text of cells the value reader does not read whole: text with
+    /// runs of its own formatting, and text that holds repeated spaces, tabs
+    /// or line breaks, which ODF writes as elements.
     pub(crate) rich: Vec<((u32, u32), Vec<TextRun>)>,
     pub(crate) conditional: Vec<ConditionalFormat>,
     pub(crate) validations: Vec<ValidationRun>,
@@ -236,7 +240,10 @@ pub(crate) fn read_formats(source: &Path) -> Result<OdsFormats, SidecarError> {
             for scope in root.children().filter(Node::is_element) {
                 match scope.tag_name().name() {
                     "styles" => formats.book.read_styles(scope),
-                    "automatic-styles" => formats.pages.read_automatic(scope, &formats.book),
+                    "automatic-styles" => {
+                        formats.pages.read_automatic(scope, &formats.book);
+                        formats.book.read_data_styles(scope);
+                    }
                     "master-styles" => formats.pages.read_masters(scope),
                     _ => {}
                 }
@@ -266,7 +273,14 @@ pub(crate) fn read_formats(source: &Path) -> Result<OdsFormats, SidecarError> {
 
     let entry = zip_entry(&mut archive, "content.xml")?;
     let mut reader = Reader::from_reader(BufReader::new(entry));
-    let mut parser = ContentParser::default();
+    let mut parser = ContentParser {
+        // A row or column style matters here only when it starts a page;
+        // every row of a document names one for its height, and keeping
+        // those would keep every row.
+        row_breaks: formats.book.row_breaks.keys().cloned().collect(),
+        column_breaks: formats.book.column_breaks.keys().cloned().collect(),
+        ..ContentParser::default()
+    };
     parser.run(&mut reader)?;
     formats.sheets = parser.sheets;
     formats.ranges = parser.ranges;
@@ -421,6 +435,8 @@ struct CellState {
     text_value: bool,
     runs: Vec<TextRun>,
     styled: bool,
+    /// True once the text held a space, tab or line-break element.
+    spaced: bool,
     paragraphs: u32,
     link: Option<String>,
 }
@@ -447,6 +463,8 @@ struct ContentParser {
     ranges: Vec<DatabaseRange>,
     validations: HashMap<String, Validation>,
     names: Names,
+    row_breaks: HashSet<String>,
+    column_breaks: HashSet<String>,
 
     sheet: Option<OdsSheetFormat>,
     next_column: u32,
@@ -672,10 +690,17 @@ impl ContentParser {
                         spaces = parse_count(&value).min(10_000);
                     }
                 })?;
+                self.mark_spaced();
                 self.text(&" ".repeat(spaces as usize));
             }
-            b"tab" if self.in_paragraph => self.text("\t"),
-            b"line-break" if self.in_paragraph => self.text("\n"),
+            b"tab" if self.in_paragraph => {
+                self.mark_spaced();
+                self.text("\t");
+            }
+            b"line-break" if self.in_paragraph => {
+                self.mark_spaced();
+                self.text("\n");
+            }
             b"database-range" => {
                 let mut range = DatabaseRange::default();
                 attributes(reader, element, |key, value| match key {
@@ -946,6 +971,14 @@ impl ContentParser {
         }
     }
 
+    fn mark_spaced(&mut self) {
+        if self.note.is_none() && self.message.is_none() {
+            if let Some(cell) = &mut self.cell {
+                cell.spaced = true;
+            }
+        }
+    }
+
     fn paragraph(&mut self, empty: bool) {
         if let Some(note) = &mut self.note {
             if note.paragraphs > 0 {
@@ -1039,7 +1072,9 @@ impl ContentParser {
         let run = ColumnRun {
             first,
             last: self.next_column - 1,
-            style: style.map(|name| self.names.id(name)),
+            style: style
+                .filter(|name| self.column_breaks.contains(name))
+                .map(|name| self.names.id(name)),
             default_cell: default_cell.map(|name| self.names.id(name)),
             hidden,
             level: (self.column_groups.len() as u8).min(MAX_OUTLINE_LEVEL),
@@ -1072,7 +1107,9 @@ impl ContentParser {
         self.row = Some(RowRun {
             first,
             last: self.next_row.saturating_sub(1).max(first),
-            style: style.map(|name| self.names.id(name)),
+            style: style
+                .filter(|name| self.row_breaks.contains(name))
+                .map(|name| self.names.id(name)),
             default_cell: default_cell.map(|name| self.names.id(name)),
             hidden,
             level: (self.row_groups.len() as u8).min(MAX_OUTLINE_LEVEL),
@@ -1091,12 +1128,16 @@ impl ContentParser {
         let mut validation = None;
         let mut value_type: Option<String> = None;
         let mut formula = false;
+        let mut string_value = false;
         attributes(reader, element, |key, value| match key {
             b"number-columns-repeated" => repeats = parse_count(&value),
             b"style-name" => style = Some(value),
             b"content-validation-name" => validation = Some(value),
             b"value-type" => value_type = Some(value),
             b"formula" => formula = true,
+            // The attribute, when present, is the value; the paragraphs
+            // are only how it is shown.
+            b"string-value" => string_value = true,
             _ => {}
         })?;
         let first = self.column;
@@ -1106,7 +1147,9 @@ impl ContentParser {
             row,
             column: first,
             repeats,
-            text_value: !formula && value_type.as_deref().is_none_or(|kind| kind == "string"),
+            text_value: !formula
+                && !string_value
+                && value_type.as_deref().is_none_or(|kind| kind == "string"),
             ..CellState::default()
         });
         if first >= MAX_COLUMN {
@@ -1167,13 +1210,13 @@ impl ContentParser {
         if let Some(link) = cell.link {
             sheet.links.push(((cell.row, cell.column), link));
         }
-        if cell.styled && cell.text_value && cell.repeats == 1 {
+        if (cell.styled || cell.spaced) && cell.text_value && cell.repeats == 1 {
             let runs: Vec<TextRun> = cell
                 .runs
                 .into_iter()
                 .filter(|(_, text)| !text.is_empty())
                 .collect();
-            if runs.iter().any(|(style, _)| style.is_some()) {
+            if cell.spaced || runs.iter().any(|(style, _)| style.is_some()) {
                 sheet.rich.push(((cell.row, cell.column), runs));
             }
         }
@@ -1278,6 +1321,27 @@ pub(crate) fn parse_range_address(address: &str) -> Option<(Option<String>, (u32
     ))
 }
 
+/// Space-separated addresses, with spaces inside quoted sheet names kept.
+pub(crate) fn split_addresses(text: &str) -> Vec<&str> {
+    let mut parts = Vec::new();
+    let mut quoted = false;
+    let mut start = 0;
+    for (index, character) in text.char_indices() {
+        if character == '\'' {
+            quoted = !quoted;
+        } else if character == ' ' && !quoted {
+            if index > start {
+                parts.push(&text[start..index]);
+            }
+            start = index + 1;
+        }
+    }
+    if start < text.len() {
+        parts.push(&text[start..]);
+    }
+    parts
+}
+
 fn split_outside_quotes(text: &str, separator: char) -> Option<(&str, &str)> {
     let mut quoted = false;
     for (index, character) in text.char_indices() {
@@ -1365,6 +1429,7 @@ mod tests {
         assert_eq!(sheet.print_ranges.as_deref(), Some("S.A1:S.C9"));
         assert_eq!(sheet.columns.len(), 3);
         assert_eq!(sheet.columns[0].default_cell.map(name), Some("ce9"));
+        assert_eq!(sheet.columns[0].style, None, "a style that breaks no page is not kept");
         assert!(sheet.columns[1].hidden);
         assert_eq!(sheet.columns[1].level, 1);
         assert_eq!(sheet.columns[2].last, MAX_COLUMN - 1);
@@ -1407,6 +1472,8 @@ mod tests {
         assert_eq!(sheet.notes[0].text, "first\nsecond & third");
         assert_eq!(sheet.rich.len(), 1, "a number's span is not rich text");
         let runs = &sheet.rich[0].1;
+        // the cell with the link has neither runs nor spacing elements, so
+        // its text is left to the value reader
         let texts: Vec<&str> = runs.iter().map(|(_, text)| text.as_str()).collect();
         assert_eq!(texts, vec!["plain ", "bold", "  end\nnext"]);
         assert!(runs[1].0.is_some());
@@ -1452,37 +1519,5 @@ mod tests {
         );
         assert_eq!(parse_range_address(".C5"), Some((None, (4, 2), (4, 2))));
         assert_eq!(parse_range_address("nothing"), None);
-    }
-}
-
-#[cfg(test)]
-mod probe {
-    /// Not a test of anything: prints what the reader makes of a file named
-    /// by `ODS_PROBE`, for work on the importer.
-    #[test]
-    #[ignore]
-    fn probe() {
-        let Ok(path) = std::env::var("ODS_PROBE") else {
-            return;
-        };
-        match super::read_formats(std::path::Path::new(&path)) {
-            Ok(formats) => {
-                for sheet in &formats.sheets {
-                    println!(
-                        "{}: columns {} rows {} links {} notes {} rich {} cf {} val {}",
-                        sheet.name,
-                        sheet.columns.len(),
-                        sheet.rows.len(),
-                        sheet.links.len(),
-                        sheet.notes.len(),
-                        sheet.rich.len(),
-                        sheet.conditional.len(),
-                        sheet.validations.len()
-                    );
-                }
-                println!("ranges {} names {}", formats.ranges.len(), formats.names.len());
-            }
-            Err(error) => println!("ERROR {error:?}"),
-        }
     }
 }
