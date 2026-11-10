@@ -70,6 +70,18 @@ function refusalText(reason: Refusal): string {
       return ko
         ? '문서에는 쪽이 하나 이상 남아야 합니다.'
         : 'The document must keep at least one page.'
+    case 'unshareable':
+      if (reason.why === 'link') {
+        return ko
+          ? '여러 사람이 함께 편집하는 동안에는 http, https, mailto 주소로만 링크를 걸 수 있습니다.'
+          : 'While several people edit this PDF, a link can only go to an http, https or mailto address.'
+      }
+      if (reason.why === 'size') {
+        return ko
+          ? '이 편집은 너무 길거나 많아서 함께 편집하는 문서에 넣을 수 없습니다.'
+          : 'This edit is too long or holds too much to share.'
+      }
+      return ko ? '이 편집은 함께 편집하는 문서에 넣을 수 없습니다.' : 'This edit cannot be shared.'
   }
 }
 

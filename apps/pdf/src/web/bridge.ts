@@ -1,5 +1,6 @@
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
+  collabLink,
   createAiStreamBridge,
   createWebBridge,
   documentByPath,
@@ -19,7 +20,7 @@ import {
 import type { Lang } from '@genoffice/i18n'
 import { CertificateEncryptionError, WrongPasswordError, decryptDocument } from '../main/pdf-crypt'
 import type { PdfApi, SavePdfRequest, SavePdfResult } from '../shared/ipc'
-import { joinPdfCollab, type PdfCollabHandles } from './collab-join'
+import type { PdfCollabHandles } from './collab-join'
 import { saveOnWeb, viewOnlyReason } from './save'
 
 // `ready` must say so before anything asks for the document
@@ -77,7 +78,8 @@ async function consumeDocument(): Promise<string | null> {
   const doc = await waitForDocument()
   if (!doc) return null
   try {
-    coEditing = await joinPdfCollab(doc)
+    // a page the host did not ask to co-edit loads none of it
+    if (collabLink()) coEditing = await (await import('./collab-join')).joinPdfCollab(doc)
   } catch (error) {
     reportError('collab_unavailable', error instanceof Error ? error.message : String(error))
     return null

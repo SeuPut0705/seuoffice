@@ -49,10 +49,17 @@ export const note = (
   ...(replyToLocalId ? { replyToLocalId } : {}),
 })
 
-export const stamp = (pageIndex: number, base64Bytes: number): DrawingInput => ({
+/** base64 of the PNG signature, which every picture stamp starts with */
+const PNG_HEAD = 'iVBORw0KGgo'
+
+/** The base64 of a picture stamp of `base64Bytes` characters; `fill` tells two pictures apart */
+export const picture = (base64Bytes: number, fill = 'A'): string =>
+  PNG_HEAD + fill.repeat(Math.max(0, base64Bytes - PNG_HEAD.length))
+
+export const stamp = (pageIndex: number, base64Bytes: number, fill = 'A'): DrawingInput => ({
   kind: 'image',
   pageIndex,
-  image: 'A'.repeat(base64Bytes),
+  image: picture(base64Bytes, fill),
   rect: [10, 10, 110, 60],
 })
 

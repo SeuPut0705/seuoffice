@@ -20,13 +20,13 @@ import type { CollabAdapter, Json } from '@seuoffice/collab/client'
 import { lookup, type Op, type PlanResult } from '../renderer/edit-ops'
 import type { EditSnapshot } from '../renderer/edit-state'
 import {
-  LIST_BUCKETS,
+  BLOCKED_BUCKETS,
   canonical,
-  decodeOp,
   diff,
   emptySnapshot,
   fold,
   foldOps,
+  foldPeer,
   mapPictures,
   newRound,
   pictureKey,
@@ -35,8 +35,10 @@ import {
   rebase,
   renumbered,
   same,
+  type BlockedBucket,
   type PdfOp,
 } from './collab-model'
+import { decodeOp, unshareable, type WireFault } from './collab-wire'
 
 /** Changes the session cannot carry */
 export type Feature =
@@ -57,6 +59,8 @@ export type Refusal =
   | { kind: 'tooLarge'; bytes: number }
   /** the change would leave the document without a page */
   | { kind: 'lastPage' }
+  /** peers would not take the change (collab-wire.ts): a link they do not open, or too long */
+  | { kind: 'unshareable'; why: WireFault }
 
 /** What the App consults while co-editing (its `collabRef`) */
 export interface PdfCollabLink {
@@ -93,12 +97,14 @@ export interface PdfAdapterOptions {
   newId(): string
 }
 
-const BLOCKED_BUCKETS: Partial<Record<keyof EditSnapshot, Feature>> = {
+const BLOCKED: Record<BlockedBucket, Feature> = {
   textEdits: 'text',
   textInserts: 'text',
   imageEdits: 'image',
   annotDeletes: 'savedAnnotation',
 }
+const blockedFeature = (bucket: keyof EditSnapshot): Feature | undefined =>
+  (BLOCKED as Partial<Record<keyof EditSnapshot, Feature>>)[bucket]
 
 const encoder = new TextEncoder()
 const sizeOf = (value: unknown): number => encoder.encode(JSON.stringify(value)).length
@@ -208,7 +214,7 @@ export function createPdfAdapter(options: PdfAdapterOptions): CollabAdapter<PdfO
           continue // the App's own plan reports an unknown op
         }
         for (const bucket of touches) {
-          const feature = BLOCKED_BUCKETS[bucket]
+          const feature = blockedFeature(bucket)
           if (feature) return failed(index, { kind: 'feature', feature })
         }
       }
@@ -238,7 +244,10 @@ export function createPdfAdapter(options: PdfAdapterOptions): CollabAdapter<PdfO
       if (!rebased) return revert({ kind: 'lastPage' })
       const op: PdfOp = { id: options.newId(), puts: rebased.puts }
       // as it goes over the wire: pictures the log holds are named, not sent again
-      const bytes = sizeOf(encode(op))
+      const wire = encode(op)
+      const fault = unshareable(wire)
+      if (fault) return revert({ kind: 'unshareable', why: fault })
+      const bytes = sizeOf(wire)
       if (bytes > options.maxOpBytes) return revert({ kind: 'tooLarge', bytes })
       view = rebased.state
       if (round.renum.size > 0) host.mapHistory((s) => renumbered(s, round.renum))
@@ -250,9 +259,8 @@ export function createPdfAdapter(options: PdfAdapterOptions): CollabAdapter<PdfO
   }
 
   const opened = host.snapshot()
-  for (const bucket of LIST_BUCKETS) {
-    const feature = BLOCKED_BUCKETS[bucket]
-    if (feature && opened[bucket].length > 0) {
+  for (const bucket of BLOCKED_BUCKETS) {
+    if (opened[bucket].length > 0) {
       throw new Error(`the document holds ${bucket} the session cannot carry`)
     }
   }
@@ -277,7 +285,8 @@ export function createPdfAdapter(options: PdfAdapterOptions): CollabAdapter<PdfO
 
     integrate(remote, local) {
       const before = confirmed
-      confirmed = foldOps(confirmed, remote)
+      // throws on a change that does not fit the document: nothing of it is kept
+      confirmed = remote.reduce((state, op) => foldPeer(state, op.puts, basePages), confirmed)
       const round = newRound(before, confirmed, basePages)
       // what the screen showed after each unconfirmed op, and what it shows there now
       const was = [before]

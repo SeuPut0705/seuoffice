@@ -17,6 +17,7 @@ import {
   highlight,
   ink,
   note,
+  picture,
   reorder,
   rotate,
   stamp,
@@ -349,7 +350,7 @@ describe('co-editing a PDF', () => {
     for (const page of [...room.pages, room.late()]) {
       const input = page.app.state.drawings[0]!.input
       if (input.kind !== 'image') throw new Error('not a stamp')
-      expect(input.image).toBe('A'.repeat(bytes))
+      expect(input.image).toBe(picture(bytes))
       expect(input.rect).toEqual([25, 25, 125, 75])
     }
     expectConverged(room)
@@ -362,7 +363,7 @@ describe('co-editing a PDF', () => {
     const half = Math.floor(MAX_OP_BYTES * 0.6)
     draw(a.app, stamp(1, half))
     room.settle(a)
-    draw(a.app, { ...stamp(1, half), image: 'B'.repeat(half) })
+    draw(a.app, stamp(1, half, 'B'))
     room.settle(a)
     deletePage(a.app, 1)
     room.settle(a)

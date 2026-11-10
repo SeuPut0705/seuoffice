@@ -38,6 +38,15 @@ export const LIST_BUCKETS = [
 ] as const satisfies readonly (keyof EditSnapshot)[]
 
 export type ListBucket = (typeof LIST_BUCKETS)[number]
+
+/**
+ * The buckets no change puts into: the web cannot save what they hold (text and image edits
+ * and the removal of saved annotations need the desktop's writers). The session refuses the
+ * person who would start one, and takes none from a peer.
+ */
+export const BLOCKED_BUCKETS = ['annotDeletes', 'textEdits', 'textInserts', 'imageEdits'] as const
+
+export type BlockedBucket = (typeof BLOCKED_BUCKETS)[number]
 type MapBucket = 'formEdits' | 'formWidgetEdits'
 type ValueBucket = 'stampCfg' | 'metadata'
 
@@ -198,6 +207,60 @@ function foldList(list: readonly Entity[], put: ListPut): Entity[] {
     ]
   }
   return [...list, item]
+}
+
+/**
+ * A peer's change folded onto the confirmed state. Every change a page sends went through
+ * `rebase` on exactly this state, so it names only pages the document has, puts nothing on a
+ * deleted page, adds a blank page only as the next page, keeps one page and leaves an order
+ * that lists every page once. A change that does not is not this editor's: it throws, rather
+ * than leave a state the save cannot write.
+ */
+export function foldPeer(s: EditSnapshot, puts: readonly Put[], basePages: number): EditSnapshot {
+  let state = s
+  const count = (): number => pageCount(state, basePages)
+  const known = (k: number): void => {
+    if (k >= count()) throw new Error(`an edit of page ${k}, which the document does not have`)
+  }
+  for (const put of puts) {
+    switch (put.b) {
+      case 'blankPages': {
+        const next = put.v !== null && PAGE.blankPages.of(put.v as Entity) === count()
+        if (!next || state.blankPages.some((b) => b.id === put.id)) {
+          throw new Error('a blank page that is not the next page')
+        }
+        break
+      }
+      case 'deleted':
+        known(put.k)
+        if (put.v && !state.deleted.has(put.k) && count() - state.deleted.size <= 1) {
+          throw new Error('a deletion that leaves no page')
+        }
+        break
+      case 'rotations':
+        known(put.k)
+        break
+      case 'order':
+      case 'formEdits':
+      case 'formWidgetEdits':
+      case 'stampCfg':
+      case 'metadata':
+        break
+      default: {
+        if (put.v === null) break
+        const at = PAGE[put.b].of(put.v as Entity)
+        known(at)
+        if (WITH_PAGE.has(put.b) && state.deleted.has(at)) {
+          throw new Error(`an edit on page ${at}, which is deleted`)
+        }
+      }
+    }
+    state = foldOne(state, put)
+  }
+  if (state.order && permutationOf(state.order, count())) {
+    throw new Error('a page order that does not list every page once')
+  }
+  return state
 }
 
 // ── diff ──────────────────────────────────────────────────────────────
@@ -368,7 +431,7 @@ export function rebase(
         const at = page(ref.of(item))
         if (at !== ref.of(item)) item = ref.at(item, at)
         if (at >= count() || (WITH_PAGE.has(put.b) && state.deleted.has(at))) break
-        // list items are the App's own LocalDrawing, LocalFormField... (decodeOp checked the shape)
+        // list items are the App's own LocalDrawing, LocalFormField... (collab-wire.ts checked the shape)
         if (put.b === 'drawings' && !parentShown(state, item as unknown as LocalDrawing)) break
         if (put.b === 'formFields') {
           item = freeName(state, item as unknown as LocalFormField) as unknown as Entity
@@ -512,8 +575,6 @@ export function renumbered(s: EditSnapshot, renum: ReadonlyMap<number, number>):
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
-const isPage = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0
-const isPages = (v: unknown): v is number[] => Array.isArray(v) && v.every(isPage)
 
 // ── picture bytes on the wire ─────────────────────────────────────────
 
@@ -553,54 +614,6 @@ export function mapPictures(op: PdfOp, map: (image: string) => string): PdfOp {
   })
   return changed ? { id: op.id, puts } : op
 }
-
-/** `json` as a PdfOp; throws on any shape this editor does not write */
-export function decodeOp(json: Json): PdfOp {
-  if (!isObject(json) || typeof json.id !== 'string' || !Array.isArray(json.puts)) {
-    throw new Error('not a pdf op')
-  }
-  return { id: json.id, puts: json.puts.map(decodePut) }
-}
-
-function decodePut(json: Json): Put {
-  if (!isObject(json) || typeof json.b !== 'string') throw new Error('not a pdf edit')
-  const { b, v } = json
-  if ((LIST_BUCKETS as readonly string[]).includes(b)) {
-    const bucket = b as ListBucket
-    if (typeof json.id !== 'string') throw new Error(`a ${b} edit without an id`)
-    if (v !== null) {
-      if (!isObject(v) || v.id !== json.id) throw new Error(`a ${b} item that is not its id's`)
-      if (!isPage(PAGE[bucket].of(v as Entity))) throw new Error(`a ${b} item without a page`)
-    }
-    return { b: bucket, id: json.id, v: v as Json | null }
-  }
-  switch (b) {
-    case 'formEdits':
-    case 'formWidgetEdits':
-      if (typeof json.k !== 'string' || !(v === null || isObject(v))) {
-        throw new Error(`a malformed ${b} edit`)
-      }
-      return { b, k: json.k, v: v as Json | null }
-    case 'rotations':
-      if (!isPage(json.k) || !isTurn(v) || !isTurn(json.was))
-        throw new Error('a malformed rotation')
-      return { b, k: json.k, v, was: json.was }
-    case 'deleted':
-      if (!isPage(json.k) || typeof v !== 'boolean') throw new Error('a malformed page deletion')
-      return { b, k: json.k, v }
-    case 'order':
-      if (!(v === null || isPages(v)) || !isPages(json.was)) throw new Error('a malformed order')
-      return { b, v, was: json.was }
-    case 'stampCfg':
-    case 'metadata':
-      if (!(v === null || isObject(v))) throw new Error(`a malformed ${b} edit`)
-      return { b, v: v as Json | null }
-    default:
-      throw new Error(`an edit of unknown kind ${b}`)
-  }
-}
-
-const isTurn = (v: unknown): v is number => Number.isInteger(v) && (v as number) % 90 === 0
 
 /** JSON with object keys sorted and map and set entries in key order: equal states read equal */
 export function canonical(value: unknown): string {
