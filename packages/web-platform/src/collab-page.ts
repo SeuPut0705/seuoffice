@@ -1,7 +1,14 @@
 import type { CollabAdapter, CollabSession, CollabStatus } from '@seuoffice/collab/client'
 import { collabLink, reportCollabStatus } from './collab-link'
 import { editMode } from './document-store'
-import { onHostSaveRequest, reportDirty, reportError, saveToHost } from './embed-channel'
+import {
+  holdOpened,
+  onHostExportRequest,
+  onHostSaveRequest,
+  reportDirty,
+  reportError,
+  saveToHost,
+} from './embed-channel'
 
 export interface PageCollab<Handles> {
   /** the bytes the editor must open: the epoch base, which may be a peer's file rather than the host's */
@@ -28,6 +35,12 @@ declare global {
        * save, since its next save is built against the session's base file.
        */
       unsaved?(): boolean
+      /**
+       * The renderer will never attach (its document did not load in full):
+       * the page leaves the session, takes input again and tells the host
+       * `collab_unavailable` with `reason`. Nothing once the editor attached.
+       */
+      fail?(reason: string): void
     }
   }
 }
@@ -43,8 +56,14 @@ declare global {
  * reported to the server as stored. The app's own save handler is replaced:
  * a co-edited document must never be saved from a state the log does not hold.
  * The host's unsaved flag follows the session (edits in the log that no stored
- * file holds), so the app must not report its own. When the adapter cannot be
- * built the page leaves the session and reports `collab_unavailable`.
+ * file holds), so the app must not report its own. The host hears `opened`
+ * only once the editor attached: when the adapter cannot be built, or the
+ * renderer gives up (`fail`), the page leaves the session and reports
+ * `collab_unavailable` instead.
+ *
+ * A host's `collab_export` is answered with the file of exactly what the page
+ * shows (`exportLocal`), in any phase: the way to keep edits a failed or
+ * offline session cannot confirm.
  */
 export async function joinPageCollab<Handles, Op>(options: {
   format: { name: string; schema: number }
@@ -61,6 +80,11 @@ export async function joinPageCollab<Handles, Op>(options: {
    */
   hostSave?(save: () => Promise<void>): Promise<void>
   /**
+   * Commit what a person still has open, before a `collab_export` while the session is live.
+   * Not `hostSave`, whose flow ends in a real save. A failed session's editor is frozen for good.
+   */
+  commitDrafts?(): void | Promise<void>
+  /**
    * Input the page takes before the editor attached, by its target: what an editor must ask
    * before it can show the document at all (a password). Nothing of the document is editable there.
    */
@@ -73,6 +97,9 @@ export async function joinPageCollab<Handles, Op>(options: {
   const join = await joinCollab(link, { format: options.format, bytes: options.bytes })
   let session: CollabSession | null = null
   let attaching: Promise<void> | null = null
+  /** `left`: the adapter could not be built, or the renderer gave up; nothing attaches after it */
+  let stage: 'waiting' | 'attached' | 'left' = 'waiting'
+  const releaseOpened = holdOpened()
   // Until the adapter attached, what the editor shows must stay the epoch base: an edit made
   // now would be counted as base by this page alone, and every peer's step would land shifted
   window.seuCollab = {
@@ -82,8 +109,19 @@ export async function joinPageCollab<Handles, Op>(options: {
       const status = session?.status()
       return !!status?.canEdit && (status.version > status.saved || status.unconfirmed > 0)
     },
+    fail: (reason) => leave(reason),
   }
   const releaseInput = holdInput(options.inputBeforeAttach)
+
+  /** never edit a document the log cannot follow: leave the session and let the host reopen */
+  const leave = (reason: string): void => {
+    if (stage !== 'waiting') return
+    stage = 'left'
+    releaseInput()
+    link.close()
+    reportError('collab_unavailable', reason)
+    releaseOpened(false)
+  }
 
   const save = async (how: { skipWhenSaved?: boolean } = {}): Promise<void> => {
     if (!session) throw new Error('the document is not open yet')
@@ -99,19 +137,25 @@ export async function joinPageCollab<Handles, Op>(options: {
     const { hostSave } = options
     onHostSaveRequest(() => (hostSave ? hostSave(() => save()) : save()))
   }
+  onHostExportRequest(async () => {
+    if (!session) throw new Error('the document is not open yet')
+    if (session.status().phase !== 'failed') await options.commitDrafts?.()
+    return session.exportLocal()
+  })
 
   const attach = (handles: Handles): Promise<void> => {
     attaching ??= (async () => {
+      if (stage !== 'waiting') return
       let adapter: CollabAdapter<Op>
       try {
         adapter = await options.adapter(handles)
       } catch (error) {
-        releaseInput()
-        // never edit a document the log cannot follow: leave the session and let the host reopen
-        link.close()
-        reportError('collab_unavailable', error instanceof Error ? error.message : String(error))
+        leave(error instanceof Error ? error.message : String(error))
         return
       }
+      // the renderer gave up while the adapter was being built
+      if (stage !== 'waiting') return
+      stage = 'attached'
       const joined = join.attach(adapter)
       session = joined
       releaseInput()
@@ -123,6 +167,7 @@ export async function joinPageCollab<Handles, Op>(options: {
       }
       joined.subscribe(report)
       report(joined.status())
+      releaseOpened(true)
     })()
     return attaching
   }

@@ -1,3 +1,4 @@
+import { joinCollab, type CollabLink, type CollabLinkEvent } from '@seuoffice/collab/client'
 import { toyMap, type ToyEditor, type MapOp } from '@seuoffice/collab/conformance'
 import {
   createCollabServer,
@@ -33,12 +34,15 @@ function fromHost(data: Record<string, unknown>): void {
 /**
  * The host end of the embed channel as `@seuoffice/embed` plays it: each
  * `collab_connect` opens a socket on the real server, frames go both ways
- * verbatim, and a `save` is stored and answered.
+ * verbatim, and a `save` is stored and answered. `cut` stops relaying the
+ * page's frames, as a network that went away without closing.
  */
 function playHost(options: { canEdit: boolean }): {
   stored: { bytes: Uint8Array; version: unknown }[]
+  cut(): void
 } {
   const stored: { bytes: Uint8Array; version: unknown }[] = []
+  let relaying = true
   const sockets = new Map<number, { message?: (frame: string | Uint8Array) => void }>()
   vi.spyOn(host, 'postMessage').mockImplementation((message: unknown) => {
     const data = message as Record<string, unknown>
@@ -67,7 +71,7 @@ function playHost(options: { canEdit: boolean }): {
         canEdit: options.canEdit,
       })
       queueMicrotask(() => fromHost({ type: 'collab_open', connectId: id }))
-    } else if (data.type === 'collab_frame') {
+    } else if (data.type === 'collab_frame' && relaying) {
       const frame = data.frame
       sockets
         .get(id)
@@ -77,7 +81,7 @@ function playHost(options: { canEdit: boolean }): {
       queueMicrotask(() => fromHost({ type: 'saved', saveId: data.saveId }))
     }
   })
-  return { stored }
+  return { stored, cut: () => (relaying = false) }
 }
 
 async function open(collab: boolean): Promise<void> {
@@ -379,5 +383,175 @@ describe('what the page allows around the session', () => {
     expect(unsaved()).toBe(true)
     await collab.save()
     await vi.waitFor(() => expect(unsaved()).toBe(false))
+  })
+})
+
+const sentOf = (type: string) => sent.filter((message) => message.type === type)
+
+describe('what the host hears about the open', () => {
+  it('hears opened only once the editor attached', async () => {
+    playHost({ canEdit: true })
+    await open(true)
+    const collab = (await join([]))!
+    // the renderer shows the document before the adapter is built
+    channel.reportOpened()
+    expect(sentOf('opened')).toEqual([])
+    await collab.attach({ bytes: collab.baseBytes })
+    expect(sentOf('opened')).toHaveLength(1)
+  })
+
+  it('hears collab_unavailable and never opened when the adapter cannot be built', async () => {
+    playHost({ canEdit: true })
+    await open(true)
+    const collab = (await page.joinPageCollab<null, MapOp>({
+      format: toyMap.format,
+      fileName: 'memo.toy',
+      bytes: toyMap.file(),
+      adapter: async () => {
+        throw new Error('an edit kind this editor cannot sync')
+      },
+    }))!
+    channel.reportOpened()
+    await collab.attach(null)
+    channel.reportOpened()
+    expect(sentOf('error')).toEqual([
+      expect.objectContaining({
+        code: 'collab_unavailable',
+        message: 'an edit kind this editor cannot sync',
+      }),
+    ])
+    expect(sentOf('opened')).toEqual([])
+  })
+
+  it('leaves the session when the renderer says it can never attach', async () => {
+    playHost({ canEdit: true })
+    await open(true)
+    const built: unknown[] = []
+    const collab = (await page.joinPageCollab<null, MapOp>({
+      format: toyMap.format,
+      fileName: 'memo.toy',
+      bytes: toyMap.file(),
+      adapter: (handles) => {
+        built.push(handles)
+        return toyMap.open(toyMap.file())
+      },
+    }))!
+    channel.reportOpened()
+    window.seuCollab!.fail!('the document did not load in full')
+    expect(sentOf('error')).toEqual([
+      expect.objectContaining({
+        code: 'collab_unavailable',
+        message: 'the document did not load in full',
+      }),
+    ])
+    expect(sentOf('collab_disconnect')).toHaveLength(1)
+    const event = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true })
+    document.body.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+    await collab.attach(null)
+    expect(built).toEqual([])
+    expect(sentOf('opened')).toEqual([])
+    await expect(collab.save()).rejects.toThrow()
+  })
+})
+
+/** A second person's page on the same server, talking to it directly */
+function directLink(name: string): CollabLink {
+  let handler: ((event: CollabLinkEvent) => void) | null = null
+  let toServer: ((frame: string | Uint8Array) => void) | undefined
+  return {
+    open() {
+      server.accept(
+        {
+          send: (frame) =>
+            queueMicrotask(() =>
+              handler?.({
+                type: 'frame',
+                frame: typeof frame === 'string' ? frame : frame.slice(),
+              }),
+            ),
+          close: () => queueMicrotask(() => handler?.({ type: 'close' })),
+          onMessage: (next) => (toServer = next),
+          onClose: () => {},
+        },
+        { documentId: 'memo', userId: name, name, canEdit: true },
+      )
+      queueMicrotask(() => handler?.({ type: 'open' }))
+    },
+    // a fresh Uint8Array, as the host's relay hands the server one
+    send: (frame) => toServer?.(typeof frame === 'string' ? frame : new Uint8Array(frame)),
+    close: () => (toServer = undefined),
+    subscribe: (next) => {
+      handler = next
+      return () => (handler = null)
+    },
+  }
+}
+
+/** ask the page for the file of what it shows, as the host does to rescue edits */
+async function exportFromPage(requestId: string): Promise<Record<string, unknown>> {
+  fromHost({ type: 'collab_export', requestId })
+  let answer: Record<string, unknown> | undefined
+  await vi.waitFor(() => {
+    answer = sent.find(
+      (message) => message.type === 'collab_export_done' && message.requestId === requestId,
+    )
+    expect(answer).toBeDefined()
+  })
+  return answer!
+}
+
+const text = (bytes: unknown) => new TextDecoder().decode(new Uint8Array(bytes as ArrayBuffer))
+
+describe('a host’s export of what the page shows', () => {
+  it('holds an edit the server never confirmed, while offline', async () => {
+    const { cut } = playHost({ canEdit: true })
+    await open(true)
+    const editors: ToyEditor<MapOp>[] = []
+    const collab = (await join(editors))!
+    await collab.attach({ bytes: collab.baseBytes })
+    await vi.waitFor(() => expect(statuses().at(-1)).toMatchObject({ phase: 'live' }))
+    cut()
+    editors[0].perform({ id: 'a', key: 'a', value: 1 })
+    await vi.waitFor(() => expect(statuses().at(-1)).toMatchObject({ unconfirmed: 1 }))
+    const answer = await exportFromPage('live')
+    expect(answer).toMatchObject({ ok: true, fileName: 'toy.json' })
+    expect(text(answer.bytes)).toBe('[["a",1]]')
+    expect(statuses().at(-1)).toMatchObject({ unconfirmed: 1 })
+  })
+
+  it('still answers once the session ended as diverged', async () => {
+    playHost({ canEdit: true })
+    await open(true)
+    // a peer opened the document first, and its copy reads differently from the same log
+    const peer = await joinCollab(directLink('u2'), { format: toyMap.format, bytes: toyMap.file() })
+    const lying = peer.attach({
+      ...toyMap.open(peer.baseBytes),
+      fingerprint: () => 'another document',
+    })
+    await vi.waitFor(() => expect(lying.status().phase).toBe('live'))
+    const editors: ToyEditor<MapOp>[] = []
+    const collab = (await join(editors))!
+    await collab.attach({ bytes: collab.baseBytes })
+    await vi.waitFor(() =>
+      expect(statuses().at(-1)).toMatchObject({ phase: 'failed', failure: 'diverged' }),
+    )
+    const answer = await exportFromPage('rescue')
+    expect(answer).toMatchObject({ ok: true, fileName: 'toy.json' })
+    expect(text(answer.bytes)).toBe('[]')
+  })
+
+  it('is refused before the editor attached', async () => {
+    playHost({ canEdit: true })
+    await open(true)
+    await join([])
+    expect(await exportFromPage('early')).toMatchObject({ ok: false })
+  })
+
+  it('is refused when the host did not ask for co-editing', async () => {
+    playHost({ canEdit: true })
+    await open(false)
+    expect(await join([])).toBeNull()
+    expect(await exportFromPage('none')).toMatchObject({ ok: false })
   })
 })
