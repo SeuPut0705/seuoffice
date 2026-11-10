@@ -299,4 +299,30 @@ describe('what the page allows around the session', () => {
     await collab.save({ skipWhenSaved: true })
     expect(stored).toHaveLength(1)
   })
+
+  it('names this page as the host named its user, once the editor attached', async () => {
+    playHost({ canEdit: true })
+    await open(true)
+    const collab = (await join([]))!
+    expect(collab.self()).toBeNull()
+    await collab.attach({ bytes: collab.baseBytes })
+    expect(collab.self()).toMatchObject({ name: 'User 1' })
+  })
+
+  it('tells the editor the document is unsaved from an edit until a save stored it', async () => {
+    playHost({ canEdit: true })
+    await open(true)
+    const editors: ToyEditor<MapOp>[] = []
+    const collab = (await join(editors))!
+    await collab.attach({ bytes: collab.baseBytes })
+    const unsaved = () => window.seuCollab!.unsaved!()
+    expect(unsaved()).toBe(false)
+    editors[0].perform({ id: 'a', key: 'a', value: 1 })
+    // unconfirmed already counts: the edit is in no stored file
+    expect(unsaved()).toBe(true)
+    await vi.waitFor(() => expect(statuses().at(-1)).toMatchObject({ version: 1, unconfirmed: 0 }))
+    expect(unsaved()).toBe(true)
+    await collab.save()
+    await vi.waitFor(() => expect(unsaved()).toBe(false))
+  })
 })

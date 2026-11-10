@@ -28,6 +28,7 @@ import {
   setDocPassword,
   snapshotDocPassword,
 } from '../main/docx-encryption'
+import { notifySubEditorState } from '../renderer/editor/active-editor'
 import type { DesktopApi } from '../shared/ipc'
 import type { DocsOp } from './collab-adapter'
 import type { DocsCollabHandles } from './collab-side'
@@ -55,6 +56,32 @@ let lastSaveError: string | undefined
 
 /** set when the host asked for co-editing and the page joined its session */
 let coEditing: PageCollab<DocsCollabHandles> | null = null
+
+/** the renderer's author-name listeners: in co-editing the name is the one the session gives this user */
+const authorListeners = new Set<(name: string) => void>()
+let coEditAuthor = ''
+let coEditUnsaved = false
+
+/**
+ * Track changes label this user's edits with the name the host gave the
+ * session, so peers' revisions are told apart. The App draws its unsaved mark
+ * from `window.seuCollab.unsaved()` when it renders; a peer's save or the
+ * server's answer to this page's own changes nothing it renders from, so the
+ * page asks for a render (the textbox editors' existing nudge) when the value
+ * flips.
+ */
+function onSessionStatus(): void {
+  const name = coEditing?.self()?.name ?? ''
+  if (name !== coEditAuthor) {
+    coEditAuthor = name
+    for (const listener of authorListeners) listener(name)
+  }
+  const unsaved = window.seuCollab?.unsaved?.() ?? false
+  if (unsaved !== coEditUnsaved) {
+    coEditUnsaved = unsaved
+    notifySubEditorState(false)
+  }
+}
 
 /** The docx as the file the host stores: with the password the session wants on it */
 async function fileBytes(path: string, data: Uint8Array) {
@@ -103,7 +130,8 @@ const saveDocxToHost: DesktopApi['saveDocx'] = async (path, data) => {
  */
 async function joinDocsCollab(doc: WebDocument): Promise<void> {
   const page = await joinPageCollab<DocsCollabHandles, DocsOp>({
-    format: { name: 'docx', schema: 1 },
+    format: { name: 'docx', schema: 2 },
+    status: onSessionStatus,
     fileName: doc.fileName,
     bytes: doc.bytes,
     adapter: async (handles) => {
@@ -158,8 +186,14 @@ const desktop: Partial<DesktopApi> = {
   onAiPanelPrefsChanged: unsubscribe,
   getAutoSaveDefault: async () => NO_AUTO_SAVE_DEFAULT,
   onAutoSaveDefaultChanged: unsubscribe,
-  getAuthorName: async () => '',
-  onAuthorNameChanged: unsubscribe,
+  // the renderer reads it before the document opens; co-editing names this user once it attached
+  getAuthorName: async () => coEditAuthor,
+  onAuthorNameChanged: (listener) => {
+    authorListeners.add(listener)
+    return () => {
+      authorListeners.delete(listener)
+    }
+  },
   getAiSettings: webAiSettings,
   aiStream: ai.aiStream,
   aiStreamCancel: ai.aiStreamCancel,

@@ -5527,7 +5527,7 @@ export function App() {
   // "has unsaved changes" check shared by the close guard and autosave; refreshed on every
   // render (all edit paths forceRender), so the guard's query reads the latest value
   const anyDirtyRef = useRef(false)
-  const hasUnsavedChanges = isDocDirty(fileCtxRef.current)
+  const hasUnsavedChanges = window.seuCollab?.unsaved?.() ?? isDocDirty(fileCtxRef.current)
   anyDirtyRef.current = hasUnsavedChanges
   useEffect(() => window.desktop.reportDirty?.(hasUnsavedChanges), [hasUnsavedChanges])
 

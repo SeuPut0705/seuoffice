@@ -3,11 +3,11 @@
  *
  * Body edits travel as ProseMirror steps, one op per local transaction
  * (plugin-appended transactions included, each its own op). Everything else
- * the saved file holds (page setup, headers, comments, notes, styles...)
- * travels as keyed last-writer-wins entries (`side` ops) kept in an ordered
- * map: a write to a known key keeps its place, a new key goes last, a null
- * value deletes it. Server order decides every conflict, so all clients that
- * applied the same log hold the same map.
+ * the saved file holds (page setup, headers, comments, notes, styles, list
+ * definitions...) travels as keyed last-writer-wins entries (`side` ops) kept
+ * in an ordered map: a write to a known key keeps its place, a new key goes
+ * last, a null value deletes it. Server order decides every conflict, so all
+ * clients that applied the same log hold the same map.
  *
  * `tail` is every step applied on top of the confirmed document, oldest
  * first; it is always a suffix of the editor's step history, which is what
@@ -73,6 +73,8 @@ export interface DocsAdapterOptions {
   commitDrafts?(): void
   /** a local edit was refused instead of ending the session: too large, or made while a file is made */
   refused?(reason: 'too_large' | 'frozen'): void
+  /** ids of `kind` the opened file defines without a synced entry (list definitions it holds) */
+  definedIds?(kind: IdKind): Iterable<string>
 }
 
 /** What `rebaseSteps` handles; prosemirror-collab's own class has exactly these fields */
@@ -118,9 +120,10 @@ interface Recorded {
 }
 
 /**
- * A local op made but not yet given to the engine. `minted` are the comment
- * and note keys its steps add a reference to; `existing` those of them the
- * document referenced already (another person's, or a copy).
+ * A local op made but not yet given to the engine. `minted` are the comment,
+ * note and list keys its steps add a reference to (a list only when it starts
+ * one); `existing` those comment and note keys the document referenced
+ * already (another person's, or a copy).
  */
 interface Outgoing {
   op: DocsOp
@@ -129,6 +132,12 @@ interface Outgoing {
   /** a side op: the entry's value before it */
   prev?: Json
 }
+
+/**
+ * Entries a peer's removal beats a concurrent write to: a change to a section
+ * the peer removed is dropped instead of bringing the section back.
+ */
+const REMOVAL_WINS = /^section:/
 
 export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<DocsOp> {
   const { editor, side } = options
@@ -228,7 +237,7 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
     })
   }
 
-  /** the next id of `kind` no entry and no reference in the body uses */
+  /** the next id of `kind` no entry, no reference in the body and no definition in the file uses */
   const freeId = (kind: IdKind, taken: Set<string>): string => {
     let next = 1
     const consider = (key: string) => {
@@ -237,6 +246,7 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
     }
     for (const key of [...sideConfirmed.keys(), ...sideView.keys(), ...taken]) consider(key)
     idsIn(editor.state.doc.toJSON(), (found, id) => consider(`${found}:${id}`))
+    for (const id of options.definedIds?.(kind) ?? []) consider(`${kind}:${id}`)
     const id = String(next)
     taken.add(`${kind}:${id}`)
     return id
@@ -440,14 +450,18 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
   })
 
   /**
-   * Comment and note ids are minted as the largest id plus one, so two people
-   * adding one at the same moment both take N. The one whose addition the
-   * server ordered later renumbers its own, still unconfirmed, to the next
+   * Comment, note and list ids are minted as the largest id plus one, so two
+   * people adding one at the same moment both take N. The one whose addition
+   * the server ordered later renumbers its own, still unconfirmed, to the next
    * free id: in its steps, its side entries and the App's lists.
+   *
+   * A list's id recurs in every step that touches one of its items, so steps
+   * tell a new list apart only on this page (`minted`, kept while its op waits
+   * in the outbox); a peer's new list is its definition entry.
    */
   const renumber = (remote: DocsOp[], local: DocsOp[], before: ReadonlySet<string>): Renames => {
     const minted = (into: Set<string>) => (kind: IdKind, id: string) => {
-      if (!before.has(`${kind}:${id}`)) into.add(`${kind}:${id}`)
+      if (kind !== 'num' && !before.has(`${kind}:${id}`)) into.add(`${kind}:${id}`)
     }
     const theirs = new Set<string>()
     for (const op of remote) {
@@ -457,6 +471,9 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
     if (theirs.size === 0) return new Map()
     const mine = new Set<string>()
     for (const entry of tail) idsIn(entry.step.toJSON(), minted(mine))
+    for (const item of outbox) {
+      for (const key of item.minted) if (idKindOf(key) === 'num' && !before.has(key)) mine.add(key)
+    }
     for (const op of [...local, ...outbox.map((item) => item.op)]) {
       if (op.kind === 'side' && op.value !== null && idKindOf(op.key) && !before.has(op.key))
         mine.add(op.key)
@@ -535,24 +552,36 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
         const over = remote.flatMap((op) => (op.kind === 'steps' ? op.steps : []))
         if (over.length > 0) commitPendingEdit(over)
         const renames = renumber(remote, local, before)
-        if (over.length > 0 || renames.size > 0) rewriteTail(over)
-
-        const rebased = local.map((op) =>
-          op.kind === 'side' ? renamedSide(op, renames) : rebuilt(op),
+        const removed = new Set(
+          remote.flatMap((op) =>
+            op.kind === 'side' && op.value === null && REMOVAL_WINS.test(op.key) ? [op.key] : [],
+          ),
         )
+        const kept = (op: DocsOp): boolean => op.kind !== 'side' || !removed.has(op.key)
+        outbox = outbox.filter((item) => kept(item.op))
         for (const item of outbox) {
-          item.op = item.op.kind === 'side' ? renamedSide(item.op, renames) : rebuilt(item.op)
+          if (item.op.kind === 'side') item.op = renamedSide(item.op, renames)
+          item.minted = renamedKeys(item.minted, renames)
+          item.existing = renamedKeys(item.existing, renames)
         }
+        const rebasedSide = new Map<DocsOp, DocsOp>(
+          local.flatMap((op) => (op.kind === 'side' ? [[op, renamedSide(op, renames)]] : [])),
+        )
         const shown = sideView
         sideView = new Map(sideConfirmed)
-        for (const op of [...rebased, ...outbox.map((item) => item.op)])
-          if (op.kind === 'side') applySide(sideView, op)
+        for (const op of [...rebasedSide.values(), ...outbox.map((item) => item.op)])
+          if (op.kind === 'side' && kept(op)) applySide(sideView, op)
         const entries = new Map<string, Json | null>()
         for (const [key, value] of sideView)
           if (!sameJson(shown.get(key), value)) entries.set(key, value)
         for (const key of shown.keys()) if (!sideView.has(key)) entries.set(key, null)
+        // before the body changes, so what the page draws from an entry (a peer's list
+        // definition) is there when the steps that use it land
         side.write({ renames, entries })
-        return rebased
+        if (over.length > 0 || renames.size > 0) rewriteTail(over)
+
+        for (const item of outbox) if (item.op.kind === 'steps') item.op = rebuilt(item.op)
+        return local.filter(kept).map((op) => rebasedSide.get(op) ?? rebuilt(op as StepsOp))
       } finally {
         integrating = false
       }
@@ -616,7 +645,12 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
   }
 }
 
-/** the comment and note keys `tr` references more often than before it, and which of them were referenced already */
+/**
+ * The comment, note and list keys `tr` references more often than before it,
+ * and which of the comment and note keys were referenced already. A list key
+ * counts only when `tr` starts the list: a new item of a list (Enter) mints
+ * nothing.
+ */
 function mintedBy(tr: Transaction): { minted: Set<string>; existing: Set<string> } {
   const ids = new Set<string>()
   for (const step of tr.steps) idsIn(step.toJSON(), (kind, id) => ids.add(`${kind}:${id}`))
@@ -635,6 +669,8 @@ function mintedBy(tr: Transaction): { minted: Set<string>; existing: Set<string>
         keys.push(
           `${node.attrs.kind === 'endnote' ? 'endnote' : 'footnote'}:${String(node.attrs.id)}`,
         )
+      if (node.type.name === 'docListItem' && node.attrs.numId != null)
+        keys.push(`num:${String(node.attrs.numId)}`)
       for (const key of keys) if (ids.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1)
     })
     return counts
@@ -642,24 +678,32 @@ function mintedBy(tr: Transaction): { minted: Set<string>; existing: Set<string>
   const before = count(tr.docs[0] ?? tr.before)
   const after = count(tr.doc)
   for (const key of ids) {
-    if ((after.get(key) ?? 0) <= (before.get(key) ?? 0)) continue
+    const was = before.get(key) ?? 0
+    if ((after.get(key) ?? 0) <= was) continue
+    if (idKindOf(key) === 'num') {
+      if (was === 0) minted.add(key)
+      continue
+    }
     minted.add(key)
-    if ((before.get(key) ?? 0) > 0) existing.add(key)
+    if (was > 0) existing.add(key)
   }
   return { minted, existing }
 }
 
-type IdKind = 'comment' | 'footnote' | 'endnote'
+/** `num` is a list's numId: its definition entry is `num:<numId>` */
+export type IdKind = 'comment' | 'footnote' | 'endnote' | 'num'
 
 /** side entry key `kind:id` to the old id's replacement */
 type Renames = Map<string, string>
 
 function idKindOf(key: string): IdKind | null {
   const kind = key.slice(0, key.indexOf(':'))
-  return kind === 'comment' || kind === 'footnote' || kind === 'endnote' ? kind : null
+  return kind === 'comment' || kind === 'footnote' || kind === 'endnote' || kind === 'num'
+    ? kind
+    : null
 }
 
-/** Every comment and note id a step's JSON carries (comment marks, note references) */
+/** Every comment, note and list id a step's JSON carries (comment marks, note references, list items) */
 function idsIn(json: unknown, found: (kind: IdKind, id: string) => void): void {
   if (Array.isArray(json)) {
     for (const item of json) idsIn(item, found)
@@ -672,6 +716,10 @@ function idsIn(json: unknown, found: (kind: IdKind, id: string) => void): void {
     for (const id of attrs.ids.split(/\s+/)) if (id) found('comment', id)
   } else if (node.type === 'docNoteRef' && attrs && attrs.id !== '' && attrs.id != null) {
     found(attrs.kind === 'endnote' ? 'endnote' : 'footnote', String(attrs.id))
+  } else if (node.type === 'docListItem' && attrs && attrs.numId != null) {
+    found('num', String(attrs.numId))
+  } else if (node.stepType === 'attr' && node.attr === 'numId' && node.value != null) {
+    found('num', String(node.value))
   }
   for (const value of Object.values(node)) idsIn(value, found)
 }
@@ -702,23 +750,60 @@ function renameIds<T>(json: T, renames: Renames): T {
     if (id !== undefined) {
       out = { ...out, attrs: { ...attrs, id: typeof attrs.id === 'number' ? Number(id) : id } }
     }
+  } else if (node.type === 'docListItem' && attrs && attrs.numId != null) {
+    const numId = renames.get(`num:${String(attrs.numId)}`)
+    if (numId !== undefined) out = { ...out, attrs: { ...attrs, numId } }
+  } else if (node.stepType === 'attr' && node.attr === 'numId' && node.value != null) {
+    const numId = renames.get(`num:${String(node.value)}`)
+    if (numId !== undefined) out = { ...out, value: numId }
   }
   return out as T
 }
 
-/** A side op for a renamed item: its new key, and the item (and a reply's parent) renumbered */
-function renamedSide(op: SideOp, renames: Renames): SideOp {
-  const kind = idKindOf(op.key)
-  if (!kind) return op
-  const to = renames.get(op.key)
-  let value = op.value
+function renamedKeys(keys: Set<string>, renames: ReadonlyMap<string, string>): Set<string> {
+  if (renames.size === 0) return keys
+  return new Set(
+    [...keys].map((key) => (renames.has(key) ? `${idKindOf(key)}:${renames.get(key)}` : key)),
+  )
+}
+
+/** The abstractNumId numbering-actions.ts gives a definition made this session, before its numId */
+export const PENDING_DEF = 'pending-'
+
+/**
+ * A side entry with renamed ids: its new key, and the item renumbered (a
+ * comment's id and a reply's parent; a list definition's numId, and the
+ * pending definition a restarted list points at).
+ */
+export function renamedEntry(
+  key: string,
+  value: Json,
+  renames: ReadonlyMap<string, string>,
+): [string, Json] {
+  const kind = idKindOf(key)
+  if (!kind || renames.size === 0) return [key, value]
+  const to = renames.get(key)
   if (value && typeof value === 'object' && !Array.isArray(value)) {
-    if (to !== undefined) value = { ...value, id: to }
-    const parent =
-      typeof value.parentId === 'string' ? renames.get(`${kind}:${value.parentId}`) : undefined
-    if (parent !== undefined) value = { ...value, parentId: parent }
+    if (kind === 'num') {
+      if (to !== undefined) value = { ...value, numId: to }
+      const source = value.abstractNumId
+      const moved =
+        typeof source === 'string' && source.startsWith(PENDING_DEF)
+          ? renames.get(`num:${source.slice(PENDING_DEF.length)}`)
+          : undefined
+      if (moved !== undefined) value = { ...value, abstractNumId: `${PENDING_DEF}${moved}` }
+    } else {
+      if (to !== undefined) value = { ...value, id: to }
+      const parent =
+        typeof value.parentId === 'string' ? renames.get(`${kind}:${value.parentId}`) : undefined
+      if (parent !== undefined) value = { ...value, parentId: parent }
+    }
   }
-  const key = to === undefined ? op.key : `${kind}:${to}`
+  return [to === undefined ? key : `${kind}:${to}`, value]
+}
+
+function renamedSide(op: SideOp, renames: Renames): SideOp {
+  const [key, value] = renamedEntry(op.key, op.value, renames)
   return key === op.key && value === op.value ? op : { kind: 'side', key, value }
 }
 

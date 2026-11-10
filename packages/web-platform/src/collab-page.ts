@@ -13,12 +13,22 @@ export interface PageCollab<Handles> {
    * the host. `skipWhenSaved`: nothing is stored when the host holds the head already.
    */
   save(how?: { skipWhenSaved?: boolean }): Promise<void>
+  /** this page as the session names it (the host's display name for this user); null before the attach */
+  self(): { client: string; name: string } | null
 }
 
 declare global {
   interface Window {
     /** set while the page co-edits: the renderer's one way into the session */
-    seuCollab?: { attach(handles: unknown): Promise<void> }
+    seuCollab?: {
+      attach(handles: unknown): Promise<void>
+      /**
+       * Whether the document has edits no stored file holds, for the editor's
+       * unsaved mark: the app's own dirty flags stay set after a co-edited
+       * save, since its next save is built against the session's base file.
+       */
+      unsaved?(): boolean
+    }
   }
 }
 
@@ -54,7 +64,14 @@ export async function joinPageCollab<Handles, Op>(options: {
   let attaching: Promise<void> | null = null
   // Until the adapter attached, what the editor shows must stay the epoch base: an edit made
   // now would be counted as base by this page alone, and every peer's step would land shifted
-  window.seuCollab = { attach: (handles) => attach(handles as Handles) }
+  window.seuCollab = {
+    attach: (handles) => attach(handles as Handles),
+    // a viewer stores nothing, so peers' edits are not its unsaved changes
+    unsaved: () => {
+      const status = session?.status()
+      return !!status?.canEdit && (status.version > status.saved || status.unconfirmed > 0)
+    },
+  }
   const releaseInput = holdInput()
 
   const save = async (how: { skipWhenSaved?: boolean } = {}): Promise<void> => {
@@ -95,7 +112,12 @@ export async function joinPageCollab<Handles, Op>(options: {
     })()
     return attaching
   }
-  return { baseBytes: join.baseBytes, attach, save }
+  return {
+    baseBytes: join.baseBytes,
+    attach,
+    save,
+    self: () => session?.status().self ?? null,
+  }
 }
 
 const INPUT_EVENTS = [
