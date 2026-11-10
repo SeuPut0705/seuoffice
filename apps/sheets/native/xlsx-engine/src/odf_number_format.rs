@@ -333,7 +333,22 @@ fn section_code(node: Node<'_, '_>, kind: FormatKind) -> String {
         // A standard number between literal parts.
         return code_with_general(node, date_like);
     }
-    code
+    if date_like { code } else { pad_edges(&code) }
+}
+
+/// A space at either end of a section, spelled as the skip-a-space token.
+/// Formats that line numbers up pad with one (`_-`, `_)` in Excel, which ODF
+/// keeps as a plain space), and a bare space at the edge of a section is the
+/// one literal some readers trim.
+fn pad_edges(code: &str) -> String {
+    let leading = code.len() - code.trim_start_matches(' ').len();
+    let rest = &code[leading..];
+    let trailing = rest.len() - rest.trim_end_matches(' ').len();
+    let middle = &rest[..rest.len() - trailing];
+    if middle.is_empty() {
+        return code.to_owned();
+    }
+    format!("{}{middle}{}", "_ ".repeat(leading), "_ ".repeat(trailing))
 }
 
 /// A style whose number is the standard one but has text around it:
@@ -576,6 +591,8 @@ mod tests {
         assert_eq!(code(body, "h").as_deref(), Some("# ?/??"));
         assert_eq!(code(body, "i").as_deref(), Some("#,##0\"원\""));
         assert_eq!(code(body, "j").as_deref(), Some("@"));
+        let padded = r#"<number:number-style style:name="p"><number:text> </number:text><number:number number:decimal-places="0" number:min-integer-digits="1" number:grouping="true"/><number:text> </number:text></number:number-style>"#;
+        assert_eq!(code(padded, "p").as_deref(), Some("_ #,##0_ "));
     }
 
     #[test]
