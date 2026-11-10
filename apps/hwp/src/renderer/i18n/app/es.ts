@@ -8,6 +8,7 @@ export const es = {
   saveFailed: 'No se pudo guardar el documento.',
   fileSave: 'Guardar',
   fileSaveAs: 'Guardar como…',
+  fileImportPdf: 'Importar PDF…',
   fileExportPdf: 'Exportar como PDF…',
   filePrint: 'Imprimir…',
   autoSave: 'Guardado automático',

@@ -6,6 +6,7 @@ Editor PDF má pět karet na pásku: **Domů / Anotace / Úpravy / Stránky / Zo
 
 - Levý postranní panel: **miniatury** (kliknutím přeskočíte, viditelný rozsah je zvýrazněn) nebo **osnova** (záložky, pokud jsou k dispozici).
 - Přiblížení: ovladač poměru vpravo dole; ctrl+kolečko mění přiblížení po stupních.
+- Lupa při otevření: volba **Při otevření** na kartě Zobrazení určuje výchozí zobrazení nově otevřeného PDF: přizpůsobit šířce, přizpůsobit stránce, nebo lupa od 50 % do 200 %. PDF, u kterého jste lupu změnili sami, se znovu otevře s touto lupou.
 - Posun zobrazení: zapněte **nástroj Ruka** (karty Domů a Zobrazení) a tažením posouvejte stránku všemi směry. Dokud je zapnutý, tažení nevybírá text a obyčejné kliknutí odkaz dál otevře. Tažení se stisknutým prostředním tlačítkem (kolečkem) posouvá zobrazení i bez nástroje. Vypne ho Esc nebo výběr jiného nástroje.
 - Otáčení: jednotlivé stránky nebo všechny z nabídky Stránky; otočení se při uložení zapíší zpět do souboru.
 - Vyhledávání: ctrl+F v celém textu se zvýrazněním všech nálezů.
@@ -70,6 +71,7 @@ Co očekávat:
 ## Operace se stránkami (Stránky)
 
 - **Otočit / odstranit / přesunout**: tažením miniatur měníte pořadí; odstranění vyžaduje potvrzení.
+- **Více stránek najednou**: klikáním na miniatury s podrženou klávesou Ctrl nebo Shift vyberete více stránek. Delete je odstraní; Ctrl+C, Ctrl+X a Ctrl+V je zkopírují, vyjmou a vloží. Zkopírované stránky lze vložit i do jiné karty PDF a vložení se hned uloží do souboru. Když jsou miniatury zavřené, znovu je otevře tlačítko u levého okraje oblasti stránek.
 - **Importovat stránky**: přeneste stránky z jiného souboru PDF. **Vložit prázdnou stránku** přidá prázdnou stránku.
 - **Nahradit stránky** nahradí celý rozsah stránkami odjinud; **Oříznout stránky** zkrátí okraje, s možností použít to na všechny stránky.
 - **Velikost stránky** přepočítá všechny stránky na jediný rozměr papíru; **Obrátit pořadí** otočí dokument od konce k začátku.
@@ -82,6 +84,7 @@ Co očekávat:
 
 - **Exportovat jako Word… / PowerPoint… / Excel…** v nabídce Soubor, nebo ty stejné tři z **Převodník PDF** na pásku karet — vše lokálně, bez nahrávání. Ze souboru .pptx vyjde jeden snímek na stránku a ze souboru .xlsx jeden list na stránku. U každého se zeptá, kam uložit.
 - **PDF do HWP** v nabídce **Převodník PDF** na pásu karet převede PDF na dokument HWP v nové kartě HWP. V okně importu PDF, které karta zobrazí, zvolte **Importovat** (가져오기); dokument vznikne v této kartě a první uložení se zeptá, kam uložit soubor .hwp nebo .hwpx. Samotné PDF zůstane beze změny a převod probíhá na tomto počítači. Zda se text převezme jako odstavce plynoucí přes stránky, nebo jako pevná textová pole, zvolíte v možnostech (환경 설정) karty HWP v části import PDF.
+- Stejný převod lze spustit i z karty HWP. Vyberte PDF příkazem **Soubor** ▸ **Importovat PDF…** a otevře se nová karta HWP se stejným oknem importu PDF. Dokument karty, ve které byla nabídka použita, zůstane beze změny.
 - **Tisk**: aktuální pořadí a otočení přes systémový dialog; podporuje rozsahy stránek.
 
 ## Ukládání

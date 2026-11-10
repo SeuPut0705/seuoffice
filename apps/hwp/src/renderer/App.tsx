@@ -494,6 +494,7 @@ export default function App() {
       .installFileMenu({
         save: t('fileSave'),
         saveAs: t('fileSaveAs'),
+        importPdf: t('fileImportPdf'),
         pdf: t('fileExportPdf'),
         preview: t('filePreview'),
         print: t('filePrint'),
@@ -504,6 +505,7 @@ export default function App() {
       if (
         command === 'save' ||
         command === 'saveAs' ||
+        command === 'importPdf' ||
         command === 'pdf' ||
         command === 'preview' ||
         command === 'print'

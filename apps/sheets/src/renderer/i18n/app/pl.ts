@@ -732,6 +732,13 @@ export const pl = {
   appSaveAs: 'Zapisz jako',
   appUndo: 'Cofnij',
   appRedo: 'Wykonaj ponownie',
+  appQuickAccessCustomize: 'Dostosuj pasek narzędzi Szybki dostęp',
+  appQuickAccessHint:
+    'Naciśnij Alt i cyfrę, aby uruchomić przycisk na tej pozycji, licząc od lewej.',
+  appQuickAccessMoveEarlier: 'Przesuń bliżej początku',
+  appQuickAccessMoveLater: 'Przesuń bliżej końca',
+  appQuickAccessReset: 'Przywróć domyślne',
+  appQuickAccessFull: 'Pasek mieści najwyżej 10 przycisków.',
   appUnsavedEditOne: '● {count} niezapisana zmiana',
   appUnsavedEditMany: '● {count} niezapisanych zmian',
   appSavedState: 'Zapisano',

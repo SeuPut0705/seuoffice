@@ -8,6 +8,7 @@ export const ko = {
   saveFailed: '문서를 저장하지 못했습니다.',
   fileSave: '저장',
   fileSaveAs: '다른 이름으로 저장…',
+  fileImportPdf: 'PDF 가져오기…',
   fileExportPdf: 'PDF로 내보내기…',
   filePrint: '인쇄…',
   autoSave: '자동 저장',

@@ -3,7 +3,7 @@
  *
  * - topics: the text format (font, size, bold, italic, underline, strike,
  *   colour, alignment, letter case) and the line into their branches (shape,
- *   thickness, colour, line style);
+ *   colour, thickness, line style);
  * - a relationship: its shape, its two ends, colour, thickness, line style,
  *   and "automatic curve";
  * - a summary: the shape of its bracket;
@@ -25,18 +25,15 @@
  * keeps its selection; the font and size fields take the focus, which ends the
  * typing first.
  *
+ * A colour is one row that shows the colour in force and opens the palette
+ * below it (`ColorField`), so every group fits the panel without scrolling.
+ * The buttons with a picture on them sit in one grid of eight across.
+ *
  * The panel is chrome and takes the app's colours from tokens. The colour
  * swatches show map colours, which are document content.
  */
 import { useEffect, useState, type ReactNode } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import {
-  ColorPicker,
-  colorSwatchName,
-  Dropdown,
-  type ColorPickerStrings,
-  type DropdownOption,
-} from '@genoffice/ui'
+import { Dropdown, type DropdownOption } from '@genoffice/ui'
 import {
   ARROW_SHAPES,
   BOUNDARY_SHAPES,
@@ -45,7 +42,7 @@ import {
   RELATIONSHIP_SHAPES,
   SUMMARY_SHAPES,
 } from '@genoffice/xmind-engine'
-import { type StringKey, type TFunc, useI18n } from '../i18n/locale'
+import { type StringKey, useI18n } from '../i18n/locale'
 import {
   FONT_SIZE_POINTS,
   type FormatToggle,
@@ -71,7 +68,8 @@ import type {
 import type { PainterState } from '../map/format-painter'
 import { linePatternDash } from '../map/branches'
 import { fontChoices, useSystemFonts } from '../system-fonts'
-import type { FormatModel, Shown, ShownColor } from './format-model'
+import { ColorField } from './ColorField'
+import type { FormatModel, Shown } from './format-model'
 import {
   IconAlignCenter,
   IconAlignLeft,
@@ -321,15 +319,21 @@ export function FormatPanel(p: FormatPanelProps) {
                 onPick={(shape) => p.onBranchLine({ shape })}
               />
             </Group>
+            <Group label={t('lineColor')}>
+              <ColorField
+                action="line-color"
+                label={t('lineColor')}
+                current={model.line.color}
+                auto={t('colorAuto')}
+                onPick={(color) => p.onBranchLine({ color })}
+              />
+            </Group>
             <Group label={t('lineWidth')}>
               <WidthPick
                 action="line-width"
                 current={model.line.width}
                 onPick={(width) => p.onBranchLine({ width })}
               />
-            </Group>
-            <Group label={t('lineColor')}>
-              <ColorPick current={model.line.color} onPick={(color) => p.onBranchLine({ color })} />
             </Group>
             <Group label={t('linePattern')}>
               <PatternPick
@@ -380,8 +384,11 @@ export function FormatPanel(p: FormatPanelProps) {
               />
             </Group>
             <Group label={t('lineColor')}>
-              <ColorPick
+              <ColorField
+                action="rel-color"
+                label={t('lineColor')}
                 current={model.format.color}
+                auto={t('colorAuto')}
                 onPick={(color) => p.onRelationship({ color })}
               />
             </Group>
@@ -442,7 +449,13 @@ export function FormatPanel(p: FormatPanelProps) {
               />
             </Group>
             <Group label={t('boundaryLineColor')}>
-              <ColorPick current={model.format.color} onPick={(color) => p.onBoundary({ color })} />
+              <ColorField
+                action="boundary-color"
+                label={t('boundaryLineColor')}
+                current={model.format.color}
+                auto={t('colorAuto')}
+                onPick={(color) => p.onBoundary({ color })}
+              />
             </Group>
             <Group label={t('lineWidth')}>
               <WidthPick
@@ -459,17 +472,26 @@ export function FormatPanel(p: FormatPanelProps) {
               />
             </Group>
             <Group label={t('boundaryFill')}>
-              <button
-                type="button"
-                className={`mm-format-action${shownIs(model.format.fill, 'none') ? ' on' : ''}`}
-                data-action="boundary-fill-none"
-                aria-pressed={shownIs(model.format.fill, 'none')}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => p.onBoundary({ fill: 'none' })}
-              >
-                {t('boundaryFillNone')}
-              </button>
-              <ColorPick current={model.format.fill} onPick={(fill) => p.onBoundary({ fill })} />
+              <div className="mm-format-fill">
+                <ColorField
+                  action="boundary-fill"
+                  label={t('boundaryFill')}
+                  current={model.format.fill}
+                  auto={t('colorAuto')}
+                  none={t('boundaryFillNone')}
+                  onPick={(fill) => p.onBoundary({ fill })}
+                />
+                <button
+                  type="button"
+                  className={`mm-format-action${shownIs(model.format.fill, 'none') ? ' on' : ''}`}
+                  data-action="boundary-fill-none"
+                  aria-pressed={shownIs(model.format.fill, 'none')}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => p.onBoundary({ fill: 'none' })}
+                >
+                  {t('boundaryFillNone')}
+                </button>
+              </div>
             </Group>
           </Section>
         )}
@@ -579,7 +601,7 @@ function TextSection(p: {
       </Group>
 
       <Group label={t('formatStyle')}>
-        <div className="mm-format-row" role="group" aria-label={t('formatStyle')}>
+        <div className="mm-format-cells" role="group" aria-label={t('formatStyle')}>
           {toggles.map((toggle) => (
             <FormatButton
               key={toggle.key}
@@ -596,20 +618,18 @@ function TextSection(p: {
       </Group>
 
       <Group label={t('formatColor')}>
-        {/* the swatches keep the focus, so a title being typed keeps its selection */}
-        <div className="mm-format-colors" onMouseDown={(event) => event.preventDefault()}>
-          <ColorPicker
-            value={format?.color ?? null}
-            strings={pickerStrings(lang, t, t('formatColorAuto'))}
-            onPick={(hex) => {
-              if (!off) p.onFormat({ color: hex ? (hex.toLowerCase() as `#${string}`) : null })
-            }}
-          />
-        </div>
+        <ColorField
+          action="format-color"
+          label={t('formatColor')}
+          current={{ state: 'value', value: format?.color ?? null }}
+          auto={t('formatColorAuto')}
+          disabled={off}
+          onPick={(hex) => p.onFormat({ color: hex ? (hex as `#${string}`) : null })}
+        />
       </Group>
 
       <Group label={t('formatAlign')}>
-        <div className="mm-format-row" role="group" aria-label={t('formatAlign')}>
+        <div className="mm-format-cells" role="group" aria-label={t('formatAlign')}>
           {aligns.map((align) => (
             <FormatButton
               key={align.value}
@@ -637,16 +657,6 @@ function TextSection(p: {
       </Group>
     </Section>
   )
-}
-
-function pickerStrings(lang: Lang, t: TFunc, auto: string): ColorPickerStrings {
-  return {
-    auto,
-    themeColors: t('formatThemeColors'),
-    standardColors: t('formatStandardColors'),
-    moreColors: t('formatMoreColors'),
-    colorName: (swatch) => colorSwatchName(lang, swatch),
-  }
 }
 
 /** A group of the panel; `bare` leaves the title to the switch above it (still read out by name). */
@@ -679,7 +689,7 @@ function StateNote({ shown }: { shown: Shown<unknown> }) {
   )
 }
 
-/** A row of shape buttons, the one in force pressed; none is when the value is mixed or another shape. */
+/** Shape buttons in the panel's grid, the one in force pressed; none is when the value is mixed or another shape. */
 function ShapeGrid<T extends string>(p: {
   action: string
   shapes: readonly T[]
@@ -690,7 +700,7 @@ function ShapeGrid<T extends string>(p: {
   onPick(shape: T): void
 }) {
   return (
-    <div className="mm-format-row mm-format-shapes" role="group">
+    <div className="mm-format-cells mm-format-shapes" role="group">
       {p.shapes.map((shape) => (
         <FormatButton
           key={shape}
@@ -778,28 +788,6 @@ function PatternSample({ pattern, name }: { pattern: LinePattern; name: string }
       </svg>
       <span>{name}</span>
     </span>
-  )
-}
-
-/**
- * A colour from the shared palette; "automatic" takes the value off. While the
- * selected topics differ, the palette is given a value no swatch has, so
- * nothing, not even "automatic", looks chosen.
- */
-function ColorPick(p: { current: ShownColor; onPick(color: string | null): void }) {
-  const { lang, t } = useI18n()
-  const value = p.current.state === 'value' ? p.current.value : MIXED
-  return (
-    <>
-      <StateNote shown={p.current} />
-      <div className="mm-format-colors" onMouseDown={(event) => event.preventDefault()}>
-        <ColorPicker
-          value={value}
-          strings={pickerStrings(lang, t, t('colorAuto'))}
-          onPick={(hex) => p.onPick(hex ? hex.toLowerCase() : null)}
-        />
-      </div>
-    </>
   )
 }
 

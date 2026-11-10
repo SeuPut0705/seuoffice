@@ -8,6 +8,7 @@ export const en = {
   saveFailed: 'The document could not be saved.',
   fileSave: 'Save',
   fileSaveAs: 'Save As…',
+  fileImportPdf: 'Import PDF…',
   fileExportPdf: 'Export as PDF…',
   filePrint: 'Print…',
   autoSave: 'Auto save',

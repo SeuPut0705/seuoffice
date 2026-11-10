@@ -6,6 +6,7 @@ L’éditeur PDF a cinq onglets de ruban : **Accueil / Annoter / Édition / Page
 
 - Barre latérale gauche : les **Vignettes** (cliquez pour sauter, la plage visible est mise en évidence) ou les **Signets** (le sommaire, lorsqu’il existe).
 - Zoom : le contrôle de ratio en bas à droite ; ctrl+molette règle le zoom par crans.
+- Zoom à l’ouverture : **À l’ouverture**, dans l’onglet Affichage, choisit la vue de départ d’un PDF que l’on ouvre : ajuster à la largeur, ajuster à la page, ou un zoom de 50 % à 200 %. Un PDF dont vous avez changé le zoom vous-même se rouvre à ce zoom.
 - Déplacer l'affichage : activez l'**Outil Main** (onglets Accueil et Affichage) et faites glisser pour déplacer la page dans tous les sens. Tant qu'il est actif, le glissement ne sélectionne pas de texte et un simple clic suit toujours un lien. Glisser avec le bouton du milieu (molette) enfoncé déplace l'affichage sans l'outil. Échap ou un autre outil le désactive.
 - Rotation : page par page ou pour toutes les pages depuis le menu Pages ; les rotations sont réécrites à l’enregistrement.
 - Recherche : ctrl+F en texte intégral, toutes les occurrences sont mises en évidence.
@@ -70,6 +71,7 @@ Six outils : **Dessin, Rectangle, Ellipse, Flèche, Note**, plus le **Caviarder 
 ## Opérations sur les pages (Pages)
 
 - **Rotation / suppression / réorganisation** : faites glisser les vignettes pour réorganiser ; la suppression demande confirmation.
+- **Plusieurs pages à la fois** : cliquez sur les vignettes en maintenant Ctrl ou Maj pour sélectionner plusieurs pages. Suppr les supprime ; Ctrl+C, Ctrl+X et Ctrl+V les copient, les coupent et les collent. Les pages copiées se collent aussi dans un autre onglet PDF, et un collage est enregistré aussitôt dans le fichier. Si les vignettes sont fermées, le bouton sur le bord gauche de la zone des pages les rouvre.
 - **Importer des pages** : faites venir des pages depuis un autre PDF. **Insérer une page vierge** ajoute une page vide.
 - **Remplacer les pages** échange une plage contre des pages venant d’ailleurs ; **Rogner les pages** rogne les bords, avec une option pour l’appliquer à toutes les pages.
 - **Taille de page** redimensionne toutes les pages à un même format de papier ; **Inverser l’ordre** retourne le document de bout en bout.
@@ -82,6 +84,7 @@ Six outils : **Dessin, Rectangle, Ellipse, Flèche, Note**, plus le **Caviarder 
 
 - **Exporter en Word… / PowerPoint… / Excel…** dans le menu Fichier, ou les trois mêmes depuis **Convertir le PDF** dans le ruban — tout est local, sans téléversement. Le .pptx donne une diapositive par page et le .xlsx une feuille de calcul par page. Chacun demande où l’enregistrer.
 - **PDF en HWP**, dans **Convertir le PDF** du ruban, transforme le PDF en document HWP dans un nouvel onglet HWP. Choisissez **Importer** (가져오기) dans la fenêtre d'importation PDF que l'onglet affiche ; le document est créé dans cet onglet, et le premier enregistrement demande où placer le .hwp ou le .hwpx. Le PDF lui-même reste tel quel, et la conversion se fait sur ce PC. Le choix entre un texte en paragraphes qui suivent les pages ou en zones de texte fixes se fait dans les options (환경 설정) de l'onglet HWP, rubrique importation PDF.
+- La même conversion se lance aussi depuis un onglet HWP. Choisissez un PDF avec **Fichier** ▸ **Importer un PDF…** : un nouvel onglet HWP s'ouvre avec la même fenêtre d'importation PDF. Le document de l'onglet où le menu a été utilisé reste tel quel.
 - **Imprimer** : l’ordre et les rotations courants via la boîte de dialogue du système ; plages de pages prises en charge.
 
 ## Enregistrement

@@ -180,6 +180,10 @@ const api: PdfApi = {
   pagePreviewPng: (request) => ipcRenderer.invoke(PDF_CHANNELS.pagePreviewPng, request),
   extractPages: (request) => ipcRenderer.invoke(PDF_CHANNELS.extractPages, request),
   insertPdf: (request) => ipcRenderer.invoke(PDF_CHANNELS.insertPdf, request),
+  copyPages: (request) => ipcRenderer.invoke(PDF_CHANNELS.copyPages, request),
+  pastePages: (request) => ipcRenderer.invoke(PDF_CHANNELS.pastePages, request),
+  copiedPageCount: () =>
+    (ipcRenderer.invoke(PDF_CHANNELS.copiedPageCount) as Promise<number>).catch(() => 0),
   compareReadPdf: () => ipcRenderer.invoke(PDF_CHANNELS.compareReadPdf),
   compareReadOpen: (path: string, password?: string) =>
     ipcRenderer.invoke(PDF_CHANNELS.compareReadOpen, path, password),

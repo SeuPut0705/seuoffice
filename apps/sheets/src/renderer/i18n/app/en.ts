@@ -685,6 +685,13 @@ export const en = {
   appSaveAs: 'Save As',
   appUndo: 'Undo',
   appRedo: 'Redo',
+  appQuickAccessCustomize: 'Customize Quick Access Toolbar',
+  appQuickAccessHint:
+    'Press Alt and a number to run the button in that position, counting from the left.',
+  appQuickAccessMoveEarlier: 'Move earlier',
+  appQuickAccessMoveLater: 'Move later',
+  appQuickAccessReset: 'Reset to default',
+  appQuickAccessFull: 'The toolbar holds up to 10 buttons.',
   appUnsavedEditOne: '● {count} unsaved edit',
   appUnsavedEditMany: '● {count} unsaved edits',
   appSavedState: 'Saved',

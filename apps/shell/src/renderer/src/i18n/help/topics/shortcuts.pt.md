@@ -278,18 +278,19 @@ O atalho de filtro do Excel, Ctrl+Shift+L, não faz nada no Windows nem no Linux
 
 ### Janela
 
-| Ação                                                         | macOS    | Windows / Linux |
-| ------------------------------------------------------------ | -------- | --------------- |
-| Guardar o livro                                              | ⌘S       | Ctrl+S          |
-| Guardar como                                                 | ⇧⌘S      | Ctrl+Shift+S    |
-| Abrir um livro                                               | ⌘O       | Ctrl+O          |
-| Imprimir                                                     | ⌘P       | Ctrl+P          |
-| Fechar o livro (macOS) / Sair da aplicação (Windows e Linux) | ⌘W       | Ctrl+Q          |
-| Abrir o guia do utilizador                                   | F1       | F1              |
-| Ampliar                                                      | ⌘=       | Ctrl+=          |
-| Zoom com a roda do rato                                      | ⌘ + roda | Ctrl + roda     |
-| Mostrar ou ocultar as fórmulas nas células                   | ⌘`       | Ctrl+`          |
-| Expandir ou recolher a barra de fórmulas                     | ⌘⇧U      | Ctrl+Shift+U    |
+| Ação                                                                                  | macOS    | Windows / Linux |
+| ------------------------------------------------------------------------------------- | -------- | --------------- |
+| Guardar o livro                                                                       | ⌘S       | Ctrl+S          |
+| Guardar como                                                                          | ⇧⌘S      | Ctrl+Shift+S    |
+| Abrir um livro                                                                        | ⌘O       | Ctrl+O          |
+| Imprimir                                                                              | ⌘P       | Ctrl+P          |
+| Fechar o livro (macOS) / Sair da aplicação (Windows e Linux)                          | ⌘W       | Ctrl+Q          |
+| Abrir o guia do utilizador                                                            | F1       | F1              |
+| Ampliar                                                                               | ⌘=       | Ctrl+=          |
+| Zoom com a roda do rato                                                               | ⌘ + roda | Ctrl + roda     |
+| Mostrar ou ocultar as fórmulas nas células                                            | ⌘`       | Ctrl+`          |
+| Expandir ou recolher a barra de fórmulas                                              | ⌘⇧U      | Ctrl+Shift+U    |
+| Executar um botão da Barra de Ferramentas de Acesso Rápido pela posição (1.º ao 10.º) |          | Alt+1 … Alt+0   |
 
 ## Slides
 

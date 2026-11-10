@@ -761,6 +761,13 @@ export const de = {
   appSaveAs: 'Speichern unter',
   appUndo: 'Rückgängig',
   appRedo: 'Wiederholen',
+  appQuickAccessCustomize: 'Symbolleiste für den Schnellzugriff anpassen',
+  appQuickAccessHint:
+    'Drücken Sie Alt und eine Ziffer, um die Schaltfläche an dieser Position von links auszuführen.',
+  appQuickAccessMoveEarlier: 'Nach vorn verschieben',
+  appQuickAccessMoveLater: 'Nach hinten verschieben',
+  appQuickAccessReset: 'Auf Standard zurücksetzen',
+  appQuickAccessFull: 'Die Symbolleiste fasst höchstens 10 Schaltflächen.',
   appUnsavedEditOne: '● {count} ungespeicherte Bearbeitung',
   appUnsavedEditMany: '● {count} ungespeicherte Bearbeitungen',
   appSavedState: 'Gespeichert',

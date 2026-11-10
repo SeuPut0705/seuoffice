@@ -278,18 +278,19 @@ Pintasan penapis Excel, Ctrl+Shift+L, tidak melakukan apa-apa pada Windows atau 
 
 ### Tetingkap
 
-| Tindakan                                                              | macOS            | Windows / Linux     |
-| --------------------------------------------------------------------- | ---------------- | ------------------- |
-| Simpan buku kerja                                                     | ⌘S               | Ctrl+S              |
-| Simpan Sebagai                                                        | ⇧⌘S              | Ctrl+Shift+S        |
-| Buka buku kerja                                                       | ⌘O               | Ctrl+O              |
-| Cetak                                                                 | ⌘P               | Ctrl+P              |
-| Tutup buku kerja (macOS) / Keluar daripada aplikasi (Windows & Linux) | ⌘W               | Ctrl+Q              |
-| Buka Panduan Pengguna                                                 | F1               | F1                  |
-| Zum masuk                                                             | ⌘=               | Ctrl+=              |
-| Zum dengan roda tetikus                                               | ⌘ + roda tetikus | Ctrl + roda tetikus |
-| Tunjuk atau sorok formula dalam sel                                   | ⌘`               | Ctrl+`              |
-| Kembangkan atau ciutkan bar formula                                   | ⌘⇧U              | Ctrl+Shift+U        |
+| Tindakan                                                                              | macOS            | Windows / Linux     |
+| ------------------------------------------------------------------------------------- | ---------------- | ------------------- |
+| Simpan buku kerja                                                                     | ⌘S               | Ctrl+S              |
+| Simpan Sebagai                                                                        | ⇧⌘S              | Ctrl+Shift+S        |
+| Buka buku kerja                                                                       | ⌘O               | Ctrl+O              |
+| Cetak                                                                                 | ⌘P               | Ctrl+P              |
+| Tutup buku kerja (macOS) / Keluar daripada aplikasi (Windows & Linux)                 | ⌘W               | Ctrl+Q              |
+| Buka Panduan Pengguna                                                                 | F1               | F1                  |
+| Zum masuk                                                                             | ⌘=               | Ctrl+=              |
+| Zum dengan roda tetikus                                                               | ⌘ + roda tetikus | Ctrl + roda tetikus |
+| Tunjuk atau sorok formula dalam sel                                                   | ⌘`               | Ctrl+`              |
+| Kembangkan atau ciutkan bar formula                                                   | ⌘⇧U              | Ctrl+Shift+U        |
+| Jalankan butang Bar Alat Capaian Pantas mengikut kedudukan (pertama hingga kesepuluh) |                  | Alt+1 … Alt+0       |
 
 ## Slides
 
