@@ -397,6 +397,21 @@
   color: var(--text-secondary);
 }
 
+/* the where-used chooser sits among these fields and takes their sizes */
+.skl-dialog .ai-skill-editors legend {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.skl-dialog .ai-skill-editors label {
+  font-size: 13px;
+}
+
+.skl-dialog .ai-skill-editors-hint {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .skl-dialog .set-adv-toggle {
   margin: 0;
 }
