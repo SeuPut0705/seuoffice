@@ -3638,6 +3638,60 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
     }
 
     #[test]
+    fn a_turned_shape_keeps_its_angle_and_an_unknown_preset_its_name() {
+        // A cloud turned 30 degrees over E2:F5: two default columns are 96 pt
+        // wide and four default rows 60 pt high.
+        let drawing = concat!(
+            r#"<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">"#,
+            r#"<xdr:twoCellAnchor><xdr:from><xdr:col>4</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>6</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>5</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>"#,
+            r#"<xdr:sp><xdr:nvSpPr><xdr:cNvPr id="2" name="Cloud 1"/><xdr:cNvSpPr/></xdr:nvSpPr><xdr:spPr><a:xfrm rot="1800000"><a:off x="2438400" y="190500"/><a:ext cx="1219200" cy="762000"/></a:xfrm><a:prstGeom prst="cloud"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="DDEBF7"/></a:solidFill></xdr:spPr></xdr:sp><xdr:clientData/></xdr:twoCellAnchor>"#,
+            r#"</xdr:wsDr>"#,
+        );
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1"/><sheetData>"#,
+            r#"<row r="1"><c r="A1"><v>1</v></c></row>"#,
+            r#"</sheetData><drawing r:id="rId1"/></worksheet>"#,
+        );
+        let entries = single_sheet_entries(
+            "",
+            sheet,
+            vec![
+                (
+                    "xl/worksheets/_rels/sheet1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/drawings/drawing1.xml", drawing.to_owned()),
+            ],
+        );
+        let (result, content, _, _, dir) = export(&entries);
+        assert_eq!(result.dropped.shapes, 0);
+        // The frame keeps its own size and is turned around its corner, then
+        // moved so its centre stays where the anchor had it. No end cell: a
+        // reader would stretch the turned frame to it.
+        assert!(
+            content.contains(
+                r#" draw:z-index="0" draw:name="Cloud 1" svg:width="3.387cm" svg:height="2.117cm" draw:transform="rotate (-0.5235987756) translate (0.756cm -0.705cm)">"#
+            ),
+            "{content}"
+        );
+        assert!(!content.contains("table:end-cell-address"), "{content}");
+        // The outline is the bounding rectangle, under the preset's name.
+        assert!(
+            content.contains(
+                r#"<draw:enhanced-geometry svg:viewBox="0 0 21600 21600" draw:type="ooxml-cloud" draw:enhanced-path="M 0 0 L 21600 0 21600 21600 0 21600 Z N"/>"#
+            ),
+            "{content}"
+        );
+        // Read back, it is a cloud turned 30 degrees again.
+        let round = dir.path().join("round.xlsx");
+        crate::convert::convert_to_xlsx(&dir.path().join("book.ods"), &round).unwrap();
+        let back = read_entry(&round, "xl/drawings/drawing1.xml");
+        assert!(back.contains(r#"<a:xfrm rot="1800000">"#), "{back}");
+        assert!(back.contains(r#"<a:prstGeom prst="cloud">"#), "{back}");
+    }
+
+    #[test]
     fn carries_a_chart_with_its_ranges_titles_and_legend() {
         let chart = concat!(
             r#"<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart>"#,

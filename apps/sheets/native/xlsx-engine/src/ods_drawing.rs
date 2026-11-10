@@ -332,10 +332,15 @@ impl Drawings {
     ) -> Option<String> {
         let anchor: &DrawingAnchor = &visual.anchor;
         let (width, height) = Self::size(geometry, visual)?;
+        let turn = visual
+            .rotation
+            .filter(|degrees| degrees.is_finite() && degrees.rem_euclid(360.0) != 0.0);
         let mut attributes = String::new();
         // A two-cell anchor follows its end cell when rows or columns are
-        // resized; naming the end cell asks a reader for the same.
-        if anchor.explicit_to && visual.edit_as.as_deref() != Some("absolute") {
+        // resized; naming the end cell asks a reader for the same. A turned
+        // drawing is left out: a reader stretches it to its end cell along
+        // the sheet's axes, which shears it.
+        if anchor.explicit_to && visual.edit_as.as_deref() != Some("absolute") && turn.is_none() {
             let end_x = (anchor.to_column_offset as f64)
                 .clamp(0.0, geometry.column(anchor.to_column) * EMU_PER_POINT);
             let end_y =
@@ -354,12 +359,42 @@ impl Drawings {
         if let Some(name) = visual.name.as_deref().filter(|name| !name.is_empty()) {
             attributes.push_str(&format!(r#" draw:name="{}""#, escape_xml(name)));
         }
+        let x = (anchor.from_column_offset as f64).max(0.0);
+        let y = (anchor.from_row_offset as f64).max(0.0);
+        let Some(degrees) = turn else {
+            attributes.push_str(&format!(
+                r#" svg:width="{}" svg:height="{}" svg:x="{}" svg:y="{}""#,
+                cm(width),
+                cm(height),
+                cm(x),
+                cm(y),
+            ));
+            return Some(attributes);
+        };
+        // The anchor of a turned drawing is around its centre; the drawing
+        // keeps its own size, and one turned onto its side is anchored
+        // around the turned frame.
+        let quarter = degrees.rem_euclid(180.0);
+        let (own_width, own_height) = match (visual.frame_width, visual.frame_height) {
+            (Some(own_width), Some(own_height)) if own_width > 0.0 && own_height > 0.0 => {
+                (own_width, own_height)
+            }
+            _ if (45.0..135.0).contains(&quarter) => (height, width),
+            _ => (width, height),
+        };
+        // ODF turns the frame around its own corner and then moves it, with
+        // the angle counted the other way round.
+        let (sin, cos) = degrees.to_radians().sin_cos();
+        let (half_width, half_height) = (own_width / 2.0, own_height / 2.0);
+        let shift_x = x + width / 2.0 - (half_width * cos - half_height * sin);
+        let shift_y = y + height / 2.0 - (half_width * sin + half_height * cos);
         attributes.push_str(&format!(
-            r#" svg:width="{}" svg:height="{}" svg:x="{}" svg:y="{}""#,
-            cm(width),
-            cm(height),
-            cm((anchor.from_column_offset as f64).max(0.0)),
-            cm((anchor.from_row_offset as f64).max(0.0)),
+            r#" svg:width="{}" svg:height="{}" draw:transform="rotate ({:.10}) translate ({} {})""#,
+            cm(own_width),
+            cm(own_height),
+            -degrees.to_radians(),
+            cm(shift_x),
+            cm(shift_y),
         ));
         Some(attributes)
     }
@@ -560,11 +595,22 @@ impl Drawings {
                     custom.width.max(1.0).round(),
                     custom.height.max(1.0).round()
                 ),
-                "non-primitive",
+                "non-primitive".to_owned(),
                 enhanced_path(&custom.d)?,
             ),
             None => {
                 let (shape_type, path) = preset_path(kind);
+                // A preset drawn as its bounding rectangle keeps its name, so
+                // a reader that knows the figure can bring it back.
+                let shape_type = if shape_type == "rectangle"
+                    && kind != "rect"
+                    && !kind.is_empty()
+                    && kind.chars().all(|character| character.is_ascii_alphanumeric())
+                {
+                    format!("ooxml-{kind}")
+                } else {
+                    shape_type.to_owned()
+                };
                 ("0 0 21600 21600".to_owned(), shape_type, path.to_owned())
             }
         };
