@@ -97,7 +97,11 @@ async function open(file: File, collab: CollabParams | null): Promise<void> {
     },
   }
   const stored = (saved: { fileName: string; bytes: Uint8Array; version?: number }): void => {
-    observed.saved = { fileName: saved.fileName, bytes: saved.bytes, version: saved.version ?? null }
+    observed.saved = {
+      fileName: saved.fileName,
+      bytes: saved.bytes,
+      version: saved.version ?? null,
+    }
     download(saved.fileName, saved.bytes)
     status.textContent = `${saved.fileName} 저장함`
   }

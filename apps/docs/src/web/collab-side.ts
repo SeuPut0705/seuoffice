@@ -46,7 +46,10 @@ export async function openDocsCollab(
     produce: async (entries) => {
       await context.current.settleFontSettings?.()
       // the App's own settle hands back its live state, which would drop these entries
-      const docx = await buildDocBytes({ ...side.contextWith(entries), settleFontSettings: undefined })
+      const docx = await buildDocBytes({
+        ...side.contextWith(entries),
+        settleFontSettings: undefined,
+      })
       if (!docx) throw new Error('the document could not be written')
       return { fileName: file.fileName, bytes: await file.finish(docx) }
     },
@@ -118,7 +121,8 @@ type ListName = keyof typeof LISTS
 
 const POLL_MS = 200
 
-const plain = (value: unknown): Json => (value === undefined ? null : (JSON.parse(JSON.stringify(value)) as Json))
+const plain = (value: unknown): Json =>
+  value === undefined ? null : (JSON.parse(JSON.stringify(value)) as Json)
 
 function listOf(name: ListName, entries: ReadonlyMap<string, Json>): Json[] {
   const prefix = `${name}:`
@@ -132,7 +136,10 @@ function listOf(name: ListName, entries: ReadonlyMap<string, Json>): Json[] {
  * hold them; `base` is each list as the document opened, which decides its
  * dirty flag.
  */
-function fieldsOf(entries: ReadonlyMap<string, Json>, base: Record<ListName, string>): Record<string, unknown> {
+function fieldsOf(
+  entries: ReadonlyMap<string, Json>,
+  base: Record<ListName, string>,
+): Record<string, unknown> {
   const fields: Record<string, unknown> = {}
   for (const [group, names] of Object.entries(GROUPS)) {
     const value = entries.get(group)
@@ -193,8 +200,7 @@ export function docsSide(context: { readonly current: FileActionContext }): Docs
       const ctx = context.current
       const setterOf = (name: string) =>
         ctx[`set${name[0].toUpperCase()}${name.slice(1)}` as keyof FileActionContext] as
-          | ((next: unknown) => void)
-          | undefined
+          ((next: unknown) => void) | undefined
       let wrote = false
       for (const [group, names] of Object.entries(GROUPS)) {
         const value = entries.get(group)

@@ -90,7 +90,9 @@ test('two people edit one docx at once, a late joiner and a viewer follow, a sav
   await expect.poll(async () => (await bob.status()).saved).toBe(version)
 })
 
-test('the app’s own save button saves the co-edited version through the host', async ({ browser }) => {
+test('the app’s own save button saves the co-edited version through the host', async ({
+  browser,
+}) => {
   const documentId = freshDocument()
   const alice = await openCoEdited(browser, SIMPLE, { documentId, user: 'alice' })
   const bob = await openCoEdited(browser, SIMPLE, { documentId, user: 'bob' })

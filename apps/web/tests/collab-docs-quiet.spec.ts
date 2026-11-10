@@ -34,7 +34,9 @@ async function fieldsAndNotes(): Promise<CoFile> {
     '<w:del w:id="12" w:author="Reviewer" w:date="2024-01-01T00:00:00Z"><w:r><w:delText>gone</w:delText></w:r></w:del>' +
     '<w:r><w:t xml:space="preserve"> with a note</w:t></w:r>' +
     '<w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="1"/></w:r></w:p>' +
-    Array.from({ length: 60 }, (_, i) => para(`Filler paragraph ${i} pushing the second chapter down.`)).join('') +
+    Array.from({ length: 60 }, (_, i) =>
+      para(`Filler paragraph ${i} pushing the second chapter down.`),
+    ).join('') +
     para('Chapter two', 'Heading1')
   const bytes = await buildDocx({
     bodyXml: body,
@@ -57,7 +59,9 @@ async function longDocument(): Promise<CoFile> {
     `<w:tbl><w:tblGrid><w:gridCol w:w="4000"/><w:gridCol w:w="4000"/></w:tblGrid><w:tr>` +
     `<w:tc>${para(`cell ${n}a`)}</w:tc><w:tc>${para(`cell ${n}b`)}</w:tc></w:tr></w:tbl>`
   const body = Array.from({ length: 400 }, (_, i) =>
-    i % 25 === 0 ? table(i) + para(`Section ${i}`, 'Heading2') : para(`Line ${i} of a long document.`),
+    i % 25 === 0
+      ? table(i) + para(`Section ${i}`, 'Heading2')
+      : para(`Line ${i} of a long document.`),
   ).join('')
   const bytes = await buildDocx({ bodyXml: body })
   return { name: 'long.docx', mimeType: DOCX, buffer: Buffer.from(bytes) }
@@ -67,16 +71,21 @@ const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.doc
 
 const FILES: Array<{ label: string; file: () => Promise<CoFile> | CoFile }> = [
   { label: 'pictures, tables and lists', file: () => at('fixtures/generated/kitchen-sink.docx') },
-  { label: 'a floating captioned table', file: () => at('fixtures/generated/visual-captable-float.docx') },
+  {
+    label: 'a floating captioned table',
+    file: () => at('fixtures/generated/visual-captable-float.docx'),
+  },
   { label: 'nested tables', file: () => at('packages/docx2hwp/tests/fixtures/nested.docx') },
   { label: 'a notice with tabs', file: () => at('packages/docx2hwp/tests/fixtures/notice.docx') },
   {
     label: 'a picture in the header',
-    file: () => at('packages/docx-engine/tests/fixtures/truths/render-hf-inline-picture/probe.docx'),
+    file: () =>
+      at('packages/docx-engine/tests/fixtures/truths/render-hf-inline-picture/probe.docx'),
   },
   {
     label: 'a header anchor',
-    file: () => at('packages/docx-engine/tests/fixtures/truths/render-hf-anchor-reserve/probe.docx'),
+    file: () =>
+      at('packages/docx-engine/tests/fixtures/truths/render-hf-anchor-reserve/probe.docx'),
   },
   {
     label: 'a text box',

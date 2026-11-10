@@ -14,8 +14,7 @@ import { createDocsAdapter, type DocsOp, type SideStore } from '../src/web/colla
 
 const FORMAT = { name: 'docx', schema: 1 }
 
-const para = (text: string) =>
-  `<w:p><w:r><w:t xml:space="preserve">${text}</w:t></w:r></w:p>`
+const para = (text: string) => `<w:p><w:r><w:t xml:space="preserve">${text}</w:t></w:r></w:p>`
 const cell = (text: string) => `<w:tc>${para(text)}</w:tc>`
 const BODY =
   para('alpha beta gamma') +
@@ -79,7 +78,8 @@ function memorySide(initial: [string, Json][]): SideStore & {
       for (const [key, value] of entries) {
         const to = renames.get(key)
         if (to === undefined) renamed.set(key, value)
-        else renamed.set(`${key.slice(0, key.indexOf(':'))}:${to}`, { ...(value as object), id: to })
+        else
+          renamed.set(`${key.slice(0, key.indexOf(':'))}:${to}`, { ...(value as object), id: to })
       }
       entries = renamed
       for (const [key, value] of changes) {
@@ -140,7 +140,8 @@ let lastSide: { readonly all: Map<string, Json> } | null = null
 
 const opener =
   (only: readonly Kind[]) =>
-  (bytes: Uint8Array): SimulatedEditor<TaggedOp> => openHeadless(bytes, only)
+  (bytes: Uint8Array): SimulatedEditor<TaggedOp> =>
+    openHeadless(bytes, only)
 
 function openHeadless(bytes: Uint8Array, only: readonly Kind[]): SimulatedEditor<TaggedOp> {
   const file = JSON.parse(decoder.decode(bytes)) as TestFile
@@ -237,7 +238,8 @@ function openHeadless(bytes: Uint8Array, only: readonly Kind[]): SimulatedEditor
     row(r: () => number): boolean {
       const rows: { pos: number; node: PmNode; count: number }[] = []
       editor.state.doc.descendants((node, pos, parent) => {
-        if (node.type.name === 'docTableRow') rows.push({ pos, node, count: parent?.childCount ?? 0 })
+        if (node.type.name === 'docTableRow')
+          rows.push({ pos, node, count: parent?.childCount ?? 0 })
       })
       if (rows.length === 0) return false
       const { pos, node, count } = rows[Math.floor(r() * rows.length)]
@@ -382,7 +384,17 @@ describe('the docs adapter under the conformance kit, with real editors', () => 
   // the kit's scheduler barely lets four clients edit under seeds 13 and 15, whatever the adapter
   for (const seed of [11, 12, 14, 16, 17, 18, 19, 20]) {
     it(`converges on every edit kind at once (seed ${seed})`, async () => {
-      const all: Kind[] = ['typeFirst', 'removeFirst', 'insert', 'remove', 'split', 'join', 'span', 'row', 'side']
+      const all: Kind[] = [
+        'typeFirst',
+        'removeFirst',
+        'insert',
+        'remove',
+        'split',
+        'join',
+        'span',
+        'row',
+        'side',
+      ]
       expect((await run(all, seed, 4)).ops).toBeGreaterThan(20)
     }, 120_000)
   }
@@ -392,7 +404,9 @@ describe('the docs adapter under the conformance kit, with real editors', () => 
 function expectEveryAddition(kind: 'comment' | 'footnote'): void {
   const entries = [...lastSide!.all].filter(([key]) => key.startsWith(`${kind}:`))
   const texts = entries.map(([, value]) => (value as { text?: string }).text ?? '')
-  const wanted = [...added].filter((item) => item.startsWith(`${kind} `)).map((item) => item.slice(kind.length + 1))
+  const wanted = [...added]
+    .filter((item) => item.startsWith(`${kind} `))
+    .map((item) => item.slice(kind.length + 1))
   expect(texts.filter((text) => text.startsWith('<')).sort()).toEqual(wanted.sort())
   const referenced = new Set<string>()
   last!.state.doc.descendants((node) => {
@@ -488,7 +502,9 @@ describe('a table edited in place', () => {
         commit: () => {
           const text = draft!
           draft = null
-          alice.editor.view.dispatch(alice.editor.state.tr.insertText(text, firstCell(alice.editor).text))
+          alice.editor.view.dispatch(
+            alice.editor.state.tr.insertText(text, firstCell(alice.editor).text),
+          )
         },
       }
     })
@@ -500,7 +516,12 @@ describe('a table edited in place', () => {
 
     bob.editor.view.dispatch(bob.editor.state.tr.insertText('peer', firstCell(bob.editor).text))
     const wire = (op: DocsOp, from = bob.adapter, to = alice.adapter) => to.decode(from.encode(op))
-    expect(alice.adapter.integrate(fromBob.map((op) => wire(op)), [])).toEqual([])
+    expect(
+      alice.adapter.integrate(
+        fromBob.map((op) => wire(op)),
+        [],
+      ),
+    ).toEqual([])
     // the committed cell text went out after integrate returned, rebased past the peer's
     expect(fromAlice).toHaveLength(0)
     await Promise.resolve()
@@ -509,7 +530,10 @@ describe('a table edited in place', () => {
     expect(alice.editor.state.doc.textContent).toContain('peer')
 
     bob.adapter.confirmed?.(fromBob)
-    bob.adapter.integrate(fromAlice.map((op) => wire(op, alice.adapter, bob.adapter)), [])
+    bob.adapter.integrate(
+      fromAlice.map((op) => wire(op, alice.adapter, bob.adapter)),
+      [],
+    )
     alice.adapter.confirmed?.(fromAlice)
     expect(await bob.adapter.fingerprint()).toBe(await alice.adapter.fingerprint())
   })

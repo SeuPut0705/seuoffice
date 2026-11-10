@@ -7,7 +7,13 @@ export interface CoEditor {
   /** the editor's text as the page shows it */
   text(): Promise<string>
   /** the session status the host last heard */
-  status(): Promise<{ phase: string; version: number; unconfirmed: number; saved: number; canEdit: boolean }>
+  status(): Promise<{
+    phase: string
+    version: number
+    unconfirmed: number
+    saved: number
+    canEdit: boolean
+  }>
 }
 
 /** a file on disk, or one a spec made in memory */
@@ -43,10 +49,11 @@ export async function openCoEdited(
   await expect(page.locator('#status')).not.toContainText('여는 중', { timeout: 30_000 })
   await expect(page.locator('#status')).not.toContainText('오류')
   const frame = page.frameLocator('#viewer iframe')
-  const shown =
-    options.ready === 'canvas' ? frame.locator('canvas') : frame.locator('.ProseMirror')
+  const shown = options.ready === 'canvas' ? frame.locator('canvas') : frame.locator('.ProseMirror')
   await expect(shown.first()).toBeVisible()
-  await expect(page.locator('body')).toHaveAttribute('data-collab-phase', 'live', { timeout: 30_000 })
+  await expect(page.locator('body')).toHaveAttribute('data-collab-phase', 'live', {
+    timeout: 30_000,
+  })
   return {
     page,
     frame,
@@ -69,7 +76,8 @@ export async function settled(editors: CoEditor[]): Promise<number> {
         const statuses = await Promise.all(editors.map((editor) => editor.status()))
         version = statuses[0].version
         return statuses.every(
-          (status) => status.phase === 'live' && status.unconfirmed === 0 && status.version === version,
+          (status) =>
+            status.phase === 'live' && status.unconfirmed === 0 && status.version === version,
         )
       },
       { timeout: 30_000 },

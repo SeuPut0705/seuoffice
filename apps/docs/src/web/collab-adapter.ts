@@ -23,8 +23,7 @@ import * as pmCollab from 'prosemirror-collab'
 import { TABLE_TRAILING_SKIP } from '../renderer/editor/extensions'
 import { TRACK_IGNORE } from '../renderer/editor/revisions'
 
-export type DocsOp =
-  { kind: 'steps'; steps: Step[] } | { kind: 'side'; key: string; value: Json }
+export type DocsOp = { kind: 'steps'; steps: Step[] } | { kind: 'side'; key: string; value: Json }
 
 type StepsOp = Extract<DocsOp, { kind: 'steps' }>
 type SideOp = Extract<DocsOp, { kind: 'side' }>
@@ -79,7 +78,11 @@ interface Rebaseable {
 
 // prosemirror-collab exports `rebaseSteps` at runtime and marks it internal in its typings
 const { rebaseSteps } = pmCollab as unknown as {
-  rebaseSteps(steps: readonly Rebaseable[], over: readonly Step[], transform: Transform): Rebaseable[]
+  rebaseSteps(
+    steps: readonly Rebaseable[],
+    over: readonly Step[],
+    transform: Transform,
+  ): Rebaseable[]
 }
 
 /**
@@ -163,7 +166,11 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
     for (const { serial: at, tr } of records) {
       if (at <= committed) continue
       committed = at
-      const entries = tr.steps.map((step, i) => ({ step, inverted: step.invert(tr.docs[i]), origin: tr }))
+      const entries = tr.steps.map((step, i) => ({
+        step,
+        inverted: step.invert(tr.docs[i]),
+        origin: tr,
+      }))
       if (tr.getMeta(LAYOUT_DERIVED)) {
         // with nothing unconfirmed before it, it simply becomes part of this client's base
         if (tail.length === 0) continue
@@ -281,7 +288,8 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
       const kind = idKindOf(key)!
       let next = 1
       for (const other of taken) {
-        if (idKindOf(other) === kind) next = Math.max(next, (parseInt(other.slice(kind.length + 1), 10) || 0) + 1)
+        if (idKindOf(other) === kind)
+          next = Math.max(next, (parseInt(other.slice(kind.length + 1), 10) || 0) + 1)
       }
       taken.add(`${kind}:${next}`)
       renames.set(key, String(next))
@@ -390,13 +398,16 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
           if (editor.state.doc !== tr.doc) throw new Error('a plugin refused a peer edit')
         }
 
-        const rebased = local.map((op) => (op.kind === 'side' ? renamedSide(op, renames) : rebuilt(op)))
+        const rebased = local.map((op) =>
+          op.kind === 'side' ? renamedSide(op, renames) : rebuilt(op),
+        )
         held = held.map((op) => (op.kind === 'side' ? renamedSide(op, renames) : op))
         const shown = sideView
         sideView = new Map(sideConfirmed)
         for (const op of [...rebased, ...held]) if (op.kind === 'side') applySide(sideView, op)
         const entries = new Map<string, Json | null>()
-        for (const [key, value] of sideView) if (!sameJson(shown.get(key), value)) entries.set(key, value)
+        for (const [key, value] of sideView)
+          if (!sameJson(shown.get(key), value)) entries.set(key, value)
         for (const key of shown.keys()) if (!sideView.has(key)) entries.set(key, null)
         side.write({ renames, entries })
         return rebased
