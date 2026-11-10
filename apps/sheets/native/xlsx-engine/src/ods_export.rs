@@ -31,6 +31,7 @@ use crate::ods_chart::chart_document;
 use crate::ods_drawing::{
     Drawings, EmbeddedObject, Geometry, Picture, default_column_points, width_points,
 };
+use crate::ods_pivot::pivot_table_xml;
 use crate::ods_print::{
     PageStyles, parse_print_extras, print_titles, split_outside_quotes, worksheet_tail,
 };
@@ -295,6 +296,11 @@ fn write_document(
     let mut database_ranges = String::new();
     let mut validations = Validations::default();
     let mut drawings = Drawings::default();
+    let mut data_pilots = String::new();
+    let package = sessions
+        .sessions
+        .get(&metadata.session_id)
+        .map(|session| session.path.clone());
 
     let body_path = staging.path("body");
     {
@@ -320,6 +326,16 @@ fn write_document(
             );
             counters.dropped.conditional_formats += lost;
             let frames = sheet_frames(sessions, metadata, sheet, &mut drawings, &mut counters)?;
+            for pivot in &sheet.pivot_tables {
+                // A pivot table that is written leaves the count of losses.
+                if let Some(xml) = package
+                    .as_deref()
+                    .and_then(|package| pivot_table_xml(package, &sheet.name, pivot))
+                {
+                    data_pilots.push_str(&xml);
+                    counters.dropped.pivots = counters.dropped.pivots.saturating_sub(1);
+                }
+            }
             let master = pages.register(wide.page_setup.as_ref(), extras, &mut registry);
             let table_style = format!("ta{}", index + 1);
             table_styles.push(table_style_xml(&table_style, sheet, &master));
@@ -370,6 +386,12 @@ fn write_document(
                 "<table:database-ranges>{database_ranges}</table:database-ranges>"
             )?;
         }
+        if !data_pilots.is_empty() {
+            write!(
+                body,
+                "<table:data-pilot-tables>{data_pilots}</table:data-pilot-tables>"
+            )?;
+        }
         body.flush()?;
     }
 
@@ -391,10 +413,6 @@ fn write_document(
     fs::write(&settings_path, settings_xml(metadata))?;
 
     let archive_path = staging.path("archive");
-    let package = sessions
-        .sessions
-        .get(&metadata.session_id)
-        .map(|session| session.path.clone());
     write_archive(
         &archive_path,
         &content_path,
@@ -3599,6 +3617,68 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
         assert!(
             chart.contains(r#"<table:table-cell office:value-type="string"><text:p>a</text:p></table:table-cell><table:table-cell office:value-type="float" office:value="3"><text:p>3</text:p></table:table-cell>"#),
             "{chart}"
+        );
+    }
+
+    #[test]
+    fn carries_a_pivot_table_that_reads_a_sheet_range() {
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:E4"/><sheetData>"#,
+            r#"<row r="1"><c r="A1" t="inlineStr"><is><t>Region</t></is></c><c r="B1" t="inlineStr"><is><t>Amount</t></is></c><c r="D1" t="inlineStr"><is><t>Region</t></is></c><c r="E1" t="inlineStr"><is><t>Sum</t></is></c></row>"#,
+            r#"<row r="2"><c r="A2" t="inlineStr"><is><t>East</t></is></c><c r="B2"><v>3</v></c><c r="D2" t="inlineStr"><is><t>East</t></is></c><c r="E2"><v>3</v></c></row>"#,
+            r#"<row r="3"><c r="A3" t="inlineStr"><is><t>West</t></is></c><c r="B3"><v>4</v></c><c r="D3" t="inlineStr"><is><t>West</t></is></c><c r="E3"><v>4</v></c></row>"#,
+            r#"<row r="4"><c r="D4" t="inlineStr"><is><t>Total</t></is></c><c r="E4"><v>7</v></c></row>"#,
+            r#"</sheetData></worksheet>"#,
+        );
+        let entries = single_sheet_entries(
+            "",
+            sheet,
+            vec![
+                (
+                    "xl/worksheets/_rels/sheet1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotTable" Target="../pivotTables/pivotTable1.xml"/></Relationships>"#.to_owned(),
+                ),
+                (
+                    "xl/pivotTables/pivotTable1.xml",
+                    concat!(
+                        r#"<pivotTableDefinition xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" name="By region" cacheId="1">"#,
+                        r#"<location ref="D1:E4" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/>"#,
+                        r#"<pivotFields count="2"><pivotField axis="axisRow" defaultSubtotal="0"/><pivotField dataField="1"/></pivotFields>"#,
+                        r#"<rowFields count="1"><field x="0"/></rowFields><dataFields count="1"><dataField name="Sum" fld="1"/></dataFields>"#,
+                        r#"</pivotTableDefinition>"#,
+                    )
+                    .to_owned(),
+                ),
+                (
+                    "xl/pivotTables/_rels/pivotTable1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotCacheDefinition" Target="../pivotCache/pivotCacheDefinition1.xml"/></Relationships>"#.to_owned(),
+                ),
+                (
+                    "xl/pivotCache/pivotCacheDefinition1.xml",
+                    concat!(
+                        r#"<pivotCacheDefinition xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cacheSource type="worksheet"><worksheetSource ref="A1:B3" sheet="Data"/></cacheSource>"#,
+                        r#"<cacheFields count="2"><cacheField name="Region"><sharedItems><s v="East"/><s v="West"/></sharedItems></cacheField><cacheField name="Amount"><sharedItems containsNumber="1"/></cacheField></cacheFields></pivotCacheDefinition>"#,
+                    )
+                    .to_owned(),
+                ),
+            ],
+        );
+        let (result, content, _, _, _dir) = export(&entries);
+        assert_eq!(result.dropped.pivots, 0);
+        // The cells it fills are ordinary cells; the table behind them comes
+        // after the sheets.
+        assert!(content.contains(r#"office:value="7""#), "{content}");
+        assert!(
+            content.contains(concat!(
+                r#"</table:table><table:data-pilot-tables>"#,
+                r#"<table:data-pilot-table table:name="By region" table:application-data="" table:target-range-address="Data.D1:Data.E4" table:buttons="Data.D1" table:show-filter-button="false">"#,
+                r#"<table:source-cell-range table:cell-range-address="Data.A1:Data.B3"/>"#,
+                r#"<table:data-pilot-field table:source-field-name="Region" table:orientation="row" table:used-hierarchy="-1" table:function="auto"><table:data-pilot-level/></table:data-pilot-field>"#,
+                r#"<table:data-pilot-field table:source-field-name="Amount" table:orientation="data" table:used-hierarchy="-1" table:function="sum"><table:data-pilot-level/></table:data-pilot-field>"#,
+                r#"</table:data-pilot-table></table:data-pilot-tables>"#,
+            )),
+            "{content}"
         );
     }
 }
