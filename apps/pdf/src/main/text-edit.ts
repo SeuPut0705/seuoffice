@@ -64,6 +64,7 @@ export interface Pdfium {
   _FPDFText_GetFontSize(textPage: number, index: number): number
   _FPDFText_IsGenerated(textPage: number, index: number): number
   _FPDFText_LoadFont(doc: number, data: number, size: number, fontType: number, cid: number): number
+  _FPDFText_LoadStandardFont(doc: number, fontName: number): number
   _FPDFText_SetText(textObj: number, text: number): number
   _FPDFPage_CountObjects(page: number): number
   _FPDFPage_GetObject(page: number, index: number): number
@@ -1039,6 +1040,54 @@ function fontString(m: Pdfium, read: (buf: number, len: number) => number): stri
   }
 }
 
+const STANDARD_LATIN_FONTS = new Set([
+  'Helvetica',
+  'Helvetica-Bold',
+  'Helvetica-Oblique',
+  'Helvetica-BoldOblique',
+  'Times-Roman',
+  'Times-Bold',
+  'Times-Italic',
+  'Times-BoldItalic',
+  'Courier',
+  'Courier-Bold',
+  'Courier-Oblique',
+  'Courier-BoldOblique',
+])
+
+const WIN_ANSI_HIGH = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ'
+
+export function winAnsiCovers(text: string): boolean {
+  for (const ch of text) {
+    const cp = ch.codePointAt(0)!
+    if ((cp >= 0x20 && cp <= 0x7e) || (cp >= 0xa0 && cp <= 0xff)) continue
+    if (!WIN_ANSI_HIGH.includes(ch)) return false
+  }
+  return true
+}
+
+export function keptStandardFont(
+  name: string,
+  embedded: boolean,
+  edit: Pick<TextEditInput, 'newFont' | 'newItalic'>,
+  drawn: string,
+): string | null {
+  if (embedded || edit.newFont || edit.newItalic) return null
+  if (!STANDARD_LATIN_FONTS.has(name)) return null
+  return winAnsiCovers(drawn) ? name : null
+}
+
+function loadStandardFont(m: Pdfium, doc: number, name: string): number {
+  const ptr = m._malloc(name.length + 1)
+  try {
+    for (let i = 0; i < name.length; i++) m.HEAPU8[ptr + i] = name.charCodeAt(i)
+    m.HEAPU8[ptr + name.length] = 0
+    return m._FPDFText_LoadStandardFont(doc, ptr)
+  } finally {
+    m._free(ptr)
+  }
+}
+
 /** Rebuild font plus whether bold must be synthesized by stroking. A bold toggle on
     "keep original" never swaps the face: the same glyphs with a thin same-color
     stroke keep every advance, so the surrounding layout survives (a bold face file
@@ -1807,6 +1856,19 @@ async function rebuildRun(
       styleEdit: TextEditInput,
       text: string,
     ): Promise<{ font: number; synth: boolean }> => {
+      const standard = anchor.font
+        ? keptStandardFont(
+            fontString(m, (b, l) => m._FPDFFont_GetBaseFontName(anchor.font, b, l)),
+            !!m._FPDFFont_GetIsEmbedded(anchor.font),
+            styleEdit,
+            (text.trim() ? text : 'x').replace(/\n/g, ''),
+          )
+        : null
+      if (standard) {
+        const f = loadStandardFont(m, doc, standard)
+        if (!f) throw new Error('FPDFText_LoadStandardFont failed')
+        return { font: f, synth: !!styleEdit.newBold && !faceIsBold(m, anchor.font) }
+      }
       const { bytes: fontBytes, syntheticBold } = await resolveRebuildFont(
         m,
         anchor.font,
