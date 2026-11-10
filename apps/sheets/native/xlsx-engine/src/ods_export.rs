@@ -1115,11 +1115,15 @@ fn write_table(
         }
         merges.sort();
         // A note on a cell with no record still needs a cell to sit in.
-        let recorded: HashSet<(usize, usize)> = window
-            .cells
-            .iter()
-            .map(|cell| (cell.row, cell.column))
-            .collect();
+        let recorded: HashSet<(usize, usize)> = if comments.is_empty() {
+            HashSet::new()
+        } else {
+            window
+                .cells
+                .iter()
+                .map(|cell| (cell.row, cell.column))
+                .collect()
+        };
         for (row, column) in comments.keys() {
             if (start..=end).contains(row) && *column < columns && !recorded.contains(&(*row, *column))
             {
