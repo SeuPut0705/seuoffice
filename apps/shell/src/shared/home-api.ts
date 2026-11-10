@@ -77,6 +77,16 @@ export interface AutoSaveDefault {
   updatedAt: number
 }
 
+/**
+ * The ceilings a delimited import (a .csv/.tsv opened as a workbook) may
+ * reach, in megabytes. The core owns them (the gateway's csv-limits); the
+ * shell offers them as a setting.
+ */
+export {
+  CSV_IMPORT_DEFAULT_LIMIT_MB,
+  CSV_IMPORT_LIMIT_CHOICES_MB,
+} from '@genoffice/xlsx-gateway/gateway/csv-limits'
+
 /** local MCP server state (persisted in userData/app-settings.json) */
 export interface McpStatus {
   running: boolean
@@ -366,6 +376,10 @@ export interface HomeApi {
   getAutoSaveDefault(): Promise<AutoSaveDefault>
   /** persist the AutoSave default; broadcasts 'app:auto-save-default-changed' to all web contents */
   setAutoSaveDefault(on: boolean): Promise<void>
+  /** the ceiling a delimited import (a .csv/.tsv opened as a workbook) may reach, in MB */
+  getCsvImportLimit(): Promise<number>
+  /** persist that ceiling; the editors take it at once */
+  setCsvImportLimit(mb: number): Promise<void>
   /** current local MCP server state (running/enabled/port/url) */
   getMcpStatus(): Promise<McpStatus>
   /** enable/disable the MCP server and/or change its port/background/logging; applies and persists, returns the new state */
@@ -622,6 +636,8 @@ export const HOME_CHANNELS = {
   setDocumentTheme: 'home:set-document-theme',
   getAutoSaveDefault: 'home:get-auto-save-default',
   setAutoSaveDefault: 'home:set-auto-save-default',
+  getCsvImportLimit: 'home:get-csv-import-limit',
+  setCsvImportLimit: 'home:set-csv-import-limit',
   getMcpStatus: 'home:get-mcp-status',
   setMcpSettings: 'home:set-mcp-settings',
   getMcpLogs: 'home:get-mcp-logs',

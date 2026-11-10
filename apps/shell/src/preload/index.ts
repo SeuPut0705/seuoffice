@@ -437,6 +437,15 @@ const homeApi: HomeApi = {
       updatedAt: typeof r?.updatedAt === 'number' ? r.updatedAt : 0,
     }
   },
+  async getCsvImportLimit() {
+    const result: unknown = await ipcRenderer.invoke(HOME_CHANNELS.getCsvImportLimit)
+    return typeof result === 'number' ? result : 0
+  },
+  async setCsvImportLimit(mb) {
+    if (typeof mb !== 'number' || !Number.isInteger(mb))
+      throw new Error('Invalid CSV import limit.')
+    await ipcRenderer.invoke(HOME_CHANNELS.setCsvImportLimit, mb)
+  },
   async setAutoSaveDefault(on) {
     if (typeof on !== 'boolean') throw new Error('Invalid AutoSave default.')
     await ipcRenderer.invoke(HOME_CHANNELS.setAutoSaveDefault, on)

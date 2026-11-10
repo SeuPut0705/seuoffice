@@ -1,3 +1,4 @@
+import { CSV_IMPORT_DEFAULT_LIMIT_MB } from '@genoffice/xlsx-gateway/gateway/csv-limits'
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
   collabLink,
@@ -324,6 +325,8 @@ const desktopApi: WebDesktopApi = {
   },
   // the web open path runs no delimited import in the page: no bar, nothing to stop
   onImportProgress: unsubscribe,
+  // no shell setting on the web: Data › From Text/CSV keeps the default ceiling
+  getCsvImportLimit: async () => CSV_IMPORT_DEFAULT_LIMIT_MB,
   readWorkbookRange: async (request) => {
     const result = await engine().readRange(request)
     reportOpened()

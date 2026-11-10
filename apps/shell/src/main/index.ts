@@ -255,6 +255,7 @@ import {
   startSheetsCaptureServer,
   stopSheetsSidecar,
 } from '../../../sheets/src/main/sheets-main'
+import { setDelimitedImportLimit } from '../../../sheets/src/main/csv-import-limit'
 import {
   configureSlidesRuntime,
   discardSlidesRecovery,
@@ -421,7 +422,8 @@ import type {
   FileSearchRerank,
   FileSearchSettings,
 } from '../shared/home-api'
-import { HOME_CHANNELS } from '../shared/home-api'
+import { CSV_IMPORT_LIMIT_CHOICES_MB, HOME_CHANNELS } from '../shared/home-api'
+import { csvImportLimitMb } from './csv-import-limit'
 import {
   normalizeAiPanelPrefs,
   sameAiPanelPrefs,
@@ -1103,6 +1105,15 @@ function currentDocTheme(): DocTheme {
   const saved = readAppSettings(APP_SETTINGS_PATH()).documentTheme
   cachedDocTheme = saved === 'light' || saved === 'dark' ? saved : 'follow'
   return cachedDocTheme
+}
+
+/**
+ * The ceiling a delimited import (a .csv/.tsv opened as a workbook) may reach,
+ * in MB. The editors take it through setDelimitedImportLimit, so the value the
+ * user picks applies to the next file they open.
+ */
+function currentCsvImportLimitMb(): number {
+  return csvImportLimitMb(readAppSettings(APP_SETTINGS_PATH()))
 }
 
 let cachedAutoSaveDefault: AutoSaveDefault | null = null
@@ -6792,6 +6803,17 @@ function registerHomeIpc(): void {
     for (const wc of webContents.getAllWebContents()) wc.send('app:auto-save-default-changed', next)
   })
 
+  ipcMain.handle(HOME_CHANNELS.getCsvImportLimit, (): number => currentCsvImportLimitMb())
+  ipcMain.handle('app:get-csv-import-limit', (): number => currentCsvImportLimitMb())
+  ipcMain.handle(HOME_CHANNELS.setCsvImportLimit, (_event, mb: unknown) => {
+    if (typeof mb !== 'number' || !Number.isInteger(mb)) return
+    if (!CSV_IMPORT_LIMIT_CHOICES_MB.includes(mb as (typeof CSV_IMPORT_LIMIT_CHOICES_MB)[number])) {
+      return
+    }
+    if (mb === currentCsvImportLimitMb()) return
+    writeAppSettings(APP_SETTINGS_PATH(), { csvImportLimitMb: mb })
+    setDelimitedImportLimit(mb * 1024 * 1024)
+  })
   ipcMain.handle(HOME_CHANNELS.getMcpStatus, () => mcpStatus())
 
   ipcMain.handle(HOME_CHANNELS.setMcpSettings, async (_event, patch: unknown) => {
@@ -9823,6 +9845,9 @@ app.whenReady().then(async () => {
     app.exit(await runRevealEntry(secretCodec))
     return
   }
+  // the editors take the ceiling before anything can be opened: the headless
+  // export opens documents too
+  setDelimitedImportLimit(currentCsvImportLimitMb() * 1024 * 1024)
   // first scan waits for the windows to come up; later ones follow folder changes
   setTimeout(() => ensureFileIndexer()?.refresh(), 4000)
   installRendererProtocol({
