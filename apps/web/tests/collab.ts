@@ -32,6 +32,8 @@ export async function openCoEdited(
     access?: 'edit' | 'view'
     /** what shows the document: the docs editor (default) or a grid canvas */
     ready?: 'editor' | 'canvas'
+    /** what a person does before the document shows, such as typing its password */
+    unlock?(frame: FrameLocator): Promise<void>
   },
 ): Promise<CoEditor> {
   const access = options.access ?? 'edit'
@@ -49,6 +51,7 @@ export async function openCoEdited(
   await expect(page.locator('#status')).not.toContainText('여는 중', { timeout: 30_000 })
   await expect(page.locator('#status')).not.toContainText('오류')
   const frame = page.frameLocator('#viewer iframe')
+  await options.unlock?.(frame)
   const shown = options.ready === 'canvas' ? frame.locator('canvas') : frame.locator('.ProseMirror')
   await expect(shown.first()).toBeVisible()
   await expect(page.locator('body')).toHaveAttribute('data-collab-phase', 'live', {

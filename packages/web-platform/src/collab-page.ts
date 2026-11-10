@@ -54,6 +54,17 @@ export async function joinPageCollab<Handles, Op>(options: {
   adapter(handles: Handles): CollabAdapter<Op> | Promise<CollabAdapter<Op>>
   /** hears the session's status once the editor attached and on every change, for an editor that shows it */
   status?(status: CollabStatus): void
+  /**
+   * How a host save request runs; `save` is the session's save. An editor passes its own flow
+   * here so that what a person still has open (a text box, a comment being typed) is committed
+   * first. The flow must end in `save` or in `PageCollab.save`.
+   */
+  hostSave?(save: () => Promise<void>): Promise<void>
+  /**
+   * Input the page takes before the editor attached, by its target: what an editor must ask
+   * before it can show the document at all (a password). Nothing of the document is editable there.
+   */
+  inputBeforeAttach?(target: EventTarget | null): boolean
 }): Promise<PageCollab<Handles> | null> {
   const link = collabLink()
   if (!link) return null
@@ -72,7 +83,7 @@ export async function joinPageCollab<Handles, Op>(options: {
       return !!status?.canEdit && (status.version > status.saved || status.unconfirmed > 0)
     },
   }
-  const releaseInput = holdInput()
+  const releaseInput = holdInput(options.inputBeforeAttach)
 
   const save = async (how: { skipWhenSaved?: boolean } = {}): Promise<void> => {
     if (!session) throw new Error('the document is not open yet')
@@ -84,7 +95,10 @@ export async function joinPageCollab<Handles, Op>(options: {
     session.reportSaved(saved.version)
   }
   // a viewer's host never stores a save, so a save request finds no handler
-  if (editMode()) onHostSaveRequest(() => save())
+  if (editMode()) {
+    const { hostSave } = options
+    onHostSaveRequest(() => (hostSave ? hostSave(() => save()) : save()))
+  }
 
   const attach = (handles: Handles): Promise<void> => {
     attaching ??= (async () => {
@@ -133,11 +147,14 @@ const INPUT_EVENTS = [
   'click',
 ]
 
-/** Refuse every input event the page gets until the returned function runs, while this page's session is the window's */
-function holdInput(): () => void {
+/**
+ * Refuse every input event the page gets until the returned function runs, while this page's
+ * session is the window's. Events whose target `allowed` accepts go through.
+ */
+function holdInput(allowed?: (target: EventTarget | null) => boolean): () => void {
   const owner = window.seuCollab
   const refuse = (event: Event): void => {
-    if (window.seuCollab !== owner) return
+    if (window.seuCollab !== owner || allowed?.(event.target)) return
     event.preventDefault()
     event.stopImmediatePropagation()
   }

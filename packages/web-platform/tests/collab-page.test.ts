@@ -272,6 +272,61 @@ describe('what the page allows around the session', () => {
     expect(keydown()).toBe(false)
   })
 
+  it('takes input before the attach only where the editor asks for it', async () => {
+    playHost({ canEdit: true })
+    await open(true)
+    const prompt = document.createElement('input')
+    prompt.className = 'password'
+    document.body.appendChild(prompt)
+    const collab = (await page.joinPageCollab<{ bytes: Uint8Array }, MapOp>({
+      format: toyMap.format,
+      fileName: 'memo.toy',
+      bytes: toyMap.file(),
+      adapter: ({ bytes }) => toyMap.open(bytes),
+      inputBeforeAttach: (target) => target instanceof Element && target.matches('.password'),
+    }))!
+    const typed = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true })
+    prompt.dispatchEvent(typed)
+    expect(typed.defaultPrevented).toBe(false)
+    expect(keydown()).toBe(true)
+    await collab.attach({ bytes: collab.baseBytes })
+    expect(keydown()).toBe(false)
+  })
+
+  it('runs the editor’s own flow on a host save, which commits what is open before the session saves', async () => {
+    const { stored } = playHost({ canEdit: true })
+    await open(true)
+    const editors: ToyEditor<MapOp>[] = []
+    const collab = (await page.joinPageCollab<{ bytes: Uint8Array }, MapOp>({
+      format: toyMap.format,
+      fileName: 'memo.toy',
+      bytes: toyMap.file(),
+      adapter: ({ bytes }) => {
+        const editor = toyMap.open(bytes)
+        editors.push(editor)
+        return editor
+      },
+      hostSave: async (save) => {
+        editors[0].perform({ id: 'open', key: 'draft', value: 7 })
+        await save()
+      },
+    }))!
+    await collab.attach({ bytes: collab.baseBytes })
+    fromHost({ type: 'request_save', requestId: 4 })
+    await vi.waitFor(() =>
+      expect(sent).toContainEqual(
+        expect.objectContaining({ type: 'request_save_done', requestId: 4, ok: true }),
+      ),
+    )
+    expect(stored).toHaveLength(1)
+    expect(stored[0].version).toBe(1)
+    expect(new TextDecoder().decode(stored[0].bytes)).toBe('[["draft",7]]')
+    // the app's own save does not run the host's flow again
+    await collab.save()
+    expect(stored).toHaveLength(2)
+    expect(new TextDecoder().decode(stored[1].bytes)).toBe('[["draft",7]]')
+  })
+
   it('answers no save request on a page the host opened for viewing', async () => {
     history.replaceState(null, '', '/?mode=view')
     playHost({ canEdit: true })
