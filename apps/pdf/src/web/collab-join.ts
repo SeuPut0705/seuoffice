@@ -6,6 +6,7 @@
 import {
   joinPageCollab,
   webLanguage,
+  type CollabStatus,
   type PageCollab,
   type WebDocument,
 } from '@seuoffice/web-platform'
@@ -22,6 +23,8 @@ export interface PdfCollabHandles extends PdfHost {
   password(): string | null
   /** the App's notice line */
   notice(text: string): void
+  /** the toolbar's unsaved mark and Save button follow this instead of the App's own pending edits */
+  unsaved(value: boolean): void
 }
 
 /** Bump `schema` when the op format changes: pages of two schemas must not share a session */
@@ -66,15 +69,26 @@ function refusalText(reason: Refusal): string {
 const newId = (): string => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
 
 /**
+ * Whether a person who may save has something to save: an edit of their own on the way to the
+ * log, or edits in the log that no stored file holds. The App's own pending edits cannot say:
+ * they are the whole session's since the base file, and no save ever clears them.
+ */
+export const sessionUnsaved = (status: CollabStatus): boolean =>
+  status.canEdit && (status.unconfirmed > 0 || status.version > status.saved)
+
+/**
  * Join before the renderer opens `doc`; a page that joins a running session
  * opens the session's base file, which the bridge puts into `doc.bytes`.
  */
 export function joinPdfCollab(doc: WebDocument): Promise<PageCollab<PdfCollabHandles> | null> {
+  let app: PdfCollabHandles | null = null
   return joinPageCollab<PdfCollabHandles, PdfOp>({
+    status: (status) => app?.unsaved(sessionUnsaved(status)),
     format: FORMAT,
     fileName: doc.fileName,
     bytes: doc.bytes,
     adapter: async (handles) => {
+      app = handles
       // a page that never co-edits never loads these
       const [{ MAX_CHANGE_BYTES }, { createPdfAdapter }, { produceCoEditedFile }] =
         await Promise.all([

@@ -47,6 +47,9 @@ async function save(request: SavePdfRequest): Promise<SavePdfResult> {
     // the session writes the file of one exact version from the log, never the renderer's
     // own request. "external-modified" keeps the renderer from reloading the document from
     // the file it thinks it saved, which would drop every pending edit on this page.
+    // A viewer's renderer asks too, since other people's edits are pending ones on its page:
+    // it is answered the same way, with nothing saved.
+    if (!editing) return { ok: false, error: 'external-modified' }
     try {
       await coEditing.save()
       lastSaveError = undefined
@@ -192,7 +195,8 @@ const pdfApi: Partial<PdfApi> = {
   listSavedSignatures: unsupported('pdf.savedSignatures'),
   addSavedSignature: unsupported('pdf.savedSignatures'),
   removeSavedSignature: unsupported('pdf.savedSignatures'),
-  save: editing ? save : unsupported('pdf.save'),
+  // a page opened for viewing saves nothing; only while co-editing does its renderer ever ask
+  save: (request) => (editing || coEditing ? save(request) : unsupported('pdf.save')(request)),
   // the host keeps edits only in edit mode; elsewhere the view is read-only
   readOnlyReason: editing ? undefined : viewOnlyReason(),
   // desktop-only services: undefined turns their features off, as without a shell

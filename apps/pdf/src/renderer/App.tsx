@@ -3073,6 +3073,10 @@ export default function App() {
   // desktop). It keeps the first handles it gets, so they call this render's functions through a ref.
   const collabAppRef = useRef({ snapshot, applySnapshot })
   collabAppRef.current = { snapshot, applySnapshot }
+  // While co-editing, every pending edit on this page is the session's: whether a stored file
+  // holds them all is the session's to say (null: not co-editing)
+  const [collabUnsaved, setCollabUnsaved] = useState<boolean | null>(null)
+  const unsavedShown = collabUnsaved ?? dirty
   useEffect(() => {
     if (status !== 'ready' || !doc) return
     void window.seuCollab?.attach({
@@ -3090,6 +3094,7 @@ export default function App() {
       pageSizes: sizes,
       password: () => diskPasswordRef.current,
       notice: (text: string) => showNoticeRef.current(text),
+      unsaved: setCollabUnsaved,
     })
   }, [status, doc, sizes])
 
@@ -9714,7 +9719,7 @@ export default function App() {
             className="qa-btn"
             data-tip={`${t('save')} (${platformShortcuts('⌘S')})`}
             aria-label={t('save')}
-            disabled={!dirty || saveState === 'saving'}
+            disabled={!unsavedShown || saveState === 'saving'}
             onClick={() => void save()}
           >
             <IconSave />
@@ -9791,7 +9796,7 @@ export default function App() {
           {saveState === 'saving' ? (
             <span className="tb-save-pending">{t('saving')}</span>
           ) : (
-            dirty &&
+            unsavedShown &&
             saveState !== 'error' && <span className="tb-save-pending">{t('unsaved')}</span>
           )}
           {saveState === 'error' && (
