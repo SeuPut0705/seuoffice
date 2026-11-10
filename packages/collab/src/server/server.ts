@@ -12,6 +12,7 @@
  */
 
 import { systemClock, type Clock } from '../clock.js'
+import { deferred } from '../deferred.js'
 import { MAX_CHANGE_BYTES } from '../limits.js'
 import type { Change, Peer } from '../model.js'
 import { sha256 } from '../sha256.js'
@@ -634,7 +635,7 @@ export function createServerCore({
     },
     idle() {
       if (busy === 0) return Promise.resolve()
-      const { promise, resolve } = Promise.withResolvers<void>()
+      const { promise, resolve } = deferred<void>()
       idleWaiters.push(resolve)
       return promise
     },

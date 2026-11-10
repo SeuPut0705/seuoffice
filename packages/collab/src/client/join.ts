@@ -5,6 +5,7 @@
  */
 
 import { systemClock, type Clock } from '../clock.js'
+import { deferred, type Deferred } from '../deferred.js'
 import type { Json } from '../model.js'
 import { sha256 } from '../sha256.js'
 import { parseServerFrame } from '../wire.js'
@@ -68,11 +69,11 @@ export function startEngine(
   const outstanding = new Set<Promise<unknown>>()
   const statusHandlers = new Set<(status: CollabStatus) => void>()
   let lastStatus = ''
-  let save: PromiseWithResolvers<SavedVersion> | null = null
-  let exporting: PromiseWithResolvers<ProducedFile> | null = null
+  let save: Deferred<SavedVersion> | null = null
+  let exporting: Deferred<ProducedFile> | null = null
   let unlisten: (() => void) | null = null
   let unsubscribe: (() => void) | null = null
-  const joined = Promise.withResolvers<CollabJoin>()
+  const joined = deferred<CollabJoin>()
 
   function track(promise: Promise<unknown>): void {
     const settled = promise.then(
@@ -255,14 +256,14 @@ export function startEngine(
   const session: CollabSession = {
     save() {
       if (save) return save.promise
-      save = Promise.withResolvers<SavedVersion>()
+      save = deferred<SavedVersion>()
       const pending = save.promise
       dispatch({ type: 'save' })
       return pending
     },
     exportLocal() {
       if (exporting) return exporting.promise
-      exporting = Promise.withResolvers<ProducedFile>()
+      exporting = deferred<ProducedFile>()
       const pending = exporting.promise
       dispatch({ type: 'export' })
       return pending

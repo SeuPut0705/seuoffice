@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { CollabError } from '../src/client/api'
 import { MAX_CHANGE_BYTES } from '../src/client/index'
 import { oldest, SimNetwork, type SimClient } from '../src/conformance/network'
+import { deferred } from '../src/deferred'
 import {
   toyLines,
   toyMap,
@@ -302,7 +303,7 @@ describe('saving', () => {
     await net.run()
 
     let producing = false
-    const gate = Promise.withResolvers<void>()
+    const gate = deferred<void>()
     const produce = a.editor!.produceFile
     a.editor!.produceFile = async () => {
       producing = true
@@ -672,7 +673,7 @@ describe('getting work out', () => {
     await net.run()
 
     // An editor that reads its document only after some asynchronous work
-    const gate = Promise.withResolvers<void>()
+    const gate = deferred<void>()
     const produce = a.editor!.produceFile
     a.editor!.produceFile = async () => {
       await gate.promise
