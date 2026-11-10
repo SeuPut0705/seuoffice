@@ -4,7 +4,7 @@ Een vaardigheid is een set werkinstructies voor de AI. Leg iets wat je steeds op
 
 ## Vaardigheden aan- en uitzetten
 
-**Instellingen ▸ Vaardigheden** toont de vaardigheden op deze pc, gegroepeerd naar herkomst. Vaardigheden worden bij hun naam getoond, zoals codeeragents dat doen. Met het zoekvak bovenaan vind je er een op naam of beschrijving.
+**Instellingen ▸ Vaardigheden** toont de vaardigheden op deze pc, gegroepeerd naar herkomst. Vaardigheden worden bij hun naam getoond, zoals codeeragents dat doen. Met het zoekvak bovenaan vind je er een op naam of beschrijving. Een eigen vaardigheid met een titel toont die titel in deze lijst, in de `/`-lijst en op chips, met de naam klein ernaast. U kunt ook op de titel zoeken.
 
 | Herkomst                   | Wat erin staat                                                          | In het begin |
 | -------------------------- | ----------------------------------------------------------------------- | ------------ |
@@ -38,7 +38,7 @@ Onder het voorbeeld staat altijd: "Installeer alleen vaardigheden uit bronnen di
 - **Regels om te lezen voordat je installeert** zijn regels die de AI vragen eerdere instructies te negeren, iets voor je verborgen te houden of instructies van een extern adres te halen, en `../`-paden die buiten de vaardigheidsmap wijzen. Bij elke regel staan het bestand en het regelnummer. Ze houden de installatie niet tegen, en een vaardigheid zonder zulke regels is daarom nog niet veilig.
 - Bij het downloaden van GitHub maakt GenOffice alleen verbinding met `github.com`, `api.github.com` en `codeload.github.com`, en stuurt het geen aanmeldgegevens mee. Is het archief te groot of komt het niet door de veiligheidscontroles, dan wordt er niets geïnstalleerd.
 - De pagina van een vaardigheid op skills.sh (`https://skills.sh/owner/repo/skill`) wordt gelezen als die vaardigheid in de GitHub-repository `owner/repo`. GenOffice maakt geen verbinding met skills.sh.
-- **Nieuwe vaardigheid** opent een lege editor waarin je zelf de naam, beschrijving en instructies schrijft.
+- **Nieuwe vaardigheid** opent een lege editor waarin je zelf de naam, beschrijving en instructies schrijft. Het veld **Titel** bovenaan neemt een titel in elke taal; de naam wordt vanuit de titel ingevuld en u kunt hem wijzigen. Heeft een ingeschakelde vaardigheid uit een andere bron dezelfde naam, dan wordt u dat vóór het opslaan gevraagd, en bij het opslaan wordt die vaardigheid uitgezet.
 
 ## Op updates controleren
 
@@ -70,7 +70,7 @@ Onder het voorbeeld staat altijd: "Installeer alleen vaardigheden uit bronnen di
 
 1. Zeg in het AI-paneel bijvoorbeeld "Sla wat we net gedaan hebben op als vaardigheid" of "Maak een vaardigheid die verslagen in onze huisstijl schrijft".
 2. De AI haalt de stappen en regels eruit die het herhalen waard zijn en toont een kaart **Nieuwe vaardigheid**. Waarden die alleen deze keer gebruikt zijn, zoals namen en datums, blijven buiten de instructies.
-3. Controleer en bewerk de naam, beschrijving en instructies op de kaart. De naam is wat de lijst met vaardigheden toont en wat je na `/` typt: Engelse kleine letters, cijfers en koppeltekens.
+3. Controleer en bewerk de naam, beschrijving en instructies op de kaart. De naam is wat de lijst met vaardigheden toont en wat je na `/` typt: Engelse kleine letters, cijfers en koppeltekens. In het veld **Titel** boven de naam staat de titel die de lijst toont, in elke taal.
 4. Klik op **Opslaan**. De nieuwe vaardigheid wordt aan mijn vaardigheden toegevoegd, gaat aan en staat meteen in de lijst van `/`.
 
 - Er wordt geen bestand geschreven tot je op **Opslaan** klikt. Klik je op **Annuleren**, dan bewaart het gesprek hem alleen als "Niet-opgeslagen voorstel voor een vaardigheid".

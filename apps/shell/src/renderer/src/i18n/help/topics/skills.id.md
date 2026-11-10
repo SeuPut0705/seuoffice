@@ -4,7 +4,7 @@ Skill adalah sekumpulan petunjuk kerja untuk AI. Tuliskan sekali saja hal yang A
 
 ## Mengaktifkan dan menonaktifkan skill
 
-**Pengaturan ▸ Skill** menampilkan skill yang ada di PC ini, dikelompokkan menurut asalnya. Setiap skill ditampilkan dengan namanya, seperti di agen pemrograman. Pakai kotak pencarian di bagian atas untuk mencari menurut nama atau deskripsi.
+**Pengaturan ▸ Skill** menampilkan skill yang ada di PC ini, dikelompokkan menurut asalnya. Setiap skill ditampilkan dengan namanya, seperti di agen pemrograman. Pakai kotak pencarian di bagian atas untuk mencari menurut nama atau deskripsi. Skill Anda yang memiliki judul menampilkan judul itu di daftar ini, di daftar `/`, dan pada chip, dengan nama berukuran kecil di sampingnya. Anda juga bisa mencari berdasarkan judul.
 
 | Sumber                  | Isinya                                                       | Awalnya  |
 | ----------------------- | ------------------------------------------------------------ | -------- |
@@ -38,7 +38,7 @@ Di bawah pratinjau selalu tertulis: "Pasang skill hanya dari sumber yang Anda pe
 - **Baris yang perlu dibaca sebelum memasang** adalah baris yang meminta AI mengabaikan instruksi sebelumnya, menyembunyikan sesuatu dari Anda, atau mengambil instruksi dari alamat luar, serta jalur `../` yang menunjuk ke luar folder skill. Masing-masing menampilkan file dan barisnya. Baris ini tidak menghentikan pemasangan, dan skill tanpa baris seperti ini belum tentu aman.
 - Saat mengunduh dari GitHub, GenOffice hanya terhubung ke `github.com`, `api.github.com`, dan `codeload.github.com`, dan tidak mengirim data login apa pun. Jika arsipnya terlalu besar atau tidak lolos pemeriksaan keamanan, tidak ada yang dipasang.
 - Halaman skill di skills.sh (`https://skills.sh/owner/repo/skill`) dibaca sebagai skill tersebut di repositori GitHub `owner/repo`. GenOffice tidak terhubung ke skills.sh.
-- **Skill baru** membuka editor kosong tempat Anda menulis sendiri nama, deskripsi, dan petunjuknya.
+- **Skill baru** membuka editor kosong tempat Anda menulis sendiri nama, deskripsi, dan petunjuknya. Kolom **Judul** di paling atas menerima judul dalam bahasa apa pun; nama diisi dari judul dan bisa Anda ubah. Jika skill aktif dari sumber lain memiliki nama yang sama, Anda ditanya sebelum menyimpan, dan menyimpan akan mematikan skill itu.
 
 ## Memeriksa pembaruan
 
@@ -70,7 +70,7 @@ Di bawah pratinjau selalu tertulis: "Pasang skill hanya dari sumber yang Anda pe
 
 1. Di panel AI, ucapkan sesuatu seperti "Simpan yang barusan kita kerjakan sebagai skill" atau "Buat skill yang menulis laporan dengan gaya kantor kita".
 2. AI memilih langkah dan aturan yang layak diulang, lalu menampilkan kartu **Skill baru**. Nilai yang hanya dipakai sekali ini, seperti nama dan tanggal, tidak dimasukkan ke petunjuk.
-3. Periksa dan edit nama, deskripsi, dan petunjuk di kartu. Nama adalah yang ditampilkan di daftar skill dan yang Anda ketik setelah `/`: huruf kecil bahasa Inggris, angka, dan tanda hubung.
+3. Periksa dan edit nama, deskripsi, dan petunjuk di kartu. Nama adalah yang ditampilkan di daftar skill dan yang Anda ketik setelah `/`: huruf kecil bahasa Inggris, angka, dan tanda hubung. Kolom **Judul** di atas nama diisi dengan judul yang ditampilkan di daftar, dalam bahasa apa pun.
 4. Klik **Simpan**. Skill baru ditambahkan ke skill saya dalam keadaan aktif, dan langsung muncul di daftar `/`.
 
 - Tidak ada file yang ditulis sebelum Anda mengeklik **Simpan**. Jika Anda mengeklik **Batal**, percakapan hanya menyimpannya sebagai "Usulan skill yang tidak disimpan".

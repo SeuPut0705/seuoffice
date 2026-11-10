@@ -4,7 +4,7 @@ Kỹ năng là một bộ hướng dẫn làm việc dành cho AI. Hãy viết r
 
 ## Bật và tắt kỹ năng
 
-**Cài đặt ▸ Kỹ năng** liệt kê các kỹ năng có trên máy tính này, được nhóm theo nguồn gốc. Mỗi kỹ năng hiển thị bằng tên, giống cách các tác tử lập trình hiển thị. Dùng ô tìm kiếm ở trên cùng để tìm theo tên hoặc mô tả.
+**Cài đặt ▸ Kỹ năng** liệt kê các kỹ năng có trên máy tính này, được nhóm theo nguồn gốc. Mỗi kỹ năng hiển thị bằng tên, giống cách các tác tử lập trình hiển thị. Dùng ô tìm kiếm ở trên cùng để tìm theo tên hoặc mô tả. Kỹ năng của bạn nếu có tiêu đề sẽ hiện tiêu đề đó trong danh sách này, trong danh sách `/` và trên thẻ, kèm tên bằng chữ nhỏ bên cạnh. Bạn cũng có thể tìm theo tiêu đề.
 
 | Nguồn                      | Nội dung                                                 | Ban đầu |
 | -------------------------- | -------------------------------------------------------- | ------- |
@@ -38,7 +38,7 @@ Bên dưới bản xem trước luôn có dòng: "Chỉ cài kỹ năng từ ngu
 - **Các dòng nên đọc trước khi cài** là những dòng yêu cầu AI bỏ qua các chỉ dẫn trước đó, giấu bạn điều gì đó hoặc nhận chỉ dẫn từ một địa chỉ bên ngoài, và các đường dẫn `../` trỏ ra ngoài thư mục kỹ năng. Mỗi dòng đều cho biết tệp và số dòng. Chúng không ngăn việc cài đặt, và kỹ năng không có những dòng như vậy cũng không vì thế mà an toàn.
 - Khi tải xuống từ GitHub, GenOffice chỉ kết nối tới `github.com`, `api.github.com` và `codeload.github.com`, và không gửi bất kỳ dữ liệu đăng nhập nào. Nếu tệp nén quá lớn hoặc không qua được các bước kiểm tra an toàn, sẽ không có gì được cài.
 - Trang của một kỹ năng trên skills.sh (`https://skills.sh/owner/repo/skill`) được đọc là kỹ năng đó trong kho GitHub `owner/repo`. GenOffice không kết nối tới skills.sh.
-- **Kỹ năng mới** mở một trình soạn thảo trống để bạn tự viết tên, mô tả và hướng dẫn.
+- **Kỹ năng mới** mở một trình soạn thảo trống để bạn tự viết tên, mô tả và hướng dẫn. Ô **Tiêu đề** ở trên cùng nhận tiêu đề bằng ngôn ngữ nào cũng được; tên được điền từ tiêu đề và bạn có thể sửa. Nếu một kỹ năng đang bật từ nguồn khác có cùng tên, bạn sẽ được hỏi trước khi lưu, và khi lưu thì kỹ năng đó bị tắt.
 
 ## Kiểm tra cập nhật
 
@@ -70,7 +70,7 @@ Bên dưới bản xem trước luôn có dòng: "Chỉ cài kỹ năng từ ngu
 
 1. Trong bảng AI, hãy nói chẳng hạn như "Lưu việc chúng ta vừa làm thành một kỹ năng" hoặc "Tạo một kỹ năng viết báo cáo theo phong cách của đơn vị mình".
 2. AI chọn ra các bước và quy tắc đáng lặp lại rồi hiện một thẻ **Kỹ năng mới**. Những giá trị chỉ dùng cho lần này, như tên và ngày tháng, không được đưa vào hướng dẫn.
-3. Kiểm tra và sửa tên, mô tả và hướng dẫn trên thẻ. Tên là thứ danh sách kỹ năng hiển thị và là thứ bạn gõ sau `/`: chữ cái tiếng Anh viết thường, chữ số và dấu gạch nối.
+3. Kiểm tra và sửa tên, mô tả và hướng dẫn trên thẻ. Tên là thứ danh sách kỹ năng hiển thị và là thứ bạn gõ sau `/`: chữ cái tiếng Anh viết thường, chữ số và dấu gạch nối. Ô **Tiêu đề** phía trên tên dùng để ghi tiêu đề hiện trong danh sách, bằng ngôn ngữ nào cũng được.
 4. Nhấn **Lưu**. Kỹ năng mới được thêm vào kỹ năng của tôi ở trạng thái bật và xuất hiện ngay trong danh sách `/`.
 
 - Không có tệp nào được ghi cho đến khi bạn nhấn **Lưu**. Nếu bạn nhấn **Hủy**, cuộc trò chuyện chỉ giữ lại nó dưới dạng "Đề xuất kỹ năng chưa lưu".

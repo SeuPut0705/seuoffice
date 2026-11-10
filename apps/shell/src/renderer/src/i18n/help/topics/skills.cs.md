@@ -4,7 +4,7 @@ Dovednost je sada pracovních pokynů pro AI. Jednou si zapište, co děláte st
 
 ## Zapínání a vypínání dovedností
 
-**Nastavení ▸ Dovednosti** ukazuje dovednosti na tomto počítači, seskupené podle původu. Každá dovednost se zobrazuje pod svým jménem, stejně jako ji ukazují agenti pro programování. Pomocí vyhledávacího pole nahoře najdete dovednost podle jména nebo popisu.
+**Nastavení ▸ Dovednosti** ukazuje dovednosti na tomto počítači, seskupené podle původu. Každá dovednost se zobrazuje pod svým jménem, stejně jako ji ukazují agenti pro programování. Pomocí vyhledávacího pole nahoře najdete dovednost podle jména nebo popisu. Vaše dovednost, která má název, ukazuje tento název v tomto seznamu, v seznamu `/` a na štítcích a jméno je malým písmem vedle něj. Hledat můžete i podle názvu.
 
 | Původ                        | Co obsahuje                                                            | Na začátku |
 | ---------------------------- | ---------------------------------------------------------------------- | ---------- |
@@ -38,7 +38,7 @@ Pod náhledem je vždy uvedeno: „Instalujte dovednosti jen ze zdrojů, kterým
 - **Řádky, které stojí za přečtení před instalací**, jsou řádky, které žádají AI, aby ignorovala dřívější pokyny, před vámi něco skrývala nebo přebírala pokyny z vnější adresy, a cesty `../`, které vedou mimo složku dovednosti. U každého je uveden soubor a řádek. Instalaci nezastaví a dovednost bez takových řádků tím ještě není bezpečná.
 - Při stahování z GitHubu se GenOffice připojuje jen k `github.com`, `api.github.com` a `codeload.github.com` a neposílá žádné přihlašovací údaje. Pokud je archiv příliš velký nebo neprojde bezpečnostními kontrolami, nic se nenainstaluje.
 - Stránka dovednosti na skills.sh (`https://skills.sh/owner/repo/skill`) se čte jako tato dovednost v repozitáři GitHub `owner/repo`. GenOffice se ke skills.sh nepřipojuje.
-- **Nová dovednost** otevře prázdný editor, do kterého sami napíšete jméno, popis a pokyny.
+- **Nová dovednost** otevře prázdný editor, do kterého sami napíšete jméno, popis a pokyny. Pole **Název** úplně nahoře přijme název v libovolném jazyce; jméno se vyplní z názvu a můžete ho změnit. Pokud má zapnutá dovednost z jiného zdroje stejné jméno, před uložením se vás aplikace zeptá a uložením se ta dovednost vypne.
 
 ## Kontrola aktualizací
 
@@ -70,7 +70,7 @@ Pod náhledem je vždy uvedeno: „Instalujte dovednosti jen ze zdrojů, kterým
 
 1. V panelu AI napište například „Ulož to, co jsme právě udělali, jako dovednost“ nebo „Vytvoř dovednost, která píše zprávy v našem firemním stylu“.
 2. AI vybere kroky a pravidla, která se vyplatí opakovat, a zobrazí kartu **Nová dovednost**. Hodnoty použité jen tentokrát, jako jména a data, do pokynů nepatří.
-3. Zkontrolujte a upravte na kartě jméno, popis a pokyny. Jméno se zobrazuje v seznamu dovedností a píšete ho za `/`: malá anglická písmena, číslice a spojovníky.
+3. Zkontrolujte a upravte na kartě jméno, popis a pokyny. Jméno se zobrazuje v seznamu dovedností a píšete ho za `/`: malá anglická písmena, číslice a spojovníky. Do pole **Název** nad jménem se píše název, který ukazuje seznam, v libovolném jazyce.
 4. Klikněte na **Uložit**. Nová dovednost se přidá do mých dovedností, zapne se a hned se objeví v seznamu `/`.
 
 - Dokud nekliknete na **Uložit**, žádný soubor se nezapíše. Pokud kliknete na **Zrušit**, rozhovor ji ponechá jen jako „Neuložený návrh dovednosti“.

@@ -4,7 +4,7 @@ Umiejętność to zestaw instrukcji roboczych dla AI. Zapisz raz to, co robisz w
 
 ## Włączanie i wyłączanie umiejętności
 
-**Ustawienia ▸ Umiejętności** pokazuje umiejętności na tym komputerze, pogrupowane według pochodzenia. Każda umiejętność jest pokazana pod swoją nazwą, tak jak w agentach programistycznych. Polem wyszukiwania u góry znajdziesz umiejętność po nazwie lub opisie.
+**Ustawienia ▸ Umiejętności** pokazuje umiejętności na tym komputerze, pogrupowane według pochodzenia. Każda umiejętność jest pokazana pod swoją nazwą, tak jak w agentach programistycznych. Polem wyszukiwania u góry znajdziesz umiejętność po nazwie lub opisie. Twoja umiejętność, która ma tytuł, pokazuje ten tytuł na tej liście, na liście `/` i na znacznikach, a nazwa jest obok małą czcionką. Możesz też szukać po tytule.
 
 | Pochodzenie                    | Co zawiera                                                              | Na początku |
 | ------------------------------ | ----------------------------------------------------------------------- | ----------- |
@@ -38,7 +38,7 @@ Pod podglądem zawsze widnieje: „Instaluj umiejętności tylko z zaufanych źr
 - **Wiersze warte przeczytania przed instalacją** to wiersze, które proszą AI o zignorowanie wcześniejszych instrukcji, ukrycie czegoś przed tobą lub pobranie instrukcji z zewnętrznego adresu, a także ścieżki `../` wskazujące poza folder umiejętności. Przy każdym widać plik i numer wiersza. Nie blokują instalacji, a umiejętność bez takich wierszy nie jest przez to bezpieczna.
 - Przy pobieraniu z GitHub GenOffice łączy się tylko z `github.com`, `api.github.com` i `codeload.github.com` i nie wysyła żadnych danych logowania. Jeśli archiwum jest za duże albo nie przejdzie kontroli bezpieczeństwa, nic nie zostanie zainstalowane.
 - Strona umiejętności w skills.sh (`https://skills.sh/owner/repo/skill`) jest odczytywana jako ta umiejętność w repozytorium GitHub `owner/repo`. GenOffice nie łączy się ze skills.sh.
-- **Nowa umiejętność** otwiera pusty edytor, w którym sam wpisujesz nazwę, opis i instrukcje.
+- **Nowa umiejętność** otwiera pusty edytor, w którym sam wpisujesz nazwę, opis i instrukcje. Pole **Tytuł** na samej górze przyjmuje tytuł w dowolnym języku; nazwa jest wypełniana na podstawie tytułu i można ją zmienić. Jeśli włączona umiejętność z innego źródła ma tę samą nazwę, przed zapisaniem pojawi się pytanie, a zapisanie wyłączy tamtą umiejętność.
 
 ## Sprawdzanie aktualizacji
 
@@ -70,7 +70,7 @@ Pod podglądem zawsze widnieje: „Instaluj umiejętności tylko z zaufanych źr
 
 1. W panelu AI napisz na przykład „Zapisz jako umiejętność to, co właśnie zrobiliśmy” albo „Utwórz umiejętność, która pisze raporty w naszym stylu”.
 2. AI wyłuskuje kroki i reguły warte powtarzania i pokazuje kartę **Nowa umiejętność**. Wartości użyte tylko ten jeden raz, takie jak imiona i daty, nie trafiają do instrukcji.
-3. Sprawdź i popraw na karcie nazwę, opis i instrukcje. Nazwa jest widoczna na liście umiejętności i to ją wpisujesz po `/`: małe litery angielskie, cyfry i łączniki.
+3. Sprawdź i popraw na karcie nazwę, opis i instrukcje. Nazwa jest widoczna na liście umiejętności i to ją wpisujesz po `/`: małe litery angielskie, cyfry i łączniki. W polu **Tytuł** nad nazwą wpisuje się tytuł widoczny na liście, w dowolnym języku.
 4. Kliknij **Zapisz**. Nowa umiejętność trafia do moich umiejętności, zostaje włączona i od razu pojawia się na liście `/`.
 
 - Żaden plik nie zostanie zapisany, dopóki nie klikniesz **Zapisz**. Jeśli klikniesz **Anuluj**, rozmowa zachowa ją tylko jako „Niezapisana propozycja umiejętności”.

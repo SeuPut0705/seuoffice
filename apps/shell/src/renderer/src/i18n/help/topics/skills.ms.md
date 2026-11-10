@@ -4,7 +4,7 @@ Kemahiran ialah satu set arahan kerja untuk AI. Tulis sekali sahaja perkara yang
 
 ## Menghidupkan dan mematikan kemahiran
 
-**Tetapan ▸ Kemahiran** menyenaraikan kemahiran pada PC ini, dikumpulkan mengikut asalnya. Setiap kemahiran dipaparkan dengan namanya, seperti dalam ejen pengekodan. Gunakan kotak carian di bahagian atas untuk mencari mengikut nama atau keterangan.
+**Tetapan ▸ Kemahiran** menyenaraikan kemahiran pada PC ini, dikumpulkan mengikut asalnya. Setiap kemahiran dipaparkan dengan namanya, seperti dalam ejen pengekodan. Gunakan kotak carian di bahagian atas untuk mencari mengikut nama atau keterangan. Kemahiran anda yang mempunyai tajuk memaparkan tajuk itu dalam senarai ini, dalam senarai `/` dan pada cip, dengan nama bersaiz kecil di sebelahnya. Anda juga boleh mencari mengikut tajuk.
 
 | Sumber                      | Kandungannya                                                  | Pada mulanya |
 | --------------------------- | ------------------------------------------------------------- | ------------ |
@@ -38,7 +38,7 @@ Di bawah pratonton sentiasa tertulis: "Pasang kemahiran hanya daripada sumber ya
 - **Baris yang patut dibaca sebelum memasang** ialah baris yang meminta AI mengabaikan arahan sebelumnya, menyembunyikan sesuatu daripada anda atau mengambil arahan dari alamat luar, serta laluan `../` yang menghala ke luar folder kemahiran. Setiap satu menunjukkan fail dan barisnya. Baris ini tidak menghalang pemasangan, dan kemahiran tanpa baris sebegini tidak semestinya selamat.
 - Semasa memuat turun dari GitHub, GenOffice hanya bersambung ke `github.com`, `api.github.com` dan `codeload.github.com`, dan tidak menghantar sebarang data log masuk. Jika arkib terlalu besar atau gagal dalam semakan keselamatan, tiada apa-apa yang dipasang.
 - Halaman kemahiran di skills.sh (`https://skills.sh/owner/repo/skill`) dibaca sebagai kemahiran itu dalam repositori GitHub `owner/repo`. GenOffice tidak bersambung ke skills.sh.
-- **Kemahiran baharu** membuka editor kosong untuk anda menulis sendiri nama, keterangan dan arahannya.
+- **Kemahiran baharu** membuka editor kosong untuk anda menulis sendiri nama, keterangan dan arahannya. Medan **Tajuk** di bahagian paling atas menerima tajuk dalam apa-apa bahasa; nama diisi daripada tajuk dan anda boleh mengubahnya. Jika kemahiran yang dihidupkan daripada sumber lain mempunyai nama yang sama, anda ditanya sebelum menyimpan, dan menyimpan akan mematikan kemahiran itu.
 
 ## Menyemak kemas kini
 
@@ -70,7 +70,7 @@ Di bawah pratonton sentiasa tertulis: "Pasang kemahiran hanya daripada sumber ya
 
 1. Dalam panel AI, sebut sesuatu seperti "Simpan apa yang kita buat tadi sebagai kemahiran" atau "Buat kemahiran yang menulis laporan mengikut gaya organisasi kita".
 2. AI memilih langkah dan peraturan yang wajar diulang, lalu memaparkan kad **Kemahiran baharu**. Nilai yang digunakan sekali ini sahaja, seperti nama dan tarikh, tidak dimasukkan ke dalam arahan.
-3. Semak dan sunting nama, keterangan dan arahan pada kad. Nama ialah yang dipaparkan dalam senarai kemahiran dan yang anda taip selepas `/`: huruf kecil bahasa Inggeris, digit dan tanda sempang.
+3. Semak dan sunting nama, keterangan dan arahan pada kad. Nama ialah yang dipaparkan dalam senarai kemahiran dan yang anda taip selepas `/`: huruf kecil bahasa Inggeris, digit dan tanda sempang. Medan **Tajuk** di atas nama diisi dengan tajuk yang dipaparkan dalam senarai, dalam apa-apa bahasa.
 4. Klik **Simpan**. Kemahiran baharu ditambah ke kemahiran saya dalam keadaan hidup, dan terus muncul dalam senarai `/`.
 
 - Tiada fail ditulis sehingga anda mengklik **Simpan**. Jika anda mengklik **Batal**, perbualan hanya menyimpannya sebagai "Cadangan kemahiran yang tidak disimpan".

@@ -4,7 +4,7 @@ Un'abilità è un insieme di istruzioni di lavoro per l'IA. Scrivi una volta sol
 
 ## Attivare e disattivare le abilità
 
-**Impostazioni ▸ Abilità** elenca le abilità presenti su questo PC, raggruppate in base alla provenienza. Ogni abilità è mostrata con il suo nome, come fanno gli agenti di programmazione. Con la casella di ricerca in alto puoi trovarne una per nome o descrizione.
+**Impostazioni ▸ Abilità** elenca le abilità presenti su questo PC, raggruppate in base alla provenienza. Ogni abilità è mostrata con il suo nome, come fanno gli agenti di programmazione. Con la casella di ricerca in alto puoi trovarne una per nome o descrizione. Una tua abilità che ha un titolo mostra quel titolo in questo elenco, nell’elenco di `/` e sui chip, con il nome in piccolo accanto. Puoi cercare anche per titolo.
 
 | Provenienza                    | Che cosa contiene                                             | All'inizio  |
 | ------------------------------ | ------------------------------------------------------------- | ----------- |
@@ -38,7 +38,7 @@ Sotto l'anteprima compare sempre: «Installa abilità solo da fonti affidabili. 
 - **Righe da leggere prima di installare**: sono righe che chiedono all'IA di ignorare le istruzioni precedenti, di nasconderti qualcosa o di prendere istruzioni da un indirizzo esterno, e percorsi `../` che puntano fuori dalla cartella dell'abilità. Per ognuna sono indicati il file e la riga. Non bloccano l'installazione, e un'abilità senza righe di questo tipo non è per questo sicura.
 - Quando scarica da GitHub, GenOffice si collega solo a `github.com`, `api.github.com` e `codeload.github.com` e non invia alcun dato di accesso. Se l'archivio è troppo grande o non supera i controlli di sicurezza, non viene installato nulla.
 - La pagina di un'abilità su skills.sh (`https://skills.sh/owner/repo/skill`) viene letta come quell'abilità nel repository GitHub `owner/repo`. GenOffice non si collega a skills.sh.
-- **Nuova abilità** apre un editor vuoto in cui scrivi tu nome, descrizione e istruzioni.
+- **Nuova abilità** apre un editor vuoto in cui scrivi tu nome, descrizione e istruzioni. Il campo **Titolo**, in alto, accetta un titolo in qualsiasi lingua; il nome viene compilato a partire dal titolo e puoi cambiarlo. Se un’abilità attiva di un’altra origine ha lo stesso nome, ti viene chiesto prima di salvare, e salvando quell’abilità viene disattivata.
 
 ## Cercare aggiornamenti
 
@@ -70,7 +70,7 @@ Sotto l'anteprima compare sempre: «Installa abilità solo da fonti affidabili. 
 
 1. Nel pannello IA, scrivi per esempio «Salva come abilità quello che abbiamo appena fatto» oppure «Crea un'abilità che scriva i rapporti nello stile della nostra organizzazione».
 2. L'IA individua i passaggi e le regole che vale la pena ripetere e mostra una scheda **Nuova abilità**. I valori usati solo questa volta, come nomi e date, restano fuori dalle istruzioni.
-3. Controlla e correggi sulla scheda nome, descrizione e istruzioni. Il nome è quello che compare nell'elenco delle abilità e che scrivi dopo `/`: lettere inglesi minuscole, cifre e trattini.
+3. Controlla e correggi sulla scheda nome, descrizione e istruzioni. Il nome è quello che compare nell'elenco delle abilità e che scrivi dopo `/`: lettere inglesi minuscole, cifre e trattini. Il campo **Titolo**, sopra il nome, contiene il titolo mostrato nell’elenco, in qualsiasi lingua.
 4. Fai clic su **Salva**. La nuova abilità viene aggiunta alle mie abilità, viene attivata e compare subito nell'elenco di `/`.
 
 - Nessun file viene scritto finché non fai clic su **Salva**. Se fai clic su **Annulla**, la chat la conserva solo come «Proposta di abilità non salvata».

@@ -4,7 +4,7 @@ Ein Skill ist eine Arbeitsanleitung für die KI. Schreiben Sie einmal auf, was S
 
 ## Skills ein- und ausschalten
 
-**Einstellungen ▸ Skills** listet die Skills auf diesem PC auf, gruppiert nach ihrer Herkunft. Jeder Skill wird mit seinem Namen angezeigt, so wie Coding-Agenten es tun. Über das Suchfeld oben finden Sie einen Skill nach Name oder Beschreibung.
+**Einstellungen ▸ Skills** listet die Skills auf diesem PC auf, gruppiert nach ihrer Herkunft. Jeder Skill wird mit seinem Namen angezeigt, so wie Coding-Agenten es tun. Über das Suchfeld oben finden Sie einen Skill nach Name oder Beschreibung. Ein eigener Skill mit Titel zeigt diesen Titel in dieser Liste, in der `/`-Liste und auf Chips, der Name steht klein daneben. Sie können auch nach dem Titel suchen.
 
 | Herkunft                 | Inhalt                                                                   | Anfangs |
 | ------------------------ | ------------------------------------------------------------------------ | ------- |
@@ -38,7 +38,7 @@ Unter der Vorschau steht immer: „Installieren Sie Skills nur aus Quellen, dene
 - **Zeilen, die Sie vor der Installation lesen sollten**, sind Zeilen, die die KI auffordern, frühere Anweisungen zu ignorieren, etwas vor Ihnen zu verbergen oder Anweisungen von einer externen Adresse zu holen, sowie `../`-Pfade, die aus dem Skill-Ordner hinauszeigen. Bei jeder stehen Datei und Zeile. Sie verhindern die Installation nicht, und ein Skill ohne solche Zeilen ist deshalb noch nicht sicher.
 - Beim Herunterladen von GitHub verbindet sich GenOffice nur mit `github.com`, `api.github.com` und `codeload.github.com` und sendet keine Anmeldedaten. Ist das Archiv zu groß oder besteht es die Sicherheitsprüfungen nicht, wird nichts installiert.
 - Die Seite eines Skills auf skills.sh (`https://skills.sh/owner/repo/skill`) wird als dieser Skill im GitHub-Repository `owner/repo` gelesen. GenOffice verbindet sich nicht mit skills.sh.
-- **Neuer Skill** öffnet einen leeren Editor, in dem Sie Name, Beschreibung und Anleitung selbst schreiben.
+- **Neuer Skill** öffnet einen leeren Editor, in dem Sie Name, Beschreibung und Anleitung selbst schreiben. Das Feld **Titel** ganz oben nimmt einen Titel in beliebiger Sprache auf; der Name wird aus dem Titel ausgefüllt und lässt sich ändern. Hat ein eingeschalteter Skill aus einer anderen Quelle denselben Namen, werden Sie vor dem Speichern gefragt, und beim Speichern wird jener Skill ausgeschaltet.
 
 ## Nach Updates suchen
 
@@ -70,7 +70,7 @@ Unter der Vorschau steht immer: „Installieren Sie Skills nur aus Quellen, dene
 
 1. Sagen Sie im KI-Bereich etwa „Speichere, was wir gerade gemacht haben, als Skill“ oder „Erstelle einen Skill, der Berichte in unserem Hausstil schreibt“.
 2. Die KI zieht die Schritte und Regeln heraus, die sich zu wiederholen lohnen, und zeigt eine Karte **Neuer Skill**. Werte, die nur dieses eine Mal gebraucht wurden, etwa Namen und Daten, bleiben aus der Anleitung heraus.
-3. Prüfen und bearbeiten Sie Name, Beschreibung und Anleitung auf der Karte. Der Name erscheint in der Skill-Liste, und Sie tippen ihn nach `/`: englische Kleinbuchstaben, Ziffern und Bindestriche.
+3. Prüfen und bearbeiten Sie Name, Beschreibung und Anleitung auf der Karte. Der Name erscheint in der Skill-Liste, und Sie tippen ihn nach `/`: englische Kleinbuchstaben, Ziffern und Bindestriche. Das Feld **Titel** über dem Namen nimmt den Titel auf, den die Liste zeigt, in beliebiger Sprache.
 4. Klicken Sie auf **Speichern**. Der neue Skill wird zu meinen Skills hinzugefügt, eingeschaltet und erscheint sofort in der `/`-Liste.
 
 - Bis Sie auf **Speichern** klicken, wird keine Datei geschrieben. Klicken Sie auf **Abbrechen**, behält der Chat ihn nur als „Nicht gespeicherter Skill-Vorschlag“.

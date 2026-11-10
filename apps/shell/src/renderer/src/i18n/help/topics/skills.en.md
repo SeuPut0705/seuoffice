@@ -4,7 +4,7 @@ A skill is a set of working instructions for the AI. Write down something you do
 
 ## Turning skills on and off
 
-**Settings ▸ Skills** lists the skills on this PC, grouped by where they come from. Each skill is shown by its name, the way coding agents show it. Use the search box at the top to find one by name or description.
+**Settings ▸ Skills** lists the skills on this PC, grouped by where they come from. Each skill is shown by its name, the way coding agents show it. Use the search box at the top to find one by name or description. A skill of yours that has a title shows the title in this list, in the `/` list and on chips, with the name in small text beside it. You can search by the title too.
 
 | Source                   | What it holds                                     | At first |
 | ------------------------ | ------------------------------------------------- | -------- |
@@ -38,7 +38,7 @@ Below the preview it always says: "Install skills only from sources you trust. A
 - **Lines worth reading** are lines that ask the AI to ignore earlier instructions, to keep something from you, or to take instructions from an outside address, and `../` paths that point outside the skill folder. Each shows its file and line. They do not stop the install, and a skill with no such lines is not therefore safe.
 - When it downloads from GitHub, GenOffice connects only to `github.com`, `api.github.com` and `codeload.github.com`, and sends no sign-in data. If the archive is too large or fails the safety checks, nothing is installed.
 - A skill's page on skills.sh (`https://skills.sh/owner/repo/skill`) is read as that skill in the GitHub repository `owner/repo`. GenOffice does not connect to skills.sh.
-- **New skill** opens an empty editor where you write the name, description and instructions yourself.
+- **New skill** opens an empty editor where you write the name, description and instructions yourself. The **Title** field at the top takes a title in any language; the name is filled in from the title and you can change it. If an enabled skill from another source has the same name, you are asked before saving, and saving turns that skill off.
 
 ## Checking for updates
 
@@ -70,7 +70,7 @@ Below the preview it always says: "Install skills only from sources you trust. A
 
 1. In the AI panel, say something like "Save what we just did as a skill" or "Make a skill that writes reports in our house style".
 2. The AI picks out the steps and rules worth repeating and shows a **New skill** card. Values used only this once, such as names and dates, stay out of the instructions.
-3. Check and edit the name, description and instructions on the card. The name is what the skill list shows and what you type after `/`: lowercase English letters, digits and hyphens.
+3. Check and edit the name, description and instructions on the card. The name is what the skill list shows and what you type after `/`: lowercase English letters, digits and hyphens. The **Title** field above the name takes the title the list shows, in any language.
 4. Click **Save**. The new skill is added to my skills, turned on, and appears in the `/` list right away.
 
 - No file is written until you click **Save**. If you click **Cancel**, the chat keeps it only as an "Unsaved skill proposal".

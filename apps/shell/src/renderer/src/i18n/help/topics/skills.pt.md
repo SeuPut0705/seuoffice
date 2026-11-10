@@ -4,7 +4,7 @@ Uma habilidade é um conjunto de instruções de trabalho para a IA. Registe uma
 
 ## Ativar e desativar habilidades
 
-**Configurações ▸ Habilidades** lista as habilidades deste PC, agrupadas pela origem. Cada habilidade aparece pelo nome, como nos agentes de programação. Use a caixa de pesquisa no topo para encontrar uma por nome ou descrição.
+**Configurações ▸ Habilidades** lista as habilidades deste PC, agrupadas pela origem. Cada habilidade aparece pelo nome, como nos agentes de programação. Use a caixa de pesquisa no topo para encontrar uma por nome ou descrição. Uma habilidade sua que tem título mostra esse título nesta lista, na lista de `/` e nos chips, com o nome em letras pequenas ao lado. Também é possível pesquisar pelo título.
 
 | Origem                             | O que contém                                                | No início   |
 | ---------------------------------- | ----------------------------------------------------------- | ----------- |
@@ -38,7 +38,7 @@ Por baixo da pré-visualização aparece sempre: «Instale habilidades somente d
 - **Linhas para ler antes de instalar** são linhas que pedem à IA que ignore as instruções anteriores, que esconda algo de si ou que siga instruções de um endereço externo, e caminhos `../` que apontam para fora da pasta da habilidade. Cada uma mostra o seu ficheiro e a sua linha. Não impedem a instalação, e uma habilidade sem estas linhas não é, por isso, segura.
 - Ao transferir do GitHub, o GenOffice liga-se apenas a `github.com`, `api.github.com` e `codeload.github.com`, e não envia nenhum dado de início de sessão. Se o pacote for grande demais ou não passar nas verificações de segurança, nada é instalado.
 - A página de uma habilidade no skills.sh (`https://skills.sh/owner/repo/skill`) é lida como essa habilidade no repositório do GitHub `owner/repo`. O GenOffice não se liga ao skills.sh.
-- **Nova habilidade** abre um editor vazio onde escreve o nome, a descrição e as instruções.
+- **Nova habilidade** abre um editor vazio onde escreve o nome, a descrição e as instruções. O campo **Título**, no topo, aceita um título em qualquer idioma; o nome é preenchido a partir do título e você pode alterá-lo. Se uma habilidade ativada de outra origem tiver o mesmo nome, você é consultado antes de salvar, e salvar desativa essa habilidade.
 
 ## Verificar atualizações
 
@@ -70,7 +70,7 @@ Por baixo da pré-visualização aparece sempre: «Instale habilidades somente d
 
 1. No painel de IA, diga algo como «Guarda o que acabámos de fazer como habilidade» ou «Cria uma habilidade que escreva relatórios no estilo da nossa equipa».
 2. A IA separa os passos e as regras que vale a pena repetir e mostra um cartão **Nova habilidade**. Os valores usados só desta vez, como nomes e datas, ficam fora das instruções.
-3. Reveja e edite o nome, a descrição e as instruções no cartão. O nome é o que a lista de habilidades mostra e o que escreve depois de `/`: letras minúsculas inglesas, algarismos e hífenes.
+3. Reveja e edite o nome, a descrição e as instruções no cartão. O nome é o que a lista de habilidades mostra e o que escreve depois de `/`: letras minúsculas inglesas, algarismos e hífenes. O campo **Título**, acima do nome, recebe o título que a lista mostra, em qualquer idioma.
 4. Clique em **Salvar**. A nova habilidade é adicionada a minhas habilidades, já ativada, e aparece logo na lista de `/`.
 
 - Nenhum ficheiro é gravado até clicar em **Salvar**. Se clicar em **Cancelar**, a conversa guarda-a apenas como «Proposta de habilidade não salva».

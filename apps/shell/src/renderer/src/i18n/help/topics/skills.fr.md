@@ -4,7 +4,7 @@ Une compétence est un ensemble d’instructions de travail pour l’IA. Notez u
 
 ## Activer et désactiver des compétences
 
-**Paramètres ▸ Compétences** liste les compétences présentes sur ce PC, regroupées selon leur provenance. Chaque compétence apparaît sous son nom, comme dans les agents de programmation. Le champ de recherche en haut permet d’en trouver une par nom ou description.
+**Paramètres ▸ Compétences** liste les compétences présentes sur ce PC, regroupées selon leur provenance. Chaque compétence apparaît sous son nom, comme dans les agents de programmation. Le champ de recherche en haut permet d’en trouver une par nom ou description. Une de vos compétences qui porte un titre affiche ce titre dans cette liste, dans la liste `/` et sur les pastilles, avec le nom en petit à côté. La recherche fonctionne aussi avec le titre.
 
 | Provenance                         | Contenu                                                                   | Au départ   |
 | ---------------------------------- | ------------------------------------------------------------------------- | ----------- |
@@ -38,7 +38,7 @@ Sous l’aperçu figure toujours ce message : « N’installez que des compéten
 - **Lignes à lire avant d’installer** : ce sont les lignes qui demandent à l’IA d’ignorer les instructions précédentes, de vous cacher quelque chose ou de suivre des instructions venant d’une adresse extérieure, ainsi que les chemins `../` qui pointent hors du dossier de la compétence. Chacune indique son fichier et sa ligne. Elles n’empêchent pas l’installation, et une compétence sans ces lignes n’est pas sûre pour autant.
 - Pour télécharger depuis GitHub, GenOffice se connecte uniquement à `github.com`, `api.github.com` et `codeload.github.com`, et n’envoie aucune donnée de connexion. Si l’archive est trop volumineuse ou échoue aux contrôles de sécurité, rien n’est installé.
 - La page d’une compétence sur skills.sh (`https://skills.sh/owner/repo/skill`) est lue comme cette compétence dans le dépôt GitHub `owner/repo`. GenOffice ne se connecte pas à skills.sh.
-- **Nouvelle compétence** ouvre un éditeur vide où vous rédigez vous-même le nom, la description et les instructions.
+- **Nouvelle compétence** ouvre un éditeur vide où vous rédigez vous-même le nom, la description et les instructions. Le champ **Titre**, en haut, accepte un titre dans n’importe quelle langue ; le nom est rempli à partir du titre et vous pouvez le modifier. Si une compétence activée d’une autre source porte le même nom, une question vous est posée avant l’enregistrement, et enregistrer désactive cette compétence.
 
 ## Rechercher des mises à jour
 
@@ -70,7 +70,7 @@ Sous l’aperçu figure toujours ce message : « N’installez que des compéten
 
 1. Dans le panneau IA, dites par exemple « Enregistre ce qu’on vient de faire comme compétence » ou « Crée une compétence qui rédige les rapports dans notre style maison ».
 2. L’IA repère les étapes et les règles qui méritent d’être reprises et affiche une carte **Nouvelle compétence**. Les valeurs propres à cette fois-ci, comme les noms et les dates, restent hors des instructions.
-3. Vérifiez et modifiez le nom, la description et les instructions sur la carte. Le nom est ce qu’affiche la liste des compétences et ce que vous tapez après `/` : lettres anglaises minuscules, chiffres et traits d’union.
+3. Vérifiez et modifiez le nom, la description et les instructions sur la carte. Le nom est ce qu’affiche la liste des compétences et ce que vous tapez après `/` : lettres anglaises minuscules, chiffres et traits d’union. Le champ **Titre**, au-dessus du nom, reçoit le titre affiché dans la liste, dans n’importe quelle langue.
 4. Cliquez sur **Enregistrer**. La nouvelle compétence est ajoutée à mes compétences, activée, et apparaît aussitôt dans la liste `/`.
 
 - Aucun fichier n’est écrit tant que vous n’avez pas cliqué sur **Enregistrer**. Si vous cliquez sur **Annuler**, la conversation la garde seulement comme « Proposition de compétence non enregistrée ».
