@@ -198,6 +198,7 @@ button {
 .app.pdf-presenting .ai-dock,
 .app.pdf-presenting .pdf-thumbs,
 .app.pdf-presenting .pdf-side-resizer,
+.app.pdf-presenting .pdf-side-reopen,
 .app.pdf-presenting .status-bar,
 .app.pdf-presenting .pdf-search-bar {
   display: none !important;
@@ -776,6 +777,14 @@ button {
   background: var(--border);
 }
 
+/* shortcut beside a menu label (cut / copy / paste pages) */
+.thumb-menu-key {
+  margin-left: auto;
+  padding-left: 24px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 /* ── Markup context menu (right click on a highlight/underline/strikeout) ── */
 
 .pdf-markup-menu {
@@ -1294,6 +1303,38 @@ button {
   cursor: col-resize;
   z-index: 20;
   background: transparent;
+}
+
+/* a closed sidebar leaves this tab on the edge of the page area where the
+ * sidebar sits: one press brings the thumbnails back (the View tab button does
+ * the same). Logical sides, so it follows the sidebar in right-to-left languages. */
+.pdf-side-reopen {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 12px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-inline-start: none;
+  border-start-end-radius: 6px;
+  border-end-end-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.pdf-side-reopen:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+[dir='rtl'] .pdf-side-reopen svg {
+  transform: scaleX(-1);
 }
 
 .pdf-thumb {

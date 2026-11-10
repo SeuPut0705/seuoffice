@@ -6,6 +6,7 @@ Editor PDF punya lima tab di pita: **Beranda / Anotasi / Edit / Halaman / Tampil
 
 - Bilah sisi kiri: **Gambar mini** (klik untuk melompat, rentang yang terlihat disorot) atau **Kerangka** (bookmark, jika ada).
 - Zoom: kendali rasio di kanan bawah; ctrl+roda mengubah tingkat zoom.
+- Zoom saat dibuka: **Saat dibuka** di tab Tampilan memilih tampilan awal PDF yang baru dibuka: sesuaikan lebar, sesuaikan halaman, atau zoom 50% sampai 200%. PDF yang zoomnya Anda ubah sendiri akan dibuka lagi dengan zoom itu.
 - Menggeser tampilan: aktifkan **Alat Tangan** (tab Beranda dan Tampilan) lalu seret untuk menggeser halaman ke segala arah. Selama aktif, menyeret tidak memilih teks dan klik biasa tetap membuka tautan. Menyeret sambil menahan tombol tengah (roda) menggeser tampilan tanpa alat ini. Esc atau memilih alat lain mematikannya.
 - Rotasi: per halaman atau semua halaman dari menu Halaman; rotasi ditulis kembali saat menyimpan.
 - Cari: ctrl+F untuk mencari seluruh teks dengan semua hasil disorot.
@@ -70,6 +71,7 @@ Enam alat: **Gambar, Persegi, Elips, Panah, Catatan**, ditambah **Redaksi area**
 ## Operasi halaman (Halaman)
 
 - **Putar / Hapus halaman / Ubah urutan**: seret gambar mini untuk mengubah urutan; penghapusan meminta konfirmasi.
+- **Beberapa halaman sekaligus**: klik gambar mini sambil menahan Ctrl atau Shift untuk memilih beberapa halaman. Delete menghapusnya; Ctrl+C, Ctrl+X, dan Ctrl+V menyalin, memotong, dan menempelkannya. Halaman yang disalin juga dapat ditempel ke tab PDF lain, dan hasil tempel langsung disimpan ke file. Jika gambar mini ditutup, tombol di tepi kiri area halaman membukanya kembali.
 - **Impor halaman**: tarik halaman dari PDF lain ke dalam dokumen. **Sisipkan halaman kosong** menambahkan satu halaman kosong.
 - **Ganti halaman** menukar sebuah rentang dengan halaman dari tempat lain; **Pangkas halaman** memotong tepinya, dengan opsi menerapkannya ke semua halaman.
 - **Ukuran halaman** menskalakan ulang setiap halaman ke satu ukuran kertas; **Balik urutan** membalik dokumen dari ujung ke ujung.

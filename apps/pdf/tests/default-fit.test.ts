@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_FIT_KEY,
+  DEFAULT_VIEWS,
   MAX_SCALE,
+  defaultViewPercent,
   loadDefaultView,
   openingView,
   saveDefaultView,
@@ -48,6 +50,32 @@ describe('default view for a PDF without a saved view', () => {
     expect(openingView(null, 'width')).toEqual({ fitMode: 'width' })
     expect(openingView(null, 'page')).toEqual({ fitMode: 'page' })
     expect(openingView(null, 'actual')).toEqual({ fitMode: null, scale: 1 })
+  })
+
+  it('opens at the chosen zoom percentage', () => {
+    expect(openingView(null, '75')).toEqual({ fitMode: null, scale: 0.75 })
+    expect(openingView(null, '80')).toEqual({ fitMode: null, scale: 0.8 })
+    expect(openingView(null, '150')).toEqual({ fitMode: null, scale: 1.5 })
+  })
+
+  it('offers the fit modes and percentages, each remembered across a reload', () => {
+    expect(DEFAULT_VIEWS.map(defaultViewPercent)).toEqual([
+      null,
+      null,
+      50,
+      75,
+      80,
+      90,
+      100,
+      125,
+      150,
+      200,
+    ])
+    for (const view of DEFAULT_VIEWS) {
+      const { storage } = memoryStorage()
+      saveDefaultView(view, storage)
+      expect(loadDefaultView(storage)).toBe(view)
+    }
   })
 
   it('keeps a saved custom zoom inside the zoom range', () => {
