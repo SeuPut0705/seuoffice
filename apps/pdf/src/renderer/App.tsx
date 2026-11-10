@@ -2826,6 +2826,13 @@ export default function App() {
 
   // ── Undo/redo: push a full snapshot before each change; consecutive input on the same form field coalesces into one step ──
 
+  // Set while the web page co-edits this document (apps/pdf/src/web/collab-adapter.ts)
+  const collabRef = useRef<{
+    refuse(ops: Op[]): PlanResult | null
+    blocks(what: 'outline' | 'attachments' | 'protection' | 'redaction' | 'history'): boolean
+    changed(state: EditSnapshot): void
+  } | null>(null)
+
   // Ref-mirrored fields read the mirrors so a pushUndo later in an AI turn captures
   // the tools that ran before it, not the state this render closed over
   const snapshot = (): EditSnapshot => ({
@@ -2889,6 +2896,8 @@ export default function App() {
    * display metadata (validated bounds, ghost PNGs) are the only direct writes left.
    */
   const applyEditOps = (ops: Op[], opts?: { coalesceKey?: string }): PlanResult => {
+    const refused = collabRef.current?.refuse(ops)
+    if (refused) return refused
     const structuralIndex = ops.findIndex(
       (op) => op.op === 'rotatePages' || op.op === 'deletePage' || op.op === 'setPageOrder',
     )
@@ -2958,6 +2967,7 @@ export default function App() {
       metadataRef.current = reduce('metadata', metadataRef.current)
       setMetadata(metadataRef.current)
     }
+    collabRef.current?.changed(snapshot())
     return plan
   }
   /** Latest entry for async callbacks (bakes, validated AI edits): the closure they
@@ -2996,7 +3006,7 @@ export default function App() {
       },
     ])
 
-  const applySnapshot = (s: EditSnapshot) => {
+  const applySnapshot = (s: EditSnapshot, keepDrafts = false) => {
     markupsRef.current = s.markups
     formEditsRef.current = s.formEdits
     formWidgetEditsRef.current = s.formWidgetEdits
@@ -3021,10 +3031,10 @@ export default function App() {
     )
     setFreshFormFieldId((cur) => (cur && s.formFields.some((f) => f.id === cur) ? cur : null))
     updateImageEdits(() => s.imageEdits)
-    setTextDraft(null)
+    if (!keepDrafts) setTextDraft(null)
     // The comment being rewritten may not exist in the restored snapshot; confirming a
     // stale edit box would reapply text that undo just reverted
-    setNoteEditDraft(null)
+    if (!keepDrafts) setNoteEditDraft(null)
     setStampCfg(s.stampCfg)
     setFormEdits(s.formEdits)
     setRotations(s.rotations)
@@ -3038,24 +3048,50 @@ export default function App() {
 
   const undo = () => {
     const top = undoStack[undoStack.length - 1]
-    if (!top) return
+    if (!top || collabRef.current?.blocks('history')) return
     // Taken before applySnapshot rewrites the refs; the updater may run after it
     const cur = snapshot()
     setRedoStack((r) => [...r, cur])
     setUndoStack((u) => u.slice(0, -1))
     applySnapshot(top)
     coalesceKeyRef.current = null
+    collabRef.current?.changed(top)
   }
 
   const redo = () => {
     const top = redoStack[redoStack.length - 1]
-    if (!top) return
+    if (!top || collabRef.current?.blocks('history')) return
     const cur = snapshot()
     setUndoStack((u) => [...u, cur])
     setRedoStack((r) => r.slice(0, -1))
     applySnapshot(top)
     coalesceKeyRef.current = null
+    collabRef.current?.changed(top)
   }
+
+  // web co-editing: the session takes the edits once the document is on screen (absent on the
+  // desktop). It keeps the first handles it gets, so they call this render's functions through a ref.
+  const collabAppRef = useRef({ snapshot, applySnapshot })
+  collabAppRef.current = { snapshot, applySnapshot }
+  useEffect(() => {
+    if (status !== 'ready' || !doc) return
+    void window.seuCollab?.attach({
+      link: collabRef,
+      snapshot: () => collabAppRef.current.snapshot(),
+      show: (s: EditSnapshot) => {
+        stampRef.current = s.stampCfg
+        collabAppRef.current.applySnapshot(s, true)
+      },
+      mapHistory: (map: (s: EditSnapshot) => EditSnapshot) => {
+        setUndoStack((u) => u.map(map))
+        setRedoStack((r) => r.map(map))
+      },
+      // the opened file's pages: only a reload changes them, and a co-edited page never reloads
+      pageSizes: sizes,
+      password: () => diskPasswordRef.current,
+      notice: (text: string) => showNoticeRef.current(text),
+    })
+  }, [status, doc, sizes])
 
   // ── Full-text search ──
 
@@ -5528,6 +5564,7 @@ export default function App() {
   }
 
   const addAttachment = async () => {
+    if (collabRef.current?.blocks('attachments')) return
     const picked = await window.pdfApi.pickAttachmentFile()
     if (!picked.ok) {
       if (!('cancelled' in picked)) showNotice(picked.reason)
@@ -5548,6 +5585,7 @@ export default function App() {
   }
 
   const toggleAttachmentRemove = (row: AttachmentRow): void => {
+    if (collabRef.current?.blocks('attachments')) return
     if (!row.saved) {
       setPendingAttachmentAdds((prev) => prev.filter((a) => a.name !== row.name))
       return
@@ -8417,6 +8455,7 @@ export default function App() {
   }
 
   const startBookmarkEdit = (): void => {
+    if (collabRef.current?.blocks('outline')) return
     // A committed (unsaved) tree reopens as is; the file's outline is only the
     // starting point when nothing is pending
     if (pendingOutline?.tree) {
@@ -9440,6 +9479,7 @@ export default function App() {
     ownerPassword: string
     permissions: PdfPermissions
   }): void => {
+    if (collabRef.current?.blocks('protection')) return setProtectionDlg(false)
     if (!mayChangeProtection(readOnly, diskLock)) {
       showNotice(t('pwOwnerNeeded'))
       setProtectionDlg(false)
@@ -9456,6 +9496,7 @@ export default function App() {
   }
 
   const removeProtection = (): void => {
+    if (collabRef.current?.blocks('protection')) return setProtectionDlg(false)
     if (!mayChangeProtection(readOnly, diskLock)) {
       showNotice(t('pwOwnerNeeded'))
       setProtectionDlg(false)
@@ -12438,6 +12479,7 @@ export default function App() {
                                 marks={redactions.filter((mark) => mark.pageIndex === origIdx)}
                                 markLabel={t('redact')}
                                 onCommit={(rect) =>
+                                  !collabRef.current?.blocks('redaction') &&
                                   setRedactions((prev) => [
                                     ...prev,
                                     { id: newId(), pageIndex: origIdx, rect },

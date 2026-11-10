@@ -1,0 +1,113 @@
+/**
+ * The PDF page joining the host's co-editing session: the format it declares,
+ * the adapter it builds once the renderer shows the document, and what the
+ * person reads when the session refuses a change.
+ */
+import {
+  joinPageCollab,
+  webLanguage,
+  type PageCollab,
+  type WebDocument,
+} from '@seuoffice/web-platform'
+import { flushSync } from 'react-dom'
+import type { PageSize } from '../renderer/view-config'
+import type { PdfHost, Refusal } from './collab-adapter'
+import type { PdfOp } from './collab-model'
+
+/** What the renderer hands over (`window.seuCollab.attach`) once the opened document is on screen */
+export interface PdfCollabHandles extends PdfHost {
+  /** the opened file's pages, unrotated */
+  pageSizes: readonly PageSize[]
+  /** the open password of a protected file */
+  password(): string | null
+  /** the App's notice line */
+  notice(text: string): void
+}
+
+/** Bump `schema` when the op format changes: pages of two schemas must not share a session */
+const FORMAT = { name: 'pdf', schema: 1 }
+
+const FEATURES = {
+  text: ['글자를 고치거나 넣을 수 없습니다', 'text cannot be edited or added'],
+  image: ['문서 안의 그림을 고칠 수 없습니다', 'images in the document cannot be edited'],
+  savedAnnotation: ['파일에 저장된 주석을 지울 수 없습니다', 'saved annotations cannot be removed'],
+  outline: ['책갈피를 고칠 수 없습니다', 'bookmarks cannot be edited'],
+  attachments: ['첨부 파일을 더하거나 뺄 수 없습니다', 'attachments cannot be added or removed'],
+  protection: ['암호 보호를 바꿀 수 없습니다', 'password protection cannot be changed'],
+  redaction: ['영구 가림을 할 수 없습니다', 'nothing can be redacted'],
+} as const
+
+function refusalText(reason: Refusal): string {
+  const ko = webLanguage() === 'ko'
+  switch (reason.kind) {
+    case 'feature': {
+      const [korean, english] = FEATURES[reason.feature]
+      return ko
+        ? `여러 사람이 함께 편집하는 동안에는 ${korean}.`
+        : `While several people edit this PDF, ${english}.`
+    }
+    case 'frozen':
+      return ko
+        ? '지금은 문서를 고칠 수 없습니다. 저장하는 중이거나 보기 전용입니다.'
+        : 'The document cannot be changed now: it is being saved, or you may only view it.'
+    case 'tooLarge': {
+      const mb = (reason.bytes / (1024 * 1024)).toFixed(1)
+      return ko
+        ? `이 편집(${mb}MB)은 너무 커서 함께 편집하는 문서에 넣을 수 없습니다. 더 작은 그림을 쓰세요.`
+        : `This edit (${mb} MB) is too large to share: use a smaller image.`
+    }
+    case 'lastPage':
+      return ko
+        ? '문서에는 쪽이 하나 이상 남아야 합니다.'
+        : 'The document must keep at least one page.'
+  }
+}
+
+const newId = (): string => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
+
+/**
+ * Join before the renderer opens `doc`; a page that joins a running session
+ * opens the session's base file, which the bridge puts into `doc.bytes`.
+ */
+export function joinPdfCollab(doc: WebDocument): Promise<PageCollab<PdfCollabHandles> | null> {
+  return joinPageCollab<PdfCollabHandles, PdfOp>({
+    format: FORMAT,
+    fileName: doc.fileName,
+    bytes: doc.bytes,
+    adapter: async (handles) => {
+      // a page that never co-edits never loads these
+      const [{ MAX_CHANGE_BYTES }, { createPdfAdapter }, { produceCoEditedFile }] =
+        await Promise.all([
+          import('@seuoffice/collab/client'),
+          import('./collab-adapter'),
+          import('./collab-file'),
+        ])
+      const file = {
+        path: doc.virtualPath,
+        fileName: doc.fileName,
+        bytes: doc.bytes,
+        pageSizes: handles.pageSizes,
+        password: handles.password,
+      }
+      const adapter = createPdfAdapter({
+        host: handles,
+        basePages: handles.pageSizes.length,
+        produce: (state) => produceCoEditedFile(state, file),
+        refused: (reason) => {
+          const text = refusalText(reason)
+          handles.notice(text)
+          return text
+        },
+        // room for the submit frame and the op's own wrapper
+        maxOpBytes: MAX_CHANGE_BYTES - 4096,
+        newId,
+      })
+      return {
+        ...adapter,
+        // The App's undo closes over its history as last rendered: a peer's change and the
+        // history it rewrote must be on screen before the next key press reaches it
+        integrate: (remote, local) => flushSync(() => adapter.integrate(remote, local)),
+      }
+    },
+  })
+}
