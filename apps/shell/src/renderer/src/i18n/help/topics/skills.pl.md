@@ -4,7 +4,7 @@ Umiejętność to zestaw instrukcji roboczych dla AI. Zapisz raz to, co robisz w
 
 ## Włączanie i wyłączanie umiejętności
 
-**Ustawienia ▸ Umiejętności** pokazuje umiejętności na tym komputerze, pogrupowane według pochodzenia. Każda umiejętność jest pokazana pod swoją nazwą, tak jak w agentach programistycznych. Polem wyszukiwania u góry znajdziesz umiejętność po nazwie lub opisie. Twoja umiejętność, która ma tytuł, pokazuje ten tytuł na tej liście, na liście `/` i na znacznikach, a nazwa jest obok małą czcionką. Możesz też szukać po tytule.
+**Ustawienia ▸ Umiejętności** pokazuje umiejętności na tym komputerze, pogrupowane według pochodzenia. Każda umiejętność jest pokazana pod swoją nazwą, tak jak w agentach programistycznych. Polem wyszukiwania u góry znajdziesz umiejętność po nazwie lub opisie. Twoja umiejętność, która ma tytuł, pokazuje ten tytuł na tej liście, na liście `/` i na znacznikach, a nazwa jest obok małą czcionką. Możesz też szukać po tytule. Nazwa nadana przez aplikację (`skill-…`) nie jest pokazywana obok tytułu.
 
 | Pochodzenie                    | Co zawiera                                                              | Na początku |
 | ------------------------------ | ----------------------------------------------------------------------- | ----------- |
@@ -16,8 +16,9 @@ Umiejętność to zestaw instrukcji roboczych dla AI. Zapisz raz to, co robisz w
 
 - Przełącznik włącza lub wyłącza umiejętność. To samo ustawienie obowiązuje w panelu AI każdego edytora, w Ask AI na stronie głównej i w oknie agenta.
 - Dla włączonej umiejętności wybierz **Decyduje AI** lub **Tylko na wezwanie**. Na początku ustawione jest Decyduje AI. Przy Tylko na wezwanie umiejętność jest używana tylko wtedy, gdy sam ją wywołasz.
-- Umiejętności z różnych źródeł mogą mieć tę samą nazwę. Rozróżnisz je po etykiecie pochodzenia w każdym wierszu.
-- W menu dodatkowych opcji są **Pokaż zawartość**, **Edytuj** (tylko moje umiejętności), **Eksportuj (zip)** (tylko moje umiejętności) i **Otwórz folder**. Wbudowane umiejętności nie mają pozycji **Otwórz folder**.
+- Umiejętności z różnych źródeł mogą mieć tę samą nazwę. Rozróżnisz je po etykiecie pochodzenia w każdym wierszu. Gdy dwie umiejętności o tej samej nazwie są włączone, na liście `/` widać i używana jest tylko jedna: pierwsza w kolejności Moje umiejętności, Wbudowane, Folder umiejętności Claude, Folder umiejętności Codex, Wtyczki Claude. W wierszu drugiej jest podane, która umiejętność jest używana zamiast niej.
+- W menu dodatkowych opcji są **Pokaż zawartość**, **Edytuj** (tylko moje umiejętności), **Eksportuj (zip)** (tylko moje umiejętności) i **Otwórz folder**. Wbudowane umiejętności nie mają pozycji **Otwórz folder**. **Gdzie używać** otwiera od razu miejsce wyboru edytorów, w których umiejętność jest używana.
+- Moje umiejętności znajdują się w folderze `~/.ieumoffice/skills`. W systemie Windows jest to `C:\Users\<nazwa użytkownika>\.ieumoffice\skills`. **Otwórz folder** w menu dodatkowych opcji otwiera folder umiejętności.
 - **Przenieś do kosza** przenosi jedną z moich umiejętności do systemowego kosza, skąd można ją przywrócić.
 - Wbudowanej umiejętności się nie usuwa, tylko ukrywa: wybierz **Ukryj**. **Pokaż ponownie** na dole listy przywraca ją w stanie początkowym.
 - Aby zmienić umiejętność wbudowaną lub pochodzącą z innego programu, wybierz **Kopiuj do moich umiejętności**. Kopia pojawia się w moich umiejętnościach, a oryginał zostaje wyłączony.
@@ -38,7 +39,7 @@ Pod podglądem zawsze widnieje: „Instaluj umiejętności tylko z zaufanych źr
 - **Wiersze warte przeczytania przed instalacją** to wiersze, które proszą AI o zignorowanie wcześniejszych instrukcji, ukrycie czegoś przed tobą lub pobranie instrukcji z zewnętrznego adresu, a także ścieżki `../` wskazujące poza folder umiejętności. Przy każdym widać plik i numer wiersza. Nie blokują instalacji, a umiejętność bez takich wierszy nie jest przez to bezpieczna.
 - Przy pobieraniu z GitHub GenOffice łączy się tylko z `github.com`, `api.github.com` i `codeload.github.com` i nie wysyła żadnych danych logowania. Jeśli archiwum jest za duże albo nie przejdzie kontroli bezpieczeństwa, nic nie zostanie zainstalowane.
 - Strona umiejętności w skills.sh (`https://skills.sh/owner/repo/skill`) jest odczytywana jako ta umiejętność w repozytorium GitHub `owner/repo`. GenOffice nie łączy się ze skills.sh.
-- **Nowa umiejętność** otwiera pusty edytor, w którym sam wpisujesz nazwę, opis i instrukcje. Pole **Tytuł** na samej górze przyjmuje tytuł w dowolnym języku; nazwa jest wypełniana na podstawie tytułu i można ją zmienić. Jeśli włączona umiejętność z innego źródła ma tę samą nazwę, przed zapisaniem pojawi się pytanie, a zapisanie wyłączy tamtą umiejętność.
+- **Nowa umiejętność** otwiera pusty edytor, w którym sam wpisujesz nazwę, opis i instrukcje. Pole **Tytuł** na samej górze przyjmuje tytuł w dowolnym języku; nazwa jest wypełniana na podstawie tytułu i można ją zmienić. Jeśli włączona umiejętność z innego źródła ma tę samą nazwę, przed zapisaniem pojawi się pytanie, a zapisanie wyłączy tamtą umiejętność. Jeśli tytuł nie zawiera liter łacińskich ani cyfr, nazwa zostaje wypełniona jako `skill-` z kilkoma znakami. Nazwy używają inne programy i wywołanie przez `/`, więc można ją zostawić bez zmian.
 
 ## Sprawdzanie aktualizacji
 
@@ -80,7 +81,7 @@ Pod podglądem zawsze widnieje: „Instaluj umiejętności tylko z zaufanych źr
 
 Umiejętność pasującą tylko do jednego rodzaju dokumentu, na przykład do stylizowania slajdów albo porządkowania arkusza, można pokazywać tylko w panelu AI tego edytora. W pozostałych edytorach lista `/` i lista umiejętności, których AI używa samo, są krótsze, więc AI częściej wybiera właściwą umiejętność.
 
-- Dla mojej umiejętności otwórz **Edytuj** i w sekcji **Gdzie używać** wybierz **Wszystkie edytory** albo **Tylko te edytory**. Wybrane edytory są zapisywane w pliku umiejętności, więc idą za nią przy eksporcie i przeniesieniu do innego programu.
+- Dla mojej umiejętności otwórz **Edytuj** i w sekcji **Gdzie używać** wybierz **Wszystkie edytory** albo **Tylko te edytory**. Wybrane edytory są zapisywane w pliku umiejętności, więc idą za nią przy eksporcie i przeniesieniu do innego programu. **Tylko te edytory** zaczyna się bez zaznaczonych edytorów; **Zaznacz wszystkie** i **Odznacz wszystkie** zmieniają wszystkie naraz.
 - Dla umiejętności wbudowanej lub z innego programu zmień to w sekcji **Gdzie używać** w **Pokaż zawartość**. Wybór jest zapisywany tylko w ustawieniach tego komputera; plik umiejętności się nie zmienia.
 - Umiejętność, która nie jest używana we wszystkich edytorach, pokazuje to w swoim wierszu, na przykład „Używana w: Prezentacja”.
 - Gdy AI tworzy umiejętność pasującą tylko do jednego formatu, proponuje też, gdzie jej używać; w przeciwnym razie zostawia wszystkie edytory. Przed zapisaniem możesz to zmienić w sekcji **Gdzie używać** na karcie.
@@ -120,7 +121,7 @@ Gdy tworzysz umiejętność w panelu AI edytora, bieżący dokument może dołą
 | `administration-report`       | Dopasowuje raport do wytycznych koreańskiego ministerstwa spraw wewnętrznych: zdania opisowe, stała numeracja, czcionki dostępne wszędzie, proste tabele |
 | `administration-report-draft` | Pisze raport administracyjny od zera w formacie ministerstwa: sekcje, numeracja Ⅰ·1·가, zdania opisowe, tytuły tabel i dostępne czcionki                 |
 
-`copy-editing` jest przeznaczona do angielskich tekstów marketingowych. `find-skills` działa tylko w oknie agenta.
+`copy-editing` jest przeznaczona do angielskich tekstów marketingowych. `find-skills` działa tylko w oknie agenta. W oknie **Pokaż zawartość** wbudowanej umiejętności opis jest w języku interfejsu, a instrukcje to tekst przekazywany AI, pokazany bez zmian (po angielsku).
 
 ## W oknie agenta
 

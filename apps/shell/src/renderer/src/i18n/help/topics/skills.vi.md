@@ -4,7 +4,7 @@ Kỹ năng là một bộ hướng dẫn làm việc dành cho AI. Hãy viết r
 
 ## Bật và tắt kỹ năng
 
-**Cài đặt ▸ Kỹ năng** liệt kê các kỹ năng có trên máy tính này, được nhóm theo nguồn gốc. Mỗi kỹ năng hiển thị bằng tên, giống cách các tác tử lập trình hiển thị. Dùng ô tìm kiếm ở trên cùng để tìm theo tên hoặc mô tả. Kỹ năng của bạn nếu có tiêu đề sẽ hiện tiêu đề đó trong danh sách này, trong danh sách `/` và trên thẻ, kèm tên bằng chữ nhỏ bên cạnh. Bạn cũng có thể tìm theo tiêu đề.
+**Cài đặt ▸ Kỹ năng** liệt kê các kỹ năng có trên máy tính này, được nhóm theo nguồn gốc. Mỗi kỹ năng hiển thị bằng tên, giống cách các tác tử lập trình hiển thị. Dùng ô tìm kiếm ở trên cùng để tìm theo tên hoặc mô tả. Kỹ năng của bạn nếu có tiêu đề sẽ hiện tiêu đề đó trong danh sách này, trong danh sách `/` và trên thẻ, kèm tên bằng chữ nhỏ bên cạnh. Bạn cũng có thể tìm theo tiêu đề. Tên do ứng dụng tự đặt (`skill-…`) không hiện bên cạnh tiêu đề.
 
 | Nguồn                      | Nội dung                                                 | Ban đầu |
 | -------------------------- | -------------------------------------------------------- | ------- |
@@ -16,8 +16,9 @@ Kỹ năng là một bộ hướng dẫn làm việc dành cho AI. Hãy viết r
 
 - Công tắc dùng để bật hoặc tắt một kỹ năng. Cùng một cài đặt áp dụng cho bảng AI của mọi trình soạn thảo, Hỏi AI ở Trang chủ và cửa sổ tác tử.
 - Với kỹ năng đang bật, hãy chọn **AI tự quyết định** hoặc **Chỉ khi được gọi**. Ban đầu là AI tự quyết định. Với Chỉ khi được gọi, kỹ năng chỉ được dùng khi chính bạn gọi nó.
-- Các kỹ năng từ những nguồn khác nhau có thể trùng tên. Nhãn nguồn trên mỗi hàng giúp phân biệt chúng.
-- Menu thêm có **Xem nội dung**, **Chỉnh sửa** (chỉ kỹ năng của tôi), **Xuất (zip)** (chỉ kỹ năng của tôi) và **Mở thư mục**. Kỹ năng có sẵn không có **Mở thư mục**.
+- Các kỹ năng từ những nguồn khác nhau có thể trùng tên. Nhãn nguồn trên mỗi hàng giúp phân biệt chúng. Khi hai kỹ năng cùng tên đều đang bật, chỉ một kỹ năng xuất hiện trong danh sách `/` và được dùng: kỹ năng đứng trước theo thứ tự Kỹ năng của tôi, Có sẵn, Thư mục kỹ năng Claude, Thư mục kỹ năng Codex, Phần bổ trợ Claude. Dòng của kỹ năng còn lại cho biết kỹ năng nào được dùng thay.
+- Menu thêm có **Xem nội dung**, **Chỉnh sửa** (chỉ kỹ năng của tôi), **Xuất (zip)** (chỉ kỹ năng của tôi) và **Mở thư mục**. Kỹ năng có sẵn không có **Mở thư mục**. **Nơi dùng** mở ngay chỗ chọn các trình soạn thảo dùng kỹ năng đó.
+- Kỹ năng của tôi nằm trong thư mục `~/.ieumoffice/skills`. Trên Windows đó là `C:\Users\<tên người dùng>\.ieumoffice\skills`. **Mở thư mục** trong menu thêm sẽ mở thư mục của kỹ năng.
 - **Chuyển vào thùng rác** chuyển một kỹ năng của tôi vào thùng rác hệ thống, nơi bạn có thể khôi phục lại.
 - Kỹ năng có sẵn không bị xóa mà được ẩn đi: hãy chọn **Ẩn**. **Hiện lại** ở cuối danh sách sẽ đưa nó trở lại như ban đầu.
 - Để thay đổi một kỹ năng có sẵn hoặc kỹ năng từ chương trình khác, hãy chọn **Sao chép vào kỹ năng của tôi**. Bản sao xuất hiện trong kỹ năng của tôi và bản gốc bị tắt.
@@ -38,7 +39,7 @@ Bên dưới bản xem trước luôn có dòng: "Chỉ cài kỹ năng từ ngu
 - **Các dòng nên đọc trước khi cài** là những dòng yêu cầu AI bỏ qua các chỉ dẫn trước đó, giấu bạn điều gì đó hoặc nhận chỉ dẫn từ một địa chỉ bên ngoài, và các đường dẫn `../` trỏ ra ngoài thư mục kỹ năng. Mỗi dòng đều cho biết tệp và số dòng. Chúng không ngăn việc cài đặt, và kỹ năng không có những dòng như vậy cũng không vì thế mà an toàn.
 - Khi tải xuống từ GitHub, GenOffice chỉ kết nối tới `github.com`, `api.github.com` và `codeload.github.com`, và không gửi bất kỳ dữ liệu đăng nhập nào. Nếu tệp nén quá lớn hoặc không qua được các bước kiểm tra an toàn, sẽ không có gì được cài.
 - Trang của một kỹ năng trên skills.sh (`https://skills.sh/owner/repo/skill`) được đọc là kỹ năng đó trong kho GitHub `owner/repo`. GenOffice không kết nối tới skills.sh.
-- **Kỹ năng mới** mở một trình soạn thảo trống để bạn tự viết tên, mô tả và hướng dẫn. Ô **Tiêu đề** ở trên cùng nhận tiêu đề bằng ngôn ngữ nào cũng được; tên được điền từ tiêu đề và bạn có thể sửa. Nếu một kỹ năng đang bật từ nguồn khác có cùng tên, bạn sẽ được hỏi trước khi lưu, và khi lưu thì kỹ năng đó bị tắt.
+- **Kỹ năng mới** mở một trình soạn thảo trống để bạn tự viết tên, mô tả và hướng dẫn. Ô **Tiêu đề** ở trên cùng nhận tiêu đề bằng ngôn ngữ nào cũng được; tên được điền từ tiêu đề và bạn có thể sửa. Nếu một kỹ năng đang bật từ nguồn khác có cùng tên, bạn sẽ được hỏi trước khi lưu, và khi lưu thì kỹ năng đó bị tắt. Khi tiêu đề không có chữ cái Latinh hay chữ số, tên được điền thành `skill-` kèm vài ký tự. Tên là thứ mà các chương trình khác và lệnh gọi `/` sử dụng nên có thể giữ nguyên.
 
 ## Kiểm tra cập nhật
 
@@ -80,7 +81,7 @@ Bên dưới bản xem trước luôn có dòng: "Chỉ cài kỹ năng từ ngu
 
 Kỹ năng chỉ hợp với một loại tài liệu, như trang trí trang chiếu hay sắp xếp bảng tính, có thể chỉ hiện trong bảng AI của trình soạn thảo đó. Danh sách `/` và danh sách kỹ năng AI tự dùng ở các trình soạn thảo khác ngắn lại, nên AI chọn đúng kỹ năng hơn.
 
-- Với kỹ năng của tôi, mở **Chỉnh sửa** và chọn **Mọi trình soạn thảo** hoặc **Chỉ các trình soạn thảo đã chọn** ở **Nơi dùng**. Các trình soạn thảo đã chọn được ghi vào tệp của kỹ năng, nên vẫn đi theo khi bạn xuất kỹ năng hay chuyển sang chương trình khác.
+- Với kỹ năng của tôi, mở **Chỉnh sửa** và chọn **Mọi trình soạn thảo** hoặc **Chỉ các trình soạn thảo đã chọn** ở **Nơi dùng**. Các trình soạn thảo đã chọn được ghi vào tệp của kỹ năng, nên vẫn đi theo khi bạn xuất kỹ năng hay chuyển sang chương trình khác. **Chỉ các trình soạn thảo đã chọn** bắt đầu khi chưa chọn trình soạn thảo nào; **Chọn tất cả** và **Bỏ chọn tất cả** đổi tất cả cùng lúc.
 - Với kỹ năng có sẵn và kỹ năng của chương trình khác, đổi ở **Nơi dùng** trong **Xem nội dung**. Lựa chọn này chỉ lưu trong cài đặt của máy này; tệp của kỹ năng giữ nguyên.
 - Kỹ năng không dùng ở mọi trình soạn thảo sẽ ghi rõ trên dòng của nó, ví dụ "Dùng trong: Bản trình bày".
 - Khi AI tạo một kỹ năng chỉ hợp với một định dạng, AI đề xuất luôn nơi dùng; nếu không, kỹ năng dùng ở mọi trình soạn thảo. Bạn có thể đổi ở **Nơi dùng** trên thẻ trước khi lưu.
@@ -120,7 +121,7 @@ Khi bạn tạo kỹ năng trong bảng AI của một trình soạn thảo, tà
 | `administration-report`       | Đưa báo cáo về đúng hướng dẫn của Bộ Nội vụ và An toàn Hàn Quốc: câu diễn đạt, đánh số chuẩn, phông chữ mở được mọi nơi, bảng đơn giản |
 | `administration-report-draft` | Viết báo cáo hành chính từ đầu theo định dạng của bộ: các phần, đánh số Ⅰ·1·가, câu diễn đạt, tiêu đề bảng và phông chữ phổ dụng       |
 
-`copy-editing` được làm cho văn bản tiếp thị tiếng Anh. `find-skills` chỉ hoạt động trong cửa sổ tác tử.
+`copy-editing` được làm cho văn bản tiếp thị tiếng Anh. `find-skills` chỉ hoạt động trong cửa sổ tác tử. Trong **Xem nội dung** của kỹ năng có sẵn, phần mô tả hiển thị bằng ngôn ngữ giao diện, còn phần hướng dẫn là văn bản đưa cho AI nên hiển thị nguyên văn (tiếng Anh).
 
 ## Trong cửa sổ tác tử
 

@@ -4,7 +4,7 @@ Una habilidad es un conjunto de instrucciones de trabajo para la IA. Anote una s
 
 ## Activar y desactivar habilidades
 
-**Configuración ▸ Habilidades** muestra las habilidades de este PC, agrupadas según su origen. Cada habilidad aparece con su nombre, como la muestran los agentes de programación. Use el cuadro de búsqueda de arriba para encontrar una por nombre o descripción. Una habilidad suya que tiene título muestra ese título en esta lista, en la lista de `/` y en las fichas, con el nombre en pequeño al lado. También puede buscar por el título.
+**Configuración ▸ Habilidades** muestra las habilidades de este PC, agrupadas según su origen. Cada habilidad aparece con su nombre, como la muestran los agentes de programación. Use el cuadro de búsqueda de arriba para encontrar una por nombre o descripción. Una habilidad suya que tiene título muestra ese título en esta lista, en la lista de `/` y en las fichas, con el nombre en pequeño al lado. También puede buscar por el título. Un nombre puesto por la aplicación (`skill-…`) no se muestra junto al título.
 
 | Origen                               | Qué contiene                                                     | Al principio |
 | ------------------------------------ | ---------------------------------------------------------------- | ------------ |
@@ -16,8 +16,9 @@ Una habilidad es un conjunto de instrucciones de trabajo para la IA. Anote una s
 
 - El interruptor activa o desactiva una habilidad. El mismo ajuste vale para el panel de IA de todos los editores, para Ask AI en Inicio y para la ventana del agente.
 - Para una habilidad activada, elija **Decide la IA** o **Solo cuando se llama**. Al principio está en Decide la IA. Con Solo cuando se llama, la habilidad solo se usa cuando usted mismo la llama.
-- Habilidades de orígenes distintos pueden tener el mismo nombre. La etiqueta de origen de cada fila las distingue.
-- El menú de más opciones tiene **Ver contenido**, **Editar** (solo mis habilidades), **Exportar (zip)** (solo mis habilidades) y **Abrir carpeta**. Las habilidades integradas no tienen **Abrir carpeta**.
+- Habilidades de orígenes distintos pueden tener el mismo nombre. La etiqueta de origen de cada fila las distingue. Cuando dos habilidades con el mismo nombre están activadas, solo una aparece en la lista `/` y se usa: la primera en el orden Mis habilidades, Integradas, Carpeta de habilidades de Claude, Carpeta de habilidades de Codex, Complementos de Claude. La fila de la otra indica qué habilidad se usa en su lugar.
+- El menú de más opciones tiene **Ver contenido**, **Editar** (solo mis habilidades), **Exportar (zip)** (solo mis habilidades) y **Abrir carpeta**. Las habilidades integradas no tienen **Abrir carpeta**. **Dónde se usa** abre directamente el lugar donde se eligen los editores en los que se usa la habilidad.
+- Mis habilidades están en la carpeta `~/.ieumoffice/skills`. En Windows es `C:\Users\<nombre de usuario>\.ieumoffice\skills`. **Abrir carpeta**, en el menú de más opciones, abre la carpeta de la habilidad.
 - **Mover a la papelera** lleva una de mis habilidades a la papelera del sistema, desde donde puede restaurarla.
 - Una habilidad integrada se oculta en lugar de eliminarse: elija **Ocultar**. **Volver a mostrar**, al final de la lista, la recupera tal como era al principio.
 - Para cambiar una habilidad integrada o una de otro programa, elija **Copiar a mis habilidades**. La copia aparece en mis habilidades y la original se desactiva.
@@ -38,7 +39,7 @@ Debajo de la vista previa siempre se lee: «Instala habilidades solo de fuentes 
 - **Líneas que conviene leer antes de instalar**: son las líneas que piden a la IA que ignore las instrucciones anteriores, que le oculte algo o que siga instrucciones de una dirección externa, y las rutas `../` que apuntan fuera de la carpeta de la habilidad. Cada una muestra su archivo y su línea. No impiden la instalación, y una habilidad sin estas líneas no es segura por eso.
 - Al descargar desde GitHub, GenOffice solo se conecta a `github.com`, `api.github.com` y `codeload.github.com`, y no envía ningún dato de inicio de sesión. Si el archivo comprimido es demasiado grande o no supera las comprobaciones de seguridad, no se instala nada.
 - La página de una habilidad en skills.sh (`https://skills.sh/owner/repo/skill`) se lee como esa habilidad del repositorio de GitHub `owner/repo`. GenOffice no se conecta a skills.sh.
-- **Nueva habilidad** abre un editor vacío donde usted mismo escribe el nombre, la descripción y las instrucciones. El campo **Título**, arriba del todo, admite un título en cualquier idioma; el nombre se rellena a partir del título y puede cambiarlo. Si una habilidad activada de otro origen tiene el mismo nombre, se le pregunta antes de guardar, y al guardar esa habilidad se desactiva.
+- **Nueva habilidad** abre un editor vacío donde usted mismo escribe el nombre, la descripción y las instrucciones. El campo **Título**, arriba del todo, admite un título en cualquier idioma; el nombre se rellena a partir del título y puede cambiarlo. Si una habilidad activada de otro origen tiene el mismo nombre, se le pregunta antes de guardar, y al guardar esa habilidad se desactiva. Si el título no tiene letras latinas ni números, el nombre se rellena con `skill-` seguido de unos caracteres. El nombre es lo que usan otros programas y la llamada con `/`, así que puede quedarse como está.
 
 ## Buscar actualizaciones
 
@@ -80,7 +81,7 @@ Debajo de la vista previa siempre se lee: «Instala habilidades solo de fuentes 
 
 Una habilidad que solo sirve para un tipo de documento, como dar estilo a diapositivas u ordenar una hoja de cálculo, puede mostrarse solo en el panel de IA de ese editor. En los demás editores, la lista `/` y la lista de habilidades que la IA usa por su cuenta se acortan, y la IA elige mejor la habilidad adecuada.
 
-- Para una de mis habilidades, abre **Editar** y elige **Todos los editores** o **Solo estos editores** en **Dónde se usa**. Los editores elegidos se escriben en el archivo de la habilidad, así que la acompañan al exportarla o al llevarla a otro programa.
+- Para una de mis habilidades, abre **Editar** y elige **Todos los editores** o **Solo estos editores** en **Dónde se usa**. Los editores elegidos se escriben en el archivo de la habilidad, así que la acompañan al exportarla o al llevarla a otro programa. **Solo estos editores** empieza sin ningún editor marcado; **Marcar todos** y **Desmarcar todos** los cambian todos de una vez.
 - Para una habilidad integrada o de otro programa, cámbialo en **Dónde se usa** dentro de **Ver contenido**. Se guarda solo en la configuración de este PC; el archivo de la habilidad no cambia.
 - Una habilidad que no se usa en todos los editores lo indica en su fila, por ejemplo «Se usa en: Presentación».
 - Cuando la IA crea una habilidad que solo sirve para un formato, propone también dónde usarla; si no, la deja en todos los editores. Puedes cambiarlo en **Dónde se usa** en la tarjeta antes de guardar.
@@ -120,7 +121,7 @@ Cuando crea una habilidad en el panel de IA de un editor, el documento actual pu
 | `administration-report`       | Ajusta un informe a la guía del Ministerio del Interior y Seguridad de Corea: frases redactadas, numeración estándar, fuentes disponibles en cualquier equipo, tablas sencillas |
 | `administration-report-draft` | Escribe un informe administrativo desde cero con el formato del ministerio: secciones, numeración Ⅰ·1·가, frases redactadas, títulos de tablas y fuentes disponibles            |
 
-`copy-editing` está pensada para textos de marketing en inglés. `find-skills` solo funciona en la ventana del agente.
+`copy-editing` está pensada para textos de marketing en inglés. `find-skills` solo funciona en la ventana del agente. En **Ver contenido** de una habilidad integrada, la descripción aparece en el idioma de la interfaz y las instrucciones son el texto que recibe la IA, mostrado tal cual (en inglés).
 
 ## En la ventana del agente
 

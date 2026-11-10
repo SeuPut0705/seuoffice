@@ -4,7 +4,7 @@ Skill adalah sekumpulan petunjuk kerja untuk AI. Tuliskan sekali saja hal yang A
 
 ## Mengaktifkan dan menonaktifkan skill
 
-**Pengaturan ▸ Skill** menampilkan skill yang ada di PC ini, dikelompokkan menurut asalnya. Setiap skill ditampilkan dengan namanya, seperti di agen pemrograman. Pakai kotak pencarian di bagian atas untuk mencari menurut nama atau deskripsi. Skill Anda yang memiliki judul menampilkan judul itu di daftar ini, di daftar `/`, dan pada chip, dengan nama berukuran kecil di sampingnya. Anda juga bisa mencari berdasarkan judul.
+**Pengaturan ▸ Skill** menampilkan skill yang ada di PC ini, dikelompokkan menurut asalnya. Setiap skill ditampilkan dengan namanya, seperti di agen pemrograman. Pakai kotak pencarian di bagian atas untuk mencari menurut nama atau deskripsi. Skill Anda yang memiliki judul menampilkan judul itu di daftar ini, di daftar `/`, dan pada chip, dengan nama berukuran kecil di sampingnya. Anda juga bisa mencari berdasarkan judul. Nama yang dibuat aplikasi (`skill-…`) tidak ditampilkan di samping judul.
 
 | Sumber                  | Isinya                                                       | Awalnya  |
 | ----------------------- | ------------------------------------------------------------ | -------- |
@@ -16,8 +16,9 @@ Skill adalah sekumpulan petunjuk kerja untuk AI. Tuliskan sekali saja hal yang A
 
 - Sakelar mengaktifkan atau menonaktifkan skill. Pengaturan yang sama berlaku untuk panel AI di semua editor, Tanya AI di Beranda, dan jendela agen.
 - Untuk skill yang aktif, pilih **AI yang menentukan** atau **Hanya saat dipanggil**. Awalnya disetel ke AI yang menentukan. Dengan Hanya saat dipanggil, skill hanya dipakai jika Anda sendiri yang memanggilnya.
-- Skill dari sumber yang berbeda bisa bernama sama. Label sumber di setiap baris membedakannya.
-- Menu lainnya berisi **Lihat isi**, **Edit** (hanya skill saya), **Ekspor (zip)** (hanya skill saya), dan **Buka folder**. Skill bawaan tidak memiliki **Buka folder**.
+- Skill dari sumber yang berbeda bisa bernama sama. Label sumber di setiap baris membedakannya. Jika dua skill bernama sama sama-sama aktif, hanya satu yang muncul di daftar `/` dan dipakai: yang lebih dulu menurut urutan Skill saya, Bawaan, Folder skill Claude, Folder skill Codex, Plugin Claude. Baris skill yang lain menyebutkan skill mana yang dipakai sebagai gantinya.
+- Menu lainnya berisi **Lihat isi**, **Edit** (hanya skill saya), **Ekspor (zip)** (hanya skill saya), dan **Buka folder**. Skill bawaan tidak memiliki **Buka folder**. **Tempat dipakai** langsung membuka tempat memilih editor yang memakai skill itu.
+- Skill saya berada di folder `~/.ieumoffice/skills`. Di Windows, itu adalah `C:\Users\<nama pengguna>\.ieumoffice\skills`. **Buka folder** di menu lainnya membuka folder skill tersebut.
 - **Pindahkan ke tempat sampah** memindahkan salah satu skill saya ke tempat sampah sistem, dan dari sana skill itu bisa dipulihkan.
 - Skill bawaan tidak dihapus, melainkan disembunyikan: pilih **Sembunyikan**. **Tampilkan lagi** di bagian bawah daftar mengembalikannya seperti semula.
 - Untuk mengubah skill bawaan atau skill dari program lain, pilih **Salin ke skill saya**. Salinannya muncul di skill saya dan skill aslinya dinonaktifkan.
@@ -38,7 +39,7 @@ Di bawah pratinjau selalu tertulis: "Pasang skill hanya dari sumber yang Anda pe
 - **Baris yang perlu dibaca sebelum memasang** adalah baris yang meminta AI mengabaikan instruksi sebelumnya, menyembunyikan sesuatu dari Anda, atau mengambil instruksi dari alamat luar, serta jalur `../` yang menunjuk ke luar folder skill. Masing-masing menampilkan file dan barisnya. Baris ini tidak menghentikan pemasangan, dan skill tanpa baris seperti ini belum tentu aman.
 - Saat mengunduh dari GitHub, GenOffice hanya terhubung ke `github.com`, `api.github.com`, dan `codeload.github.com`, dan tidak mengirim data login apa pun. Jika arsipnya terlalu besar atau tidak lolos pemeriksaan keamanan, tidak ada yang dipasang.
 - Halaman skill di skills.sh (`https://skills.sh/owner/repo/skill`) dibaca sebagai skill tersebut di repositori GitHub `owner/repo`. GenOffice tidak terhubung ke skills.sh.
-- **Skill baru** membuka editor kosong tempat Anda menulis sendiri nama, deskripsi, dan petunjuknya. Kolom **Judul** di paling atas menerima judul dalam bahasa apa pun; nama diisi dari judul dan bisa Anda ubah. Jika skill aktif dari sumber lain memiliki nama yang sama, Anda ditanya sebelum menyimpan, dan menyimpan akan mematikan skill itu.
+- **Skill baru** membuka editor kosong tempat Anda menulis sendiri nama, deskripsi, dan petunjuknya. Kolom **Judul** di paling atas menerima judul dalam bahasa apa pun; nama diisi dari judul dan bisa Anda ubah. Jika skill aktif dari sumber lain memiliki nama yang sama, Anda ditanya sebelum menyimpan, dan menyimpan akan mematikan skill itu. Jika judul tidak memiliki huruf Latin atau angka, nama diisi dengan `skill-` diikuti beberapa karakter. Nama dipakai oleh program lain dan panggilan `/`, jadi boleh dibiarkan apa adanya.
 
 ## Memeriksa pembaruan
 
@@ -80,7 +81,7 @@ Di bawah pratinjau selalu tertulis: "Pasang skill hanya dari sumber yang Anda pe
 
 Skill yang hanya cocok untuk satu jenis dokumen, misalnya menata slide atau merapikan spreadsheet, bisa ditampilkan hanya di panel AI editor itu. Di editor lain, daftar `/` dan daftar skill yang dipakai AI sendiri jadi lebih pendek, sehingga AI lebih sering memilih skill yang tepat.
 
-- Untuk skill saya, buka **Edit** lalu pilih **Semua editor** atau **Hanya editor ini** di **Tempat dipakai**. Editor yang dipilih ditulis di berkas skill, jadi ikut terbawa saat skill diekspor atau dipindah ke program lain.
+- Untuk skill saya, buka **Edit** lalu pilih **Semua editor** atau **Hanya editor ini** di **Tempat dipakai**. Editor yang dipilih ditulis di berkas skill, jadi ikut terbawa saat skill diekspor atau dipindah ke program lain. **Hanya editor ini** dimulai tanpa editor yang dicentang; **Pilih semua** dan **Hapus semua pilihan** mengubah semuanya sekaligus.
 - Untuk skill bawaan dan skill dari program lain, ubah di **Tempat dipakai** pada **Lihat isi**. Pilihan ini hanya disimpan di pengaturan PC ini; berkas skill tidak berubah.
 - Skill yang tidak dipakai di semua editor menyebutkannya di barisnya, misalnya "Dipakai di: Presentasi".
 - Saat AI membuat skill yang hanya cocok untuk satu format, AI juga mengusulkan tempat dipakainya; jika tidak, skill tetap untuk semua editor. Anda bisa mengubahnya di **Tempat dipakai** pada kartu sebelum menyimpan.
@@ -120,7 +121,7 @@ Saat Anda membuat skill di panel AI sebuah editor, dokumen yang sedang terbuka b
 | `administration-report`       | Menyesuaikan laporan dengan pedoman Kementerian Dalam Negeri dan Keamanan Korea: kalimat naratif, penomoran baku, font yang tersedia di mana saja, tabel sederhana |
 | `administration-report-draft` | Menulis laporan administrasi dari nol dengan format kementerian: bagian, penomoran Ⅰ·1·가, kalimat naratif, judul tabel, dan font yang tersedia                    |
 
-`copy-editing` dibuat untuk teks pemasaran berbahasa Inggris. `find-skills` hanya berfungsi di jendela agen.
+`copy-editing` dibuat untuk teks pemasaran berbahasa Inggris. `find-skills` hanya berfungsi di jendela agen. Di **Lihat isi** milik skill bawaan, deskripsi ditampilkan dalam bahasa antarmuka, sedangkan petunjuk adalah teks yang diberikan kepada AI dan ditampilkan apa adanya (bahasa Inggris).
 
 ## Di jendela agen
 

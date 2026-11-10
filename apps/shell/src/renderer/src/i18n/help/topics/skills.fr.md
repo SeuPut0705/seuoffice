@@ -4,7 +4,7 @@ Une compétence est un ensemble d’instructions de travail pour l’IA. Notez u
 
 ## Activer et désactiver des compétences
 
-**Paramètres ▸ Compétences** liste les compétences présentes sur ce PC, regroupées selon leur provenance. Chaque compétence apparaît sous son nom, comme dans les agents de programmation. Le champ de recherche en haut permet d’en trouver une par nom ou description. Une de vos compétences qui porte un titre affiche ce titre dans cette liste, dans la liste `/` et sur les pastilles, avec le nom en petit à côté. La recherche fonctionne aussi avec le titre.
+**Paramètres ▸ Compétences** liste les compétences présentes sur ce PC, regroupées selon leur provenance. Chaque compétence apparaît sous son nom, comme dans les agents de programmation. Le champ de recherche en haut permet d’en trouver une par nom ou description. Une de vos compétences qui porte un titre affiche ce titre dans cette liste, dans la liste `/` et sur les pastilles, avec le nom en petit à côté. La recherche fonctionne aussi avec le titre. Un nom attribué par l’application (`skill-…`) ne s’affiche pas à côté du titre.
 
 | Provenance                         | Contenu                                                                   | Au départ   |
 | ---------------------------------- | ------------------------------------------------------------------------- | ----------- |
@@ -16,8 +16,9 @@ Une compétence est un ensemble d’instructions de travail pour l’IA. Notez u
 
 - L’interrupteur active ou désactive une compétence. Le même réglage s’applique au panneau IA de chaque éditeur, à Ask AI dans l’accueil et à la fenêtre de l’agent.
 - Pour une compétence activée, choisissez **L’IA décide** ou **Seulement sur appel**. Au départ, c’est L’IA décide. Avec Seulement sur appel, la compétence n’est utilisée que lorsque vous l’appelez vous-même.
-- Des compétences de provenances différentes peuvent porter le même nom. L’étiquette de provenance de chaque ligne permet de les distinguer.
-- Le menu d’options contient **Voir le contenu**, **Modifier** (mes compétences uniquement), **Exporter (zip)** (mes compétences uniquement) et **Ouvrir le dossier**. Les compétences intégrées n’ont pas **Ouvrir le dossier**.
+- Des compétences de provenances différentes peuvent porter le même nom. L’étiquette de provenance de chaque ligne permet de les distinguer. Quand deux compétences du même nom sont activées, une seule figure dans la liste `/` et est utilisée : la première dans l’ordre Mes compétences, Intégrées, Dossier des compétences Claude, Dossier des compétences Codex, Plugins Claude. La ligne de l’autre indique quelle compétence est utilisée à sa place.
+- Le menu d’options contient **Voir le contenu**, **Modifier** (mes compétences uniquement), **Exporter (zip)** (mes compétences uniquement) et **Ouvrir le dossier**. Les compétences intégrées n’ont pas **Ouvrir le dossier**. **Où l’utiliser** ouvre directement l’endroit où l’on choisit les éditeurs dans lesquels la compétence est utilisée.
+- Mes compétences se trouvent dans le dossier `~/.ieumoffice/skills`. Sous Windows, il s’agit de `C:\Users\<nom d’utilisateur>\.ieumoffice\skills`. **Ouvrir le dossier**, dans le menu d’options, ouvre le dossier de la compétence.
 - **Mettre à la corbeille** déplace une de mes compétences dans la corbeille du système, d’où vous pouvez la restaurer.
 - Une compétence intégrée se masque au lieu d’être supprimée : choisissez **Masquer**. **Afficher à nouveau**, en bas de la liste, la rétablit telle qu’elle était au départ.
 - Pour modifier une compétence intégrée ou issue d’un autre programme, choisissez **Copier dans mes compétences**. La copie apparaît dans mes compétences et l’original est désactivé.
@@ -38,7 +39,7 @@ Sous l’aperçu figure toujours ce message : « N’installez que des compéten
 - **Lignes à lire avant d’installer** : ce sont les lignes qui demandent à l’IA d’ignorer les instructions précédentes, de vous cacher quelque chose ou de suivre des instructions venant d’une adresse extérieure, ainsi que les chemins `../` qui pointent hors du dossier de la compétence. Chacune indique son fichier et sa ligne. Elles n’empêchent pas l’installation, et une compétence sans ces lignes n’est pas sûre pour autant.
 - Pour télécharger depuis GitHub, GenOffice se connecte uniquement à `github.com`, `api.github.com` et `codeload.github.com`, et n’envoie aucune donnée de connexion. Si l’archive est trop volumineuse ou échoue aux contrôles de sécurité, rien n’est installé.
 - La page d’une compétence sur skills.sh (`https://skills.sh/owner/repo/skill`) est lue comme cette compétence dans le dépôt GitHub `owner/repo`. GenOffice ne se connecte pas à skills.sh.
-- **Nouvelle compétence** ouvre un éditeur vide où vous rédigez vous-même le nom, la description et les instructions. Le champ **Titre**, en haut, accepte un titre dans n’importe quelle langue ; le nom est rempli à partir du titre et vous pouvez le modifier. Si une compétence activée d’une autre source porte le même nom, une question vous est posée avant l’enregistrement, et enregistrer désactive cette compétence.
+- **Nouvelle compétence** ouvre un éditeur vide où vous rédigez vous-même le nom, la description et les instructions. Le champ **Titre**, en haut, accepte un titre dans n’importe quelle langue ; le nom est rempli à partir du titre et vous pouvez le modifier. Si une compétence activée d’une autre source porte le même nom, une question vous est posée avant l’enregistrement, et enregistrer désactive cette compétence. Si le titre ne contient ni lettre latine ni chiffre, le nom est rempli avec `skill-` suivi de quelques caractères. Le nom sert aux autres programmes et à l’appel avec `/` ; vous pouvez le laisser tel quel.
 
 ## Rechercher des mises à jour
 
@@ -80,7 +81,7 @@ Sous l’aperçu figure toujours ce message : « N’installez que des compéten
 
 Une compétence qui ne convient qu’à un type de document, comme la mise en forme de diapositives ou le rangement d’un tableur, peut n’apparaître que dans le panneau IA de cet éditeur. Dans les autres éditeurs, la liste `/` et la liste des compétences que l’IA utilise d’elle-même raccourcissent, et l’IA choisit plus souvent la bonne compétence.
 
-- Pour une de mes compétences, ouvrez **Modifier** et choisissez **Tous les éditeurs** ou **Seulement ces éditeurs** sous **Où l’utiliser**. Les éditeurs choisis sont écrits dans le fichier de la compétence et la suivent quand vous l’exportez ou la passez à un autre programme.
+- Pour une de mes compétences, ouvrez **Modifier** et choisissez **Tous les éditeurs** ou **Seulement ces éditeurs** sous **Où l’utiliser**. Les éditeurs choisis sont écrits dans le fichier de la compétence et la suivent quand vous l’exportez ou la passez à un autre programme. **Seulement ces éditeurs** commence sans aucun éditeur coché ; **Tout cocher** et **Tout décocher** les changent tous d’un coup.
 - Pour une compétence intégrée ou celle d’un autre programme, changez-le sous **Où l’utiliser** dans **Voir le contenu**. Ce choix est enregistré uniquement dans les réglages de ce PC ; le fichier de la compétence ne change pas.
 - Une compétence qui n’est pas utilisée dans tous les éditeurs l’indique sur sa ligne, par exemple « Utilisée dans : Présentation ».
 - Quand l’IA crée une compétence qui ne convient qu’à un format, elle propose aussi où l’utiliser ; sinon elle laisse tous les éditeurs. Vous pouvez le changer sous **Où l’utiliser** sur la carte avant d’enregistrer.
@@ -120,7 +121,7 @@ Quand vous créez une compétence dans le panneau IA d’un éditeur, le documen
 | `administration-report`       | Aligne un rapport sur la directive du ministère coréen de l'Intérieur : phrases rédigées, numérotation normalisée, polices disponibles partout, tableaux simples    |
 | `administration-report-draft` | Rédige un rapport administratif de zéro au format du ministère : sections, numérotation Ⅰ·1·가, phrases rédigées, titres de tableaux et polices disponibles partout |
 
-`copy-editing` est conçue pour les textes marketing en anglais. `find-skills` fonctionne uniquement dans la fenêtre de l’agent.
+`copy-editing` est conçue pour les textes marketing en anglais. `find-skills` fonctionne uniquement dans la fenêtre de l’agent. Dans **Voir le contenu** d’une compétence intégrée, la description est dans la langue de l’interface et les instructions sont le texte donné à l’IA, affiché tel quel (en anglais).
 
 ## Dans la fenêtre de l’agent
 

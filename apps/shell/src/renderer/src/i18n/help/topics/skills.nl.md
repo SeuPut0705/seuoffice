@@ -4,7 +4,7 @@ Een vaardigheid is een set werkinstructies voor de AI. Leg iets wat je steeds op
 
 ## Vaardigheden aan- en uitzetten
 
-**Instellingen ▸ Vaardigheden** toont de vaardigheden op deze pc, gegroepeerd naar herkomst. Vaardigheden worden bij hun naam getoond, zoals codeeragents dat doen. Met het zoekvak bovenaan vind je er een op naam of beschrijving. Een eigen vaardigheid met een titel toont die titel in deze lijst, in de `/`-lijst en op chips, met de naam klein ernaast. U kunt ook op de titel zoeken.
+**Instellingen ▸ Vaardigheden** toont de vaardigheden op deze pc, gegroepeerd naar herkomst. Vaardigheden worden bij hun naam getoond, zoals codeeragents dat doen. Met het zoekvak bovenaan vind je er een op naam of beschrijving. Een eigen vaardigheid met een titel toont die titel in deze lijst, in de `/`-lijst en op chips, met de naam klein ernaast. U kunt ook op de titel zoeken. Een naam die de app heeft bedacht (`skill-…`) staat niet naast de titel.
 
 | Herkomst                   | Wat erin staat                                                          | In het begin |
 | -------------------------- | ----------------------------------------------------------------------- | ------------ |
@@ -16,8 +16,9 @@ Een vaardigheid is een set werkinstructies voor de AI. Leg iets wat je steeds op
 
 - Met de schakelaar zet je een vaardigheid aan of uit. Dezelfde instelling geldt voor het AI-paneel van elke editor, voor Ask AI op Start en voor het agentvenster.
 - Kies voor een vaardigheid die aanstaat **AI beslist** of **Alleen bij aanroepen**. In het begin staat AI beslist ingesteld. Met Alleen bij aanroepen wordt de vaardigheid alleen gebruikt als je hem zelf aanroept.
-- Vaardigheden uit verschillende bronnen kunnen dezelfde naam hebben. Het herkomstlabel op elke rij maakt het verschil duidelijk.
-- In het menu met meer opties staan **Inhoud bekijken**, **Bewerken** (alleen mijn vaardigheden), **Exporteren (zip)** (alleen mijn vaardigheden) en **Map openen**. Ingebouwde vaardigheden hebben geen **Map openen**.
+- Vaardigheden uit verschillende bronnen kunnen dezelfde naam hebben. Het herkomstlabel op elke rij maakt het verschil duidelijk. Als twee vaardigheden met dezelfde naam allebei aan staan, staat er maar één in de `/`-lijst en wordt alleen die gebruikt: de eerste in de volgorde Mijn vaardigheden, Ingebouwd, Claude-vaardighedenmap, Codex-vaardighedenmap, Claude-plug-ins. In de rij van de andere staat welke vaardigheid in plaats daarvan wordt gebruikt.
+- In het menu met meer opties staan **Inhoud bekijken**, **Bewerken** (alleen mijn vaardigheden), **Exporteren (zip)** (alleen mijn vaardigheden) en **Map openen**. Ingebouwde vaardigheden hebben geen **Map openen**. **Waar gebruikt** opent meteen de plek waar je de editors kiest waarin de vaardigheid wordt gebruikt.
+- Mijn vaardigheden staan in de map `~/.ieumoffice/skills`. In Windows is dat `C:\Users\<gebruikersnaam>\.ieumoffice\skills`. **Map openen** in het menu met meer opties opent de map van de vaardigheid.
 - **Naar prullenbak** verplaatst een van mijn vaardigheden naar de prullenbak van het systeem, waaruit je hem kunt terugzetten.
 - Een ingebouwde vaardigheid wordt verborgen in plaats van verwijderd: kies **Verbergen**. **Weer tonen** onderaan de lijst haalt hem terug zoals hij in het begin was.
 - Wil je een ingebouwde vaardigheid of een vaardigheid uit een ander programma aanpassen, kies dan **Kopiëren naar mijn vaardigheden**. De kopie verschijnt bij mijn vaardigheden en het origineel gaat uit.
@@ -38,7 +39,7 @@ Onder het voorbeeld staat altijd: "Installeer alleen vaardigheden uit bronnen di
 - **Regels om te lezen voordat je installeert** zijn regels die de AI vragen eerdere instructies te negeren, iets voor je verborgen te houden of instructies van een extern adres te halen, en `../`-paden die buiten de vaardigheidsmap wijzen. Bij elke regel staan het bestand en het regelnummer. Ze houden de installatie niet tegen, en een vaardigheid zonder zulke regels is daarom nog niet veilig.
 - Bij het downloaden van GitHub maakt GenOffice alleen verbinding met `github.com`, `api.github.com` en `codeload.github.com`, en stuurt het geen aanmeldgegevens mee. Is het archief te groot of komt het niet door de veiligheidscontroles, dan wordt er niets geïnstalleerd.
 - De pagina van een vaardigheid op skills.sh (`https://skills.sh/owner/repo/skill`) wordt gelezen als die vaardigheid in de GitHub-repository `owner/repo`. GenOffice maakt geen verbinding met skills.sh.
-- **Nieuwe vaardigheid** opent een lege editor waarin je zelf de naam, beschrijving en instructies schrijft. Het veld **Titel** bovenaan neemt een titel in elke taal; de naam wordt vanuit de titel ingevuld en u kunt hem wijzigen. Heeft een ingeschakelde vaardigheid uit een andere bron dezelfde naam, dan wordt u dat vóór het opslaan gevraagd, en bij het opslaan wordt die vaardigheid uitgezet.
+- **Nieuwe vaardigheid** opent een lege editor waarin je zelf de naam, beschrijving en instructies schrijft. Het veld **Titel** bovenaan neemt een titel in elke taal; de naam wordt vanuit de titel ingevuld en u kunt hem wijzigen. Heeft een ingeschakelde vaardigheid uit een andere bron dezelfde naam, dan wordt u dat vóór het opslaan gevraagd, en bij het opslaan wordt die vaardigheid uitgezet. Als de titel geen Latijnse letters of cijfers bevat, wordt de naam ingevuld als `skill-` met een paar tekens. De naam wordt gebruikt door andere programma’s en door de aanroep met `/`, dus die kan zo blijven.
 
 ## Op updates controleren
 
@@ -80,7 +81,7 @@ Onder het voorbeeld staat altijd: "Installeer alleen vaardigheden uit bronnen di
 
 Een skill die maar bij één soort document past, zoals dia’s opmaken of een spreadsheet opruimen, kan alleen in het AI-paneel van die editor verschijnen. In de andere editors worden de `/`-lijst en de lijst met skills die de AI zelf gebruikt korter, zodat de AI vaker de juiste skill kiest.
 
-- Open bij een van mijn skills **Bewerken** en kies onder **Waar gebruikt** **Alle editors** of **Alleen deze editors**. De gekozen editors worden in het bestand van de skill geschreven en gaan mee als u de skill exporteert of naar een ander programma brengt.
+- Open bij een van mijn skills **Bewerken** en kies onder **Waar gebruikt** **Alle editors** of **Alleen deze editors**. De gekozen editors worden in het bestand van de skill geschreven en gaan mee als u de skill exporteert of naar een ander programma brengt. **Alleen deze editors** begint zonder aangevinkte editors; **Alles selecteren** en **Alles wissen** wijzigen ze allemaal tegelijk.
 - Bij een ingebouwde skill of een skill van een ander programma wijzigt u het onder **Waar gebruikt** in **Inhoud bekijken**. Dit wordt alleen in de instellingen van deze pc bewaard; het bestand van de skill blijft gelijk.
 - Een skill die niet in alle editors wordt gebruikt, laat dat zien in zijn rij, bijvoorbeeld "Gebruikt in: Presentatie".
 - Als de AI een skill maakt die maar bij één formaat past, stelt hij ook voor waar die wordt gebruikt; anders blijft het alle editors. Vóór het opslaan kunt u het op de kaart wijzigen onder **Waar gebruikt**.
@@ -120,7 +121,7 @@ Maak je een vaardigheid in het AI-paneel van een editor, dan kan het huidige doc
 | `administration-report`       | Brengt een rapport in lijn met de richtlijn van het Koreaanse ministerie van Binnenlandse Zaken: lopende tekst, vaste nummering, overal beschikbare lettertypen, eenvoudige tabellen |
 | `administration-report-draft` | Schrijft een bestuurlijk rapport vanaf nul in het formaat van het ministerie: secties, nummering Ⅰ·1·가, lopende tekst, tabelkoppen en overal beschikbare lettertypen                |
 
-`copy-editing` is gemaakt voor Engelse marketingteksten. `find-skills` werkt alleen in het agentvenster.
+`copy-editing` is gemaakt voor Engelse marketingteksten. `find-skills` werkt alleen in het agentvenster. In **Inhoud bekijken** van een ingebouwde vaardigheid staat de beschrijving in de taal van de interface; de instructies zijn de tekst die de AI krijgt, getoond zoals die is geschreven (in het Engels).
 
 ## In het agentvenster
 

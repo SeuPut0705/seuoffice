@@ -4,7 +4,7 @@ Uma habilidade é um conjunto de instruções de trabalho para a IA. Registe uma
 
 ## Ativar e desativar habilidades
 
-**Configurações ▸ Habilidades** lista as habilidades deste PC, agrupadas pela origem. Cada habilidade aparece pelo nome, como nos agentes de programação. Use a caixa de pesquisa no topo para encontrar uma por nome ou descrição. Uma habilidade sua que tem título mostra esse título nesta lista, na lista de `/` e nos chips, com o nome em letras pequenas ao lado. Também é possível pesquisar pelo título.
+**Configurações ▸ Habilidades** lista as habilidades deste PC, agrupadas pela origem. Cada habilidade aparece pelo nome, como nos agentes de programação. Use a caixa de pesquisa no topo para encontrar uma por nome ou descrição. Uma habilidade sua que tem título mostra esse título nesta lista, na lista de `/` e nos chips, com o nome em letras pequenas ao lado. Também é possível pesquisar pelo título. Um nome criado pelo aplicativo (`skill-…`) não aparece ao lado do título.
 
 | Origem                             | O que contém                                                | No início   |
 | ---------------------------------- | ----------------------------------------------------------- | ----------- |
@@ -16,8 +16,9 @@ Uma habilidade é um conjunto de instruções de trabalho para a IA. Registe uma
 
 - O interruptor ativa ou desativa uma habilidade. A mesma configuração vale para o painel de IA de todos os editores, para o Ask AI do Início e para a janela do agente.
 - Para uma habilidade ativada, escolha **A IA decide** ou **Só quando chamada**. No início fica em A IA decide. Com Só quando chamada, a habilidade só é usada quando a chama.
-- Habilidades de origens diferentes podem ter o mesmo nome. O rótulo de origem em cada linha distingue-as.
-- O menu de mais opções tem **Ver conteúdo**, **Editar** (só minhas habilidades), **Exportar (zip)** (só minhas habilidades) e **Abrir pasta**. As habilidades integradas não têm **Abrir pasta**.
+- Habilidades de origens diferentes podem ter o mesmo nome. O rótulo de origem em cada linha distingue-as. Quando duas habilidades de mesmo nome estão ativadas, só uma aparece na lista `/` e é usada: a primeira na ordem Minhas habilidades, Integradas, Pasta de habilidades do Claude, Pasta de habilidades do Codex, Plugins do Claude. A linha da outra informa qual habilidade é usada no lugar dela.
+- O menu de mais opções tem **Ver conteúdo**, **Editar** (só minhas habilidades), **Exportar (zip)** (só minhas habilidades) e **Abrir pasta**. As habilidades integradas não têm **Abrir pasta**. **Onde é usada** abre direto o lugar onde se escolhem os editores em que a habilidade é usada.
+- Minhas habilidades ficam na pasta `~/.ieumoffice/skills`. No Windows é `C:\Users\<nome de usuário>\.ieumoffice\skills`. **Abrir pasta**, no menu de mais opções, abre a pasta da habilidade.
 - **Mover para a lixeira** envia uma das minhas habilidades para a reciclagem do sistema, de onde a pode restaurar.
 - Uma habilidade integrada é ocultada em vez de removida: escolha **Ocultar**. **Mostrar de novo**, no fim da lista, traz a habilidade de volta tal como era no início.
 - Para alterar uma habilidade integrada ou de outro programa, escolha **Copiar para minhas habilidades**. A cópia aparece em minhas habilidades e a original é desativada.
@@ -38,7 +39,7 @@ Por baixo da pré-visualização aparece sempre: «Instale habilidades somente d
 - **Linhas para ler antes de instalar** são linhas que pedem à IA que ignore as instruções anteriores, que esconda algo de si ou que siga instruções de um endereço externo, e caminhos `../` que apontam para fora da pasta da habilidade. Cada uma mostra o seu ficheiro e a sua linha. Não impedem a instalação, e uma habilidade sem estas linhas não é, por isso, segura.
 - Ao transferir do GitHub, o GenOffice liga-se apenas a `github.com`, `api.github.com` e `codeload.github.com`, e não envia nenhum dado de início de sessão. Se o pacote for grande demais ou não passar nas verificações de segurança, nada é instalado.
 - A página de uma habilidade no skills.sh (`https://skills.sh/owner/repo/skill`) é lida como essa habilidade no repositório do GitHub `owner/repo`. O GenOffice não se liga ao skills.sh.
-- **Nova habilidade** abre um editor vazio onde escreve o nome, a descrição e as instruções. O campo **Título**, no topo, aceita um título em qualquer idioma; o nome é preenchido a partir do título e você pode alterá-lo. Se uma habilidade ativada de outra origem tiver o mesmo nome, você é consultado antes de salvar, e salvar desativa essa habilidade.
+- **Nova habilidade** abre um editor vazio onde escreve o nome, a descrição e as instruções. O campo **Título**, no topo, aceita um título em qualquer idioma; o nome é preenchido a partir do título e você pode alterá-lo. Se uma habilidade ativada de outra origem tiver o mesmo nome, você é consultado antes de salvar, e salvar desativa essa habilidade. Se o título não tiver letras latinas nem números, o nome é preenchido com `skill-` seguido de alguns caracteres. O nome é o que outros programas e a chamada com `/` usam, então pode ficar como está.
 
 ## Verificar atualizações
 
@@ -80,7 +81,7 @@ Por baixo da pré-visualização aparece sempre: «Instale habilidades somente d
 
 Uma habilidade que só serve para um tipo de documento, como estilizar slides ou organizar uma planilha, pode aparecer apenas no painel de IA desse editor. Nos outros editores, a lista `/` e a lista de habilidades que a IA usa por conta própria ficam mais curtas, e a IA acerta mais a habilidade certa.
 
-- Para uma das minhas habilidades, abra **Editar** e escolha **Todos os editores** ou **Somente estes editores** em **Onde é usada**. Os editores escolhidos ficam gravados no arquivo da habilidade e a acompanham quando você a exporta ou a leva para outro programa.
+- Para uma das minhas habilidades, abra **Editar** e escolha **Todos os editores** ou **Somente estes editores** em **Onde é usada**. Os editores escolhidos ficam gravados no arquivo da habilidade e a acompanham quando você a exporta ou a leva para outro programa. **Somente estes editores** começa sem nenhum editor marcado; **Marcar todos** e **Desmarcar todos** mudam todos de uma vez.
 - Para uma habilidade integrada ou de outro programa, mude em **Onde é usada** dentro de **Ver conteúdo**. Isso fica guardado apenas nas configurações deste PC; o arquivo da habilidade não muda.
 - Uma habilidade que não é usada em todos os editores mostra isso na sua linha, por exemplo "Usada em: Apresentação".
 - Quando a IA cria uma habilidade que só serve para um formato, ela também propõe onde usá-la; caso contrário, deixa todos os editores. Você pode mudar em **Onde é usada** no cartão antes de salvar.
@@ -120,7 +121,7 @@ Quando cria uma habilidade no painel de IA de um editor, o documento atual pode 
 | `administration-report`       | Alinha um relatório à diretriz do Ministério do Interior e Segurança da Coreia: frases corridas, numeração padrão, fontes disponíveis em qualquer PC, tabelas simples |
 | `administration-report-draft` | Escreve um relatório administrativo do zero no formato do ministério: seções, numeração Ⅰ·1·가, frases corridas, títulos de tabelas e fontes disponíveis              |
 
-`copy-editing` foi feita para textos de marketing em inglês. `find-skills` só funciona na janela do agente.
+`copy-editing` foi feita para textos de marketing em inglês. `find-skills` só funciona na janela do agente. Em **Ver conteúdo** de uma habilidade integrada, a descrição aparece no idioma da interface e as instruções são o texto entregue à IA, mostrado como foi escrito (em inglês).
 
 ## Na janela do agente
 

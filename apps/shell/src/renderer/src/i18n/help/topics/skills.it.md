@@ -4,7 +4,7 @@ Un'abilità è un insieme di istruzioni di lavoro per l'IA. Scrivi una volta sol
 
 ## Attivare e disattivare le abilità
 
-**Impostazioni ▸ Abilità** elenca le abilità presenti su questo PC, raggruppate in base alla provenienza. Ogni abilità è mostrata con il suo nome, come fanno gli agenti di programmazione. Con la casella di ricerca in alto puoi trovarne una per nome o descrizione. Una tua abilità che ha un titolo mostra quel titolo in questo elenco, nell’elenco di `/` e sui chip, con il nome in piccolo accanto. Puoi cercare anche per titolo.
+**Impostazioni ▸ Abilità** elenca le abilità presenti su questo PC, raggruppate in base alla provenienza. Ogni abilità è mostrata con il suo nome, come fanno gli agenti di programmazione. Con la casella di ricerca in alto puoi trovarne una per nome o descrizione. Una tua abilità che ha un titolo mostra quel titolo in questo elenco, nell’elenco di `/` e sui chip, con il nome in piccolo accanto. Puoi cercare anche per titolo. Un nome assegnato dall’app (`skill-…`) non viene mostrato accanto al titolo.
 
 | Provenienza                    | Che cosa contiene                                             | All'inizio  |
 | ------------------------------ | ------------------------------------------------------------- | ----------- |
@@ -16,8 +16,9 @@ Un'abilità è un insieme di istruzioni di lavoro per l'IA. Scrivi una volta sol
 
 - L'interruttore attiva o disattiva un'abilità. La stessa impostazione vale per il pannello IA di ogni editor, per Ask AI in Home e per la finestra dell'agente.
 - Per un'abilità attiva, scegli **Decide l'IA** o **Solo se richiamata**. All'inizio è impostata su Decide l'IA. Con Solo se richiamata, l'abilità viene usata solo quando la richiami tu.
-- Abilità di provenienze diverse possono avere lo stesso nome. L'etichetta della provenienza su ogni riga permette di distinguerle.
-- Il menu delle altre azioni contiene **Vedi contenuto**, **Modifica** (solo per le mie abilità), **Esporta (zip)** (solo per le mie abilità) e **Apri cartella**. Le abilità integrate non hanno **Apri cartella**.
+- Abilità di provenienze diverse possono avere lo stesso nome. L'etichetta della provenienza su ogni riga permette di distinguerle. Quando due abilità con lo stesso nome sono entrambe attive, solo una compare nell’elenco `/` e viene usata: la prima nell’ordine Le mie abilità, Integrate, Cartella abilità di Claude, Cartella abilità di Codex, Plugin di Claude. La riga dell’altra indica quale abilità viene usata al suo posto.
+- Il menu delle altre azioni contiene **Vedi contenuto**, **Modifica** (solo per le mie abilità), **Esporta (zip)** (solo per le mie abilità) e **Apri cartella**. Le abilità integrate non hanno **Apri cartella**. **Dove si usa** apre direttamente il punto in cui si scelgono gli editor in cui l’abilità viene usata.
+- Le mie abilità si trovano nella cartella `~/.ieumoffice/skills`. In Windows è `C:\Users\<nome utente>\.ieumoffice\skills`. **Apri cartella**, nel menu delle altre azioni, apre la cartella dell’abilità.
 - **Sposta nel cestino** sposta una delle mie abilità nel cestino del sistema, da cui puoi ripristinarla.
 - Un'abilità integrata non si elimina, si nasconde: scegli **Nascondi**. **Mostra di nuovo** in fondo all'elenco la riporta com'era all'inizio.
 - Per cambiare un'abilità integrata o una che viene da un altro programma, scegli **Copia nelle mie abilità**. La copia compare tra le mie abilità e l'originale viene disattivato.
@@ -38,7 +39,7 @@ Sotto l'anteprima compare sempre: «Installa abilità solo da fonti affidabili. 
 - **Righe da leggere prima di installare**: sono righe che chiedono all'IA di ignorare le istruzioni precedenti, di nasconderti qualcosa o di prendere istruzioni da un indirizzo esterno, e percorsi `../` che puntano fuori dalla cartella dell'abilità. Per ognuna sono indicati il file e la riga. Non bloccano l'installazione, e un'abilità senza righe di questo tipo non è per questo sicura.
 - Quando scarica da GitHub, GenOffice si collega solo a `github.com`, `api.github.com` e `codeload.github.com` e non invia alcun dato di accesso. Se l'archivio è troppo grande o non supera i controlli di sicurezza, non viene installato nulla.
 - La pagina di un'abilità su skills.sh (`https://skills.sh/owner/repo/skill`) viene letta come quell'abilità nel repository GitHub `owner/repo`. GenOffice non si collega a skills.sh.
-- **Nuova abilità** apre un editor vuoto in cui scrivi tu nome, descrizione e istruzioni. Il campo **Titolo**, in alto, accetta un titolo in qualsiasi lingua; il nome viene compilato a partire dal titolo e puoi cambiarlo. Se un’abilità attiva di un’altra origine ha lo stesso nome, ti viene chiesto prima di salvare, e salvando quell’abilità viene disattivata.
+- **Nuova abilità** apre un editor vuoto in cui scrivi tu nome, descrizione e istruzioni. Il campo **Titolo**, in alto, accetta un titolo in qualsiasi lingua; il nome viene compilato a partire dal titolo e puoi cambiarlo. Se un’abilità attiva di un’altra origine ha lo stesso nome, ti viene chiesto prima di salvare, e salvando quell’abilità viene disattivata. Se il titolo non contiene lettere latine né cifre, il nome viene compilato con `skill-` seguito da alcuni caratteri. Il nome è ciò che usano gli altri programmi e la chiamata con `/`, quindi può restare così.
 
 ## Cercare aggiornamenti
 
@@ -80,7 +81,7 @@ Sotto l'anteprima compare sempre: «Installa abilità solo da fonti affidabili. 
 
 Una skill adatta a un solo tipo di documento, come curare l’aspetto delle diapositive o riordinare un foglio di calcolo, può comparire solo nel pannello IA di quell’editor. Negli altri editor l’elenco `/` e l’elenco delle skill che l’IA usa da sola si accorciano, e l’IA sceglie più spesso la skill giusta.
 
-- Per una delle mie skill, apri **Modifica** e scegli **Tutti gli editor** o **Solo questi editor** in **Dove si usa**. Gli editor scelti vengono scritti nel file della skill e la seguono quando la esporti o la porti in un altro programma.
+- Per una delle mie skill, apri **Modifica** e scegli **Tutti gli editor** o **Solo questi editor** in **Dove si usa**. Gli editor scelti vengono scritti nel file della skill e la seguono quando la esporti o la porti in un altro programma. **Solo questi editor** parte senza alcun editor selezionato; **Seleziona tutti** e **Deseleziona tutti** li cambiano tutti in una volta.
 - Per una skill integrata o di un altro programma, cambialo in **Dove si usa** dentro **Vedi contenuto**. La scelta resta solo nelle impostazioni di questo PC; il file della skill non cambia.
 - Una skill che non si usa in tutti gli editor lo indica nella sua riga, per esempio "Usata in: Presentazione".
 - Quando l’IA crea una skill adatta a un solo formato, propone anche dove usarla; altrimenti lascia tutti gli editor. Puoi cambiarlo in **Dove si usa** sulla scheda prima di salvare.
@@ -120,7 +121,7 @@ Quando crei un'abilità nel pannello IA di un editor, il documento attuale può 
 | `administration-report`       | Allinea una relazione alle linee guida del Ministero dell'Interno coreano: frasi discorsive, numerazione standard, caratteri disponibili ovunque, tabelle semplici |
 | `administration-report-draft` | Scrive una relazione amministrativa da zero nel formato del ministero: sezioni, numerazione Ⅰ·1·가, frasi discorsive, titoli delle tabelle e caratteri disponibili |
 
-`copy-editing` è pensata per testi di marketing in inglese. `find-skills` funziona solo nella finestra dell'agente.
+`copy-editing` è pensata per testi di marketing in inglese. `find-skills` funziona solo nella finestra dell'agente. In **Vedi contenuto** di un’abilità integrata la descrizione è nella lingua dell’interfaccia, mentre le istruzioni sono il testo dato all’IA, mostrato così com’è (in inglese).
 
 ## Nella finestra dell'agente
 

@@ -4,7 +4,7 @@ Dovednost je sada pracovních pokynů pro AI. Jednou si zapište, co děláte st
 
 ## Zapínání a vypínání dovedností
 
-**Nastavení ▸ Dovednosti** ukazuje dovednosti na tomto počítači, seskupené podle původu. Každá dovednost se zobrazuje pod svým jménem, stejně jako ji ukazují agenti pro programování. Pomocí vyhledávacího pole nahoře najdete dovednost podle jména nebo popisu. Vaše dovednost, která má název, ukazuje tento název v tomto seznamu, v seznamu `/` a na štítcích a jméno je malým písmem vedle něj. Hledat můžete i podle názvu.
+**Nastavení ▸ Dovednosti** ukazuje dovednosti na tomto počítači, seskupené podle původu. Každá dovednost se zobrazuje pod svým jménem, stejně jako ji ukazují agenti pro programování. Pomocí vyhledávacího pole nahoře najdete dovednost podle jména nebo popisu. Vaše dovednost, která má název, ukazuje tento název v tomto seznamu, v seznamu `/` a na štítcích a jméno je malým písmem vedle něj. Hledat můžete i podle názvu. Jméno, které vytvořila aplikace (`skill-…`), se vedle názvu nezobrazuje.
 
 | Původ                        | Co obsahuje                                                            | Na začátku |
 | ---------------------------- | ---------------------------------------------------------------------- | ---------- |
@@ -16,8 +16,9 @@ Dovednost je sada pracovních pokynů pro AI. Jednou si zapište, co děláte st
 
 - Přepínač dovednost zapíná nebo vypíná. Stejné nastavení platí pro panel AI každého editoru, pro Ask AI na stránce Domů i pro okno agenta.
 - U zapnuté dovednosti zvolte **Rozhoduje AI** nebo **Jen na vyvolání**. Na začátku je nastaveno Rozhoduje AI. S volbou Jen na vyvolání se dovednost použije jen tehdy, když ji vyvoláte sami.
-- Dovednosti z různých zdrojů mohou mít stejný název. Rozlišíte je podle štítku původu na každém řádku.
-- V nabídce dalších akcí jsou **Zobrazit obsah**, **Upravit** (jen moje dovednosti), **Exportovat (zip)** (jen moje dovednosti) a **Otevřít složku**. Vestavěné dovednosti položku **Otevřít složku** nemají.
+- Dovednosti z různých zdrojů mohou mít stejný název. Rozlišíte je podle štítku původu na každém řádku. Když jsou zapnuté dvě dovednosti se stejným jménem, v seznamu `/` se zobrazí a používá jen jedna: první v pořadí Moje dovednosti, Vestavěné, Složka dovedností Claude, Složka dovedností Codex, Pluginy Claude. V řádku té druhé je uvedeno, která dovednost se používá místo ní.
+- V nabídce dalších akcí jsou **Zobrazit obsah**, **Upravit** (jen moje dovednosti), **Exportovat (zip)** (jen moje dovednosti) a **Otevřít složku**. Vestavěné dovednosti položku **Otevřít složku** nemají. **Kde se používá** otevře rovnou místo, kde se vybírají editory, ve kterých se dovednost používá.
+- Moje dovednosti jsou ve složce `~/.ieumoffice/skills`. Ve Windows je to `C:\Users\<uživatelské jméno>\.ieumoffice\skills`. **Otevřít složku** v nabídce dalších akcí otevře složku dovednosti.
 - **Přesunout do koše** přesune jednu z mých dovedností do systémového koše, odkud ji můžete obnovit.
 - Vestavěná dovednost se neodstraňuje, ale skrývá: zvolte **Skrýt**. **Znovu zobrazit** dole v seznamu ji vrátí do původního stavu.
 - Chcete-li změnit vestavěnou dovednost nebo dovednost z jiného programu, zvolte **Kopírovat do mých dovedností**. Kopie se objeví v mých dovednostech a originál se vypne.
@@ -38,7 +39,7 @@ Pod náhledem je vždy uvedeno: „Instalujte dovednosti jen ze zdrojů, kterým
 - **Řádky, které stojí za přečtení před instalací**, jsou řádky, které žádají AI, aby ignorovala dřívější pokyny, před vámi něco skrývala nebo přebírala pokyny z vnější adresy, a cesty `../`, které vedou mimo složku dovednosti. U každého je uveden soubor a řádek. Instalaci nezastaví a dovednost bez takových řádků tím ještě není bezpečná.
 - Při stahování z GitHubu se GenOffice připojuje jen k `github.com`, `api.github.com` a `codeload.github.com` a neposílá žádné přihlašovací údaje. Pokud je archiv příliš velký nebo neprojde bezpečnostními kontrolami, nic se nenainstaluje.
 - Stránka dovednosti na skills.sh (`https://skills.sh/owner/repo/skill`) se čte jako tato dovednost v repozitáři GitHub `owner/repo`. GenOffice se ke skills.sh nepřipojuje.
-- **Nová dovednost** otevře prázdný editor, do kterého sami napíšete jméno, popis a pokyny. Pole **Název** úplně nahoře přijme název v libovolném jazyce; jméno se vyplní z názvu a můžete ho změnit. Pokud má zapnutá dovednost z jiného zdroje stejné jméno, před uložením se vás aplikace zeptá a uložením se ta dovednost vypne.
+- **Nová dovednost** otevře prázdný editor, do kterého sami napíšete jméno, popis a pokyny. Pole **Název** úplně nahoře přijme název v libovolném jazyce; jméno se vyplní z názvu a můžete ho změnit. Pokud má zapnutá dovednost z jiného zdroje stejné jméno, před uložením se vás aplikace zeptá a uložením se ta dovednost vypne. Pokud název neobsahuje latinská písmena ani číslice, vyplní se jméno jako `skill-` s několika znaky. Jméno používají jiné programy a volání přes `/`, takže ho můžete nechat, jak je.
 
 ## Kontrola aktualizací
 
@@ -80,7 +81,7 @@ Pod náhledem je vždy uvedeno: „Instalujte dovednosti jen ze zdrojů, kterým
 
 Dovednost, která se hodí jen pro jeden druh dokumentu, třeba úprava vzhledu snímků nebo uklizení tabulky, může být vidět jen v panelu AI daného editoru. V ostatních editorech se seznam `/` i seznam dovedností, které AI používá sama, zkrátí a AI častěji vybere tu správnou.
 
-- U mé dovednosti otevřete **Upravit** a v části **Kde se používá** zvolte **Všechny editory** nebo **Jen tyto editory**. Vybrané editory se zapíší do souboru dovednosti, takže ji provázejí i při exportu nebo přenesení do jiného programu.
+- U mé dovednosti otevřete **Upravit** a v části **Kde se používá** zvolte **Všechny editory** nebo **Jen tyto editory**. Vybrané editory se zapíší do souboru dovednosti, takže ji provázejí i při exportu nebo přenesení do jiného programu. **Jen tyto editory** začíná bez zaškrtnutých editorů; **Vybrat vše** a **Zrušit výběr** změní všechny najednou.
 - U vestavěné dovednosti nebo dovednosti jiného programu to změníte v části **Kde se používá** v **Zobrazit obsah**. Volba se ukládá jen do nastavení tohoto počítače; soubor dovednosti se nemění.
 - Dovednost, která se nepoužívá ve všech editorech, to ukazuje ve svém řádku, například „Používá se v: Prezentace“.
 - Když AI vytváří dovednost, která se hodí jen pro jeden formát, navrhne i to, kde se má používat; jinak ponechá všechny editory. Před uložením to můžete změnit v části **Kde se používá** na kartě.
@@ -120,7 +121,7 @@ Když vytváříte dovednost v panelu AI editoru, může s ní jako šablona jí
 | `administration-report`       | Uvede zprávu do souladu se směrnicí korejského ministerstva vnitra: souvislé věty, jednotné číslování, dostupné písmo, jednoduché tabulky |
 | `administration-report-draft` | Píše správní zprávu od začátku ve formátu ministerstva: oddíly, číslování Ⅰ·1·가, souvislé věty, názvy tabulek a dostupné písmo           |
 
-`copy-editing` je určena pro anglické marketingové texty. `find-skills` funguje jen v okně agenta.
+`copy-editing` je určena pro anglické marketingové texty. `find-skills` funguje jen v okně agenta. V okně **Zobrazit obsah** vestavěné dovednosti je popis v jazyce rozhraní a pokyny jsou text, který dostává AI, zobrazený beze změny (anglicky).
 
 ## V okně agenta
 

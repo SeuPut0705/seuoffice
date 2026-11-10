@@ -4,7 +4,7 @@ Ein Skill ist eine Arbeitsanleitung für die KI. Schreiben Sie einmal auf, was S
 
 ## Skills ein- und ausschalten
 
-**Einstellungen ▸ Skills** listet die Skills auf diesem PC auf, gruppiert nach ihrer Herkunft. Jeder Skill wird mit seinem Namen angezeigt, so wie Coding-Agenten es tun. Über das Suchfeld oben finden Sie einen Skill nach Name oder Beschreibung. Ein eigener Skill mit Titel zeigt diesen Titel in dieser Liste, in der `/`-Liste und auf Chips, der Name steht klein daneben. Sie können auch nach dem Titel suchen.
+**Einstellungen ▸ Skills** listet die Skills auf diesem PC auf, gruppiert nach ihrer Herkunft. Jeder Skill wird mit seinem Namen angezeigt, so wie Coding-Agenten es tun. Über das Suchfeld oben finden Sie einen Skill nach Name oder Beschreibung. Ein eigener Skill mit Titel zeigt diesen Titel in dieser Liste, in der `/`-Liste und auf Chips, der Name steht klein daneben. Sie können auch nach dem Titel suchen. Ein von der App vergebener Name (`skill-…`) wird nicht neben dem Titel angezeigt.
 
 | Herkunft                 | Inhalt                                                                   | Anfangs |
 | ------------------------ | ------------------------------------------------------------------------ | ------- |
@@ -16,8 +16,9 @@ Ein Skill ist eine Arbeitsanleitung für die KI. Schreiben Sie einmal auf, was S
 
 - Der Schalter schaltet einen Skill ein oder aus. Dieselbe Einstellung gilt für den KI-Bereich jedes Editors, für Ask AI auf der Startseite und für das Agentenfenster.
 - Wählen Sie für einen eingeschalteten Skill **KI entscheidet** oder **Nur auf Aufruf**. Anfangs ist KI entscheidet eingestellt. Bei Nur auf Aufruf wird der Skill nur verwendet, wenn Sie ihn selbst aufrufen.
-- Skills aus verschiedenen Quellen können denselben Namen tragen. Die Herkunftsangabe in jeder Zeile unterscheidet sie.
-- Das Mehr-Menü enthält **Inhalt ansehen**, **Bearbeiten** (nur meine Skills), **Exportieren (zip)** (nur meine Skills) und **Ordner öffnen**. Integrierte Skills haben kein **Ordner öffnen**.
+- Skills aus verschiedenen Quellen können denselben Namen tragen. Die Herkunftsangabe in jeder Zeile unterscheidet sie. Sind zwei Skills mit demselben Namen eingeschaltet, erscheint nur einer in der `/`-Liste und wird verwendet: der erste in der Reihenfolge Meine Skills, Integriert, Claude-Skills-Ordner, Codex-Skills-Ordner, Claude-Plugins. In der Zeile des anderen steht, welcher Skill stattdessen verwendet wird.
+- Das Mehr-Menü enthält **Inhalt ansehen**, **Bearbeiten** (nur meine Skills), **Exportieren (zip)** (nur meine Skills) und **Ordner öffnen**. Integrierte Skills haben kein **Ordner öffnen**. **Wo sie genutzt wird** öffnet direkt die Stelle, an der Sie die Editoren wählen, in denen der Skill verwendet wird.
+- Meine Skills liegen im Ordner `~/.ieumoffice/skills`. Unter Windows ist das `C:\Users\<Benutzername>\.ieumoffice\skills`. **Ordner öffnen** im Mehr-Menü öffnet den Ordner des Skills.
 - **In den Papierkorb** verschiebt einen meiner Skills in den Papierkorb des Systems, wo Sie ihn wiederherstellen können.
 - Ein integrierter Skill wird ausgeblendet statt entfernt: Wählen Sie **Ausblenden**. **Wieder einblenden** unten in der Liste holt ihn im ursprünglichen Zustand zurück.
 - Um einen integrierten Skill oder einen aus einem anderen Programm zu ändern, wählen Sie **In meine Skills kopieren**. Die Kopie erscheint unter meinen Skills, und das Original wird ausgeschaltet.
@@ -38,7 +39,7 @@ Unter der Vorschau steht immer: „Installieren Sie Skills nur aus Quellen, dene
 - **Zeilen, die Sie vor der Installation lesen sollten**, sind Zeilen, die die KI auffordern, frühere Anweisungen zu ignorieren, etwas vor Ihnen zu verbergen oder Anweisungen von einer externen Adresse zu holen, sowie `../`-Pfade, die aus dem Skill-Ordner hinauszeigen. Bei jeder stehen Datei und Zeile. Sie verhindern die Installation nicht, und ein Skill ohne solche Zeilen ist deshalb noch nicht sicher.
 - Beim Herunterladen von GitHub verbindet sich GenOffice nur mit `github.com`, `api.github.com` und `codeload.github.com` und sendet keine Anmeldedaten. Ist das Archiv zu groß oder besteht es die Sicherheitsprüfungen nicht, wird nichts installiert.
 - Die Seite eines Skills auf skills.sh (`https://skills.sh/owner/repo/skill`) wird als dieser Skill im GitHub-Repository `owner/repo` gelesen. GenOffice verbindet sich nicht mit skills.sh.
-- **Neuer Skill** öffnet einen leeren Editor, in dem Sie Name, Beschreibung und Anleitung selbst schreiben. Das Feld **Titel** ganz oben nimmt einen Titel in beliebiger Sprache auf; der Name wird aus dem Titel ausgefüllt und lässt sich ändern. Hat ein eingeschalteter Skill aus einer anderen Quelle denselben Namen, werden Sie vor dem Speichern gefragt, und beim Speichern wird jener Skill ausgeschaltet.
+- **Neuer Skill** öffnet einen leeren Editor, in dem Sie Name, Beschreibung und Anleitung selbst schreiben. Das Feld **Titel** ganz oben nimmt einen Titel in beliebiger Sprache auf; der Name wird aus dem Titel ausgefüllt und lässt sich ändern. Hat ein eingeschalteter Skill aus einer anderen Quelle denselben Namen, werden Sie vor dem Speichern gefragt, und beim Speichern wird jener Skill ausgeschaltet. Enthält der Titel weder lateinische Buchstaben noch Ziffern, wird als Name `skill-` mit einigen Zeichen eingetragen. Der Name wird von anderen Programmen und beim Aufruf mit `/` verwendet und kann so bleiben.
 
 ## Nach Updates suchen
 
@@ -80,7 +81,7 @@ Unter der Vorschau steht immer: „Installieren Sie Skills nur aus Quellen, dene
 
 Ein Skill, der nur zu einer Art Dokument passt, etwa Folien gestalten oder eine Tabelle aufräumen, kann nur im KI-Bereich dieses Editors erscheinen. In den anderen Editoren werden die `/`-Liste und die Liste der Skills, die die KI selbst nutzt, kürzer, und die KI wählt öfter den passenden Skill.
 
-- Für einen meiner Skills öffnen Sie **Bearbeiten** und wählen unter **Wo sie genutzt wird** **Alle Editoren** oder **Nur diese Editoren**. Die gewählten Editoren stehen in der Datei des Skills und gehen mit, wenn Sie ihn exportieren oder in ein anderes Programm übernehmen.
+- Für einen meiner Skills öffnen Sie **Bearbeiten** und wählen unter **Wo sie genutzt wird** **Alle Editoren** oder **Nur diese Editoren**. Die gewählten Editoren stehen in der Datei des Skills und gehen mit, wenn Sie ihn exportieren oder in ein anderes Programm übernehmen. **Nur diese Editoren** beginnt ohne ausgewählten Editor; **Alle auswählen** und **Alle abwählen** ändern alle auf einmal.
 - Für einen integrierten Skill oder einen aus einem anderen Programm ändern Sie es unter **Wo sie genutzt wird** in **Inhalt ansehen**. Das wird nur in den Einstellungen dieses PCs gespeichert; die Datei des Skills bleibt unverändert.
 - Ein Skill, der nicht in allen Editoren genutzt wird, zeigt das in seiner Zeile, zum Beispiel „Genutzt in: Präsentation“.
 - Wenn die KI einen Skill erstellt, der nur zu einem Format passt, schlägt sie auch vor, wo er genutzt wird; sonst bleibt es bei allen Editoren. Vor dem Speichern können Sie es auf der Karte unter **Wo sie genutzt wird** ändern.
@@ -120,7 +121,7 @@ Wenn Sie im KI-Bereich eines Editors einen Skill erstellen, kann das aktuelle Do
 | `administration-report`       | Bringt einen Bericht auf die Linie der Richtlinie des koreanischen Innenministeriums: Fließtext, einheitliche Nummerierung, überall verfügbare Schriften, einfache Tabellen |
 | `administration-report-draft` | Schreibt einen Verwaltungsbericht von Grund auf im Format des Ministeriums: Abschnitte, Nummerierung Ⅰ·1·가, Fließtext, Tabellenüberschriften und verfügbare Schriften      |
 
-`copy-editing` ist für englische Marketingtexte gedacht. `find-skills` funktioniert nur im Agentenfenster.
+`copy-editing` ist für englische Marketingtexte gedacht. `find-skills` funktioniert nur im Agentenfenster. In **Inhalt ansehen** eines integrierten Skills steht die Beschreibung in der Sprache der Oberfläche; die Anleitung ist der Text, den die KI erhält, und wird unverändert (auf Englisch) gezeigt.
 
 ## Im Agentenfenster
 

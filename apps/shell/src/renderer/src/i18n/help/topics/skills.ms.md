@@ -4,7 +4,7 @@ Kemahiran ialah satu set arahan kerja untuk AI. Tulis sekali sahaja perkara yang
 
 ## Menghidupkan dan mematikan kemahiran
 
-**Tetapan ▸ Kemahiran** menyenaraikan kemahiran pada PC ini, dikumpulkan mengikut asalnya. Setiap kemahiran dipaparkan dengan namanya, seperti dalam ejen pengekodan. Gunakan kotak carian di bahagian atas untuk mencari mengikut nama atau keterangan. Kemahiran anda yang mempunyai tajuk memaparkan tajuk itu dalam senarai ini, dalam senarai `/` dan pada cip, dengan nama bersaiz kecil di sebelahnya. Anda juga boleh mencari mengikut tajuk.
+**Tetapan ▸ Kemahiran** menyenaraikan kemahiran pada PC ini, dikumpulkan mengikut asalnya. Setiap kemahiran dipaparkan dengan namanya, seperti dalam ejen pengekodan. Gunakan kotak carian di bahagian atas untuk mencari mengikut nama atau keterangan. Kemahiran anda yang mempunyai tajuk memaparkan tajuk itu dalam senarai ini, dalam senarai `/` dan pada cip, dengan nama bersaiz kecil di sebelahnya. Anda juga boleh mencari mengikut tajuk. Nama yang direka oleh aplikasi (`skill-…`) tidak dipaparkan di sebelah tajuk.
 
 | Sumber                      | Kandungannya                                                  | Pada mulanya |
 | --------------------------- | ------------------------------------------------------------- | ------------ |
@@ -16,8 +16,9 @@ Kemahiran ialah satu set arahan kerja untuk AI. Tulis sekali sahaja perkara yang
 
 - Suis menghidupkan atau mematikan kemahiran. Tetapan yang sama terpakai pada panel AI setiap editor, Tanya AI di Laman Utama dan tetingkap ejen.
 - Bagi kemahiran yang hidup, pilih **AI tentukan** atau **Hanya apabila dipanggil**. Pada mulanya ia ditetapkan kepada AI tentukan. Dengan Hanya apabila dipanggil, kemahiran itu digunakan hanya apabila anda sendiri memanggilnya.
-- Kemahiran daripada sumber yang berlainan boleh mempunyai nama yang sama. Label sumber pada setiap baris membezakannya.
-- Menu lagi mengandungi **Lihat kandungan**, **Sunting** (kemahiran saya sahaja), **Eksport (zip)** (kemahiran saya sahaja) dan **Buka folder**. Kemahiran terbina dalam tiada **Buka folder**.
+- Kemahiran daripada sumber yang berlainan boleh mempunyai nama yang sama. Label sumber pada setiap baris membezakannya. Apabila dua kemahiran dengan nama yang sama kedua-duanya dihidupkan, hanya satu yang muncul dalam senarai `/` dan digunakan: yang pertama mengikut susunan Kemahiran saya, Terbina dalam, Folder kemahiran Claude, Folder kemahiran Codex, Pemalam Claude. Baris kemahiran yang satu lagi menyatakan kemahiran mana yang digunakan sebagai ganti.
+- Menu lagi mengandungi **Lihat kandungan**, **Sunting** (kemahiran saya sahaja), **Eksport (zip)** (kemahiran saya sahaja) dan **Buka folder**. Kemahiran terbina dalam tiada **Buka folder**. **Tempat digunakan** terus membuka tempat memilih editor yang menggunakan kemahiran itu.
+- Kemahiran saya berada dalam folder `~/.ieumoffice/skills`. Pada Windows, ia ialah `C:\Users\<nama pengguna>\.ieumoffice\skills`. **Buka folder** dalam menu lagi membuka folder kemahiran itu.
 - **Alih ke tong sampah** memindahkan salah satu kemahiran saya ke tong sampah sistem, dan anda boleh memulihkannya dari situ.
 - Kemahiran terbina dalam tidak dibuang tetapi disembunyikan: pilih **Sembunyikan**. **Tunjukkan semula** di bahagian bawah senarai mengembalikannya seperti keadaan asal.
 - Untuk mengubah kemahiran terbina dalam atau kemahiran daripada program lain, pilih **Salin ke kemahiran saya**. Salinannya muncul dalam kemahiran saya dan kemahiran asal dimatikan.
@@ -38,7 +39,7 @@ Di bawah pratonton sentiasa tertulis: "Pasang kemahiran hanya daripada sumber ya
 - **Baris yang patut dibaca sebelum memasang** ialah baris yang meminta AI mengabaikan arahan sebelumnya, menyembunyikan sesuatu daripada anda atau mengambil arahan dari alamat luar, serta laluan `../` yang menghala ke luar folder kemahiran. Setiap satu menunjukkan fail dan barisnya. Baris ini tidak menghalang pemasangan, dan kemahiran tanpa baris sebegini tidak semestinya selamat.
 - Semasa memuat turun dari GitHub, GenOffice hanya bersambung ke `github.com`, `api.github.com` dan `codeload.github.com`, dan tidak menghantar sebarang data log masuk. Jika arkib terlalu besar atau gagal dalam semakan keselamatan, tiada apa-apa yang dipasang.
 - Halaman kemahiran di skills.sh (`https://skills.sh/owner/repo/skill`) dibaca sebagai kemahiran itu dalam repositori GitHub `owner/repo`. GenOffice tidak bersambung ke skills.sh.
-- **Kemahiran baharu** membuka editor kosong untuk anda menulis sendiri nama, keterangan dan arahannya. Medan **Tajuk** di bahagian paling atas menerima tajuk dalam apa-apa bahasa; nama diisi daripada tajuk dan anda boleh mengubahnya. Jika kemahiran yang dihidupkan daripada sumber lain mempunyai nama yang sama, anda ditanya sebelum menyimpan, dan menyimpan akan mematikan kemahiran itu.
+- **Kemahiran baharu** membuka editor kosong untuk anda menulis sendiri nama, keterangan dan arahannya. Medan **Tajuk** di bahagian paling atas menerima tajuk dalam apa-apa bahasa; nama diisi daripada tajuk dan anda boleh mengubahnya. Jika kemahiran yang dihidupkan daripada sumber lain mempunyai nama yang sama, anda ditanya sebelum menyimpan, dan menyimpan akan mematikan kemahiran itu. Jika tajuk tiada huruf Latin atau digit, nama diisi sebagai `skill-` diikuti beberapa aksara. Nama digunakan oleh program lain dan panggilan `/`, jadi ia boleh dibiarkan begitu sahaja.
 
 ## Menyemak kemas kini
 
@@ -80,7 +81,7 @@ Di bawah pratonton sentiasa tertulis: "Pasang kemahiran hanya daripada sumber ya
 
 Kemahiran yang hanya sesuai untuk satu jenis dokumen, seperti menggayakan slaid atau mengemaskan hamparan, boleh dipaparkan dalam panel AI editor itu sahaja. Dalam editor lain, senarai `/` dan senarai kemahiran yang digunakan AI sendiri menjadi lebih pendek, jadi AI lebih kerap memilih kemahiran yang betul.
 
-- Untuk kemahiran saya, buka **Sunting** dan pilih **Semua editor** atau **Editor ini sahaja** di **Tempat digunakan**. Editor yang dipilih ditulis dalam fail kemahiran, jadi ia ikut sama apabila kemahiran dieksport atau dibawa ke program lain.
+- Untuk kemahiran saya, buka **Sunting** dan pilih **Semua editor** atau **Editor ini sahaja** di **Tempat digunakan**. Editor yang dipilih ditulis dalam fail kemahiran, jadi ia ikut sama apabila kemahiran dieksport atau dibawa ke program lain. **Editor ini sahaja** bermula tanpa editor yang ditanda; **Pilih semua** dan **Kosongkan semua** mengubah semuanya sekali gus.
 - Untuk kemahiran terbina dalam atau kemahiran program lain, tukar di **Tempat digunakan** dalam **Lihat kandungan**. Pilihan ini disimpan dalam tetapan PC ini sahaja; fail kemahiran tidak berubah.
 - Kemahiran yang tidak digunakan dalam semua editor menyatakannya pada barisnya, contohnya "Digunakan dalam: Persembahan".
 - Apabila AI membuat kemahiran yang hanya sesuai untuk satu format, AI turut mencadangkan tempat ia digunakan; jika tidak, ia dibiarkan untuk semua editor. Anda boleh menukarnya di **Tempat digunakan** pada kad sebelum menyimpan.
@@ -120,7 +121,7 @@ Apabila anda membuat kemahiran dalam panel AI sesebuah editor, dokumen semasa bo
 | `administration-report`       | Menyesuaikan laporan dengan garis panduan Kementerian Dalam Negeri dan Keselamatan Korea: ayat naratif, penomboran piawai, fon yang ada di mana-mana, jadual ringkas |
 | `administration-report-draft` | Menulis laporan pentadbiran dari awal mengikut format kementerian: bahagian, penomboran Ⅰ·1·가, ayat naratif, tajuk jadual dan fon yang tersedia                     |
 
-`copy-editing` dibuat untuk teks pemasaran bahasa Inggeris. `find-skills` hanya berfungsi dalam tetingkap ejen.
+`copy-editing` dibuat untuk teks pemasaran bahasa Inggeris. `find-skills` hanya berfungsi dalam tetingkap ejen. Dalam **Lihat kandungan** bagi kemahiran terbina dalam, penerangan dipaparkan dalam bahasa antara muka, manakala arahan ialah teks yang diberikan kepada AI dan dipaparkan seperti yang ditulis (bahasa Inggeris).
 
 ## Dalam tetingkap ejen
 
