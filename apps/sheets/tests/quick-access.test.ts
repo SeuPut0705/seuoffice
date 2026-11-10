@@ -201,6 +201,16 @@ describe('quick-access row in the shell', () => {
     )
   })
 
+  it('marks a row longer than the default so a narrow window keeps every tab', () => {
+    // at the 720px minimum width ten buttons pushed the last tab past the
+    // edge; the crowded row drops the auto-save label and tightens the tabs
+    expect(shell).toContain("quickAccess.length > DEFAULT_QUICK_ACCESS.length ? ' qa-crowded' : ''")
+    const css = read('src/renderer/styles.css')
+    expect(css).toMatch(
+      /@media \(max-width: 840px\) \{\s*\.ribbon-tabs\.qa-crowded \.autosave-text \{\s*display: none;[\s\S]*?\.ribbon-tabs\.qa-crowded > button:not\(\.qa-btn\) \{\s*padding-left: 6px;\s*padding-right: 6px;/,
+    )
+  })
+
   it('does not run a built-in button that is disabled', () => {
     expect(shell).toContain('if (!builtin.disabled) builtin.run()')
   })
