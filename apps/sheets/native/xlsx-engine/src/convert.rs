@@ -236,7 +236,10 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
         };
         let columns = match (sheet_binary, styles) {
             (Some(sheet), Some(styles)) => cols_xml(sheet, styles),
-            _ => match odf_parts.as_ref().filter(|parts| !parts.cols.is_empty()) {
+            // The sheet parts already decided which columns need an entry;
+            // none at all means every column has the default width, not that
+            // the widths are still to be written.
+            _ => match odf_parts.as_ref() {
                 Some(parts) => parts.cols.clone(),
                 None => layout.map(odf_cols_xml).unwrap_or_default(),
             },

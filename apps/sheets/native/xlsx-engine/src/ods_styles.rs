@@ -62,6 +62,9 @@ pub(crate) struct StyleRegistry {
     /// Named styles a conditional format applies, by their properties.
     conditional_names: HashMap<String, String>,
     conditional_bodies: Vec<(String, String)>,
+    /// The name the workbook cached for its body font, which follows the
+    /// theme.
+    body_font: Option<String>,
     /// The East Asian face behind a font that follows the theme.
     scheme_asian: Option<String>,
     fonts: BTreeSet<String>,
@@ -88,32 +91,39 @@ impl StyleRegistry {
             text_bodies: Vec::new(),
             conditional_names: HashMap::new(),
             conditional_bodies: Vec::new(),
+            body_font: None,
             scheme_asian: None,
             fonts,
             counter: 0,
         }
     }
 
-    /// Names the East Asian face of the fonts that follow the theme. The
-    /// model resolves such a font to the theme's Latin face, which is right
-    /// for Latin text; the workbook was written with another face for
-    /// Korean, Japanese or Chinese, and a reader picks the face by script.
-    pub(crate) fn set_scheme_asian(&mut self, family: Option<String>) {
-        if let Some(family) = &family {
+    /// Says what the fonts that follow the theme stand for. The model
+    /// resolves such a font to the theme's Latin face. `body` is the name the
+    /// workbook itself cached for its body font — the face Excel shows where
+    /// the workbook was made, 맑은 고딕 for one made in Korean — and replaces
+    /// the Latin face for every script. Without it, `asian` names the face
+    /// the theme gives East Asian text.
+    pub(crate) fn set_theme_fonts(&mut self, body: Option<String>, asian: Option<String>) {
+        for family in body.iter().chain(asian.iter()) {
             self.fonts.insert(family.clone());
         }
-        self.scheme_asian = family;
+        self.body_font = body;
+        self.scheme_asian = asian;
     }
 
     /// The font name for Western, East Asian and complex text. A reader
     /// picks the property by script, so a Korean cell given only the Western
     /// one would keep the reader's own default font.
-    fn font_names(&self, family: &str, follows_theme: bool) -> String {
-        let asian = self
-            .scheme_asian
-            .as_deref()
-            .filter(|_| follows_theme)
-            .unwrap_or(family);
+    fn font_names(&self, family: &str, scheme: Option<&str>) -> String {
+        let family = match (scheme, &self.body_font) {
+            (Some("minor"), Some(body)) => body.as_str(),
+            _ => family,
+        };
+        let asian = match (scheme, &self.scheme_asian) {
+            (Some(_), Some(asian)) if self.body_font.is_none() => asian.as_str(),
+            _ => family,
+        };
         format!(
             r#" style:font-name="{0}" style:font-name-asian="{1}" style:font-name-complex="{0}""#,
             escape_xml(family),
@@ -294,7 +304,7 @@ impl StyleRegistry {
             .filter(|family| font_family_differs(&self.base, family));
         if let Some(family) = font_family {
             self.fonts.insert(family.clone());
-            text.push_str(&self.font_names(family, style.font_scheme.is_some()));
+            text.push_str(&self.font_names(family, style.font_scheme.as_deref()));
         }
         if let Some(size) = style.font_size.filter(|size| {
             self.base.font_size.map(|base| (base - size).abs() > 1e-6) != Some(false)
@@ -427,7 +437,7 @@ impl StyleRegistry {
         if let Some(family) = run.family.as_ref().filter(|family| !family.is_empty()) {
             if font_family_differs(&self.base, family) {
                 self.fonts.insert(family.clone());
-                text.push_str(&self.font_names(family, false));
+                text.push_str(&self.font_names(family, None));
             }
         }
         if let Some(size) = run.size.filter(|size| *size > 0.0) {
@@ -566,7 +576,7 @@ impl StyleRegistry {
     pub(crate) fn default_cell_style(&self) -> String {
         let mut text = String::new();
         if let Some(family) = &self.base.font_family {
-            text.push_str(&self.font_names(family, self.base.font_scheme.is_some()));
+            text.push_str(&self.font_names(family, self.base.font_scheme.as_deref()));
         }
         if let Some(size) = self.base.font_size {
             text.push_str(&font_size_attributes(size));
@@ -2226,10 +2236,18 @@ mod tests {
             font_scheme: Some("minor".into()),
             ..CellStyle::default()
         });
-        registry.set_scheme_asian(Some("맑은 고딕".into()));
+        // Only the East Asian face of the theme is known: it is the Asian font.
+        registry.set_theme_fonts(None, Some("맑은 고딕".into()));
         let default = registry.default_cell_style();
         assert!(
             default.contains(r#" style:font-name="Calibri" style:font-name-asian="맑은 고딕" style:font-name-complex="Calibri""#),
+            "{default}"
+        );
+        // The workbook cached a name for its body font: that is the font.
+        registry.set_theme_fonts(Some("맑은 고딕".into()), None);
+        let default = registry.default_cell_style();
+        assert!(
+            default.contains(r#" style:font-name="맑은 고딕" style:font-name-asian="맑은 고딕" style:font-name-complex="맑은 고딕""#),
             "{default}"
         );
         assert!(registry.font_face_decls().contains(r#"style:name="맑은 고딕""#));

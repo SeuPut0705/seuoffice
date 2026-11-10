@@ -290,20 +290,21 @@ fn write_document(
     let mut staging = StagingFiles::new(target);
     let base = metadata.styles.first().cloned().unwrap_or_default();
     let mut registry = StyleRegistry::new(base.clone());
-    // A font that follows the theme: the East Asian face the theme names, or
-    // the name the workbook itself cached for its Normal font.
-    registry.set_scheme_asian(
+    // A font that follows the theme is the Latin face of the theme in the
+    // model. The workbook cached the name it was made with for its body font;
+    // where it did not, the theme may still name a face for East Asian text.
+    let differs = |family: &String| !family.is_empty() && base.font_family.as_ref() != Some(family);
+    registry.set_theme_fonts(
+        metadata
+            .normal_font_name
+            .clone()
+            .filter(|_| base.font_scheme.as_deref() == Some("minor"))
+            .filter(differs),
         metadata
             .theme_fonts
             .as_ref()
             .and_then(|fonts| fonts.minor_ea.clone())
-            .or_else(|| {
-                metadata
-                    .normal_font_name
-                    .clone()
-                    .filter(|_| base.font_scheme.is_some())
-            })
-            .filter(|family| !family.is_empty() && base.font_family.as_ref() != Some(family)),
+            .filter(differs),
     );
     let mut pages = PageStyles::default();
     let mut table_styles: Vec<String> = Vec::new();
