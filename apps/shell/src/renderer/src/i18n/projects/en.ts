@@ -78,7 +78,7 @@ export const en = {
   restoreAria: 'Undo: {name}',
   chatsDesc:
     'Chats in this project. Click one to continue it in the AI panel of the document it was last used in.',
-  actionFailed: 'That did not work. Please try again.',
+  actionFailed: 'That did not work. Try again.',
   loadFailed: 'The project could not be read.',
   addExistingFolder: 'Use an existing folder',
   trustStatus: 'Status: {state}',

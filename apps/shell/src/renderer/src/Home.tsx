@@ -1953,7 +1953,10 @@ export function Home({
               <span className="quick-text">
                 <span className="quick-title-row">
                   <span className="quick-title">{t(HOME_KIND_LABEL[kind].title)}</span>
-                  <span className="ai-chip">AI</span>
+                  {/* "AI Docs" already says it; the chip is for titles that do not */}
+                  {!/\bAI\b/.test(t(HOME_KIND_LABEL[kind].title)) && (
+                    <span className="ai-chip">AI</span>
+                  )}
                 </span>
                 <span className="quick-sub">{HOME_KIND_LABEL[kind].sub}</span>
               </span>

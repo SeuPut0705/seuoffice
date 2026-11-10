@@ -556,7 +556,7 @@ describe('resuming and starting over', () => {
     const m = await mount(b)
     await until(() => !!q(m.el, '[data-strip="resume"]'), 'the offer')
     expect(q(m.el, '[data-strip="resume"]')!.textContent).toContain(
-      'Unfinished translation (Korean) 25% — continue?',
+      'Unfinished translation (Korean) 25%. Continue?',
     )
     await click(q(m.el, '[data-action="resume-job"]'))
     await until(() => !!q(m.el, '[data-units]'), 'the window')

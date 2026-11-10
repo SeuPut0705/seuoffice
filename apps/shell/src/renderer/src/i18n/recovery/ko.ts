@@ -17,6 +17,6 @@ export const ko = {
   changedAfterNote:
     '다른 프로그램이나 클라우드 동기화가 고쳤을 수 있습니다. 지금 파일을 그대로 두도록 처음에는 “버리기”로 골라 두었습니다.',
   missing: '원본 파일을 찾을 수 없습니다',
-  missingNote: '되살리면 제목 없는 새 문서로 열립니다. 저장할 때 원래 위치가 처음 값으로 나옵니다.',
+  missingNote: '되살리면 제목 없는 새 문서로 열립니다. 저장할 때 원래 위치를 먼저 제안합니다.',
   choiceLabel: '{name} 처리',
 } satisfies Record<keyof typeof zh, string>

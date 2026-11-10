@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import type { Lang, Params } from '@genoffice/i18n'
+import { IconArrowDown, IconArrowLeft, IconArrowUp, IconClose } from '@genoffice/ui/icons'
 import {
   PDF_TOOL_ANNOT_KINDS,
   PDF_TOOL_MARGINS,
@@ -416,7 +417,10 @@ export function PdfToolsWindow({ lang }: { lang: Lang }) {
         {view.kind === 'editor' && (
           <section className="pt-section">
             <button type="button" className="pt-back" onClick={() => openTool({ kind: 'home' })}>
-              <span className="pt-back-arrow">←</span> {t('back')}
+              <span className="pt-back-arrow">
+                <IconArrowLeft size={14} />
+              </span>
+              {t('back')}
             </button>
             <h2 className="pt-tool-title">{t(TOOL_TEXT[view.tool][0])}</h2>
             <p className="pt-hint">{t(TOOL_TEXT[view.tool][1])}</p>
@@ -552,7 +556,10 @@ function ToolPanel(p: ToolPanelProps) {
   return (
     <section className="pt-section">
       <button type="button" className="pt-back" onClick={p.onBack}>
-        <span className="pt-back-arrow">←</span> {t('back')}
+        <span className="pt-back-arrow">
+          <IconArrowLeft size={14} />
+        </span>
+        {t('back')}
       </button>
       <h2 className="pt-tool-title">{t(TOOL_TEXT[tool][0])}</h2>
       <p className="pt-hint">{t(hint)}</p>
@@ -575,7 +582,7 @@ function ToolPanel(p: ToolPanelProps) {
                     disabled={index === 0}
                     onClick={() => p.onMove(index, -1)}
                   >
-                    ↑
+                    <IconArrowUp size={14} />
                   </button>
                   <button
                     type="button"
@@ -585,7 +592,7 @@ function ToolPanel(p: ToolPanelProps) {
                     disabled={index === inputs.length - 1}
                     onClick={() => p.onMove(index, 1)}
                   >
-                    ↓
+                    <IconArrowDown size={14} />
                   </button>
                 </>
               )}
@@ -596,7 +603,7 @@ function ToolPanel(p: ToolPanelProps) {
                 title={t('remove')}
                 onClick={() => p.onRemove(input.id)}
               >
-                ×
+                <IconClose size={14} />
               </button>
             </li>
           ))}
@@ -624,7 +631,7 @@ function ToolPanel(p: ToolPanelProps) {
                   title={t('remove')}
                   onClick={p.onRemoveBackground}
                 >
-                  ×
+                  <IconClose size={14} />
                 </button>
               </li>
             </ul>

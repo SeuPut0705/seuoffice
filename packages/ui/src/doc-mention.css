@@ -77,7 +77,7 @@
 .ai-doc-mention-picker .ai-doc-mention-dir {
   flex: 1 1 auto;
   min-width: 0;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -86,7 +86,7 @@
 .ai-doc-mention-picker .ai-doc-mention-reason {
   flex-shrink: 0;
   margin-left: auto;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 

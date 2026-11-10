@@ -398,7 +398,7 @@ describe('AI highlights: start window', () => {
     const jobs = m.channels.writes.flatMap((w) => (w.kind === 'job' ? [w.job] : []))
     expect(jobs.every((j) => j.kind === 'highlight' && j.runId === DEFAULT_RUN_ID)).toBe(true)
     expect(q(m.el, '[data-job-kind="highlight"]')?.textContent).toContain(
-      'AI highlights done — 1 suggestions',
+      'AI highlights done: 1 suggestions',
     )
     expect(q(m.el, '[data-job-kind="highlight"] .pdf-job-strip-detail')?.textContent).toBe(
       'AI used: Claude',

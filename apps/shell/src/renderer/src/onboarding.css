@@ -15,7 +15,7 @@
   --onb-brand: #0f7fff;
   --onb-text-primary: #232425;
   --onb-text-secondary: #606366;
-  --onb-text-tertiary: #909499;
+  --onb-text-tertiary: #6f7378;
   --onb-bg-subtle: #f6f7f8;
   --onb-border-default: #eaeaea;
   --onb-border-strong: #d0d3d8;
@@ -44,7 +44,7 @@
   min-height: 420px;
   max-width: calc(100vw - 48px);
   max-height: calc(100vh - 48px);
-  border-radius: 20px;
+  border-radius: 14px;
   background: #fff;
   box-shadow:
     0 24px 64px rgba(35, 36, 37, 0.22),
@@ -324,7 +324,7 @@
   --onb-btn-primary-text: #1a1a1a;
   --onb-text-primary: #e4e4e4;
   --onb-text-secondary: #a0a0a0;
-  --onb-text-tertiary: #777;
+  --onb-text-tertiary: #949494;
   --onb-bg-subtle: #333;
   --onb-border-default: #444;
   --onb-border-strong: #555;
@@ -344,7 +344,7 @@
     --onb-btn-primary-text: #1a1a1a;
     --onb-text-primary: #e4e4e4;
     --onb-text-secondary: #a0a0a0;
-    --onb-text-tertiary: #777;
+    --onb-text-tertiary: #949494;
     --onb-bg-subtle: #333;
     --onb-border-default: #444;
     --onb-border-strong: #555;

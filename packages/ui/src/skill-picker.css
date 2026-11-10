@@ -135,7 +135,7 @@
 
 .ai-skill-chip-list .ai-skill-chip.is-missing .ai-skill-chip-title {
   text-decoration: line-through;
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .ai-skill-chip-list .ai-skill-chip-missing {

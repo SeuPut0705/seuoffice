@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconArrowDown, IconArrowUp } from '@genoffice/ui/icons'
 import {
   HOME_KINDS,
   defaultHomeKinds,
@@ -104,7 +105,7 @@ export function HomeKindsField() {
                   data-tip={homeKindsText(lang, 'homeKindUp', { name })}
                   onClick={() => update(moveHomeKind(settings, kind, -1))}
                 >
-                  ↑
+                  <IconArrowUp size={14} />
                 </button>
                 <button
                   className="set-home-kind-move"
@@ -113,7 +114,7 @@ export function HomeKindsField() {
                   data-tip={homeKindsText(lang, 'homeKindDown', { name })}
                   onClick={() => update(moveHomeKind(settings, kind, 1))}
                 >
-                  ↓
+                  <IconArrowDown size={14} />
                 </button>
                 <button
                   className="set-switch"

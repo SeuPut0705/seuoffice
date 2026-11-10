@@ -196,7 +196,7 @@
   --slides-shadow-tip: 0 4px 6px rgb(0 0 0 / 10%);
   --slides-shadow-toast: 0 4px 16px rgb(0 0 0 / 18%);
   --slides-shadow-copilot: 4px 0 16px rgb(82 41 31 / 5%);
-  --slides-shadow-composer: 0 6px 30px rgb(0 0 0 / 8%);
+  --slides-shadow-composer: 0 1px 3px rgb(0 0 0 / 8%);
   --slides-shadow-stage: 0 2px 14px rgb(0 0 0 / 18%);
   --slides-shadow-reading: 0 10px 36px rgb(0 0 0 / 50%);
 }

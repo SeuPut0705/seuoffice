@@ -62,7 +62,7 @@ export const ko = {
     '{provider} 프로그램 버전이 낮아 이 기능을 쓸 수 없습니다. 업데이트한 뒤 다시 시도하세요.',
   errHeadlessLimit: '자동 호출의 시간당 한도에 도달했습니다.',
   errHeadlessLimitReset: '자동 호출의 시간당 한도에 도달했습니다. {time}부터 다시 가능합니다.',
-  connectFreeHint: '구독이 없나요? 설정에서 무료 AI를 1분 안에 연결할 수 있습니다.',
+  connectFreeHint: '구독이 없어도 설정에서 무료 AI를 1분 안에 연결할 수 있습니다.',
   actionConnectFree: '무료 AI 연결하기',
   errFreeLimit:
     '오늘 쓸 수 있는 무료 사용량을 다 썼습니다. 내일 다시 쓰거나 설정에서 다른 AI를 고르세요.',
