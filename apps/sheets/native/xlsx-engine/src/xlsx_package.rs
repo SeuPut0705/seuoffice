@@ -32,6 +32,36 @@ pub(crate) struct SheetArt {
     pub(crate) media: Vec<(String, Vec<u8>)>,
 }
 
+/// One relationship of a sheet beyond its drawing: a link target, the notes
+/// part, the legacy drawing behind the notes.
+pub(crate) struct PartRelationship {
+    pub(crate) id: String,
+    pub(crate) kind: &'static str,
+    pub(crate) target: String,
+    /// True for a target outside the package (a URL).
+    pub(crate) external: bool,
+}
+
+/// What a sheet brings besides its own part and its drawing.
+#[derive(Default)]
+pub(crate) struct SheetExtras {
+    pub(crate) relationships: Vec<PartRelationship>,
+    /// `(part name, content type, bytes)`. A part without a content type of
+    /// its own relies on the default for its extension.
+    pub(crate) parts: Vec<(String, Option<&'static str>, Vec<u8>)>,
+    /// The relationship id of the legacy drawing, when the sheet has notes.
+    pub(crate) legacy_drawing: Option<String>,
+}
+
+/// What a dialect adds to the package beyond sheets, drawings and styles.
+#[derive(Default)]
+pub(crate) struct PackageExtras {
+    /// `<bookViews>…</bookViews>`, or nothing.
+    pub(crate) book_views: String,
+    /// Runs alongside the sheets; a missing entry is an empty one.
+    pub(crate) sheets: Vec<SheetExtras>,
+}
+
 /// Writes the whole package. `sheet_xmls` runs in the same order as `sheets`:
 /// entry *n* becomes `xl/worksheets/sheet{n}.xml`. `art` runs alongside it —
 /// one optional drawing per sheet.
@@ -42,6 +72,27 @@ pub(crate) fn write_package(
     sheet_xmls: &[String],
     art: &[Option<SheetArt>],
     styles_xml: &str,
+) -> Result<(), SidecarError> {
+    write_package_with(
+        target,
+        sheets,
+        defined_names,
+        sheet_xmls,
+        art,
+        styles_xml,
+        &PackageExtras::default(),
+    )
+}
+
+/// `write_package` with the parts only some dialects have.
+pub(crate) fn write_package_with(
+    target: &Path,
+    sheets: &[SheetSpec],
+    defined_names: &str,
+    sheet_xmls: &[String],
+    art: &[Option<SheetArt>],
+    styles_xml: &str,
+    extras: &PackageExtras,
 ) -> Result<(), SidecarError> {
     let file = File::create(target)?;
     let mut writer = ZipWriter::new(file);
@@ -71,14 +122,14 @@ pub(crate) fn write_package(
     add(
         &mut writer,
         "[Content_Types].xml",
-        &content_types_xml(sheets.len(), art),
+        &content_types_xml(sheets.len(), art, extras),
         options,
     )?;
     add(&mut writer, "_rels/.rels", ROOT_RELS, options)?;
     add(
         &mut writer,
         "xl/workbook.xml",
-        &workbook_xml(sheets, defined_names),
+        &workbook_xml(sheets, defined_names, &extras.book_views),
         options,
     )?;
     add(
@@ -95,14 +146,26 @@ pub(crate) fn write_package(
             xml,
             options,
         )?;
-        if let Some(art) = art.get(index).and_then(Option::as_ref) {
+        let sheet_art = art.get(index).and_then(Option::as_ref);
+        let sheet_extras = extras.sheets.get(index);
+        if sheet_art.is_some()
+            || sheet_extras.is_some_and(|extras| !extras.relationships.is_empty())
+        {
             let n = index + 1;
             add(
                 &mut writer,
                 &format!("xl/worksheets/_rels/sheet{n}.xml.rels"),
-                &worksheet_rels_xml(n),
+                &worksheet_rels_xml(n, sheet_art.is_some(), sheet_extras),
                 options,
             )?;
+        }
+        if let Some(sheet_extras) = sheet_extras {
+            for (name, _, bytes) in &sheet_extras.parts {
+                add_binary(&mut writer, name, bytes, options)?;
+            }
+        }
+        if let Some(art) = sheet_art {
+            let n = index + 1;
             add(
                 &mut writer,
                 &format!("xl/drawings/drawing{n}.xml"),
@@ -244,7 +307,11 @@ fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
     era * 146_097 + day_of_era - 719_468
 }
 
-fn content_types_xml(sheet_count: usize, art: &[Option<SheetArt>]) -> String {
+fn content_types_xml(
+    sheet_count: usize,
+    art: &[Option<SheetArt>],
+    extras: &PackageExtras,
+) -> String {
     let overrides: String = (1..=sheet_count)
         .map(|index| format!(
             r#"<Override PartName="/xl/worksheets/sheet{index}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>"#,
@@ -259,6 +326,18 @@ fn content_types_xml(sheet_count: usize, art: &[Option<SheetArt>]) -> String {
         ))
         .collect();
     let mut extensions = String::new();
+    let mut parts = String::new();
+    for (name, content_type, _) in extras.sheets.iter().flat_map(|sheet| &sheet.parts) {
+        match content_type {
+            Some(content_type) => parts.push_str(&format!(
+                r#"<Override PartName="/{name}" ContentType="{content_type}"/>"#
+            )),
+            None if name.ends_with(".vml") && !extensions.contains("vml") => extensions.push_str(
+                r#"<Default Extension="vml" ContentType="application/vnd.openxmlformats-officedocument.vmlDrawing"/>"#,
+            ),
+            None => {}
+        }
+    }
     if art
         .iter()
         .flatten()
@@ -275,16 +354,35 @@ fn content_types_xml(sheet_count: usize, art: &[Option<SheetArt>]) -> String {
     }
     format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>{extensions}<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>{overrides}{drawings}</Types>"#,
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>{extensions}<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>{overrides}{drawings}{parts}</Types>"#,
     )
 }
 
-/// A sheet with a drawing gets one relationship, at the first free id — the
-/// minimal writer emits no other sheet-level relationships.
-fn worksheet_rels_xml(n: usize) -> String {
+/// A sheet with a drawing keeps it at `rId1`; whatever else the dialect
+/// brings follows under the ids it chose.
+fn worksheet_rels_xml(n: usize, drawing: bool, extras: Option<&SheetExtras>) -> String {
+    let mut relationships = String::new();
+    if drawing {
+        relationships.push_str(&format!(
+            r#"<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing{n}.xml"/>"#
+        ));
+    }
+    for relationship in extras.iter().flat_map(|extras| &extras.relationships) {
+        relationships.push_str(&format!(
+            r#"<Relationship Id="{}" Type="{}" Target="{}"{}/>"#,
+            escape_xml(&relationship.id),
+            relationship.kind,
+            escape_xml(&relationship.target),
+            if relationship.external {
+                r#" TargetMode="External""#
+            } else {
+                ""
+            },
+        ));
+    }
     format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing{n}.xml"/></Relationships>"#,
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">{relationships}</Relationships>"#,
     )
 }
 
@@ -293,7 +391,7 @@ const ROOT_RELS: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"
 
 /// `defined_names` arrives already spelled as `<definedName>` elements, and
 /// goes in after `<sheets>` where the schema wants it.
-fn workbook_xml(sheets: &[SheetSpec], defined_names: &str) -> String {
+fn workbook_xml(sheets: &[SheetSpec], defined_names: &str, book_views: &str) -> String {
     let entries: String = sheets
         .iter()
         .enumerate()
@@ -317,7 +415,7 @@ fn workbook_xml(sheets: &[SheetSpec], defined_names: &str) -> String {
     };
     format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>{entries}</sheets>{names}</workbook>"#,
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">{book_views}<sheets>{entries}</sheets>{names}</workbook>"#,
     )
 }
 
