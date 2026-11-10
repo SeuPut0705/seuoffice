@@ -410,6 +410,7 @@ import {
   applyAiDocContent as applyAiDocContentImpl,
   exportPdf as exportPdfImpl,
   exportHtml as exportHtmlImpl,
+  exportHwp as exportHwpImpl,
   exportMarkdown as exportMarkdownImpl,
   exportImages as exportImagesImpl,
   loadFile as loadFileImpl,
@@ -2877,6 +2878,10 @@ export function App() {
   )
   const exportHtml = useCallback(
     (outPath?: string) => exportHtmlImpl(fileCtxRef.current, outPath),
+    [],
+  )
+  const exportHwp = useCallback(
+    (outPath?: string) => exportHwpImpl(fileCtxRef.current, outPath),
     [],
   )
   const exportMarkdown = useCallback(
@@ -6019,6 +6024,9 @@ export function App() {
         case 'export-pdf':
           void exportPdf()
           break
+        case 'export-hwp':
+          void exportHwp()
+          break
         case 'export-html':
           void exportHtml()
           break
@@ -6042,6 +6050,7 @@ export function App() {
     save,
     exportPdf,
     exportHtml,
+    exportHwp,
     exportMarkdown,
     exportImages,
     printDoc,
@@ -6394,9 +6403,10 @@ export function App() {
       getStatus: () => status,
       exportPdfTo: (path: string) => exportPdf(path),
       exportHtmlTo: (path: string) => exportHtml(path),
+      exportHwpTo: (path: string) => exportHwp(path),
       exportMarkdownTo: (path: string) => exportMarkdown(path),
     }
-  }, [editor, openRecent, save, status, exportPdf, exportHtml, exportMarkdown])
+  }, [editor, openRecent, save, status, exportPdf, exportHtml, exportHwp, exportMarkdown])
 
   // Pending style definitions (Styles pane / AI define_style) show before the
   // save writes them: styles.xml is re-resolved with the patches applied and

@@ -1560,4 +1560,8 @@ export const vi = {
   appSpellUnavailable: 'Kiểm tra chính tả không khả dụng trong cửa sổ này.',
   appSpellReplaceAll: 'Thay tất cả bằng "{suggestion}"',
   appSpellChangedAll: 'Đã sửa {count} ô chứa "{word}".',
+
+  // ── ODS import ──
+  appOdsImportNotice: 'Đã mở ODS dưới dạng bản sao xlsx. Khi lưu sẽ ghi tệp xlsx.',
+  appOdsFormulasDropped: 'Chỉ giữ lại giá trị của {count} công thức.',
 } satisfies Record<keyof typeof zh, string>
