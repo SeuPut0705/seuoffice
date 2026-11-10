@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openDocument, type CollabRelay, type WebSocketLike } from '../src/index'
 
 const BASE = 'https://office.example/'
@@ -8,6 +8,7 @@ type Listener = (event: { data?: unknown }) => void
 
 class FakeSocket implements WebSocketLike {
   binaryType: 'blob' | 'arraybuffer' = 'blob'
+  readyState = 0
   sent: (string | ArrayBuffer)[] = []
   closed = false
   private listeners = new Map<string, Listener[]>()
@@ -73,12 +74,12 @@ function openWith(options: { collab?: CollabRelay; onSave?: (file: unknown) => P
 }
 
 /** A relay whose `connect` hands out fresh fake sockets, in order */
-function relay() {
+function relay(make: () => FakeSocket = () => new FakeSocket()) {
   const sockets: FakeSocket[] = []
   const statuses: unknown[] = []
   const collab: CollabRelay = {
     connect: () => {
-      const socket = new FakeSocket()
+      const socket = make()
       sockets.push(socket)
       return socket
     },
@@ -87,10 +88,15 @@ function relay() {
   return { collab, sockets, statuses }
 }
 
-// one macrotask: every microtask the pipe chains after connect() has run by then
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+/** Run every timer due within `ms` and every microtask the pipe chains after connect() */
+const flush = (ms = 0) => vi.advanceTimersByTimeAsync(ms)
+
+beforeEach(() => {
+  vi.useFakeTimers()
+})
 
 afterEach(() => {
+  vi.useRealTimers()
   document.body.replaceChildren()
 })
 
@@ -103,11 +109,110 @@ describe('the co-editing pipe', () => {
     await expect(doc.collabCapable).resolves.toBe(true)
   })
 
-  it('reports a page that declares nothing as not capable', async () => {
-    const { collab } = relay()
-    const { doc, page } = openWith({ collab })
+  it('refuses to open in collab mode when the page cannot co-edit', async () => {
+    const { collab, sockets } = relay()
+    const { doc, page, messages } = openWith({ collab })
     page({ type: 'ready' })
+    await expect(doc.opened).rejects.toMatchObject({ code: 'collab_unavailable' })
     await expect(doc.collabCapable).resolves.toBe(false)
+    page({ type: 'collab_connect', connectId: 1 })
+    await flush(1000)
+    expect(messages().map((message) => message.type)).not.toContain('open')
+    expect(sockets).toEqual([])
+  })
+
+  it('settles collabCapable false when the page never announces itself', async () => {
+    const { collab } = relay()
+    const doc = openDocument(document.body, {
+      baseUrl: BASE,
+      fileName: 'memo.docx',
+      bytes: new Uint8Array([1]),
+      collab,
+      readyTimeoutMs: 100,
+    })
+    let capable: boolean | undefined
+    void doc.collabCapable.then((value) => (capable = value))
+    await flush(100)
+    await expect(doc.opened).rejects.toMatchObject({ code: 'timeout' })
+    expect(capable).toBe(false)
+  })
+
+  it('announces a socket that connect() returns already open', async () => {
+    const { collab, sockets } = relay(() => Object.assign(new FakeSocket(), { readyState: 1 }))
+    const { page, collabMessages } = openWith({ collab })
+    page({ type: 'ready', collab: true })
+    page({ type: 'collab_connect', connectId: 1 })
+    await flush()
+    expect(collabMessages()).toEqual([
+      expect.objectContaining({ type: 'collab_open', connectId: 1 }),
+    ])
+    sockets[0]!.fire('message', 'first')
+    expect(collabMessages()[1]).toMatchObject({ type: 'collab_frame', frame: 'first' })
+  })
+
+  it('answers a socket that connect() returns already closed with collab_close', async () => {
+    const { collab, sockets } = relay(() => Object.assign(new FakeSocket(), { readyState: 3 }))
+    const { page, collabMessages } = openWith({ collab })
+    page({ type: 'ready', collab: true })
+    page({ type: 'collab_connect', connectId: 1 })
+    await flush()
+    expect(collabMessages()).toEqual([
+      expect.objectContaining({ type: 'collab_close', connectId: 1 }),
+    ])
+    expect(sockets[0]!.closed).toBe(true)
+  })
+
+  it('gives up on a socket that does not open within 15 seconds', async () => {
+    const { collab, sockets } = relay()
+    const { page, collabMessages } = openWith({ collab })
+    page({ type: 'ready', collab: true })
+    page({ type: 'collab_connect', connectId: 1 })
+    await flush(14_999)
+    expect(collabMessages()).toEqual([])
+    await flush(1)
+    expect(sockets[0]!.closed).toBe(true)
+    sockets[0]!.fire('open')
+    expect(collabMessages()).toEqual([
+      expect.objectContaining({ type: 'collab_close', connectId: 1 }),
+    ])
+  })
+
+  it('gives up on a connect() that never settles, and closes its socket if it comes later', async () => {
+    let hand!: (socket: WebSocketLike) => void
+    const { page, collabMessages } = openWith({
+      collab: {
+        connect: () => new Promise<WebSocketLike>((resolve) => (hand = resolve)),
+        connectTimeoutMs: 500,
+      },
+    })
+    page({ type: 'ready', collab: true })
+    page({ type: 'collab_connect', connectId: 1 })
+    await flush(500)
+    expect(collabMessages()).toEqual([
+      expect.objectContaining({ type: 'collab_close', connectId: 1 }),
+    ])
+    const late = new FakeSocket()
+    hand(late)
+    await flush()
+    expect(late.closed).toBe(true)
+  })
+
+  it('calls connect() at most once per 250 ms and keeps only the latest request', async () => {
+    const { collab, sockets } = relay()
+    const { page, collabMessages } = openWith({ collab })
+    page({ type: 'ready', collab: true })
+    for (let id = 1; id <= 5; id++) page({ type: 'collab_connect', connectId: id })
+    await flush()
+    expect(sockets).toHaveLength(1)
+    await flush(249)
+    expect(sockets).toHaveLength(1)
+    await flush(1)
+    expect(sockets).toHaveLength(2)
+    expect(sockets[0]!.closed).toBe(true)
+    sockets[1]!.fire('open')
+    expect(collabMessages()).toEqual([
+      expect.objectContaining({ type: 'collab_open', connectId: 5 }),
+    ])
   })
 
   it('relays frames verbatim both ways, binary as a transferred ArrayBuffer', async () => {
@@ -145,7 +250,7 @@ describe('the co-editing pipe', () => {
     await flush()
     sockets[0]!.fire('open')
     page({ type: 'collab_connect', connectId: 2 })
-    await flush()
+    await flush(250)
     expect(sockets[0]!.closed).toBe(true)
     sockets[0]!.fire('message', 'old')
     sockets[0]!.fire('close')
@@ -195,7 +300,7 @@ describe('the co-editing pipe', () => {
     page({ type: 'collab_disconnect', connectId: 1 })
     expect(sockets[0]!.closed).toBe(true)
     page({ type: 'collab_connect', connectId: 2 })
-    await flush()
+    await flush(250)
     doc.destroy()
     expect(sockets[1]!.closed).toBe(true)
   })

@@ -21,7 +21,9 @@
  * page's `collab_connect` makes this side call `collab.connect()` and pipe
  * that socket: `collab_open`, `collab_frame` both ways (unchanged), and
  * `collab_close`; `collab_disconnect` and `destroy()` close it. A collab
- * `save` carries `collabVersion`, the exact version its bytes hold.
+ * `save` carries `collabVersion`, the exact version its bytes hold. A page
+ * whose `ready` says it cannot co-edit gets no `open`: `opened` rejects with
+ * `collab_unavailable`.
  */
 
 import { createCollabPipe, type CollabRelay } from './collab'
@@ -48,8 +50,18 @@ export function appForFileName(fileName: string): SeuofficeApp | null {
 
 export const MAX_EMBED_BYTES = 50 * 1024 * 1024
 
+/**
+ * `collab_unavailable`: the page cannot co-edit this file (too large to load
+ * whole, an edit kind it cannot sync). The host opens it again without
+ * `collab`, under its edit lock.
+ */
 export type EmbedErrorCode =
-  'unsupported_format' | 'too_large' | 'open_failed' | 'timeout' | 'save_failed'
+  | 'unsupported_format'
+  | 'too_large'
+  | 'open_failed'
+  | 'timeout'
+  | 'save_failed'
+  | 'collab_unavailable'
 
 export class SeuofficeEmbedError extends Error {
   readonly code: EmbedErrorCode
@@ -130,8 +142,9 @@ export interface EmbeddedDocument {
   readonly opened: Promise<void>
   /**
    * Whether the page can co-edit this document, from its `ready`. False when
-   * the page cannot (or never answered): open the document with the edit
-   * lock instead, without `collab`.
+   * the page cannot (or never answered); with `collab` given, `opened` then
+   * rejects with `collab_unavailable`: destroy this document and open it again
+   * without `collab`, under the edit lock.
    */
   readonly collabCapable: Promise<boolean>
   /**
@@ -223,6 +236,14 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
     const data = event.data as Record<string, unknown> | null
     if (!data || data.source !== SOURCE || data.version !== VERSION) return
     if (data.type === 'ready' && !sent) {
+      if (options.collab && data.collab !== true) {
+        // this app has no co-editing: opening it would give this person a private copy
+        collabAnswer(false)
+        settle(
+          new SeuofficeEmbedError('collab_unavailable', 'this page cannot co-edit the document'),
+        )
+        return
+      }
       sent = true
       clearTimeout(timer)
       collabAnswer(data.collab === true)
@@ -284,10 +305,10 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
   }
 
   view.addEventListener('message', onMessage)
-  const timer = setTimeout(
-    () => settle(new SeuofficeEmbedError('timeout', 'the seuoffice page did not answer in time')),
-    options.readyTimeoutMs ?? 30000,
-  )
+  const timer = setTimeout(() => {
+    collabAnswer(false)
+    settle(new SeuofficeEmbedError('timeout', 'the seuoffice page did not answer in time'))
+  }, options.readyTimeoutMs ?? 30000)
   container.appendChild(iframe)
   return {
     iframe,
@@ -427,5 +448,10 @@ function notSaved(message: string): SeuofficeEmbedError {
 }
 
 function isPageErrorCode(code: unknown): code is EmbedErrorCode {
-  return code === 'unsupported_format' || code === 'too_large' || code === 'open_failed'
+  return (
+    code === 'unsupported_format' ||
+    code === 'too_large' ||
+    code === 'open_failed' ||
+    code === 'collab_unavailable'
+  )
 }
