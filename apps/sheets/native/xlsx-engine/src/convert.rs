@@ -1087,6 +1087,127 @@ mod tests {
         assert!(workbook.contains(r#"<sheet name="Data" sheetId="1" r:id="rId1"/>"#));
     }
 
+    /// One BIFF record: type, length, payload.
+    fn biff_record(kind: u16, data: &[u8]) -> Vec<u8> {
+        let mut out = Vec::with_capacity(4 + data.len());
+        out.extend_from_slice(&kind.to_le_bytes());
+        out.extend_from_slice(&(data.len() as u16).to_le_bytes());
+        out.extend_from_slice(data);
+        out
+    }
+
+    /// A BIFF5 (Excel 5.0/95) workbook in a version 3 compound file: one sheet
+    /// named `sheet_name` with `text` in A1, both stored as raw bytes of the
+    /// code page the CODEPAGE record declares.
+    fn biff5_workbook(codepage: u16, sheet_name: &[u8], text: &[u8]) -> Vec<u8> {
+        let bof = |kind: u16| {
+            let mut data = Vec::new();
+            for value in [0x0500u16, kind, 0, 0] {
+                data.extend_from_slice(&value.to_le_bytes());
+            }
+            biff_record(0x0809, &data)
+        };
+        let globals = |sheet_offset: u32| {
+            let mut out = bof(0x0005);
+            out.extend(biff_record(0x0042, &codepage.to_le_bytes()));
+            let mut sheet = sheet_offset.to_le_bytes().to_vec();
+            sheet.extend_from_slice(&[0, 0, sheet_name.len() as u8]);
+            sheet.extend_from_slice(sheet_name);
+            out.extend(biff_record(0x0085, &sheet));
+            out.extend(biff_record(0x000A, &[]));
+            out
+        };
+        let mut book = globals(globals(0).len() as u32);
+        book.extend(bof(0x0010));
+        let mut label = Vec::new();
+        for value in [0u16, 0, 0, text.len() as u16] {
+            label.extend_from_slice(&value.to_le_bytes());
+        }
+        label.extend_from_slice(text);
+        book.extend(biff_record(0x0204, &label));
+        book.extend(biff_record(0x000A, &[]));
+        // at the mini-stream cutoff, so the stream lives in regular sectors
+        book.resize(4096, 0);
+
+        const END: u32 = 0xFFFF_FFFE;
+        const FREE: u32 = 0xFFFF_FFFF;
+        let mut file = vec![0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
+        file.extend_from_slice(&[0; 16]);
+        for value in [0x3Eu16, 3, 0xFFFE, 9, 6] {
+            file.extend_from_slice(&value.to_le_bytes());
+        }
+        file.extend_from_slice(&[0; 6]);
+        // directory sectors, FAT sectors, first directory sector, transaction,
+        // mini cutoff, first mini FAT, mini FAT sectors, first DIFAT, DIFAT sectors
+        for value in [0u32, 1, 1, 0, 4096, END, 0, END, 0] {
+            file.extend_from_slice(&value.to_le_bytes());
+        }
+        file.extend_from_slice(&0u32.to_le_bytes());
+        for _ in 0..108 {
+            file.extend_from_slice(&FREE.to_le_bytes());
+        }
+        // sector 0 is the FAT, 1 the directory, 2..=9 the Book stream
+        let mut fat = vec![0xFFFF_FFFD, END, 3, 4, 5, 6, 7, 8, 9, END];
+        fat.resize(128, FREE);
+        for value in fat {
+            file.extend_from_slice(&value.to_le_bytes());
+        }
+        let entry = |name: &str, kind: u8, child: u32, start: u32, size: u64| {
+            let mut out = vec![0u8; 128];
+            let units: Vec<u8> = name
+                .encode_utf16()
+                .chain(std::iter::once(0))
+                .flat_map(u16::to_le_bytes)
+                .collect();
+            out[..units.len()].copy_from_slice(&units);
+            out[64..66].copy_from_slice(&(units.len() as u16).to_le_bytes());
+            out[66] = kind;
+            out[67] = 1;
+            out[68..72].copy_from_slice(&FREE.to_le_bytes());
+            out[72..76].copy_from_slice(&FREE.to_le_bytes());
+            out[76..80].copy_from_slice(&child.to_le_bytes());
+            out[116..120].copy_from_slice(&start.to_le_bytes());
+            out[120..128].copy_from_slice(&size.to_le_bytes());
+            out
+        };
+        file.extend(entry("Root Entry", 5, 1, END, 0));
+        file.extend(entry("Book", 2, FREE, 2, 4096));
+        let mut unused = vec![0u8; 128];
+        unused[68..80].copy_from_slice(&[0xFF; 12]);
+        file.extend_from_slice(&unused);
+        file.extend_from_slice(&unused);
+        file.extend(book);
+        file
+    }
+
+    #[test]
+    fn a_biff5_workbook_in_a_double_byte_code_page_keeps_its_text() {
+        // Excel 5.0/95 stores text as the bytes of the workbook's code page.
+        // calamine before 0.38 widened each byte as if it were UTF-16, so
+        // every Korean cell and sheet name arrived as replacement characters
+        // (2026-11-10 report, a Korean .xls that Excel itself opens fine).
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("legacy-949.xls");
+        // "명단" and "한글 이름" in code page 949
+        let sheet_name = [0xB8, 0xED, 0xB4, 0xDC];
+        let text = [0xC7, 0xD1, 0xB1, 0xDB, 0x20, 0xC0, 0xCC, 0xB8, 0xA7];
+        std::fs::write(&source, biff5_workbook(949, &sheet_name, &text)).unwrap();
+        let target = dir.path().join("converted.xlsx");
+
+        let result = convert_to_xlsx(&source, &target).unwrap();
+        assert_eq!(result.sheets, 1);
+        let sheet = read_entry(&target, "xl/worksheets/sheet1.xml");
+        assert!(
+            sheet.contains(r#"<t xml:space="preserve">한글 이름</t>"#),
+            "A1 lost its Korean text: {sheet}"
+        );
+        let workbook = read_entry(&target, "xl/workbook.xml");
+        assert!(
+            workbook.contains(r#"<sheet name="명단""#),
+            "the sheet name lost its Korean text: {workbook}"
+        );
+    }
+
     #[test]
     fn iso_dates_become_serials_and_suspicious_ones_stay_text() {
         assert_eq!(iso_serial("2026-03-05"), Some(46_086.0));
