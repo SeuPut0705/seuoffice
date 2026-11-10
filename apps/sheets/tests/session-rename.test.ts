@@ -33,6 +33,21 @@ describe('sessionAfterRename', () => {
     })
   })
 
+  it('follows a renamed .ods through odsSourcePath so the original stays protected', () => {
+    // An .ods session names its original twice: the Save As default derived
+    // from it, and the path an ODS export must never write over.
+    const session = {
+      ...base,
+      suggestSaveAs: '/docs/report.xlsx',
+      odsSourcePath: '/docs/report.ods',
+    }
+    expect(sessionAfterRename(session, '/docs/report.ods', '/docs/result.ods')).toEqual({
+      ...session,
+      suggestSaveAs: '/docs/result.xlsx',
+      odsSourcePath: '/docs/result.ods',
+    })
+  })
+
   it('re-derives the Save As default of a converted .xls / .tsv copy', () => {
     const xls = { ...base, suggestSaveAs: '/docs/legacy.xlsx' }
     expect(sessionAfterRename(xls, '/docs/legacy.xls', '/docs/archive.xls')).toEqual({

@@ -533,7 +533,11 @@ import {
   type PageLayoutContext,
 } from './page-layout-actions'
 import { handleExportCsv as handleExportCsvImpl, type CsvExportContext } from './csv-export'
-import { handleExportOds as handleExportOdsImpl, type OdsExportContext } from './ods-export'
+import {
+  handleExportOds as handleExportOdsImpl,
+  saveThenExportOds,
+  type OdsExportContext,
+} from './ods-export'
 import { effectivePageBreaks, installPageBreakPreview } from './page-break-preview'
 import { mapProtectedRanges } from './protected-ranges'
 import {
@@ -1017,7 +1021,7 @@ export function App({
   /// menuActionRef, so the interval closure never goes stale).
   const handleSaveRef = useRef<
     (
-      mode: 'save' | 'save-as' | 'recovery' | 'template',
+      mode: 'save' | 'save-as' | 'recovery' | 'template' | 'ods',
       quiet?: boolean,
       explicitTarget?: { path: string; overwrite: boolean },
     ) => Promise<SaveOutcome>
@@ -1202,10 +1206,7 @@ export function App({
     return {
       lazyWorkbookRef,
       setMessage,
-      saveFirst: async () => {
-        const outcome = await handleSaveRef.current('save', true)
-        return outcome.ok || outcome.skipped === true
-      },
+      pendingEdits: async () => (await handleSaveRef.current('ods')).request ?? null,
     }
   }
 
@@ -1222,7 +1223,6 @@ export function App({
       },
       exportPdfCopy: (saveAsPath) =>
         handleExportPdfImpl(pageLayoutContext(), undefined, saveAsPath),
-      exportOdsCopy: (saveAsPath) => handleExportOdsImpl(odsExportContext(), saveAsPath),
     }
   }
 
@@ -5090,7 +5090,7 @@ export function App({
   }
 
   async function handleSave(
-    mode: 'save' | 'save-as' | 'recovery' | 'template',
+    mode: 'save' | 'save-as' | 'recovery' | 'template' | 'ods',
     quiet = false,
     explicitTarget?: { path: string; overwrite: boolean },
   ): Promise<SaveOutcome> {
@@ -5098,10 +5098,16 @@ export function App({
     // written beside a real save would outlive it as a phantom Restore prompt.
     const gate = saveGateRef.current
     if (mode === 'recovery' && gate.busy) return { ok: false }
-    return gate.run(async () => {
-      if (!(await commitActiveEditor())) return { ok: false }
-      return handleSaveImpl(saveContext(), mode, quiet, explicitTarget)
-    })
+    // A Save As that ends on the ODS format exports after the gate has let
+    // the save go (see saveThenExportOds).
+    return saveThenExportOds(
+      () =>
+        gate.run(async (): Promise<SaveOutcome> => {
+          if (!(await commitActiveEditor())) return { ok: false }
+          return handleSaveImpl(saveContext(), mode, quiet, explicitTarget)
+        }),
+      (targetPath) => handleExportOdsImpl(odsExportContext(), targetPath),
+    )
   }
   closeSaveRef.current = async () => {
     if (!(await commitActiveEditor())) {

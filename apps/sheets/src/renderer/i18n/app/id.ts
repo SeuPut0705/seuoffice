@@ -1575,6 +1575,4 @@ export const id = {
   // ── ODS import ──
   appOdsImportNotice: 'ODS dibuka sebagai salinan xlsx. Menyimpan akan menulis file xlsx.',
   appOdsFormulasDropped: 'Pada {count} rumus, hanya nilainya yang dipertahankan.',
-  saveAsNeedsExtension:
-    'Tambahkan ekstensi pada nama berkas, misalnya laporan.xlsx atau laporan.ods.',
 } satisfies Record<keyof typeof zh, string>

@@ -56,6 +56,10 @@ export interface OdsDroppedCounts {
   readonly validations: number
   readonly pivots: number
   readonly comments: number
+  readonly macros: number
+  readonly shapes: number
+  readonly slicers: number
+  readonly sparklines: number
 }
 
 /// The `convert_to_ods` answer: the new package's size and what it left out.
@@ -209,6 +213,11 @@ export class XlsxSidecarClient {
         validations: count(dropped.validations),
         pivots: count(dropped.pivots),
         comments: count(dropped.comments),
+        // absent from a sidecar built before these were counted
+        macros: count(dropped.macros),
+        shapes: count(dropped.shapes),
+        slicers: count(dropped.slicers),
+        sparklines: count(dropped.sparklines),
       },
     }
   }

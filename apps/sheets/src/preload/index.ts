@@ -494,7 +494,8 @@ const desktopApi: DesktopApi = {
       typeof request.sessionId !== 'string' ||
       !isUuid(request.sessionId) ||
       (request.targetPath !== undefined &&
-        (typeof request.targetPath !== 'string' || request.targetPath.length === 0))
+        (typeof request.targetPath !== 'string' || request.targetPath.length === 0)) ||
+      (request.workbook !== undefined && !isRecord(request.workbook))
     ) {
       throw new Error('Invalid ODS export request.')
     }
@@ -525,6 +526,10 @@ const desktopApi: DesktopApi = {
           validations: number
           pivots: number
           comments: number
+          macros: number
+          shapes: number
+          slicers: number
+          sparklines: number
         }
       }
     }
@@ -4126,7 +4131,11 @@ function isOdsDroppedCounts(input: unknown): boolean {
     isNonnegativeInteger(input.conditionalFormats) &&
     isNonnegativeInteger(input.validations) &&
     isNonnegativeInteger(input.pivots) &&
-    isNonnegativeInteger(input.comments)
+    isNonnegativeInteger(input.comments) &&
+    isNonnegativeInteger(input.macros) &&
+    isNonnegativeInteger(input.shapes) &&
+    isNonnegativeInteger(input.slicers) &&
+    isNonnegativeInteger(input.sparklines)
   )
 }
 

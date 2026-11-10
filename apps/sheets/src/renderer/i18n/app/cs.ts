@@ -1571,6 +1571,4 @@ export const cs = {
   // ── ODS import ──
   appOdsImportNotice: 'Soubor ODS byl otevřen jako kopie xlsx. Uložením se zapíše soubor xlsx.',
   appOdsFormulasDropped: 'U {count} vzorců byly ponechány pouze hodnoty.',
-  saveAsNeedsExtension:
-    'Přidejte k názvu souboru příponu, například sestava.xlsx nebo sestava.ods.',
 } satisfies Record<keyof typeof zh, string>

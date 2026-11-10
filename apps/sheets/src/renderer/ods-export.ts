@@ -1,8 +1,10 @@
-/// ODS export of the whole workbook. The main process converts a private temp
-/// copy from the session's saved .xlsx state, warns once about the features ODS
-/// cannot hold, and only then writes the target. The open workbook keeps its
-/// path and stays an .xlsx session — this is a copy, like Export CSV/PDF.
+/// ODS export of the whole workbook. The main process writes the workbook as
+/// it stands — pending edits included — into a private temp copy, converts
+/// that, warns once about the features ODS cannot hold, and only then writes
+/// the target. The open workbook keeps its path, its pending edits and its
+/// unsaved state: this is a copy, like Export CSV/PDF.
 
+import type { WorkbookSaveRequest } from '../shared/desktop-api'
 import { t } from './i18n/locale'
 import { showToast } from './toast-bus'
 import type { LazyWorkbookState } from './univer-state'
@@ -11,9 +13,25 @@ import type { LazyWorkbookState } from './univer-state'
 export interface OdsExportContext {
   lazyWorkbookRef: { readonly current: LazyWorkbookState | null }
   setMessage: (message: string) => void
-  /// Save the open workbook first so the sidecar converts the current edits,
-  /// not the last saved snapshot. False when the save was canceled or failed.
-  saveFirst: () => Promise<boolean>
+  /// The pending edits as a save request, assembled the way a save assembles
+  /// them but sent nowhere: the export hands it to the main process, which
+  /// writes it into its own copy. Null when the edits could not be gathered.
+  pendingEdits: () => Promise<WorkbookSaveRequest | null>
+}
+
+/// Runs a save and, when its Save As ended on the ODS format, the export
+/// after it. The export gathers the pending edits through the same save gate
+/// the save holds, so it may only start once the save has returned: started
+/// from inside it, the two wait on each other and every later save of the
+/// tab queues behind them.
+export async function saveThenExportOds<T extends { ok: boolean; odsSaveAsPath?: string }>(
+  save: () => Promise<T>,
+  exportTo: (targetPath: string) => Promise<unknown>,
+): Promise<T | { ok: false }> {
+  const outcome = await save()
+  if (outcome.odsSaveAsPath === undefined) return outcome
+  await exportTo(outcome.odsSaveAsPath)
+  return { ok: false }
 }
 
 /// True when a file was written. `targetPath` is the Save As pick the main
@@ -24,15 +42,18 @@ export async function handleExportOds(
 ): Promise<boolean> {
   if (!ctx.lazyWorkbookRef.current) return false
   try {
-    // The sidecar reads a real .xlsx package, so the open workbook is saved
-    // first; the export must not silently omit edits made since the last save.
-    if (!(await ctx.saveFirst())) return false
-    // A real save swaps the sidecar session; read the id after the save.
+    // The export must not silently omit edits made since the last save, and
+    // it must not save the workbook to get them either.
+    const workbook = await ctx.pendingEdits()
     const state = ctx.lazyWorkbookRef.current
-    if (!state) return false
+    if (!workbook || !state || workbook.sessionId !== state.file.sessionId) {
+      ctx.setMessage(t('appOdsExportFailed'))
+      return false
+    }
     const result = await window.desktopApi.exportOds({
       sessionId: state.file.sessionId,
       ...(targetPath === undefined ? {} : { targetPath }),
+      workbook,
     })
     if (result.canceled) {
       // The main process already showed the dialog for a refusal or a failed

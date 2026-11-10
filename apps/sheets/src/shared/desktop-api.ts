@@ -2274,6 +2274,23 @@ export const workbookSaveRequestSchema = z
     message: 'Sheet operations need the final sheet order.',
   })
 
+/// ODS export of the whole workbook. The main process converts a private
+/// temp copy, warns about the features ODS cannot hold, and only then moves
+/// the finished package onto `targetPath` (a Save As pick authorized for one
+/// export). The open session is never re-targeted and never saved.
+export const workbookExportOdsRequestSchema = z
+  .object({
+    sessionId: z.string().uuid(),
+    /// Write straight to this path (from the Save As dialog's ODS pick).
+    targetPath: z.string().min(1).max(4096).optional(),
+    /// The pending edits, as a save request for the same session: the main
+    /// process writes them into its private copy so the export shows what
+    /// is on screen without saving the workbook. Absent → the last saved
+    /// state is exported.
+    workbook: workbookSaveRequestSchema.optional(),
+  })
+  .strict()
+
 export const workbookSaveResultSchema = z.union([
   z
     .object({
@@ -2934,18 +2951,6 @@ export const workbookExportCsvResultSchema = z.union([
 export type WorkbookExportCsvRequest = z.infer<typeof workbookExportCsvRequestSchema>
 export type WorkbookExportCsvResult = z.infer<typeof workbookExportCsvResultSchema>
 
-/// ODS export of the whole workbook. The main process converts a private
-/// temp copy, warns about the features ODS cannot hold, and only then moves
-/// the finished package onto `targetPath` (a Save As pick authorized for one
-/// export). The open session is never re-targeted.
-export const workbookExportOdsRequestSchema = z
-  .object({
-    sessionId: z.string().uuid(),
-    /// Write straight to this path (from the Save As dialog's ODS pick).
-    targetPath: z.string().min(1).max(4096).optional(),
-  })
-  .strict()
-
 const odsDroppedCountsSchema = z
   .object({
     charts: z.number().int().min(0),
@@ -2954,6 +2959,10 @@ const odsDroppedCountsSchema = z
     validations: z.number().int().min(0),
     pivots: z.number().int().min(0),
     comments: z.number().int().min(0),
+    macros: z.number().int().min(0),
+    shapes: z.number().int().min(0),
+    slicers: z.number().int().min(0),
+    sparklines: z.number().int().min(0),
   })
   .strict()
 
