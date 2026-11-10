@@ -113,6 +113,8 @@ beforeEach(async () => {
   store = memoryStore()
   server = createCollabServer({ store })
   // the channel keeps one host per page load, so each test loads a fresh copy
+  // the host opened the page for editing, so a save request finds the session's handler
+  history.replaceState(null, '', '/?mode=edit')
   vi.resetModules()
   channel = await import('../src/embed-channel')
   page = await import('../src/collab-page')
@@ -176,6 +178,31 @@ describe('joining a co-edited page', () => {
     expect(dirty).toEqual([false, true, false])
   })
 
+  it('tells the editor every status it tells the host, from the attach on', async () => {
+    playHost({ canEdit: true })
+    await open(true)
+    const editors: ToyEditor<MapOp>[] = []
+    const heard: CollabStatus[] = []
+    const collab = (await page.joinPageCollab<{ bytes: Uint8Array }, MapOp>({
+      format: toyMap.format,
+      fileName: 'memo.toy',
+      bytes: toyMap.file(),
+      adapter: ({ bytes }) => {
+        const editor = toyMap.open(bytes)
+        editors.push(editor)
+        return editor
+      },
+      status: (status) => heard.push(status),
+    }))!
+    expect(heard).toEqual([])
+    await collab.attach({ bytes: collab.baseBytes })
+    editors[0].perform({ id: 'a', key: 'a', value: 1 })
+    await vi.waitFor(() => expect(heard.at(-1)).toMatchObject({ version: 1, unconfirmed: 0 }))
+    fromHost({ type: 'request_save', requestId: 1 })
+    await vi.waitFor(() => expect(heard.at(-1)).toMatchObject({ version: 1, saved: 1 }))
+    expect(heard).toEqual(statuses())
+  })
+
   it('refuses a host save before the renderer attached', async () => {
     playHost({ canEdit: true })
     await open(true)
@@ -226,5 +253,50 @@ describe('joining a co-edited page', () => {
     )
     expect(sent).toContainEqual(expect.objectContaining({ type: 'collab_disconnect' }))
     await expect(collab.save()).rejects.toThrow()
+  })
+})
+
+describe('what the page allows around the session', () => {
+  const keydown = (): boolean => {
+    const event = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true })
+    document.body.dispatchEvent(event)
+    return event.defaultPrevented
+  }
+
+  it('takes no input between the join and the attach', async () => {
+    playHost({ canEdit: true })
+    await open(true)
+    const collab = (await join([]))!
+    expect(keydown()).toBe(true)
+    await collab.attach({ bytes: collab.baseBytes })
+    expect(keydown()).toBe(false)
+  })
+
+  it('answers no save request on a page the host opened for viewing', async () => {
+    history.replaceState(null, '', '/?mode=view')
+    playHost({ canEdit: true })
+    await open(true)
+    const collab = (await join([]))!
+    await collab.attach({ bytes: collab.baseBytes })
+    fromHost({ type: 'request_save', requestId: 9 })
+    await vi.waitFor(() =>
+      expect(sent).toContainEqual(
+        expect.objectContaining({ type: 'request_save_done', requestId: 9, ok: false }),
+      ),
+    )
+  })
+
+  it('stores nothing for the app’s repeated save when the host holds the head', async () => {
+    const { stored } = playHost({ canEdit: true })
+    await open(true)
+    const editors: ToyEditor<MapOp>[] = []
+    const collab = (await join(editors))!
+    await collab.attach({ bytes: collab.baseBytes })
+    editors[0].perform({ id: 'a', key: 'a', value: 1 })
+    await vi.waitFor(() => expect(statuses().at(-1)).toMatchObject({ version: 1, unconfirmed: 0 }))
+    await collab.save({ skipWhenSaved: true })
+    await vi.waitFor(() => expect(statuses().at(-1)).toMatchObject({ saved: 1 }))
+    await collab.save({ skipWhenSaved: true })
+    expect(stored).toHaveLength(1)
   })
 })

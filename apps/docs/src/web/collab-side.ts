@@ -14,6 +14,8 @@ import { MAX_CHANGE_BYTES, type CollabAdapter, type Json } from '@seuoffice/coll
 import type { Editor } from '@tiptap/core'
 import { pendingNumberingDirty, type PendingNumbering } from '../renderer/doc-state'
 import { buildDocBytes, type FileActionContext } from '../renderer/file-actions'
+import { showToast } from '../renderer/components/toast-bus'
+import { getLang } from '../renderer/i18n/locale'
 import { waitForFullContent } from '../renderer/phased-content'
 import { createDocsAdapter, type DocsOp, type SideStore } from './collab-adapter'
 
@@ -71,8 +73,21 @@ export async function openDocsCollab(
     },
     // room for the submit frame and the op's own wrapper around its steps
     maxOpBytes: MAX_CHANGE_BYTES - 4096,
-    refused: (reason) => console.warn(`[collab] a local edit was refused: ${reason}`),
+    commitDrafts: () => window.dispatchEvent(new Event('ai-docs-commit-tables')),
+    refused: (reason) => showToast(refusedText(reason), 'error'),
   })
+}
+
+/** The App's toast, in the two languages the web pages default to */
+function refusedText(reason: 'too_large' | 'frozen'): string {
+  const ko = getLang() === 'ko'
+  if (reason === 'too_large')
+    return ko
+      ? '이 편집은 함께 편집하기에 너무 커서 적용하지 않았습니다.'
+      : 'This edit is too large to share while co-editing and was not applied.'
+  return ko
+    ? '파일을 저장하는 동안 한 편집은 적용하지 않았습니다. 다시 해 주세요.'
+    : 'An edit made while the file was being saved was not applied. Please make it again.'
 }
 
 /** App fields with a setter of the same name (`x` and `setX`) */
@@ -226,10 +241,12 @@ export function docsSide(context: { readonly current: FileActionContext }): Docs
           })
           for (const [key, value] of changed) {
             const id = key.slice(prefix.length)
+            // the entry replaces every item with its id: a lagging list may hold two
             const at = items.findIndex((item) => item.id === id)
-            if (value === null) items = items.filter((item) => item.id !== id)
-            else if (at < 0) items = [...items, value as { id: string }]
-            else items = items.map((item, i) => (i === at ? (value as { id: string }) : item))
+            const rest = items.filter((item) => item.id !== id)
+            if (value === null) items = rest
+            else if (at < 0) items = [...rest, value as { id: string }]
+            else items = [...rest.slice(0, at), value as { id: string }, ...rest.slice(at)]
           }
           return items
         })

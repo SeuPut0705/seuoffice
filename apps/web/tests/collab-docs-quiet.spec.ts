@@ -113,3 +113,46 @@ for (const { label, file } of FILES) {
     await bob.page.context().close()
   })
 }
+
+test('typing before the page is live changes nothing the others hold', async ({ browser }) => {
+  test.setTimeout(180_000)
+  const documentId = `early-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  const source = await longDocument()
+  const alice = await openCoEdited(browser, source, { documentId, user: 'alice' })
+  const context = await browser.newContext({ viewport: { width: 1400, height: 900 } })
+  const page = await context.newPage()
+  const query = new URLSearchParams({
+    collab: documentId,
+    user: 'bob',
+    name: 'bob',
+    access: 'edit',
+  })
+  await page.goto(`/?${query}`)
+  await page.locator('#edit').setChecked(true)
+  await page.setInputFiles('#file', source)
+  const frame = page.frameLocator('#viewer iframe')
+  const editor = frame.locator('.ProseMirror').first()
+  await expect(editor).toBeVisible({ timeout: 30_000 })
+  // as early as the editor shows anything, while the tail may still stream in
+  await editor.getByText('Line 1 of a long document.').click()
+  await page.keyboard.type('early', { delay: 5 })
+  await expect(page.locator('body')).toHaveAttribute('data-collab-phase', 'live', {
+    timeout: 30_000,
+  })
+  const bob = {
+    page,
+    frame,
+    text: () => editor.innerText(),
+    status: () =>
+      page.evaluate(() => {
+        const status = window.seuLauncher?.collab
+        if (!status) throw new Error('no co-editing status yet')
+        return status
+      }),
+  }
+  await page.waitForTimeout(20_000)
+  await settled([alice, bob])
+  expect((await alice.status()).phase).toBe('live')
+  expect((await bob.status()).phase).toBe('live')
+  expect(await bob.text()).toBe(await alice.text())
+})

@@ -82,7 +82,7 @@ const saveDocxToHost: DesktopApi['saveDocx'] = async (path, data) => {
       // the session writes the file of one exact version from the log, never the renderer's
       // own bytes. "Intent pending" keeps the renderer from reloading the document from
       // the file it thinks it saved, which would replace every peer's edit on this page.
-      await coEditing.save()
+      await coEditing.save({ skipWhenSaved: true })
       return { ok: true, passwordIntentPending: true }
     }
     const { bytes, passwordState } = await fileBytes(path, new Uint8Array(data))

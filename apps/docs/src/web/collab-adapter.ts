@@ -18,7 +18,8 @@
 import type { CollabAdapter, Json } from '@seuoffice/collab/client'
 import type { Editor } from '@tiptap/core'
 import { Plugin, PluginKey, TextSelection, type Transaction } from '@tiptap/pm/state'
-import { Step, type Transform } from '@tiptap/pm/transform'
+import type { Node as PmNode } from '@tiptap/pm/model'
+import { Step, Transform } from '@tiptap/pm/transform'
 import * as pmCollab from 'prosemirror-collab'
 import { TABLE_TRAILING_SKIP } from '../renderer/editor/extensions'
 import { TRACK_IGNORE } from '../renderer/editor/revisions'
@@ -65,8 +66,13 @@ export interface DocsAdapterOptions {
   pendingEdit?(): { pos: number; commit(): void } | null
   /** encoded bytes one op may have: the engine's change limit less the frame around it */
   maxOpBytes: number
-  /** a local edit was refused instead of ending the session */
-  refused?(reason: 'too_large'): void
+  /**
+   * Finish every edit the editor holds outside the document (table cells,
+   * text boxes typed in place), synchronously.
+   */
+  commitDrafts?(): void
+  /** a local edit was refused instead of ending the session: too large, or made while a file is made */
+  refused?(reason: 'too_large' | 'frozen'): void
 }
 
 /** What `rebaseSteps` handles; prosemirror-collab's own class has exactly these fields */
@@ -95,12 +101,33 @@ export const LAYOUT_DERIVED = 'layoutDerived'
 
 const remoteKey = new PluginKey<{ records: Recorded[] }>('seuCollab')
 
-/** plugins that must see remote transactions: they map positions they keep across transactions */
-const SEES_REMOTE = new Set(['trackChangesRecorder$'])
+/**
+ * The track-changes recorder must see remote transactions: it maps the IME
+ * range it keeps across transactions (they carry TRACK_IGNORE, so it records
+ * nothing). Its key is `trackChangesRecorder$`, numbered after the first editor.
+ */
+const seesRemote = (plugin: Plugin): boolean =>
+  /^trackChangesRecorder\$\d*$/.test(pluginKeyOf(plugin))
+
+/** how long a new comment or note waits for the App to list it before it goes out anyway */
+export const ENTRY_WAIT_MS = 1000
 
 interface Recorded {
   serial: number
   tr: Transaction
+}
+
+/**
+ * A local op made but not yet given to the engine. `minted` are the comment
+ * and note keys its steps add a reference to; `existing` those of them the
+ * document referenced already (another person's, or a copy).
+ */
+interface Outgoing {
+  op: DocsOp
+  minted: Set<string>
+  existing: Set<string>
+  /** a side op: the entry's value before it */
+  prev?: Json
 }
 
 export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<DocsOp> {
@@ -108,7 +135,10 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
   const schema = editor.schema
   /** each local steps op's origin transaction, which tags its entries in `tail` */
   const origins = new WeakMap<StepsOp, Transform>()
-  const layoutOnly = new WeakSet<Transform>()
+  /**
+   * Every local step on top of the confirmed document, oldest first: the
+   * engine's unconfirmed ops, then the outbox's.
+   */
   let tail: Rebaseable[] = []
   let sideConfirmed = new Map(side.read())
   let sideView = new Map(sideConfirmed)
@@ -116,7 +146,15 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
   let serial = 0
   let committed = 0
   let emit: ((ops: DocsOp[]) => void) | null = null
-  let unready: DocsOp[] = []
+  /**
+   * Ops on screen the engine does not have yet, in order: a new comment or
+   * note waits for the App to list its entry, so both travel in one change,
+   * and ops made inside `integrate` wait until it returned. The fingerprint
+   * leaves them out, since the engine counts nothing of them.
+   */
+  let outbox: Outgoing[] = []
+  let outboxTimer: ReturnType<typeof setTimeout> | null = null
+  let integrating = false
   const wrapped = new WeakSet<object>()
 
   /**
@@ -130,64 +168,183 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
         appendTransaction?: (trs: readonly Transaction[], ...rest: never[]) => unknown
       }
       const own = spec.appendTransaction
-      if (!own || wrapped.has(plugin) || SEES_REMOTE.has(pluginKeyOf(plugin))) continue
+      if (!own || wrapped.has(plugin) || seesRemote(plugin)) continue
       wrapped.add(plugin)
       spec.appendTransaction = (trs, ...rest) =>
         trs.some((tr) => tr.getMeta(remoteKey)) ? null : own.call(plugin, trs, ...rest)
     }
   }
 
-  /**
-   * Ops made while `integrate` runs (an in-place table edit committed before a
-   * peer's change redraws it, App state read before it is overwritten) wait
-   * here and go out once it returned: the engine forbids an emit inside it.
-   * Their steps live in `tail` like any other local op's until then.
-   */
-  let integrating = false
-  let held: DocsOp[] = []
+  const outboxOrigins = (): Set<Transform> =>
+    new Set(outbox.flatMap((item) => (item.op.kind === 'steps' ? [origins.get(item.op)!] : [])))
 
-  const deliver = (ops: DocsOp[]): void => {
-    if (ops.length === 0) return
-    if (integrating) {
-      if (held.length === 0) queueMicrotask(releaseHeld)
-      held.push(...ops)
-    } else if (emit) emit(ops)
-    else unready.push(...ops)
+  /** `op` with the steps its transaction has in `tail` now */
+  const rebuilt = (op: StepsOp): StepsOp => {
+    const origin = origins.get(op)!
+    const next: StepsOp = {
+      kind: 'steps',
+      steps: tail.filter((entry) => entry.origin === origin).map((entry) => entry.step),
+    }
+    origins.set(next, origin)
+    return next
   }
 
-  const releaseHeld = (): void => {
-    const ops = held.map((op) => (op.kind === 'side' ? op : rebuilt(op)))
-    held = []
-    deliver(ops)
+  /** undo the whole tail and apply it again with `over` in front, in one transaction */
+  const rewriteTail = (over: Step[]): void => {
+    const state = editor.state
+    const tr = state.tr
+    // the history plugin remaps its last `undone` items: rebaseSteps undoes the tail first
+    const undone = tail.length
+    tail = rebaseSteps(tail, over, tr)
+    // the user's caret stays in front of text a peer inserted right at it
+    const selection = state.selection
+    if (selection instanceof TextSelection) {
+      tr.setSelection(
+        TextSelection.between(
+          tr.doc.resolve(tr.mapping.map(selection.anchor, -1)),
+          tr.doc.resolve(tr.mapping.map(selection.head, -1)),
+          -1,
+        ),
+      )
+    }
+    if (state.storedMarks) tr.setStoredMarks(state.storedMarks)
+    tr.setMeta(remoteKey, true)
+      .setMeta('rebased', undone)
+      .setMeta('addToHistory', false)
+      // a peer's edit is not this user's tracked change, nor a fresh table to pad
+      .setMeta(TRACK_IGNORE, true)
+      .setMeta(TABLE_TRAILING_SKIP, true)
+    editor.view.dispatch(tr)
+    if (editor.state.doc !== tr.doc) throw new Error('a plugin refused a peer edit')
+  }
+
+  /** rename ids in the tail steps of `only` (all when absent); `inverted` still undoes what is on screen */
+  const renameInTail = (renames: Renames, only?: Set<Transform>): void => {
+    tail = tail.map((entry) => {
+      if (only && !only.has(entry.origin)) return entry
+      const json = entry.step.toJSON()
+      const renamed = renameIds(json, renames)
+      return renamed === json ? entry : { ...entry, step: Step.fromJSON(schema, renamed) }
+    })
+  }
+
+  /** the next id of `kind` no entry and no reference in the body uses */
+  const freeId = (kind: IdKind, taken: Set<string>): string => {
+    let next = 1
+    const consider = (key: string) => {
+      if (idKindOf(key) === kind)
+        next = Math.max(next, (parseInt(key.slice(kind.length + 1), 10) || 0) + 1)
+    }
+    for (const key of [...sideConfirmed.keys(), ...sideView.keys(), ...taken]) consider(key)
+    idsIn(editor.state.doc.toJSON(), (found, id) => consider(`${found}:${id}`))
+    const id = String(next)
+    taken.add(`${kind}:${id}`)
+    return id
+  }
+
+  /** a steps op may go once the App listed the entry of every id it references anew */
+  const ready = (at: number): boolean => {
+    const item = outbox[at]
+    const later = new Set(
+      outbox.slice(at + 1).flatMap((next) => (next.op.kind === 'side' ? [next.op.key] : [])),
+    )
+    for (const key of item.minted) {
+      if (item.existing.has(key) ? !later.has(key) : !sideView.has(key) && !later.has(key))
+        return false
+    }
+    return true
+  }
+
+  /**
+   * A new comment or note whose id the document already held (the App counted
+   * from a list that did not show a peer's entry yet) gets the next free id,
+   * in its steps, in the document and in the App's list; the peer's entry is
+   * put back.
+   */
+  const settleCollisions = (released: Outgoing[]): void => {
+    const renames: Renames = new Map()
+    const taken = new Set<string>()
+    for (const item of released) {
+      for (const key of item.existing) {
+        const entry = released.find((other) => other.op.kind === 'side' && other.op.key === key)
+        if (!entry || entry.op.kind !== 'side' || !sideConfirmed.has(key)) continue
+        if (sameJson(sideConfirmed.get(key), entry.op.value)) continue
+        renames.set(key, freeId(idKindOf(key)!, taken))
+      }
+    }
+    if (renames.size === 0) return
+    const owners = new Set(
+      released.flatMap((item) =>
+        item.op.kind === 'steps' && [...item.minted].some((key) => renames.has(key))
+          ? [origins.get(item.op)!]
+          : [],
+      ),
+    )
+    renameInTail(renames, owners)
+    rewriteTail([])
+    const entries = new Map<string, Json | null>()
+    for (const item of released) {
+      if (item.op.kind === 'steps') {
+        if (owners.has(origins.get(item.op)!)) item.op = rebuilt(item.op)
+        continue
+      }
+      const to = renames.get(item.op.key)
+      if (to === undefined) continue
+      const kind = idKindOf(item.op.key)!
+      const own = { ...(item.op.value as Record<string, Json>), id: to }
+      const restored = sideConfirmed.get(item.op.key) ?? null
+      entries.set(item.op.key, restored)
+      entries.set(`${kind}:${to}`, own)
+      if (restored === null) sideView.delete(item.op.key)
+      else sideView.set(item.op.key, restored)
+      sideView.set(`${kind}:${to}`, own)
+      item.op = { kind: 'side', key: `${kind}:${to}`, value: own }
+    }
+    side.write({ renames: new Map(), entries })
+  }
+
+  const flush = (force: boolean): void => {
+    if (integrating || !emit || outbox.length === 0) return
+    let count = 0
+    while (count < outbox.length && (force || ready(count))) count++
+    const released = outbox.slice(0, count)
+    outbox = outbox.slice(count)
+    clearTimeout(outboxTimer ?? undefined)
+    outboxTimer = outbox.length > 0 ? setTimeout(() => flush(true), ENTRY_WAIT_MS) : null
+    if (released.length === 0) return
+    settleCollisions(released)
+    emit(released.map((item) => item.op))
+  }
+
+  const queue = (items: Outgoing[]): void => {
+    if (items.length === 0) return
+    outbox.push(...items)
+    if (integrating) queueMicrotask(() => flush(false))
+    else flush(false)
   }
 
   const commit = (records: readonly Recorded[]): void => {
-    const ops: DocsOp[] = []
+    const items: Outgoing[] = []
     for (const { serial: at, tr } of records) {
       if (at <= committed) continue
       committed = at
-      const entries = tr.steps.map((step, i) => ({
-        step,
-        inverted: step.invert(tr.docs[i]),
-        origin: tr,
-      }))
-      if (tr.getMeta(LAYOUT_DERIVED)) {
-        // with nothing unconfirmed before it, it simply becomes part of this client's base
-        if (tail.length === 0) continue
-        layoutOnly.add(tr)
-      } else {
-        const op: StepsOp = { kind: 'steps', steps: tr.steps.slice() }
-        origins.set(op, tr)
-        ops.push(op)
-      }
-      tail.push(...entries)
+      // layout passes only while nothing local is on top (the filter), and join this client's base
+      if (tr.getMeta(LAYOUT_DERIVED)) continue
+      const op: StepsOp = { kind: 'steps', steps: tr.steps.slice() }
+      origins.set(op, tr)
+      tail.push(
+        ...tr.steps.map((step, i) => ({ step, inverted: step.invert(tr.docs[i]), origin: tr })),
+      )
+      items.push({ op, ...mintedBy(tr) })
     }
-    deliver(ops)
+    queue(items)
   }
 
   editor.registerPlugin(
     new Plugin<{ records: Recorded[] }>({
       key: remoteKey,
+      // the history plugin keeps one item per step, which its `rebased` handling relies on
+      historyPreserveItems: true,
       state: {
         init: () => ({ records: [] }),
         // every transaction that reaches a state, appended ones included, in order;
@@ -200,12 +357,23 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
           return { records: [...kept, { serial: ++serial, tr }] }
         },
       },
-      // While frozen no local change reaches the document, whatever command or input made it.
-      // An edit too large for one change is refused here, so the session outlives it.
       filterTransaction: (tr) => {
-        if (!tr.docChanged || tr.getMeta(remoteKey) || tr.getMeta(LAYOUT_DERIVED)) return true
-        if (frozen) return false
-        if (!tooLarge(tr.steps, options.maxOpBytes)) return true
+        if (!tr.docChanged || tr.getMeta(remoteKey)) return true
+        // layout written on top of unconfirmed steps would be rebased as a stale attribute
+        // set over a peer's change; the next pagination pass writes it again
+        if (tr.getMeta(LAYOUT_DERIVED)) return tail.length === 0
+        if (frozen) {
+          options.refused?.('frozen')
+          return false
+        }
+        // an edit too large for one change is refused here, so the session outlives it
+        if (
+          !tooLarge(
+            tr.steps.map((step) => step.toJSON()),
+            options.maxOpBytes,
+          )
+        )
+          return true
         options.refused?.('too_large')
         return false
       },
@@ -234,29 +402,42 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
   )
   skipRemoteFixups()
 
-  const unobserve = side.observe(() => {
-    const now = side.read()
-    const ops: SideOp[] = []
-    for (const [key, value] of now) {
-      if (!sameJson(sideView.get(key), value)) ops.push({ kind: 'side', key, value })
-    }
-    for (const key of sideView.keys()) {
-      if (!now.has(key)) ops.push({ kind: 'side', key, value: null })
-    }
-    for (const op of ops) applySide(sideView, op)
-    deliver(ops)
-  })
-
-  /** `op` with the steps its transaction has in `tail` now */
-  const rebuilt = (op: StepsOp): StepsOp => {
-    const origin = origins.get(op)!
-    const next: StepsOp = {
-      kind: 'steps',
-      steps: tail.filter((entry) => entry.origin === origin).map((entry) => entry.step),
-    }
-    origins.set(next, origin)
-    return next
+  // in-place islands (table cells, text boxes) stop ProseMirror from seeing their events
+  const refuseWhileFrozen = (event: Event): void => {
+    if (!frozen) return
+    event.preventDefault()
+    event.stopPropagation()
   }
+  const ISLAND_EVENTS = ['beforeinput', 'paste', 'drop', 'cut']
+  for (const type of ISLAND_EVENTS) editor.view.dom.addEventListener(type, refuseWhileFrozen, true)
+
+  /** what the App changed outside the document since the last look, as side ops */
+  const pullSide = (): void => {
+    const now = side.read()
+    const items: Outgoing[] = []
+    const refused = new Map<string, Json | null>()
+    const change = (key: string, value: Json): void => {
+      if (value !== null && tooLarge(value, options.maxOpBytes)) {
+        refused.set(key, sideView.get(key) ?? null)
+        return
+      }
+      const prev = sideView.get(key)
+      const op: SideOp = { kind: 'side', key, value }
+      applySide(sideView, op)
+      items.push({ op, minted: new Set(), existing: new Set(), prev })
+    }
+    for (const [key, value] of now) if (!sameJson(sideView.get(key), value)) change(key, value)
+    for (const key of [...sideView.keys()]) if (!now.has(key)) change(key, null)
+    if (refused.size > 0) {
+      side.write({ renames: new Map(), entries: refused })
+      options.refused?.('too_large')
+    }
+    queue(items)
+  }
+  // while frozen (a file is being made, or a viewer) changes wait; unfreezing reads them
+  const unobserve = side.observe(() => {
+    if (!frozen && !integrating) pullSide()
+  })
 
   /**
    * Comment and note ids are minted as the largest id plus one, so two people
@@ -275,32 +456,15 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
     }
     if (theirs.size === 0) return new Map()
     const mine = new Set<string>()
-    const ownSteps = tail.filter((entry) => !layoutOnly.has(entry.origin))
-    for (const entry of ownSteps) idsIn(entry.step.toJSON(), minted(mine))
-    for (const op of [...local, ...held]) {
+    for (const entry of tail) idsIn(entry.step.toJSON(), minted(mine))
+    for (const op of [...local, ...outbox.map((item) => item.op)]) {
       if (op.kind === 'side' && op.value !== null && idKindOf(op.key) && !before.has(op.key))
         mine.add(op.key)
     }
     const renames: Renames = new Map()
-    const taken = new Set([...sideConfirmed.keys(), ...sideView.keys(), ...theirs, ...mine])
-    for (const key of mine) {
-      if (!theirs.has(key)) continue
-      const kind = idKindOf(key)!
-      let next = 1
-      for (const other of taken) {
-        if (idKindOf(other) === kind)
-          next = Math.max(next, (parseInt(other.slice(kind.length + 1), 10) || 0) + 1)
-      }
-      taken.add(`${kind}:${next}`)
-      renames.set(key, String(next))
-    }
-    if (renames.size === 0) return renames
-    tail = tail.map((entry) => {
-      if (layoutOnly.has(entry.origin)) return entry
-      const json = entry.step.toJSON()
-      const renamed = renameIds(json, renames)
-      return renamed === json ? entry : { ...entry, step: Step.fromJSON(schema, renamed) }
-    })
+    const taken = new Set([...theirs, ...mine])
+    for (const key of mine) if (theirs.has(key)) renames.set(key, freeId(idKindOf(key)!, taken))
+    if (renames.size > 0) renameInTail(renames)
     return renames
   }
 
@@ -341,12 +505,13 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
 
     listen(handler) {
       emit = handler
-      const early = unready
-      unready = []
-      deliver(early)
+      flush(false)
       return () => {
         if (emit === handler) emit = null
+        clearTimeout(outboxTimer ?? undefined)
         unobserve()
+        for (const type of ISLAND_EVENTS)
+          editor.view.dom.removeEventListener(type, refuseWhileFrozen, true)
       }
     },
 
@@ -355,56 +520,33 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
       try {
         const before = new Set(sideConfirmed.keys())
         for (const op of remote) if (op.kind === 'side') applySide(sideConfirmed, op)
-        const localOrigins = new Set<Transform>()
-        for (const op of [...local, ...held]) {
+        const known = outboxOrigins()
+        for (const op of local) {
           if (op.kind !== 'steps') continue
           const origin = origins.get(op)
           if (!origin) throw new Error('an unconfirmed op this editor never made')
-          localOrigins.add(origin)
+          known.add(origin)
         }
         for (const entry of tail) {
-          if (!layoutOnly.has(entry.origin) && !localOrigins.has(entry.origin))
+          if (!known.has(entry.origin))
             throw new Error('the editor holds steps the engine does not count as unconfirmed')
         }
 
         const over = remote.flatMap((op) => (op.kind === 'steps' ? op.steps : []))
         if (over.length > 0) commitPendingEdit(over)
         const renames = renumber(remote, local, before)
-        if (over.length > 0 || renames.size > 0) {
-          const state = editor.state
-          const tr = state.tr
-          // the history plugin remaps its last `undone` items: rebaseSteps undoes the tail first
-          const undone = tail.length
-          tail = rebaseSteps(tail, over, tr)
-          // the user's caret stays in front of text a peer inserted right at it
-          const selection = state.selection
-          if (selection instanceof TextSelection) {
-            tr.setSelection(
-              TextSelection.between(
-                tr.doc.resolve(tr.mapping.map(selection.anchor, -1)),
-                tr.doc.resolve(tr.mapping.map(selection.head, -1)),
-                -1,
-              ),
-            )
-          }
-          if (state.storedMarks) tr.setStoredMarks(state.storedMarks)
-          tr.setMeta(remoteKey, true)
-            .setMeta('rebased', undone)
-            .setMeta('addToHistory', false)
-            // a peer's edit is not this user's tracked change, nor a fresh table to pad
-            .setMeta(TRACK_IGNORE, true)
-            .setMeta(TABLE_TRAILING_SKIP, true)
-          editor.view.dispatch(tr)
-          if (editor.state.doc !== tr.doc) throw new Error('a plugin refused a peer edit')
-        }
+        if (over.length > 0 || renames.size > 0) rewriteTail(over)
 
         const rebased = local.map((op) =>
           op.kind === 'side' ? renamedSide(op, renames) : rebuilt(op),
         )
-        held = held.map((op) => (op.kind === 'side' ? renamedSide(op, renames) : op))
+        for (const item of outbox) {
+          item.op = item.op.kind === 'side' ? renamedSide(item.op, renames) : rebuilt(item.op)
+        }
         const shown = sideView
         sideView = new Map(sideConfirmed)
-        for (const op of [...rebased, ...held]) if (op.kind === 'side') applySide(sideView, op)
+        for (const op of [...rebased, ...outbox.map((item) => item.op)])
+          if (op.kind === 'side') applySide(sideView, op)
         const entries = new Map<string, Json | null>()
         for (const [key, value] of sideView)
           if (!sameJson(shown.get(key), value)) entries.set(key, value)
@@ -428,30 +570,83 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
           if (entry.origin === origin) last = i
         })
         if (last < 0) continue
-        for (const entry of tail.slice(0, last + 1)) {
-          if (entry.origin !== origin && !layoutOnly.has(entry.origin))
-            throw new Error('ops were confirmed out of order')
-        }
+        if (tail.slice(0, last + 1).some((entry) => entry.origin !== origin))
+          throw new Error('ops were confirmed out of order')
         tail = tail.slice(last + 1)
       }
-      // layout steps nothing unconfirmed precedes join this client's base
-      while (tail.length > 0 && layoutOnly.has(tail[0].origin)) tail.shift()
     },
 
     fingerprint() {
-      const text = canonical({
-        doc: withoutLayout(editor.state.doc.toJSON() as Json),
-        side: [...sideView],
-      })
+      // the outbox is on screen but not in the engine's count: the state it vouches for is without it
+      let doc = editor.state.doc
+      const pending = outboxOrigins()
+      if (pending.size > 0) {
+        const undo = new Transform(doc)
+        for (let i = tail.length - 1; i >= 0 && pending.has(tail[i].origin); i--)
+          undo.step(tail[i].inverted)
+        doc = undo.doc
+      }
+      const entries = new Map(sideView)
+      for (const item of [...outbox].reverse()) {
+        if (item.op.kind !== 'side') continue
+        if (item.prev === undefined) entries.delete(item.op.key)
+        else entries.set(item.op.key, item.prev)
+      }
+      const text = canonical({ doc: withoutLayout(doc.toJSON() as Json), side: [...entries] })
       return sha256(text)
     },
 
     setEditable(editable) {
-      frozen = !editable
+      if (editable) {
+        frozen = false
+        pullSide()
+        return
+      }
+      // The engine takes ops made in here before it makes a file: finish the drafts the editor
+      // holds outside the document, read the App's outside state, and hand over the outbox
+      if (!frozen) {
+        options.commitDrafts?.()
+        pullSide()
+      }
+      flush(true)
+      frozen = true
     },
 
     produceFile: () => options.produce(new Map(sideView)),
   }
+}
+
+/** the comment and note keys `tr` references more often than before it, and which of them were referenced already */
+function mintedBy(tr: Transaction): { minted: Set<string>; existing: Set<string> } {
+  const ids = new Set<string>()
+  for (const step of tr.steps) idsIn(step.toJSON(), (kind, id) => ids.add(`${kind}:${id}`))
+  const minted = new Set<string>()
+  const existing = new Set<string>()
+  if (ids.size === 0) return { minted, existing }
+  const count = (doc: PmNode): Map<string, number> => {
+    const counts = new Map<string, number>()
+    doc.descendants((node) => {
+      const keys: string[] = []
+      for (const mark of node.marks) {
+        if (mark.type.name === 'comment')
+          for (const id of String(mark.attrs.ids).split(/\s+/)) if (id) keys.push(`comment:${id}`)
+      }
+      if (node.type.name === 'docNoteRef')
+        keys.push(
+          `${node.attrs.kind === 'endnote' ? 'endnote' : 'footnote'}:${String(node.attrs.id)}`,
+        )
+      for (const key of keys) if (ids.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1)
+    })
+    return counts
+  }
+  const before = count(tr.docs[0] ?? tr.before)
+  const after = count(tr.doc)
+  for (const key of ids) {
+    if ((after.get(key) ?? 0) <= (before.get(key) ?? 0)) continue
+    minted.add(key)
+    if ((before.get(key) ?? 0) > 0) existing.add(key)
+  }
+  return { minted, existing }
 }
 
 type IdKind = 'comment' | 'footnote' | 'endnote'
@@ -527,8 +722,8 @@ function renamedSide(op: SideOp, renames: Renames): SideOp {
   return key === op.key && value === op.value ? op : { kind: 'side', key, value }
 }
 
-function tooLarge(steps: readonly Step[], limit: number): boolean {
-  const text = JSON.stringify(steps.map((step) => step.toJSON()))
+function tooLarge(json: unknown, limit: number): boolean {
+  const text = JSON.stringify(json)
   // a UTF-16 unit is at most three UTF-8 bytes: most edits are cleared without encoding
   return text.length * 3 > limit && new TextEncoder().encode(text).length > limit
 }

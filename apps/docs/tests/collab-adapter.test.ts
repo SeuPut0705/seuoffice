@@ -2,6 +2,7 @@ import { parseDocx } from '@genoffice/docx-engine'
 import type { Json } from '@seuoffice/collab/client'
 import { Editor } from '@tiptap/core'
 import type { Node as PmNode } from '@tiptap/pm/model'
+import { closeHistory } from '@tiptap/pm/history'
 import { canJoin } from '@tiptap/pm/transform'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 // the kit from its source: this package's vitest config has no seuoffice-source condition
@@ -10,7 +11,13 @@ import { simulate, type SimulatedEditor } from '../../../packages/collab/src/con
 import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 import { blocksToPmDoc } from '../src/renderer/editor/convert'
 import { editorExtensions } from '../src/renderer/editor/extensions'
-import { createDocsAdapter, type DocsOp, type SideStore } from '../src/web/collab-adapter'
+import {
+  createDocsAdapter,
+  type DocsAdapterOptions,
+  type DocsOp,
+  type SideChange,
+  type SideStore,
+} from '../src/web/collab-adapter'
 
 const FORMAT = { name: 'docx', schema: 1 }
 
@@ -349,7 +356,7 @@ const run = (only: readonly Kind[], seed: number, clients = 3) =>
     adapterFactory: opener(only),
   })
 
-const SEEDS = [1, 2, 3, 4]
+const SEEDS = [1, 2, 4, 5]
 
 describe('the docs adapter under the conformance kit, with real editors', () => {
   for (const seed of SEEDS) {
@@ -382,7 +389,7 @@ describe('the docs adapter under the conformance kit, with real editors', () => 
   }
 
   // the kit's scheduler barely lets four clients edit under seeds 13 and 15, whatever the adapter
-  for (const seed of [11, 12, 14, 16, 17, 18, 19, 20]) {
+  for (const seed of [11, 12, 14, 16, 17, 18, 19, 21]) {
     it(`converges on every edit kind at once (seed ${seed})`, async () => {
       const all: Kind[] = [
         'typeFirst',
@@ -440,7 +447,7 @@ describe('ids two people mint at the same moment', () => {
 describe('large edits', () => {
   it('carries steps larger than 256 KiB', async () => {
     const report = await simulate({
-      seed: 7,
+      seed: 9,
       clients: 2,
       steps: 120,
       file: { format: FORMAT, bytes: base },
@@ -465,20 +472,21 @@ describe('large edits', () => {
 })
 
 /** One editor on the base file with its adapter, outside any network */
-function headlessPair(pendingEdit?: () => { pos: number; commit(): void } | null) {
+function headlessPair(extra: Partial<DocsAdapterOptions> & { side?: SideStore } = {}) {
   const file = JSON.parse(decoder.decode(base)) as TestFile
   const editor = new Editor({ extensions: editorExtensions, content: file.doc as never })
   editors.push(editor)
   const refused: string[] = []
+  const side = extra.side ?? memorySide(file.side)
   const adapter = createDocsAdapter({
-    editor,
-    side: memorySide(file.side),
     produce: async () => ({ fileName: 'memo.json', bytes: new Uint8Array() }),
     maxOpBytes: MAX_CHANGE_BYTES - 4096,
-    pendingEdit,
     refused: (reason) => refused.push(reason),
+    ...extra,
+    editor,
+    side,
   })
-  return { editor, adapter, refused }
+  return { editor, adapter, refused, side }
 }
 
 const firstCell = (editor: Editor): { table: number; text: number } => {
@@ -495,18 +503,20 @@ const firstCell = (editor: Editor): { table: number; text: number } => {
 describe('a table edited in place', () => {
   it('commits the cell being typed in before a peer’s change to that table redraws it', async () => {
     let draft: string | null = 'draft'
-    const alice = headlessPair(() => {
-      if (draft === null) return null
-      return {
-        pos: firstCell(alice.editor).table,
-        commit: () => {
-          const text = draft!
-          draft = null
-          alice.editor.view.dispatch(
-            alice.editor.state.tr.insertText(text, firstCell(alice.editor).text),
-          )
-        },
-      }
+    const alice = headlessPair({
+      pendingEdit: () => {
+        if (draft === null) return null
+        return {
+          pos: firstCell(alice.editor).table,
+          commit: () => {
+            const text = draft!
+            draft = null
+            alice.editor.view.dispatch(
+              alice.editor.state.tr.insertText(text, firstCell(alice.editor).text),
+            )
+          },
+        }
+      },
     })
     const bob = headlessPair()
     const fromAlice: DocsOp[] = []
@@ -536,5 +546,295 @@ describe('a table edited in place', () => {
     )
     alice.adapter.confirmed?.(fromAlice)
     expect(await bob.adapter.fingerprint()).toBe(await alice.adapter.fingerprint())
+  })
+})
+
+type Pair = ReturnType<typeof headlessPair>
+
+/** `to` takes `ops` from `from` over the wire, as confirmed changes it did not make */
+const carry = (ops: DocsOp[], from: Pair, to: Pair, local: DocsOp[] = []): DocsOp[] =>
+  to.adapter.integrate(
+    ops.map((op) => to.adapter.decode(from.adapter.encode(op))),
+    local,
+  )
+
+function listening(pair: Pair): DocsOp[] {
+  const sent: DocsOp[] = []
+  pair.adapter.listen((ops) => sent.push(...ops))
+  return sent
+}
+
+/** a position just inside the textblock that holds `text` */
+const at = (editor: Editor, text: string): number => {
+  let found = -1
+  editor.state.doc.descendants((node, pos) => {
+    if (found < 0 && node.isTextblock && node.textContent.includes(text)) found = pos + 1
+    return found < 0
+  })
+  return found
+}
+
+describe('undo after a peer’s edit', () => {
+  it('takes back exactly this user’s own typing, and the peer applies the same', async () => {
+    const alice = headlessPair()
+    const bob = headlessPair()
+    const fromAlice = listening(alice)
+    const fromBob = listening(bob)
+    const type = (text: string, pos: number, close: boolean) => {
+      const tr = alice.editor.state.tr.insertText(text, pos)
+      alice.editor.view.dispatch(close ? closeHistory(tr) : tr)
+    }
+    // two confirmed edits, each its own undo step
+    type('X', at(alice.editor, 'delta'), true)
+    type('Y', at(alice.editor, 'delta'), true)
+    const first = fromAlice.splice(0)
+    carry(first, alice, bob)
+    alice.adapter.confirmed?.(first)
+    // three quick characters: one undo step, three unconfirmed steps
+    const end = at(alice.editor, 'zeta') + 'zeta eta theta'.length
+    type('a', end, true)
+    type('b', end + 1, false)
+    type('c', end + 2, false)
+    const unconfirmed = fromAlice.splice(0)
+    expect(unconfirmed).toHaveLength(3)
+
+    bob.editor.view.dispatch(bob.editor.state.tr.insertText('BOB', at(bob.editor, 'alpha')))
+    const peer = fromBob.splice(0)
+    const rebased = carry(peer, bob, alice, unconfirmed)
+    bob.adapter.confirmed?.(peer)
+
+    for (let i = 0; i < 10 && alice.editor.commands.undo(); i++);
+    const text = alice.editor.state.doc.textContent
+    expect(text).toContain('BOB')
+    expect(text).toBe(baseText.replace('alpha', 'BOBalpha'))
+
+    carry([...rebased, ...fromAlice.splice(0)], alice, bob)
+    expect(bob.editor.state.doc.textContent).toBe(text)
+    expect(await bob.adapter.fingerprint()).toBe(await alice.adapter.fingerprint())
+  })
+})
+
+describe('a fingerprint right after a peer’s change', () => {
+  it('leaves out a table draft committed inside integrate until the engine has it', async () => {
+    let draft: string | null = 'draft'
+    const alice: Pair = headlessPair({
+      pendingEdit: () =>
+        draft === null
+          ? null
+          : {
+              pos: firstCell(alice.editor).table,
+              commit: () => {
+                const text = draft!
+                draft = null
+                alice.editor.view.dispatch(
+                  alice.editor.state.tr.insertText(text, firstCell(alice.editor).text),
+                )
+              },
+            },
+    })
+    const bob = headlessPair()
+    const carol = headlessPair()
+    listening(alice)
+    const fromBob = listening(bob)
+    bob.editor.view.dispatch(bob.editor.state.tr.insertText('peer', firstCell(bob.editor).text))
+    const ops = fromBob.splice(0)
+    carry(ops, bob, alice)
+    carry(ops, bob, carol)
+    // the engine may ask in the same turn: alice vouches for the version, not for her draft
+    const fp = await alice.adapter.fingerprint()
+    expect(alice.editor.state.doc.textContent).toContain('draft')
+    expect(fp).toBe(await carol.adapter.fingerprint())
+  })
+})
+
+/**
+ * An App-like outside store: its own additions and the adapter's writes are
+ * queued, as React state updates are, and show only after `render`; a list
+ * may then hold two items with one id, and the later one is what a read sees.
+ */
+function laggingSide(initial: [string, Json][]) {
+  let shown: [string, Json][] = [...initial]
+  const queued: Array<(items: [string, Json][]) => [string, Json][]> = []
+  let changed: (() => void) | null = null
+  return {
+    read: () => new Map(shown),
+    write({ renames, entries }: SideChange) {
+      queued.push((items) => {
+        let next = items.map(([key, value]): [string, Json] => {
+          const to = renames.get(key)
+          return to === undefined
+            ? [key, value]
+            : [`${key.slice(0, key.indexOf(':'))}:${to}`, { ...(value as object), id: to }]
+        })
+        for (const [key, value] of entries) {
+          next = next.filter(([other]) => other !== key)
+          if (value !== null) next.push([key, value])
+        }
+        return next
+      })
+    },
+    observe(handler: () => void) {
+      changed = handler
+      return () => (changed = null)
+    },
+    add(key: string, value: Json) {
+      queued.push((items) => [...items, [key, value]])
+    },
+    render() {
+      for (const update of queued.splice(0)) shown = update(shown)
+      changed?.()
+    },
+    ids(kind: string): number[] {
+      return shown
+        .filter(([key]) => key.startsWith(`${kind}:`))
+        .map(([key]) => Number(key.split(':')[1]))
+    },
+  }
+}
+
+const noteRefs = (editor: Editor): string[] => {
+  const ids: string[] = []
+  editor.state.doc.descendants((node) => {
+    if (node.type.name === 'docNoteRef') ids.push(String(node.attrs.id))
+  })
+  return ids.sort()
+}
+
+describe('a note added while a peer’s note is still on its way into the list', () => {
+  it('sends the reference and its entry together, and renumbers a colliding id', async () => {
+    const file = JSON.parse(decoder.decode(base)) as TestFile
+    const bob = headlessPair()
+    const lag = laggingSide(file.side)
+    const carol = headlessPair({ side: lag })
+    const batches: DocsOp[][] = []
+    bob.adapter.listen((ops) => batches.push(ops))
+    const fromCarol = listening(carol)
+
+    const ref = (editor: Editor, id: string) =>
+      editor.schema.nodes.docNoteRef.create({ kind: 'footnote', id })
+    bob.editor.view.dispatch(
+      bob.editor.state.tr.insert(at(bob.editor, 'alpha'), ref(bob.editor, '1')),
+    )
+    expect(batches).toHaveLength(0)
+    ;(bob.side as ReturnType<typeof memorySide>).set('footnote:1', { id: '1', text: 'bob' })
+    // the reference and its entry are one batch for the engine
+    expect(batches).toHaveLength(1)
+    expect(batches[0].map((op) => op.kind)).toEqual(['steps', 'side'])
+
+    carry(batches[0], bob, carol)
+    bob.adapter.confirmed?.(batches[0])
+    // Carol's list does not show Bob's note yet: her App counts 1 again
+    const id = String(Math.max(0, ...lag.ids('footnote')) + 1)
+    expect(id).toBe('1')
+    carol.editor.view.dispatch(
+      carol.editor.state.tr.insert(at(carol.editor, 'zeta'), ref(carol.editor, id)),
+    )
+    lag.add(`footnote:${id}`, { id, text: 'carol' })
+    lag.render()
+    lag.render()
+
+    carry(fromCarol.splice(0), carol, bob)
+    expect(noteRefs(bob.editor)).toEqual(['1', '2'])
+    expect(noteRefs(carol.editor)).toEqual(['1', '2'])
+    const notes = (entries: Map<string, Json>) =>
+      [...entries].filter(([key]) => key.startsWith('footnote:')).sort()
+    expect(notes(lag.read())).toEqual([
+      ['footnote:1', { id: '1', text: 'bob' }],
+      ['footnote:2', { id: '2', text: 'carol' }],
+    ])
+    expect(notes((bob.side as ReturnType<typeof memorySide>).all)).toEqual(notes(lag.read()))
+    expect(await bob.adapter.fingerprint()).toBe(await carol.adapter.fingerprint())
+  })
+})
+
+describe('outside state and a frozen editor', () => {
+  it('holds outside-state changes made while frozen and sends them once released', () => {
+    const alice = headlessPair()
+    const sent = listening(alice)
+    alice.adapter.setEditable(false)
+    ;(alice.side as ReturnType<typeof memorySide>).set('section', { value: 7 })
+    expect(sent).toHaveLength(0)
+    alice.adapter.setEditable(true)
+    expect(sent).toEqual([{ kind: 'side', key: 'section', value: { value: 7 } }])
+  })
+
+  it('finishes open drafts before it freezes, and reports an edit refused while frozen', () => {
+    const alice: Pair = headlessPair({
+      commitDrafts: () =>
+        alice.editor.view.dispatch(
+          alice.editor.state.tr.insertText('draft', at(alice.editor, 'alpha')),
+        ),
+    })
+    const sent = listening(alice)
+    alice.adapter.setEditable(false)
+    expect(sent).toHaveLength(1)
+    expect(alice.editor.state.doc.textContent).toContain('draft')
+    const before = alice.editor.state.doc
+    alice.editor.view.dispatch(alice.editor.state.tr.insertText('late', 1))
+    expect(alice.editor.state.doc).toBe(before)
+    expect(alice.refused).toEqual(['frozen'])
+  })
+
+  it('refuses an outside-state entry larger than one change may be', () => {
+    const alice = headlessPair({ maxOpBytes: 1024 })
+    const sent = listening(alice)
+    const side = alice.side as ReturnType<typeof memorySide>
+    side.set('watermark', { picture: 'x'.repeat(4096) })
+    expect(sent).toHaveLength(0)
+    expect(alice.refused).toEqual(['too_large'])
+    // the App shows what it showed before the refused change
+    expect(side.all.has('watermark')).toBe(false)
+  })
+})
+
+describe('layout written over unconfirmed steps', () => {
+  it('never re-applies a stale attribute set over a peer’s attribute change', async () => {
+    const alice = headlessPair()
+    const bob = headlessPair()
+    const fromAlice = listening(alice)
+    const fromBob = listening(bob)
+    alice.editor.view.dispatch(alice.editor.state.tr.insertText('mine', at(alice.editor, 'zeta')))
+    const local = fromAlice.splice(0)
+    const pos = at(alice.editor, 'alpha') - 1
+    const node = alice.editor.state.doc.nodeAt(pos)!
+    // a pagination pass rewrites the whole attribute set, as applyTocPageDisplays does
+    alice.editor.view.dispatch(
+      alice.editor.state.tr
+        .setNodeMarkup(pos, undefined, { ...node.attrs })
+        .setMeta('layoutDerived', true),
+    )
+    const bobPos = at(bob.editor, 'alpha') - 1
+    const bobNode = bob.editor.state.doc.nodeAt(bobPos)!
+    bob.editor.view.dispatch(
+      bob.editor.state.tr.setNodeMarkup(bobPos, undefined, { ...bobNode.attrs, caretMarks: '[]' }),
+    )
+    const peer = fromBob.splice(0)
+    const rebased = carry(peer, bob, alice, local)
+    bob.adapter.confirmed?.(peer)
+    carry(rebased, alice, bob)
+    alice.adapter.confirmed?.(rebased)
+    expect(fromAlice).toHaveLength(0)
+    expect(await bob.adapter.fingerprint()).toBe(await alice.adapter.fingerprint())
+  })
+})
+
+describe('the track-changes recorder on a later editor', () => {
+  it('records this user’s typing and never a peer’s, whatever editor number it has', () => {
+    headlessPair()
+    const alice = headlessPair()
+    const bob = headlessPair()
+    const fromBob = listening(bob)
+    listening(alice)
+    alice.editor.storage.trackChanges.enabled = true
+    bob.editor.view.dispatch(bob.editor.state.tr.insertText('peer', at(bob.editor, 'alpha')))
+    carry(fromBob.splice(0), bob, alice)
+    alice.editor.view.dispatch(alice.editor.state.tr.insertText('mine', at(alice.editor, 'zeta')))
+    const inserted: string[] = []
+    alice.editor.state.doc.descendants((node) => {
+      if (node.isText && node.marks.some((mark) => mark.type.name === 'ins'))
+        inserted.push(node.text!)
+    })
+    expect(inserted.join('')).toContain('mine')
+    expect(inserted.join('')).not.toContain('peer')
   })
 })

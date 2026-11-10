@@ -1,5 +1,6 @@
 import type { CollabAdapter, CollabSession, CollabStatus } from '@seuoffice/collab/client'
 import { collabLink, reportCollabStatus } from './collab-link'
+import { editMode } from './document-store'
 import { onHostSaveRequest, reportDirty, reportError, saveToHost } from './embed-channel'
 
 export interface PageCollab<Handles> {
@@ -7,8 +8,11 @@ export interface PageCollab<Handles> {
   baseBytes: Uint8Array
   /** the renderer calls this once the editor shows `baseBytes`; later calls do nothing */
   attach(handles: Handles): Promise<void>
-  /** what a host save request does: the file of one exact version, stored by the host */
-  save(): Promise<void>
+  /**
+   * What a host save request does: the file of one exact version, stored by
+   * the host. `skipWhenSaved`: nothing is stored when the host holds the head already.
+   */
+  save(how?: { skipWhenSaved?: boolean }): Promise<void>
 }
 
 declare global {
@@ -38,6 +42,8 @@ export async function joinPageCollab<Handles, Op>(options: {
   bytes: Uint8Array
   /** may settle later, for an editor that has to finish showing the document first */
   adapter(handles: Handles): CollabAdapter<Op> | Promise<CollabAdapter<Op>>
+  /** hears the session's status once the editor attached and on every change, for an editor that shows it */
+  status?(status: CollabStatus): void
 }): Promise<PageCollab<Handles> | null> {
   const link = collabLink()
   if (!link) return null
@@ -46,14 +52,22 @@ export async function joinPageCollab<Handles, Op>(options: {
   const join = await joinCollab(link, { format: options.format, bytes: options.bytes })
   let session: CollabSession | null = null
   let attaching: Promise<void> | null = null
+  // Until the adapter attached, what the editor shows must stay the epoch base: an edit made
+  // now would be counted as base by this page alone, and every peer's step would land shifted
+  window.seuCollab = { attach: (handles) => attach(handles as Handles) }
+  const releaseInput = holdInput()
 
-  const save = async (): Promise<void> => {
+  const save = async (how: { skipWhenSaved?: boolean } = {}): Promise<void> => {
     if (!session) throw new Error('the document is not open yet')
+    const status = session.status()
+    // the app's own repeated saves (its autosave) store nothing new
+    if (how.skipWhenSaved && status.version === status.saved && status.unconfirmed === 0) return
     const saved = await session.save()
     await saveToHost(options.fileName, saved.bytes, { version: saved.version })
     session.reportSaved(saved.version)
   }
-  onHostSaveRequest(save)
+  // a viewer's host never stores a save, so a save request finds no handler
+  if (editMode()) onHostSaveRequest(() => save())
 
   const attach = (handles: Handles): Promise<void> => {
     attaching ??= (async () => {
@@ -61,6 +75,7 @@ export async function joinPageCollab<Handles, Op>(options: {
       try {
         adapter = await options.adapter(handles)
       } catch (error) {
+        releaseInput()
         // never edit a document the log cannot follow: leave the session and let the host reopen
         link.close()
         reportError('collab_unavailable', error instanceof Error ? error.message : String(error))
@@ -68,16 +83,44 @@ export async function joinPageCollab<Handles, Op>(options: {
       }
       const joined = join.attach(adapter)
       session = joined
+      releaseInput()
       const report = (status: CollabStatus): void => {
         reportCollabStatus(status)
         // unsaved means the log holds edits no stored file has
         reportDirty(status.version > status.saved)
+        options.status?.(status)
       }
       joined.subscribe(report)
       report(joined.status())
     })()
     return attaching
   }
-  window.seuCollab = { attach: (handles) => attach(handles as Handles) }
   return { baseBytes: join.baseBytes, attach, save }
+}
+
+const INPUT_EVENTS = [
+  'beforeinput',
+  'keydown',
+  'keypress',
+  'paste',
+  'cut',
+  'drop',
+  'compositionstart',
+  'pointerdown',
+  'mousedown',
+  'click',
+]
+
+/** Refuse every input event the page gets until the returned function runs, while this page's session is the window's */
+function holdInput(): () => void {
+  const owner = window.seuCollab
+  const refuse = (event: Event): void => {
+    if (window.seuCollab !== owner) return
+    event.preventDefault()
+    event.stopImmediatePropagation()
+  }
+  for (const type of INPUT_EVENTS) window.addEventListener(type, refuse, true)
+  return () => {
+    for (const type of INPUT_EVENTS) window.removeEventListener(type, refuse, true)
+  }
 }
