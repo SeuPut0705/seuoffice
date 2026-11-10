@@ -278,18 +278,19 @@ El atajo de filtro de Excel, Ctrl+Shift+L, no hace nada en Windows ni en Linux. 
 
 ### Ventana
 
-| Acción                                                             | macOS     | Windows / Linux |
-| ------------------------------------------------------------------ | --------- | --------------- |
-| Guardar el libro                                                   | ⌘S        | Ctrl+S          |
-| Guardar como                                                       | ⇧⌘S       | Ctrl+Shift+S    |
-| Abrir un libro                                                     | ⌘O        | Ctrl+O          |
-| Imprimir                                                           | ⌘P        | Ctrl+P          |
-| Cerrar el libro (macOS) / Salir de la aplicación (Windows y Linux) | ⌘W        | Ctrl+Q          |
-| Abrir la guía del usuario                                          | F1        | F1              |
-| Acercar                                                            | ⌘=        | Ctrl+=          |
-| Zoom con la rueda del ratón                                        | ⌘ + rueda | Ctrl + rueda    |
-| Mostrar u ocultar las fórmulas en las celdas                       | ⌘`        | Ctrl+`          |
-| Ampliar o reducir la barra de fórmulas                             | ⌘⇧U       | Ctrl+Shift+U    |
+| Acción                                                                        | macOS     | Windows / Linux |
+| ----------------------------------------------------------------------------- | --------- | --------------- |
+| Guardar el libro                                                              | ⌘S        | Ctrl+S          |
+| Guardar como                                                                  | ⇧⌘S       | Ctrl+Shift+S    |
+| Abrir un libro                                                                | ⌘O        | Ctrl+O          |
+| Imprimir                                                                      | ⌘P        | Ctrl+P          |
+| Cerrar el libro (macOS) / Salir de la aplicación (Windows y Linux)            | ⌘W        | Ctrl+Q          |
+| Abrir la guía del usuario                                                     | F1        | F1              |
+| Acercar                                                                       | ⌘=        | Ctrl+=          |
+| Zoom con la rueda del ratón                                                   | ⌘ + rueda | Ctrl + rueda    |
+| Mostrar u ocultar las fórmulas en las celdas                                  | ⌘`        | Ctrl+`          |
+| Ampliar o reducir la barra de fórmulas                                        | ⌘⇧U       | Ctrl+Shift+U    |
+| Ejecutar un botón de la barra de acceso rápido según su posición (1.º a 10.º) |           | Alt+1 … Alt+0   |
 
 ## Slides
 

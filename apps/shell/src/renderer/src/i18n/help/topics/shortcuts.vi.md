@@ -278,18 +278,19 @@ Phím lọc của Excel là Ctrl+Shift+L, không làm gì trên Windows hay Linu
 
 ### Cửa sổ
 
-| Hành động                                                    | macOS         | Windows / Linux  |
-| ------------------------------------------------------------ | ------------- | ---------------- |
-| Lưu sổ làm việc                                              | ⌘S            | Ctrl+S           |
-| Lưu dưới dạng                                                | ⇧⌘S           | Ctrl+Shift+S     |
-| Mở sổ làm việc                                               | ⌘O            | Ctrl+O           |
-| In                                                           | ⌘P            | Ctrl+P           |
-| Đóng sổ làm việc (macOS) / Thoát ứng dụng (Windows và Linux) | ⌘W            | Ctrl+Q           |
-| Mở Hướng dẫn sử dụng                                         | F1            | F1               |
-| Phóng to                                                     | ⌘=            | Ctrl+=           |
-| Thu phóng bằng lăn chuột                                     | ⌘ + lăn chuột | Ctrl + lăn chuột |
-| Hiện hoặc ẩn công thức trong các ô                           | ⌘`            | Ctrl+`           |
-| Mở rộng hoặc thu gọn thanh công thức                         | ⌘⇧U           | Ctrl+Shift+U     |
+| Hành động                                                                  | macOS         | Windows / Linux  |
+| -------------------------------------------------------------------------- | ------------- | ---------------- |
+| Lưu sổ làm việc                                                            | ⌘S            | Ctrl+S           |
+| Lưu dưới dạng                                                              | ⇧⌘S           | Ctrl+Shift+S     |
+| Mở sổ làm việc                                                             | ⌘O            | Ctrl+O           |
+| In                                                                         | ⌘P            | Ctrl+P           |
+| Đóng sổ làm việc (macOS) / Thoát ứng dụng (Windows và Linux)               | ⌘W            | Ctrl+Q           |
+| Mở Hướng dẫn sử dụng                                                       | F1            | F1               |
+| Phóng to                                                                   | ⌘=            | Ctrl+=           |
+| Thu phóng bằng lăn chuột                                                   | ⌘ + lăn chuột | Ctrl + lăn chuột |
+| Hiện hoặc ẩn công thức trong các ô                                         | ⌘`            | Ctrl+`           |
+| Mở rộng hoặc thu gọn thanh công thức                                       | ⌘⇧U           | Ctrl+Shift+U     |
+| Chạy nút trên Thanh công cụ Truy nhập Nhanh theo vị trí (thứ 1 đến thứ 10) |               | Alt+1 … Alt+0    |
 
 ## Slides
 
