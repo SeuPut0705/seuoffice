@@ -15,6 +15,8 @@ export default defineConfig({
   use: { baseURL: `http://localhost:${port}/`, viewport: { width: 1400, height: 900 } },
   webServer: {
     command: `npx vite preview --port ${port} --strictPort`,
+    // the co-editing specs' server rides on the preview (tests/collab-server.ts)
+    env: { SEUOFFICE_COLLAB_SERVER: '1' },
     port,
     reuseExistingServer: false,
     timeout: 60_000,
