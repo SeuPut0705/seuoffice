@@ -343,6 +343,13 @@ function editorsTextOf(
   return wanted ? wanted.join(' ') : null
 }
 
+/** What an own skill hands on when another version takes its folder */
+interface ReplacedSkill {
+  id: string
+  /** `metadata.ieum-editors` as its file wrote it; undefined when the file named none */
+  editorsText: string | undefined
+}
+
 export function createUserSkillsService(deps: UserSkillsServiceDeps) {
   const appSkillsDir = () => appSkillsDirOf(deps.homeDir())
   const settingsPath = () => deps.settingsPath()
@@ -436,6 +443,55 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
 
   async function readSkillMdText(dir: string): Promise<string | undefined> {
     return readFile(join(dir, 'SKILL.md'), 'utf8').catch(() => undefined)
+  }
+
+  /** An own skill as it is just before another version replaces it */
+  async function replacedSkillOf(id: string): Promise<ReplacedSkill | undefined> {
+    const skill = await find(id)
+    if (!skill || skill.source !== 'app') return undefined
+    const text = await readSkillMdText(skill.dir)
+    const parsed = text === undefined ? undefined : parseSkillMd(text)
+    return { id: skill.id, editorsText: parsed?.metadata[IEUM_EDITORS_KEY] }
+  }
+
+  /**
+   * The one rule for what stays when another version takes an own skill's
+   * place, by a reinstall over the same name or a GitHub update (decision
+   * 0127). The saved state (on or off, when it is used) stays with the skill,
+   * under its new identifier when the name changed. Where it is used is in the
+   * file (decision 0122), so the replaced file's value goes into the new file
+   * when that one names none; a value the new file brings wins.
+   */
+  async function keepAcrossReplace(
+    old: ReplacedSkill,
+    newId: string,
+    newDir: string,
+  ): Promise<void> {
+    if (newId !== old.id) {
+      changeSettings((settings) => {
+        const kept = settings.states[old.id]
+        clearState(settings, old.id)
+        clearState(settings, newId)
+        if (kept) settings.states[newId] = kept
+      })
+    }
+    if (old.editorsText === undefined) return
+    const base = await readSkillMdText(newDir)
+    const parsed = base === undefined ? undefined : parseSkillMd(base)
+    if (!parsed?.name || parsed.metadata[IEUM_EDITORS_KEY] !== undefined) return
+    const text = renderSkillMd(
+      {
+        name: parsed.name,
+        description: parsed.description ?? '',
+        title: parsed.metadata[IEUM_TITLE_KEY],
+        template: parsed.metadata[IEUM_TEMPLATE_KEY],
+        editors: old.editorsText,
+        body: parsed.body,
+      },
+      base,
+    )
+    // the new version is in place either way; a file that cannot be rewritten keeps what it brought
+    await writeFileAtomic(join(newDir, 'SKILL.md'), text).catch(() => undefined)
   }
 
   interface WriteRequest {
@@ -809,7 +865,11 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       })
     },
 
-    /** Install the checked skills of a previewed import; they start on, used on their own */
+    /**
+     * Install the checked skills of a previewed import. A new skill starts on,
+     * used on its own; one that replaces an own skill of the same name keeps
+     * that skill's settings (`keepAcrossReplace`).
+     */
     async install(
       imported: SkillImport,
       request: Pick<UserSkillInstallRequest, 'selected' | 'onCollision'>,
@@ -817,19 +877,27 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       UserSkillsResult<{ installed: Array<{ key: string; id: string }>; skipped: string[] }>
     > {
       try {
+        const replacedByKey = new Map<string, ReplacedSkill>()
+        for (const candidate of imported.candidates) {
+          if (!request.selected.includes(candidate.key)) continue
+          if (request.onCollision[candidate.key] !== 'replace') continue
+          const old = await replacedSkillOf(userSkillId('app', candidate.name))
+          if (old) replacedByKey.set(candidate.key, old)
+        }
         const done = await installImportedSkills(imported, {
           appSkillsDir: appSkillsDir(),
           selected: request.selected,
           onCollision: request.onCollision,
           discardReplaced: (dir) => deps.trash(dir),
         })
-        const installed = done.installed.map((skill) => ({
-          key: skill.key,
-          id: userSkillId('app', skill.name),
-        }))
-        changeSettings((settings) => {
-          for (const skill of installed) clearState(settings, skill.id)
-        })
+        const installed: Array<{ key: string; id: string }> = []
+        for (const skill of done.installed) {
+          const id = userSkillId('app', skill.name)
+          installed.push({ key: skill.key, id })
+          const old = skill.replaced ? replacedByKey.get(skill.key) : undefined
+          if (old) await keepAcrossReplace(old, id, skill.dir)
+          else changeSettings((settings) => clearState(settings, id))
+        }
         return { ok: true, installed, skipped: done.skipped }
       } catch (error) {
         return failureOf(error)
@@ -864,7 +932,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       }
     },
 
-    /** Apply a found update; on/off and when-used stay as they were */
+    /** Apply a found update; the skill's settings stay as they were (`keepAcrossReplace`) */
     async applyUpdate(
       id: string,
       check: Extract<GitHubSkillUpdateCheck, { status: 'changed' }>,
@@ -876,20 +944,14 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
         return fail(skill ? 'not-owned' : 'not-found')
       }
       try {
+        const old = await replacedSkillOf(skill.id)
         const done = await applyGitHubSkillUpdate(check, {
           appSkillsDir: appSkillsDir(),
           skillDir: dir,
-          discardReplaced: (old) => deps.trash(old),
+          discardReplaced: (replaced) => deps.trash(replaced),
         })
         const newId = userSkillId('app', done.name)
-        if (newId !== skill.id) {
-          changeSettings((settings) => {
-            const kept = settings.states[skill.id]
-            clearState(settings, skill.id)
-            clearState(settings, newId)
-            if (kept) settings.states[newId] = kept
-          })
-        }
+        await keepAcrossReplace(old ?? { id: skill.id, editorsText: undefined }, newId, done.dir)
         return { ok: true, id: newId }
       } catch (error) {
         return failureOf(error)
