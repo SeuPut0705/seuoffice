@@ -1,6 +1,7 @@
 import { parseDocx } from '@genoffice/docx-engine'
 import { MAX_CHANGE_BYTES, type CollabAdapter, type Json } from '@seuoffice/collab/client'
-import { Editor } from '@tiptap/core'
+import { Editor, getSchema } from '@tiptap/core'
+import { Transform } from '@tiptap/pm/transform'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
@@ -9,7 +10,7 @@ import { blocksToPmDoc, type PmNode as PmNodeJson } from '../src/renderer/editor
 import { equationBlockJson, inlineEquationNodeJson } from '../src/renderer/editor/equation'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import { createDocsAdapter, type DocsOp, type SideStore } from '../src/web/collab-adapter'
-import { safeNode } from '../src/web/collab-safety'
+import { safeNode, safeStep } from '../src/web/collab-safety'
 
 const para = (text: string) => `<w:p><w:r><w:t xml:space="preserve">${text}</w:t></w:r></w:p>`
 
@@ -29,9 +30,15 @@ afterEach(() => {
 interface Page {
   editor: Editor
   adapter: CollabAdapter<DocsOp>
+  /** the ops this page handed the engine, oldest first */
   sent: DocsOp[]
+  refused: string[]
+  /** the App's outside state, and its own changes to it */
+  entries(): Map<string, Json>
+  set(key: string, value: Json): void
 }
 
+/** One person's page: a real editor, an App holding the outside state, and the adapter */
 function page(): Page {
   const editor = new Editor({
     element: document.createElement('div'),
@@ -40,47 +47,84 @@ function page(): Page {
   })
   editors.push(editor)
   let entries = new Map<string, Json>()
+  let changed: (() => void) | null = null
   const side: SideStore = {
     read: () => new Map(entries),
-    write: ({ entries: changed }) => {
+    write: ({ entries: next }) => {
       entries = new Map(entries)
-      for (const [key, value] of changed) {
+      for (const [key, value] of next) {
         if (value === null) entries.delete(key)
         else entries.set(key, value)
       }
     },
-    observe: () => () => {},
+    observe: (handler) => {
+      changed = handler
+      return () => (changed = null)
+    },
   }
+  const refused: string[] = []
   const adapter = createDocsAdapter({
     editor,
     side,
-    produce: async () => ({ fileName: 'memo.docx', bytes: new Uint8Array() }),
+    // the file as these tests read it: the body and the outside entries the save writes
+    produce: async (shown) => ({
+      fileName: 'memo.json',
+      bytes: new TextEncoder().encode(JSON.stringify({ doc: editor.getJSON(), side: [...shown] })),
+    }),
     maxOpBytes: MAX_CHANGE_BYTES - 4096,
+    refused: (reason) => refused.push(reason),
   })
   const sent: DocsOp[] = []
   adapter.listen((ops) => sent.push(...ops))
-  return { editor, adapter, sent }
+  return {
+    editor,
+    adapter,
+    sent,
+    refused,
+    entries: () => entries,
+    set(key, value) {
+      entries = new Map(entries).set(key, value)
+      changed?.()
+    },
+  }
 }
 
-/** `to` takes `ops` from `from` over the wire */
-const carry = (ops: DocsOp[], from: Page, to: Page) =>
+/** `to` takes `ops` from `from` over the wire, as confirmed changes it did not make */
+function carry(ops: DocsOp[], from: Page, to: Page): void {
   to.adapter.integrate(
     ops.map((op) => to.adapter.decode(from.adapter.encode(op))),
     [],
   )
+  from.adapter.confirmed?.(ops)
+}
 
-/** insert `nodes` (JSON) after "alpha", as a peer's editor would send them */
-function insert(p: Page, nodes: Json[], block = false): DocsOp[] {
-  const editor = p.editor
+/** where "alpha" ends, or where its paragraph ends */
+function after(editor: Editor, block: boolean): number {
   let pos = -1
   editor.state.doc.descendants((node, at) => {
     if (pos < 0 && node.isTextblock) pos = block ? at + node.nodeSize : at + 1 + 'alpha'.length
     return pos < 0
   })
-  const fragment = nodes.map((json) => editor.schema.nodeFromJSON(json))
-  editor.view.dispatch(editor.state.tr.insert(pos, fragment))
-  return p.sent.splice(0)
+  return pos
 }
+
+/** insert `nodes` (JSON) after "alpha" as this person's own edit */
+function insert(p: Page, nodes: Json[], block = false): void {
+  const fragment = nodes.map((json) => p.editor.schema.nodeFromJSON(json))
+  p.editor.view.dispatch(p.editor.state.tr.insert(after(p.editor, block), fragment))
+}
+
+/**
+ * The op a hostile client sends for inserting `nodes` after "alpha": made
+ * outside any editor, so no rule of the sending page saw it.
+ */
+function forged(p: Page, nodes: Json[], block = false): Json {
+  const fragment = nodes.map((json) => p.editor.schema.nodeFromJSON(json))
+  const step = new Transform(p.editor.state.doc).insert(after(p.editor, block), fragment).steps[0]
+  return { kind: 'steps', steps: [step.toJSON() as Json] }
+}
+
+const receive = (p: Page, op: Json) => p.adapter.integrate([p.adapter.decode(op)], [])
 
 const HOSTILE_MARKUP =
   '<style>body{display:none}</style><form action="https://evil.example/"><input name="p"></form>' +
@@ -116,7 +160,7 @@ function hostile(): { inline: Json[]; block: Json[] } {
         type: 'text',
         text: 'link',
         marks: [
-          { type: 'link', attrs: { href: 'javascript:alert(1)' } },
+          { type: 'link', attrs: { href: 'java\tscript:alert(1)' } },
           { type: 'docTextStyle', attrs: { color: STYLE_ESCAPE, font: 'x";position:fixed;"' } },
         ],
       },
@@ -130,6 +174,17 @@ function hostile(): { inline: Json[]; block: Json[] } {
   }
 }
 
+/** a legitimate equation, link and picture */
+const legitimate = (): Json[] => [
+  asJson(inlineEquationNodeJson('a+b')),
+  {
+    type: 'text',
+    text: 'site',
+    marks: [{ type: 'link', attrs: { href: 'https://example.com/' } }],
+  },
+  { type: 'docInlineImage', attrs: { dataUrl: PNG, widthPx: 10, heightPx: 10 } },
+]
+
 /** every way the hostile values above could show in a page */
 function threats(editor: Editor): string[] {
   const dom = editor.view.dom
@@ -139,7 +194,8 @@ function threats(editor: Editor): string[] {
   for (const element of [dom, ...dom.querySelectorAll('*')]) {
     for (const { name, value } of element.attributes) {
       if (/^on/i.test(name)) found.push(`${name} on <${element.localName}>`)
-      if (/href$/i.test(name) && /^\s*javascript:/i.test(value)) found.push(`${name}=${value}`)
+      if (/href$/i.test(name) && /script:/i.test(value.replace(/\s/g, '')))
+        found.push(`${name}=${value}`)
       if (name === 'src' && value.startsWith('data:image/svg')) found.push('svg src')
       if (name === 'style' && /url\(|position:\s*fixed/i.test(value)) found.push(`style=${value}`)
     }
@@ -153,40 +209,92 @@ describe('a peer’s step carrying markup, scripts and style escapes', () => {
     const bob = page()
     const carol = page()
     const { inline, block } = hostile()
-    const ops = [...insert(alice, inline), ...insert(alice, block, true)]
-    expect(threats(alice.editor).length).toBeGreaterThan(0)
-    for (const to of [bob, carol]) carry(ops, alice, to)
+    // the block first: it lands after the paragraph, so the inline op's position still holds
+    const ops = [forged(alice, block, true), forged(alice, inline)]
+    for (const to of [bob, carol]) for (const op of ops) receive(to, op)
     expect(threats(bob.editor)).toEqual([])
     expect(threats(carol.editor)).toEqual([])
     // the equations still draw: their markup is rebuilt from their OMML
     expect(bob.editor.view.dom.querySelectorAll('math').length).toBe(2)
-    const fingerprint = await bob.adapter.fingerprint()
-    expect(await carol.adapter.fingerprint()).toBe(fingerprint)
-    // the page that made them vouches for the same state
-    alice.adapter.confirmed?.(ops)
-    expect(await alice.adapter.fingerprint()).toBe(fingerprint)
+    expect(await carol.adapter.fingerprint()).toBe(await bob.adapter.fingerprint())
   })
 
-  it('still shows a peer’s equation, link and picture', async () => {
+  it('still shows a peer’s equation, link and picture', () => {
     const alice = page()
     const bob = page()
-    const ops = [
-      ...insert(alice, [
-        asJson(inlineEquationNodeJson('a+b')),
-        {
-          type: 'text',
-          text: 'site',
-          marks: [{ type: 'link', attrs: { href: 'https://example.com/' } }],
-        },
-        { type: 'docInlineImage', attrs: { dataUrl: PNG, widthPx: 10, heightPx: 10 } },
-      ]),
-    ]
-    carry(ops, alice, bob)
+    insert(alice, legitimate())
+    carry(alice.sent.splice(0), alice, bob)
     const dom = bob.editor.view.dom
     expect(dom.querySelector('math')).not.toBeNull()
     expect(dom.querySelector('a[href="https://example.com/"]')).not.toBeNull()
     expect(dom.querySelector(`img[src="${PNG}"]`)).not.toBeNull()
     expect(bob.editor.state.doc.toJSON()).toEqual(alice.editor.state.doc.toJSON())
+  })
+})
+
+describe('this person’s own edit holding a value the peers would replace', () => {
+  it('is refused before it applies, and editing goes on', () => {
+    const alice = page()
+    const before = alice.editor.state.doc
+    const { inline, block } = hostile()
+    for (const node of inline) insert(alice, [node])
+    insert(alice, block, true)
+    // the attribute changes a paste-free edit can make
+    const at = after(alice.editor, false)
+    alice.editor.view.dispatch(
+      alice.editor.state.tr.addMark(
+        1,
+        at,
+        alice.editor.schema.marks.link.create({ href: 'javascript:alert(1)' }),
+      ),
+    )
+    alice.editor.view.dispatch(
+      alice.editor.state.tr.setNodeAttribute(0, 'tabStops', '[{"__proto__":{"pos":1}}]'),
+    )
+    expect(alice.editor.state.doc).toBe(before)
+    expect(alice.sent).toEqual([])
+    expect(alice.refused).toEqual(Array(7).fill('unsafe'))
+    insert(alice, legitimate())
+    expect(alice.sent).toHaveLength(1)
+    expect(threats(alice.editor)).toEqual([])
+  })
+
+  it('in the outside state is not sent, and the App shows the confirmed value again', () => {
+    const alice = page()
+    const header = { header: { text: 'Title', paras: [] }, headerDirty: true }
+    alice.set('header', header)
+    expect(alice.sent).toEqual([{ kind: 'side', key: 'header', value: header }])
+    alice.set('header', {
+      header: { text: 'Title', paras: [{ runs: [{ text: 'a', color: STYLE_ESCAPE }] }] },
+      headerDirty: true,
+    })
+    expect(alice.sent).toHaveLength(1)
+    expect(alice.entries().get('header')).toEqual(header)
+    expect(alice.refused).toEqual(['unsafe'])
+  })
+
+  it('leaves the sender and a receiver with the same file after a mix of edits', async () => {
+    const alice = page()
+    const bob = page()
+    insert(alice, legitimate())
+    insert(alice, hostile().inline)
+    carry(alice.sent.splice(0), alice, bob)
+    bob.editor.view.dispatch(
+      bob.editor.state.tr.addMark(1, 6, bob.editor.schema.marks.bold.create()),
+    )
+    carry(bob.sent.splice(0), bob, alice)
+    alice.set('header', { header: { text: 'Title', paras: [] }, headerDirty: true })
+    alice.set('watermark', {
+      watermark: 'DRAFT',
+      watermarkPicture: { dataUrl: 'javascript:alert(1)' },
+    })
+    alice.set('comment:1', { id: '1', author: "O'Brien", text: 'see <b>this</b>; "quoted"' })
+    carry(alice.sent.splice(0), alice, bob)
+    expect(alice.refused).toEqual(['unsafe', 'unsafe'])
+    const file = async (p: Page) =>
+      JSON.parse(new TextDecoder().decode((await p.adapter.produceFile()).bytes)) as Json
+    expect(await file(bob)).toEqual(await file(alice))
+    expect(await bob.adapter.fingerprint()).toBe(await alice.adapter.fingerprint())
   })
 })
 
@@ -244,16 +352,71 @@ describe('a peer’s outside-state entries', () => {
   })
 })
 
+describe('keys that name the prototype chain', () => {
+  // JSON.parse makes them own keys, as a frame from the wire does
+  const wire = (text: string) => JSON.parse(text) as Json
+
+  it('make decode throw, in an entry key, an entry, a step and JSON inside a step', () => {
+    const { adapter } = page()
+    for (const key of ['__proto__', 'style:__proto__', 'sectionHf:constructor', 'prototype']) {
+      expect(() => adapter.decode({ kind: 'side', key, value: {} }), key).toThrow()
+    }
+    expect(() =>
+      adapter.decode({ kind: 'side', key: 'header', value: wire('{"header":{"__proto__":{}}}') }),
+    ).toThrow()
+    const mark = wire('{"type":"bold","attrs":{"constructor":{"x":1}}}')
+    expect(() =>
+      adapter.decode({ kind: 'steps', steps: [{ stepType: 'addMark', from: 1, to: 2, mark }] }),
+    ).toThrow()
+    const tabStops = '[{"prototype":{"pos":1}}]'
+    expect(() =>
+      adapter.decode({
+        kind: 'steps',
+        steps: [{ stepType: 'attr', pos: 0, attr: 'tabStops', value: tabStops }],
+      }),
+    ).toThrow()
+  })
+})
+
+/** every docx this repository keeps as a fixture */
+function fixtures(): string[] {
+  const root = join(__dirname, '../../..')
+  const found: string[] = []
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue
+      const path = join(dir, entry.name)
+      if (entry.isDirectory()) walk(path)
+      else if (entry.name.endsWith('.docx')) found.push(path)
+    }
+  }
+  for (const dir of ['apps/docs/tests', 'packages/docx-engine/tests', 'packages/docx2hwp/tests'])
+    walk(join(root, dir))
+  walk(join(root, 'fixtures'))
+  return found
+}
+
 describe('what the app itself makes', () => {
-  it('passes every document of the pagination corpus unchanged', async () => {
-    const dir = join(__dirname, 'pagination-corpus/docx')
+  it('passes every fixture document unchanged, and refuses no paste of one', async () => {
+    const schema = getSchema(editorExtensions)
     let checked = 0
-    for (const name of readdirSync(dir).filter((file) => file.endsWith('.docx'))) {
-      const parsed = await parseDocx(new Uint8Array(readFileSync(join(dir, name))))
+    for (const path of fixtures()) {
+      let parsed
+      try {
+        parsed = await parseDocx(new Uint8Array(readFileSync(path)))
+      } catch {
+        // the encrypted fixtures and the deliberately broken ones
+        continue
+      }
       const doc = asJson(blocksToPmDoc(parsed.blocks))
-      expect(safeNode(doc, {}), name).toBe(doc)
+      expect(safeNode(doc, {}), path).toBe(doc)
+      // the whole body pasted over itself, as a local step
+      const node = schema.nodeFromJSON(doc)
+      const step = new Transform(node).replaceWith(0, node.content.size, node.content).steps[0]
+      const json = step.toJSON() as Json
+      expect(safeStep(json), path).toBe(json)
       checked++
     }
-    expect(checked).toBeGreaterThan(10)
-  }, 120_000)
+    expect(checked).toBeGreaterThan(170)
+  }, 300_000)
 })

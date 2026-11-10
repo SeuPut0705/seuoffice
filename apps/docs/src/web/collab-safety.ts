@@ -3,15 +3,20 @@
  * entries reach every page of the session, viewers included. The renderer
  * writes some attribute values into the DOM as markup (MathML through
  * innerHTML), as URLs (link targets, picture sources, CSS `url()`) and as
- * style text (colours, faces and sizes concatenated into `style`). Every
- * remote value goes through here before the editor or the App sees it.
+ * style text (colours, faces and sizes concatenated into `style`). The same
+ * rules judge both directions: a remote value is made safe before the editor
+ * or the App sees it, and a local edit holding a value they would change is
+ * refused, so no page ever holds a value another page would replace and
+ * every page saves the same file.
  *
  * Values are judged by the key that holds them, at any depth of a node's or
  * mark's attributes (nested table, chart, text box and header models carry
  * the same keys):
  * - `mathml` is rebuilt from the `omml` beside it with the converter that
  *   made it in the first place, so a legitimate equation comes out unchanged.
- * - link targets keep http, https, mailto and in-document `#` anchors.
+ * - link targets keep the schemes a document's hyperlinks use (http, https,
+ *   mailto, tel, ftp, file) and scheme-less targets (relative paths, `#`
+ *   anchors); a script-running scheme (javascript, vbscript, data) does not.
  * - picture sources keep the data URLs the app makes: base64 raster images,
  *   and SVG shapes (percent-encoded, as the VML and drawing readers write
  *   them) made only of drawing elements.
@@ -22,7 +27,8 @@
  *   must not be able to end a CSS declaration, open a string or a comment,
  *   or load anything.
  * A value that fails is replaced by an inert one ('' or nothing), the same on
- * every page, so the pages that receive it agree.
+ * every page. An object key that names the prototype chain cannot be made
+ * safe: `UnsafeValue` is thrown.
  */
 import { ommlToMathML } from '@genoffice/docx-engine'
 import type { Json } from '@seuoffice/collab/client'
@@ -81,7 +87,13 @@ const PICTURE_KEY = /(src|url)$/i
 /** a token that could end a declaration, open a string, block or comment, or load something */
 const UNSAFE_TOKEN =
   /[;"'{}\\<>\n\r\f]|\/\*|url\s*\(|image-set|expression\s*\(|@import|javascript:/i
-const SAFE_LINK = /^(https?:|mailto:|#)/i
+/** a scheme a document's hyperlink may use; any other (javascript:, data:) is refused */
+const LINK_SCHEMES = new Set(['http', 'https', 'mailto', 'tel', 'ftp', 'file'])
+/** keys that reach an object's prototype when an App or renderer copies the object */
+const RESERVED = new Set(['__proto__', 'constructor', 'prototype'])
+
+/** A value no rule can make safe */
+export class UnsafeValue extends Error {}
 const RASTER = /^data:image\/(?!svg)[a-z0-9.+-]+;base64,[a-z0-9+/]*=*$/i
 /** what encodeURIComponent leaves: no quote or backslash, so the URL is safe in `url("...")` too */
 const SVG_URL = /^data:image\/svg\+xml(?:;charset=utf-8)?,([a-z0-9\-_.!~*'()%]*)$/i
@@ -107,26 +119,51 @@ const SVG_ELEMENTS = new Set([
 ])
 
 export interface Safety {
-  /** for a fingerprint: drop `mathml` (a function of `omml`) instead of rebuilding it */
-  hashing?: boolean
   /** only links, pictures and markup: entries the App shows through React alone */
   urlsOnly?: boolean
 }
 
-/** The step's JSON with every value it brings safe; `Step.fromJSON` still rejects a malformed one */
+/**
+ * The step's JSON with every value it brings safe: the same object when
+ * nothing needed changing. `Step.fromJSON` still rejects a malformed one.
+ */
 export function safeStep(step: Json): Json {
+  ordinaryKeys(step)
   if (!isObject(step)) return step
   let out = step
-  if (isObject(step.slice)) out = { ...out, slice: safeSlice(step.slice) }
-  if (isObject(step.mark)) out = { ...out, mark: safeNode(step.mark, {}) }
-  if ((step.stepType === 'attr' || step.stepType === 'docAttr') && typeof step.attr === 'string')
-    out = { ...out, value: step.attr === 'mathml' ? '' : safeValue(step.value, step.attr, {}) }
+  if (isObject(step.slice)) {
+    const slice = safeSlice(step.slice)
+    if (slice !== step.slice) out = { ...out, slice }
+  }
+  if (isObject(step.mark)) {
+    const mark = safeNode(step.mark, {})
+    if (mark !== step.mark) out = { ...out, mark }
+  }
+  if ((step.stepType === 'attr' || step.stepType === 'docAttr') && typeof step.attr === 'string') {
+    // no edit sets an equation's markup alone: it always comes with its OMML
+    const value = step.attr === 'mathml' ? '' : safeValue(step.value, step.attr, {})
+    if (value !== step.value) out = { ...out, value }
+  }
   return out
 }
 
 function safeSlice(slice: JsonObject): JsonObject {
-  if (!Array.isArray(slice.content)) return slice
-  return { ...slice, content: slice.content.map((node) => safeNode(node, {})) }
+  const content = slice.content
+  if (!Array.isArray(content)) return slice
+  const nodes = content.map((node) => safeNode(node, {}))
+  return nodes.some((node, i) => node !== content[i]) ? { ...slice, content: nodes } : slice
+}
+
+/** Throws `UnsafeValue` when an object anywhere in `json` has a key naming the prototype chain */
+function ordinaryKeys(json: Json): void {
+  if (Array.isArray(json)) {
+    for (const item of json) ordinaryKeys(item)
+  } else if (isObject(json)) {
+    for (const [key, value] of Object.entries(json)) {
+      if (RESERVED.has(key)) throw new UnsafeValue(`a reserved key: ${key}`)
+      ordinaryKeys(value)
+    }
+  }
 }
 
 /** A node or mark JSON (`{ type, attrs, content, marks }`) with safe attributes */
@@ -146,8 +183,15 @@ export function safeNode(node: Json, how: Safety): Json {
   return out
 }
 
-/** An outside-state entry's value, judged as the attributes are */
+/**
+ * An outside-state entry's value, judged as the attributes are. Its key's
+ * parts become App field and record keys (`style:<styleId>`), so a reserved
+ * one throws as a reserved key inside the value does.
+ */
 export function safeEntry(key: string, value: Json, how: Safety = {}): Json {
+  for (const part of key.split(':'))
+    if (RESERVED.has(part)) throw new UnsafeValue(`a reserved entry key: ${key}`)
+  ordinaryKeys(value)
   // the bibliography and Zotero data are free text the App shows through React
   const urlsOnly = how.urlsOnly || key === 'sources' || key === 'zotero'
   return safeValue(value, key, { ...how, urlsOnly })
@@ -164,7 +208,7 @@ function safeObject(object: JsonObject, how: Safety, inline = false): JsonObject
     if (next !== value) out = { ...out, [key]: next }
   }
   if (typeof object.mathml === 'string') {
-    if (how.hashing) return withoutKey(out, 'mathml')
+    // the markup is a pure function of the OMML: the same converter makes it on every page
     const omml = typeof object.omml === 'string' ? object.omml : ''
     const mathml = object.mathml && omml ? rebuilt(omml, inline) : ''
     if (mathml !== object.mathml) out = { ...out, mathml }
@@ -184,15 +228,22 @@ function safeValue(value: Json, key: string, how: Safety): Json {
   }
   if (typeof value !== 'string') return value
   if (key === 'mathml') return value
-  if (LINK_KEY.test(key)) return value === '' || SAFE_LINK.test(value.trim()) ? value : ''
+  if (LINK_KEY.test(key)) return safeLink(value) ? value : ''
   if (PICTURE_KEY.test(key)) return safePicture(value)
   if (how.urlsOnly || FREE_TEXT.has(key) || XML_KEY.test(key)) return value
   const json = jsonIn(value)
   if (json !== undefined) {
+    ordinaryKeys(json)
     const next = safeValue(json, key, how)
     return next === json ? value : JSON.stringify(next)
   }
   return UNSAFE_TOKEN.test(value) ? '' : value
+}
+
+function safeLink(href: string): boolean {
+  // a browser drops tabs, newlines and leading controls before it reads the scheme
+  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(href.replace(/[\u0000-\u0020\u007f]/g, ''))
+  return !scheme || LINK_SCHEMES.has(scheme[1].toLowerCase())
 }
 
 function safePicture(url: string): string {
@@ -226,7 +277,7 @@ function drawingOnly(markup: string): boolean {
   return true
 }
 
-/** MathML from OMML, memoised: a fingerprint asks again for every equation */
+/** MathML from OMML, memoised: every step that copies an equation (a paste, an undo) asks again */
 const mathml = new Map<string, string>()
 function rebuilt(omml: string, inline: boolean): string {
   const key = `${inline ? 'i' : 'b'}${omml}`
@@ -250,9 +301,4 @@ function jsonIn(text: string): Json | undefined {
 
 function isObject(value: Json | undefined): value is JsonObject {
   return !!value && typeof value === 'object' && !Array.isArray(value)
-}
-
-function withoutKey(object: JsonObject, key: string): JsonObject {
-  const { [key]: _dropped, ...rest } = object
-  return rest
 }

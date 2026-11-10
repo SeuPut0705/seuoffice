@@ -23,7 +23,7 @@ import { Step, Transform } from '@tiptap/pm/transform'
 import * as pmCollab from 'prosemirror-collab'
 import { TABLE_TRAILING_SKIP } from '../renderer/editor/extensions'
 import { TRACK_IGNORE } from '../renderer/editor/revisions'
-import { safeEntry, safeNode, safeStep } from './collab-safety'
+import { safeEntry, safeStep } from './collab-safety'
 
 export type DocsOp = { kind: 'steps'; steps: Step[] } | { kind: 'side'; key: string; value: Json }
 
@@ -72,8 +72,11 @@ export interface DocsAdapterOptions {
    * text boxes typed in place), synchronously.
    */
   commitDrafts?(): void
-  /** a local edit was refused instead of ending the session: too large, or made while a file is made */
-  refused?(reason: 'too_large' | 'frozen'): void
+  /**
+   * a local edit was refused instead of ending the session: too large, made while a file is
+   * made, or holding a value the pages that receive it would replace
+   */
+  refused?(reason: 'too_large' | 'frozen' | 'unsafe'): void
   /** ids of `kind` the opened file defines without a synced entry (list definitions it holds) */
   definedIds?(kind: IdKind): Iterable<string>
 }
@@ -377,16 +380,18 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
           options.refused?.('frozen')
           return false
         }
+        const steps = tr.steps.map((step) => step.toJSON() as Json)
         // an edit too large for one change is refused here, so the session outlives it
-        if (
-          !tooLarge(
-            tr.steps.map((step) => step.toJSON()),
-            options.maxOpBytes,
-          )
-        )
-          return true
-        options.refused?.('too_large')
-        return false
+        if (tooLarge(steps, options.maxOpBytes)) {
+          options.refused?.('too_large')
+          return false
+        }
+        // every page must hold what its peers would: a value they would replace never applies
+        if (steps.some((step) => !kept(safeStep, step))) {
+          options.refused?.('unsafe')
+          return false
+        }
+        return true
       },
       // Input is refused at the event, not through the view's `editable` prop: TipTap's React
       // binding copies `editor.isEditable` back into its options on render, so a freeze seen
@@ -427,9 +432,19 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
     const now = side.read()
     const items: Outgoing[] = []
     const refused = new Map<string, Json | null>()
+    const reasons = new Set<'too_large' | 'unsafe'>()
     const change = (key: string, value: Json): void => {
-      if (value !== null && tooLarge(value, options.maxOpBytes)) {
+      const reason =
+        value === null
+          ? null
+          : tooLarge(value, options.maxOpBytes)
+            ? 'too_large'
+            : !kept((json) => safeEntry(key, json), value)
+              ? 'unsafe'
+              : null
+      if (reason) {
         refused.set(key, sideView.get(key) ?? null)
+        reasons.add(reason)
         return
       }
       const prev = sideView.get(key)
@@ -441,7 +456,7 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
     for (const key of [...sideView.keys()]) if (!now.has(key)) change(key, null)
     if (refused.size > 0) {
       side.write({ renames: new Map(), entries: refused })
-      options.refused?.('too_large')
+      for (const reason of reasons) options.refused?.(reason)
     }
     queue(items)
   }
@@ -624,14 +639,8 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
         if (item.prev === undefined) entries.delete(item.op.key)
         else entries.set(item.op.key, item.prev)
       }
-      // the state as a page that received it holds it: a value made safe on arrival
-      // reads the same as the original on the page that made it
-      const body = safeNode(withoutLayout(doc.toJSON() as Json), { hashing: true })
-      const side = [...entries].map(([key, value]) => [
-        key,
-        safeEntry(key, value, { hashing: true }),
-      ])
-      return sha256(canonical({ doc: body, side }))
+      const text = canonical({ doc: withoutLayout(doc.toJSON() as Json), side: [...entries] })
+      return sha256(text)
     },
 
     setEditable(editable) {
@@ -814,6 +823,16 @@ export function renamedEntry(
 function renamedSide(op: SideOp, renames: Renames): SideOp {
   const [key, value] = renamedEntry(op.key, op.value, renames)
   return key === op.key && value === op.value ? op : { kind: 'side', key, value }
+}
+
+/** whether the safety rules leave `json` as it is (they return the same object then) */
+function kept(safe: (json: Json) => Json, json: Json): boolean {
+  try {
+    return safe(json) === json
+  } catch {
+    // a reserved key: no peer would take it
+    return false
+  }
 }
 
 function tooLarge(json: unknown, limit: number): boolean {

@@ -94,12 +94,16 @@ export async function openDocsCollab(
 }
 
 /** The App's toast, in the two languages the web pages default to */
-function refusedText(reason: 'too_large' | 'frozen'): string {
+function refusedText(reason: 'too_large' | 'frozen' | 'unsafe'): string {
   const ko = getLang() === 'ko'
   if (reason === 'too_large')
     return ko
       ? '이 편집은 함께 편집하기에 너무 커서 적용하지 않았습니다.'
       : 'This edit is too large to share while co-editing and was not applied.'
+  if (reason === 'unsafe')
+    return ko
+      ? '이 편집에는 함께 편집할 때 보낼 수 없는 내용(스크립트 링크나 안전하지 않은 그림, 서식 값)이 있어 적용하지 않았습니다.'
+      : 'This edit holds content that cannot be shared while co-editing (a script link, an unsafe picture or formatting value) and was not applied.'
   return ko
     ? '파일을 저장하는 동안 한 편집은 적용하지 않았습니다. 다시 해 주세요.'
     : 'An edit made while the file was being saved was not applied. Please make it again.'
