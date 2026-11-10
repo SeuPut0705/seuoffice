@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   notesBaselineAfterFlush,
+  notesDraftAfterDeckChange,
   notesDraftIndex,
+  notesShownAfterLoad,
   retargetNotesDraft,
   startNotesDraft,
 } from '../src/shared/notes-draft'
@@ -74,5 +76,35 @@ describe('retargetNotesDraft (genoffice#900)', () => {
     expect(notesDraftIndex(anon, [{}, {}])).toBe(1)
     expect(notesDraftIndex(anon, [{}])).toBe(-1)
     expect(retargetNotesDraft(anon, [{}, {}], '')).toBe(anon)
+  })
+})
+
+describe('a notes draft while other people change the deck', () => {
+  it('follows its slide when slides come or go before it', () => {
+    const slides = deck('ppt/slides/slide9.xml', 'ppt/slides/slide1.xml', 'ppt/slides/slide2.xml')
+    expect(notesDraftAfterDeckChange(draft, slides)).toEqual({ ...draft, index: 2 })
+    const same = deck('ppt/slides/slide1.xml', 'ppt/slides/slide2.xml')
+    expect(notesDraftAfterDeckChange(draft, same)).toBe(draft)
+  })
+
+  it('is dropped when its slide is gone', () => {
+    expect(notesDraftAfterDeckChange(draft, deck('ppt/slides/slide1.xml'))).toBeNull()
+  })
+
+  it('is dropped when its part now holds another slide, though the name is still there', () => {
+    const slides = deck('ppt/slides/slide1.xml', 'ppt/slides/slide2.xml')
+    expect(notesDraftAfterDeckChange(draft, slides, ['ppt/slides/slide2.xml'])).toBeNull()
+    expect(notesDraftAfterDeckChange(draft, slides, ['ppt/slides/slide1.xml'])).toBe(draft)
+  })
+})
+
+describe('what the notes box shows once the stored notes were read', () => {
+  it('is the stored text when nothing is being typed for that slide', () => {
+    expect(notesShownAfterLoad(null, 1, 'stored')).toBe('stored')
+    expect(notesShownAfterLoad({ ...draft, index: 0 }, 1, 'stored')).toBe('stored')
+  })
+
+  it('is what the person typed for that slide since the read began', () => {
+    expect(notesShownAfterLoad(draft, 1, 'stored')).toBe('typing')
   })
 })

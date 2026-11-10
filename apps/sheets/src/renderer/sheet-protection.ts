@@ -429,11 +429,27 @@ const READ_ONLY_RIBBON_COMMANDS = [
   'formula-bar-toggle',
 ]
 
+/// What this page refuses beyond read-only and sheet protection. Co-editing
+/// (the web build) sets it: only edits that run as Univer mutations reach the
+/// other people, so a ribbon command, an executor operation (`op:<kind>`) or a
+/// direct edit (`direct:<what>`) that writes this page's own journal must not
+/// run there. It returns the reason to show, or null when `kind` may run.
+let editRefusalRule: ((kind: string) => string | null) | null = null
+
+export function setEditRefusalRule(rule: ((kind: string) => string | null) | null): void {
+  editRefusalRule = rule
+}
+
+/// The reason `kind` must not run on this page now; null when it may.
+export function editRefusal(kind: string): string | null {
+  return editRefusalRule?.(kind) ?? null
+}
+
 /// Whether a ribbon or context-menu command may run; in a read-only open
 /// everything else is an edit (or an edit dialog) the renderer journals
 /// itself, past the Univer command guard.
 export function ribbonCommandAllowed(readOnly: boolean, command: string): boolean {
-  if (!readOnly) return true
+  if (!readOnly) return editRefusal(command) === null
   return READ_ONLY_RIBBON_COMMANDS.some((allowed) =>
     allowed.endsWith(':') ? command.startsWith(allowed) : command === allowed,
   )
@@ -451,6 +467,8 @@ function writesWorkbook(
 ): boolean {
   if (event.type !== CommandType.MUTATION || event.id.startsWith('formula.')) return false
   if ((event.options as { fromFormula?: boolean } | undefined)?.fromFormula) return false
+  // co-editing applies everyone's confirmed edits, a viewer's page too
+  if ((event.options as { fromCollab?: boolean } | undefined)?.fromCollab) return false
   const unitId = (event.params as { unitId?: unknown } | undefined)?.unitId
   return unitId === runtime.univerAPI.getActiveWorkbook()?.getId()
 }

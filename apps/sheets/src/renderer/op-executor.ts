@@ -59,7 +59,11 @@ import {
 import { beginAgentWrite } from './ai/run-lock'
 import { aiBulkUndoGate, aiRunLock, journalSuppression } from './univer-state'
 import { isVeryHiddenSheet } from './very-hidden-sheets'
-import { effectiveSheetProtection, mergeSheetProtectionAllow } from './sheet-protection'
+import {
+  editRefusal,
+  effectiveSheetProtection,
+  mergeSheetProtectionAllow,
+} from './sheet-protection'
 import {
   hashSheetPassword,
   verifySheetPassword,
@@ -460,6 +464,11 @@ async function applyChangePlanNow(
     // throw would leave earlier ops committed.
     if (workbookStructureLocked(state) && plannedOps.some((op) => SHEET_LIFECYCLE_OPS.has(op.op))) {
       throw new Error(t('appWorkbookStructureLocked'))
+    }
+    // The same rule for what this page may not do at all now (sheet-protection.ts editRefusal)
+    for (const op of plannedOps) {
+      const refusal = editRefusal(`op:${op.op}`)
+      if (refusal !== null) throw new Error(refusal)
     }
     for (const op of plannedOps) await executeOp(op, run)
     setPendingEdits(journalSize(state.editJournal))

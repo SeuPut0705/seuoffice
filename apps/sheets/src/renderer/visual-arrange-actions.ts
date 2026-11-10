@@ -17,6 +17,7 @@ import {
   updateVisualAdd,
 } from './edit-journal'
 import { t } from './i18n/locale'
+import { editRefusal } from './sheet-protection'
 import {
   captureVisualJournal,
   projectVisualEdits,
@@ -110,6 +111,8 @@ export function handleVisualCommand(
   targetId?: string,
 ): boolean {
   if (!command.startsWith('visual:')) return false
+  // the context menu of a visual comes here without passing the ribbon gate
+  if (editRefusal(command) !== null) return true
   const [, group = '', argument = ''] = command.split(':')
   const runtime = ctx.univerRef.current
   const state = ctx.lazyWorkbookRef.current

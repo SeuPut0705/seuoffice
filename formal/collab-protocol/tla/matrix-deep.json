@@ -1,0 +1,5 @@
+{
+	"runs": [
+		{ "name": "deep-fixed-3clients-2ops-1cut-safety", "config": "MC_three.cfg", "constants": { "OpsPer": "2", "MaxCuts": "1" }, "expect": "pass", "tier": "deep", "workers": 8, "timeoutSec": 7200 }
+	]
+}

@@ -401,6 +401,7 @@ import { buildOcrBakeInserts } from './ocr-bake'
 import { planEditOps, reduceBucket } from './edit-ops'
 import type { Bucket, Op, OpContext, PlanResult } from './edit-ops'
 import { rectsNear } from './edit-state'
+import { keptMarkupMenu, keptSelection } from './kept-selection'
 import { usePanDrag } from './pan-drag'
 import { useDragEdgeScroll } from './thumb-drag-scroll'
 import type {
@@ -2826,6 +2827,16 @@ export default function App() {
 
   // ── Undo/redo: push a full snapshot before each change; consecutive input on the same form field coalesces into one step ──
 
+  // Set while the web page co-edits this document (apps/pdf/src/web/collab-adapter.ts)
+  const collabRef = useRef<{
+    refuse(ops: Op[]): PlanResult | null
+    blocks(
+      what: 'outline' | 'attachments' | 'protection' | 'redaction' | 'history' | 'fileOps',
+    ): boolean
+    changed(state: EditSnapshot): void
+    shownFile(): Promise<Uint8Array>
+  } | null>(null)
+
   // Ref-mirrored fields read the mirrors so a pushUndo later in an AI turn captures
   // the tools that ran before it, not the state this render closed over
   const snapshot = (): EditSnapshot => ({
@@ -2889,6 +2900,8 @@ export default function App() {
    * display metadata (validated bounds, ghost PNGs) are the only direct writes left.
    */
   const applyEditOps = (ops: Op[], opts?: { coalesceKey?: string }): PlanResult => {
+    const refused = collabRef.current?.refuse(ops)
+    if (refused) return refused
     const structuralIndex = ops.findIndex(
       (op) => op.op === 'rotatePages' || op.op === 'deletePage' || op.op === 'setPageOrder',
     )
@@ -2958,6 +2971,7 @@ export default function App() {
       metadataRef.current = reduce('metadata', metadataRef.current)
       setMetadata(metadataRef.current)
     }
+    collabRef.current?.changed(snapshot())
     return plan
   }
   /** Latest entry for async callbacks (bakes, validated AI edits): the closure they
@@ -2996,7 +3010,7 @@ export default function App() {
       },
     ])
 
-  const applySnapshot = (s: EditSnapshot) => {
+  const applySnapshot = (s: EditSnapshot, keepDrafts = false) => {
     markupsRef.current = s.markups
     formEditsRef.current = s.formEdits
     formWidgetEditsRef.current = s.formWidgetEdits
@@ -3021,41 +3035,81 @@ export default function App() {
     )
     setFreshFormFieldId((cur) => (cur && s.formFields.some((f) => f.id === cur) ? cur : null))
     updateImageEdits(() => s.imageEdits)
-    setTextDraft(null)
+    if (!keepDrafts) setTextDraft(null)
     // The comment being rewritten may not exist in the restored snapshot; confirming a
     // stale edit box would reapply text that undo just reverted
-    setNoteEditDraft(null)
+    if (!keepDrafts) setNoteEditDraft(null)
     setStampCfg(s.stampCfg)
     setFormEdits(s.formEdits)
     setRotations(s.rotations)
     setDeleted(s.deleted)
     setOrder(s.order)
     setMetadata(s.metadata)
-    // The selected annotation may no longer exist in the restored snapshot
-    setSelected(null)
-    setMarkupMenu(null)
+    // The selected annotation may no longer exist in the restored snapshot. Another person's
+    // change (keepDrafts) leaves a selection and a menu whose item is still there.
+    setSelected((cur) => (keepDrafts ? keptSelection(cur, s) : null))
+    setMarkupMenu((cur) => (keepDrafts ? keptMarkupMenu(cur, s) : null))
   }
 
   const undo = () => {
     const top = undoStack[undoStack.length - 1]
-    if (!top) return
+    if (!top || collabRef.current?.blocks('history')) return
     // Taken before applySnapshot rewrites the refs; the updater may run after it
     const cur = snapshot()
     setRedoStack((r) => [...r, cur])
     setUndoStack((u) => u.slice(0, -1))
     applySnapshot(top)
     coalesceKeyRef.current = null
+    collabRef.current?.changed(top)
   }
 
   const redo = () => {
     const top = redoStack[redoStack.length - 1]
-    if (!top) return
+    if (!top || collabRef.current?.blocks('history')) return
     const cur = snapshot()
     setUndoStack((u) => [...u, cur])
     setRedoStack((r) => r.slice(0, -1))
     applySnapshot(top)
     coalesceKeyRef.current = null
+    collabRef.current?.changed(top)
   }
+
+  // web co-editing: the session takes the edits once the document is on screen (absent on the
+  // desktop). It keeps the first handles it gets, so they call this render's functions through a ref.
+  const collabAppRef = useRef({ snapshot, applySnapshot, commitDrafts: () => {} })
+  collabAppRef.current = {
+    snapshot,
+    applySnapshot,
+    commitDrafts: () => {
+      commitTextDraft()
+      commitNoteEdit()
+    },
+  }
+  // While co-editing, every pending edit on this page is the session's: whether a stored file
+  // holds them all is the session's to say (null: not co-editing)
+  const [collabUnsaved, setCollabUnsaved] = useState<boolean | null>(null)
+  const unsavedShown = collabUnsaved ?? dirty
+  useEffect(() => {
+    if (status !== 'ready' || !doc) return
+    void window.seuCollab?.attach({
+      link: collabRef,
+      snapshot: () => collabAppRef.current.snapshot(),
+      show: (s: EditSnapshot) => {
+        stampRef.current = s.stampCfg
+        collabAppRef.current.applySnapshot(s, true)
+      },
+      mapHistory: (map: (s: EditSnapshot) => EditSnapshot) => {
+        setUndoStack((u) => u.map(map))
+        setRedoStack((r) => r.map(map))
+      },
+      // the opened file's pages: only a reload changes them, and a co-edited page never reloads
+      pageSizes: sizes,
+      password: () => diskPasswordRef.current,
+      notice: (text: string) => showNoticeRef.current(text),
+      unsaved: setCollabUnsaved,
+      commitDrafts: () => collabAppRef.current.commitDrafts(),
+    })
+  }, [status, doc, sizes])
 
   // ── Full-text search ──
 
@@ -5528,6 +5582,7 @@ export default function App() {
   }
 
   const addAttachment = async () => {
+    if (collabRef.current?.blocks('attachments')) return
     const picked = await window.pdfApi.pickAttachmentFile()
     if (!picked.ok) {
       if (!('cancelled' in picked)) showNotice(picked.reason)
@@ -5548,6 +5603,7 @@ export default function App() {
   }
 
   const toggleAttachmentRemove = (row: AttachmentRow): void => {
+    if (collabRef.current?.blocks('attachments')) return
     if (!row.saved) {
       setPendingAttachmentAdds((prev) => prev.filter((a) => a.name !== row.name))
       return
@@ -5750,7 +5806,9 @@ export default function App() {
       edits !== textEdits ||
       noteFlush.drawings !== drawings ||
       noteFlush.noteEdits !== noteEdits ||
-      ocrBakeInserts.length > 0
+      ocrBakeInserts.length > 0 ||
+      // web co-editing: the session holds edits no stored file has, whatever is pending here
+      collabUnsaved === true
     if (!anythingToSave || !filePath) return Promise.resolve(!anythingToSave)
     // Writing a protection with no owner password would hand ownership to
     // anyone, so a protection change with both passwords empty is refused. An
@@ -7653,9 +7711,18 @@ export default function App() {
   }
 
   /** Extract/insert work on the file on disk — flush unsaved changes first; undefined = the save failed */
-  const flushThen = async <T,>(fn: () => Promise<T>): Promise<T | undefined> => {
+  // `onShown`: the work reads the file through collabRef's shownFile when co-editing
+  const flushThen = async <T,>(fn: () => Promise<T>, onShown = false): Promise<T | undefined> => {
     if (redactions.length > 0) {
       opFailed(t('redactStructureBlocked'))
+      return undefined
+    }
+    // web co-editing: a save leaves the edits pending and the page never reloads from a stored
+    // file, so nothing is flushed. Work on the file as this page shows it goes on; the rest is
+    // refused with a message.
+    if (collabRef.current) {
+      if (onShown) return fn()
+      collabRef.current.blocks('fileOps')
       return undefined
     }
     if (dirty && !(await save(false, true))) return undefined
@@ -7935,7 +8002,8 @@ export default function App() {
       await flushThen(async () => {
         setPrinting(true)
         try {
-          const data = await window.pdfApi.readFile(filePath)
+          const data =
+            (await collabRef.current?.shownFile()) ?? (await window.pdfApi.readFile(filePath))
           const pdoc = await getDocument({ data: new Uint8Array(data), ...DOC_OPTS }).promise
           try {
             await printPdf(pdoc, pages, { includeAnnotations })
@@ -7947,7 +8015,7 @@ export default function App() {
         } finally {
           setPrinting(false)
         }
-      })
+      }, true)
     } finally {
       printBusyRef.current = false
     }
@@ -8417,6 +8485,7 @@ export default function App() {
   }
 
   const startBookmarkEdit = (): void => {
+    if (collabRef.current?.blocks('outline')) return
     // A committed (unsaved) tree reopens as is; the file's outline is only the
     // starting point when nothing is pending
     if (pendingOutline?.tree) {
@@ -9440,6 +9509,7 @@ export default function App() {
     ownerPassword: string
     permissions: PdfPermissions
   }): void => {
+    if (collabRef.current?.blocks('protection')) return setProtectionDlg(false)
     if (!mayChangeProtection(readOnly, diskLock)) {
       showNotice(t('pwOwnerNeeded'))
       setProtectionDlg(false)
@@ -9456,6 +9526,7 @@ export default function App() {
   }
 
   const removeProtection = (): void => {
+    if (collabRef.current?.blocks('protection')) return setProtectionDlg(false)
     if (!mayChangeProtection(readOnly, diskLock)) {
       showNotice(t('pwOwnerNeeded'))
       setProtectionDlg(false)
@@ -9673,7 +9744,7 @@ export default function App() {
             className="qa-btn"
             data-tip={`${t('save')} (${platformShortcuts('⌘S')})`}
             aria-label={t('save')}
-            disabled={!dirty || saveState === 'saving'}
+            disabled={!unsavedShown || saveState === 'saving'}
             onClick={() => void save()}
           >
             <IconSave />
@@ -9750,7 +9821,7 @@ export default function App() {
           {saveState === 'saving' ? (
             <span className="tb-save-pending">{t('saving')}</span>
           ) : (
-            dirty &&
+            unsavedShown &&
             saveState !== 'error' && <span className="tb-save-pending">{t('unsaved')}</span>
           )}
           {saveState === 'error' && (
@@ -12438,6 +12509,7 @@ export default function App() {
                                 marks={redactions.filter((mark) => mark.pageIndex === origIdx)}
                                 markLabel={t('redact')}
                                 onCommit={(rect) =>
+                                  !collabRef.current?.blocks('redaction') &&
                                   setRedactions((prev) => [
                                     ...prev,
                                     { id: newId(), pageIndex: origIdx, rect },

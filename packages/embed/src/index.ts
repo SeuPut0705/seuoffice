@@ -16,7 +16,19 @@
  * the gateway, and streams the answer back as `ai_chunk` bytes, then
  * `ai_end`, or `ai_error` (with the HTTP status for a non-2xx answer).
  * `ai_cancel` aborts that request; `destroy()` aborts every request.
+ *
+ * With `collab`, the `open` message says the host relays co-editing. The
+ * page's `collab_connect` makes this side call `collab.connect()` and pipe
+ * that socket: `collab_open`, `collab_frame` both ways (unchanged), and
+ * `collab_close`; `collab_disconnect` and `destroy()` close it. A collab
+ * `save` carries `collabVersion`, the exact version its bytes hold. A page
+ * whose `ready` says it cannot co-edit gets no `open`: `opened` rejects with
+ * `collab_unavailable`.
  */
+
+import { createCollabPipe, type CollabRelay } from './collab'
+
+export type { CollabRelay, CollabStatus, WebSocketLike } from './collab'
 
 export type SeuofficeApp = 'docs' | 'sheets' | 'slides' | 'pdf' | 'hwp'
 
@@ -38,8 +50,18 @@ export function appForFileName(fileName: string): SeuofficeApp | null {
 
 export const MAX_EMBED_BYTES = 50 * 1024 * 1024
 
+/**
+ * `collab_unavailable`: the page cannot co-edit this file (too large to load
+ * whole, an edit kind it cannot sync). The host opens it again without
+ * `collab`, under its edit lock.
+ */
 export type EmbedErrorCode =
-  'unsupported_format' | 'too_large' | 'open_failed' | 'timeout' | 'save_failed'
+  | 'unsupported_format'
+  | 'too_large'
+  | 'open_failed'
+  | 'timeout'
+  | 'save_failed'
+  | 'collab_unavailable'
 
 export class SeuofficeEmbedError extends Error {
   readonly code: EmbedErrorCode
@@ -79,25 +101,61 @@ export interface SavedFile {
   bytes: Uint8Array
 }
 
-export interface ViewOptions extends BaseOpenOptions {
-  mode?: 'view'
+/** A co-edited document the page saved: `bytes` hold exactly version `version` */
+export interface CollabSavedFile extends SavedFile {
+  version: number
 }
 
-export interface EditOptions extends BaseOpenOptions {
-  /** open for editing; the host holds the edit lock for this document */
+export interface ViewOptions extends BaseOpenOptions {
+  mode?: 'view'
+  /** relay co-editing frames between the page and the host's socket */
+  collab?: CollabRelay
+}
+
+interface EditOptionsBase extends BaseOpenOptions {
+  /** open for editing; without `collab` the host holds the edit lock for this document */
   mode: 'edit'
-  /** store the saved bytes; resolve when stored, reject with the reason it was not */
-  onSave: (file: SavedFile) => Promise<void>
   /** called when the page gains or loses unsaved changes */
   onDirtyChange?: (dirty: boolean) => void
 }
 
+export interface LockedEditOptions extends EditOptionsBase {
+  collab?: undefined
+  /** store the saved bytes; resolve when stored, reject with the reason it was not */
+  onSave: (file: SavedFile) => Promise<void>
+}
+
+export interface CollabEditOptions extends EditOptionsBase {
+  /** relay co-editing frames between the page and the host's socket */
+  collab: CollabRelay
+  /** store the saved bytes of `version`; resolve when stored, reject with the reason it was not */
+  onSave: (file: CollabSavedFile) => Promise<void>
+}
+
+export type EditOptions = LockedEditOptions | CollabEditOptions
+
 export type OpenOptions = ViewOptions | EditOptions
+
+/** Options that ask for co-editing, in either mode */
+export type CollabOpenOptions = (ViewOptions & { collab: CollabRelay }) | CollabEditOptions
+
+/** A file of exactly what the page shows; it holds no version */
+export interface LocalFile {
+  fileName: string
+  bytes: Uint8Array
+}
 
 export interface EmbeddedDocument {
   readonly iframe: HTMLIFrameElement
   /** settles once the document is on screen, or rejects with SeuofficeEmbedError */
   readonly opened: Promise<void>
+  /**
+   * Whether the page can co-edit this document, from its `ready`. False when
+   * the page cannot (or never answered); with `collab` given, `opened` then
+   * rejects with `collab_unavailable`: destroy this document and open it again
+   * without `collab`, under the edit lock.
+   */
+  readonly collabCapable: Promise<boolean>
   /**
    * Ask the page to save now; settles after `onSave` stored the bytes.
    * Rejects with `save_failed` in view mode, before the document opened, or
@@ -107,10 +165,26 @@ export interface EmbeddedDocument {
   destroy(): void
 }
 
+export interface CollabEmbeddedDocument extends EmbeddedDocument {
+  /**
+   * The file of what this person's page shows, for when the session ended
+   * (`diverged`, `failed`) or they are offline. It has no version: offer it
+   * as a download or a copy, never store it over the document. Never calls
+   * `onSave`. Rejects with `save_failed` when the page refused or did not
+   * answer in time, or the document is not open.
+   */
+  exportLocal(): Promise<LocalFile>
+}
+
 const SOURCE = 'seuoffice'
 const VERSION = 1
 
-export function openDocument(container: HTMLElement, options: OpenOptions): EmbeddedDocument {
+export function openDocument(
+  container: HTMLElement,
+  options: CollabOpenOptions,
+): CollabEmbeddedDocument
+export function openDocument(container: HTMLElement, options: OpenOptions): EmbeddedDocument
+export function openDocument(container: HTMLElement, options: OpenOptions): CollabEmbeddedDocument {
   const iframe = container.ownerDocument.createElement('iframe')
   const app = appForFileName(options.fileName)
   const refusal = !app
@@ -128,7 +202,9 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
     return {
       iframe,
       opened,
+      collabCapable: Promise.resolve(false),
       save: () => Promise.reject(notSaved('the document did not open')),
+      exportLocal: () => Promise.reject(notSaved('the document did not open')),
       destroy: () => iframe.remove(),
     }
   }
@@ -163,6 +239,17 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
   >()
   // in-flight AI requests by the page's request id; aborting one ends its host fetch
   const aiRequests = new Map<string, AbortController>()
+  let nextExportId = 1
+  const exportRequests = new Map<
+    string,
+    {
+      resolve: (file: LocalFile) => void
+      reject: (error: SeuofficeEmbedError) => void
+      timer: ReturnType<typeof setTimeout>
+    }
+  >()
+  let collabAnswer!: (capable: boolean) => void
+  const collabCapable = new Promise<boolean>((resolve) => (collabAnswer = resolve))
   const post = (message: Record<string, unknown>, transfer: Transferable[] = []): void => {
     iframe.contentWindow?.postMessage(
       { source: SOURCE, version: VERSION, ...message },
@@ -176,14 +263,25 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
     if (error) reject(error)
     else resolve()
   }
+  // exists only when the host relays co-editing: without it no collab message is ever sent
+  const collabPipe = options.collab ? createCollabPipe(options.collab, post) : undefined
 
   const onMessage = (event: MessageEvent): void => {
     if (event.source !== iframe.contentWindow || event.origin !== base.origin) return
     const data = event.data as Record<string, unknown> | null
     if (!data || data.source !== SOURCE || data.version !== VERSION) return
     if (data.type === 'ready' && !sent) {
+      if (options.collab && data.collab !== true) {
+        // this app has no co-editing: opening it would give this person a private copy
+        collabAnswer(false)
+        settle(
+          new SeuofficeEmbedError('collab_unavailable', 'this page cannot co-edit the document'),
+        )
+        return
+      }
       sent = true
       clearTimeout(timer)
+      collabAnswer(data.collab === true)
       // an exact fresh copy: a view's slice() may share its backing buffer (Buffer#slice does)
       const source =
         options.bytes instanceof ArrayBuffer
@@ -200,6 +298,7 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
           fileName: options.fileName,
           bytes,
           ai: options.ai !== undefined,
+          collab: options.collab !== undefined,
         },
         base.origin,
         [bytes],
@@ -235,18 +334,33 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
     } else if (data.type === 'ai_cancel' && typeof data.requestId === 'string') {
       aiRequests.get(data.requestId)?.abort()
       aiRequests.delete(data.requestId)
+    } else if (data.type === 'collab_export_done' && typeof data.requestId === 'string') {
+      const request = exportRequests.get(data.requestId)
+      if (!request) return
+      exportRequests.delete(data.requestId)
+      clearTimeout(request.timer)
+      if (
+        data.ok === true &&
+        typeof data.fileName === 'string' &&
+        data.bytes instanceof ArrayBuffer
+      )
+        request.resolve({ fileName: data.fileName, bytes: new Uint8Array(data.bytes) })
+      else request.reject(notSaved(String(data.message ?? 'the page did not export the document')))
+    } else if (sent && typeof data.type === 'string' && data.type.startsWith('collab_')) {
+      collabPipe?.onPageMessage(data)
     }
   }
 
   view.addEventListener('message', onMessage)
-  const timer = setTimeout(
-    () => settle(new SeuofficeEmbedError('timeout', 'the seuoffice page did not answer in time')),
-    options.readyTimeoutMs ?? 30000,
-  )
+  const timer = setTimeout(() => {
+    collabAnswer(false)
+    settle(new SeuofficeEmbedError('timeout', 'the seuoffice page did not answer in time'))
+  }, options.readyTimeoutMs ?? 30000)
   container.appendChild(iframe)
   return {
     iframe,
     opened,
+    collabCapable,
     save: () => {
       if (mode !== 'edit') return Promise.reject(notSaved('the document was opened for viewing'))
       if (!shown) return Promise.reject(notSaved('the document is not open yet'))
@@ -257,14 +371,36 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
       post({ type: 'request_save', requestId })
       return done
     },
+    exportLocal: () => {
+      if (!options.collab)
+        return Promise.reject(notSaved('the document was opened without co-editing'))
+      if (!shown) return Promise.reject(notSaved('the document is not open yet'))
+      const requestId = String(nextExportId++)
+      const done = new Promise<LocalFile>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          exportRequests.delete(requestId)
+          reject(notSaved('the page did not export the document in time'))
+        }, options.collab?.exportTimeoutMs ?? 60000)
+        exportRequests.set(requestId, { resolve, reject, timer })
+      })
+      post({ type: 'collab_export', requestId })
+      return done
+    },
     destroy: () => {
       view.removeEventListener('message', onMessage)
       clearTimeout(timer)
       for (const request of saveRequests.values())
         request.reject(notSaved('the document was closed'))
       saveRequests.clear()
+      for (const request of exportRequests.values()) {
+        clearTimeout(request.timer)
+        request.reject(notSaved('the document was closed'))
+      }
+      exportRequests.clear()
       for (const controller of aiRequests.values()) controller.abort()
       aiRequests.clear()
+      collabPipe?.close()
+      collabAnswer(false)
       iframe.remove()
     },
   }
@@ -279,7 +415,11 @@ async function store(
   if (typeof saveId !== 'number' || !(data.bytes instanceof ArrayBuffer)) return
   try {
     // the page saves under the name it opened; a different name is not this document
-    await options.onSave({ fileName: options.fileName, bytes: new Uint8Array(data.bytes) })
+    const file = { fileName: options.fileName, bytes: new Uint8Array(data.bytes) }
+    if (!options.collab) await options.onSave(file)
+    else if (typeof data.collabVersion === 'number')
+      await options.onSave({ ...file, version: data.collabVersion })
+    else throw new Error('the page saved a co-edited document without its version')
     post({ type: 'saved', saveId })
   } catch (error) {
     post({
@@ -375,5 +515,10 @@ function notSaved(message: string): SeuofficeEmbedError {
 }
 
 function isPageErrorCode(code: unknown): code is EmbedErrorCode {
-  return code === 'unsupported_format' || code === 'too_large' || code === 'open_failed'
+  return (
+    code === 'unsupported_format' ||
+    code === 'too_large' ||
+    code === 'open_failed' ||
+    code === 'collab_unavailable'
+  )
 }

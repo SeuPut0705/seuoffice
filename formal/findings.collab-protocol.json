@@ -1,0 +1,750 @@
+{
+	"concern": "collab-protocol",
+	"workflow": "W6",
+	"generated_at": "2026-11-10T16:01:31.957338+00:00",
+	"summary": "The co-editing code at 2a5d2d8 (packages/collab with the page link and host relay; the fixes landed in 97d1fea) keeps every edit in the log exactly once, in one order, and loses none: all five frozen properties hold for 2 clients x 2 ops x 2 cuts (470,001 states), with late frames reaching the store (812,881 states), for 3 clients x 1 op x 2 cuts with liveness (1,161,825 states), and, safety and quiet-state P4, for 3 clients x 2 ops x 1 cut (90,240,507 states). The design as written still fails P4 in two ways (F1, F2); both are fixed in the code and pinned by scenarios. The drift step found no new violation.",
+	"scope": {
+		"modeled": [
+			"Server (decide.ts, server.ts, store.ts at 2a5d2d8): compare-and-append with the (client, seq) duplicate check first; the attempt fence on resume hellos; welcome plus catch-up; superseding the client's other live sockets; ignoring closed sockets; ack to the sender, change to every other live socket",
+			"Engine (engine.ts): confirmed, one in-flight {seq, base, ops, doomed}, pending, nextSeq, the connection count sent as attempt; chunked submits (a prefix of pending); ack, change and stale rules with their protocol-error branches; reconnect, catch-up, resend or drop of the in-flight",
+			"Link (collab-link.ts, embed collab.ts): the connectId fence, so frames of a given-up socket never reach the engine",
+			"Environment: per-connection in-order channels; a cut at any moment loses undelivered frames toward the client; frames the client sent on a cut connection may reach the server later or never; concurrent submits"
+		],
+		"abstracted": [
+			"Ops are opaque ids; integrate keeps ids and order (no rebasing semantics)",
+			"A change frame carries only its version; the client reads the immutable log[v]",
+			"Welcome plus the whole catch-up is one server step; decideSubmit plus store.append is one server step",
+			"Backoff is fairness, not time; only the current connection keeps a server-to-client queue"
+		],
+		"out_of_scope": [
+			"Initial join (need_base, base, hello without resume), epoch reset and drop",
+			"save / saved / held changes, fingerprint, diverged, peers, canEdit = false, too_large, schema_mismatch",
+			"Single frames dropped or duplicated inside an open connection; frames of a closed socket reaching the engine",
+			"Two engines sharing a client id; page reloads; a non-atomic store; adapter transforms and exceptions",
+			"waitFor and held as variables (StaleAfterCatchUp shows waitFor never blocks; held needs save or a late attach)",
+			"store failures, the protocol-strike limit, a durable store"
+		],
+		"assumptions": [
+			"A1: store.append is atomic per document and frames of a document are handled one at a time (memoryStore has no await in append; enqueue chains every frame); a durable store must keep this",
+			"A2: welcome and the whole catch-up go out before any live change on that socket (same chained task)",
+			"A3: frames of a closed link never reach the engine and vice versa: enforced by the connectId fence in collab-link.ts and embed collab.ts; another CollabLink must keep it",
+			"A4: a connection is in order and never drops or duplicates single frames without closing",
+			"A5: integrate keeps the op ids of local, in order",
+			"A6: one epoch, canEdit everywhere, no save, export or fingerprint, editor attached, store never fails; clients start welcomed at version 0",
+			"A7: one engine per client id",
+			"A8: MC_late (old sockets never closed, no fence) stands for a second server process sharing the store or a close the server has not noticed"
+		]
+	},
+	"properties": [
+		{
+			"name": "P1_NoOpTwice",
+			"kind": "invariant",
+			"statement": "LET f == FlatOps(log) IN \\A i, j \\in DOMAIN f : i < j => f[i] # f[j]",
+			"meaning": "No op id is in the log twice.",
+			"source": "Promise; design invariant 2",
+			"frozen": true,
+			"result": "holds",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "MC.cfg (470,001 distinct states, 1,412,439 generated, depth 40), MC_late.cfg (812,881 distinct states, 2,545,805 generated, depth 42), MC_three_live.cfg (1,161,825 distinct states, 4,030,351 generated, depth 38); code at 2a5d2d8",
+			"evidence": "formal/collab-protocol/evidence/matrix.log"
+		},
+		{
+			"name": "P2_ConfirmedIsLogPrefix",
+			"kind": "invariant",
+			"statement": "\\A c : confirmed[c] <= Len(log) /\\ Len(view[c]) = confirmed[c] /\\ \\A v \\in 1..confirmed[c] : view[c][v] = log[v].ops",
+			"meaning": "Each client's confirmed document is exactly the first `confirmed` changes of the log, in log order.",
+			"source": "Promise; design section 2 and invariant 4",
+			"frozen": true,
+			"result": "holds",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "MC.cfg (470,001 distinct states, 1,412,439 generated, depth 40), MC_late.cfg (812,881 distinct states, 2,545,805 generated, depth 42), MC_three_live.cfg (1,161,825 distinct states, 4,030,351 generated, depth 38); code at 2a5d2d8",
+			"evidence": "formal/collab-protocol/evidence/matrix.log"
+		},
+		{
+			"name": "P3_ConfirmedOpsInLog",
+			"kind": "invariant",
+			"statement": "\\A c : \\A v \\in DOMAIN view[c] : Range(view[c][v]) \\subseteq LogOps",
+			"meaning": "A client never treats as confirmed an op the server never ordered.",
+			"source": "Promise; design section 5",
+			"frozen": true,
+			"result": "holds",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "MC.cfg (470,001 distinct states, 1,412,439 generated, depth 40), MC_late.cfg (812,881 distinct states, 2,545,805 generated, depth 42), MC_three_live.cfg (1,161,825 distinct states, 4,030,351 generated, depth 38); code at 2a5d2d8",
+			"evidence": "formal/collab-protocol/evidence/matrix.log"
+		},
+		{
+			"name": "P4_NoOpLost",
+			"kind": "liveness",
+			"statement": "<>[]AllDone (AllDone: every client live, all ops made, no in-flight, nothing pending, at head, each own op in the log exactly once); fairness: \\A c : WF_vars(Fair(c))",
+			"meaning": "Once faults stop, every edit ends up in the log exactly once and every client is at head with nothing left.",
+			"source": "Promise; design sections 5 and 6",
+			"frozen": true,
+			"result": "holds",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "Clients={c1,c2}, OpsPer=2, MaxCuts=2, AttemptFence=TRUE, DoomedOnReconnect=\"drop\"; the same with SupersedeOnHello=FALSE and no fence; Clients={c1,c2,c3}, OpsPer=1, MaxCuts=2 (no symmetry)",
+			"evidence": "formal/collab-protocol/evidence/matrix.log"
+		},
+		{
+			"name": "P4_QuietIsDone",
+			"kind": "invariant",
+			"statement": "Quiet => AllDone (Quiet: no guaranteed step enabled for any client)",
+			"meaning": "The same at every state where nothing guaranteed is left to do.",
+			"source": "Promise; design sections 5 and 6",
+			"frozen": true,
+			"result": "holds",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "MC.cfg (470,001 distinct states, 1,412,439 generated, depth 40), MC_late.cfg (812,881 distinct states, 2,545,805 generated, depth 42), MC_three_live.cfg (1,161,825 distinct states, 4,030,351 generated, depth 38); MC_three.cfg (194,167 distinct states, 674,103 generated, depth 38, symmetry)",
+			"evidence": "formal/collab-protocol/evidence/matrix.log"
+		},
+		{
+			"name": "P4_NoOpLost (design as written: hello)",
+			"kind": "liveness",
+			"statement": "<>[]AllDone",
+			"meaning": "With FenceHello = FALSE (section 4 as written) P4 fails: finding F1.",
+			"source": "Design section 4",
+			"frozen": false,
+			"result": "violated",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "Clients={c1,c2}, OpsPer=1, MaxCuts=2, SupersedeOnHello=TRUE, AttemptFence=FALSE",
+			"evidence": "formal/collab-protocol/evidence/tlc/CollabProtocol-MC_F1_live.log"
+		},
+		{
+			"name": "P4_QuietIsDone (design as written: hello)",
+			"kind": "invariant",
+			"statement": "Quiet => AllDone",
+			"meaning": "Finding F1, shortest trace (13 states).",
+			"source": "Design section 4",
+			"frozen": false,
+			"result": "violated",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "Clients={c1,c2}, OpsPer=1, MaxCuts=2, AttemptFence=FALSE",
+			"evidence": "formal/collab-protocol/evidence/F1.json"
+		},
+		{
+			"name": "P4_QuietIsDone (design as written: doomed in-flight)",
+			"kind": "invariant",
+			"statement": "Quiet => AllDone",
+			"meaning": "With DoomedOnReconnect = \"keep\" (section 5 read literally) P4 fails: finding F2, shortest trace (13 states).",
+			"source": "Design section 5",
+			"frozen": false,
+			"result": "violated",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "Clients={c1,c2}, OpsPer=1, MaxCuts=1, DoomedOnReconnect=\"keep\"",
+			"evidence": "formal/collab-protocol/evidence/F2.json"
+		},
+		{
+			"name": "P5_InflightChangesOnlyAfterProof",
+			"kind": "action-property",
+			"statement": "[][\\A c : \\A y \\in copies'[c] \\ copies[c] : \\A x \\in copies[c] : x.s = y.s => Dead(c, x)]_vars",
+			"meaning": "A submit that reuses a seq with other base or ops is sent only when the earlier one can never be appended.",
+			"source": "Design invariant 5",
+			"frozen": true,
+			"result": "holds",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "MC.cfg (470,001 distinct states, 1,412,439 generated, depth 40), MC_late.cfg (812,881 distinct states, 2,545,805 generated, depth 42), MC_three_live.cfg (1,161,825 distinct states, 4,030,351 generated, depth 38); code at 2a5d2d8",
+			"evidence": "formal/collab-protocol/evidence/matrix.log"
+		},
+		{
+			"name": "P1, P2, P3, P5 (design exactly as written)",
+			"kind": "invariant",
+			"statement": "see above",
+			"meaning": "Safety holds for the unmodified design: the findings lose edits, they never duplicate or reorder them.",
+			"source": "Design sections 2, 4, 5",
+			"frozen": false,
+			"result": "holds",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "Clients={c1,c2}, OpsPer=2, MaxCuts=2, AttemptFence=FALSE, DoomedOnReconnect=\"keep\": 538,917 distinct states, 1,575,801 generated, depth 40",
+			"evidence": "formal/collab-protocol/evidence/tlc/CollabProtocol-MC_asis_safety.log"
+		},
+		{
+			"name": "ServerInv2_ClientSeqOnce (replayed seq)",
+			"kind": "invariant",
+			"statement": "\\A v, w \\in 1..Len(log) : v < w => ~(log[v].c = log[w].c /\\ log[v].s = log[w].s)",
+			"meaning": "Design invariant 2 against an engine that replays an appended seq with the current head as base; every frozen safety property is checked in the same run.",
+			"source": "Design section 2",
+			"frozen": false,
+			"result": "holds",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "Clients={c1,c2}, OpsPer=2, MaxCuts=1, RogueClients: 795,026 distinct states, 3,748,435 generated, depth 40",
+			"evidence": "formal/collab-protocol/evidence/tlc/CollabProtocol-MC_rogue.log"
+		},
+		{
+			"name": "P1, P2, P3, P4_QuietIsDone, P5 (deep tier)",
+			"kind": "invariant",
+			"statement": "see above",
+			"meaning": "The frozen safety properties and the quiet-state form of P4 with three clients making two edits each.",
+			"source": "Promise; design sections 2, 4, 5",
+			"frozen": true,
+			"result": "holds",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "Clients={c1,c2,c3}, OpsPer=2, MaxCuts=1, code at 2a5d2d8, symmetry, 8 workers: 90,240,507 distinct states, 281,013,597 generated, depth 69, 3,699 s",
+			"evidence": "formal/collab-protocol/evidence/matrix-deep.log"
+		},
+		{
+			"name": "AcksCovered, HelloAnsweredFirst (drift step)",
+			"kind": "invariant",
+			"statement": "see CollabProtocol.tla, derived checks",
+			"meaning": "The engine error branches for an unexpected ack and for frames before welcome never fire.",
+			"source": "engine.ts:414-422, 505",
+			"frozen": false,
+			"result": "holds",
+			"tool": "TLC2 2026.10.28.014557",
+			"bounds": "MC.cfg (470,001 distinct states, 1,412,439 generated, depth 40), MC_late.cfg (812,881 distinct states, 2,545,805 generated, depth 42), MC_three_live.cfg (1,161,825 distinct states, 4,030,351 generated, depth 38)",
+			"evidence": "formal/collab-protocol/evidence/matrix.log"
+		}
+	],
+	"findings": [
+		{
+			"id": "F1",
+			"title": "A late hello from a dead connection supersedes the live socket",
+			"severity": "medium",
+			"status": "fixed",
+			"property": "P4_QuietIsDone",
+			"story": "Design as written: client c2 drops (cut 1) and reconnects on connection 2 with hello {resume}. Connection 2 drops too before the server has read that hello (cut 2). c2 reconnects on connection 3. The server reads connection 3's hello first and welcomes it; then connection 2's hello arrives and, read as 'the second hello closes the older socket', supersedes the live connection 3. c2 fails with its edits unconfirmed (P4). The first code closed the socket accepted earlier, which behind a proxy that accepts connections out of order is the same bug. Fix in 97d1fea (unchanged at 2a5d2d8): hello.resume.attempt is the engine's connection count (engine.ts:286,295); decideHello answers superseded on that socket only when resume.attempt is below the highest attempt welcomed for the client (decide.ts:61-64), and welcome records the attempt (server.ts:403). The page link's connectId fence keeps that superseded away from the engine. The model now has exactly this rule (AttemptFence, welcomed); the as-written variant stays in the matrix and must fail. Reproduction: the scenario failing on the accept-order code is as reported by the implementer; this drift step ran the scenario only at HEAD, where it passes.",
+			"trace": [
+				{
+					"step": 1,
+					"action": "Init",
+					"changed": {
+						"phase": "(c1 :> \"live\" @@ c2 :> \"live\")",
+						"made": "(c1 :> 0 @@ c2 :> 0)",
+						"log": "<<>>",
+						"conn": "(c1 :> 1 @@ c2 :> 1)",
+						"confirmed": "(c1 :> 0 @@ c2 :> 0)",
+						"view": "(c1 :> <<>> @@ c2 :> <<>>)",
+						"welcomed": "(c1 :> 0 @@ c2 :> 0)",
+						"open": "(c1 :> {1} @@ c2 :> {1})",
+						"copies": "(c1 :> {} @@ c2 :> {})",
+						"pending": "(c1 :> <<>> @@ c2 :> <<>>)",
+						"inflight": "( c1 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )",
+						"c2s": "(c1 :> <<<<>>, <<>>, <<>>>> @@ c2 :> <<<<>>, <<>>, <<>>>>)",
+						"cuts": "0",
+						"nextSeq": "(c1 :> 1 @@ c2 :> 1)",
+						"s2c": "(c1 :> <<>> @@ c2 :> <<>>)",
+						"catchHead": "(c1 :> 0 @@ c2 :> 0)"
+					}
+				},
+				{
+					"step": 2,
+					"action": "MakeOp(c1)",
+					"code": "packages/collab/src/client/engine.ts:325-331",
+					"changed": {
+						"made": "(c1 :> 0 @@ c2 :> 0) -> (c1 :> 1 @@ c2 :> 0)",
+						"pending": "(c1 :> <<>> @@ c2 :> <<>>) -> (c1 :> <<<<c1, 1>>>> @@ c2 :> <<>>)"
+					},
+					"actor": "c1"
+				},
+				{
+					"step": 3,
+					"action": "SendNext(c1)",
+					"code": "packages/collab/src/client/engine.ts:578-603",
+					"changed": {
+						"copies": "(c1 :> {} @@ c2 :> {}) -> (c1 :> {[s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>]} @@ c2 :> {})",
+						"pending": "(c1 :> <<<<c1, 1>>>> @@ c2 :> <<>>) -> (c1 :> <<>> @@ c2 :> <<>>)",
+						"inflight": "( c1 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] ) -> ( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )",
+						"c2s": "(c1 :> <<<<>>, <<>>, <<>>>> @@ c2 :> <<<<>>, <<>>, <<>>>>) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>>, <<>> >> @@ c2 :> <<<<>>, <<>>, <<>>>> )"
+					},
+					"actor": "c1"
+				},
+				{
+					"step": 4,
+					"action": "Cut(c2)",
+					"code": "packages/web-platform/src/collab-link.ts:36-49, packages/embed/src/collab.ts:116-124, packages/collab/src/client/engine.ts:300-308",
+					"changed": {
+						"phase": "(c1 :> \"live\" @@ c2 :> \"live\") -> (c1 :> \"live\" @@ c2 :> \"offline\")",
+						"cuts": "0 -> 1"
+					},
+					"actor": "environment"
+				},
+				{
+					"step": 5,
+					"action": "Reconnect(c2)",
+					"code": "packages/collab/src/client/engine.ts:309-312, packages/collab/src/client/engine.ts:282-299",
+					"changed": {
+						"phase": "(c1 :> \"live\" @@ c2 :> \"offline\") -> (c1 :> \"live\" @@ c2 :> \"hello\")",
+						"conn": "(c1 :> 1 @@ c2 :> 1) -> (c1 :> 1 @@ c2 :> 2)",
+						"c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>>, <<>> >> @@ c2 :> <<<<>>, <<>>, <<>>>> ) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>>, <<>> >> @@ c2 :> << <<>>, <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 2]>>, <<>> >> )"
+					},
+					"actor": "c2"
+				},
+				{
+					"step": 6,
+					"action": "Cut(c2)",
+					"code": "packages/web-platform/src/collab-link.ts:36-49, packages/embed/src/collab.ts:116-124, packages/collab/src/client/engine.ts:300-308",
+					"changed": {
+						"phase": "(c1 :> \"live\" @@ c2 :> \"hello\") -> (c1 :> \"live\" @@ c2 :> \"offline\")",
+						"cuts": "1 -> 2"
+					},
+					"actor": "environment"
+				},
+				{
+					"step": 7,
+					"action": "Reconnect(c2)",
+					"code": "packages/collab/src/client/engine.ts:309-312, packages/collab/src/client/engine.ts:282-299",
+					"changed": {
+						"phase": "(c1 :> \"live\" @@ c2 :> \"offline\") -> (c1 :> \"live\" @@ c2 :> \"hello\")",
+						"conn": "(c1 :> 1 @@ c2 :> 2) -> (c1 :> 1 @@ c2 :> 3)",
+						"c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>>, <<>> >> @@ c2 :> << <<>>, <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 2]>>, <<>> >> ) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>>, <<>> >> @@ c2 :> << <<>>, <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 2]>>, << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 3 ] >> >> )"
+					},
+					"actor": "c2"
+				},
+				{
+					"step": 8,
+					"action": "SrvHello(c2,3)",
+					"code": "packages/collab/src/server/decide.ts:58-73, packages/collab/src/server/server.ts:352-364, packages/collab/src/server/server.ts:391-426, packages/collab/src/server/server.ts:429-444, packages/collab/src/server/server.ts:300-304",
+					"changed": {
+						"welcomed": "(c1 :> 0 @@ c2 :> 0) -> (c1 :> 0 @@ c2 :> 3)",
+						"open": "(c1 :> {1} @@ c2 :> {1}) -> (c1 :> {1} @@ c2 :> {3})",
+						"c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>>, <<>> >> @@ c2 :> << <<>>, <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 2]>>, << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 3 ] >> >> ) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>>, <<>> >> @@ c2 :> << <<>>, <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 2]>>, <<>> >> )",
+						"s2c": "(c1 :> <<>> @@ c2 :> <<>>) -> ( c1 :> <<>> @@ c2 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"welcome\", v |-> 0, h |-> 0]>> )"
+					},
+					"actor": "server (c2)"
+				},
+				{
+					"step": 9,
+					"action": "RecvWelcome(c2)",
+					"code": "packages/collab/src/client/engine.ts:447-467",
+					"changed": {
+						"phase": "(c1 :> \"live\" @@ c2 :> \"hello\") -> (c1 :> \"live\" @@ c2 :> \"catchup\")",
+						"s2c": "( c1 :> <<>> @@ c2 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"welcome\", v |-> 0, h |-> 0]>> ) -> (c1 :> <<>> @@ c2 :> <<>>)"
+					},
+					"actor": "c2"
+				},
+				{
+					"step": 10,
+					"action": "SrvHello(c2,2)",
+					"code": "packages/collab/src/server/decide.ts:58-73, packages/collab/src/server/server.ts:352-364, packages/collab/src/server/server.ts:391-426, packages/collab/src/server/server.ts:429-444, packages/collab/src/server/server.ts:300-304",
+					"changed": {
+						"welcomed": "(c1 :> 0 @@ c2 :> 3) -> (c1 :> 0 @@ c2 :> 2)",
+						"open": "(c1 :> {1} @@ c2 :> {3}) -> (c1 :> {1} @@ c2 :> {2})",
+						"c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>>, <<>> >> @@ c2 :> << <<>>, <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 2]>>, <<>> >> ) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>>, <<>> >> @@ c2 :> <<<<>>, <<>>, <<>>>> )",
+						"s2c": "(c1 :> <<>> @@ c2 :> <<>>) -> ( c1 :> <<>> @@ c2 :> << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"superseded\", v |-> 0, h |-> 0 ] >> )"
+					},
+					"actor": "server (c2)"
+				},
+				{
+					"step": 11,
+					"action": "SrvSubmit(c1,1)",
+					"code": "packages/collab/src/server/decide.ts:88-99, packages/collab/src/server/store.ts:95-107, packages/collab/src/server/server.ts:463-507",
+					"changed": {
+						"log": "<<>> -> <<[s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, c |-> c1]>>",
+						"c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>>, <<>> >> @@ c2 :> <<<<>>, <<>>, <<>>>> ) -> (c1 :> <<<<>>, <<>>, <<>>>> @@ c2 :> <<<<>>, <<>>, <<>>>>)",
+						"s2c": "( c1 :> <<>> @@ c2 :> << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"superseded\", v |-> 0, h |-> 0 ] >> ) -> ( c1 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> @@ c2 :> << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"superseded\", v |-> 0, h |-> 0 ] >> )"
+					},
+					"actor": "server (c1)"
+				},
+				{
+					"step": 12,
+					"action": "RecvAck(c1)",
+					"code": "packages/collab/src/client/engine.ts:501-508",
+					"changed": {
+						"confirmed": "(c1 :> 0 @@ c2 :> 0) -> (c1 :> 1 @@ c2 :> 0)",
+						"view": "(c1 :> <<>> @@ c2 :> <<>>) -> (c1 :> <<<<<<c1, 1>>>>>> @@ c2 :> <<>>)",
+						"inflight": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] ) -> ( c1 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )",
+						"nextSeq": "(c1 :> 1 @@ c2 :> 1) -> (c1 :> 2 @@ c2 :> 1)",
+						"s2c": "( c1 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> @@ c2 :> << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"superseded\", v |-> 0, h |-> 0 ] >> ) -> ( c1 :> <<>> @@ c2 :> << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"superseded\", v |-> 0, h |-> 0 ] >> )"
+					},
+					"actor": "c1"
+				},
+				{
+					"step": 13,
+					"action": "RecvSuperseded(c2)",
+					"code": "packages/collab/src/client/engine.ts:431-432, packages/collab/src/client/engine.ts:631-643",
+					"changed": {
+						"phase": "(c1 :> \"live\" @@ c2 :> \"catchup\") -> (c1 :> \"live\" @@ c2 :> \"failed\")",
+						"s2c": "( c1 :> <<>> @@ c2 :> << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"superseded\", v |-> 0, h |-> 0 ] >> ) -> (c1 :> <<>> @@ c2 :> <<>>)"
+					},
+					"violation": true,
+					"actor": "c2"
+				}
+			],
+			"reproduction": {
+				"test": "packages/collab/tests/scenarios.test.ts::schedules found by the protocol model (formal/collab-protocol) F1: a late hello from a connection the client gave up does not evict its newer connection",
+				"result_before_fix": "fails",
+				"result_after_fix": "passes"
+			},
+			"fix": {
+				"summary": "Fence resume hellos by a per-client connection attempt number (hello.resume.attempt) instead of accept order.",
+				"diff": "decide.ts:61-64\n+    // The client opened a newer connection since this one, and the server already took it\n+    if (welcomed !== undefined && resume.attempt < welcomed) {\n+      return { kind: 'reject', code: 'superseded' }\n+    }\nserver.ts:403\n+    state.clients.set(client, { user: conn.principal.userId, attempt })",
+				"pr": "commit 97d1fea on feat/collab",
+				"model_recheck": "passes",
+				"mutation_check": "fails-as-expected"
+			},
+			"diagram": {
+				"nodes": [
+					{
+						"id": "c2",
+						"label": "engine c2 (edits unconfirmed)"
+					},
+					{
+						"id": "k2",
+						"label": "connection 2 (dropped; hello delayed)"
+					},
+					{
+						"id": "k3",
+						"label": "connection 3 (live)"
+					},
+					{
+						"id": "srv",
+						"label": "server: one socket per client id"
+					}
+				],
+				"edges": [
+					{
+						"from": "c2",
+						"to": "k2",
+						"label": "hello {resume}"
+					},
+					{
+						"from": "c2",
+						"to": "k3",
+						"label": "hello {resume}"
+					},
+					{
+						"from": "k3",
+						"to": "srv",
+						"label": "read first: welcome"
+					},
+					{
+						"from": "k2",
+						"to": "srv",
+						"label": "read late: supersedes connection 3"
+					},
+					{
+						"from": "srv",
+						"to": "c2",
+						"label": "error superseded: phase failed"
+					}
+				],
+				"highlight": [
+					"k2",
+					"k2->srv",
+					"srv->c2"
+				],
+				"steps": {
+					"k2": 5,
+					"k3": 7,
+					"srv": 10,
+					"c2": 13
+				}
+			},
+			"evidence": [
+				"formal/collab-protocol/evidence/F1.json",
+				"formal/collab-protocol/evidence/tlc/CollabProtocol-MC_F1.log",
+				"formal/collab-protocol/evidence/tlc/CollabProtocol-MC_F1_live.log",
+				"formal/collab-protocol/evidence/matrix.log",
+				"formal/collab-protocol/evidence/mutate.log",
+				"formal/collab-protocol/evidence/scenarios-F1-F2.log"
+			]
+		},
+		{
+			"id": "F2",
+			"title": "A doomed in-flight left over a reconnect blocks every later submit",
+			"severity": "high",
+			"status": "fixed",
+			"property": "P4_QuietIsDone",
+			"story": "Design as written: c1 submits {seq 1, base 0} and its link drops before any answer. c1 reconnects and is welcomed at head 0. c2's submit becomes version 1 and reaches c1 during catch-up as a foreign change, which dooms c1's in-flight. Section 5 says only what happens to an in-flight that is not doomed; the stale that would clear the doomed one went to the dead connection. With an in-flight present nothing is sent again, and c1's edit stays in pending (P4). The engine was written with the fix: caughtUp drops a doomed in-flight and the next submit reuses its seq (engine.ts:475). The design-as-written variant (DoomedOnReconnect = \"keep\") stays in the matrix and must fail. Reproduction: no engine without the fix ever existed, so there is no failing run; the scenario drives the F2 schedule and passes at HEAD.",
+			"trace": [
+				{
+					"step": 1,
+					"action": "Init",
+					"changed": {
+						"phase": "(c1 :> \"live\" @@ c2 :> \"live\")",
+						"made": "(c1 :> 0 @@ c2 :> 0)",
+						"log": "<<>>",
+						"conn": "(c1 :> 1 @@ c2 :> 1)",
+						"confirmed": "(c1 :> 0 @@ c2 :> 0)",
+						"view": "(c1 :> <<>> @@ c2 :> <<>>)",
+						"welcomed": "(c1 :> 0 @@ c2 :> 0)",
+						"open": "(c1 :> {1} @@ c2 :> {1})",
+						"copies": "(c1 :> {} @@ c2 :> {})",
+						"pending": "(c1 :> <<>> @@ c2 :> <<>>)",
+						"inflight": "( c1 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )",
+						"c2s": "(c1 :> <<<<>>, <<>>>> @@ c2 :> <<<<>>, <<>>>>)",
+						"cuts": "0",
+						"nextSeq": "(c1 :> 1 @@ c2 :> 1)",
+						"s2c": "(c1 :> <<>> @@ c2 :> <<>>)",
+						"catchHead": "(c1 :> 0 @@ c2 :> 0)"
+					}
+				},
+				{
+					"step": 2,
+					"action": "MakeOp(c1)",
+					"code": "packages/collab/src/client/engine.ts:325-331",
+					"changed": {
+						"made": "(c1 :> 0 @@ c2 :> 0) -> (c1 :> 1 @@ c2 :> 0)",
+						"pending": "(c1 :> <<>> @@ c2 :> <<>>) -> (c1 :> <<<<c1, 1>>>> @@ c2 :> <<>>)"
+					},
+					"actor": "c1"
+				},
+				{
+					"step": 3,
+					"action": "SendNext(c1)",
+					"code": "packages/collab/src/client/engine.ts:578-603",
+					"changed": {
+						"copies": "(c1 :> {} @@ c2 :> {}) -> (c1 :> {[s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>]} @@ c2 :> {})",
+						"pending": "(c1 :> <<<<c1, 1>>>> @@ c2 :> <<>>) -> (c1 :> <<>> @@ c2 :> <<>>)",
+						"inflight": "( c1 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] ) -> ( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )",
+						"c2s": "(c1 :> <<<<>>, <<>>>> @@ c2 :> <<<<>>, <<>>>>) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> )"
+					},
+					"actor": "c1"
+				},
+				{
+					"step": 4,
+					"action": "Cut(c1)",
+					"code": "packages/web-platform/src/collab-link.ts:36-49, packages/embed/src/collab.ts:116-124, packages/collab/src/client/engine.ts:300-308",
+					"changed": {
+						"phase": "(c1 :> \"live\" @@ c2 :> \"live\") -> (c1 :> \"offline\" @@ c2 :> \"live\")",
+						"cuts": "0 -> 1"
+					},
+					"actor": "environment"
+				},
+				{
+					"step": 5,
+					"action": "Reconnect(c1)",
+					"code": "packages/collab/src/client/engine.ts:309-312, packages/collab/src/client/engine.ts:282-299",
+					"changed": {
+						"phase": "(c1 :> \"offline\" @@ c2 :> \"live\") -> (c1 :> \"hello\" @@ c2 :> \"live\")",
+						"conn": "(c1 :> 1 @@ c2 :> 1) -> (c1 :> 2 @@ c2 :> 1)",
+						"c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> ) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 2 ] >> >> @@ c2 :> <<<<>>, <<>>>> )"
+					},
+					"actor": "c1"
+				},
+				{
+					"step": 6,
+					"action": "SrvHello(c1,2)",
+					"code": "packages/collab/src/server/decide.ts:58-73, packages/collab/src/server/server.ts:352-364, packages/collab/src/server/server.ts:391-426, packages/collab/src/server/server.ts:429-444, packages/collab/src/server/server.ts:300-304",
+					"changed": {
+						"welcomed": "(c1 :> 0 @@ c2 :> 0) -> (c1 :> 2 @@ c2 :> 0)",
+						"open": "(c1 :> {1} @@ c2 :> {1}) -> (c1 :> {2} @@ c2 :> {1})",
+						"c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 2 ] >> >> @@ c2 :> <<<<>>, <<>>>> ) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> )",
+						"s2c": "(c1 :> <<>> @@ c2 :> <<>>) -> ( c1 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"welcome\", v |-> 0, h |-> 0]>> @@ c2 :> <<>> )"
+					},
+					"actor": "server (c1)"
+				},
+				{
+					"step": 7,
+					"action": "RecvWelcome(c1)",
+					"code": "packages/collab/src/client/engine.ts:447-467",
+					"changed": {
+						"phase": "(c1 :> \"hello\" @@ c2 :> \"live\") -> (c1 :> \"catchup\" @@ c2 :> \"live\")",
+						"s2c": "( c1 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"welcome\", v |-> 0, h |-> 0]>> @@ c2 :> <<>> ) -> (c1 :> <<>> @@ c2 :> <<>>)"
+					},
+					"actor": "c1"
+				},
+				{
+					"step": 8,
+					"action": "MakeOp(c2)",
+					"code": "packages/collab/src/client/engine.ts:325-331",
+					"changed": {
+						"made": "(c1 :> 1 @@ c2 :> 0) -> (c1 :> 1 @@ c2 :> 1)",
+						"pending": "(c1 :> <<>> @@ c2 :> <<>>) -> (c1 :> <<>> @@ c2 :> <<<<c2, 1>>>>)"
+					},
+					"actor": "c2"
+				},
+				{
+					"step": 9,
+					"action": "SendNext(c2)",
+					"code": "packages/collab/src/client/engine.ts:578-603",
+					"changed": {
+						"copies": "(c1 :> {[s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>]} @@ c2 :> {}) -> ( c1 :> {[s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>]} @@ c2 :> {[s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>]} )",
+						"pending": "(c1 :> <<>> @@ c2 :> <<<<c2, 1>>>>) -> (c1 :> <<>> @@ c2 :> <<>>)",
+						"inflight": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] ) -> ( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, doomed |-> FALSE] )",
+						"c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> ) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> )"
+					},
+					"actor": "c2"
+				},
+				{
+					"step": 10,
+					"action": "SrvSubmit(c2,1)",
+					"code": "packages/collab/src/server/decide.ts:88-99, packages/collab/src/server/store.ts:95-107, packages/collab/src/server/server.ts:463-507",
+					"changed": {
+						"log": "<<>> -> <<[s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, c |-> c2]>>",
+						"c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> ) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> )",
+						"s2c": "(c1 :> <<>> @@ c2 :> <<>>) -> ( c1 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"change\", v |-> 1, h |-> 0]>> @@ c2 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> )"
+					},
+					"actor": "server (c2)"
+				},
+				{
+					"step": 11,
+					"action": "RecvChangeForeign(c1)",
+					"code": "packages/collab/src/client/engine.ts:495-496, packages/collab/src/client/engine.ts:528-535, packages/collab/src/client/engine.ts:332-334",
+					"changed": {
+						"confirmed": "(c1 :> 0 @@ c2 :> 0) -> (c1 :> 1 @@ c2 :> 0)",
+						"view": "(c1 :> <<>> @@ c2 :> <<>>) -> (c1 :> <<<<<<c2, 1>>>>>> @@ c2 :> <<>>)",
+						"pending": "(c1 :> <<>> @@ c2 :> <<>>) -> (c1 :> <<<<c1, 1>>>> @@ c2 :> <<>>)",
+						"inflight": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, doomed |-> FALSE] ) -> ( c1 :> [s |-> 1, b |-> 0, ops |-> <<>>, doomed |-> TRUE] @@ c2 :> [s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, doomed |-> FALSE] )",
+						"s2c": "( c1 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"change\", v |-> 1, h |-> 0]>> @@ c2 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> ) -> ( c1 :> <<>> @@ c2 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> )"
+					},
+					"actor": "c1"
+				},
+				{
+					"step": 12,
+					"action": "CaughtUp(c1)",
+					"code": "packages/collab/src/client/engine.ts:469-484",
+					"changed": {
+						"phase": "(c1 :> \"catchup\" @@ c2 :> \"live\") -> (c1 :> \"live\" @@ c2 :> \"live\")"
+					},
+					"actor": "c1"
+				},
+				{
+					"step": 13,
+					"action": "RecvAck(c2)",
+					"code": "packages/collab/src/client/engine.ts:501-508",
+					"changed": {
+						"confirmed": "(c1 :> 1 @@ c2 :> 0) -> (c1 :> 1 @@ c2 :> 1)",
+						"view": "(c1 :> <<<<<<c2, 1>>>>>> @@ c2 :> <<>>) -> (c1 :> <<<<<<c2, 1>>>>>> @@ c2 :> <<<<<<c2, 1>>>>>>)",
+						"inflight": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<>>, doomed |-> TRUE] @@ c2 :> [s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, doomed |-> FALSE] ) -> ( c1 :> [s |-> 1, b |-> 0, ops |-> <<>>, doomed |-> TRUE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )",
+						"nextSeq": "(c1 :> 1 @@ c2 :> 1) -> (c1 :> 1 @@ c2 :> 2)",
+						"s2c": "( c1 :> <<>> @@ c2 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> ) -> (c1 :> <<>> @@ c2 :> <<>>)"
+					},
+					"violation": true,
+					"actor": "c2"
+				}
+			],
+			"reproduction": {
+				"test": "packages/collab/tests/scenarios.test.ts::schedules found by the protocol model (formal/collab-protocol) F2: a submit cut off with its connection and doomed during catch-up goes out again with its seq",
+				"result_before_fix": "not-reproduced",
+				"result_after_fix": "passes"
+			},
+			"fix": {
+				"summary": "After catch-up a doomed in-flight is dropped (its ops are already in pending) and the next submit reuses its seq. The engine had this from its first version; the scenario pins it.",
+				"diff": "engine.ts:474-475\n   const inflight = s.inflight\n   if (inflight?.doomed) s.inflight = null",
+				"pr": "commit 97d1fea on feat/collab (scenario)",
+				"model_recheck": "passes",
+				"mutation_check": "fails-as-expected"
+			},
+			"diagram": {
+				"nodes": [
+					{
+						"id": "c1",
+						"label": "engine c1: in-flight seq 1 doomed"
+					},
+					{
+						"id": "k1",
+						"label": "connection 1 (dropped)"
+					},
+					{
+						"id": "srv",
+						"label": "server log: v1 = c2 seq 1"
+					},
+					{
+						"id": "k2",
+						"label": "connection 2 (catch-up)"
+					}
+				],
+				"edges": [
+					{
+						"from": "c1",
+						"to": "k1",
+						"label": "submit {seq 1, base 0}"
+					},
+					{
+						"from": "k1",
+						"to": "srv",
+						"label": "ignored or stale to a dead socket"
+					},
+					{
+						"from": "srv",
+						"to": "k2",
+						"label": "change v1 (foreign)"
+					},
+					{
+						"from": "k2",
+						"to": "c1",
+						"label": "doomed; no stale will ever come"
+					}
+				],
+				"highlight": [
+					"c1",
+					"k2->c1"
+				],
+				"steps": {
+					"k1": 4,
+					"srv": 10,
+					"k2": 11,
+					"c1": 12
+				}
+			},
+			"evidence": [
+				"formal/collab-protocol/evidence/F2.json",
+				"formal/collab-protocol/evidence/tlc/CollabProtocol-MC_F2.log",
+				"formal/collab-protocol/evidence/tlc/CollabProtocol-MC_F2_live.log",
+				"formal/collab-protocol/evidence/matrix.log",
+				"formal/collab-protocol/evidence/scenarios-F1-F2.log"
+			]
+		}
+	],
+	"simplifications": [
+		{
+			"id": "S1",
+			"change": "The (client, seq) duplicate check in store.append",
+			"code": "packages/collab/src/server/store.ts:98-100 (memoryStore append)",
+			"justification": "With engines that follow section 5 it never decides anything: every copy of a seq still on the wire has the same base, and a copy with another base is sent only after invariant 5 proved the old one dead, so base === head already rejects the second copy (EQUIVALENT mutant under MC_late.cfg). Against an engine that replays an appended seq with the current head as base, it is the only thing that keeps invariant 2 and P1 (DETECTED under MC_rogue.cfg).",
+			"relies_on_assumptions": [
+				"A4",
+				"A7"
+			],
+			"reverified": "passes",
+			"status": "rejected"
+		},
+		{
+			"id": "S2",
+			"change": "The seq comparison in the lost-ack rule (\"change mine with seq === inflight.seq\")",
+			"code": "packages/collab/src/client/engine.ts:491-493 (change)",
+			"justification": "An own change at confirmed + 1 always carries the in-flight seq (FramesCovered holds everywhere; EQUIVALENT mutant under MC.cfg and MC_late.cfg). Keep it: it costs nothing and turns a server bug into a protocol error instead of a wrong confirmation.",
+			"relies_on_assumptions": [
+				"A1",
+				"A7"
+			],
+			"reverified": "passes",
+			"status": "rejected"
+		},
+		{
+			"id": "S3",
+			"change": "The \"if not doomed\" branch of the stale rule and the wait \"until confirmed >= stale.head\"",
+			"code": "packages/collab/src/client/engine.ts:510-517, 581 (stale, waitFor)",
+			"justification": "NoStaleForLiveInflight and StaleAfterCatchUp hold in every passing config: a stale always finds its in-flight doomed and the client already at stale.head, because the server sends every change up to stale.head before the stale on that socket. Implementers may write the branch as an assertion or a logged protocol error rather than as a resend path.",
+			"relies_on_assumptions": [
+				"A1",
+				"A2",
+				"A4"
+			],
+			"reverified": "passes",
+			"status": "proposed"
+		}
+	],
+	"trust_base": {
+		"tla": {
+			"tool_version": "TLC2 Version 2026.10.28.014557 (tla2tools release 1.8.0), Java 17",
+			"states_generated": 1412439,
+			"distinct_states": 470001,
+			"depth": 40,
+			"sanity_checks": [
+				"matrix.json: 15 runs, all as expected, exit 0 (evidence/matrix.log)",
+				"Design as written must fail: MC_F1 / MC_F1_live (AttemptFence = FALSE) violate P4_QuietIsDone / P4_NoOpLost; MC_F2 / MC_F2_live (DoomedOnReconnect = \"keep\") likewise",
+				"Sanity invariants violated as required: SanityNeverDoomed, SanityNoSeqReuse, SanityNoLateCopy, SanityNoFencedHello (the attempt fence really refuses a late hello), SanityNeverDone",
+				"mutations.json: 21 of 21 DETECTED, every one of 14 properties covered, exit 0 (evidence/mutate.log)",
+				"mutations-observations.json: 3 EQUIVALENT as declared, exit 0 (evidence/mutate-observations.log)",
+				"matrix-deep.json (3 clients x 2 ops x 1 cut): pass, 90,240,507 states (evidence/matrix-deep.log)",
+				"Coverage at the design stage: the protocol-error branches are never enabled; FramesCovered, AcksCovered and HelloAnsweredFirst state it",
+				"Scenarios F1 and F2 pass at HEAD (evidence/scenarios-F1-F2.log)",
+				"Design-stage logs: evidence/pre-drift/"
+			]
+		}
+	},
+	"rerun": [
+		"bun <skill-dir>/scripts/verify-all.ts formal --only collab-protocol",
+		"bun <skill-dir>/scripts/tlc.ts formal/collab-protocol/tla/CollabProtocol.tla --matrix formal/collab-protocol/tla/matrix.json",
+		"bun <skill-dir>/scripts/mutate.ts formal/collab-protocol/tla/CollabProtocol.tla formal/collab-protocol/tla/mutations.json",
+		"bun <skill-dir>/scripts/mutate.ts formal/collab-protocol/tla/CollabProtocol.tla formal/collab-protocol/tla/mutations-observations.json",
+		"bun <skill-dir>/scripts/verify-all.ts formal --only collab-protocol-deep"
+	],
+	"next_steps": [
+		"Write the attempt fence and the doomed-in-flight rule into the design contract (sections 4 and 5)",
+		"W5: run verify-all.ts formal --strict-drift in CI so a change to the covered files needs the model updated",
+		"Model the save path (held changes, waitFor, a file at one version) and the initial join as a second concern",
+		"A durable CollabStore must keep append atomic (A1): give it a contract test"
+	],
+	"repo_commit": "2a5d2d8c7168a3ade355d289de5940ba37ab3aec"
+}

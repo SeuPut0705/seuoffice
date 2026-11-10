@@ -762,6 +762,14 @@ export interface DeckChange {
   size: { cx: number; cy: number }
   /** Present for a partial update; omitted for a full resync. */
   order?: string[]
+  /**
+   * Web co-editing: part paths that now hold another slide than this window knew under that
+   * path (deleted, and a new slide took the freed name). What was open on the old one is not
+   * for the new one.
+   */
+  replaced?: string[]
+  /** Web co-editing: an edit was refused after the canvas showed it; build the canvas again. */
+  rebuild?: boolean
 }
 
 /** Pushed to every window attached to a session whenever its history or AI-run state changes. */

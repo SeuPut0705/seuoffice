@@ -1,0 +1,24 @@
+{
+  "spec": "/Users/seuput/Desktop/GitHub/seuoffice/formal/collab-protocol/tla/CollabProtocol.tla",
+  "runs": [
+    {
+      "name": "deep-fixed-3clients-2ops-1cut-safety",
+      "config": "MC_three.cfg",
+      "ok": true,
+      "expect": "pass",
+      "durationMs": 1119225,
+      "logPath": "/Users/seuput/Desktop/GitHub/seuoffice/formal/collab-protocol/evidence/tlc-deep/CollabProtocol-MC_three.log",
+      "outcome": "pass",
+      "stats": {
+        "generated": 88029397,
+        "distinct": 27491947,
+        "queue": 0,
+        "depth": 69
+      },
+      "trace": [],
+      "rows": [],
+      "tlcVersion": "2026.10.28.014557",
+      "warnings": []
+    }
+  ]
+}

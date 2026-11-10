@@ -615,20 +615,20 @@ jobs:
         env:
           VERSION: ${{ needs.version.outputs.version }}
         run: |
-          node -e "const fs=require('fs');for(const f of ['packages/embed/package.json','apps/web/package.json']){const p=JSON.parse(fs.readFileSync(f,'utf8'));p.version=process.env.VERSION;fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n')}"
+          node -e "const fs=require('fs');for(const f of ['packages/embed/package.json','packages/collab/package.json','apps/web/package.json']){const p=JSON.parse(fs.readFileSync(f,'utf8'));p.version=process.env.VERSION;fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n')}"
 
       - name: Build the web bundle
         run: npm run build -w @seuoffice/web
 
-      # prepack copies LICENSE and NOTICE in and builds the embed library
+      # prepack copies LICENSE and NOTICE in and builds the embed and collab libraries
       - name: Pack
         env:
           VERSION: ${{ needs.version.outputs.version }}
         run: |
           set -euo pipefail
           mkdir web-packages
-          npm pack -w @seuoffice/embed -w @seuoffice/web --pack-destination web-packages
-          for name in embed web; do
+          npm pack -w @seuoffice/embed -w @seuoffice/collab -w @seuoffice/web --pack-destination web-packages
+          for name in embed collab web; do
             test -f "web-packages/seuoffice-$name-$VERSION.tgz" || { echo "::error::missing seuoffice-$name-$VERSION.tgz"; exit 1; }
           done
           ls -la web-packages
@@ -708,7 +708,7 @@ jobs:
             echo
             echo "자동 업데이트는 두 플랫폼 모두 이 릴리스의 피드 파일로 돈다. 판 번호 없는 SeuOffice-mac-arm64.dmg와 SeuOffice-windows-x64.exe는 안정 채널 설치 파일의 사본이고, 이 릴리스가 안정 채널로 올라가면 README의 다운로드 버튼이 이 둘을 받는다."
             echo
-            echo "웹에 붙이는 묶음 seuoffice-embed-*.tgz와 seuoffice-web-*.tgz도 이 릴리스에 있다. 붙이는 쪽은 안정 판의 주소로 설치한다(docs/seuoffice/판-내기.md). 미리보기 판은 10개가 넘으면 지워지므로 고정하지 않는다."
+            echo "웹에 붙이는 묶음 seuoffice-embed-*.tgz, seuoffice-web-*.tgz와 공동 편집 서버 seuoffice-collab-*.tgz도 이 릴리스에 있다. 붙이는 쪽은 안정 판의 주소로 설치한다(docs/seuoffice/판-내기.md). 미리보기 판은 10개가 넘으면 지워지므로 고정하지 않는다."
           } > notes.md
           cat notes.md
 
@@ -760,6 +760,7 @@ jobs:
             "dist/latest-mac.yml"
             "dist/stable-mac.yml"
             "dist/seuoffice-embed-$version.tgz"
+            "dist/seuoffice-collab-$version.tgz"
             "dist/seuoffice-web-$version.tgz"
           )
           for file in "${files[@]}"; do

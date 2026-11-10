@@ -10,10 +10,19 @@ export {
 } from './document-store'
 export {
   onHostSaveRequest,
+  registerCollabCapable,
   reportDirty,
   reportError,
   reportOpened,
   saveToHost,
   type EmbedOpenErrorCode,
 } from './embed-channel'
+export {
+  collabLink,
+  reportCollabStatus,
+  type CollabLink,
+  type CollabLinkEvent,
+  type CollabStatus,
+} from './collab-link'
+export { joinPageCollab, type PageCollab } from './collab-page'
 export { createAiStreamBridge, hostOffersAi, webAiSettings, type AiStreamBridge } from './ai-relay'

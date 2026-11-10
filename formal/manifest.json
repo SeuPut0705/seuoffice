@@ -1,0 +1,42 @@
+{
+	"version": 1,
+	"codeRoot": "..",
+	"models": [
+		{
+			"id": "collab-protocol",
+			"title": "Co-editing protocol: every edit in the log exactly once, in one order",
+			"kind": "tla",
+			"dir": "collab-protocol/tla",
+			"spec": "CollabProtocol.tla",
+			"matrix": "matrix.json",
+			"mutations": "mutations.json",
+			"covers": [
+				"packages/collab/src/server/decide.ts",
+				"packages/collab/src/server/server.ts",
+				"packages/collab/src/server/store.ts",
+				"packages/collab/src/client/engine.ts",
+				"packages/web-platform/src/collab-link.ts",
+				"packages/embed/src/collab.ts"
+			],
+			"syncCommit": "5d5ca3609b167fec4b7cee695c68a3060a109956"
+		},
+		{
+			"id": "collab-protocol-deep",
+			"title": "Co-editing protocol, deep tier (3 clients, 2 ops each)",
+			"tier": "deep",
+			"kind": "tla",
+			"dir": "collab-protocol/tla",
+			"spec": "CollabProtocol.tla",
+			"matrix": "matrix-deep.json",
+			"covers": [
+				"packages/collab/src/server/decide.ts",
+				"packages/collab/src/server/server.ts",
+				"packages/collab/src/server/store.ts",
+				"packages/collab/src/client/engine.ts",
+				"packages/web-platform/src/collab-link.ts",
+				"packages/embed/src/collab.ts"
+			],
+			"syncCommit": null
+		}
+	]
+}

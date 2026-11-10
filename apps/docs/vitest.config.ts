@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+import { defaultClientConditions } from 'vite'
 import { defineConfig } from 'vitest/config'
 
 // resolve sibling source packages by path (not via node_modules), so a git
@@ -8,6 +9,7 @@ const local = (rel: string) => fileURLToPath(new URL(rel, import.meta.url))
 
 export default defineConfig({
   resolve: {
+    conditions: ['seuoffice-source', ...defaultClientConditions],
     alias: {
       '@genoffice/docx-engine/lazy-media': local('../../packages/docx-engine/src/lazy-media.ts'),
       '@genoffice/docx-engine/zip-splice': local('../../packages/docx-engine/src/zip-splice.ts'),

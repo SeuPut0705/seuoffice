@@ -2201,6 +2201,11 @@ export function App() {
       setDocPwdPrompt({ path: info.path, name: info.name, value: '', errorKey: '', busy: false }),
   }
 
+  // web co-editing: the session takes the document once it is on screen (absent on the desktop)
+  useEffect(() => {
+    if (doc && editor) void window.seuCollab?.attach({ editor, context: fileCtxRef })
+  }, [doc, editor])
+
   const loadFile = useCallback(async (result: OpenDocxResult) => {
     const outcome = await loadFileImpl(fileCtxRef.current, result)
     // a failed open with no document yet (boot, or the open that superseded the
@@ -4261,7 +4266,8 @@ export function App() {
         })
         const tr = editor.state.tr
         if (applyTocPageDisplays(editor.state.doc, tr, headings, displays)) {
-          tr.setMeta('addToHistory', false)
+          // each page derives its own page numbers: co-editing keeps this write local
+          tr.setMeta('addToHistory', false).setMeta('layoutDerived', true)
           editor.view.dispatch(tr)
         }
       }
@@ -5521,7 +5527,7 @@ export function App() {
   // "has unsaved changes" check shared by the close guard and autosave; refreshed on every
   // render (all edit paths forceRender), so the guard's query reads the latest value
   const anyDirtyRef = useRef(false)
-  const hasUnsavedChanges = isDocDirty(fileCtxRef.current)
+  const hasUnsavedChanges = window.seuCollab?.unsaved?.() ?? isDocDirty(fileCtxRef.current)
   anyDirtyRef.current = hasUnsavedChanges
   useEffect(() => window.desktop.reportDirty?.(hasUnsavedChanges), [hasUnsavedChanges])
 

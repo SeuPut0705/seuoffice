@@ -1,0 +1,37 @@
+{
+	"checker": {
+		"kind": "tlc",
+		"config": "MC_late.cfg",
+		"timeoutSec": 2400
+	},
+	"properties": [
+		"P1_NoOpTwice"
+	],
+	"waive": {
+		"P1_NoOpTwice": "This file records equivalent mutants only (changes no property can notice for engines that follow the design); property coverage is shown by mutations.json."
+	},
+	"mutations": [
+		{
+			"name": "drop-client-seq-duplicate-check-honest-clients",
+			"why": "store.append without the (client, seq) check, against engines that follow section 5, with old sockets left open so late copies of a submit do reach store.append after the resend.",
+			"search": "dupAt == {v \\in 1..head : log[v].c = c /\\ log[v].s = f.s}",
+			"replace": "dupAt == {}",
+			"equivalent": "Every copy of one seq that an honest engine can still have on the wire carries the same base: a copy with another base is sent only after a foreign change took the old base + 1 (invariant 5, checked as P5). So when a late copy arrives after its twin was appended, head > base and the base check answers stale where the duplicate check would have answered ack; the engine has already confirmed that seq from the change frame that preceded the answer on its socket, and ignores both answers."
+		},
+		{
+			"name": "any-own-change-is-ack",
+			"why": "The lost-ack rule treats every change from this client at confirmed + 1 as the ack of the in-flight, without comparing seq and without requiring a live in-flight.",
+			"search": "    /\\ inflight[c].s # 0\n    /\\ ~inflight[c].doomed\n    /\\ log[Hd(c).v].s = inflight[c].s\n    /\\ Pop(c)\n",
+			"replace": "    /\\ Pop(c)\n",
+			"equivalent": "An own change at confirmed + 1 always carries the in-flight's seq: the engine sends seq n + 1 only after seq n is confirmed, a seq is appended at most once (invariant 2) and only at base + 1 (invariant 1), and the copies that carry the seq after a doom or stale are dead. FramesCovered checks exactly this in every config, so the seq comparison never decides anything."
+		},
+		{
+			"name": "any-own-change-is-ack-fenced-sockets",
+			"why": "The same change with the design's socket handling (superseded sockets ignored) and the F1 fence.",
+			"config": "MC.cfg",
+			"search": "    /\\ inflight[c].s # 0\n    /\\ ~inflight[c].doomed\n    /\\ log[Hd(c).v].s = inflight[c].s\n    /\\ Pop(c)\n",
+			"replace": "    /\\ Pop(c)\n",
+			"equivalent": "As for any-own-change-is-ack: with superseded sockets ignored an own change reaches a socket other than the submitter's only through catch-up, at the in-flight's base + 1 and with its seq."
+		}
+	]
+}

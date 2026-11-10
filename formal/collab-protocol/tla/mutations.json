@@ -1,0 +1,199 @@
+{
+	"checker": {
+		"kind": "tlc",
+		"config": "MC.cfg",
+		"timeoutSec": 900
+	},
+	"properties": [
+		"P1_NoOpTwice",
+		"P2_ConfirmedIsLogPrefix",
+		"P3_ConfirmedOpsInLog",
+		"P4_QuietIsDone",
+		"P4_NoOpLost",
+		"P5_InflightChangesOnlyAfterProof",
+		"FramesCovered",
+		"StaleAfterCatchUp",
+		"InflightAtConfirmed",
+		"NoStaleForLiveInflight",
+		"ServerInv1_BaseIsHead",
+		"ServerInv2_ClientSeqOnce",
+		"AcksCovered",
+		"HelloAnsweredFirst"
+	],
+	"waive": {
+		"TypeOK": "Shape check only: every behaviour change below that leaves the declared types also breaks a named property, and TLC already stops with an evaluation error when an action leaves a variable unspecified."
+	},
+	"mutations": [
+		{
+			"name": "drop-client-seq-duplicate-check",
+			"why": "store.append no longer looks for (client, seq) in the log before the base check (design invariant 2 removed). Checked against an engine that replays a submit whose seq the log already holds, with the current head as base (MC_rogue.cfg): the server must hold invariant 2 whatever a client sends. With engines that follow section 5 the check is redundant: see mutations-observations.json.",
+			"config": "MC_rogue.cfg",
+			"search": "dupAt == {v \\in 1..head : log[v].c = c /\\ log[v].s = f.s}",
+			"replace": "dupAt == {}",
+			"breaks": "ServerInv2_ClientSeqOnce",
+			"isolate": true
+		},
+		{
+			"name": "drop-client-seq-duplicate-check-dup-op",
+			"why": "The same mistake seen by P1: the replayed submit is appended a second time and its ops are in the document twice.",
+			"config": "MC_rogue.cfg",
+			"search": "dupAt == {v \\in 1..head : log[v].c = c /\\ log[v].s = f.s}",
+			"replace": "dupAt == {}",
+			"breaks": "P1_NoOpTwice"
+		},
+		{
+			"name": "drop-base-equals-head-check",
+			"why": "store.append appends whatever base the submit carries (design invariant 1 removed): two clients that submit at the same time are both appended. Since the drift step the engine meets the doomed client's ack and its own change with a protocol error (engine.ts:488, 500) instead of confirming them, so the edit is never confirmed and the client reconnects until it runs out of connections: P4 fails, not P2 (before the drift step it failed on P2).",
+			"search": "          ELSE IF f.b # head\n",
+			"replace": "          ELSE IF FALSE\n",
+			"breaks": "P4_QuietIsDone",
+			"isolate": true
+		},
+		{
+			"name": "drop-base-equals-head-check-ack",
+			"why": "The same mistake seen by the derived check: an ack arrives for a doomed in-flight (before the drift step the doomed client then resent its ops and P1 failed).",
+			"search": "          ELSE IF f.b # head\n",
+			"replace": "          ELSE IF FALSE\n",
+			"breaks": "AcksCovered",
+			"isolate": true
+		},
+		{
+			"name": "drop-base-equals-head-check-server",
+			"why": "The same mistake, seen by the server's own invariant 1: a change lands at a version other than base + 1.",
+			"search": "          ELSE IF f.b # head\n",
+			"replace": "          ELSE IF FALSE\n",
+			"breaks": "ServerInv1_BaseIsHead",
+			"isolate": true
+		},
+		{
+			"name": "change-inflight-on-reconnect",
+			"why": "After catch-up the engine folds pending into the in-flight and resends it with the same seq and base, without proof that the copy on the dead connection can never be appended (design invariant 5).",
+			"search": "ResendOnReconnect(c) == [ops |-> inflight[c].ops, rest |-> pending[c]]",
+			"replace": "ResendOnReconnect(c) == [ops |-> inflight[c].ops \\o pending[c], rest |-> <<>>]",
+			"breaks": "P5_InflightChangesOnlyAfterProof"
+		},
+		{
+			"name": "change-inflight-on-reconnect-late-copy-wins",
+			"why": "The same mistake where the old copy is not fenced: it is appended, the engine confirms the folded ops, and an op shown as confirmed is in no change.",
+			"config": "MC_late.cfg",
+			"search": "ResendOnReconnect(c) == [ops |-> inflight[c].ops, rest |-> pending[c]]",
+			"replace": "ResendOnReconnect(c) == [ops |-> inflight[c].ops \\o pending[c], rest |-> <<>>]",
+			"breaks": "P3_ConfirmedOpsInLog",
+			"isolate": true
+		},
+		{
+			"name": "foreign-change-does-not-doom",
+			"why": "A foreign change at confirmed + 1 moves the in-flight ops into pending but leaves the in-flight live: its stale then puts the same ops in front of pending a second time.",
+			"search": "IF i.s # 0 THEN [i EXCEPT !.doomed = TRUE, !.ops = <<>>] ELSE i]",
+			"replace": "i]",
+			"breaks": "P1_NoOpTwice",
+			"isolate": true
+		},
+		{
+			"name": "foreign-change-does-not-doom-base",
+			"why": "The same mistake seen by the derived rule: a live in-flight is left on a base the client has moved past.",
+			"search": "IF i.s # 0 THEN [i EXCEPT !.doomed = TRUE, !.ops = <<>>] ELSE i]",
+			"replace": "i]",
+			"breaks": "InflightAtConfirmed",
+			"isolate": true
+		},
+		{
+			"name": "foreign-change-does-not-doom-stale",
+			"why": "The same mistake seen by the observation: a stale now answers an in-flight that is not doomed.",
+			"search": "IF i.s # 0 THEN [i EXCEPT !.doomed = TRUE, !.ops = <<>>] ELSE i]",
+			"replace": "i]",
+			"breaks": "NoStaleForLiveInflight",
+			"isolate": true
+		},
+		{
+			"name": "no-resend-after-catch-up",
+			"why": "After a reconnect the engine waits for the ack of a not-doomed in-flight instead of resending it; the ack died with the old connection.",
+			"search": "               /\\ c2s' = [c2s EXCEPT ![c][conn[c]] = Append(@, Submit(i.s, i.b, r.ops))]\n",
+			"replace": "               /\\ UNCHANGED c2s\n",
+			"breaks": "P4_QuietIsDone",
+			"isolate": true
+		},
+		{
+			"name": "no-resend-after-catch-up-liveness",
+			"why": "The same mistake seen by the liveness form of P4.",
+			"search": "               /\\ c2s' = [c2s EXCEPT ![c][conn[c]] = Append(@, Submit(i.s, i.b, r.ops))]\n",
+			"replace": "               /\\ UNCHANGED c2s\n",
+			"breaks": "P4_NoOpLost",
+			"isolate": true,
+			"deadlock": false
+		},
+		{
+			"name": "remove-fairness",
+			"why": "Nothing forces a client to keep handling frames or the server to read a live connection: P4 must fail by stuttering.",
+			"search": "Spec == Init /\\ [][Next]_vars /\\ \\A c \\in Clients : WF_vars(Fair(c))",
+			"replace": "Spec == Init /\\ [][Next]_vars",
+			"breaks": "P4_NoOpLost",
+			"isolate": true,
+			"deadlock": false
+		},
+		{
+			"name": "resume-skips-a-version",
+			"why": "The reconnect hello resumes from confirmed + 1 instead of confirmed, so catch-up starts one version too late.",
+			"search": "Append(@, Hello(confirmed[c], conn[c] + 1))",
+			"replace": "Append(@, Hello(confirmed[c] + 1, conn[c] + 1))",
+			"breaks": "FramesCovered",
+			"isolate": true
+		},
+		{
+			"name": "stale-head-ahead-of-sent-changes",
+			"why": "The server answers stale with a head one past the changes it has sent on that socket (it reads head after a concurrent append).",
+			"search": "toSender(Stale(f.s, f.b, head))",
+			"replace": "toSender(Stale(f.s, f.b, head + 1))",
+			"breaks": "StaleAfterCatchUp",
+			"isolate": true
+		},
+		{
+			"name": "drop-attempt-fence",
+			"why": "decideHello welcomes a resume hello whatever its attempt (the fix of F1 removed): a late hello of a given-up connection supersedes the live one and the client fails with edits unsent.",
+			"search": "accept == ~AttemptFence \\/ f.h >= welcomed[c]",
+			"replace": "accept == TRUE",
+			"breaks": "P4_QuietIsDone",
+			"isolate": true
+		},
+		{
+			"name": "attempt-not-recorded",
+			"why": "welcome does not record the attempt it welcomed (state.clients keeps the old one), so the fence compares with a stale number and lets a late hello through.",
+			"search": "welcomed' = [welcomed EXCEPT ![c] = IF accept THEN f.h ELSE @]",
+			"replace": "welcomed' = welcomed",
+			"breaks": "P4_QuietIsDone",
+			"isolate": true
+		},
+		{
+			"name": "link-passes-superseded-of-given-up-socket",
+			"why": "Without the connectId fence of the page link, the superseded the server sends on a given-up socket reaches the engine on its current connection and fails it.",
+			"search": "ELSE IF conn[c] \\in closed THEN Append(@, Superseded)",
+			"replace": "ELSE IF closed # {} \\/ ~accept THEN Append(@, Superseded)",
+			"breaks": "P4_QuietIsDone",
+			"isolate": true
+		},
+		{
+			"name": "broadcast-to-socket-before-welcome",
+			"why": "onSubmit sends a change to a socket of the client that was not welcomed yet (live() filter removed): the change overtakes the welcome.",
+			"search": "ELSE IF conn[d] \\in open[d] /\\ Linked(d)",
+			"replace": "ELSE IF Linked(d)",
+			"breaks": "HelloAnsweredFirst",
+			"isolate": true
+		},
+		{
+			"name": "ack-names-wrong-version",
+			"why": "onSubmit acks an append with a version one past the one it appended.",
+			"search": "Append(s2c[c], Ack(head + 1, f.s))",
+			"replace": "Append(s2c[c], Ack(head + 2, f.s))",
+			"breaks": "AcksCovered",
+			"isolate": true
+		},
+		{
+			"name": "confirm-reports-pending",
+			"why": "confirm hands the adapter the in-flight ops plus pending as confirmed (engine.ts:516 with the wrong list): the client's confirmed document holds ops that are not in that change.",
+			"search": "    /\\ view' = [view EXCEPT ![c] = Append(@, inflight[c].ops)]",
+			"replace": "    /\\ view' = [view EXCEPT ![c] = Append(@, inflight[c].ops \\o pending[c])]",
+			"breaks": "P2_ConfirmedIsLogPrefix",
+			"isolate": true
+		}
+	]
+}

@@ -7,7 +7,7 @@ vi.mock('../src/renderer/export-render', () => ({ renderSlidesToPngBase64: vi.fn
 vi.mock('../src/renderer/components/toast-bus', () => ({ showToast: vi.fn() }))
 vi.mock('../src/renderer/i18n/locale', () => ({ t: (k: string) => k }))
 
-import { adoptSavedSlides, save, saveAs } from '../src/renderer/file-actions'
+import { adoptSavedSlides, commitDrafts, save, saveAs } from '../src/renderer/file-actions'
 import { showToast } from '../src/renderer/components/toast-bus'
 import type { ActionCtx } from '../src/renderer/action-context'
 
@@ -114,6 +114,38 @@ describe('slides save serialization', () => {
     expect(mockSave).toHaveBeenCalledTimes(1)
     expect(mockSaveAs).toHaveBeenCalledTimes(1)
     expect(maxConcurrent).toBe(1)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('commits what is open without saving, after a save that is under way', async () => {
+    const order: string[] = []
+    const mockSave = vi.fn(async () => {
+      order.push('save begins')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      order.push('save ends')
+      return { ok: true }
+    })
+    vi.stubGlobal('window', { slidesApi: { save: mockSave } })
+    const context = (who: string): ActionCtx =>
+      ({
+        ...ctx(),
+        flushNotes: async () => {
+          order.push(`${who} writes the notes`)
+        },
+      }) as unknown as ActionCtx
+
+    const saving = save(() => context('save'))
+    await commitDrafts(() => context('commit'))
+    await saving
+
+    expect(order).toEqual([
+      'save writes the notes',
+      'save begins',
+      'save ends',
+      'commit writes the notes',
+    ])
+    expect(mockSave).toHaveBeenCalledTimes(1)
 
     vi.unstubAllGlobals()
   })

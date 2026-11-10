@@ -1,22 +1,30 @@
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
+  collabLink,
   createAiStreamBridge,
   createWebBridge,
   documentByPath,
   editMode,
   installWebBridge,
   onHostSaveRequest,
+  registerCollabCapable,
   reportDirty,
+  reportError,
   reportOpened,
   unsupported,
   waitForDocument,
   webAiSettings,
   webLanguage,
+  type PageCollab,
 } from '@seuoffice/web-platform'
 import type { Lang } from '@genoffice/i18n'
 import { CertificateEncryptionError, WrongPasswordError, decryptDocument } from '../main/pdf-crypt'
 import type { PdfApi, SavePdfRequest, SavePdfResult } from '../shared/ipc'
+import type { PdfCollabHandles } from './collab-join'
 import { saveOnWeb, viewOnlyReason } from './save'
+
+// `ready` must say so before anything asks for the document
+registerCollabCapable()
 
 const noop = (): void => {}
 const unsubscribe = (): (() => void) => noop
@@ -32,13 +40,52 @@ const editing = editMode()
 
 let lastSaveError: string | undefined
 
+/** set when the host asked for co-editing and the page joined its session */
+let coEditing: PageCollab<PdfCollabHandles> | null = null
+
 async function save(request: SavePdfRequest): Promise<SavePdfResult> {
+  if (coEditing) {
+    // the session writes the file of one exact version from the log, never the renderer's
+    // own request. "external-modified" keeps the renderer from reloading the document from
+    // the file it thinks it saved, which would drop every pending edit on this page.
+    // A viewer's renderer asks too, since other people's edits are pending ones on its page:
+    // it is answered the same way, with nothing saved.
+    if (!editing) return { ok: false, error: 'external-modified' }
+    try {
+      // pressing save again stores nothing new: the host holds that version already
+      await coEditing.save({ skipWhenSaved: true })
+      lastSaveError = undefined
+      return { ok: false, error: 'external-modified' }
+    } catch (error) {
+      lastSaveError = error instanceof Error ? error.message : String(error)
+      return { ok: false, error: lastSaveError }
+    }
+  }
   const doc = documentByPath(request.path)
   const result = doc
     ? await saveOnWeb(doc, request)
     : { ok: false as const, error: `seuoffice web: no document at ${request.path}` }
   lastSaveError = result.ok ? undefined : result.error
   return result
+}
+
+/**
+ * The page's document, once: a co-edited one joins the host's session before
+ * the renderer reads it, and a later joiner reads the session's base file.
+ */
+let pending: Promise<string | null> | undefined
+async function consumeDocument(): Promise<string | null> {
+  const doc = await waitForDocument()
+  if (!doc) return null
+  try {
+    // a page the host did not ask to co-edit loads none of it
+    if (collabLink()) coEditing = await (await import('./collab-join')).joinPdfCollab(doc)
+  } catch (error) {
+    reportError('collab_unavailable', error instanceof Error ? error.message : String(error))
+    return null
+  }
+  if (coEditing) doc.bytes = coEditing.baseBytes
+  return doc.virtualPath
 }
 
 /** The desktop decrypt handler over the page's bytes: same results, same refusals */
@@ -84,7 +131,7 @@ function saveForHost(): Promise<void> {
 const ai = createAiStreamBridge()
 
 const pdfApi: Partial<PdfApi> = {
-  consumePending: async () => (await waitForDocument())?.virtualPath ?? null,
+  consumePending: () => (pending ??= consumeDocument()),
   readFile: async (path) => {
     const bytes = bytesOf(path)
     queueMicrotask(reportOpened)
@@ -111,7 +158,12 @@ const pdfApi: Partial<PdfApi> = {
   recoveryState: async () => ({ unsaved: false }),
   listEditFonts: async () => [],
   listStaticFormFills: async () => [],
-  setDirty: editing ? reportDirty : noop,
+  // a co-edited page's unsaved flag follows the session (collab-page.ts), not this renderer
+  setDirty: editing
+    ? (dirty) => {
+        if (!coEditing) reportDirty(dirty)
+      }
+    : noop,
   onCloseSaveRequest: (handler) => {
     closeSaveRequest = handler
     return () => {
@@ -146,7 +198,8 @@ const pdfApi: Partial<PdfApi> = {
   listSavedSignatures: unsupported('pdf.savedSignatures'),
   addSavedSignature: unsupported('pdf.savedSignatures'),
   removeSavedSignature: unsupported('pdf.savedSignatures'),
-  save: editing ? save : unsupported('pdf.save'),
+  // a page opened for viewing saves nothing; only while co-editing does its renderer ever ask
+  save: (request) => (editing || coEditing ? save(request) : unsupported('pdf.save')(request)),
   // the host keeps edits only in edit mode; elsewhere the view is read-only
   readOnlyReason: editing ? undefined : viewOnlyReason(),
   // desktop-only services: undefined turns their features off, as without a shell
