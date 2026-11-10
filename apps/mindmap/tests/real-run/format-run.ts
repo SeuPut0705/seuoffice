@@ -165,7 +165,13 @@ async function main(): Promise<void> {
     // the text side of the switch, whichever side was chosen last
     await page.locator('[data-action="format-tab-text"]').click()
     await page.locator('[data-action="format-italic"]').click()
+    // the colour is one row; its palette opens below it
+    await page.locator('[data-action="format-color"]').click()
     await page.locator('.mm-format-colors button[title]').nth(14).click()
+    check(
+      (await page.locator('.mm-color-pop').count()) === 0,
+      'picking a colour closes the palette',
+    )
     await page.locator('[data-action="format-size"]').fill('20')
     await page.locator('[data-action="format-size"]').press('Enter')
     await page.locator('[data-action="format-align-left"]').click()
@@ -178,6 +184,11 @@ async function main(): Promise<void> {
     await page.waitForSelector('#input-box')
     await page.keyboard.press('End')
     for (let n = 0; n < 5; n++) await page.keyboard.press('Shift+ArrowLeft')
+    await page.locator('[data-action="format-color"]').click()
+    check(
+      (await page.locator('#input-box').count()) === 1,
+      'opening the palette keeps the title being typed open',
+    )
     await page.locator('.mm-format-colors button[title]').nth(20).click()
     check(
       (await page.locator('#input-box').count()) === 1,

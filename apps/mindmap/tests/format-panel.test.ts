@@ -478,6 +478,106 @@ describe('the format panel', () => {
   })
 })
 
+describe('a colour of the format panel', () => {
+  const palette = (): Element | null => panel().querySelector('.gcp-palette')
+  const row = (action: string): HTMLElement => button(action).closest<HTMLElement>('.mm-color')!
+  const lineColor = (controller: MapController): unknown => {
+    const model = formatModel(controller)
+    return model.kind === 'topics' ? model.line?.color : undefined
+  }
+
+  it('is one closed row that says the colour in force', async () => {
+    const { mind, on } = await mount()
+    await on(() => mind.selectNode(mind.findEle(ID.a)))
+    // the text colour: none written
+    expect(palette()).toBeNull()
+    expect(row('format-color').dataset.colorState).toBe('auto')
+    expect(button('format-color').textContent).toBe('As the theme')
+    // the line colour: the one of the file
+    await showLine()
+    expect(palette()).toBeNull()
+    expect(row('line-color').dataset.colorState).toBe('value')
+    expect(button('line-color').textContent).toBe('#112233')
+  })
+
+  it('opens its palette below the row; a pick is one step and closes it', async () => {
+    const { controller, mind, on } = await mount()
+    await on(() => mind.selectNode(mind.findEle(ID.a)))
+    await showLine()
+    await click(button('line-color'))
+    expect(palette()).not.toBeNull()
+    expect(button('line-color').getAttribute('aria-expanded')).toBe('true')
+
+    await click(panel().querySelector<HTMLElement>('.gcp-standard-row .gcp-swatch')!)
+    expect(palette()).toBeNull()
+    expect(lineColor(controller)).toEqual({ state: 'value', value: '#c00000' })
+    expect(button('line-color').textContent).toBe('#C00000')
+
+    await on(() => controller.undo())
+    expect(lineColor(controller)).toEqual({ state: 'value', value: '#112233' })
+    expect(button('line-color').textContent).toBe('#112233')
+  })
+
+  it('takes the colour off with "automatic"', async () => {
+    const { controller, mind, on } = await mount()
+    await on(() => mind.selectNode(mind.findEle(ID.a)))
+    await showLine()
+    await click(button('line-color'))
+    await click(panel().querySelector<HTMLElement>('.gcp-auto')!)
+    expect(palette()).toBeNull()
+    expect(lineColor(controller)).toEqual({ state: 'value', value: null })
+    expect(row('line-color').dataset.colorState).toBe('auto')
+    expect(button('line-color').textContent).toBe('Automatic')
+  })
+
+  it('closes on Escape and on a press outside, changing nothing', async () => {
+    const { controller, mind, on } = await mount()
+    await on(() => mind.selectNode(mind.findEle(ID.a)))
+    await showLine()
+
+    await click(button('line-color'))
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    })
+    expect(palette()).toBeNull()
+
+    await click(button('line-color'))
+    expect(palette()).not.toBeNull()
+    await act(async () => {
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    })
+    expect(palette()).toBeNull()
+
+    expect(lineColor(controller)).toEqual({ state: 'value', value: '#112233' })
+    // the topic is still the one selected: Escape went to the palette, not to the map
+    expect(kind()).toBe('topics')
+  })
+
+  it('says "mixed" while the selected topics differ, with no swatch chosen', async () => {
+    const { mind, on } = await mount()
+    await on(() => mind.selectNodes([mind.findEle(ID.a), mind.findEle(ID.b)]))
+    await showLine()
+    expect(row('line-color').dataset.colorState).toBe('mixed')
+    expect(button('line-color').textContent).toBe('Mixed')
+    await click(button('line-color'))
+    expect(panel().querySelector('.gcp-swatch.selected, .gcp-auto.selected')).toBeNull()
+  })
+
+  it('reads "no fill" for a boundary without one', async () => {
+    const { controller, on } = await mount()
+    await on(() => controller.selectBoundary(ID.boundary))
+    expect(row('boundary-fill').dataset.colorState).toBe('auto')
+    await click(button('boundary-fill-none'))
+    expect(row('boundary-fill').dataset.colorState).toBe('none')
+    expect(button('boundary-fill').textContent).toBe('No fill')
+  })
+
+  it('is off with nothing selected', async () => {
+    await mount()
+    expect(button('format-color').disabled).toBe(true)
+  })
+})
+
 describe('the map menu', () => {
   it('has "Add boundary" among the topic entries', async () => {
     const { controller } = await mount()
