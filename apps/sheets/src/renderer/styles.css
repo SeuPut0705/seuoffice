@@ -88,7 +88,7 @@
   --sheets-shadow-badge: 0 2px 6px rgb(74 92 255 / 25%);
   --sheets-shadow-slicer: 0 6px 18px rgb(15 40 30 / 14%);
   --sheets-shadow-toast: 0 4px 16px rgb(0 0 0 / 18%);
-  --sheets-shadow-composer: 0 6px 30px rgb(0 0 0 / 8%);
+  --sheets-shadow-composer: 0 1px 3px rgb(0 0 0 / 8%);
 
   /* Same stack as docs/slides — an Inter fallback here made ribbon labels
      render in a different face than the other apps on machines with Inter */

@@ -1134,10 +1134,8 @@ html.markdown-graph-open .ribbon-tabs {
 
 .fm-title {
   padding: 6px 12px 0;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -1182,10 +1180,8 @@ html.markdown-graph-open .ribbon-tabs {
 }
 
 .source-title {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
   color: var(--text-muted);
 }
 
@@ -2275,7 +2271,7 @@ html.markdown-graph-open .ribbon-tabs {
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-16);
   background: var(--color-bg-page);
-  box-shadow: 0 6px 30px var(--md-shadow-soft);
+  box-shadow: 0 1px 3px var(--md-shadow-soft);
   transition:
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
@@ -3750,7 +3746,7 @@ div.tiptap-mathematics-render {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: var(--md-page-shadow);
+  box-shadow: var(--shadow-menu);
 }
 
 .md-theme-item {
@@ -3904,8 +3900,8 @@ div.tiptap-mathematics-render {
 /* the node cap cut the vault: say so rather than let a 400-of-3000 draw
    read as the whole vault */
 .graph-truncated {
-  font-size: 11px;
-  color: var(--text-tertiary);
+  font-size: 12px;
+  color: var(--text-secondary);
   margin-left: 10px;
 }
 

@@ -109,3 +109,86 @@ export function IconPlay(props: IconProps) {
     </Svg>
   )
 }
+
+/** close / dismiss / remove */
+export function IconClose(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 4l8 8M12 4l-8 8" />
+    </Svg>
+  )
+}
+
+/** move up, previous item */
+export function IconArrowUp(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M8 13V3M4 7l4-4 4 4" strokeLinejoin="round" />
+    </Svg>
+  )
+}
+
+/** move down, next item */
+export function IconArrowDown(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M8 3v10M4 9l4 4 4-4" strokeLinejoin="round" />
+    </Svg>
+  )
+}
+
+/** back */
+export function IconArrowLeft(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M13 8H3M7 4L3 8l4 4" strokeLinejoin="round" />
+    </Svg>
+  )
+}
+
+/** chosen, done */
+export function IconCheck(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3.5 8.5l3 3 6-7" strokeLinejoin="round" />
+    </Svg>
+  )
+}
+
+/** previous page */
+export function IconChevronLeft(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M10 4L6 8l4 4" strokeLinejoin="round" />
+    </Svg>
+  )
+}
+
+/** next page */
+export function IconChevronRight(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M6 4l4 4-4 4" strokeLinejoin="round" />
+    </Svg>
+  )
+}
+
+/** a table was added */
+export function IconTable(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="2.5" y="3.5" width="11" height="9" rx="1" />
+      <path d="M2.5 7.5h11M7 3.5v9" />
+    </Svg>
+  )
+}
+
+/** a picture was added */
+export function IconPicture(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="2.5" y="3.5" width="11" height="9" rx="1" />
+      <path d="M3 11l3-3 2.5 2.5 2-2 2.5 2.5" strokeLinejoin="round" />
+    </Svg>
+  )
+}

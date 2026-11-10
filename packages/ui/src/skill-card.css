@@ -167,7 +167,7 @@
   padding: 0;
   border: none;
   background: none;
-  color: var(--text-secondary);
+  color: inherit;
   font-family: inherit;
   font-size: 12px;
   text-decoration: underline;

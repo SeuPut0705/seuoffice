@@ -18,7 +18,7 @@
   --accent-dark: #c3b3f2;
   --accent-soft: rgba(168, 147, 232, 0.2);
   --mm-on-accent: #1e1e1e;
-  --mm-on-danger: #ffffff;
+  --mm-on-danger: #1e1e1e;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,7 +27,7 @@
     --accent-dark: #c3b3f2;
     --accent-soft: rgba(168, 147, 232, 0.2);
     --mm-on-accent: #1e1e1e;
-    --mm-on-danger: #ffffff;
+    --mm-on-danger: #1e1e1e;
   }
 }
 
@@ -736,7 +736,7 @@ html.genoffice-popover-open .ribbon-tabs {
 
 .mm-theme-hint {
   margin: 0 2px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: 11.5px;
   line-height: 1.5;
 }
@@ -902,7 +902,7 @@ html.genoffice-popover-open .ribbon-tabs {
 .mm-modal-hint {
   margin: 6px 0 14px;
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .mm-modal-hint.error {
@@ -934,7 +934,7 @@ html.genoffice-popover-open .ribbon-tabs {
   display: block;
   margin-top: 2px;
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .mm-field {
@@ -1303,7 +1303,6 @@ textarea.mm-field {
   margin: 0 2px 6px;
   color: var(--text-secondary);
   font-size: 11.5px;
-  font-style: italic;
   line-height: 1.4;
 }
 

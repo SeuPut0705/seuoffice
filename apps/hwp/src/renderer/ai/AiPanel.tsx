@@ -47,6 +47,7 @@ import {
   useProjectPanel,
   type ProjectPanel,
 } from '@genoffice/ui'
+import { IconPicture, IconTable } from '@genoffice/ui/icons'
 import { useEffect, useId, useRef, useState } from 'react'
 import type {
   DragEvent as ReactDragEvent,
@@ -1768,7 +1769,8 @@ function ChangeLine({ item }: { item: HwpChange }): ReactElement {
     return (
       <>
         <span className="ai-change-mark" aria-hidden>
-          {item.kind === 'table' ? '+ ▦' : item.kind === 'image' ? '+ ▧' : '+'}
+          +{item.kind === 'table' && <IconTable size={12} />}
+          {item.kind === 'image' && <IconPicture size={12} />}
         </span>
         <ins className="ai-change-to">{item.to}</ins>
       </>

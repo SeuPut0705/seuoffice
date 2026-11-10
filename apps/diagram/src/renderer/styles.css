@@ -216,3 +216,13 @@ body,
   background: var(--accent);
   color: var(--dg-on-accent);
 }
+
+.dg-notice-close:hover,
+.dg-buttons button:not(.dg-primary):hover {
+  background: var(--hover);
+}
+
+.dg-buttons .dg-primary:hover {
+  border-color: var(--accent-dark);
+  background: var(--accent-dark);
+}

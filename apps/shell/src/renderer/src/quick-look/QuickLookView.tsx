@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
+import { IconArrowDown, IconArrowUp, IconClose } from '@genoffice/ui/icons'
 import type {
   QuickLookDocBlock,
   QuickLookMindmapSheet,
@@ -95,13 +96,7 @@ function SheetsBody({ sheets }: { sheets: QuickLookSheet[] }): React.JSX.Element
   )
 }
 
-function SlidesBody({
-  slides,
-  lang,
-}: {
-  slides: QuickLookSlide[]
-  lang: Lang
-}): React.JSX.Element {
+function SlidesBody({ slides, lang }: { slides: QuickLookSlide[]; lang: Lang }): React.JSX.Element {
   return (
     <div className="ql-slides">
       {slides.map((slide) => (
@@ -212,11 +207,7 @@ function DocBlocksBody({ blocks }: { blocks: QuickLookDocBlock[] }): React.JSX.E
                   {block.rows.map((row, rIdx) => (
                     <tr key={rIdx}>
                       {row.map((cell, cIdx) =>
-                        rIdx === 0 ? (
-                          <th key={cIdx}>{cell}</th>
-                        ) : (
-                          <td key={cIdx}>{cell}</td>
-                        ),
+                        rIdx === 0 ? <th key={cIdx}>{cell}</th> : <td key={cIdx}>{cell}</td>,
                       )}
                     </tr>
                   ))}
@@ -299,9 +290,7 @@ export function QuickLookView({
       Boolean(payload.docBlocks?.length) ||
       Boolean(payload.plainText?.trim()))
 
-  const contentStageKey = payload
-    ? `${payload.path}:${payload.mtimeMs}:${viewTab}`
-    : 'loading'
+  const contentStageKey = payload ? `${payload.path}:${payload.mtimeMs}:${viewTab}` : 'loading'
 
   function renderBody(): React.JSX.Element {
     if (loading || !payload) {
@@ -371,10 +360,7 @@ export function QuickLookView({
     return <div className="ql-state">{quickLookText(lang, 'empty')}</div>
   }
 
-  const rootClass = [
-    standalone ? 'ql-standalone' : 'ql-modal',
-    closing ? 'ql-closing' : '',
-  ]
+  const rootClass = [standalone ? 'ql-standalone' : 'ql-modal', closing ? 'ql-closing' : '']
     .filter(Boolean)
     .join(' ')
 
@@ -409,7 +395,7 @@ export function QuickLookView({
                 title={quickLookText(lang, 'prevFile')}
                 aria-label={quickLookText(lang, 'prevFile')}
               >
-                ↑
+                <IconArrowUp size={14} />
               </button>
               <button
                 type="button"
@@ -419,7 +405,7 @@ export function QuickLookView({
                 title={quickLookText(lang, 'nextFile')}
                 aria-label={quickLookText(lang, 'nextFile')}
               >
-                ↓
+                <IconArrowDown size={14} />
               </button>
             </>
           )}
@@ -436,7 +422,7 @@ export function QuickLookView({
             title={quickLookText(lang, 'close')}
             aria-label={quickLookText(lang, 'close')}
           >
-            ✕
+            <IconClose size={14} />
           </button>
         </div>
       </div>
