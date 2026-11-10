@@ -3,3 +3,5 @@ export type { NetworkFaults, SimulateOptions, SimulationReport } from './simulat
 export type { SimulatedEditor } from './network.js'
 export { toyLines, toyMap } from './toys.js'
 export type { LineOp, MapOp, Toy, ToyEditor } from './toys.js'
+export { storeContract } from './store-contract.js'
+export type { StoreContractCase, StoreContractOptions } from './store-contract.js'

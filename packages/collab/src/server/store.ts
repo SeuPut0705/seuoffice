@@ -39,7 +39,13 @@ export type AppendResult =
  * when `base` equals the head, and never reuses a version. `gone` means the
  * epoch no longer exists. `read` returns the changes after version `after`,
  * at most `limit` of them, in order. `markSaved` keeps the highest version
- * reported and returns it. `readBase` and `read` reject for an epoch that is gone.
+ * reported and returns it; the server never reports one past the head.
+ * `readBase` and `read` reject for an epoch that is gone. `create` is
+ * first-wins and leaves an existing epoch untouched. `drop` removes only the
+ * epoch it names; after it, a `create` starts again at version 0 and the
+ * dropped epoch's `(client, seq)` pairs are free. `ops` come back as equal
+ * JSON; object key order may change. `storeContract` in
+ * `@seuoffice/collab/conformance` checks all of this against an implementation.
  */
 export interface CollabStore {
   load(documentId: string): Promise<EpochHead | null>

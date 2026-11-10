@@ -72,8 +72,32 @@ httpServer.on('upgrade', async (request, socket, head) => {
 - 모든 메서드는 문서 하나에 대해 원자적이다.
 - `append`는 비교 후 추가 한 번이다. 같은 `(client, seq)`가 이미 있으면 그때의 버전으로 `duplicate`를 돌려준다. 이 검사가 `base` 검사보다 먼저다. `base`가 지금 머리(head)와 같을 때만 `head + 1`로 붙이고, 아니면 `stale`과 지금 머리를 돌려준다. 그 에포크가 없으면 `gone`이다.
 - 버전은 1부터 빈틈없이 늘고 다시 쓰지 않는다.
-- `markSaved`는 지금까지 받은 가장 큰 버전을 남기고 그 값을 돌려준다.
+- `markSaved`는 지금까지 받은 가장 큰 버전을 남기고 그 값을 돌려준다. 서버는 머리보다 큰 버전을 보내지 않는다.
+- `drop`은 이름 붙인 에포크만 지운다. 그 문서에 다른 에포크가 있으면 아무것도 하지 않는다. 지운 뒤의 `create`는 버전 0에서 시작하고, 지운 에포크에서 쓰인 `(client, seq)`도 다시 쓸 수 있다.
+- 없거나 지워진 에포크에 대한 `readBase`와 `read`는 reject한다. `append`는 reject하지 않고 `gone`을 돌려준다.
+- `ops`는 JSON 값으로 돌려주면 된다. 객체의 키 순서는 바뀌어도 된다(PostgreSQL의 `jsonb`처럼). 문자열과 숫자는 그대로여야 한다. 숫자를 10진수 열로 바꾸는 저장소에서는 `1e21`, `-2.5` 같은 값이 그대로 돌아오는지 확인한다.
 - 변경 하나는 `maxChangeBytes`(기본 8 MiB)까지 클 수 있다. 항목 하나의 크기가 더 작은 저장소는 큰 변경을 따로 저장해야 한다. DynamoDB는 항목이 400 KB까지다. 그런 저장소에서는 `ops`를 객체 저장소(S3 같은 곳)에 두고 로그 항목에는 그 위치만 적는다. `read`는 원래의 `ops`를 채워서 돌려준다. 이 경우 `append`의 원자성은 로그 항목을 쓰는 한 번으로 지키고, 객체는 그보다 먼저 쓴다.
+
+### 저장소 시험하기
+
+원자적이지 않은 저장소는 평소에는 잘 돌다가, 두 사람이 같은 순간 편집할 때 같은 버전을 두 번 주고 문서를 소리 없이 어긋나게 한다. 직접 만든 저장소는 `@seuoffice/collab/conformance`의 `storeContract`로 확인한다. `storeContract(makeStore, options)`는 사례 목록을 돌려준다. 사례마다 `run()`이 있고, 계약을 어기면 예외를 던진다. 시험 도구는 무엇이든 쓸 수 있다. vitest라면 다음과 같다.
+
+```ts
+import { describe, it } from 'vitest'
+import { storeContract } from '@seuoffice/collab/conformance'
+
+describe('our CollabStore', () => {
+  const cases = storeContract(() => openStore(testDatabase), {
+    reopen: () => openStore(testDatabase), // 같은 데이터를 보는 두 번째 인스턴스
+  })
+  for (const each of cases) it.skipIf(each.skip !== undefined)(each.name, each.run)
+})
+```
+
+- 사례마다 새 문서 id를 쓰므로 시험용 데이터베이스 하나를 모든 사례가 함께 써도 된다. `makeStore`가 매번 새 인스턴스를 줘도 되고 같은 인스턴스를 줘도 된다.
+- 시험하는 것: `create`의 먼저 온 쪽이 이기는 규칙(동시에 여러 번 불러도), `base === head`일 때만 붙는 `append`, 머리를 담은 `stale`, 원래 버전을 담은 `duplicate`(그 `base`가 이제 맞지 않아도), `gone`, 같은 `base`로 동시에 온 여러 `append` 가운데 하나만 붙는지, `read`의 순서와 빈틈과 `limit`, 수백 KiB짜리 편집이 그대로 돌아오는지, `markSaved`가 뒤로 가지 않는지, `readBase`, `drop` 뒤의 새 에포크, 문서끼리 섞이지 않는지.
+- `reopen`을 주면 같은 데이터를 보는 두 번째 인스턴스를 열어 같은 상태가 보이는지, 두 인스턴스에서 동시에 온 `append` 가운데 하나만 붙는지 확인한다. 서버를 여러 대 띄운다면 반드시 준다. 주지 않으면 그 사례는 `skip`에 이유를 담아 건너뛴다.
+- 동시 호출 수는 `options.concurrency`(기본 16)로 바꾼다. 동시성 사례는 경합을 확실히 일으키지 못한다. 통과했다고 원자성이 증명되지는 않으므로, 데이터베이스 쪽에서 조건부 쓰기(DynamoDB의 `ConditionExpression`, SQL의 유일 키와 트랜잭션)로 비교와 추가를 한 번에 해야 한다.
 
 ## 엔진 붙이기
 
