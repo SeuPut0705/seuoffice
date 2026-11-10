@@ -229,7 +229,8 @@ export interface RoomPage extends Opened {
  * confirmed. A late joiner replays the whole log.
  */
 export class Room {
-  readonly log: PdfOp[] = []
+  /** the changes as the server holds them: what each sender put on the wire */
+  readonly log: Json[] = []
   readonly pages: RoomPage[] = []
 
   constructor(readonly file: TestFile = blankFile()) {}
@@ -237,10 +238,10 @@ export class Room {
   join(): RoomPage {
     const opened = openHeadless(fileBytes(this.file))
     const page: RoomPage = { ...opened, local: [] }
-    opened.adapter.listen((ops) => page.local.push(...ops.map((op) => roundTrip(opened, op))))
+    opened.adapter.listen((ops) => page.local.push(...ops))
     if (this.log.length > 0)
       opened.adapter.integrate(
-        this.log.map((op) => roundTrip(opened, op)),
+        this.log.map((wire) => opened.adapter.decode(wire)),
         [],
       )
     this.pages.push(page)
@@ -252,11 +253,13 @@ export class Room {
       const sent = sender.local
       if (sent.length === 0) continue
       sender.local = []
-      this.log.push(...sent)
+      // the wire: the sender encodes as it submits, every other page decodes what was sent
+      const wire = sent.map((op) => JSON.parse(JSON.stringify(sender.adapter.encode(op))) as Json)
+      this.log.push(...wire)
       sender.adapter.confirmed?.(sent)
       for (const other of this.pages) {
         if (other === sender) continue
-        const remote = sent.map((op) => roundTrip(other, op))
+        const remote = wire.map((json) => other.adapter.decode(json))
         other.local = other.adapter.integrate(remote, other.local)
       }
     }
@@ -268,9 +271,4 @@ export class Room {
     this.pages.pop()
     return page
   }
-}
-
-/** what the wire does to an op: JSON out, decoded in */
-function roundTrip(opened: Opened, op: PdfOp): PdfOp {
-  return opened.adapter.decode(JSON.parse(JSON.stringify(opened.adapter.encode(op))) as Json)
 }

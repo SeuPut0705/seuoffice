@@ -51,7 +51,8 @@ async function save(request: SavePdfRequest): Promise<SavePdfResult> {
     // it is answered the same way, with nothing saved.
     if (!editing) return { ok: false, error: 'external-modified' }
     try {
-      await coEditing.save()
+      // pressing save again stores nothing new: the host holds that version already
+      await coEditing.save({ skipWhenSaved: true })
       lastSaveError = undefined
       return { ok: false, error: 'external-modified' }
     } catch (error) {

@@ -5,16 +5,19 @@
  * back with pdf-lib.
  */
 import { fileURLToPath } from 'node:url'
-import { expect, test, type Browser, type Locator } from '@playwright/test'
+import { expect, test, type Browser, type FrameLocator, type Locator } from '@playwright/test'
 import {
   PDFArray,
   PDFDict,
   PDFDocument,
+  PDFHexString,
   PDFName,
   PDFRawStream,
+  PDFString,
   StandardFonts,
   degrees,
 } from 'pdf-lib'
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { openCoEdited, settled, type CoEditor, type CoFile } from './collab'
 
 test.setTimeout(240_000)
@@ -50,8 +53,15 @@ async function open(
   documentId: string,
   user: string,
   access: 'edit' | 'view' = 'edit',
+  unlock?: (frame: FrameLocator) => Promise<void>,
 ): Promise<CoEditor> {
-  const editor = await openCoEdited(browser, file, { documentId, user, access, ready: 'canvas' })
+  const editor = await openCoEdited(browser, file, {
+    documentId,
+    user,
+    access,
+    ready: 'canvas',
+    unlock,
+  })
   opened.push(editor)
   editor.page.on('pageerror', (error) => pageErrors.push(`${user}: ${error.message}`))
   await expect(editor.frame.locator('.pdf-page').first()).toBeVisible({ timeout: 20_000 })
@@ -136,7 +146,7 @@ async function atOnce(editors: CoEditor[], act: () => Promise<void>): Promise<nu
 }
 
 /** Show a ribbon tab. Pressing the tab that is already shown would collapse the ribbon. */
-async function tab(editor: CoEditor, name: '주석' | '페이지' | '편집'): Promise<void> {
+async function tab(editor: CoEditor, name: '홈' | '주석' | '페이지' | '편집'): Promise<void> {
   const button = editor.frame.locator('.ribbon-tab', { hasText: name }).first()
   if (!(await button.evaluate((element) => element.classList.contains('active'))))
     await button.click()
@@ -422,8 +432,12 @@ test('two people edit one PDF at once; a late joiner and a viewer follow; saves 
     await expect(editor.page.locator('#status')).not.toContainText('저장 안 함')
   }
 
-  // carol's own save of the same version is the same document
+  // the host holds this version: carol's own save has nothing new to store
   await pressSave(carol)
+  await carol.page.waitForTimeout(1_000)
+  expect(await carol.page.evaluate(() => window.seuLauncher?.saved ?? null)).toBeNull()
+  // asked by her host, her page writes the same document for the same version
+  await carol.page.locator('#save').click()
   const hers = await savedPdf(carol)
   expect(hers.version).toBe(version)
   expect(pagesOf(hers.pdf)).toEqual(stored)
@@ -534,17 +548,223 @@ test('a text edit is refused with a message and changes nothing on either page',
     await expect(saveMarks(editor)).toHaveCount(0)
     await expect(editor.page.locator('#status')).not.toContainText('저장 안 함')
   }
-  // the save she pressed still ran: it stored the session's file, which is the opened one
-  const hers = await savedPdf(alice)
-  expect(hers.version).toBe(before)
-  expect(sourcesOf(hers.pdf, original)).toEqual([0, 1, 2])
-  // and so is the file bob's page writes
-  expect(await bob.page.evaluate(() => window.seuLauncher?.saved ?? null)).toBeNull()
+  // the save she pressed stored nothing: the session holds nothing the host does not have
+  for (const editor of [alice, bob]) {
+    expect(await editor.page.evaluate(() => window.seuLauncher?.saved ?? null)).toBeNull()
+  }
+  // the file bob's page writes when his host asks is the opened one
   await bob.page.locator('#save').click()
   const saved = await savedPdf(bob)
   expect(saved.version).toBe(before)
   expect(sourcesOf(saved.pdf, original)).toEqual([0, 1, 2])
   expect(pagesOf(saved.pdf).map((page) => page.squares)).toEqual([[], [], []])
+  expect(pageErrors).toEqual([])
+})
+
+/** Select the first page's shape `index` the way a person does: a press on its outline */
+async function selectShape(editor: CoEditor, index: number): Promise<void> {
+  const grip = await gripOf(editor, index)
+  await editor.page.mouse.click(grip.x, grip.y)
+  await expect(pageAt(editor, 0).locator('.pdf-draw-selected')).toHaveCount(1)
+}
+
+const storedFile = (editor: CoEditor): Promise<unknown> =>
+  editor.page.evaluate(() => window.seuLauncher?.saved ?? null)
+
+test('the app’s save stores the session’s version also when this page holds no pending edit', async ({
+  browser,
+}) => {
+  const file = await planPdf()
+  const documentId = freshDocument()
+  const alice = await open(browser, file, documentId, 'alice')
+  const bob = await open(browser, file, documentId, 'bob')
+  await drawRectangle(alice, 0.3, 0.2)
+  await settled([alice, bob])
+  await pressSave(alice)
+  const first = await savedPdf(alice)
+  expect(pagesOf(first.pdf)[0]!.squares).toHaveLength(1)
+  await expect(saveMarks(alice)).toHaveCount(0)
+
+  // she deletes the rectangle: no pending edit is left on the page, and the stored file still
+  // holds the rectangle
+  await selectShape(alice, 0)
+  await edit(alice, () => alice.page.keyboard.press('Delete'))
+  const version = await settled([alice, bob])
+  expect((await shown(alice)).shapes).toEqual([])
+  await expect(alice.frame.locator('.tb-save-pending')).toHaveText('저장 안 됨')
+  await pressSave(alice)
+  const second = await savedPdf(alice, first)
+  expect(second.version).toBe(version)
+  expect(pagesOf(second.pdf)[0]!.squares).toEqual([])
+  for (const editor of [alice, bob]) await expect(saveMarks(editor)).toHaveCount(0)
+  // pressing save again stores nothing: the host holds this version
+  await alice.page.evaluate(() => {
+    window.seuLauncher!.saved = null
+  })
+  await pressSave(alice)
+  await alice.page.waitForTimeout(1_000)
+  expect(await storedFile(alice)).toBeNull()
+  expect(pageErrors).toEqual([])
+})
+
+test('the host’s save takes the comment a person is still typing', async ({ browser }) => {
+  const file = await planPdf()
+  const documentId = freshDocument()
+  const alice = await open(browser, file, documentId, 'alice')
+  const bob = await open(browser, file, documentId, 'bob')
+
+  // a note on the first page
+  await tab(alice, '주석')
+  await showFirstPage(alice)
+  await alice.frame.getByRole('button', { name: '메모', exact: true }).click()
+  const layer = (await pageAt(alice, 0).locator('.pdf-draw-layer').boundingBox())!
+  await alice.page.mouse.click(layer.x + layer.width * 0.5, layer.y + layer.height * 0.3)
+  const draft = alice.frame.locator('.pdf-note-draft-box textarea')
+  await draft.fill('first words')
+  await edit(alice, () => alice.frame.locator('.pdf-note-draft-actions .primary').click())
+  await settled([alice, bob])
+
+  // she rewrites it, and the host saves while the box is still open
+  await alice.frame.locator('.pdf-note-comment-edit').first().click()
+  const box = alice.frame.locator('.pdf-note-edit-box textarea')
+  await box.fill('still typing when the host saved')
+  await alice.page.locator('#save').click()
+  const saved = await savedPdf(alice)
+  const notes = (saved.pdf.getPage(0).node.Annots()?.asArray() ?? [])
+    .map((ref) => saved.pdf.context.lookup(ref, PDFDict))
+    .filter((annot) => String(annot.get(PDFName.of('Subtype'))) === '/Text')
+    .map((annot) => {
+      const contents = annot.get(PDFName.of('Contents'))
+      return contents instanceof PDFString || contents instanceof PDFHexString
+        ? contents.decodeText()
+        : String(contents)
+    })
+  expect(notes).toEqual(['still typing when the host saved'])
+  expect(saved.version).toBe(await settled([alice, bob]))
+  await expect(bob.frame.getByText('still typing when the host saved').first()).toBeAttached()
+  expect(pageErrors).toEqual([])
+})
+
+test('printing prints what the page shows and a file operation is refused; neither stores a save', async ({
+  browser,
+}) => {
+  const file = await planPdf()
+  const documentId = freshDocument()
+  const alice = await open(browser, file, documentId, 'alice')
+  const bob = await open(browser, file, documentId, 'bob')
+  await addBlankPage(alice, 0)
+  await drawRectangle(alice, 0.3, 0.2)
+  const version = await settled([alice, bob])
+
+  // the print dialog cannot be driven: count the pages handed to it instead
+  const frame = alice.page.frames().find((candidate) => candidate !== alice.page.mainFrame())!
+  await frame.evaluate(() => {
+    const printed = window as unknown as { printedPages: number | null }
+    printed.printedPages = null
+    window.print = () => {
+      printed.printedPages = document.querySelector('.pdf-print-root')?.children.length ?? 0
+      window.dispatchEvent(new Event('afterprint'))
+    }
+  })
+  await tab(alice, '홈')
+  await alice.frame.locator('.rb-big', { hasText: '인쇄' }).click()
+  await alice.frame.locator('.pdf-modal .pdf-modal-btn.primary', { hasText: '인쇄' }).click()
+  await expect
+    .poll(
+      () =>
+        frame.evaluate(() => {
+          const printed = window as unknown as { printedPages: number | null }
+          return printed.printedPages
+        }),
+      { timeout: 20_000 },
+    )
+    .toBe(4)
+  await expect(alice.frame.locator('.tb-save-error')).toHaveCount(0)
+
+  // merging works on the stored file, which a co-edited page does not have: refused, with a message
+  await tab(alice, '페이지')
+  await alice.frame.getByRole('button', { name: 'PDF 병합' }).click()
+  await expect(alice.frame.locator('.pdf-toast-notice')).toContainText(
+    '여러 사람이 함께 편집하는 동안에는',
+  )
+  await alice.page.waitForTimeout(1_000)
+
+  // neither stored anything, and the edits are where they were
+  expect(await storedFile(alice)).toBeNull()
+  expect(await alice.status()).toMatchObject({ phase: 'live', version, saved: 0 })
+  expect((await shown(alice)).shapes).toHaveLength(1)
+  await expect(alice.frame.locator('.tb-save-pending')).toHaveText('저장 안 됨')
+  expect(pageErrors).toEqual([])
+})
+
+test('a selection stays through someone else’s change, and goes when its item is deleted', async ({
+  browser,
+}) => {
+  const file = await planPdf()
+  const documentId = freshDocument()
+  const alice = await open(browser, file, documentId, 'alice')
+  const bob = await open(browser, file, documentId, 'bob')
+  await drawRectangle(alice, 0.3, 0.2)
+  await settled([alice, bob])
+  await selectShape(alice, 0)
+  const selected = pageAt(alice, 0).locator('.pdf-draw-selected')
+
+  // a change that leaves the page where it is on her screen (one that moves the layout scrolls
+  // the view, and a scroll closes the selection as it always does)
+  await drawRectangle(bob, 0.6, 0.5)
+  await settled([alice, bob])
+  await expect(pageAt(alice, 0).locator('.pdf-draw-shape')).toHaveCount(2)
+  await expect(selected).toHaveCount(1)
+
+  // bob deletes the rectangle she has selected: the selection goes with it
+  await selectShape(bob, 0)
+  await edit(bob, () => bob.page.keyboard.press('Delete'))
+  await settled([alice, bob])
+  await expect(pageAt(alice, 0).locator('.pdf-draw-shape')).toHaveCount(1)
+  await expect(selected).toHaveCount(0)
+  expect(pageErrors).toEqual([])
+})
+
+// the encrypted fixtures' first page, and their password (encrypted.spec.ts)
+const LOCKED_TEXT = 'Encrypted Edit Probe'
+const LOCKED_PASSWORD = 's3cret'
+
+async function typePassword(frame: FrameLocator): Promise<void> {
+  const field = frame.locator('.pdf-pwd-dialog input')
+  await expect(field).toBeVisible({ timeout: 30_000 })
+  await field.fill(LOCKED_PASSWORD)
+  await field.press('Enter')
+}
+
+test('a password-protected PDF opens for the first person and a late joiner, and saves protected', async ({
+  browser,
+}) => {
+  const file = fixture('enc-r5-aes256.pdf')
+  const documentId = freshDocument()
+  const alice = await open(browser, file, documentId, 'alice', 'edit', typePassword)
+  await expect(alice.frame.getByText(LOCKED_TEXT).first()).toBeVisible({ timeout: 30_000 })
+  await drawRectangle(alice, 0.3, 0.4)
+  const bob = await open(browser, file, documentId, 'bob', 'edit', typePassword)
+  await expect(bob.frame.getByText(LOCKED_TEXT).first()).toBeVisible({ timeout: 30_000 })
+  const version = await settled([alice, bob])
+  await expect.poll(async () => (await shown(bob)).shapes).toHaveLength(1)
+
+  await bob.page.locator('#save').click()
+  await expect
+    .poll(() => bob.page.evaluate(() => window.seuLauncher?.saved?.version ?? null), {
+      timeout: 60_000,
+    })
+    .toBe(version)
+  const bytes = new Uint8Array(
+    await bob.page.evaluate(() => Array.from(window.seuLauncher!.saved!.bytes)),
+  )
+  // an independent reader: the stored file needs the password, and holds the rectangle
+  await expect(getDocument({ data: bytes.slice() }).promise).rejects.toMatchObject({
+    name: 'PasswordException',
+  })
+  const stored = await getDocument({ data: bytes.slice(), password: LOCKED_PASSWORD }).promise
+  const annotations = await (await stored.getPage(1)).getAnnotations()
+  expect(annotations.map((annotation) => annotation.subtype)).toEqual(['Square'])
   expect(pageErrors).toEqual([])
 })
 

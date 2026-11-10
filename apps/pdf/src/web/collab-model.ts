@@ -154,10 +154,13 @@ function foldOne(s: EditSnapshot, put: Put): EditSnapshot {
       return { ...s, [put.b]: next }
     }
     case 'rotations': {
-      const rotations = new Map(s.rotations)
-      if (put.v === 0) rotations.delete(put.k)
-      else rotations.set(put.k, put.v)
-      return { ...s, rotations }
+      const turn = (((put.v - (s.rotations.get(put.k) ?? 0)) % 360) + 360) % 360
+      if (turn === 0) return s
+      // the op's own reducer: a quarter turn also lays the page's picture stamps on their side,
+      // so two people's turns of one page turn its stamps twice
+      return reduceEditOps(s, [
+        { op: 'rotatePages', pages: [put.k], dir: turn === 270 ? -90 : turn },
+      ])
     }
     case 'deleted': {
       if (put.v) {
@@ -204,7 +207,10 @@ function foldList(list: readonly Entity[], put: ListPut): Entity[] {
  * flags, order, rotations), so the item puts after them address pages that
  * exist. A blank page that disappears (an undone insertion) becomes a deleted
  * page: blank page indexes must stay gapless, and a peer may have added the
- * next one already.
+ * next one already. Items are compared with what the page puts already made
+ * of them (a deleted page takes its items along, a quarter turn turns its
+ * stamps): that part of the change travels as the page put alone, so it
+ * composes with a peer's change of the same page.
  */
 export function diff(from: EditSnapshot, to: EditSnapshot, basePages: number): Put[] {
   const puts: Put[] = []
@@ -228,8 +234,9 @@ export function diff(from: EditSnapshot, to: EditSnapshot, basePages: number): P
     const v = to.rotations.get(k) ?? 0
     if (v !== was) puts.push({ b: 'rotations', k, v, was })
   }
+  const paged = fold(from, puts)
   for (const bucket of LIST_BUCKETS)
-    if (bucket !== 'blankPages') puts.push(...listDiff(bucket, from, to))
+    if (bucket !== 'blankPages') puts.push(...listDiff(bucket, paged, to))
   for (const bucket of MAP_BUCKETS) {
     const before = from[bucket] as Map<string, unknown>
     const after = to[bucket] as Map<string, unknown>
@@ -507,6 +514,45 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 const isPage = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0
 const isPages = (v: unknown): v is number[] => Array.isArray(v) && v.every(isPage)
+
+// ── picture bytes on the wire ─────────────────────────────────────────
+
+/** A stamp's `image` on the wire when an earlier change of the log carries its bytes */
+const PICTURE_REF = 'ref:'
+
+export const pictureRef = (key: string): string => `${PICTURE_REF}${key}`
+
+/** The key a wire `image` names, or null when it is the bytes themselves (base64 has no colon) */
+export const pictureRefKey = (image: string): string | null =>
+  image.startsWith(PICTURE_REF) ? image.slice(PICTURE_REF.length) : null
+
+/** A name for picture bytes from the bytes alone: their length and 64 bits of two hashes */
+export function pictureKey(image: string): string {
+  let a = 0x811c9dc5
+  let b = 0x9e3779b9
+  for (let i = 0; i < image.length; i++) {
+    const c = image.charCodeAt(i)
+    a = Math.imul(a ^ c, 0x01000193)
+    b = Math.imul(b ^ c, 0x85ebca6b) ^ (b >>> 15)
+  }
+  const hex = (n: number): string => (n >>> 0).toString(16).padStart(8, '0')
+  return `${image.length.toString(36)}.${hex(a)}${hex(b)}`
+}
+
+/** `op` with every picture stamp's `image` passed through `map`; `op` itself when none changed */
+export function mapPictures(op: PdfOp, map: (image: string) => string): PdfOp {
+  let changed = false
+  const puts = op.puts.map((put): Put => {
+    if (put.b !== 'drawings' || !isObject(put.v)) return put
+    const input = put.v.input
+    if (!isObject(input) || input.kind !== 'image' || typeof input.image !== 'string') return put
+    const image = map(input.image)
+    if (image === input.image) return put
+    changed = true
+    return { ...put, v: { ...put.v, input: { ...input, image } } }
+  })
+  return changed ? { id: op.id, puts } : op
+}
 
 /** `json` as a PdfOp; throws on any shape this editor does not write */
 export function decodeOp(json: Json): PdfOp {

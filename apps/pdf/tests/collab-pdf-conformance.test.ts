@@ -15,7 +15,7 @@ import { pageCount, type PdfOp } from '../src/web/collab-model'
 import { randomAction } from './collab/actions'
 import { blankFile, fileBytes, openHeadless } from './collab/headless'
 
-const FORMAT = { name: 'pdf', schema: 1 }
+const FORMAT = { name: 'pdf', schema: 2 }
 
 /** What the App and the save path need of an edit state, whatever the peers did */
 function invalid(s: EditSnapshot, basePages: number): string | null {

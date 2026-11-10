@@ -25,10 +25,13 @@ export interface PdfCollabHandles extends PdfHost {
   notice(text: string): void
   /** the toolbar's unsaved mark and Save button follow this instead of the App's own pending edits */
   unsaved(value: boolean): void
+  /** commit what the person has open (a text edit, a comment being rewritten), as the App's save does */
+  commitDrafts(): void
 }
 
 /** Bump `schema` when the op format changes: pages of two schemas must not share a session */
-const FORMAT = { name: 'pdf', schema: 1 }
+// 2: a rotation put turns the page's picture stamps itself, and a stamp's bytes travel once
+const FORMAT = { name: 'pdf', schema: 2 }
 
 const FEATURES = {
   text: ['글자를 고치거나 넣을 수 없습니다', 'text cannot be edited or added'],
@@ -38,6 +41,10 @@ const FEATURES = {
   attachments: ['첨부 파일을 더하거나 뺄 수 없습니다', 'attachments cannot be added or removed'],
   protection: ['암호 보호를 바꿀 수 없습니다', 'password protection cannot be changed'],
   redaction: ['영구 가림을 할 수 없습니다', 'nothing can be redacted'],
+  fileOps: [
+    '내보내기, 합치기, 나누기처럼 저장된 파일로 하는 작업을 할 수 없습니다',
+    'exporting, merging, splitting and other work on the stored file is not available',
+  ],
 } as const
 
 function refusalText(reason: Refusal): string {
@@ -84,6 +91,13 @@ export function joinPdfCollab(doc: WebDocument): Promise<PageCollab<PdfCollabHan
   let app: PdfCollabHandles | null = null
   return joinPageCollab<PdfCollabHandles, PdfOp>({
     status: (status) => app?.unsaved(sessionUnsaved(status)),
+    // the host's save takes what the person is still typing, as the App's own save does
+    hostSave: async (save) => {
+      app?.commitDrafts()
+      await save()
+    },
+    // a protected file asks for its password before anything can attach
+    inputBeforeAttach: (target) => target instanceof Element && !!target.closest('.pdf-pwd-dialog'),
     format: FORMAT,
     fileName: doc.fileName,
     bytes: doc.bytes,

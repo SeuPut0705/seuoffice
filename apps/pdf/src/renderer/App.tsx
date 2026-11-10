@@ -401,6 +401,7 @@ import { buildOcrBakeInserts } from './ocr-bake'
 import { planEditOps, reduceBucket } from './edit-ops'
 import type { Bucket, Op, OpContext, PlanResult } from './edit-ops'
 import { rectsNear } from './edit-state'
+import { keptMarkupMenu, keptSelection } from './kept-selection'
 import { usePanDrag } from './pan-drag'
 import { useDragEdgeScroll } from './thumb-drag-scroll'
 import type {
@@ -2829,8 +2830,11 @@ export default function App() {
   // Set while the web page co-edits this document (apps/pdf/src/web/collab-adapter.ts)
   const collabRef = useRef<{
     refuse(ops: Op[]): PlanResult | null
-    blocks(what: 'outline' | 'attachments' | 'protection' | 'redaction' | 'history'): boolean
+    blocks(
+      what: 'outline' | 'attachments' | 'protection' | 'redaction' | 'history' | 'fileOps',
+    ): boolean
     changed(state: EditSnapshot): void
+    shownFile(): Promise<Uint8Array>
   } | null>(null)
 
   // Ref-mirrored fields read the mirrors so a pushUndo later in an AI turn captures
@@ -3041,9 +3045,10 @@ export default function App() {
     setDeleted(s.deleted)
     setOrder(s.order)
     setMetadata(s.metadata)
-    // The selected annotation may no longer exist in the restored snapshot
-    setSelected(null)
-    setMarkupMenu(null)
+    // The selected annotation may no longer exist in the restored snapshot. Another person's
+    // change (keepDrafts) leaves a selection and a menu whose item is still there.
+    setSelected((cur) => (keepDrafts ? keptSelection(cur, s) : null))
+    setMarkupMenu((cur) => (keepDrafts ? keptMarkupMenu(cur, s) : null))
   }
 
   const undo = () => {
@@ -3071,8 +3076,15 @@ export default function App() {
 
   // web co-editing: the session takes the edits once the document is on screen (absent on the
   // desktop). It keeps the first handles it gets, so they call this render's functions through a ref.
-  const collabAppRef = useRef({ snapshot, applySnapshot })
-  collabAppRef.current = { snapshot, applySnapshot }
+  const collabAppRef = useRef({ snapshot, applySnapshot, commitDrafts: () => {} })
+  collabAppRef.current = {
+    snapshot,
+    applySnapshot,
+    commitDrafts: () => {
+      commitTextDraft()
+      commitNoteEdit()
+    },
+  }
   // While co-editing, every pending edit on this page is the session's: whether a stored file
   // holds them all is the session's to say (null: not co-editing)
   const [collabUnsaved, setCollabUnsaved] = useState<boolean | null>(null)
@@ -3095,6 +3107,7 @@ export default function App() {
       password: () => diskPasswordRef.current,
       notice: (text: string) => showNoticeRef.current(text),
       unsaved: setCollabUnsaved,
+      commitDrafts: () => collabAppRef.current.commitDrafts(),
     })
   }, [status, doc, sizes])
 
@@ -5793,7 +5806,9 @@ export default function App() {
       edits !== textEdits ||
       noteFlush.drawings !== drawings ||
       noteFlush.noteEdits !== noteEdits ||
-      ocrBakeInserts.length > 0
+      ocrBakeInserts.length > 0 ||
+      // web co-editing: the session holds edits no stored file has, whatever is pending here
+      collabUnsaved === true
     if (!anythingToSave || !filePath) return Promise.resolve(!anythingToSave)
     // Writing a protection with no owner password would hand ownership to
     // anyone, so a protection change with both passwords empty is refused. An
@@ -7696,9 +7711,18 @@ export default function App() {
   }
 
   /** Extract/insert work on the file on disk — flush unsaved changes first; undefined = the save failed */
-  const flushThen = async <T,>(fn: () => Promise<T>): Promise<T | undefined> => {
+  // `onShown`: the work reads the file through collabRef's shownFile when co-editing
+  const flushThen = async <T,>(fn: () => Promise<T>, onShown = false): Promise<T | undefined> => {
     if (redactions.length > 0) {
       opFailed(t('redactStructureBlocked'))
+      return undefined
+    }
+    // web co-editing: a save leaves the edits pending and the page never reloads from a stored
+    // file, so nothing is flushed. Work on the file as this page shows it goes on; the rest is
+    // refused with a message.
+    if (collabRef.current) {
+      if (onShown) return fn()
+      collabRef.current.blocks('fileOps')
       return undefined
     }
     if (dirty && !(await save(false, true))) return undefined
@@ -7978,7 +8002,8 @@ export default function App() {
       await flushThen(async () => {
         setPrinting(true)
         try {
-          const data = await window.pdfApi.readFile(filePath)
+          const data =
+            (await collabRef.current?.shownFile()) ?? (await window.pdfApi.readFile(filePath))
           const pdoc = await getDocument({ data: new Uint8Array(data), ...DOC_OPTS }).promise
           try {
             await printPdf(pdoc, pages, { includeAnnotations })
@@ -7990,7 +8015,7 @@ export default function App() {
         } finally {
           setPrinting(false)
         }
-      })
+      }, true)
     } finally {
       printBusyRef.current = false
     }

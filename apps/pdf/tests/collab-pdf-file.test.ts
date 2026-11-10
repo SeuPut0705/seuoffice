@@ -76,7 +76,7 @@ describe('the co-edited PDF file', () => {
     const sent: PdfOp[] = []
     adapter.listen((ops) => sent.push(...ops))
     adapter.integrate(
-      room.log.map((op) => adapter.decode(JSON.parse(JSON.stringify(op)) as Json)),
+      room.log.map((wire) => adapter.decode(wire)),
       [],
     )
     expect(canonical(carol.state)).toBe(alice.print())
