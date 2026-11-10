@@ -31,7 +31,7 @@ use crate::ods_chart::{accent_palette, chart_document};
 use crate::ods_drawing::{
     Drawings, EmbeddedObject, Geometry, Picture, default_column_points, width_points,
 };
-use crate::ods_pivot::pivot_table_xml;
+use crate::ods_pivot::{NamedSources, named_sources, pivot_table_xml};
 use crate::ods_print::{
     PageStyles, parse_print_extras, print_titles, split_outside_quotes, worksheet_tail,
 };
@@ -83,6 +83,8 @@ const NAMESPACES: &str = concat!(
     // Conditional formats have no element in the standard; this is the
     // extension namespace the readers of the format share for them.
     r#"xmlns:calcext="urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0" "#,
+    // The stops of a gradient with more than two colours.
+    r#"xmlns:loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0" "#,
 );
 
 /// What the export did, in the shape the protocol returns it. `dropped` counts
@@ -152,6 +154,7 @@ fn sheet_frames(
     sessions: &mut WorkbookSessions,
     metadata: &WorkbookMetadata,
     sheet: &SheetMetadata,
+    package: Option<&Path>,
     drawings: &mut Drawings,
     counters: &mut Counters,
 ) -> Result<HashMap<(usize, usize), String>, SidecarError> {
@@ -198,6 +201,23 @@ fn sheet_frames(
             ),
             "chart" => (
                 visual.chart.as_ref().and_then(|chart| {
+                    // The model keeps the cell a series is named after only
+                    // when the chart saved no copy of the name. The cell is
+                    // what keeps the name live, so it is read from the part.
+                    let named = package
+                        .zip(visual.chart_path.as_deref())
+                        .and_then(|(package, part)| series_name_cells(package, part))
+                        .filter(|cells| cells.len() == chart.series.len())
+                        .map(|cells| {
+                            let mut chart = chart.clone();
+                            for (series, cell) in chart.series.iter_mut().zip(cells) {
+                                if series.name_ref.is_none() {
+                                    series.name_ref = cell;
+                                }
+                            }
+                            chart
+                        });
+                    let chart = named.as_ref().unwrap_or(chart);
                     drawings.chart(sheet, &geometry, visual, |width, height| {
                         chart_document(chart, &palette, width, height)
                     })
@@ -222,6 +242,47 @@ fn sheet_frames(
         }
     }
     Ok(frames)
+}
+
+/// A chart part is a few kilobytes; one past this is not read for names.
+const MAX_CHART_PART_BYTES: u64 = 16 * 1024 * 1024;
+
+/// The formula each series of a chart part takes its name from, in the order
+/// the series appear, `None` for a name typed into the chart.
+fn series_name_cells(package: &Path, part: &str) -> Option<Vec<Option<String>>> {
+    use std::io::Read;
+    let mut archive = ZipArchive::new(File::open(package).ok()?).ok()?;
+    let entry = archive.by_name(part.trim_start_matches('/')).ok()?;
+    if entry.size() > MAX_CHART_PART_BYTES {
+        return None;
+    }
+    let mut text = String::new();
+    entry
+        .take(MAX_CHART_PART_BYTES)
+        .read_to_string(&mut text)
+        .ok()?;
+    let document = roxmltree::Document::parse(&text).ok()?;
+    let child = |node: roxmltree::Node<'_, '_>, name: &str| {
+        node.children()
+            .find(|child| child.is_element() && child.tag_name().name() == name)
+            .map(|child| child.id())
+    };
+    Some(
+        document
+            .descendants()
+            .filter(|node| node.is_element() && node.tag_name().name() == "ser")
+            .map(|series| {
+                let tx = document.get_node(child(series, "tx")?)?;
+                let reference = document.get_node(child(tx, "strRef")?)?;
+                let formula = document.get_node(child(reference, "f")?)?;
+                formula
+                    .text()
+                    .map(str::trim)
+                    .filter(|formula| !formula.is_empty())
+                    .map(str::to_owned)
+            })
+            .collect(),
+    )
 }
 
 /// The rows from `first` to `last` whose height is not the default one: their
@@ -318,6 +379,23 @@ fn write_document(
         .sessions
         .get(&metadata.session_id)
         .map(|session| session.path.clone());
+    // The names a pivot table may read from are looked up once, and only for
+    // a workbook that has a pivot table.
+    let pivot_sources: NamedSources = match package.as_deref() {
+        Some(package) if metadata.sheets.iter().any(|sheet| !sheet.pivot_tables.is_empty()) => {
+            let parts: Vec<(String, String)> = metadata
+                .sheets
+                .iter()
+                .enumerate()
+                .filter_map(|(index, sheet)| {
+                    worksheet_part(sessions, &metadata.session_id, index)
+                        .map(|(_, part)| (sheet.name.clone(), part))
+                })
+                .collect();
+            named_sources(package, &parts, &metadata.defined_names)
+        }
+        _ => NamedSources::new(),
+    };
 
     let body_path = staging.path("body");
     {
@@ -342,12 +420,23 @@ fn write_document(
                 &mut registry,
             );
             counters.dropped.conditional_formats += lost;
-            let frames = sheet_frames(sessions, metadata, sheet, &mut drawings, &mut counters)?;
+            let frames = sheet_frames(
+                sessions,
+                metadata,
+                sheet,
+                package.as_deref(),
+                &mut drawings,
+                &mut counters,
+            )?;
+            let (sparklines, written) = sparkline_groups_xml(index, sheet);
+            counters.dropped.sparklines = counters.dropped.sparklines.saturating_sub(written);
             for pivot in &sheet.pivot_tables {
                 // A pivot table that is written leaves the count of losses.
                 if let Some(xml) = package
                     .as_deref()
-                    .and_then(|package| pivot_table_xml(package, &sheet.name, pivot))
+                    .and_then(|package| {
+                        pivot_table_xml(package, &sheet.name, pivot, &pivot_sources)
+                    })
                 {
                     data_pilots.push_str(&xml);
                     counters.dropped.pivots = counters.dropped.pivots.saturating_sub(1);
@@ -375,6 +464,7 @@ fn write_document(
                 local_names: &local_names,
                 validations: &areas,
                 conditional_formats: &conditional_formats,
+                sparklines: &sparklines,
                 frames: &frames,
             };
             write_table(
@@ -423,7 +513,10 @@ fn write_document(
         metadata,
     )?;
     let styles_path = staging.path("styles");
-    fs::write(&styles_path, styles_xml(&registry, &pages))?;
+    fs::write(
+        &styles_path,
+        styles_xml(&registry, &pages, &drawings.named_styles()),
+    )?;
     let meta_path = staging.path("meta");
     fs::write(&meta_path, meta_xml())?;
     let settings_path = staging.path("settings");
@@ -500,9 +593,80 @@ fn write_content_xml(
     Ok(())
 }
 
-fn styles_xml(registry: &StyleRegistry, pages: &PageStyles) -> String {
+/// The sparklines of a sheet as the extension element the readers of the
+/// format share for them, and how many cells it covers. The model carries the
+/// kind, the series colour, the colour of negative points and where each one
+/// reads from; a sparkline whose range cannot be named is left out.
+fn sparkline_groups_xml(sheet_index: usize, sheet: &SheetMetadata) -> (String, u32) {
+    let mut groups = String::new();
+    let mut written = 0;
+    for (group_index, group) in sheet.sparklines.iter().enumerate() {
+        let mut cells = String::new();
+        let mut count = 0;
+        for cell in &group.cells {
+            let host = cell.cell.replace('$', "");
+            let source = cell.source_ref.trim();
+            let range = crate::ods_chart::chart_range(source).or_else(|| {
+                // A range on the sparkline's own sheet may come without it.
+                let quoted = format!("'{}'!{source}", sheet.name.replace('\'', "''"));
+                crate::ods_chart::chart_range(&quoted)
+            });
+            let Some(range) = range.filter(|_| !host.is_empty()) else {
+                continue;
+            };
+            cells.push_str(&format!(
+                r#"<calcext:sparkline calcext:cell-address="{}.{}" calcext:data-range="{}"/>"#,
+                escape_xml(&odf_formula::odf_sheet_name(&sheet.name)),
+                escape_xml(&host),
+                escape_xml(&range)
+            ));
+            count += 1;
+        }
+        if count == 0 {
+            continue;
+        }
+        let kind = match group.kind.as_str() {
+            "column" => "column",
+            "stacked" => "stacked",
+            _ => "line",
+        };
+        let hex = |color: &str| {
+            let color = color.trim().trim_start_matches('#');
+            let color = if color.len() == 8 { &color[2..] } else { color };
+            format!("#{}", color.to_ascii_lowercase())
+        };
+        let mut attributes = format!(
+            r#" calcext:id="{{00000000-0000-0000-{:04x}-{:012x}}}" calcext:type="{kind}" calcext:line-width="0.75pt" calcext:display-empty-cells-as="gap""#,
+            sheet_index & 0xffff,
+            group_index
+        );
+        if group.negative_color.is_some() {
+            attributes.push_str(r#" calcext:negative="true""#);
+        }
+        attributes.push_str(r#" calcext:min-axis-type="individual" calcext:max-axis-type="individual""#);
+        // Excel's own colours stand in for the ones the model does not carry.
+        attributes.push_str(&format!(
+            r#" calcext:color-series="{}" calcext:color-negative="{}""#,
+            escape_xml(&hex(group.color.as_deref().unwrap_or("#376092"))),
+            escape_xml(&hex(group.negative_color.as_deref().unwrap_or("#d00000"))),
+        ));
+        groups.push_str(&format!(
+            "<calcext:sparkline-group{attributes}><calcext:sparklines>{cells}</calcext:sparklines></calcext:sparkline-group>"
+        ));
+        written += count;
+    }
+    if groups.is_empty() {
+        return (String::new(), 0);
+    }
+    (
+        format!("<calcext:sparkline-groups>{groups}</calcext:sparkline-groups>"),
+        written,
+    )
+}
+
+fn styles_xml(registry: &StyleRegistry, pages: &PageStyles, drawing_styles: &str) -> String {
     format!(
-        r#"<?xml version="1.0" encoding="UTF-8"?><office:document-styles {NAMESPACES}office:version="{ODF_VERSION}"><office:font-face-decls>{}</office:font-face-decls><office:styles>{}{}</office:styles><office:automatic-styles>{}{}</office:automatic-styles><office:master-styles>{}</office:master-styles></office:document-styles>"#,
+        r#"<?xml version="1.0" encoding="UTF-8"?><office:document-styles {NAMESPACES}office:version="{ODF_VERSION}"><office:font-face-decls>{}</office:font-face-decls><office:styles>{}{drawing_styles}{}</office:styles><office:automatic-styles>{}{}</office:automatic-styles><office:master-styles>{}</office:master-styles></office:document-styles>"#,
         registry.font_face_decls(),
         registry.default_cell_style(),
         registry.conditional_styles(),
@@ -1125,6 +1289,8 @@ struct SheetContext<'a> {
     local_names: &'a str,
     /// The ranges a validation covers, sorted by first row.
     validations: &'a [ValidationArea],
+    /// The sheet's `calcext:sparkline-groups` element, ready to write.
+    sparklines: &'a str,
     /// The sheet's `calcext:conditional-formats` element, ready to write.
     conditional_formats: &'a str,
     /// The drawings that start in a cell, as ready shape elements.
@@ -1543,6 +1709,7 @@ fn write_table(
             context.local_names
         )?;
     }
+    out.write_all(context.sparklines.as_bytes())?;
     out.write_all(context.conditional_formats.as_bytes())?;
     out.write_all(b"</table:table>")?;
     Ok(())
@@ -3638,6 +3805,88 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
     }
 
     #[test]
+    fn carries_sparklines_dashes_and_trend_lines() {
+        let chart = concat!(
+            r#"<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart><c:grouping val="standard"/>"#,
+            r#"<c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>typed</c:v></c:tx><c:spPr><a:ln><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></a:ln></c:spPr>"#,
+            r#"<c:trendline><c:trendlineType val="movingAvg"/><c:period val="2"/></c:trendline>"#,
+            r#"<c:cat><c:strRef><c:f>Data!$A$1:$A$2</c:f></c:strRef></c:cat><c:val><c:numRef><c:f>Data!$B$1:$B$2</c:f></c:numRef></c:val></c:ser>"#,
+            r#"<c:axId val="1"/><c:axId val="2"/></c:lineChart>"#,
+            r#"<c:catAx><c:axId val="1"/><c:scaling/><c:delete val="0"/><c:axPos val="b"/><c:crossAx val="2"/></c:catAx>"#,
+            r#"<c:valAx><c:axId val="2"/><c:scaling/><c:delete val="0"/><c:axPos val="l"/><c:crossAx val="1"/></c:valAx>"#,
+            r#"</c:plotArea></c:chart></c:chartSpace>"#,
+        );
+        let drawing = concat!(
+            r#"<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">"#,
+            r#"<xdr:twoCellAnchor><xdr:from><xdr:col>6</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>8</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>2</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>"#,
+            r#"<xdr:sp><xdr:nvSpPr><xdr:cNvPr id="2" name="Dashed"/><xdr:cNvSpPr/></xdr:nvSpPr><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:ln w="25400"><a:solidFill><a:srgbClr val="C00000"/></a:solidFill><a:prstDash val="lgDashDotDot"/></a:ln></xdr:spPr></xdr:sp><xdr:clientData/></xdr:twoCellAnchor>"#,
+            r#"<xdr:twoCellAnchor><xdr:from><xdr:col>6</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>4</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>12</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>16</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>"#,
+            r#"<xdr:graphicFrame><xdr:nvGraphicFramePr><xdr:cNvPr id="3" name="Chart 1"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>"#,
+            r#"</xdr:wsDr>"#,
+        );
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:D2"/><sheetData>"#,
+            r#"<row r="1"><c r="A1" t="inlineStr"><is><t>a</t></is></c><c r="B1"><v>3</v></c><c r="C1"><v>-4</v></c><c r="D1"><v>5</v></c></row>"#,
+            r#"<row r="2"><c r="A2" t="inlineStr"><is><t>b</t></is></c><c r="B2"><v>6</v></c><c r="C2"><v>7</v></c><c r="D2"><v>8</v></c></row>"#,
+            r#"</sheetData><drawing r:id="rId1"/>"#,
+            r#"<extLst><ext uri="{05C60535-1F16-4fd2-B633-F4F36F0B64E0}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"><x14:sparklineGroups xmlns:xm="http://schemas.microsoft.com/office/excel/2006/main">"#,
+            r#"<x14:sparklineGroup type="column" negative="1"><x14:colorSeries rgb="FFC00000"/><x14:colorNegative rgb="FF00B050"/><x14:sparklines><x14:sparkline><xm:f>Data!B1:D1</xm:f><xm:sqref>E1</xm:sqref></x14:sparkline><x14:sparkline><xm:f>Data!B2:D2</xm:f><xm:sqref>E2</xm:sqref></x14:sparkline></x14:sparklines></x14:sparklineGroup>"#,
+            r#"</x14:sparklineGroups></ext></extLst></worksheet>"#,
+        );
+        let entries = single_sheet_entries(
+            "",
+            sheet,
+            vec![
+                (
+                    "xl/worksheets/_rels/sheet1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/drawings/drawing1.xml", drawing.to_owned()),
+                (
+                    "xl/drawings/_rels/drawing1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/charts/chart1.xml", chart.to_owned()),
+            ],
+        );
+        let (result, content, styles, _, dir) = export(&entries);
+        assert_eq!(result.dropped.sparklines, 0);
+        assert_eq!(result.dropped.shapes, 0);
+        assert_eq!(result.dropped.charts, 0);
+        // The sparklines close the sheet, one group with its two cells.
+        assert!(
+            content.contains(concat!(
+                r##"<calcext:sparkline-groups><calcext:sparkline-group calcext:id="{00000000-0000-0000-0000-000000000000}" calcext:type="column" calcext:line-width="0.75pt" calcext:display-empty-cells-as="gap" calcext:negative="true" calcext:min-axis-type="individual" calcext:max-axis-type="individual" calcext:color-series="#c00000" calcext:color-negative="#00b050">"##,
+                r#"<calcext:sparklines><calcext:sparkline calcext:cell-address="Data.E1" calcext:data-range="Data.B1:Data.D1"/><calcext:sparkline calcext:cell-address="Data.E2" calcext:data-range="Data.B2:Data.D2"/></calcext:sparklines>"#,
+                r#"</calcext:sparkline-group></calcext:sparkline-groups></table:table>"#,
+            )),
+            "{content}"
+        );
+        // The outline names its dash, and the dash is declared once among the
+        // document's styles: one long stroke and two dots.
+        assert!(
+            content.contains(r##" draw:stroke="dash" draw:stroke-dash="lgDashDotDot" svg:stroke-width="2pt" svg:stroke-color="#c00000""##),
+            "{content}"
+        );
+        assert!(
+            styles.contains(r#"<draw:stroke-dash draw:name="lgDashDotDot" draw:style="rect" draw:dots1="1" draw:dots1-length="800%" draw:dots2="2" draw:dots2-length="100%" draw:distance="300%"/>"#),
+            "{styles}"
+        );
+        // The trend line sits in its series, before the points, and a name
+        // typed into the chart stays a string.
+        let chart = read_entry(&dir.path().join("book.ods"), "Object 1/content.xml");
+        assert!(
+            chart.contains(r#"<style:chart-properties chart:regression-type="moving-average" chart:regression-period="2"/>"#),
+            "{chart}"
+        );
+        assert!(
+            chart.contains(r#" loext:label-string="&quot;typed&quot;" chart:class="chart:line"><chart:regression-curve chart:style-name="ch"#),
+            "{chart}"
+        );
+    }
+
+    #[test]
     fn a_turned_shape_keeps_its_angle_and_an_unknown_preset_its_name() {
         // A cloud turned 30 degrees over E2:F5: two default columns are 96 pt
         // wide and four default rows 60 pt high.
@@ -3742,7 +3991,7 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
         assert!(
             content.contains(concat!(
                 r#"<text:p>east</text:p></table:table-cell><table:table-cell/><table:table-cell><draw:frame draw:style-name="gr1" table:end-cell-address="Data.J13" table:end-x="0.000cm" table:end-y="0.000cm" draw:z-index="0" draw:name="Chart 1" svg:width="10.160cm" svg:height="6.350cm" svg:x="0.000cm" svg:y="0.000cm">"#,
-                r#"<draw:object draw:notify-on-update-of-ranges="Data.A2:Data.A3 Data.B2:Data.B3" xlink:href="./Object 1" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>"#,
+                r#"<draw:object draw:notify-on-update-of-ranges="Data.A2:Data.A3 Data.B2:Data.B3 Data.B1:Data.B1" xlink:href="./Object 1" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>"#,
             )),
             "{content}"
         );
@@ -3765,8 +4014,10 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
             "{chart}"
         );
         assert!(chart.contains(r#"chart:class="major"/>"#), "{chart}");
+        // The series is named after B1. The chart saved a copy of the name,
+        // and the cell is still what the series points at.
         assert!(
-            chart.contains(r#"chart:values-cell-range-address="Data.B2:Data.B3" loext:label-string="&quot;east&quot;" chart:class="chart:bar"><chart:data-point chart:repeated="2"/>"#),
+            chart.contains(r#"chart:values-cell-range-address="Data.B2:Data.B3" chart:label-cell-address="Data.B1:Data.B1" chart:class="chart:bar"><chart:data-point chart:repeated="2"/>"#),
             "{chart}"
         );
         assert!(chart.contains(r##"draw:fill="solid" draw:fill-color="#4472c4""##), "{chart}");

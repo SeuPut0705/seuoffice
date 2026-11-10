@@ -154,11 +154,95 @@ pub(crate) struct Drawings {
     picture_names: HashMap<String, String>,
     pub(crate) objects: Vec<EmbeddedObject>,
     z_index: usize,
+    /// What a graphic style refers to by name — dashes and gradients — in
+    /// the order it was first asked for.
+    named: Vec<String>,
+    named_keys: HashMap<String, String>,
 }
+
+/// The preset dashes of DrawingML as an ODF dash: the name, the count and
+/// length of the first and second kind of dot, and the gap, in percent of the
+/// line's width. The importer reads the same table back.
+pub(crate) const DASHES: &[(&str, u8, u32, u8, u32, u32)] = &[
+    ("sysDot", 1, 100, 0, 0, 100),
+    ("sysDash", 1, 300, 0, 0, 100),
+    ("dash", 1, 400, 0, 0, 300),
+    ("dashDot", 1, 400, 1, 100, 300),
+    ("lgDash", 1, 800, 0, 0, 300),
+    ("lgDashDot", 1, 800, 1, 100, 300),
+    ("lgDashDotDot", 1, 800, 2, 100, 300),
+    ("dot", 1, 100, 0, 0, 300),
+    ("sysDashDot", 1, 300, 1, 100, 100),
+    ("sysDashDotDot", 1, 300, 2, 100, 100),
+];
 
 impl Drawings {
     pub(crate) fn automatic_styles(&self) -> String {
         self.styles.concat()
+    }
+
+    /// The dashes and gradients the graphic styles name, for
+    /// `<office:styles>`.
+    pub(crate) fn named_styles(&self) -> String {
+        self.named.concat()
+    }
+
+    /// The name of the dash a preset stands for, declared on first use.
+    fn dash(&mut self, preset: &str) -> Option<&'static str> {
+        let (name, dots1, length1, dots2, length2, distance) =
+            *DASHES.iter().find(|entry| entry.0 == preset)?;
+        if !self.named_keys.contains_key(name) {
+            let second = if dots2 > 0 {
+                format!(r#" draw:dots2="{dots2}" draw:dots2-length="{length2}%""#)
+            } else {
+                String::new()
+            };
+            self.named.push(format!(
+                r#"<draw:stroke-dash draw:name="{name}" draw:style="rect" draw:dots1="{dots1}" draw:dots1-length="{length1}%"{second} draw:distance="{distance}%"/>"#
+            ));
+            self.named_keys.insert(name.to_owned(), name.to_owned());
+        }
+        Some(name)
+    }
+
+    /// The name of a linear gradient, declared on first use. `None` for one
+    /// with fewer than two usable stops.
+    fn gradient(&mut self, gradient: &crate::visuals::FillGradient) -> Option<String> {
+        let mut stops: Vec<(f64, String)> = gradient
+            .stops
+            .iter()
+            .filter(|stop| stop.position.is_finite())
+            .map(|stop| (stop.position.clamp(0.0, 1.0), hex_color(&stop.color)))
+            .collect();
+        if stops.len() < 2 || !gradient.angle.is_finite() {
+            return None;
+        }
+        stops.sort_by(|a, b| a.0.total_cmp(&b.0));
+        // DrawingML counts the angle clockwise from left-to-right; ODF turns
+        // a top-to-bottom gradient the other way round.
+        let angle = (90.0_f64 - gradient.angle).rem_euclid(360.0).round();
+        let listed: String = stops
+            .iter()
+            .map(|(position, color)| {
+                format!(
+                    r#"<loext:gradient-stop svg:offset="{position}" loext:color-type="rgb" loext:color-value="{}"/>"#,
+                    escape_xml(color)
+                )
+            })
+            .collect();
+        let body = format!(
+            r#" draw:style="linear" draw:start-color="{}" draw:end-color="{}" draw:start-intensity="100%" draw:end-intensity="100%" draw:angle="{angle}deg" draw:border="0%">{listed}</draw:gradient>"#,
+            escape_xml(&stops[0].1),
+            escape_xml(&stops[stops.len() - 1].1),
+        );
+        if let Some(name) = self.named_keys.get(&body) {
+            return Some(name.clone());
+        }
+        let name = format!("gradient{}", self.named_keys.len() + 1);
+        self.named
+            .push(format!(r#"<draw:gradient draw:name="{name}"{body}"#));
+        self.named_keys.insert(body, name.clone());
+        Some(name)
     }
 
     /// An automatic style of one family, shared by everything that asks for
@@ -517,8 +601,12 @@ impl Drawings {
             .is_some_and(|path| path.stroke_only);
         match visual.line_color.as_deref() {
             Some(color) if color != "none" => {
+                let stroke = match visual.line_dash.as_deref().and_then(|dash| self.dash(dash)) {
+                    Some(dash) => format!(r#"dash" draw:stroke-dash="{dash}"#),
+                    None => "solid".to_owned(),
+                };
                 graphic.push_str(&format!(
-                    r#" draw:stroke="solid" svg:stroke-width="{}pt" svg:stroke-color="{}""#,
+                    r#" draw:stroke="{stroke}" svg:stroke-width="{}pt" svg:stroke-color="{}""#,
                     visual.line_width.filter(|width| *width > 0.0).unwrap_or(0.75),
                     escape_xml(&hex_color(color))
                 ));
@@ -567,10 +655,22 @@ impl Drawings {
             ));
         }
         match visual.fill_color.as_deref() {
-            Some(color) if color != "none" && !stroke_only => graphic.push_str(&format!(
-                r#" draw:fill="solid" draw:fill-color="{}""#,
-                escape_xml(&hex_color(color))
-            )),
+            Some(color) if color != "none" && !stroke_only => {
+                // The flat colour stays beside a gradient for a reader that
+                // does not draw one.
+                let fill = match visual
+                    .fill_gradient
+                    .as_ref()
+                    .and_then(|gradient| self.gradient(gradient))
+                {
+                    Some(gradient) => format!(r#"gradient" draw:fill-gradient-name="{gradient}"#),
+                    None => "solid".to_owned(),
+                };
+                graphic.push_str(&format!(
+                    r#" draw:fill="{fill}" draw:fill-color="{}""#,
+                    escape_xml(&hex_color(color))
+                ));
+            }
             _ => graphic.push_str(r#" draw:fill="none""#),
         }
         graphic.push_str(match visual.text_anchor.as_deref() {
@@ -852,5 +952,48 @@ mod tests {
         assert_eq!(preset_of_path("M 0 0 L 1 1 Z N"), None);
         assert_eq!(hex_color("FF4472C4"), "#4472c4");
         assert_eq!(media_type_of("jpeg"), "image/jpeg");
+    }
+
+    #[test]
+    fn declares_a_dash_and_a_gradient_once_each() {
+        use crate::visuals::{FillGradient, FillGradientStop};
+        let mut drawings = Drawings::default();
+        assert_eq!(drawings.dash("sysDash"), Some("sysDash"));
+        assert_eq!(drawings.dash("sysDash"), Some("sysDash"));
+        assert_eq!(drawings.dash("solid"), None);
+        let stop = |position: f64, color: &str| FillGradientStop {
+            position,
+            color: color.into(),
+        };
+        // Top to bottom in DrawingML is a quarter turn clockwise from
+        // left-to-right; in ODF it is the unturned gradient.
+        let down = FillGradient {
+            angle: 90.0,
+            stops: vec![stop(1.0, "#0000FF"), stop(0.0, "#FF0000"), stop(0.5, "#FFFFFF")],
+        };
+        let name = drawings.gradient(&down).unwrap();
+        assert_eq!(drawings.gradient(&down).as_deref(), Some(name.as_str()));
+        let sideways = FillGradient {
+            angle: 0.0,
+            stops: vec![stop(0.0, "#FF0000"), stop(1.0, "#0000FF")],
+        };
+        assert_ne!(drawings.gradient(&sideways).unwrap(), name);
+        assert_eq!(
+            drawings.gradient(&FillGradient {
+                angle: 0.0,
+                stops: vec![stop(0.0, "#FF0000")],
+            }),
+            None
+        );
+        assert_eq!(
+            drawings.named_styles(),
+            concat!(
+                r#"<draw:stroke-dash draw:name="sysDash" draw:style="rect" draw:dots1="1" draw:dots1-length="300%" draw:distance="100%"/>"#,
+                r##"<draw:gradient draw:name="gradient2" draw:style="linear" draw:start-color="#ff0000" draw:end-color="#0000ff" draw:start-intensity="100%" draw:end-intensity="100%" draw:angle="0deg" draw:border="0%">"##,
+                r##"<loext:gradient-stop svg:offset="0" loext:color-type="rgb" loext:color-value="#ff0000"/><loext:gradient-stop svg:offset="0.5" loext:color-type="rgb" loext:color-value="#ffffff"/><loext:gradient-stop svg:offset="1" loext:color-type="rgb" loext:color-value="#0000ff"/></draw:gradient>"##,
+                r##"<draw:gradient draw:name="gradient3" draw:style="linear" draw:start-color="#ff0000" draw:end-color="#0000ff" draw:start-intensity="100%" draw:end-intensity="100%" draw:angle="90deg" draw:border="0%">"##,
+                r##"<loext:gradient-stop svg:offset="0" loext:color-type="rgb" loext:color-value="#ff0000"/><loext:gradient-stop svg:offset="1" loext:color-type="rgb" loext:color-value="#0000ff"/></draw:gradient>"##,
+            )
+        );
     }
 }

@@ -80,7 +80,7 @@ fn class_of(plot: &str) -> Option<&'static str> {
 
 /// `Sheet1!$B$2:$B$7` as `Sheet1.B2:Sheet1.B7`, the form a chart names a
 /// range in. `None` for anything but one cell or one rectangle on one sheet.
-fn chart_range(reference: &str) -> Option<String> {
+pub(crate) fn chart_range(reference: &str) -> Option<String> {
     let translated = odf_formula::odf_range_address(reference.trim())?;
     // `$Sheet.$B$2:.$B$7` → sheet and the two cells.
     let (sheet, cells) = split_sheet(&translated)?;
@@ -247,6 +247,19 @@ impl Styles {
         ));
         name
     }
+}
+
+/// The ODF name of a DrawingML trend line kind.
+fn regression_type(kind: &str) -> Option<&'static str> {
+    Some(match kind {
+        "linear" => "linear",
+        "exp" => "exponential",
+        "log" => "logarithmic",
+        "power" => "power",
+        "poly" => "polynomial",
+        "movingAvg" => "moving-average",
+        _ => return None,
+    })
 }
 
 /// The relative luminance of `#RRGGBB`, 0 for black and 1 for white.
@@ -772,6 +785,27 @@ pub(crate) fn chart_document(
                     escape_xml(&domain)
                 ));
             }
+        }
+        // A trend line follows the domain. The model knows its kind; the
+        // order of a polynomial and the period of a moving average are the
+        // ones a new trend line gets.
+        if let Some(kind) = series.trendline.as_deref().and_then(regression_type) {
+            let extra = match kind {
+                "polynomial" => r#" chart:regression-max-degree="2""#,
+                "moving-average" => r#" chart:regression-period="2""#,
+                _ => "",
+            };
+            let trend = styles.add(
+                &format!(r#" chart:regression-type="{kind}"{extra}"#),
+                &format!(
+                    r#" draw:stroke="solid" svg:stroke-width="0.035cm" svg:stroke-color="{}""#,
+                    escape_xml(&color)
+                ),
+                "",
+            );
+            inner.push_str(&format!(
+                r#"<chart:regression-curve chart:style-name="{trend}"/>"#
+            ));
         }
         let count = point_count(series).max(1);
         if round || series.point_colors.is_some() {

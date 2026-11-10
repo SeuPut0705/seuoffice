@@ -10,6 +10,7 @@
 //! written. One fed by a named range, a table, another file or a data model
 //! has no source a reader could follow, and is left to the count of losses.
 
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -19,15 +20,141 @@ use zip::ZipArchive;
 
 use crate::odf_formula;
 use crate::xlsx_package::escape_xml;
-use crate::PivotTableInfo;
+use crate::{DefinedName, PivotTableInfo};
+
+/// The names of a workbook that stand for one range of a sheet — defined
+/// names and tables — in lower case, with the sheet and the range. A pivot
+/// table fed by such a name reads that range.
+pub(crate) type NamedSources = HashMap<String, (String, String)>;
 
 /// One pivot table as a `table:data-pilot-table` element, or `None` when it
 /// cannot be said in ODF.
-pub(crate) fn pivot_table_xml(package: &Path, sheet: &str, info: &PivotTableInfo) -> Option<String> {
+pub(crate) fn pivot_table_xml(
+    package: &Path,
+    sheet: &str,
+    info: &PivotTableInfo,
+    sources: &NamedSources,
+) -> Option<String> {
     let mut archive = ZipArchive::new(File::open(package).ok()?).ok()?;
     let definition = read_part(&mut archive, &info.path)?;
     let cache = read_part(&mut archive, info.cache_path.as_deref()?)?;
-    data_pilot_xml(sheet, &definition, &cache)
+    data_pilot_xml(sheet, &definition, &cache, sources)
+}
+
+/// `xl/worksheets/_rels/sheet1.xml.rels` for `xl/worksheets/sheet1.xml`.
+fn relationships_path(part: &str) -> String {
+    match part.rsplit_once('/') {
+        Some((folder, file)) => format!("{folder}/_rels/{file}.rels"),
+        None => format!("_rels/{part}.rels"),
+    }
+}
+
+/// A relationship target as a path in the package.
+fn resolve_target(part: &str, target: &str) -> String {
+    if let Some(absolute) = target.strip_prefix('/') {
+        return absolute.to_owned();
+    }
+    let mut pieces: Vec<&str> = part.split('/').collect();
+    pieces.pop();
+    for piece in target.split('/') {
+        match piece {
+            "" | "." => {}
+            ".." => {
+                pieces.pop();
+            }
+            piece => pieces.push(piece),
+        }
+    }
+    pieces.join("/")
+}
+
+/// The sheet and range a defined name stands for, when it is exactly one
+/// range of one sheet (`'Raw Data'!$A$1:$D$13`).
+fn name_target(formula: &str) -> Option<(String, String)> {
+    let formula = formula.trim().trim_start_matches('=');
+    let (sheet, cells) = formula.rsplit_once('!')?;
+    range(cells)?;
+    let sheet = match sheet.strip_prefix('\'').and_then(|sheet| sheet.strip_suffix('\'')) {
+        Some(quoted) => quoted.replace("''", "'"),
+        None => sheet.to_owned(),
+    };
+    (!sheet.is_empty() && !sheet.contains(['!', '[', ']']))
+        .then(|| (sheet, cells.replace('$', "")))
+}
+
+/// The defined names and tables of the workbook a pivot table may name as
+/// its source. `sheets` gives each sheet's name and worksheet part.
+pub(crate) fn named_sources(
+    package: &Path,
+    sheets: &[(String, String)],
+    defined: &[DefinedName],
+) -> NamedSources {
+    let mut sources = NamedSources::new();
+    if let Some(mut archive) = File::open(package)
+        .ok()
+        .and_then(|file| ZipArchive::new(file).ok())
+    {
+        for (sheet, part) in sheets {
+            let Some(relationships) = read_part(&mut archive, &relationships_path(part)) else {
+                continue;
+            };
+            let Ok(relationships) = Document::parse(&relationships) else {
+                continue;
+            };
+            let targets: Vec<String> = relationships
+                .root_element()
+                .children()
+                .filter(|node| {
+                    node.is_element()
+                        && node
+                            .attribute("Type")
+                            .is_some_and(|kind| kind.ends_with("/table"))
+                })
+                .filter_map(|node| node.attribute("Target"))
+                .map(|target| resolve_target(part, target))
+                .collect();
+            for target in targets {
+                let Some(table) = read_part(&mut archive, &target) else {
+                    continue;
+                };
+                let Ok(table) = Document::parse(&table) else {
+                    continue;
+                };
+                let root = table.root_element();
+                let Some((first, mut last)) = root.attribute("ref").and_then(range) else {
+                    continue;
+                };
+                // A pivot table reads the header and the data of a table,
+                // not its totals row.
+                let totals: usize = root
+                    .attribute("totalsRowCount")
+                    .and_then(|count| count.parse().ok())
+                    .unwrap_or(0);
+                last.1 = last.1.saturating_sub(totals).max(first.1);
+                let cells = format!(
+                    "{}{}:{}{}",
+                    column_name(first.0),
+                    first.1 + 1,
+                    column_name(last.0),
+                    last.1 + 1
+                );
+                for name in [root.attribute("displayName"), root.attribute("name")]
+                    .into_iter()
+                    .flatten()
+                {
+                    sources.insert(name.to_lowercase(), (sheet.clone(), cells.clone()));
+                }
+            }
+        }
+    }
+    // A name of the whole workbook; one that belongs to a single sheet is
+    // not what a pivot cache names.
+    for name in defined.iter().filter(|name| name.sheet_index.is_none()) {
+        if let Some(target) = name_target(&name.formula) {
+            sources.entry(name.name.to_lowercase()).or_insert(target);
+        }
+    }
+    sources
 }
 
 fn read_part(archive: &mut ZipArchive<File>, path: &str) -> Option<String> {
@@ -126,7 +253,12 @@ fn item_name(item: Node<'_, '_>) -> Option<String> {
     }
 }
 
-fn data_pilot_xml(sheet: &str, definition: &str, cache: &str) -> Option<String> {
+fn data_pilot_xml(
+    sheet: &str,
+    definition: &str,
+    cache: &str,
+    sources: &NamedSources,
+) -> Option<String> {
     let definition = Document::parse(definition).ok()?;
     let cache = Document::parse(cache).ok()?;
     let table = definition.root_element();
@@ -138,16 +270,28 @@ fn data_pilot_xml(sheet: &str, definition: &str, cache: &str) -> Option<String> 
         return None;
     }
     let worksheet = child(source, "worksheetSource")?;
-    // A relationship id means another file; a name means a named range or a
-    // table. Neither is a range of this workbook a reader could be given.
+    // A relationship id means another file, which is not a range of this
+    // workbook a reader could be given. A name is a defined name or a table,
+    // and is followed to the range it stands for.
     if worksheet
         .attributes()
         .any(|attribute| attribute.name() == "id")
     {
         return None;
     }
-    let source_sheet = worksheet.attribute("sheet")?;
-    let (source_first, source_last) = range(worksheet.attribute("ref")?)?;
+    let (source_sheet, reference) = match (
+        worksheet.attribute("sheet"),
+        worksheet.attribute("ref"),
+        worksheet.attribute("name"),
+    ) {
+        (Some(sheet), Some(reference), _) => (sheet, reference),
+        (_, _, Some(name)) => {
+            let (sheet, reference) = sources.get(&name.to_lowercase())?;
+            (sheet.as_str(), reference.as_str())
+        }
+        _ => return None,
+    };
+    let (source_first, source_last) = range(reference)?;
     let names: Vec<&str> = children(child(cache_root, "cacheFields")?, "cacheField")
         .map(|field| field.attribute("name").unwrap_or(""))
         .collect();
@@ -369,7 +513,13 @@ mod tests {
             r#"<pageFields count="1"><pageField fld="2" hier="-1"/></pageFields>"#,
             r#"<dataFields count="2"><dataField name="Sum of Amount" fld="3"/><dataField name="Average" fld="3" subtotal="average"/></dataFields>"#,
         );
-        let xml = data_pilot_xml("Pivot", &definition(body, r#" colGrandTotals="0""#), CACHE).unwrap();
+        let xml = data_pilot_xml(
+            "Pivot",
+            &definition(body, r#" colGrandTotals="0""#),
+            CACHE,
+            &NamedSources::new(),
+        )
+        .unwrap();
         assert_eq!(
             xml,
             concat!(
@@ -394,16 +544,41 @@ mod tests {
             r#"<rowFields count="1"><field x="0"/></rowFields><dataFields count="1"><dataField fld="3"/></dataFields>"#,
         );
         let table = definition(body, "");
-        assert!(data_pilot_xml("Pivot", &table, CACHE).is_some());
-        // Fed by a named range or a table.
+        let none = NamedSources::new();
+        assert!(data_pilot_xml("Pivot", &table, CACHE, &none).is_some());
+        // Fed by a name the workbook does not explain.
         let named = CACHE.replace(r#"ref="A1:D13" sheet="Raw Data""#, r#"name="Table1""#);
-        assert_eq!(data_pilot_xml("Pivot", &table, &named), None);
+        assert_eq!(data_pilot_xml("Pivot", &table, &named, &none), None);
+        // Fed by a table or a defined name: the range it stands for.
+        let mut sources = NamedSources::new();
+        sources.insert("table1".into(), ("Raw Data".into(), "A1:D13".into()));
+        let followed = data_pilot_xml("Pivot", &table, &named, &sources).unwrap();
+        assert!(
+            followed.contains(
+                r#"<table:source-cell-range table:cell-range-address="'Raw Data'.A1:'Raw Data'.D13"/>"#
+            ),
+            "{followed}"
+        );
         // Fed by another file.
         let external = CACHE.replace(r#"<worksheetSource ref"#, r#"<worksheetSource r:id="rId1" ref"#);
-        assert_eq!(data_pilot_xml("Pivot", &table, &external), None);
+        assert_eq!(data_pilot_xml("Pivot", &table, &external, &none), None);
         // Fed by something that is not a sheet at all.
         let model = CACHE.replace(r#"type="worksheet""#, r#"type="external""#);
-        assert_eq!(data_pilot_xml("Pivot", &table, &model), None);
+        assert_eq!(data_pilot_xml("Pivot", &table, &model, &none), None);
+        assert_eq!(
+            name_target("='Raw ''Data'!$A$1:$D$13"),
+            Some(("Raw 'Data".into(), "A1:D13".into()))
+        );
+        assert_eq!(name_target("Data!$A$1:$B$2,Data!$D$1"), None);
+        assert_eq!(name_target("OFFSET(Data!$A$1,0,0)"), None);
+        assert_eq!(
+            resolve_target("xl/worksheets/sheet1.xml", "../tables/table1.xml"),
+            "xl/tables/table1.xml"
+        );
+        assert_eq!(
+            relationships_path("xl/worksheets/sheet1.xml"),
+            "xl/worksheets/_rels/sheet1.xml.rels"
+        );
         assert_eq!(function(Some("countNums")), "countnums");
         assert_eq!(function(None), "sum");
         assert_eq!(range("$B$2:$D$9"), Some(((1, 1), (3, 8))));
