@@ -4,7 +4,7 @@ export const ko = {
   title: 'MCP 서버',
   desc: 'AI 창이 쓸 바깥 도구를 연결합니다. 법령 찾기나 팀이 운영하는 서비스 같은 것입니다. AI는 대화 중에, 여기서 허락한 만큼만 서버의 도구를 부릅니다.',
   empty: '아직 등록한 서버가 없습니다.',
-  add: '서버 더하기',
+  add: '서버 등록',
   noSealing:
     '이 PC는 열쇠와 로그인을 암호화해 보관하지 못해, 앱이 켜져 있는 동안만 기억합니다. 이 PC에서는 앱을 다시 켜면 다시 넣어야 합니다.',
   memoryOnly: '이 서버의 열쇠는 앱을 닫으면 사라집니다.',
@@ -43,7 +43,7 @@ export const ko = {
   signingIn: '브라우저에서 로그인을 마치세요…',
   signedIn: '로그인했습니다.',
   signInCancelled: '로그인을 마치기 전에 멈췄습니다.',
-  signInTimeout: '10분 안에 로그인을 마치지 못했습니다. 다시 해 보세요.',
+  signInTimeout: '10분 안에 로그인을 마치지 못했습니다. 다시 시도하세요.',
   signInDenied: '서버가 로그인을 허락하지 않았습니다.',
   signInClient:
     '이 서버는 로그인에 클라이언트 ID가 필요합니다. 서버 안내서에 있는 클라이언트 ID와 비밀값을 "고급"에 넣으세요.',
@@ -70,7 +70,7 @@ export const ko = {
   launchFromApp: '앱이 받아 둔 프로그램을 씁니다.',
   launchFromPc: 'PC에 있는 프로그램을 씁니다.',
   launchAllow: '실행 허락',
-  launchRecheck: '명령이 바뀌어 다시 확인해 주세요.',
+  launchRecheck: '명령이 바뀌었습니다. 다시 확인하세요.',
   runtimeAsk: '이 서버를 쓰려면 {runtime} 프로그램이 필요합니다. 앱이 받아 둘까요? (모두 {size})',
   runtimeItem: '{runtime} {version}: {size}',
   runtimeWhere: '앱 폴더 안에 두며, PC의 설정은 바꾸지 않습니다.',
@@ -106,7 +106,7 @@ export const ko = {
   keepInsideDesc:
     '켜 두면, 이 서버가 돌려준 내용이 대화에 들어온 뒤로는 바깥으로 보내는 도구를 그 대화에서 막습니다.',
   keepInsideOffWarn: '개인 자료를 주는 서버라면 켜 두세요.',
-  formAdd: '서버 더하기',
+  formAdd: '서버 등록',
   formEdit: '{name} 고치기',
   wayDirect: '직접 넣기',
   wayPaste: '설정 글 붙여넣기',
@@ -161,7 +161,7 @@ export const ko = {
   invalidCommand: '실행할 명령을 넣으세요.',
   invalidOther: '쓸 수 없는 값이 있습니다. 칸을 확인하세요.',
   pasteExpired: '붙여넣은 글을 더는 기억하지 않습니다. 다시 붙여넣으세요.',
-  saveFailed: '저장하지 못했습니다. 다시 해 보세요.',
+  saveFailed: '저장하지 못했습니다. 다시 시도하세요.',
   register: '등록',
   save: '저장',
   skip: '건너뛰기',
@@ -190,7 +190,7 @@ export const ko = {
   pasteTypeIgnored:
     '앱이 모르는 연결 방식("{type}")이라 무시했습니다. 보통 방식으로 연결해 봅니다.',
   valueFromVar:
-    '값을 넣어 주세요. 붙여넣은 글은 이 값을 PC 변수 {name}에서 읽게 되어 있는데, 앱은 PC 변수를 읽지 않습니다.',
+    '값을 넣으세요. 붙여넣은 글은 이 값을 PC 변수 {name}에서 읽게 되어 있는데, 앱은 PC 변수를 읽지 않습니다.',
   launchSystemFold: 'PC 기본 변수 {n}개',
   permPaused: '바뀐 내용을 승인할 때까지 쓰지 않음(승인하면: {perm})',
   permUnusable: '켤 수 없음',

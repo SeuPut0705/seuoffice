@@ -110,5 +110,5 @@ export const en = {
   trEasyRestartYes: 'Explain again',
   trEasyRunning: 'Writing the {language} plain-language explanation… {done}/{total} blocks',
   trEasyDone: 'The {language} plain-language explanation is finished ({count} blocks).',
-  trResumeEasy: 'Unfinished plain-language explanation ({language}) {percent}% — continue?',
+  trResumeEasy: 'Unfinished plain-language explanation ({language}) {percent}%. Continue?',
 } satisfies Record<keyof typeof zh, string>

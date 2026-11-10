@@ -56,7 +56,7 @@ export const en = {
   overwrite: 'Replace',
   exportNotice:
     'The template document goes into the file too. Check that it holds no personal information',
-  exportContinue: 'Continue',
+  exportContinue: 'Export',
   exported: 'Exported: {path}',
   upToDate: 'Up to date',
   checking: 'Checking…',

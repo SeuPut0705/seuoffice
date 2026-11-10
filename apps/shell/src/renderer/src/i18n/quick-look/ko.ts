@@ -29,7 +29,7 @@ export const ko = {
     '파일 탐색기나 바탕화면에서 파일을 선택하고 스페이스바를 누르면 미리보기 창을 띄웁니다.',
   setKeepInTray: '창을 닫아도 시스템 트레이에 남겨 탐색기 미리보기 유지',
   setKeepInTrayDesc:
-    '메인 창을 닫은 뒤에도 백그라운드에서 대기하여 탐색기 스페이스바 미리보기가 즉시 작동합니다.',
+    '메인 창을 닫아도 뒤에서 실행 상태로 남아, 탐색기의 스페이스바 미리보기가 계속 동작합니다.',
   trayOpen: 'GenOffice 열기',
   trayQuit: 'GenOffice 종료',
 } satisfies Record<keyof typeof zh, string>

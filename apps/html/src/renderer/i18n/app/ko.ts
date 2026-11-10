@@ -65,7 +65,7 @@ export const ko = {
   replace: '바꾸기',
   replaceAll: '모두 바꾸기',
   findTip: '찾기 및 바꾸기 (⌘F)',
-  autoSaveTip: '30초마다 및 창이 포커스를 잃을 때 자동 저장',
+  autoSaveTip: '30초마다, 그리고 다른 창으로 넘어갈 때 저장합니다',
   zoom: '확대·축소',
   zoomIn: '확대',
   zoomOut: '축소',

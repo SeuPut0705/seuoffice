@@ -157,7 +157,7 @@ describe('Settings → Integrations', () => {
     expect(host.textContent).toContain('skill 2.1.0')
     // guidance: hero steps, one-of-three note, example prompts, npx command shown inline
     expect(host.querySelectorAll('.set-intg-hero-steps li')).toHaveLength(3)
-    expect(host.textContent).toContain('Pick any one of these three ways')
+    expect(host.textContent).toContain('Pick one of these three ways')
     // the same three prompts appear under both the CLI and the MCP part
     expect(host.querySelectorAll('.set-intg-example')).toHaveLength(6)
     expect(host.textContent).toContain('npx skills add pblsketch/ieumoffice')
