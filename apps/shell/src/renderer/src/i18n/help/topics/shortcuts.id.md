@@ -278,18 +278,19 @@ Pintasan filter milik Excel, Ctrl+Shift+L, tidak melakukan apa pun di Windows ma
 
 ### Jendela
 
-| Tindakan                                                          | macOS            | Windows / Linux     |
-| ----------------------------------------------------------------- | ---------------- | ------------------- |
-| Simpan buku kerja                                                 | ⌘S               | Ctrl+S              |
-| Simpan Sebagai                                                    | ⇧⌘S              | Ctrl+Shift+S        |
-| Buka buku kerja                                                   | ⌘O               | Ctrl+O              |
-| Cetak                                                             | ⌘P               | Ctrl+P              |
-| Tutup buku kerja (macOS) / Keluar dari aplikasi (Windows & Linux) | ⌘W               | Ctrl+Q              |
-| Buka Panduan Pengguna                                             | F1               | F1                  |
-| Perbesar                                                          | ⌘=               | Ctrl+=              |
-| Perbesar dengan roda tetikus                                      | ⌘ + roda tetikus | Ctrl + roda tetikus |
-| Tampilkan atau sembunyikan rumus di dalam sel                     | ⌘`               | Ctrl+`              |
-| Perluas atau ciutkan Bilah Rumus                                  | ⌘⇧U              | Ctrl+Shift+U        |
+| Tindakan                                                                     | macOS            | Windows / Linux     |
+| ---------------------------------------------------------------------------- | ---------------- | ------------------- |
+| Simpan buku kerja                                                            | ⌘S               | Ctrl+S              |
+| Simpan Sebagai                                                               | ⇧⌘S              | Ctrl+Shift+S        |
+| Buka buku kerja                                                              | ⌘O               | Ctrl+O              |
+| Cetak                                                                        | ⌘P               | Ctrl+P              |
+| Tutup buku kerja (macOS) / Keluar dari aplikasi (Windows & Linux)            | ⌘W               | Ctrl+Q              |
+| Buka Panduan Pengguna                                                        | F1               | F1                  |
+| Perbesar                                                                     | ⌘=               | Ctrl+=              |
+| Perbesar dengan roda tetikus                                                 | ⌘ + roda tetikus | Ctrl + roda tetikus |
+| Tampilkan atau sembunyikan rumus di dalam sel                                | ⌘`               | Ctrl+`              |
+| Perluas atau ciutkan Bilah Rumus                                             | ⌘⇧U              | Ctrl+Shift+U        |
+| Jalankan tombol Bilah Alat Akses Cepat menurut posisinya (ke-1 sampai ke-10) |                  | Alt+1 … Alt+0       |
 
 ## Slides
 

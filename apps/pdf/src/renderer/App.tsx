@@ -136,6 +136,7 @@ import { navAction, shouldHandleDocumentUndo } from './keyNav'
 import {
   EMPTY_PAGE_SELECTION,
   clickPageSelection,
+  keyPageTargets,
   formatPageRanges,
   livePages,
   moveBlockOrder,
@@ -350,6 +351,7 @@ import {
   saveSidebarOpen,
   DEFAULT_VIEWS,
   parseDefaultView,
+  defaultViewPercent,
   loadDefaultView,
   saveDefaultView,
   openingView,
@@ -2579,6 +2581,14 @@ export default function App() {
     if (visIdx >= 0) scrollToPage(visIdx + 1)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToPage reads the same render's rows
   }, [visList])
+  /** Visible position of the first pasted page, shown once the reloaded pages are laid out */
+  const [pasteLanding, setPasteLanding] = useState<number | null>(null)
+  useEffect(() => {
+    if (pasteLanding === null) return
+    setPasteLanding(null)
+    scrollToPage(pasteLanding + 1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToPage reads the same render's rows
+  }, [pasteLanding])
 
   /** The file's widgets with pending Form Design edits applied: moved, re-flagged, removed */
   const liveFormCatalog = useMemo((): FormCatalog | null => {
@@ -7776,6 +7786,97 @@ export default function App() {
     })
   }
 
+  // ── Page clipboard (thumbnail sidebar) ──
+  // Copy applies the pending edits in memory and writes nothing; the copied pages
+  // stay in the main process, so they paste into this or another PDF tab. Paste
+  // lands in the file at once, like Import pages.
+
+  /** How many pages the clipboard held when the thumbnail menu last opened */
+  const [copiedPageCount, setCopiedPageCount] = useState(0)
+  const thumbMenuOpen = thumbMenu != null
+  useEffect(() => {
+    if (!thumbMenuOpen) return
+    let live = true
+    void window.pdfApi.copiedPageCount?.().then((n) => {
+      if (live) setCopiedPageCount(n)
+    })
+    return () => {
+      live = false
+    }
+  }, [thumbMenuOpen])
+
+  const pageClipboardRefusal = (): string | null =>
+    readOnly
+      ? readOnlyReason
+      : documentEncrypted || encryption !== null
+        ? t('pageClipProtected')
+        : null
+
+  const copyPages = async (origIdxs: number[], cut = false): Promise<void> => {
+    if (!filePath || origIdxs.length === 0 || !window.pdfApi.copyPages) return
+    // a damaged file's pages do not line up with the view, so it is not copied from either
+    const refusal = pageClipboardRefusal()
+    if (refusal) {
+      showNotice(refusal)
+      return
+    }
+    if (cut) {
+      if (redactions.length > 0) {
+        showNotice(t('redactStructureBlocked'))
+        return
+      }
+      // at least one page must remain, as with Delete
+      if (origIdxs.length >= pageCount) return
+    }
+    const pages = origIdxs.map((p) => visList.indexOf(p)).filter((v) => v >= 0)
+    const result = await window.pdfApi.copyPages({
+      source: { path: filePath, ...editsPayload() },
+      pages,
+    })
+    if (!result.ok) {
+      showNotice(result.protected ? t('pageClipProtected') : result.error)
+      return
+    }
+    if (cut) deletePages(origIdxs)
+    showNotice(t(cut ? 'pagesCut' : 'pagesCopied', { n: result.count }))
+  }
+
+  /** Paste the copied pages after a page (original index); -1 = front of the document */
+  const pastePages = async (afterOrigIdx: number): Promise<void> => {
+    const paste = window.pdfApi.pastePages
+    if (!filePath || !paste) return
+    const refusal = pageClipboardRefusal()
+    if (refusal) {
+      showNotice(refusal)
+      return
+    }
+    if (((await window.pdfApi.copiedPageCount?.()) ?? 0) === 0) {
+      showNotice(t('pageClipEmpty'))
+      return
+    }
+    // the flush bakes the visible order into the file, so the anchor becomes its visible position
+    const afterPageIndex = visListOf(orderRef.current).indexOf(afterOrigIdx)
+    await flushThen(async () => {
+      const result = await paste({ path: filePath, afterPageIndex })
+      if (!result.ok) {
+        if (result.protected) showNotice(t('pageClipProtected'))
+        else opFailed(result.error)
+        return
+      }
+      if (result.insertedCount === 0) return
+      await aiReadRef.current?.afterPageOperation().catch(() => null)
+      await loadDoc(filePath, doc)
+      // the reloaded file is in visible order: the pasted pages follow the anchor
+      const first = afterPageIndex + 1
+      setPageSel({
+        pages: Array.from({ length: result.insertedCount }, (_, i) => first + i),
+        anchor: first,
+      })
+      setPasteLanding(first)
+      showNotice(t('pagesPasted', { n: result.insertedCount }))
+    })
+  }
+
   /** Pending edit like a new slide in Slides: shows up at once, drags, undoes, lands in the file on save. -1 / null = first page */
   const insertBlankPage = (
     afterOrigIdx: number | null,
@@ -8602,6 +8703,13 @@ export default function App() {
 
   const curOrigIdx = visList[currentPage - 1] ?? -1
 
+  /** Original index of the thumbnail holding keyboard focus; null when focus is elsewhere */
+  const focusedThumbPage = (): number | null => {
+    const thumb = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.pdf-thumb')
+    if (!thumb || !thumbsRef.current?.contains(thumb)) return null
+    return visList[Number(thumb.dataset.idx)] ?? null
+  }
+
   // ── unified popover dismissal: a press outside the guard roots, a window
   // blur, or a press on the shell tab strip closes each popover ──
 
@@ -8620,6 +8728,14 @@ export default function App() {
   useDismissablePopover(thumbMenu != null, () => setThumbMenu(null), {
     inside: () => [thumbMenuRef.current],
   })
+  // The menu's height depends on its items (page or gap, zoom, language): once it is
+  // laid out, lift it so the last item stays inside the window
+  useLayoutEffect(() => {
+    const el = thumbMenuRef.current
+    if (!thumbMenu || !el) return
+    const over = el.getBoundingClientRect().bottom - (window.innerHeight - 8)
+    if (over > 0) el.style.top = `${Math.max(8, thumbMenu.y - over)}px`
+  }, [thumbMenu])
   useDismissablePopover(formMenu != null, () => setFormMenu(null), {
     inside: () => [formMenuRef.current],
   })
@@ -8788,6 +8904,25 @@ export default function App() {
             return
           }
         }
+        if (
+          !inEditable &&
+          !e.shiftKey &&
+          !e.altKey &&
+          thumbsRef.current?.contains(document.activeElement)
+        ) {
+          const pages = keyPageTargets(pickedPages, focusedThumbPage())
+          if ((k === 'c' || k === 'x') && pages.length > 0) {
+            e.preventDefault()
+            void copyPages(pages, k === 'x')
+            return
+          }
+          if (k === 'v') {
+            e.preventDefault()
+            // after the last page the keys cover, else after the page in view
+            void pastePages(pages.at(-1) ?? curOrigIdx)
+            return
+          }
+        }
         if (k === 'a' && !inEditable && thumbsRef.current?.contains(document.activeElement)) {
           e.preventDefault()
           setPageSel({ pages: visList, anchor: curOrigIdx >= 0 ? curOrigIdx : null })
@@ -8873,12 +9008,22 @@ export default function App() {
       }
       if (
         (e.key === 'Delete' || e.key === 'Backspace') &&
-        pickedPages.length > 0 &&
         thumbsRef.current?.contains(document.activeElement)
       ) {
-        e.preventDefault()
-        deletePages(pickedPages)
-        return
+        // the picked pages, else the one thumbnail that holds focus
+        const pages = keyPageTargets(pickedPages, focusedThumbPage())
+        if (pages.length > 0) {
+          e.preventDefault()
+          const at = visList.indexOf(pages[0]!)
+          deletePages(pages)
+          // the focused thumbnail is gone: focus the one now in its place, so the
+          // arrow keys and the next Delete keep working from there
+          requestAnimationFrame(() => {
+            const thumbs = thumbsRef.current?.querySelectorAll<HTMLElement>('.pdf-thumb')
+            thumbs?.[Math.min(at, thumbs.length - 1)]?.focus({ preventScroll: true })
+          })
+          return
+        }
       }
       // Shift+navigation extends the text layer's native selection (Excel/
       // Word parity: Shift+→ grows the selection by a character). Swallowing
@@ -9260,11 +9405,12 @@ export default function App() {
     </div>
   )
 
-  const defaultViewLabels: Record<DefaultView, string> = {
-    width: t('fitWidth'),
-    page: t('fitPage'),
-    actual: '100%',
-  }
+  const defaultViewLabel = (view: DefaultView): string =>
+    view === 'width'
+      ? t('fitWidth')
+      : view === 'page'
+        ? t('fitPage')
+        : `${defaultViewPercent(view)}%`
 
   const pageZoomGroup = (showDefaultView = false) => (
     <div className="ribbon-group">
@@ -9349,7 +9495,7 @@ export default function App() {
             >
               {DEFAULT_VIEWS.map((view) => (
                 <option key={view} value={view}>
-                  {defaultViewLabels[view]}
+                  {defaultViewLabel(view)}
                 </option>
               ))}
             </select>
@@ -11134,7 +11280,7 @@ export default function App() {
                   }
                   setThumbMenu({
                     x: Math.min(e.clientX, window.innerWidth - 190),
-                    y: Math.min(e.clientY, window.innerHeight - 100),
+                    y: Math.min(e.clientY, window.innerHeight - 150),
                     origIdx: null,
                     afterOrigIdx: visList[above] ?? null,
                   })
@@ -11225,7 +11371,7 @@ export default function App() {
                           setPageSel({ pages: [origIdx], anchor: origIdx })
                         setThumbMenu({
                           x: Math.min(e.clientX, window.innerWidth - 190),
-                          y: Math.min(e.clientY, window.innerHeight - 190),
+                          y: Math.min(e.clientY, window.innerHeight - 330),
                           origIdx,
                         })
                       }}
@@ -11304,6 +11450,30 @@ export default function App() {
               sidebar === 'notes' ||
               (sidebar === 'outline' && !!outline)) && (
               <div className="pdf-side-resizer" onPointerDown={startSidebarResize} />
+            )}
+            {/* A closed sidebar stays closed for the next PDF, so the way back is on screen */}
+            {sidebar === null && status === 'ready' && (
+              <button
+                type="button"
+                className="pdf-side-reopen"
+                aria-label={t('thumbs')}
+                data-tip={t('thumbs')}
+                onClick={() => setSidebar('thumbs')}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m10 6 6 6-6 6" />
+                </svg>
+              </button>
             )}
             <div
               ref={scrollRef}
@@ -13226,8 +13396,40 @@ export default function App() {
                         ? t('pageSelExtract', { n: menuPages.length })
                         : t('extractPage')}
                     </button>
+                    <div className="thumb-menu-sep" />
+                    <button
+                      disabled={readOnly || menuPages.length >= pageCount}
+                      onClick={() => {
+                        setThumbMenu(null)
+                        void copyPages(menuPages, true)
+                      }}
+                    >
+                      <span>{t('pageCut')}</span>
+                      <span className="thumb-menu-key">{platformShortcuts('⌘X')}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setThumbMenu(null)
+                        void copyPages(menuPages)
+                      }}
+                    >
+                      <span>{t('pageCopy')}</span>
+                      <span className="thumb-menu-key">{platformShortcuts('⌘C')}</span>
+                    </button>
                   </>
                 )}
+                <button
+                  disabled={readOnly || copiedPageCount === 0}
+                  onClick={() => {
+                    setThumbMenu(null)
+                    // after the last of the pages the menu covers; in a gap, after the page above
+                    void pastePages(menuInGap ? menuInsertAfter : (menuPages.at(-1) ?? menuOrig))
+                  }}
+                >
+                  <span>{t('pagePaste')}</span>
+                  <span className="thumb-menu-key">{platformShortcuts('⌘V')}</span>
+                </button>
+                <div className="thumb-menu-sep" />
                 <button
                   onClick={() => {
                     setThumbMenu(null)

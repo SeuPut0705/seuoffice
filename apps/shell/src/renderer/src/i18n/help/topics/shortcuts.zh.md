@@ -290,6 +290,7 @@ Excel 的筛选快捷键 Ctrl+Shift+L 在 Windows 或 Linux 上不做任何事�
 | 用鼠标滚轮缩放                                    | ⌘ + 滚轮 | Ctrl + 滚轮     |
 | 在单元格中显示或隐藏公式                          | ⌘`       | Ctrl+`          |
 | 展开或收起公式栏                                  | ⌘⇧U      | Ctrl+Shift+U    |
+| 按位置运行快速访问工具栏按钮（第 1 至第 10 个）   |          | Alt+1 … Alt+0   |
 
 ## Slides
 

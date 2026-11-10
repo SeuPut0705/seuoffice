@@ -380,5 +380,7 @@ describe('the stored results follow a page operation and the next save', () => {
     expect(migratesFirst(rewrite)).toBe(true)
     const insert = app.slice(app.indexOf('const insertPdf'), app.indexOf('const insertBlankPage'))
     expect(migratesFirst(insert)).toBe(true)
+    const paste = app.slice(app.indexOf('const pastePages'), app.indexOf('const insertBlankPage'))
+    expect(migratesFirst(paste)).toBe(true)
   })
 })
