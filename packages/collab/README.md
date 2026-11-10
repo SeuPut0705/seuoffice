@@ -90,11 +90,13 @@ const join = await joinCollab(
 await editor.open(join.baseBytes)
 const session = join.attach(adapter)
 
-session.subscribe((status) => render(status)) // phase, failure, canEdit, version, saved, unconfirmed, peers
+session.subscribe((status) => render(status)) // phase, failure, canEdit, version, saved, unconfirmed, peers, self
 const { fileName, bytes: saved, version } = await session.save()
 await host.store(fileName, saved)
 session.reportSaved(version)
 ```
+
+`status.self`는 이 페이지 자신이다. 서버가 준 클라이언트 id와, 호스트가 이 소켓의 `Principal.name`으로 정한 표시 이름이 들어 있다. `peers` 안의 자기 항목과 같다. 처음 `welcome`을 받기 전에는 `null`이다. 편집기가 변경 추적에 사람 이름을 남길 때 이 이름을 쓴다.
 
 `save()`는 입력을 잠그고, 이 사람의 편집이 모두 서버에서 확정될 때까지 기다린다. 잠글 때 편집기가 마무리한 편집(입력 중이던 셀, 조합 중이던 글자)도 여기에 들어간다. 그다음 다른 사람의 변경을 잠시 붙잡아 둔 채 정확히 한 버전의 파일을 만든다. 파일을 다 만들면 붙잡아 둔 변경을 반영하고 입력을 다시 연다. `saveTimeoutMs`(기본 30초) 안에 편집을 확정하지 못하면 `CollabError('offline')`로 거절하고 입력을 다시 연다. 편집은 그대로 남아 연결이 돌아오면 보내진다. 닫힌 세션의 `save()`는 `CollabError('closed')`로 거절한다.
 

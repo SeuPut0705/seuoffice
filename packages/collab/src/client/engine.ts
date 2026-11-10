@@ -80,6 +80,8 @@ export interface EngineState<Op> {
   canEdit: boolean
   saved: number
   peers: Peer[]
+  /** this page's display name, as the last welcome gave it */
+  name: string | null
   /** the head named by the last welcome */
   target: number
   /** the version the editor shows */
@@ -191,6 +193,7 @@ export function initialState<Op>(
     canEdit: false,
     saved: 0,
     peers: [],
+    name: null,
     target: 0,
     confirmed: 0,
     held: [],
@@ -222,6 +225,7 @@ export function statusOf<Op>(s: EngineState<Op>): CollabStatus {
     saved: s.saved,
     unconfirmed: (s.inflight && !s.inflight.doomed ? s.inflight.ops.length : 0) + s.pending.length,
     peers: s.peers,
+    self: s.client !== null && s.name !== null ? { client: s.client, name: s.name } : null,
   }
   if (s.failure) status.failure = s.failure
   return status
@@ -453,6 +457,7 @@ function welcome<Op>(c: Ctx<Op>, w: Extract<ServerFrame, { t: 'welcome' }>): voi
     c.fx.push({ type: 'joined', baseBytes: s.serverBase })
   }
   s.canEdit = w.canEdit
+  s.name = w.name
   s.saved = Math.max(s.saved, w.saved)
   s.peers = w.peers
   s.target = w.head

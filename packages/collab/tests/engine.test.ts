@@ -60,6 +60,7 @@ const welcome = (start: number, head = start) => ({
   t: 'welcome',
   epoch: 'e1',
   client: 'c1',
+  name: 'Me',
   start,
   head,
   saved: 0,

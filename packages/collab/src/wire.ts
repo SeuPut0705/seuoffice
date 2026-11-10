@@ -49,6 +49,8 @@ export type ServerFrame =
       t: 'welcome'
       epoch: string
       client: string
+      /** the display name of this socket's principal, as the others see it in `peers` */
+      name: string
       start: number
       head: number
       saved: number
@@ -190,6 +192,7 @@ export function parseServerFrame(raw: string | Uint8Array): ServerFrame | BytesF
         t: 'welcome',
         epoch: id(f.epoch),
         client: id(f.client),
+        name: text(f.name),
         start: count(f.start),
         head: count(f.head),
         saved: count(f.saved),

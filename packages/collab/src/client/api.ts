@@ -91,6 +91,8 @@ export type CollabStatus = {
   saved: number
   unconfirmed: number
   peers: { client: string; name: string }[]
+  /** this page as the others see it among `peers`; null before the first welcome */
+  self: { client: string; name: string } | null
 }
 
 export type CollabFailure = NonNullable<CollabStatus['failure']>

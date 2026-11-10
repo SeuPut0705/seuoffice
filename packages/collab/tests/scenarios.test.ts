@@ -84,6 +84,47 @@ describe('two clients', () => {
     await net.run()
     expect(a.session!.status().peers.map((peer) => peer.name)).toEqual(['a'])
   })
+
+  it('each know who they are: their own client id and display name, and both are peers', async () => {
+    const net = new SimNetwork()
+    const [ada, bo] = await Promise.all(
+      [
+        { userId: 'u-ada', name: 'Ada Lovelace' },
+        { userId: 'u-bo', name: 'Bo Kim' },
+      ].map((who) =>
+        net.client<LineOp, ToyEditor<LineOp>>(
+          { documentId: DOC, canEdit: true, ...who },
+          { format: toyLines.format, bytes: toyLines.file() },
+          toyLines.open,
+        ),
+      ),
+    )
+    expect(ada!.join).toBeNull()
+    await net.run()
+
+    const peers = ada!.session!.status().peers
+    expect(peers).toHaveLength(2)
+    for (const [client, name] of [
+      [ada!, 'Ada Lovelace'],
+      [bo!, 'Bo Kim'],
+    ] as const) {
+      const self = client.session!.status().self
+      expect(self?.name).toBe(name)
+      expect(peers).toContainEqual(self)
+      expect(client.session!.status().peers).toEqual(expect.arrayContaining(peers))
+    }
+    expect(ada!.session!.status().self?.client).not.toBe(bo!.session!.status().self?.client)
+  })
+
+  it('still know who they are while offline', async () => {
+    const net = new SimNetwork()
+    const a = await join(net, toyLines, 'a')
+    await net.run()
+    const self = a.session!.status().self
+    expect(self).toEqual({ client: expect.any(String), name: 'a' })
+    net.break(a.link.current!)
+    expect(a.session!.status()).toMatchObject({ phase: 'offline', self })
+  })
 })
 
 describe('a lost connection', () => {

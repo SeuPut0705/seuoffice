@@ -414,6 +414,7 @@ export function createServerCore({
       t: 'welcome',
       epoch: epoch.id,
       client,
+      name: conn.principal.name,
       start,
       head: epoch.head,
       saved: state.saved,
