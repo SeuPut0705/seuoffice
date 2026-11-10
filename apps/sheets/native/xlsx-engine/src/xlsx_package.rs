@@ -68,6 +68,9 @@ pub(crate) struct PackageExtras {
     pub(crate) sheets: Vec<SheetExtras>,
     /// The zip package `SheetArt::copied` entries are read from.
     pub(crate) source: Option<PathBuf>,
+    /// `(cache id, part name under xl/)` of each pivot cache definition. The
+    /// parts themselves travel with the sheet their pivot table is on.
+    pub(crate) pivot_caches: Vec<(u32, String)>,
 }
 
 /// Writes the whole package. `sheet_xmls` runs in the same order as `sheets`:
@@ -137,13 +140,13 @@ pub(crate) fn write_package_with(
     add(
         &mut writer,
         "xl/workbook.xml",
-        &workbook_xml(sheets, defined_names, &extras.book_views),
+        &workbook_xml(sheets, defined_names, &extras.book_views, &extras.pivot_caches),
         options,
     )?;
     add(
         &mut writer,
         "xl/_rels/workbook.xml.rels",
-        &workbook_rels_xml(sheets.len()),
+        &workbook_rels_xml(sheets.len(), &extras.pivot_caches),
         options,
     )?;
     add(&mut writer, "xl/styles.xml", styles_xml, options)?;
@@ -443,9 +446,21 @@ fn worksheet_rels_xml(n: usize, drawing: bool, extras: Option<&SheetExtras>) -> 
 const ROOT_RELS: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>"#;
 
+/// The relationship id of the workbook's *n*th pivot cache: the sheets and
+/// the styles come first.
+fn pivot_cache_relationship(sheet_count: usize, position: usize) -> String {
+    format!("rId{}", sheet_count + 2 + position)
+}
+
 /// `defined_names` arrives already spelled as `<definedName>` elements, and
-/// goes in after `<sheets>` where the schema wants it.
-fn workbook_xml(sheets: &[SheetSpec], defined_names: &str, book_views: &str) -> String {
+/// goes in after `<sheets>` where the schema wants it; the pivot caches close
+/// the workbook.
+fn workbook_xml(
+    sheets: &[SheetSpec],
+    defined_names: &str,
+    book_views: &str,
+    pivot_caches: &[(u32, String)],
+) -> String {
     let entries: String = sheets
         .iter()
         .enumerate()
@@ -467,13 +482,28 @@ fn workbook_xml(sheets: &[SheetSpec], defined_names: &str, book_views: &str) -> 
     } else {
         format!("<definedNames>{defined_names}</definedNames>")
     };
+    let caches = if pivot_caches.is_empty() {
+        String::new()
+    } else {
+        let entries: String = pivot_caches
+            .iter()
+            .enumerate()
+            .map(|(position, (id, _))| {
+                format!(
+                    r#"<pivotCache cacheId="{id}" r:id="{}"/>"#,
+                    pivot_cache_relationship(sheets.len(), position)
+                )
+            })
+            .collect();
+        format!("<pivotCaches>{entries}</pivotCaches>")
+    };
     format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">{book_views}<sheets>{entries}</sheets>{names}</workbook>"#,
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">{book_views}<sheets>{entries}</sheets>{names}{caches}</workbook>"#,
     )
 }
 
-fn workbook_rels_xml(sheet_count: usize) -> String {
+fn workbook_rels_xml(sheet_count: usize, pivot_caches: &[(u32, String)]) -> String {
     let mut relationships: String = (1..=sheet_count)
         .map(|index| format!(
             r#"<Relationship Id="rId{index}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet{index}.xml"/>"#,
@@ -483,6 +513,13 @@ fn workbook_rels_xml(sheet_count: usize) -> String {
         r#"<Relationship Id="rId{}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>"#,
         sheet_count + 1,
     ));
+    for (position, (_, target)) in pivot_caches.iter().enumerate() {
+        relationships.push_str(&format!(
+            r#"<Relationship Id="{}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotCacheDefinition" Target="{}"/>"#,
+            pivot_cache_relationship(sheet_count, position),
+            escape_xml(target),
+        ));
+    }
     format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">{relationships}</Relationships>"#,

@@ -38,6 +38,7 @@ mod odf_drawings;
 mod odf_layout;
 mod odf_number_format;
 mod odf_page;
+mod odf_pivots;
 mod odf_rules;
 mod odf_sheet_format;
 mod odf_sheet_parts;

@@ -30,6 +30,7 @@ use crate::odf_drawing_parts::{DrawingWriter, SheetGeometry};
 use crate::odf_drawings::{self, OdfDrawings};
 use crate::odf_formula;
 use crate::odf_layout::{self, OdsSheetLayout};
+use crate::odf_pivots::{Pivots, SourceCell};
 use crate::odf_sheet_format::{self, OdsFormats};
 use crate::odf_sheet_parts::{self, OdfSheetXml};
 use crate::spreadsheetml;
@@ -156,12 +157,18 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
     // Formatting, structure and print setup are a third reading of the
     // package, and as best-effort as the second: a document this cannot
     // follow still opens with its values.
-    let formats: Option<OdsFormats> = if odf {
+    let mut formats: Option<OdsFormats> = if odf {
         odf_sheet_format::read_formats(source).ok()
     } else {
         None
     };
     let mut odf_styles = formats.as_ref().map(|formats| XlsxStyles::new(&formats.book));
+    // The pivot tables came with that reading. Each one needs the header row
+    // of the range it reads, which is taken as its sheet goes by.
+    let mut pivots = formats
+        .as_mut()
+        .map(|formats| Pivots::new(std::mem::take(&mut formats.pivots), &names))
+        .unwrap_or_default();
     // Pictures, shapes and charts are a fourth reading, skipped outright for
     // a document that holds none. A drawing this cannot follow is left out;
     // it never stops the cells from opening.
@@ -194,6 +201,15 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
         let range = workbook
             .worksheet_range(name)
             .map_err(|error| SidecarError::Workbook(format!("Sheet {name}: {error}")))?;
+        if !pivots.is_empty() {
+            pivots.observe(index, |row, column| match range.get_value((row, column)) {
+                Some(Data::String(text)) => SourceCell::Text(text),
+                Some(Data::Float(number)) => SourceCell::Number(*number),
+                Some(Data::Int(number)) => SourceCell::Number(*number as f64),
+                Some(Data::Empty) | None => SourceCell::Empty,
+                Some(_) => SourceCell::Other,
+            });
+        }
         let formulas = workbook.worksheet_formula(name).ok();
         // A cell's entry is `Some` with the Excel spelling of its formula, or
         // `Some(None)` when the source had one the translation dropped.
@@ -509,6 +525,7 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
         package_extras.book_views =
             format!(r#"<bookViews><workbookView activeTab="{active}"/></bookViews>"#);
     }
+    pivots.write(&names, &mut package_extras);
     write_package_with(
         target,
         &sheets,
