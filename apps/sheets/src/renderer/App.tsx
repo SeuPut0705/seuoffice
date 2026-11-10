@@ -5207,8 +5207,11 @@ export function App({
           },
         )
         if (state.formulaMode) {
-          void startFullLoad(runtime, lazyWorkbookRef, setMessage)
+          void startFullLoad(runtime, lazyWorkbookRef, setMessage).then(() =>
+            window.seuCollab?.attach({ runtime, state }),
+          )
         } else {
+          window.seuCollab?.attach({ runtime, state })
           // Deferred so first paint and initial streaming win the sidecar.
           setTimeout(() => {
             void activateFormulaClosure(runtime, lazyWorkbookRef, setMessage)

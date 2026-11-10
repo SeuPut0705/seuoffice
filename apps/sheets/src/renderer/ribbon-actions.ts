@@ -38,7 +38,12 @@ import { columnLabel, formatAddress } from '@genoffice/xlsx-gateway/domain/cell-
 import type { WorkbookOperation } from '@genoffice/xlsx-gateway/domain/workbook-dsl'
 import type { ApplyOutcome } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import { SET_ROW_IS_AUTO_HEIGHT_COMMAND } from './autofit-multi-row'
-import { CELL_HIDDEN_KEY, CELL_LOCKED_KEY, effectiveSheetProtection } from './sheet-protection'
+import {
+  CELL_HIDDEN_KEY,
+  CELL_LOCKED_KEY,
+  editRefusal,
+  effectiveSheetProtection,
+} from './sheet-protection'
 import { fullColumnSpans, fullRowSpans } from './autofit-selection'
 import { applyFormatPainterClick } from './format-painter'
 import { nextSheetName } from './new-sheet-name'
@@ -1588,6 +1593,8 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
     const sheetId = sheet?.getSheetId()
     if (!state || !sheet || !sheetId || isSheetRemoved(state.editJournal, sheetId)) return
     if (range.getRow() !== 0 || range.getHeight() < sheet.getMaxRows()) return
+    // only this page's journal would hold the column default (sheet-protection.ts editRefusal)
+    if (editRefusal('direct:column-default-style') !== null) return
     const op = {
       kind: 'set-col-style' as const,
       start: range.getColumn(),

@@ -5,6 +5,7 @@ import {
   editMode,
   installWebBridge,
   onHostSaveRequest,
+  registerCollabCapable,
   reportDirty,
   reportError,
   reportOpened,
@@ -14,6 +15,7 @@ import {
   WebUnsupportedError,
   webAiSettings,
   webLanguage,
+  type PageCollab,
 } from '@seuoffice/web-platform'
 import {
   saveEditsChunkArraySchema,
@@ -27,10 +29,17 @@ import {
 } from '../shared/desktop-api'
 import { SaveEditsTransferStore } from '../main/save-edits-transfer'
 import { resolveWorkbookSave } from '../main/workbook-save-resolve'
+import { joinSheetsCollab, type SheetsRendererHandles } from './collab-join'
 import { WasmSidecarClient, type SidecarOpenResult } from './wasm-sidecar-client'
 
 const noop = (): void => {}
 const unsubscribe = (): (() => void) => noop
+
+// Before the page announces ready: this page can co-edit when the host asks for it
+registerCollabCapable()
+
+/** The co-editing session when the host asked for one: saves then go through it */
+let collab: PageCollab<SheetsRendererHandles> | null = null
 
 let client: WasmSidecarClient | undefined
 const engine = (): WasmSidecarClient => (client ??= new WasmSidecarClient())
@@ -96,10 +105,13 @@ async function openQueuedDocument(): Promise<WorkbookFile | null> {
   const doc = await waitForDocument()
   if (!doc) return null
   try {
+    // joined before anything opens: a session already running hands back its base file
+    collab = await joinSheetsCollab(doc.fileName, doc.bytes)
+    const bytes = collab?.baseBytes ?? doc.bytes
     const engineName = engineFileName(/\.[^./]+$/.exec(doc.fileName)?.[0].toLowerCase() ?? '')
-    const enginePath = await engine().put(engineName, doc.bytes)
+    const enginePath = await engine().put(engineName, bytes)
     const opened = await engine().open(enginePath, navigator.language)
-    return await adopt(opened, doc.bytes, {
+    return await adopt(opened, bytes, {
       fileName: doc.fileName,
       virtualPath: doc.virtualPath,
       engineName,
@@ -130,6 +142,11 @@ function withTransferredEdits(request: WorkbookSaveRequest): WorkbookSaveRequest
  * session and its pending edits as they were.
  */
 async function saveWorkbookEdits(input: WorkbookSaveRequest): Promise<WorkbookSaveResult> {
+  // A co-edited workbook is saved at one version of the session, by the host, without a reopen
+  if (collab) {
+    await collab.save()
+    return { canceled: true }
+  }
   try {
     if (!editMode()) throw new WebUnsupportedError('sheets.save')
     // Save As (another name or format) and MCP path saves need a file system
@@ -174,6 +191,52 @@ async function saveWorkbookEdits(input: WorkbookSaveRequest): Promise<WorkbookSa
   }
 }
 
+/**
+ * The bytes of the workbook as edited, written to scratch files the session
+ * never adopts: the co-editing save, which must leave the editor untouched.
+ *
+ * The engine writes a defined-names snapshot only onto a package whose rows,
+ * columns and sheets are final. The app's own save splits such a request in
+ * two saves with a reopen between them; here nothing reopens, and the journal
+ * lasts the whole session, so the split happens in place: everything but the
+ * names first, then the names onto that file.
+ */
+async function workbookTemplateBytes(
+  input: WorkbookSaveRequest,
+): Promise<{ ok: boolean; bytes?: Uint8Array }> {
+  const targets: string[] = []
+  try {
+    const request = withTransferredEdits(workbookSaveRequestSchema.parse(input))
+    const session = current
+    if (!session || session.sessionId !== request.sessionId) {
+      throw new Error('Unknown workbook session.')
+    }
+    const scratch = (): string => {
+      const name = engineFileName(/\.[^.]+$/.exec(session.engineName)?.[0] ?? '.xlsx')
+      targets.push(name)
+      return name
+    }
+    const save = resolveWorkbookSave(session.sheetNames, request)
+    const names = save.definedNamesState ?? null
+    const reshapes =
+      save.sheetPlan !== undefined ||
+      (save.structuralOps ?? []).some((sheet) => sheet.ops.length > 0)
+    if (names === null || !reshapes) {
+      return { ok: true, bytes: (await engine().save(session.engineName, scratch(), save)).bytes }
+    }
+    const reshaped = scratch()
+    await engine().save(session.engineName, reshaped, { ...save, definedNamesState: null })
+    const named = await engine().save(reshaped, scratch(), { edits: [], definedNamesState: names })
+    return { ok: true, bytes: named.bytes }
+  } catch (error) {
+    // the renderer reports only "not written" and the session then stops: keep the reason
+    console.error('[co-editing] the workbook could not be written', error)
+    throw error
+  } finally {
+    for (const target of targets) await engine().drop(target).catch(noop)
+  }
+}
+
 // The renderer's close-guard save runs its normal save and reports whether the journal drained.
 let closeSave: (() => void) | undefined
 let closeSaveSettled: ((ok: boolean) => void) | undefined
@@ -209,7 +272,9 @@ function onSaveShortcut(callback: (action: MenuAction) => void): () => void {
     if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return
     if (event.key.toLowerCase() !== 's') return
     event.preventDefault()
-    callback('save')
+    if (collab)
+      void collab.save().catch((error: unknown) => console.error('[co-editing] save failed', error))
+    else callback('save')
   }
   window.addEventListener('keydown', onKey, true)
   return () => window.removeEventListener('keydown', onKey, true)
@@ -256,6 +321,7 @@ const desktopApi: WebDesktopApi = {
     await engine().close(sessionId)
   },
   saveWorkbookEdits,
+  workbookTemplateBytes,
   beginSaveEditsTransfer: async (request) => transfers.begin(request),
   sendSaveEditsChunk: async (request) =>
     transfers.addChunk({
@@ -274,9 +340,9 @@ const desktopApi: WebDesktopApi = {
     }
   },
   reportCloseSaveResult: (ok) => closeSaveSettled?.(ok),
-  // the pending-edit count feeds the host's unsaved-changes flag
+  // the pending-edit count feeds the host's unsaved-changes flag; a co-editing session reports its own
   notifyPendingEdits: (count) => {
-    if (editMode()) reportDirty(count > 0)
+    if (editMode() && !collab) reportDirty(count > 0)
   },
   // shell and desktop services that never fire on the web
   onChromePressed: unsubscribe,
@@ -285,7 +351,12 @@ const desktopApi: WebDesktopApi = {
   onRecoveryNotice: unsubscribe,
   onRecoveryWriteNow: unsubscribe,
   onMcpCommand: unsubscribe,
-  aiStream: ai.aiStream,
+  // An AI run applies, reverts and re-applies its edits as one proposal and vetoes everything else
+  // meanwhile, remote edits included, so co-editing turns it off
+  aiStream: (...args) =>
+    collab
+      ? Promise.reject(new WebUnsupportedError('sheets.aiWhileCoEditing'))
+      : ai.aiStream(...args),
   aiStreamCancel: ai.aiStreamCancel,
   onAiStream: ai.onAiStream,
   reportMcpResult: noop,

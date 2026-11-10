@@ -8,6 +8,7 @@ import type { IRange } from '@univerjs/core'
 
 import { isSheetRemoved, journalSize, recordStructuralOp } from './edit-journal'
 import { t } from './i18n/locale'
+import { editRefusal } from './sheet-protection'
 import {
   groupTogglePlan,
   levelButtonPlan,
@@ -137,7 +138,7 @@ export function toggleOutlineGroup(
   collapsed: boolean,
 ): void {
   const target = activeTarget(ctx)
-  if (!target) return
+  if (!target || editRefusal('direct:outline') !== null) return
   const { state, worksheet, sheetId } = target
   const groups = outlineGroupsFor(state, worksheet, sheetId, axis)
   const plan = groupTogglePlan(groups, group, collapsed)
@@ -156,7 +157,7 @@ export function showOutlineLevel(
   level: number,
 ): void {
   const target = activeTarget(ctx)
-  if (!target) return
+  if (!target || editRefusal('direct:outline') !== null) return
   const { state, worksheet, sheetId } = target
   const entries = outlineEntries(sheetOutline(state, sheetId), axis)
   const groups = outlineGroupsFor(state, worksheet, sheetId, axis)

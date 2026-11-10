@@ -24,6 +24,7 @@ import {
 } from './chart-sync-pending'
 import { recordChartEdit, recordVisualEdit, removeVisualAdd, updateVisualAdd } from './edit-journal'
 import { t } from './i18n/locale'
+import { editRefusal } from './sheet-protection'
 import {
   captureVisualJournal,
   pushVisualUndo,
@@ -337,6 +338,8 @@ export function applyChartEdit(ctx: VisualSyncContext, editKey: string, edit: Ch
   const state = ctx.lazyWorkbookRef.current
   const runtime = ctx.univerRef.current
   if (!runtime) return
+  // not while this page may only make shared edits (sheet-protection.ts editRefusal)
+  if (editRefusal('direct:chart-edit') !== null) return
   if (!state) {
     const applied = applyDemoVisualChange(ctx, editKey, (before) =>
       before.chart
@@ -421,6 +424,11 @@ export function applyShapeEdit(
   const state = ctx.lazyWorkbookRef.current
   const runtime = ctx.univerRef.current
   if (!runtime) return
+  if (editRefusal('direct:shape-edit') !== null) {
+    // a dragged or resized frame goes back to where the workbook has it
+    if (state) ctx.refreshLazyVisuals(state)
+    return
+  }
   if (!state) {
     const applied = applyDemoVisualChange(ctx, visualId, (before) =>
       changes.remove

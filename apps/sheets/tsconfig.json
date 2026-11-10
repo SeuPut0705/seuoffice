@@ -3,6 +3,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "customConditions": ["seuoffice-source"],
     "jsx": "react-jsx",
     "strict": true,
     "noUncheckedIndexedAccess": true,

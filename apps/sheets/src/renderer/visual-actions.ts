@@ -32,6 +32,7 @@ import {
 } from './edit-journal'
 import { t } from './i18n/locale'
 import { filePivotAtSelection, type PivotActionContext } from './pivot-actions'
+import { editRefusal } from './sheet-protection'
 import {
   fitPictureFrame,
   pictureFileProblem,
@@ -691,7 +692,7 @@ export function handleInsertPictureFile(
   file: File,
   anchor: PictureAnchor | null = null,
 ): void {
-  if (!pictureTargetReady(ctx)) return
+  if (!pictureTargetReady(ctx) || editRefusal('direct:insert-picture') !== null) return
   const problem = pictureFileProblem(file)
   if (problem) {
     ctx.setMessage(t(problem === 'too-large' ? 'appPictureTooLarge' : 'appPictureBadType'))
