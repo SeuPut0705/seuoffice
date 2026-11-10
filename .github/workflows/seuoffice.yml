@@ -40,8 +40,8 @@ jobs:
           targets: wasm32-wasip1
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
-      - run: npm run typecheck -w @seuoffice/web-platform -w @seuoffice/embed -w @seuoffice/web
-      - run: npm run test -w @seuoffice/web-platform -w @seuoffice/embed
+      - run: npm run typecheck -w @seuoffice/web-platform -w @seuoffice/embed -w @seuoffice/collab -w @seuoffice/web
+      - run: npm run test -w @seuoffice/web-platform -w @seuoffice/embed -w @seuoffice/collab
       - run: npm run build -w @seuoffice/web
       - run: npm run test -w @seuoffice/web
       - if: failure()

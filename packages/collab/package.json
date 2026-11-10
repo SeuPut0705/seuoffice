@@ -1,0 +1,51 @@
+{
+  "name": "@seuoffice/collab",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "description": "Several people editing one seuoffice document at once: the server that orders every edit, the client engine and its conformance kit",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SeuPut0705/seuoffice.git",
+    "directory": "packages/collab"
+  },
+  "homepage": "https://github.com/SeuPut0705/seuoffice#readme",
+  "bugs": {
+    "url": "https://github.com/SeuPut0705/seuoffice/issues"
+  },
+  "private": false,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./client": {
+      "seuoffice-source": "./src/client/index.ts",
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    },
+    "./server": {
+      "seuoffice-source": "./src/server/index.ts",
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    },
+    "./conformance": {
+      "seuoffice-source": "./src/conformance/index.ts",
+      "types": "./dist/conformance/index.d.ts",
+      "default": "./dist/conformance/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "node ../../scripts/seuoffice-prepack.mjs && npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
+  }
+}

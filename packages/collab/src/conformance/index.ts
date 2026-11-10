@@ -1,0 +1,5 @@
+export { simulate } from './simulate.js'
+export type { NetworkFaults, SimulateOptions, SimulationReport } from './simulate.js'
+export type { SimulatedEditor } from './network.js'
+export { toyLines, toyMap } from './toys.js'
+export type { LineOp, MapOp, Toy, ToyEditor } from './toys.js'
