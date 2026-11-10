@@ -34,6 +34,7 @@ import {
   SetFrozenMutationFactory,
   SetWorksheetDefaultStyleMutationFactory,
 } from '@univerjs/sheets'
+import { MAX_COLUMNS, MAX_ROWS } from './collab-wire-check'
 
 export type Params = Record<string, unknown>
 
@@ -362,12 +363,13 @@ function sheetSetting(
  */
 function restoreMerges(env: MutationEnv, params: Params): Mutation[] {
   const sheet = sheetOf(env, params)
-  // merges can outlive the grid (a column removal shrinks the count, not the merges past it)
+  // merges can outlive the grid (a column removal shrinks the count, not the merges past it),
+  // never Excel's own bounds
   const whole = {
     startRow: 0,
-    endRow: Number.MAX_SAFE_INTEGER,
+    endRow: MAX_ROWS - 1,
     startColumn: 0,
-    endColumn: Number.MAX_SAFE_INTEGER,
+    endColumn: MAX_COLUMNS - 1,
   }
   const unitId = unitOf(env)
   return [

@@ -1,5 +1,6 @@
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
+  collabLink,
   createAiStreamBridge,
   createWebBridge,
   editMode,
@@ -29,8 +30,7 @@ import {
 } from '../shared/desktop-api'
 import { SaveEditsTransferStore } from '../main/save-edits-transfer'
 import { resolveWorkbookSave } from '../main/workbook-save-resolve'
-import { joinSheetsCollab, type SheetsRendererHandles } from './collab-join'
-import { coEditedSaveRequest } from './collab-save'
+import type { SheetsRendererHandles } from './collab-join'
 import { WasmSidecarClient, type SidecarOpenResult } from './wasm-sidecar-client'
 
 const noop = (): void => {}
@@ -107,7 +107,11 @@ async function openQueuedDocument(): Promise<WorkbookFile | null> {
   if (!doc) return null
   try {
     // joined before anything opens: a session already running hands back its base file
-    collab = await joinSheetsCollab(doc.fileName, doc.bytes)
+    // pages the host did not ask to co-edit never load the adapter or the engine
+    if (collabLink()) {
+      const { joinSheetsCollab } = await import('./collab-join')
+      collab = await joinSheetsCollab(doc.fileName, doc.bytes)
+    }
     const bytes = collab?.baseBytes ?? doc.bytes
     const engineName = engineFileName(/\.[^./]+$/.exec(doc.fileName)?.[0].toLowerCase() ?? '')
     const enginePath = await engine().put(engineName, bytes)
@@ -210,6 +214,8 @@ async function workbookTemplateBytes(
   if (!collab) return { ok: false }
   const targets: string[] = []
   try {
+    // split out with the adapter: only a co-editing page reaches here
+    const { coEditedSaveRequest } = await import('./collab-save')
     const checked = coEditedSaveRequest(input)
     const session = current
     if (!session || session.sessionId !== input.sessionId) {

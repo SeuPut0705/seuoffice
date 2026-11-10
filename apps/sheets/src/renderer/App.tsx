@@ -5211,8 +5211,14 @@ export function App({
           },
         )
         if (state.formulaMode) {
-          void startFullLoad(runtime, lazyWorkbookRef, setMessage).then(() =>
-            window.seuCollab?.attach({ runtime, state }),
+          void startFullLoad(runtime, lazyWorkbookRef, setMessage).then(
+            () => window.seuCollab?.attach({ runtime, state }),
+            (error: unknown) => {
+              // a co-editing page holds input until attach; leave the session instead
+              const page = window.seuCollab as { fail?(reason: string): void } | undefined
+              page?.fail?.(error instanceof Error ? error.message : String(error))
+              throw error
+            },
           )
         } else {
           window.seuCollab?.attach({ runtime, state })

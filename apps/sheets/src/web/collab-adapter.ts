@@ -81,6 +81,7 @@ import {
   shiftFormula,
   type SheetNames,
 } from './collab-rebase'
+import { checkWireMutation, firstInvalid } from './collab-wire-check'
 
 /**
  * User commands whose every mutation co-editing cannot take back exactly
@@ -716,11 +717,14 @@ export function sheetsCollabAdapter(
     const op: SheetOp = { id: id ?? randomId(), mutations: burst.mutations }
     // One op travels as one change, and the engine fails the session over a change it cannot
     // send. The person loses this one edit instead, and is told.
-    if (new TextEncoder().encode(JSON.stringify(encode(op))).length > maxOpBytes) {
+    // Nor may it carry what the other pages' decode refuses (collab-wire-check.ts)
+    const invalid = firstInvalid(burst.mutations)
+    if (invalid || new TextEncoder().encode(JSON.stringify(encode(op))).length > maxOpBytes) {
+      if (invalid) console.warn(`[co-editing] ${invalid.message}`)
       const first = burst.mutations[0]!.id
       takeBack({ mutations: 0, undo: 0, journal: 0 })
       resetMarks()
-      options.onBlocked?.(first, 'too-large')
+      options.onBlocked?.(first, invalid && !invalid.tooLarge ? 'unshared' : 'too-large')
       return false
     }
     undoOf.set(op, { undo: burst.undo, journal: burst.journal })
@@ -994,6 +998,7 @@ export function sheetsCollabAdapter(
     if (typeof id !== 'string' || !isSynced(id)) throw new Error(`unknown mutation ${String(id)}`)
     if (!params || typeof params !== 'object' || Array.isArray(params))
       throw new Error('mutation params must be an object')
+    checkWireMutation(id, params)
     return { id, params: params as Params }
   }
 
