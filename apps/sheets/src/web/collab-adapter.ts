@@ -81,7 +81,7 @@ import {
   shiftFormula,
   type SheetNames,
 } from './collab-rebase'
-import { checkWireMutation, firstInvalid } from './collab-wire-check'
+import { checkWireMutation, firstInvalid, MAX_SHEET_NAME, mergesFit } from './collab-wire-check'
 
 /**
  * User commands whose every mutation co-editing cannot take back exactly
@@ -313,7 +313,10 @@ function carriesContent(sheet: unknown): boolean {
   )
 }
 
-/** `name`, or the first `name (n)` no other sheet uses; sheet names compare without case */
+/**
+ * `name`, or the first `name (n)` no other sheet uses, shortened to Excel's 31 characters; sheet
+ * names compare without case. It reads only the workbook, so pages at one version agree on it.
+ */
 function freeName(workbook: Workbook, name: string, self: string): string {
   const taken = new Set(
     workbook
@@ -323,9 +326,33 @@ function freeName(workbook: Workbook, name: string, self: string): string {
   )
   if (!taken.has(name.toLowerCase())) return name
   for (let n = 2; ; n++) {
-    const candidate = `${name} (${n})`
+    const suffix = ` (${n})`
+    const candidate = `${name.slice(0, MAX_SHEET_NAME - suffix.length)}${suffix}`
     if (!taken.has(candidate.toLowerCase())) return candidate
   }
+}
+
+/** `wire` with the sheet name it sets made free in `workbook` */
+function withFreeName(workbook: Workbook, wire: Mutation): Mutation {
+  if (wire.id === INSERT_SHEET) {
+    const sheet = wire.params.sheet as { id: string; name: string }
+    const name = freeName(workbook, sheet.name, sheet.id)
+    return name === sheet.name
+      ? wire
+      : { id: wire.id, params: { ...wire.params, sheet: { ...sheet, name } } }
+  }
+  if (wire.id === SET_SHEET_NAME) {
+    const name = freeName(workbook, String(wire.params.name), String(wire.params.subUnitId))
+    return name === wire.params.name ? wire : { id: wire.id, params: { ...wire.params, name } }
+  }
+  return wire
+}
+
+/** Whether merge `wire` keeps its sheet within what every page's span cache may walk */
+function mergeFits(workbook: Workbook, wire: Mutation): boolean {
+  if (wire.id !== ADD_MERGE) return true
+  const sheet = workbook.getSheetBySheetId(String(wire.params.subUnitId))
+  return !sheet || mergesFit(sheet.getConfig().mergeData, wire.params.ranges as IRange[])
 }
 
 export function sheetsCollabAdapter(
@@ -592,6 +619,11 @@ export function sheetsCollabAdapter(
       options.onBlocked?.(info.id, 'unshared')
       refuse(`co-editing refuses a second sheet named ${named.name}`)
     }
+    // every page rebuilds the sheet's merge cache over each merged cell on each merge edit
+    if (!mergeFits(workbook!, { id: info.id, params })) {
+      options.onBlocked?.(info.id, 'too-large')
+      refuse('co-editing refuses a merge past the merged cells a sheet may hold')
+    }
     // A sheet that arrives with content is journaled as an empty new sheet on the other pages
     // (see BLOCKED_COMMANDS). One that was removed earlier is known to every journal: its return
     // (the undo of a removal) only lifts the removal.
@@ -776,16 +808,9 @@ export function sheetsCollabAdapter(
   /** run one wire mutation of a local op again; returns its revert, or null when it no longer applies */
   function replayOne(wire: Mutation): Replayed | null {
     if (subUnitsOf(wire).some((id) => !workbook!.getSheetBySheetId(id))) return null
-    let fixed = wire
+    let fixed = withFreeName(workbook!, wire)
     if (wire.id === INSERT_SHEET) {
-      const sheet = wire.params.sheet as { id: string; name: string }
-      const name = freeName(workbook!, sheet.name, sheet.id)
-      if (name !== sheet.name)
-        fixed = { id: wire.id, params: { ...wire.params, sheet: { ...sheet, name } } }
-      if (workbook!.getSheetBySheetId(sheet.id)) return null
-    } else if (wire.id === SET_SHEET_NAME) {
-      const name = freeName(workbook!, String(wire.params.name), String(wire.params.subUnitId))
-      if (name !== wire.params.name) fixed = { id: wire.id, params: { ...wire.params, name } }
+      if (workbook!.getSheetBySheetId((wire.params.sheet as { id: string }).id)) return null
     } else if (wire.id === REMOVE_SHEET || (wire.id === SET_SHEET_HIDDEN && wire.params.hidden)) {
       // a workbook keeps one visible sheet; a remote change may have taken the others
       const others = workbook!
@@ -808,6 +833,7 @@ export function sheetsCollabAdapter(
       )
       if (ranges.length === 0) return null
       fixed = { id: wire.id, params: { ...wire.params, ranges } }
+      if (!mergeFits(workbook!, fixed)) return null
     }
     const local = fromWire(workbook!, withLocalNameId(fixed))
     const undo = inverseOf(env, local)
@@ -932,7 +958,15 @@ export function sheetsCollabAdapter(
 
       const changes: Change[] = []
       for (const op of remote) {
-        for (const mutation of op.mutations) {
+        for (const received of op.mutations) {
+          // Checks every page makes on the same version of the log, so all of them end alike: a
+          // clashing sheet name gets the same free name, a merge past the bound runs nowhere.
+          // Only a page that skipped its own checks sends either.
+          if (!mergeFits(workbook!, received)) {
+            console.warn(`[co-editing] dropped a received merge past the bound (op ${op.id})`)
+            continue
+          }
+          const mutation = withFreeName(workbook!, received)
           const sheet = String(mutation.params.subUnitId)
           const nameBefore = names.nameOf(sheet)
           const change: AxisChange | null = axisChangeOf(mutation)

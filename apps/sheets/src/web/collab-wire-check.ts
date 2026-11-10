@@ -15,9 +15,16 @@ export const MAX_ROWS = 1_048_576
 export const MAX_COLUMNS = 16_384
 /** Cells one mutation writes or covers with a cell range: one whole column */
 export const MAX_CELLS = MAX_ROWS
+/**
+ * What Univer walks for a sheet's merges, all of them: every merge mutation rebuilds the sheet's
+ * span cache over each merged cell (about 35 ms and 50 MB per million cells, measured headless)
+ */
+export const MAX_MERGED_CELLS = MAX_CELLS
+/** Merges on one sheet: a removal compares each of its ranges with each of them */
+export const MAX_MERGES = 65_536
 const MAX_TEXT = 32_767
 const MAX_FORMULA = 8_192
-const MAX_SHEET_NAME = 31
+export const MAX_SHEET_NAME = 31
 const MAX_NUMBER_FORMAT = 255
 const MAX_ID = 128
 const MAX_RANGES = 4_096
@@ -25,7 +32,7 @@ const MAX_SHEETS = 65_536
 /** JSON nodes inside one free-form value (rich text, `custom`), and how deep they may nest */
 const MAX_JSON_DEPTH = 12
 const MAX_JSON_NODES = 100_000
-/** Keys that carry links, embedded objects or other documents */
+/** Keys that carry links, embedded objects or other documents; the cell editor writes some empty */
 const LINK_KEYS = new Set([
   'customRanges',
   'customBlocks',
@@ -39,6 +46,14 @@ const LINK_KEYS = new Set([
   'linkUrl',
   'linkId',
 ])
+/** Keys Univer's deep clone would assign through to the object's prototype */
+const RESERVED_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
+/** What the cell editor leaves in a link or drawing key when the text has none */
+const isEmpty = (value: unknown): boolean =>
+  value === null ||
+  (Array.isArray(value) && value.length === 0) ||
+  (isRecord(value) && Object.keys(value).length === 0)
 
 /** A mutation outside these shapes or bounds; `tooLarge` when only a bound was crossed */
 export class WireMutationError extends Error {
@@ -128,9 +143,10 @@ const boolean: Check = (value, path) => {
 /** Univer's small numeric enums */
 const enumeration = integer(0, 64)
 const id = text(MAX_ID)
+/** Excel's rule: 1 to 31 characters, none of `\ / ? * [ ] :`, no apostrophe at either end */
 const sheetName: Check = (value, path, budget) => {
   text(MAX_SHEET_NAME)(value, path, budget)
-  if ((value as string).length === 0) bad(path, 'empty sheet name')
+  if (!/^(?!')[^\\/?*[\]:]+(?<!')$/.test(value as string)) bad(path, 'not a sheet name Excel takes')
 }
 const color = text(64)
 const row = integer(0, MAX_ROWS - 1)
@@ -146,7 +162,7 @@ function object(shape: Shape, required: readonly string[] = []): Check {
     for (const [key, field] of Object.entries(value)) {
       // absent on the wire: JSON drops it
       if (field === undefined) continue
-      const check = shape[key]
+      const check = Object.hasOwn(shape, key) ? shape[key] : undefined
       if (!check) bad(`${path}.${key}`, 'unknown field')
       check(field, `${path}.${key}`, budget)
     }
@@ -219,8 +235,21 @@ const rangeShape = object(
 
 type Range = { startRow: number; endRow: number; startColumn: number; endColumn: number }
 
+/**
+ * What Univer's span cache walks for a merge: each cell, or each row or column of a whole-row or
+ * whole-column merge (`rangeType`), or nothing for the whole sheet
+ */
+export function mergeCost(range: Range & { rangeType?: number }): number {
+  const rows = range.endRow - range.startRow + 1
+  const columns = range.endColumn - range.startColumn + 1
+  if (range.rangeType === 1) return rows
+  if (range.rangeType === 2) return columns
+  if (range.rangeType === 3) return 1
+  return rows * columns
+}
+
 /** A range; `covers` says what of it the mutation visits one by one */
-function range(covers: 'cells' | 'rows' | 'columns' | 'nothing'): Check {
+function range(covers: 'cells' | 'rows' | 'columns' | 'merge' | 'nothing'): Check {
   return (value, path, budget) => {
     rangeShape(value, path, budget)
     const { startRow, endRow, startColumn, endColumn } = value as Range
@@ -228,6 +257,7 @@ function range(covers: 'cells' | 'rows' | 'columns' | 'nothing'): Check {
     const rows = endRow - startRow + 1
     const columns = endColumn - startColumn + 1
     if (covers === 'cells') spend(budget, 'cells', rows * columns, path)
+    else if (covers === 'merge') spend(budget, 'cells', mergeCost(value as Range), path)
     else if (covers === 'rows') spend(budget, 'rows', rows, path)
     else if (covers === 'columns') spend(budget, 'columns', columns, path)
   }
@@ -300,14 +330,22 @@ const plainJson: Check = (value, path) => {
     }
     if (!isRecord(node)) bad(at, 'not JSON')
     for (const [key, item] of Object.entries(node)) {
-      if (LINK_KEYS.has(key)) bad(`${at}.${key}`, 'links and embedded objects not allowed')
+      if (RESERVED_KEYS.has(key)) bad(`${at}.${key}`, 'reserved key')
+      if (LINK_KEYS.has(key) && !isEmpty(item))
+        bad(`${at}.${key}`, 'links and embedded objects not allowed')
       walk(item, `${at}.${key}`, depth + 1)
     }
   }
   walk(value, path, 0)
 }
 
-const cellValue = either(text(MAX_TEXT), number(-Number.MAX_VALUE, Number.MAX_VALUE), boolean)
+const finite = number(-Number.MAX_VALUE, Number.MAX_VALUE)
+const cellText = text(MAX_TEXT)
+/** By its type, not by `either`: one value per cell, and a thrown error per cell is slow */
+const cellValue: Check = (value, path, budget) => {
+  if (typeof value === 'number') finite(value, path, budget)
+  else if (typeof value !== 'boolean') cellText(value, path, budget)
+}
 
 const cell = nullable(
   object({
@@ -364,7 +402,7 @@ const worksheet = object(
     scrollLeft: optional(size),
     defaultColumnWidth: optional(size),
     defaultRowHeight: optional(size),
-    mergeData: optional(ranges('nothing')),
+    mergeData: optional(ranges('merge')),
     cellData: optional(matrix(cell)),
     rowData: optional(lines('rows', rowData)),
     columnData: optional(lines('columns', columnData)),
@@ -434,7 +472,9 @@ const WIRE: Record<string, Check> = {
     { sourceRange: range('columns'), targetRange: range('columns') },
     ['sourceRange', 'targetRange'],
   ),
-  'sheet.mutation.add-worksheet-merge': onSheet({ ranges: ranges('nothing') }, ['ranges']),
+  // the span cache is rebuilt over every merge of the sheet (adapter: mergesFit); a removal only
+  // compares ranges, and what it leaves was bounded when it was added
+  'sheet.mutation.add-worksheet-merge': onSheet({ ranges: ranges('merge') }, ['ranges']),
   'sheet.mutation.remove-worksheet-merge': onSheet({ ranges: ranges('nothing') }, ['ranges']),
   'sheet.mutation.set-row-data': onSheet({ rowData: lines('rows', rowData) }, ['rowData']),
   'sheet.mutation.set-col-data': onSheet({ columnData: lines('columns', columnData) }, [
@@ -485,7 +525,8 @@ const WIRE: Record<string, Check> = {
     },
     ['index', 'sheet'],
   ),
-  'sheet.mutation.remove-sheet': onSheet({ subUnitName: sheetName }, ['subUnitName']),
+  // the name the page had; a file may hold one Excel would not take (a CSV's file name)
+  'sheet.mutation.remove-sheet': onSheet({ subUnitName: text(255) }, ['subUnitName']),
   'sheet.mutation.set-worksheet-name': onSheet({ name: sheetName }, ['name']),
   'sheet.mutation.set-worksheet-order': onSheet(
     { fromOrder: integer(0, MAX_SHEETS), toOrder: integer(0, MAX_SHEETS) },
@@ -528,6 +569,7 @@ function record(entry: Check): Check {
     const keys = Object.keys(value)
     if (keys.length > MAX_RANGES) tooLarge(path, `more than ${MAX_RANGES} entries`)
     for (const key of keys) {
+      if (RESERVED_KEYS.has(key)) bad(`${path}.${key}`, 'reserved key')
       id(key, `${path} key`, budget)
       entry(value[key], `${path}.${key}`, budget)
     }
@@ -536,7 +578,7 @@ function record(entry: Check): Check {
 
 /** Throws a `WireMutationError` unless `params` is what mutation `mutationId` may carry on the wire */
 export function checkWireMutation(mutationId: string, params: unknown): void {
-  const check = WIRE[mutationId]
+  const check = Object.hasOwn(WIRE, mutationId) ? WIRE[mutationId] : undefined
   if (!check) throw new WireMutationError(`unknown mutation ${mutationId}`, false)
   const budget: Budget = { cells: MAX_CELLS, rows: MAX_ROWS, columns: MAX_COLUMNS }
   try {
@@ -565,4 +607,15 @@ export function firstInvalid(
     }
   }
   return null
+}
+
+/**
+ * Whether a sheet holding `merges` stays within the merge bounds once `added` joins them. Every
+ * page decides it on the same state (the log so far), so a merge it drops is dropped everywhere.
+ */
+export function mergesFit(merges: readonly Range[], added: readonly Range[]): boolean {
+  if (merges.length + added.length > MAX_MERGES) return false
+  let cost = 0
+  for (const range of [...merges, ...added]) cost += mergeCost(range)
+  return cost <= MAX_MERGED_CELLS
 }
