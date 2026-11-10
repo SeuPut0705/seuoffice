@@ -54,6 +54,17 @@
   white-space: nowrap;
 }
 
+/* the name beside a title the person gave: small and secondary */
+.ai-skill-picker .ai-skill-picker-name {
+  flex-shrink: 1;
+  min-width: 0;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ai-skill-picker .ai-skill-picker-source {
   flex-shrink: 0;
   color: var(--text-tertiary);

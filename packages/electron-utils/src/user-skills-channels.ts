@@ -165,6 +165,12 @@ export type UserSkillsFailReason =
   | 'name-taken'
   /** copy to mine: the name is taken; ask, then call again with `overwrite` */
   | 'exists'
+  /**
+   * A save under a name an enabled skill of another source has; `problem` names
+   * the sources (`builtin`, `user`, `codex`, `plugin:<plugin>`, joined by `,`).
+   * Ask, then call again with `turnOffSameName`.
+   */
+  | 'same-name-on'
   /** a hidden builtin cannot be turned on before it is shown again */
   | 'hidden'
   /** the template is not a document the app's editors open, or cannot be read */
@@ -202,6 +208,7 @@ export type UserSkillsResult<T extends object = object> = ({ ok: true } & T) | U
 /** Settings editor: a new skill (no `id`) or an edit of one of the app's own skills */
 export interface UserSkillSaveInput {
   id?: string | undefined
+  /** `metadata.ieum-title`, in any language; empty takes the key out */
   title: string
   /** a new skill without one gets a name made from the title */
   name?: string | undefined
@@ -209,6 +216,8 @@ export interface UserSkillSaveInput {
   body: string
   /** written to `metadata.ieum-editors`; absent keeps what the file has */
   editors?: UserSkillEditorsValue | undefined
+  /** the person agreed: enabled skills of other sources with this name are turned off */
+  turnOffSameName?: boolean | undefined
 }
 
 /**
@@ -225,6 +234,7 @@ export interface UserSkillTemplateInput {
 
 /** A skill card's save (spec 5.6) */
 export interface UserSkillCardSaveInput {
+  /** `metadata.ieum-title`, in any language; empty takes the key out */
   title: string
   name: string
   description: string
@@ -237,6 +247,8 @@ export interface UserSkillCardSaveInput {
   overwrite?: boolean | undefined
   /** written to `metadata.ieum-editors`; absent keeps what the file has */
   editors?: UserSkillEditorsValue | undefined
+  /** the person agreed: enabled skills of other sources with this name are turned off */
+  turnOffSameName?: boolean | undefined
 }
 
 /**
@@ -460,7 +472,15 @@ export function saveInputOf(value: unknown): UserSkillSaveInput | undefined {
   if (value.name !== undefined && name === undefined) return undefined
   const editors = editorsValueOf(value.editors)
   if (editors === null) return undefined
-  return { id, title, name, description, body, ...(editors ? { editors } : {}) }
+  return {
+    id,
+    title,
+    name,
+    description,
+    body,
+    ...(editors ? { editors } : {}),
+    ...(value.turnOffSameName === true ? { turnOffSameName: true } : {}),
+  }
 }
 
 /** Largest template a card may hand over (the folder limit) */
@@ -503,6 +523,7 @@ export function cardSaveInputOf(value: unknown): UserSkillCardSaveInput | undefi
     targetId,
     overwrite: value.overwrite === true,
     ...(editors ? { editors } : {}),
+    ...(value.turnOffSameName === true ? { turnOffSameName: true } : {}),
   }
 }
 

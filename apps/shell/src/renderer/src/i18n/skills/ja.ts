@@ -71,6 +71,9 @@ export const ja = {
   editorNew: '新しいスキル',
   editorEdit: 'スキルを編集',
   editorView: 'スキルの内容',
+  fieldTitle: 'タイトル',
+  titleHint:
+    '一覧に表示されるタイトルです。どの言語でも書けます。空のままにすると名前が表示されます',
   fieldDescription: '説明',
   fieldDescriptionHint: 'AI はこの説明を読んで、スキルを使うかどうかを判断します',
   fieldBody: '本文',
@@ -84,11 +87,15 @@ export const ja = {
   createHint: 'AI パネルで「こんなスキルを作って」と頼んで作ることもできます',
   nameEmpty: '名前を入力してください',
   nameTooLong: '名前は 64 文字までです',
-  nameCharacters: '使えるのは英小文字・数字・ハイフン (-) だけです',
+  nameCharacters:
+    '使えるのは英小文字・数字・ハイフン (-) だけです。日本語のタイトルは上のタイトル欄に書いてください',
   nameHyphenEdge: '名前の先頭や末尾にハイフンは使えません',
   nameDoubleHyphen: 'ハイフンを 2 つ続けて使うことはできません',
   nameReserved: 'この名前は使えません',
   nameTaken: 'マイスキルに同じ名前のスキルがすでにあります',
+  sameNameOn:
+    '同じ名前のスキルがオンになっています（{sources}）。保存するとマイスキルが代わりに使われ、そのスキルはオフになります。',
+  saveTurnOff: '保存してそのスキルをオフにする',
   githubTitle: 'GitHub リンクから追加',
   githubLabel: 'GitHub のアドレス',
   githubPlaceholder: 'https://github.com/所有者/リポジトリ',
@@ -156,6 +163,7 @@ export const ja = {
   warnRemoteInstructions: 'AI に外部のアドレスから指示を受け取るよう求める文',
   warnParentPath: 'スキルフォルダーの外を指す ../ パス',
   exportSeveral: '複数をエクスポート',
+  bundleFileName: '{title} ほか {n} 件',
   bundleTitle: 'スキルをまとめてエクスポート',
   bundleIntro:
     'チェックを入れたスキルを、スキルごとのフォルダーにして 1 つの zip ファイルにまとめます。受け取った人は、その zip をアプリのウィンドウにドロップするか、追加 ▸ zip ファイルから で取り込めます。',

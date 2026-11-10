@@ -10,6 +10,21 @@ import { failureKey, skillDisplayTitle } from './skills-model'
 type Text = (key: SkillsStringKey, params?: Record<string, string | number>) => string
 
 /**
+ * The words the save dialog's file name is made from: the first ticked skill
+ * as the list shows it "and N more". One skill needs none (the main process
+ * uses that skill's own file name), and the main process makes the words
+ * into a file name.
+ */
+export function bundleNameOf(
+  chosen: readonly Pick<UserSkillView, 'name' | 'title' | 'source'>[],
+  s: Text,
+): string | undefined {
+  const first = chosen[0]
+  if (!first || chosen.length < 2) return undefined
+  return s('bundleFileName', { title: skillDisplayTitle(first), n: chosen.length - 1 })
+}
+
+/**
  * Several own skills into one zip, a folder per skill: tick them, read the
  * template note when a ticked one carries a document, then choose where it
  * goes. Nothing is ticked at first.
@@ -46,7 +61,10 @@ export function SkillBundleExportDialog({
   const run = async () => {
     if (busy || chosen.length === 0) return
     setBusy(true)
-    const answer = await api.exportBundle(chosen.map((v) => v.id))
+    const answer = await api.exportBundle(
+      chosen.map((v) => v.id),
+      bundleNameOf(chosen, s),
+    )
     setBusy(false)
     if (answer.ok) {
       onDone({ tone: 'ok', text: s('exported', { path: answer.path }) })

@@ -130,7 +130,7 @@ export interface SkillPickerItem {
   source: string
   plugin: string | undefined
   name: string
-  /** display title (builtins in the UI language) */
+  /** what the row shows: `skillDisplayName` (the name is shown beside it when they differ) */
   title: string
   description: string
   /** plain-text source label; empty for project skills */
@@ -179,21 +179,32 @@ export function skillSourceLabel(
 /** The name the app gives a skill whose title has no Latin letters or digits (`skill-<6 random>`) */
 const MADE_UP_NAME = /^skill-[a-z0-9]{6}(?:-\d+)?$/
 
+/** Whether a name is one the app made up for a title no name could be made from */
+export function isMadeUpSkillName(name: string): boolean {
+  return MADE_UP_NAME.test(name)
+}
+
 /**
- * What a list shows for a skill: its name, as coding agents show it. A skill
- * that only has a made-up name shows the title it was made with instead.
+ * What every list, chip and sentence shows for a skill (decision 0128): the
+ * title the person gave it, in any language, when its file carries one; else
+ * its name, as coding agents show it. A builtin always shows its name. Where
+ * the result differs from the name, lists show the name beside it.
  */
-export function skillDisplayName(skill: { name: string; title?: string | undefined }): string {
-  const title = skill.title?.trim()
-  return title && MADE_UP_NAME.test(skill.name) ? title : skill.name
+export function skillDisplayName(skill: {
+  name: string
+  title?: string | undefined
+  source?: string | undefined
+}): string {
+  if (skill.source === 'builtin') return skill.name
+  return skill.title?.trim() || skill.name
 }
 
 /**
  * The rows of the list from the bridge's answer: enabled skills only (skills
  * used only when called are listed too), never hidden or unreadable ones;
  * the regular panels leave out agent-only skills, and an editor's panel the
- * skills set for other editors. Rows show the skill's name; builtins use
- * their descriptions in the UI language.
+ * skills set for other editors. Rows show the skill's title or name
+ * (`skillDisplayName`); builtins use their descriptions in the UI language.
  */
 export function pickerSkillsOf(
   raw: unknown,
@@ -220,7 +231,7 @@ export function pickerSkillsOf(
       source,
       plugin,
       name,
-      title: skillDisplayName({ name, title: builtin ? '' : str(view.title) }),
+      title: skillDisplayName({ name, title: str(view.title), source }),
       description: builtin ? builtinSkillDesc(lang, name) : str(view.description),
       sourceLabel: skillSourceLabel(lang, { source, plugin, github: view.github }),
       hasScripts: view.hasScripts === true,

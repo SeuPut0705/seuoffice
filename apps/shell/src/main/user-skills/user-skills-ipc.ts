@@ -12,7 +12,7 @@ import { randomUUID } from 'node:crypto'
 import { BrowserWindow, dialog, ipcMain, shell, webContents } from 'electron'
 import type { IpcMainInvokeEvent, WebContents } from 'electron'
 import {
-  SKILL_BUNDLE_FILE_NAME,
+  skillBundleFileName,
   type GitHubSkillUpdateCheck,
   type SkillImport,
   type SkillImportSource,
@@ -68,6 +68,9 @@ export type DroppedSkillEntry = DroppedSkillSource | { kind: 'no-skills' }
 
 /** Most dropped skill files waiting at once; older ones go first */
 export const DROPPED_SKILLS_MAX = 20
+
+/** Longest bundle name a window may suggest; the core cuts it to a file name */
+const BUNDLE_NAME_MAX_CHARS = 300
 
 export interface UserSkillsIpc {
   /** tell every window the list changed */
@@ -439,12 +442,21 @@ export function registerUserSkillsIpc(deps: UserSkillsIpcDeps): UserSkillsIpc {
     return service.exportTo(skillId, picked.filePath)
   })
 
-  manage(C.exportBundle, async (event, raw: unknown) => {
+  manage(C.exportBundle, async (event, raw: unknown, suggested: unknown) => {
     const ids = skillIdListOf(raw)
     if (!ids) return invalid
+    // one skill goes out under its own file name; several under the words the screen made
+    let defaultPath = skillBundleFileName(
+      typeof suggested === 'string' ? suggested.slice(0, BUNDLE_NAME_MAX_CHARS) : undefined,
+    )
+    if (ids.length === 1) {
+      const info = await service.exportInfo(ids[0]!)
+      if (!info.ok) return info
+      defaultPath = info.fileName
+    }
     const parent = parentOf(event)
     const options = {
-      defaultPath: SKILL_BUNDLE_FILE_NAME,
+      defaultPath,
       filters: [{ name: 'Zip', extensions: ['zip'] }],
     }
     const picked = parent

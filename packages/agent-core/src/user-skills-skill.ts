@@ -32,10 +32,10 @@ export const USER_SKILL_TOOL_NAMES: ReadonlySet<string> = new Set([
   PROPOSE_SKILL_TOOL,
 ])
 
-/** First words of a proposal's tool result, then its name as JSON (stored chats read it back) */
+/** First words of a proposal's tool result, then its title (else its name) as JSON (stored chats read it back) */
 const PROPOSAL_SHOWN_PREFIX = 'Skill card shown: '
 
-/** The name (a title in older chats) a stored `propose_skill` result names, or '' */
+/** The title, else the name, a stored `propose_skill` result names, or '' */
 export function proposedTitleOf(output: string | undefined): string {
   if (!output?.startsWith(PROPOSAL_SHOWN_PREFIX)) return ''
   const line = output.slice(PROPOSAL_SHOWN_PREFIX.length).split('\n', 1)[0]!
@@ -118,6 +118,7 @@ export type UserSkillRead<T> = ({ ok: true } & T) | { ok: false; reason: string 
 export interface SkillProposal {
   /** unique per proposal (the tool call's id) */
   key: string
+  /** the title in the person's language the model suggested; '' when it gave none */
   title: string
   /** the English name the model suggested; '' when it gave none */
   name: string
@@ -305,7 +306,8 @@ const PROPOSE_DESCRIPTION =
   'steps, the rules, the tone and wording, the checks before finishing. Leave out values used ' +
   'only once (names of people, dates, this particular content): list them in the body as ' +
   'values given each time instead. Write the body as instructions to an assistant, in the ' +
-  'language of the conversation. Set wantsTemplate when the finished document itself should ' +
+  'language of the conversation. Give a short title in the person’s language as well as the ' +
+  'English name: lists show the title. Set wantsTemplate when the finished document itself should ' +
   'be kept as a template to fill in next time. Set editors only when the skill is tied to one ' +
   'kind of document (designing slides: slides; tidying spreadsheets: sheets); otherwise leave ' +
   'it out so the skill is offered in every editor. Never set it just because of the editor ' +
@@ -347,10 +349,16 @@ function tools(): AgentToolDef[] {
       inputSchema: {
         type: 'object',
         properties: {
+          title: {
+            type: 'string',
+            description:
+              'a short title in the language the person writes in (not put into English), ' +
+              'shown in the skill list',
+          },
           name: {
             type: 'string',
             description:
-              'the name the person sees in the skill list and types after / to call it: English ' +
+              'the name shown beside the title, also the skill’s name in other programs: English ' +
               'words saying what the skill does, lowercase letters, digits and hyphens, 1-64 ' +
               'characters, e.g. meeting-minutes',
           },
@@ -527,9 +535,9 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
 
   const proposeSkill = (call: AgentToolCall): ToolExecution => {
     const name = str(call.input.name).trim()
-    // older prompts gave a title instead; the card makes a name from it
+    // a title alone is enough: the card makes a name from it
     const title = str(call.input.title).trim()
-    const label = name || title
+    const label = title || name
     const body = str(call.input.body)
     if (!label) return fail('name must not be empty', PROPOSE_SKILL_TOOL)
     if (!body.trim()) return fail('body must not be empty', PROPOSE_SKILL_TOOL)

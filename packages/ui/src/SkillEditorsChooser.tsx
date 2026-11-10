@@ -38,7 +38,8 @@ export function withSkillEditor(
 
 /**
  * The "where it is used" chooser of the skill card and the settings editor:
- * every editor, or only the checked ones.
+ * every editor, or only the checked ones. Going from every editor to only
+ * some starts with all of them checked, so leaving one out is one click.
  */
 export function SkillEditorsChooser({
   lang,
@@ -74,7 +75,7 @@ export function SkillEditorsChooser({
             type="radio"
             name={group}
             checked={some}
-            onChange={() => onChange(some ? value : [])}
+            onChange={() => onChange(some ? value : [...SKILL_EDITORS])}
           />
           {t('some')}
         </label>

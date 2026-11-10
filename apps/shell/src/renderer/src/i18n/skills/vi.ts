@@ -72,6 +72,8 @@ export const vi = {
   editorNew: 'Kỹ năng mới',
   editorEdit: 'Sửa kỹ năng',
   editorView: 'Nội dung kỹ năng',
+  fieldTitle: 'Tiêu đề',
+  titleHint: 'Hiển thị trong danh sách, bằng ngôn ngữ nào cũng được. Để trống thì hiện tên',
   fieldDescription: 'Mô tả',
   fieldDescriptionHint: 'AI đọc phần này để quyết định khi nào dùng kỹ năng',
   fieldBody: 'Hướng dẫn',
@@ -86,11 +88,15 @@ export const vi = {
   createHint: 'Bạn cũng có thể nhờ trong bảng AI: "tạo cho tôi một kỹ năng…"',
   nameEmpty: 'Nhập tên',
   nameTooLong: 'Tên tối đa 64 ký tự',
-  nameCharacters: 'Chỉ dùng chữ thường tiếng Anh, chữ số và dấu gạch nối (-)',
+  nameCharacters:
+    'Chỉ dùng chữ thường tiếng Anh, chữ số và dấu gạch nối (-). Hãy viết tiêu đề bằng ngôn ngữ của bạn vào ô Tiêu đề ở trên',
   nameHyphenEdge: 'Tên không được bắt đầu hoặc kết thúc bằng dấu gạch nối',
   nameDoubleHyphen: 'Tên không được có hai dấu gạch nối liền nhau',
   nameReserved: 'Không thể dùng tên này',
   nameTaken: 'Kỹ năng của tôi đã có kỹ năng trùng tên này',
+  sameNameOn:
+    'Một kỹ năng cùng tên đang bật ({sources}). Nếu lưu, kỹ năng của bạn sẽ được dùng thay và kỹ năng kia sẽ bị tắt.',
+  saveTurnOff: 'Lưu và tắt kỹ năng kia',
   githubTitle: 'Thêm từ liên kết GitHub',
   githubLabel: 'Địa chỉ GitHub',
   githubPlaceholder: 'https://github.com/chủ-sở-hữu/kho',
@@ -157,6 +163,7 @@ export const vi = {
   warnRemoteInstructions: 'Yêu cầu AI nhận chỉ dẫn từ một địa chỉ bên ngoài',
   warnParentPath: 'Đường dẫn ../ trỏ ra ngoài thư mục kỹ năng',
   exportSeveral: 'Xuất nhiều kỹ năng',
+  bundleFileName: '{title} và {n} mục khác',
   bundleTitle: 'Xuất các kỹ năng cùng nhau',
   bundleIntro:
     'Các kỹ năng bạn đánh dấu sẽ được đưa vào một tệp zip, mỗi kỹ năng một thư mục. Người nhận có thể thả tệp zip vào cửa sổ ứng dụng, hoặc dùng Thêm ▸ Từ tệp zip.',

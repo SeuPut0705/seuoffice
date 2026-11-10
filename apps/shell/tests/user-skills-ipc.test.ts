@@ -61,6 +61,7 @@ const service = {
   })),
   readImportedFile: vi.fn(async () => ({ ok: true, file: { text: 'f', truncated: false } })),
   exportBundleTo: vi.fn(async () => ({ ok: true, path: 'p' })),
+  exportInfo: vi.fn(async () => ({ ok: true, fileName: 'a.zip', includesTemplate: false })),
 }
 
 const { registerUserSkillsIpc } = await import('../src/main/user-skills/user-skills-ipc')
@@ -244,5 +245,25 @@ describe('skills dropped on a window and pasted text', () => {
       reason: 'cancelled',
     })
     expect(service.exportBundleTo).not.toHaveBeenCalled()
+  })
+
+  it('suggests a bundle file name from the words the screen made, or the one skill it holds', async () => {
+    const { dialog } = await import('electron')
+    const suggested = () =>
+      (vi.mocked(dialog.showSaveDialog).mock.lastCall as unknown as [{ defaultPath: string }])[0]
+        .defaultPath
+
+    await call(C.exportBundle, settings, ['app:a', 'app:b'], '회의록: "정리" 외 1개')
+    expect(suggested()).toBe('회의록 정리 외 1개.zip')
+
+    await call(C.exportBundle, settings, ['app:a', 'app:b'])
+    expect(suggested()).toBe('skills.zip')
+    await call(C.exportBundle, settings, ['app:a', 'app:b'], { not: 'text' })
+    expect(suggested()).toBe('skills.zip')
+
+    // one skill: the name its own export uses, whatever the screen sent
+    await call(C.exportBundle, settings, ['app:a'], 'anything')
+    expect(service.exportInfo).toHaveBeenCalledWith('app:a')
+    expect(suggested()).toBe('a.zip')
   })
 })

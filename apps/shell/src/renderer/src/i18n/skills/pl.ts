@@ -71,6 +71,8 @@ export const pl = {
   editorNew: 'Nowa umiejętność',
   editorEdit: 'Edycja umiejętności',
   editorView: 'Zawartość umiejętności',
+  fieldTitle: 'Tytuł',
+  titleHint: 'Widoczny na listach, w dowolnym języku. Zostaw puste, aby pokazywać nazwę',
   fieldDescription: 'Opis',
   fieldDescriptionHint: 'AI czyta ten opis, aby zdecydować, kiedy użyć umiejętności',
   fieldBody: 'Instrukcje',
@@ -85,11 +87,15 @@ export const pl = {
   createHint: 'Możesz też poprosić w panelu AI: „utwórz umiejętność, która…”',
   nameEmpty: 'Wpisz nazwę',
   nameTooLong: 'Nazwa może mieć do 64 znaków',
-  nameCharacters: 'Tylko małe litery łacińskie, cyfry i łączniki (-)',
+  nameCharacters:
+    'Tylko małe litery łacińskie, cyfry i łączniki (-). Tytuł w swoim języku wpisz w polu Tytuł powyżej',
   nameHyphenEdge: 'Nazwa nie może zaczynać się ani kończyć łącznikiem',
   nameDoubleHyphen: 'Nazwa nie może zawierać dwóch łączników z rzędu',
   nameReserved: 'Tej nazwy nie można użyć',
   nameTaken: 'W moich umiejętnościach jest już umiejętność o tej nazwie',
+  sameNameOn:
+    'Umiejętność o tej samej nazwie jest włączona ({sources}). Po zapisaniu zamiast niej będzie używana Twoja, a tamta zostanie wyłączona.',
+  saveTurnOff: 'Zapisz i wyłącz tamtą',
   githubTitle: 'Dodaj z linku GitHub',
   githubLabel: 'Adres GitHub',
   githubPlaceholder: 'https://github.com/właściciel/repozytorium',
@@ -157,6 +163,7 @@ export const pl = {
   warnRemoteInstructions: 'Prosi AI o pobranie instrukcji z zewnętrznego adresu',
   warnParentPath: 'Ścieżka ../ wskazująca poza folder umiejętności',
   exportSeveral: 'Eksportuj kilka',
+  bundleFileName: '{title} i {n} więcej',
   bundleTitle: 'Eksportuj umiejętności razem',
   bundleIntro:
     'Zaznaczone umiejętności trafiają do jednego pliku zip, każda do osobnego folderu. Odbiorca może upuścić ten zip na okno aplikacji albo użyć Dodaj ▸ Z pliku zip.',

@@ -597,6 +597,32 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     targetId: string | undefined
     overwrite: boolean
     editors: UserSkillEditorsValue | undefined
+    /** the person agreed that enabled skills of other sources with this name are turned off */
+    turnOffSameName: boolean
+  }
+
+  /** Turn another source's skill off: the own skill of its name is used instead */
+  function turnOff(settings: UserSkillSettings, skill: ResolvedUserSkill): void {
+    setStateValue(settings, skill.id, skill.source, { enabled: false })
+  }
+
+  /** Enabled skills of other sources that carry `name` (builtin, Claude, plugins, Codex) */
+  async function enabledElsewhere(name: string, exceptId?: string): Promise<ResolvedUserSkill[]> {
+    return (await resolved()).filter(
+      (skill) =>
+        skill.source !== 'app' &&
+        skill.enabled &&
+        sameName(skill.name, name) &&
+        skill.id !== exceptId,
+    )
+  }
+
+  /** Where the skills of `enabledElsewhere` come from, for the question the screen asks */
+  function sourcesOf(skills: readonly ResolvedUserSkill[]): string {
+    const sources = skills.map((skill) =>
+      skill.source === 'plugin' ? `plugin:${skill.plugin ?? ''}` : skill.source,
+    )
+    return [...new Set(sources)].join(',')
   }
 
   /**
@@ -626,9 +652,8 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
 
     const target = request.targetId ? await find(request.targetId) : undefined
     if (request.targetId && !target) return fail('not-found')
-    // lists show the name; a title is optional, and a changed skill keeps the one it had
-    const keptTitle = target && target.title !== target.name ? target.title : undefined
-    const title = request.title.trim() || keptTitle
+    // the title is the person's to give in any language; an empty one takes the key out
+    const title = request.title.trim() || undefined
 
     // ---- an edit of an own skill: files rewritten in place, the folder renamed with the name
     if (target && target.source === 'app') {
@@ -639,6 +664,11 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
         const problem = await nameProblem(name, dir)
         if (problem === 'taken') return fail('name-taken')
         if (problem) return fail('bad-name', problem)
+      }
+      // a new name may be one another source's enabled skill has: ask before taking its place
+      const elsewhere = name !== target.name ? await enabledElsewhere(name) : []
+      if (elsewhere.length > 0 && !request.turnOffSameName) {
+        return fail('same-name-on', sourcesOf(elsewhere))
       }
       const base = await readSkillMdText(dir)
       const text = renderSkillMd(
@@ -674,6 +704,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
           if (kept) settings.states[newId] = kept
         }
         if (request.invoke) setStateValue(settings, newId, 'app', { invoke: request.invoke })
+        for (const other of elsewhere) turnOff(settings, other)
       })
       return { ok: true, id: newId }
     }
@@ -697,6 +728,10 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       if (!request.overwrite) return fail('exists')
     }
     if (target && target.unreadable === 'too-large') return fail('too-large')
+    const elsewhere = await enabledElsewhere(name, target?.id)
+    if (elsewhere.length > 0 && !request.turnOffSameName) {
+      return fail('same-name-on', sourcesOf(elsewhere))
+    }
 
     const work = await makeWorkDir()
     try {
@@ -729,7 +764,8 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     changeSettings((settings) => {
       clearState(settings, id)
       if (request.invoke) setStateValue(settings, id, 'app', { invoke: request.invoke })
-      if (target) setStateValue(settings, target.id, target.source, { enabled: false })
+      if (target) turnOff(settings, target)
+      for (const other of elsewhere) turnOff(settings, other)
     })
     return { ok: true, id }
   }
@@ -887,7 +923,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       const newId = userSkillId('app', skill.name)
       changeSettings((settings) => {
         clearState(settings, newId)
-        setStateValue(settings, skill.id, skill.source, { enabled: false })
+        turnOff(settings, skill)
       })
       return { ok: true, id: newId }
     },
@@ -925,6 +961,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
         targetId: input.id,
         overwrite: false,
         editors: input.editors,
+        turnOffSameName: input.turnOffSameName === true,
       })
     },
 
@@ -944,6 +981,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
         targetId: input.targetId,
         overwrite: input.overwrite === true,
         editors: input.editors,
+        turnOffSameName: input.turnOffSameName === true,
       })
     },
 

@@ -87,7 +87,7 @@ export interface UserSkillsBridge {
   /** asks where to save, then writes the zip */
   exportZip(id: string): Promise<UserSkillsResult<{ path: string }>>
   /** asks where to save, then writes one zip with a folder per skill */
-  exportBundle(ids: string[]): Promise<UserSkillsResult<{ path: string }>>
+  exportBundle(ids: string[], suggestedName?: string): Promise<UserSkillsResult<{ path: string }>>
   openFolder(id: string): Promise<UserSkillsResult>
   /** `use_skill`: an enabled skill's body and text files */
   aiRead(id: string): Promise<UserSkillsResult<{ skill: UserSkillAiRead }>>
@@ -197,7 +197,12 @@ export function userSkillsBridge(): UserSkillsBridge {
     },
     exportInfo: (id) => result(C.exportInfo, String(id)),
     exportZip: (id) => result(C.exportZip, String(id)),
-    exportBundle: (ids) => result(C.exportBundle, ids.map(String)),
+    exportBundle: (ids, suggestedName) =>
+      result(
+        C.exportBundle,
+        ids.map(String),
+        typeof suggestedName === 'string' ? suggestedName : undefined,
+      ),
     openFolder: (id) => result(C.openFolder, String(id)),
     aiRead: (id) => result(C.aiRead, String(id)),
     aiReadFile: (id, rel) => result(C.aiReadFile, String(id), String(rel)),

@@ -56,8 +56,30 @@ export async function skillExportInfo(
   return (await readForExport(skillDir, limits)).info
 }
 
-/** The file name a bundle export suggests */
+/** The file name a bundle export suggests when it is given no words for one */
 export const SKILL_BUNDLE_FILE_NAME = 'skills.zip'
+
+const WINDOWS_DEVICE_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i
+const BUNDLE_FILE_STEM_MAX = 100
+
+/**
+ * The file name a bundle export suggests, from the words the screen made for
+ * it ("<first skill> and 2 more"): the characters a Windows file name cannot
+ * hold taken out, `.zip` at the end. `skills.zip` when nothing usable is left.
+ */
+export function skillBundleFileName(suggested: string | undefined): string {
+  const stem = (suggested ?? '')
+    .replace(/\.zip$/i, '')
+    .replace(/\s+/g, ' ')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/g, '')
+    .trim()
+    .replace(/^\.+/, '')
+    .slice(0, BUNDLE_FILE_STEM_MAX)
+    .replace(/[. ]+$/, '')
+  if (!stem || WINDOWS_DEVICE_NAME.test(stem)) return SKILL_BUNDLE_FILE_NAME
+  return `${stem}.zip`
+}
 
 /**
  * The zip bytes of a bundle: every skill under a top folder of its name.

@@ -72,6 +72,8 @@ export const ms = {
   editorNew: 'Kemahiran baharu',
   editorEdit: 'Sunting kemahiran',
   editorView: 'Kandungan kemahiran',
+  fieldTitle: 'Tajuk',
+  titleHint: 'Dipaparkan dalam senarai, dalam apa-apa bahasa. Biarkan kosong untuk memaparkan nama',
   fieldDescription: 'Keterangan',
   fieldDescriptionHint: 'AI membaca ini untuk menentukan bila hendak menggunakan kemahiran',
   fieldBody: 'Arahan',
@@ -86,11 +88,15 @@ export const ms = {
   createHint: 'Anda juga boleh meminta dalam panel AI: "buatkan saya kemahiran yang…"',
   nameEmpty: 'Masukkan nama',
   nameTooLong: 'Nama boleh sehingga 64 aksara',
-  nameCharacters: 'Hanya huruf kecil, digit dan tanda sempang (-)',
+  nameCharacters:
+    'Hanya huruf kecil, digit dan tanda sempang (-). Tulis tajuk dalam bahasa anda di medan Tajuk di atas',
   nameHyphenEdge: 'Nama tidak boleh bermula atau berakhir dengan tanda sempang',
   nameDoubleHyphen: 'Nama tidak boleh mempunyai dua tanda sempang berturut-turut',
   nameReserved: 'Nama ini tidak boleh digunakan',
   nameTaken: 'Kemahiran saya sudah ada kemahiran dengan nama ini',
+  sameNameOn:
+    'Kemahiran dengan nama yang sama sedang dihidupkan ({sources}). Jika disimpan, kemahiran anda akan digunakan dan kemahiran itu dimatikan.',
+  saveTurnOff: 'Simpan dan matikan kemahiran itu',
   githubTitle: 'Tambah daripada pautan GitHub',
   githubLabel: 'Alamat GitHub',
   githubPlaceholder: 'https://github.com/pemilik/repositori',
@@ -157,6 +163,7 @@ export const ms = {
   warnRemoteInstructions: 'Meminta AI mengambil arahan dari alamat luar',
   warnParentPath: 'Laluan ../ yang menghala ke luar folder kemahiran',
   exportSeveral: 'Eksport beberapa',
+  bundleFileName: '{title} dan {n} lagi',
   bundleTitle: 'Eksport kemahiran bersama-sama',
   bundleIntro:
     'Kemahiran yang anda tandakan dimasukkan ke dalam satu fail zip, satu folder bagi setiap kemahiran. Penerimanya boleh melepaskan zip itu pada tetingkap aplikasi, atau menggunakan Tambah ▸ Daripada fail zip.',

@@ -72,6 +72,8 @@ export const hi = {
   editorNew: 'नया कौशल',
   editorEdit: 'कौशल संपादित करें',
   editorView: 'कौशल की सामग्री',
+  fieldTitle: 'शीर्षक',
+  titleHint: 'सूचियों में दिखता है, किसी भी भाषा में लिखें। नाम दिखाने के लिए खाली छोड़ें',
   fieldDescription: 'विवरण',
   fieldDescriptionHint: 'AI इसे पढ़कर तय करता है कि कौशल कब इस्तेमाल करना है',
   fieldBody: 'निर्देश',
@@ -85,11 +87,15 @@ export const hi = {
   createHint: 'आप AI पैनल में भी कह सकते हैं: "मेरे लिए ऐसा कौशल बनाओ जो…"',
   nameEmpty: 'नाम लिखें',
   nameTooLong: 'नाम अधिकतम 64 वर्ण का हो सकता है',
-  nameCharacters: 'सिर्फ़ छोटे अंग्रेज़ी अक्षर, अंक और हाइफ़न (-)',
+  nameCharacters:
+    'सिर्फ़ छोटे अंग्रेज़ी अक्षर, अंक और हाइफ़न (-)। अपनी भाषा का शीर्षक ऊपर शीर्षक वाले खाने में लिखें',
   nameHyphenEdge: 'नाम हाइफ़न से शुरू या खत्म नहीं हो सकता',
   nameDoubleHyphen: 'नाम में लगातार दो हाइफ़न नहीं हो सकते',
   nameReserved: 'यह नाम इस्तेमाल नहीं किया जा सकता',
   nameTaken: 'मेरे कौशल में इस नाम का कौशल पहले से है',
+  sameNameOn:
+    'इसी नाम का एक कौशल चालू है ({sources})। सहेजने पर उसकी जगह आपका कौशल इस्तेमाल होगा और वह बंद हो जाएगा।',
+  saveTurnOff: 'सहेजें और उसे बंद करें',
   githubTitle: 'GitHub लिंक से जोड़ें',
   githubLabel: 'GitHub पता',
   githubPlaceholder: 'https://github.com/मालिक/रिपॉज़िटरी',
@@ -156,6 +162,7 @@ export const hi = {
   warnRemoteInstructions: 'AI से किसी बाहरी पते से निर्देश लेने को कहता है',
   warnParentPath: '../ वाला पथ जो कौशल फ़ोल्डर के बाहर इशारा करता है',
   exportSeveral: 'कई निर्यात करें',
+  bundleFileName: '{title} और {n} अन्य',
   bundleTitle: 'कौशल एक साथ निर्यात करें',
   bundleIntro:
     'आप जिन कौशलों पर टिक करते हैं, वे एक zip फ़ाइल में जाते हैं, हर कौशल का अपना फ़ोल्डर। जिसे यह मिले, वह zip को ऐप की विंडो पर छोड़ सकता है, या जोड़ें ▸ zip फ़ाइल से इस्तेमाल कर सकता है।',

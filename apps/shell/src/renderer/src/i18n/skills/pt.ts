@@ -72,6 +72,8 @@ export const pt = {
   editorNew: 'Nova habilidade',
   editorEdit: 'Editar habilidade',
   editorView: 'Conteúdo da habilidade',
+  fieldTitle: 'Título',
+  titleHint: 'Aparece nas listas, em qualquer idioma. Deixe vazio para mostrar o nome',
   fieldDescription: 'Descrição',
   fieldDescriptionHint: 'A IA lê isto para decidir quando usar a habilidade',
   fieldBody: 'Instruções',
@@ -86,11 +88,15 @@ export const pt = {
   createHint: 'Você também pode pedir no painel de IA: "crie uma habilidade que…"',
   nameEmpty: 'Digite um nome',
   nameTooLong: 'O nome pode ter até 64 caracteres',
-  nameCharacters: 'Somente letras minúsculas, números e hifens (-)',
+  nameCharacters:
+    'Somente letras minúsculas, números e hifens (-). Escreva um título no seu idioma no campo Título acima',
   nameHyphenEdge: 'O nome não pode começar nem terminar com hífen',
   nameDoubleHyphen: 'O nome não pode ter dois hifens seguidos',
   nameReserved: 'Este nome não pode ser usado',
   nameTaken: 'Minhas habilidades já tem uma habilidade com este nome',
+  sameNameOn:
+    'Uma habilidade com o mesmo nome está ativada ({sources}). Se salvar, a sua será usada no lugar dela e a outra será desativada.',
+  saveTurnOff: 'Salvar e desativar a outra',
   githubTitle: 'Adicionar de um link do GitHub',
   githubLabel: 'Endereço do GitHub',
   githubPlaceholder: 'https://github.com/dono/repositorio',
@@ -159,6 +165,7 @@ export const pt = {
   warnRemoteInstructions: 'Pede à IA que siga instruções de um endereço externo',
   warnParentPath: 'Um caminho ../ que aponta para fora da pasta da habilidade',
   exportSeveral: 'Exportar várias',
+  bundleFileName: '{title} e mais {n}',
   bundleTitle: 'Exportar habilidades juntas',
   bundleIntro:
     'As habilidades que você marcar vão para um único arquivo zip, uma pasta por habilidade. Quem receber pode soltar o zip numa janela do aplicativo ou usar Adicionar ▸ De um arquivo zip.',

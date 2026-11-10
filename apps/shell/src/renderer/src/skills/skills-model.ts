@@ -50,9 +50,13 @@ export function groupLabelKey(group: SkillGroupId): SkillsStringKey {
 
 type Text = (key: SkillsStringKey, params?: Record<string, string | number>) => string
 
-/** What a row is called: the skill's name (a made-up name shows the title it was made with) */
-export function skillDisplayTitle(view: UserSkillView): string {
-  return skillDisplayName(view.source === 'builtin' ? { name: view.name } : view)
+/**
+ * What a row is called (`skillDisplayName`, decision 0128): the title the
+ * person gave, else the name; a builtin always its name. Where this differs
+ * from the name, the row shows the name beside it.
+ */
+export function skillDisplayTitle(view: Pick<UserSkillView, 'name' | 'title' | 'source'>): string {
+  return skillDisplayName(view)
 }
 
 export function skillDisplayDesc(view: UserSkillView, lang: Lang): string {
@@ -63,7 +67,10 @@ export function skillDisplayDesc(view: UserSkillView, lang: Lang): string {
 }
 
 /** Plain source label: never a logo, only the folder or plugin it came from */
-export function sourceLabel(view: UserSkillView, text: Text): string {
+export function sourceLabel(
+  view: { source: string; plugin?: string | undefined; github?: unknown },
+  text: Text,
+): string {
   switch (view.source) {
     case 'builtin':
       return text('sourceBuiltin')
@@ -241,6 +248,8 @@ export function failureKey(
     case 'name-taken':
     case 'exists':
       return 'nameTaken'
+    case 'same-name-on':
+      return 'sameNameOn'
     case 'unreadable':
       return 'unreadableUnreadable'
     default:

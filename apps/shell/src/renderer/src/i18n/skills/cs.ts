@@ -71,6 +71,9 @@ export const cs = {
   editorNew: 'Nová dovednost',
   editorEdit: 'Úprava dovednosti',
   editorView: 'Obsah dovednosti',
+  fieldTitle: 'Název',
+  titleHint:
+    'Zobrazuje se v seznamech, v libovolném jazyce. Když ho necháte prázdný, zobrazí se jméno',
   fieldDescription: 'Popis',
   fieldDescriptionHint: 'Podle tohoto popisu AI rozhoduje, kdy dovednost použít',
   fieldBody: 'Pokyny',
@@ -85,11 +88,15 @@ export const cs = {
   createHint: 'Můžete také požádat v panelu AI: „vytvoř mi dovednost, která…“',
   nameEmpty: 'Zadejte název',
   nameTooLong: 'Název může mít nejvýše 64 znaků',
-  nameCharacters: 'Jen malá písmena bez diakritiky, číslice a spojovníky (-)',
+  nameCharacters:
+    'Jen malá písmena bez diakritiky, číslice a spojovníky (-). Název ve svém jazyce napište do pole Název nahoře',
   nameHyphenEdge: 'Název nesmí začínat ani končit spojovníkem',
   nameDoubleHyphen: 'Název nesmí obsahovat dva spojovníky za sebou',
   nameReserved: 'Tento název nelze použít',
   nameTaken: 'V mých dovednostech už je dovednost s tímto názvem',
+  sameNameOn:
+    'Dovednost se stejným jménem je zapnutá ({sources}). Po uložení se místo ní použije vaše a ta druhá se vypne.',
+  saveTurnOff: 'Uložit a tu druhou vypnout',
   githubTitle: 'Přidat z odkazu na GitHub',
   githubLabel: 'Adresa GitHub',
   githubPlaceholder: 'https://github.com/vlastník/repozitář',
@@ -156,6 +163,7 @@ export const cs = {
   warnRemoteInstructions: 'Žádá AI, aby přebírala pokyny z vnější adresy',
   warnParentPath: 'Cesta ../, která vede mimo složku dovednosti',
   exportSeveral: 'Exportovat více',
+  bundleFileName: '{title} a {n} dalších',
   bundleTitle: 'Exportovat dovednosti společně',
   bundleIntro:
     'Zaškrtnuté dovednosti se uloží do jednoho souboru zip, každá do vlastní složky. Kdo ho dostane, může zip přetáhnout na okno aplikace nebo použít Přidat ▸ Ze souboru zip.',

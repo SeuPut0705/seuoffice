@@ -73,6 +73,8 @@ export const nl = {
   editorNew: 'Nieuwe vaardigheid',
   editorEdit: 'Vaardigheid bewerken',
   editorView: 'Inhoud van de vaardigheid',
+  fieldTitle: 'Titel',
+  titleHint: 'Staat in lijsten, in elke taal. Laat leeg om de naam te tonen',
   fieldDescription: 'Beschrijving',
   fieldDescriptionHint: 'De AI leest dit om te bepalen wanneer de vaardigheid wordt gebruikt',
   fieldBody: 'Instructies',
@@ -87,11 +89,15 @@ export const nl = {
   createHint: 'Je kunt het ook in het AI-paneel vragen: "maak een vaardigheid die…"',
   nameEmpty: 'Vul een naam in',
   nameTooLong: 'Een naam mag maximaal 64 tekens hebben',
-  nameCharacters: 'Alleen kleine letters, cijfers en koppeltekens (-)',
+  nameCharacters:
+    'Alleen kleine letters, cijfers en koppeltekens (-). Schrijf een titel in uw eigen taal in het veld Titel hierboven',
   nameHyphenEdge: 'Een naam mag niet beginnen of eindigen met een koppelteken',
   nameDoubleHyphen: 'Een naam mag geen twee koppeltekens achter elkaar hebben',
   nameReserved: 'Deze naam kan niet worden gebruikt',
   nameTaken: 'Mijn vaardigheden bevat al een vaardigheid met deze naam',
+  sameNameOn:
+    'Een vaardigheid met dezelfde naam staat aan ({sources}). Als u opslaat, wordt die van u in plaats daarvan gebruikt en wordt de andere uitgezet.',
+  saveTurnOff: 'Opslaan en de andere uitzetten',
   githubTitle: 'Toevoegen via een GitHub-link',
   githubLabel: 'GitHub-adres',
   githubPlaceholder: 'https://github.com/eigenaar/opslagplaats',
@@ -160,6 +166,7 @@ export const nl = {
   warnRemoteInstructions: 'Vraagt de AI instructies van een extern adres te halen',
   warnParentPath: 'Een ../-pad dat buiten de vaardigheidsmap wijst',
   exportSeveral: 'Meerdere exporteren',
+  bundleFileName: '{title} en nog {n}',
   bundleTitle: 'Vaardigheden samen exporteren',
   bundleIntro:
     'De vaardigheden die je aanvinkt gaan in één zip-bestand, een map per vaardigheid. Wie het krijgt, kan de zip op een appvenster neerzetten of Toevoegen ▸ Uit een zip-bestand gebruiken.',

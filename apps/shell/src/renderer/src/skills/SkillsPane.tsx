@@ -548,6 +548,11 @@ function SkillRow({
         <div className="skl-row-text">
           <div className="skl-row-head">
             <span className="skl-row-title">{title}</span>
+            {title !== view.name && (
+              <code className="skl-name" dir="ltr">
+                {view.name}
+              </code>
+            )}
             <span className="skl-source">{sourceLabel(view, text)}</span>
           </div>
           {desc && (

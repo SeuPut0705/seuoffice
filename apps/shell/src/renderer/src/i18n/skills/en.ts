@@ -72,6 +72,8 @@ export const en = {
   editorNew: 'New skill',
   editorEdit: 'Edit skill',
   editorView: 'Skill contents',
+  fieldTitle: 'Title',
+  titleHint: 'Shown in lists, in any language. Leave it empty to show the name',
   fieldDescription: 'Description',
   fieldDescriptionHint: 'The AI reads this to decide when to use the skill',
   fieldBody: 'Instructions',
@@ -86,11 +88,15 @@ export const en = {
   createHint: 'You can also ask in the AI panel: "make me a skill that…"',
   nameEmpty: 'Enter a name',
   nameTooLong: 'Names can be up to 64 characters',
-  nameCharacters: 'Only lowercase letters, digits and hyphens (-)',
+  nameCharacters:
+    'Only lowercase letters, digits and hyphens (-). A title in your own language goes in the Title field above',
   nameHyphenEdge: 'A name cannot start or end with a hyphen',
   nameDoubleHyphen: 'A name cannot have two hyphens in a row',
   nameReserved: 'This name cannot be used',
   nameTaken: 'My skills already has a skill with this name',
+  sameNameOn:
+    'A skill of the same name is on ({sources}). If you save, your skill is used instead and that one is turned off.',
+  saveTurnOff: 'Save and turn that one off',
   githubTitle: 'Add from a GitHub link',
   githubLabel: 'GitHub address',
   githubPlaceholder: 'https://github.com/owner/repo',
@@ -158,6 +164,7 @@ export const en = {
   warnRemoteInstructions: 'Asks the AI to take instructions from an outside address',
   warnParentPath: 'A ../ path that points outside the skill folder',
   exportSeveral: 'Export several',
+  bundleFileName: '{title} and {n} more',
   bundleTitle: 'Export skills together',
   bundleIntro:
     'The skills you tick go into one zip file, a folder per skill. Whoever gets it can drop the zip on an app window, or use Add ▸ From a zip file.',

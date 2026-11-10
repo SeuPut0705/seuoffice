@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   IEUM_SOURCE_FILE,
   SKILL_BUNDLE_FILE_NAME,
+  skillBundleFileName,
   SKILL_WARNING_RULES,
   SkillImportError,
   disposeSkillImport,
@@ -319,6 +320,23 @@ describe('bundle export', () => {
       'not-installable',
     )
     expect((await listSkillFolderFiles(outDir))?.files).toEqual([])
+  })
+
+  it('makes a file name Windows can hold from the words a screen suggests', () => {
+    expect(skillBundleFileName('회의록 외 2개')).toBe('회의록 외 2개.zip')
+    expect(skillBundleFileName('meeting-minutes and 2 more.zip')).toBe(
+      'meeting-minutes and 2 more.zip',
+    )
+    // characters a Windows file name cannot hold, control characters, ends in dots or spaces
+    expect(skillBundleFileName('a<b>c:d"e/f\\g|h?i*j\u0001 외\n1개 . ')).toBe(
+      'abcdefghij 외 1개.zip',
+    )
+    expect(skillBundleFileName('..hidden')).toBe('hidden.zip')
+    expect(skillBundleFileName(`${'가'.repeat(300)}`)).toBe(`${'가'.repeat(100)}.zip`)
+    // nothing usable left, or a device name
+    for (const none of [undefined, '', ' . ', '<>:"|?*', 'CON', 'lpt1']) {
+      expect(skillBundleFileName(none)).toBe(SKILL_BUNDLE_FILE_NAME)
+    }
   })
 })
 

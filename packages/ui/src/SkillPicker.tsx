@@ -72,6 +72,11 @@ export function SkillPicker({
               <span className="ai-skill-picker-title" dir="auto">
                 {item.title}
               </span>
+              {item.title !== item.name && (
+                <span className="ai-skill-picker-name" dir="ltr">
+                  {item.name}
+                </span>
+              )}
               {item.sourceLabel && (
                 <span className="ai-skill-picker-source">{item.sourceLabel}</span>
               )}

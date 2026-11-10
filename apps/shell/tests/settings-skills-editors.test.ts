@@ -185,6 +185,39 @@ describe('an own skill’s editor', () => {
   })
 })
 
+describe('going from every editor to only some', () => {
+  const boxes = () => [...document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+
+  it('starts with every editor checked, so leaving one out is one click', async () => {
+    const api = bridge([notes])
+    await renderPane(api)
+    await openFromMenu('app:notes', 'actEdit')
+    expect(radio('모든 편집기').checked).toBe(true)
+    await click(radio('고른 편집기만'))
+    expect(boxes().length).toBeGreaterThan(5)
+    expect(boxes().every((box) => box.checked)).toBe(true)
+    expect(document.body.textContent).not.toContain('편집기를 하나 이상 고르세요')
+
+    const all = boxes().length
+    await click(checkbox('pdf'))
+    await click(button(skillsText('ko', 'save')))
+    const saved = api.save.mock.calls[0]![0] as { editors: string[] }
+    expect(saved.editors).not.toContain('pdf')
+    expect(saved.editors).toHaveLength(all - 1)
+  })
+
+  it('writes every editor to the settings file as such when all stay checked', async () => {
+    const api = bridge([tidy])
+    await renderPane(api)
+    await openFromMenu('user:sheet-tidy', 'actView')
+    await click(radio('모든 편집기'))
+    await click(radio('고른 편집기만'))
+    expect(boxes().every((box) => box.checked)).toBe(true)
+    const last = api.setState.mock.lastCall as unknown as [string, { editors: string[] }]
+    expect(last[1].editors).toHaveLength(boxes().length)
+  })
+})
+
 describe('a skill the person cannot edit', () => {
   it('changes the settings file’s choice from its view, without a copy', async () => {
     const api = bridge([tidy])

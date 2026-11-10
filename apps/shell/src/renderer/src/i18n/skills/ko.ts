@@ -71,6 +71,8 @@ export const ko = {
   editorNew: '새 스킬',
   editorEdit: '스킬 고치기',
   editorView: '스킬 내용',
+  fieldTitle: '제목',
+  titleHint: '목록에 보이는 제목입니다. 어떤 언어로든 적을 수 있고, 비워 두면 이름이 보입니다',
   fieldDescription: '설명',
   fieldDescriptionHint: 'AI는 이 설명을 보고 스킬을 쓸지 정합니다',
   fieldBody: '본문',
@@ -84,11 +86,15 @@ export const ko = {
   createHint: 'AI 창에서 "이런 스킬 만들어 줘"라고 말해도 만들 수 있습니다',
   nameEmpty: '이름을 적으세요',
   nameTooLong: '이름은 64자까지입니다',
-  nameCharacters: '영문 소문자, 숫자, 하이픈(-)만 쓸 수 있습니다',
+  nameCharacters:
+    '영문 소문자, 숫자, 하이픈(-)만 쓸 수 있습니다. 한글 제목은 위 제목 칸에 적으세요',
   nameHyphenEdge: '하이픈으로 시작하거나 끝날 수 없습니다',
   nameDoubleHyphen: '하이픈을 두 번 잇달아 쓸 수 없습니다',
   nameReserved: '쓸 수 없는 이름입니다',
   nameTaken: '같은 이름의 내 스킬이 이미 있습니다',
+  sameNameOn:
+    '같은 이름의 스킬이 켜져 있습니다({sources}). 저장하면 내 스킬이 대신 쓰이고 그 스킬은 꺼집니다.',
+  saveTurnOff: '저장하고 그 스킬 끄기',
   githubTitle: '깃허브 링크로 추가',
   githubLabel: '깃허브 주소',
   githubPlaceholder: 'https://github.com/소유자/저장소',
@@ -153,6 +159,7 @@ export const ko = {
   warnRemoteInstructions: 'AI에게 바깥 주소에서 지시를 받아 오라는 글',
   warnParentPath: '스킬 폴더 밖을 가리키는 ../ 경로',
   exportSeveral: '여러 개 내보내기',
+  bundleFileName: '{title} 외 {n}개',
   bundleTitle: '스킬 함께 내보내기',
   bundleIntro:
     '체크한 스킬을 zip 파일 하나에 스킬마다 폴더로 담습니다. 받는 사람은 그 zip을 앱 창에 끌어 놓거나 추가 ▸ zip 파일에서로 넣습니다.',

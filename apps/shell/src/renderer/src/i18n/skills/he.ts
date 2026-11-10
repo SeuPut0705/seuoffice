@@ -71,6 +71,8 @@ export const he = {
   editorNew: 'מיומנות חדשה',
   editorEdit: 'עריכת מיומנות',
   editorView: 'תוכן המיומנות',
+  fieldTitle: 'כותרת',
+  titleHint: 'מוצגת ברשימות, בכל שפה. השאירו ריק כדי להציג את השם',
   fieldDescription: 'תיאור',
   fieldDescriptionHint: 'ה-AI קורא את זה כדי להחליט מתי להשתמש במיומנות',
   fieldBody: 'הוראות',
@@ -84,11 +86,15 @@ export const he = {
   createHint: 'אפשר גם לבקש בחלונית ה-AI: "תכין לי מיומנות ש…"',
   nameEmpty: 'נא להזין שם',
   nameTooLong: 'השם יכול להכיל עד 64 תווים',
-  nameCharacters: 'רק אותיות אנגליות קטנות, ספרות ומקפים (-)',
+  nameCharacters:
+    'רק אותיות אנגליות קטנות, ספרות ומקפים (-). כתבו כותרת בשפה שלכם בשדה הכותרת שלמעלה',
   nameHyphenEdge: 'השם לא יכול להתחיל או להסתיים במקף',
   nameDoubleHyphen: 'השם לא יכול לכלול שני מקפים ברצף',
   nameReserved: 'אי אפשר להשתמש בשם הזה',
   nameTaken: 'במיומנויות שלי כבר יש מיומנות בשם הזה',
+  sameNameOn:
+    'מיומנות באותו שם מופעלת ({sources}). אם תשמרו, המיומנות שלכם תשמש במקומה והיא תכובה.',
+  saveTurnOff: 'שמירה וכיבוי המיומנות ההיא',
   githubTitle: 'הוספה מקישור GitHub',
   githubLabel: 'כתובת GitHub',
   githubPlaceholder: 'https://github.com/בעלים/מאגר',
@@ -154,6 +160,7 @@ export const he = {
   warnRemoteInstructions: 'מבקשת מה-AI לקבל הוראות מכתובת חיצונית',
   warnParentPath: 'נתיב ../ שמצביע אל מחוץ לתיקיית המיומנות',
   exportSeveral: 'ייצוא של כמה מיומנויות',
+  bundleFileName: '{title} ועוד {n}',
   bundleTitle: 'ייצוא מיומנויות יחד',
   bundleIntro:
     'המיומנויות שסימנתם נכנסות לקובץ zip אחד, תיקייה לכל מיומנות. מי שמקבל אותו יכול לגרור את קובץ ה-zip לחלון של האפליקציה, או לבחור הוספה ▸ מקובץ zip.',
