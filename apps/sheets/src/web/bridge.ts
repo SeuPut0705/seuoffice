@@ -30,6 +30,7 @@ import {
 import { SaveEditsTransferStore } from '../main/save-edits-transfer'
 import { resolveWorkbookSave } from '../main/workbook-save-resolve'
 import { joinSheetsCollab, type SheetsRendererHandles } from './collab-join'
+import { coEditedSaveRequest } from './collab-save'
 import { WasmSidecarClient, type SidecarOpenResult } from './wasm-sidecar-client'
 
 const noop = (): void => {}
@@ -204,13 +205,19 @@ async function saveWorkbookEdits(input: WorkbookSaveRequest): Promise<WorkbookSa
 async function workbookTemplateBytes(
   input: WorkbookSaveRequest,
 ): Promise<{ ok: boolean; bytes?: Uint8Array }> {
+  // Only a co-editing page asks for a copy; the app's other caller (a skill's template) has no
+  // web counterpart, and its request would not be checked by this page's own bounds.
+  if (!collab) return { ok: false }
   const targets: string[] = []
   try {
-    const request = withTransferredEdits(workbookSaveRequestSchema.parse(input))
+    const checked = coEditedSaveRequest(input)
     const session = current
-    if (!session || session.sessionId !== request.sessionId) {
+    if (!session || session.sessionId !== input.sessionId) {
       throw new Error('Unknown workbook session.')
     }
+    // nothing a save writes was edited yet: the workbook is the file the session started from
+    if (checked === null) return { ok: true, bytes: session.bytes }
+    const request = withTransferredEdits(checked)
     const scratch = (): string => {
       const name = engineFileName(/\.[^.]+$/.exec(session.engineName)?.[0] ?? '.xlsx')
       targets.push(name)

@@ -180,6 +180,7 @@ import {
   loadAutoHeightSuppression,
   lazyFileSheetId,
   lazySheetMeta,
+  modelResidency,
   type ActiveWorkbook,
   type LazyWorkbookState,
   type PinnedClosureCell,
@@ -1318,6 +1319,24 @@ export function getScrollAnchor(
   }
 }
 
+/// Whether the windowed loader must leave `sheetId` alone (modelResidency).
+/// A row or column change drops the sheet's loaded-range entry so a streamed
+/// workbook refetches its viewport; here the cells are all installed and
+/// Univer moved them itself, so only the entry is put back, at the new extent.
+function wholeModelResident(state: LazyWorkbookState, sheetId: string): boolean {
+  if (!modelResidency.whole) return false
+  const extent = lazySheetScreenExtent(state, sheetId)
+  if (extent && extent.rows > 0 && extent.columns > 0) {
+    state.loadedRanges.set(sheetId, {
+      startRow: 0,
+      endRow: extent.rows - 1,
+      startColumn: 0,
+      endColumn: extent.columns - 1,
+    })
+  }
+  return true
+}
+
 export async function loadVisibleRange(
   runtime: UniverRuntime,
   lazyWorkbookRef: { current: LazyWorkbookState | null },
@@ -1328,6 +1347,7 @@ export async function loadVisibleRange(
   const state = lazyWorkbookRef.current
   if (!state) return
   const sheetId = worksheet.getSheetId()
+  if (wholeModelResident(state, sheetId)) return
   const sheet = lazySheetMeta(state, sheetId)
   if (!sheet) return
   // Data bounds are screen-space: structural operations shift the extent.
@@ -3145,6 +3165,7 @@ async function loadRange(
   const state = lazyWorkbookRef.current
   if (!state) return
   const sheetId = worksheet.getSheetId()
+  if (wholeModelResident(state, sheetId)) return
   const loaded = state.loadedRanges.get(sheetId)
   // A range loaded before the sidecar finished indexing came without the
   // sheet's decorations (conditional formats, filters, validations) — those

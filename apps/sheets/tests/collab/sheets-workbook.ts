@@ -26,7 +26,7 @@ import {
   type SheetsCollabOptions,
   sheetsCollabAdapter,
 } from '../../src/web/collab-adapter'
-import { journalMark } from '../../src/web/collab-journal'
+import { journalMark, structuralOpsRefusal } from '../../src/web/collab-journal'
 import { feedJournal } from './journal'
 
 export const UNIT = 'collab-book'
@@ -161,7 +161,12 @@ export function openBook(
       univer,
       unitId: workbook.getUnitId(),
       produceFile: async () => ({ fileName: 'book.json', bytes: fileOf(workbook.save()) }),
-      ...(journal ? { journalMark: (mutation) => journalMark(journal, mutation) } : {}),
+      ...(journal
+        ? {
+            journalMark: (mutation) => journalMark(journal, mutation),
+            refusalOf: (mutation) => structuralOpsRefusal(journal, mutation),
+          }
+        : {}),
     },
     { bursts: 'manual', ...options },
   )

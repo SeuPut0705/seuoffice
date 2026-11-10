@@ -250,6 +250,13 @@ export const CLOSURE_MAX_CELLS = 50_000
 /// Shared mutable state between App.tsx and univer-sync.ts.
 export const journalSuppression = { active: false }
 
+/// Raised by co-editing (the web build) once the full load has installed
+/// every cell: each page must go on holding the whole workbook, because the
+/// others' edits apply to it and its fingerprint is compared with theirs. The
+/// windowed loader then stays out: it reads nothing from the file again and
+/// evicts nothing (univer-sync.ts, wholeModelResident).
+export const modelResidency = { whole: false }
+
 /// An AI batch whose applied payload exceeds this many cells keeps no undo
 /// entry: the stack retains the full mutation matrices both ways (five
 /// 200k-cell copies held ~336MB), and entries accumulate across proposals.

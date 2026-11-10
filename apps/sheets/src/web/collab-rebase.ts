@@ -7,7 +7,8 @@
  * - a cell, range or row typed at a coordinate follows that row or column when
  *   a remote insert, remove or move shifts it, and vanishes with it when a
  *   remote remove deleted it;
- * - formula text typed locally follows the rows and columns it refers to;
+ * - formula text typed locally follows the rows and columns it refers to, and
+ *   the new name of a sheet someone renamed meanwhile;
  * - a local insert or remove still lands between the same neighbours.
  *
  * When two inserts meet at one index, the remote rows come first. Sheet name
@@ -57,11 +58,26 @@ import {
 export type Axis = 'row' | 'col'
 
 /** A change to the row or column axis of one sheet, in the coordinates it ran in */
-export type AxisChange =
+export type AxisChange = (
   | { sheet: string; axis: Axis; kind: 'insert'; at: number; count: number }
   | { sheet: string; axis: Axis; kind: 'remove'; at: number; count: number }
   /** the `count` lines from `from` go before line `to` (both before the move) */
   | { sheet: string; axis: Axis; kind: 'move'; from: number; count: number; to: number }
+) & {
+  /** the sheet's name when the change ran: formulas written before a later rename use it */
+  name?: string
+}
+
+/** A sheet got another name; formulas that name it follow */
+export interface RenameChange {
+  kind: 'rename'
+  sheet: string
+  from: string
+  to: string
+}
+
+/** A remote change local mutations are rewritten past */
+export type Change = AxisChange | RenameChange
 
 /** The axis change a structural mutation makes; null for every other mutation */
 export function axisChangeOf(mutation: Mutation): AxisChange | null {
@@ -256,14 +272,15 @@ function isEmpty(record: object): boolean {
 const lexer = new LexerTreeBuilder()
 
 /**
- * `formula` with its references to `change.sheet` (named `changedName`) moved
- * by `change`. A reference whose lines were all removed becomes #REF!.
- * `ownName` is the name of the sheet the formula sits on.
+ * `formula` with its references to the changed sheet (named `changedName`)
+ * moved by `change`. A reference whose lines were all removed becomes #REF!.
+ * `onChangedSheet`: the formula sits on that sheet, so its references without
+ * a sheet name point there.
  */
 export function shiftFormula(
   formula: string,
-  ownName: string,
-  changedName: string,
+  onChangedSheet: boolean,
+  changedName: string | undefined,
   change: AxisChange,
 ): string {
   if (!formula.startsWith('=')) return formula
@@ -273,7 +290,7 @@ export function shiftFormula(
   const out = nodes.map((node) => {
     if (typeof node === 'string' || node.nodeType !== sequenceNodeType.REFERENCE) return node
     const ref = deserializeRangeWithSheet(node.token)
-    if ((ref.sheetName || ownName) !== changedName) return node
+    if (ref.sheetName ? ref.sheetName !== changedName : !onChangedSheet) return node
     const range = ref.range
     const [startKey, endKey] = change.axis === 'row' ? ROW_KEYS : COL_KEYS
     if (range[startKey] === null || range[startKey] === undefined || Number.isNaN(range[startKey]))
@@ -287,16 +304,28 @@ export function shiftFormula(
   return changed ? `=${generateStringWithSequence(out)}` : formula
 }
 
+/** `formula` with its references to the sheet named `from` naming it `to` */
+export function renameInFormula(formula: string, from: string, to: string): string {
+  if (!formula.startsWith('=') || from === to) return formula
+  const nodes = lexer.sequenceNodesBuilder(formula) as (string | ISequenceNode)[] | undefined
+  if (!nodes) return formula
+  let changed = false
+  const out = nodes.map((node) => {
+    if (typeof node === 'string' || node.nodeType !== sequenceNodeType.REFERENCE) return node
+    const ref = deserializeRangeWithSheet(node.token)
+    if (ref.sheetName !== from) return node
+    changed = true
+    return { ...node, token: serializeRangeToRefString({ ...ref, sheetName: to }) }
+  })
+  return changed ? `=${generateStringWithSequence(out)}` : formula
+}
+
 export interface SheetNames {
   nameOf(sheetId: string): string | undefined
 }
 
-function shiftCellFormulas(
-  cells: Matrix,
-  ownName: string,
-  changedName: string,
-  change: AxisChange,
-): Matrix {
+/** `cells` with every formula text passed through `rewrite`; the same object when none changed */
+function mapCellFormulas(cells: Matrix, rewrite: (formula: string) => string): Matrix {
   let changed = false
   const out: Matrix = {}
   for (const [row, columns] of Object.entries(cells)) {
@@ -305,10 +334,10 @@ function shiftCellFormulas(
     for (const [col, cell] of Object.entries(columns)) {
       const f = (cell as { f?: unknown } | null)?.f
       if (typeof f === 'string') {
-        const shifted = shiftFormula(f, ownName, changedName, change)
-        if (shifted !== f) {
+        const next = rewrite(f)
+        if (next !== f) {
           changed = true
-          out[row]![col] = { ...(cell as object), f: shifted }
+          out[row]![col] = { ...(cell as object), f: next }
           continue
         }
       }
@@ -318,18 +347,39 @@ function shiftCellFormulas(
   return changed ? out : cells
 }
 
+/** A local mutation's formula texts after a remote rename; nothing else names a sheet by its name */
+function renameInMutation(mutation: Mutation, change: RenameChange): Mutation[] {
+  const p = mutation.params
+  if (mutation.id === SET_RANGE_VALUES) {
+    const cells = (p.cellValue ?? {}) as Matrix
+    const renamed = mapCellFormulas(cells, (f) => renameInFormula(f, change.from, change.to))
+    return renamed === cells
+      ? [mutation]
+      : [{ id: mutation.id, params: { ...p, cellValue: renamed } }]
+  }
+  if (mutation.id === SET_DEFINED_NAME && typeof p.formulaOrRefString === 'string') {
+    const text = p.formulaOrRefString
+    const renamed = renameInFormula(`=${text}`, change.from, change.to).slice(1)
+    return renamed === text
+      ? [mutation]
+      : [{ id: mutation.id, params: { ...p, formulaOrRefString: renamed } }]
+  }
+  return [mutation]
+}
+
 /**
  * A local mutation expressed after `change` ran before it. Empty when what it
  * edits is gone; several when a range split.
  */
 export function transformMutation(
   mutation: Mutation,
-  change: AxisChange,
+  change: Change,
   names: SheetNames,
 ): Mutation[] {
+  if (change.kind === 'rename') return renameInMutation(mutation, change)
   const p = mutation.params
   const same = p.subUnitId === change.sheet
-  const changedName = names.nameOf(change.sheet)
+  const changedName = change.name ?? names.nameOf(change.sheet)
   const with_ = (params: Params): Mutation[] => [{ id: mutation.id, params: { ...p, ...params } }]
   const onAxis = (axis: Axis): boolean => same && change.axis === axis
 
@@ -337,9 +387,7 @@ export function transformMutation(
     case SET_RANGE_VALUES: {
       let cells = (p.cellValue ?? {}) as Matrix
       if (same) cells = mapMatrix(change, cells)
-      const ownName = names.nameOf(String(p.subUnitId))
-      if (changedName !== undefined && ownName !== undefined)
-        cells = shiftCellFormulas(cells, ownName, changedName, change)
+      cells = mapCellFormulas(cells, (f) => shiftFormula(f, same, changedName, change))
       return isEmpty(cells) ? [] : with_({ cellValue: cells })
     }
     case MOVE_RANGE: {
@@ -498,7 +546,7 @@ export function transformMutation(
       const text = p.formulaOrRefString
       if (typeof text !== 'string' || changedName === undefined) return [mutation]
       // a defined name has no sheet of its own: only references naming the changed sheet move
-      const shifted = shiftFormula(`=${text}`, '', changedName, change).slice(1)
+      const shifted = shiftFormula(`=${text}`, false, changedName, change).slice(1)
       return shifted === text ? [mutation] : with_({ formulaOrRefString: shifted })
     }
     default:
@@ -550,12 +598,12 @@ export function axisChangesOf(mutations: readonly Mutation[]): AxisChange[] {
  */
 export function rebaseMutations(
   local: readonly (readonly Mutation[])[],
-  changes: readonly AxisChange[],
+  changes: readonly Change[],
   names: SheetNames,
 ): Mutation[][] {
   let current = local.map((op) => op.slice())
   for (const remote of changes) {
-    let pending: AxisChange[] = [remote]
+    let pending: Change[] = [remote]
     current = current.map((op) =>
       op.flatMap((mutation) => {
         let rewritten: Mutation[] = [mutation]
@@ -563,7 +611,9 @@ export function rebaseMutations(
           rewritten = rewritten.flatMap((m) => transformMutation(m, change, names))
         // the remote change, carried past what the local mutation did in the coordinates both started from
         for (const localChange of axisChangesOf([mutation]))
-          pending = pending.flatMap((change) => transformChange(change, localChange))
+          pending = pending.flatMap((change): Change[] =>
+            change.kind === 'rename' ? [change] : transformChange(change, localChange),
+          )
         return rewritten
       }),
     )

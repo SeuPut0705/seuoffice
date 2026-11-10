@@ -471,6 +471,7 @@ import { installCfFormulaFold } from './cf-formula-fold'
 import { installSheetRenameFix } from './sheet-rename-fix'
 import { installArrowCollapse } from './arrow-collapse-fix'
 import {
+  editRefusal,
   effectiveSheetProtection,
   installSheetProtectionGuard,
   ribbonCommandAllowed,
@@ -3846,6 +3847,9 @@ export function App({
     const instruction = (overrideInstruction ?? prompt).trim()
     // a held proposal must be accepted or rejected before the next request
     if (!instruction || aiBusy || proposal.kind === 'pending') return
+    // not on a page that may only make shared edits (sheet-protection.ts editRefusal): a run
+    // takes the workbook for itself, and the other people's edits keep arriving in it
+    if (isAgentConfigured() && editRefusal('direct:ai-run') !== null) return
     // a retried message that carried skills sends the same skill text again
     const skillUse =
       retryIndex !== undefined &&

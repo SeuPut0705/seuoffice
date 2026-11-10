@@ -3,8 +3,10 @@
  *
  * The step runs drive pages through the adapter calls the engine makes, in a
  * seeded order of edits, submits and partial catch-ups, and compare every page
- * with a late joiner whenever all of them are at the head; a mismatch prints
- * the first differing part of the two workbooks.
+ * with a late joiner whenever all of them are at the head: the workbook each
+ * shows, and what each would save (its save journal against the journal of a
+ * page that only ever applied the log). A mismatch prints the first differing
+ * part.
  *
  * The kit runs use the conformance kit of @seuoffice/collab: two to four pages
  * against the real server through a scheduler that breaks connections, delays
@@ -15,7 +17,9 @@
  */
 import { simulate } from '@seuoffice/collab/conformance'
 import { afterEach, describe, expect, it } from 'vitest'
+import { createEditJournal, type EditJournal } from '../src/renderer/edit-journal'
 import { fingerprintText } from '../src/web/collab-fingerprint'
+import { savePayload } from './collab/journal'
 import { int, pick, randomEdit, seeded } from './collab/random-edit'
 import { Room } from './collab/room'
 import {
@@ -53,7 +57,11 @@ function stepRun(seed: number): { ops: number } {
   const random = seeded(seed)
   const room = new Room(CELLS)
   const pages: OpenedBook[] = []
-  for (let i = 0, count = 2 + (seed % 3); i < count; i++) pages.push(room.join())
+  const journals: EditJournal[] = []
+  for (let i = 0, count = 2 + (seed % 3); i < count; i++) {
+    journals.push(createEditJournal())
+    pages.push(room.join(journals[i]))
+  }
   let edits = 0
   for (let step = 0; step < 120; step++) {
     const page = pick(random, pages)
@@ -75,8 +83,10 @@ function stepRun(seed: number): { ops: number } {
     else room.catchUp(page, int(random, room.log.length + 1))
     if (step % 30 === 29) {
       room.settle(...pages)
-      const late = room.late()
+      const lateJournal = createEditJournal()
+      const late = room.late(lateJournal)
       const reference = fingerprintText(late.workbook)
+      const saved = JSON.stringify(savePayload(lateJournal))
       for (const other of pages) {
         const shown = fingerprintText(other.workbook)
         if (shown !== reference) {
@@ -90,6 +100,12 @@ function stepRun(seed: number): { ops: number } {
           )
           throw new Error(
             `seed ${seed}: page ${pages.indexOf(other)} differs from the log at step ${step}${firstDifference(shown, reference)}\n  log: ${ops.join('\n       ')}`,
+          )
+        }
+        const saves = JSON.stringify(savePayload(journals[pages.indexOf(other)]!))
+        if (saves !== saved) {
+          throw new Error(
+            `seed ${seed}: page ${pages.indexOf(other)} would save another file than the log at step ${step}${firstDifference(saves, saved)}`,
           )
         }
       }

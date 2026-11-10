@@ -1,5 +1,5 @@
 import type { EditJournal } from '../../src/renderer/edit-journal'
-import type { SheetOp } from '../../src/web/collab-adapter'
+import type { SheetOp, SheetsCollabOptions } from '../../src/web/collab-adapter'
 import { fingerprintText } from '../../src/web/collab-fingerprint'
 import { fileOf, openBook, type OpenedBook, workbookData } from './sheets-workbook'
 
@@ -37,8 +37,8 @@ export class Room {
   }
 
   /** `journal`: a save journal the page feeds, as the app's page does */
-  join(journal?: EditJournal): OpenedBook {
-    const page = openBook(this.base, {}, journal)
+  join(journal?: EditJournal, options: SheetsCollabOptions = {}): OpenedBook {
+    const page = openBook(this.base, options, journal)
     this.pages.push(page)
     this.#sent.set(page, 0)
     this.#pending.set(page, [])

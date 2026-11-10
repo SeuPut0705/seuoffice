@@ -7,6 +7,14 @@
  * derives on its own: formula results (a formula cell counts by its text),
  * array-formula spill cells, measured auto heights, style ids (a style counts
  * by its content) and empty or default row and column records.
+ *
+ * A cell's number format is left out as well. The formula engine writes the
+ * format of a formula's sources into the formula cell's own style, together
+ * with the result: later than the edit, never on a page that does not
+ * calculate, and once only (a cell that has a format keeps it). The style then
+ * stays when the formula is typed over, and nothing in the workbook tells such
+ * a format from one a person chose. Number formats of rows, columns and the
+ * sheet default are always a person's and are covered.
  */
 import type { ICellData, IStyleData, Workbook, Worksheet } from '@univerjs/core'
 import { CellValueType } from '@univerjs/core'
@@ -31,10 +39,19 @@ function styleOf(workbook: Workbook, s: unknown): unknown {
   return style ? canonical(style) : undefined
 }
 
+/** A cell's style without its number format, which the formula engine may have put there */
+function cellStyleOf(workbook: Workbook, s: unknown): unknown {
+  if (!s) return undefined
+  const style = typeof s === 'string' ? workbook.getStyles().get(s) : (s as IStyleData)
+  if (!style) return undefined
+  const { n: _derivable, ...own } = style
+  return canonical(own)
+}
+
 function cellPrint(workbook: Workbook, cell: ICellData): unknown {
   const formula = typeof cell.f === 'string' && cell.f !== '' ? cell.f : undefined
   const shared = typeof cell.si === 'string' && cell.si !== '' ? cell.si : undefined
-  const print: Record<string, unknown> = { s: styleOf(workbook, cell.s) }
+  const print: Record<string, unknown> = { s: cellStyleOf(workbook, cell.s) }
   if (formula !== undefined || shared !== undefined) {
     print.f = formula
     print.si = shared

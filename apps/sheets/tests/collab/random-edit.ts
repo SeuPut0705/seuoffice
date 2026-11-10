@@ -54,9 +54,12 @@ export function randomEdit(book: OpenedBook, random: () => number, id: string): 
   if (roll < 0.35) {
     const ref = `${columnName(int(random, 8))}${1 + int(random, 25)}`
     const target = random() < 0.3 ? `Data!${ref}` : ref
+    // Formulas go to a few cells of one column, so that people often write one where another's
+    // row or column change is about to rewrite references: the rewrite must not win over it.
+    const formulaCell = { startRow: row % 6, endRow: row % 6, startColumn: 2, endColumn: 2 }
     return book.edit(id, 'sheet.command.set-range-values', {
       subUnitId,
-      range: cell,
+      range: formulaCell,
       value: { f: `=${target}+1` },
     })
   }

@@ -55,7 +55,8 @@ const SHARED_COMMANDS = new Set([
   'calc-mode',
   'calculate-now',
   'calculate-sheet',
-  // the AI panel: what it applies goes through the operation executor
+  // the AI panel itself: what it applies goes through the operation executor, and an agent
+  // run, which takes the workbook for itself, is refused where it starts (`direct:ai-run`)
   'ai-open-panel',
   'ai-toggle-panel',
   'ai-ask-selection',

@@ -12,6 +12,15 @@
  * (collab-rebase.ts) and replays them, computing fresh inverses. The page then
  * shows confirmed state plus its own ops exactly as it will send them, so every
  * page that applies the log in order reaches the same workbook.
+ * The formula text Univer restates when rows, columns or a sheet's name change
+ * is right only for the workbook it was computed on, so a replay leaves that
+ * part of an op out and computes it again from the formulas the workbook
+ * holds then: someone else's formula, confirmed meanwhile, is rewritten from
+ * what it says now instead of being overwritten.
+ *
+ * A page that may show something else than the log stops at once: a remote or
+ * replayed mutation that does not run, or a local one the adapter lost track
+ * of, fails the session on this page instead of leaving it to drift.
  *
  * Every mutation the adapter runs goes through `ICommandService` with
  * `fromCollab`, so the app's save journal (a `CommandExecuted` listener)
@@ -20,8 +29,11 @@
  * puts the journal back to its mark from before the edit (collab-journal.ts):
  * the journal then holds the log in server order, as on every other page.
  * Mutations that cannot be undone exactly are cancelled before they run.
+ * A local edit too large to travel as one change is taken back whole, and
+ * this page's undo history is emptied when someone else's change could make
+ * an undo take that change back.
  */
-import type { CollabAdapter, Json } from '@seuoffice/collab/client'
+import { type CollabAdapter, type Json, MAX_CHANGE_BYTES } from '@seuoffice/collab/client'
 import {
   CommandType,
   CustomCommandExecutionError,
@@ -62,8 +74,10 @@ import {
 import {
   axisChangeOf,
   type AxisChange,
+  type Change,
   mapIndex,
   rebaseMutations,
+  renameInFormula,
   shiftFormula,
   type SheetNames,
 } from './collab-rebase'
@@ -171,6 +185,11 @@ export interface SheetsCollabHandles {
    * (collab-journal.ts). Without it the journal keeps what the reverts wrote.
    */
   journalMark?(mutation: Mutation): JournalRevert
+  /**
+   * Why a local mutation (in the form `ICommandService` runs) must not run
+   * now although it could be shared; null when it may. Asked before it runs.
+   */
+  refusalOf?(mutation: Mutation): BlockReason | null
 }
 
 export interface SheetsCollabAdapter extends CollabAdapter<SheetOp> {
@@ -180,11 +199,19 @@ export interface SheetsCollabAdapter extends CollabAdapter<SheetOp> {
   dispose(): void
 }
 
+/**
+ * Why a local edit was cancelled: it cannot be shared, it is too large to
+ * travel as one change, or the session's save journal has no room for it.
+ */
+export type BlockReason = 'unshared' | 'too-large' | 'limit'
+
 export interface SheetsCollabOptions {
   /** 'manual': ops are reported only by `flush` (tests drive bursts themselves) */
   readonly bursts?: 'macrotask' | 'manual'
-  /** a local edit co-editing cannot carry was cancelled */
-  readonly onBlocked?: (mutationId: string) => void
+  /** a local edit was cancelled, or taken back whole */
+  readonly onBlocked?: (mutationId: string, reason: BlockReason) => void
+  /** the largest op to report, in bytes of its JSON; the engine's limit for one change by default */
+  readonly maxChangeBytes?: number
 }
 
 /** What takes local mutations back: `undo` runs in order, then `journal` in order (newest mark first) */
@@ -202,6 +229,36 @@ interface Replayed extends Revert {
   wire: Mutation
 }
 
+/** What the adapter keeps of a local mutation between its before and its executed event */
+interface Captured extends Revert {
+  /** it only restates formulas after the structural mutation before it (Univer's reference rewrite) */
+  rewrite: boolean
+}
+
+/** A user command that began; where the burst stood then, and whether one of its mutations was refused */
+interface OpenCommand {
+  info: ICommandInfo
+  mutations: number
+  undo: number
+  journal: number
+  refused: boolean
+}
+
+/** A formula a cell holds: its own text, or the one its shared-formula group gives it */
+interface HeldFormula {
+  sheet: string
+  row: number
+  column: number
+  formula: string
+  /** sheet and shared-formula id; null for a cell with a formula of its own only */
+  group: string | null
+}
+
+/** What the engine adds around an op when it sends it; an op this close to the limit is refused */
+const OP_FRAME_BYTES = 64 * 1024
+/** Commands that began and never ended (thrown, cancelled) stay listed; nesting never goes this deep */
+const MAX_OPEN_COMMANDS = 64
+
 const FROM_COLLAB: IExecutionOptions = { fromCollab: true }
 
 function randomId(): string {
@@ -215,6 +272,30 @@ function subUnitsOf(mutation: Mutation): string[] {
     return [(p.from as { subUnitId: string }).subUnitId, (p.to as { subUnitId: string }).subUnitId]
   }
   return typeof p.subUnitId === 'string' && mutation.id !== INSERT_SHEET ? [p.subUnitId] : []
+}
+
+/** The cells a cell matrix names, as `row:column` */
+function cellKeys(matrix: unknown): string[] {
+  const keys: string[] = []
+  for (const [row, columns] of Object.entries((matrix ?? {}) as Record<string, object | null>))
+    for (const column of Object.keys(columns ?? {})) keys.push(`${Number(row)}:${Number(column)}`)
+  return keys
+}
+
+/**
+ * Whether a cell matrix only sets or clears formula text: the shape of the
+ * rewrite Univer adds to a command that moves rows, columns or a sheet's name.
+ */
+function restatesFormulas(matrix: unknown): boolean {
+  let cells = 0
+  for (const columns of Object.values((matrix ?? {}) as Record<string, object | null>)) {
+    for (const cell of Object.values(columns ?? {}) as unknown[]) {
+      if (!cell || typeof cell !== 'object') return false
+      if (Object.keys(cell).some((key) => key !== 'f' && key !== 'si')) return false
+      cells++
+    }
+  }
+  return cells > 0
 }
 
 /** Whether a sheet snapshot holds cells, merges, or row or column records */
@@ -263,6 +344,7 @@ export function sheetsCollabAdapter(
   if (!workbook) throw new Error(`no workbook ${handles.unitId}`)
   const env: MutationEnv = { accessor, workbook }
   const names: SheetNames = { nameOf: (id) => workbook.getSheetBySheetId(id)?.getName() }
+  const maxOpBytes = options.maxChangeBytes ?? MAX_CHANGE_BYTES - OP_FRAME_BYTES
 
   let emit: ((ops: SheetOp[]) => void) | null = null
   let editable = true
@@ -272,12 +354,47 @@ export function sheetsCollabAdapter(
   let applying = false
   let running: Params | null = null
   let strays: string[] = []
+  /** why this page may no longer show what the log holds; every later call of the engine fails */
+  let broken: Error | null = null
   /** every sheet a mutation removed on this page, local or remote: all journals know these ids */
   const removedSheets = new Set<string>()
-  /** the revert computed before a captured mutation ran, by its command info */
-  const inverses = new WeakMap<ICommandInfo, Revert>()
+  /** what was computed before a captured mutation ran, by its command info */
+  const inverses = new WeakMap<ICommandInfo, Captured>()
+  /**
+   * Ids of captured mutations whose executed event has not come. One that another listener
+   * cancelled after the capture stays listed, so the list is bounded: it only says when to look.
+   */
+  const awaited: string[] = []
   /** the revert of every reported op the server has not confirmed */
   const undoOf = new WeakMap<SheetOp, Revert>()
+  /**
+   * Wire mutations that only restate formulas after the structural mutation
+   * before them. They are right for the workbook they were computed on, so a
+   * replay computes them again instead of running them.
+   */
+  const rewrites = new WeakSet<Mutation>()
+  /** counts the user commands that began; a rewrite runs in the round of its structural mutation */
+  let commandRound = 0
+  let rewriter: { round: number; trigger: string } | null = null
+  /**
+   * The cells this page's own edits wrote since its undo history was last
+   * emptied, by sheet; null once one of those edits was not a plain cell
+   * write. Undo entries write these cells (or, after null, anything).
+   */
+  let undoable: Map<string, Set<string>> | null = new Map()
+
+  /**
+   * Stop for good: this page may show something else than the log. Inside an
+   * engine call the caller throws the result; outside one, an op that cannot
+   * be encoded makes the engine fail the session as soon as it looks at it.
+   */
+  function fail(error: unknown): Error {
+    if (broken) return broken
+    broken = error instanceof Error ? error : new Error(String(error))
+    console.error('[co-editing] this page stops:', broken)
+    if (!applying) emit?.([{ id: 'broken', mutations: [] }])
+    return broken
+  }
 
   /** the save journal's mark before `mutation` (local form) runs, as the list a `Revert` holds */
   function journalMarkOf(mutation: Mutation): JournalRevert[] {
@@ -293,6 +410,31 @@ export function sheetsCollabAdapter(
   function revert(reverts: readonly Revert[]): boolean {
     for (const { undo } of reverts) if (!run(undo)) return false
     for (const { journal } of reverts) for (const step of journal) step()
+    return true
+  }
+
+  /** Univer's undo and redo entries of this workbook hold values and positions that no longer apply */
+  function clearHistory(): void {
+    injector.get(IUndoRedoService).clearUndoRedo(handles.unitId)
+    undoable = new Map()
+  }
+
+  /**
+   * Whether this page's undo history still fits after `remote`: only when the
+   * remote ops wrote nothing but cells, none of them a cell this page's own
+   * edits wrote, and those edits were cell writes too. Otherwise an undo could
+   * take back someone else's confirmed value, write an old value where another
+   * record now sits, or remove someone else's merge.
+   */
+  function historyFits(remote: readonly SheetOp[]): boolean {
+    if (!undoable) return false
+    for (const op of remote) {
+      for (const mutation of op.mutations) {
+        if (mutation.id !== SET_RANGE_VALUES) return false
+        const own = undoable.get(String(mutation.params.subUnitId))
+        if (own && cellKeys(mutation.params.cellValue).some((key) => own.has(key))) return false
+      }
+    }
     return true
   }
 
@@ -352,26 +494,64 @@ export function sheetsCollabAdapter(
   }
 
   /**
-   * Where the outermost user command started in the burst, and whether one of
-   * its mutations was refused; a refused command is taken back whole.
+   * The user commands that began and have not ended, innermost last. A command
+   * ends with its executed event, or never: another listener cancelled it, or
+   * its handler threw. Such a command stays listed until an outer one ends, so
+   * nothing here may wait for the list to empty: every command settles its own
+   * refusal when it ends.
    */
-  let command: { mutations: number; undo: number; journal: number; refused: boolean } | null = null
-  let depth = 0
+  const openCommands: OpenCommand[] = []
+
+  /** the open commands' marks point into a burst that is gone or was rebuilt */
+  function resetMarks(): void {
+    for (const open of openCommands) {
+      open.mutations = 0
+      open.undo = 0
+      open.journal = 0
+    }
+  }
+
+  /** Cancel the mutation about to run; the commands it belongs to are taken back when they end */
+  function refuse(message: string): never {
+    for (const open of openCommands) open.refused = true
+    throw new CustomCommandExecutionError(message)
+  }
+
+  /** Take back the part of the burst made since `from`, as if it had not been made */
+  function takeBack(from: { mutations: number; undo: number; journal: number }): void {
+    if (!burst) return
+    const undone = burst.undo.length - from.undo
+    const marks = burst.journal.length - from.journal
+    applying = true
+    try {
+      const part = { undo: burst.undo.slice(0, undone), journal: burst.journal.slice(0, marks) }
+      if (!revert([part])) fail(new Error('co-editing could not take back an edit it refused'))
+    } finally {
+      applying = false
+    }
+    burst.undo = burst.undo.slice(undone)
+    burst.journal = burst.journal.slice(marks)
+    burst.mutations = burst.mutations.slice(0, from.mutations)
+    if (burst.mutations.length === 0) burst = null
+    // the command may have left an undo entry for what is no longer there
+    if (undone > 0) clearHistory()
+  }
 
   function beforeMutation(info: ICommandInfo, executionOptions?: IExecutionOptions): void {
     if (info.type === CommandType.COMMAND && !applying && !journalSuppression.active) {
       if (BLOCKED_COMMANDS.has(info.id)) {
-        options.onBlocked?.(info.id)
+        options.onBlocked?.(info.id, 'unshared')
         throw new CustomCommandExecutionError(`co-editing refuses ${info.id}`)
       }
-      if (depth++ === 0) {
-        command = {
-          mutations: burst?.mutations.length ?? 0,
-          undo: burst?.undo.length ?? 0,
-          journal: burst?.journal.length ?? 0,
-          refused: false,
-        }
-      }
+      commandRound++
+      openCommands.push({
+        info,
+        mutations: burst?.mutations.length ?? 0,
+        undo: burst?.undo.length ?? 0,
+        journal: burst?.journal.length ?? 0,
+        refused: false,
+      })
+      if (openCommands.length > MAX_OPEN_COMMANDS) openCommands.shift()
       return
     }
     if (info.type !== CommandType.MUTATION || !ours(info)) return
@@ -390,10 +570,9 @@ export function sheetsCollabAdapter(
       return
     }
     if (kind === 'derived') return
-    if (kind === 'blocked' || !editable) {
-      if (kind === 'blocked') options.onBlocked?.(info.id)
-      if (command) command.refused = true
-      throw new CustomCommandExecutionError(`co-editing refuses ${info.id}`)
+    if (kind === 'blocked' || !editable || broken) {
+      if (kind === 'blocked') options.onBlocked?.(info.id, 'unshared')
+      refuse(`co-editing refuses ${info.id}`)
     }
     const params = { ...(info.params as Params) }
     delete params.trigger
@@ -409,9 +588,8 @@ export function sheetsCollabAdapter(
           ? { name: String(params.name), self: String(params.subUnitId) }
           : null
     if (named && freeName(workbook!, named.name, named.self) !== named.name) {
-      options.onBlocked?.(info.id)
-      if (command) command.refused = true
-      throw new CustomCommandExecutionError(`co-editing refuses a second sheet named ${named.name}`)
+      options.onBlocked?.(info.id, 'unshared')
+      refuse(`co-editing refuses a second sheet named ${named.name}`)
     }
     // A sheet that arrives with content is journaled as an empty new sheet on the other pages
     // (see BLOCKED_COMMANDS). One that was removed earlier is known to every journal: its return
@@ -421,25 +599,43 @@ export function sheetsCollabAdapter(
       !removedSheets.has(named!.self) &&
       carriesContent(params.sheet)
     ) {
-      options.onBlocked?.(info.id)
-      if (command) command.refused = true
-      throw new CustomCommandExecutionError(
-        'co-editing refuses a new sheet that arrives with content',
-      )
+      options.onBlocked?.(info.id, 'unshared')
+      refuse('co-editing refuses a new sheet that arrives with content')
+    }
+    const limit = handles.refusalOf?.({ id: info.id, params: info.params as Params }) ?? null
+    if (limit) {
+      options.onBlocked?.(info.id, limit)
+      refuse(`co-editing refuses ${info.id}: ${limit}`)
     }
     let inverse: Mutation[]
     try {
       inverse = inverseOf(env, { id: info.id, params })
     } catch {
       // an edit the adapter cannot take back would leave this page apart from the others
-      options.onBlocked?.(info.id)
-      if (command) command.refused = true
-      throw new CustomCommandExecutionError(`co-editing cannot undo ${info.id}`)
+      options.onBlocked?.(info.id, 'unshared')
+      refuse(`co-editing cannot undo ${info.id}`)
+    }
+    // Univer adds its reference rewrite to the command that moves rows, columns or a sheet's
+    // name: one set-range-values of formula text, run right after the structural mutation
+    const trigger = (info.params as Params).trigger
+    let rewrite = false
+    if (info.id === SET_SHEET_NAME || axisChangeOf({ id: info.id, params })) {
+      rewriter = typeof trigger === 'string' ? { round: commandRound, trigger } : null
+    } else if (
+      info.id === SET_RANGE_VALUES &&
+      rewriter?.round === commandRound &&
+      rewriter.trigger === trigger &&
+      restatesFormulas(params.cellValue)
+    ) {
+      rewrite = true
     }
     inverses.set(info, {
       undo: inverse,
       journal: journalMarkOf({ id: info.id, params: info.params as Params }),
+      rewrite,
     })
+    awaited.push(info.id)
+    if (awaited.length > MAX_OPEN_COMMANDS) awaited.shift()
   }
 
   const before = commands.beforeCommandExecuted(beforeMutation)
@@ -454,12 +650,41 @@ export function sheetsCollabAdapter(
   beforeListeners.splice(beforeListeners.indexOf(beforeMutation), 1)
   beforeListeners.unshift(beforeMutation)
 
-  const after = commands.onMutationExecutedForCollab((info) => {
+  const after = commands.onMutationExecutedForCollab((info, executionOptions) => {
     const taken = inverses.get(info)
-    if (!taken) return
+    if (!taken) {
+      // Every local mutation the adapter let run is known by its command info object. One that
+      // ran, would have been captured, and is not known: Univer handed this listener another
+      // object than the before-listener got, and the edit would stay on this page unsaid.
+      const result = (executionOptions as { applyFormulaCalculationResult?: boolean } | undefined)
+        ?.applyFormulaCalculationResult
+      if (
+        awaited.includes(info.id) &&
+        !applying &&
+        !journalSuppression.active &&
+        !result &&
+        ours(info) &&
+        classify(info.id, executionOptions) === 'synced'
+      ) {
+        fail(new Error(`co-editing lost the command info of ${info.id} between Univer's listeners`))
+      }
+      return
+    }
     inverses.delete(info)
+    awaited.splice(awaited.lastIndexOf(info.id), 1)
+    const wire = toWire(workbook, { id: info.id, params: info.params as Params })
+    if (taken.rewrite) rewrites.add(wire)
+    if (undoable) {
+      if (info.id !== SET_RANGE_VALUES) undoable = null
+      else {
+        const sheet = String((info.params as Params).subUnitId)
+        const own = undoable.get(sheet) ?? new Set<string>()
+        for (const key of cellKeys((info.params as Params).cellValue)) own.add(key)
+        undoable.set(sheet, own)
+      }
+    }
     burst ??= { mutations: [], undo: [], journal: [] }
-    burst.mutations.push(toWire(workbook, { id: info.id, params: info.params as Params }))
+    burst.mutations.push(wire)
     burst.undo = taken.undo.concat(burst.undo)
     burst.journal = taken.journal.concat(burst.journal)
     if (options.bursts !== 'manual' && flushTimer === null) {
@@ -470,31 +695,37 @@ export function sheetsCollabAdapter(
     }
   })
 
-  // The outermost command ended: if one of its mutations was refused, take back the ones that ran
+  // A command ended: if one of its mutations was refused, take back the ones that ran
   const ended = commands.onCommandExecuted((info) => {
-    if (info.type !== CommandType.COMMAND || applying || depth === 0 || --depth > 0) return
-    const ran = command
-    command = null
-    if (!ran?.refused || !burst) return
-    const undone = burst.undo.length - ran.undo
-    const marks = burst.journal.length - ran.journal
-    applying = true
-    try {
-      revert([{ undo: burst.undo.slice(0, undone), journal: burst.journal.slice(0, marks) }])
-    } finally {
-      applying = false
-    }
-    burst.undo = burst.undo.slice(undone)
-    burst.journal = burst.journal.slice(marks)
-    burst.mutations = burst.mutations.slice(0, ran.mutations)
-    if (burst.mutations.length === 0) burst = null
+    if (info.type !== CommandType.COMMAND || applying) return
+    let index = openCommands.length - 1
+    while (index >= 0 && openCommands[index]!.info !== info) index--
+    if (index < 0) return
+    // the commands listed after it began inside it and never ended
+    const ran = openCommands.splice(index)[0]!
+    if (ran.refused) takeBack(ran)
   })
 
+  const encode = (op: SheetOp): Json => {
+    if (broken) throw broken
+    return { id: op.id, m: op.mutations.map((m) => [m.id, m.params as Json]) }
+  }
+
   function flush(id?: string): boolean {
-    if (!burst || !emit || applying) return false
+    if (!burst || !emit || applying || broken) return false
     const op: SheetOp = { id: id ?? randomId(), mutations: burst.mutations }
+    // One op travels as one change, and the engine fails the session over a change it cannot
+    // send. The person loses this one edit instead, and is told.
+    if (new TextEncoder().encode(JSON.stringify(encode(op))).length > maxOpBytes) {
+      const first = burst.mutations[0]!.id
+      takeBack({ mutations: 0, undo: 0, journal: 0 })
+      resetMarks()
+      options.onBlocked?.(first, 'too-large')
+      return false
+    }
     undoOf.set(op, { undo: burst.undo, journal: burst.journal })
     burst = null
+    resetMarks()
     emit([op])
     return true
   }
@@ -577,73 +808,87 @@ export function sheetsCollabAdapter(
     const local = fromWire(workbook!, withLocalNameId(fixed))
     const undo = inverseOf(env, local)
     const journal = journalMarkOf(local)
-    run([local])
+    // the page would show less than the op it is about to send again
+    if (!run([local])) throw new Error(`co-editing could not apply its own ${wire.id} again`)
     return { wire: fixed, undo, journal }
   }
 
+  /** Every formula in the workbook now; a shared-formula cell without text of its own gets its group's */
+  function heldFormulas(): HeldFormula[] {
+    let model: FormulaDataModel | null = null
+    try {
+      model = injector.get(FormulaDataModel)
+    } catch {
+      // no formula engine: cells keep only the text they hold themselves
+    }
+    const held: HeldFormula[] = []
+    for (const sheet of workbook!.getSheets()) {
+      const id = sheet.getSheetId()
+      sheet.getCellMatrix().forValue((row, column, cell) => {
+        const own = typeof cell?.f === 'string' && cell.f !== '' ? cell.f : null
+        const shared = typeof cell?.si === 'string' && cell.si !== '' ? cell.si : null
+        if (!own && !shared) return
+        const formula = own ?? model?.getFormulaStringByCell(row, column, id, handles.unitId)
+        if (typeof formula !== 'string' || formula === '') return
+        held.push({
+          sheet: id,
+          row,
+          column,
+          formula,
+          group: shared ? `${id}\u0000${shared}` : null,
+        })
+      })
+    }
+    return held
+  }
+
   /**
-   * Formulas the remote ops wrote, by position after them. A local insert or
-   * remove replayed after them was made without knowing these formulas, so
-   * their references are moved here, as Univer's own reference rewrite would
-   * have done had they existed when the person inserted.
+   * The reference rewrite of the structural mutation `wire`, which just ran
+   * again: what Univer adds to the command a person runs, computed for the
+   * formulas the workbook held right before it (`held`), so a formula someone
+   * else changed meanwhile is rewritten from what it says now. A shared-formula
+   * group one of whose cells changes or moves becomes plain formulas, as in
+   * Univer's own rewrite: its cells no longer follow one text.
    */
-  type Tracked = { sheet: string; row: number; column: number }
-
-  function track(tracked: Tracked[], mutation: Mutation): Tracked[] {
-    const change = axisChangeOf(mutation)
-    let out = change ? moveTracked(tracked, change) : tracked
-    if (mutation.id === REMOVE_SHEET)
-      out = out.filter((cell) => cell.sheet !== mutation.params.subUnitId)
-    if (mutation.id === SET_RANGE_VALUES) {
-      const sheet = String(mutation.params.subUnitId)
-      const cells = (mutation.params.cellValue ?? {}) as Record<
-        string,
-        Record<string, { f?: unknown } | null>
-      >
-      for (const [row, columns] of Object.entries(cells))
-        for (const [column, cell] of Object.entries(columns ?? {}))
-          if (typeof cell?.f === 'string')
-            out.push({ sheet, row: Number(row), column: Number(column) })
-    }
-    return out
-  }
-
-  function moveTracked(tracked: Tracked[], change: AxisChange): Tracked[] {
-    return tracked.flatMap((cell) => {
-      if (cell.sheet !== change.sheet) return [cell]
-      const index = mapIndex(change, change.axis === 'row' ? cell.row : cell.column)
-      if (index === null) return []
-      return [change.axis === 'row' ? { ...cell, row: index } : { ...cell, column: index }]
-    })
-  }
-
-  function fixTrackedFormulas(tracked: Tracked[], change: AxisChange): Replayed[] {
-    const changedName = workbook!.getSheetBySheetId(change.sheet)?.getName()
-    if (changedName === undefined) return []
-    const out: Replayed[] = []
-    for (const cell of tracked) {
-      const sheet = workbook!.getSheetBySheetId(cell.sheet)
-      const f = sheet?.getCellRaw(cell.row, cell.column)?.f
-      if (!sheet || typeof f !== 'string') continue
-      const shifted = shiftFormula(f, sheet.getName(), changedName, change)
-      if (shifted === f) continue
-      const fix: Mutation = {
-        id: SET_RANGE_VALUES,
-        params: {
-          subUnitId: cell.sheet,
-          cellValue: { [cell.row]: { [cell.column]: { f: shifted } } },
-        },
+  function rewriteFormulas(held: HeldFormula[], wire: Mutation, oldName: string | undefined) {
+    const change = axisChangeOf(wire)
+    const changedName = change ? names.nameOf(change.sheet) : undefined
+    const moved = held.flatMap((cell) => {
+      if (!workbook!.getSheetBySheetId(cell.sheet)) return []
+      let { row, column } = cell
+      const onChanged = change !== null && cell.sheet === change.sheet
+      if (change && onChanged) {
+        const index = mapIndex(change, change.axis === 'row' ? row : column)
+        if (index === null) return []
+        if (change.axis === 'row') row = index
+        else column = index
       }
-      const replayed = replayOne(fix)
-      if (replayed) out.push(replayed)
+      const next = change
+        ? shiftFormula(cell.formula, onChanged, changedName, change)
+        : renameInFormula(cell.formula, oldName ?? '', String(wire.params.name))
+      return [{ ...cell, row, column, next, onChanged }]
+    })
+    const plain = new Set<string>()
+    for (const cell of moved)
+      if (cell.group && (cell.onChanged || cell.next !== cell.formula)) plain.add(cell.group)
+    const bySheet = new Map<string, Record<number, Record<number, { f: string; si: null }>>>()
+    for (const cell of moved) {
+      if (cell.next === cell.formula && !(cell.group && plain.has(cell.group))) continue
+      const cells = bySheet.get(cell.sheet) ?? {}
+      ;(cells[cell.row] ??= {})[cell.column] = { f: cell.next, si: null }
+      bySheet.set(cell.sheet, cells)
+    }
+    const out: Replayed[] = []
+    for (const [subUnitId, cellValue] of bySheet) {
+      const replayed = replayOne({ id: SET_RANGE_VALUES, params: { subUnitId, cellValue } })
+      if (!replayed) continue
+      rewrites.add(replayed.wire)
+      out.push(replayed)
     }
     return out
   }
 
-  function replayOp(
-    wires: readonly Mutation[],
-    tracked: Tracked[],
-  ): Burst & { tracked: Tracked[] } {
+  function replayOp(wires: readonly Mutation[]): Burst {
     const mutations: Mutation[] = []
     let undo: Mutation[] = []
     let journal: JournalRevert[] = []
@@ -653,21 +898,23 @@ export function sheetsCollabAdapter(
       journal = replayed.journal.concat(journal)
     }
     for (const wire of wires) {
+      const renames = wire.id === SET_SHEET_NAME
+      const held = renames || axisChangeOf(wire) ? heldFormulas() : null
+      const oldName = renames ? names.nameOf(String(wire.params.subUnitId)) : undefined
       const replayed = replayOne(wire)
       if (!replayed) continue
       ran(replayed)
-      const change = axisChangeOf(replayed.wire)
-      if (!change) continue
-      tracked = moveTracked(tracked, change)
-      for (const fix of fixTrackedFormulas(tracked, change)) ran(fix)
+      if (held) for (const rewrite of rewriteFormulas(held, replayed.wire, oldName)) ran(rewrite)
     }
-    return { mutations, undo, journal, tracked }
+    return { mutations, undo, journal }
   }
 
   function integrate(remote: SheetOp[], local: SheetOp[]): SheetOp[] {
+    if (broken) throw broken
     applying = true
     strays = []
     try {
+      const shown = workbook!.getActiveSheet(true)?.getSheetId()
       const open = burst
       // newest first: the edit in progress, then the reported ops from the last one back
       const reverts: Revert[] = open ? [open] : []
@@ -679,44 +926,63 @@ export function sheetsCollabAdapter(
       }
       if (!revert(reverts)) throw new Error('co-editing could not revert its unconfirmed edits')
 
-      const changes: AxisChange[] = []
-      let tracked: Tracked[] = []
-      let reshaped = false
-      for (const op of remote)
+      const changes: Change[] = []
+      for (const op of remote) {
         for (const mutation of op.mutations) {
-          run([fromWire(workbook!, withLocalNameId(mutation))])
-          const change = axisChangeOf(mutation)
-          if (change) changes.push(change)
-          if (change || mutation.id === INSERT_SHEET || mutation.id === REMOVE_SHEET)
-            reshaped = true
-          tracked = track(tracked, mutation)
+          const sheet = String(mutation.params.subUnitId)
+          const nameBefore = names.nameOf(sheet)
+          const change: AxisChange | null = axisChangeOf(mutation)
+          // A confirmed edit that does not run here leaves this page without it for good
+          if (!run([fromWire(workbook!, withLocalNameId(mutation))]))
+            throw new Error(`co-editing could not apply ${mutation.id}`)
+          if (change)
+            changes.push(nameBefore === undefined ? change : { ...change, name: nameBefore })
+          else if (mutation.id === SET_SHEET_NAME && nameBefore !== undefined)
+            changes.push({
+              kind: 'rename',
+              sheet,
+              from: nameBefore,
+              to: String(mutation.params.name),
+            })
         }
+      }
 
-      const queued = local.map((op) => op.mutations)
-      if (open) queued.push(open.mutations)
+      // a rewrite belongs to the workbook it was computed on: the replay computes it again
+      const queued = local.map((op) => op.mutations.filter((mutation) => !rewrites.has(mutation)))
+      if (open) queued.push(open.mutations.filter((mutation) => !rewrites.has(mutation)))
       const rebased = rebaseMutations(queued, changes, names)
       const rebuilt: SheetOp[] = []
       rebased.forEach((wires, index) => {
-        const replayed = replayOp(wires, tracked)
-        tracked = replayed.tracked
+        const replayed = replayOp(wires)
         if (index < local.length) {
           const op: SheetOp = { id: local[index]!.id, mutations: replayed.mutations }
           undoOf.set(op, { undo: replayed.undo, journal: replayed.journal })
           rebuilt.push(op)
         } else {
-          burst = { mutations: replayed.mutations, undo: replayed.undo, journal: replayed.journal }
+          burst = replayed.mutations.length > 0 ? replayed : null
         }
       })
-      if (reshaped) {
-        // Univer's undo entries hold coordinates and sheets from before the remote change
-        injector.get(IUndoRedoService).clearUndoRedo(handles.unitId)
-      }
+      resetMarks()
+      if (remote.length > 0 && !historyFits(remote)) clearHistory()
       if (strays.length > 0) {
         throw new Error(
           `co-editing saw untracked writes while applying a change: ${[...new Set(strays)].join(', ')}`,
         )
       }
+      // taking back and putting again a sheet the person just added must not move them off it
+      if (
+        shown !== undefined &&
+        workbook!.getSheetBySheetId(shown) &&
+        workbook!.getActiveSheet(true)?.getSheetId() !== shown
+      ) {
+        commands.syncExecuteCommand('sheet.operation.set-worksheet-active', {
+          unitId: handles.unitId,
+          subUnitId: shown,
+        })
+      }
       return rebuilt
+    } catch (error) {
+      throw fail(error)
     } finally {
       applying = false
     }
@@ -732,7 +998,7 @@ export function sheetsCollabAdapter(
   }
 
   return {
-    encode: (op) => ({ id: op.id, m: op.mutations.map((m) => [m.id, m.params as Json]) }),
+    encode,
     decode(json) {
       if (!json || typeof json !== 'object' || Array.isArray(json))
         throw new Error('not a sheet op')
@@ -751,6 +1017,7 @@ export function sheetsCollabAdapter(
       for (const op of ops) undoOf.delete(op)
     },
     fingerprint() {
+      if (broken) throw broken
       const text = fingerprintText(workbook, {
         spill: spills(),
         definedNames: () => {
@@ -769,7 +1036,7 @@ export function sheetsCollabAdapter(
       if (!value) flush()
       editable = value
     },
-    produceFile: () => handles.produceFile(),
+    produceFile: () => (broken ? Promise.reject(broken) : handles.produceFile()),
     flush,
     dispose() {
       before.dispose()

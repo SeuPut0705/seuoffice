@@ -39,8 +39,10 @@ export interface CommandEventLike {
  */
 export function personEditVetoed(event: CommandEventLike, workbookId: string | undefined): boolean {
   if (!aiRunLock.active || aiRunLock.agentWriting > 0 || journalSuppression.active) return false
-  // the formula engine's results are derived from what the run wrote
-  if ((event.options as { fromFormula?: boolean } | undefined)?.fromFormula) return false
+  // the formula engine's results are derived from what the run wrote; co-editing's mutations
+  // are other people's confirmed edits, which this page must hold to stay equal to theirs
+  const options = event.options as { fromFormula?: boolean; fromCollab?: boolean } | undefined
+  if (options?.fromFormula || options?.fromCollab) return false
   const params = (event.params ?? {}) as { unitId?: unknown; visible?: unknown }
   if (event.id === OPEN_CELL_EDITOR) return params.visible === true
   if (event.type !== CommandType.MUTATION || FORMULA_ENGINE_MUTATION.test(event.id)) return false
