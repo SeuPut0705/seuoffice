@@ -4,7 +4,7 @@ export const ko = {
   title: 'MCP 서버',
   desc: 'AI 창이 쓸 바깥 도구를 연결합니다. 법령 찾기나 팀이 운영하는 서비스 같은 것입니다. AI는 대화 중에, 여기서 허락한 만큼만 서버의 도구를 부릅니다.',
   empty: '아직 등록한 서버가 없습니다.',
-  add: '서버 등록',
+  add: '서버 더하기',
   noSealing:
     '이 PC는 열쇠와 로그인을 암호화해 보관하지 못해, 앱이 켜져 있는 동안만 기억합니다. 이 PC에서는 앱을 다시 켜면 다시 넣어야 합니다.',
   memoryOnly: '이 서버의 열쇠는 앱을 닫으면 사라집니다.',
@@ -106,7 +106,7 @@ export const ko = {
   keepInsideDesc:
     '켜 두면, 이 서버가 돌려준 내용이 대화에 들어온 뒤로는 바깥으로 보내는 도구를 그 대화에서 막습니다.',
   keepInsideOffWarn: '개인 자료를 주는 서버라면 켜 두세요.',
-  formAdd: '서버 등록',
+  formAdd: '서버 더하기',
   formEdit: '{name} 고치기',
   wayDirect: '직접 넣기',
   wayPaste: '설정 글 붙여넣기',
