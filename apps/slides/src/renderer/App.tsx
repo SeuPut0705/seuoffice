@@ -1028,9 +1028,21 @@ export function App() {
             ? (mergeBroadcastUpdate(current, { slides: all, order }, refreshDeck) ?? current)
             : all,
         )
-        setCurrent((c) => Math.min(c, Math.max(0, (order?.length ?? all.length) - 1)))
-        // Comments live outside RenderSlide: re-read the current page list (ribbon badge)
-        // and the all-pages list together. Notes drafts stay untouched (no annotations bump).
+        // Slides before the one on screen may have come or gone: it stays on screen, found by its
+        // part, and a notes draft stays with the slide it is for. The position decides only for
+        // a slide that is gone itself.
+        const parts = (order ?? all.map((s) => s.partPath)).map((partPath) => ({ partPath }))
+        const shown = ctxRef.current.slides[ctxRef.current.current]?.partPath
+        const kept = shown ? parts.findIndex((p) => p.partPath === shown) : -1
+        setCurrent((c) => (kept >= 0 ? kept : Math.min(c, Math.max(0, parts.length - 1))))
+        const draft = notesDraftRef.current
+        const draftAt = draft ? notesDraftIndex(draft, parts) : -1
+        notesDraftRef.current = draft && draftAt >= 0 ? { ...draft, index: draftAt } : null
+        // Notes live outside RenderSlide: with none being typed here, read them again (the
+        // change may have written them)
+        if (!notesDraftRef.current) setAnnotationsNonce((n) => n + 1)
+        // Comments live outside RenderSlide too: re-read the current page list (ribbon badge)
+        // and the all-pages list together.
         setCommentsRefreshNonce((n) => n + 1)
         // The broadcast also fires for undo back to a clean state — ask the
         // session instead of assuming the change dirtied it
@@ -2569,7 +2581,7 @@ export function App() {
   )
 
   const canvasRef = useRef<SlideCanvasHandle>(null)
-  const editNode = useMemo(() => {
+  const editNodeNow = useMemo(() => {
     if (!editing || !slide) return null
     // In-group-editing children: compose the group offset into an absolute box (the canvas only allows text editing when the group is unrotated/unflipped/unscaled)
     if (editing.groupId) {
@@ -2584,6 +2596,12 @@ export function App() {
     }
     return slide.nodes.find((n) => n.sourceId === editing.sourceId) as ShapeRenderNode | undefined
   }, [editing, slide])
+  // The slide can be drawn again under an open editor with this node unchanged (another window's
+  // edit elsewhere on it, or another person's on the web): the editor keeps the node it opened
+  // on, since a new object would fill it from the slide again and drop what was typed
+  const editNodeDrawn = useMemo(() => JSON.stringify(editNodeNow ?? null), [editNodeNow])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const editNode = useMemo(() => editNodeNow, [editNodeDrawn])
 
   const startEdit = useCallback(
     (sourceId: string, caret?: EditCaret) => {
@@ -2734,6 +2752,19 @@ export function App() {
     [slides.length, current],
   )
 
+  // A move, resize or turn is on the canvas before its edit is made. When the edit is not made
+  // (refused, or its element is gone), the canvas is built again from the slide.
+  const [canvasEpoch, setCanvasEpoch] = useState(0)
+  const madeOrRedrawn = useCallback(async <T,>(edit: Promise<T | null>): Promise<T | null> => {
+    let made: T | null = null
+    try {
+      made = await edit
+    } finally {
+      if (!made) setCanvasEpoch((n) => n + 1)
+    }
+    return made
+  }, [])
+
   const onTransform = useCallback(
     async (
       sourceId: string,
@@ -2741,7 +2772,7 @@ export function App() {
       preview?: boolean,
       groupId?: string,
     ) => {
-      const updated = await window.slidesApi.editTransform({
+      const edit = window.slidesApi.editTransform({
         slideIndex: current,
         sourceId,
         xPx: box.x,
@@ -2753,12 +2784,13 @@ export function App() {
         ...(preview ? { preview: true } : {}),
         ...(groupId ? { groupId } : {}),
       })
+      const updated = await (preview ? edit : madeOrRedrawn(edit))
       if (updated) {
         setSlides((s) => s.map((sl, i) => (i === current ? updated : sl)))
         setDirty(true)
       }
     },
-    [current],
+    [current, madeOrRedrawn],
   )
 
   const onTransformMulti = useCallback(
@@ -2769,7 +2801,7 @@ export function App() {
         box: { x: number; y: number; w: number; h: number; rotationDeg: number }
       }>,
     ) => {
-      const updated = await window.slidesApi.editTransformMulti({
+      const edit = window.slidesApi.editTransformMulti({
         slideIndex: current,
         fitWidthPx: FIT_WIDTH,
         items: items.map((it) => ({
@@ -2782,12 +2814,13 @@ export function App() {
           rotationDeg: it.box.rotationDeg,
         })),
       })
+      const updated = await madeOrRedrawn(edit)
       if (updated) {
         setSlides((s) => s.map((sl, i) => (i === current ? updated : sl)))
         setDirty(true)
       }
     },
-    [current],
+    [current, madeOrRedrawn],
   )
 
   const onTransformCancel = useCallback(async () => {
@@ -4248,6 +4281,7 @@ export function App() {
                             }}
                           >
                             <SlideCanvas
+                              key={canvasEpoch}
                               ref={canvasRef}
                               slide={slide}
                               selectedIds={selectedIds}

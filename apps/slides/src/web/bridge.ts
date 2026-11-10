@@ -19,7 +19,7 @@ import {
 } from '@seuoffice/web-platform'
 import { setUiLang } from '@genoffice/i18n'
 import { getPrivateFontData, listPrivateFontFaces } from '../main/fonts'
-import type { DeckChange, DesktopFilesApi, OpenResult, SlidesApi } from '../shared/ipc'
+import type { DeckChange, DesktopFilesApi, OpenResult, SlideUpdate, SlidesApi } from '../shared/ipc'
 import type { SlidesOp } from './collab-ops'
 import type { SlidesCollabHandles } from './collab-side'
 import { coEditDeck, deckEdits, installHostSave } from './deck-edits'
@@ -206,13 +206,22 @@ let coEditing: PageCollab<SlidesCollabHandles> | null = null
 /** The renderer's deck-changed listeners; only co-editing sends them anything */
 const deckListeners = new Set<(change: DeckChange) => void>()
 
-/** Send the whole deck to the renderer: other people's edits changed it */
-function redrawDeck(): void {
+/**
+ * Tell the renderer the deck changed under it: `update` names the order and the slides to draw
+ * again (the renderer keeps the others, and a text box open on one of them); without it the
+ * whole deck is sent.
+ */
+function redrawDeck(update?: SlideUpdate): void {
   const session = currentSession()
-  const slides = renderDeck()
+  const slides = update ? update.slides : renderDeck()
   if (!session || !slides) return
   const { cx, cy } = session.opened.deck.size
-  for (const listener of deckListeners) listener({ slides, size: { cx, cy } })
+  const change: DeckChange = {
+    slides,
+    size: { cx, cy },
+    ...(update ? { order: update.order } : {}),
+  }
+  for (const listener of deckListeners) listener(change)
 }
 
 /**

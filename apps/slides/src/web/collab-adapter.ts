@@ -18,9 +18,11 @@ import {
   type TextElement,
 } from '@genoffice/pptx-engine'
 import type { EditParagraph } from '@genoffice/pptx-ops'
+import type { RenderSlide } from '@genoffice/pptx-render'
 import type { CollabAdapter } from '@seuoffice/collab/client'
 import { applyAutofitResize, syncAutofitScale } from '../main/autofit-writeback'
 import { rebuildSlide, type Session } from '../main/session-state'
+import type { SlideUpdate } from '../shared/ipc'
 import {
   applyOp,
   decodeOp,
@@ -46,7 +48,9 @@ export type Refusal = 'frozen' | 'gone'
 export interface SlidesCollabOptions {
   session: Session
   fileName: string
-  /** the deck changed under the renderer: draw it again */
+  /** other people's edits are about to change the deck: until now it is what the renderer shows */
+  changing(): void
+  /** the deck changed under the renderer: draw what changed */
   refresh(): void
   /** tell the person their edit is not in the deck */
   refused(reason: Refusal): void
@@ -166,6 +170,7 @@ export function createSlidesCollab(options: SlidesCollabOptions): SlidesCollab {
     },
 
     integrate(remote, local) {
+      options.changing()
       for (const [key, ref] of elementRefs(deck())) seen.set(key, ref)
       let kept: SlidesOp[] = []
       let gone: Set<string>
@@ -283,4 +288,29 @@ export function slideEdit(
   if (!applied) return null
   const made = createsSlide(edit) && applied.made ? { made: applied.made } : {}
   return { op: { id, edit: { ...edit, ...made } }, applied }
+}
+
+// ── what the renderer draws again ───────────────────────────────────────
+
+/** Each slide's render as text, by part path: a slide that draws the same gives the same text */
+export type Drawn = ReadonlyMap<string, string>
+
+export const drawnOf = (slides: readonly RenderSlide[]): Drawn =>
+  new Map(slides.map((slide) => [slide.partPath ?? '', JSON.stringify(slide)]))
+
+/**
+ * What the renderer needs after other people's edits: the order of the slides, and only the
+ * slides that draw differently from `before`. The renderer keeps its own objects for the rest
+ * (shared/slide-update.ts), so the text box a person is typing in on a slide nobody else
+ * touched stays open with what they typed; a whole new deck would open it again from the slide.
+ */
+export function redrawFrom(before: Drawn, slides: readonly RenderSlide[]): SlideUpdate {
+  const now = drawnOf(slides)
+  return {
+    order: slides.map((slide) => slide.partPath ?? ''),
+    slides: slides.filter((slide) => {
+      const path = slide.partPath ?? ''
+      return before.get(path) !== now.get(path)
+    }),
+  }
 }

@@ -49,11 +49,15 @@ import {
 import { runTxn, type EditParagraph } from '@genoffice/pptx-ops'
 // the kit from its source: this package's vitest config has no seuoffice-source condition
 import { simulate, type SimulatedEditor } from '../../../packages/collab/src/conformance/index'
-import type { Session } from '../src/main/session-state'
+import { buildAllRenderSlides, type Session } from '../src/main/session-state'
+import type { SlideUpdate } from '../src/shared/ipc'
 import {
   createSlidesCollab,
+  drawnOf,
+  redrawFrom,
   slideEdit,
   textEdit,
+  type Drawn,
   type Refusal,
   type SlidesCollab,
 } from '../src/web/collab-adapter'
@@ -139,9 +143,12 @@ interface Page {
   refusals: Refusal[]
   /** remote edits in the order this page integrated them */
   remote: SlidesOp[]
+  /** what each integrate told the renderer to draw again; filled only when the page draws */
+  redraws: SlideUpdate[]
 }
 
-function openPage(opened: OpenedPptx): Page {
+/** `draws`: the page renders around every integrate, the way collab-side.ts does for the renderer */
+function openPage(opened: OpenedPptx, draws = false): Page {
   const session: Session = {
     path: 'deck.pptx',
     opened,
@@ -150,13 +157,21 @@ function openPage(opened: OpenedPptx): Page {
     redoStack: [],
   }
   const refusals: Refusal[] = []
+  const redraws: SlideUpdate[] = []
+  const render = () => buildAllRenderSlides(session.opened, session.fitWidthPx)
+  let shown: Drawn = new Map()
   const collab = createSlidesCollab({
     session,
     fileName: 'deck.pptx',
-    refresh: () => {},
+    changing: () => {
+      if (draws) shown = drawnOf(render())
+    },
+    refresh: () => {
+      if (draws) redraws.push(redrawFrom(shown, render()))
+    },
     refused: (reason) => refusals.push(reason),
   })
-  return { session, collab, refusals, remote: [] }
+  return { session, collab, refusals, remote: [], redraws }
 }
 
 const WORDS = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'iota']
@@ -374,6 +389,79 @@ describe('the edits themselves', () => {
       expect(await fingerprint(b.session.opened)).toBe(await fingerprint(a.session.opened))
     })
   }
+
+  it('other people’s edits redraw only the slides they changed, also around this person’s own edit', () => {
+    const a = openPage(cloneDeck(baseDeck), true)
+    const b = openPage(cloneDeck(baseDeck))
+    const mine: SlidesOp[] = []
+    a.collab.adapter.listen((ops) => mine.push(...ops))
+    a.collab.adapter.setEditable(true)
+    const theirs: SlidesOp[] = []
+    b.collab.adapter.listen((ops) => theirs.push(...ops))
+    b.collab.adapter.setEditable(true)
+    const paths = a.session.opened.deck.slides.map((slide) => slide.path)
+    const type = (page: Page, id: string, slide: number, text: string) => {
+      const at = page.collab.refOf(firstBox(page.session.opened, slide).id)!
+      expect(
+        page.collab.edit(() => textEdit(page.session, id, at, [{ runs: [{ text }] }])),
+      ).not.toBeNull()
+    }
+
+    // their text on the second slide: the renderer keeps the other three as they are, so a box
+    // this person is typing in on one of them stays open with what they typed
+    type(b, 'u1.0', 1, 'theirs')
+    a.collab.adapter.integrate(theirs.splice(0), [])
+    expect(a.redraws.at(-1)!.order).toEqual(paths)
+    expect(a.redraws.at(-1)!.slides.map((slide) => slide.partPath)).toEqual([paths[1]])
+
+    // the same with an edit of this person's own still unconfirmed: the deck is put back and
+    // replayed, and still only their slide draws differently
+    type(a, 'u0.0', 0, 'mine')
+    type(b, 'u1.1', 2, 'theirs again')
+    a.collab.adapter.integrate(theirs.splice(0), mine.splice(0))
+    expect(a.redraws.at(-1)!.order).toEqual(paths)
+    expect(a.redraws.at(-1)!.slides.map((slide) => slide.partPath)).toEqual([paths[2]])
+
+    // a slide they add is new to the renderer; one they delete only leaves the order
+    const first = slideIdAt(b.session.opened, 0)!
+    expect(
+      b.collab.edit(() =>
+        slideEdit(b.session, 'u1.2', { kind: 'blankSlide', slide: first, before: false, made: '' }),
+      ),
+    ).not.toBeNull()
+    a.collab.adapter.integrate(theirs.splice(0), [])
+    const added = a.session.opened.deck.slides[1]!.path
+    expect(paths).not.toContain(added)
+    expect(a.redraws.at(-1)!.order).toEqual([paths[0], added, ...paths.slice(1)])
+    expect(a.redraws.at(-1)!.slides.map((slide) => slide.partPath)).toEqual([added])
+    const last = slideIdAt(b.session.opened, 4)!
+    expect(
+      b.collab.edit(() => slideEdit(b.session, 'u1.3', { kind: 'deleteSlides', slides: [last] })),
+    ).not.toBeNull()
+    a.collab.adapter.integrate(theirs.splice(0), [])
+    expect(a.redraws.at(-1)!.order).toEqual([paths[0], added, paths[1], paths[2]])
+    expect(a.redraws.at(-1)!.slides).toEqual([])
+  })
+
+  it('the engine’s random ids are the real ones again after an edit, also one that throws', () => {
+    const a = openPage(cloneDeck(baseDeck))
+    const at = a.collab.refOf(firstBox(a.session.opened, 1).id)!
+    const real = globalThis.crypto.randomUUID
+    const ok: SlidesOp = {
+      id: 'u0.0',
+      edit: { kind: 'text', at, paragraphs: [{ runs: [{ text: 'fine' }] }] },
+    }
+    expect(applyOp(a.session.opened, ok)).not.toBeNull()
+    expect(globalThis.crypto.randomUUID).toBe(real)
+    // a paragraph that cannot be copied makes the edit throw while the seeded ids answer
+    const broken = [{ runs: [{ text: 'x' }], oops: () => {} }] as unknown as EditParagraph[]
+    expect(() =>
+      applyOp(a.session.opened, { id: 'u0.1', edit: { kind: 'text', at, paragraphs: broken } }),
+    ).toThrow()
+    expect(globalThis.crypto.randomUUID).toBe(real)
+    expect(Object.hasOwn(globalThis.crypto, 'randomUUID')).toBe(false)
+    expect(globalThis.crypto.randomUUID()).not.toBe(globalThis.crypto.randomUUID())
+  })
 
   it('text typed into a box whose slide a peer moved lands in that box', () => {
     const a = openPage(cloneDeck(baseDeck))

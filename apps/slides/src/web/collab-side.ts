@@ -9,9 +9,16 @@ import type { CollabAdapter } from '@seuoffice/collab/client'
 import { showToast } from '../renderer/components/toast-bus'
 import { buildSlideUpdate, rebuildSlide } from '../main/session-state'
 import type { SlideUpdate, SlidesApi } from '../shared/ipc'
-import { createSlidesCollab, slideEdit, textEdit } from './collab-adapter'
+import {
+  createSlidesCollab,
+  drawnOf,
+  redrawFrom,
+  slideEdit,
+  textEdit,
+  type Drawn,
+} from './collab-adapter'
 import { slideIdAt, slideIndexOf, type SlidesEdit, type SlidesOp } from './collab-ops'
-import { currentSession, forPage } from './session'
+import { currentSession, forPage, renderDeck } from './session'
 
 /** What the renderer hands over once the co-edited deck is on screen */
 export interface SlidesCollabHandles {
@@ -68,8 +75,9 @@ const READS: Partial<Record<keyof SlidesApi, true>> = {
 
 /**
  * The adapter for the deck the page opened at `path`. `editMembers` are the bridge's editing
- * members; `install` puts the co-editing ones on the bridge, and `redraw` sends the whole deck
- * to the renderer after other people's edits changed it.
+ * members; `install` puts the co-editing ones on the bridge. After other people's edits
+ * `redraw` gets the slides that draw differently and the order; without an update it sends the
+ * whole deck.
  */
 export function openSlidesCollab(
   handles: SlidesCollabHandles,
@@ -79,17 +87,22 @@ export function openSlidesCollab(
     canEdit: boolean
     editMembers: ReadonlyArray<keyof SlidesApi>
     install(members: Partial<SlidesApi>): void
-    redraw(): void
+    redraw(update?: SlideUpdate): void
   },
 ): CollabAdapter<SlidesOp> {
   const session = currentSession()
   if (!session || session.path !== page.path || handles.path !== page.path) {
     throw new Error('the editor does not show the co-edited presentation')
   }
+  /** what the renderer shows, read just before other people's edits change the deck */
+  let shown: Drawn = new Map()
   const collab = createSlidesCollab({
     session,
     fileName: page.fileName,
-    refresh: page.redraw,
+    changing: () => {
+      shown = drawnOf(renderDeck() ?? [])
+    },
+    refresh: () => page.redraw(redrawFrom(shown, renderDeck() ?? [])),
     refused: notice,
   })
   const deck = session.opened
