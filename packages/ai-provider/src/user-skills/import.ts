@@ -402,15 +402,54 @@ export async function prepareZipImport(options: PrepareZipImportOptions): Promis
 /** The largest `SKILL.md` text taken as a skill of its own (pasted, or a dropped file) */
 export const MAX_SKILL_TEXT_IMPORT_BYTES = 2 * 1024 * 1024
 
+/** How many lines of other text may stand before the front matter of a pasted skill */
+export const SKILL_TEXT_LEAD_LINES = 5
+
+const FENCE_LINE = /^[ \t]*(?:```|~~~)/
+
 /**
- * The `name` of a text that reads as a `SKILL.md`: it starts with a `---`
- * front matter block (after blank space; `\s` also takes a byte order mark)
- * that has a `name`. `undefined` for any other text.
+ * The `SKILL.md` text inside what a person pasted or saved. A chat program
+ * wraps it in a code fence, and a sender puts a line of greeting before it,
+ * so the front matter may start after blank lines, a fence line and a few
+ * lines of other text; a fence opened before it is closed off at its end.
+ * Returns the text from its `---` line on, or `undefined` when no front
+ * matter with a `name` starts there.
+ */
+export function skillTextOf(text: string): string | undefined {
+  const source = text.startsWith('﻿') ? text.slice(1) : text
+  let start = -1
+  let lead = 0
+  let fenced = false
+  for (let at = 0; at <= source.length && lead <= SKILL_TEXT_LEAD_LINES;) {
+    const end = source.indexOf('\n', at)
+    const line = source.slice(at, end === -1 ? source.length : end).trim()
+    if (line === '---') {
+      start = at
+      break
+    }
+    if (line !== '') lead++
+    if (FENCE_LINE.test(line)) fenced = true
+    if (end === -1) break
+    at = end + 1
+  }
+  if (start === -1) return undefined
+  let rest = source.slice(start).replace(/^[ \t]+/, '')
+  if (fenced) {
+    // the opening fence is gone with the lead; an odd number of fence lines left means its closing one is the last
+    const fences = [...rest.matchAll(/^[ \t]*(?:```|~~~).*$/gm)]
+    const last = fences[fences.length - 1]
+    if (fences.length % 2 === 1 && last) rest = rest.slice(0, last.index)
+  }
+  return parseSkillMd(rest)?.name?.trim() ? rest : undefined
+}
+
+/**
+ * The `name` of a text that reads as a `SKILL.md` (`skillTextOf`): a `---`
+ * front matter block that has a `name`. `undefined` for any other text.
  */
 export function skillTextName(text: string): string | undefined {
-  const start = text.replace(/^\s+/, '')
-  if (!start.startsWith('---')) return undefined
-  return parseSkillMd(start)?.name?.trim() || undefined
+  const found = skillTextOf(text)
+  return found === undefined ? undefined : parseSkillMd(found)?.name?.trim() || undefined
 }
 
 export interface PrepareTextImportOptions {
@@ -428,15 +467,16 @@ async function prepareSingleFileImport(
   if (Buffer.byteLength(text, 'utf8') > MAX_SKILL_TEXT_IMPORT_BYTES) {
     throw new SkillImportError('too-large', 'The SKILL.md text is too large')
   }
-  const name = skillTextName(text)
-  if (name === undefined) throw noSkills()
+  const skillMd = skillTextOf(text)
+  const name = skillMd === undefined ? undefined : parseSkillMd(skillMd)?.name?.trim()
+  if (skillMd === undefined || !name) throw noSkills()
   const work = await makeWorkDir(options.tempDir)
   try {
     const root = join(work, 'text')
     // the folder gets the skill's name, so a name the rule refuses still shows as that problem
     const folder = USER_SKILL_NAME.test(name) ? name : 'skill'
     await mkdir(join(root, folder), { recursive: true })
-    await writeFile(join(root, folder, 'SKILL.md'), text.replace(/^\s+(?=---)/, ''))
+    await writeFile(join(root, folder, 'SKILL.md'), skillMd)
     const candidates = await describeCandidates(root, [folder], options.appSkillsDir, undefined)
     if (candidates.length === 0) throw noSkills()
     return { origin, root, candidates, rootLicense: undefined, tempDir: work }

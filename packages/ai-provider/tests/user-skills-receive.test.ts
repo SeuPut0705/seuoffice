@@ -23,7 +23,9 @@ import {
   prepareSkillImport,
   prepareZipImport,
   skillArchiveLayout,
+  SKILL_TEXT_LEAD_LINES,
   skillTextName,
+  skillTextOf,
   skillWarningsInText,
   type SkillFetch,
   type SkillImport,
@@ -155,9 +157,41 @@ describe('pasted and single-file SKILL.md', () => {
     expect(skillTextName(skillMd('home-letter'))).toBe('home-letter')
     expect(skillTextName(`\uFEFF\n  ${skillMd('home-letter')}`)).toBe('home-letter')
     expect(skillTextName('---\ndescription: no name\n---\nbody')).toBeUndefined()
-    expect(skillTextName('Some notes\n---\nname: x\n---')).toBeUndefined()
     expect(skillTextName('---\nname: x\n')).toBeUndefined()
     expect(skillTextName('')).toBeUndefined()
+  })
+
+  it('finds the SKILL.md text a chat program wrapped or a sender introduced', async () => {
+    const text = skillMd('home-letter', 'Write the letter.\n\n```\nDear parents,\n```\n')
+    const crlf = text.replace(/\n/g, '\r\n')
+    // blank lines first
+    expect(skillTextOf(`\n\n\n${text}`)).toBe(text)
+    // a code fence around it, with and without a language, and CRLF line ends
+    expect(skillTextOf(`\`\`\`markdown\n${text}\`\`\`\n`)).toBe(text)
+    expect(skillTextOf(`\`\`\`\n${text}\`\`\``)).toBe(text)
+    expect(skillTextOf(`~~~\r\n${crlf}~~~\r\n`)).toBe(crlf)
+    // a greeting before it, and a remark after the closing fence
+    expect(skillTextOf(`Here is the skill I told you about:\n\n${text}`)).toBe(text)
+    expect(skillTextOf(`Hi!\nTry this one.\n\`\`\`\n${text}\`\`\`\nTell me how it goes.\n`)).toBe(
+      text,
+    )
+    // a fence that only belongs to the skill's own body stays
+    expect(skillTextOf(text)).toBe(text)
+
+    // still not a skill: no name, front matter too far down, or never closed
+    expect(skillTextOf('Hello\n---\ndescription: no name\n---\nbody')).toBeUndefined()
+    expect(skillTextOf(`${'A line.\n'.repeat(SKILL_TEXT_LEAD_LINES + 1)}${text}`)).toBeUndefined()
+    expect(skillTextOf('```\n---\nname: x\n```')).toBeUndefined()
+    expect(skillTextOf('just notes')).toBeUndefined()
+
+    const e = env()
+    const imported = await prepareSkillImport(
+      { kind: 'text', text: `Hi!\n\`\`\`\n${text}\`\`\`\n` },
+      e,
+    )
+    expect(imported.candidates[0]).toMatchObject({ name: 'home-letter', problem: undefined })
+    expect(readFileSync(join(imported.candidates[0]!.dir, 'SKILL.md'), 'utf8')).toBe(text)
+    await disposeSkillImport(imported)
   })
 
   it('previews pasted text as one skill and installs that one file', async () => {
