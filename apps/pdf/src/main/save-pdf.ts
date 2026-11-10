@@ -493,7 +493,7 @@ function addLinkAnnot(
   if (d.url) {
     annot.set(
       PDFName.of('A'),
-      pdfDoc.context.obj({ Type: 'Action', S: 'URI', URI: PDFString.of(d.url) }),
+      pdfDoc.context.obj({ Type: 'Action', S: 'URI', URI: literalString(d.url) }),
     )
   } else {
     const target = pages[(d.destPage ?? 1) - 1]
@@ -504,6 +504,21 @@ function addLinkAnnot(
     )
   }
   appendAnnot(pdfDoc, page, pdfDoc.context.register(annot))
+}
+
+/**
+ * `text` as a PDF literal string. pdf-lib's `PDFString.of` writes its value between the
+ * parentheses as is, so a `)` in the text would end the string early (and what follows
+ * would be read as PDF syntax) and a trailing `\` would escape the closing one. Line ends
+ * are escaped too: a reader turns a raw CR into LF.
+ */
+function literalString(text: string): PDFString {
+  return PDFString.of(
+    text
+      .replace(/[\\()]/g, '\\$&')
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n'),
+  )
 }
 
 /** Epoch ms → PDF date string, e.g. D:20260812175959+08'00' */
@@ -934,7 +949,7 @@ const ALIGNMENT = {
 /** Acrobat's AFDate_* viewer scripts: format on display, validate on keystroke (what WPS/Acrobat write for date fields) */
 function installDateActions(pdfDoc: PDFDocument, widget: PDFDict, format: string): void {
   const fmt = format.replace(/["\\]/g, '')
-  const js = (code: string) => pdfDoc.context.obj({ S: 'JavaScript', JS: PDFString.of(code) })
+  const js = (code: string) => pdfDoc.context.obj({ S: 'JavaScript', JS: literalString(code) })
   widget.set(
     PDFName.of('AA'),
     pdfDoc.context.obj({
