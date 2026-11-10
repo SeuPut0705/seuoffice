@@ -21,7 +21,7 @@
 ## 항상 지켜야 하는 것
 
 - 이 프로젝트는 원본의 수정을 병합할 때만 이 크레이트의 동작을 바꾼다. 예외는 사람이 정해 아래 "원본과 다른 점"에 적은 수정뿐이다(결정 0111). 그 밖에는 같은 파일에서 나오는 결과가 원본이 내는 것과 같아야 한다. 이름(`xlsx-sidecar`, 명령과 필드 이름, 기본 로캘 `"zh"`, 임시 폴더 접두사)을 고치지 않고, 파일을 옮기거나 다시 포맷하지 않는다. 그래야 원본의 수정이 충돌 없이 들어온다.
-- 예외: calamine은 원본보다 먼저 0.38로 올렸다(결정 0124). 0.37까지는 Excel 5.0/95 `.xls`의 2바이트 코드페이지(949·932·936·950) 글자를 모두 `�`로 읽었다. 원본을 받아오다 calamine 줄이 충돌하면 더 높은 판을 남기고, `convert.rs`의 `a_biff5_workbook_in_a_double_byte_code_page_keeps_its_text`가 통과하는지 본다.
+- 예외: calamine은 원본보다 먼저 0.38로 올렸다(결정 0126). 0.37까지는 Excel 5.0/95 `.xls`의 2바이트 코드페이지(949·932·936·950) 글자를 모두 `�`로 읽었다. 원본을 받아오다 calamine 줄이 충돌하면 더 높은 판을 남기고, `convert.rs`의 `a_biff5_workbook_in_a_double_byte_code_page_keeps_its_text`가 통과하는지 본다.
 - 요청과 응답은 한 줄에 JSON 하나다. 요청은 `version`, `requestId`, `command`(snake_case 값)와 그 명령의 필드(camelCase)를 한 객체에 평평하게 담는다. 응답은 `version`, `requestId`, `ok`와 `result` 또는 `error: { code, message }` 중 하나다. 이 모양과 이름을 바꾸지 않는다.
 - `PROTOCOL_VERSION`(지금 1)은 `src/main.rs`와 `xlsx-sidecar-client.ts`에 따로 있다. 한쪽만 올리지 않는다. 클라이언트는 버전이 다른 줄을 잡음으로 버리므로, 어긋나면 오류가 아니라 모든 요청의 시간 초과로 나타난다. 깨진 JSON 요청도 같다. `invalid_json` 응답은 `requestId`가 비어 있어 짝이 맞지 않는다.
 - stdout에는 `write_response`로만 쓴다. `println!` 같은 출력을 넣지 않는다. 응답은 요청 루프, `xlsx-reader`, `xlsx-recalc` 세 스레드가 한 잠금 아래에서 쓰므로 요청 순서와 다르게 나올 수 있고, 짝은 `requestId`로만 맞춘다.
