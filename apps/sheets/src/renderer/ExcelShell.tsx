@@ -1007,7 +1007,9 @@ export function ExcelShell({
     >
       <header className={`excel-header ${collapse.rootClass}`} ref={collapse.rootRef}>
         <nav
-          className={`ribbon-tabs ${IN_TAB ? '' : IS_MAC ? 'ribbon-tabs-mac' : 'ribbon-tabs-win'}`}
+          // a row longer than the default gives the tabs their room back in a
+          // narrow window (styles.css)
+          className={`ribbon-tabs ${IN_TAB ? '' : IS_MAC ? 'ribbon-tabs-mac' : 'ribbon-tabs-win'}${quickAccess.length > DEFAULT_QUICK_ACCESS.length ? ' qa-crowded' : ''}`}
           aria-label={t('appScopeWorkbook')}
           onDoubleClick={collapse.onTabsDoubleClick}
         >

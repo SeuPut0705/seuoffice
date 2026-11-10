@@ -1955,6 +1955,21 @@ button.check-item:hover {
   width: 18px;
 }
 
+/* With more buttons than the default four, a window near the 720px minimum
+   cannot hold the row, the auto-save label and every tab: the last tab (and a
+   contextual one after it) slid past the edge. The label goes and the tabs
+   tighten, so ten buttons and a contextual tab fit at the minimum width. */
+@media (max-width: 840px) {
+  .ribbon-tabs.qa-crowded .autosave-text {
+    display: none;
+  }
+
+  .ribbon-tabs.qa-crowded > button:not(.qa-btn) {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+}
+
 .quick-access-menu {
   width: 290px;
   overflow-y: auto;
