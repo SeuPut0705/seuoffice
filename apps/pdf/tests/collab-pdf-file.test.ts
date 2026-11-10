@@ -3,7 +3,6 @@
  * bytes and the edits of the log. Two people edit at once, a third page that
  * only replays the log writes the file, and the file is read back.
  */
-import type { Json } from '@seuoffice/collab/client'
 import { PDFArray, PDFDict, PDFDocument, PDFName } from 'pdf-lib'
 import { describe, expect, it } from 'vitest'
 import { createPdfAdapter } from '../src/web/collab-adapter'

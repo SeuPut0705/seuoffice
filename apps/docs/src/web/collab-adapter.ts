@@ -149,7 +149,7 @@ export function createDocsAdapter(options: DocsAdapterOptions): CollabAdapter<Do
    * engine's unconfirmed ops, then the outbox's.
    */
   let tail: Rebaseable[] = []
-  let sideConfirmed = new Map(side.read())
+  const sideConfirmed = new Map(side.read())
   let sideView = new Map(sideConfirmed)
   let frozen = false
   let serial = 0
