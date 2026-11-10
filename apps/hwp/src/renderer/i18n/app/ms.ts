@@ -8,6 +8,7 @@ export const ms = {
   saveFailed: 'Dokumen tidak dapat disimpan.',
   fileSave: 'Simpan',
   fileSaveAs: 'Simpan Sebagai…',
+  fileImportPdf: 'Import PDF…',
   fileExportPdf: 'Eksport sebagai PDF…',
   filePrint: 'Cetak…',
   autoSave: 'Simpan automatik',
