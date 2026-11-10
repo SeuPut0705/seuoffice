@@ -14,6 +14,7 @@ import type { DrawingInput, FormFieldInput } from '../src/shared/ipc'
 import { addBlankPage, draw, highlight, ink, note, picture, stamp } from './collab/actions'
 import { Room, blankFile, fileBytes, openHeadless, type HeadlessPdf } from './collab/headless'
 import { DATE_FORMATS } from '../src/renderer/FormDesignLayer'
+import { dateFormatFromActions } from '../src/renderer/date-format'
 import { WireError } from '../src/web/collab-wire'
 
 const PAGES = 3
@@ -371,18 +372,55 @@ describe('shapes the app does not make are not taken', () => {
 
   it.each([
     'y) >> /Fo << /S /JavaScript /JS (app.alert(1)) >> /Zz << /JS (',
-    'dd.mm.yyyy',
-    'YYYY-MM-DD',
+    ')) >> /Fo << /S /JavaScript /JS (app.alert(1)) >> /Zz << /JS ((',
     '',
-  ])('a date format the form designer does not offer: %j', (dateFormat) => {
+    'yyyy\\mm',
+    'yyyy"mm',
+    "yyyy'mm",
+    'yyyy\nmm',
+    'yyyy\u0000mm',
+    'yyyy\u2028mm',
+    'yyyy<mm>',
+    'y'.repeat(65),
+  ])('a date format no file carries is not taken: %j', (dateFormat) => {
     const page = open()
     expect(() =>
       page.adapter.decode({ id: 'x', puts: [dateFieldPut(dateFormat)] } as Json),
     ).toThrow(WireError)
   })
 
-  it.each(DATE_FORMATS)('every date format the form designer offers is taken: %s', (format) => {
-    expect(() => take(dateFieldPut(format))).not.toThrow()
+  /** Acrobat's legacy AFDate_Keystroke(n) formats, as date-format.ts reads them from a file */
+  const legacy: string[] = []
+  for (let n = 0; ; n++) {
+    const format = dateFormatFromActions({ Keystroke: [`AFDate_Keystroke(${n});`] })
+    if (format === null) break
+    legacy.push(format)
+  }
+
+  it.each([
+    ...DATE_FORMATS,
+    ...legacy,
+    'dd.mm.yyyy',
+    'yyyy-mm-dd HH:MM',
+    'm/d/yyyy h:MM tt',
+    'yyyy년 mm월 dd일',
+    'yyyy年mm月dd日',
+  ])('a date field of a format a file carries travels to a peer: %j', (format) => {
+    expect(dateFormatFromActions({ Format: [`AFDate_FormatEx("${format}");`] })).toBe(format)
+    const room = new Room()
+    const a = room.join()
+    const b = room.join()
+    const field: FormFieldInput = {
+      name: 'Date 1',
+      kind: 'text',
+      pageIndex: 0,
+      rect: [10, 60, 200, 90],
+      dateFormat: format,
+    }
+    expect(a.app.apply([{ op: 'addFormField', field }]).failures).toEqual([])
+    expect(a.app.refusals).toEqual([])
+    room.settle(a)
+    expect(b.app.state.formFields.map((f) => f.input.dateFormat)).toEqual([format])
   })
 })
 

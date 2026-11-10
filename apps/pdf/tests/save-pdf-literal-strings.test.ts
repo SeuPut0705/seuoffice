@@ -1,12 +1,14 @@
 /**
- * Text that reaches a PDF literal string `( … )` in a save: a link address and a date
- * field's format. pdf-lib's `PDFString.of` writes its value raw, so a `)` in the value
- * would close the string and the rest would become PDF syntax (another action), and a
- * trailing `\` would swallow the closing parenthesis. The saved bytes are read back and
- * checked by structure, not by searching the text.
+ * Text that reaches a PDF string in a save: a link address and a date field's format.
+ * pdf-lib's `PDFString.of` writes its value raw, so a `)` in the value would close the
+ * string and the rest would become PDF syntax (another action), and a trailing `\` would
+ * swallow the closing parenthesis. It also writes each UTF-16 code unit as its low byte,
+ * so a character above U+00FF can turn into `(`, `)` or `\`. The saved bytes are read
+ * back and checked by structure, not by searching the text.
  */
 import { describe, expect, it } from 'vitest'
 import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFString } from 'pdf-lib'
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { applySaveRequest } from '../src/main/save-pdf'
 import type { DrawingInput, FormFieldInput, SavePdfRequest } from '../src/shared/ipc'
 
@@ -106,7 +108,42 @@ describe('text in a literal string stays text', () => {
     })
   }
 
-  for (const format of DATE_PAYLOADS) {
+  // U+0128 and U+0129 are `(` and `)` once a code unit is cut to its low byte
+  const WIDE_LINK_PAYLOAD =
+    'https://a.example/\u0129 /Next << /S /JavaScript /JS \u0128app.alert\u01281\u0129\u0129 >> /Zz \u0128'
+  for (const url of [WIDE_LINK_PAYLOAD, 'https://ko.wikipedia.org/wiki/대한민국?q=서울#역사']) {
+    it(`a link to ${JSON.stringify(url)} is written as its ASCII address and opens as a link`, async () => {
+      const href = new URL(url).href
+      const pdf = await save({ drawings: [link(url)] })
+      const action = linkAction(pdf)
+      expect(keys(action)).toEqual(['/S', '/Type', '/URI'])
+      expect(text(action.get(PDFName.of('URI')))).toBe(href)
+      expect(scripts(pdf)).toEqual([])
+      // what a viewer reads: pdf.js takes the annotation as a link to that address
+      const viewer = await getDocument({ data: await pdf.save() }).promise
+      const annots = await (await viewer.getPage(1)).getAnnotations()
+      expect(annots.map((a: { subtype: string; url?: string }) => [a.subtype, a.url])).toEqual([
+        ['Link', href],
+      ])
+    })
+  }
+
+  it('an address the URL parser refuses keeps its ASCII and percent-encodes the rest', async () => {
+    const url = 'https://한 국/\u0129(x'
+    expect(() => new URL(url)).toThrow()
+    const action = linkAction(await save({ drawings: [link(url)] }))
+    expect(keys(action)).toEqual(['/S', '/Type', '/URI'])
+    expect(text(action.get(PDFName.of('URI')))).toBe('https://%ED%95%9C %EA%B5%AD/%C4%A9(x')
+  })
+
+  for (const format of [
+    ...DATE_PAYLOADS,
+    'yyyy年mm月dd日',
+    'yyyy년 mm월 dd일',
+    'm/d/yy h:MM tt',
+    'dd.mm.yyyy',
+    '\u0129\u0129 >> /Fo << /JS \u0128\u0128',
+  ]) {
     it(`the date format ${JSON.stringify(format)} writes only the two date scripts`, async () => {
       const pdf = await save({ formFields: [dateField(format)] })
       const triggers = dictionaries(pdf).flatMap((dict) => {

@@ -493,7 +493,7 @@ function addLinkAnnot(
   if (d.url) {
     annot.set(
       PDFName.of('A'),
-      pdfDoc.context.obj({ Type: 'Action', S: 'URI', URI: literalString(d.url) }),
+      pdfDoc.context.obj({ Type: 'Action', S: 'URI', URI: literalString(uriAddress(d.url)) }),
     )
   } else {
     const target = pages[(d.destPage ?? 1) - 1]
@@ -506,19 +506,45 @@ function addLinkAnnot(
   appendAnnot(pdfDoc, page, pdfDoc.context.register(annot))
 }
 
+/** Anything outside 7-bit ASCII */
+const NOT_ASCII = /[\u0080-\uffff]/
+
 /**
- * `text` as a PDF literal string. pdf-lib's `PDFString.of` writes its value between the
+ * `text` as a PDF string. pdf-lib's `PDFString.of` writes its value between the
  * parentheses as is, so a `)` in the text would end the string early (and what follows
- * would be read as PDF syntax) and a trailing `\` would escape the closing one. Line ends
- * are escaped too: a reader turns a raw CR into LF.
+ * would be read as PDF syntax) and a trailing `\` would escape the closing one; line ends
+ * are escaped too, as a reader turns a raw CR into LF. It also writes each UTF-16 code
+ * unit as its low byte, so text beyond ASCII (where a code unit could come out as `(`, and
+ * where bytes 0x80-0xFF would be read as PDFDocEncoding, not Latin-1) is written as a
+ * UTF-16 hex string instead: right for a text string such as `/JS`. A byte string such as
+ * `/URI` must be ASCII before it gets here.
  */
-function literalString(text: string): PDFString {
+function literalString(text: string): PDFString | PDFHexString {
+  if (NOT_ASCII.test(text)) return PDFHexString.fromText(text)
   return PDFString.of(
     text
       .replace(/[\\()]/g, '\\$&')
       .replace(/\r/g, '\\r')
       .replace(/\n/g, '\\n'),
   )
+}
+
+/**
+ * A link address as the 7-bit ASCII a URI action holds: an ASCII address as typed (so
+ * saves without such characters stay byte for byte what they were), any other as the
+ * URL parser writes it (host in punycode, the rest percent-encoded as UTF-8), and one it
+ * cannot parse with only its non-ASCII characters percent-encoded.
+ */
+function uriAddress(url: string): string {
+  if (!NOT_ASCII.test(url)) return url
+  try {
+    return new URL(url).href
+  } catch {
+    const utf8 = new TextEncoder()
+    return url.replace(/[\u0080-\uffff]+/g, (run) =>
+      Array.from(utf8.encode(run), (byte) => `%${byte.toString(16).toUpperCase()}`).join(''),
+    )
+  }
 }
 
 /** Epoch ms → PDF date string, e.g. D:20260812175959+08'00' */

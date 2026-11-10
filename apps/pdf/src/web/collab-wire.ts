@@ -19,7 +19,6 @@ import { safeExternalUrl } from '@genoffice/electron-utils/safe-external-url'
 import type { Json } from '@seuoffice/collab/client'
 import type { LocalMarkup } from '../renderer/annotations'
 import type { LocalDrawing } from '../renderer/DrawLayer'
-import { DATE_FORMATS } from '../renderer/FormDesignLayer'
 import type {
   LocalBlankPage,
   LocalFormField,
@@ -186,6 +185,17 @@ const objNum = integer(0, 2 ** 31)
 const hexColor: Check = (v, at) => {
   if (typeof v !== 'string' || !/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) {
     fail('shape', at, 'a hex colour')
+  }
+}
+
+/**
+ * An AFDate format as a file carries it (date-format.ts reads any; the designer offers four):
+ * its tokens are ASCII letters, between them separators, and a local file spells the parts
+ * out in its own script (`yyyy년 mm월 dd일`). The save writes it into a viewer script.
+ */
+const dateFormat: Check = (v, at) => {
+  if (typeof v !== 'string' || !/^[\p{L}0-9 .,:/-]{1,64}$/u.test(v)) {
+    fail('shape', at, 'a date format of letters, digits, spaces and . , : / -')
   }
 }
 
@@ -357,8 +367,7 @@ const ITEM: Record<Carried, Check> = {
         checked: flag,
         exportValue: name,
         options: list(WIRE_LIMITS.options, name),
-        // the formats the form designer offers; the save writes the format into viewer scripts
-        dateFormat: oneOf(...DATE_FORMATS),
+        dateFormat,
       },
       [
         'required',
