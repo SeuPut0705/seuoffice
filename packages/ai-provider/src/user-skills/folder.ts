@@ -232,15 +232,23 @@ export function mcpServersOfSkillMd(parsed: ParsedSkillMd): string[] {
 /**
  * SHA-256 (hex) of a skill folder's paths, sizes and contents, leaving out the
  * GitHub source record at its top. The same files give the same hash on any
- * machine: paths use `/` and are sorted by code unit.
+ * machine: paths use `/` and are sorted by code unit. `skillMd` hashes the
+ * SKILL.md as the given function rewrites its text.
  */
-export async function skillContentHash(dir: string): Promise<string> {
+export async function skillContentHash(
+  dir: string,
+  options: { skillMd?: ((text: string) => string) | undefined } = {},
+): Promise<string> {
   const listed = await listSkillFolderFiles(dir)
   if (!listed) throw new Error(`Cannot read the skill folder: ${dir}`)
   const hash = createHash('sha256')
   for (const file of listed.files) {
     if (file.rel === IEUM_SOURCE_FILE) continue
-    const content = await readFile(file.path)
+    const read = await readFile(file.path)
+    const content =
+      options.skillMd && file.rel === 'SKILL.md'
+        ? Buffer.from(options.skillMd(read.toString('utf8')), 'utf8')
+        : read
     hash.update(`${file.rel}\0${content.length}\0`)
     hash.update(content)
   }
