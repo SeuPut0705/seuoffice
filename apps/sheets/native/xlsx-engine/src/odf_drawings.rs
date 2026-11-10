@@ -44,6 +44,10 @@ pub(crate) struct DrawStyle {
     pub(crate) parent: Option<String>,
     /// `none`, `solid` or `dash`.
     pub(crate) stroke: Option<String>,
+    /// The name of the dash a dashed stroke is drawn with.
+    pub(crate) stroke_dash: Option<String>,
+    /// The name of the gradient a gradient fill is drawn with.
+    pub(crate) fill_gradient: Option<String>,
     /// In points.
     pub(crate) stroke_width: Option<f64>,
     /// `RRGGBB`.
@@ -86,7 +90,8 @@ impl DrawStyle {
             };
         }
         inherit!(
-            stroke, stroke_width, stroke_color, fill, fill_color, opacity, image_opacity,
+            stroke, stroke_dash, fill_gradient, stroke_width, stroke_color, fill, fill_color, opacity,
+            image_opacity,
             vertical_align, horizontal_align, wrap, marker_start, marker_end, align, color, size,
             bold, italic,
             underline, font, font_asian
@@ -105,6 +110,118 @@ impl DrawStyle {
 pub(crate) struct DrawStyles {
     styles: HashMap<(Family, String), DrawStyle>,
     defaults: HashMap<Family, DrawStyle>,
+    /// The DrawingML preset each named dash of the document comes closest to.
+    pub(crate) dashes: HashMap<String, &'static str>,
+    /// The named linear gradients of the document.
+    pub(crate) gradients: HashMap<String, Gradient>,
+}
+
+/// A linear gradient: the angle the way DrawingML counts it (degrees
+/// clockwise, 0 = left to right) and the colours along it, 0 to 1.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Gradient {
+    pub(crate) angle: f64,
+    pub(crate) stops: Vec<(f64, String)>,
+}
+
+/// A document may declare many dashes and gradients; these are plenty.
+const MAX_NAMED_STYLES: usize = 10_000;
+const MAX_GRADIENT_STOPS: usize = 64;
+
+/// A length of a dash in line widths: a percentage of the width, or a
+/// measure taken against a line one point wide.
+fn dash_units(value: Option<&str>) -> Option<f64> {
+    let value = value?.trim();
+    match value.strip_suffix('%') {
+        Some(percent) => percent.trim().parse::<f64>().ok().map(|percent| percent / 100.0),
+        None => length_points(value),
+    }
+    .filter(|units| units.is_finite() && *units >= 0.0)
+}
+
+/// The preset dash nearest to a `draw:stroke-dash`. One the export wrote is
+/// found in its table; any other is told apart by how long its strokes are
+/// and how many dots sit between them.
+fn dash_preset(attributes: &[(String, String)]) -> &'static str {
+    let count = |name: &str| {
+        get(attributes, name)
+            .and_then(|count| count.trim().parse::<u32>().ok())
+            .unwrap_or(0)
+    };
+    let (dots1, dots2) = (count("draw:dots1"), count("draw:dots2"));
+    let length1 = dash_units(get(attributes, "draw:dots1-length")).unwrap_or(1.0);
+    let length2 = dash_units(get(attributes, "draw:dots2-length")).unwrap_or(1.0);
+    let distance = dash_units(get(attributes, "draw:distance")).unwrap_or(1.0);
+    let percent = |units: f64| (units * 100.0).round() as u32;
+    if let Some(entry) = crate::ods_drawing::DASHES.iter().find(|entry| {
+        u32::from(entry.1) == dots1
+            && entry.2 == percent(length1)
+            && u32::from(entry.3) == dots2
+            && (dots2 == 0 || entry.4 == percent(length2))
+            && entry.5 == percent(distance)
+    }) {
+        return entry.0;
+    }
+    // The longer kind of stroke is the dash, the shorter one the dots.
+    let (long, dots) = match (dots1 > 0, dots2 > 0) {
+        (true, true) if length1 >= length2 => (length1, dots2),
+        (true, true) => (length2, dots1),
+        (true, false) => (length1, 0),
+        (false, true) => (length2, 0),
+        (false, false) => return "dash",
+    };
+    match (dots, long) {
+        (0, long) if long < 2.0 => {
+            if distance < 2.0 {
+                "sysDot"
+            } else {
+                "dot"
+            }
+        }
+        (0, long) if long < 3.5 => "sysDash",
+        (0, long) if long < 6.0 => "dash",
+        (0, _) => "lgDash",
+        (1, long) if long < 3.5 => "sysDashDot",
+        (_, long) if long < 3.5 => "sysDashDotDot",
+        (1, long) if long < 6.0 => "dashDot",
+        (1, _) => "lgDashDot",
+        _ => "lgDashDotDot",
+    }
+}
+
+/// A gradient while its element is open: name, angle, the colours of its
+/// two ends, and the stops listed inside it.
+type PendingGradient = (String, f64, Vec<(f64, String)>, Vec<(f64, String)>);
+
+/// Keeps a gradient that was read to its end. The stops listed inside it say
+/// more than the two colours of its ends, and are used when there are two or
+/// more of them.
+fn finish_gradient(pending: &mut Option<PendingGradient>, styles: &mut DrawStyles) {
+    let Some((name, angle, ends, listed)) = pending.take() else {
+        return;
+    };
+    let mut stops = if listed.len() >= 2 { listed } else { ends };
+    if stops.len() < 2 {
+        return;
+    }
+    stops.sort_by(|a, b| a.0.total_cmp(&b.0));
+    styles.gradients.insert(name, Gradient { angle, stops });
+}
+
+/// The angle of a `draw:gradient` in degrees. A bare number is in tenths of
+/// a degree, the way the format wrote it before it took units.
+fn gradient_degrees(value: Option<&str>) -> Option<f64> {
+    let value = value.unwrap_or("0").trim();
+    let degrees = if let Some(degrees) = value.strip_suffix("deg") {
+        degrees.trim().parse::<f64>().ok()?
+    } else if let Some(grads) = value.strip_suffix("grad") {
+        grads.trim().parse::<f64>().ok()? * 0.9
+    } else if let Some(radians) = value.strip_suffix("rad") {
+        radians.trim().parse::<f64>().ok()?.to_degrees()
+    } else {
+        value.parse::<f64>().ok()? / 10.0
+    };
+    degrees.is_finite().then_some(degrees)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -501,6 +618,8 @@ fn read_properties(kind: &[u8], attributes: &[(String, String)], style: &mut Dra
     match kind {
         b"style:graphic-properties" => {
             style.stroke = text("draw:stroke").or(style.stroke.take());
+            style.stroke_dash = text("draw:stroke-dash").or(style.stroke_dash.take());
+            style.fill_gradient = text("draw:fill-gradient-name").or(style.fill_gradient.take());
             style.stroke_width = get(attributes, "svg:stroke-width")
                 .and_then(length_points)
                 .or(style.stroke_width);
@@ -1559,6 +1678,9 @@ fn parse<R: BufRead>(
     // The style being read: its family, its name (none for a family default)
     // and what it has set so far.
     let mut style: Option<(Family, Option<String>, DrawStyle)> = None;
+    // The gradient being read: its name, its angle, the two colours it
+    // states itself and the stops listed inside it.
+    let mut gradient: Option<PendingGradient> = None;
     // The column or row style being read: true for a row style, and its id.
     let mut size_style: Option<(bool, u32)> = None;
     let mut next_column_definition = 0u32;
@@ -1599,6 +1721,62 @@ fn parse<R: BufRead>(
                     continue;
                 }
                 match name {
+                    b"draw:stroke-dash" => {
+                        let attributes = attributes(reader, &element)?;
+                        if let Some(name) = get(&attributes, "draw:name") {
+                            if styles.dashes.len() < MAX_NAMED_STYLES {
+                                styles.dashes.insert(name.to_owned(), dash_preset(&attributes));
+                            }
+                        }
+                    }
+                    b"draw:gradient" => {
+                        let attributes = attributes(reader, &element)?;
+                        // Only a gradient along a line has a counterpart
+                        // this reader writes; the others keep the flat fill.
+                        gradient = match (
+                            get(&attributes, "draw:name"),
+                            get(&attributes, "draw:style").unwrap_or("linear"),
+                            gradient_degrees(get(&attributes, "draw:angle")),
+                        ) {
+                            (Some(name), "linear", Some(degrees))
+                                if styles.gradients.len() < MAX_NAMED_STYLES =>
+                            {
+                                let ends: Vec<(f64, String)> = [
+                                    (0.0, get(&attributes, "draw:start-color")),
+                                    (1.0, get(&attributes, "draw:end-color")),
+                                ]
+                                .into_iter()
+                                .filter_map(|(at, value)| Some((at, color(value?)?)))
+                                .collect();
+                                Some((
+                                    name.to_owned(),
+                                    // The format turns a top-to-bottom
+                                    // gradient anticlockwise.
+                                    (90.0 - degrees).rem_euclid(360.0),
+                                    ends,
+                                    Vec::new(),
+                                ))
+                            }
+                            _ => None,
+                        };
+                        if empty {
+                            finish_gradient(&mut gradient, styles);
+                        }
+                    }
+                    b"loext:gradient-stop" => {
+                        if let Some((_, _, _, stops)) = gradient.as_mut() {
+                            let attributes = attributes(reader, &element)?;
+                            let at = get(&attributes, "svg:offset")
+                                .and_then(|offset| offset.trim().parse::<f64>().ok())
+                                .filter(|offset| offset.is_finite());
+                            let value = get(&attributes, "loext:color-value").and_then(color);
+                            if let (Some(at), Some(value)) = (at, value) {
+                                if stops.len() < MAX_GRADIENT_STOPS {
+                                    stops.push((at.clamp(0.0, 1.0), value));
+                                }
+                            }
+                        }
+                    }
                     b"style:style" | b"style:default-style" => {
                         let attributes = attributes(reader, &element)?;
                         size_style = match (
@@ -1752,6 +1930,7 @@ fn parse<R: BufRead>(
                     continue;
                 }
                 match name {
+                    b"draw:gradient" => finish_gradient(&mut gradient, styles),
                     b"style:style" | b"style:default-style" => {
                         size_style = None;
                         match style.take() {
@@ -2054,5 +2233,53 @@ mod tests {
         assert_eq!(color("transparent"), None);
         assert_eq!(media_extension("JPG"), Some("jpg"));
         assert_eq!(media_extension("svg"), None);
+    }
+
+    #[test]
+    fn a_named_dash_becomes_the_nearest_preset() {
+        let dash = |pairs: &[(&str, &str)]| {
+            let attributes: Vec<(String, String)> = pairs
+                .iter()
+                .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+                .collect();
+            dash_preset(&attributes)
+        };
+        // The ones the export writes come back as they went.
+        for entry in crate::ods_drawing::DASHES {
+            let (one, two, gap) = (format!("{}%", entry.2), format!("{}%", entry.4), format!("{}%", entry.5));
+            let (count1, count2) = (entry.1.to_string(), entry.3.to_string());
+            let mut pairs = vec![
+                ("draw:dots1", count1.as_str()),
+                ("draw:dots1-length", one.as_str()),
+                ("draw:distance", gap.as_str()),
+            ];
+            if entry.3 > 0 {
+                pairs.push(("draw:dots2", count2.as_str()));
+                pairs.push(("draw:dots2-length", two.as_str()));
+            }
+            assert_eq!(dash(&pairs), entry.0);
+        }
+        // Another writer's dashes, in lengths and with the dots first.
+        assert_eq!(
+            dash(&[("draw:dots1", "1"), ("draw:dots1-length", "0.2cm"), ("draw:distance", "0.1cm")]),
+            "dash"
+        );
+        assert_eq!(
+            dash(&[
+                ("draw:dots1", "2"),
+                ("draw:dots1-length", "100%"),
+                ("draw:dots2", "1"),
+                ("draw:dots2-length", "900%"),
+                ("draw:distance", "300%"),
+            ]),
+            "lgDashDotDot"
+        );
+        assert_eq!(dash(&[("draw:dots1", "1"), ("draw:distance", "100%")]), "sysDot");
+        assert_eq!(dash(&[]), "dash");
+        // Angles: with a unit, and in tenths of a degree without one.
+        assert_eq!(gradient_degrees(Some("45deg")), Some(45.0));
+        assert_eq!(gradient_degrees(Some("900")), Some(90.0));
+        assert_eq!(gradient_degrees(None), Some(0.0));
+        assert_eq!(gradient_degrees(Some("soon")), None);
     }
 }

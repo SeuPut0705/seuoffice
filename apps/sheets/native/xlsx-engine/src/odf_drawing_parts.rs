@@ -20,7 +20,7 @@ use zip::ZipArchive;
 use crate::SidecarError;
 use crate::odf_chart_parts;
 use crate::odf_drawings::{
-    CustomPath, DrawStyle, DrawStyles, EMU_PER_POINT, Family, Outline, PathCommand, Shape,
+    CustomPath, DrawStyle, DrawStyles, EMU_PER_POINT, Family, Gradient, Outline, PathCommand, Shape,
     ShapeKind, SheetDrawings, Span, media_extension,
 };
 use crate::xlsx_package::{SheetArt, escape_xml};
@@ -432,7 +432,7 @@ fn transform_xml(element: &str, shape: &Shape, placement: &Placement) -> String 
 }
 
 /// The outline of a shape or a line.
-fn line_xml(style: &DrawStyle, arrows: bool) -> String {
+fn line_xml(style: &DrawStyle, arrows: bool, styles: &DrawStyles) -> String {
     if style.stroke.as_deref() == Some("none") {
         return "<a:ln><a:noFill/></a:ln>".to_owned();
     }
@@ -455,7 +455,14 @@ fn line_xml(style: &DrawStyle, arrows: bool) -> String {
         solid_fill(style.stroke_color.as_deref().unwrap_or(DEFAULT_LINE), None)
     );
     if style.stroke.as_deref() == Some("dash") {
-        out.push_str(r#"<a:prstDash val="dash"/>"#);
+        // The dash the style names, or the plain one when it names none
+        // this reader knows.
+        let preset = style
+            .stroke_dash
+            .as_deref()
+            .and_then(|name| styles.dashes.get(name).copied())
+            .unwrap_or("dash");
+        out.push_str(&format!(r#"<a:prstDash val="{preset}"/>"#));
     }
     if arrows {
         if style.marker_start == Some(true) {
@@ -469,13 +476,26 @@ fn line_xml(style: &DrawStyle, arrows: bool) -> String {
     out
 }
 
-fn fill_xml(style: &DrawStyle, filled: bool) -> String {
+fn fill_xml(style: &DrawStyle, filled: bool, styles: &DrawStyles) -> String {
     if !filled {
         return "<a:noFill/>".to_owned();
     }
     match style.fill.as_deref() {
         Some("none") => "<a:noFill/>".to_owned(),
-        // A gradient, a hatch or a bitmap keeps the flat colour beside it.
+        Some("gradient") => match style
+            .fill_gradient
+            .as_deref()
+            .and_then(|name| styles.gradients.get(name))
+        {
+            Some(gradient) => gradient_fill(gradient, style.opacity),
+            // A gradient this reader cannot follow keeps the flat colour
+            // written beside it.
+            None => match style.fill_color.as_deref() {
+                Some(color) => solid_fill(color, style.opacity),
+                None => "<a:noFill/>".to_owned(),
+            },
+        },
+        // A hatch or a bitmap keeps the flat colour beside it.
         Some("solid") | None => solid_fill(
             style.fill_color.as_deref().unwrap_or(DEFAULT_FILL),
             style.opacity,
@@ -485,6 +505,29 @@ fn fill_xml(style: &DrawStyle, filled: bool) -> String {
             None => "<a:noFill/>".to_owned(),
         },
     }
+}
+
+/// `a:gradFill` along a line: the stops in thousandths of a percent and the
+/// angle in sixty-thousandths of a degree.
+fn gradient_fill(gradient: &Gradient, opacity: Option<f64>) -> String {
+    let alpha = match opacity.filter(|opacity| (0.0..1.0).contains(opacity)) {
+        Some(opacity) => format!(r#"<a:alpha val="{}"/>"#, (opacity * 100_000.0).round() as i64),
+        None => String::new(),
+    };
+    let stops: String = gradient
+        .stops
+        .iter()
+        .map(|(at, color)| {
+            format!(
+                r#"<a:gs pos="{}"><a:srgbClr val="{color}">{alpha}</a:srgbClr></a:gs>"#,
+                (at.clamp(0.0, 1.0) * 100_000.0).round() as i64
+            )
+        })
+        .collect();
+    format!(
+        r#"<a:gradFill rotWithShape="1"><a:gsLst>{stops}</a:gsLst><a:lin ang="{}" scaled="0"/></a:gradFill>"#,
+        (gradient.angle.rem_euclid(360.0) * 60_000.0).round() as i64
+    )
 }
 
 fn custom_geometry(path: &CustomPath) -> String {
@@ -840,8 +883,8 @@ impl DrawingWriter {
                         link,
                         if *text_box { r#" txBox="1""# } else { "" },
                         transform_xml("a:xfrm", shape, &placement),
-                        fill_xml(&graphic, filled),
-                        line_xml(&graphic, false),
+                        fill_xml(&graphic, filled, styles),
+                        line_xml(&graphic, false, styles),
                         text_body(shape, &graphic, styles),
                     )
                 }
@@ -853,7 +896,7 @@ impl DrawingWriter {
                         link,
                         transform_xml("a:xfrm", shape, &placement),
                         preset_geometry(preset),
-                        line_xml(&graphic, true),
+                        line_xml(&graphic, true, styles),
                     )
                 }
             };
@@ -1163,17 +1206,17 @@ mod tests {
             ..DrawStyle::default()
         };
         assert_eq!(
-            line_xml(&style, true),
+            line_xml(&style, true, &DrawStyles::default()),
             r#"<a:ln w="19050"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill><a:prstDash val="dash"/><a:tailEnd type="triangle"/></a:ln>"#
         );
         assert_eq!(
-            fill_xml(&style, true),
+            fill_xml(&style, true, &DrawStyles::default()),
             r#"<a:solidFill><a:srgbClr val="00FF00"><a:alpha val="50000"/></a:srgbClr></a:solidFill>"#
         );
-        assert_eq!(fill_xml(&style, false), "<a:noFill/>");
+        assert_eq!(fill_xml(&style, false, &DrawStyles::default()), "<a:noFill/>");
         let bare = DrawStyle::default();
         assert_eq!(
-            line_xml(&bare, false),
+            line_xml(&bare, false, &DrawStyles::default()),
             r#"<a:ln><a:solidFill><a:srgbClr val="3465A4"/></a:solidFill></a:ln>"#
         );
         let none = DrawStyle {
@@ -1181,8 +1224,8 @@ mod tests {
             fill: Some("none".into()),
             ..DrawStyle::default()
         };
-        assert_eq!(line_xml(&none, true), "<a:ln><a:noFill/></a:ln>");
-        assert_eq!(fill_xml(&none, true), "<a:noFill/>");
+        assert_eq!(line_xml(&none, true, &DrawStyles::default()), "<a:ln><a:noFill/></a:ln>");
+        assert_eq!(fill_xml(&none, true, &DrawStyles::default()), "<a:noFill/>");
     }
 
     #[test]
@@ -1224,6 +1267,48 @@ mod tests {
         assert!(
             body.starts_with(r#"<xdr:txBody><a:bodyPr wrap="none"/><a:lstStyle/><a:p><a:r>"#),
             "{body}"
+        );
+    }
+
+    #[test]
+    fn writes_the_dash_and_the_gradient_a_style_names() {
+        let mut styles = DrawStyles::default();
+        styles.dashes.insert("Long_20_Dash_20_Dot".into(), "lgDashDot");
+        styles.gradients.insert(
+            "Sky".into(),
+            Gradient {
+                angle: 90.0,
+                stops: vec![(0.0, "FF0000".into()), (0.5, "FFFFFF".into()), (1.0, "0000FF".into())],
+            },
+        );
+        let style = DrawStyle {
+            stroke: Some("dash".into()),
+            stroke_dash: Some("Long_20_Dash_20_Dot".into()),
+            stroke_color: Some("C00000".into()),
+            fill: Some("gradient".into()),
+            fill_gradient: Some("Sky".into()),
+            fill_color: Some("808080".into()),
+            ..DrawStyle::default()
+        };
+        assert_eq!(
+            line_xml(&style, false, &styles),
+            r#"<a:ln><a:solidFill><a:srgbClr val="C00000"/></a:solidFill><a:prstDash val="lgDashDot"/></a:ln>"#
+        );
+        assert_eq!(
+            fill_xml(&style, true, &styles),
+            concat!(
+                r#"<a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"><a:srgbClr val="FF0000"></a:srgbClr></a:gs>"#,
+                r#"<a:gs pos="50000"><a:srgbClr val="FFFFFF"></a:srgbClr></a:gs><a:gs pos="100000"><a:srgbClr val="0000FF"></a:srgbClr></a:gs></a:gsLst>"#,
+                r#"<a:lin ang="5400000" scaled="0"/></a:gradFill>"#,
+            )
+        );
+        // A dash or a gradient the document does not declare: the plain
+        // dash, and the flat colour written beside the gradient.
+        let unknown = DrawStyles::default();
+        assert!(line_xml(&style, false, &unknown).contains(r#"<a:prstDash val="dash"/>"#));
+        assert_eq!(
+            fill_xml(&style, true, &unknown),
+            r#"<a:solidFill><a:srgbClr val="808080"/></a:solidFill>"#
         );
     }
 }

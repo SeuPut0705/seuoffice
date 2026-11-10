@@ -183,7 +183,21 @@ pub(crate) struct OdsSheetFormat {
     pub(crate) rich: Vec<((u32, u32), Vec<TextRun>)>,
     pub(crate) conditional: Vec<ConditionalFormat>,
     pub(crate) validations: Vec<ValidationRun>,
+    pub(crate) sparklines: Vec<SparklineGroup>,
 }
+
+/// One `calcext:sparkline-group`: what it says about itself, by local
+/// attribute name, and the cell and the range of each sparkline as the
+/// document writes them.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct SparklineGroup {
+    pub(crate) attributes: Vec<(String, String)>,
+    pub(crate) cells: Vec<(String, String)>,
+}
+
+/// The sparkline groups one sheet may hold, and the cells of one group.
+const MAX_SPARKLINE_GROUPS: usize = 1_000;
+const MAX_SPARKLINE_CELLS: usize = 100_000;
 
 /// What `settings.xml` remembers about one sheet's window.
 #[derive(Clone, Debug, Default)]
@@ -492,6 +506,7 @@ struct ContentParser {
     validation: Option<(String, Validation)>,
     message: Option<Message>,
     conditional: Option<ConditionalFormat>,
+    sparkline: Option<SparklineGroup>,
     scale: Option<(bool, Vec<ScalePoint>, Option<String>)>,
     /// Validation runs still growing downwards, one per column span.
     open_validations: Vec<ValidationRun>,
@@ -824,6 +839,31 @@ impl ContentParser {
                     }
                 }
             }
+            b"sparkline-group" if !empty => {
+                let mut group = SparklineGroup::default();
+                attributes(reader, element, |key, value| {
+                    if group.attributes.len() < 64 {
+                        group
+                            .attributes
+                            .push((String::from_utf8_lossy(key).into_owned(), value));
+                    }
+                })?;
+                self.sparkline = Some(group);
+            }
+            b"sparkline" => {
+                if let Some(group) = &mut self.sparkline {
+                    let (mut cell, mut range) = (String::new(), String::new());
+                    attributes(reader, element, |key, value| match key {
+                        b"cell-address" => cell = value,
+                        b"data-range" => range = value,
+                        _ => {}
+                    })?;
+                    if !cell.is_empty() && !range.is_empty() && group.cells.len() < MAX_SPARKLINE_CELLS
+                    {
+                        group.cells.push((cell, range));
+                    }
+                }
+            }
             b"conditional-format" if !empty => {
                 let mut target = String::new();
                 attributes(reader, element, |key, value| {
@@ -967,6 +1007,13 @@ impl ContentParser {
                 self.message = None;
             }
             b"help-message" | b"error-message" => self.message = None,
+            b"sparkline-group" => {
+                if let (Some(group), Some(sheet)) = (self.sparkline.take(), &mut self.sheet) {
+                    if !group.cells.is_empty() && sheet.sparklines.len() < MAX_SPARKLINE_GROUPS {
+                        sheet.sparklines.push(group);
+                    }
+                }
+            }
             b"conditional-format" => {
                 if let (Some(format), Some(sheet)) = (self.conditional.take(), &mut self.sheet) {
                     if !format.entries.is_empty() {

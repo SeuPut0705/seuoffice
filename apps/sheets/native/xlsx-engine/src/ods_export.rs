@@ -35,7 +35,10 @@ use crate::ods_pivot::{NamedSources, named_sources, pivot_table_xml};
 use crate::ods_print::{
     PageStyles, parse_print_extras, print_titles, split_outside_quotes, worksheet_tail,
 };
-use crate::ods_rules::{ValidationArea, Validations, conditional_formats_xml, parse_rule_extras};
+use crate::ods_rules::{
+    SparklineExtra, ValidationArea, Validations, conditional_formats_xml, parse_rule_extras,
+    parse_sparkline_extras,
+};
 use crate::ods_styles::{DEFAULT_CELL_STYLE, ResolvedStyle, StyleRegistry, ValueKind};
 use crate::xlsx_package::escape_xml;
 use crate::{
@@ -432,6 +435,7 @@ fn write_document(
                 .and_then(|(package, part)| worksheet_tail(&package, &part));
             let extras = tail.as_deref().map(parse_print_extras).unwrap_or_default();
             let rule_extras = tail.as_deref().map(parse_rule_extras).unwrap_or_default();
+            let sparkline_extras = tail.as_deref().map(parse_sparkline_extras).unwrap_or_default();
             drop(tail);
             let (areas, lost) = validations.register(&sheet.name, &wide.data_validations, &names);
             counters.dropped.validations += lost;
@@ -452,7 +456,7 @@ fn write_document(
                 &mut drawings,
                 &mut counters,
             )?;
-            let (sparklines, written) = sparkline_groups_xml(index, sheet);
+            let (sparklines, written) = sparkline_groups_xml(index, sheet, &sparkline_extras);
             counters.dropped.sparklines = counters.dropped.sparklines.saturating_sub(written);
             for pivot in &sheet.pivot_tables {
                 // A pivot table that is written leaves the count of losses.
@@ -619,12 +623,20 @@ fn write_content_xml(
 
 /// The sparklines of a sheet as the extension element the readers of the
 /// format share for them, and how many cells it covers. The model carries the
-/// kind, the series colour, the colour of negative points and where each one
-/// reads from; a sparkline whose range cannot be named is left out.
-fn sparkline_groups_xml(sheet_index: usize, sheet: &SheetMetadata) -> (String, u32) {
+/// kind, the series colour and where each one reads from; the options that
+/// are switched on, the line's weight and the other colours come from the
+/// worksheet part (`extras`, one per group, used only when they pair up with
+/// the model's groups). A sparkline whose range cannot be named is left out.
+fn sparkline_groups_xml(
+    sheet_index: usize,
+    sheet: &SheetMetadata,
+    extras: &[SparklineExtra],
+) -> (String, u32) {
     let mut groups = String::new();
     let mut written = 0;
+    let paired = extras.len() == sheet.sparklines.len();
     for (group_index, group) in sheet.sparklines.iter().enumerate() {
+        let extra = extras.get(group_index).filter(|_| paired);
         let mut cells = String::new();
         let mut count = 0;
         for cell in &group.cells {
@@ -659,21 +671,68 @@ fn sparkline_groups_xml(sheet_index: usize, sheet: &SheetMetadata) -> (String, u
             let color = if color.len() == 8 { &color[2..] } else { color };
             format!("#{}", color.to_ascii_lowercase())
         };
+        let empty_cells = match extra.and_then(|extra| extra.empty_cells.as_deref()) {
+            Some("zero") => "zero",
+            Some("span") => "span",
+            _ => "gap",
+        };
         let mut attributes = format!(
-            r#" calcext:id="{{00000000-0000-0000-{:04x}-{:012x}}}" calcext:type="{kind}" calcext:line-width="0.75pt" calcext:display-empty-cells-as="gap""#,
+            r#" calcext:id="{{00000000-0000-0000-{:04x}-{:012x}}}" calcext:type="{kind}" calcext:line-width="{}pt" calcext:display-empty-cells-as="{empty_cells}""#,
             sheet_index & 0xffff,
-            group_index
+            group_index,
+            extra.and_then(|extra| extra.line_weight).unwrap_or(0.75),
         );
-        if group.negative_color.is_some() {
-            attributes.push_str(r#" calcext:negative="true""#);
+        match extra {
+            Some(extra) => {
+                for flag in &extra.flags {
+                    attributes.push_str(&format!(r#" calcext:{flag}="true""#));
+                }
+            }
+            // Without the part to ask, a colour for negative points is the
+            // only sign that they are picked out.
+            None if group.negative_color.is_some() => {
+                attributes.push_str(r#" calcext:negative="true""#);
+            }
+            None => {}
         }
         attributes.push_str(r#" calcext:min-axis-type="individual" calcext:max-axis-type="individual""#);
-        // Excel's own colours stand in for the ones the model does not carry.
+        // The series colour and the colour of negative points come resolved
+        // from the model; Excel's own stand in where neither says.
+        let stated = |slot: &str| {
+            extra.and_then(|extra| {
+                extra
+                    .colors
+                    .iter()
+                    .find(|(name, _)| *name == slot)
+                    .map(|(_, color)| color.as_str())
+            })
+        };
         attributes.push_str(&format!(
             r#" calcext:color-series="{}" calcext:color-negative="{}""#,
-            escape_xml(&hex(group.color.as_deref().unwrap_or("#376092"))),
-            escape_xml(&hex(group.negative_color.as_deref().unwrap_or("#d00000"))),
+            escape_xml(&hex(group.color.as_deref().or(stated("color-series")).unwrap_or("#376092"))),
+            escape_xml(&hex(
+                group
+                    .negative_color
+                    .as_deref()
+                    .or(stated("color-negative"))
+                    .unwrap_or("#d00000")
+            )),
         ));
+        // Every colour is written, as a reader of the format writes them:
+        // one left out would come back as whatever the next writer assumes.
+        for (slot, default) in [
+            ("color-axis", "#000000"),
+            ("color-markers", "#d00000"),
+            ("color-first", "#d00000"),
+            ("color-last", "#d00000"),
+            ("color-high", "#d00000"),
+            ("color-low", "#d00000"),
+        ] {
+            attributes.push_str(&format!(
+                r#" calcext:{slot}="{}""#,
+                escape_xml(&hex(stated(slot).unwrap_or(default)))
+            ));
+        }
         groups.push_str(&format!(
             "<calcext:sparkline-group{attributes}><calcext:sparklines>{cells}</calcext:sparklines></calcext:sparkline-group>"
         ));
@@ -3883,7 +3942,7 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
         // The sparklines close the sheet, one group with its two cells.
         assert!(
             content.contains(concat!(
-                r##"<calcext:sparkline-groups><calcext:sparkline-group calcext:id="{00000000-0000-0000-0000-000000000000}" calcext:type="column" calcext:line-width="0.75pt" calcext:display-empty-cells-as="gap" calcext:negative="true" calcext:min-axis-type="individual" calcext:max-axis-type="individual" calcext:color-series="#c00000" calcext:color-negative="#00b050">"##,
+                r##"<calcext:sparkline-groups><calcext:sparkline-group calcext:id="{00000000-0000-0000-0000-000000000000}" calcext:type="column" calcext:line-width="0.75pt" calcext:display-empty-cells-as="gap" calcext:negative="true" calcext:min-axis-type="individual" calcext:max-axis-type="individual" calcext:color-series="#c00000" calcext:color-negative="#00b050" calcext:color-axis="#000000" calcext:color-markers="#d00000" calcext:color-first="#d00000" calcext:color-last="#d00000" calcext:color-high="#d00000" calcext:color-low="#d00000">"##,
                 r#"<calcext:sparklines><calcext:sparkline calcext:cell-address="Data.E1" calcext:data-range="Data.B1:Data.D1"/><calcext:sparkline calcext:cell-address="Data.E2" calcext:data-range="Data.B2:Data.D2"/></calcext:sparklines>"#,
                 r#"</calcext:sparkline-group></calcext:sparkline-groups></table:table>"#,
             )),

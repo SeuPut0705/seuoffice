@@ -401,6 +401,10 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
         {
             tail.push_str(&format!(r#"<legacyDrawing r:id="{id}"/>"#));
         }
+        // The extension list closes the worksheet.
+        if let Some(parts) = &odf_parts {
+            tail.push_str(&parts.extensions);
+        }
         if sheet_drawing
             .as_ref()
             .is_some_and(|art| !art.copied.is_empty())

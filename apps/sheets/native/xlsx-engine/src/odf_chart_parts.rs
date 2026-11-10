@@ -34,6 +34,8 @@ const LOEXT: &str = "urn:org:documentfoundation:names:experimental:office:xmlns:
 /// not read into caches.
 const MAX_CACHE_ROWS: usize = 100_000;
 const MAX_SERIES: usize = 255;
+/// Trend lines one series may carry.
+const MAX_TRENDS: usize = 8;
 
 const PRIMARY_CATEGORY_AXIS: u32 = 111_111_111;
 const PRIMARY_VALUE_AXIS: u32 = 222_222_222;
@@ -143,6 +145,8 @@ struct Series {
     style: Style,
     /// `(how many points, the fill each of them has)`.
     points: Vec<(usize, Option<String>)>,
+    /// The styles of the trend lines drawn through the series.
+    trends: Vec<Style>,
 }
 
 /// One cell of the chart's own table.
@@ -548,6 +552,45 @@ fn stroke_properties(style: &Style, named: bool) -> String {
     }
 }
 
+/// `c:trendline` for a trend line of a kind a chart part has a word for;
+/// nothing for any other.
+fn trendline_xml(style: &Style) -> String {
+    let (kind, extra) = match style.text("regression-type") {
+        Some("linear") => ("linear", String::new()),
+        Some("logarithmic") => ("log", String::new()),
+        Some("exponential") => ("exp", String::new()),
+        Some("power") => ("power", String::new()),
+        // A chart part takes a polynomial of the second to the sixth order,
+        // and a moving average over at least two points.
+        Some("polynomial") => (
+            "poly",
+            format!(
+                r#"<c:order val="{}"/>"#,
+                style.number("regression-max-degree").unwrap_or(2.0).clamp(2.0, 6.0) as u8
+            ),
+        ),
+        Some("moving-average") => (
+            "movingAvg",
+            format!(
+                r#"<c:period val="{}"/>"#,
+                style.number("regression-period").unwrap_or(2.0).clamp(2.0, 255.0) as u32
+            ),
+        ),
+        _ => return String::new(),
+    };
+    let look = match style.stroke_color.as_deref() {
+        Some(color) if style.stroke.as_deref() != Some("none") => format!(
+            "<c:spPr><a:ln{}>{}</a:ln></c:spPr>",
+            line_width(style.stroke_width),
+            solid_fill(color)
+        ),
+        _ => String::new(),
+    };
+    format!(
+        r#"<c:trendline>{look}<c:trendlineType val="{kind}"/>{extra}<c:dispRSqr val="0"/><c:dispEq val="0"/></c:trendline>"#
+    )
+}
+
 /// `c:marker` of a series drawn as a line.
 fn marker_xml(style: &Style, plot: &Style) -> String {
     let symbol = style.text("symbol-type").or(plot.text("symbol-type"));
@@ -876,6 +919,12 @@ impl Chart {
             point += count;
         }
         out.push_str(&labels_xml(&series.style));
+        // Slices and radar lines have no trend to draw.
+        if !kind.round() && !kind.radar() {
+            for trend in &series.trends {
+                out.push_str(&trendline_xml(trend));
+            }
+        }
 
         // ---- the data
         let values = series.values.as_deref().and_then(formula);
@@ -1221,8 +1270,13 @@ pub(crate) fn chart_part(content: &str) -> Option<String> {
             let own = if kind == Kind::Ring && own == Kind::Pie { Kind::Ring } else { own };
             let mut points = Vec::new();
             let mut domains = Vec::new();
+            let mut trends = Vec::new();
             for part in node.children().filter(Node::is_element) {
-                if is(part, CHART, "data-point") {
+                if is(part, CHART, "regression-curve") {
+                    if trends.len() < MAX_TRENDS {
+                        trends.push(style_of(part));
+                    }
+                } else if is(part, CHART, "data-point") {
                     let count = attr(part, CHART, "repeated")
                         .and_then(|count| count.parse::<usize>().ok())
                         .unwrap_or(1)
@@ -1248,6 +1302,7 @@ pub(crate) fn chart_part(content: &str) -> Option<String> {
                 domains,
                 style: style_of(node),
                 points,
+                trends,
             });
         } else if is(node, CHART, "wall") {
             wall = Some(style_of(node));
@@ -1640,5 +1695,34 @@ mod tests {
         assert!(chart_part(&document("", "chart:bar", mixed, "")).is_none());
         assert!(chart_part("<not-a-chart/>").is_none());
         assert!(chart_part("not xml").is_none());
+    }
+
+    #[test]
+    fn a_trend_line_keeps_its_kind_and_its_order_or_period() {
+        let style = |pairs: &[(&str, &str)]| Style {
+            chart: pairs
+                .iter()
+                .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+                .collect(),
+            stroke_color: Some("4472C4".into()),
+            stroke_width: Some(1.0),
+            ..Style::default()
+        };
+        assert_eq!(
+            trendline_xml(&style(&[("regression-type", "linear")])),
+            r#"<c:trendline><c:spPr><a:ln w="12700"><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></a:ln></c:spPr><c:trendlineType val="linear"/><c:dispRSqr val="0"/><c:dispEq val="0"/></c:trendline>"#
+        );
+        assert!(
+            trendline_xml(&style(&[("regression-type", "polynomial"), ("regression-max-degree", "9")]))
+                .contains(r#"<c:trendlineType val="poly"/><c:order val="6"/>"#)
+        );
+        assert!(
+            trendline_xml(&style(&[("regression-type", "moving-average"), ("regression-period", "3")]))
+                .contains(r#"<c:trendlineType val="movingAvg"/><c:period val="3"/>"#)
+        );
+        assert!(trendline_xml(&style(&[("regression-type", "logarithmic")])).contains(r#"val="log""#));
+        // No kind, or one a chart part has no word for: no trend line.
+        assert_eq!(trendline_xml(&style(&[("regression-type", "none")])), "");
+        assert_eq!(trendline_xml(&style(&[])), "");
     }
 }

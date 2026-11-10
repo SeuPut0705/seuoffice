@@ -271,6 +271,102 @@ struct Average {
 }
 
 /// Reads the rule extras from the part of a worksheet that follows its data.
+/// What a sparkline group says beyond what the model carries: the options
+/// that are switched on (by their ODF attribute name), how empty cells are
+/// drawn, the line's weight in points and the colours given as RGB (by the
+/// ODF attribute that takes each).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct SparklineExtra {
+    pub(crate) flags: Vec<&'static str>,
+    pub(crate) empty_cells: Option<String>,
+    pub(crate) line_weight: Option<f64>,
+    pub(crate) colors: Vec<(&'static str, String)>,
+}
+
+/// The sparkline groups of a worksheet tail, in the order they appear.
+pub(crate) fn parse_sparkline_extras(tail: &[u8]) -> Vec<SparklineExtra> {
+    const FLAGS: [(&[u8], &str); 9] = [
+        (b"markers", "markers"),
+        (b"high", "high"),
+        (b"low", "low"),
+        (b"first", "first"),
+        (b"last", "last"),
+        (b"negative", "negative"),
+        (b"displayXAxis", "display-x-axis"),
+        (b"displayHidden", "display-hidden"),
+        (b"rightToLeft", "right-to-left"),
+    ];
+    const COLORS: [(&[u8], &str); 8] = [
+        (b"colorSeries", "color-series"),
+        (b"colorNegative", "color-negative"),
+        (b"colorAxis", "color-axis"),
+        (b"colorMarkers", "color-markers"),
+        (b"colorFirst", "color-first"),
+        (b"colorLast", "color-last"),
+        (b"colorHigh", "color-high"),
+        (b"colorLow", "color-low"),
+    ];
+    let mut groups: Vec<SparklineExtra> = Vec::new();
+    // Nothing to look for in a sheet without a sparkline.
+    if !tail.windows(14).any(|window| window == b"sparklineGroup") {
+        return groups;
+    }
+    let mut reader = Reader::from_reader(tail);
+    reader.config_mut().check_end_names = false;
+    reader.config_mut().allow_unmatched_ends = true;
+    let mut buffer = Vec::new();
+    let mut open = false;
+    loop {
+        let event = match reader.read_event_into(&mut buffer) {
+            Ok(Event::Eof) | Err(_) => break,
+            Ok(event) => event,
+        };
+        match &event {
+            Event::Start(element) | Event::Empty(element) => {
+                let name = element.local_name();
+                let name = name.as_ref();
+                if name == b"sparklineGroup" {
+                    let on = |key: &[u8]| {
+                        attribute(element, key).is_some_and(|value| value == "1" || value == "true")
+                    };
+                    groups.push(SparklineExtra {
+                        flags: FLAGS
+                            .iter()
+                            .filter(|(key, _)| on(key))
+                            .map(|(_, flag)| *flag)
+                            .collect(),
+                        empty_cells: attribute(element, b"displayEmptyCellsAs"),
+                        line_weight: attribute(element, b"lineWeight")
+                            .and_then(|value| value.parse::<f64>().ok())
+                            .filter(|value| value.is_finite() && *value > 0.0),
+                        colors: Vec::new(),
+                    });
+                    open = matches!(event, Event::Start(_));
+                } else if open {
+                    if let Some((_, slot)) = COLORS.iter().find(|(key, _)| *key == name) {
+                        // A colour of the theme is the model's to resolve;
+                        // only one given outright is taken here.
+                        let rgb = attribute(element, b"rgb").filter(|rgb| {
+                            matches!(rgb.len(), 6 | 8)
+                                && rgb.chars().all(|character| character.is_ascii_hexdigit())
+                        });
+                        if let (Some(rgb), Some(group)) = (rgb, groups.last_mut()) {
+                            let hex = &rgb[rgb.len() - 6..];
+                            group.colors.push((slot, format!("#{}", hex.to_ascii_lowercase())));
+                        }
+                    }
+                }
+            }
+            Event::End(element) if element.local_name().as_ref() == b"sparklineGroup" => {
+                open = false;
+            }
+            _ => {}
+        }
+        buffer.clear();
+    }
+    groups
+}
+
 pub(crate) fn parse_rule_extras(tail: &[u8]) -> RuleExtras {
     let mut extras = RuleExtras::default();
     let mut reader = Reader::from_reader(tail);

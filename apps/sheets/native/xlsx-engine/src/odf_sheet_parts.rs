@@ -16,7 +16,7 @@ use crate::odf_layout::OdsSheetLayout;
 use crate::odf_rules;
 use crate::odf_sheet_format::{
     DatabaseRange, FilterCondition, MAX_COLUMN, MAX_ROW, OdsFormats, OdsSheetFormat,
-    parse_cell_address, parse_range_address, split_addresses,
+    SparklineGroup, parse_cell_address, parse_range_address, split_addresses,
 };
 use crate::xlsx_package::{PartRelationship, SheetExtras, cell_reference, escape_xml};
 
@@ -57,6 +57,8 @@ pub(crate) struct OdfSheetXml {
     pub(crate) before_merges: String,
     /// Everything that follows the merges, in schema order.
     pub(crate) after_merges: String,
+    /// The worksheet's extension list, which closes it: the sparklines.
+    pub(crate) extensions: String,
     /// `<is>` content of cells whose text has runs of its own formatting, or
     /// spacing the value reader drops.
     pub(crate) rich: HashMap<(u32, u32), String>,
@@ -142,6 +144,109 @@ impl ColumnFormats {
 /// Builds the worksheet pieces of sheet `index`. `used` is the last row and
 /// column that hold a value, which bounds how far a style that runs to the
 /// edge of the grid is written out.
+/// `#rrggbb` as the `FFRRGGBB` a sparkline colour is written with.
+fn sparkline_color(value: Option<&str>, default: &str) -> String {
+    let hex = value
+        .map(|value| value.trim().trim_start_matches('#'))
+        .filter(|hex| hex.len() == 6 && hex.chars().all(|character| character.is_ascii_hexdigit()))
+        .unwrap_or(default);
+    format!("FF{}", hex.to_ascii_uppercase())
+}
+
+/// The sparklines of a sheet as the worksheet extension Excel keeps them in.
+/// The element and the order of its parts are the ones Excel writes; a
+/// sparkline whose cell or range cannot be named is left out, and so is a
+/// group left without any.
+fn sparklines_xml(groups: &[SparklineGroup]) -> String {
+    let mut out = String::new();
+    for group in groups {
+        let get = |name: &str| {
+            group
+                .attributes
+                .iter()
+                .find(|(key, _)| key == name)
+                .map(|(_, value)| value.as_str())
+        };
+        let flag = |name: &str| get(name) == Some("true");
+        let mut cells = String::new();
+        for (cell, range) in &group.cells {
+            let Some((_, (row, column))) = parse_cell_address(cell) else {
+                continue;
+            };
+            let Some(formula) = crate::odf_formula::excel_range(range) else {
+                continue;
+            };
+            cells.push_str(&format!(
+                "<x14:sparkline><xm:f>{}</xm:f><xm:sqref>{}</xm:sqref></x14:sparkline>",
+                escape_xml(&formula),
+                cell_reference(row, column)
+            ));
+        }
+        if cells.is_empty() {
+            continue;
+        }
+        let mut attributes = String::new();
+        // A line is what a group is when it says nothing.
+        match get("type") {
+            Some("column") => attributes.push_str(r#" type="column""#),
+            Some("stacked") => attributes.push_str(r#" type="stacked""#),
+            _ => {}
+        }
+        if let Some(points) = get("line-width")
+            .and_then(crate::odf_layout::length_points)
+            .filter(|points| *points > 0.0 && (points - 0.75).abs() > 0.01)
+        {
+            attributes.push_str(&format!(r#" lineWeight="{points}""#));
+        }
+        attributes.push_str(match get("display-empty-cells-as") {
+            Some("zero") => r#" displayEmptyCellsAs="zero""#,
+            Some("span") => r#" displayEmptyCellsAs="span""#,
+            _ => r#" displayEmptyCellsAs="gap""#,
+        });
+        for (name, attribute) in [
+            ("markers", "markers"),
+            ("high", "high"),
+            ("low", "low"),
+            ("first", "first"),
+            ("last", "last"),
+            ("negative", "negative"),
+            ("display-x-axis", "displayXAxis"),
+            ("display-hidden", "displayHidden"),
+            ("right-to-left", "rightToLeft"),
+        ] {
+            if flag(name) {
+                attributes.push_str(&format!(r#" {attribute}="1""#));
+            }
+        }
+        // Every colour is stated; the ones the document leaves out are the
+        // ones Excel gives a new sparkline.
+        let colors: String = [
+            ("colorSeries", "color-series", "376092"),
+            ("colorNegative", "color-negative", "D00000"),
+            ("colorAxis", "color-axis", "000000"),
+            ("colorMarkers", "color-markers", "D00000"),
+            ("colorFirst", "color-first", "D00000"),
+            ("colorLast", "color-last", "D00000"),
+            ("colorHigh", "color-high", "D00000"),
+            ("colorLow", "color-low", "D00000"),
+        ]
+        .iter()
+        .map(|(element, name, default)| {
+            format!(r#"<x14:{element} rgb="{}"/>"#, sparkline_color(get(name), default))
+        })
+        .collect();
+        out.push_str(&format!(
+            "<x14:sparklineGroup{attributes}>{colors}<x14:sparklines>{cells}</x14:sparklines></x14:sparklineGroup>"
+        ));
+    }
+    if out.is_empty() {
+        return out;
+    }
+    format!(
+        r#"<extLst><ext xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main" uri="{{05C60535-1F16-4fd2-B633-F4F36F0B64E0}}"><x14:sparklineGroups xmlns:xm="http://schemas.microsoft.com/office/excel/2006/main">{out}</x14:sparklineGroups></ext></extLst>"#
+    )
+}
+
 pub(crate) fn build(
     index: usize,
     formats: &OdsFormats,
@@ -366,6 +471,7 @@ pub(crate) fn build(
         ));
     }
 
+    out.extensions = sparklines_xml(&sheet.sparklines);
     out.after_merges
         .push_str(&odf_rules::conditional_formatting_xml(sheet, formats, xlsx, names));
     out.after_merges
@@ -938,5 +1044,45 @@ mod tests {
         assert_eq!(internal_location("'My sheet'.A1:'My sheet'.C2"), "'My sheet'!A1:C2");
         assert_eq!(internal_location("Name"), "Name");
         assert_eq!(split_addresses("S.A1:S.B2 'a b'.C1:'a b'.D2"), vec!["S.A1:S.B2", "'a b'.C1:'a b'.D2"]);
+    }
+
+    #[test]
+    fn sparklines_become_the_worksheet_extension() {
+        let group = |attributes: &[(&str, &str)], cells: &[(&str, &str)]| SparklineGroup {
+            attributes: attributes
+                .iter()
+                .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+                .collect(),
+            cells: cells
+                .iter()
+                .map(|(cell, range)| ((*cell).to_owned(), (*range).to_owned()))
+                .collect(),
+        };
+        let xml = sparklines_xml(&[
+            group(
+                &[
+                    ("type", "column"),
+                    ("line-width", "2.25pt"),
+                    ("negative", "true"),
+                    ("markers", "false"),
+                    ("color-series", "#c00000"),
+                    ("color-negative", "#00b050"),
+                ],
+                &[("Data.E1", "Data.B1:Data.D1"), ("nowhere", "Data.B2:Data.D2")],
+            ),
+            // A group none of whose sparklines can be placed is left out.
+            group(&[("type", "line")], &[("Data.E9", "")]),
+        ]);
+        assert_eq!(
+            xml,
+            concat!(
+                r#"<extLst><ext xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main" uri="{05C60535-1F16-4fd2-B633-F4F36F0B64E0}"><x14:sparklineGroups xmlns:xm="http://schemas.microsoft.com/office/excel/2006/main">"#,
+                r#"<x14:sparklineGroup type="column" lineWeight="2.25" displayEmptyCellsAs="gap" negative="1">"#,
+                r#"<x14:colorSeries rgb="FFC00000"/><x14:colorNegative rgb="FF00B050"/><x14:colorAxis rgb="FF000000"/><x14:colorMarkers rgb="FFD00000"/><x14:colorFirst rgb="FFD00000"/><x14:colorLast rgb="FFD00000"/><x14:colorHigh rgb="FFD00000"/><x14:colorLow rgb="FFD00000"/>"#,
+                r#"<x14:sparklines><x14:sparkline><xm:f>Data!B1:D1</xm:f><xm:sqref>E1</xm:sqref></x14:sparkline></x14:sparklines></x14:sparklineGroup>"#,
+                r#"</x14:sparklineGroups></ext></extLst>"#,
+            )
+        );
+        assert_eq!(sparklines_xml(&[]), "");
     }
 }
