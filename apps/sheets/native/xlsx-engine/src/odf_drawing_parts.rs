@@ -569,16 +569,30 @@ fn text_body(shape: &Shape, graphic: &DrawStyle, styles: &DrawStyles) -> String 
     match graphic.vertical_align.as_deref() {
         Some("middle") => body.push_str(r#" anchor="ctr""#),
         Some("bottom") => body.push_str(r#" anchor="b""#),
+        None if shape.figure => body.push_str(r#" anchor="ctr""#),
         _ => {}
     }
     body.push_str("/><a:lstStyle/>");
+    // Where a paragraph that names no alignment goes is the text area's
+    // business. One spread over the whole shape starts its lines at the
+    // edge, unless the text is not wrapped: a reader centres that.
+    let text_box = matches!(shape.kind, ShapeKind::Shape { text_box: true, .. });
+    let area = match graphic.horizontal_align.as_deref() {
+        Some("center") => Some("center"),
+        Some("right") => Some("end"),
+        None | Some("justify") if !text_box && graphic.wrap.as_deref() == Some("no-wrap") => {
+            Some("center")
+        }
+        _ => None,
+    };
     for paragraph in &shape.paragraphs[..=last] {
         let own = styles.resolve(Family::Paragraph, paragraph.style.as_deref());
         let align = own
             .align
             .as_deref()
             .or(shape_text.align.as_deref())
-            .or(graphic.align.as_deref());
+            .or(graphic.align.as_deref())
+            .or(area);
         body.push_str("<a:p>");
         match align {
             Some("center") => body.push_str(r#"<a:pPr algn="ctr"/>"#),
@@ -927,6 +941,7 @@ mod tests {
             flip_h: false,
             flip_v: false,
             rotation: 0.0,
+            figure: false,
             paragraphs: Vec::new(),
         }
     }
@@ -1168,5 +1183,47 @@ mod tests {
         };
         assert_eq!(line_xml(&none, true), "<a:ln><a:noFill/></a:ln>");
         assert_eq!(fill_xml(&none, true), "<a:noFill/>");
+    }
+
+    #[test]
+    fn text_without_a_stated_place_goes_where_a_reader_draws_it() {
+        use crate::odf_drawings::{Paragraph, Run};
+        let styles = DrawStyles::default();
+        let mut figure = shape(Some((0, 0)), 0.0, 0.0, 100.0, 100.0);
+        figure.paragraphs = vec![Paragraph {
+            style: None,
+            runs: vec![Run {
+                text: "yes?".into(),
+                ..Run::default()
+            }],
+        }];
+        // A plain shape with wrapped text: top, lines from the edge.
+        let wrapped = DrawStyle::default();
+        let body = text_body(&figure, &wrapped, &styles);
+        assert!(body.starts_with("<xdr:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r>"), "{body}");
+        // A custom shape puts its text in the middle of its height, and
+        // unwrapped text that fills the width is centred.
+        figure.figure = true;
+        let unwrapped = DrawStyle {
+            wrap: Some("no-wrap".into()),
+            ..DrawStyle::default()
+        };
+        let body = text_body(&figure, &unwrapped, &styles);
+        assert!(
+            body.starts_with(r#"<xdr:txBody><a:bodyPr wrap="none" anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r>"#),
+            "{body}"
+        );
+        // What the style states wins.
+        let stated = DrawStyle {
+            wrap: Some("no-wrap".into()),
+            vertical_align: Some("top".into()),
+            horizontal_align: Some("left".into()),
+            ..DrawStyle::default()
+        };
+        let body = text_body(&figure, &stated, &styles);
+        assert!(
+            body.starts_with(r#"<xdr:txBody><a:bodyPr wrap="none"/><a:lstStyle/><a:p><a:r>"#),
+            "{body}"
+        );
     }
 }

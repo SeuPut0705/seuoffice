@@ -56,6 +56,9 @@ pub(crate) struct DrawStyle {
     pub(crate) image_opacity: Option<f64>,
     /// `top`, `middle`, `bottom`.
     pub(crate) vertical_align: Option<String>,
+    /// Where the text area sits across the shape: `left`, `center`, `right`
+    /// or `justify` (the whole width, which is also what nothing means).
+    pub(crate) horizontal_align: Option<String>,
     /// `wrap` or `no-wrap`.
     pub(crate) wrap: Option<String>,
     /// Left, top, right, bottom, in points.
@@ -84,7 +87,8 @@ impl DrawStyle {
         }
         inherit!(
             stroke, stroke_width, stroke_color, fill, fill_color, opacity, image_opacity,
-            vertical_align, wrap, marker_start, marker_end, align, color, size, bold, italic,
+            vertical_align, horizontal_align, wrap, marker_start, marker_end, align, color, size,
+            bold, italic,
             underline, font, font_asian
         );
         for (own, inherited) in self.padding.iter_mut().zip(under.padding) {
@@ -231,6 +235,9 @@ pub(crate) struct Shape {
     pub(crate) flip_v: bool,
     /// Degrees clockwise.
     pub(crate) rotation: f64,
+    /// A `draw:custom-shape`, whose text sits in the middle of its height
+    /// when no style says where.
+    pub(crate) figure: bool,
     pub(crate) paragraphs: Vec<Paragraph>,
 }
 
@@ -510,6 +517,8 @@ fn read_properties(kind: &[u8], attributes: &[(String, String)], style: &mut Dra
                 .or(style.image_opacity);
             style.vertical_align =
                 text("draw:textarea-vertical-align").or(style.vertical_align.take());
+            style.horizontal_align =
+                text("draw:textarea-horizontal-align").or(style.horizontal_align.take());
             style.wrap = text("fo:wrap-option").or(style.wrap.take());
             for (slot, name) in style.padding.iter_mut().zip([
                 "fo:padding-left",
@@ -1504,6 +1513,7 @@ impl ShapeBuilder {
             flip_h,
             flip_v,
             rotation,
+            figure: name == b"draw:custom-shape",
             paragraphs: self.paragraphs,
         })
     }
