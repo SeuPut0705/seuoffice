@@ -83,6 +83,7 @@ import { aiRunRefusal } from '@genoffice/electron-utils/ai-run-guard'
 import {
   configureExtraFontDirs,
   configureMetricsCache,
+  familyAliases,
   familyInfoFor,
   familyVerticalMetrics,
 } from '@genoffice/font-metrics'
@@ -5071,6 +5072,20 @@ export function registerDocsIpc(): void {
   // shared with the other editor modules — last (identical) registration wins
   ipcMain.removeHandler('app:font-family-info')
   ipcMain.handle('app:font-family-info', (_event, families: unknown) => familyInfoFor(families))
+  // the other spellings of the installed faces behind these names: a document
+  // that declares a CJK font by its localized name needs the English spelling
+  // the browser resolves (genoffice#2449). The renderer is not trusted, but
+  // the answer is only font names.
+  ipcMain.handle('docs:font-aliases', (_event, names: unknown) => {
+    if (!Array.isArray(names)) return {}
+    const out: Record<string, readonly string[]> = {}
+    for (const raw of names.slice(0, 512)) {
+      if (typeof raw !== 'string' || raw.length === 0 || raw.length > 256) continue
+      const aliases = familyAliases(raw)
+      if (aliases.length) out[raw] = aliases
+    }
+    return out
+  })
 
   ipcMain.handle('docs:open', async (event) => {
     const result = await openDialog(event, {

@@ -4,3 +4,4 @@ export { configureMetricsCache, familyVerticalMetrics, type FaceVerticalMetrics 
 export { familyInfoFor, type FamilyInfo } from './family-info'
 export { configureExtraFontDirs } from './sfnt'
 export { appleFontAssetRoots } from './sfnt'
+export { familyAliases, type FamilyNameRecord } from './sfnt'

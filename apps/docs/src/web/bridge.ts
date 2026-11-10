@@ -221,6 +221,7 @@ const desktop: Partial<DesktopApi> = {
   // no host fonts to read: the editor falls back to its bundled and CSS fonts
   fontMetrics: async () => null,
   fontFamilyInfo: async () => [],
+  fontAliases: async () => ({}),
   fetchImage: async (url) => {
     try {
       const res = await fetch(url)

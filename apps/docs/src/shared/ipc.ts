@@ -644,6 +644,10 @@ export interface DesktopApi {
   /** Korean name and Hangul coverage of the enumerated families (read from the font
    *  files); families that are not Korean are left out */
   fontFamilyInfo(families: readonly string[]): Promise<Array<[string, FontFamilyInfo]>>
+  /** the other spellings of the installed faces behind these names: a localized
+   *  (CJK) family name yields the English spelling the browser resolves.
+   *  Only the names that have an alias are answered (genoffice#2449). */
+  fontAliases(names: readonly string[]): Promise<Record<string, readonly string[]>>
   getAiSettings(): Promise<AiSettings>
   setAiSettings(settings: AiSettings): Promise<void>
   /** ai-settings.json was rewritten by any renderer; re-read it */
