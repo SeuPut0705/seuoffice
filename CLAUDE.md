@@ -22,7 +22,7 @@ seuoffice는 웹과 PC(Windows)에서 문서를 보고 고치고 AI로 편집하
 
 - 원격 `ieum` = https://github.com/pblsketch/ieumoffice (바탕, merge로 따라감), 원격 `genoffice` = GenOffice 원본(보통 이음을 거쳐 받는다).
 - 내부 이름(`@genoffice/*` 패키지, `GENOFFICE_*` 환경 변수, `genoffice` 명령, `~/.genoffice`)은 바꾸지 않는다(결정 0002). 사용자에게 보이는 이름과 새로 만드는 부품만 seuoffice / `@seuoffice/*`로 한다.
-- 새 코드는 새 파일에 둔다: `packages/web-platform/`, `packages/embed/`, `apps/web/`, `apps/*/vite.web.config.ts`, `apps/*/src/web/`, `apps/sheets/native/xlsx-wasm/`, `docs/seuoffice/`, `.github/workflows/seuoffice.yml`.
+- 새 코드는 새 파일에 둔다: `packages/web-platform/`, `packages/embed/`, `packages/collab/`, `apps/web/`, `apps/*/vite.web.config.ts`, `apps/*/src/web/`, `apps/sheets/native/xlsx-wasm/`, `formal/`, `docs/seuoffice/`, `.github/workflows/seuoffice.yml`.
 - 상위 파일을 고쳐야 하면 가장 작게 고치고, 같은 커밋에서 `docs/seuoffice/upstream-edits.md`에 파일·까닭을 한 줄 적는다. Rust 엔진은 `#[cfg(target_os = "wasi")]` 분기로만 고치고 데스크톱 동작은 바꾸지 않는다.
 - 이음 따라잡기: `git fetch ieum` → 가지 `sync/ieum-YYYYMMDD`에서 `git merge ieum/main` → 충돌 처리 → 아래 "합치기 전 검사" → `main`에 `--no-ff`로 합친다.
   - 루트 `AGENTS.md`·`CLAUDE.md`·`README.md`는 우리 것을 두고, 상위 규칙 변경 중 해당되는 것만 옮긴다.
