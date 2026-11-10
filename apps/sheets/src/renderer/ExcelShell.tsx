@@ -39,6 +39,7 @@ import {
   UndoIcon,
 } from './ribbon-icons'
 import { sheetContextMenuAction } from './sheet-context-menu'
+import { odsConversionNoticeText, type OdsConversionNotice } from './ods-import'
 import { useAiDock } from './ai/use-ai-dock'
 
 import { ColorDropdown } from './ColorDropdown'
@@ -331,6 +332,9 @@ interface ExcelShellProps {
   /// Left side of the status bar (ready / streaming / AI progress messages).
   readonly statusMessage: string
   readonly emptyCsvNotice: boolean
+  /// The open document came from an .ods copy: the footer keeps saying that
+  /// saving writes an .xlsx and how many formulas were kept as values.
+  readonly odsNotice?: OdsConversionNotice | null
   readonly onOpenWorkbook: () => void
   readonly onDismissEmptyCsvNotice: () => void
   /// The open workbook keeps no recovery copy (password protected): shown once per tab.
@@ -594,6 +598,7 @@ export function ExcelShell({
   openingWorkbook,
   statusMessage,
   emptyCsvNotice,
+  odsNotice,
   onOpenWorkbook,
   onDismissEmptyCsvNotice,
   recoveryNotice,
@@ -628,6 +633,9 @@ export function ExcelShell({
   onGetFillSeriesContext,
 }: ExcelShellProps): React.JSX.Element {
   const { t } = useI18n()
+  // The .ods import line: the same value for the life of the document, so a
+  // command's transient status message never hides or replaces it.
+  const odsNoticeText = odsNotice ? odsConversionNoticeText(odsNotice, t) : null
   const [activeTab, setActiveTab] = useState<RibbonTab>('Home')
   const collapse = useRibbonCollapse('ai-sheets-ribbon-collapsed', {
     collapse: t('appRibbonCollapse'),
@@ -1153,6 +1161,14 @@ export function ExcelShell({
               {showFormulas && (
                 <span className="status-flag" role="status" title={t('appShowingFormulas')}>
                   {t('appShowingFormulasActive')}
+                </span>
+              )}
+              {/* The document was opened from an .ods copy: saving writes an
+                  .xlsx. A document fact, so it stays beside the shared status
+                  chip, in its own value that command messages never clear. */}
+              {odsNoticeText && (
+                <span className="status-flag status-ods" role="status" title={odsNoticeText}>
+                  {odsNoticeText}
                 </span>
               )}
               <span className="status-msg">{statusMessage}</span>
