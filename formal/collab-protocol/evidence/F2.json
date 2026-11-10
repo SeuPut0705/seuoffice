@@ -1,0 +1,586 @@
+{
+  "spec": "/Users/seuput/Desktop/GitHub/seuoffice/formal/collab-protocol/tla/CollabProtocol.tla",
+  "name": "MC_F2.cfg",
+  "config": "MC_F2.cfg",
+  "ok": false,
+  "expect": "pass",
+  "durationMs": 606,
+  "outcome": "invariant",
+  "property": "P4_QuietIsDone",
+  "stats": {
+    "generated": 1495,
+    "distinct": 731,
+    "queue": 122,
+    "depth": 13
+  },
+  "trace": [
+    {
+      "step": 1,
+      "action": "Init",
+      "changed": {
+        "phase": "(c1 :> \"live\" @@ c2 :> \"live\")",
+        "made": "(c1 :> 0 @@ c2 :> 0)",
+        "log": "<<>>",
+        "conn": "(c1 :> 1 @@ c2 :> 1)",
+        "confirmed": "(c1 :> 0 @@ c2 :> 0)",
+        "view": "(c1 :> <<>> @@ c2 :> <<>>)",
+        "welcomed": "(c1 :> 0 @@ c2 :> 0)",
+        "open": "(c1 :> {1} @@ c2 :> {1})",
+        "copies": "(c1 :> {} @@ c2 :> {})",
+        "pending": "(c1 :> <<>> @@ c2 :> <<>>)",
+        "inflight": "( c1 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )",
+        "c2s": "(c1 :> <<<<>>, <<>>>> @@ c2 :> <<<<>>, <<>>>>)",
+        "cuts": "0",
+        "nextSeq": "(c1 :> 1 @@ c2 :> 1)",
+        "s2c": "(c1 :> <<>> @@ c2 :> <<>>)",
+        "catchHead": "(c1 :> 0 @@ c2 :> 0)"
+      }
+    },
+    {
+      "step": 2,
+      "action": "MakeOp(c1)",
+      "code": "packages/collab/src/client/engine.ts:325-331",
+      "changed": {
+        "made": "(c1 :> 0 @@ c2 :> 0) -> (c1 :> 1 @@ c2 :> 0)",
+        "pending": "(c1 :> <<>> @@ c2 :> <<>>) -> (c1 :> <<<<c1, 1>>>> @@ c2 :> <<>>)"
+      }
+    },
+    {
+      "step": 3,
+      "action": "SendNext(c1)",
+      "code": "packages/collab/src/client/engine.ts:578-603",
+      "changed": {
+        "copies": "(c1 :> {} @@ c2 :> {}) -> (c1 :> {[s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>]} @@ c2 :> {})",
+        "pending": "(c1 :> <<<<c1, 1>>>> @@ c2 :> <<>>) -> (c1 :> <<>> @@ c2 :> <<>>)",
+        "inflight": "( c1 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] ) -> ( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )",
+        "c2s": "(c1 :> <<<<>>, <<>>>> @@ c2 :> <<<<>>, <<>>>>) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> )"
+      }
+    },
+    {
+      "step": 4,
+      "action": "Cut(c1)",
+      "code": "packages/web-platform/src/collab-link.ts:36-49, packages/embed/src/collab.ts:116-124, packages/collab/src/client/engine.ts:300-308",
+      "changed": {
+        "phase": "(c1 :> \"live\" @@ c2 :> \"live\") -> (c1 :> \"offline\" @@ c2 :> \"live\")",
+        "cuts": "0 -> 1"
+      }
+    },
+    {
+      "step": 5,
+      "action": "Reconnect(c1)",
+      "code": "packages/collab/src/client/engine.ts:309-312, packages/collab/src/client/engine.ts:282-299",
+      "changed": {
+        "phase": "(c1 :> \"offline\" @@ c2 :> \"live\") -> (c1 :> \"hello\" @@ c2 :> \"live\")",
+        "conn": "(c1 :> 1 @@ c2 :> 1) -> (c1 :> 2 @@ c2 :> 1)",
+        "c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> ) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 2 ] >> >> @@ c2 :> <<<<>>, <<>>>> )"
+      }
+    },
+    {
+      "step": 6,
+      "action": "SrvHello(c1,2)",
+      "code": "packages/collab/src/server/decide.ts:58-73, packages/collab/src/server/server.ts:352-364, packages/collab/src/server/server.ts:391-426, packages/collab/src/server/server.ts:429-444, packages/collab/src/server/server.ts:300-304",
+      "changed": {
+        "welcomed": "(c1 :> 0 @@ c2 :> 0) -> (c1 :> 2 @@ c2 :> 0)",
+        "open": "(c1 :> {1} @@ c2 :> {1}) -> (c1 :> {2} @@ c2 :> {1})",
+        "c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 2 ] >> >> @@ c2 :> <<<<>>, <<>>>> ) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> )",
+        "s2c": "(c1 :> <<>> @@ c2 :> <<>>) -> ( c1 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"welcome\", v |-> 0, h |-> 0]>> @@ c2 :> <<>> )"
+      }
+    },
+    {
+      "step": 7,
+      "action": "RecvWelcome(c1)",
+      "code": "packages/collab/src/client/engine.ts:447-467",
+      "changed": {
+        "phase": "(c1 :> \"hello\" @@ c2 :> \"live\") -> (c1 :> \"catchup\" @@ c2 :> \"live\")",
+        "s2c": "( c1 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"welcome\", v |-> 0, h |-> 0]>> @@ c2 :> <<>> ) -> (c1 :> <<>> @@ c2 :> <<>>)"
+      }
+    },
+    {
+      "step": 8,
+      "action": "MakeOp(c2)",
+      "code": "packages/collab/src/client/engine.ts:325-331",
+      "changed": {
+        "made": "(c1 :> 1 @@ c2 :> 0) -> (c1 :> 1 @@ c2 :> 1)",
+        "pending": "(c1 :> <<>> @@ c2 :> <<>>) -> (c1 :> <<>> @@ c2 :> <<<<c2, 1>>>>)"
+      }
+    },
+    {
+      "step": 9,
+      "action": "SendNext(c2)",
+      "code": "packages/collab/src/client/engine.ts:578-603",
+      "changed": {
+        "copies": "(c1 :> {[s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>]} @@ c2 :> {}) -> ( c1 :> {[s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>]} @@ c2 :> {[s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>]} )",
+        "pending": "(c1 :> <<>> @@ c2 :> <<<<c2, 1>>>>) -> (c1 :> <<>> @@ c2 :> <<>>)",
+        "inflight": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] ) -> ( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, doomed |-> FALSE] )",
+        "c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> ) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> )"
+      }
+    },
+    {
+      "step": 10,
+      "action": "SrvSubmit(c2,1)",
+      "code": "packages/collab/src/server/decide.ts:88-99, packages/collab/src/server/store.ts:95-107, packages/collab/src/server/server.ts:463-507",
+      "changed": {
+        "log": "<<>> -> <<[s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, c |-> c2]>>",
+        "c2s": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> ) -> ( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> )",
+        "s2c": "(c1 :> <<>> @@ c2 :> <<>>) -> ( c1 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"change\", v |-> 1, h |-> 0]>> @@ c2 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> )"
+      }
+    },
+    {
+      "step": 11,
+      "action": "RecvChangeForeign(c1)",
+      "code": "packages/collab/src/client/engine.ts:495-496, packages/collab/src/client/engine.ts:528-535, packages/collab/src/client/engine.ts:332-334",
+      "changed": {
+        "confirmed": "(c1 :> 0 @@ c2 :> 0) -> (c1 :> 1 @@ c2 :> 0)",
+        "view": "(c1 :> <<>> @@ c2 :> <<>>) -> (c1 :> <<<<<<c2, 1>>>>>> @@ c2 :> <<>>)",
+        "pending": "(c1 :> <<>> @@ c2 :> <<>>) -> (c1 :> <<<<c1, 1>>>> @@ c2 :> <<>>)",
+        "inflight": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, doomed |-> FALSE] ) -> ( c1 :> [s |-> 1, b |-> 0, ops |-> <<>>, doomed |-> TRUE] @@ c2 :> [s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, doomed |-> FALSE] )",
+        "s2c": "( c1 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"change\", v |-> 1, h |-> 0]>> @@ c2 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> ) -> ( c1 :> <<>> @@ c2 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> )"
+      }
+    },
+    {
+      "step": 12,
+      "action": "CaughtUp(c1)",
+      "code": "packages/collab/src/client/engine.ts:469-484",
+      "changed": {
+        "phase": "(c1 :> \"catchup\" @@ c2 :> \"live\") -> (c1 :> \"live\" @@ c2 :> \"live\")"
+      }
+    },
+    {
+      "step": 13,
+      "action": "RecvAck(c2)",
+      "code": "packages/collab/src/client/engine.ts:501-508",
+      "changed": {
+        "confirmed": "(c1 :> 1 @@ c2 :> 0) -> (c1 :> 1 @@ c2 :> 1)",
+        "view": "(c1 :> <<<<<<c2, 1>>>>>> @@ c2 :> <<>>) -> (c1 :> <<<<<<c2, 1>>>>>> @@ c2 :> <<<<<<c2, 1>>>>>>)",
+        "inflight": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<>>, doomed |-> TRUE] @@ c2 :> [s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, doomed |-> FALSE] ) -> ( c1 :> [s |-> 1, b |-> 0, ops |-> <<>>, doomed |-> TRUE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )",
+        "nextSeq": "(c1 :> 1 @@ c2 :> 1) -> (c1 :> 1 @@ c2 :> 2)",
+        "s2c": "( c1 :> <<>> @@ c2 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> ) -> (c1 :> <<>> @@ c2 :> <<>>)"
+      },
+      "violation": true
+    }
+  ],
+  "rows": [
+    {
+      "n": 1,
+      "step": "Init",
+      "code": [],
+      "changed": {
+        "phase": {
+          "to": "(c1 :> \"live\" @@ c2 :> \"live\")"
+        },
+        "made": {
+          "to": "(c1 :> 0 @@ c2 :> 0)"
+        },
+        "log": {
+          "to": "<<>>"
+        },
+        "conn": {
+          "to": "(c1 :> 1 @@ c2 :> 1)"
+        },
+        "confirmed": {
+          "to": "(c1 :> 0 @@ c2 :> 0)"
+        },
+        "view": {
+          "to": "(c1 :> <<>> @@ c2 :> <<>>)"
+        },
+        "welcomed": {
+          "to": "(c1 :> 0 @@ c2 :> 0)"
+        },
+        "open": {
+          "to": "(c1 :> {1} @@ c2 :> {1})"
+        },
+        "copies": {
+          "to": "(c1 :> {} @@ c2 :> {})"
+        },
+        "pending": {
+          "to": "(c1 :> <<>> @@ c2 :> <<>>)"
+        },
+        "inflight": {
+          "to": "( c1 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )"
+        },
+        "c2s": {
+          "to": "(c1 :> <<<<>>, <<>>>> @@ c2 :> <<<<>>, <<>>>>)"
+        },
+        "cuts": {
+          "to": "0"
+        },
+        "nextSeq": {
+          "to": "(c1 :> 1 @@ c2 :> 1)"
+        },
+        "s2c": {
+          "to": "(c1 :> <<>> @@ c2 :> <<>>)"
+        },
+        "catchHead": {
+          "to": "(c1 :> 0 @@ c2 :> 0)"
+        }
+      }
+    },
+    {
+      "n": 2,
+      "step": "MakeOp(c1)",
+      "action": "MakeOp",
+      "location": {
+        "module": "CollabProtocol",
+        "line": 209,
+        "col": 5,
+        "endLine": 213,
+        "endCol": 110
+      },
+      "code": [
+        "packages/collab/src/client/engine.ts:325-331"
+      ],
+      "changed": {
+        "made": {
+          "from": "(c1 :> 0 @@ c2 :> 0)",
+          "to": "(c1 :> 1 @@ c2 :> 0)"
+        },
+        "pending": {
+          "from": "(c1 :> <<>> @@ c2 :> <<>>)",
+          "to": "(c1 :> <<<<c1, 1>>>> @@ c2 :> <<>>)"
+        }
+      }
+    },
+    {
+      "n": 3,
+      "step": "SendNext(c1)",
+      "action": "SendNext",
+      "location": {
+        "module": "CollabProtocol",
+        "line": 219,
+        "col": 5,
+        "endLine": 228,
+        "endCol": 107
+      },
+      "code": [
+        "packages/collab/src/client/engine.ts:578-603"
+      ],
+      "changed": {
+        "copies": {
+          "from": "(c1 :> {} @@ c2 :> {})",
+          "to": "(c1 :> {[s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>]} @@ c2 :> {})"
+        },
+        "pending": {
+          "from": "(c1 :> <<<<c1, 1>>>> @@ c2 :> <<>>)",
+          "to": "(c1 :> <<>> @@ c2 :> <<>>)"
+        },
+        "inflight": {
+          "from": "( c1 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )",
+          "to": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )"
+        },
+        "c2s": {
+          "from": "(c1 :> <<<<>>, <<>>>> @@ c2 :> <<<<>>, <<>>>>)",
+          "to": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> )"
+        }
+      }
+    },
+    {
+      "n": 4,
+      "step": "Cut(c1)",
+      "action": "Cut",
+      "location": {
+        "module": "CollabProtocol",
+        "line": 421,
+        "col": 5,
+        "endLine": 426,
+        "endCol": 107
+      },
+      "code": [
+        "packages/web-platform/src/collab-link.ts:36-49",
+        "packages/embed/src/collab.ts:116-124",
+        "packages/collab/src/client/engine.ts:300-308"
+      ],
+      "changed": {
+        "phase": {
+          "from": "(c1 :> \"live\" @@ c2 :> \"live\")",
+          "to": "(c1 :> \"offline\" @@ c2 :> \"live\")"
+        },
+        "cuts": {
+          "from": "0",
+          "to": "1"
+        }
+      }
+    },
+    {
+      "n": 5,
+      "step": "Reconnect(c1)",
+      "action": "Reconnect",
+      "location": {
+        "module": "CollabProtocol",
+        "line": 431,
+        "col": 5,
+        "endLine": 436,
+        "endCol": 121
+      },
+      "code": [
+        "packages/collab/src/client/engine.ts:309-312",
+        "packages/collab/src/client/engine.ts:282-299"
+      ],
+      "changed": {
+        "phase": {
+          "from": "(c1 :> \"offline\" @@ c2 :> \"live\")",
+          "to": "(c1 :> \"hello\" @@ c2 :> \"live\")"
+        },
+        "conn": {
+          "from": "(c1 :> 1 @@ c2 :> 1)",
+          "to": "(c1 :> 2 @@ c2 :> 1)"
+        },
+        "c2s": {
+          "from": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> )",
+          "to": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 2 ] >> >> @@ c2 :> <<<<>>, <<>>>> )"
+        }
+      }
+    },
+    {
+      "n": 6,
+      "step": "SrvHello(c1,2)",
+      "action": "SrvHello",
+      "location": {
+        "module": "CollabProtocol",
+        "line": 146,
+        "col": 5,
+        "endLine": 162,
+        "endCol": 42
+      },
+      "code": [
+        "packages/collab/src/server/decide.ts:58-73",
+        "packages/collab/src/server/server.ts:352-364",
+        "packages/collab/src/server/server.ts:391-426",
+        "packages/collab/src/server/server.ts:429-444",
+        "packages/collab/src/server/server.ts:300-304"
+      ],
+      "changed": {
+        "welcomed": {
+          "from": "(c1 :> 0 @@ c2 :> 0)",
+          "to": "(c1 :> 2 @@ c2 :> 0)"
+        },
+        "open": {
+          "from": "(c1 :> {1} @@ c2 :> {1})",
+          "to": "(c1 :> {2} @@ c2 :> {1})"
+        },
+        "c2s": {
+          "from": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, << [ s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"hello\", v |-> 0, h |-> 2 ] >> >> @@ c2 :> <<<<>>, <<>>>> )",
+          "to": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> )"
+        },
+        "s2c": {
+          "from": "(c1 :> <<>> @@ c2 :> <<>>)",
+          "to": "( c1 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"welcome\", v |-> 0, h |-> 0]>> @@ c2 :> <<>> )"
+        }
+      }
+    },
+    {
+      "n": 7,
+      "step": "RecvWelcome(c1)",
+      "action": "RecvWelcome",
+      "location": {
+        "module": "CollabProtocol",
+        "line": 248,
+        "col": 5,
+        "endLine": 254,
+        "endCol": 102
+      },
+      "code": [
+        "packages/collab/src/client/engine.ts:447-467"
+      ],
+      "changed": {
+        "phase": {
+          "from": "(c1 :> \"hello\" @@ c2 :> \"live\")",
+          "to": "(c1 :> \"catchup\" @@ c2 :> \"live\")"
+        },
+        "s2c": {
+          "from": "( c1 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"welcome\", v |-> 0, h |-> 0]>> @@ c2 :> <<>> )",
+          "to": "(c1 :> <<>> @@ c2 :> <<>>)"
+        }
+      }
+    },
+    {
+      "n": 8,
+      "step": "MakeOp(c2)",
+      "action": "MakeOp",
+      "location": {
+        "module": "CollabProtocol",
+        "line": 209,
+        "col": 5,
+        "endLine": 213,
+        "endCol": 110
+      },
+      "code": [
+        "packages/collab/src/client/engine.ts:325-331"
+      ],
+      "changed": {
+        "made": {
+          "from": "(c1 :> 1 @@ c2 :> 0)",
+          "to": "(c1 :> 1 @@ c2 :> 1)"
+        },
+        "pending": {
+          "from": "(c1 :> <<>> @@ c2 :> <<>>)",
+          "to": "(c1 :> <<>> @@ c2 :> <<<<c2, 1>>>>)"
+        }
+      }
+    },
+    {
+      "n": 9,
+      "step": "SendNext(c2)",
+      "action": "SendNext",
+      "location": {
+        "module": "CollabProtocol",
+        "line": 219,
+        "col": 5,
+        "endLine": 228,
+        "endCol": 107
+      },
+      "code": [
+        "packages/collab/src/client/engine.ts:578-603"
+      ],
+      "changed": {
+        "copies": {
+          "from": "(c1 :> {[s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>]} @@ c2 :> {})",
+          "to": "( c1 :> {[s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>]} @@ c2 :> {[s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>]} )"
+        },
+        "pending": {
+          "from": "(c1 :> <<>> @@ c2 :> <<<<c2, 1>>>>)",
+          "to": "(c1 :> <<>> @@ c2 :> <<>>)"
+        },
+        "inflight": {
+          "from": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )",
+          "to": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, doomed |-> FALSE] )"
+        },
+        "c2s": {
+          "from": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> )",
+          "to": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> )"
+        }
+      }
+    },
+    {
+      "n": 10,
+      "step": "SrvSubmit(c2,1)",
+      "action": "SrvSubmit",
+      "location": {
+        "module": "CollabProtocol",
+        "line": 168,
+        "col": 5,
+        "endLine": 189,
+        "endCol": 53
+      },
+      "code": [
+        "packages/collab/src/server/decide.ts:88-99",
+        "packages/collab/src/server/store.ts:95-107",
+        "packages/collab/src/server/server.ts:463-507"
+      ],
+      "changed": {
+        "log": {
+          "from": "<<>>",
+          "to": "<<[s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, c |-> c2]>>"
+        },
+        "c2s": {
+          "from": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> )",
+          "to": "( c1 :> << << [ s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, t |-> \"submit\", v |-> 0, h |-> 0 ] >>, <<>> >> @@ c2 :> <<<<>>, <<>>>> )"
+        },
+        "s2c": {
+          "from": "(c1 :> <<>> @@ c2 :> <<>>)",
+          "to": "( c1 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"change\", v |-> 1, h |-> 0]>> @@ c2 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> )"
+        }
+      }
+    },
+    {
+      "n": 11,
+      "step": "RecvChangeForeign(c1)",
+      "action": "RecvChangeForeign",
+      "location": {
+        "module": "CollabProtocol",
+        "line": 291,
+        "col": 5,
+        "endLine": 303,
+        "endCol": 84
+      },
+      "code": [
+        "packages/collab/src/client/engine.ts:495-496",
+        "packages/collab/src/client/engine.ts:528-535",
+        "packages/collab/src/client/engine.ts:332-334"
+      ],
+      "changed": {
+        "confirmed": {
+          "from": "(c1 :> 0 @@ c2 :> 0)",
+          "to": "(c1 :> 1 @@ c2 :> 0)"
+        },
+        "view": {
+          "from": "(c1 :> <<>> @@ c2 :> <<>>)",
+          "to": "(c1 :> <<<<<<c2, 1>>>>>> @@ c2 :> <<>>)"
+        },
+        "pending": {
+          "from": "(c1 :> <<>> @@ c2 :> <<>>)",
+          "to": "(c1 :> <<<<c1, 1>>>> @@ c2 :> <<>>)"
+        },
+        "inflight": {
+          "from": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<<<c1, 1>>>>, doomed |-> FALSE] @@ c2 :> [s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, doomed |-> FALSE] )",
+          "to": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<>>, doomed |-> TRUE] @@ c2 :> [s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, doomed |-> FALSE] )"
+        },
+        "s2c": {
+          "from": "( c1 :> <<[s |-> 0, b |-> 0, ops |-> <<>>, t |-> \"change\", v |-> 1, h |-> 0]>> @@ c2 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> )",
+          "to": "( c1 :> <<>> @@ c2 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> )"
+        }
+      }
+    },
+    {
+      "n": 12,
+      "step": "CaughtUp(c1)",
+      "action": "CaughtUp",
+      "location": {
+        "module": "CollabProtocol",
+        "line": 397,
+        "col": 5,
+        "endLine": 412,
+        "endCol": 59
+      },
+      "code": [
+        "packages/collab/src/client/engine.ts:469-484"
+      ],
+      "changed": {
+        "phase": {
+          "from": "(c1 :> \"catchup\" @@ c2 :> \"live\")",
+          "to": "(c1 :> \"live\" @@ c2 :> \"live\")"
+        }
+      }
+    },
+    {
+      "n": 13,
+      "step": "RecvAck(c2)",
+      "action": "RecvAck",
+      "location": {
+        "module": "CollabProtocol",
+        "line": 319,
+        "col": 5,
+        "endLine": 328,
+        "endCol": 84
+      },
+      "code": [
+        "packages/collab/src/client/engine.ts:501-508"
+      ],
+      "changed": {
+        "confirmed": {
+          "from": "(c1 :> 1 @@ c2 :> 0)",
+          "to": "(c1 :> 1 @@ c2 :> 1)"
+        },
+        "view": {
+          "from": "(c1 :> <<<<<<c2, 1>>>>>> @@ c2 :> <<>>)",
+          "to": "(c1 :> <<<<<<c2, 1>>>>>> @@ c2 :> <<<<<<c2, 1>>>>>>)"
+        },
+        "inflight": {
+          "from": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<>>, doomed |-> TRUE] @@ c2 :> [s |-> 1, b |-> 0, ops |-> <<<<c2, 1>>>>, doomed |-> FALSE] )",
+          "to": "( c1 :> [s |-> 1, b |-> 0, ops |-> <<>>, doomed |-> TRUE] @@ c2 :> [s |-> 0, b |-> 0, ops |-> <<>>, doomed |-> FALSE] )"
+        },
+        "nextSeq": {
+          "from": "(c1 :> 1 @@ c2 :> 1)",
+          "to": "(c1 :> 1 @@ c2 :> 2)"
+        },
+        "s2c": {
+          "from": "( c1 :> <<>> @@ c2 :> <<[s |-> 1, b |-> 0, ops |-> <<>>, t |-> \"ack\", v |-> 1, h |-> 0]>> )",
+          "to": "(c1 :> <<>> @@ c2 :> <<>>)"
+        }
+      },
+      "violation": true
+    }
+  ],
+  "tlcVersion": "2026.10.28.014557",
+  "message": "Invariant P4_QuietIsDone is violated.",
+  "warnings": []
+}

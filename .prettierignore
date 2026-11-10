@@ -32,3 +32,6 @@ apps/shell/resources/builtin-skills/*/
 
 # The seuoffice handoff note is kept byte-for-byte as it was handed over.
 docs/인계-2026-11-08.md
+
+# The model-checking tools write these files themselves (seuoffice).
+formal/

@@ -1,0 +1,19 @@
+{
+	"runs": [
+		{ "name": "fixed-2clients-2ops-2cuts", "config": "MC.cfg", "expect": "pass" },
+		{ "name": "late-frames-reach-store-2clients-2ops-2cuts", "config": "MC_late.cfg", "expect": "pass" },
+		{ "name": "fixed-3clients-1op-2cuts-safety", "config": "MC_three.cfg", "expect": "pass" },
+		{ "name": "fixed-3clients-1op-2cuts-liveness", "config": "MC_three_live.cfg", "expect": "pass", "timeoutSec": 1800 },
+		{ "name": "as-written-safety-2clients-2ops-2cuts", "config": "MC_asis_safety.cfg", "expect": "pass" },
+		{ "name": "replayed-seq-2clients-2ops-1cut", "config": "MC_rogue.cfg", "expect": "pass" },
+		{ "name": "as-written-F1-late-hello-supersedes-live-socket", "config": "MC_F1.cfg", "expect": "invariant", "property": "P4_QuietIsDone" },
+		{ "name": "as-written-F1-late-hello-liveness", "config": "MC_F1_live.cfg", "expect": "temporal", "property": "P4_NoOpLost" },
+		{ "name": "as-written-F2-doomed-inflight-kept-on-reconnect", "config": "MC_F2.cfg", "expect": "invariant", "property": "P4_QuietIsDone" },
+		{ "name": "as-written-F2-doomed-inflight-liveness", "config": "MC_F2_live.cfg", "expect": "temporal", "property": "P4_NoOpLost" },
+		{ "name": "sanity-concurrent-submit-dooms", "config": "MC_NeverDoomed.cfg", "expect": "invariant", "property": "SanityNeverDoomed" },
+		{ "name": "sanity-seq-reused-after-stale-or-doom", "config": "MC_NoSeqReuse.cfg", "expect": "invariant", "property": "SanityNoSeqReuse" },
+		{ "name": "sanity-late-copy-after-confirm", "config": "MC_NoLateCopy.cfg", "expect": "invariant", "property": "SanityNoLateCopy" },
+		{ "name": "sanity-attempt-fence-fires", "config": "MC_NoFencedHello.cfg", "expect": "invariant", "property": "SanityNoFencedHello" },
+		{ "name": "sanity-run-completes", "config": "MC_NeverDone.cfg", "expect": "invariant", "property": "SanityNeverDone" }
+	]
+}
