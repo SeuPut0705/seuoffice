@@ -31,6 +31,8 @@ mod odf_formula;
 mod odf_functions;
 mod odf_layout;
 pub mod ods_export;
+mod ods_chart;
+mod ods_drawing;
 mod ods_print;
 mod ods_rules;
 mod ods_styles;

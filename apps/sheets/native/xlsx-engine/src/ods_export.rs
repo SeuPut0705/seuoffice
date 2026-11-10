@@ -27,6 +27,10 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
 use crate::odf_formula::{self, Names};
+use crate::ods_chart::chart_document;
+use crate::ods_drawing::{
+    Drawings, EmbeddedObject, Geometry, Picture, default_column_points, width_points,
+};
 use crate::ods_print::{
     PageStyles, parse_print_extras, print_titles, split_outside_quotes, worksheet_tail,
 };
@@ -35,8 +39,8 @@ use crate::ods_styles::{DEFAULT_CELL_STYLE, ResolvedStyle, StyleRegistry, ValueK
 use crate::xlsx_package::escape_xml;
 use crate::{
     CellRange, CellRecord, CellStyle, CellValue, CommentInfo, FilterColumnCriteria, MergedRange,
-    RangeResult, RichRun, RowProperty, SheetMetadata, SidecarError, WorkbookMetadata,
-    WorkbookSessions,
+    RangeResult, RichRun, RowProperty, SheetMetadata, SidecarError, VisualObject,
+    WorkbookMetadata, WorkbookSessions,
 };
 
 /// Excel's grid limits, the same ones the reader enforces.
@@ -73,6 +77,7 @@ const NAMESPACES: &str = concat!(
     r#"xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" "#,
     r#"xmlns:of="urn:oasis:names:tc:opendocument:xmlns:of:1.2" "#,
     r#"xmlns:xlink="http://www.w3.org/1999/xlink" "#,
+    r#"xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" "#,
     r#"xmlns:dc="http://purl.org/dc/elements/1.1/" "#,
     // Conditional formats have no element in the standard; this is the
     // extension namespace the readers of the format share for them.
@@ -140,6 +145,118 @@ fn reject_same_target(source: &Path, target: &Path) -> Result<(), SidecarError> 
     Ok(())
 }
 
+/// The drawings of one sheet as shape elements, keyed by the cell each one
+/// starts in. A drawing that is written leaves the count of losses.
+fn sheet_frames(
+    sessions: &mut WorkbookSessions,
+    metadata: &WorkbookMetadata,
+    sheet: &SheetMetadata,
+    drawings: &mut Drawings,
+    counters: &mut Counters,
+) -> Result<HashMap<(usize, usize), String>, SidecarError> {
+    let mut frames: HashMap<(usize, usize), String> = HashMap::new();
+    let visuals: Vec<&VisualObject> = metadata
+        .visuals
+        .iter()
+        .filter(|visual| visual.sheet_id == sheet.id)
+        .collect();
+    if visuals.is_empty() && sheet.cell_images.is_empty() {
+        return Ok(frames);
+    }
+    // The heights of the rows the drawings span decide their size.
+    let first = visuals
+        .iter()
+        .map(|visual| visual.anchor.from_row)
+        .chain(sheet.cell_images.iter().map(|image| image.row))
+        .min()
+        .unwrap_or(0);
+    let last = visuals
+        .iter()
+        .map(|visual| visual.anchor.to_row.max(visual.anchor.from_row))
+        .chain(sheet.cell_images.iter().map(|image| image.row))
+        .max()
+        .unwrap_or(0);
+    let geometry = Geometry::new(
+        sheet,
+        row_heights(sessions, &metadata.session_id, sheet, first, last)?,
+    );
+    for visual in visuals {
+        let cell = (
+            visual.anchor.from_row.min(MAX_ROWS - 1),
+            visual.anchor.from_column.min(MAX_COLUMNS - 1),
+        );
+        let (frame, lost) = match visual.kind.as_str() {
+            "image" => (
+                drawings.image(sheet, &geometry, visual),
+                &mut counters.dropped.images,
+            ),
+            "shape" => (
+                drawings.shape(sheet, &geometry, visual),
+                &mut counters.dropped.shapes,
+            ),
+            "chart" => (
+                visual.chart.as_ref().and_then(|chart| {
+                    drawings.chart(sheet, &geometry, visual, |width, height| {
+                        chart_document(chart, width, height)
+                    })
+                }),
+                &mut counters.dropped.charts,
+            ),
+            _ => continue,
+        };
+        if let Some(frame) = frame {
+            frames.entry(cell).or_default().push_str(&frame);
+            *lost = lost.saturating_sub(1);
+        }
+    }
+    for image in &sheet.cell_images {
+        if let Some(frame) = drawings.cell_image(&geometry, image.row, image.column, &image.media_path)
+        {
+            frames
+                .entry((image.row, image.column))
+                .or_default()
+                .push_str(&frame);
+            counters.dropped.images = counters.dropped.images.saturating_sub(1);
+        }
+    }
+    Ok(frames)
+}
+
+/// The rows from `first` to `last` whose height is not the default one: their
+/// height in points, zero when hidden.
+fn row_heights(
+    sessions: &mut WorkbookSessions,
+    session_id: &str,
+    sheet: &SheetMetadata,
+    first: usize,
+    last: usize,
+) -> Result<HashMap<usize, f64>, SidecarError> {
+    let mut heights = HashMap::new();
+    if sheet.row_count == 0 || sheet.column_count == 0 {
+        return Ok(heights);
+    }
+    let last = last.min(sheet.row_count - 1);
+    let mut start = first;
+    while start <= last {
+        let end = (start + READ_WINDOW_CELLS - 1).min(last);
+        let range = CellRange {
+            start_row: start,
+            end_row: end,
+            start_column: 0,
+            end_column: 0,
+        };
+        for row in sessions.read_range(session_id, &sheet.id, &range)?.rows {
+            if row.hidden {
+                heights.insert(row.row, 0.0);
+            } else if let Some(height) = row.height.filter(|height| *height > 0.0) {
+                heights.insert(row.row, height);
+            }
+        }
+        start = end + 1;
+    }
+    Ok(heights)
+}
+
 /// The package and the worksheet part behind a sheet, for the few settings
 /// the model does not carry.
 fn worksheet_part(
@@ -177,6 +294,7 @@ fn write_document(
     let (named, names) = exported_names(metadata);
     let mut database_ranges = String::new();
     let mut validations = Validations::default();
+    let mut drawings = Drawings::default();
 
     let body_path = staging.path("body");
     {
@@ -201,6 +319,7 @@ fn write_document(
                 &mut registry,
             );
             counters.dropped.conditional_formats += lost;
+            let frames = sheet_frames(sessions, metadata, sheet, &mut drawings, &mut counters)?;
             let master = pages.register(wide.page_setup.as_ref(), extras, &mut registry);
             let table_style = format!("ta{}", index + 1);
             table_styles.push(table_style_xml(&table_style, sheet, &master));
@@ -223,6 +342,7 @@ fn write_document(
                 local_names: &local_names,
                 validations: &areas,
                 conditional_formats: &conditional_formats,
+                frames: &frames,
             };
             write_table(
                 sessions,
@@ -259,6 +379,7 @@ fn write_document(
         &registry,
         &table_styles,
         &validations.xml,
+        &drawings.automatic_styles(),
         &body_path,
         metadata,
     )?;
@@ -270,7 +391,20 @@ fn write_document(
     fs::write(&settings_path, settings_xml(metadata))?;
 
     let archive_path = staging.path("archive");
-    write_archive(&archive_path, &content_path, &styles_path, &meta_path, &settings_path)?;
+    let package = sessions
+        .sessions
+        .get(&metadata.session_id)
+        .map(|session| session.path.clone());
+    write_archive(
+        &archive_path,
+        &content_path,
+        &styles_path,
+        &meta_path,
+        &settings_path,
+        package.as_deref(),
+        &drawings.pictures,
+        &drawings.objects,
+    )?;
     promote(&archive_path, target)?;
     staging.forget(&archive_path);
 
@@ -285,6 +419,7 @@ fn write_content_xml(
     registry: &StyleRegistry,
     table_styles: &[String],
     validations: &str,
+    graphic_styles: &str,
     body_path: &Path,
     metadata: &WorkbookMetadata,
 ) -> Result<(), SidecarError> {
@@ -300,6 +435,7 @@ fn write_content_xml(
     for style in table_styles {
         header.push_str(style);
     }
+    header.push_str(graphic_styles);
     header.push_str("</office:automatic-styles><office:body><office:spreadsheet>");
     // Excel compares text without case and reads `*` and `?` in a criterion as
     // wildcards. ODF's defaults are the opposite on both counts, so a document
@@ -431,6 +567,9 @@ fn write_archive(
     styles_path: &Path,
     meta_path: &Path,
     settings_path: &Path,
+    package: Option<&Path>,
+    pictures: &[Picture],
+    objects: &[EmbeddedObject],
 ) -> Result<(), SidecarError> {
     let file = File::create(path)?;
     let mut writer = ZipWriter::new(file);
@@ -443,7 +582,7 @@ fn write_archive(
     writer.write_all(MIMETYPE.as_bytes())?;
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
     writer.start_file("META-INF/manifest.xml", options)?;
-    writer.write_all(manifest_xml().as_bytes())?;
+    writer.write_all(manifest_xml(pictures, objects).as_bytes())?;
     for (name, source) in [
         ("content.xml", content_path),
         ("styles.xml", styles_path),
@@ -454,14 +593,48 @@ fn write_archive(
         let mut part = File::open(source)?;
         io::copy(&mut part, &mut writer)?;
     }
+    for object in objects {
+        writer.start_file(format!("{}/content.xml", object.directory), options)?;
+        writer.write_all(object.content.as_bytes())?;
+    }
+    if !pictures.is_empty() {
+        // The pictures are copied out of the workbook as they are; the frames
+        // that point at them are already written, so a picture that cannot
+        // be read fails the export rather than leaving a broken link.
+        let source = package.ok_or_else(|| {
+            SidecarError::InvalidRequest("The workbook behind the export is gone.".into())
+        })?;
+        let mut archive = ZipArchive::new(File::open(source)?)?;
+        for picture in pictures {
+            let mut entry = archive.by_name(&picture.source)?;
+            writer.start_file(picture.name.as_str(), options)?;
+            io::copy(&mut entry, &mut writer)?;
+        }
+    }
     let finished = writer.finish()?;
     crate::archive::sync_best_effort(&finished)?;
     Ok(())
 }
 
-fn manifest_xml() -> String {
+fn manifest_xml(pictures: &[Picture], objects: &[EmbeddedObject]) -> String {
+    let mut pictures: String = pictures
+        .iter()
+        .map(|picture| {
+            format!(
+                r#"<manifest:file-entry manifest:full-path="{}" manifest:media-type="{}"/>"#,
+                escape_xml(&picture.name),
+                escape_xml(&picture.media_type)
+            )
+        })
+        .collect();
+    for object in objects {
+        let directory = escape_xml(&object.directory);
+        pictures.push_str(&format!(
+            r#"<manifest:file-entry manifest:full-path="{directory}/" manifest:media-type="application/vnd.oasis.opendocument.chart"/><manifest:file-entry manifest:full-path="{directory}/content.xml" manifest:media-type="text/xml"/>"#
+        ));
+    }
     format!(
-        r#"<?xml version="1.0" encoding="UTF-8"?><manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="{ODF_VERSION}"><manifest:file-entry manifest:full-path="/" manifest:version="{ODF_VERSION}" manifest:media-type="{MIMETYPE}"/><manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="meta.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="settings.xml" manifest:media-type="text/xml"/></manifest:manifest>"#
+        r#"<?xml version="1.0" encoding="UTF-8"?><manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="{ODF_VERSION}"><manifest:file-entry manifest:full-path="/" manifest:version="{ODF_VERSION}" manifest:media-type="{MIMETYPE}"/><manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="meta.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="settings.xml" manifest:media-type="text/xml"/>{pictures}</manifest:manifest>"#
     )
 }
 
@@ -904,12 +1077,6 @@ fn axis_columns(sheet: &SheetMetadata, columns: usize) -> usize {
     columns.max(widest).min(MAX_COLUMNS)
 }
 
-/// Excel's column width (characters of the default font) as the points ODF
-/// measures lengths in: characters → pixels at 96 dpi → points.
-fn width_points(width: f64) -> f64 {
-    ((width * 7.0 + 5.0) * 0.75).max(0.0)
-}
-
 /// Everything about one sheet the row writer needs besides the cells.
 struct SheetContext<'a> {
     sheet: &'a SheetMetadata,
@@ -925,6 +1092,8 @@ struct SheetContext<'a> {
     validations: &'a [ValidationArea],
     /// The sheet's `calcext:conditional-formats` element, ready to write.
     conditional_formats: &'a str,
+    /// The drawings that start in a cell, as ready shape elements.
+    frames: &'a HashMap<(usize, usize), String>,
 }
 
 /// One column of the axis, as far as its `table:table-column` is concerned.
@@ -1040,6 +1209,7 @@ fn write_table(
 
     // Column axis: one entry per run of identical columns, inside the group
     // and title wrappers the sheet asks for.
+    let default_width = default_column_points(sheet);
     let column_breaks: HashSet<usize> = context.wide.col_breaks.iter().copied().collect();
     let mut column_axis = vec![
         ColumnAxis {
@@ -1091,7 +1261,10 @@ fn write_table(
             out.write_all(nesting.enter(entry.level, entry.title, entry.hidden).as_bytes())?;
         }
         let mut attributes = String::new();
-        if let Some(name) = registry.column(entry.width.map(width_points), entry.break_before) {
+        // A column without a width still says one: left unsaid, a reader
+        // uses its own default, which is a third wider than Excel's.
+        let width = entry.width.map_or(default_width, width_points);
+        if let Some(name) = registry.column(Some(width), entry.break_before) {
             attributes.push_str(&format!(r#" table:style-name="{name}""#));
         }
         if let Some(name) = &entry.default_style {
@@ -1107,6 +1280,18 @@ fn write_table(
         column += run;
     }
     out.write_all(nesting.close().as_bytes())?;
+    if axis < MAX_COLUMNS {
+        // The columns past the last one described keep the default width too.
+        if let Some(name) = registry.column(Some(default_width), false) {
+            out.write_all(
+                format!(
+                    r#"<table:table-column table:style-name="{name}" table:number-columns-repeated="{}"/>"#,
+                    MAX_COLUMNS - axis
+                )
+                .as_bytes(),
+            )?;
+        }
+    }
     // A reader only applies a column's default cell style to rows the table
     // does not spell out, so every row that is written names the style on its
     // empty cells too.
@@ -1150,51 +1335,72 @@ fn write_table(
     let mut resolved: HashMap<usize, ResolvedStyle> = HashMap::new();
     let window_rows = (READ_WINDOW_CELLS / columns.max(1)).clamp(1, 4096);
 
+    // A note or a drawing sits in a cell, and that cell may lie below or to
+    // the right of the box. The rows down to the last of them are walked too;
+    // nothing is read for them.
+    let total_rows = comments
+        .keys()
+        .chain(context.frames.keys())
+        .map(|(row, _)| row + 1)
+        .max()
+        .unwrap_or(0)
+        .max(rows)
+        .min(MAX_ROWS);
     let mut start = 0;
-    while start < rows {
-        let end = (start + window_rows - 1).min(rows - 1);
-        let range = CellRange {
-            start_row: start,
-            end_row: end,
-            start_column: 0,
-            end_column: columns - 1,
+    while start < total_rows {
+        let end = (start + window_rows - 1).min(total_rows - 1);
+        let (mut window_cells, window_row_properties, window_links, window_merges) = if start < rows
+        {
+            let range = CellRange {
+                start_row: start,
+                end_row: end.min(rows - 1),
+                start_column: 0,
+                end_column: columns - 1,
+            };
+            let window = sessions.read_range(session_id, &sheet.id, &range)?;
+            (window.cells, window.rows, window.hyperlinks, window.merges)
+        } else {
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new())
         };
-        let mut window = sessions.read_range(session_id, &sheet.id, &range)?;
-        for merge in &window.merges {
+        for merge in &window_merges {
             merges.add(*merge);
         }
         merges.sort();
-        // A note on a cell with no record still needs a cell to sit in.
-        let recorded: HashSet<(usize, usize)> = if comments.is_empty() {
-            HashSet::new()
-        } else {
-            window
-                .cells
+        // A note or a drawing on a cell with no record still needs a cell to
+        // sit in.
+        let mut placed: Vec<(usize, usize)> = comments
+            .keys()
+            .chain(context.frames.keys())
+            .filter(|(row, column)| (start..=end).contains(row) && *column < MAX_COLUMNS)
+            .copied()
+            .collect();
+        if !placed.is_empty() {
+            placed.sort_unstable();
+            placed.dedup();
+            let recorded: HashSet<(usize, usize)> = window_cells
                 .iter()
                 .map(|cell| (cell.row, cell.column))
-                .collect()
-        };
-        for (row, column) in comments.keys() {
-            if (start..=end).contains(row) && *column < columns && !recorded.contains(&(*row, *column))
-            {
-                window.cells.push(CellRecord {
-                    row: *row,
-                    column: *column,
-                    value: None,
-                    formula: None,
-                    array_ref: None,
-                    style_index: None,
-                    rich: None,
-                });
+                .collect();
+            for (row, column) in placed {
+                if !recorded.contains(&(row, column)) {
+                    window_cells.push(CellRecord {
+                        row,
+                        column,
+                        value: None,
+                        formula: None,
+                        array_ref: None,
+                        style_index: None,
+                        rich: None,
+                    });
+                }
             }
         }
-        let links: HashMap<(usize, usize), &str> = window
-            .hyperlinks
+        let links: HashMap<(usize, usize), &str> = window_links
             .iter()
             .map(|link| ((link.row, link.column), link.target.as_str()))
             .collect();
         let mut by_row: HashMap<usize, Vec<&CellRecord>> = HashMap::new();
-        for cell in &window.cells {
+        for cell in &window_cells {
             by_row.entry(cell.row).or_default().push(cell);
         }
         for cells in by_row.values_mut() {
@@ -1202,7 +1408,7 @@ fn write_table(
         }
         row_styles.clear();
         let mut row_properties: HashMap<usize, &RowProperty> = HashMap::new();
-        for row in &window.rows {
+        for row in &window_row_properties {
             row_styles.insert(row.row, row.style_index);
             row_properties.insert(row.row, row);
         }
@@ -1273,7 +1479,7 @@ fn write_table(
     // A validation that reaches past the last row of the box still has cells
     // to mark. The rows below are empty, so each band between two range
     // boundaries is one repeated row.
-    let mut row = rows;
+    let mut row = total_rows;
     while row < MAX_ROWS {
         while area_cursor < areas.len() && areas[area_cursor].range.start_row <= row {
             area_active.push(&areas[area_cursor]);
@@ -1587,10 +1793,13 @@ fn write_row<W: Write>(
                 // merged text in every cell of the range, and Excel keeps
                 // what it finds there for the formulas that point at it. The
                 // cell stays covered and keeps its content.
+                let carries = |cell: &CellRecord| {
+                    holds_content(cell) || context.frames.contains_key(&(row, cell.column))
+                };
                 if let Some(record) = cells
                     .get(cell_index)
                     .filter(|cell| cell.column == column)
-                    .filter(|cell| holds_content(cell))
+                    .filter(|cell| carries(cell))
                     .copied()
                 {
                     cell_index += 1;
@@ -1622,7 +1831,7 @@ fn write_row<W: Write>(
                     && !cells[cell_index.min(cells.len())..]
                         .iter()
                         .take_while(|cell| cell.column <= column + run)
-                        .any(|cell| cell.column == column + run && holds_content(cell))
+                        .any(|cell| cell.column == column + run && carries(cell))
                 {
                     run += 1;
                 }
@@ -1952,6 +2161,9 @@ fn push_cell(
         // The note goes ahead of the cell's own paragraphs.
         body.insert_str(0, &annotation_xml(comment));
         counters.dropped.comments = counters.dropped.comments.saturating_sub(1);
+    }
+    if let Some(frames) = context.frames.get(&key) {
+        body.push_str(frames);
     }
     if body.is_empty() {
         out.push_str(&format!("<{element}{attributes}/>"));
@@ -2601,8 +2813,47 @@ mod tests {
         write_workbook(&source, &entries);
         let target = dir.path().join("features.ods");
         let result = convert_to_ods(&source, &target).unwrap();
-        assert_eq!(result.dropped.charts, 1);
-        assert_eq!(result.dropped.images, 1);
+        // The chart travels as an embedded chart document. Its series names
+        // no cell range, so it reads the values the workbook cached.
+        assert_eq!(result.dropped.charts, 0);
+        let chart = read_entry(&target, "Object 1/content.xml");
+        roxmltree::Document::parse(&chart).unwrap_or_else(|error| panic!("{error}: {chart}"));
+        assert!(chart.contains(r#"chart:class="chart:bar""#), "{chart}");
+        assert!(
+            chart.contains(r#"chart:values-cell-range-address="local-table.$B$2:.$B$2" chart:label-cell-address="local-table.$B$1" chart:class="chart:bar""#),
+            "{chart}"
+        );
+        assert!(
+            chart.contains(r#"<table:table-cell office:value-type="float" office:value="8"><text:p>8</text:p></table:table-cell>"#),
+            "{chart}"
+        );
+        assert!(
+            read_entry(&target, "META-INF/manifest.xml").contains(
+                r#"<manifest:file-entry manifest:full-path="Object 1/" manifest:media-type="application/vnd.oasis.opendocument.chart"/><manifest:file-entry manifest:full-path="Object 1/content.xml" manifest:media-type="text/xml"/>"#
+            )
+        );
+        assert!(
+            read_entry(&target, "content.xml").contains(r#"<draw:object xlink:href="./Object 1" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>"#)
+        );
+        // The picture travels: its bytes are in the package and a frame in
+        // its start cell points at them.
+        assert_eq!(result.dropped.images, 0);
+        let picture = {
+            let mut archive = ZipArchive::new(File::open(&target).unwrap()).unwrap();
+            let mut bytes = Vec::new();
+            archive
+                .by_name("Pictures/image1.png")
+                .unwrap()
+                .read_to_end(&mut bytes)
+                .unwrap();
+            bytes
+        };
+        assert!(picture.ends_with(&[b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]), "{picture:?}");
+        assert!(
+            read_entry(&target, "META-INF/manifest.xml").contains(
+                r#"<manifest:file-entry manifest:full-path="Pictures/image1.png" manifest:media-type="image/png"/>"#
+            )
+        );
         // The note travels now, so it is no longer among the losses.
         assert_eq!(result.dropped.comments, 0);
         assert_eq!(result.dropped.macros, 0);
@@ -2871,7 +3122,7 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
             "{content}"
         );
         assert!(
-            content.contains("<table:table-header-columns><table:table-column/></table:table-header-columns>"),
+            content.contains(r#"<table:table-header-columns><table:table-column table:style-name="co1"/></table:table-header-columns>"#),
             "{content}"
         );
         assert!(
@@ -3168,6 +3419,186 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
         assert!(
             styles.contains(r#"<style:style style:name="ConditionalStyle_1" style:family="table-cell" style:parent-style-name="Default">"#),
             "{styles}"
+        );
+    }
+
+    #[test]
+    fn carries_pictures_and_shapes_in_their_start_cells() {
+        let marker = |tag: &str, column: usize, row: usize, column_offset: i64, row_offset: i64| {
+            format!(
+                "<xdr:{tag}><xdr:col>{column}</xdr:col><xdr:colOff>{column_offset}</xdr:colOff><xdr:row>{row}</xdr:row><xdr:rowOff>{row_offset}</xdr:rowOff></xdr:{tag}>"
+            )
+        };
+        let drawing = format!(
+            concat!(
+                r#"<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">"#,
+                // A text box that starts on a cell with a value.
+                r#"<xdr:twoCellAnchor>{}{}<xdr:sp><xdr:nvSpPr><xdr:cNvPr id="2" name="Box &amp; 1"/><xdr:cNvSpPr/></xdr:nvSpPr><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="FFFF00"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln></xdr:spPr><xdr:txBody><a:bodyPr anchor="ctr"/><a:p><a:pPr algn="ctr"/><a:r><a:rPr b="1"/><a:t>Hello</a:t></a:r></a:p></xdr:txBody></xdr:sp><xdr:clientData/></xdr:twoCellAnchor>"#,
+                // A picture below and right of everything the sheet holds.
+                r#"<xdr:twoCellAnchor>{}{}<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="3" name="Picture 2" descr="a pattern"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId1"/></xdr:blipFill><xdr:spPr/></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>"#,
+                // A line running up to the right.
+                r#"<xdr:twoCellAnchor>{}{}<xdr:cxnSp><xdr:nvCxnSpPr><xdr:cNvPr id="4" name="Line 3"/><xdr:cNvCxnSpPr/></xdr:nvCxnSpPr><xdr:spPr><a:xfrm flipV="1"/><a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:ln w="12700"><a:solidFill><a:srgbClr val="00B050"/></a:solidFill></a:ln></xdr:spPr></xdr:cxnSp><xdr:clientData/></xdr:twoCellAnchor>"#,
+                r#"</xdr:wsDr>"#,
+            ),
+            marker("from", 0, 0, 0, 0),
+            marker("to", 2, 2, 0, 0),
+            marker("from", 5, 9, 95_250, 0),
+            marker("to", 7, 12, 0, 0),
+            marker("from", 0, 9, 0, 0),
+            marker("to", 1, 10, 0, 0),
+        );
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:A2"/><sheetData>"#,
+            r#"<row r="1"><c r="A1"><v>1</v></c></row><row r="2"><c r="A2"><v>2</v></c></row>"#,
+            r#"</sheetData><drawing r:id="rId1"/></worksheet>"#,
+        );
+        let entries = single_sheet_entries(
+            "",
+            sheet,
+            vec![
+                (
+                    "xl/worksheets/_rels/sheet1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/drawings/drawing1.xml", drawing),
+                (
+                    "xl/drawings/_rels/drawing1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/media/image1.png", "not really a png".to_owned()),
+            ],
+        );
+        let (result, content, _, _, dir) = export(&entries);
+        assert_eq!(result.dropped.images, 0);
+        assert_eq!(result.dropped.shapes, 0);
+        // The box sits in A1 beside the value, with its end cell named. Two
+        // default columns are 96 pt and two default rows 30 pt.
+        assert!(
+            content.contains(concat!(
+                r#"<text:p>1</text:p><draw:custom-shape draw:style-name="gr3" table:end-cell-address="Data.C3" table:end-x="0.000cm" table:end-y="0.000cm" draw:z-index="0" draw:name="Box &amp; 1" svg:width="3.387cm" svg:height="1.058cm" svg:x="0.000cm" svg:y="0.000cm">"#,
+                r#"<text:p text:style-name="gp1"><text:span text:style-name="gt2">Hello</text:span></text:p>"#,
+                r#"<draw:enhanced-geometry svg:viewBox="0 0 21600 21600" draw:type="rectangle" draw:enhanced-path="M 0 0 L 21600 0 21600 21600 0 21600 Z N"/></draw:custom-shape></table:table-cell>"#,
+            )),
+            "{content}"
+        );
+        // Rows 3 to 9 hold nothing; row 10 is written for the line in A10 and
+        // the picture in F10, four empty columns apart.
+        assert!(
+            content.contains(concat!(
+                r#"<table:table-row table:number-rows-repeated="7"><table:table-cell/></table:table-row>"#,
+                r#"<table:table-row><table:table-cell><draw:line draw:style-name="gr"#,
+            )),
+            "{content}"
+        );
+        assert!(
+            content.contains(r#" draw:name="Line 3" svg:x1="0.000cm" svg:y1="0.529cm" svg:x2="1.693cm" svg:y2="0.000cm"/></table:table-cell><table:table-cell table:number-columns-repeated="4"/><table:table-cell><draw:frame "#),
+            "{content}"
+        );
+        assert!(
+            content.contains(concat!(
+                r#" table:end-cell-address="Data.H13" table:end-x="0.000cm" table:end-y="0.000cm" draw:z-index="1" draw:name="Picture 2" svg:width="3.122cm" svg:height="1.587cm" svg:x="0.265cm" svg:y="0.000cm">"#,
+                r#"<draw:image xlink:href="Pictures/image1.png" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/png"/><svg:desc>a pattern</svg:desc></draw:frame>"#,
+            )),
+            "{content}"
+        );
+        assert!(
+            content.contains(r##"<style:style style:name="gr3" style:family="graphic"><style:graphic-properties draw:stroke="solid" svg:stroke-width="1pt" svg:stroke-color="#000000" draw:fill="solid" draw:fill-color="#ffff00" draw:textarea-vertical-align="middle""##),
+            "{content}"
+        );
+        assert_eq!(
+            read_entry(&dir.path().join("book.ods"), "Pictures/image1.png"),
+            "not really a png"
+        );
+        // Our own importer still reads the values around the drawings.
+        let round = dir.path().join("round.xlsx");
+        crate::convert::convert_to_xlsx(&dir.path().join("book.ods"), &round).unwrap();
+        assert!(read_entry(&round, "xl/worksheets/sheet1.xml").contains(r#"<c r="A2"><v>2</v></c>"#));
+    }
+
+    #[test]
+    fn carries_a_chart_with_its_ranges_titles_and_legend() {
+        let chart = concat!(
+            r#"<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart>"#,
+            r#"<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>Sales &amp; plan</a:t></a:r></a:p></c:rich></c:tx></c:title>"#,
+            r#"<c:plotArea><c:barChart><c:barDir val="col"/><c:grouping val="stacked"/>"#,
+            r#"<c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:strRef><c:f>Data!$B$1</c:f><c:strCache><c:pt idx="0"><c:v>east</c:v></c:pt></c:strCache></c:strRef></c:tx>"#,
+            r#"<c:spPr><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></c:spPr>"#,
+            r#"<c:cat><c:strRef><c:f>Data!$A$2:$A$3</c:f><c:strCache><c:pt idx="0"><c:v>a</c:v></c:pt><c:pt idx="1"><c:v>b</c:v></c:pt></c:strCache></c:strRef></c:cat>"#,
+            r#"<c:val><c:numRef><c:f>Data!$B$2:$B$3</c:f><c:numCache><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numCache></c:numRef></c:val></c:ser>"#,
+            r#"<c:gapWidth val="80"/><c:axId val="1"/><c:axId val="2"/></c:barChart>"#,
+            r#"<c:catAx><c:axId val="1"/><c:scaling/><c:delete val="0"/><c:axPos val="b"/><c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>Region</a:t></a:r></a:p></c:rich></c:tx></c:title><c:crossAx val="2"/></c:catAx>"#,
+            r#"<c:valAx><c:axId val="2"/><c:scaling><c:max val="10"/><c:min val="0"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorGridlines/><c:numFmt formatCode="0.0" sourceLinked="0"/><c:crossAx val="1"/></c:valAx>"#,
+            r#"</c:plotArea><c:legend><c:legendPos val="b"/></c:legend></c:chart></c:chartSpace>"#,
+        );
+        let drawing = concat!(
+            r#"<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">"#,
+            r#"<xdr:twoCellAnchor><xdr:from><xdr:col>3</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>9</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>12</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>"#,
+            r#"<xdr:graphicFrame><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Chart 1"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor></xdr:wsDr>"#,
+        );
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:B3"/><sheetData>"#,
+            r#"<row r="1"><c r="B1" t="inlineStr"><is><t>east</t></is></c></row>"#,
+            r#"<row r="2"><c r="A2" t="inlineStr"><is><t>a</t></is></c><c r="B2"><v>3</v></c></row>"#,
+            r#"<row r="3"><c r="A3" t="inlineStr"><is><t>b</t></is></c><c r="B3"><v>4</v></c></row>"#,
+            r#"</sheetData><drawing r:id="rId1"/></worksheet>"#,
+        );
+        let entries = single_sheet_entries(
+            "",
+            sheet,
+            vec![
+                (
+                    "xl/worksheets/_rels/sheet1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/drawings/drawing1.xml", drawing.to_owned()),
+                (
+                    "xl/drawings/_rels/drawing1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/charts/chart1.xml", chart.to_owned()),
+            ],
+        );
+        let (result, content, _, _, dir) = export(&entries);
+        assert_eq!(result.dropped.charts, 0);
+        // The frame starts in D1, past the columns the sheet holds, and tells
+        // a reader which ranges to watch.
+        assert!(
+            content.contains(concat!(
+                r#"<text:p>east</text:p></table:table-cell><table:table-cell/><table:table-cell><draw:frame draw:style-name="gr1" table:end-cell-address="Data.J13" table:end-x="0.000cm" table:end-y="0.000cm" draw:z-index="0" draw:name="Chart 1" svg:width="10.160cm" svg:height="6.350cm" svg:x="0.000cm" svg:y="0.000cm">"#,
+                r#"<draw:object draw:notify-on-update-of-ranges="Data.A2:Data.A3 Data.B2:Data.B3" xlink:href="./Object 1" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>"#,
+            )),
+            "{content}"
+        );
+        let chart = read_entry(&dir.path().join("book.ods"), "Object 1/content.xml");
+        roxmltree::Document::parse(&chart).unwrap_or_else(|error| panic!("{error}: {chart}"));
+        assert!(
+            chart.contains(r#"<chart:chart svg:width="10.160cm" svg:height="6.350cm" xlink:href=".." xlink:type="simple" chart:class="chart:bar""#),
+            "{chart}"
+        );
+        assert!(chart.contains("<text:p>Sales &amp; plan</text:p>"), "{chart}");
+        assert!(chart.contains(r#"<chart:legend chart:legend-position="bottom""#), "{chart}");
+        assert!(chart.contains(r#"chart:stacked="true""#), "{chart}");
+        assert!(
+            chart.contains(r#"<text:p>Region</text:p></chart:title><chart:categories table:cell-range-address="Data.A2:Data.A3"/>"#),
+            "{chart}"
+        );
+        // The value axis keeps its bounds, its own number format and its grid.
+        assert!(
+            chart.contains(r#"chart:minimum="0" chart:maximum="10" chart:gap-width="80" chart:overlap="100" chart:link-data-style-to-source="false""#),
+            "{chart}"
+        );
+        assert!(chart.contains(r#"chart:class="major"/>"#), "{chart}");
+        assert!(
+            chart.contains(r#"chart:values-cell-range-address="Data.B2:Data.B3" loext:label-string="&quot;east&quot;" chart:class="chart:bar"><chart:data-point chart:repeated="2"/>"#),
+            "{chart}"
+        );
+        assert!(chart.contains(r##"draw:fill="solid" draw:fill-color="#4472c4""##), "{chart}");
+        // The values as they were, for a reader that cannot reach the cells.
+        assert!(
+            chart.contains(r#"<table:table-cell office:value-type="string"><text:p>a</text:p></table:table-cell><table:table-cell office:value-type="float" office:value="3"><text:p>3</text:p></table:table-cell>"#),
+            "{chart}"
         );
     }
 }

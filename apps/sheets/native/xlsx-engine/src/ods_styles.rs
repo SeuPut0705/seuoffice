@@ -441,6 +441,17 @@ impl StyleRegistry {
         Some(name)
     }
 
+    /// The data style for a number format outside a cell — a chart axis or
+    /// its data labels — and `None` for a format that needs none.
+    pub(crate) fn number_format_style(&mut self, format: &str) -> Option<String> {
+        self.data_style(Some(format)).0
+    }
+
+    /// The data styles alone, for a document that has no cells of its own.
+    pub(crate) fn data_styles(&self) -> String {
+        self.data_bodies.concat()
+    }
+
     /// The named style a conditional format applies for a differential
     /// style. A differential style only says what it changes, so it is
     /// written against an empty base rather than the workbook's default: a
