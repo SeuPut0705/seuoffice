@@ -6,6 +6,7 @@ O editor de PDF tem cinco separadores no friso: **Página Inicial / Anotar / Edi
 
 - Barra lateral esquerda: **Miniaturas** (clique para saltar, o intervalo visível fica destacado) ou **Estrutura** (os marcadores, quando existem).
 - Zoom: o controlo de proporção no canto inferior direito; ctrl+roda ajusta o zoom por degraus.
+- Zoom ao abrir: **Ao abrir**, na guia Exibir, escolhe a visualização inicial de um PDF recém-aberto: ajustar à largura, ajustar à página ou um zoom de 50% a 200%. Um PDF cujo zoom você mesmo alterou volta a abrir com esse zoom.
 - Mover a visualização: ative a **Ferramenta Mão** (guias Página Inicial e Exibir) e arraste para mover a página em qualquer direção. Enquanto está ativa, arrastar não seleciona texto e um clique simples continua abrindo links. Arrastar com o botão do meio (roda) pressionado move a visualização sem a ferramenta. Esc ou outra ferramenta a desativa.
 - Rotação: por página ou em todas as páginas a partir do menu Páginas; as rotações são gravadas ao salvar.
 - Pesquisar: ctrl+F para procurar em todo o texto com todas as ocorrências realçadas.
@@ -70,6 +71,7 @@ Seis ferramentas: **Desenho livre, Retângulo, Elipse, Seta, Nota**, mais a **Ce
 ## Operações de página (Páginas)
 
 - **Girar / Excluir página / Reordenar**: arraste as miniaturas para reordenar; a exclusão pede confirmação.
+- **Várias páginas de uma vez**: clique nas miniaturas com Ctrl ou Shift pressionado para selecionar várias páginas. Delete as exclui; Ctrl+C, Ctrl+X e Ctrl+V copiam, recortam e colam. As páginas copiadas também podem ser coladas em outra guia de PDF, e a colagem é salva no arquivo na hora. Se as miniaturas estiverem fechadas, o botão na borda esquerda da área de páginas as reabre.
 - **Importar páginas**: traga páginas de outro PDF para o documento. **Inserir página em branco** adiciona uma página vazia.
 - **Substituir páginas** troca um intervalo por páginas oriundas de outro documento; **Recortar páginas** apara as margens, com a opção de aplicar a todas as páginas.
 - **Tamanho da página** redimensiona todas as páginas para um único tamanho de papel; **Inverter ordem** inverte o documento de trás para a frente.

@@ -6,6 +6,7 @@ Der PDF-Editor hat fünf Tabs im Menüband: **Start / Anmerken / Bearbeiten / Se
 
 - Linke Seitenleiste: **Miniaturen** (anklicken zum Springen, der sichtbare Bereich ist hervorgehoben) oder **Gliederung** (Lesezeichen, sofern vorhanden).
 - Zoom: die Verhältnissteuerung unten rechts; Strg+Radrad zoomt stufenweise.
+- Zoom beim Öffnen: **Beim Öffnen** auf der Registerkarte Ansicht legt fest, wie eine neu geöffnete PDF startet: an Breite anpassen, an Seite anpassen oder ein Zoom von 50 % bis 200 %. Eine PDF, deren Zoom Sie selbst geändert haben, öffnet sich wieder mit diesem Zoom.
 - Ansicht verschieben: Mit dem **Hand-Werkzeug** (Registerkarten Start und Ansicht) verschieben Sie die Seite durch Ziehen in alle Richtungen. Solange es aktiv ist, wird beim Ziehen kein Text markiert, und ein einfacher Klick folgt weiterhin einem Link. Ziehen mit gedrückter mittlerer Taste (Mausrad) verschiebt die Ansicht auch ohne das Werkzeug. Esc oder ein anderes Werkzeug schaltet es aus.
 - Drehung: einzelne oder alle Seiten über das Menü „Seiten“; Drehungen werden beim Speichern zurückgeschrieben.
 - Suche: Strg+F als Volltextsuche, alle Treffer werden hervorgehoben.
@@ -70,6 +71,7 @@ Sechs Werkzeuge: **Freihand, Rechteck, Ellipse, Pfeil, Notiz** sowie **Bereich s
 ## Seitenvorgänge (Seiten)
 
 - **Drehen / löschen / neu anordnen**: Ziehen Sie Miniaturen zum Umsortieren; beim Löschen wird nachgefragt.
+- **Mehrere Seiten auf einmal**: Klicken Sie mit gedrückter Strg- oder Umschalttaste auf Miniaturen, um mehrere Seiten auszuwählen. Entf löscht sie; Strg+C, Strg+X und Strg+V kopieren sie, schneiden sie aus und fügen sie ein. Kopierte Seiten lassen sich auch in einen anderen PDF-Tab einfügen, und das Einfügen wird sofort in der Datei gespeichert. Sind die Miniaturen geschlossen, öffnet die Schaltfläche am linken Rand des Seitenbereichs sie wieder.
 - **Seiten importieren**: ziehen Sie Seiten aus einem anderen PDF herein. **Leere Seite einfügen** fügt eine leere Seite hinzu.
 - **Seiten ersetzen** tauscht einen Bereich gegen Seiten aus einer anderen Datei; **Seiten zuschneiden** beschneidet, mit der Option, das auf alle Seiten anzuwenden.
 - **Seitengröße** skaliert alle Seiten auf ein einziges Papierformat; **Reihenfolge umkehren** dreht das Dokument von hinten nach vorne.
