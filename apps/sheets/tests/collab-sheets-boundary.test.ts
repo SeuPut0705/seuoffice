@@ -339,7 +339,8 @@ describe('the merge rebuilds one op may cause', () => {
     })
     expect(mergesOf(a)).toEqual([fullMerge])
     expect(mergesOf(b)).toEqual(mergesOf(a))
-  })
+    // two pages each rebuild a million merged cells up to the budget: seconds on a small CI runner
+  }, 30_000)
 
   it('refuses an edit that would rebuild a heavily merged sheet too often, and tells the person', () => {
     const told: string[] = []
