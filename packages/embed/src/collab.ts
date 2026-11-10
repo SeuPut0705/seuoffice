@@ -47,6 +47,8 @@ export interface CollabRelay {
   onStatus?(status: CollabStatus): void
   /** how long `connect()` plus the socket's opening may take; default 15000 */
   connectTimeoutMs?: number
+  /** how long the page may take to answer `exportLocal()`; default 60000 */
+  exportTimeoutMs?: number
 }
 
 const MIN_CONNECT_INTERVAL_MS = 250

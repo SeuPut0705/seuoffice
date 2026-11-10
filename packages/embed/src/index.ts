@@ -136,6 +136,15 @@ export type EditOptions = LockedEditOptions | CollabEditOptions
 
 export type OpenOptions = ViewOptions | EditOptions
 
+/** Options that ask for co-editing, in either mode */
+export type CollabOpenOptions = (ViewOptions & { collab: CollabRelay }) | CollabEditOptions
+
+/** A file of exactly what the page shows; it holds no version */
+export interface LocalFile {
+  fileName: string
+  bytes: Uint8Array
+}
+
 export interface EmbeddedDocument {
   readonly iframe: HTMLIFrameElement
   /** settles once the document is on screen, or rejects with SeuofficeEmbedError */
@@ -156,10 +165,26 @@ export interface EmbeddedDocument {
   destroy(): void
 }
 
+export interface CollabEmbeddedDocument extends EmbeddedDocument {
+  /**
+   * The file of what this person's page shows, for when the session ended
+   * (`diverged`, `failed`) or they are offline. It has no version: offer it
+   * as a download or a copy, never store it over the document. Never calls
+   * `onSave`. Rejects with `save_failed` when the page refused or did not
+   * answer in time, or the document is not open.
+   */
+  exportLocal(): Promise<LocalFile>
+}
+
 const SOURCE = 'seuoffice'
 const VERSION = 1
 
-export function openDocument(container: HTMLElement, options: OpenOptions): EmbeddedDocument {
+export function openDocument(
+  container: HTMLElement,
+  options: CollabOpenOptions,
+): CollabEmbeddedDocument
+export function openDocument(container: HTMLElement, options: OpenOptions): EmbeddedDocument
+export function openDocument(container: HTMLElement, options: OpenOptions): CollabEmbeddedDocument {
   const iframe = container.ownerDocument.createElement('iframe')
   const app = appForFileName(options.fileName)
   const refusal = !app
@@ -179,6 +204,7 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
       opened,
       collabCapable: Promise.resolve(false),
       save: () => Promise.reject(notSaved('the document did not open')),
+      exportLocal: () => Promise.reject(notSaved('the document did not open')),
       destroy: () => iframe.remove(),
     }
   }
@@ -213,6 +239,15 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
   >()
   // in-flight AI requests by the page's request id; aborting one ends its host fetch
   const aiRequests = new Map<string, AbortController>()
+  let nextExportId = 1
+  const exportRequests = new Map<
+    string,
+    {
+      resolve: (file: LocalFile) => void
+      reject: (error: SeuofficeEmbedError) => void
+      timer: ReturnType<typeof setTimeout>
+    }
+  >()
   let collabAnswer!: (capable: boolean) => void
   const collabCapable = new Promise<boolean>((resolve) => (collabAnswer = resolve))
   const post = (message: Record<string, unknown>, transfer: Transferable[] = []): void => {
@@ -299,6 +334,18 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
     } else if (data.type === 'ai_cancel' && typeof data.requestId === 'string') {
       aiRequests.get(data.requestId)?.abort()
       aiRequests.delete(data.requestId)
+    } else if (data.type === 'collab_export_done' && typeof data.requestId === 'string') {
+      const request = exportRequests.get(data.requestId)
+      if (!request) return
+      exportRequests.delete(data.requestId)
+      clearTimeout(request.timer)
+      if (
+        data.ok === true &&
+        typeof data.fileName === 'string' &&
+        data.bytes instanceof ArrayBuffer
+      )
+        request.resolve({ fileName: data.fileName, bytes: new Uint8Array(data.bytes) })
+      else request.reject(notSaved(String(data.message ?? 'the page did not export the document')))
     } else if (sent && typeof data.type === 'string' && data.type.startsWith('collab_')) {
       collabPipe?.onPageMessage(data)
     }
@@ -324,12 +371,32 @@ export function openDocument(container: HTMLElement, options: OpenOptions): Embe
       post({ type: 'request_save', requestId })
       return done
     },
+    exportLocal: () => {
+      if (!options.collab)
+        return Promise.reject(notSaved('the document was opened without co-editing'))
+      if (!shown) return Promise.reject(notSaved('the document is not open yet'))
+      const requestId = String(nextExportId++)
+      const done = new Promise<LocalFile>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          exportRequests.delete(requestId)
+          reject(notSaved('the page did not export the document in time'))
+        }, options.collab?.exportTimeoutMs ?? 60000)
+        exportRequests.set(requestId, { resolve, reject, timer })
+      })
+      post({ type: 'collab_export', requestId })
+      return done
+    },
     destroy: () => {
       view.removeEventListener('message', onMessage)
       clearTimeout(timer)
       for (const request of saveRequests.values())
         request.reject(notSaved('the document was closed'))
       saveRequests.clear()
+      for (const request of exportRequests.values()) {
+        clearTimeout(request.timer)
+        request.reject(notSaved('the document was closed'))
+      }
+      exportRequests.clear()
       for (const controller of aiRequests.values()) controller.abort()
       aiRequests.clear()
       collabPipe?.close()

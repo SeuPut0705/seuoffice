@@ -117,6 +117,8 @@ try {
 - `doc.collabCapable`은 페이지가 `ready`에서 알린 값이다. 페이지가 답하지 않았거나 문서가 닫혔으면 `false`다.
 - `doc.destroy()`는 소켓도 닫는다. `collab`을 주지 않으면 공동 편집 메시지는 하나도 오가지 않는다.
 
+`doc.exportLocal()`은 그 사람 화면에 보이는 그대로의 파일(`{ fileName, bytes }`)을 돌려준다. `collab`을 넘겨 연 문서에만 있다. 공동 편집이 `diverged`나 `failed`로 끝났을 때, 또는 연결이 끊긴 사람이 사본을 갖고 싶을 때 쓴다. 이 파일에는 판 번호가 없고 서버가 확정한 내용과 다를 수 있으므로, 저장된 문서를 자동으로 덮어쓰면 안 된다. 내려받기나 "사본으로 저장"으로 건넨다. `onSave`를 부르지 않고 소켓도 건드리지 않는다. 페이지가 거절하거나 60초(`collab.exportTimeoutMs`) 안에 답하지 않거나 문서가 닫히면 `save_failed`로 reject한다.
+
 ## 오류
 
 `SeuofficeEmbedError.code`: `unsupported_format`, `too_large`(50 MB 초과), `open_failed`, `timeout`, `save_failed`, `collab_unavailable`(`collab`을 넘겼는데 그 앱이 함께 고치기를 못 함).
