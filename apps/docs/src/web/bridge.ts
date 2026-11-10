@@ -5,14 +5,19 @@ import {
   documentByPath,
   editMode,
   installWebBridge,
+  joinPageCollab,
   onHostSaveRequest,
+  registerCollabCapable,
   reportDirty,
+  reportError,
   reportOpened,
   saveToHost,
   unsupported,
   waitForDocument,
   webAiSettings,
   webLanguage,
+  type PageCollab,
+  type WebDocument,
 } from '@seuoffice/web-platform'
 import { docFormatOfPath, prepareSaveBytes } from '../main/doc-format'
 import {
@@ -24,7 +29,12 @@ import {
   snapshotDocPassword,
 } from '../main/docx-encryption'
 import type { DesktopApi } from '../shared/ipc'
+import type { DocsOp } from './collab-adapter'
+import type { DocsCollabHandles } from './collab-side'
 import { WEB_RENDERER, openDecryptedDocx, openDocxFromBytes } from './open-docx'
+
+// `ready` must say so before anything asks for the document
+registerCollabCapable()
 
 const noop = (): void => {}
 const unsubscribe = (): (() => void) => noop
@@ -43,6 +53,21 @@ let pendingConsumed = false
 /** the reason the host gave for refusing the last save, for a host-asked save to report back */
 let lastSaveError: string | undefined
 
+/** set when the host asked for co-editing and the page joined its session */
+let coEditing: PageCollab<DocsCollabHandles> | null = null
+
+/** The docx as the file the host stores: with the password the session wants on it */
+async function fileBytes(path: string, data: Uint8Array) {
+  const format = docFormatOfPath(path) ?? 'docx'
+  const passwordState = format === 'docx' ? snapshotDocPassword(WEB_RENDERER, path) : null
+  const { bytes } = await prepareSaveBytes(format, Buffer.from(data), {
+    materialize: async (plain) => ({ bytes: plain, hashes: new Set() }),
+    encrypt: encryptDocx,
+    password: passwordState?.password ?? null,
+  })
+  return { bytes, passwordState }
+}
+
 /**
  * The desktop save's bytes without its file write: the docx takes the
  * password the session wants (the opened one unless the user changed it) and
@@ -53,13 +78,14 @@ const saveDocxToHost: DesktopApi['saveDocx'] = async (path, data) => {
   const doc = documentByPath(path)
   if (!doc) return { ok: false, error: 'save target is not an opened document' }
   try {
-    const format = docFormatOfPath(path) ?? 'docx'
-    const passwordState = format === 'docx' ? snapshotDocPassword(WEB_RENDERER, path) : null
-    const { bytes } = await prepareSaveBytes(format, Buffer.from(data), {
-      materialize: async (plain) => ({ bytes: plain, hashes: new Set() }),
-      encrypt: encryptDocx,
-      password: passwordState?.password ?? null,
-    })
+    if (coEditing) {
+      // the session writes the file of one exact version from the log, never the renderer's
+      // own bytes. "Intent pending" keeps the renderer from reloading the document from
+      // the file it thinks it saved, which would replace every peer's edit on this page.
+      await coEditing.save()
+      return { ok: true, passwordIntentPending: true }
+    }
+    const { bytes, passwordState } = await fileBytes(path, new Uint8Array(data))
     await saveToHost(doc.fileName, bytes)
     const passwordIntentPending = passwordState
       ? commitDocPasswordSave(WEB_RENDERER, passwordState, path)
@@ -69,6 +95,30 @@ const saveDocxToHost: DesktopApi['saveDocx'] = async (path, data) => {
     lastSaveError = error instanceof Error ? error.message : String(error)
     return { ok: false, error: lastSaveError }
   }
+}
+
+/**
+ * Join the host's co-editing session for `doc` before the renderer opens it;
+ * a later joiner opens the session's base file, not the host's copy.
+ */
+async function joinDocsCollab(doc: WebDocument): Promise<void> {
+  const page = await joinPageCollab<DocsCollabHandles, DocsOp>({
+    format: { name: 'docx', schema: 1 },
+    fileName: doc.fileName,
+    bytes: doc.bytes,
+    adapter: async (handles) => {
+      // the renderer's modules are loaded by now; a page that never co-edits never loads these
+      const { openDocsCollab } = await import('./collab-side')
+      return openDocsCollab(handles, {
+        path: doc.virtualPath,
+        fileName: doc.fileName,
+        finish: async (docx) => (await fileBytes(doc.virtualPath, docx)).bytes,
+      })
+    },
+  })
+  if (!page) return
+  coEditing = page
+  doc.bytes = page.baseBytes
 }
 
 // The renderer's close-guard "Save" runs its full save until the document is
@@ -121,6 +171,12 @@ const desktop: Partial<DesktopApi> = {
     pendingConsumed = true
     const doc = await waitForDocument()
     if (!doc) return null
+    try {
+      await joinDocsCollab(doc)
+    } catch (error) {
+      reportError('collab_unavailable', error instanceof Error ? error.message : String(error))
+      return null
+    }
     const result = await openDocxFromBytes(doc)
     if (result) queueMicrotask(reportOpened)
     return result
@@ -164,7 +220,10 @@ const desktop: Partial<DesktopApi> = {
     settleCloseSave?.(ok)
     settleCloseSave = undefined
   },
-  reportDirty,
+  // a co-edited page's unsaved flag follows the session (collab-page.ts), not this renderer
+  reportDirty: (dirty) => {
+    if (!coEditing) reportDirty(dirty)
+  },
   onMenuCommand: unsubscribe,
   consumeHeadlessExport: async () => null,
   // the desktop main process's password state, kept for the page's one renderer
@@ -180,7 +239,10 @@ const desktop: Partial<DesktopApi> = {
   },
   // a page holds one document: the prompt answers for the host's, with nothing open to replace
   confirmDocumentReplace: async () => true,
+  // an open password is not part of the co-editing log: one person's choice would decide what
+  // every later save of a peer writes, so it cannot change while co-editing
   setDocPassword: async (filePath, password) => {
+    if (coEditing) return { ok: false }
     setDocPassword(WEB_RENDERER, filePath, password)
     return { ok: true }
   },
