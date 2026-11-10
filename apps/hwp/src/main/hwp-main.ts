@@ -79,6 +79,12 @@ interface RuntimePaths {
   /** a new Hangul document in a tab (Hangul's Alt+N) */
   newDocument?: () => void
   /**
+   * File > Import PDF: the shell asks for a PDF and opens it as a new, untitled Hangul
+   * document in a tab of its own, where the editor's PDF import converts it (decision
+   * 0116). This view's document is not touched. Without a shell the item does nothing.
+   */
+  importPdf?: () => void
+  /**
    * Project folders (spec 6): the folder an untitled document's save dialog
    * opens in for this view, or null for the default save folder.
    */
@@ -836,6 +842,7 @@ function registerHwpIpc(): void {
     else if (command === 'pdf') requestHwpPrint(e.sender, 'pdf')
     else if (command === 'preview') requestHwpPreview(e.sender, 'open')
     else if (command === 'print') requestHwpPreview(e.sender, 'print')
+    else if (command === 'importPdf' && hwpViews.has(e.sender.id)) runtime.importPdf?.()
   })
 
   ipcMain.on(HWP_CHANNELS.abortSave, (e) => {

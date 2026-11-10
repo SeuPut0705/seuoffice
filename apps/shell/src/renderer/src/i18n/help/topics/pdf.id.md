@@ -6,6 +6,7 @@ Editor PDF punya lima tab di pita: **Beranda / Anotasi / Edit / Halaman / Tampil
 
 - Bilah sisi kiri: **Gambar mini** (klik untuk melompat, rentang yang terlihat disorot) atau **Kerangka** (bookmark, jika ada).
 - Zoom: kendali rasio di kanan bawah; ctrl+roda mengubah tingkat zoom.
+- Zoom saat dibuka: **Saat dibuka** di tab Tampilan memilih tampilan awal PDF yang baru dibuka: sesuaikan lebar, sesuaikan halaman, atau zoom 50% sampai 200%. PDF yang zoomnya Anda ubah sendiri akan dibuka lagi dengan zoom itu.
 - Menggeser tampilan: aktifkan **Alat Tangan** (tab Beranda dan Tampilan) lalu seret untuk menggeser halaman ke segala arah. Selama aktif, menyeret tidak memilih teks dan klik biasa tetap membuka tautan. Menyeret sambil menahan tombol tengah (roda) menggeser tampilan tanpa alat ini. Esc atau memilih alat lain mematikannya.
 - Rotasi: per halaman atau semua halaman dari menu Halaman; rotasi ditulis kembali saat menyimpan.
 - Cari: ctrl+F untuk mencari seluruh teks dengan semua hasil disorot.
@@ -70,6 +71,7 @@ Enam alat: **Gambar, Persegi, Elips, Panah, Catatan**, ditambah **Redaksi area**
 ## Operasi halaman (Halaman)
 
 - **Putar / Hapus halaman / Ubah urutan**: seret gambar mini untuk mengubah urutan; penghapusan meminta konfirmasi.
+- **Beberapa halaman sekaligus**: klik gambar mini sambil menahan Ctrl atau Shift untuk memilih beberapa halaman. Delete menghapusnya; Ctrl+C, Ctrl+X, dan Ctrl+V menyalin, memotong, dan menempelkannya. Halaman yang disalin juga dapat ditempel ke tab PDF lain, dan hasil tempel langsung disimpan ke file. Jika gambar mini ditutup, tombol di tepi kiri area halaman membukanya kembali.
 - **Impor halaman**: tarik halaman dari PDF lain ke dalam dokumen. **Sisipkan halaman kosong** menambahkan satu halaman kosong.
 - **Ganti halaman** menukar sebuah rentang dengan halaman dari tempat lain; **Pangkas halaman** memotong tepinya, dengan opsi menerapkannya ke semua halaman.
 - **Ukuran halaman** menskalakan ulang setiap halaman ke satu ukuran kertas; **Balik urutan** membalik dokumen dari ujung ke ujung.
@@ -82,6 +84,7 @@ Enam alat: **Gambar, Persegi, Elips, Panah, Catatan**, ditambah **Redaksi area**
 
 - **Ekspor sebagai Word… / PowerPoint… / Excel…** di menu File, atau ketiganya dari **Konversi PDF** pada pita — semuanya lokal, tanpa unggahan. .pptx keluar dengan satu slide per halaman dan .xlsx dengan satu lembar kerja per halaman. Masing-masing menanyakan tempat penyimpanan.
 - **PDF ke HWP** di **Konversi PDF** pada pita mengubah PDF menjadi dokumen HWP di tab HWP baru. Pilih **Impor** (가져오기) di jendela impor PDF yang muncul di tab; dokumen dibuat di tab itu, dan penyimpanan pertama menanyakan tempat untuk .hwp atau .hwpx. PDF aslinya tetap seperti semula, dan konversi berjalan di PC ini. Apakah teks masuk sebagai paragraf yang mengalir mengikuti halaman atau sebagai kotak teks tetap dipilih di opsi (환경 설정) tab HWP, bagian impor PDF.
+- Konversi yang sama juga dapat dimulai dari tab HWP. Pilih PDF dengan **File** ▸ **Impor PDF…**, lalu tab HWP baru terbuka dengan jendela impor PDF yang sama. Dokumen di tab tempat menu digunakan tetap seperti semula.
 - **Cetak**: urutan dan rotasi saat ini melalui dialog sistem; rentang halaman didukung.
 
 ## Menyimpan
