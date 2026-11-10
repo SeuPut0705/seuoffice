@@ -259,6 +259,7 @@ import {
 import { XlsxSidecarClient } from './xlsx-sidecar-client'
 import { convertLegacyWorkbook } from './legacy-import'
 import { sessionAfterRename } from './session-rename'
+import { continuedOpenOptions, sessionToContinue } from './session-reopen'
 import {
   appendSaveFailure,
   describeReopenFailure,
@@ -4109,6 +4110,39 @@ export function registerSheetsIpc(): void {
 
   ipcMain.handle(IPC_CHANNELS.reopenWorkbook, async (event, path: unknown) => {
     const validated = z.string().min(1).parse(path)
+    // A converted, restored, new or decrypted workbook is more than its path:
+    // re-open the twin of the session being continued, so Save still knows
+    // the copy is a copy and the original keeps its protection.
+    const entry = sessionFor(event)
+    const previous = sessionToContinue(entry.sessions.values(), validated)
+    if (previous !== null) {
+      if (!existsSync(previous.path)) throw new Error('Workbook file not found.')
+      const result = await openWorkbookSession(
+        entry.client,
+        previous.path,
+        entry.sessions,
+        continuedOpenOptions(previous),
+      )
+      const twin = entry.sessions.get(result.sessionId)
+      if (event.sender.isDestroyed()) {
+        // The tab closed while the twin was opening; its sessions are already
+        // cleaned up, so this one has to go the same way.
+        entry.sessions.delete(result.sessionId)
+        if (twin !== undefined) {
+          await cleanupSessionResources({
+            tempRoot: app.getPath('temp'),
+            snapshotPath: twin.snapshotPath,
+            importTempDir: previous.importTempDir,
+            closeSidecar: () => entry.client.close(result.sessionId),
+          })
+        }
+        return null
+      }
+      if (twin !== undefined && previous.importTempDir !== undefined) {
+        entry.sessions.set(result.sessionId, { ...twin, importTempDir: previous.importTempDir })
+      }
+      return result
+    }
     // A crash re-open targets the file the user already has open, so a
     // missing/deleted file is a real failure rather than a reason to pop the
     // picker at someone who did not ask to open anything.
