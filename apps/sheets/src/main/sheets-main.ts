@@ -259,6 +259,7 @@ import {
 import { XlsxSidecarClient } from './xlsx-sidecar-client'
 import { convertLegacyWorkbook } from './legacy-import'
 import { sessionAfterRename } from './session-rename'
+import { continuedOpenOptions, sessionToContinue } from './session-reopen'
 import {
   appendSaveFailure,
   describeReopenFailure,
@@ -341,7 +342,7 @@ const tMain = createI18n({
     odsLossPivots: '数据透视表:{count}',
     odsLossComments: '批注:{count}',
     odsLossMacros: '宏:{count}',
-    odsLossShapes: '形状和文本框:{count}',
+    odsLossShapes: '图形和文本框:{count}',
     odsLossSlicers: '切片器:{count}',
     odsLossSparklines: '迷你图:{count}',
     odsContinueBtn: '继续',
@@ -516,9 +517,9 @@ const tMain = createI18n({
     odsLossPivots: 'Bảng tổng hợp: {count}',
     odsLossComments: 'Chú thích: {count}',
     odsLossMacros: 'Macro: {count}',
-    odsLossShapes: 'Hình và hộp văn bản: {count}',
-    odsLossSlicers: 'Bộ cắt dữ liệu: {count}',
-    odsLossSparklines: 'Biểu đồ thu nhỏ: {count}',
+    odsLossShapes: 'Hình dạng và hộp văn bản: {count}',
+    odsLossSlicers: 'Slicer: {count}',
+    odsLossSparklines: 'Biểu đồ mini: {count}',
     odsContinueBtn: 'Tiếp tục',
     errOdsExportFailed: 'Xuất ODS thất bại: {message}',
     errOdsReopenFailed:
@@ -1517,7 +1518,7 @@ const tMain = createI18n({
     odsLossComments: 'Commenti: {count}',
     odsLossMacros: 'Macro: {count}',
     odsLossShapes: 'Forme e caselle di testo: {count}',
-    odsLossSlicers: 'Filtri dei dati: {count}',
+    odsLossSlicers: 'Filtri dati: {count}',
     odsLossSparklines: 'Grafici sparkline: {count}',
     odsContinueBtn: 'Continua',
     errOdsExportFailed: 'Esportazione ODS non riuscita: {message}',
@@ -1884,7 +1885,7 @@ const tMain = createI18n({
     odsLossMacros: 'Makro: {count}',
     odsLossShapes: 'Bentuk dan kotak teks: {count}',
     odsLossSlicers: 'Penghiris: {count}',
-    odsLossSparklines: 'Carta mini: {count}',
+    odsLossSparklines: 'Garis percikan: {count}',
     odsContinueBtn: 'Teruskan',
     errOdsExportFailed: 'Eksport ODS gagal: {message}',
     errOdsReopenFailed:
@@ -1972,7 +1973,7 @@ const tMain = createI18n({
     odsLossMacros: 'פקודות מאקרו: {count}',
     odsLossShapes: 'צורות ותיבות טקסט: {count}',
     odsLossSlicers: 'כלי פריסה: {count}',
-    odsLossSparklines: 'גרפים זעירים: {count}',
+    odsLossSparklines: 'תרשימים זעירים: {count}',
     odsContinueBtn: 'המשך',
     errOdsExportFailed: 'ייצוא ODS נכשל: {message}',
     errOdsReopenFailed:
@@ -2146,7 +2147,7 @@ const tMain = createI18n({
     odsLossPivots: '樞紐分析表:{count}',
     odsLossComments: '註解:{count}',
     odsLossMacros: '巨集:{count}',
-    odsLossShapes: '圖形和文字方塊:{count}',
+    odsLossShapes: '圖案和文字方塊:{count}',
     odsLossSlicers: '交叉分析篩選器:{count}',
     odsLossSparklines: '走勢圖:{count}',
     odsContinueBtn: '繼續',
@@ -4109,6 +4110,39 @@ export function registerSheetsIpc(): void {
 
   ipcMain.handle(IPC_CHANNELS.reopenWorkbook, async (event, path: unknown) => {
     const validated = z.string().min(1).parse(path)
+    // A converted, restored, new or decrypted workbook is more than its path:
+    // re-open the twin of the session being continued, so Save still knows
+    // the copy is a copy and the original keeps its protection.
+    const entry = sessionFor(event)
+    const previous = sessionToContinue(entry.sessions.values(), validated)
+    if (previous !== null) {
+      if (!existsSync(previous.path)) throw new Error('Workbook file not found.')
+      const result = await openWorkbookSession(
+        entry.client,
+        previous.path,
+        entry.sessions,
+        continuedOpenOptions(previous),
+      )
+      const twin = entry.sessions.get(result.sessionId)
+      if (event.sender.isDestroyed()) {
+        // The tab closed while the twin was opening; its sessions are already
+        // cleaned up, so this one has to go the same way.
+        entry.sessions.delete(result.sessionId)
+        if (twin !== undefined) {
+          await cleanupSessionResources({
+            tempRoot: app.getPath('temp'),
+            snapshotPath: twin.snapshotPath,
+            importTempDir: previous.importTempDir,
+            closeSidecar: () => entry.client.close(result.sessionId),
+          })
+        }
+        return null
+      }
+      if (twin !== undefined && previous.importTempDir !== undefined) {
+        entry.sessions.set(result.sessionId, { ...twin, importTempDir: previous.importTempDir })
+      }
+      return result
+    }
     // A crash re-open targets the file the user already has open, so a
     // missing/deleted file is a real failure rather than a reason to pop the
     // picker at someone who did not ask to open anything.

@@ -9,6 +9,13 @@
 //! which pushes the sheet down the page.
 
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
+
+use quick_xml::Reader;
+use quick_xml::events::{BytesStart, Event};
+use zip::ZipArchive;
 
 use crate::ods_styles::StyleRegistry;
 use crate::xlsx_package::escape_xml;
@@ -18,6 +25,149 @@ use crate::PagePrintInfo;
 const DEFAULT_SIDE_MARGIN: f64 = 0.7;
 const DEFAULT_EDGE_MARGIN: f64 = 0.75;
 const DEFAULT_HEADER_MARGIN: f64 = 0.3;
+
+/// Print settings the editor's model does not read, taken straight from the
+/// worksheet part: centring on the page, the first page number, the order
+/// pages are numbered in, and whether notes print.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(crate) struct PrintExtras {
+    pub(crate) center_horizontal: bool,
+    pub(crate) center_vertical: bool,
+    pub(crate) first_page_number: Option<u32>,
+    pub(crate) over_then_down: bool,
+    pub(crate) notes: bool,
+}
+
+/// How much of a worksheet part is kept after `</sheetData>`. The print
+/// elements sit there, behind the merges, rules and links; a tail larger than
+/// this is cut and the extras fall back to their defaults.
+const MAX_TAIL_BYTES: usize = 64 * 1024 * 1024;
+
+/// Reads the extras of one worksheet part.
+#[cfg(test)]
+fn read_print_extras(source: &Path, worksheet_path: &str) -> PrintExtras {
+    let Some(tail) = worksheet_tail(source, worksheet_path) else {
+        return PrintExtras::default();
+    };
+    parse_print_extras(&tail)
+}
+
+/// Everything after the sheet data, without parsing the cells a second time:
+/// the part is inflated in chunks and only searched for the end of
+/// `sheetData`. `None` when the part cannot be read or its tail is too large;
+/// what is read from the tail refines the export and must not fail it.
+pub(crate) fn worksheet_tail(source: &Path, worksheet_path: &str) -> Option<Vec<u8>> {
+    let mut archive = ZipArchive::new(File::open(source).ok()?).ok()?;
+    let mut entry = archive.by_name(worksheet_path).ok()?;
+    const NAME: &[u8] = b"sheetData";
+    let mut chunk = vec![0u8; 64 * 1024];
+    // Bytes carried over so a name split across two chunks is still found.
+    let mut window: Vec<u8> = Vec::new();
+    let mut seen = 0;
+    let mut tail: Option<Vec<u8>> = None;
+    loop {
+        let read = entry.read(&mut chunk).ok()?;
+        if read == 0 {
+            break;
+        }
+        if let Some(tail) = tail.as_mut() {
+            if tail.len() + read > MAX_TAIL_BYTES {
+                return None;
+            }
+            tail.extend_from_slice(&chunk[..read]);
+            continue;
+        }
+        window.extend_from_slice(&chunk[..read]);
+        let mut from = 0;
+        while let Some(found) = window[from..]
+            .windows(NAME.len())
+            .position(|candidate| candidate == NAME)
+        {
+            let after = from + found + NAME.len();
+            let Some(next) = window.get(after) else {
+                // The byte that tells an empty element from an opening tag is
+                // in the next chunk.
+                break;
+            };
+            from = after;
+            seen += 1;
+            // `<sheetData/>` ends the data at once; otherwise the second
+            // mention of the name is the closing tag.
+            if *next == b'/' || seen == 2 {
+                tail = Some(window[after..].to_vec());
+                break;
+            }
+        }
+        if tail.is_none() {
+            let keep = window.len().saturating_sub(from).min(NAME.len() + 1);
+            let start = window.len() - keep;
+            window.drain(..start);
+        }
+    }
+    tail
+}
+
+pub(crate) fn parse_print_extras(tail: &[u8]) -> PrintExtras {
+    let mut extras = PrintExtras::default();
+    let mut reader = Reader::from_reader(tail);
+    // The tail starts in the middle of the document, so its end tags have no
+    // start tags to match.
+    reader.config_mut().check_end_names = false;
+    reader.config_mut().allow_unmatched_ends = true;
+    let mut buffer = Vec::new();
+    let mut custom_views = 0usize;
+    let flag = |element: &BytesStart<'_>, name: &[u8]| {
+        attribute(element, name).is_some_and(|value| value == "1" || value == "true")
+    };
+    loop {
+        let event = match reader.read_event_into(&mut buffer) {
+            Ok(Event::Eof) | Err(_) => break,
+            Ok(event) => event,
+        };
+        match &event {
+            // A custom view carries its own print settings; only the sheet's
+            // own count.
+            Event::Start(element) if element.local_name().as_ref() == b"customSheetViews" => {
+                custom_views += 1;
+            }
+            Event::End(element) if element.local_name().as_ref() == b"customSheetViews" => {
+                custom_views = custom_views.saturating_sub(1);
+            }
+            Event::Start(element) | Event::Empty(element) if custom_views == 0 => {
+                match element.local_name().as_ref() {
+                    b"printOptions" => {
+                        extras.center_horizontal = flag(element, b"horizontalCentered");
+                        extras.center_vertical = flag(element, b"verticalCentered");
+                    }
+                    b"pageSetup" => {
+                        if flag(element, b"useFirstPageNumber") {
+                            extras.first_page_number = attribute(element, b"firstPageNumber")
+                                .and_then(|value| value.parse::<u32>().ok())
+                                .filter(|value| *value >= 1);
+                        }
+                        extras.over_then_down = attribute(element, b"pageOrder")
+                            .is_some_and(|value| value == "overThenDown");
+                        extras.notes = attribute(element, b"cellComments")
+                            .is_some_and(|value| value == "atEnd" || value == "asDisplayed");
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+        buffer.clear();
+    }
+    extras
+}
+
+fn attribute(element: &BytesStart<'_>, name: &[u8]) -> Option<String> {
+    element
+        .attributes()
+        .flatten()
+        .find(|attribute| attribute.key.local_name().as_ref() == name)
+        // Flags, numbers and enumerated words: nothing here needs unescaping.
+        .map(|attribute| String::from_utf8_lossy(&attribute.value).into_owned())
+}
 
 /// Page layouts and master pages for the sheets, deduplicated: sheets with the
 /// same print setup share one.
@@ -38,11 +188,12 @@ impl PageStyles {
     pub(crate) fn register(
         &mut self,
         setup: Option<&PagePrintInfo>,
+        extras: PrintExtras,
         registry: &mut StyleRegistry,
     ) -> String {
         let key = match setup {
-            Some(setup) => format!("{setup:?}"),
-            None => "default".to_owned(),
+            Some(setup) => format!("{setup:?}{extras:?}"),
+            None => format!("default{extras:?}"),
         };
         if let Some((_, master)) = self.seen.iter().find(|(entry, _)| *entry == key) {
             return master.clone();
@@ -80,8 +231,25 @@ impl PageStyles {
         let (page_bottom, footer_height) = split_margin(bottom, footer_margin, footer.shown());
 
         let mut properties = format!(
-            r#" fo:page-width="{width:.3}cm" fo:page-height="{height:.3}cm" style:print-orientation="{orientation}" fo:margin-left="{left:.4}in" fo:margin-right="{right:.4}in" fo:margin-top="{page_top:.4}in" fo:margin-bottom="{page_bottom:.4}in" style:print-page-order="ttb""#
+            r#" fo:page-width="{width:.3}cm" fo:page-height="{height:.3}cm" style:print-orientation="{orientation}" fo:margin-left="{left:.4}in" fo:margin-right="{right:.4}in" fo:margin-top="{page_top:.4}in" fo:margin-bottom="{page_bottom:.4}in" style:print-page-order="{}""#,
+            // Excel numbers pages down a column of pages first unless told
+            // to go across.
+            if extras.over_then_down { "ltr" } else { "ttb" }
         );
+        match (extras.center_horizontal, extras.center_vertical) {
+            (true, true) => properties.push_str(r#" style:table-centering="both""#),
+            (true, false) => properties.push_str(r#" style:table-centering="horizontal""#),
+            (false, true) => properties.push_str(r#" style:table-centering="vertical""#),
+            (false, false) => {}
+        }
+        // Left unsaid, a reader starts every sheet at page one; Excel carries
+        // the count on from the sheet before.
+        match extras.first_page_number {
+            Some(number) => {
+                properties.push_str(&format!(r#" style:first-page-number="{number}""#))
+            }
+            None => properties.push_str(r#" style:first-page-number="continue""#),
+        }
         if let Some(setup) = setup {
             if setup.fit_to_page {
                 // Excel's absent count means one page; zero means "as many as
@@ -104,6 +272,9 @@ impl PageStyles {
         }
         if setup.is_some_and(|setup| setup.print_headings) {
             print.push_str(" headers");
+        }
+        if extras.notes {
+            print.push_str(" annotations");
         }
         properties.push_str(&format!(r#" style:print="{print}""#));
 
@@ -590,7 +761,7 @@ mod tests {
     fn registered(setup: &PagePrintInfo) -> PageStyles {
         let mut pages = PageStyles::default();
         let mut registry = StyleRegistry::new(CellStyle::default());
-        pages.register(Some(setup), &mut registry);
+        pages.register(Some(setup), PrintExtras::default(), &mut registry);
         pages
     }
 
@@ -758,5 +929,86 @@ mod tests {
         assert_eq!(print_titles(Some("'My, Sheet'!$3:$3")), (Some((2, 2)), None));
         assert_eq!(print_titles(Some("Sheet1!$C:$D")), (None, Some((2, 3))));
         assert_eq!(print_titles(None), (None, None));
+    }
+
+    #[test]
+    fn reads_centring_first_page_and_page_order_from_the_sheet_tail() {
+        let tail = concat!(
+            r#"<customSheetViews><customSheetView guid="{1}"><printOptions verticalCentered="1"/><pageSetup pageOrder="overThenDown"/></customSheetView></customSheetViews>"#,
+            r#"<printOptions horizontalCentered="1"/><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>"#,
+            r#"<pageSetup paperSize="9" firstPageNumber="5" useFirstPageNumber="1" cellComments="atEnd"/></worksheet>"#,
+        );
+        let extras = parse_print_extras(tail.as_bytes());
+        assert_eq!(
+            extras,
+            PrintExtras {
+                center_horizontal: true,
+                center_vertical: false,
+                first_page_number: Some(5),
+                over_then_down: false,
+                notes: true,
+            },
+            "the custom view's settings are not the sheet's"
+        );
+        // A first page number Excel was not told to use is not one.
+        let unused = parse_print_extras(br#"<pageSetup firstPageNumber="5" pageOrder="overThenDown"/>"#);
+        assert_eq!(unused.first_page_number, None);
+        assert!(unused.over_then_down);
+
+        let mut pages = PageStyles::default();
+        let mut registry = StyleRegistry::new(CellStyle::default());
+        let plain = pages.register(None, PrintExtras::default(), &mut registry);
+        let centred = pages.register(
+            None,
+            PrintExtras {
+                center_horizontal: true,
+                center_vertical: true,
+                first_page_number: Some(3),
+                over_then_down: true,
+                notes: true,
+            },
+            &mut registry,
+        );
+        assert_ne!(plain, centred, "different extras are different page styles");
+        assert!(pages.layouts.contains(r#"style:print-page-order="ltr" style:table-centering="both" style:first-page-number="3""#), "{}", pages.layouts);
+        assert!(pages.layouts.contains("zero-values annotations"), "{}", pages.layouts);
+    }
+
+    #[test]
+    fn finds_the_print_settings_behind_sheet_data_of_any_size() {
+        use std::io::Write;
+        let dir = tempfile::tempdir().unwrap();
+        let package = |name: &str, sheet: &str| {
+            let path = dir.path().join(name);
+            let mut writer = zip::ZipWriter::new(File::create(&path).unwrap());
+            writer
+                .start_file("xl/worksheets/sheet1.xml", zip::write::SimpleFileOptions::default())
+                .unwrap();
+            writer.write_all(sheet.as_bytes()).unwrap();
+            writer.finish().unwrap();
+            path
+        };
+        let tail = r#"<printOptions horizontalCentered="1"/><pageSetup pageOrder="overThenDown"/></worksheet>"#;
+        // Rows of every length, so the closing tag lands on each side of a
+        // chunk boundary in turn.
+        for padding in [0usize, 1, 7, 8, 9, 10, 11, 4096] {
+            let mut sheet = String::from(r#"<worksheet><sheetData>"#);
+            sheet.push_str(&" ".repeat(padding));
+            while sheet.len() < 200_000 {
+                sheet.push_str(r#"<row r="1"><c r="A1"><v>1</v></c></row>"#);
+            }
+            sheet.push_str("</sheetData>");
+            sheet.push_str(tail);
+            let extras = read_print_extras(&package("big.xlsx", &sheet), "xl/worksheets/sheet1.xml");
+            assert!(extras.center_horizontal && extras.over_then_down, "padding {padding}");
+        }
+        let empty = format!("<worksheet><sheetData/>{tail}");
+        let extras = read_print_extras(&package("empty.xlsx", &empty), "xl/worksheets/sheet1.xml");
+        assert!(extras.center_horizontal && extras.over_then_down);
+        // A part that is not there answers the defaults instead of failing.
+        assert_eq!(
+            read_print_extras(&package("none.xlsx", "<worksheet/>"), "xl/worksheets/missing.xml"),
+            PrintExtras::default()
+        );
     }
 }

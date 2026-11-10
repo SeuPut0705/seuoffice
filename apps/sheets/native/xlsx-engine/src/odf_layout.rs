@@ -353,7 +353,7 @@ fn parse_content<R: BufRead>(
 
 /// An ODF length as points. A unitless number is 1/100 mm (ODF 1.2 §18.3.13),
 /// and `px` is the CSS pixel: 96 to the inch.
-fn length_points(text: &str) -> Option<f64> {
+pub(crate) fn length_points(text: &str) -> Option<f64> {
     let text = text.trim();
     let split = text
         .find(|character: char| {

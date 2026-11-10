@@ -27,13 +27,24 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
 use crate::odf_formula::{self, Names};
-use crate::ods_print::{PageStyles, print_titles, split_outside_quotes};
+use crate::ods_chart::{accent_palette, chart_document};
+use crate::ods_drawing::{
+    Drawings, EmbeddedObject, Geometry, Picture, default_column_points, width_points,
+};
+use crate::ods_pivot::{NamedSources, named_sources, pivot_table_xml};
+use crate::ods_print::{
+    PageStyles, parse_print_extras, print_titles, split_outside_quotes, worksheet_tail,
+};
+use crate::ods_rules::{
+    SparklineExtra, ValidationArea, Validations, conditional_formats_xml, parse_rule_extras,
+    parse_sparkline_extras,
+};
 use crate::ods_styles::{DEFAULT_CELL_STYLE, ResolvedStyle, StyleRegistry, ValueKind};
 use crate::xlsx_package::escape_xml;
 use crate::{
     CellRange, CellRecord, CellStyle, CellValue, CommentInfo, FilterColumnCriteria, MergedRange,
-    RangeResult, RichRun, RowProperty, SheetMetadata, SidecarError, WorkbookMetadata,
-    WorkbookSessions,
+    RangeResult, RichRun, RowProperty, SheetMetadata, SidecarError, VisualObject,
+    WorkbookMetadata, WorkbookSessions,
 };
 
 /// Excel's grid limits, the same ones the reader enforces.
@@ -70,7 +81,16 @@ const NAMESPACES: &str = concat!(
     r#"xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" "#,
     r#"xmlns:of="urn:oasis:names:tc:opendocument:xmlns:of:1.2" "#,
     r#"xmlns:xlink="http://www.w3.org/1999/xlink" "#,
+    r#"xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" "#,
     r#"xmlns:dc="http://purl.org/dc/elements/1.1/" "#,
+    // Conditional formats have no element in the standard; this is the
+    // extension namespace the readers of the format share for them.
+    r#"xmlns:calcext="urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0" "#,
+    // The stops of a gradient with more than two colours, and the compact
+    // layout of a pivot table.
+    r#"xmlns:loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0" "#,
+    // The caption a pivot table field was given.
+    r#"xmlns:tableooo="http://openoffice.org/2009/table" "#,
 );
 
 /// What the export did, in the shape the protocol returns it. `dropped` counts
@@ -134,6 +154,211 @@ fn reject_same_target(source: &Path, target: &Path) -> Result<(), SidecarError> 
     Ok(())
 }
 
+/// The drawings of one sheet as shape elements, keyed by the cell each one
+/// starts in. A drawing that is written leaves the count of losses.
+fn sheet_frames(
+    sessions: &mut WorkbookSessions,
+    metadata: &WorkbookMetadata,
+    sheet: &SheetMetadata,
+    package: Option<&Path>,
+    drawings: &mut Drawings,
+    counters: &mut Counters,
+) -> Result<HashMap<(usize, usize), String>, SidecarError> {
+    let mut frames: HashMap<(usize, usize), String> = HashMap::new();
+    let visuals: Vec<&VisualObject> = metadata
+        .visuals
+        .iter()
+        .filter(|visual| visual.sheet_id == sheet.id)
+        .collect();
+    if visuals.is_empty() && sheet.cell_images.is_empty() {
+        return Ok(frames);
+    }
+    // The heights of the rows the drawings span decide their size.
+    let first = visuals
+        .iter()
+        .map(|visual| visual.anchor.from_row)
+        .chain(sheet.cell_images.iter().map(|image| image.row))
+        .min()
+        .unwrap_or(0);
+    let last = visuals
+        .iter()
+        .map(|visual| visual.anchor.to_row.max(visual.anchor.from_row))
+        .chain(sheet.cell_images.iter().map(|image| image.row))
+        .max()
+        .unwrap_or(0);
+    let geometry = Geometry::new(
+        sheet,
+        row_heights(sessions, &metadata.session_id, sheet, first, last)?,
+    );
+    let palette = accent_palette(metadata.theme_colors.as_deref());
+    for visual in visuals {
+        let cell = (
+            visual.anchor.from_row.min(MAX_ROWS - 1),
+            visual.anchor.from_column.min(MAX_COLUMNS - 1),
+        );
+        let (frame, lost) = match visual.kind.as_str() {
+            "image" => (
+                drawings.image(sheet, &geometry, visual),
+                &mut counters.dropped.images,
+            ),
+            "shape" => (
+                drawings.shape(sheet, &geometry, visual),
+                &mut counters.dropped.shapes,
+            ),
+            "chart" => (
+                visual.chart.as_ref().and_then(|chart| {
+                    // The model keeps the cell a series is named after only
+                    // when the chart saved no copy of the name, and gives a
+                    // series without a name the one Excel shows for it. The
+                    // cell is what keeps a name live, and a name nobody gave
+                    // is not one to write, so both are read from the part.
+                    let named = package
+                        .zip(visual.chart_path.as_deref())
+                        .and_then(|(package, part)| series_names(package, part))
+                        .filter(|names| names.len() == chart.series.len())
+                        .map(|names| {
+                            let mut chart = chart.clone();
+                            for (series, name) in chart.series.iter_mut().zip(names) {
+                                match name {
+                                    SeriesName::Cell(cell) if series.name_ref.is_none() => {
+                                        series.name_ref = Some(cell);
+                                    }
+                                    SeriesName::Absent => series.name.clear(),
+                                    _ => {}
+                                }
+                            }
+                            chart
+                        });
+                    let chart = named.as_ref().unwrap_or(chart);
+                    drawings.chart(sheet, &geometry, visual, |width, height| {
+                        chart_document(chart, &palette, width, height)
+                    })
+                }),
+                &mut counters.dropped.charts,
+            ),
+            _ => continue,
+        };
+        if let Some(frame) = frame {
+            frames.entry(cell).or_default().push_str(&frame);
+            *lost = lost.saturating_sub(1);
+        }
+    }
+    for image in &sheet.cell_images {
+        if let Some(frame) = drawings.cell_image(&geometry, image.row, image.column, &image.media_path)
+        {
+            frames
+                .entry((image.row, image.column))
+                .or_default()
+                .push_str(&frame);
+            counters.dropped.images = counters.dropped.images.saturating_sub(1);
+        }
+    }
+    Ok(frames)
+}
+
+/// A chart part is a few kilobytes; one past this is not read for names.
+const MAX_CHART_PART_BYTES: u64 = 16 * 1024 * 1024;
+
+/// Where a series of a chart part has its name from.
+#[derive(Debug, PartialEq)]
+enum SeriesName {
+    /// The formula of the cell it is named after.
+    Cell(String),
+    /// Typed into the chart.
+    Typed,
+    /// The series has no name.
+    Absent,
+}
+
+/// How each series of a chart part is named, in the order the series appear.
+fn series_names(package: &Path, part: &str) -> Option<Vec<SeriesName>> {
+    use std::io::Read;
+    let mut archive = ZipArchive::new(File::open(package).ok()?).ok()?;
+    let entry = archive.by_name(part.trim_start_matches('/')).ok()?;
+    if entry.size() > MAX_CHART_PART_BYTES {
+        return None;
+    }
+    let mut text = String::new();
+    entry
+        .take(MAX_CHART_PART_BYTES)
+        .read_to_string(&mut text)
+        .ok()?;
+    let document = roxmltree::Document::parse(&text).ok()?;
+    let child = |node: roxmltree::Node<'_, '_>, name: &str| {
+        node.children()
+            .find(|child| child.is_element() && child.tag_name().name() == name)
+            .map(|child| child.id())
+    };
+    Some(
+        document
+            .descendants()
+            .filter(|node| node.is_element() && node.tag_name().name() == "ser")
+            .map(|series| {
+                let Some(tx) = child(series, "tx").and_then(|id| document.get_node(id)) else {
+                    return SeriesName::Absent;
+                };
+                child(tx, "strRef")
+                    .and_then(|id| document.get_node(id))
+                    .and_then(|reference| child(reference, "f"))
+                    .and_then(|id| document.get_node(id))
+                    .and_then(|formula| formula.text())
+                    .map(str::trim)
+                    .filter(|formula| !formula.is_empty())
+                    .map_or(SeriesName::Typed, |formula| {
+                        SeriesName::Cell(formula.to_owned())
+                    })
+            })
+            .collect(),
+    )
+}
+
+/// The rows from `first` to `last` whose height is not the default one: their
+/// height in points, zero when hidden.
+fn row_heights(
+    sessions: &mut WorkbookSessions,
+    session_id: &str,
+    sheet: &SheetMetadata,
+    first: usize,
+    last: usize,
+) -> Result<HashMap<usize, f64>, SidecarError> {
+    let mut heights = HashMap::new();
+    if sheet.row_count == 0 || sheet.column_count == 0 {
+        return Ok(heights);
+    }
+    let last = last.min(sheet.row_count - 1);
+    let mut start = first;
+    while start <= last {
+        let end = (start + READ_WINDOW_CELLS - 1).min(last);
+        let range = CellRange {
+            start_row: start,
+            end_row: end,
+            start_column: 0,
+            end_column: 0,
+        };
+        for row in sessions.read_range(session_id, &sheet.id, &range)?.rows {
+            if row.hidden {
+                heights.insert(row.row, 0.0);
+            } else if let Some(height) = row.height.filter(|height| *height > 0.0) {
+                heights.insert(row.row, height);
+            }
+        }
+        start = end + 1;
+    }
+    Ok(heights)
+}
+
+/// The package and the worksheet part behind a sheet, for the few settings
+/// the model does not carry.
+fn worksheet_part(
+    sessions: &WorkbookSessions,
+    session_id: &str,
+    index: usize,
+) -> Option<(PathBuf, String)> {
+    let session = sessions.sessions.get(session_id)?;
+    let runtime = session.runtimes.get(index)?;
+    Some((session.path.clone(), runtime.worksheet_path.clone()))
+}
+
 /// True when the package holds a VBA project. Macros have no ODF counterpart,
 /// and a macro-enabled workbook that quietly loses them is the kind of loss
 /// the caller has to be able to name.
@@ -153,19 +378,99 @@ fn write_document(
     let mut staging = StagingFiles::new(target);
     let base = metadata.styles.first().cloned().unwrap_or_default();
     let mut registry = StyleRegistry::new(base.clone());
+    // A font that follows the theme is the Latin face of the theme in the
+    // model. The workbook cached the name it was made with for its body font;
+    // where it did not, the theme may still name a face for East Asian text.
+    let differs = |family: &String| !family.is_empty() && base.font_family.as_ref() != Some(family);
+    registry.set_theme_fonts(
+        metadata
+            .normal_font_name
+            .clone()
+            .filter(|_| base.font_scheme.as_deref() == Some("minor"))
+            .filter(differs),
+        metadata
+            .theme_fonts
+            .as_ref()
+            .and_then(|fonts| fonts.minor_ea.clone())
+            .filter(differs),
+    );
     let mut pages = PageStyles::default();
     let mut table_styles: Vec<String> = Vec::new();
     let mut counters = Counters::new(metadata, macros);
     let (named, names) = exported_names(metadata);
     let mut database_ranges = String::new();
+    let mut validations = Validations::default();
+    let mut drawings = Drawings::default();
+    let mut data_pilots = String::new();
+    let package = sessions
+        .sessions
+        .get(&metadata.session_id)
+        .map(|session| session.path.clone());
+    // The names a pivot table may read from are looked up once, and only for
+    // a workbook that has a pivot table.
+    let pivot_sources: NamedSources = match package.as_deref() {
+        Some(package) if metadata.sheets.iter().any(|sheet| !sheet.pivot_tables.is_empty()) => {
+            let parts: Vec<(String, String)> = metadata
+                .sheets
+                .iter()
+                .enumerate()
+                .filter_map(|(index, sheet)| {
+                    worksheet_part(sessions, &metadata.session_id, index)
+                        .map(|(_, part)| (sheet.name.clone(), part))
+                })
+                .collect();
+            named_sources(package, &parts, &metadata.defined_names)
+        }
+        _ => NamedSources::new(),
+    };
 
     let body_path = staging.path("body");
     {
         let mut body = BufWriter::new(File::create(&body_path)?);
         for (index, sheet) in metadata.sheets.iter().enumerate() {
             let wide = read_sheet_wide(sessions, &metadata.session_id, sheet)?;
-            counters.count_sheet(&wide, sheet);
-            let master = pages.register(wide.page_setup.as_ref(), &mut registry);
+            // What the model does not carry is read from the worksheet part
+            // itself, once for the print settings and the rules.
+            let tail = worksheet_part(sessions, &metadata.session_id, index)
+                .and_then(|(package, part)| worksheet_tail(&package, &part));
+            let extras = tail.as_deref().map(parse_print_extras).unwrap_or_default();
+            let rule_extras = tail.as_deref().map(parse_rule_extras).unwrap_or_default();
+            let sparkline_extras = tail.as_deref().map(parse_sparkline_extras).unwrap_or_default();
+            drop(tail);
+            let (areas, lost) = validations.register(&sheet.name, &wide.data_validations, &names);
+            counters.dropped.validations += lost;
+            let (conditional_formats, lost) = conditional_formats_xml(
+                &sheet.name,
+                &wide.conditional_rules,
+                &metadata.dxf_styles,
+                &rule_extras,
+                &names,
+                &mut registry,
+            );
+            counters.dropped.conditional_formats += lost;
+            let frames = sheet_frames(
+                sessions,
+                metadata,
+                sheet,
+                package.as_deref(),
+                &mut drawings,
+                &mut counters,
+            )?;
+            let (sparklines, written) = sparkline_groups_xml(index, sheet, &sparkline_extras);
+            counters.dropped.sparklines = counters.dropped.sparklines.saturating_sub(written);
+            for pivot in &sheet.pivot_tables {
+                // A pivot table that is written leaves the count of losses.
+                if let Some(xml) = package
+                    .as_deref()
+                    .and_then(|package| {
+                        pivot_table_xml(package, &sheet.name, pivot, &pivot_sources)
+                    })
+                {
+                    data_pilots.push_str(&xml);
+                    counters.dropped.pivots = counters.dropped.pivots.saturating_sub(1);
+                }
+            }
+            let master = pages.register(wide.page_setup.as_ref(), extras, &mut registry);
             let table_style = format!("ta{}", index + 1);
             table_styles.push(table_style_xml(&table_style, sheet, &master));
             let filter = sheet_filter(index, sheet, &wide);
@@ -185,6 +490,10 @@ fn write_document(
                 wide: &wide,
                 filtered_rows: filter.filtered_rows,
                 local_names: &local_names,
+                validations: &areas,
+                conditional_formats: &conditional_formats,
+                sparklines: &sparklines,
+                frames: &frames,
             };
             write_table(
                 sessions,
@@ -212,6 +521,12 @@ fn write_document(
                 "<table:database-ranges>{database_ranges}</table:database-ranges>"
             )?;
         }
+        if !data_pilots.is_empty() {
+            write!(
+                body,
+                "<table:data-pilot-tables>{data_pilots}</table:data-pilot-tables>"
+            )?;
+        }
         body.flush()?;
     }
 
@@ -220,18 +535,32 @@ fn write_document(
         &content_path,
         &registry,
         &table_styles,
+        &validations.xml,
+        &drawings.automatic_styles(),
         &body_path,
         metadata,
     )?;
     let styles_path = staging.path("styles");
-    fs::write(&styles_path, styles_xml(&registry, &pages))?;
+    fs::write(
+        &styles_path,
+        styles_xml(&registry, &pages, &drawings.named_styles()),
+    )?;
     let meta_path = staging.path("meta");
     fs::write(&meta_path, meta_xml())?;
     let settings_path = staging.path("settings");
     fs::write(&settings_path, settings_xml(metadata))?;
 
     let archive_path = staging.path("archive");
-    write_archive(&archive_path, &content_path, &styles_path, &meta_path, &settings_path)?;
+    write_archive(
+        &archive_path,
+        &content_path,
+        &styles_path,
+        &meta_path,
+        &settings_path,
+        package.as_deref(),
+        &drawings.pictures,
+        &drawings.objects,
+    )?;
     promote(&archive_path, target)?;
     staging.forget(&archive_path);
 
@@ -245,6 +574,8 @@ fn write_content_xml(
     path: &Path,
     registry: &StyleRegistry,
     table_styles: &[String],
+    validations: &str,
+    graphic_styles: &str,
     body_path: &Path,
     metadata: &WorkbookMetadata,
 ) -> Result<(), SidecarError> {
@@ -260,6 +591,7 @@ fn write_content_xml(
     for style in table_styles {
         header.push_str(style);
     }
+    header.push_str(graphic_styles);
     header.push_str("</office:automatic-styles><office:body><office:spreadsheet>");
     // Excel compares text without case and reads `*` and `?` in a criterion as
     // wildcards. ODF's defaults are the opposite on both counts, so a document
@@ -276,6 +608,11 @@ fn write_content_xml(
     } else {
         header.push_str("/>");
     }
+    if !validations.is_empty() {
+        header.push_str(&format!(
+            "<table:content-validations>{validations}</table:content-validations>"
+        ));
+    }
     out.write_all(header.as_bytes())?;
     let mut body = File::open(body_path)?;
     io::copy(&mut body, &mut out)?;
@@ -284,11 +621,138 @@ fn write_content_xml(
     Ok(())
 }
 
-fn styles_xml(registry: &StyleRegistry, pages: &PageStyles) -> String {
+/// The sparklines of a sheet as the extension element the readers of the
+/// format share for them, and how many cells it covers. The model carries the
+/// kind, the series colour and where each one reads from; the options that
+/// are switched on, the line's weight and the other colours come from the
+/// worksheet part (`extras`, one per group, used only when they pair up with
+/// the model's groups). A sparkline whose range cannot be named is left out.
+fn sparkline_groups_xml(
+    sheet_index: usize,
+    sheet: &SheetMetadata,
+    extras: &[SparklineExtra],
+) -> (String, u32) {
+    let mut groups = String::new();
+    let mut written = 0;
+    let paired = extras.len() == sheet.sparklines.len();
+    for (group_index, group) in sheet.sparklines.iter().enumerate() {
+        let extra = extras.get(group_index).filter(|_| paired);
+        let mut cells = String::new();
+        let mut count = 0;
+        for cell in &group.cells {
+            let host = cell.cell.replace('$', "");
+            let source = cell.source_ref.trim();
+            let range = crate::ods_chart::chart_range(source).or_else(|| {
+                // A range on the sparkline's own sheet may come without it.
+                let quoted = format!("'{}'!{source}", sheet.name.replace('\'', "''"));
+                crate::ods_chart::chart_range(&quoted)
+            });
+            let Some(range) = range.filter(|_| !host.is_empty()) else {
+                continue;
+            };
+            cells.push_str(&format!(
+                r#"<calcext:sparkline calcext:cell-address="{}.{}" calcext:data-range="{}"/>"#,
+                escape_xml(&odf_formula::odf_sheet_name(&sheet.name)),
+                escape_xml(&host),
+                escape_xml(&range)
+            ));
+            count += 1;
+        }
+        if count == 0 {
+            continue;
+        }
+        let kind = match group.kind.as_str() {
+            "column" => "column",
+            "stacked" => "stacked",
+            _ => "line",
+        };
+        let hex = |color: &str| {
+            let color = color.trim().trim_start_matches('#');
+            let color = if color.len() == 8 { &color[2..] } else { color };
+            format!("#{}", color.to_ascii_lowercase())
+        };
+        let empty_cells = match extra.and_then(|extra| extra.empty_cells.as_deref()) {
+            Some("zero") => "zero",
+            Some("span") => "span",
+            _ => "gap",
+        };
+        let mut attributes = format!(
+            r#" calcext:id="{{00000000-0000-0000-{:04x}-{:012x}}}" calcext:type="{kind}" calcext:line-width="{}pt" calcext:display-empty-cells-as="{empty_cells}""#,
+            sheet_index & 0xffff,
+            group_index,
+            extra.and_then(|extra| extra.line_weight).unwrap_or(0.75),
+        );
+        match extra {
+            Some(extra) => {
+                for flag in &extra.flags {
+                    attributes.push_str(&format!(r#" calcext:{flag}="true""#));
+                }
+            }
+            // Without the part to ask, a colour for negative points is the
+            // only sign that they are picked out.
+            None if group.negative_color.is_some() => {
+                attributes.push_str(r#" calcext:negative="true""#);
+            }
+            None => {}
+        }
+        attributes.push_str(r#" calcext:min-axis-type="individual" calcext:max-axis-type="individual""#);
+        // The series colour and the colour of negative points come resolved
+        // from the model; Excel's own stand in where neither says.
+        let stated = |slot: &str| {
+            extra.and_then(|extra| {
+                extra
+                    .colors
+                    .iter()
+                    .find(|(name, _)| *name == slot)
+                    .map(|(_, color)| color.as_str())
+            })
+        };
+        attributes.push_str(&format!(
+            r#" calcext:color-series="{}" calcext:color-negative="{}""#,
+            escape_xml(&hex(group.color.as_deref().or(stated("color-series")).unwrap_or("#376092"))),
+            escape_xml(&hex(
+                group
+                    .negative_color
+                    .as_deref()
+                    .or(stated("color-negative"))
+                    .unwrap_or("#d00000")
+            )),
+        ));
+        // Every colour is written, as a reader of the format writes them:
+        // one left out would come back as whatever the next writer assumes.
+        for (slot, default) in [
+            ("color-axis", "#000000"),
+            ("color-markers", "#d00000"),
+            ("color-first", "#d00000"),
+            ("color-last", "#d00000"),
+            ("color-high", "#d00000"),
+            ("color-low", "#d00000"),
+        ] {
+            attributes.push_str(&format!(
+                r#" calcext:{slot}="{}""#,
+                escape_xml(&hex(stated(slot).unwrap_or(default)))
+            ));
+        }
+        groups.push_str(&format!(
+            "<calcext:sparkline-group{attributes}><calcext:sparklines>{cells}</calcext:sparklines></calcext:sparkline-group>"
+        ));
+        written += count;
+    }
+    if groups.is_empty() {
+        return (String::new(), 0);
+    }
+    (
+        format!("<calcext:sparkline-groups>{groups}</calcext:sparkline-groups>"),
+        written,
+    )
+}
+
+fn styles_xml(registry: &StyleRegistry, pages: &PageStyles, drawing_styles: &str) -> String {
     format!(
-        r#"<?xml version="1.0" encoding="UTF-8"?><office:document-styles {NAMESPACES}office:version="{ODF_VERSION}"><office:font-face-decls>{}</office:font-face-decls><office:styles>{}</office:styles><office:automatic-styles>{}{}</office:automatic-styles><office:master-styles>{}</office:master-styles></office:document-styles>"#,
+        r#"<?xml version="1.0" encoding="UTF-8"?><office:document-styles {NAMESPACES}office:version="{ODF_VERSION}"><office:font-face-decls>{}</office:font-face-decls><office:styles>{}{drawing_styles}{}</office:styles><office:automatic-styles>{}{}</office:automatic-styles><office:master-styles>{}</office:master-styles></office:document-styles>"#,
         registry.font_face_decls(),
         registry.default_cell_style(),
+        registry.conditional_styles(),
         pages.layouts,
         pages.text_styles,
         pages.masters,
@@ -385,6 +849,9 @@ fn write_archive(
     styles_path: &Path,
     meta_path: &Path,
     settings_path: &Path,
+    package: Option<&Path>,
+    pictures: &[Picture],
+    objects: &[EmbeddedObject],
 ) -> Result<(), SidecarError> {
     let file = File::create(path)?;
     let mut writer = ZipWriter::new(file);
@@ -397,7 +864,7 @@ fn write_archive(
     writer.write_all(MIMETYPE.as_bytes())?;
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
     writer.start_file("META-INF/manifest.xml", options)?;
-    writer.write_all(manifest_xml().as_bytes())?;
+    writer.write_all(manifest_xml(pictures, objects).as_bytes())?;
     for (name, source) in [
         ("content.xml", content_path),
         ("styles.xml", styles_path),
@@ -408,14 +875,48 @@ fn write_archive(
         let mut part = File::open(source)?;
         io::copy(&mut part, &mut writer)?;
     }
+    for object in objects {
+        writer.start_file(format!("{}/content.xml", object.directory), options)?;
+        writer.write_all(object.content.as_bytes())?;
+    }
+    if !pictures.is_empty() {
+        // The pictures are copied out of the workbook as they are; the frames
+        // that point at them are already written, so a picture that cannot
+        // be read fails the export rather than leaving a broken link.
+        let source = package.ok_or_else(|| {
+            SidecarError::InvalidRequest("The workbook behind the export is gone.".into())
+        })?;
+        let mut archive = ZipArchive::new(File::open(source)?)?;
+        for picture in pictures {
+            let mut entry = archive.by_name(&picture.source)?;
+            writer.start_file(picture.name.as_str(), options)?;
+            io::copy(&mut entry, &mut writer)?;
+        }
+    }
     let finished = writer.finish()?;
     crate::archive::sync_best_effort(&finished)?;
     Ok(())
 }
 
-fn manifest_xml() -> String {
+fn manifest_xml(pictures: &[Picture], objects: &[EmbeddedObject]) -> String {
+    let mut pictures: String = pictures
+        .iter()
+        .map(|picture| {
+            format!(
+                r#"<manifest:file-entry manifest:full-path="{}" manifest:media-type="{}"/>"#,
+                escape_xml(&picture.name),
+                escape_xml(&picture.media_type)
+            )
+        })
+        .collect();
+    for object in objects {
+        let directory = escape_xml(&object.directory);
+        pictures.push_str(&format!(
+            r#"<manifest:file-entry manifest:full-path="{directory}/" manifest:media-type="application/vnd.oasis.opendocument.chart"/><manifest:file-entry manifest:full-path="{directory}/content.xml" manifest:media-type="text/xml"/>"#
+        ));
+    }
     format!(
-        r#"<?xml version="1.0" encoding="UTF-8"?><manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="{ODF_VERSION}"><manifest:file-entry manifest:full-path="/" manifest:version="{ODF_VERSION}" manifest:media-type="{MIMETYPE}"/><manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="meta.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="settings.xml" manifest:media-type="text/xml"/></manifest:manifest>"#
+        r#"<?xml version="1.0" encoding="UTF-8"?><manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="{ODF_VERSION}"><manifest:file-entry manifest:full-path="/" manifest:version="{ODF_VERSION}" manifest:media-type="{MIMETYPE}"/><manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="meta.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="settings.xml" manifest:media-type="text/xml"/>{pictures}</manifest:manifest>"#
     )
 }
 
@@ -522,11 +1023,6 @@ impl Counters {
             formulas_dropped: 0,
             dropped,
         }
-    }
-
-    fn count_sheet(&mut self, wide: &RangeResult, _sheet: &SheetMetadata) {
-        self.dropped.conditional_formats += wide.conditional_rules.len() as u32;
-        self.dropped.validations += wide.data_validations.len() as u32;
     }
 
     fn finish(self) -> OdsExportResult {
@@ -863,12 +1359,6 @@ fn axis_columns(sheet: &SheetMetadata, columns: usize) -> usize {
     columns.max(widest).min(MAX_COLUMNS)
 }
 
-/// Excel's column width (characters of the default font) as the points ODF
-/// measures lengths in: characters → pixels at 96 dpi → points.
-fn width_points(width: f64) -> f64 {
-    ((width * 7.0 + 5.0) * 0.75).max(0.0)
-}
-
 /// Everything about one sheet the row writer needs besides the cells.
 struct SheetContext<'a> {
     sheet: &'a SheetMetadata,
@@ -880,6 +1370,14 @@ struct SheetContext<'a> {
     wide: &'a RangeResult,
     filtered_rows: Option<(usize, usize)>,
     local_names: &'a str,
+    /// The ranges a validation covers, sorted by first row.
+    validations: &'a [ValidationArea],
+    /// The sheet's `calcext:sparkline-groups` element, ready to write.
+    sparklines: &'a str,
+    /// The sheet's `calcext:conditional-formats` element, ready to write.
+    conditional_formats: &'a str,
+    /// The drawings that start in a cell, as ready shape elements.
+    frames: &'a HashMap<(usize, usize), String>,
 }
 
 /// One column of the axis, as far as its `table:table-column` is concerned.
@@ -995,6 +1493,7 @@ fn write_table(
 
     // Column axis: one entry per run of identical columns, inside the group
     // and title wrappers the sheet asks for.
+    let default_width = default_column_points(sheet);
     let column_breaks: HashSet<usize> = context.wide.col_breaks.iter().copied().collect();
     let mut column_axis = vec![
         ColumnAxis {
@@ -1046,7 +1545,10 @@ fn write_table(
             out.write_all(nesting.enter(entry.level, entry.title, entry.hidden).as_bytes())?;
         }
         let mut attributes = String::new();
-        if let Some(name) = registry.column(entry.width.map(width_points), entry.break_before) {
+        // A column without a width still says one: left unsaid, a reader
+        // uses its own default, which is a third wider than Excel's.
+        let width = entry.width.map_or(default_width, width_points);
+        if let Some(name) = registry.column(Some(width), entry.break_before) {
             attributes.push_str(&format!(r#" table:style-name="{name}""#));
         }
         if let Some(name) = &entry.default_style {
@@ -1062,6 +1564,18 @@ fn write_table(
         column += run;
     }
     out.write_all(nesting.close().as_bytes())?;
+    if axis < MAX_COLUMNS {
+        // The columns past the last one described keep the default width too.
+        if let Some(name) = registry.column(Some(default_width), false) {
+            out.write_all(
+                format!(
+                    r#"<table:table-column table:style-name="{name}" table:number-columns-repeated="{}"/>"#,
+                    MAX_COLUMNS - axis
+                )
+                .as_bytes(),
+            )?;
+        }
+    }
     // A reader only applies a column's default cell style to rows the table
     // does not spell out, so every row that is written names the style on its
     // empty cells too.
@@ -1074,11 +1588,15 @@ fn write_table(
         .rposition(Option::is_some)
         .map(|last| last + 1)
         .unwrap_or(0);
-    let empty_row = if styled_columns == 0 {
-        "<table:table-cell/>".to_owned()
-    } else {
-        empty_cells(0, styled_columns - 1, None, &column_defaults)
-    };
+    let plain_row = empty_row_cells(&[], &column_defaults, styled_columns);
+    // The validations that cover the current row, as column spans. They only
+    // change where a range starts or ends, so the cells of an otherwise empty
+    // row are built once per band and reused.
+    let areas = context.validations;
+    let mut area_cursor = 0;
+    let mut area_active: Vec<&ValidationArea> = Vec::new();
+    let mut spans: Vec<ValidationSpan<'_>> = Vec::new();
+    let mut band_row = plain_row.clone();
 
     let comments: HashMap<(usize, usize), &CommentInfo> = sheet
         .comments
@@ -1090,61 +1608,83 @@ fn write_table(
     let mut sink = RowSink {
         out,
         pending: 0,
+        pending_cells: String::new(),
         wrote_row: false,
         rows: 0,
         fill_to_end: styled_columns > 0,
-        empty_row,
+        plain_row: plain_row.clone(),
     };
     let mut nesting = Nesting::rows();
     let mut row_styles: HashMap<usize, Option<usize>> = HashMap::new();
     let mut resolved: HashMap<usize, ResolvedStyle> = HashMap::new();
     let window_rows = (READ_WINDOW_CELLS / columns.max(1)).clamp(1, 4096);
 
+    // A note or a drawing sits in a cell, and that cell may lie below or to
+    // the right of the box. The rows down to the last of them are walked too;
+    // nothing is read for them.
+    let total_rows = comments
+        .keys()
+        .chain(context.frames.keys())
+        .map(|(row, _)| row + 1)
+        .max()
+        .unwrap_or(0)
+        .max(rows)
+        .min(MAX_ROWS);
     let mut start = 0;
-    while start < rows {
-        let end = (start + window_rows - 1).min(rows - 1);
-        let range = CellRange {
-            start_row: start,
-            end_row: end,
-            start_column: 0,
-            end_column: columns - 1,
+    while start < total_rows {
+        let end = (start + window_rows - 1).min(total_rows - 1);
+        let (mut window_cells, window_row_properties, window_links, window_merges) = if start < rows
+        {
+            let range = CellRange {
+                start_row: start,
+                end_row: end.min(rows - 1),
+                start_column: 0,
+                end_column: columns - 1,
+            };
+            let window = sessions.read_range(session_id, &sheet.id, &range)?;
+            (window.cells, window.rows, window.hyperlinks, window.merges)
+        } else {
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new())
         };
-        let mut window = sessions.read_range(session_id, &sheet.id, &range)?;
-        for merge in &window.merges {
+        for merge in &window_merges {
             merges.add(*merge);
         }
         merges.sort();
-        // A note on a cell with no record still needs a cell to sit in.
-        let recorded: HashSet<(usize, usize)> = if comments.is_empty() {
-            HashSet::new()
-        } else {
-            window
-                .cells
+        // A note or a drawing on a cell with no record still needs a cell to
+        // sit in.
+        let mut placed: Vec<(usize, usize)> = comments
+            .keys()
+            .chain(context.frames.keys())
+            .filter(|(row, column)| (start..=end).contains(row) && *column < MAX_COLUMNS)
+            .copied()
+            .collect();
+        if !placed.is_empty() {
+            placed.sort_unstable();
+            placed.dedup();
+            let recorded: HashSet<(usize, usize)> = window_cells
                 .iter()
                 .map(|cell| (cell.row, cell.column))
-                .collect()
-        };
-        for (row, column) in comments.keys() {
-            if (start..=end).contains(row) && *column < columns && !recorded.contains(&(*row, *column))
-            {
-                window.cells.push(CellRecord {
-                    row: *row,
-                    column: *column,
-                    value: None,
-                    formula: None,
-                    array_ref: None,
-                    style_index: None,
-                    rich: None,
-                });
+                .collect();
+            for (row, column) in placed {
+                if !recorded.contains(&(row, column)) {
+                    window_cells.push(CellRecord {
+                        row,
+                        column,
+                        value: None,
+                        formula: None,
+                        array_ref: None,
+                        style_index: None,
+                        rich: None,
+                    });
+                }
             }
         }
-        let links: HashMap<(usize, usize), &str> = window
-            .hyperlinks
+        let links: HashMap<(usize, usize), &str> = window_links
             .iter()
             .map(|link| ((link.row, link.column), link.target.as_str()))
             .collect();
         let mut by_row: HashMap<usize, Vec<&CellRecord>> = HashMap::new();
-        for cell in &window.cells {
+        for cell in &window_cells {
             by_row.entry(cell.row).or_default().push(cell);
         }
         for cells in by_row.values_mut() {
@@ -1152,7 +1692,7 @@ fn write_table(
         }
         row_styles.clear();
         let mut row_properties: HashMap<usize, &RowProperty> = HashMap::new();
-        for row in &window.rows {
+        for row in &window_row_properties {
             row_styles.insert(row.row, row.style_index);
             row_properties.insert(row.row, row);
         }
@@ -1164,6 +1704,18 @@ fn write_table(
                 cursor += 1;
             }
             active.retain(|merge| merge.end_row >= row);
+            let mut band_changed = false;
+            while area_cursor < areas.len() && areas[area_cursor].range.start_row <= row {
+                area_active.push(&areas[area_cursor]);
+                area_cursor += 1;
+                band_changed = true;
+            }
+            let covering = area_active.len();
+            area_active.retain(|area| area.range.end_row >= row);
+            if band_changed || area_active.len() != covering {
+                spans = validation_spans(&area_active);
+                band_row = empty_row_cells(&spans, &column_defaults, styled_columns);
+            }
             let properties = row_properties.get(&row).copied();
             let level = properties
                 .and_then(|properties| properties.outline_level)
@@ -1188,6 +1740,9 @@ fn write_table(
                 columns,
                 links: &links,
                 comments: &comments,
+                validations: &spans,
+                empty_row: &band_row,
+                window: &by_row,
             };
             write_row(
                 &mut sink,
@@ -1206,6 +1761,29 @@ fn write_table(
     if !closing.is_empty() {
         sink.raw(&closing)?;
     }
+    // A validation that reaches past the last row of the box still has cells
+    // to mark. The rows below are empty, so each band between two range
+    // boundaries is one repeated row.
+    let mut row = total_rows;
+    while row < MAX_ROWS {
+        while area_cursor < areas.len() && areas[area_cursor].range.start_row <= row {
+            area_active.push(&areas[area_cursor]);
+            area_cursor += 1;
+        }
+        area_active.retain(|area| area.range.end_row >= row);
+        let next_start = areas.get(area_cursor).map(|area| area.range.start_row);
+        let next_end = area_active.iter().map(|area| area.range.end_row + 1).min();
+        let Some(next) = [next_start, next_end].into_iter().flatten().min() else {
+            break;
+        };
+        let next = next.min(MAX_ROWS);
+        if next <= row {
+            break;
+        }
+        let cells = empty_row_cells(&validation_spans(&area_active), &column_defaults, styled_columns);
+        sink.empty_rows(next - row, &cells)?;
+        row = next;
+    }
     sink.finish()?;
     if !context.local_names.is_empty() {
         write!(
@@ -1214,6 +1792,8 @@ fn write_table(
             context.local_names
         )?;
     }
+    out.write_all(context.sparklines.as_bytes())?;
+    out.write_all(context.conditional_formats.as_bytes())?;
     out.write_all(b"</table:table>")?;
     Ok(())
 }
@@ -1269,18 +1849,31 @@ struct RowSink<'a, W: Write> {
     wrote_row: bool,
     /// Rows written so far, repeats counted.
     rows: usize,
+    /// The cells the pending empty rows share.
+    pending_cells: String,
     /// A column's default cell style runs to the last row of the sheet, and a
     /// reader only paints it on rows the table spells out — so the tail of
     /// the sheet is written as one repeated row instead of being dropped.
     fill_to_end: bool,
-    /// The cells of a row that holds nothing of its own: one empty cell, or
-    /// the styled empties of the columns that carry a default cell style.
-    empty_row: String,
+    /// The cells of a row that holds nothing of its own and sits under no
+    /// validation: one empty cell, or the styled empties of the columns that
+    /// carry a default cell style.
+    plain_row: String,
 }
 
 impl<W: Write> RowSink<'_, W> {
-    fn empty(&mut self) {
-        self.pending += 1;
+    /// `count` rows that hold nothing but `cells`. Neighbours with the same
+    /// cells collapse into one repeated row.
+    fn empty_rows(&mut self, count: usize, cells: &str) -> io::Result<()> {
+        if self.pending > 0 && self.pending_cells != cells {
+            self.flush()?;
+        }
+        if self.pending == 0 {
+            self.pending_cells.clear();
+            self.pending_cells.push_str(cells);
+        }
+        self.pending += count;
+        Ok(())
     }
 
     fn push(&mut self, attributes: &str, cells: &str) -> io::Result<()> {
@@ -1316,7 +1909,7 @@ impl<W: Write> RowSink<'_, W> {
         write!(
             self.out,
             "<table:table-row{repeat}>{}</table:table-row>",
-            self.empty_row
+            self.pending_cells
         )?;
         self.rows += self.pending;
         self.pending = 0;
@@ -1325,8 +1918,15 @@ impl<W: Write> RowSink<'_, W> {
     }
 
     fn finish(&mut self) -> io::Result<()> {
+        // Pending rows that mark a validation are content; plain ones at the
+        // end of the sheet are not.
+        if self.pending > 0 && self.pending_cells != self.plain_row {
+            self.flush()?;
+        }
         if self.fill_to_end && self.rows < MAX_ROWS {
-            self.pending = MAX_ROWS - self.rows;
+            let plain = self.plain_row.clone();
+            self.pending = 0;
+            self.empty_rows(MAX_ROWS - self.rows, &plain)?;
             return self.flush();
         }
         if !self.wrote_row {
@@ -1354,6 +1954,122 @@ struct RowContext<'a> {
     columns: usize,
     links: &'a HashMap<(usize, usize), &'a str>,
     comments: &'a HashMap<(usize, usize), &'a CommentInfo>,
+    /// The validations covering this row, as column spans in column order.
+    validations: &'a [ValidationSpan<'a>],
+    /// The cells of this row if it holds nothing of its own.
+    empty_row: &'a str,
+    /// The records of the window being written, by row and sorted by column.
+    window: &'a HashMap<usize, Vec<&'a CellRecord>>,
+}
+
+impl RowContext<'_> {
+    /// The style index of a cell elsewhere in the window, when it has one.
+    fn style_index_at(&self, row: usize, column: usize) -> Option<usize> {
+        let cells = self.window.get(&row)?;
+        let index = cells.binary_search_by_key(&column, |cell| cell.column).ok()?;
+        cells[index].style_index.filter(|index| *index != 0)
+    }
+}
+
+/// The style of a merged cell. Excel keeps the right and bottom edges of a
+/// merged area on its last column and last row; ODF draws the whole area with
+/// the first cell's style, so those edges move there. The last row is only
+/// looked at when it lies in the window being written.
+fn merged_style(
+    record: Option<&CellRecord>,
+    merge: &MergedRange,
+    row_context: &RowContext<'_>,
+    context: &SheetContext<'_>,
+    registry: &mut StyleRegistry,
+    own: ResolvedStyle,
+) -> ResolvedStyle {
+    let style_at = |row: usize, column: usize| {
+        row_context
+            .style_index_at(row, column)
+            .and_then(|index| context.styles.get(index))
+    };
+    let right = style_at(merge.start_row, merge.end_column).and_then(|style| style.border_right.clone());
+    let bottom = style_at(merge.end_row, merge.start_column).and_then(|style| style.border_bottom.clone());
+    if right.is_none() && bottom.is_none() {
+        return own;
+    }
+    let index = record
+        .and_then(|record| record.style_index)
+        .filter(|index| *index != 0)
+        .or(row_context.row_style)
+        .or_else(|| {
+            row_context
+                .column_styles
+                .get(merge.start_column)
+                .copied()
+                .flatten()
+        })
+        .unwrap_or(0);
+    let mut style = context.styles.get(index).cloned().unwrap_or_else(|| context.base.clone());
+    let mut changed = false;
+    if style.border_right.is_none() && right.is_some() {
+        style.border_right = right;
+        changed = true;
+    }
+    if style.border_bottom.is_none() && bottom.is_some() {
+        style.border_bottom = bottom;
+        changed = true;
+    }
+    if !changed {
+        return own;
+    }
+    registry.resolve_cell(&style)
+}
+
+/// First column, last column and the validation's name.
+type ValidationSpan<'a> = (usize, usize, &'a str);
+
+/// The column spans of the validations covering a row. Where two overlap the
+/// one that starts first keeps the cells, so a cell names one validation.
+fn validation_spans<'a>(active: &[&'a ValidationArea]) -> Vec<ValidationSpan<'a>> {
+    let mut spans: Vec<ValidationSpan<'a>> = active
+        .iter()
+        .map(|area| {
+            (
+                area.range.start_column,
+                area.range.end_column.min(MAX_COLUMNS - 1),
+                area.name.as_str(),
+            )
+        })
+        .collect();
+    spans.sort_by_key(|span| span.0);
+    let mut kept: Vec<ValidationSpan<'a>> = Vec::new();
+    for span in spans {
+        if kept.last().is_none_or(|last| span.0 > last.1) {
+            kept.push(span);
+        }
+    }
+    kept
+}
+
+fn validation_at<'a>(spans: &[ValidationSpan<'a>], column: usize) -> Option<&'a str> {
+    spans
+        .iter()
+        .find(|span| span.0 <= column && column <= span.1)
+        .map(|span| span.2)
+}
+
+/// The cells of a row that holds nothing of its own: the styled empties of
+/// the default-styled columns and the marks of the validations covering it.
+fn empty_row_cells(
+    spans: &[ValidationSpan<'_>],
+    column_defaults: &[Option<String>],
+    styled_columns: usize,
+) -> String {
+    let last = spans
+        .last()
+        .map(|span| span.1 + 1)
+        .unwrap_or(0)
+        .max(styled_columns);
+    if last == 0 {
+        return "<table:table-cell/>".to_owned();
+    }
+    empty_cells(0, last - 1, None, column_defaults, spans)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1385,20 +2101,22 @@ fn write_row<W: Write>(
     let attributes = row_attributes(row_context, registry);
     let Some(last) = last else {
         if attributes.is_empty() {
-            sink.empty();
+            sink.empty_rows(1, row_context.empty_row)?;
         } else {
-            let cells = sink.empty_row.clone();
-            sink.push(&attributes, &cells)?;
+            sink.push(&attributes, row_context.empty_row)?;
         }
         return Ok(());
     };
-    // The styled empties of the default-styled columns reach past the last
-    // record of the row.
-    let last = if row_context.styled_columns > 0 {
+    // The styled empties of the default-styled columns and the cells under a
+    // validation reach past the last record of the row.
+    let mut last = if row_context.styled_columns > 0 {
         last.max(row_context.styled_columns - 1)
     } else {
         last
     };
+    if let Some(span) = row_context.validations.last() {
+        last = last.max(span.1);
+    }
 
     let mut xml = String::with_capacity((last + 1) * 48);
     let mut column = 0;
@@ -1422,10 +2140,13 @@ fn write_row<W: Write>(
                 // merged text in every cell of the range, and Excel keeps
                 // what it finds there for the formulas that point at it. The
                 // cell stays covered and keeps its content.
+                let carries = |cell: &CellRecord| {
+                    holds_content(cell) || context.frames.contains_key(&(row, cell.column))
+                };
                 if let Some(record) = cells
                     .get(cell_index)
                     .filter(|cell| cell.column == column)
-                    .filter(|cell| holds_content(cell))
+                    .filter(|cell| carries(cell))
                     .copied()
                 {
                     cell_index += 1;
@@ -1437,6 +2158,7 @@ fn write_row<W: Write>(
                         Some(record),
                         style.name.as_deref(),
                         style.kind,
+                        None,
                         None,
                         context,
                         row_context,
@@ -1456,7 +2178,7 @@ fn write_row<W: Write>(
                     && !cells[cell_index.min(cells.len())..]
                         .iter()
                         .take_while(|cell| cell.column <= column + run)
-                        .any(|cell| cell.column == column + run && holds_content(cell))
+                        .any(|cell| cell.column == column + run && carries(cell))
                 {
                     run += 1;
                 }
@@ -1480,6 +2202,10 @@ fn write_row<W: Write>(
                 cell_index += 1;
             }
             let style = resolve_style(record, row_context, column, context, registry, resolved);
+            let style = match anchor {
+                Some(merge) => merged_style(record, merge, row_context, context, registry, style),
+                None => style,
+            };
             let style_name = style.name.clone().or_else(|| {
                 // A plain cell in a column that has a default cell style
                 // would pick that style up unless it names the plain one.
@@ -1496,6 +2222,7 @@ fn write_row<W: Write>(
                 style_name.as_deref(),
                 style.kind,
                 anchor,
+                validation_at(row_context.validations, column),
                 context,
                 row_context,
                 column,
@@ -1505,17 +2232,27 @@ fn write_row<W: Write>(
             column += 1;
             continue;
         }
-        let mut run = 1;
-        while column + run <= last && !occupied(cells, cell_index, column + run, active) {
-            run += 1;
-        }
+        // The empty run ends before the next record or merge. Nothing covers
+        // this column, so both lie strictly to its right.
+        let next_record = cells.get(cell_index).map(|cell| cell.column);
+        let next_merge = active
+            .iter()
+            .filter(|merge| merge.start_column > column)
+            .map(|merge| merge.start_column)
+            .min();
+        let end = [next_record, next_merge]
+            .into_iter()
+            .flatten()
+            .min()
+            .map_or(last, |next| (next - 1).min(last));
         xml.push_str(&empty_cells(
             column,
-            column + run - 1,
+            end,
             row_style_name.as_deref(),
             row_context.column_defaults,
+            row_context.validations,
         ));
-        column += run;
+        column = end + 1;
     }
     if let Some(name) = row_style_name.as_deref().filter(|_| last + 1 < MAX_COLUMNS) {
         // The row's own style runs to the last column of the sheet.
@@ -1528,13 +2265,15 @@ fn write_row<W: Write>(
     Ok(())
 }
 
-/// Empty cells for the columns `first..=last`, in runs of one style. A row's
-/// own default style wins over a column's, as it does in the workbook.
+/// Empty cells for the columns `first..=last`, in runs of one style under
+/// one validation. A row's own default style wins over a column's, as it does
+/// in the workbook.
 fn empty_cells(
     first: usize,
     last: usize,
     row_style: Option<&str>,
     column_defaults: &[Option<String>],
+    validations: &[ValidationSpan<'_>],
 ) -> String {
     let style_of = |column: usize| {
         row_style.or_else(|| column_defaults.get(column).and_then(|name| name.as_deref()))
@@ -1543,37 +2282,51 @@ fn empty_cells(
     let mut column = first;
     while column <= last {
         let style = style_of(column);
-        let mut run = 1;
-        while column + run <= last && style_of(column + run) == style {
-            run += 1;
-        }
+        // Past the last column that names a default style nothing changes, so
+        // the run is not walked column by column to the end of the sheet.
+        let style_end = if row_style.is_some() || column >= column_defaults.len() {
+            last
+        } else {
+            let limit = last.min(column_defaults.len() - 1);
+            let mut same = column;
+            while same < limit && style_of(same + 1) == style {
+                same += 1;
+            }
+            if same == column_defaults.len() - 1 && style.is_none() {
+                last
+            } else {
+                same
+            }
+        };
+        let validation = validations
+            .iter()
+            .find(|span| span.0 <= column && column <= span.1);
+        let end = match validation {
+            Some(span) => style_end.min(span.1),
+            None => validations
+                .iter()
+                .find(|span| span.0 > column)
+                .map_or(style_end, |next| style_end.min(next.0 - 1)),
+        };
+        let run = end - column + 1;
         out.push_str("<table:table-cell");
         if let Some(name) = style {
             out.push_str(&format!(r#" table:style-name="{name}""#));
+        }
+        if let Some(span) = validation {
+            out.push_str(&format!(r#" table:content-validation-name="{}""#, span.2));
         }
         if run > 1 {
             out.push_str(&format!(r#" table:number-columns-repeated="{run}""#));
         }
         out.push_str("/>");
-        column += run;
+        column = end + 1;
     }
     out
 }
 
 fn holds_content(record: &CellRecord) -> bool {
     record.value.is_some() || record.formula.is_some()
-}
-
-/// True when the column already has a cell record or sits inside a merge, so
-/// an empty run must stop before it.
-fn occupied(cells: &[&CellRecord], cell_index: usize, column: usize, active: &[&MergedRange]) -> bool {
-    cells[cell_index.min(cells.len())..]
-        .iter()
-        .take_while(|cell| cell.column <= column)
-        .any(|cell| cell.column == column)
-        || active.iter().any(|merge| {
-            merge.start_column <= column && merge.end_column >= column
-        })
 }
 
 fn row_attributes(row_context: &RowContext<'_>, registry: &mut StyleRegistry) -> String {
@@ -1642,6 +2395,7 @@ fn push_cell(
     style_name: Option<&str>,
     kind: ValueKind,
     merge: Option<&MergedRange>,
+    validation: Option<&str>,
     context: &SheetContext<'_>,
     row_context: &RowContext<'_>,
     column: usize,
@@ -1651,6 +2405,9 @@ fn push_cell(
     let mut attributes = String::new();
     if let Some(name) = style_name {
         attributes.push_str(&format!(r#" table:style-name="{name}""#));
+    }
+    if let Some(name) = validation {
+        attributes.push_str(&format!(r#" table:content-validation-name="{name}""#));
     }
     if let Some(merge) = merge {
         let columns = merge.end_column - merge.start_column + 1;
@@ -1751,10 +2508,33 @@ fn push_cell(
         }
         None => String::new(),
     };
+    // A link on a number, date or logical cell wraps the text the cell
+    // shows; a text cell already carries its link in its paragraphs.
+    if let (Some(link), false) = (
+        &link,
+        matches!(
+            record.and_then(|record| record.value.as_ref()),
+            Some(CellValue::String(_)) | None
+        ),
+    ) {
+        if let Some(inner) = body
+            .strip_prefix("<text:p>")
+            .and_then(|rest| rest.strip_suffix("</text:p>"))
+            .filter(|inner| !inner.contains("<text:p>"))
+        {
+            body = format!(
+                r#"<text:p><text:a xlink:type="simple" xlink:href="{}">{inner}</text:a></text:p>"#,
+                escape_xml(link)
+            );
+        }
+    }
     if let Some(comment) = row_context.comments.get(&key) {
         // The note goes ahead of the cell's own paragraphs.
         body.insert_str(0, &annotation_xml(comment));
         counters.dropped.comments = counters.dropped.comments.saturating_sub(1);
+    }
+    if let Some(frames) = context.frames.get(&key) {
+        body.push_str(frames);
     }
     if body.is_empty() {
         out.push_str(&format!("<{element}{attributes}/>"));
@@ -2404,13 +3184,54 @@ mod tests {
         write_workbook(&source, &entries);
         let target = dir.path().join("features.ods");
         let result = convert_to_ods(&source, &target).unwrap();
-        assert_eq!(result.dropped.charts, 1);
-        assert_eq!(result.dropped.images, 1);
+        // The chart travels as an embedded chart document. Its series names
+        // no cell range, so it reads the values the workbook cached.
+        assert_eq!(result.dropped.charts, 0);
+        let chart = read_entry(&target, "Object 1/content.xml");
+        roxmltree::Document::parse(&chart).unwrap_or_else(|error| panic!("{error}: {chart}"));
+        assert!(chart.contains(r#"chart:class="chart:bar""#), "{chart}");
+        assert!(
+            chart.contains(r#"chart:values-cell-range-address="local-table.$B$2:.$B$2" chart:label-cell-address="local-table.$B$1" chart:class="chart:bar""#),
+            "{chart}"
+        );
+        assert!(
+            chart.contains(r#"<table:table-cell office:value-type="float" office:value="8"><text:p>8</text:p></table:table-cell>"#),
+            "{chart}"
+        );
+        assert!(
+            read_entry(&target, "META-INF/manifest.xml").contains(
+                r#"<manifest:file-entry manifest:full-path="Object 1/" manifest:media-type="application/vnd.oasis.opendocument.chart"/><manifest:file-entry manifest:full-path="Object 1/content.xml" manifest:media-type="text/xml"/>"#
+            )
+        );
+        assert!(
+            read_entry(&target, "content.xml").contains(r#"<draw:object xlink:href="./Object 1" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>"#)
+        );
+        // The picture travels: its bytes are in the package and a frame in
+        // its start cell points at them.
+        assert_eq!(result.dropped.images, 0);
+        let picture = {
+            let mut archive = ZipArchive::new(File::open(&target).unwrap()).unwrap();
+            let mut bytes = Vec::new();
+            archive
+                .by_name("Pictures/image1.png")
+                .unwrap()
+                .read_to_end(&mut bytes)
+                .unwrap();
+            bytes
+        };
+        assert!(picture.ends_with(&[b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]), "{picture:?}");
+        assert!(
+            read_entry(&target, "META-INF/manifest.xml").contains(
+                r#"<manifest:file-entry manifest:full-path="Pictures/image1.png" manifest:media-type="image/png"/>"#
+            )
+        );
         // The note travels now, so it is no longer among the losses.
         assert_eq!(result.dropped.comments, 0);
         assert_eq!(result.dropped.macros, 0);
+        // The rule names a differential style the workbook does not have, so
+        // there is nothing for it to paint; the validation travels.
         assert_eq!(result.dropped.conditional_formats, 1);
-        assert_eq!(result.dropped.validations, 1);
+        assert_eq!(result.dropped.validations, 0);
         assert_eq!(result.dropped.pivots, 1);
 
         // The sheet with a chart still carries its values.
@@ -2672,7 +3493,7 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
             "{content}"
         );
         assert!(
-            content.contains("<table:table-header-columns><table:table-column/></table:table-header-columns>"),
+            content.contains(r#"<table:table-header-columns><table:table-column table:style-name="co1"/></table:table-header-columns>"#),
             "{content}"
         );
         assert!(
@@ -2895,5 +3716,541 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
         assert!(!is_iso_date("2010-01-11T09:30:00Z"));
         assert!(!is_iso_date("2010-1-11"));
         assert!(!is_iso_date("not a date"));
+    }
+
+    #[test]
+    fn carries_validations_and_conditional_formats() {
+        let styles = STYLES.replace(
+            "</styleSheet>",
+            r#"<dxfs count="1"><dxf><font><b/><color rgb="FF9C0006"/></font><fill><patternFill><bgColor rgb="FFFFC7CE"/></patternFill></fill></dxf></dxfs></styleSheet>"#,
+        );
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:B3"/><sheetData>"#,
+            r#"<row r="1"><c r="A1"><v>1</v></c></row>"#,
+            r#"<row r="2"><c r="A2"><v>2</v></c><c r="B2" t="inlineStr"><is><t>one</t></is></c></row>"#,
+            r#"<row r="3"><c r="A3"><v>3</v></c></row>"#,
+            r#"</sheetData>"#,
+            r#"<conditionalFormatting sqref="A1:A3"><cfRule type="cellIs" dxfId="0" priority="2" operator="greaterThan"><formula>1</formula></cfRule><cfRule type="aboveAverage" dxfId="0" priority="1" aboveAverage="0"/></conditionalFormatting>"#,
+            r#"<dataValidations count="2">"#,
+            r#"<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="Pick" error="one of the list" sqref="B2:B1048576"><formula1>"one,two"</formula1></dataValidation>"#,
+            r#"<dataValidation type="whole" operator="between" sqref="D1 F1:G1"><formula1>1</formula1><formula2>$A$3</formula2></dataValidation>"#,
+            r#"</dataValidations></worksheet>"#,
+        );
+        let mut entries = single_sheet_entries("", sheet, vec![]);
+        for entry in &mut entries {
+            if entry.0 == "xl/styles.xml" {
+                entry.1 = styles.clone();
+            }
+        }
+        let (result, content, styles, _, _dir) = export(&entries);
+        assert_eq!(result.dropped.validations, 0);
+        assert_eq!(result.dropped.conditional_formats, 0);
+        assert!(
+            content.contains(concat!(
+                r#"<table:content-validations>"#,
+                r#"<table:content-validation table:name="val1" table:condition="of:cell-content-is-in-list(&quot;one&quot;;&quot;two&quot;)" table:allow-empty-cell="true" table:display-list="unsorted" table:base-cell-address="Data.B2">"#,
+                r#"<table:error-message table:message-type="stop" table:title="Pick" table:display="true"><text:p>one of the list</text:p></table:error-message></table:content-validation>"#,
+                r#"<table:content-validation table:name="val2" table:condition="of:cell-content-is-whole-number() and cell-content-is-between(1,[.$A$3])" table:allow-empty-cell="false" table:base-cell-address="Data.D1"/>"#,
+                r#"</table:content-validations><table:table "#,
+            )),
+            "{content}"
+        );
+        // Row 1: the value, then the empty cells the second validation covers.
+        assert!(
+            content.contains(concat!(
+                r#"<text:p>1</text:p></table:table-cell><table:table-cell table:number-columns-repeated="2"/>"#,
+                r#"<table:table-cell table:content-validation-name="val2"/><table:table-cell/>"#,
+                r#"<table:table-cell table:content-validation-name="val2" table:number-columns-repeated="2"/></table:table-row>"#,
+            )),
+            "{content}"
+        );
+        // Row 2: a cell with a value names its validation too.
+        assert!(
+            content.contains(r#"<table:table-cell table:content-validation-name="val1" office:value-type="string"><text:p>one</text:p>"#),
+            "{content}"
+        );
+        // Row 3 and everything below it: the list reaches the last row.
+        assert!(
+            content.contains(concat!(
+                r#"<text:p>3</text:p></table:table-cell><table:table-cell table:content-validation-name="val1"/></table:table-row>"#,
+                r#"<table:table-row table:number-rows-repeated="1048573"><table:table-cell/><table:table-cell table:content-validation-name="val1"/></table:table-row>"#,
+            )),
+            "{content}"
+        );
+        assert!(
+            content.contains(concat!(
+                r#"<calcext:conditional-formats><calcext:conditional-format calcext:target-range-address="Data.A1:Data.A3">"#,
+                r#"<calcext:condition calcext:apply-style-name="ConditionalStyle_1" calcext:value="below-average" calcext:base-cell-address="Data.A1"/>"#,
+                r#"<calcext:condition calcext:apply-style-name="ConditionalStyle_1" calcext:value="&gt;1" calcext:base-cell-address="Data.A1"/>"#,
+                r#"</calcext:conditional-format></calcext:conditional-formats></table:table>"#,
+            )),
+            "{content}"
+        );
+        assert!(
+            styles.contains(r#"<style:style style:name="ConditionalStyle_1" style:family="table-cell" style:parent-style-name="Default">"#),
+            "{styles}"
+        );
+    }
+
+    #[test]
+    fn carries_pictures_and_shapes_in_their_start_cells() {
+        let marker = |tag: &str, column: usize, row: usize, column_offset: i64, row_offset: i64| {
+            format!(
+                "<xdr:{tag}><xdr:col>{column}</xdr:col><xdr:colOff>{column_offset}</xdr:colOff><xdr:row>{row}</xdr:row><xdr:rowOff>{row_offset}</xdr:rowOff></xdr:{tag}>"
+            )
+        };
+        let drawing = format!(
+            concat!(
+                r#"<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">"#,
+                // A text box that starts on a cell with a value.
+                r#"<xdr:twoCellAnchor>{}{}<xdr:sp><xdr:nvSpPr><xdr:cNvPr id="2" name="Box &amp; 1"/><xdr:cNvSpPr/></xdr:nvSpPr><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="FFFF00"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln></xdr:spPr><xdr:txBody><a:bodyPr anchor="ctr"/><a:p><a:pPr algn="ctr"/><a:r><a:rPr b="1"/><a:t>Hello</a:t></a:r></a:p></xdr:txBody></xdr:sp><xdr:clientData/></xdr:twoCellAnchor>"#,
+                // A picture below and right of everything the sheet holds.
+                r#"<xdr:twoCellAnchor>{}{}<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="3" name="Picture 2" descr="a pattern"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId1"/></xdr:blipFill><xdr:spPr/></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>"#,
+                // A line running up to the right.
+                r#"<xdr:twoCellAnchor>{}{}<xdr:cxnSp><xdr:nvCxnSpPr><xdr:cNvPr id="4" name="Line 3"/><xdr:cNvCxnSpPr/></xdr:nvCxnSpPr><xdr:spPr><a:xfrm flipV="1"/><a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:ln w="12700"><a:solidFill><a:srgbClr val="00B050"/></a:solidFill></a:ln></xdr:spPr></xdr:cxnSp><xdr:clientData/></xdr:twoCellAnchor>"#,
+                r#"</xdr:wsDr>"#,
+            ),
+            marker("from", 0, 0, 0, 0),
+            marker("to", 2, 2, 0, 0),
+            marker("from", 5, 9, 95_250, 0),
+            marker("to", 7, 12, 0, 0),
+            marker("from", 0, 9, 0, 0),
+            marker("to", 1, 10, 0, 0),
+        );
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:A2"/><sheetData>"#,
+            r#"<row r="1"><c r="A1"><v>1</v></c></row><row r="2"><c r="A2"><v>2</v></c></row>"#,
+            r#"</sheetData><drawing r:id="rId1"/></worksheet>"#,
+        );
+        let entries = single_sheet_entries(
+            "",
+            sheet,
+            vec![
+                (
+                    "xl/worksheets/_rels/sheet1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/drawings/drawing1.xml", drawing),
+                (
+                    "xl/drawings/_rels/drawing1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/media/image1.png", "not really a png".to_owned()),
+            ],
+        );
+        let (result, content, _, _, dir) = export(&entries);
+        assert_eq!(result.dropped.images, 0);
+        assert_eq!(result.dropped.shapes, 0);
+        // The box sits in A1 beside the value, with its end cell named. Two
+        // default columns are 96 pt and two default rows 30 pt.
+        assert!(
+            content.contains(concat!(
+                r#"<text:p>1</text:p><draw:custom-shape draw:style-name="gr3" table:end-cell-address="Data.C3" table:end-x="0.000cm" table:end-y="0.000cm" draw:z-index="0" draw:name="Box &amp; 1" svg:width="3.387cm" svg:height="1.058cm" svg:x="0.000cm" svg:y="0.000cm">"#,
+                r#"<text:p text:style-name="gp1"><text:span text:style-name="gt2">Hello</text:span></text:p>"#,
+                r#"<draw:enhanced-geometry svg:viewBox="0 0 21600 21600" draw:type="rectangle" draw:enhanced-path="M 0 0 L 21600 0 21600 21600 0 21600 Z N"/></draw:custom-shape></table:table-cell>"#,
+            )),
+            "{content}"
+        );
+        // Rows 3 to 9 hold nothing; row 10 is written for the line in A10 and
+        // the picture in F10, four empty columns apart.
+        assert!(
+            content.contains(concat!(
+                r#"<table:table-row table:number-rows-repeated="7"><table:table-cell/></table:table-row>"#,
+                r#"<table:table-row><table:table-cell><draw:line draw:style-name="gr"#,
+            )),
+            "{content}"
+        );
+        assert!(
+            content.contains(r#" draw:name="Line 3" svg:x1="0.000cm" svg:y1="0.529cm" svg:x2="1.693cm" svg:y2="0.000cm"/></table:table-cell><table:table-cell table:number-columns-repeated="4"/><table:table-cell><draw:frame "#),
+            "{content}"
+        );
+        assert!(
+            content.contains(concat!(
+                r#" table:end-cell-address="Data.H13" table:end-x="0.000cm" table:end-y="0.000cm" draw:z-index="1" draw:name="Picture 2" svg:width="3.122cm" svg:height="1.587cm" svg:x="0.265cm" svg:y="0.000cm">"#,
+                r#"<draw:image xlink:href="Pictures/image1.png" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/png"/><svg:desc>a pattern</svg:desc></draw:frame>"#,
+            )),
+            "{content}"
+        );
+        assert!(
+            content.contains(r##"<style:style style:name="gr3" style:family="graphic"><style:graphic-properties draw:stroke="solid" svg:stroke-width="1pt" svg:stroke-color="#000000" draw:fill="solid" draw:fill-color="#ffff00" draw:textarea-vertical-align="middle""##),
+            "{content}"
+        );
+        assert_eq!(
+            read_entry(&dir.path().join("book.ods"), "Pictures/image1.png"),
+            "not really a png"
+        );
+        // Our own importer still reads the values around the drawings.
+        let round = dir.path().join("round.xlsx");
+        crate::convert::convert_to_xlsx(&dir.path().join("book.ods"), &round).unwrap();
+        assert!(read_entry(&round, "xl/worksheets/sheet1.xml").contains(r#"<c r="A2"><v>2</v></c>"#));
+    }
+
+    #[test]
+    fn carries_sparklines_dashes_and_trend_lines() {
+        let chart = concat!(
+            r#"<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart><c:grouping val="standard"/>"#,
+            r#"<c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>typed</c:v></c:tx><c:spPr><a:ln><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></a:ln></c:spPr>"#,
+            r#"<c:trendline><c:trendlineType val="movingAvg"/><c:period val="2"/></c:trendline>"#,
+            r#"<c:cat><c:strRef><c:f>Data!$A$1:$A$2</c:f></c:strRef></c:cat><c:val><c:numRef><c:f>Data!$B$1:$B$2</c:f></c:numRef></c:val></c:ser>"#,
+            // A series nobody named.
+            r#"<c:ser><c:idx val="1"/><c:order val="1"/><c:cat><c:strRef><c:f>Data!$A$1:$A$2</c:f></c:strRef></c:cat><c:val><c:numRef><c:f>Data!$C$1:$C$2</c:f></c:numRef></c:val></c:ser>"#,
+            r#"<c:axId val="1"/><c:axId val="2"/></c:lineChart>"#,
+            r#"<c:catAx><c:axId val="1"/><c:scaling/><c:delete val="0"/><c:axPos val="b"/><c:crossAx val="2"/></c:catAx>"#,
+            r#"<c:valAx><c:axId val="2"/><c:scaling/><c:delete val="0"/><c:axPos val="l"/><c:crossAx val="1"/></c:valAx>"#,
+            r#"</c:plotArea></c:chart></c:chartSpace>"#,
+        );
+        let drawing = concat!(
+            r#"<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">"#,
+            r#"<xdr:twoCellAnchor><xdr:from><xdr:col>6</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>8</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>2</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>"#,
+            r#"<xdr:sp><xdr:nvSpPr><xdr:cNvPr id="2" name="Dashed"/><xdr:cNvSpPr/></xdr:nvSpPr><xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:ln w="25400"><a:solidFill><a:srgbClr val="C00000"/></a:solidFill><a:prstDash val="lgDashDotDot"/></a:ln></xdr:spPr></xdr:sp><xdr:clientData/></xdr:twoCellAnchor>"#,
+            r#"<xdr:twoCellAnchor><xdr:from><xdr:col>6</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>4</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>12</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>16</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>"#,
+            r#"<xdr:graphicFrame><xdr:nvGraphicFramePr><xdr:cNvPr id="3" name="Chart 1"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>"#,
+            r#"</xdr:wsDr>"#,
+        );
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:D2"/><sheetData>"#,
+            r#"<row r="1"><c r="A1" t="inlineStr"><is><t>a</t></is></c><c r="B1"><v>3</v></c><c r="C1"><v>-4</v></c><c r="D1"><v>5</v></c></row>"#,
+            r#"<row r="2"><c r="A2" t="inlineStr"><is><t>b</t></is></c><c r="B2"><v>6</v></c><c r="C2"><v>7</v></c><c r="D2"><v>8</v></c></row>"#,
+            r#"</sheetData><drawing r:id="rId1"/>"#,
+            r#"<extLst><ext uri="{05C60535-1F16-4fd2-B633-F4F36F0B64E0}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"><x14:sparklineGroups xmlns:xm="http://schemas.microsoft.com/office/excel/2006/main">"#,
+            r#"<x14:sparklineGroup type="column" negative="1"><x14:colorSeries rgb="FFC00000"/><x14:colorNegative rgb="FF00B050"/><x14:sparklines><x14:sparkline><xm:f>Data!B1:D1</xm:f><xm:sqref>E1</xm:sqref></x14:sparkline><x14:sparkline><xm:f>Data!B2:D2</xm:f><xm:sqref>E2</xm:sqref></x14:sparkline></x14:sparklines></x14:sparklineGroup>"#,
+            r#"</x14:sparklineGroups></ext></extLst></worksheet>"#,
+        );
+        let entries = single_sheet_entries(
+            "",
+            sheet,
+            vec![
+                (
+                    "xl/worksheets/_rels/sheet1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/drawings/drawing1.xml", drawing.to_owned()),
+                (
+                    "xl/drawings/_rels/drawing1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/charts/chart1.xml", chart.to_owned()),
+            ],
+        );
+        let (result, content, styles, _, dir) = export(&entries);
+        assert_eq!(result.dropped.sparklines, 0);
+        assert_eq!(result.dropped.shapes, 0);
+        assert_eq!(result.dropped.charts, 0);
+        // The sparklines close the sheet, one group with its two cells.
+        assert!(
+            content.contains(concat!(
+                r##"<calcext:sparkline-groups><calcext:sparkline-group calcext:id="{00000000-0000-0000-0000-000000000000}" calcext:type="column" calcext:line-width="0.75pt" calcext:display-empty-cells-as="gap" calcext:negative="true" calcext:min-axis-type="individual" calcext:max-axis-type="individual" calcext:color-series="#c00000" calcext:color-negative="#00b050" calcext:color-axis="#000000" calcext:color-markers="#d00000" calcext:color-first="#d00000" calcext:color-last="#d00000" calcext:color-high="#d00000" calcext:color-low="#d00000">"##,
+                r#"<calcext:sparklines><calcext:sparkline calcext:cell-address="Data.E1" calcext:data-range="Data.B1:Data.D1"/><calcext:sparkline calcext:cell-address="Data.E2" calcext:data-range="Data.B2:Data.D2"/></calcext:sparklines>"#,
+                r#"</calcext:sparkline-group></calcext:sparkline-groups></table:table>"#,
+            )),
+            "{content}"
+        );
+        // The outline names its dash, and the dash is declared once among the
+        // document's styles: one long stroke and two dots.
+        assert!(
+            content.contains(r##" draw:stroke="dash" draw:stroke-dash="lgDashDotDot" svg:stroke-width="2pt" svg:stroke-color="#c00000""##),
+            "{content}"
+        );
+        assert!(
+            styles.contains(r#"<draw:stroke-dash draw:name="lgDashDotDot" draw:style="rect" draw:dots1="1" draw:dots1-length="800%" draw:dots2="2" draw:dots2-length="100%" draw:distance="300%"/>"#),
+            "{styles}"
+        );
+        // The trend line sits in its series, before the points, and a name
+        // typed into the chart stays a string.
+        let chart = read_entry(&dir.path().join("book.ods"), "Object 1/content.xml");
+        assert!(
+            chart.contains(r#"<style:chart-properties chart:regression-type="moving-average" chart:regression-period="2"/>"#),
+            "{chart}"
+        );
+        assert!(
+            chart.contains(r#" loext:label-string="&quot;typed&quot;" chart:class="chart:line"><chart:regression-curve chart:style-name="ch"#),
+            "{chart}"
+        );
+        // The second series has no name, and is not given the one a
+        // spreadsheet shows for it.
+        assert!(
+            chart.contains(r#" chart:values-cell-range-address="Data.C1:Data.C2" chart:class="chart:line">"#),
+            "{chart}"
+        );
+        assert!(!chart.contains("Series2"), "{chart}");
+    }
+
+    #[test]
+    fn a_turned_shape_keeps_its_angle_and_an_unknown_preset_its_name() {
+        // A cloud turned 30 degrees over E2:F5: two default columns are 96 pt
+        // wide and four default rows 60 pt high.
+        let drawing = concat!(
+            r#"<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">"#,
+            r#"<xdr:twoCellAnchor><xdr:from><xdr:col>4</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>6</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>5</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>"#,
+            r#"<xdr:sp><xdr:nvSpPr><xdr:cNvPr id="2" name="Cloud 1"/><xdr:cNvSpPr/></xdr:nvSpPr><xdr:spPr><a:xfrm rot="1800000"><a:off x="2438400" y="190500"/><a:ext cx="1219200" cy="762000"/></a:xfrm><a:prstGeom prst="cloud"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="DDEBF7"/></a:solidFill></xdr:spPr></xdr:sp><xdr:clientData/></xdr:twoCellAnchor>"#,
+            r#"</xdr:wsDr>"#,
+        );
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1"/><sheetData>"#,
+            r#"<row r="1"><c r="A1"><v>1</v></c></row>"#,
+            r#"</sheetData><drawing r:id="rId1"/></worksheet>"#,
+        );
+        let entries = single_sheet_entries(
+            "",
+            sheet,
+            vec![
+                (
+                    "xl/worksheets/_rels/sheet1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/drawings/drawing1.xml", drawing.to_owned()),
+            ],
+        );
+        let (result, content, _, _, dir) = export(&entries);
+        assert_eq!(result.dropped.shapes, 0);
+        // The frame keeps its own size and is turned around its corner, then
+        // moved so its centre stays where the anchor had it. No end cell: a
+        // reader would stretch the turned frame to it.
+        assert!(
+            content.contains(
+                r#" draw:z-index="0" draw:name="Cloud 1" svg:width="3.387cm" svg:height="2.117cm" draw:transform="rotate (-0.5235987756) translate (0.756cm -0.705cm)">"#
+            ),
+            "{content}"
+        );
+        assert!(!content.contains("table:end-cell-address"), "{content}");
+        // The outline is the bounding rectangle, under the preset's name.
+        assert!(
+            content.contains(
+                r#"<draw:enhanced-geometry svg:viewBox="0 0 21600 21600" draw:type="ooxml-cloud" draw:enhanced-path="M 0 0 L 21600 0 21600 21600 0 21600 Z N"/>"#
+            ),
+            "{content}"
+        );
+        // Read back, it is a cloud turned 30 degrees again.
+        let round = dir.path().join("round.xlsx");
+        crate::convert::convert_to_xlsx(&dir.path().join("book.ods"), &round).unwrap();
+        let back = read_entry(&round, "xl/drawings/drawing1.xml");
+        assert!(back.contains(r#"<a:xfrm rot="1800000">"#), "{back}");
+        assert!(back.contains(r#"<a:prstGeom prst="cloud">"#), "{back}");
+    }
+
+    #[test]
+    fn carries_a_chart_with_its_ranges_titles_and_legend() {
+        let chart = concat!(
+            r#"<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart>"#,
+            r#"<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>Sales &amp; plan</a:t></a:r></a:p></c:rich></c:tx></c:title>"#,
+            r#"<c:plotArea><c:barChart><c:barDir val="col"/><c:grouping val="stacked"/>"#,
+            r#"<c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:strRef><c:f>Data!$B$1</c:f><c:strCache><c:pt idx="0"><c:v>east</c:v></c:pt></c:strCache></c:strRef></c:tx>"#,
+            r#"<c:spPr><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></c:spPr>"#,
+            r#"<c:cat><c:strRef><c:f>Data!$A$2:$A$3</c:f><c:strCache><c:pt idx="0"><c:v>a</c:v></c:pt><c:pt idx="1"><c:v>b</c:v></c:pt></c:strCache></c:strRef></c:cat>"#,
+            r#"<c:val><c:numRef><c:f>Data!$B$2:$B$3</c:f><c:numCache><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numCache></c:numRef></c:val></c:ser>"#,
+            r#"<c:gapWidth val="80"/><c:axId val="1"/><c:axId val="2"/></c:barChart>"#,
+            r#"<c:catAx><c:axId val="1"/><c:scaling/><c:delete val="0"/><c:axPos val="b"/><c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>Region</a:t></a:r></a:p></c:rich></c:tx></c:title><c:crossAx val="2"/></c:catAx>"#,
+            r#"<c:valAx><c:axId val="2"/><c:scaling><c:max val="10"/><c:min val="0"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorGridlines/><c:numFmt formatCode="0.0" sourceLinked="0"/><c:crossAx val="1"/></c:valAx>"#,
+            r#"</c:plotArea><c:legend><c:legendPos val="b"/></c:legend></c:chart></c:chartSpace>"#,
+        );
+        let drawing = concat!(
+            r#"<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">"#,
+            r#"<xdr:twoCellAnchor><xdr:from><xdr:col>3</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>9</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>12</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>"#,
+            r#"<xdr:graphicFrame><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Chart 1"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor></xdr:wsDr>"#,
+        );
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:B3"/><sheetData>"#,
+            r#"<row r="1"><c r="B1" t="inlineStr"><is><t>east</t></is></c></row>"#,
+            r#"<row r="2"><c r="A2" t="inlineStr"><is><t>a</t></is></c><c r="B2"><v>3</v></c></row>"#,
+            r#"<row r="3"><c r="A3" t="inlineStr"><is><t>b</t></is></c><c r="B3"><v>4</v></c></row>"#,
+            r#"</sheetData><drawing r:id="rId1"/></worksheet>"#,
+        );
+        let entries = single_sheet_entries(
+            "",
+            sheet,
+            vec![
+                (
+                    "xl/worksheets/_rels/sheet1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/drawings/drawing1.xml", drawing.to_owned()),
+                (
+                    "xl/drawings/_rels/drawing1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/></Relationships>"#.to_owned(),
+                ),
+                ("xl/charts/chart1.xml", chart.to_owned()),
+            ],
+        );
+        let (result, content, _, _, dir) = export(&entries);
+        assert_eq!(result.dropped.charts, 0);
+        // The frame starts in D1, past the columns the sheet holds, and tells
+        // a reader which ranges to watch.
+        assert!(
+            content.contains(concat!(
+                r#"<text:p>east</text:p></table:table-cell><table:table-cell/><table:table-cell><draw:frame draw:style-name="gr1" table:end-cell-address="Data.J13" table:end-x="0.000cm" table:end-y="0.000cm" draw:z-index="0" draw:name="Chart 1" svg:width="10.160cm" svg:height="6.350cm" svg:x="0.000cm" svg:y="0.000cm">"#,
+                r#"<draw:object draw:notify-on-update-of-ranges="Data.A2:Data.A3 Data.B2:Data.B3 Data.B1:Data.B1" xlink:href="./Object 1" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>"#,
+            )),
+            "{content}"
+        );
+        let chart = read_entry(&dir.path().join("book.ods"), "Object 1/content.xml");
+        roxmltree::Document::parse(&chart).unwrap_or_else(|error| panic!("{error}: {chart}"));
+        assert!(
+            chart.contains(r#"<chart:chart svg:width="10.160cm" svg:height="6.350cm" xlink:href=".." xlink:type="simple" chart:class="chart:bar""#),
+            "{chart}"
+        );
+        assert!(chart.contains("<text:p>Sales &amp; plan</text:p>"), "{chart}");
+        assert!(chart.contains(r#"<chart:legend chart:legend-position="bottom""#), "{chart}");
+        assert!(chart.contains(r#"chart:stacked="true""#), "{chart}");
+        assert!(
+            chart.contains(r#"<text:p>Region</text:p></chart:title><chart:categories table:cell-range-address="Data.A2:Data.A3"/>"#),
+            "{chart}"
+        );
+        // The value axis keeps its bounds, its own number format and its grid.
+        assert!(
+            chart.contains(r#"chart:minimum="0" chart:maximum="10" chart:gap-width="80" chart:overlap="100" chart:link-data-style-to-source="false""#),
+            "{chart}"
+        );
+        assert!(chart.contains(r#"chart:class="major"/>"#), "{chart}");
+        // The series is named after B1. The chart saved a copy of the name,
+        // and the cell is still what the series points at.
+        assert!(
+            chart.contains(r#"chart:values-cell-range-address="Data.B2:Data.B3" chart:label-cell-address="Data.B1:Data.B1" chart:class="chart:bar"><chart:data-point chart:repeated="2"/>"#),
+            "{chart}"
+        );
+        assert!(chart.contains(r##"draw:fill="solid" draw:fill-color="#4472c4""##), "{chart}");
+        // The values as they were, for a reader that cannot reach the cells.
+        assert!(
+            chart.contains(r#"<table:table-cell office:value-type="string"><text:p>a</text:p></table:table-cell><table:table-cell office:value-type="float" office:value="3"><text:p>3</text:p></table:table-cell>"#),
+            "{chart}"
+        );
+    }
+
+    #[test]
+    fn carries_a_pivot_table_that_reads_a_sheet_range() {
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:E4"/><sheetData>"#,
+            r#"<row r="1"><c r="A1" t="inlineStr"><is><t>Region</t></is></c><c r="B1" t="inlineStr"><is><t>Amount</t></is></c><c r="D1" t="inlineStr"><is><t>Region</t></is></c><c r="E1" t="inlineStr"><is><t>Sum</t></is></c></row>"#,
+            r#"<row r="2"><c r="A2" t="inlineStr"><is><t>East</t></is></c><c r="B2"><v>3</v></c><c r="D2" t="inlineStr"><is><t>East</t></is></c><c r="E2"><v>3</v></c></row>"#,
+            r#"<row r="3"><c r="A3" t="inlineStr"><is><t>West</t></is></c><c r="B3"><v>4</v></c><c r="D3" t="inlineStr"><is><t>West</t></is></c><c r="E3"><v>4</v></c></row>"#,
+            r#"<row r="4"><c r="D4" t="inlineStr"><is><t>Total</t></is></c><c r="E4"><v>7</v></c></row>"#,
+            r#"</sheetData></worksheet>"#,
+        );
+        let entries = single_sheet_entries(
+            "",
+            sheet,
+            vec![
+                (
+                    "xl/worksheets/_rels/sheet1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotTable" Target="../pivotTables/pivotTable1.xml"/></Relationships>"#.to_owned(),
+                ),
+                (
+                    "xl/pivotTables/pivotTable1.xml",
+                    concat!(
+                        r#"<pivotTableDefinition xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" name="By region" cacheId="1">"#,
+                        r#"<location ref="D1:E4" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/>"#,
+                        r#"<pivotFields count="2"><pivotField axis="axisRow" defaultSubtotal="0"/><pivotField dataField="1"/></pivotFields>"#,
+                        r#"<rowFields count="1"><field x="0"/></rowFields><dataFields count="1"><dataField name="Sum" fld="1"/></dataFields>"#,
+                        r#"</pivotTableDefinition>"#,
+                    )
+                    .to_owned(),
+                ),
+                (
+                    "xl/pivotTables/_rels/pivotTable1.xml.rels",
+                    r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotCacheDefinition" Target="../pivotCache/pivotCacheDefinition1.xml"/></Relationships>"#.to_owned(),
+                ),
+                (
+                    "xl/pivotCache/pivotCacheDefinition1.xml",
+                    concat!(
+                        r#"<pivotCacheDefinition xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cacheSource type="worksheet"><worksheetSource ref="A1:B3" sheet="Data"/></cacheSource>"#,
+                        r#"<cacheFields count="2"><cacheField name="Region"><sharedItems><s v="East"/><s v="West"/></sharedItems></cacheField><cacheField name="Amount"><sharedItems containsNumber="1"/></cacheField></cacheFields></pivotCacheDefinition>"#,
+                    )
+                    .to_owned(),
+                ),
+            ],
+        );
+        let (result, content, _, _, _dir) = export(&entries);
+        assert_eq!(result.dropped.pivots, 0);
+        // The cells it fills are ordinary cells; the table behind them comes
+        // after the sheets.
+        assert!(content.contains(r#"office:value="7""#), "{content}");
+        assert!(
+            content.contains(concat!(
+                r#"</table:table><table:data-pilot-tables>"#,
+                r#"<table:data-pilot-table table:name="By region" table:application-data="" table:target-range-address="Data.D1:Data.E4" table:buttons="Data.D1" table:show-filter-button="false">"#,
+                r#"<table:source-cell-range table:cell-range-address="Data.A1:Data.B3"/>"#,
+                // A field that says nothing about its form has the compact
+                // one, and the value keeps the caption it was given.
+                r#"<table:data-pilot-field table:source-field-name="Region" table:orientation="row" table:used-hierarchy="-1" table:function="auto"><table:data-pilot-level><table:data-pilot-layout-info table:add-empty-lines="false" table:layout-mode="tabular-layout" loext:layout-mode="compact-layout"/></table:data-pilot-level></table:data-pilot-field>"#,
+                r#"<table:data-pilot-field table:source-field-name="Amount" tableooo:display-name="Sum" table:orientation="data" table:used-hierarchy="-1" table:function="sum"><table:data-pilot-level/></table:data-pilot-field>"#,
+                r#"</table:data-pilot-table></table:data-pilot-tables>"#,
+            )),
+            "{content}"
+        );
+    }
+
+    #[test]
+    fn a_merged_area_keeps_its_far_borders_and_a_number_keeps_its_link() {
+        let styles = STYLES
+            .replace(
+                r#"<borders count="2">"#,
+                r#"<borders count="4">"#,
+            )
+            .replace(
+                "</borders>",
+                r#"<border><left/><right style="thick"><color rgb="FFFF0000"/></right><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="medium"><color rgb="FF0000FF"/></bottom><diagonal/></border></borders>"#,
+            )
+            .replace(
+                r#"<cellXfs count="7">"#,
+                r#"<cellXfs count="9">"#,
+            )
+            .replace(
+                "</cellXfs>",
+                r#"<xf numFmtId="0" fontId="0" fillId="0" borderId="2" xfId="0" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="3" xfId="0" applyBorder="1"/></cellXfs>"#,
+            );
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:D3"/><sheetData>"#,
+            // A1:C2 is merged; the right edge sits on C1 and the bottom edge
+            // on A2, as Excel writes them.
+            r#"<row r="1"><c r="A1" t="inlineStr"><is><t>box</t></is></c><c r="B1"/><c r="C1" s="7"/><c r="D1"><v>42</v></c></row>"#,
+            r#"<row r="2"><c r="A2" s="8"/><c r="B2" s="8"/><c r="C2" s="7"/></row>"#,
+            r#"</sheetData><mergeCells count="1"><mergeCell ref="A1:C2"/></mergeCells>"#,
+            r#"<hyperlinks><hyperlink ref="D1" r:id="rId1"/></hyperlinks></worksheet>"#,
+        );
+        let mut entries = single_sheet_entries(
+            "",
+            sheet,
+            vec![(
+                "xl/worksheets/_rels/sheet1.xml.rels",
+                r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/n" TargetMode="External"/></Relationships>"#.to_owned(),
+            )],
+        );
+        for entry in &mut entries {
+            if entry.0 == "xl/styles.xml" {
+                entry.1 = styles.clone();
+            }
+        }
+        let (_, content, _, _, _dir) = export(&entries);
+        // The first cell of the merged area carries both far edges.
+        let anchor = content
+            .split(r#"<table:table-cell table:style-name=""#)
+            .nth(1)
+            .and_then(|rest| rest.split('"').next())
+            .unwrap_or_else(|| panic!("{content}"))
+            .to_owned();
+        assert!(
+            content.contains(&format!(
+                r#"<table:table-cell table:style-name="{anchor}" table:number-columns-spanned="3" table:number-rows-spanned="2" office:value-type="string"><text:p>box</text:p>"#
+            )),
+            "{content}"
+        );
+        let style = content
+            .split(&format!(r#"<style:style style:name="{anchor}""#))
+            .nth(1)
+            .and_then(|rest| rest.split("</style:style>").next())
+            .unwrap_or_else(|| panic!("{content}"));
+        assert!(style.contains("fo:border-right=") && style.contains("#FF0000"), "{style}");
+        assert!(style.contains("fo:border-bottom=") && style.contains("#0000FF"), "{style}");
+        // The number shows as a link and is still a number.
+        assert!(
+            content.contains(r#"office:value-type="float" office:value="42"><text:p><text:a xlink:type="simple" xlink:href="https://example.com/n">42</text:a></text:p></table:table-cell>"#),
+            "{content}"
+        );
     }
 }
