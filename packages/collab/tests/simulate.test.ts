@@ -43,6 +43,8 @@ describe.each([
     expect(total(reports, 'breaks')).toBeGreaterThan(0)
     expect(total(reports, 'lateFrames')).toBeGreaterThan(0)
     expect(total(reports, 'saves')).toBeGreaterThan(0)
+    expect(total(reports, 'saveTimeouts')).toBeGreaterThan(0)
+    expect(total(reports, 'exports')).toBeGreaterThan(0)
     expect(total(reports, 'joiners')).toBeGreaterThan(0)
   }, 60_000)
 })

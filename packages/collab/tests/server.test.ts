@@ -275,3 +275,130 @@ describe('the server', () => {
     expect(late.closed).toBe(true)
   })
 })
+
+describe('fingerprints', () => {
+  it('come only from editors, and a client that reports twice at one version is not compared with itself', async () => {
+    const { server, store, open } = await setup()
+    const editor = await open('editor')
+    const viewer = await open('viewer', false)
+    editor.receive({ t: 'fingerprint', v: 0, fp: 'first' })
+    editor.receive({ t: 'fingerprint', v: 0, fp: 'second' })
+    viewer.receive({ t: 'fingerprint', v: 0, fp: 'viewer' })
+    await server.idle()
+    for (const socket of [editor, viewer]) {
+      expect(socket.closed).toBe(false)
+      expect(socket.frames().some((frame) => frame.t === 'diverged')).toBe(false)
+    }
+    expect(await store.load('doc')).not.toBeNull()
+
+    const other = await open('other')
+    other.receive({ t: 'fingerprint', v: 0, fp: 'third' })
+    await server.idle()
+    expect(editor.frames().at(-1)).toEqual({ t: 'diverged', v: 0 })
+    expect(await store.load('doc')).toBeNull()
+  })
+})
+
+describe('seeding', () => {
+  it('asks only an editor for the base; a viewer waits until the epoch exists', async () => {
+    const { server, hello, open } = await setup()
+    const viewer = new FakeSocket()
+    server.accept(viewer, principal('viewer', false))
+    viewer.receive(hello)
+    await server.idle()
+    expect(viewer.frames()).toEqual([])
+
+    const editor = await open('editor')
+    expect(editor.frames()[0]).toEqual({ t: 'need_base' })
+    expect(viewer.welcomed().epoch).toBe(editor.welcomed().epoch)
+  })
+
+  it('refuses a seeder whose file is not the one the host names as current', async () => {
+    const { server, hello, open } = await setup()
+    const stranger = new FakeSocket()
+    server.accept(stranger, { ...principal('a'), fileHash: 'f'.repeat(64) })
+    stranger.receive(hello)
+    await server.idle()
+    expect(stranger.frames()).toEqual([{ t: 'error', code: 'forbidden' }])
+
+    const current = new FakeSocket()
+    server.accept(current, { ...principal('b'), fileHash: hello.fileHash })
+    current.receive(hello)
+    await server.idle()
+    expect(current.frames()).toEqual([{ t: 'need_base' }])
+    current.receive(BASE)
+    await server.idle()
+
+    // Once the epoch exists the hint plays no part: a joiner just opens the epoch's base
+    const joiner = new FakeSocket()
+    server.accept(joiner, { ...principal('c'), fileHash: 'f'.repeat(64) })
+    joiner.receive(hello)
+    await server.idle()
+    expect(joiner.welcomed().epoch).toBe(current.welcomed().epoch)
+    void open
+  })
+
+  it('hands seeding to the next waiting editor when the seeder sends no base within 30 s', async () => {
+    const { server, clock, hello } = await setup()
+    const silent = new FakeSocket()
+    server.accept(silent, principal('a'))
+    silent.receive(hello)
+    const next = new FakeSocket()
+    server.accept(next, principal('b'))
+    next.receive(hello)
+    await server.idle()
+    expect(next.frames()).toEqual([])
+
+    const start = clock.now()
+    expect(clock.fire()).toBe(true)
+    await server.idle()
+    expect(clock.now() - start).toBe(30_000)
+    expect(silent.closed).toBe(true)
+    expect(next.frames()).toEqual([{ t: 'need_base' }])
+  })
+})
+
+describe('a failing store', () => {
+  it('costs only the socket whose work failed', async () => {
+    const inner = memoryStore()
+    let loads = 0
+    const store = {
+      ...inner,
+      async load(documentId: string) {
+        loads += 1
+        if (loads === 5) throw new Error('store unavailable')
+        return inner.load(documentId)
+      },
+    }
+    const server = createServerCore({ store, clock: new VirtualClock() })
+    const hello = { t: 'hello', p: 1, format: FORMAT, fileHash: await sha256(BASE) }
+    const [seeder, unlucky, lucky] = ['a', 'b', 'c'].map((user) => {
+      const socket = new FakeSocket()
+      server.accept(socket, principal(user))
+      socket.receive(hello)
+      return socket
+    })
+    await server.idle()
+    seeder.receive(BASE)
+    await server.idle()
+
+    expect(seeder.closed).toBe(false)
+    expect(seeder.welcomed()).toBeTruthy()
+    expect(unlucky.closed).toBe(true)
+    expect(lucky.welcomed().epoch).toBe(seeder.welcomed().epoch)
+  })
+})
+
+describe('inbound frames', () => {
+  it('closes a socket with more than 256 frames waiting', async () => {
+    const { server, open } = await setup()
+    const socket = await open('a')
+    for (let i = 0; i < 256; i++) socket.receive({ t: 'fingerprint', v: 0, fp: 'same' })
+    await server.idle()
+    expect(socket.closed).toBe(false)
+
+    for (let i = 0; i < 257; i++) socket.receive({ t: 'fingerprint', v: 0, fp: 'same' })
+    await server.idle()
+    expect(socket.closed).toBe(true)
+  })
+})

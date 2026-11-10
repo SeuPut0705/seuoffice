@@ -1,5 +1,6 @@
 export { joinCollab } from './join.js'
 export { CollabError } from './api.js'
+export { MAX_CHANGE_BYTES, SUBMIT_CHUNK_BYTES } from '../limits.js'
 export type {
   CollabAdapter,
   CollabFailure,
@@ -7,6 +8,7 @@ export type {
   CollabJoin,
   CollabLink,
   CollabLinkEvent,
+  CollabOptions,
   CollabSession,
   CollabStatus,
   SavedVersion,

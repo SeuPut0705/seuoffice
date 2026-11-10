@@ -7,7 +7,7 @@
  * names its seed.
  */
 
-import type { CollabFile } from '../client/api.js'
+import { CollabError, type CollabFile } from '../client/api.js'
 import type { Change } from '../model.js'
 import { parseServerFrame } from '../wire.js'
 import {
@@ -56,6 +56,9 @@ export interface SimulationReport {
   lateFrames: number
   stale: number
   saves: number
+  /** saves that gave up because their edits could not be confirmed in time */
+  saveTimeouts: number
+  exports: number
   joiners: number
 }
 
@@ -110,6 +113,9 @@ async function run<Op>(options: SimulateOptions<Op>): Promise<SimulationReport> 
   const clientIds = new Map<string, SimClient<Op>>()
   let stale = 0
   let joiners = 0
+  let saveTimeouts = 0
+  let exports = 0
+  const exporting = new Set<SimClient<Op>>()
 
   const pick = <T>(items: T[]): T => items[Math.floor(random() * items.length)]
 
@@ -161,8 +167,33 @@ async function run<Op>(options: SimulateOptions<Op>): Promise<SimulationReport> 
         saves.push({ version: file.version, bytes: file.bytes })
         client.session!.reportSaved(file.version)
       },
+      (error: unknown) => {
+        // The virtual clock may run past the save timeout while the network is down; the
+        // edits stay pending, and the checks at the end find them confirmed like any other
+        if (error instanceof CollabError && error.code === 'offline') {
+          saving.delete(client)
+          saveTimeouts += 1
+        } else failures.push(`save on ${client.principal.userId} failed: ${String(error)}`)
+      },
+    )
+  }
+
+  function exportLocal(client: SimClient<Op>): void {
+    exporting.add(client)
+    client.session!.exportLocal().then(
+      (file) => {
+        exporting.delete(client)
+        exports += 1
+        try {
+          options.adapterFactory(file.bytes)
+        } catch (error) {
+          failures.push(
+            `the file ${client.principal.userId} exported does not open: ${String(error)}`,
+          )
+        }
+      },
       (error: unknown) =>
-        failures.push(`save on ${client.principal.userId} failed: ${String(error)}`),
+        failures.push(`export on ${client.principal.userId} failed: ${String(error)}`),
     )
   }
 
@@ -213,6 +244,10 @@ async function run<Op>(options: SimulateOptions<Op>): Promise<SimulationReport> 
       const idle = attached.filter((client) => !saving.has(client))
       if (idle.length > 0) save(pick(idle))
     }
+    if (random() < 0.01) {
+      const idle = attached.filter((client) => !exporting.has(client))
+      if (idle.length > 0) exportLocal(pick(idle))
+    }
     if (joiners < 2 && random() < 0.01) {
       joiners += 1
       // A joiner holding an older saved file is sent the epoch's base instead
@@ -237,6 +272,7 @@ async function run<Op>(options: SimulateOptions<Op>): Promise<SimulationReport> 
   }
   check(failures.length === 0, failures.join('; '))
   check(saving.size === 0, 'a save never finished')
+  check(exporting.size === 0, 'an export never finished')
 
   const epoch = await net.store.load(DOCUMENT)
   check(epoch !== null, 'the epoch is gone')
@@ -321,6 +357,8 @@ async function run<Op>(options: SimulateOptions<Op>): Promise<SimulationReport> 
     lateFrames: net.stats.lateFrames,
     stale,
     saves: saves.length,
+    saveTimeouts,
+    exports,
     joiners,
   }
 }

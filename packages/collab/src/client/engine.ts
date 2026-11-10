@@ -11,8 +11,15 @@
  * one effect whose result the reducer needs; it is always the last effect of
  * a step, and its result comes back as the `integrated` event before anything
  * else happens.
+ *
+ * Any adapter call may make the editor emit an edit, and that edit reaches
+ * the reducer only as a later `local` event. So whatever must see the editor
+ * with nothing unconfirmed (a fingerprint, producing a file) is decided in a
+ * step of its own, reached through a `then` effect that queues its event
+ * behind every edit the earlier effects caused.
  */
 
+import { MAX_CHANGE_BYTES, SUBMIT_CHUNK_BYTES, SUBMIT_FRAME_BYTES } from '../limits.js'
 import type { Change, Format, Json, Peer } from '../model.js'
 import {
   utf8Length,
@@ -26,15 +33,15 @@ import type { CollabFailure, CollabStatus } from './api.js'
 const RECONNECT_FIRST_MS = 500
 const RECONNECT_LAST_MS = 15_000
 const FINGERPRINT_EVERY_MS = 10_000
-/** Encoded ops per submit; well below the server's default 256 KiB frame limit */
-const SUBMIT_BYTES = 64 * 1024
 /** Connections in a row that broke the protocol before any change came through */
 const PROTOCOL_STRIKES = 3
 
 /** `hello`: sent, waiting for welcome; `catching_up`: welcomed, changes up to its head still coming */
 type Connection = 'down' | 'connecting' | 'hello' | 'catching_up' | 'live'
 
-export type TimerName = 'reconnect' | 'fingerprint'
+export type TimerName = 'reconnect' | 'fingerprint' | 'save'
+
+export type Purpose = 'save' | 'export'
 
 export interface ProducedFile {
   fileName: string
@@ -53,10 +60,13 @@ interface Inflight<Op> {
 export interface EngineState<Op> {
   format: Format
   fileHash: string
+  saveTimeoutMs: number
   connection: Connection
   everLive: boolean
   joined: boolean
   failure: CollabFailure | null
+  /** a sentence for people about the failure, carried by the `CollabError` of saves and joins */
+  detail: string | null
   closed: boolean
   attempts: number
   /** connections in a row that ended in a protocol violation without a change getting through */
@@ -72,7 +82,7 @@ export interface EngineState<Op> {
   target: number
   /** the version the editor shows */
   confirmed: number
-  /** received after `confirmed` but not applied: before attach, and while a save produces its file */
+  /** received after `confirmed` but not applied: before attach, and while a file is produced */
   held: Change[]
   attached: boolean
   inflight: Inflight<Op> | null
@@ -82,7 +92,14 @@ export interface EngineState<Op> {
   waitFor: number
   expectBase: number | null
   serverBase: Uint8Array | null
-  save: 'draining' | 'producing' | null
+  /**
+   * `draining`: input frozen, local ops being confirmed; `settling`: nothing
+   * was local, one more step checks no edit came out of the freeze;
+   * `producing`: the file of `confirmed` is being made
+   */
+  save: 'draining' | 'settling' | 'producing' | null
+  /** `freezing`: input frozen, one more step until the file is made; `producing`: being made */
+  exporting: 'freezing' | 'producing' | null
   /** the highest version the host reported stored */
   reported: number
   fingerprinted: { at: number; v: number }
@@ -96,9 +113,13 @@ export type EngineEvent<Op> =
   | { type: 'attach' }
   | { type: 'local'; ops: Op[] }
   | { type: 'integrated'; local: Op[] }
+  | { type: 'fingerprint_now'; v: number }
   | { type: 'fingerprinted'; v: number; fp: string }
-  | { type: 'produced'; file: ProducedFile }
   | { type: 'save' }
+  | { type: 'settled' }
+  | { type: 'export' }
+  | { type: 'export_ready' }
+  | { type: 'produced'; purpose: Purpose; file: ProducedFile }
   | { type: 'report_saved'; v: number }
   | { type: 'timer'; name: TimerName }
   | { type: 'adapter_failed' }
@@ -111,6 +132,8 @@ export type EngineEffect<Op> =
   | { type: 'send_file' }
   | { type: 'timer'; name: TimerName; delay: number }
   | { type: 'cancel_timers' }
+  /** queue `event` behind everything the effects before it cause */
+  | { type: 'then'; event: EngineEvent<Op> }
   /** `baseBytes` null: the host's own bytes are the base */
   | { type: 'joined'; baseBytes: Uint8Array | null }
   | { type: 'join_failed'; code: CollabFailure }
@@ -118,9 +141,11 @@ export type EngineEffect<Op> =
   | { type: 'integrate'; remote: Json[][]; local: Op[] }
   | { type: 'confirmed'; ops: Op[] }
   | { type: 'fingerprint'; v: number }
-  | { type: 'produce' }
+  | { type: 'produce'; purpose: Purpose }
   | { type: 'save_done'; file: ProducedFile; version: number }
-  | { type: 'save_failed'; code: CollabFailure | 'closed' }
+  | { type: 'save_failed'; code: CollabFailure | 'closed' | 'offline' }
+  | { type: 'export_done'; file: ProducedFile }
+  | { type: 'export_failed'; code: 'closed' }
 
 /** `encode` may throw; the shell turns that into an adapter failure */
 export interface EngineEnv<Op> {
@@ -140,14 +165,20 @@ interface Ctx<Op> {
   integrate: { remote: Json[][]; local: Op[] } | null
 }
 
-export function initialState<Op>(format: Format, fileHash: string): EngineState<Op> {
+export function initialState<Op>(
+  format: Format,
+  fileHash: string,
+  saveTimeoutMs: number,
+): EngineState<Op> {
   return {
     format,
     fileHash,
+    saveTimeoutMs,
     connection: 'connecting',
     everLive: false,
     joined: false,
     failure: null,
+    detail: null,
     closed: false,
     attempts: 0,
     strikes: 0,
@@ -168,6 +199,7 @@ export function initialState<Op>(format: Format, fileHash: string): EngineState<
     expectBase: null,
     serverBase: null,
     save: null,
+    exporting: null,
     reported: 0,
     fingerprinted: { at: -Infinity, v: -1 },
   }
@@ -197,7 +229,13 @@ export function reduce<Op>(
   event: EngineEvent<Op>,
   env: EngineEnv<Op>,
 ): Step<Op> {
-  if (state.closed) return { state, effects: [] }
+  if (state.closed) {
+    if (event.type === 'save') return { state, effects: [{ type: 'save_failed', code: 'closed' }] }
+    if (event.type === 'export') {
+      return { state, effects: [{ type: 'export_failed', code: 'closed' }] }
+    }
+    return { state, effects: [] }
+  }
   const c: Ctx<Op> = { s: { ...state }, fx: [], env, integrate: null }
   if (state.failure) afterFailure(c, event)
   else handle(c, event)
@@ -206,14 +244,29 @@ export function reduce<Op>(
   return { state: c.s, effects: c.fx }
 }
 
-/** A failed session only freezes a late editor, refuses saves and shuts down */
+/** A failed session keeps the editor frozen, refuses saves, still exports, and shuts down */
 function afterFailure<Op>(c: Ctx<Op>, event: EngineEvent<Op>): void {
   const s = c.s
-  if (event.type === 'attach') {
-    s.attached = true
-    c.fx.push({ type: 'editable', value: false })
-  } else if (event.type === 'save') c.fx.push({ type: 'save_failed', code: s.failure! })
-  else if (event.type === 'shutdown') s.closed = true
+  switch (event.type) {
+    case 'attach':
+      s.attached = true
+      c.fx.push({ type: 'editable', value: false })
+      return
+    case 'save':
+      c.fx.push({ type: 'save_failed', code: s.failure! })
+      return
+    case 'export':
+      // Input is frozen for good, so the file can be made at once
+      s.exporting = 'producing'
+      c.fx.push({ type: 'produce', purpose: 'export' })
+      return
+    case 'produced':
+      if (event.purpose === 'export') exported(c, event.file)
+      return
+    case 'shutdown':
+      shutdown(c)
+      return
+  }
 }
 
 function handle<Op>(c: Ctx<Op>, event: EngineEvent<Op>): void {
@@ -245,6 +298,11 @@ function handle<Op>(c: Ctx<Op>, event: EngineEvent<Op>): void {
       if (event.name === 'reconnect' && s.connection === 'down') {
         s.connection = 'connecting'
         c.fx.push({ type: 'open' })
+      } else if (event.name === 'save' && (s.save === 'draining' || s.save === 'settling')) {
+        // The edits stay pending and go out once the connection is back
+        s.save = null
+        c.fx.push({ type: 'editable', value: editable(s) })
+        c.fx.push({ type: 'save_failed', code: 'offline' })
       }
       return
     case 'attach':
@@ -253,24 +311,51 @@ function handle<Op>(c: Ctx<Op>, event: EngineEvent<Op>): void {
       if (s.held.length > 0) release(c)
       return
     case 'local':
-      // The file being produced must match the version it is labelled with
-      if (s.save === 'producing') return fail(c, 'adapter')
+      // The editor no longer shows the document, and the server would refuse the edit
+      if (!s.canEdit) return fail(c, 'forbidden')
+      // The file being produced must be the state it is labelled with
+      if (s.save === 'producing' || s.exporting === 'producing') return fail(c, 'adapter')
       s.pending = s.pending.concat(event.ops)
       return
     case 'integrated':
       s.pending = event.local
       return
+    case 'fingerprint_now':
+      if (fingerprintable(s) && s.confirmed === event.v) {
+        c.fx.push({ type: 'fingerprint', v: event.v })
+      }
+      return
     case 'fingerprinted':
       if (s.connection === 'live')
         c.fx.push({ type: 'send', frame: { t: 'fingerprint', v: event.v, fp: event.fp } })
       return
-    case 'produced':
-      return produced(c, event.file)
     case 'save':
       if (s.save) return
       s.save = 'draining'
       c.fx.push({ type: 'editable', value: false })
+      c.fx.push({ type: 'timer', name: 'save', delay: s.saveTimeoutMs })
       return
+    case 'settled':
+      if (s.save !== 'settling') return
+      if (!s.inflight && s.pending.length === 0) {
+        s.save = 'producing'
+        c.fx.push({ type: 'produce', purpose: 'save' })
+      } else s.save = 'draining'
+      return
+    case 'export':
+      if (s.exporting) return
+      s.exporting = 'freezing'
+      c.fx.push({ type: 'editable', value: false })
+      c.fx.push({ type: 'then', event: { type: 'export_ready' } })
+      return
+    case 'export_ready':
+      if (s.exporting !== 'freezing') return
+      s.exporting = 'producing'
+      c.fx.push({ type: 'produce', purpose: 'export' })
+      return
+    case 'produced':
+      if (event.purpose === 'save') return saved(c, event.file)
+      return exported(c, event.file)
     case 'report_saved':
       if (event.v <= s.reported) return
       s.reported = event.v
@@ -282,12 +367,18 @@ function handle<Op>(c: Ctx<Op>, event: EngineEvent<Op>): void {
     case 'shutdown':
       if (s.connection !== 'down') c.fx.push({ type: 'close' })
       s.connection = 'down'
-      s.closed = true
       c.fx.push({ type: 'cancel_timers' })
       if (s.save) c.fx.push({ type: 'save_failed', code: 'closed' })
       s.save = null
-      return
+      return shutdown(c)
   }
+}
+
+function shutdown<Op>(c: Ctx<Op>): void {
+  const s = c.s
+  s.closed = true
+  if (s.exporting) c.fx.push({ type: 'export_failed', code: 'closed' })
+  s.exporting = null
 }
 
 function frame<Op>(c: Ctx<Op>, f: ServerFrame | BytesFrame): void {
@@ -357,7 +448,6 @@ function welcome<Op>(c: Ctx<Op>, w: Extract<ServerFrame, { t: 'welcome' }>): voi
   s.saved = Math.max(s.saved, w.saved)
   s.peers = w.peers
   s.target = w.head
-  s.attempts = 0
   s.connection = 'catching_up'
   if (s.attached) c.fx.push({ type: 'editable', value: editable(s) })
   caughtUp(c)
@@ -389,7 +479,7 @@ function change<Op>(c: Ctx<Op>, ch: Change): void {
     // Our own change on this socket is the in-flight submit whose ack was lost
     if (!inflight || inflight.doomed || ch.seq !== inflight.seq || s.held.length > 0) return drop(c)
     confirm(c, ch.v)
-  } else if (!s.attached || s.save === 'producing' || s.held.length > 0) s.held = s.held.concat(ch)
+  } else if (holding(s) || s.held.length > 0) s.held = s.held.concat(ch)
   else integrateForeign(c, [ch])
   progress(s)
   caughtUp(c)
@@ -437,7 +527,7 @@ function release<Op>(c: Ctx<Op>): void {
   integrateForeign(c, held)
 }
 
-function produced<Op>(c: Ctx<Op>, file: ProducedFile): void {
+function saved<Op>(c: Ctx<Op>, file: ProducedFile): void {
   const s = c.s
   if (s.save !== 'producing') return
   const version = s.confirmed
@@ -449,15 +539,25 @@ function produced<Op>(c: Ctx<Op>, file: ProducedFile): void {
   }
   c.fx.push({ type: 'editable', value: editable(s) })
   c.fx.push({ type: 'save_done', file, version })
-  if (s.held.length > 0) release(c)
+  if (s.held.length > 0 && !holding(s)) release(c)
+}
+
+function exported<Op>(c: Ctx<Op>, file: ProducedFile): void {
+  const s = c.s
+  if (!s.exporting) return
+  s.exporting = null
+  if (s.attached) c.fx.push({ type: 'editable', value: editable(s) })
+  c.fx.push({ type: 'export_done', file })
+  if (!s.failure && s.held.length > 0 && !holding(s)) release(c)
 }
 
 function settle<Op>(c: Ctx<Op>): void {
   submit(c)
   const s = c.s
+  if (s.failure) return
   if (s.save === 'draining' && !s.inflight && s.pending.length === 0) {
-    s.save = 'producing'
-    c.fx.push({ type: 'produce' })
+    s.save = 'settling'
+    c.fx.push({ type: 'then', event: { type: 'settled' } })
   }
   fingerprint(c)
 }
@@ -471,34 +571,54 @@ function submit<Op>(c: Ctx<Op>): void {
   let size = 0
   for (const op of s.pending) {
     const encoded = c.env.encode(op)
-    const bytes = utf8Length(JSON.stringify(encoded)) + 1
-    if (ops.length > 0 && size + bytes > SUBMIT_BYTES) break
+    const bytes = utf8Length(JSON.stringify(encoded))
+    if (bytes + SUBMIT_FRAME_BYTES > MAX_CHANGE_BYTES) {
+      return fail(
+        c,
+        'adapter',
+        `an edit of ${bytes} bytes is larger than one change may be (${MAX_CHANGE_BYTES} bytes)`,
+      )
+    }
+    if (ops.length > 0 && size + bytes + 1 > SUBMIT_CHUNK_BYTES) break
     ops.push(op)
     json.push(encoded)
-    size += bytes
+    size += bytes + 1
   }
   s.inflight = { seq: s.nextSeq, base: s.confirmed, ops, json, doomed: false }
   s.pending = s.pending.slice(ops.length)
   c.fx.push({ type: 'send', frame: { t: 'submit', seq: s.nextSeq, base: s.confirmed, ops: json } })
 }
 
+/** The editor shows exactly version `confirmed`, and nothing will move it while a step runs */
+function fingerprintable<Op>(s: EngineState<Op>): boolean {
+  return (
+    s.attached &&
+    s.connection === 'live' &&
+    !s.save &&
+    !s.exporting &&
+    !s.inflight &&
+    s.pending.length === 0 &&
+    s.held.length === 0
+  )
+}
+
 /** At most once every 10 s, at a version not yet fingerprinted, with nothing local or held */
 function fingerprint<Op>(c: Ctx<Op>): void {
   const s = c.s
-  if (!s.attached || s.connection !== 'live' || s.save || s.inflight) return
-  if (s.pending.length > 0 || s.held.length > 0 || s.fingerprinted.v === s.confirmed) return
+  if (!fingerprintable(s) || s.fingerprinted.v === s.confirmed) return
   const due = s.fingerprinted.at + FINGERPRINT_EVERY_MS
   if (c.env.now < due) {
     c.fx.push({ type: 'timer', name: 'fingerprint', delay: due - c.env.now })
     return
   }
   s.fingerprinted = { at: c.env.now, v: s.confirmed }
-  c.fx.push({ type: 'fingerprint', v: s.confirmed })
+  c.fx.push({ type: 'then', event: { type: 'fingerprint_now', v: s.confirmed } })
 }
 
-function fail<Op>(c: Ctx<Op>, code: CollabFailure): void {
+function fail<Op>(c: Ctx<Op>, code: CollabFailure, detail?: string): void {
   const s = c.s
   s.failure = code
+  s.detail = detail ?? null
   c.integrate = null
   if (s.connection !== 'down') c.fx.push({ type: 'close' })
   s.connection = 'down'
@@ -522,9 +642,11 @@ function drop<Op>(c: Ctx<Op>): void {
   lose(c)
 }
 
+/** A change got through on this connection: it works, so retries start fast again */
 function progress<Op>(s: EngineState<Op>): void {
   s.progressed = true
   s.strikes = 0
+  s.attempts = 0
 }
 
 function lose<Op>(c: Ctx<Op>): void {
@@ -544,6 +666,11 @@ function top<Op>(s: EngineState<Op>): number {
   return s.confirmed + s.held.length
 }
 
+/** Remote changes wait: the editor is not there yet, or a file of what it shows is being made */
+function holding<Op>(s: EngineState<Op>): boolean {
+  return !s.attached || s.save === 'producing' || s.exporting === 'producing'
+}
+
 function editable<Op>(s: EngineState<Op>): boolean {
-  return s.canEdit && !s.save && !s.failure
+  return s.canEdit && !s.save && !s.exporting && !s.failure
 }

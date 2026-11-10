@@ -10,7 +10,7 @@ import type { AppendRequest, EpochHead } from './store.js'
 export type HelloDecision =
   | { kind: 'need_base' }
   | { kind: 'wait' }
-  | { kind: 'reject'; code: 'schema_mismatch' | 'reset' }
+  | { kind: 'reject'; code: 'schema_mismatch' | 'reset' | 'forbidden' }
   /** `client` null: issue a new client id */
   | { kind: 'welcome'; epoch: EpochHead; client: string | null; start: number; sendBase: boolean }
 
@@ -21,18 +21,27 @@ export interface HelloContext {
   owner: string | undefined
   /** the user saying hello */
   user: string
+  /** the user may edit; only an editor seeds an epoch */
+  canEdit: boolean
+  /** the hash of the file the host holds as current, when it said */
+  currentHash: string | undefined
 }
 
 export function decideHello(
   epoch: EpochHead | null,
   hello: HelloFrame,
-  { seeding, owner, user }: HelloContext,
+  { seeding, owner, user, canEdit, currentHash }: HelloContext,
 ): HelloDecision {
   // Someone else's client id is not this user's to resume or to supersede
   const resume = owner === undefined || owner === user ? hello.resume : undefined
   if (!epoch) {
     if (resume) return { kind: 'reject', code: 'reset' }
-    return seeding ? { kind: 'wait' } : { kind: 'need_base' }
+    if (seeding || !canEdit) return { kind: 'wait' }
+    // A stale copy must not become the document everyone edits
+    if (currentHash !== undefined && hello.fileHash !== currentHash) {
+      return { kind: 'reject', code: 'forbidden' }
+    }
+    return { kind: 'need_base' }
   }
   if (epoch.format.name !== hello.format.name || epoch.format.schema !== hello.format.schema) {
     return { kind: 'reject', code: 'schema_mismatch' }

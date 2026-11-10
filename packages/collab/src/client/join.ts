@@ -15,6 +15,7 @@ import {
   type CollabJoin,
   type CollabLink,
   type CollabLinkEvent,
+  type CollabOptions,
   type CollabSession,
   type CollabStatus,
   type SavedVersion,
@@ -26,6 +27,8 @@ import {
   type EngineEffect,
   type EngineEvent,
   type EngineState,
+  type ProducedFile,
+  type Purpose,
   type Step,
   type TimerName,
 } from './engine.js'
@@ -36,14 +39,25 @@ export interface Engine {
   settled(): Promise<void>
 }
 
-export function joinCollab(link: CollabLink, file: CollabFile): Promise<CollabJoin> {
-  return startEngine(link, file, systemClock).join
+export function joinCollab(
+  link: CollabLink,
+  file: CollabFile,
+  options: CollabOptions = {},
+): Promise<CollabJoin> {
+  return startEngine(link, file, systemClock, options).join
 }
+
+const SAVE_TIMEOUT_MS = 30_000
 
 /** The engine's state holds adapter ops it never looks into */
 type Op = unknown
 
-export function startEngine(link: CollabLink, file: CollabFile, clock: Clock): Engine {
+export function startEngine(
+  link: CollabLink,
+  file: CollabFile,
+  clock: Clock,
+  options: CollabOptions = {},
+): Engine {
   let state: EngineState<Op> | null = null
   let adapter: CollabAdapter<Op> | null = null
   let integrating = false
@@ -55,6 +69,7 @@ export function startEngine(link: CollabLink, file: CollabFile, clock: Clock): E
   const statusHandlers = new Set<(status: CollabStatus) => void>()
   let lastStatus = ''
   let save: PromiseWithResolvers<SavedVersion> | null = null
+  let exporting: PromiseWithResolvers<ProducedFile> | null = null
   let unlisten: (() => void) | null = null
   let unsubscribe: (() => void) | null = null
   const joined = Promise.withResolvers<CollabJoin>()
@@ -130,6 +145,9 @@ export function startEngine(link: CollabLink, file: CollabFile, clock: Clock): E
         timers.set(name, handle)
         return
       }
+      case 'then':
+        queue.push(effect.event)
+        return
       case 'cancel_timers':
         for (const handle of timers.values()) clock.clearTimeout(handle)
         timers.clear()
@@ -137,7 +155,7 @@ export function startEngine(link: CollabLink, file: CollabFile, clock: Clock): E
       case 'joined':
         return joined.resolve({ baseBytes: effect.baseBytes ?? file.bytes, attach })
       case 'join_failed':
-        return joined.reject(new CollabError(effect.code))
+        return joined.reject(new CollabError(effect.code, detail()))
       case 'editable':
         if (adapter) guard(() => adapter!.setEditable(effect.value))
         return
@@ -148,14 +166,22 @@ export function startEngine(link: CollabLink, file: CollabFile, clock: Clock): E
       case 'fingerprint':
         return fingerprint(effect.v)
       case 'produce':
-        return produce()
+        return produce(effect.purpose)
       case 'save_done':
         save?.resolve({ ...effect.file, version: effect.version })
         save = null
         return
       case 'save_failed':
-        save?.reject(new CollabError(effect.code))
+        save?.reject(new CollabError(effect.code, detail()))
         save = null
+        return
+      case 'export_done':
+        exporting?.resolve(effect.file)
+        exporting = null
+        return
+      case 'export_failed':
+        exporting?.reject(new CollabError(effect.code))
+        exporting = null
         return
     }
   }
@@ -195,17 +221,33 @@ export function startEngine(link: CollabLink, file: CollabFile, clock: Clock): E
     )
   }
 
-  function produce(): void {
-    let file: Promise<{ fileName: string; bytes: Uint8Array }>
+  function detail(): string | undefined {
+    return state?.detail ?? undefined
+  }
+
+  /** a failed save is rejected by the session failing; a failed export only by its own promise */
+  function produceFailed(purpose: Purpose): void {
+    if (purpose === 'export') {
+      exporting?.reject(new CollabError('adapter'))
+      exporting = null
+    }
+  }
+
+  function produce(purpose: Purpose): void {
+    let file: Promise<ProducedFile>
     try {
       file = adapter!.produceFile()
     } catch {
+      produceFailed(purpose)
       return adapterFailed()
     }
     track(
       Promise.resolve(file).then(
-        (produced) => dispatch({ type: 'produced', file: produced }),
-        () => dispatch({ type: 'adapter_failed' }),
+        (produced) => dispatch({ type: 'produced', purpose, file: produced }),
+        () => {
+          produceFailed(purpose)
+          dispatch({ type: 'adapter_failed' })
+        },
       ),
     )
   }
@@ -216,6 +258,13 @@ export function startEngine(link: CollabLink, file: CollabFile, clock: Clock): E
       save = Promise.withResolvers<SavedVersion>()
       const pending = save.promise
       dispatch({ type: 'save' })
+      return pending
+    },
+    exportLocal() {
+      if (exporting) return exporting.promise
+      exporting = Promise.withResolvers<ProducedFile>()
+      const pending = exporting.promise
+      dispatch({ type: 'export' })
       return pending
     },
     reportSaved(version) {
@@ -264,7 +313,7 @@ export function startEngine(link: CollabLink, file: CollabFile, clock: Clock): E
   track(
     sha256(file.bytes).then(
       (hash) => {
-        state = initialState(file.format, hash)
+        state = initialState(file.format, hash, options.saveTimeoutMs ?? SAVE_TIMEOUT_MS)
         unsubscribe = link.subscribe(onLink)
         link.open()
       },

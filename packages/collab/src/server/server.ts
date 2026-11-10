@@ -12,6 +12,7 @@
  */
 
 import { systemClock, type Clock } from '../clock.js'
+import { MAX_CHANGE_BYTES } from '../limits.js'
 import type { Change, Peer } from '../model.js'
 import { sha256 } from '../sha256.js'
 import {
@@ -25,7 +26,7 @@ import {
   type SubmitFrame,
 } from '../wire.js'
 import { decideHello, decideSubmit, type HelloDecision } from './decide.js'
-import type { CollabStore, EpochHead } from './store.js'
+import type { AppendResult, CollabStore, EpochHead } from './store.js'
 
 /** Who is on the other end of a socket; the host authenticated the upgrade and decides it */
 export interface Principal {
@@ -33,6 +34,11 @@ export interface Principal {
   userId: string
   name: string
   canEdit: boolean
+  /**
+   * The sha-256 hex of the file the host holds as current. When given, a socket may seed a new
+   * epoch only from exactly that file; others get `error forbidden`.
+   */
+  fileHash?: string
 }
 
 /** One accepted WebSocket, adapted by the host from its WebSocket library */
@@ -52,13 +58,19 @@ export interface Limits {
   catchUpPage: number
   /** how long a document stays without sockets before its saved epoch ends; Infinity keeps it */
   idleEpochMs: number
+  /** how long a socket asked for the base may take to send it before the next editor is asked */
+  seedTimeoutMs: number
+  /** frames of one socket waiting to be handled; past it the socket is closed */
+  maxQueuedFrames: number
 }
 
 const DEFAULT_LIMITS: Limits = {
-  maxChangeBytes: 256 * 1024,
+  maxChangeBytes: MAX_CHANGE_BYTES,
   maxBaseBytes: 50 * 1024 * 1024,
   catchUpPage: 200,
   idleEpochMs: 10 * 60 * 1000,
+  seedTimeoutMs: 30_000,
+  maxQueuedFrames: 256,
 }
 
 /** setTimeout fires at once for longer delays */
@@ -106,13 +118,20 @@ interface Conn {
   epoch: string | null
   /** the highest version this socket received; a change goes out only as `sent + 1` (invariant 4) */
   sent: number
+  /** frames received and not yet handled */
+  inbox: number
+  /** the socket is being closed for a frame it should not have sent; its later frames are ignored */
+  refused: boolean
+  /** while seeding: the timer that hands seeding on */
+  seedTimer: unknown
 }
 
 /** What this process remembers about an epoch beyond what the store holds */
 interface EpochState {
   id: string
   saved: number
-  fingerprints: Map<number, string>
+  /** per version, the fingerprint each editing client last reported */
+  fingerprints: Map<number, Map<string, string>>
   /** client id to the user it was issued to */
   clients: Map<string, string>
 }
@@ -281,6 +300,18 @@ export function createServerCore({
     await remove(doc, conn)
   }
 
+  /**
+   * Work for one socket inside a loop over several: when the store fails, only that socket is
+   * closed (its client reconnects and resumes) and the loop goes on with the others.
+   */
+  async function forSocket(doc: Doc, conn: Conn, work: () => Promise<void>): Promise<void> {
+    try {
+      await work()
+    } catch {
+      await abort(doc, conn)
+    }
+  }
+
   async function remove(doc: Doc, conn: Conn): Promise<void> {
     if (conn.stage === 'closed') return
     const wasLive = conn.stage === 'live'
@@ -289,25 +320,50 @@ export function createServerCore({
     doc.waiting = doc.waiting.filter((other) => other !== conn)
     if (wasLive) broadcast(doc, { t: 'peers', peers: peersOf(doc) })
     if (doc.seeder === conn) {
-      doc.seeder = null
-      const next = doc.waiting.shift()
-      if (next) await answerHello(doc, next, next.hello!)
+      endSeeding(doc)
+      await answerWaiting(doc)
     }
     if (doc.conns.size === 0) armIdle(doc)
   }
 
-  async function answerHello(doc: Doc, conn: Conn, hello: HelloFrame): Promise<void> {
+  function endSeeding(doc: Doc): void {
+    clock.clearTimeout(doc.seeder?.seedTimer)
+    doc.seeder = null
+  }
+
+  /** answer every waiting hello again, in order: the epoch now exists, or the next editor seeds */
+  async function answerWaiting(doc: Doc): Promise<void> {
+    const waiting = doc.waiting
+    doc.waiting = []
+    for (const other of waiting) {
+      if (other.stage === 'waiting') await forSocket(doc, other, () => answerHello(doc, other))
+    }
+  }
+
+  async function answerHello(doc: Doc, conn: Conn): Promise<void> {
+    const hello = conn.hello!
     const epoch = await store.load(doc.id)
     const known = epoch ? epochState(doc, epoch) : null
     const decision = decideHello(epoch, hello, {
       seeding: doc.seeder !== null,
       owner: hello.resume ? known?.clients.get(hello.resume.client) : undefined,
       user: conn.principal.userId,
+      canEdit: conn.principal.canEdit,
+      currentHash: conn.principal.fileHash,
     })
     switch (decision.kind) {
       case 'need_base':
         conn.stage = 'seeding'
         doc.seeder = conn
+        conn.seedTimer = clock.setTimeout(
+          () =>
+            void enqueue(doc, null, async () => {
+              if (doc.seeder !== conn) return
+              conn.socket.close(4000, 'no base')
+              await remove(doc, conn)
+            }),
+          limits.seedTimeoutMs,
+        )
         send(conn, { t: 'need_base' })
         return
       case 'wait':
@@ -388,12 +444,9 @@ export function createServerCore({
       baseHash: hello.fileHash,
       base,
     })
-    doc.seeder = null
-    await answerHello(doc, conn, hello)
-    const waiting = doc.waiting
-    doc.waiting = []
-    for (const other of waiting)
-      if (other.stage === 'waiting') await answerHello(doc, other, other.hello!)
+    endSeeding(doc)
+    await forSocket(doc, conn, () => answerHello(doc, conn))
+    await answerWaiting(doc)
   }
 
   async function onSubmit(doc: Doc, conn: Conn, submit: SubmitFrame): Promise<void> {
@@ -404,21 +457,29 @@ export function createServerCore({
     }
     const decision = decideSubmit(sender, submit)
     if (decision.kind === 'reject') return reject(doc, conn, decision.code)
-    const result = await store.append(doc.id, conn.epoch!, decision.change)
+    let result: AppendResult
+    try {
+      result = await store.append(doc.id, conn.epoch!, decision.change)
+    } catch {
+      // Appended or not, the client finds out when it resumes: a duplicate submit is acked
+      return abort(doc, conn)
+    }
     switch (result.kind) {
       case 'appended': {
         const { client, seq, author, ops } = decision.change
         const change: Change = { v: result.v, client, seq, author, ops }
-        if (conn.sent < result.v - 1) await catchUp(doc, conn, result.v - 1)
-        send(conn, { t: 'ack', v: result.v, seq })
-        conn.sent = result.v
+        await forSocket(doc, conn, async () => {
+          if (conn.sent < change.v - 1) await catchUp(doc, conn, change.v - 1)
+          send(conn, { t: 'ack', v: change.v, seq })
+          conn.sent = change.v
+        })
         const frame = changeFrame(change)
         for (const other of live(doc)) {
           if (other === conn) continue
           if (other.sent === change.v - 1) {
             send(other, frame)
             other.sent = change.v
-          } else await catchUp(doc, other, change.v)
+          } else await forSocket(doc, other, () => catchUp(doc, other, change.v))
         }
         return
       }
@@ -436,15 +497,19 @@ export function createServerCore({
 
   async function onFingerprint(doc: Doc, conn: Conn, v: number, fp: string): Promise<void> {
     if (conn.stage !== 'live' || v > conn.sent || !doc.epoch) return reject(doc, conn, 'bad_frame')
+    // A view-only editor cannot be fixed by its user, and must not end everyone's epoch
+    if (!conn.principal.canEdit) return
     const fingerprints = doc.epoch.fingerprints
-    const known = fingerprints.get(v)
-    if (known === undefined) {
-      fingerprints.set(v, fp)
+    let atV = fingerprints.get(v)
+    if (!atV) {
+      atV = new Map()
+      fingerprints.set(v, atV)
       if (fingerprints.size > FINGERPRINTS_KEPT)
         fingerprints.delete(fingerprints.keys().next().value!)
-      return
     }
-    if (known === fp) return
+    // A client's later report at one version replaces its earlier one
+    atV.set(conn.client!, fp)
+    if ([...atV.values()].every((other) => other === fp)) return
     // No file of this epoch can be trusted any more: its sockets go now, and with the last
     // of them the epoch, saved or not; the next opener starts from the host's stored file
     evict(doc, live(doc), { t: 'diverged', v }, 'diverged')
@@ -470,8 +535,7 @@ export function createServerCore({
   }
 
   async function onFrame(doc: Doc, conn: Conn, raw: string | Uint8Array): Promise<void> {
-    if (conn.stage === 'closed') return
-    if (tooLarge(raw)) return reject(doc, conn, 'too_large')
+    if (conn.stage === 'closed' || conn.refused) return
     let frame: ClientFrame | BytesFrame
     try {
       frame = parseClientFrame(raw)
@@ -482,7 +546,7 @@ export function createServerCore({
       case 'hello':
         if (conn.stage !== 'new') return reject(doc, conn, 'bad_frame')
         conn.hello = frame
-        return answerHello(doc, conn, frame)
+        return answerHello(doc, conn)
       case 'bytes':
         return onBase(doc, conn, frame.bytes)
       case 'submit':
@@ -511,9 +575,29 @@ export function createServerCore({
         client: null,
         epoch: null,
         sent: 0,
+        inbox: 0,
+        refused: false,
+        seedTimer: null,
       }
       doc.conns.add(conn)
-      socket.onMessage((frame) => void enqueue(doc, conn, () => onFrame(doc, conn, frame)))
+      // Checked before queueing, so a socket cannot make the server hold what it will refuse
+      socket.onMessage((frame) => {
+        if (conn.stage === 'closed' || conn.refused) return
+        if (tooLarge(frame)) {
+          conn.refused = true
+          void enqueue(doc, conn, () => reject(doc, conn, 'too_large'))
+        } else if (conn.inbox >= limits.maxQueuedFrames) {
+          conn.refused = true
+          conn.socket.close(1008, 'too many frames')
+          void enqueue(doc, conn, () => remove(doc, conn))
+        } else {
+          conn.inbox += 1
+          void enqueue(doc, conn, () => {
+            conn.inbox -= 1
+            return onFrame(doc, conn, frame)
+          })
+        }
+      })
       socket.onClose(() => void enqueue(doc, conn, () => remove(doc, conn)))
     },
     async reset(documentId) {
@@ -523,7 +607,7 @@ export function createServerCore({
       await enqueue(doc, null, async () => {
         try {
           evict(doc, [...doc.conns], { t: 'error', code: 'reset' }, 'reset')
-          doc.seeder = null
+          endSeeding(doc)
           doc.waiting = []
           const epoch = await store.load(doc.id)
           if (epoch) await dropEpoch(doc, epoch.id)

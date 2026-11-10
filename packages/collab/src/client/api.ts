@@ -60,13 +60,27 @@ export interface SavedVersion {
 }
 
 export interface CollabSession {
-  /** freeze input, confirm everything local, hold remote changes, produce the file at one exact version */
+  /**
+   * Freeze input, confirm everything local, hold remote changes, produce the file at one exact
+   * version. Rejects with `offline` when the local edits cannot be confirmed within the save
+   * timeout; input is unfrozen and the edits stay pending.
+   */
   save(): Promise<SavedVersion>
   /** tell the server the host stored the file of `version`; ignored for a principal that cannot edit */
   reportSaved(version: number): void
+  /**
+   * The file of exactly what the editor shows, unconfirmed edits included, in any phase. It has no
+   * version and the server never hears of it: a way to keep work a failed or offline session holds.
+   */
+  exportLocal(): Promise<{ fileName: string; bytes: Uint8Array }>
   status(): CollabStatus
   subscribe(handler: (status: CollabStatus) => void): () => void
   close(): void
+}
+
+export interface CollabOptions {
+  /** how long `save()` waits for local edits to be confirmed; default 30000 */
+  saveTimeoutMs?: number
 }
 
 export type CollabStatus = {
@@ -81,12 +95,15 @@ export type CollabStatus = {
 
 export type CollabFailure = NonNullable<CollabStatus['failure']>
 
-/** Why a join or a save did not happen: the session's failure, or `closed` */
+/**
+ * Why a join, a save or an export did not happen: the session's failure, `closed`, or `offline`
+ * for a save whose edits could not be confirmed in time
+ */
 export class CollabError extends Error {
-  readonly code: CollabFailure | 'closed'
+  readonly code: CollabFailure | 'closed' | 'offline'
 
-  constructor(code: CollabFailure | 'closed') {
-    super(`co-editing stopped: ${code}`)
+  constructor(code: CollabFailure | 'closed' | 'offline', detail?: string) {
+    super(detail ? `co-editing stopped: ${code}: ${detail}` : `co-editing stopped: ${code}`)
     this.name = 'CollabError'
     this.code = code
   }

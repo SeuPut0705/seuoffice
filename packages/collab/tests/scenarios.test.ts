@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CollabError } from '../src/client/api'
+import { MAX_CHANGE_BYTES } from '../src/client/index'
 import { oldest, SimNetwork, type SimClient } from '../src/conformance/network'
 import {
   toyLines,
@@ -181,10 +182,10 @@ describe('a lost connection', () => {
 })
 
 describe('reconnecting', () => {
-  it('waits 0.5 s, doubling up to 15 s, and starts over once welcomed again', async () => {
+  it('waits 0.5 s, doubling up to 15 s, and starts over only once a change got through', async () => {
     const net = new SimNetwork()
     const a = await join(net, toyLines, 'a')
-    await join(net, toyLines, 'b')
+    const b = await join(net, toyLines, 'b')
     await net.run()
 
     async function nextAttempt(): Promise<number> {
@@ -202,8 +203,15 @@ describe('reconnecting', () => {
     for (let i = 0; i < 7; i++) waits.push(await nextAttempt())
     expect(waits).toEqual([500, 1000, 2000, 4000, 8000, 15000, 15000])
 
+    // A welcome alone proves little: a server that accepts and then drops gets no fast retries
     await net.run()
     expect(a.session!.status().phase).toBe('live')
+    expect(await nextAttempt()).toBe(15000)
+
+    await net.run()
+    b.editor!.perform(ins('b', 0))
+    await net.run()
+    expect(a.session!.status().version).toBe(1)
     expect(await nextAttempt()).toBe(500)
   })
 })
@@ -481,6 +489,8 @@ describe('failures', () => {
     expect(a.session!.status().saved).toBe(0)
 
     viewer.editor!.perform(ins('sneaky', 0))
+    // The editor now differs from the document; nothing goes to the server
+    expect(viewer.session!.status()).toMatchObject({ phase: 'failed', failure: 'forbidden' })
     await net.run()
     expect(viewer.session!.status()).toMatchObject({ phase: 'failed', failure: 'forbidden' })
     expect(await opIds(net)).toEqual([['x']])
@@ -543,5 +553,229 @@ describe('failures', () => {
     await net.run()
     expect(b.session!.status()).toMatchObject({ phase: 'failed', failure: 'adapter' })
     expect(await opIds(net)).toEqual([['x']])
+  })
+})
+
+/** what a promise settled with by now: the value, the error, or 'pending' */
+function track<T>(promise: Promise<T>): { outcome: T | unknown | 'pending' } {
+  const box: { outcome: T | unknown | 'pending' } = { outcome: 'pending' }
+  promise.then(
+    (value) => (box.outcome = value),
+    (error: unknown) => (box.outcome = error),
+  )
+  return box
+}
+
+function codeOf(outcome: unknown): string | null {
+  return outcome instanceof CollabError ? outcome.code : null
+}
+
+describe('edits the editor makes on its own', () => {
+  it('one committed when input freezes for a save is submitted, confirmed and saved', async () => {
+    const net = new SimNetwork()
+    let composing: LineOp | null = null
+    const composer = (bytes: Uint8Array): ToyEditor<LineOp> => {
+      const editor = toyLines.open(bytes)
+      const setEditable = editor.setEditable
+      editor.setEditable = (value) => {
+        if (!value && composing) {
+          const op = composing
+          composing = null
+          editor.perform(op)
+        }
+        setEditable(value)
+      }
+      return editor
+    }
+    const a = await join(net, toyLines, 'a', { factory: composer })
+    const b = await join(net, toyLines, 'b')
+    await net.run()
+
+    composing = ins('typed', 0)
+    const saving = a.session!.save()
+    await net.run()
+    const saved = await saving
+    expect(saved.version).toBe(1)
+    expect(JSON.parse(decoder.decode(saved.bytes))).toEqual(['typed', 'one', 'two', 'three'])
+    expect(a.session!.status()).toMatchObject({ phase: 'live', unconfirmed: 0 })
+    expect(await shown(b)).toEqual(['typed', 'one', 'two', 'three'])
+  })
+
+  it('one made when its own edit is confirmed is ordinary, and no fingerprint catches it unconfirmed', async () => {
+    const net = new SimNetwork()
+    let follow = true
+    const follower = (bytes: Uint8Array): ToyEditor<LineOp> => {
+      const editor = toyLines.open(bytes)
+      const confirmed = editor.confirmed!
+      editor.confirmed = (ops) => {
+        confirmed(ops)
+        if (follow) {
+          follow = false
+          editor.perform(ins('auto', 0))
+        }
+      }
+      return editor
+    }
+    const a = await join(net, toyLines, 'a', { factory: follower })
+    const b = await join(net, toyLines, 'b')
+    await net.run()
+    // Ten minutes on, both clients are due a fingerprint the moment their version moves
+    net.clock.setTimeout(() => {}, 10 * 60 * 1000)
+    net.clock.fire()
+
+    a.editor!.perform(ins('x', 0))
+    await net.run()
+    for (const client of [a, b]) {
+      expect(client.session!.status()).toMatchObject({ phase: 'live', version: 2, unconfirmed: 0 })
+    }
+    expect(await opIds(net)).toEqual([['x'], ['auto']])
+    expect(await shown(b)).toEqual(await shown(a))
+  })
+})
+
+describe('getting work out', () => {
+  it('exportLocal returns what is on screen, unconfirmed edits included, while offline', async () => {
+    const net = new SimNetwork()
+    const a = await join(net, toyLines, 'a')
+    await join(net, toyLines, 'b')
+    await net.run()
+    net.break(a.link.current!)
+    a.editor!.perform(ins('offline', 0))
+
+    const file = await a.session!.exportLocal()
+    expect(JSON.parse(decoder.decode(file.bytes))).toEqual(['offline', 'one', 'two', 'three'])
+    expect(file).not.toHaveProperty('version')
+    expect(a.session!.status()).toMatchObject({ phase: 'offline', unconfirmed: 1 })
+    expect(a.editor!.editable).toBe(true)
+    expect(await opIds(net)).toEqual([])
+  })
+
+  it('exportLocal works on a failed session', async () => {
+    const net = new SimNetwork()
+    const a = await join(net, toyLines, 'a')
+    await net.run()
+    net.break(a.link.current!)
+    a.editor!.perform(ins('lost', 0))
+    await net.server.reset(DOC)
+    await net.run()
+    expect(a.session!.status().phase).toBe('failed')
+
+    const file = await a.session!.exportLocal()
+    expect(JSON.parse(decoder.decode(file.bytes))).toEqual(['lost', 'one', 'two', 'three'])
+    expect(a.editor!.editable).toBe(false)
+  })
+
+  it('exportLocal holds remote changes until its file is made', async () => {
+    const net = new SimNetwork()
+    const a = await join(net, toyLines, 'a')
+    const b = await join(net, toyLines, 'b')
+    await net.run()
+
+    // An editor that reads its document only after some asynchronous work
+    const gate = Promise.withResolvers<void>()
+    const produce = a.editor!.produceFile
+    a.editor!.produceFile = async () => {
+      await gate.promise
+      return produce()
+    }
+    const exporting = a.session!.exportLocal()
+    b.editor!.perform(ins('remote', 0))
+    for (;;) {
+      const next = oldest(net.upReady(), 'up', oldest(net.downReady(), 'down'))
+      if (!next) break
+      void (next.direction === 'up'
+        ? net.deliverUp(next.connection)
+        : net.deliverDown(next.connection))
+      await net.server.idle()
+      await b.engine.settled()
+    }
+    gate.resolve()
+    const file = await exporting
+    expect(JSON.parse(decoder.decode(file.bytes))).toEqual(['one', 'two', 'three'])
+
+    await net.run()
+    expect(await shown(a)).toEqual(['remote', 'one', 'two', 'three'])
+    expect(a.session!.status()).toMatchObject({ phase: 'live', version: 1 })
+  })
+
+  it('exportLocal includes an edit committed when input freezes, and the edit goes out as usual', async () => {
+    const net = new SimNetwork()
+    let composing: LineOp | null = null
+    const composer = (bytes: Uint8Array): ToyEditor<LineOp> => {
+      const editor = toyLines.open(bytes)
+      const setEditable = editor.setEditable
+      editor.setEditable = (value) => {
+        if (!value && composing) {
+          const op = composing
+          composing = null
+          editor.perform(op)
+        }
+        setEditable(value)
+      }
+      return editor
+    }
+    const a = await join(net, toyLines, 'a')
+    await net.run()
+    const b = await join(net, toyLines, 'b', { factory: composer })
+    await net.run()
+    composing = ins('typed', 0)
+
+    const file = await b.session!.exportLocal()
+    expect(JSON.parse(decoder.decode(file.bytes))).toEqual(['typed', 'one', 'two', 'three'])
+    await net.run()
+    expect(b.session!.status()).toMatchObject({ phase: 'live', unconfirmed: 0, version: 1 })
+    expect(await shown(a)).toEqual(['typed', 'one', 'two', 'three'])
+  })
+
+  it('a save that cannot confirm within 30 s rejects with offline, unfreezes input and keeps the edits', async () => {
+    const net = new SimNetwork()
+    const a = await join(net, toyLines, 'a')
+    await join(net, toyLines, 'b')
+    await net.run()
+    net.break(a.link.current!)
+    a.editor!.perform(ins('offline', 0))
+
+    const start = net.clock.now()
+    const saving = track(a.session!.save())
+    expect(a.editor!.editable).toBe(false)
+    while (saving.outcome === 'pending' && net.clock.fire()) await net.settle()
+    expect(codeOf(saving.outcome)).toBe('offline')
+    expect(net.clock.now() - start).toBe(30_000)
+    expect(a.editor!.editable).toBe(true)
+    expect(a.session!.status().unconfirmed).toBe(1)
+
+    await net.run()
+    expect(await opIds(net)).toEqual([['offline']])
+    const saved = await a.session!.save()
+    expect(saved.version).toBe(1)
+  })
+
+  it('a save on a closed session rejects with closed', async () => {
+    const net = new SimNetwork()
+    const a = await join(net, toyLines, 'a')
+    await net.run()
+    a.session!.close()
+    const saving = track(a.session!.save())
+    await net.settle()
+    expect(codeOf(saving.outcome)).toBe('closed')
+  })
+})
+
+describe('an edit too large for one change', () => {
+  it('fails the session with its size named, and is never sent', async () => {
+    const net = new SimNetwork()
+    const a = await join(net, toyLines, 'a')
+    const b = await join(net, toyLines, 'b')
+    await net.run()
+    const op = ins('x'.repeat(MAX_CHANGE_BYTES), 0)
+    a.editor!.perform(op)
+    await net.run()
+    expect(a.session!.status()).toMatchObject({ phase: 'failed', failure: 'adapter' })
+    const error = await a.session!.save().catch((reason: unknown) => reason)
+    expect(error).toBeInstanceOf(CollabError)
+    expect((error as CollabError).code).toBe('adapter')
+    expect((error as CollabError).message).toContain(`${JSON.stringify(op).length} bytes`)
+    expect(await opIds(net)).toEqual([])
+    expect(b.session!.status().phase).toBe('live')
   })
 })
