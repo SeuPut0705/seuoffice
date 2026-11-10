@@ -162,4 +162,12 @@ export const id = {
     'Skill yang Anda centang masuk ke satu file zip, satu folder per skill. Penerimanya bisa melepas zip itu di jendela aplikasi, atau memakai Tambah ▸ Dari file zip.',
   bundleSelectLabel: 'Sertakan {title}',
   bundleExport: 'Ekspor ({n})',
+  previewBodyEmpty: 'Petunjuknya kosong',
+  previewTruncated: 'Hanya {n} karakter pertama yang ditampilkan. Masih ada isi setelah ini.',
+  collisionKeeps:
+    'Ganti mempertahankan pengaturan skill: aktif atau tidak, kapan dipakai, dan tempat dipakai.',
+  discardAsk: 'Ada perubahan yang belum disimpan. Jika ditutup, perubahan itu hilang.',
+  discardKeep: 'Lanjut mengedit',
+  discardClose: 'Buang dan tutup',
+  dropOverlaySkills: 'File skill (.zip, SKILL.md) juga bisa dijatuhkan di sini',
 } satisfies Record<keyof typeof zh, string>

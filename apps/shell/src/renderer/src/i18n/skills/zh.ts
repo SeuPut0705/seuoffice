@@ -153,4 +153,11 @@ export const zh = {
     '勾选的技能会放进一个 zip 文件，每个技能一个文件夹。收到的人可以把这个 zip 拖到应用窗口上，或使用 添加 ▸ 从 zip 文件。',
   bundleSelectLabel: '包含 {title}',
   bundleExport: '导出（{n} 个）',
+  previewBodyEmpty: '正文为空',
+  previewTruncated: '只显示前 {n} 个字符，后面还有内容。',
+  collisionKeeps: '选择替换后，开关、使用时机和使用位置的设置保持不变。',
+  discardAsk: '有未保存的内容，关闭后将丢失。',
+  discardKeep: '继续编辑',
+  discardClose: '放弃并关闭',
+  dropOverlaySkills: '也可以拖入技能文件（.zip、SKILL.md）',
 }

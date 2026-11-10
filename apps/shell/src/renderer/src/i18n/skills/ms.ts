@@ -162,4 +162,12 @@ export const ms = {
     'Kemahiran yang anda tandakan dimasukkan ke dalam satu fail zip, satu folder bagi setiap kemahiran. Penerimanya boleh melepaskan zip itu pada tetingkap aplikasi, atau menggunakan Tambah ▸ Daripada fail zip.',
   bundleSelectLabel: 'Sertakan {title}',
   bundleExport: 'Eksport ({n})',
+  previewBodyEmpty: 'Arahannya kosong',
+  previewTruncated: 'Hanya {n} aksara pertama dipaparkan. Masih ada kandungan selepas ini.',
+  collisionKeeps:
+    'Gantikan mengekalkan tetapan kemahiran: hidup atau mati, bila digunakan dan tempat digunakan.',
+  discardAsk: 'Ada perubahan yang belum disimpan. Jika ditutup, perubahan itu hilang.',
+  discardKeep: 'Teruskan mengedit',
+  discardClose: 'Buang dan tutup',
+  dropOverlaySkills: 'Fail kemahiran (.zip, SKILL.md) juga boleh dilepaskan di sini',
 } satisfies Record<keyof typeof zh, string>

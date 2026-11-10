@@ -161,4 +161,12 @@ export const cs = {
     'Zaškrtnuté dovednosti se uloží do jednoho souboru zip, každá do vlastní složky. Kdo ho dostane, může zip přetáhnout na okno aplikace nebo použít Přidat ▸ Ze souboru zip.',
   bundleSelectLabel: 'Zahrnout {title}',
   bundleExport: 'Exportovat ({n})',
+  previewBodyEmpty: 'Pokyny jsou prázdné',
+  previewTruncated: 'Zobrazuje se jen prvních {n} znaků. Text pak pokračuje.',
+  collisionKeeps:
+    'Při nahrazení zůstane nastavení dovednosti stejné: zapnuto či vypnuto, kdy se používá a kde se používá.',
+  discardAsk: 'Máte neuložené změny. Zavřením o ně přijdete.',
+  discardKeep: 'Pokračovat v úpravách',
+  discardClose: 'Zahodit a zavřít',
+  dropOverlaySkills: 'Přetáhnout sem lze i soubory dovedností (.zip, SKILL.md)',
 } satisfies Record<keyof typeof zh, string>

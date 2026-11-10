@@ -165,4 +165,12 @@ export const nl = {
     'De vaardigheden die je aanvinkt gaan in één zip-bestand, een map per vaardigheid. Wie het krijgt, kan de zip op een appvenster neerzetten of Toevoegen ▸ Uit een zip-bestand gebruiken.',
   bundleSelectLabel: '{title} meenemen',
   bundleExport: 'Exporteren ({n})',
+  previewBodyEmpty: 'De instructies zijn leeg',
+  previewTruncated: 'Alleen de eerste {n} tekens worden getoond. Daarna gaat de tekst verder.',
+  collisionKeeps:
+    'Vervangen behoudt de instellingen van de vaardigheid: aan of uit, wanneer gebruikt en waar gebruikt.',
+  discardAsk: 'Er zijn niet-opgeslagen wijzigingen. Bij sluiten gaan ze verloren.',
+  discardKeep: 'Verder bewerken',
+  discardClose: 'Weggooien en sluiten',
+  dropOverlaySkills: 'Vaardigheidsbestanden (.zip, SKILL.md) kun je hier ook neerzetten',
 } satisfies Record<keyof typeof zh, string>

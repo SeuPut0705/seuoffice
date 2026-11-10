@@ -70,6 +70,7 @@ import { DriveNavIcon, DrivePanel, useDriveState } from './DrivePanel'
 import { driveUiText } from './i18n/strings-drive'
 import { ProjectsPanel, subscribeProjectScreen, type ProjectScreenRequest } from './ProjectsPanel'
 import { projectsText } from './i18n/strings-projects'
+import { skillsText } from './i18n/strings-skills'
 
 declare global {
   interface Window {
@@ -1019,7 +1020,7 @@ function AccountEntry({
  * hide the overlay mid-drag. Enter fires before the matching leave when
  * moving between elements, so the depth never dips to zero inside the window.
  */
-function DropToOpenOverlay(): ReactElement | null {
+export function DropToOpenOverlay(): ReactElement | null {
   const [visible, setVisible] = useState(false)
   useEffect(() => {
     let depth = 0
@@ -1054,7 +1055,7 @@ function DropToOpenOverlay(): ReactElement | null {
       window.removeEventListener('blur', onHide)
     }
   }, [])
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   if (!visible) return null
   return (
     <div className="home-drop-overlay" aria-hidden="true">
@@ -1076,6 +1077,7 @@ function DropToOpenOverlay(): ReactElement | null {
         </svg>
         <h2>{t('dropToOpenTitle')}</h2>
         <p>{OPEN_LOCAL_EXTENSIONS}</p>
+        <p className="home-drop-skills">{skillsText(lang, 'dropOverlaySkills')}</p>
       </div>
     </div>
   )

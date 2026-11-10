@@ -165,4 +165,12 @@ export const de = {
     'Die angehakten Skills kommen in eine zip-Datei, ein Ordner pro Skill. Wer sie erhält, kann die zip-Datei auf ein App-Fenster ziehen oder Hinzufügen ▸ Aus einer zip-Datei verwenden.',
   bundleSelectLabel: '{title} einschließen',
   bundleExport: 'Exportieren ({n})',
+  previewBodyEmpty: 'Die Anleitung ist leer',
+  previewTruncated: 'Es werden nur die ersten {n} Zeichen angezeigt. Danach geht der Text weiter.',
+  collisionKeeps:
+    'Beim Ersetzen bleiben die Einstellungen des Skills erhalten: ein oder aus, wann er genutzt wird und wo er genutzt wird.',
+  discardAsk: 'Es gibt nicht gespeicherte Änderungen. Beim Schließen gehen sie verloren.',
+  discardKeep: 'Weiter bearbeiten',
+  discardClose: 'Verwerfen und schließen',
+  dropOverlaySkills: 'Auch Skill-Dateien (.zip, SKILL.md) können hier abgelegt werden',
 } satisfies Record<keyof typeof zh, string>

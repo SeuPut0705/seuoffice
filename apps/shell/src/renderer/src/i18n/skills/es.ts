@@ -164,4 +164,12 @@ export const es = {
     'Las habilidades que marques van a un solo archivo zip, con una carpeta por habilidad. Quien lo reciba puede soltar el zip en una ventana de la aplicación o usar Añadir ▸ Desde un archivo zip.',
   bundleSelectLabel: 'Incluir {title}',
   bundleExport: 'Exportar ({n})',
+  previewBodyEmpty: 'Las instrucciones están vacías',
+  previewTruncated: 'Solo se muestran los primeros {n} caracteres. El texto sigue después.',
+  collisionKeeps:
+    'Reemplazar conserva los ajustes de la habilidad: activada o no, cuándo se usa y dónde se usa.',
+  discardAsk: 'Hay cambios sin guardar. Se perderán al cerrar.',
+  discardKeep: 'Seguir editando',
+  discardClose: 'Descartar y cerrar',
+  dropOverlaySkills: 'También puedes soltar archivos de habilidad (.zip, SKILL.md)',
 } satisfies Record<keyof typeof zh, string>

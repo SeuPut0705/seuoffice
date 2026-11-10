@@ -159,4 +159,12 @@ export const he = {
     'המיומנויות שסימנתם נכנסות לקובץ zip אחד, תיקייה לכל מיומנות. מי שמקבל אותו יכול לגרור את קובץ ה-zip לחלון של האפליקציה, או לבחור הוספה ▸ מקובץ zip.',
   bundleSelectLabel: 'הכללת {title}',
   bundleExport: 'ייצוא ({n})',
+  previewBodyEmpty: 'ההוראות ריקות',
+  previewTruncated: 'מוצגים רק {n} התווים הראשונים. יש תוכן נוסף אחריהם.',
+  collisionKeeps:
+    'בהחלפה הגדרות המיומנות נשארות כפי שהן: פועלת או כבויה, מתי משתמשים בה ואיפה משתמשים.',
+  discardAsk: 'יש שינויים שלא נשמרו. בסגירה הם יאבדו.',
+  discardKeep: 'להמשיך לערוך',
+  discardClose: 'לבטל שינויים ולסגור',
+  dropOverlaySkills: 'אפשר לשחרר כאן גם קובצי מיומנות (‎.zip, SKILL.md)',
 } satisfies Record<keyof typeof zh, string>

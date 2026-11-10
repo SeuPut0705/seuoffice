@@ -161,4 +161,11 @@ export const ja = {
     'チェックを入れたスキルを、スキルごとのフォルダーにして 1 つの zip ファイルにまとめます。受け取った人は、その zip をアプリのウィンドウにドロップするか、追加 ▸ zip ファイルから で取り込めます。',
   bundleSelectLabel: '{title} を含める',
   bundleExport: 'エクスポート ({n} 件)',
+  previewBodyEmpty: '本文が空です',
+  previewTruncated: '先頭の {n} 文字だけを表示しています。この後にも内容があります。',
+  collisionKeeps: '置き換えても、オン/オフ、使うタイミング、使う場所の設定はそのままです。',
+  discardAsk: '保存していない内容があります。閉じると失われます。',
+  discardKeep: '編集を続ける',
+  discardClose: '破棄して閉じる',
+  dropOverlaySkills: 'スキルファイル（.zip、SKILL.md）もドロップできます',
 } satisfies Record<keyof typeof zh, string>

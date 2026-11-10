@@ -1742,6 +1742,12 @@ body.vib .home {
   white-space: nowrap;
 }
 
+/* the line that says skill files are taken too: a sentence, so it wraps */
+.home-drop-card .home-drop-skills {
+  white-space: normal;
+  text-align: center;
+}
+
 /* Motion accessibility: suppress all animation for users who opt out */
 /* PowerPoint-sized minimum window (720px): the fixed 232px sidebar and the
    eight-column file grid no longer fit side by side */

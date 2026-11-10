@@ -22,11 +22,30 @@ const TITLE_KEY: Record<SkillEditorMode, SkillsStringKey> = {
   new: 'editorNew',
 }
 
+/** What the editor holds that a save would write */
+interface SkillDraft {
+  name: string
+  description: string
+  body: string
+  editors: SkillEditorsDraft
+}
+
+function sameDraft(a: SkillDraft, b: SkillDraft): boolean {
+  return (
+    a.name === b.name &&
+    a.description === b.description &&
+    a.body === b.body &&
+    String(a.editors) === String(b.editors)
+  )
+}
+
 /**
  * Read-only view, edit of an own skill, or a new skill (spec 5.1). The name
  * (what lists show, checked as it is typed), description and body are edited
  * here; the other files are listed and changed in the folder. A title the
- * skill already has is kept by the main process.
+ * skill already has is kept by the main process. Escape or a click outside
+ * asks before it throws away something typed or changed; Cancel is the
+ * person's own word and closes at once.
  */
 export function SkillEditor({
   api,
@@ -63,6 +82,15 @@ export function SkillEditor({
     () => skillEditorsOf(view?.editors) ?? 'all',
   )
   const [editorsFailed, setEditorsFailed] = useState(false)
+  /** what the dialog started from: empty for a new skill, the skill as read for an edit */
+  const [started, setStarted] = useState<SkillDraft>({
+    name: '',
+    description: '',
+    body: '',
+    editors: 'all',
+  })
+  /** the "discard what you typed?" question is showing */
+  const [asking, setAsking] = useState(false)
   const viewId = view?.id
   /** a skill the person cannot edit: its where-used choice goes to the settings file at once */
   const choosesInSettings = readOnly && !!view && !view.can.edit && !view.unreadable
@@ -83,7 +111,16 @@ export function SkillEditor({
       setName(skill.name)
       setOriginalName(skill.name)
       setFiles(skill.files)
-      if (mode === 'edit') setEditors(skillEditorsOf(skill.editors) ?? 'all')
+      const fileEditors: SkillEditorsDraft = skillEditorsOf(skill.editors) ?? 'all'
+      if (mode === 'edit') {
+        setEditors(fileEditors)
+        setStarted({
+          name: skill.name,
+          description: skill.description,
+          body: skill.body,
+          editors: fileEditors,
+        })
+      }
     })
     return () => {
       live = false
@@ -151,16 +188,33 @@ export function SkillEditor({
 
   const label = s(TITLE_KEY[mode])
   const heading = view ? skillDisplayTitle(view) : ''
+  const unsaved = !readOnly && !loading && !sameDraft(started, { name, description, body, editors })
+  const closeUnlessUnsaved = () => {
+    if (unsaved) setAsking(true)
+    else onClose()
+  }
 
   return (
     <SkillDialog
       label={label}
-      onCancel={onClose}
+      onCancel={closeUnlessUnsaved}
       footer={
         readOnly ? (
           <button type="button" className="set-btn" onClick={onClose}>
             {s('close')}
           </button>
+        ) : asking ? (
+          <div className="skl-confirm skl-discard" role="alertdialog" aria-label={s('discardAsk')}>
+            <span className="set-field-desc">{s('discardAsk')}</span>
+            <div className="skl-confirm-actions">
+              <button type="button" className="set-btn" autoFocus onClick={() => setAsking(false)}>
+                {s('discardKeep')}
+              </button>
+              <button type="button" className="set-btn danger" onClick={onClose}>
+                {s('discardClose')}
+              </button>
+            </div>
+          </div>
         ) : (
           <>
             <button type="button" className="set-btn" onClick={onClose}>

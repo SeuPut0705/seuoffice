@@ -163,4 +163,12 @@ export const it = {
     "Le abilità che selezioni finiscono in un unico file zip, una cartella per abilità. Chi lo riceve può trascinare lo zip su una finestra dell'app oppure usare Aggiungi ▸ Da un file zip.",
   bundleSelectLabel: 'Includi {title}',
   bundleExport: 'Esporta ({n})',
+  previewBodyEmpty: 'Le istruzioni sono vuote',
+  previewTruncated: 'Sono mostrati solo i primi {n} caratteri. Il testo continua dopo.',
+  collisionKeeps:
+    'Sostituisci mantiene le impostazioni dell’abilità: attiva o no, quando si usa e dove si usa.',
+  discardAsk: 'Ci sono modifiche non salvate. Chiudendo andranno perse.',
+  discardKeep: 'Continua a modificare',
+  discardClose: 'Scarta e chiudi',
+  dropOverlaySkills: 'Puoi rilasciare anche i file di abilità (.zip, SKILL.md)',
 } satisfies Record<keyof typeof zh, string>

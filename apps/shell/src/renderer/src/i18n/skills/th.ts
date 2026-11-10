@@ -160,4 +160,11 @@ export const th = {
     'สกิลที่คุณเลือกจะอยู่ในไฟล์ zip ไฟล์เดียว โดยแยกเป็นโฟลเดอร์ละหนึ่งสกิล ผู้ที่ได้รับสามารถลากไฟล์ zip มาวางบนหน้าต่างแอป หรือใช้ เพิ่ม ▸ จากไฟล์ zip',
   bundleSelectLabel: 'รวม {title}',
   bundleExport: 'ส่งออก ({n})',
+  previewBodyEmpty: 'คำแนะนำว่างเปล่า',
+  previewTruncated: 'แสดงเฉพาะ {n} อักขระแรก ยังมีเนื้อหาต่อจากนี้',
+  collisionKeeps: 'เมื่อแทนที่ การตั้งค่าของสกิลจะคงเดิม ทั้งเปิดหรือปิด ใช้เมื่อใด และใช้ที่ใด',
+  discardAsk: 'มีเนื้อหาที่ยังไม่ได้บันทึก หากปิดจะหายไป',
+  discardKeep: 'แก้ไขต่อ',
+  discardClose: 'ทิ้งแล้วปิด',
+  dropOverlaySkills: 'วางไฟล์สกิล (.zip, SKILL.md) ได้เช่นกัน',
 } satisfies Record<keyof typeof zh, string>

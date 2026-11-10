@@ -158,4 +158,11 @@ export const ko = {
     '체크한 스킬을 zip 파일 하나에 스킬마다 폴더로 담습니다. 받는 사람은 그 zip을 앱 창에 끌어 놓거나 추가 ▸ zip 파일에서로 넣습니다.',
   bundleSelectLabel: '{title} 넣기',
   bundleExport: '내보내기({n}개)',
+  previewBodyEmpty: '본문이 비어 있습니다',
+  previewTruncated: '앞의 {n}자까지만 보입니다. 뒤에 내용이 더 있습니다.',
+  collisionKeeps: '바꾸기를 해도 켜짐, 쓰는 때, 쓰는 곳 설정은 그대로입니다.',
+  discardAsk: '저장하지 않은 내용이 있습니다. 닫으면 사라집니다.',
+  discardKeep: '계속 쓰기',
+  discardClose: '버리고 닫기',
+  dropOverlaySkills: '스킬 파일(.zip, SKILL.md)도 놓을 수 있습니다',
 } satisfies Record<keyof typeof zh, string>

@@ -156,4 +156,11 @@ export const zhTW = {
     '勾選的技能會放進一個 zip 檔案，每個技能一個資料夾。收到的人可以把這個 zip 拖曳到應用程式視窗上，或使用 新增 ▸ 從 zip 檔案。',
   bundleSelectLabel: '包含 {title}',
   bundleExport: '匯出（{n} 個）',
+  previewBodyEmpty: '內文是空的',
+  previewTruncated: '只顯示前 {n} 個字元，後面還有內容。',
+  collisionKeeps: '選擇取代後，開關、使用時機和使用位置的設定維持不變。',
+  discardAsk: '有尚未儲存的內容，關閉後將會遺失。',
+  discardKeep: '繼續編輯',
+  discardClose: '捨棄並關閉',
+  dropOverlaySkills: '也可以拖入技能檔案（.zip、SKILL.md）',
 } satisfies Record<keyof typeof zh, string>

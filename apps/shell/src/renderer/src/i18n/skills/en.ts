@@ -163,4 +163,12 @@ export const en = {
     'The skills you tick go into one zip file, a folder per skill. Whoever gets it can drop the zip on an app window, or use Add ▸ From a zip file.',
   bundleSelectLabel: 'Include {title}',
   bundleExport: 'Export ({n})',
+  previewBodyEmpty: 'The instructions are empty',
+  previewTruncated: 'Only the first {n} characters are shown. There is more after this.',
+  collisionKeeps:
+    'Replace keeps the skill’s settings: on or off, when it is used and where it is used.',
+  discardAsk: 'You have unsaved changes. Closing discards them.',
+  discardKeep: 'Keep editing',
+  discardClose: 'Discard and close',
+  dropOverlaySkills: 'Skill files (.zip, SKILL.md) can be dropped too',
 } satisfies Record<keyof typeof zh, string>

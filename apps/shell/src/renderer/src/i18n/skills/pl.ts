@@ -162,4 +162,12 @@ export const pl = {
     'Zaznaczone umiejętności trafiają do jednego pliku zip, każda do osobnego folderu. Odbiorca może upuścić ten zip na okno aplikacji albo użyć Dodaj ▸ Z pliku zip.',
   bundleSelectLabel: 'Dołącz {title}',
   bundleExport: 'Eksportuj ({n})',
+  previewBodyEmpty: 'Instrukcje są puste',
+  previewTruncated: 'Widać tylko pierwsze {n} znaków. Dalej jest więcej tekstu.',
+  collisionKeeps:
+    'Zastąpienie zachowuje ustawienia umiejętności: włączona czy nie, kiedy używać i gdzie używać.',
+  discardAsk: 'Są niezapisane zmiany. Po zamknięciu przepadną.',
+  discardKeep: 'Edytuj dalej',
+  discardClose: 'Odrzuć i zamknij',
+  dropOverlaySkills: 'Można tu też upuścić pliki umiejętności (.zip, SKILL.md)',
 } satisfies Record<keyof typeof zh, string>

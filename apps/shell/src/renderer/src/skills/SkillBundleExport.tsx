@@ -94,7 +94,7 @@ export function SkillBundleExportDialog({
               <div className="skl-candidate-main">
                 <div className="skl-row-head">
                   <span className="skl-row-title">{title}</span>
-                  <code className="skl-name">{v.name}</code>
+                  {title !== v.name && <code className="skl-name">{v.name}</code>}
                 </div>
                 {v.template && v.templateExists && (
                   <div className="skl-badges">

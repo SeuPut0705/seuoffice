@@ -162,4 +162,12 @@ export const vi = {
     'Các kỹ năng bạn đánh dấu sẽ được đưa vào một tệp zip, mỗi kỹ năng một thư mục. Người nhận có thể thả tệp zip vào cửa sổ ứng dụng, hoặc dùng Thêm ▸ Từ tệp zip.',
   bundleSelectLabel: 'Bao gồm {title}',
   bundleExport: 'Xuất ({n})',
+  previewBodyEmpty: 'Phần hướng dẫn đang trống',
+  previewTruncated: 'Chỉ hiển thị {n} ký tự đầu. Phía sau vẫn còn nội dung.',
+  collisionKeeps:
+    'Thay thế vẫn giữ các cài đặt của kỹ năng: bật hay tắt, khi nào được dùng và nơi dùng.',
+  discardAsk: 'Có thay đổi chưa lưu. Đóng lại sẽ mất các thay đổi đó.',
+  discardKeep: 'Tiếp tục chỉnh sửa',
+  discardClose: 'Bỏ thay đổi và đóng',
+  dropOverlaySkills: 'Cũng có thể thả tệp kỹ năng (.zip, SKILL.md) vào đây',
 } satisfies Record<keyof typeof zh, string>

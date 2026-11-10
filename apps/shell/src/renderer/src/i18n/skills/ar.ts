@@ -158,4 +158,12 @@ export const ar = {
     'توضع المهارات التي تحددها في ملف zip واحد، بمجلد لكل مهارة. ويمكن لمن يستلمه أن يُفلت ملف zip على نافذة التطبيق، أو أن يستخدم إضافة ▸ من ملف zip.',
   bundleSelectLabel: 'تضمين {title}',
   bundleExport: 'تصدير ({n})',
+  previewBodyEmpty: 'التعليمات فارغة',
+  previewTruncated: 'يُعرض أول {n} حرف فقط. يوجد محتوى آخر بعد ذلك.',
+  collisionKeeps:
+    'عند الاستبدال تبقى إعدادات المهارة كما هي: مفعّلة أم لا، ووقت الاستخدام، ومكان الاستخدام.',
+  discardAsk: 'توجد تغييرات غير محفوظة. ستُفقد عند الإغلاق.',
+  discardKeep: 'متابعة التحرير',
+  discardClose: 'تجاهل وإغلاق',
+  dropOverlaySkills: 'يمكن أيضًا إفلات ملفات المهارات (‎.zip، SKILL.md)',
 } satisfies Record<keyof typeof zh, string>

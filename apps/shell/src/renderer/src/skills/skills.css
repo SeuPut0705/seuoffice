@@ -210,10 +210,9 @@
   width: 28px;
 }
 
+/* placed by MenuButton: under its button, above it near the bottom of the window */
 .skl-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  position: fixed;
   z-index: 5;
   display: flex;
   flex-direction: column;
@@ -323,6 +322,57 @@
   gap: 8px;
   padding: 12px 22px 18px;
   border-top: 1px solid var(--border-subtle);
+}
+
+/* a note beside the footer buttons, pushed to the start of the row */
+.skl-footer-note {
+  margin-inline-end: auto;
+  align-self: center;
+}
+
+/* the editor's "discard what you typed?" question takes the footer */
+.skl-discard {
+  flex: 1;
+  margin: 0;
+}
+
+.skl-read {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.skl-read-toggle {
+  font-size: 12px;
+}
+
+.skl-read-box,
+.skl-read-file {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.skl-read-text {
+  max-height: 240px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-hover);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+}
+
+.skl-read-more {
+  margin: 0;
 }
 
 .skl-editor-heading {
@@ -485,6 +535,10 @@
   align-items: center;
   gap: 8px;
   margin-top: 4px;
+}
+
+.skl-collision-note {
+  flex-basis: 100%;
 }
 
 .skl-choice.active {

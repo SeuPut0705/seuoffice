@@ -167,4 +167,12 @@ export const fr = {
     'Les compétences cochées vont dans un seul fichier zip, avec un dossier par compétence. La personne qui le reçoit peut déposer le zip sur une fenêtre de l’application, ou utiliser Ajouter ▸ Depuis un fichier zip.',
   bundleSelectLabel: 'Inclure {title}',
   bundleExport: 'Exporter ({n})',
+  previewBodyEmpty: 'Les instructions sont vides',
+  previewTruncated: 'Seuls les {n} premiers caractères sont affichés. Le texte continue ensuite.',
+  collisionKeeps:
+    'Remplacer conserve les réglages de la compétence : activée ou non, quand l’utiliser et où l’utiliser.',
+  discardAsk: 'Des modifications ne sont pas enregistrées. Elles seront perdues à la fermeture.',
+  discardKeep: 'Continuer la saisie',
+  discardClose: 'Abandonner et fermer',
+  dropOverlaySkills: 'Vous pouvez aussi déposer des fichiers de compétence (.zip, SKILL.md)',
 } satisfies Record<keyof typeof zh, string>
