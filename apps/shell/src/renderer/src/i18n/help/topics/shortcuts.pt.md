@@ -290,6 +290,7 @@ O atalho de filtro do Excel, Ctrl+Shift+L, não faz nada no Windows nem no Linux
 | Zoom com a roda do rato                                      | ⌘ + roda | Ctrl + roda     |
 | Mostrar ou ocultar as fórmulas nas células                   | ⌘`       | Ctrl+`          |
 | Expandir ou recolher a barra de fórmulas                     | ⌘⇧U      | Ctrl+Shift+U    |
+| Executar um botão da Barra de Ferramentas de Acesso Rápido pela posição (1.º ao 10.º) |          | Alt+1 … Alt+0   |
 
 ## Slides
 

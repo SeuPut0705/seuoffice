@@ -290,6 +290,7 @@ La scorciatoia di Excel per il filtro, Ctrl+Shift+L, non fa nulla su Windows o L
 | Zoom con la rotella del mouse                                          | ⌘ + scorri | Ctrl + scorri   |
 | Mostra o nascondi le formule nelle celle                               | ⌘`         | Ctrl+`          |
 | Espandi o comprimi la barra delle formule                              | ⌘⇧U        | Ctrl+Shift+U    |
+| Esegui un pulsante della barra di accesso rapido in base alla posizione (dal 1º al 10º) |            | Alt+1 … Alt+0   |
 
 ## Slides
 

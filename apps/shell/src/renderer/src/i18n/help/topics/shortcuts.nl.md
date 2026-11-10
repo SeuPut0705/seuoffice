@@ -290,6 +290,7 @@ De sneltoets voor filteren van Excel, Ctrl+Shift+L, doet niets op Windows of Lin
 | Zoomen met het muiswiel                                          | ⌘ + scrollen | Ctrl + scrollen |
 | Formules in de cellen tonen of verbergen                         | ⌘`           | Ctrl+`          |
 | De formulebalk uitvouwen of inklappen                            | ⌘⇧U          | Ctrl+Shift+U    |
+| Een knop op de werkbalk Snelle toegang uitvoeren op positie (1e tot en met 10e) |              | Alt+1 … Alt+0   |
 
 ## Slides
 

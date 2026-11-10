@@ -290,6 +290,7 @@ Zkratka filtru Excelu, Ctrl+Shift+L, na Windows ani Linuxu nedělá nic. Na macO
 | Přiblížení kolečkem myši                                  | ⌘ + posouvání | Ctrl + posouvání |
 | Zobrazit nebo skrýt vzorce v buňkách                      | ⌘`            | Ctrl+`           |
 | Rozbalit nebo sbalit řádek vzorců                         | ⌘⇧U           | Ctrl+Shift+U     |
+| Spustit tlačítko panelu Rychlý přístup podle pozice (1. až 10.) |               | Alt+1 … Alt+0    |
 
 ## Slides
 

@@ -290,6 +290,7 @@ El atajo de filtro de Excel, Ctrl+Shift+L, no hace nada en Windows ni en Linux. 
 | Zoom con la rueda del ratón                                        | ⌘ + rueda | Ctrl + rueda    |
 | Mostrar u ocultar las fórmulas en las celdas                       | ⌘`        | Ctrl+`          |
 | Ampliar o reducir la barra de fórmulas                             | ⌘⇧U       | Ctrl+Shift+U    |
+| Ejecutar un botón de la barra de acceso rápido según su posición (1.º a 10.º) |           | Alt+1 … Alt+0   |
 
 ## Slides
 

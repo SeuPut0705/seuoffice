@@ -290,6 +290,7 @@ Pintasan filter milik Excel, Ctrl+Shift+L, tidak melakukan apa pun di Windows ma
 | Perbesar dengan roda tetikus                                      | ⌘ + roda tetikus | Ctrl + roda tetikus |
 | Tampilkan atau sembunyikan rumus di dalam sel                     | ⌘`               | Ctrl+`              |
 | Perluas atau ciutkan Bilah Rumus                                  | ⌘⇧U              | Ctrl+Shift+U        |
+| Jalankan tombol Bilah Alat Akses Cepat menurut posisinya (ke-1 sampai ke-10) |                  | Alt+1 … Alt+0       |
 
 ## Slides
 

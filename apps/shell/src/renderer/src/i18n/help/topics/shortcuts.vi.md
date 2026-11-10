@@ -290,6 +290,7 @@ Phím lọc của Excel là Ctrl+Shift+L, không làm gì trên Windows hay Linu
 | Thu phóng bằng lăn chuột                                     | ⌘ + lăn chuột | Ctrl + lăn chuột |
 | Hiện hoặc ẩn công thức trong các ô                           | ⌘`            | Ctrl+`           |
 | Mở rộng hoặc thu gọn thanh công thức                         | ⌘⇧U           | Ctrl+Shift+U     |
+| Chạy nút trên Thanh công cụ Truy nhập Nhanh theo vị trí (thứ 1 đến thứ 10) |               | Alt+1 … Alt+0    |
 
 ## Slides
 

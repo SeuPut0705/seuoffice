@@ -290,6 +290,7 @@ Le raccourci de filtre d’Excel, Ctrl+Shift+L, ne fait rien sous Windows ni sou
 | Zoom à la molette                                                     | ⌘ + molette | Ctrl + molette  |
 | Afficher ou masquer les formules dans les cellules                    | ⌘`          | Ctrl+`          |
 | Agrandir ou réduire la barre de formule                               | ⌘⇧U         | Ctrl+Shift+U    |
+| Exécuter un bouton de la barre d’outils Accès rapide selon sa position (1er à 10e) |             | Alt+1 … Alt+0   |
 
 ## Slides
 

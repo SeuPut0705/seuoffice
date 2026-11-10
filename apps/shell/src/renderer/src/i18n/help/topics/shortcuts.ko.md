@@ -290,6 +290,7 @@ Excel의 필터 단축키 Ctrl+Shift+L은 Windows나 Linux에서 아무 일도 �
 | 마우스 휠로 확대/축소                             | ⌘ + 휠 | Ctrl + 휠       |
 | 셀의 수식 표시 또는 숨기기                        | ⌘`     | Ctrl+`          |
 | 수식 입력줄 펼치기 또는 접기                      | ⌘⇧U    | Ctrl+Shift+U    |
+| 빠른 실행 도구 모음의 단추 실행(왼쪽부터 1~10번째) |        | Alt+1 … Alt+0   |
 
 ## Slides
 

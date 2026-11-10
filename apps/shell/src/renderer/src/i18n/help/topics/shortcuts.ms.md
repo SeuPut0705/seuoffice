@@ -290,6 +290,7 @@ Pintasan penapis Excel, Ctrl+Shift+L, tidak melakukan apa-apa pada Windows atau 
 | Zum dengan roda tetikus                                               | ⌘ + roda tetikus | Ctrl + roda tetikus |
 | Tunjuk atau sorok formula dalam sel                                   | ⌘`               | Ctrl+`              |
 | Kembangkan atau ciutkan bar formula                                   | ⌘⇧U              | Ctrl+Shift+U        |
+| Jalankan butang Bar Alat Capaian Pantas mengikut kedudukan (pertama hingga kesepuluh) |                  | Alt+1 … Alt+0       |
 
 ## Slides
 

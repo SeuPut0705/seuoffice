@@ -290,6 +290,7 @@ Excels Kürzel für den Filter, Ctrl+Shift+L, bewirkt unter Windows und Linux ni
 | Mit dem Mausrad zoomen                                           | ⌘ + rollen | Ctrl + rollen   |
 | Formeln in den Zellen ein- oder ausblenden                       | ⌘`         | Ctrl+`          |
 | Formelleiste ausklappen oder einklappen                          | ⌘⇧U        | Ctrl+Shift+U    |
+| Schaltfläche der Symbolleiste für den Schnellzugriff nach Position ausführen (1. bis 10.) |            | Alt+1 … Alt+0   |
 
 ## Slides
 

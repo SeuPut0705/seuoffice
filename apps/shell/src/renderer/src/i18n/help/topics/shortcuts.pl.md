@@ -290,6 +290,7 @@ Skrót filtru Excela, Ctrl+Shift+L, nie działa w Windows ani Linux. Naciśnij �
 | Zoom kółkiem myszy                                              | ⌘ + przewijanie | Ctrl + przewijanie |
 | Pokaż lub ukryj formuły w komórkach                             | ⌘`              | Ctrl+`             |
 | Rozwiń lub zwiń pasek formuły                                   | ⌘⇧U             | Ctrl+Shift+U       |
+| Uruchom przycisk paska Szybki dostęp według pozycji (od 1. do 10.) |                 | Alt+1 … Alt+0      |
 
 ## Slides
 
