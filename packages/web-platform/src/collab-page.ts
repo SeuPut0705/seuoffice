@@ -166,8 +166,10 @@ export async function joinPageCollab<Handles, Op>(options: {
         options.status?.(status)
       }
       joined.subscribe(report)
-      report(joined.status())
+      // opened first: a host that sets its title on opened must not overwrite the dirty state
+      // a late joiner reports straight away
       releaseOpened(true)
+      report(joined.status())
     })()
     return attaching
   }
