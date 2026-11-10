@@ -27,7 +27,7 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
 use crate::odf_formula::{self, Names};
-use crate::ods_print::{PageStyles, print_titles, split_outside_quotes};
+use crate::ods_print::{PageStyles, print_titles, read_print_extras, split_outside_quotes};
 use crate::ods_styles::{DEFAULT_CELL_STYLE, ResolvedStyle, StyleRegistry, ValueKind};
 use crate::xlsx_package::escape_xml;
 use crate::{
@@ -134,6 +134,18 @@ fn reject_same_target(source: &Path, target: &Path) -> Result<(), SidecarError> 
     Ok(())
 }
 
+/// The package and the worksheet part behind a sheet, for the few settings
+/// the model does not carry.
+fn worksheet_part(
+    sessions: &WorkbookSessions,
+    session_id: &str,
+    index: usize,
+) -> Option<(PathBuf, String)> {
+    let session = sessions.sessions.get(session_id)?;
+    let runtime = session.runtimes.get(index)?;
+    Some((session.path.clone(), runtime.worksheet_path.clone()))
+}
+
 /// True when the package holds a VBA project. Macros have no ODF counterpart,
 /// and a macro-enabled workbook that quietly loses them is the kind of loss
 /// the caller has to be able to name.
@@ -165,7 +177,10 @@ fn write_document(
         for (index, sheet) in metadata.sheets.iter().enumerate() {
             let wide = read_sheet_wide(sessions, &metadata.session_id, sheet)?;
             counters.count_sheet(&wide, sheet);
-            let master = pages.register(wide.page_setup.as_ref(), &mut registry);
+            let extras = worksheet_part(sessions, &metadata.session_id, index)
+                .map(|(package, part)| read_print_extras(&package, &part))
+                .unwrap_or_default();
+            let master = pages.register(wide.page_setup.as_ref(), extras, &mut registry);
             let table_style = format!("ta{}", index + 1);
             table_styles.push(table_style_xml(&table_style, sheet, &master));
             let filter = sheet_filter(index, sheet, &wide);
