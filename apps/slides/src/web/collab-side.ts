@@ -26,6 +26,8 @@ import { currentSession, forPage, renderDeck } from './session'
 export interface SlidesCollabHandles {
   /** the path of the deck the renderer shows */
   path: string
+  /** commit the open text box and the notes draft, as the renderer's save does first; saves nothing */
+  commitDrafts(): Promise<void>
 }
 
 type Notice =
@@ -50,7 +52,7 @@ const NOTICES: Record<'ko' | 'en', Record<Notice, string>> = {
     blocked:
       '함께 편집하는 동안에는 이 편집을 쓸 수 없습니다. 글자, 슬라이드 추가와 삭제, 슬라이드 노트만 고칠 수 있습니다.',
     viewOnly: '이 프레젠테이션은 보기만 할 수 있습니다.',
-    link: '함께 편집하는 동안에는 http, https, mailto 주소로 가는 링크가 있는 글만 고칠 수 있습니다.',
+    link: '함께 편집하는 동안 새 링크는 http, https, mailto 주소로만 걸 수 있습니다. 다른 링크는 빠졌습니다.',
     tooLong: '글이 너무 길어서 함께 편집하는 프레젠테이션에 넣을 수 없습니다.',
     unshareable: '이 글은 함께 편집하는 프레젠테이션에 넣을 수 없습니다.',
   },
@@ -64,7 +66,7 @@ const NOTICES: Record<'ko' | 'en', Record<Notice, string>> = {
     blocked:
       'This edit is not available while editing together. You can change text, add and delete slides, and write speaker notes.',
     viewOnly: 'This presentation is view only.',
-    link: 'While editing together, text can only hold links to http, https or mailto addresses.',
+    link: 'While editing together, a new link can only go to an http, https or mailto address. Other links were left out.',
     tooLong: 'This text is too long to share.',
     unshareable: 'This text cannot be shared.',
   },
@@ -172,7 +174,7 @@ export function openSlidesCollab(
   const refusedByPeers = (edit: SlidesEdit): boolean => {
     const fault = unshareable(edit)
     if (!fault) return false
-    notice(fault === 'link' ? 'link' : fault === 'size' ? 'tooLong' : 'unshareable')
+    notice(fault === 'size' ? 'tooLong' : 'unshareable')
     return true
   }
 
@@ -186,6 +188,7 @@ export function openSlidesCollab(
       if (refusedByPeers({ kind: 'text', at, paragraphs: input.paragraphs })) return null
       const done = collab.edit(() => textEdit(session, newId(), at, input.paragraphs))
       if (!done) return null
+      if (done.applied.linksDropped) notice('link')
       const index = slideIndexOf(deck, at.slide)
       // the renderer puts the result on the slide it shows at `slideIndex`: when other people's
       // edits moved this one, it gets the whole deck instead

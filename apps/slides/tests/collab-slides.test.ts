@@ -62,7 +62,8 @@ import {
   type SlidesCollab,
 } from '../src/web/collab-adapter'
 import { applyOp, fingerprint, slideIdAt, type SlidesOp } from '../src/web/collab-ops'
-import { decodeOp, encodeOp } from '../src/web/collab-wire'
+import { decodeOp, encodeOp, unshareable } from '../src/web/collab-wire'
+import { decodeLinkTarget } from '../src/shared/run-link'
 
 const FORMAT = { name: 'pptx', schema: 2 }
 const CREATION_ID =
@@ -777,5 +778,226 @@ describe('a text box holding a slide number field', () => {
       applyOp(a.session.opened, { id: 'u0.1', edit: { kind: 'text', at, paragraphs: broken } }),
     ).toThrow()
     expect(Math.random).toBe(real)
+  })
+})
+
+describe('links on the runs of a text box', () => {
+  const TEL = 'tel:+82-2-0000-0000'
+  const FILE = '../docs/plan.docx'
+  let linkDeck: OpenedPptx
+
+  const boxOf = (opened: OpenedPptx, index: number): TextElement =>
+    opened.deck.slides[0]!.elements.filter(editable)[index]!
+  const linksOf = (opened: OpenedPptx, index: number): (string | undefined)[] =>
+    boxOf(opened, index).text!.paragraphs.flatMap((p) => p.runs.map((r) => r.hyperlink))
+  const wordsOf = (opened: OpenedPptx, index: number): string =>
+    textOf(boxOf(opened, index).text!.paragraphs)
+
+  beforeAll(async () => {
+    const opened = await openPptx(await createBlankPptx())
+    const box = (y: number) => ({
+      op: 'addElement',
+      target: { slide: 0 },
+      kind: 'textbox',
+      offset: { x: 457200, y, cx: 3600000, cy: 500000 },
+      paragraphs: [{ runs: [{ text: 'plain' }] }],
+    })
+    const made = runTxn(opened, {
+      ops: [
+        { op: 'addBlankSlide', target: { slide: 0 } },
+        { op: 'addBlankSlide', target: { slide: 0 } },
+        box(300000),
+        box(1100000),
+        box(1900000),
+      ],
+    })
+    expect(made.applied).toBe(true)
+    const [jumps, foreign] = made.records!.slice(2).map((record) => record.created![0]!)
+    const linked = runTxn(opened, {
+      ops: [
+        {
+          op: 'setText',
+          target: { slide: 0, el: jumps },
+          paragraphs: [
+            {
+              runs: [
+                { text: 'see ' },
+                // a jump inside the deck: what PowerPoint writes as ppaction://hlinksldjump
+                { text: 'the last slide', link: { kind: 'slide', slideIndex: 2 } },
+                { text: ' or ' },
+                { text: 'stop', link: { kind: 'action', action: 'endshow' } },
+              ],
+            },
+          ],
+        },
+        {
+          op: 'setText',
+          target: { slide: 0, el: foreign },
+          paragraphs: [
+            {
+              runs: [
+                { text: 'call ' },
+                // targets other editors wrote, which the app would not let a person add
+                { text: 'the office', link: { kind: 'url', url: TEL } },
+                { text: ' about ' },
+                { text: 'the plan', link: { kind: 'url', url: FILE } },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    expect(linked.applied).toBe(true)
+    linkDeck = await openPptx(await savePptx(opened))
+    expect(linksOf(linkDeck, 0)).toEqual([undefined, 'slide:2', undefined, 'action:endshow'])
+    expect(linksOf(linkDeck, 1)).toEqual([undefined, TEL, undefined, FILE])
+  })
+
+  /** The box as the text editor sends it back: every run with the link its span holds */
+  function retyped(opened: OpenedPptx, index: number, first: string): EditParagraph[] {
+    const runs = boxOf(opened, index).text!.paragraphs[0]!.runs
+    return [
+      {
+        srcPara: 0,
+        level: 0,
+        runs: runs.map((run, i) => ({
+          text: i === 0 ? first : run.text,
+          srcRun: i,
+          redact: null,
+          link: run.hyperlink ? decodeLinkTarget(run.hyperlink) : null,
+        })),
+      },
+    ]
+  }
+
+  /** `a` types into box `index`; `b` takes the edit from the wire */
+  function typeAndSend(index: number, first: string) {
+    const a = openPage(cloneDeck(linkDeck))
+    const b = openPage(cloneDeck(linkDeck))
+    const sent: SlidesOp[] = []
+    a.collab.adapter.listen((ops) => sent.push(...ops))
+    a.collab.adapter.setEditable(true)
+    const at = a.collab.refOf(boxOf(a.session.opened, index).id)!
+    const paragraphs = retyped(a.session.opened, index, first)
+    const done = a.collab.edit(() => textEdit(a.session, 'u0.0', at, paragraphs))
+    return { a, b, sent, done, at, paragraphs }
+  }
+
+  it('a box with a slide jump and a show action is edited, and both stay on both pages', async () => {
+    const { a, b, sent, done, paragraphs, at } = typeAndSend(0, 'look at ')
+    expect(unshareable({ kind: 'text', at, paragraphs })).toBeNull()
+    expect(done?.applied.linksDropped).toBeFalsy()
+    b.collab.adapter.integrate(
+      sent.map((op) => decodeOp(encodeOp(op))),
+      [],
+    )
+    for (const page of [a, b]) {
+      expect(wordsOf(page.session.opened, 0)).toBe('look at the last slide or stop')
+      expect(linksOf(page.session.opened, 0)).toEqual([
+        undefined,
+        'slide:2',
+        undefined,
+        'action:endshow',
+      ])
+    }
+    expect(await fingerprint(b.session.opened)).toBe(await fingerprint(a.session.opened))
+    const saved = await openPptx(await a.collab.adapter.produceFile().then((file) => file.bytes))
+    expect(linksOf(saved, 0)).toEqual([undefined, 'slide:2', undefined, 'action:endshow'])
+  })
+
+  it('a box whose file already links to a phone number and a file path is edited, and both links stay', async () => {
+    const { a, b, sent, done, paragraphs, at } = typeAndSend(1, 'please call ')
+    // nothing stops the person, and nothing is taken out of their edit
+    expect(unshareable({ kind: 'text', at, paragraphs })).toBeNull()
+    expect(done).not.toBeNull()
+    expect(done?.applied.linksDropped).toBeFalsy()
+    b.collab.adapter.integrate(
+      sent.map((op) => decodeOp(encodeOp(op))),
+      [],
+    )
+    for (const page of [a, b]) {
+      expect(wordsOf(page.session.opened, 1)).toBe('please call the office about the plan')
+      expect(linksOf(page.session.opened, 1)).toEqual([undefined, TEL, undefined, FILE])
+    }
+    expect(await fingerprint(b.session.opened)).toBe(await fingerprint(a.session.opened))
+    const saved = await openPptx(await b.collab.adapter.produceFile().then((file) => file.bytes))
+    expect(linksOf(saved, 1)).toEqual([undefined, TEL, undefined, FILE])
+  })
+
+  it('a link the box already has may move to other words of the same box', async () => {
+    const a = openPage(cloneDeck(linkDeck))
+    const b = openPage(cloneDeck(linkDeck))
+    const at = a.collab.refOf(boxOf(a.session.opened, 1).id)!
+    const op: SlidesOp = {
+      id: 'u0.0',
+      edit: {
+        kind: 'text',
+        at,
+        paragraphs: [{ runs: [{ text: 'office', link: { kind: 'url', url: TEL } }] }],
+      },
+    }
+    for (const page of [a, b]) {
+      expect(applyOp(page.session.opened, decodeOp(encodeOp(op)))?.linksDropped).toBeFalsy()
+      expect(linksOf(page.session.opened, 1)).toEqual([TEL])
+    }
+    expect(await fingerprint(b.session.opened)).toBe(await fingerprint(a.session.opened))
+  })
+
+  it.each([
+    ['a script', 'javascript:alert(1)'],
+    ['a script, in other letters', 'JaVaScRiPt:alert(1)'],
+    ['a file on the reader’s disk', 'file:///etc/passwd'],
+    ['a link another box has, not this one', TEL],
+    ['a link with spaces around it', ' https://example.com '],
+  ])(
+    'a peer cannot put %s into a box as a new link: the edit lands without it, the same on every page',
+    async (_name, url) => {
+      const a = openPage(cloneDeck(linkDeck))
+      const b = openPage(cloneDeck(linkDeck))
+      const at = a.collab.refOf(boxOf(a.session.opened, 2).id)!
+      // what a page running other code could send
+      const wire = encodeOp({
+        id: 'x9.0',
+        edit: {
+          kind: 'text',
+          at,
+          paragraphs: [
+            { runs: [{ text: 'click ' }, { text: 'here', link: { kind: 'url', url } }] },
+          ],
+        },
+      })
+      for (const page of [a, b]) {
+        page.collab.adapter.integrate([decodeOp(wire)], [])
+        expect(wordsOf(page.session.opened, 2)).toBe('click here')
+        expect(linksOf(page.session.opened, 2)).toEqual([undefined, undefined])
+      }
+      expect(await fingerprint(b.session.opened)).toBe(await fingerprint(a.session.opened))
+      const bytes = (await a.collab.adapter.produceFile()).bytes
+      const saved = await openPptx(bytes)
+      expect(linksOf(saved, 2)).toEqual([undefined, undefined])
+      const slide = saved.deck.slides[0]!.path
+      const rels = slide.replace('slides/', 'slides/_rels/') + '.rels'
+      const written = `${saved.archive.readText(slide)}${saved.archive.readText(rels) ?? ''}`
+      if (url !== TEL) expect(written.toLowerCase()).not.toContain(url.trim().toLowerCase())
+    },
+  )
+
+  it('a person’s own new link outside the gate is left out and they are told; a link the app allows stays', () => {
+    const a = openPage(cloneDeck(linkDeck))
+    a.collab.adapter.listen(() => {})
+    a.collab.adapter.setEditable(true)
+    const at = a.collab.refOf(boxOf(a.session.opened, 2).id)!
+    const done = a.collab.edit(() =>
+      textEdit(a.session, 'u0.0', at, [
+        {
+          runs: [
+            { text: 'files ', link: { kind: 'url', url: 'ftp://example.com/files' } },
+            { text: 'site', link: { kind: 'url', url: 'https://example.com/' } },
+          ],
+        },
+      ]),
+    )
+    expect(done?.applied.linksDropped).toBe(true)
+    expect(linksOf(a.session.opened, 2)).toEqual([undefined, 'https://example.com/'])
   })
 })

@@ -8,13 +8,14 @@ import { fileURLToPath } from 'node:url'
 import {
   addElement,
   createBlankPptx,
+  ensureRunLinkRels,
   getSlideNotes,
   openPptx,
   savePptx,
   type SlideElement,
 } from '@genoffice/pptx-engine'
 import { expect, test, type Browser, type Frame, type Locator } from '@playwright/test'
-import { openCoEdited, settled, type CoEditor, type CoFile } from './collab'
+import { exportedFile, openCoEdited, settled, type CoEditor, type CoFile } from './collab'
 
 const repo = fileURLToPath(new URL('../../..', import.meta.url))
 const FIXTURE = resolve(repo, 'packages/pptx-engine/tests/fixtures/01_standard_business.pptx')
@@ -281,6 +282,23 @@ interface SavedDeck {
   slides: Array<{ texts: string[]; notes: string }>
 }
 
+/** Each slide of a pptx file, read back with the engine: the text of its boxes and its notes */
+async function slidesOf(bytes: Uint8Array): Promise<SavedDeck['slides']> {
+  const opened = await openPptx(bytes)
+  const texts = (elements: SlideElement[]): string[] =>
+    elements.flatMap((el) =>
+      el.type === 'group'
+        ? texts(el.children)
+        : 'text' in el && el.text
+          ? [el.text.paragraphs.map((p) => p.runs.map((r) => r.text).join('')).join('\n')]
+          : [],
+    )
+  return opened.deck.slides.map((slide) => ({
+    texts: texts(slide.elements),
+    notes: getSlideNotes(opened.archive, slide.path),
+  }))
+}
+
 /** The file the host stored last, once it is newer than `previous`, read back with the engine */
 async function savedDeck(editor: CoEditor, previous: SavedDeck | null = null): Promise<SavedDeck> {
   const read = () =>
@@ -292,22 +310,7 @@ async function savedDeck(editor: CoEditor, previous: SavedDeck | null = null): P
     .poll(async () => (await read())?.version ?? null, { timeout: 60_000 })
     .not.toBe(previous?.version ?? null)
   const saved = (await read())!
-  const opened = await openPptx(new Uint8Array(saved.bytes))
-  const texts = (elements: SlideElement[]): string[] =>
-    elements.flatMap((el) =>
-      el.type === 'group'
-        ? texts(el.children)
-        : 'text' in el && el.text
-          ? [el.text.paragraphs.map((p) => p.runs.map((r) => r.text).join('')).join('\n')]
-          : [],
-    )
-  return {
-    version: saved.version,
-    slides: opened.deck.slides.map((slide) => ({
-      texts: texts(slide.elements),
-      notes: getSlideNotes(opened.archive, slide.path),
-    })),
-  }
+  return { version: saved.version, slides: await slidesOf(new Uint8Array(saved.bytes)) }
 }
 
 /**
@@ -607,6 +610,121 @@ test('the app’s own save saves the co-edited version, and editing goes on afte
   expect(second.version).toBe(later)
   expect(second.slides[1]!.texts).toEqual(['after the save', AGENDA_BODY])
   expect(second.slides[0]!.texts).toEqual(['Q3 Business Review', 'from bob'])
+  expect(unexpectedErrors()).toEqual([])
+})
+
+test('an export is the deck as the person sees it, the box and the notes they are still typing included; nothing is stored', async ({
+  browser,
+}) => {
+  const documentId = freshDocument()
+  const alice = await open(browser, documentId, 'alice')
+  const bob = await open(browser, documentId, 'bob')
+
+  // notes she is still writing: the box has the focus, and nothing of them is in the deck
+  await showSlide(alice, 0)
+  await notesBox(alice).click()
+  await alice.page.keyboard.type('notes at the export')
+  expect(await alice.status()).toMatchObject({ version: 0, unconfirmed: 0 })
+  const withNotes = await slidesOf(new Uint8Array(await exportedFile(alice)))
+  expect(withNotes[0]!.notes).toBe('notes at the export')
+  expect(withNotes[0]!.texts).toEqual(['Q3 Business Review', 'Fiscal Year 2026'])
+  const version = await settled([alice, bob])
+
+  // a text box still open
+  await typeInto(alice, 0, 'Fiscal Year 2026', 'typed at the export')
+  expect(await alice.status()).toMatchObject({ version, unconfirmed: 0 })
+  const withText = await slidesOf(new Uint8Array(await exportedFile(alice)))
+  expect(withText[0]!.texts).toEqual(['Q3 Business Review', 'typed at the export'])
+  expect(withText[0]!.notes).toBe('notes at the export')
+  expect(await alice.page.evaluate(() => window.seuLauncher?.saved ?? null)).toBeNull()
+
+  // what was committed for the export is an edit like any other
+  await settled([alice, bob])
+  await expect.poll(async () => (await shownDeck(bob))[0]).toContain('typed at the export')
+  await showSlide(bob, 0)
+  await expect(notesBox(bob)).toHaveValue('notes at the export')
+  expect(await bob.page.evaluate(() => window.seuLauncher?.saved ?? null)).toBeNull()
+  expect(unexpectedErrors()).toEqual([])
+})
+
+const PHONE = 'tel:+82-2-0000-0000'
+
+/** One box whose runs link to a phone number and to a slide: links another editor wrote */
+async function linkedDeck(): Promise<CoFile> {
+  const deck = await openPptx(await createBlankPptx())
+  const box = addElement(deck.deck.slides[0]!, {
+    kind: 'textbox',
+    // wide enough for the text to stay on one line
+    offset: { x: 609600, y: 914400, cx: 10972800, cy: 914400 },
+    paragraphs: [
+      {
+        runs: [
+          { text: 'call ' },
+          { text: 'the office', hyperlink: PHONE },
+          { text: ' or go to ' },
+          { text: 'the start', hyperlink: 'slide:0' },
+          { text: ' today' },
+        ],
+      },
+    ],
+  })
+  ensureRunLinkRels(deck, 0, box.text!.paragraphs)
+  box.dirty = true
+  return {
+    name: 'linked.pptx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    buffer: Buffer.from(await savePptx(deck)),
+  }
+}
+
+/** The linked words of the first slide of the file the host stored last, with where each goes */
+async function storedLinks(editor: CoEditor): Promise<Array<[string, string]>> {
+  const bytes = await editor.page.evaluate(() => Array.from(window.seuLauncher!.saved!.bytes))
+  const opened = await openPptx(new Uint8Array(bytes))
+  return opened.deck.slides[0]!.elements.flatMap((el) =>
+    'text' in el && el.text
+      ? el.text.paragraphs.flatMap((p) =>
+          p.runs.flatMap((run): Array<[string, string]> =>
+            run.hyperlink ? [[run.text, run.hyperlink]] : [],
+          ),
+        )
+      : [],
+  )
+}
+
+test('a box that already links to a phone number and to a slide is edited, and its links stay on both pages and in the file', async ({
+  browser,
+}) => {
+  const file = await linkedDeck()
+  const documentId = freshDocument()
+  const alice = await open(browser, documentId, 'alice', 'edit', file)
+  const bob = await open(browser, documentId, 'bob', 'edit', file)
+
+  // words added after the last one: the editor sends the whole box, its links included
+  await showSlide(alice, 0)
+  const at = await nodeAt(alice, 0, { text: 'call the office' })
+  await alice.page.mouse.dblclick(at.x, at.y)
+  await expect(textEditor(alice)).toBeFocused()
+  await expect(textEditor(alice)).toHaveText('call the office or go to the start today')
+  await alice.page.keyboard.press('ControlOrMeta+A')
+  await alice.page.keyboard.press('ArrowRight')
+  await alice.page.keyboard.type(' and tomorrow', { delay: 10 })
+  await leaveBox(alice)
+  // nothing was refused, and nothing was taken out of the edit
+  await expect(alice.frame.getByText(/넣을 수 없습니다|다른 링크는 빠졌습니다/)).toHaveCount(0)
+
+  await settled([alice, bob])
+  const typed = 'call the office or go to the start today and tomorrow'
+  for (const editor of [alice, bob]) {
+    await expect.poll(async () => (await shownDeck(editor))[0]).toEqual([typed])
+  }
+  await bob.page.locator('#save').click()
+  const saved = await savedDeck(bob)
+  expect(saved.slides[0]!.texts).toEqual([typed])
+  expect(await storedLinks(bob)).toEqual([
+    ['the office', PHONE],
+    ['the start', 'slide:0'],
+  ])
   expect(unexpectedErrors()).toEqual([])
 })
 

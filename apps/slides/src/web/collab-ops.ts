@@ -15,6 +15,7 @@
  * - what the originator's layout decided after a text edit (autofit size or shrink) travels in
  *   the edit, because another page lays text out at another width.
  */
+import { safeExternalUrl } from '@genoffice/electron-utils/safe-external-url'
 import {
   elementDurableId,
   ensureCreationId,
@@ -32,6 +33,7 @@ import {
   type TextElement,
 } from '@genoffice/pptx-engine'
 import { runTxn, type EditParagraph, type Op as PptxOp, type TxnResult } from '@genoffice/pptx-ops'
+import { DECK_LINK_PROTOCOLS } from '../shared/run-link'
 
 /** An element as every page names it */
 export interface ElementRef {
@@ -70,6 +72,8 @@ export interface Applied {
   made?: string
   /** a text edit changed paragraph levels, so its slide was parsed again */
   levelDirty?: boolean
+  /** a text edit named a link its box may not get: it was applied without that link */
+  linksDropped?: boolean
 }
 
 export const slideIndexOf = (opened: OpenedPptx, slide: string): number =>
@@ -247,15 +251,58 @@ export function fitText(opened: OpenedPptx, at: ElementRef, fit: Autofit): void 
   }
 }
 
+/** The box `at` names, a group's child included (as the executor finds it) */
+function textElementAt(opened: OpenedPptx, at: ElementRef): TextElement | undefined {
+  const slide = opened.deck.slides[slideIndexOf(opened, at.slide)]
+  const top = slide?.elements.find((el) => matchesElementRef(el, at.group ?? at.el))
+  if (!at.group) return top as TextElement | undefined
+  if (top?.type !== 'group') return undefined
+  return top.children.find(
+    (child) => groupChildDurableId(top, child) === at.el || elementDurableId(child) === at.el,
+  ) as TextElement | undefined
+}
+
+/**
+ * `paragraphs` with every link address their box may not get taken off its run; null when all
+ * may stay. A box may link to what the app lets a person link to (the desktop's set-link gate:
+ * http, https, mailto), and to what it links to already: the editor sends a box whole, so the
+ * addresses another editor wrote into the file (a phone number, a file path) come back with
+ * every edit of the box and must stay. Anything else is new, from whichever page, and a script
+ * or a local file must never be written into the deck.
+ *
+ * Decided on the deck the edit lands on, which is the same on every page at that point of the
+ * log: every page drops the same links.
+ */
+function withoutNewUnsafeLinks(
+  opened: OpenedPptx,
+  at: ElementRef,
+  paragraphs: readonly EditParagraph[],
+): EditParagraph[] | null {
+  const has = (url: string): boolean =>
+    !!textElementAt(opened, at)?.text?.paragraphs.some((p) =>
+      p.runs.some((run) => run.hyperlink === url),
+    )
+  const stays = (url: string): boolean =>
+    safeExternalUrl(url, { allowedProtocols: DECK_LINK_PROTOCOLS }) === url || has(url)
+  const unsafe = (run: EditParagraph['runs'][number]): boolean =>
+    run.link?.kind === 'url' && !stays(run.link.url)
+  if (!paragraphs.some((p) => p.runs.some(unsafe))) return null
+  return paragraphs.map((p) => ({
+    ...p,
+    runs: p.runs.map((run) => (unsafe(run) ? { ...run, link: null } : run)),
+  }))
+}
+
 function applyEdit(opened: OpenedPptx, edit: SlidesEdit): Applied | null {
   switch (edit.kind) {
     case 'text': {
+      const gated = withoutNewUnsafeLinks(opened, edit.at, edit.paragraphs)
       const r = txn(opened, [
         {
           op: 'setText',
           target: { slide: edit.at.slide, el: edit.at.el },
           // the executor may normalize what it is given; the edit stays as it was sent
-          paragraphs: structuredClone(edit.paragraphs),
+          paragraphs: structuredClone(gated ?? edit.paragraphs),
           ...(edit.at.group ? { group: edit.at.group } : {}),
         },
       ])
@@ -263,7 +310,10 @@ function applyEdit(opened: OpenedPptx, edit: SlidesEdit): Applied | null {
       if (edit.autofit) fitText(opened, edit.at, edit.autofit)
       // setText's own record (pptx-ops text-ops.ts)
       const after = r.records?.[0]?.after as { levelDirty?: boolean } | undefined
-      return after?.levelDirty === true ? { levelDirty: true } : {}
+      return {
+        ...(after?.levelDirty === true ? { levelDirty: true } : {}),
+        ...(gated ? { linksDropped: true } : {}),
+      }
     }
     case 'duplicateSlide':
       return created(opened, () =>

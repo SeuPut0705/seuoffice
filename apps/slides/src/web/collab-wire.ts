@@ -5,11 +5,13 @@
  * runs the op executor on this page's deck. `decodeOp` takes only what the app itself sends:
  * the five edit kinds, with the fields the app writes and nothing beside them; slides and
  * elements named the way every page names them (`s_<n>`, `e_<guid8>` or `e_<cNvPr id>`), never
- * a part path, a position or an id a page made while parsing; a run's link only to where the
- * app lets a deck link; names and tokens that end up in the slide's XML in the shapes the text
- * editor produces; and text, paragraph and run counts a person's own edit stays under, so that
- * no single edit can keep a page busy. Anything else throws, and the engine stops this page's
- * session instead of applying the edit.
+ * a part path, a position or an id a page made while parsing; names and tokens that end up in
+ * the slide's XML in the shapes the text editor produces; and text, paragraph and run counts a
+ * person's own edit stays under, so that no single edit can keep a page busy. Anything else
+ * throws, and the engine stops this page's session instead of applying the edit.
+ *
+ * Where a run's link may go is not decided here: a text box is sent whole, links the file
+ * already had included, so that takes the deck the edit lands on (`applyOp`, collab-ops.ts).
  *
  * `shape<T>` names every field of `T`: a field added to an edit, a paragraph or a run does not
  * compile here until it is given a check.
@@ -17,16 +19,14 @@
  * A person's own text and notes pass the same check before they are applied (collab-side.ts),
  * so a page never sends what its peers would stop on.
  */
-import { safeExternalUrl } from '@genoffice/electron-utils/safe-external-url'
 import { NAMED_ACTIONS } from '@genoffice/pptx-engine/named-action'
 import type { EditParagraph, EditRun, LinkTargetOp } from '@genoffice/pptx-ops'
-import { DECK_LINK_PROTOCOLS } from '../shared/run-link'
 import type { Autofit, ElementRef, SlidesEdit, SlidesOp } from './collab-ops'
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json }
 
-/** Why an edit is not taken: not a shape the app writes, too long or too many, or a link target */
-export type WireFault = 'shape' | 'size' | 'link'
+/** Why an edit is not taken: not a shape the app writes, or too long or too many */
+export type WireFault = 'shape' | 'size'
 
 export class WireError extends Error {
   constructor(
@@ -47,7 +47,8 @@ export const WIRE_LIMITS = {
   runs: 2_000,
   /** a font name, a withheld run's label */
   name: 256,
-  url: 2_048,
+  /** a link's address; a file's own may be long */
+  url: 8_192,
   /** base64 characters of a picture bullet */
   bulletImage: 2_000_000,
   /** slides one edit deletes */
@@ -174,13 +175,13 @@ const fontName: Check = (v, at) => {
 const token = matching(/^[A-Za-z][A-Za-z0-9]{0,39}$/, 'a name of the format')
 const emu = number(-WIRE_LIMITS.emu, WIRE_LIMITS.emu)
 
-/** An address a deck may carry (the desktop's set-link gate): never a script or a local file */
+/** A link's address as text: which addresses a box may link to is decided where the edit lands */
 const linkUrl: Check = (v, at) => {
-  if (typeof v !== 'string') fail('shape', at, 'an address')
+  if (typeof v !== 'string' || v.length < 1) fail('shape', at, 'an address')
   if (v.length > WIRE_LIMITS.url) fail('size', at, `at most ${WIRE_LIMITS.url} characters`)
-  // as the link dialog leaves it: trimmed
-  if (safeExternalUrl(v, { allowedProtocols: DECK_LINK_PROTOCOLS }) !== v) {
-    fail('link', at, 'an http, https or mailto address')
+  for (let i = 0; i < v.length; i++) {
+    const c = v.charCodeAt(i)
+    if (c < 0x20 || c === 0x7f) fail('shape', at, 'an address')
   }
 }
 

@@ -222,21 +222,15 @@ describe('only the edits and the fields the app writes', () => {
   })
 })
 
-describe('a link on a run goes only where the app lets a deck link', () => {
-  it.each([
-    'javascript:alert(1)',
-    'JaVaScRiPt:alert(1)',
-    ' javascript:alert(1)',
-    'data:text/html,<script>alert(1)</script>',
-    'file:///etc/passwd',
-    'vbscript:msgbox(1)',
-    'ms-msdt:/id PCWDiagnostic',
-    'ftp://example.com/x',
-    'slide7.xml',
-    '',
-  ])('%s is not taken', (url) => {
-    expect(() => decodeOp(withRun({ link: { kind: 'url', url } }))).toThrow()
-  })
+describe('a link on a run', () => {
+  // which addresses a box may link to takes the deck the edit lands on: collab-slides.test.ts
+  it.each(['tel:+82-2-0000-0000', '../docs/plan.docx', 'ftp://example.com/x'])(
+    'an address a file may already hold is read: %s',
+    (url) => {
+      const op = withRun({ link: { kind: 'url', url } })
+      expect(decodeOp(op)).toEqual(op)
+    },
+  )
 
   it.each([
     ['a link of an unknown kind', { kind: 'macro', name: 'x' }],
@@ -248,8 +242,11 @@ describe('a link on a run goes only where the app lets a deck link', () => {
     ],
     [
       'an address longer than any real one',
-      { kind: 'url', url: `https://example.com/${'a'.repeat(5000)}` },
+      { kind: 'url', url: `https://example.com/${'a'.repeat(WIRE_LIMITS.url)}` },
     ],
+    ['an address with a control character', { kind: 'url', url: 'https://example.com/\u0000' }],
+    ['an empty address', { kind: 'url', url: '' }],
+    ['an address that is not text', { kind: 'url', url: 7 }],
   ])('%s is not taken', (_name, link) => {
     expect(() => decodeOp(withRun({ link }))).toThrow()
   })
@@ -316,12 +313,6 @@ describe('why a person’s own edit would not be taken', () => {
       unshareable(text([para('hello', { link: { kind: 'url', url: 'https://example.com' } })])),
     ).toBeNull()
     expect(unshareable({ kind: 'notes', slide: 's_1', text: 'hello' })).toBeNull()
-  })
-
-  it('a link the deck may not carry', () => {
-    expect(unshareable(text([para('x', { link: { kind: 'url', url: 'file:///C:/x.exe' } })]))).toBe(
-      'link',
-    )
   })
 
   it('its length', () => {

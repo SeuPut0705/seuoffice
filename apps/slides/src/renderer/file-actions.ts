@@ -127,6 +127,19 @@ export async function save(getCtx: () => ActionCtx, auto = false): Promise<boole
 }
 
 /**
+ * Commit what the person still has open (a text box, a notes draft), as a save does before it
+ * writes; nothing is saved. Same queue as save(): the web's co-editing export asks for the
+ * deck as it is on screen, and must not run into a save pass.
+ */
+export function commitDrafts(getCtx: () => ActionCtx): Promise<void> {
+  return runSerialized(async () => {
+    const ctx = getCtx()
+    await flushActiveEdit(ctx)
+    await ctx.flushNotes()
+  })
+}
+
+/**
  * Project folders (spec 6): the run a create flow handed to this untitled deck
  * ended well, so the deck is saved into its panel's project without a dialog.
  * The main process picks the folder and a free name; with no project nothing
