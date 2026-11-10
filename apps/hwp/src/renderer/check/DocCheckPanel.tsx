@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { IconClose } from '@genoffice/ui/icons'
 import {
   ADMINISTRATION_RULES,
   audit,
@@ -149,7 +150,7 @@ export function DocCheckPanel({ bridge, format, onClose, onHandOff, revision = 0
           onClick={onClose}
           aria-label={t('dismiss')}
         >
-          ×
+          <IconClose size={14} />
         </button>
       </header>
 

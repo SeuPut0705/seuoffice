@@ -278,18 +278,19 @@ De sneltoets voor filteren van Excel, Ctrl+Shift+L, doet niets op Windows of Lin
 
 ### Venster
 
-| Actie                                                            | macOS        | Windows / Linux |
-| ---------------------------------------------------------------- | ------------ | --------------- |
-| De werkmap opslaan                                               | ⌘S           | Ctrl+S          |
-| Opslaan als                                                      | ⇧⌘S          | Ctrl+Shift+S    |
-| Een werkmap openen                                               | ⌘O           | Ctrl+O          |
-| Afdrukken                                                        | ⌘P           | Ctrl+P          |
-| De werkmap sluiten (macOS) / De app afsluiten (Windows en Linux) | ⌘W           | Ctrl+Q          |
-| De gebruikershandleiding openen                                  | F1           | F1              |
-| Inzoomen                                                         | ⌘=           | Ctrl+=          |
-| Zoomen met het muiswiel                                          | ⌘ + scrollen | Ctrl + scrollen |
-| Formules in de cellen tonen of verbergen                         | ⌘`           | Ctrl+`          |
-| De formulebalk uitvouwen of inklappen                            | ⌘⇧U          | Ctrl+Shift+U    |
+| Actie                                                                           | macOS        | Windows / Linux |
+| ------------------------------------------------------------------------------- | ------------ | --------------- |
+| De werkmap opslaan                                                              | ⌘S           | Ctrl+S          |
+| Opslaan als                                                                     | ⇧⌘S          | Ctrl+Shift+S    |
+| Een werkmap openen                                                              | ⌘O           | Ctrl+O          |
+| Afdrukken                                                                       | ⌘P           | Ctrl+P          |
+| De werkmap sluiten (macOS) / De app afsluiten (Windows en Linux)                | ⌘W           | Ctrl+Q          |
+| De gebruikershandleiding openen                                                 | F1           | F1              |
+| Inzoomen                                                                        | ⌘=           | Ctrl+=          |
+| Zoomen met het muiswiel                                                         | ⌘ + scrollen | Ctrl + scrollen |
+| Formules in de cellen tonen of verbergen                                        | ⌘`           | Ctrl+`          |
+| De formulebalk uitvouwen of inklappen                                           | ⌘⇧U          | Ctrl+Shift+U    |
+| Een knop op de werkbalk Snelle toegang uitvoeren op positie (1e tot en met 10e) |              | Alt+1 … Alt+0   |
 
 ## Slides
 

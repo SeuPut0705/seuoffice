@@ -59,8 +59,8 @@ export const en = {
   hlStartFailed: 'AI highlights could not start. {reason}',
   hlDeleteFailed: 'The earlier suggestions could not be deleted.',
   hlUnavailable: 'AI highlights are not available in this window.',
-  hlRunning: 'AI highlights — text blocks {done}/{total}',
-  hlDone: 'AI highlights done — {count} suggestions',
+  hlRunning: 'AI highlights: text blocks {done}/{total}',
+  hlDone: 'AI highlights done: {count} suggestions',
   hlReport: '{received} suggestions received, {dropped} dropped',
   hlReportFound: '{received} suggestions received, {dropped} dropped, {notFound} not located',
   hlFailedBatches:

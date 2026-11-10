@@ -84,7 +84,7 @@ export const en = {
   refusedDifferentProject: 'That folder belongs to another project, so nothing was changed.',
   deleteConfirm: 'Move the chat “{title}” to the trash?',
   cancel: 'Cancel',
-  actionFailed: 'That did not work. Please try again.',
+  actionFailed: 'That did not work. Try again.',
   consolidateFailed: 'Could not tidy up. The memory is unchanged.',
   contextMissing:
     'The project folder could not be found, so this request went without the project’s context.',

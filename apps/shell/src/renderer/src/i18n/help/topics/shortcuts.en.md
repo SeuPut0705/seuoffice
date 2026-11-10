@@ -290,6 +290,7 @@ Excel's filter shortcut, Ctrl+Shift+L, does nothing on Windows or Linux. Press �
 | Zoom with the mouse wheel                                   | ⌘ + scroll | Ctrl + scroll   |
 | Show or hide formulas in the cells                          | ⌘`         | Ctrl+`          |
 | Expand or collapse the formula bar                          | ⌘⇧U        | Ctrl+Shift+U    |
+| Run a Quick Access Toolbar button by position (1st to 10th) |            | Alt+1 … Alt+0   |
 
 ## Slides
 

@@ -8,7 +8,6 @@
   --agent-notice-bg: #fff7e6;
   --agent-notice-border: #f3d69a;
   --agent-notice-text: #7a4b00;
-  --agent-on-accent: #ffffff;
 }
 
 [data-theme='dark'] {
@@ -18,7 +17,6 @@
   --agent-notice-bg: #3a2f17;
   --agent-notice-border: #6b5424;
   --agent-notice-text: #f2d398;
-  --agent-on-accent: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -29,7 +27,6 @@
     --agent-notice-bg: #3a2f17;
     --agent-notice-border: #6b5424;
     --agent-notice-text: #f2d398;
-    --agent-on-accent: #ffffff;
   }
 }
 
@@ -236,13 +233,13 @@ body {
 }
 
 .agent-btn-primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--agent-on-accent);
+  border-color: var(--color-btn-primary);
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
 }
 
 .agent-btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
+  background: var(--color-btn-primary-hover);
 }
 
 .agent-log {
@@ -446,8 +443,8 @@ body {
 }
 
 .agent .set-btn.primary {
-  background: var(--accent);
-  color: var(--agent-on-accent);
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
 }
 
 .agent .set-field-desc {

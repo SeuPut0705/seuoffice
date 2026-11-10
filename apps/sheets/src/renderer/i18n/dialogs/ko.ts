@@ -417,7 +417,7 @@ export const ko = {
     '각 영역은 첫 열의 레이블로 행을 맞춥니다. 결과는 {target}부터 출력되며 원본 영역을 참조하는 실시간 수식입니다.',
   dlgConsNotePosition:
     '각 영역을 위치별로 통합합니다. 결과는 {target}부터 출력되며 원본 영역을 참조하는 실시간 수식입니다.',
-  dlgConsBadRef: '잘못된 참조: {ref} — A1:C5 또는 Sheet2!A1:C5 형식으로 입력하세요.',
+  dlgConsBadRef: '잘못된 참조: {ref}. A1:C5 또는 Sheet2!A1:C5 형식으로 입력하세요.',
   dlgConsNeedOneRef: '원본 참조를 하나 이상 추가하세요.',
 
   dlgSubtotalTitle: '부분합',
@@ -440,7 +440,7 @@ export const ko = {
   dlgNmAdd: '추가',
   dlgNmUpdate: '업데이트',
 
-  dlgFnTitle: '함수 삽입 — 대상 {target}',
+  dlgFnTitle: '함수 삽입: 대상 {target}',
   dlgFnSearchPlaceholder: '함수 검색…',
   dlgFnNoMatch: '일치하는 함수가 없습니다.',
   dlgFnCatRecent: '최근에 사용한 함수',
@@ -507,8 +507,8 @@ export const ko = {
   dlgFnDescNow: '현재 날짜와 시간을 반환합니다(다시 계산됨).',
   dlgFnDescDate: '연, 월, 일로 날짜를 만듭니다.',
   dlgFnDescYear: '날짜의 연도를 반환합니다.',
-  dlgFnDescMonth: '날짜의 월(1–12)을 반환합니다.',
-  dlgFnDescDay: '날짜의 일(1–31)을 반환합니다.',
+  dlgFnDescMonth: '날짜의 월(1~12)을 반환합니다.',
+  dlgFnDescDay: '날짜의 일(1~31)을 반환합니다.',
   dlgFnDescEdate: '지정한 개월 수 전이나 후의 날짜를 반환합니다.',
   dlgFnDescPmt: '정기적으로 일정 금액을 지불하는 대출의 상환금을 계산합니다.',
   dlgFnDescFv: '투자의 미래 가치를 반환합니다.',

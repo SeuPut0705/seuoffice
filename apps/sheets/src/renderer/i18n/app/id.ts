@@ -708,6 +708,13 @@ export const id = {
   appSaveAs: 'Simpan Sebagai',
   appUndo: 'Urungkan',
   appRedo: 'Ulangi',
+  appQuickAccessCustomize: 'Sesuaikan Bilah Alat Akses Cepat',
+  appQuickAccessHint:
+    'Tekan Alt dan angka untuk menjalankan tombol pada posisi itu, dihitung dari kiri.',
+  appQuickAccessMoveEarlier: 'Pindahkan ke depan',
+  appQuickAccessMoveLater: 'Pindahkan ke belakang',
+  appQuickAccessReset: 'Kembalikan ke default',
+  appQuickAccessFull: 'Bilah alat memuat paling banyak 10 tombol.',
   appUnsavedEditOne: '● {count} pengeditan belum disimpan',
   appUnsavedEditMany: '● {count} pengeditan belum disimpan',
   appSavedState: 'Tersimpan',

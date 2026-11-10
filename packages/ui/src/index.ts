@@ -283,7 +283,20 @@ export {
   type RibbonDensity,
 } from './ribbon-collapse'
 export { AiReplyProgress, AiTypingIndicator } from './AiTypingIndicator'
-export { IconSend, IconStop, type IconProps } from './icons'
+export {
+  IconArrowDown,
+  IconArrowLeft,
+  IconArrowUp,
+  IconCheck,
+  IconChevronLeft,
+  IconChevronRight,
+  IconClose,
+  IconPicture,
+  IconSend,
+  IconStop,
+  IconTable,
+  type IconProps,
+} from './icons'
 export { AiMark, type AiMarkProps } from './AiMark'
 export { Markdown, type MarkdownNav } from './Markdown'
 export { FILE_NAV_SCHEME, createFileNav, fileNavHref, parseFileNavHref } from './file-nav'

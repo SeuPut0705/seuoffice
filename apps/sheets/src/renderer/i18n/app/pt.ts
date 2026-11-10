@@ -746,6 +746,13 @@ export const pt = {
   appSaveAs: 'Salvar Como',
   appUndo: 'Desfazer',
   appRedo: 'Refazer',
+  appQuickAccessCustomize: 'Personalizar a Barra de Ferramentas de Acesso Rápido',
+  appQuickAccessHint:
+    'Pressione Alt e um número para executar o botão nessa posição, contando a partir da esquerda.',
+  appQuickAccessMoveEarlier: 'Mover para o início',
+  appQuickAccessMoveLater: 'Mover para o fim',
+  appQuickAccessReset: 'Restaurar padrão',
+  appQuickAccessFull: 'A barra comporta até 10 botões.',
   appUnsavedEditOne: '● {count} edição não salva',
   appUnsavedEditMany: '● {count} edições não salvas',
   appSavedState: 'Salvo',

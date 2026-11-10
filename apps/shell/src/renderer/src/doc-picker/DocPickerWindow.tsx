@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
+import { IconCheck } from '@genoffice/ui/icons'
 import type {
   DocItemGroup,
   DocItemState,
@@ -130,7 +131,7 @@ export function DocPickerWindow({ lang, api }: { lang: Lang; api: DocPickerApi }
                           title={reason ? t(reason) : undefined}
                         >
                           <span className="doc-check" aria-hidden="true">
-                            {picked ? '✓' : ''}
+                            {picked && <IconCheck size={12} />}
                           </span>
                           <span className="doc-meta">
                             <span className="doc-title">{item.title}</span>

@@ -72,7 +72,7 @@ export const ko = {
   ignoredEmpty: '없습니다.',
   restoreAria: '되돌리기: {name}',
   chatsDesc: '이 프로젝트에서 나눈 대화입니다. 누르면 마지막으로 쓴 문서의 AI 창에서 이어 갑니다.',
-  actionFailed: '하지 못했습니다. 다시 시도해 주세요.',
+  actionFailed: '하지 못했습니다. 다시 시도하세요.',
   loadFailed: '프로젝트를 읽지 못했습니다.',
   addExistingFolder: '기존 폴더를 프로젝트로',
   trustStatus: '상태: {state}',

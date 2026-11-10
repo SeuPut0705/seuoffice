@@ -86,7 +86,7 @@ export const en = {
   ribbonFontEastAsia: 'East Asian font',
   ribbonFontLatin: 'Latin font',
   ribbonFontFamilyTip: 'Font',
-  ribbonFontDialogTip: 'Font — character scale and spacing are on the Advanced tab',
+  ribbonFontDialogTip: 'Font: character scale and spacing are on the Advanced tab',
   ribbonFontsCommon: 'Common fonts',
   ribbonFontsSystem: 'System fonts',
   ribbonFontsHangul: 'Korean fonts',

@@ -278,18 +278,19 @@ La scorciatoia di Excel per il filtro, Ctrl+Shift+L, non fa nulla su Windows o L
 
 ### Finestra
 
-| Azione                                                                 | macOS      | Windows / Linux |
-| ---------------------------------------------------------------------- | ---------- | --------------- |
-| Salva la cartella di lavoro                                            | ⌘S         | Ctrl+S          |
-| Salva come                                                             | ⇧⌘S        | Ctrl+Shift+S    |
-| Apri una cartella di lavoro                                            | ⌘O         | Ctrl+O          |
-| Stampa                                                                 | ⌘P         | Ctrl+P          |
-| Chiudi la cartella di lavoro (macOS) / Esci dall’app (Windows e Linux) | ⌘W         | Ctrl+Q          |
-| Apri la guida utente                                                   | F1         | F1              |
-| Ingrandisci                                                            | ⌘=         | Ctrl+=          |
-| Zoom con la rotella del mouse                                          | ⌘ + scorri | Ctrl + scorri   |
-| Mostra o nascondi le formule nelle celle                               | ⌘`         | Ctrl+`          |
-| Espandi o comprimi la barra delle formule                              | ⌘⇧U        | Ctrl+Shift+U    |
+| Azione                                                                                  | macOS      | Windows / Linux |
+| --------------------------------------------------------------------------------------- | ---------- | --------------- |
+| Salva la cartella di lavoro                                                             | ⌘S         | Ctrl+S          |
+| Salva come                                                                              | ⇧⌘S        | Ctrl+Shift+S    |
+| Apri una cartella di lavoro                                                             | ⌘O         | Ctrl+O          |
+| Stampa                                                                                  | ⌘P         | Ctrl+P          |
+| Chiudi la cartella di lavoro (macOS) / Esci dall’app (Windows e Linux)                  | ⌘W         | Ctrl+Q          |
+| Apri la guida utente                                                                    | F1         | F1              |
+| Ingrandisci                                                                             | ⌘=         | Ctrl+=          |
+| Zoom con la rotella del mouse                                                           | ⌘ + scorri | Ctrl + scorri   |
+| Mostra o nascondi le formule nelle celle                                                | ⌘`         | Ctrl+`          |
+| Espandi o comprimi la barra delle formule                                               | ⌘⇧U        | Ctrl+Shift+U    |
+| Esegui un pulsante della barra di accesso rapido in base alla posizione (dal 1º al 10º) |            | Alt+1 … Alt+0   |
 
 ## Slides
 

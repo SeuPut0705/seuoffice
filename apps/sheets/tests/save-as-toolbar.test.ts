@@ -12,8 +12,10 @@ const iconSrc = read('src/renderer/ribbon-icons.tsx')
 
 describe('Save As quick-access command', () => {
   it('renders a dedicated, independently enabled button beside Save', () => {
+    // the quick-access row is built from a table: each built-in button keeps
+    // its own icon, enabled state and handler
     expect(shellSrc).toMatch(
-      /<SaveIcon \/>[\s\S]*?disabled=\{!canSaveAs\}[\s\S]*?onClick=\{onSaveAs\}[\s\S]*?<SaveAsIcon \/>/,
+      /icon: <SaveIcon \/>, disabled: !canSave, run: onSave[\s\S]*?icon: <SaveAsIcon \/>, disabled: !canSaveAs, run: onSaveAs/,
     )
   })
 

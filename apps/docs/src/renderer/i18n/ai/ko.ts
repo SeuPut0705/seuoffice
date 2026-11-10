@@ -15,7 +15,8 @@ export const ko = {
   aiPolishPrompt: '문서 전체를 다듬어 더 명확하고 매끄럽게 만들어 주세요',
   aiPolishSelectionPrompt: '선택한 내용을 다듬어 더 명확하고 매끄럽게 만들어 주세요',
   aiScopeSelection: '선택됨: {words}자',
-  aiScopeSelectionTip: '다시 쓰기류 지시는 기본적으로 선택 영역에만 적용됩니다. 클릭하여 미리 보기',
+  aiScopeSelectionTip:
+    '고쳐 쓰기 요청은 따로 말하지 않으면 선택한 부분에만 적용됩니다. 누르면 미리 봅니다',
   aiScopeClearTitle: '선택 범위 해제',
   aiAskBtn: 'AI 수정 요청',
   aiAskTitle: '선택 영역에 대한 수정 요청',
@@ -105,13 +106,13 @@ export const ko = {
   aiTruncatedNote: '(응답이 길이 제한으로 잘려 내용이 불완전할 수 있습니다.)',
   aiImagesSendFailed: '이미지 첨부 파일을 읽을 수 없어 이 메시지는 이미지 없이 전송되었습니다',
   aiImageReadFail: '{name}: 읽기 실패',
-  aiTooManyImages: '이미지는 메시지당 최대 {max}장까지 보낼 수 있으며, 초과분은 무시되었습니다',
+  aiTooManyImages: '이미지는 메시지 하나에 {max}장까지 보낼 수 있습니다. 넘는 이미지는 뺐습니다',
   aiUnknownError: '알 수 없는 오류',
   aiTimeoutError:
-    'AI 요청 시간 초과: 네트워크 응답이 없어 중단되었습니다. 연결을 확인한 후 다시 시도해 주세요',
-  aiOverloadedError: 'AI 서비스가 혼잡합니다. 잠시 후 다시 시도해 주세요',
+    'AI 요청 시간 초과: 네트워크 응답이 없어 중단되었습니다. 연결을 확인한 후 다시 시도하세요',
+  aiOverloadedError: 'AI 서비스가 혼잡합니다. 잠시 후 다시 시도하세요',
   aiNetworkError:
-    '네트워크에 문제가 있어 AI 서비스에 연결할 수 없습니다. 연결을 확인한 후 다시 시도해 주세요',
+    '네트워크에 문제가 있어 AI 서비스에 연결할 수 없습니다. 연결을 확인한 후 다시 시도하세요',
   aiSumReadAttachment: '첨부 파일 읽기',
   aiSumImageAttachment: '이미지 첨부 {name}',
   aiSumRead: '{name} 읽기',
