@@ -399,6 +399,169 @@ test('an edit only one page’s journal would hold is refused while co-editing a
   await expect(frame.locator('.app-toast.error')).toHaveCount(0)
 })
 
+/** Pages compare fingerprints at most this often (the engine's FINGERPRINT_EVERY_MS), plus slack */
+const FINGERPRINTS_COMPARED_MS = 12_000
+
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+/** The basic workbook with a number in A2..A900: a far scroll leaves the first window well behind */
+function tallBook(): CoFile {
+  const parts = unzipSync(readFileSync(BASIC))
+  const rows = Array.from(
+    { length: 899 },
+    (_, i) => `<row r="${i + 2}"><c r="A${i + 2}"><v>${i + 2}</v></c></row>`,
+  ).join('')
+  const sheet = strFromU8(parts['xl/worksheets/sheet1.xml']!)
+  if (!sheet.includes('</sheetData>')) throw new Error('the basic workbook has no sheet data')
+  parts['xl/worksheets/sheet1.xml'] = strToU8(sheet.replace('</sheetData>', `${rows}</sheetData>`))
+  return { name: 'tall.xlsx', mimeType: XLSX_MIME, buffer: Buffer.from(zipSync(parts)) }
+}
+
+test('a page that scrolls far away after a row insert still holds every cell the others hold', async ({
+  browser,
+}) => {
+  const documentId = freshDocument()
+  const file = tallBook()
+  const alice = await open(browser, documentId, 'alice', 'edit', file)
+  const bob = await open(browser, documentId, 'bob', 'edit', file)
+
+  // After the first row insert the app refetches "the viewport"; loading by window from there on
+  // would empty every row a page scrolls away from, on that page only.
+  await insertRowAbove(alice, 3)
+  await settled([alice, bob])
+  await select(bob, 'A850')
+  await bob.page.waitForTimeout(1_500)
+  await select(bob, 'A1')
+  await bob.page.waitForTimeout(1_500)
+
+  // a second insert between two scrolls, then an edit from each so both compare at a new version
+  await insertRowAbove(bob, 10)
+  await settled([alice, bob])
+  await select(alice, 'A700')
+  await alice.page.waitForTimeout(1_500)
+  await typeInto(alice, 'C700', 'far-down')
+  await typeInto(bob, 'C2', 'near-top')
+  const version = await settled([alice, bob])
+  await alice.page.waitForTimeout(FINGERPRINTS_COMPARED_MS)
+  // a page whose workbook differed from the others' at one version is put out of the session
+  expect((await alice.status()).phase).toBe('live')
+  expect((await bob.status()).phase).toBe('live')
+  expect((await alice.status()).version).toBe(version)
+
+  // a late joiner, who holds the whole workbook by construction, agrees with both
+  const carol = await open(browser, documentId, 'carol', 'edit', file)
+  await typeInto(carol, 'D1', 'late')
+  const later = await settled([alice, bob, carol])
+  await carol.page.waitForTimeout(FINGERPRINTS_COMPARED_MS)
+  for (const editor of [alice, bob, carol]) expect((await editor.status()).phase).toBe('live')
+
+  await bob.page.locator('#save').click()
+  const saved = await savedBook(bob)
+  expect(saved.version).toBe(later)
+  const cells = firstSheet(saved)
+  expect(cells.get('A1')).toBe('Old')
+  expect(cells.get('A2')).toBe('2')
+  // two rows were inserted above it
+  expect(cells.get('A902')).toBe('900')
+  expect(cells.get('C700')).toBe('far-down')
+  expect(cells.get('C2')).toBe('near-top')
+  expect(cells.get('D1')).toBe('late')
+})
+
+test('what a person does before the page is in the session changes nothing', async ({
+  browser,
+}) => {
+  const documentId = freshDocument()
+  const context = await browser.newContext({ viewport: { width: 1400, height: 900 } })
+  // The workbook is on screen some time before the page is in the session; here that time is
+  // made long. The page's own hand-over object is kept as it is: the page tells by it whose
+  // session the window holds.
+  await context.addInitScript(() => {
+    type HandOver = { attach(handles: unknown): Promise<void> }
+    let given: HandOver | undefined
+    Object.defineProperty(window, 'seuCollab', {
+      configurable: true,
+      get: () => given,
+      set(next: HandOver | undefined) {
+        if (next) {
+          const attach = next.attach.bind(next)
+          next.attach = (handles) =>
+            new Promise<void>((resolve) => setTimeout(resolve, 5_000)).then(() => attach(handles))
+        }
+        given = next
+      },
+    })
+  })
+  const page = await context.newPage()
+  const query = new URLSearchParams({ collab: documentId, user: 'alice', name: 'alice' })
+  await page.goto(`/?${query}&access=edit`)
+  await page.locator('#edit').setChecked(true)
+  await page.setInputFiles('#file', BASIC)
+  const frame = page.frameLocator('#viewer iframe')
+  await expect(nameBox(frame)).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('body')).not.toHaveAttribute('data-collab-phase', 'live')
+
+  // on screen, not yet in the session: a click into the grid and some typing
+  await frame
+    .locator('canvas')
+    .first()
+    .click({ position: { x: 300, y: 200 }, force: true })
+  await page.keyboard.type('too-early')
+  await page.keyboard.press('Enter')
+  await nameBox(frame).fill('H2')
+  await nameBox(frame).press('Enter')
+  await page.keyboard.type('too-early')
+  await page.keyboard.press('Enter')
+
+  await expect(page.locator('body')).toHaveAttribute('data-collab-phase', 'live', {
+    timeout: 30_000,
+  })
+  const alice: CoEditor = {
+    page,
+    frame,
+    text: () => Promise.resolve(''),
+    status: () => page.evaluate(() => window.seuLauncher!.collab!),
+  }
+  await countOwnEdits(alice)
+  expect((await alice.status()).version).toBe(0)
+  expect((await alice.status()).unconfirmed).toBe(0)
+
+  // someone else joins and both edit: had the early typing reached alice's workbook alone, the
+  // two would differ at the first version they compare
+  const bob = await open(browser, documentId, 'bob')
+  await typeInto(alice, 'H3', 'in-session')
+  await typeInto(bob, 'I3', 'bob')
+  const version = await settled([alice, bob])
+  await page.waitForTimeout(FINGERPRINTS_COMPARED_MS)
+  expect((await alice.status()).phase).toBe('live')
+  expect((await bob.status()).phase).toBe('live')
+
+  await page.locator('#save').click()
+  const saved = await savedBook(alice)
+  expect(saved.version).toBe(version)
+  const cells = firstSheet(saved)
+  expect([...cells.values()]).not.toContain('too-early')
+  expect(cells.get('H3')).toBe('in-session')
+  expect(cells.get('I3')).toBe('bob')
+})
+
+test('a save before anyone has edited stores the workbook as it is', async ({ browser }) => {
+  const alice = await open(browser, freshDocument(), 'alice')
+  await alice.page.locator('#save').click()
+  const saved = await savedBook(alice)
+  expect(saved.version).toBe(0)
+  expect(firstSheet(saved).get('A1')).toBe('Old')
+  expect(firstSheet(saved).get('B1')).toBe('10')
+  // the page is still in the session and edits on
+  expect((await alice.status()).phase).toBe('live')
+  await typeInto(alice, 'H2', 'after-the-save')
+  const version = await settled([alice])
+  await alice.page.locator('#save').click()
+  const second = await savedBook(alice, saved)
+  expect(second.version).toBe(version)
+  expect(firstSheet(second).get('H2')).toBe('after-the-save')
+})
+
 const QUIET: Array<{ label: string; file: string }> = [
   { label: 'a plain workbook', file: BASIC },
   { label: 'formulas and edits', file: fixture('compatibility-edit.xlsx') },
