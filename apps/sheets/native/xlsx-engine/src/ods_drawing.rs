@@ -679,6 +679,32 @@ fn preset_path(kind: &str) -> (&'static str, &'static str) {
     }
 }
 
+/// The preset `preset_path` draws with `path`, for the reader that meets a
+/// document this module wrote: the outline goes back to the name it had.
+pub(crate) fn preset_of_path(path: &str) -> Option<&'static str> {
+    const KINDS: [&str; 17] = [
+        "rect",
+        "ellipse",
+        "roundRect",
+        "triangle",
+        "rtTriangle",
+        "diamond",
+        "parallelogram",
+        "trapezoid",
+        "hexagon",
+        "octagon",
+        "pentagon",
+        "plus",
+        "star5",
+        "rightArrow",
+        "leftArrow",
+        "upArrow",
+        "downArrow",
+    ];
+    let path = path.trim();
+    KINDS.into_iter().find(|kind| preset_path(kind).1 == path)
+}
+
 /// An SVG path (`M`, `L`, `C`, `Q`, `Z`, absolute) as an enhanced path: the
 /// same commands, whole numbers, and an end marker. `None` for a path with a
 /// command the two do not share.
@@ -777,6 +803,9 @@ mod tests {
         assert_eq!(enhanced_path("  "), None);
         assert_eq!(preset_path("ellipse").0, "ellipse");
         assert_eq!(preset_path("cloudCallout").0, "rectangle");
+        assert_eq!(preset_of_path(preset_path("star5").1), Some("star5"));
+        assert_eq!(preset_of_path(preset_path("cloudCallout").1), Some("rect"));
+        assert_eq!(preset_of_path("M 0 0 L 1 1 Z N"), None);
         assert_eq!(hex_color("FF4472C4"), "#4472c4");
         assert_eq!(media_type_of("jpeg"), "image/jpeg");
     }

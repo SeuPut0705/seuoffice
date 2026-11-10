@@ -6,7 +6,7 @@
 
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
@@ -30,6 +30,12 @@ pub(crate) struct SheetArt {
     pub(crate) rels: String,
     /// (part name, bytes) — `xl/media/image1.png` and friends.
     pub(crate) media: Vec<(String, Vec<u8>)>,
+    /// `(part name, content type, bytes)` of the parts the drawing points at
+    /// besides its media: charts and their relationship parts.
+    pub(crate) parts: Vec<(String, Option<&'static str>, Vec<u8>)>,
+    /// `(part name, entry name)`: media streamed out of the source package
+    /// (`PackageExtras::source`) instead of being held in memory.
+    pub(crate) copied: Vec<(String, String)>,
 }
 
 /// One relationship of a sheet beyond its drawing: a link target, the notes
@@ -60,6 +66,8 @@ pub(crate) struct PackageExtras {
     pub(crate) book_views: String,
     /// Runs alongside the sheets; a missing entry is an empty one.
     pub(crate) sheets: Vec<SheetExtras>,
+    /// The zip package `SheetArt::copied` entries are read from.
+    pub(crate) source: Option<PathBuf>,
 }
 
 /// Writes the whole package. `sheet_xmls` runs in the same order as `sheets`:
@@ -183,6 +191,28 @@ pub(crate) fn write_package_with(
     for entry in art.iter().flatten() {
         for (name, bytes) in &entry.media {
             add_binary(&mut writer, name, bytes, options)?;
+        }
+        for (name, _, bytes) in &entry.parts {
+            add_binary(&mut writer, name, bytes, options)?;
+        }
+    }
+    if art.iter().flatten().any(|entry| !entry.copied.is_empty()) {
+        // One entry at a time goes from the source to the target, so a
+        // document full of photographs costs no more memory than one.
+        let source = extras.source.as_deref().ok_or_else(|| {
+            SidecarError::Workbook("The drawing media has no source package.".into())
+        })?;
+        let mut archive = zip::ZipArchive::new(File::open(source)?)?;
+        for (name, entry_name) in art.iter().flatten().flat_map(|entry| &entry.copied) {
+            let mut entry = archive.by_name(entry_name)?;
+            let declared = entry.size();
+            writer.start_file(name.as_str(), options)?;
+            crate::xml_util::copy_entry_bounded(
+                &mut entry,
+                declared,
+                crate::archive::MAX_EXTRACTED_ENTRY_BYTES,
+                &mut writer,
+            )?;
         }
     }
     crate::archive::sync_best_effort(&writer.finish()?)?;
@@ -338,25 +368,49 @@ fn content_types_xml(
             None => {}
         }
     }
-    if art
-        .iter()
-        .flatten()
-        .any(|entry| entry.media.iter().any(|(name, _)| name.ends_with(".png")))
-    {
-        extensions.push_str(r#"<Default Extension="png" ContentType="image/png"/>"#);
+    // One default per media extension in use, in a fixed order.
+    for (extension, content_type) in MEDIA_TYPES {
+        let suffix = format!(".{extension}");
+        let used = art.iter().flatten().any(|entry| {
+            entry
+                .media
+                .iter()
+                .map(|(name, _)| name)
+                .chain(entry.copied.iter().map(|(name, _)| name))
+                .any(|name| name.ends_with(&suffix))
+        });
+        if used {
+            extensions.push_str(&format!(
+                r#"<Default Extension="{extension}" ContentType="{content_type}"/>"#
+            ));
+        }
     }
-    if art
-        .iter()
-        .flatten()
-        .any(|entry| entry.media.iter().any(|(name, _)| name.ends_with(".jpg")))
-    {
-        extensions.push_str(r#"<Default Extension="jpg" ContentType="image/jpeg"/>"#);
+    for (name, content_type, _) in art.iter().flatten().flat_map(|entry| &entry.parts) {
+        if let Some(content_type) = content_type {
+            parts.push_str(&format!(
+                r#"<Override PartName="/{name}" ContentType="{content_type}"/>"#
+            ));
+        }
     }
     format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>{extensions}<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>{overrides}{drawings}{parts}</Types>"#,
     )
 }
+
+/// The media a drawing may embed, by the extension its part is written
+/// under: the picture formats Excel draws.
+pub(crate) const MEDIA_TYPES: [(&str, &str); 9] = [
+    ("png", "image/png"),
+    ("jpg", "image/jpeg"),
+    ("jpeg", "image/jpeg"),
+    ("gif", "image/gif"),
+    ("bmp", "image/bmp"),
+    ("tif", "image/tiff"),
+    ("tiff", "image/tiff"),
+    ("emf", "image/x-emf"),
+    ("wmf", "image/x-wmf"),
+];
 
 /// A sheet with a drawing keeps it at `rId1`; whatever else the dialect
 /// brings follows under the ids it chose.

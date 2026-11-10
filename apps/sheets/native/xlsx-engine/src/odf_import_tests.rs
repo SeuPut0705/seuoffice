@@ -22,6 +22,7 @@ const NS: &str = concat!(
     r#"xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" "#,
     r#"xmlns:xlink="http://www.w3.org/1999/xlink" "#,
     r#"xmlns:dc="http://purl.org/dc/elements/1.1/" "#,
+    r#"xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" "#,
     r#"xmlns:of="urn:oasis:names:tc:opendocument:xmlns:of:1.2" "#,
     r#"xmlns:calcext="urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0" "#,
     r#"xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0""#,
@@ -43,6 +44,8 @@ struct Package<'a> {
     masters: &'a str,
     /// Inside `office:settings`, when the package has a `settings.xml`.
     settings: Option<&'a str>,
+    /// More entries: pictures, embedded chart documents.
+    entries: &'a [(&'a str, &'a [u8])],
 }
 
 fn write_package(path: &Path, package: &Package<'_>) {
@@ -87,6 +90,10 @@ fn write_package(path: &Path, package: &Package<'_>) {
         "META-INF/manifest.xml",
         r#"<?xml version="1.0" encoding="UTF-8"?><manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.3"><manifest:file-entry manifest:full-path="/" manifest:version="1.3" manifest:media-type="application/vnd.oasis.opendocument.spreadsheet"/><manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/></manifest:manifest>"#.to_owned(),
     );
+    for (name, bytes) in package.entries {
+        writer.start_file(*name, options).unwrap();
+        writer.write_all(bytes).unwrap();
+    }
     writer.finish().unwrap();
 }
 
@@ -570,4 +577,188 @@ fn repeats_become_column_and_row_styles_and_merges_spread_their_frame() {
     assert!(bottom_middle.contains(r#"<bottom style="thin">"#), "{bottom_middle}");
     assert!(bottom_middle.contains("<left/><right/><top/>"), "{bottom_middle}");
     assert!(sheet.contains(r#"<mergeCell ref="A1:C2"/>"#), "{sheet}");
+}
+
+/// A chart document as an application writes one into the package.
+fn chart_document(class: &str) -> String {
+    format!(
+        concat!(
+            r#"<?xml version="1.0" encoding="UTF-8"?><office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:chart="urn:oasis:names:tc:opendocument:xmlns:chart:1.0">"#,
+            r##"<office:automatic-styles><style:style style:name="s1" style:family="chart"><style:graphic-properties draw:fill="solid" draw:fill-color="#4472c4"/></style:style></office:automatic-styles>"##,
+            r#"<office:body><office:chart><chart:chart chart:class="chart:{class}"><chart:title><text:p>매출</text:p></chart:title><chart:plot-area>"#,
+            r#"<chart:axis chart:dimension="x" chart:name="primary-x"><chart:categories table:cell-range-address="Data.A2:Data.A3"/></chart:axis><chart:axis chart:dimension="y" chart:name="primary-y"/>"#,
+            r#"<chart:series chart:style-name="s1" chart:values-cell-range-address="Data.B2:Data.B3" chart:label-cell-address="Data.B1"/>"#,
+            r#"</chart:plot-area><table:table table:name="local-table"><table:table-header-rows><table:table-row><table:table-cell><text:p/></table:table-cell><table:table-cell office:value-type="string"><text:p>amount</text:p></table:table-cell></table:table-row></table:table-header-rows>"#,
+            r#"<table:table-rows><table:table-row><table:table-cell office:value-type="string"><text:p>a</text:p></table:table-cell><table:table-cell office:value-type="float" office:value="3"><text:p>3</text:p></table:table-cell></table:table-row>"#,
+            r#"<table:table-row><table:table-cell office:value-type="string"><text:p>b</text:p></table:table-cell><table:table-cell office:value-type="float" office:value="4.5"><text:p>4.5</text:p></table:table-cell></table:table-row></table:table-rows></table:table>"#,
+            r#"</chart:chart></office:chart></office:body></office:document-content>"#,
+        ),
+        class = class
+    )
+}
+
+#[test]
+fn carries_pictures_shapes_and_charts_from_ods() {
+    let picture: &[u8] = b"\x89PNG\r\n\x1a\nnot really a picture";
+    let bar = chart_document("bar");
+    let stock = chart_document("stock");
+    let (_dir, target) = convert(&Package {
+        automatic: concat!(
+            r##"<style:style style:name="gr1" style:family="graphic"><style:graphic-properties draw:stroke="none" draw:fill="none" draw:image-opacity="40%"/></style:style>"##,
+            r##"<style:style style:name="gr2" style:family="graphic"><style:graphic-properties draw:stroke="solid" svg:stroke-width="1.5pt" svg:stroke-color="#7f6000" draw:fill="solid" draw:fill-color="#ffc000" draw:textarea-vertical-align="middle"/></style:style>"##,
+            r##"<style:style style:name="gr3" style:family="graphic"><style:graphic-properties draw:stroke="solid" svg:stroke-width="2.25pt" svg:stroke-color="#00b050" draw:marker-end="Arrow"/></style:style>"##,
+            r##"<style:style style:name="gp1" style:family="paragraph"><style:paragraph-properties fo:text-align="center"/></style:style>"##,
+            r##"<style:style style:name="gt1" style:family="text"><style:text-properties fo:color="#c00000" fo:font-size="14pt" fo:font-weight="bold"/></style:style>"##,
+        ),
+        body: concat!(
+            r#"<table:table table:name="Data"><table:table-column table:number-columns-repeated="6"/>"#,
+            r#"<table:table-row><table:table-cell office:value-type="string"><office:annotation><text:p>note</text:p></office:annotation><text:p>name</text:p></table:table-cell><table:table-cell office:value-type="string"><text:p>amount</text:p></table:table-cell></table:table-row>"#,
+            r#"<table:table-row><table:table-cell office:value-type="string"><text:p>a</text:p></table:table-cell><table:table-cell office:value-type="float" office:value="3"><text:p>3</text:p>"#,
+            // A picture in B2 that ends in D5 and follows a link.
+            r#"<draw:a xlink:type="simple" xlink:href="https://example.com/?a=1&amp;b=2"><draw:frame draw:style-name="gr1" table:end-cell-address="Data.D5" table:end-x="0.5cm" table:end-y="0.25cm" draw:z-index="1" draw:name="Logo" svg:width="4cm" svg:height="2cm" svg:x="0.1cm" svg:y="0cm"><draw:image xlink:href="Pictures/logo.png"/><svg:desc>회사 &amp; 로고</svg:desc></draw:frame></draw:a>"#,
+            // A shape with text, above the picture in the stack.
+            r#"<draw:custom-shape draw:style-name="gr2" draw:z-index="2" draw:name="Box" svg:width="3cm" svg:height="1cm" svg:x="0cm" svg:y="0cm"><text:p text:style-name="gp1"><text:span text:style-name="gt1">둥근 &lt;상자&gt;</text:span></text:p><draw:enhanced-geometry svg:viewBox="0 0 21600 21600" draw:type="round-rectangle"/></draw:custom-shape>"#,
+            // The lowest in the stack although it comes last here.
+            r#"<draw:line draw:style-name="gr3" draw:z-index="0" svg:x1="0cm" svg:y1="1cm" svg:x2="2cm" svg:y2="0cm"/>"#,
+            r#"</table:table-cell></table:table-row>"#,
+            r#"<table:table-row><table:table-cell office:value-type="string"><text:p>b</text:p></table:table-cell><table:table-cell office:value-type="float" office:value="4.5"><text:p>4.5</text:p></table:table-cell><table:table-cell/><table:table-cell>"#,
+            r#"<draw:frame draw:z-index="3" draw:name="Sales" svg:width="8cm" svg:height="5cm" svg:x="0cm" svg:y="0cm"><draw:object xlink:href="./Object 1"/><draw:image xlink:href="./ObjectReplacements/Object 1"/></draw:frame>"#,
+            // A chart this cannot draw, a picture that is not in the
+            // package and a vector picture: none of them stops the rest.
+            r#"<draw:frame draw:z-index="4" svg:width="8cm" svg:height="5cm"><draw:object xlink:href="./Object 2"/></draw:frame>"#,
+            r#"<draw:frame draw:z-index="5" svg:width="1cm" svg:height="1cm"><draw:image xlink:href="Pictures/missing.png"/></draw:frame>"#,
+            r#"<draw:frame draw:z-index="6" svg:width="1cm" svg:height="1cm"><draw:image xlink:href="Pictures/vector.svg"/></draw:frame>"#,
+            r#"</table:table-cell></table:table-row></table:table>"#,
+            // The same picture again, pinned to the page of another sheet.
+            r#"<table:table table:name="Second"><table:shapes><draw:frame svg:width="2cm" svg:height="1cm" svg:x="3cm" svg:y="4cm"><draw:image xlink:href="Pictures/logo.png"/></draw:frame></table:shapes>"#,
+            r#"<table:table-row><table:table-cell office:value-type="string"><text:p>x</text:p></table:table-cell></table:table-row></table:table>"#,
+            r#"<table:table table:name="Plain"><table:table-row><table:table-cell office:value-type="string"><text:p>y</text:p></table:table-cell></table:table-row></table:table>"#,
+        ),
+        entries: &[
+            ("Pictures/logo.png", picture),
+            ("Pictures/vector.svg", b"<svg/>"),
+            ("Object 1/content.xml", bar.as_bytes()),
+            ("Object 2/content.xml", stock.as_bytes()),
+        ],
+        ..Package::default()
+    });
+
+    // ---- the worksheet names its drawing where the schema wants it
+    let sheet = read_entry(&target, "xl/worksheets/sheet1.xml");
+    assert_in_order(
+        &sheet,
+        &["</sheetData>", r#"<drawing r:id="rId1"/>"#, r#"<legacyDrawing r:id="rIdV1"/>"#],
+    );
+    let sheet_rels = read_entry(&target, "xl/worksheets/_rels/sheet1.xml.rels");
+    assert!(
+        sheet_rels.contains(r#"<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>"#),
+        "{sheet_rels}"
+    );
+    assert!(sheet_rels.contains("comments"), "{sheet_rels}");
+    assert!(!read_entry(&target, "xl/worksheets/sheet3.xml").contains("<drawing"));
+    assert!(!has_entry(&target, "xl/drawings/drawing3.xml"));
+
+    // ---- the drawing: line, picture, shape, chart, lowest first
+    let drawing = read_entry(&target, "xl/drawings/drawing1.xml");
+    assert!(roxmltree::Document::parse(&drawing).is_ok(), "{drawing}");
+    assert_in_order(
+        &drawing,
+        &[
+            // 2 cm by 1 cm from the corner of B2, running up to the right.
+            r#"<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="720000" cy="360000"/><xdr:cxnSp macro=""><xdr:nvCxnSpPr><xdr:cNvPr id="2" name="Line 1"/><xdr:cNvCxnSpPr/></xdr:nvCxnSpPr><xdr:spPr><a:xfrm flipV="1">"#,
+            r#"<a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:ln w="28575"><a:solidFill><a:srgbClr val="00B050"/></a:solidFill><a:tailEnd type="triangle"/></a:ln></xdr:spPr></xdr:cxnSp><xdr:clientData/></xdr:oneCellAnchor>"#,
+            r#"<xdr:twoCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>36000</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>3</xdr:col><xdr:colOff>180000</xdr:colOff><xdr:row>4</xdr:row><xdr:rowOff>90000</xdr:rowOff></xdr:to>"#,
+            r#"<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="3" name="Logo" descr="회사 &amp; 로고"><a:hlinkClick r:id="rId2"/></xdr:cNvPr><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId1"><a:alphaModFix amt="40000"/></a:blip><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>"#,
+            r#"<xdr:sp macro="" textlink=""><xdr:nvSpPr><xdr:cNvPr id="4" name="Box"/><xdr:cNvSpPr/></xdr:nvSpPr><xdr:spPr>"#,
+            r#"<a:prstGeom prst="roundRect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="FFC000"/></a:solidFill><a:ln w="19050"><a:solidFill><a:srgbClr val="7F6000"/></a:solidFill></a:ln></xdr:spPr>"#,
+            r#"<xdr:txBody><a:bodyPr anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr sz="1400" b="1"><a:solidFill><a:srgbClr val="C00000"/></a:solidFill></a:rPr><a:t>둥근 &lt;상자&gt;</a:t></a:r></a:p></xdr:txBody></xdr:sp>"#,
+            r#"<xdr:oneCellAnchor><xdr:from><xdr:col>3</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>2</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="2880000" cy="1800000"/><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="5" name="Sales"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>"#,
+            r#"<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="rId3"/>"#,
+        ],
+    );
+    // Nothing was written for the three drawings that could not be read.
+    assert_eq!(drawing.matches("<xdr:clientData/>").count(), 4, "{drawing}");
+    let drawing_rels = read_entry(&target, "xl/drawings/_rels/drawing1.xml.rels");
+    assert_in_order(
+        &drawing_rels,
+        &[
+            r#"<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>"#,
+            r#"<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/?a=1&amp;b=2" TargetMode="External"/>"#,
+            r#"<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>"#,
+        ],
+    );
+
+    // ---- the picture is stored once and the second sheet points at it
+    let mut archive = ZipArchive::new(File::open(&target).unwrap()).unwrap();
+    let mut stored = Vec::new();
+    archive
+        .by_name("xl/media/image1.png")
+        .unwrap()
+        .read_to_end(&mut stored)
+        .unwrap();
+    assert_eq!(stored, picture);
+    assert!(!has_entry(&target, "xl/media/image2.png"));
+    let second = read_entry(&target, "xl/drawings/drawing2.xml");
+    assert!(
+        second.contains(r#"<xdr:absoluteAnchor><xdr:pos x="1080000" y="1440000"/><xdr:ext cx="720000" cy="360000"/><xdr:pic>"#),
+        "{second}"
+    );
+    assert!(read_entry(&target, "xl/drawings/_rels/drawing2.xml.rels").contains("../media/image1.png"));
+
+    // ---- the chart part and every content type
+    let chart = read_entry(&target, "xl/charts/chart1.xml");
+    assert!(roxmltree::Document::parse(&chart).is_ok(), "{chart}");
+    assert_in_order(
+        &chart,
+        &[
+            "<a:t>매출</a:t>",
+            "<c:barChart>",
+            "<c:f>Data!$B$1</c:f><c:strCache><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>amount</c:v></c:pt></c:strCache>",
+            r#"<a:srgbClr val="4472C4"/>"#,
+            "<c:f>Data!$A$2:$A$3</c:f>",
+            r#"<c:f>Data!$B$2:$B$3</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="2"/><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>4.5</c:v></c:pt></c:numCache>"#,
+        ],
+    );
+    assert!(!has_entry(&target, "xl/charts/chart2.xml"));
+    let types = read_entry(&target, "[Content_Types].xml");
+    for part in [
+        r#"<Default Extension="png" ContentType="image/png"/>"#,
+        r#"<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>"#,
+        r#"<Override PartName="/xl/drawings/drawing2.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>"#,
+        r#"<Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>"#,
+    ] {
+        assert!(types.contains(part), "{part} is missing from {types}");
+    }
+
+    // ---- the engine reads back what the importer wrote
+    let mut sessions = WorkbookSessions::new();
+    let metadata = sessions.open(&target).unwrap();
+    let kinds: Vec<&str> = metadata.visuals.iter().map(|visual| visual.kind.as_str()).collect();
+    assert_eq!(kinds, ["shape", "image", "shape", "chart", "image"], "{kinds:?}");
+    let logo = &metadata.visuals[1];
+    assert_eq!(logo.alt_text.as_deref(), Some("회사 & 로고"));
+    assert_eq!(logo.hyperlink.as_deref(), Some("https://example.com/?a=1&b=2"));
+    assert_eq!((logo.anchor.from_row, logo.anchor.from_column), (1, 1));
+    assert_eq!((logo.anchor.to_row, logo.anchor.to_column), (4, 3));
+    let chart = metadata.visuals[3].chart.as_ref().unwrap();
+    assert_eq!(chart.title, "매출");
+    assert_eq!(chart.series[0].name, "amount");
+    assert_eq!(chart.series[0].values, [3.0, 4.5]);
+    assert_eq!(chart.series[0].categories, ["a", "b"]);
+    assert_eq!(metadata.sheets[0].comments.len(), 1);
+    let _ = sessions.close(&metadata.session_id);
+}
+
+#[test]
+fn a_document_without_drawings_gets_no_drawing_parts() {
+    let (_dir, target) = convert(&Package {
+        body: concat!(
+            r#"<table:table table:name="Only"><table:table-row><table:table-cell office:value-type="string"><text:p>draw: is only text here</text:p></table:table-cell></table:table-row></table:table>"#,
+        ),
+        ..Package::default()
+    });
+    assert!(!read_entry(&target, "xl/worksheets/sheet1.xml").contains("<drawing"));
+    assert!(!has_entry(&target, "xl/drawings/drawing1.xml"));
+    assert!(!has_entry(&target, "xl/worksheets/_rels/sheet1.xml.rels"));
+    assert!(!read_entry(&target, "[Content_Types].xml").contains("drawing"));
 }

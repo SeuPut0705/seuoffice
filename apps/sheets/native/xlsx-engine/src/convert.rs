@@ -26,6 +26,8 @@ use calamine::{Data, Dimensions, Reader, SheetVisible, Sheets, open_workbook_aut
 use crate::SidecarError;
 use crate::escher::{self, Blip, BlipKind};
 use crate::odf_cell_styles::{ValueKind, XlsxStyles};
+use crate::odf_drawing_parts::{DrawingWriter, SheetGeometry};
+use crate::odf_drawings::{self, OdfDrawings};
 use crate::odf_formula;
 use crate::odf_layout::{self, OdsSheetLayout};
 use crate::odf_sheet_format::{self, OdsFormats};
@@ -160,6 +162,21 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
         None
     };
     let mut odf_styles = formats.as_ref().map(|formats| XlsxStyles::new(&formats.book));
+    // Pictures, shapes and charts are a fourth reading, skipped outright for
+    // a document that holds none. A drawing this cannot follow is left out;
+    // it never stops the cells from opening.
+    let drawings: Option<OdfDrawings> = if odf {
+        odf_drawings::read_drawings(source)
+            .ok()
+            .filter(|drawings| !drawings.is_empty())
+    } else {
+        None
+    };
+    let mut drawing_writer = match &drawings {
+        Some(_) => DrawingWriter::new(source).ok(),
+        None => None,
+    };
+    let mut odf_art: Vec<Option<SheetArt>> = Vec::new();
     let mut package_extras = PackageExtras::default();
     let mut sheet_names_xml = String::new();
     // The names the document defines travel with it, so a formula that
@@ -341,15 +358,40 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
             // of the package instead.
             _ => layout.map(odf_merges_xml).unwrap_or_default(),
         };
+        let sheet_drawing = match (&drawings, &mut drawing_writer) {
+            (Some(drawings), Some(writer)) => drawings
+                .sheets
+                .get(index)
+                .filter(|sheet| !sheet.shapes.is_empty())
+                .and_then(|sheet| {
+                    writer.sheet_art(&sheet.shapes, &drawings.styles, &SheetGeometry::new(sheet))
+                }),
+            _ => None,
+        };
         // Protection and the filter precede the merges; rules, links, the
-        // print setup and the notes' drawing follow them.
+        // print setup, the drawing and the notes' drawing follow them, in
+        // that order.
         if let Some(parts) = &odf_parts {
             tail.insert_str(0, &parts.before_merges);
             tail.push_str(&parts.after_merges);
-            if let Some(id) = &parts.extras.legacy_drawing {
-                tail.push_str(&format!(r#"<legacyDrawing r:id="{id}"/>"#));
-            }
         }
+        if sheet_drawing.is_some() {
+            // the drawing part is written beside this sheet, always rId1 there
+            tail.push_str(r#"<drawing r:id="rId1"/>"#);
+        }
+        if let Some(id) = odf_parts
+            .as_ref()
+            .and_then(|parts| parts.extras.legacy_drawing.as_ref())
+        {
+            tail.push_str(&format!(r#"<legacyDrawing r:id="{id}"/>"#));
+        }
+        if sheet_drawing
+            .as_ref()
+            .is_some_and(|art| !art.copied.is_empty())
+        {
+            package_extras.source = Some(source.to_path_buf());
+        }
+        odf_art.push(sheet_drawing);
         // printOptions … colBreaks follow mergeCells and precede drawing
         if let Some(sheet) = sheet_binary {
             tail.push_str(&sheet.print.tail_xml());
@@ -395,16 +437,20 @@ pub fn convert_to_xlsx(source: &Path, target: &Path) -> Result<ConvertResult, Si
     }
 
     let mut media_names: HashMap<usize, String> = HashMap::new();
-    let art: Vec<Option<SheetArt>> = names
-        .iter()
-        .enumerate()
-        .map(|(index, _)| {
-            let binary = binary.as_ref()?;
-            let sheet = binary.sheets.get(index)?;
-            let drawing = sheet.drawing.as_ref()?;
-            sheet_art(sheet, drawing, &binary.blips, &mut media_names)
-        })
-        .collect();
+    let art: Vec<Option<SheetArt>> = if odf {
+        odf_art
+    } else {
+        names
+            .iter()
+            .enumerate()
+            .map(|(index, _)| {
+                let binary = binary.as_ref()?;
+                let sheet = binary.sheets.get(index)?;
+                let drawing = sheet.drawing.as_ref()?;
+                sheet_art(sheet, drawing, &binary.blips, &mut media_names)
+            })
+            .collect()
+    };
 
     // An ODF table says whether it is shown in its style; calamine reads
     // that. A workbook needs one visible sheet, so a document that hides
@@ -1028,6 +1074,8 @@ fn sheet_art(
             r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">{rels_xml}</Relationships>"#,
         ),
         media,
+        parts: Vec::new(),
+        copied: Vec::new(),
     })
 }
 
