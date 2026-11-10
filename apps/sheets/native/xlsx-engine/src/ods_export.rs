@@ -27,7 +27,7 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
 use crate::odf_formula::{self, Names};
-use crate::ods_chart::chart_document;
+use crate::ods_chart::{accent_palette, chart_document};
 use crate::ods_drawing::{
     Drawings, EmbeddedObject, Geometry, Picture, default_column_points, width_points,
 };
@@ -181,6 +181,7 @@ fn sheet_frames(
         sheet,
         row_heights(sessions, &metadata.session_id, sheet, first, last)?,
     );
+    let palette = accent_palette(metadata.theme_colors.as_deref());
     for visual in visuals {
         let cell = (
             visual.anchor.from_row.min(MAX_ROWS - 1),
@@ -198,7 +199,7 @@ fn sheet_frames(
             "chart" => (
                 visual.chart.as_ref().and_then(|chart| {
                     drawings.chart(sheet, &geometry, visual, |width, height| {
-                        chart_document(chart, width, height)
+                        chart_document(chart, &palette, width, height)
                     })
                 }),
                 &mut counters.dropped.charts,
@@ -289,6 +290,21 @@ fn write_document(
     let mut staging = StagingFiles::new(target);
     let base = metadata.styles.first().cloned().unwrap_or_default();
     let mut registry = StyleRegistry::new(base.clone());
+    // A font that follows the theme: the East Asian face the theme names, or
+    // the name the workbook itself cached for its Normal font.
+    registry.set_scheme_asian(
+        metadata
+            .theme_fonts
+            .as_ref()
+            .and_then(|fonts| fonts.minor_ea.clone())
+            .or_else(|| {
+                metadata
+                    .normal_font_name
+                    .clone()
+                    .filter(|_| base.font_scheme.is_some())
+            })
+            .filter(|family| !family.is_empty() && base.font_family.as_ref() != Some(family)),
+    );
     let mut pages = PageStyles::default();
     let mut table_styles: Vec<String> = Vec::new();
     let mut counters = Counters::new(metadata, macros);
@@ -1476,6 +1492,7 @@ fn write_table(
                 comments: &comments,
                 validations: &spans,
                 empty_row: &band_row,
+                window: &by_row,
             };
             write_row(
                 &mut sink,
@@ -1690,6 +1707,67 @@ struct RowContext<'a> {
     validations: &'a [ValidationSpan<'a>],
     /// The cells of this row if it holds nothing of its own.
     empty_row: &'a str,
+    /// The records of the window being written, by row and sorted by column.
+    window: &'a HashMap<usize, Vec<&'a CellRecord>>,
+}
+
+impl RowContext<'_> {
+    /// The style index of a cell elsewhere in the window, when it has one.
+    fn style_index_at(&self, row: usize, column: usize) -> Option<usize> {
+        let cells = self.window.get(&row)?;
+        let index = cells.binary_search_by_key(&column, |cell| cell.column).ok()?;
+        cells[index].style_index.filter(|index| *index != 0)
+    }
+}
+
+/// The style of a merged cell. Excel keeps the right and bottom edges of a
+/// merged area on its last column and last row; ODF draws the whole area with
+/// the first cell's style, so those edges move there. The last row is only
+/// looked at when it lies in the window being written.
+fn merged_style(
+    record: Option<&CellRecord>,
+    merge: &MergedRange,
+    row_context: &RowContext<'_>,
+    context: &SheetContext<'_>,
+    registry: &mut StyleRegistry,
+    own: ResolvedStyle,
+) -> ResolvedStyle {
+    let style_at = |row: usize, column: usize| {
+        row_context
+            .style_index_at(row, column)
+            .and_then(|index| context.styles.get(index))
+    };
+    let right = style_at(merge.start_row, merge.end_column).and_then(|style| style.border_right.clone());
+    let bottom = style_at(merge.end_row, merge.start_column).and_then(|style| style.border_bottom.clone());
+    if right.is_none() && bottom.is_none() {
+        return own;
+    }
+    let index = record
+        .and_then(|record| record.style_index)
+        .filter(|index| *index != 0)
+        .or(row_context.row_style)
+        .or_else(|| {
+            row_context
+                .column_styles
+                .get(merge.start_column)
+                .copied()
+                .flatten()
+        })
+        .unwrap_or(0);
+    let mut style = context.styles.get(index).cloned().unwrap_or_else(|| context.base.clone());
+    let mut changed = false;
+    if style.border_right.is_none() && right.is_some() {
+        style.border_right = right;
+        changed = true;
+    }
+    if style.border_bottom.is_none() && bottom.is_some() {
+        style.border_bottom = bottom;
+        changed = true;
+    }
+    if !changed {
+        return own;
+    }
+    registry.resolve_cell(&style)
 }
 
 /// First column, last column and the validation's name.
@@ -1873,6 +1951,10 @@ fn write_row<W: Write>(
                 cell_index += 1;
             }
             let style = resolve_style(record, row_context, column, context, registry, resolved);
+            let style = match anchor {
+                Some(merge) => merged_style(record, merge, row_context, context, registry, style),
+                None => style,
+            };
             let style_name = style.name.clone().or_else(|| {
                 // A plain cell in a column that has a default cell style
                 // would pick that style up unless it names the plain one.
@@ -2175,6 +2257,26 @@ fn push_cell(
         }
         None => String::new(),
     };
+    // A link on a number, date or logical cell wraps the text the cell
+    // shows; a text cell already carries its link in its paragraphs.
+    if let (Some(link), false) = (
+        &link,
+        matches!(
+            record.and_then(|record| record.value.as_ref()),
+            Some(CellValue::String(_)) | None
+        ),
+    ) {
+        if let Some(inner) = body
+            .strip_prefix("<text:p>")
+            .and_then(|rest| rest.strip_suffix("</text:p>"))
+            .filter(|inner| !inner.contains("<text:p>"))
+        {
+            body = format!(
+                r#"<text:p><text:a xlink:type="simple" xlink:href="{}">{inner}</text:a></text:p>"#,
+                escape_xml(link)
+            );
+        }
+    }
     if let Some(comment) = row_context.comments.get(&key) {
         // The note goes ahead of the cell's own paragraphs.
         body.insert_str(0, &annotation_xml(comment));
@@ -3678,6 +3780,76 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
                 r#"<table:data-pilot-field table:source-field-name="Amount" table:orientation="data" table:used-hierarchy="-1" table:function="sum"><table:data-pilot-level/></table:data-pilot-field>"#,
                 r#"</table:data-pilot-table></table:data-pilot-tables>"#,
             )),
+            "{content}"
+        );
+    }
+
+    #[test]
+    fn a_merged_area_keeps_its_far_borders_and_a_number_keeps_its_link() {
+        let styles = STYLES
+            .replace(
+                r#"<borders count="2">"#,
+                r#"<borders count="4">"#,
+            )
+            .replace(
+                "</borders>",
+                r#"<border><left/><right style="thick"><color rgb="FFFF0000"/></right><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="medium"><color rgb="FF0000FF"/></bottom><diagonal/></border></borders>"#,
+            )
+            .replace(
+                r#"<cellXfs count="7">"#,
+                r#"<cellXfs count="9">"#,
+            )
+            .replace(
+                "</cellXfs>",
+                r#"<xf numFmtId="0" fontId="0" fillId="0" borderId="2" xfId="0" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="3" xfId="0" applyBorder="1"/></cellXfs>"#,
+            );
+        let sheet = concat!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>"#,
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:D3"/><sheetData>"#,
+            // A1:C2 is merged; the right edge sits on C1 and the bottom edge
+            // on A2, as Excel writes them.
+            r#"<row r="1"><c r="A1" t="inlineStr"><is><t>box</t></is></c><c r="B1"/><c r="C1" s="7"/><c r="D1"><v>42</v></c></row>"#,
+            r#"<row r="2"><c r="A2" s="8"/><c r="B2" s="8"/><c r="C2" s="7"/></row>"#,
+            r#"</sheetData><mergeCells count="1"><mergeCell ref="A1:C2"/></mergeCells>"#,
+            r#"<hyperlinks><hyperlink ref="D1" r:id="rId1"/></hyperlinks></worksheet>"#,
+        );
+        let mut entries = single_sheet_entries(
+            "",
+            sheet,
+            vec![(
+                "xl/worksheets/_rels/sheet1.xml.rels",
+                r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/n" TargetMode="External"/></Relationships>"#.to_owned(),
+            )],
+        );
+        for entry in &mut entries {
+            if entry.0 == "xl/styles.xml" {
+                entry.1 = styles.clone();
+            }
+        }
+        let (_, content, _, _, _dir) = export(&entries);
+        // The first cell of the merged area carries both far edges.
+        let anchor = content
+            .split(r#"<table:table-cell table:style-name=""#)
+            .nth(1)
+            .and_then(|rest| rest.split('"').next())
+            .unwrap_or_else(|| panic!("{content}"))
+            .to_owned();
+        assert!(
+            content.contains(&format!(
+                r#"<table:table-cell table:style-name="{anchor}" table:number-columns-spanned="3" table:number-rows-spanned="2" office:value-type="string"><text:p>box</text:p>"#
+            )),
+            "{content}"
+        );
+        let style = content
+            .split(&format!(r#"<style:style style:name="{anchor}""#))
+            .nth(1)
+            .and_then(|rest| rest.split("</style:style>").next())
+            .unwrap_or_else(|| panic!("{content}"));
+        assert!(style.contains("fo:border-right=") && style.contains("#FF0000"), "{style}");
+        assert!(style.contains("fo:border-bottom=") && style.contains("#0000FF"), "{style}");
+        // The number shows as a link and is still a number.
+        assert!(
+            content.contains(r#"office:value-type="float" office:value="42"><text:p><text:a xlink:type="simple" xlink:href="https://example.com/n">42</text:a></text:p></table:table-cell>"#),
             "{content}"
         );
     }

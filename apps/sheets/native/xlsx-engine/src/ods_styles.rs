@@ -62,6 +62,8 @@ pub(crate) struct StyleRegistry {
     /// Named styles a conditional format applies, by their properties.
     conditional_names: HashMap<String, String>,
     conditional_bodies: Vec<(String, String)>,
+    /// The East Asian face behind a font that follows the theme.
+    scheme_asian: Option<String>,
     fonts: BTreeSet<String>,
     counter: usize,
 }
@@ -86,9 +88,37 @@ impl StyleRegistry {
             text_bodies: Vec::new(),
             conditional_names: HashMap::new(),
             conditional_bodies: Vec::new(),
+            scheme_asian: None,
             fonts,
             counter: 0,
         }
+    }
+
+    /// Names the East Asian face of the fonts that follow the theme. The
+    /// model resolves such a font to the theme's Latin face, which is right
+    /// for Latin text; the workbook was written with another face for
+    /// Korean, Japanese or Chinese, and a reader picks the face by script.
+    pub(crate) fn set_scheme_asian(&mut self, family: Option<String>) {
+        if let Some(family) = &family {
+            self.fonts.insert(family.clone());
+        }
+        self.scheme_asian = family;
+    }
+
+    /// The font name for Western, East Asian and complex text. A reader
+    /// picks the property by script, so a Korean cell given only the Western
+    /// one would keep the reader's own default font.
+    fn font_names(&self, family: &str, follows_theme: bool) -> String {
+        let asian = self
+            .scheme_asian
+            .as_deref()
+            .filter(|_| follows_theme)
+            .unwrap_or(family);
+        format!(
+            r#" style:font-name="{0}" style:font-name-asian="{1}" style:font-name-complex="{0}""#,
+            escape_xml(family),
+            escape_xml(asian)
+        )
     }
 
     fn next_name(&mut self, prefix: &str) -> String {
@@ -264,7 +294,7 @@ impl StyleRegistry {
             .filter(|family| font_family_differs(&self.base, family));
         if let Some(family) = font_family {
             self.fonts.insert(family.clone());
-            text.push_str(&font_name_attributes(family));
+            text.push_str(&self.font_names(family, style.font_scheme.is_some()));
         }
         if let Some(size) = style.font_size.filter(|size| {
             self.base.font_size.map(|base| (base - size).abs() > 1e-6) != Some(false)
@@ -397,7 +427,7 @@ impl StyleRegistry {
         if let Some(family) = run.family.as_ref().filter(|family| !family.is_empty()) {
             if font_family_differs(&self.base, family) {
                 self.fonts.insert(family.clone());
-                text.push_str(&font_name_attributes(family));
+                text.push_str(&self.font_names(family, false));
             }
         }
         if let Some(size) = run.size.filter(|size| *size > 0.0) {
@@ -536,7 +566,7 @@ impl StyleRegistry {
     pub(crate) fn default_cell_style(&self) -> String {
         let mut text = String::new();
         if let Some(family) = &self.base.font_family {
-            text.push_str(&font_name_attributes(family));
+            text.push_str(&self.font_names(family, self.base.font_scheme.is_some()));
         }
         if let Some(size) = self.base.font_size {
             text.push_str(&font_size_attributes(size));
@@ -567,16 +597,6 @@ impl StyleRegistry {
         ));
         out
     }
-}
-
-/// The font name for Western, East Asian and complex text alike. A reader
-/// picks the property by script, so a Korean cell given only the Western one
-/// would keep the reader's own default font.
-fn font_name_attributes(family: &str) -> String {
-    let family = escape_xml(family);
-    format!(
-        r#" style:font-name="{family}" style:font-name-asian="{family}" style:font-name-complex="{family}""#
-    )
 }
 
 fn font_size_attributes(size: f64) -> String {
@@ -861,17 +881,80 @@ fn data_style_plan(code: &str) -> Option<DataStylePlan> {
             main: sections.remove(0),
         });
     }
-    // The text section is the last one and only says how text looks; a number
-    // cell never reaches it.
-    if sections.len() > 1 && matches!(sections.last().map(|section| &section.body), Some(Body::Text { .. })) {
-        sections.pop();
-    }
+    // The text section says how a text cell looks. With four sections it is
+    // the fourth, whatever it holds — an empty one hides the text; otherwise
+    // it is a last section that names the text with `@`.
+    let text_section = if sections.len() >= 4 {
+        let fourth = sections.remove(3);
+        Some(match fourth.body {
+            Body::Literal(text) => Section {
+                color: fourth.color,
+                condition: None,
+                body: Body::Text {
+                    parts: if text.is_empty() { Vec::new() } else { vec![Part::Text(text)] },
+                },
+            },
+            _ => fourth,
+        })
+    } else if sections.len() > 1
+        && matches!(sections.last().map(|section| &section.body), Some(Body::Text { .. }))
+    {
+        sections.pop()
+    } else {
+        None
+    };
+    let text_section = text_section.filter(|section| matches!(section.body, Body::Text { .. }));
     sections.truncate(3);
     if sections
         .iter()
         .any(|section| matches!(section.body, Body::Unknown | Body::Calendar { .. }))
     {
         return None;
+    }
+    if let Some(text_section) = text_section {
+        // Every number section is reached by a condition and the text
+        // section is what is left: the style a text cell falls through to.
+        let defaults: &[&str] = match sections.len() {
+            1 => &[">=0"],
+            2 => &[">=0", "<0"],
+            _ => &[">0", "<0", "=0"],
+        };
+        let alone = sections.len() == 1;
+        let mut mapped: Vec<(String, Section)> = sections
+            .into_iter()
+            .zip(defaults)
+            .map(|(section, default)| {
+                let condition = section
+                    .condition
+                    .as_ref()
+                    .map(|(operator, value)| format!("{operator}{value}"))
+                    .unwrap_or_else(|| (*default).to_owned());
+                (condition, section)
+            })
+            .collect();
+        if alone {
+            // One section formats every number, and a section reached by a
+            // condition is handed the number without its sign: the negative
+            // side needs its own copy that says the minus.
+            let mut negative = section(split_sections(code)[0]);
+            let signed = match &mut negative.body {
+                Body::Number { parts, .. }
+                | Body::Scientific { parts, .. }
+                | Body::Fraction { parts, .. } => {
+                    parts.insert(0, Part::Text("-".to_owned()));
+                    true
+                }
+                _ => false,
+            };
+            if signed && negative.condition.is_none() {
+                mapped.push(("<0".to_owned(), negative));
+            }
+        }
+        return Some(DataStylePlan {
+            kind: ValueKind::Number,
+            mapped,
+            main: text_section,
+        });
     }
     if sections.len() == 1 {
         let only = sections.remove(0);
@@ -1952,7 +2035,13 @@ mod tests {
             "{accounting}"
         );
         assert!(
-            accounting.contains(r#"<number:number-style style:name="N1"><number:text>-</number:text><style:map"#),
+            accounting.contains(r#"<number:number-style style:name="N1P2" style:volatile="true"><number:text>-</number:text></number:number-style>"#),
+            "{accounting}"
+        );
+        // The text section is the style a text cell falls through to.
+        assert!(
+            accounting.contains(r#"<number:text-style style:name="N1"><number:text-content/><style:map"#)
+                && accounting.contains(r#"<style:map style:condition="value()=0" style:apply-style-name="N1P2"/>"#),
             "{accounting}"
         );
         // Parentheses for negatives.
@@ -2093,5 +2182,67 @@ mod tests {
         assert!(styles.contains(r#"style:cell-protect="none""#), "{styles}");
         // East Asian text reads its own weight property.
         assert!(styles.contains(r#"style:font-weight-asian="bold""#), "{styles}");
+    }
+    #[test]
+    fn a_text_section_is_what_a_text_cell_falls_through_to() {
+        // Four sections: the numbers are reached by conditions and the text
+        // section is the style itself.
+        let four = rendered("0;-0;;@");
+        assert!(
+            four.ends_with(concat!(
+                r#"<number:text-style style:name="N1"><number:text-content/>"#,
+                r#"<style:map style:condition="value()&gt;0" style:apply-style-name="N1P0"/>"#,
+                r#"<style:map style:condition="value()&lt;0" style:apply-style-name="N1P1"/>"#,
+                r#"<style:map style:condition="value()=0" style:apply-style-name="N1P2"/></number:text-style>"#,
+            )),
+            "{four}"
+        );
+        // `;;;` hides text as well as numbers: a text style with no content.
+        let hidden = rendered(";;;");
+        assert!(
+            hidden.contains(r#"<number:text-style style:name="N1"><style:map"#),
+            "{hidden}"
+        );
+        assert!(!hidden.contains("number:text-content"), "{hidden}");
+        // One number section and a text section: the negative side says its
+        // own minus, because a mapped section is handed the bare number.
+        let two = rendered("0.0;\"t:\"@");
+        assert!(
+            two.contains(concat!(
+                r#"<number:number-style style:name="N1P1" style:volatile="true"><number:text>-</number:text>"#,
+                r#"<number:number number:decimal-places="1" number:min-integer-digits="1"/></number:number-style>"#,
+                r#"<number:text-style style:name="N1"><number:text>t:</number:text><number:text-content/>"#,
+                r#"<style:map style:condition="value()&gt;=0" style:apply-style-name="N1P0"/>"#,
+                r#"<style:map style:condition="value()&lt;0" style:apply-style-name="N1P1"/>"#,
+            )),
+            "{two}"
+        );
+    }
+
+    #[test]
+    fn a_font_that_follows_the_theme_names_its_east_asian_face() {
+        let mut registry = StyleRegistry::new(CellStyle {
+            font_family: Some("Calibri".into()),
+            font_scheme: Some("minor".into()),
+            ..CellStyle::default()
+        });
+        registry.set_scheme_asian(Some("맑은 고딕".into()));
+        let default = registry.default_cell_style();
+        assert!(
+            default.contains(r#" style:font-name="Calibri" style:font-name-asian="맑은 고딕" style:font-name-complex="Calibri""#),
+            "{default}"
+        );
+        assert!(registry.font_face_decls().contains(r#"style:name="맑은 고딕""#));
+        // A font the cell names outright keeps that name for every script.
+        let named = registry.resolve_cell(&CellStyle {
+            font_family: Some("Arial".into()),
+            ..CellStyle::default()
+        });
+        let styles = registry.automatic_styles();
+        assert!(named.name.is_some());
+        assert!(
+            styles.contains(r#" style:font-name="Arial" style:font-name-asian="Arial" style:font-name-complex="Arial""#),
+            "{styles}"
+        );
     }
 }

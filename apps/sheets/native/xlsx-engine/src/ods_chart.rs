@@ -36,10 +36,25 @@ const NAMESPACES: &str = concat!(
     r#"xmlns:loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0" "#,
 );
 
-/// The colours Excel gives series that name none, in order.
+/// The colours Excel gives points that name none when the workbook has no
+/// theme to take them from.
 const PALETTE: [&str; 6] = [
     "#4472c4", "#ed7d31", "#a5a5a5", "#ffc000", "#5b9bd5", "#70ad47",
 ];
+
+/// The six accent colours of the workbook's theme, which is where Excel
+/// takes the colours of slices and unnamed series from. The theme lists them
+/// after its two light and two dark colours.
+pub(crate) fn accent_palette(theme_colors: Option<&[String]>) -> Vec<String> {
+    let accents: Vec<String> = theme_colors
+        .map(|colors| colors.iter().skip(4).take(6).map(|color| hex_color(color)).collect())
+        .unwrap_or_default();
+    if accents.len() == 6 {
+        accents
+    } else {
+        PALETTE.iter().map(|color| (*color).to_owned()).collect()
+    }
+}
 
 /// A chart ready for the package.
 pub(crate) struct ChartDocument {
@@ -363,7 +378,12 @@ fn label_properties(mode: Option<&str>) -> &'static str {
 
 /// Builds the chart document. `sheet` is the sheet the chart sits on; the
 /// size is the frame's, in centimetres.
-pub(crate) fn chart_document(chart: &ChartMetadata, width: f64, height: f64) -> Option<ChartDocument> {
+pub(crate) fn chart_document(
+    chart: &ChartMetadata,
+    palette: &[String],
+    width: f64,
+    height: f64,
+) -> Option<ChartDocument> {
     let primary = chart.chart_types.first()?.as_str();
     let class = class_of(primary)?;
     if chart.series.is_empty() {
@@ -410,10 +430,11 @@ pub(crate) fn chart_document(chart: &ChartMetadata, width: f64, height: f64) -> 
     };
 
     // ---- the chart itself, its title and legend
+    // Excel frames a chart with a thin grey line unless told otherwise.
     let area_style = styles.add(
         "",
         &format!(
-            r#" draw:stroke="none" draw:fill="solid" draw:fill-color="{}""#,
+            r##" draw:stroke="solid" svg:stroke-width="0.026cm" svg:stroke-color="#d9d9d9" draw:fill="solid" draw:fill-color="{}""##,
             escape_xml(&hex_color(chart.chart_area_fill.as_deref().unwrap_or("#ffffff")))
         ),
         "",
@@ -630,7 +651,7 @@ pub(crate) fn chart_document(chart: &ChartMetadata, width: f64, height: f64) -> 
             .color
             .as_deref()
             .map(hex_color)
-            .unwrap_or_else(|| PALETTE[index % PALETTE.len()].to_owned());
+            .unwrap_or_else(|| palette[index % palette.len()].clone());
         let stroked = matches!(kind, "chart:line" | "chart:scatter" | "chart:radar");
         let mut properties = String::new();
         if stroked {
@@ -765,7 +786,7 @@ pub(crate) fn chart_document(chart: &ChartMetadata, width: f64, height: f64) -> 
                 });
                 let fill = match (own, round) {
                     (Some(own), _) => own,
-                    (None, true) => PALETTE[point % PALETTE.len()].to_owned(),
+                    (None, true) => palette[point % palette.len()].clone(),
                     (None, false) => color.clone(),
                 };
                 let point_style = styles.add(
