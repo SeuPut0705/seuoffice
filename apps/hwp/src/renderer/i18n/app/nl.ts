@@ -8,6 +8,7 @@ export const nl = {
   saveFailed: 'Het document kon niet worden opgeslagen.',
   fileSave: 'Opslaan',
   fileSaveAs: 'Opslaan als…',
+  fileImportPdf: 'PDF importeren…',
   fileExportPdf: 'Exporteren als PDF…',
   filePrint: 'Afdrukken…',
   autoSave: 'Automatisch opslaan',
