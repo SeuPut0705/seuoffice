@@ -371,15 +371,13 @@ impl Drawings {
             ));
             return Some(attributes);
         };
-        // The anchor of a turned drawing is around its centre; the drawing
-        // keeps its own size, and one turned onto its side is anchored
-        // around the turned frame.
-        let quarter = degrees.rem_euclid(180.0);
+        // The anchor of a turned drawing is around its centre and may be the
+        // turned bounds; the drawing keeps the size its frame states. Without
+        // one the anchor is the frame, which is how the editor draws it.
         let (own_width, own_height) = match (visual.frame_width, visual.frame_height) {
             (Some(own_width), Some(own_height)) if own_width > 0.0 && own_height > 0.0 => {
                 (own_width, own_height)
             }
-            _ if (45.0..135.0).contains(&quarter) => (height, width),
             _ => (width, height),
         };
         // ODF turns the frame around its own corner and then moves it, with
