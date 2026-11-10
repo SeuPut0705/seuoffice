@@ -8,7 +8,7 @@ Una habilidad es un conjunto de instrucciones de trabajo para la IA. Anote una s
 
 | Origen                               | Qué contiene                                                     | Al principio |
 | ------------------------------------ | ---------------------------------------------------------------- | ------------ |
-| **Integradas**                       | Las 5 habilidades que vienen con GenOffice                       | Activadas    |
+| **Integradas**                       | Las habilidades que vienen con GenOffice                         | Activadas    |
 | **Mis habilidades**                  | Las habilidades que usted añadió o creó (`~/.ieumoffice/skills`) | Activadas    |
 | **Carpeta de habilidades de Claude** | Las habilidades de `~/.claude/skills`                            | Desactivadas |
 | **Complementos de Claude**           | Las habilidades de los complementos de Claude instalados         | Desactivadas |
@@ -17,7 +17,7 @@ Una habilidad es un conjunto de instrucciones de trabajo para la IA. Anote una s
 - El interruptor activa o desactiva una habilidad. El mismo ajuste vale para el panel de IA de todos los editores, para Ask AI en Inicio y para la ventana del agente.
 - Para una habilidad activada, elija **Decide la IA** o **Solo cuando se llama**. Al principio está en Decide la IA. Con Solo cuando se llama, la habilidad solo se usa cuando usted mismo la llama.
 - Habilidades de orígenes distintos pueden tener el mismo nombre. La etiqueta de origen de cada fila las distingue.
-- El menú de más opciones tiene **Ver contenido**, **Editar** (solo mis habilidades), **Exportar (zip)** (solo mis habilidades) y **Abrir carpeta**.
+- El menú de más opciones tiene **Ver contenido**, **Editar** (solo mis habilidades), **Exportar (zip)** (solo mis habilidades) y **Abrir carpeta**. Las habilidades integradas no tienen **Abrir carpeta**.
 - **Mover a la papelera** lleva una de mis habilidades a la papelera del sistema, desde donde puede restaurarla.
 - Una habilidad integrada se oculta en lugar de eliminarse: elija **Ocultar**. **Volver a mostrar**, al final de la lista, la recupera tal como era al principio.
 - Para cambiar una habilidad integrada o una de otro programa, elija **Copiar a mis habilidades**. La copia aparece en mis habilidades y la original se desactiva.
@@ -28,13 +28,13 @@ Una habilidad es un conjunto de instrucciones de trabajo para la IA. Anote una s
 
 1. En **Configuración ▸ Habilidades**, haga clic en **Añadir**.
 2. Elija **Desde una carpeta**, **Desde un archivo zip**, **Desde texto pegado** o **Desde un enlace de GitHub**. Para el texto pegado, pegue el `SKILL.md` completo, desde su primera línea `---`, y haga clic en **Vista previa**. Para GitHub, escriba la dirección de un repositorio público, `owner/repo` o la página de una habilidad en skills.sh, y haga clic en **Buscar**.
-3. Revise en la vista previa las habilidades encontradas. Muestra el número y el tamaño de los archivos, si hay scripts, las direcciones web que aparecen en el texto, el archivo de licencia y las líneas que conviene leer antes de instalar.
+3. Revise en la vista previa las habilidades encontradas. Muestra el número y el tamaño de los archivos, si hay scripts, las direcciones web que aparecen en el texto, el archivo de licencia y las líneas que conviene leer antes de instalar. **Ver contenido**, debajo de una habilidad, abre el texto de su `SKILL.md` y sus archivos de texto para leerlos antes de instalar.
 4. Marque solo las habilidades que quiera instalar y haga clic en **Instalar**. Las habilidades instaladas quedan activadas desde el principio.
 
 Debajo de la vista previa siempre se lee: «Instala habilidades solo de fuentes de confianza. Una habilidad da instrucciones a la IA y, en la ventana del agente, puede ejecutar scripts.» Lea una habilidad de origen desconocido antes de instalarla.
 
-- Si mis habilidades ya tiene una con el mismo nombre, elija **Reemplazar** u **Omitir** en esa fila.
-- También puede soltar el archivo zip de una habilidad o un archivo `SKILL.md` en cualquier ventana de GenOffice. Se abre **Configuración ▸ Habilidades** con la misma vista previa. Un zip cuenta como habilidad cuando `SKILL.md` está en su nivel superior o cada carpeta del nivel superior contiene uno; cualquier otro zip se deja como está. Un archivo `SKILL.md` llega solo: ponga en un zip una habilidad que tenga más archivos.
+- Si mis habilidades ya tiene una con el mismo nombre, elija **Reemplazar** u **Omitir** en esa fila. **Reemplazar** conserva los ajustes de la habilidad: activada o no, Decide la IA / Solo cuando se llama y dónde se usa.
+- También puede soltar el archivo zip de una habilidad o un archivo `SKILL.md` en cualquier ventana de GenOffice. Se abre **Configuración ▸ Habilidades** con la misma vista previa. Un zip cuenta como habilidad cuando `SKILL.md` está en su nivel superior o cada carpeta del nivel superior contiene uno; con cualquier otro zip soltado solo, **Configuración ▸ Habilidades** muestra «No se encontraron habilidades». Un archivo `SKILL.md` llega solo: ponga en un zip una habilidad que tenga más archivos.
 - **Líneas que conviene leer antes de instalar**: son las líneas que piden a la IA que ignore las instrucciones anteriores, que le oculte algo o que siga instrucciones de una dirección externa, y las rutas `../` que apuntan fuera de la carpeta de la habilidad. Cada una muestra su archivo y su línea. No impiden la instalación, y una habilidad sin estas líneas no es segura por eso.
 - Al descargar desde GitHub, GenOffice solo se conecta a `github.com`, `api.github.com` y `codeload.github.com`, y no envía ningún dato de inicio de sesión. Si el archivo comprimido es demasiado grande o no supera las comprobaciones de seguridad, no se instala nada.
 - La página de una habilidad en skills.sh (`https://skills.sh/owner/repo/skill`) se lee como esa habilidad del repositorio de GitHub `owner/repo`. GenOffice no se conecta a skills.sh.
@@ -45,7 +45,7 @@ Debajo de la vista previa siempre se lee: «Instala habilidades solo de fuentes 
 - En una habilidad instalada desde GitHub, **Buscar actualizaciones** en el menú de más opciones comprueba si hay contenido nuevo. Solo se contacta con GitHub cuando usted hace clic.
 - Si no ha cambiado nada, aparece «Está al día». Si algo cambió, revise los archivos cambiados y la vista previa, y haga clic en **Actualizar**.
 - Si usted editó la habilidad después de instalarla, también aparece «Se perderán tus propios cambios».
-- Al actualizar se conservan el estado activado o desactivado de la habilidad y la elección entre Decide la IA y Solo cuando se llama.
+- Al actualizar se conservan el estado activado o desactivado de la habilidad, la elección entre Decide la IA y Solo cuando se llama y dónde se usa.
 
 ## Llamar a una habilidad en el panel de IA
 
@@ -110,13 +110,15 @@ Cuando crea una habilidad en el panel de IA de un editor, el documento actual pu
 
 ## Habilidades integradas
 
-| Habilidad         | Qué hace                                                                                    |
-| ----------------- | ------------------------------------------------------------------------------------------- |
-| `meeting-minutes` | Convierte las notas de una reunión en un acta que muestra las decisiones y las tareas       |
-| `internal-comms`  | Redacta avisos, boletines, informes de avance, preguntas frecuentes y otros textos internos |
-| `humanizer`       | Busca las expresiones que suenan escritas por una IA y las vuelve naturales                 |
-| `copy-editing`    | Repasa un texto en inglés ya escrito para hacerlo más claro y conciso                       |
-| `find-skills`     | Busca en la ventana del agente las habilidades que necesita y propone instalarlas           |
+| Habilidad                     | Qué hace                                                                                                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Convierte las notas de una reunión en un acta que muestra las decisiones y las tareas                                                                                           |
+| `internal-comms`              | Redacta avisos, boletines, informes de avance, preguntas frecuentes y otros textos internos                                                                                     |
+| `humanizer`                   | Busca las expresiones que suenan escritas por una IA y las vuelve naturales                                                                                                     |
+| `copy-editing`                | Repasa un texto en inglés ya escrito para hacerlo más claro y conciso                                                                                                           |
+| `find-skills`                 | Busca en la ventana del agente las habilidades que necesita y propone instalarlas                                                                                               |
+| `administration-report`       | Ajusta un informe a la guía del Ministerio del Interior y Seguridad de Corea: frases redactadas, numeración estándar, fuentes disponibles en cualquier equipo, tablas sencillas |
+| `administration-report-draft` | Escribe un informe administrativo desde cero con el formato del ministerio: secciones, numeración Ⅰ·1·가, frases redactadas, títulos de tablas y fuentes disponibles            |
 
 `copy-editing` está pensada para textos de marketing en inglés. `find-skills` solo funciona en la ventana del agente.
 

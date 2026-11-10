@@ -8,7 +8,7 @@ Skill adalah sekumpulan petunjuk kerja untuk AI. Tuliskan sekali saja hal yang A
 
 | Sumber                  | Isinya                                                       | Awalnya  |
 | ----------------------- | ------------------------------------------------------------ | -------- |
-| **Bawaan**              | 5 skill yang disertakan bersama GenOffice                    | Aktif    |
+| **Bawaan**              | Skill yang disertakan bersama GenOffice                      | Aktif    |
 | **Skill saya**          | Skill yang Anda tambahkan atau buat (`~/.ieumoffice/skills`) | Aktif    |
 | **Folder skill Claude** | Skill di `~/.claude/skills`                                  | Nonaktif |
 | **Plugin Claude**       | Skill dari plugin Claude yang terpasang                      | Nonaktif |
@@ -17,7 +17,7 @@ Skill adalah sekumpulan petunjuk kerja untuk AI. Tuliskan sekali saja hal yang A
 - Sakelar mengaktifkan atau menonaktifkan skill. Pengaturan yang sama berlaku untuk panel AI di semua editor, Tanya AI di Beranda, dan jendela agen.
 - Untuk skill yang aktif, pilih **AI yang menentukan** atau **Hanya saat dipanggil**. Awalnya disetel ke AI yang menentukan. Dengan Hanya saat dipanggil, skill hanya dipakai jika Anda sendiri yang memanggilnya.
 - Skill dari sumber yang berbeda bisa bernama sama. Label sumber di setiap baris membedakannya.
-- Menu lainnya berisi **Lihat isi**, **Edit** (hanya skill saya), **Ekspor (zip)** (hanya skill saya), dan **Buka folder**.
+- Menu lainnya berisi **Lihat isi**, **Edit** (hanya skill saya), **Ekspor (zip)** (hanya skill saya), dan **Buka folder**. Skill bawaan tidak memiliki **Buka folder**.
 - **Pindahkan ke tempat sampah** memindahkan salah satu skill saya ke tempat sampah sistem, dan dari sana skill itu bisa dipulihkan.
 - Skill bawaan tidak dihapus, melainkan disembunyikan: pilih **Sembunyikan**. **Tampilkan lagi** di bagian bawah daftar mengembalikannya seperti semula.
 - Untuk mengubah skill bawaan atau skill dari program lain, pilih **Salin ke skill saya**. Salinannya muncul di skill saya dan skill aslinya dinonaktifkan.
@@ -28,13 +28,13 @@ Skill adalah sekumpulan petunjuk kerja untuk AI. Tuliskan sekali saja hal yang A
 
 1. Di **Pengaturan ▸ Skill**, klik **Tambah**.
 2. Pilih **Dari folder**, **Dari file zip**, **Dari teks yang ditempel**, atau **Dari tautan GitHub**. Untuk teks yang ditempel, tempel seluruh `SKILL.md` mulai dari baris `---` pertamanya, lalu klik **Pratinjau**. Untuk GitHub, masukkan alamat repositori publik, `owner/repo`, atau halaman skill di skills.sh, lalu klik **Cari**.
-3. Periksa skill yang ditemukan di pratinjau. Pratinjau menampilkan jumlah dan ukuran file, ada tidaknya skrip, alamat web di dalam teks, file lisensi, dan baris yang perlu dibaca sebelum memasang.
+3. Periksa skill yang ditemukan di pratinjau. Pratinjau menampilkan jumlah dan ukuran file, ada tidaknya skrip, alamat web di dalam teks, file lisensi, dan baris yang perlu dibaca sebelum memasang. **Lihat isi** di bawah sebuah skill membuka teks `SKILL.md` dan file teksnya agar bisa dibaca sebelum memasang.
 4. Centang hanya skill yang ingin dipasang, lalu klik **Pasang**. Skill yang dipasang langsung aktif.
 
 Di bawah pratinjau selalu tertulis: "Pasang skill hanya dari sumber yang Anda percayai. Skill memberi AI instruksi, dan di jendela agen skill dapat menjalankan skrip." Baca dulu skill dari sumber yang tidak dikenal sebelum memasangnya.
 
-- Jika skill saya sudah memiliki skill dengan nama yang sama, pilih **Ganti** atau **Lewati** pada baris tersebut.
-- Anda juga bisa melepas file zip skill atau file `SKILL.md` ke jendela GenOffice mana pun. **Pengaturan ▸ Skill** terbuka dengan pratinjau yang sama. Zip dianggap skill jika `SKILL.md` ada di tingkat teratasnya atau setiap folder teratas berisi satu `SKILL.md`; zip lain dibiarkan. File `SKILL.md` masuk sendirian: masukkan skill yang punya file lain ke dalam zip.
+- Jika skill saya sudah memiliki skill dengan nama yang sama, pilih **Ganti** atau **Lewati** pada baris tersebut. **Ganti** tetap mempertahankan pengaturan skill: aktif/nonaktif, AI yang menentukan / Hanya saat dipanggil, dan tempat dipakai.
+- Anda juga bisa melepas file zip skill atau file `SKILL.md` ke jendela GenOffice mana pun. **Pengaturan ▸ Skill** terbuka dengan pratinjau yang sama. Zip dianggap skill jika `SKILL.md` ada di tingkat teratasnya atau setiap folder teratas berisi satu `SKILL.md`; untuk zip lain yang dilepas sendirian, **Pengaturan ▸ Skill** menampilkan "Tidak ada skill yang ditemukan". File `SKILL.md` masuk sendirian: masukkan skill yang punya file lain ke dalam zip.
 - **Baris yang perlu dibaca sebelum memasang** adalah baris yang meminta AI mengabaikan instruksi sebelumnya, menyembunyikan sesuatu dari Anda, atau mengambil instruksi dari alamat luar, serta jalur `../` yang menunjuk ke luar folder skill. Masing-masing menampilkan file dan barisnya. Baris ini tidak menghentikan pemasangan, dan skill tanpa baris seperti ini belum tentu aman.
 - Saat mengunduh dari GitHub, GenOffice hanya terhubung ke `github.com`, `api.github.com`, dan `codeload.github.com`, dan tidak mengirim data login apa pun. Jika arsipnya terlalu besar atau tidak lolos pemeriksaan keamanan, tidak ada yang dipasang.
 - Halaman skill di skills.sh (`https://skills.sh/owner/repo/skill`) dibaca sebagai skill tersebut di repositori GitHub `owner/repo`. GenOffice tidak terhubung ke skills.sh.
@@ -45,7 +45,7 @@ Di bawah pratinjau selalu tertulis: "Pasang skill hanya dari sumber yang Anda pe
 - Untuk skill yang dipasang dari GitHub, **Periksa pembaruan** di menu lainnya mencari isi yang baru. GitHub hanya dihubungi saat Anda mengekliknya.
 - Jika tidak ada perubahan, tertulis "Sudah terbaru". Jika ada, tinjau file yang berubah dan pratinjaunya, lalu klik **Perbarui**.
 - Jika Anda sendiri sudah mengedit skill itu setelah memasangnya, akan muncul juga "Suntingan Anda sendiri akan hilang".
-- Pembaruan tetap mempertahankan status aktif/nonaktif skill serta pilihan AI yang menentukan / Hanya saat dipanggil.
+- Pembaruan tetap mempertahankan status aktif/nonaktif skill, pilihan AI yang menentukan / Hanya saat dipanggil, dan tempat dipakai.
 
 ## Memanggil skill di panel AI
 
@@ -110,13 +110,15 @@ Saat Anda membuat skill di panel AI sebuah editor, dokumen yang sedang terbuka b
 
 ## Skill bawaan
 
-| Skill             | Fungsinya                                                                                 |
-| ----------------- | ----------------------------------------------------------------------------------------- |
-| `meeting-minutes` | Mengubah catatan rapat menjadi notulen yang menampilkan keputusan dan tugas tindak lanjut |
-| `internal-comms`  | Menulis pengumuman, buletin, laporan kemajuan, FAQ, dan pesan internal lainnya            |
-| `humanizer`       | Mencari ungkapan yang terdengar ditulis AI dan membuatnya wajar                           |
-| `copy-editing`    | Memeriksa ulang teks bahasa Inggris yang Anda tulis agar lebih jelas dan ringkas          |
-| `find-skills`     | Mencari skill yang Anda perlukan di jendela agen dan mengusulkan pemasangannya            |
+| Skill                         | Fungsinya                                                                                                                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `meeting-minutes`             | Mengubah catatan rapat menjadi notulen yang menampilkan keputusan dan tugas tindak lanjut                                                                          |
+| `internal-comms`              | Menulis pengumuman, buletin, laporan kemajuan, FAQ, dan pesan internal lainnya                                                                                     |
+| `humanizer`                   | Mencari ungkapan yang terdengar ditulis AI dan membuatnya wajar                                                                                                    |
+| `copy-editing`                | Memeriksa ulang teks bahasa Inggris yang Anda tulis agar lebih jelas dan ringkas                                                                                   |
+| `find-skills`                 | Mencari skill yang Anda perlukan di jendela agen dan mengusulkan pemasangannya                                                                                     |
+| `administration-report`       | Menyesuaikan laporan dengan pedoman Kementerian Dalam Negeri dan Keamanan Korea: kalimat naratif, penomoran baku, font yang tersedia di mana saja, tabel sederhana |
+| `administration-report-draft` | Menulis laporan administrasi dari nol dengan format kementerian: bagian, penomoran Ⅰ·1·가, kalimat naratif, judul tabel, dan font yang tersedia                    |
 
 `copy-editing` dibuat untuk teks pemasaran berbahasa Inggris. `find-skills` hanya berfungsi di jendela agen.
 

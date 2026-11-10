@@ -8,7 +8,7 @@ A skill is a set of working instructions for the AI. Write down something you do
 
 | Source                   | What it holds                                     | At first |
 | ------------------------ | ------------------------------------------------- | -------- |
-| **Built-in**             | The 5 skills that come with GenOffice             | On       |
+| **Built-in**             | The skills that come with GenOffice               | On       |
 | **My skills**            | Skills you added or made (`~/.ieumoffice/skills`) | On       |
 | **Claude skills folder** | The skills in `~/.claude/skills`                  | Off      |
 | **Claude plugins**       | The skills of installed Claude plugins            | Off      |
@@ -17,7 +17,7 @@ A skill is a set of working instructions for the AI. Write down something you do
 - The switch turns a skill on or off. The same setting applies to the AI panel of every editor, Ask AI on Home, and the agent window.
 - For a skill that is on, choose **AI decides** or **Only when called**. It starts as AI decides. With Only when called, the skill is used only when you call it yourself.
 - Skills from different sources can share a name. The source label on each row tells them apart.
-- The more menu has **View contents**, **Edit** (my skills only), **Export (zip)** (my skills only) and **Open folder**.
+- The more menu has **View contents**, **Edit** (my skills only), **Export (zip)** (my skills only) and **Open folder**. Built-in skills have no **Open folder**.
 - **Move to trash** moves one of my skills to the system trash, where you can restore it.
 - A built-in skill is hidden instead of removed: choose **Hide**. **Show again** at the bottom of the list brings it back as it was at first.
 - To change a built-in skill or one from another program, choose **Copy to my skills**. The copy appears in my skills and the original is turned off.
@@ -28,13 +28,13 @@ A skill is a set of working instructions for the AI. Write down something you do
 
 1. In **Settings ▸ Skills**, click **Add**.
 2. Choose **From a folder**, **From a zip file**, **From pasted text** or **From a GitHub link**. For pasted text, paste the whole `SKILL.md`, from its first `---` line, and click **Preview**. For GitHub, enter the address of a public repository, `owner/repo`, or a skill's page on skills.sh, and click **Find**.
-3. Check the skills found in the preview. It shows the number and size of the files, whether there are scripts, the web addresses in the text, the license file, and the lines worth reading before you install.
+3. Check the skills found in the preview. It shows the number and size of the files, whether there are scripts, the web addresses in the text, the license file, and the lines worth reading before you install. **View contents** under a skill opens its `SKILL.md` text and its text files, so you can read them before installing.
 4. Tick only the skills to install and click **Install**. Installed skills start turned on.
 
 Below the preview it always says: "Install skills only from sources you trust. A skill gives the AI instructions, and in the agent window it can run scripts." Read a skill from an unknown source before you install it.
 
-- If my skills already have one with the same name, choose **Replace** or **Skip** on that row.
-- You can also drop a skill's zip file or a `SKILL.md` file onto any GenOffice window. **Settings ▸ Skills** opens with the same preview. A zip counts as a skill when `SKILL.md` sits at its top or every top folder holds one; any other zip is left alone. A `SKILL.md` file comes in alone: put a skill with more files in a zip.
+- If my skills already have one with the same name, choose **Replace** or **Skip** on that row. **Replace** keeps the skill's settings: on or off, AI decides / Only when called, and where it is used.
+- You can also drop a skill's zip file or a `SKILL.md` file onto any GenOffice window. **Settings ▸ Skills** opens with the same preview. A zip counts as a skill when `SKILL.md` sits at its top or every top folder holds one; for any other zip dropped on its own, **Settings ▸ Skills** says "No skills found". A `SKILL.md` file comes in alone: put a skill with more files in a zip.
 - **Lines worth reading** are lines that ask the AI to ignore earlier instructions, to keep something from you, or to take instructions from an outside address, and `../` paths that point outside the skill folder. Each shows its file and line. They do not stop the install, and a skill with no such lines is not therefore safe.
 - When it downloads from GitHub, GenOffice connects only to `github.com`, `api.github.com` and `codeload.github.com`, and sends no sign-in data. If the archive is too large or fails the safety checks, nothing is installed.
 - A skill's page on skills.sh (`https://skills.sh/owner/repo/skill`) is read as that skill in the GitHub repository `owner/repo`. GenOffice does not connect to skills.sh.
@@ -45,7 +45,7 @@ Below the preview it always says: "Install skills only from sources you trust. A
 - For a skill installed from GitHub, **Check for updates** in the more menu looks for new content. GitHub is contacted only when you click it.
 - If nothing changed, it says "Up to date". If something did, review the changed files and the preview, then click **Update**.
 - If you edited the skill yourself after installing it, "Your own edits will be lost" is shown as well.
-- Updating keeps the skill's on/off state and its AI decides / Only when called choice.
+- Updating keeps the skill's on/off state, its AI decides / Only when called choice and where it is used.
 
 ## Calling a skill in the AI panel
 
@@ -110,13 +110,15 @@ When you make a skill in an editor's AI panel, the current document can go along
 
 ## Built-in skills
 
-| Skill             | What it does                                                                          |
-| ----------------- | ------------------------------------------------------------------------------------- |
-| `meeting-minutes` | Turns meeting notes into minutes that show the decisions and action items             |
-| `internal-comms`  | Writes announcements, newsletters, progress updates, FAQs and other internal messages |
-| `humanizer`       | Finds phrasing that sounds AI-written and makes it natural                            |
-| `copy-editing`    | Goes over English text you have written and makes it clearer and tighter              |
-| `find-skills`     | Finds skills you need in the agent window and suggests installing them                |
+| Skill                         | What it does                                                                                                                                       |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Turns meeting notes into minutes that show the decisions and action items                                                                          |
+| `internal-comms`              | Writes announcements, newsletters, progress updates, FAQs and other internal messages                                                              |
+| `humanizer`                   | Finds phrasing that sounds AI-written and makes it natural                                                                                         |
+| `copy-editing`                | Goes over English text you have written and makes it clearer and tighter                                                                           |
+| `find-skills`                 | Finds skills you need in the agent window and suggests installing them                                                                             |
+| `administration-report`       | Brings a report in line with the Ministry of the Interior and Safety guideline: prose, standard numbering, fonts that open anywhere, simple tables |
+| `administration-report-draft` | Writes an administrative report from scratch in the ministry format: sections, the Ⅰ·1·가 numbering, prose, table titles and compatible fonts      |
 
 `copy-editing` is made for English marketing text. `find-skills` works only in the agent window.
 

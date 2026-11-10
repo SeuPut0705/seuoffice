@@ -8,7 +8,7 @@ Une compétence est un ensemble d’instructions de travail pour l’IA. Notez u
 
 | Provenance                         | Contenu                                                                   | Au départ   |
 | ---------------------------------- | ------------------------------------------------------------------------- | ----------- |
-| **Intégrées**                      | Les 5 compétences fournies avec GenOffice                                 | Activées    |
+| **Intégrées**                      | Les compétences fournies avec GenOffice                                   | Activées    |
 | **Mes compétences**                | Les compétences que vous avez ajoutées ou créées (`~/.ieumoffice/skills`) | Activées    |
 | **Dossier des compétences Claude** | Les compétences de `~/.claude/skills`                                     | Désactivées |
 | **Plugins Claude**                 | Les compétences des plugins Claude installés                              | Désactivées |
@@ -17,7 +17,7 @@ Une compétence est un ensemble d’instructions de travail pour l’IA. Notez u
 - L’interrupteur active ou désactive une compétence. Le même réglage s’applique au panneau IA de chaque éditeur, à Ask AI dans l’accueil et à la fenêtre de l’agent.
 - Pour une compétence activée, choisissez **L’IA décide** ou **Seulement sur appel**. Au départ, c’est L’IA décide. Avec Seulement sur appel, la compétence n’est utilisée que lorsque vous l’appelez vous-même.
 - Des compétences de provenances différentes peuvent porter le même nom. L’étiquette de provenance de chaque ligne permet de les distinguer.
-- Le menu d’options contient **Voir le contenu**, **Modifier** (mes compétences uniquement), **Exporter (zip)** (mes compétences uniquement) et **Ouvrir le dossier**.
+- Le menu d’options contient **Voir le contenu**, **Modifier** (mes compétences uniquement), **Exporter (zip)** (mes compétences uniquement) et **Ouvrir le dossier**. Les compétences intégrées n’ont pas **Ouvrir le dossier**.
 - **Mettre à la corbeille** déplace une de mes compétences dans la corbeille du système, d’où vous pouvez la restaurer.
 - Une compétence intégrée se masque au lieu d’être supprimée : choisissez **Masquer**. **Afficher à nouveau**, en bas de la liste, la rétablit telle qu’elle était au départ.
 - Pour modifier une compétence intégrée ou issue d’un autre programme, choisissez **Copier dans mes compétences**. La copie apparaît dans mes compétences et l’original est désactivé.
@@ -28,13 +28,13 @@ Une compétence est un ensemble d’instructions de travail pour l’IA. Notez u
 
 1. Dans **Paramètres ▸ Compétences**, cliquez sur **Ajouter**.
 2. Choisissez **Depuis un dossier**, **Depuis un fichier zip**, **Depuis un texte collé** ou **Depuis un lien GitHub**. Pour un texte collé, collez tout le `SKILL.md`, à partir de sa première ligne `---`, puis cliquez sur **Aperçu**. Pour GitHub, saisissez l’adresse d’un dépôt public, `owner/repo` ou la page d’une compétence sur skills.sh, puis cliquez sur **Rechercher**.
-3. Vérifiez les compétences trouvées dans l’aperçu. Il indique le nombre et la taille des fichiers, la présence éventuelle de scripts, les adresses web citées dans le texte, le fichier de licence et les lignes à lire avant d’installer.
+3. Vérifiez les compétences trouvées dans l’aperçu. Il indique le nombre et la taille des fichiers, la présence éventuelle de scripts, les adresses web citées dans le texte, le fichier de licence et les lignes à lire avant d’installer. **Voir le contenu**, sous une compétence, ouvre le texte de son `SKILL.md` et ses fichiers texte pour les lire avant d’installer.
 4. Cochez uniquement les compétences à installer et cliquez sur **Installer**. Les compétences installées sont activées d’emblée.
 
 Sous l’aperçu figure toujours ce message : « N’installez que des compétences provenant de sources de confiance. Une compétence donne des instructions à l’IA et, dans la fenêtre de l’agent, elle peut exécuter des scripts. » Lisez une compétence d’origine inconnue avant de l’installer.
 
-- Si mes compétences en contient déjà une du même nom, choisissez **Remplacer** ou **Ignorer** sur cette ligne.
-- Vous pouvez aussi déposer le fichier zip d’une compétence ou un fichier `SKILL.md` sur n’importe quelle fenêtre de GenOffice. **Paramètres ▸ Compétences** s’ouvre avec le même aperçu. Un zip compte comme une compétence lorsque `SKILL.md` se trouve à sa racine ou que chaque dossier de premier niveau en contient un ; tout autre zip est laissé de côté. Un fichier `SKILL.md` arrive seul : mettez dans un zip une compétence qui a d’autres fichiers.
+- Si mes compétences en contient déjà une du même nom, choisissez **Remplacer** ou **Ignorer** sur cette ligne. **Remplacer** conserve les réglages de la compétence : activée ou non, L’IA décide / Seulement sur appel et où l’utiliser.
+- Vous pouvez aussi déposer le fichier zip d’une compétence ou un fichier `SKILL.md` sur n’importe quelle fenêtre de GenOffice. **Paramètres ▸ Compétences** s’ouvre avec le même aperçu. Un zip compte comme une compétence lorsque `SKILL.md` se trouve à sa racine ou que chaque dossier de premier niveau en contient un ; pour tout autre zip déposé seul, **Paramètres ▸ Compétences** indique « Aucune compétence trouvée ». Un fichier `SKILL.md` arrive seul : mettez dans un zip une compétence qui a d’autres fichiers.
 - **Lignes à lire avant d’installer** : ce sont les lignes qui demandent à l’IA d’ignorer les instructions précédentes, de vous cacher quelque chose ou de suivre des instructions venant d’une adresse extérieure, ainsi que les chemins `../` qui pointent hors du dossier de la compétence. Chacune indique son fichier et sa ligne. Elles n’empêchent pas l’installation, et une compétence sans ces lignes n’est pas sûre pour autant.
 - Pour télécharger depuis GitHub, GenOffice se connecte uniquement à `github.com`, `api.github.com` et `codeload.github.com`, et n’envoie aucune donnée de connexion. Si l’archive est trop volumineuse ou échoue aux contrôles de sécurité, rien n’est installé.
 - La page d’une compétence sur skills.sh (`https://skills.sh/owner/repo/skill`) est lue comme cette compétence dans le dépôt GitHub `owner/repo`. GenOffice ne se connecte pas à skills.sh.
@@ -45,7 +45,7 @@ Sous l’aperçu figure toujours ce message : « N’installez que des compéten
 - Pour une compétence installée depuis GitHub, **Rechercher des mises à jour** dans le menu d’options vérifie s’il y a du nouveau contenu. GitHub n’est contacté que lorsque vous cliquez dessus.
 - Si rien n’a changé, le message « À jour » s’affiche. Sinon, examinez les fichiers modifiés et l’aperçu, puis cliquez sur **Mettre à jour**.
 - Si vous avez vous-même modifié la compétence après l’avoir installée, « Vos propres modifications seront perdues » s’affiche aussi.
-- La mise à jour conserve l’état activé ou désactivé de la compétence ainsi que le choix L’IA décide / Seulement sur appel.
+- La mise à jour conserve l’état activé ou désactivé de la compétence, le choix L’IA décide / Seulement sur appel et où l’utiliser.
 
 ## Appeler une compétence dans le panneau IA
 
@@ -110,13 +110,15 @@ Quand vous créez une compétence dans le panneau IA d’un éditeur, le documen
 
 ## Compétences intégrées
 
-| Compétence        | Ce qu’elle fait                                                                                 |
-| ----------------- | ----------------------------------------------------------------------------------------------- |
-| `meeting-minutes` | Transforme les notes de réunion en compte rendu qui fait ressortir les décisions et les actions |
-| `internal-comms`  | Rédige annonces, lettres d’information, points d’avancement, FAQ et autres messages internes    |
-| `humanizer`       | Repère les tournures qui sonnent écrites par une IA et les rend naturelles                      |
-| `copy-editing`    | Relit un texte anglais déjà écrit pour le rendre plus clair et plus concis                      |
-| `find-skills`     | Trouve dans la fenêtre de l’agent les compétences utiles et propose de les installer            |
+| Compétence                    | Ce qu’elle fait                                                                                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Transforme les notes de réunion en compte rendu qui fait ressortir les décisions et les actions                                                                     |
+| `internal-comms`              | Rédige annonces, lettres d’information, points d’avancement, FAQ et autres messages internes                                                                        |
+| `humanizer`                   | Repère les tournures qui sonnent écrites par une IA et les rend naturelles                                                                                          |
+| `copy-editing`                | Relit un texte anglais déjà écrit pour le rendre plus clair et plus concis                                                                                          |
+| `find-skills`                 | Trouve dans la fenêtre de l’agent les compétences utiles et propose de les installer                                                                                |
+| `administration-report`       | Aligne un rapport sur la directive du ministère coréen de l'Intérieur : phrases rédigées, numérotation normalisée, polices disponibles partout, tableaux simples    |
+| `administration-report-draft` | Rédige un rapport administratif de zéro au format du ministère : sections, numérotation Ⅰ·1·가, phrases rédigées, titres de tableaux et polices disponibles partout |
 
 `copy-editing` est conçue pour les textes marketing en anglais. `find-skills` fonctionne uniquement dans la fenêtre de l’agent.
 

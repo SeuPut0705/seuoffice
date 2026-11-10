@@ -8,7 +8,7 @@ Un'abilità è un insieme di istruzioni di lavoro per l'IA. Scrivi una volta sol
 
 | Provenienza                    | Che cosa contiene                                             | All'inizio  |
 | ------------------------------ | ------------------------------------------------------------- | ----------- |
-| **Integrate**                  | Le 5 abilità fornite con GenOffice                            | Attive      |
+| **Integrate**                  | Le abilità fornite con GenOffice                              | Attive      |
 | **Le mie abilità**             | Le abilità che hai aggiunto o creato (`~/.ieumoffice/skills`) | Attive      |
 | **Cartella abilità di Claude** | Le abilità in `~/.claude/skills`                              | Disattivate |
 | **Plugin di Claude**           | Le abilità dei plugin Claude installati                       | Disattivate |
@@ -17,7 +17,7 @@ Un'abilità è un insieme di istruzioni di lavoro per l'IA. Scrivi una volta sol
 - L'interruttore attiva o disattiva un'abilità. La stessa impostazione vale per il pannello IA di ogni editor, per Ask AI in Home e per la finestra dell'agente.
 - Per un'abilità attiva, scegli **Decide l'IA** o **Solo se richiamata**. All'inizio è impostata su Decide l'IA. Con Solo se richiamata, l'abilità viene usata solo quando la richiami tu.
 - Abilità di provenienze diverse possono avere lo stesso nome. L'etichetta della provenienza su ogni riga permette di distinguerle.
-- Il menu delle altre azioni contiene **Vedi contenuto**, **Modifica** (solo per le mie abilità), **Esporta (zip)** (solo per le mie abilità) e **Apri cartella**.
+- Il menu delle altre azioni contiene **Vedi contenuto**, **Modifica** (solo per le mie abilità), **Esporta (zip)** (solo per le mie abilità) e **Apri cartella**. Le abilità integrate non hanno **Apri cartella**.
 - **Sposta nel cestino** sposta una delle mie abilità nel cestino del sistema, da cui puoi ripristinarla.
 - Un'abilità integrata non si elimina, si nasconde: scegli **Nascondi**. **Mostra di nuovo** in fondo all'elenco la riporta com'era all'inizio.
 - Per cambiare un'abilità integrata o una che viene da un altro programma, scegli **Copia nelle mie abilità**. La copia compare tra le mie abilità e l'originale viene disattivato.
@@ -28,13 +28,13 @@ Un'abilità è un insieme di istruzioni di lavoro per l'IA. Scrivi una volta sol
 
 1. In **Impostazioni ▸ Abilità**, fai clic su **Aggiungi**.
 2. Scegli **Da una cartella**, **Da un file zip**, **Da testo incollato** o **Da un link GitHub**. Per il testo incollato, incolla l'intero `SKILL.md` dalla sua prima riga `---` e fai clic su **Anteprima**. Per GitHub, inserisci l'indirizzo di un repository pubblico, `owner/repo` oppure la pagina di un'abilità su skills.sh e fai clic su **Cerca**.
-3. Controlla nell'anteprima le abilità trovate. L'anteprima mostra il numero e la dimensione dei file, se ci sono script, gli indirizzi web presenti nel testo, il file della licenza e le righe da leggere prima di installare.
+3. Controlla nell'anteprima le abilità trovate. L'anteprima mostra il numero e la dimensione dei file, se ci sono script, gli indirizzi web presenti nel testo, il file della licenza e le righe da leggere prima di installare. **Vedi contenuto**, sotto un'abilità, apre il testo del suo `SKILL.md` e i suoi file di testo, così puoi leggerli prima di installare.
 4. Spunta solo le abilità da installare e fai clic su **Installa**. Le abilità installate partono attive.
 
 Sotto l'anteprima compare sempre: «Installa abilità solo da fonti affidabili. Un'abilità dà istruzioni all'IA e nella finestra dell'agente può eseguire script». Prima di installare un'abilità di provenienza sconosciuta, leggila.
 
-- Se tra le mie abilità ce n'è già una con lo stesso nome, scegli **Sostituisci** o **Salta** su quella riga.
-- Puoi anche trascinare il file zip di un'abilità o un file `SKILL.md` su qualsiasi finestra di GenOffice. Si apre **Impostazioni ▸ Abilità** con la stessa anteprima. Uno zip conta come abilità quando `SKILL.md` si trova al suo livello principale o ogni cartella di primo livello ne contiene uno; qualsiasi altro zip viene lasciato com'è. Un file `SKILL.md` arriva da solo: metti in uno zip un'abilità con altri file.
+- Se tra le mie abilità ce n'è già una con lo stesso nome, scegli **Sostituisci** o **Salta** su quella riga. **Sostituisci** conserva le impostazioni dell'abilità: attiva o no, Decide l'IA / Solo se richiamata e dove si usa.
+- Puoi anche trascinare il file zip di un'abilità o un file `SKILL.md` su qualsiasi finestra di GenOffice. Si apre **Impostazioni ▸ Abilità** con la stessa anteprima. Uno zip conta come abilità quando `SKILL.md` si trova al suo livello principale o ogni cartella di primo livello ne contiene uno; con qualsiasi altro zip trascinato da solo, **Impostazioni ▸ Abilità** mostra "Nessuna abilità trovata". Un file `SKILL.md` arriva da solo: metti in uno zip un'abilità con altri file.
 - **Righe da leggere prima di installare**: sono righe che chiedono all'IA di ignorare le istruzioni precedenti, di nasconderti qualcosa o di prendere istruzioni da un indirizzo esterno, e percorsi `../` che puntano fuori dalla cartella dell'abilità. Per ognuna sono indicati il file e la riga. Non bloccano l'installazione, e un'abilità senza righe di questo tipo non è per questo sicura.
 - Quando scarica da GitHub, GenOffice si collega solo a `github.com`, `api.github.com` e `codeload.github.com` e non invia alcun dato di accesso. Se l'archivio è troppo grande o non supera i controlli di sicurezza, non viene installato nulla.
 - La pagina di un'abilità su skills.sh (`https://skills.sh/owner/repo/skill`) viene letta come quell'abilità nel repository GitHub `owner/repo`. GenOffice non si collega a skills.sh.
@@ -45,7 +45,7 @@ Sotto l'anteprima compare sempre: «Installa abilità solo da fonti affidabili. 
 - Per un'abilità installata da GitHub, **Cerca aggiornamenti** nel menu delle altre azioni controlla se c'è un contenuto nuovo. GitHub viene contattato solo quando fai clic.
 - Se non è cambiato nulla, compare «Aggiornata». Se qualcosa è cambiato, esamina i file modificati e l'anteprima, poi fai clic su **Aggiorna**.
 - Se hai modificato l'abilità dopo averla installata, compare anche «Le tue modifiche andranno perse».
-- L'aggiornamento conserva lo stato attivo/disattivo dell'abilità e la scelta tra Decide l'IA e Solo se richiamata.
+- L'aggiornamento conserva lo stato attivo/disattivo dell'abilità, la scelta tra Decide l'IA e Solo se richiamata e dove si usa.
 
 ## Richiamare un'abilità nel pannello IA
 
@@ -110,13 +110,15 @@ Quando crei un'abilità nel pannello IA di un editor, il documento attuale può 
 
 ## Abilità integrate
 
-| Abilità           | Che cosa fa                                                                                    |
-| ----------------- | ---------------------------------------------------------------------------------------------- |
-| `meeting-minutes` | Trasforma gli appunti di una riunione in un verbale con le decisioni e le attività da svolgere |
-| `internal-comms`  | Scrive avvisi, newsletter, aggiornamenti sull'avanzamento, FAQ e altri testi interni           |
-| `humanizer`       | Trova le espressioni che sembrano scritte da un'IA e le rende naturali                         |
-| `copy-editing`    | Rilegge un testo in inglese già scritto e lo rende più chiaro e conciso                        |
-| `find-skills`     | Trova nella finestra dell'agente le abilità che ti servono e ne propone l'installazione        |
+| Abilità                       | Che cosa fa                                                                                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `meeting-minutes`             | Trasforma gli appunti di una riunione in un verbale con le decisioni e le attività da svolgere                                                                     |
+| `internal-comms`              | Scrive avvisi, newsletter, aggiornamenti sull'avanzamento, FAQ e altri testi interni                                                                               |
+| `humanizer`                   | Trova le espressioni che sembrano scritte da un'IA e le rende naturali                                                                                             |
+| `copy-editing`                | Rilegge un testo in inglese già scritto e lo rende più chiaro e conciso                                                                                            |
+| `find-skills`                 | Trova nella finestra dell'agente le abilità che ti servono e ne propone l'installazione                                                                            |
+| `administration-report`       | Allinea una relazione alle linee guida del Ministero dell'Interno coreano: frasi discorsive, numerazione standard, caratteri disponibili ovunque, tabelle semplici |
+| `administration-report-draft` | Scrive una relazione amministrativa da zero nel formato del ministero: sezioni, numerazione Ⅰ·1·가, frasi discorsive, titoli delle tabelle e caratteri disponibili |
 
 `copy-editing` è pensata per testi di marketing in inglese. `find-skills` funziona solo nella finestra dell'agente.
 

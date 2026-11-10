@@ -8,7 +8,7 @@ Dovednost je sada pracovních pokynů pro AI. Jednou si zapište, co děláte st
 
 | Původ                        | Co obsahuje                                                            | Na začátku |
 | ---------------------------- | ---------------------------------------------------------------------- | ---------- |
-| **Vestavěné**                | 5 dovedností dodávaných s GenOffice                                    | Zapnuté    |
+| **Vestavěné**                | Dovednosti dodávané s GenOffice                                        | Zapnuté    |
 | **Moje dovednosti**          | Dovednosti, které jste přidali nebo vytvořili (`~/.ieumoffice/skills`) | Zapnuté    |
 | **Složka dovedností Claude** | Dovednosti v `~/.claude/skills`                                        | Vypnuté    |
 | **Pluginy Claude**           | Dovednosti nainstalovaných pluginů Claude                              | Vypnuté    |
@@ -17,7 +17,7 @@ Dovednost je sada pracovních pokynů pro AI. Jednou si zapište, co děláte st
 - Přepínač dovednost zapíná nebo vypíná. Stejné nastavení platí pro panel AI každého editoru, pro Ask AI na stránce Domů i pro okno agenta.
 - U zapnuté dovednosti zvolte **Rozhoduje AI** nebo **Jen na vyvolání**. Na začátku je nastaveno Rozhoduje AI. S volbou Jen na vyvolání se dovednost použije jen tehdy, když ji vyvoláte sami.
 - Dovednosti z různých zdrojů mohou mít stejný název. Rozlišíte je podle štítku původu na každém řádku.
-- V nabídce dalších akcí jsou **Zobrazit obsah**, **Upravit** (jen moje dovednosti), **Exportovat (zip)** (jen moje dovednosti) a **Otevřít složku**.
+- V nabídce dalších akcí jsou **Zobrazit obsah**, **Upravit** (jen moje dovednosti), **Exportovat (zip)** (jen moje dovednosti) a **Otevřít složku**. Vestavěné dovednosti položku **Otevřít složku** nemají.
 - **Přesunout do koše** přesune jednu z mých dovedností do systémového koše, odkud ji můžete obnovit.
 - Vestavěná dovednost se neodstraňuje, ale skrývá: zvolte **Skrýt**. **Znovu zobrazit** dole v seznamu ji vrátí do původního stavu.
 - Chcete-li změnit vestavěnou dovednost nebo dovednost z jiného programu, zvolte **Kopírovat do mých dovedností**. Kopie se objeví v mých dovednostech a originál se vypne.
@@ -28,13 +28,13 @@ Dovednost je sada pracovních pokynů pro AI. Jednou si zapište, co děláte st
 
 1. V **Nastavení ▸ Dovednosti** klikněte na **Přidat**.
 2. Zvolte **Ze složky**, **Ze souboru zip**, **Z vloženého textu** nebo **Z odkazu na GitHub**. U vloženého textu vložte celý `SKILL.md` od jeho prvního řádku `---` a klikněte na **Náhled**. U GitHubu zadejte adresu veřejného repozitáře, `owner/repo` nebo stránku dovednosti na skills.sh a klikněte na **Najít**.
-3. V náhledu zkontrolujte nalezené dovednosti. Náhled ukazuje počet a velikost souborů, zda obsahují skripty, webové adresy v textu, soubor s licencí a řádky, které stojí za přečtení před instalací.
+3. V náhledu zkontrolujte nalezené dovednosti. Náhled ukazuje počet a velikost souborů, zda obsahují skripty, webové adresy v textu, soubor s licencí a řádky, které stojí za přečtení před instalací. **Zobrazit obsah** pod dovedností otevře text jejího `SKILL.md` a její textové soubory, abyste si je mohli přečíst před instalací.
 4. Zaškrtněte jen dovednosti, které chcete nainstalovat, a klikněte na **Nainstalovat**. Nainstalované dovednosti jsou hned zapnuté.
 
 Pod náhledem je vždy uvedeno: „Instalujte dovednosti jen ze zdrojů, kterým důvěřujete. Dovednost dává AI pokyny a v okně agenta může spouštět skripty“. Dovednost z neznámého zdroje si před instalací přečtěte.
 
-- Pokud už mezi mými dovednostmi je jedna se stejným názvem, zvolte na tom řádku **Nahradit** nebo **Přeskočit**.
-- Soubor zip s dovedností nebo soubor `SKILL.md` můžete také přetáhnout na kterékoli okno GenOffice. Otevře se **Nastavení ▸ Dovednosti** se stejným náhledem. Zip se bere jako dovednost, když `SKILL.md` leží na jeho nejvyšší úrovni nebo ho obsahuje každá složka nejvyšší úrovně; jakýkoli jiný zip zůstane bez povšimnutí. Soubor `SKILL.md` přijde sám: dovednost s dalšími soubory dejte do zipu.
+- Pokud už mezi mými dovednostmi je jedna se stejným názvem, zvolte na tom řádku **Nahradit** nebo **Přeskočit**. **Nahradit** zachová nastavení dovednosti: zapnutí či vypnutí, volbu Rozhoduje AI / Jen na vyvolání i to, kde se používá.
+- Soubor zip s dovedností nebo soubor `SKILL.md` můžete také přetáhnout na kterékoli okno GenOffice. Otevře se **Nastavení ▸ Dovednosti** se stejným náhledem. Zip se bere jako dovednost, když `SKILL.md` leží na jeho nejvyšší úrovni nebo ho obsahuje každá složka nejvyšší úrovně; u jakéhokoli jiného zipu přetaženého samostatně zobrazí **Nastavení ▸ Dovednosti** „Nebyly nalezeny žádné dovednosti“. Soubor `SKILL.md` přijde sám: dovednost s dalšími soubory dejte do zipu.
 - **Řádky, které stojí za přečtení před instalací**, jsou řádky, které žádají AI, aby ignorovala dřívější pokyny, před vámi něco skrývala nebo přebírala pokyny z vnější adresy, a cesty `../`, které vedou mimo složku dovednosti. U každého je uveden soubor a řádek. Instalaci nezastaví a dovednost bez takových řádků tím ještě není bezpečná.
 - Při stahování z GitHubu se GenOffice připojuje jen k `github.com`, `api.github.com` a `codeload.github.com` a neposílá žádné přihlašovací údaje. Pokud je archiv příliš velký nebo neprojde bezpečnostními kontrolami, nic se nenainstaluje.
 - Stránka dovednosti na skills.sh (`https://skills.sh/owner/repo/skill`) se čte jako tato dovednost v repozitáři GitHub `owner/repo`. GenOffice se ke skills.sh nepřipojuje.
@@ -45,7 +45,7 @@ Pod náhledem je vždy uvedeno: „Instalujte dovednosti jen ze zdrojů, kterým
 - U dovednosti nainstalované z GitHubu hledá **Zkontrolovat aktualizace** v nabídce dalších akcí nový obsah. GitHub se kontaktuje jen tehdy, když na to kliknete.
 - Pokud se nic nezměnilo, zobrazí se „Aktuální“. Pokud se něco změnilo, prohlédněte si změněné soubory a náhled a klikněte na **Aktualizovat**.
 - Pokud jste dovednost po instalaci sami upravili, zobrazí se také „Vaše úpravy budou ztraceny“.
-- Aktualizace zachová zapnutí či vypnutí dovednosti i volbu mezi Rozhoduje AI a Jen na vyvolání.
+- Aktualizace zachová zapnutí či vypnutí dovednosti, volbu mezi Rozhoduje AI a Jen na vyvolání i to, kde se používá.
 
 ## Vyvolání dovednosti v panelu AI
 
@@ -110,13 +110,15 @@ Když vytváříte dovednost v panelu AI editoru, může s ní jako šablona jí
 
 ## Vestavěné dovednosti
 
-| Dovednost         | Co dělá                                                                         |
-| ----------------- | ------------------------------------------------------------------------------- |
-| `meeting-minutes` | Udělá z poznámek z porady zápis s rozhodnutími a úkoly                          |
-| `internal-comms`  | Píše oznámení, zpravodaje, zprávy o postupu, časté dotazy a další interní texty |
-| `humanizer`       | Najde obraty, které působí jako psané AI, a upraví je přirozeně                 |
-| `copy-editing`    | Projde anglický text, který jste napsali, a udělá ho jasnějším a stručnějším    |
-| `find-skills`     | Najde v okně agenta dovednosti, které potřebujete, a navrhne jejich instalaci   |
+| Dovednost                     | Co dělá                                                                                                                                   |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Udělá z poznámek z porady zápis s rozhodnutími a úkoly                                                                                    |
+| `internal-comms`              | Píše oznámení, zpravodaje, zprávy o postupu, časté dotazy a další interní texty                                                           |
+| `humanizer`                   | Najde obraty, které působí jako psané AI, a upraví je přirozeně                                                                           |
+| `copy-editing`                | Projde anglický text, který jste napsali, a udělá ho jasnějším a stručnějším                                                              |
+| `find-skills`                 | Najde v okně agenta dovednosti, které potřebujete, a navrhne jejich instalaci                                                             |
+| `administration-report`       | Uvede zprávu do souladu se směrnicí korejského ministerstva vnitra: souvislé věty, jednotné číslování, dostupné písmo, jednoduché tabulky |
+| `administration-report-draft` | Píše správní zprávu od začátku ve formátu ministerstva: oddíly, číslování Ⅰ·1·가, souvislé věty, názvy tabulek a dostupné písmo           |
 
 `copy-editing` je určena pro anglické marketingové texty. `find-skills` funguje jen v okně agenta.
 

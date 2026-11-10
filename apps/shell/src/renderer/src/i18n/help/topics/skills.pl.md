@@ -8,7 +8,7 @@ Umiejętność to zestaw instrukcji roboczych dla AI. Zapisz raz to, co robisz w
 
 | Pochodzenie                    | Co zawiera                                                              | Na początku |
 | ------------------------------ | ----------------------------------------------------------------------- | ----------- |
-| **Wbudowane**                  | 5 umiejętności dostarczanych z GenOffice                                | Włączone    |
+| **Wbudowane**                  | Umiejętności dostarczane z GenOffice                                    | Włączone    |
 | **Moje umiejętności**          | Umiejętności dodane lub utworzone przez ciebie (`~/.ieumoffice/skills`) | Włączone    |
 | **Folder umiejętności Claude** | Umiejętności z `~/.claude/skills`                                       | Wyłączone   |
 | **Wtyczki Claude**             | Umiejętności zainstalowanych wtyczek Claude                             | Wyłączone   |
@@ -17,7 +17,7 @@ Umiejętność to zestaw instrukcji roboczych dla AI. Zapisz raz to, co robisz w
 - Przełącznik włącza lub wyłącza umiejętność. To samo ustawienie obowiązuje w panelu AI każdego edytora, w Ask AI na stronie głównej i w oknie agenta.
 - Dla włączonej umiejętności wybierz **Decyduje AI** lub **Tylko na wezwanie**. Na początku ustawione jest Decyduje AI. Przy Tylko na wezwanie umiejętność jest używana tylko wtedy, gdy sam ją wywołasz.
 - Umiejętności z różnych źródeł mogą mieć tę samą nazwę. Rozróżnisz je po etykiecie pochodzenia w każdym wierszu.
-- W menu dodatkowych opcji są **Pokaż zawartość**, **Edytuj** (tylko moje umiejętności), **Eksportuj (zip)** (tylko moje umiejętności) i **Otwórz folder**.
+- W menu dodatkowych opcji są **Pokaż zawartość**, **Edytuj** (tylko moje umiejętności), **Eksportuj (zip)** (tylko moje umiejętności) i **Otwórz folder**. Wbudowane umiejętności nie mają pozycji **Otwórz folder**.
 - **Przenieś do kosza** przenosi jedną z moich umiejętności do systemowego kosza, skąd można ją przywrócić.
 - Wbudowanej umiejętności się nie usuwa, tylko ukrywa: wybierz **Ukryj**. **Pokaż ponownie** na dole listy przywraca ją w stanie początkowym.
 - Aby zmienić umiejętność wbudowaną lub pochodzącą z innego programu, wybierz **Kopiuj do moich umiejętności**. Kopia pojawia się w moich umiejętnościach, a oryginał zostaje wyłączony.
@@ -28,13 +28,13 @@ Umiejętność to zestaw instrukcji roboczych dla AI. Zapisz raz to, co robisz w
 
 1. W **Ustawienia ▸ Umiejętności** kliknij **Dodaj**.
 2. Wybierz **Z folderu**, **Z pliku zip**, **Z wklejonego tekstu** lub **Z linku GitHub**. W przypadku wklejonego tekstu wklej cały `SKILL.md` od jego pierwszego wiersza `---` i kliknij **Podgląd**. W przypadku GitHub wpisz adres publicznego repozytorium, `owner/repo` albo stronę umiejętności w skills.sh i kliknij **Znajdź**.
-3. Sprawdź w podglądzie znalezione umiejętności. Podgląd pokazuje liczbę i rozmiar plików, to, czy są skrypty, adresy internetowe w tekście, plik licencji oraz wiersze warte przeczytania przed instalacją.
+3. Sprawdź w podglądzie znalezione umiejętności. Podgląd pokazuje liczbę i rozmiar plików, to, czy są skrypty, adresy internetowe w tekście, plik licencji oraz wiersze warte przeczytania przed instalacją. **Pokaż zawartość** pod umiejętnością otwiera tekst jej `SKILL.md` i jej pliki tekstowe, żeby przeczytać je przed instalacją.
 4. Zaznacz tylko te umiejętności, które chcesz zainstalować, i kliknij **Zainstaluj**. Zainstalowane umiejętności są od razu włączone.
 
 Pod podglądem zawsze widnieje: „Instaluj umiejętności tylko z zaufanych źródeł. Umiejętność przekazuje AI instrukcje, a w oknie agenta może uruchamiać skrypty”. Umiejętność z nieznanego źródła przeczytaj, zanim ją zainstalujesz.
 
-- Jeśli w moich umiejętnościach jest już jedna o tej samej nazwie, wybierz w tym wierszu **Zastąp** lub **Pomiń**.
-- Możesz też upuścić plik zip umiejętności lub plik `SKILL.md` na dowolne okno GenOffice. Otworzy się **Ustawienia ▸ Umiejętności** z tym samym podglądem. Zip jest traktowany jako umiejętność, gdy `SKILL.md` leży na jego najwyższym poziomie albo każdy folder najwyższego poziomu zawiera taki plik; każdy inny zip zostaje pominięty. Plik `SKILL.md` trafia sam: umiejętność z dodatkowymi plikami spakuj do zipa.
+- Jeśli w moich umiejętnościach jest już jedna o tej samej nazwie, wybierz w tym wierszu **Zastąp** lub **Pomiń**. **Zastąp** zachowuje ustawienia umiejętności: włączona lub nie, Decyduje AI / Tylko na wezwanie oraz gdzie jest używana.
+- Możesz też upuścić plik zip umiejętności lub plik `SKILL.md` na dowolne okno GenOffice. Otworzy się **Ustawienia ▸ Umiejętności** z tym samym podglądem. Zip jest traktowany jako umiejętność, gdy `SKILL.md` leży na jego najwyższym poziomie albo każdy folder najwyższego poziomu zawiera taki plik; przy każdym innym zipie upuszczonym osobno **Ustawienia ▸ Umiejętności** pokazują „Nie znaleziono umiejętności”. Plik `SKILL.md` trafia sam: umiejętność z dodatkowymi plikami spakuj do zipa.
 - **Wiersze warte przeczytania przed instalacją** to wiersze, które proszą AI o zignorowanie wcześniejszych instrukcji, ukrycie czegoś przed tobą lub pobranie instrukcji z zewnętrznego adresu, a także ścieżki `../` wskazujące poza folder umiejętności. Przy każdym widać plik i numer wiersza. Nie blokują instalacji, a umiejętność bez takich wierszy nie jest przez to bezpieczna.
 - Przy pobieraniu z GitHub GenOffice łączy się tylko z `github.com`, `api.github.com` i `codeload.github.com` i nie wysyła żadnych danych logowania. Jeśli archiwum jest za duże albo nie przejdzie kontroli bezpieczeństwa, nic nie zostanie zainstalowane.
 - Strona umiejętności w skills.sh (`https://skills.sh/owner/repo/skill`) jest odczytywana jako ta umiejętność w repozytorium GitHub `owner/repo`. GenOffice nie łączy się ze skills.sh.
@@ -45,7 +45,7 @@ Pod podglądem zawsze widnieje: „Instaluj umiejętności tylko z zaufanych źr
 - W przypadku umiejętności zainstalowanej z GitHub polecenie **Sprawdź aktualizacje** w menu dodatkowych opcji szuka nowej treści. GenOffice łączy się z GitHub dopiero po kliknięciu.
 - Jeśli nic się nie zmieniło, pojawia się „Aktualna”. Jeśli coś się zmieniło, przejrzyj zmienione pliki i podgląd, a potem kliknij **Aktualizuj**.
 - Jeśli po instalacji sam edytowałeś umiejętność, pojawia się też „Twoje zmiany zostaną utracone”.
-- Aktualizacja zachowuje stan włączenia umiejętności i wybór między Decyduje AI a Tylko na wezwanie.
+- Aktualizacja zachowuje stan włączenia umiejętności, wybór między Decyduje AI a Tylko na wezwanie oraz to, gdzie jest używana.
 
 ## Wywoływanie umiejętności w panelu AI
 
@@ -110,13 +110,15 @@ Gdy tworzysz umiejętność w panelu AI edytora, bieżący dokument może dołą
 
 ## Wbudowane umiejętności
 
-| Umiejętność       | Co robi                                                                                 |
-| ----------------- | --------------------------------------------------------------------------------------- |
-| `meeting-minutes` | Zamienia notatki ze spotkania w protokół z decyzjami i zadaniami do wykonania           |
-| `internal-comms`  | Pisze ogłoszenia, biuletyny, raporty z postępów, FAQ i inne teksty wewnętrzne           |
-| `humanizer`       | Wyszukuje sformułowania brzmiące jak pisane przez AI i wygładza je                      |
-| `copy-editing`    | Przechodzi przez napisany przez ciebie tekst angielski, by był jaśniejszy i zwięźlejszy |
-| `find-skills`     | Znajduje w oknie agenta potrzebne umiejętności i proponuje ich instalację               |
+| Umiejętność                   | Co robi                                                                                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Zamienia notatki ze spotkania w protokół z decyzjami i zadaniami do wykonania                                                                            |
+| `internal-comms`              | Pisze ogłoszenia, biuletyny, raporty z postępów, FAQ i inne teksty wewnętrzne                                                                            |
+| `humanizer`                   | Wyszukuje sformułowania brzmiące jak pisane przez AI i wygładza je                                                                                       |
+| `copy-editing`                | Przechodzi przez napisany przez ciebie tekst angielski, by był jaśniejszy i zwięźlejszy                                                                  |
+| `find-skills`                 | Znajduje w oknie agenta potrzebne umiejętności i proponuje ich instalację                                                                                |
+| `administration-report`       | Dopasowuje raport do wytycznych koreańskiego ministerstwa spraw wewnętrznych: zdania opisowe, stała numeracja, czcionki dostępne wszędzie, proste tabele |
+| `administration-report-draft` | Pisze raport administracyjny od zera w formacie ministerstwa: sekcje, numeracja Ⅰ·1·가, zdania opisowe, tytuły tabel i dostępne czcionki                 |
 
 `copy-editing` jest przeznaczona do angielskich tekstów marketingowych. `find-skills` działa tylko w oknie agenta.
 
