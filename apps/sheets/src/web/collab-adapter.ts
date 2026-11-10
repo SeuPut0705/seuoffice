@@ -54,13 +54,20 @@ import {
   classify,
   ADD_MERGE,
   fromWire,
+  INSERT_COL,
+  INSERT_ROW,
   INSERT_SHEET,
   inverseOf,
   isSynced,
+  MOVE_COLS,
   MOVE_RANGE,
+  MOVE_ROWS,
   type Mutation,
   type MutationEnv,
   type Params,
+  REMOVE_COL,
+  REMOVE_MERGE,
+  REMOVE_ROWS,
   REMOVE_SHEET,
   REMOVE_DEFINED_NAME,
   SET_DEFINED_NAME,
@@ -81,7 +88,16 @@ import {
   shiftFormula,
   type SheetNames,
 } from './collab-rebase'
-import { checkWireMutation, firstInvalid, MAX_SHEET_NAME, mergesFit } from './collab-wire-check'
+import {
+  checkWireMutation,
+  firstInvalid,
+  MAX_COLUMNS,
+  MAX_REBUILD_WORK,
+  MAX_ROWS,
+  MAX_SHEET_NAME,
+  mergedCells,
+  mergesFit,
+} from './collab-wire-check'
 
 /**
  * User commands whose every mutation co-editing cannot take back exactly
@@ -223,6 +239,8 @@ interface Revert {
 
 interface Burst extends Revert {
   mutations: Mutation[]
+  /** the merged cells its mutations made Univer rebuild (rebuildWork) */
+  work: number
 }
 
 /** One local mutation as it ran again (wire form), with what takes it back */
@@ -234,6 +252,7 @@ interface Replayed extends Revert {
 interface Captured extends Revert {
   /** it only restates formulas after the structural mutation before it (Univer's reference rewrite) */
   rewrite: boolean
+  work: number
 }
 
 /** A user command that began; where the burst stood then, and whether one of its mutations was refused */
@@ -348,11 +367,51 @@ function withFreeName(workbook: Workbook, wire: Mutation): Mutation {
   return wire
 }
 
-/** Whether merge `wire` keeps its sheet within what every page's span cache may walk */
-function mergeFits(workbook: Workbook, wire: Mutation): boolean {
-  if (wire.id !== ADD_MERGE) return true
+/**
+ * Whether `wire` keeps its sheet within what every page can hold: Excel's grid, and the merged
+ * cells a span cache may walk. Every page decides it on the same version of the log.
+ */
+function keepsSheetBounds(workbook: Workbook, wire: Mutation): boolean {
   const sheet = workbook.getSheetBySheetId(String(wire.params.subUnitId))
-  return !sheet || mergesFit(sheet.getConfig().mergeData, wire.params.ranges as IRange[])
+  if (!sheet) return true
+  const range = wire.params.range as IRange
+  switch (wire.id) {
+    case ADD_MERGE:
+      return mergesFit(sheet.getConfig().mergeData, wire.params.ranges as IRange[])
+    case INSERT_ROW:
+      return sheet.getRowCount() + range.endRow - range.startRow + 1 <= MAX_ROWS
+    case INSERT_COL:
+      return sheet.getColumnCount() + range.endColumn - range.startColumn + 1 <= MAX_COLUMNS
+    default:
+      return true
+  }
+}
+
+/** Mutations after which Univer rebuilds the sheet's span cache over every merged cell */
+const REBUILDS_SPANS = new Set([
+  ADD_MERGE,
+  REMOVE_MERGE,
+  INSERT_ROW,
+  INSERT_COL,
+  REMOVE_ROWS,
+  REMOVE_COL,
+  MOVE_ROWS,
+  MOVE_COLS,
+])
+
+/**
+ * The merged cells Univer walks when `wire` runs now: the sheet's merges (with those it adds) for
+ * a mutation that rebuilds the span cache, a new sheet's own merges. Pages at one version of the
+ * log agree on it, so an op is held to MAX_REBUILD_WORK the same way everywhere.
+ */
+function rebuildWork(workbook: Workbook, wire: Mutation): number {
+  if (wire.id === INSERT_SHEET)
+    return mergedCells((wire.params.sheet as { mergeData?: IRange[] }).mergeData ?? [])
+  if (!REBUILDS_SPANS.has(wire.id)) return 0
+  const sheet = workbook.getSheetBySheetId(String(wire.params.subUnitId))
+  if (!sheet) return 0
+  const added = wire.id === ADD_MERGE ? mergedCells(wire.params.ranges as IRange[]) : 0
+  return mergedCells(sheet.getConfig().mergeData) + added
 }
 
 export function sheetsCollabAdapter(
@@ -619,10 +678,10 @@ export function sheetsCollabAdapter(
       options.onBlocked?.(info.id, 'unshared')
       refuse(`co-editing refuses a second sheet named ${named.name}`)
     }
-    // every page rebuilds the sheet's merge cache over each merged cell on each merge edit
-    if (!mergeFits(workbook!, { id: info.id, params })) {
+    // every page must hold the sheet: Excel's grid, and merges a span cache can walk
+    if (!keepsSheetBounds(workbook!, { id: info.id, params })) {
       options.onBlocked?.(info.id, 'too-large')
-      refuse('co-editing refuses a merge past the merged cells a sheet may hold')
+      refuse(`co-editing refuses ${info.id} past what a sheet may hold`)
     }
     // A sheet that arrives with content is journaled as an empty new sheet on the other pages
     // (see BLOCKED_COMMANDS). One that was removed earlier is known to every journal: its return
@@ -666,6 +725,7 @@ export function sheetsCollabAdapter(
       undo: inverse,
       journal: journalMarkOf({ id: info.id, params: info.params as Params }),
       rewrite,
+      work: rebuildWork(workbook!, { id: info.id, params }),
     })
     awaited.push(info.id)
     if (awaited.length > MAX_OPEN_COMMANDS) awaited.shift()
@@ -716,7 +776,8 @@ export function sheetsCollabAdapter(
         undoable.set(sheet, own)
       }
     }
-    burst ??= { mutations: [], undo: [], journal: [] }
+    burst ??= { mutations: [], undo: [], journal: [], work: 0 }
+    burst.work += taken.work
     burst.mutations.push(wire)
     burst.undo = taken.undo.concat(burst.undo)
     burst.journal = taken.journal.concat(burst.journal)
@@ -749,9 +810,13 @@ export function sheetsCollabAdapter(
     const op: SheetOp = { id: id ?? randomId(), mutations: burst.mutations }
     // One op travels as one change, and the engine fails the session over a change it cannot
     // send. The person loses this one edit instead, and is told.
-    // Nor may it carry what the other pages' decode refuses (collab-wire-check.ts)
+    // Nor may it carry what the other pages' decode refuses (collab-wire-check.ts), or make them
+    // rebuild merges for longer than an op may
     const invalid = firstInvalid(burst.mutations)
-    if (invalid || new TextEncoder().encode(JSON.stringify(encode(op))).length > maxOpBytes) {
+    const tooLarge =
+      burst.work > MAX_REBUILD_WORK ||
+      new TextEncoder().encode(JSON.stringify(encode(op))).length > maxOpBytes
+    if (invalid || tooLarge) {
       if (invalid) console.warn(`[co-editing] ${invalid.message}`)
       const first = burst.mutations[0]!.id
       takeBack({ mutations: 0, undo: 0, journal: 0 })
@@ -833,8 +898,8 @@ export function sheetsCollabAdapter(
       )
       if (ranges.length === 0) return null
       fixed = { id: wire.id, params: { ...wire.params, ranges } }
-      if (!mergeFits(workbook!, fixed)) return null
     }
+    if (!keepsSheetBounds(workbook!, fixed)) return null
     const local = fromWire(workbook!, withLocalNameId(fixed))
     const undo = inverseOf(env, local)
     const journal = journalMarkOf(local)
@@ -922,12 +987,17 @@ export function sheetsCollabAdapter(
     const mutations: Mutation[] = []
     let undo: Mutation[] = []
     let journal: JournalRevert[] = []
+    let work = 0
     const ran = (replayed: Replayed): void => {
       mutations.push(replayed.wire)
       undo = replayed.undo.concat(undo)
       journal = replayed.journal.concat(journal)
     }
     for (const wire of wires) {
+      // what the others hold the op to, on the version it is now sent at
+      const cost = rebuildWork(workbook!, wire)
+      if (work + cost > MAX_REBUILD_WORK) continue
+      work += cost
       const renames = wire.id === SET_SHEET_NAME
       const held = renames || axisChangeOf(wire) ? heldFormulas() : null
       const oldName = renames ? names.nameOf(String(wire.params.subUnitId)) : undefined
@@ -936,7 +1006,7 @@ export function sheetsCollabAdapter(
       ran(replayed)
       if (held) for (const rewrite of rewriteFormulas(held, replayed.wire, oldName)) ran(rewrite)
     }
-    return { mutations, undo, journal }
+    return { mutations, undo, journal, work }
   }
 
   function integrate(remote: SheetOp[], local: SheetOp[]): SheetOp[] {
@@ -958,14 +1028,19 @@ export function sheetsCollabAdapter(
 
       const changes: Change[] = []
       for (const op of remote) {
+        let work = 0
+        let dropped = 0
         for (const received of op.mutations) {
           // Checks every page makes on the same version of the log, so all of them end alike: a
-          // clashing sheet name gets the same free name, a merge past the bound runs nowhere.
-          // Only a page that skipped its own checks sends either.
-          if (!mergeFits(workbook!, received)) {
-            console.warn(`[co-editing] dropped a received merge past the bound (op ${op.id})`)
+          // clashing sheet name gets the same free name; a mutation past a sheet's bounds, or
+          // past the op's merge rebuilds, runs nowhere. Only a page that skipped its own checks
+          // sends either.
+          const cost = rebuildWork(workbook!, received)
+          if (!keepsSheetBounds(workbook!, received) || work + cost > MAX_REBUILD_WORK) {
+            dropped++
             continue
           }
+          work += cost
           const mutation = withFreeName(workbook!, received)
           const sheet = String(mutation.params.subUnitId)
           const nameBefore = names.nameOf(sheet)
@@ -983,6 +1058,8 @@ export function sheetsCollabAdapter(
               to: String(mutation.params.name),
             })
         }
+        if (dropped > 0)
+          console.warn(`[co-editing] dropped ${dropped} mutations past the bounds of op ${op.id}`)
       }
 
       // a rewrite belongs to the workbook it was computed on: the replay computes it again

@@ -20,6 +20,15 @@ export const MAX_CELLS = MAX_ROWS
  * span cache over each merged cell (about 35 ms and 50 MB per million cells, measured headless)
  */
 export const MAX_MERGED_CELLS = MAX_CELLS
+/**
+ * Merged cells one op may make Univer rebuild, summed over its mutations that rebuild the span
+ * cache (adapter: rebuildWork). A received merge mutation on a sheet holding 1,048,576 merged
+ * cells took 106 to 121 ms with the adapter and Univer's listeners (measured in vitest, machine
+ * load 8), so the bound is about one second. It leaves an ordinary edit room: a merge is two
+ * rebuilds, and 201 subtotal rows inserted at once fit while the sheet holds under 41,000
+ * merged cells.
+ */
+export const MAX_REBUILD_WORK = 8 * MAX_MERGED_CELLS
 /** Merges on one sheet: a removal compares each of its ranges with each of them */
 export const MAX_MERGES = 65_536
 const MAX_TEXT = 32_767
@@ -143,10 +152,15 @@ const boolean: Check = (value, path) => {
 /** Univer's small numeric enums */
 const enumeration = integer(0, 64)
 const id = text(MAX_ID)
-/** Excel's rule: 1 to 31 characters, none of `\ / ? * [ ] :`, no apostrophe at either end */
+/**
+ * Excel's rule: 1 to 31 characters, none of `\ / ? * [ ] :`, no apostrophe at either end; and no
+ * control characters, which an XML file cannot hold
+ */
 const sheetName: Check = (value, path, budget) => {
   text(MAX_SHEET_NAME)(value, path, budget)
-  if (!/^(?!')[^\\/?*[\]:]+(?<!')$/.test(value as string)) bad(path, 'not a sheet name Excel takes')
+  // eslint-disable-next-line no-control-regex
+  if (!/^(?!')[^\\/?*[\]:\u0000-\u001f\u007f]+(?<!')$/.test(value as string))
+    bad(path, 'not a sheet name Excel takes')
 }
 const color = text(64)
 const row = integer(0, MAX_ROWS - 1)
@@ -236,20 +250,22 @@ const rangeShape = object(
 type Range = { startRow: number; endRow: number; startColumn: number; endColumn: number }
 
 /**
- * What Univer's span cache walks for a merge: each cell, or each row or column of a whole-row or
- * whole-column merge (`rangeType`), or nothing for the whole sheet
+ * The cells a merge covers. Univer's span cache walks only the rows or columns of a whole-row or
+ * whole-column merge (`rangeType`), but a saved file holds every cell of it, and opening that file
+ * walks them all.
  */
-export function mergeCost(range: Range & { rangeType?: number }): number {
-  const rows = range.endRow - range.startRow + 1
-  const columns = range.endColumn - range.startColumn + 1
-  if (range.rangeType === 1) return rows
-  if (range.rangeType === 2) return columns
-  if (range.rangeType === 3) return 1
-  return rows * columns
+const mergeCost = (range: Range): number =>
+  (range.endRow - range.startRow + 1) * (range.endColumn - range.startColumn + 1)
+
+/** The cells `merges` cover together */
+export function mergedCells(merges: readonly Range[]): number {
+  let cells = 0
+  for (const merge of merges) cells += mergeCost(merge)
+  return cells
 }
 
 /** A range; `covers` says what of it the mutation visits one by one */
-function range(covers: 'cells' | 'rows' | 'columns' | 'merge' | 'nothing'): Check {
+function range(covers: 'cells' | 'rows' | 'columns' | 'nothing'): Check {
   return (value, path, budget) => {
     rangeShape(value, path, budget)
     const { startRow, endRow, startColumn, endColumn } = value as Range
@@ -257,7 +273,6 @@ function range(covers: 'cells' | 'rows' | 'columns' | 'merge' | 'nothing'): Chec
     const rows = endRow - startRow + 1
     const columns = endColumn - startColumn + 1
     if (covers === 'cells') spend(budget, 'cells', rows * columns, path)
-    else if (covers === 'merge') spend(budget, 'cells', mergeCost(value as Range), path)
     else if (covers === 'rows') spend(budget, 'rows', rows, path)
     else if (covers === 'columns') spend(budget, 'columns', columns, path)
   }
@@ -402,7 +417,7 @@ const worksheet = object(
     scrollLeft: optional(size),
     defaultColumnWidth: optional(size),
     defaultRowHeight: optional(size),
-    mergeData: optional(ranges('merge')),
+    mergeData: optional(ranges('cells')),
     cellData: optional(matrix(cell)),
     rowData: optional(lines('rows', rowData)),
     columnData: optional(lines('columns', columnData)),
@@ -472,9 +487,9 @@ const WIRE: Record<string, Check> = {
     { sourceRange: range('columns'), targetRange: range('columns') },
     ['sourceRange', 'targetRange'],
   ),
-  // the span cache is rebuilt over every merge of the sheet (adapter: mergesFit); a removal only
-  // compares ranges, and what it leaves was bounded when it was added
-  'sheet.mutation.add-worksheet-merge': onSheet({ ranges: ranges('merge') }, ['ranges']),
+  // the span cache is rebuilt over every merge of the sheet (adapter: mergesFit, rebuildWork); a
+  // removal only compares ranges, and what it leaves was bounded when it was added
+  'sheet.mutation.add-worksheet-merge': onSheet({ ranges: ranges('cells') }, ['ranges']),
   'sheet.mutation.remove-worksheet-merge': onSheet({ ranges: ranges('nothing') }, ['ranges']),
   'sheet.mutation.set-row-data': onSheet({ rowData: lines('rows', rowData) }, ['rowData']),
   'sheet.mutation.set-col-data': onSheet({ columnData: lines('columns', columnData) }, [
@@ -615,7 +630,5 @@ export function firstInvalid(
  */
 export function mergesFit(merges: readonly Range[], added: readonly Range[]): boolean {
   if (merges.length + added.length > MAX_MERGES) return false
-  let cost = 0
-  for (const range of [...merges, ...added]) cost += mergeCost(range)
-  return cost <= MAX_MERGED_CELLS
+  return mergedCells(merges) + mergedCells(added) <= MAX_MERGED_CELLS
 }

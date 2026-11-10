@@ -4,7 +4,7 @@
  * prototype keys slipping past the shape check, and sheet names Excel forbids
  * or that two sheets share.
  */
-import { BooleanNumber, DocumentDataModel } from '@univerjs/core'
+import { BooleanNumber, Direction, DocumentDataModel } from '@univerjs/core'
 import { afterEach, describe, expect, it } from 'vitest'
 import { MAX_COLUMNS, MAX_ROWS, WireMutationError } from '../src/web/collab-wire-check'
 import { Room } from './collab/room'
@@ -231,5 +231,167 @@ describe('sheet names', () => {
     receive([a], op('sheet.mutation.set-worksheet-name', { subUnitId: 's1', name: long }))
     receive([a], op('sheet.mutation.set-worksheet-name', { subUnitId: 's2', name: long }))
     expect(namesOf(a)).toEqual([long, `${'x'.repeat(27)} (2)`])
+  })
+})
+
+const rowCountOf = (page: OpenedBook, sheet = 's1') =>
+  page.workbook.getSheetBySheetId(sheet)!.getRowCount()
+const columnCountOf = (page: OpenedBook, sheet = 's1') =>
+  page.workbook.getSheetBySheetId(sheet)!.getColumnCount()
+
+describe('a sheet never grows past Excel’s grid', () => {
+  it('drops, on every page alike, received inserts that would take a sheet past 1,048,576 rows', () => {
+    const room = new Room()
+    const a = room.join()
+    const b = room.join()
+    receive(
+      [a, b],
+      op('sheet.mutation.set-worksheet-row-count', { subUnitId: 's1', rowCount: MAX_ROWS - 10 }),
+    )
+    receive([a, b], {
+      id: 'hostile-rows',
+      m: [
+        ['sheet.mutation.insert-row', { subUnitId: 's1', range: range(0, 0, 4, 0) }],
+        ['sheet.mutation.insert-row', { subUnitId: 's1', range: range(0, 0, 19, 0) }],
+      ],
+    })
+    expect(rowCountOf(a)).toBe(MAX_ROWS - 5)
+    expect(rowCountOf(b)).toBe(rowCountOf(a))
+  })
+
+  it('drops, on every page alike, received inserts that would take a sheet past 16,384 columns', () => {
+    const room = new Room()
+    const a = room.join()
+    const b = room.join()
+    receive(
+      [a, b],
+      op('sheet.mutation.set-worksheet-column-count', {
+        subUnitId: 's1',
+        columnCount: MAX_COLUMNS - 1,
+      }),
+    )
+    receive([a, b], op('sheet.mutation.insert-col', { subUnitId: 's1', range: range(0, 0, 0, 1) }))
+    expect(columnCountOf(a)).toBe(MAX_COLUMNS - 1)
+    expect(columnCountOf(b)).toBe(columnCountOf(a))
+  })
+
+  it('refuses a row insert on a full sheet and tells the person', () => {
+    const told: string[] = []
+    const room = new Room()
+    const a = room.join(undefined, { onBlocked: (id, reason) => told.push(`${reason}: ${id}`) })
+    expect(
+      a.edit('full', 'sheet.command.set-worksheet-row-count', {
+        subUnitId: 's1',
+        rowCount: MAX_ROWS,
+      }),
+    ).toBe(true)
+    expect(
+      a.edit('insert', 'sheet.command.insert-row-by-range', {
+        subUnitId: 's1',
+        range: range(3, 0, 3, 11),
+        direction: Direction.UP,
+      }),
+    ).toBe(false)
+    expect(rowCountOf(a)).toBe(MAX_ROWS)
+    expect(a.emitted.map((sent) => sent.id)).toEqual(['full'])
+    expect(told).toEqual(['too-large: sheet.mutation.insert-row'])
+  })
+
+  it('leaves out of its own edit an insert that someone else’s change made too many', () => {
+    const room = new Room()
+    const a = room.join()
+    const b = room.join()
+    expect(
+      a.edit('insert', 'sheet.command.insert-row-by-range', {
+        subUnitId: 's1',
+        range: range(3, 0, 3, 11),
+        direction: Direction.UP,
+      }),
+    ).toBe(true)
+    expect(
+      b.edit('full', 'sheet.command.set-worksheet-row-count', {
+        subUnitId: 's1',
+        rowCount: MAX_ROWS,
+      }),
+    ).toBe(true)
+    room.settle(b, a)
+    expect(rowCountOf(a)).toBe(MAX_ROWS)
+    expect(rowCountOf(b)).toBe(MAX_ROWS)
+  })
+})
+
+describe('the merge rebuilds one op may cause', () => {
+  /** One merge of 1,048,576 cells, the most a sheet may hold */
+  const fullMerge = range(0, 0, 524_287, 1)
+
+  it('leaves out, on every page alike, what a received op does past its rebuild budget', () => {
+    const room = new Room()
+    const a = room.join()
+    const b = room.join()
+    receive([a, b], op(ADD_MERGE, { subUnitId: 's1', ranges: [fullMerge] }))
+    const empty = ['sheet.mutation.remove-worksheet-merge', { subUnitId: 's1', ranges: [] }]
+    receive([a, b], {
+      id: 'hostile-rebuilds',
+      m: [
+        ...Array.from({ length: 40 }, () => empty),
+        ['sheet.mutation.remove-worksheet-merge', { subUnitId: 's1', ranges: [fullMerge] }],
+      ],
+    })
+    expect(mergesOf(a)).toEqual([fullMerge])
+    expect(mergesOf(b)).toEqual(mergesOf(a))
+  })
+
+  it('refuses an edit that would rebuild a heavily merged sheet too often, and tells the person', () => {
+    const told: string[] = []
+    const room = new Room()
+    const a = room.join(undefined, { onBlocked: (id, reason) => told.push(`${reason}: ${id}`) })
+    expect(
+      a.edit('rows', 'sheet.command.set-worksheet-row-count', {
+        subUnitId: 's1',
+        rowCount: 600_000,
+      }),
+    ).toBe(true)
+    expect(
+      a.edit('merge', 'sheet.command.add-worksheet-merge', {
+        subUnitId: 's1',
+        selections: [fullMerge],
+        defaultMerge: true,
+      }),
+    ).toBe(true)
+    // nine rebuilds of 1,048,576 merged cells pass the budget of eight
+    for (let insert = 0; insert < 9; insert++) {
+      void a.commands.executeCommand('sheet.command.insert-row-by-range', {
+        unitId: a.workbook.getUnitId(),
+        subUnitId: 's1',
+        range: range(0, 0, 0, 11),
+        direction: Direction.UP,
+      })
+    }
+    expect(a.adapter.flush('subtotals')).toBe(false)
+    expect(a.emitted.map((sent) => sent.id)).toEqual(['rows', 'merge'])
+    expect(rowCountOf(a)).toBe(600_000)
+    expect(told).toEqual(['too-large: sheet.mutation.insert-row'])
+  }, 30_000)
+
+  it('charges a whole-sheet merge for every cell a saved file would hold', () => {
+    const page = new Room().join()
+    const error = decodeError(
+      page,
+      op(ADD_MERGE, {
+        subUnitId: 's1',
+        ranges: [{ ...range(0, 0, MAX_ROWS - 1, MAX_COLUMNS - 1), rangeType: 3 }],
+      }),
+    )
+    expect(error).toBeInstanceOf(WireMutationError)
+    expect((error as WireMutationError).tooLarge).toBe(true)
+  })
+})
+
+describe('sheet name control characters', () => {
+  it.each(['a\u0000b', 'a\u001fb', 'a\u007fb', '\tTab'])('refuses %j', (name) => {
+    const page = new Room().join()
+    expect(
+      decodeError(page, op('sheet.mutation.set-worksheet-name', { subUnitId: 's1', name })),
+    ).toBeInstanceOf(WireMutationError)
   })
 })
