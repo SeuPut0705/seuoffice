@@ -249,8 +249,50 @@ fn function(subtotal: Option<&str>) -> &'static str {
 fn item_name(item: Node<'_, '_>) -> Option<String> {
     match item.tag_name().name() {
         "s" => item.attribute("v").map(str::to_owned),
+        // A plain number is called by its digits. One that needs an exponent
+        // or a format to be read is not a name a reader will recognise.
+        "n" => item
+            .attribute("v")
+            .map(str::trim)
+            .filter(|value| {
+                !value.is_empty()
+                    && value.parse::<f64>().is_ok_and(f64::is_finite)
+                    && value
+                        .chars()
+                        .all(|character| character.is_ascii_digit() || matches!(character, '-' | '.'))
+            })
+            .map(str::to_owned),
         _ => None,
     }
+}
+
+/// The caption a field was given, as the attribute readers share for it.
+fn display_name(caption: Option<&str>) -> String {
+    match caption.map(str::trim).filter(|caption| !caption.is_empty()) {
+        Some(caption) => format!(r#" tableooo:display-name="{}""#, escape_xml(caption)),
+        None => String::new(),
+    }
+}
+
+/// How a row or column field lays out its items. The compact form has no
+/// word in the standard: it is written as the tabular one with the form
+/// itself beside it, which is how the readers that know it say it.
+fn layout_info(field: Node<'_, '_>) -> String {
+    let mode = match (flag(field, "outline", true), flag(field, "compact", true)) {
+        (true, true) => r#"tabular-layout" loext:layout-mode="compact-layout"#,
+        (true, false) if flag(field, "subtotalTop", true) => "outline-subtotals-top",
+        (true, false) => "outline-subtotals-bottom",
+        (false, _) => "tabular-layout",
+    };
+    let blank_lines = flag(field, "insertBlankRow", false);
+    // The tabular form without blank lines is what a field has when nothing
+    // is said.
+    if mode == "tabular-layout" && !blank_lines {
+        return String::new();
+    }
+    format!(
+        r#"<table:data-pilot-layout-info table:add-empty-lines="{blank_lines}" table:layout-mode="{mode}"/>"#
+    )
 }
 
 fn data_pilot_xml(
@@ -399,6 +441,9 @@ fn data_pilot_xml(
                 }
                 level.push_str("</table:data-pilot-members>");
             }
+            if orientation != "page" {
+                level.push_str(&layout_info(field));
+            }
         }
         let level = if level.is_empty() {
             "<table:data-pilot-level/>".to_owned()
@@ -406,8 +451,9 @@ fn data_pilot_xml(
             format!("<table:data-pilot-level>{level}</table:data-pilot-level>")
         };
         fields.push_str(&format!(
-            r#"<table:data-pilot-field table:source-field-name="{}" table:orientation="{orientation}" table:used-hierarchy="-1" table:function="auto">{level}</table:data-pilot-field>"#,
-            escape_xml(name)
+            r#"<table:data-pilot-field table:source-field-name="{}"{} table:orientation="{orientation}" table:used-hierarchy="-1" table:function="auto">{level}</table:data-pilot-field>"#,
+            escape_xml(name),
+            display_name(field.and_then(|field| field.attribute("name"))),
         ));
         Some(())
     };
@@ -437,15 +483,31 @@ fn data_pilot_xml(
             buttons.push(address(sheet, first.0, top + position));
         }
     }
+    // Several values have a place among the row or the column fields. A
+    // writer that leaves it out means the side the table says its values run
+    // along; the place is written so that a reader does not have to guess.
+    let values = child(table, "dataFields")
+        .map(|list| children(list, "dataField").count())
+        .unwrap_or(0);
+    if values > 1 && !row_fields.contains(&-2) && !column_fields.contains(&-2) {
+        let side = if flag(table, "dataOnRows", false) { "row" } else { "column" };
+        push_field(&mut fields, -2, side)?;
+    }
     let mut data_fields = 0;
     if let Some(list) = child(table, "dataFields") {
         for data in children(list, "dataField") {
             let index: i64 = data.attribute("fld")?.parse().ok()?;
             let name = name_of(index)?;
+            let function = function(data.attribute("subtotal"));
+            // The caption a value gets by itself is not one somebody gave
+            // it; writing it would turn it into one.
+            let caption = data
+                .attribute("name")
+                .filter(|caption| *caption != crate::odf_pivots::data_caption(function, name));
             fields.push_str(&format!(
-                r#"<table:data-pilot-field table:source-field-name="{}" table:orientation="data" table:used-hierarchy="-1" table:function="{}"><table:data-pilot-level/></table:data-pilot-field>"#,
+                r#"<table:data-pilot-field table:source-field-name="{}"{} table:orientation="data" table:used-hierarchy="-1" table:function="{function}"><table:data-pilot-level/></table:data-pilot-field>"#,
                 escape_xml(name),
-                function(data.attribute("subtotal"))
+                display_name(caption),
             ));
             data_fields += 1;
         }
@@ -525,12 +587,12 @@ mod tests {
             concat!(
                 r#"<table:data-pilot-table table:name="Sales &amp; plan" table:application-data="" table:target-range-address="Pivot.A4:Pivot.D11" table:buttons="Pivot.A7 Pivot.B6 Pivot.A4" table:grand-total="row" table:show-filter-button="false">"#,
                 r#"<table:source-cell-range table:cell-range-address="'Raw Data'.A1:'Raw Data'.D13"/>"#,
-                r#"<table:data-pilot-field table:source-field-name="Region" table:orientation="row" table:used-hierarchy="-1" table:function="auto"><table:data-pilot-level><table:data-pilot-subtotals><table:data-pilot-subtotal table:function="auto"/></table:data-pilot-subtotals><table:data-pilot-members><table:data-pilot-member table:name="West" table:display="false"/></table:data-pilot-members></table:data-pilot-level></table:data-pilot-field>"#,
-                r#"<table:data-pilot-field table:source-field-name="Product" table:orientation="column" table:used-hierarchy="-1" table:function="auto"><table:data-pilot-level/></table:data-pilot-field>"#,
+                r#"<table:data-pilot-field table:source-field-name="Region" table:orientation="row" table:used-hierarchy="-1" table:function="auto"><table:data-pilot-level><table:data-pilot-subtotals><table:data-pilot-subtotal table:function="auto"/></table:data-pilot-subtotals><table:data-pilot-members><table:data-pilot-member table:name="West" table:display="false"/></table:data-pilot-members><table:data-pilot-layout-info table:add-empty-lines="false" table:layout-mode="tabular-layout" loext:layout-mode="compact-layout"/></table:data-pilot-level></table:data-pilot-field>"#,
+                r#"<table:data-pilot-field table:source-field-name="Product" table:orientation="column" table:used-hierarchy="-1" table:function="auto"><table:data-pilot-level><table:data-pilot-layout-info table:add-empty-lines="false" table:layout-mode="tabular-layout" loext:layout-mode="compact-layout"/></table:data-pilot-level></table:data-pilot-field>"#,
                 r#"<table:data-pilot-field table:source-field-name="" table:is-data-layout-field="true" table:orientation="column" table:used-hierarchy="-1" table:function="auto"/>"#,
                 r#"<table:data-pilot-field table:source-field-name="Month" table:orientation="page" table:used-hierarchy="-1" table:function="auto"><table:data-pilot-level/></table:data-pilot-field>"#,
                 r#"<table:data-pilot-field table:source-field-name="Amount" table:orientation="data" table:used-hierarchy="-1" table:function="sum"><table:data-pilot-level/></table:data-pilot-field>"#,
-                r#"<table:data-pilot-field table:source-field-name="Amount" table:orientation="data" table:used-hierarchy="-1" table:function="average"><table:data-pilot-level/></table:data-pilot-field>"#,
+                r#"<table:data-pilot-field table:source-field-name="Amount" tableooo:display-name="Average" table:orientation="data" table:used-hierarchy="-1" table:function="average"><table:data-pilot-level/></table:data-pilot-field>"#,
                 r#"</table:data-pilot-table>"#,
             )
         );
@@ -579,6 +641,25 @@ mod tests {
             relationships_path("xl/worksheets/sheet1.xml"),
             "xl/worksheets/_rels/sheet1.xml.rels"
         );
+        // A hidden member that is a plain number is named by its digits.
+        let number = Document::parse(r#"<n v="12.5"/>"#).unwrap();
+        assert_eq!(item_name(number.root_element()).as_deref(), Some("12.5"));
+        let exponent = Document::parse(r#"<n v="1E+20"/>"#).unwrap();
+        assert_eq!(item_name(exponent.root_element()), None);
+        // The form of a field's items, and the two forms an outline has.
+        let field = |attributes: &str| format!("<pivotField{attributes}/>");
+        let layout = |attributes: &str| {
+            let text = field(attributes);
+            layout_info(Document::parse(&text).unwrap().root_element())
+        };
+        assert!(layout("").contains(r#"table:layout-mode="tabular-layout" loext:layout-mode="compact-layout""#));
+        assert!(layout(r#" compact="0""#).contains(r#"table:layout-mode="outline-subtotals-top""#));
+        assert!(layout(r#" compact="0" subtotalTop="0""#).contains(r#"table:layout-mode="outline-subtotals-bottom""#));
+        assert!(
+            layout(r#" compact="0" outline="0" insertBlankRow="1""#)
+                .contains(r#"table:add-empty-lines="true" table:layout-mode="tabular-layout"/>"#)
+        );
+        assert_eq!(layout(r#" compact="0" outline="0""#), "");
         assert_eq!(function(Some("countNums")), "countnums");
         assert_eq!(function(None), "sum");
         assert_eq!(range("$B$2:$D$9"), Some(((1, 1), (3, 8))));

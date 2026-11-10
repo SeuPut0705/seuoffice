@@ -83,8 +83,11 @@ const NAMESPACES: &str = concat!(
     // Conditional formats have no element in the standard; this is the
     // extension namespace the readers of the format share for them.
     r#"xmlns:calcext="urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0" "#,
-    // The stops of a gradient with more than two colours.
+    // The stops of a gradient with more than two colours, and the compact
+    // layout of a pivot table.
     r#"xmlns:loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0" "#,
+    // The caption a pivot table field was given.
+    r#"xmlns:tableooo="http://openoffice.org/2009/table" "#,
 );
 
 /// What the export did, in the shape the protocol returns it. `dropped` counts
@@ -4112,8 +4115,10 @@ second</t></r></text></comment></commentList></comments>"#.to_owned(),
                 r#"</table:table><table:data-pilot-tables>"#,
                 r#"<table:data-pilot-table table:name="By region" table:application-data="" table:target-range-address="Data.D1:Data.E4" table:buttons="Data.D1" table:show-filter-button="false">"#,
                 r#"<table:source-cell-range table:cell-range-address="Data.A1:Data.B3"/>"#,
-                r#"<table:data-pilot-field table:source-field-name="Region" table:orientation="row" table:used-hierarchy="-1" table:function="auto"><table:data-pilot-level/></table:data-pilot-field>"#,
-                r#"<table:data-pilot-field table:source-field-name="Amount" table:orientation="data" table:used-hierarchy="-1" table:function="sum"><table:data-pilot-level/></table:data-pilot-field>"#,
+                // A field that says nothing about its form has the compact
+                // one, and the value keeps the caption it was given.
+                r#"<table:data-pilot-field table:source-field-name="Region" table:orientation="row" table:used-hierarchy="-1" table:function="auto"><table:data-pilot-level><table:data-pilot-layout-info table:add-empty-lines="false" table:layout-mode="tabular-layout" loext:layout-mode="compact-layout"/></table:data-pilot-level></table:data-pilot-field>"#,
+                r#"<table:data-pilot-field table:source-field-name="Amount" tableooo:display-name="Sum" table:orientation="data" table:used-hierarchy="-1" table:function="sum"><table:data-pilot-level/></table:data-pilot-field>"#,
                 r#"</table:data-pilot-table></table:data-pilot-tables>"#,
             )),
             "{content}"

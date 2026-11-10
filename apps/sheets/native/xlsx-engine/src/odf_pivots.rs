@@ -541,7 +541,7 @@ fn data_function(function: &str) -> Option<Option<&'static str>> {
 
 /// What Excel calls a data field summarised by `function` before the user
 /// renames it.
-fn data_caption(function: &str, field: &str) -> String {
+pub(crate) fn data_caption(function: &str, field: &str) -> String {
     let word = match function {
         "count" | "countnums" => "Count",
         "average" => "Average",
@@ -1062,7 +1062,9 @@ fn parts(
             r#"<pivotTableDefinition xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" name="{}" cacheId="{}" applyNumberFormats="0" applyBorderFormats="0" applyFontFormats="0" applyPatternFormats="0" applyAlignmentFormats="0" applyWidthHeightFormats="1" dataCaption="Values" updatedVersion="3" minRefreshableVersion="3" useAutoFormatting="1" itemPrintTitles="1" createdVersion="3" indent="0"{}>"#,
             r#"<location ref="{}:{}" firstHeaderRow="{}" firstDataRow="{}" firstDataCol="{}"{}/>"#,
             r#"<pivotFields count="{}">{}</pivotFields>{}{}{}{}{}{}"#,
-            r#"<pivotTableStyleInfo name="PivotStyleLight16" showRowHeaders="1" showColHeaders="1" showRowStripes="0" showColStripes="0" showLastColumn="1"/>"#,
+            // No style is named: the cells already carry the look the document
+            // gave them, and a named style would draw its bands over it.
+            r#"<pivotTableStyleInfo showRowHeaders="1" showColHeaders="1" showRowStripes="0" showColStripes="0" showLastColumn="1"/>"#,
             r#"</pivotTableDefinition>"#,
         ),
         escape_xml(&printable(name)),
