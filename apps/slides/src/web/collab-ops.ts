@@ -261,8 +261,9 @@ function applyEdit(opened: OpenedPptx, edit: SlidesEdit): Applied | null {
       ])
       if (!r) return null
       if (edit.autofit) fitText(opened, edit.at, edit.autofit)
-      const after = r.records?.[0]?.after
-      return isRecord(after) && after.levelDirty === true ? { levelDirty: true } : {}
+      // setText's own record (pptx-ops text-ops.ts)
+      const after = r.records?.[0]?.after as { levelDirty?: boolean } | undefined
+      return after?.levelDirty === true ? { levelDirty: true } : {}
     }
     case 'duplicateSlide':
       return created(opened, () =>
@@ -397,103 +398,3 @@ export function deckFile(opened: OpenedPptx): Promise<Uint8Array> {
     }),
   )
 }
-
-// ── the wire form ───────────────────────────────────────────────────────
-
-type Json = null | boolean | number | string | Json[] | { [key: string]: Json }
-
-function fail(what: string): never {
-  throw new Error(`not a slides edit: ${what}`)
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-function text(value: unknown, what: string): string {
-  if (typeof value !== 'string' || !value) fail(what)
-  return value
-}
-
-function finite(value: unknown, what: string): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) fail(what)
-  return value
-}
-
-function ref(value: unknown): ElementRef {
-  if (!isRecord(value)) fail('at')
-  const at: ElementRef = { slide: text(value.slide, 'at.slide'), el: text(value.el, 'at.el') }
-  if (value.group !== undefined) at.group = text(value.group, 'at.group')
-  return at
-}
-
-function paragraphs(value: unknown): EditParagraph[] {
-  if (!Array.isArray(value)) fail('paragraphs')
-  for (const p of value) {
-    if (!isRecord(p) || !Array.isArray(p.runs)) fail('paragraphs[].runs')
-    for (const r of p.runs) if (!isRecord(r) || typeof r.text !== 'string') fail('runs[].text')
-  }
-  return value as EditParagraph[]
-}
-
-function autofit(value: unknown): Autofit {
-  if (!isRecord(value)) fail('autofit')
-  const fit: Autofit = {}
-  if (value.offset !== undefined) {
-    const o = value.offset
-    if (!isRecord(o)) fail('autofit.offset')
-    fit.offset = {
-      x: finite(o.x, 'offset.x'),
-      y: finite(o.y, 'offset.y'),
-      cx: finite(o.cx, 'offset.cx'),
-      cy: finite(o.cy, 'offset.cy'),
-    }
-  }
-  if (value.fontScale !== undefined) fit.fontScale = finite(value.fontScale, 'fontScale')
-  if (value.lnSpcReduction !== undefined)
-    fit.lnSpcReduction = finite(value.lnSpcReduction, 'lnSpcReduction')
-  return fit
-}
-
-function edit(value: unknown): SlidesEdit {
-  if (!isRecord(value)) fail('edit')
-  switch (value.kind) {
-    case 'text':
-      return {
-        kind: 'text',
-        at: ref(value.at),
-        paragraphs: paragraphs(value.paragraphs),
-        ...(value.autofit !== undefined ? { autofit: autofit(value.autofit) } : {}),
-      }
-    case 'duplicateSlide':
-      if (typeof value.clearText !== 'boolean') fail('clearText')
-      return {
-        kind: 'duplicateSlide',
-        slide: text(value.slide, 'slide'),
-        clearText: value.clearText,
-        made: text(value.made, 'made'),
-      }
-    case 'blankSlide':
-      if (typeof value.before !== 'boolean') fail('before')
-      return {
-        kind: 'blankSlide',
-        slide: text(value.slide, 'slide'),
-        before: value.before,
-        made: text(value.made, 'made'),
-      }
-    case 'deleteSlides':
-      if (!Array.isArray(value.slides) || value.slides.length === 0) fail('slides')
-      return { kind: 'deleteSlides', slides: value.slides.map((s) => text(s, 'slides[]')) }
-    case 'notes':
-      if (typeof value.text !== 'string') fail('text')
-      return { kind: 'notes', slide: text(value.slide, 'slide'), text: value.text }
-    default:
-      return fail(`kind ${String(value.kind)}`)
-  }
-}
-
-export function decodeOp(json: unknown): SlidesOp {
-  if (!isRecord(json)) fail('op')
-  return { id: text(json.id, 'id'), edit: edit(json.edit) }
-}
-
-export const encodeOp = (op: SlidesOp): Json => JSON.parse(JSON.stringify(op)) as Json

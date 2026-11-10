@@ -169,6 +169,7 @@ import * as tableActions from './table-actions'
 import * as styleActions from './style-actions'
 import { handleGlobalKeydown, slideRailHasFocus } from './keyboard-actions'
 import { clickSelection, currentAfterHistory, normalizeSelection } from '../shared/slide-selection'
+import { applyDeckChange } from '../shared/viewed-slide'
 import {
   notesBaselineAfterFlush,
   notesDraftAfterDeckChange,
@@ -1032,19 +1033,20 @@ export function App() {
       window.slidesApi.onDeckChanged?.(({ slides: all, order, replaced = [], rebuild }) => {
         // an edit was refused after the canvas showed it (a border or a handle where it was dragged)
         if (rebuild) setCanvasEpoch((n) => n + 1)
-        setSlides((current) =>
-          order
-            ? (mergeBroadcastUpdate(current, { slides: all, order }, refreshDeck) ?? current)
-            : all,
-        )
         // Slides before the one on screen may have come or gone: it stays on screen, found by its
         // part, and a notes draft stays with the slide it is for. The position decides only for
         // a slide that is gone itself, or whose part now holds another slide (`replaced`).
         const parts = (order ?? all.map((s) => s.partPath)).map((partPath) => ({ partPath }))
-        const shown = ctxRef.current.slides[ctxRef.current.current]?.partPath
-        const kept =
-          shown && !replaced.includes(shown) ? parts.findIndex((p) => p.partPath === shown) : -1
-        setCurrent((c) => (kept >= 0 ? kept : Math.min(c, Math.max(0, parts.length - 1))))
+        applyDeckChange(
+          setSlides,
+          setCurrent,
+          (current) =>
+            order
+              ? (mergeBroadcastUpdate(current, { slides: all, order }, refreshDeck) ?? current)
+              : all,
+          parts,
+          replaced,
+        )
         const draft = notesDraftRef.current
         notesDraftRef.current = draft && notesDraftAfterDeckChange(draft, parts, replaced)
         // Notes live outside RenderSlide: with none being typed here, read them again (the

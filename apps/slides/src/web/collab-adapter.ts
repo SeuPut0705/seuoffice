@@ -25,11 +25,9 @@ import { rebuildSlide, type Session } from '../main/session-state'
 import type { SlideUpdate } from '../shared/ipc'
 import {
   applyOp,
-  decodeOp,
   deckFile,
   elementRefOf,
   elementRefs,
-  encodeOp,
   fingerprint,
   fitText,
   putState,
@@ -42,6 +40,7 @@ import {
   type SlidesEdit,
   type SlidesOp,
 } from './collab-ops'
+import { GONE, decodeOp, encodeOp } from './collab-wire'
 
 /** Why a person's edit is not in the deck: input is frozen, or a peer removed what it changed */
 export type Refusal = 'frozen' | 'gone'
@@ -73,9 +72,6 @@ export interface SlidesCollab {
    */
   edit<T extends { op: SlidesOp }>(apply: () => T | null): T | null
 }
-
-/** A slide id no slide has: an edit naming it applies as nothing, on every page */
-const GONE = '\u0000gone'
 
 const createsSlide = (
   edit: SlidesEdit,

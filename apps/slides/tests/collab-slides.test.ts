@@ -61,14 +61,8 @@ import {
   type Refusal,
   type SlidesCollab,
 } from '../src/web/collab-adapter'
-import {
-  applyOp,
-  decodeOp,
-  encodeOp,
-  fingerprint,
-  slideIdAt,
-  type SlidesOp,
-} from '../src/web/collab-ops'
+import { applyOp, fingerprint, slideIdAt, type SlidesOp } from '../src/web/collab-ops'
+import { decodeOp, encodeOp } from '../src/web/collab-wire'
 
 const FORMAT = { name: 'pptx', schema: 2 }
 const CREATION_ID =
