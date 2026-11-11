@@ -30,3 +30,7 @@ export function setOwn<V>(record: Record<string, V>, key: string, value: V): voi
     })
   } else record[key] = value
 }
+
+// Copy such a record with a spread or Object.entries. Object.assign and
+// `target[key] = value` in a loop send a `__proto__` entry to the setter again,
+// which swaps the TARGET's prototype when the value is an object.
