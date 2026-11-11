@@ -1,6 +1,6 @@
 // Legacy VML (v:shape / v:group) geometry and color readers.
 import { attrsOf, findChild, type XNode } from './xml-utils'
-import { ownValue } from './own-value'
+import { ownValue, setOwn } from './own-value'
 import { EMU_PER_PX } from './parse-xml-text'
 import type { HfImage, Run, TextboxDisplay } from './types'
 
@@ -409,7 +409,7 @@ const VML_SPT_PATHS: Record<string, string> = {
 
 function parseTagAttrs(tag: string): Record<string, string> {
   const out: Record<string, string> = {}
-  for (const m of tag.matchAll(/([\w:.-]+)="([^"]*)"/g)) out[m[1]!] = m[2]!
+  for (const m of tag.matchAll(/([\w:.-]+)="([^"]*)"/g)) setOwn(out, m[1]!, m[2]!)
   return out
 }
 

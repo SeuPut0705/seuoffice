@@ -243,7 +243,7 @@ import {
 import { parseSdtBlock, sdtMeta, sdtRanges, sdtTableXml, splitSdtParts } from './parse-sdt'
 import { sdtCheckboxControl } from './checkbox-control'
 import { paraCsFormat, parseStyles } from './parse-styles'
-import { ownValue } from './own-value'
+import { ownValue, setOwn } from './own-value'
 import {
   VML_PICT_RID_RE,
   VML_WORDART_RE,
@@ -7152,12 +7152,12 @@ async function parseAllHfParts(
       resolver,
     )
     const images = bindHfImageAnchors(await hfImages(zip, path, xml, content.paras), content.paras)
-    out[rId] = {
+    setOwn(out, rId, {
       text: content.text,
       hasPageNumber: content.hasPageNumber,
       paras: content.paras,
       ...(images.length > 0 ? { images } : {}),
-    }
+    })
   }
   return out
 }
@@ -9162,7 +9162,7 @@ async function extractChart(xml: string, ctx: BuildContext): Promise<ChartDispla
     // chartex (cx:) parts are display-only degrades: the data-edit patcher
     // speaks classic c: syntax, so keeping them out makes edits no-ops
     // instead of corruption
-    if (!partXml.includes('<cx:chartSpace')) ctx.chartParts[path] = partXml
+    if (!partXml.includes('<cx:chartSpace')) setOwn(ctx.chartParts, path, partXml)
     const extentTag = /<wp:extent[^>]*\/?>/.exec(xml)?.[0] ?? ''
     const cx = parseInt(/\bcx\s*=\s*["'](\d+)["']/.exec(extentTag)?.[1] ?? '', 10)
     const cy = parseInt(/\bcy\s*=\s*["'](\d+)["']/.exec(extentTag)?.[1] ?? '', 10)

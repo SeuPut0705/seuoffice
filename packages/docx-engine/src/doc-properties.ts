@@ -9,7 +9,7 @@ import {
   propertyText,
 } from './zotero-doc-props'
 import { escapeXmlAttr, escapeXmlText } from './xml-utils'
-import { ownValue } from './own-value'
+import { ownValue, setOwn } from './own-value'
 
 /** docProps/core.xml — the core properties part. */
 export const CORE_PROPERTIES_PATH = 'docProps/core.xml'
@@ -206,7 +206,7 @@ export function parseCustomPropertiesXml(xml: string): Record<string, string> {
   const out: Record<string, string> = {}
   for (const property of xml.match(PROPERTY_RE) ?? []) {
     const name = attrValue(property, 'name')
-    if (name) out[name] = customPropertyValue(property)
+    if (name) setOwn(out, name, customPropertyValue(property))
   }
   return out
 }
@@ -217,7 +217,7 @@ export function parseCustomPropertyTypesXml(xml: string): Record<string, string>
   for (const property of xml.match(PROPERTY_RE) ?? []) {
     const name = attrValue(property, 'name')
     const type = VT_TYPE_RE.exec(property)?.[1]
-    if (name && type) out[name] = type
+    if (name && type) setOwn(out, name, type)
   }
   return out
 }
@@ -713,7 +713,7 @@ export function parsePropertyChanges(input: Record<string, unknown>): PropertyCh
         )
       }
       if (value === null) {
-        out[key] = null
+        setOwn(out, key, null)
         continue
       }
       const typed = typeof value === 'number' || typeof value === 'boolean'
@@ -724,7 +724,7 @@ export function parsePropertyChanges(input: Record<string, unknown>): PropertyCh
             : `set_properties: ${section}.${key} must be a string or null`,
         )
       }
-      out[key] = value
+      setOwn(out, key, value)
     }
     if (section === 'custom') changes.custom = out as Record<string, PropertyValue | null>
     else changes[section] = out as Record<string, string | null>
