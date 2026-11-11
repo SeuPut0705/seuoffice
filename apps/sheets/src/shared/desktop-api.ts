@@ -8,6 +8,7 @@ import {
   MAX_PDF_TEMPLATE_CHARS,
   MAX_SAVE_EDITS,
   MAX_SAVE_EDITS_TOTAL,
+  MAX_SAVE_STRUCTURAL_OPS,
   SAVE_EDITS_CHUNK_JSON_MAX,
   SAVE_EDITS_CHUNK_MAX,
 } from './ipc-channels'
@@ -2064,7 +2065,7 @@ export const workbookSaveRequestSchema = z
     /// splices the accumulated chunks back in before applying.
     editsTransferId: z.string().uuid().optional(),
     bulkConstantFills: z.array(workbookBulkConstantFillSchema).max(1_000).optional(),
-    structuralOps: z.array(workbookStructuralOpSchema).max(1_000),
+    structuralOps: z.array(workbookStructuralOpSchema).max(MAX_SAVE_STRUCTURAL_OPS),
     chartEdits: z.array(workbookChartEditSchema).max(100),
     visualEdits: z.array(workbookVisualEditSchema).max(100),
     visualAdditions: z.array(workbookVisualAddSchema).max(50),

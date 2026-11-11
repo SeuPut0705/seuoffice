@@ -50,4 +50,15 @@ describe('workbookSaveRequestSchema', () => {
     }
     expect(() => workbookSaveRequestSchema.parse(request)).not.toThrow()
   })
+
+  it('accepts thousands of structural ops (unmerging a sheet journals one per region)', () => {
+    const structuralOps = Array.from({ length: 3058 }, (_, at) => ({
+      sheetId: 'sheet-1',
+      kind: 'unmerge-cells' as const,
+      range: { startRow: at * 2, endRow: at * 2 + 1, startColumn: 0, endColumn: 0 },
+    }))
+    expect(() =>
+      workbookSaveRequestSchema.parse({ ...emptyRequest('save'), structuralOps }),
+    ).not.toThrow()
+  })
 })
