@@ -24,6 +24,7 @@ import { resolveMainDocumentPath } from '../../packages/docx-engine/src/parse-pa
 import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
 import { bench } from './bench'
 import { callsAfterCorpus, callsOnDocument, reportCalls } from './calls-run'
+import { compareBlankBytes } from './compare-blank'
 import { compareScan } from './compare-scan'
 import { compareRoundTrips, mutate } from './compare-xml'
 import { compareZipText, textWithoutBuffer } from './compare-zip'
@@ -56,6 +57,7 @@ const comparisons = {
   zipText: new Comparison('(c) zip entry text, corpus entries', 'zipEntries'),
   zipXmlText: new Comparison('(c) of which .xml and .rels entries', 'zipXmlEntries'),
   zipSynthetic: new Comparison('(c) zip entry text, synthetic entries', 'zipSyntheticEntries'),
+  writtenZips: new Comparison('(g) zips written: blank documents and packages', 'writtenZips'),
 }
 
 const corpus = execFileSync('git', ['ls-files', '-z', '*.docx'], {
@@ -161,6 +163,9 @@ for (let done = 0; done < FUZZ_CASES; done += 500) {
 propsAfterCorpus(random)
 await packageAfterCorpus(random)
 await callsAfterCorpus(random)
+const written = await compareBlankBytes()
+comparisons.writtenZips.compared = written.compared
+comparisons.writtenZips.differences.push(...written.differences)
 
 const CHECKSUM_MARKER = 'content whose checksum goes stale'
 for (const compression of ['STORE', 'DEFLATE'] as const) {
@@ -192,6 +197,10 @@ reportComparisons()
 reportProps()
 reportPackage()
 reportCalls()
+console.log(
+  `(g) raw zip fields that differ between the two writers, each following from the deflate stream: ` +
+    [...written.rawFields].map(([field, count]) => `${field} ${count}`).join(', '),
+)
 const nonAscii = mainParts.filter((xml) => /[^\0-\x7f]/.test(xml)).length
 console.log(
   `offsets: ${nonAscii} of ${mainParts.length} main parts hold non-ASCII text, where a byte offset ` +
