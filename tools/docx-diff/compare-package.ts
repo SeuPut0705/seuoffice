@@ -1,5 +1,6 @@
 // Comparison (e): a docx as loadDocxZip opens it, and every value parseDocx
 // reads from the package before it reaches the body.
+import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
@@ -40,7 +41,7 @@ import {
 } from '../../packages/docx-engine/src/xml-utils'
 import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
 import { failed } from './engine'
-import { type Comparison, describeTextDifference, engine, repoRoot } from './harness'
+import { type Comparison, describeTextDifference, engine, repoRoot, toolDir } from './harness'
 
 export type Outcome = { value?: unknown } | { error: string }
 
@@ -341,6 +342,22 @@ export function rustOpen(docx: Uint8Array): Opened {
   const { header } = engine.call<{ package: Opened }>({ cmd: 'package' }, [docx])
   if (failed(header)) throw new Error(`package failed: ${header.error.message}`)
   return header.package
+}
+
+/**
+ * One loader on a container, in a child process: the only way to see that it
+ * does not return. A loader that hangs gives a result that differs instead of
+ * hanging the gate.
+ */
+export function openOnce(side: 'typescript' | 'rust', docx: Uint8Array): unknown {
+  const child = spawnSync(process.execPath, ['--import', 'tsx', 'load-once.ts', side], {
+    cwd: toolDir,
+    input: docx,
+    timeout: 5_000,
+    encoding: 'utf8',
+  })
+  if (child.error || child.signal) return 'does not return within 5 s'
+  return JSON.parse(child.stdout) as unknown
 }
 
 /** A package given as named texts: the readers without the zip container. */

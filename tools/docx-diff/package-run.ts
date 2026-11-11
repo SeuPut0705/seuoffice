@@ -1,11 +1,13 @@
 // Comparison (e): the package layer, over the corpus, built containers and
 // seeded mutations.
+import { isDeepStrictEqual } from 'node:util'
 import type JSZip from 'jszip'
 import {
   compareModels,
   compareNormalized,
   comparePackage,
   driftedCopies,
+  openOnce,
   rustParts,
   typescriptParts,
 } from './compare-package'
@@ -13,6 +15,7 @@ import { mutateProps } from './compare-props'
 import { mutate } from './compare-xml'
 import { atFloor, Comparison, failGate, option } from './harness'
 import {
+  hostileContainers,
   mutateContainer,
   oddContainers,
   richSeeds,
@@ -104,6 +107,16 @@ export async function packageAfterCorpus(random: () => number): Promise<void> {
       const kind = typescript.refused.replace(/\d+/g, 'N').replace(/part .*? /, 'part X ')
       refusals.set(kind, (refusals.get(kind) ?? 0) + 1)
     }
+  }
+  // JSZip never returned from these: each loader opens them in a process of its own
+  for (const [name, docx] of Object.entries(hostileContainers())) {
+    const typescript = openOnce('typescript', docx)
+    const rust = openOnce('rust', docx)
+    built.record(
+      isDeepStrictEqual(typescript, rust)
+        ? null
+        : `built "${name}": typescript ${JSON.stringify(typescript)}; rust ${JSON.stringify(rust)}`,
+    )
   }
 
   // one mutation in three starts from a built package: the tracked documents
