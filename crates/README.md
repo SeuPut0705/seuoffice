@@ -243,12 +243,56 @@ is listed, never coded around in the harness.
 State on 2026-11-12. Nothing is pushed.
 
 - `feat/rust-docx-u1`: everything below. The gate passes on this baseline.
-- `fix/rust-zip64-six-fields`: two commits on top of it. They make the Rust
-  zip gate refuse the six end-record fields main's zip gate refuses since
-  d49361a3f, and they are green only on a baseline that holds that commit.
-  The two go in together.
+- `fix/rust-zip64-six-fields`: this branch and two commits more. They make
+  the Rust zip gate refuse the six end-record fields main's zip gate refuses
+  since d49361a3f, and they are green only on a baseline that holds that
+  commit. main merges this one, so the two arrive together.
 
 ### What to do, in order
+
+0. **Bring the Rust and the ledger in line with main.** main fixed the
+   TypeScript defects this port found. Once this work sits on a tree that
+   holds those commits, run the gate first and save that run untouched: it
+   is expected to fail, with stale ledger entries and with differences
+   where the TypeScript changed. Then, class by class:
+   - **Table lookups answer for own keys only** (cf22e1fe4, 18 modules).
+     The Rust tables already do. The 13 `table-lookup-inherited-key-*`
+     entries go stale: remove them, the `listed` predicates of
+     `calls-markers.ts`, `calls-section.ts`, `calls-blank.ts` and
+     `props-registry.ts`, and `listed` itself from `CallSpec` and `Reader`
+     if nothing uses it any more. Those inputs are then compared again. One
+     place where the TypeScript changed its answer: an unknown
+     `paperSize` now gives A4, where `blank.rs` refuses any value but `A4`
+     and `Letter`.
+   - **A record keeps an entry named `__proto__`** (f11df68ef). The Rust
+     drops it in two places to mirror the old assignment and must keep it
+     now: `doc_properties.rs` (the `Record`) and `theme.rs` (the script
+     fonts). `vml.rs` reads tag attributes into such a record too. The
+     entry sits where it was inserted, like any other string key.
+   - **A character outside the BMP is one LaTeX argument** (37c8fcdaa).
+     `omml/src/latex_to_omml.rs` takes one UTF-16 unit there, as the old
+     TypeScript did, and has to take the pair. The entry
+     `lone-surrogate-from-half-a-latex-argument` goes, and with it most or
+     all of the lossy line of math: lower or drop `callsMathLossy`.
+   - **A character reference in the surrogate range reads as U+FFFD**
+     (6f0fdab07), a pair written as two references still joining. The Rust
+     already does both. The two `lone-surrogate-*` entries of document
+     properties go, and `callsDocpropsLossy` with the line.
+   - **A LaTeX name every object inherits is refused as unknown**
+     (488d6d432). Both sides refused before; nothing should move.
+   - **The zip gate** (d49361a3f): done by the branch above.
+
+   What holds answers of the old TypeScript and has to be made again:
+   `crates/fixtures/package-layer.json`
+   (`npm --prefix tools/docx-diff run fixtures`), and the expected values of
+   `docx-engine/tests/docprops.rs`, `tests/package.rs` and `tests/blank.rs`
+   where they name `__proto__` or a paper size. The four readers
+   `compare-package.ts` copies from `parse.ts` still match main at
+   488d6d432.
+
+   These entries stay: the LaTeX depth limit, the two host-dependent ones
+   (`zip-text-in-hosts-without-buffer`, `inflate-failure-text-is-the-hosts`),
+   DOCTYPE and the CDATA opener.
 
 1. **Key order becomes part of parity everywhere.** Turn on `preserve_order`
    of `serde_json` and compare (d), (e) and (f) with a deep comparison that
@@ -287,29 +331,6 @@ State on 2026-11-12. Nothing is pushed.
    `resource-cleanup.ts`, the writers left out of the modules above) and
    the features on top (`compare.ts`, `mail-merge.ts`) come after the read
    side is whole.
-
-### What main is changing underneath
-
-main is fixing the TypeScript defects this port found, one commit per
-class. When they reach this branch the gate reports ledger entries as
-stale, by design. For each: make the Rust equal to the fixed TypeScript,
-then remove the entry.
-
-- Inherited-key lookups (the `table-lookup-inherited-key-*` entries). The
-  Rust already answers as the fix does. Remove the entries, the `listed`
-  predicates of the specs and the filters of `props-registry.ts`, so those
-  inputs are compared again.
-- Surrogate-range character references in `decodeXmlText`, to U+FFFD (the
-  two `lone-surrogate-*` entries of document properties). The Rust already
-  does this. The lossy line of docprops shrinks: lower its floor.
-- An astral character as the argument of a script or command in the LaTeX
-  reader (`lone-surrogate-from-half-a-latex-argument`). Here the Rust has to
-  change: it reads one UTF-16 unit, as the old TypeScript did.
-- The zip gate (see the branch above).
-
-These stay listed: the LaTeX depth limit, the two host-dependent ones
-(`zip-text-in-hosts-without-buffer`, `inflate-failure-text-is-the-hosts`),
-DOCTYPE and the CDATA opener.
 
 One finding is not a port matter and is with main: a run-level content
 control is dropped when its paragraph is saved as a generated block
