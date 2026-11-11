@@ -62,6 +62,17 @@ pub fn on_off_of(parent: &XNode, name: &str) -> Option<bool> {
     Some(child.attr("w:val").is_none_or(|value| !is_off(value)))
 }
 
+/// `boolProp`: absent and explicit off are both false.
+pub fn bool_prop(parent: &XNode, name: &str) -> bool {
+    let Some(child) = parent.find_child(name) else {
+        return false;
+    };
+    match child.attr("w:val") {
+        None => true,
+        Some(val) => !is_off(val),
+    }
+}
+
 /// `on_off_of` for a caller that only has the raw XML of a run's rPr. `name`
 /// goes into the pattern unescaped, as in the original.
 pub fn on_off_tag_in(xml: &str, name: &str) -> Result<Option<bool>, RegexSyntaxError> {
