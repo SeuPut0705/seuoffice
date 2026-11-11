@@ -346,8 +346,9 @@ export function rustOpen(docx: Uint8Array): Opened {
 
 /**
  * One loader on a container, in a child process: the only way to see that it
- * does not return. A loader that hangs gives a result that differs instead of
- * hanging the gate.
+ * does not return. A loader that hangs or dies gives a result that says so
+ * instead of hanging or ending the gate. Two loaders that fail alike give the
+ * same result, so a caller that expects an answer has to name it.
  */
 export function openOnce(side: 'typescript' | 'rust', docx: Uint8Array): unknown {
   const child = spawnSync(process.execPath, ['--import', 'tsx', 'load-once.ts', side], {
@@ -357,6 +358,9 @@ export function openOnce(side: 'typescript' | 'rust', docx: Uint8Array): unknown
     encoding: 'utf8',
   })
   if (child.error || child.signal) return 'does not return within 5 s'
+  if (child.status !== 0 || child.stdout.trim() === '') {
+    return `ends with status ${child.status} and no result: ${child.stderr.trim().split('\n').at(-1)}`
+  }
   return JSON.parse(child.stdout) as unknown
 }
 
