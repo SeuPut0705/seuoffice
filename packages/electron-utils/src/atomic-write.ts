@@ -70,7 +70,7 @@ export const tempPathBeside = (filePath: string) =>
  * every attempt, and the user's folder fills with them (genoffice#2567).
  */
 const rescuePathFor = (filePath: string) =>
-  join(dirname(filePath), `${basename(filePath)}.unsaved.tmp`)
+  join(dirname(filePath), `${nameHead(basename(filePath), TEMP_NAME_MAX_BYTES)}.unsaved.tmp`)
 
 /**
  * Park the new bytes beside the target, replacing the copy an earlier failed
