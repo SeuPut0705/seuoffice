@@ -163,8 +163,12 @@ export const AI_SUBSCRIPTION_LOGIN_FAILURE_STEPS = [
   'callback-error',
   /** the browser came back without a code or a client id */
   'callback-incomplete',
+  /** signing an issued client id in again, the browser came back naming another one */
+  'callback-client-mismatch',
   /** the token endpoint refused the code (400, 401, 403) */
   'token-refused',
+  /** the code went out twice (the first try failed on the way) and was refused as used */
+  'token-resent',
   /** the token endpoint answered another failing status */
   'token-http',
   /** the token endpoint could not be reached */

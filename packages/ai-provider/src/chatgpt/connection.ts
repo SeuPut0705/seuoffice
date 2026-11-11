@@ -11,6 +11,8 @@ import { AiRunError } from '../run-error'
 import type { FreeConnectPage } from '../free-connect'
 import type { ChatGptConnectionRecord, ChatGptConnectionStore, ChatGptSession } from './credentials'
 import {
+  CHATGPT_CALLBACK_PATH,
+  CHATGPT_LEGACY_CALLBACK_PATH,
   CHATGPT_PLAN_SCOPE,
   chatGptAttemptValues,
   chatGptAuthorizeUrl,
@@ -175,6 +177,11 @@ export function createChatGptConnection(deps: ChatGptConnectionDeps): ChatGptCon
 
     async signIn(options) {
       const record = await deps.store.read()
+      // an issued client id signs in again on the path it was issued for (one stored
+      // before the path was kept was issued for the old one); a new registration takes today's
+      const callbackPath = record.clientId
+        ? (record.callbackPath ?? CHATGPT_LEGACY_CALLBACK_PATH)
+        : CHATGPT_CALLBACK_PATH
       const { verifier, challenge } = chatGptPkcePair()
       const { state, nonce } = chatGptAttemptValues()
       const callback = await waitForChatGptCallback({
@@ -186,9 +193,12 @@ export function createChatGptConnection(deps: ChatGptConnectionDeps): ChatGptCon
             nonce,
             hostId: record.hostId,
             clientId: record.clientId,
+            callbackPath,
             agentName: deps.agentName,
           }),
         state,
+        callbackPath,
+        clientId: record.clientId,
         openBrowser: options.openBrowser,
         pages: options.pages,
         signal: options.signal,
@@ -196,7 +206,13 @@ export function createChatGptConnection(deps: ChatGptConnectionDeps): ChatGptCon
       })
       if (!callback.ok) return callback
       const exchanged = await exchangeChatGptCode(
-        { code: callback.code, clientId: callback.clientId, verifier, port: callback.port },
+        {
+          code: callback.code,
+          clientId: callback.clientId,
+          verifier,
+          port: callback.port,
+          callbackPath,
+        },
         deps.fetch,
         options.signal,
         now,
@@ -234,6 +250,7 @@ export function createChatGptConnection(deps: ChatGptConnectionDeps): ChatGptCon
         await deps.store.write({
           hostId: current.hostId,
           clientId: callback.clientId,
+          callbackPath,
           subject: identity.subject,
           session: sessionOf(tokens),
         })

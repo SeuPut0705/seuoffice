@@ -17,7 +17,7 @@ Claude는 같은 길이 없다. Anthropic은 별도 허가 없이 다른 앱이 
 **로그인.** OpenAI가 오픈소스 앱에 정한 그대로다.
 
 - 시스템 브라우저에 OpenAI의 로그인 화면을 연다. 앱 안에 로그인 양식은 없다.
-- 돌아오는 곳은 `127.0.0.1`의 빈 포트에 연 임시 서버의 `/callback` 하나다. `state`가 맞는 요청 하나에만 답하고, 10분이 지나거나 취소되면 닫는다.
+- 돌아오는 곳은 `127.0.0.1`의 빈 포트에 연 임시 서버의 콜백 경로 하나다(처음에는 `/callback`이었고, 2026-11-10부터 새 등록은 OpenAI 안내와 같은 `/auth/callback`을 쓴다. 이미 발급된 `client_id`는 등록한 경로를 그대로 쓴다). `state`가 맞는 요청 하나에만 답하고, 10분이 지나거나 취소되면 닫는다.
 - PKCE(S256), `state`, `nonce`를 시도마다 새로 만든다. 첫 등록은 `client_id=dynamic_agent_client`, 이 설치를 가리키는 `ext_agent_host_id`(한 번 만들어 계속 쓴다), `agent_name_hint`(제품 이름)를 보낸다. 돌아올 때 OpenAI가 발급한 `client_id`를 함께 받는다.
 - 범위는 `openid profile email offline_access resource.invoke chatgpt.tokens.use.direct`, 대상은 `https://api.openai.com/v1`이다. 요금제 사용(`chatgpt.tokens.use.direct`)을 허락하지 않은 로그인은 저장하지 않고 실패로 알린다.
 - ID 토큰은 OpenAI가 공개한 키(JWKS)로 서명을 확인하고, 발급자·대상(`client_id`)·만료·`nonce`를 본다.
