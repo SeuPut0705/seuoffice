@@ -317,17 +317,61 @@ describe('the default view', () => {
     expect(host.querySelector('input[type="password"]:not(.free-ai-key)')).toBeNull()
   })
 
-  it('does not offer Claude in the key pane', async () => {
+  it('offers both subscription CLIs in the key pane, for the path of a custom install', async () => {
     installHome(defaultAiSettings())
     installSubscription(statusMap('ready', 'ready'))
     await openModal()
     await openAiSection()
     await openAdvanced()
     const labels = (await optionsOf('Provider')).map((option) => option.label)
-    expect(labels).not.toContain('Claude Code')
-    // "Claude" here is the Anthropic key provider; Codex stays for the path of a custom install
+    // "Claude" among the key providers is the Anthropic key; these two are the CLIs
+    expect(labels).toContain('Claude Code')
     expect(labels).toContain('Codex CLI')
     expect(labels).toContain('OpenAI')
+  })
+
+  it('checks Claude again once its path is saved, and not for a save that left the path alone', async () => {
+    installHome(defaultAiSettings())
+    const subscription = installSubscription(statusMap('not-installed', 'ready'))
+    await openModal()
+    await openAiSection()
+    await openAdvanced()
+    await pick('Provider', 'Claude Code')
+    subscription.recheck.mockClear()
+
+    const field = host.querySelector<HTMLInputElement>('#set-ai-cli-path')!
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
+    await act(async () => {
+      setter.call(field, '/Users/me/tools/claude')
+      field.dispatchEvent(new Event('input', { bubbles: true }))
+      await Promise.resolve()
+    })
+    await click(button('Save'))
+    expect(lastSaved().providers['claude-code']?.cliPath).toBe('/Users/me/tools/claude')
+    expect(subscription.recheck).toHaveBeenCalledWith(['claude-code'])
+
+    subscription.recheck.mockClear()
+    await pick('Model', 'sonnet')
+    await click(button('Save'))
+    expect(lastSaved().providers['claude-code']?.model).toBe('sonnet')
+    expect(subscription.recheck).not.toHaveBeenCalled()
+  })
+
+  it('gives a CLI a path field and no key field, with the program named in both texts', async () => {
+    installHome(defaultAiSettings())
+    installSubscription(statusMap('ready', 'ready'))
+    await openModal()
+    await openAiSection()
+    await openAdvanced()
+    await pick('Provider', 'Claude Code')
+    expect(host.querySelector('#set-ai-cli-path')).not.toBeNull()
+    expect(host.querySelector('#set-ai-key')).toBeNull()
+    expect(host.textContent).toContain('Claude Code executable')
+    expect(host.textContent).not.toContain('{name}')
+
+    await pick('Provider', 'Codex CLI')
+    expect(host.querySelector('#set-ai-cli-path')).not.toBeNull()
+    expect(host.textContent).toContain('Codex CLI executable')
   })
 
   it('opens straight on the Advanced media area when an outside entry point asks for it', async () => {
