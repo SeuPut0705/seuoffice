@@ -1,0 +1,20 @@
+[package]
+name = "office-wasm"
+description = "The document engines for JavaScript hosts, built for wasm32-wasip1 as a reactor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+docx-engine.workspace = true
+ooxml-pkg.workspace = true
+ooxml-xml.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+zip.workspace = true

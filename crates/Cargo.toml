@@ -1,5 +1,5 @@
 [workspace]
-members = ["ooxml-xml", "ooxml-pkg", "docx-engine"]
+members = ["ooxml-xml", "ooxml-pkg", "docx-engine", "office-wasm"]
 resolver = "3"
 
 [workspace.package]
@@ -10,8 +10,12 @@ publish = false
 
 [workspace.dependencies]
 ooxml-xml = { path = "ooxml-xml" }
+ooxml-pkg = { path = "ooxml-pkg" }
+docx-engine = { path = "docx-engine" }
 # the inflater the zip crate already uses; entries are read without its CRC check
 flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 zip = { version = "9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 [profile.release]
