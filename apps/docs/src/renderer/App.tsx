@@ -5707,6 +5707,7 @@ export function App() {
         )
         stage('sheets+annotations')
         tSetGaps = performance.now() - tSet0
+        if (obstaclesChanged) followUp('obstacles')
         // a fill just applied to a split row changed the table height under the slices
         const fSig = rowFillsSig(rowFills)
         if (fSig !== rowFillSig) {
