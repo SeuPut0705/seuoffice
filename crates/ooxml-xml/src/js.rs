@@ -17,3 +17,7 @@ pub(crate) fn is_js_space(c: char) -> bool {
 pub(crate) fn trim_start(text: &str) -> &str {
     text.trim_start_matches(is_js_space)
 }
+
+pub(crate) fn trim(text: &str) -> &str {
+    text.trim_matches(is_js_space)
+}
