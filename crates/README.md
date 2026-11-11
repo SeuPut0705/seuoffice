@@ -8,13 +8,15 @@ caller.
 
 ## Layout
 
-| Crate         | What it holds                                                                                                                             | Ported from                                                                                                                               |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `jscompat`    | JavaScript operations, bit for bit: `parseInt`, `Number`, `Math.round`, number printing, regular expressions, `Map`, `decodeURIComponent` | the language                                                                                                                              |
-| `ooxml-xml`   | The tag scanner, the ordered parser and its serializer, `XNode` readers, UTF-16 offsets                                                   | `scan.ts`, `xml-utils.ts`, fast-xml-parser                                                                                                |
-| `ooxml-pkg`   | A docx as `loadDocxZip` opens it: the zip gate, the JSZip reader, Strict normalization, `Package`                                         | `zip-load.ts`, `packages/zip-gate`, JSZip 3.10.1, `ooxml-normalize.ts`                                                                    |
-| `docx-engine` | Body scan, property readers, relationships, content types, theme, font table, styles, numbering, comments, protection                     | `scan.ts`, `parse-props.ts`, `parse-xml-text.ts`, `parse-package.ts`, `theme.ts`, `font-table.ts`, `parse-styles.ts`, parts of `parse.ts` |
-| `office-wasm` | The one entry point JavaScript calls, built for `wasm32-wasip1`                                                                           | new                                                                                                                                       |
+| Crate                | What it holds                                                                                                                                                                                                                                                          | Ported from                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `jscompat`           | JavaScript operations, bit for bit: `parseInt`, `Number`, `Math.round`, number printing, regular expressions, `Map`, `decodeURIComponent`                                                                                                                              | the language                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `ooxml-xml`          | The tag scanner, the ordered parser and its serializer, `XNode` readers, UTF-16 offsets                                                                                                                                                                                | `scan.ts`, `xml-utils.ts`, fast-xml-parser                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `ooxml-pkg`          | A docx as `loadDocxZip` opens it: the zip gate, the JSZip reader, Strict normalization, `Package`; the zip as JSZip writes it (`write`)                                                                                                                                | `zip-load.ts`, `packages/zip-gate`, JSZip 3.10.1, `ooxml-normalize.ts`                                                                                                                                                                                                                                                                                                                                                                        |
+| `docx-engine`        | Body scan, property readers, relationships, content types, theme, font table, styles, numbering, comments, protection and its hash, document properties, sources, sections, watermarks, notes, fields, EQ fields, SDTs, list markers, symbol fonts, the blank document | `scan.ts`, `parse-props.ts`, `parse-xml-text.ts`, `parse-package.ts`, `theme.ts`, `font-table.ts`, `parse-styles.ts`, parts of `parse.ts`; the read side of `doc-properties.ts`, `zotero-doc-props.ts`, `sources.ts`, `protection.ts`, `section.ts`, `watermark.ts`, `notes.ts`; `parse-fields.ts` without what needs `resolve-props.ts`, `eq-field.ts`, `parse-sdt.ts`, `field-balance.ts`, `list-markers.ts`, `symbol-fonts.ts`, `blank.ts` |
+| `omml`               | Office Math: OMML to LaTeX and to MathML, LaTeX to OMML. Depends on no engine                                                                                                                                                                                          | `math.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `office-wasm`        | The one entry point JavaScript calls, built for `wasm32-wasip1`                                                                                                                                                                                                        | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `spike-one-run-save` | An experiment, not part of the engine: see its README                                                                                                                                                                                                                  | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 `docx-engine` is pure: bytes and values in, values out. No I/O, no clock, no
 randomness.
@@ -105,17 +107,32 @@ comparison over the 185 `.docx` files tracked in the repository. It exits 1 on
 any difference, any population below `floors.json`, or a `divergences.json`
 entry that no longer reproduces.
 
-|     | Compares                                                                              | Module                                                    |
-| --- | ------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| (a) | `scanBody`                                                                            | `compare-scan.ts`                                         |
-| (b) | parse and serialize of XML fragments                                                  | `compare-xml.ts`                                          |
-| (c) | text of zip entries                                                                   | `compare-zip.ts`                                          |
-| (d) | the 69 property readers                                                               | `compare-props.ts`, `props-registry.ts`, `props-run.ts`   |
-| (e) | the package layer: loading, refusals, normalization, every value read before the body | `compare-package.ts`, `package-zips.ts`, `package-run.ts` |
+|     | Compares                                                                                                                                                                   | Module                                                    |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| (a) | `scanBody`                                                                                                                                                                 | `compare-scan.ts`                                         |
+| (b) | parse and serialize of XML fragments                                                                                                                                       | `compare-xml.ts`                                          |
+| (c) | text of zip entries                                                                                                                                                        | `compare-zip.ts`                                          |
+| (d) | the 69 property readers                                                                                                                                                    | `compare-props.ts`, `props-registry.ts`, `props-run.ts`   |
+| (e) | the package layer: loading, refusals, normalization, every value read before the body                                                                                      | `compare-package.ts`, `package-zips.ts`, `package-run.ts` |
+| (f) | exported functions of the modules ported since, called by name, one group per module family                                                                                | `calls-spec.ts`, `calls-run.ts`, `calls-<group>.ts`       |
+| (g) | the zips the writer produces, for every blank document option set and for built packages: entries, order and inflated content as JSZip reads them, and every raw zip field | `compare-blank.ts`                                        |
 
 A `+` marks seeded mutations of the same inputs. The rule for them: where the
 TypeScript throws, Rust must refuse; where it answers, Rust must answer the
 same.
+
+What the comparisons do not see:
+
+- **The order of the keys of an object.** JSON objects are compared as sets
+  of keys. Where the order can be observed (a record keyed by data from the
+  document), (f) sends the result as its entries. (d) and (e) do not: the
+  numbering levels of `numbering.rs` sit in a `BTreeMap`, which puts `"10"`
+  before `"2"` where JavaScript puts integer keys in numeric order.
+- **A result that holds a lone surrogate.** A Rust string cannot hold one.
+  (f) sets those cases aside and counts them; `divergences.json` lists one
+  per cause.
+- **Inputs a spec names as `listed`.** They are the inherited-key lookups of
+  `divergences.json`, counted in the report.
 
 ### Adding a comparison
 
@@ -133,6 +150,24 @@ same.
 4. Run once with the floor keys missing, read the populations, and commit
    them to `floors.json`: exact where they follow the corpus, rounded down
    where they follow a seeded generator.
+
+### Adding functions to (f)
+
+A module whose exports can be called one by one needs no comparison of its
+own. It joins a group:
+
+1. `tools/docx-diff/calls-<group>.ts`: one `CallSpec` per exported function,
+   named `<group>.<TypeScript name>`: the TypeScript call, the inputs a corpus
+   document gives (`fromDocument`), and the inputs built for what the corpus
+   lacks. The runner adds seeded mutations of the text of both.
+2. `crates/office-wasm/src/calls/<group>.rs`: `dispatch(function, text, args)`
+   answering to the same names. A function over a parsed node takes the XML
+   text and both sides parse it; a function over a zip takes `args.parts`.
+3. `npm --prefix tools/docx-diff run calls -- --group <group> --by-function`
+   runs that group alone in seconds. It accepts nothing: the gate does.
+
+A group reports its own line: how many functions, and how many of them only
+ever gave one result. The second number has to be 0.
 
 ### What makes a comparison worth its line
 
@@ -166,3 +201,22 @@ is listed, never coded around in the harness.
   `jscompat::JsMap` existed.
 - `cargo-deny` is configured (`deny.toml`) but was not installed on the
   machine these crates were written on, so it has not run.
+- Helpers written more than once, to move down: `Math.max`/`Math.min` with
+  JavaScript's NaN and zero rules (`list_markers.rs`, `vml.rs`), text escapes
+  (`eq_field.rs`, `blank.rs`, `omml/src/xml.rs`, and private in `ooxml-xml`),
+  `String.prototype.slice` (`sdt.rs`, `eq_field.rs`, `field_balance.rs`), the
+  record that keeps JavaScript's key order (`doc_properties.rs`, and the
+  array-index test in `ooxml-pkg` and `ooxml-xml`), `atob` (`protection.rs`),
+  the `Date` readers (`ooxml-pkg/src/write.rs`, `blank.rs`), the new document
+  properties (`blank.rs`; `doc_properties.rs` holds the read side only).
+- `fields.rs` takes what `resolve-props.ts` computes as arguments
+  (`EffectivePPr`, `ResolveCtx`, `ResolveCompat` hold only the fields read
+  here). `fieldDisplayOf` and `applyTocEntryNumbers` wait for that port.
+- `parseNotesXml` is ported without its paragraph reader callback, which
+  `parse.ts` supplies.
+- `blank/locale.rs` answers `paperSizeForLocale` from a table of likely
+  subtags taken from one ICU (`tools/docx-diff/blank-locale-table.mjs` says
+  which and regenerates it). The TypeScript asks the host's `Intl.Locale`, so
+  another ICU can answer differently for rare tags.
+- `omml` refuses LaTeX nested deeper than 256 levels; the TypeScript runs
+  until the JavaScript stack overflows.
