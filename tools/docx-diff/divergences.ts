@@ -2,14 +2,17 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import JSZip from 'jszip'
+import { outcomeOf, rustOutcome } from './compare-props'
 import { rustRoundTrip, typescriptRoundTrip } from './compare-xml'
 import { rustEntries, textWithoutBuffer } from './compare-zip'
 import { toolDir } from './harness'
+import { READERS } from './props-registry'
 
 /** A known difference, with what each side returns for the input. */
 type Divergence = { id: string; typescript: unknown; rust: unknown; reason: string } & (
   | { comparison: 'roundTripXml'; fragment: string }
   | { comparison: 'zipTextWithoutBuffer'; entryHex: string }
+  | { comparison: 'props'; fn: string; text: string }
 )
 
 async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust: unknown }> {
@@ -17,6 +20,13 @@ async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust:
     return {
       typescript: typescriptRoundTrip(entry.fragment),
       rust: rustRoundTrip([entry.fragment])[0],
+    }
+  }
+  if (entry.comparison === 'props') {
+    const reader = READERS.find((candidate) => candidate.fn === entry.fn)!
+    return {
+      typescript: outcomeOf(() => reader.call(entry.text, {})),
+      rust: rustOutcome(entry.fn, entry.text, {}),
     }
   }
   const zip = new JSZip()

@@ -4,9 +4,20 @@
   "scanBodySynthetic": 37,
   "nonAsciiMainParts": 72,
   "rPrFragments": 10016,
+  "pPrFragments": 5007,
   "roundTripSynthetic": 101,
   "bodyElements": 4084,
   "zipEntries": 1343,
   "zipXmlEntries": 1224,
-  "zipSyntheticEntries": 96
+  "zipSyntheticEntries": 96,
+  "propsPPrChecks": 65543,
+  "propsRPrChecks": 350732,
+  "propsParagraphChecks": 209278,
+  "propsTableChecks": 22656,
+  "propsValueChecks": 34872,
+  "propsSyntheticChecks": 250000,
+  "propsModelChecks": 30000,
+  "propsMutatedFragments": 4000,
+  "propsMutatedChecks": 350000,
+  "propsFunctions": 69
 }

@@ -3,20 +3,45 @@
 // difference, any population below floors.json, or a stale divergences.json.
 //
 //   npm --prefix tools/docx-diff run gate     builds the wasm first
-//   npx tsx tools/docx-diff/main.ts [--show N] [--fuzz N] [--seed N] [--bench]
+//   npx tsx tools/docx-diff/main.ts [--show N] [--seed N] [--fuzz N] [--props-fuzz N]
+//                                   [--numbers N] [--by-function] [--bench]
+//
+// floors.json holds the populations of a run with the default options. The
+// counts that follow the corpus are exact; the ones that follow the seeded
+// generators (synthetic, model and mutated checks) are rounded down, so adding
+// an input does not move them.
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import JSZip from 'jszip'
+import { parseDocx } from '../../packages/docx-engine/src/index'
 import { resolveMainDocumentPath } from '../../packages/docx-engine/src/parse-package'
+import { fieldInstructions } from '../../packages/docx-engine/src/parse-props'
+import { DEFAULT_THEME_COLORS } from '../../packages/docx-engine/src/theme'
+import type { Run } from '../../packages/docx-engine/src/types'
 import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
 import { bench } from './bench'
+import {
+  byFunction,
+  compareModelDomains,
+  compareModelValues,
+  compareReaders,
+  flush,
+  type Group,
+  inputsOf,
+  modelValuesOf,
+  mutateProps,
+  ODD_FONT_THEMES,
+  ODD_VALUES,
+} from './compare-props'
 import { compareScan } from './compare-scan'
 import { compareRoundTrips, mutate } from './compare-xml'
 import { compareZipText, textWithoutBuffer } from './compare-zip'
 import { staleDivergences } from './divergences'
 import { elementFragments } from './fragments'
 import { Comparison, repoRoot, toolDir } from './harness'
+import type { Themes } from './props-registry'
+import { numberTexts, PROPS_INSTRUCTIONS, PROPS_RUN_LISTS, PROPS_TEXTS } from './props-synthetic'
 import { mulberry32, SCAN_CASES, XML_CASES, zipTextCases } from './synthetic'
 
 function option(name: string, fallback: number): number {
@@ -25,6 +50,8 @@ function option(name: string, fallback: number): number {
 }
 const SHOW = option('--show', 5)
 const FUZZ_CASES = option('--fuzz', 20_000)
+const PROPS_FUZZ_CASES = option('--props-fuzz', 4_000)
+const NUMBER_TEXTS = option('--numbers', 20_000)
 
 const comparisons = {
   scan: new Comparison('(a) scanBody, corpus documents', 'scanBodyDocuments'),
@@ -36,7 +63,22 @@ const comparisons = {
   zipText: new Comparison('(c) zip entry text, corpus entries', 'zipEntries'),
   zipXmlText: new Comparison('(c) of which .xml and .rels entries', 'zipXmlEntries'),
   zipSynthetic: new Comparison('(c) zip entry text, synthetic entries', 'zipSyntheticEntries'),
+  propsSynthetic: new Comparison('(d) readers on synthetic texts, checks', 'propsSyntheticChecks'),
+  propsModel: new Comparison('(d) model functions, checks', 'propsModelChecks'),
+  propsMutated: new Comparison('(d+) readers on mutated fragments, checks', 'propsMutatedChecks'),
 }
+const readers: Record<Group, Comparison> = {
+  pPr: new Comparison('(d) w:pPr readers, checks', 'propsPPrChecks'),
+  rPr: new Comparison('(d) w:rPr readers, checks', 'propsRPrChecks'),
+  paragraph: new Comparison('(d) paragraph and run readers, checks', 'propsParagraphChecks'),
+  table: new Comparison('(d) table readers, checks', 'propsTableChecks'),
+  values: new Comparison('(d) helpers on attribute values, checks', 'propsValueChecks'),
+}
+/** Fragments of each element the readers were called on, and what feeds the mutations. */
+const fragmentCounts = new Map<string, number>()
+const distinctFragments = new Map<string, Set<string>>()
+const themesSeen: Themes[] = []
+const runLists: Run[][] = []
 
 const corpus = execFileSync('git', ['ls-files', '-z', '*.docx'], {
   cwd: repoRoot,
@@ -80,11 +122,32 @@ for (const path of corpus) {
     continue
   }
   loadable.push(bytes)
+  const parsed = await parseDocx(bytes).catch(() => null)
+  const themes: Themes = {
+    colors: parsed?.themeColors ?? undefined,
+    fonts: parsed?.themeFonts ?? undefined,
+  }
+  themesSeen.push(themes)
+  for (const block of parsed?.blocks ?? []) {
+    const runs = (block as { runs?: Run[] }).runs
+    if (runs && runs.length > 0 && JSON.stringify(runs).length < 20_000) runLists.push(runs)
+  }
   for (const [name, file] of Object.entries(zip.files)) {
     if (file.dir || !/\.xml$/i.test(name)) continue
-    const fragments = elementFragments(await file.async('string'), 'w:rPr')
+    const partXml = await file.async('string')
+    const fragments = elementFragments(partXml, 'w:rPr')
     compareRoundTrips(comparisons.rPr, `${path}: ${name}`, fragments)
     for (const fragment of fragments) mutationSeeds.add(fragment)
+
+    const inputs = inputsOf(partXml)
+    for (const [element, list] of inputs.elements) {
+      fragmentCounts.set(element, (fragmentCounts.get(element) ?? 0) + list.length)
+      const distinct = distinctFragments.get(element) ?? new Set()
+      for (const fragment of list) distinct.add(fragment)
+      distinctFragments.set(element, distinct)
+    }
+    const instructions = new Set((inputs.elements.get('w:p') ?? []).flatMap(fieldInstructions))
+    compareReaders(readers, `${path}: ${name}`, inputs, themes, partXml, instructions)
   }
 
   const mainPath = await resolveMainDocumentPath(zip)
@@ -118,6 +181,82 @@ for (let done = 0; done < FUZZ_CASES; done += 500) {
   )
   compareRoundTrips(comparisons.fuzz, `mutations from ${done}`, batch)
 }
+
+/** Every reader group recorded under one comparison. */
+const allGroups = (comparison: Comparison): Record<Group, Comparison> =>
+  Object.fromEntries(Object.keys(readers).map((group) => [group, comparison])) as Record<
+    Group,
+    Comparison
+  >
+const noteFragments = (elements: Map<string, string[]>): void => {
+  for (const [element, list] of elements) {
+    const distinct = distinctFragments.get(element) ?? new Set()
+    for (const fragment of list) distinct.add(fragment)
+    distinctFragments.set(element, distinct)
+  }
+}
+const oddThemes = (index: number): Themes => ({
+  colors: index % 3 === 0 ? { dk1: ' 1f2e3d ', accent1: 'abcdef', lt1: '' } : DEFAULT_THEME_COLORS,
+  fonts: ODD_FONT_THEMES[index % ODD_FONT_THEMES.length],
+})
+
+const syntheticTexts = Object.entries(PROPS_TEXTS).flatMap(([group, texts]) =>
+  texts.map((text, index) => ({ where: `synthetic "${group}" ${index}`, text })),
+)
+syntheticTexts.forEach(({ where, text }, index) => {
+  const inputs = inputsOf(text)
+  noteFragments(inputs.elements)
+  const instructions = new Set((inputs.elements.get('w:p') ?? []).flatMap(fieldInstructions))
+  if (index === 0) {
+    for (const instruction of PROPS_INSTRUCTIONS) instructions.add(instruction)
+    for (const value of ODD_VALUES) inputs.attributeValues.add(value)
+    for (const value of numberTexts(random, NUMBER_TEXTS)) inputs.attributeValues.add(value)
+  }
+  for (const themes of [{}, oddThemes(index)]) {
+    compareReaders(allGroups(comparisons.propsSynthetic), where, inputs, themes, text, instructions)
+  }
+})
+
+const propsSeeds = [
+  ...syntheticTexts.map(({ text }) => text),
+  ...['w:pPr', 'w:rPr', 'w:tblPr', 'w:tcPr'].flatMap((name) => [
+    ...(distinctFragments.get(name) ?? []),
+  ]),
+  ...[...(distinctFragments.get('w:p') ?? [])].filter((fragment) => fragment.length < 3000),
+]
+for (let index = 0; index < PROPS_FUZZ_CASES; index++) {
+  // half of the mutations start from a synthetic text: the tracked documents hold few constructs
+  const seed =
+    index % 2 === 0
+      ? syntheticTexts[Math.floor(random() * syntheticTexts.length)]!.text
+      : propsSeeds[Math.floor(random() * propsSeeds.length)]!
+  // one in ten is broken as XML too: where the TypeScript parser throws, Rust must refuse
+  const edited = mutateProps(seed, random)
+  const fragment = index % 10 === 9 ? mutate(edited, random) : edited
+  const inputs = inputsOf(fragment)
+  noteFragments(inputs.elements)
+  const instructions = new Set((inputs.elements.get('w:p') ?? []).flatMap(fieldInstructions))
+  compareReaders(
+    allGroups(comparisons.propsMutated),
+    `mutation ${index}`,
+    inputs,
+    oddThemes(index),
+    fragment,
+    instructions,
+  )
+}
+
+const modelValues = modelValuesOf(
+  distinctFragments.get('w:pPr') ?? [],
+  distinctFragments.get('w:ind') ?? [],
+)
+compareModelDomains(comparisons.propsModel, themesSeen)
+compareModelValues(
+  comparisons.propsModel,
+  { ...modelValues, runs: [...PROPS_RUN_LISTS, ...runLists] },
+  random,
+)
+flush()
 
 const CHECKSUM_MARKER = 'content whose checksum goes stale'
 for (const compression of ['STORE', 'DEFLATE'] as const) {
@@ -157,7 +296,7 @@ for (const line of [
 ]) {
   console.log(`  skipped ${line}`)
 }
-for (const comparison of Object.values(comparisons)) {
+for (const comparison of [...Object.values(comparisons), ...Object.values(readers)]) {
   if (comparison.differences.length > 0) failedGate = true
   console.log(
     `${comparison.label.padEnd(46)} compared ${String(comparison.compared).padStart(6)}  ` +
@@ -172,6 +311,35 @@ for (const comparison of Object.values(comparisons)) {
   }
 }
 
+for (const [element, key] of [
+  ['w:pPr', 'pPrFragments'],
+  ['w:rPr', 'rPrFragments'],
+] as const) {
+  const count = fragmentCounts.get(element) ?? 0
+  console.log(
+    `(d) ${element} fragments the readers were called on: ${count} (${atFloor(count, key)})`,
+  )
+}
+console.log(
+  `(d+) mutated fragments: ${PROPS_FUZZ_CASES} (${atFloor(PROPS_FUZZ_CASES, 'propsMutatedFragments')})`,
+)
+const oneResult = [...byFunction].filter(([, tally]) => tally.outcomes.size < 2).map(([fn]) => fn)
+console.log(
+  `(d) functions compared: ${byFunction.size} (${atFloor(byFunction.size, 'propsFunctions')}); ` +
+    `with a single distinct result, so not really compared: ` +
+    `${oneResult.length}${oneResult.length > 0 ? ` (${oneResult.join(', ')})` : ''}`,
+)
+if (oneResult.length > 0) failedGate = true
+if (process.argv.includes('--by-function')) {
+  for (const [fn, { checks, differences, outcomes }] of [...byFunction].sort(
+    (a, b) => b[1].differences - a[1].differences || a[0].localeCompare(b[0]),
+  )) {
+    console.log(
+      `    ${fn.padEnd(26)} checks ${String(checks).padStart(8)}  differences ${String(differences).padStart(7)}  ` +
+        `equal ${(100 * (1 - differences / checks)).toFixed(3)}%  distinct results ${outcomes.size}`,
+    )
+  }
+}
 const nonAscii = mainParts.filter((xml) => /[^\0-\x7f]/.test(xml)).length
 console.log(
   `offsets: ${nonAscii} of ${mainParts.length} main parts hold non-ASCII text, where a byte offset ` +
