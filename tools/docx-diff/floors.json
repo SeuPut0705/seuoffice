@@ -18,6 +18,7 @@
   "propsSyntheticChecks": 250000,
   "propsModelChecks": 30000,
   "propsMutatedFragments": 4000,
-  "propsMutatedChecks": 350000,
+  "propsMutatedChecks": 400000,
+  "propsBrokenChecks": 60000,
   "propsFunctions": 69
 }

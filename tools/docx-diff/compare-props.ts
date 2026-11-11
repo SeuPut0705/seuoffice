@@ -24,12 +24,13 @@ interface Case {
 }
 
 /**
- * Per function: checks, differences, and how many distinct results TypeScript
- * gave. A function that only ever returned one thing was not really compared.
+ * Per function: checks, differences, how many of the checks TypeScript threw
+ * in, and how many distinct results it gave. A function that only ever
+ * returned one thing was not really compared.
  */
 export const byFunction = new Map<
   string,
-  { checks: number; differences: number; outcomes: Set<string> }
+  { checks: number; differences: number; threw: number; outcomes: Set<string> }
 >()
 
 const textIds = new Map<string, number>()
@@ -44,9 +45,12 @@ const queued = new Map<string, Case>()
 
 function record(comparison: Comparison, fn: string, key: string, where: string): void {
   const { difference, typescriptThrew, outcome } = settled.get(key)!
-  if (typescriptThrew) comparison.typescriptThrew += 1
-  const tally = byFunction.get(fn) ?? { checks: 0, differences: 0, outcomes: new Set() }
+  const tally = byFunction.get(fn) ?? { checks: 0, differences: 0, threw: 0, outcomes: new Set() }
   tally.checks += 1
+  if (typescriptThrew) {
+    comparison.typescriptThrew += 1
+    tally.threw += 1
+  }
   tally.outcomes.add(outcome)
   if (difference !== null) tally.differences += 1
   byFunction.set(fn, tally)
@@ -154,7 +158,7 @@ function check(
   if (queued.size >= 20_000) flush()
 }
 
-const READER_ELEMENTS = new Set(
+export const READER_ELEMENTS = new Set(
   READERS.flatMap((reader) => reader.on).flatMap((on) =>
     typeof on === 'object' ? [on.element] : [],
   ),
@@ -198,6 +202,49 @@ export function inputsOf(xml: string): Inputs {
     }
   }
   return { elements, attributeValues }
+}
+
+/**
+ * `text` itself as the input of every reader over an element or a paragraph.
+ * `inputsOf` yields balanced elements only, so a text cut at its root would
+ * never reach a reader through it.
+ */
+export function inputsOfWhole(text: string): Inputs {
+  return {
+    elements: new Map([...READER_ELEMENTS, 'w:p', 'w:tbl'].map((name) => [name, [text]])),
+    attributeValues: new Set(),
+  }
+}
+
+/**
+ * An element broken at its root in the ways a truncated or damaged part
+ * breaks. The parser refuses some of these and reads the others leniently;
+ * either way both engines must do the same.
+ */
+export function brokenAtTheRoot(fragment: string): string[] {
+  const openEnd = fragment.indexOf('>') + 1
+  const closer = fragment.lastIndexOf('</')
+  const value = fragment.indexOf('="')
+  const points = Array.from(fragment)
+  const afterTheOpener = (inserted: string): string =>
+    fragment.slice(0, openEnd) + inserted + fragment.slice(openEnd)
+  return [
+    // the root never closes
+    fragment.slice(0, closer === -1 ? openEnd - 2 : closer),
+    points.slice(0, points.length / 2).join(''),
+    fragment.slice(0, openEnd - 1),
+    ...(value === -1 ? [] : [fragment.slice(0, value + 2)]),
+    fragment.slice(0, -1),
+    // a closer with no opener
+    `${fragment}</w:x>`,
+    `</w:x>${fragment}`,
+    ...(closer === -1 ? [] : [`${fragment.slice(0, closer)}</w:x>`]),
+    afterTheOpener('<!-- c'),
+    afterTheOpener('<![CDATA[ x'),
+    afterTheOpener('<?pi '),
+    // deeper than the parser's maxNestedTags
+    '<a>'.repeat(101) + fragment + '</a>'.repeat(101),
+  ]
 }
 
 export type Group = 'pPr' | 'rPr' | 'paragraph' | 'table' | 'values'

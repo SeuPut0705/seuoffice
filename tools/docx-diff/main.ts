@@ -22,6 +22,7 @@ import type { Run } from '../../packages/docx-engine/src/types'
 import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
 import { bench } from './bench'
 import {
+  brokenAtTheRoot,
   byFunction,
   compareModelDomains,
   compareModelValues,
@@ -29,10 +30,12 @@ import {
   flush,
   type Group,
   inputsOf,
+  inputsOfWhole,
   modelValuesOf,
   mutateProps,
   ODD_FONT_THEMES,
   ODD_VALUES,
+  READER_ELEMENTS,
 } from './compare-props'
 import { compareScan } from './compare-scan'
 import { compareRoundTrips, mutate } from './compare-xml'
@@ -40,7 +43,7 @@ import { compareZipText, textWithoutBuffer } from './compare-zip'
 import { staleDivergences } from './divergences'
 import { elementFragments } from './fragments'
 import { Comparison, repoRoot, toolDir } from './harness'
-import type { Themes } from './props-registry'
+import { READERS, type Themes } from './props-registry'
 import { numberTexts, PROPS_INSTRUCTIONS, PROPS_RUN_LISTS, PROPS_TEXTS } from './props-synthetic'
 import { mulberry32, SCAN_CASES, XML_CASES, zipTextCases } from './synthetic'
 
@@ -64,6 +67,7 @@ const comparisons = {
   zipXmlText: new Comparison('(c) of which .xml and .rels entries', 'zipXmlEntries'),
   zipSynthetic: new Comparison('(c) zip entry text, synthetic entries', 'zipSyntheticEntries'),
   propsSynthetic: new Comparison('(d) readers on synthetic texts, checks', 'propsSyntheticChecks'),
+  propsBroken: new Comparison('(d) readers on elements broken at the root', 'propsBrokenChecks'),
   propsModel: new Comparison('(d) model functions, checks', 'propsModelChecks'),
   propsMutated: new Comparison('(d+) readers on mutated fragments, checks', 'propsMutatedChecks'),
 }
@@ -224,15 +228,35 @@ const propsSeeds = [
   ]),
   ...[...(distinctFragments.get('w:p') ?? [])].filter((fragment) => fragment.length < 3000),
 ]
+
+// inputsOf yields balanced elements only, so the texts the parser refuses are passed as they are
+for (const name of [...READER_ELEMENTS, 'w:p']) {
+  const fragments = [...(distinctFragments.get(name) ?? [])]
+  const shape = fragments.find((fragment) => fragment.includes('<wps:wsp'))
+  for (const fragment of [...fragments.slice(0, 3), ...(shape ? [shape] : [])]) {
+    brokenAtTheRoot(fragment).forEach((text, index) => {
+      compareReaders(
+        allGroups(comparisons.propsBroken),
+        `${name} broken at the root, way ${index}`,
+        inputsOfWhole(text),
+        oddThemes(index),
+        text,
+        [],
+      )
+    })
+  }
+}
+
 for (let index = 0; index < PROPS_FUZZ_CASES; index++) {
   // half of the mutations start from a synthetic text: the tracked documents hold few constructs
   const seed =
     index % 2 === 0
       ? syntheticTexts[Math.floor(random() * syntheticTexts.length)]!.text
       : propsSeeds[Math.floor(random() * propsSeeds.length)]!
-  // one in ten is broken as XML too: where the TypeScript parser throws, Rust must refuse
+  // one in ten is broken as XML too, and goes to the readers whole as well
   const edited = mutateProps(seed, random)
-  const fragment = index % 10 === 9 ? mutate(edited, random) : edited
+  const broken = index % 10 === 9
+  const fragment = broken ? mutate(edited, random) : edited
   const inputs = inputsOf(fragment)
   noteFragments(inputs.elements)
   const instructions = new Set((inputs.elements.get('w:p') ?? []).flatMap(fieldInstructions))
@@ -244,6 +268,16 @@ for (let index = 0; index < PROPS_FUZZ_CASES; index++) {
     fragment,
     instructions,
   )
+  if (broken) {
+    compareReaders(
+      allGroups(comparisons.propsMutated),
+      `mutation ${index}, whole`,
+      inputsOfWhole(fragment),
+      oddThemes(index),
+      fragment,
+      [],
+    )
+  }
 }
 
 const modelValues = modelValuesOf(
@@ -330,13 +364,23 @@ console.log(
     `${oneResult.length}${oneResult.length > 0 ? ` (${oneResult.join(', ')})` : ''}`,
 )
 if (oneResult.length > 0) failedGate = true
+const overAnElement = new Set(
+  READERS.filter((reader) => reader.on.some((on) => typeof on === 'object')).map(({ fn }) => fn),
+)
+const neverRefused = [...overAnElement].filter((fn) => (byFunction.get(fn)?.threw ?? 0) === 0)
+console.log(
+  `(d) readers over a parsed element: ${overAnElement.size}; never called on a text the TypeScript ` +
+    `parser refuses: ${neverRefused.length}${neverRefused.length > 0 ? ` (${neverRefused.join(', ')})` : ''}`,
+)
+if (neverRefused.length > 0) failedGate = true
 if (process.argv.includes('--by-function')) {
-  for (const [fn, { checks, differences, outcomes }] of [...byFunction].sort(
+  for (const [fn, { checks, differences, threw, outcomes }] of [...byFunction].sort(
     (a, b) => b[1].differences - a[1].differences || a[0].localeCompare(b[0]),
   )) {
     console.log(
       `    ${fn.padEnd(26)} checks ${String(checks).padStart(8)}  differences ${String(differences).padStart(7)}  ` +
-        `equal ${(100 * (1 - differences / checks)).toFixed(3)}%  distinct results ${outcomes.size}`,
+        `equal ${(100 * (1 - differences / checks)).toFixed(3)}%  distinct results ${outcomes.size}  ` +
+        `TypeScript threw ${threw}`,
     )
   }
 }
