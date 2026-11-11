@@ -243,6 +243,7 @@ import {
 import { parseSdtBlock, sdtMeta, sdtRanges, sdtTableXml, splitSdtParts } from './parse-sdt'
 import { sdtCheckboxControl } from './checkbox-control'
 import { paraCsFormat, parseStyles } from './parse-styles'
+import { ownValue } from './own-value'
 import {
   VML_PICT_RID_RE,
   VML_WORDART_RE,
@@ -278,7 +279,7 @@ const BREAK_CHAR: Record<string, string> = { page: '\f', column: '\v' }
 /** a w:br that clears floats (Word's Text Wrapping break) travels as \u001e */
 function breakCharOf(attrs: Record<string, string | undefined>): string {
   if (attrs['w:clear']) return '\u001e'
-  return BREAK_CHAR[attrs['w:type'] ?? ''] ?? '\n'
+  return ownValue(BREAK_CHAR, attrs['w:type'] ?? '') ?? '\n'
 }
 
 const IMAGE_MIME: Record<string, string> = {
@@ -335,7 +336,7 @@ function contentTypesOf(zip: JSZip) {
  */
 async function imagePartMime(zip: JSZip, path: string): Promise<string | undefined> {
   const ext = path.split('.').pop()?.toLowerCase() ?? ''
-  const fromExt = IMAGE_MIME[ext]
+  const fromExt = ownValue(IMAGE_MIME, ext)
   if (fromExt) return fromExt
   const { defaults, overrides } = await contentTypesOf(zip)
   const fromPart = overrides.get(`/${path}`) ?? defaults.get(ext)
@@ -4050,7 +4051,8 @@ function extractParaFormat(
   if (bidiOwn) format.bidi = true
   else if (bidiOwn === undefined && styleBidi) format.bidiInherited = true
   const jc = attrsOf(findChild(pPr, 'w:jc') ?? {})['w:val']
-  if (jc && JC_ALIGN[jc]) format.align = JC_ALIGN[jc]
+  const align = jc ? ownValue(JC_ALIGN, jc) : undefined
+  if (align) format.align = align
   // Word quirk: in bidi paragraphs w:jc left/right are logical values (start/end); convert to visual direction
   if (
     (format.bidi || format.bidiInherited) &&
@@ -9059,7 +9061,7 @@ async function extractDiagramDrawing(
       if (srgb) shape.fillHex = srgb
       else if (scheme) {
         const theme = ctx.themeColors as Record<string, string> | null | undefined
-        shape.fillHex = (theme && theme[scheme]) || '9AB5E4'
+        shape.fillHex = (theme && ownValue(theme, scheme)) || '9AB5E4'
       }
     }
     const body = findChild(sp, 'dsp:txBody')

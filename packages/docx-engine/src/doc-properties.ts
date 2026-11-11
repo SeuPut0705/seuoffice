@@ -9,6 +9,7 @@ import {
   propertyText,
 } from './zotero-doc-props'
 import { escapeXmlAttr, escapeXmlText } from './xml-utils'
+import { ownValue } from './own-value'
 
 /** docProps/core.xml — the core properties part. */
 export const CORE_PROPERTIES_PATH = 'docProps/core.xml'
@@ -349,7 +350,7 @@ export function patchCorePropertiesXml(
 ): string {
   let out = xml
   for (const [key, value] of Object.entries(changes)) {
-    const spec = CORE_PROPERTIES[key]
+    const spec = ownValue(CORE_PROPERTIES, key)
     if (!spec) continue
     if (value === null) {
       out = out.replace(elementRe(spec.local), '')
@@ -374,7 +375,7 @@ export function patchCorePropertiesXml(
 export function patchAppPropertiesXml(xml: string, changes: Record<string, string | null>): string {
   let out = xml
   for (const [key, value] of Object.entries(changes)) {
-    const local = APP_PROPERTIES[key]
+    const local = ownValue(APP_PROPERTIES, key)
     if (!local) continue
     if (value === null) {
       out = out.replace(elementRe(local), '')
@@ -535,7 +536,7 @@ export function patchCustomPropertiesXml(
       )
       continue
     }
-    const { type, text } = resolveCustomValue(existingTypes[name] ?? null, value)
+    const { type, text } = resolveCustomValue(ownValue(existingTypes, name) ?? null, value)
     const valueXml = `<${prefix}:${type}>${escapeXmlText(text)}</${prefix}:${type}>`
     let replaced = false
     out = out.replace(PROPERTY_RE, (property) => {

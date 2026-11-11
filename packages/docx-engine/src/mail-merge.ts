@@ -1,4 +1,5 @@
 import type { Block, Run } from './types'
+import { ownValue } from './own-value'
 
 /**
  * Mail merge, engine half — the data source and the substitution walk.
@@ -162,7 +163,7 @@ function recordAt(data: MergeData, index: number): MergeRecord {
 
 /** the value a record holds for `name`, or '' when the column is absent */
 export function valueOf(record: MergeRecord, name: string): string {
-  return record[name] ?? ''
+  return ownValue(record, name) ?? ''
 }
 
 /**

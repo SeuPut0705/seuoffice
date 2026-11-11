@@ -2,6 +2,7 @@ import JSZip from 'jszip'
 import { chartWorkbookParts, colLetter } from '@genoffice/pptx-engine/chart-workbook'
 import type { ChartAxis, ChartDisplay, ChartSeries, NewChart, ThemeColors } from './types'
 import { DOCX_ZIP_LIMITS, assertZipInflatesWithinLimits } from './zip-load'
+import { ownValue } from './own-value'
 import {
   attrsOf,
   childrenOf,
@@ -422,7 +423,7 @@ function solidFillHex(spPr: XNode | undefined, theme?: ThemeColors | null): stri
     if (name === 'a:srgbClr') base = attrsOf(clr)['val']
     else if (name === 'a:sysClr') base = attrsOf(clr)['lastClr']
     else if (name === 'a:schemeClr') {
-      const slot = SCHEME_SLOTS[attrsOf(clr)['val'] ?? '']
+      const slot = ownValue(SCHEME_SLOTS, attrsOf(clr)['val'] ?? '')
       base = slot ? theme?.[slot] : undefined
     }
     const baseTrimmed = (base ?? '').trim()
@@ -636,7 +637,8 @@ function parseChartexPartXml(parsed: XNode[], partPath: string): ChartDisplay | 
   const series: ChartSeries[] = []
   for (const ser of plotRegion ? findChildren(plotRegion, 'cx:series') : []) {
     const layout = attrsOf(ser)['layoutId'] ?? ''
-    if (kind === 'other' && CHARTEX_KINDS[layout]) kind = CHARTEX_KINDS[layout]
+    const layoutKind = ownValue(CHARTEX_KINDS, layout)
+    if (kind === 'other' && layoutKind) kind = layoutKind
     const dataId = attrsOf(findChild(ser, 'cx:dataId') ?? {})['val'] ?? ''
     const data = dataById.get(dataId)
     if (!data || data.vals.length === 0) continue

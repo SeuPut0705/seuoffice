@@ -17,6 +17,7 @@ import JSZip from 'jszip'
 
 import { resolveMainDocumentPath, resolveRelationshipTargetPath } from './parse-package'
 import { loadDocxZip } from './zip-load'
+import { ownValue } from './own-value'
 
 /** Metadata-carrying part families the docs remove_parts op can target. */
 export const REMOVE_PARTS_KINDS = ['customXml', 'webExtensions'] as const
@@ -177,7 +178,7 @@ async function wantedParts(
   }
   const paths = new Set<string>()
   for (const kind of options.kinds ?? []) {
-    const prefix = KIND_PREFIXES[kind]
+    const prefix = ownValue(KIND_PREFIXES, kind)
     if (!prefix) continue
     for (const name of Object.keys(zip.files)) {
       if (!zip.files[name]!.dir && name.startsWith(prefix)) paths.add(name)

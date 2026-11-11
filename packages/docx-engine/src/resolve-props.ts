@@ -26,6 +26,7 @@ import {
   type CharUnits,
 } from './parse-props'
 import { runBorderOf, styleRunFormat } from './parse-styles'
+import { ownValue } from './own-value'
 import type {
   CharIndents,
   DocDefaults,
@@ -240,7 +241,8 @@ function tableStylePLayer(ctx: ResolveCtx): PLayer {
       const line = lineOf(ps.lineRule, ps.lineRawTwips, ps.lineSpacing)
       if (line) out.line = line
     }
-    if (c.paraJc && JC_ALIGN[c.paraJc]) out.align = JC_ALIGN[c.paraJc]
+    const align = c.paraJc ? ownValue(JC_ALIGN, c.paraJc) : undefined
+    if (align) out.align = align
   }
   apply(t)
   for (const cond of ctx.table?.cond ?? []) apply(t[cond])
@@ -310,7 +312,8 @@ function directPLayer(pPr: XNode | undefined, theme: ThemeColors | null | undefi
   const bidi = onOffOf(pPr, 'w:bidi')
   if (bidi !== undefined) out.bidi = bidi
   const jc = attrsOf(findChild(pPr, 'w:jc') ?? {})['w:val']
-  if (jc && JC_ALIGN[jc]) out.align = JC_ALIGN[jc]
+  const align = jc ? ownValue(JC_ALIGN, jc) : undefined
+  if (align) out.align = align
   const spacing = findChild(pPr, 'w:spacing')
   if (spacing) {
     const a = attrsOf(spacing)

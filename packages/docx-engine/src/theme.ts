@@ -1,5 +1,6 @@
 import type { ThemeColors, ThemeFonts } from './types'
 import { escapeXmlAttr } from './xml-utils'
+import { ownValue } from './own-value'
 
 /**
  * Theme part support (word/theme/theme1.xml). Theme fonts rewrite the
@@ -156,7 +157,7 @@ export function resolveThemeColor(
   tint?: string,
   shade?: string,
 ): string | null {
-  const slot = THEME_COLOR_SLOTS[themeColor]
+  const slot = ownValue(THEME_COLOR_SLOTS, themeColor)
   if (!slot) return null
   const base = (colors[slot] as string | undefined) ?? SLOT_FALLBACK[slot]
   const baseTrimmed = (base ?? '').trim()

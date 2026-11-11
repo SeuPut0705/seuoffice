@@ -126,7 +126,7 @@ function typeOf(el: El): RevisionXmlType | undefined {
     case 'w:cellMerge':
       return 'formatting'
     default:
-      if (PROP_CHANGE[el.name]) return 'formatting'
+      if (Object.hasOwn(PROP_CHANGE, el.name)) return 'formatting'
       return undefined
   }
 }
