@@ -7,7 +7,7 @@ metadata:
 
 # Making an HTML document
 
-In the HTML editor you do not write whole pages yourself: a page writer does, from a brief or a plan. **The page writer never sees this skill.** It sees the confirmed brief, or the `plan` and `context` you pass. So this skill is about what to decide, what to hand over, and what to check afterwards.
+In the HTML editor you do not write whole pages yourself: a page writer does, from a brief or a plan. **The page writer never sees this skill.** It sees the user's request and the confirmed brief, or the `plan` and `context` you pass. So this skill is about what to decide, what to hand over, and what to check afterwards.
 
 The tool names below are those of the HTML editor's AI panel. In another window, apply the content and checking rules with the tools that window gives you.
 
@@ -16,8 +16,9 @@ The tool names below are those of the HTML editor's AI panel. In another window,
 | The user wants | Route |
 | --- | --- |
 | A designed page: one-pager, landing page, poster, newsletter, invitation, dashboard | `ask_clarification` if real choices are open, then `plan_page` (`new`) |
-| Text to be written: article, guide, memo, announcement, the body of a report | `write_document` |
+| Text to be written as a whole document: article, guide, memo, announcement, report | `write_document` (it replaces the whole page) |
 | A small change to the page that is there | `apply_ops` |
+| A new look for the page that is there | `plan_page` (`restyle`) |
 | The whole page rebuilt | `plan_page` (`redesign`) |
 | Something to print: handout, worksheet, form, report | Either route above, plus section 4 |
 
@@ -34,9 +35,11 @@ Settle these from the request and the material. Ask only for what is missing and
 Hand them over where the writer will find them:
 
 - **`plan_page`:** the brief is drafted from the conversation, so the facts and sections must be in it. When they came from an attachment or a search, state the ones to use in your message before the call. Put the choices to honour (reader, length, paper, tone) into `notes`, in three sentences at most.
-- **`write_document`:** `plan` holds the numbered outline with one line per section, the target length and the voice; `context` holds the facts, figures and quotations word for word with their sources, the most important first. Do not leave a decision out of both and expect it to be followed.
+- **`write_document`:** `plan` holds the numbered outline with one line per section, the target length, the voice, and the paper and page count when it will be printed; `context` holds the facts, figures and quotations word for word with their sources. `plan` is cut at 4,000 characters and `context` at 8,000, so put the most important first. A decision left out of both is not followed.
 
 ## 3. What a good document holds
+
+Hand over what matters from this list (section 2). After the page is written, fix what is missing with `apply_ops`.
 
 - **The point comes first:** a title that names the subject and one sentence below it that says the conclusion.
 - **Headings are plain labels or short statements,** three levels at most, none skipped. One section, one idea. Paragraphs of four sentences or fewer.
@@ -48,12 +51,12 @@ Hand them over where the writer will find them:
 ## 4. When it will be printed
 
 - Name the paper and the page count up front; A4 portrait unless the user says otherwise.
-- **Nothing may depend on scripts, hover or animation.** The PDF is made with scripts turned off; what a script draws is missing from it.
-- Dark text on white. No dark or full-page coloured backgrounds: they waste ink and print unevenly.
-- Body text of 10 pt or more. Write a link's address out where the reader needs it; paper cannot be clicked.
+- **Nothing may depend on scripts, hover or animation.** PDF export runs with scripts turned off, while printing and `check_pages` run them: what a script draws can pass `check_pages` and still be missing from the PDF.
+- Dark text on white, no dark or full-page coloured background: they waste ink and print unevenly. The page writer does not assume this for paper, so say it in `notes` or `plan`.
+- Body text of 10 to 11 pt, never below 9 pt. Write a link's address out where the reader needs it; paper cannot be clicked.
 - Keep tables, figures and cards whole on a page, and keep a heading with what follows it.
 - For a sheet to write on, leave ruled lines or boxes at least 8 mm high.
-- After the page is written, and after any edit that changes what fits, measure with `check_pages` and fix what it reports.
+- After the page is written, and after any edit that changes what fits, measure with `check_pages` and fix what it reports. A page from `write_document` has no `@page` rule unless the plan asked for paper: add one with `apply_ops` first.
 
 ## 5. Check before you answer (required)
 

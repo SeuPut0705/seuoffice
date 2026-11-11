@@ -33,5 +33,7 @@
 - 네 편집기의 스스로 쓰기 목록에 한 줄씩 더 실린다(이름과 설명). 본문은 AI가 `use_skill`로 부르거나 사람이 칩으로 붙일 때만 요청에 들어간다.
 - 실제 구독으로 결과물을 견주어 보지 않았다. 사람이 확인할 것(`docs/tracking/status.md`): 편집기마다 스킬을 켠 때와 끈 때 같은 요청의 결과를 한 번씩 본다. 한도를 쓰므로 반복하지 않는다.
 - 스킬이 적은 한계는 2026-11-11의 코드 기준이다: 한글은 머리말·꼬리말·쪽 번호·단·테두리를 만들지 못하고, 마인드맵은 배치·테마·표식·새 요약·새 경계를 정하지 못하며, 다이어그램은 선의 경로를 정하지 못하고, HTML의 PDF 내보내기는 스크립트를 끈 창에서 만든다. 이 도구들이 생기면 스킬의 그 줄을 고친다.
+- 스킬을 쓰며 찾아 함께 고친 것: 새 한글 문서의 끝에 문단을 넣으면(`insert_paragraphs`의 `end`) 처음 있던 빈 문단 뒤에 붙어 맨 위에 빈 줄이 남았다. 문서가 빈 문단 하나뿐이면(구역·단 정의 말고는 개체도 없으면) 첫 글을 그 문단에 쓴다(`apps/hwp/studio-plugin/agent-plugin.mjs`의 `isEmptyDocument`, 시험 `apps/hwp/tests/agent-plugin-engine.test.ts`). 글이 있는 문서의 끝 넣기는 그대로다.
+- 스킬 본문은 코드를 쓰지 않은 검토자가 편집기 코드와 한 문장씩 대조했고, 편집기 지시문과 부딪치던 문장(차례는 사용자가 원할 때만, 서식은 이번에 쓴 글에만)과 사실이 틀린 문장(넓힌 도형의 격자 간격, `write_document`는 쪽 전체를 바꿈, PDF만 스크립트를 끔)을 고쳤다.
 - 고친 문서: `docs/business-rules.md`("스킬"), `docs/plans/skills-v2.md`(7단계), 도움말 "스킬"(21개 언어), `apps/hwp/AGENTS.md`, `apps/mindmap/AGENTS.md`, `apps/diagram/AGENTS.md`, `apps/html/AGENTS.md`.
 - 시험: `apps/hwp/tests/hwp-skill.test.ts`(한글 문서용 기본 스킬 셋이 적은 도구), `apps/mindmap/tests/builtin-skill.test.ts`, `apps/diagram/tests/builtin-skill.test.ts`, `apps/html/tests/builtin-skill.test.ts`, `packages/ui/tests/builtin-skills-strings.test.ts`(앞머리, 쓰는 곳, 점검 절, 21개 언어 설명).

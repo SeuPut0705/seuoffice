@@ -38,7 +38,7 @@ The tool names below are those of the mind map editor's AI panel. In another win
 
 ## 3. Build it
 
-- **A new map, or a map from material:** write the whole outline in one `write_map` call. Read the map afterwards only when you need the new ids.
+- **A new map, or a map from material:** write the whole outline in one `write_map` call, then check it (section 4). On a map that already has content `write_map` adds a new sheet and leaves the others as they are; to change a sheet that is there, use `edit_map`.
 - **A map that is already there:** `read_map`, then `edit_map`. Restructure with `move`; deleting a topic and adding it again loses its note, picture and format.
 - **Tidying a map:** fix the shape first (merge only children, split overloaded branches, shorten titles into notes), then wording. Keep the user's own terms.
 - **Emphasis:** leave the look to the theme. Make at most one or two key topics bold with `set_format` when that helps reading; change line or text colours only when the user asks.

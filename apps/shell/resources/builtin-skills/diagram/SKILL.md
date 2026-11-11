@@ -57,10 +57,10 @@ flowchart TD
 
 - **Use a grid.** With the default size (120 × 60), put columns 200 apart and rows 120 apart: `x = 40 + 200 × column`, `y = 40 + 120 × row`. Shapes in one column share `x`, shapes in one row share `y`.
 - **One meaning per shape, the same everywhere:** `rounded` start or end, `rectangle` step or component, `rhombus` decision, `parallelogram` input or output, `cylinder` data store, `document` document, `actor` person, `cloud` outside system, `note` remark, `text` free label.
-- **Same kind, same size.** For a long label make every shape of that kind wider (160 to 200) rather than letting one wrap.
+- **Same kind, same size.** For a long label make every shape of that kind wider (160 to 200) rather than letting one wrap, and widen the grid with it: columns are the width plus 80 apart (`x = 40 + (width + 80) × column`).
 - **`shape` and `style` do not add up in `add_shape`:** a `style` there replaces the look of the shape. Create the shape with `shape` alone, then colour it with `update`, whose `style` is merged in.
 - **Zones and swimlanes:** add the zone first as a large `rectangle` with an `id`, then add its members with `parent` set to that id and positions counted from the zone's corner, 40 in from its edges. Then `update` the zone with `verticalAlign=top;dashed=1;fillColor=none;` so its title sits at the top and its members stay readable.
-- **Lines:** you choose the two ends, not the route. Order the shapes so lines run one way and rarely cross. Keep line labels to a word or two.
+- **Lines:** you choose the two ends; no argument sets the path. Order the shapes so lines run one way and rarely cross. Keep line labels to a word or two.
 - Give every shape an `id` you choose (`login`) and send shapes and lines in one call, shapes first.
 
 ## 5. Colour
@@ -86,7 +86,7 @@ Keep its positions, sizes, colours and wording; match them in what you add. Put 
 Read the page with `read_diagram` and go through this list on the table it returns. Fix what fails, then answer.
 
 - **No overlaps:** for any two shapes with the same parent, the boxes `x … x+width` by `y … y+height` do not intersect, and they are at least 40 apart. (A zone and its own members are the exception.)
-- **No loose shapes:** every shape except notes, legends, titles and zones has at least one line.
+- **No loose shapes:** every shape except notes, legends, titles, zones and the empty group a Mermaid drawing comes in has at least one line.
 - **Decisions are answered:** every decision has two or more outgoing lines, each labelled.
 - **One direction:** targets sit below (or to the right of) their sources, loops aside.
 - **Same kind, same shape and size;** no label cut short or wrapped into three lines.
