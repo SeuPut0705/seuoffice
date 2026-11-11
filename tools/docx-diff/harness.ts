@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Engine } from './engine'
@@ -8,18 +9,83 @@ export const WASM_PATH = resolve(repoRoot, 'crates/target/wasm32-wasip1/release/
 
 export const engine = Engine.load(WASM_PATH)
 
+/** A numeric command line option: `--name N`. */
+export function option(name: string, fallback: number): number {
+  const at = process.argv.indexOf(name)
+  return at === -1 ? fallback : Number(process.argv[at + 1])
+}
+
+/** Differences printed per comparison. */
+export const SHOW = option('--show', 5)
+
+/** Every comparison made, in the order the report prints them. */
+const registered: Comparison[] = []
+
 export class Comparison {
   compared = 0
   typescriptThrew = 0
   readonly differences: string[] = []
+  /**
+   * `floor` is the least population the comparison must reach: a key of
+   * floors.json, or the number itself where an option sets it.
+   */
   constructor(
     readonly label: string,
-    readonly floorKey: string,
-  ) {}
+    readonly floor: string | number,
+  ) {
+    registered.push(this)
+  }
 
   record(difference: string | null): void {
     this.compared += 1
     if (difference !== null) this.differences.push(difference)
+  }
+}
+
+const floors = JSON.parse(readFileSync(resolve(toolDir, 'floors.json'), 'utf8')) as Record<
+  string,
+  number
+>
+let gateFailed = false
+
+/** Marks the gate as failed: the run exits with 1. */
+export function failGate(): void {
+  gateFailed = true
+}
+
+export function gateHasFailed(): boolean {
+  return gateFailed
+}
+
+/** `count` against its floor, as report text. A count below its floor fails the gate. */
+export function atFloor(count: number, floor: string | number): string {
+  const least = typeof floor === 'number' ? floor : floors[floor]
+  if (least !== undefined && count >= least) return `floor ${String(least).padStart(6)}`
+  failGate()
+  return `floor ${String(least ?? 'missing').padStart(6)}  BELOW FLOOR`
+}
+
+/**
+ * Prints every comparison, grouped by its letter: a module registers its
+ * lines when it is imported, which is not the order of the report. A
+ * difference fails the gate.
+ */
+export function reportComparisons(): void {
+  const byLetter = [...registered].sort((a, b) => a.label[1]!.localeCompare(b.label[1]!))
+  for (const comparison of byLetter) {
+    if (comparison.differences.length > 0) failGate()
+    console.log(
+      `${comparison.label.padEnd(46)} compared ${String(comparison.compared).padStart(6)}  ` +
+        `${atFloor(comparison.compared, comparison.floor)}  differences ${comparison.differences.length}` +
+        (comparison.typescriptThrew > 0
+          ? `  (TypeScript threw in ${comparison.typescriptThrew}: Rust must refuse those too)`
+          : ''),
+    )
+    for (const difference of comparison.differences.slice(0, SHOW))
+      console.log(`    - ${difference}`)
+    if (comparison.differences.length > SHOW) {
+      console.log(`    ... ${comparison.differences.length - SHOW} more (--show N)`)
+    }
   }
 }
 
