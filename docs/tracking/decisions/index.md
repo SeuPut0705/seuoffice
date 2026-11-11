@@ -127,3 +127,4 @@
 | [0126](0126-calamine-ahead-of-upstream.md)                    | 옛 .xls 한글이 깨지지 않게 calamine을 원본보다 먼저 0.38로 올린다                                    | 2026-11-10 |
 | [0127](0127-skills-first-user-findings.md)                    | 스킬을 바꿔 설치해도 설정이 남고, 미리보기에서 내용을 읽으며, 스킬 없는 zip에는 알림을 띄운다        | 2026-11-10 |
 | [0128](0128-skill-titles-in-any-language.md)                  | 내 스킬은 어떤 언어로든 제목을 붙이고, 남의 이름을 차지하기 전에 묻는다                              | 2026-11-10 |
+| [0131](0131-document-skills-for-the-agent-window.md)          | 공개 문서 스킬 넷(docx·pptx·xlsx·pdf)을 원본 그대로 싣고, 에이전트 창에서만 쓴다                     | 2026-11-11 |
