@@ -12,6 +12,10 @@ export const BUILTIN_SKILL_NAMES = [
   'find-skills',
   'administration-report',
   'administration-report-draft',
+  'docx',
+  'pptx',
+  'xlsx',
+  'pdf',
 ] as const
 
 export type BuiltinSkillName = (typeof BUILTIN_SKILL_NAMES)[number]
@@ -26,6 +30,14 @@ const zh = {
     '按照韩国行政安全部的指南整理报告：叙述式语句、标准编号、通用字体、简洁的表格。',
   'builtinSkillDesc.administration-report-draft':
     '按行政安全部格式从头撰写行政文书：章节结构、Ⅰ·1·가 编号、叙述式语句、表题与通用字体。',
+  'builtinSkillDesc.docx':
+    '仅在智能体窗口中可用。运行脚本，在项目文件夹中创建、修改和读取 .docx 文件。这台电脑上需要装有 Python 等程序。',
+  'builtinSkillDesc.pptx':
+    '仅在智能体窗口中可用。运行脚本，在项目文件夹中创建、修改和读取 .pptx 文件。这台电脑上需要装有 Python 等程序。',
+  'builtinSkillDesc.xlsx':
+    '仅在智能体窗口中可用。运行脚本，在项目文件夹中创建和修改 .xlsx 文件，并重新计算公式。这台电脑上需要装有 Python 等程序。',
+  'builtinSkillDesc.pdf':
+    '仅在智能体窗口中可用。运行脚本，在项目文件夹中读取、合并和拆分 .pdf 文件，并填写表单。这台电脑上需要装有 Python 等程序。',
 }
 
 /**
@@ -50,6 +62,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Brings a report in line with the Ministry of the Interior and Safety guideline: prose, standard numbering, fonts that open anywhere, simple tables.',
     'builtinSkillDesc.administration-report-draft':
       'Writes an administrative report from scratch in the ministry format: sections, the Ⅰ·1·가 numbering, prose, table titles and compatible fonts.',
+    'builtinSkillDesc.docx':
+      'Works only in the agent window. Runs scripts to create, edit and read .docx files in the project folder. Python and other programs must be installed on this PC.',
+    'builtinSkillDesc.pptx':
+      'Works only in the agent window. Runs scripts to create, edit and read .pptx files in the project folder. Python and other programs must be installed on this PC.',
+    'builtinSkillDesc.xlsx':
+      'Works only in the agent window. Runs scripts to create and edit .xlsx files in the project folder and recalculate their formulas. Python and other programs must be installed on this PC.',
+    'builtinSkillDesc.pdf':
+      'Works only in the agent window. Runs scripts to read, merge and split .pdf files in the project folder and fill in forms. Python and other programs must be installed on this PC.',
   },
   ja: {
     'builtinSkillDesc.meeting-minutes':
@@ -65,6 +85,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       '行政安全部のガイドラインに合わせて報告書を整えます。叙述式の文章、標準の番号、どの環境でも開けるフォント、単純な表。',
     'builtinSkillDesc.administration-report-draft':
       '行政文書を最初から行政安全部の形式で書きます。節構成、Ⅰ・1・가の番号、叙述式の文章、表の題名と通用するフォント。',
+    'builtinSkillDesc.docx':
+      'エージェントのウィンドウでのみ使えます。スクリプトを実行して、プロジェクトのフォルダーの .docx ファイルを作成・編集・読み取りします。この PC に Python などのプログラムが入っている必要があります。',
+    'builtinSkillDesc.pptx':
+      'エージェントのウィンドウでのみ使えます。スクリプトを実行して、プロジェクトのフォルダーの .pptx ファイルを作成・編集・読み取りします。この PC に Python などのプログラムが入っている必要があります。',
+    'builtinSkillDesc.xlsx':
+      'エージェントのウィンドウでのみ使えます。スクリプトを実行して、プロジェクトのフォルダーの .xlsx ファイルを作成・編集し、数式を再計算します。この PC に Python などのプログラムが入っている必要があります。',
+    'builtinSkillDesc.pdf':
+      'エージェントのウィンドウでのみ使えます。スクリプトを実行して、プロジェクトのフォルダーの .pdf ファイルを読み取り、結合・分割し、フォームに入力します。この PC に Python などのプログラムが入っている必要があります。',
   },
   ko: {
     'builtinSkillDesc.meeting-minutes':
@@ -81,6 +109,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       '행안부 가이드라인에 맞게 보고서를 다듬습니다. 서술식 문장, 표준 번호, 호환 글꼴, 단순한 표.',
     'builtinSkillDesc.administration-report-draft':
       '행안부 형식으로 행정문서를 처음부터 씁니다. 절 구성, Ⅰ·1·가 번호, 서술식 문장, 표 제목과 호환 글꼴.',
+    'builtinSkillDesc.docx':
+      '에이전트 창에서만 쓸 수 있습니다. 스크립트를 실행해 프로젝트 폴더의 .docx 파일을 만들고 고치고 읽습니다. 이 PC에 Python 같은 프로그램이 설치되어 있어야 합니다.',
+    'builtinSkillDesc.pptx':
+      '에이전트 창에서만 쓸 수 있습니다. 스크립트를 실행해 프로젝트 폴더의 .pptx 파일을 만들고 고치고 읽습니다. 이 PC에 Python 같은 프로그램이 설치되어 있어야 합니다.',
+    'builtinSkillDesc.xlsx':
+      '에이전트 창에서만 쓸 수 있습니다. 스크립트를 실행해 프로젝트 폴더의 .xlsx 파일을 만들고 고치고 수식을 다시 계산합니다. 이 PC에 Python 같은 프로그램이 설치되어 있어야 합니다.',
+    'builtinSkillDesc.pdf':
+      '에이전트 창에서만 쓸 수 있습니다. 스크립트를 실행해 프로젝트 폴더의 .pdf 파일을 읽고 합치고 나누고 양식을 채웁니다. 이 PC에 Python 같은 프로그램이 설치되어 있어야 합니다.',
   },
   fr: {
     'builtinSkillDesc.meeting-minutes':
@@ -97,6 +133,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       "Aligne un rapport sur la directive du ministère coréen de l'Intérieur : phrases rédigées, numérotation normalisée, polices disponibles partout, tableaux simples.",
     'builtinSkillDesc.administration-report-draft':
       'Rédige un rapport administratif de zéro au format du ministère : sections, numérotation Ⅰ·1·가, phrases rédigées, titres de tableaux et polices disponibles partout.',
+    'builtinSkillDesc.docx':
+      'Fonctionne uniquement dans la fenêtre Agent. Exécute des scripts pour créer, modifier et lire des fichiers .docx dans le dossier du projet. Python et d’autres programmes doivent être installés sur ce PC.',
+    'builtinSkillDesc.pptx':
+      'Fonctionne uniquement dans la fenêtre Agent. Exécute des scripts pour créer, modifier et lire des fichiers .pptx dans le dossier du projet. Python et d’autres programmes doivent être installés sur ce PC.',
+    'builtinSkillDesc.xlsx':
+      'Fonctionne uniquement dans la fenêtre Agent. Exécute des scripts pour créer et modifier des fichiers .xlsx dans le dossier du projet et recalculer leurs formules. Python et d’autres programmes doivent être installés sur ce PC.',
+    'builtinSkillDesc.pdf':
+      'Fonctionne uniquement dans la fenêtre Agent. Exécute des scripts pour lire, fusionner et diviser des fichiers .pdf dans le dossier du projet et remplir des formulaires. Python et d’autres programmes doivent être installés sur ce PC.',
   },
   de: {
     'builtinSkillDesc.meeting-minutes':
@@ -113,6 +157,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Bringt einen Bericht auf die Linie der Richtlinie des koreanischen Innenministeriums: Fließtext, einheitliche Nummerierung, überall verfügbare Schriften, einfache Tabellen.',
     'builtinSkillDesc.administration-report-draft':
       'Schreibt einen Verwaltungsbericht von Grund auf im Format des Ministeriums: Abschnitte, Nummerierung Ⅰ·1·가, Fließtext, Tabellenüberschriften und verfügbare Schriften.',
+    'builtinSkillDesc.docx':
+      'Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .docx-Dateien im Projektordner zu erstellen, zu bearbeiten und zu lesen. Auf diesem PC müssen Python und weitere Programme installiert sein.',
+    'builtinSkillDesc.pptx':
+      'Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .pptx-Dateien im Projektordner zu erstellen, zu bearbeiten und zu lesen. Auf diesem PC müssen Python und weitere Programme installiert sein.',
+    'builtinSkillDesc.xlsx':
+      'Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .xlsx-Dateien im Projektordner zu erstellen und zu bearbeiten und ihre Formeln neu zu berechnen. Auf diesem PC müssen Python und weitere Programme installiert sein.',
+    'builtinSkillDesc.pdf':
+      'Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .pdf-Dateien im Projektordner zu lesen, zusammenzuführen und zu teilen und Formulare auszufüllen. Auf diesem PC müssen Python und weitere Programme installiert sein.',
   },
   es: {
     'builtinSkillDesc.meeting-minutes':
@@ -129,6 +181,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Ajusta un informe a la guía del Ministerio del Interior y Seguridad de Corea: frases redactadas, numeración estándar, fuentes disponibles en cualquier equipo, tablas sencillas.',
     'builtinSkillDesc.administration-report-draft':
       'Escribe un informe administrativo desde cero con el formato del ministerio: secciones, numeración Ⅰ·1·가, frases redactadas, títulos de tablas y fuentes disponibles.',
+    'builtinSkillDesc.docx':
+      'Solo funciona en la ventana del agente. Ejecuta scripts para crear, editar y leer archivos .docx en la carpeta del proyecto. Este PC debe tener instalados Python y otros programas.',
+    'builtinSkillDesc.pptx':
+      'Solo funciona en la ventana del agente. Ejecuta scripts para crear, editar y leer archivos .pptx en la carpeta del proyecto. Este PC debe tener instalados Python y otros programas.',
+    'builtinSkillDesc.xlsx':
+      'Solo funciona en la ventana del agente. Ejecuta scripts para crear y editar archivos .xlsx en la carpeta del proyecto y recalcular sus fórmulas. Este PC debe tener instalados Python y otros programas.',
+    'builtinSkillDesc.pdf':
+      'Solo funciona en la ventana del agente. Ejecuta scripts para leer, combinar y dividir archivos .pdf en la carpeta del proyecto y rellenar formularios. Este PC debe tener instalados Python y otros programas.',
   },
   th: {
     'builtinSkillDesc.meeting-minutes':
@@ -145,6 +205,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'ปรับรายงานให้ตรงแนวทางของกระทรวงมหาดไทยและความมั่นคงเกาหลี: ประโยคบรรยาย ลำดับเลขมาตรฐาน ฟอนต์ที่เปิดได้ทุกเครื่อง และตารางเรียบง่าย',
     'builtinSkillDesc.administration-report-draft':
       'เขียนรายงานราชการตั้งแต่ต้นตามรูปแบบกระทรวง: โครง sections ลำดับเลข Ⅰ·1·가 ประโยคบรรยาย หัวตาราง และฟอนต์ที่ใช้ได้ทั่วไป',
+    'builtinSkillDesc.docx':
+      'ใช้ได้เฉพาะในหน้าต่างเอเจนต์ เรียกใช้สคริปต์เพื่อสร้าง แก้ไข และอ่านไฟล์ .docx ในโฟลเดอร์โปรเจกต์ พีซีเครื่องนี้ต้องติดตั้ง Python และโปรแกรมอื่นไว้',
+    'builtinSkillDesc.pptx':
+      'ใช้ได้เฉพาะในหน้าต่างเอเจนต์ เรียกใช้สคริปต์เพื่อสร้าง แก้ไข และอ่านไฟล์ .pptx ในโฟลเดอร์โปรเจกต์ พีซีเครื่องนี้ต้องติดตั้ง Python และโปรแกรมอื่นไว้',
+    'builtinSkillDesc.xlsx':
+      'ใช้ได้เฉพาะในหน้าต่างเอเจนต์ เรียกใช้สคริปต์เพื่อสร้างและแก้ไขไฟล์ .xlsx ในโฟลเดอร์โปรเจกต์ และคำนวณสูตรใหม่ พีซีเครื่องนี้ต้องติดตั้ง Python และโปรแกรมอื่นไว้',
+    'builtinSkillDesc.pdf':
+      'ใช้ได้เฉพาะในหน้าต่างเอเจนต์ เรียกใช้สคริปต์เพื่ออ่าน รวม และแยกไฟล์ .pdf ในโฟลเดอร์โปรเจกต์ และกรอกแบบฟอร์ม พีซีเครื่องนี้ต้องติดตั้ง Python และโปรแกรมอื่นไว้',
   },
   id: {
     'builtinSkillDesc.meeting-minutes':
@@ -161,6 +229,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Menyesuaikan laporan dengan pedoman Kementerian Dalam Negeri dan Keamanan Korea: kalimat naratif, penomoran baku, font yang tersedia di mana saja, tabel sederhana.',
     'builtinSkillDesc.administration-report-draft':
       'Menulis laporan administrasi dari nol dengan format kementerian: bagian, penomoran Ⅰ·1·가, kalimat naratif, judul tabel, dan font yang tersedia.',
+    'builtinSkillDesc.docx':
+      'Hanya berfungsi di jendela agen. Menjalankan skrip untuk membuat, mengedit, dan membaca file .docx di folder proyek. Python dan program lain harus terpasang di PC ini.',
+    'builtinSkillDesc.pptx':
+      'Hanya berfungsi di jendela agen. Menjalankan skrip untuk membuat, mengedit, dan membaca file .pptx di folder proyek. Python dan program lain harus terpasang di PC ini.',
+    'builtinSkillDesc.xlsx':
+      'Hanya berfungsi di jendela agen. Menjalankan skrip untuk membuat dan mengedit file .xlsx di folder proyek serta menghitung ulang rumusnya. Python dan program lain harus terpasang di PC ini.',
+    'builtinSkillDesc.pdf':
+      'Hanya berfungsi di jendela agen. Menjalankan skrip untuk membaca, menggabungkan, dan memisahkan file .pdf di folder proyek serta mengisi formulir. Python dan program lain harus terpasang di PC ini.',
   },
   ru: {
     'builtinSkillDesc.meeting-minutes':
@@ -177,6 +253,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Приводит отчёт в соответствие с руководством Министерства внутренних дел Кореи: связные предложения, единая нумерация, доступные шрифты, простые таблицы.',
     'builtinSkillDesc.administration-report-draft':
       'Пишет административный отчёт с нуля в формате министерства: разделы, нумерация Ⅰ·1·가, связные предложения, заголовки таблиц и доступные шрифты.',
+    'builtinSkillDesc.docx':
+      'Работает только в окне агента. Запускает скрипты, чтобы создавать, изменять и читать файлы .docx в папке проекта. На этом компьютере должны быть установлены Python и другие программы.',
+    'builtinSkillDesc.pptx':
+      'Работает только в окне агента. Запускает скрипты, чтобы создавать, изменять и читать файлы .pptx в папке проекта. На этом компьютере должны быть установлены Python и другие программы.',
+    'builtinSkillDesc.xlsx':
+      'Работает только в окне агента. Запускает скрипты, чтобы создавать и изменять файлы .xlsx в папке проекта и пересчитывать формулы. На этом компьютере должны быть установлены Python и другие программы.',
+    'builtinSkillDesc.pdf':
+      'Работает только в окне агента. Запускает скрипты, чтобы читать, объединять и разделять файлы .pdf в папке проекта и заполнять формы. На этом компьютере должны быть установлены Python и другие программы.',
   },
   ar: {
     'builtinSkillDesc.meeting-minutes':
@@ -192,6 +276,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'يضبط التقرير وفق إرشادات وزارة الداخلية والسلامة الكورية: جمل سردية، ترقيم موحد، خطوط متوفرة في أي جهاز، وجداول بسيطة.',
     'builtinSkillDesc.administration-report-draft':
       'يكتب تقريراً إدارياً من الصفر بصيغة الوزارة: الأقسام، ترقيم Ⅰ·1·가، جمل سردية، عناوين الجداول وخطوط متوفرة.',
+    'builtinSkillDesc.docx':
+      'يعمل في نافذة الوكيل فقط. يشغّل نصوصًا برمجية لإنشاء ملفات .docx في مجلد المشروع وتعديلها وقراءتها. يجب أن يكون Python وبرامج أخرى مثبتة على هذا الكمبيوتر.',
+    'builtinSkillDesc.pptx':
+      'يعمل في نافذة الوكيل فقط. يشغّل نصوصًا برمجية لإنشاء ملفات .pptx في مجلد المشروع وتعديلها وقراءتها. يجب أن يكون Python وبرامج أخرى مثبتة على هذا الكمبيوتر.',
+    'builtinSkillDesc.xlsx':
+      'يعمل في نافذة الوكيل فقط. يشغّل نصوصًا برمجية لإنشاء ملفات .xlsx في مجلد المشروع وتعديلها وإعادة حساب صيغها. يجب أن يكون Python وبرامج أخرى مثبتة على هذا الكمبيوتر.',
+    'builtinSkillDesc.pdf':
+      'يعمل في نافذة الوكيل فقط. يشغّل نصوصًا برمجية لقراءة ملفات .pdf في مجلد المشروع ودمجها وتقسيمها وتعبئة النماذج. يجب أن يكون Python وبرامج أخرى مثبتة على هذا الكمبيوتر.',
   },
   pt: {
     'builtinSkillDesc.meeting-minutes':
@@ -208,6 +300,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Alinha um relatório à diretriz do Ministério do Interior e Segurança da Coreia: frases corridas, numeração padrão, fontes disponíveis em qualquer PC, tabelas simples.',
     'builtinSkillDesc.administration-report-draft':
       'Escreve um relatório administrativo do zero no formato do ministério: seções, numeração Ⅰ·1·가, frases corridas, títulos de tabelas e fontes disponíveis.',
+    'builtinSkillDesc.docx':
+      'Funciona só na janela do agente. Executa scripts para criar, editar e ler arquivos .docx na pasta do projeto. Este PC precisa ter o Python e outros programas instalados.',
+    'builtinSkillDesc.pptx':
+      'Funciona só na janela do agente. Executa scripts para criar, editar e ler arquivos .pptx na pasta do projeto. Este PC precisa ter o Python e outros programas instalados.',
+    'builtinSkillDesc.xlsx':
+      'Funciona só na janela do agente. Executa scripts para criar e editar arquivos .xlsx na pasta do projeto e recalcular as fórmulas. Este PC precisa ter o Python e outros programas instalados.',
+    'builtinSkillDesc.pdf':
+      'Funciona só na janela do agente. Executa scripts para ler, juntar e dividir arquivos .pdf na pasta do projeto e preencher formulários. Este PC precisa ter o Python e outros programas instalados.',
   },
   it: {
     'builtinSkillDesc.meeting-minutes':
@@ -224,6 +324,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       "Allinea una relazione alle linee guida del Ministero dell'Interno coreano: frasi discorsive, numerazione standard, caratteri disponibili ovunque, tabelle semplici.",
     'builtinSkillDesc.administration-report-draft':
       'Scrive una relazione amministrativa da zero nel formato del ministero: sezioni, numerazione Ⅰ·1·가, frasi discorsive, titoli delle tabelle e caratteri disponibili.',
+    'builtinSkillDesc.docx':
+      'Funziona solo nella finestra dell’agente. Esegue script per creare, modificare e leggere file .docx nella cartella del progetto. Su questo PC devono essere installati Python e altri programmi.',
+    'builtinSkillDesc.pptx':
+      'Funziona solo nella finestra dell’agente. Esegue script per creare, modificare e leggere file .pptx nella cartella del progetto. Su questo PC devono essere installati Python e altri programmi.',
+    'builtinSkillDesc.xlsx':
+      'Funziona solo nella finestra dell’agente. Esegue script per creare e modificare file .xlsx nella cartella del progetto e ricalcolarne le formule. Su questo PC devono essere installati Python e altri programmi.',
+    'builtinSkillDesc.pdf':
+      'Funziona solo nella finestra dell’agente. Esegue script per leggere, unire e dividere file .pdf nella cartella del progetto e compilare moduli. Su questo PC devono essere installati Python e altri programmi.',
   },
   pl: {
     'builtinSkillDesc.meeting-minutes':
@@ -240,6 +348,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Dopasowuje raport do wytycznych koreańskiego ministerstwa spraw wewnętrznych: zdania opisowe, stała numeracja, czcionki dostępne wszędzie, proste tabele.',
     'builtinSkillDesc.administration-report-draft':
       'Pisze raport administracyjny od zera w formacie ministerstwa: sekcje, numeracja Ⅰ·1·가, zdania opisowe, tytuły tabel i dostępne czcionki.',
+    'builtinSkillDesc.docx':
+      'Działa tylko w oknie agenta. Uruchamia skrypty, aby tworzyć, edytować i odczytywać pliki .docx w folderze projektu. Na tym komputerze muszą być zainstalowane Python i inne programy.',
+    'builtinSkillDesc.pptx':
+      'Działa tylko w oknie agenta. Uruchamia skrypty, aby tworzyć, edytować i odczytywać pliki .pptx w folderze projektu. Na tym komputerze muszą być zainstalowane Python i inne programy.',
+    'builtinSkillDesc.xlsx':
+      'Działa tylko w oknie agenta. Uruchamia skrypty, aby tworzyć i edytować pliki .xlsx w folderze projektu oraz przeliczać formuły. Na tym komputerze muszą być zainstalowane Python i inne programy.',
+    'builtinSkillDesc.pdf':
+      'Działa tylko w oknie agenta. Uruchamia skrypty, aby odczytywać, scalać i dzielić pliki .pdf w folderze projektu oraz wypełniać formularze. Na tym komputerze muszą być zainstalowane Python i inne programy.',
   },
   cs: {
     'builtinSkillDesc.meeting-minutes':
@@ -256,6 +372,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Uvede zprávu do souladu se směrnicí korejského ministerstva vnitra: souvislé věty, jednotné číslování, dostupné písmo, jednoduché tabulky.',
     'builtinSkillDesc.administration-report-draft':
       'Píše správní zprávu od začátku ve formátu ministerstva: oddíly, číslování Ⅰ·1·가, souvislé věty, názvy tabulek a dostupné písmo.',
+    'builtinSkillDesc.docx':
+      'Funguje jen v okně agenta. Spouští skripty, které vytvářejí, upravují a čtou soubory .docx ve složce projektu. Na tomto počítači musí být nainstalován Python a další programy.',
+    'builtinSkillDesc.pptx':
+      'Funguje jen v okně agenta. Spouští skripty, které vytvářejí, upravují a čtou soubory .pptx ve složce projektu. Na tomto počítači musí být nainstalován Python a další programy.',
+    'builtinSkillDesc.xlsx':
+      'Funguje jen v okně agenta. Spouští skripty, které vytvářejí a upravují soubory .xlsx ve složce projektu a přepočítávají vzorce. Na tomto počítači musí být nainstalován Python a další programy.',
+    'builtinSkillDesc.pdf':
+      'Funguje jen v okně agenta. Spouští skripty, které čtou, slučují a dělí soubory .pdf ve složce projektu a vyplňují formuláře. Na tomto počítači musí být nainstalován Python a další programy.',
   },
   nl: {
     'builtinSkillDesc.meeting-minutes':
@@ -272,6 +396,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Brengt een rapport in lijn met de richtlijn van het Koreaanse ministerie van Binnenlandse Zaken: lopende tekst, vaste nummering, overal beschikbare lettertypen, eenvoudige tabellen.',
     'builtinSkillDesc.administration-report-draft':
       'Schrijft een bestuurlijk rapport vanaf nul in het formaat van het ministerie: secties, nummering Ⅰ·1·가, lopende tekst, tabelkoppen en overal beschikbare lettertypen.',
+    'builtinSkillDesc.docx':
+      'Werkt alleen in het agentvenster. Voert scripts uit om .docx-bestanden in de projectmap te maken, te bewerken en te lezen. Op deze pc moeten Python en andere programma’s zijn geïnstalleerd.',
+    'builtinSkillDesc.pptx':
+      'Werkt alleen in het agentvenster. Voert scripts uit om .pptx-bestanden in de projectmap te maken, te bewerken en te lezen. Op deze pc moeten Python en andere programma’s zijn geïnstalleerd.',
+    'builtinSkillDesc.xlsx':
+      'Werkt alleen in het agentvenster. Voert scripts uit om .xlsx-bestanden in de projectmap te maken en te bewerken en de formules opnieuw te berekenen. Op deze pc moeten Python en andere programma’s zijn geïnstalleerd.',
+    'builtinSkillDesc.pdf':
+      'Werkt alleen in het agentvenster. Voert scripts uit om .pdf-bestanden in de projectmap te lezen, samen te voegen en te splitsen en formulieren in te vullen. Op deze pc moeten Python en andere programma’s zijn geïnstalleerd.',
   },
   ms: {
     'builtinSkillDesc.meeting-minutes':
@@ -288,6 +420,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Menyesuaikan laporan dengan garis panduan Kementerian Dalam Negeri dan Keselamatan Korea: ayat naratif, penomboran piawai, fon yang ada di mana-mana, jadual ringkas.',
     'builtinSkillDesc.administration-report-draft':
       'Menulis laporan pentadbiran dari awal mengikut format kementerian: bahagian, penomboran Ⅰ·1·가, ayat naratif, tajuk jadual dan fon yang tersedia.',
+    'builtinSkillDesc.docx':
+      'Hanya berfungsi dalam tetingkap ejen. Menjalankan skrip untuk mencipta, mengedit dan membaca fail .docx dalam folder projek. Python dan program lain mesti dipasang pada PC ini.',
+    'builtinSkillDesc.pptx':
+      'Hanya berfungsi dalam tetingkap ejen. Menjalankan skrip untuk mencipta, mengedit dan membaca fail .pptx dalam folder projek. Python dan program lain mesti dipasang pada PC ini.',
+    'builtinSkillDesc.xlsx':
+      'Hanya berfungsi dalam tetingkap ejen. Menjalankan skrip untuk mencipta dan mengedit fail .xlsx dalam folder projek serta mengira semula formulanya. Python dan program lain mesti dipasang pada PC ini.',
+    'builtinSkillDesc.pdf':
+      'Hanya berfungsi dalam tetingkap ejen. Menjalankan skrip untuk membaca, menggabungkan dan memisahkan fail .pdf dalam folder projek serta mengisi borang. Python dan program lain mesti dipasang pada PC ini.',
   },
   he: {
     'builtinSkillDesc.meeting-minutes': 'הופך רשימות מפגישה לסיכום שמציג את ההחלטות ואת המשימות.',
@@ -303,6 +443,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'מתאים דוח להנחיות משרד הפנים והביטחון של קוריאה: משפטים רצופים, מספור אחיד, גופנים זמינים בכל מחשב וטבלאות פשוטות.',
     'builtinSkillDesc.administration-report-draft':
       'כותב דוח מנהלי מאפס בפורמט של המשרד: סעיפים, מספור Ⅰ·1·가, משפטים רצופים, כותרות טבלאות וגופנים זמינים.',
+    'builtinSkillDesc.docx':
+      'פועל רק בחלון הסוכן. מריץ סקריפטים כדי ליצור, לערוך ולקרוא קובצי .docx בתיקיית הפרויקט. Python ותוכנות נוספות צריכות להיות מותקנות במחשב הזה.',
+    'builtinSkillDesc.pptx':
+      'פועל רק בחלון הסוכן. מריץ סקריפטים כדי ליצור, לערוך ולקרוא קובצי .pptx בתיקיית הפרויקט. Python ותוכנות נוספות צריכות להיות מותקנות במחשב הזה.',
+    'builtinSkillDesc.xlsx':
+      'פועל רק בחלון הסוכן. מריץ סקריפטים כדי ליצור ולערוך קובצי .xlsx בתיקיית הפרויקט ולחשב מחדש את הנוסחאות. Python ותוכנות נוספות צריכות להיות מותקנות במחשב הזה.',
+    'builtinSkillDesc.pdf':
+      'פועל רק בחלון הסוכן. מריץ סקריפטים כדי לקרוא, למזג ולפצל קובצי .pdf בתיקיית הפרויקט ולמלא טפסים. Python ותוכנות נוספות צריכות להיות מותקנות במחשב הזה.',
   },
   hi: {
     'builtinSkillDesc.meeting-minutes':
@@ -319,6 +467,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'रिपोर्ट को कोरिया के आंतरिक एवं सुरक्षा मंत्रालय के दिशानिर्देश के अनुसार ढालता है: वर्णनात्मक वाक्य, मानक क्रमांकन, हर जगह उपलब्ध फ़ॉन्ट, सरल तालिकाएँ।',
     'builtinSkillDesc.administration-report-draft':
       'मंत्रालय के प्रारूप में प्रशासनिक रिपोर्ट शुरू से लिखता है: अनुभाग, Ⅰ·1·가 क्रमांकन, वर्णनात्मक वाक्य, तालिका शीर्षक और उपलब्ध फ़ॉन्ट।',
+    'builtinSkillDesc.docx':
+      'केवल एजेंट विंडो में काम करता है। स्क्रिप्ट चलाकर प्रोजेक्ट फ़ोल्डर में .docx फ़ाइलें बनाता, संपादित करता और पढ़ता है। इस PC पर Python और अन्य प्रोग्राम इंस्टॉल होने चाहिए।',
+    'builtinSkillDesc.pptx':
+      'केवल एजेंट विंडो में काम करता है। स्क्रिप्ट चलाकर प्रोजेक्ट फ़ोल्डर में .pptx फ़ाइलें बनाता, संपादित करता और पढ़ता है। इस PC पर Python और अन्य प्रोग्राम इंस्टॉल होने चाहिए।',
+    'builtinSkillDesc.xlsx':
+      'केवल एजेंट विंडो में काम करता है। स्क्रिप्ट चलाकर प्रोजेक्ट फ़ोल्डर में .xlsx फ़ाइलें बनाता और संपादित करता है और उनके फ़ॉर्मूले दोबारा गिनता है। इस PC पर Python और अन्य प्रोग्राम इंस्टॉल होने चाहिए।',
+    'builtinSkillDesc.pdf':
+      'केवल एजेंट विंडो में काम करता है। स्क्रिप्ट चलाकर प्रोजेक्ट फ़ोल्डर की .pdf फ़ाइलें पढ़ता, जोड़ता और बाँटता है और फ़ॉर्म भरता है। इस PC पर Python और अन्य प्रोग्राम इंस्टॉल होने चाहिए।',
   },
   'zh-TW': {
     'builtinSkillDesc.meeting-minutes': '把會議筆記整理成列明決議事項和待辦事項的會議紀錄。',
@@ -331,6 +487,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       '依照韓國行政安全部的指南整理報告：敘述式語句、標準編號、通用字體、簡潔的表格。',
     'builtinSkillDesc.administration-report-draft':
       '依行政安全部格式從頭撰寫行政文書：章節結構、Ⅰ·1·가 編號、敘述式語句、表題與通用字體。',
+    'builtinSkillDesc.docx':
+      '僅能在代理程式視窗中使用。執行指令碼，在專案資料夾中建立、修改和讀取 .docx 檔案。這台電腦上需要安裝 Python 等程式。',
+    'builtinSkillDesc.pptx':
+      '僅能在代理程式視窗中使用。執行指令碼，在專案資料夾中建立、修改和讀取 .pptx 檔案。這台電腦上需要安裝 Python 等程式。',
+    'builtinSkillDesc.xlsx':
+      '僅能在代理程式視窗中使用。執行指令碼，在專案資料夾中建立和修改 .xlsx 檔案，並重新計算公式。這台電腦上需要安裝 Python 等程式。',
+    'builtinSkillDesc.pdf':
+      '僅能在代理程式視窗中使用。執行指令碼，在專案資料夾中讀取、合併和分割 .pdf 檔案，並填寫表單。這台電腦上需要安裝 Python 等程式。',
   },
   vi: {
     'builtinSkillDesc.meeting-minutes':
@@ -347,6 +511,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Đưa báo cáo về đúng hướng dẫn của Bộ Nội vụ và An toàn Hàn Quốc: câu diễn đạt, đánh số chuẩn, phông chữ mở được mọi nơi, bảng đơn giản.',
     'builtinSkillDesc.administration-report-draft':
       'Viết báo cáo hành chính từ đầu theo định dạng của bộ: các phần, đánh số Ⅰ·1·가, câu diễn đạt, tiêu đề bảng và phông chữ phổ dụng.',
+    'builtinSkillDesc.docx':
+      'Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để tạo, sửa và đọc tệp .docx trong thư mục dự án. PC này cần cài sẵn Python và các chương trình khác.',
+    'builtinSkillDesc.pptx':
+      'Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để tạo, sửa và đọc tệp .pptx trong thư mục dự án. PC này cần cài sẵn Python và các chương trình khác.',
+    'builtinSkillDesc.xlsx':
+      'Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để tạo và sửa tệp .xlsx trong thư mục dự án và tính lại công thức. PC này cần cài sẵn Python và các chương trình khác.',
+    'builtinSkillDesc.pdf':
+      'Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để đọc, gộp và tách tệp .pdf trong thư mục dự án và điền biểu mẫu. PC này cần cài sẵn Python và các chương trình khác.',
   },
 })
 

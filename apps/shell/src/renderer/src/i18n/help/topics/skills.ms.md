@@ -111,17 +111,21 @@ Apabila anda membuat kemahiran dalam panel AI sesebuah editor, dokumen semasa bo
 
 ## Kemahiran terbina dalam
 
-| Kemahiran                     | Fungsinya                                                                                                                                                            |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `meeting-minutes`             | Menyusun nota mesyuarat menjadi minit yang menunjukkan keputusan dan tindakan susulan                                                                                |
-| `internal-comms`              | Menulis pengumuman, buletin, laporan kemajuan, soalan lazim dan mesej dalaman lain                                                                                   |
-| `humanizer`                   | Mencari ungkapan yang berbunyi seperti ditulis AI dan menjadikannya semula jadi                                                                                      |
-| `copy-editing`                | Menyemak teks bahasa Inggeris yang anda tulis supaya lebih jelas dan ringkas                                                                                         |
-| `find-skills`                 | Mencari kemahiran yang anda perlukan dalam tetingkap ejen dan mencadangkan pemasangannya                                                                             |
-| `administration-report`       | Menyesuaikan laporan dengan garis panduan Kementerian Dalam Negeri dan Keselamatan Korea: ayat naratif, penomboran piawai, fon yang ada di mana-mana, jadual ringkas |
-| `administration-report-draft` | Menulis laporan pentadbiran dari awal mengikut format kementerian: bahagian, penomboran Ⅰ·1·가, ayat naratif, tajuk jadual dan fon yang tersedia                     |
+| Kemahiran                     | Fungsinya                                                                                                                                                                                                  |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Menyusun nota mesyuarat menjadi minit yang menunjukkan keputusan dan tindakan susulan                                                                                                                      |
+| `internal-comms`              | Menulis pengumuman, buletin, laporan kemajuan, soalan lazim dan mesej dalaman lain                                                                                                                         |
+| `humanizer`                   | Mencari ungkapan yang berbunyi seperti ditulis AI dan menjadikannya semula jadi                                                                                                                            |
+| `copy-editing`                | Menyemak teks bahasa Inggeris yang anda tulis supaya lebih jelas dan ringkas                                                                                                                               |
+| `find-skills`                 | Mencari kemahiran yang anda perlukan dalam tetingkap ejen dan mencadangkan pemasangannya                                                                                                                   |
+| `administration-report`       | Menyesuaikan laporan dengan garis panduan Kementerian Dalam Negeri dan Keselamatan Korea: ayat naratif, penomboran piawai, fon yang ada di mana-mana, jadual ringkas                                       |
+| `administration-report-draft` | Menulis laporan pentadbiran dari awal mengikut format kementerian: bahagian, penomboran Ⅰ·1·가, ayat naratif, tajuk jadual dan fon yang tersedia                                                           |
+| `docx`                        | Hanya berfungsi dalam tetingkap ejen. Menjalankan skrip untuk mencipta, mengedit dan membaca fail .docx dalam folder projek. Python dan program lain mesti dipasang pada PC ini                            |
+| `pptx`                        | Hanya berfungsi dalam tetingkap ejen. Menjalankan skrip untuk mencipta, mengedit dan membaca fail .pptx dalam folder projek. Python dan program lain mesti dipasang pada PC ini                            |
+| `xlsx`                        | Hanya berfungsi dalam tetingkap ejen. Menjalankan skrip untuk mencipta dan mengedit fail .xlsx dalam folder projek serta mengira semula formulanya. Python dan program lain mesti dipasang pada PC ini     |
+| `pdf`                         | Hanya berfungsi dalam tetingkap ejen. Menjalankan skrip untuk membaca, menggabungkan dan memisahkan fail .pdf dalam folder projek serta mengisi borang. Python dan program lain mesti dipasang pada PC ini |
 
-`copy-editing` dibuat untuk teks pemasaran bahasa Inggeris. `find-skills` hanya berfungsi dalam tetingkap ejen. Dalam **Lihat kandungan** bagi kemahiran terbina dalam, penerangan dipaparkan dalam bahasa antara muka, manakala arahan ialah teks yang diberikan kepada AI dan dipaparkan seperti yang ditulis (bahasa Inggeris).
+`copy-editing` dibuat untuk teks pemasaran bahasa Inggeris. `find-skills` hanya berfungsi dalam tetingkap ejen. Dalam **Lihat kandungan** bagi kemahiran terbina dalam, penerangan dipaparkan dalam bahasa antara muka, manakala arahan ialah teks yang diberikan kepada AI dan dipaparkan seperti yang ditulis (bahasa Inggeris). `docx`, `pptx`, `xlsx` dan `pdf` hanya berfungsi dalam tetingkap ejen; semuanya menjalankan skrip, jadi Python dan program lain mesti dipasang pada PC ini.
 
 ## Dalam tetingkap ejen
 

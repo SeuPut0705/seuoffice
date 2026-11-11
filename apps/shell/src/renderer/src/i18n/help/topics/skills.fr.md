@@ -111,17 +111,21 @@ Quand vous créez une compétence dans le panneau IA d’un éditeur, le documen
 
 ## Compétences intégrées
 
-| Compétence                    | Ce qu’elle fait                                                                                                                                                     |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `meeting-minutes`             | Transforme les notes de réunion en compte rendu qui fait ressortir les décisions et les actions                                                                     |
-| `internal-comms`              | Rédige annonces, lettres d’information, points d’avancement, FAQ et autres messages internes                                                                        |
-| `humanizer`                   | Repère les tournures qui sonnent écrites par une IA et les rend naturelles                                                                                          |
-| `copy-editing`                | Relit un texte anglais déjà écrit pour le rendre plus clair et plus concis                                                                                          |
-| `find-skills`                 | Trouve dans la fenêtre de l’agent les compétences utiles et propose de les installer                                                                                |
-| `administration-report`       | Aligne un rapport sur la directive du ministère coréen de l'Intérieur : phrases rédigées, numérotation normalisée, polices disponibles partout, tableaux simples    |
-| `administration-report-draft` | Rédige un rapport administratif de zéro au format du ministère : sections, numérotation Ⅰ·1·가, phrases rédigées, titres de tableaux et polices disponibles partout |
+| Compétence                    | Ce qu’elle fait                                                                                                                                                                                                                         |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Transforme les notes de réunion en compte rendu qui fait ressortir les décisions et les actions                                                                                                                                         |
+| `internal-comms`              | Rédige annonces, lettres d’information, points d’avancement, FAQ et autres messages internes                                                                                                                                            |
+| `humanizer`                   | Repère les tournures qui sonnent écrites par une IA et les rend naturelles                                                                                                                                                              |
+| `copy-editing`                | Relit un texte anglais déjà écrit pour le rendre plus clair et plus concis                                                                                                                                                              |
+| `find-skills`                 | Trouve dans la fenêtre de l’agent les compétences utiles et propose de les installer                                                                                                                                                    |
+| `administration-report`       | Aligne un rapport sur la directive du ministère coréen de l'Intérieur : phrases rédigées, numérotation normalisée, polices disponibles partout, tableaux simples                                                                        |
+| `administration-report-draft` | Rédige un rapport administratif de zéro au format du ministère : sections, numérotation Ⅰ·1·가, phrases rédigées, titres de tableaux et polices disponibles partout                                                                     |
+| `docx`                        | Fonctionne uniquement dans la fenêtre Agent. Exécute des scripts pour créer, modifier et lire des fichiers .docx dans le dossier du projet. Python et d’autres programmes doivent être installés sur ce PC                              |
+| `pptx`                        | Fonctionne uniquement dans la fenêtre Agent. Exécute des scripts pour créer, modifier et lire des fichiers .pptx dans le dossier du projet. Python et d’autres programmes doivent être installés sur ce PC                              |
+| `xlsx`                        | Fonctionne uniquement dans la fenêtre Agent. Exécute des scripts pour créer et modifier des fichiers .xlsx dans le dossier du projet et recalculer leurs formules. Python et d’autres programmes doivent être installés sur ce PC       |
+| `pdf`                         | Fonctionne uniquement dans la fenêtre Agent. Exécute des scripts pour lire, fusionner et diviser des fichiers .pdf dans le dossier du projet et remplir des formulaires. Python et d’autres programmes doivent être installés sur ce PC |
 
-`copy-editing` est conçue pour les textes marketing en anglais. `find-skills` fonctionne uniquement dans la fenêtre de l’agent. Dans **Voir le contenu** d’une compétence intégrée, la description est dans la langue de l’interface et les instructions sont le texte donné à l’IA, affiché tel quel (en anglais).
+`copy-editing` est conçue pour les textes marketing en anglais. `find-skills` fonctionne uniquement dans la fenêtre de l’agent. Dans **Voir le contenu** d’une compétence intégrée, la description est dans la langue de l’interface et les instructions sont le texte donné à l’IA, affiché tel quel (en anglais). `docx`, `pptx`, `xlsx` et `pdf` fonctionnent uniquement dans la fenêtre Agent ; ils exécutent des scripts, donc Python et d’autres programmes doivent être installés sur ce PC.
 
 ## Dans la fenêtre de l’agent
 

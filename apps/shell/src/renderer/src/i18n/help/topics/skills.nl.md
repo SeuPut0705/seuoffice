@@ -111,17 +111,21 @@ Maak je een vaardigheid in het AI-paneel van een editor, dan kan het huidige doc
 
 ## Ingebouwde vaardigheden
 
-| Vaardigheid                   | Wat hij doet                                                                                                                                                                         |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `meeting-minutes`             | Maakt van vergaderaantekeningen notulen met de besluiten en actiepunten                                                                                                              |
-| `internal-comms`              | Schrijft mededelingen, nieuwsbrieven, voortgangsrapporten, veelgestelde vragen en andere interne berichten                                                                           |
-| `humanizer`                   | Zoekt formuleringen die naar AI klinken en maakt ze natuurlijk                                                                                                                       |
-| `copy-editing`                | Loopt een Engelse tekst die je hebt geschreven na en maakt hem duidelijker en bondiger                                                                                               |
-| `find-skills`                 | Zoekt in het agentvenster de vaardigheden die je nodig hebt en stelt voor ze te installeren                                                                                          |
-| `administration-report`       | Brengt een rapport in lijn met de richtlijn van het Koreaanse ministerie van Binnenlandse Zaken: lopende tekst, vaste nummering, overal beschikbare lettertypen, eenvoudige tabellen |
-| `administration-report-draft` | Schrijft een bestuurlijk rapport vanaf nul in het formaat van het ministerie: secties, nummering Ⅰ·1·가, lopende tekst, tabelkoppen en overal beschikbare lettertypen                |
+| Vaardigheid                   | Wat hij doet                                                                                                                                                                                                                   |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `meeting-minutes`             | Maakt van vergaderaantekeningen notulen met de besluiten en actiepunten                                                                                                                                                        |
+| `internal-comms`              | Schrijft mededelingen, nieuwsbrieven, voortgangsrapporten, veelgestelde vragen en andere interne berichten                                                                                                                     |
+| `humanizer`                   | Zoekt formuleringen die naar AI klinken en maakt ze natuurlijk                                                                                                                                                                 |
+| `copy-editing`                | Loopt een Engelse tekst die je hebt geschreven na en maakt hem duidelijker en bondiger                                                                                                                                         |
+| `find-skills`                 | Zoekt in het agentvenster de vaardigheden die je nodig hebt en stelt voor ze te installeren                                                                                                                                    |
+| `administration-report`       | Brengt een rapport in lijn met de richtlijn van het Koreaanse ministerie van Binnenlandse Zaken: lopende tekst, vaste nummering, overal beschikbare lettertypen, eenvoudige tabellen                                           |
+| `administration-report-draft` | Schrijft een bestuurlijk rapport vanaf nul in het formaat van het ministerie: secties, nummering Ⅰ·1·가, lopende tekst, tabelkoppen en overal beschikbare lettertypen                                                          |
+| `docx`                        | Werkt alleen in het agentvenster. Voert scripts uit om .docx-bestanden in de projectmap te maken, te bewerken en te lezen. Op deze pc moeten Python en andere programma’s zijn geïnstalleerd                                   |
+| `pptx`                        | Werkt alleen in het agentvenster. Voert scripts uit om .pptx-bestanden in de projectmap te maken, te bewerken en te lezen. Op deze pc moeten Python en andere programma’s zijn geïnstalleerd                                   |
+| `xlsx`                        | Werkt alleen in het agentvenster. Voert scripts uit om .xlsx-bestanden in de projectmap te maken en te bewerken en de formules opnieuw te berekenen. Op deze pc moeten Python en andere programma’s zijn geïnstalleerd         |
+| `pdf`                         | Werkt alleen in het agentvenster. Voert scripts uit om .pdf-bestanden in de projectmap te lezen, samen te voegen en te splitsen en formulieren in te vullen. Op deze pc moeten Python en andere programma’s zijn geïnstalleerd |
 
-`copy-editing` is gemaakt voor Engelse marketingteksten. `find-skills` werkt alleen in het agentvenster. In **Inhoud bekijken** van een ingebouwde vaardigheid staat de beschrijving in de taal van de interface; de instructies zijn de tekst die de AI krijgt, getoond zoals die is geschreven (in het Engels).
+`copy-editing` is gemaakt voor Engelse marketingteksten. `find-skills` werkt alleen in het agentvenster. In **Inhoud bekijken** van een ingebouwde vaardigheid staat de beschrijving in de taal van de interface; de instructies zijn de tekst die de AI krijgt, getoond zoals die is geschreven (in het Engels). `docx`, `pptx`, `xlsx` en `pdf` werken alleen in het agentvenster; ze voeren scripts uit, dus op deze pc moeten Python en andere programma’s zijn geïnstalleerd.
 
 ## In het agentvenster
 

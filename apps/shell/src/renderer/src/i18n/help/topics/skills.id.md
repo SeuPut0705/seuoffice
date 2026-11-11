@@ -111,17 +111,21 @@ Saat Anda membuat skill di panel AI sebuah editor, dokumen yang sedang terbuka b
 
 ## Skill bawaan
 
-| Skill                         | Fungsinya                                                                                                                                                          |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `meeting-minutes`             | Mengubah catatan rapat menjadi notulen yang menampilkan keputusan dan tugas tindak lanjut                                                                          |
-| `internal-comms`              | Menulis pengumuman, buletin, laporan kemajuan, FAQ, dan pesan internal lainnya                                                                                     |
-| `humanizer`                   | Mencari ungkapan yang terdengar ditulis AI dan membuatnya wajar                                                                                                    |
-| `copy-editing`                | Memeriksa ulang teks bahasa Inggris yang Anda tulis agar lebih jelas dan ringkas                                                                                   |
-| `find-skills`                 | Mencari skill yang Anda perlukan di jendela agen dan mengusulkan pemasangannya                                                                                     |
-| `administration-report`       | Menyesuaikan laporan dengan pedoman Kementerian Dalam Negeri dan Keamanan Korea: kalimat naratif, penomoran baku, font yang tersedia di mana saja, tabel sederhana |
-| `administration-report-draft` | Menulis laporan administrasi dari nol dengan format kementerian: bagian, penomoran Ⅰ·1·가, kalimat naratif, judul tabel, dan font yang tersedia                    |
+| Skill                         | Fungsinya                                                                                                                                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Mengubah catatan rapat menjadi notulen yang menampilkan keputusan dan tugas tindak lanjut                                                                                                            |
+| `internal-comms`              | Menulis pengumuman, buletin, laporan kemajuan, FAQ, dan pesan internal lainnya                                                                                                                       |
+| `humanizer`                   | Mencari ungkapan yang terdengar ditulis AI dan membuatnya wajar                                                                                                                                      |
+| `copy-editing`                | Memeriksa ulang teks bahasa Inggris yang Anda tulis agar lebih jelas dan ringkas                                                                                                                     |
+| `find-skills`                 | Mencari skill yang Anda perlukan di jendela agen dan mengusulkan pemasangannya                                                                                                                       |
+| `administration-report`       | Menyesuaikan laporan dengan pedoman Kementerian Dalam Negeri dan Keamanan Korea: kalimat naratif, penomoran baku, font yang tersedia di mana saja, tabel sederhana                                   |
+| `administration-report-draft` | Menulis laporan administrasi dari nol dengan format kementerian: bagian, penomoran Ⅰ·1·가, kalimat naratif, judul tabel, dan font yang tersedia                                                      |
+| `docx`                        | Hanya berfungsi di jendela agen. Menjalankan skrip untuk membuat, mengedit, dan membaca file .docx di folder proyek. Python dan program lain harus terpasang di PC ini                               |
+| `pptx`                        | Hanya berfungsi di jendela agen. Menjalankan skrip untuk membuat, mengedit, dan membaca file .pptx di folder proyek. Python dan program lain harus terpasang di PC ini                               |
+| `xlsx`                        | Hanya berfungsi di jendela agen. Menjalankan skrip untuk membuat dan mengedit file .xlsx di folder proyek serta menghitung ulang rumusnya. Python dan program lain harus terpasang di PC ini         |
+| `pdf`                         | Hanya berfungsi di jendela agen. Menjalankan skrip untuk membaca, menggabungkan, dan memisahkan file .pdf di folder proyek serta mengisi formulir. Python dan program lain harus terpasang di PC ini |
 
-`copy-editing` dibuat untuk teks pemasaran berbahasa Inggris. `find-skills` hanya berfungsi di jendela agen. Di **Lihat isi** milik skill bawaan, deskripsi ditampilkan dalam bahasa antarmuka, sedangkan petunjuk adalah teks yang diberikan kepada AI dan ditampilkan apa adanya (bahasa Inggris).
+`copy-editing` dibuat untuk teks pemasaran berbahasa Inggris. `find-skills` hanya berfungsi di jendela agen. Di **Lihat isi** milik skill bawaan, deskripsi ditampilkan dalam bahasa antarmuka, sedangkan petunjuk adalah teks yang diberikan kepada AI dan ditampilkan apa adanya (bahasa Inggris). `docx`, `pptx`, `xlsx`, dan `pdf` hanya berfungsi di jendela agen; semuanya menjalankan skrip, jadi Python dan program lain harus terpasang di PC ini.
 
 ## Di jendela agen
 

@@ -7,6 +7,7 @@ import {
   BUILTIN_SKILL_STRINGS,
   builtinSkillDesc,
   isBuiltinSkillName,
+  type BuiltinSkillName,
   type BuiltinSkillStringKey,
 } from '../src/strings-builtin-skills'
 
@@ -64,7 +65,8 @@ describe('BUILTIN_SKILL_STRINGS', () => {
     )
     expect(builtinSkillDesc('en', 'find-skills')).toMatch(/agent window/)
     expect(isBuiltinSkillName('humanizer')).toBe(true)
-    expect(isBuiltinSkillName('docx')).toBe(false)
+    expect(isBuiltinSkillName('docx')).toBe(true)
+    expect(isBuiltinSkillName('odt')).toBe(false)
   })
 
   it('does not limit humanizer to English text, while copy-editing still says English', () => {
@@ -80,5 +82,24 @@ describe('BUILTIN_SKILL_STRINGS', () => {
   it('lists the same skills as the shipped builtin-skills.json', () => {
     const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8')) as { name: string }[]
     expect(manifest.map((e) => e.name).sort()).toEqual([...BUILTIN_SKILL_NAMES].sort())
+  })
+
+  it('ships the four document skills for the agent window only, as upstream wrote them', () => {
+    const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8')) as {
+      name: string
+      source: string
+      license: string
+      agentOnly: boolean
+      modified: boolean
+    }[]
+    for (const name of ['docx', 'pptx', 'xlsx', 'pdf']) {
+      // their instructions run scripts, which only the agent window does
+      expect(
+        manifest.find((e) => e.name === name),
+        name,
+      ).toMatchObject({ license: 'Apache-2.0', agentOnly: true, modified: false })
+      expect(builtinSkillDesc('en', name as BuiltinSkillName)).toMatch(/only in the agent window/)
+      expect(builtinSkillDesc('ko', name as BuiltinSkillName)).toMatch(/에이전트 창에서만/)
+    }
   })
 })

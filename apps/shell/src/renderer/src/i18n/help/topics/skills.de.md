@@ -111,17 +111,21 @@ Wenn Sie im KI-Bereich eines Editors einen Skill erstellen, kann das aktuelle Do
 
 ## Integrierte Skills
 
-| Skill                         | Was er tut                                                                                                                                                                  |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `meeting-minutes`             | Macht aus Besprechungsnotizen ein Protokoll, das Beschlüsse und Aufgaben zeigt                                                                                              |
-| `internal-comms`              | Schreibt Mitteilungen, Newsletter, Statusberichte, FAQs und andere interne Texte                                                                                            |
-| `humanizer`                   | Findet Formulierungen, die nach KI klingen, und macht sie natürlich                                                                                                         |
-| `copy-editing`                | Geht einen fertigen englischen Text durch und macht ihn klarer und knapper                                                                                                  |
-| `find-skills`                 | Findet im Agentenfenster benötigte Skills und schlägt ihre Installation vor                                                                                                 |
-| `administration-report`       | Bringt einen Bericht auf die Linie der Richtlinie des koreanischen Innenministeriums: Fließtext, einheitliche Nummerierung, überall verfügbare Schriften, einfache Tabellen |
-| `administration-report-draft` | Schreibt einen Verwaltungsbericht von Grund auf im Format des Ministeriums: Abschnitte, Nummerierung Ⅰ·1·가, Fließtext, Tabellenüberschriften und verfügbare Schriften      |
+| Skill                         | Was er tut                                                                                                                                                                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Macht aus Besprechungsnotizen ein Protokoll, das Beschlüsse und Aufgaben zeigt                                                                                                                                                |
+| `internal-comms`              | Schreibt Mitteilungen, Newsletter, Statusberichte, FAQs und andere interne Texte                                                                                                                                              |
+| `humanizer`                   | Findet Formulierungen, die nach KI klingen, und macht sie natürlich                                                                                                                                                           |
+| `copy-editing`                | Geht einen fertigen englischen Text durch und macht ihn klarer und knapper                                                                                                                                                    |
+| `find-skills`                 | Findet im Agentenfenster benötigte Skills und schlägt ihre Installation vor                                                                                                                                                   |
+| `administration-report`       | Bringt einen Bericht auf die Linie der Richtlinie des koreanischen Innenministeriums: Fließtext, einheitliche Nummerierung, überall verfügbare Schriften, einfache Tabellen                                                   |
+| `administration-report-draft` | Schreibt einen Verwaltungsbericht von Grund auf im Format des Ministeriums: Abschnitte, Nummerierung Ⅰ·1·가, Fließtext, Tabellenüberschriften und verfügbare Schriften                                                        |
+| `docx`                        | Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .docx-Dateien im Projektordner zu erstellen, zu bearbeiten und zu lesen. Auf diesem PC müssen Python und weitere Programme installiert sein                          |
+| `pptx`                        | Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .pptx-Dateien im Projektordner zu erstellen, zu bearbeiten und zu lesen. Auf diesem PC müssen Python und weitere Programme installiert sein                          |
+| `xlsx`                        | Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .xlsx-Dateien im Projektordner zu erstellen und zu bearbeiten und ihre Formeln neu zu berechnen. Auf diesem PC müssen Python und weitere Programme installiert sein  |
+| `pdf`                         | Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .pdf-Dateien im Projektordner zu lesen, zusammenzuführen und zu teilen und Formulare auszufüllen. Auf diesem PC müssen Python und weitere Programme installiert sein |
 
-`copy-editing` ist für englische Marketingtexte gedacht. `find-skills` funktioniert nur im Agentenfenster. In **Inhalt ansehen** eines integrierten Skills steht die Beschreibung in der Sprache der Oberfläche; die Anleitung ist der Text, den die KI erhält, und wird unverändert (auf Englisch) gezeigt.
+`copy-editing` ist für englische Marketingtexte gedacht. `find-skills` funktioniert nur im Agentenfenster. In **Inhalt ansehen** eines integrierten Skills steht die Beschreibung in der Sprache der Oberfläche; die Anleitung ist der Text, den die KI erhält, und wird unverändert (auf Englisch) gezeigt. `docx`, `pptx`, `xlsx` und `pdf` funktionieren nur im Agent-Fenster; sie führen Skripte aus, deshalb müssen Python und weitere Programme auf diesem PC installiert sein.
 
 ## Im Agentenfenster
 
