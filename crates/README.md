@@ -43,27 +43,27 @@ randomness.
 A port that uses the nearest Rust function differs on real documents. These
 are the ones that bit, each with an input where the two disagree:
 
-| JavaScript                      | Use                                                      | Not                      | Differs on                                                        |
-| ------------------------------- | -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------- |
-| `parseInt(s, 10)`               | `parse_int(s, Radix::Ten)`                               | `s.parse()`              | `"12.9pt"` is 12, `" 7"` is 7, `""` is NaN                        |
-| `Number(s)`                     | `to_number`                                              | `s.parse::<f64>()`       | `""` is 0, `"0x10"` is 16, `"1e2"` is 100                         |
-| `parseFloat(s)`                 | `parse_float`                                            | `s.parse::<f64>()`       | `"2.5cm"` is 2.5                                                  |
-| `Math.round(x)`                 | `math_round`                                             | `f64::round`             | -2.5 rounds to -2                                                 |
-| `String(x)`                     | `number_to_string`                                       | `format!("{x}")`         | `1e21`, and ties in the last digit                                |
-| `x \| 0`, `x & m`               | `to_int32`                                               | `as i32`                 | wraps, does not saturate                                          |
-| `n.toString(16)`                | `to_string_radix16`                                      | `format!("{:x}")`        | integers past 64 bits                                             |
-| a number in a model             | `JsNum(f64)`                                             | an integer type          | the TypeScript holds NaN and fractions there                      |
-| `/pattern/flags`                | `js_regex!(r"pattern", "flags")`                         | the `regex` crate        | lookahead, backreferences, `\s` holds U+FEFF, `\d` is ASCII       |
-| `new RegExp(text)`              | `JsRegex::new(text, flags)?`                             | assuming it compiles     | a tag name like `w:(` throws                                      |
-| `s.split(/re/)`                 | `JsRegex::split`                                         | `str::split`             | empty matches, the trailing piece                                 |
-| `s.trim()`                      | `trim`, `trim_start`                                     | `str::trim`              | U+FEFF is white space, U+0085 is not                              |
-| `if (s)`, `a \|\| b` on strings | `truthy(Option<&str>)`                                   | `Option::is_some`        | `""` is false                                                     |
-| `a ?? b`                        | `Option::or`, `unwrap_or`                                | `truthy`                 | `""` and `0` are kept                                             |
-| `new Map()`                     | `JsMap<V>`                                               | `HashMap`, `BTreeMap`    | order of entries; a key set again keeps its place                 |
-| `{}` used as a table            | a `match` on own keys                                    |                          | `table["constructor"]` answers in JavaScript: a listed divergence |
-| `obj[key] = value`              | skip `"__proto__"` where the key comes from the document |                          | that assignment sets the prototype and leaves no entry            |
-| `decodeURIComponent`            | `decode_uri_component`                                   | a percent-decoding crate | malformed escapes throw                                           |
-| `JSON.stringify`                | `serde` with `skip_serializing_if`, `JsNum`              |                          | NaN is `null`, -0 is `0`, `undefined` is no key                   |
+| JavaScript                      | Use                                         | Not                      | Differs on                                                        |
+| ------------------------------- | ------------------------------------------- | ------------------------ | ----------------------------------------------------------------- |
+| `parseInt(s, 10)`               | `parse_int(s, Radix::Ten)`                  | `s.parse()`              | `"12.9pt"` is 12, `" 7"` is 7, `""` is NaN                        |
+| `Number(s)`                     | `to_number`                                 | `s.parse::<f64>()`       | `""` is 0, `"0x10"` is 16, `"1e2"` is 100                         |
+| `parseFloat(s)`                 | `parse_float`                               | `s.parse::<f64>()`       | `"2.5cm"` is 2.5                                                  |
+| `Math.round(x)`                 | `math_round`                                | `f64::round`             | -2.5 rounds to -2                                                 |
+| `String(x)`                     | `number_to_string`                          | `format!("{x}")`         | `1e21`, and ties in the last digit                                |
+| `x \| 0`, `x & m`               | `to_int32`                                  | `as i32`                 | wraps, does not saturate                                          |
+| `n.toString(16)`                | `to_string_radix16`                         | `format!("{:x}")`        | integers past 64 bits                                             |
+| a number in a model             | `JsNum(f64)`                                | an integer type          | the TypeScript holds NaN and fractions there                      |
+| `/pattern/flags`                | `js_regex!(r"pattern", "flags")`            | the `regex` crate        | lookahead, backreferences, `\s` holds U+FEFF, `\d` is ASCII       |
+| `new RegExp(text)`              | `JsRegex::new(text, flags)?`                | assuming it compiles     | a tag name like `w:(` throws                                      |
+| `s.split(/re/)`                 | `JsRegex::split`                            | `str::split`             | empty matches, the trailing piece                                 |
+| `s.trim()`                      | `trim`, `trim_start`                        | `str::trim`              | U+FEFF is white space, U+0085 is not                              |
+| `if (s)`, `a \|\| b` on strings | `truthy(Option<&str>)`                      | `Option::is_some`        | `""` is false                                                     |
+| `a ?? b`                        | `Option::or`, `unwrap_or`                   | `truthy`                 | `""` and `0` are kept                                             |
+| `new Map()`                     | `JsMap<V>`                                  | `HashMap`, `BTreeMap`    | order of entries; a key set again keeps its place                 |
+| `ownValue(table, key)`          | a `match` on own keys                       |                          | `table["constructor"]` answers in JavaScript, `ownValue` does not |
+| `setOwn(record, key, value)`    | an entry like any other, `"__proto__"` too  | skipping `"__proto__"`   | a plain `obj[key] = value` would set the prototype there          |
+| `decodeURIComponent`            | `decode_uri_component`                      | a percent-decoding crate | malformed escapes throw                                           |
+| `JSON.stringify`                | `serde` with `skip_serializing_if`, `JsNum` |                          | NaN is `null`, -0 is `0`, `undefined` is no key                   |
 
 `regress` walks UTF-8 characters where JavaScript without the `u` flag walks
 UTF-16 code units. It shows only in a pattern that counts characters outside
@@ -131,12 +131,11 @@ What the comparisons do not see:
   document), (f) sends the result as its entries. (d) and (e) do not: the
   numbering levels of `numbering.rs` sit in a `BTreeMap`, which puts `"10"`
   before `"2"` where JavaScript puts integer keys in numeric order.
-- **A lone surrogate in a result.** A Rust string cannot hold one, so where
-  the TypeScript result has one, (f) compares against that result with each
-  lone surrogate written as U+FFFD, on a line of its own per group. The raw
-  difference is in `divergences.json`, one entry per cause.
-- **Inputs a spec names as `listed`.** They are the inherited-key lookups of
-  `divergences.json`, counted in the report.
+
+A lone surrogate in a TypeScript result shows as a difference: a Rust string
+cannot hold one. None is left in what (f) compares since the TypeScript
+turns a surrogate reference into U+FFFD and reads an astral LaTeX argument
+whole. The two XML cases that remain are in `divergences.json`.
 
 ### Adding a comparison
 
@@ -245,57 +244,43 @@ is listed, never coded around in the harness.
 
 State on 2026-11-12. Nothing is pushed.
 
-- `feat/rust-docx-u1`: everything below. The gate passes on this baseline.
-- `fix/rust-zip64-six-fields`: this branch and two commits more. They make
-  the Rust zip gate refuse the six end-record fields main's zip gate refuses
-  since d49361a3f, and they are green only on a baseline that holds that
-  commit. main merges this one, so the two arrive together.
+- `feat/rust-docx-u1`: everything below, on main at 0d846f69b (merged, not
+  rebased). The gate passes: 1,668,203 checks, 0 differences, 5 ledger
+  entries, none stale.
+- `fix/rust-zip64-six-fields` is merged into this branch and has nothing
+  more.
+
+### What was done last: the Rust and the ledger in line with main
+
+main fixed the TypeScript defects this port found, and this branch follows:
+
+- **Table lookups answer for own keys only** (cf22e1fe4). The Rust tables
+  already did. The 13 `table-lookup-inherited-key-*` entries are gone, and
+  with them `listed` of `CallSpec` and `Reader`. The specs build inputs with
+  the names every object inherits instead (fonts, bullet texts, list levels,
+  fill colours, paper sizes, an East Asian language), so those are compared.
+  `props-registry.ts` reads `JC_ALIGN` and `EA_LANG_DEFAULT_FONT` through
+  `ownValue`, as every engine site does: read bare, the tables still answer
+  to `constructor`, and three ledger entries reproduced for that reason
+  alone.
+- **An unknown paper size gives A4** (`blank.rs`, `own_paper_size`).
+- **A record keeps an entry named `__proto__`** (f11df68ef):
+  `doc_properties.rs` and `theme.rs`. `parseTagAttrs` of `parse-vml.ts`
+  writes such a record too and is not ported yet: keep the entry there.
+- **A character outside the BMP is one LaTeX argument** (37c8fcdaa):
+  `peek_char` of `omml/src/latex_to_omml.rs`.
+- **A surrogate character reference reads as U+FFFD** (6f0fdab07). The Rust
+  already did. The lossy lines of (f) and their floors are gone.
+
+The first gate run on the merged tree, before any of this, had 872
+differences in 10 lines and 13 of 21 ledger entries stale.
+
+The ledger holds five entries: DOCTYPE and the CDATA opener (what
+fast-xml-parser reads and Rust refuses), the two host-dependent ones
+(`zip-text-in-hosts-without-buffer`, `inflate-failure-text-is-the-hosts`)
+and the LaTeX depth limit.
 
 ### What to do, in order
-
-0. **Bring the Rust and the ledger in line with main.** main fixed the
-   TypeScript defects this port found. Once this work sits on a tree that
-   holds those commits, run the gate first and save that run untouched: it
-   is expected to fail, with stale ledger entries and with differences
-   where the TypeScript changed. Then, class by class:
-   - **Table lookups answer for own keys only** (cf22e1fe4, 18 modules).
-     The Rust tables already do. The 13 `table-lookup-inherited-key-*`
-     entries go stale: remove them, the `listed` predicates of
-     `calls-markers.ts`, `calls-section.ts`, `calls-blank.ts` and
-     `props-registry.ts`, and `listed` itself from `CallSpec` and `Reader`
-     if nothing uses it any more. Those inputs are then compared again. One
-     place where the TypeScript changed its answer: an unknown
-     `paperSize` now gives A4, where `blank.rs` refuses any value but `A4`
-     and `Letter`.
-   - **A record keeps an entry named `__proto__`** (f11df68ef). The Rust
-     drops it in two places to mirror the old assignment and must keep it
-     now: `doc_properties.rs` (the `Record`) and `theme.rs` (the script
-     fonts). `vml.rs` reads tag attributes into such a record too. The
-     entry sits where it was inserted, like any other string key.
-   - **A character outside the BMP is one LaTeX argument** (37c8fcdaa).
-     `omml/src/latex_to_omml.rs` takes one UTF-16 unit there, as the old
-     TypeScript did, and has to take the pair. The entry
-     `lone-surrogate-from-half-a-latex-argument` goes, and with it most or
-     all of the lossy line of math: lower or drop `callsMathLossy`.
-   - **A character reference in the surrogate range reads as U+FFFD**
-     (6f0fdab07), a pair written as two references still joining. The Rust
-     already does both. The two `lone-surrogate-*` entries of document
-     properties go, and `callsDocpropsLossy` with the line.
-   - **A LaTeX name every object inherits is refused as unknown**
-     (488d6d432). Both sides refused before; nothing should move.
-   - **The zip gate** (d49361a3f): done by the branch above.
-
-   What holds answers of the old TypeScript and has to be made again:
-   `crates/fixtures/package-layer.json`
-   (`npm --prefix tools/docx-diff run fixtures`), and the expected values of
-   `docx-engine/tests/docprops.rs`, `tests/package.rs` and `tests/blank.rs`
-   where they name `__proto__` or a paper size. The four readers
-   `compare-package.ts` copies from `parse.ts` still match main at
-   488d6d432.
-
-   These entries stay: the LaTeX depth limit, the two host-dependent ones
-   (`zip-text-in-hosts-without-buffer`, `inflate-failure-text-is-the-hosts`),
-   DOCTYPE and the CDATA opener.
 
 1. **Key order becomes part of parity everywhere.** Turn on `preserve_order`
    of `serde_json` and compare (d), (e) and (f) with a deep comparison that
