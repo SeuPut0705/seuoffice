@@ -66,7 +66,13 @@ const event = { sender: { id: 7 } }
 const render = (...args: unknown[]): Promise<RenderSlide | null> =>
   h.handlers.get(CHANNEL)!(event, ...args) as Promise<RenderSlide | null>
 
-/** Every `text` string in a value (a render tree or a page spec), in order */
+/**
+ * Every `text` string in a value (a render tree or a page spec), in order. A
+ * laid-out line's `runs` are its tokens (a word, a space, one CJK character,
+ * one Hangul syllable of a run with no Korean language tag), each starting
+ * where the one before ends, so a line reads as one string, the way the
+ * editor reads a render tree.
+ */
 function textsOf(value: unknown): string[] {
   const out: string[] = []
   const walk = (v: unknown): void => {
@@ -74,6 +80,7 @@ function textsOf(value: unknown): string[] {
     else if (v && typeof v === 'object') {
       for (const [k, child] of Object.entries(v)) {
         if (k === 'text' && typeof child === 'string') out.push(child)
+        else if (k === 'runs' && Array.isArray(child)) out.push(textsOf(child).join(''))
         else walk(child)
       }
     }
