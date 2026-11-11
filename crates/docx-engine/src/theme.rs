@@ -1,46 +1,248 @@
-//! Theme palette and fonts as the property readers use them
-//! (`resolveThemeColor` of packages/docx-engine/src/theme.ts; the theme part
-//! readers are not ported yet).
+//! The theme part (packages/docx-engine/src/theme.ts, the reading half, and
+//! `parseTheme` of parse.ts): the font pair, the palette, and the resolution
+//! of a w:themeColor reference.
 
 use std::collections::BTreeMap;
 
-use jscompat::{Radix, js_regex, math_round, pad_start, parse_int, to_string_radix16, trim};
-use serde::Deserialize;
+use jscompat::{
+    JsRegex, Radix, js_regex, math_round, pad_start, parse_int, to_string_radix16, trim, truthy,
+};
+use ooxml_pkg::Package;
+use serde::{Deserialize, Serialize};
 
-/// The slots `readThemeColors` fills for w:themeColor resolution.
-#[derive(Debug, Clone, Default, Deserialize)]
+use crate::package::{Thrown, part_text};
+
+pub const THEME_PART_PATH: &str = "word/theme/theme1.xml";
+
+/// The a:clrScheme slots, as `readThemeColors` fills them.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ThemeColors {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dk1: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lt1: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dk2: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lt2: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accent1: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accent2: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accent3: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accent4: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accent5: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accent6: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hlink: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fol_hlink: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+impl ThemeColors {
+    /// The built-in Office palette: what Word resolves theme colours against
+    /// when a document ships no theme part.
+    pub fn office() -> Self {
+        let hex = |value: &str| Some(value.to_owned());
+        Self {
+            name: None,
+            dk1: hex("000000"),
+            lt1: hex("FFFFFF"),
+            dk2: hex("44546A"),
+            lt2: hex("E7E6E6"),
+            accent1: hex("4472C4"),
+            accent2: hex("ED7D31"),
+            accent3: hex("A5A5A5"),
+            accent4: hex("FFC000"),
+            accent5: hex("5B9BD5"),
+            accent6: hex("70AD47"),
+            hlink: hex("0563C1"),
+            fol_hlink: hex("954F72"),
+        }
+    }
+
+    fn slot_mut(&mut self, tag: &str) -> &mut Option<String> {
+        match tag {
+            "dk1" => &mut self.dk1,
+            "lt1" => &mut self.lt1,
+            "dk2" => &mut self.dk2,
+            "lt2" => &mut self.lt2,
+            "accent1" => &mut self.accent1,
+            "accent2" => &mut self.accent2,
+            "accent3" => &mut self.accent3,
+            "accent4" => &mut self.accent4,
+            "accent5" => &mut self.accent5,
+            "accent6" => &mut self.accent6,
+            "hlink" => &mut self.hlink,
+            _ => &mut self.fol_hlink,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ThemeFonts {
     pub major: String,
     pub minor: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub east_asia: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub major_east_asia: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub major_cs: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub minor_cs: Option<String>,
     /// settings.xml w:themeFontLang w:eastAsia
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ea_lang: Option<String>,
     /// settings.xml w:themeFontLang w:bidi
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bidi_lang: Option<String>,
     /// Per-script faces (`<a:font script="Hang" typeface="..."/>`) of each font group.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub major_scripts: Option<BTreeMap<String, String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub minor_scripts: Option<BTreeMap<String, String>>,
+}
+
+/// The first `<tag ...>...</tag>` of the part. `tag` is one of the fixed
+/// names below, so the pattern always compiles.
+fn section_of<'a>(xml: &'a str, tag: &str) -> Option<&'a str> {
+    JsRegex::new(&format!(r"<{tag}(?:\s[^>]*)?>[\s\S]*?</{tag}>"), "")
+        .ok()?
+        .exec(xml)
+        .map(|found| found.as_str())
+}
+
+fn font_of(xml: &str, tag: &str) -> Option<String> {
+    let section = section_of(xml, tag)?;
+    js_regex!(r#"<a:latin typeface="([^"]*)""#)
+        .exec(section)
+        .and_then(|found| found.get(1))
+        .map(str::to_owned)
+}
+
+/// Per-script faces of a font group.
+fn script_fonts_of(xml: &str, tag: &str) -> Option<BTreeMap<String, String>> {
+    let section = section_of(xml, tag)?;
+    let out: BTreeMap<String, String> = js_regex!(r#"<a:font script="([^"]+)" typeface="([^"]+)""#)
+        .find_iter(section)
+        .map(|found| {
+            (
+                found.get(1).unwrap_or("").to_owned(),
+                found.get(2).unwrap_or("").to_owned(),
+            )
+        })
+        // the original assigns into a plain object, where this key sets
+        // the prototype and leaves no entry
+        .filter(|(script, _)| script != "__proto__")
+        .collect();
+    (!out.is_empty()).then_some(out)
+}
+
+/// The latin, East Asian and complex-script typefaces of the major and minor
+/// font groups of theme1.xml.
+pub fn read_theme_fonts(theme_xml: &str) -> Option<ThemeFonts> {
+    let major = font_of(theme_xml, "a:majorFont");
+    let minor = font_of(theme_xml, "a:minorFont");
+    if truthy(major.as_deref()).is_none() && truthy(minor.as_deref()).is_none() {
+        return None;
+    }
+    let slot = |tag: &str, kind: &JsRegex| -> Option<String> {
+        let face = kind.exec(section_of(theme_xml, tag)?)?.get(1)?;
+        (!face.is_empty()).then(|| face.to_owned())
+    };
+    let ea = js_regex!(r#"<a:ea typeface="([^"]*)""#);
+    let cs = js_regex!(r#"<a:cs typeface="([^"]*)""#);
+    Some(ThemeFonts {
+        major: major.unwrap_or_default(),
+        minor: minor.unwrap_or_default(),
+        east_asia: slot("a:minorFont", ea),
+        major_east_asia: slot("a:majorFont", ea),
+        minor_cs: slot("a:minorFont", cs),
+        major_cs: slot("a:majorFont", cs),
+        ea_lang: None,
+        bidi_lang: None,
+        major_scripts: script_fonts_of(theme_xml, "a:majorFont"),
+        minor_scripts: script_fonts_of(theme_xml, "a:minorFont"),
+    })
+}
+
+/// Every a:clrScheme slot; dk1 and lt1 may be system colours.
+const READ_TAGS: [&str; 12] = [
+    "dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6",
+    "hlink", "folHlink",
+];
+
+pub fn read_theme_colors(theme_xml: &str) -> Option<ThemeColors> {
+    let scheme = section_of(theme_xml, "a:clrScheme")?;
+    let mut out = ThemeColors {
+        name: js_regex!(r#"<a:clrScheme name="([^"]*)""#)
+            .exec(theme_xml)
+            .and_then(|found| truthy(found.get(1)))
+            .map(str::to_owned),
+        ..ThemeColors::default()
+    };
+    for tag in READ_TAGS {
+        let slot = JsRegex::new(
+            &format!(r#"<a:{tag}>\s*<a:(?:srgbClr val|sysClr[^>]*? lastClr)="([0-9A-Fa-f]{{6}})""#),
+            "",
+        )
+        .ok()?;
+        if let Some(hex) = slot.exec(scheme).and_then(|found| found.get(1)) {
+            *out.slot_mut(tag) = Some(hex.to_uppercase());
+        }
+    }
+    (out != ThemeColors::default()).then_some(out)
+}
+
+/// What the rest of the parser resolves theme references against.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Theme {
+    pub fonts: Option<ThemeFonts>,
+    pub colors: Option<ThemeColors>,
+}
+
+/// `parseTheme` of parse.ts. A package without a theme part still resolves
+/// colour references, against the built-in Office palette.
+pub fn parse_theme(package: &Package) -> Result<Theme, Thrown> {
+    let Some(xml) = part_text(package, THEME_PART_PATH)? else {
+        return Ok(Theme {
+            fonts: None,
+            colors: Some(ThemeColors::office()),
+        });
+    };
+    let mut fonts = read_theme_fonts(xml);
+    if let Some(fonts) = &mut fonts {
+        // settings.xml w:themeFontLang picks Word's face for an empty slot
+        let tag = part_text(package, "word/settings.xml")?
+            .and_then(|settings| js_regex!(r"<w:themeFontLang\b[^>]*>").exec(settings));
+        if let Some(tag) = tag {
+            let attr = |pattern: &JsRegex| {
+                pattern
+                    .exec(tag.as_str())
+                    .and_then(|found| found.get(1))
+                    .map(str::to_owned)
+            };
+            if let Some(ea_lang) = attr(js_regex!(r#"\bw:eastAsia="([^"]+)""#)) {
+                fonts.ea_lang = Some(ea_lang);
+            }
+            if let Some(bidi_lang) = attr(js_regex!(r#"\bw:bidi="([^"]+)""#)) {
+                fonts.bidi_lang = Some(bidi_lang);
+            }
+        }
+    }
+    Ok(Theme {
+        fonts,
+        colors: read_theme_colors(xml),
+    })
 }
 
 /// The palette slot a w:themeColor value names, with the built-in fallback of

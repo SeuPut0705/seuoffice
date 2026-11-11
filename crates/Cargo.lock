@@ -49,6 +49,7 @@ name = "docx-engine"
 version = "0.1.0"
 dependencies = [
  "jscompat",
+ "ooxml-pkg",
  "ooxml-xml",
  "serde",
  "serde_json",
