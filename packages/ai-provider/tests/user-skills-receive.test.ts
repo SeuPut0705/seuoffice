@@ -64,6 +64,29 @@ async function zipFile(files: Record<string, string>): Promise<string> {
   return path
 }
 
+/**
+ * The archive as ZIP64: the disk number of its end record all ones, with a
+ * ZIP64 end record and locator in front. JSZip opens it; the zip gate refuses
+ * every archive JSZip reads this way, because JSZip's ZIP64 reader does not
+ * return from some of them.
+ */
+function asZip64(archive: Buffer): Buffer {
+  const end = archive.length - 22
+  const record = Buffer.alloc(56)
+  record.writeUInt32LE(0x06064b50, 0)
+  record.writeUInt32LE(44, 4)
+  record.writeUInt32LE(archive.readUInt16LE(end + 10), 32)
+  record.writeUInt32LE(archive.readUInt32LE(end + 12), 40)
+  record.writeUInt32LE(archive.readUInt32LE(end + 16), 48)
+  const locator = Buffer.alloc(20)
+  locator.writeUInt32LE(0x07064b50, 0)
+  locator.writeUInt32LE(end, 8)
+  locator.writeUInt32LE(1, 16)
+  const endRecord = Buffer.from(archive.subarray(end))
+  endRecord.writeUInt16LE(0xffff, 4)
+  return Buffer.concat([archive.subarray(0, end), record, locator, endRecord])
+}
+
 const noFetch: SkillFetch = () => {
   throw new Error('no network in this test')
 }
@@ -151,6 +174,16 @@ describe('droppedSkillSourceOf', () => {
     })
     expect(await droppedSkillSourceOf('/home/a/MY-SKILL.md')).toBeUndefined()
     expect(await droppedSkillSourceOf('/home/a/report.docx')).toBeUndefined()
+  })
+
+  it('does not take a skill zip the zip gate refuses', async () => {
+    const single = await zipFile({ 'SKILL.md': skillMd('one') })
+    const refused = join(temp(), 'zip64.zip')
+    writeFileSync(refused, asZip64(readFileSync(single)))
+    // what makes the case: without the gate JSZip opens these bytes
+    expect(Object.keys((await JSZip.loadAsync(readFileSync(refused))).files)).toEqual(['SKILL.md'])
+    // as for any zip that cannot be read: the drop keeps its usual handling
+    expect(await droppedSkillSourceOf(refused)).toBeUndefined()
   })
 })
 
