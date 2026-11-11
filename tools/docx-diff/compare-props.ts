@@ -312,7 +312,6 @@ export function compareReaders(
     for (const on of reader.on) {
       const node = typeof on === 'object' ? { node: on.element } : {}
       for (const text of textsOf(on)) {
-        if (reader.listed?.(text)) continue
         for (const variant of variants) {
           const args = { ...node, ...variant }
           check(comparisons[groupOf(on)], where, reader.fn, text, args, () =>

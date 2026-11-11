@@ -22,7 +22,6 @@ import {
 } from '../../packages/docx-engine/src/symbol-fonts'
 import type { NumberingDef } from '../../packages/docx-engine/src/types'
 import { type CallSpec, type Input, zipOf } from './calls-spec'
-import { inheritedByEveryObject } from './props-registry'
 
 const FONTS = [
   'Symbol',
@@ -37,6 +36,9 @@ const FONTS = [
   'Calibri',
   'Courier New',
   '',
+  // keys every object inherits, as the table is read (trimmed, lower case)
+  'constructor',
+  ' __PROTO__ ',
 ]
 
 const range = (from: number, to: number): number[] =>
@@ -141,8 +143,16 @@ const BULLETS = numbering(
     lvl(11, 'bullet', '\uf080', font('Symbol')) +
     lvl(12, 'bullet', '', font('Wingdings')) +
     '</w:abstractNum>' +
+    // names every object inherits, as level text and as font
+    '<w:abstractNum w:abstractNumId="9">' +
+    lvl(0, 'bullet', 'constructor') +
+    lvl(1, 'bullet', 'toString', font('constructor')) +
+    lvl(2, 'bullet', '__proto__', font('__proto__')) +
+    lvl(3, 'bullet', 'valueOf', font('Symbol')) +
+    '</w:abstractNum>' +
     '<w:num w:numId="10"><w:abstractNumId w:val="7"/></w:num>' +
-    '<w:num w:numId="11"><w:abstractNumId w:val="8"/></w:num>',
+    '<w:num w:numId="11"><w:abstractNumId w:val="8"/></w:num>' +
+    '<w:num w:numId="12"><w:abstractNumId w:val="9"/></w:num>',
 )
 
 const item = (numId: string | null, ilvl: number, deleted?: boolean): ListItemRef =>
@@ -162,6 +172,7 @@ const ITEM_LISTS: ListItemRef[][] = [
   range(0, 10).map((l) => item('10', l)),
   range(0, 13).map((l) => item('11', l)),
   [item('10', 0), item('1', 0), item('10', 1), item('1', 0), item('11', 3)],
+  range(0, 4).map((l) => item('12', l)),
 ]
 
 const PICS: Array<Array<[number, string]> | undefined> = [
@@ -411,6 +422,8 @@ const FACES = [
   'Symbol',
   'Wingdings',
   '',
+  'constructor',
+  '__proto__',
   'CALIBRI Light',
   'Cambria Math',
 ]
@@ -486,14 +499,9 @@ const listSpec = (
   built: listInputs,
 })
 
-/** The symbol-font table is read with `font.trim().toLowerCase()` as the key. */
-const inheritedFont = (font: unknown): boolean =>
-  typeof font === 'string' && inheritedByEveryObject(font.trim().toLowerCase())
-
 export const MARKERS: CallSpec[] = [
   {
     fn: 'markers.isSymbolFont',
-    listed: (text) => inheritedFont(text),
     call: (text) => isSymbolFont(text),
     fromDocument: (parts) => corpusOf(parts).fonts.map((text) => ({ text })),
     built: [...FONTS, 'webdings', 'WEBDINGS', 'wingdings 3 ', 'Segoe UI Symbol'].map((text) => ({
@@ -502,7 +510,6 @@ export const MARKERS: CallSpec[] = [
   },
   {
     fn: 'markers.decodeSymbolChar',
-    listed: (text) => inheritedFont(text),
     call: (text, args) => decodeSymbolChar(text, args.code as number),
     fromDocument: (parts) =>
       corpusOf(parts).syms.map(([font, char]) => ({
@@ -532,7 +539,6 @@ export const MARKERS: CallSpec[] = [
   },
   {
     fn: 'markers.symbolGlyph',
-    listed: (_text, args) => inheritedFont(args.font),
     call: (text, args) => symbolGlyph(args.font as string, text),
     fromDocument: (parts) => corpusOf(parts).syms.map(([font, text]) => ({ text, args: { font } })),
     built: FONTS.flatMap((font) =>
@@ -558,7 +564,6 @@ export const MARKERS: CallSpec[] = [
   },
   {
     fn: 'markers.decodeSymbolText',
-    listed: (_text, args) => inheritedFont(args.font),
     call: (text, args) =>
       decodeSymbolText(args.font as string, text, {
         textGlyphsOnly: args.textGlyphsOnly as boolean | undefined,
@@ -602,12 +607,12 @@ export const MARKERS: CallSpec[] = [
   },
   {
     fn: 'markers.substituteBullet',
-    listed: inheritedByEveryObject,
     call: (text) => substituteBullet(text),
     fromDocument: (parts) => corpusOf(parts).bullets.map(([text]) => ({ text })),
-    built: ['\u2022', '\u25cf', '\u25aa', '', '1.', 'o', '\u2022\u2022', ' \u2022'].map((text) => ({
-      text,
-    })),
+    built: [
+      ...['\u2022', '\u25cf', '\u25aa', '', '1.', 'o', '\u2022\u2022', ' \u2022'],
+      ...['constructor', 'toString', '__proto__', 'valueOf', 'hasOwnProperty'],
+    ].map((text) => ({ text })),
   },
   {
     fn: 'markers.SEGOE_UI_SYMBOL_RE',
@@ -624,7 +629,6 @@ export const MARKERS: CallSpec[] = [
   },
   {
     fn: 'markers.markerFallbackFace',
-    listed: (text) => inheritedFont(text),
     call: (text, args) => markerFallbackFace(args.glyph as string, text),
     fromDocument: (parts) =>
       corpusOf(parts).bullets.map(([glyph, text]) => ({ text, args: { glyph } })),

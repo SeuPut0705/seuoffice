@@ -2,6 +2,7 @@
 // parse-props.ts and of the helpers it stands on, under its own name, with the
 // inputs it is called on.
 import { isOn } from '../../packages/docx-engine/src/checkbox-control'
+import { ownValue } from '../../packages/docx-engine/src/own-value'
 import * as props from '../../packages/docx-engine/src/parse-props'
 import { runBorderOf } from '../../packages/docx-engine/src/parse-styles'
 import * as xmlText from '../../packages/docx-engine/src/parse-xml-text'
@@ -67,8 +68,6 @@ export interface Reader {
   on: Population[]
   /** One call per entry; a single call with no arguments when absent. */
   variants?: (themes: Themes) => Args[]
-  /** Inputs whose difference is listed in divergences.json, which checks them itself. */
-  listed?: (text: string) => boolean
   call(text: string, args: Args): unknown
 }
 
@@ -127,9 +126,6 @@ const PATTERN_NAMES = [
   'w:(?<n',
 ]
 
-/** `constructor`, `toString`, `__proto__`...: keys a JavaScript object used as a table answers to. */
-export const inheritedByEveryObject = (key: string): boolean => key in Object.prototype
-
 const overText = (
   fn: string,
   on: Population[],
@@ -182,18 +178,11 @@ export const READERS: Reader[] = [
     return match && [match[1] ?? null, match[2] ?? null]
   }),
 
-  {
-    fn: 'JC_ALIGN',
-    on: ['attributeValue'],
-    listed: inheritedByEveryObject,
-    call: (value) => props.JC_ALIGN[value],
-  },
-  {
-    fn: 'EA_LANG_DEFAULT_FONT',
-    on: ['attributeValue'],
-    listed: inheritedByEveryObject,
-    call: (value) => props.EA_LANG_DEFAULT_FONT[value],
-  },
+  // the tables as the engine reads them: for their own keys only
+  overText('JC_ALIGN', ['attributeValue'], (value) => ownValue(props.JC_ALIGN, value)),
+  overText('EA_LANG_DEFAULT_FONT', ['attributeValue'], (value) =>
+    ownValue(props.EA_LANG_DEFAULT_FONT, value),
+  ),
   overText('isOn', ['attributeValue'], (value) => isOn(value)),
   overText('decodeEntities', ['attributeValue', 'instruction'], (value) =>
     xmlText.decodeEntities(value),

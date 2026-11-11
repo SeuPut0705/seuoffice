@@ -26,8 +26,6 @@ interface Group {
   corpus: Comparison
   built: Comparison
   mutated: Comparison
-  /** Made at the first case that needs it: most groups have none. */
-  lossy?: Comparison
 }
 
 const titled = (name: string): string => name[0]!.toUpperCase() + name.slice(1)
@@ -51,40 +49,17 @@ const groups: Group[] = Object.entries({
 
 const seeds = new Map<string, Map<string, Input>>()
 
-const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
-
-/**
- * `value` with every lone surrogate as U+FFFD, in strings and in keys: what a
- * Rust string holds of it (`String::from_utf16_lossy`). A TypeScript result
- * with a lone surrogate can equal no Rust result, and divergences.json lists
- * one such case per cause; the rest of the result is still the port's to get
- * right, so those cases are compared in this form, on a line of their own.
- */
-function lossy(value: unknown): unknown {
-  if (typeof value === 'string') return value.replace(LONE_SURROGATE, '\uFFFD')
-  if (Array.isArray(value)) return value.map(lossy)
-  if (value === null || typeof value !== 'object') return value
-  return Object.fromEntries(
-    Object.entries(value).map(([key, inner]) => [lossy(key) as string, lossy(inner)]),
-  )
-}
-/** Per group, the cases a spec names as a listed divergence. */
-const listedCases = new Map<string, number>()
-
 /**
  * What the TypeScript side gives, in the form the Rust reply has: a Map as
- * its entries, a Set as its values, a function made visible.
+ * its entries, a Set as its values, a function made visible. A lone surrogate
+ * in it shows as a difference: a Rust string cannot hold one.
  */
 async function typescriptOutcome(
   spec: CallSpec,
   text: string,
   args: Record<string, unknown>,
-): Promise<{ outcome: Outcome; unpaired: boolean }> {
-  let unpaired = false
-  const wireForm = (key: string, value: unknown): unknown => {
-    // not `test`: the pattern is global for `lossy`, and `test` would keep its place
-    if (key.search(LONE_SURROGATE) !== -1) unpaired = true
-    if (typeof value === 'string' && value.search(LONE_SURROGATE) !== -1) unpaired = true
+): Promise<Outcome> {
+  const wireForm = (_key: string, value: unknown): unknown => {
     if (value instanceof Map) return [...(value as Map<unknown, unknown>)]
     if (value instanceof Set) return [...(value as Set<unknown>)]
     return typeof value === 'function' ? '[function]' : value
@@ -94,9 +69,9 @@ async function typescriptOutcome(
   console.warn = console.error = () => {}
   try {
     const value: unknown = await spec.call(text, args)
-    return { outcome: JSON.parse(JSON.stringify({ value }, wireForm)) as Outcome, unpaired }
+    return JSON.parse(JSON.stringify({ value }, wireForm)) as Outcome
   } catch (error) {
-    return { outcome: { error: String(error) }, unpaired }
+    return { error: String(error) }
   } finally {
     console.warn = warn
     console.error = logError
@@ -111,31 +86,19 @@ export async function callOutcomes(
 ): Promise<{ typescript: unknown; rust: unknown }> {
   const spec = groups.flatMap(({ specs }) => specs).find((candidate) => candidate.fn === fn)
   if (!spec) return { typescript: 'no such function', rust: 'no such function' }
-  const { outcome } = await typescriptOutcome(spec, text, args)
-  return { typescript: outcome, rust: rustOutcome(fn, text, args) }
+  return {
+    typescript: await typescriptOutcome(spec, text, args),
+    rust: rustOutcome(fn, text, args),
+  }
 }
 
 async function check(
-  group: Group,
   comparison: Comparison,
   where: string,
   spec: CallSpec,
   { text = '', args = {} }: Input,
 ): Promise<void> {
-  if (spec.listed?.(text, args)) {
-    listedCases.set(group.name, (listedCases.get(group.name) ?? 0) + 1)
-    return
-  }
-  const { outcome, unpaired } = await typescriptOutcome(spec, text, args)
-  if (unpaired) {
-    group.lossy ??= new Comparison(
-      `(f) ${group.name}, lone surrogates as U+FFFD, checks`,
-      `calls${titled(group.name)}Lossy`,
-    )
-    const expected = lossy(outcome) as Outcome
-    checkOutcome(group.lossy, `${where}: ${spec.fn}`, spec.fn, text, args, () => expected)
-    return
-  }
+  const outcome = await typescriptOutcome(spec, text, args)
   checkOutcome(comparison, `${where}: ${spec.fn}`, spec.fn, text, args, () => outcome)
 }
 
@@ -149,7 +112,7 @@ export async function callsOnDocument(
       const kept = seeds.get(spec.fn) ?? new Map<string, Input>()
       seeds.set(spec.fn, kept)
       for (const input of spec.fromDocument?.(parts) ?? []) {
-        await check(group, group.corpus, where, spec, input)
+        await check(group.corpus, where, spec, input)
         const text = input.text ?? ''
         if (kept.size < SEEDS_KEPT && text.length > 0 && text.length < 20_000) {
           kept.set(text, input)
@@ -164,7 +127,7 @@ export async function callsAfterCorpus(random: () => number): Promise<void> {
   for (const group of groups) {
     for (const spec of group.specs) {
       for (const [index, input] of spec.built.entries()) {
-        await check(group, group.built, `built ${index}`, spec, input)
+        await check(group.built, `built ${index}`, spec, input)
       }
       if (spec.mutation === 'none') continue
       const from = [...spec.built, ...(seeds.get(spec.fn)?.values() ?? [])].filter(
@@ -174,7 +137,7 @@ export async function callsAfterCorpus(random: () => number): Promise<void> {
       for (let done = 0; done < CALL_FUZZ_CASES; done++) {
         const seed = from[Math.floor(random() * from.length)]!
         const text = mutate(seed.text!, random)
-        await check(group, group.mutated, `mutation ${done}`, spec, { text, args: seed.args })
+        await check(group.mutated, `mutation ${done}`, spec, { text, args: seed.args })
       }
     }
   }
@@ -194,8 +157,7 @@ export function reportCalls(): void {
       `(f) ${name}: ${specs.length} functions (${atFloor(specs.length, `calls${titled(name)}Functions`)}); ` +
         `with a single distinct result, so not really compared: ${oneResult.length}` +
         (oneResult.length > 0 ? ` (${oneResult.map(({ fn }) => fn).join(', ')})` : '') +
-        `; never threw in TypeScript: ${neverThrew.length} of ${specs.length}` +
-        `; cases left out as listed divergences: ${listedCases.get(name) ?? 0}`,
+        `; never threw in TypeScript: ${neverThrew.length} of ${specs.length}`,
     )
     if (oneResult.length > 0) failGate()
     if (!process.argv.includes('--by-function')) continue

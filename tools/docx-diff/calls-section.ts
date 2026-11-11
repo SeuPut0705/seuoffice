@@ -50,7 +50,6 @@ import {
 } from '../../packages/docx-engine/src/watermark'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments, tagTokens } from './fragments'
-import { inheritedByEveryObject } from './props-registry'
 
 type NoteKind = 'footnote' | 'endnote'
 type NotePrTag = 'w:footnotePr' | 'w:endnotePr'
@@ -493,6 +492,10 @@ const TEXT_WATERMARKS: string[] = [
   '<w:p><w:r><w:pict><v:textpath string="no shape"/></w:pict></w:r></w:p>',
   '<w:p><w:r><w:pict><v:shapetype id="t"><v:textpath string="only in the shapetype"/></v:shapetype><v:shape style="width:1in;height:1in"/></w:pict></w:r></w:p>',
   '<w:p><w:r><w:pict><v:shape style="width:1in;height:1in" fillcolor="blue"><v:textpath string="no closer"/></w:pict></w:r></w:p>',
+  // fill colours that are names every object inherits
+  ...['constructor', '__proto__', 'toString [3204]'].map((color) =>
+    wordArt(SHAPE_STYLES[0]!, '', ` fillcolor="${color}"`, TEXTPATHS[0]!),
+  ),
 ]
 
 const pictureShape = (attributes: string, style: string, imagedata: string): string =>
@@ -625,27 +628,12 @@ const COLORS = [
   '#ab',
   '#ABCDEFAB',
   'white\tsmoke',
+  'constructor',
+  '__proto__',
+  'toString',
+  'Constructor [3212]',
+  'valueOf\tx',
 ]
-
-/**
- * Where vmlColorHex reaches its colour-name table, a key the table answers
- * for as every object does (`constructor`, `__proto__`): a listed divergence.
- */
-function inheritedColorName(value: string | undefined): boolean {
-  if (!value) return false
-  const v = value.trim()
-  if (/^#?[0-9a-fA-F]{6}/.test(v) || /^#[0-9a-fA-F]{3}(?![0-9a-fA-F])/.test(v)) return false
-  return inheritedByEveryObject(v.split(/[\s[]/, 1)[0]!.toLowerCase())
-}
-
-/** readWatermarkShape reads the fill colour of the first v:shape outside the shapetypes. */
-function inheritedFillColor(pictXml: string): boolean {
-  const body = pictXml.replace(/<v:shapetype\b[\s\S]*?<\/v:shapetype>/g, '')
-  const shapeTag = /<v:shape\b[^>]*>/.exec(body)?.[0] ?? ''
-  if (/\sfilled="([^"]*)"/.exec(shapeTag)?.[1] === 'f') return false
-  return inheritedColorName(/\sfillcolor="([^"]*)"/.exec(shapeTag)?.[1])
-}
-
 /** style and colour attribute values of the VML shapes in a part, a bounded few */
 function vmlAttributesOf(xml: string, attribute: string): string[] {
   const values = new Set<string>()
@@ -913,7 +901,6 @@ export const SECTION: CallSpec[] = [
   {
     fn: 'section.readWatermarkShape',
     call: (text) => readWatermarkShape(text),
-    listed: inheritedFillColor,
     fromDocument: (parts) =>
       headersOf(parts)
         .flatMap((header) => elementFragments(header, 'w:pict'))
@@ -1095,7 +1082,6 @@ export const SECTION: CallSpec[] = [
   {
     fn: 'section.vmlColorHex',
     call: (text) => vmlColorHex(text),
-    listed: inheritedColorName,
     fromDocument: (parts) =>
       vmlPartsOf(parts)
         .flatMap((xml) => [

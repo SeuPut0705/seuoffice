@@ -17,7 +17,6 @@ import {
 } from '../../packages/docx-engine/src/blank'
 import { parseNumbering } from '../../packages/docx-engine/src/parse-package'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
-import { inheritedByEveryObject } from './props-registry'
 import { mulberry32 } from './synthetic'
 
 const RealDate = Date
@@ -190,7 +189,8 @@ export const ZIP_PACKAGES: ZipPackage[] = [
 /** The arguments of buildBlankDocx as they cross the wire: a date is its time value. */
 interface WireBlankOptions {
   eastAsiaFont?: string
-  paperSize?: string
+  /** Unchecked, as a caller outside the type system passes it. */
+  paperSize?: unknown
   createdAt?: number
   application?: string
   appVersion?: string
@@ -225,6 +225,8 @@ export async function typescriptBlankDocx(
   return atClock(args.now as number, () => buildBlankDocx(options))
 }
 
+/** Not own keys of PAPER_TWIPS: other names, names every object inherits, other types. */
+const UNKNOWN_PAPER_SIZES = ['B5', 'letter', 'constructor', '__proto__', 'toString', '', 5, null]
 const EAST_ASIA_FONTS = [undefined, '', 'Malgun Gothic', 'A"<&\u5B8B\u4F53']
 const PAPER_SIZES = [undefined, 'A4', 'Letter']
 /** Before 1970, a leap day, year 10000 (expanded ISO year), a year before 0. */
@@ -269,15 +271,14 @@ BLANK_DOCX_MATRIX.push(
   // an invalid clock: the zip date is 0, a default creation stamp throws
   { args: { options: { createdAt: 0 }, now: 1e20 } },
   { args: { options: {}, now: 1e20 } },
-  // an invalid creation date throws RangeError; an unknown paper size TypeError
+  // an invalid creation date throws RangeError; a paper size the table does not hold gives A4
   { args: { options: { createdAt: 1e20 }, now: 0 } },
   { args: { options: { createdAt: 8.64e15 + 1 }, now: 0 } },
   { args: { options: { createdAt: 8.64e15 }, now: 0 } },
   { args: { options: { createdAt: -8.64e15 }, now: 0 } },
   { args: { options: { createdAt: 1.9 }, now: 0 } },
   { args: { options: { createdAt: -0.5 }, now: 0.7 } },
-  { args: { options: { paperSize: 'B5' }, now: 0 } },
-  { args: { options: { paperSize: 'letter' }, now: 0 } },
+  ...UNKNOWN_PAPER_SIZES.map((paperSize) => ({ args: { options: { paperSize }, now: 0 } })),
 )
 
 /** Seeds of the mutations: the text is the option `textOption` names. */
@@ -569,12 +570,6 @@ function given(text: string, args: Record<string, unknown>): string | null | und
 
 const missingInputs: Input[] = [{ args: { missing: 'null' } }, { args: { missing: 'undefined' } }]
 
-/** PAPER_TWIPS[paperSize] answers for an inherited key such as `constructor`. */
-function inheritedPaperSize(_text: string, args: Record<string, unknown>): boolean {
-  const paperSize = (args.options as WireBlankOptions | undefined)?.paperSize
-  return paperSize !== undefined && inheritedByEveryObject(paperSize)
-}
-
 export const BLANK: CallSpec[] = [
   {
     fn: 'blank.customLevelXml',
@@ -684,7 +679,6 @@ export const BLANK: CallSpec[] = [
   },
   {
     fn: 'blank.buildBlankDocx',
-    listed: inheritedPaperSize,
     // the package read back: [name, isDirectory, text] in central directory order
     call: async (text, args) => {
       const zip = await JSZip.loadAsync(await typescriptBlankDocx(text, args))
@@ -698,7 +692,6 @@ export const BLANK: CallSpec[] = [
   },
   {
     fn: 'blank.pageSizeTag',
-    listed: inheritedPaperSize,
     // the w:pgSz of word/document.xml in the package buildBlankDocx builds
     call: async (text, args) => {
       const zip = await JSZip.loadAsync(await typescriptBlankDocx(text, args))
@@ -706,7 +699,7 @@ export const BLANK: CallSpec[] = [
       return document?.match(/<w:pgSz[^>]*\/>/)?.[0]
     },
     built: [
-      ...[undefined, 'A4', 'Letter', 'B5', 'letter'].map((paperSize) => ({
+      ...[undefined, 'A4', 'Letter', ...UNKNOWN_PAPER_SIZES].map((paperSize) => ({
         args: { options: { paperSize }, now: 0 },
       })),
       { args: { now: 1_762_900_000_000 } },

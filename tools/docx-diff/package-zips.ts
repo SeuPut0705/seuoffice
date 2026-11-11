@@ -384,7 +384,8 @@ function richPackages(): Record<string, EntrySpec[]> {
       {
         name: 'word/styles.xml',
         data: styles(
-          '<w:docDefaults><w:pPrDefault><w:pPr><w:spacing w:line="-240" w:lineRule="exact"/></w:pPr></w:pPrDefault></w:docDefaults>' +
+          // an East Asian language that is a name every object inherits, once lower case
+          '<w:docDefaults><w:rPrDefault><w:rPr><w:lang w:eastAsia="Constructor"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:line="-240" w:lineRule="exact"/></w:pPr></w:pPrDefault></w:docDefaults>' +
             heading('Later2', '1') +
             heading('Earlier1', '0', '<w:basedOn w:val="Later2"/>') +
             heading('Again2', '1'),

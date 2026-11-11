@@ -28,11 +28,6 @@ export interface CallSpec {
   built: Input[]
   /** `none` where the text is not what the function reads, so mutating it compares nothing. */
   mutation?: 'none'
-  /**
-   * Inputs where the two sides are known to differ, so they stay out of the
-   * comparison: divergences.json lists one of them with the reason.
-   */
-  listed?(text: string, args: Record<string, unknown>): boolean
 }
 
 /** The package a function over a zip reads, from `args.parts`: `[name, text]` pairs. */

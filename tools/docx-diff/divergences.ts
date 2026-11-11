@@ -3,34 +3,22 @@ import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import JSZip from 'jszip'
 import { callOutcomes } from './calls-run'
-import { openOnce, type Outcome, rustParts, typescriptParts } from './compare-package'
-import { outcomeOf, rustOutcome } from './compare-props'
+import { openOnce } from './compare-package'
 import { rustRoundTrip, typescriptRoundTrip } from './compare-xml'
 import { rustEntries, textWithoutBuffer } from './compare-zip'
 import { toolDir } from './harness'
 import { oddContainers } from './package-zips'
-import { READERS } from './props-registry'
 
 /** A known difference, with what each side returns for the input. */
 type Divergence = { id: string; typescript: unknown; rust: unknown; reason: string } & (
   | { comparison: 'roundTripXml'; fragment: string }
   | { comparison: 'zipTextWithoutBuffer'; entryHex: string }
-  | { comparison: 'props'; fn: string; text: string }
   /** A container of package-zips.ts by name: what loading it gives. */
   | { comparison: 'loadDocx'; container: string }
-  /** A styles part: the docDefaults read from it. */
-  | { comparison: 'docDefaults'; stylesXml: string }
   /** A function of comparison (f), by the name of its spec. */
   | { comparison: 'call'; fn: string; text: string; args?: Record<string, unknown> }
 )
 
-/** The docDefaults of a styles outcome, which is the one value of it the ledger lists. */
-function docDefaultsOf(styles: Outcome): unknown {
-  const value = 'value' in styles ? styles.value : undefined
-  return value !== null && typeof value === 'object' && 'docDefaults' in value
-    ? value.docDefaults
-    : styles
-}
 async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust: unknown }> {
   if (entry.comparison === 'roundTripXml') {
     return {
@@ -38,25 +26,11 @@ async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust:
       rust: rustRoundTrip([entry.fragment])[0],
     }
   }
-  if (entry.comparison === 'props') {
-    const reader = READERS.find((candidate) => candidate.fn === entry.fn)!
-    return {
-      typescript: outcomeOf(() => reader.call(entry.text, {})),
-      rust: rustOutcome(entry.fn, entry.text, {}),
-    }
-  }
   if (entry.comparison === 'call') return callOutcomes(entry.fn, entry.text, entry.args ?? {})
   if (entry.comparison === 'loadDocx') {
     const docx = oddContainers().find(([name]) => name === entry.container)?.[1]
     if (!docx) return { typescript: 'no such container', rust: 'no such container' }
     return { typescript: openOnce('typescript', docx), rust: openOnce('rust', docx) }
-  }
-  if (entry.comparison === 'docDefaults') {
-    const parts: Array<[string, string]> = [['word/styles.xml', entry.stylesXml]]
-    return {
-      typescript: docDefaultsOf((await typescriptParts(parts)).styles),
-      rust: docDefaultsOf(rustParts(parts).styles),
-    }
   }
   const zip = new JSZip()
   zip.file('entry', Buffer.from(entry.entryHex, 'hex'))
