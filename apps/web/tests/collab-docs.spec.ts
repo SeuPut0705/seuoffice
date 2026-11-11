@@ -16,6 +16,30 @@ test.setTimeout(180_000)
 /** a document id no earlier test used: the server keeps its sessions for the whole run */
 const freshDocument = (): string => `doc-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
+/**
+ * Whether `text` is `a` and `b` mixed: every character of both, each one's own in the order it
+ * was typed. Two people typing at one spot may alternate letter by letter (a cursor steps past
+ * what arrives exactly at it), so their words need not stay whole; nothing is lost or doubled.
+ */
+function isMixOf(text: string, a: string, b: string): boolean {
+  if (text.length !== a.length + b.length) return false
+  // reach[j]: the first i + j characters of text are the first i of a mixed with the first j of b
+  let reach = Array.from({ length: b.length + 1 }, (_, j) => text.slice(0, j) === b.slice(0, j))
+  for (let i = 1; i <= a.length; i++) {
+    const next: boolean[] = []
+    for (let j = 0; j <= b.length; j++) {
+      const char = text[i + j - 1]
+      next[j] = (reach[j] && char === a[i - 1]) || (j > 0 && next[j - 1] && char === b[j - 1])
+    }
+    reach = next
+  }
+  return reach[b.length]
+}
+
+/** what follows bob's first words in the second paragraph, in `text` */
+const afterBobOne = (text: string): string =>
+  (text.split(`${SECOND} bob-one`)[1] ?? '').split('\n')[0]
+
 /** the file the host stored last, once there is one */
 async function savedTexts(editor: CoEditor): Promise<{ version: number | null; texts: string[] }> {
   const read = () =>
@@ -52,8 +76,7 @@ test('two people edit one docx at once, a late joiner and a viewer follow, a sav
   await settled([alice, bob])
   const shown = await alice.text()
   expect(await bob.text()).toBe(shown)
-  expect(shown).toContain(' A-two')
-  expect(shown).toContain(' B-two')
+  expect(isMixOf(afterBobOne(shown), ' A-two', ' B-two'), shown).toBe(true)
 
   // nothing keeps writing once the people stop: no edit bounces between the pages
   const quiet = await settled([alice, bob])
@@ -83,8 +106,7 @@ test('two people edit one docx at once, a late joiner and a viewer follow, a sav
   const all = saved.texts.join('\n')
   expect(all).toContain(`${FIRST} alice-one`)
   expect(all).toContain(`${SECOND} bob-one`)
-  expect(all).toContain('A-two')
-  expect(all).toContain('B-two')
+  expect(isMixOf(afterBobOne(all), ' A-two', ' B-two'), all).toBe(true)
   expect(all).toContain('alice-three')
   expect(all).not.toContain('dave-typed')
   await expect.poll(async () => (await bob.status()).saved).toBe(version)
