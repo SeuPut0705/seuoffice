@@ -1,6 +1,7 @@
 import JSZip from 'jszip'
 import { chartWorkbookParts, colLetter } from '@genoffice/pptx-engine/chart-workbook'
 import type { ChartAxis, ChartDisplay, ChartSeries, NewChart, ThemeColors } from './types'
+import { DOCX_ZIP_LIMITS, assertZipInflatesWithinLimits } from './zip-load'
 import {
   attrsOf,
   childrenOf,
@@ -1033,6 +1034,10 @@ export async function patchChartWorkbookXlsxBase64(
     const bytes = new Uint8Array(binaryStr.length)
     for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
 
+    // The workbook came out of the document, so it is held to the document's
+    // limits. JSZip is not given an archive the gate refuses: it does not
+    // return from some of them.
+    await assertZipInflatesWithinLimits(bytes, DOCX_ZIP_LIMITS)
     const zip = await JSZip.loadAsync(bytes)
     const sheetFile = zip.file('xl/worksheets/sheet1.xml')
     if (!sheetFile) return null
