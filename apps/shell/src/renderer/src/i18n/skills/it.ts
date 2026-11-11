@@ -72,12 +72,14 @@ export const it = {
   editorNew: 'Nuova abilità',
   editorEdit: 'Modifica abilità',
   editorView: "Contenuto dell'abilità",
+  fieldTitle: 'Titolo',
+  titleHint: 'Mostrato negli elenchi, in qualsiasi lingua. Lascialo vuoto per mostrare il nome',
   fieldDescription: 'Descrizione',
   fieldDescriptionHint: "L'IA legge questo testo per decidere quando usare l'abilità",
   fieldBody: 'Istruzioni',
   fieldName: 'Nome',
   nameHint:
-    'Nome mostrato nell’elenco delle abilità. Lettere minuscole, cifre e trattini (-), fino a 64 caratteri',
+    'Nome usato dagli altri programmi e dalla chiamata con /. Lettere minuscole, cifre e trattini (-), fino a 64 caratteri. Un nome compilato automaticamente può restare così',
   files: "File dell'abilità",
   filesNone: 'Nessun altro file',
   filesHint: 'Apri la cartella per modificare questi file',
@@ -86,11 +88,15 @@ export const it = {
   createHint: "Puoi anche chiedere nel pannello IA: «creami un'abilità che…»",
   nameEmpty: 'Inserisci un nome',
   nameTooLong: 'Il nome può avere al massimo 64 caratteri',
-  nameCharacters: 'Solo lettere minuscole, cifre e trattini (-)',
+  nameCharacters:
+    'Solo lettere minuscole, cifre e trattini (-). Scrivi un titolo nella tua lingua nel campo Titolo qui sopra',
   nameHyphenEdge: 'Il nome non può iniziare o finire con un trattino',
   nameDoubleHyphen: 'Il nome non può contenere due trattini di seguito',
   nameReserved: 'Questo nome non si può usare',
   nameTaken: "Tra le mie abilità ce n'è già una con questo nome",
+  sameNameOn:
+    'Un’abilità con lo stesso nome è attiva ({sources}). Se salvi, verrà usata la tua al suo posto e l’altra verrà disattivata.',
+  saveTurnOff: 'Salva e disattiva l’altra',
   githubTitle: 'Aggiungi da un link GitHub',
   githubLabel: 'Indirizzo GitHub',
   githubPlaceholder: 'https://github.com/proprietario/repository',
@@ -158,9 +164,23 @@ export const it = {
   warnRemoteInstructions: "Chiede all'IA di prendere istruzioni da un indirizzo esterno",
   warnParentPath: "Un percorso ../ che punta fuori dalla cartella dell'abilità",
   exportSeveral: 'Esporta più abilità',
+  bundleFileName: '{title} e altre {n}',
   bundleTitle: 'Esporta abilità insieme',
   bundleIntro:
     "Le abilità che selezioni finiscono in un unico file zip, una cartella per abilità. Chi lo riceve può trascinare lo zip su una finestra dell'app oppure usare Aggiungi ▸ Da un file zip.",
   bundleSelectLabel: 'Includi {title}',
   bundleExport: 'Esporta ({n})',
+  previewBodyEmpty: 'Le istruzioni sono vuote',
+  previewTruncated: 'Sono mostrati solo i primi {n} caratteri. Il testo continua dopo.',
+  collisionKeeps:
+    'Sostituisci mantiene le impostazioni dell’abilità: attiva o no, quando si usa e dove si usa.',
+  discardAsk: 'Ci sono modifiche non salvate. Chiudendo andranno perse.',
+  discardKeep: 'Continua a modificare',
+  discardClose: 'Scarta e chiudi',
+  dropOverlaySkills: 'Puoi rilasciare anche i file di abilità (.zip, SKILL.md)',
+  shadowedNote: 'Al posto di questa viene usata l’abilità con lo stesso nome ({source})',
+  builtinBodyNote:
+    'Le istruzioni qui sotto sono il testo dato all’IA, mostrato così com’è: per questo può essere in inglese',
+  pasteUnclosed:
+    'Manca la riga --- di chiusura. Il testo potrebbe essere stato tagliato: copialo di nuovo dall’inizio alla fine.',
 } satisfies Record<keyof typeof zh, string>

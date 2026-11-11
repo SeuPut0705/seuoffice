@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { SKILL_EDITORS } from '@genoffice/agent-core/skill-editors'
 import { readAppSettings } from '../src/main/app-settings'
 import {
   createUserSkillsService,
@@ -63,7 +64,7 @@ describe('an own skill', () => {
   const save = (editors?: 'all' | string[]) =>
     service.save({
       id: 'app:deck',
-      title: '',
+      title: 'Deck',
       description: 'Makes decks look good.',
       body: 'Body\n',
       editors,
@@ -74,6 +75,13 @@ describe('an own skill', () => {
     expect(mineText()).toContain('\n  ieum-editors: slides\n')
     expect(mineText()).toContain('license: MIT\nmetadata:\n  author: me\n  ieum-title: Deck\n')
     expect(await editorsOf('app:deck')).toEqual(['slides'])
+  })
+
+  it('stores every editor when the choice lists all of them', async () => {
+    await save(['slides'])
+    await save([...SKILL_EDITORS])
+    expect(mineText()).not.toContain('ieum-editors')
+    expect(await editorsOf('app:deck')).toBeUndefined()
   })
 
   it('takes ieum-editors out for every editor and leaves the other metadata', async () => {

@@ -9,7 +9,17 @@
  * temporary folder under the OS temp folder.
  */
 import { randomBytes } from 'node:crypto'
-import { copyFile, mkdir, readFile, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
+import {
+  copyFile,
+  mkdir,
+  open,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import {
   skillEditorScope,
@@ -44,6 +54,7 @@ import {
   pickEnabledUserSkills,
   prepareSkillImport,
   readIeumSourceRecord,
+  readListedSkillMd,
   renderSkillMd,
   resolveUserSkillStates,
   skillExportInfo,
@@ -62,22 +73,25 @@ import {
   type UserSkillSettings,
   type UserSkillSource,
 } from '@genoffice/ai-provider'
-import type {
-  UserSkillAiRead,
-  UserSkillCardSaveInput,
-  UserSkillContent,
-  UserSkillEditorsValue,
-  UserSkillImportCandidateView,
-  UserSkillImportPreview,
-  UserSkillInstallRequest,
-  UserSkillNameProblem,
-  UserSkillSaveInput,
-  UserSkillStatePatch,
-  UserSkillTemplateInput,
-  UserSkillView,
-  UserSkillsFail,
-  UserSkillsFailReason,
-  UserSkillsResult,
+import {
+  USER_SKILL_PREVIEW_TEXT_MAX_CHARS,
+  type UserSkillAiRead,
+  type UserSkillCardSaveInput,
+  type UserSkillContent,
+  type UserSkillEditorsValue,
+  type UserSkillImportCandidateView,
+  type UserSkillImportContent,
+  type UserSkillImportPreview,
+  type UserSkillImportText,
+  type UserSkillInstallRequest,
+  type UserSkillNameProblem,
+  type UserSkillSaveInput,
+  type UserSkillStatePatch,
+  type UserSkillTemplateInput,
+  type UserSkillView,
+  type UserSkillsFail,
+  type UserSkillsFailReason,
+  type UserSkillsResult,
 } from '@genoffice/electron-utils/user-skills-channels'
 import { readSkillSettings, updateSkillSettings } from '../app-settings'
 
@@ -187,6 +201,7 @@ function stagedCandidate(dir: string, name: string): SkillImportCandidate {
     warnings: [],
     warningCount: 0,
     collision: false,
+    emptyBody: false,
     problem: undefined,
   }
 }
@@ -270,6 +285,7 @@ function candidateView(candidate: SkillImportCandidate): UserSkillImportCandidat
     })),
     warningCount: candidate.warningCount,
     collision: candidate.collision,
+    emptyBody: candidate.emptyBody,
     problem: candidate.problem,
   }
 }
@@ -341,6 +357,90 @@ function editorsTextOf(
   const wanted = skillEditorScope(skillEditorsChoiceOf(choice), undefined)
   if (String(wanted) === String(skillEditorsOf(written))) return undefined
   return wanted ? wanted.join(' ') : null
+}
+
+/** Text cut at the preview's display limit, never in the middle of a character pair */
+function cutForPreview(text: string, more: boolean): UserSkillImportText {
+  const max = USER_SKILL_PREVIEW_TEXT_MAX_CHARS
+  if (text.length <= max) return { text, truncated: more }
+  const last = text.charCodeAt(max - 1)
+  const end = last >= 0xd800 && last <= 0xdbff ? max - 1 : max
+  return { text: text.slice(0, end), truncated: true }
+}
+
+/** The start of a text file, as much as a preview shows */
+async function readFileHead(path: string): Promise<UserSkillImportText> {
+  const handle = await open(path, 'r')
+  try {
+    // four bytes cover any one character, so the head holds at least the display limit
+    const head = Buffer.alloc(USER_SKILL_PREVIEW_TEXT_MAX_CHARS * 4)
+    const { bytesRead } = await handle.read(head, 0, head.length, 0)
+    const { size } = await handle.stat()
+    const more = bytesRead < size
+    const text = head.subarray(0, bytesRead).toString('utf8')
+    // a character cut by the end of the head reads as U+FFFD
+    return cutForPreview(more ? text.replace(/\ufffd$/, '') : text, more)
+  } finally {
+    await handle.close()
+  }
+}
+
+/** A path inside a skill folder as a caller gave it, `/` between parts; undefined when it leads out */
+function skillRelOf(rel: string): string | undefined {
+  const wanted = rel.replace(/\\/g, '/').replace(/^\.\//, '')
+  const parts = wanted.split('/')
+  const leadsOut =
+    !wanted ||
+    isAbsolute(rel) ||
+    /^[A-Za-z]:/.test(wanted) ||
+    parts.some((part) => part === '' || part === '.' || part === '..')
+  return leadsOut ? undefined : wanted
+}
+
+/**
+ * One text file of a skill folder by its path inside it, for the AI's read
+ * and for the import preview. The file must be one the folder listing finds
+ * (links leading out are never listed), its real place must be inside the
+ * folder's, and it must be a text type.
+ */
+async function skillTextFileIn(
+  dir: string,
+  rel: string,
+): Promise<{ path: string; size: number } | UserSkillsFail> {
+  const wanted = skillRelOf(rel)
+  if (!wanted) return fail('outside')
+  if (!SKILL_TEXT_EXTENSIONS.has(extname(wanted).toLowerCase())) return fail('not-text')
+  const listed = await listSkillFolderFiles(dir, FOLDER_LIMITS)
+  if (!listed) return fail('unreadable')
+  const file =
+    listed.files.find((entry) => entry.rel === wanted) ??
+    (process.platform === 'win32'
+      ? listed.files.find((entry) => sameName(entry.rel, wanted))
+      : undefined)
+  if (!file) {
+    const there = await stat(join(dir, ...wanted.split('/'))).catch(() => undefined)
+    return fail(there ? 'outside' : 'not-found')
+  }
+  const root = await realpath(dir).catch(() => undefined)
+  const real = await realpath(file.path).catch(() => undefined)
+  if (!root || !real || !isInsideDir(real, root)) return fail('outside')
+  return { path: file.path, size: file.size }
+}
+
+/** Whether a listed file is one of a skill's text files besides its SKILL.md and source record */
+function isOtherTextFile(rel: string): boolean {
+  return (
+    rel !== 'SKILL.md' &&
+    rel !== IEUM_SOURCE_FILE &&
+    SKILL_TEXT_EXTENSIONS.has(extname(rel).toLowerCase())
+  )
+}
+
+/** What an own skill hands on when another version takes its folder */
+interface ReplacedSkill {
+  id: string
+  /** `metadata.ieum-editors` as its file wrote it; undefined when the file named none */
+  editorsText: string | undefined
 }
 
 export function createUserSkillsService(deps: UserSkillsServiceDeps) {
@@ -438,6 +538,55 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     return readFile(join(dir, 'SKILL.md'), 'utf8').catch(() => undefined)
   }
 
+  /** An own skill as it is just before another version replaces it */
+  async function replacedSkillOf(id: string): Promise<ReplacedSkill | undefined> {
+    const skill = await find(id)
+    if (!skill || skill.source !== 'app') return undefined
+    const text = await readSkillMdText(skill.dir)
+    const parsed = text === undefined ? undefined : parseSkillMd(text)
+    return { id: skill.id, editorsText: parsed?.metadata[IEUM_EDITORS_KEY] }
+  }
+
+  /**
+   * The one rule for what stays when another version takes an own skill's
+   * place, by a reinstall over the same name or a GitHub update (decision
+   * 0127). The saved state (on or off, when it is used) stays with the skill,
+   * under its new identifier when the name changed. Where it is used is in the
+   * file (decision 0122), so the replaced file's value goes into the new file
+   * when that one names none; a value the new file brings wins.
+   */
+  async function keepAcrossReplace(
+    old: ReplacedSkill,
+    newId: string,
+    newDir: string,
+  ): Promise<void> {
+    if (newId !== old.id) {
+      changeSettings((settings) => {
+        const kept = settings.states[old.id]
+        clearState(settings, old.id)
+        clearState(settings, newId)
+        if (kept) settings.states[newId] = kept
+      })
+    }
+    if (old.editorsText === undefined) return
+    const base = await readSkillMdText(newDir)
+    const parsed = base === undefined ? undefined : parseSkillMd(base)
+    if (!parsed?.name || parsed.metadata[IEUM_EDITORS_KEY] !== undefined) return
+    const text = renderSkillMd(
+      {
+        name: parsed.name,
+        description: parsed.description ?? '',
+        title: parsed.metadata[IEUM_TITLE_KEY],
+        template: parsed.metadata[IEUM_TEMPLATE_KEY],
+        editors: old.editorsText,
+        body: parsed.body,
+      },
+      base,
+    )
+    // the new version is in place either way; a file that cannot be rewritten keeps what it brought
+    await writeFileAtomic(join(newDir, 'SKILL.md'), text).catch(() => undefined)
+  }
+
   interface WriteRequest {
     title: string
     name: string | undefined
@@ -448,6 +597,32 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     targetId: string | undefined
     overwrite: boolean
     editors: UserSkillEditorsValue | undefined
+    /** the person agreed that enabled skills of other sources with this name are turned off */
+    turnOffSameName: boolean
+  }
+
+  /** Turn another source's skill off: the own skill of its name is used instead */
+  function turnOff(settings: UserSkillSettings, skill: ResolvedUserSkill): void {
+    setStateValue(settings, skill.id, skill.source, { enabled: false })
+  }
+
+  /** Enabled skills of other sources that carry `name` (builtin, Claude, plugins, Codex) */
+  async function enabledElsewhere(name: string, exceptId?: string): Promise<ResolvedUserSkill[]> {
+    return (await resolved()).filter(
+      (skill) =>
+        skill.source !== 'app' &&
+        skill.enabled &&
+        sameName(skill.name, name) &&
+        skill.id !== exceptId,
+    )
+  }
+
+  /** Where the skills of `enabledElsewhere` come from, for the question the screen asks */
+  function sourcesOf(skills: readonly ResolvedUserSkill[]): string {
+    const sources = skills.map((skill) =>
+      skill.source === 'plugin' ? `plugin:${skill.plugin ?? ''}` : skill.source,
+    )
+    return [...new Set(sources)].join(',')
   }
 
   /**
@@ -477,9 +652,8 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
 
     const target = request.targetId ? await find(request.targetId) : undefined
     if (request.targetId && !target) return fail('not-found')
-    // lists show the name; a title is optional, and a changed skill keeps the one it had
-    const keptTitle = target && target.title !== target.name ? target.title : undefined
-    const title = request.title.trim() || keptTitle
+    // the title is the person's to give in any language; an empty one takes the key out
+    const title = request.title.trim() || undefined
 
     // ---- an edit of an own skill: files rewritten in place, the folder renamed with the name
     if (target && target.source === 'app') {
@@ -490,6 +664,11 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
         const problem = await nameProblem(name, dir)
         if (problem === 'taken') return fail('name-taken')
         if (problem) return fail('bad-name', problem)
+      }
+      // a new name may be one another source's enabled skill has: ask before taking its place
+      const elsewhere = name !== target.name ? await enabledElsewhere(name) : []
+      if (elsewhere.length > 0 && !request.turnOffSameName) {
+        return fail('same-name-on', sourcesOf(elsewhere))
       }
       const base = await readSkillMdText(dir)
       const text = renderSkillMd(
@@ -525,6 +704,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
           if (kept) settings.states[newId] = kept
         }
         if (request.invoke) setStateValue(settings, newId, 'app', { invoke: request.invoke })
+        for (const other of elsewhere) turnOff(settings, other)
       })
       return { ok: true, id: newId }
     }
@@ -548,6 +728,10 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       if (!request.overwrite) return fail('exists')
     }
     if (target && target.unreadable === 'too-large') return fail('too-large')
+    const elsewhere = await enabledElsewhere(name, target?.id)
+    if (elsewhere.length > 0 && !request.turnOffSameName) {
+      return fail('same-name-on', sourcesOf(elsewhere))
+    }
 
     const work = await makeWorkDir()
     try {
@@ -580,7 +764,8 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
     changeSettings((settings) => {
       clearState(settings, id)
       if (request.invoke) setStateValue(settings, id, 'app', { invoke: request.invoke })
-      if (target) setStateValue(settings, target.id, target.source, { enabled: false })
+      if (target) turnOff(settings, target)
+      for (const other of elsewhere) turnOff(settings, other)
     })
     return { ok: true, id }
   }
@@ -738,7 +923,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       const newId = userSkillId('app', skill.name)
       changeSettings((settings) => {
         clearState(settings, newId)
-        setStateValue(settings, skill.id, skill.source, { enabled: false })
+        turnOff(settings, skill)
       })
       return { ok: true, id: newId }
     },
@@ -776,6 +961,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
         targetId: input.id,
         overwrite: false,
         editors: input.editors,
+        turnOffSameName: input.turnOffSameName === true,
       })
     },
 
@@ -795,6 +981,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
         targetId: input.targetId,
         overwrite: input.overwrite === true,
         editors: input.editors,
+        turnOffSameName: input.turnOffSameName === true,
       })
     },
 
@@ -809,7 +996,11 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       })
     },
 
-    /** Install the checked skills of a previewed import; they start on, used on their own */
+    /**
+     * Install the checked skills of a previewed import. A new skill starts on,
+     * used on its own; one that replaces an own skill of the same name keeps
+     * that skill's settings (`keepAcrossReplace`).
+     */
     async install(
       imported: SkillImport,
       request: Pick<UserSkillInstallRequest, 'selected' | 'onCollision'>,
@@ -817,19 +1008,27 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       UserSkillsResult<{ installed: Array<{ key: string; id: string }>; skipped: string[] }>
     > {
       try {
+        const replacedByKey = new Map<string, ReplacedSkill>()
+        for (const candidate of imported.candidates) {
+          if (!request.selected.includes(candidate.key)) continue
+          if (request.onCollision[candidate.key] !== 'replace') continue
+          const old = await replacedSkillOf(userSkillId('app', candidate.name))
+          if (old) replacedByKey.set(candidate.key, old)
+        }
         const done = await installImportedSkills(imported, {
           appSkillsDir: appSkillsDir(),
           selected: request.selected,
           onCollision: request.onCollision,
           discardReplaced: (dir) => deps.trash(dir),
         })
-        const installed = done.installed.map((skill) => ({
-          key: skill.key,
-          id: userSkillId('app', skill.name),
-        }))
-        changeSettings((settings) => {
-          for (const skill of installed) clearState(settings, skill.id)
-        })
+        const installed: Array<{ key: string; id: string }> = []
+        for (const skill of done.installed) {
+          const id = userSkillId('app', skill.name)
+          installed.push({ key: skill.key, id })
+          const old = skill.replaced ? replacedByKey.get(skill.key) : undefined
+          if (old) await keepAcrossReplace(old, id, skill.dir)
+          else changeSettings((settings) => clearState(settings, id))
+        }
         return { ok: true, installed, skipped: done.skipped }
       } catch (error) {
         return failureOf(error)
@@ -838,6 +1037,52 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
 
     dispose(imported: SkillImport): Promise<void> {
       return disposeSkillImport(imported)
+    },
+
+    /**
+     * A found skill of a previewed import, opened to read before installing
+     * (decision 0127): its SKILL.md after the front matter, cut at the display
+     * limit, and the text files the preview can open. Reads only the import's
+     * own files, as the folder listing finds them; nothing is installed.
+     */
+    async readImported(
+      imported: SkillImport,
+      key: string,
+    ): Promise<UserSkillsResult<{ content: UserSkillImportContent }>> {
+      const candidate = imported.candidates.find((found) => found.key === key)
+      if (!candidate) return fail('not-found')
+      if (candidate.problem === 'too-large') return fail('too-large')
+      const listed = await listSkillFolderFiles(candidate.dir, FOLDER_LIMITS)
+      if (!listed || listed.tooLarge) return fail(listed ? 'too-large' : 'unreadable')
+      const text = await readListedSkillMd(candidate.dir)
+      if (text === undefined) return fail('unreadable')
+      return {
+        ok: true,
+        content: {
+          body: cutForPreview(parseSkillMd(text)?.body ?? text, false),
+          files: listed.files
+            .filter((file) => isOtherTextFile(file.rel) && !sameName(file.rel, 'SKILL.md'))
+            .map((file) => ({ rel: file.rel, size: file.size })),
+        },
+      }
+    },
+
+    /** One text file of a previewed import's skill, cut at the display limit */
+    async readImportedFile(
+      imported: SkillImport,
+      key: string,
+      rel: string,
+    ): Promise<UserSkillsResult<{ file: UserSkillImportText }>> {
+      const candidate = imported.candidates.find((found) => found.key === key)
+      if (!candidate) return fail('not-found')
+      if (candidate.problem === 'too-large') return fail('too-large')
+      const file = await skillTextFileIn(candidate.dir, rel)
+      if ('ok' in file) return file
+      try {
+        return { ok: true, file: await readFileHead(file.path) }
+      } catch {
+        return fail('unreadable')
+      }
     },
 
     /** Check an own GitHub skill for an update; connects only when called */
@@ -864,7 +1109,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       }
     },
 
-    /** Apply a found update; on/off and when-used stay as they were */
+    /** Apply a found update; the skill's settings stay as they were (`keepAcrossReplace`) */
     async applyUpdate(
       id: string,
       check: Extract<GitHubSkillUpdateCheck, { status: 'changed' }>,
@@ -876,20 +1121,14 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
         return fail(skill ? 'not-owned' : 'not-found')
       }
       try {
+        const old = await replacedSkillOf(skill.id)
         const done = await applyGitHubSkillUpdate(check, {
           appSkillsDir: appSkillsDir(),
           skillDir: dir,
-          discardReplaced: (old) => deps.trash(old),
+          discardReplaced: (replaced) => deps.trash(replaced),
         })
         const newId = userSkillId('app', done.name)
-        if (newId !== skill.id) {
-          changeSettings((settings) => {
-            const kept = settings.states[skill.id]
-            clearState(settings, skill.id)
-            clearState(settings, newId)
-            if (kept) settings.states[newId] = kept
-          })
-        }
+        await keepAcrossReplace(old ?? { id: skill.id, editorsText: undefined }, newId, done.dir)
         return { ok: true, id: newId }
       } catch (error) {
         return failureOf(error)
@@ -976,14 +1215,7 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
           name: skill.name,
           title: skill.title,
           body: parsed.body,
-          files: listed.files
-            .map((file) => file.rel)
-            .filter(
-              (rel) =>
-                rel !== 'SKILL.md' &&
-                rel !== IEUM_SOURCE_FILE &&
-                SKILL_TEXT_EXTENSIONS.has(extname(rel).toLowerCase()),
-            ),
+          files: listed.files.map((file) => file.rel).filter(isOtherTextFile),
           template: skill.templateExists ? skill.template : undefined,
           hasScripts: skill.hasScripts,
           // read again from the text sent now, not the list's copy
@@ -1031,31 +1263,8 @@ export function createUserSkillsService(deps: UserSkillsServiceDeps) {
       if (skill.agentOnly) return fail('agent-only')
       if (skill.unreadable) return fail('unreadable')
       if (!skill.enabled) return fail('disabled')
-      const wanted = rel.replace(/\\/g, '/').replace(/^\.\//, '')
-      const parts = wanted.split('/')
-      if (
-        !wanted ||
-        isAbsolute(rel) ||
-        /^[A-Za-z]:/.test(wanted) ||
-        parts.some((part) => part === '' || part === '.' || part === '..')
-      ) {
-        return fail('outside')
-      }
-      if (!SKILL_TEXT_EXTENSIONS.has(extname(wanted).toLowerCase())) return fail('not-text')
-      const listed = await listSkillFolderFiles(skill.dir, FOLDER_LIMITS)
-      if (!listed) return fail('unreadable')
-      const file =
-        listed.files.find((entry) => entry.rel === wanted) ??
-        (process.platform === 'win32'
-          ? listed.files.find((entry) => sameName(entry.rel, wanted))
-          : undefined)
-      if (!file) {
-        const there = await stat(join(skill.dir, ...parts)).catch(() => undefined)
-        return fail(there ? 'outside' : 'not-found')
-      }
-      const root = await realpath(skill.dir).catch(() => undefined)
-      const real = await realpath(file.path).catch(() => undefined)
-      if (!root || !real || !isInsideDir(real, root)) return fail('outside')
+      const file = await skillTextFileIn(skill.dir, rel)
+      if ('ok' in file) return file
       if (file.size > aiFileMax) return fail('too-large')
       try {
         return { ok: true, text: await readFile(file.path, 'utf8') }

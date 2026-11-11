@@ -275,6 +275,13 @@ body.vib .home {
   flex: 1;
 }
 
+.account-settings {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .account-chevron {
   flex-shrink: 0;
   margin-left: auto;
@@ -1740,6 +1747,12 @@ body.vib .home {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* the line that says skill files are taken too: a sentence, so it wraps */
+.home-drop-card .home-drop-skills {
+  white-space: normal;
+  text-align: center;
 }
 
 /* Motion accessibility: suppress all animation for users who opt out */

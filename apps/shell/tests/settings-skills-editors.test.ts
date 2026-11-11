@@ -8,6 +8,7 @@ import type { UserSkillView } from '@genoffice/electron-utils/user-skills-channe
 import type { HomeApi } from '../src/shared/home-api'
 import { LocaleProvider } from '../src/renderer/src/locale'
 import { SkillsPane } from '../src/renderer/src/skills/SkillsPane'
+import { skillEditorsText } from '@genoffice/ui'
 import { skillsText } from '../src/renderer/src/i18n/strings-skills'
 
 /**
@@ -182,6 +183,115 @@ describe('an own skill’s editor', () => {
     await click(radio('모든 편집기'))
     await click(button(skillsText('ko', 'save')))
     expect(api.save).toHaveBeenCalledWith(expect.objectContaining({ editors: 'all' }))
+  })
+})
+
+describe('going from every editor to only some', () => {
+  const boxes = () => [...document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+
+  it('starts with no editor checked, so one editor is one click', async () => {
+    const api = bridge([notes])
+    await renderPane(api)
+    await openFromMenu('app:notes', 'actEdit')
+    expect(radio('모든 편집기').checked).toBe(true)
+    await click(radio('고른 편집기만'))
+    expect(boxes().length).toBeGreaterThan(5)
+    expect(boxes().some((box) => box.checked)).toBe(false)
+    // nothing checked is the one state a save refuses, and it says so
+    expect(document.body.textContent).toContain('편집기를 하나 이상 고르세요')
+    expect(button(skillsText('ko', 'save'))!.disabled).toBe(true)
+
+    await click(checkbox('slides'))
+    await click(button(skillsText('ko', 'save')))
+    expect(api.save).toHaveBeenCalledWith(expect.objectContaining({ editors: ['slides'] }))
+  })
+
+  it('checks every editor with one button, so leaving a few out stays short', async () => {
+    const api = bridge([notes])
+    await renderPane(api)
+    await openFromMenu('app:notes', 'actEdit')
+    await click(radio('고른 편집기만'))
+    await click(button('모두 고르기'))
+    expect(boxes().every((box) => box.checked)).toBe(true)
+    const all = boxes().length
+    await click(checkbox('pdf'))
+    await click(button(skillsText('ko', 'save')))
+    const saved = api.save.mock.calls[0]![0] as { editors: string[] }
+    expect(saved.editors).not.toContain('pdf')
+    expect(saved.editors).toHaveLength(all - 1)
+  })
+
+  it('clears every editor with the other button', async () => {
+    const api = bridge([deck], ['slides'])
+    await renderPane(api)
+    await openFromMenu('app:deck', 'actEdit')
+    expect(checkbox('slides')!.checked).toBe(true)
+    await click(button('모두 지우기'))
+    expect(boxes().some((box) => box.checked)).toBe(false)
+    expect(button(skillsText('ko', 'save'))!.disabled).toBe(true)
+  })
+
+  it('keeps the settings file as it was until an editor is checked, then writes all of them as such', async () => {
+    const api = bridge([tidy])
+    await renderPane(api)
+    await openFromMenu('user:sheet-tidy', 'actView')
+    await click(radio('모든 편집기'))
+    api.setState.mockClear()
+    await click(radio('고른 편집기만'))
+    expect(boxes().some((box) => box.checked)).toBe(false)
+    expect(api.setState).not.toHaveBeenCalled()
+
+    await click(button('모두 고르기'))
+    const last = api.setState.mock.lastCall as unknown as [string, { editors: string[] }]
+    expect(last[1].editors).toHaveLength(boxes().length)
+  })
+})
+
+describe('"where it is used" in a row’s menu', () => {
+  const whereUsed = skillEditorsText('ko', 'label')
+
+  async function openWhereUsed(id: string): Promise<HTMLElement> {
+    await click(row(id).querySelector('button[aria-haspopup="menu"]'))
+    const item = [...document.querySelectorAll('[role="menuitem"]')].find(
+      (b) => b.textContent?.trim() === whereUsed,
+    )
+    await click(item)
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')
+    expect(dialog).toBeTruthy()
+    return dialog!
+  }
+
+  it('opens an own skill’s editor on the chooser, where the choice is saved with the skill', async () => {
+    const api = bridge([deck], ['slides'])
+    await renderPane(api)
+    const dialog = await openWhereUsed('app:deck')
+    expect(dialog.getAttribute('aria-label')).toBe(skillsText('ko', 'editorEdit'))
+    // the keyboard is on the chooser: the mode that is on
+    expect(document.activeElement).toBe(radio('고른 편집기만'))
+    await click(checkbox('docs'))
+    await click(button(skillsText('ko', 'save')))
+    expect(api.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'app:deck', editors: ['docs', 'slides'] }),
+    )
+  })
+
+  it('opens the view of a skill the person cannot edit on the chooser, where the choice goes to the settings file', async () => {
+    const api = bridge([tidy])
+    await renderPane(api)
+    const dialog = await openWhereUsed('user:sheet-tidy')
+    expect(dialog.getAttribute('aria-label')).toBe(skillsText('ko', 'editorView'))
+    expect(dialog.contains(document.activeElement)).toBe(true)
+    expect((document.activeElement as HTMLInputElement).type).toBe('radio')
+    await click(checkbox('hwp'))
+    expect(api.setState).toHaveBeenLastCalledWith('user:sheet-tidy', {
+      editors: ['sheets', 'hwp'],
+    })
+  })
+
+  it('leaves the focus alone when the dialog is opened by its own entry', async () => {
+    await renderPane(bridge([deck], ['slides']))
+    await openFromMenu('app:deck', 'actEdit')
+    expect((document.activeElement as HTMLInputElement | null)?.type).not.toBe('radio')
   })
 })
 

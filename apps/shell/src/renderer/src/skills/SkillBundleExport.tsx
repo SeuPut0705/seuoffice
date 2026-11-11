@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
+import { skillNameBeside } from '@genoffice/ui'
 import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
 import type { UserSkillView } from '@genoffice/electron-utils/user-skills-channels'
 import { skillsText, type SkillsStringKey } from '../i18n/strings-skills'
@@ -8,6 +9,21 @@ import type { SkillsNotice } from './SkillImport'
 import { failureKey, skillDisplayTitle } from './skills-model'
 
 type Text = (key: SkillsStringKey, params?: Record<string, string | number>) => string
+
+/**
+ * The words the save dialog's file name is made from: the first ticked skill
+ * as the list shows it "and N more". One skill needs none (the main process
+ * uses that skill's own file name), and the main process makes the words
+ * into a file name.
+ */
+export function bundleNameOf(
+  chosen: readonly Pick<UserSkillView, 'name' | 'title' | 'source'>[],
+  s: Text,
+): string | undefined {
+  const first = chosen[0]
+  if (!first || chosen.length < 2) return undefined
+  return s('bundleFileName', { title: skillDisplayTitle(first), n: chosen.length - 1 })
+}
 
 /**
  * Several own skills into one zip, a folder per skill: tick them, read the
@@ -46,7 +62,10 @@ export function SkillBundleExportDialog({
   const run = async () => {
     if (busy || chosen.length === 0) return
     setBusy(true)
-    const answer = await api.exportBundle(chosen.map((v) => v.id))
+    const answer = await api.exportBundle(
+      chosen.map((v) => v.id),
+      bundleNameOf(chosen, s),
+    )
     setBusy(false)
     if (answer.ok) {
       onDone({ tone: 'ok', text: s('exported', { path: answer.path }) })
@@ -94,7 +113,7 @@ export function SkillBundleExportDialog({
               <div className="skl-candidate-main">
                 <div className="skl-row-head">
                   <span className="skl-row-title">{title}</span>
-                  <code className="skl-name">{v.name}</code>
+                  {skillNameBeside(v) && <code className="skl-name">{skillNameBeside(v)}</code>}
                 </div>
                 {v.template && v.templateExists && (
                   <div className="skl-badges">

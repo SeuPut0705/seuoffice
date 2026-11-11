@@ -73,12 +73,15 @@ export const de = {
   editorNew: 'Neuer Skill',
   editorEdit: 'Skill bearbeiten',
   editorView: 'Skill-Inhalt',
+  fieldTitle: 'Titel',
+  titleHint:
+    'Wird in Listen angezeigt, in beliebiger Sprache. Leer lassen, um den Namen anzuzeigen',
   fieldDescription: 'Beschreibung',
   fieldDescriptionHint: 'Die KI liest dies, um zu entscheiden, wann sie den Skill nutzt',
   fieldBody: 'Anleitung',
   fieldName: 'Name',
   nameHint:
-    'Name in der Skill-Liste. Kleinbuchstaben, Ziffern und Bindestriche (-), höchstens 64 Zeichen',
+    'Name, den andere Programme und der Aufruf mit / verwenden. Kleinbuchstaben, Ziffern und Bindestriche (-), höchstens 64 Zeichen. Ein automatisch eingetragener Name kann so bleiben',
   files: 'Dateien im Skill',
   filesNone: 'Keine weiteren Dateien',
   filesHint: 'Öffnen Sie den Ordner, um diese Dateien zu ändern',
@@ -87,11 +90,15 @@ export const de = {
   createHint: 'Sie können auch im KI-Bereich fragen: „Erstelle mir einen Skill, der …“',
   nameEmpty: 'Geben Sie einen Namen ein',
   nameTooLong: 'Namen dürfen höchstens 64 Zeichen lang sein',
-  nameCharacters: 'Nur Kleinbuchstaben, Ziffern und Bindestriche (-)',
+  nameCharacters:
+    'Nur Kleinbuchstaben, Ziffern und Bindestriche (-). Einen Titel in Ihrer Sprache schreiben Sie oben in das Feld „Titel“',
   nameHyphenEdge: 'Ein Name darf nicht mit einem Bindestrich beginnen oder enden',
   nameDoubleHyphen: 'Ein Name darf keine zwei Bindestriche hintereinander enthalten',
   nameReserved: 'Dieser Name kann nicht verwendet werden',
   nameTaken: 'In Meine Skills gibt es bereits einen Skill mit diesem Namen',
+  sameNameOn:
+    'Ein Skill mit demselben Namen ist eingeschaltet ({sources}). Beim Speichern wird stattdessen Ihr Skill verwendet und der andere ausgeschaltet.',
+  saveTurnOff: 'Speichern und den anderen ausschalten',
   githubTitle: 'Über einen GitHub-Link hinzufügen',
   githubLabel: 'GitHub-Adresse',
   githubPlaceholder: 'https://github.com/inhaber/repository',
@@ -160,9 +167,23 @@ export const de = {
   warnRemoteInstructions: 'Fordert die KI auf, Anweisungen von einer externen Adresse zu holen',
   warnParentPath: 'Ein ../-Pfad, der aus dem Skill-Ordner hinauszeigt',
   exportSeveral: 'Mehrere exportieren',
+  bundleFileName: '{title} und {n} weitere',
   bundleTitle: 'Skills gemeinsam exportieren',
   bundleIntro:
     'Die angehakten Skills kommen in eine zip-Datei, ein Ordner pro Skill. Wer sie erhält, kann die zip-Datei auf ein App-Fenster ziehen oder Hinzufügen ▸ Aus einer zip-Datei verwenden.',
   bundleSelectLabel: '{title} einschließen',
   bundleExport: 'Exportieren ({n})',
+  previewBodyEmpty: 'Die Anleitung ist leer',
+  previewTruncated: 'Es werden nur die ersten {n} Zeichen angezeigt. Danach geht der Text weiter.',
+  collisionKeeps:
+    'Beim Ersetzen bleiben die Einstellungen des Skills erhalten: ein oder aus, wann er genutzt wird und wo er genutzt wird.',
+  discardAsk: 'Es gibt nicht gespeicherte Änderungen. Beim Schließen gehen sie verloren.',
+  discardKeep: 'Weiter bearbeiten',
+  discardClose: 'Verwerfen und schließen',
+  dropOverlaySkills: 'Auch Skill-Dateien (.zip, SKILL.md) können hier abgelegt werden',
+  shadowedNote: 'Statt diesem wird der gleichnamige Skill ({source}) verwendet',
+  builtinBodyNote:
+    'Die Anleitung unten ist der Text, den die KI erhält. Er wird unverändert gezeigt und kann daher englisch sein',
+  pasteUnclosed:
+    'Die schließende Zeile --- fehlt. Der Text wurde vielleicht abgeschnitten; kopieren Sie ihn noch einmal von Anfang bis Ende.',
 } satisfies Record<keyof typeof zh, string>

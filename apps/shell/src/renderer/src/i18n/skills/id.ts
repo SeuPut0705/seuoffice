@@ -72,12 +72,14 @@ export const id = {
   editorNew: 'Skill baru',
   editorEdit: 'Edit skill',
   editorView: 'Isi skill',
+  fieldTitle: 'Judul',
+  titleHint: 'Ditampilkan di daftar, dalam bahasa apa pun. Kosongkan untuk menampilkan nama',
   fieldDescription: 'Deskripsi',
   fieldDescriptionHint: 'AI membaca ini untuk memutuskan kapan memakai skill',
   fieldBody: 'Petunjuk',
   fieldName: 'Nama',
   nameHint:
-    'Nama yang tampil di daftar skill. Huruf kecil, angka, dan tanda hubung (-), maksimal 64 karakter',
+    'Nama yang dipakai program lain dan panggilan /. Huruf kecil, angka, dan tanda hubung (-), maksimal 64 karakter. Nama yang terisi otomatis boleh dibiarkan apa adanya',
   files: 'File dalam skill',
   filesNone: 'Tidak ada file lain',
   filesHint: 'Buka folder untuk mengubah file-file ini',
@@ -86,11 +88,15 @@ export const id = {
   createHint: 'Anda juga bisa meminta di panel AI: "buatkan skill yang…"',
   nameEmpty: 'Masukkan nama',
   nameTooLong: 'Nama maksimal 64 karakter',
-  nameCharacters: 'Hanya huruf kecil, angka, dan tanda hubung (-)',
+  nameCharacters:
+    'Hanya huruf kecil, angka, dan tanda hubung (-). Tulis judul dalam bahasa Anda di kolom Judul di atas',
   nameHyphenEdge: 'Nama tidak boleh diawali atau diakhiri tanda hubung',
   nameDoubleHyphen: 'Nama tidak boleh memuat dua tanda hubung berturut-turut',
   nameReserved: 'Nama ini tidak dapat dipakai',
   nameTaken: 'Skill saya sudah memiliki skill dengan nama ini',
+  sameNameOn:
+    'Skill dengan nama yang sama sedang aktif ({sources}). Jika disimpan, skill Anda yang dipakai dan skill itu dimatikan.',
+  saveTurnOff: 'Simpan dan matikan skill itu',
   githubTitle: 'Tambah dari tautan GitHub',
   githubLabel: 'Alamat GitHub',
   githubPlaceholder: 'https://github.com/pemilik/repositori',
@@ -157,9 +163,23 @@ export const id = {
   warnRemoteInstructions: 'Meminta AI mengambil instruksi dari alamat luar',
   warnParentPath: 'Jalur ../ yang menunjuk ke luar folder skill',
   exportSeveral: 'Ekspor beberapa',
+  bundleFileName: '{title} dan {n} lainnya',
   bundleTitle: 'Ekspor skill sekaligus',
   bundleIntro:
     'Skill yang Anda centang masuk ke satu file zip, satu folder per skill. Penerimanya bisa melepas zip itu di jendela aplikasi, atau memakai Tambah ▸ Dari file zip.',
   bundleSelectLabel: 'Sertakan {title}',
   bundleExport: 'Ekspor ({n})',
+  previewBodyEmpty: 'Petunjuknya kosong',
+  previewTruncated: 'Hanya {n} karakter pertama yang ditampilkan. Masih ada isi setelah ini.',
+  collisionKeeps:
+    'Ganti mempertahankan pengaturan skill: aktif atau tidak, kapan dipakai, dan tempat dipakai.',
+  discardAsk: 'Ada perubahan yang belum disimpan. Jika ditutup, perubahan itu hilang.',
+  discardKeep: 'Lanjut mengedit',
+  discardClose: 'Buang dan tutup',
+  dropOverlaySkills: 'File skill (.zip, SKILL.md) juga bisa dijatuhkan di sini',
+  shadowedNote: 'Skill bernama sama ({source}) dipakai sebagai gantinya',
+  builtinBodyNote:
+    'Petunjuk di bawah adalah teks yang diberikan kepada AI, ditampilkan apa adanya sehingga bisa berbahasa Inggris',
+  pasteUnclosed:
+    'Baris --- penutup tidak ada. Teks mungkin terpotong; salin lagi dari awal sampai akhir.',
 } satisfies Record<keyof typeof zh, string>

@@ -15,6 +15,12 @@
   backdrop-filter: blur(4px);
 }
 
+/* asked for while the first-run welcome window (1000) is up: a dropped skill's
+   preview must be read above it; the first-connection notice (1100) still leads */
+.set-overlay.over-welcome {
+  z-index: 1050;
+}
+
 .set-dialog {
   display: flex;
   flex-direction: column;

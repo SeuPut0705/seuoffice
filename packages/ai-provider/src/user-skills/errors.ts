@@ -19,6 +19,8 @@ export type SkillImportErrorKind =
   | 'unsafe'
   /** no skill was found where the person pointed */
   | 'no-skills'
+  /** the text opens a front matter (`---`) and never closes it: only its first part was given */
+  | 'unclosed-frontmatter'
   /** the person cancelled */
   | 'cancelled'
   /** a chosen skill's name is taken and no replace-or-skip choice was given */

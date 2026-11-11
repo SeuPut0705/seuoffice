@@ -2,8 +2,8 @@
  * Exporting the app's skills as a zip: each skill folder as it is, under a
  * top folder named after the skill (the layout skill uploads expect, and one
  * the zip import reads back), without the GitHub source record. One skill
- * gives `<name>.zip`; several give a bundle, `skills.zip`, with one top
- * folder per skill. The caller warns before the save dialog when a template
+ * gives a zip named by its title (`<name>.zip` without one); several give a
+ * bundle with one top folder per skill. The caller warns before the save dialog when a template
  * document goes in.
  */
 import { randomBytes } from 'node:crypto'
@@ -17,7 +17,7 @@ import { listSkillFolderFiles, readUserSkillFolder, type SkillFolderLimits } fro
 export interface SkillExportInfo {
   /** the skill's name, also the top folder inside the zip */
   name: string
-  /** `<name>.zip`, the save dialog's suggestion */
+  /** the save dialog's suggestion: the skill's title as a file name, `<name>.zip` without one */
   fileName: string
   /** a template document is in the folder and goes into the zip */
   includesTemplate: boolean
@@ -40,7 +40,7 @@ async function readForExport(skillDir: string, limits: SkillFolderLimits) {
   const files = listed.files.filter((file) => file.rel !== IEUM_SOURCE_FILE)
   const info: SkillExportInfo = {
     name: skill.name,
-    fileName: `${skill.name}.zip`,
+    fileName: `${fileStemOf(skill.title) || skill.name}.zip`,
     includesTemplate: skill.template !== undefined && skill.templateExists,
     files: files.length,
     bytes: files.reduce((sum, file) => sum + file.size, 0),
@@ -56,8 +56,39 @@ export async function skillExportInfo(
   return (await readForExport(skillDir, limits)).info
 }
 
-/** The file name a bundle export suggests */
+/** The file name a bundle export suggests when it is given no words for one */
 export const SKILL_BUNDLE_FILE_NAME = 'skills.zip'
+
+const WINDOWS_DEVICE_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i
+const BUNDLE_FILE_STEM_MAX = 100
+
+/**
+ * Words as the stem of a file name: the characters a Windows file name cannot
+ * hold taken out. '' when nothing usable is left.
+ */
+function fileStemOf(words: string | undefined): string {
+  const stem = (words ?? '')
+    .replace(/\.zip$/i, '')
+    .replace(/\s+/g, ' ')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/g, '')
+    .trim()
+    .replace(/^\.+/, '')
+    .slice(0, BUNDLE_FILE_STEM_MAX)
+    .replace(/[. ]+$/, '')
+  return WINDOWS_DEVICE_NAME.test(stem) ? '' : stem
+}
+
+/**
+ * The file name a bundle export suggests, from the words the screen made for
+ * it ("<first skill> and 2 more"), `.zip` at the end; `skills.zip` when
+ * nothing usable is left. One skill's own export follows the same rule from
+ * its title (`SkillExportInfo.fileName`).
+ */
+export function skillBundleFileName(suggested: string | undefined): string {
+  const stem = fileStemOf(suggested)
+  return stem ? `${stem}.zip` : SKILL_BUNDLE_FILE_NAME
+}
 
 /**
  * The zip bytes of a bundle: every skill under a top folder of its name.

@@ -72,12 +72,14 @@ export const vi = {
   editorNew: 'Kỹ năng mới',
   editorEdit: 'Sửa kỹ năng',
   editorView: 'Nội dung kỹ năng',
+  fieldTitle: 'Tiêu đề',
+  titleHint: 'Hiển thị trong danh sách, bằng ngôn ngữ nào cũng được. Để trống thì hiện tên',
   fieldDescription: 'Mô tả',
   fieldDescriptionHint: 'AI đọc phần này để quyết định khi nào dùng kỹ năng',
   fieldBody: 'Hướng dẫn',
   fieldName: 'Tên',
   nameHint:
-    'Tên hiển thị trong danh sách kỹ năng. Chữ thường tiếng Anh, chữ số và dấu gạch nối (-), tối đa 64 ký tự',
+    'Tên mà các chương trình khác và lệnh gọi / sử dụng. Chữ thường tiếng Anh, chữ số và dấu gạch nối (-), tối đa 64 ký tự. Tên được điền sẵn có thể giữ nguyên',
   files: 'Tệp trong kỹ năng',
   filesNone: 'Không có tệp nào khác',
   filesHint: 'Mở thư mục để sửa các tệp này',
@@ -86,11 +88,15 @@ export const vi = {
   createHint: 'Bạn cũng có thể nhờ trong bảng AI: "tạo cho tôi một kỹ năng…"',
   nameEmpty: 'Nhập tên',
   nameTooLong: 'Tên tối đa 64 ký tự',
-  nameCharacters: 'Chỉ dùng chữ thường tiếng Anh, chữ số và dấu gạch nối (-)',
+  nameCharacters:
+    'Chỉ dùng chữ thường tiếng Anh, chữ số và dấu gạch nối (-). Hãy viết tiêu đề bằng ngôn ngữ của bạn vào ô Tiêu đề ở trên',
   nameHyphenEdge: 'Tên không được bắt đầu hoặc kết thúc bằng dấu gạch nối',
   nameDoubleHyphen: 'Tên không được có hai dấu gạch nối liền nhau',
   nameReserved: 'Không thể dùng tên này',
   nameTaken: 'Kỹ năng của tôi đã có kỹ năng trùng tên này',
+  sameNameOn:
+    'Một kỹ năng cùng tên đang bật ({sources}). Nếu lưu, kỹ năng của bạn sẽ được dùng thay và kỹ năng kia sẽ bị tắt.',
+  saveTurnOff: 'Lưu và tắt kỹ năng kia',
   githubTitle: 'Thêm từ liên kết GitHub',
   githubLabel: 'Địa chỉ GitHub',
   githubPlaceholder: 'https://github.com/chủ-sở-hữu/kho',
@@ -157,9 +163,23 @@ export const vi = {
   warnRemoteInstructions: 'Yêu cầu AI nhận chỉ dẫn từ một địa chỉ bên ngoài',
   warnParentPath: 'Đường dẫn ../ trỏ ra ngoài thư mục kỹ năng',
   exportSeveral: 'Xuất nhiều kỹ năng',
+  bundleFileName: '{title} và {n} mục khác',
   bundleTitle: 'Xuất các kỹ năng cùng nhau',
   bundleIntro:
     'Các kỹ năng bạn đánh dấu sẽ được đưa vào một tệp zip, mỗi kỹ năng một thư mục. Người nhận có thể thả tệp zip vào cửa sổ ứng dụng, hoặc dùng Thêm ▸ Từ tệp zip.',
   bundleSelectLabel: 'Bao gồm {title}',
   bundleExport: 'Xuất ({n})',
+  previewBodyEmpty: 'Phần hướng dẫn đang trống',
+  previewTruncated: 'Chỉ hiển thị {n} ký tự đầu. Phía sau vẫn còn nội dung.',
+  collisionKeeps:
+    'Thay thế vẫn giữ các cài đặt của kỹ năng: bật hay tắt, khi nào được dùng và nơi dùng.',
+  discardAsk: 'Có thay đổi chưa lưu. Đóng lại sẽ mất các thay đổi đó.',
+  discardKeep: 'Tiếp tục chỉnh sửa',
+  discardClose: 'Bỏ thay đổi và đóng',
+  dropOverlaySkills: 'Cũng có thể thả tệp kỹ năng (.zip, SKILL.md) vào đây',
+  shadowedNote: 'Kỹ năng cùng tên ({source}) được dùng thay cho kỹ năng này',
+  builtinBodyNote:
+    'Phần hướng dẫn bên dưới là văn bản đưa cho AI, hiển thị nguyên văn nên có thể bằng tiếng Anh',
+  pasteUnclosed:
+    'Thiếu dòng --- đóng phần đầu. Văn bản có thể đã bị cắt; hãy sao chép lại từ đầu đến cuối.',
 } satisfies Record<keyof typeof zh, string>

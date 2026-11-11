@@ -29,6 +29,10 @@ export const USER_SKILLS_CHANNELS = {
   importText: 'skills:import-text',
   /** the settings screen takes the next skill file dropped on any window, previewed */
   takeDropped: 'skills:take-dropped',
+  /** a previewed import's skill, opened to read before installing: its SKILL.md and text file list */
+  readImport: 'skills:read-import',
+  /** one text file of a previewed import's skill */
+  readImportFile: 'skills:read-import-file',
   cancelImport: 'skills:cancel-import',
   install: 'skills:install',
   checkUpdate: 'skills:check-update',
@@ -161,6 +165,12 @@ export type UserSkillsFailReason =
   | 'name-taken'
   /** copy to mine: the name is taken; ask, then call again with `overwrite` */
   | 'exists'
+  /**
+   * A save under a name an enabled skill of another source has; `problem` names
+   * the sources (`builtin`, `user`, `codex`, `plugin:<plugin>`, joined by `,`).
+   * Ask, then call again with `turnOffSameName`.
+   */
+  | 'same-name-on'
   /** a hidden builtin cannot be turned on before it is shown again */
   | 'hidden'
   /** the template is not a document the app's editors open, or cannot be read */
@@ -184,6 +194,8 @@ export type UserSkillsFailReason =
   | 'network'
   | 'unsafe'
   | 'no-skills'
+  /** pasted text whose front matter is opened and never closed */
+  | 'unclosed-frontmatter'
   | 'needs-choice'
   | 'not-installable'
   | 'invalid-source'
@@ -198,6 +210,7 @@ export type UserSkillsResult<T extends object = object> = ({ ok: true } & T) | U
 /** Settings editor: a new skill (no `id`) or an edit of one of the app's own skills */
 export interface UserSkillSaveInput {
   id?: string | undefined
+  /** `metadata.ieum-title`, in any language; empty takes the key out */
   title: string
   /** a new skill without one gets a name made from the title */
   name?: string | undefined
@@ -205,6 +218,8 @@ export interface UserSkillSaveInput {
   body: string
   /** written to `metadata.ieum-editors`; absent keeps what the file has */
   editors?: UserSkillEditorsValue | undefined
+  /** the person agreed: enabled skills of other sources with this name are turned off */
+  turnOffSameName?: boolean | undefined
 }
 
 /**
@@ -221,6 +236,7 @@ export interface UserSkillTemplateInput {
 
 /** A skill card's save (spec 5.6) */
 export interface UserSkillCardSaveInput {
+  /** `metadata.ieum-title`, in any language; empty takes the key out */
   title: string
   name: string
   description: string
@@ -233,6 +249,8 @@ export interface UserSkillCardSaveInput {
   overwrite?: boolean | undefined
   /** written to `metadata.ieum-editors`; absent keeps what the file has */
   editors?: UserSkillEditorsValue | undefined
+  /** the person agreed: enabled skills of other sources with this name are turned off */
+  turnOffSameName?: boolean | undefined
 }
 
 /**
@@ -269,6 +287,8 @@ export interface UserSkillImportCandidateView {
   warnings: UserSkillWarningView[]
   warningCount: number
   collision: boolean
+  /** its SKILL.md has nothing after the front matter (absent from an older main process) */
+  emptyBody?: boolean | undefined
   problem: UserSkillUnreadable | 'duplicate' | undefined
 }
 
@@ -283,6 +303,24 @@ export interface UserSkillImportPreview {
     | { kind: 'github'; repo: string; ref: string; commit: string; path: string }
   candidates: UserSkillImportCandidateView[]
   rootLicense: string | undefined
+}
+
+/** Most characters of one file an import preview shows; past it the text is cut and the screen says so */
+export const USER_SKILL_PREVIEW_TEXT_MAX_CHARS = 20_000
+
+/** Text an import preview shows, cut at the display limit */
+export interface UserSkillImportText {
+  text: string
+  /** the file goes on past what is shown */
+  truncated: boolean
+}
+
+/** What an import preview shows when the person opens a found skill to read it */
+export interface UserSkillImportContent {
+  /** SKILL.md after the front matter */
+  body: UserSkillImportText
+  /** the folder's other text files the preview can open, `/` between parts */
+  files: Array<{ rel: string; size: number }>
 }
 
 export type UserSkillCollisionChoice = 'replace' | 'skip'
@@ -436,7 +474,15 @@ export function saveInputOf(value: unknown): UserSkillSaveInput | undefined {
   if (value.name !== undefined && name === undefined) return undefined
   const editors = editorsValueOf(value.editors)
   if (editors === null) return undefined
-  return { id, title, name, description, body, ...(editors ? { editors } : {}) }
+  return {
+    id,
+    title,
+    name,
+    description,
+    body,
+    ...(editors ? { editors } : {}),
+    ...(value.turnOffSameName === true ? { turnOffSameName: true } : {}),
+  }
 }
 
 /** Largest template a card may hand over (the folder limit) */
@@ -479,6 +525,7 @@ export function cardSaveInputOf(value: unknown): UserSkillCardSaveInput | undefi
     targetId,
     overwrite: value.overwrite === true,
     ...(editors ? { editors } : {}),
+    ...(value.turnOffSameName === true ? { turnOffSameName: true } : {}),
   }
 }
 

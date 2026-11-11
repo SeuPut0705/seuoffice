@@ -111,6 +111,23 @@ describe('autoSkillsSection', () => {
     expect(autoSkillsSection([LIST[2]!, LIST[3]!])).toBe('')
   })
 
+  it('lists a skill that lost its name in an editor its winner is not used in', () => {
+    const list = [
+      entry({ id: 'app:home-letter', editors: ['slides'] }),
+      entry({ id: 'user:home-letter', shadowedBy: 'app:home-letter' }),
+    ]
+    const inSlides = autoSkillsSection(list, { editor: 'slides' })
+    expect(inSlides).toContain('app:home-letter')
+    expect(inSlides).not.toContain('user:home-letter')
+    const inDocs = autoSkillsSection(list, { editor: 'docs' })
+    expect(inDocs).toContain('user:home-letter')
+    expect(inDocs).not.toContain('app:home-letter')
+    // no editor (home ask): the winner alone
+    const anywhere = autoSkillsSection(list)
+    expect(anywhere).toContain('app:home-letter')
+    expect(anywhere).not.toContain('user:home-letter')
+  })
+
   it('cuts each description at the limit', () => {
     const long = 'x'.repeat(AUTO_SKILL_DESCRIPTION_MAX + 50)
     const text = autoSkillsSection([entry({ id: 'app:long', description: long })])
@@ -337,9 +354,9 @@ describe('createUserSkillsSkill', () => {
     expect(result.mutated).toBeFalsy()
     expect(result.output).toMatch(/card/i)
     expect(result.output).toMatch(/not saved|nothing is saved/i)
-    // the result and the tool row name the proposal by its name
-    expect(proposedTitleOf(result.output)).toBe('minutes')
-    expect(result.summary).toBe('Skill proposal: minutes')
+    // the result and the tool row name the proposal by its title
+    expect(proposedTitleOf(result.output)).toBe('Minutes')
+    expect(result.summary).toBe('Skill proposal: Minutes')
     expect(proposedTitleOf('other')).toBe('')
     expect(proposals).toEqual([
       {
@@ -395,12 +412,15 @@ describe('createUserSkillsSkill', () => {
     expect(proposals.map((p) => p.wantsTemplate)).toEqual([false, false])
   })
 
-  it('propose_skill asks for a name, not a title', () => {
+  it('propose_skill asks for a name and takes a title in the person’s language beside it', () => {
     const { deps } = makeDeps()
     const tool = createUserSkillsSkill(deps).tools.find((t) => t.name === PROPOSE_SKILL_TOOL)!
-    const schema = tool.inputSchema as { properties: Record<string, unknown>; required: string[] }
-    expect(schema.properties).not.toHaveProperty('title')
+    const schema = tool.inputSchema as {
+      properties: Record<string, { description?: string }>
+      required: string[]
+    }
     expect(schema.properties).toHaveProperty('name')
+    expect(schema.properties.title?.description).toMatch(/language the person writes in/)
     expect(schema.required).toEqual(['name', 'description', 'body'])
   })
 

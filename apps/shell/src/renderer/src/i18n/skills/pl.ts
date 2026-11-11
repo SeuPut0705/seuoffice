@@ -71,12 +71,14 @@ export const pl = {
   editorNew: 'Nowa umiejętność',
   editorEdit: 'Edycja umiejętności',
   editorView: 'Zawartość umiejętności',
+  fieldTitle: 'Tytuł',
+  titleHint: 'Widoczny na listach, w dowolnym języku. Zostaw puste, aby pokazywać nazwę',
   fieldDescription: 'Opis',
   fieldDescriptionHint: 'AI czyta ten opis, aby zdecydować, kiedy użyć umiejętności',
   fieldBody: 'Instrukcje',
   fieldName: 'Nazwa',
   nameHint:
-    'Nazwa widoczna na liście umiejętności. Małe litery łacińskie, cyfry i łączniki (-), do 64 znaków',
+    'Nazwa używana przez inne programy i przy wywołaniu przez /. Małe litery łacińskie, cyfry i łączniki (-), do 64 znaków. Nazwę wpisaną automatycznie można zostawić bez zmian',
   files: 'Pliki umiejętności',
   filesNone: 'Brak innych plików',
   filesHint: 'Aby zmienić te pliki, otwórz folder',
@@ -85,11 +87,15 @@ export const pl = {
   createHint: 'Możesz też poprosić w panelu AI: „utwórz umiejętność, która…”',
   nameEmpty: 'Wpisz nazwę',
   nameTooLong: 'Nazwa może mieć do 64 znaków',
-  nameCharacters: 'Tylko małe litery łacińskie, cyfry i łączniki (-)',
+  nameCharacters:
+    'Tylko małe litery łacińskie, cyfry i łączniki (-). Tytuł w swoim języku wpisz w polu Tytuł powyżej',
   nameHyphenEdge: 'Nazwa nie może zaczynać się ani kończyć łącznikiem',
   nameDoubleHyphen: 'Nazwa nie może zawierać dwóch łączników z rzędu',
   nameReserved: 'Tej nazwy nie można użyć',
   nameTaken: 'W moich umiejętnościach jest już umiejętność o tej nazwie',
+  sameNameOn:
+    'Umiejętność o tej samej nazwie jest włączona ({sources}). Po zapisaniu zamiast niej będzie używana Twoja, a tamta zostanie wyłączona.',
+  saveTurnOff: 'Zapisz i wyłącz tamtą',
   githubTitle: 'Dodaj z linku GitHub',
   githubLabel: 'Adres GitHub',
   githubPlaceholder: 'https://github.com/właściciel/repozytorium',
@@ -157,9 +163,23 @@ export const pl = {
   warnRemoteInstructions: 'Prosi AI o pobranie instrukcji z zewnętrznego adresu',
   warnParentPath: 'Ścieżka ../ wskazująca poza folder umiejętności',
   exportSeveral: 'Eksportuj kilka',
+  bundleFileName: '{title} i {n} więcej',
   bundleTitle: 'Eksportuj umiejętności razem',
   bundleIntro:
     'Zaznaczone umiejętności trafiają do jednego pliku zip, każda do osobnego folderu. Odbiorca może upuścić ten zip na okno aplikacji albo użyć Dodaj ▸ Z pliku zip.',
   bundleSelectLabel: 'Dołącz {title}',
   bundleExport: 'Eksportuj ({n})',
+  previewBodyEmpty: 'Instrukcje są puste',
+  previewTruncated: 'Widać tylko pierwsze {n} znaków. Dalej jest więcej tekstu.',
+  collisionKeeps:
+    'Zastąpienie zachowuje ustawienia umiejętności: włączona czy nie, kiedy używać i gdzie używać.',
+  discardAsk: 'Są niezapisane zmiany. Po zamknięciu przepadną.',
+  discardKeep: 'Edytuj dalej',
+  discardClose: 'Odrzuć i zamknij',
+  dropOverlaySkills: 'Można tu też upuścić pliki umiejętności (.zip, SKILL.md)',
+  shadowedNote: 'Zamiast tej używana jest umiejętność o tej samej nazwie ({source})',
+  builtinBodyNote:
+    'Instrukcje poniżej to tekst przekazywany AI, pokazany bez zmian, dlatego może być po angielsku',
+  pasteUnclosed:
+    'Brakuje zamykającego wiersza ---. Tekst mógł zostać ucięty; skopiuj go jeszcze raz od początku do końca.',
 } satisfies Record<keyof typeof zh, string>

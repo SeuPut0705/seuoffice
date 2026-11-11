@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   IEUM_SOURCE_FILE,
   SKILL_BUNDLE_FILE_NAME,
+  skillBundleFileName,
   SKILL_WARNING_RULES,
   SkillImportError,
   disposeSkillImport,
@@ -23,7 +24,10 @@ import {
   prepareSkillImport,
   prepareZipImport,
   skillArchiveLayout,
+  SKILL_TEXT_LEAD_LINES,
   skillTextName,
+  skillTextOf,
+  skillTextUnclosed,
   skillWarningsInText,
   type SkillFetch,
   type SkillImport,
@@ -155,9 +159,41 @@ describe('pasted and single-file SKILL.md', () => {
     expect(skillTextName(skillMd('home-letter'))).toBe('home-letter')
     expect(skillTextName(`\uFEFF\n  ${skillMd('home-letter')}`)).toBe('home-letter')
     expect(skillTextName('---\ndescription: no name\n---\nbody')).toBeUndefined()
-    expect(skillTextName('Some notes\n---\nname: x\n---')).toBeUndefined()
     expect(skillTextName('---\nname: x\n')).toBeUndefined()
     expect(skillTextName('')).toBeUndefined()
+  })
+
+  it('finds the SKILL.md text a chat program wrapped or a sender introduced', async () => {
+    const text = skillMd('home-letter', 'Write the letter.\n\n```\nDear parents,\n```\n')
+    const crlf = text.replace(/\n/g, '\r\n')
+    // blank lines first
+    expect(skillTextOf(`\n\n\n${text}`)).toBe(text)
+    // a code fence around it, with and without a language, and CRLF line ends
+    expect(skillTextOf(`\`\`\`markdown\n${text}\`\`\`\n`)).toBe(text)
+    expect(skillTextOf(`\`\`\`\n${text}\`\`\``)).toBe(text)
+    expect(skillTextOf(`~~~\r\n${crlf}~~~\r\n`)).toBe(crlf)
+    // a greeting before it, and a remark after the closing fence
+    expect(skillTextOf(`Here is the skill I told you about:\n\n${text}`)).toBe(text)
+    expect(skillTextOf(`Hi!\nTry this one.\n\`\`\`\n${text}\`\`\`\nTell me how it goes.\n`)).toBe(
+      text,
+    )
+    // a fence that only belongs to the skill's own body stays
+    expect(skillTextOf(text)).toBe(text)
+
+    // still not a skill: no name, front matter too far down, or never closed
+    expect(skillTextOf('Hello\n---\ndescription: no name\n---\nbody')).toBeUndefined()
+    expect(skillTextOf(`${'A line.\n'.repeat(SKILL_TEXT_LEAD_LINES + 1)}${text}`)).toBeUndefined()
+    expect(skillTextOf('```\n---\nname: x\n```')).toBeUndefined()
+    expect(skillTextOf('just notes')).toBeUndefined()
+
+    const e = env()
+    const imported = await prepareSkillImport(
+      { kind: 'text', text: `Hi!\n\`\`\`\n${text}\`\`\`\n` },
+      e,
+    )
+    expect(imported.candidates[0]).toMatchObject({ name: 'home-letter', problem: undefined })
+    expect(readFileSync(join(imported.candidates[0]!.dir, 'SKILL.md'), 'utf8')).toBe(text)
+    await disposeSkillImport(imported)
   })
 
   it('previews pasted text as one skill and installs that one file', async () => {
@@ -194,6 +230,37 @@ describe('pasted and single-file SKILL.md', () => {
       ),
     ).toBe('too-large')
     expect((await listSkillFolderFiles(e.tempDir))?.files).toEqual([])
+  })
+
+  it('says the front matter is not closed when only the first part of a skill was pasted', async () => {
+    const e = env()
+    // cut before the closing --- line, with the greeting and the fence a chat adds
+    const half = 'Here it is:\n```\n---\nname: home-letter\ndescription: Writes a'
+    expect(await kindOf(prepareSkillImport({ kind: 'text', text: half }, e))).toBe(
+      'unclosed-frontmatter',
+    )
+    expect(await kindOf(prepareSkillImport({ kind: 'text', text: '---\nname: x' }, e))).toBe(
+      'unclosed-frontmatter',
+    )
+    // the second part alone opens nothing: it is just not a skill
+    expect(
+      await kindOf(prepareSkillImport({ kind: 'text', text: 'Write the letter.\nThen stop.' }, e)),
+    ).toBe('no-skills')
+    // closed, but without a name: not a skill either
+    expect(
+      await kindOf(prepareSkillImport({ kind: 'text', text: '---\ndescription: x\n---\n' }, e)),
+    ).toBe('no-skills')
+    expect((await listSkillFolderFiles(e.tempDir))?.files).toEqual([])
+  })
+
+  it('tells an unclosed front matter from other text', () => {
+    expect(skillTextUnclosed('---\nname: x')).toBe(true)
+    expect(skillTextUnclosed('---')).toBe(true)
+    expect(skillTextUnclosed('```\n---\nname: x\n```')).toBe(true)
+    expect(skillTextUnclosed('---\nname: x\n---\nbody')).toBe(false)
+    expect(skillTextUnclosed('---\nname: x\n  ---  \n')).toBe(false)
+    expect(skillTextUnclosed('just notes')).toBe(false)
+    expect(skillTextUnclosed('')).toBe(false)
   })
 
   it('shows a name the rule refuses as that problem', async () => {
@@ -285,6 +352,23 @@ describe('bundle export', () => {
       'not-installable',
     )
     expect((await listSkillFolderFiles(outDir))?.files).toEqual([])
+  })
+
+  it('makes a file name Windows can hold from the words a screen suggests', () => {
+    expect(skillBundleFileName('회의록 외 2개')).toBe('회의록 외 2개.zip')
+    expect(skillBundleFileName('meeting-minutes and 2 more.zip')).toBe(
+      'meeting-minutes and 2 more.zip',
+    )
+    // characters a Windows file name cannot hold, control characters, ends in dots or spaces
+    expect(skillBundleFileName('a<b>c:d"e/f\\g|h?i*j\u0001 외\n1개 . ')).toBe(
+      'abcdefghij 외 1개.zip',
+    )
+    expect(skillBundleFileName('..hidden')).toBe('hidden.zip')
+    expect(skillBundleFileName(`${'가'.repeat(300)}`)).toBe(`${'가'.repeat(100)}.zip`)
+    // nothing usable left, or a device name
+    for (const none of [undefined, '', ' . ', '<>:"|?*', 'CON', 'lpt1']) {
+      expect(skillBundleFileName(none)).toBe(SKILL_BUNDLE_FILE_NAME)
+    }
   })
 })
 

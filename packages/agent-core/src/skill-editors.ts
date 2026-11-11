@@ -81,3 +81,25 @@ export function skillUsedIn(
   const editors = skillEditorsOf(scope)
   return !editors || editors.includes(editor)
 }
+
+/**
+ * Whether a skill stands back in `editor` for the enabled skill of the same
+ * name that won over it. Who wins is decided once, in the main process
+ * (`pickEnabledUserSkills`, which leaves the winner's id in `shadowedBy`);
+ * every list built for the AI or for the `/` picker reads it through here, so
+ * one name is listed once. A skill stands back wherever its winner is used:
+ * in an editor the winner is not set for, it is listed as if alone.
+ */
+export function skillStandsBack(
+  skill: { shadowedBy?: unknown },
+  all: readonly unknown[],
+  editor: SkillEditorId | undefined,
+): boolean {
+  const by = skill.shadowedBy
+  if (typeof by !== 'string' || !by) return false
+  const winner = all.find(
+    (other): other is { id: string; editors?: unknown } =>
+      !!other && typeof other === 'object' && (other as { id?: unknown }).id === by,
+  )
+  return !winner || skillUsedIn(skillEditorsOf(winner.editors), editor)
+}

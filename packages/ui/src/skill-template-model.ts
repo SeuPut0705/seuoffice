@@ -116,7 +116,7 @@ export function chipRefOf(chip: SkillChipRef): SkillChipRef {
 /** The chip of a skill the model used on its own (its identifier starts with the source) */
 export function chipRefForSkill(skill: { id: string; name: string; title: string }): SkillChipRef {
   const source = skill.id.slice(0, Math.max(0, skill.id.indexOf(':'))) || 'app'
-  const title = skillDisplayName(source === 'builtin' ? { name: skill.name } : skill)
+  const title = skillDisplayName({ name: skill.name, title: skill.title, source })
   return { id: skill.id, source, title }
 }
 

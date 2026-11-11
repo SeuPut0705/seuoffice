@@ -27,6 +27,8 @@ export type AgentSkillsBridge = Pick<
   | 'markAgentNoticeSeen'
   | 'onChanged'
   | 'importGitHub'
+  | 'readImport'
+  | 'readImportFile'
   | 'cancelImport'
   | 'install'
   | 'focusTab'

@@ -73,12 +73,14 @@ export const nl = {
   editorNew: 'Nieuwe vaardigheid',
   editorEdit: 'Vaardigheid bewerken',
   editorView: 'Inhoud van de vaardigheid',
+  fieldTitle: 'Titel',
+  titleHint: 'Staat in lijsten, in elke taal. Laat leeg om de naam te tonen',
   fieldDescription: 'Beschrijving',
   fieldDescriptionHint: 'De AI leest dit om te bepalen wanneer de vaardigheid wordt gebruikt',
   fieldBody: 'Instructies',
   fieldName: 'Naam',
   nameHint:
-    'Naam in de lijst met vaardigheden. Kleine letters, cijfers en koppeltekens (-), maximaal 64 tekens',
+    'Naam die andere programma’s en de aanroep met / gebruiken. Kleine letters, cijfers en koppeltekens (-), maximaal 64 tekens. Een automatisch ingevulde naam kan zo blijven',
   files: 'Bestanden in de vaardigheid',
   filesNone: 'Geen andere bestanden',
   filesHint: 'Open de map om deze bestanden te wijzigen',
@@ -87,11 +89,15 @@ export const nl = {
   createHint: 'Je kunt het ook in het AI-paneel vragen: "maak een vaardigheid die…"',
   nameEmpty: 'Vul een naam in',
   nameTooLong: 'Een naam mag maximaal 64 tekens hebben',
-  nameCharacters: 'Alleen kleine letters, cijfers en koppeltekens (-)',
+  nameCharacters:
+    'Alleen kleine letters, cijfers en koppeltekens (-). Schrijf een titel in uw eigen taal in het veld Titel hierboven',
   nameHyphenEdge: 'Een naam mag niet beginnen of eindigen met een koppelteken',
   nameDoubleHyphen: 'Een naam mag geen twee koppeltekens achter elkaar hebben',
   nameReserved: 'Deze naam kan niet worden gebruikt',
   nameTaken: 'Mijn vaardigheden bevat al een vaardigheid met deze naam',
+  sameNameOn:
+    'Een vaardigheid met dezelfde naam staat aan ({sources}). Als u opslaat, wordt die van u in plaats daarvan gebruikt en wordt de andere uitgezet.',
+  saveTurnOff: 'Opslaan en de andere uitzetten',
   githubTitle: 'Toevoegen via een GitHub-link',
   githubLabel: 'GitHub-adres',
   githubPlaceholder: 'https://github.com/eigenaar/opslagplaats',
@@ -160,9 +166,23 @@ export const nl = {
   warnRemoteInstructions: 'Vraagt de AI instructies van een extern adres te halen',
   warnParentPath: 'Een ../-pad dat buiten de vaardigheidsmap wijst',
   exportSeveral: 'Meerdere exporteren',
+  bundleFileName: '{title} en nog {n}',
   bundleTitle: 'Vaardigheden samen exporteren',
   bundleIntro:
     'De vaardigheden die je aanvinkt gaan in één zip-bestand, een map per vaardigheid. Wie het krijgt, kan de zip op een appvenster neerzetten of Toevoegen ▸ Uit een zip-bestand gebruiken.',
   bundleSelectLabel: '{title} meenemen',
   bundleExport: 'Exporteren ({n})',
+  previewBodyEmpty: 'De instructies zijn leeg',
+  previewTruncated: 'Alleen de eerste {n} tekens worden getoond. Daarna gaat de tekst verder.',
+  collisionKeeps:
+    'Vervangen behoudt de instellingen van de vaardigheid: aan of uit, wanneer gebruikt en waar gebruikt.',
+  discardAsk: 'Er zijn niet-opgeslagen wijzigingen. Bij sluiten gaan ze verloren.',
+  discardKeep: 'Verder bewerken',
+  discardClose: 'Weggooien en sluiten',
+  dropOverlaySkills: 'Vaardigheidsbestanden (.zip, SKILL.md) kun je hier ook neerzetten',
+  shadowedNote: 'In plaats hiervan wordt de vaardigheid met dezelfde naam ({source}) gebruikt',
+  builtinBodyNote:
+    'De instructies hieronder zijn de tekst die de AI krijgt, getoond zoals die is geschreven; daarom kan die in het Engels zijn',
+  pasteUnclosed:
+    'De afsluitende regel --- ontbreekt. De tekst is misschien afgekapt; kopieer hem opnieuw van begin tot eind.',
 } satisfies Record<keyof typeof zh, string>

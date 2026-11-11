@@ -27,9 +27,9 @@ export const OPENABLE_DOC_RE =
 export const KNOWN_UNSUPPORTED_DOC_RE = /\.(doc|rtf|ppt|pps|odp|xlsb|pages|key|numbers)$/i
 
 /** Files that may hold skills: a `SKILL.md`, or a zip the shell looks into.
- *  The shell decides; a zip that is not a skill zip is dropped silently like
- *  any other unrecognized file. A `SKILL.md` goes to the skill preview, not
- *  the markdown editor. */
+ *  The shell decides; for a zip that is not a skill zip it says that no skill
+ *  was found. A `SKILL.md` goes to the skill preview, not the markdown
+ *  editor. */
 export const SKILL_DROP_RE = /(?:^|[\\/])skill\.md$|\.zip$/i
 
 /** upper bound on how many files one drop may ask to open */

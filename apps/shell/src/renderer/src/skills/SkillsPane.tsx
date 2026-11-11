@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
 import { skillEditorsOf } from '@genoffice/agent-core/skill-editors'
-import { skillEditorsSummary } from '@genoffice/ui'
+import { skillEditorsSummary, skillNameBeside } from '@genoffice/ui'
 import type {
   UserSkillImportPreview,
   UserSkillInvokeValue,
@@ -21,12 +21,12 @@ import {
 } from './SkillImport'
 import { SkillUpdateDialog, type ChangedUpdate } from './SkillUpdate'
 import {
-  actionLabelKey,
   failureKey,
   groupLabelKey,
   groupSkills,
   hiddenBuiltinCount,
   listedCount,
+  skillActionLabel,
   skillDisplayDesc,
   skillDisplayTitle,
   skillMcpServersNeeded,
@@ -34,6 +34,7 @@ import {
   sourceLabel,
   unreadableKey,
   userSkillsApi,
+  whereUsedDialogMode,
   type SkillMenuAction,
 } from './skills-model'
 import './skills.css'
@@ -44,7 +45,7 @@ export const SKILLS_HELP_TOPIC = 'skills'
 type Text = (key: SkillsStringKey, params?: Record<string, string | number>) => string
 
 type Dialog =
-  | { kind: 'editor'; mode: SkillEditorMode; view?: UserSkillView }
+  | { kind: 'editor'; mode: SkillEditorMode; view?: UserSkillView; toWhereUsed?: boolean }
   | { kind: 'github' }
   | { kind: 'paste' }
   | { kind: 'bundle' }
@@ -112,25 +113,34 @@ export function SkillsPane({
   useEffect(() => {
     const bridge = userSkillsApi()
     if (!idle || !bridge) return
-    void bridge.takeDropped().then((answer) => {
-      if (!alive.current) {
-        if (answer.ok && answer.preview) void bridge.cancelImport(answer.preview.token)
+    void (async () => {
+      // An entry that opens no dialog (a zip with no skill, a file that could
+      // not be read) leaves this page idle, so nothing would come back for the
+      // one queued behind it: keep taking until a preview opens or none is left
+      for (;;) {
+        const answer = await bridge.takeDropped()
+        if (!alive.current) {
+          if (answer.ok && answer.preview) void bridge.cancelImport(answer.preview.token)
+          return
+        }
+        if (!answer.ok) {
+          const key = failureKey(answer.reason, 'import')
+          if (key) setNotice({ tone: 'error', text: skillsText(lang, key) })
+          // a refusal took nothing off the queue: asking again would never end
+          if (answer.reason === 'not-allowed') return
+          continue
+        }
+        if (!answer.preview) return
+        // a dialog the person opened meanwhile keeps its place
+        if (dialogOpen.current) {
+          void bridge.cancelImport(answer.preview.token)
+          return
+        }
+        setNotice(null)
+        setDialog({ kind: 'preview', preview: answer.preview })
         return
       }
-      if (!answer.ok) {
-        const key = failureKey(answer.reason, 'import')
-        if (key) setNotice({ tone: 'error', text: skillsText(lang, key) })
-        return
-      }
-      if (!answer.preview) return
-      // a dialog the person opened meanwhile keeps its place
-      if (dialogOpen.current) {
-        void bridge.cancelImport(answer.preview.token)
-        return
-      }
-      setNotice(null)
-      setDialog({ kind: 'preview', preview: answer.preview })
-    })
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- lang is read when the answer comes
   }, [idle, droppedTick])
 
@@ -224,6 +234,9 @@ export function SkillsPane({
       case 'view':
       case 'edit':
         setDialog({ kind: 'editor', mode: action, view })
+        return
+      case 'whereUsed':
+        setDialog({ kind: 'editor', mode: whereUsedDialogMode(view), view, toWhereUsed: true })
         return
       case 'copyToMine':
         void copyToMine(view, false)
@@ -410,6 +423,7 @@ export function SkillsPane({
                 lang={lang}
                 text={s}
                 usableMcpServers={usableMcpServers}
+                winner={views?.find((other) => other.id === view.shadowedBy)}
                 onToggle={() => void setState(view, { enabled: !view.enabled })}
                 onInvoke={(invoke) => void setState(view, { invoke })}
                 onAction={(action) => runAction(view, action)}
@@ -444,6 +458,7 @@ export function SkillsPane({
           api={api}
           mode={dialog.mode}
           view={dialog.view}
+          toWhereUsed={dialog.toWhereUsed}
           lang={lang}
           locale={dateLocale}
           onClose={() => setDialog(null)}
@@ -513,6 +528,7 @@ function SkillRow({
   lang,
   text,
   usableMcpServers,
+  winner,
   onToggle,
   onInvoke,
   onAction,
@@ -522,6 +538,8 @@ function SkillRow({
   lang: Lang
   text: Text
   usableMcpServers: ReadonlySet<string>
+  /** the enabled skill of the same name that is used instead of this one */
+  winner: UserSkillView | undefined
   onToggle: () => void
   onInvoke: (invoke: UserSkillInvokeValue) => void
   onAction: (action: SkillMenuAction) => void
@@ -548,6 +566,11 @@ function SkillRow({
         <div className="skl-row-text">
           <div className="skl-row-head">
             <span className="skl-row-title">{title}</span>
+            {skillNameBeside(view) && (
+              <code className="skl-name" dir="ltr">
+                {skillNameBeside(view)}
+              </code>
+            )}
             <span className="skl-source">{sourceLabel(view, text)}</span>
           </div>
           {desc && (
@@ -561,6 +584,11 @@ function SkillRow({
             </div>
           )}
           {usedIn && <div className="set-field-desc skl-row-editors">{usedIn}</div>}
+          {winner && (
+            <div className="set-field-desc skl-row-shadowed">
+              {text('shadowedNote', { source: sourceLabel(winner, text) })}
+            </div>
+          )}
           {(badges.length > 0 || mcpServers.length > 0) && (
             <div className="skl-badges">
               {badges.map((key) => (
@@ -616,7 +644,7 @@ function SkillRow({
               ariaLabel={text('moreLabel', { title })}
               items={actions.map((action) => ({
                 key: action,
-                label: text(actionLabelKey(action)),
+                label: skillActionLabel(action, lang),
                 onPick: () => onAction(action),
               }))}
             />

@@ -284,9 +284,15 @@ describe('the skills gateway for the agent window', () => {
 
   it('lets the agent window make only the install-preview calls', () => {
     expect([...AGENT_WINDOW_MANAGE_CHANNELS].sort()).toEqual(
-      [C.importGitHub, C.cancelImport, C.install].sort(),
+      [C.importGitHub, C.readImport, C.readImportFile, C.cancelImport, C.install].sort(),
     )
-    for (const channel of [C.importGitHub, C.cancelImport, C.install]) {
+    for (const channel of [
+      C.importGitHub,
+      C.readImport,
+      C.readImportFile,
+      C.cancelImport,
+      C.install,
+    ]) {
       expect(gate('agent', channel)).toBe(true)
     }
     for (const channel of [

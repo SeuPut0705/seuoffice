@@ -121,7 +121,9 @@ export function createAgentSkillTools(
       name: 'propose_skill',
       description: PROPOSE_SKILL_DESCRIPTION,
       inputSchema: {
-        title: z.string().describe('short title shown to the person'),
+        title: z
+          .string()
+          .describe('short title in the language the person writes in, shown in the skill list'),
         name: z
           .string()
           .optional()

@@ -72,12 +72,14 @@ export const es = {
   editorNew: 'Nueva habilidad',
   editorEdit: 'Editar habilidad',
   editorView: 'Contenido de la habilidad',
+  fieldTitle: 'Título',
+  titleHint: 'Se muestra en las listas, en cualquier idioma. Déjelo vacío para mostrar el nombre',
   fieldDescription: 'Descripción',
   fieldDescriptionHint: 'La IA lee esto para decidir cuándo usar la habilidad',
   fieldBody: 'Instrucciones',
   fieldName: 'Nombre',
   nameHint:
-    'Nombre que aparece en la lista de habilidades. Letras minúsculas, números y guiones (-), hasta 64 caracteres',
+    'Nombre que usan otros programas y la llamada con /. Letras minúsculas, números y guiones (-), hasta 64 caracteres. Un nombre rellenado automáticamente puede quedarse como está',
   files: 'Archivos de la habilidad',
   filesNone: 'No hay otros archivos',
   filesHint: 'Abre la carpeta para cambiar estos archivos',
@@ -86,11 +88,15 @@ export const es = {
   createHint: 'También puedes pedirlo en el panel de IA: «hazme una habilidad que…»',
   nameEmpty: 'Escribe un nombre',
   nameTooLong: 'El nombre puede tener hasta 64 caracteres',
-  nameCharacters: 'Solo letras minúsculas, números y guiones (-)',
+  nameCharacters:
+    'Solo letras minúsculas, números y guiones (-). Escriba un título en su idioma en el campo Título de arriba',
   nameHyphenEdge: 'El nombre no puede empezar ni terminar con un guion',
   nameDoubleHyphen: 'El nombre no puede tener dos guiones seguidos',
   nameReserved: 'Este nombre no se puede usar',
   nameTaken: 'Mis habilidades ya tiene una habilidad con este nombre',
+  sameNameOn:
+    'Hay una habilidad con el mismo nombre activada ({sources}). Si guarda, se usará la suya en su lugar y la otra se desactivará.',
+  saveTurnOff: 'Guardar y desactivar la otra',
   githubTitle: 'Añadir desde un enlace de GitHub',
   githubLabel: 'Dirección de GitHub',
   githubPlaceholder: 'https://github.com/propietario/repositorio',
@@ -159,9 +165,23 @@ export const es = {
   warnRemoteInstructions: 'Pide a la IA que siga instrucciones de una dirección externa',
   warnParentPath: 'Una ruta ../ que apunta fuera de la carpeta de la habilidad',
   exportSeveral: 'Exportar varias',
+  bundleFileName: '{title} y {n} más',
   bundleTitle: 'Exportar habilidades juntas',
   bundleIntro:
     'Las habilidades que marques van a un solo archivo zip, con una carpeta por habilidad. Quien lo reciba puede soltar el zip en una ventana de la aplicación o usar Añadir ▸ Desde un archivo zip.',
   bundleSelectLabel: 'Incluir {title}',
   bundleExport: 'Exportar ({n})',
+  previewBodyEmpty: 'Las instrucciones están vacías',
+  previewTruncated: 'Solo se muestran los primeros {n} caracteres. El texto sigue después.',
+  collisionKeeps:
+    'Reemplazar conserva los ajustes de la habilidad: activada o no, cuándo se usa y dónde se usa.',
+  discardAsk: 'Hay cambios sin guardar. Se perderán al cerrar.',
+  discardKeep: 'Seguir editando',
+  discardClose: 'Descartar y cerrar',
+  dropOverlaySkills: 'También puedes soltar archivos de habilidad (.zip, SKILL.md)',
+  shadowedNote: 'En su lugar se usa la habilidad del mismo nombre ({source})',
+  builtinBodyNote:
+    'Las instrucciones de abajo son el texto que recibe la IA. Se muestran tal cual, por lo que pueden estar en inglés',
+  pasteUnclosed:
+    'Falta la línea --- de cierre. Puede que el texto se haya cortado; cópielo de nuevo de principio a fin.',
 } satisfies Record<keyof typeof zh, string>

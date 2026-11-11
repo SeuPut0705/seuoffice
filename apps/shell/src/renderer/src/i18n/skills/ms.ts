@@ -72,12 +72,14 @@ export const ms = {
   editorNew: 'Kemahiran baharu',
   editorEdit: 'Sunting kemahiran',
   editorView: 'Kandungan kemahiran',
+  fieldTitle: 'Tajuk',
+  titleHint: 'Dipaparkan dalam senarai, dalam apa-apa bahasa. Biarkan kosong untuk memaparkan nama',
   fieldDescription: 'Keterangan',
   fieldDescriptionHint: 'AI membaca ini untuk menentukan bila hendak menggunakan kemahiran',
   fieldBody: 'Arahan',
   fieldName: 'Nama',
   nameHint:
-    'Nama yang dipaparkan dalam senarai kemahiran. Huruf kecil, digit dan tanda sempang (-), sehingga 64 aksara',
+    'Nama yang digunakan oleh program lain dan panggilan /. Huruf kecil, digit dan tanda sempang (-), sehingga 64 aksara. Nama yang diisi secara automatik boleh dibiarkan begitu sahaja',
   files: 'Fail dalam kemahiran',
   filesNone: 'Tiada fail lain',
   filesHint: 'Buka folder untuk mengubah fail ini',
@@ -86,11 +88,15 @@ export const ms = {
   createHint: 'Anda juga boleh meminta dalam panel AI: "buatkan saya kemahiran yang…"',
   nameEmpty: 'Masukkan nama',
   nameTooLong: 'Nama boleh sehingga 64 aksara',
-  nameCharacters: 'Hanya huruf kecil, digit dan tanda sempang (-)',
+  nameCharacters:
+    'Hanya huruf kecil, digit dan tanda sempang (-). Tulis tajuk dalam bahasa anda di medan Tajuk di atas',
   nameHyphenEdge: 'Nama tidak boleh bermula atau berakhir dengan tanda sempang',
   nameDoubleHyphen: 'Nama tidak boleh mempunyai dua tanda sempang berturut-turut',
   nameReserved: 'Nama ini tidak boleh digunakan',
   nameTaken: 'Kemahiran saya sudah ada kemahiran dengan nama ini',
+  sameNameOn:
+    'Kemahiran dengan nama yang sama sedang dihidupkan ({sources}). Jika disimpan, kemahiran anda akan digunakan dan kemahiran itu dimatikan.',
+  saveTurnOff: 'Simpan dan matikan kemahiran itu',
   githubTitle: 'Tambah daripada pautan GitHub',
   githubLabel: 'Alamat GitHub',
   githubPlaceholder: 'https://github.com/pemilik/repositori',
@@ -157,9 +163,23 @@ export const ms = {
   warnRemoteInstructions: 'Meminta AI mengambil arahan dari alamat luar',
   warnParentPath: 'Laluan ../ yang menghala ke luar folder kemahiran',
   exportSeveral: 'Eksport beberapa',
+  bundleFileName: '{title} dan {n} lagi',
   bundleTitle: 'Eksport kemahiran bersama-sama',
   bundleIntro:
     'Kemahiran yang anda tandakan dimasukkan ke dalam satu fail zip, satu folder bagi setiap kemahiran. Penerimanya boleh melepaskan zip itu pada tetingkap aplikasi, atau menggunakan Tambah ▸ Daripada fail zip.',
   bundleSelectLabel: 'Sertakan {title}',
   bundleExport: 'Eksport ({n})',
+  previewBodyEmpty: 'Arahannya kosong',
+  previewTruncated: 'Hanya {n} aksara pertama dipaparkan. Masih ada kandungan selepas ini.',
+  collisionKeeps:
+    'Gantikan mengekalkan tetapan kemahiran: hidup atau mati, bila digunakan dan tempat digunakan.',
+  discardAsk: 'Ada perubahan yang belum disimpan. Jika ditutup, perubahan itu hilang.',
+  discardKeep: 'Teruskan mengedit',
+  discardClose: 'Buang dan tutup',
+  dropOverlaySkills: 'Fail kemahiran (.zip, SKILL.md) juga boleh dilepaskan di sini',
+  shadowedNote: 'Kemahiran dengan nama yang sama ({source}) digunakan sebagai ganti',
+  builtinBodyNote:
+    'Arahan di bawah ialah teks yang diberikan kepada AI, dipaparkan seperti yang ditulis, jadi mungkin dalam bahasa Inggeris',
+  pasteUnclosed:
+    'Baris --- penutup tiada. Teks mungkin terpotong; salin semula dari awal hingga akhir.',
 } satisfies Record<keyof typeof zh, string>

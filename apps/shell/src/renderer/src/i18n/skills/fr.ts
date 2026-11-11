@@ -74,12 +74,15 @@ export const fr = {
   editorNew: 'Nouvelle compétence',
   editorEdit: 'Modifier la compétence',
   editorView: 'Contenu de la compétence',
+  fieldTitle: 'Titre',
+  titleHint:
+    'Affiché dans les listes, dans la langue de votre choix. Laissez vide pour afficher le nom',
   fieldDescription: 'Description',
   fieldDescriptionHint: 'L’IA lit ce texte pour décider quand utiliser la compétence',
   fieldBody: 'Instructions',
   fieldName: 'Nom',
   nameHint:
-    'Nom affiché dans la liste des compétences. Lettres minuscules, chiffres et traits d’union (-), 64 caractères maximum',
+    'Nom utilisé par les autres programmes et par l’appel avec /. Lettres minuscules, chiffres et traits d’union (-), 64 caractères maximum. Un nom rempli automatiquement peut rester tel quel',
   files: 'Fichiers de la compétence',
   filesNone: 'Aucun autre fichier',
   filesHint: 'Ouvrez le dossier pour modifier ces fichiers',
@@ -88,11 +91,15 @@ export const fr = {
   createHint: 'Vous pouvez aussi demander dans le panneau IA : « crée-moi une compétence qui… »',
   nameEmpty: 'Saisissez un nom',
   nameTooLong: 'Le nom ne peut pas dépasser 64 caractères',
-  nameCharacters: 'Uniquement des lettres minuscules, des chiffres et des traits d’union (-)',
+  nameCharacters:
+    'Uniquement des lettres minuscules, des chiffres et des traits d’union (-). Écrivez un titre dans votre langue dans le champ Titre ci-dessus',
   nameHyphenEdge: 'Le nom ne peut pas commencer ni finir par un trait d’union',
   nameDoubleHyphen: 'Le nom ne peut pas contenir deux traits d’union à la suite',
   nameReserved: 'Ce nom ne peut pas être utilisé',
   nameTaken: 'Mes compétences contient déjà une compétence portant ce nom',
+  sameNameOn:
+    'Une compétence du même nom est activée ({sources}). Si vous enregistrez, la vôtre sera utilisée à sa place et l’autre sera désactivée.',
+  saveTurnOff: 'Enregistrer et désactiver l’autre',
   githubTitle: 'Ajouter depuis un lien GitHub',
   githubLabel: 'Adresse GitHub',
   githubPlaceholder: 'https://github.com/propriétaire/dépôt',
@@ -162,9 +169,23 @@ export const fr = {
     'Demande à l’IA de suivre des instructions venant d’une adresse extérieure',
   warnParentPath: 'Un chemin ../ qui pointe hors du dossier de la compétence',
   exportSeveral: 'Exporter plusieurs',
+  bundleFileName: '{title} et {n} autres',
   bundleTitle: 'Exporter des compétences ensemble',
   bundleIntro:
     'Les compétences cochées vont dans un seul fichier zip, avec un dossier par compétence. La personne qui le reçoit peut déposer le zip sur une fenêtre de l’application, ou utiliser Ajouter ▸ Depuis un fichier zip.',
   bundleSelectLabel: 'Inclure {title}',
   bundleExport: 'Exporter ({n})',
+  previewBodyEmpty: 'Les instructions sont vides',
+  previewTruncated: 'Seuls les {n} premiers caractères sont affichés. Le texte continue ensuite.',
+  collisionKeeps:
+    'Remplacer conserve les réglages de la compétence : activée ou non, quand l’utiliser et où l’utiliser.',
+  discardAsk: 'Des modifications ne sont pas enregistrées. Elles seront perdues à la fermeture.',
+  discardKeep: 'Continuer la saisie',
+  discardClose: 'Abandonner et fermer',
+  dropOverlaySkills: 'Vous pouvez aussi déposer des fichiers de compétence (.zip, SKILL.md)',
+  shadowedNote: 'Une compétence du même nom ({source}) est utilisée à la place de celle-ci',
+  builtinBodyNote:
+    'Les instructions ci-dessous sont le texte donné à l’IA, affiché tel quel ; il peut donc être en anglais',
+  pasteUnclosed:
+    'La ligne --- de fermeture manque. Le texte a peut-être été coupé ; copiez-le de nouveau du début à la fin.',
 } satisfies Record<keyof typeof zh, string>

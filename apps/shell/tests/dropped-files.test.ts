@@ -14,16 +14,20 @@ function fakeDeps(overrides: Partial<DroppedFilesDeps> = {}): DroppedFilesDeps &
   revealed: ReturnType<typeof vi.fn>
   warned: string[]
   skills: DroppedSkillSource[]
+  noSkills: ReturnType<typeof vi.fn>
 } {
   const opened: string[] = []
   const revealed = vi.fn()
   const warned: string[] = []
   const skills: DroppedSkillSource[] = []
+  const noSkills = vi.fn()
   return {
     opened,
     revealed,
     warned,
     skills,
+    noSkills,
+    noSkillsFound: noSkills,
     // the core's real judge: a zip is read for its layout
     skillSourceOf: (path) => droppedSkillSourceOf(path, '/no-home'),
     importSkills: (source) => {
@@ -123,13 +127,43 @@ describe('handleDroppedFiles with skill files', () => {
     expect(deps.opened).toEqual(['/dl/notes.md'])
   })
 
-  it('leaves a zip that holds no skill alone, as before', async () => {
+  it('says once that no skill was found when the drop is only zips without one', async () => {
     const photos = await zipAt('photos.zip', { 'trip/1.png': 'png', 'report/SKILL.md': skillMd })
+    const papers = await zipAt('papers.zip', { 'report.docx': 'doc' })
     const deps = fakeDeps()
-    await handleDroppedFiles([photos], deps)
+    await handleDroppedFiles([photos, papers], deps)
+    expect(deps.noSkills).toHaveBeenCalledOnce()
     expect(deps.skills).toEqual([])
     expect(deps.opened).toEqual([])
     expect(deps.revealed).not.toHaveBeenCalled()
     expect(deps.warned).toEqual([])
+  })
+
+  it('stays silent about such a zip beside a document that opened', async () => {
+    const photos = await zipAt('photos.zip', { 'trip/1.png': 'png' })
+    const deps = fakeDeps()
+    await handleDroppedFiles(['/tmp/a.docx', photos], deps)
+    expect(deps.opened).toEqual(['/tmp/a.docx'])
+    expect(deps.noSkills).not.toHaveBeenCalled()
+  })
+
+  it('stays silent about such a zip beside a skill zip or an unsupported file', async () => {
+    const photos = await zipAt('photos.zip', { 'trip/1.png': 'png' })
+    const pack = await zipAt('pack.zip', { 'report/SKILL.md': skillMd })
+    const withSkill = fakeDeps()
+    await handleDroppedFiles([photos, pack], withSkill)
+    expect(withSkill.skills).toEqual([{ kind: 'zip', file: pack }])
+    expect(withSkill.noSkills).not.toHaveBeenCalled()
+
+    const withWarning = fakeDeps()
+    await handleDroppedFiles([photos, '/tmp/old.doc'], withWarning)
+    expect(withWarning.warned).toEqual(['unsupported: doc'])
+    expect(withWarning.noSkills).not.toHaveBeenCalled()
+  })
+
+  it('says nothing for a drop that had no zip or SKILL.md at all', async () => {
+    const deps = fakeDeps()
+    await handleDroppedFiles(['/tmp/photo.png'], deps)
+    expect(deps.noSkills).not.toHaveBeenCalled()
   })
 })

@@ -54,12 +54,14 @@ export {
   aiSkillsBridge,
   chipsAfterListChange,
   filterPickerSkills,
+  isMadeUpSkillName,
   pickerSkillsOf,
   removeSkillTrigger,
   skillChipOf,
   skillChipRef,
   skillChipRefsOf,
   skillDisplayName,
+  skillNameBeside,
   skillPickerKeyAction,
   skillSourceLabel,
   skillTriggerAt,
@@ -111,6 +113,9 @@ export {
   skillCardNameVerdict,
   skillCardSaveBlock,
   skillCardSaveFailureKey,
+  SAME_NAME_ON,
+  sameNameSourcesOf,
+  skillCardDraftLabel,
   skillCardSaveInput,
   skillCardSaveResultOf,
   skillCardSavedRecord,
@@ -606,3 +611,9 @@ export type {
 } from './use-project-panel'
 export type { ProjectChatStringKey } from './strings-project-chat'
 export { useScrollWindow } from './scroll-window'
+export {
+  NAME_FROM_TITLE_DELAY_MS,
+  nameFromTitle,
+  useNameFromTitle,
+  type SuggestSkillName,
+} from './skill-name-from-title'

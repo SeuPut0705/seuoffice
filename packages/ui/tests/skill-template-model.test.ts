@@ -67,22 +67,22 @@ describe('which template a request uses', () => {
     expect(templateOpenResultOf(null)).toEqual({ ok: false, reason: 'failed' })
   })
 
-  it('makes the chip of a skill the model used, titled by the skill name', () => {
-    expect(chipRefForSkill({ id: 'app:letter', name: 'letter', title: 'Letter' })).toEqual({
+  it('makes the chip of a skill the model used, titled as lists show the skill', () => {
+    expect(chipRefForSkill({ id: 'app:letter', name: 'letter', title: '가정통신문' })).toEqual({
       id: 'app:letter',
       source: 'app',
-      title: 'letter',
+      title: '가정통신문',
     })
+    expect(chipRefForSkill({ id: 'app:letter', name: 'letter', title: 'letter' }).title).toBe(
+      'letter',
+    )
     expect(chipRefForSkill({ id: 'plugin:p:x', name: 'x', title: 'X' }).source).toBe('plugin')
   })
 
-  it('titles a builtin chip by its name and a made-up name by its title', () => {
+  it('titles a builtin chip by its name', () => {
     expect(
       chipRefForSkill({ id: 'builtin:humanizer', name: 'humanizer', title: 'Humanizer' }),
     ).toEqual({ id: 'builtin:humanizer', source: 'builtin', title: 'humanizer' })
-    expect(
-      chipRefForSkill({ id: 'app:skill-a1b2c3', name: 'skill-a1b2c3', title: '가정통신문' }).title,
-    ).toBe('가정통신문')
   })
 })
 

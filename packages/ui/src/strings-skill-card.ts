@@ -7,6 +7,8 @@ import { createI18n, defineStrings, type Lang } from '@genoffice/i18n'
 const zh = {
   cardNewTitle: '创建技能',
   cardEditTitle: '修改技能',
+  fieldTitle: '标题',
+  titleHint: '显示在列表中的标题，可以用任何语言填写。留空则显示名称',
   fieldDescription: '说明',
   fieldBody: '正文',
   fieldName: '名称',
@@ -30,12 +32,14 @@ const zh = {
   nameChecking: '正在检查名称…',
   nameEmpty: '请填写名称',
   nameTooLong: '名称最多 64 个字符',
-  nameCharacters: '名称只能使用英文小写字母、数字和连字符(-)',
+  nameCharacters: '名称只能使用英文小写字母、数字和连字符(-)。中文标题请填写在上方的标题栏',
   nameHyphenEdge: '名称不能以连字符(-)开头或结尾',
   nameDoubleHyphen: '名称中不能连续使用两个连字符(--)',
   nameReserved: '不能使用此名称',
   nameTaken: '我的技能中已有同名技能',
   nameTakenReplace: '我的技能中已有同名技能，保存后将替换它',
+  sameNameOn: '已有同名技能处于开启状态（{sources}）。保存后将改用我的技能，并关闭该技能。',
+  saveTurnOff: '保存并关闭该技能',
   saveFailed: '无法保存',
   trashFailed: '无法将要替换的技能移到回收站，因此没有保存任何内容',
   noBridge: '此窗口无法保存技能',
@@ -48,6 +52,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   en: {
     cardNewTitle: 'New skill',
     cardEditTitle: 'Change skill',
+    fieldTitle: 'Title',
+    titleHint: 'Shown in lists, in any language. Leave it empty to show the name',
     fieldDescription: 'Description',
     fieldBody: 'Instructions',
     fieldName: 'Name',
@@ -72,12 +78,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'Checking the name…',
     nameEmpty: 'Enter a name',
     nameTooLong: 'The name can be up to 64 characters',
-    nameCharacters: 'The name can use only lowercase English letters, digits and hyphens (-)',
+    nameCharacters:
+      'The name can use only lowercase English letters, digits and hyphens (-). A title in your own language goes in the Title field above',
     nameHyphenEdge: 'The name cannot start or end with a hyphen (-)',
     nameDoubleHyphen: 'The name cannot have two hyphens in a row (--)',
     nameReserved: 'This name cannot be used',
     nameTaken: 'My skills already have a skill with this name',
     nameTakenReplace: 'My skills already have a skill with this name; saving replaces it',
+    sameNameOn:
+      'A skill of the same name is on ({sources}). If you save, your skill is used instead and that one is turned off.',
+    saveTurnOff: 'Save and turn that one off',
     saveFailed: 'Could not save',
     trashFailed: 'The skill it replaces could not be moved to the trash, so nothing was saved',
     noBridge: 'Skills cannot be saved in this window',
@@ -87,6 +97,9 @@ export const SKILL_CARD_STRINGS = defineStrings({
   ja: {
     cardNewTitle: 'スキルを作成',
     cardEditTitle: 'スキルを修正',
+    fieldTitle: 'タイトル',
+    titleHint:
+      '一覧に表示されるタイトルです。どの言語でも書けます。空のままにすると名前が表示されます',
     fieldDescription: '説明',
     fieldBody: '本文',
     fieldName: '名前',
@@ -110,12 +123,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: '名前を確認しています…',
     nameEmpty: '名前を入力してください',
     nameTooLong: '名前は 64 文字までです',
-    nameCharacters: '名前には英小文字・数字・ハイフン(-)だけが使えます',
+    nameCharacters:
+      '名前には英小文字・数字・ハイフン(-)だけが使えます。日本語のタイトルは上のタイトル欄に書いてください',
     nameHyphenEdge: '名前をハイフン(-)で始めたり終えたりできません',
     nameDoubleHyphen: '名前にハイフンを 2 つ続けて(--)使えません',
     nameReserved: 'この名前は使えません',
     nameTaken: 'マイスキルに同じ名前のスキルがあります',
     nameTakenReplace: 'マイスキルに同じ名前のスキルがあり、保存するとそのスキルを置き換えます',
+    sameNameOn:
+      '同じ名前のスキルがオンになっています（{sources}）。保存するとマイスキルが代わりに使われ、そのスキルはオフになります。',
+    saveTurnOff: '保存してそのスキルをオフにする',
     saveFailed: '保存できませんでした',
     trashFailed: '置き換えるスキルをごみ箱に移動できなかったため、何も保存していません',
     noBridge: 'このウィンドウではスキルを保存できません',
@@ -125,6 +142,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   ko: {
     cardNewTitle: '스킬 만들기',
     cardEditTitle: '스킬 고치기',
+    fieldTitle: '제목',
+    titleHint: '목록에 보이는 제목입니다. 어떤 언어로든 적을 수 있고, 비워 두면 이름이 보입니다',
     fieldDescription: '설명',
     fieldBody: '본문',
     fieldName: '이름',
@@ -148,12 +167,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: '이름을 확인하는 중…',
     nameEmpty: '이름을 적어 주세요',
     nameTooLong: '이름은 64자까지입니다',
-    nameCharacters: '이름에는 영어 소문자, 숫자, 하이픈(-)만 쓸 수 있습니다',
+    nameCharacters:
+      '이름에는 영어 소문자, 숫자, 하이픈(-)만 쓸 수 있습니다. 한글 제목은 위 제목 칸에 적으세요',
     nameHyphenEdge: '이름은 하이픈(-)으로 시작하거나 끝날 수 없습니다',
     nameDoubleHyphen: '이름에 하이픈을 두 번(--) 잇달아 쓸 수 없습니다',
     nameReserved: '이 이름은 쓸 수 없습니다',
     nameTaken: '내 스킬에 같은 이름이 있습니다',
     nameTakenReplace: '내 스킬에 같은 이름이 있어, 저장하면 그 스킬을 바꿉니다',
+    sameNameOn:
+      '같은 이름의 스킬이 켜져 있습니다({sources}). 저장하면 내 스킬이 대신 쓰이고 그 스킬은 꺼집니다.',
+    saveTurnOff: '저장하고 그 스킬 끄기',
     saveFailed: '저장하지 못했습니다',
     trashFailed: '바꿀 스킬을 휴지통으로 옮기지 못해 아무것도 저장하지 않았습니다',
     noBridge: '이 창에서는 스킬을 저장할 수 없습니다',
@@ -163,6 +186,9 @@ export const SKILL_CARD_STRINGS = defineStrings({
   fr: {
     cardNewTitle: 'Nouvelle compétence',
     cardEditTitle: 'Modifier la compétence',
+    fieldTitle: 'Titre',
+    titleHint:
+      'Affiché dans les listes, dans la langue de votre choix. Laissez vide pour afficher le nom',
     fieldDescription: 'Description',
     fieldBody: 'Instructions',
     fieldName: 'Nom',
@@ -189,13 +215,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameEmpty: 'Saisissez un nom',
     nameTooLong: 'Le nom compte 64 caractères au plus',
     nameCharacters:
-      'Le nom ne peut contenir que des lettres anglaises minuscules, des chiffres et des traits d’union (-)',
+      'Le nom ne peut contenir que des lettres anglaises minuscules, des chiffres et des traits d’union (-). Écrivez un titre dans votre langue dans le champ Titre ci-dessus',
     nameHyphenEdge: 'Le nom ne peut pas commencer ni finir par un trait d’union (-)',
     nameDoubleHyphen: 'Le nom ne peut pas contenir deux traits d’union de suite (--)',
     nameReserved: 'Ce nom ne peut pas être utilisé',
     nameTaken: 'Mes compétences contiennent déjà une compétence de ce nom',
     nameTakenReplace:
       'Mes compétences contiennent déjà une compétence de ce nom ; l’enregistrement la remplace',
+    sameNameOn:
+      'Une compétence du même nom est activée ({sources}). Si vous enregistrez, la vôtre sera utilisée à sa place et l’autre sera désactivée.',
+    saveTurnOff: 'Enregistrer et désactiver l’autre',
     saveFailed: 'Impossible d’enregistrer',
     trashFailed:
       'La compétence remplacée n’a pas pu être mise à la corbeille : rien n’a été enregistré',
@@ -206,6 +235,9 @@ export const SKILL_CARD_STRINGS = defineStrings({
   de: {
     cardNewTitle: 'Neuer Skill',
     cardEditTitle: 'Skill ändern',
+    fieldTitle: 'Titel',
+    titleHint:
+      'Wird in Listen angezeigt, in beliebiger Sprache. Leer lassen, um den Namen anzuzeigen',
     fieldDescription: 'Beschreibung',
     fieldBody: 'Anweisungen',
     fieldName: 'Name',
@@ -232,13 +264,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameEmpty: 'Geben Sie einen Namen ein',
     nameTooLong: 'Der Name darf höchstens 64 Zeichen haben',
     nameCharacters:
-      'Der Name darf nur englische Kleinbuchstaben, Ziffern und Bindestriche (-) enthalten',
+      'Der Name darf nur englische Kleinbuchstaben, Ziffern und Bindestriche (-) enthalten. Einen Titel in Ihrer Sprache schreiben Sie oben in das Feld „Titel“',
     nameHyphenEdge: 'Der Name darf nicht mit einem Bindestrich (-) beginnen oder enden',
     nameDoubleHyphen: 'Der Name darf keine zwei Bindestriche hintereinander (--) enthalten',
     nameReserved: 'Dieser Name kann nicht verwendet werden',
     nameTaken: 'Unter meinen Skills gibt es schon einen mit diesem Namen',
     nameTakenReplace:
       'Unter meinen Skills gibt es schon einen mit diesem Namen; Speichern ersetzt ihn',
+    sameNameOn:
+      'Ein Skill mit demselben Namen ist eingeschaltet ({sources}). Beim Speichern wird stattdessen Ihr Skill verwendet und der andere ausgeschaltet.',
+    saveTurnOff: 'Speichern und den anderen ausschalten',
     saveFailed: 'Speichern nicht möglich',
     trashFailed:
       'Der ersetzte Skill konnte nicht in den Papierkorb verschoben werden, daher wurde nichts gespeichert',
@@ -249,6 +284,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   es: {
     cardNewTitle: 'Nueva habilidad',
     cardEditTitle: 'Cambiar habilidad',
+    fieldTitle: 'Título',
+    titleHint: 'Se muestra en las listas, en cualquier idioma. Déjelo vacío para mostrar el nombre',
     fieldDescription: 'Descripción',
     fieldBody: 'Instrucciones',
     fieldName: 'Nombre',
@@ -273,12 +310,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'Comprobando el nombre…',
     nameEmpty: 'Escribe un nombre',
     nameTooLong: 'El nombre puede tener hasta 64 caracteres',
-    nameCharacters: 'El nombre solo puede llevar letras inglesas minúsculas, números y guiones (-)',
+    nameCharacters:
+      'El nombre solo puede llevar letras inglesas minúsculas, números y guiones (-). Escriba un título en su idioma en el campo Título de arriba',
     nameHyphenEdge: 'El nombre no puede empezar ni terminar con un guion (-)',
     nameDoubleHyphen: 'El nombre no puede llevar dos guiones seguidos (--)',
     nameReserved: 'Este nombre no se puede usar',
     nameTaken: 'Mis habilidades ya tienen una con este nombre',
     nameTakenReplace: 'Mis habilidades ya tienen una con este nombre; al guardar se reemplaza',
+    sameNameOn:
+      'Hay una habilidad con el mismo nombre activada ({sources}). Si guarda, se usará la suya en su lugar y la otra se desactivará.',
+    saveTurnOff: 'Guardar y desactivar la otra',
     saveFailed: 'No se pudo guardar',
     trashFailed:
       'No se pudo mover a la papelera la habilidad que reemplaza, así que no se guardó nada',
@@ -289,6 +330,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   th: {
     cardNewTitle: 'สร้างสกิล',
     cardEditTitle: 'แก้ไขสกิล',
+    fieldTitle: 'ชื่อเรื่อง',
+    titleHint: 'แสดงในรายการ เขียนเป็นภาษาใดก็ได้ เว้นว่างไว้เพื่อแสดงชื่อ',
     fieldDescription: 'คำอธิบาย',
     fieldBody: 'เนื้อหา',
     fieldName: 'ชื่อ',
@@ -313,12 +356,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'กำลังตรวจสอบชื่อ…',
     nameEmpty: 'กรุณาใส่ชื่อ',
     nameTooLong: 'ชื่อยาวได้ไม่เกิน 64 ตัวอักษร',
-    nameCharacters: 'ชื่อใช้ได้เฉพาะตัวพิมพ์เล็กภาษาอังกฤษ ตัวเลข และขีด (-)',
+    nameCharacters:
+      'ชื่อใช้ได้เฉพาะตัวพิมพ์เล็กภาษาอังกฤษ ตัวเลข และขีด (-) ชื่อเรื่องภาษาไทยให้เขียนในช่องชื่อเรื่องด้านบน',
     nameHyphenEdge: 'ชื่อขึ้นต้นหรือลงท้ายด้วยขีด (-) ไม่ได้',
     nameDoubleHyphen: 'ชื่อมีขีดสองตัวติดกัน (--) ไม่ได้',
     nameReserved: 'ใช้ชื่อนี้ไม่ได้',
     nameTaken: 'สกิลของฉันมีชื่อนี้อยู่แล้ว',
     nameTakenReplace: 'สกิลของฉันมีชื่อนี้อยู่แล้ว การบันทึกจะแทนที่สกิลนั้น',
+    sameNameOn:
+      'มีสกิลชื่อเดียวกันเปิดอยู่ ({sources}) หากบันทึก สกิลของคุณจะถูกใช้แทน และสกิลนั้นจะถูกปิด',
+    saveTurnOff: 'บันทึกและปิดสกิลนั้น',
     saveFailed: 'บันทึกไม่ได้',
     trashFailed: 'ย้ายสกิลที่จะถูกแทนที่ไปถังขยะไม่ได้ จึงไม่ได้บันทึกอะไร',
     noBridge: 'บันทึกสกิลในหน้าต่างนี้ไม่ได้',
@@ -328,6 +375,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   id: {
     cardNewTitle: 'Skill baru',
     cardEditTitle: 'Ubah skill',
+    fieldTitle: 'Judul',
+    titleHint: 'Ditampilkan di daftar, dalam bahasa apa pun. Kosongkan untuk menampilkan nama',
     fieldDescription: 'Deskripsi',
     fieldBody: 'Instruksi',
     fieldName: 'Nama',
@@ -352,12 +401,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'Memeriksa nama…',
     nameEmpty: 'Isi nama',
     nameTooLong: 'Nama paling banyak 64 karakter',
-    nameCharacters: 'Nama hanya boleh berisi huruf kecil Inggris, angka, dan tanda hubung (-)',
+    nameCharacters:
+      'Nama hanya boleh berisi huruf kecil Inggris, angka, dan tanda hubung (-). Tulis judul dalam bahasa Anda di kolom Judul di atas',
     nameHyphenEdge: 'Nama tidak boleh diawali atau diakhiri tanda hubung (-)',
     nameDoubleHyphen: 'Nama tidak boleh berisi dua tanda hubung berurutan (--)',
     nameReserved: 'Nama ini tidak dapat dipakai',
     nameTaken: 'Skill saya sudah punya nama ini',
     nameTakenReplace: 'Skill saya sudah punya nama ini; menyimpan akan menggantinya',
+    sameNameOn:
+      'Skill dengan nama yang sama sedang aktif ({sources}). Jika disimpan, skill Anda yang dipakai dan skill itu dimatikan.',
+    saveTurnOff: 'Simpan dan matikan skill itu',
     saveFailed: 'Tidak dapat menyimpan',
     trashFailed:
       'Skill yang digantikan tidak dapat dipindahkan ke tempat sampah, jadi tidak ada yang disimpan',
@@ -368,6 +421,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   ru: {
     cardNewTitle: 'Новый навык',
     cardEditTitle: 'Изменить навык',
+    fieldTitle: 'Заголовок',
+    titleHint: 'Показывается в списках, на любом языке. Оставьте пустым, чтобы показывалось имя',
     fieldDescription: 'Описание',
     fieldBody: 'Инструкции',
     fieldName: 'Имя',
@@ -393,12 +448,15 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameEmpty: 'Введите имя',
     nameTooLong: 'Имя — не больше 64 символов',
     nameCharacters:
-      'В имени можно использовать только строчные английские буквы, цифры и дефисы (-)',
+      'В имени можно использовать только строчные английские буквы, цифры и дефисы (-). Заголовок на своём языке впишите в поле «Заголовок» выше',
     nameHyphenEdge: 'Имя не может начинаться или заканчиваться дефисом (-)',
     nameDoubleHyphen: 'В имени не может быть двух дефисов подряд (--)',
     nameReserved: 'Это имя нельзя использовать',
     nameTaken: 'В моих навыках уже есть навык с таким именем',
     nameTakenReplace: 'В моих навыках уже есть навык с таким именем; сохранение заменит его',
+    sameNameOn:
+      'Навык с таким же именем включён ({sources}). Если сохранить, вместо него будет использоваться ваш навык, а тот будет выключен.',
+    saveTurnOff: 'Сохранить и выключить тот навык',
     saveFailed: 'Не удалось сохранить',
     trashFailed: 'Не удалось переместить заменяемый навык в корзину, поэтому ничего не сохранено',
     noBridge: 'В этом окне нельзя сохранять навыки',
@@ -408,6 +466,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   ar: {
     cardNewTitle: 'مهارة جديدة',
     cardEditTitle: 'تعديل المهارة',
+    fieldTitle: 'العنوان',
+    titleHint: 'يظهر في القوائم بأي لغة. اتركه فارغًا ليظهر الاسم',
     fieldDescription: 'الوصف',
     fieldBody: 'التعليمات',
     fieldName: 'الاسم',
@@ -431,12 +491,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'جارٍ التحقق من الاسم…',
     nameEmpty: 'أدخل اسمًا',
     nameTooLong: 'يصل الاسم إلى 64 حرفًا',
-    nameCharacters: 'لا يقبل الاسم إلا الأحرف الإنجليزية الصغيرة والأرقام والشرطات (-)',
+    nameCharacters:
+      'لا يقبل الاسم إلا الأحرف الإنجليزية الصغيرة والأرقام والشرطات (-). اكتب العنوان بلغتك في حقل العنوان أعلاه',
     nameHyphenEdge: 'لا يمكن أن يبدأ الاسم أو ينتهي بشرطة (-)',
     nameDoubleHyphen: 'لا يمكن أن يحتوي الاسم على شرطتين متتاليتين (--)',
     nameReserved: 'لا يمكن استخدام هذا الاسم',
     nameTaken: 'توجد في مهاراتي مهارة بهذا الاسم',
     nameTakenReplace: 'توجد في مهاراتي مهارة بهذا الاسم؛ الحفظ يستبدلها',
+    sameNameOn:
+      'توجد مهارة بالاسم نفسه مفعّلة ({sources}). إذا حفظت، ستُستخدم مهارتك بدلًا منها وسيتم إيقاف تلك المهارة.',
+    saveTurnOff: 'حفظ وإيقاف تلك المهارة',
     saveFailed: 'تعذّر الحفظ',
     trashFailed: 'تعذّر نقل المهارة التي تحل محلها إلى سلة المهملات، فلم يُحفظ شيء',
     noBridge: 'لا يمكن حفظ المهارات في هذه النافذة',
@@ -446,6 +510,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   pt: {
     cardNewTitle: 'Nova habilidade',
     cardEditTitle: 'Alterar habilidade',
+    fieldTitle: 'Título',
+    titleHint: 'Aparece nas listas, em qualquer idioma. Deixe vazio para mostrar o nome',
     fieldDescription: 'Descrição',
     fieldBody: 'Instruções',
     fieldName: 'Nome',
@@ -470,12 +536,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'Verificando o nome…',
     nameEmpty: 'Digite um nome',
     nameTooLong: 'O nome pode ter até 64 caracteres',
-    nameCharacters: 'O nome só pode ter letras inglesas minúsculas, números e hífens (-)',
+    nameCharacters:
+      'O nome só pode ter letras inglesas minúsculas, números e hífens (-). Escreva um título no seu idioma no campo Título acima',
     nameHyphenEdge: 'O nome não pode começar nem terminar com hífen (-)',
     nameDoubleHyphen: 'O nome não pode ter dois hífens seguidos (--)',
     nameReserved: 'Este nome não pode ser usado',
     nameTaken: 'Minhas habilidades já têm uma com este nome',
     nameTakenReplace: 'Minhas habilidades já têm uma com este nome; salvar a substitui',
+    sameNameOn:
+      'Uma habilidade com o mesmo nome está ativada ({sources}). Se salvar, a sua será usada no lugar dela e a outra será desativada.',
+    saveTurnOff: 'Salvar e desativar a outra',
     saveFailed: 'Não foi possível salvar',
     trashFailed:
       'Não foi possível mover para a lixeira a habilidade que ela substitui, então nada foi salvo',
@@ -486,6 +556,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   it: {
     cardNewTitle: 'Nuova abilità',
     cardEditTitle: 'Modifica abilità',
+    fieldTitle: 'Titolo',
+    titleHint: 'Mostrato negli elenchi, in qualsiasi lingua. Lascialo vuoto per mostrare il nome',
     fieldDescription: 'Descrizione',
     fieldBody: 'Istruzioni',
     fieldName: 'Nome',
@@ -510,12 +582,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'Controllo del nome…',
     nameEmpty: 'Inserisci un nome',
     nameTooLong: 'Il nome può avere fino a 64 caratteri',
-    nameCharacters: 'Il nome può contenere solo lettere inglesi minuscole, cifre e trattini (-)',
+    nameCharacters:
+      'Il nome può contenere solo lettere inglesi minuscole, cifre e trattini (-). Scrivi un titolo nella tua lingua nel campo Titolo qui sopra',
     nameHyphenEdge: 'Il nome non può iniziare né finire con un trattino (-)',
     nameDoubleHyphen: 'Il nome non può avere due trattini di seguito (--)',
     nameReserved: 'Questo nome non si può usare',
     nameTaken: 'Le mie abilità ne hanno già una con questo nome',
     nameTakenReplace: 'Le mie abilità ne hanno già una con questo nome; salvando la sostituisci',
+    sameNameOn:
+      'Un’abilità con lo stesso nome è attiva ({sources}). Se salvi, verrà usata la tua al suo posto e l’altra verrà disattivata.',
+    saveTurnOff: 'Salva e disattiva l’altra',
     saveFailed: 'Impossibile salvare',
     trashFailed:
       'Non è stato possibile spostare nel cestino l’abilità che sostituisce, quindi non è stato salvato nulla',
@@ -526,6 +602,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   pl: {
     cardNewTitle: 'Nowa umiejętność',
     cardEditTitle: 'Zmień umiejętność',
+    fieldTitle: 'Tytuł',
+    titleHint: 'Widoczny na listach, w dowolnym języku. Zostaw puste, aby pokazywać nazwę',
     fieldDescription: 'Opis',
     fieldBody: 'Instrukcje',
     fieldName: 'Nazwa',
@@ -550,12 +628,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'Sprawdzanie nazwy…',
     nameEmpty: 'Wpisz nazwę',
     nameTooLong: 'Nazwa może mieć do 64 znaków',
-    nameCharacters: 'Nazwa może zawierać tylko małe litery angielskie, cyfry i łączniki (-)',
+    nameCharacters:
+      'Nazwa może zawierać tylko małe litery angielskie, cyfry i łączniki (-). Tytuł w swoim języku wpisz w polu Tytuł powyżej',
     nameHyphenEdge: 'Nazwa nie może zaczynać się ani kończyć łącznikiem (-)',
     nameDoubleHyphen: 'Nazwa nie może mieć dwóch łączników z rzędu (--)',
     nameReserved: 'Tej nazwy nie można użyć',
     nameTaken: 'Moje umiejętności mają już taką nazwę',
     nameTakenReplace: 'Moje umiejętności mają już taką nazwę; zapisanie ją zastąpi',
+    sameNameOn:
+      'Umiejętność o tej samej nazwie jest włączona ({sources}). Po zapisaniu zamiast niej będzie używana Twoja, a tamta zostanie wyłączona.',
+    saveTurnOff: 'Zapisz i wyłącz tamtą',
     saveFailed: 'Nie udało się zapisać',
     trashFailed:
       'Nie udało się przenieść zastępowanej umiejętności do kosza, więc nic nie zapisano',
@@ -566,6 +648,9 @@ export const SKILL_CARD_STRINGS = defineStrings({
   cs: {
     cardNewTitle: 'Nová dovednost',
     cardEditTitle: 'Změnit dovednost',
+    fieldTitle: 'Název',
+    titleHint:
+      'Zobrazuje se v seznamech, v libovolném jazyce. Když ho necháte prázdný, zobrazí se jméno',
     fieldDescription: 'Popis',
     fieldBody: 'Pokyny',
     fieldName: 'Jméno',
@@ -590,12 +675,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'Kontrola jména…',
     nameEmpty: 'Zadejte jméno',
     nameTooLong: 'Jméno může mít nejvýše 64 znaků',
-    nameCharacters: 'Jméno smí obsahovat jen malá anglická písmena, číslice a spojovníky (-)',
+    nameCharacters:
+      'Jméno smí obsahovat jen malá anglická písmena, číslice a spojovníky (-). Název ve svém jazyce napište do pole Název nahoře',
     nameHyphenEdge: 'Jméno nesmí začínat ani končit spojovníkem (-)',
     nameDoubleHyphen: 'Jméno nesmí obsahovat dva spojovníky za sebou (--)',
     nameReserved: 'Toto jméno nelze použít',
     nameTaken: 'Mezi mými dovednostmi už je jedna s tímto jménem',
     nameTakenReplace: 'Mezi mými dovednostmi už je jedna s tímto jménem; uložení ji nahradí',
+    sameNameOn:
+      'Dovednost se stejným jménem je zapnutá ({sources}). Po uložení se místo ní použije vaše a ta druhá se vypne.',
+    saveTurnOff: 'Uložit a tu druhou vypnout',
     saveFailed: 'Uložení se nezdařilo',
     trashFailed:
       'Dovednost, kterou nahrazuje, nebylo možné přesunout do koše, proto se nic neuložilo',
@@ -606,6 +695,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   nl: {
     cardNewTitle: 'Nieuwe vaardigheid',
     cardEditTitle: 'Vaardigheid wijzigen',
+    fieldTitle: 'Titel',
+    titleHint: 'Staat in lijsten, in elke taal. Laat leeg om de naam te tonen',
     fieldDescription: 'Beschrijving',
     fieldBody: 'Instructies',
     fieldName: 'Naam',
@@ -631,12 +722,15 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameEmpty: 'Vul een naam in',
     nameTooLong: 'De naam mag hoogstens 64 tekens hebben',
     nameCharacters:
-      'De naam mag alleen kleine Engelse letters, cijfers en koppeltekens (-) bevatten',
+      'De naam mag alleen kleine Engelse letters, cijfers en koppeltekens (-) bevatten. Schrijf een titel in uw eigen taal in het veld Titel hierboven',
     nameHyphenEdge: 'De naam mag niet met een koppelteken (-) beginnen of eindigen',
     nameDoubleHyphen: 'De naam mag geen twee koppeltekens achter elkaar (--) bevatten',
     nameReserved: 'Deze naam kan niet worden gebruikt',
     nameTaken: 'Mijn vaardigheden hebben er al een met deze naam',
     nameTakenReplace: 'Mijn vaardigheden hebben er al een met deze naam; opslaan vervangt die',
+    sameNameOn:
+      'Een vaardigheid met dezelfde naam staat aan ({sources}). Als u opslaat, wordt die van u in plaats daarvan gebruikt en wordt de andere uitgezet.',
+    saveTurnOff: 'Opslaan en de andere uitzetten',
     saveFailed: 'Opslaan is mislukt',
     trashFailed:
       'De vaardigheid die wordt vervangen kon niet naar de prullenbak, dus er is niets opgeslagen',
@@ -647,6 +741,9 @@ export const SKILL_CARD_STRINGS = defineStrings({
   ms: {
     cardNewTitle: 'Kemahiran baharu',
     cardEditTitle: 'Ubah kemahiran',
+    fieldTitle: 'Tajuk',
+    titleHint:
+      'Dipaparkan dalam senarai, dalam apa-apa bahasa. Biarkan kosong untuk memaparkan nama',
     fieldDescription: 'Keterangan',
     fieldBody: 'Arahan',
     fieldName: 'Nama',
@@ -671,12 +768,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'Menyemak nama…',
     nameEmpty: 'Masukkan nama',
     nameTooLong: 'Nama boleh mempunyai hingga 64 aksara',
-    nameCharacters: 'Nama hanya boleh menggunakan huruf kecil Inggeris, digit dan sengkang (-)',
+    nameCharacters:
+      'Nama hanya boleh menggunakan huruf kecil Inggeris, digit dan sengkang (-). Tulis tajuk dalam bahasa anda di medan Tajuk di atas',
     nameHyphenEdge: 'Nama tidak boleh bermula atau berakhir dengan sengkang (-)',
     nameDoubleHyphen: 'Nama tidak boleh mempunyai dua sengkang berturut-turut (--)',
     nameReserved: 'Nama ini tidak boleh digunakan',
     nameTaken: 'Kemahiran saya sudah ada nama ini',
     nameTakenReplace: 'Kemahiran saya sudah ada nama ini; menyimpan akan menggantikannya',
+    sameNameOn:
+      'Kemahiran dengan nama yang sama sedang dihidupkan ({sources}). Jika disimpan, kemahiran anda akan digunakan dan kemahiran itu dimatikan.',
+    saveTurnOff: 'Simpan dan matikan kemahiran itu',
     saveFailed: 'Tidak dapat menyimpan',
     trashFailed:
       'Kemahiran yang diganti tidak dapat dialihkan ke tong sampah, jadi tiada apa-apa disimpan',
@@ -687,6 +788,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   he: {
     cardNewTitle: 'מיומנות חדשה',
     cardEditTitle: 'שינוי מיומנות',
+    fieldTitle: 'כותרת',
+    titleHint: 'מוצגת ברשימות, בכל שפה. השאירו ריק כדי להציג את השם',
     fieldDescription: 'תיאור',
     fieldBody: 'הוראות',
     fieldName: 'שם',
@@ -710,12 +813,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'בודק את השם…',
     nameEmpty: 'יש להזין שם',
     nameTooLong: 'השם יכול להכיל עד 64 תווים',
-    nameCharacters: 'השם יכול להכיל רק אותיות אנגליות קטנות, ספרות ומקפים (-)',
+    nameCharacters:
+      'השם יכול להכיל רק אותיות אנגליות קטנות, ספרות ומקפים (-). כתבו כותרת בשפה שלכם בשדה הכותרת שלמעלה',
     nameHyphenEdge: 'השם לא יכול להתחיל או להסתיים במקף (-)',
     nameDoubleHyphen: 'השם לא יכול להכיל שני מקפים ברצף (--)',
     nameReserved: 'אי אפשר להשתמש בשם הזה',
     nameTaken: 'במיומנויות שלי כבר יש מיומנות בשם הזה',
     nameTakenReplace: 'במיומנויות שלי כבר יש מיומנות בשם הזה; השמירה תחליף אותה',
+    sameNameOn:
+      'מיומנות באותו שם מופעלת ({sources}). אם תשמרו, המיומנות שלכם תשמש במקומה והיא תכובה.',
+    saveTurnOff: 'שמירה וכיבוי המיומנות ההיא',
     saveFailed: 'השמירה נכשלה',
     trashFailed: 'לא ניתן היה להעביר לאשפה את המיומנות שהיא מחליפה, ולכן שום דבר לא נשמר',
     noBridge: 'אי אפשר לשמור מיומנויות בחלון הזה',
@@ -725,6 +832,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   hi: {
     cardNewTitle: 'नया कौशल',
     cardEditTitle: 'कौशल बदलें',
+    fieldTitle: 'शीर्षक',
+    titleHint: 'सूचियों में दिखता है, किसी भी भाषा में लिखें। नाम दिखाने के लिए खाली छोड़ें',
     fieldDescription: 'विवरण',
     fieldBody: 'निर्देश',
     fieldName: 'नाम',
@@ -749,12 +858,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'नाम जाँचा जा रहा है…',
     nameEmpty: 'नाम लिखें',
     nameTooLong: 'नाम अधिकतम 64 वर्ण का हो सकता है',
-    nameCharacters: 'नाम में केवल छोटे अंग्रेज़ी अक्षर, अंक और हाइफ़न (-) हो सकते हैं',
+    nameCharacters:
+      'नाम में केवल छोटे अंग्रेज़ी अक्षर, अंक और हाइफ़न (-) हो सकते हैं। अपनी भाषा का शीर्षक ऊपर शीर्षक वाले खाने में लिखें',
     nameHyphenEdge: 'नाम हाइफ़न (-) से शुरू या खत्म नहीं हो सकता',
     nameDoubleHyphen: 'नाम में लगातार दो हाइफ़न (--) नहीं हो सकते',
     nameReserved: 'यह नाम इस्तेमाल नहीं किया जा सकता',
     nameTaken: 'मेरे कौशल में इस नाम का कौशल पहले से है',
     nameTakenReplace: 'मेरे कौशल में इस नाम का कौशल पहले से है; सहेजने पर वह बदल जाएगा',
+    sameNameOn:
+      'इसी नाम का एक कौशल चालू है ({sources})। सहेजने पर उसकी जगह आपका कौशल इस्तेमाल होगा और वह बंद हो जाएगा।',
+    saveTurnOff: 'सहेजें और उसे बंद करें',
     saveFailed: 'सहेजा नहीं जा सका',
     trashFailed:
       'जिस कौशल की जगह यह आता है उसे ट्रैश में नहीं ले जाया जा सका, इसलिए कुछ भी सहेजा नहीं गया',
@@ -765,6 +878,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   'zh-TW': {
     cardNewTitle: '建立技能',
     cardEditTitle: '修改技能',
+    fieldTitle: '標題',
+    titleHint: '顯示在清單中的標題，可以用任何語言填寫。留空則顯示名稱',
     fieldDescription: '說明',
     fieldBody: '內文',
     fieldName: '名稱',
@@ -788,12 +903,14 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: '正在檢查名稱…',
     nameEmpty: '請填寫名稱',
     nameTooLong: '名稱最多 64 個字元',
-    nameCharacters: '名稱只能使用英文小寫字母、數字和連字號(-)',
+    nameCharacters: '名稱只能使用英文小寫字母、數字和連字號(-)。中文標題請填寫在上方的標題欄',
     nameHyphenEdge: '名稱不能以連字號(-)開頭或結尾',
     nameDoubleHyphen: '名稱中不能連續使用兩個連字號(--)',
     nameReserved: '不能使用此名稱',
     nameTaken: '我的技能中已有同名技能',
     nameTakenReplace: '我的技能中已有同名技能，儲存後將取代它',
+    sameNameOn: '已有同名技能處於開啟狀態（{sources}）。儲存後將改用我的技能，並關閉該技能。',
+    saveTurnOff: '儲存並關閉該技能',
     saveFailed: '無法儲存',
     trashFailed: '無法將要取代的技能移到資源回收筒，因此沒有儲存任何內容',
     noBridge: '此視窗無法儲存技能',
@@ -803,6 +920,8 @@ export const SKILL_CARD_STRINGS = defineStrings({
   vi: {
     cardNewTitle: 'Kỹ năng mới',
     cardEditTitle: 'Sửa kỹ năng',
+    fieldTitle: 'Tiêu đề',
+    titleHint: 'Hiển thị trong danh sách, bằng ngôn ngữ nào cũng được. Để trống thì hiện tên',
     fieldDescription: 'Mô tả',
     fieldBody: 'Hướng dẫn',
     fieldName: 'Tên',
@@ -827,12 +946,16 @@ export const SKILL_CARD_STRINGS = defineStrings({
     nameChecking: 'Đang kiểm tra tên…',
     nameEmpty: 'Hãy nhập tên',
     nameTooLong: 'Tên dài tối đa 64 ký tự',
-    nameCharacters: 'Tên chỉ được dùng chữ thường tiếng Anh, chữ số và dấu gạch ngang (-)',
+    nameCharacters:
+      'Tên chỉ được dùng chữ thường tiếng Anh, chữ số và dấu gạch ngang (-). Hãy viết tiêu đề bằng ngôn ngữ của bạn vào ô Tiêu đề ở trên',
     nameHyphenEdge: 'Tên không được bắt đầu hoặc kết thúc bằng dấu gạch ngang (-)',
     nameDoubleHyphen: 'Tên không được có hai dấu gạch ngang liền nhau (--)',
     nameReserved: 'Không thể dùng tên này',
     nameTaken: 'Kỹ năng của tôi đã có tên này',
     nameTakenReplace: 'Kỹ năng của tôi đã có tên này; khi lưu sẽ thay thế kỹ năng đó',
+    sameNameOn:
+      'Một kỹ năng cùng tên đang bật ({sources}). Nếu lưu, kỹ năng của bạn sẽ được dùng thay và kỹ năng kia sẽ bị tắt.',
+    saveTurnOff: 'Lưu và tắt kỹ năng kia',
     saveFailed: 'Không lưu được',
     trashFailed: 'Không thể chuyển kỹ năng bị thay thế vào thùng rác nên chưa lưu gì',
     noBridge: 'Không thể lưu kỹ năng trong cửa sổ này',
