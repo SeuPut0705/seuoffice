@@ -11,10 +11,11 @@
 //! input errors are replies, never panics.
 
 use docx_engine::scan::{BodyScan, scan_body};
-use ooxml_pkg::{decode_text, read_entries};
+use ooxml_pkg::{decode_text, needs_ooxml_normalization, normalize_ooxml_xml, read_entries};
 use ooxml_xml::{Utf16Map, parse_ordered, serialize};
 use serde::{Deserialize, Serialize};
 
+mod package;
 mod props;
 
 const PROTOCOL_VERSION: u8 = 1;
@@ -32,6 +33,14 @@ enum Command {
     ZipEntries,
     /// Calls the property readers. The reply has one list of outcomes per input.
     Props { inputs: Vec<props::Input> },
+    /// Blob 0: a docx. The reply is the package as `loadDocxZip` opens it and
+    /// the values `parseDocx` reads from it before the body, or the refusal.
+    Package,
+    /// The same values for a package given as named texts, without a zip.
+    PackageParts { parts: Vec<package::WirePart> },
+    /// Every blob: a part as UTF-8. Reply blob `i`: part `i` as
+    /// `normalizeOoxmlXml` rewrites it, as UTF-8.
+    NormalizeOoxml,
 }
 
 #[derive(Deserialize)]
@@ -44,11 +53,28 @@ struct Request {
 #[derive(Serialize)]
 #[serde(untagged)]
 enum Reply<'a> {
-    Scan { scan: WireScan<'a> },
-    RoundTrip { results: Vec<RoundTrip> },
-    Entries { entries: Vec<WireEntry> },
-    Props { results: Vec<Vec<props::Outcome>> },
-    Failure { error: Failure },
+    Scan {
+        scan: WireScan<'a>,
+    },
+    RoundTrip {
+        results: Vec<RoundTrip>,
+    },
+    Entries {
+        entries: Vec<WireEntry>,
+    },
+    Props {
+        results: Vec<Vec<props::Outcome>>,
+    },
+    Package {
+        package: package::Opened,
+    },
+    /// Per part, what `needsOoxmlNormalization` answers.
+    Normalized {
+        needed: Vec<bool>,
+    },
+    Failure {
+        error: Failure,
+    },
 }
 
 #[derive(Serialize)]
@@ -235,6 +261,19 @@ fn zip_entries(container: &[u8], reply_blobs: &mut Vec<Vec<u8>>) -> Vec<u8> {
     json(&Reply::Entries { entries })
 }
 
+fn normalize(parts: &[&[u8]], reply_blobs: &mut Vec<Vec<u8>>) -> Vec<u8> {
+    let mut needed = Vec::with_capacity(parts.len());
+    for part in parts {
+        let xml = match std::str::from_utf8(part) {
+            Ok(xml) => xml,
+            Err(error) => return json(&Reply::failure("invalid_request", error)),
+        };
+        needed.push(needs_ooxml_normalization(xml));
+        reply_blobs.push(normalize_ooxml_xml(xml).into_bytes());
+    }
+    json(&Reply::Normalized { needed })
+}
+
 fn respond(input: &[u8]) -> Vec<u8> {
     let mut reply_blobs = Vec::new();
     let header = match decode_frame(input) {
@@ -255,9 +294,16 @@ fn respond(input: &[u8]) -> Vec<u8> {
                 (Command::Props { inputs }, _) => json(&Reply::Props {
                     results: inputs.iter().map(props::run).collect(),
                 }),
+                (Command::PackageParts { parts }, _) => json(&Reply::Package {
+                    package: package::from_parts(parts),
+                }),
+                (Command::NormalizeOoxml, _) => normalize(&frame.blobs, &mut reply_blobs),
                 (Command::ScanBody, Some(xml)) => scan(xml),
                 (Command::ZipEntries, Some(container)) => zip_entries(container, &mut reply_blobs),
-                (Command::ScanBody | Command::ZipEntries, None) => {
+                (Command::Package, Some(docx)) => json(&Reply::Package {
+                    package: package::open(docx),
+                }),
+                (Command::ScanBody | Command::ZipEntries | Command::Package, None) => {
                     json(&Reply::failure("invalid_request", "blob 0 is missing"))
                 }
             },
