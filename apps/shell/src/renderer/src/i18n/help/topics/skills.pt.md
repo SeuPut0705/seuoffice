@@ -124,8 +124,12 @@ Quando cria uma habilidade no painel de IA de um editor, o documento atual pode 
 | `pptx`                        | Funciona só na janela do agente. Executa scripts para criar, editar e ler arquivos .pptx na pasta do projeto. Este PC precisa ter o Python e outros programas instalados                          |
 | `xlsx`                        | Funciona só na janela do agente. Executa scripts para criar e editar arquivos .xlsx na pasta do projeto e recalcular as fórmulas. Este PC precisa ter o Python e outros programas instalados      |
 | `pdf`                         | Funciona só na janela do agente. Executa scripts para ler, juntar e dividir arquivos .pdf na pasta do projeto e preencher formulários. Este PC precisa ter o Python e outros programas instalados |
+| `hwp-document`                | Escreve um novo documento .hwp ou .hwpx do zero: escolhe a estrutura de relatório, plano, aviso, ofício ou ata, escreve no estilo do documento e confere o resultado                              |
+| `mindmap`                     | Monta um mapa mental a partir de um tema ou de materiais: de três a sete ramos principais equilibrados, títulos curtos com o detalhe nas notas e uma conferência da estrutura no final            |
+| `diagram`                     | Desenha um diagrama claro: escolhe o tipo adequado, mantém uma só direção, rótulos curtos e poucas cores, e confere sobreposições e formas soltas                                                 |
+| `html-document`               | Cria um documento HTML bom de ler na tela e limpo na impressão: define primeiro o leitor, o tamanho e o papel, depois confere as páginas e o conteúdo                                             |
 
-`copy-editing` foi feita para textos de marketing em inglês. `find-skills` só funciona na janela do agente. Em **Ver conteúdo** de uma habilidade integrada, a descrição aparece no idioma da interface e as instruções são o texto entregue à IA, mostrado como foi escrito (em inglês). `docx`, `pptx`, `xlsx` e `pdf` funcionam só na janela do agente; eles executam scripts, por isso este PC precisa ter o Python e outros programas instalados.
+`copy-editing` foi feita para textos de marketing em inglês. `find-skills` só funciona na janela do agente. Em **Ver conteúdo** de uma habilidade integrada, a descrição aparece no idioma da interface e as instruções são o texto entregue à IA, mostrado como foi escrito (em inglês). `docx`, `pptx`, `xlsx` e `pdf` funcionam só na janela do agente; eles executam scripts, por isso este PC precisa ter o Python e outros programas instalados. `hwp-document`, `mindmap`, `diagram` e `html-document` são usados apenas no editor para o qual cada um foi escrito.
 
 ## Na janela do agente
 

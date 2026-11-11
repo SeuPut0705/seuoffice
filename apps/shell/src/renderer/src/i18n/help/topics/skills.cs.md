@@ -124,8 +124,12 @@ Když vytváříte dovednost v panelu AI editoru, může s ní jako šablona jí
 | `pptx`                        | Funguje jen v okně agenta. Spouští skripty, které vytvářejí, upravují a čtou soubory .pptx ve složce projektu. Na tomto počítači musí být nainstalován Python a další programy                  |
 | `xlsx`                        | Funguje jen v okně agenta. Spouští skripty, které vytvářejí a upravují soubory .xlsx ve složce projektu a přepočítávají vzorce. Na tomto počítači musí být nainstalován Python a další programy |
 | `pdf`                         | Funguje jen v okně agenta. Spouští skripty, které čtou, slučují a dělí soubory .pdf ve složce projektu a vyplňují formuláře. Na tomto počítači musí být nainstalován Python a další programy    |
+| `hwp-document`                | Napíše od začátku nový dokument .hwp nebo .hwpx: zvolí stavbu zprávy, plánu, oznámení, úředního dopisu nebo zápisu, píše stylem dokumentu a výsledek zkontroluje                                |
+| `mindmap`                     | Sestaví myšlenkovou mapu z tématu nebo podkladů: tři až sedm vyvážených hlavních větví, krátké názvy s podrobnostmi v poznámkách a na konci kontrola struktury                                  |
+| `diagram`                     | Nakreslí přehledný diagram: zvolí vhodný typ, drží jeden směr, krátké popisky a málo barev a zkontroluje překryvy a nepřipojené tvary                                                           |
+| `html-document`               | Vytvoří dokument HTML, který se dobře čte na obrazovce a čistě tiskne: nejdřív určí čtenáře, rozsah a papír, potom zkontroluje stránky a obsah                                                  |
 
-`copy-editing` je určena pro anglické marketingové texty. `find-skills` funguje jen v okně agenta. V okně **Zobrazit obsah** vestavěné dovednosti je popis v jazyce rozhraní a pokyny jsou text, který dostává AI, zobrazený beze změny (anglicky). `docx`, `pptx`, `xlsx` a `pdf` fungují jen v okně agenta; spouštějí skripty, proto musí být na tomto počítači nainstalován Python a další programy.
+`copy-editing` je určena pro anglické marketingové texty. `find-skills` funguje jen v okně agenta. V okně **Zobrazit obsah** vestavěné dovednosti je popis v jazyce rozhraní a pokyny jsou text, který dostává AI, zobrazený beze změny (anglicky). `docx`, `pptx`, `xlsx` a `pdf` fungují jen v okně agenta; spouštějí skripty, proto musí být na tomto počítači nainstalován Python a další programy. `hwp-document`, `mindmap`, `diagram` a `html-document` se používají jen v editoru, pro který je každá z nich napsána.
 
 ## V okně agenta
 

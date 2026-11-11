@@ -16,6 +16,10 @@ export const BUILTIN_SKILL_NAMES = [
   'pptx',
   'xlsx',
   'pdf',
+  'hwp-document',
+  'mindmap',
+  'diagram',
+  'html-document',
 ] as const
 
 export type BuiltinSkillName = (typeof BUILTIN_SKILL_NAMES)[number]
@@ -38,6 +42,14 @@ const zh = {
     '仅在智能体窗口中可用。运行脚本，在项目文件夹中创建和修改 .xlsx 文件，并重新计算公式。这台电脑上需要装有 Python 等程序。',
   'builtinSkillDesc.pdf':
     '仅在智能体窗口中可用。运行脚本，在项目文件夹中读取、合并和拆分 .pdf 文件，并填写表单。这台电脑上需要装有 Python 等程序。',
+  'builtinSkillDesc.hwp-document':
+    '从头撰写 .hwp、.hwpx 文档：按报告、计划、通知、公文、会议记录选定结构，用公文语体撰写，最后进行检查。',
+  'builtinSkillDesc.mindmap':
+    '根据主题或资料制作思维导图：均衡地设 3 到 7 个主分支，标题简短、说明放在备注里，最后检查结构。',
+  'builtinSkillDesc.diagram':
+    '绘制清晰易读的图表：选对图表类型，流向保持一个方向，文字简短、颜色少用，并检查重叠和孤立的图形。',
+  'builtinSkillDesc.html-document':
+    '制作屏幕上好读、打印也整洁的 HTML 文档：先确定读者、篇幅和纸张，再检查分页和内容。',
 }
 
 /**
@@ -70,6 +82,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Works only in the agent window. Runs scripts to create and edit .xlsx files in the project folder and recalculate their formulas. Python and other programs must be installed on this PC.',
     'builtinSkillDesc.pdf':
       'Works only in the agent window. Runs scripts to read, merge and split .pdf files in the project folder and fill in forms. Python and other programs must be installed on this PC.',
+    'builtinSkillDesc.hwp-document':
+      'Writes a new .hwp or .hwpx document from scratch: picks the parts for a report, plan, notice, official letter or minutes, writes it in document style, and checks it at the end.',
+    'builtinSkillDesc.mindmap':
+      'Builds a mind map from a topic or material: three to seven balanced main branches, short titles with the detail in notes, and a structure check at the end.',
+    'builtinSkillDesc.diagram':
+      'Draws a clear diagram: picks the type that fits, keeps one direction, short labels and few colours, and checks for overlaps and loose shapes.',
+    'builtinSkillDesc.html-document':
+      'Makes an HTML document that reads well on screen and prints cleanly: settles the reader, length and paper first, then checks the pages and the content.',
   },
   ja: {
     'builtinSkillDesc.meeting-minutes':
@@ -93,6 +113,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'エージェントのウィンドウでのみ使えます。スクリプトを実行して、プロジェクトのフォルダーの .xlsx ファイルを作成・編集し、数式を再計算します。この PC に Python などのプログラムが入っている必要があります。',
     'builtinSkillDesc.pdf':
       'エージェントのウィンドウでのみ使えます。スクリプトを実行して、プロジェクトのフォルダーの .pdf ファイルを読み取り、結合・分割し、フォームに入力します。この PC に Python などのプログラムが入っている必要があります。',
+    'builtinSkillDesc.hwp-document':
+      '.hwp・.hwpx の文書を最初から書きます。報告書・計画書・案内文・公文書・議事録に合った構成を選び、文書の文体で書き、最後に点検します。',
+    'builtinSkillDesc.mindmap':
+      'テーマや資料からマインドマップを作ります。主な枝を 3〜7 本でバランスよく取り、タイトルは短く、説明はノートに置き、最後に構成を点検します。',
+    'builtinSkillDesc.diagram':
+      '読みやすい図を描きます。合った種類を選び、流れは一方向に、文字は短く、色は少なくし、重なりや孤立した図形を点検します。',
+    'builtinSkillDesc.html-document':
+      '画面で読みやすく、印刷してもきれいな HTML 文書を作ります。読み手・分量・用紙を先に決め、ページ割りと内容を点検します。',
   },
   ko: {
     'builtinSkillDesc.meeting-minutes':
@@ -117,6 +145,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       '에이전트 창에서만 쓸 수 있습니다. 스크립트를 실행해 프로젝트 폴더의 .xlsx 파일을 만들고 고치고 수식을 다시 계산합니다. 이 PC에 Python 같은 프로그램이 설치되어 있어야 합니다.',
     'builtinSkillDesc.pdf':
       '에이전트 창에서만 쓸 수 있습니다. 스크립트를 실행해 프로젝트 폴더의 .pdf 파일을 읽고 합치고 나누고 양식을 채웁니다. 이 PC에 Python 같은 프로그램이 설치되어 있어야 합니다.',
+    'builtinSkillDesc.hwp-document':
+      '한글 문서(.hwp, .hwpx)를 처음부터 씁니다. 보고서·계획서·안내문·공문·회의록에 맞는 짜임을 고르고, 문서 문체로 쓴 뒤 마지막에 점검합니다.',
+    'builtinSkillDesc.mindmap':
+      '주제나 자료로 마인드맵을 만듭니다. 큰 가지 3~7개를 고르게 잡고, 제목은 짧게 쓰고 설명은 메모에 두며, 마지막에 짜임을 점검합니다.',
+    'builtinSkillDesc.diagram':
+      '읽기 쉬운 다이어그램을 그립니다. 알맞은 종류를 고르고, 흐름은 한 방향으로, 글은 짧게, 색은 적게 쓰며, 겹침과 떨어진 도형을 점검합니다.',
+    'builtinSkillDesc.html-document':
+      '화면에서 읽기 좋고 인쇄해도 깔끔한 HTML 문서를 만듭니다. 읽는 사람·분량·용지를 먼저 정하고, 쪽 나눔과 내용을 점검합니다.',
   },
   fr: {
     'builtinSkillDesc.meeting-minutes':
@@ -141,6 +177,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Fonctionne uniquement dans la fenêtre Agent. Exécute des scripts pour créer et modifier des fichiers .xlsx dans le dossier du projet et recalculer leurs formules. Python et d’autres programmes doivent être installés sur ce PC.',
     'builtinSkillDesc.pdf':
       'Fonctionne uniquement dans la fenêtre Agent. Exécute des scripts pour lire, fusionner et diviser des fichiers .pdf dans le dossier du projet et remplir des formulaires. Python et d’autres programmes doivent être installés sur ce PC.',
+    'builtinSkillDesc.hwp-document':
+      'Rédige un nouveau document .hwp ou .hwpx à partir de zéro : choisit la structure d’un rapport, d’un plan, d’un avis, d’une lettre officielle ou d’un compte rendu, écrit dans le style du document et vérifie le résultat.',
+    'builtinSkillDesc.mindmap':
+      'Construit une carte mentale à partir d’un sujet ou de documents : trois à sept branches principales équilibrées, des titres courts avec le détail dans les notes, et une vérification de la structure à la fin.',
+    'builtinSkillDesc.diagram':
+      'Dessine un diagramme clair : choisit le type adapté, garde un seul sens de lecture, des libellés courts et peu de couleurs, puis vérifie les chevauchements et les formes isolées.',
+    'builtinSkillDesc.html-document':
+      'Crée un document HTML agréable à lire à l’écran et propre à l’impression : fixe d’abord le lecteur, la longueur et le papier, puis vérifie les pages et le contenu.',
   },
   de: {
     'builtinSkillDesc.meeting-minutes':
@@ -165,6 +209,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .xlsx-Dateien im Projektordner zu erstellen und zu bearbeiten und ihre Formeln neu zu berechnen. Auf diesem PC müssen Python und weitere Programme installiert sein.',
     'builtinSkillDesc.pdf':
       'Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .pdf-Dateien im Projektordner zu lesen, zusammenzuführen und zu teilen und Formulare auszufüllen. Auf diesem PC müssen Python und weitere Programme installiert sein.',
+    'builtinSkillDesc.hwp-document':
+      'Schreibt ein neues .hwp- oder .hwpx-Dokument von Grund auf: wählt den Aufbau für Bericht, Plan, Mitteilung, amtliches Schreiben oder Protokoll, schreibt im Dokumentstil und prüft das Ergebnis.',
+    'builtinSkillDesc.mindmap':
+      'Baut eine Mindmap aus einem Thema oder Material: drei bis sieben ausgewogene Hauptzweige, kurze Titel mit den Details in Notizen und am Ende eine Prüfung der Struktur.',
+    'builtinSkillDesc.diagram':
+      'Zeichnet ein klares Diagramm: wählt den passenden Typ, hält eine Leserichtung, kurze Beschriftungen und wenige Farben ein und prüft auf Überlappungen und lose Formen.',
+    'builtinSkillDesc.html-document':
+      'Erstellt ein HTML-Dokument, das sich am Bildschirm gut liest und sauber druckt: legt zuerst Leser, Länge und Papier fest und prüft dann Seiten und Inhalt.',
   },
   es: {
     'builtinSkillDesc.meeting-minutes':
@@ -189,6 +241,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Solo funciona en la ventana del agente. Ejecuta scripts para crear y editar archivos .xlsx en la carpeta del proyecto y recalcular sus fórmulas. Este PC debe tener instalados Python y otros programas.',
     'builtinSkillDesc.pdf':
       'Solo funciona en la ventana del agente. Ejecuta scripts para leer, combinar y dividir archivos .pdf en la carpeta del proyecto y rellenar formularios. Este PC debe tener instalados Python y otros programas.',
+    'builtinSkillDesc.hwp-document':
+      'Redacta un documento .hwp o .hwpx nuevo desde cero: elige la estructura de un informe, plan, aviso, oficio o acta, escribe en el estilo del documento y revisa el resultado.',
+    'builtinSkillDesc.mindmap':
+      'Construye un mapa mental a partir de un tema o de materiales: de tres a siete ramas principales equilibradas, títulos cortos con el detalle en las notas y una revisión de la estructura al final.',
+    'builtinSkillDesc.diagram':
+      'Dibuja un diagrama claro: elige el tipo adecuado, mantiene una sola dirección, etiquetas cortas y pocos colores, y revisa solapamientos y formas sueltas.',
+    'builtinSkillDesc.html-document':
+      'Crea un documento HTML que se lee bien en pantalla y se imprime limpio: define primero el lector, la extensión y el papel, y luego revisa las páginas y el contenido.',
   },
   th: {
     'builtinSkillDesc.meeting-minutes':
@@ -213,6 +273,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'ใช้ได้เฉพาะในหน้าต่างเอเจนต์ เรียกใช้สคริปต์เพื่อสร้างและแก้ไขไฟล์ .xlsx ในโฟลเดอร์โปรเจกต์ และคำนวณสูตรใหม่ พีซีเครื่องนี้ต้องติดตั้ง Python และโปรแกรมอื่นไว้',
     'builtinSkillDesc.pdf':
       'ใช้ได้เฉพาะในหน้าต่างเอเจนต์ เรียกใช้สคริปต์เพื่ออ่าน รวม และแยกไฟล์ .pdf ในโฟลเดอร์โปรเจกต์ และกรอกแบบฟอร์ม พีซีเครื่องนี้ต้องติดตั้ง Python และโปรแกรมอื่นไว้',
+    'builtinSkillDesc.hwp-document':
+      'เขียนเอกสาร .hwp หรือ .hwpx ใหม่ตั้งแต่ต้น โดยเลือกโครงสร้างให้เหมาะกับรายงาน แผนงาน ประกาศ หนังสือราชการ หรือรายงานการประชุม เขียนด้วยภาษาเอกสาร แล้วตรวจทานตอนท้าย',
+    'builtinSkillDesc.mindmap':
+      'สร้างแผนผังความคิดจากหัวข้อหรือเอกสาร โดยวางกิ่งหลัก 3 ถึง 7 กิ่งให้สมดุล ตั้งชื่อหัวข้อสั้น ๆ ใส่รายละเอียดไว้ในบันทึก แล้วตรวจโครงสร้างตอนท้าย',
+    'builtinSkillDesc.diagram':
+      'วาดแผนภาพที่อ่านง่าย โดยเลือกชนิดให้เหมาะ ให้ทิศทางไหลไปทางเดียว ใช้ข้อความสั้นและสีน้อย แล้วตรวจการซ้อนทับและรูปร่างที่ไม่ได้เชื่อมต่อ',
+    'builtinSkillDesc.html-document':
+      'สร้างเอกสาร HTML ที่อ่านง่ายบนจอและพิมพ์ออกมาเรียบร้อย โดยกำหนดผู้อ่าน ความยาว และกระดาษก่อน แล้วตรวจการแบ่งหน้าและเนื้อหา',
   },
   id: {
     'builtinSkillDesc.meeting-minutes':
@@ -237,6 +305,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Hanya berfungsi di jendela agen. Menjalankan skrip untuk membuat dan mengedit file .xlsx di folder proyek serta menghitung ulang rumusnya. Python dan program lain harus terpasang di PC ini.',
     'builtinSkillDesc.pdf':
       'Hanya berfungsi di jendela agen. Menjalankan skrip untuk membaca, menggabungkan, dan memisahkan file .pdf di folder proyek serta mengisi formulir. Python dan program lain harus terpasang di PC ini.',
+    'builtinSkillDesc.hwp-document':
+      'Menulis dokumen .hwp atau .hwpx baru dari awal: memilih susunan untuk laporan, rencana, pengumuman, surat resmi, atau notulen, menulis dengan gaya dokumen, lalu memeriksa hasilnya.',
+    'builtinSkillDesc.mindmap':
+      'Menyusun peta pikiran dari topik atau bahan: tiga sampai tujuh cabang utama yang seimbang, judul singkat dengan rincian di catatan, dan pemeriksaan struktur di akhir.',
+    'builtinSkillDesc.diagram':
+      'Menggambar diagram yang jelas: memilih jenis yang sesuai, menjaga satu arah alur, label singkat dan sedikit warna, lalu memeriksa tumpang-tindih dan bentuk yang lepas.',
+    'builtinSkillDesc.html-document':
+      'Membuat dokumen HTML yang enak dibaca di layar dan rapi saat dicetak: menetapkan pembaca, panjang, dan kertas lebih dulu, lalu memeriksa halaman dan isinya.',
   },
   ru: {
     'builtinSkillDesc.meeting-minutes':
@@ -261,6 +337,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Работает только в окне агента. Запускает скрипты, чтобы создавать и изменять файлы .xlsx в папке проекта и пересчитывать формулы. На этом компьютере должны быть установлены Python и другие программы.',
     'builtinSkillDesc.pdf':
       'Работает только в окне агента. Запускает скрипты, чтобы читать, объединять и разделять файлы .pdf в папке проекта и заполнять формы. На этом компьютере должны быть установлены Python и другие программы.',
+    'builtinSkillDesc.hwp-document':
+      'Пишет новый документ .hwp или .hwpx с нуля: выбирает структуру для отчёта, плана, объявления, официального письма или протокола, пишет в стиле документа и проверяет результат.',
+    'builtinSkillDesc.mindmap':
+      'Строит интеллект-карту по теме или материалам: от трёх до семи уравновешенных главных ветвей, короткие заголовки с подробностями в заметках и проверка структуры в конце.',
+    'builtinSkillDesc.diagram':
+      'Рисует понятную диаграмму: выбирает подходящий тип, держит одно направление, короткие подписи и мало цветов, проверяет наложения и несвязанные фигуры.',
+    'builtinSkillDesc.html-document':
+      'Создаёт HTML-документ, который удобно читать на экране и аккуратно печатать: сначала определяет читателя, объём и бумагу, затем проверяет страницы и содержание.',
   },
   ar: {
     'builtinSkillDesc.meeting-minutes':
@@ -284,6 +368,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'يعمل في نافذة الوكيل فقط. يشغّل نصوصًا برمجية لإنشاء ملفات .xlsx في مجلد المشروع وتعديلها وإعادة حساب صيغها. يجب أن يكون Python وبرامج أخرى مثبتة على هذا الكمبيوتر.',
     'builtinSkillDesc.pdf':
       'يعمل في نافذة الوكيل فقط. يشغّل نصوصًا برمجية لقراءة ملفات .pdf في مجلد المشروع ودمجها وتقسيمها وتعبئة النماذج. يجب أن يكون Python وبرامج أخرى مثبتة على هذا الكمبيوتر.',
+    'builtinSkillDesc.hwp-document':
+      'يكتب مستند .hwp أو .hwpx جديدًا من البداية: يختار بنية التقرير أو الخطة أو الإعلان أو الخطاب الرسمي أو محضر الاجتماع، ويكتب بأسلوب المستندات، ثم يراجع النتيجة.',
+    'builtinSkillDesc.mindmap':
+      'ينشئ خريطة ذهنية من موضوع أو مواد: من ثلاثة إلى سبعة فروع رئيسية متوازنة، وعناوين قصيرة مع وضع التفاصيل في الملاحظات، ثم يراجع البنية في النهاية.',
+    'builtinSkillDesc.diagram':
+      'يرسم مخططًا واضحًا: يختار النوع المناسب، ويحافظ على اتجاه واحد وتسميات قصيرة وألوان قليلة، ثم يتحقق من التداخل والأشكال غير الموصولة.',
+    'builtinSkillDesc.html-document':
+      'ينشئ مستند HTML سهل القراءة على الشاشة ومرتبًا عند الطباعة: يحدد القارئ والطول والورق أولًا، ثم يراجع الصفحات والمحتوى.',
   },
   pt: {
     'builtinSkillDesc.meeting-minutes':
@@ -308,6 +400,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Funciona só na janela do agente. Executa scripts para criar e editar arquivos .xlsx na pasta do projeto e recalcular as fórmulas. Este PC precisa ter o Python e outros programas instalados.',
     'builtinSkillDesc.pdf':
       'Funciona só na janela do agente. Executa scripts para ler, juntar e dividir arquivos .pdf na pasta do projeto e preencher formulários. Este PC precisa ter o Python e outros programas instalados.',
+    'builtinSkillDesc.hwp-document':
+      'Escreve um novo documento .hwp ou .hwpx do zero: escolhe a estrutura de relatório, plano, aviso, ofício ou ata, escreve no estilo do documento e confere o resultado.',
+    'builtinSkillDesc.mindmap':
+      'Monta um mapa mental a partir de um tema ou de materiais: de três a sete ramos principais equilibrados, títulos curtos com o detalhe nas notas e uma conferência da estrutura no final.',
+    'builtinSkillDesc.diagram':
+      'Desenha um diagrama claro: escolhe o tipo adequado, mantém uma só direção, rótulos curtos e poucas cores, e confere sobreposições e formas soltas.',
+    'builtinSkillDesc.html-document':
+      'Cria um documento HTML bom de ler na tela e limpo na impressão: define primeiro o leitor, o tamanho e o papel, depois confere as páginas e o conteúdo.',
   },
   it: {
     'builtinSkillDesc.meeting-minutes':
@@ -332,6 +432,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Funziona solo nella finestra dell’agente. Esegue script per creare e modificare file .xlsx nella cartella del progetto e ricalcolarne le formule. Su questo PC devono essere installati Python e altri programmi.',
     'builtinSkillDesc.pdf':
       'Funziona solo nella finestra dell’agente. Esegue script per leggere, unire e dividere file .pdf nella cartella del progetto e compilare moduli. Su questo PC devono essere installati Python e altri programmi.',
+    'builtinSkillDesc.hwp-document':
+      'Scrive da zero un nuovo documento .hwp o .hwpx: sceglie la struttura per relazione, piano, avviso, lettera ufficiale o verbale, scrive nello stile del documento e controlla il risultato.',
+    'builtinSkillDesc.mindmap':
+      'Costruisce una mappa mentale da un argomento o da materiali: da tre a sette rami principali equilibrati, titoli brevi con i dettagli nelle note e un controllo della struttura alla fine.',
+    'builtinSkillDesc.diagram':
+      'Disegna un diagramma chiaro: sceglie il tipo adatto, mantiene una sola direzione, etichette brevi e pochi colori, e controlla sovrapposizioni e forme isolate.',
+    'builtinSkillDesc.html-document':
+      'Crea un documento HTML piacevole da leggere a schermo e pulito in stampa: stabilisce prima lettore, lunghezza e carta, poi controlla le pagine e il contenuto.',
   },
   pl: {
     'builtinSkillDesc.meeting-minutes':
@@ -356,6 +464,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Działa tylko w oknie agenta. Uruchamia skrypty, aby tworzyć i edytować pliki .xlsx w folderze projektu oraz przeliczać formuły. Na tym komputerze muszą być zainstalowane Python i inne programy.',
     'builtinSkillDesc.pdf':
       'Działa tylko w oknie agenta. Uruchamia skrypty, aby odczytywać, scalać i dzielić pliki .pdf w folderze projektu oraz wypełniać formularze. Na tym komputerze muszą być zainstalowane Python i inne programy.',
+    'builtinSkillDesc.hwp-document':
+      'Pisze od zera nowy dokument .hwp lub .hwpx: dobiera układ raportu, planu, ogłoszenia, pisma urzędowego lub protokołu, pisze stylem dokumentu i sprawdza wynik.',
+    'builtinSkillDesc.mindmap':
+      'Buduje mapę myśli z tematu lub materiałów: od trzech do siedmiu zrównoważonych głównych gałęzi, krótkie tytuły ze szczegółami w notatkach i sprawdzenie struktury na końcu.',
+    'builtinSkillDesc.diagram':
+      'Rysuje czytelny diagram: dobiera właściwy typ, trzyma jeden kierunek, krótkie etykiety i niewiele kolorów, a potem sprawdza nakładanie się i luźne kształty.',
+    'builtinSkillDesc.html-document':
+      'Tworzy dokument HTML, który dobrze się czyta na ekranie i czysto drukuje: najpierw ustala czytelnika, długość i papier, potem sprawdza strony i treść.',
   },
   cs: {
     'builtinSkillDesc.meeting-minutes':
@@ -380,6 +496,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Funguje jen v okně agenta. Spouští skripty, které vytvářejí a upravují soubory .xlsx ve složce projektu a přepočítávají vzorce. Na tomto počítači musí být nainstalován Python a další programy.',
     'builtinSkillDesc.pdf':
       'Funguje jen v okně agenta. Spouští skripty, které čtou, slučují a dělí soubory .pdf ve složce projektu a vyplňují formuláře. Na tomto počítači musí být nainstalován Python a další programy.',
+    'builtinSkillDesc.hwp-document':
+      'Napíše od začátku nový dokument .hwp nebo .hwpx: zvolí stavbu zprávy, plánu, oznámení, úředního dopisu nebo zápisu, píše stylem dokumentu a výsledek zkontroluje.',
+    'builtinSkillDesc.mindmap':
+      'Sestaví myšlenkovou mapu z tématu nebo podkladů: tři až sedm vyvážených hlavních větví, krátké názvy s podrobnostmi v poznámkách a na konci kontrola struktury.',
+    'builtinSkillDesc.diagram':
+      'Nakreslí přehledný diagram: zvolí vhodný typ, drží jeden směr, krátké popisky a málo barev a zkontroluje překryvy a nepřipojené tvary.',
+    'builtinSkillDesc.html-document':
+      'Vytvoří dokument HTML, který se dobře čte na obrazovce a čistě tiskne: nejdřív určí čtenáře, rozsah a papír, potom zkontroluje stránky a obsah.',
   },
   nl: {
     'builtinSkillDesc.meeting-minutes':
@@ -404,6 +528,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Werkt alleen in het agentvenster. Voert scripts uit om .xlsx-bestanden in de projectmap te maken en te bewerken en de formules opnieuw te berekenen. Op deze pc moeten Python en andere programma’s zijn geïnstalleerd.',
     'builtinSkillDesc.pdf':
       'Werkt alleen in het agentvenster. Voert scripts uit om .pdf-bestanden in de projectmap te lezen, samen te voegen en te splitsen en formulieren in te vullen. Op deze pc moeten Python en andere programma’s zijn geïnstalleerd.',
+    'builtinSkillDesc.hwp-document':
+      'Schrijft een nieuw .hwp- of .hwpx-document vanaf nul: kiest de opbouw voor een rapport, plan, mededeling, officiële brief of notulen, schrijft in documentstijl en controleert het resultaat.',
+    'builtinSkillDesc.mindmap':
+      'Bouwt een mindmap uit een onderwerp of materiaal: drie tot zeven evenwichtige hoofdtakken, korte titels met de details in notities en aan het eind een controle van de structuur.',
+    'builtinSkillDesc.diagram':
+      'Tekent een duidelijk diagram: kiest het passende type, houdt één richting aan, korte labels en weinig kleuren, en controleert op overlappingen en losse vormen.',
+    'builtinSkillDesc.html-document':
+      'Maakt een HTML-document dat prettig leest op het scherm en netjes afdrukt: legt eerst lezer, lengte en papier vast en controleert daarna de pagina’s en de inhoud.',
   },
   ms: {
     'builtinSkillDesc.meeting-minutes':
@@ -428,6 +560,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Hanya berfungsi dalam tetingkap ejen. Menjalankan skrip untuk mencipta dan mengedit fail .xlsx dalam folder projek serta mengira semula formulanya. Python dan program lain mesti dipasang pada PC ini.',
     'builtinSkillDesc.pdf':
       'Hanya berfungsi dalam tetingkap ejen. Menjalankan skrip untuk membaca, menggabungkan dan memisahkan fail .pdf dalam folder projek serta mengisi borang. Python dan program lain mesti dipasang pada PC ini.',
+    'builtinSkillDesc.hwp-document':
+      'Menulis dokumen .hwp atau .hwpx baharu dari awal: memilih susunan untuk laporan, rancangan, notis, surat rasmi atau minit mesyuarat, menulis dalam gaya dokumen, kemudian menyemak hasilnya.',
+    'builtinSkillDesc.mindmap':
+      'Membina peta minda daripada topik atau bahan: tiga hingga tujuh cabang utama yang seimbang, tajuk ringkas dengan butiran dalam nota, dan semakan struktur pada akhirnya.',
+    'builtinSkillDesc.diagram':
+      'Melukis rajah yang jelas: memilih jenis yang sesuai, mengekalkan satu arah aliran, label ringkas dan sedikit warna, kemudian menyemak pertindihan dan bentuk yang terlepas.',
+    'builtinSkillDesc.html-document':
+      'Membuat dokumen HTML yang selesa dibaca pada skrin dan kemas apabila dicetak: menetapkan pembaca, panjang dan kertas dahulu, kemudian menyemak halaman dan kandungannya.',
   },
   he: {
     'builtinSkillDesc.meeting-minutes': 'הופך רשימות מפגישה לסיכום שמציג את ההחלטות ואת המשימות.',
@@ -451,6 +591,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'פועל רק בחלון הסוכן. מריץ סקריפטים כדי ליצור ולערוך קובצי .xlsx בתיקיית הפרויקט ולחשב מחדש את הנוסחאות. Python ותוכנות נוספות צריכות להיות מותקנות במחשב הזה.',
     'builtinSkillDesc.pdf':
       'פועל רק בחלון הסוכן. מריץ סקריפטים כדי לקרוא, למזג ולפצל קובצי .pdf בתיקיית הפרויקט ולמלא טפסים. Python ותוכנות נוספות צריכות להיות מותקנות במחשב הזה.',
+    'builtinSkillDesc.hwp-document':
+      'כותב מסמך .hwp או .hwpx חדש מאפס: בוחר מבנה לדוח, לתוכנית, להודעה, למכתב רשמי או לפרוטוקול, כותב בסגנון של מסמך ובודק את התוצאה.',
+    'builtinSkillDesc.mindmap':
+      'בונה מפת חשיבה מנושא או מחומרים: שלושה עד שבעה ענפים ראשיים מאוזנים, כותרות קצרות עם הפירוט בהערות, ובדיקת המבנה בסוף.',
+    'builtinSkillDesc.diagram':
+      'משרטט תרשים ברור: בוחר את הסוג המתאים, שומר על כיוון אחד, תוויות קצרות ומעט צבעים, ובודק חפיפות וצורות שאינן מחוברות.',
+    'builtinSkillDesc.html-document':
+      'יוצר מסמך HTML שנוח לקרוא על המסך ונקי בהדפסה: קובע קודם את הקורא, האורך והנייר, ואז בודק את העמודים והתוכן.',
   },
   hi: {
     'builtinSkillDesc.meeting-minutes':
@@ -475,6 +623,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'केवल एजेंट विंडो में काम करता है। स्क्रिप्ट चलाकर प्रोजेक्ट फ़ोल्डर में .xlsx फ़ाइलें बनाता और संपादित करता है और उनके फ़ॉर्मूले दोबारा गिनता है। इस PC पर Python और अन्य प्रोग्राम इंस्टॉल होने चाहिए।',
     'builtinSkillDesc.pdf':
       'केवल एजेंट विंडो में काम करता है। स्क्रिप्ट चलाकर प्रोजेक्ट फ़ोल्डर की .pdf फ़ाइलें पढ़ता, जोड़ता और बाँटता है और फ़ॉर्म भरता है। इस PC पर Python और अन्य प्रोग्राम इंस्टॉल होने चाहिए।',
+    'builtinSkillDesc.hwp-document':
+      'नया .hwp या .hwpx दस्तावेज़ शुरू से लिखता है: रिपोर्ट, योजना, सूचना, सरकारी पत्र या बैठक के कार्यवृत्त के लिए ढाँचा चुनता है, दस्तावेज़ की शैली में लिखता है और अंत में जाँच करता है।',
+    'builtinSkillDesc.mindmap':
+      'किसी विषय या सामग्री से माइंड मैप बनाता है: तीन से सात संतुलित मुख्य शाखाएँ, छोटे शीर्षक और ब्योरा नोट में, और अंत में ढाँचे की जाँच।',
+    'builtinSkillDesc.diagram':
+      'साफ़ आरेख बनाता है: सही प्रकार चुनता है, प्रवाह एक ही दिशा में, लेबल छोटे और रंग कम रखता है, और ओवरलैप व बिना जुड़ी आकृतियों की जाँच करता है।',
+    'builtinSkillDesc.html-document':
+      'ऐसा HTML दस्तावेज़ बनाता है जो स्क्रीन पर पढ़ने में अच्छा और छपने पर साफ़ हो: पहले पाठक, लंबाई और काग़ज़ तय करता है, फिर पृष्ठों और सामग्री की जाँच करता है।',
   },
   'zh-TW': {
     'builtinSkillDesc.meeting-minutes': '把會議筆記整理成列明決議事項和待辦事項的會議紀錄。',
@@ -495,6 +651,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       '僅能在代理程式視窗中使用。執行指令碼，在專案資料夾中建立和修改 .xlsx 檔案，並重新計算公式。這台電腦上需要安裝 Python 等程式。',
     'builtinSkillDesc.pdf':
       '僅能在代理程式視窗中使用。執行指令碼，在專案資料夾中讀取、合併和分割 .pdf 檔案，並填寫表單。這台電腦上需要安裝 Python 等程式。',
+    'builtinSkillDesc.hwp-document':
+      '從頭撰寫 .hwp、.hwpx 文件：依報告、計畫、通知、公文、會議紀錄選定架構，用公文語體撰寫，最後進行檢查。',
+    'builtinSkillDesc.mindmap':
+      '根據主題或資料製作心智圖：均衡地設 3 到 7 個主分支，標題簡短、說明放在備註裡，最後檢查架構。',
+    'builtinSkillDesc.diagram':
+      '繪製清楚易讀的圖表：選對圖表類型，流向保持同一方向，文字簡短、顏色少用，並檢查重疊和孤立的圖形。',
+    'builtinSkillDesc.html-document':
+      '製作在螢幕上好讀、列印也整潔的 HTML 文件：先確定讀者、篇幅和紙張，再檢查分頁和內容。',
   },
   vi: {
     'builtinSkillDesc.meeting-minutes':
@@ -519,6 +683,14 @@ export const BUILTIN_SKILL_STRINGS = defineStrings({
       'Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để tạo và sửa tệp .xlsx trong thư mục dự án và tính lại công thức. PC này cần cài sẵn Python và các chương trình khác.',
     'builtinSkillDesc.pdf':
       'Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để đọc, gộp và tách tệp .pdf trong thư mục dự án và điền biểu mẫu. PC này cần cài sẵn Python và các chương trình khác.',
+    'builtinSkillDesc.hwp-document':
+      'Viết mới tài liệu .hwp hoặc .hwpx từ đầu: chọn bố cục cho báo cáo, kế hoạch, thông báo, công văn hoặc biên bản họp, viết theo văn phong tài liệu rồi kiểm tra kết quả.',
+    'builtinSkillDesc.mindmap':
+      'Dựng sơ đồ tư duy từ một chủ đề hoặc tài liệu: ba đến bảy nhánh chính cân đối, tiêu đề ngắn với chi tiết đặt trong ghi chú, và kiểm tra cấu trúc ở cuối.',
+    'builtinSkillDesc.diagram':
+      'Vẽ sơ đồ rõ ràng: chọn loại phù hợp, giữ một hướng đi, nhãn ngắn và ít màu, rồi kiểm tra chồng lấn và hình rời rạc.',
+    'builtinSkillDesc.html-document':
+      'Tạo tài liệu HTML dễ đọc trên màn hình và gọn gàng khi in: xác định người đọc, độ dài và khổ giấy trước, rồi kiểm tra các trang và nội dung.',
   },
 })
 

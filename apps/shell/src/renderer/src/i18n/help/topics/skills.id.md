@@ -124,8 +124,12 @@ Saat Anda membuat skill di panel AI sebuah editor, dokumen yang sedang terbuka b
 | `pptx`                        | Hanya berfungsi di jendela agen. Menjalankan skrip untuk membuat, mengedit, dan membaca file .pptx di folder proyek. Python dan program lain harus terpasang di PC ini                               |
 | `xlsx`                        | Hanya berfungsi di jendela agen. Menjalankan skrip untuk membuat dan mengedit file .xlsx di folder proyek serta menghitung ulang rumusnya. Python dan program lain harus terpasang di PC ini         |
 | `pdf`                         | Hanya berfungsi di jendela agen. Menjalankan skrip untuk membaca, menggabungkan, dan memisahkan file .pdf di folder proyek serta mengisi formulir. Python dan program lain harus terpasang di PC ini |
+| `hwp-document`                | Menulis dokumen .hwp atau .hwpx baru dari awal: memilih susunan untuk laporan, rencana, pengumuman, surat resmi, atau notulen, menulis dengan gaya dokumen, lalu memeriksa hasilnya                  |
+| `mindmap`                     | Menyusun peta pikiran dari topik atau bahan: tiga sampai tujuh cabang utama yang seimbang, judul singkat dengan rincian di catatan, dan pemeriksaan struktur di akhir                                |
+| `diagram`                     | Menggambar diagram yang jelas: memilih jenis yang sesuai, menjaga satu arah alur, label singkat dan sedikit warna, lalu memeriksa tumpang-tindih dan bentuk yang lepas                               |
+| `html-document`               | Membuat dokumen HTML yang enak dibaca di layar dan rapi saat dicetak: menetapkan pembaca, panjang, dan kertas lebih dulu, lalu memeriksa halaman dan isinya                                          |
 
-`copy-editing` dibuat untuk teks pemasaran berbahasa Inggris. `find-skills` hanya berfungsi di jendela agen. Di **Lihat isi** milik skill bawaan, deskripsi ditampilkan dalam bahasa antarmuka, sedangkan petunjuk adalah teks yang diberikan kepada AI dan ditampilkan apa adanya (bahasa Inggris). `docx`, `pptx`, `xlsx`, dan `pdf` hanya berfungsi di jendela agen; semuanya menjalankan skrip, jadi Python dan program lain harus terpasang di PC ini.
+`copy-editing` dibuat untuk teks pemasaran berbahasa Inggris. `find-skills` hanya berfungsi di jendela agen. Di **Lihat isi** milik skill bawaan, deskripsi ditampilkan dalam bahasa antarmuka, sedangkan petunjuk adalah teks yang diberikan kepada AI dan ditampilkan apa adanya (bahasa Inggris). `docx`, `pptx`, `xlsx`, dan `pdf` hanya berfungsi di jendela agen; semuanya menjalankan skrip, jadi Python dan program lain harus terpasang di PC ini. `hwp-document`, `mindmap`, `diagram`, dan `html-document` masing-masing hanya dipakai di editor yang dituju.
 
 ## Di jendela agen
 

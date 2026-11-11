@@ -124,8 +124,12 @@ When you make a skill in an editor's AI panel, the current document can go along
 | `pptx`                        | Works only in the agent window. Runs scripts to create, edit and read .pptx files in the project folder. Python and other programs must be installed on this PC                          |
 | `xlsx`                        | Works only in the agent window. Runs scripts to create and edit .xlsx files in the project folder and recalculate their formulas. Python and other programs must be installed on this PC |
 | `pdf`                         | Works only in the agent window. Runs scripts to read, merge and split .pdf files in the project folder and fill in forms. Python and other programs must be installed on this PC         |
+| `hwp-document`                | Writes a new .hwp or .hwpx document from scratch: picks the parts for a report, plan, notice, official letter or minutes, writes it in document style, and checks it at the end          |
+| `mindmap`                     | Builds a mind map from a topic or material: three to seven balanced main branches, short titles with the detail in notes, and a structure check at the end                               |
+| `diagram`                     | Draws a clear diagram: picks the type that fits, keeps one direction, short labels and few colours, and checks for overlaps and loose shapes                                             |
+| `html-document`               | Makes an HTML document that reads well on screen and prints cleanly: settles the reader, length and paper first, then checks the pages and the content                                   |
 
-`copy-editing` is made for English marketing text. `find-skills` works only in the agent window. In a built-in skill’s **View contents**, the description is in the UI language and the instructions are the text given to the AI, shown as written (in English). `docx`, `pptx`, `xlsx` and `pdf` work only in the agent window; they run scripts, so Python and other programs must be installed on this PC.
+`copy-editing` is made for English marketing text. `find-skills` works only in the agent window. In a built-in skill’s **View contents**, the description is in the UI language and the instructions are the text given to the AI, shown as written (in English). `docx`, `pptx`, `xlsx` and `pdf` work only in the agent window; they run scripts, so Python and other programs must be installed on this PC. `hwp-document`, `mindmap`, `diagram` and `html-document` are each used only in the editor they are written for.
 
 ## In the agent window
 

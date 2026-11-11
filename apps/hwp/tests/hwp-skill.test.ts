@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AgentToolCall } from '@genoffice/agent-core'
 import type { AgentMemo, AgentMemoRemovalRefusal } from '../studio-plugin/agent-plugin.mjs'
@@ -2275,6 +2277,22 @@ describe('memo anchor removal', () => {
 })
 
 describe('the skill as the model sees it', () => {
+  it('has every tool the built-in skills for this editor name', () => {
+    // apps/shell/resources/builtin-skills: the skills written for Hangul documents
+    const names = new Set(setup().skill.tools.map((tool) => tool.name))
+    const dir = join(__dirname, '../../shell/resources/builtin-skills')
+    for (const skill of ['hwp-document', 'administration-report', 'administration-report-draft']) {
+      const text = readFileSync(join(dir, skill, 'SKILL.md'), 'utf8')
+      // `words_like_this` in backticks: the way a skill writes a tool
+      const words = [...text.matchAll(/`([a-z]+(?:_[a-z]+)+)`/g)].map((m) => m[1])
+      expect(words.length, skill).toBeGreaterThan(3)
+      for (const word of words) expect(names.has(word!), `${skill}: ${word}`).toBe(true)
+    }
+    const own = readFileSync(join(dir, 'hwp-document', 'SKILL.md'), 'utf8')
+    expect(own).toMatch(/^---\nname: hwp-document\n/)
+    expect(own).toMatch(/\nmetadata:\n {2}ieum-editors: hwp\n---\n/)
+  })
+
   it('offers exactly the tools it can execute', async () => {
     const { skill, call } = setup()
     expect(skill.tools.map((tool) => tool.name)).toEqual([

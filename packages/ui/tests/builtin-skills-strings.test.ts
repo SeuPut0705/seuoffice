@@ -84,6 +84,36 @@ describe('BUILTIN_SKILL_STRINGS', () => {
     expect(manifest.map((e) => e.name).sort()).toEqual([...BUILTIN_SKILL_NAMES].sort())
   })
 
+  it('scopes each skill written for one editor to that editor, in a standard front matter', () => {
+    const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8')) as {
+      name: string
+      source: string
+      agentOnly: boolean
+    }[]
+    const editors: Record<string, string> = {
+      'hwp-document': 'hwp',
+      mindmap: 'mindmap',
+      diagram: 'diagram',
+      'html-document': 'html',
+    }
+    for (const [name, editor] of Object.entries(editors)) {
+      expect(
+        manifest.find((e) => e.name === name),
+        name,
+      ).toMatchObject({ source: 'ieumoffice', agentOnly: false })
+      const text = readFileSync(join(MANIFEST, '..', name, 'SKILL.md'), 'utf8')
+      const front = text.split('\n---\n')[0]!
+      expect(front.split('\n')[1], name).toBe(`name: ${name}`)
+      expect(front.split('\n').slice(-2), name).toEqual(['metadata:', `  ieum-editors: ${editor}`])
+      // the standard's limit for a description
+      const description = /\ndescription: '(.+)'\n/.exec(front)?.[1] ?? ''
+      expect(description.length, name).toBeGreaterThan(80)
+      expect(description.length, name).toBeLessThanOrEqual(1024)
+      // each ends with a check the assistant runs before it answers
+      expect(text, name).toMatch(/\n## \d\. Check before you answer \(required\)\n/)
+    }
+  })
+
   it('ships the four document skills for the agent window only, as upstream wrote them', () => {
     const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8')) as {
       name: string
