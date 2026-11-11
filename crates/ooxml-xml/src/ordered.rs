@@ -600,46 +600,65 @@ fn parse_int(text: &str, radix: u32) -> Option<u32> {
 /// XML 1.0 forbids.
 pub fn serialize(node: &XNode) -> String {
     let mut out = String::new();
-    let mut stack = vec![Step::Node(node)];
-    while let Some(step) = stack.pop() {
+    write(&mut out, vec![Step::Node(node)]);
+    out
+}
+
+/// `serialize` for an element put together from parsed nodes: what the
+/// TypeScript code builds as `{ [name]: children, ':@': attrs }`.
+pub fn serialize_element(name: &str, attrs: &[(String, String)], children: &[&XNode]) -> String {
+    let mut out = String::new();
+    push_open_tag(&mut out, name, attrs);
+    let mut steps = vec![Step::Close(name, out.len())];
+    steps.extend(children.iter().rev().map(|child| Step::Node(child)));
+    write(&mut out, steps);
+    out
+}
+
+fn push_open_tag(out: &mut String, name: &str, attrs: &[(String, String)]) {
+    out.push('<');
+    out.push_str(name);
+    for (name, value) in attrs {
+        out.push(' ');
+        out.push_str(name);
+        out.push_str("=\"");
+        push_escaped(out, value, true);
+        out.push('"');
+    }
+    out.push('>');
+}
+
+fn write<'a>(out: &mut String, mut steps: Vec<Step<'a>>) {
+    while let Some(step) = steps.pop() {
         match step {
-            Step::Node(XNode::Text(text)) => push_escaped(&mut out, text, false),
+            Step::Node(XNode::Text(text)) => push_escaped(out, text, false),
             // The serializer finds no element name in `""` and `":@"`, and reads
             // `"#text"` (only a self-closing tag can carry it) as empty text.
             Step::Node(XNode::Element(element))
                 if matches!(&*element.name, "" | ":@" | "#text") => {}
             Step::Node(XNode::Element(element)) => {
-                out.push('<');
-                out.push_str(&element.name);
-                for (name, value) in &element.attrs {
-                    out.push(' ');
-                    out.push_str(name);
-                    out.push_str("=\"");
-                    push_escaped(&mut out, value, true);
-                    out.push('"');
-                }
-                out.push('>');
-                stack.push(Step::Close(element, out.len()));
-                stack.extend(element.children.iter().rev().map(Step::Node));
+                push_open_tag(out, &element.name, &element.attrs);
+                steps.push(Step::Close(&element.name, out.len()));
+                steps.extend(element.children.iter().rev().map(Step::Node));
             }
-            Step::Close(element, content_start) => {
+            Step::Close(name, content_start) => {
                 if out.len() == content_start {
                     out.pop();
                     out.push_str("/>");
                 } else {
                     out.push_str("</");
-                    out.push_str(&element.name);
+                    out.push_str(name);
                     out.push('>');
                 }
             }
         }
     }
-    out
 }
 
 enum Step<'a> {
     Node(&'a XNode),
-    Close(&'a XElement, usize),
+    /// The element name and where its content starts in the output.
+    Close(&'a str, usize),
 }
 
 /// `escapeXmlText`, plus the quote of `escapeXmlAttr` for attribute values.
