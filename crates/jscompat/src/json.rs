@@ -2,7 +2,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// A JavaScript number in a model value. It serializes the way
 /// `JSON.stringify` writes it: NaN and the infinities as `null`, -0 as `0`.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
 pub struct JsNum(pub f64);
 
 impl Serialize for JsNum {

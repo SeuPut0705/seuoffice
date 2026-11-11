@@ -6,12 +6,15 @@
 //! through this crate and nowhere else.
 
 mod json;
+mod map;
 mod number;
 mod regex;
 mod space;
 mod string;
+mod uri;
 
 pub use json::JsNum;
+pub use map::JsMap;
 pub use number::{
     Radix, math_round, number_to_string, parse_float, parse_int, to_int32, to_number,
     to_string_radix16,
@@ -19,3 +22,4 @@ pub use number::{
 pub use regex::{JsMatch, JsRegex, RegexSyntaxError};
 pub use space::{is_js_space, trim, trim_start};
 pub use string::{pad_start, truthy};
+pub use uri::{UriError, base64, decode_uri_component};

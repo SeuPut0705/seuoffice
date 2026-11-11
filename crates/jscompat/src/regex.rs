@@ -112,6 +112,30 @@ impl JsRegex {
         out.push_str(&text[copied..]);
         out
     }
+
+    /// `text.split(regex)` for a regex without capture groups.
+    pub fn split<'t>(&self, text: &'t str) -> Vec<&'t str> {
+        if text.is_empty() {
+            return if self.test(text) {
+                Vec::new()
+            } else {
+                vec![text]
+            };
+        }
+        let mut pieces = Vec::new();
+        let mut piece_start = 0;
+        for found in self.find_iter(text) {
+            // an empty match at the start of a piece, and any match at the end
+            // of the text, splits nothing
+            if found.end() == piece_start || found.start() >= text.len() {
+                continue;
+            }
+            pieces.push(&text[piece_start..found.start()]);
+            piece_start = found.end();
+        }
+        pieces.push(&text[piece_start..]);
+        pieces
+    }
 }
 
 /// A regex literal: compiled once, on first use.

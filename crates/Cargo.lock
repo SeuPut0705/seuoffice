@@ -121,6 +121,7 @@ dependencies = [
  "regress",
  "ryu",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
