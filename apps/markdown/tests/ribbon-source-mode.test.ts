@@ -76,6 +76,8 @@ function counts(container: HTMLElement) {
     styleDropdown: container.querySelectorAll('.rb-style').length,
     // every icon button in the toolbar body, minus the one the source ribbon keeps
     iconButtons: container.querySelectorAll('.ribbon-body button.rb-btn').length,
+    themePickerDisabled: container.querySelector<HTMLButtonElement>('.md-theme-wrap > .rb-btn')
+      ?.disabled,
   }
 }
 
@@ -94,8 +96,11 @@ describe('Ribbon source mode', () => {
     expect(markdown.iconButtons).toBe(23)
     // source mode keeps exactly two: the spellcheck toggle (the withhold
     // toggle gates the block editor's marks, which source mode does not carry)
-    // and the paper-theme picker (the paper exists in source view too)
+    // and the paper-theme picker, disabled there (source text sits outside
+    // the themed paper)
     expect(source.iconButtons).toBe(2)
+    expect(source.themePickerDisabled).toBe(true)
+    expect(markdown.themePickerDisabled).toBe(false)
   })
 
   it('keeps the actions that still apply to source text', () => {
