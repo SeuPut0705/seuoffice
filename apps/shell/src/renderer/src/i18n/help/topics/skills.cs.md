@@ -111,17 +111,25 @@ Když vytváříte dovednost v panelu AI editoru, může s ní jako šablona jí
 
 ## Vestavěné dovednosti
 
-| Dovednost                     | Co dělá                                                                                                                                   |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `meeting-minutes`             | Udělá z poznámek z porady zápis s rozhodnutími a úkoly                                                                                    |
-| `internal-comms`              | Píše oznámení, zpravodaje, zprávy o postupu, časté dotazy a další interní texty                                                           |
-| `humanizer`                   | Najde obraty, které působí jako psané AI, a upraví je přirozeně                                                                           |
-| `copy-editing`                | Projde anglický text, který jste napsali, a udělá ho jasnějším a stručnějším                                                              |
-| `find-skills`                 | Najde v okně agenta dovednosti, které potřebujete, a navrhne jejich instalaci                                                             |
-| `administration-report`       | Uvede zprávu do souladu se směrnicí korejského ministerstva vnitra: souvislé věty, jednotné číslování, dostupné písmo, jednoduché tabulky |
-| `administration-report-draft` | Píše správní zprávu od začátku ve formátu ministerstva: oddíly, číslování Ⅰ·1·가, souvislé věty, názvy tabulek a dostupné písmo           |
+| Dovednost                     | Co dělá                                                                                                                                                                                         |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Udělá z poznámek z porady zápis s rozhodnutími a úkoly                                                                                                                                          |
+| `internal-comms`              | Píše oznámení, zpravodaje, zprávy o postupu, časté dotazy a další interní texty                                                                                                                 |
+| `humanizer`                   | Najde obraty, které působí jako psané AI, a upraví je přirozeně                                                                                                                                 |
+| `copy-editing`                | Projde anglický text, který jste napsali, a udělá ho jasnějším a stručnějším                                                                                                                    |
+| `find-skills`                 | Najde v okně agenta dovednosti, které potřebujete, a navrhne jejich instalaci                                                                                                                   |
+| `administration-report`       | Uvede zprávu do souladu se směrnicí korejského ministerstva vnitra: souvislé věty, jednotné číslování, dostupné písmo, jednoduché tabulky                                                       |
+| `administration-report-draft` | Píše správní zprávu od začátku ve formátu ministerstva: oddíly, číslování Ⅰ·1·가, souvislé věty, názvy tabulek a dostupné písmo                                                                 |
+| `docx`                        | Funguje jen v okně agenta. Spouští skripty, které vytvářejí, upravují a čtou soubory .docx ve složce projektu. Na tomto počítači musí být nainstalován Python a další programy                  |
+| `pptx`                        | Funguje jen v okně agenta. Spouští skripty, které vytvářejí, upravují a čtou soubory .pptx ve složce projektu. Na tomto počítači musí být nainstalován Python a další programy                  |
+| `xlsx`                        | Funguje jen v okně agenta. Spouští skripty, které vytvářejí a upravují soubory .xlsx ve složce projektu a přepočítávají vzorce. Na tomto počítači musí být nainstalován Python a další programy |
+| `pdf`                         | Funguje jen v okně agenta. Spouští skripty, které čtou, slučují a dělí soubory .pdf ve složce projektu a vyplňují formuláře. Na tomto počítači musí být nainstalován Python a další programy    |
+| `hwp-document`                | Napíše od začátku nový dokument .hwp nebo .hwpx: zvolí stavbu zprávy, plánu, oznámení, úředního dopisu nebo zápisu, píše stylem dokumentu a výsledek zkontroluje                                |
+| `mindmap`                     | Sestaví myšlenkovou mapu z tématu nebo podkladů: tři až sedm vyvážených hlavních větví, krátké názvy s podrobnostmi v poznámkách a na konci kontrola struktury                                  |
+| `diagram`                     | Nakreslí přehledný diagram: zvolí vhodný typ, drží jeden směr, krátké popisky a málo barev a zkontroluje překryvy a nepřipojené tvary                                                           |
+| `html-document`               | Vytvoří dokument HTML, který se dobře čte na obrazovce a čistě tiskne: nejdřív určí čtenáře, rozsah a papír, potom zkontroluje stránky a obsah                                                  |
 
-`copy-editing` je určena pro anglické marketingové texty. `find-skills` funguje jen v okně agenta. V okně **Zobrazit obsah** vestavěné dovednosti je popis v jazyce rozhraní a pokyny jsou text, který dostává AI, zobrazený beze změny (anglicky).
+`copy-editing` je určena pro anglické marketingové texty. `find-skills` funguje jen v okně agenta. V okně **Zobrazit obsah** vestavěné dovednosti je popis v jazyce rozhraní a pokyny jsou text, který dostává AI, zobrazený beze změny (anglicky). `docx`, `pptx`, `xlsx` a `pdf` fungují jen v okně agenta; spouštějí skripty, proto musí být na tomto počítači nainstalován Python a další programy. `hwp-document`, `mindmap`, `diagram` a `html-document` se používají jen v editoru, pro který je každá z nich napsána.
 
 ## V okně agenta
 

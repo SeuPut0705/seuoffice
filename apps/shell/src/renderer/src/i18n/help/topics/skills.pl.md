@@ -111,17 +111,25 @@ Gdy tworzysz umiejętność w panelu AI edytora, bieżący dokument może dołą
 
 ## Wbudowane umiejętności
 
-| Umiejętność                   | Co robi                                                                                                                                                  |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `meeting-minutes`             | Zamienia notatki ze spotkania w protokół z decyzjami i zadaniami do wykonania                                                                            |
-| `internal-comms`              | Pisze ogłoszenia, biuletyny, raporty z postępów, FAQ i inne teksty wewnętrzne                                                                            |
-| `humanizer`                   | Wyszukuje sformułowania brzmiące jak pisane przez AI i wygładza je                                                                                       |
-| `copy-editing`                | Przechodzi przez napisany przez ciebie tekst angielski, by był jaśniejszy i zwięźlejszy                                                                  |
-| `find-skills`                 | Znajduje w oknie agenta potrzebne umiejętności i proponuje ich instalację                                                                                |
-| `administration-report`       | Dopasowuje raport do wytycznych koreańskiego ministerstwa spraw wewnętrznych: zdania opisowe, stała numeracja, czcionki dostępne wszędzie, proste tabele |
-| `administration-report-draft` | Pisze raport administracyjny od zera w formacie ministerstwa: sekcje, numeracja Ⅰ·1·가, zdania opisowe, tytuły tabel i dostępne czcionki                 |
+| Umiejętność                   | Co robi                                                                                                                                                                                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Zamienia notatki ze spotkania w protokół z decyzjami i zadaniami do wykonania                                                                                                                               |
+| `internal-comms`              | Pisze ogłoszenia, biuletyny, raporty z postępów, FAQ i inne teksty wewnętrzne                                                                                                                               |
+| `humanizer`                   | Wyszukuje sformułowania brzmiące jak pisane przez AI i wygładza je                                                                                                                                          |
+| `copy-editing`                | Przechodzi przez napisany przez ciebie tekst angielski, by był jaśniejszy i zwięźlejszy                                                                                                                     |
+| `find-skills`                 | Znajduje w oknie agenta potrzebne umiejętności i proponuje ich instalację                                                                                                                                   |
+| `administration-report`       | Dopasowuje raport do wytycznych koreańskiego ministerstwa spraw wewnętrznych: zdania opisowe, stała numeracja, czcionki dostępne wszędzie, proste tabele                                                    |
+| `administration-report-draft` | Pisze raport administracyjny od zera w formacie ministerstwa: sekcje, numeracja Ⅰ·1·가, zdania opisowe, tytuły tabel i dostępne czcionki                                                                    |
+| `docx`                        | Działa tylko w oknie agenta. Uruchamia skrypty, aby tworzyć, edytować i odczytywać pliki .docx w folderze projektu. Na tym komputerze muszą być zainstalowane Python i inne programy                        |
+| `pptx`                        | Działa tylko w oknie agenta. Uruchamia skrypty, aby tworzyć, edytować i odczytywać pliki .pptx w folderze projektu. Na tym komputerze muszą być zainstalowane Python i inne programy                        |
+| `xlsx`                        | Działa tylko w oknie agenta. Uruchamia skrypty, aby tworzyć i edytować pliki .xlsx w folderze projektu oraz przeliczać formuły. Na tym komputerze muszą być zainstalowane Python i inne programy            |
+| `pdf`                         | Działa tylko w oknie agenta. Uruchamia skrypty, aby odczytywać, scalać i dzielić pliki .pdf w folderze projektu oraz wypełniać formularze. Na tym komputerze muszą być zainstalowane Python i inne programy |
+| `hwp-document`                | Pisze od zera nowy dokument .hwp lub .hwpx: dobiera układ raportu, planu, ogłoszenia, pisma urzędowego lub protokołu, pisze stylem dokumentu i sprawdza wynik                                               |
+| `mindmap`                     | Buduje mapę myśli z tematu lub materiałów: od trzech do siedmiu zrównoważonych głównych gałęzi, krótkie tytuły ze szczegółami w notatkach i sprawdzenie struktury na końcu                                  |
+| `diagram`                     | Rysuje czytelny diagram: dobiera właściwy typ, trzyma jeden kierunek, krótkie etykiety i niewiele kolorów, a potem sprawdza nakładanie się i luźne kształty                                                 |
+| `html-document`               | Tworzy dokument HTML, który dobrze się czyta na ekranie i czysto drukuje: najpierw ustala czytelnika, długość i papier, potem sprawdza strony i treść                                                       |
 
-`copy-editing` jest przeznaczona do angielskich tekstów marketingowych. `find-skills` działa tylko w oknie agenta. W oknie **Pokaż zawartość** wbudowanej umiejętności opis jest w języku interfejsu, a instrukcje to tekst przekazywany AI, pokazany bez zmian (po angielsku).
+`copy-editing` jest przeznaczona do angielskich tekstów marketingowych. `find-skills` działa tylko w oknie agenta. W oknie **Pokaż zawartość** wbudowanej umiejętności opis jest w języku interfejsu, a instrukcje to tekst przekazywany AI, pokazany bez zmian (po angielsku). `docx`, `pptx`, `xlsx` i `pdf` działają tylko w oknie agenta; uruchamiają skrypty, dlatego na tym komputerze muszą być zainstalowane Python i inne programy. `hwp-document`, `mindmap`, `diagram` i `html-document` są używane tylko w edytorze, dla którego każda z nich została napisana.
 
 ## W oknie agenta
 

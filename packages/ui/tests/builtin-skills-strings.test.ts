@@ -7,6 +7,7 @@ import {
   BUILTIN_SKILL_STRINGS,
   builtinSkillDesc,
   isBuiltinSkillName,
+  type BuiltinSkillName,
   type BuiltinSkillStringKey,
 } from '../src/strings-builtin-skills'
 
@@ -64,7 +65,8 @@ describe('BUILTIN_SKILL_STRINGS', () => {
     )
     expect(builtinSkillDesc('en', 'find-skills')).toMatch(/agent window/)
     expect(isBuiltinSkillName('humanizer')).toBe(true)
-    expect(isBuiltinSkillName('docx')).toBe(false)
+    expect(isBuiltinSkillName('docx')).toBe(true)
+    expect(isBuiltinSkillName('odt')).toBe(false)
   })
 
   it('does not limit humanizer to English text, while copy-editing still says English', () => {
@@ -80,5 +82,54 @@ describe('BUILTIN_SKILL_STRINGS', () => {
   it('lists the same skills as the shipped builtin-skills.json', () => {
     const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8')) as { name: string }[]
     expect(manifest.map((e) => e.name).sort()).toEqual([...BUILTIN_SKILL_NAMES].sort())
+  })
+
+  it('scopes each skill written for one editor to that editor, in a standard front matter', () => {
+    const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8')) as {
+      name: string
+      source: string
+      agentOnly: boolean
+    }[]
+    const editors: Record<string, string> = {
+      'hwp-document': 'hwp',
+      mindmap: 'mindmap',
+      diagram: 'diagram',
+      'html-document': 'html',
+    }
+    for (const [name, editor] of Object.entries(editors)) {
+      expect(
+        manifest.find((e) => e.name === name),
+        name,
+      ).toMatchObject({ source: 'ieumoffice', agentOnly: false })
+      const text = readFileSync(join(MANIFEST, '..', name, 'SKILL.md'), 'utf8')
+      const front = text.split('\n---\n')[0]!
+      expect(front.split('\n')[1], name).toBe(`name: ${name}`)
+      expect(front.split('\n').slice(-2), name).toEqual(['metadata:', `  ieum-editors: ${editor}`])
+      // the standard's limit for a description
+      const description = /\ndescription: '(.+)'\n/.exec(front)?.[1] ?? ''
+      expect(description.length, name).toBeGreaterThan(80)
+      expect(description.length, name).toBeLessThanOrEqual(1024)
+      // each ends with a check the assistant runs before it answers
+      expect(text, name).toMatch(/\n## \d\. Check before you answer \(required\)\n/)
+    }
+  })
+
+  it('ships the four document skills for the agent window only, as upstream wrote them', () => {
+    const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8')) as {
+      name: string
+      source: string
+      license: string
+      agentOnly: boolean
+      modified: boolean
+    }[]
+    for (const name of ['docx', 'pptx', 'xlsx', 'pdf']) {
+      // their instructions run scripts, which only the agent window does
+      expect(
+        manifest.find((e) => e.name === name),
+        name,
+      ).toMatchObject({ license: 'Apache-2.0', agentOnly: true, modified: false })
+      expect(builtinSkillDesc('en', name as BuiltinSkillName)).toMatch(/only in the agent window/)
+      expect(builtinSkillDesc('ko', name as BuiltinSkillName)).toMatch(/에이전트 창에서만/)
+    }
   })
 })

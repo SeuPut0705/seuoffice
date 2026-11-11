@@ -111,17 +111,25 @@ Cuando crea una habilidad en el panel de IA de un editor, el documento actual pu
 
 ## Habilidades integradas
 
-| Habilidad                     | Qué hace                                                                                                                                                                        |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `meeting-minutes`             | Convierte las notas de una reunión en un acta que muestra las decisiones y las tareas                                                                                           |
-| `internal-comms`              | Redacta avisos, boletines, informes de avance, preguntas frecuentes y otros textos internos                                                                                     |
-| `humanizer`                   | Busca las expresiones que suenan escritas por una IA y las vuelve naturales                                                                                                     |
-| `copy-editing`                | Repasa un texto en inglés ya escrito para hacerlo más claro y conciso                                                                                                           |
-| `find-skills`                 | Busca en la ventana del agente las habilidades que necesita y propone instalarlas                                                                                               |
-| `administration-report`       | Ajusta un informe a la guía del Ministerio del Interior y Seguridad de Corea: frases redactadas, numeración estándar, fuentes disponibles en cualquier equipo, tablas sencillas |
-| `administration-report-draft` | Escribe un informe administrativo desde cero con el formato del ministerio: secciones, numeración Ⅰ·1·가, frases redactadas, títulos de tablas y fuentes disponibles            |
+| Habilidad                     | Qué hace                                                                                                                                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Convierte las notas de una reunión en un acta que muestra las decisiones y las tareas                                                                                                                         |
+| `internal-comms`              | Redacta avisos, boletines, informes de avance, preguntas frecuentes y otros textos internos                                                                                                                   |
+| `humanizer`                   | Busca las expresiones que suenan escritas por una IA y las vuelve naturales                                                                                                                                   |
+| `copy-editing`                | Repasa un texto en inglés ya escrito para hacerlo más claro y conciso                                                                                                                                         |
+| `find-skills`                 | Busca en la ventana del agente las habilidades que necesita y propone instalarlas                                                                                                                             |
+| `administration-report`       | Ajusta un informe a la guía del Ministerio del Interior y Seguridad de Corea: frases redactadas, numeración estándar, fuentes disponibles en cualquier equipo, tablas sencillas                               |
+| `administration-report-draft` | Escribe un informe administrativo desde cero con el formato del ministerio: secciones, numeración Ⅰ·1·가, frases redactadas, títulos de tablas y fuentes disponibles                                          |
+| `docx`                        | Solo funciona en la ventana del agente. Ejecuta scripts para crear, editar y leer archivos .docx en la carpeta del proyecto. Este PC debe tener instalados Python y otros programas                           |
+| `pptx`                        | Solo funciona en la ventana del agente. Ejecuta scripts para crear, editar y leer archivos .pptx en la carpeta del proyecto. Este PC debe tener instalados Python y otros programas                           |
+| `xlsx`                        | Solo funciona en la ventana del agente. Ejecuta scripts para crear y editar archivos .xlsx en la carpeta del proyecto y recalcular sus fórmulas. Este PC debe tener instalados Python y otros programas       |
+| `pdf`                         | Solo funciona en la ventana del agente. Ejecuta scripts para leer, combinar y dividir archivos .pdf en la carpeta del proyecto y rellenar formularios. Este PC debe tener instalados Python y otros programas |
+| `hwp-document`                | Redacta un documento .hwp o .hwpx nuevo desde cero: elige la estructura de un informe, plan, aviso, oficio o acta, escribe en el estilo del documento y revisa el resultado                                   |
+| `mindmap`                     | Construye un mapa mental a partir de un tema o de materiales: de tres a siete ramas principales equilibradas, títulos cortos con el detalle en las notas y una revisión de la estructura al final             |
+| `diagram`                     | Dibuja un diagrama claro: elige el tipo adecuado, mantiene una sola dirección, etiquetas cortas y pocos colores, y revisa solapamientos y formas sueltas                                                      |
+| `html-document`               | Crea un documento HTML que se lee bien en pantalla y se imprime limpio: define primero el lector, la extensión y el papel, y luego revisa las páginas y el contenido                                          |
 
-`copy-editing` está pensada para textos de marketing en inglés. `find-skills` solo funciona en la ventana del agente. En **Ver contenido** de una habilidad integrada, la descripción aparece en el idioma de la interfaz y las instrucciones son el texto que recibe la IA, mostrado tal cual (en inglés).
+`copy-editing` está pensada para textos de marketing en inglés. `find-skills` solo funciona en la ventana del agente. En **Ver contenido** de una habilidad integrada, la descripción aparece en el idioma de la interfaz y las instrucciones son el texto que recibe la IA, mostrado tal cual (en inglés). `docx`, `pptx`, `xlsx` y `pdf` solo funcionan en la ventana del agente; ejecutan scripts, por lo que este PC debe tener instalados Python y otros programas. `hwp-document`, `mindmap`, `diagram` y `html-document` solo se usan en el editor para el que está escrito cada uno.
 
 ## En la ventana del agente
 

@@ -38,6 +38,18 @@ type DropCounter = { __e2eDrops?: number }
  * be lost on a slow machine, which reads as the app losing the second file.
  */
 async function dropFiles(page: Page, files: string[]): Promise<void> {
+  // launchShell returns as soon as the window exists. A drag sent before the
+  // window has drawn anything has no target and is lost, so the first drop
+  // after a launch never reached the page on a slow runner.
+  await page.waitForFunction(() => (document.body?.innerText ?? '').trim().length > 0)
+  await page.evaluate(
+    () =>
+      new Promise<void>((drawn) => {
+        // two frames: laid out and painted; the timer covers a window that gets no frames
+        requestAnimationFrame(() => requestAnimationFrame(() => drawn()))
+        setTimeout(drawn, 500)
+      }),
+  )
   const before = await page.evaluate(() => {
     const counter = window as unknown as DropCounter
     if (counter.__e2eDrops === undefined) {

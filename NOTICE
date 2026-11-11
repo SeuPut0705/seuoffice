@@ -124,11 +124,13 @@ exact source of every file. All files were downloaded on 2026-10-14.
 
 Built-in skills
 
-apps/shell/resources/builtin-skills holds the five skills shipped with the
-app. It ships in the installer as resources/builtin-skills. Each folder is the
-upstream skill as read at the commit below, with its license file beside it;
-builtin-skills.json in the same folder records the same source, path, commit
-and license. Only the files listed for each skill were taken.
+apps/shell/resources/builtin-skills holds the skills shipped with the app. It
+ships in the installer as resources/builtin-skills. Each folder taken from
+another project is the upstream skill as read at the commit below, with its
+license file beside it; builtin-skills.json in the same folder records the
+same source, path, commit and license. Only the files listed for each skill
+were taken. The folders that file lists with the source "ieumoffice" were
+written for IeumOffice and are under this project's license.
 
 - meeting-minutes: https://github.com/github/awesome-copilot, path
   skills/meeting-minutes (SKILL.md), read at commit
@@ -153,6 +155,17 @@ and license. Only the files listed for each skill were taken.
   License, Copyright (c) 2026 Vercel, Inc.; the repository's LICENSE is copied
   as find-skills/LICENSE. Modified: appended a section for IeumOffice
   ("In IeumOffice") at the end of SKILL.md.
+- docx, pptx, xlsx, pdf: https://github.com/anthropics/skills, paths
+  skills/docx, skills/pptx, skills/xlsx and skills/pdf (every file of each
+  folder: SKILL.md, LICENSE.txt, scripts/, and for pdf also forms.md and
+  reference.md), read at commit 2c5958ecac7cee2b583967a2c4981d0f4a75c579.
+  Apache License, Version 2.0, a work of Anthropic, PBC; the full text is
+  LICENSE.txt in each folder (upstream left the copyright line of its
+  appendix unfilled). Unmodified. scripts/office/schemas in docx, pptx and
+  xlsx holds the ISO/IEC 29500-4:2016 (ECMA-376) schema files, the Open
+  Packaging Conventions schemas and the Microsoft Office extension schemas
+  those skills validate against, exactly as upstream ships them; these ship
+  in the installer inside the skill folders.
 
 IeumOffice modifications
 

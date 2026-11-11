@@ -111,17 +111,25 @@ Khi bạn tạo kỹ năng trong bảng AI của một trình soạn thảo, tà
 
 ## Kỹ năng có sẵn
 
-| Kỹ năng                       | Chức năng                                                                                                                              |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `meeting-minutes`             | Biến ghi chú cuộc họp thành biên bản nêu rõ các quyết định và việc cần làm                                                             |
-| `internal-comms`              | Viết thông báo, bản tin, báo cáo tiến độ, câu hỏi thường gặp và các văn bản nội bộ khác                                                |
-| `humanizer`                   | Tìm những cách diễn đạt nghe như AI viết và sửa cho tự nhiên                                                                           |
-| `copy-editing`                | Rà lại văn bản tiếng Anh bạn đã viết để nó rõ ràng và gọn hơn                                                                          |
-| `find-skills`                 | Tìm các kỹ năng bạn cần trong cửa sổ tác tử và đề xuất cài đặt                                                                         |
-| `administration-report`       | Đưa báo cáo về đúng hướng dẫn của Bộ Nội vụ và An toàn Hàn Quốc: câu diễn đạt, đánh số chuẩn, phông chữ mở được mọi nơi, bảng đơn giản |
-| `administration-report-draft` | Viết báo cáo hành chính từ đầu theo định dạng của bộ: các phần, đánh số Ⅰ·1·가, câu diễn đạt, tiêu đề bảng và phông chữ phổ dụng       |
+| Kỹ năng                       | Chức năng                                                                                                                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Biến ghi chú cuộc họp thành biên bản nêu rõ các quyết định và việc cần làm                                                                                             |
+| `internal-comms`              | Viết thông báo, bản tin, báo cáo tiến độ, câu hỏi thường gặp và các văn bản nội bộ khác                                                                                |
+| `humanizer`                   | Tìm những cách diễn đạt nghe như AI viết và sửa cho tự nhiên                                                                                                           |
+| `copy-editing`                | Rà lại văn bản tiếng Anh bạn đã viết để nó rõ ràng và gọn hơn                                                                                                          |
+| `find-skills`                 | Tìm các kỹ năng bạn cần trong cửa sổ tác tử và đề xuất cài đặt                                                                                                         |
+| `administration-report`       | Đưa báo cáo về đúng hướng dẫn của Bộ Nội vụ và An toàn Hàn Quốc: câu diễn đạt, đánh số chuẩn, phông chữ mở được mọi nơi, bảng đơn giản                                 |
+| `administration-report-draft` | Viết báo cáo hành chính từ đầu theo định dạng của bộ: các phần, đánh số Ⅰ·1·가, câu diễn đạt, tiêu đề bảng và phông chữ phổ dụng                                       |
+| `docx`                        | Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để tạo, sửa và đọc tệp .docx trong thư mục dự án. PC này cần cài sẵn Python và các chương trình khác                  |
+| `pptx`                        | Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để tạo, sửa và đọc tệp .pptx trong thư mục dự án. PC này cần cài sẵn Python và các chương trình khác                  |
+| `xlsx`                        | Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để tạo và sửa tệp .xlsx trong thư mục dự án và tính lại công thức. PC này cần cài sẵn Python và các chương trình khác |
+| `pdf`                         | Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để đọc, gộp và tách tệp .pdf trong thư mục dự án và điền biểu mẫu. PC này cần cài sẵn Python và các chương trình khác |
+| `hwp-document`                | Viết mới tài liệu .hwp hoặc .hwpx từ đầu: chọn bố cục cho báo cáo, kế hoạch, thông báo, công văn hoặc biên bản họp, viết theo văn phong tài liệu rồi kiểm tra kết quả  |
+| `mindmap`                     | Dựng sơ đồ tư duy từ một chủ đề hoặc tài liệu: ba đến bảy nhánh chính cân đối, tiêu đề ngắn với chi tiết đặt trong ghi chú, và kiểm tra cấu trúc ở cuối                |
+| `diagram`                     | Vẽ sơ đồ rõ ràng: chọn loại phù hợp, giữ một hướng đi, nhãn ngắn và ít màu, rồi kiểm tra chồng lấn và hình rời rạc                                                     |
+| `html-document`               | Tạo tài liệu HTML dễ đọc trên màn hình và gọn gàng khi in: xác định người đọc, độ dài và khổ giấy trước, rồi kiểm tra các trang và nội dung                            |
 
-`copy-editing` được làm cho văn bản tiếp thị tiếng Anh. `find-skills` chỉ hoạt động trong cửa sổ tác tử. Trong **Xem nội dung** của kỹ năng có sẵn, phần mô tả hiển thị bằng ngôn ngữ giao diện, còn phần hướng dẫn là văn bản đưa cho AI nên hiển thị nguyên văn (tiếng Anh).
+`copy-editing` được làm cho văn bản tiếp thị tiếng Anh. `find-skills` chỉ hoạt động trong cửa sổ tác tử. Trong **Xem nội dung** của kỹ năng có sẵn, phần mô tả hiển thị bằng ngôn ngữ giao diện, còn phần hướng dẫn là văn bản đưa cho AI nên hiển thị nguyên văn (tiếng Anh). `docx`, `pptx`, `xlsx` và `pdf` chỉ dùng được trong cửa sổ tác tử; chúng chạy tập lệnh nên PC này cần cài sẵn Python và các chương trình khác. `hwp-document`, `mindmap`, `diagram` và `html-document` mỗi kỹ năng chỉ dùng trong trình soạn thảo mà nó được viết cho.
 
 ## Trong cửa sổ tác tử
 
