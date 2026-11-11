@@ -50,23 +50,6 @@ export function compareRoundTrips(
   })
 }
 
-/** Nested `<w:rPr>` elements (inside `w:rPrChange`) come out as fragments of their own. */
-export function rPrFragments(xml: string): string[] {
-  const fragments: string[] = []
-  const open: number[] = []
-  for (const match of xml.matchAll(/<w:rPr(?=[\s>/])[^>]*>|<\/w:rPr\s*>/g)) {
-    if (match[0].startsWith('</')) {
-      const start = open.pop()
-      if (start !== undefined) fragments.push(xml.slice(start, match.index + match[0].length))
-    } else if (match[0].endsWith('/>')) {
-      fragments.push(match[0])
-    } else {
-      open.push(match.index)
-    }
-  }
-  return fragments
-}
-
 const MUTATION_TOKENS = [
   ...'<>/"\'=&; \t\r\n',
   '\r\n',

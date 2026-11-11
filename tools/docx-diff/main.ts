@@ -12,9 +12,10 @@ import { resolveMainDocumentPath } from '../../packages/docx-engine/src/parse-pa
 import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
 import { bench } from './bench'
 import { compareScan } from './compare-scan'
-import { compareRoundTrips, mutate, rPrFragments } from './compare-xml'
+import { compareRoundTrips, mutate } from './compare-xml'
 import { compareZipText, textWithoutBuffer } from './compare-zip'
 import { staleDivergences } from './divergences'
+import { elementFragments } from './fragments'
 import { Comparison, repoRoot, toolDir } from './harness'
 import { mulberry32, SCAN_CASES, XML_CASES, zipTextCases } from './synthetic'
 
@@ -81,7 +82,7 @@ for (const path of corpus) {
   loadable.push(bytes)
   for (const [name, file] of Object.entries(zip.files)) {
     if (file.dir || !/\.xml$/i.test(name)) continue
-    const fragments = rPrFragments(await file.async('string'))
+    const fragments = elementFragments(await file.async('string'), 'w:rPr')
     compareRoundTrips(comparisons.rPr, `${path}: ${name}`, fragments)
     for (const fragment of fragments) mutationSeeds.add(fragment)
   }
