@@ -212,6 +212,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "omml"
+version = "0.1.0"
+dependencies = [
+ "jscompat",
+ "ooxml-xml",
+]
+
+[[package]]
 name = "ooxml-pkg"
 version = "0.1.0"
 dependencies = [

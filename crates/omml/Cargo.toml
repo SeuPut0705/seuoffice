@@ -1,0 +1,11 @@
+[package]
+name = "omml"
+description = "Office Math Markup: OMML to LaTeX and MathML, LaTeX to OMML"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+jscompat.workspace = true
+ooxml-xml.workspace = true

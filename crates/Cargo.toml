@@ -1,5 +1,5 @@
 [workspace]
-members = ["jscompat", "ooxml-xml", "ooxml-pkg", "docx-engine", "office-wasm"]
+members = ["jscompat", "ooxml-xml", "ooxml-pkg", "docx-engine", "omml", "office-wasm"]
 resolver = "3"
 
 [workspace.package]
@@ -13,6 +13,7 @@ jscompat = { path = "jscompat" }
 ooxml-xml = { path = "ooxml-xml" }
 ooxml-pkg = { path = "ooxml-pkg" }
 docx-engine = { path = "docx-engine" }
+omml = { path = "omml" }
 # the inflater the zip crate already uses; entries are read without its CRC check
 flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
 # ECMAScript regular expressions: patterns are ported by copying them
