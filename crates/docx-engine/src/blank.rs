@@ -888,13 +888,33 @@ impl BlankPaperSize {
     }
 }
 
+/// `ownValue(PAPER_TWIPS, options.paperSize)`: a size the table does not hold
+/// (an unchecked caller value) takes the default, like a missing one.
+fn own_paper_size<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<BlankPaperSize>, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Unchecked {
+        Text(String),
+        Other(serde::de::IgnoredAny),
+    }
+    Ok(match Unchecked::deserialize(deserializer)? {
+        Unchecked::Text(name) if name == "A4" => Some(BlankPaperSize::A4),
+        Unchecked::Text(name) if name == "Letter" => Some(BlankPaperSize::Letter),
+        Unchecked::Text(_) | Unchecked::Other(_) => None,
+    })
+}
+
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlankDocxOptions {
     /// docDefaults East Asian font (w:eastAsia). When omitted no w:eastAsia
     /// is written.
     pub east_asia_font: Option<String>,
-    /// Page size of the single section; defaults to A4.
+    /// Page size of the single section; defaults to A4, also for a value
+    /// that names no size.
+    #[serde(default, deserialize_with = "own_paper_size")]
     pub paper_size: Option<BlankPaperSize>,
     /// Creation stamp of docProps/core.xml as a time value (milliseconds
     /// since 1970 UTC); defaults to the `now` of [`build_blank_docx`].
