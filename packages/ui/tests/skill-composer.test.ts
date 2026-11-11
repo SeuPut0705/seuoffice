@@ -170,9 +170,10 @@ describe('AiComposer with skills', () => {
     expect(rows()).toHaveLength(3)
     expect(rows()[2]).toBe('스킬 관리…')
     expect(host.textContent).not.toContain('꺼진 스킬')
-    // rows show the skill name, not its title
-    expect(rows()[0]).toContain('minutes')
-    expect(rows()[0]).not.toContain('회의록 정리')
+    // a row shows the title the person gave, with the name beside it in the small style
+    const first = host.querySelector('.ai-skill-picker-row')!
+    expect(first.querySelector('.ai-skill-picker-title')?.textContent).toBe('회의록 정리')
+    expect(first.querySelector('.ai-skill-picker-name')?.textContent).toBe('minutes')
     type('/let')
     await flush()
     expect(rows()).toEqual([expect.stringContaining('letter'), '스킬 관리…'])
@@ -206,7 +207,7 @@ describe('AiComposer with skills', () => {
     await flush()
     expect(h.sent).toEqual([])
     expect(textarea().value).toBe('요약해 줘 ')
-    expect(chipTitles()).toEqual(['minutes'])
+    expect(chipTitles()).toEqual(['회의록 정리'])
   })
 
   it('↓ then Tab picks the next row; the same skill goes in only once', async () => {

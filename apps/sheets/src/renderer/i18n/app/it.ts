@@ -598,6 +598,9 @@ export const it = {
     "L'esportazione in CSV richiede la cartella di lavoro completamente caricata — attendi la fine del caricamento.",
   appCsvExportTooLarge: 'Il foglio è troppo grande per essere esportato come CSV.',
   appCsvExportCanceled: 'Esportazione CSV annullata.',
+  appOdsExported: '{path} esportato.',
+  appOdsExportCanceled: 'Esportazione ODS annullata.',
+  appOdsExportFailed: 'Esportazione ODS non riuscita.',
   appCsvExported: '{path} esportato.',
   appCsvExportedActiveOnly:
     'I file CSV contengono un solo foglio — il foglio attivo “{name}” è stato esportato in {path}.',
@@ -750,6 +753,13 @@ export const it = {
   appSaveAs: 'Salva con nome',
   appUndo: 'Annulla',
   appRedo: 'Ripeti',
+  appQuickAccessCustomize: 'Personalizza barra di accesso rapido',
+  appQuickAccessHint:
+    'Premi Alt e un numero per eseguire il pulsante in quella posizione, contando da sinistra.',
+  appQuickAccessMoveEarlier: 'Sposta verso l’inizio',
+  appQuickAccessMoveLater: 'Sposta verso la fine',
+  appQuickAccessReset: 'Ripristina impostazioni predefinite',
+  appQuickAccessFull: 'La barra contiene al massimo 10 pulsanti.',
   appUnsavedEditOne: '● {count} modifica non salvata',
   appUnsavedEditMany: '● {count} modifiche non salvate',
   appSavedState: 'Salvato',

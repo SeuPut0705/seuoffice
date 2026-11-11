@@ -71,7 +71,7 @@ export const ko = {
   errRange: '페이지 범위를 확인하세요. 예: 1-3,5',
   errSameAsSource: '원본 파일에는 저장할 수 없습니다. 다른 이름을 고르세요.',
   errUnsavedTarget: '그 파일은 저장하지 않은 변경이 있는 채로 열려 있습니다. 다른 이름을 고르세요.',
-  errBusy: '다른 작업이 끝난 뒤 다시 해 보세요.',
+  errBusy: '다른 작업이 끝난 뒤 다시 시도하세요.',
   errFailed: '처리하지 못했습니다.',
   rejectEncrypted: '{name}: 암호가 걸린 PDF입니다. 먼저 ‘암호 풀기’로 암호를 푸세요.',
   rejectUnreadable: '{name}: PDF로 읽을 수 없습니다.',

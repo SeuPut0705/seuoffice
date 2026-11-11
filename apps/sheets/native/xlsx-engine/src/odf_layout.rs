@@ -37,6 +37,10 @@ pub(crate) struct OdsSheetLayout {
     pub(crate) columns: Vec<(u32, u32, f64)>,
     /// `(first, last, height)` in points, the unit OOXML's `ht` uses.
     pub(crate) row_heights: Vec<(u32, u32, f64)>,
+    /// `(start, end)` inclusive corners of every array formula's result
+    /// range, keyed by the cell that holds the formula
+    /// (`table:number-matrix-columns-spanned` / `-rows-spanned`).
+    pub(crate) arrays: Vec<((u32, u32), (u32, u32))>,
 }
 
 /// The sizing named styles declare, keyed by style name: lengths are resolved
@@ -52,6 +56,7 @@ struct StyleTable {
 #[derive(Default)]
 struct SheetBuilder {
     merges: Vec<((u32, u32), (u32, u32))>,
+    arrays: Vec<((u32, u32), (u32, u32))>,
     columns: Vec<(u32, u32, String)>,
     row_heights: Vec<(u32, u32, String)>,
     /// First row of the row being read, in 0-based sheet coordinates.
@@ -274,6 +279,30 @@ fn parse_content<R: BufRead>(
                             );
                             builder.merges.push((start, end));
                         }
+                        // An array formula says how far its result reaches on
+                        // the cell that holds it; one cell wide and high is
+                        // still an array formula.
+                        let matrix_columns = count_attribute(
+                            reader,
+                            &element,
+                            b"number-matrix-columns-spanned",
+                        )?;
+                        let matrix_rows =
+                            count_attribute(reader, &element, b"number-matrix-rows-spanned")?;
+                        if matrix_columns.is_some() || matrix_rows.is_some() {
+                            let start = (builder.row_start, builder.column);
+                            let end = (
+                                builder
+                                    .row_start
+                                    .saturating_add(matrix_rows.unwrap_or(1).max(1) - 1)
+                                    .min(MAX_ROW - 1),
+                                builder
+                                    .column
+                                    .saturating_add(matrix_columns.unwrap_or(1).max(1) - 1)
+                                    .min(MAX_COLUMN - 1),
+                            );
+                            builder.arrays.push((start, end));
+                        }
                         builder.column = builder.column.saturating_add(repeats).min(MAX_COLUMN);
                     }
                     _ => read_style_property(reader, &element, style.as_ref(), &mut styles)?,
@@ -297,6 +326,7 @@ fn parse_content<R: BufRead>(
         .into_iter()
         .map(|builder| OdsSheetLayout {
             merges: builder.merges,
+            arrays: builder.arrays,
             columns: builder
                 .columns
                 .iter()
@@ -323,7 +353,7 @@ fn parse_content<R: BufRead>(
 
 /// An ODF length as points. A unitless number is 1/100 mm (ODF 1.2 §18.3.13),
 /// and `px` is the CSS pixel: 96 to the inch.
-fn length_points(text: &str) -> Option<f64> {
+pub(crate) fn length_points(text: &str) -> Option<f64> {
     let text = text.trim();
     let split = text
         .find(|character: char| {

@@ -4,11 +4,11 @@ Umiejętność to zestaw instrukcji roboczych dla AI. Zapisz raz to, co robisz w
 
 ## Włączanie i wyłączanie umiejętności
 
-**Ustawienia ▸ Umiejętności** pokazuje umiejętności na tym komputerze, pogrupowane według pochodzenia. Każda umiejętność jest pokazana pod swoją nazwą, tak jak w agentach programistycznych. Polem wyszukiwania u góry znajdziesz umiejętność po nazwie lub opisie.
+**Ustawienia ▸ Umiejętności** pokazuje umiejętności na tym komputerze, pogrupowane według pochodzenia. Każda umiejętność jest pokazana pod swoją nazwą, tak jak w agentach programistycznych. Polem wyszukiwania u góry znajdziesz umiejętność po nazwie lub opisie. Twoja umiejętność, która ma tytuł, pokazuje ten tytuł na tej liście, na liście `/` i na znacznikach, a nazwa jest obok małą czcionką. Możesz też szukać po tytule. Nazwa nadana przez aplikację (`skill-…`) nie jest pokazywana obok tytułu.
 
 | Pochodzenie                    | Co zawiera                                                              | Na początku |
 | ------------------------------ | ----------------------------------------------------------------------- | ----------- |
-| **Wbudowane**                  | 5 umiejętności dostarczanych z GenOffice                                | Włączone    |
+| **Wbudowane**                  | Umiejętności dostarczane z GenOffice                                    | Włączone    |
 | **Moje umiejętności**          | Umiejętności dodane lub utworzone przez ciebie (`~/.ieumoffice/skills`) | Włączone    |
 | **Folder umiejętności Claude** | Umiejętności z `~/.claude/skills`                                       | Wyłączone   |
 | **Wtyczki Claude**             | Umiejętności zainstalowanych wtyczek Claude                             | Wyłączone   |
@@ -16,32 +16,37 @@ Umiejętność to zestaw instrukcji roboczych dla AI. Zapisz raz to, co robisz w
 
 - Przełącznik włącza lub wyłącza umiejętność. To samo ustawienie obowiązuje w panelu AI każdego edytora, w Ask AI na stronie głównej i w oknie agenta.
 - Dla włączonej umiejętności wybierz **Decyduje AI** lub **Tylko na wezwanie**. Na początku ustawione jest Decyduje AI. Przy Tylko na wezwanie umiejętność jest używana tylko wtedy, gdy sam ją wywołasz.
-- Umiejętności z różnych źródeł mogą mieć tę samą nazwę. Rozróżnisz je po etykiecie pochodzenia w każdym wierszu.
-- W menu dodatkowych opcji są **Pokaż zawartość**, **Edytuj** (tylko moje umiejętności), **Eksportuj (zip)** (tylko moje umiejętności) i **Otwórz folder**.
+- Umiejętności z różnych źródeł mogą mieć tę samą nazwę. Rozróżnisz je po etykiecie pochodzenia w każdym wierszu. Gdy dwie umiejętności o tej samej nazwie są włączone, na liście `/` widać i używana jest tylko jedna: pierwsza w kolejności Moje umiejętności, Wbudowane, Folder umiejętności Claude, Folder umiejętności Codex, Wtyczki Claude. W wierszu drugiej jest podane, która umiejętność jest używana zamiast niej.
+- W menu dodatkowych opcji są **Pokaż zawartość**, **Edytuj** (tylko moje umiejętności), **Eksportuj (zip)** (tylko moje umiejętności) i **Otwórz folder**. Wbudowane umiejętności nie mają pozycji **Otwórz folder**. **Gdzie używać** otwiera od razu miejsce wyboru edytorów, w których umiejętność jest używana.
+- Moje umiejętności znajdują się w folderze `~/.ieumoffice/skills`. W systemie Windows jest to `C:\Users\<nazwa użytkownika>\.ieumoffice\skills`. **Otwórz folder** w menu dodatkowych opcji otwiera folder umiejętności.
 - **Przenieś do kosza** przenosi jedną z moich umiejętności do systemowego kosza, skąd można ją przywrócić.
 - Wbudowanej umiejętności się nie usuwa, tylko ukrywa: wybierz **Ukryj**. **Pokaż ponownie** na dole listy przywraca ją w stanie początkowym.
 - Aby zmienić umiejętność wbudowaną lub pochodzącą z innego programu, wybierz **Kopiuj do moich umiejętności**. Kopia pojawia się w moich umiejętnościach, a oryginał zostaje wyłączony.
 - Gdy eksportujesz umiejętność z szablonem, do pliku zip trafia też dokument szablonu. Przed eksportem sprawdź, czy dokument nie zawiera danych osobowych.
+- **Eksportuj kilka** u góry strony umieszcza zaznaczone umiejętności w jednym pliku zip, każdą w osobnym folderze. Odbiorca dodaje ten zip tak samo jak każdy inny zip z umiejętnością i może wybrać, które z jego umiejętności zainstalować.
 
 ## Dodawanie umiejętności
 
 1. W **Ustawienia ▸ Umiejętności** kliknij **Dodaj**.
-2. Wybierz **Z folderu**, **Z pliku zip** lub **Z linku GitHub**. W przypadku GitHub wpisz adres publicznego repozytorium albo `owner/repo` i kliknij **Znajdź**.
-3. Sprawdź w podglądzie znalezione umiejętności. Podgląd pokazuje liczbę i rozmiar plików, to, czy są skrypty, adresy internetowe w tekście oraz plik licencji.
+2. Wybierz **Z folderu**, **Z pliku zip**, **Z wklejonego tekstu** lub **Z linku GitHub**. W przypadku wklejonego tekstu wklej cały `SKILL.md` od jego pierwszego wiersza `---` i kliknij **Podgląd**. W przypadku GitHub wpisz adres publicznego repozytorium, `owner/repo` albo stronę umiejętności w skills.sh i kliknij **Znajdź**.
+3. Sprawdź w podglądzie znalezione umiejętności. Podgląd pokazuje liczbę i rozmiar plików, to, czy są skrypty, adresy internetowe w tekście, plik licencji oraz wiersze warte przeczytania przed instalacją. **Pokaż zawartość** pod umiejętnością otwiera tekst jej `SKILL.md` i jej pliki tekstowe, żeby przeczytać je przed instalacją.
 4. Zaznacz tylko te umiejętności, które chcesz zainstalować, i kliknij **Zainstaluj**. Zainstalowane umiejętności są od razu włączone.
 
 Pod podglądem zawsze widnieje: „Instaluj umiejętności tylko z zaufanych źródeł. Umiejętność przekazuje AI instrukcje, a w oknie agenta może uruchamiać skrypty”. Umiejętność z nieznanego źródła przeczytaj, zanim ją zainstalujesz.
 
-- Jeśli w moich umiejętnościach jest już jedna o tej samej nazwie, wybierz w tym wierszu **Zastąp** lub **Pomiń**.
+- Jeśli w moich umiejętnościach jest już jedna o tej samej nazwie, wybierz w tym wierszu **Zastąp** lub **Pomiń**. **Zastąp** zachowuje ustawienia umiejętności: włączona lub nie, Decyduje AI / Tylko na wezwanie oraz gdzie jest używana.
+- Możesz też upuścić plik zip umiejętności lub plik `SKILL.md` na dowolne okno GenOffice. Otworzy się **Ustawienia ▸ Umiejętności** z tym samym podglądem. Zip jest traktowany jako umiejętność, gdy `SKILL.md` leży na jego najwyższym poziomie albo każdy folder najwyższego poziomu zawiera taki plik; przy każdym innym zipie upuszczonym osobno **Ustawienia ▸ Umiejętności** pokazują „Nie znaleziono umiejętności”. Plik `SKILL.md` trafia sam: umiejętność z dodatkowymi plikami spakuj do zipa.
+- **Wiersze warte przeczytania przed instalacją** to wiersze, które proszą AI o zignorowanie wcześniejszych instrukcji, ukrycie czegoś przed tobą lub pobranie instrukcji z zewnętrznego adresu, a także ścieżki `../` wskazujące poza folder umiejętności. Przy każdym widać plik i numer wiersza. Nie blokują instalacji, a umiejętność bez takich wierszy nie jest przez to bezpieczna.
 - Przy pobieraniu z GitHub GenOffice łączy się tylko z `github.com`, `api.github.com` i `codeload.github.com` i nie wysyła żadnych danych logowania. Jeśli archiwum jest za duże albo nie przejdzie kontroli bezpieczeństwa, nic nie zostanie zainstalowane.
-- **Nowa umiejętność** otwiera pusty edytor, w którym sam wpisujesz nazwę, opis i instrukcje.
+- Strona umiejętności w skills.sh (`https://skills.sh/owner/repo/skill`) jest odczytywana jako ta umiejętność w repozytorium GitHub `owner/repo`. GenOffice nie łączy się ze skills.sh.
+- **Nowa umiejętność** otwiera pusty edytor, w którym sam wpisujesz nazwę, opis i instrukcje. Pole **Tytuł** na samej górze przyjmuje tytuł w dowolnym języku; nazwa jest wypełniana na podstawie tytułu i można ją zmienić. Jeśli włączona umiejętność z innego źródła ma tę samą nazwę, przed zapisaniem pojawi się pytanie, a zapisanie wyłączy tamtą umiejętność. Jeśli tytuł nie zawiera liter łacińskich ani cyfr, nazwa zostaje wypełniona jako `skill-` z kilkoma znakami. Nazwy używają inne programy i wywołanie przez `/`, więc można ją zostawić bez zmian.
 
 ## Sprawdzanie aktualizacji
 
 - W przypadku umiejętności zainstalowanej z GitHub polecenie **Sprawdź aktualizacje** w menu dodatkowych opcji szuka nowej treści. GenOffice łączy się z GitHub dopiero po kliknięciu.
 - Jeśli nic się nie zmieniło, pojawia się „Aktualna”. Jeśli coś się zmieniło, przejrzyj zmienione pliki i podgląd, a potem kliknij **Aktualizuj**.
 - Jeśli po instalacji sam edytowałeś umiejętność, pojawia się też „Twoje zmiany zostaną utracone”.
-- Aktualizacja zachowuje stan włączenia umiejętności i wybór między Decyduje AI a Tylko na wezwanie.
+- Aktualizacja zachowuje stan włączenia umiejętności, wybór między Decyduje AI a Tylko na wezwanie oraz to, gdzie jest używana.
 
 ## Wywoływanie umiejętności w panelu AI
 
@@ -66,11 +71,21 @@ Pod podglądem zawsze widnieje: „Instaluj umiejętności tylko z zaufanych źr
 
 1. W panelu AI napisz na przykład „Zapisz jako umiejętność to, co właśnie zrobiliśmy” albo „Utwórz umiejętność, która pisze raporty w naszym stylu”.
 2. AI wyłuskuje kroki i reguły warte powtarzania i pokazuje kartę **Nowa umiejętność**. Wartości użyte tylko ten jeden raz, takie jak imiona i daty, nie trafiają do instrukcji.
-3. Sprawdź i popraw na karcie nazwę, opis i instrukcje. Nazwa jest widoczna na liście umiejętności i to ją wpisujesz po `/`: małe litery angielskie, cyfry i łączniki.
+3. Sprawdź i popraw na karcie nazwę, opis i instrukcje. Nazwa jest widoczna na liście umiejętności i to ją wpisujesz po `/`: małe litery angielskie, cyfry i łączniki. W polu **Tytuł** nad nazwą wpisuje się tytuł widoczny na liście, w dowolnym języku.
 4. Kliknij **Zapisz**. Nowa umiejętność trafia do moich umiejętności, zostaje włączona i od razu pojawia się na liście `/`.
 
 - Żaden plik nie zostanie zapisany, dopóki nie klikniesz **Zapisz**. Jeśli klikniesz **Anuluj**, rozmowa zachowa ją tylko jako „Niezapisana propozycja umiejętności”.
 - Możesz też poprosić o zmianę istniejącej umiejętności, na przykład „Zmień umiejętność protokołu tak, jak to u nas wygląda”. Karta ma wtedy tytuł **Zmień umiejętność**. Jedna z moich umiejętności zostaje nadpisana przez **Zastąp**; umiejętność wbudowana lub z innego programu jest zapisywana jako kopia w moich umiejętnościach, a oryginał zostaje wyłączony.
+
+## Wybór, gdzie używać umiejętności
+
+Umiejętność pasującą tylko do jednego rodzaju dokumentu, na przykład do stylizowania slajdów albo porządkowania arkusza, można pokazywać tylko w panelu AI tego edytora. W pozostałych edytorach lista `/` i lista umiejętności, których AI używa samo, są krótsze, więc AI częściej wybiera właściwą umiejętność.
+
+- Dla mojej umiejętności otwórz **Edytuj** i w sekcji **Gdzie używać** wybierz **Wszystkie edytory** albo **Tylko te edytory**. Wybrane edytory są zapisywane w pliku umiejętności, więc idą za nią przy eksporcie i przeniesieniu do innego programu. **Tylko te edytory** zaczyna się bez zaznaczonych edytorów; **Zaznacz wszystkie** i **Odznacz wszystkie** zmieniają wszystkie naraz.
+- Dla umiejętności wbudowanej lub z innego programu zmień to w sekcji **Gdzie używać** w **Pokaż zawartość**. Wybór jest zapisywany tylko w ustawieniach tego komputera; plik umiejętności się nie zmienia.
+- Umiejętność, która nie jest używana we wszystkich edytorach, pokazuje to w swoim wierszu, na przykład „Używana w: Prezentacja”.
+- Gdy AI tworzy umiejętność pasującą tylko do jednego formatu, proponuje też, gdzie jej używać; w przeciwnym razie zostawia wszystkie edytory. Przed zapisaniem możesz to zmienić w sekcji **Gdzie używać** na karcie.
+- Zapytaj AI na stronie głównej i okno agenta używają wszystkich włączonych umiejętności, niezależnie od ustawienia, gdzie ich używać.
 
 ## Dodawanie dokumentu jako szablonu
 
@@ -96,15 +111,25 @@ Gdy tworzysz umiejętność w panelu AI edytora, bieżący dokument może dołą
 
 ## Wbudowane umiejętności
 
-| Umiejętność       | Co robi                                                                                 |
-| ----------------- | --------------------------------------------------------------------------------------- |
-| `meeting-minutes` | Zamienia notatki ze spotkania w protokół z decyzjami i zadaniami do wykonania           |
-| `internal-comms`  | Pisze ogłoszenia, biuletyny, raporty z postępów, FAQ i inne teksty wewnętrzne           |
-| `humanizer`       | Wyszukuje sformułowania brzmiące jak pisane przez AI i wygładza je                      |
-| `copy-editing`    | Przechodzi przez napisany przez ciebie tekst angielski, by był jaśniejszy i zwięźlejszy |
-| `find-skills`     | Znajduje w oknie agenta potrzebne umiejętności i proponuje ich instalację               |
+| Umiejętność                   | Co robi                                                                                                                                                                                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Zamienia notatki ze spotkania w protokół z decyzjami i zadaniami do wykonania                                                                                                                               |
+| `internal-comms`              | Pisze ogłoszenia, biuletyny, raporty z postępów, FAQ i inne teksty wewnętrzne                                                                                                                               |
+| `humanizer`                   | Wyszukuje sformułowania brzmiące jak pisane przez AI i wygładza je                                                                                                                                          |
+| `copy-editing`                | Przechodzi przez napisany przez ciebie tekst angielski, by był jaśniejszy i zwięźlejszy                                                                                                                     |
+| `find-skills`                 | Znajduje w oknie agenta potrzebne umiejętności i proponuje ich instalację                                                                                                                                   |
+| `administration-report`       | Dopasowuje raport do wytycznych koreańskiego ministerstwa spraw wewnętrznych: zdania opisowe, stała numeracja, czcionki dostępne wszędzie, proste tabele                                                    |
+| `administration-report-draft` | Pisze raport administracyjny od zera w formacie ministerstwa: sekcje, numeracja Ⅰ·1·가, zdania opisowe, tytuły tabel i dostępne czcionki                                                                    |
+| `docx`                        | Działa tylko w oknie agenta. Uruchamia skrypty, aby tworzyć, edytować i odczytywać pliki .docx w folderze projektu. Na tym komputerze muszą być zainstalowane Python i inne programy                        |
+| `pptx`                        | Działa tylko w oknie agenta. Uruchamia skrypty, aby tworzyć, edytować i odczytywać pliki .pptx w folderze projektu. Na tym komputerze muszą być zainstalowane Python i inne programy                        |
+| `xlsx`                        | Działa tylko w oknie agenta. Uruchamia skrypty, aby tworzyć i edytować pliki .xlsx w folderze projektu oraz przeliczać formuły. Na tym komputerze muszą być zainstalowane Python i inne programy            |
+| `pdf`                         | Działa tylko w oknie agenta. Uruchamia skrypty, aby odczytywać, scalać i dzielić pliki .pdf w folderze projektu oraz wypełniać formularze. Na tym komputerze muszą być zainstalowane Python i inne programy |
+| `hwp-document`                | Pisze od zera nowy dokument .hwp lub .hwpx: dobiera układ raportu, planu, ogłoszenia, pisma urzędowego lub protokołu, pisze stylem dokumentu i sprawdza wynik                                               |
+| `mindmap`                     | Buduje mapę myśli z tematu lub materiałów: od trzech do siedmiu zrównoważonych głównych gałęzi, krótkie tytuły ze szczegółami w notatkach i sprawdzenie struktury na końcu                                  |
+| `diagram`                     | Rysuje czytelny diagram: dobiera właściwy typ, trzyma jeden kierunek, krótkie etykiety i niewiele kolorów, a potem sprawdza nakładanie się i luźne kształty                                                 |
+| `html-document`               | Tworzy dokument HTML, który dobrze się czyta na ekranie i czysto drukuje: najpierw ustala czytelnika, długość i papier, potem sprawdza strony i treść                                                       |
 
-`copy-editing` jest przeznaczona do angielskich tekstów marketingowych. `find-skills` działa tylko w oknie agenta.
+`copy-editing` jest przeznaczona do angielskich tekstów marketingowych. `find-skills` działa tylko w oknie agenta. W oknie **Pokaż zawartość** wbudowanej umiejętności opis jest w języku interfejsu, a instrukcje to tekst przekazywany AI, pokazany bez zmian (po angielsku). `docx`, `pptx`, `xlsx` i `pdf` działają tylko w oknie agenta; uruchamiają skrypty, dlatego na tym komputerze muszą być zainstalowane Python i inne programy. `hwp-document`, `mindmap`, `diagram` i `html-document` są używane tylko w edytorze, dla którego każda z nich została napisana.
 
 ## W oknie agenta
 

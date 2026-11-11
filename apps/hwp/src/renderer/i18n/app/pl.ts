@@ -8,6 +8,7 @@ export const pl = {
   saveFailed: 'Nie udało się zapisać dokumentu.',
   fileSave: 'Zapisz',
   fileSaveAs: 'Zapisz jako…',
+  fileImportPdf: 'Importuj PDF…',
   fileExportPdf: 'Eksportuj jako PDF…',
   filePrint: 'Drukuj…',
   autoSave: 'Autozapis',

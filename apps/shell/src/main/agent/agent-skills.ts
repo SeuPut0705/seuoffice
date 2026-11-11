@@ -14,6 +14,7 @@ import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path
 import JSZip from 'jszip'
 import type { SkillProposal } from '@genoffice/agent-core'
 import { REDACT_NS } from '@genoffice/agent-core/redact-range'
+import { skillEditorsOf } from '@genoffice/agent-core/skill-editors'
 import {
   IEUM_TEMPLATE_KEY,
   MAX_USER_SKILL_BYTES,
@@ -42,16 +43,19 @@ import type { AgentSkillProposalInput } from './agent-mcp'
 
 /**
  * The skills-management calls the agent window may make: the GitHub preview
- * of an install the session proposed, and its Install and Cancel (spec 6.4).
- * Every other management call stays with the settings screen.
+ * of an install the session proposed, reading that preview's own files, and
+ * its Install and Cancel (spec 6.4). Every other management call stays with
+ * the settings screen.
  */
 export const AGENT_WINDOW_MANAGE_CHANNELS: ReadonlySet<string> = new Set([
   USER_SKILLS_CHANNELS.importGitHub,
+  USER_SKILLS_CHANNELS.readImport,
+  USER_SKILLS_CHANNELS.readImportFile,
   USER_SKILLS_CHANNELS.cancelImport,
   USER_SKILLS_CHANNELS.install,
 ])
 
-/** The `canManage` gate of the skills channels: the main window, and the agent window for three */
+/** The `canManage` gate of the skills channels: the main window, and the agent window for its preview */
 export function userSkillsManageGate<S>(windows: {
   isMainWindow(sender: S): boolean
   isAgentWindow(sender: S): boolean
@@ -113,6 +117,8 @@ export interface AgentSkillListEntry {
   title: string
   owned: boolean
   unreadable?: unknown
+  /** where the skill is used (the list's value); absent: every editor */
+  editors?: unknown
 }
 
 export type AgentSkillProposalResult =
@@ -188,6 +194,7 @@ export function agentSkillProposalOf(
       title: entry.title || entry.name,
       owned: entry.owned,
       source: entry.source,
+      editors: skillEditorsOf(entry.editors),
     }
   }
   return {

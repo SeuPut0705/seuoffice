@@ -8,6 +8,7 @@ export const ja = {
   saveFailed: '文書を保存できませんでした。',
   fileSave: '保存',
   fileSaveAs: '名前を付けて保存…',
+  fileImportPdf: 'PDF を取り込む…',
   fileExportPdf: 'PDF として書き出す…',
   filePrint: '印刷…',
   autoSave: '自動保存',

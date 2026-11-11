@@ -106,5 +106,5 @@ export const ko = {
   trEasyRestartYes: '다시 풀이',
   trEasyRunning: '{language} 쉬운 풀이를 만드는 중… {done}/{total}개 블록',
   trEasyDone: '{language} 쉬운 풀이를 마쳤습니다({count}개 블록).',
-  trResumeEasy: '끝나지 않은 쉬운 풀이({language}) {percent}% — 이어서 할까요?',
+  trResumeEasy: '끝나지 않은 쉬운 풀이({language}) {percent}%. 이어서 할까요?',
 } satisfies Record<keyof typeof zh, string>

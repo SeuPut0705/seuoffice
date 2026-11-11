@@ -12,7 +12,13 @@
   justify-content: center;
   padding: 5vh 24px;
   background: var(--color-bg-overlay);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(4px);
+}
+
+/* asked for while the first-run welcome window (1000) is up: a dropped skill's
+   preview must be read above it; the first-connection notice (1100) still leads */
+.set-overlay.over-welcome {
+  z-index: 1050;
 }
 
 .set-dialog {
@@ -337,7 +343,7 @@
   height: 18px;
   border-radius: 50%;
   background: var(--surface);
-  box-shadow: var(--shadow-modal-strong);
+  box-shadow: var(--shadow-pill);
   transition: left 0.15s ease;
 }
 
@@ -509,7 +515,7 @@
   width: 46%;
   min-width: 200px;
   padding: 6px 10px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   font: inherit;
   font-size: 13px;
@@ -688,7 +694,7 @@
   margin-left: auto;
   font-size: 12px;
   font-weight: 400;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .set-intg-lead {
@@ -1147,7 +1153,7 @@
 }
 
 .set-local-meta {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
@@ -1222,10 +1228,11 @@
 
 .set-local-profile {
   margin-top: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  background: var(--surface-subtle);
+  padding: 12px 0 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  border-top: 1px solid var(--border-subtle);
 }
 
 /* a context length can reach 10,000,000; the generic 64px field clips it */
@@ -1234,8 +1241,8 @@
 }
 
 .set-local-source {
-  font-size: 11px;
-  color: var(--text-tertiary);
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .set-local-notes {
@@ -1339,7 +1346,7 @@
 .set-home-kind-sub {
   margin-left: 6px;
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .set-home-kind-move {
@@ -1353,6 +1360,9 @@
   font-size: 13px;
   color: var(--text-secondary);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .set-home-kind-move:hover:not(:disabled) {

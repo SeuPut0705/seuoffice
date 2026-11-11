@@ -14,7 +14,7 @@
   box-sizing: border-box;
   width: 100%;
   padding: 6px 10px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   font: inherit;
   font-size: 13px;
@@ -57,7 +57,10 @@
   word-break: break-all;
 }
 
-.skl-error {
+/* `.set-field-desc` (settings.css) has the same weight and comes later in the
+   bundle: name it here too, or a reason under a field shows in the hint's grey */
+.skl-error,
+.set-field-desc.skl-error {
   color: var(--danger);
 }
 
@@ -115,7 +118,7 @@
 
 .skl-source {
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .skl-row-desc {
@@ -144,8 +147,8 @@
 }
 
 .skl-meta {
-  font-size: 11px;
-  color: var(--text-tertiary);
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .skl-row-controls {
@@ -178,7 +181,7 @@
 .skl-invoke-option.active {
   background: var(--surface);
   color: var(--text-primary);
-  box-shadow: var(--shadow-menu);
+  box-shadow: var(--shadow-pill);
 }
 
 .skl-menu-wrap {
@@ -210,10 +213,9 @@
   width: 28px;
 }
 
+/* placed by MenuButton: under its button, above it near the bottom of the window */
 .skl-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  position: fixed;
   z-index: 5;
   display: flex;
   flex-direction: column;
@@ -325,6 +327,58 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+/* a note beside the footer buttons, pushed to the start of the row */
+.skl-footer-note {
+  margin-inline-end: auto;
+  align-self: center;
+}
+
+/* the editor's "discard what you typed?" question takes the footer */
+.skl-discard {
+  flex: 1;
+  margin: 0;
+}
+
+.skl-read {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* over .set-link's inherited font, which would follow the dialog's text size */
+.skl-read .skl-read-toggle {
+  font-size: 12px;
+}
+
+.skl-read-box,
+.skl-read-file {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.skl-read-text {
+  max-height: 240px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-hover);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+}
+
+.skl-read-more {
+  margin: 0;
+}
+
 .skl-editor-heading {
   font-size: 14px;
   font-weight: 600;
@@ -344,6 +398,22 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+/* the where-used chooser sits among these fields and takes their sizes */
+.skl-dialog .ai-skill-editors legend {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.skl-dialog .ai-skill-editors label {
+  font-size: 13px;
+}
+
+.skl-dialog .ai-skill-editors-hint,
+.skl-dialog .ai-skill-editors-bulk button {
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .skl-dialog .set-adv-toggle {
@@ -379,7 +449,7 @@
 .skl-change {
   flex-shrink: 0;
   font-size: 11px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .skl-files-actions {
@@ -437,11 +507,45 @@
 .skl-urls ul {
   margin: 2px 0 0;
   padding-inline-start: 16px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
 .skl-urls code {
+  word-break: break-all;
+}
+
+.skl-line-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+  background: var(--danger-bg);
+}
+
+.skl-line-warnings-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.skl-line-warnings ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding-inline-start: 16px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.skl-line-warnings code {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
   word-break: break-all;
 }
 
@@ -451,6 +555,10 @@
   align-items: center;
   gap: 8px;
   margin-top: 4px;
+}
+
+.skl-collision-note {
+  flex-basis: 100%;
 }
 
 .skl-choice.active {

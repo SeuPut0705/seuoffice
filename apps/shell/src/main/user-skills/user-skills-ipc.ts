@@ -4,17 +4,26 @@
  * ask for the settings page; changing, importing, exporting and removing
  * skills is for the settings screen only. Previewed imports and found updates
  * wait under a token until installed or dropped; a window that goes away
- * drops its own.
+ * drops its own. A skill file dropped on any window waits in a queue (only
+ * the path) until the settings screen takes it and previews it as its own;
+ * a drop that held no skill waits there too, as the notice it becomes.
  */
 import { randomUUID } from 'node:crypto'
 import { BrowserWindow, dialog, ipcMain, shell, webContents } from 'electron'
 import type { IpcMainInvokeEvent, WebContents } from 'electron'
-import type { GitHubSkillUpdateCheck, SkillImport } from '@genoffice/ai-provider'
+import {
+  skillBundleFileName,
+  type GitHubSkillUpdateCheck,
+  type SkillImport,
+  type SkillImportSource,
+} from '@genoffice/ai-provider'
 import {
   USER_SKILLS_CHANNELS as C,
   cardSaveInputOf,
+  importTextOf,
   installRequestOf,
   saveInputOf,
+  skillIdListOf,
   skillIdOf,
   statePatchOf,
   type UserSkillImportPreview,
@@ -48,9 +57,29 @@ interface Pending<T> {
 
 type ChangedCheck = Extract<GitHubSkillUpdateCheck, { status: 'changed' }>
 
+/** A file dropped on a window that holds skills */
+export type DroppedSkillSource = Extract<SkillImportSource, { kind: 'zip' | 'skill-file' }>
+
+/**
+ * What a drop leaves for the settings screen: a file that holds skills, or
+ * word that the dropped zip or `SKILL.md` held none (the screen says so)
+ */
+export type DroppedSkillEntry = DroppedSkillSource | { kind: 'no-skills' }
+
+/** Most dropped skill files waiting at once; older ones go first */
+export const DROPPED_SKILLS_MAX = 20
+
+/** Longest bundle name a window may suggest; the core cuts it to a file name */
+const BUNDLE_NAME_MAX_CHARS = 300
+
 export interface UserSkillsIpc {
   /** tell every window the list changed */
   broadcastChanged(): void
+  /**
+   * Keep what a drop left for the settings screen and tell the windows; the
+   * caller opens the settings on the skills page
+   */
+  queueDropped(entry: DroppedSkillEntry): void
 }
 
 export function registerUserSkillsIpc(deps: UserSkillsIpcDeps): UserSkillsIpc {
@@ -60,6 +89,7 @@ export function registerUserSkillsIpc(deps: UserSkillsIpcDeps): UserSkillsIpc {
   /** the GitHub import or update check running for a window */
   const running = new Map<number, AbortController>()
   const watched = new Set<number>()
+  const dropped: DroppedSkillEntry[] = []
 
   const broadcastChanged = () => {
     for (const wc of webContents.getAllWebContents()) {
@@ -232,7 +262,7 @@ export function registerUserSkillsIpc(deps: UserSkillsIpcDeps): UserSkillsIpc {
       : await dialog.showOpenDialog(options)
     const folder = picked.filePaths[0]
     if (picked.canceled || !folder) return { ok: false, reason: 'cancelled' } as UserSkillsFail
-    return keepImport(event, await service.prepareFolder(folder))
+    return keepImport(event, await service.prepare({ kind: 'folder', folder }))
   })
 
   manage(C.importZip, async (event) => {
@@ -246,7 +276,20 @@ export function registerUserSkillsIpc(deps: UserSkillsIpcDeps): UserSkillsIpc {
       : await dialog.showOpenDialog(options)
     const file = picked.filePaths[0]
     if (picked.canceled || !file) return { ok: false, reason: 'cancelled' } as UserSkillsFail
-    return keepImport(event, await service.prepareZip(file))
+    return keepImport(event, await service.prepare({ kind: 'zip', file }))
+  })
+
+  manage(C.importText, async (event, raw: unknown) => {
+    const text = importTextOf(raw)
+    if (text === undefined) return invalid
+    return keepImport(event, await service.prepare({ kind: 'text', text }))
+  })
+
+  manage(C.takeDropped, async (event) => {
+    const next = dropped.shift()
+    if (!next) return { ok: true, preview: null }
+    if (next.kind === 'no-skills') return { ok: false, reason: 'no-skills' } as UserSkillsFail
+    return keepImport(event, await service.prepare(next))
   })
 
   manage(C.importGitHub, async (event, address: unknown) => {
@@ -257,7 +300,7 @@ export function registerUserSkillsIpc(deps: UserSkillsIpcDeps): UserSkillsIpc {
     const controller = new AbortController()
     running.set(owner, controller)
     try {
-      const imported = await service.prepareGitHub(address, controller.signal)
+      const imported = await service.prepare({ kind: 'github', address }, controller.signal)
       if (controller.signal.aborted || event.sender.isDestroyed()) {
         await service.dispose(imported)
         return { ok: false, reason: 'cancelled' } as UserSkillsFail
@@ -266,6 +309,27 @@ export function registerUserSkillsIpc(deps: UserSkillsIpcDeps): UserSkillsIpc {
     } finally {
       if (running.get(owner) === controller) running.delete(owner)
     }
+  })
+
+  /** The previewed import a window asks about by its token: its own only */
+  const ownImport = (event: IpcMainInvokeEvent, token: unknown): SkillImport | undefined => {
+    const entry = typeof token === 'string' ? imports.get(token) : undefined
+    return entry && entry.owner === event.sender.id ? entry.value : undefined
+  }
+
+  manage(C.readImport, async (event, token: unknown, key: unknown) => {
+    if (typeof key !== 'string' || key.length > 4096) return invalid
+    const imported = ownImport(event, token)
+    if (!imported) return { ok: false, reason: 'not-found' } as UserSkillsFail
+    return service.readImported(imported, key)
+  })
+
+  manage(C.readImportFile, async (event, token: unknown, key: unknown, rel: unknown) => {
+    if (typeof key !== 'string' || key.length > 4096) return invalid
+    if (typeof rel !== 'string' || rel.length > 4096) return invalid
+    const imported = ownImport(event, token)
+    if (!imported) return { ok: false, reason: 'not-found' } as UserSkillsFail
+    return service.readImportedFile(imported, key, rel)
   })
 
   manage(C.cancelImport, async (event, token: unknown) => {
@@ -378,6 +442,32 @@ export function registerUserSkillsIpc(deps: UserSkillsIpcDeps): UserSkillsIpc {
     return service.exportTo(skillId, picked.filePath)
   })
 
+  manage(C.exportBundle, async (event, raw: unknown, suggested: unknown) => {
+    const ids = skillIdListOf(raw)
+    if (!ids) return invalid
+    // one skill goes out under its own file name; several under the words the screen made
+    let defaultPath = skillBundleFileName(
+      typeof suggested === 'string' ? suggested.slice(0, BUNDLE_NAME_MAX_CHARS) : undefined,
+    )
+    if (ids.length === 1) {
+      const info = await service.exportInfo(ids[0]!)
+      if (!info.ok) return info
+      defaultPath = info.fileName
+    }
+    const parent = parentOf(event)
+    const options = {
+      defaultPath,
+      filters: [{ name: 'Zip', extensions: ['zip'] }],
+    }
+    const picked = parent
+      ? await dialog.showSaveDialog(parent, options)
+      : await dialog.showSaveDialog(options)
+    if (picked.canceled || !picked.filePath) {
+      return { ok: false, reason: 'cancelled' } as UserSkillsFail
+    }
+    return service.exportBundleTo(ids, picked.filePath)
+  })
+
   manage(C.openFolder, async (_event, id: unknown) => {
     const skillId = skillIdOf(id)
     if (!skillId) return invalid
@@ -387,5 +477,13 @@ export function registerUserSkillsIpc(deps: UserSkillsIpcDeps): UserSkillsIpc {
     return error ? ({ ok: false, reason: 'failed' } as UserSkillsFail) : { ok: true }
   })
 
-  return { broadcastChanged }
+  const queueDropped = (entry: DroppedSkillEntry) => {
+    dropped.push(entry)
+    if (dropped.length > DROPPED_SKILLS_MAX) dropped.splice(0, dropped.length - DROPPED_SKILLS_MAX)
+    for (const wc of webContents.getAllWebContents()) {
+      if (!wc.isDestroyed()) wc.send(C.dropped)
+    }
+  }
+
+  return { broadcastChanged, queueDropped }
 }

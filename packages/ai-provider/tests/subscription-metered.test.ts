@@ -445,7 +445,8 @@ describe('the status service', () => {
     await service.check()
     expect(seen.sort()).toEqual([
       ['chatgpt', undefined],
-      ['claude-code', undefined],
+      // both CLIs have a path field, so an untouched Claude slot sends an empty one
+      ['claude-code', ''],
       ['codex', 'D:\\tools\\codex.exe'],
     ])
   })

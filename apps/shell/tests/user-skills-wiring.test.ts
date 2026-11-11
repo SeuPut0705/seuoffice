@@ -107,11 +107,15 @@ describe('the skills bridge in every window', () => {
       (...args: unknown[]) => Promise<unknown>
     >
     await api.importGitHub!('a/b@c')
+    await api.readImport!('tok', 'k')
+    await api.readImportFile!('tok', 'k', 'notes.md')
     await api.cancelImport!('tok')
     await api.install!('tok', ['k'])
     await api.focusTab!('tab-1')
     expect(electronMocks.invoke.mock.calls).toEqual([
       [USER_SKILLS_CHANNELS.importGitHub, 'a/b@c'],
+      [USER_SKILLS_CHANNELS.readImport, 'tok', 'k'],
+      [USER_SKILLS_CHANNELS.readImportFile, 'tok', 'k', 'notes.md'],
       [USER_SKILLS_CHANNELS.cancelImport, 'tok'],
       [USER_SKILLS_CHANNELS.install, { token: 'tok', selected: ['k'], onCollision: {} }],
       [USER_SKILLS_CHANNELS.focusTab, 'tab-1'],

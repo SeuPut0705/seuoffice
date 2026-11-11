@@ -15,6 +15,7 @@ import {
   skillContentHash,
   suggestUserSkillName,
   validateNewUserSkillName,
+  withoutSkillEditors,
 } from '../src/user-skills'
 
 const roots: string[] = []
@@ -179,6 +180,18 @@ describe('writing front matter', () => {
     })
   })
 
+  it('writes, keeps and takes out the editors without touching the rest', () => {
+    const base =
+      '---\nname: deck\nlicense: MIT\ndescription: d\nmetadata:\n  author: me # kept\n  ieum-title: T\n---\nBody\n'
+    const input = { name: 'deck', description: 'd', title: 'T', body: 'Body\n' }
+    const written = renderSkillMd({ ...input, editors: 'slides docs' }, base)
+    expect(written).toBe(
+      '---\nname: deck\nlicense: MIT\ndescription: d\nmetadata:\n  author: me # kept\n  ieum-title: T\n  ieum-editors: slides docs\n---\nBody\n',
+    )
+    expect(renderSkillMd(input, written)).toBe(written)
+    expect(renderSkillMd({ ...input, editors: null }, written)).toBe(base)
+  })
+
   it('drops the app values it is told to drop and adds extra keys', () => {
     const base = '---\nname: a\ndescription: b\nmetadata:\n  ieum-title: T\n---\nx'
     expect(renderSkillMd({ name: 'a', description: 'b', body: 'x' }, base)).toBe(
@@ -209,6 +222,46 @@ describe('writing front matter', () => {
       original,
     )
     expect(parseSkillMd(again)).toEqual(parsed)
+  })
+
+  it('leaves every other byte of the front matter as written when one value changes', () => {
+    const original =
+      '---\nname: "deck"\n# what it does\ndescription: >-\n  Makes decks,\n  slide by slide.\nlicense: \'MIT\'\nmetadata:\n  author: "kim"   # who\n  ieum-title: \'발표\'\n---\nSteps.\n'
+    const parsed = parseSkillMd(original)!
+    const input = {
+      name: parsed.name!,
+      description: parsed.description!,
+      template: parsed.metadata['ieum-template'],
+      body: parsed.body,
+    }
+    // a new title: only its line differs
+    expect(renderSkillMd({ ...input, title: '발표 자료' }, original)).toBe(
+      original.replace("ieum-title: '발표'", 'ieum-title: 발표 자료'),
+    )
+    // the title cleared: only its line is gone
+    expect(renderSkillMd({ ...input, title: undefined }, original)).toBe(
+      original.replace("  ieum-title: '발표'\n", ''),
+    )
+    // nothing changed: the file as it was
+    expect(renderSkillMd({ ...input, title: '발표' }, original)).toBe(original)
+  })
+
+  it('takes the where-used value out and leaves the rest of the file as written', () => {
+    const received = '---\nname: deck\ndescription: "Makes decks: slides"\n---\nSteps.\n'
+    const parsed = parseSkillMd(received)!
+    const carried = renderSkillMd(
+      {
+        name: parsed.name!,
+        description: parsed.description!,
+        editors: 'slides',
+        body: parsed.body,
+      },
+      received,
+    )
+    expect(parseSkillMd(carried)!.metadata['ieum-editors']).toBe('slides')
+    expect(withoutSkillEditors(carried)).toBe(received)
+    expect(withoutSkillEditors(received)).toBe(received)
+    expect(withoutSkillEditors('no front matter')).toBe('no front matter')
   })
 })
 

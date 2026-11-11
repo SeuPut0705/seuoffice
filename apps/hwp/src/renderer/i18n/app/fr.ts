@@ -8,6 +8,7 @@ export const fr = {
   saveFailed: 'Le document n’a pas pu être enregistré.',
   fileSave: 'Enregistrer',
   fileSaveAs: 'Enregistrer sous…',
+  fileImportPdf: 'Importer un PDF…',
   fileExportPdf: 'Exporter en PDF…',
   filePrint: 'Imprimer…',
   autoSave: 'Enregistrement auto',

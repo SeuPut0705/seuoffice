@@ -43,6 +43,7 @@ import {
   toSaveSheetOps,
   toSavePageSetupStates,
   toSaveStructuralOps,
+  type StructuralJournalOp,
 } from '../src/renderer/edit-journal'
 
 describe('bulk constant-fill journal', () => {
@@ -763,6 +764,68 @@ describe('recordStructuralOp', () => {
       { sheetId: 'sheet-1', kind: 'insert-rows', index: 1, count: 1 },
       { sheetId: 'sheet-1', kind: 'remove-cols', index: 0, count: 2 },
     ])
+  })
+
+  it('saves back-to-back row ops of one value as one op', () => {
+    // An undo restoring 3,000 row heights journals one op per line.
+    const journal = createEditJournal()
+    for (let row = 0; row < 3000; row += 1) {
+      recordStructuralOp(journal, 'sheet-1', {
+        kind: 'set-row-size',
+        start: row,
+        end: row,
+        size: row < 2000 ? 15 : 22.5,
+      })
+    }
+    for (let row = 0; row < 3000; row += 1) {
+      recordStructuralOp(journal, 'sheet-1', {
+        kind: 'set-row-size',
+        start: row,
+        end: row,
+        size: null,
+      })
+    }
+    recordStructuralOp(journal, 'sheet-1', {
+      kind: 'set-rows-hidden',
+      start: 4,
+      end: 6,
+      hidden: true,
+    })
+    recordStructuralOp(journal, 'sheet-1', {
+      kind: 'set-rows-hidden',
+      start: 6,
+      end: 9,
+      hidden: true,
+    })
+    recordStructuralOp(journal, 'sheet-2', {
+      kind: 'set-rows-hidden',
+      start: 10,
+      end: 10,
+      hidden: true,
+    })
+    expect(toSaveStructuralOps(journal)).toEqual([
+      { sheetId: 'sheet-1', kind: 'set-row-size', start: 0, end: 1999, size: 15 },
+      { sheetId: 'sheet-1', kind: 'set-row-size', start: 2000, end: 2999, size: 22.5 },
+      { sheetId: 'sheet-1', kind: 'set-row-size', start: 0, end: 2999, size: null },
+      { sheetId: 'sheet-1', kind: 'set-rows-hidden', start: 4, end: 9, hidden: true },
+      { sheetId: 'sheet-2', kind: 'set-rows-hidden', start: 10, end: 10, hidden: true },
+    ])
+  })
+
+  it('keeps row ops apart across a gap, a different value, or a shifting op', () => {
+    const journal = createEditJournal()
+    const ops: StructuralJournalOp[] = [
+      { kind: 'set-row-size', start: 0, end: 0, size: 20 },
+      { kind: 'set-row-size', start: 2, end: 2, size: 20 },
+      { kind: 'set-row-size', start: 3, end: 3, size: 21 },
+      { kind: 'set-rows-outline', start: 0, end: 1, level: 1 },
+      { kind: 'set-rows-outline', start: 2, end: 3, level: 1, collapsed: true },
+      { kind: 'insert-rows', index: 9, count: 1 },
+      { kind: 'set-cols-hidden', start: 0, end: 0, hidden: true },
+      { kind: 'set-cols-hidden', start: 1, end: 1, hidden: true },
+    ]
+    for (const op of ops) recordStructuralOp(journal, 'sheet-1', op)
+    expect(toSaveStructuralOps(journal)).toEqual(ops.map((op) => ({ sheetId: 'sheet-1', ...op })))
   })
 })
 

@@ -5,6 +5,7 @@ import {
   windowUserSkillsBridge,
   type AgentMessage,
   type AgentSkill,
+  type SkillEditorId,
   type SkillProposal,
   type UserSkillText,
   type UserSkillsBridgeLike,
@@ -12,6 +13,7 @@ import {
 import {
   readStoredSkillCards,
   skillCardBridge,
+  skillCardDraftLabel,
   skillCardSavedRecord,
   type SkillCardBridge,
   type SkillCardStatus,
@@ -41,6 +43,8 @@ import {
 // ---- the capability an AI panel composes ------------------------------------
 
 export interface PanelUserSkillsOptions {
+  /** the editor this panel belongs to: skills set for other editors are not used; none in home ask */
+  editor?: SkillEditorId | undefined
   /** the UI language now (the loop lives longer than one render) */
   lang: () => Lang
   /** the loop's history: skills the request carries as chips are not listed again */
@@ -68,6 +72,7 @@ export function panelUserSkills(options: PanelUserSkillsOptions): AgentSkill[] {
   if (!bridge) return []
   return [
     createBridgedUserSkillsSkill(bridge, {
+      editor: options.editor,
       messages: options.messages,
       onProposal: options.onProposal,
       onUsed: options.onUsed,
@@ -76,20 +81,16 @@ export function panelUserSkills(options: PanelUserSkillsOptions): AgentSkill[] {
         used: (title) => skillCardText(options.lang(), 'skillUsed', { title }),
         proposed: (title) => skillCardText(options.lang(), 'skillProposed', { title }),
       },
-      displayTitle: (skill) =>
-        skillDisplayName({
-          name: skill.name,
-          title: skill.source === 'builtin' ? '' : skill.title,
-        }),
+      displayTitle: skillDisplayName,
     }),
   ]
 }
 
 // ---- the cards in a panel's chat ----------------------------------------------
 
-/** What a proposal is called in the chat: the name the model gave (a title in older chats) */
+/** What a proposal is called in the chat: the title the model gave, else the name */
 function proposalLabel(proposal: SkillProposal): string {
-  return proposal.name || proposal.title
+  return proposal.title || proposal.name
 }
 
 /** 'preview': the card continues in a template preview tab (spec 5.6) */
@@ -202,12 +203,17 @@ export function useSkillProposals(options: SkillProposalsOptions): SkillProposal
 
   const addPreview = useCallback((preview: HandedPreview): string => {
     const key = `preview-${preview.previewId}`
+    const proposal = preview.proposal
     setCards((prev) => {
       if (prev.has(key)) return prev
       const next = new Map(prev)
       next.set(key, {
-        proposal: preview.proposal,
-        title: preview.draft?.name || proposalLabel(preview.proposal),
+        proposal,
+        title:
+          preview.draft?.title?.trim() ||
+          proposal.title ||
+          preview.draft?.name ||
+          proposalLabel(proposal),
         status: 'open',
         preview,
       })
@@ -275,7 +281,11 @@ export function useSkillProposals(options: SkillProposalsOptions): SkillProposal
                   document={document}
                   bridge={templateBridge}
                   onPreviewOpened={(continuesIn) =>
-                    setCard(key, { status: 'preview', title: context.draft.name, continuesIn })
+                    setCard(key, {
+                      status: 'preview',
+                      title: skillCardDraftLabel(context.draft),
+                      continuesIn,
+                    })
                   }
                 />
               )
@@ -290,12 +300,15 @@ export function useSkillProposals(options: SkillProposalsOptions): SkillProposal
           renderTemplateActions={renderTemplateActions}
           initialDraft={preview ? { ...preview.draft, withTemplate: true } : undefined}
           onSaved={(id, draft) => {
-            setCard(key, { status: 'saved', title: draft.name })
+            setCard(key, { status: 'saved', title: skillCardDraftLabel(draft) })
             // the stored record names the proposal as the model named it
             optionsRef.current.persistSaved?.(skillCardSavedRecord(proposalLabel(proposal), id))
             if (preview) {
               void templateBridge
-                ?.finishPreview(preview.previewId, 'saved', { skillId: id, title: draft.name })
+                ?.finishPreview(preview.previewId, 'saved', {
+                  skillId: id,
+                  title: skillCardDraftLabel(draft),
+                })
                 .catch(() => undefined)
             }
           }}

@@ -278,18 +278,19 @@ Le raccourci de filtre d’Excel, Ctrl+Shift+L, ne fait rien sous Windows ni sou
 
 ### Fenêtre
 
-| Action                                                                | macOS       | Windows / Linux |
-| --------------------------------------------------------------------- | ----------- | --------------- |
-| Enregistrer le classeur                                               | ⌘S          | Ctrl+S          |
-| Enregistrer sous                                                      | ⇧⌘S         | Ctrl+Shift+S    |
-| Ouvrir un classeur                                                    | ⌘O          | Ctrl+O          |
-| Imprimer                                                              | ⌘P          | Ctrl+P          |
-| Fermer le classeur (macOS) / Quitter l’application (Windows et Linux) | ⌘W          | Ctrl+Q          |
-| Ouvrir le guide de l’utilisateur                                      | F1          | F1              |
-| Zoom avant                                                            | ⌘=          | Ctrl+=          |
-| Zoom à la molette                                                     | ⌘ + molette | Ctrl + molette  |
-| Afficher ou masquer les formules dans les cellules                    | ⌘`          | Ctrl+`          |
-| Agrandir ou réduire la barre de formule                               | ⌘⇧U         | Ctrl+Shift+U    |
+| Action                                                                             | macOS       | Windows / Linux |
+| ---------------------------------------------------------------------------------- | ----------- | --------------- |
+| Enregistrer le classeur                                                            | ⌘S          | Ctrl+S          |
+| Enregistrer sous                                                                   | ⇧⌘S         | Ctrl+Shift+S    |
+| Ouvrir un classeur                                                                 | ⌘O          | Ctrl+O          |
+| Imprimer                                                                           | ⌘P          | Ctrl+P          |
+| Fermer le classeur (macOS) / Quitter l’application (Windows et Linux)              | ⌘W          | Ctrl+Q          |
+| Ouvrir le guide de l’utilisateur                                                   | F1          | F1              |
+| Zoom avant                                                                         | ⌘=          | Ctrl+=          |
+| Zoom à la molette                                                                  | ⌘ + molette | Ctrl + molette  |
+| Afficher ou masquer les formules dans les cellules                                 | ⌘`          | Ctrl+`          |
+| Agrandir ou réduire la barre de formule                                            | ⌘⇧U         | Ctrl+Shift+U    |
+| Exécuter un bouton de la barre d’outils Accès rapide selon sa position (1er à 10e) |             | Alt+1 … Alt+0   |
 
 ## Slides
 

@@ -28,7 +28,7 @@ export const ko = {
   cvAiFilling: 'AI가 앞쪽 페이지를 읽는 중…',
   cvAiFilled: 'AI가 제안한 값으로 채웠습니다. 확인하고 필요하면 고치세요.',
   cvAiNoText: '앞쪽 페이지에 보낼 글자가 없습니다.',
-  cvAiUnreadable: 'AI의 답을 읽지 못했습니다. 다시 해 보세요.',
+  cvAiUnreadable: 'AI의 답을 읽지 못했습니다. 다시 시도하세요.',
   cvConvert: '변환',
   cvPreparing: '준비하는 중…',
   cvRunning: '변환하는 중… {total}쪽 중 {done}쪽',

@@ -382,6 +382,31 @@ describe('an .ods opens as a converted .xlsx session', () => {
     )) as OpenedWorkbook
     expect(reopened.sessionId).toBeTruthy()
     expect(reopened.path).toBe(file.path)
+    // the twin still knows it is a converted copy, not a file in the temp dir
+    expect(reopened.needsSaveAs).toBe(true)
+    expect(reopened.odsConverted).toBe(true)
+    expect(reopened.formulasDropped).toBe(file.formulasDropped)
+  })
+
+  it('still routes Save through Save As after a crash re-open', async () => {
+    const contents = newTab()
+    const ods = writeOds()
+    const file = await openOds(contents, ods)
+    const reopened = (await call(
+      contents,
+      IPC_CHANNELS.reopenWorkbook,
+      file.path,
+    )) as OpenedWorkbook
+    const target = join(dir, '보고서.xlsx')
+    saveDialogAnswer.value = target
+
+    const saved = await saveWorkbook(contents, reopened.sessionId)
+
+    // without the twin this Save wrote the temp copy in place and said "saved"
+    expect(saveDialogs).toHaveLength(1)
+    expect(saveDialogs[0]?.defaultPath).toBe(target)
+    expect(saved.file?.path).toBe(target)
+    expect(readFileSync(ods).toString()).toBe(ODS_BYTES)
   })
 
   it('keeps the crash-recovery copy under userData, named from the original', async () => {

@@ -10,7 +10,7 @@ export const ko = {
   codexWebLabel: '웹 검색',
   codexWebCached: '저장된 결과',
   codexWebLive: '실시간',
-  codexWebDisabled: '끄기',
+  codexWebDisabled: '끔',
   codexWebNote: '저장된 결과는 미리 모아 둔 웹 자료에서 찾고, 실시간은 지금의 웹을 검색합니다.',
   codexNetworkLabel: '명령의 인터넷 접속',
   codexNetworkOff: '끔',

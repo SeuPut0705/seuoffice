@@ -5,7 +5,7 @@
  * as `metadata`, and top-level lists of scalars (`- item` lines or `[a, b]`).
  * Anything else is kept as written when the app rewrites a file.
  */
-import { IEUM_TEMPLATE_KEY, IEUM_TITLE_KEY } from './constants'
+import { IEUM_EDITORS_KEY, IEUM_TEMPLATE_KEY, IEUM_TITLE_KEY } from './constants'
 
 export interface ParsedSkillMd {
   name: string | undefined
@@ -477,6 +477,11 @@ export interface SkillMdInput {
   title?: string | undefined
   /** `metadata.ieum-template`; left out when undefined */
   template?: string | undefined
+  /**
+   * `metadata.ieum-editors`, editor ids separated by spaces; `null` takes it
+   * out, and undefined keeps what the file has
+   */
+  editors?: string | null | undefined
   body: string
   /** other top-level keys to set, such as `disable-model-invocation` */
   fields?: Record<string, string | boolean> | undefined
@@ -485,12 +490,16 @@ export interface SkillMdInput {
 /**
  * Write a SKILL.md in the standard shape: `name`, `description`, and this
  * app's values under `metadata`. With `base` (the file being rewritten), its
- * other keys and other metadata entries stay as they were written, in place.
+ * other keys and other metadata entries stay as they were written, in place,
+ * and so does a key whose value is not changed (its quoting, its comments).
  */
 export function renderSkillMd(input: SkillMdInput, base?: string): string {
   const ieum: Array<[string, string]> = []
   if (input.title !== undefined) ieum.push([IEUM_TITLE_KEY, input.title])
   if (input.template !== undefined) ieum.push([IEUM_TEMPLATE_KEY, input.template])
+  if (typeof input.editors === 'string') ieum.push([IEUM_EDITORS_KEY, input.editors])
+  const managed = new Set([IEUM_TITLE_KEY, IEUM_TEMPLATE_KEY])
+  if (input.editors !== undefined) managed.add(IEUM_EDITORS_KEY)
   const fields = new Map<string, string | boolean>([
     ['name', input.name],
     ['description', input.description],
@@ -508,11 +517,12 @@ export function renderSkillMd(input: SkillMdInput, base?: string): string {
     const lines: string[] = [...(map?.lead ?? [])]
     let kept = 0
     for (const entry of map?.entries ?? []) {
-      if (entry.key === IEUM_TITLE_KEY || entry.key === IEUM_TEMPLATE_KEY) {
+      if (managed.has(entry.key)) {
         const value = pending.get(entry.key)
         pending.delete(entry.key)
         if (value === undefined) continue
-        lines.push(...keyValue(entry.key, value, indent))
+        const same = readScalar(entry.inline, entry.children, indent) === value
+        lines.push(...(same ? entry.raw : keyValue(entry.key, value, indent)))
       } else {
         lines.push(...entry.raw)
       }
@@ -544,7 +554,10 @@ export function renderSkillMd(input: SkillMdInput, base?: string): string {
       out.push(...block.raw)
       continue
     }
-    if (!written.has(block.key)) out.push(...keyValue(block.key, value, 0))
+    if (!written.has(block.key)) {
+      const same = readScalar(block.inline, block.children, 0) === value
+      out.push(...(same ? block.raw : keyValue(block.key, value, 0)))
+    }
     written.add(block.key)
   }
   const missing = [...fields].filter(([key]) => !written.has(key))
@@ -554,4 +567,25 @@ export function renderSkillMd(input: SkillMdInput, base?: string): string {
   if (!metadataWritten) out.push(...metadataLines(undefined))
   for (const [key, value] of tail) out.push(...keyValue(key, value, 0))
   return `---\n${out.join('\n')}\n---\n${input.body}`
+}
+
+/**
+ * A SKILL.md without this app's where-used value, every other byte of the
+ * front matter as written. A file that names none, or cannot be read, comes
+ * back unchanged.
+ */
+export function withoutSkillEditors(text: string): string {
+  const parsed = parseSkillMd(text)
+  if (!parsed?.name || parsed.metadata[IEUM_EDITORS_KEY] === undefined) return text
+  return renderSkillMd(
+    {
+      name: parsed.name,
+      description: parsed.description ?? '',
+      title: parsed.metadata[IEUM_TITLE_KEY],
+      template: parsed.metadata[IEUM_TEMPLATE_KEY],
+      editors: null,
+      body: parsed.body,
+    },
+    text,
+  )
 }

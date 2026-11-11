@@ -426,8 +426,8 @@ html.genoffice-popover-open .ribbon-tabs {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border: none;
   border-radius: 4px;
   background: var(--accent);
@@ -747,7 +747,7 @@ html.genoffice-popover-open .ribbon-tabs {
   margin-inline-start: auto;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .epub-status-preview {

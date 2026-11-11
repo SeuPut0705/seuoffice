@@ -18,7 +18,7 @@
   --accent-dark: #c3b3f2;
   --accent-soft: rgba(168, 147, 232, 0.2);
   --mm-on-accent: #1e1e1e;
-  --mm-on-danger: #ffffff;
+  --mm-on-danger: #1e1e1e;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,7 +27,7 @@
     --accent-dark: #c3b3f2;
     --accent-soft: rgba(168, 147, 232, 0.2);
     --mm-on-accent: #1e1e1e;
-    --mm-on-danger: #ffffff;
+    --mm-on-danger: #1e1e1e;
   }
 }
 
@@ -114,7 +114,9 @@ html.genoffice-popover-open .ribbon-tabs {
 .ribbon-body {
   display: flex;
   align-items: stretch;
-  padding: 4px 12px 6px;
+  /* no padding at the end: the AI entry carries it, so it is the same when the entry is stuck there */
+  padding-block: 4px 6px;
+  padding-inline: 12px 0;
   height: 42px;
   box-sizing: border-box;
   overflow-x: auto;
@@ -291,10 +293,18 @@ html.genoffice-popover-open .ribbon-tabs {
   font-size: 12.5px;
 }
 
+/* the AI entry: at the far end, and still there when the row is wider than the window
+   (the buttons before it scroll under it) */
 .mm-tools-end {
+  position: sticky;
+  inset-inline-end: 0;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   margin-inline-start: auto;
+  white-space: nowrap;
+  padding-inline: 8px 12px;
+  background: var(--surface);
 }
 
 /* ---- notices ---- */
@@ -586,8 +596,9 @@ html.genoffice-popover-open .ribbon-tabs {
 
 /* ---- the theme panel beside the map ---- */
 
+/* the theme, format and note panels are one width */
 .mm-theme-panel {
-  flex: 0 0 268px;
+  flex: 0 0 288px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -640,6 +651,22 @@ html.genoffice-popover-open .ribbon-tabs {
   gap: 16px;
   padding: 12px 12px 14px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* the lists of a panel are as tall and as round as its buttons */
+.mm-theme-panel .gs-dd-btn {
+  height: 30px;
+  padding: 0 8px;
+  border-color: var(--border);
+  border-radius: 6px;
+  font-size: 12.5px;
+}
+
+/* off the way the panel's buttons are off */
+.mm-theme-panel .gs-dd-btn:disabled {
+  opacity: 0.4;
 }
 
 .mm-theme-note {
@@ -736,7 +763,7 @@ html.genoffice-popover-open .ribbon-tabs {
 
 .mm-theme-hint {
   margin: 0 2px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: 11.5px;
   line-height: 1.5;
 }
@@ -902,7 +929,7 @@ html.genoffice-popover-open .ribbon-tabs {
 .mm-modal-hint {
   margin: 6px 0 14px;
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .mm-modal-hint.error {
@@ -934,7 +961,7 @@ html.genoffice-popover-open .ribbon-tabs {
   display: block;
   margin-top: 2px;
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .mm-field {
@@ -1125,6 +1152,18 @@ textarea.mm-field {
   gap: 4px;
 }
 
+/* buttons with a picture on them (bold…, alignment, shapes, line ends): one grid of eight
+   across the panel, so every row of them lines up with the others and the longest fits in one */
+.mm-format-cells {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.mm-format-cells .mm-format-button {
+  width: auto;
+}
+
 .mm-format-font,
 .mm-format-case {
   width: 100%;
@@ -1179,13 +1218,114 @@ textarea.mm-field {
   outline-offset: -1px;
 }
 
-/* the palette sits in the panel, not over it: no frame or shadow of its own */
-.mm-format-colors .gcp-palette {
+/* a colour: one row showing the colour in force; the palette opens below it */
+.mm-color {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  anchor-name: --mm-color;
+  anchor-scope: --mm-color;
+}
+
+.mm-color-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
-  padding: 0;
-  border: none;
-  box-shadow: none;
-  background: none;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: start;
+  cursor: pointer;
+}
+
+.mm-color-field:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.mm-color-field[aria-expanded='true'],
+.mm-color-field:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.mm-color-field:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* the frame is the panel's; the colour in it is the map's */
+.mm-color-swatch {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border: 1px solid color-mix(in srgb, var(--text-primary) 22%, transparent);
+  border-radius: 4px;
+}
+
+/* no colour of its own (automatic, or the items differ): an empty frame */
+.mm-color[data-color-state='auto'] .mm-color-swatch,
+.mm-color[data-color-state='mixed'] .mm-color-swatch {
+  border-style: dashed;
+  border-color: var(--text-tertiary);
+}
+
+/* no fill: a frame struck through */
+.mm-color[data-color-state='none'] .mm-color-swatch {
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 0.75px),
+    var(--text-tertiary) calc(50% - 0.75px),
+    var(--text-tertiary) calc(50% + 0.75px),
+    transparent calc(50% + 0.75px)
+  );
+}
+
+.mm-color-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mm-color-caret {
+  flex: 0 0 auto;
+  display: flex;
+  color: var(--text-dim);
+}
+
+/* fixed and anchored like the lists, so the panel's scrolling never clips the palette;
+   it opens above the row when there is no room below */
+.mm-color-pop {
+  position: fixed;
+  position-anchor: --mm-color;
+  top: calc(anchor(bottom) + 4px);
+  left: anchor(left);
+  position-try-fallbacks:
+    flip-block,
+    flip-inline,
+    flip-block flip-inline;
+  position-visibility: anchors-visible;
+  z-index: 80;
+}
+
+/* a boundary's fill: the colour, and "no fill" beside it */
+.mm-format-fill {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mm-format-fill .mm-color {
+  flex: 1 1 120px;
 }
 
 /* a section for each kind of item: text, the line of a branch, a relationship, a summary, a boundary */
@@ -1294,16 +1434,11 @@ textarea.mm-field {
   cursor: default;
 }
 
-.mm-format-shapes {
-  flex-wrap: wrap;
-}
-
 /* "mixed", "other shape", and why the shape cannot be picked in this layout */
 .mm-format-state {
   margin: 0 2px 6px;
   color: var(--text-secondary);
   font-size: 11.5px;
-  font-style: italic;
   line-height: 1.4;
 }
 
@@ -1317,11 +1452,6 @@ textarea.mm-field {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-
-/* "no fill" above the palette of a boundary's fill */
-.mm-format-group .mm-format-action + .mm-format-colors {
-  margin-top: 6px;
 }
 
 /* ---- the line switches of the theme panel ---- */

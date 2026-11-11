@@ -8,6 +8,7 @@ export const de = {
   saveFailed: 'Das Dokument konnte nicht gespeichert werden.',
   fileSave: 'Speichern',
   fileSaveAs: 'Speichern unter…',
+  fileImportPdf: 'PDF importieren…',
   fileExportPdf: 'Als PDF exportieren…',
   filePrint: 'Drucken…',
   autoSave: 'Automatisch speichern',

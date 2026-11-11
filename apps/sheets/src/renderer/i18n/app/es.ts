@@ -602,6 +602,9 @@ export const es = {
     'La exportación a CSV requiere el libro completamente cargado — espere a que termine la carga.',
   appCsvExportTooLarge: 'La hoja es demasiado grande para exportarla como CSV.',
   appCsvExportCanceled: 'Exportación a CSV cancelada.',
+  appOdsExported: 'Se exportó {path}.',
+  appOdsExportCanceled: 'Exportación a ODS cancelada.',
+  appOdsExportFailed: 'La exportación a ODS falló.',
   appCsvExported: 'Se exportó {path}.',
   appCsvExportedActiveOnly:
     'Los archivos CSV solo contienen una hoja — se exportó la hoja activa «{name}» a {path}.',
@@ -753,6 +756,13 @@ export const es = {
   appSaveAs: 'Guardar como',
   appUndo: 'Deshacer',
   appRedo: 'Rehacer',
+  appQuickAccessCustomize: 'Personalizar la barra de herramientas de acceso rápido',
+  appQuickAccessHint:
+    'Pulse Alt y un número para ejecutar el botón que ocupa esa posición contando desde la izquierda.',
+  appQuickAccessMoveEarlier: 'Mover hacia delante',
+  appQuickAccessMoveLater: 'Mover hacia atrás',
+  appQuickAccessReset: 'Restablecer valores predeterminados',
+  appQuickAccessFull: 'La barra admite hasta 10 botones.',
   appUnsavedEditOne: '● {count} edición sin guardar',
   appUnsavedEditMany: '● {count} ediciones sin guardar',
   appSavedState: 'Guardado',

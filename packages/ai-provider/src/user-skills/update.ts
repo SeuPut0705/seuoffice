@@ -12,6 +12,7 @@ import { extractSkillArchive } from './archive'
 import { IEUM_SOURCE_FILE, MAX_USER_SKILL_BYTES, MAX_USER_SKILL_FILES } from './constants'
 import { SkillImportError } from './errors'
 import { isInsideDir, listSkillFolderFiles, skillContentHash, type SkillFolderFile } from './folder'
+import { withoutSkillEditors } from './frontmatter'
 import {
   MAX_SKILL_ARCHIVE_BYTES,
   downloadGitHubArchive,
@@ -42,7 +43,11 @@ interface UpdateCheckBase {
   record: IeumSourceRecord
   /** the commit the recorded branch points at now */
   commit: string
-  /** the installed folder differs from what was installed (the person changed it) */
+  /**
+   * The installed folder differs from what was installed (the person changed
+   * it). The app's where-used value in SKILL.md is not counted when the
+   * installed file did not bring one: an update keeps it.
+   */
   locallyEdited: boolean
 }
 
@@ -137,7 +142,11 @@ export async function checkGitHubSkillUpdate(
   const request = { fetch: options.fetch, signal: options.signal }
   const commit = await githubRefCommit(address.owner, address.repo, record.ref, request)
   const installedHash = await skillContentHash(skillDir)
-  const locallyEdited = installedHash !== record.contentHash
+  // where it is used stays across an update (the shell carries it into the new file),
+  // so that value alone is nothing an update would lose
+  const locallyEdited =
+    installedHash !== record.contentHash &&
+    (await skillContentHash(skillDir, { skillMd: withoutSkillEditors })) !== record.contentHash
   if (commit === record.commit) return { status: 'up-to-date', record, commit, locallyEdited }
 
   const archive = await downloadGitHubArchive(address.owner, address.repo, commit, {

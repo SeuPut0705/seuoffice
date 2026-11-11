@@ -297,14 +297,13 @@ export function advancedPaneUseChoice(
 
 /**
  * Providers the Advanced key pane lists: everything that has something to
- * fill in there. Claude runs on its own login and has no field of its own;
- * Codex stays for the path of a custom install.
+ * fill in there. The two subscription CLIs take no key, and stay for the path
+ * of an install the automatic lookup cannot reach (a GUI app on macOS never
+ * sees the PATH a shell profile sets).
  */
 export function advancedProviderIds(catalog: readonly { id: string }[]): AiProviderId[] {
   const known = new Set<string>(AI_PROVIDERS.map((meta) => meta.id))
-  return catalog
-    .map((entry) => entry.id)
-    .filter((id) => known.has(id) && id !== 'claude-code') as AiProviderId[]
+  return catalog.map((entry) => entry.id).filter((id) => known.has(id)) as AiProviderId[]
 }
 
 /**

@@ -12,7 +12,10 @@ export {
   type UserSkillsServiceDeps,
 } from './user-skills-service'
 export {
+  DROPPED_SKILLS_MAX,
   registerUserSkillsIpc,
+  type DroppedSkillEntry,
+  type DroppedSkillSource,
   type UserSkillsIpc,
   type UserSkillsIpcDeps,
 } from './user-skills-ipc'

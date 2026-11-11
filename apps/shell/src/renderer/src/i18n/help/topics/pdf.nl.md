@@ -6,6 +6,7 @@ De pdf-editor heeft vijf linttabs: **Start / Annoteren / Bewerken / Pagina's / B
 
 - Linkerzijbalk: **miniaturen** (klik om te springen, het zichtbare bereik is gemarkeerd) of **overzicht** (bladwijzers, indien aanwezig).
 - Zoom: de verhoudingsknop rechtsonder; ctrl+scrollwiel verandert de zoom in stappen.
+- Zoom bij openen: **Bij openen** op het tabblad Beeld kiest de beginweergave van een pdf die u opent: aan breedte aanpassen, aan pagina aanpassen of een zoom van 50% tot 200%. Een pdf waarvan u de zoom zelf hebt gewijzigd, opent weer met die zoom.
 - De weergave verplaatsen: zet het **Handje** aan (tabbladen Start en Beeld) en sleep om de pagina alle kanten op te verplaatsen. Zolang het aan staat, selecteert slepen geen tekst en opent een gewone klik nog steeds een koppeling. Slepen met de middelste knop (scrollwiel) ingedrukt verplaatst de weergave ook zonder het hulpmiddel. Esc of een ander hulpmiddel zet het uit.
 - Draaien: per pagina of voor alle pagina's via het menu Pagina's; draaiingen worden bij opslaan teruggeschreven.
 - Zoeken: ctrl+F op volledige tekst met alle treffers gemarkeerd.
@@ -70,6 +71,7 @@ Zes gereedschappen: **inkt, rechthoek, ellips, pijl, notitie**, plus de **zwartm
 ## Paginabewerkingen (Pagina's)
 
 - **Draaien / verwijderen / herschikken**: sleep miniaturen om te herschikken; verwijderen vraagt bevestiging.
+- **Meerdere pagina’s tegelijk**: klik met Ctrl of Shift ingedrukt op miniaturen om meerdere pagina’s te selecteren. Delete verwijdert ze; Ctrl+C, Ctrl+X en Ctrl+V kopiëren, knippen en plakken ze. Gekopieerde pagina’s kunt u ook in een ander pdf-tabblad plakken, en het plakken wordt meteen in het bestand opgeslagen. Zijn de miniaturen gesloten, dan opent de knop aan de linkerrand van het paginagebied ze weer.
 - **Pagina's importeren**: haal pagina's op uit een andere pdf. **Lege pagina invoegen** voegt een lege pagina toe.
 - **Pagina's vervangen** wisselt een bereik in voor pagina's uit een ander bestand; **Pagina's bijsnijden** snijdt de randen bij, met een optie om dit op alle pagina's toe te passen.
 - **Paginaformaat** schaalt elke pagina naar één en hetzelfde papierformaat; **Volgorde omkeren** draait het document van einde tot begin.
@@ -82,6 +84,7 @@ Zes gereedschappen: **inkt, rechthoek, ellips, pijl, notitie**, plus de **zwartm
 
 - **Exporteren als Word… / PowerPoint… / Excel…** in het menu Bestand, of dezelfde drie via **PDF converteren** in het lintmenu — alles lokaal, geen upload. De .pptx komt eruit met één dia per pagina en de .xlsx met één werkblad per pagina. Elk ervan vraagt waar het opgeslagen moet worden.
 - **PDF naar HWP** onder **PDF converteren** op het lint maakt van de PDF een HWP-document in een nieuw HWP-tabblad. Kies **Importeren** (가져오기) in het PDF-importvenster dat het tabblad toont; het document ontstaat in dat tabblad, en bij de eerste keer opslaan wordt gevraagd waar het .hwp- of .hwpx-bestand moet komen. De PDF zelf blijft zoals hij was, en de conversie gebeurt op deze pc. Of de tekst binnenkomt als alinea's die over de pagina's lopen of als vaste tekstvakken, kiest u in de opties (환경 설정) van het HWP-tabblad, onder PDF-import.
+- Dezelfde conversie start u ook vanuit een HWP-tabblad. Kies een PDF met **Bestand** ▸ **PDF importeren…**; er opent een nieuw HWP-tabblad met hetzelfde PDF-importvenster. Het document van het tabblad waarin het menu is gebruikt, blijft zoals het was.
 - **Afdrukken**: huidige volgorde en draaiingen via het systeemvenster; paginabereiken worden ondersteund.
 
 ## Opslaan

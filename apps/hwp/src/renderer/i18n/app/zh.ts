@@ -7,6 +7,7 @@ export const zh = {
   saveFailed: '无法保存文档。',
   fileSave: '保存',
   fileSaveAs: '另存为…',
+  fileImportPdf: '导入 PDF…',
   fileExportPdf: '导出为 PDF…',
   filePrint: '打印…',
   autoSave: '自动保存',

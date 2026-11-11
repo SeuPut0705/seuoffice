@@ -8,6 +8,7 @@ import {
   MAX_PDF_TEMPLATE_CHARS,
   MAX_SAVE_EDITS,
   MAX_SAVE_EDITS_TOTAL,
+  MAX_SAVE_STRUCTURAL_OPS,
   SAVE_EDITS_CHUNK_JSON_MAX,
   SAVE_EDITS_CHUNK_MAX,
 } from './ipc-channels'
@@ -2064,7 +2065,7 @@ export const workbookSaveRequestSchema = z
     /// splices the accumulated chunks back in before applying.
     editsTransferId: z.string().uuid().optional(),
     bulkConstantFills: z.array(workbookBulkConstantFillSchema).max(1_000).optional(),
-    structuralOps: z.array(workbookStructuralOpSchema).max(1_000),
+    structuralOps: z.array(workbookStructuralOpSchema).max(MAX_SAVE_STRUCTURAL_OPS),
     chartEdits: z.array(workbookChartEditSchema).max(100),
     visualEdits: z.array(workbookVisualEditSchema).max(100),
     visualAdditions: z.array(workbookVisualAddSchema).max(50),
@@ -2274,6 +2275,23 @@ export const workbookSaveRequestSchema = z
     message: 'Sheet operations need the final sheet order.',
   })
 
+/// ODS export of the whole workbook. The main process converts a private
+/// temp copy, warns about the features ODS cannot hold, and only then moves
+/// the finished package onto `targetPath` (a Save As pick authorized for one
+/// export). The open session is never re-targeted and never saved.
+export const workbookExportOdsRequestSchema = z
+  .object({
+    sessionId: z.string().uuid(),
+    /// Write straight to this path (from the Save As dialog's ODS pick).
+    targetPath: z.string().min(1).max(4096).optional(),
+    /// The pending edits, as a save request for the same session: the main
+    /// process writes them into its private copy so the export shows what
+    /// is on screen without saving the workbook. Absent → the last saved
+    /// state is exported.
+    workbook: workbookSaveRequestSchema.optional(),
+  })
+  .strict()
+
 export const workbookSaveResultSchema = z.union([
   z
     .object({
@@ -2286,6 +2304,10 @@ export const workbookSaveResultSchema = z.union([
       /// renderer lays out the active sheet and exports it to this path (the
       /// main process authorized it for one PDF export).
       pdfSaveAsPath: z.string().min(1).optional(),
+      /// The user picked ODS in the Save As dialog: no xlsx was written; the
+      /// renderer asks the main process to export the workbook to this path
+      /// (authorized once, exactly like the PDF pick).
+      odsSaveAsPath: z.string().min(1).optional(),
     })
     .strict(),
   z
@@ -2930,6 +2952,45 @@ export const workbookExportCsvResultSchema = z.union([
 export type WorkbookExportCsvRequest = z.infer<typeof workbookExportCsvRequestSchema>
 export type WorkbookExportCsvResult = z.infer<typeof workbookExportCsvResultSchema>
 
+const odsDroppedCountsSchema = z
+  .object({
+    charts: z.number().int().min(0),
+    images: z.number().int().min(0),
+    conditionalFormats: z.number().int().min(0),
+    validations: z.number().int().min(0),
+    pivots: z.number().int().min(0),
+    comments: z.number().int().min(0),
+    macros: z.number().int().min(0),
+    shapes: z.number().int().min(0),
+    slicers: z.number().int().min(0),
+    sparklines: z.number().int().min(0),
+  })
+  .strict()
+
+export const workbookExportOdsResultSchema = z.union([
+  z
+    .object({
+      canceled: z.literal(true),
+      /// Why nothing was written, so the renderer can stay quiet when the
+      /// main process already showed a dialog.
+      reason: z.enum(['canceled', 'encrypted', 'original', 'failed', 'unreadable']).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      canceled: z.literal(false),
+      path: z.string().min(1),
+      sheets: z.number().int().min(0),
+      cells: z.number().int().min(0),
+      formulasDropped: z.number().int().min(0),
+      dropped: odsDroppedCountsSchema,
+    })
+    .strict(),
+])
+
+export type WorkbookExportOdsRequest = z.infer<typeof workbookExportOdsRequestSchema>
+export type WorkbookExportOdsResult = z.infer<typeof workbookExportOdsResultSchema>
+
 /// AI create_document: a new standalone file written into the default save
 /// folder (no dialog) under a unique sanitized name and opened in a new tab.
 /// xlsx/csv carry one worksheet's serialized CSV in content (the renderer
@@ -3133,6 +3194,8 @@ export interface DesktopApi {
   printWorkbook(request: WorkbookExportPdfRequest): Promise<WorkbookPrintResult>
   listPrinters(): Promise<PrinterInfo[]>
   exportCsv(request: WorkbookExportCsvRequest): Promise<WorkbookExportCsvResult>
+  /// Export the whole workbook as an ODS copy; the session stays .xlsx.
+  exportOds(request: WorkbookExportOdsRequest): Promise<WorkbookExportOdsResult>
   /// First Save of a CSV session: native "keep this format?" dialog.
   confirmCsvSave(): Promise<'csv' | 'xlsx' | 'cancel'>
   /// AI create_document: write a new standalone file into the default save
@@ -3218,7 +3281,15 @@ export interface DesktopApi {
 }
 
 export type MenuAction =
-  'open' | 'save' | 'save-as' | 'print' | 'export-pdf' | 'export-csv' | 'undo' | 'redo'
+  | 'open'
+  | 'save'
+  | 'save-as'
+  | 'print'
+  | 'export-pdf'
+  | 'export-csv'
+  | 'export-ods'
+  | 'undo'
+  | 'redo'
 
 export interface WebSearchResult {
   results: Array<{ title: string; url: string; snippet: string }>

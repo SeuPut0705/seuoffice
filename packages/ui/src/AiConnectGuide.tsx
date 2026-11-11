@@ -12,6 +12,7 @@ import {
 } from './ai-subscription'
 import { AiSubscriptionCard, type AiSubscriptionCardActions } from './AiSubscriptionCard'
 import { AiCodexNotice } from './AiSubscriptionNotices'
+import { IconCheck } from './icons'
 import {
   AI_CONNECT_STEP_KEYS,
   aiConnectAlternatePath,
@@ -201,7 +202,7 @@ function GuidePath({
             aria-current={steps.current === step.id && !step.done ? 'step' : undefined}
           >
             <span className="ai-sub-guide-step-mark" aria-hidden="true">
-              {step.done ? '✓' : index + 1}
+              {step.done ? <IconCheck size={12} /> : index + 1}
             </span>
             <span className="ai-sub-guide-step-name">
               {aiSubscriptionText(lang, AI_CONNECT_STEP_KEYS[step.id])}

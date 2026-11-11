@@ -6,6 +6,7 @@ El editor de PDF tiene cinco pestañas en la cinta de opciones: **Inicio / Anota
 
 - Barra lateral izquierda: **Miniaturas** (haga clic para saltar, el intervalo visible aparece resaltado) o **Esquema** (los marcadores, cuando existen).
 - Zoom: el control de proporción de la esquina inferior derecha; ctrl+rueda ajusta el zoom por pasos.
+- Zoom al abrir: **Al abrir**, en la pestaña Vista, elige la vista inicial de un PDF recién abierto: ajustar al ancho, ajustar a la página o un zoom del 50 % al 200 %. Un PDF cuyo zoom cambió usted se vuelve a abrir con ese zoom.
 - Mover la vista: active la **Herramienta Mano** (pestañas Inicio y Vista) y arrastre para mover la página en cualquier dirección. Mientras está activa, arrastrar no selecciona texto y un clic simple sigue abriendo los enlaces. Arrastrar con el botón central (rueda) pulsado mueve la vista sin la herramienta. Esc u otra herramienta la desactiva.
 - Rotación: por página o de todas las páginas desde el menú Páginas; las rotaciones se vuelven a escribir al guardar.
 - Búsqueda: ctrl+F en texto completo, con todas las coincidencias resaltadas.
@@ -70,6 +71,7 @@ Seis herramientas: **Dibujar, Rectángulo, Elipse, Flecha, Nota**, más **Censur
 ## Operaciones de página (Páginas)
 
 - **Girar / eliminar / reordenar**: arrastre las miniaturas para reordenar; la eliminación pide confirmación.
+- **Varias páginas a la vez**: haga clic en las miniaturas con Ctrl o Mayús pulsado para seleccionar varias páginas. Supr las elimina; Ctrl+C, Ctrl+X y Ctrl+V las copian, las cortan y las pegan. Las páginas copiadas también se pueden pegar en otra pestaña de PDF, y lo pegado se guarda en el archivo de inmediato. Si las miniaturas están cerradas, el botón del borde izquierdo del área de páginas las vuelve a abrir.
 - **Importar páginas**: arrastre páginas desde otro PDF. **Insertar página en blanco** añade una página vacía.
 - **Reemplazar páginas** cambia un intervalo por páginas de otro documento; **Recortar páginas** recorta los bordes, con una opción para aplicarlo a todas las páginas.
 - **Tamaño de página** reescala todas las páginas a un mismo tamaño de papel; **Invertir orden** da la vuelta al documento de principio a fin.
@@ -82,6 +84,7 @@ Seis herramientas: **Dibujar, Rectángulo, Elipse, Flecha, Nota**, más **Censur
 
 - **Exportar como Word… / PowerPoint… / Excel…** en el menú Archivo, o los mismos tres desde **Convertir PDF** en la cinta — todo local, sin subir nada. El .pptx sale con una diapositiva por página y el .xlsx con una hoja de cálculo por página. Cada uno pregunta dónde guardarlo.
 - **PDF a HWP**, en **Convertir PDF** de la cinta, convierte el PDF en un documento HWP en una pestaña HWP nueva. Elija **Importar** (가져오기) en la ventana de importación de PDF que muestra la pestaña; el documento se crea en esa pestaña, y el primer guardado pregunta dónde poner el .hwp o el .hwpx. El PDF queda como estaba, y la conversión se hace en este equipo. Si el texto entra como párrafos que fluyen por las páginas o como cuadros de texto fijos se elige en las opciones (환경 설정) de la pestaña HWP, apartado de importación de PDF.
+- La misma conversión también se inicia desde una pestaña HWP. Elija un PDF con **Archivo** ▸ **Importar PDF…** y se abrirá una pestaña HWP nueva con la misma ventana de importación de PDF. El documento de la pestaña donde se usó el menú queda como estaba.
 - **Imprimir**: el orden y las rotaciones actuales a través del cuadro de diálogo del sistema; admite intervalos de páginas.
 
 ## Guardar

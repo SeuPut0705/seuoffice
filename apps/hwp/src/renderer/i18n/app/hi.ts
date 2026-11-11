@@ -8,6 +8,7 @@ export const hi = {
   saveFailed: 'दस्तावेज़ सहेजा नहीं जा सका।',
   fileSave: 'सहेजें',
   fileSaveAs: 'इस रूप में सहेजें…',
+  fileImportPdf: 'PDF आयात करें…',
   fileExportPdf: 'PDF के रूप में निर्यात…',
   filePrint: 'प्रिंट करें…',
   autoSave: 'स्वतः सहेजें',

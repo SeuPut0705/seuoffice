@@ -2,8 +2,12 @@ import React, { useEffect, useId, useRef, useState } from 'react'
 import type { Lang } from '@genoffice/i18n'
 import { USE_SKILL_TOOL, type SkillProposal } from '@genoffice/agent-core'
 import {
+  SAME_NAME_ON,
   initialSkillCardDraft,
+  sameNameSourcesOf,
+  skillCardEditorsBlocked,
   skillCardMode,
+  skillCardNameFollowsTitle,
   skillCardNameVerdict,
   skillCardSaveBlock,
   skillCardSaveFailureKey,
@@ -16,7 +20,11 @@ import {
   type SkillCardStatus,
   type SkillCardTemplate,
 } from './skill-card-model'
+import { useNameFromTitle } from './skill-name-from-title'
+import { skillSourceLabel } from './skill-picker-model'
 import { skillCardText, type SkillCardStringKey } from './strings-skill-card'
+import { SkillEditorsChooser } from './SkillEditorsChooser'
+import { skillEditorsText } from './strings-skill-editors'
 import './skill-card.css'
 
 /** Wait after the last keystroke before the name is checked */
@@ -59,10 +67,12 @@ export interface SkillProposalCardProps {
 
 /**
  * The skill card (spec 5.6): the model's proposal in editable fields, the
- * name first (lists show it) with its rule check, "on its own / only when
- * called", the template box when the document can be a template, and
- * Save (Replace for an own skill) and Cancel. Nothing is written before Save;
- * Save hands the fields to the shell, which writes the skill.
+ * title first (any language; lists show it), then the name with its rule
+ * check (a new skill's name follows the title until the person types one),
+ * "on its own / only when called", the template box when the document can be
+ * a template, and Save (Replace for an own skill) and Cancel. Nothing is
+ * written before Save; Save hands the fields to the shell, which writes the
+ * skill. A name an enabled skill of another source has is asked about first.
  */
 export function SkillProposalCard({
   lang,
@@ -85,6 +95,10 @@ export function SkillProposalCard({
   const [nameState, setNameState] = useState<SkillCardNameState>('checking')
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<SkillCardStringKey | null>(null)
+  /** the name still follows the title: nobody gave one and the person has not typed in it */
+  const [nameFollows, setNameFollows] = useState(() => skillCardNameFollowsTitle(proposal, draft))
+  /** the sources of enabled skills that have this name, once a save was refused for them */
+  const [sameNameOn, setSameNameOn] = useState<string | null>(null)
   const liveRef = useRef(true)
   useEffect(() => {
     liveRef.current = true
@@ -93,20 +107,17 @@ export function SkillProposalCard({
     }
   }, [])
 
-  // a proposal without a name (an older prompt's title only) gets one made from the title
-  useEffect(() => {
-    if (draft.name || !bridge) return
-    void bridge
-      .suggestName(draft.title)
-      .then((name) => {
-        if (liveRef.current && typeof name === 'string' && name) {
-          setDraft((d) => (d.name ? d : { ...d, name }))
-        }
-      })
-      .catch(() => undefined)
-    // only once, for the starting fields
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  useNameFromTitle({
+    title: draft.title,
+    follows: nameFollows,
+    name: draft.name,
+    suggest: bridge ? (title) => bridge.suggestName(title) : null,
+    onName: (name) => {
+      if (!liveRef.current) return
+      setSameNameOn(null)
+      setDraft((d) => ({ ...d, name }))
+    },
+  })
 
   // check the name against the rule and my skills' names whenever it changes
   const checkSeqRef = useRef(0)
@@ -135,22 +146,29 @@ export function SkillProposalCard({
 
   const verdict = skillCardNameVerdict(mode, proposal, draft.name, nameState)
   const blockKey = bridge ? skillCardSaveBlock(draft, verdict.blocked) : 'noBridge'
-  const blocked = blockKey ? t(blockKey) : null
+  const editorsBlocked = !blockKey && skillCardEditorsBlocked(draft)
+  const blocked = blockKey ? t(blockKey) : editorsBlocked ? skillEditorsText(lang, 'none') : null
   const nameProblem = verdict.blocked && verdict.blocked !== 'nameChecking'
 
   const save = async (template?: SkillCardTemplate): Promise<boolean> => {
-    if (!bridge || busy || blockKey) return false
+    if (!bridge || busy || blocked) return false
     setBusy(true)
     setFailure(null)
     try {
-      const input = skillCardSaveInput(draft, proposal, { overwrite: verdict.overwrite, template })
+      const input = skillCardSaveInput(draft, proposal, {
+        overwrite: verdict.overwrite,
+        template,
+        // a second press, with the question in sight, is the person's yes
+        turnOffSameName: sameNameOn !== null,
+      })
       const result = skillCardSaveResultOf(await bridge.saveFromCard(input).catch(() => null))
       if (!liveRef.current) return result.ok
       if (result.ok) {
         onSaved(result.id, draft)
         return true
       }
-      setFailure(skillCardSaveFailureKey(result.reason, result.problem))
+      if (result.reason === SAME_NAME_ON) setSameNameOn(result.problem ?? '')
+      else setFailure(skillCardSaveFailureKey(result.reason, result.problem))
       return false
     } finally {
       if (liveRef.current) setBusy(false)
@@ -159,8 +177,16 @@ export function SkillProposalCard({
 
   const set = (patch: Partial<SkillCardDraft>) => {
     setFailure(null)
+    if (patch.name !== undefined) setSameNameOn(null)
     setDraft((d) => ({ ...d, ...patch }))
   }
+  const sameNameSources =
+    sameNameOn === null
+      ? ''
+      : sameNameSourcesOf(sameNameOn)
+          .map((from) => skillSourceLabel(lang, from))
+          .filter(Boolean)
+          .join(', ')
 
   // an own skill keeps its template unless a new one is checked here
   const showTemplate = canBeTemplate
@@ -188,15 +214,31 @@ export function SkillProposalCard({
       {mode === 'copy' && <p className="ai-skill-card-note">{t('copyNotice')}</p>}
 
       <label className="ai-skill-card-field">
+        <span>{t('fieldTitle')}</span>
+        <input
+          type="text"
+          data-field="title"
+          value={draft.title}
+          disabled={busy}
+          dir="auto"
+          onChange={(e) => set({ title: e.target.value })}
+        />
+        <span className="ai-skill-card-hint">{t('titleHint')}</span>
+      </label>
+      <label className="ai-skill-card-field">
         <span>{t('fieldName')}</span>
         <input
           type="text"
+          data-field="name"
           value={draft.name}
           disabled={busy}
           spellCheck={false}
           dir="ltr"
           aria-invalid={nameProblem ? true : undefined}
-          onChange={(e) => set({ name: e.target.value })}
+          onChange={(e) => {
+            setNameFollows(false)
+            set({ name: e.target.value })
+          }}
         />
         <span className="ai-skill-card-hint">{t('nameHint')}</span>
       </label>
@@ -236,6 +278,13 @@ export function SkillProposalCard({
         ))}
       </fieldset>
 
+      <SkillEditorsChooser
+        lang={lang}
+        value={draft.editors}
+        disabled={busy}
+        onChange={(editors) => set({ editors })}
+      />
+
       {showTemplate && (
         <label className="ai-skill-card-check">
           <input
@@ -249,7 +298,12 @@ export function SkillProposalCard({
       )}
 
       {verdict.notice && <p className="ai-skill-card-note">{t(verdict.notice)}</p>}
-      {(failure || (blocked && blockKey !== 'nameChecking')) && (
+      {sameNameOn !== null && (
+        <p className="ai-skill-card-note" role="alert" data-skill-card-same-name="">
+          {t('sameNameOn', { sources: sameNameSources })}
+        </p>
+      )}
+      {(failure || (blockKey && blockKey !== 'nameChecking')) && (
         <p className="ai-skill-card-note is-error" role="alert">
           {failure ? t(failure) : blocked}
         </p>
@@ -273,11 +327,13 @@ export function SkillProposalCard({
           <button
             type="button"
             className="ai-skill-card-btn primary"
-            disabled={busy || !!blockKey}
+            disabled={busy || !!blocked}
             title={blocked ?? undefined}
             onClick={() => void save()}
           >
-            {busy ? t('saving') : t(mode === 'edit-own' ? 'replace' : 'save')}
+            {busy
+              ? t('saving')
+              : t(sameNameOn !== null ? 'saveTurnOff' : mode === 'edit-own' ? 'replace' : 'save')}
           </button>
         )}
         <button type="button" className="ai-skill-card-btn" disabled={busy} onClick={onCancel}>

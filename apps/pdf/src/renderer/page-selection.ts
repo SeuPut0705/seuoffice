@@ -60,6 +60,14 @@ export function pageTargets(live: readonly number[], page: number): number[] {
 }
 
 /**
+ * Pages a sidebar key (Delete, copy, cut) covers, in visible order: the
+ * multi-selection, else the one thumbnail that holds keyboard focus.
+ */
+export function keyPageTargets(live: readonly number[], focused: number | null): number[] {
+  return live.length > 1 ? [...live] : focused !== null ? [focused] : []
+}
+
+/**
  * Visible order after dropping `block` on the thumbnail at visible position
  * `to`. Same landing rule as a single-page move: dragging down lands after
  * the target, dragging up lands before it. Null when nothing would change.

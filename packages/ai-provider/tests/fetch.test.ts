@@ -102,6 +102,35 @@ describe('aiFetch', () => {
     expect(await aiFetch('https://gateway.example.com/api/x', { body: '{}' })).toBe(primary)
   })
 
+  it('tells a caller before it sends a request again, and why', async () => {
+    const why: string[] = []
+    const watch = { onResend: (reason: string) => void why.push(reason) }
+    // the first try threw: whether it arrived is unknown
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('fetch failed')))
+    setRescueFetch(vi.fn().mockResolvedValue(new Response('rescued')))
+    await aiFetch('https://x/', { method: 'POST', body: 'a=1' }, watch)
+    expect(why).toEqual(['failed'])
+    // an edge block page: the service never saw the first try
+    why.length = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('<!doctype html>', {
+          status: 403,
+          headers: { 'content-type': 'text/html' },
+        }),
+      ),
+    )
+    setRescueFetch(vi.fn().mockResolvedValue(new Response('{}')))
+    await aiFetch('https://x/', { method: 'POST', body: 'a=1' }, watch)
+    expect(why).toEqual(['blocked'])
+    // a request that goes out once tells nothing
+    why.length = 0
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('ok')))
+    await aiFetch('https://x/', {}, watch)
+    expect(why).toEqual([])
+  })
+
   it('does not treat an API 403 or a stream body as a block page', async () => {
     const denied = new Response('{"error":"forbidden"}', {
       status: 403,
@@ -144,6 +173,24 @@ describe('aiFetch transient refusals', () => {
     const response = await aiFetch('https://x/', { method: 'POST', body: '{}' })
     expect(await response.text()).toBe('ok')
     expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('tells a caller that a busy answer is sent again', async () => {
+    setAiTransientRetryDelays([0, 0])
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response('high demand', { status: 503 }))
+        .mockResolvedValueOnce(new Response('ok')),
+    )
+    const why: string[] = []
+    await aiFetch(
+      'https://x/',
+      { method: 'POST', body: '{}' },
+      { onResend: (reason) => void why.push(reason) },
+    )
+    expect(why).toEqual(['busy'])
   })
 
   it('hands back the last refusal once the retries are spent', async () => {

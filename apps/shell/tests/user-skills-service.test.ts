@@ -368,21 +368,26 @@ describe('saving skills', () => {
     expect(await byId('app:home-letter')).toMatchObject({ title: 'home-letter' })
   })
 
-  it('keeps the title an own skill already has when an edit gives none', async () => {
+  it('keeps the title an edit sends along and takes out one the edit emptied', async () => {
     expect(
-      await service.save({ id: 'app:mine', title: '', description: 'D', body: 'New body\n' }),
+      await service.save({ id: 'app:mine', title: 'Mine', description: 'D', body: 'New body\n' }),
     ).toEqual({ ok: true, id: 'app:mine' })
     const parsed = parseSkillMd(readFileSync(join(appDir(), 'mine', 'SKILL.md'), 'utf8'))!
     expect(parsed.metadata['ieum-title']).toBe('Mine')
     expect(parsed.body).toBe('New body\n')
     expect(await byId('app:mine')).toMatchObject({ title: 'Mine' })
+
+    await service.save({ id: 'app:mine', title: '', description: 'D', body: 'New body\n' })
+    const emptied = parseSkillMd(readFileSync(join(appDir(), 'mine', 'SKILL.md'), 'utf8'))!
+    expect(emptied.metadata).not.toHaveProperty('ieum-title')
+    expect(await byId('app:mine')).toMatchObject({ title: 'mine' })
   })
 
-  it('keeps the title through a rename that gives none', async () => {
+  it('keeps the title through a rename that sends it along', async () => {
     expect(
       await service.save({
         id: 'app:mine',
-        title: '',
+        title: 'Mine',
         name: 'mine-2',
         description: 'D',
         body: 'B',

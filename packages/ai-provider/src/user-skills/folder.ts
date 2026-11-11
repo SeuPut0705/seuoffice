@@ -8,8 +8,10 @@ import type { Dirent } from 'node:fs'
 import { lstat, readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { basename, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { mcpServersOfSkill } from '@genoffice/agent-core/skill-mcp-refs'
+import { skillEditorsOf } from '@genoffice/agent-core/skill-editors'
 import {
   IEUM_SOURCE_FILE,
+  IEUM_EDITORS_KEY,
   IEUM_TEMPLATE_KEY,
   IEUM_TITLE_KEY,
   MAX_USER_SKILL_BYTES,
@@ -191,10 +193,29 @@ export async function readUserSkillFolder(
       options.source === 'builtin' &&
       (options.agentOnlyNames?.has(name) === true ||
         options.agentOnlyNames?.has(folderName) === true),
+    fileEditors: skillEditorsOf(parsed?.metadata[IEUM_EDITORS_KEY]),
     files: files.length,
     bytes: listed?.bytes ?? 0,
     unreadable,
   }
+}
+
+/**
+ * A skill folder's `SKILL.md` text, read only as a file the folder listing
+ * finds, so a link leading out of the folder is never read. `undefined` when
+ * the folder has none or it cannot be read.
+ */
+export async function readListedSkillMd(dir: string): Promise<string | undefined> {
+  const listed = await listSkillFolderFiles(dir, {
+    files: MAX_USER_SKILL_FILES,
+    bytes: MAX_USER_SKILL_BYTES,
+  })
+  const fold = (rel: string) => (process.platform === 'win32' ? rel.toLowerCase() : rel)
+  const skillMd =
+    listed?.files.find((file) => file.rel === 'SKILL.md') ??
+    listed?.files.find((file) => fold(file.rel) === fold('SKILL.md'))
+  if (!skillMd) return undefined
+  return readFile(skillMd.path, 'utf8').catch(() => undefined)
 }
 
 /**
@@ -211,15 +232,23 @@ export function mcpServersOfSkillMd(parsed: ParsedSkillMd): string[] {
 /**
  * SHA-256 (hex) of a skill folder's paths, sizes and contents, leaving out the
  * GitHub source record at its top. The same files give the same hash on any
- * machine: paths use `/` and are sorted by code unit.
+ * machine: paths use `/` and are sorted by code unit. `skillMd` hashes the
+ * SKILL.md as the given function rewrites its text.
  */
-export async function skillContentHash(dir: string): Promise<string> {
+export async function skillContentHash(
+  dir: string,
+  options: { skillMd?: ((text: string) => string) | undefined } = {},
+): Promise<string> {
   const listed = await listSkillFolderFiles(dir)
   if (!listed) throw new Error(`Cannot read the skill folder: ${dir}`)
   const hash = createHash('sha256')
   for (const file of listed.files) {
     if (file.rel === IEUM_SOURCE_FILE) continue
-    const content = await readFile(file.path)
+    const read = await readFile(file.path)
+    const content =
+      options.skillMd && file.rel === 'SKILL.md'
+        ? Buffer.from(options.skillMd(read.toString('utf8')), 'utf8')
+        : read
     hash.update(`${file.rel}\0${content.length}\0`)
     hash.update(content)
   }

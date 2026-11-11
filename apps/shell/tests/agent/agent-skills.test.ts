@@ -284,9 +284,15 @@ describe('the skills gateway for the agent window', () => {
 
   it('lets the agent window make only the install-preview calls', () => {
     expect([...AGENT_WINDOW_MANAGE_CHANNELS].sort()).toEqual(
-      [C.importGitHub, C.cancelImport, C.install].sort(),
+      [C.importGitHub, C.readImport, C.readImportFile, C.cancelImport, C.install].sort(),
     )
-    for (const channel of [C.importGitHub, C.cancelImport, C.install]) {
+    for (const channel of [
+      C.importGitHub,
+      C.readImport,
+      C.readImportFile,
+      C.cancelImport,
+      C.install,
+    ]) {
       expect(gate('agent', channel)).toBe(true)
     }
     for (const channel of [
@@ -664,5 +670,33 @@ describe('the one-time notice and the next-session line', () => {
       { kind: 'skill-card', key: 'k' },
       { kind: 'skill-install', key: 'j' },
     ])
+  })
+})
+
+describe('where a changed skill is used, on the agent window card', () => {
+  it('starts the card at where the skill is used now', () => {
+    const made = agentSkillProposalOf(
+      {
+        title: 'T',
+        name: '',
+        description: 'D',
+        body: 'B',
+        wantsTemplate: false,
+        targetId: 'app:deck',
+        suggestedTemplatePath: '',
+      },
+      [
+        {
+          id: 'app:deck',
+          source: 'app',
+          name: 'deck',
+          title: 'D',
+          owned: true,
+          editors: ['slides'],
+        },
+      ],
+      'k',
+    )
+    expect(made.ok && made.proposal.target?.editors).toEqual(['slides'])
   })
 })

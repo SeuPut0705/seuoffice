@@ -34,6 +34,8 @@ interface OnboardingProps {
   /** read before the onboarding opened (null if not known by then): decides,
    *  once, whether the default-app step is offered */
   defaultApp: DefaultAppStatus | null
+  /** Settings is open above this window: the keyboard is not ours meanwhile */
+  covered?: boolean
 }
 
 /* exact vectors from the design spec:
@@ -87,6 +89,7 @@ export function Onboarding({
   noticeDue,
   onNoticeAcknowledge,
   defaultApp,
+  covered = false,
 }: OnboardingProps) {
   const { t, lang } = useI18n()
   // fixed for the whole run so the dots never change under the user
@@ -181,8 +184,8 @@ export function Onboarding({
   // when a button is focused so the native click doesn't double-fire.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      // the notice above owns the keyboard while it is open
-      if (noticeOpen) return
+      // the notice or the Settings dialog above owns the keyboard while it is open
+      if (noticeOpen || covered) return
       if (event.key === 'Escape') {
         finish()
         return

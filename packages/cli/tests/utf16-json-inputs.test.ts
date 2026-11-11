@@ -11,6 +11,13 @@ const utf16le = (text: string) =>
   Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, 'utf16le')])
 const utf16be = (text: string) =>
   Buffer.concat([Buffer.from([0xfe, 0xff]), Buffer.from(Buffer.from(text, 'utf16le')).swap16()])
+/** What some editors and `iconv -t UTF-32LE` write; never readable as UTF-8 or UTF-16. */
+const utf32le = (text: string) => {
+  const codePoints = Array.from(text, (c) => c.codePointAt(0)!)
+  const body = Buffer.alloc(codePoints.length * 4)
+  codePoints.forEach((cp, i) => body.writeUInt32LE(cp, i * 4))
+  return Buffer.concat([Buffer.from([0xff, 0xfe, 0x00, 0x00]), body])
+}
 
 async function template(dir: string): Promise<string> {
   const file = join(dir, 'template.docx')
@@ -86,6 +93,27 @@ describe('JSON input files saved as UTF-16', () => {
   })
 })
 
+describe('a UTF-32 --ops file', () => {
+  it('exits with the usage code and reason, not the generic conversion failure', async () => {
+    const dir = tempDir()
+    const ops = join(dir, 'ops.json')
+    const output = join(dir, 'result.docx')
+    writeFileSync(ops, utf32le('[{"op":"insert_content","html":"<p>x</p>","afterBlockIndex":-1}]'))
+    const r = await run([
+      'docs',
+      'apply',
+      await template(dir),
+      '--ops',
+      ops,
+      '--out',
+      output,
+      '--json',
+    ])
+    expect(r.code, r.stdout).toBe(1)
+    expect(r.json().error).toBe('unsupported')
+  })
+})
+
 describe('decodeText', () => {
   it('decodes UTF-16 by its byte order mark and drops that mark', () => {
     expect(decodeText(utf16le('한글'))).toBe('한글')
@@ -96,5 +124,12 @@ describe('decodeText', () => {
     expect(decodeText(Buffer.from('한글'))).toBe('한글')
     expect(decodeText(Buffer.from('\ufeff{"a":1}'))).toBe('\ufeff{"a":1}')
     expect(decodeText(new Uint8Array())).toBe('')
+  })
+
+  it('rejects a UTF-32 BOM instead of decoding it as UTF-16 or UTF-8', () => {
+    const le = Buffer.from([0xff, 0xfe, 0x00, 0x00, 0x48, 0x00, 0x00, 0x00])
+    const be = Buffer.from([0x00, 0x00, 0xfe, 0xff, 0x00, 0x00, 0x00, 0x48])
+    expect(() => decodeText(le)).toThrow(/UTF-32/)
+    expect(() => decodeText(be)).toThrow(/UTF-32/)
   })
 })

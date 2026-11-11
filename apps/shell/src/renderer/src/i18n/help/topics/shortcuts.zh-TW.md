@@ -290,6 +290,7 @@ Excel 的篩選快速鍵 Ctrl+Shift+L 在 Windows 或 Linux 上不做任何事�
 | 使用滑鼠滾輪縮放                                      | ⌘ + 滾輪 | Ctrl + 滾輪     |
 | 在儲存格中顯示或隱藏公式                              | ⌘`       | Ctrl+`          |
 | 展開或收合公式列                                      | ⌘⇧U      | Ctrl+Shift+U    |
+| 依位置執行快速存取工具列按鈕（第 1 至第 10 個）       |          | Alt+1 … Alt+0   |
 
 ## Slides
 

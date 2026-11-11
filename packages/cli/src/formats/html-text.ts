@@ -1,9 +1,20 @@
+import { isUtf32Bom } from '../fs'
+import { CliError, EXIT } from '../result'
+
 /**
  * An HTML file's bytes as text: a byte order mark first, then the charset the page declares in its
  * head (`<meta charset>` or the http-equiv form, as legacy Korean pages declare euc-kr), then UTF-8.
  * An unknown charset name reads as UTF-8; broken bytes become replacement characters.
  */
 export function decodeHtmlBytes(bytes: Uint8Array): string {
+  if (isUtf32Bom(bytes)) {
+    throw new CliError(
+      EXIT.usage,
+      'Unsupported text encoding: BOM-declared UTF-32 cannot be decoded (UTF-8 and UTF-16 are supported)',
+      undefined,
+      { reason: 'unsupported' },
+    )
+  }
   const label = bomCharset(bytes) ?? metaCharset(bytes) ?? 'utf-8'
   try {
     return new TextDecoder(label.toLowerCase()).decode(bytes)
@@ -13,6 +24,7 @@ export function decodeHtmlBytes(bytes: Uint8Array): string {
 }
 
 function bomCharset(bytes: Uint8Array): string | undefined {
+  if (isUtf32Bom(bytes)) return undefined
   if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) return 'utf-8'
   if (bytes[0] === 0xff && bytes[1] === 0xfe) return 'utf-16le'
   if (bytes[0] === 0xfe && bytes[1] === 0xff) return 'utf-16be'

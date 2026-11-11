@@ -49,6 +49,7 @@ import type {
   AiSearchProviderMeta,
   AiSearchSettings,
   AiSettings,
+  AiSubscriptionProviderId,
 } from '@genoffice/ai-provider'
 import { useI18n } from './locale'
 import type { StringKey, TFunc } from './locale'
@@ -435,7 +436,14 @@ export function withAdvancedCustomSave(
  * userData/ai-settings.json. The provider picked here is the one being filled
  * in; which AI is in use is chosen in the section above, never here.
  */
-function AiModelPane({ t }: { t: TFunc }) {
+function AiModelPane({
+  t,
+  onCliPathSaved,
+}: {
+  t: TFunc
+  /** a CLI's path was saved: check that program again so its card shows what the path found */
+  onCliPathSaved?: (provider: AiSubscriptionProviderId) => void
+}) {
   const [catalog, setCatalog] = useState<AiCatalogEntry[]>(
     () => window.aiOffice.getAiProviders?.() ?? [],
   )
@@ -579,6 +587,8 @@ function AiModelPane({ t }: { t: TFunc }) {
     cliPath: undefined,
   }
   const isCodex = provider === 'codex'
+  /** a subscription CLI: it is found and signed in on its own, and takes a path instead of a key */
+  const cliProvider = meta?.needsCliPath === true
   /** an API-key provider: the fixed catalog plus what the vendor listed for the key (decision 0087) */
   const keyProvider = !meta?.needsBaseUrl && !isSubscriptionProvider(provider)
   const modelOptions = keyProvider
@@ -661,18 +671,24 @@ function AiModelPane({ t }: { t: TFunc }) {
     const removedIds = baselineIdsRef.current.filter(
       (id) => !(toSave.customEndpoints ?? []).some((entry) => entry.id === id),
     )
-    changeAiSettings((latest) =>
-      withAdvancedCustomSave(
+    let pathBefore: string | undefined
+    changeAiSettings((latest) => {
+      pathBefore = latest.providers[provider]?.cliPath
+      return withAdvancedCustomSave(
         toSave,
         latest,
         edited,
         loadedModel,
         removedIds,
         baselineIdsRef.current,
-      ),
-    )
+      )
+    })
       .then((written) => {
         if (!written) return
+        if (cliProvider && (written.providers[provider]?.cliPath ?? '') !== (pathBefore ?? '')) {
+          // needsCliPath is set on the subscription CLIs only
+          onCliPathSaved?.(provider as AiSubscriptionProviderId)
+        }
         setSettings(written)
         baselineIdsRef.current = (written.customEndpoints ?? []).map((entry) => entry.id)
         baselineModelsRef.current = Object.fromEntries(
@@ -770,7 +786,7 @@ function AiModelPane({ t }: { t: TFunc }) {
         />
       </div>
       <div className="set-field-desc set-ai-note">
-        {isCodex ? t('setAiCodexHint') : t('setAiKeyNote')}
+        {cliProvider ? t('setAiCliHint', { name: meta?.label ?? '' }) : t('setAiKeyNote')}
       </div>
       {meta?.needsBaseUrl && (
         <>
@@ -856,14 +872,14 @@ function AiModelPane({ t }: { t: TFunc }) {
           />
         )}
       </div>
-      {isCodex ? (
+      {cliProvider ? (
         <div className="set-field">
           <div className="set-field-text">
             <div className="set-field-stack">
               <label className="set-field-label" htmlFor="set-ai-cli-path">
-                {t('setAiCodexPath')}
+                {t('setAiCliPath', { name: meta?.label ?? '' })}
               </label>
-              <div className="set-field-desc">{t('setAiCodexPathHint')}</div>
+              <div className="set-field-desc">{t('setAiCliPathHint')}</div>
             </div>
           </div>
           <input
@@ -871,11 +887,12 @@ function AiModelPane({ t }: { t: TFunc }) {
             className="set-input"
             type="text"
             value={config.cliPath ?? ''}
-            placeholder={t('setAiCodexAutoPlaceholder')}
+            placeholder={t('setAiCliAutoPlaceholder')}
             spellCheck={false}
             autoComplete="off"
             onChange={(e) => updateConfig({ cliPath: e.target.value.trim() })}
             onBlur={(e) => {
+              if (!isCodex) return
               const cliPath = e.target.value.trim()
               void refreshCodexModels(cliPath, config.model).catch(() => undefined)
             }}
@@ -1649,6 +1666,8 @@ export interface SettingsModalProps {
   onSkillUpdateDue?: (due: boolean) => void
   /** open on this section / block instead of the account page */
   target?: SettingsTarget | null
+  /** the first-run welcome window is up: stack above it */
+  overWelcome?: boolean
 }
 
 export function SettingsModal({
@@ -1657,6 +1676,7 @@ export function SettingsModal({
   skillUpdateDue: updateDue = false,
   onSkillUpdateDue,
   target,
+  overWelcome = false,
 }: SettingsModalProps) {
   const { lang, setLang, t } = useI18n()
   const [section, setSection] = useState<SectionId>(target?.section ?? 'account')
@@ -1807,7 +1827,7 @@ export function SettingsModal({
 
   return (
     <div
-      className="set-overlay"
+      className={overWelcome ? 'set-overlay over-welcome' : 'set-overlay'}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
@@ -1860,7 +1880,7 @@ export function SettingsModal({
                 openTab={section === 'aiMedia' ? 'media' : undefined}
                 advanced={(tab) =>
                   tab === 'model' ? (
-                    <AiModelPane t={t} />
+                    <AiModelPane t={t} onCliPathSaved={connection.recheck} />
                   ) : (
                     <AiMediaPane
                       t={t}

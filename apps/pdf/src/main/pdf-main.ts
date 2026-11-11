@@ -61,6 +61,10 @@ import type {
   InsertBlankPageResult,
   InsertPdfRequest,
   InsertPdfResult,
+  CopyPagesRequest,
+  CopyPagesResult,
+  PastePagesRequest,
+  PastePagesResult,
   MergePagesRequest,
   MergePagesResult,
   MergePdfRequest,
@@ -141,6 +145,7 @@ import {
 } from './note-link'
 import type { PdfNoteResult, PdfRecoveryCopyResult } from '../shared/ipc'
 import { createPdfRecovery, pdfLooksEncrypted } from './pdf-recovery'
+import { copiedPagesOf, heldCopiedPages, holdCopiedPages } from './page-clipboard'
 import { ResultStore, documentHashOfFile } from '../../../../packages/pdf-structure/src/store'
 
 const tDlg = createI18n({
@@ -2217,6 +2222,64 @@ function registerPdfIpc(): void {
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
     },
+  )
+
+  // Page clipboard: the copied pages stay here, so a paste in any PDF view reads
+  // no path from the renderer. Copying applies the view's pending edits in memory.
+  ipcMain.handle(
+    PDF_CHANNELS.copyPages,
+    async (e, request: CopyPagesRequest): Promise<CopyPagesResult> => {
+      const { source, pages } = request ?? {}
+      const path = source?.path
+      if (
+        !pdfPathGranted(e.sender.id, path) ||
+        source.targetPath !== undefined ||
+        !Array.isArray(pages)
+      ) {
+        return { ok: false, error: 'pdf: path not granted to this view' }
+      }
+      if (carriesProtection(source)) return { ok: false, error: 'pdf: protected', protected: true }
+      try {
+        const bytes = await viewDocumentBytes(e.sender.id, path)
+        if (pdfLooksEncrypted(bytes)) return { ok: false, error: 'pdf: protected', protected: true }
+        const copied = await copiedPagesOf(bytes, source, pages)
+        if (!copied) return { ok: false, error: 'pdf: no such pages' }
+        holdCopiedPages(copied)
+        return { ok: true, count: copied.count }
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    },
+  )
+
+  ipcMain.handle(
+    PDF_CHANNELS.pastePages,
+    async (e, request: PastePagesRequest): Promise<PastePagesResult> => {
+      const { path, afterPageIndex } = request ?? {}
+      if (!pdfPathGranted(e.sender.id, path)) {
+        return { ok: false, error: 'pdf: path not granted to this view' }
+      }
+      const copied = heldCopiedPages()
+      if (!copied) return { ok: true, insertedCount: 0 }
+      try {
+        const target = new Uint8Array(await readFile(path))
+        if (pdfLooksEncrypted(target))
+          return { ok: false, error: 'pdf: protected', protected: true }
+        const { merged, count } = await insertPdfBytes(
+          target,
+          copied.bytes,
+          typeof afterPageIndex === 'number' ? afterPageIndex : -1,
+        )
+        await writeOwnFile(e.sender.id, path, () => writePdfAtomically(path, merged))
+        return { ok: true, insertedCount: count }
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    },
+  )
+
+  ipcMain.handle(PDF_CHANNELS.copiedPageCount, (e): number =>
+    allowedByWc.has(e.sender.id) ? (heldCopiedPages()?.count ?? 0) : 0,
   )
 
   // Compare: pick a second document and extract its per-page text main-side —

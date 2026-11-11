@@ -278,18 +278,19 @@ Zkratka filtru Excelu, Ctrl+Shift+L, na Windows ani Linuxu nedělá nic. Na macO
 
 ### Okno
 
-| Akce                                                      | macOS         | Windows / Linux  |
-| --------------------------------------------------------- | ------------- | ---------------- |
-| Uložit sešit                                              | ⌘S            | Ctrl+S           |
-| Uložit jako                                               | ⇧⌘S           | Ctrl+Shift+S     |
-| Otevřít sešit                                             | ⌘O            | Ctrl+O           |
-| Tisk                                                      | ⌘P            | Ctrl+P           |
-| Zavřít sešit (macOS) / Ukončit aplikaci (Windows a Linux) | ⌘W            | Ctrl+Q           |
-| Otevřít uživatelskou příručku                             | F1            | F1               |
-| Přiblížit                                                 | ⌘=            | Ctrl+=           |
-| Přiblížení kolečkem myši                                  | ⌘ + posouvání | Ctrl + posouvání |
-| Zobrazit nebo skrýt vzorce v buňkách                      | ⌘`            | Ctrl+`           |
-| Rozbalit nebo sbalit řádek vzorců                         | ⌘⇧U           | Ctrl+Shift+U     |
+| Akce                                                            | macOS         | Windows / Linux  |
+| --------------------------------------------------------------- | ------------- | ---------------- |
+| Uložit sešit                                                    | ⌘S            | Ctrl+S           |
+| Uložit jako                                                     | ⇧⌘S           | Ctrl+Shift+S     |
+| Otevřít sešit                                                   | ⌘O            | Ctrl+O           |
+| Tisk                                                            | ⌘P            | Ctrl+P           |
+| Zavřít sešit (macOS) / Ukončit aplikaci (Windows a Linux)       | ⌘W            | Ctrl+Q           |
+| Otevřít uživatelskou příručku                                   | F1            | F1               |
+| Přiblížit                                                       | ⌘=            | Ctrl+=           |
+| Přiblížení kolečkem myši                                        | ⌘ + posouvání | Ctrl + posouvání |
+| Zobrazit nebo skrýt vzorce v buňkách                            | ⌘`            | Ctrl+`           |
+| Rozbalit nebo sbalit řádek vzorců                               | ⌘⇧U           | Ctrl+Shift+U     |
+| Spustit tlačítko panelu Rychlý přístup podle pozice (1. až 10.) |               | Alt+1 … Alt+0    |
 
 ## Slides
 

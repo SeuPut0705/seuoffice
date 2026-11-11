@@ -8,6 +8,7 @@ export const ar = {
   saveFailed: 'تعذّر حفظ المستند.',
   fileSave: 'حفظ',
   fileSaveAs: 'حفظ باسم…',
+  fileImportPdf: 'استيراد PDF…',
   fileExportPdf: 'تصدير بتنسيق PDF…',
   filePrint: 'طباعة…',
   autoSave: 'حفظ تلقائي',

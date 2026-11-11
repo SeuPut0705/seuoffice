@@ -4,11 +4,11 @@ Dovednost je sada pracovních pokynů pro AI. Jednou si zapište, co děláte st
 
 ## Zapínání a vypínání dovedností
 
-**Nastavení ▸ Dovednosti** ukazuje dovednosti na tomto počítači, seskupené podle původu. Každá dovednost se zobrazuje pod svým jménem, stejně jako ji ukazují agenti pro programování. Pomocí vyhledávacího pole nahoře najdete dovednost podle jména nebo popisu.
+**Nastavení ▸ Dovednosti** ukazuje dovednosti na tomto počítači, seskupené podle původu. Každá dovednost se zobrazuje pod svým jménem, stejně jako ji ukazují agenti pro programování. Pomocí vyhledávacího pole nahoře najdete dovednost podle jména nebo popisu. Vaše dovednost, která má název, ukazuje tento název v tomto seznamu, v seznamu `/` a na štítcích a jméno je malým písmem vedle něj. Hledat můžete i podle názvu. Jméno, které vytvořila aplikace (`skill-…`), se vedle názvu nezobrazuje.
 
 | Původ                        | Co obsahuje                                                            | Na začátku |
 | ---------------------------- | ---------------------------------------------------------------------- | ---------- |
-| **Vestavěné**                | 5 dovedností dodávaných s GenOffice                                    | Zapnuté    |
+| **Vestavěné**                | Dovednosti dodávané s GenOffice                                        | Zapnuté    |
 | **Moje dovednosti**          | Dovednosti, které jste přidali nebo vytvořili (`~/.ieumoffice/skills`) | Zapnuté    |
 | **Složka dovedností Claude** | Dovednosti v `~/.claude/skills`                                        | Vypnuté    |
 | **Pluginy Claude**           | Dovednosti nainstalovaných pluginů Claude                              | Vypnuté    |
@@ -16,32 +16,37 @@ Dovednost je sada pracovních pokynů pro AI. Jednou si zapište, co děláte st
 
 - Přepínač dovednost zapíná nebo vypíná. Stejné nastavení platí pro panel AI každého editoru, pro Ask AI na stránce Domů i pro okno agenta.
 - U zapnuté dovednosti zvolte **Rozhoduje AI** nebo **Jen na vyvolání**. Na začátku je nastaveno Rozhoduje AI. S volbou Jen na vyvolání se dovednost použije jen tehdy, když ji vyvoláte sami.
-- Dovednosti z různých zdrojů mohou mít stejný název. Rozlišíte je podle štítku původu na každém řádku.
-- V nabídce dalších akcí jsou **Zobrazit obsah**, **Upravit** (jen moje dovednosti), **Exportovat (zip)** (jen moje dovednosti) a **Otevřít složku**.
+- Dovednosti z různých zdrojů mohou mít stejný název. Rozlišíte je podle štítku původu na každém řádku. Když jsou zapnuté dvě dovednosti se stejným jménem, v seznamu `/` se zobrazí a používá jen jedna: první v pořadí Moje dovednosti, Vestavěné, Složka dovedností Claude, Složka dovedností Codex, Pluginy Claude. V řádku té druhé je uvedeno, která dovednost se používá místo ní.
+- V nabídce dalších akcí jsou **Zobrazit obsah**, **Upravit** (jen moje dovednosti), **Exportovat (zip)** (jen moje dovednosti) a **Otevřít složku**. Vestavěné dovednosti položku **Otevřít složku** nemají. **Kde se používá** otevře rovnou místo, kde se vybírají editory, ve kterých se dovednost používá.
+- Moje dovednosti jsou ve složce `~/.ieumoffice/skills`. Ve Windows je to `C:\Users\<uživatelské jméno>\.ieumoffice\skills`. **Otevřít složku** v nabídce dalších akcí otevře složku dovednosti.
 - **Přesunout do koše** přesune jednu z mých dovedností do systémového koše, odkud ji můžete obnovit.
 - Vestavěná dovednost se neodstraňuje, ale skrývá: zvolte **Skrýt**. **Znovu zobrazit** dole v seznamu ji vrátí do původního stavu.
 - Chcete-li změnit vestavěnou dovednost nebo dovednost z jiného programu, zvolte **Kopírovat do mých dovedností**. Kopie se objeví v mých dovednostech a originál se vypne.
 - Při exportu dovednosti se šablonou se do zipu přibalí i dokument šablony. Před exportem zkontrolujte, že dokument neobsahuje osobní údaje.
+- **Exportovat více** nahoře na stránce uloží zaškrtnuté dovednosti do jednoho souboru zip, každou do vlastní složky. Kdo zip dostane, přidá ho stejně jako jakýkoli zip s dovedností a může si vybrat, které z jeho dovedností nainstaluje.
 
 ## Přidání dovednosti
 
 1. V **Nastavení ▸ Dovednosti** klikněte na **Přidat**.
-2. Zvolte **Ze složky**, **Ze souboru zip** nebo **Z odkazu na GitHub**. U GitHubu zadejte adresu veřejného repozitáře nebo `owner/repo` a klikněte na **Najít**.
-3. V náhledu zkontrolujte nalezené dovednosti. Náhled ukazuje počet a velikost souborů, zda obsahují skripty, webové adresy v textu a soubor s licencí.
+2. Zvolte **Ze složky**, **Ze souboru zip**, **Z vloženého textu** nebo **Z odkazu na GitHub**. U vloženého textu vložte celý `SKILL.md` od jeho prvního řádku `---` a klikněte na **Náhled**. U GitHubu zadejte adresu veřejného repozitáře, `owner/repo` nebo stránku dovednosti na skills.sh a klikněte na **Najít**.
+3. V náhledu zkontrolujte nalezené dovednosti. Náhled ukazuje počet a velikost souborů, zda obsahují skripty, webové adresy v textu, soubor s licencí a řádky, které stojí za přečtení před instalací. **Zobrazit obsah** pod dovedností otevře text jejího `SKILL.md` a její textové soubory, abyste si je mohli přečíst před instalací.
 4. Zaškrtněte jen dovednosti, které chcete nainstalovat, a klikněte na **Nainstalovat**. Nainstalované dovednosti jsou hned zapnuté.
 
 Pod náhledem je vždy uvedeno: „Instalujte dovednosti jen ze zdrojů, kterým důvěřujete. Dovednost dává AI pokyny a v okně agenta může spouštět skripty“. Dovednost z neznámého zdroje si před instalací přečtěte.
 
-- Pokud už mezi mými dovednostmi je jedna se stejným názvem, zvolte na tom řádku **Nahradit** nebo **Přeskočit**.
+- Pokud už mezi mými dovednostmi je jedna se stejným názvem, zvolte na tom řádku **Nahradit** nebo **Přeskočit**. **Nahradit** zachová nastavení dovednosti: zapnutí či vypnutí, volbu Rozhoduje AI / Jen na vyvolání i to, kde se používá.
+- Soubor zip s dovedností nebo soubor `SKILL.md` můžete také přetáhnout na kterékoli okno GenOffice. Otevře se **Nastavení ▸ Dovednosti** se stejným náhledem. Zip se bere jako dovednost, když `SKILL.md` leží na jeho nejvyšší úrovni nebo ho obsahuje každá složka nejvyšší úrovně; u jakéhokoli jiného zipu přetaženého samostatně zobrazí **Nastavení ▸ Dovednosti** „Nebyly nalezeny žádné dovednosti“. Soubor `SKILL.md` přijde sám: dovednost s dalšími soubory dejte do zipu.
+- **Řádky, které stojí za přečtení před instalací**, jsou řádky, které žádají AI, aby ignorovala dřívější pokyny, před vámi něco skrývala nebo přebírala pokyny z vnější adresy, a cesty `../`, které vedou mimo složku dovednosti. U každého je uveden soubor a řádek. Instalaci nezastaví a dovednost bez takových řádků tím ještě není bezpečná.
 - Při stahování z GitHubu se GenOffice připojuje jen k `github.com`, `api.github.com` a `codeload.github.com` a neposílá žádné přihlašovací údaje. Pokud je archiv příliš velký nebo neprojde bezpečnostními kontrolami, nic se nenainstaluje.
-- **Nová dovednost** otevře prázdný editor, do kterého sami napíšete jméno, popis a pokyny.
+- Stránka dovednosti na skills.sh (`https://skills.sh/owner/repo/skill`) se čte jako tato dovednost v repozitáři GitHub `owner/repo`. GenOffice se ke skills.sh nepřipojuje.
+- **Nová dovednost** otevře prázdný editor, do kterého sami napíšete jméno, popis a pokyny. Pole **Název** úplně nahoře přijme název v libovolném jazyce; jméno se vyplní z názvu a můžete ho změnit. Pokud má zapnutá dovednost z jiného zdroje stejné jméno, před uložením se vás aplikace zeptá a uložením se ta dovednost vypne. Pokud název neobsahuje latinská písmena ani číslice, vyplní se jméno jako `skill-` s několika znaky. Jméno používají jiné programy a volání přes `/`, takže ho můžete nechat, jak je.
 
 ## Kontrola aktualizací
 
 - U dovednosti nainstalované z GitHubu hledá **Zkontrolovat aktualizace** v nabídce dalších akcí nový obsah. GitHub se kontaktuje jen tehdy, když na to kliknete.
 - Pokud se nic nezměnilo, zobrazí se „Aktuální“. Pokud se něco změnilo, prohlédněte si změněné soubory a náhled a klikněte na **Aktualizovat**.
 - Pokud jste dovednost po instalaci sami upravili, zobrazí se také „Vaše úpravy budou ztraceny“.
-- Aktualizace zachová zapnutí či vypnutí dovednosti i volbu mezi Rozhoduje AI a Jen na vyvolání.
+- Aktualizace zachová zapnutí či vypnutí dovednosti, volbu mezi Rozhoduje AI a Jen na vyvolání i to, kde se používá.
 
 ## Vyvolání dovednosti v panelu AI
 
@@ -66,11 +71,21 @@ Pod náhledem je vždy uvedeno: „Instalujte dovednosti jen ze zdrojů, kterým
 
 1. V panelu AI napište například „Ulož to, co jsme právě udělali, jako dovednost“ nebo „Vytvoř dovednost, která píše zprávy v našem firemním stylu“.
 2. AI vybere kroky a pravidla, která se vyplatí opakovat, a zobrazí kartu **Nová dovednost**. Hodnoty použité jen tentokrát, jako jména a data, do pokynů nepatří.
-3. Zkontrolujte a upravte na kartě jméno, popis a pokyny. Jméno se zobrazuje v seznamu dovedností a píšete ho za `/`: malá anglická písmena, číslice a spojovníky.
+3. Zkontrolujte a upravte na kartě jméno, popis a pokyny. Jméno se zobrazuje v seznamu dovedností a píšete ho za `/`: malá anglická písmena, číslice a spojovníky. Do pole **Název** nad jménem se píše název, který ukazuje seznam, v libovolném jazyce.
 4. Klikněte na **Uložit**. Nová dovednost se přidá do mých dovedností, zapne se a hned se objeví v seznamu `/`.
 
 - Dokud nekliknete na **Uložit**, žádný soubor se nezapíše. Pokud kliknete na **Zrušit**, rozhovor ji ponechá jen jako „Neuložený návrh dovednosti“.
 - Můžete také požádat o změnu existující dovednosti, například „Uprav dovednost pro zápisy tak, jak to děláme my“. Karta se pak jmenuje **Změnit dovednost**. Jedna z mých dovedností se přepíše tlačítkem **Nahradit**; vestavěná dovednost nebo dovednost z jiného programu se uloží jako kopie do mých dovedností a originál se vypne.
+
+## Volba, kde se dovednost používá
+
+Dovednost, která se hodí jen pro jeden druh dokumentu, třeba úprava vzhledu snímků nebo uklizení tabulky, může být vidět jen v panelu AI daného editoru. V ostatních editorech se seznam `/` i seznam dovedností, které AI používá sama, zkrátí a AI častěji vybere tu správnou.
+
+- U mé dovednosti otevřete **Upravit** a v části **Kde se používá** zvolte **Všechny editory** nebo **Jen tyto editory**. Vybrané editory se zapíší do souboru dovednosti, takže ji provázejí i při exportu nebo přenesení do jiného programu. **Jen tyto editory** začíná bez zaškrtnutých editorů; **Vybrat vše** a **Zrušit výběr** změní všechny najednou.
+- U vestavěné dovednosti nebo dovednosti jiného programu to změníte v části **Kde se používá** v **Zobrazit obsah**. Volba se ukládá jen do nastavení tohoto počítače; soubor dovednosti se nemění.
+- Dovednost, která se nepoužívá ve všech editorech, to ukazuje ve svém řádku, například „Používá se v: Prezentace“.
+- Když AI vytváří dovednost, která se hodí jen pro jeden formát, navrhne i to, kde se má používat; jinak ponechá všechny editory. Před uložením to můžete změnit v části **Kde se používá** na kartě.
+- Zeptat se AI na domovské stránce a okno agenta používají všechny zapnuté dovednosti bez ohledu na to, kde se mají používat.
 
 ## Přidání dokumentu jako šablony
 
@@ -96,15 +111,25 @@ Když vytváříte dovednost v panelu AI editoru, může s ní jako šablona jí
 
 ## Vestavěné dovednosti
 
-| Dovednost         | Co dělá                                                                         |
-| ----------------- | ------------------------------------------------------------------------------- |
-| `meeting-minutes` | Udělá z poznámek z porady zápis s rozhodnutími a úkoly                          |
-| `internal-comms`  | Píše oznámení, zpravodaje, zprávy o postupu, časté dotazy a další interní texty |
-| `humanizer`       | Najde obraty, které působí jako psané AI, a upraví je přirozeně                 |
-| `copy-editing`    | Projde anglický text, který jste napsali, a udělá ho jasnějším a stručnějším    |
-| `find-skills`     | Najde v okně agenta dovednosti, které potřebujete, a navrhne jejich instalaci   |
+| Dovednost                     | Co dělá                                                                                                                                                                                         |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Udělá z poznámek z porady zápis s rozhodnutími a úkoly                                                                                                                                          |
+| `internal-comms`              | Píše oznámení, zpravodaje, zprávy o postupu, časté dotazy a další interní texty                                                                                                                 |
+| `humanizer`                   | Najde obraty, které působí jako psané AI, a upraví je přirozeně                                                                                                                                 |
+| `copy-editing`                | Projde anglický text, který jste napsali, a udělá ho jasnějším a stručnějším                                                                                                                    |
+| `find-skills`                 | Najde v okně agenta dovednosti, které potřebujete, a navrhne jejich instalaci                                                                                                                   |
+| `administration-report`       | Uvede zprávu do souladu se směrnicí korejského ministerstva vnitra: souvislé věty, jednotné číslování, dostupné písmo, jednoduché tabulky                                                       |
+| `administration-report-draft` | Píše správní zprávu od začátku ve formátu ministerstva: oddíly, číslování Ⅰ·1·가, souvislé věty, názvy tabulek a dostupné písmo                                                                 |
+| `docx`                        | Funguje jen v okně agenta. Spouští skripty, které vytvářejí, upravují a čtou soubory .docx ve složce projektu. Na tomto počítači musí být nainstalován Python a další programy                  |
+| `pptx`                        | Funguje jen v okně agenta. Spouští skripty, které vytvářejí, upravují a čtou soubory .pptx ve složce projektu. Na tomto počítači musí být nainstalován Python a další programy                  |
+| `xlsx`                        | Funguje jen v okně agenta. Spouští skripty, které vytvářejí a upravují soubory .xlsx ve složce projektu a přepočítávají vzorce. Na tomto počítači musí být nainstalován Python a další programy |
+| `pdf`                         | Funguje jen v okně agenta. Spouští skripty, které čtou, slučují a dělí soubory .pdf ve složce projektu a vyplňují formuláře. Na tomto počítači musí být nainstalován Python a další programy    |
+| `hwp-document`                | Napíše od začátku nový dokument .hwp nebo .hwpx: zvolí stavbu zprávy, plánu, oznámení, úředního dopisu nebo zápisu, píše stylem dokumentu a výsledek zkontroluje                                |
+| `mindmap`                     | Sestaví myšlenkovou mapu z tématu nebo podkladů: tři až sedm vyvážených hlavních větví, krátké názvy s podrobnostmi v poznámkách a na konci kontrola struktury                                  |
+| `diagram`                     | Nakreslí přehledný diagram: zvolí vhodný typ, drží jeden směr, krátké popisky a málo barev a zkontroluje překryvy a nepřipojené tvary                                                           |
+| `html-document`               | Vytvoří dokument HTML, který se dobře čte na obrazovce a čistě tiskne: nejdřív určí čtenáře, rozsah a papír, potom zkontroluje stránky a obsah                                                  |
 
-`copy-editing` je určena pro anglické marketingové texty. `find-skills` funguje jen v okně agenta.
+`copy-editing` je určena pro anglické marketingové texty. `find-skills` funguje jen v okně agenta. V okně **Zobrazit obsah** vestavěné dovednosti je popis v jazyce rozhraní a pokyny jsou text, který dostává AI, zobrazený beze změny (anglicky). `docx`, `pptx`, `xlsx` a `pdf` fungují jen v okně agenta; spouštějí skripty, proto musí být na tomto počítači nainstalován Python a další programy. `hwp-document`, `mindmap`, `diagram` a `html-document` se používají jen v editoru, pro který je každá z nich napsána.
 
 ## V okně agenta
 
