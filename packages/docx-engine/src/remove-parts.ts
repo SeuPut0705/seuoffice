@@ -82,6 +82,11 @@ export interface RemovePartsPlan {
   dataBindings: RemovedPartBinding[]
 }
 
+/**
+ * A reference to half of a surrogate pair (&#xD800; .. &#xDFFF;) reads as U+FFFD,
+ * not as a lone UTF-16 unit; with the u flag the surrogate class leaves a pair
+ * spelled by two adjacent references whole.
+ */
 function decodeXmlEntities(value: string): string {
   const codePoint = (match: string, raw: string, radix: number) => {
     const value = parseInt(raw, radix)
@@ -92,6 +97,7 @@ function decodeXmlEntities(value: string): string {
   return value
     .replace(/&#x([0-9a-f]+);/gi, (match, hex: string) => codePoint(match, hex, 16))
     .replace(/&#(\d+);/g, (match, decimal: string) => codePoint(match, decimal, 10))
+    .replace(/[\uD800-\uDFFF]/gu, '\uFFFD')
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
     .replace(/&lt;/g, '<')
