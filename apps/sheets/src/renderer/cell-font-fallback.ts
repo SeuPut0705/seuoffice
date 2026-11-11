@@ -750,7 +750,7 @@ function registerAlias(alias: CellFontAlias, loads: Promise<unknown>[]): void {
     )
 }
 
-const registeredAliases = new Set<string>()
+const registeredAliases = new Map<string, Promise<unknown>>()
 
 /// Register + load the alias faces of these families, once each, before the
 /// skeleton that measures them: canvas fillText never triggers lazy
@@ -761,14 +761,19 @@ const registeredAliases = new Set<string>()
 /// skipped here: its stand-in's local() chain could otherwise win the match,
 /// while it stays in ALIASES_BY_FAMILY so its fallback intent holds.
 export function registerCellFontAliases(families: Iterable<string>): Promise<unknown> {
-  const loads: Promise<unknown>[] = []
-  const gated: Promise<unknown>[] = []
+  const all: Promise<unknown>[] = []
   for (const name of families) {
     const key = name.trim().replace(/^@/, '').toLowerCase()
     if (TEMPLATE_FONT_FAMILY_KEYS.has(key)) continue
     const alias = ALIASES_BY_FAMILY.get(key)
-    if (!alias || registeredAliases.has(key)) continue
-    registeredAliases.add(key)
+    if (!alias) continue
+    const inFlight = registeredAliases.get(key)
+    if (inFlight) {
+      all.push(inFlight)
+      continue
+    }
+    const loads: Promise<unknown>[] = []
+    const gated: Promise<unknown>[] = []
     if (alias.skipIfLocal) {
       gated.push(
         genuineLocalExists(alias.skipIfLocal).then((genuine) => {
@@ -786,8 +791,11 @@ export function registerCellFontAliases(families: Iterable<string>): Promise<unk
     } else {
       registerAlias(alias, loads)
     }
+    const load = Promise.all([...loads, ...gated])
+    registeredAliases.set(key, load)
+    all.push(load)
   }
-  return Promise.all([...loads, ...gated])
+  return Promise.all(all)
 }
 
 /// Local faces resolve in milliseconds; the timeout only keeps a broken
@@ -815,15 +823,38 @@ export function registerTextDingbatsFace(): Promise<unknown> {
   return Promise.all(loads)
 }
 
-/// Every family a workbook names before its cells load: the cell styles, the
-/// theme's scheme fonts, and the Normal font's cached name.
+/// A cell font can carry a comma list ("A,B"), quoted names included.
+function addFamilies(families: Set<string>, value: string | undefined): void {
+  for (const segment of value?.split(',') ?? []) {
+    const family = segment
+      .trim()
+      .replace(/^["']|["']$/g, '')
+      .trim()
+    if (family) families.add(family)
+  }
+}
+
+/// Every family a workbook names before its cells load: the cell and
+/// conditional-format styles, the theme's scheme fonts, and the Normal font's
+/// cached name.
 export function workbookFontFamilies(
-  file: Pick<WorkbookFile, 'styles' | 'themeFonts' | 'normalFontName'>,
+  file: Pick<WorkbookFile, 'styles' | 'dxfStyles' | 'themeFonts' | 'normalFontName'>,
 ): Set<string> {
   const families = new Set<string>()
-  for (const style of file.styles ?? []) if (style.fontFamily) families.add(style.fontFamily)
+  for (const style of file.styles ?? []) addFamilies(families, style.fontFamily)
+  for (const style of file.dxfStyles ?? []) addFamilies(families, style.fontFamily)
   const theme = file.themeFonts
   for (const family of [theme?.major, theme?.minor, theme?.minorEa, file.normalFontName])
-    if (family) families.add(family)
+    addFamilies(families, family)
+  return families
+}
+
+/// Families named only by rich-text runs: they live in the cell data, not in
+/// a cellXf, so each loaded range registers them before it is installed.
+export function richRunFamilies(
+  cells: Iterable<{ rich?: readonly { family?: string | undefined }[] | undefined }>,
+): Set<string> {
+  const families = new Set<string>()
+  for (const cell of cells) for (const run of cell.rich ?? []) addFamilies(families, run.family)
   return families
 }

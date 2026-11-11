@@ -521,6 +521,7 @@ import { sharedFormulaResolverFor } from './shared-formula-journal'
 import { installCellClipAnchorFix } from './cell-clip-anchor-fix'
 import { installBorderOverflowExclusionFix } from './border-overflow-exclusion'
 import { installCfEmptySheetFastPath } from './cf-empty-fast-path'
+import { installOtherFormulaAnchor } from './other-formula-anchor'
 import { installStylesCacheReuse } from './styles-cache-reuse'
 import { installMergeBorderFix } from './merge-border-fix'
 import { installThickBorderFix } from './thick-border-fix'
@@ -2779,6 +2780,7 @@ export function App({
     installLoadAutoHeightGate()
     installBorderOverflowExclusionFix()
     installCfEmptySheetFastPath()
+    installOtherFormulaAnchor()
     // Blit-only frames (a selection move over a clean viewport) must not
     // re-run every visible cell through the interceptor chain.
     installStylesCacheReuse()
@@ -6807,8 +6809,9 @@ export function App({
         <SpellingDialog
           onClose={() => setSpellDialogOpen(false)}
           getWorkbook={() => univerRef.current?.univerAPI.getActiveWorkbook() ?? null}
-          // this fork has no withheld (redacted) cells: every cell is checked
-          isWithheld={() => false}
+          isWithheld={(sheetId, row, column) =>
+            (redactionIndexRef.current ?? NO_REDACTIONS).labelAt(sheetId, row, column) !== null
+          }
           onJumpTo={(sheetId, row, column) => {
             void selectWorkbookRange(
               readContext(),
