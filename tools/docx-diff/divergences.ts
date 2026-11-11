@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import JSZip from 'jszip'
-import { rustOpen } from './compare-package'
+import { type Outcome, rustOpen, rustParts, typescriptParts } from './compare-package'
 import { outcomeOf, rustOutcome } from './compare-props'
 import { rustRoundTrip, typescriptRoundTrip } from './compare-xml'
 import { rustEntries, textWithoutBuffer } from './compare-zip'
@@ -18,9 +18,19 @@ type Divergence = { id: string; typescript: unknown; rust: unknown; reason: stri
   | { comparison: 'props'; fn: string; text: string }
   /** A container of package-zips.ts by name: what loading it gives. */
   | { comparison: 'loadDocx'; container: string }
+  /** A styles part: the docDefaults read from it. */
+  | { comparison: 'docDefaults'; stylesXml: string }
 )
 
 const NEVER_RETURNS = 'does not return within 5 s'
+
+/** The docDefaults of a styles outcome, which is the one value of it the ledger lists. */
+function docDefaultsOf(styles: Outcome): unknown {
+  const value = 'value' in styles ? styles.value : undefined
+  return value !== null && typeof value === 'object' && 'docDefaults' in value
+    ? value.docDefaults
+    : styles
+}
 
 /**
  * `loadDocxZip` in a child process: the only way to see that it does not
@@ -60,6 +70,13 @@ async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust:
     return {
       typescript: typescriptLoadOnce(docx),
       rust: 'refused' in rust ? { refused: rust.refused } : 'opens',
+    }
+  }
+  if (entry.comparison === 'docDefaults') {
+    const parts: Array<[string, string]> = [['word/styles.xml', entry.stylesXml]]
+    return {
+      typescript: docDefaultsOf((await typescriptParts(parts)).styles),
+      rust: docDefaultsOf(rustParts(parts).styles),
     }
   }
   const zip = new JSZip()

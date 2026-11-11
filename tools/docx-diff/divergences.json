@@ -85,5 +85,23 @@
       "refused": "Corrupted zip: the ZIP64 extensible data does not end"
     },
     "reason": "JSZip 3.10.1 reads the extensible data of a ZIP64 end record in a loop whose counter never advances (zipEntries.js, readBlockZip64EndOfCentral): it ends when a read runs past the data. A field whose length is -6 moves the reader back to the start of the field, so the loop reads the same six bytes for ever and loadDocxZip never returns. The zip gate does not stop the archive: it refuses ZIP64 by the record count, the directory size and offset, and a locator 20 bytes before the end record, while JSZip also takes a disk number of 0xffff as ZIP64 and finds the locator anywhere. Rust refuses the container. This is a defect of the TypeScript engine (a document that hangs the application), reported with unit 1c, not behaviour to reproduce."
+  },
+  {
+    "id": "table-lookup-inherited-key-doc-defaults",
+    "comparison": "docDefaults",
+    "stylesXml": "<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:docDefaults><w:rPrDefault><w:rPr><w:lang w:eastAsia=\"Constructor\"/></w:rPr></w:rPrDefault><w:pPrDefault/></w:docDefaults></w:styles>",
+    "typescript": {
+      "asciiFont": "Times New Roman",
+      "sizeHalfPoints": 20,
+      "eastAsiaLang": "Constructor",
+      "eastAsiaFont": "[function]",
+      "eaFromLang": true
+    },
+    "rust": {
+      "asciiFont": "Times New Roman",
+      "eastAsiaLang": "Constructor",
+      "sizeHalfPoints": 20
+    },
+    "reason": "See table-lookup-inherited-key-object. parseStyles lower-cases the w:lang w:eastAsia of the docDefaults and looks it up in EA_LANG_DEFAULT_FONT. For constructor (and __proto__) the TypeScript takes the inherited member for a font: it stores a function as eastAsiaFont and sets eaFromLang. The lower-casing keeps toString, valueOf and hasOwnProperty out. The Rust table answers for its own keys only, so neither field is set."
   }
 ]
