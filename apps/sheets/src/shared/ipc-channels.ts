@@ -5,6 +5,13 @@
 /// schema and the preload's hand-rolled validator (which stays zod-free).
 export const MAX_SAVE_EDITS = 1_000_000
 
+/// Cap on structural ops (row/column inserts, sizes, visibility, outline,
+/// merges) in one save request. Unmerging a sheet journals one op per merged
+/// region and restoring row heights one per line, so a sheet-scale edit runs
+/// into the thousands. The save applies consecutive ops of one kind in a
+/// single pass, so this guards the transfer size, not the save's cost.
+export const MAX_SAVE_STRUCTURAL_OPS = 100_000
+
 /// Above this, the renderer stages edits through the chunked transfer
 /// instead of the inline request: live object graphs cross the context
 /// bridge property by property (~38s for a million edits measured on an M-

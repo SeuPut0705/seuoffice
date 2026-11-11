@@ -174,15 +174,23 @@ export function applyStructuralOps(
 ): string {
   let xml = ops.length === 0 ? worksheetXml : inferWorksheetAddresses(worksheetXml)
   let outlineTouched = false
-  for (const op of ops) {
+  for (let at = 0; at < ops.length; at += 1) {
+    const op = ops[at]!
     if ('start' in op) {
-      outlineTouched ||= 'level' in op
-      xml =
-        op.kind === 'set-row-size' ||
-        op.kind === 'set-rows-hidden' ||
-        op.kind === 'set-rows-outline'
-          ? applyRowAttributeOp(xml, op)
-          : applyColAttributeOp(xml, op, resolveColStyle)
+      if (!isRowAttributeOp(op)) {
+        outlineTouched ||= 'level' in op
+        xml = applyColAttributeOp(xml, op, resolveColStyle)
+        continue
+      }
+      // A run of row attribute ops (an undo that restores every line's
+      // height journals one op per line) patches the rows in one pass
+      // instead of rewriting the sheet once per op.
+      let end = at + 1
+      while (end < ops.length && isRowAttributeOp(ops[end]!)) end += 1
+      const run = ops.slice(at, end) as AxisAttributeOp[]
+      outlineTouched ||= run.some((entry) => 'level' in entry)
+      xml = run.length === 1 ? applyRowAttributeOp(xml, op) : applyRowAttributeRun(xml, run)
+      at = end - 1
       continue
     }
     if ('summaryBelow' in op) {
@@ -190,7 +198,13 @@ export function applyStructuralOps(
       continue
     }
     if (!('index' in op)) {
-      xml = applyMergeOp(xml, op)
+      // Same for a run of merges or of unmerges (unmerging a whole sheet
+      // journals one op per merged region).
+      let end = at + 1
+      while (end < ops.length && ops[end]!.kind === op.kind) end += 1
+      const run = ops.slice(at, end) as MergeOp[]
+      xml = run.length === 1 ? applyMergeOp(xml, op) : applyMergeRun(xml, run)
+      at = end - 1
       continue
     }
     const axis: Axis = axisOf(op)
@@ -401,48 +415,233 @@ function applyRowAttributeOp(xml: string, op: AxisAttributeOp): string {
   const end = Math.min(op.end, MAX_GRID_ROWS - 1)
   if (start > end) return xml
   const seen = new Set<number>()
-  let result = xml.replace(/<row\b([^>]*?)(\/>|>)/g, (full, attributes: string, close: string) => {
-    const rowNumber = /(?:^|\s)r="([0-9]+)"/.exec(attributes)?.[1]
+  let result = xml.replace(ROW_OPEN_PATTERN, (full, attributes: string, close: string) => {
+    const rowNumber = ROW_NUMBER_PATTERN.exec(attributes)?.[1]
     if (rowNumber === undefined) return full
     const rowIndex = Number(rowNumber) - 1
     if (rowIndex < start || rowIndex > end) return full
     seen.add(rowIndex)
-    let patched = attributes
-    if ('size' in op) {
-      patched = patched.replace(/\s*ht="[^"]*"/, '').replace(/\s*customHeight="[^"]*"/, '')
-      if (op.size !== null) patched += ` ht="${formatSize(op.size)}" customHeight="1"`
-    } else if ('level' in op) {
-      patched = patched.replace(/\s*outlineLevel="[^"]*"/, '')
-      if (op.level > 0) patched += ` outlineLevel="${op.level}"`
-      if (op.collapsed !== undefined) {
-        patched = patched.replace(/\s*collapsed="[^"]*"/, '')
-        if (op.collapsed) patched += ' collapsed="1"'
-      }
-    } else {
-      patched = patched.replace(/\s*hidden="[^"]*"/, '')
-      if (op.hidden) patched += ' hidden="1"'
-    }
-    return `<row${patched}${close}`
+    return `<row${patchRowAttributes(attributes, op)}${close}`
   })
-  const setsSomething =
-    'size' in op
-      ? op.size !== null
-      : 'level' in op
-        ? op.level > 0 || op.collapsed === true
-        : op.hidden
-  if (!setsSomething) return result
-  const newAttributes =
-    'size' in op
-      ? ` ht="${formatSize(op.size ?? 0)}" customHeight="1"`
-      : 'level' in op
-        ? (op.level > 0 ? ` outlineLevel="${op.level}"` : '') +
-          (op.collapsed ? ' collapsed="1"' : '')
-        : ' hidden="1"'
+  if (!rowOpSetsSomething(op)) return result
+  const newAttributes = newRowAttributes(op)
   for (let rowIndex = start; rowIndex <= end; rowIndex += 1) {
     if (seen.has(rowIndex)) continue
     result = insertEmptyRow(result, rowIndex + 1, newAttributes)
   }
   return result
+}
+
+type MergeOp = Extract<StructuralOp, { range: CellArea }>
+
+const ROW_OPEN_PATTERN = /<row\b([^>]*?)(\/>|>)/g
+const ROW_NUMBER_PATTERN = /(?:^|\s)r="([0-9]+)"/
+
+function isRowAttributeOp(op: StructuralOp): op is AxisAttributeOp {
+  return (
+    op.kind === 'set-row-size' || op.kind === 'set-rows-hidden' || op.kind === 'set-rows-outline'
+  )
+}
+
+function patchRowAttributes(attributes: string, op: AxisAttributeOp): string {
+  if ('style' in op) return attributes
+  let patched = attributes
+  if ('size' in op) {
+    patched = patched.replace(/\s*ht="[^"]*"/, '').replace(/\s*customHeight="[^"]*"/, '')
+    if (op.size !== null) patched += ` ht="${formatSize(op.size)}" customHeight="1"`
+  } else if ('level' in op) {
+    patched = patched.replace(/\s*outlineLevel="[^"]*"/, '')
+    if (op.level > 0) patched += ` outlineLevel="${op.level}"`
+    if (op.collapsed !== undefined) {
+      patched = patched.replace(/\s*collapsed="[^"]*"/, '')
+      if (op.collapsed) patched += ' collapsed="1"'
+    }
+  } else {
+    patched = patched.replace(/\s*hidden="[^"]*"/, '')
+    if (op.hidden) patched += ' hidden="1"'
+  }
+  return patched
+}
+
+/// Whether the op writes onto a row the file never materialized (a reset
+/// back to the default leaves a missing row missing).
+function rowOpSetsSomething(op: AxisAttributeOp): boolean {
+  if ('style' in op) return false
+  return 'size' in op
+    ? op.size !== null
+    : 'level' in op
+      ? op.level > 0 || op.collapsed === true
+      : op.hidden
+}
+
+function newRowAttributes(op: AxisAttributeOp): string {
+  if ('style' in op) return ''
+  return 'size' in op
+    ? ` ht="${formatSize(op.size ?? 0)}" customHeight="1"`
+    : 'level' in op
+      ? (op.level > 0 ? ` outlineLevel="${op.level}"` : '') + (op.collapsed ? ' collapsed="1"' : '')
+      : ' hidden="1"'
+}
+
+/// Byte-for-byte what `applyRowAttributeOp` over each op in turn produces,
+/// in one pass over the rows. Each row takes the ops covering it in run
+/// order; a row the file lacks is created by the first covering op that sets
+/// something, and the covering ops after it patch it, as they would patch the
+/// row the sequential pass had just inserted. Sequential insertion lands
+/// each new row before the first later-numbered one, which is the sorted
+/// position only when the file's rows are already sorted — any other sheet
+/// takes the sequential path.
+function applyRowAttributeRun(xml: string, run: readonly AxisAttributeOp[]): string {
+  const ops = run
+    .map((op, order) => ({ op, order, start: op.start, end: Math.min(op.end, MAX_GRID_ROWS - 1) }))
+    .filter((entry) => entry.start <= entry.end && !('style' in entry.op))
+  if (ops.length === 0) return xml
+  const existing: number[] = []
+  for (const match of xml.matchAll(ROW_OPEN_PATTERN)) {
+    const rowNumber = ROW_NUMBER_PATTERN.exec(match[1] ?? '')?.[1]
+    if (rowNumber !== undefined) existing.push(Number(rowNumber) - 1)
+  }
+  // insertEmptyRow finds its neighbour with this looser pattern.
+  const neighbours = [...xml.matchAll(/<row\b[^>]*?\br="([1-9][0-9]*)"/g)].map(
+    (match) => Number(match[1]) - 1,
+  )
+  const sorted =
+    neighbours.length === existing.length &&
+    existing.every((row, at) => row === neighbours[at] && (at === 0 || row > existing[at - 1]!))
+  if (!sorted) {
+    let result = xml
+    for (const { op } of ops) result = applyRowAttributeOp(result, op)
+    return result
+  }
+
+  // Rows to visit, ascending: every existing row, plus every row of a span
+  // whose op creates missing rows.
+  const creating = ops
+    .filter((entry) => rowOpSetsSomething(entry.op))
+    .map((entry): [number, number] => [entry.start, entry.end])
+    .sort((left, right) => left[0] - right[0])
+  const spans: Array<[number, number]> = []
+  for (const [start, end] of creating) {
+    const last = spans[spans.length - 1]
+    if (last && start <= last[1] + 1) last[1] = Math.max(last[1], end)
+    else spans.push([start, end])
+  }
+  const byStart = [...ops].sort((left, right) => left.start - right.start)
+  let nextStart = 0
+  let active: typeof ops = []
+  const coveringOps = (rowIndex: number): AxisAttributeOp[] => {
+    let added = false
+    while (nextStart < byStart.length && byStart[nextStart]!.start <= rowIndex) {
+      active.push(byStart[nextStart]!)
+      nextStart += 1
+      added = true
+    }
+    if (added) active.sort((left, right) => left.order - right.order)
+    active = active.filter((entry) => entry.end >= rowIndex)
+    return active.map((entry) => entry.op)
+  }
+
+  const patchedRows = new Map<number, AxisAttributeOp[]>()
+  const createdRows: string[] = []
+  const createdIndexes: number[] = []
+  let existingAt = 0
+  let spanAt = 0
+  let spanRow = spans[0]?.[0] ?? Infinity
+  for (;;) {
+    const existingRow = existing[existingAt] ?? Infinity
+    const rowIndex = Math.min(existingRow, spanRow)
+    if (rowIndex === Infinity) break
+    if (rowIndex === existingRow) existingAt += 1
+    if (rowIndex === spanRow) {
+      if (spanRow < spans[spanAt]![1]) spanRow += 1
+      else {
+        spanAt += 1
+        spanRow = spans[spanAt]?.[0] ?? Infinity
+      }
+    }
+    const covering = coveringOps(rowIndex)
+    if (covering.length === 0) continue
+    if (rowIndex === existingRow) {
+      patchedRows.set(rowIndex, covering)
+      continue
+    }
+    const first = covering.findIndex(rowOpSetsSomething)
+    if (first === -1) continue
+    let attributes = ` r="${rowIndex + 1}"${newRowAttributes(covering[first]!)}`
+    for (const op of covering.slice(first + 1)) attributes = patchRowAttributes(attributes, op)
+    createdRows.push(`<row${attributes}/>`)
+    createdIndexes.push(rowIndex)
+  }
+
+  let createdAt = 0
+  const createdBefore = (rowIndex: number): string => {
+    const from = createdAt
+    while (createdAt < createdIndexes.length && createdIndexes[createdAt]! < rowIndex) {
+      createdAt += 1
+    }
+    return createdRows.slice(from, createdAt).join('')
+  }
+  const result = xml.replace(ROW_OPEN_PATTERN, (full, attributes: string, close: string) => {
+    const rowNumber = ROW_NUMBER_PATTERN.exec(attributes)?.[1]
+    if (rowNumber === undefined) return full
+    const rowIndex = Number(rowNumber) - 1
+    const before = createdBefore(rowIndex)
+    const covering = patchedRows.get(rowIndex)
+    if (!covering) return before + full
+    let patched = attributes
+    for (const op of covering) patched = patchRowAttributes(patched, op)
+    return `${before}<row${patched}${close}`
+  })
+  const rest = createdBefore(Infinity)
+  if (rest === '') return result
+  if (result.includes('</sheetData>')) {
+    return result.replace('</sheetData>', () => `${rest}</sheetData>`)
+  }
+  const emptySheetData = /<sheetData\s*\/>/
+  if (emptySheetData.test(result)) {
+    return result.replace(emptySheetData, () => `<sheetData>${rest}</sheetData>`)
+  }
+  throw new StructuralShiftError('Worksheet has no sheetData element.')
+}
+
+/// Byte-for-byte what `applyMergeOp` over each op of a same-kind run in turn
+/// produces, without rescanning the sheet once per op.
+function applyMergeRun(xml: string, run: readonly MergeOp[]): string {
+  if (run[0]!.kind === 'merge-cells') {
+    // The first op places the section when the sheet has none; every later
+    // one appends before that same first </mergeCells>.
+    const placed = applyMergeOp(xml, run[0]!)
+    const elements = run
+      .slice(1)
+      .map((op) => `<mergeCell ref="${toRef(op.range)}"/>`)
+      .join('')
+    return refreshMergeCount(placed.replace('</mergeCells>', () => `${elements}</mergeCells>`))
+  }
+  // Each unmerge drops the first remaining element that carries its ref.
+  const pending = new Map<string, number>()
+  for (const op of run) {
+    const ref = toRef(op.range)
+    pending.set(ref, (pending.get(ref) ?? 0) + 1)
+  }
+  let ambiguous = false
+  const without = xml.replace(/<mergeCell\b[^>]*\/>/g, (element) => {
+    const refs = [...element.matchAll(/\bref="([^"]*)"/g)].map((match) => match[1]!)
+    if (refs.length !== 1) {
+      // Two ref-like attributes: which op claims it depends on op order.
+      ambiguous ||= refs.some((ref) => pending.has(ref))
+      return element
+    }
+    const left = pending.get(refs[0]!) ?? 0
+    if (left === 0) return element
+    pending.set(refs[0]!, left - 1)
+    return ''
+  })
+  if (ambiguous) {
+    let result = xml
+    for (const op of run) result = applyMergeOp(result, op)
+    return result
+  }
+  return refreshMergeCount(without)
 }
 
 function insertEmptyRow(worksheetXml: string, rowNumber: number, attributes: string): string {

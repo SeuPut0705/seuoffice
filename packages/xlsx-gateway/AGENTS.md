@@ -50,6 +50,7 @@ Sheets 앱(메인과 렌더러)과 명령줄 도구(`packages/cli`)가 쓴다.
 원본의 개선을 받아온 뒤 아래 시험이 모두 통과해야 한다. 충돌을 풀 때 이 동작이 사라지지 않게 한다. 원본이 같은 수정을 받아들였으면 그 항목을 지운다.
 
 - **`styles.xml`의 호환 블록(결정 0112).** 한셀은 서식 항목을 `mc:AlternateContent`로 감싸고 `xmlns:hs`를 `mc:Choice`에만 둔다. 구역의 직계 자식(일반 항목이나 블록 하나)을 한 칸으로 세고, 블록은 바이트 그대로 다시 쓴다. 번호를 읽을 때와 새 서식의 바탕을 찾을 때만 Fallback(없으면 첫 Choice)으로 푼다. 엔진의 `mc_children`과 같은 규칙이다. 구역 시작 태그는 `count`만 고친다. 읽기 전용 `xlsx-style-read.ts`와 `dateStyleIndexes`도 같은 칸 규칙을 쓴다. `gateway/xlsx-style-entries.ts`, `gateway/xlsx-styles.ts`. 시험 `tests/style-alternate-content.test.ts`, `apps/sheets/tests/xlsx-hancom-styles-reopen.test.ts`.
+- **구조 변경을 묶어 쓰기(결정 0133).** `applyStructuralOps`는 연달아 오는 행 속성 기록(높이·숨기기·윤곽), 병합 넣기, 병합 풀기를 각각 한 번에 쓴다(`applyRowAttributeRun`, `applyMergeRun`). 기록마다 시트 전체를 다시 쓰면 수천 개에서 수십 초 걸린다. 결과 바이트는 하나씩 쓸 때와 같고, 파일의 행 번호가 오름차순이 아니거나 ref가 두 개인 병합 요소가 있으면 하나씩 쓴다. 원본이 `applyRowAttributeOp`를 고치면 그 수정을 `patchRowAttributes`·`rowOpSetsSomething`·`newRowAttributes`로 옮긴다. `gateway/xlsx-structure.ts`. 시험 `tests/structural-op-runs.test.ts`.
 
 ## 테스트
 
