@@ -2,9 +2,8 @@
 //! math.ts).
 //!
 //! The parser walks UTF-16 code units as the TypeScript indexes its string.
-//! Where it takes a single unit as a token (`x^` and then a character outside
-//! the BMP takes half the pair), the TypeScript output holds a lone
-//! surrogate; a Rust string cannot, so that half becomes U+FFFD here.
+//! Where it takes a single character as a token (the argument of `x^`), it
+//! takes the whole character: both units of one outside the BMP.
 
 use std::fmt;
 
@@ -112,6 +111,22 @@ impl Parser<'_> {
         self.src.get(self.pos).copied()
     }
 
+    /// `peek`: the whole character at the cursor, with the units it takes
+    /// (two for a character outside the BMP); `None` at the end.
+    fn peek_char(&self) -> Option<(String, usize)> {
+        let rest = self.src.get(self.pos..)?;
+        let len = match rest {
+            [high, low, ..]
+                if (0xD800..0xDC00).contains(high) && (0xDC00..0xE000).contains(low) =>
+            {
+                2
+            }
+            [_, ..] => 1,
+            [] => return None,
+        };
+        Some((String::from_utf16_lossy(&rest[..len]), len))
+    }
+
     fn peek_is(&self, ch: u8) -> bool {
         self.peek() == Some(u16::from(ch))
     }
@@ -158,7 +173,7 @@ impl Parser<'_> {
         }
     }
 
-    /// `readControlName`: the name after a backslash, letters or one unit.
+    /// `readControlName`: the name after a backslash, letters or one character.
     fn read_control_name(&mut self) -> String {
         let rest = self.src.get(self.pos..).unwrap_or_default();
         let letters = rest
@@ -169,11 +184,8 @@ impl Parser<'_> {
             self.pos += letters;
             return String::from_utf16_lossy(&rest[..letters]);
         }
-        let ch = rest
-            .first()
-            .map(|&u| String::from_utf16_lossy(&[u]))
-            .unwrap_or_default();
-        self.pos += 1;
+        let (ch, len) = self.peek_char().unwrap_or_default();
+        self.pos += len;
         ch
     }
 
@@ -194,14 +206,14 @@ impl Parser<'_> {
             self.pos += 1;
             self.control()?
         } else {
-            match self.peek() {
+            match self.peek_char() {
                 None => return Err(LatexError("An argument is required here".into())),
-                Some(u) if b"{}^_&".iter().any(|&b| u16::from(b) == u) => {
+                Some((ch, _)) if "{}^_&".contains(ch.as_str()) => {
                     return Err(LatexError("An argument is required here".into()));
                 }
-                Some(u) => {
-                    self.pos += 1;
-                    math_run(&String::from_utf16_lossy(&[u]), false)
+                Some((ch, len)) => {
+                    self.pos += len;
+                    math_run(&ch, false)
                 }
             }
         };
@@ -439,10 +451,7 @@ impl Parser<'_> {
             self.pos = start;
             return Err(LatexError(format!("Unsupported delimiter: \\{name}")));
         }
-        let ch = self
-            .peek()
-            .map(|u| String::from_utf16_lossy(&[u]))
-            .unwrap_or_default();
+        let ch = self.peek_char().map(|(ch, _)| ch).unwrap_or_default();
         if let Some(delimiter) = value_of(LEFT_RIGHT_CHARS, &ch) {
             self.pos += 1;
             return Ok(delimiter);
