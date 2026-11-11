@@ -54,6 +54,8 @@ pub struct NumberingLevel {
     pub font: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pic_bullet_id: Option<JsNum>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pic_bullet_src: Option<String>,
 }
 
 /// Levels by ilvl. The key is the number as JavaScript writes an object key.
