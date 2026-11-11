@@ -32,6 +32,8 @@
   "include": [
     "src",
     "tests",
+    // the setup file vitest.config.ts loads for every test process
+    "../../tools/test-home.ts",
     "../pdf2docx/src/bidi-js.d.ts",
     "../pptx-ops/src/raw.d.ts",
     "../../apps/docs/src/renderer/env.d.ts",
