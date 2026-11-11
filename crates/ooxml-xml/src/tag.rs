@@ -1,6 +1,6 @@
 //! The tag scanner under `scanBody` (packages/docx-engine/src/scan.ts).
 
-use crate::js::trim_start;
+use jscompat::trim_start;
 
 /// One tag found by the scanner. `start..end` is a byte range of the text.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

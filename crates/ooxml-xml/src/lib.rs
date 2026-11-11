@@ -3,7 +3,6 @@
 //! Offsets are UTF-8 byte offsets everywhere in Rust. The TypeScript callers
 //! count UTF-16 code units, so [`Utf16Map`] converts at the boundary only.
 
-mod js;
 mod ordered;
 mod tag;
 mod utf16;

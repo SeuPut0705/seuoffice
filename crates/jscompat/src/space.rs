@@ -1,6 +1,6 @@
 /// `\s` of a JavaScript regular expression, which is also what `trim` removes.
 /// It differs from `char::is_whitespace`: U+FEFF is a space, U+0085 is not.
-pub(crate) fn is_js_space(c: char) -> bool {
+pub fn is_js_space(c: char) -> bool {
     matches!(
         c,
         '\t' | '\n' | '\u{000B}' | '\u{000C}' | '\r' | ' ' | '\u{00A0}' | '\u{1680}' | '\u{2000}'
@@ -14,10 +14,10 @@ pub(crate) fn is_js_space(c: char) -> bool {
     )
 }
 
-pub(crate) fn trim_start(text: &str) -> &str {
+pub fn trim_start(text: &str) -> &str {
     text.trim_start_matches(is_js_space)
 }
 
-pub(crate) fn trim(text: &str) -> &str {
+pub fn trim(text: &str) -> &str {
     text.trim_matches(is_js_space)
 }

@@ -1,0 +1,12 @@
+[package]
+name = "jscompat"
+description = "JavaScript primitives the ported engines must reproduce: number conversions, regular expressions, strings"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+regress.workspace = true
+ryu.workspace = true
+serde.workspace = true

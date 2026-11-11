@@ -11,7 +11,7 @@
 use std::borrow::Cow;
 use std::fmt;
 
-use crate::js::{is_js_space, trim, trim_start};
+use jscompat::{is_js_space, trim, trim_start};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum XNode {
