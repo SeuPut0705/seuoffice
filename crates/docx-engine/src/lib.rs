@@ -1,5 +1,6 @@
 //! The docx engine. Pure: no I/O, no clock, no randomness.
 
+pub mod blank;
 pub mod doc_properties;
 pub mod drawing_geometry;
 pub mod eq_field;

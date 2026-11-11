@@ -12,6 +12,7 @@ mod jszip;
 mod load;
 mod normalize;
 mod package;
+pub mod write;
 
 pub use gate::{
     DEFAULT_ZIP_LIMITS, DeclaredPart, INFLATE_FAILURE, ZipLimits,
