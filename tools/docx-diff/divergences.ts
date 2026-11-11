@@ -1,15 +1,14 @@
-import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import JSZip from 'jszip'
 import { callOutcomes } from './calls-run'
-import { type Outcome, rustParts, typescriptParts } from './compare-package'
+import { openOnce, type Outcome, rustParts, typescriptParts } from './compare-package'
 import { outcomeOf, rustOutcome } from './compare-props'
 import { rustRoundTrip, typescriptRoundTrip } from './compare-xml'
 import { rustEntries, textWithoutBuffer } from './compare-zip'
 import { toolDir } from './harness'
-import { hostileContainers, oddContainers } from './package-zips'
+import { oddContainers } from './package-zips'
 import { READERS } from './props-registry'
 
 /** A known difference, with what each side returns for the input. */
@@ -25,8 +24,6 @@ type Divergence = { id: string; typescript: unknown; rust: unknown; reason: stri
   | { comparison: 'call'; fn: string; text: string; args?: Record<string, unknown> }
 )
 
-const NEVER_RETURNS = 'does not return within 5 s'
-
 /** The docDefaults of a styles outcome, which is the one value of it the ledger lists. */
 function docDefaultsOf(styles: Outcome): unknown {
   const value = 'value' in styles ? styles.value : undefined
@@ -34,23 +31,6 @@ function docDefaultsOf(styles: Outcome): unknown {
     ? value.docDefaults
     : styles
 }
-
-/**
- * One loader on a container, in a child process: the only way to see that it
- * does not return. Both sides go through it, so a loader that starts to hang
- * makes its entry stale instead of hanging the gate.
- */
-function loadOnce(side: 'typescript' | 'rust', docx: Uint8Array): unknown {
-  const child = spawnSync(process.execPath, ['--import', 'tsx', 'load-once.ts', side], {
-    cwd: toolDir,
-    input: docx,
-    timeout: 5_000,
-    encoding: 'utf8',
-  })
-  if (child.error || child.signal) return NEVER_RETURNS
-  return JSON.parse(child.stdout) as unknown
-}
-
 async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust: unknown }> {
   if (entry.comparison === 'roundTripXml') {
     return {
@@ -67,11 +47,9 @@ async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust:
   }
   if (entry.comparison === 'call') return callOutcomes(entry.fn, entry.text, entry.args ?? {})
   if (entry.comparison === 'loadDocx') {
-    const docx =
-      hostileContainers()[entry.container] ??
-      oddContainers().find(([name]) => name === entry.container)?.[1]
+    const docx = oddContainers().find(([name]) => name === entry.container)?.[1]
     if (!docx) return { typescript: 'no such container', rust: 'no such container' }
-    return { typescript: loadOnce('typescript', docx), rust: loadOnce('rust', docx) }
+    return { typescript: openOnce('typescript', docx), rust: openOnce('rust', docx) }
   }
   if (entry.comparison === 'docDefaults') {
     const parts: Array<[string, string]> = [['word/styles.xml', entry.stylesXml]]

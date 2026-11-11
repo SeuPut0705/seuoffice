@@ -201,6 +201,9 @@ is listed, never coded around in the harness.
 
 - `Package` holds every entry inflated; JSZip inflates on read. Fine for the
   gate, to be revisited when a caller flips.
+- The zip gate refuses every archive JSZip would read as ZIP64, so the ZIP64
+  branch of `ooxml-pkg/src/jszip.rs` is no longer reached through
+  `load_docx_package`. The gate compares nothing of it; its unit tests do.
 - `docx-engine/src/styles/mod.rs` has a private `JsMap` from before
   `jscompat::JsMap` existed.
 - `cargo-deny` is configured (`deny.toml`) but was not installed on the

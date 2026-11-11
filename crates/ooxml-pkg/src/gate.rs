@@ -143,7 +143,18 @@ fn scan_parts(bytes: &[u8]) -> Result<Vec<ScannedPart>, String> {
     let count = at(bytes, eocd + 10, 2);
     let cd_size = at(bytes, eocd + 12, 4);
     let cd_offset = at(bytes, eocd + 16, 4);
-    if count == 0xffff || cd_size == 0xffff_ffff || cd_offset == 0xffff_ffff {
+    // JSZip reads an archive as ZIP64 when any of six fields of the end record
+    // is all ones: both disk numbers and both record counts, besides the
+    // directory size and offset. All six are refused, not only the three this
+    // scan goes on to use: JSZip's ZIP64 reader does not return from crafted
+    // extensible data.
+    if at(bytes, eocd + 4, 2) == 0xffff
+        || at(bytes, eocd + 6, 2) == 0xffff
+        || at(bytes, eocd + 8, 2) == 0xffff
+        || count == 0xffff
+        || cd_size == 0xffff_ffff
+        || cd_offset == 0xffff_ffff
+    {
         return Err(ZIP64.to_owned());
     }
     if cd_offset > length || cd_size > length - cd_offset {

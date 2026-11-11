@@ -45,7 +45,10 @@ interface ZipSpec {
   directorySizeDelta?: number
   /** Fields of the end record written as given. */
   count?: number
+  /** The count on this disk alone; `count` sets both counts. */
+  countOnDisk?: number
   diskNumber?: number
+  directoryDisk?: number
   directorySize?: number
   directoryOffset?: number
 }
@@ -120,7 +123,8 @@ export function buildZip(entries: EntrySpec[], spec: ZipSpec = {}): Uint8Array {
   const end = header(22, (view) => {
     view.setUint32(0, 0x06054b50, true)
     view.setUint16(4, spec.diskNumber ?? 0, true)
-    view.setUint16(8, counted, true)
+    view.setUint16(6, spec.directoryDisk ?? 0, true)
+    view.setUint16(8, spec.countOnDisk ?? counted, true)
     view.setUint16(10, counted, true)
     view.setUint32(
       12,
@@ -556,6 +560,8 @@ export function oddContainers(): Array<[name: string, docx: Uint8Array]> {
       gap: concat([latin1('PK\x06\x07'), new Uint8Array(16)]),
     }),
     'zip64: only the disk number says so': buildZip(base(), { diskNumber: 0xffff }),
+    'zip64: only the disk of the directory says so': buildZip(base(), { directoryDisk: 0xffff }),
+    'zip64: only the count on this disk says so': buildZip(base(), { countOnDisk: 0xffff }),
     'the end record counts more entries than there are': buildZip(base(), { count: 9 }),
     'the end record counts fewer entries than there are': buildZip(
       withEntry({
@@ -841,8 +847,10 @@ export function richSeeds(): Array<{
 }
 
 /**
- * Containers the TypeScript loader does not return from, so they stay out of
- * the comparison and are checked from a child process (divergences.ts).
+ * Containers JSZip does not return from. The zip gate refuses them before
+ * JSZip sees them; each loader opens them in a process of its own
+ * (package-run.ts), so one that reaches the loop again shows as a difference
+ * instead of hanging the gate.
  *
  * JSZip reads the extensible data of a ZIP64 end record in a loop that never
  * advances its counter and ends when a read runs past the data. A field of

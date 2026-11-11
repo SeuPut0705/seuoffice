@@ -1,11 +1,13 @@
 // Comparison (e): the package layer, over the corpus, built containers and
 // seeded mutations.
+import { isDeepStrictEqual } from 'node:util'
 import type JSZip from 'jszip'
 import {
   compareModels,
   compareNormalized,
   comparePackage,
   driftedCopies,
+  openOnce,
   rustParts,
   typescriptParts,
 } from './compare-package'
@@ -13,6 +15,7 @@ import { mutateProps } from './compare-props'
 import { mutate } from './compare-xml'
 import { atFloor, Comparison, failGate, option } from './harness'
 import {
+  hostileContainers,
   mutateContainer,
   oddContainers,
   richSeeds,
@@ -22,6 +25,8 @@ import {
 
 const CONTAINER_FUZZ_CASES = option('--container-fuzz', 3_000)
 const PART_FUZZ_CASES = option('--part-fuzz', 1_500)
+/** What the zip gate says of an archive JSZip would read as ZIP64. */
+const ZIP64_REFUSAL = { refused: 'zip: zip64 archives are not supported' }
 
 const opened = new Comparison('(e) packages opened, corpus documents', 'packagesOpened')
 const values = new Comparison('(e) package values, corpus, checks', 'packageValueChecks')
@@ -104,6 +109,19 @@ export async function packageAfterCorpus(random: () => number): Promise<void> {
       const kind = typescript.refused.replace(/\d+/g, 'N').replace(/part .*? /, 'part X ')
       refusals.set(kind, (refusals.get(kind) ?? 0) + 1)
     }
+  }
+  // JSZip never returned from these, so each loader opens them in a process of
+  // its own. Both have to refuse at the gate: comparing the two with each
+  // other would also pass two loaders that hang alike.
+  for (const [name, docx] of Object.entries(hostileContainers())) {
+    const typescript = openOnce('typescript', docx)
+    const rust = openOnce('rust', docx)
+    built.record(
+      isDeepStrictEqual(typescript, ZIP64_REFUSAL) && isDeepStrictEqual(rust, ZIP64_REFUSAL)
+        ? null
+        : `built "${name}": both must refuse with "${ZIP64_REFUSAL.refused}"; ` +
+            `typescript ${JSON.stringify(typescript)}; rust ${JSON.stringify(rust)}`,
+    )
   }
 
   // one mutation in three starts from a built package: the tracked documents
