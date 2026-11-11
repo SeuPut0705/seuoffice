@@ -8,4 +8,10 @@ publish.workspace = true
 
 [dependencies]
 flate2.workspace = true
+jscompat.workspace = true
+ooxml-xml.workspace = true
 zip.workspace = true
+
+[dev-dependencies]
+serde.workspace = true
+serde_json.workspace = true

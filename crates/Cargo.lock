@@ -166,6 +166,10 @@ name = "ooxml-pkg"
 version = "0.1.0"
 dependencies = [
  "flate2",
+ "jscompat",
+ "ooxml-xml",
+ "serde",
+ "serde_json",
  "zip",
 ]
 

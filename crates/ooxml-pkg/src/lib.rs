@@ -7,6 +7,20 @@ use flate2::read::DeflateDecoder;
 use zip::result::ZipError;
 use zip::{CompressionMethod, ZipArchive};
 
+mod gate;
+mod jszip;
+mod load;
+mod normalize;
+mod package;
+
+pub use gate::{
+    DEFAULT_ZIP_LIMITS, DeclaredPart, INFLATE_FAILURE, ZipLimits,
+    assert_declared_sizes_within_limits, assert_zip_inflates_within_limits,
+};
+pub use load::load_docx_package;
+pub use normalize::{needs_ooxml_normalization, normalize_ooxml_xml};
+pub use package::{Package, Part, ReadError};
+
 /// Per-entry cap, the `maxPartBytes` of the TypeScript zip gate.
 pub const MAX_ENTRY_BYTES: u64 = 512 * 1024 * 1024;
 
