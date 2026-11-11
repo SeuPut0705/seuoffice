@@ -1479,6 +1479,9 @@ function memoFreeObjectPositions(doc, sec, para) {
   return positions.filter((position) => !starts.includes(position))
 }
 
+/** The controls a section's first paragraph holds for its page and column setup; not objects. */
+const SECTION_SETUP_CONTROLS = ['secd', 'cold']
+
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
 const ALIGNMENTS = ['left', 'center', 'right', 'justify']
 const TOGGLES = ['bold', 'italic', 'underline', 'strikethrough']
@@ -5417,6 +5420,19 @@ export const agentPlugin = {
       return { box, plain }
     }
 
+    /**
+     * Whether `box` is the one empty paragraph a new document starts with: no text in it,
+     * nothing else in the document, and no control but the section and column definitions
+     * every first paragraph carries. Text added at the end of such a document goes into that
+     * paragraph, as typing would, instead of leaving it in front as an empty first line.
+     */
+    const isEmptyDocument = (doc, box) =>
+      !box.inTable &&
+      doc.getSectionCount() === 1 &&
+      doc.getParagraphCount(0) === 1 &&
+      box.length(box.index) === 0 &&
+      parse(doc.getControls()).every((control) => SECTION_SETUP_CONTROLS.includes(control.ctrlId))
+
     /** Make an empty paragraph after paragraph `k` of `box`; its index is k + 1. */
     const openAfter = (box, k, plain) => {
       if (plain) box.addAfter(k)
@@ -5674,6 +5690,12 @@ export const agentPlugin = {
               const before = objectsOf(doc)
               const texts = [...paragraphs]
               let at = box.index
+              // the first text of a new document is written into its empty paragraph
+              const intoEmpty = where === 'end' && isEmptyDocument(doc, box)
+              if (intoEmpty) {
+                const first = texts.shift()
+                if (first) box.insert(at, first)
+              }
               if (where === 'before') {
                 // splitting at the start leaves an empty paragraph in front, formatted like this one
                 box.split(at, 0)
@@ -5691,7 +5713,7 @@ export const agentPlugin = {
                 if (text) box.insert(at, text)
               }
               mustKeep(before, objectsOf(doc))
-              const first = where === 'before' ? box.index : box.index + 1
+              const first = where === 'before' || intoEmpty ? box.index : box.index + 1
               return {
                 ok: true,
                 count: paragraphs.length,
