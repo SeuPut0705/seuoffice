@@ -1077,8 +1077,7 @@ const WEBDINGS: &[(u8, &str)] = &[
 ];
 
 fn font_map(font: &str) -> Option<&'static [(u8, &'static str)]> {
-    // `in` on an object literal: only own keys here, so `constructor` and the
-    // other inherited names the TypeScript also accepts are not fonts
+    // the table answers for its own keys only (`Object.hasOwn`, `ownValue`)
     match trim(font).to_lowercase().as_str() {
         "symbol" => Some(SYMBOL),
         "wingdings" => Some(WINGDINGS),

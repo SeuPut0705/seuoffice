@@ -86,7 +86,7 @@ fn replace_char_refs(units: &[u16], hex: bool) -> Vec<u16> {
 pub fn decode_xml_text(value: &str) -> String {
     let units: Vec<u16> = value.encode_utf16().collect();
     let units = replace_char_refs(&replace_char_refs(&units, true), false);
-    // a lone surrogate cannot be held in a Rust string: a listed divergence
+    // `.replace(/[\uD800-\uDFFF]/gu, '\uFFFD')`: a unit left without its pair
     String::from_utf16_lossy(&units)
         .replace("&lt;", "<")
         .replace("&gt;", ">")

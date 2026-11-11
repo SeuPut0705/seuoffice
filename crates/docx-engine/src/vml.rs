@@ -202,8 +202,8 @@ pub fn vml_fraction(value: Option<&str>) -> Option<f64> {
     })
 }
 
-/// The HTML colour names VML attributes use ("silver", "blue"...). Own keys
-/// only: the original's object also answers "constructor" and "__proto__".
+/// The HTML colour names VML attributes use ("silver", "blue"...), read for
+/// the table's own keys only (`ownValue`).
 fn vml_named_color(name: &str) -> Option<&'static str> {
     Some(match name {
         "black" => "000000",
