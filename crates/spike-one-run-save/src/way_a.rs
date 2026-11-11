@@ -103,8 +103,13 @@ pub enum RunItem {
 }
 
 pub enum SaveBlock {
-    Original { docx_index: usize },
-    Generated { block: GeneratedBlock, docx_index: Option<usize> },
+    Original {
+        docx_index: usize,
+    },
+    Generated {
+        block: GeneratedBlock,
+        docx_index: Option<usize>,
+    },
 }
 
 pub struct Document {
@@ -126,7 +131,10 @@ const CONTROLS: [(char, &str); 7] = [
 ];
 
 fn attr<'e>(e: &'e XElement, name: &str) -> Option<&'e str> {
-    e.attrs.iter().find(|(k, _)| k == name).map(|(_, v)| v.as_str())
+    e.attrs
+        .iter()
+        .find(|(k, _)| k == name)
+        .map(|(_, v)| v.as_str())
 }
 
 fn control_of(e: &XElement) -> Option<char> {
@@ -176,7 +184,12 @@ fn raw_p_pr_of(xml: &str) -> Option<Range<usize>> {
     }
     let mut depth = 0usize;
     let mut at = start;
-    while let Some(found) = xml[at..].find("<w:pPr").into_iter().chain(xml[at..].find("</w:pPr>")).min() {
+    while let Some(found) = xml[at..]
+        .find("<w:pPr")
+        .into_iter()
+        .chain(xml[at..].find("</w:pPr>"))
+        .min()
+    {
         let pos = at + found;
         if xml[pos..].starts_with("</w:pPr>") {
             depth = depth.checked_sub(1)?;
@@ -221,14 +234,18 @@ fn read_run(e: &XElement, step: u8) -> Run {
         // step RUN_RAW
         } else if step >= STEP_RUN_RAW {
             content.push(RunItem::Raw(serialize(child)));
-        // end step RUN_RAW
+            // end step RUN_RAW
         }
     }
     Run {
         raw_r_pr,
         content,
         // step ATTRS
-        attrs: if step >= STEP_ATTRS { e.attrs.clone() } else { Vec::new() },
+        attrs: if step >= STEP_ATTRS {
+            e.attrs.clone()
+        } else {
+            Vec::new()
+        },
         // end step ATTRS
     }
 }
@@ -244,7 +261,13 @@ fn push_text(content: &mut Vec<RunItem>, text: String, t: Option<&XElement>, ste
     if let Some(RunItem::Text { text: run_text, .. }) = content.first_mut() {
         run_text.push_str(&text);
     } else {
-        content.insert(0, RunItem::Text { text, t_attrs: None });
+        content.insert(
+            0,
+            RunItem::Text {
+                text,
+                t_attrs: None,
+            },
+        );
     }
 }
 
@@ -287,7 +310,7 @@ fn read_inlines(children: &[XNode], step: u8, out: &mut Vec<Inline>) {
         // step MARKS
         } else if step >= STEP_MARKS {
             out.push(Inline::Raw(serialize(node)));
-        // end step MARKS
+            // end step MARKS
         }
     }
 }
@@ -305,7 +328,11 @@ impl Document {
     }
 
     pub fn paragraph(&self, docx_index: usize, step: u8) -> Result<GeneratedBlock, String> {
-        let range = self.elements.get(docx_index).ok_or("no such block")?.clone();
+        let range = self
+            .elements
+            .get(docx_index)
+            .ok_or("no such block")?
+            .clone();
         let source = &self.xml[range.clone()];
         let nodes = parse_ordered(source, 100).map_err(|e| e.to_string())?;
         let Some(XNode::Element(p)) = nodes.iter().find(|n| matches!(n, XNode::Element(_))) else {
@@ -323,7 +350,11 @@ impl Document {
             }),
             content,
             // step ATTRS
-            attrs: if step >= STEP_ATTRS { p.attrs.clone() } else { Vec::new() },
+            attrs: if step >= STEP_ATTRS {
+                p.attrs.clone()
+            } else {
+                Vec::new()
+            },
             // end step ATTRS
         })
     }
@@ -427,8 +458,7 @@ fn write_inlines(content: &[Inline], out: &mut String) {
                 out.push_str("</");
                 out.push_str(name);
                 out.push('>');
-            }
-            // end step WRAPPERS
+            } // end step WRAPPERS
         }
     }
 }
@@ -460,14 +490,17 @@ impl Document {
                 SaveBlock::Original { docx_index } => Some(*docx_index),
                 SaveBlock::Generated { docx_index, .. } => *docx_index,
             };
-            if let (Some(end), Some(range)) = (previous_end, index.and_then(|i| self.elements.get(i)))
+            if let (Some(end), Some(range)) =
+                (previous_end, index.and_then(|i| self.elements.get(i)))
                 && end <= range.start
             {
                 out.push_str(&xml[end..range.start]);
             }
             previous_end = index.and_then(|i| self.elements.get(i)).map(|r| r.end);
             match block {
-                SaveBlock::Original { docx_index } => out.push_str(&xml[self.elements[*docx_index].clone()]),
+                SaveBlock::Original { docx_index } => {
+                    out.push_str(&xml[self.elements[*docx_index].clone()])
+                }
                 SaveBlock::Generated { block, .. } => generate_paragraph_xml(block, &mut out),
             }
         }
@@ -495,8 +528,7 @@ fn run_at<'b>(content: &'b mut [Inline], index: &mut usize) -> Option<&'b mut Ru
             }
             // end step WRAPPERS
             // step PROOF_ERR
-            Inline::Raw(_) => {}
-            // end step PROOF_ERR
+            Inline::Raw(_) => {} // end step PROOF_ERR
         }
     }
     None
@@ -508,8 +540,12 @@ pub fn set_run_text(block: &mut GeneratedBlock, run: usize, text: &str) -> Resul
     let run = run_at(&mut block.content, &mut index).ok_or("no such run")?;
     let is_text = |c: char| !CONTROLS.iter().any(|(k, _)| *k == c);
     for item in &mut run.content {
-        let RunItem::Text { text: run_text, .. } = item else { continue };
-        let Some(first) = run_text.find(is_text) else { continue };
+        let RunItem::Text { text: run_text, .. } = item else {
+            continue;
+        };
+        let Some(first) = run_text.find(is_text) else {
+            continue;
+        };
         let last = run_text.rfind(is_text).unwrap_or(first);
         let end = last + run_text[last..].chars().next().map_or(0, char::len_utf8);
         run_text.replace_range(first..end, text);

@@ -90,13 +90,23 @@ impl<'x> Reader<'x> {
     ) -> Result<(Vec<Node<T>>, Src), String> {
         let mut children = Vec::new();
         if open.self_closing {
-            let src = Src { outer: open.start..open.end, open_end: open.end, close_start: open.start };
+            let src = Src {
+                outer: open.start..open.end,
+                open_end: open.end,
+                close_start: open.start,
+            };
             return Ok((children, src));
         }
         loop {
-            let tag = self.next_tag().ok_or_else(|| format!("<{}> is not closed", open.name))?;
+            let tag = self
+                .next_tag()
+                .ok_or_else(|| format!("<{}> is not closed", open.name))?;
             if tag.closing {
-                let src = Src { outer: open.start..tag.end, open_end: open.end, close_start: tag.start };
+                let src = Src {
+                    outer: open.start..tag.end,
+                    open_end: open.end,
+                    close_start: tag.start,
+                };
                 return Ok((children, src));
             }
             children.push(child(self, tag)?);
@@ -108,7 +118,9 @@ impl<'x> Reader<'x> {
         let mut depth = usize::from(!open.self_closing);
         let mut close = open;
         while depth > 0 {
-            close = self.next_tag().ok_or_else(|| format!("<{}> is not closed", open.name))?;
+            close = self
+                .next_tag()
+                .ok_or_else(|| format!("<{}> is not closed", open.name))?;
             if close.closing {
                 depth -= 1;
             } else if !close.self_closing {
@@ -120,19 +132,31 @@ impl<'x> Reader<'x> {
             open_end: open.end,
             close_start: close.start.max(open.end),
         };
-        Ok(Node { src, state: State::Clean, val })
+        Ok(Node {
+            src,
+            state: State::Clean,
+            val,
+        })
     }
 
     fn inline(&mut self, open: Tag<'x>) -> Result<Node<Inline>, String> {
         if open.name == "w:r" {
             let (content, src) = self.element(open, Self::run_content)?;
-            return Ok(Node { src, state: State::Clean, val: Inline::Run(content) });
+            return Ok(Node {
+                src,
+                state: State::Clean,
+                val: Inline::Run(content),
+            });
         }
         if open.self_closing {
             return self.opaque(open, Inline::Opaque);
         }
         let (content, src) = self.element(open, Self::inline)?;
-        Ok(Node { src, state: State::Clean, val: Inline::Container(content) })
+        Ok(Node {
+            src,
+            state: State::Clean,
+            val: Inline::Container(content),
+        })
     }
 
     fn run_content(&mut self, open: Tag<'x>) -> Result<Node<RunContent>, String> {
@@ -150,11 +174,18 @@ impl<'x> Document<'x> {
         let scan = scan_body(xml).map_err(|e| e.to_string())?;
         let mut items = Vec::with_capacity(scan.elements.len());
         for element in &scan.elements {
-            let mut reader = Reader { xml, at: element.start };
+            let mut reader = Reader {
+                xml,
+                at: element.start,
+            };
             let open = reader.next_tag().ok_or("no tag")?;
             items.push(if open.name == "w:p" {
                 let (content, src) = reader.element(open, Reader::inline)?;
-                Node { src, state: State::Clean, val: BodyItem::Paragraph(content) }
+                Node {
+                    src,
+                    state: State::Clean,
+                    val: BodyItem::Paragraph(content),
+                }
             } else {
                 reader.opaque(open, BodyItem::Opaque)?
             });
@@ -164,7 +195,14 @@ impl<'x> Document<'x> {
             open_end: scan.body_content_start,
             close_start: scan.body_content_end,
         };
-        Ok(Self { xml, body: Node { src, state: State::Clean, val: items } })
+        Ok(Self {
+            xml,
+            body: Node {
+                src,
+                state: State::Clean,
+                val: items,
+            },
+        })
     }
 }
 
@@ -227,7 +265,10 @@ impl Emit for RunContent {
             return;
         };
         let open = &xml[src.outer.start..src.open_end];
-        let open = open.strip_suffix("/>").or_else(|| open.strip_suffix('>')).unwrap_or(open);
+        let open = open
+            .strip_suffix("/>")
+            .or_else(|| open.strip_suffix('>'))
+            .unwrap_or(open);
         out.push_str(open);
         if needs_preserve(text) && !open.contains("xml:space") {
             out.push_str(" xml:space=\"preserve\"");

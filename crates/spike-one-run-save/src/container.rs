@@ -193,7 +193,9 @@ impl<'a> Archive<'a> {
 
         let mut order: Vec<usize> = (0..self.records.len()).collect();
         order.sort_by_key(|&i| self.records[i].local.start);
-        let first = order.first().map_or(self.eocd, |&i| self.records[i].local.start);
+        let first = order
+            .first()
+            .map_or(self.eocd, |&i| self.records[i].local.start);
         let mut out = self.bytes[..first].to_vec();
         let mut offsets = vec![0u32; self.records.len()];
         for &i in &order {

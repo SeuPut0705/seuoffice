@@ -27,9 +27,18 @@ fn snippet(s: &str, at: usize) -> String {
 }
 
 enum Token<'x> {
-    Tag { start: usize, end: usize, name: &'x str },
-    Text { start: usize, end: usize },
-    Opaque { start: usize },
+    Tag {
+        start: usize,
+        end: usize,
+        name: &'x str,
+    },
+    Text {
+        start: usize,
+        end: usize,
+    },
+    Opaque {
+        start: usize,
+    },
 }
 
 /// The token of `xml` (inside `within`) holding byte `at`, and the names of
@@ -39,11 +48,23 @@ fn token_at<'x>(xml: &'x str, within: Range<usize>, at: usize) -> (Token<'x>, Ve
     let mut cursor = within.start;
     while cursor < within.end {
         let Some(found) = xml[cursor..within.end].find('<') else {
-            return (Token::Text { start: cursor, end: within.end }, stack);
+            return (
+                Token::Text {
+                    start: cursor,
+                    end: within.end,
+                },
+                stack,
+            );
         };
         let start = cursor + found;
         if at < start {
-            return (Token::Text { start: cursor, end: start }, stack);
+            return (
+                Token::Text {
+                    start: cursor,
+                    end: start,
+                },
+                stack,
+            );
         }
         if let Some(end) = opaque_end(xml, start) {
             if at < end {
@@ -54,7 +75,14 @@ fn token_at<'x>(xml: &'x str, within: Range<usize>, at: usize) -> (Token<'x>, Ve
         }
         let tag = tag_at(xml, start);
         if at < tag.end {
-            return (Token::Tag { start, end: tag.end, name: tag.name }, stack);
+            return (
+                Token::Tag {
+                    start,
+                    end: tag.end,
+                    name: tag.name,
+                },
+                stack,
+            );
         }
         cursor = tag.end;
         if tag.closing {
@@ -63,7 +91,13 @@ fn token_at<'x>(xml: &'x str, within: Range<usize>, at: usize) -> (Token<'x>, Ve
             stack.push(tag.name);
         }
     }
-    (Token::Text { start: within.end, end: within.end }, stack)
+    (
+        Token::Text {
+            start: within.end,
+            end: within.end,
+        },
+        stack,
+    )
 }
 
 fn attrs_of(tag: &str) -> Vec<(&str, &str, u8)> {
@@ -73,8 +107,12 @@ fn attrs_of(tag: &str) -> Vec<(&str, &str, u8)> {
     while let Some(eq) = rest.find('=') {
         let name = rest[..eq].trim();
         let after = rest[eq + 1..].trim_start();
-        let Some(quote) = after.bytes().next().filter(|q| *q == b'"' || *q == b'\'') else { break };
-        let Some(close) = after[1..].find(quote as char) else { break };
+        let Some(quote) = after.bytes().next().filter(|q| *q == b'"' || *q == b'\'') else {
+            break;
+        };
+        let Some(close) = after[1..].find(quote as char) else {
+            break;
+        };
         out.push((name, &after[1..1 + close], quote));
         rest = &after[close + 2..];
     }
@@ -95,7 +133,9 @@ fn tag_form_difference(original: &str, saved: &str) -> &'static str {
         out
     };
     let same_decoded = a.len() == b.len()
-        && a.iter().zip(&b).all(|(x, y)| x.0 == y.0 && decoded(x.1) == decoded(y.1));
+        && a.iter()
+            .zip(&b)
+            .all(|(x, y)| x.0 == y.0 && decoded(x.1) == decoded(y.1));
     if same_decoded && a.iter().zip(&b).any(|(x, y)| x.1 != y.1) {
         return "entity form in attribute";
     }
@@ -124,8 +164,14 @@ fn element_class(name: &str, stack: &[&str]) -> String {
         }
         "w:hyperlink" => "w:hyperlink wrapper".into(),
         "w:ins" | "w:del" | "w:moveFrom" | "w:moveTo" => "revision wrapper (w:ins, w:del)".into(),
-        "w:smartTag" | "w:sdt" | "w:sdtContent" | "w:sdtPr" | "w:sdtEndPr" | "w:customXml"
-        | "w:fldSimple" | "mc:AlternateContent" => format!("other inline wrapper ({name})"),
+        "w:smartTag"
+        | "w:sdt"
+        | "w:sdtContent"
+        | "w:sdtPr"
+        | "w:sdtEndPr"
+        | "w:customXml"
+        | "w:fldSimple"
+        | "mc:AlternateContent" => format!("other inline wrapper ({name})"),
         "w:fldChar" | "w:instrText" | "w:delInstrText" => "field characters".into(),
         "w:tab" | "w:br" | "w:cr" | "w:noBreakHyphen" | "w:softHyphen" => {
             "tabs and breaks inside runs".into()
@@ -138,10 +184,20 @@ fn element_class(name: &str, stack: &[&str]) -> String {
 
 /// `saved` against `original` outside `edited` (a content range of the
 /// original), both inside the paragraph `para`; `None` when identical there.
-pub fn classify(original: &str, saved: &str, para: Range<usize>, edited: Range<usize>) -> Option<Divergence> {
+pub fn classify(
+    original: &str,
+    saved: &str,
+    para: Range<usize>,
+    edited: Range<usize>,
+) -> Option<Divergence> {
     let (o, s) = (original.as_bytes(), saved.as_bytes());
     let prefix = o.iter().zip(s).take_while(|(a, b)| a == b).count();
-    let suffix = o.iter().rev().zip(s.iter().rev()).take_while(|(a, b)| a == b).count();
+    let suffix = o
+        .iter()
+        .rev()
+        .zip(s.iter().rev())
+        .take_while(|(a, b)| a == b)
+        .count();
     let shift = s.len() as isize - o.len() as isize;
     let (at, front) = if prefix < edited.start {
         (prefix, true)
@@ -150,8 +206,16 @@ pub fn classify(original: &str, saved: &str, para: Range<usize>, edited: Range<u
     } else {
         return None;
     };
-    let saved_at = if front { at } else { (at as isize + shift).max(0) as usize };
-    let within = if para.contains(&at) { para } else { 0..original.len() };
+    let saved_at = if front {
+        at
+    } else {
+        (at as isize + shift).max(0) as usize
+    };
+    let within = if para.contains(&at) {
+        para
+    } else {
+        0..original.len()
+    };
     let (token, mut stack) = token_at(original, within, at);
     let class = match token {
         Token::Tag { start, end, name } => {
@@ -159,7 +223,9 @@ pub fn classify(original: &str, saved: &str, para: Range<usize>, edited: Range<u
                 (saved.as_bytes().get(start) == Some(&b'<')).then(|| tag_at(saved, start))
             } else {
                 let saved_end = (end as isize + shift).max(0) as usize;
-                saved[..floor_boundary(saved, saved_end)].rfind('<').map(|i| tag_at(saved, i))
+                saved[..floor_boundary(saved, saved_end)]
+                    .rfind('<')
+                    .map(|i| tag_at(saved, i))
             };
             let original_tag = &original[start..end];
             match saved_tag {
