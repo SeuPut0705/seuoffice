@@ -2,6 +2,9 @@
 
 pub mod doc_properties;
 pub mod drawing_geometry;
+pub mod eq_field;
+pub mod field_balance;
+pub mod fields;
 pub mod font_table;
 pub mod list_markers;
 pub mod notes;
@@ -10,6 +13,7 @@ pub mod package;
 pub mod props;
 pub mod protection;
 pub mod scan;
+pub mod sdt;
 pub mod section;
 pub mod settings;
 pub mod sources;
