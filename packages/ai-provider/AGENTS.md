@@ -72,7 +72,10 @@
 - 사용자 스킬은 `~/.codex` 안을 어떤 경로로도 읽지 않고, 스킬 폴더 밖으로 이어지는 링크를 따라가지 않는다. 이름이 `genoffice`·`ieumoffice`인 스킬은 어느 출처에서든 목록에 넣지 않는다. 파일을 쓰는 곳은 내 스킬 폴더(`~/.ieumoffice/skills`) 하나이고, 깃허브 요청에는 쿠키와 인증 머리글을 싣지 않는다(결정 0048).
 
 - **ChatGPT 직접 연결(결정 0081).** 토큰은 이 앱이 OpenAI에 자기 이름으로 등록해 받은 것이고, Codex의 로그인을 읽지 않는다. 지킬 것:
-  - 돌아오는 서버는 `127.0.0.1`에만 열고(`localhost` 금지), `/callback` 가운데 `state`가 맞는 요청 하나에만 답한다. 시도마다 PKCE·`state`·`nonce`를 새로 만든다.
+  - 돌아오는 서버는 `127.0.0.1`에만 열고(`localhost` 금지), 그 시도의 콜백 경로 가운데 `state`가 맞는 요청 하나에만 답한다. 시도마다 PKCE·`state`·`nonce`를 새로 만든다.
+  - 콜백 경로는 발급된 `client_id`에 묶인다(OpenAI는 포트만 바꾸게 한다). 새 등록은 `CHATGPT_CALLBACK_PATH`(`/auth/callback`)를 쓰고 그 경로를 `callbackPath`로 함께 저장한다. `client_id`는 있는데 `callbackPath`가 없는 기록(0.12.12까지)은 `/callback`으로 다시 로그인한다. 경로를 바꾸려면 새 등록에만 적용하고 저장된 값은 그대로 읽는다.
+  - 발급된 `client_id`로 다시 로그인하면 콜백에 `client_id`가 빠질 수 있다. 그때는 보관한 값으로 코드를 바꾼다. 콜백이 보관한 값과 다른 `client_id`를 대면 코드를 바꾸지 않고 `callback-client-mismatch`로 거절한다(OpenAI 안내). 새 등록의 콜백에 없으면 `callback-incomplete`다.
+  - 로그인 코드는 한 번만 쓸 수 있다. `aiFetch`가 코드를 다시 보낸 뒤(첫 요청이 던졌거나 503·429) 토큰 주소가 `invalid_grant`로 답하면 `network`·`token-resent`로 알린다(첫 요청은 닿았고 답이 오다 끊긴 것이다). 차단 페이지를 지나 다시 보낸 것은 세지 않는다. 다시 보낸 까닭은 `aiFetch`의 셋째 인자 `onResend`로 받는다.
   - ID 토큰은 JWKS 서명, 발급자, 대상(발급된 `client_id`), 만료, `nonce`를 모두 본다. 요금제 범위(`chatgpt.tokens.use.direct`)가 없으면 저장하지 않는다.
   - 토큰은 `credentials.ts`로만 쓴다(봉인, 임시 이름 뒤 바꾸기, 소유자 권한). 이메일은 쓰지 않는다. 토큰을 로그·오류 글·주소에 싣지 않는다.
   - 갱신은 `connection.ts`의 줄 하나로만 한다(같은 갱신 토큰을 두 번 보내면 무효). 거절은 세션을 지우고 `signed-out`, 네트워크 실패는 아직 유효한 토큰을 쓴다.
