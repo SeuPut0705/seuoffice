@@ -714,6 +714,7 @@ class TabLayoutView {
       const box = fixed ? ' doc-tab-fixed' : ''
       const wrap = t.wrap ? ' doc-tab-wrap' : ''
       decos.push(
+        // inline-rules: allow (upstream line from before the check reached this tree)
         Decoration.inline(
           t.pos,
           t.pos + 1,

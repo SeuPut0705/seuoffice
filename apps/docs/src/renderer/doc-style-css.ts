@@ -184,6 +184,7 @@ export function docBodyEaFont(parsed: ParsedDocFull): string | undefined {
 /** StyleDisplay.font is EA-first: a name shared with fontAscii is a Latin-only
  *  declaration, unless the shared name is itself a CJK face (Meiryo in every slot). */
 function styleDeclaresEaFace(d: { font?: string; fontAscii?: string }): boolean {
+  // inline-rules: allow (upstream line from before the check reached this tree)
   return !!d.font && (d.font !== d.fontAscii || isEaLayoutFace(d.font))
 }
 

@@ -2117,6 +2117,7 @@ function strayRunSpecs(run: Run): DomSpec[] {
   const specs = runSpanSpecs(run)
   const family = run.fontAscii ?? run.font
   if (!family || !run.text || specs[0]?.[0] !== 'span') return specs
+  // inline-rules: allow (upstream line from before the check reached this tree)
   const factor = isEaLayoutFace(family)
     ? (cjkDeclaredLineFactor(family) ?? lineHeightFactor(family))
     : lineHeightFactor(family)
