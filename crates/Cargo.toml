@@ -1,5 +1,5 @@
 [workspace]
-members = ["ooxml-xml"]
+members = ["ooxml-xml", "docx-engine"]
 resolver = "3"
 
 [workspace.package]
@@ -7,6 +7,9 @@ version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
 publish = false
+
+[workspace.dependencies]
+ooxml-xml = { path = "ooxml-xml" }
 
 [profile.release]
 opt-level = "s"

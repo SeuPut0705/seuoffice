@@ -3,5 +3,12 @@
 version = 4
 
 [[package]]
+name = "docx-engine"
+version = "0.1.0"
+dependencies = [
+ "ooxml-xml",
+]
+
+[[package]]
 name = "ooxml-xml"
 version = "0.1.0"

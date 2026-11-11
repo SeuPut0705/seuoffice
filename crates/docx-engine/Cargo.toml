@@ -1,0 +1,10 @@
+[package]
+name = "docx-engine"
+description = "The docx engine: bytes and values in, values and bytes out"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+ooxml-xml.workspace = true
