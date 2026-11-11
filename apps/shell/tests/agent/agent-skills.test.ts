@@ -637,6 +637,33 @@ describe('saving a candidate as it is', () => {
     expect(await templateRedactionOf('deck.pptx', bytes('not a zip'), false)).toBe('unknown')
   })
 
+  it('is not known for a deck the zip gate refuses', async () => {
+    const clean = new JSZip()
+    clean.file('ppt/slides/slide1.xml', '<p:sld/>')
+    const deck = await clean.generateAsync({ type: 'nodebuffer' })
+    // The deck as ZIP64: the disk number of its end record all ones, with a
+    // ZIP64 end record and locator in front. JSZip opens it; the zip gate
+    // refuses every archive JSZip reads this way, because JSZip's ZIP64 reader
+    // does not return from some of them.
+    const end = deck.length - 22
+    const record = Buffer.alloc(56)
+    record.writeUInt32LE(0x06064b50, 0)
+    record.writeUInt32LE(44, 4)
+    record.writeUInt32LE(deck.readUInt16LE(end + 10), 32)
+    record.writeUInt32LE(deck.readUInt32LE(end + 12), 40)
+    record.writeUInt32LE(deck.readUInt32LE(end + 16), 48)
+    const locator = Buffer.alloc(20)
+    locator.writeUInt32LE(0x07064b50, 0)
+    locator.writeUInt32LE(end, 8)
+    locator.writeUInt32LE(1, 16)
+    const endRecord = Buffer.from(deck.subarray(end))
+    endRecord.writeUInt16LE(0xffff, 4)
+    const zip64 = Buffer.concat([deck.subarray(0, end), record, locator, endRecord])
+    // what makes the case: without the gate JSZip opens these bytes
+    expect(Object.keys((await JSZip.loadAsync(zip64)).files)).toContain('ppt/slides/slide1.xml')
+    expect(await templateRedactionOf('deck.pptx', zip64, false)).toBe('unknown')
+  })
+
   it('is not known for a PDF open in a tab (its pending marks are the editor’s)', async () => {
     expect(await templateRedactionOf('a.pdf', bytes('%PDF'), true)).toBe('unknown')
     expect(await templateRedactionOf('a.pdf', bytes('%PDF'), false)).toBe('none')
