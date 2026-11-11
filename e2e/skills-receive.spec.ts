@@ -29,8 +29,25 @@ async function zipFile(path: string, files: Record<string, string>): Promise<str
   return path
 }
 
-/** Drop OS files on the middle of the page, the way Chromium delivers a drag from Explorer */
+type DropCounter = { __e2eDrops?: number }
+
+/**
+ * Drop OS files on the middle of the page, the way Chromium delivers a drag
+ * from Explorer, and wait until the page has the drop event. The CDP call can
+ * return before the renderer handles the drop; a second drag started then can
+ * be lost on a slow machine, which reads as the app losing the second file.
+ */
 async function dropFiles(page: Page, files: string[]): Promise<void> {
+  const before = await page.evaluate(() => {
+    const counter = window as unknown as DropCounter
+    if (counter.__e2eDrops === undefined) {
+      counter.__e2eDrops = 0
+      window.addEventListener('drop', () => (counter.__e2eDrops = (counter.__e2eDrops ?? 0) + 1), {
+        capture: true,
+      })
+    }
+    return counter.__e2eDrops
+  })
   const cdp = await page.context().newCDPSession(page)
   const size = await page.evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }))
   const at = { x: Math.round(size.w / 2), y: Math.round(size.h / 2) }
@@ -39,6 +56,11 @@ async function dropFiles(page: Page, files: string[]): Promise<void> {
     await cdp.send('Input.dispatchDragEvent', { type, ...at, data })
   }
   await cdp.detach()
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as DropCounter).__e2eDrops), {
+      message: `the page never got the drop of ${files.join(', ')}`,
+    })
+    .toBe(before + 1)
 }
 
 const REPORT_SKILL = '---\nname: report\ndescription: Weekly report\n---\nWrite the report.\n'
