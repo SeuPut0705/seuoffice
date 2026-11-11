@@ -8,6 +8,7 @@
 
 import JSZip from 'jszip'
 import type { JSZipObject } from 'jszip'
+import { DOCX_ZIP_LIMITS, assertZipInflatesWithinLimits } from '../../docx-engine/src/index'
 import { attr, descendants, parseXml, type XNode } from './xml'
 
 /** one part may inflate to at most this many bytes */
@@ -99,6 +100,9 @@ export async function loadHwpxPackage(bytes: Uint8Array): Promise<HwpxPackage> {
   if (isHwpBinary(bytes)) throw new HwpConvertError('hwp-binary')
   let zip: JSZip
   try {
+    // JSZip is not given an archive the zip gate refuses: it does not return
+    // from some of them. A refusal reads as an unreadable package.
+    await assertZipInflatesWithinLimits(bytes, DOCX_ZIP_LIMITS)
     zip = await JSZip.loadAsync(bytes)
   } catch {
     throw new HwpConvertError('unreadable')
