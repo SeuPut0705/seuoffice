@@ -128,7 +128,7 @@ const PATTERN_NAMES = [
 ]
 
 /** `constructor`, `toString`, `__proto__`...: keys a JavaScript object used as a table answers to. */
-const inheritedByEveryObject = (key: string): boolean => key in Object.prototype
+export const inheritedByEveryObject = (key: string): boolean => key in Object.prototype
 
 const overText = (
   fn: string,

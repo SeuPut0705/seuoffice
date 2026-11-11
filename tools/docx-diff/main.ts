@@ -23,6 +23,7 @@ import { parseDocx } from '../../packages/docx-engine/src/index'
 import { resolveMainDocumentPath } from '../../packages/docx-engine/src/parse-package'
 import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
 import { bench } from './bench'
+import { callsAfterCorpus, callsOnDocument, reportCalls } from './calls-run'
 import { compareScan } from './compare-scan'
 import { compareRoundTrips, mutate } from './compare-xml'
 import { compareZipText, textWithoutBuffer } from './compare-zip'
@@ -112,9 +113,13 @@ for (const path of corpus) {
       return runs && runs.length > 0 && JSON.stringify(runs).length < 20_000 ? [runs] : []
     }),
   )
+  const parts = new Map<string, string>()
   for (const [name, file] of Object.entries(zip.files)) {
-    if (file.dir || !/\.xml$/i.test(name)) continue
-    const partXml = await file.async('string')
+    if (!file.dir && /\.(xml|rels)$/i.test(name)) parts.set(name, await file.async('string'))
+  }
+  await callsOnDocument(path, parts)
+  for (const [name, partXml] of parts) {
+    if (!/\.xml$/i.test(name)) continue
     const fragments = elementFragments(partXml, 'w:rPr')
     compareRoundTrips(comparisons.rPr, `${path}: ${name}`, fragments)
     for (const fragment of fragments) mutationSeeds.add(fragment)
@@ -155,6 +160,7 @@ for (let done = 0; done < FUZZ_CASES; done += 500) {
 
 propsAfterCorpus(random)
 await packageAfterCorpus(random)
+await callsAfterCorpus(random)
 
 const CHECKSUM_MARKER = 'content whose checksum goes stale'
 for (const compression of ['STORE', 'DEFLATE'] as const) {
@@ -185,6 +191,7 @@ for (const line of [
 reportComparisons()
 reportProps()
 reportPackage()
+reportCalls()
 const nonAscii = mainParts.filter((xml) => /[^\0-\x7f]/.test(xml)).length
 console.log(
   `offsets: ${nonAscii} of ${mainParts.length} main parts hold non-ASCII text, where a byte offset ` +

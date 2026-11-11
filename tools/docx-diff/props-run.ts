@@ -181,9 +181,11 @@ export function reportProps(): void {
   console.log(
     `(d+) mutated fragments: ${PROPS_FUZZ_CASES} (${atFloor(PROPS_FUZZ_CASES, 'propsMutatedFragments')})`,
   )
-  const oneResult = [...byFunction].filter(([, tally]) => tally.outcomes.size < 2).map(([fn]) => fn)
+  // a name with a dot is a function of comparison (f)
+  const readers = [...byFunction].filter(([fn]) => !fn.includes('.'))
+  const oneResult = readers.filter(([, tally]) => tally.outcomes.size < 2).map(([fn]) => fn)
   console.log(
-    `(d) functions compared: ${byFunction.size} (${atFloor(byFunction.size, 'propsFunctions')}); ` +
+    `(d) functions compared: ${readers.length} (${atFloor(readers.length, 'propsFunctions')}); ` +
       `with a single distinct result, so not really compared: ` +
       `${oneResult.length}${oneResult.length > 0 ? ` (${oneResult.join(', ')})` : ''}`,
   )
@@ -198,7 +200,7 @@ export function reportProps(): void {
   )
   if (neverRefused.length > 0) failGate()
   if (process.argv.includes('--by-function')) {
-    for (const [fn, { checks, differences, threw, outcomes }] of [...byFunction].sort(
+    for (const [fn, { checks, differences, threw, outcomes }] of readers.sort(
       (a, b) => b[1].differences - a[1].differences || a[0].localeCompare(b[0]),
     )) {
       console.log(

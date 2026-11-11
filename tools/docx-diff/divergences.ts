@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import JSZip from 'jszip'
+import { callOutcomes } from './calls-run'
 import { type Outcome, rustParts, typescriptParts } from './compare-package'
 import { outcomeOf, rustOutcome } from './compare-props'
 import { rustRoundTrip, typescriptRoundTrip } from './compare-xml'
@@ -20,6 +21,8 @@ type Divergence = { id: string; typescript: unknown; rust: unknown; reason: stri
   | { comparison: 'loadDocx'; container: string }
   /** A styles part: the docDefaults read from it. */
   | { comparison: 'docDefaults'; stylesXml: string }
+  /** A function of comparison (f), by the name of its spec. */
+  | { comparison: 'call'; fn: string; text: string; args?: Record<string, unknown> }
 )
 
 const NEVER_RETURNS = 'does not return within 5 s'
@@ -62,6 +65,7 @@ async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust:
       rust: rustOutcome(entry.fn, entry.text, {}),
     }
   }
+  if (entry.comparison === 'call') return callOutcomes(entry.fn, entry.text, entry.args ?? {})
   if (entry.comparison === 'loadDocx') {
     const docx =
       hostileContainers()[entry.container] ??

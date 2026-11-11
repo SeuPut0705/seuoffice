@@ -19,7 +19,7 @@ export type Outcome = { value?: unknown } | { error: string }
 interface Case {
   fn: string
   text: number
-  args: Args
+  args: object
   typescript: Outcome
 }
 
@@ -123,7 +123,7 @@ export function outcomeOf(call: () => unknown): Outcome {
   }
 }
 
-export function rustOutcome(fn: string, xml: string, args: Args): Outcome {
+export function rustOutcome(fn: string, xml: string, args: object): Outcome {
   const { header } = engine.call<{ results: Outcome[][] }>({
     cmd: 'props',
     inputs: [{ xml, calls: [{ fn, args }] }],
@@ -140,17 +140,32 @@ function check(
   args: Args,
   call: () => unknown,
 ): void {
+  checkOutcome(comparison, where, fn, xml, args, () => outcomeOf(call))
+}
+
+/**
+ * One check of a function called by name on both sides. `typescript` gives
+ * the outcome of the TypeScript side and runs once per distinct case.
+ */
+export function checkOutcome(
+  comparison: Comparison,
+  where: string,
+  fn: string,
+  xml: string,
+  args: object,
+  typescript: () => Outcome,
+): void {
   let text = textIds.get(xml)
   if (text === undefined) {
     text = texts.push(xml) - 1
     textIds.set(xml, text)
   }
   // what the arguments are once they have crossed the wire
-  const wireArgs = JSON.parse(JSON.stringify(args)) as Args
+  const wireArgs = JSON.parse(JSON.stringify(args)) as object
   const key = `${fn}\0${text}\0${JSON.stringify(wireArgs)}`
   let found = queued.get(key)
   if (!found && !settled.has(key)) {
-    found = { fn, text, args: wireArgs, typescript: outcomeOf(call) }
+    found = { fn, text, args: wireArgs, typescript: typescript() }
     queued.set(key, found)
   }
   if (found) pending.push({ comparison, where, key, fn })
