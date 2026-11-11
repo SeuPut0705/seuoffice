@@ -981,6 +981,8 @@ test.describe('mind map line format', () => {
       await map.locator(`${LINE} [data-action="line-shape-straight"]`).click()
       await map.waitForTimeout(250)
       await pickFrom(map, `${LINE} .line-width`, '4')
+      // a colour is one row; its palette opens below it
+      await map.locator(`${LINE} [data-action="line-color"]`).click()
       const swatch = map.locator(`${LINE} .gcp-standard-row .gcp-swatch`).first()
       const colour = await swatch.evaluate((el) => getComputedStyle(el).backgroundColor)
       const hex = rgbToHex(colour)
@@ -1102,6 +1104,7 @@ test.describe('mind map line format', () => {
       await map.waitForTimeout(200)
       await map.locator(`${PANEL} [data-action="rel-end-triangle"]`).click()
       await map.waitForTimeout(200)
+      await map.locator(`${REL_SECTION} [data-action="rel-color"]`).click()
       const relSwatch = map.locator(`${REL_SECTION} .gcp-standard-row .gcp-swatch`).nth(4)
       const relColour = await relSwatch.evaluate((el) => getComputedStyle(el).backgroundColor)
       await relSwatch.click()

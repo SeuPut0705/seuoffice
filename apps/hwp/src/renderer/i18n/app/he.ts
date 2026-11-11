@@ -8,6 +8,7 @@ export const he = {
   saveFailed: 'לא ניתן היה לשמור את המסמך.',
   fileSave: 'שמירה',
   fileSaveAs: 'שמירה בשם…',
+  fileImportPdf: 'ייבוא PDF…',
   fileExportPdf: 'ייצוא כ-PDF…',
   filePrint: 'הדפסה…',
   autoSave: 'שמירה אוטומטית',

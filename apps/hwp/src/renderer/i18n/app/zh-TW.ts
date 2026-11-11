@@ -8,6 +8,7 @@ export const zhTW = {
   saveFailed: '無法儲存文件。',
   fileSave: '儲存',
   fileSaveAs: '另存新檔…',
+  fileImportPdf: '匯入 PDF…',
   fileExportPdf: '匯出為 PDF…',
   filePrint: '列印…',
   autoSave: '自動儲存',

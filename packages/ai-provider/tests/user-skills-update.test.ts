@@ -16,8 +16,10 @@ import {
   checkGitHubSkillUpdate,
   disposeSkillImport,
   installImportedSkills,
+  parseSkillMd,
   prepareGitHubImport,
   readIeumSourceRecord,
+  renderSkillMd,
   skillContentHash,
   type SkillFetch,
 } from '../src/user-skills'
@@ -213,6 +215,42 @@ describe('checkGitHubSkillUpdate', () => {
       await disposeSkillImport(check.update)
     }
     expect(readdirSync(tmp)).toEqual([])
+  })
+
+  it('does not count a where-used value the app wrote into the installed file as a change', async () => {
+    const head = { commit: SHA1 }
+    const quoted =
+      '---\nname: minutes\ndescription: "Meeting minutes: short"\n---\nWrite minutes.\n'
+    const { app, tmp, skillDir, github } = await installed(head, {
+      [SHA1]: { ...V1, 'skills/minutes/SKILL.md': quoted },
+    })
+    const options = { skillDir, appSkillsDir: app, fetch: github.fetch, tempDir: tmp }
+    const parsed = parseSkillMd(quoted)!
+    const withEditors = (body: string) =>
+      renderSkillMd(
+        { name: parsed.name!, description: parsed.description!, editors: 'slides', body },
+        quoted,
+      )
+    writeFileSync(join(skillDir, 'SKILL.md'), withEditors(parsed.body))
+    expect(await checkGitHubSkillUpdate(options)).toMatchObject({ locallyEdited: false })
+
+    // the instructions changed as well: that would be lost
+    writeFileSync(join(skillDir, 'SKILL.md'), withEditors('My own steps.\n'))
+    expect(await checkGitHubSkillUpdate(options)).toMatchObject({ locallyEdited: true })
+  })
+
+  it('counts a changed where-used value when the installed file brought its own', async () => {
+    const head = { commit: SHA1 }
+    const brought =
+      '---\nname: minutes\ndescription: Meeting minutes\nmetadata:\n  ieum-editors: slides\n---\nWrite minutes.\n'
+    const { app, tmp, skillDir, github } = await installed(head, {
+      [SHA1]: { ...V1, 'skills/minutes/SKILL.md': brought },
+    })
+    const options = { skillDir, appSkillsDir: app, fetch: github.fetch, tempDir: tmp }
+    expect(await checkGitHubSkillUpdate(options)).toMatchObject({ locallyEdited: false })
+    // an update brings the repository's value back, so the person's choice would be lost
+    writeFileSync(join(skillDir, 'SKILL.md'), brought.replace('slides', 'docs'))
+    expect(await checkGitHubSkillUpdate(options)).toMatchObject({ locallyEdited: true })
   })
 
   it('reports a skill gone from the repository and one without a source record', async () => {

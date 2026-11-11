@@ -150,7 +150,9 @@ async function searchDirs(lookup: Lookup, extra: string[]): Promise<string[]> {
   const dirs = [...pathDirs(lookup.env, lookup.platform)]
   const fallback =
     lookup.fallbackDirs ??
-    (lookup.platform === 'win32' ? extra : [...(await commonUnixBinDirs(homeOf(lookup))), ...extra])
+    (lookup.platform === 'win32'
+      ? extra
+      : [...(await commonUnixBinDirs(homeOf(lookup), lookup.env, lookup.platform)), ...extra])
   for (const dir of fallback) if (isFullDir(dir) && !dirs.includes(dir)) dirs.push(dir)
   return dirs
 }

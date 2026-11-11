@@ -1,5 +1,11 @@
 import type { Lang } from '@genoffice/i18n'
-import { RESERVED_USER_SKILL_NAMES } from '@genoffice/agent-core'
+import {
+  RESERVED_USER_SKILL_NAMES,
+  skillEditorsOf,
+  skillStandsBack,
+  skillUsedIn,
+  type SkillEditorId,
+} from '@genoffice/agent-core'
 import { mcpServerListOf } from '@genoffice/agent-core/skill-mcp-refs'
 import { builtinSkillDesc, isBuiltinSkillName } from './strings-builtin-skills'
 import { skillPickerText } from './strings-skill-picker'
@@ -125,7 +131,7 @@ export interface SkillPickerItem {
   source: string
   plugin: string | undefined
   name: string
-  /** display title (builtins in the UI language) */
+  /** what the row shows: `skillDisplayName` (the name is shown beside it when they differ) */
   title: string
   description: string
   /** plain-text source label; empty for project skills */
@@ -174,25 +180,55 @@ export function skillSourceLabel(
 /** The name the app gives a skill whose title has no Latin letters or digits (`skill-<6 random>`) */
 const MADE_UP_NAME = /^skill-[a-z0-9]{6}(?:-\d+)?$/
 
+/** Whether a name is one the app made up for a title no name could be made from */
+export function isMadeUpSkillName(name: string): boolean {
+  return MADE_UP_NAME.test(name)
+}
+
 /**
- * What a list shows for a skill: its name, as coding agents show it. A skill
- * that only has a made-up name shows the title it was made with instead.
+ * What every list, chip and sentence shows for a skill (decision 0128): the
+ * title the person gave it, in any language, when its file carries one; else
+ * its name, as coding agents show it. A builtin always shows its name. Lists
+ * show the name beside a title (`skillNameBeside`).
  */
-export function skillDisplayName(skill: { name: string; title?: string | undefined }): string {
-  const title = skill.title?.trim()
-  return title && MADE_UP_NAME.test(skill.name) ? title : skill.name
+export function skillDisplayName(skill: {
+  name: string
+  title?: string | undefined
+  source?: string | undefined
+}): string {
+  if (skill.source === 'builtin') return skill.name
+  return skill.title?.trim() || skill.name
+}
+
+/**
+ * The name a list shows beside what `skillDisplayName` gives: the name a
+ * person chose, when a title is shown in its place. A name the app made up
+ * (`skill-<6 random>`) says nothing to a reader and is left out; '' when
+ * there is nothing to show beside.
+ */
+export function skillNameBeside(skill: {
+  name: string
+  title?: string | undefined
+  source?: string | undefined
+}): string {
+  if (skillDisplayName(skill) === skill.name || isMadeUpSkillName(skill.name)) return ''
+  return skill.name
 }
 
 /**
  * The rows of the list from the bridge's answer: enabled skills only (skills
  * used only when called are listed too), never hidden or unreadable ones;
- * the regular panels leave out agent-only skills. Rows show the skill's name;
- * builtins use their descriptions in the UI language.
+ * the regular panels leave out agent-only skills, and an editor's panel the
+ * skills set for other editors. Of enabled skills that share a name only the
+ * one that wins it is listed (`skillStandsBack`). Rows show the skill's title
+ * or name (`skillDisplayName`); builtins use their descriptions in the UI
+ * language.
  */
 export function pickerSkillsOf(
   raw: unknown,
   lang: Lang,
   surface: SkillPickerSurface = 'panel',
+  editor?: SkillEditorId | undefined,
 ): SkillPickerItem[] {
   if (!Array.isArray(raw)) return []
   const items: SkillPickerItem[] = []
@@ -204,6 +240,9 @@ export function pickerSkillsOf(
     if (!id.includes(':') || !name || !source) continue
     if (view.enabled !== true || view.hidden === true || view.unreadable) continue
     if (view.agentOnly === true && surface !== 'agent') continue
+    if (surface !== 'agent' && !skillUsedIn(skillEditorsOf(view.editors), editor)) continue
+    // one name, one row: the enabled skill that won the name is the one listed
+    if (skillStandsBack(view, raw, surface === 'agent' ? undefined : editor)) continue
     if (RESERVED_USER_SKILL_NAMES.has(name.toLowerCase())) continue
     const plugin = typeof view.plugin === 'string' ? view.plugin : undefined
     const builtin = source === 'builtin' && isBuiltinSkillName(name)
@@ -212,7 +251,7 @@ export function pickerSkillsOf(
       source,
       plugin,
       name,
-      title: skillDisplayName({ name, title: builtin ? '' : str(view.title) }),
+      title: skillDisplayName({ name, title: str(view.title), source }),
       description: builtin ? builtinSkillDesc(lang, name) : str(view.description),
       sourceLabel: skillSourceLabel(lang, { source, plugin, github: view.github }),
       hasScripts: view.hasScripts === true,

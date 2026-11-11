@@ -8,7 +8,6 @@
   --gen-notice-bg: #fff7e6;
   --gen-notice-border: #f3d69a;
   --gen-notice-text: #7a4b00;
-  --gen-on-accent: #ffffff;
 }
 
 [data-theme='dark'] {
@@ -18,7 +17,6 @@
   --gen-notice-bg: #3a2f17;
   --gen-notice-border: #6b5424;
   --gen-notice-text: #f2d398;
-  --gen-on-accent: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -29,7 +27,6 @@
     --gen-notice-bg: #3a2f17;
     --gen-notice-border: #6b5424;
     --gen-notice-text: #f2d398;
-    --gen-on-accent: #ffffff;
   }
 }
 
@@ -335,7 +332,7 @@ body {
 
 .gen-hint {
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .gen-foot {
@@ -385,14 +382,14 @@ body {
 }
 
 .gen-btn-primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--gen-on-accent);
+  background: var(--color-btn-primary);
+  border-color: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
   font-weight: 600;
 }
 
 .gen-btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
+  background: var(--color-btn-primary-hover);
 }
 
 .gen-icon-btn {

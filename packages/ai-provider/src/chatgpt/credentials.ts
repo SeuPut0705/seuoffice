@@ -13,7 +13,8 @@
  *   later sign-in can be told to be the same account.
  * - `hostId` names this installation to OpenAI and outlives a sign-out; the
  *   issued `clientId` outlives an ended session, so signing the same account in
- *   again reuses its registration.
+ *   again reuses its registration. `callbackPath` is the loopback path that id
+ *   was issued for; a record written before the path was kept has none.
  */
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
@@ -36,6 +37,8 @@ export interface ChatGptConnectionRecord {
   hostId: string
   /** the id OpenAI issued at the last sign-in; absent until one */
   clientId?: string | undefined
+  /** the loopback path `clientId` was issued for; absent on a record of 0.12.12 or before */
+  callbackPath?: string | undefined
   /** the signed-in account's stable id */
   subject?: string | undefined
   /** absent when signed out */
@@ -52,6 +55,7 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 
 const HOST_ID = /^urn:uuid:[0-9a-f-]{36}$/i
 const CLIENT_ID = /^[A-Za-z0-9._-]{1,256}$/
+const CALLBACK_PATH = /^(\/[A-Za-z0-9_-]{1,32}){1,4}$/
 
 export function newChatGptHostId(): string {
   return `urn:uuid:${randomUUID()}`
@@ -82,9 +86,13 @@ export function chatGptConnectionOf(value: unknown): ChatGptConnectionRecord {
   const clientId = stringField(value.clientId)
   const subject = stringField(value.subject)
   const session = sessionOf(value.session)
+  const issued = clientId && CLIENT_ID.test(clientId) ? clientId : undefined
+  const callbackPath = stringField(value.callbackPath)
   return {
     hostId: hostId && HOST_ID.test(hostId) ? hostId : newChatGptHostId(),
-    ...(clientId && CLIENT_ID.test(clientId) ? { clientId } : {}),
+    ...(issued ? { clientId: issued } : {}),
+    // the path belongs to the client id: without one there is nothing it was issued for
+    ...(issued && callbackPath && CALLBACK_PATH.test(callbackPath) ? { callbackPath } : {}),
     ...(subject && subject.length <= 256 ? { subject } : {}),
     ...(session ? { session } : {}),
   }
@@ -95,6 +103,7 @@ export function storedChatGptConnection(record: ChatGptConnectionRecord): Record
   return {
     hostId: record.hostId,
     ...(record.clientId ? { clientId: record.clientId } : {}),
+    ...(record.clientId && record.callbackPath ? { callbackPath: record.callbackPath } : {}),
     ...(record.subject ? { subject: record.subject } : {}),
     ...(record.session
       ? {

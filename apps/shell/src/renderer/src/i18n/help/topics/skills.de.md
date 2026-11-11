@@ -4,11 +4,11 @@ Ein Skill ist eine Arbeitsanleitung für die KI. Schreiben Sie einmal auf, was S
 
 ## Skills ein- und ausschalten
 
-**Einstellungen ▸ Skills** listet die Skills auf diesem PC auf, gruppiert nach ihrer Herkunft. Jeder Skill wird mit seinem Namen angezeigt, so wie Coding-Agenten es tun. Über das Suchfeld oben finden Sie einen Skill nach Name oder Beschreibung.
+**Einstellungen ▸ Skills** listet die Skills auf diesem PC auf, gruppiert nach ihrer Herkunft. Jeder Skill wird mit seinem Namen angezeigt, so wie Coding-Agenten es tun. Über das Suchfeld oben finden Sie einen Skill nach Name oder Beschreibung. Ein eigener Skill mit Titel zeigt diesen Titel in dieser Liste, in der `/`-Liste und auf Chips, der Name steht klein daneben. Sie können auch nach dem Titel suchen. Ein von der App vergebener Name (`skill-…`) wird nicht neben dem Titel angezeigt.
 
 | Herkunft                 | Inhalt                                                                   | Anfangs |
 | ------------------------ | ------------------------------------------------------------------------ | ------- |
-| **Integriert**           | Die 5 Skills, die mit GenOffice geliefert werden                         | Ein     |
+| **Integriert**           | Die Skills, die mit GenOffice geliefert werden                           | Ein     |
 | **Meine Skills**         | Skills, die Sie hinzugefügt oder erstellt haben (`~/.ieumoffice/skills`) | Ein     |
 | **Claude-Skills-Ordner** | Die Skills in `~/.claude/skills`                                         | Aus     |
 | **Claude-Plugins**       | Die Skills installierter Claude-Plugins                                  | Aus     |
@@ -16,32 +16,37 @@ Ein Skill ist eine Arbeitsanleitung für die KI. Schreiben Sie einmal auf, was S
 
 - Der Schalter schaltet einen Skill ein oder aus. Dieselbe Einstellung gilt für den KI-Bereich jedes Editors, für Ask AI auf der Startseite und für das Agentenfenster.
 - Wählen Sie für einen eingeschalteten Skill **KI entscheidet** oder **Nur auf Aufruf**. Anfangs ist KI entscheidet eingestellt. Bei Nur auf Aufruf wird der Skill nur verwendet, wenn Sie ihn selbst aufrufen.
-- Skills aus verschiedenen Quellen können denselben Namen tragen. Die Herkunftsangabe in jeder Zeile unterscheidet sie.
-- Das Mehr-Menü enthält **Inhalt ansehen**, **Bearbeiten** (nur meine Skills), **Exportieren (zip)** (nur meine Skills) und **Ordner öffnen**.
+- Skills aus verschiedenen Quellen können denselben Namen tragen. Die Herkunftsangabe in jeder Zeile unterscheidet sie. Sind zwei Skills mit demselben Namen eingeschaltet, erscheint nur einer in der `/`-Liste und wird verwendet: der erste in der Reihenfolge Meine Skills, Integriert, Claude-Skills-Ordner, Codex-Skills-Ordner, Claude-Plugins. In der Zeile des anderen steht, welcher Skill stattdessen verwendet wird.
+- Das Mehr-Menü enthält **Inhalt ansehen**, **Bearbeiten** (nur meine Skills), **Exportieren (zip)** (nur meine Skills) und **Ordner öffnen**. Integrierte Skills haben kein **Ordner öffnen**. **Wo sie genutzt wird** öffnet direkt die Stelle, an der Sie die Editoren wählen, in denen der Skill verwendet wird.
+- Meine Skills liegen im Ordner `~/.ieumoffice/skills`. Unter Windows ist das `C:\Users\<Benutzername>\.ieumoffice\skills`. **Ordner öffnen** im Mehr-Menü öffnet den Ordner des Skills.
 - **In den Papierkorb** verschiebt einen meiner Skills in den Papierkorb des Systems, wo Sie ihn wiederherstellen können.
 - Ein integrierter Skill wird ausgeblendet statt entfernt: Wählen Sie **Ausblenden**. **Wieder einblenden** unten in der Liste holt ihn im ursprünglichen Zustand zurück.
 - Um einen integrierten Skill oder einen aus einem anderen Programm zu ändern, wählen Sie **In meine Skills kopieren**. Die Kopie erscheint unter meinen Skills, und das Original wird ausgeschaltet.
 - Wenn Sie einen Skill mit Vorlage exportieren, kommt das Vorlagendokument mit in die zip-Datei. Prüfen Sie vor dem Export, dass das Dokument keine persönlichen Daten enthält.
+- **Mehrere exportieren** oben auf der Seite packt die angehakten Skills in eine zip-Datei, einen Ordner pro Skill. Wer die zip-Datei erhält, fügt sie wie jede andere Skill-zip-Datei hinzu und kann auswählen, welche ihrer Skills installiert werden.
 
 ## Einen Skill hinzufügen
 
 1. Klicken Sie unter **Einstellungen ▸ Skills** auf **Hinzufügen**.
-2. Wählen Sie **Aus einem Ordner**, **Aus einer zip-Datei** oder **Über einen GitHub-Link**. Geben Sie für GitHub die Adresse eines öffentlichen Repositorys oder `owner/repo` ein und klicken Sie auf **Suchen**.
-3. Prüfen Sie die gefundenen Skills in der Vorschau. Sie zeigt Anzahl und Größe der Dateien, ob Skripte enthalten sind, die Webadressen im Text und die Lizenzdatei.
+2. Wählen Sie **Aus einem Ordner**, **Aus einer zip-Datei**, **Aus eingefügtem Text** oder **Über einen GitHub-Link**. Fügen Sie für eingefügten Text die ganze `SKILL.md` ab ihrer ersten Zeile `---` ein und klicken Sie auf **Vorschau**. Geben Sie für GitHub die Adresse eines öffentlichen Repositorys, `owner/repo` oder die Seite eines Skills auf skills.sh ein und klicken Sie auf **Suchen**.
+3. Prüfen Sie die gefundenen Skills in der Vorschau. Sie zeigt Anzahl und Größe der Dateien, ob Skripte enthalten sind, die Webadressen im Text, die Lizenzdatei und die Zeilen, die Sie vor der Installation lesen sollten. **Inhalt ansehen** unter einem Skill öffnet den Text seiner `SKILL.md` und seine Textdateien, damit Sie sie vor der Installation lesen können.
 4. Haken Sie nur die Skills an, die installiert werden sollen, und klicken Sie auf **Installieren**. Installierte Skills sind sofort eingeschaltet.
 
 Unter der Vorschau steht immer: „Installieren Sie Skills nur aus Quellen, denen Sie vertrauen. Ein Skill gibt der KI Anweisungen und kann im Agent-Fenster Skripte ausführen.“ Lesen Sie einen Skill aus unbekannter Quelle, bevor Sie ihn installieren.
 
-- Gibt es unter meinen Skills schon einen mit demselben Namen, wählen Sie in dieser Zeile **Ersetzen** oder **Überspringen**.
+- Gibt es unter meinen Skills schon einen mit demselben Namen, wählen Sie in dieser Zeile **Ersetzen** oder **Überspringen**. Bei **Ersetzen** bleiben die Einstellungen des Skills erhalten: Ein/Aus, KI entscheidet / Nur auf Aufruf und wo er genutzt wird.
+- Sie können die zip-Datei eines Skills oder eine `SKILL.md`-Datei auch auf ein beliebiges GenOffice-Fenster ziehen. **Einstellungen ▸ Skills** öffnet sich mit derselben Vorschau. Eine zip-Datei gilt als Skill, wenn `SKILL.md` auf ihrer obersten Ebene liegt oder jeder Ordner der obersten Ebene eine enthält; bei jeder anderen zip-Datei, die allein abgelegt wird, zeigt **Einstellungen ▸ Skills** „Keine Skills gefunden“. Eine `SKILL.md`-Datei kommt allein: Packen Sie einen Skill mit weiteren Dateien in eine zip-Datei.
+- **Zeilen, die Sie vor der Installation lesen sollten**, sind Zeilen, die die KI auffordern, frühere Anweisungen zu ignorieren, etwas vor Ihnen zu verbergen oder Anweisungen von einer externen Adresse zu holen, sowie `../`-Pfade, die aus dem Skill-Ordner hinauszeigen. Bei jeder stehen Datei und Zeile. Sie verhindern die Installation nicht, und ein Skill ohne solche Zeilen ist deshalb noch nicht sicher.
 - Beim Herunterladen von GitHub verbindet sich GenOffice nur mit `github.com`, `api.github.com` und `codeload.github.com` und sendet keine Anmeldedaten. Ist das Archiv zu groß oder besteht es die Sicherheitsprüfungen nicht, wird nichts installiert.
-- **Neuer Skill** öffnet einen leeren Editor, in dem Sie Name, Beschreibung und Anleitung selbst schreiben.
+- Die Seite eines Skills auf skills.sh (`https://skills.sh/owner/repo/skill`) wird als dieser Skill im GitHub-Repository `owner/repo` gelesen. GenOffice verbindet sich nicht mit skills.sh.
+- **Neuer Skill** öffnet einen leeren Editor, in dem Sie Name, Beschreibung und Anleitung selbst schreiben. Das Feld **Titel** ganz oben nimmt einen Titel in beliebiger Sprache auf; der Name wird aus dem Titel ausgefüllt und lässt sich ändern. Hat ein eingeschalteter Skill aus einer anderen Quelle denselben Namen, werden Sie vor dem Speichern gefragt, und beim Speichern wird jener Skill ausgeschaltet. Enthält der Titel weder lateinische Buchstaben noch Ziffern, wird als Name `skill-` mit einigen Zeichen eingetragen. Der Name wird von anderen Programmen und beim Aufruf mit `/` verwendet und kann so bleiben.
 
 ## Nach Updates suchen
 
 - Bei einem von GitHub installierten Skill sucht **Nach Updates suchen** im Mehr-Menü nach neuen Inhalten. GitHub wird nur kontaktiert, wenn Sie darauf klicken.
 - Hat sich nichts geändert, erscheint „Aktuell“. Hat sich etwas geändert, prüfen Sie die geänderten Dateien und die Vorschau und klicken dann auf **Aktualisieren**.
 - Haben Sie den Skill nach der Installation selbst bearbeitet, erscheint zusätzlich „Ihre eigenen Änderungen gehen verloren“.
-- Beim Aktualisieren bleiben der Ein/Aus-Zustand des Skills und die Wahl zwischen KI entscheidet und Nur auf Aufruf erhalten.
+- Beim Aktualisieren bleiben der Ein/Aus-Zustand des Skills, die Wahl zwischen KI entscheidet und Nur auf Aufruf sowie die Angabe, wo er genutzt wird, erhalten.
 
 ## Einen Skill im KI-Bereich aufrufen
 
@@ -66,11 +71,21 @@ Unter der Vorschau steht immer: „Installieren Sie Skills nur aus Quellen, dene
 
 1. Sagen Sie im KI-Bereich etwa „Speichere, was wir gerade gemacht haben, als Skill“ oder „Erstelle einen Skill, der Berichte in unserem Hausstil schreibt“.
 2. Die KI zieht die Schritte und Regeln heraus, die sich zu wiederholen lohnen, und zeigt eine Karte **Neuer Skill**. Werte, die nur dieses eine Mal gebraucht wurden, etwa Namen und Daten, bleiben aus der Anleitung heraus.
-3. Prüfen und bearbeiten Sie Name, Beschreibung und Anleitung auf der Karte. Der Name erscheint in der Skill-Liste, und Sie tippen ihn nach `/`: englische Kleinbuchstaben, Ziffern und Bindestriche.
+3. Prüfen und bearbeiten Sie Name, Beschreibung und Anleitung auf der Karte. Der Name erscheint in der Skill-Liste, und Sie tippen ihn nach `/`: englische Kleinbuchstaben, Ziffern und Bindestriche. Das Feld **Titel** über dem Namen nimmt den Titel auf, den die Liste zeigt, in beliebiger Sprache.
 4. Klicken Sie auf **Speichern**. Der neue Skill wird zu meinen Skills hinzugefügt, eingeschaltet und erscheint sofort in der `/`-Liste.
 
 - Bis Sie auf **Speichern** klicken, wird keine Datei geschrieben. Klicken Sie auf **Abbrechen**, behält der Chat ihn nur als „Nicht gespeicherter Skill-Vorschlag“.
 - Sie können auch darum bitten, einen vorhandenen Skill zu ändern, etwa „Passe den Protokoll-Skill an unsere Arbeitsweise an“. Die Karte heißt dann **Skill ändern**. Einer meiner Skills wird mit **Ersetzen** überschrieben; ein integrierter Skill oder einer aus einem anderen Programm wird als Kopie unter meinen Skills gespeichert, und das Original wird ausgeschaltet.
+
+## Festlegen, wo ein Skill genutzt wird
+
+Ein Skill, der nur zu einer Art Dokument passt, etwa Folien gestalten oder eine Tabelle aufräumen, kann nur im KI-Bereich dieses Editors erscheinen. In den anderen Editoren werden die `/`-Liste und die Liste der Skills, die die KI selbst nutzt, kürzer, und die KI wählt öfter den passenden Skill.
+
+- Für einen meiner Skills öffnen Sie **Bearbeiten** und wählen unter **Wo sie genutzt wird** **Alle Editoren** oder **Nur diese Editoren**. Die gewählten Editoren stehen in der Datei des Skills und gehen mit, wenn Sie ihn exportieren oder in ein anderes Programm übernehmen. **Nur diese Editoren** beginnt ohne ausgewählten Editor; **Alle auswählen** und **Alle abwählen** ändern alle auf einmal.
+- Für einen integrierten Skill oder einen aus einem anderen Programm ändern Sie es unter **Wo sie genutzt wird** in **Inhalt ansehen**. Das wird nur in den Einstellungen dieses PCs gespeichert; die Datei des Skills bleibt unverändert.
+- Ein Skill, der nicht in allen Editoren genutzt wird, zeigt das in seiner Zeile, zum Beispiel „Genutzt in: Präsentation“.
+- Wenn die KI einen Skill erstellt, der nur zu einem Format passt, schlägt sie auch vor, wo er genutzt wird; sonst bleibt es bei allen Editoren. Vor dem Speichern können Sie es auf der Karte unter **Wo sie genutzt wird** ändern.
+- „KI fragen“ auf der Startseite und das Agentenfenster nutzen alle eingeschalteten Skills, egal wo sie genutzt werden sollen.
 
 ## Ein Dokument als Vorlage mitgeben
 
@@ -96,15 +111,25 @@ Wenn Sie im KI-Bereich eines Editors einen Skill erstellen, kann das aktuelle Do
 
 ## Integrierte Skills
 
-| Skill             | Was er tut                                                                       |
-| ----------------- | -------------------------------------------------------------------------------- |
-| `meeting-minutes` | Macht aus Besprechungsnotizen ein Protokoll, das Beschlüsse und Aufgaben zeigt   |
-| `internal-comms`  | Schreibt Mitteilungen, Newsletter, Statusberichte, FAQs und andere interne Texte |
-| `humanizer`       | Findet Formulierungen, die nach KI klingen, und macht sie natürlich              |
-| `copy-editing`    | Geht einen fertigen englischen Text durch und macht ihn klarer und knapper       |
-| `find-skills`     | Findet im Agentenfenster benötigte Skills und schlägt ihre Installation vor      |
+| Skill                         | Was er tut                                                                                                                                                                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Macht aus Besprechungsnotizen ein Protokoll, das Beschlüsse und Aufgaben zeigt                                                                                                                                                |
+| `internal-comms`              | Schreibt Mitteilungen, Newsletter, Statusberichte, FAQs und andere interne Texte                                                                                                                                              |
+| `humanizer`                   | Findet Formulierungen, die nach KI klingen, und macht sie natürlich                                                                                                                                                           |
+| `copy-editing`                | Geht einen fertigen englischen Text durch und macht ihn klarer und knapper                                                                                                                                                    |
+| `find-skills`                 | Findet im Agentenfenster benötigte Skills und schlägt ihre Installation vor                                                                                                                                                   |
+| `administration-report`       | Bringt einen Bericht auf die Linie der Richtlinie des koreanischen Innenministeriums: Fließtext, einheitliche Nummerierung, überall verfügbare Schriften, einfache Tabellen                                                   |
+| `administration-report-draft` | Schreibt einen Verwaltungsbericht von Grund auf im Format des Ministeriums: Abschnitte, Nummerierung Ⅰ·1·가, Fließtext, Tabellenüberschriften und verfügbare Schriften                                                        |
+| `docx`                        | Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .docx-Dateien im Projektordner zu erstellen, zu bearbeiten und zu lesen. Auf diesem PC müssen Python und weitere Programme installiert sein                          |
+| `pptx`                        | Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .pptx-Dateien im Projektordner zu erstellen, zu bearbeiten und zu lesen. Auf diesem PC müssen Python und weitere Programme installiert sein                          |
+| `xlsx`                        | Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .xlsx-Dateien im Projektordner zu erstellen und zu bearbeiten und ihre Formeln neu zu berechnen. Auf diesem PC müssen Python und weitere Programme installiert sein  |
+| `pdf`                         | Funktioniert nur im Agent-Fenster. Führt Skripte aus, um .pdf-Dateien im Projektordner zu lesen, zusammenzuführen und zu teilen und Formulare auszufüllen. Auf diesem PC müssen Python und weitere Programme installiert sein |
+| `hwp-document`                | Schreibt ein neues .hwp- oder .hwpx-Dokument von Grund auf: wählt den Aufbau für Bericht, Plan, Mitteilung, amtliches Schreiben oder Protokoll, schreibt im Dokumentstil und prüft das Ergebnis                               |
+| `mindmap`                     | Baut eine Mindmap aus einem Thema oder Material: drei bis sieben ausgewogene Hauptzweige, kurze Titel mit den Details in Notizen und am Ende eine Prüfung der Struktur                                                        |
+| `diagram`                     | Zeichnet ein klares Diagramm: wählt den passenden Typ, hält eine Leserichtung, kurze Beschriftungen und wenige Farben ein und prüft auf Überlappungen und lose Formen                                                         |
+| `html-document`               | Erstellt ein HTML-Dokument, das sich am Bildschirm gut liest und sauber druckt: legt zuerst Leser, Länge und Papier fest und prüft dann Seiten und Inhalt                                                                     |
 
-`copy-editing` ist für englische Marketingtexte gedacht. `find-skills` funktioniert nur im Agentenfenster.
+`copy-editing` ist für englische Marketingtexte gedacht. `find-skills` funktioniert nur im Agentenfenster. In **Inhalt ansehen** eines integrierten Skills steht die Beschreibung in der Sprache der Oberfläche; die Anleitung ist der Text, den die KI erhält, und wird unverändert (auf Englisch) gezeigt. `docx`, `pptx`, `xlsx` und `pdf` funktionieren nur im Agent-Fenster; sie führen Skripte aus, deshalb müssen Python und weitere Programme auf diesem PC installiert sein. `hwp-document`, `mindmap`, `diagram` und `html-document` werden jeweils nur in dem Editor verwendet, für den sie geschrieben sind.
 
 ## Im Agentenfenster
 

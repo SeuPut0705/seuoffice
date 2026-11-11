@@ -8,6 +8,7 @@ export const cs = {
   saveFailed: 'Dokument se nepodařilo uložit.',
   fileSave: 'Uložit',
   fileSaveAs: 'Uložit jako…',
+  fileImportPdf: 'Importovat PDF…',
   fileExportPdf: 'Exportovat jako PDF…',
   filePrint: 'Tisk…',
   autoSave: 'Automatické ukládání',

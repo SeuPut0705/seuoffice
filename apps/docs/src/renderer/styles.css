@@ -69,7 +69,7 @@
   --docs-shadow-modal-gs: 0 12px 40px rgb(0 0 0 / 16%);
   --docs-shadow-chip: 0 2px 8px rgb(0 0 0 / 12%);
   --docs-shadow-tooltip: 0 4px 6px rgb(0 0 0 / 10%);
-  --docs-shadow-composer: 0 6px 30px rgb(0 0 0 / 8%);
+  --docs-shadow-composer: 0 1px 3px rgb(0 0 0 / 8%);
   --docs-shadow-toast: 0 4px 16px rgb(0 0 0 / 18%);
 
   /* brand-fixed chrome: identical in both themes */
@@ -238,7 +238,7 @@
   --docs-shadow-modal-gs: 0 20px 50px rgb(0 0 0 / 65%);
   --docs-shadow-chip: 0 2px 8px rgb(0 0 0 / 40%);
   --docs-shadow-tooltip: 0 4px 6px rgb(0 0 0 / 30%);
-  --docs-shadow-composer: 0 6px 30px rgb(0 0 0 / 30%);
+  --docs-shadow-composer: 0 1px 3px rgb(0 0 0 / 30%);
   --docs-shadow-toast: 0 4px 16px rgb(0 0 0 / 45%);
 }
 
@@ -309,7 +309,7 @@
     --docs-shadow-modal-gs: 0 20px 50px rgb(0 0 0 / 65%);
     --docs-shadow-chip: 0 2px 8px rgb(0 0 0 / 40%);
     --docs-shadow-tooltip: 0 4px 6px rgb(0 0 0 / 30%);
-    --docs-shadow-composer: 0 6px 30px rgb(0 0 0 / 30%);
+    --docs-shadow-composer: 0 1px 3px rgb(0 0 0 / 30%);
     --docs-shadow-toast: 0 4px 16px rgb(0 0 0 / 45%);
   }
 }
@@ -3428,7 +3428,6 @@ th.cell-rev-del {
 .nav-row.on {
   background: var(--accent-soft);
   color: var(--accent);
-  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .nav-row.dim {

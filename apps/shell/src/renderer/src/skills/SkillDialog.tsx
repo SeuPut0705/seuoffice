@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { placeFolderMenu } from '../folder-menu-position'
 
 /**
  * A dialog above the settings window. Escape closes this dialog only: the
@@ -61,7 +62,15 @@ export interface MenuItem {
   onPick: () => void
 }
 
-/** A button with a small menu under it; a click anywhere else closes it */
+/** the gap between a menu button and its menu */
+const MENU_GAP = 4
+
+/**
+ * A button with a small menu under it; a click anywhere else closes it. The
+ * menu is placed in the window like the home screen's folder menu: under the
+ * button, above it when there is no room below, and never past an edge, so a
+ * row at the bottom of the settings shows its whole menu.
+ */
 export function MenuButton({
   label,
   ariaLabel,
@@ -75,6 +84,7 @@ export function MenuButton({
 }) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
@@ -86,14 +96,45 @@ export function MenuButton({
       e.stopPropagation()
       setOpen(false)
     }
+    // the menu is fixed in the window, so it would come away from its row when the list moves
+    const close = () => setOpen(false)
     document.addEventListener('mousedown', outside)
     document.addEventListener('click', outside)
     window.addEventListener('keydown', onKey, true)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
     return () => {
       document.removeEventListener('mousedown', outside)
       document.removeEventListener('click', outside)
       window.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
     }
+  }, [open])
+
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current
+    const menu = menuRef.current
+    if (!open || !wrap || !menu) return
+    const button = wrap.getBoundingClientRect()
+    // the app frame may be scaled: the button's place is in window pixels, the menu's in its own
+    const scale = wrap.offsetWidth > 0 && button.width > 0 ? button.width / wrap.offsetWidth : 1
+    const rtl = getComputedStyle(wrap).direction === 'rtl'
+    const { left, top } = placeFolderMenu(
+      {
+        x: (rtl ? button.left : button.right) / scale,
+        y: button.bottom / scale + MENU_GAP,
+        above: button.top / scale - MENU_GAP,
+        align: rtl ? 'start' : 'end',
+      },
+      { width: menu.offsetWidth, height: menu.offsetHeight },
+      {
+        width: document.documentElement.clientWidth / scale,
+        height: document.documentElement.clientHeight / scale,
+      },
+    )
+    menu.style.left = `${left}px`
+    menu.style.top = `${top}px`
   }, [open])
 
   return (
@@ -109,7 +150,7 @@ export function MenuButton({
         {label}
       </button>
       {open && (
-        <div className="skl-menu" role="menu">
+        <div className="skl-menu" role="menu" ref={menuRef}>
           {items.map((item) => (
             <button
               key={item.key}

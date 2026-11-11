@@ -8,6 +8,7 @@ export const ru = {
   saveFailed: 'Не удалось сохранить документ.',
   fileSave: 'Сохранить',
   fileSaveAs: 'Сохранить как…',
+  fileImportPdf: 'Импортировать PDF…',
   fileExportPdf: 'Экспортировать в PDF…',
   filePrint: 'Печать…',
   autoSave: 'Автосохранение',

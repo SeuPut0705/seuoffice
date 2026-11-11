@@ -9,12 +9,19 @@
  * keeps the original in `restoreTarget`. Renaming only `path` would leave the
  * next Save writing to the old name, recreating a file the user just renamed
  * away — so every field that names the original moves together.
+ *
+ * An .ods opens as a converted copy too, and the original it must never be
+ * exported over is kept in `odsSourcePath`. That field follows the rename as
+ * well: left at the old name, the protection would guard a path that no
+ * longer exists while the export's default name pointed straight at the
+ * renamed original.
  */
 export interface RenamableSession {
   readonly path: string
   readonly suggestSaveAs?: string
   readonly csvSourcePath?: string
   readonly restoreTarget?: string
+  readonly odsSourcePath?: string
 }
 
 /** Replace the extension of `path` with `.xlsx` — mirrors the Save As default for converted copies. */
@@ -38,6 +45,7 @@ export function sessionAfterRename<S extends RenamableSession>(
   if (session.path === oldPath) patch({ path: newPath })
   if (session.csvSourcePath === oldPath) patch({ csvSourcePath: newPath })
   if (session.restoreTarget === oldPath) patch({ restoreTarget: newPath })
+  if (session.odsSourcePath === oldPath) patch({ odsSourcePath: newPath })
   // A converted .xls/.tsv copy is tied to its original only through the Save
   // As default derived from it; re-derive from the new name.
   if (

@@ -423,6 +423,45 @@ describe('notes', () => {
     }
   })
 
+  // The official xmind-sdk-js writes a note's rich form under `html` as
+  // structured paragraphs of spans (see its Note class), never as an HTML
+  // string. `notes.ts` walks that shape directly instead of expecting an
+  // HTML string there, since there is none to parse.
+  it('reads the xmind-sdk-js `html` paragraph/span shape as text', () => {
+    expect(
+      noteText({ html: { content: { paragraphs: [{ spans: [{ text: 'rich text' }] }] } } }),
+    ).toBe('rich text\n')
+    // realHTML still wins when both forms are present
+    expect(
+      noteText({
+        realHTML: { content: '<div>real</div>' },
+        html: { content: { paragraphs: [{ spans: [{ text: 'sdk' }] }] } },
+      }),
+    ).toBe('real\n')
+    // multiple paragraphs, a hyperlink span's own nested text, and an
+    // image span (which contributes no text)
+    expect(
+      noteText({
+        html: {
+          content: {
+            paragraphs: [
+              {
+                spans: [
+                  { text: 'Hello ' },
+                  { href: 'https://example.com', spans: [{ text: 'world' }] },
+                ],
+              },
+              { spans: [{ image: 'xap:resources/abc.png' }] },
+            ],
+          },
+        },
+      }),
+    ).toBe('Hello world\n\n')
+    // an unset note (the SDK's own default `Note` before any text is set)
+    // has no rich content at all, same as having none of these keys
+    expect(noteText({ html: { content: { paragraphs: [] } }, plain: {} })).toBeNull()
+  })
+
   it('turns a rich note into lines of text', () => {
     expect(htmlToPlainText('<div>one</div><div>two&nbsp;</div>')).toBe('one\ntwo \n')
     expect(htmlToPlainText('<ul><li>a</li><li>b</li></ul><ol><li><br></li></ol>')).toBe('a\nb\n\n')

@@ -32,6 +32,7 @@ function entry(over: Partial<UserSkillEntry> & { id: string }): UserSkillEntry {
     unreadable: false,
     shadowedBy: undefined,
     owned: over.id.startsWith('app:'),
+    editors: undefined,
     ...over,
   }
 }
@@ -108,6 +109,23 @@ describe('autoSkillsSection', () => {
 
   it('is empty when no skill is used on its own', () => {
     expect(autoSkillsSection([LIST[2]!, LIST[3]!])).toBe('')
+  })
+
+  it('lists a skill that lost its name in an editor its winner is not used in', () => {
+    const list = [
+      entry({ id: 'app:home-letter', editors: ['slides'] }),
+      entry({ id: 'user:home-letter', shadowedBy: 'app:home-letter' }),
+    ]
+    const inSlides = autoSkillsSection(list, { editor: 'slides' })
+    expect(inSlides).toContain('app:home-letter')
+    expect(inSlides).not.toContain('user:home-letter')
+    const inDocs = autoSkillsSection(list, { editor: 'docs' })
+    expect(inDocs).toContain('user:home-letter')
+    expect(inDocs).not.toContain('app:home-letter')
+    // no editor (home ask): the winner alone
+    const anywhere = autoSkillsSection(list)
+    expect(anywhere).toContain('app:home-letter')
+    expect(anywhere).not.toContain('user:home-letter')
   })
 
   it('cuts each description at the limit', () => {
@@ -336,9 +354,9 @@ describe('createUserSkillsSkill', () => {
     expect(result.mutated).toBeFalsy()
     expect(result.output).toMatch(/card/i)
     expect(result.output).toMatch(/not saved|nothing is saved/i)
-    // the result and the tool row name the proposal by its name
-    expect(proposedTitleOf(result.output)).toBe('minutes')
-    expect(result.summary).toBe('Skill proposal: minutes')
+    // the result and the tool row name the proposal by its title
+    expect(proposedTitleOf(result.output)).toBe('Minutes')
+    expect(result.summary).toBe('Skill proposal: Minutes')
     expect(proposedTitleOf('other')).toBe('')
     expect(proposals).toEqual([
       {
@@ -394,12 +412,15 @@ describe('createUserSkillsSkill', () => {
     expect(proposals.map((p) => p.wantsTemplate)).toEqual([false, false])
   })
 
-  it('propose_skill asks for a name, not a title', () => {
+  it('propose_skill asks for a name and takes a title in the person’s language beside it', () => {
     const { deps } = makeDeps()
     const tool = createUserSkillsSkill(deps).tools.find((t) => t.name === PROPOSE_SKILL_TOOL)!
-    const schema = tool.inputSchema as { properties: Record<string, unknown>; required: string[] }
-    expect(schema.properties).not.toHaveProperty('title')
+    const schema = tool.inputSchema as {
+      properties: Record<string, { description?: string }>
+      required: string[]
+    }
     expect(schema.properties).toHaveProperty('name')
+    expect(schema.properties.title?.description).toMatch(/language the person writes in/)
     expect(schema.required).toEqual(['name', 'description', 'body'])
   })
 
@@ -597,5 +618,85 @@ describe('createBridgedUserSkillsSkill', () => {
     expect(used.isError).toBe(true)
     const file = await skill.executeTool(call(READ_SKILL_FILE_TOOL, { id: 'app:a', path: 'x.md' }))
     expect(file.isError).toBe(true)
+  })
+})
+
+describe('skills set for some editors', () => {
+  const SCOPED: UserSkillEntry[] = [
+    entry({ id: 'app:deck-style', editors: ['slides'] }),
+    entry({ id: 'app:minutes' }),
+  ]
+
+  function scopedDeps(editor: UserSkillsDeps['editor']) {
+    return makeDeps({ list: () => SCOPED, editor })
+  }
+
+  it('lists a slides skill to the model in the slides panel only', () => {
+    expect(createUserSkillsSkill(scopedDeps('slides').deps).systemPrompt).toContain(
+      'app:deck-style',
+    )
+    const sheets = createUserSkillsSkill(scopedDeps('sheets').deps).systemPrompt
+    expect(sheets).not.toContain('app:deck-style')
+    expect(sheets).toContain('app:minutes')
+  })
+
+  it('lists every skill where no editor is given (home ask)', () => {
+    expect(createUserSkillsSkill(scopedDeps(undefined).deps).systemPrompt).toContain(
+      'app:deck-style',
+    )
+  })
+
+  it('use_skill and read_skill_file refuse a skill set for other editors, without reading it', async () => {
+    const { deps, reads, fileReads } = scopedDeps('sheets')
+    const skill = createUserSkillsSkill(deps)
+    const used = await skill.executeTool(call(USE_SKILL_TOOL, { id: 'app:deck-style' }))
+    expect(used.isError).toBe(true)
+    expect(used.output).toMatch(/only in other editors \(slides\)/)
+    const file = await skill.executeTool(
+      call(READ_SKILL_FILE_TOOL, { id: 'app:deck-style', path: 'a.md' }),
+    )
+    expect(file.isError).toBe(true)
+    expect(file.output).toMatch(/other editors/)
+    expect(reads).toEqual([])
+    expect(fileReads).toEqual([])
+  })
+
+  it('use_skill reads the skill in its own editor', async () => {
+    const { deps, reads } = scopedDeps('slides')
+    const used = await createUserSkillsSkill(deps).executeTool(
+      call(USE_SKILL_TOOL, { id: 'app:deck-style' }),
+    )
+    expect(used.isError).toBeFalsy()
+    expect(reads).toEqual(['app:deck-style'])
+  })
+
+  it('propose_skill passes the editors the model named, and none when it named none', async () => {
+    const { deps, proposals } = scopedDeps('docs')
+    const skill = createUserSkillsSkill(deps)
+    await skill.executeTool(
+      call(PROPOSE_SKILL_TOOL, { name: 'deck', description: 'd', body: 'b', editors: ['slides'] }),
+    )
+    await skill.executeTool(
+      call(PROPOSE_SKILL_TOOL, { name: 'notes', description: 'd', body: 'b' }),
+    )
+    expect(proposals.map((p) => p.editors)).toEqual([['slides'], undefined])
+  })
+
+  it('propose_skill hands over where the changed skill is used now', async () => {
+    const { deps, proposals } = scopedDeps('docs')
+    await createUserSkillsSkill(deps).executeTool(
+      call(PROPOSE_SKILL_TOOL, {
+        name: 'x',
+        description: 'd',
+        body: 'b',
+        targetId: 'app:deck-style',
+      }),
+    )
+    expect(proposals[0]!.target?.editors).toEqual(['slides'])
+  })
+
+  it('reads the editors a view carries from the bridge', () => {
+    const [view] = userSkillEntriesOf([{ id: 'app:a', name: 'a', editors: ['slides', 'nope'] }])
+    expect(view!.editors).toEqual(['slides'])
   })
 })

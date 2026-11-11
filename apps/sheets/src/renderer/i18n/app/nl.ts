@@ -596,6 +596,9 @@ export const nl = {
     'CSV-export vereist een volledig geladen werkmap — wacht tot het laden is voltooid.',
   appCsvExportTooLarge: 'Het blad is te groot om als CSV te exporteren.',
   appCsvExportCanceled: 'CSV-export geannuleerd.',
+  appOdsExported: '{path} geëxporteerd.',
+  appOdsExportCanceled: 'ODS-export geannuleerd.',
+  appOdsExportFailed: 'Exporteren naar ODS is mislukt.',
   appCsvExported: '{path} geëxporteerd.',
   appCsvExportedActiveOnly:
     'CSV-bestanden bevatten slechts één blad — het actieve blad “{name}” is geëxporteerd naar {path}.',
@@ -749,6 +752,13 @@ export const nl = {
   appSaveAs: 'Opslaan als',
   appUndo: 'Ongedaan maken',
   appRedo: 'Opnieuw',
+  appQuickAccessCustomize: 'Werkbalk Snelle toegang aanpassen',
+  appQuickAccessHint:
+    'Druk op Alt en een cijfer om de knop op die positie, geteld vanaf links, uit te voeren.',
+  appQuickAccessMoveEarlier: 'Naar voren verplaatsen',
+  appQuickAccessMoveLater: 'Naar achteren verplaatsen',
+  appQuickAccessReset: 'Standaardinstellingen herstellen',
+  appQuickAccessFull: 'Op de werkbalk passen maximaal 10 knoppen.',
   appUnsavedEditOne: '● {count} niet-opgeslagen bewerking',
   appUnsavedEditMany: '● {count} niet-opgeslagen bewerkingen',
   appSavedState: 'Opgeslagen',

@@ -567,6 +567,11 @@ import {
   type PageLayoutContext,
 } from './page-layout-actions'
 import { handleExportCsv as handleExportCsvImpl, type CsvExportContext } from './csv-export'
+import {
+  handleExportOds as handleExportOdsImpl,
+  saveThenExportOds,
+  type OdsExportContext,
+} from './ods-export'
 import { effectivePageBreaks, installPageBreakPreview } from './page-break-preview'
 import { mapProtectedRanges } from './protected-ranges'
 import {
@@ -1050,7 +1055,7 @@ export function App({
   /// menuActionRef, so the interval closure never goes stale).
   const handleSaveRef = useRef<
     (
-      mode: 'save' | 'save-as' | 'recovery' | 'template',
+      mode: 'save' | 'save-as' | 'recovery' | 'template' | 'ods',
       quiet?: boolean,
       explicitTarget?: { path: string; overwrite: boolean },
     ) => Promise<SaveOutcome>
@@ -1228,6 +1233,14 @@ export function App({
       lazyWorkbookRef,
       setMessage,
       requestSaveAs: () => void handleSaveRef.current('save-as'),
+    }
+  }
+
+  function odsExportContext(): OdsExportContext {
+    return {
+      lazyWorkbookRef,
+      setMessage,
+      pendingEdits: async () => (await handleSaveRef.current('ods')).request ?? null,
     }
   }
 
@@ -1771,6 +1784,7 @@ export function App({
         ),
         // the person's skills: use_skill, read_skill_file, propose_skill (app-run tools)
         ...panelUserSkills({
+          editor: 'sheets',
           lang: getLang,
           messages: () => agentLoopRef.current?.messages ?? [],
           // a template skill the model used offers its new document (spec 5.7)
@@ -5305,7 +5319,7 @@ export function App({
   }
 
   async function handleSave(
-    mode: 'save' | 'save-as' | 'recovery' | 'template',
+    mode: 'save' | 'save-as' | 'recovery' | 'template' | 'ods',
     quiet = false,
     explicitTarget?: { path: string; overwrite: boolean },
   ): Promise<SaveOutcome> {
@@ -5322,10 +5336,16 @@ export function App({
       if (mode !== 'recovery' && mode !== 'template' && !quiet) setMessage(reason)
       return { ok: false, error: reason }
     }
-    return guardedSave(gate, refusal, async () => {
-      if (!(await commitActiveEditor())) return { ok: false }
-      return handleSaveImpl(saveContext(), mode, quiet, explicitTarget)
-    })
+    // A Save As that ends on the ODS format exports after the gate has let
+    // the save go (see saveThenExportOds).
+    return saveThenExportOds(
+      () =>
+        guardedSave(gate, refusal, async (): Promise<SaveOutcome> => {
+          if (!(await commitActiveEditor())) return { ok: false }
+          return handleSaveImpl(saveContext(), mode, quiet, explicitTarget)
+        }),
+      (targetPath) => handleExportOdsImpl(odsExportContext(), targetPath),
+    )
   }
   closeSaveRef.current = async () => {
     if (!(await commitActiveEditor())) {
@@ -5362,12 +5382,13 @@ export function App({
       void handleInspectWorkbook()
     } else if (action === 'print') {
       void openPrintPreviewHost(pageLayoutContext()).then(setPrintHost)
-    } else if (action === 'export-pdf' || action === 'export-csv') {
+    } else if (action === 'export-pdf' || action === 'export-csv' || action === 'export-ods') {
       // an export writes the workbook as it stands: not while the run's edits are in it
       const refusal = aiRunSaveRefusal()
       if (refusal !== null) setMessage(refusal)
       else if (action === 'export-pdf') void handleExportPdfImpl(pageLayoutContext())
-      else void handleExportCsvImpl(csvExportContext())
+      else if (action === 'export-csv') void handleExportCsvImpl(csvExportContext())
+      else void handleExportOdsImpl(odsExportContext())
     } else if (action === 'undo' || action === 'redo') {
       // The shell's own text fields (AI prompt, dialog inputs) keep native
       // text undo; everywhere else ⌘Z means workbook history.

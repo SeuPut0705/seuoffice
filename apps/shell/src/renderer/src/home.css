@@ -14,7 +14,6 @@
   --timeline-user-text: #5a6170;
   /* lift for the active segment in gray-track tab pills */
   --shadow-pill: 0 1px 2px rgb(0 0 0 / 8%);
-  --shadow-composer: 0 6px 30px rgb(0 0 0 / 8%);
 
   /* genoffice-logo.svg is pure black-and-white; dark themes flip it to 1 */
   --logo-invert: 0;
@@ -35,7 +34,6 @@
   --timeline-user-bg: #2a2a3a;
   --timeline-user-text: #b0b0c0;
   --shadow-pill: 0 1px 2px rgb(0 0 0 / 40%);
-  --shadow-composer: 0 6px 30px rgb(0 0 0 / 30%);
   --logo-invert: 1;
   --shadow-composer: 0 1px 3px rgb(0 0 0 / 25%);
 }
@@ -52,7 +50,6 @@
     --timeline-user-bg: #2a2a3a;
     --timeline-user-text: #b0b0c0;
     --shadow-pill: 0 1px 2px rgb(0 0 0 / 40%);
-    --shadow-composer: 0 6px 30px rgb(0 0 0 / 30%);
     --logo-invert: 1;
     --shadow-composer: 0 1px 3px rgb(0 0 0 / 25%);
   }
@@ -255,7 +252,7 @@ body.vib .home {
 }
 
 .account-avatar.logged-in {
-  background: linear-gradient(135deg, #3d7ff5, #1b58cf);
+  background: var(--accent);
   color: #fff;
 }
 
@@ -276,6 +273,13 @@ body.vib .home {
   min-width: 0;
   line-height: 1.25;
   flex: 1;
+}
+
+.account-settings {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .account-chevron {
@@ -1745,6 +1749,12 @@ body.vib .home {
   white-space: nowrap;
 }
 
+/* the line that says skill files are taken too: a sentence, so it wraps */
+.home-drop-card .home-drop-skills {
+  white-space: normal;
+  text-align: center;
+}
+
 /* Motion accessibility: suppress all animation for users who opt out */
 /* PowerPoint-sized minimum window (720px): the fixed 232px sidebar and the
    eight-column file grid no longer fit side by side */
@@ -2061,15 +2071,11 @@ html[dir='rtl'] .quick-title-row {
   padding-bottom: 8px;
 }
 .kb-ask-hero-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 15px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 .kb-ask-hero h3 {
   margin: 0 0 6px;
@@ -2135,7 +2141,7 @@ html[dir='rtl'] .quick-title-row {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: var(--accent);
+  background: var(--color-btn-primary);
   color: var(--color-btn-primary-text);
   border-radius: 10px;
   padding: 9px 18px;
@@ -2143,7 +2149,7 @@ html[dir='rtl'] .quick-title-row {
   transition: background var(--transition-fast, 150ms);
 }
 .kb-ask-cta:hover {
-  background: var(--accent-hover);
+  background: var(--color-btn-primary-hover);
 }
 
 /* has corpus, nothing asked yet: one quiet centered line */

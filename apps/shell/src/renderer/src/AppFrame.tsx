@@ -170,6 +170,7 @@ function SplitDivider({ split, viewport }: { split: SplitViewState; viewport: Vi
 export function AppFrame({ initialOnboardingSeen, initialDefaultAppStatus }: AppFrameProps) {
   const [homeActive, setHomeActive] = useState(true)
   const [showOnboarding, setShowOnboarding] = useState(!initialOnboardingSeen)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const split = useSplitView()
   const viewport = useViewportSize()
   // one live view of the subscription connection for the home screen, the
@@ -213,6 +214,8 @@ export function AppFrame({ initialOnboardingSeen, initialDefaultAppStatus }: App
           // during the onboarding its connect step shows the notice instead
           noticeDue={notice.due && !showOnboarding}
           onNoticeAcknowledge={notice.acknowledge}
+          welcomeOpen={showOnboarding}
+          onSettingsOpenChange={setSettingsOpen}
         />
       </div>
       {/* editor WebContentsViews paint above ALL shell DOM, so the overlay only
@@ -224,6 +227,7 @@ export function AppFrame({ initialOnboardingSeen, initialDefaultAppStatus }: App
           noticeDue={notice.due}
           onNoticeAcknowledge={notice.acknowledge}
           defaultApp={initialDefaultAppStatus}
+          covered={settingsOpen}
         />
       )}
     </div>

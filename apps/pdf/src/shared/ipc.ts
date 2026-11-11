@@ -68,6 +68,9 @@ export const PDF_CHANNELS = {
   pagePreviewPng: 'pdf:page-preview-png',
   extractPages: 'pdf:extract-pages',
   insertPdf: 'pdf:insert-pdf',
+  copyPages: 'pdf:copy-pages',
+  pastePages: 'pdf:paste-pages',
+  copiedPageCount: 'pdf:copied-page-count',
   compareReadPdf: 'pdf:compare-read-pdf',
   compareReadOpen: 'pdf:compare-read-open',
   reduceFileSize: 'pdf:reduce-file-size',
@@ -1064,6 +1067,29 @@ export interface InsertPdfRequest {
 export type InsertPdfResult =
   { ok: true; insertedCount: number } | { ok: true; canceled: true } | { ok: false; error: string }
 
+/** Copy pages of the open document into the app's page clipboard (main process); no file is written */
+export interface CopyPagesRequest {
+  /** The view's file with its pending edits, as a save would send them */
+  source: SavePdfRequest
+  /** Positions in the document as displayed (after the pending order and deletions) */
+  pages: number[]
+}
+
+/** `protected`: a password-protected document's pages are not copied */
+export type CopyPagesResult =
+  { ok: true; count: number } | { ok: false; error: string; protected?: true }
+
+/** Insert the copied pages after a page of the current file and write back immediately — no dialog */
+export interface PastePagesRequest {
+  path: string
+  /** Insert after this page index of the file as saved; -1 means front of the document */
+  afterPageIndex: number
+}
+
+/** insertedCount 0: nothing has been copied */
+export type PastePagesResult =
+  { ok: true; insertedCount: number } | { ok: false; error: string; protected?: true }
+
 /** Insert a blank page (sized like the neighboring page) and write back immediately — no dialog */
 export interface InsertBlankPageRequest {
   path: string
@@ -1767,6 +1793,11 @@ export interface PdfApi {
   pagePreviewPng(request: PagePreviewRequest): Promise<PagePreviewResult | null>
   extractPages(request: ExtractPagesRequest): Promise<ExtractPagesResult>
   insertPdf(request: InsertPdfRequest): Promise<InsertPdfResult>
+  /** Page clipboard of the thumbnail sidebar; absent in a build without it */
+  copyPages?(request: CopyPagesRequest): Promise<CopyPagesResult>
+  pastePages?(request: PastePagesRequest): Promise<PastePagesResult>
+  /** How many pages the page clipboard holds (0 = nothing copied) */
+  copiedPageCount?(): Promise<number>
   insertBlankPage(request: InsertBlankPageRequest): Promise<InsertBlankPageResult>
   splitPdf(request: SplitPdfRequest): Promise<SplitPdfResult>
   mergePdf(request: MergePdfRequest): Promise<MergePdfResult>

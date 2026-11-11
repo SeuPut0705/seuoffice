@@ -577,7 +577,7 @@ html.genoffice-popover-open .ribbon-tabs {
 .redact-dialog-btn {
   padding: 6px 14px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 6px;
   background: transparent;
   color: var(--text);
   font: inherit;
@@ -1832,7 +1832,7 @@ html.genoffice-popover-open .ribbon-tabs {
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-16);
   background: var(--color-bg-page);
-  box-shadow: 0 6px 30px var(--hx-shadow-soft);
+  box-shadow: 0 1px 3px var(--hx-shadow-soft);
   transition:
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
@@ -3571,10 +3571,8 @@ html.genoffice-popover-open .ribbon-tabs {
 }
 
 .hx-panel-section {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text-dim);
 }
 

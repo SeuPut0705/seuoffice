@@ -8,6 +8,7 @@ export const th = {
   saveFailed: 'ไม่สามารถบันทึกเอกสารได้',
   fileSave: 'บันทึก',
   fileSaveAs: 'บันทึกเป็น…',
+  fileImportPdf: 'นำเข้า PDF…',
   fileExportPdf: 'ส่งออกเป็น PDF…',
   filePrint: 'พิมพ์…',
   autoSave: 'บันทึกอัตโนมัติ',

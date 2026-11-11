@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { JSX } from 'react'
+import { IconChevronLeft, IconChevronRight } from '@genoffice/ui/icons'
 import type { AgentBridge } from '../ai/agent-bridge'
 import { useI18n } from '../i18n/locale'
 import type { PrintMode, PrintResult } from '../../shared/ipc'
@@ -404,7 +405,7 @@ export function PrintPreview({
           disabled={page <= 0}
           onClick={() => go(stepPage(page, view, pageCount ?? 0, -1))}
         >
-          ‹
+          <IconChevronLeft size={14} />
         </button>
         <input
           className="hwp-preview-page-input"
@@ -431,7 +432,7 @@ export function PrintPreview({
           disabled={pageCount === null || page >= pageCount - 1}
           onClick={() => go(stepPage(page, view, pageCount ?? 0, 1))}
         >
-          ›
+          <IconChevronRight size={14} />
         </button>
         <span className="hwp-preview-spacer" />
         <label className="hwp-preview-field">

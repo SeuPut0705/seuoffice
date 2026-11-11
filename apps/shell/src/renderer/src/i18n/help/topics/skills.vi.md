@@ -4,11 +4,11 @@ Kỹ năng là một bộ hướng dẫn làm việc dành cho AI. Hãy viết r
 
 ## Bật và tắt kỹ năng
 
-**Cài đặt ▸ Kỹ năng** liệt kê các kỹ năng có trên máy tính này, được nhóm theo nguồn gốc. Mỗi kỹ năng hiển thị bằng tên, giống cách các tác tử lập trình hiển thị. Dùng ô tìm kiếm ở trên cùng để tìm theo tên hoặc mô tả.
+**Cài đặt ▸ Kỹ năng** liệt kê các kỹ năng có trên máy tính này, được nhóm theo nguồn gốc. Mỗi kỹ năng hiển thị bằng tên, giống cách các tác tử lập trình hiển thị. Dùng ô tìm kiếm ở trên cùng để tìm theo tên hoặc mô tả. Kỹ năng của bạn nếu có tiêu đề sẽ hiện tiêu đề đó trong danh sách này, trong danh sách `/` và trên thẻ, kèm tên bằng chữ nhỏ bên cạnh. Bạn cũng có thể tìm theo tiêu đề. Tên do ứng dụng tự đặt (`skill-…`) không hiện bên cạnh tiêu đề.
 
 | Nguồn                      | Nội dung                                                 | Ban đầu |
 | -------------------------- | -------------------------------------------------------- | ------- |
-| **Có sẵn**                 | 5 kỹ năng đi kèm GenOffice                               | Bật     |
+| **Có sẵn**                 | Các kỹ năng đi kèm GenOffice                             | Bật     |
 | **Kỹ năng của tôi**        | Kỹ năng bạn đã thêm hoặc tự tạo (`~/.ieumoffice/skills`) | Bật     |
 | **Thư mục kỹ năng Claude** | Các kỹ năng trong `~/.claude/skills`                     | Tắt     |
 | **Phần bổ trợ Claude**     | Kỹ năng của các phần bổ trợ Claude đã cài                | Tắt     |
@@ -16,32 +16,37 @@ Kỹ năng là một bộ hướng dẫn làm việc dành cho AI. Hãy viết r
 
 - Công tắc dùng để bật hoặc tắt một kỹ năng. Cùng một cài đặt áp dụng cho bảng AI của mọi trình soạn thảo, Hỏi AI ở Trang chủ và cửa sổ tác tử.
 - Với kỹ năng đang bật, hãy chọn **AI tự quyết định** hoặc **Chỉ khi được gọi**. Ban đầu là AI tự quyết định. Với Chỉ khi được gọi, kỹ năng chỉ được dùng khi chính bạn gọi nó.
-- Các kỹ năng từ những nguồn khác nhau có thể trùng tên. Nhãn nguồn trên mỗi hàng giúp phân biệt chúng.
-- Menu thêm có **Xem nội dung**, **Chỉnh sửa** (chỉ kỹ năng của tôi), **Xuất (zip)** (chỉ kỹ năng của tôi) và **Mở thư mục**.
+- Các kỹ năng từ những nguồn khác nhau có thể trùng tên. Nhãn nguồn trên mỗi hàng giúp phân biệt chúng. Khi hai kỹ năng cùng tên đều đang bật, chỉ một kỹ năng xuất hiện trong danh sách `/` và được dùng: kỹ năng đứng trước theo thứ tự Kỹ năng của tôi, Có sẵn, Thư mục kỹ năng Claude, Thư mục kỹ năng Codex, Phần bổ trợ Claude. Dòng của kỹ năng còn lại cho biết kỹ năng nào được dùng thay.
+- Menu thêm có **Xem nội dung**, **Chỉnh sửa** (chỉ kỹ năng của tôi), **Xuất (zip)** (chỉ kỹ năng của tôi) và **Mở thư mục**. Kỹ năng có sẵn không có **Mở thư mục**. **Nơi dùng** mở ngay chỗ chọn các trình soạn thảo dùng kỹ năng đó.
+- Kỹ năng của tôi nằm trong thư mục `~/.ieumoffice/skills`. Trên Windows đó là `C:\Users\<tên người dùng>\.ieumoffice\skills`. **Mở thư mục** trong menu thêm sẽ mở thư mục của kỹ năng.
 - **Chuyển vào thùng rác** chuyển một kỹ năng của tôi vào thùng rác hệ thống, nơi bạn có thể khôi phục lại.
 - Kỹ năng có sẵn không bị xóa mà được ẩn đi: hãy chọn **Ẩn**. **Hiện lại** ở cuối danh sách sẽ đưa nó trở lại như ban đầu.
 - Để thay đổi một kỹ năng có sẵn hoặc kỹ năng từ chương trình khác, hãy chọn **Sao chép vào kỹ năng của tôi**. Bản sao xuất hiện trong kỹ năng của tôi và bản gốc bị tắt.
 - Khi xuất một kỹ năng có mẫu, tài liệu mẫu cũng được đưa vào tệp zip. Hãy kiểm tra để chắc rằng tài liệu đó không chứa thông tin cá nhân trước khi xuất.
+- **Xuất nhiều kỹ năng** ở đầu trang đưa các kỹ năng bạn đánh dấu vào một tệp zip, mỗi kỹ năng một thư mục. Người nhận thêm tệp zip đó giống như mọi tệp zip kỹ năng khác và có thể chọn cài những kỹ năng nào trong đó.
 
 ## Thêm kỹ năng
 
 1. Trong **Cài đặt ▸ Kỹ năng**, nhấn **Thêm**.
-2. Chọn **Từ thư mục**, **Từ tệp zip** hoặc **Từ liên kết GitHub**. Với GitHub, hãy nhập địa chỉ của một kho lưu trữ công khai hoặc `owner/repo` rồi nhấn **Tìm**.
-3. Kiểm tra các kỹ năng tìm thấy trong bản xem trước. Bản xem trước cho biết số lượng và kích thước tệp, có tập lệnh hay không, các địa chỉ web trong nội dung và tệp giấy phép.
+2. Chọn **Từ thư mục**, **Từ tệp zip**, **Từ văn bản dán vào** hoặc **Từ liên kết GitHub**. Với văn bản dán vào, hãy dán toàn bộ `SKILL.md` từ dòng `---` đầu tiên rồi nhấn **Xem trước**. Với GitHub, hãy nhập địa chỉ của một kho lưu trữ công khai, `owner/repo` hoặc trang của một kỹ năng trên skills.sh rồi nhấn **Tìm**.
+3. Kiểm tra các kỹ năng tìm thấy trong bản xem trước. Bản xem trước cho biết số lượng và kích thước tệp, có tập lệnh hay không, các địa chỉ web trong nội dung, tệp giấy phép và các dòng nên đọc trước khi cài. **Xem nội dung** bên dưới một kỹ năng mở phần văn bản của `SKILL.md` và các tệp văn bản của nó để đọc trước khi cài đặt.
 4. Chỉ đánh dấu những kỹ năng muốn cài rồi nhấn **Cài đặt**. Kỹ năng đã cài ở trạng thái bật ngay từ đầu.
 
 Bên dưới bản xem trước luôn có dòng: "Chỉ cài kỹ năng từ nguồn bạn tin cậy. Kỹ năng đưa chỉ dẫn cho AI và có thể chạy tập lệnh trong cửa sổ tác tử." Hãy đọc kỹ một kỹ năng từ nguồn lạ trước khi cài.
 
-- Nếu kỹ năng của tôi đã có một kỹ năng trùng tên, hãy chọn **Thay thế** hoặc **Bỏ qua** trên hàng đó.
+- Nếu kỹ năng của tôi đã có một kỹ năng trùng tên, hãy chọn **Thay thế** hoặc **Bỏ qua** trên hàng đó. **Thay thế** giữ nguyên các cài đặt của kỹ năng: bật/tắt, AI tự quyết định / Chỉ khi được gọi và nơi dùng.
+- Bạn cũng có thể thả tệp zip của một kỹ năng hoặc tệp `SKILL.md` vào bất kỳ cửa sổ GenOffice nào. **Cài đặt ▸ Kỹ năng** sẽ mở ra với cùng bản xem trước. Một tệp zip được coi là kỹ năng khi `SKILL.md` nằm ở cấp trên cùng của nó hoặc mỗi thư mục cấp trên cùng đều có một tệp như vậy; với mọi tệp zip khác được thả một mình, **Cài đặt ▸ Kỹ năng** hiện "Không tìm thấy kỹ năng nào". Tệp `SKILL.md` chỉ được đưa vào một mình: hãy đóng gói kỹ năng có thêm tệp khác thành zip.
+- **Các dòng nên đọc trước khi cài** là những dòng yêu cầu AI bỏ qua các chỉ dẫn trước đó, giấu bạn điều gì đó hoặc nhận chỉ dẫn từ một địa chỉ bên ngoài, và các đường dẫn `../` trỏ ra ngoài thư mục kỹ năng. Mỗi dòng đều cho biết tệp và số dòng. Chúng không ngăn việc cài đặt, và kỹ năng không có những dòng như vậy cũng không vì thế mà an toàn.
 - Khi tải xuống từ GitHub, GenOffice chỉ kết nối tới `github.com`, `api.github.com` và `codeload.github.com`, và không gửi bất kỳ dữ liệu đăng nhập nào. Nếu tệp nén quá lớn hoặc không qua được các bước kiểm tra an toàn, sẽ không có gì được cài.
-- **Kỹ năng mới** mở một trình soạn thảo trống để bạn tự viết tên, mô tả và hướng dẫn.
+- Trang của một kỹ năng trên skills.sh (`https://skills.sh/owner/repo/skill`) được đọc là kỹ năng đó trong kho GitHub `owner/repo`. GenOffice không kết nối tới skills.sh.
+- **Kỹ năng mới** mở một trình soạn thảo trống để bạn tự viết tên, mô tả và hướng dẫn. Ô **Tiêu đề** ở trên cùng nhận tiêu đề bằng ngôn ngữ nào cũng được; tên được điền từ tiêu đề và bạn có thể sửa. Nếu một kỹ năng đang bật từ nguồn khác có cùng tên, bạn sẽ được hỏi trước khi lưu, và khi lưu thì kỹ năng đó bị tắt. Khi tiêu đề không có chữ cái Latinh hay chữ số, tên được điền thành `skill-` kèm vài ký tự. Tên là thứ mà các chương trình khác và lệnh gọi `/` sử dụng nên có thể giữ nguyên.
 
 ## Kiểm tra cập nhật
 
 - Với kỹ năng được cài từ GitHub, **Kiểm tra cập nhật** trong menu thêm sẽ tìm nội dung mới. GitHub chỉ được liên hệ khi bạn nhấn vào đó.
 - Nếu không có gì thay đổi, sẽ hiện "Đã là bản mới nhất". Nếu có, hãy xem lại các tệp đã thay đổi và bản xem trước, rồi nhấn **Cập nhật**.
 - Nếu bạn đã tự sửa kỹ năng sau khi cài, dòng "Những chỉnh sửa của bạn sẽ bị mất" cũng hiện ra.
-- Việc cập nhật giữ nguyên trạng thái bật/tắt của kỹ năng và lựa chọn AI tự quyết định / Chỉ khi được gọi.
+- Việc cập nhật giữ nguyên trạng thái bật/tắt của kỹ năng, lựa chọn AI tự quyết định / Chỉ khi được gọi và nơi dùng.
 
 ## Gọi kỹ năng trong bảng AI
 
@@ -66,11 +71,21 @@ Bên dưới bản xem trước luôn có dòng: "Chỉ cài kỹ năng từ ngu
 
 1. Trong bảng AI, hãy nói chẳng hạn như "Lưu việc chúng ta vừa làm thành một kỹ năng" hoặc "Tạo một kỹ năng viết báo cáo theo phong cách của đơn vị mình".
 2. AI chọn ra các bước và quy tắc đáng lặp lại rồi hiện một thẻ **Kỹ năng mới**. Những giá trị chỉ dùng cho lần này, như tên và ngày tháng, không được đưa vào hướng dẫn.
-3. Kiểm tra và sửa tên, mô tả và hướng dẫn trên thẻ. Tên là thứ danh sách kỹ năng hiển thị và là thứ bạn gõ sau `/`: chữ cái tiếng Anh viết thường, chữ số và dấu gạch nối.
+3. Kiểm tra và sửa tên, mô tả và hướng dẫn trên thẻ. Tên là thứ danh sách kỹ năng hiển thị và là thứ bạn gõ sau `/`: chữ cái tiếng Anh viết thường, chữ số và dấu gạch nối. Ô **Tiêu đề** phía trên tên dùng để ghi tiêu đề hiện trong danh sách, bằng ngôn ngữ nào cũng được.
 4. Nhấn **Lưu**. Kỹ năng mới được thêm vào kỹ năng của tôi ở trạng thái bật và xuất hiện ngay trong danh sách `/`.
 
 - Không có tệp nào được ghi cho đến khi bạn nhấn **Lưu**. Nếu bạn nhấn **Hủy**, cuộc trò chuyện chỉ giữ lại nó dưới dạng "Đề xuất kỹ năng chưa lưu".
 - Bạn cũng có thể nhờ sửa một kỹ năng sẵn có, chẳng hạn "Sửa kỹ năng biên bản cuộc họp theo cách chúng ta vẫn làm". Khi đó thẻ có tiêu đề **Sửa kỹ năng**. Một kỹ năng của tôi sẽ bị ghi đè bằng **Thay thế**; kỹ năng có sẵn hoặc kỹ năng từ chương trình khác được lưu thành một bản sao trong kỹ năng của tôi và bản gốc bị tắt.
+
+## Chọn nơi dùng kỹ năng
+
+Kỹ năng chỉ hợp với một loại tài liệu, như trang trí trang chiếu hay sắp xếp bảng tính, có thể chỉ hiện trong bảng AI của trình soạn thảo đó. Danh sách `/` và danh sách kỹ năng AI tự dùng ở các trình soạn thảo khác ngắn lại, nên AI chọn đúng kỹ năng hơn.
+
+- Với kỹ năng của tôi, mở **Chỉnh sửa** và chọn **Mọi trình soạn thảo** hoặc **Chỉ các trình soạn thảo đã chọn** ở **Nơi dùng**. Các trình soạn thảo đã chọn được ghi vào tệp của kỹ năng, nên vẫn đi theo khi bạn xuất kỹ năng hay chuyển sang chương trình khác. **Chỉ các trình soạn thảo đã chọn** bắt đầu khi chưa chọn trình soạn thảo nào; **Chọn tất cả** và **Bỏ chọn tất cả** đổi tất cả cùng lúc.
+- Với kỹ năng có sẵn và kỹ năng của chương trình khác, đổi ở **Nơi dùng** trong **Xem nội dung**. Lựa chọn này chỉ lưu trong cài đặt của máy này; tệp của kỹ năng giữ nguyên.
+- Kỹ năng không dùng ở mọi trình soạn thảo sẽ ghi rõ trên dòng của nó, ví dụ "Dùng trong: Bản trình bày".
+- Khi AI tạo một kỹ năng chỉ hợp với một định dạng, AI đề xuất luôn nơi dùng; nếu không, kỹ năng dùng ở mọi trình soạn thảo. Bạn có thể đổi ở **Nơi dùng** trên thẻ trước khi lưu.
+- Hỏi AI ở Trang chủ và cửa sổ tác tử dùng mọi kỹ năng đang bật, bất kể nơi dùng.
 
 ## Thêm tài liệu làm mẫu
 
@@ -96,15 +111,25 @@ Khi bạn tạo kỹ năng trong bảng AI của một trình soạn thảo, tà
 
 ## Kỹ năng có sẵn
 
-| Kỹ năng           | Chức năng                                                                               |
-| ----------------- | --------------------------------------------------------------------------------------- |
-| `meeting-minutes` | Biến ghi chú cuộc họp thành biên bản nêu rõ các quyết định và việc cần làm              |
-| `internal-comms`  | Viết thông báo, bản tin, báo cáo tiến độ, câu hỏi thường gặp và các văn bản nội bộ khác |
-| `humanizer`       | Tìm những cách diễn đạt nghe như AI viết và sửa cho tự nhiên                            |
-| `copy-editing`    | Rà lại văn bản tiếng Anh bạn đã viết để nó rõ ràng và gọn hơn                           |
-| `find-skills`     | Tìm các kỹ năng bạn cần trong cửa sổ tác tử và đề xuất cài đặt                          |
+| Kỹ năng                       | Chức năng                                                                                                                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Biến ghi chú cuộc họp thành biên bản nêu rõ các quyết định và việc cần làm                                                                                             |
+| `internal-comms`              | Viết thông báo, bản tin, báo cáo tiến độ, câu hỏi thường gặp và các văn bản nội bộ khác                                                                                |
+| `humanizer`                   | Tìm những cách diễn đạt nghe như AI viết và sửa cho tự nhiên                                                                                                           |
+| `copy-editing`                | Rà lại văn bản tiếng Anh bạn đã viết để nó rõ ràng và gọn hơn                                                                                                          |
+| `find-skills`                 | Tìm các kỹ năng bạn cần trong cửa sổ tác tử và đề xuất cài đặt                                                                                                         |
+| `administration-report`       | Đưa báo cáo về đúng hướng dẫn của Bộ Nội vụ và An toàn Hàn Quốc: câu diễn đạt, đánh số chuẩn, phông chữ mở được mọi nơi, bảng đơn giản                                 |
+| `administration-report-draft` | Viết báo cáo hành chính từ đầu theo định dạng của bộ: các phần, đánh số Ⅰ·1·가, câu diễn đạt, tiêu đề bảng và phông chữ phổ dụng                                       |
+| `docx`                        | Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để tạo, sửa và đọc tệp .docx trong thư mục dự án. PC này cần cài sẵn Python và các chương trình khác                  |
+| `pptx`                        | Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để tạo, sửa và đọc tệp .pptx trong thư mục dự án. PC này cần cài sẵn Python và các chương trình khác                  |
+| `xlsx`                        | Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để tạo và sửa tệp .xlsx trong thư mục dự án và tính lại công thức. PC này cần cài sẵn Python và các chương trình khác |
+| `pdf`                         | Chỉ dùng được trong cửa sổ tác tử. Chạy tập lệnh để đọc, gộp và tách tệp .pdf trong thư mục dự án và điền biểu mẫu. PC này cần cài sẵn Python và các chương trình khác |
+| `hwp-document`                | Viết mới tài liệu .hwp hoặc .hwpx từ đầu: chọn bố cục cho báo cáo, kế hoạch, thông báo, công văn hoặc biên bản họp, viết theo văn phong tài liệu rồi kiểm tra kết quả  |
+| `mindmap`                     | Dựng sơ đồ tư duy từ một chủ đề hoặc tài liệu: ba đến bảy nhánh chính cân đối, tiêu đề ngắn với chi tiết đặt trong ghi chú, và kiểm tra cấu trúc ở cuối                |
+| `diagram`                     | Vẽ sơ đồ rõ ràng: chọn loại phù hợp, giữ một hướng đi, nhãn ngắn và ít màu, rồi kiểm tra chồng lấn và hình rời rạc                                                     |
+| `html-document`               | Tạo tài liệu HTML dễ đọc trên màn hình và gọn gàng khi in: xác định người đọc, độ dài và khổ giấy trước, rồi kiểm tra các trang và nội dung                            |
 
-`copy-editing` được làm cho văn bản tiếp thị tiếng Anh. `find-skills` chỉ hoạt động trong cửa sổ tác tử.
+`copy-editing` được làm cho văn bản tiếp thị tiếng Anh. `find-skills` chỉ hoạt động trong cửa sổ tác tử. Trong **Xem nội dung** của kỹ năng có sẵn, phần mô tả hiển thị bằng ngôn ngữ giao diện, còn phần hướng dẫn là văn bản đưa cho AI nên hiển thị nguyên văn (tiếng Anh). `docx`, `pptx`, `xlsx` và `pdf` chỉ dùng được trong cửa sổ tác tử; chúng chạy tập lệnh nên PC này cần cài sẵn Python và các chương trình khác. `hwp-document`, `mindmap`, `diagram` và `html-document` mỗi kỹ năng chỉ dùng trong trình soạn thảo mà nó được viết cho.
 
 ## Trong cửa sổ tác tử
 

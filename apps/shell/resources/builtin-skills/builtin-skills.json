@@ -61,5 +61,77 @@
     "license": "Apache-2.0",
     "agentOnly": false,
     "modified": false
+  },
+  {
+    "name": "docx",
+    "source": "anthropics/skills",
+    "path": "skills/docx",
+    "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+    "license": "Apache-2.0",
+    "agentOnly": true,
+    "modified": false
+  },
+  {
+    "name": "pptx",
+    "source": "anthropics/skills",
+    "path": "skills/pptx",
+    "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+    "license": "Apache-2.0",
+    "agentOnly": true,
+    "modified": false
+  },
+  {
+    "name": "xlsx",
+    "source": "anthropics/skills",
+    "path": "skills/xlsx",
+    "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+    "license": "Apache-2.0",
+    "agentOnly": true,
+    "modified": false
+  },
+  {
+    "name": "pdf",
+    "source": "anthropics/skills",
+    "path": "skills/pdf",
+    "commit": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+    "license": "Apache-2.0",
+    "agentOnly": true,
+    "modified": false
+  },
+  {
+    "name": "hwp-document",
+    "source": "ieumoffice",
+    "path": "",
+    "commit": "",
+    "license": "Apache-2.0",
+    "agentOnly": false,
+    "modified": false
+  },
+  {
+    "name": "mindmap",
+    "source": "ieumoffice",
+    "path": "",
+    "commit": "",
+    "license": "Apache-2.0",
+    "agentOnly": false,
+    "modified": false
+  },
+  {
+    "name": "diagram",
+    "source": "ieumoffice",
+    "path": "",
+    "commit": "",
+    "license": "Apache-2.0",
+    "agentOnly": false,
+    "modified": false
+  },
+  {
+    "name": "html-document",
+    "source": "ieumoffice",
+    "path": "",
+    "commit": "",
+    "license": "Apache-2.0",
+    "agentOnly": false,
+    "modified": false
   }
 ]

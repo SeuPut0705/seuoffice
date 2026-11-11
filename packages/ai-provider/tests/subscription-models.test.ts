@@ -176,7 +176,7 @@ describe('the model list on the connection status', () => {
     // the status is there, the list is still being read
     expect(checked['claude-code'].state).toBe('ready')
     expect(checked['claude-code'].models).toBeUndefined()
-    expect(asked).toEqual([['claude-code', undefined]])
+    expect(asked).toEqual([['claude-code', '']])
     const before = changes.length
 
     pending.resolve(CLAUDE_MODELS)

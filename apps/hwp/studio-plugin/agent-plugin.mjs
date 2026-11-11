@@ -168,6 +168,7 @@ export const DIRTY_EVENT = 'ieum:dirty-changed'
 const FILE_MENU = [
   { command: 'save', id: 'ext:ieum-save', shortcut: 'Ctrl+S' },
   { command: 'saveAs', id: 'ext:ieum-save-as', shortcut: 'Ctrl+Shift+S' },
+  { command: 'importPdf', id: 'ext:ieum-import-pdf' },
   { command: 'pdf', id: 'ext:ieum-export-pdf' },
   { command: 'preview', id: 'ext:ieum-preview' },
   { command: 'print', id: 'ext:ieum-print', shortcut: 'Ctrl+P' },
@@ -1525,6 +1526,9 @@ function memoFreeObjectPositions(doc, sec, para) {
     .filter((offset) => Number.isInteger(offset))
   return positions.filter((position) => !starts.includes(position))
 }
+
+/** The controls a section's first paragraph holds for its page and column setup; not objects. */
+const SECTION_SETUP_CONTROLS = ['secd', 'cold']
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
 const ALIGNMENTS = ['left', 'center', 'right', 'justify']
@@ -5576,6 +5580,19 @@ export const agentPlugin = {
       return { box, plain }
     }
 
+    /**
+     * Whether `box` is the one empty paragraph a new document starts with: no text in it,
+     * nothing else in the document, and no control but the section and column definitions
+     * every first paragraph carries. Text added at the end of such a document goes into that
+     * paragraph, as typing would, instead of leaving it in front as an empty first line.
+     */
+    const isEmptyDocument = (doc, box) =>
+      !box.inTable &&
+      doc.getSectionCount() === 1 &&
+      doc.getParagraphCount(0) === 1 &&
+      box.length(box.index) === 0 &&
+      parse(doc.getControls()).every((control) => SECTION_SETUP_CONTROLS.includes(control.ctrlId))
+
     /** Make an empty paragraph after paragraph `k` of `box`; its index is k + 1. */
     const openAfter = (box, k, plain) => {
       if (plain) box.addAfter(k)
@@ -5833,6 +5850,12 @@ export const agentPlugin = {
               const before = objectsOf(doc)
               const texts = [...paragraphs]
               let at = box.index
+              // the first text of a new document is written into its empty paragraph
+              const intoEmpty = where === 'end' && isEmptyDocument(doc, box)
+              if (intoEmpty) {
+                const first = texts.shift()
+                if (first) box.insert(at, first)
+              }
               if (where === 'before') {
                 // splitting at the start leaves an empty paragraph in front, formatted like this one
                 box.split(at, 0)
@@ -5850,7 +5873,7 @@ export const agentPlugin = {
                 if (text) box.insert(at, text)
               }
               mustKeep(before, objectsOf(doc))
-              const first = where === 'before' ? box.index : box.index + 1
+              const first = where === 'before' || intoEmpty ? box.index : box.index + 1
               return {
                 ok: true,
                 count: paragraphs.length,
@@ -7432,12 +7455,12 @@ export const agentPlugin = {
       }),
 
       /**
-       * Put Save, Save As, Export as PDF, Print Preview and Print at the top of the editor's
-       * File menu. The embedded editor leaves out its own (the app owns the file), which left
-       * the menu with no way to save. Each item fires FILE_COMMAND_EVENT on the editor's window
-       * and the app does the rest. `labels` holds the five names in the app's language, by
-       * command. A second call puts the items back where they were; the names stay the first
-       * ones.
+       * Put Save, Save As, Import PDF, Export as PDF, Print Preview and Print at the top of the
+       * editor's File menu. The embedded editor leaves out its own (the app owns the file),
+       * which left the menu with no way to save, and no way to its PDF import (its Open is
+       * off too). Each item fires FILE_COMMAND_EVENT on the editor's window and the app does
+       * the rest. `labels` holds the six names in the app's language, by command. A second
+       * call puts the items back where they were; the names stay the first ones.
        */
       installFileMenu: guarded((labels) => {
         for (const item of FILE_MENU) {

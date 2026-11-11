@@ -1,0 +1,340 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pblsketch <239486537+pblsketch@users.noreply.github.com>
+Date: Sun, 8 Nov 2026 00:00:00 +0900
+Subject: [PATCH 32/32] fix(pdf): ToUnicode 범위 항목을 줄이 아니라 토큰으로 읽는다
+
+PDF 가져오기가 ToUnicode CMap의 bfrange·notdefrange 구역을 줄마다 따로 해석했다.
+CMap은 PostScript라 줄바꿈은 공백일 뿐이고, Acrobat Distiller 같은 작성기는 긴 대상
+배열을 여러 줄에 나눠 적는다.
+
+  1 beginbfrange
+  <01><8A>[<00B7><00D7><2217>...
+  <2135><D835DC9C><212C>...
+  ...]endbfrange
+
+배열의 이어지는 줄 `<2135><D835DC9C><212C>`가 "0x2135부터 0xD835DC9C까지의 범위"로
+읽혀 항목 36억 개로 계산됐고, 항목이 138개뿐인 글꼴 표에서 가져오기 전체가
+`PDF_RESOURCE_LIMIT: CMap entries`로 멈췄다(Acrobat Distiller 8.1이 만든 5쪽 논문 PDF,
+글꼴 표 10개의 항목을 다 합쳐 792개). 한도에 걸리지 않는 줄도 틀린 코드에 글자를
+이었다(첫 줄은 0xB7~0xD7에).
+
+- 범위 구역을 토큰으로 잘라 `<lo> <hi> <dst>` 또는 `<lo> <hi> [<dst>...]` 하나씩 넘긴다
+  (RangeEntries). pdf.js, MuPDF, Poppler가 읽는 방식이다. 항목이 몇 줄에 걸치든, 한 줄에
+  여러 항목이 있든 같다. 항목을 해석하는 코드는 그대로다.
+- 배열 꼴로 읽히지 않은 배열 항목(빈 대상 `<>` 등)은 버린다. 전에는 배열 안의 문자열
+  셋을 순차 범위로 다시 읽었다.
+- notdefrange에는 배열 꼴이 없으므로 대괄호 항목을 건너뛴다.
+- 한도는 그대로다. 배열 원소 하나가 항목 하나로 계상되고, 실제로 큰 범위는 한 줄이든
+  여러 줄이든 `CMap entries`로 거부된다. 구역을 한 번 더 훑는 만큼 CMap scan 예산을
+  더 계상한다.
+---
+ tests/cases/pdf_cmap_range_entries_across_lines.rs | 162 +++++++++++++++++++++
+ vendor/rhwp-pdf-import-backend/src/fonts/cmap.rs   | 103 ++++++++++++-
+ 2 files changed, 259 insertions(+), 6 deletions(-)
+ create mode 100644 tests/cases/pdf_cmap_range_entries_across_lines.rs
+
+diff --git a/tests/cases/pdf_cmap_range_entries_across_lines.rs b/tests/cases/pdf_cmap_range_entries_across_lines.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..c2f29b4fcca7e5dcff44895511469b199ce951df
+--- /dev/null
++++ b/tests/cases/pdf_cmap_range_entries_across_lines.rs
+@@ -0,0 +1,162 @@
++//! ToUnicode `bfrange`/`notdefrange` entries are read by token, not by line.
++//! Synthetic CMap sources, not PDF/Hancom layout baselines.
++#![cfg(feature = "pdf-import")]
++
++use pdf_oxide::fonts::cmap::{parse_tounicode_cmap, parse_tounicode_cmap_with_budget};
++use pdf_oxide::import_limits::{ImportBudget, PdfImportLimits};
++
++fn default_budget() -> ImportBudget {
++    ImportBudget::new(PdfImportLimits::default()).unwrap()
++}
++
++/// Acrobat Distiller wraps a destination array over several lines. The second
++/// line here starts with a BMP string and a surrogate pair. Read as a line of
++/// its own it is the range 0x2135..=0xD835DC9C, 3.6 billion codes, and the
++/// whole import stopped with `PDF_RESOURCE_LIMIT: CMap entries` on a table of
++/// eight.
++#[test]
++fn bfrange_array_wrapped_over_lines_maps_its_own_codes() {
++    let source = b"1 begincodespacerange\n<00><FF>endcodespacerange\n\
++1 beginbfrange\n\
++<01><08>[<00B7><00D7><2217>\n\
++<2135><D835DC9C><212C>\n\
++<D835DC9E><2130>]endbfrange";
++    let expected = [
++        "\u{00B7}",
++        "\u{00D7}",
++        "\u{2217}",
++        "\u{2135}",
++        "\u{1D49C}",
++        "\u{212C}",
++        "\u{1D49E}",
++        "\u{2130}",
++    ];
++
++    let budget = default_budget();
++    let bounded = parse_tounicode_cmap_with_budget(source, &budget).unwrap();
++    budget.check().unwrap();
++    let unbounded = parse_tounicode_cmap(source).unwrap();
++    for cmap in [&bounded, &unbounded] {
++        for (i, value) in expected.iter().enumerate() {
++            let code = i as u32 + 1;
++            assert_eq!(cmap.get(&code).as_deref(), Some(*value), "code {code:#x}");
++        }
++        // The strings of the array body are destinations. Before, the first
++        // line mapped 0xB7..=0xD7 and the third 0xD835DC9E onward.
++        assert!(cmap.get(&0xB7).is_none());
++        assert!(cmap.get(&0x2135).is_none());
++    }
++}
++
++/// A wrapped array still costs one entry per element, no more and no less.
++#[test]
++fn wrapped_array_charges_one_entry_per_element() {
++    let source = b"beginbfrange\n<01><04>[<0041><0042>\n<0043><0044>]\nendbfrange";
++    for (cap, fits) in [(3, false), (4, true)] {
++        let budget = ImportBudget::new(PdfImportLimits {
++            cmap_entries: cap,
++            ..PdfImportLimits::default()
++        })
++        .unwrap();
++        let result = parse_tounicode_cmap_with_budget(source, &budget);
++        assert_eq!(result.is_ok(), fits, "cap {cap}");
++        if let Ok(cmap) = result {
++            assert_eq!(cmap.get(&0x04).as_deref(), Some("D"));
++        }
++    }
++}
++
++/// A line break inside an entry and several entries on one line are both plain
++/// white space, in `bfrange` and in `notdefrange`.
++#[test]
++fn range_entries_do_not_depend_on_line_breaks() {
++    let source = b"beginbfrange\n\
++<10>\n<12> <0041> <20> <21>\n[<0058>\n<0059>] <30> <31>\n<0061>\n\
++endbfrange\n\
++beginnotdefrange\n<40>\n<41>\n<FFFD>\nendnotdefrange";
++    let budget = default_budget();
++    for cmap in [
++        parse_tounicode_cmap_with_budget(source, &budget).unwrap(),
++        parse_tounicode_cmap(source).unwrap(),
++    ] {
++        for (code, value) in [
++            (0x10, "A"),
++            (0x11, "B"),
++            (0x12, "C"),
++            (0x20, "X"),
++            (0x21, "Y"),
++            (0x30, "a"),
++            (0x31, "b"),
++            (0x40, "\u{FFFD}"),
++            (0x41, "\u{FFFD}"),
++        ] {
++            assert_eq!(cmap.get(&code).as_deref(), Some(value), "code {code:#x}");
++        }
++    }
++    budget.check().unwrap();
++}
++
++/// An array the array form does not take (an empty destination here) is
++/// dropped whole. Its body is not read as `<lo> <hi> <dst>`, which for the
++/// first three strings is again a range of 3.6 billion codes.
++#[test]
++fn unreadable_array_is_not_read_as_a_sequential_range() {
++    let source =
++        b"beginbfrange\n<01> <04> [<2135> <D835DC9C> <212C> <>]\n<05> <06> <0041>\nendbfrange";
++    let budget = default_budget();
++    let cmap = parse_tounicode_cmap_with_budget(source, &budget).unwrap();
++    budget.check().unwrap();
++    assert!(cmap.get(&0x01).is_none());
++    assert!(cmap.get(&0x2135).is_none());
++    assert_eq!(cmap.get(&0x05).as_deref(), Some("A"));
++    assert_eq!(cmap.get(&0x06).as_deref(), Some("B"));
++}
++
++/// Brackets and strings that belong to no entry do not shift the entries after
++/// them, and an array or a string left open maps nothing.
++#[test]
++fn stray_brackets_and_open_entries_map_nothing() {
++    for source in [
++        "beginbfrange\n<01> [<0041> <0042>] <05> <06> <0043>\nendbfrange",
++        "beginbfrange\n<01> <02> ] <05> <06> <0043>\nendbfrange",
++    ] {
++        let budget = default_budget();
++        let cmap = parse_tounicode_cmap_with_budget(source.as_bytes(), &budget).unwrap();
++        budget.check().unwrap();
++        assert!(cmap.get(&0x01).is_none(), "{source}");
++        assert!(cmap.get(&0x41).is_none(), "{source}");
++        assert_eq!(cmap.get(&0x05).as_deref(), Some("C"), "{source}");
++        assert_eq!(cmap.get(&0x06).as_deref(), Some("D"), "{source}");
++    }
++    for source in [
++        "beginbfrange\n<01> <02> [<0041> <0042>\nendbfrange",
++        "beginbfrange\n<01> <02> <00\nendbfrange",
++    ] {
++        let budget = default_budget();
++        let cmap = parse_tounicode_cmap_with_budget(source.as_bytes(), &budget).unwrap();
++        budget.check().unwrap();
++        assert!(cmap.is_empty(), "{source}");
++    }
++}
++
++/// The limit this patch stops tripping by mistake still holds for a range
++/// that really is that large, on one line or across two.
++#[test]
++fn a_really_huge_range_is_still_rejected() {
++    for source in [
++        "beginbfrange\n<00000000> <FFFFFFFF> <0041>\nendbfrange",
++        "beginbfrange\n<00000000>\n<FFFFFFFF> <0041>\nendbfrange",
++        "beginbfrange\n<00000000> <FFFFFFFF>\n[<0041>\n<0042>]\nendbfrange",
++        "beginnotdefrange\n<00000000>\n<FFFFFFFF>\n<0041>\nendnotdefrange",
++    ] {
++        let budget = default_budget();
++        let result = parse_tounicode_cmap_with_budget(source.as_bytes(), &budget);
++        assert!(
++            matches!(
++                result,
++                Err(pdf_oxide::error::Error::ImportResourceLimit("CMap entries"))
++            ),
++            "{source}"
++        );
++    }
++}
+diff --git a/vendor/rhwp-pdf-import-backend/src/fonts/cmap.rs b/vendor/rhwp-pdf-import-backend/src/fonts/cmap.rs
+index df20697c38553a441c5a7d7c759276bf28a8a894..9cda599b192b4efe2927977b66b1cdca51a65d3a 100644
+--- a/vendor/rhwp-pdf-import-backend/src/fonts/cmap.rs
++++ b/vendor/rhwp-pdf-import-backend/src/fonts/cmap.rs
+@@ -653,10 +653,10 @@ fn parse_tounicode_cmap_impl(data: &[u8], budget: Option<&ImportBudget>) -> Resu
+             BfSectionKind::Range => {
+                 // Format: <srcCodeLo> <srcCodeHi> [<dstString0> <dstString1> ... <dstStringN>]
+                 //     or: <srcCodeLo> <srcCodeHi> <dstString>
+-                for line in section.lines() {
++                for entry in range_entries(section, budget)? {
+                     let mappings = match budget {
+-                        Some(budget) => parse_bfrange_line_with_budget(line, Some(budget)),
+-                        None => parse_bfrange_line(line),
++                        Some(budget) => parse_bfrange_line_with_budget(entry, Some(budget)),
++                        None => parse_bfrange_line(entry),
+                     };
+                     if let Some(budget) = budget {
+                         budget.check()?;
+@@ -680,10 +680,11 @@ fn parse_tounicode_cmap_impl(data: &[u8], budget: Option<&ImportBudget>) -> Resu
+     // Format: <srcCodeLo> <srcCodeHi> <dstString>
+     // Maps a range of codes to a single Unicode character (fallback for unmapped codes)
+     for section in extract_sections(&content, "beginnotdefrange", "endnotdefrange") {
+-        for line in section.lines() {
++        // A notdefrange has no array form, so a bracketed entry is not one.
++        for entry in range_entries(section, budget)?.filter(|entry| !entry.ends_with(']')) {
+             let mappings = match budget {
+-                Some(budget) => parse_notdefrange_line_with_budget(line, Some(budget)),
+-                None => parse_notdefrange_line(line),
++                Some(budget) => parse_notdefrange_line_with_budget(entry, Some(budget)),
++                None => parse_notdefrange_line(entry),
+             };
+             if let Some(budget) = budget {
+                 budget.check()?;
+@@ -747,6 +748,90 @@ fn bf_sections_in_document_order<'a>(
+     })
+ }
+ 
++/// The entries of a `bfrange` or `notdefrange` section, one
++/// `<lo> <hi> <dst>` or `<lo> <hi> [<dst0> <dst1> ...]` at a time.
++///
++/// A CMap is PostScript, so a line break is white space like any other (ISO
++/// 32000-1:2008 §9.10.3, Adobe Technical Note #5014). Writers wrap long
++/// destination arrays over many lines, and reading such a section line by
++/// line takes a continuation line `<2135> <D835DC9C> <212C>` for a range of
++/// 3.6 billion codes. Entries are therefore cut by token, the way pdf.js,
++/// MuPDF, and Poppler read them, and each item holds exactly one entry
++/// whatever lines it sits on.
++struct RangeEntries<'a> {
++    section: &'a str,
++    pos: usize,
++}
++
++fn range_entries<'a>(
++    section: &'a str,
++    budget: Option<&ImportBudget>,
++) -> Result<RangeEntries<'a>> {
++    if let Some(budget) = budget {
++        // One more pass over the section, on top of what `cmap_source` charged.
++        budget.charge_cmap_scan(section.len())?;
++    }
++    Ok(RangeEntries { section, pos: 0 })
++}
++
++impl<'a> Iterator for RangeEntries<'a> {
++    type Item = &'a str;
++
++    fn next(&mut self) -> Option<&'a str> {
++        let bytes = self.section.as_bytes();
++        let mut start = 0;
++        // Hex strings read so far for this entry: `<lo>`, `<hi>`, then `<dst>`.
++        let mut operands = 0;
++        // Inside the destination array of this entry.
++        let mut in_array = false;
++        // Inside a bracket that follows no `<lo> <hi>`; its strings belong to no entry.
++        let mut stray_array = false;
++
++        while self.pos < bytes.len() {
++            let at = self.pos;
++            match bytes[at] {
++                b'<' => {
++                    // An unterminated string ends the section.
++                    let len = self.section[at..].find('>')?;
++                    self.pos = at + len + 1;
++                    if in_array || stray_array {
++                        continue;
++                    }
++                    if operands == 0 {
++                        start = at;
++                    }
++                    operands += 1;
++                    if operands == 3 {
++                        return Some(&self.section[start..self.pos]);
++                    }
++                },
++                b'[' => {
++                    self.pos = at + 1;
++                    if in_array {
++                        continue;
++                    }
++                    if operands == 2 {
++                        in_array = true;
++                    } else {
++                        stray_array = true;
++                        operands = 0;
++                    }
++                },
++                b']' => {
++                    self.pos = at + 1;
++                    if in_array {
++                        return Some(&self.section[start..self.pos]);
++                    }
++                    stray_array = false;
++                    operands = 0;
++                },
++                _ => self.pos = at + 1,
++            }
++        }
++        None
++    }
++}
++
+ /// Extract sections between begin and end markers.
+ fn extract_sections<'a>(content: &'a str, begin: &str, end: &str) -> Vec<&'a str> {
+     let mut sections = Vec::new();
+@@ -1066,6 +1151,12 @@ fn parse_bfrange_line_with_budget(
+         return Some(result);
+     }
+ 
++    // An array entry that did not read as one is not a sequential range
++    // either: three strings of its body are destinations, not `<lo> <hi> <dst>`.
++    if line.contains('[') {
++        return None;
++    }
++
+     // Try format 1 (sequential format)
+     if let Some(caps) = RE_SEQ.captures(line) {
+         let start_str = caps[1].trim().replace(char::is_whitespace, "");

@@ -8,6 +8,7 @@ export const it = {
   saveFailed: 'Impossibile salvare il documento.',
   fileSave: 'Salva',
   fileSaveAs: 'Salva con nome…',
+  fileImportPdf: 'Importa PDF…',
   fileExportPdf: 'Esporta come PDF…',
   filePrint: 'Stampa…',
   autoSave: 'Salvataggio automatico',

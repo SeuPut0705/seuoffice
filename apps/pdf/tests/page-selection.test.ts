@@ -3,6 +3,7 @@ import {
   EMPTY_PAGE_SELECTION,
   clickPageSelection,
   formatPageRanges,
+  keyPageTargets,
   livePages,
   moveBlockOrder,
   pageTargets,
@@ -110,6 +111,22 @@ describe('moveBlockOrder', () => {
     expect(moveBlockOrder(order, [1, 3], 1, 3)).toBeNull()
     expect(moveBlockOrder(order, [1, 2], 1, 3)).toEqual([0, 3, 1, 2, 4, 5])
     expect(moveBlockOrder(order, [0, 1], 1, 0)).toBeNull()
+  })
+})
+
+describe('keyPageTargets', () => {
+  it('covers the multi-selection, whichever thumbnail holds focus', () => {
+    expect(keyPageTargets([3, 0, 1], 4)).toEqual([3, 0, 1])
+    expect(keyPageTargets([3, 0], null)).toEqual([3, 0])
+  })
+
+  it('covers the focused thumbnail when no several pages are picked', () => {
+    expect(keyPageTargets([], 2)).toEqual([2])
+    expect(keyPageTargets([], 0)).toEqual([0])
+  })
+
+  it('covers nothing when focus is not on a thumbnail', () => {
+    expect(keyPageTargets([], null)).toEqual([])
   })
 })
 

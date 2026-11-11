@@ -195,8 +195,8 @@ describe('ask panel skill tools', () => {
     expect(request.tools.map((t) => t.name)).toEqual(
       expect.arrayContaining(['use_skill', 'read_skill_file', 'propose_skill']),
     )
-    // the prompt lists a skill by its name, as the lists show it
-    expect(request.system).toContain('app:lease-check | lease-check')
+    // the prompt lists a skill as the lists show it: by the title its file carries
+    expect(request.system).toContain('app:lease-check | Lease checklist')
     expect(request.system).not.toContain('user:manual-one')
     expect(request.system).not.toContain('builtin:find-skills')
   })
@@ -207,7 +207,7 @@ describe('ask panel skill tools', () => {
     await ask('Check this lease')
     await act(async () => settle(5))
     expect(bridge.aiRead).toHaveBeenCalledWith('app:lease-check')
-    expect(host.textContent).toContain('Used the lease-check skill')
+    expect(host.textContent).toContain('Used the Lease checklist skill')
     expect(JSON.stringify(requests[1]!.messages)).toContain('CHECK PETS FIRST')
   })
 
@@ -238,6 +238,7 @@ describe('ask panel skill tools', () => {
       description: 'Reviews a lease the way we do.',
       body: '1. Pets\n2. Deposit',
       invoke: 'auto',
+      editors: 'all',
     })
     expect(host.textContent).toContain('Saved · lease-review')
   })

@@ -1,6 +1,13 @@
 import type { AgentMessage, AgentToolCall, AgentToolDef, ToolExecution } from './types'
 import { RESERVED_USER_SKILL_NAMES } from './user-skill-names'
 import { mcpServerListOf, skillStepsNote } from './skill-mcp-refs'
+import {
+  SKILL_EDITORS,
+  skillEditorsOf,
+  skillStandsBack,
+  skillUsedIn,
+  type SkillEditorId,
+} from './skill-editors'
 import type { AgentSkill } from './skill'
 
 /**
@@ -31,10 +38,10 @@ export const USER_SKILL_TOOL_NAMES: ReadonlySet<string> = new Set([
   PROPOSE_SKILL_TOOL,
 ])
 
-/** First words of a proposal's tool result, then its name as JSON (stored chats read it back) */
+/** First words of a proposal's tool result, then its title (else its name) as JSON (stored chats read it back) */
 const PROPOSAL_SHOWN_PREFIX = 'Skill card shown: '
 
-/** The name (a title in older chats) a stored `propose_skill` result names, or '' */
+/** The title, else the name, a stored `propose_skill` result names, or '' */
 export function proposedTitleOf(output: string | undefined): string {
   if (!output?.startsWith(PROPOSAL_SHOWN_PREFIX)) return ''
   const line = output.slice(PROPOSAL_SHOWN_PREFIX.length).split('\n', 1)[0]!
@@ -91,6 +98,8 @@ export interface UserSkillEntry {
   shadowedBy: string | undefined
   /** the skill lives in the app's own skills folder */
   owned: boolean
+  /** the editors the skill is used in; undefined: every editor */
+  editors: SkillEditorId[] | undefined
 }
 
 /** A skill's text as `use_skill` gets it */
@@ -115,6 +124,7 @@ export type UserSkillRead<T> = ({ ok: true } & T) | { ok: false; reason: string 
 export interface SkillProposal {
   /** unique per proposal (the tool call's id) */
   key: string
+  /** the title in the person's language the model suggested; '' when it gave none */
   title: string
   /** the English name the model suggested; '' when it gave none */
   name: string
@@ -122,8 +132,20 @@ export interface SkillProposal {
   body: string
   /** the model thinks the current document should go along as a template */
   wantsTemplate: boolean
+  /** the editors the model would limit the skill to; undefined when it gave none */
+  editors?: SkillEditorId[] | undefined
   /** the skill being changed; undefined for a new skill */
-  target: { id: string; name: string; title: string; owned: boolean; source: string } | undefined
+  target:
+    | {
+        id: string
+        name: string
+        title: string
+        owned: boolean
+        source: string
+        /** where the skill is used now; undefined: every editor */
+        editors?: SkillEditorId[] | undefined
+      }
+    | undefined
 }
 
 /** Display words for the tool rows (the panel passes its UI language) */
@@ -135,6 +157,11 @@ export interface UserSkillLabels {
 }
 
 export interface UserSkillsDeps {
+  /**
+   * the editor this panel belongs to: skills set for other editors are not
+   * listed or used here; undefined (home ask) uses every skill
+   */
+  editor?: SkillEditorId | undefined
   /** the skill list as of now (a synchronous snapshot) */
   list(): readonly UserSkillEntry[]
   /**
@@ -184,14 +211,19 @@ function clip(text: string, max: number): string {
 }
 
 /** Whether the model may pick a skill on its own (spec 5.5) */
-function isAutoSkill(skill: UserSkillEntry): boolean {
+function isAutoSkill(
+  skill: UserSkillEntry,
+  all: readonly UserSkillEntry[],
+  editor: SkillEditorId | undefined,
+): boolean {
   return (
     skill.enabled &&
+    skillUsedIn(skill.editors, editor) &&
     !skill.hidden &&
     !skill.unreadable &&
     !skill.agentOnly &&
     skill.invoke === 'auto' &&
-    !skill.shadowedBy &&
+    !skillStandsBack(skill, all, editor) &&
     !RESERVED_USER_SKILL_NAMES.has(skill.name.toLowerCase())
   )
 }
@@ -208,13 +240,15 @@ export function autoSkillsSection(
   options: Partial<AutoSkillsLimits> & {
     attached?: readonly string[] | undefined
     displayTitle?: UserSkillsDeps['displayTitle']
+    /** the panel's editor: skills set for other editors are left out */
+    editor?: SkillEditorId | undefined
   } = {},
 ): string {
   const descriptionMax = options.descriptionMax ?? AUTO_SKILL_DESCRIPTION_MAX
   const max = options.max ?? AUTO_SKILLS_MAX
   const namesMax = options.namesMax ?? AUTO_SKILLS_NAMES_ONLY_MAX
   const attached = new Set(options.attached ?? [])
-  const listed = skills.filter((s) => isAutoSkill(s) && !attached.has(s.id))
+  const listed = skills.filter((s) => isAutoSkill(s, skills, options.editor) && !attached.has(s.id))
   if (listed.length === 0) return ''
   const titleOf = (s: UserSkillEntry) =>
     clip(options.displayTitle?.(s) || s.title || s.name, AUTO_SKILL_TITLE_MAX)
@@ -282,8 +316,12 @@ const PROPOSE_DESCRIPTION =
   'steps, the rules, the tone and wording, the checks before finishing. Leave out values used ' +
   'only once (names of people, dates, this particular content): list them in the body as ' +
   'values given each time instead. Write the body as instructions to an assistant, in the ' +
-  'language of the conversation. Set wantsTemplate when the finished document itself should ' +
-  'be kept as a template to fill in next time.'
+  'language of the conversation. Give a short title in the person’s language as well as the ' +
+  'English name: lists show the title. Set wantsTemplate when the finished document itself should ' +
+  'be kept as a template to fill in next time. Set editors only when the skill is tied to one ' +
+  'kind of document (designing slides: slides; tidying spreadsheets: sheets); otherwise leave ' +
+  'it out so the skill is offered in every editor. Never set it just because of the editor ' +
+  'this conversation is in.'
 
 function tools(): AgentToolDef[] {
   return [
@@ -321,10 +359,16 @@ function tools(): AgentToolDef[] {
       inputSchema: {
         type: 'object',
         properties: {
+          title: {
+            type: 'string',
+            description:
+              'a short title in the language the person writes in (not put into English), ' +
+              'shown in the skill list',
+          },
           name: {
             type: 'string',
             description:
-              'the name the person sees in the skill list and types after / to call it: English ' +
+              'the name shown beside the title, also the skill’s name in other programs: English ' +
               'words saying what the skill does, lowercase letters, digits and hyphens, 1-64 ' +
               'characters, e.g. meeting-minutes',
           },
@@ -341,6 +385,12 @@ function tools(): AgentToolDef[] {
             type: 'string',
             description: 'id of the existing skill to change; leave out for a new skill',
           },
+          editors: {
+            type: 'array',
+            items: { type: 'string', enum: [...SKILL_EDITORS] },
+            description:
+              'the only editors the skill is offered in; leave out for every editor (the usual case)',
+          },
         },
         required: ['name', 'description', 'body'],
       },
@@ -348,8 +398,13 @@ function tools(): AgentToolDef[] {
   ]
 }
 
-function refusalText(reason: string, id: string): string {
+function refusalText(reason: string, id: string, editors?: readonly string[]): string {
   switch (reason) {
+    case 'other-editor':
+      return (
+        `The skill ${id} is set to be used only in other editors (${(editors ?? []).join(', ')}), ` +
+        'not in this one. The person can change where it is used in Settings → Skills.'
+      )
     case 'not-found':
       return `No skill with id ${id}. Use an id from the skills list.`
     case 'disabled':
@@ -380,10 +435,15 @@ function fileRefusalText(reason: string, id: string, path: string): string {
 }
 
 /** Why a skill may not be used or read here; undefined when it may */
-function entryRefusal(entry: UserSkillEntry | undefined, id: string): string | undefined {
+function entryRefusal(
+  entry: UserSkillEntry | undefined,
+  id: string,
+  editor: SkillEditorId | undefined,
+): string | undefined {
   if (!entry || RESERVED_USER_SKILL_NAMES.has(entry.name.toLowerCase()))
     return refusalText('not-found', id)
   if (entry.agentOnly) return refusalText('agent-only', id)
+  if (!skillUsedIn(entry.editors, editor)) return refusalText('other-editor', id, entry.editors)
   if (entry.unreadable) return refusalText('unreadable', id)
   if (!entry.enabled || entry.hidden) return refusalText('disabled', id)
   return undefined
@@ -432,7 +492,7 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
   const useSkill = async (call: AgentToolCall): Promise<ToolExecution> => {
     const id = str(call.input.id).trim()
     const entry = await findFresh(id)
-    const refusal = entryRefusal(entry, id)
+    const refusal = entryRefusal(entry, id, deps.editor)
     if (refusal || !entry) return fail(refusal ?? refusalText('not-found', id), USE_SKILL_TOOL)
     const title = titleOf(entry)
     if (attached().includes(id)) {
@@ -467,7 +527,7 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
     const id = str(call.input.id).trim()
     const path = str(call.input.path).trim()
     const entry = await findFresh(id)
-    const refusal = entryRefusal(entry, id)
+    const refusal = entryRefusal(entry, id, deps.editor)
     if (refusal || !entry)
       return fail(refusal ?? refusalText('not-found', id), READ_SKILL_FILE_TOOL)
     if (pathLeavesFolder(path)) return fail(fileRefusalText('outside', id, path), path)
@@ -485,9 +545,9 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
 
   const proposeSkill = (call: AgentToolCall): ToolExecution => {
     const name = str(call.input.name).trim()
-    // older prompts gave a title instead; the card makes a name from it
+    // a title alone is enough: the card makes a name from it
     const title = str(call.input.title).trim()
-    const label = name || title
+    const label = title || name
     const body = str(call.input.body)
     if (!label) return fail('name must not be empty', PROPOSE_SKILL_TOOL)
     if (!body.trim()) return fail('body must not be empty', PROPOSE_SKILL_TOOL)
@@ -508,6 +568,7 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
         title: titleOf(entry),
         owned: entry.owned,
         source: entry.source,
+        editors: entry.editors,
       }
     }
     deps.onProposal({
@@ -517,6 +578,7 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
       description: str(call.input.description).trim(),
       body,
       wantsTemplate: call.input.wantsTemplate === true,
+      editors: skillEditorsOf(call.input.editors),
       target,
     })
     return {
@@ -536,6 +598,7 @@ export function createUserSkillsSkill(deps: UserSkillsDeps): AgentSkill {
         ...deps.limits,
         attached: attached(),
         displayTitle: deps.displayTitle,
+        editor: deps.editor,
       })
       return list ? `${SKILLS_SYSTEM_PROMPT}\n\n${list}` : SKILLS_SYSTEM_PROMPT
     },
@@ -579,6 +642,7 @@ export function userSkillEntriesOf(raw: unknown): UserSkillEntry[] {
       shadowedBy:
         typeof view.shadowedBy === 'string' && view.shadowedBy ? view.shadowedBy : undefined,
       owned: view.owned === true,
+      editors: skillEditorsOf(view.editors),
     })
   }
   return out

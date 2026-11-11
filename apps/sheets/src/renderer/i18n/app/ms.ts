@@ -563,6 +563,9 @@ export const ms = {
     'Eksport CSV memerlukan buku kerja dimuatkan sepenuhnya — tunggu pemuatan selesai.',
   appCsvExportTooLarge: 'Helaian terlalu besar untuk dieksport sebagai CSV.',
   appCsvExportCanceled: 'Eksport CSV dibatalkan.',
+  appOdsExported: '{path} dieksport.',
+  appOdsExportCanceled: 'Eksport ODS dibatalkan.',
+  appOdsExportFailed: 'Eksport ODS gagal.',
   appCsvExported: '{path} dieksport.',
   appCsvExportedActiveOnly:
     'Fail CSV hanya mengandungi satu helaian — helaian aktif “{name}” dieksport ke {path}.',
@@ -711,6 +714,13 @@ export const ms = {
   appSaveAs: 'Simpan Sebagai',
   appUndo: 'Buat Asal',
   appRedo: 'Buat Semula',
+  appQuickAccessCustomize: 'Sesuaikan Bar Alat Capaian Pantas',
+  appQuickAccessHint:
+    'Tekan Alt dan nombor untuk menjalankan butang pada kedudukan itu, dikira dari kiri.',
+  appQuickAccessMoveEarlier: 'Alih ke depan',
+  appQuickAccessMoveLater: 'Alih ke belakang',
+  appQuickAccessReset: 'Tetapkan semula kepada lalai',
+  appQuickAccessFull: 'Bar alat memuatkan paling banyak 10 butang.',
   appUnsavedEditOne: '● {count} suntingan belum disimpan',
   appUnsavedEditMany: '● {count} suntingan belum disimpan',
   appSavedState: 'Disimpan',

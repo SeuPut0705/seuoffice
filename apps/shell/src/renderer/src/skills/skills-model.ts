@@ -6,7 +6,12 @@
  */
 import type { Lang } from '@genoffice/i18n'
 import { unusableMcpServers } from '@genoffice/agent-core/skill-mcp-refs'
-import { builtinSkillDesc, isBuiltinSkillName, skillDisplayName } from '@genoffice/ui'
+import {
+  builtinSkillDesc,
+  isBuiltinSkillName,
+  skillDisplayName,
+  skillEditorsText,
+} from '@genoffice/ui'
 import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
 import type {
   UserSkillNameProblem,
@@ -14,7 +19,7 @@ import type {
   UserSkillView,
   UserSkillsFailReason,
 } from '@genoffice/electron-utils/user-skills-channels'
-import type { SkillsStringKey } from '../i18n/strings-skills'
+import { skillsText, type SkillsStringKey } from '../i18n/strings-skills'
 
 /** The settings screen's skills bridge (src/preload/index.ts); absent outside the shell */
 export function userSkillsApi(): UserSkillsBridge | undefined {
@@ -50,9 +55,13 @@ export function groupLabelKey(group: SkillGroupId): SkillsStringKey {
 
 type Text = (key: SkillsStringKey, params?: Record<string, string | number>) => string
 
-/** What a row is called: the skill's name (a made-up name shows the title it was made with) */
-export function skillDisplayTitle(view: UserSkillView): string {
-  return skillDisplayName(view.source === 'builtin' ? { name: view.name } : view)
+/**
+ * What a row is called (`skillDisplayName`, decision 0128): the title the
+ * person gave, else the name; a builtin always its name. Where this differs
+ * from the name, the row shows the name beside it.
+ */
+export function skillDisplayTitle(view: Pick<UserSkillView, 'name' | 'title' | 'source'>): string {
+  return skillDisplayName(view)
 }
 
 export function skillDisplayDesc(view: UserSkillView, lang: Lang): string {
@@ -63,7 +72,10 @@ export function skillDisplayDesc(view: UserSkillView, lang: Lang): string {
 }
 
 /** Plain source label: never a logo, only the folder or plugin it came from */
-export function sourceLabel(view: UserSkillView, text: Text): string {
+export function sourceLabel(
+  view: { source: string; plugin?: string | undefined; github?: unknown },
+  text: Text,
+): string {
   switch (view.source) {
     case 'builtin':
       return text('sourceBuiltin')
@@ -134,9 +146,17 @@ export function listedCount(views: readonly UserSkillView[]): number {
 }
 
 export type SkillMenuAction =
-  'view' | 'edit' | 'copyToMine' | 'export' | 'checkUpdate' | 'openFolder' | 'remove' | 'hide'
+  | 'view'
+  | 'edit'
+  | 'whereUsed'
+  | 'copyToMine'
+  | 'export'
+  | 'checkUpdate'
+  | 'openFolder'
+  | 'remove'
+  | 'hide'
 
-const ACTION_LABEL: Record<SkillMenuAction, SkillsStringKey> = {
+const ACTION_LABEL: Record<Exclude<SkillMenuAction, 'whereUsed'>, SkillsStringKey> = {
   view: 'actView',
   edit: 'actEdit',
   copyToMine: 'actCopy',
@@ -147,15 +167,31 @@ const ACTION_LABEL: Record<SkillMenuAction, SkillsStringKey> = {
   hide: 'actHide',
 }
 
-export function actionLabelKey(action: SkillMenuAction): SkillsStringKey {
-  return ACTION_LABEL[action]
+/** A menu entry's words; "where it is used" is called what its chooser is called */
+export function skillActionLabel(action: SkillMenuAction, lang: Lang): string {
+  if (action === 'whereUsed') return skillEditorsText(lang, 'label')
+  return skillsText(lang, ACTION_LABEL[action])
 }
 
-/** The more-menu in spec 5.1 order, from what the main process allows */
+/**
+ * The dialog that holds a skill's where-used chooser: the editor of a skill
+ * the person can edit (the choice is saved in its file), the read-only view
+ * of any other (the choice is kept in the settings file).
+ */
+export function whereUsedDialogMode(view: UserSkillView): 'edit' | 'view' {
+  return view.can.edit ? 'edit' : 'view'
+}
+
+/**
+ * The more-menu in spec 5.1 order, from what the main process allows. Every
+ * skill that can be read has "where it is used": the chooser sits inside
+ * another entry's dialog, where a person looking for it does not think to look.
+ */
 export function skillMenuActions(view: UserSkillView): SkillMenuAction[] {
   const actions: SkillMenuAction[] = []
   if (!view.unreadable) actions.push('view')
   if (view.can.edit) actions.push('edit')
+  if (!view.unreadable) actions.push('whereUsed')
   if (view.can.copyToMine) actions.push('copyToMine')
   if (view.can.export) actions.push('export')
   if (view.can.checkUpdate) actions.push('checkUpdate')
@@ -203,6 +239,8 @@ export function failureKey(
       return undefined
     case 'no-skills':
       return 'failNoSkills'
+    case 'unclosed-frontmatter':
+      return 'pasteUnclosed'
     case 'not-found':
       return context === 'import' ? 'failRepoNotFound' : 'failNotFound'
     case 'rate-limited':
@@ -241,6 +279,8 @@ export function failureKey(
     case 'name-taken':
     case 'exists':
       return 'nameTaken'
+    case 'same-name-on':
+      return 'sameNameOn'
     case 'unreadable':
       return 'unreadableUnreadable'
     default:

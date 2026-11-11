@@ -64,7 +64,8 @@ export const en = {
   errHeadlessLimit: 'The hourly limit for automatic requests has been reached.',
   errHeadlessLimitReset:
     'The hourly limit for automatic requests has been reached. Requests are possible again at {time}.',
-  connectFreeHint: 'No subscription? You can connect a free AI in Settings in about a minute.',
+  connectFreeHint:
+    'Without a subscription, you can connect a free AI in Settings in about a minute.',
   actionConnectFree: 'Connect a free AI',
   errFreeLimit:
     "Today's free allowance is used up. Try again tomorrow, or choose another AI in Settings.",

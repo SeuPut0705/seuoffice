@@ -565,6 +565,9 @@ export const cs = {
     'Export do CSV vyžaduje plně načtený sešit — počkejte na dokončení načítání.',
   appCsvExportTooLarge: 'List je příliš velký na export do CSV.',
   appCsvExportCanceled: 'Export do CSV zrušen.',
+  appOdsExported: 'Exportováno {path}.',
+  appOdsExportCanceled: 'Export do ODS zrušen.',
+  appOdsExportFailed: 'Export do ODS selhal.',
   appCsvExported: 'Exportováno {path}.',
   appCsvExportedActiveOnly:
     'CSV obsahuje jediný list — aktivní list „{name}“ byl exportován do {path}.',
@@ -712,6 +715,13 @@ export const cs = {
   appSaveAs: 'Uložit jako',
   appUndo: 'Zpět',
   appRedo: 'Znovu',
+  appQuickAccessCustomize: 'Přizpůsobit panel nástrojů Rychlý přístup',
+  appQuickAccessHint:
+    'Stisknutím klávesy Alt a číslice spustíte tlačítko na dané pozici počítáno zleva.',
+  appQuickAccessMoveEarlier: 'Přesunout blíž k začátku',
+  appQuickAccessMoveLater: 'Přesunout blíž ke konci',
+  appQuickAccessReset: 'Obnovit výchozí',
+  appQuickAccessFull: 'Na panel se vejde nejvýše 10 tlačítek.',
   appUnsavedEditOne: '● {count} neuložená úprava',
   appUnsavedEditMany: '● {count} neuložených úprav',
   appSavedState: 'Uloženo',

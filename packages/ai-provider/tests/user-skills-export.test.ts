@@ -65,6 +65,27 @@ describe('exportSkillZip', () => {
     expect(readdirSync(dirname(out))).toEqual(['report.zip'])
   })
 
+  it('suggests the title as the file name when the skill has one', async () => {
+    const titled = (title: string) =>
+      `---\nname: skill-ehef0a\ndescription: Letter\nmetadata:\n  ieum-title: ${title}\n---\nWrite.\n`
+    const dir = join(temp(), 'skill-ehef0a')
+    writeTree(dir, { 'SKILL.md': titled('가정통신문·안내문 쓰기') })
+    const info = await skillExportInfo(dir)
+    expect(info.fileName).toBe('가정통신문·안내문 쓰기.zip')
+    // the folder inside the zip is still the name: that is what an import reads
+    expect(info.name).toBe('skill-ehef0a')
+
+    // characters a Windows file name cannot hold are taken out, as for a bundle
+    const odd = join(temp(), 'skill-ehef0a')
+    writeTree(odd, { 'SKILL.md': titled('"Q&A: 1/2?"') })
+    expect((await skillExportInfo(odd)).fileName).toBe('Q&A 12.zip')
+
+    // a title with nothing usable left falls back to the name
+    const empty = join(temp(), 'skill-ehef0a')
+    writeTree(empty, { 'SKILL.md': titled('"???"') })
+    expect((await skillExportInfo(empty)).fileName).toBe('skill-ehef0a.zip')
+  })
+
   it('says when a template document goes in', async () => {
     const dir = join(temp(), 'report')
     writeTree(dir, { ...skill('assets/form.docx'), 'assets/form.docx': 'doc' })

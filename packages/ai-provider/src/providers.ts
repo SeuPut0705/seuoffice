@@ -40,6 +40,7 @@ export const AI_PROVIDERS: AiProviderMeta[] = [
     models: ['opus', 'sonnet', 'haiku'],
     defaultModel: '',
     keyPlaceholder: '',
+    needsCliPath: true,
   },
   {
     id: 'chatgpt',

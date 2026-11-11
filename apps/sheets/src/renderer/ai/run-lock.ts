@@ -176,8 +176,11 @@ export function aiRunOpenRefusal(): string | null {
   return aiRunLock.active ? t('appAiRunLocked') : null
 }
 
-/** The ways a save can be asked for; the two that write the file reopen it afterwards. */
-export type SaveRefusalMode = 'save' | 'save-as' | 'recovery' | 'template'
+/**
+ * The ways a save can be asked for; the two that write the file reopen it afterwards. `ods`
+ * gathers the pending edits for an ODS export and writes nothing.
+ */
+export type SaveRefusalMode = 'save' | 'save-as' | 'recovery' | 'template' | 'ods'
 
 /**
  * Why a save must not write the workbook right now, or null when it may. A copy (recovery,

@@ -147,9 +147,25 @@ export const savePassageMarks = (on: boolean, storage: FlagStorage = localStorag
 
 export const DEFAULT_FIT_KEY = 'genoffice-pdf-default-fit'
 
-export const DEFAULT_VIEWS = ['width', 'page', 'actual'] as const
+/** Fit modes, then fixed zoom percentages; 'actual' is 100% (the value earlier builds stored) */
+export const DEFAULT_VIEWS = [
+  'width',
+  'page',
+  '50',
+  '75',
+  '80',
+  '90',
+  'actual',
+  '125',
+  '150',
+  '200',
+] as const
 
 export type DefaultView = (typeof DEFAULT_VIEWS)[number]
+
+/** Zoom percentage of a fixed-zoom default view; null for the fit modes */
+export const defaultViewPercent = (view: DefaultView): number | null =>
+  view === 'width' || view === 'page' ? null : view === 'actual' ? 100 : Number(view)
 
 export const parseDefaultView = (raw: string | null): DefaultView =>
   DEFAULT_VIEWS.find((view) => view === raw) ?? 'width'
@@ -173,7 +189,8 @@ export const saveDefaultView = (view: DefaultView, storage: FlagStorage = localS
 export const openingView = (chosen: PdfZoom | null, fallback: DefaultView): PdfZoom => {
   if (chosen)
     return chosen.fitMode === null ? { fitMode: null, scale: clampScale(chosen.scale) } : chosen
-  return fallback === 'actual' ? { fitMode: null, scale: 1 } : { fitMode: fallback }
+  if (fallback === 'width' || fallback === 'page') return { fitMode: fallback }
+  return { fitMode: null, scale: defaultViewPercent(fallback)! / 100 }
 }
 
 // ── Sidebar open or closed: a closed sidebar stays closed in the next PDF; open starts on the thumbnails ──

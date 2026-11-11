@@ -4,11 +4,11 @@ A skill is a set of working instructions for the AI. Write down something you do
 
 ## Turning skills on and off
 
-**Settings ▸ Skills** lists the skills on this PC, grouped by where they come from. Each skill is shown by its name, the way coding agents show it. Use the search box at the top to find one by name or description.
+**Settings ▸ Skills** lists the skills on this PC, grouped by where they come from. Each skill is shown by its name, the way coding agents show it. Use the search box at the top to find one by name or description. A skill of yours that has a title shows the title in this list, in the `/` list and on chips, with the name in small text beside it. You can search by the title too. A name the app made up (`skill-…`) is not shown beside the title.
 
 | Source                   | What it holds                                     | At first |
 | ------------------------ | ------------------------------------------------- | -------- |
-| **Built-in**             | The 5 skills that come with GenOffice             | On       |
+| **Built-in**             | The skills that come with GenOffice               | On       |
 | **My skills**            | Skills you added or made (`~/.ieumoffice/skills`) | On       |
 | **Claude skills folder** | The skills in `~/.claude/skills`                  | Off      |
 | **Claude plugins**       | The skills of installed Claude plugins            | Off      |
@@ -16,32 +16,37 @@ A skill is a set of working instructions for the AI. Write down something you do
 
 - The switch turns a skill on or off. The same setting applies to the AI panel of every editor, Ask AI on Home, and the agent window.
 - For a skill that is on, choose **AI decides** or **Only when called**. It starts as AI decides. With Only when called, the skill is used only when you call it yourself.
-- Skills from different sources can share a name. The source label on each row tells them apart.
-- The more menu has **View contents**, **Edit** (my skills only), **Export (zip)** (my skills only) and **Open folder**.
+- Skills from different sources can share a name. The source label on each row tells them apart. When two skills of one name are both on, only one is listed under `/` and used: the first in the order My skills, Built-in, Claude skills folder, Codex skills folder, Claude plugins. The row of the other says which skill is used instead.
+- The more menu has **View contents**, **Edit** (my skills only), **Export (zip)** (my skills only) and **Open folder**. Built-in skills have no **Open folder**. **Where it is used** opens straight on the place where you choose the editors the skill is used in.
+- My skills are kept in the `~/.ieumoffice/skills` folder. On Windows that is `C:\Users\<your user name>\.ieumoffice\skills`. **Open folder** in the more menu opens the skill’s folder.
 - **Move to trash** moves one of my skills to the system trash, where you can restore it.
 - A built-in skill is hidden instead of removed: choose **Hide**. **Show again** at the bottom of the list brings it back as it was at first.
 - To change a built-in skill or one from another program, choose **Copy to my skills**. The copy appears in my skills and the original is turned off.
 - Exporting a skill with a template puts the template document in the zip too. Check the document holds no personal information before you export it.
+- **Export several** at the top of the page puts the skills you tick into one zip file, a folder per skill. Whoever gets the zip adds it the same way as any skill zip, and can pick which of its skills to install.
 
 ## Adding a skill
 
 1. In **Settings ▸ Skills**, click **Add**.
-2. Choose **From a folder**, **From a zip file** or **From a GitHub link**. For GitHub, enter the address of a public repository or `owner/repo` and click **Find**.
-3. Check the skills found in the preview. It shows the number and size of the files, whether there are scripts, the web addresses in the text, and the license file.
+2. Choose **From a folder**, **From a zip file**, **From pasted text** or **From a GitHub link**. For pasted text, paste the whole `SKILL.md`, from its first `---` line, and click **Preview**. For GitHub, enter the address of a public repository, `owner/repo`, or a skill's page on skills.sh, and click **Find**.
+3. Check the skills found in the preview. It shows the number and size of the files, whether there are scripts, the web addresses in the text, the license file, and the lines worth reading before you install. **View contents** under a skill opens its `SKILL.md` text and its text files, so you can read them before installing.
 4. Tick only the skills to install and click **Install**. Installed skills start turned on.
 
 Below the preview it always says: "Install skills only from sources you trust. A skill gives the AI instructions, and in the agent window it can run scripts." Read a skill from an unknown source before you install it.
 
-- If my skills already have one with the same name, choose **Replace** or **Skip** on that row.
+- If my skills already have one with the same name, choose **Replace** or **Skip** on that row. **Replace** keeps the skill's settings: on or off, AI decides / Only when called, and where it is used.
+- You can also drop a skill's zip file or a `SKILL.md` file onto any GenOffice window. **Settings ▸ Skills** opens with the same preview. A zip counts as a skill when `SKILL.md` sits at its top or every top folder holds one; for any other zip dropped on its own, **Settings ▸ Skills** says "No skills found". A `SKILL.md` file comes in alone: put a skill with more files in a zip.
+- **Lines worth reading** are lines that ask the AI to ignore earlier instructions, to keep something from you, or to take instructions from an outside address, and `../` paths that point outside the skill folder. Each shows its file and line. They do not stop the install, and a skill with no such lines is not therefore safe.
 - When it downloads from GitHub, GenOffice connects only to `github.com`, `api.github.com` and `codeload.github.com`, and sends no sign-in data. If the archive is too large or fails the safety checks, nothing is installed.
-- **New skill** opens an empty editor where you write the name, description and instructions yourself.
+- A skill's page on skills.sh (`https://skills.sh/owner/repo/skill`) is read as that skill in the GitHub repository `owner/repo`. GenOffice does not connect to skills.sh.
+- **New skill** opens an empty editor where you write the name, description and instructions yourself. The **Title** field at the top takes a title in any language; the name is filled in from the title and you can change it. If an enabled skill from another source has the same name, you are asked before saving, and saving turns that skill off. When the title has no Latin letters or digits, the name is filled in as `skill-` followed by a few characters. The name is what other programs and the `/` call use, so it can stay as it is.
 
 ## Checking for updates
 
 - For a skill installed from GitHub, **Check for updates** in the more menu looks for new content. GitHub is contacted only when you click it.
 - If nothing changed, it says "Up to date". If something did, review the changed files and the preview, then click **Update**.
 - If you edited the skill yourself after installing it, "Your own edits will be lost" is shown as well.
-- Updating keeps the skill's on/off state and its AI decides / Only when called choice.
+- Updating keeps the skill's on/off state, its AI decides / Only when called choice and where it is used.
 
 ## Calling a skill in the AI panel
 
@@ -66,11 +71,21 @@ Below the preview it always says: "Install skills only from sources you trust. A
 
 1. In the AI panel, say something like "Save what we just did as a skill" or "Make a skill that writes reports in our house style".
 2. The AI picks out the steps and rules worth repeating and shows a **New skill** card. Values used only this once, such as names and dates, stay out of the instructions.
-3. Check and edit the name, description and instructions on the card. The name is what the skill list shows and what you type after `/`: lowercase English letters, digits and hyphens.
+3. Check and edit the name, description and instructions on the card. The name is what the skill list shows and what you type after `/`: lowercase English letters, digits and hyphens. The **Title** field above the name takes the title the list shows, in any language.
 4. Click **Save**. The new skill is added to my skills, turned on, and appears in the `/` list right away.
 
 - No file is written until you click **Save**. If you click **Cancel**, the chat keeps it only as an "Unsaved skill proposal".
 - You can also ask to change an existing skill, such as "Change the meeting minutes skill to the way we do it". The card is then titled **Change skill**. One of my skills is overwritten with **Replace**; a built-in skill or one from another program is saved as a copy in my skills and the original is turned off.
+
+## Choosing where a skill is used
+
+A skill that fits only one kind of document, such as styling slides or tidying a spreadsheet, can be shown only in that editor's AI panel. The `/` list and the list of skills the AI uses on its own get shorter in the other editors, so the AI picks the right skill more often.
+
+- For one of my skills, open **Edit** and choose **Every editor** or **Only these editors** under **Where it is used**. The editors you choose are written in the skill's file, so they go along when you export the skill or move it to another program. **Only these editors** starts with nothing checked; **Check all** and **Clear all** change them all at once.
+- For a built-in skill or one from another program, change it under **Where it is used** in **View contents**. This is kept in this PC's settings only; the skill's file stays as it is.
+- A skill not used in every editor says so on its row, for example "Used in: Slides".
+- When the AI makes a skill that fits only one format, it proposes where to use it; otherwise it leaves every editor. You can change it under **Where it is used** on the card before you save.
+- Ask AI on Home and the agent window use every skill that is on, wherever it is set to be used.
 
 ## Adding a document as a template
 
@@ -96,15 +111,25 @@ When you make a skill in an editor's AI panel, the current document can go along
 
 ## Built-in skills
 
-| Skill             | What it does                                                                          |
-| ----------------- | ------------------------------------------------------------------------------------- |
-| `meeting-minutes` | Turns meeting notes into minutes that show the decisions and action items             |
-| `internal-comms`  | Writes announcements, newsletters, progress updates, FAQs and other internal messages |
-| `humanizer`       | Finds phrasing that sounds AI-written and makes it natural                            |
-| `copy-editing`    | Goes over English text you have written and makes it clearer and tighter              |
-| `find-skills`     | Finds skills you need in the agent window and suggests installing them                |
+| Skill                         | What it does                                                                                                                                                                             |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Turns meeting notes into minutes that show the decisions and action items                                                                                                                |
+| `internal-comms`              | Writes announcements, newsletters, progress updates, FAQs and other internal messages                                                                                                    |
+| `humanizer`                   | Finds phrasing that sounds AI-written and makes it natural                                                                                                                               |
+| `copy-editing`                | Goes over English text you have written and makes it clearer and tighter                                                                                                                 |
+| `find-skills`                 | Finds skills you need in the agent window and suggests installing them                                                                                                                   |
+| `administration-report`       | Brings a report in line with the Ministry of the Interior and Safety guideline: prose, standard numbering, fonts that open anywhere, simple tables                                       |
+| `administration-report-draft` | Writes an administrative report from scratch in the ministry format: sections, the Ⅰ·1·가 numbering, prose, table titles and compatible fonts                                            |
+| `docx`                        | Works only in the agent window. Runs scripts to create, edit and read .docx files in the project folder. Python and other programs must be installed on this PC                          |
+| `pptx`                        | Works only in the agent window. Runs scripts to create, edit and read .pptx files in the project folder. Python and other programs must be installed on this PC                          |
+| `xlsx`                        | Works only in the agent window. Runs scripts to create and edit .xlsx files in the project folder and recalculate their formulas. Python and other programs must be installed on this PC |
+| `pdf`                         | Works only in the agent window. Runs scripts to read, merge and split .pdf files in the project folder and fill in forms. Python and other programs must be installed on this PC         |
+| `hwp-document`                | Writes a new .hwp or .hwpx document from scratch: picks the parts for a report, plan, notice, official letter or minutes, writes it in document style, and checks it at the end          |
+| `mindmap`                     | Builds a mind map from a topic or material: three to seven balanced main branches, short titles with the detail in notes, and a structure check at the end                               |
+| `diagram`                     | Draws a clear diagram: picks the type that fits, keeps one direction, short labels and few colours, and checks for overlaps and loose shapes                                             |
+| `html-document`               | Makes an HTML document that reads well on screen and prints cleanly: settles the reader, length and paper first, then checks the pages and the content                                   |
 
-`copy-editing` is made for English marketing text. `find-skills` works only in the agent window.
+`copy-editing` is made for English marketing text. `find-skills` works only in the agent window. In a built-in skill’s **View contents**, the description is in the UI language and the instructions are the text given to the AI, shown as written (in English). `docx`, `pptx`, `xlsx` and `pdf` work only in the agent window; they run scripts, so Python and other programs must be installed on this PC. `hwp-document`, `mindmap`, `diagram` and `html-document` are each used only in the editor they are written for.
 
 ## In the agent window
 

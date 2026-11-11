@@ -11,11 +11,13 @@ import type {
   AiSubscriptionStatus,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
+import { LANGS } from '@genoffice/i18n'
 import { aiSubscriptionText } from '@genoffice/ui'
 import type { HomeApi } from '../src/shared/home-api'
 import type { SubscriptionApi } from '../src/shared/subscription-api'
 import { Home } from '../src/renderer/src/Home'
 import { LocaleProvider } from '../src/renderer/src/locale'
+import { strings } from '../src/renderer/src/strings'
 import type { SubscriptionConnection } from '../src/renderer/src/subscription-client'
 
 const actEnvironment = globalThis as typeof globalThis & {
@@ -25,6 +27,8 @@ actEnvironment.IS_REACT_ACT_ENVIRONMENT = true
 
 let host: HTMLDivElement
 let root: Root
+/** the listener Home gave `onOpenSettings`: the main process asking for Settings */
+let askForSettings: ((target: { section: string }) => void) | undefined
 
 /** every home call answers with something harmless; the calls this file cares about are named */
 function installHome(): void {
@@ -48,6 +52,10 @@ function installHome(): void {
     getUpdateChannel: async () => 'stable',
     getAppVersion: async () => '1.0.0',
     getCodexModels: async () => ({ models: [], defaultModel: '' }),
+    onOpenSettings: (handler: (target: { section: string }) => void) => {
+      askForSettings = handler
+      return () => undefined
+    },
   }
   window.aiOffice = new Proxy(known, {
     get: (target, name: string) =>
@@ -94,6 +102,8 @@ function statuses(
 }
 
 interface RenderOptions {
+  welcomeOpen?: boolean
+  onSettingsOpenChange?: (open: boolean) => void
   noticeDue?: boolean
   onNoticeAcknowledge?: () => void
   aiSettings?: AiSettings | null
@@ -126,6 +136,10 @@ async function renderHome(map: SubscriptionStatusMap, options: RenderOptions = {
           aiSettings: options.aiSettings === undefined ? defaultAiSettings() : options.aiSettings,
           noticeDue: options.noticeDue ?? false,
           onNoticeAcknowledge: options.onNoticeAcknowledge ?? vi.fn(),
+          ...(options.welcomeOpen === undefined ? {} : { welcomeOpen: options.welcomeOpen }),
+          ...(options.onSettingsOpenChange
+            ? { onSettingsOpenChange: options.onSettingsOpenChange }
+            : {}),
         }),
       ),
     )
@@ -242,6 +256,59 @@ describe('home settings entry', () => {
     await click(host.querySelector('.set-close'))
     expect(host.querySelector('.set-sub-cards')).toBeNull()
     expect(refresh).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('the word Settings on the home entry', () => {
+  const label = () => entryText('.account-settings')
+
+  it('is in sight beside the AI connection, whatever that connection is', async () => {
+    await renderHome(statuses({ state: 'ready', planName: 'max' }, { state: 'signed-out' }))
+    expect(label()).toBe('Settings')
+    // the connection it shows is still there
+    expect(entryText('.account-name')).toBe('Claude')
+    expect(entryText('.account-sub')).toBe('Connected · max')
+
+    await renderHome(statuses({ state: 'not-installed' }, { state: 'signed-out' }))
+    expect(label()).toBe('Settings')
+    expect(entryText('.account-name')).toBe(aiSubscriptionText('en', 'pickerNotConnected'))
+
+    await renderHome(statuses({ state: 'checking' }, { state: 'checking' }))
+    expect(label()).toBe('Settings')
+  })
+
+  it('has a word in every language', () => {
+    for (const lang of LANGS) {
+      // read from the dictionary itself: the lookup falls back to English for a missing word
+      const word = strings[lang].settings
+      expect(word.trim(), lang).not.toBe('')
+      if (lang !== 'en') expect(word, lang).not.toBe('Settings')
+    }
+  })
+})
+
+describe('a request for Settings while the welcome window is up', () => {
+  const none = statuses({ state: 'signed-out' }, { state: 'signed-out' })
+  const dialog = () => host.querySelector('.set-dialog')
+  const overlay = () => host.querySelector('.set-overlay')
+
+  it('opens at once where it was asked, marked to stack above that window', async () => {
+    const onSettingsOpenChange = vi.fn()
+    await renderHome(none, { welcomeOpen: true, onSettingsOpenChange })
+    // a skill file dropped on the window: the main process asks for Settings → Skills
+    await act(async () => askForSettings!({ section: 'skills' }))
+    expect(dialog()).not.toBeNull()
+    expect(host.querySelector('.set-nav-item.active')?.textContent).toContain('Skills')
+    expect(overlay()!.classList.contains('over-welcome')).toBe(true)
+    // the welcome window is told, so it leaves the keyboard alone meanwhile
+    expect(onSettingsOpenChange).toHaveBeenLastCalledWith(true)
+  })
+
+  it('is not marked when no welcome window is up', async () => {
+    await renderHome(none)
+    await act(async () => askForSettings!({ section: 'skills' }))
+    expect(dialog()).not.toBeNull()
+    expect(overlay()!.classList.contains('over-welcome')).toBe(false)
   })
 })
 

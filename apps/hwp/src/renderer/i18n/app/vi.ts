@@ -8,6 +8,7 @@ export const vi = {
   saveFailed: 'Không thể lưu tài liệu.',
   fileSave: 'Lưu',
   fileSaveAs: 'Lưu dưới dạng…',
+  fileImportPdf: 'Nhập PDF…',
   fileExportPdf: 'Xuất dưới dạng PDF…',
   filePrint: 'In…',
   autoSave: 'Tự động lưu',

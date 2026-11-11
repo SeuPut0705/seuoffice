@@ -19,6 +19,7 @@ import {
   CHATGPT_SCOPES,
   CHATGPT_TOKEN_URL,
   chatGptAuthorizeUrl,
+  exchangeChatGptCode,
   refreshChatGptTokens,
   verifyChatGptIdToken,
 } from '../src/chatgpt/oauth'
@@ -138,7 +139,7 @@ describe('the sign-in page address', () => {
     const p = url.searchParams
     expect(p.get('client_id')).toBe(CHATGPT_DYNAMIC_CLIENT_ID)
     expect(p.get('agent_name_hint')).toBe('IeumOffice')
-    expect(p.get('redirect_uri')).toBe('http://127.0.0.1:4321/callback')
+    expect(p.get('redirect_uri')).toBe('http://127.0.0.1:4321/auth/callback')
     expect(p.get('scope')?.split(' ')).toContain(CHATGPT_PLAN_SCOPE)
     expect(p.get('resource')).toBe(CHATGPT_RESOURCE)
     expect(p.get('code_challenge_method')).toBe('S256')
@@ -161,6 +162,78 @@ describe('the sign-in page address', () => {
     )
     expect(url.searchParams.get('client_id')).toBe('oaiapp_1')
     expect(url.searchParams.has('agent_name_hint')).toBe(false)
+  })
+
+  it('comes back to the path the attempt names', () => {
+    const url = new URL(
+      chatGptAuthorizeUrl({
+        port: 1,
+        challenge: 'c',
+        state: 's',
+        nonce: 'n',
+        hostId: 'urn:uuid:00000000-0000-4000-8000-000000000000',
+        clientId: 'oaiapp_1',
+        callbackPath: '/callback',
+        agentName: 'IeumOffice',
+      }),
+    )
+    expect(url.searchParams.get('redirect_uri')).toBe('http://127.0.0.1:1/callback')
+  })
+})
+
+describe('trading the code for tokens', () => {
+  const request = { code: 'c', clientId: 'oaiapp_1', verifier: 'v', port: 4321 }
+  const used = (): Response => json({ error: 'invalid_grant' }, 400)
+
+  it('sends the callback address the code was asked for with', async () => {
+    const sent: string[] = []
+    const fetchImpl = async (_url: string, init: RequestInit): Promise<Response> => {
+      sent.push(new URLSearchParams(String(init.body)).get('redirect_uri') ?? '')
+      return used()
+    }
+    await exchangeChatGptCode(request, fetchImpl)
+    await exchangeChatGptCode({ ...request, callbackPath: '/callback' }, fetchImpl)
+    expect(sent).toEqual(['http://127.0.0.1:4321/auth/callback', 'http://127.0.0.1:4321/callback'])
+  })
+
+  it('reads a used code it had to send twice as the network, not as OpenAI refusing', async () => {
+    for (const why of ['failed', 'busy'] as const) {
+      const result = await exchangeChatGptCode(request, async (_url, _init, watch) => {
+        // the first try did not come back and the same code went out again
+        watch?.onResend?.(why)
+        return used()
+      })
+      expect(result).toEqual({
+        ok: false,
+        reason: 'network',
+        step: 'token-resent',
+        httpStatus: 400,
+        oauthError: 'invalid_grant',
+      })
+    }
+  })
+
+  it('keeps a refusal as one when the code reached OpenAI once', async () => {
+    const once = await exchangeChatGptCode(request, async () => used())
+    expect(once).toMatchObject({ reason: 'denied', step: 'token-refused' })
+    // a block page answered the first try: OpenAI saw the code only the second time
+    const pastBlock = await exchangeChatGptCode(request, async (_url, _init, watch) => {
+      watch?.onResend?.('blocked')
+      return used()
+    })
+    expect(pastBlock).toMatchObject({ reason: 'denied', step: 'token-refused' })
+    // another refusal of a code sent twice is still OpenAI's own answer
+    const policy = await exchangeChatGptCode(request, async (_url, _init, watch) => {
+      watch?.onResend?.('failed')
+      return json({ error: '3p_delegated_access_policy_denied' }, 403)
+    })
+    expect(policy).toEqual({
+      ok: false,
+      reason: 'denied',
+      step: 'token-refused',
+      httpStatus: 403,
+      oauthError: '3p_delegated_access_policy_denied',
+    })
   })
 })
 
@@ -263,6 +336,24 @@ describe('the stored connection', () => {
     expect(back.session?.refreshToken).toBe('refresh-1')
   })
 
+  it('keeps the callback path with the client id it was issued for', async () => {
+    const store = createChatGptConnectionFileStore(dir)
+    const { hostId } = await store.read()
+    await store.write({ hostId, clientId: 'oaiapp_1', callbackPath: '/auth/callback' })
+    expect(await store.read()).toMatchObject({
+      clientId: 'oaiapp_1',
+      callbackPath: '/auth/callback',
+    })
+    // a record of an earlier version has none
+    expect(chatGptConnectionOf({ hostId, clientId: 'oaiapp_1' }).callbackPath).toBeUndefined()
+    // a path without its client id, or a value that is no path, is dropped
+    expect(chatGptConnectionOf({ hostId, callbackPath: '/callback' }).callbackPath).toBeUndefined()
+    expect(
+      chatGptConnectionOf({ hostId, clientId: 'oaiapp_1', callbackPath: 'http://x.example/cb' })
+        .callbackPath,
+    ).toBeUndefined()
+  })
+
   it('reads tokens it cannot open, or a broken file, as no session', async () => {
     setAiSecretCodec({ seal: () => null, open: () => null })
     const path = join(dir, CHATGPT_CONNECTION_FILE)
@@ -310,11 +401,15 @@ describe('the connection', { timeout: 20_000 }, () => {
       ok: true,
     })
     expect(browser.opened[0]?.searchParams.get('redirect_uri')).toMatch(
-      /^http:\/\/127\.0\.0\.1:\d+\/callback$/,
+      /^http:\/\/127\.0\.0\.1:\d+\/auth\/callback$/,
     )
     expect(changes).toBe(1)
     expect(await connection.state()).toEqual({ signedIn: true, account: 'someone@example.com' })
-    expect(store.current()).toMatchObject({ clientId: 'oaiapp_1', subject: 'user-123' })
+    expect(store.current()).toMatchObject({
+      clientId: 'oaiapp_1',
+      callbackPath: '/auth/callback',
+      subject: 'user-123',
+    })
     expect(JSON.stringify(store.current())).not.toContain('someone@example.com')
     expect(await connection.accessToken()).toBe('access-1')
     expect(await detectChatGptConnection(connection)).toEqual({
@@ -492,6 +587,101 @@ describe('the connection', { timeout: 20_000 }, () => {
       back: (state) => ({ state, code: 'c' }),
     })
     expect(result).toEqual({ ok: false, reason: 'denied', step: 'callback-incomplete' })
+  })
+
+  it('signs an issued client id in again on its own path, the id left out of the callback', async () => {
+    // a record of 0.12.12 or before: an issued id, registered on the old path, no path kept
+    const store = createChatGptConnectionMemoryStore({
+      hostId: 'urn:uuid:00000000-0000-4000-8000-000000000000',
+      clientId: 'oaiapp_1',
+      subject: 'user-123',
+    })
+    const oldPath = /^http:\/\/127\.0\.0\.1:\d+\/callback$/
+    let nonce = ''
+    const openai = fakeOpenAi((body) => {
+      expect(body.get('client_id')).toBe('oaiapp_1')
+      expect(body.get('redirect_uri')).toMatch(oldPath)
+      return signedInTokens(nonce)
+    })
+    const browser = browserReturning((authorize) => {
+      nonce = authorize.searchParams.get('nonce')!
+      // OpenAI may leave the client id out when an issued one signs in again
+      return { code: 'c', state: authorize.searchParams.get('state')! }
+    })
+    const connection = createChatGptConnection({
+      store,
+      agentName: 'x',
+      fetch: openai.fetch,
+      now: () => NOW,
+    })
+    expect(await connection.signIn({ openBrowser: browser.open, pages: PAGES })).toEqual({
+      ok: true,
+    })
+    expect(browser.opened[0]?.searchParams.get('client_id')).toBe('oaiapp_1')
+    expect(browser.opened[0]?.searchParams.get('redirect_uri')).toMatch(oldPath)
+    expect(store.current()).toMatchObject({ clientId: 'oaiapp_1', callbackPath: '/callback' })
+    expect(store.current().session?.accessToken).toBe('access-1')
+  })
+
+  it('refuses a callback naming another client id than the one signing in again', async () => {
+    const store = createChatGptConnectionMemoryStore({
+      hostId: 'urn:uuid:00000000-0000-4000-8000-000000000000',
+      clientId: 'oaiapp_1',
+      callbackPath: '/auth/callback',
+      subject: 'user-123',
+    })
+    const tokenCalls: string[] = []
+    const connection = createChatGptConnection({
+      store,
+      agentName: 'x',
+      fetch: async (url) => {
+        tokenCalls.push(url)
+        return json({}, 500)
+      },
+      now: () => NOW,
+    })
+    const browser = browserReturning((authorize) => ({
+      code: 'c',
+      state: authorize.searchParams.get('state')!,
+      client_id: 'oaiapp_2',
+    }))
+    expect(await connection.signIn({ openBrowser: browser.open, pages: PAGES })).toEqual({
+      ok: false,
+      reason: 'denied',
+      step: 'callback-client-mismatch',
+    })
+    // the code is not traded, and the record keeps its own id
+    expect(tokenCalls).toEqual([])
+    expect(store.current()).toMatchObject({ clientId: 'oaiapp_1', callbackPath: '/auth/callback' })
+  })
+
+  it('answers the callback only on the path this attempt asked for', async () => {
+    let nonce = ''
+    const openai = fakeOpenAi(() => signedInTokens(nonce))
+    const connection = createChatGptConnection({
+      store: createChatGptConnectionMemoryStore(),
+      agentName: 'x',
+      fetch: openai.fetch,
+      now: () => NOW,
+    })
+    let otherPath = 0
+    const open = async (url: string): Promise<boolean> => {
+      const authorize = new URL(url)
+      nonce = authorize.searchParams.get('nonce')!
+      const back = new URL(authorize.searchParams.get('redirect_uri')!)
+      back.searchParams.set('state', authorize.searchParams.get('state')!)
+      back.searchParams.set('code', 'c')
+      back.searchParams.set('client_id', 'oaiapp_1')
+      setTimeout(async () => {
+        const other = new URL(back)
+        other.pathname = '/callback'
+        otherPath = (await fetch(other)).status
+        await fetch(back)
+      }, 5)
+      return true
+    }
+    expect(await connection.signIn({ openBrowser: open, pages: PAGES })).toEqual({ ok: true })
+    expect(otherPath).toBe(404)
   })
 
   it('names a token endpoint that cannot be reached, and an answer it cannot use', async () => {

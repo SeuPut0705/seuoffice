@@ -8,6 +8,7 @@ export const id = {
   saveFailed: 'Dokumen tidak dapat disimpan.',
   fileSave: 'Simpan',
   fileSaveAs: 'Simpan Sebagai…',
+  fileImportPdf: 'Impor PDF…',
   fileExportPdf: 'Ekspor sebagai PDF…',
   filePrint: 'Cetak…',
   autoSave: 'Simpan otomatis',

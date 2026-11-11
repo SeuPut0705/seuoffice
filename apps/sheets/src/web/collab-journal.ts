@@ -234,7 +234,7 @@ export function journalMark(journal: EditJournal, mutation: Mutation): JournalRe
   return wholeMark(journal)
 }
 
-/** What one save request may carry (shared/desktop-api.ts, `structuralOps`) */
+/** The bound co-editing keeps on one request's `structuralOps`; the request schema allows more (shared/ipc-channels.ts) */
 export const STRUCTURAL_OPS_LIMIT = 1_000
 /** Room left for the edits several people make before they see each other's */
 const STRUCTURAL_OPS_ROOM = 100

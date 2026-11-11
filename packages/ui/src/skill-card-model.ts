@@ -1,4 +1,4 @@
-import { proposedTitleOf, type SkillProposal } from '@genoffice/agent-core'
+import { proposedTitleOf, type SkillEditorId, type SkillProposal } from '@genoffice/agent-core'
 import type { SkillCardStringKey } from './strings-skill-card'
 
 /**
@@ -33,6 +33,10 @@ export interface SkillCardSaveInput {
   template?: SkillCardTemplate | undefined
   targetId?: string | undefined
   overwrite?: boolean | undefined
+  /** where the skill is used, written to its `metadata.ieum-editors` */
+  editors?: 'all' | SkillEditorId[] | undefined
+  /** the person agreed: enabled skills of other sources with this name are turned off */
+  turnOffSameName?: boolean | undefined
 }
 
 /** The calls of `window.aiOfficeUserSkills` the card uses */
@@ -100,6 +104,7 @@ export function skillCardMode(proposal: Pick<SkillProposal, 'target'>): SkillCar
 
 /** The fields the person edits */
 export interface SkillCardDraft {
+  /** the title lists show, in any language; '' shows the name */
   title: string
   name: string
   description: string
@@ -107,22 +112,52 @@ export interface SkillCardDraft {
   invoke: 'auto' | 'manual'
   /** "save this document along as a template" is checked */
   withTemplate: boolean
+  /** where the skill is used: every editor, or the checked ones (none checked blocks Save) */
+  editors: 'all' | SkillEditorId[]
+}
+
+/** The title a changed skill has now ('' when lists show its name) */
+function targetTitle(proposal: SkillProposal): string {
+  const target = proposal.target
+  return target && target.title !== target.name ? target.title : ''
 }
 
 /**
- * The card's starting fields: the model's text, its name (else the name of
- * the skill being changed; a new skill without one gets a suggested name),
- * "used on its own", and the template box checked when the model wants one.
+ * The card's starting fields: the model's text, its title (else the title of
+ * the skill being changed), its name (else the name of the skill being
+ * changed; a new skill without one gets a name from the title), "used on its
+ * own", the template box checked when the model wants one, and where it is
+ * used: what the model named, else where the changed skill is used now, else
+ * every editor (never just the editor the card is shown in).
  */
 export function initialSkillCardDraft(proposal: SkillProposal): SkillCardDraft {
   return {
-    title: proposal.title,
+    title: proposal.title || targetTitle(proposal),
     name: proposal.name || proposal.target?.name || '',
     description: proposal.description,
     body: proposal.body,
     invoke: 'auto',
     withTemplate: proposal.wantsTemplate,
+    editors: proposal.editors ?? proposal.target?.editors ?? 'all',
   }
+}
+
+/** What a card is called once it is closed: the title, else the name */
+export function skillCardDraftLabel(draft: Pick<SkillCardDraft, 'title' | 'name'>): string {
+  return draft.title.trim() || draft.name.trim()
+}
+
+/**
+ * Whether a card starts with its name following the title as it is typed:
+ * only for a new skill whose name nobody gave yet. A name the model gave and
+ * the name of a skill being changed stay; so does a name once the person
+ * typed in it.
+ */
+export function skillCardNameFollowsTitle(
+  proposal: SkillProposal,
+  start: Pick<SkillCardDraft, 'name'>,
+): boolean {
+  return !proposal.target && !start.name
 }
 
 /** The name is the changed skill's own name (kept as is; the strict rule is for new names) */
@@ -173,7 +208,7 @@ export function skillCardNameVerdict(
 /**
  * Why Save is blocked, or null (spec 9.12): an empty description or body, or
  * a name the rule refuses. The description is required by the shell's save as
- * well. The title is optional: lists show the name.
+ * well. The title is optional: without one, lists show the name.
  */
 export function skillCardSaveBlock(
   draft: SkillCardDraft,
@@ -184,6 +219,11 @@ export function skillCardSaveBlock(
   return nameBlock
 }
 
+/** Whether Save waits for an editor to be checked ("only these editors" with none) */
+export function skillCardEditorsBlocked(draft: Pick<SkillCardDraft, 'editors'>): boolean {
+  return draft.editors !== 'all' && draft.editors.length === 0
+}
+
 /**
  * What Save hands to the shell. A change carries the skill it changes: the
  * shell rewrites an own skill, and copies another source's skill into mine
@@ -192,7 +232,11 @@ export function skillCardSaveBlock(
 export function skillCardSaveInput(
   draft: SkillCardDraft,
   proposal: SkillProposal,
-  options: { overwrite?: boolean; template?: SkillCardTemplate | undefined } = {},
+  options: {
+    overwrite?: boolean
+    template?: SkillCardTemplate | undefined
+    turnOffSameName?: boolean
+  } = {},
 ): SkillCardSaveInput {
   return {
     title: draft.title.trim(),
@@ -200,10 +244,30 @@ export function skillCardSaveInput(
     description: draft.description.trim(),
     body: draft.body,
     invoke: draft.invoke,
+    editors: draft.editors,
     ...(options.template ? { template: options.template } : {}),
     ...(proposal.target ? { targetId: proposal.target.id } : {}),
     ...(options.overwrite ? { overwrite: true } : {}),
+    ...(options.turnOffSameName ? { turnOffSameName: true } : {}),
   }
+}
+
+/** A save refused because an enabled skill of another source has the name (the card then asks) */
+export const SAME_NAME_ON = 'same-name-on'
+
+/**
+ * The sources a `same-name-on` refusal names (`builtin`, `user`, `codex`,
+ * `plugin:<plugin>`, joined by `,`), as a source label reads them.
+ */
+export function sameNameSourcesOf(
+  problem: string | undefined,
+): Array<{ source: string; plugin?: string | undefined }> {
+  return (problem ?? '')
+    .split(',')
+    .filter((part) => part !== '')
+    .map((part) =>
+      part.startsWith('plugin:') ? { source: 'plugin', plugin: part.slice(7) } : { source: part },
+    )
 }
 
 /** The line for a refused save */
@@ -296,7 +360,7 @@ function storedTitle(tool: StoredToolRecord): string {
   if (named) return named
   try {
     const input = JSON.parse(tool.input ?? '') as { name?: unknown; title?: unknown }
-    for (const value of [input.name, input.title]) {
+    for (const value of [input.title, input.name]) {
       if (typeof value === 'string' && value.trim()) return value.trim()
     }
   } catch {

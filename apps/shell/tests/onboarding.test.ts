@@ -73,6 +73,7 @@ interface RenderOptions {
   noticeDue?: boolean
   onNoticeAcknowledge?: () => void
   defaultApp?: DefaultAppStatus | null
+  covered?: boolean
 }
 
 function renderOnboarding(options: RenderOptions = {}): void {
@@ -87,6 +88,7 @@ function renderOnboarding(options: RenderOptions = {}): void {
           noticeDue: options.noticeDue ?? false,
           onNoticeAcknowledge: options.onNoticeAcknowledge ?? vi.fn(),
           defaultApp: options.defaultApp ?? null,
+          ...(options.covered === undefined ? {} : { covered: options.covered }),
         }),
       ),
     )
@@ -284,6 +286,27 @@ describe('Onboarding', () => {
       await Promise.resolve()
     })
     expect(onDone).toHaveBeenCalledTimes(2)
+  })
+
+  it('leaves the keyboard alone while Settings is open above it, and is still there after', async () => {
+    const onDone = vi.fn(async () => true)
+    renderOnboarding({ onDone, covered: true })
+    const press = async (key: string) =>
+      act(async () => {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key }))
+        await Promise.resolve()
+      })
+
+    // Escape closes the dropped skill's preview, Enter is typed in a field there
+    await press('Escape')
+    await press('Enter')
+    await press('ArrowRight')
+    expect(onDone).not.toHaveBeenCalled()
+    expect(activeStep()).toBe('welcome')
+
+    renderOnboarding({ onDone, covered: false })
+    await press('Escape')
+    expect(onDone).toHaveBeenCalledTimes(1)
   })
 
   it('asks which AI the user has on the connect step, then walks that one path on the live status', async () => {

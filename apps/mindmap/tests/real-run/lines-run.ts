@@ -304,6 +304,8 @@ async function main(): Promise<void> {
     await page.locator(`${LINE} [data-action="line-shape-straight"]`).click()
     await page.waitForTimeout(250)
     await pickFrom(page, `${LINE} .line-width`, '4')
+    // the colour is one row; its palette opens below it
+    await page.locator(`${LINE} [data-action="line-color"]`).click()
     const swatch = page.locator(`${LINE} .gcp-standard-row .gcp-swatch`).first()
     const swatchRgb = await swatch.evaluate((el) => getComputedStyle(el).backgroundColor)
     await swatch.click()

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createEditor } from '@rhwp/editor'
 import type { ChromeVisibility, RhwpEditor } from '@rhwp/editor'
 import type { Params } from '@genoffice/i18n'
+import { IconClose } from '@genoffice/ui/icons'
 import {
   aiPanelInitiallyOpen,
   rememberAiPanelOpen,
@@ -515,6 +516,7 @@ export default function App() {
       .installFileMenu({
         save: t('fileSave'),
         saveAs: t('fileSaveAs'),
+        importPdf: t('fileImportPdf'),
         pdf: t('fileExportPdf'),
         preview: t('filePreview'),
         print: t('filePrint'),
@@ -525,6 +527,7 @@ export default function App() {
       if (
         command === 'save' ||
         command === 'saveAs' ||
+        command === 'importPdf' ||
         command === 'pdf' ||
         command === 'preview' ||
         command === 'print'
@@ -1121,7 +1124,7 @@ export default function App() {
                 aria-label={t('dismiss')}
                 onClick={() => setNotice(null)}
               >
-                ×
+                <IconClose size={14} />
               </button>
             </div>
           )}

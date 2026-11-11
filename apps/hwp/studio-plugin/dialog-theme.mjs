@@ -17,7 +17,7 @@
  * the existing studio tokens) rather than a raw hex value.
  *
  * Design notes (docs/plans/hwp-dialog-design.md):
- * - paper-like surfaces, ink text, and one blue accent line: the editor's
+ * - paper-like surfaces, ink text, and one blue accent: the editor's
  *   chrome is a document tool, so the dialog should feel like paper on a desk,
  *   not like a web card.
  * - compact office density: 12px text, 26-30px controls, 4-8px radii.
@@ -66,7 +66,7 @@ export const DIALOG_THEME_CSS = `
   /* ink */
   --ieum-dialog-ink: #24292f;
   --ieum-dialog-ink-muted: #667085;
-  --ieum-dialog-ink-hint: #6f7889;
+  --ieum-dialog-ink-hint: #667085;
   --ieum-dialog-ink-disabled: #98a1af;
   --ieum-dialog-title-ink: #1f2937;
 
@@ -362,7 +362,7 @@ export const DIALOG_THEME_CSS = `
 }
 
 /* A tonal selected state keeps the solid accent for the one committing
-   action (the footer's primary button) and the dialog's blue edge. */
+   action (the footer's primary button). */
 :root[${DIALOG_THEME_ATTRIBUTE}] .dialog-btn-group button.active {
   background: var(--ieum-dialog-accent-soft);
   border-color: var(--ieum-dialog-accent-line);

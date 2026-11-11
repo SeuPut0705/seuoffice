@@ -6,7 +6,7 @@
  * start (the JS launcher on a Node runtime when that binary is not found).
  */
 import { constants } from 'node:fs'
-import { access, open, readdir, realpath, stat } from 'node:fs/promises'
+import { access, open, readdir, readFile, realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, delimiter, dirname, extname, isAbsolute, join, resolve, sep } from 'node:path'
 import { AiRunError } from '../run-error'
@@ -506,24 +506,92 @@ async function programInDir(
   return programFromFile(context, candidate, source)
 }
 
+/** nvm installs under `~/.nvm/versions/node/vX.Y.Z`. Prefer higher X.Y.Z first. */
+function compareNvmVersionDirsNewestFirst(a: string, b: string): number {
+  const parts = (name: string): number[] => {
+    const match = /^v?(\d+)\.(\d+)\.(\d+)/i.exec(name.trim())
+    return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : [-1, -1, -1]
+  }
+  const pa = parts(a)
+  const pb = parts(b)
+  for (let i = 0; i < 3; i++) {
+    if (pa[i]! !== pb[i]!) return pb[i]! - pa[i]!
+  }
+  // Equal numeric triples (or both unparsable): keep a stable string order.
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
 /**
  * Finder/Dock-launched Electron inherits a minimal PATH, so the directories
  * npm, Homebrew, version managers and the Claude installer (`~/.local/bin`)
  * install into are probed explicitly.
  */
-export async function commonUnixBinDirs(home: string): Promise<string[]> {
-  const dirs = ['/opt/homebrew/bin', '/usr/local/bin']
+export async function commonUnixBinDirs(
+  home: string,
+  env: NodeJS.ProcessEnv,
+  platform: NodeJS.Platform,
+): Promise<string[]> {
+  const dirs = ['/opt/homebrew/bin', '/usr/local/bin', '/opt/local/bin']
   if (home) {
+    // Tool managers that keep their data outside the home directory's dotfiles
+    const dataHome = cleanCliPath(env.XDG_DATA_HOME) || join(home, '.local', 'share')
+    const fnmRoot =
+      cleanCliPath(env.FNM_DIR) ||
+      (platform === 'darwin'
+        ? join(home, 'Library', 'Application Support', 'fnm')
+        : join(dataHome, 'fnm'))
+    const pnpmHome =
+      cleanCliPath(env.PNPM_HOME) ||
+      (platform === 'darwin' ? join(home, 'Library', 'pnpm') : join(dataHome, 'pnpm'))
     dirs.push(
       join(home, '.local', 'bin'),
       join(home, '.npm-global', 'bin'),
       join(home, '.volta', 'bin'),
       join(home, '.bun', 'bin'),
       join(home, '.yarn', 'bin'),
+      join(home, '.asdf', 'shims'),
+      join(dataHome, 'mise', 'shims'),
+      pnpmHome,
+      // the version fnm's `default` alias points at; its per-shell directories
+      // live under a process id and are gone by the next sign-in
+      join(fnmRoot, 'aliases', 'default', 'bin'),
+      ...(await npmPrefixDirs(env, platform, home)),
     )
     const nvmRoot = join(home, '.nvm', 'versions', 'node')
     const versions = await readdir(nvmRoot).catch(() => [] as string[])
-    for (const version of versions.sort().reverse()) dirs.push(join(nvmRoot, version, 'bin'))
+    // Newest first: String.sort is lexicographic, so "v8.x" sorts ahead of "v20.x".
+    for (const version of versions.sort(compareNvmVersionDirsNewestFirst)) {
+      dirs.push(join(nvmRoot, version, 'bin'))
+    }
+  }
+  return dirs
+}
+
+/**
+ * The bin directory of a global npm prefix the user moved (`npm config set
+ * prefix`, `NPM_CONFIG_PREFIX`), which PATH may not list for a GUI app. npm
+ * is not run to read it: `npm config set` writes the value to `~/.npmrc`.
+ */
+async function npmPrefixDirs(
+  env: NodeJS.ProcessEnv,
+  platform: NodeJS.Platform,
+  home: string,
+): Promise<string[]> {
+  const values = [env.npm_config_prefix, env.NPM_CONFIG_PREFIX]
+  if (home) {
+    const npmrc = await readFile(join(home, '.npmrc'), 'utf8').catch(() => '')
+    for (const line of npmrc.split(/\r?\n/)) {
+      const match = /^\s*prefix\s*=\s*(.*)$/.exec(line)
+      if (match) values.push(match[1])
+    }
+  }
+  const dirs: string[] = []
+  for (const value of values) {
+    const prefix = expandHome(cleanCliPath(value), home)
+    if (!isFullDir(prefix)) continue
+    // npm links a global command into `<prefix>/bin`; on Windows into the prefix itself
+    const dir = platform === 'win32' ? prefix : join(prefix, 'bin')
+    if (!dirs.includes(dir)) dirs.push(dir)
   }
   return dirs
 }
@@ -551,9 +619,9 @@ async function wingetCodexPackage(localAppData: string, arch: string): Promise<s
 }
 
 /** Places a CLI can be on Windows without being on the PATH the app inherited */
-function windowsFallbackDirs(
+async function windowsFallbackDirs(
   context: Context,
-): Array<{ dir: string; source: SubscriptionProgramSource }> {
+): Promise<Array<{ dir: string; source: SubscriptionProgramSource }>> {
   const { env, provider } = context
   const home = homeOf(env, 'win32')
   const appData = env.APPDATA ?? (home ? join(home, 'AppData', 'Roaming') : undefined)
@@ -564,6 +632,7 @@ function windowsFallbackDirs(
     dirs.push({ dir: join(home, '.local', 'bin'), source: 'native-installer' })
   }
   if (appData) dirs.push({ dir: join(appData, 'npm'), source: 'npm' })
+  for (const dir of await npmPrefixDirs(env, 'win32', home)) dirs.push({ dir, source: 'npm' })
   if (localAppData) {
     dirs.push({ dir: join(localAppData, 'Microsoft', 'WinGet', 'Links'), source: 'winget' })
   }
@@ -582,13 +651,13 @@ async function* programsByName(
     if (program) yield program
   }
   if (platform === 'win32') {
-    for (const { dir, source } of windowsFallbackDirs(context)) {
+    for (const { dir, source } of await windowsFallbackDirs(context)) {
       const program = await programInDir(context, dir, name, fallbackSource ?? source)
       if (program) yield program
     }
     return
   }
-  const dirs = context.commonDirs ?? (await commonUnixBinDirs(homeOf(env, platform)))
+  const dirs = context.commonDirs ?? (await commonUnixBinDirs(homeOf(env, platform), env, platform))
   for (const dir of dirs) {
     const program = await programInDir(context, dir, name, fallbackSource ?? 'path')
     if (program) yield program

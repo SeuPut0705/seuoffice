@@ -4,11 +4,11 @@ Skill adalah sekumpulan petunjuk kerja untuk AI. Tuliskan sekali saja hal yang A
 
 ## Mengaktifkan dan menonaktifkan skill
 
-**Pengaturan ▸ Skill** menampilkan skill yang ada di PC ini, dikelompokkan menurut asalnya. Setiap skill ditampilkan dengan namanya, seperti di agen pemrograman. Pakai kotak pencarian di bagian atas untuk mencari menurut nama atau deskripsi.
+**Pengaturan ▸ Skill** menampilkan skill yang ada di PC ini, dikelompokkan menurut asalnya. Setiap skill ditampilkan dengan namanya, seperti di agen pemrograman. Pakai kotak pencarian di bagian atas untuk mencari menurut nama atau deskripsi. Skill Anda yang memiliki judul menampilkan judul itu di daftar ini, di daftar `/`, dan pada chip, dengan nama berukuran kecil di sampingnya. Anda juga bisa mencari berdasarkan judul. Nama yang dibuat aplikasi (`skill-…`) tidak ditampilkan di samping judul.
 
 | Sumber                  | Isinya                                                       | Awalnya  |
 | ----------------------- | ------------------------------------------------------------ | -------- |
-| **Bawaan**              | 5 skill yang disertakan bersama GenOffice                    | Aktif    |
+| **Bawaan**              | Skill yang disertakan bersama GenOffice                      | Aktif    |
 | **Skill saya**          | Skill yang Anda tambahkan atau buat (`~/.ieumoffice/skills`) | Aktif    |
 | **Folder skill Claude** | Skill di `~/.claude/skills`                                  | Nonaktif |
 | **Plugin Claude**       | Skill dari plugin Claude yang terpasang                      | Nonaktif |
@@ -16,32 +16,37 @@ Skill adalah sekumpulan petunjuk kerja untuk AI. Tuliskan sekali saja hal yang A
 
 - Sakelar mengaktifkan atau menonaktifkan skill. Pengaturan yang sama berlaku untuk panel AI di semua editor, Tanya AI di Beranda, dan jendela agen.
 - Untuk skill yang aktif, pilih **AI yang menentukan** atau **Hanya saat dipanggil**. Awalnya disetel ke AI yang menentukan. Dengan Hanya saat dipanggil, skill hanya dipakai jika Anda sendiri yang memanggilnya.
-- Skill dari sumber yang berbeda bisa bernama sama. Label sumber di setiap baris membedakannya.
-- Menu lainnya berisi **Lihat isi**, **Edit** (hanya skill saya), **Ekspor (zip)** (hanya skill saya), dan **Buka folder**.
+- Skill dari sumber yang berbeda bisa bernama sama. Label sumber di setiap baris membedakannya. Jika dua skill bernama sama sama-sama aktif, hanya satu yang muncul di daftar `/` dan dipakai: yang lebih dulu menurut urutan Skill saya, Bawaan, Folder skill Claude, Folder skill Codex, Plugin Claude. Baris skill yang lain menyebutkan skill mana yang dipakai sebagai gantinya.
+- Menu lainnya berisi **Lihat isi**, **Edit** (hanya skill saya), **Ekspor (zip)** (hanya skill saya), dan **Buka folder**. Skill bawaan tidak memiliki **Buka folder**. **Tempat dipakai** langsung membuka tempat memilih editor yang memakai skill itu.
+- Skill saya berada di folder `~/.ieumoffice/skills`. Di Windows, itu adalah `C:\Users\<nama pengguna>\.ieumoffice\skills`. **Buka folder** di menu lainnya membuka folder skill tersebut.
 - **Pindahkan ke tempat sampah** memindahkan salah satu skill saya ke tempat sampah sistem, dan dari sana skill itu bisa dipulihkan.
 - Skill bawaan tidak dihapus, melainkan disembunyikan: pilih **Sembunyikan**. **Tampilkan lagi** di bagian bawah daftar mengembalikannya seperti semula.
 - Untuk mengubah skill bawaan atau skill dari program lain, pilih **Salin ke skill saya**. Salinannya muncul di skill saya dan skill aslinya dinonaktifkan.
 - Saat skill yang memiliki templat diekspor, dokumen templatnya ikut masuk ke file zip. Pastikan dokumen itu tidak berisi informasi pribadi sebelum Anda mengekspornya.
+- **Ekspor beberapa** di bagian atas halaman memasukkan skill yang Anda centang ke satu file zip, satu folder per skill. Penerima zip itu menambahkannya dengan cara yang sama seperti zip skill lain, dan bisa memilih skill mana di dalamnya yang akan dipasang.
 
 ## Menambahkan skill
 
 1. Di **Pengaturan ▸ Skill**, klik **Tambah**.
-2. Pilih **Dari folder**, **Dari file zip**, atau **Dari tautan GitHub**. Untuk GitHub, masukkan alamat repositori publik atau `owner/repo`, lalu klik **Cari**.
-3. Periksa skill yang ditemukan di pratinjau. Pratinjau menampilkan jumlah dan ukuran file, ada tidaknya skrip, alamat web di dalam teks, dan file lisensi.
+2. Pilih **Dari folder**, **Dari file zip**, **Dari teks yang ditempel**, atau **Dari tautan GitHub**. Untuk teks yang ditempel, tempel seluruh `SKILL.md` mulai dari baris `---` pertamanya, lalu klik **Pratinjau**. Untuk GitHub, masukkan alamat repositori publik, `owner/repo`, atau halaman skill di skills.sh, lalu klik **Cari**.
+3. Periksa skill yang ditemukan di pratinjau. Pratinjau menampilkan jumlah dan ukuran file, ada tidaknya skrip, alamat web di dalam teks, file lisensi, dan baris yang perlu dibaca sebelum memasang. **Lihat isi** di bawah sebuah skill membuka teks `SKILL.md` dan file teksnya agar bisa dibaca sebelum memasang.
 4. Centang hanya skill yang ingin dipasang, lalu klik **Pasang**. Skill yang dipasang langsung aktif.
 
 Di bawah pratinjau selalu tertulis: "Pasang skill hanya dari sumber yang Anda percayai. Skill memberi AI instruksi, dan di jendela agen skill dapat menjalankan skrip." Baca dulu skill dari sumber yang tidak dikenal sebelum memasangnya.
 
-- Jika skill saya sudah memiliki skill dengan nama yang sama, pilih **Ganti** atau **Lewati** pada baris tersebut.
+- Jika skill saya sudah memiliki skill dengan nama yang sama, pilih **Ganti** atau **Lewati** pada baris tersebut. **Ganti** tetap mempertahankan pengaturan skill: aktif/nonaktif, AI yang menentukan / Hanya saat dipanggil, dan tempat dipakai.
+- Anda juga bisa melepas file zip skill atau file `SKILL.md` ke jendela GenOffice mana pun. **Pengaturan ▸ Skill** terbuka dengan pratinjau yang sama. Zip dianggap skill jika `SKILL.md` ada di tingkat teratasnya atau setiap folder teratas berisi satu `SKILL.md`; untuk zip lain yang dilepas sendirian, **Pengaturan ▸ Skill** menampilkan "Tidak ada skill yang ditemukan". File `SKILL.md` masuk sendirian: masukkan skill yang punya file lain ke dalam zip.
+- **Baris yang perlu dibaca sebelum memasang** adalah baris yang meminta AI mengabaikan instruksi sebelumnya, menyembunyikan sesuatu dari Anda, atau mengambil instruksi dari alamat luar, serta jalur `../` yang menunjuk ke luar folder skill. Masing-masing menampilkan file dan barisnya. Baris ini tidak menghentikan pemasangan, dan skill tanpa baris seperti ini belum tentu aman.
 - Saat mengunduh dari GitHub, GenOffice hanya terhubung ke `github.com`, `api.github.com`, dan `codeload.github.com`, dan tidak mengirim data login apa pun. Jika arsipnya terlalu besar atau tidak lolos pemeriksaan keamanan, tidak ada yang dipasang.
-- **Skill baru** membuka editor kosong tempat Anda menulis sendiri nama, deskripsi, dan petunjuknya.
+- Halaman skill di skills.sh (`https://skills.sh/owner/repo/skill`) dibaca sebagai skill tersebut di repositori GitHub `owner/repo`. GenOffice tidak terhubung ke skills.sh.
+- **Skill baru** membuka editor kosong tempat Anda menulis sendiri nama, deskripsi, dan petunjuknya. Kolom **Judul** di paling atas menerima judul dalam bahasa apa pun; nama diisi dari judul dan bisa Anda ubah. Jika skill aktif dari sumber lain memiliki nama yang sama, Anda ditanya sebelum menyimpan, dan menyimpan akan mematikan skill itu. Jika judul tidak memiliki huruf Latin atau angka, nama diisi dengan `skill-` diikuti beberapa karakter. Nama dipakai oleh program lain dan panggilan `/`, jadi boleh dibiarkan apa adanya.
 
 ## Memeriksa pembaruan
 
 - Untuk skill yang dipasang dari GitHub, **Periksa pembaruan** di menu lainnya mencari isi yang baru. GitHub hanya dihubungi saat Anda mengekliknya.
 - Jika tidak ada perubahan, tertulis "Sudah terbaru". Jika ada, tinjau file yang berubah dan pratinjaunya, lalu klik **Perbarui**.
 - Jika Anda sendiri sudah mengedit skill itu setelah memasangnya, akan muncul juga "Suntingan Anda sendiri akan hilang".
-- Pembaruan tetap mempertahankan status aktif/nonaktif skill serta pilihan AI yang menentukan / Hanya saat dipanggil.
+- Pembaruan tetap mempertahankan status aktif/nonaktif skill, pilihan AI yang menentukan / Hanya saat dipanggil, dan tempat dipakai.
 
 ## Memanggil skill di panel AI
 
@@ -66,11 +71,21 @@ Di bawah pratinjau selalu tertulis: "Pasang skill hanya dari sumber yang Anda pe
 
 1. Di panel AI, ucapkan sesuatu seperti "Simpan yang barusan kita kerjakan sebagai skill" atau "Buat skill yang menulis laporan dengan gaya kantor kita".
 2. AI memilih langkah dan aturan yang layak diulang, lalu menampilkan kartu **Skill baru**. Nilai yang hanya dipakai sekali ini, seperti nama dan tanggal, tidak dimasukkan ke petunjuk.
-3. Periksa dan edit nama, deskripsi, dan petunjuk di kartu. Nama adalah yang ditampilkan di daftar skill dan yang Anda ketik setelah `/`: huruf kecil bahasa Inggris, angka, dan tanda hubung.
+3. Periksa dan edit nama, deskripsi, dan petunjuk di kartu. Nama adalah yang ditampilkan di daftar skill dan yang Anda ketik setelah `/`: huruf kecil bahasa Inggris, angka, dan tanda hubung. Kolom **Judul** di atas nama diisi dengan judul yang ditampilkan di daftar, dalam bahasa apa pun.
 4. Klik **Simpan**. Skill baru ditambahkan ke skill saya dalam keadaan aktif, dan langsung muncul di daftar `/`.
 
 - Tidak ada file yang ditulis sebelum Anda mengeklik **Simpan**. Jika Anda mengeklik **Batal**, percakapan hanya menyimpannya sebagai "Usulan skill yang tidak disimpan".
 - Anda juga bisa meminta agar skill yang sudah ada diubah, misalnya "Ubah skill notulen rapat sesuai cara kita bekerja". Kartunya lalu berjudul **Ubah skill**. Skill saya ditimpa dengan **Ganti**; skill bawaan atau skill dari program lain disimpan sebagai salinan di skill saya dan skill aslinya dinonaktifkan.
+
+## Memilih tempat skill dipakai
+
+Skill yang hanya cocok untuk satu jenis dokumen, misalnya menata slide atau merapikan spreadsheet, bisa ditampilkan hanya di panel AI editor itu. Di editor lain, daftar `/` dan daftar skill yang dipakai AI sendiri jadi lebih pendek, sehingga AI lebih sering memilih skill yang tepat.
+
+- Untuk skill saya, buka **Edit** lalu pilih **Semua editor** atau **Hanya editor ini** di **Tempat dipakai**. Editor yang dipilih ditulis di berkas skill, jadi ikut terbawa saat skill diekspor atau dipindah ke program lain. **Hanya editor ini** dimulai tanpa editor yang dicentang; **Pilih semua** dan **Hapus semua pilihan** mengubah semuanya sekaligus.
+- Untuk skill bawaan dan skill dari program lain, ubah di **Tempat dipakai** pada **Lihat isi**. Pilihan ini hanya disimpan di pengaturan PC ini; berkas skill tidak berubah.
+- Skill yang tidak dipakai di semua editor menyebutkannya di barisnya, misalnya "Dipakai di: Presentasi".
+- Saat AI membuat skill yang hanya cocok untuk satu format, AI juga mengusulkan tempat dipakainya; jika tidak, skill tetap untuk semua editor. Anda bisa mengubahnya di **Tempat dipakai** pada kartu sebelum menyimpan.
+- Tanya AI di Beranda dan jendela agen memakai semua skill yang aktif, di mana pun skill itu diatur untuk dipakai.
 
 ## Menambahkan dokumen sebagai templat
 
@@ -96,15 +111,25 @@ Saat Anda membuat skill di panel AI sebuah editor, dokumen yang sedang terbuka b
 
 ## Skill bawaan
 
-| Skill             | Fungsinya                                                                                 |
-| ----------------- | ----------------------------------------------------------------------------------------- |
-| `meeting-minutes` | Mengubah catatan rapat menjadi notulen yang menampilkan keputusan dan tugas tindak lanjut |
-| `internal-comms`  | Menulis pengumuman, buletin, laporan kemajuan, FAQ, dan pesan internal lainnya            |
-| `humanizer`       | Mencari ungkapan yang terdengar ditulis AI dan membuatnya wajar                           |
-| `copy-editing`    | Memeriksa ulang teks bahasa Inggris yang Anda tulis agar lebih jelas dan ringkas          |
-| `find-skills`     | Mencari skill yang Anda perlukan di jendela agen dan mengusulkan pemasangannya            |
+| Skill                         | Fungsinya                                                                                                                                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting-minutes`             | Mengubah catatan rapat menjadi notulen yang menampilkan keputusan dan tugas tindak lanjut                                                                                                            |
+| `internal-comms`              | Menulis pengumuman, buletin, laporan kemajuan, FAQ, dan pesan internal lainnya                                                                                                                       |
+| `humanizer`                   | Mencari ungkapan yang terdengar ditulis AI dan membuatnya wajar                                                                                                                                      |
+| `copy-editing`                | Memeriksa ulang teks bahasa Inggris yang Anda tulis agar lebih jelas dan ringkas                                                                                                                     |
+| `find-skills`                 | Mencari skill yang Anda perlukan di jendela agen dan mengusulkan pemasangannya                                                                                                                       |
+| `administration-report`       | Menyesuaikan laporan dengan pedoman Kementerian Dalam Negeri dan Keamanan Korea: kalimat naratif, penomoran baku, font yang tersedia di mana saja, tabel sederhana                                   |
+| `administration-report-draft` | Menulis laporan administrasi dari nol dengan format kementerian: bagian, penomoran Ⅰ·1·가, kalimat naratif, judul tabel, dan font yang tersedia                                                      |
+| `docx`                        | Hanya berfungsi di jendela agen. Menjalankan skrip untuk membuat, mengedit, dan membaca file .docx di folder proyek. Python dan program lain harus terpasang di PC ini                               |
+| `pptx`                        | Hanya berfungsi di jendela agen. Menjalankan skrip untuk membuat, mengedit, dan membaca file .pptx di folder proyek. Python dan program lain harus terpasang di PC ini                               |
+| `xlsx`                        | Hanya berfungsi di jendela agen. Menjalankan skrip untuk membuat dan mengedit file .xlsx di folder proyek serta menghitung ulang rumusnya. Python dan program lain harus terpasang di PC ini         |
+| `pdf`                         | Hanya berfungsi di jendela agen. Menjalankan skrip untuk membaca, menggabungkan, dan memisahkan file .pdf di folder proyek serta mengisi formulir. Python dan program lain harus terpasang di PC ini |
+| `hwp-document`                | Menulis dokumen .hwp atau .hwpx baru dari awal: memilih susunan untuk laporan, rencana, pengumuman, surat resmi, atau notulen, menulis dengan gaya dokumen, lalu memeriksa hasilnya                  |
+| `mindmap`                     | Menyusun peta pikiran dari topik atau bahan: tiga sampai tujuh cabang utama yang seimbang, judul singkat dengan rincian di catatan, dan pemeriksaan struktur di akhir                                |
+| `diagram`                     | Menggambar diagram yang jelas: memilih jenis yang sesuai, menjaga satu arah alur, label singkat dan sedikit warna, lalu memeriksa tumpang-tindih dan bentuk yang lepas                               |
+| `html-document`               | Membuat dokumen HTML yang enak dibaca di layar dan rapi saat dicetak: menetapkan pembaca, panjang, dan kertas lebih dulu, lalu memeriksa halaman dan isinya                                          |
 
-`copy-editing` dibuat untuk teks pemasaran berbahasa Inggris. `find-skills` hanya berfungsi di jendela agen.
+`copy-editing` dibuat untuk teks pemasaran berbahasa Inggris. `find-skills` hanya berfungsi di jendela agen. Di **Lihat isi** milik skill bawaan, deskripsi ditampilkan dalam bahasa antarmuka, sedangkan petunjuk adalah teks yang diberikan kepada AI dan ditampilkan apa adanya (bahasa Inggris). `docx`, `pptx`, `xlsx`, dan `pdf` hanya berfungsi di jendela agen; semuanya menjalankan skrip, jadi Python dan program lain harus terpasang di PC ini. `hwp-document`, `mindmap`, `diagram`, dan `html-document` masing-masing hanya dipakai di editor yang dituju.
 
 ## Di jendela agen
 

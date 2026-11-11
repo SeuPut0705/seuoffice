@@ -278,18 +278,19 @@ Skrót filtru Excela, Ctrl+Shift+L, nie działa w Windows ani Linux. Naciśnij �
 
 ### Okno
 
-| Czynność                                                        | macOS           | Windows / Linux    |
-| --------------------------------------------------------------- | --------------- | ------------------ |
-| Zapisz skoroszyt                                                | ⌘S              | Ctrl+S             |
-| Zapisz jako                                                     | ⇧⌘S             | Ctrl+Shift+S       |
-| Otwórz skoroszyt                                                | ⌘O              | Ctrl+O             |
-| Drukuj                                                          | ⌘P              | Ctrl+P             |
-| Zamknij skoroszyt (macOS) / Zakończ aplikację (Windows i Linux) | ⌘W              | Ctrl+Q             |
-| Otwórz Podręcznik użytkownika                                   | F1              | F1                 |
-| Powiększ                                                        | ⌘=              | Ctrl+=             |
-| Zoom kółkiem myszy                                              | ⌘ + przewijanie | Ctrl + przewijanie |
-| Pokaż lub ukryj formuły w komórkach                             | ⌘`              | Ctrl+`             |
-| Rozwiń lub zwiń pasek formuły                                   | ⌘⇧U             | Ctrl+Shift+U       |
+| Czynność                                                           | macOS           | Windows / Linux    |
+| ------------------------------------------------------------------ | --------------- | ------------------ |
+| Zapisz skoroszyt                                                   | ⌘S              | Ctrl+S             |
+| Zapisz jako                                                        | ⇧⌘S             | Ctrl+Shift+S       |
+| Otwórz skoroszyt                                                   | ⌘O              | Ctrl+O             |
+| Drukuj                                                             | ⌘P              | Ctrl+P             |
+| Zamknij skoroszyt (macOS) / Zakończ aplikację (Windows i Linux)    | ⌘W              | Ctrl+Q             |
+| Otwórz Podręcznik użytkownika                                      | F1              | F1                 |
+| Powiększ                                                           | ⌘=              | Ctrl+=             |
+| Zoom kółkiem myszy                                                 | ⌘ + przewijanie | Ctrl + przewijanie |
+| Pokaż lub ukryj formuły w komórkach                                | ⌘`              | Ctrl+`             |
+| Rozwiń lub zwiń pasek formuły                                      | ⌘⇧U             | Ctrl+Shift+U       |
+| Uruchom przycisk paska Szybki dostęp według pozycji (od 1. do 10.) |                 | Alt+1 … Alt+0      |
 
 ## Slides
 

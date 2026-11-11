@@ -6,6 +6,7 @@ Trình soạn thảo PDF có năm thẻ ruy-bâng: **Trang chủ / Chú thích /
 
 - Thanh bên trái: **hình thu nhỏ** (nhấp để nhảy, vùng đang hiện được đánh dấu) hoặc **mục lục** (bookmark, nếu có).
 - Thu phóng: bộ điều khiển tỉ lệ ở góc dưới bên phải; ctrl+lăn chuột thay đổi từng bậc.
+- Mức thu phóng khi mở: mục **Khi mở** trên tab Xem chọn chế độ xem ban đầu của PDF mới mở: vừa chiều rộng, vừa trang, hoặc mức thu phóng từ 50% đến 200%. PDF nào bạn đã tự đổi mức thu phóng sẽ mở lại theo mức đó.
 - Di chuyển khung nhìn: bật **Công cụ bàn tay** (tab Trang chủ và Xem) rồi kéo để di chuyển trang theo mọi hướng. Khi bật, kéo sẽ không chọn chữ và nhấp thường vào liên kết vẫn mở liên kết. Kéo trong khi giữ nút giữa (con lăn) sẽ di chuyển khung nhìn mà không cần công cụ. Nhấn Esc hoặc chọn công cụ khác để tắt.
 - Xoay: theo từng trang hoặc tất cả các trang từ menu Trang; góc xoay được ghi lại khi lưu.
 - Tìm kiếm: ctrl+F tìm trong toàn văn, tô sáng mọi kết quả.
@@ -70,6 +71,7 @@ Sáu công cụ: **Vẽ, Hình chữ nhật, Hình elip, Mũi tên, Ghi chú**, 
 ## Thao tác trang (Trang)
 
 - **Xoay / xóa / sắp xếp lại**: kéo hình thu nhỏ để đổi thứ tự; xóa sẽ hỏi xác nhận.
+- **Nhiều trang cùng lúc**: giữ Ctrl hoặc Shift và bấm vào hình thu nhỏ để chọn nhiều trang. Delete xóa các trang đó; Ctrl+C, Ctrl+X và Ctrl+V sao chép, cắt và dán. Trang đã sao chép cũng dán được vào tab PDF khác, và thao tác dán được lưu vào tệp ngay. Nếu đã đóng hình thu nhỏ, nút ở mép trái vùng trang sẽ mở lại.
 - **Nhập trang**: kéo các trang từ một tệp PDF khác vào tài liệu. **Chèn trang trắng** thêm một trang trắng.
 - **Thay thế trang** thay cả một đoạn bằng các trang từ nơi khác; **Cắt xén trang** cắt bỏ phần thừa, với tùy chọn áp dụng cho tất cả các trang.
 - **Kích thước trang** đưa mọi trang về cùng một khổ giấy; **Đảo thứ tự** lật ngược tài liệu từ cuối về đầu.
@@ -82,6 +84,7 @@ Sáu công cụ: **Vẽ, Hình chữ nhật, Hình elip, Mũi tên, Ghi chú**, 
 
 - **Xuất dưới dạng Word… / PowerPoint… / Excel…** trong menu Tệp, hoặc lấy đúng ba mục đó từ **Chuyển đổi PDF** trên dải ruy-bâng — tất cả đều tại máy, không tải lên. Tệp .pptx ra một slide mỗi trang và tệp .xlsx ra một bảng tính mỗi trang. Mỗi mục đều hỏi lưu ở đâu.
 - **PDF sang HWP** trong **Chuyển đổi PDF** trên ruy-băng chuyển PDF thành tài liệu HWP trong một thẻ HWP mới. Chọn **Nhập** (가져오기) trong cửa sổ nhập PDF mà thẻ hiện ra; tài liệu được tạo trong thẻ đó, và lần lưu đầu tiên sẽ hỏi nơi lưu tệp .hwp hoặc .hwpx. Tệp PDF gốc được giữ nguyên, và việc chuyển đổi chạy trên máy này. Nhập nội dung thành đoạn văn chảy theo trang hay thành hộp văn bản cố định được chọn trong tùy chọn (환경 설정) của thẻ HWP, mục nhập PDF.
+- Cũng có thể bắt đầu việc chuyển đổi này từ một thẻ HWP. Chọn một tệp PDF bằng **Tệp** ▸ **Nhập PDF…**, một thẻ HWP mới sẽ mở ra cùng cửa sổ nhập PDF như trên. Tài liệu của thẻ nơi bạn dùng trình đơn được giữ nguyên.
 - **In**: qua hộp thoại hệ thống, theo thứ tự trang và góc xoay hiện tại; có thể chọn phạm vi trang.
 
 ## Lưu

@@ -3,6 +3,7 @@ import type { Lang } from '@genoffice/i18n'
 import { unusableMcpServers } from '@genoffice/agent-core/skill-mcp-refs'
 import {
   chipTitleRepeats,
+  skillNameBeside,
   type SkillChipRef,
   type SkillChipView,
   type SkillPickerItem,
@@ -72,6 +73,11 @@ export function SkillPicker({
               <span className="ai-skill-picker-title" dir="auto">
                 {item.title}
               </span>
+              {skillNameBeside(item) && (
+                <span className="ai-skill-picker-name" dir="ltr">
+                  {skillNameBeside(item)}
+                </span>
+              )}
               {item.sourceLabel && (
                 <span className="ai-skill-picker-source">{item.sourceLabel}</span>
               )}
