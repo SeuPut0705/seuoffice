@@ -368,10 +368,10 @@ describe('a change saved at once', () => {
 })
 
 describe('the Advanced key pane', () => {
-  it('lists no id outside the catalog and not Claude, and keeps Codex for its path', () => {
+  it('lists no id outside the catalog, and keeps both CLIs for the path of a custom install', () => {
     const listed = advancedProviderIds([...AI_PROVIDERS, { id: 'retired-provider' }])
     expect(listed).not.toContain('retired-provider')
-    expect(listed).not.toContain('claude-code')
+    expect(listed).toContain('claude-code')
     expect(listed).toContain('codex')
     expect(listed).toContain('custom')
     expect(listed).toContain('openai')
@@ -381,9 +381,11 @@ describe('the Advanced key pane', () => {
     expect(initialAdvancedProvider({ provider: 'openai' }, AI_PROVIDERS)).toBe('openai')
     expect(initialAdvancedProvider({ provider: 'codex' }, AI_PROVIDERS)).toBe('codex')
     const first = initialAdvancedProvider({ provider: 'auto' }, AI_PROVIDERS)
-    expect(first).toBe(AI_PROVIDERS.find((m) => !['claude-code', 'codex'].includes(m.id))!.id)
-    // a subscription or an unknown id selected: the pane still opens on a key provider
-    expect(initialAdvancedProvider({ provider: 'claude-code' }, AI_PROVIDERS)).toBe(first)
+    expect(first).toBe(AI_PROVIDERS.find((m) => !m.needsCliPath)!.id)
+    // a CLI selected: its own pane opens, where its path is
+    expect(initialAdvancedProvider({ provider: 'claude-code' }, AI_PROVIDERS)).toBe('claude-code')
+    // an unknown id: the pane still opens on a key provider
+    expect(initialAdvancedProvider({ provider: 'retired' as never }, AI_PROVIDERS)).toBe(first)
     expect(initialAdvancedProvider({ provider: 'retired-provider' as never }, AI_PROVIDERS)).toBe(
       first,
     )
@@ -393,7 +395,7 @@ describe('the Advanced key pane', () => {
     const withKey = withOpenAiKey(settingsWith({ provider: 'auto' }))
     expect(initialAdvancedProvider(withKey, AI_PROVIDERS)).toBe('openai')
     expect(initialAdvancedProvider({ ...withKey, provider: 'claude-code' }, AI_PROVIDERS)).toBe(
-      'openai',
+      'claude-code',
     )
     // the stored selection still comes first
     expect(initialAdvancedProvider({ ...withKey, provider: 'codex' }, AI_PROVIDERS)).toBe('codex')

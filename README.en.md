@@ -302,8 +302,16 @@ What differs on a Mac:
   Applications. One opened straight from the disk image, or kept in a folder
   you cannot write to, opens the download page instead. Coming from an older
   version without this, install the new dmg over the old app once.
-- The AI connection card has **no install button**. Follow its "official
-  install instructions" link to install Claude Code or Codex.
+- The AI connection card has **no install button**. Install from Terminal
+  instead: `curl -fsSL https://claude.ai/install.sh | bash` for Claude Code,
+  `npm install -g @openai/codex` for Codex. The card's "official install
+  instructions" link says the same.
+- **A PATH set for your terminal does not reach the app.** An app opened from
+  the Dock or Applications never sees what `~/.zshrc` adds to PATH. The app
+  looks in the places the installers and package managers use instead
+  (`~/.local/bin`, Homebrew, MacPorts, nvm/fnm/volta/asdf/mise, the global npm
+  prefix). If it still cannot find the program, you can type its path under
+  **Settings → AI → Advanced**.
 - Signing in finishes in the browser. If the browser asks you to paste a code,
   run `claude auth login` or `codex login` in Terminal yourself.
 
@@ -327,7 +335,8 @@ What differs on Linux:
   when a new version is out and opens the download page.
 - As on a Mac, the AI connection card has **no install button**, and if a
   sign-in page asks you to paste a code, run `claude auth login` or
-  `codex login` in a terminal yourself.
+  `codex login` in a terminal yourself. The install commands, and the places
+  the app looks for the programs, are the same as on a Mac.
 
 To use only the terminal command without the desktop app (a server without a
 screen, or an AI agent's workspace), use the command-line archive

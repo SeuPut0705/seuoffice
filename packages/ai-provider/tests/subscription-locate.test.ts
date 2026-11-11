@@ -738,13 +738,13 @@ describe('resolveSubscriptionProgram', () => {
   })
 })
 
-describe('commonUnixBinDirs nvm versions', () => {
+describe('commonUnixBinDirs', () => {
   it('lists nvm Node bins newest-semver-first, not lexicographically', async () => {
     const nvmRoot = join(root, '.nvm', 'versions', 'node')
     for (const version of ['v8.17.0', 'v18.20.4', 'v20.11.1', 'v6.14.4']) {
       await mkdir(join(nvmRoot, version, 'bin'), { recursive: true })
     }
-    const dirs = await commonUnixBinDirs(root)
+    const dirs = await commonUnixBinDirs(root, {}, 'darwin')
     const nvmBins = dirs.filter(
       (dir) => dir.startsWith(nvmRoot + sep) || dir.startsWith(nvmRoot + '/'),
     )
@@ -754,5 +754,72 @@ describe('commonUnixBinDirs nvm versions', () => {
       join(nvmRoot, 'v8.17.0', 'bin'),
       join(nvmRoot, 'v6.14.4', 'bin'),
     ])
+  })
+
+  it('probes the tool managers that keep their bins outside the home dotfiles', async () => {
+    const dirs = await commonUnixBinDirs(root, {}, 'darwin')
+    expect(dirs).toContain('/opt/local/bin')
+    expect(dirs).toContain(join(root, '.asdf', 'shims'))
+    expect(dirs).toContain(join(root, '.local', 'share', 'mise', 'shims'))
+    expect(dirs).toContain(join(root, 'Library', 'pnpm'))
+    expect(dirs).toContain(
+      join(root, 'Library', 'Application Support', 'fnm', 'aliases', 'default', 'bin'),
+    )
+  })
+
+  it('follows the data directory each manager uses on Linux', async () => {
+    const dirs = await commonUnixBinDirs(root, { XDG_DATA_HOME: join(root, 'data') }, 'linux')
+    expect(dirs).toContain(join(root, 'data', 'mise', 'shims'))
+    expect(dirs).toContain(join(root, 'data', 'pnpm'))
+    expect(dirs).toContain(join(root, 'data', 'fnm', 'aliases', 'default', 'bin'))
+  })
+
+  it('follows FNM_DIR and PNPM_HOME when the user moved them', async () => {
+    const dirs = await commonUnixBinDirs(
+      root,
+      { FNM_DIR: join(root, 'fnm'), PNPM_HOME: join(root, 'pnpm') },
+      'darwin',
+    )
+    expect(dirs).toContain(join(root, 'fnm', 'aliases', 'default', 'bin'))
+    expect(dirs).toContain(join(root, 'pnpm'))
+  })
+
+  it('reads a moved global npm prefix from ~/.npmrc', async () => {
+    await touch(join(root, '.npmrc'), `prefix=${join(root, 'npm-global')}`)
+    const dirs = await commonUnixBinDirs(root, {}, 'darwin')
+    expect(dirs).toContain(join(root, 'npm-global', 'bin'))
+  })
+
+  it('leaves out a prefix that is not a full path', async () => {
+    await touch(join(root, '.npmrc'), 'prefix=')
+    const dirs = await commonUnixBinDirs(root, { npm_config_prefix: 'npm' }, 'darwin')
+    expect(dirs).not.toContain(join('npm', 'bin'))
+    expect(dirs.every((dir) => dir.length > 0)).toBe(true)
+  })
+})
+
+describe('a global npm prefix the user moved', () => {
+  it('finds the macOS CLI under the prefix in ~/.npmrc when PATH is the minimal one', async () => {
+    const prefix = join(root, 'npm-global')
+    await touch(join(root, '.npmrc'), `prefix=${prefix}`)
+    const cli = await touch(join(prefix, 'bin', 'claude'), '#!/bin/sh')
+    await chmod(cli, 0o755)
+    const program = await locateSubscriptionProgram('claude-code', {
+      env: { HOME: root, PATH: '/usr/bin:/bin' },
+      platform: 'darwin',
+      applicationDirs: [],
+    })
+    expect(program).toMatchObject({ command: cli, source: 'path' })
+  })
+
+  it('finds the Windows CLI under the prefix in ~/.npmrc', async () => {
+    const prefix = join(root, 'npm-global')
+    await touch(join(root, '.npmrc'), `prefix=${prefix}`)
+    const cli = await touch(join(prefix, 'claude.exe'))
+    const program = await locateSubscriptionProgram('claude-code', {
+      env: windowsEnv(),
+      platform: 'win32',
+    })
+    expect(program).toMatchObject({ command: cli, source: 'npm' })
   })
 })
