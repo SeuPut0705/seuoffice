@@ -1,5 +1,13 @@
 [workspace]
-members = ["jscompat", "ooxml-xml", "ooxml-pkg", "docx-engine", "omml", "office-wasm"]
+members = [
+  "jscompat",
+  "ooxml-xml",
+  "ooxml-pkg",
+  "docx-engine",
+  "omml",
+  "office-wasm",
+  "spike-one-run-save",
+]
 resolver = "3"
 
 [workspace.package]
