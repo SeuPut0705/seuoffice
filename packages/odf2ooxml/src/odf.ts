@@ -9,6 +9,7 @@
 
 import JSZip from 'jszip'
 import type { JSZipObject } from 'jszip'
+import { DOCX_ZIP_LIMITS, assertZipInflatesWithinLimits } from '../../docx-engine/src/index'
 import { XNode, firstChild, nodeChildren, nodeName, parseOdfXml } from './xml'
 
 /** why a conversion gave up; the app maps every code to a message */
@@ -100,6 +101,9 @@ export interface OdfPackage {
 export async function loadOdfPackage(bytes: Uint8Array): Promise<OdfPackage | null> {
   let zip: JSZip
   try {
+    // JSZip is not given an archive the zip gate refuses: it does not return
+    // from some of them. A refusal reads as an unreadable package.
+    await assertZipInflatesWithinLimits(bytes, DOCX_ZIP_LIMITS)
     zip = await JSZip.loadAsync(bytes)
   } catch {
     return null
