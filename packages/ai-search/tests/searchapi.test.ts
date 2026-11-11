@@ -11,11 +11,11 @@ const webResponse = () =>
       {
         position: 1,
         title: 'GenOffice',
-        link: 'https://genoffice.ai/',
+        link: 'https://office.example.com/',
         snippet: 'A free, open-source office suite.',
       },
       { position: 2, title: 'Not a page', link: 'javascript:void(0)', snippet: 'dropped' },
-      { position: 3, title: 'Docs', link: 'https://genoffice.ai/docs', snippet: 'Documentation.' },
+      { position: 3, title: 'Docs', link: 'https://office.example.com/docs', snippet: 'Documentation.' },
     ],
   })
 const image = (title: string, link: string, sourceLink: string, sourceName: string) => ({
@@ -58,10 +58,10 @@ describe('SearchApi web search', () => {
       results: [
         {
           title: 'GenOffice',
-          url: 'https://genoffice.ai/',
+          url: 'https://office.example.com/',
           snippet: 'A free, open-source office suite.',
         },
-        { title: 'Docs', url: 'https://genoffice.ai/docs', snippet: 'Documentation.' },
+        { title: 'Docs', url: 'https://office.example.com/docs', snippet: 'Documentation.' },
       ],
       method: 'searchapi',
     })
@@ -89,7 +89,7 @@ describe('SearchApi web search', () => {
     )
     const r = await webSearch('genoffice', 1)
     expect(r.method).toBe('searchapi')
-    expect(r.results.map((x) => x.url)).toEqual(['https://genoffice.ai/'])
+    expect(r.results.map((x) => x.url)).toEqual(['https://office.example.com/'])
   })
 
   it('falls through to the next backend when SearchApi rejects the key', async () => {
