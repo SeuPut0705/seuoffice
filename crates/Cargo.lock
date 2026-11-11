@@ -204,6 +204,7 @@ version = "0.1.0"
 dependencies = [
  "docx-engine",
  "jscompat",
+ "omml",
  "ooxml-pkg",
  "ooxml-xml",
  "serde",

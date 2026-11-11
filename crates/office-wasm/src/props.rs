@@ -17,6 +17,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use std::cell::OnceCell;
 
+use crate::calls::{self, Returned, optional, value};
+
 /// The calls on one text: it crosses the wire and is parsed once.
 #[derive(Deserialize)]
 pub struct Input {
@@ -30,8 +32,9 @@ pub struct Input {
 struct Call {
     #[serde(rename = "fn")]
     name: String,
+    /// Read by the function called: a group of `calls` takes it as it is.
     #[serde(default)]
-    args: Args,
+    args: Value,
 }
 
 #[derive(Deserialize, Default)]
@@ -78,10 +81,14 @@ pub fn run(input: &Input) -> Vec<Outcome> {
     input
         .calls
         .iter()
-        .map(|call| match dispatch(call, &input.xml, &parsed) {
-            Ok(Some(value)) => Outcome::Value { value },
-            Ok(None) => Outcome::Undefined {},
-            Err(error) => Outcome::Error { error },
+        .map(|call| {
+            let returned = calls::dispatch(&call.name, &input.xml, &call.args)
+                .unwrap_or_else(|| own(call, &input.xml, &parsed));
+            match returned {
+                Ok(Some(value)) => Outcome::Value { value },
+                Ok(None) => Outcome::Undefined {},
+                Err(error) => Outcome::Error { error },
+            }
         })
         .collect()
 }
@@ -89,17 +96,14 @@ pub fn run(input: &Input) -> Vec<Outcome> {
 /// `xmlParser.parse(xml)`, or why it throws.
 type Parsed = OnceCell<Result<Vec<XNode>, String>>;
 
-type Returned = Result<Option<Value>, String>;
-
-fn value(result: impl Serialize) -> Returned {
-    serde_json::to_value(result)
-        .map(Some)
-        .map_err(|error| error.to_string())
-}
-
-/// For a function that returns `undefined` where Rust has `None`.
-fn optional(result: Option<impl Serialize>) -> Returned {
-    result.map_or(Ok(None), value)
+/// A call of a function of this module, which reads its arguments typed.
+fn own(call: &Call, xml: &str, parsed: &Parsed) -> Returned {
+    let args = if call.args.is_null() {
+        Args::default()
+    } else {
+        serde_json::from_value(call.args.clone()).map_err(|error| error.to_string())?
+    };
+    dispatch(&call.name, &args, xml, parsed)
 }
 
 /// For a function that returns `null` where Rust has `None`.
@@ -120,13 +124,12 @@ fn exact(x: f64) -> String {
     }
 }
 
-fn dispatch(call: &Call, xml: &str, parsed: &Parsed) -> Returned {
-    let Call { name, args } = call;
+fn dispatch(name: &str, args: &Args, xml: &str, parsed: &Parsed) -> Returned {
     let theme = args.theme.as_ref();
     let fonts = args.fonts.as_ref();
 
     // the functions over text
-    match &**name {
+    match name {
         "staysVanished" => return value(props::stays_vanished(xml)),
         "crossParaCommentMarkers" => return value(props::cross_para_comment_markers(xml)),
         "bookmarkNamesOf" => return value(props::bookmark_names_of(xml)),
@@ -187,7 +190,7 @@ fn dispatch(call: &Call, xml: &str, parsed: &Parsed) -> Returned {
     }
 
     // the functions over model values
-    match &**name {
+    match name {
         "autoSpaceMode" => return optional(props::auto_space_mode(args.de, args.dn)),
         "mergeCharIndents" => {
             return optional(props::merge_char_indents(
@@ -211,7 +214,7 @@ fn dispatch(call: &Call, xml: &str, parsed: &Parsed) -> Returned {
                 .iter()
                 .map(|run| run.get("text").and_then(Value::as_str).unwrap_or(""))
                 .collect();
-            return match &**name {
+            return match name {
                 "spaceOnlyRuns" => value(props::space_only_runs(&texts)),
                 "breakOnlyRuns" => value(props::break_only_runs(&texts)),
                 _ => value(props::merge_runs(runs)),
@@ -266,7 +269,7 @@ fn dispatch(call: &Call, xml: &str, parsed: &Parsed) -> Returned {
             .map(|run| serialize_element("w:r", run.attrs, &run.children))
             .collect()
     };
-    match &**name {
+    match name {
         "collectNodes" | "collectTopNodes" => {
             let wanted = args.name.as_deref().ok_or_else(|| missing("name"))?;
             let mut out = Vec::new();

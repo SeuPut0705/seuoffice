@@ -15,6 +15,7 @@ use ooxml_pkg::{decode_text, needs_ooxml_normalization, normalize_ooxml_xml, rea
 use ooxml_xml::{Utf16Map, parse_ordered, serialize};
 use serde::{Deserialize, Serialize};
 
+mod calls;
 mod package;
 mod props;
 
