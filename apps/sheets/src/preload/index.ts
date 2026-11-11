@@ -66,6 +66,7 @@ import {
   MAX_PDF_TEMPLATE_CHARS,
   MAX_SAVE_EDITS,
   MAX_SAVE_EDITS_TOTAL,
+  MAX_SAVE_STRUCTURAL_OPS,
   SAVE_EDITS_CHUNK_JSON_MAX,
 } from '../shared/ipc-channels'
 import {
@@ -2205,7 +2206,7 @@ function parseSaveRequest(input: WorkbookSaveRequest): WorkbookSaveRequest {
   if (input.editsTransferId !== undefined && input.edits.length > 0)
     invalid('cell edits: inline edits mixed with a transfer')
   cappedArray('bulk constant fills', input.bulkConstantFills ?? [], 1_000)
-  cappedArray('structural operations', input.structuralOps, 1_000)
+  cappedArray('structural operations', input.structuralOps, MAX_SAVE_STRUCTURAL_OPS)
   cappedArray('chart edits', input.chartEdits, 100)
   cappedArray('visual edits', input.visualEdits, 100)
   cappedArray('visual additions', input.visualAdditions, 100)

@@ -1666,9 +1666,39 @@ export function toSaveStructuralOps(journal: EditJournal): WorkbookStructuralOp[
   const ops: WorkbookStructuralOp[] = []
   for (const [sheetId, sheetOps] of journal.structuralOps) {
     if (isSheetRemoved(journal, sheetId)) continue
-    for (const op of sheetOps) ops.push({ sheetId, ...op })
+    for (const op of sheetOps) {
+      const previous = ops[ops.length - 1]
+      const joined = previous?.sheetId === sheetId ? joinedRowAttributeSpan(previous, op) : null
+      if (previous && joined) ops[ops.length - 1] = { ...previous, ...joined }
+      else ops.push({ sheetId, ...op })
+    }
   }
   return ops
+}
+
+/// An undo that restores row heights journals one op per line, often all
+/// with the same value: back-to-back row ops of one kind and value over
+/// touching or overlapping spans save as one op. Row attributes are written
+/// row by row, so the saved sheet is byte-for-byte the same; column ops are
+/// left alone because the save splits <col> spans per op.
+function joinedRowAttributeSpan(
+  previous: WorkbookStructuralOp,
+  op: StructuralJournalOp,
+): { start: number; end: number } | null {
+  if (previous.kind !== op.kind || !('start' in previous) || !('start' in op)) return null
+  const sameValue =
+    'size' in previous && 'size' in op
+      ? previous.kind === 'set-row-size' && previous.size === op.size
+      : 'hidden' in previous && 'hidden' in op
+        ? previous.kind === 'set-rows-hidden' && previous.hidden === op.hidden
+        : 'level' in previous && 'level' in op
+          ? previous.kind === 'set-rows-outline' &&
+            previous.level === op.level &&
+            previous.collapsed === op.collapsed
+          : false
+  if (!sameValue) return null
+  if (op.start > previous.end + 1 || previous.start > op.end + 1) return null
+  return { start: Math.min(previous.start, op.start), end: Math.max(previous.end, op.end) }
 }
 
 export interface BulkConstantFillRecord {

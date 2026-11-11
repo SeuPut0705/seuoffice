@@ -129,3 +129,4 @@
 | [0128](0128-skill-titles-in-any-language.md)                  | 내 스킬은 어떤 언어로든 제목을 붙이고, 남의 이름을 차지하기 전에 묻는다                              | 2026-11-10 |
 | [0131](0131-document-skills-for-the-agent-window.md)          | 공개 문서 스킬 넷(docx·pptx·xlsx·pdf)을 원본 그대로 싣고, 에이전트 창에서만 쓴다                     | 2026-11-11 |
 | [0132](0132-own-skills-for-four-editors.md)                   | 한글·마인드맵·다이어그램·HTML 편집기의 문서 작성 스킬 넷을 직접 써서 싣는다                          | 2026-11-11 |
+| [0133](0133-sheets-structural-ops-in-runs.md)                 | 엑셀 저장이 같은 종류의 구조 변경을 한 번에 쓰고, 한 번에 보낼 수 있는 개수를 늘린다                 | 2026-11-11 |
