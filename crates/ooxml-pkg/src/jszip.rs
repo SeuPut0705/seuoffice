@@ -4,6 +4,8 @@
 //! entries, and one JSZip refuses must be refused with the same message, so
 //! the reader keeps JSZip's order of reads and its integer arithmetic.
 
+use std::collections::HashSet;
+
 use flate2::{Decompress, FlushDecompress, Status};
 
 use crate::decode_text;
@@ -478,19 +480,19 @@ fn read_end_of_central(reader: &mut Reader<'_>) -> Result<(i64, i64, bool), Stri
         central_dir_size = reader.read_int(8)?;
         central_dir_offset = reader.read_int(8)?;
         // the extensible data: JSZip's loop never advances its counter, so it
-        // reads fields until the data runs out and then fails. A field of
-        // length -6 steps back to where it started: JSZip never returns from
-        // that one, and here it is refused.
+        // reads fields until a read runs past the data and fails. A negative
+        // field length moves the reader back, and what a field does depends
+        // on where it starts alone: a start seen before means JSZip reads the
+        // same fields for ever. That is refused here; every other path ends
+        // in JSZip's own error.
         if zip64_end_of_central_size - 44 > 0 {
-            loop {
-                let field_start = reader.index;
+            let mut field_starts = HashSet::new();
+            while field_starts.insert(reader.index) {
                 reader.read_int(2)?;
                 let extra_field_length = reader.read_int(4)?;
                 reader.read_data(extra_field_length)?;
-                if reader.index == field_start {
-                    return Err(ZIP64_EXTENSIBLE_DATA_LOOPS.to_owned());
-                }
             }
+            return Err(ZIP64_EXTENSIBLE_DATA_LOOPS.to_owned());
         }
     }
 
@@ -568,5 +570,80 @@ fn inflate_as_pako(compressed: &[u8], uncompressed_size: i64) -> Vec<u8> {
                 return out;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
+
+    use super::*;
+
+    /// An archive without entries that JSZip reads as ZIP64, with `extensible`
+    /// as the extensible data of its ZIP64 end record.
+    fn zip64_with_extensible_data(extensible: &[u8]) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        // the ZIP64 end record at offset 0: its size, then 44 bytes of
+        // versions, disks, counts, and the size and offset of no directory
+        bytes.extend_from_slice(&ZIP64_CENTRAL_DIRECTORY_END);
+        bytes.extend_from_slice(&(44 + extensible.len() as u64).to_le_bytes());
+        bytes.extend_from_slice(&[0; 44]);
+        bytes.extend_from_slice(extensible);
+        // its locator: disk 0, the record at offset 0, one disk
+        bytes.extend_from_slice(&ZIP64_CENTRAL_DIRECTORY_LOCATOR);
+        bytes.extend_from_slice(&[0; 12]);
+        bytes.extend_from_slice(&1u32.to_le_bytes());
+        // the end record: a disk number of 0xffff is what says ZIP64
+        bytes.extend_from_slice(&CENTRAL_DIRECTORY_END);
+        bytes.extend_from_slice(&[0xff, 0xff]);
+        bytes.extend_from_slice(&[0; 16]);
+        bytes
+    }
+
+    /// `load` on another thread: a reader that never returns must fail the
+    /// test, not hang the run.
+    fn load_in_time(bytes: Vec<u8>) -> Result<usize, String> {
+        let (sender, receiver) = mpsc::channel();
+        thread::spawn(move || {
+            let _ = sender.send(load(&bytes).map(|entries| entries.len()));
+        });
+        receiver
+            .recv_timeout(Duration::from_secs(5))
+            .expect("the reader returns")
+    }
+
+    #[test]
+    fn extensible_data_that_leads_back_to_itself_is_refused() {
+        // a field of length -6 ends where it began
+        let one_field = [1, 0, 0xfa, 0xff, 0xff, 0xff];
+        // a field of length 0, then one of length -12 that ends at the first
+        let two_fields = [1, 0, 0, 0, 0, 0, 2, 0, 0xf4, 0xff, 0xff, 0xff];
+        // three fields: the last one goes back to the second
+        let back_to_the_second = [
+            1, 0, 0, 0, 0, 0, 2, 0, 1, 0, 0, 0, 9, 3, 0, 0xf3, 0xff, 0xff, 0xff,
+        ];
+        for extensible in [&one_field[..], &two_fields, &back_to_the_second] {
+            assert_eq!(
+                load_in_time(zip64_with_extensible_data(extensible)),
+                Err(ZIP64_EXTENSIBLE_DATA_LOOPS.to_owned()),
+                "{extensible:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn extensible_data_that_runs_off_the_end_fails_as_in_jszip() {
+        // JSZip never leaves its loop: after this field it reads the locator
+        // as the next one, and that read runs past the data
+        let error = load_in_time(zip64_with_extensible_data(&[1, 0, 2, 0, 0, 0, 7, 7]))
+            .expect_err("JSZip throws");
+        assert!(error.starts_with("End of data reached"), "{error}");
+    }
+
+    #[test]
+    fn a_zip64_record_without_extensible_data_opens() {
+        assert_eq!(load_in_time(zip64_with_extensible_data(&[])), Ok(0));
     }
 }

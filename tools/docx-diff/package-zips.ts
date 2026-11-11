@@ -846,13 +846,20 @@ export function richSeeds(): Array<{
  *
  * JSZip reads the extensible data of a ZIP64 end record in a loop that never
  * advances its counter and ends when a read runs past the data. A field of
- * length -6 moves the reader back to where the field began.
+ * length -6 moves the reader back to where the field began; a field of
+ * length 0 and then one of length -12 do the same between them.
  */
 export function hostileContainers(): Record<string, Uint8Array> {
   return {
     'zip64 extensible data that reads itself again': buildZip(base(), {
       diskNumber: 0xffff,
       gap: zip64Tail({ extensible: Uint8Array.from([1, 0, 0xfa, 0xff, 0xff, 0xff]) }),
+    }),
+    'zip64 extensible data that leads back over two fields': buildZip(base(), {
+      diskNumber: 0xffff,
+      gap: zip64Tail({
+        extensible: Uint8Array.from([1, 0, 0, 0, 0, 0, 2, 0, 0xf4, 0xff, 0xff, 0xff]),
+      }),
     }),
   }
 }

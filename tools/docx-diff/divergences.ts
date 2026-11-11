@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import JSZip from 'jszip'
-import { type Outcome, rustOpen, rustParts, typescriptParts } from './compare-package'
+import { type Outcome, rustParts, typescriptParts } from './compare-package'
 import { outcomeOf, rustOutcome } from './compare-props'
 import { rustRoundTrip, typescriptRoundTrip } from './compare-xml'
 import { rustEntries, textWithoutBuffer } from './compare-zip'
@@ -33,11 +33,12 @@ function docDefaultsOf(styles: Outcome): unknown {
 }
 
 /**
- * `loadDocxZip` in a child process: the only way to see that it does not
- * return, and the same path for a container it refuses.
+ * One loader on a container, in a child process: the only way to see that it
+ * does not return. Both sides go through it, so a loader that starts to hang
+ * makes its entry stale instead of hanging the gate.
  */
-function typescriptLoadOnce(docx: Uint8Array): unknown {
-  const child = spawnSync(process.execPath, ['--import', 'tsx', 'load-once.ts'], {
+function loadOnce(side: 'typescript' | 'rust', docx: Uint8Array): unknown {
+  const child = spawnSync(process.execPath, ['--import', 'tsx', 'load-once.ts', side], {
     cwd: toolDir,
     input: docx,
     timeout: 5_000,
@@ -66,11 +67,7 @@ async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust:
       hostileContainers()[entry.container] ??
       oddContainers().find(([name]) => name === entry.container)?.[1]
     if (!docx) return { typescript: 'no such container', rust: 'no such container' }
-    const rust = rustOpen(docx)
-    return {
-      typescript: typescriptLoadOnce(docx),
-      rust: 'refused' in rust ? { refused: rust.refused } : 'opens',
-    }
+    return { typescript: loadOnce('typescript', docx), rust: loadOnce('rust', docx) }
   }
   if (entry.comparison === 'docDefaults') {
     const parts: Array<[string, string]> = [['word/styles.xml', entry.stylesXml]]
