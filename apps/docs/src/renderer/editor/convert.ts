@@ -2476,22 +2476,7 @@ export function normalizeZoteroFieldParts(doc: PmNode): PmNode {
   return rebuild(doc)
 }
 
-export interface SavePlanOptions {
-  /**
-   * A table cell that holds a nested table and whose own paragraphs were
-   * edited is saved by regenerating the table (`generateTableModelXml`): the
-   * cell-text patch only diffs the nested tables and would drop the typing.
-   * On for ODT documents (the ODT write-back still patches cell by cell, so
-   * untouched bytes stay); docx documents keep the earlier behaviour.
-   */
-  regenerateEditedNestedHosts?: boolean
-}
-
-export function pmDocToSavePlan(
-  inputDoc: PmNode,
-  originalBlocks: Block[],
-  options: SavePlanOptions = {},
-): SavePlan {
+export function pmDocToSavePlan(inputDoc: PmNode, originalBlocks: Block[]): SavePlan {
   newPictures.clear()
   newPictureSeq = 0
   newPictureTokenOf = new WeakMap()

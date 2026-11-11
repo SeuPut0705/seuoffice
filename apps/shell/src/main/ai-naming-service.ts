@@ -41,7 +41,7 @@ async function askModel(content: string, lang: string): Promise<string> {
   const controller = new AbortController()
   // a naming call that has not answered in 30s is not going to
   const timer = setTimeout(() => controller.abort(), 30_000)
-  let out = ''
+  let out: string
   try {
     const result = await chatForProvider(
       target.provider,

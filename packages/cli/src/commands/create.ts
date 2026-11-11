@@ -474,7 +474,11 @@ async function createDocx(
   const ext = extname(source).toLowerCase()
   if (ext === '.md' || ext === '.markdown') {
     return {
-      bytes: await markdownToDocx(stripBom(readTextFile(source)), { file: source, ctx }, blankOptions),
+      bytes: await markdownToDocx(
+        stripBom(readTextFile(source)),
+        { file: source, ctx },
+        blankOptions,
+      ),
       detail: { source: 'markdown' },
     }
   }

@@ -42,7 +42,11 @@ describe('collectLaunchPaths', () => {
   it('accepts a legacy PowerPoint .ppt in either case (Slides imports a .pptx copy)', () => {
     expect(LAUNCHABLE_EXTS).toContain('ppt')
     expect(
-      collectLaunchPaths(['IeumOffice.app', '/tmp/old.ppt', '/tmp/OLD2.PPT'], undefined, () => true),
+      collectLaunchPaths(
+        ['IeumOffice.app', '/tmp/old.ppt', '/tmp/OLD2.PPT'],
+        undefined,
+        () => true,
+      ),
     ).toEqual(['/tmp/old.ppt', '/tmp/OLD2.PPT'])
     expect(
       collectLaunchPaths(['IeumOffice.exe'], { launchPaths: ['/tmp/deck.Ppt'] }, () => true),

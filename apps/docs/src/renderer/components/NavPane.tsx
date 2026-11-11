@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   type DragEvent,
-  type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { useDismissablePopover } from '@genoffice/ui'
 import type { Editor } from '@tiptap/core'

@@ -425,9 +425,7 @@ describe('writeJsonAtomic', () => {
 
 describe('tempPathBeside', () => {
   it('keeps a short name whole and a long Hangul name within the 255-byte file-name limit', () => {
-    expect(basename(tempPathBeside(join('dir', 'a.docx')))).toMatch(
-      /^a\.docx\.[0-9a-f]{12}\.tmp$/,
-    )
+    expect(basename(tempPathBeside(join('dir', 'a.docx')))).toMatch(/^a\.docx\.[0-9a-f]{12}\.tmp$/)
     const name = `${'가'.repeat(100)}😀.docx`
     const temp = basename(tempPathBeside(join('dir', name)))
     expect(Buffer.byteLength(temp)).toBeLessThanOrEqual(255)

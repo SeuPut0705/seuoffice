@@ -141,12 +141,7 @@ describe('MiniMax text choices', () => {
       defaults,
     )
     expect(
-      await chatForProvider(
-        settings.provider,
-        settings.providers[provider],
-        'system',
-        'hello',
-      ),
+      await chatForProvider(settings.provider, settings.providers[provider], 'system', 'hello'),
     ).toEqual({ ok: true, content: 'ok' })
     expect(fetchMock.mock.calls[0][0]).toBe(url)
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).model).toBe(model)

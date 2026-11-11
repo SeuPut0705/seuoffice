@@ -15,7 +15,12 @@ const webResponse = () =>
         snippet: 'A free, open-source office suite.',
       },
       { position: 2, title: 'Not a page', link: 'javascript:void(0)', snippet: 'dropped' },
-      { position: 3, title: 'Docs', link: 'https://office.example.com/docs', snippet: 'Documentation.' },
+      {
+        position: 3,
+        title: 'Docs',
+        link: 'https://office.example.com/docs',
+        snippet: 'Documentation.',
+      },
     ],
   })
 const image = (title: string, link: string, sourceLink: string, sourceName: string) => ({

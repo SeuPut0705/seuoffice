@@ -323,5 +323,4 @@ describe('formulaKeepsCache with defined names and table references', () => {
     expect(formulaKeepsCache('VLOOKUP(F5,table_data,2,FALSE)', true)).toBe(true)
     expect(formulaKeepsCache('SUM(rng_data)', true)).toBe(true)
   })
-
 })
