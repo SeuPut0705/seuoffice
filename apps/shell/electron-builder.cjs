@@ -813,8 +813,10 @@ const config = {
     category: 'public.app-category.productivity',
     fileAssociations: FILE_ASSOCIATIONS,
     // .drawio / .dio resolve to the type identifier draw.io exports, also on a
-    // Mac without draw.io: "set as default" (src/main/default-app.ts) names it
+    // Mac without draw.io: "set as default" (src/main/default-app.ts) names it.
+    // macOS asks for the microphone with NSMicrophoneUsageDescription.
     extendInfo: {
+      NSMicrophoneUsageDescription: `${PRODUCT_NAME} records your narration when you record a slide show.`,
       UTImportedTypeDeclarations: [
         {
           UTTypeIdentifier: 'com.jgraph.drawio',
@@ -829,14 +831,9 @@ const config = {
     },
     hardenedRuntime: true,
     gatekeeperAssess: false,
+    // Slides' Slide Show > Record needs the audio-input entitlement under the hardened runtime
     entitlements: 'build/entitlements.mac.plist',
     entitlementsInherit: 'build/entitlements.mac.plist',
-    // Slides' Slide Show > Record: the hardened runtime refuses the microphone without the
-    // audio-input entitlement, and macOS asks for it with this text
-    extendInfo: {
-      NSMicrophoneUsageDescription:
-        'GenOffice records your narration when you record a slide show.',
-    },
     notarize: true,
     extraResources: [
       {
