@@ -50,15 +50,15 @@ the middle and the last text run. The new text is `Edit & <x>` and U+1D11E.
 183 of 185 documents open (the other two are encrypted, not zips). 163 have
 no eligible paragraph. 120 paragraphs in 20 documents give 325 edits.
 
-| way                         | other entries raw   | sibling paragraphs | sibling runs | text read back |
-| --------------------------- | ------------------- | ------------------ | ------------ | -------------- |
-| B                           | 100% (1906 of 1906) | 100%               | 100%         | 100%           |
-| A0: minimal mirror          | 100% (1906 of 1906) | 100%               | 88.9%        | 100%           |
-| A1: each `w:t` with its attributes | XML only     | 100%               | 93.2%        | 100%           |
-| A2: unknown run children as XML    | XML only     | 100%               | 97.5%        | 100%           |
-| A3: inline wrappers                | XML only     | 100%               | 99.4%        | 100%           |
-| A4: tabs and breaks as written     | XML only     | 100%               | 100%         | 100%           |
-| A5 to A8: rsid attributes, `w:proofErr`, other marks, white space | XML only | 100% | 100% | 100% |
+| way                                                               | other entries raw   | sibling paragraphs | sibling runs | text read back |
+| ----------------------------------------------------------------- | ------------------- | ------------------ | ------------ | -------------- |
+| B                                                                 | 100% (1906 of 1906) | 100%               | 100%         | 100%           |
+| A0: minimal mirror                                                | 100% (1906 of 1906) | 100%               | 88.9%        | 100%           |
+| A1: each `w:t` with its attributes                                | XML only            | 100%               | 93.2%        | 100%           |
+| A2: unknown run children as XML                                   | XML only            | 100%               | 97.5%        | 100%           |
+| A3: inline wrappers                                               | XML only            | 100%               | 99.4%        | 100%           |
+| A4: tabs and breaks as written                                    | XML only            | 100%               | 100%         | 100%           |
+| A5 to A8: rsid attributes, `w:proofErr`, other marks, white space | XML only            | 100%               | 100%         | 100%           |
 
 "Sibling runs" means every byte of the main part outside the edited `w:t`
 content is the original's. The 36 A0 misses, by the first differing
@@ -73,16 +73,82 @@ to A8 therefore move nothing here. `tests/one_run.rs` pins them on a
 Word-shaped paragraph instead: A reaches identity there only with every step
 through the paragraph marks (A7).
 
+## Result on Word-saved documents
+
+The tracked corpus says little about Word. The same binary was run on the
+test documents of Apache POI (`test-data/document/*.docx`, apache/poi at
+77df76b, Apache-2.0, 130 files). That corpus is external: it is not in this
+repository and nothing here depends on it.
+
+```
+git clone https://github.com/apache/poi /tmp/docx-public/poi
+cd /tmp/docx-public/poi && git checkout 77df76b
+<repository>/crates/target/release/measure /tmp/u1g-poi-result.txt test-data/document/*.docx
+```
+
+115 of 130 open (9 are not zips: encrypted or OLE; 6 are fuzzer cases whose
+central directory offset is wrong, which the container refuses). 98 carry
+`w:rsid` attributes. 210 paragraphs give 582 edits, none failing.
+
+| way                                | other entries raw     | sibling paragraphs | sibling runs | text read back |
+| ---------------------------------- | --------------------- | ------------------ | ------------ | -------------- |
+| B                                  | 100% (10338 of 10338) | 100%               | 100%         | 100%           |
+| A0: minimal mirror                 | 100% (10338 of 10338) | 100%               | 0.0%         | 99.5%          |
+| A1: each `w:t` with its attributes | XML only              | 100%               | 0.5%         | 99.5%          |
+| A2: unknown run children as XML    | XML only              | 100%               | 0.5%         | 100%           |
+| A3: inline wrappers                | XML only              | 100%               | 1.5%         | 100%           |
+| A4: tabs and breaks as written     | XML only              | 100%               | 1.5%         | 100%           |
+| A5: attributes of `w:p` and `w:r`  | XML only              | 100%               | 46.0%        | 100%           |
+| A6: `w:proofErr`                   | XML only              | 100%               | 83.7%        | 100%           |
+| A7: other paragraph marks          | XML only              | 100%               | 95.9%        | 100%           |
+| A8: white space between elements   | 100% (10338 of 10338) | 100%               | 95.9%        | 100%           |
+
+On Word's own output the minimal mirror keeps no paragraph byte-identical:
+552 of the 582 edits first differ at the `w:rsid*` attributes of `w:p`. The
+steps that moved nothing on the tracked corpus carry the result here.
+
+What is left after every step, 24 edits:
+
+- 12 are white space the model has no place for. A8 keeps a white-space text
+  node where there is a list to hold it: among the children of the paragraph
+  and of an inline wrapper. Before `w:pPr` there is none, because `rawPPr` is
+  written first and the white space then comes after it (9 edits, rtl.docx).
+  Between the children of a `w:r` there is none either (3 edits,
+  Bug66263-paragraph.docx, in the edited run and in its siblings alike).
+- 12 are an `xml:space="preserve"` the writer adds to a sibling `w:t` that
+  had none and whose text begins or ends in white space. 6 of them are edits
+  A8 fixed, which then differ at this next place: that is why A7 and A8 show
+  the same share.
+
+Both are spelling, with one exception that belongs to this experiment and
+not to the engine it mirrors. Word drops an unpreserved space at the edge of
+a `w:t`, and parse.ts reads it the same way (`wtText`). Way A here keeps the
+space and then marks it preserved, so it would become visible.
+
+The three edits whose text did not read back at A0 and A1 are one paragraph
+of WordWithAttachments.docx. One of its runs holds a `w:pict` with a VML
+text box. The minimal mirror keeps the text and the `rawRPr` of a run and
+nothing else, so the text box goes with the `w:pict`; from A2 on it is kept
+as raw XML. The TypeScript engine does not regenerate that paragraph at all:
+it reads a paragraph with such a text box as a passthrough block.
+
+One class in the table is not spelling in the TypeScript engine either. A
+run-level content control (`w:sdt` around runs) is not part of its run
+model: the parser reports it and leaves it in the paragraph's original XML.
+A paragraph saved as a generated block comes out without the control, its
+text as plain runs. That is the `w:sdtPr` class here, which way A only keeps
+from A7 on, and which way B never touches.
+
 ## Code amounts
 
 Counted by `src/bin/loc.rs`: non-blank lines that are not `//` comments.
 
-| part                         | model | reader | writer | edit | total |
-| ---------------------------- | ----- | ------ | ------ | ---- | ----- |
-| container (shared)           |       |        |        |      | 214   |
-| B                            | 34    | 96     | 65     | 48   | 249   |
-| A0                           | 36    | 149    | 95     | 46   | 353   |
-| A steps 1 to 8               |       |        |        |      | 76    |
+| part               | model | reader | writer | edit | total |
+| ------------------ | ----- | ------ | ------ | ---- | ----- |
+| container (shared) |       |        |        |      | 214   |
+| B                  | 34    | 96     | 65     | 48   | 249   |
+| A0                 | 36    | 149    | 95     | 46   | 353   |
+| A steps 1 to 8     |       |        |        |      | 76    |
 
 The totals include imports (B 6, A 7). A's total also holds 20 lines of step
 switches that exist only for the cost curve. The steps cost: `w:t`
@@ -135,6 +201,6 @@ It edits run text only. These edits would change the picture:
   B's `reorder`). Inside a paragraph, B inserts nodes without spans next to
   clean ones; A regenerates the paragraph anyway.
 
-It also does not show behavior on Word-saved documents beyond the built test
-paragraphs, because the tracked corpus has almost none. Running `measure`
-over a folder of real documents is the next check.
+The Word-saved reading rests on one external corpus of test documents, many
+of them written to exercise one feature. It is not a sample of what people
+write.
