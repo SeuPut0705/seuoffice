@@ -5,9 +5,16 @@
  */
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { expect, test, type FrameLocator } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { strFromU8, unzipSync } from 'fflate'
-import { countOwnEdits, openCoEdited, ownEdits, recoveryTests, type CoEditor } from './collab'
+import {
+  countOwnEdits,
+  nameBox,
+  openCoEdited,
+  ownEdits,
+  recoveryTests,
+  selectCell as select,
+} from './collab'
 
 // small enough to open fully loaded, which co-editing needs
 const BASIC = fileURLToPath(
@@ -16,17 +23,8 @@ const BASIC = fileURLToPath(
 
 test.setTimeout(240_000)
 
-const nameBox = (frame: FrameLocator) => frame.locator('input.univer-appearance-none').first()
-
 /** One person's places are the cells H2..H11, the other's I2..I11 */
 const cellOf = (place: number): string => `${'HI'[Math.floor(place / 10)]}${(place % 10) + 2}`
-
-async function select(editor: CoEditor, cell: string, timeout?: number): Promise<void> {
-  await nameBox(editor.frame).fill(cell, { timeout })
-  await nameBox(editor.frame).press('Enter', { timeout })
-  // the box sometimes keeps focus after the jump; the grid takes keys once it lets go
-  await nameBox(editor.frame).blur({ timeout })
-}
 
 /** Every cell's shown text (`=` and the formula for formula cells), sheet after sheet */
 function cellsOf(bytes: Uint8Array): string {

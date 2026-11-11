@@ -42,6 +42,13 @@ export async function openCoEdited(
   const access = options.access ?? 'edit'
   const context = await browser.newContext({ viewport: { width: 1400, height: 900 } })
   const page = await context.newPage()
+  // SEUOFFICE_SLOW_CPU=6 slows every page as a small CI runner does: the way to meet at a desk
+  // the timing a spec only shows there
+  const slow = Number(process.env.SEUOFFICE_SLOW_CPU ?? 0)
+  if (slow > 1) {
+    const session = await context.newCDPSession(page)
+    await session.send('Emulation.setCPUThrottlingRate', { rate: slow })
+  }
   const query = new URLSearchParams({
     collab: options.documentId,
     user: options.user,
@@ -72,6 +79,24 @@ export async function openCoEdited(
         return status
       }),
   }
+}
+
+/** The grid's name box (Univer's), which shows the selected cell */
+export const nameBox = (frame: FrameLocator) =>
+  frame.locator('input.univer-appearance-none').first()
+
+/**
+ * Select `cell` of a sheet through the name box, as a person does, and wait until the grid took
+ * the jump. The reference is typed in lower case: the box writes it back in upper case only once
+ * the selection moved, and keys typed before that go to the cell selected until then.
+ */
+export async function selectCell(editor: CoEditor, cell: string, timeout?: number): Promise<void> {
+  const box = nameBox(editor.frame)
+  await box.fill(cell.toLowerCase(), { timeout })
+  await box.press('Enter', { timeout })
+  await expect(box).toHaveValue(cell, { timeout: timeout ?? 10_000 })
+  // the box sometimes keeps focus after the jump; the grid takes keys once it lets go
+  await box.blur({ timeout })
 }
 
 /** Wait until every page is live at one version with nothing of its own unconfirmed */

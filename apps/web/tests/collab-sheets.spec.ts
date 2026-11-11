@@ -7,7 +7,14 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { expect, test, type Browser, type FrameLocator } from '@playwright/test'
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
-import { openCoEdited, settled, type CoEditor, type CoFile } from './collab'
+import {
+  nameBox,
+  openCoEdited,
+  selectCell as select,
+  settled,
+  type CoEditor,
+  type CoFile,
+} from './collab'
 
 const fixture = (name: string): string =>
   fileURLToPath(new URL(`../../sheets/fixtures/generated/${name}`, import.meta.url))
@@ -17,8 +24,6 @@ const BASIC = fixture('compatibility-basic.xlsx')
 test.setTimeout(240_000)
 
 const freshDocument = (): string => `book-${Date.now()}-${Math.random().toString(36).slice(2)}`
-
-const nameBox = (frame: FrameLocator) => frame.locator('input.univer-appearance-none').first()
 
 async function open(
   browser: Browser,
@@ -62,14 +67,6 @@ const ownEdits = (editor: CoEditor): Promise<number> =>
     const counted = window as unknown as { ownEdits: number }
     return counted.ownEdits
   })
-
-/** Select `cell` through the name box, as a person does */
-async function select(editor: CoEditor, cell: string): Promise<void> {
-  await nameBox(editor.frame).fill(cell)
-  await nameBox(editor.frame).press('Enter')
-  // the box sometimes keeps focus after the jump; the grid takes keys once it lets go
-  await nameBox(editor.frame).blur()
-}
 
 /**
  * Type `text` into `cell` and commit it. A page that just went live drops keys
