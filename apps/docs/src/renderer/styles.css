@@ -117,6 +117,7 @@
   --docs-paper-mark: #2b7cd3;
   --docs-paper-grid: rgb(43 124 211 / 13%);
   --docs-paper-hf-line: #d0d0d0;
+  --docs-paper-crop-mark: #b4b4b4;
   --docs-paper-chip-bg: #fafafa;
   --docs-paper-select-bg: #e8f1fb;
   --docs-paper-stripe: #f0f0f0;
@@ -3058,6 +3059,12 @@ th[data-rev-fmt] {
 .editor-scroll .doc-page:not(.measuring-columns) .doc-col-block [data-page-rel-x='1'] {
   transform: translateX(calc(-1 * var(--col-dx, 0px)));
 }
+/* run-anchored pictures carry their offset in an inline transform: the undo
+   rides a variable that transform reads instead — the measured correction
+   (pinPageRelXPictures: column shift + anchor indent) or the bare column shift */
+.editor-scroll .doc-page:not(.measuring-columns) img[data-page-rel-x='1'] {
+  --page-rel-x-undo: var(--page-rel-x-pin, var(--col-dx, 0px));
+}
 
 /* sectPr w:textDirection sections (verticalTextSpecs): blocks are measured as
    horizontal paragraphs wrapping at the line length (--col-w) and shown as
@@ -3631,13 +3638,13 @@ th[data-rev-fmt] {
 
 .page-hf-header {
   top: var(--header-dist, 48px);
-  border-bottom: 1px dashed var(--docs-paper-hf-line);
+  border-bottom: 1px dashed transparent;
   padding-bottom: 2px;
 }
 
 .page-hf-footer {
   bottom: var(--footer-dist, 48px);
-  border-top: 1px dashed var(--docs-paper-hf-line);
+  border-top: 1px dashed transparent;
   padding-top: 2px;
 }
 
@@ -5216,6 +5223,7 @@ th[data-rev-fmt] {
     --docs-paper-mark: #468edb;
     --docs-paper-grid: rgb(70 142 219 / 13%);
     --docs-paper-hf-line: #474747;
+    --docs-paper-crop-mark: #606060;
     --docs-paper-chip-bg: #222222;
     --docs-paper-select-bg: #222a32;
     --docs-paper-stripe: #2b2b2b;
@@ -6521,6 +6529,12 @@ body.docs-crop-active .doc-protected[data-doc-protected='image'] .doc-img-wrap {
      set --doc-row-grid 0 inline; reset here so nested tables do not inherit them */
   --doc-row-eat: 0px;
   --doc-row-grid: 1;
+  /* fixed-layout tables set normal inline (w:noWrap ignored); a nested table decides for itself */
+  --doc-cell-nowrap: nowrap;
+  /* row-wide cell padding is set per tr; a nested table must fall back to its
+     own --doc-cell-pad-* instead of inheriting the host row's */
+  --doc-row-pad-t: initial;
+  --doc-row-pad-b: initial;
 }
 
 .doc-table.doc-table-autofit-contents,
@@ -6596,9 +6610,11 @@ body.docs-crop-active .doc-protected[data-doc-protected='image'] .doc-img-wrap {
   --cell-bw-r: var(--doc-bw-v, 0px);
   --cell-bd-t: var(--doc-bd-h, 0px);
   --cell-bd-b: var(--doc-bd-h, 0px);
-  padding: var(--doc-cell-pad-t, 0px)
+  /* top/bottom are row-wide: Word pads every cell with the row's largest tcMar
+     (tr --doc-row-pad-*, extensions rowPadVarsCss; probe 2026-10-13) */
+  padding: var(--doc-row-pad-t, var(--doc-cell-pad-t, 0px))
     max(0px, calc(var(--doc-cell-pad-r, 7.2px) - var(--cell-bw-r) * var(--doc-bw-share, 0.5)))
-    var(--doc-cell-pad-b, 0px)
+    var(--doc-row-pad-b, var(--doc-cell-pad-b, 0px))
     max(0px, calc(var(--doc-cell-pad-l, 7.2px) - var(--cell-bw-l) * var(--doc-bw-share, 0.5)));
   vertical-align: top;
   /* Word breaks a token wider than the cell character-by-character rather

@@ -2299,6 +2299,10 @@ export function App() {
   const [pendingExportTick, setPendingExportTick] = useState(0)
   // Print dialog (Word-style preview + range); the pagination preview is its print source
   const [showPrintDialog, setShowPrintDialog] = useState(false)
+  const showPrintDialogRef = useRef(false)
+  showPrintDialogRef.current = showPrintDialog
+  // Chromium is capturing the live .pv-page sheets: Escape / Close must not unmount them
+  const [exportLocksPreview, setExportLocksPreview] = useState(false)
   // the dialog auto-opened the pagination preview: close it again with the dialog
   const printAutoOpenedPreviewRef = useRef(false)
 
@@ -3242,7 +3246,12 @@ export function App() {
         setStatus(t('appExportPdfFailed', { error: 'pagination preview produced no pages' }))
         return
       }
-      void exportPdf(pending.outPath).then(pending.resolve, () => pending.resolve(false))
+      setExportLocksPreview(true)
+      const ok = await exportPdf(pending.outPath).catch(() => false)
+      setExportLocksPreview(false)
+      // a Print the user started meanwhile owns the preview now
+      if (pending.closePreview && !showPrintDialogRef.current) setShowPagePreview(false)
+      pending.resolve(ok)
     }, 1200)
     return () => window.clearTimeout(timer)
   }, [showPagePreview, pendingExportTick, exportPdf])
@@ -8352,6 +8361,10 @@ export function App() {
     '--page-pad': canvasSection
       ? `${canvasTop}px ${twipsToPx(canvasSection.marginRight)}px ${canvasBottom}px ${twipsToPx(canvasSection.marginLeft)}px`
       : undefined,
+    '--page-mt': canvasSection ? `${canvasTop}px` : undefined,
+    '--page-mb': canvasSection ? `${canvasBottom}px` : undefined,
+    '--page-ml': canvasSection ? `${twipsToPx(canvasSection.marginLeft)}px` : undefined,
+    '--page-mr': canvasSection ? `${twipsToPx(canvasSection.marginRight)}px` : undefined,
     '--header-dist': canvasBox ? `${canvasBox.headerDist}px` : undefined,
     '--footer-dist': canvasBox ? `${canvasBox.footerDist}px` : undefined,
     '--page-bg': pageColor ? `#${pageColor}` : undefined,
@@ -9397,8 +9410,10 @@ export function App() {
             }
           }}
           onExportPdf={() => void exportPdf()}
-          onClose={() => setShowPagePreview(false)}
-          suppressEscape={showPrintDialog}
+          onClose={() => {
+            if (!exportLocksPreview) setShowPagePreview(false)
+          }}
+          suppressEscape={showPrintDialog || exportLocksPreview}
         />
       )}
 

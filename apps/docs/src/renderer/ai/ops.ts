@@ -246,10 +246,14 @@ function validateTarget(target: unknown, where: string): string | null {
   return null
 }
 
+const isEmptyTarget = (v: unknown): boolean =>
+  !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0
+
 function validateShape(op: Op, def: OpDef, where: string): string | null {
   if (def.target === 'none' && op.target !== undefined) {
     return `${where}: does not take a target`
   }
+  if (def.target === 'optional' && isEmptyTarget(op.target)) delete op.target
   if (def.target === 'required' || op.target !== undefined) {
     const error = validateTarget(op.target, where)
     if (error) return error
@@ -510,6 +514,18 @@ function paragraphsIn(b: TopBlock, scoped: SelRange | null): ParagraphHit[] {
 }
 
 /** true when [from, to) lies inside the block's selected span (no clip = whole block is fair game) */
+/** Text blocks a character-level scan visits inside a top block: the block itself, or the paragraphs nested in a container such as a table (kept to the scoped range) */
+function scanParagraphs(b: TopBlock, scoped: SelRange | null): ParagraphHit[] {
+  return paragraphsIn(b, scoped)
+}
+
+/** a character span is in play when it lies inside the top block's clip and, for nested paragraphs, inside the scoped range (a caret-only scope leaves the block whole, as matchTarget does) */
+function insideScope(b: TopBlock, scoped: SelRange | null, from: number, to: number): boolean {
+  if (!insideClip(b, from, to)) return false
+  if (!scoped || b.node.isTextblock || scoped.from === scoped.to) return true
+  return from >= scoped.from && to <= scoped.to
+}
+
 function insideClip(b: TopBlock, from: number, to: number): boolean {
   return !b.clip || (from >= b.clip.from && to <= b.clip.to)
 }
@@ -866,10 +882,10 @@ function modelViewOf(node: PmDocNode): { text: string; markers: string[] } {
  */
 function redactionRangesOf(node: PmDocNode, base: number): Array<{ from: number; to: number }> {
   const out: Array<{ from: number; to: number }> = []
-  node.forEach((child, offset) => {
+  node.descendants((child, pos) => {
     if (!child.isText || !child.text) return
     if (!child.marks.some((m) => m.type.name === REDACT_MARK)) return
-    out.push({ from: base + offset, to: base + offset + child.text.length })
+    out.push({ from: base + pos, to: base + pos + child.text.length })
   })
   return out
 }
@@ -881,6 +897,7 @@ function runFindReplace(op: Op, env: RunEnv): OpResult {
   const matchCase = op.matchCase !== false
   const needle = matchCase ? find : find.toLowerCase()
   const blocks = op.target ? matchTarget(tr.doc, targetOf(op), sel) : topLevelBlocks(tr.doc)
+  const scoped = op.target ? scopedRange(targetOf(op), sel) : null
   const replacements: Array<{ from: number; to: number; marks: PmDocNode['marks'] }> = []
   const touchedIndexes = new Set<number>()
   let skippedProtected = 0
@@ -892,22 +909,25 @@ function runFindReplace(op: Op, env: RunEnv): OpResult {
       continue
     }
     const blockDeleted = isTrackedDeleted(b.node)
-    b.node.forEach((child, offset) => {
-      if (!child.isText || !child.text) return
-      const struck = blockDeleted || child.marks.some((m) => m.type.name === 'del')
-      const hay = matchCase ? child.text : child.text.toLowerCase()
-      let at = hay.indexOf(needle)
-      while (at !== -1) {
-        const from = b.pos + 1 + offset + at
-        if (struck) {
-          skippedDeleted++
-        } else if (insideClip(b, from, from + needle.length)) {
-          replacements.push({ from, to: from + needle.length, marks: child.marks })
-          touchedIndexes.add(b.index)
+    for (const p of scanParagraphs(b, scoped)) {
+      const paraDeleted = blockDeleted || isTrackedDeleted(p.node)
+      p.node.forEach((child, offset) => {
+        if (!child.isText || !child.text) return
+        const struck = paraDeleted || child.marks.some((m) => m.type.name === 'del')
+        const hay = matchCase ? child.text : child.text.toLowerCase()
+        let at = hay.indexOf(needle)
+        while (at !== -1) {
+          const from = p.pos + 1 + offset + at
+          if (struck) {
+            skippedDeleted++
+          } else if (insideScope(b, scoped, from, from + needle.length)) {
+            replacements.push({ from, to: from + needle.length, marks: child.marks })
+            touchedIndexes.add(b.index)
+          }
+          at = hay.indexOf(needle, at + needle.length)
         }
-        at = hay.indexOf(needle, at + needle.length)
-      }
-    })
+      })
+    }
   }
 
   // A rewrite is refused only when it would actually touch a withheld span: the
@@ -1014,6 +1034,7 @@ function runSetMatchedFont(op: Op, env: RunEnv): OpResult {
   const matchCase = op.matchCase !== false
   const needle = text === null ? null : matchCase ? text : text.toLowerCase()
   const blocks = op.target ? matchTarget(tr.doc, targetOf(op), sel) : topLevelBlocks(tr.doc)
+  const scoped = op.target ? scopedRange(targetOf(op), sel) : null
   const boolKeys = present(op, Object.keys(BOOL_MARK_TYPES))
   const markPatch = buildTextMarkPatch(op)
   const touched = new Set<number>()
@@ -1027,40 +1048,45 @@ function runSetMatchedFont(op: Op, env: RunEnv): OpResult {
       continue
     }
     const blockDeleted = isTrackedDeleted(b.node)
-    const contentFrom = b.pos + 1
-    b.node.forEach((child, offset) => {
-      if (!child.isText || !child.text) return
-      if (!runStyleMatches(child, op)) return
-      const struck = blockDeleted || child.marks.some((m) => m.type.name === 'del')
-      // no text to match: the whole run is one match
-      const ranges: Array<[number, number]> = []
-      if (needle === null) {
-        ranges.push([0, child.text.length])
-      } else {
-        const hay = matchCase ? child.text : child.text.toLowerCase()
-        let at = hay.indexOf(needle)
-        while (at !== -1) {
-          ranges.push([at, at + needle.length])
-          at = hay.indexOf(needle, at + needle.length)
+    for (const p of scanParagraphs(b, scoped)) {
+      const paraDeleted = blockDeleted || isTrackedDeleted(p.node)
+      const contentFrom = p.pos + 1
+      p.node.forEach((child, offset) => {
+        if (!child.isText || !child.text) return
+        if (!runStyleMatches(child, op)) return
+        const struck = paraDeleted || child.marks.some((m) => m.type.name === 'del')
+        // no text to match: the whole run is one match
+        const ranges: Array<[number, number]> = []
+        if (needle === null) {
+          ranges.push([0, child.text.length])
+        } else {
+          const hay = matchCase ? child.text : child.text.toLowerCase()
+          let at = hay.indexOf(needle)
+          while (at !== -1) {
+            ranges.push([at, at + needle.length])
+            at = hay.indexOf(needle, at + needle.length)
+          }
         }
-      }
-      for (const [start, end] of ranges) {
-        let from = contentFrom + offset + start
-        let to = contentFrom + offset + end
-        // a style match is the whole run; a selection may cut into it, so clip instead of skipping
-        if (needle === null && b.clip) {
-          ;[from, to] = [Math.max(from, b.clip.from), Math.min(to, b.clip.to)]
-          if (from >= to) continue
+        for (const [start, end] of ranges) {
+          let from = contentFrom + offset + start
+          let to = contentFrom + offset + end
+          if (needle === null) {
+            // a style match is the whole run; a selection may cut into it, so clip instead of skipping
+            if (b.clip) [from, to] = [Math.max(from, b.clip.from), Math.min(to, b.clip.to)]
+            if (scoped && !b.node.isTextblock && scoped.from !== scoped.to)
+              [from, to] = [Math.max(from, scoped.from), Math.min(to, scoped.to)]
+            if (from >= to) continue
+          }
+          if (struck) {
+            skippedDeleted++
+          } else if (insideScope(b, scoped, from, to)) {
+            applyFontRange(env, op, boolKeys, markPatch, from, to, p.node, contentFrom)
+            styledCount++
+            touched.add(b.index)
+          }
         }
-        if (struck) {
-          skippedDeleted++
-        } else if (insideClip(b, from, to)) {
-          applyFontRange(env, op, boolKeys, markPatch, from, to, b.node, contentFrom)
-          styledCount++
-          touched.add(b.index)
-        }
-      }
-    })
+      })
+    }
   }
   // mark steps never shift positions, so block offsets are still valid here
   for (const b of topLevelBlocks(tr.doc)) {

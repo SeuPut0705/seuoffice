@@ -86,6 +86,7 @@ import {
   deleteTableColumn,
   distributeRowsEvenly,
   enterSelectedTable,
+  inTableOrSelected,
   selectTablePart,
   tableCellsSelection,
   setCellAlignment,
@@ -1407,6 +1408,26 @@ function RibbonInner({
     runTableCommand(
       setSelectionBorders(mode, { style: borderStyle, szEighths: borderSz, color: borderColor }),
     )
+  }
+
+  // Word's Home ▸ Borders is the table gallery whenever the selection sits in a
+  // table: the lines go on the selected cells, not on their paragraphs. A
+  // focused textbox / header / footer sub-editor is never "in a table".
+  const HOME_BORDER_CELL_MODE: Record<string, TableBorderMode> = {
+    b: 'bottom',
+    t: 'top',
+    l: 'left',
+    r: 'right',
+    tblr: 'all',
+    none: 'none',
+  }
+  const applyHomeBorders = (borders: string | null) => {
+    if (!sub && inTableOrSelected(editor.state)) {
+      applyCellBorders(HOME_BORDER_CELL_MODE[borders ?? 'none'])
+      setDropdown(null)
+      return
+    }
+    setParaAttr({ borders })
   }
 
   /** Set row height for selected rows (twips; null = auto) */
@@ -4329,22 +4350,22 @@ function RibbonInner({
                     </button>
                     {dropdown === 'borders' && (
                       <div data-rb-panel="" className="spacing-menu borders-menu">
-                        <button onClick={() => setParaAttr({ borders: 'b' })}>
+                        <button onClick={() => applyHomeBorders('b')}>
                           {t('ribbonBorderBottom')}
                         </button>
-                        <button onClick={() => setParaAttr({ borders: 't' })}>
+                        <button onClick={() => applyHomeBorders('t')}>
                           {t('ribbonBorderTop')}
                         </button>
-                        <button onClick={() => setParaAttr({ borders: 'l' })}>
+                        <button onClick={() => applyHomeBorders('l')}>
                           {t('ribbonBorderLeft')}
                         </button>
-                        <button onClick={() => setParaAttr({ borders: 'r' })}>
+                        <button onClick={() => applyHomeBorders('r')}>
                           {t('ribbonBorderRight')}
                         </button>
-                        <button onClick={() => setParaAttr({ borders: 'tblr' })}>
+                        <button onClick={() => applyHomeBorders('tblr')}>
                           {t('ribbonBorderBox')}
                         </button>
-                        <button onClick={() => setParaAttr({ borders: null })}>
+                        <button onClick={() => applyHomeBorders(null)}>
                           {t('ribbonNoBorders')}
                         </button>
                       </div>

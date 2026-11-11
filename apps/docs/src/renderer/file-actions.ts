@@ -120,7 +120,6 @@ import {
 import { adoptEmbeddedFonts } from './embedded-fonts'
 import { prefetchFaces } from './font-resolve'
 import { defaultEastAsiaFontFor } from './font-list'
-import { hasPrintableHeaderFooter } from './pagination'
 import { clearPrintZoom, setPrintZoom } from './print-zoom'
 import { collectPdfInternalLinks } from './pdf-internal-links'
 import type { PdfInternalLink } from '../shared/ipc'
@@ -129,7 +128,12 @@ import { buildStandaloneHtml } from './html-export'
 import { aiPanelInitiallyOpen } from '@genoffice/ui'
 
 /** An export waiting for the pagination preview to mount; resolve settles the caller's exportPdf promise. */
-export type PendingPdfExport = { outPath?: string; resolve: (ok: boolean) => void }
+export type PendingPdfExport = {
+  outPath?: string
+  resolve: (ok: boolean) => void
+  /** the export opened the preview itself and closes it once the PDF is written */
+  closePreview: boolean
+}
 
 /** The App state the file actions need; built fresh per call. */
 export interface FileActionContext {
@@ -342,7 +346,10 @@ function resetEditorHistory(editor: Editor): void {
 function caretMarksSnapshot(editor: Editor): string | null {
   const { state } = editor
   const { $from } = state.selection
-  return serializeMarks(state.storedMarks ?? $from.marks())
+  // an explicit empty list is "user cleared the formatting" and must survive
+  // as such, or the caret inherits the surrounding text again after the rewrite
+  if (state.storedMarks) return serializeMarks(state.storedMarks) ?? '[]'
+  return serializeMarks($from.marks())
 }
 
 /**
@@ -364,7 +371,7 @@ export function restoreMarksAfterDocRewrite(editor: Editor, snapshot: string | n
     const type = editor.schema.marks[entry.type]
     return type && FORMAT_MARKS.has(entry.type) ? [type.create(entry.attrs)] : []
   })
-  if (marks.length === 0) return false
+  if (marks.length === 0 && entries.length > 0) return false
   editor.view.dispatch(editor.state.tr.setStoredMarks(marks))
   return true
 }
@@ -378,6 +385,9 @@ function applyDocLayoutSettings(editor: Editor, parsed: ParsedDocFull): void {
   // Word 2013+ justified lines pull words up by shrinking spaces; legacy
   // compatibility modes (and new blank docs) never do
   editor.storage.justifyShrink.enabled = (parsed.compatibilityMode ?? 0) >= 15
+  // Word stretches a justified line that ends in a line break (w:br / w:cr)
+  // unless the document opts out with doNotExpandShiftReturn
+  editor.storage.justifyShrink.expandBreakLines = parsed.doNotExpandShiftReturn !== true
   setAdditiveParagraphSpacing(parsed.doNotUseHTMLParagraphAutoSpacing === true)
   editor.storage.cjkPunctShrink.enabled = parsed.compressPunctuation === true
   editor.storage.cjkPunctShrink.hangPunct = parsed.compressPunctuation !== true
@@ -1381,12 +1391,6 @@ async function saveOnce(
     // identity snapshot: detects edits that arrive while the save is in flight
     const fontSettingsVersion = ctx.fontSettingsVersionRef?.current
     const docSnapshot = editor.state.doc
-    const selectionPos = editor.state.selection.from
-    // The caret's marks — the ribbon's font/size live here as storedMarks and
-    // apply to whatever is typed next. The reparse below replaces the doc, so
-    // they have to travel with the selection or an autosave silently drops the
-    // font the user just picked (#2004).
-    const caretMarks = caretMarksSnapshot(editor)
     const docx = await buildDocBytes(ctx)
     if (!docx) return false
     const format: DocFormat = isOdtDoc(doc) ? 'odt' : 'docx'
@@ -1581,6 +1585,14 @@ async function saveOnce(
     rebaseOdtSession(reparsed)
     // Equal doc: skip the rewrite so undo history, caret and scroll survive.
     if (!unchanged) {
+      // The caret's marks — the ribbon's font/size live here as storedMarks and
+      // apply to whatever is typed next. setContent replaces the doc, so they
+      // have to travel with the selection or an autosave silently drops the
+      // font the user just picked (genoffice#2004). Both are read live, not
+      // before the await: a font chosen or a caret moved during the save must
+      // win, and the marks must belong to the position they are restored at.
+      const selectionPos = editor.state.selection.from
+      const caretMarks = caretMarksSnapshot(editor)
       // Rebase saved anchors without recording the reload as a user edit.
       editor
         .chain()
@@ -1805,9 +1817,8 @@ async function printGroupsMerged(
 /** Park the export until the preview mounts; the App effect re-runs it and settles the promise. */
 function deferExportToPreview(ctx: FileActionContext, outPath?: string): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
-    const prev = ctx.pendingMixedExportRef.current
-    if (prev) prev.resolve(false)
-    ctx.pendingMixedExportRef.current = { outPath, resolve }
+    const closePreview = !document.querySelector('.pagination-preview')
+    ctx.pendingMixedExportRef.current = { outPath, resolve, closePreview }
     ctx.setShowPagePreview(true)
     ctx.bumpPendingExportTick()
   })
@@ -1815,9 +1826,10 @@ function deferExportToPreview(ctx: FileActionContext, outPath?: string): Promise
 
 // Concurrent exports would trample each other's pv-print-skip classes and
 // interleave print jobs; while one is printing, further calls report busy.
-// A parked deferral must not hold the flag (its resume call has to get
-// through), so the defer paths return without await: the finally runs at
-// return time and the flag clears while the export is parked.
+// A parked deferral cannot hold the flag (its resume call has to get
+// through), so the defer path returns without await and the flag clears
+// while the export is parked; the pending ref keeps the export exclusive
+// in the meantime, and the resume call claims (clears) it before re-entering.
 let printJobActive = false
 
 /** Resolves true only when a PDF was written to disk. */
@@ -1826,7 +1838,7 @@ export async function exportPdf(ctx: FileActionContext, outPath?: string): Promi
   if (!doc) return false
   noticeLabelsBeforeOutput()
   await waitForFullContent()
-  if (printJobActive) {
+  if (printJobActive || ctx.pendingMixedExportRef.current) {
     ctx.setStatus(t('appExportingPdf'))
     return false
   }
@@ -1890,62 +1902,20 @@ export async function exportPdf(ctx: FileActionContext, outPath?: string): Promi
         return false
       }
     }
-    // preview closed: mixed paper auto-opens the preview and uses the merge path; uniform paper exports directly
-    const sizeKey = (w: number, h: number) => `${w}x${h}`
-    const counts = new Map<string, { w: number; h: number; n: number }>()
-    const list =
-      ctx.sections.length > 0
+    // Preview closed: open it and export its per-page sheets. Printing the
+    // edit canvas directly hands Chromium one padded box to auto-paginate, so
+    // only the first sheet gets a top margin, the bottom margin is ignored and
+    // the trailing padding spills onto a blank last page.
+    const sizes = new Set(
+      (ctx.sections.length > 0
         ? ctx.sections.map((sec) => sec.settings)
         : ctx.section
           ? [ctx.section]
           : []
-    for (const st of list) {
-      const key = sizeKey(st.pageWidth, st.pageHeight)
-      const cur = counts.get(key) ?? { w: st.pageWidth, h: st.pageHeight, n: 0 }
-      cur.n += 1
-      counts.set(key, cur)
-    }
-    // headers/footers exist once on the edit canvas (not once per page), so direct
-    // print would show them on the last page only — force the preview-merge path too
-    const mixedPaper = counts.size > 1
-    // direct print pads every page by the odd-page margins: mirrored even pages need the per-page sheets
-    if (
-      mixedPaper ||
-      ctx.mirrorMargins ||
-      hasPrintableHeaderFooter({
-        edited: [
-          ctx.header,
-          ctx.footer,
-          ...(ctx.titlePg ? [ctx.hfVariants.headerFirst, ctx.hfVariants.footerFirst] : []),
-          ...(ctx.evenOddHf ? [ctx.hfVariants.headerEven, ctx.hfVariants.footerEven] : []),
-          ...Object.values(ctx.sectionHfEdits),
-        ],
-        sections: ctx.sections,
-        hfParts: doc.parsed.hfParts ?? undefined,
-        evenOddHf: ctx.evenOddHf,
-      })
-    ) {
-      if (mixedPaper) ctx.setStatus(t('appMixedExportOpening'))
-      return deferExportToPreview(ctx, outPath)
-    }
-    const major = [...counts.values()][0]
-    const result = await window.desktop.exportPdf(
-      doc.fileName,
-      major?.w ?? ctx.section?.pageWidth ?? 12240,
-      major?.h ?? ctx.section?.pageHeight ?? 15840,
-      outPath,
+      ).map((st) => `${st.pageWidth}x${st.pageHeight}`),
     )
-    if (result.ok) {
-      ctx.setStatus(t('appExportedPdf', { path: result.path ?? '' }))
-      return true
-    }
-    if (!result.error) {
-      ctx.setStatus(t('appExportPdfCanceled'))
-      return false
-    }
-    // direct print of a heavy canvas failed: reroute through the preview so the
-    // retry can print in chunks; the failed attempt already authorized result.path
-    return deferExportToPreview(ctx, outPath ?? result.path)
+    if (sizes.size > 1) ctx.setStatus(t('appMixedExportOpening'))
+    return deferExportToPreview(ctx, outPath)
   } finally {
     clearPrintZoom()
     printJobActive = false
