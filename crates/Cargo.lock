@@ -152,6 +152,7 @@ name = "office-wasm"
 version = "0.1.0"
 dependencies = [
  "docx-engine",
+ "jscompat",
  "ooxml-pkg",
  "ooxml-xml",
  "serde",

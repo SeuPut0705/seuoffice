@@ -15,6 +15,8 @@ use ooxml_pkg::{decode_text, read_entries};
 use ooxml_xml::{Utf16Map, parse_ordered, serialize};
 use serde::{Deserialize, Serialize};
 
+mod props;
+
 const PROTOCOL_VERSION: u8 = 1;
 
 #[derive(Deserialize)]
@@ -28,6 +30,8 @@ enum Command {
     },
     /// Blob 0: a zip container. Reply blob `i`: the text of entry `i` as UTF-16LE.
     ZipEntries,
+    /// Calls the property readers. The reply has one list of outcomes per input.
+    Props { inputs: Vec<props::Input> },
 }
 
 #[derive(Deserialize)]
@@ -43,6 +47,7 @@ enum Reply<'a> {
     Scan { scan: WireScan<'a> },
     RoundTrip { results: Vec<RoundTrip> },
     Entries { entries: Vec<WireEntry> },
+    Props { results: Vec<Vec<props::Outcome>> },
     Failure { error: Failure },
 }
 
@@ -247,6 +252,9 @@ fn respond(input: &[u8]) -> Vec<u8> {
                     },
                     _,
                 ) => round_trip(&fragments, max_nested_tags),
+                (Command::Props { inputs }, _) => json(&Reply::Props {
+                    results: inputs.iter().map(props::run).collect(),
+                }),
                 (Command::ScanBody, Some(xml)) => scan(xml),
                 (Command::ZipEntries, Some(container)) => zip_entries(container, &mut reply_blobs),
                 (Command::ScanBody | Command::ZipEntries, None) => {
