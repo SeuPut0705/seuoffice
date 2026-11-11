@@ -781,8 +781,14 @@ function mathRun(text: string, plain = false): string {
   return `<m:r>${rPr}<m:t xml:space="preserve">${escapeXmlText(text)}</m:t></m:r>`
 }
 
+/**
+ * The character at the cursor ('' at the end). A whole code point: a character
+ * outside the BMP is two UTF-16 units, and taking one of them as an argument
+ * would leave half a surrogate pair in the OMML. Advance by its length.
+ */
 function peek(p: LatexParser): string {
-  return p.src[p.pos] ?? ''
+  const code = p.src.codePointAt(p.pos)
+  return code === undefined ? '' : String.fromCodePoint(code)
 }
 
 function skipSpaces(p: LatexParser): void {
@@ -796,8 +802,8 @@ function readControlName(p: LatexParser): string {
     p.pos += m[0].length
     return m[0]
   }
-  const ch = p.src[p.pos] ?? ''
-  p.pos++
+  const ch = peek(p)
+  p.pos += ch.length
   return ch
 }
 
@@ -817,7 +823,7 @@ function parseGroup(p: LatexParser): string {
   }
   const ch = peek(p)
   if (ch === '' || '{}^_&'.includes(ch)) throw new LatexError('An argument is required here')
-  p.pos++
+  p.pos += ch.length
   return mathRun(ch)
 }
 
