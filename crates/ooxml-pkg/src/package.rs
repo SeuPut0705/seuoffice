@@ -127,7 +127,13 @@ impl Package {
         let Some(last_slash) = path.rfind('/').filter(|at| *at > 0) else {
             return;
         };
-        let folder = format!("{}/", &path[..last_slash]);
+        // JSZip's forceTrailingSlash: a parent ending in a slash keeps just that one
+        let parent = &path[..last_slash];
+        let folder = if parent.ends_with('/') {
+            parent.to_owned()
+        } else {
+            format!("{parent}/")
+        };
         if !self.by_name.contains_key(&folder) {
             self.add_parent_folders(&folder);
             self.set(Part::new(folder, true, Ok(Vec::new())));
