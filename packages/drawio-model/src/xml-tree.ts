@@ -193,8 +193,16 @@ export function newElement(name: string, attrs: XmlAttr[], children: XmlNode[] =
   return element
 }
 
+// Control characters outside \t \n \r, the U+FFFE/U+FFFF noncharacters, and lone
+// (unpaired) UTF-16 surrogates are all illegal in XML 1.0 even when escaped
+// (same class as packages/docx-engine and odt-engine escape helpers).
+const ILLEGAL_XML_CHARS =
+  // eslint-disable-next-line no-control-regex
+  /[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
+
 export function escapeXmlAttr(value: string): string {
   return value
+    .replace(ILLEGAL_XML_CHARS, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -205,7 +213,11 @@ export function escapeXmlAttr(value: string): string {
 }
 
 export function escapeXmlText(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return value
+    .replace(ILLEGAL_XML_CHARS, '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
 }
 
 /** Decodes the five XML entities and character references in raw character data. */
