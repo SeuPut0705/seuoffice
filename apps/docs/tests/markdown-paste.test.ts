@@ -11,6 +11,18 @@ describe('looksLikeMarkdown', () => {
     expect(looksLikeMarkdown('| A | B |\n| --- | --- |\n| 1 | 2 |')).toBe(true)
   })
 
+  it('treats CommonMark ATX headings indented by up to three spaces as Markdown', () => {
+    expect(looksLikeMarkdown(' # Hello')).toBe(true)
+    expect(looksLikeMarkdown('  # Hello\nworld')).toBe(true)
+    expect(looksLikeMarkdown('   ## Section')).toBe(true)
+    expect(looksLikeMarkdown('    # four spaces')).toBe(false)
+    expect(markdownPasteHtml('  # Title\n\nBody')).toContain('<h1>')
+  })
+
+  it('does not treat a tab-indented "#" line as a heading (CommonMark: tab indents a code block)', () => {
+    expect(looksLikeMarkdown('\t# Hello')).toBe(false)
+  })
+
   it('requires repetition for list and quote markers', () => {
     expect(looksLikeMarkdown('- one item only')).toBe(false)
     expect(looksLikeMarkdown('- one\n- two')).toBe(true)

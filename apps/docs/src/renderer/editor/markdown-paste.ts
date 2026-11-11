@@ -16,7 +16,7 @@ import { sanitizeMarkdownHtml } from './sanitize-markdown-html'
 
 /// Constructs that essentially never appear in prose accidentally.
 const STRONG_SIGNALS: readonly RegExp[] = [
-  /^#{1,6}\s+\S/m, // ATX heading
+  /^ {0,3}#{1,6}\s+\S/m, // ATX heading (spaces only — a tab indents a code block per CommonMark)
   /^\s{0,3}```/m, // fenced code block
   /\[[^\]\n]+\]\([^\s)]+\)/, // [text](url) link
   // **bold** only — the __bold__ form is indistinguishable from Python
