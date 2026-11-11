@@ -273,7 +273,7 @@ main fixed the TypeScript defects this port found, and this branch follows:
   already did. The lossy lines of (f) and their floors are gone.
 
 The first gate run on the merged tree, before any of this, had 872
-differences in 10 lines and 13 of 21 ledger entries stale.
+differences in 9 lines and 13 of 21 ledger entries stale.
 
 The ledger holds five entries: DOCTYPE and the CDATA opener (what
 fast-xml-parser reads and Rust refuses), the two host-dependent ones
