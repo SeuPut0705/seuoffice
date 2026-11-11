@@ -6,6 +6,9 @@ it yet: every ported module is compared against the TypeScript it came from by
 `tools/docx-diff`, and the TypeScript stays the engine until a unit flips a
 caller.
 
+A session that picks this work up starts at
+[Next session starts here](#next-session-starts-here).
+
 ## Layout
 
 | Crate                | What it holds                                                                                                                                                                                                                                                          | Ported from                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -212,7 +215,8 @@ is listed, never coded around in the harness.
   properties (`blank.rs`; `doc_properties.rs` holds the read side only).
 - `fields.rs` takes what `resolve-props.ts` computes as arguments
   (`EffectivePPr`, `ResolveCtx`, `ResolveCompat` hold only the fields read
-  here). `fieldDisplayOf` and `applyTocEntryNumbers` wait for that port.
+  here). `fieldDisplayOf` waits for that port; `applyTocEntryNumbers` works
+  on the block model and waits for `parse.ts`.
 - `parseNotesXml` is ported without its paragraph reader callback, which
   `parse.ts` supplies.
 - `blank/locale.rs` answers `paperSizeForLocale` from a table of likely
@@ -221,3 +225,152 @@ is listed, never coded around in the harness.
   another ICU can answer differently for rare tags.
 - `omml` refuses LaTeX nested deeper than 256 levels; the TypeScript runs
   until the JavaScript stack overflows.
+- The zip writer re-deflates every entry and rebuilds every header, as JSZip
+  does, so parity with today's save does not need more. A save that keeps an
+  untouched entry byte for byte needs its raw record copied instead, and that
+  belongs to the save unit, not before it and not mixed with the first
+  switch of a caller. What it takes: the reader keeps each original record
+  (local header, extra fields, compressed bytes, data descriptor), which
+  `Package` does not do today. `spike-one-run-save/src/container.rs` is a
+  working sketch of 214 lines. It refuses ZIP64, multi-disk and encrypted
+  archives and a central directory whose offset does not match its position;
+  it keeps bytes before the first record; an entry it replaces loses its data
+  descriptor. 1 tracked document and 11 of Apache POI's 115 have data
+  descriptors; none has a prefix.
+
+## Next session starts here
+
+State on 2026-11-12. Nothing is pushed.
+
+- `feat/rust-docx-u1`: everything below. The gate passes on this baseline.
+- `fix/rust-zip64-six-fields`: two commits on top of it. They make the Rust
+  zip gate refuse the six end-record fields main's zip gate refuses since
+  d49361a3f, and they are green only on a baseline that holds that commit.
+  The two go in together.
+
+### What to do, in order
+
+1. **Key order becomes part of parity everywhere.** Turn on `preserve_order`
+   of `serde_json` and compare (d), (e) and (f) with a deep comparison that
+   looks at key order, struct fields included. The CLI prints engine results
+   as JSON, and 87 places in the TypeScript engine iterate objects. Where the
+   TypeScript order depends on the path taken (a key assigned under a
+   condition), mirror the path. A ledger entry for an order is allowed only
+   with its reason written. Expect the first run to light up many structs:
+   a Rust struct serializes in declaration order, a TypeScript literal in
+   the order it was written. `numbering.rs` keeps levels in a `BTreeMap`
+   (`"10"` before `"2"`); that is one known case. The specs of (f) that send
+   dictionaries as entries can go back to plain objects afterwards.
+2. **`resolve-props.ts`** (1,141 lines, 25 exports; imports only modules
+   already ported). It unblocks `fieldDisplayOf` and replaces the partial
+   `EffectivePPr`, `ResolveCtx` and `ResolveCompat` of `fields.rs`.
+3. **The leaves `parse.ts` still imports**, in parallel, each as a group of
+   (f): the rest of `parse-drawing-geometry.ts` (651; one function is
+   ported) and of `parse-vml.ts` (568; nine are), `chart.ts` read side
+   (1,077), `revision-xml.ts` (511, shared with the save side),
+   `alt-chunk.ts` (289), `parse-block-passes.ts` (240), `ink.ts` (153),
+   `checkbox-control.ts` (77). `tiff.ts` (145) and `metafile.ts` (122) read
+   bytes: their inputs cross as blobs of the wire frame, not as text.
+   `lazy-media.ts` (55) is about when the host reads media, so decide what
+   of it the engine owns before porting it.
+4. **The model**, `types.ts` (2,719 lines), as Rust types that serialize to
+   the same JSON. Task 1 decides how their field order is written down.
+5. **`parse.ts`** (9,171 lines, 152 functions, 12 exports). Its functions
+   are not exported, so (f) cannot call them. Compare `parseDocx` as a
+   whole: the model of every corpus document as JSON, block by block, with a
+   count per block type and per field so a partial port shows what is equal
+   already. Port by pass: runs, paragraphs, tables, drawings and text boxes,
+   the block passes. Then finish `parseNotesXml`'s paragraph reader and
+   `applyTocEntryNumbers`, which need it.
+6. The save side (`generate.ts`, `patch.ts`, `text-patch.ts`,
+   `style-upsert.ts`, `remove-parts.ts`, `zip-splice.ts`,
+   `resource-cleanup.ts`, the writers left out of the modules above) and
+   the features on top (`compare.ts`, `mail-merge.ts`) come after the read
+   side is whole.
+
+### What main is changing underneath
+
+main is fixing the TypeScript defects this port found, one commit per
+class. When they reach this branch the gate reports ledger entries as
+stale, by design. For each: make the Rust equal to the fixed TypeScript,
+then remove the entry.
+
+- Inherited-key lookups (the `table-lookup-inherited-key-*` entries). The
+  Rust already answers as the fix does. Remove the entries, the `listed`
+  predicates of the specs and the filters of `props-registry.ts`, so those
+  inputs are compared again.
+- Surrogate-range character references in `decodeXmlText`, to U+FFFD (the
+  two `lone-surrogate-*` entries of document properties). The Rust already
+  does this. The lossy line of docprops shrinks: lower its floor.
+- An astral character as the argument of a script or command in the LaTeX
+  reader (`lone-surrogate-from-half-a-latex-argument`). Here the Rust has to
+  change: it reads one UTF-16 unit, as the old TypeScript did.
+- The zip gate (see the branch above).
+
+These stay listed: the LaTeX depth limit, the two host-dependent ones
+(`zip-text-in-hosts-without-buffer`, `inflate-failure-text-is-the-hosts`),
+DOCTYPE and the CDATA opener.
+
+One finding is not a port matter and is with main: a run-level content
+control is dropped when its paragraph is saved as a generated block
+(`spike-one-run-save/README.md`). A faithful port reproduces it.
+
+### Standing rules
+
+From the owner, for every unit:
+
+- Change files only under `crates/` and `tools/docx-diff/`. No product code
+  (`apps/`, `packages/*/src`), no workflow, no root `package.json`, no
+  `AGENTS.md`. No push, no `git stash`, no rewriting history.
+- English Conventional Commits, one change each, each building and passing
+  its tests. Comments in English, no CJK ideographs (escape them in
+  literals).
+- Between 03:30 and 05:00 KST nothing heavy runs: no `cargo`, no wasm build,
+  no gate, no whole test suite. `tsc`, eslint, prettier and a single `tsx`
+  script are fine. Outside the window one heavy command at a time on the
+  machine. `tools/docx-diff/heavy.sh <command>` does both: it waits for the
+  window to end and for the lock. Every subagent goes through it too.
+- The first comparison run of a newly ported module is saved untouched
+  before anything is fixed: it is the measure of the port. A comparison a
+  subagent made privately does not count; the gate does.
+- A function counts as compared when it gave at least two distinct results
+  and a seeded fault in it is caught. The one who integrates seeds a fault
+  of their own per group, chosen without looking at the porter's list. A
+  fault that passes names an input to add.
+- Floors are committed with the unit: exact where they follow the corpus,
+  rounded down where they follow a seeded generator.
+- A difference is listed in `divergences.json` with both answers and the
+  reason, and the gate checks it still reproduces. It is never coded around,
+  in the Rust or in the harness. A TypeScript defect is reported to main,
+  not reproduced and not silently avoided. The DOCTYPE refusal is final.
+- A JavaScript operation gets one implementation, in `jscompat`.
+- `ooxml-xml` keeps yielding positions: the edit model of stage 4 starts
+  from byte ranges (decision 0025 on main), for which `spike-one-run-save`
+  is the evidence. That crate stays.
+- Each unit ends with a report to main: equality before fixing, the classes
+  of difference, what cannot be reproduced, the rate, and what was not
+  checked. `cargo-deny` is not installed here: say it did not run.
+- `packages/docx-engine` moves underneath: another session merges upstream
+  commits. `compare-package.ts` holds four readers copied from `parse.ts`
+  and the gate fails when `parse.ts` no longer holds that text.
+
+### How the last units were run
+
+- Leaf modules went to subagents in parallel, one group of modules each,
+  with files no other one touched and the contract of "Adding functions to
+  (f)" as the brief. While they wrote, each group sat behind a cargo feature
+  of its own so that one group that did not compile yet stopped no other;
+  the features went once every group built. Shared files (manifests,
+  `lib.rs`, `calls/mod.rs`, the runner) stayed with the integrator.
+- Commits were checked as staged: the index of `crates/` checked out to a
+  scratch directory, then `cargo test`, the wasm release build and clippy
+  with `-D warnings` there.
+- Rates, in TypeScript lines per hour: 1,433 for the package layer (one
+  agent, wall clock); about 875 per agent for the readers of unit 1d (four
+  agents, about 1,500 an hour together); about 790 for the math converters;
+  about 510 for the blank document with the zip writer, where a model of
+  `Intl.Locale` had to be found first. Integrating six groups, the gate,
+  floors and commits took another 70 minutes, most of it waiting for the
+  lock.
+- The gate takes about two and a half minutes with its wasm build; one group
+  of (f) alone about 40 seconds.
