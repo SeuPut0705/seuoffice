@@ -1,3 +1,4 @@
+import { ownValue } from './own-value'
 import {
   attrsOf,
   childrenOf,
@@ -936,7 +937,7 @@ function naryOmml(p: LatexParser, chr: string, limLoc: 'undOvr' | 'subSup'): str
 }
 
 function matrixOmml(p: LatexParser, env: string): string {
-  const delims = MATRIX_DELIMS[env]
+  const delims = ownValue(MATRIX_DELIMS, env)
   const rows: string[][] = [[]]
   let done = false
   while (!done) {
@@ -1000,12 +1001,12 @@ function readDelimiter(p: LatexParser): string {
     p.pos++
     const name = readControlName(p)
     const key = '\\' + name
-    if (key in LEFT_RIGHT_CHARS) return LEFT_RIGHT_CHARS[key]
+    if (Object.hasOwn(LEFT_RIGHT_CHARS, key)) return LEFT_RIGHT_CHARS[key]
     p.pos = start
     throw new LatexError(`Unsupported delimiter: \\${name}`)
   }
   const ch = peek(p)
-  if (ch in LEFT_RIGHT_CHARS) {
+  if (Object.hasOwn(LEFT_RIGHT_CHARS, ch)) {
     p.pos++
     return LEFT_RIGHT_CHARS[ch]
   }
@@ -1014,9 +1015,11 @@ function readDelimiter(p: LatexParser): string {
 
 function parseControl(p: LatexParser): string {
   const name = readControlName(p)
-  if (name in LATEX_SYMBOLS) return mathRun(LATEX_SYMBOLS[name])
-  if (name in NARY_OPS) return naryOmml(p, NARY_OPS[name].chr, NARY_OPS[name].limLoc)
-  if (name in ACCENT_CHARS) {
+  if (Object.hasOwn(LATEX_SYMBOLS, name)) return mathRun(LATEX_SYMBOLS[name])
+  if (Object.hasOwn(NARY_OPS, name)) {
+    return naryOmml(p, NARY_OPS[name].chr, NARY_OPS[name].limLoc)
+  }
+  if (Object.hasOwn(ACCENT_CHARS, name)) {
     const base = parseGroup(p)
     return `<m:acc><m:accPr><m:chr m:val="${escapeXmlAttr(ACCENT_CHARS[name])}"/></m:accPr><m:e>${base}</m:e></m:acc>`
   }
@@ -1098,7 +1101,9 @@ function parseControl(p: LatexParser): string {
     }
     case 'begin': {
       const env = readBraceText(p)
-      if (!(env in MATRIX_DELIMS)) throw new LatexError(`Unsupported environment: \\begin{${env}}`)
+      if (!Object.hasOwn(MATRIX_DELIMS, env)) {
+        throw new LatexError(`Unsupported environment: \\begin{${env}}`)
+      }
       return matrixOmml(p, env)
     }
     case ',':
