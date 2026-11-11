@@ -185,7 +185,7 @@ fn theme_fonts_take_the_language_of_the_settings_part() {
         json!({
             "fonts": {
                 "major": "Major", "minor": "", "eastAsia": "Ea", "majorCs": "Cs",
-                "eaLang": "ko-KR", "majorScripts": {"Hang": "Malgun Gothic"},
+                "eaLang": "ko-KR", "majorScripts": {"Hang": "Malgun Gothic", "__proto__": "x"},
             },
             "colors": {"name": "Mine", "dk1": "0A0B0C", "accent1": "4472C4"},
         })

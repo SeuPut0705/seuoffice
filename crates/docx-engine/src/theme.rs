@@ -140,9 +140,6 @@ fn script_fonts_of(xml: &str, tag: &str) -> Option<BTreeMap<String, String>> {
                 found.get(2).unwrap_or("").to_owned(),
             )
         })
-        // the original assigns into a plain object, where this key sets
-        // the prototype and leaves no entry
-        .filter(|(script, _)| script != "__proto__")
         .collect();
     (!out.is_empty()).then_some(out)
 }

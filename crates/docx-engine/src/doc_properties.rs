@@ -71,7 +71,8 @@ pub const APP_PROPERTIES: [(&str, &str); 17] = [
     ("manager", "Manager"),
 ];
 
-/// A plain JavaScript object used as a table of strings: `out[key] = value`.
+/// A plain JavaScript object used as a table of strings, written with
+/// `setOwn(out, key, value)`: every key is an own entry, `__proto__` too.
 /// It serializes in object order: array-index keys first, ascending, then the
 /// rest in insertion order.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -79,10 +80,6 @@ pub struct Record(Vec<(String, String)>);
 
 impl Record {
     fn set(&mut self, key: &str, value: String) {
-        // that assignment sets the prototype and leaves no entry
-        if key == "__proto__" {
-            return;
-        }
         match self.0.iter_mut().find(|(have, _)| have == key) {
             Some(entry) => entry.1 = value,
             None => self.0.push((key.to_owned(), value)),
