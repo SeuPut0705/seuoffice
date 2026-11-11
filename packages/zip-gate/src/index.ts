@@ -159,7 +159,25 @@ function scanParts(bytes: Uint8Array): ScannedPart[] {
   const count = at(eocd + 10, 2)
   const cdSize = at(eocd + 12, 4)
   const cdOffset = at(eocd + 16, 4)
-  if (count === 0xffff || cdSize === 0xffffffff || cdOffset === 0xffffffff) {
+  // JSZip 3.10.1 reads an archive as ZIP64 when any of six end-record fields is
+  // all ones (zipEntries.js, readEndOfCentral): both disk numbers and both
+  // record counts, besides the directory size and offset. Only then does it
+  // look for the locator, and it takes the last one anywhere in the file, so
+  // the locator need not be where the check above looks. Its ZIP64 reader
+  // never returns from crafted extensible data (readBlockZip64EndOfCentral),
+  // so all six fields are refused, not only the three this scan goes on to use.
+  //
+  // The record tested here is the one JSZip tests: it takes the last signature
+  // in the file and throws when the file ends before that record does, which
+  // leaves the last signature with room for a record, the one found above.
+  if (
+    at(eocd + 4, 2) === 0xffff ||
+    at(eocd + 6, 2) === 0xffff ||
+    at(eocd + 8, 2) === 0xffff ||
+    count === 0xffff ||
+    cdSize === 0xffffffff ||
+    cdOffset === 0xffffffff
+  ) {
     throw new Error('zip: zip64 archives are not supported')
   }
   if (cdOffset > bytes.byteLength || cdSize > bytes.byteLength - cdOffset) {

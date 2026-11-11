@@ -1,6 +1,6 @@
 import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
   documentMediaRoots,
@@ -14,8 +14,11 @@ import {
 // is opt-in: with no roots the extension check alone applies (the pre-allowlist
 // behaviour), and a caller that knows where the open document lives passes its
 // own roots. `outside` is deliberately under neither the working tree nor the
-// temp dir (homedir is the one writable place a test may use that is
-// guaranteed to sit outside both), so it exercises the no-roots path.
+// temp dir: it exercises the no-roots path. The home folder is the one
+// writable place a test may use that sits outside both. It is not the real
+// one: the runner gives each test process a throwaway home (tools/test-home.ts)
+// and tests/setup-tmpdir.ts keeps this suite's temp dir beside that home
+// instead of around it.
 const outside = mkdtempSync(join(homedir(), '.genoffice-aisearch-outside-'))
 const inside = mkdtempSync(join(tmpdir(), 'genoffice-aisearch-inside-'))
 const secret = join(outside, 'private.png')
@@ -29,6 +32,18 @@ function writePng(path: string): string {
   writeFileSync(path, Buffer.alloc(16, 7))
   return path
 }
+
+describe('where the test files live', () => {
+  it('is a throwaway home beside the temp dir, never the real home', () => {
+    // both are folders the runner created in the real OS temp dir
+    expect(dirname(homedir())).toBe(dirname(tmpdir()))
+  })
+
+  it('keeps `outside` out of both the working tree and the temp dir', () => {
+    expect(outside.startsWith(process.cwd())).toBe(false)
+    expect(outside.startsWith(tmpdir())).toBe(false)
+  })
+})
 
 describe('localMediaRoots', () => {
   it('has no default: an allowlist nobody opts into relocates the trust boundary', () => {

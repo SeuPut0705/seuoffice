@@ -6,6 +6,8 @@
  * output all see the same bytes.
  */
 
+import { ownValue } from './own-value'
+
 const T = 'http://schemas.openxmlformats.org/'
 const S = 'http://purl.oclc.org/ooxml/'
 const MS = 'http://schemas.microsoft.com/office/'
@@ -172,7 +174,7 @@ function mapUriValue(value: string): string {
   if (direct) return direct
   if (value.startsWith(STRICT_REL_BASE)) {
     const tail = value.slice(STRICT_REL_BASE.length)
-    return TRANSITIONAL_REL_BASE + (REL_TAIL[tail] ?? tail)
+    return TRANSITIONAL_REL_BASE + (ownValue(REL_TAIL, tail) ?? tail)
   }
   return value
 }
@@ -411,7 +413,7 @@ export function normalizeOoxmlXml(xml: string): string {
           .join(' ')
       } else {
         attr.value = mapUriValue(attr.value)
-        const factor = factors?.[al]
+        const factor = factors ? ownValue(factors, al) : undefined
         if (factor !== undefined && (ap === '' || lookup(bindings, ap) === W_URI)) {
           attr.value = convertMeasure(attr.value, factor)
         }

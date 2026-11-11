@@ -335,7 +335,7 @@ describe('a save request of a session that never empties its journal', () => {
     mode: 'save',
   }
 
-  it('goes through with more size records than one request takes: they are sent compacted', () => {
+  it('sends more size records than a session may record as the few that remain once compacted', () => {
     // 1 500 drags of the heights of ten rows
     const structuralOps = Array.from({ length: 1_500 }, (_, i) => ({
       sheetId: 's1',
@@ -344,14 +344,12 @@ describe('a save request of a session that never empties its journal', () => {
       end: i % 10,
       size: 20 + (i % 7),
     }))
-    // what the page checked the request with before: every save of the session failed from here on
-    expect(workbookSaveRequestSchema.safeParse({ ...base, structuralOps }).success).toBe(false)
     const request = coEditedSaveRequest({ ...base, structuralOps })
     expect(request?.structuralOps.length).toBeLessThanOrEqual(10)
     expect(request?.structuralOps.every((op) => op.sheetId === 's1')).toBe(true)
   })
 
-  it('takes records that cannot be compacted past the bound of one request', () => {
+  it('keeps records that cannot be compacted, each sheet’s in their order', () => {
     const structuralOps = Array.from({ length: STRUCTURAL_OPS_LIMIT + 200 }, (_, i) => ({
       sheetId: i % 2 === 0 ? 's1' : 's2',
       kind: 'merge-cells' as const,

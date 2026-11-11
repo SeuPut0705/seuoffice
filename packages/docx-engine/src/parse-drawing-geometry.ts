@@ -3,6 +3,7 @@
 import { attrsOf, childrenOf, findChild, nameOf, type XNode } from './xml-utils'
 import { EMU_PER_PX } from './parse-xml-text'
 import { DEFAULT_THEME_COLORS } from './theme'
+import { ownValue } from './own-value'
 import type { SectionSettings, TextGlow, TextOutline, TextboxDisplay, ThemeColors } from './types'
 
 /**
@@ -151,11 +152,11 @@ function gradStopRgb(gs: XNode, theme?: ThemeColors | null): number[] | null {
   }
   if (!base) {
     const prst = findChild(gs, 'a:prstClr')
-    if (prst) base = PRST_CLR_HEX[attrsOf(prst)['val'] ?? '']
+    if (prst) base = ownValue(PRST_CLR_HEX, attrsOf(prst)['val'] ?? '')
   }
   const scheme = base ? undefined : findChild(gs, 'a:schemeClr')
   if (!base && scheme) {
-    const slot = SCHEME_CLR_SLOTS[attrsOf(scheme)['val'] ?? '']
+    const slot = ownValue(SCHEME_CLR_SLOTS, attrsOf(scheme)['val'] ?? '')
     if (!slot) return null
     base = (theme?.[slot] as string | undefined) ?? DEFAULT_THEME_COLORS[slot]
   }
@@ -481,7 +482,7 @@ function w14ColorRgb(node: XNode, theme?: ThemeColors | null): number[] | null {
   const isScheme = nameOf(colorNode) === 'w14:schemeClr'
   let base: string | undefined = attrsOf(colorNode)['w14:val']
   if (isScheme) {
-    const slot = SCHEME_CLR_SLOTS[base ?? '']
+    const slot = ownValue(SCHEME_CLR_SLOTS, base ?? '')
     if (!slot) return null
     base = (theme?.[slot] as string | undefined) ?? DEFAULT_THEME_COLORS[slot]
   }

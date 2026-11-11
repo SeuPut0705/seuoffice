@@ -15,6 +15,7 @@ import type {
 } from './types'
 import { escapeXmlAttr, escapeXmlText } from './xml-utils'
 import { resolvePropChangeXml } from './revision-xml'
+import { ownValue } from './own-value'
 
 export interface GenerateContext {
   /** heading level -> styleId existing in the original styles.xml */
@@ -710,7 +711,9 @@ function cellRunContentXml(text: string): string {
   const parts = text.split(/([\t\n\f\v\u001e\u2011\u00ad])/)
   return parts
     .map((seg) =>
-      seg === '' ? '' : (CONTROL[seg] ?? `<w:t xml:space="preserve">${escapeXmlText(seg)}</w:t>`),
+      seg === ''
+        ? ''
+        : (ownValue(CONTROL, seg) ?? `<w:t xml:space="preserve">${escapeXmlText(seg)}</w:t>`),
     )
     .join('')
 }
@@ -1340,7 +1343,7 @@ export function buildLineParagraphXml(opts: {
   id?: number
   colorHex?: string
 }): string {
-  const def = LINE_KINDS[opts.kind] ?? LINE_KINDS.line
+  const def = ownValue(LINE_KINDS, opts.kind) ?? LINE_KINDS.line
   const widthEmu = opts.widthEmu ?? 1800000
   const heightEmu = opts.heightEmu ?? 114300
   const id = opts.id ?? 1
@@ -1845,7 +1848,7 @@ function pprGroupUnchanged(
       return rawBool(raw) === !!f.bidi
     case 'w:jc': {
       const val = rawAttr(raw, 'w:val')
-      let rawAlign = val ? JC_TO_ALIGN[val] : undefined
+      let rawAlign = val ? ownValue(JC_TO_ALIGN, val) : undefined
       if ((f.bidi || f.bidiInherited) && (rawAlign === 'left' || rawAlign === 'right')) {
         rawAlign = rawAlign === 'left' ? 'right' : 'left'
       }

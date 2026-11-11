@@ -1,5 +1,6 @@
 import type { ThemeColors, ThemeFonts } from './types'
 import { escapeXmlAttr } from './xml-utils'
+import { ownValue, setOwn } from './own-value'
 
 /**
  * Theme part support (word/theme/theme1.xml). Theme fonts rewrite the
@@ -45,7 +46,7 @@ function scriptFontsOf(themeXml: string, tag: string): Record<string, string> | 
   if (!section) return undefined
   const out: Record<string, string> = {}
   for (const m of section.matchAll(/<a:font script="([^"]+)" typeface="([^"]+)"/g)) {
-    out[m[1]] = m[2]
+    setOwn(out, m[1], m[2])
   }
   return Object.keys(out).length > 0 ? out : undefined
 }
@@ -156,7 +157,7 @@ export function resolveThemeColor(
   tint?: string,
   shade?: string,
 ): string | null {
-  const slot = THEME_COLOR_SLOTS[themeColor]
+  const slot = ownValue(THEME_COLOR_SLOTS, themeColor)
   if (!slot) return null
   const base = (colors[slot] as string | undefined) ?? SLOT_FALLBACK[slot]
   const baseTrimmed = (base ?? '').trim()

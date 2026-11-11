@@ -10,6 +10,7 @@ import {
   newDocumentCorePropertiesXml,
 } from './doc-properties'
 import { PPR_CHILD_ORDER } from './generate'
+import { ownValue } from './own-value'
 import type { NumberingLevel } from './types'
 
 /**
@@ -605,7 +606,8 @@ export async function buildBlankDocx(options?: BlankDocxOptions): Promise<Uint8A
     }),
   )
 
-  const paper = PAPER_TWIPS[options?.paperSize ?? 'A4']
+  // a size the table does not hold (an unchecked caller string) takes the default, like a missing one
+  const paper = ownValue(PAPER_TWIPS, options?.paperSize ?? 'A4') ?? PAPER_TWIPS.A4
   const sectPr =
     `<w:sectPr><w:pgSz w:w="${paper.w}" w:h="${paper.h}"/>` +
     '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/>' +

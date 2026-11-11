@@ -37,7 +37,7 @@ docx 한 파일의 읽기와 쓰기 전부를 맡는다.
 - 깨진 XML이 문서 전체를 실패시키면 안 된다. 파싱하지 못한 문단은 원본 바이트를 지닌 `passthrough` 블록이 되고, 읽히지 않는 `styles.xml`은 빈 스타일 표로 내려간다.
 - Electron과 UI에 의존하지 않는다. 기본 진입점은 Docs 렌더러 번들에 들어가므로 `node:*`를 import하지 않는다. Node 전용 코드는 `./zip-splice` 하위 경로에만 두고, `zip-load.ts`가 `zip-splice`를 import하게 만들지 않는다(테스트가 막고 있다).
 - `src/vendor/`는 가져온 원본과 바이트가 같아야 한다. 포매터 대상에서도 빠져 있다.
-- 엔진 동작은 원본(GenOffice)의 수정을 받아올 때 바뀐다. 이 저장소에서 고칠 때는 사람이 정하고, 고친 것과 그것을 지키는 시험을 "원본과 다른 점" 절에 적는다(결정 0092). 지금은 그런 수정이 없다. 파일 이동, 재포맷, 이름 변경을 하지 않고 `@genoffice/*` 이름을 그대로 둔다.
+- 엔진 동작은 이 저장소에서 사람이 정해 고친다. 원본(GenOffice)과 달라진 것과 그것을 지키는 시험은 "원본과 다른 점" 절에 적는다(결정 0092). 원본 커밋을 옮겨 올 때 충돌이 나면 그 절의 동작을 남긴다. 파일 이동, 재포맷, 이름 변경을 하지 않고 `@genoffice/*` 이름을 그대로 둔다.
 
 ## 이 모듈의 방식
 
@@ -53,7 +53,14 @@ docx 한 파일의 읽기와 쓰기 전부를 맡는다.
 
 ## 원본과 다른 점 (결정 0092)
 
-지금은 없다. 결정 0092의 네 수정(머리글·꼬리말의 `SECTIONPAGES`, 직접 만든 스타일의 목차 줄, 쪽 기준 도형의 감싸기, 대체 글꼴)은 원본 #2364로 원본에 들어갔고, 2026-11-03 받아오기 뒤 엔진 파일이 원본과 같다. 그 시험(`tests/hf-section-pages.test.ts`, `tests/field-display.test.ts`, `tests/page-anchored-wrap.test.ts`, `tests/wrap-topbottom-band.test.ts`)은 원본의 것으로 남는다.
+결정 0092의 네 수정(머리글·꼬리말의 `SECTIONPAGES`, 직접 만든 스타일의 목차 줄, 쪽 기준 도형의 감싸기, 대체 글꼴)은 원본 #2364로 원본에 들어갔다. 그 시험(`tests/hf-section-pages.test.ts`, `tests/field-display.test.ts`, `tests/page-anchored-wrap.test.ts`, `tests/wrap-topbottom-band.test.ts`)은 원본의 것으로 남는다.
+
+아래는 2026-11-12에 이 저장소에서 고친 것이고 원본에는 없다. Rust 엔진과 함수 단위로 비교하다가 찾았다(결정 0025).
+
+- **표를 문서 값으로 읽을 때 자기 키만 본다.** 평범한 객체로 둔 표를 문서에서 온 값으로 읽으면 `constructor`, `toString`, `__proto__` 같은 상속 이름이 "찾은 값"으로 나왔다. 글머리 기호의 `w:lvlText`가 `constructor`면 표식이 함수가 됐고, 표 칸 글자가 정확히 그 낱말이면 함수의 소스가 저장됐고, 미리 정한 색 이름이 그 낱말이면 예외가 났다. 이런 조회는 모두 `src/own-value.ts`의 `ownValue`나 `Object.hasOwn`을 거친다. 새 표를 문서 값으로 읽을 때도 그렇게 한다. 시험: `tests/inherited-key-lookups.test.ts`, `tests/inherited-key-lookups-sweep.test.ts`, `tests/latex-inherited-names.test.ts`.
+- **문서가 `__proto__`라고 이름 붙인 항목을 잃지 않는다.** 그 이름으로 대입하면 값이 버려지거나 기록의 프로토타입이 바뀐다. 사용자 지정 속성, 메일 머지 열, 머리글·꼬리말 관계 id, 차트 파트 경로, 테마 글꼴 표, VML 속성은 `setOwn`으로 넣는다. 이 기록을 다른 객체로 옮길 때는 spread나 `Object.entries`를 쓴다(`Object.assign`과 `target[k] = v`는 대상의 프로토타입을 바꾼다). 시험: `tests/proto-named-keys.test.ts`.
+- **LaTeX에서 BMP 밖 글자 하나가 인자 하나다.** 읽기가 UTF-16 단위로 움직여 `x^😀`나 `x_𝒜`가 반쪽 대리 문자 둘이 됐다. 시험: `tests/latex-astral-characters.test.ts`.
+- **대리 범위의 문자 참조(`&#xD800;`)는 U+FFFD로 읽는다.** 문서 속성의 값과 이름, 내용 컨트롤의 `w:tag`, 체크 상자 글리프에서 반쪽 대리 문자가 나왔다. 붙어 있는 두 참조가 한 글자를 이루면 합친다. 입력에 이미 있던 반쪽도 U+FFFD가 된다. 본문 글자(`parse-xml-text.ts`, `generate.ts`)는 전부터 그런 참조를 쓰인 그대로 두고, `resource-cleanup.ts`는 값을 안에서 비교에만 써서 그대로 뒀다. 시험: `tests/char-ref-surrogates.test.ts`.
 
 ## 테스트
 

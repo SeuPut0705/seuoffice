@@ -219,9 +219,11 @@ export function skillArchiveLayout(names: readonly string[]): SkillArchiveLayout
 }
 
 /**
- * The layout of a zip file on disk, reading only its entry list (nothing is
- * inflated or written). `undefined` when it is not a skill zip, is over the
- * archive size limit, or cannot be read as a zip.
+ * The layout of a zip file on disk, from its entry list (nothing is written).
+ * The zip gate runs first, as it does before the archive is opened for
+ * import: JSZip does not return from some archives the gate refuses.
+ * `undefined` when it is not a skill zip, is over the archive size limit, is
+ * refused by the gate, or cannot be read as a zip.
  */
 export async function readSkillArchiveLayout(
   file: string,
@@ -230,7 +232,9 @@ export async function readSkillArchiveLayout(
   const info = await stat(file).catch(() => undefined)
   if (!info?.isFile() || info.size > maxBytes) return undefined
   try {
-    const zip = await JSZip.loadAsync(await readFile(file))
+    const bytes = await readFile(file)
+    await assertZipInflatesWithinLimits(bytes, SKILL_ARCHIVE_ZIP_LIMITS)
+    const zip = await JSZip.loadAsync(bytes)
     return skillArchiveLayout(
       Object.values(zip.files).map((entry) => entry.unsafeOriginalName ?? entry.name),
     )

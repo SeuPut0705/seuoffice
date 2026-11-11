@@ -28,6 +28,7 @@ import {
   themedRFonts,
 } from './parse-props'
 import { w14TextOutlineOf } from './parse-drawing-geometry'
+import { ownValue } from './own-value'
 import { xmlFlagOn } from './section'
 import type {
   DocDefaults,
@@ -195,7 +196,7 @@ export async function parseStyles(
     const eaLang = rPr ? attrsOf(findChild(rPr, 'w:lang') ?? {})['w:eastAsia'] : undefined
     if (eaLang) dd.eastAsiaLang = eaLang
     if (!dd.eastAsiaFont && eaLang) {
-      const eaDefault = EA_LANG_DEFAULT_FONT[eaLang.toLowerCase()]
+      const eaDefault = ownValue(EA_LANG_DEFAULT_FONT, eaLang.toLowerCase())
       if (eaDefault) {
         const ddEaTheme =
           ddRf.eaSlotEmpty && themeFonts

@@ -17,7 +17,11 @@ const DEFAULT_GLYPHS: CheckboxGlyphs = { checked: '☒', unchecked: '☐' }
 
 const glyphOf = (hex: string | undefined, fallback: string): string => {
   const code = parseInt(hex ?? '', 16)
-  return Number.isFinite(code) && code > 0 && code <= 0x10ffff
+  // half of a surrogate pair is not a character: it gets the fallback too
+  return Number.isFinite(code) &&
+    code > 0 &&
+    code <= 0x10ffff &&
+    !(code >= 0xd800 && code <= 0xdfff)
     ? String.fromCodePoint(code)
     : fallback
 }
