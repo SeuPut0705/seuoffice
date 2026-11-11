@@ -90,7 +90,7 @@ test.describe('docs table operations', () => {
           .nth(col)
 
       // ---- Split Cells… on a merged A1:B1 → 2 rows × 3 columns
-      // a plain drag between cells is a text selection now (genspark-ai/genoffice#2329,
+      // a plain drag between cells is a text selection now (genoffice#2329,
       // Word's behaviour); whole cells select with click + shift-click
       await cell(0, 0).click()
       await cell(0, 1).click({ modifiers: ['Shift'] })

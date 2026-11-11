@@ -1,6 +1,6 @@
 /**
  * Word-style continuous text selection across table cells
- * (genspark-ai/genoffice#2329): dragging from one cell into another extends
+ * (genoffice#2329): dragging from one cell into another extends
  * the text selection across the boundary instead of jumping to a
  * cell-selection rectangle, and deleting or typing over it clears the covered
  * text while every cell it crossed survives.

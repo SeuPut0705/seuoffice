@@ -7391,7 +7391,7 @@ export const editorExtensions = [
   NativeTableSupport,
   // after NativeTableSupport on purpose: its border drags (column resize,
   // row height) preventDefault on their mousedown, so the chain stops before
-  // the cross-cell drag can arm over them (genspark-ai/genoffice#2329)
+  // the cross-cell drag can arm over them (genoffice#2329)
   CrossCellDrag,
   TableHandle,
   TrackChangesExtension,

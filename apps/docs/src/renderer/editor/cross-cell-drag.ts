@@ -1,5 +1,5 @@
 /**
- * Word-style continuous text selection across table cells (genspark-ai/genoffice#2329).
+ * Word-style continuous text selection across table cells (genoffice#2329).
  *
  * prosemirror-tables hijacks every drag that starts inside a cell: its
  * document-level mousemove listener dispatches a `CellSelection` the moment
