@@ -65,9 +65,38 @@ async function deck(slide: string, notes?: string): Promise<Uint8Array> {
   return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
 }
 
+const P188 = 'http://schemas.microsoft.com/office/powerpoint/2018/8/main'
+const MODERN_COMMENTS_REL = 'http://schemas.microsoft.com/office/2018/10/relationships/comments'
+
+/** a one-comment, one-paragraph Office 365 comment thread on slide 1 */
+async function deckWithComment(paragraph: string): Promise<Uint8Array> {
+  const zip = new JSZip()
+  zip.file('ppt/slides/slide1.xml', slideXml([run('Title')]))
+  zip.file(
+    'ppt/slides/_rels/slide1.xml.rels',
+    `${XML_DECL}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      `<Relationship Id="rId9" Type="${MODERN_COMMENTS_REL}" Target="../comments/comment1.xml"/>` +
+      '</Relationships>',
+  )
+  zip.file(
+    'ppt/comments/comment1.xml',
+    `${XML_DECL}<p188:cmLst xmlns:p188="${P188}" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">` +
+      '<p188:cm authorId="a1" created="2026-01-01T00:00:00Z">' +
+      `<p188:txBody><a:p>${paragraph}</a:p></p188:txBody>` +
+      '</p188:cm></p188:cmLst>',
+  )
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
+}
+
 let fixtureSeq = 0
 async function readDeck(slide: string, notes?: string) {
   return parseFileToText(writeFixture(`withheld-${++fixtureSeq}.pptx`, await deck(slide, notes)))
+}
+
+async function readDeckWithComment(paragraph: string) {
+  return parseFileToText(
+    writeFixture(`withheld-comment-${++fixtureSeq}.pptx`, await deckWithComment(paragraph)),
+  )
 }
 
 function readText(name: string, content: string) {
@@ -171,6 +200,19 @@ describe('pptx: a withheld run reads as its marker', () => {
     const result = await readDeck(slideXml([run('Product') + run('Intro')]))
     expect(result.text).toBe('## Slide 1\nProductIntro')
   })
+
+  it('swaps the run inside a comment thread and keeps the words around it', async () => {
+    const result = await readDeckWithComment(
+      run('please call ') + withheldRun(SECRET) + run(' to confirm'),
+    )
+    expect(result).toEqual({
+      ok: true,
+      kind: 'text',
+      text:
+        '## Slide 1\nTitle\n### Comments\n' +
+        `- Unknown author (2026-01-01T00:00:00Z): please call ${MARKER} to confirm`,
+    })
+  })
 })
 
 describe('pptx: a mark that cannot be processed fails the read', () => {
@@ -230,6 +272,10 @@ describe('pptx: a mark that cannot be processed fails the read', () => {
   it('throws from pptxToText itself, which has no result object to fail with', async () => {
     const bytes = await deck(slideXml([run(SECRET, `<a:rPr>${ext('')}</a:rPr>`)]))
     await expect(pptxToText(bytes)).rejects.toThrow(/redaction/i)
+  })
+
+  it('a mark inside a comment thread, which reads the part the same way as a slide', async () => {
+    expectClosedFailure(await readDeckWithComment(run(SECRET, `<a:rPr>${ext('')}</a:rPr>`)))
   })
 })
 
