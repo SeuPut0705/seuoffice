@@ -28,5 +28,10 @@ export default defineConfig({
       '@genoffice/ai-provider': resolve(here, '../ai-provider/src/index.ts'),
     },
   },
-  test: { include: ['tests/**/*.test.ts'] },
+  test: {
+    include: ['tests/**/*.test.ts'],
+    // every test process runs with a throwaway home folder, never the real one;
+    // the second file keeps the temp dir beside that home (see the file)
+    setupFiles: ['../../tools/test-home.ts', 'tests/setup-tmpdir.ts'],
+  },
 })
