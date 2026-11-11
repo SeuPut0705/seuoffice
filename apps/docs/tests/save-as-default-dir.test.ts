@@ -59,9 +59,11 @@ beforeEach(async () => {
   Object.defineProperty(process, 'resourcesPath', { value: state.root, configurable: true })
   state.handlers.clear()
   state.pick.mockReset()
+  // the first import compiles the whole main process: under a loaded machine it passes the
+  // 10 s a hook gets by default, so it gets what a test gets here
   const { registerDocsIpc } = await import('../src/main/docs-main')
   registerDocsIpc()
-})
+}, 20_000)
 
 afterEach(() => rmSync(state.root, { recursive: true, force: true }))
 
