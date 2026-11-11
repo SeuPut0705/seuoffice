@@ -1,0 +1,83 @@
+// Node host of crates/office-wasm. The frame is described in its src/lib.rs.
+import { readFileSync } from 'node:fs'
+import { WASI } from 'node:wasi'
+
+const PROTOCOL_VERSION = 1
+
+interface EngineExports {
+  memory: WebAssembly.Memory
+  seu_alloc(length: number): number
+  seu_free(pointer: number, length: number): void
+  seu_call(pointer: number, length: number): bigint
+}
+
+export interface EngineFailure {
+  error: { code: string; message: string }
+}
+
+export interface Reply<Header> {
+  header: Header | EngineFailure
+  blobs: Uint8Array[]
+}
+
+export function failed(header: object): header is EngineFailure {
+  return 'error' in header
+}
+
+const encoder = new TextEncoder()
+const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
+
+export class Engine {
+  private constructor(private readonly exports: EngineExports) {}
+
+  static load(wasmPath: string): Engine {
+    const wasi = new WASI({ version: 'preview1' })
+    const module = new WebAssembly.Module(readFileSync(wasmPath))
+    const instance = new WebAssembly.Instance(module, {
+      wasi_snapshot_preview1: wasi.wasiImport,
+    })
+    wasi.initialize(instance)
+    return new Engine(instance.exports as unknown as EngineExports)
+  }
+
+  call<Header extends object>(command: object, blobs: Uint8Array[] = []): Reply<Header> {
+    const header = encoder.encode(JSON.stringify({ version: PROTOCOL_VERSION, ...command }))
+    const size = 8 + header.length + blobs.reduce((sum, blob) => sum + 4 + blob.length, 0)
+    const { memory, seu_alloc, seu_call, seu_free } = this.exports
+
+    const request = seu_alloc(size)
+    const bytes = new Uint8Array(memory.buffer, request, size)
+    const view = new DataView(memory.buffer, request, size)
+    let offset = 0
+    const put = (part: Uint8Array): void => {
+      view.setUint32(offset, part.length, true)
+      bytes.set(part, offset + 4)
+      offset += 4 + part.length
+    }
+    put(header)
+    view.setUint32(offset, blobs.length, true)
+    offset += 4
+    blobs.forEach(put)
+
+    const packed = seu_call(request, size)
+    seu_free(request, size)
+    const pointer = Number(packed >> 32n)
+    const length = Number(packed & 0xffff_ffffn)
+    // the call may have grown the memory: take the buffer again
+    const reply = new Uint8Array(memory.buffer, pointer, length).slice()
+    seu_free(pointer, length)
+
+    const replyView = new DataView(reply.buffer)
+    let cursor = 0
+    const take = (): Uint8Array => {
+      const partLength = replyView.getUint32(cursor, true)
+      const part = reply.subarray(cursor + 4, cursor + 4 + partLength)
+      cursor += 4 + partLength
+      return part
+    }
+    const replyHeader = JSON.parse(decoder.decode(take())) as Header | EngineFailure
+    const count = replyView.getUint32(cursor, true)
+    cursor += 4
+    return { header: replyHeader, blobs: Array.from({ length: count }, take) }
+  }
+}

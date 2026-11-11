@@ -1,0 +1,13 @@
+{
+  "name": "docx-diff",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "Parity gate: the Rust docx engine (crates/) against the TypeScript engine, over every tracked .docx",
+  "scripts": {
+    "gate": "node ../../crates/office-wasm/build.mjs && tsx main.ts",
+    "bench": "node ../../crates/office-wasm/build.mjs && tsx main.ts --bench",
+    "typecheck": "tsc --noEmit"
+  }
+}

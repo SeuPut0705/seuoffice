@@ -1,0 +1,12 @@
+{
+  "trackedDocuments": 185,
+  "scanBodyDocuments": 183,
+  "scanBodySynthetic": 37,
+  "nonAsciiMainParts": 72,
+  "rPrFragments": 10016,
+  "roundTripSynthetic": 101,
+  "bodyElements": 4084,
+  "zipEntries": 1343,
+  "zipXmlEntries": 1224,
+  "zipSyntheticEntries": 96
+}

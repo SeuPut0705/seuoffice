@@ -1,0 +1,26 @@
+[
+  {
+    "id": "doctype-in-a-parsed-fragment",
+    "comparison": "roundTripXml",
+    "fragment": "<!DOCTYPE a [<!ENTITY e \"x\">]><w:t>&e;</w:t>",
+    "typescript": { "xml": "<w:t>x</w:t>" },
+    "rust": { "error": "document type declarations are not supported" },
+    "reason": "fast-xml-parser reads a document type declaration and expands the internal entities it declares; that reader (DocTypeReader.js with xml-naming and is-unsafe, about 400 lines) is not ported. Rust refuses the fragment. No tracked document has a DOCTYPE in a part the engine parses, and the Open Packaging Conventions forbid DTDs, so refusing may be the wanted end state: the owner decides before a whole-part parser is switched."
+  },
+  {
+    "id": "cdata-opener-cuts-a-surrogate-pair",
+    "comparison": "roundTripXml",
+    "fragment": "<![x😀😀😀]]>",
+    "typescript": { "xml": "\ude00" },
+    "rust": { "error": "a surrogate pair would be split" },
+    "reason": "fast-xml-parser takes the nine UTF-16 units after any '<![' as the CDATA opener, so a malformed opener can cut a character outside the BMP in half and leave a lone surrogate in the text. A Rust string cannot hold a lone surrogate. Rust refuses the fragment instead of inventing a replacement character."
+  },
+  {
+    "id": "zip-text-in-hosts-without-buffer",
+    "comparison": "zipTextWithoutBuffer",
+    "entryHex": "80e24142eda080",
+    "typescript": "\u0000\u2042\ud800",
+    "rust": "\ufffd\ufffdAB\ufffd\ufffd\ufffd",
+    "reason": "JSZip has two UTF-8 decoders. Where a global Buffer exists (Node: CLI, tests, main process) it replaces each ill-formed sequence with U+FFFD, which is what Rust does and what the gate compares. Where none exists (a browser, and the sandboxed desktop renderer unless a bundler supplies one) it uses pako's decoder, which never rejects a byte: stray continuation bytes become control characters, a lead byte swallows the bytes after it, encoded surrogates stay lone surrogates, and the result depends on where JSZip's 16 KiB blocks end. The TypeScript engine therefore already reads ill-formed parts differently per host. Rust follows the Node behaviour everywhere. Every .xml and .rels entry of the tracked documents is well-formed UTF-8, so no tracked document is affected."
+  }
+]
