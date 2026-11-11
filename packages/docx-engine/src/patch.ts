@@ -122,6 +122,7 @@ import {
 } from './zotero-doc-props'
 import { applyPropertyChanges, type PropertyChanges } from './doc-properties'
 import { patchHfPicturesXml } from './run-picture'
+import { ownValue } from './own-value'
 
 /**
  * Relationship attributes are read quote-agnostically and with any spacing
@@ -2300,9 +2301,9 @@ export async function saveDocx(
       out.file(name, customPropertiesXml, { date: entry.date })
     } else if (name === CORE_PROPS_PATH && coreXmlOut !== null) {
       out.file(name, coreXmlOut, { date: entry.date })
-    } else if (options.partXml && options.partXml[name] !== undefined) {
+    } else if (options.partXml && ownValue(options.partXml, name) !== undefined) {
       out.file(name, options.partXml[name], { date: entry.date })
-    } else if (options.partBinary && options.partBinary[name] !== undefined) {
+    } else if (options.partBinary && ownValue(options.partBinary, name) !== undefined) {
       out.file(name, options.partBinary[name], { base64: true, date: entry.date })
     } else {
       out.file(name, await entry.async('uint8array'), { date: entry.date })

@@ -47,6 +47,7 @@ AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미�
 
 - 실행: `npm run test -w @genoffice/ai-search`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/ai-search`.
 - 테스트는 네트워크와 벤더 프로그램에 닿지 않는다. `@genoffice/ai-provider`의 `generateImageWithProvider`·`analyzeMediaWithProvider`·`streamForProvider`를 `vi.mock`으로 바꾸고, 상태는 `tests/routing-helpers.ts`의 `status()`로 만든다. 구독 경로를 타는 테스트에서 `streamForProvider`를 바꾸지 않으면 실제 프로그램이 뜬다.
+- 테스트 프로세스의 홈 폴더는 실행기가 바꾼다. `vitest.config.ts`가 `tools/test-home.ts`(OS 임시 폴더 안의 빈 홈)와 `tests/setup-tmpdir.ts`(이 패키지의 임시 폴더를 그 홈 옆으로 옮김)를 `setupFiles`로 부른다. `tests/media-local-path.test.ts`는 작업 폴더와 임시 폴더 어디에도 속하지 않는 곳으로 홈을 쓰는데, 전에는 실제 홈에 `.genoffice-aisearch-outside-*` 폴더를 만들었다. 임시 폴더를 옮기지 않으면 그 폴더가 `tmpdir()` 안에 놓여 테스트의 전제가 깨지므로 두 파일을 함께 둔다.
 - 설정 파일 픽스처에는 `providers` 블록을 항상 넣는다(`writeSettings`). 그 블록이 없는 파일은 제공자 도입 이전 파일로 읽혀 모든 구역이 기본값으로 초기화된다.
 - 바꾸면 반드시 테스트하는 것: 화면·자동 호출 × 스위치 켬·끔 × 구독 `ready`·종량 허용·미연결 조합에서 경로와 보고가 같은 답인지, 환경 변수 키가 선택을 바꾸지 못하는지(`tests/search-free-route.test.ts`), 21번째 이후 요청도 거절되지 않는지, 손상된 장부와 쓸 수 없는 장부가 요청을 막지 않는지, 예전 판의 동의가 꺼짐으로 읽히는지, 죽은 프로세스의 잠금, 동시에 들어온 두 요청이 차례로 도는지.
 - `tests/codex-image-absent.test.ts`는 "패키지 진입점만으로는 Codex 이미지 생성기가 등록되지 않는다"를 고정한다. 앱의 등록은 `apps/docs`가 하며, 그 등록을 바꾸면 이 테스트와 가용성 판단을 함께 본다.

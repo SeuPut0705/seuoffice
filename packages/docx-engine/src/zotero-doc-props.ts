@@ -16,10 +16,17 @@ function codePointText(match: string, code: number): string {
   return code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : match
 }
 
+/**
+ * A reference to half of a surrogate pair (&#xD800; .. &#xDFFF;, which XML
+ * forbids) reads as U+FFFD, not as a lone UTF-16 unit. Two adjacent references
+ * that spell a pair join into one character first; with the u flag the
+ * surrogate class sees that character whole and leaves it alone.
+ */
 export function decodeXmlText(value: string): string {
   return value
     .replace(/&#x([0-9a-f]+);/gi, (match, hex) => codePointText(match, parseInt(hex, 16)))
     .replace(/&#(\d+);/g, (match, decimal) => codePointText(match, parseInt(decimal, 10)))
+    .replace(/[\uD800-\uDFFF]/gu, '\uFFFD')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')

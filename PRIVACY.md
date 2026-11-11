@@ -567,5 +567,5 @@ is responsible for saying so.
 ## Questions
 
 Open an issue at
-[github.com/pblsketch/ieumoffice/issues](https://github.com/pblsketch/ieumoffice/issues).
+[github.com/SeuPut0705/seuoffice/issues](https://github.com/SeuPut0705/seuoffice/issues).
 For a suspected security problem, follow [SECURITY.md](SECURITY.md) instead.

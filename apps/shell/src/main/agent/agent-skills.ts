@@ -30,8 +30,10 @@ import {
   isInsidePath,
   type AgentSkillEntry,
 } from '@genoffice/ai-provider/agent-session'
+import { assertZipInflatesWithinLimits } from '@genoffice/docx-engine'
 import { handoffEditorForFile } from '@genoffice/electron-utils/generate-handoff'
 import { USER_SKILLS_CHANNELS } from '@genoffice/electron-utils/user-skills-channels'
+import { PPTX_ZIP_LIMITS } from '@genoffice/pptx-engine'
 import type {
   AgentSessionSkill,
   AgentTemplateCandidateView,
@@ -394,6 +396,9 @@ export async function templateRedactionOf(
       return /data-gx-redact|gx:redact:/i.test(asText()) ? 'redacted' : 'none'
     case 'pptx':
       try {
+        // JSZip is not given a deck the zip gate refuses: it does not return
+        // from some of them. A refused deck is one that cannot be read.
+        await assertZipInflatesWithinLimits(bytes, PPTX_ZIP_LIMITS)
         const zip = await JSZip.loadAsync(bytes)
         for (const entry of Object.values(zip.files)) {
           if (entry.dir || !/\.xml$/i.test(entry.name)) continue

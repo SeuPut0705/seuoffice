@@ -17,6 +17,7 @@ import JSZip from 'jszip'
 
 import { resolveMainDocumentPath, resolveRelationshipTargetPath } from './parse-package'
 import { loadDocxZip } from './zip-load'
+import { ownValue } from './own-value'
 
 /** Metadata-carrying part families the docs remove_parts op can target. */
 export const REMOVE_PARTS_KINDS = ['customXml', 'webExtensions'] as const
@@ -82,6 +83,11 @@ export interface RemovePartsPlan {
   dataBindings: RemovedPartBinding[]
 }
 
+/**
+ * A reference to half of a surrogate pair (&#xD800; .. &#xDFFF;) reads as U+FFFD,
+ * not as a lone UTF-16 unit; with the u flag the surrogate class leaves a pair
+ * spelled by two adjacent references whole.
+ */
 function decodeXmlEntities(value: string): string {
   const codePoint = (match: string, raw: string, radix: number) => {
     const value = parseInt(raw, radix)
@@ -92,6 +98,7 @@ function decodeXmlEntities(value: string): string {
   return value
     .replace(/&#x([0-9a-f]+);/gi, (match, hex: string) => codePoint(match, hex, 16))
     .replace(/&#(\d+);/g, (match, decimal: string) => codePoint(match, decimal, 10))
+    .replace(/[\uD800-\uDFFF]/gu, '\uFFFD')
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
     .replace(/&lt;/g, '<')
@@ -171,7 +178,7 @@ async function wantedParts(
   }
   const paths = new Set<string>()
   for (const kind of options.kinds ?? []) {
-    const prefix = KIND_PREFIXES[kind]
+    const prefix = ownValue(KIND_PREFIXES, kind)
     if (!prefix) continue
     for (const name of Object.keys(zip.files)) {
       if (!zip.files[name]!.dir && name.startsWith(prefix)) paths.add(name)

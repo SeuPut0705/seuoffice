@@ -36,6 +36,7 @@ import type {
 import type { AutoSpace } from './types'
 import { resolveThemeColor } from './theme'
 import { isOn } from './checkbox-control'
+import { ownValue } from './own-value'
 
 /** No run un-hides itself and nothing anchors here (bookmarks, comments, sectPr,
  *  drawings): safe to collapse a style-vanished paragraph entirely. Numbering is
@@ -881,7 +882,7 @@ const BIDI_LANG_SCRIPT: Record<string, string> = {
  * the minorFont Arab entry under bidi=ar-SA, Times New Roman without one) */
 function emptyCsSlotFont(fonts: ThemeFonts, csRef: string): string {
   const lang = fonts.bidiLang?.toLowerCase().split('-')[0]
-  const script = lang ? BIDI_LANG_SCRIPT[lang] : undefined
+  const script = lang ? ownValue(BIDI_LANG_SCRIPT, lang) : undefined
   const table = csRef === 'majorBidi' ? fonts.majorScripts : fonts.minorScripts
   return (script ? table?.[script] : undefined) ?? 'Times New Roman'
 }
@@ -899,11 +900,11 @@ export function themeLangEaSlotFont(
   const full = fonts.eaLang?.toLowerCase()
   if (!full) return undefined
   const lang = full.split('-')[0]
-  const script = EA_LANG_SCRIPT[full] ?? EA_LANG_SCRIPT[lang]
+  const script = ownValue(EA_LANG_SCRIPT, full) ?? ownValue(EA_LANG_SCRIPT, lang)
   const table = eaRef === 'majorEastAsia' ? fonts.majorScripts : fonts.minorScripts
   const fromScript = script ? table?.[script] : undefined
   if (fromScript) return fromScript
-  const byLang = EMPTY_EA_SLOT_BY_LANG[lang]
+  const byLang = ownValue(EMPTY_EA_SLOT_BY_LANG, lang)
   return byLang ? (eaRef === 'majorEastAsia' ? byLang.major : byLang.minor) : undefined
 }
 

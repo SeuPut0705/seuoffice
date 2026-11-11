@@ -144,6 +144,7 @@
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/shell`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/shell`. 환경은 `node`다.
+- 테스트 프로세스의 홈 폴더는 실행기가 바꾼다. `vitest.config.ts`가 `tools/test-home.ts`를 `setupFiles`로 불러 테스트 파일마다 OS 임시 폴더 안에 빈 홈을 만들고 끝나면 지운다(`tests/test-home.test.ts`가 고정). `tests/mcp/mcp-http-surface.test.ts`처럼 실제 CLI를 프로세스 안에서 돌리는 테스트의 감사 기록이 실제 `~/.ieumoffice`에 쌓이지 않게 하려는 것이다.
 - `src/main/index.ts`는 실행 중인 Electron이 있어야 불러올 수 있다. 그래서 배선은 소스 글자를 읽어 고정한다(`tests/subscription-lifetime.test.ts`, `tests/main-locale-tables.test.ts`). 종료 처리나 인라인 사전의 모양을 바꾸면 이 테스트들이 깨진다. 로직은 Electron을 import하지 않는 모듈로 빼서 테스트한다(`settings-ai.ts`, `kb-ask-connection.ts`, `app-routing.ts`).
 - 닫은 렌더러 끝내기는 `tests/renderer-disposal.test.ts`, 크래시 기록의 칸과 크기 상한은 `tests/crash-log.test.ts`, 기록·알림·다시 열기는 `tests/crash-watch.test.ts`, 메인 프로세스의 심장 박동과 `main-gone` 줄은 `tests/crash-heartbeat.test.ts`가 본다.
 - 갑자기 꺼졌을 때: 정상/비정상 판정과 기록 읽고 쓰기는 `tests/session-record.test.ts`, 켤 때의 계획·목록 답·PC 끄기 순서·MCP `needs-user`는 `tests/launch-recovery.test.ts`, 불러오지 않은 탭은 `tests/tab-manager-unloaded.test.ts`, 시작 목록 화면과 다리는 `tests/recovery-list.test.ts`·`tests/preload-recovery-list.test.ts`. 빌드한 앱에서 강제 종료 → 다시 켜기는 `e2e/`의 화면 시험이 본다.

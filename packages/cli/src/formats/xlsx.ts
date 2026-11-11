@@ -1,4 +1,5 @@
 import JSZip from 'jszip'
+import { assertZipInflatesWithinLimits } from '@genoffice/docx-engine'
 import * as numfmt from 'numfmt'
 import {
   blankXlsxBuffer,
@@ -8,6 +9,7 @@ import {
 } from '@genoffice/xlsx-gateway/gateway/csv-import'
 import { columnLabel, parseAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
 import {
+  XLSX_ZIP_LIMITS,
   assembleWithJsZip,
   createBufferEntrySource,
   planCellEditsToXlsx,
@@ -632,8 +634,18 @@ export async function readSheet(path: string, opts: ReadOptions): Promise<SheetR
   })
 }
 
+/**
+ * JSZip over the bytes of a workbook file. The zip gate runs first, with the
+ * limits the gateway opens workbooks with: JSZip does not return from some of
+ * the archives the gate refuses.
+ */
+export async function loadWorkbookZip(source: Uint8Array): Promise<JSZip> {
+  await assertZipInflatesWithinLimits(source, XLSX_ZIP_LIMITS)
+  return JSZip.loadAsync(source)
+}
+
 async function hasThemePart(source: Buffer): Promise<boolean> {
-  const zip = await JSZip.loadAsync(source)
+  const zip = await loadWorkbookZip(source)
   return zip.file('xl/theme/theme1.xml') !== null
 }
 
@@ -684,7 +696,7 @@ function sameStyleColor(a: StyleColor | undefined, b: StyleColor | undefined): b
 
 async function storedFormats(path: string): Promise<StylesheetFormats | undefined> {
   try {
-    const zip = await JSZip.loadAsync(await readFile(path))
+    const zip = await loadWorkbookZip(await readFile(path))
     const xml = await zip.file('xl/styles.xml')?.async('string')
     return xml === undefined ? undefined : parseStylesheetFormats(xml)
   } catch {
@@ -1408,7 +1420,7 @@ async function cachedFormulaValues(
     wanted.set(toA1Address(cell.row, cell.column), cell.sheet + '|' + cell.row + '|' + cell.column)
     wantedBySheet.set(cell.sheet, wanted)
   }
-  const zip = await JSZip.loadAsync(source)
+  const zip = await loadWorkbookZip(source)
   const workbook = (await zip.file('xl/workbook.xml')?.async('string')) ?? ''
   const relationships = (await zip.file('xl/_rels/workbook.xml.rels')?.async('string')) ?? ''
   const targets = new Map(

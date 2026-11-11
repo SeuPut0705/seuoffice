@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { mkdtemp, readdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
@@ -144,7 +145,17 @@ describe.skipIf(!SOFFICE)('pivot LibreOffice round-trip', () => {
     await writeFile(savedPath, mutation.buffer)
     execFileSync(
       SOFFICE as string,
-      ['--headless', '--convert-to', 'xlsx', '--outdir', join(workDir, 'out'), savedPath],
+      [
+        // a profile of its own: by default LibreOffice creates or updates the
+        // one in the home folder of whoever runs the suite
+        `-env:UserInstallation=${pathToFileURL(join(workDir, 'profile')).href}`,
+        '--headless',
+        '--convert-to',
+        'xlsx',
+        '--outdir',
+        join(workDir, 'out'),
+        savedPath,
+      ],
       { timeout: 120_000 },
     )
     const outputs = await readdir(join(workDir, 'out'))

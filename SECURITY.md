@@ -2,10 +2,8 @@
 
 ## Reporting a Vulnerability
 
-Please report suspected vulnerabilities privately via GitHub's
-[private vulnerability reporting](https://github.com/pblsketch/ieumoffice/security/advisories/new)
-on this repository. Do not open public issues for security reports. IeumOffice
-is maintained by volunteers, so reports are handled on a best-effort basis.
+This repository has no private channel for vulnerability reports at this time.
+Do not post the details of a vulnerability in a public issue.
 
 IeumOffice is a modified version of GenOffice (see
 [License and acknowledgement](README.en.md#license-and-acknowledgement)). If a
@@ -30,11 +28,6 @@ old repository; if it does not match the new name, verify it with
 
 The installer is not code-signed, so Windows shows an "unknown publisher"
 warning the first time you run it.
-
-## Trademark and Copyright Reports
-
-Send trademark or copyright infringement reports and licensing questions to
-pblsketch@gmail.com. The same address is in the app under Settings → About.
 
 ## Process Security Posture
 

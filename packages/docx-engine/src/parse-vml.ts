@@ -1,5 +1,6 @@
 // Legacy VML (v:shape / v:group) geometry and color readers.
 import { attrsOf, findChild, type XNode } from './xml-utils'
+import { ownValue, setOwn } from './own-value'
 import { EMU_PER_PX } from './parse-xml-text'
 import type { HfImage, Run, TextboxDisplay } from './types'
 
@@ -154,7 +155,7 @@ export function vmlColorHex(value: string | undefined): string | undefined {
       .map((c) => c + c)
       .join('')
   }
-  return VML_NAMED_COLORS[v.split(/[\s[]/, 1)[0]!.toLowerCase()]
+  return ownValue(VML_NAMED_COLORS, v.split(/[\s[]/, 1)[0]!.toLowerCase())
 }
 
 /** VML WordArt: a shape carrying its text in a v:textpath string attribute */
@@ -408,7 +409,7 @@ const VML_SPT_PATHS: Record<string, string> = {
 
 function parseTagAttrs(tag: string): Record<string, string> {
   const out: Record<string, string> = {}
-  for (const m of tag.matchAll(/([\w:.-]+)="([^"]*)"/g)) out[m[1]!] = m[2]!
+  for (const m of tag.matchAll(/([\w:.-]+)="([^"]*)"/g)) setOwn(out, m[1]!, m[2]!)
   return out
 }
 
@@ -485,7 +486,7 @@ export function vmlShapeSvg(
     const r = Math.round(arc * (Math.min(iw, ih) / 2) * 100) / 100
     body = `<rect x="${ix}" y="${ix}" width="${iw}" height="${ih}"${r > 0 ? ` rx="${r}"` : ''}${paint}/>`
   } else {
-    const path = a['path'] ?? VML_SPT_PATHS[a['o:spt'] ?? '']
+    const path = a['path'] ?? ownValue(VML_SPT_PATHS, a['o:spt'] ?? '')
     const cs = /^\s*(-?\d+)[,\s]+(-?\d+)/.exec(a['coordsize'] ?? '21600,21600')
     const d =
       path && cs ? vmlPathToNormD(path, parseInt(cs[1]!, 10), parseInt(cs[2]!, 10)) : undefined

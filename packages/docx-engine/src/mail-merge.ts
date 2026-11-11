@@ -1,4 +1,5 @@
 import type { Block, Run } from './types'
+import { ownValue, setOwn } from './own-value'
 
 /**
  * Mail merge, engine half — the data source and the substitution walk.
@@ -162,7 +163,7 @@ function recordAt(data: MergeData, index: number): MergeRecord {
 
 /** the value a record holds for `name`, or '' when the column is absent */
 export function valueOf(record: MergeRecord, name: string): string {
-  return record[name] ?? ''
+  return ownValue(record, name) ?? ''
 }
 
 /**
@@ -527,7 +528,7 @@ export function mergeDataFromRows(rows: readonly (readonly string[])[]): MergeDa
   const records = rows.slice(1).map((row) => {
     const record: MergeRecord = {}
     header.forEach((name, i) => {
-      record[name] = row[i] ?? ''
+      setOwn(record, name, row[i] ?? '')
     })
     return record
   })

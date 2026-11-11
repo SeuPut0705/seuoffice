@@ -11,6 +11,8 @@
  * glyph stands in instead, so a glyph never falls back to tofu.
  */
 
+import { ownValue } from './own-value'
+
 const SYMBOL: Record<number, string> = {
   0x21: '!',
   0x22: '∀',
@@ -1090,12 +1092,12 @@ const SYMBOL_FONT_MAPS: Record<string, Record<number, string>> = {
 }
 
 export function isSymbolFont(font: string | null | undefined): boolean {
-  return !!font && font.trim().toLowerCase() in SYMBOL_FONT_MAPS
+  return !!font && Object.hasOwn(SYMBOL_FONT_MAPS, font.trim().toLowerCase())
 }
 
 /** glyph code (raw byte or its U+F0xx private-use form) → Unicode equivalent, null when unknown */
 export function decodeSymbolChar(font: string, code: number): string | null {
-  const map = SYMBOL_FONT_MAPS[font.trim().toLowerCase()]
+  const map = ownValue(SYMBOL_FONT_MAPS, font.trim().toLowerCase())
   if (!map) return null
   const low = code >= 0xf000 && code <= 0xf0ff ? code - 0xf000 : code
   if (low === 0x20) return ' '

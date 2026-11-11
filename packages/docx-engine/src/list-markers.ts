@@ -1,3 +1,4 @@
+import { ownValue } from './own-value'
 import { decodeSymbolText, isSymbolFont, toSymbolPua } from './symbol-fonts'
 import type { NumberingDef, NumberingLevel } from './types'
 
@@ -345,7 +346,7 @@ export interface BulletSubstitute {
 }
 
 export function substituteBullet(glyph: string): BulletSubstitute | null {
-  return SUBSTITUTE_BULLETS[glyph] ?? null
+  return ownValue(SUBSTITUTE_BULLETS, glyph) ?? null
 }
 
 export const SEGOE_UI_SYMBOL_RE = /^segoe ui symbol$/
@@ -424,7 +425,7 @@ export function computeListMarkerInfos(
       const textFont = level.font?.trim()
       if (textFont && !isSymbolFont(textFont) && /^[^\s\uf000-\uf0ff]+$/.test(level.lvlText))
         return { text: level.lvlText, font: textFont }
-      const glyph = decoded ?? BULLET_GLYPHS[level.lvlText] ?? level.lvlText
+      const glyph = decoded ?? ownValue(BULLET_GLYPHS, level.lvlText) ?? level.lvlText
       // undecodable symbol-font glyphs, private-use or empty ones fall back to the per-level default
       if (!glyph || /[-]/.test(glyph) || (decoded === null && isSymbolFont(level.font)))
         return bulletInfo(DEFAULT_BULLETS[lvl % 9], level)
