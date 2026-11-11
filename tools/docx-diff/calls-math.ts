@@ -171,7 +171,7 @@ function arg(depth: number): string {
   if (k < 0.92) return ` ${pick(TOKENS)}`
   if (k < 0.999) return `\\${pick(SYMBOLS)[0]}`
   // the parser takes one UTF-16 unit here, so the result holds half of the
-  // pair, which the runner sets aside
+  // pair, which the runner compares as U+FFFD
   return '\u{1D465}'
 }
 

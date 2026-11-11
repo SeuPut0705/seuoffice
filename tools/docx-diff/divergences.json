@@ -236,7 +236,7 @@
     "rust": {
       "value": "�"
     },
-    "reason": "decodeXmlText (zotero-doc-props.ts) turns a character reference into String.fromCodePoint of its number without refusing the surrogate range, so a reference to half of a pair leaves a lone surrogate in the text. A Rust string cannot hold one: Rust decodes into UTF-16 units and replaces a unit without its pair by U+FFFD, which is what the text becomes anyway the first time it is written as UTF-8. Two references that form a pair combine on both sides. The gate sets aside every case of comparison (f) whose TypeScript result holds a lone surrogate, counts them in the report, and checks this one here."
+    "reason": "decodeXmlText (zotero-doc-props.ts) turns a character reference into String.fromCodePoint of its number without refusing the surrogate range, so a reference to half of a pair leaves a lone surrogate in the text. A Rust string cannot hold one: Rust decodes into UTF-16 units and replaces a unit without its pair by U+FFFD, which is what the text becomes anyway the first time it is written as UTF-8. Two references that form a pair combine on both sides. Comparison (f) compares every case whose TypeScript result holds a lone surrogate with those units written as U+FFFD, so the rest of the result is still checked, and this entry holds the raw difference."
   },
   {
     "id": "lone-surrogate-in-a-property-name",

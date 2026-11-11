@@ -109,6 +109,12 @@ const CORE_BUILT: string[] = [
   '<cp:coreProperties><dc:titleX>not it</dc:titleX><dc:title >spaced</dc:title ><cp:keywords a="1"/></cp:coreProperties>',
   '<cp:coreProperties><dc:title>mismatched</y:title><dcterms:created>2024-01-02</dcterms:created><dcterms:modified>garbage date</dcterms:modified></cp:coreProperties>',
   '<cp:coreProperties><dc:title>&#x110000;&#99999999999999999999;&#xZZ;&#;&#x26;#65;&#X42;&quot;&apos;&gt;</dc:title><cp:revision>\n 3 \n</cp:revision><dc:language/></cp:coreProperties>',
+  // half a surrogate pair in one property, with every other property beside
+  // it: the rest of such a result is compared with the half as U+FFFD
+  CORE_FULL.replace('<dc:language>ko-KR', '<dc:language>ko&#xD800;KR').replace(
+    '<cp:version>1.0',
+    '<cp:version>&#xDC00;1.0&#xD83D;',
+  ),
   '<dc:title>unclosed',
   '',
 ]
@@ -176,6 +182,13 @@ const CUSTOM_BUILT: string[] = [
     property('Blob', '<vt:blob>AAAA</vt:blob>'),
     property('Empty', ''),
     property('Spaced', '<vt:i4 >7</vt:i4 >'),
+  ),
+  custom(
+    property('10', '<vt:lpwstr>ten</vt:lpwstr>'),
+    property('half&#xD800;name', '<vt:lpwstr>in a key</vt:lpwstr>'),
+    property('2', '<vt:i4>2</vt:i4>'),
+    property('Value', '<vt:lpwstr>in a value &#xDFFF;</vt:lpwstr>'),
+    property('Last', '<vt:bool>true</vt:bool>'),
   ),
   '<op:Properties><op:property name="ns"><vt:bool>0</vt:bool></op:property ></op:Properties>',
   custom(),

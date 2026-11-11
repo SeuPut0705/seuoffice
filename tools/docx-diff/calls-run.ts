@@ -26,6 +26,8 @@ interface Group {
   corpus: Comparison
   built: Comparison
   mutated: Comparison
+  /** Made at the first case that needs it: most groups have none. */
+  lossy?: Comparison
 }
 
 const titled = (name: string): string => name[0]!.toUpperCase() + name.slice(1)
@@ -49,13 +51,23 @@ const groups: Group[] = Object.entries({
 
 const seeds = new Map<string, Map<string, Input>>()
 
-const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
+
 /**
- * Per group, the cases whose TypeScript result holds a lone surrogate. A Rust
- * string cannot hold one, so no port can be equal there: they are counted
- * here and stay out of the comparison, and divergences.json lists one.
+ * `value` with every lone surrogate as U+FFFD, in strings and in keys: what a
+ * Rust string holds of it (`String::from_utf16_lossy`). A TypeScript result
+ * with a lone surrogate can equal no Rust result, and divergences.json lists
+ * one such case per cause; the rest of the result is still the port's to get
+ * right, so those cases are compared in this form, on a line of their own.
  */
-const loneSurrogates = new Map<string, number>()
+function lossy(value: unknown): unknown {
+  if (typeof value === 'string') return value.replace(LONE_SURROGATE, '\uFFFD')
+  if (Array.isArray(value)) return value.map(lossy)
+  if (value === null || typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.entries(value).map(([key, inner]) => [lossy(key) as string, lossy(inner)]),
+  )
+}
 /** Per group, the cases a spec names as a listed divergence. */
 const listedCases = new Map<string, number>()
 
@@ -70,8 +82,9 @@ async function typescriptOutcome(
 ): Promise<{ outcome: Outcome; unpaired: boolean }> {
   let unpaired = false
   const wireForm = (key: string, value: unknown): unknown => {
-    if (LONE_SURROGATE.test(key)) unpaired = true
-    if (typeof value === 'string' && LONE_SURROGATE.test(value)) unpaired = true
+    // not `test`: the pattern is global for `lossy`, and `test` would keep its place
+    if (key.search(LONE_SURROGATE) !== -1) unpaired = true
+    if (typeof value === 'string' && value.search(LONE_SURROGATE) !== -1) unpaired = true
     if (value instanceof Map) return [...(value as Map<unknown, unknown>)]
     if (value instanceof Set) return [...(value as Set<unknown>)]
     return typeof value === 'function' ? '[function]' : value
@@ -115,7 +128,12 @@ async function check(
   }
   const { outcome, unpaired } = await typescriptOutcome(spec, text, args)
   if (unpaired) {
-    loneSurrogates.set(group.name, (loneSurrogates.get(group.name) ?? 0) + 1)
+    group.lossy ??= new Comparison(
+      `(f) ${group.name}, lone surrogates as U+FFFD, checks`,
+      `calls${titled(group.name)}Lossy`,
+    )
+    const expected = lossy(outcome) as Outcome
+    checkOutcome(group.lossy, `${where}: ${spec.fn}`, spec.fn, text, args, () => expected)
     return
   }
   checkOutcome(comparison, `${where}: ${spec.fn}`, spec.fn, text, args, () => outcome)
@@ -177,8 +195,7 @@ export function reportCalls(): void {
         `with a single distinct result, so not really compared: ${oneResult.length}` +
         (oneResult.length > 0 ? ` (${oneResult.map(({ fn }) => fn).join(', ')})` : '') +
         `; never threw in TypeScript: ${neverThrew.length} of ${specs.length}` +
-        `; cases set aside for a lone surrogate in the TypeScript result: ${loneSurrogates.get(name) ?? 0}` +
-        `, as listed divergences: ${listedCases.get(name) ?? 0}`,
+        `; cases left out as listed divergences: ${listedCases.get(name) ?? 0}`,
     )
     if (oneResult.length > 0) failGate()
     if (!process.argv.includes('--by-function')) continue

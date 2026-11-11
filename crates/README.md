@@ -128,9 +128,10 @@ What the comparisons do not see:
   document), (f) sends the result as its entries. (d) and (e) do not: the
   numbering levels of `numbering.rs` sit in a `BTreeMap`, which puts `"10"`
   before `"2"` where JavaScript puts integer keys in numeric order.
-- **A result that holds a lone surrogate.** A Rust string cannot hold one.
-  (f) sets those cases aside and counts them; `divergences.json` lists one
-  per cause.
+- **A lone surrogate in a result.** A Rust string cannot hold one, so where
+  the TypeScript result has one, (f) compares against that result with each
+  lone surrogate written as U+FFFD, on a line of its own per group. The raw
+  difference is in `divergences.json`, one entry per cause.
 - **Inputs a spec names as `listed`.** They are the inherited-key lookups of
   `divergences.json`, counted in the report.
 
