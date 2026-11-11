@@ -1,5 +1,4 @@
-//! Section readers (packages/docx-engine/src/section.ts; only `xmlFlagOn` is
-//! ported yet).
+//! Section readers (packages/docx-engine/src/section.ts, read side).
 
 use jscompat::{JsRegex, RegexSyntaxError, js_regex};
 
@@ -23,3 +22,5 @@ pub fn xml_flag_on(xml: &str, tag: &str) -> Result<bool, RegexSyntaxError> {
     }
     Ok(false)
 }
+mod read;
+pub use read::*;
