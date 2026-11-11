@@ -9,6 +9,7 @@ import { delimiter, join, sep } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { AiRunError } from '../src/run-error'
 import {
+  commonUnixBinDirs,
   locateSubscriptionProgram,
   resolveSubscriptionProgram,
   SUBSCRIPTION_CODEX_UPDATE_COMMANDS,
@@ -734,5 +735,24 @@ describe('resolveSubscriptionProgram', () => {
     const attempt = resolveSubscriptionProgram('codex', { env: windowsEnv(), platform: 'win32' })
     await expect(attempt).rejects.toBeInstanceOf(AiRunError)
     await expect(attempt).rejects.toMatchObject({ kind: 'not-installed', provider: 'codex' })
+  })
+})
+
+describe('commonUnixBinDirs nvm versions', () => {
+  it('lists nvm Node bins newest-semver-first, not lexicographically', async () => {
+    const nvmRoot = join(root, '.nvm', 'versions', 'node')
+    for (const version of ['v8.17.0', 'v18.20.4', 'v20.11.1', 'v6.14.4']) {
+      await mkdir(join(nvmRoot, version, 'bin'), { recursive: true })
+    }
+    const dirs = await commonUnixBinDirs(root)
+    const nvmBins = dirs.filter(
+      (dir) => dir.startsWith(nvmRoot + sep) || dir.startsWith(nvmRoot + '/'),
+    )
+    expect(nvmBins).toEqual([
+      join(nvmRoot, 'v20.11.1', 'bin'),
+      join(nvmRoot, 'v18.20.4', 'bin'),
+      join(nvmRoot, 'v8.17.0', 'bin'),
+      join(nvmRoot, 'v6.14.4', 'bin'),
+    ])
   })
 })
