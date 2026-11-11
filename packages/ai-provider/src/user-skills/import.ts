@@ -439,7 +439,7 @@ function frontMatterOpening(source: string): { start: number; fenced: boolean } 
  * is left of a skill when only its first part was copied.
  */
 export function skillTextUnclosed(text: string): boolean {
-  const source = text.replace(/^﻿/, '')
+  const source = text.replace(/^\uFEFF/, '')
   const opening = frontMatterOpening(source)
   if (!opening) return false
   const lines = source.slice(opening.start).split('\n').slice(1)
@@ -455,7 +455,7 @@ export function skillTextUnclosed(text: string): boolean {
  * matter with a `name` starts there.
  */
 export function skillTextOf(text: string): string | undefined {
-  const source = text.startsWith('﻿') ? text.slice(1) : text
+  const source = text.startsWith('\uFEFF') ? text.slice(1) : text
   const opening = frontMatterOpening(source)
   if (!opening) return undefined
   let rest = source.slice(opening.start).replace(/^[ \t]+/, '')
