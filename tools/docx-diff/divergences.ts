@@ -1,11 +1,14 @@
+import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import JSZip from 'jszip'
+import { rustOpen } from './compare-package'
 import { outcomeOf, rustOutcome } from './compare-props'
 import { rustRoundTrip, typescriptRoundTrip } from './compare-xml'
 import { rustEntries, textWithoutBuffer } from './compare-zip'
 import { toolDir } from './harness'
+import { hostileContainers, oddContainers } from './package-zips'
 import { READERS } from './props-registry'
 
 /** A known difference, with what each side returns for the input. */
@@ -13,7 +16,26 @@ type Divergence = { id: string; typescript: unknown; rust: unknown; reason: stri
   | { comparison: 'roundTripXml'; fragment: string }
   | { comparison: 'zipTextWithoutBuffer'; entryHex: string }
   | { comparison: 'props'; fn: string; text: string }
+  /** A container of package-zips.ts by name: what loading it gives. */
+  | { comparison: 'loadDocx'; container: string }
 )
+
+const NEVER_RETURNS = 'does not return within 5 s'
+
+/**
+ * `loadDocxZip` in a child process: the only way to see that it does not
+ * return, and the same path for a container it refuses.
+ */
+function typescriptLoadOnce(docx: Uint8Array): unknown {
+  const child = spawnSync(process.execPath, ['--import', 'tsx', 'load-once.ts'], {
+    cwd: toolDir,
+    input: docx,
+    timeout: 5_000,
+    encoding: 'utf8',
+  })
+  if (child.error || child.signal) return NEVER_RETURNS
+  return JSON.parse(child.stdout) as unknown
+}
 
 async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust: unknown }> {
   if (entry.comparison === 'roundTripXml') {
@@ -27,6 +49,17 @@ async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust:
     return {
       typescript: outcomeOf(() => reader.call(entry.text, {})),
       rust: rustOutcome(entry.fn, entry.text, {}),
+    }
+  }
+  if (entry.comparison === 'loadDocx') {
+    const docx =
+      hostileContainers()[entry.container] ??
+      oddContainers().find(([name]) => name === entry.container)?.[1]
+    if (!docx) return { typescript: 'no such container', rust: 'no such container' }
+    const rust = rustOpen(docx)
+    return {
+      typescript: typescriptLoadOnce(docx),
+      rust: 'refused' in rust ? { refused: rust.refused } : 'opens',
     }
   }
   const zip = new JSZip()

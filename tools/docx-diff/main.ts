@@ -39,6 +39,7 @@ import {
   SHOW,
 } from './harness'
 import type { Themes } from './props-registry'
+import { packageAfterCorpus, packageOnDocument, reportPackage } from './package-run'
 import { propsAfterCorpus, propsOnDocument, propsOnPart, reportProps } from './props-run'
 import { mulberry32, SCAN_CASES, XML_CASES, zipTextCases } from './synthetic'
 
@@ -98,6 +99,7 @@ for (const path of corpus) {
     continue
   }
   loadable.push(bytes)
+  await packageOnDocument(path, bytes, zip)
   const parsed = await parseDocx(bytes).catch(() => null)
   const themes: Themes = {
     colors: parsed?.themeColors ?? undefined,
@@ -152,6 +154,7 @@ for (let done = 0; done < FUZZ_CASES; done += 500) {
 }
 
 propsAfterCorpus(random)
+await packageAfterCorpus(random)
 
 const CHECKSUM_MARKER = 'content whose checksum goes stale'
 for (const compression of ['STORE', 'DEFLATE'] as const) {
@@ -181,6 +184,7 @@ for (const line of [
 }
 reportComparisons()
 reportProps()
+reportPackage()
 const nonAscii = mainParts.filter((xml) => /[^\0-\x7f]/.test(xml)).length
 console.log(
   `offsets: ${nonAscii} of ${mainParts.length} main parts hold non-ASCII text, where a byte offset ` +

@@ -8,6 +8,7 @@
   "scripts": {
     "gate": "node ../../crates/office-wasm/build.mjs && tsx main.ts",
     "bench": "node ../../crates/office-wasm/build.mjs && tsx main.ts --bench",
+    "fixtures": "tsx write-fixtures.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   }

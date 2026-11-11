@@ -63,5 +63,27 @@
     },
     "rust": {},
     "reason": "See table-lookup-inherited-key-object: the same lookup on the East Asian default font table."
+  },
+  {
+    "id": "inflate-failure-text-is-the-hosts",
+    "comparison": "loadDocx",
+    "container": "damaged deflate data",
+    "typescript": {
+      "refused": "zip rejected: part word/styles.xml cannot be inflated: TypeError"
+    },
+    "rust": {
+      "refused": "zip rejected: part word/styles.xml cannot be inflated: the deflate data is damaged or cut short"
+    },
+    "reason": "The zip gate ends this message with the text of the error DecompressionStream rejects with. That text belongs to the host: Node 22 rejects with a TypeError whose message is empty, so the gate falls back to its name, and a browser words it differently. Rust writes one sentence of its own. The gate compares the message up to \"cannot be inflated:\", which is the part the TypeScript wrote."
+  },
+  {
+    "id": "zip64-extensible-data-never-ends",
+    "comparison": "loadDocx",
+    "container": "zip64 extensible data that reads itself again",
+    "typescript": "does not return within 5 s",
+    "rust": {
+      "refused": "Corrupted zip: the ZIP64 extensible data does not end"
+    },
+    "reason": "JSZip 3.10.1 reads the extensible data of a ZIP64 end record in a loop whose counter never advances (zipEntries.js, readBlockZip64EndOfCentral): it ends when a read runs past the data. A field whose length is -6 moves the reader back to the start of the field, so the loop reads the same six bytes for ever and loadDocxZip never returns. The zip gate does not stop the archive: it refuses ZIP64 by the record count, the directory size and offset, and a locator 20 bytes before the end record, while JSZip also takes a disk number of 0xffff as ZIP64 and finds the locator anywhere. Rust refuses the container. This is a defect of the TypeScript engine (a document that hangs the application), reported with unit 1c, not behaviour to reproduce."
   }
 ]

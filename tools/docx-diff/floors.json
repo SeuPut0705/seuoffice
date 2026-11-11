@@ -20,5 +20,16 @@
   "propsMutatedFragments": 4000,
   "propsMutatedChecks": 400000,
   "propsBrokenChecks": 60000,
-  "propsFunctions": 69
+  "propsFunctions": 69,
+  "packagesOpened": 183,
+  "packageValueChecks": 2953,
+  "normalizedParts": 1224,
+  "normalizedStrictParts": 1250,
+  "builtContainers": 92,
+  "builtValueChecks": 640,
+  "refusalKinds": 25,
+  "mutatedContainersRefused": 1900,
+  "mutatedContainerValueChecks": 14000,
+  "mutatedPartValueChecks": 23000,
+  "normalizedMutatedParts": 1500
 }
