@@ -3,7 +3,8 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { editedCommentModelText, parseDocx } from '../src'
+import JSZip from 'jszip'
+import { editedCommentModelText, parseDocx, saveDocx, type SaveBlock } from '../src'
 import { withheldDrawingLabel } from '../src/withheld'
 import {
   hiddenStoriesDocx,
@@ -98,5 +99,31 @@ describe('a picture in a hidden run', () => {
     for (const wrap of ['w:hyperlink', 'w:fldSimple', 'w:smartTag', 'w:sdt', 'w:ins']) {
       expect(withheldDrawingLabel(`<w:p><${wrap}>${run}</${wrap}></w:p>`)).toBe('id card')
     }
+  })
+})
+
+describe('a comment edited so that its hidden runs cannot be patched around', () => {
+  it.each([
+    ['a paragraph added', (text: string) => `${text}\nmore`],
+    ['words changed across the hidden and plain ones', () => 'Different words'],
+  ])('keeps its hidden picture in a marked run (%s)', async (_name, edit) => {
+    const doc = await parsed({ pictures: true })
+    const comment = doc.comments.find((c) => c.id === '1')!
+    expect(comment.image).toBeDefined()
+    const blocks = doc.blocks
+      .filter((block) => !block.hidden)
+      .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+    const saved = await saveDocx(doc, blocks, {
+      comments: doc.comments.map((c) => (c.id === '1' ? { ...c, text: edit(c.text) } : c)),
+    })
+    const xml = await (await JSZip.loadAsync(saved)).file('word/comments.xml')!.async('string')
+    const entry = /<w:comment\b[^>]*\bw:id="1"[\s\S]*?<\/w:comment>/.exec(xml)![0]
+    const pictureRuns = entry.match(/<w:r>(?:(?!<\/w:r>)[\s\S])*<w:drawing[\s\S]*?<\/w:r>/g) ?? []
+    expect(pictureRuns).toHaveLength(1)
+    expect(pictureRuns[0]).toMatch(/<(?:\w+:)?redact[\s/>]/)
+    // reopened: the comment still hides something, so no reader lists its picture
+    const reopened = (await parseDocx(saved)).comments.find((c) => c.id === '1')!
+    expect(reopened.modelText).toBeDefined()
+    expect(reopened.markedXml).toBeDefined()
   })
 })

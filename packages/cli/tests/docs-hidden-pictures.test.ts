@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { parseDocx, saveDocx, type SaveBlock } from '@seuoffice/docx-engine'
 import JSZip from 'jszip'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
@@ -306,5 +307,29 @@ describe('a hidden run whose words are the placeholder', () => {
     await expectPicturesStillMarked(file)
     const read = await run(['docs', 'read', file, ...READ_FLAGS])
     expectNothingOfHiddenPictures(read.stdout)
+  })
+})
+
+describe('a comment with a hidden run and a hidden picture, edited across the boundary and saved', () => {
+  it('lists no picture and hands over no hidden word after the reopen', async () => {
+    const dir = tempDir()
+    const file = await hiddenStoriesDocx(dir, OWN_REDACT_NS, 'edited.docx', 'go', {
+      pictures: true,
+    })
+    const doc = await parseDocx(new Uint8Array(readFileSync(file)))
+    const blocks = doc.blocks
+      .filter((block) => !block.hidden)
+      .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+    // a paragraph added: the comment cannot be patched around its hidden runs and is written anew
+    const saved = await saveDocx(doc, blocks, {
+      comments: doc.comments.map((c) => (c.id === '1' ? { ...c, text: `${c.text}\nmore` } : c)),
+    })
+    writeFileSync(file, saved)
+    const read = await run(['docs', 'read', file, ...READ_FLAGS])
+    expect(read.code).toBe(0)
+    expectNothingOfHiddenPictures(read.stdout)
+    const comments = read.json().detail.comments as Array<{ id: string; image?: unknown }>
+    expect(comments.find((c) => c.id === '1')!.image).toBeUndefined()
+    expect(comments.find((c) => c.id === '2')!.image).toBeDefined()
   })
 })
