@@ -1,0 +1,21 @@
+[package]
+name = "file-parse"
+description = "Document attachment text readers, compared with @genoffice/file-parse"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+redaction = []
+docx = []
+pptx = ["redaction"]
+xlsx = ["redaction"]
+
+[dependencies]
+jscompat.workspace = true
+ooxml-pkg.workspace = true
+ooxml-xml.workspace = true
+serde.workspace = true
+serde_json.workspace = true

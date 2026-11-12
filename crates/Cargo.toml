@@ -5,6 +5,8 @@ members = [
   "ooxml-pkg",
   "docx-engine",
   "omml",
+  "file-parse",
+  "epub-engine",
   "office-wasm",
   "spike-one-run-save",
 ]
@@ -22,6 +24,8 @@ ooxml-xml = { path = "ooxml-xml" }
 ooxml-pkg = { path = "ooxml-pkg" }
 docx-engine = { path = "docx-engine" }
 omml = { path = "omml" }
+file-parse = { path = "file-parse" }
+epub-engine = { path = "epub-engine" }
 # the inflater the zip crate already uses; entries are read without its CRC check
 flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
 # ECMAScript regular expressions: patterns are ported by copying them
