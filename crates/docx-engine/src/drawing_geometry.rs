@@ -7,6 +7,9 @@ use serde::Serialize;
 
 use crate::theme::ThemeColors;
 
+pub mod anchor;
+pub mod fill;
+
 /// w14:textOutline stroke: hex without '#', width in points, opacity 0..1.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -19,7 +22,7 @@ pub struct TextOutline {
 
 /// `theme?.[SCHEME_CLR_SLOTS[val]] ?? DEFAULT_THEME_COLORS[slot]`; `None` for an
 /// unknown scheme name.
-fn scheme_clr_base(val: &str, theme: Option<&ThemeColors>) -> Option<Option<String>> {
+pub(crate) fn scheme_clr_base(val: &str, theme: Option<&ThemeColors>) -> Option<Option<String>> {
     let (pick, fallback): (fn(&ThemeColors) -> &Option<String>, &str) = match val {
         "tx1" | "dk1" => (|t| &t.dk1, "000000"),
         "bg1" | "lt1" => (|t| &t.lt1, "FFFFFF"),
@@ -42,7 +45,7 @@ fn scheme_clr_base(val: &str, theme: Option<&ThemeColors>) -> Option<Option<Stri
     ))
 }
 
-fn rgb_hex(rgb: &[f64]) -> String {
+pub(crate) fn rgb_hex(rgb: &[f64]) -> String {
     rgb.iter()
         .map(|c| {
             pad_start(&to_string_radix16(math_round(c.clamp(0.0, 255.0))), 2, '0').to_uppercase()
@@ -50,7 +53,7 @@ fn rgb_hex(rgb: &[f64]) -> String {
         .collect()
 }
 
-fn w14_color_rgb(node: &XNode, theme: Option<&ThemeColors>) -> Option<Vec<f64>> {
+pub(crate) fn w14_color_rgb(node: &XNode, theme: Option<&ThemeColors>) -> Option<Vec<f64>> {
     let color_node = node
         .find_child("w14:srgbClr")
         .or_else(|| node.find_child("w14:schemeClr"))?;
