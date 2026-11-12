@@ -12,6 +12,7 @@ mod json;
 mod json_value;
 mod map;
 mod math;
+pub mod node_path;
 mod number;
 mod object;
 mod random;
