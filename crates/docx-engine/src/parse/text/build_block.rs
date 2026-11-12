@@ -69,6 +69,9 @@ const INVISIBLE_BODY_MARKERS: [&str; 15] = [
     "w:customXmlDelRangeEnd",
 ];
 
+/// A key of a block set from a value that holds a picture.
+type SetOnBlock = Box<dyn FnOnce(&mut Block)>;
+
 /// An object literal built key by key, as the TypeScript writes them.
 ///
 /// The keys that can hold a picture stand empty in the map and are set on the
@@ -77,7 +80,7 @@ const INVISIBLE_BODY_MARKERS: [&str; 15] = [
 /// one string per media part.
 struct Obj {
     map: Map<String, Value>,
-    by_value: Vec<Box<dyn FnOnce(&mut Block)>>,
+    by_value: Vec<SetOnBlock>,
 }
 
 impl Obj {
