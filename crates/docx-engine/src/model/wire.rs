@@ -229,7 +229,7 @@ fn decode_base64(text: &str) -> Option<Vec<u8>> {
         Some(u32::from(value))
     }
     let bytes = text.as_bytes();
-    if bytes.len() % 4 != 0 {
+    if !bytes.len().is_multiple_of(4) {
         return None;
     }
     let groups = bytes.len() / 4;

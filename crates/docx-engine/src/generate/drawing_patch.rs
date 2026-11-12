@@ -158,29 +158,29 @@ pub fn patch_image_paragraph_xml(xml: &str, patch: &ImagePatch) -> String {
                 )
             });
         let touch_rot = patch.rot_deg.is_some();
-        if let Some((ext_cx, ext_cy)) = ext_m {
-            if touch_rot || (touch_size && rot_m.is_some()) {
-                let rot = rot_m.as_deref().map_or(0.0, to_number);
-                let rad = ((rot / 60000.0) * std::f64::consts::PI) / 180.0;
-                let cx = to_number(&ext_cx);
-                let cy = to_number(&ext_cy);
-                let bw = (cx * rad.cos()).abs() + (cy * rad.sin()).abs();
-                let bh = (cx * rad.sin()).abs() + (cy * rad.cos()).abs();
-                let dx = num(js_max(0.0, math_round((bw - cx) / 2.0)));
-                let dy = num(js_max(0.0, math_round((bh - cy) / 2.0)));
-                let ee = format!("<wp:effectExtent l=\"{dx}\" t=\"{dy}\" r=\"{dx}\" b=\"{dy}\"/>");
-                let effect = js_regex!(r"<wp:effectExtent\b[^>]*\/>");
-                out = if effect.test(&out) {
-                    replace_first(effect, 0, &out, &ee)
-                } else {
-                    replace_first(
-                        js_regex!(r"(<wp:extent\b[^>]*\/?>)"),
-                        1,
-                        &out,
-                        &format!("$1{ee}"),
-                    )
-                };
-            }
+        if let Some((ext_cx, ext_cy)) = ext_m
+            && (touch_rot || (touch_size && rot_m.is_some()))
+        {
+            let rot = rot_m.as_deref().map_or(0.0, to_number);
+            let rad = ((rot / 60000.0) * std::f64::consts::PI) / 180.0;
+            let cx = to_number(&ext_cx);
+            let cy = to_number(&ext_cy);
+            let bw = (cx * rad.cos()).abs() + (cy * rad.sin()).abs();
+            let bh = (cx * rad.sin()).abs() + (cy * rad.cos()).abs();
+            let dx = num(js_max(0.0, math_round((bw - cx) / 2.0)));
+            let dy = num(js_max(0.0, math_round((bh - cy) / 2.0)));
+            let ee = format!("<wp:effectExtent l=\"{dx}\" t=\"{dy}\" r=\"{dx}\" b=\"{dy}\"/>");
+            let effect = js_regex!(r"<wp:effectExtent\b[^>]*\/>");
+            out = if effect.test(&out) {
+                replace_first(effect, 0, &out, &ee)
+            } else {
+                replace_first(
+                    js_regex!(r"(<wp:extent\b[^>]*\/?>)"),
+                    1,
+                    &out,
+                    &format!("$1{ee}"),
+                )
+            };
         }
     }
     if let Some(align) = &patch.align {
@@ -1094,7 +1094,8 @@ pub fn resize_anchored_picture_xml(xml: &str, width_px: f64, height_px: f64) -> 
 }
 
 fn resize_drawing_extents(xml: &str, width_px: f64, height_px: f64) -> String {
-    if !(width_px > 0.0) || !(height_px > 0.0) {
+    // `!(w > 0) || !(h > 0)`: a NaN is not above zero either
+    if width_px.is_nan() || width_px <= 0.0 || height_px.is_nan() || height_px <= 0.0 {
         return xml.to_owned();
     }
     let cx = js_max(1.0, math_round(width_px * EMU_PER_PX));

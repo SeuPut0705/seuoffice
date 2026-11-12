@@ -137,7 +137,7 @@ fn replace_text_nodes(xml: &str, replacements: &[(&XmlTextNode<'_>, String)]) ->
     }
     let map = Utf16Map::new(xml);
     let mut ordered: Vec<&(&XmlTextNode<'_>, String)> = replacements.iter().collect();
-    ordered.sort_by(|a, b| b.0.start.cmp(&a.0.start));
+    ordered.sort_by_key(|replacement| std::cmp::Reverse(replacement.0.start));
     let mut out: Vec<u16> = xml.encode_utf16().collect();
     for (node, text) in ordered {
         // wtText drops edge whitespace without xml:space="preserve"
@@ -521,7 +521,7 @@ pub struct CellRichPara {
 #[serde(untagged)]
 pub enum CellParaPatch {
     Text(String),
-    Rich(CellRichPara),
+    Rich(Box<CellRichPara>),
 }
 
 /// `texts[row][cell]` of patchTableCellTexts.

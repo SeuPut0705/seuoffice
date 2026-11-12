@@ -425,7 +425,8 @@ fn raw_spacing_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
             && rule == "auto"
             && math_round((line / 240.0) * 100.0) / 100.0 == spacing;
     }
-    !(line > 0.0)
+    // `!(line > 0)`: a NaN is not above zero either
+    line.is_nan() || line <= 0.0
 }
 
 fn raw_ind_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {

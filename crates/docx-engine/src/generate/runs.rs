@@ -273,10 +273,11 @@ impl Emitter<'_, '_, '_> {
                 if run.ins.is_some() {
                     out.push_str(&format!("</{ins_tag}>"));
                 }
-                if open_range.is_some() && movement != move_of(self.runs.get(end)) {
-                    if let Some((side, id)) = open_range.take() {
-                        out.push_str(&format!("<w:move{side}RangeEnd w:id=\"{}\"/>", attr(&id)));
-                    }
+                if open_range.is_some()
+                    && movement != move_of(self.runs.get(end))
+                    && let Some((side, id)) = open_range.take()
+                {
+                    out.push_str(&format!("<w:move{side}RangeEnd w:id=\"{}\"/>", attr(&id)));
                 }
             }
             g = end;

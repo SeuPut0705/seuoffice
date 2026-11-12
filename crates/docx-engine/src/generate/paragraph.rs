@@ -90,18 +90,18 @@ pub fn generate_paragraph_xml(
             format!("<w:pStyle w:val=\"{}\"/>", attr(style)),
         ));
     }
-    if block.r#type.as_str() == "listItem" {
-        if let Some(list) = &block.list {
-            let level = math_min(math_max(list.ilvl.0, 0.0), 8.0);
-            children.push((
-                "w:numPr".to_owned(),
-                format!(
-                    "<w:numPr><w:ilvl w:val=\"{}\"/><w:numId w:val=\"{}\"/></w:numPr>",
-                    number_to_string(level),
-                    attr(&list.num_id)
-                ),
-            ));
-        }
+    if block.r#type.as_str() == "listItem"
+        && let Some(list) = &block.list
+    {
+        let level = math_min(math_max(list.ilvl.0, 0.0), 8.0);
+        children.push((
+            "w:numPr".to_owned(),
+            format!(
+                "<w:numPr><w:ilvl w:val=\"{}\"/><w:numId w:val=\"{}\"/></w:numPr>",
+                number_to_string(level),
+                attr(&list.num_id)
+            ),
+        ));
     }
     children.extend(props::format_p_pr_children(block.format.as_ref()));
     if let Some(change) = block
@@ -109,10 +109,9 @@ pub fn generate_paragraph_xml(
         .as_ref()
         .and_then(|value| value.as_deref())
         .filter(|value| !value.is_empty())
+        && let Some(revision) = props::revision_p_pr_change_xml(change)?
     {
-        if let Some(revision) = props::revision_p_pr_change_xml(change)? {
-            children.push(("w:pPrChange".to_owned(), revision));
-        }
+        children.push(("w:pPrChange".to_owned(), revision));
     }
     let mut empty_id = || String::new();
     let mint: &mut dyn FnMut() -> String = match ctx.allocate_revision_id.as_mut() {
