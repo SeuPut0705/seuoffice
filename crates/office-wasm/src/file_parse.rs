@@ -91,6 +91,10 @@ pub fn run(function: &str, text: &str, bytes: &[u8], args: &Value) -> Vec<u8> {
         "isTextPart" => Ok(Value::Bool(file_parse::zip_text_parts::is_text_part(text))),
         "readZipTextParts" => file_parse::zip_text_parts::read_zip_text_parts(bytes)
             .map(|bytes| Value::Array(bytes.into_iter().map(Value::from).collect())),
+        "decodeCsvBuffer" => Ok(Value::String(file_parse::csv::decode_csv_buffer(
+            bytes,
+            args.get("preferred").and_then(Value::as_str),
+        ))),
         "compoundStreams" => file_parse::compound::read_streams(bytes)
             .and_then(|streams| serde_json::to_value(streams).map_err(|error| error.to_string())),
         _ => Err(format!("unknown attachment reader: {function}")),

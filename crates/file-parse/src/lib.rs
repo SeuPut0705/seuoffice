@@ -2,6 +2,7 @@
 
 pub mod attachable;
 pub mod compound;
+pub mod csv;
 #[cfg(feature = "docx")]
 pub mod docx;
 #[cfg(feature = "redaction")]

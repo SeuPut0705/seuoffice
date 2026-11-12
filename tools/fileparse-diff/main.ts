@@ -2,6 +2,7 @@ import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { SPECS as ATTACHABLE } from './attachable-cases'
 import { SPECS as COMPOUND } from './compound-cases'
+import { SPECS as CSV } from './csv-cases'
 import { SPECS as DATES } from './date-cases'
 import { SPECS as DOCX } from './docx-cases'
 import { hostileZipInputs } from './hostile'
@@ -23,6 +24,7 @@ const passed = await runSuite({
   groups: {
     opc: OPC, attachable: ATTACHABLE, dates: DATES, redaction: REDACTION,
     docx: DOCX.map(withHostile), pptx: PPTX, xlsx: XLSX, ziptext: ZIP_TEXT, compound: COMPOUND.map(isolated),
+    csv: CSV,
   },
 })
 process.exitCode = passed ? 0 : 1

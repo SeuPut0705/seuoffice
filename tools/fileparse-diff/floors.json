@@ -59,5 +59,8 @@
   "functions.pptx": 1,
   "functions.xlsx": 3,
   "functions.ziptext": 3,
-  "functions.compound": 1
+  "functions.compound": 1,
+  "decodeCsvBuffer.corpus": 3,
+  "decodeCsvBuffer.built": 1776,
+  "functions.csv": 1
 }

@@ -23,5 +23,11 @@
   {"id":"zip-descriptor-bit","group":"ziptext","file":"crates/file-parse/src/zip_text_parts.rs","from":"entry.flags & !FLAG_DATA_DESCRIPTOR","to":"entry.flags"},
   {"id":"integrator-zip-gate-skipped","group":"ziptext","file":"crates/file-parse/src/zip_text_parts.rs","from":"    assert_zip_inflates_within_limits(bytes, &DEFAULT_ZIP_LIMITS)?;\n","to":""},
   {"id":"compound-stream-name","group":"compound","file":"crates/file-parse/src/compound.rs","from":"out.push(Stream { name, bytes });","to":"out.push(Stream { name: format!(\"{name}!\"), bytes });"},
-  {"id":"integrator-compound-mini-cutoff","group":"compound","file":"crates/file-parse/src/compound.rs","from":"const MINI_CUTOFF: i32 = 4096;","to":"const MINI_CUTOFF: i32 = 4097;"}
+  {"id":"integrator-compound-mini-cutoff","group":"compound","file":"crates/file-parse/src/compound.rs","from":"const MINI_CUTOFF: i32 = 4096;","to":"const MINI_CUTOFF: i32 = 4097;"},
+  {"id":"csv-korean-ratio","group":"csv","file":"crates/file-parse/src/csv.rs","from":"&& f64::from(hangul) / f64::from(non_ascii) >= 0.8","to":"&& f64::from(hangul) / f64::from(non_ascii) >= 0.5"},
+  {"id":"csv-replacement-penalty","group":"csv","file":"crates/file-parse/src/csv.rs","from":"            -20","to":"            -2"},
+  {"id":"csv-utf16-tie-order","group":"csv","file":"crates/file-parse/src/csv.rs","from":"Some(if odd_nul >= even_nul {","to":"Some(if odd_nul > even_nul {"},
+  {"id":"csv-score-tie","group":"csv","file":"crates/file-parse/src/csv.rs","from":"if candidate_score > best_score {","to":"if candidate_score >= best_score {"},
+  {"id":"integrator-csv-bom-kept","group":"csv","file":"crates/file-parse/src/csv.rs","from":"let (text, had_errors) = encoding.decode_with_bom_removal(bytes);","to":"let (text, had_errors) = encoding.decode_without_bom_handling(bytes);"},
+  {"id":"integrator-csv-replacement-label","group":"csv","file":"crates/file-parse/src/csv.rs","from":".filter(|found| *found != REPLACEMENT)","to":".filter(|_| true)"}
 ]

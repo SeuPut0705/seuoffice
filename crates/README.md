@@ -40,6 +40,13 @@ randomness.
    code should do. `tests/readers.rs` and `tests/styles.rs` say how each was
    generated.
 
+Engines are ported in whole-engine batches (decision 0025, rule 5): every
+module left in an engine is ported in one go, its gate cases written beside
+it, and the gate runs once at the end of the batch, as the batch's first
+comparison, then once on a runner. Runner jobs are started and not waited
+for. Fault injection, tidying the ledger and the review run once, before
+the batch is merged to main. A unit's gate is no longer run per module.
+
 ## jscompat rules
 
 A port that uses the nearest Rust function differs on real documents. These
@@ -332,13 +339,23 @@ What is particular to these gates:
   after formatting.
 - **First runs** are kept in `evidence/`, untouched; those above 200 KB are
   gzip-compressed. `decisions.tsv` is the trail.
+- **CSV decoding** (`file_parse::csv`, `decodeCsvBuffer` of xlsx-gateway)
+  decodes with `encoding_rs`, the WHATWG Encoding Standard; the TypeScript
+  decodes with Node's `TextDecoder`, which is not that standard for three of
+  the charsets it tries: `euc-kr` is KS X 1001 where the standard is
+  windows-949, `big5` has no HKSCS, `shift_jis` moves 0x1A, 0x1C and 0x7F and
+  rejects 0x80, and Node does not know `x-user-defined`. gb18030, UTF-8,
+  UTF-16 and windows-1252 agree on every one and two byte sequence and every
+  gb18030 four byte one. The ledger lists each input that differs, and
+  `npx tsx csv-decoders.ts` checks that with the WHATWG decoder of
+  `@exodus/bytes` in place of Node's the TypeScript gives the Rust answer
+  for every one of them: they are defects of the TypeScript.
 
 Not ported, each for the parser or library it needs:
 
 - `file-parse`: `html-redaction.ts` (parse5), `pdf.ts`, `hwp.ts`, `doc.ts` and
   `ppt.ts` (their extractors; only the compound reader under them is here),
-  `odt.ts`, `xmind.ts`, `diagram.ts`, `epub.ts`, the dispatcher `parse.ts`,
-  CSV decoding.
+  `odt.ts`, `xmind.ts`, `diagram.ts`, `epub.ts`, the dispatcher `parse.ts`.
 - `epub-engine`: everything that parses text with saxes or parse5
   (`parseXml`, `parseHtml`, `openEpub`, chapter text, blocks, notation, edits,
   save, `buildToc`) and `translate/`. The tree readers here take the tree the

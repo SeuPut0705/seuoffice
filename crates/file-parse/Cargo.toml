@@ -14,6 +14,7 @@ pptx = ["redaction"]
 xlsx = ["redaction"]
 
 [dependencies]
+encoding_rs.workspace = true
 jscompat.workspace = true
 ooxml-pkg.workspace = true
 ooxml-xml.workspace = true
