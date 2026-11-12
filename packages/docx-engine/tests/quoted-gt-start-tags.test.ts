@@ -149,4 +149,29 @@ describe('a start tag with a quoted > in an attribute value', () => {
     // A4 with 1in margins: the 2:1 image fits the 451.3pt margin width
     expect(await widthOf('<w:pgSz x:note="a>b" w:w="11906" w:h="16838"/>')).toBe('451.3pt')
   })
+
+  it('removing personal information empties an author element holding the quoted >', async () => {
+    const doc = await parseDocx(
+      await buildDocx({
+        bodyXml: BODY,
+        extraParts: [
+          {
+            path: 'docProps/core.xml',
+            xml:
+              '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+              '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/">' +
+              `<dc:creator ${ODD}>Core Person</dc:creator><cp:lastModifiedBy ${ODD}>Last Person</cp:lastModifiedBy>` +
+              '<dc:title>Kept</dc:title></cp:coreProperties>',
+            contentType: 'application/vnd.openxmlformats-package.core-properties+xml',
+          },
+        ],
+      }),
+    )
+    const saved = await saveDocx(doc, originalOrder(doc), { removePersonalInfo: true })
+    const xml = await partOf(saved, 'docProps/core.xml')
+    wellFormed(xml)
+    expect(xml).toContain(`<dc:creator ${ODD}></dc:creator>`)
+    expect(xml).toContain(`<cp:lastModifiedBy ${ODD}></cp:lastModifiedBy>`)
+    expect(xml).toContain('<dc:title>Kept</dc:title>')
+  })
 })

@@ -3098,11 +3098,14 @@ function clearQualifiedElements(
   )
   let out = xml
   for (const qName of qNames) {
-    const escaped = regexEscape(qName)
-    out = out.replace(
-      new RegExp(`(<${escaped}\\b[^>]*>)[\\s\\S]*?(<\\/${escaped}\\s*>)`, 'g'),
-      '$1$2',
-    )
+    const close = new RegExp(`<\\/${regexEscape(qName)}\\s*>`, 'g')
+    for (let tag = findStartTag(out, qName); tag; tag = findStartTag(out, qName, tag.end)) {
+      if (tag.selfClosing) continue
+      close.lastIndex = tag.end
+      const end = close.exec(out)
+      if (!end) break
+      out = out.slice(0, tag.end) + out.slice(end.index)
+    }
   }
   return out
 }
