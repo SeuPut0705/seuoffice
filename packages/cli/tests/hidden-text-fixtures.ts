@@ -1,6 +1,9 @@
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import JSZip from 'jszip'
+import { expect } from 'vitest'
 import { OLD_REDACT_NS } from '../../agent-core/src/old-names'
+import { setRedactExt } from '../../pptx-engine/src/redaction-xml'
 import { buildDocx } from '../../docx-engine/tests/helpers/build-docx'
 
 /** Fixtures for text a person marked "hidden from AI", as the apps write it. */
@@ -28,5 +31,53 @@ export async function hiddenDocx(dir: string, ns: string, name = 'hidden.docx'):
   })
   const file = join(dir, name)
   writeFileSync(file, bytes)
+  return file
+}
+
+/**
+ * A deck whose slide text and speaker notes each hold a run marked hidden from
+ * AI, written the way the slide editor writes the mark (its own helper).
+ */
+export async function hiddenPptx(dir: string, name = 'hidden.pptx'): Promise<string> {
+  const { run } = await import('./helpers')
+  const spec = join(dir, 'deck.json')
+  writeFileSync(
+    spec,
+    JSON.stringify({
+      pages: [
+        {
+          elements: [
+            {
+              type: 'text',
+              x: 80,
+              y: 80,
+              w: 600,
+              h: 80,
+              paragraphs: [{ runs: [{ text: 'Call ' }, { text: SECRET }, { text: ' now' }] }],
+            },
+          ],
+        },
+      ],
+    }),
+  )
+  const file = join(dir, name)
+  expect(
+    (await run(['create', '--type', 'pptx', '--spec', spec, '--out', file, '--json'])).code,
+  ).toBe(0)
+  const ops = join(dir, 'ops.json')
+  writeFileSync(ops, JSON.stringify([{ op: 'setNotes', target: { slide: 0 }, text: SECRET }]))
+  expect((await run(['slides', 'apply', file, '--ops', ops, '--json'])).code).toBe(0)
+  const zip = await JSZip.loadAsync(readFileSync(file))
+  for (const part of ['ppt/slides/slide1.xml', 'ppt/notesSlides/notesSlide1.xml']) {
+    const xml = await zip.file(part)!.async('string')
+    const marked = xml.replace(
+      /<a:r>(<a:rPr[^>]*?\/>|<a:rPr[^>]*>[\s\S]*?<\/a:rPr>)?<a:t>13800138000<\/a:t><\/a:r>/,
+      (_all, rPr: string | undefined) =>
+        `<a:r>${setRedactExt(rPr ?? '<a:rPr lang="en-US"/>', LABEL)}<a:t>${SECRET}</a:t></a:r>`,
+    )
+    expect(marked).not.toBe(xml)
+    zip.file(part, marked)
+  }
+  writeFileSync(file, await zip.generateAsync({ type: 'uint8array' }))
   return file
 }
