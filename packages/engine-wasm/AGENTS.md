@@ -13,7 +13,7 @@ Rust 엔진의 WASM 빌드(`crates/office-wasm`)를 싣고 부르는 단 하나�
 
 - `src/`에서 Node 내장 모듈을 import하지 않는다. Electron main, 웹 페이지, Node 어디서나 같은 코드가 돈다.
 - WASI는 엔진이 쓰는 다섯 함수(`random_get`, `environ_get`, `environ_sizes_get`, `fd_write`, `proc_exit`)만 직접 준다. 엔진이 새 import를 요구하면 여기에 더한다.
-- `seu_host.host_collate`는 `Intl.Collator('zh-CN')`이다(워드 엔진의 INDEX 필드 정렬).
+- `seu_host.host_collate(a, b, locale)`는 세 UTF-8 문자열을 받아 `new Intl.Collator(locale).compare(a, b)`를 준다. 로캘마다 콜레이터를 하나씩 캐시한다. 로캘이 잘못돼 `Intl.Collator`가 던지면 `-2147483648`을 돌려주고 엔진이 그 호출을 거부한다(localeCompare가 던지는 것과 같다). 로캘 인자가 없는 이전 빌드는 `zh-CN`으로 읽는다.
 - 엔진의 실패 응답은 `EngineError`(code, message)로 던진다.
 
 ## 테스트

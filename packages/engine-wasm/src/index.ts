@@ -44,8 +44,26 @@ export class EngineError extends Error {
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
-// generateIndexFieldXml sorts index entries with `a.localeCompare(b, 'zh-CN')`
-const collator = new Intl.Collator('zh-CN')
+
+// generateIndexFieldXml sorts index entries with `a.localeCompare(b, locale)`:
+// one collator per locale, made on first use
+const collators = new Map<string, Intl.Collator>()
+
+/** What `host_collate` answers where `new Intl.Collator(locale)` throws: the engine refuses the call. */
+const COLLATE_REFUSED = -2_147_483_648
+
+function collatorFor(locale: string): Intl.Collator | null {
+  let collator = collators.get(locale)
+  if (!collator) {
+    try {
+      collator = new Intl.Collator(locale)
+    } catch {
+      return null
+    }
+    collators.set(locale, collator)
+  }
+  return collator
+}
 
 /** errno of WASI preview 1 */
 const ERRNO_SUCCESS = 0
@@ -109,8 +127,23 @@ function imports(): WebAssembly.Imports {
   return {
     wasi_snapshot_preview1: wasiImports(memory),
     seu_host: {
-      host_collate(a: number, aLength: number, b: number, bLength: number): number {
+      // `(a, b, locale)` as three UTF-8 strings; a build from before the
+      // locale argument passes four arguments and means 'zh-CN'
+      host_collate(
+        a: number,
+        aLength: number,
+        b: number,
+        bLength: number,
+        locale?: number,
+        localeLength?: number,
+      ): number {
         const { buffer } = memory()
+        const name =
+          locale === undefined || localeLength === undefined
+            ? 'zh-CN'
+            : decoder.decode(new Uint8Array(buffer, locale, localeLength))
+        const collator = collatorFor(name)
+        if (!collator) return COLLATE_REFUSED
         return collator.compare(
           decoder.decode(new Uint8Array(buffer, a, aLength)),
           decoder.decode(new Uint8Array(buffer, b, bLength)),
