@@ -262,8 +262,15 @@ export type {
 } from './registry'
 export { sanitizeAiSettings, sanitizeCliPath, validCliPath } from './ai-settings-guard'
 export { chatForProvider } from './chat'
-export { AiRedirectRefusedError, keyedFetch, setAiUserAgent, setRescueFetch } from './fetch'
-export type { KeyedFetchBase } from './fetch'
+export {
+  AiRedirectRefusedError,
+  fetchSeeingRedirects,
+  keyedDownload,
+  keyedFetch,
+  setAiUserAgent,
+  setRescueFetch,
+} from './fetch'
+export type { AiRedirectRefusal, KeyedDownloadOptions, KeyedFetchBase } from './fetch'
 export { isAiNetworkError } from './network-error'
 export { isAiOverloadedError } from './overload-error'
 export { freeLimitOf, isOpenRouterFreeModel } from './free-ai'
