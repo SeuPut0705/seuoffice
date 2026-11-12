@@ -275,16 +275,14 @@ impl BlockConverter for TableBlockConverter {
             if element.is_none()
                 && data.kind == TableBlockKind::Frames
                 && matches!(para, ParaOutcome::Deleted)
+                && let Some(paragraph) = data.paragraph
+                && is_host_picture_paragraph(rctx, paragraph, &a.item.borrow())
             {
-                if let Some(paragraph) = data.paragraph {
-                    if is_host_picture_paragraph(rctx, paragraph, &a.item.borrow()) {
-                        let writer = registry.free_writer_for(&a.item.borrow());
-                        if let Some(writer) = writer {
-                            let xml = writer.to_odf(rctx, std::slice::from_ref(&a.item), env)?;
-                            para = ParaOutcome::Changed { xml };
-                            continue;
-                        }
-                    }
+                let writer = registry.free_writer_for(&a.item.borrow());
+                if let Some(writer) = writer {
+                    let xml = writer.to_odf(rctx, std::slice::from_ref(&a.item), env)?;
+                    para = ParaOutcome::Changed { xml };
+                    continue;
                 }
             }
             let Some(element) = element.filter(|e| e.block == block.id) else {

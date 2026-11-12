@@ -338,15 +338,14 @@ fn write_paragraph(
     let src = cut(&xml_all, origin.start, origin.end);
     // a note in it changed although the paragraph's OOXML did not (objects layer)
     let dirty = paragraph_needs_rewrite(rctx, origin.id);
-    if !dirty && opts.placements.is_none() {
-        if let Some(bridge_xml) = opts.bridge_xml {
-            if !item.xml.is_empty()
-                && (item.xml == bridge_xml
-                    || without_bridge_bookmarks(&item.xml) == without_bridge_bookmarks(bridge_xml))
-            {
-                return Ok((src, false));
-            }
-        }
+    if !dirty
+        && opts.placements.is_none()
+        && let Some(bridge_xml) = opts.bridge_xml
+        && !item.xml.is_empty()
+        && (item.xml == bridge_xml
+            || without_bridge_bookmarks(&item.xml) == without_bridge_bookmarks(bridge_xml))
+    {
+        return Ok((src, false));
     }
     let candidate = paragraph_to_odf(
         rctx,
@@ -492,15 +491,15 @@ pub fn write_cell_content(
     let xml = xml_of(rctx);
     let mut own = original_items(rctx, primary, false);
     // bridge items line up with the primary's own items
-    if let Some(bridge) = bridge {
-        if bridge.items.len() == own.len() {
-            for (o, item) in own.iter_mut().zip(&bridge.items) {
-                match o {
-                    OrigItem::P { bridge_xml, .. } | OrigItem::T { bridge_xml, .. } => {
-                        *bridge_xml = Some(item.xml.clone());
-                    }
-                    OrigItem::S => {}
+    if let Some(bridge) = bridge
+        && bridge.items.len() == own.len()
+    {
+        for (o, item) in own.iter_mut().zip(&bridge.items) {
+            match o {
+                OrigItem::P { bridge_xml, .. } | OrigItem::T { bridge_xml, .. } => {
+                    *bridge_xml = Some(item.xml.clone());
                 }
+                OrigItem::S => {}
             }
         }
     }
@@ -524,13 +523,13 @@ pub fn write_cell_content(
                 items.truncate(n - 1);
             }
         }
-    } else if primary.synthetic == Some(Synthetic::Empty) && others.is_empty() {
-        if items.len() == 1
-            && items[0].kind == OxItemKind::P
-            && para_text(items[0].para.as_deref()).is_empty()
-        {
-            items.clear();
-        }
+    } else if primary.synthetic == Some(Synthetic::Empty)
+        && others.is_empty()
+        && items.len() == 1
+        && items[0].kind == OxItemKind::P
+        && para_text(items[0].para.as_deref()).is_empty()
+    {
+        items.clear();
     }
 
     // indexes into `origs`
@@ -965,10 +964,10 @@ fn frame_xml(
         let mut over = AttrOverrides::new();
         let mut grow = |name: &str, delta: f64| {
             let v = length_cm(attrs(name).as_deref());
-            if let Some(v) = v {
-                if delta.abs() > 0.0005 {
-                    over.set(name, Some(cm(v + delta)));
-                }
+            if let Some(v) = v
+                && delta.abs() > 0.0005
+            {
+                over.set(name, Some(cm(v + delta)));
             }
         };
         grow("svg:height", dh);
@@ -990,23 +989,23 @@ fn frame_xml(
             let mut props = AttrOverrides::new();
             let h = length_cm(gp.get("fo:min-height").map(String::as_str));
             let w = length_cm(gp.get("fo:min-width").map(String::as_str));
-            if let Some(h) = h {
-                if dh.abs() > 0.0005 {
-                    props.set("fo:min-height", Some(cm(h + dh)));
-                }
+            if let Some(h) = h
+                && dh.abs() > 0.0005
+            {
+                props.set("fo:min-height", Some(cm(h + dh)));
             }
-            if let Some(w) = w {
-                if dw.abs() > 0.0005 {
-                    props.set("fo:min-width", Some(cm(w + dw)));
-                }
+            if let Some(w) = w
+                && dw.abs() > 0.0005
+            {
+                props.set("fo:min-width", Some(cm(w + dw)));
             }
             let sh = length_cm(gp.get("svg:height").map(String::as_str));
-            if let Some(sh) = sh {
-                if dh.abs() > 0.0005 {
-                    props.set("svg:height", Some(cm(sh + dh)));
-                }
+            if let Some(sh) = sh
+                && dh.abs() > 0.0005
+            {
+                props.set("svg:height", Some(cm(sh + dh)));
             }
-            if props.len() > 0 {
+            if !props.is_empty() {
                 let style_src = xml.text[style.start..style.end].to_string();
                 let key = key_of(json!(["frame", style.name, props]));
                 let name = derive(rctx, &key, &style.name, |n| {
@@ -1028,7 +1027,7 @@ fn frame_xml(
                 over.set("draw:style-name", Some(name));
             }
         }
-        if over.len() > 0 {
+        if !over.is_empty() {
             tag = patch_start_tag(&tag, &prefixes, &over)?;
         }
     }
@@ -1292,7 +1291,7 @@ fn write_cell_element(
             "style:table-cell-properties",
         );
         let props = cell_overrides(&props_of(rctx, src), a.cell, &attrs);
-        if props.len() > 0 {
+        if !props.is_empty() {
             over.set(
                 "table:style-name",
                 Some(derived_cell_style(rctx, src.style.as_deref(), &props)?),
@@ -1322,7 +1321,7 @@ fn write_cell_element(
             );
         }
     }
-    if !content.changed && over.len() == 0 {
+    if !content.changed && over.is_empty() {
         return Ok(CellOutcome {
             xml: original,
             changed: false,
@@ -1330,7 +1329,7 @@ fn write_cell_element(
         });
     }
     let mut tag = cut(&xml, src.element.start, src.element.open_end);
-    if over.len() > 0 {
+    if !over.is_empty() {
         tag = patch_start_tag(&tag, &prefixes_of(rctx), &over)?;
     }
     let out = if src.element.self_closing {
@@ -1361,10 +1360,10 @@ fn first_paragraph(
     cell: Option<&AnchorCellRecord>,
 ) -> Option<BridgeParagraph> {
     for u in cell.map_or(&[][..], |c| c.units.as_slice()) {
-        if let Some(id) = u.paragraph_id() {
-            if let Some(p) = rctx.map.paragraphs.get(id) {
-                return Some(p.clone());
-            }
+        if let Some(id) = u.paragraph_id()
+            && let Some(p) = rctx.map.paragraphs.get(id)
+        {
+            return Some(p.clone());
         }
     }
     None
@@ -1411,7 +1410,7 @@ fn new_cell_from_template(
             "style:table-cell-properties",
         );
         let props = cell_overrides(&props_of(rctx, template), a.cell, &attrs);
-        if props.len() > 0 {
+        if !props.is_empty() {
             over.set(
                 "table:style-name",
                 Some(derived_cell_style(rctx, template.style.as_deref(), &props)?),
@@ -1510,13 +1509,12 @@ pub fn write_table(
     edited: &EditedTable<'_>,
     bridge: Option<&OxTable>,
 ) -> Result<TableResult, OdtError> {
-    if let Some(bridge) = bridge {
-        if !edited.ox.xml.is_empty()
-            && edited.ox.xml == bridge.xml
-            && !table_needs_rewrite(rctx, ext, rec)
-        {
-            return Ok(unchanged_result(rctx, rec));
-        }
+    if let Some(bridge) = bridge
+        && !edited.ox.xml.is_empty()
+        && edited.ox.xml == bridge.xml
+        && !table_needs_rewrite(rctx, ext, rec)
+    {
+        return Ok(unchanged_result(rctx, rec));
     }
     let grid = edited_grid(edited.model, &edited.ox);
     if same_grid(rec, &grid) {
@@ -1555,10 +1553,10 @@ fn cell_needs_rewrite(
 fn table_needs_rewrite(rctx: &mut OoxmlToOdfContext, ext: &TableExt, rec: &TableRecord) -> bool {
     for row in &rec.cells {
         for cell in row {
-            if let CellRecord::Cell(cell) = cell {
-                if cell_needs_rewrite(rctx, ext, cell) {
-                    return true;
-                }
+            if let CellRecord::Cell(cell) = cell
+                && cell_needs_rewrite(rctx, ext, cell)
+            {
+                return true;
             }
         }
     }
@@ -1649,11 +1647,11 @@ fn locked_cell_touched(
         "table-cell",
         "style:table-cell-properties",
     );
-    cell_overrides(&props_of(rctx, cell), a.cell, &attrs).len() > 0
+    !cell_overrides(&props_of(rctx, cell), a.cell, &attrs).is_empty()
 }
 
 /// `bridgeCell`: the bridge `w:tc` of an original anchor cell.
-fn bridge_cell<'b>(bridge: Option<&'b OxTable>, r: usize, tc: Option<usize>) -> Option<&'b OxCell> {
+fn bridge_cell(bridge: Option<&OxTable>, r: usize, tc: Option<usize>) -> Option<&OxCell> {
     match (bridge, tc) {
         (Some(bridge), Some(tc)) => bridge.rows.get(r).and_then(|row| row.cells.get(tc)),
         _ => None,
@@ -1680,15 +1678,15 @@ fn patch_table(
                 continue;
             };
             let b = bridge_cell(bridge, r, cell.tc());
-            if let (Some(ox), Some(b)) = (a.ox, b) {
-                if ox.xml == b.xml {
-                    let needs = match cell {
-                        CellRecord::Cell(cell) => cell_needs_rewrite(rctx, ext, cell),
-                        _ => false,
-                    };
-                    if !needs {
-                        continue;
-                    }
+            if let (Some(ox), Some(b)) = (a.ox, b)
+                && ox.xml == b.xml
+            {
+                let needs = match cell {
+                    CellRecord::Cell(cell) => cell_needs_rewrite(rctx, ext, cell),
+                    _ => false,
+                };
+                if !needs {
+                    continue;
                 }
             }
             let CellRecord::Cell(cell_rec) = cell else {
@@ -1792,14 +1790,15 @@ fn column_patches(
         });
         delta += widths[i] - col.width_twips.0;
     }
-    if delta != 0.0 && !delta.is_nan() {
-        if let Some(table_tag) = table_start_tag(rctx, rec, delta)? {
-            patches.push(Patch {
-                start: at(&xml, rec.element.start),
-                end: at(&xml, rec.element.open_end),
-                xml: table_tag,
-            });
-        }
+    if delta != 0.0
+        && !delta.is_nan()
+        && let Some(table_tag) = table_start_tag(rctx, rec, delta)?
+    {
+        patches.push(Patch {
+            start: at(&xml, rec.element.start),
+            end: at(&xml, rec.element.open_end),
+            xml: table_tag,
+        });
     }
     Ok(ColumnPatches {
         patches,
@@ -1922,9 +1921,9 @@ fn nearest(map: &[i64], at: usize) -> i64 {
         }
         k -= 1;
     }
-    for k in at + 1..map.len() {
-        if map[k] >= 0 {
-            return map[k];
+    for &v in map.iter().skip(at + 1) {
+        if v >= 0 {
+            return v;
         }
     }
     -1
@@ -1940,8 +1939,8 @@ pub fn map_sequence(original: &[String], edited: &[String]) -> Vec<i64> {
     let m = edited.len();
     let mut out = vec![-1i64; m];
     if n * m > 4_000_000 {
-        for k in 0..n.min(m) {
-            out[k] = k as i64;
+        for (k, slot) in out.iter_mut().enumerate().take(n.min(m)) {
+            *slot = k as i64;
         }
         return out;
     }
@@ -2265,29 +2264,28 @@ fn rebuild_table(
             } else {
                 None
             };
-            let cell_xml: String;
-            match a {
+
+            let cell_xml: String = match a {
                 None => {
                     // a row the editor left short: an empty cell keeps the grid whole
-                    cell_xml = "<table:table-cell office:value-type=\"string\"><text:p/></table:table-cell>".to_string();
+                    "<table:table-cell office:value-type=\"string\"><text:p/></table:table-cell>"
+                        .to_string()
                 }
                 Some(a) if a.row == e && a.col == c => {
-                    cell_xml = rebuild_anchor(rctx, ext, rec, a, &row_map, &col_map, bridge)?;
+                    rebuild_anchor(rctx, ext, rec, a, &row_map, &col_map, bridge)?
                 }
-                Some(_) => {
-                    cell_xml = match orig_cell {
-                        Some(cell @ CellRecord::Covered(_)) if cell.range().start.is_some() => {
-                            let range = cell.range();
-                            cut(
-                                &xml,
-                                range.start.0.expect("checked"),
-                                range.end.0.expect("a covered cell has an end"),
-                            )
-                        }
-                        _ => "<table:covered-table-cell/>".to_string(),
-                    };
-                }
-            }
+                Some(_) => match orig_cell {
+                    Some(cell @ CellRecord::Covered(_)) if cell.range().start.is_some() => {
+                        let range = cell.range();
+                        cut(
+                            &xml,
+                            range.start.0.expect("checked"),
+                            range.end.0.expect("a covered cell has an end"),
+                        )
+                    }
+                    _ => "<table:covered-table-cell/>".to_string(),
+                },
+            };
             if same {
                 let identical = match orig_cell {
                     Some(cell) if cell.range().start.is_some() => {
@@ -2594,11 +2592,11 @@ pub fn new_table_odf(
         let mut cells = String::new();
         for c in 0..grid.cols {
             let a = grid.anchor_at(r, c);
-            if let Some(a) = a {
-                if a.row != r || a.col != c {
-                    cells.push_str("<table:covered-table-cell/>");
-                    continue;
-                }
+            if let Some(a) = a
+                && (a.row != r || a.col != c)
+            {
+                cells.push_str("<table:covered-table-cell/>");
+                continue;
             }
             let cell: Option<&TableCell> = a.map(|a| a.cell);
             let last_row = match a {

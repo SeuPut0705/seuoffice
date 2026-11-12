@@ -322,10 +322,10 @@ fn first_block<'a>(xml: &'a str, name: &str) -> &'a str {
             Some(c) if is_js_space(c) => xml[after..].find('>').map(|gt| after + gt + 1),
             _ => None,
         };
-        if let Some(open_end) = open_end {
-            if let Some(close) = xml[open_end..].find(&closing) {
-                return &xml[at..open_end + close + closing.len()];
-            }
+        if let Some(open_end) = open_end
+            && let Some(close) = xml[open_end..].find(&closing)
+        {
+            return &xml[at..open_end + close + closing.len()];
         }
         from = at + 1;
     }
@@ -343,13 +343,13 @@ pub fn docx_styles_by_id(styles_xml: &str) -> JsMap<String> {
         let after = at + "<w:style".len();
         let next = styles_xml[after..].chars().next();
         let mut matched_end: Option<usize> = None;
-        if next.is_some_and(|c| is_js_space(c) || c == '>' || c == '/') {
-            if let Some(gt) = styles_xml[after..].find('>').map(|g| after + g) {
-                if gt > after && styles_xml.as_bytes()[gt - 1] == b'/' {
-                    matched_end = Some(gt + 1);
-                } else if let Some(close) = styles_xml[gt + 1..].find("</w:style>") {
-                    matched_end = Some(gt + 1 + close + "</w:style>".len());
-                }
+        if next.is_some_and(|c| is_js_space(c) || c == '>' || c == '/')
+            && let Some(gt) = styles_xml[after..].find('>').map(|g| after + g)
+        {
+            if gt > after && styles_xml.as_bytes()[gt - 1] == b'/' {
+                matched_end = Some(gt + 1);
+            } else if let Some(close) = styles_xml[gt + 1..].find("</w:style>") {
+                matched_end = Some(gt + 1 + close + "</w:style>".len());
             }
         }
         let Some(end) = matched_end else {
@@ -359,10 +359,10 @@ pub fn docx_styles_by_id(styles_xml: &str) -> JsMap<String> {
         let whole = &styles_xml[at..end];
         // `/^<w:style[^>]*>/`: the start tag of the match
         let head = whole.find('>').map(|gt| &whole[..=gt]);
-        if let Some(id) = attr_of(head, "w:styleId") {
-            if !out.has(&id) {
-                out.set(id, whole.to_owned());
-            }
+        if let Some(id) = attr_of(head, "w:styleId")
+            && !out.has(&id)
+        {
+            out.set(id, whole.to_owned());
         }
         from = end;
     }

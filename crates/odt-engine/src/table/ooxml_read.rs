@@ -363,6 +363,7 @@ pub fn edited_grid<'a>(model: &'a TableModel, ox: &'a OxTable) -> EditedGrid<'a>
         for cell in row {
             let raw = cell.col_span.map_or(1.0, |n| n.0).floor();
             let raw = if raw.is_nan() || raw == 0.0 { 1.0 } else { raw };
+            #[allow(clippy::manual_clamp)] // clamp would propagate NaN
             let span = raw.min(1000.0).max(1.0) as usize;
             if cell.grid_gap.unwrap_or(false) {
                 c += span;
@@ -373,9 +374,7 @@ pub fn edited_grid<'a>(model: &'a TableModel, ox: &'a OxTable) -> EditedGrid<'a>
             } else {
                 None
             };
-            let continues = cell
-                .v_merge
-                .map_or(false, |v| v == TableCellVMerge::Continue)
+            let continues = cell.v_merge.is_some_and(|v| v == TableCellVMerge::Continue)
                 && above.is_some_and(|a| {
                     let above = &anchors[a];
                     above.col == c && above.row + above.row_span == r

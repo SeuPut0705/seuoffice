@@ -124,16 +124,16 @@ pub fn inject_paragraph_sect_pr(paragraph_xml: &str, sect_pr: &str) -> String {
             after
         );
     }
-    if js_regex!(r"^<w:pPr[\s>]").test(rest) {
-        if let Some(close) = rest.find("</w:pPr>") {
-            return format!(
-                "{}{}{}{}",
-                &paragraph_xml[..at],
-                &rest[..close],
-                sect_pr,
-                &rest[close..]
-            );
-        }
+    if js_regex!(r"^<w:pPr[\s>]").test(rest)
+        && let Some(close) = rest.find("</w:pPr>")
+    {
+        return format!(
+            "{}{}{}{}",
+            &paragraph_xml[..at],
+            &rest[..close],
+            sect_pr,
+            &rest[close..]
+        );
     }
     format!("{}<w:pPr>{}</w:pPr>{}", &paragraph_xml[..at], sect_pr, rest)
 }

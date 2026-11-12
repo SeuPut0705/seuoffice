@@ -154,11 +154,12 @@ pub fn edited_items_of_blocks(blocks: &[Block]) -> Vec<ItemRef> {
             continue;
         }
         let index = (*b.docx_index).flatten().map_or(-1, |n| n.0 as i64);
-        if let Some(last) = &last {
-            if index >= 0 && last.borrow().index == index {
-                last.borrow_mut().blocks.push(b.clone());
-                continue;
-            }
+        if let Some(last) = &last
+            && index >= 0
+            && last.borrow().index == index
+        {
+            last.borrow_mut().blocks.push(b.clone());
+            continue;
         }
         let item = Rc::new(RefCell::new(EditedItem {
             index,
@@ -271,8 +272,8 @@ pub fn align_items(
                 }
             }
             let mut hi: i64 = element_count as i64;
-            for k in i + 1..matched.len() {
-                if let Some(m) = matched[k] {
+            for slot in matched.iter().skip(i + 1) {
+                if let Some(m) = *slot {
                     hi = m as i64;
                     break;
                 }
@@ -301,12 +302,12 @@ pub fn align_items(
                 continue;
             }
             let found = converter.identify(rctx, &item.borrow(), &own)?;
-            if let Some(id) = found {
-                if !used.contains(&id) {
-                    used.insert(id);
-                    matched[i] = Some(id);
-                    break 'converters;
-                }
+            if let Some(id) = found
+                && !used.contains(&id)
+            {
+                used.insert(id);
+                matched[i] = Some(id);
+                break 'converters;
             }
         }
     }
@@ -536,17 +537,17 @@ pub fn rebuild_flow(
             }
         };
     for k in 1..assigned.len() {
-        if let (None, Some(prev)) = (assigned[k], assigned[k - 1]) {
-            if absorbs(rctx, prev, &aligned[k].item)? {
-                assigned[k] = Some(prev);
-            }
+        if let (None, Some(prev)) = (assigned[k], assigned[k - 1])
+            && absorbs(rctx, prev, &aligned[k].item)?
+        {
+            assigned[k] = Some(prev);
         }
     }
     for k in (0..assigned.len().saturating_sub(1)).rev() {
-        if let (None, Some(next)) = (assigned[k], assigned[k + 1]) {
-            if absorbs(rctx, next, &aligned[k].item)? {
-                assigned[k] = Some(next);
-            }
+        if let (None, Some(next)) = (assigned[k], assigned[k + 1])
+            && absorbs(rctx, next, &aligned[k].item)?
+        {
+            assigned[k] = Some(next);
         }
     }
 
@@ -654,10 +655,10 @@ impl Emit {
                 _ => None,
             };
             let start = rctx.byte(b.part, b.start);
-            if let Some(from) = from {
-                if from <= start {
-                    self.out.push_str(slice(xml, from, start));
-                }
+            if let Some(from) = from
+                && from <= start
+            {
+                self.out.push_str(slice(xml, from, start));
             }
         }
         self.out.push_str(&block_source(rctx, b));

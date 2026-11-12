@@ -360,17 +360,17 @@ fn face_line(face: Option<&str>) -> f64 {
     let Some(face) = face.filter(|face| !face.is_empty()) else {
         return 1.0;
     };
-    let ratio = match face.to_lowercase().as_str() {
+
+    match face.to_lowercase().as_str() {
         "calibri" | "calibri light" => 1.2207,
         "cambria" => 1.1724,
         "arial" => 1.1172,
         "times new roman" => 1.1074,
         "malgun gothic" | "\u{b9d1}\u{c740} \u{ace0}\u{b515}" => 1.3301,
         "microsoft yahei" | "\u{5fae}\u{8f6f}\u{96c5}\u{9ed1}" => 1.3198,
-        "constructor" | "__proto__" => return f64::NAN,
+        "constructor" | "__proto__" => f64::NAN,
         _ => 1.0,
-    };
-    ratio
+    }
 }
 
 /// `naturalLine`: the tallest single line of the paragraph's text, in twips:

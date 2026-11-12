@@ -612,10 +612,10 @@ fn citation_for(
         None => id.to_string(),
         Some(n) => number_to_string(n.0),
     };
-    if let Some(template) = template {
-        if js_regex!(r"\d+").test(&template.citation) {
-            return replace_first(js_regex!(r"\d+"), 0, &template.citation, &number);
-        }
+    if let Some(template) = template
+        && js_regex!(r"\d+").test(&template.citation)
+    {
+        return replace_first(js_regex!(r"\d+"), 0, &template.citation, &number);
     }
     number
 }

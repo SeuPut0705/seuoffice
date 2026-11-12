@@ -162,10 +162,10 @@ impl TextAlignment {
         if self.original_len == 0 {
             return -1.0;
         }
-        if let Some(v) = self.e2o(index) {
-            if v >= 0 {
-                return f64::from(v);
-            }
+        if let Some(v) = self.e2o(index)
+            && v >= 0
+        {
+            return f64::from(v);
         }
         // between the nearest kept characters: replaced text lines up position by position
         let mut ep = index - 1;

@@ -441,10 +441,12 @@ fn read_font_faces(xml: &str, prefixes: &PrefixMap) -> JsMap<String> {
 pub fn unquote_family(family: &str) -> String {
     let t = jscompat::trim(family);
     let mut chars = t.chars();
-    if let (Some(first), Some(last)) = (chars.next(), t.chars().next_back()) {
-        if t.chars().count() >= 2 && (first == '\'' || first == '"') && last == first {
-            return t[first.len_utf8()..t.len() - last.len_utf8()].to_owned();
-        }
+    if let (Some(first), Some(last)) = (chars.next(), t.chars().next_back())
+        && t.chars().count() >= 2
+        && (first == '\'' || first == '"')
+        && last == first
+    {
+        return t[first.len_utf8()..t.len() - last.len_utf8()].to_owned();
     }
     t.to_owned()
 }
@@ -1515,10 +1517,10 @@ impl OoxmlToOdfContext {
     /// given, once; later calls answer the same `Rc`. `None` when the bridge
     /// has no such key.
     pub fn ext<T: DeserializeOwned + 'static>(&self, key: &str) -> Result<Option<Rc<T>>, OdtError> {
-        if let Some(cached) = self.ext_cache.borrow().get(key) {
-            if let Ok(typed) = Rc::clone(cached).downcast::<T>() {
-                return Ok(Some(typed));
-            }
+        if let Some(cached) = self.ext_cache.borrow().get(key)
+            && let Ok(typed) = Rc::clone(cached).downcast::<T>()
+        {
+            return Ok(Some(typed));
         }
         let Some(value) = self.map.ext.get(key) else {
             return Ok(None);

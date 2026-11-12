@@ -82,10 +82,10 @@ pub fn prepare_object_write_back(rctx: &mut OoxmlToOdfContext) -> Result<(), Odt
     let notes = st.borrow().ext.notes.clone();
     for note in &notes {
         let edited = edited_note(rctx, note.kind, &note.id);
-        if let Some(edited) = edited {
-            if edited.text != note.text {
-                force_rewrite(rctx, note.paragraph)?;
-            }
+        if let Some(edited) = edited
+            && edited.text != note.text
+        {
+            force_rewrite(rctx, note.paragraph)?;
         }
     }
     let comments = rctx.edited.comments.clone();
@@ -167,15 +167,14 @@ pub fn object_package_changes(
     let notes = st.borrow().ext.notes.clone();
     for note in &notes {
         let edited = edited_note(rctx, note.kind, &note.id);
-        if let Some(edited) = edited {
-            if edited.text != note.text
-                && !st
-                    .borrow()
-                    .emitted_notes
-                    .contains(&note_key(note.kind, &note.id))
-            {
-                rctx.warn("a changed note could not be written back; it keeps its original text");
-            }
+        if let Some(edited) = edited
+            && edited.text != note.text
+            && !st
+                .borrow()
+                .emitted_notes
+                .contains(&note_key(note.kind, &note.id))
+        {
+            rctx.warn("a changed note could not be written back; it keeps its original text");
         }
     }
     let referenced = referenced_paths(&[Some(final_parts.content_xml), final_parts.styles_xml]);
@@ -234,10 +233,10 @@ pub fn patch_manifest_xml(manifest_xml: &str, changes: &OdtPackageChanges) -> St
         .iter()
         .filter(|e| remove.contains(e.full_path.as_str()))
         .collect();
-    cuts.sort_by(|a, b| b.start.cmp(&a.start));
+    cuts.sort_by_key(|c| std::cmp::Reverse(c.start));
     let mut out = manifest_xml.to_string();
     for e in cuts {
-        out = format!("{}{}", &out[..e.start as usize], &out[e.end as usize..]);
+        out = format!("{}{}", &out[..e.start], &out[e.end..]);
     }
     let present: HashSet<&str> = manifest
         .entries

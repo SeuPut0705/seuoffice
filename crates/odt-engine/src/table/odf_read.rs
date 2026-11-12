@@ -321,8 +321,8 @@ pub fn read_grid(table: &OdtNode) -> OdfGrid<'_> {
                 continue;
             }
             let span = cell_span(node);
-            let mut cs = (span.columns as usize).min(width - c);
-            let mut rs = (span.rows as usize).min(row_count - r);
+            let mut cs = span.columns.min(width - c);
+            let mut rs = span.rows.min(row_count - r);
             // stop at a real cell or a position another merge already took
             for k in 1..cs {
                 let x = &cells[r][c + k];
@@ -383,7 +383,7 @@ pub fn tc_indexes(cells: &[Vec<OdfGridCell<'_>>]) -> Vec<Vec<Option<usize>>> {
                     if ac != c {
                         return None;
                     }
-                    if ar == r || ar < r {
+                    if ar <= r {
                         let at = k;
                         k += 1;
                         return Some(at);

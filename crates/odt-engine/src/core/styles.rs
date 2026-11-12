@@ -707,7 +707,7 @@ impl PartReader<'_> {
             let is_properties = child_name.ends_with("-properties");
             let own = self.attrs(child);
             if is_properties
-                || (inside_properties && counts.get(child_name) == Some(&1) && own.len() > 0)
+                || (inside_properties && counts.get(child_name) == Some(&1) && !own.is_empty())
             {
                 match bag.get_mut(&child_path) {
                     Some(target) => target.assign(&own),

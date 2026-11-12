@@ -217,10 +217,11 @@ pub fn border_from_odf(value: Option<&str>) -> Option<CellBorder> {
 pub fn cell_props_from_odf(props: &JsObject<String>) -> CellPropsAndMargins {
     let get = |key: &str| props.get(key).map(String::as_str);
     let mut out = CellProps::default();
-    if let Some(bg) = get("fo:background-color") {
-        if !bg.is_empty() && js_regex!(r"^#[0-9a-fA-F]{6}$").test(bg) {
-            out.fill = Some(bg[1..].to_uppercase());
-        }
+    if let Some(bg) = get("fo:background-color")
+        && !bg.is_empty()
+        && js_regex!(r"^#[0-9a-fA-F]{6}$").test(bg)
+    {
+        out.fill = Some(bg[1..].to_uppercase());
     }
     match get("style:vertical-align") {
         Some("middle") => out.v_align = Some(CellVAlign::Center),
@@ -240,15 +241,15 @@ pub fn cell_props_from_odf(props: &JsObject<String>) -> CellPropsAndMargins {
             }
         }
     }
-    if let Some(tl) = border_from_odf(get("style:diagonal-tl-br")) {
-        if tl.style != "nil" {
-            borders.tl2br.set(tl);
-        }
+    if let Some(tl) = border_from_odf(get("style:diagonal-tl-br"))
+        && tl.style != "nil"
+    {
+        borders.tl2br.set(tl);
     }
-    if let Some(bl) = border_from_odf(get("style:diagonal-bl-tr")) {
-        if bl.style != "nil" {
-            borders.tr2bl.set(bl);
-        }
+    if let Some(bl) = border_from_odf(get("style:diagonal-bl-tr"))
+        && bl.style != "nil"
+    {
+        borders.tr2bl.set(bl);
     }
     if !borders.has_no_key() {
         out.borders = Some(borders);

@@ -393,24 +393,26 @@ impl ParagraphInjector for CommentInjector {
             let one_paragraph = c.end_paragraph == Some(c.paragraph);
             if c.ranged && one_paragraph {
                 // the comment goes where the editor still marks it (the first such paragraph)
-                if let Some(here) = here {
-                    if !st.borrow().comment_started.contains(&c.id) {
-                        start(rctx, &mut out, here.0);
-                        end(rctx, &mut out, here.1);
-                    }
+                if let Some(here) = here
+                    && !st.borrow().comment_started.contains(&c.id)
+                {
+                    start(rctx, &mut out, here.0);
+                    end(rctx, &mut out, here.1);
                 }
                 continue;
             }
             if own_start && !st.borrow().comment_started.contains(&c.id) {
                 start(rctx, &mut out, env.map_offset(c.offset, MapBias::Start));
             }
-            if own_end && !one_paragraph && !st.borrow().comment_done.contains(&c.id) {
-                if let Some(end_offset) = c.end_offset {
-                    if start_kept(rctx, c)? {
-                        end(rctx, &mut out, env.map_offset(end_offset, MapBias::End));
-                    } else {
-                        rctx.warn("a comment whose start was deleted lost its end too");
-                    }
+            if own_end
+                && !one_paragraph
+                && !st.borrow().comment_done.contains(&c.id)
+                && let Some(end_offset) = c.end_offset
+            {
+                if start_kept(rctx, c)? {
+                    end(rctx, &mut out, env.map_offset(end_offset, MapBias::End));
+                } else {
+                    rctx.warn("a comment whose start was deleted lost its end too");
                 }
             }
         }

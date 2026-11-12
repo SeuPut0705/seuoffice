@@ -125,9 +125,8 @@ fn level_to_custom(
     let mut suff = "tab";
     let mut tab_stop: Option<f64> = None;
     if llp_attr("text:list-level-position-and-space-mode") == Some("label-alignment")
-        && align.is_some()
+        && let Some(align) = align
     {
-        let align = align.expect("checked above");
         let align_attr = |name: &str| align.get(name).map(String::as_str);
         indent_left = twips(align_attr("fo:margin-left")).unwrap_or(fallback_left);
         let ti = twips(align_attr("fo:text-indent")).unwrap_or(0.0);

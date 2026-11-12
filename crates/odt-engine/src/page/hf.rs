@@ -81,10 +81,11 @@ pub fn read_edited_parts(
         let target = js_regex!(r#"\bTarget="([^"]*)""#)
             .exec(m.as_str())
             .and_then(|x| x.get(1));
-        if let (Some(id), Some(target)) = (id, target) {
-            if !id.is_empty() && !target.is_empty() {
-                targets.set(id, target.to_owned());
-            }
+        if let (Some(id), Some(target)) = (id, target)
+            && !id.is_empty()
+            && !target.is_empty()
+        {
+            targets.set(id, target.to_owned());
         }
     }
     for r_id in wanted {
@@ -447,12 +448,10 @@ pub fn region_inner_xml(
                  follows: Option<&BridgeParagraph>,
                  neighbour: Option<&BridgeParagraph>|
      -> Result<String, OdtError> {
-        if let (Some(origin), Some(baseline_para)) = (origin, baseline_para) {
-            if same_paragraph(para, baseline_para) {
-                return Ok(
-                    xml[indexed.to_byte(origin.start)..indexed.to_byte(origin.end)].to_owned(),
-                );
-            }
+        if let (Some(origin), Some(baseline_para)) = (origin, baseline_para)
+            && same_paragraph(para, baseline_para)
+        {
+            return Ok(xml[indexed.to_byte(origin.start)..indexed.to_byte(origin.end)].to_owned());
         }
         let template = origin.or(follows).or(neighbour);
         let style_id = template.and_then(|r| {
@@ -653,13 +652,13 @@ impl RunWriter for PageFieldRunWriter {
                 })
                 .collect::<Vec<_>>()
         });
-        if let (Some(own), Some(origin)) = (own, env.origin.as_ref()) {
-            if let Some(original) = own.get(rank) {
-                let info = rctx.part(origin.part);
-                return Ok(info.xml.text
-                    [info.xml.to_byte(original.start)..info.xml.to_byte(original.end)]
-                    .to_owned());
-            }
+        if let (Some(own), Some(origin)) = (own, env.origin.as_ref())
+            && let Some(original) = own.get(rank)
+        {
+            let info = rctx.part(origin.part);
+            return Ok(info.xml.text
+                [info.xml.to_byte(original.start)..info.xml.to_byte(original.end)]
+                .to_owned());
         }
         Ok(if name == "text:page-number" {
             "<text:page-number text:select-page=\"current\">1</text:page-number>".to_owned()

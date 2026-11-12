@@ -111,21 +111,21 @@ fn element_start(
 ) -> Option<RunStart> {
     if let Some(paragraph) = el.paragraph {
         let rec = map.paragraphs.get(paragraph)?;
-        if rec.part == OdtStylePart::ContentXml {
-            if let Some(style_name) = &rec.style_name {
-                let master = master_of(
-                    styles
-                        .find(style_name, "paragraph", OdtStyleScope::Content)
-                        .as_deref(),
-                )?;
-                return Some(RunStart {
-                    master,
-                    paragraph: Some(rec.id),
-                    block: rec.block,
-                    style: style_name.clone(),
-                    family: StartFamily::Paragraph,
-                });
-            }
+        if rec.part == OdtStylePart::ContentXml
+            && let Some(style_name) = &rec.style_name
+        {
+            let master = master_of(
+                styles
+                    .find(style_name, "paragraph", OdtStyleScope::Content)
+                    .as_deref(),
+            )?;
+            return Some(RunStart {
+                master,
+                paragraph: Some(rec.id),
+                block: rec.block,
+                style: style_name.clone(),
+                family: StartFamily::Paragraph,
+            });
         }
         return None;
     }
@@ -175,16 +175,16 @@ pub fn convert_odt_page(ctx: &mut OdfToOoxmlContext) -> Result<(), OdtError> {
                 }
                 next_element += 1;
             }
-            if !subtree_has_elements(map, block.id) {
-                if let Some(s) = block_start(map, styles, &content, block.id) {
-                    pending = Some(s);
-                }
+            if !subtree_has_elements(map, block.id)
+                && let Some(s) = block_start(map, styles, &content, block.id)
+            {
+                pending = Some(s);
             }
         }
-        if let Some(p) = pending {
-            if next_element < map.elements.len() {
-                pending_before.insert(next_element, p);
-            }
+        if let Some(p) = pending
+            && next_element < map.elements.len()
+        {
+            pending_before.insert(next_element, p);
         }
     }
 
@@ -241,16 +241,16 @@ pub fn convert_odt_page(ctx: &mut OdfToOoxmlContext) -> Result<(), OdtError> {
                     });
                     continue;
                 }
-            } else if let Some((current_region, current_run)) = current {
-                if current_region != region {
-                    drafts.push(Draft {
-                        run: current_run,
-                        region,
-                        continuous: true,
-                        elements: vec![el.id],
-                    });
-                    continue;
-                }
+            } else if let Some((current_region, current_run)) = current
+                && current_region != region
+            {
+                drafts.push(Draft {
+                    run: current_run,
+                    region,
+                    continuous: true,
+                    elements: vec![el.id],
+                });
+                continue;
             }
             if current.is_none() {
                 drafts.push(Draft {
@@ -532,29 +532,29 @@ fn make_part(
     let mut paragraphs: Vec<usize> = Vec::new();
     let mut body = String::new();
     let range = region.and_then(|r| master.and_then(|m| master_region(m, r)));
-    if let Some(range) = range {
-        if !range.self_closing {
-            for child in child_elements(
-                &info.xml.text,
-                &info.prefixes,
-                range.open_end,
-                range.close_start,
-            ) {
-                if child.name != "text:p" && child.name != "text:h" {
-                    continue;
-                }
-                let made = paragraph_to_ooxml(
-                    ctx,
-                    &child.range(),
-                    &ParagraphOoxmlOptions {
-                        part: OdtStylePart::StylesXml,
-                        owner: Some(PAGE_OWNER.to_owned()),
-                        ..Default::default()
-                    },
-                )?;
-                paragraphs.push(made.paragraph.id);
-                body.push_str(&made.xml);
+    if let Some(range) = range
+        && !range.self_closing
+    {
+        for child in child_elements(
+            &info.xml.text,
+            &info.prefixes,
+            range.open_end,
+            range.close_start,
+        ) {
+            if child.name != "text:p" && child.name != "text:h" {
+                continue;
             }
+            let made = paragraph_to_ooxml(
+                ctx,
+                &child.range(),
+                &ParagraphOoxmlOptions {
+                    part: OdtStylePart::StylesXml,
+                    owner: Some(PAGE_OWNER.to_owned()),
+                    ..Default::default()
+                },
+            )?;
+            paragraphs.push(made.paragraph.id);
+            body.push_str(&made.xml);
         }
     }
     if body.is_empty() {

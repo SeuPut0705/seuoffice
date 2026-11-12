@@ -173,6 +173,7 @@ impl ElementVisitor for TextWalker<'_> {
                     _ => 1.0,
                 };
                 // Math.min(1000, Math.max(1, count)): the digits always parse
+                #[allow(clippy::manual_clamp)] // clamp would propagate NaN
                 let count = count.max(1.0).min(1000.0) as usize;
                 self.literal(&" ".repeat(count));
                 OpenVerdict::Skip
@@ -258,10 +259,10 @@ impl ElementVisitor for TextWalker<'_> {
                     .filter(|p| !trim(p).is_empty())
                     .collect();
                 let value = js_regex!(r"[\t\n]+", "g").replace_all(&kept.join(" "), |_| " ".into());
-                if let Some(row) = table_row {
-                    if el.name == "table:table-cell" {
-                        row.push(value);
-                    }
+                if let Some(row) = table_row
+                    && el.name == "table:table-cell"
+                {
+                    row.push(value);
                 }
             }
             Ctx::Table(rows) => {
@@ -280,11 +281,11 @@ impl ElementVisitor for TextWalker<'_> {
                     // the host paragraph is still open unless the document nests oddly;
                     // the TypeScript then changes an object nobody reads
                     for ctx in self.stack.iter_mut() {
-                        if let Ctx::Para(p) = ctx {
-                            if p.id == host {
-                                p.text.insert_str(c.at, &citation);
-                                p.ws = false;
-                            }
+                        if let Ctx::Para(p) = ctx
+                            && p.id == host
+                        {
+                            p.text.insert_str(c.at, &citation);
+                            p.ws = false;
                         }
                     }
                 }

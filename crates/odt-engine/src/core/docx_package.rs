@@ -138,10 +138,11 @@ pub fn build_bridge_docx(ctx: &OdfToOoxmlContext, now: HostNow) -> Result<Vec<u8
                 .exec(&part.path)
                 .and_then(|m| m.get(1))
                 .map(|e| e.to_lowercase());
-            if let Some(ext) = ext {
-                if media_type(&ext).is_some() && !defaults.contains(&ext) {
-                    defaults.push(ext);
-                }
+            if let Some(ext) = ext
+                && media_type(&ext).is_some()
+                && !defaults.contains(&ext)
+            {
+                defaults.push(ext);
             }
         }
     }

@@ -515,35 +515,35 @@ impl<'a> ElementVisitor for Reader<'a> {
             return CloseVerdict::Continue;
         }
         let rec = self.recorded.get(&self.u16_of(el.start)).copied();
-        if let (Some(record), Some(rec)) = (self.record, rec) {
-            if matches!(rec.kind, BridgeMarkerKind::Handler | BridgeMarkerKind::Text) {
-                let text = slice_utf16(
-                    &record.text,
-                    f64::from(rec.offset.0),
-                    Some(f64::from(rec.offset.0) + f64::from(rec.length.0)),
-                );
-                let character = self.is_character_object(el);
-                if !text.is_empty() || character {
-                    self.flush_pending();
-                }
-                let at = self.offset();
-                let set = if rec.kind == BridgeMarkerKind::Handler {
-                    -1
-                } else {
-                    self.current as i64
-                };
-                self.push(&text, set);
-                if !text.is_empty() {
-                    self.ignore_leading = false;
-                } else if character {
-                    self.after_object = true;
-                }
-                let mut marker = rec.clone();
-                marker.offset = at;
-                marker.pair = None;
-                self.add_marker(marker, false);
-                return CloseVerdict::Continue;
+        if let (Some(record), Some(rec)) = (self.record, rec)
+            && matches!(rec.kind, BridgeMarkerKind::Handler | BridgeMarkerKind::Text)
+        {
+            let text = slice_utf16(
+                &record.text,
+                f64::from(rec.offset.0),
+                Some(f64::from(rec.offset.0) + f64::from(rec.length.0)),
+            );
+            let character = self.is_character_object(el);
+            if !text.is_empty() || character {
+                self.flush_pending();
             }
+            let at = self.offset();
+            let set = if rec.kind == BridgeMarkerKind::Handler {
+                -1
+            } else {
+                self.current as i64
+            };
+            self.push(&text, set);
+            if !text.is_empty() {
+                self.ignore_leading = false;
+            } else if character {
+                self.after_object = true;
+            }
+            let mut marker = rec.clone();
+            marker.offset = at;
+            marker.pair = None;
+            self.add_marker(marker, false);
+            return CloseVerdict::Continue;
         }
         if self.forward.is_some() {
             let part = self.src.info.part;

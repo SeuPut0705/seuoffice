@@ -94,7 +94,7 @@ pub fn prepare_page_write_back(rctx: &mut OoxmlToOdfContext) -> Result<Vec<ItemR
         .map(|b| SectionBlock {
             hidden: b.hidden.as_ref().copied(),
             original_xml: b.original_xml.clone().into_option().flatten(),
-            docx_index: b.docx_index.clone().into_option().flatten().map(|n| n.0),
+            docx_index: b.docx_index.into_option().flatten().map(|n| n.0),
         })
         .collect();
     let edited = read_sections(&section_blocks, rctx.edited.gutter_at_top);
@@ -183,10 +183,10 @@ fn paragraph_block(b: &Block, xml: &str) -> Block {
         out.hidden_bookmarks.set(hidden);
         return out;
     }
-    if let Some(raw) = b.raw_p_pr.as_ref() {
-        if raw.contains("<w:sectPr") {
-            out.raw_p_pr.assign(strip_p_pr_sect_pr(Some(raw)));
-        }
+    if let Some(raw) = b.raw_p_pr.as_ref()
+        && raw.contains("<w:sectPr")
+    {
+        out.raw_p_pr.assign(strip_p_pr_sect_pr(Some(raw)));
     }
     out
 }
@@ -370,28 +370,28 @@ impl<'a> PageWriter<'a> {
             });
             let mut cont: Option<usize> = None;
             let mut base: Option<usize> = None;
-            if let Some(first_element) = first.and_then(|f| self.aligned[f].element) {
-                if let Some(k) = self.section_of(first_element) {
-                    base = Some(k);
-                    let mut ok = !claimed.contains(&k);
-                    let mut el = self.ext.sections[k].first.unwrap_or(0);
-                    while ok && el < first_element {
-                        if self.rctx.matched.contains(&el) {
-                            ok = false;
-                        }
-                        el += 1;
+            if let Some(first_element) = first.and_then(|f| self.aligned[f].element)
+                && let Some(k) = self.section_of(first_element)
+            {
+                base = Some(k);
+                let mut ok = !claimed.contains(&k);
+                let mut el = self.ext.sections[k].first.unwrap_or(0);
+                while ok && el < first_element {
+                    if self.rctx.matched.contains(&el) {
+                        ok = false;
                     }
-                    if ok {
-                        claimed.insert(k);
-                        cont = Some(k);
-                    }
+                    el += 1;
+                }
+                if ok {
+                    claimed.insert(k);
+                    cont = Some(k);
                 }
             }
-            if let (Some(prev), Some(c)) = (out.last_mut(), cont) {
-                if self.ext.sections[c].continuous {
-                    prev.sections.push(i);
-                    continue;
-                }
+            if let (Some(prev), Some(c)) = (out.last_mut(), cont)
+                && self.ext.sections[c].continuous
+            {
+                prev.sections.push(i);
+                continue;
             }
             let base_section = cont
                 .or(base)
@@ -475,15 +475,14 @@ impl<'a> PageWriter<'a> {
             .aligned
             .iter()
             .find(|a| a.item.borrow().index as f64 == e.last_block_index.0);
-        if let Some(element) = carrier.and_then(|c| c.element) {
-            if let Some(j) = self
+        if let Some(element) = carrier.and_then(|c| c.element)
+            && let Some(j) = self
                 .ext
                 .sections
                 .iter()
                 .position(|s| s.carrier == Some(element))
-            {
-                return j;
-            }
+        {
+            return j;
         }
         for a in self.aligned.iter().rev() {
             let Some(element) = a.element else { continue };
@@ -600,57 +599,57 @@ impl<'a> PageWriter<'a> {
             };
             let part = self.ext.parts.get(&r_id);
             let state = self.parts.get(&r_id);
-            if let (Some(part), Some(state)) = (part, state) {
-                if state.unchanged {
-                    let source_slot = self
-                        .ext
-                        .runs
-                        .get(source_run)
-                        .and_then(|run| run.slots.get(name));
-                    if source_slot == Some(&r_id) {
-                        continue;
-                    }
-                    if part.master == master.name
-                        && part.region == Some(region)
-                        && part.fill == HfFill::Content
-                    {
-                        continue;
-                    }
-                    if part.fill == HfFill::Fallback
-                        && part.master == master.name
-                        && part.region == Some(kind_region)
-                        && has.is_none()
-                    {
-                        continue;
-                    }
-                    if part.fill == HfFill::Empty {
-                        if has.is_none() && !(variant != Variant::Default && has_plain) {
-                            continue;
-                        }
-                        out.push((region, Some(String::new())));
-                        continue;
-                    }
-                    // content of another master page's region (Link to Previous)
-                    let source_master = doc.styles.master_page(&part.master);
-                    let from = part
-                        .region
-                        .and_then(|pr| source_master.as_deref().and_then(|m| master_region(m, pr)));
-                    let inner = from.map_or(String::new(), |f| region_inner(self.rctx, f));
-                    if let Some(has) = has {
-                        if region_inner(self.rctx, has) == inner {
-                            continue;
-                        }
-                    }
-                    if has.is_none()
-                        && variant != Variant::Default
-                        && part.region == Some(kind_region)
-                        && part.master == master.name
-                    {
-                        continue;
-                    }
-                    out.push((region, Some(inner)));
+            if let (Some(part), Some(state)) = (part, state)
+                && state.unchanged
+            {
+                let source_slot = self
+                    .ext
+                    .runs
+                    .get(source_run)
+                    .and_then(|run| run.slots.get(name));
+                if source_slot == Some(&r_id) {
                     continue;
                 }
+                if part.master == master.name
+                    && part.region == Some(region)
+                    && part.fill == HfFill::Content
+                {
+                    continue;
+                }
+                if part.fill == HfFill::Fallback
+                    && part.master == master.name
+                    && part.region == Some(kind_region)
+                    && has.is_none()
+                {
+                    continue;
+                }
+                if part.fill == HfFill::Empty {
+                    if has.is_none() && !(variant != Variant::Default && has_plain) {
+                        continue;
+                    }
+                    out.push((region, Some(String::new())));
+                    continue;
+                }
+                // content of another master page's region (Link to Previous)
+                let source_master = doc.styles.master_page(&part.master);
+                let from = part
+                    .region
+                    .and_then(|pr| source_master.as_deref().and_then(|m| master_region(m, pr)));
+                let inner = from.map_or(String::new(), |f| region_inner(self.rctx, f));
+                if let Some(has) = has
+                    && region_inner(self.rctx, has) == inner
+                {
+                    continue;
+                }
+                if has.is_none()
+                    && variant != Variant::Default
+                    && part.region == Some(kind_region)
+                    && part.master == master.name
+                {
+                    continue;
+                }
+                out.push((region, Some(inner)));
+                continue;
             }
             // changed or new part
             let source_master = part.and_then(|p| doc.styles.master_page(&p.master));
@@ -674,10 +673,10 @@ impl<'a> PageWriter<'a> {
                 baseline.map(Vec::as_slice),
                 edited_paras,
             )?;
-            if let Some(has) = has {
-                if region_inner(self.rctx, has) == inner {
-                    continue;
-                }
+            if let Some(has) = has
+                && region_inner(self.rctx, has) == inner
+            {
+                continue;
             }
             out.push((region, Some(inner)));
         }
@@ -1012,10 +1011,10 @@ impl<'a> PageWriter<'a> {
         if let Some(continues) = r.continues {
             let run = &self.ext.runs[continues];
             if let Some(sp) = run.start_paragraph {
-                if let Some(element) = self.element_by_paragraph.get(&sp).copied() {
-                    if self.rctx.matched.contains(&element) {
-                        return self.paragraph_mode(sp, true);
-                    }
+                if let Some(element) = self.element_by_paragraph.get(&sp).copied()
+                    && self.rctx.matched.contains(&element)
+                {
+                    return self.paragraph_mode(sp, true);
                 }
             } else if let (Some(style), Some(family)) = (&run.start_style, run.start_family) {
                 return if self.exclusive_start(style, family.as_str()) {
@@ -1042,14 +1041,14 @@ impl<'a> PageWriter<'a> {
             b.owner == "text" && matches!(b.kind, OdtNodeKind::Paragraph | OdtNodeKind::Heading)
         }) && record.list.is_none();
         let style_name = record.style_name.clone();
-        let not_text = block.map_or(true, |b| b.owner != "text");
+        let not_text = block.is_none_or(|b| b.owner != "text");
         let unchanged = item.unchanged;
-        if existing_start {
-            if let Some(style_name) = &style_name {
-                if (unchanged || not_text) && self.exclusive_start(style_name, "paragraph") {
-                    return Some(Mode::A);
-                }
-            }
+        if existing_start
+            && let Some(style_name) = &style_name
+            && (unchanged || not_text)
+            && self.exclusive_start(style_name, "paragraph")
+        {
+            return Some(Mode::A);
         }
         if text_owned && self.decorated && paragraph_block_of(&item.item.borrow()).is_some() {
             return Some(Mode::B);
@@ -1226,13 +1225,13 @@ impl<'a> PageWriter<'a> {
             let record = &self.rctx.map.paragraphs[change.paragraph];
             (record.style_name.clone(), record.block)
         };
-        if mode == Some(Mode::A) {
-            if let Some(style_name) = &style_name {
-                if self.patch_style_in_place(style_name, "paragraph", &change) {
-                    return;
-                }
-                mode = self.paragraph_mode(change.paragraph, false);
+        if mode == Some(Mode::A)
+            && let Some(style_name) = &style_name
+        {
+            if self.patch_style_in_place(style_name, "paragraph", &change) {
+                return;
             }
+            mode = self.paragraph_mode(change.paragraph, false);
         }
         let Some(block) = block.filter(|_| mode == Some(Mode::B)) else {
             self.rctx
@@ -1256,15 +1255,15 @@ impl<'a> PageWriter<'a> {
         }
         let element = self.element_by_paragraph.get(&change.paragraph).copied();
         let item = element.and_then(|e| self.item_by_element.get(&e).copied());
-        if let Some(item) = item {
-            if item.unchanged {
-                let index = item.item.borrow().index;
-                let mut plan = self.rctx.state::<PagePlan>();
-                if !plan.forced.contains_key(&index) {
-                    let xml = item.item.borrow().xml.clone();
-                    plan.forced.insert(index, xml);
-                    item.item.borrow_mut().xml.push_str(FORCE_MARK);
-                }
+        if let Some(item) = item
+            && item.unchanged
+        {
+            let index = item.item.borrow().index;
+            let mut plan = self.rctx.state::<PagePlan>();
+            if let std::collections::hash_map::Entry::Vacant(e) = plan.forced.entry(index) {
+                let xml = item.item.borrow().xml.clone();
+                e.insert(xml);
+                item.item.borrow_mut().xml.push_str(FORCE_MARK);
             }
         }
     }

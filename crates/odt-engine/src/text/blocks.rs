@@ -197,20 +197,19 @@ fn write_list(
         open = Some(start_tag(xml, start));
         break;
     }
-    if open.is_none() {
-        if let Some(style) = bridge_list
+    if open.is_none()
+        && let Some(style) = bridge_list
             .as_ref()
             .and_then(|l| l.style_name.as_deref())
             .filter(|s| !s.is_empty())
-        {
-            open = Some(format!(
-                "<text:list text:style-name=\"{}\" text:continue-numbering=\"true\">",
-                style
-                    .replace('&', "&amp;")
-                    .replace('"', "&quot;")
-                    .replace('<', "&lt;")
-            ));
-        }
+    {
+        open = Some(format!(
+            "<text:list text:style-name=\"{}\" text:continue-numbering=\"true\">",
+            style
+                .replace('&', "&amp;")
+                .replace('"', "&quot;")
+                .replace('<', "&lt;")
+        ));
     }
     let mut open = match open {
         Some(open) => open,
@@ -282,10 +281,11 @@ fn write_list(
         };
         if let Some(origin) = e.origin.as_ref().filter(|_| !e.continuation) {
             let parent = node_at(rctx, part.xml.to_byte(origin.start)).and_then(|n| n.parent());
-            if let Some(parent) = parent {
-                if parent.kind == OdtNodeKind::ListItem && !parent.self_closing {
-                    item_open = start_tag(xml, parent.start);
-                }
+            if let Some(parent) = parent
+                && parent.kind == OdtNodeKind::ListItem
+                && !parent.self_closing
+            {
+                item_open = start_tag(xml, parent.start);
             }
         }
         out.push_str(&item_open);
@@ -463,10 +463,10 @@ pub fn write_text_items(
             out.push_str(&odf);
             continue;
         };
-        if group.as_ref().is_some_and(|g| g.num_id != num_id) {
-            if let Some(g) = group.take() {
-                out.push_str(&write_list(rctx, &g.num_id, &g.entries)?);
-            }
+        if group.as_ref().is_some_and(|g| g.num_id != num_id)
+            && let Some(g) = group.take()
+        {
+            out.push_str(&write_list(rctx, &g.num_id, &g.entries)?);
         }
         let g = group.get_or_insert_with(|| Group {
             num_id: num_id.clone(),

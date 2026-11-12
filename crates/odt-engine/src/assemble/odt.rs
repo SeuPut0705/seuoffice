@@ -145,10 +145,10 @@ pub fn save_odt(
     if content_xml != doc.content_xml.text {
         replaced.set("content.xml", Replacement::Text(content_xml.clone()));
     }
-    if let Some(styles) = styles_xml.as_ref() {
-        if doc.styles_xml.as_ref().map(|s| s.text.as_str()) != Some(styles.as_str()) {
-            replaced.set("styles.xml", Replacement::Text(styles.clone()));
-        }
+    if let Some(styles) = styles_xml.as_ref()
+        && doc.styles_xml.as_ref().map(|s| s.text.as_str()) != Some(styles.as_str())
+    {
+        replaced.set("styles.xml", Replacement::Text(styles.clone()));
     }
     if let Some(manifest_xml) = doc.pkg.text("META-INF/manifest.xml") {
         let patched = patch_manifest_xml(&manifest_xml, &changes);

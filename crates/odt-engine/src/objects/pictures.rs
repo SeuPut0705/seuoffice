@@ -100,52 +100,52 @@ impl InlineConverter for DrawingInlineConverter {
             st.seq.to_string()
         };
         let anchor = anchor_of(&doc, el.part, &a.anchor);
-        if a.r#type == AnalysisType::Picture {
-            if let Some(image) = &a.image {
-                let r_id = bridge_media(ctx, &image.entry, &image.bytes, &image.format);
-                let record = ObjectPicture {
-                    id: id.clone(),
-                    name: picture_name(&id),
-                    part: el.part,
-                    start: info.xml.to_u16(el.start),
-                    end: info.xml.to_u16(el.end),
-                    open_end: info.xml.to_u16(el.open_end),
-                    image_start: info.xml.to_u16(image.start),
-                    image_open_end: info.xml.to_u16(image.open_end),
-                    href: image.href.clone(),
-                    entry: image.entry.clone(),
-                    r_id: r_id.clone(),
-                    width_emu: JsNum(a.width_emu),
-                    height_emu: JsNum(a.height_emu),
-                    anchored: anchor.is_some(),
-                    x_emu: anchor.as_ref().and_then(|x| x.h.offset),
-                    y_emu: anchor.as_ref().and_then(|x| x.v.offset),
-                    paragraph: Some(env.paragraph_id),
-                    entries: a.entries.clone(),
-                };
-                let doc_pr_id = {
-                    let mut st = st.borrow_mut();
-                    st.doc_pr_seq += 1;
-                    st.doc_pr_seq
-                };
-                let xml = format!(
-                    "<w:r>{}</w:r>",
-                    drawing_xml(&DrawingSpec {
-                        doc_pr_id: JsNum(doc_pr_id as f64),
-                        name: record.name.clone(),
-                        descr: None,
-                        r_id,
-                        cx: JsNum(a.width_emu),
-                        cy: JsNum(a.height_emu),
-                        anchor,
-                    })
-                );
-                st.borrow_mut().ext.pictures.push(record);
-                return Ok(Some(InlineOoxml::Xml {
-                    xml,
-                    text: String::new(),
-                }));
-            }
+        if a.r#type == AnalysisType::Picture
+            && let Some(image) = &a.image
+        {
+            let r_id = bridge_media(ctx, &image.entry, &image.bytes, &image.format);
+            let record = ObjectPicture {
+                id: id.clone(),
+                name: picture_name(&id),
+                part: el.part,
+                start: info.xml.to_u16(el.start),
+                end: info.xml.to_u16(el.end),
+                open_end: info.xml.to_u16(el.open_end),
+                image_start: info.xml.to_u16(image.start),
+                image_open_end: info.xml.to_u16(image.open_end),
+                href: image.href.clone(),
+                entry: image.entry.clone(),
+                r_id: r_id.clone(),
+                width_emu: JsNum(a.width_emu),
+                height_emu: JsNum(a.height_emu),
+                anchored: anchor.is_some(),
+                x_emu: anchor.as_ref().and_then(|x| x.h.offset),
+                y_emu: anchor.as_ref().and_then(|x| x.v.offset),
+                paragraph: Some(env.paragraph_id),
+                entries: a.entries.clone(),
+            };
+            let doc_pr_id = {
+                let mut st = st.borrow_mut();
+                st.doc_pr_seq += 1;
+                st.doc_pr_seq
+            };
+            let xml = format!(
+                "<w:r>{}</w:r>",
+                drawing_xml(&DrawingSpec {
+                    doc_pr_id: JsNum(doc_pr_id as f64),
+                    name: record.name.clone(),
+                    descr: None,
+                    r_id,
+                    cx: JsNum(a.width_emu),
+                    cy: JsNum(a.height_emu),
+                    anchor,
+                })
+            );
+            st.borrow_mut().ext.pictures.push(record);
+            return Ok(Some(InlineOoxml::Xml {
+                xml,
+                text: String::new(),
+            }));
         }
         let placeholder = ObjectPlaceholder {
             id: id.clone(),
@@ -269,51 +269,49 @@ fn write_existing_picture(
         overrides.set("svg:height", Some(emu_to_cm(cy)));
     }
     if pic.anchored && facts.anchored {
-        if let (Some(px), Some(fx)) = (pic.x_emu, facts.x_offset) {
-            if fx.0 != px.0 {
-                overrides.set("svg:x", Some(emu_to_cm(fx.0)));
-            }
+        if let (Some(px), Some(fx)) = (pic.x_emu, facts.x_offset)
+            && fx.0 != px.0
+        {
+            overrides.set("svg:x", Some(emu_to_cm(fx.0)));
         }
-        if let (Some(py), Some(fy)) = (pic.y_emu, facts.y_offset) {
-            if fy.0 != py.0 {
-                overrides.set("svg:y", Some(emu_to_cm(fy.0)));
-            }
+        if let (Some(py), Some(fy)) = (pic.y_emu, facts.y_offset)
+            && fy.0 != py.0
+        {
+            overrides.set("svg:y", Some(emu_to_cm(fy.0)));
         }
     }
     let mut inner = slice_u16(xml, pic.open_end, pic.end).to_string();
-    if let Some(r_id) = &facts.r_id {
-        if *r_id != pic.r_id {
-            let bytes = data_url_bytes(data_url);
-            let original = rctx.doc.pkg.get(&pic.entry).map(|e| e.bytes.clone());
-            match bytes {
-                None => {
-                    rctx.warn("a replaced picture could not be read; kept the original picture")
-                }
-                Some(bytes) => {
-                    if original.as_deref().is_none_or(|o| !same_bytes(&bytes, o)) {
-                        let format =
-                            sniff_image(&bytes).unwrap_or_else(|| format_of_data_url(data_url));
-                        let path = add_picture_entry(rctx, &bytes, &format)?;
-                        let mut href: JsObject<Option<String>> = JsObject::new();
-                        href.set("xlink:href", Some(path));
-                        let tag = patch_start_tag(
-                            slice_u16(xml, pic.image_start, pic.image_open_end),
-                            &info.prefixes,
-                            &href,
-                        )?;
-                        inner = format!(
-                            "{}{}{}",
-                            slice_u16(xml, pic.open_end, pic.image_start),
-                            tag,
-                            slice_u16(xml, pic.image_open_end, pic.end)
-                        );
-                    }
+    if let Some(r_id) = &facts.r_id
+        && *r_id != pic.r_id
+    {
+        let bytes = data_url_bytes(data_url);
+        let original = rctx.doc.pkg.get(&pic.entry).map(|e| e.bytes.clone());
+        match bytes {
+            None => rctx.warn("a replaced picture could not be read; kept the original picture"),
+            Some(bytes) => {
+                if original.as_deref().is_none_or(|o| !same_bytes(&bytes, o)) {
+                    let format =
+                        sniff_image(&bytes).unwrap_or_else(|| format_of_data_url(data_url));
+                    let path = add_picture_entry(rctx, &bytes, &format)?;
+                    let mut href: JsObject<Option<String>> = JsObject::new();
+                    href.set("xlink:href", Some(path));
+                    let tag = patch_start_tag(
+                        slice_u16(xml, pic.image_start, pic.image_open_end),
+                        &info.prefixes,
+                        &href,
+                    )?;
+                    inner = format!(
+                        "{}{}{}",
+                        slice_u16(xml, pic.open_end, pic.image_start),
+                        tag,
+                        slice_u16(xml, pic.image_open_end, pic.end)
+                    );
                 }
             }
         }
     }
     let mut open = slice_u16(xml, pic.start, pic.open_end).to_string();
-    if overrides.len() > 0 {
+    if !overrides.is_empty() {
         open = patch_start_tag(&open, &info.prefixes, &overrides)?;
     }
     // a copy must not repeat a unique frame name
@@ -474,10 +472,9 @@ fn edited_names(rctx: &OoxmlToOdfContext) -> Result<EditedNames, OdtError> {
                     .and_then(Value::as_str);
                 if let (Some(_), Some(image_xml)) =
                     (o.get("text").and_then(Value::as_str), image_xml)
+                    && let Some(name) = read_drawing(image_xml).name
                 {
-                    if let Some(name) = read_drawing(image_xml).name {
-                        runs.insert(name);
-                    }
+                    runs.insert(name);
                 }
                 for (k, v) in o {
                     if k != "originalXml" && (v.is_object() || v.is_array() || v.is_null()) {

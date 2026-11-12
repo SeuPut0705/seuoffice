@@ -281,7 +281,7 @@ pub fn scrub_meta_xml(meta_xml: &str) -> String {
     walk_elements(meta_xml, &root.prefixes, &mut visitor, 0, meta_xml.len());
     let mut cuts = visitor.cuts;
     // `cuts.sort((a, b) => b.start - a.start)`: the cuts do not overlap
-    cuts.sort_by(|a, b| b.0.cmp(&a.0));
+    cuts.sort_by_key(|c| std::cmp::Reverse(c.0));
     let mut out = meta_xml.to_owned();
     for (start, end) in cuts {
         out = format!("{}{}", &out[..start], &out[end..]);

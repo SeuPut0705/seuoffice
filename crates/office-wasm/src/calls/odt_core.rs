@@ -358,7 +358,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let bytes: Bytes = required(args, "bytes")?;
             read_docx_part(&bytes.0, text)
                 .map_err(|e| e.message().to_owned())
-                .and_then(|found| value(found))
+                .and_then(value)
         }
         "crc32" => {
             let bytes: Bytes = required(args, "bytes")?;
@@ -608,7 +608,7 @@ impl ElementVisitor for Recorder<'_> {
         if self.stop_open.as_deref() == Some(el.name.as_str()) {
             return OpenVerdict::Stop;
         }
-        if self.skip.iter().any(|s| *s == el.name) {
+        if self.skip.contains(&el.name) {
             return OpenVerdict::Skip;
         }
         OpenVerdict::Continue

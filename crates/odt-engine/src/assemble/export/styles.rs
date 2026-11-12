@@ -362,15 +362,15 @@ fn style_xml(
     element: &str,
 ) -> Result<String, OdtError> {
     let mut props: JsObject<AttrOverrides> = JsObject::new();
-    if let Some(para) = para {
-        if para.attrs.len() > 0 || para.tabs.is_some() {
-            props.set("style:paragraph-properties", para.attrs.clone());
-        }
+    if let Some(para) = para
+        && (!para.attrs.is_empty() || para.tabs.is_some())
+    {
+        props.set("style:paragraph-properties", para.attrs.clone());
     }
-    if let Some(text) = text {
-        if text.len() > 0 {
-            props.set("style:text-properties", text.clone());
-        }
+    if let Some(text) = text
+        && !text.is_empty()
+    {
+        props.set("style:text-properties", text.clone());
     }
     let mut base = new_style_xml(name, family, None);
     if element != "style:style" {

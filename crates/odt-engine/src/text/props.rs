@@ -89,19 +89,18 @@ pub fn tab_stops_from_odf(
         let style = s.get("style:leader-style").map(String::as_str);
         if let Some(style) = style.filter(|st| !st.is_empty() && *st != "none") {
             leader = leader_from_odf(style).unwrap_or(TabStopLeader::Dot);
-        } else if style.is_none_or(str::is_empty) {
-            if let Some(t) = s
+        } else if style.is_none_or(str::is_empty)
+            && let Some(t) = s
                 .get("style:leader-text")
                 .map(String::as_str)
                 .filter(|t| !t.is_empty())
-            {
-                leader = match t {
-                    "." => TabStopLeader::Dot,
-                    "-" => TabStopLeader::Hyphen,
-                    "_" => TabStopLeader::Underscore,
-                    _ => TabStopLeader::None,
-                };
-            }
+        {
+            leader = match t {
+                "." => TabStopLeader::Dot,
+                "-" => TabStopLeader::Hyphen,
+                "_" => TabStopLeader::Underscore,
+                _ => TabStopLeader::None,
+            };
         }
         out.push(TabStop {
             pos: JsNum(math_round(pos + margin_left_twips)),
@@ -577,10 +576,10 @@ pub fn text_format_from_odf(tp: &OdfAttrs, font_faces: &JsMap<String>) -> TextFo
         f.font_cs.set(cs.clone());
     }
     let size = attr("fo:font-size").or(attr("style:font-size-asian"));
-    if let Some(size) = size.filter(|s| !s.is_empty() && !s.ends_with('%')) {
-        if let Some(t) = length_to_twips(Some(size)).filter(|t| *t > 0.0) {
-            f.size_half_points.set(JsNum(math_round(t / 10.0).max(1.0)));
-        }
+    if let Some(size) = size.filter(|s| !s.is_empty() && !s.ends_with('%'))
+        && let Some(t) = length_to_twips(Some(size)).filter(|t| *t > 0.0)
+    {
+        f.size_half_points.set(JsNum(math_round(t / 10.0).max(1.0)));
     }
     let weight = attr("fo:font-weight").or(attr("style:font-weight-asian"));
     if let Some(weight) = weight {
@@ -616,10 +615,11 @@ pub fn text_format_from_odf(tp: &OdfAttrs, font_faces: &JsMap<String>) -> TextFo
         }
     }
     let scale = percent(attr("style:text-scale"));
-    if let Some(scale) = scale {
-        if math_round(scale * 100.0) != 100.0 && scale > 0.0 {
-            f.char_scale_pct.set(JsNum(math_round(scale * 100.0)));
-        }
+    if let Some(scale) = scale
+        && math_round(scale * 100.0) != 100.0
+        && scale > 0.0
+    {
+        f.char_scale_pct.set(JsNum(math_round(scale * 100.0)));
     }
     if let Some(bg) = hex(attr("fo:background-color")) {
         f.shading.set(bg);
@@ -942,17 +942,17 @@ pub fn text_overrides(
             }
             TextKey::Font => {
                 let font = edited.font.as_deref().filter(|f| !f.is_empty());
-                o.set("style:font-name-asian", font.map(|f| face(f)));
+                o.set("style:font-name-asian", font.map(&mut *face));
                 o.set("style:font-family-asian", font.map(quote_family));
             }
             TextKey::FontAscii => {
                 let font = edited.font_ascii.as_deref().filter(|f| !f.is_empty());
-                o.set("style:font-name", font.map(|f| face(f)));
+                o.set("style:font-name", font.map(&mut *face));
                 o.set("fo:font-family", font.map(quote_family));
             }
             TextKey::FontCs => {
                 let font = edited.font_cs.as_deref().filter(|f| !f.is_empty());
-                o.set("style:font-name-complex", font.map(|f| face(f)));
+                o.set("style:font-name-complex", font.map(&mut *face));
                 o.set("style:font-family-complex", font.map(quote_family));
             }
             TextKey::Spacing => {

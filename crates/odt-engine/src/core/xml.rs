@@ -142,6 +142,8 @@ impl<'a> XmlScanner<'a> {
     }
 
     /// `next()`
+    // Keeps the name of the ported `XmlScanner.next()`; not an `Iterator`.
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> bool {
         let xml = self.xml;
         let bytes = xml.as_bytes();
@@ -643,10 +645,10 @@ impl PrefixMap {
             let Some(prefix) = attr.name.strip_prefix("xmlns:") else {
                 continue;
             };
-            if let Some(canonical) = namespace_prefix(&decode_xml_entities(&attr.raw)) {
-                if canonical != prefix {
-                    rename.set(prefix.to_owned(), canonical.to_owned());
-                }
+            if let Some(canonical) = namespace_prefix(&decode_xml_entities(&attr.raw))
+                && canonical != prefix
+            {
+                rename.set(prefix.to_owned(), canonical.to_owned());
             }
         }
         Self { rename }

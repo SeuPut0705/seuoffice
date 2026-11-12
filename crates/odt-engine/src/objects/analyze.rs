@@ -201,16 +201,16 @@ pub fn entries_of(doc: &OdtDocument, href: &str) -> Vec<String> {
         return Vec::new();
     };
     let mut candidates = vec![raw.clone()];
-    if let Ok(decoded) = decode_uri_component(&raw) {
-        if decoded != raw {
-            candidates.push(decoded);
-        }
+    if let Ok(decoded) = decode_uri_component(&raw)
+        && decoded != raw
+    {
+        candidates.push(decoded);
     }
     for path in candidates {
-        if let Some(file) = doc.pkg.get(&path) {
-            if !file.directory {
-                return vec![path];
-            }
+        if let Some(file) = doc.pkg.get(&path)
+            && !file.directory
+        {
+            return vec![path];
         }
         let dir = if path.ends_with('/') {
             path.clone()
@@ -472,12 +472,12 @@ pub fn analyze_object(
     let children: Vec<&SubElement> = subs.iter().filter(|s| s.depth == 0).collect();
     let mut entries: Vec<String> = Vec::new();
     for s in &subs {
-        if let Some(href) = attr(&s.attrs, "xlink:href") {
-            if ENTRY_HREF_ELEMENTS.contains(&s.name.as_str()) {
-                for e in entries_of(doc, href) {
-                    if !entries.contains(&e) {
-                        entries.push(e);
-                    }
+        if let Some(href) = attr(&s.attrs, "xlink:href")
+            && ENTRY_HREF_ELEMENTS.contains(&s.name.as_str())
+        {
+            for e in entries_of(doc, href) {
+                if !entries.contains(&e) {
+                    entries.push(e);
                 }
             }
         }
@@ -614,16 +614,17 @@ pub fn analyze_object(
         };
         let shown = displayable(doc, attr(&img.attrs, "xlink:href").unwrap_or(""), true);
         let a = b.w * b.h;
-        if let Some(shown) = shown {
-            if a >= area * 0.9 && best.as_ref().is_none_or(|(_, best_area)| a > *best_area) {
-                best = Some((
-                    AnalysisPreview {
-                        bytes: shown.bytes,
-                        format: shown.format,
-                    },
-                    a,
-                ));
-            }
+        if let Some(shown) = shown
+            && a >= area * 0.9
+            && best.as_ref().is_none_or(|(_, best_area)| a > *best_area)
+        {
+            best = Some((
+                AnalysisPreview {
+                    bytes: shown.bytes,
+                    format: shown.format,
+                },
+                a,
+            ));
         }
     }
     ObjectAnalysis {

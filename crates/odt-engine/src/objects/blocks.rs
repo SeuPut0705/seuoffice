@@ -283,10 +283,10 @@ impl BlockConverter for ObjectsBlockConverter {
                     .and_then(|p| p.element),
                 None => None,
             };
-            if let Some(element) = element {
-                if candidates.iter().any(|c| c.id == element) {
-                    return Ok(Some(element));
-                }
+            if let Some(element) = element
+                && candidates.iter().any(|c| c.id == element)
+            {
+                return Ok(Some(element));
             }
         }
         Ok(None)
@@ -393,25 +393,24 @@ fn write_image_item(
     let info = rctx.part(OdtStylePart::ContentXml);
     let xml = &info.xml;
     // the paragraph held only this object and keeps its format: everything else as it was
-    if let (Some(host), Some(origin)) = (&host, &origin) {
-        if drawings.len() == 1
-            && origin.text.is_empty()
-            && p_pr == origin.p_pr
-            && origin
-                .markers
-                .iter()
-                .filter(|m| m.kind == BridgeMarkerKind::Handler)
-                .count()
-                == 1
-        {
-            let drawing = write_drawing(rctx, &drawings[0], data_url.as_deref(), origin.part)?;
-            return Ok(format!(
-                "{}{}{}",
-                slice_u16(xml, origin.start, host.start),
-                drawing,
-                slice_u16(xml, host.end, origin.end)
-            ));
-        }
+    if let (Some(host), Some(origin)) = (&host, &origin)
+        && drawings.len() == 1
+        && origin.text.is_empty()
+        && p_pr == origin.p_pr
+        && origin
+            .markers
+            .iter()
+            .filter(|m| m.kind == BridgeMarkerKind::Handler)
+            .count()
+            == 1
+    {
+        let drawing = write_drawing(rctx, &drawings[0], data_url.as_deref(), origin.part)?;
+        return Ok(format!(
+            "{}{}{}",
+            slice_u16(xml, origin.start, host.start),
+            drawing,
+            slice_u16(xml, host.end, origin.end)
+        ));
     }
     let runs: Vec<Run> = drawings
         .iter()

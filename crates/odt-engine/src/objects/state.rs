@@ -195,12 +195,12 @@ pub fn append_to_lazy_part(ctx: &mut OdfToOoxmlContext, path: &str, suffix: &str
     {
         return;
     }
-    if let Some(part) = ctx.docx.parts.iter_mut().find(|p| p.path == path) {
-        if let DocxPartData::Text(text) = &mut part.data {
-            text.truncate(text.len() - suffix.len());
-            text.push_str(fragment);
-            text.push_str(suffix);
-        }
+    if let Some(part) = ctx.docx.parts.iter_mut().find(|p| p.path == path)
+        && let DocxPartData::Text(text) = &mut part.data
+    {
+        text.truncate(text.len() - suffix.len());
+        text.push_str(fragment);
+        text.push_str(suffix);
     }
 }
 

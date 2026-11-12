@@ -261,12 +261,7 @@ impl Writer<'_> {
         };
         let Some(model) = &self.model else {
             // a new paragraph next to an original one: its last character's styles
-            let last = tpl
-                .char_sets
-                .iter()
-                .copied()
-                .filter(|s| *s >= 0)
-                .next_back();
+            let last = tpl.char_sets.iter().copied().rfind(|s| *s >= 0);
             return last.unwrap_or(tpl.empty_set as i64);
         };
         let o_len = self.original_len as i64;
@@ -274,10 +269,10 @@ impl Writer<'_> {
             return model.empty_set as i64;
         }
         let idx = self.mapper.original_of(U16(i as u32)).min(o_len - 1).max(0);
-        if let Some(set) = model.char_sets.get(idx as usize).copied() {
-            if set >= 0 {
-                return set;
-            }
+        if let Some(set) = model.char_sets.get(idx as usize).copied()
+            && set >= 0
+        {
+            return set;
         }
         let mut k = idx;
         while k >= 0 {
@@ -527,13 +522,12 @@ pub fn paragraph_to_odf(
     // the original whose style this paragraph continues: its own, or for a new
     // paragraph the one it follows when both have the same docx style
     let mut template: Option<&BridgeParagraph> = origin;
-    if origin.is_none() {
-        if let Some(follows) = opts.follows.filter(|f| f.part == part) {
-            let followed =
-                paragraph_style_info(&doc, &rctx.map, part, follows.style_name.as_deref());
-            if followed.style_id == para.style_id {
-                template = Some(follows);
-            }
+    if origin.is_none()
+        && let Some(follows) = opts.follows.filter(|f| f.part == part)
+    {
+        let followed = paragraph_style_info(&doc, &rctx.map, part, follows.style_name.as_deref());
+        if followed.style_id == para.style_id {
+            template = Some(follows);
         }
     }
     let continues = origin.is_none() && template.is_some();
@@ -588,20 +582,19 @@ pub fn paragraph_to_odf(
         .as_ref()
         .and_then(|e| e.heading_level)
         .filter(|l| *l != 0)
+        && (template.is_none() || style_changed)
     {
-        if template.is_none() || style_changed {
-            let size = [32.0, 28.0, 26.0, 24.0, 22.0, 22.0]
-                .get(level as usize - 1)
-                .copied()
-                .unwrap_or(24.0);
-            let pt = half_points_to_pt(size);
-            heading_text.set("fo:font-weight", Some("bold".to_owned()));
-            heading_text.set("style:font-weight-asian", Some("bold".to_owned()));
-            heading_text.set("style:font-weight-complex", Some("bold".to_owned()));
-            heading_text.set("fo:font-size", Some(pt.clone()));
-            heading_text.set("style:font-size-asian", Some(pt.clone()));
-            heading_text.set("style:font-size-complex", Some(pt));
-        }
+        let size = [32.0, 28.0, 26.0, 24.0, 22.0, 22.0]
+            .get(level as usize - 1)
+            .copied()
+            .unwrap_or(24.0);
+        let pt = half_points_to_pt(size);
+        heading_text.set("fo:font-weight", Some("bold".to_owned()));
+        heading_text.set("style:font-weight-asian", Some("bold".to_owned()));
+        heading_text.set("style:font-weight-complex", Some("bold".to_owned()));
+        heading_text.set("fo:font-size", Some(pt.clone()));
+        heading_text.set("style:font-size-asian", Some(pt.clone()));
+        heading_text.set("style:font-size-complex", Some(pt));
     }
 
     // `styleFor`

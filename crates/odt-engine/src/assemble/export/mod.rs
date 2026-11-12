@@ -605,21 +605,21 @@ fn page_groups(
     let mut unequal = 0usize;
     let mut columns_of = |s: &SectionInfo| -> PageColumns {
         let st = &s.settings;
-        if st.columns.0 > 1.0 {
-            if let Some(widths) = st.col_widths.as_ref() {
-                // `new Set(st.colWidths).size > 1`: SameValueZero
-                let mut distinct: Vec<f64> = Vec::new();
-                for w in widths {
-                    if !distinct
-                        .iter()
-                        .any(|d| *d == w.0 || (d.is_nan() && w.0.is_nan()))
-                    {
-                        distinct.push(w.0);
-                    }
+        if st.columns.0 > 1.0
+            && let Some(widths) = st.col_widths.as_ref()
+        {
+            // `new Set(st.colWidths).size > 1`: SameValueZero
+            let mut distinct: Vec<f64> = Vec::new();
+            for w in widths {
+                if !distinct
+                    .iter()
+                    .any(|d| *d == w.0 || (d.is_nan() && w.0.is_nan()))
+                {
+                    distinct.push(w.0);
                 }
-                if distinct.len() > 1 {
-                    unequal += 1;
-                }
+            }
+            if distinct.len() > 1 {
+                unequal += 1;
             }
         }
         let count = if st.columns.0 == 0.0 || st.columns.0.is_nan() {
@@ -633,21 +633,21 @@ fn page_groups(
         }
     };
     for (i, s) in sections.iter().enumerate() {
-        if let Some(prev) = groups.last_mut() {
-            if matches!(s.start_type, "continuous" | "nextColumn") {
-                prev.last = s.last_block_index.0;
-                prev.subsections.push(Subsection {
-                    first: s.first_block_index.0,
-                    last: s.last_block_index.0,
-                    columns: columns_of(s),
-                });
-                // a page run of several column layouts gets them from its sections
-                prev.master.columns = PageColumns {
-                    count: 1.0,
-                    gap: 0.0,
-                };
-                continue;
-            }
+        if let Some(prev) = groups.last_mut()
+            && matches!(s.start_type, "continuous" | "nextColumn")
+        {
+            prev.last = s.last_block_index.0;
+            prev.subsections.push(Subsection {
+                first: s.first_block_index.0,
+                last: s.last_block_index.0,
+                columns: columns_of(s),
+            });
+            // a page run of several column layouts gets them from its sections
+            prev.master.columns = PageColumns {
+                count: 1.0,
+                gap: 0.0,
+            };
+            continue;
         }
         let mut parts: Vec<(Region, Option<String>)> = Vec::new();
         for header in [true, false] {

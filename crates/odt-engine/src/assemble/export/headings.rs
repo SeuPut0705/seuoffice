@@ -212,6 +212,8 @@ pub fn headings_as_paragraphs(xml: &str, common_levels: &JsMap<f64>) -> Result<S
         } else {
             parsed
         };
+        // clamp differs from min/max for NaN (parsed is never NaN here)
+        #[allow(clippy::manual_clamp)]
         let level = parsed.min(10.0).max(1.0);
         let name = chooser.style_for(style, level);
         let without = heading_attrs.replace_all(attrs, |_| String::new());

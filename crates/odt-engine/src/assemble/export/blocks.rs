@@ -45,11 +45,14 @@ use crate::text::styles::{read_ooxml_p_pr, read_ooxml_r_pr};
 /// missing).
 pub type MediaReader<'a> = Box<dyn Fn(&str) -> Option<Vec<u8>> + 'a>;
 
+/// Looks up a rendered object by key.
+pub type RenderedLookup<'a> = Box<dyn Fn(&str) -> Option<&'a RenderedObject> + 'a>;
+
 /// `NormaliseEnv`
 pub struct NormaliseEnv<'a> {
     pub parsed: &'a ParsedDoc,
     pub media: MediaReader<'a>,
-    pub rendered: Box<dyn Fn(&str) -> Option<&'a RenderedObject> + 'a>,
+    pub rendered: RenderedLookup<'a>,
     /// shared with the caller, which adds to it between the normaliser's calls
     pub report: &'a RefCell<ReportBuilder>,
 }
@@ -302,74 +305,74 @@ impl<'a> BlockNormaliser<'a> {
         };
         let mut out = run.clone();
         // `target[key] === undefined && source[key] !== undefined && source[key] !== 'auto'`
-        if out.bold.is_none() {
-            if let Some(v) = *display.bold {
-                out.bold.set(v);
-            }
+        if out.bold.is_none()
+            && let Some(v) = *display.bold
+        {
+            out.bold.set(v);
         }
-        if out.italic.is_none() {
-            if let Some(v) = *display.italic {
-                out.italic.set(v);
-            }
+        if out.italic.is_none()
+            && let Some(v) = *display.italic
+        {
+            out.italic.set(v);
         }
-        if out.underline.is_none() {
-            if let Some(v) = *display.underline {
-                out.underline.set(v);
-            }
+        if out.underline.is_none()
+            && let Some(v) = *display.underline
+        {
+            out.underline.set(v);
         }
-        if out.strike.is_none() {
-            if let Some(v) = *display.strike {
-                out.strike.set(v);
-            }
+        if out.strike.is_none()
+            && let Some(v) = *display.strike
+        {
+            out.strike.set(v);
         }
-        if out.color.is_none() {
-            if let Some(v) = display.color.as_deref().filter(|v| *v != "auto") {
-                out.color.set(v.to_owned());
-            }
+        if out.color.is_none()
+            && let Some(v) = display.color.as_deref().filter(|v| *v != "auto")
+        {
+            out.color.set(v.to_owned());
         }
-        if out.size_half_points.is_none() {
-            if let Some(v) = *display.size_half_points {
-                out.size_half_points.set(v);
-            }
+        if out.size_half_points.is_none()
+            && let Some(v) = *display.size_half_points
+        {
+            out.size_half_points.set(v);
         }
-        if out.font.is_none() {
-            if let Some(v) = display.font.as_deref().filter(|v| *v != "auto") {
-                out.font.set(v.to_owned());
-            }
+        if out.font.is_none()
+            && let Some(v) = display.font.as_deref().filter(|v| *v != "auto")
+        {
+            out.font.set(v.to_owned());
         }
-        if out.font_ascii.is_none() {
-            if let Some(v) = display.font_ascii.as_deref().filter(|v| *v != "auto") {
-                out.font_ascii.set(v.to_owned());
-            }
+        if out.font_ascii.is_none()
+            && let Some(v) = display.font_ascii.as_deref().filter(|v| *v != "auto")
+        {
+            out.font_ascii.set(v.to_owned());
         }
-        if out.east_asia_font.is_none() {
-            if let Some(v) = display.east_asia_font.as_deref().filter(|v| *v != "auto") {
-                out.east_asia_font.set(v.to_owned());
-            }
+        if out.east_asia_font.is_none()
+            && let Some(v) = display.east_asia_font.as_deref().filter(|v| *v != "auto")
+        {
+            out.east_asia_font.set(v.to_owned());
         }
-        if out.char_spacing_twips.is_none() {
-            if let Some(v) = *display.char_spacing_twips {
-                out.char_spacing_twips.set(v);
-            }
+        if out.char_spacing_twips.is_none()
+            && let Some(v) = *display.char_spacing_twips
+        {
+            out.char_spacing_twips.set(v);
         }
-        if out.caps.is_none() {
-            if let Some(v) = *display.caps {
-                out.caps.set(match v {
-                    StyleDisplayCaps::All => RunCaps::All,
-                    StyleDisplayCaps::Small => RunCaps::Small,
-                    StyleDisplayCaps::None => RunCaps::None,
-                });
-            }
+        if out.caps.is_none()
+            && let Some(v) = *display.caps
+        {
+            out.caps.set(match v {
+                StyleDisplayCaps::All => RunCaps::All,
+                StyleDisplayCaps::Small => RunCaps::Small,
+                StyleDisplayCaps::None => RunCaps::None,
+            });
         }
-        if out.shading.is_none() {
-            if let Some(v) = display.shading.as_deref().filter(|v| *v != "auto") {
-                out.shading.set(v.to_owned());
-            }
+        if out.shading.is_none()
+            && let Some(v) = display.shading.as_deref().filter(|v| *v != "auto")
+        {
+            out.shading.set(v.to_owned());
         }
-        if out.font_cs.is_none() {
-            if let Some(cs) = display.cs_font.as_deref().filter(|cs| !cs.is_empty()) {
-                out.font_cs.set(cs.to_owned());
-            }
+        if out.font_cs.is_none()
+            && let Some(cs) = display.cs_font.as_deref().filter(|cs| !cs.is_empty())
+        {
+            out.font_cs.set(cs.to_owned());
         }
         out
     }
@@ -512,12 +515,9 @@ impl<'a> BlockNormaliser<'a> {
                     ));
                     continue;
                 }
-                match classify_object(&image.xml) {
-                    Some(ObjectClass::Kind(kind)) => {
-                        out.push(self.object_run(kind, &image.xml, &keys.next_key(), ""));
-                        continue;
-                    }
-                    _ => {}
+                if let Some(ObjectClass::Kind(kind)) = classify_object(&image.xml) {
+                    out.push(self.object_run(kind, &image.xml, &keys.next_key(), ""));
+                    continue;
                 }
                 if let Some(picture) = self.picture_from_xml(&image.xml, Some(&image.data_url)) {
                     out.push(picture);
@@ -783,13 +783,13 @@ impl<'a> BlockNormaliser<'a> {
             let paragraph = self.paragraph(b);
             return Some(item(paragraph));
         }
-        if kind == Some(BlockType::Table) {
-            if let Some(model) = b.table.as_ref() {
-                let table = self.table_model(model, &mut ObjectKeys::new(docx_index(b)));
-                let mut next = b.clone();
-                next.table.set(table);
-                return Some(item(next));
-            }
+        if kind == Some(BlockType::Table)
+            && let Some(model) = b.table.as_ref()
+        {
+            let table = self.table_model(model, &mut ObjectKeys::new(docx_index(b)));
+            let mut next = b.clone();
+            next.table.set(table);
+            return Some(item(next));
         }
         if kind == Some(BlockType::Image) {
             let xml = original_xml(b);
@@ -797,14 +797,14 @@ impl<'a> BlockNormaliser<'a> {
             let p_pr = leading_p_pr(xml);
             let style_id = p_style_of(p_pr);
             let mut format = read_ooxml_p_pr(p_pr);
-            if format.align.is_none() {
-                if let Some(align) = *b.image_align {
-                    format.align.set(match align {
-                        BlockImageAlign::Left => ParaAlign::Left,
-                        BlockImageAlign::Center => ParaAlign::Center,
-                        BlockImageAlign::Right => ParaAlign::Right,
-                    });
-                }
+            if format.align.is_none()
+                && let Some(align) = *b.image_align
+            {
+                format.align.set(match align {
+                    BlockImageAlign::Left => ParaAlign::Left,
+                    BlockImageAlign::Center => ParaAlign::Center,
+                    BlockImageAlign::Right => ParaAlign::Right,
+                });
             }
             let mut next = b.clone();
             next.r#type.set(BlockType::Paragraph);

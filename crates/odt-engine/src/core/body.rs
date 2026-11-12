@@ -702,12 +702,11 @@ pub fn pair_annotations(body: &OdtBody) -> Vec<AnnotationPair> {
             // an annotation's own paragraphs never contain its end marker
             return false;
         }
-        if node.kind == OdtNodeKind::AnnotationEnd {
-            if let Some(index) = node.attr("office:name").and_then(|n| open.get(n)) {
-                if out[*index].end.is_none() {
-                    out[*index].end = Some(Rc::clone(node));
-                }
-            }
+        if node.kind == OdtNodeKind::AnnotationEnd
+            && let Some(index) = node.attr("office:name").and_then(|n| open.get(n))
+            && out[*index].end.is_none()
+        {
+            out[*index].end = Some(Rc::clone(node));
         }
         true
     });

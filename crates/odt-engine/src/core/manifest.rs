@@ -64,10 +64,10 @@ impl ElementVisitor for Reader<'_> {
             let index = self.entries.len() - 1;
             el.data = Some(index);
             self.current = Some(index);
-        } else if el.name == "manifest:encryption-data" {
-            if let Some(current) = self.current {
-                self.entries[current].encrypted = true;
-            }
+        } else if el.name == "manifest:encryption-data"
+            && let Some(current) = self.current
+        {
+            self.entries[current].encrypted = true;
         }
         OpenVerdict::Continue
     }
