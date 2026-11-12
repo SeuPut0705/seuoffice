@@ -67,18 +67,15 @@ const isRunList = (value: unknown): value is Run[] =>
   )
 
 /**
- * A parsed value as the reader gave it before runs carried wrappers and kept
- * elements: kept elements gone, wrappers gone, and the runs a wrapper edge
- * split merged back. Two documents that differ only by such structure read
- * the same through this.
+ * A parsed value as the reader gave it before runs carried wrappers: wrappers
+ * gone, and the runs a wrapper edge split merged back. Two documents that
+ * differ only by such structure read the same through this.
  */
 export function withoutInlineStructure(value: unknown): unknown {
   if (value === null || typeof value !== 'object') return value
   if (value instanceof Uint8Array) return `bytes:${value.length}`
   if (isRunList(value)) {
-    const plain = value
-      .filter((r) => r.opaqueXml === undefined)
-      .map(({ wrap: _wrap, ...rest }) => rest)
+    const plain = value.map(({ wrap: _wrap, ...rest }) => rest)
     return mergeRuns(plain).map(withoutInlineStructure)
   }
   if (Array.isArray(value)) return value.map(withoutInlineStructure)

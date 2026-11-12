@@ -1,42 +1,27 @@
 import { Editor } from '@tiptap/core'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
-import {
-  PAGE_MARK,
-  parseDocx,
-  saveDocx,
-  type HeaderFooter,
-  type HfParagraph,
-  type ParsedDocFull,
-} from '@genoffice/docx-engine'
+import { parseDocx, saveDocx, type ParsedDocFull } from '@genoffice/docx-engine'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 import type { AiDocWriter } from '../src/renderer/ai/doc-writer'
 import { executeTool } from '../src/renderer/ai/tools'
 import { FindPanel } from '../src/renderer/components/FindPanel'
-import { computeFormatState } from '../src/renderer/components/ribbon-format-state'
-import { insertTableAt } from '../src/renderer/components/ribbon-tabs'
 import { blocksToPmDoc, pmDocToSavePlan, type PmNode } from '../src/renderer/editor/convert'
 import { editorExtensions } from '../src/renderer/editor/extensions'
-import { hfHasVisibleContent, hfWithoutPageMarks, makeGapHfEl } from '../src/renderer/editor/hf-dom'
-import { hfDocJson, hfValueFromDoc } from '../src/renderer/editor/hf-editor'
-import { estimateHfHeight } from '../src/renderer/line-metrics'
 import { mergeAllRecords } from '../src/renderer/mail-merge/template'
 import { takeOdtRefusal } from '../src/renderer/odt-gate'
 
 /**
- * Run-level structure the editor carries without a model (inline content
- * controls, w:smartTag, w:permStart / w:permEnd...) in the places that are
- * not typing: the judgments that ask "is this paragraph empty", headers,
- * replacing a word, the AI tools, mail merge. The typing side is in
+ * Run-level wrappers the editor carries without a model (inline content
+ * controls, w:smartTag...) in the places that are not typing: replacing a
+ * word, the AI tools, mail merge. The typing side is in
  * inline-wrapper-survival.test.ts.
  */
 
 ;(globalThis as { CSS?: unknown }).CSS ??= { escape: (s: string) => s }
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
-const PS = '<w:permStart w:id="7" w:edGrp="everyone"/>'
-const PE = '<w:permEnd w:id="7"/>'
 const run = (text: string) => `<w:r><w:t xml:space="preserve">${text}</w:t></w:r>`
 const deleted = (text: string, id: number) =>
   `<w:del w:id="${id}" w:author="A" w:date="2024-01-01T00:00:00Z"><w:r><w:delText>${text}</w:delText></w:r></w:del>`
@@ -122,90 +107,6 @@ function findPanel(editor: Editor, find: string, replacement: string) {
   }
 }
 
-describe('a paragraph whose only live content is invisible elements', () => {
-  // text deleted with change tracking, inside an editing-permission range
-  const STRUCK = `<w:p>${PS}${deleted('gone', 9)}${PE}</w:p>`
-
-  it('is drawn as a paragraph whose content is all deleted', async () => {
-    const { editor } = await open(STRUCK + OTHER)
-    const el = editor.view.dom.firstElementChild!
-    expect(el.classList.contains('doc-para-content-del')).toBe(true)
-  })
-
-  it('is read to the AI as a pending deletion, not as current text', async () => {
-    const { editor } = await open(STRUCK + OTHER)
-    const result = await executeTool(
-      editor,
-      { id: 'ai', name: 'read_blocks', input: { startBlockIndex: 0, endBlockIndex: 0 } },
-      NUM_IDS,
-    )
-    expect(result.output).toMatch(/pending tracked deletions/)
-  })
-
-  it('leaves the document empty for the ribbon when nothing else is in it', async () => {
-    const { editor } = await open(`<w:p>${PS}${PE}</w:p>`)
-    expect(computeFormatState(editor).docEmpty).toBe(true)
-  })
-
-  it('takes a new table above it, like an empty paragraph, and keeps its elements', async () => {
-    const { editor, parsed } = await open(`<w:p>${PS}${PE}</w:p>${OTHER}`)
-    editor.commands.setTextSelection(1)
-    insertTableAt(editor, 1, 1)
-    expect(editor.state.doc.child(0).type.name).toBe('docTable')
-    expect(editor.state.doc.child(1).type.name).toBe('docParagraph')
-    const xml = await savedXml(editor.getJSON() as PmNode, parsed)
-    expect(xml).toContain(`</w:tbl><w:p>${PS}${PE}</w:p>`)
-  })
-})
-
-describe('a header line that holds only invisible elements is a blank line', () => {
-  const marker = (xml: string) => ({ text: '', opaqueXml: xml })
-  const BLANK = { runs: [marker(PS), marker(PE)], emptyRunSizeHalfPoints: 24 } as HfParagraph
-  const strip = (paras: HfParagraph[]) =>
-    makeGapHfEl({ kind: 'header', value: { text: '', paras }, pageNo: 1, pageTotal: 1 })
-
-  it('is drawn with the blank line’s text and size', () => {
-    const [marked, plain] = strip([
-      BLANK,
-      { runs: [], emptyRunSizeHalfPoints: 24 },
-    ]).querySelectorAll<HTMLElement>('.page-hf-para')
-    expect(marked.style.fontSize).toBe('12pt')
-    expect(marked.textContent).toBe(plain.textContent)
-    expect(marked.textContent).not.toBe('')
-  })
-
-  it('reserves the height of the blank line', () => {
-    const height = (paras: HfParagraph[]) => estimateHfHeight({ text: '', paras }, 600)
-    expect(height([BLANK])).toBe(height([{ runs: [], emptyRunSizeHalfPoints: 24 }]))
-  })
-
-  it('does not make the header count as having something to show', () => {
-    expect(hfHasVisibleContent({ text: '', paras: [BLANK] })).toBe(false)
-  })
-
-  it('keeps its size and its elements through the header editor untouched', () => {
-    const value: HeaderFooter = { text: '', paras: [BLANK] }
-    const back = hfValueFromDoc(hfDocJson(value), value)
-    expect(back.paras![0].emptyRunSizeHalfPoints).toBe(24)
-    expect(back.paras![0].runs.map((r) => r.opaqueXml)).toEqual([PS, PE])
-  })
-
-  it('removing the page number leaves the elements beside it', () => {
-    const out = hfWithoutPageMarks({
-      text: PAGE_MARK,
-      pageNumber: true,
-      paras: [
-        { runs: [marker(PS), { text: PAGE_MARK }, marker(PE)] },
-        { runs: [{ text: 'Title' }] },
-      ],
-    } as HeaderFooter)
-    expect(out.paras!.map((p) => p.runs.map((r) => r.opaqueXml ?? r.text))).toEqual([
-      [PS, PE],
-      ['Title'],
-    ])
-  })
-})
-
 describe('replacing a word that is exactly the content of a wrapper', () => {
   const body = (inner: string) => `<w:p>${run('I live in ')}${inner}${run(' now')}</w:p>${OTHER}`
 
@@ -285,17 +186,15 @@ describe('AI tools and a control locked against editing', () => {
 })
 
 describe('mail merge: every letter after the first goes without what carries an id', () => {
-  it('writes the content control and the permission range once, the smart tag in each letter', async () => {
+  it('writes the content control once, the smart tag in each letter', async () => {
     const { editor, parsed } = await open(
-      `<w:p>${run('Dear ')}${control('Ada')}${run(' of ')}${smart('Paris')}${run(' ')}${PS}${run('sign')}${PE}</w:p>`,
+      `<w:p>${run('Dear ')}${control('Ada')}${run(' of ')}${smart('Paris')}${run(' sign')}</w:p>`,
     )
     const merged = mergeAllRecords(editor.getJSON() as PmNode, [{}, {}, {}])
     const xml = await savedXml(merged, parsed)
     expect(occurrences(xml, '<w:p>')).toBe(3)
     expect(occurrences(xml, '<w:sdt>')).toBe(1)
     expect(occurrences(xml, 'w:val="5"')).toBe(1)
-    expect(occurrences(xml, '<w:permStart')).toBe(1)
-    expect(occurrences(xml, '<w:permEnd')).toBe(1)
     expect(occurrences(xml, SMART_OPEN)).toBe(3)
     // the text of every letter is whole
     const letters = (await parseDocx(await buildDocxOf(merged, parsed))).blocks.map((block) =>

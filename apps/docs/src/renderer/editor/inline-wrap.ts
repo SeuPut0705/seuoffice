@@ -1,31 +1,27 @@
 /**
- * Run-level structure the docx run model keeps as bytes instead of fields
- * (Run.wrap, Run.opaqueXml), carried through the editor so that editing a
- * paragraph never drops it:
+ * Run-level wrapper elements the docx run model keeps as bytes instead of
+ * fields (Run.wrap), carried through the editor so that editing a paragraph
+ * never drops them:
  *
  * - `inlineWrap` mark: the chain of wrapper elements around the text (inline
  *   content controls, w:smartTag, w:customXml, w:dir, w:bdo). Text typed
  *   inside stays inside; text typed at an edge lands outside. The mark is
  *   structure, not formatting: "clear formatting" leaves it.
- * - `docInlineOpaque` atom: one element with no text of its own (w:permStart,
- *   range markers, an empty control). Invisible; saved verbatim in place.
  * - the guard: the content of a control locked against editing
  *   (w:lock contentLocked / sdtContentLocked) refuses changes. The control can
  *   still be deleted whole.
  * - one element stays one element: what is inserted in the middle of a
  *   wrapper goes inside it, a paragraph split inside a content control leaves
- *   the control on the first half, and a pasted copy of a content control or
- *   of a kept element arrives without it, so no w:id is ever written twice.
+ *   the control on the first half, and a pasted copy of a content control
+ *   arrives without it, so no w:id is ever written twice.
+ *
+ * Elements without text (w:permStart, range markers, an empty control) are
+ * not in the editor document: they stay in the bytes of a paragraph nobody
+ * edits and go when it is rewritten, as they always did.
  */
-import { Extension, Mark, Node } from '@tiptap/core'
+import { Extension, Mark } from '@tiptap/core'
 import { Slice, type Node as PmNode } from '@tiptap/pm/model'
-import {
-  Plugin,
-  PluginKey,
-  TextSelection,
-  type EditorState,
-  type Transaction,
-} from '@tiptap/pm/state'
+import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state'
 import { AddMarkStep, RemoveMarkStep, type Step } from '@tiptap/pm/transform'
 import {
   inlineWrapContentLocked,
@@ -35,11 +31,8 @@ import {
 } from '@genoffice/docx-engine'
 import { notifyOdt, recordOdtRefusal } from '../odt-gate'
 import {
-  INLINE_OPAQUE_NODE,
   INLINE_WRAP_MARK,
   contentControlKey,
-  inlineOpaqueDomKey,
-  inlineOpaqueXmlOfDomKey,
   inlineWrapChainAttr,
   inlineWrapChainOf,
   inlineWrapChainOfDomKey,
@@ -73,35 +66,6 @@ export const InlineWrapMark = Mark.create({
       'span',
       { 'data-inline-wrap': inlineWrapDomKey(mark.attrs.chain), class: 'doc-inline-wrap' },
       0,
-    ]
-  },
-})
-
-export const DocInlineOpaque = Node.create({
-  name: INLINE_OPAQUE_NODE,
-  inline: true,
-  group: 'inline',
-  atom: true,
-  selectable: false,
-  addAttributes() {
-    return { xml: { default: '', rendered: false } }
-  },
-  parseHTML() {
-    return [
-      {
-        tag: 'span[data-inline-opaque]',
-        getAttrs: (el) => {
-          const xml = inlineOpaqueXmlOfDomKey(el.getAttribute('data-inline-opaque') ?? '')
-          return xml === undefined ? false : { xml }
-        },
-      },
-    ]
-  },
-  renderHTML({ node }) {
-    // a token, never the bytes, as the wrapper mark does
-    return [
-      'span',
-      { 'data-inline-opaque': inlineOpaqueDomKey(node.attrs.xml), class: 'doc-inline-opaque' },
     ]
   },
 })
@@ -211,7 +175,6 @@ export function lockedControlsIn(doc: PmNode, from: number, to: number): LockedC
     if (!wrap || !sameInlineWrap(wrap, locked)) found.push({ from: pos, text: '', mark })
     wrap = locked
     const control = found[found.length - 1]
-    if (node.type.name === INLINE_OPAQUE_NODE) return false
     control.text =
       node.isText && control.text !== null && mark.eq(control.mark)
         ? control.text + (node.text ?? '')
@@ -291,9 +254,7 @@ interface Arrival {
  *   w:customXml) stay on both halves, where each is written as its own element;
  * - pasted or dropped content that brings a content control the document
  *   still holds (a copy: a cut, or a drag that moves, took the original away
- *   first) arrives as its text, and a kept element the document still holds
- *   does not arrive at all. Content controls are told apart by their w:id,
- *   kept elements by their bytes.
+ *   first) arrives as its text. Content controls are told apart by their w:id.
  */
 function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Transaction | null {
   const doc = state.doc
@@ -329,29 +290,26 @@ function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Tra
   const arrived = arrivals.filter((arrival) => arrival.from < arrival.to)
   if (arrived.length === 0) return null
 
-  // what the document holds, outside what was pasted, of the things a file holds once
-  let held: { controls: Set<string>; elements: Set<string> } | null = null
+  // the content controls the document holds outside what was pasted
+  let held: Set<string> | null = null
   const heldElsewhere = () => {
     if (held) return held
     const pastes = arrived.filter((arrival) => arrival.pasted)
     const controls = new Set<string>()
-    const elements = new Set<string>()
     doc.descendants((node, pos) => {
       if (!node.isInline) return true
       const end = pos + node.nodeSize
       if (pastes.some((paste) => pos >= paste.from && end <= paste.to)) return false
-      if (node.type.name === INLINE_OPAQUE_NODE) elements.add(String(node.attrs.xml))
       for (const wrap of wrapsOf(node)) {
         const key = contentControlKey(wrap)
         if (key !== null) controls.add(key)
       }
       return false
     })
-    return (held = { controls, elements })
+    return (held = controls)
   }
 
   const marks: Array<{ from: number; to: number; chain: readonly InlineWrap[] }> = []
-  const removals: Array<{ from: number; to: number }> = []
   for (const { from, to, cut, pasted } of arrived) {
     const $from = doc.resolve(from)
     const $to = doc.resolve(to)
@@ -369,18 +327,12 @@ function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Tra
       const range = { from: Math.max(pos, from), to: Math.min(pos + node.nodeSize, to) }
       const own = wrapsOf(node)
       let chain: readonly InlineWrap[] = own
-      if (pasted) {
-        if (node.type.name === INLINE_OPAQUE_NODE) {
-          if (heldElsewhere().elements.has(String(node.attrs.xml))) removals.push(range)
-          return false
-        }
-        if (own.some((wrap) => contentControlKey(wrap) !== null)) {
-          const { controls } = heldElsewhere()
-          chain = own.filter((wrap) => {
-            const key = contentControlKey(wrap)
-            return key === null || !controls.has(key)
-          })
-        }
+      if (pasted && own.some((wrap) => contentControlKey(wrap) !== null)) {
+        const controls = heldElsewhere()
+        chain = own.filter((wrap) => {
+          const key = contentControlKey(wrap)
+          return key === null || !controls.has(key)
+        })
       }
       if (oneBlock && around.length > 0) chain = inlineWrapsInside(around, chain)
       if (!sameInlineWrapChain(chain, own)) marks.push({ ...range, chain })
@@ -399,7 +351,7 @@ function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Tra
       pos += node.nodeSize
     }
   }
-  if (marks.length === 0 && removals.length === 0) return null
+  if (marks.length === 0) return null
   // the lock is about what the user changes; this puts back what the edit broke
   const fix = state.tr.setMeta(inlineWrapGuardKey, true)
   // mark steps move no position, so every change applies where it was found
@@ -407,7 +359,6 @@ function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Tra
     if (chain.length === 0) fix.removeMark(from, to, type)
     else fix.addMark(from, to, type.create({ chain: inlineWrapChainAttr(chain) }))
   }
-  for (const { from, to } of removals.sort((a, b) => b.from - a.from)) fix.delete(from, to)
   return fix
 }
 
@@ -463,27 +414,6 @@ export const InlineWrapGuardExtension = Extension.create({
         appendTransaction: (trs, _before, state) => keepWrappersWhole(trs, state),
         // no transformPasted here: its presence is how the paste actions tell
         // the document editor from a text box or header editor (paste-actions.ts)
-        props: {
-          // Backspace / Delete beside an invisible kept element reach the text
-          // behind it: the caret steps over the element, the key then proceeds
-          handleKeyDown(view, event) {
-            if (event.key !== 'Backspace' && event.key !== 'Delete') return false
-            const { selection, doc } = view.state
-            if (!selection.empty) return false
-            const back = event.key === 'Backspace'
-            let pos = selection.from
-            for (;;) {
-              const $pos = doc.resolve(pos)
-              const beside = back ? $pos.nodeBefore : $pos.nodeAfter
-              if (beside?.type.name !== INLINE_OPAQUE_NODE) break
-              pos += back ? -beside.nodeSize : beside.nodeSize
-            }
-            if (pos !== selection.from) {
-              view.dispatch(view.state.tr.setSelection(TextSelection.create(doc, pos)))
-            }
-            return false
-          },
-        },
       }),
     ]
   },

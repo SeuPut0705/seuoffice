@@ -11,15 +11,16 @@ import {
 } from './helpers/inline-wrap'
 
 /**
- * Carrying run-level wrappers and kept elements on the runs must not change
- * what a document reads as. Two guards:
+ * Carrying run-level wrappers on the runs must not change what a document
+ * reads as. Two guards:
  *
  * - a document with none of that structure reads, and rebuilds, to exactly
  *   what is pinned here (the values the engine gave before the runs carried
  *   anything);
- * - a document WITH the structure reads as the same document without it, once
- *   the carried fields are taken off: no text read twice, no paragraph that
- *   was empty turning non-empty, no property child surfacing as content.
+ * - a document WITH wrappers, text-less markers or empty wrappers reads as
+ *   the same document without them, once the wrappers are taken off the
+ *   runs: no text read twice, no paragraph that was empty turning non-empty,
+ *   no property child surfacing as content.
  */
 
 const REV = 'w:author="Ada" w:date="2024-01-01T00:00:00Z"'
@@ -282,7 +283,7 @@ describe('structure the runs carry does not change what a paragraph reads as', (
       'a b',
     ])
     for (const runs of [...bodyRuns, ...cellRuns]) {
-      expect(runs.filter((r) => r.opaqueXml !== undefined || r.wrap)).toEqual([])
+      expect(runs.filter((r) => r.wrap)).toEqual([])
     }
   })
 

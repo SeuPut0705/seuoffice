@@ -16,7 +16,7 @@
  * formatting changed is reported as a deletion of the old run plus an
  * insertion of the new one, which is honest but more verbose than Word.
  */
-import { runCopiedElsewhere, runDraws } from './inline-opaque'
+import { runCopiedElsewhere } from './inline-opaque'
 import { saveDocx, type ParsedDocFull, type SaveBlock } from './patch'
 import type { Block, GeneratedBlock, RevisionInfo, Run } from './types'
 
@@ -170,16 +170,18 @@ export function compareBlocks(
           if (chunk.kind === 'del') {
             summary.deletions++
             runs.push(
-              ...sliceRuns(leftRuns, chunk.left![0], chunk.left![1])
-                .flatMap(foreignRun)
-                .map((r) => ({ ...r, del: info })),
+              ...sliceRuns(leftRuns, chunk.left![0], chunk.left![1]).map((r) => ({
+                ...foreignRun(r),
+                del: info,
+              })),
             )
           } else {
             summary.insertions++
             runs.push(
-              ...sliceRuns(rightRuns, chunk.right![0], chunk.right![1]).map((r) =>
-                runDraws(r) ? { ...emittedRun(r), ins: info } : emittedRun(r),
-              ),
+              ...sliceRuns(rightRuns, chunk.right![0], chunk.right![1]).map((r) => ({
+                ...emittedRun(r),
+                ins: info,
+              })),
             )
           }
         }
@@ -568,17 +570,10 @@ function tokenEqual(a: string, b: string, rules: Rules): boolean {
 function sliceRuns(runs: Run[], start: number, end: number): Run[] {
   const out: Run[] = []
   let pos = 0
-  const length = runs.reduce((n, r) => n + r.text.length, 0)
   for (const run of runs) {
     const runStart = pos
     const runEnd = pos + run.text.length
     pos = runEnd
-    // Zero-width structure belongs to the revised document, once at its
-    // logical offset (the next chunk, except at the paragraph's very end).
-    if (!runDraws(run)) {
-      if (pos >= start && (pos < end || (pos === end && end === length))) out.push(run)
-      continue
-    }
     if (runEnd <= start || runStart >= end) continue
     const from = Math.max(start, runStart)
     const to = Math.min(end, runEnd)
@@ -690,9 +685,7 @@ function originalPassthrough(block: Block): SaveBlock {
 function deletedBlock(block: Block, author: string, date: string, ids: RevisionIds): SaveBlock {
   const revision: RevisionInfo = { author, date, id: ids.take() }
   if (block.runs) {
-    const runs = comparableRuns(block.runs)
-      .flatMap(foreignRun)
-      .map((r) => ({ ...r, del: revision }))
+    const runs = comparableRuns(block.runs).map((r) => ({ ...foreignRun(r), del: revision }))
     return {
       kind: 'generated',
       block: generatedFrom(block, runs),
@@ -764,15 +757,14 @@ function emittedRun(run: Run): Run {
 /**
  * A run of the original document that ends up in the redline: its picture
  * points at a media part the revised package does not have, so the deletion
- * names it instead of carrying it. Its content controls and kept elements
- * (w:permStart...) stay behind too: their ids belong to the other document.
+ * names it instead of carrying it. Its content controls stay behind too:
+ * their ids belong to the other document.
  */
-function foreignRun(run: Run): Run[] {
+function foreignRun(run: Run): Run {
   const own = runCopiedElsewhere(run)
-  if (!own) return []
-  if (!own.image) return [own]
+  if (!own.image) return own
   const { image: _image, ...rest } = own
-  return [{ ...rest, text: '[picture]' }]
+  return { ...rest, text: '[picture]' }
 }
 
 /** drop the drawings, VML pictures and embedded objects of a fragment from the other package */

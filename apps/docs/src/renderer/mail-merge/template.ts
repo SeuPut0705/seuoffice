@@ -150,9 +150,8 @@ export function mergeAllRecords(doc: PmNode, records: readonly MergeRecord[]): P
   records.forEach((record, index) => {
     const merged = substituteContent(blocks, record) ?? []
     merged.forEach((block, blockIndex) => {
-      // a bookmark, a comment anchor, a note reference, a content control or a
-      // kept element (w:permStart...) exists once in the package, so only the
-      // first letter keeps it
+      // a bookmark, a comment anchor, a note reference or a content control
+      // exists once in the package, so only the first letter keeps it
       const copy = index === 0 ? block : withoutUniqueStructure(withoutUniqueAnchors(block))
       if (index === 0 || blockIndex !== 0) {
         content.push(copy)

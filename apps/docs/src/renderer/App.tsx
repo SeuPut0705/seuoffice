@@ -1387,8 +1387,8 @@ export function App() {
                   if (slots) content = fillMissingRunFonts(content, slots, schema)
                 }
               }
-              // tagged as pasted: a copy of a content control or kept element
-              // the document still holds arrives without it (inline-wrap.ts)
+              // tagged as pasted: a copy of a content control the document
+              // still holds arrives without it (inline-wrap.ts)
               view.dispatch(
                 view.state.tr
                   .replaceWith($from.before(1), $from.after(1), content)

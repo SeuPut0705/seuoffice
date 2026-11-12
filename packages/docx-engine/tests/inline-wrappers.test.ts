@@ -4,7 +4,6 @@ import {
   compareDocuments,
   generateParagraphXml,
   mergeBlockTree,
-  mergeRecords,
   parseDocx,
   patchTableCellTexts,
   patchTextboxParas,
@@ -18,10 +17,10 @@ import { buildDocx } from './helpers/build-docx'
 import { HYPERLINK_REL, T, buildWithHeader, count, genCtx, skeleton } from './helpers/inline-wrap'
 
 /**
- * Run-level structure the run model has no field for stays in a paragraph
- * that is rebuilt from the model: wrapper elements around runs (w:sdt,
- * w:smartTag, w:customXml, w:dir, w:bdo) and elements without text
- * (w:permStart / w:permEnd, customXml range markers).
+ * Run-level wrapper elements the run model has no field for (w:sdt,
+ * w:smartTag, w:customXml, w:dir, w:bdo) stay around their runs in a
+ * paragraph that is rebuilt from the model. (Wrappers that hold no run and
+ * text-less markers are not carried: inline-textless-elements.test.ts.)
  */
 
 // written the way a file may write it, not the way a serializer would: single
@@ -53,15 +52,6 @@ const KINDS: Record<string, Kind> = {
   },
   'w:bdo': { open: "<w:bdo w:val='rtl'>", close: '</w:bdo>' },
   'w:dir': { open: '<w:dir w:val="rtl">', close: '</w:dir>' },
-  'w:permStart / w:permEnd': {
-    open: '<w:permStart w:id=\'77\' w:edGrp="everyone"/>',
-    close: '<w:permEnd w:id="77"/>',
-  },
-  'customXml range markers': {
-    open: '<w:customXmlInsRangeStart w:id="3" w:author="A" w:date="2024-01-01T00:00:00Z"/>',
-    close: '<w:customXmlInsRangeEnd w:id="3"/>',
-  },
-  'w:subDoc': { open: '<w:subDoc r:id="rId20"/>', close: '' },
 }
 
 const BOLD = '<w:rPr><w:b/></w:rPr>'
@@ -70,16 +60,12 @@ const around = (kind: Kind) =>
 
 const OTHER = '<w:p><w:r><w:t>Untouched paragraph</w:t></w:r></w:p>'
 
-// a plain control, a smart tag and markers in the generator's own spelling
+// a plain control and a smart tag in the generator's own spelling
 const SDT: Kind = {
   open: '<w:sdt><w:sdtPr><w:tag w:val="t"/><w:id w:val="9"/></w:sdtPr><w:sdtContent>',
   close: '</w:sdtContent></w:sdt>',
 }
 const SMART: Kind = { open: '<w:smartTag w:uri="urn:x" w:element="place">', close: '</w:smartTag>' }
-const PERM: Kind = {
-  open: '<w:permStart w:id="7" w:edGrp="everyone"/>',
-  close: '<w:permEnd w:id="7"/>',
-}
 const REV = 'w:author="Ada" w:date="2024-01-01T00:00:00Z"'
 const LINK = '<w:hyperlink r:id="rId20">'
 const LINK_STYLE = '<w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr>'
@@ -201,14 +187,6 @@ describe('a paragraph rebuilt from the model keeps what the model does not repre
     expect(rebuilt(await runsOf(content))).toBe(`<w:p>${content}</w:p>`)
   })
 
-  it('a control holding no run at all is kept whole, where it was', async () => {
-    const empty =
-      '<w:sdt><w:sdtPr><w:tag w:val="empty"/><w:id w:val="9"/></w:sdtPr><w:sdtContent/></w:sdt>'
-    const noContent = '<w:sdt><w:sdtPr><w:tag w:val="bare"/></w:sdtPr></w:sdt>'
-    const content = `${T('before')}${empty}${T('middle')}${noContent}${T('after')}`
-    expect(rebuilt(await runsOf(content))).toBe(`<w:p>${content}</w:p>`)
-  })
-
   it('a paragraph whose source cannot be sliced still keeps the wrapper (serialized)', async () => {
     // a comment makes tag offsets unreliable: the parse tree stands in
     const body = `<w:p><!-- note -->${T('Meet ')}${SMART.open}${T('Seoul')}${SMART.close}</w:p>`
@@ -217,13 +195,6 @@ describe('a paragraph rebuilt from the model keeps what the model does not repre
     expect(skeleton(rebuilt(para.runs!))).toBe(
       `<w:p>[Meet ]${SMART.open}[Seoul]${SMART.close}</w:p>`,
     )
-  })
-
-  it('proofing marks are dropped (Word recomputes them); the marker between them is not', async () => {
-    const content =
-      `<w:proofErr w:type="spellStart"/>${PERM.open}${T('Seoul')}${PERM.close}` +
-      '<w:proofErr w:type="spellEnd"/>'
-    expect(rebuilt(await runsOf(content))).toBe(`<w:p>${PERM.open}${T('Seoul')}${PERM.close}</w:p>`)
   })
 })
 
@@ -298,10 +269,6 @@ describe('a wrapper goes back at the depth it was read at', () => {
     [
       'control > hyperlink',
       `${T('a ')}${SDT.open}${LINK}${T('site', LINK_STYLE)}</w:hyperlink>${SDT.close}`,
-    ],
-    [
-      'an edit-permission range inside a hyperlink',
-      `${LINK}${T('a', LINK_STYLE)}${PERM.open}${T('b', LINK_STYLE)}${PERM.close}${T('c', LINK_STYLE)}</w:hyperlink>`,
     ],
     [
       'w:ins > control (the control itself was inserted)',
@@ -397,7 +364,7 @@ describe('shapes that are not carried: read and rebuilt as before, their text on
   for (const [name, withIt, withoutIt] of SHAPES) {
     it(name, async () => {
       const runs = await runsOf(withIt)
-      expect(runs.filter((r) => r.wrap || r.opaqueXml !== undefined)).toEqual([])
+      expect(runs.filter((r) => r.wrap)).toEqual([])
       expect(rebuilt(runs)).toBe(rebuilt(await runsOf(withoutIt)))
     })
   }
@@ -522,11 +489,11 @@ describe('runs that leave their paragraph leave the ids of its structure behind'
   const ctl = (id: string, text: string) =>
     `<w:sdt><w:sdtPr><w:id w:val="${id}"/></w:sdtPr><w:sdtContent>${T(text)}</w:sdtContent></w:sdt>`
 
-  it('compare: a control and a permission range of the original document do not come into the redline', async () => {
+  it('compare: a control of the original document does not come into the redline', async () => {
     const kept = `<w:p>${T('Kept paragraph')}</w:p>`
     const original = await parseDocx(
       await buildDocx({
-        bodyXml: `${kept}<w:p>${PERM.open}${T('Removed ')}${PERM.close}${ctl('41', 'with a control')}</w:p>`,
+        bodyXml: `${kept}<w:p>${T('Removed ')}${ctl('41', 'with a control')}</w:p>`,
       }),
     )
     const revised = await parseDocx(await buildDocx({ bodyXml: kept }))
@@ -538,7 +505,6 @@ describe('runs that leave their paragraph leave the ids of its structure behind'
     expect(xml).toContain('Removed ')
     expect(xml).toContain('with a control')
     expect(xml).not.toContain('<w:sdt>')
-    expect(xml).not.toContain('w:permStart')
   })
 
   it("compare: the revised document's own control stays in a paragraph whose text changed", async () => {
@@ -563,10 +529,10 @@ describe('runs that leave their paragraph leave the ids of its structure behind'
   const mergeName: Run = { text: '«Name»', instrField: 'MERGEFIELD Name' }
   const data = { fields: ['Name'], records: [{ Name: 'Ada' }, { Name: 'Grace' }] }
 
-  it("mail merge: the first record keeps the template's control and markers, later copies go without them", async () => {
+  it("mail merge: the first record keeps the template's control, later copies go without it", async () => {
     const doc = await parseDocx(
       await buildDocx({
-        bodyXml: `<w:p>${T('Dear ')}${ctl('41', 'customer')}${PERM.open}${SMART.open}${T(' of Seoul')}${SMART.close}${PERM.close}</w:p>`,
+        bodyXml: `<w:p>${T('Dear ')}${ctl('41', 'customer')}${SMART.open}${T(' of Seoul')}${SMART.close}</w:p>`,
       }),
     )
     const template: Block = { ...doc.blocks[0], runs: [...doc.blocks[0].runs!, mergeName] }
@@ -575,25 +541,8 @@ describe('runs that leave their paragraph leave the ids of its structure behind'
     )
     const control =
       '<w:sdt><w:sdtPr><w:id w:val="41"/></w:sdtPr><w:sdtContent>[customer]</w:sdtContent></w:sdt>'
-    expect(first).toBe(
-      `<w:p>[Dear ]${control}${PERM.open}${SMART.open}[ of Seoul]${SMART.close}${PERM.close}[Ada]</w:p>`,
-    )
-    // the smart tag carries no id: it stays; the control and the range do not
+    expect(first).toBe(`<w:p>[Dear ]${control}${SMART.open}[ of Seoul]${SMART.close}[Ada]</w:p>`)
+    // the smart tag carries no id: it stays; the control does not
     expect(second).toBe(`<w:p>[Dear ][customer]${SMART.open}[ of Seoul]${SMART.close}[Grace]</w:p>`)
-  })
-
-  it('mail merge: a paragraph holding only a control field between kept markers is still consumed', async () => {
-    const doc = await parseDocx(
-      await buildDocx({ bodyXml: `<w:p>${PERM.open}${PERM.close}</w:p><w:p>${T('x')}</w:p>` }),
-    )
-    const [markers, line] = doc.blocks
-    const [start, end] = markers.runs!
-    const template: Block[] = [
-      { ...markers, runs: [start, { text: '', instrField: 'NEXT' }, end] },
-      { ...line, runs: [mergeName] },
-    ]
-    // NEXT moves on to the second record and its paragraph leaves no empty line behind
-    const { blocks } = mergeRecords(template, data)
-    expect(blocks.map((b) => b.runs?.map((r) => r.text).join(''))).toEqual(['Grace'])
   })
 })

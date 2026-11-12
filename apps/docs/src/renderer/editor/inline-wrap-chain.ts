@@ -7,19 +7,15 @@
 import { sameInlineWrap, type InlineWrap, type Run } from '@genoffice/docx-engine'
 
 export const INLINE_WRAP_MARK = 'inlineWrap'
-export const INLINE_OPAQUE_NODE = 'docInlineOpaque'
 
 /**
- * Chains and kept elements that came out of an opened document, by the token
- * they go by in the DOM. Their bytes go into the saved file as they are, so
- * they stay out of the DOM (clipboard, exported HTML), and pasted HTML may only
- * bring back what this renderer has read from a file: anything else pastes as
- * plain text, or not at all.
+ * Chains that came out of an opened document, by the token they go by in the
+ * DOM. Their bytes go into the saved file as they are, so they stay out of the
+ * DOM (clipboard, exported HTML), and pasted HTML may only bring back what
+ * this renderer has read from a file: anything else pastes as plain text.
  */
 const chainsByDomKey = new Map<string, string>()
 const domKeys = new Map<string, string>()
-const opaqueByDomKey = new Map<string, string>()
-const opaqueDomKeys = new Map<string, string>()
 
 /** 64 bits of the text (two rounds of a 32-bit multiplicative hash) */
 function hashKey(text: string): string {
@@ -68,16 +64,6 @@ export function inlineWrapDomKey(attr: unknown): string {
 /** the mark attribute behind a DOM token, when a document this renderer opened produced it */
 export function inlineWrapChainOfDomKey(key: string): string | undefined {
   return chainsByDomKey.get(key)
-}
-
-/** the token a kept element goes by in the DOM; empty for one no document produced */
-export function inlineOpaqueDomKey(xml: unknown): string {
-  return typeof xml === 'string' ? (opaqueDomKeys.get(xml) ?? '') : ''
-}
-
-/** the kept element behind a DOM token, when a document this renderer opened produced it */
-export function inlineOpaqueXmlOfDomKey(key: string): string | undefined {
-  return opaqueByDomKey.get(key)
 }
 
 const isInlineWrap = (value: unknown): value is InlineWrap =>
@@ -152,8 +138,8 @@ export function contentControlKey(wrap: InlineWrap): string | null {
 
 /**
  * A node of the editor's JSON as a copy placed elsewhere holds it: without
- * the content controls around its text and without kept elements, both of
- * which exist once in a file. The wrappers that carry no id stay.
+ * the content controls around its text, which exist once in a file. The
+ * wrappers that carry no id stay.
  */
 export function withoutUniqueStructure<T extends NodeJson & { content?: T[]; marks?: MarkJson[] }>(
   node: T,
@@ -175,11 +161,8 @@ export function withoutUniqueStructure<T extends NodeJson & { content?: T[]; mar
     }
   }
   if (node.content) {
-    const content = node.content
-      .filter((child) => child.type !== INLINE_OPAQUE_NODE)
-      .map(withoutUniqueStructure)
-    if (content.length !== node.content.length || content.some((c, i) => c !== node.content![i]))
-      out = { ...out, content }
+    const content = node.content.map(withoutUniqueStructure)
+    if (content.some((c, i) => c !== node.content![i])) out = { ...out, content }
   }
   return out
 }
@@ -210,68 +193,12 @@ export function readInlineWrapMark(run: Run, mark: MarkJson): boolean {
   return true
 }
 
-/** the editor node of a run that is one kept element; null for any other run */
-export function inlineOpaqueNodeOf(run: Run): NodeJson | null {
-  if (run.opaqueXml === undefined) return null
-  if (!opaqueDomKeys.has(run.opaqueXml)) {
-    const key = hashKey(run.opaqueXml)
-    opaqueDomKeys.set(run.opaqueXml, key)
-    opaqueByDomKey.set(key, run.opaqueXml)
-  }
-  return { type: INLINE_OPAQUE_NODE, attrs: { xml: run.opaqueXml } }
-}
-
-/** the kept element an editor node holds; undefined for any other node */
-export function inlineOpaqueXmlOf(node: NodeJson): string | undefined {
-  return node.type === INLINE_OPAQUE_NODE ? String(node.attrs?.xml ?? '') : undefined
-}
-
-/** the run sits in a wrapper or is a kept element: text beside it never merges into it */
+/** the run sits in a wrapper: text beside it never merges into it */
 export function holdsInlineStructure(run: Run | undefined): boolean {
-  return run !== undefined && (run.opaqueXml !== undefined || (run.wrap?.length ?? 0) > 0)
+  return (run?.wrap?.length ?? 0) > 0
 }
 
-/** what a run carries of this structure, as merge / signature key */
+/** the wrappers a run sits in, as merge / signature key */
 export function inlineStructureKey(run: Run): unknown {
-  if (!holdsInlineStructure(run)) return null
-  return [run.wrap?.map((w) => [w.seq, w.open, w.close]) ?? null, run.opaqueXml ?? null]
-}
-
-// ---- what counts as content ----
-
-/**
- * A kept element draws nothing and takes no room: a paragraph holding only
- * those is an empty paragraph to Word and to the user. These answer "is there
- * anything here" for the editor's nodes and for the run model alike.
- */
-interface InlineHolder {
-  childCount?: number
-  child?: (index: number) => { type: { name: string } }
-}
-
-/** how many children of `node` are anything but kept elements */
-export function drawnChildCount(node: InlineHolder): number {
-  const count = node.childCount ?? 0
-  if (!node.child) return count
-  let drawn = 0
-  for (let i = 0; i < count; i++) if (node.child(i).type.name !== INLINE_OPAQUE_NODE) drawn++
-  return drawn
-}
-
-/** the first child of `node` that is not a kept element */
-export function firstDrawnChild<T extends { type: { name: string } }>(node: {
-  childCount?: number
-  child?: (index: number) => T
-}): T | null {
-  if (!node.child) return null
-  for (let i = 0; i < (node.childCount ?? 0); i++) {
-    const child = node.child(i)
-    if (child.type.name !== INLINE_OPAQUE_NODE) return child
-  }
-  return null
-}
-
-/** true when no run of a paragraph draws anything: it is a blank line, whatever kept elements it holds */
-export function holdsNoDrawnRun(runs: readonly object[]): boolean {
-  return runs.every((run) => 'opaqueXml' in run && run.opaqueXml !== undefined)
+  return run.wrap?.length ? run.wrap.map((w) => [w.seq, w.open, w.close]) : null
 }

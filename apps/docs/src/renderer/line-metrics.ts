@@ -2781,10 +2781,8 @@ export function estimateHfHeight(
       continue
     }
     const indentPx = ((p.indentLeft ?? 0) + (p.indentRight ?? 0)) / 15
-    // a blank line: no run, or only kept elements (w:permStart...) that draw nothing
-    const blank = p.runs.every((r) => 'opaqueXml' in r && r.opaqueXml !== undefined)
     const runs =
-      blank && p.emptyRunSizeHalfPoints
+      p.runs.length === 0 && p.emptyRunSizeHalfPoints
         ? [{ text: '', sizeHalfPoints: p.emptyRunSizeHalfPoints, font: p.emptyRunFontFamily }]
         : p.runs
     const imgH = Math.max(0, ...runs.map((r) => r.image?.heightPx ?? 0))

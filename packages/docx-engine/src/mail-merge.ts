@@ -373,12 +373,10 @@ export interface MergeCursorState {
 }
 
 /** true when every run in the paragraph was consumed by a control field, so the
- *  paragraph itself must not survive into the merged output. An element kept
- *  verbatim (w:permStart...) is not content of the paragraph. */
+ *  paragraph itself must not survive into the merged output */
 function consumedByControlField(runs: readonly Run[] | undefined): boolean {
-  const content = runs?.filter((run) => run.opaqueXml === undefined) ?? []
-  if (content.length === 0) return false
-  return content.every((run) => {
+  if (!runs || runs.length === 0) return false
+  return runs.every((run) => {
     if (!run.instrField) return false
     const [keyword] = splitInstruction(run.instrField)
     return keyword === 'NEXT' || keyword === 'SKIPIF'
@@ -503,7 +501,7 @@ function mergeTable(
  *
  * The first set is the template itself with its fields filled in. Every later
  * set is one more copy of the same paragraphs, so it goes without the content
- * controls and kept elements whose ids belong to the first (runCopiedElsewhere).
+ * controls whose ids belong to the first (runCopiedElsewhere).
  */
 export function mergeBlockTree(blocks: readonly Block[], data: MergeData): Block[][] {
   const out: Block[][] = []
@@ -520,8 +518,7 @@ export function mergeBlockTree(blocks: readonly Block[], data: MergeData): Block
 
 /** a merged block as a copy after the first: see mergeBlockTree */
 function laterCopy(block: Block): Block {
-  const strip = (runs: readonly Run[]): Run[] =>
-    runs.flatMap((run) => runCopiedElsewhere(run) ?? [])
+  const strip = (runs: readonly Run[]): Run[] => runs.map(runCopiedElsewhere)
   // the report of the controls read from the template no longer describes the copy
   const { inlineContentControls: _controls, ...copy } = block
   if (copy.runs) copy.runs = strip(copy.runs)

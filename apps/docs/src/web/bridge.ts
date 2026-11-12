@@ -130,8 +130,8 @@ const saveDocxToHost: DesktopApi['saveDocx'] = async (path, data) => {
  */
 async function joinDocsCollab(doc: WebDocument): Promise<void> {
   const page = await joinPageCollab<DocsCollabHandles, DocsOp>({
-    // 3: run-level wrappers and kept elements ride in the document (the `inlineWrap`
-    // mark, `docInlineOpaque`), so the same file opens as another document than under 2
+    // 3: run-level wrappers ride in the document (the `inlineWrap` mark), so
+    // the same file opens as another document than under 2
     format: { name: 'docx', schema: 3 },
     status: onSessionStatus,
     fileName: doc.fileName,

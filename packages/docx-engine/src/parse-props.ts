@@ -999,8 +999,7 @@ function sameStyle(a: Run, b: Run): boolean {
   if (a.refField !== undefined || b.refField !== undefined) return false
   if (a.instrField !== undefined || b.instrField !== undefined) return false
   if (a.sdtCheckboxXml !== undefined || b.sdtCheckboxXml !== undefined) return false
-  // an element kept verbatim never merges; runs of different wrapper elements stay apart
-  if (a.opaqueXml !== undefined || b.opaqueXml !== undefined) return false
+  // runs of different wrapper elements stay apart
   if (!sameInlineWrapChain(a.wrap, b.wrap)) return false
   if (a.math || b.math) return false
   if (a.sym || b.sym) return false

@@ -25,7 +25,6 @@ import { rangeSlot } from '../dom-range'
 import { PHASED_CONTENT_SETTLED_EVENT, isPhasedContentPending } from '../phased-content'
 import { appendsAtEnd, touchedTopLevelBlocks } from './touched-blocks'
 import { blockDecorationPlugin } from './local-edit'
-import { INLINE_OPAQUE_NODE } from './inline-wrap-chain'
 
 const alignRange = rangeSlot()
 
@@ -1211,22 +1210,16 @@ const paraMarkDelPluginKey = new PluginKey('paraMarkDel')
 export function paraDeletionClass(node: {
   attrs?: Record<string, unknown>
   childCount: number
-  forEach: (
-    f: (child: { type?: { name: string }; marks: readonly { type: { name: string } }[] }) => void,
-  ) => void
+  forEach: (f: (child: { marks: readonly { type: { name: string } }[] }) => void) => void
 }): string | null {
   let visible = false
-  let drawn = 0
   node.forEach((child) => {
-    // a kept element (w:permStart...) draws nothing: it is neither live content nor content at all
-    if (child.type?.name === INLINE_OPAQUE_NODE) return
-    drawn++
     if (!child.marks.some((m) => m.type.name === 'del')) visible = true
   })
   if (node.attrs?.paraMarkDel) {
     return visible ? 'doc-para-mark-del' : 'doc-para-mark-del doc-para-del-collapse'
   }
-  return !visible && drawn > 0 ? 'doc-para-content-del' : null
+  return !visible && node.childCount > 0 ? 'doc-para-content-del' : null
 }
 
 export const ParaMarkDelExtension = Extension.create({

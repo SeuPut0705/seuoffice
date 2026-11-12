@@ -67,8 +67,6 @@ import { charScaleXAttr, parseGlowAttr, parseTextEffectAttr } from './text-effec
 import { SHAPE_INLINE_WRAP, shapeWrapOf } from './floating-z-order'
 import {
   holdsInlineStructure,
-  inlineOpaqueNodeOf,
-  inlineOpaqueXmlOf,
   inlineStructureKey,
   inlineWrapMarkOf,
   readInlineWrapMark,
@@ -1551,11 +1549,6 @@ export function runsToInline(runs: Run[]): PmNode[] {
   for (const run of runs) {
     const marks = runMarks(run)
     const atomMarks = marks.length > 0 ? { marks } : {}
-    const opaque = inlineOpaqueNodeOf(run)
-    if (opaque) {
-      nodes.push({ ...opaque, ...atomMarks })
-      continue
-    }
     if (run.math) {
       nodes.push({
         type: 'docInlineMath',
@@ -3577,11 +3570,6 @@ export function inlineToRuns(content: PmNode[]): Run[] {
       runs.push({ ...atomBase(node), text: '', xeTerm: String(node.attrs?.term ?? '') })
       continue
     }
-    const opaqueXml = inlineOpaqueXmlOf(node)
-    if (opaqueXml !== undefined) {
-      if (opaqueXml) runs.push({ ...atomBase(node), text: '', opaqueXml })
-      continue
-    }
     if (node.type === 'docInlineMath') {
       const omml = String(node.attrs?.omml ?? '')
       if (omml)
@@ -3782,8 +3770,6 @@ function mergeRuns(runs: Run[]): Run[] {
     // reference markers / index entries / inline math / fields are atomic and
     // never merge — two identical FORMCHECKBOX runs must stay two fields
     const atomic =
-      run.opaqueXml !== undefined ||
-      prev?.opaqueXml !== undefined ||
       run.noteRef ||
       run.xeTerm !== undefined ||
       run.instrField !== undefined ||

@@ -16,7 +16,6 @@
 import { Extension } from '@tiptap/core'
 import type { Mark, Node as PmNode } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
-import { drawnChildCount } from './inline-wrap-chain'
 
 /// Only pending FORMATTING survives; structural/annotation marks (comments,
 /// links, revisions) must never re-materialize from a caret memory.
@@ -127,8 +126,7 @@ export const CaretMarksMemory = Extension.create({
           if (!selection.empty) return null
           const $from = selection.$from
           const block = $from.parent
-          // empty as the user sees it: kept elements (w:permStart...) draw nothing
-          if (!block.isTextblock || drawnChildCount(block) > 0) return null
+          if (!block.isTextblock || block.content.size > 0) return null
           if (!('caretMarks' in block.attrs)) return null
           const blockPos = $from.before($from.depth)
           if (storedMarks !== null) {

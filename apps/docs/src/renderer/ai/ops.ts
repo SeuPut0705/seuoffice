@@ -7,7 +7,7 @@ import { isEastAsianFontName } from '../font-list'
 import { t } from '../i18n/locale'
 import { planReplacement, type TextEdit } from '../editor/find'
 import { lockedControlRefuses } from '../editor/inline-wrap'
-import { INLINE_OPAQUE_NODE, INLINE_WRAP_MARK } from '../editor/inline-wrap-chain'
+import { INLINE_WRAP_MARK } from '../editor/inline-wrap-chain'
 import { blockRangePositions, isTrackedDeleted, liveText } from './doc-utils'
 import { styleOpDefs, type AiStyleAccess } from './style-ops'
 import { fieldOpDefs } from './field-ops'
@@ -859,15 +859,13 @@ interface SearchRun {
 /**
  * The text of `block` as a search reads it. A phrase is looked for inside one
  * formatting run, as it always was; but a run-level wrapper (the `inlineWrap`
- * mark: a content control, a smart tag) is not formatting, and a kept element
- * (w:permStart...) is invisible, so neither ends a stretch: "in Paris" is
- * found whether or not "Paris" is a smart tag.
+ * mark: a content control, a smart tag) is not formatting, so it does not end
+ * a stretch: "in Paris" is found whether or not "Paris" is a smart tag.
  */
 function searchRuns(block: PmDocNode, contentFrom: number): SearchRun[] {
   const runs: SearchRun[] = []
   let formatting: PmDocNode['marks'] | null = null
   block.forEach((child, offset) => {
-    if (child.type.name === INLINE_OPAQUE_NODE) return
     if (!child.isText || !child.text) {
       formatting = null
       return

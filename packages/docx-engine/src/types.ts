@@ -194,8 +194,13 @@ export interface Run {
   /**
    * Run-level wrapper elements around this run that the model has no field for
    * (w:sdt content controls, w:smartTag, w:customXml, w:dir, w:bdo), outermost
-   * first. A rebuilt paragraph writes adjacent runs that share a wrapper back
-   * inside one element, with the bytes it was read with. A content control is
+   * first. Only a wrapper that holds a run is carried; one that holds none,
+   * and the text-less markers of a paragraph (w:permStart, the customXml
+   * range markers, w:subDoc), are not in the model: they stay in a paragraph
+   * that is not rebuilt and are not written into one that is.
+   *
+   * A rebuilt paragraph writes adjacent runs that share a wrapper back inside
+   * one element, with the bytes it was read with. A content control is
    * written once per paragraph: a later group that is not adjacent to the
    * first goes back as plain runs. At save a control written from here is
    * the only kind that gives way when its w:id is already taken in the part
@@ -206,14 +211,6 @@ export interface Run {
    * the same before it writes one.
    */
   wrap?: InlineWrap[]
-  /**
-   * The run is one text-less element the model does not represent
-   * (w:permStart / w:permEnd, customXml range markers, w:subDoc, a wrapper
-   * holding no run at all). `text` is empty; the element is written verbatim
-   * at this position when it passes the same check as a wrapper, else it is
-   * left out. On a run that holds text the text is written, not the element.
-   */
-  opaqueXml?: string
   /**
    * Run-level formatting revision (w:rPrChange): records the review info, the modeled
    * subset of the pre-revision formatting (drives the on-screen reject preview) and the
@@ -440,8 +437,9 @@ export interface InlineContentControl {
 /**
  * One run-level wrapper element kept around the runs it holds. Its bytes are
  * tags and white space only: one allowed wrapper element with its property
- * elements, split where the runs go, using no prefix the part root does not
- * declare. Bytes that are anything else are not carried and not written.
+ * elements, split where the runs go, at most 64 KiB (`open` and `close`
+ * together), using no prefix the part root does not declare. Bytes that are
+ * anything else are not carried and not written.
  */
 export interface InlineWrap {
   /** ordinal of the wrapper element inside its paragraph: runs sharing it sat in the same element */

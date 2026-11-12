@@ -31,6 +31,7 @@ import {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
+import { HF_ROOT_ATTRS, hfKeptRoot, hfWrapNamespaces } from './hf-root'
 import { partNamespaces } from './inline-opaque'
 import { resolveRelationshipTargetPath } from './parse-package'
 import { applyRemoveParts, planRemoveParts, type RemovePartsOptions } from './remove-parts'
@@ -102,7 +103,6 @@ import {
   type StyleUpsert,
 } from './style-upsert'
 import {
-  WATERMARK_NS,
   isPictureWatermark,
   isWatermarkChild,
   pictureWatermarkParagraphXml,
@@ -2527,13 +2527,6 @@ function patchWatermarkInPart(originalXml: string, watermarkXml: string): string
   return `${prefix}${rootOpen}${watermarkXml}${kept.map((c) => c.xml).join('')}</w:hdr>`
 }
 
-/** what the root of a header/footer part written anew declares */
-const HF_ROOT_ATTRS =
-  ' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"' +
-  ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"' +
-  WATERMARK_NS
-const HF_ROOT_NAMESPACES = partNamespaces(`<w:hdr${HF_ROOT_ATTRS}>`)
-
 /** the part's bytes with the editor's accept / reject decisions replayed (the regeneration basis) */
 function hfOriginalXml(hf: HeaderFooter, originalXml: string | null): string | null {
   if (!originalXml || !hf.revisionsResolved?.length) return originalXml
@@ -2548,11 +2541,14 @@ function headerFooterPartXml(
   originalXml: string | null = null,
   pageCount = 1,
 ): string {
+  const root = kind === 'header' ? 'w:hdr' : 'w:ftr'
+  // Which root the part ends up under is known before its runs are written:
+  // a wrapper is written only when that root declares the prefixes it uses.
+  const kept = originalXml ? hfKeptRoot(root, originalXml) : null
   const controls = new ContentControlPart(
     originalXml ?? '',
-    originalXml ? partNamespaces(originalXml) : HF_ROOT_NAMESPACES,
+    hfWrapNamespaces(originalXml, kept !== null),
   )
-  const root = kind === 'header' ? 'w:hdr' : 'w:ftr'
   const textRun = (t: string) =>
     t ? `<w:r><w:t xml:space="preserve">${escapeXmlText(t)}</w:t></w:r>` : ''
   const pageField =
@@ -2605,7 +2601,6 @@ function headerFooterPartXml(
       const field = (fieldXml: string, host: Run, logicalText: string) => {
         if (grouped) {
           // Keep the logical field mark for the control's changed-text test.
-          // Trusted generated fields are not untrusted Run.opaqueXml bytes.
           const piece = { ...host, text: logicalText }
           fragments.set(piece, fieldXml)
           held.push(piece)
@@ -2711,86 +2706,63 @@ function headerFooterPartXml(
   // model) keep their original bytes; only the set of text paragraphs is replaced as a
   // whole at the position of the first text paragraph. The watermark child is kept
   // verbatim unless watermarkXml replaces or drops it.
-  if (originalXml) {
-    const open = new RegExp(`<${root}[^>]*>`).exec(originalXml)?.[0]
-    const closeIdx = originalXml.lastIndexOf(`</${root}>`)
-    if (open && closeIdx >= 0) {
-      const openIdx = originalXml.indexOf(open)
-      const children = splitXmlChildren(originalXml.slice(openIdx + open.length, closeIdx))
-      // a text paragraph whose pictures are all inline blips is fully modelled
-      // (the parser keeps them on its runs), so it is regenerated like any text
-      const isModelledPictures = (xml: string) =>
-        /<w:t[\s>]/.test(xml) &&
-        !/<w:pict[\s>]|<w:object[\s>]|<wp:anchor[\s>]/.test(xml) &&
-        (xml.match(/<w:drawing[\s>][\s\S]*?<\/w:drawing>/g) ?? []).every(
-          (d) => d.includes('<wp:inline') && d.includes('<a:blip'),
-        )
-      const isProtectedPara = (xml: string) =>
-        /<w:drawing[\s>]|<w:pict[\s>]|<w:object[\s>]/.test(xml) && !isModelledPictures(xml)
-      const isTextPara = (c: { name: string; xml: string }) =>
-        c.name === 'w:p' && !isWatermarkChild(c) && !isProtectedPara(c.xml)
-      if (children.some((c) => !isTextPara(c))) {
-        const parts: string[] = []
-        let injected = false
-        // tables are numbered the way the parser walks them (through w:sdt wrappers)
-        let tblIndex = 0
-        const patchTable = (xml: string): string => {
-          const grid = cellPatches(tblIndex++)
-          return grid ? patchTableCellTexts(xml, grid, controls) : xml
+  if (kept) {
+    const { open, children, isTextPara } = kept
+    const parts: string[] = []
+    let injected = false
+    // tables are numbered the way the parser walks them (through w:sdt wrappers)
+    let tblIndex = 0
+    const patchTable = (xml: string): string => {
+      const grid = cellPatches(tblIndex++)
+      return grid ? patchTableCellTexts(xml, grid, controls) : xml
+    }
+    const openOf = (xml: string) => /^<[^>]*>/.exec(xml)?.[0] ?? ''
+    const closeOf = (xml: string) => /<\/[^>]*>$/.exec(xml)?.[0] ?? ''
+    const rewrap = (xml: string, children: string[]) =>
+      `${openOf(xml)}${children.join('')}${closeOf(xml)}`
+    const innerXml = (xml: string) =>
+      xml.slice(openOf(xml).length, xml.length - closeOf(xml).length)
+    const patchSdt = (sdtXml: string): string =>
+      rewrap(
+        sdtXml,
+        splitXmlChildren(innerXml(sdtXml)).map((inner) =>
+          inner.name !== 'w:sdtContent'
+            ? inner.xml
+            : rewrap(
+                inner.xml,
+                splitXmlChildren(innerXml(inner.xml)).map((c) =>
+                  c.name === 'w:tbl'
+                    ? patchTable(c.xml)
+                    : c.name === 'w:sdt'
+                      ? patchSdt(c.xml)
+                      : c.xml,
+                ),
+              ),
+        ),
+      )
+    for (const c of children) {
+      if (isTextPara(c)) {
+        if (!injected) {
+          parts.push(body)
+          injected = true
         }
-        const openOf = (xml: string) => /^<[^>]*>/.exec(xml)?.[0] ?? ''
-        const closeOf = (xml: string) => /<\/[^>]*>$/.exec(xml)?.[0] ?? ''
-        const rewrap = (xml: string, children: string[]) =>
-          `${openOf(xml)}${children.join('')}${closeOf(xml)}`
-        const innerXml = (xml: string) =>
-          xml.slice(openOf(xml).length, xml.length - closeOf(xml).length)
-        const patchSdt = (sdtXml: string): string =>
-          rewrap(
-            sdtXml,
-            splitXmlChildren(innerXml(sdtXml)).map((inner) =>
-              inner.name !== 'w:sdtContent'
-                ? inner.xml
-                : rewrap(
-                    inner.xml,
-                    splitXmlChildren(innerXml(inner.xml)).map((c) =>
-                      c.name === 'w:tbl'
-                        ? patchTable(c.xml)
-                        : c.name === 'w:sdt'
-                          ? patchSdt(c.xml)
-                          : c.xml,
-                    ),
-                  ),
-            ),
-          )
-        for (const c of children) {
-          if (isTextPara(c)) {
-            if (!injected) {
-              parts.push(body)
-              injected = true
-            }
-          } else if (isWatermarkChild(c) && watermarkXml !== undefined) {
-            // superseded by the watermark in body (or removed)
-          } else if (c.name === 'w:tbl') {
-            parts.push(patchTable(c.xml))
-          } else if (c.name === 'w:sdt') {
-            parts.push(patchSdt(c.xml))
-          } else {
-            parts.push(c.xml)
-          }
-        }
-        if (!injected) parts.unshift(body)
-        const rootOpen = watermarkXml ? withWatermarkNs(open) : open
-        return controls.finish(
-          `${originalXml.slice(0, openIdx)}${rootOpen}${parts.join('')}</${root}>`,
-        )
+      } else if (isWatermarkChild(c) && watermarkXml !== undefined) {
+        // superseded by the watermark in body (or removed)
+      } else if (c.name === 'w:tbl') {
+        parts.push(patchTable(c.xml))
+      } else if (c.name === 'w:sdt') {
+        parts.push(patchSdt(c.xml))
+      } else {
+        parts.push(c.xml)
       }
     }
+    if (!injected) parts.unshift(body)
+    const rootOpen = watermarkXml ? withWatermarkNs(open) : open
+    return controls.finish(`${kept.before}${rootOpen}${parts.join('')}</${root}>`)
   }
-  // a root written anew declares what the bytes carried on runs were written with
   return controls.finish(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      `<${root}${HF_ROOT_ATTRS}${controls.rootDeclarations(HF_ROOT_NAMESPACES)}>` +
-      `${body}</${root}>`,
+      `<${root}${HF_ROOT_ATTRS}>${body}</${root}>`,
   )
 }
 

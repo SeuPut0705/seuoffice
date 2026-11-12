@@ -220,8 +220,7 @@ import {
   UnderlineMark,
 } from './marks'
 import { DocRedaction } from './redaction'
-import { DocInlineOpaque, InlineWrapGuardExtension, InlineWrapMark } from './inline-wrap'
-import { INLINE_OPAQUE_NODE, drawnChildCount, firstDrawnChild } from './inline-wrap-chain'
+import { InlineWrapGuardExtension, InlineWrapMark } from './inline-wrap'
 import {
   DropCapExtension,
   EaHintQuotesExtension,
@@ -365,18 +364,15 @@ const anchorAttrs = {
 function isSpaceOnlyParagraph(node: {
   textContent?: string
   childCount?: number
-  child?: PmNode['child']
   descendants?: PmNode['descendants']
 }): boolean {
-  if (!drawnChildCount(node) || !node.descendants || !SPACE_ONLY_RE.test(node.textContent ?? ''))
+  if (!node.childCount || !node.descendants || !SPACE_ONLY_RE.test(node.textContent ?? ''))
     return false
   let textOnly = true
   node.descendants((child) => {
     const pageOrColBreak =
       child.type.name === 'hardBreak' && !!(child.attrs.pageBreak || child.attrs.colBreak)
-    // a kept element (w:permStart...) draws nothing: the spaces are still all there is
-    const drawsNothing = child.type.name === INLINE_OPAQUE_NODE
-    if (!child.isText && !pageOrColBreak && !drawsNothing) textOnly = false
+    if (!child.isText && !pageOrColBreak) textOnly = false
     return false
   })
   return textOnly
@@ -852,7 +848,6 @@ function isPictureOnlyContent(node: {
   if (!node.descendants) return false
   let ok = true
   node.descendants((child) => {
-    if (child.type.name === INLINE_OPAQUE_NODE) return false
     if (child.type.name !== 'docInlineImage' || child.attrs.wrap || child.attrs.rule) ok = false
     return false
   })
@@ -864,7 +859,6 @@ function blockAttrs(
     attrs: Record<string, unknown>
     textContent?: string
     childCount?: number
-    child?: PmNode['child']
     firstChild?: PmNode | null
     descendants?: PmNode['descendants']
   },
@@ -893,14 +887,11 @@ function blockAttrs(
   // in-line pictures and nothing else: Word sizes the line to the picture
   // extent, no strut or descent under it (probe 2026-10-13: a 19.5pt icon in a
   // tcMar 40 cell makes a 23.52pt row; a text run beside it adds its descent)
-  // kept elements (w:permStart, an empty control) draw nothing: a paragraph
-  // holding only those, or those beside its pictures, is laid out without them
-  const drawn = drawnChildCount(node)
-  const picOnly = !node.textContent && drawn > 0 && isPictureOnlyContent(node)
+  const picOnly = !node.textContent && (node.childCount ?? 0) > 0 && isPictureOnlyContent(node)
   if (picOnly) classes.push('doc-p-pic')
   // a column break leading a paragraph with text has no line of its own: Word
   // opens the next column with the first text line (CSS hides the break)
-  const lead = firstDrawnChild(node)
+  const lead = node.firstChild
   if (lead?.type.name === 'hardBreak' && lead.attrs.colBreak && node.textContent)
     classes.push('doc-lead-col-br')
   if (node.attrs.pageBreakBefore) {
@@ -968,7 +959,7 @@ function blockAttrs(
         ...fontBoxCss(chain),
       )
       if (isCjkFontName(fam)) styles.push('--doc-lead-gap:0px')
-    } else if (!drawn || spaceOnly) {
+    } else if (!node.childCount || spaceOnly) {
       // a mark without its own w:rFonts lays the line with the inherited ascii
       // face (Word probe 2026-09-05), not the document's CJK root factor
       styles.push('--doc-line-factor:var(--doc-line-factor-latin,1.2)')
@@ -1629,7 +1620,7 @@ export const HeadingEnterNextStyle = Extension.create({
         if (
           !empty ||
           parent.type.name !== 'docHeading' ||
-          drawnChildCount(parent) === 0 ||
+          parent.content.size === 0 ||
           $from.parentOffset !== parent.content.size ||
           parent.attrs.styleId == null
         )
@@ -1699,19 +1690,12 @@ export const EnterReplacesSelection = Extension.create({
           const prev = this.editor.state.doc.resolve(boundary).nodeBefore
           const restoreOn = (pos: number, node: PmNode, extras: Record<string, unknown>) => {
             const restore =
-              paraFormat && drawnChildCount(node) === 0 && paraFormatIsDefault(node)
-                ? paraFormat
-                : null
+              paraFormat && node.content.size === 0 && paraFormatIsDefault(node) ? paraFormat : null
             if (!restore && Object.keys(extras).length === 0) return
             tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...restore, ...extras })
             changed = true
           }
-          if (
-            prev &&
-            prev.isTextblock &&
-            drawnChildCount(prev) === 0 &&
-            'caretMarks' in prev.attrs
-          ) {
+          if (prev && prev.isTextblock && prev.content.size === 0 && 'caretMarks' in prev.attrs) {
             restoreOn(
               boundary - prev.nodeSize,
               prev,
@@ -1770,7 +1754,7 @@ export const WordEditorShortcuts = Extension.create({
         const parent = $from.parent
         if (!parent.isTextblock || parent.attrs.pageBreakBefore !== true) return false
         // empty block / list item: lift-out and list splits have their own semantics
-        if (drawnChildCount(parent) === 0 || parent.type.name === 'docListItem') return false
+        if (parent.content.size === 0 || parent.type.name === 'docListItem') return false
         const atStart = $from.parentOffset === 0
         return this.editor
           .chain()
@@ -1992,8 +1976,7 @@ export const DocListItem = Node.create({
           if (!empty) return false
           const node = $from.parent
           if (node.type.name !== 'docListItem') return false
-          // empty as Word sees it: kept elements (w:permStart...) are not content
-          if (drawnChildCount(node) === 0) {
+          if (node.content.size === 0) {
             // Word: an empty nested item climbs one level per Enter; at the top
             // level it becomes a Normal paragraph with no indent
             const ilvl = Number(node.attrs.ilvl) || 0
@@ -6885,7 +6868,7 @@ export const TextboxParagraph = Node.create({
     const marker = node.attrs.listMarker as TextboxListMarker | null
     const classes = ['doc-textbox-para']
     // an empty list paragraph keeps its line box: Word still shows the marker
-    if (drawnChildCount(node) === 0 && !marker) classes.push('doc-textbox-para-empty')
+    if (node.content.size === 0 && !marker) classes.push('doc-textbox-para-empty')
     if ((lineRule === 'exact' && lineRawTwips) || lineRule === 'atLeast')
       classes.push('doc-lh-fixed')
     if (node.attrs.snapToGrid === false) classes.push('doc-nosnap')
@@ -7053,9 +7036,8 @@ export const textboxSubExtensions = [
   // inline pictures inside textbox paragraphs (form checkboxes): without the
   // node the sub-editor drops them on load and the first commit loses them
   DocInlineImage,
-  // run-level wrappers and kept elements ride on the runs here too, or a
-  // commit of the box would write the paragraph back without them
-  DocInlineOpaque,
+  // run-level wrappers (a content control, a smart tag) ride on the runs here
+  // too, or a commit of the box would write the paragraph back without them
   InlineWrapGuardExtension,
   InlineWrapMark,
   BoldMark,
@@ -7142,7 +7124,6 @@ export const editorExtensions = [
   DocHardBreak,
   DocNoteRef,
   DocXeMark,
-  DocInlineOpaque,
   DocRuby,
   DocInlineImage,
   DocInlineMath,

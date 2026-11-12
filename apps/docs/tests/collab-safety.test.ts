@@ -512,7 +512,7 @@ describe('what the app itself makes', () => {
   }, 300_000)
 })
 
-describe('run-level wrappers and kept elements while co-editing', () => {
+describe('run-level wrappers while co-editing', () => {
   const run = (text: string) => `<w:r><w:t xml:space="preserve">${text}</w:t></w:r>`
   const control = (lock: string) =>
     `<w:sdt><w:sdtPr><w:alias w:val='Due; "date"'/><w:id w:val="5"/>${lock}</w:sdtPr>` +
@@ -520,9 +520,8 @@ describe('run-level wrappers and kept elements while co-editing', () => {
   const SMART =
     '<w:smartTag w:uri="urn:schemas-microsoft-com:office:smarttags" w:element="place">' +
     `${run('Paris')}</w:smartTag>`
-  const PERM = `<w:permStart w:id="7" w:edGrp="everyone"/>${run('open')}<w:permEnd w:id="7"/>`
   const body = (lock = '') =>
-    `<w:p>${run('Due on ')}${control(lock)}${run(' in ')}${SMART}${run(' ')}${PERM}</w:p>`
+    `<w:p>${run('Due on ')}${control(lock)}${run(' in ')}${SMART}${run(' open')}</w:p>`
   const opened = async (lock = '') =>
     blocksToPmDoc((await parseDocx(await buildDocx({ bodyXml: body(lock) }))).blocks)
 
@@ -559,19 +558,18 @@ describe('run-level wrappers and kept elements while co-editing', () => {
     const chain = JSON.stringify([
       { seq: 9, open: `<w:smartTag w:element="x">${HOSTILE_MARKUP}`, close: '</w:smartTag>' },
     ])
-    const nodes: Json[] = [
-      { type: 'text', text: 'forged', marks: [{ type: 'inlineWrap', attrs: { chain } }] },
-      { type: 'docInlineOpaque', attrs: { xml: HOSTILE_MARKUP } },
-    ]
+    const forged: Json = {
+      type: 'text',
+      text: 'forged',
+      marks: [{ type: 'inlineWrap', attrs: { chain } }],
+    }
     const end = bob.editor.state.doc.content.size - 1
     const step = new Transform(bob.editor.state.doc).insert(
       end,
-      nodes.map((json) => bob.editor.schema.nodeFromJSON(json)),
+      bob.editor.schema.nodeFromJSON(forged),
     ).steps[0]
     receive(bob, { kind: 'steps', steps: [step.toJSON() as Json] })
-    const text = bob.editor.state.doc.lastChild!.child(
-      bob.editor.state.doc.lastChild!.childCount - 2,
-    )
+    const text = bob.editor.state.doc.lastChild!.lastChild!
     expect(text.marks.find((mark) => mark.type.name === 'inlineWrap')?.attrs.chain).toBe(chain)
     expect(threats(bob.editor)).toEqual([])
     const html = bob.editor.view.dom.innerHTML

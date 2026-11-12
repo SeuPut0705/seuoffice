@@ -1,19 +1,9 @@
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
-import {
-  compareDocuments,
-  generateParagraphXml,
-  parseDocx,
-  saveDocx,
-  type Run,
-  type SaveBlock,
-} from '../src/index'
+import { generateParagraphXml, parseDocx, saveDocx, type Run, type SaveBlock } from '../src/index'
 import { buildDocx } from './helpers/build-docx'
 import { buildWithHeader, count, genCtx, HYPERLINK_REL, T } from './helpers/inline-wrap'
 
-const PS = '<w:permStart w:id="7" w:edGrp="everyone"/>'
-const PE = '<w:permEnd w:id="7"/>'
-const REF = '<w:r><w:commentReference w:id="0"/></w:r>'
 const PR =
   '<w:sdtPr><w:id w:val="5"/><w:dataBinding w:xpath="/a" w:storeItemID="{X}"/><w:showingPlcHdr/></w:sdtPr>'
 const control = (inner: string) => `<w:sdt>${PR}<w:sdtContent>${inner}</w:sdtContent></w:sdt>`
@@ -27,81 +17,6 @@ const original = (doc: Awaited<ReturnType<typeof parseDocx>>): SaveBlock[] =>
 async function runsOf(inner: string): Promise<Run[]> {
   return (await parseDocx(await buildDocx({ bodyXml: `<w:p>${inner}</w:p>` }))).blocks[0].runs!
 }
-const COMMENTS =
-  '<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0" w:author="A"><w:p><w:r><w:t>note</w:t></w:r></w:p></w:comment></w:comments>'
-
-describe('text-less inline elements do not become neighbouring text', () => {
-  it.each([
-    [T('noted') + PE + REF, 'noted'],
-    [REF + PS + T('noted'), 'noted'],
-    [T('noted') + control('') + REF, 'noted'],
-    [REF + control('') + T('noted'), 'noted'],
-  ])('a reference-only comment keeps its text anchor: %s', async (inner, expected) => {
-    const doc = await parseDocx(
-      await buildDocx({
-        bodyXml: `<w:p>${inner}</w:p>`,
-        extraRels:
-          '<Relationship Id="rId60" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>',
-        extraParts: [
-          {
-            path: 'word/comments.xml',
-            xml: COMMENTS,
-            contentType:
-              'application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml',
-          },
-        ],
-      }),
-    )
-    expect(
-      doc.blocks[0].runs!.filter((r) => r.commentIds?.includes('0')).map((r) => r.text),
-    ).toEqual([expected])
-    const xml = generated(doc.blocks[0].runs!)
-    expect(xml).toContain(
-      `<w:commentRangeStart w:id="0"/>${T('noted')}<w:commentRangeEnd w:id="0"/>`,
-    )
-  })
-
-  it('a collapsed checkbox never takes its glyph payload from a marker', async () => {
-    const checkbox = `<w:sdt><w:sdtPr><w14:checkbox><w14:checked w14:val="1"/></w14:checkbox></w:sdtPr><w:sdtContent>${PS}</w:sdtContent></w:sdt>`
-    const runs = await runsOf(checkbox)
-    expect(runs.map((r) => r.text).join('')).toBe('☒')
-    const xml = generated(runs)
-    expect(xml).toContain('☒')
-    expect(xml).toContain('<w14:checkbox>')
-    expect(xml).not.toContain('permStart')
-  })
-
-  it('comparison preserves revised zero-width elements once at their text offsets', async () => {
-    const read = async (text: string) =>
-      parseDocx(await buildDocx({ bodyXml: `<w:p>${PS}${T(text)}${PE}${control('')}</w:p>` }))
-    const left = await read('old name')
-    const right = await read('new name')
-    const result = await compareDocuments(left, right)
-    const xml = (await parseDocx(result.bytes)).internal.documentXml
-    expect(count(xml, PS)).toBe(1)
-    expect(count(xml, PE)).toBe(1)
-    expect(count(xml, PR)).toBe(1)
-    expect(xml.indexOf(PS)).toBeLessThan(xml.indexOf('new'))
-    expect(xml.indexOf(PE)).toBeGreaterThan(xml.indexOf('name'))
-  })
-
-  for (const instr of ['PAGE', 'REF bm', 'MERGEFIELD Name']) {
-    it.each([true, false])(
-      `markers inside a folded ${instr} result are not moved (simple=%s)`,
-      async (simple) => {
-        const inner = PS + T('result') + PE
-        const xml = simple
-          ? `<w:fldSimple w:instr="${instr}">${inner}</w:fldSimple>`
-          : field(instr, inner)
-        const plain = simple
-          ? `<w:fldSimple w:instr="${instr}">${T('result')}</w:fldSimple>`
-          : field(instr, T('result'))
-        expect(generated(await runsOf(xml))).toBe(generated(await runsOf(plain)))
-      },
-    )
-  }
-})
-
 describe('header edits outside structure preserve its logical content', () => {
   async function editOutside(inner: string, linked = false): Promise<string> {
     let bytes = await buildWithHeader(`<w:p>${inner}${T(' end')}</w:p>`)
@@ -177,20 +92,5 @@ describe('untrusted inline bytes cannot break a generated paragraph', () => {
     const again = await parseDocx(saved)
     expect(again.blocks[0].runs!.map((r) => r.text).join('')).toBe('kept')
     expect(again.internal.documentXml).toContain(`<w:p>${T('kept')}</w:p>`)
-  })
-  it.each([
-    '</w:p><w:p>',
-    '<w:unknown/>',
-    '<w:permStart/><w:permEnd/>',
-    '<w:permStart><w:r><w:t>hidden</w:t></w:r></w:permStart>',
-    '<w:sdt><w:sdtContent><w:r><w:t>hidden</w:t></w:r></w:sdtContent></w:sdt>',
-  ])('invalid opaque element is omitted, text is kept: %s', (opaqueXml) => {
-    expect(generated([{ text: 'kept', opaqueXml }])).toBe(`<w:p>${T('kept')}</w:p>`)
-  })
-  it('valid bare nested controls and paired markers keep their exact bytes', async () => {
-    const inner = control(control('')) + '<w:permEnd w:id="7"></w:permEnd>'
-    expect(generated(await runsOf(T('a') + inner + T('z')))).toBe(
-      `<w:p>${T('a')}${inner}${T('z')}</w:p>`,
-    )
   })
 })

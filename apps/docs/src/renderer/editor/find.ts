@@ -7,7 +7,7 @@
 import type { Node as PmNode } from '@tiptap/pm/model'
 import type { Transaction } from '@tiptap/pm/state'
 import { lockedControlRefuses } from './inline-wrap'
-import { INLINE_OPAQUE_NODE, INLINE_WRAP_MARK } from './inline-wrap-chain'
+import { INLINE_WRAP_MARK } from './inline-wrap-chain'
 
 export type FindMode = 'literal' | 'wildcard' | 'regex'
 
@@ -388,8 +388,7 @@ function flattenBlock(node: PmNode, pos: number): FlatBlock {
     if (child.isText && child.text) {
       for (let k = 0; k < child.text.length; k++) posAt.push(pos + 1 + offset + k)
       text += child.text
-    } else if (child.type.name !== INLINE_OPAQUE_NODE) {
-      // a kept element (w:permStart...) is invisible: the text on both sides reads on
+    } else {
       posAt.push(pos + 1 + offset)
       text += child.type.name === 'hardBreak' ? BREAK_CHAR : LEAF_CHAR
     }
@@ -574,14 +573,13 @@ export interface TextEdit {
 /**
  * The edits that put `replacement` in place of [from, to) of one textblock.
  *
- * Text that reads continuously can sit in several pieces: a kept element
- * (w:permStart, zero width for a search) stands between them, or a run-level
- * wrapper (a content control, a smart tag) covers only part of it. Replacing
- * the range whole would delete the elements and take the wrapper off its
- * text. So what the old and the new text share at either end stays where it
- * is, the new text goes into the first piece it changes, and the changed part
- * of every later piece is removed: the part of a wrapper the match did not
- * reach keeps the wrapper, and so does a word replaced inside it.
+ * Text that reads continuously can sit in several pieces: a run-level wrapper
+ * (a content control, a smart tag) covers only part of it. Replacing the range
+ * whole would take the wrapper off its text. So what the old and the new text
+ * share at either end stays where it is, the new text goes into the first
+ * piece it changes, and the changed part of every later piece is removed: the
+ * part of a wrapper the match did not reach keeps the wrapper, and so does a
+ * word replaced inside it.
  *
  * One piece, which is every match in a document without such structure, is
  * one edit over the whole range.
@@ -593,25 +591,19 @@ export function planReplacement(
   replacement: string,
 ): TextEdit[] {
   const pieces: Array<{ from: number; to: number; text: string; wrap: unknown }> = []
-  let open = true
   doc.nodesBetween(from, to, (node, pos) => {
     if (!node.isInline) return true
-    if (node.type.name === INLINE_OPAQUE_NODE) {
-      open = true
-      return false
-    }
     const start = Math.max(pos, from)
     const end = Math.min(pos + node.nodeSize, to)
     const text = node.isText ? (node.text ?? '').slice(start - pos, end - pos) : BREAK_CHAR
     const wrap = node.marks.find((mark) => mark.type.name === INLINE_WRAP_MARK)?.attrs.chain ?? ''
     const last = pieces[pieces.length - 1]
-    if (!open && last && last.wrap === wrap) {
+    if (last && last.wrap === wrap) {
       last.to = end
       last.text += text
     } else {
       pieces.push({ from: start, to: end, text, wrap })
     }
-    open = false
     return false
   })
   if (pieces.length <= 1) return [{ from, to, text: replacement, marksAt: from }]

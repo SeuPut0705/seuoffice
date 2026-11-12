@@ -1,7 +1,6 @@
 import { ContentControlPart } from './inline-control-ids'
 import { sdtCheckboxGlyphs, sdtCheckboxIsChecked, syncSdtCheckbox } from './checkbox-control'
 import {
-  inlineOpaquePrefixes,
   inlineWrapKey,
   inlineWrapPrefixes,
   inlineWrapTextOf,
@@ -9,7 +8,6 @@ import {
   placeInlineWraps,
   sameInlineWrap,
   sdtOpenForChangedText,
-  runDraws,
 } from './inline-opaque'
 import type {
   CellMargins,
@@ -3145,59 +3143,36 @@ function runsXml(
 ): string {
   const { allocateRevisionId, fragments, part } = options
   const written = options.written ?? new Set<string>()
-  // The bytes a run carries may come from a co-editing peer: each wrapper and
-  // kept element is checked before it is written, and one that fails goes
-  // without taking the run's text with it. Nothing here may throw on a value
-  // of the wrong type.
+  // The wrappers a run carries may come from a co-editing peer: each is
+  // checked before it is written, and one that fails goes without taking the
+  // run's text with it. Nothing here may throw on a value of the wrong type.
   const givenRuns = runs
-  if (runs.some((r) => r.wrap !== undefined || r.opaqueXml !== undefined)) {
-    const writable = (prefixes: ReadonlySet<string> | null): boolean =>
-      prefixes !== null && (part ? part.takes(prefixes) : true)
+  if (runs.some((r) => r.wrap !== undefined)) {
     const wraps = new Map<unknown, boolean>()
     const wrapOk = (wrap: unknown): wrap is InlineWrap => {
       let ok = wraps.get(wrap)
       if (ok === undefined) {
-        ok = writable(inlineWrapPrefixes(wrap))
+        const prefixes = inlineWrapPrefixes(wrap)
+        ok = prefixes !== null && (part ? part.takes(prefixes) : true)
         wraps.set(wrap, ok)
-      }
-      return ok
-    }
-    const opaques = new Map<unknown, boolean>()
-    const opaqueOk = (xml: unknown): boolean => {
-      let ok = opaques.get(xml)
-      if (ok === undefined) {
-        ok = writable(inlineOpaquePrefixes(xml))
-        opaques.set(xml, ok)
       }
       return ok
     }
     runs = runs.map((run) => {
       const given: unknown = run.wrap
       const wrap = Array.isArray(given) ? given.filter(wrapOk) : []
-      // a kept element is text-less: on a run that holds text, the text is what is written
-      const opaque = run.opaqueXml !== undefined && run.text === '' && opaqueOk(run.opaqueXml)
-      const wrapKept = given === undefined || (Array.isArray(given) && wrap.length === given.length)
-      if (wrapKept && opaque === (run.opaqueXml !== undefined)) return run
-      const { wrap: _wrap, opaqueXml, ...rest } = run
-      return { ...rest, ...(wrap.length > 0 ? { wrap } : {}), ...(opaque ? { opaqueXml } : {}) }
+      if (given === undefined || (Array.isArray(given) && wrap.length === given.length)) return run
+      const { wrap: _wrap, ...rest } = run
+      return wrap.length > 0 ? { ...rest, wrap } : rest
     })
   }
-  const fragment = (index: number, insideLink: boolean): string => {
-    const given = fragments?.get(givenRuns[index])
-    if (given !== undefined) return given
-    const run = runs[index]
-    const xml = runFragmentXml(run, insideLink)
-    // a whole empty control gives way to a taken id like one around runs
-    return part && run.opaqueXml !== undefined && /^<w:sdt[\s/>]/.test(xml)
-      ? part.yielding(xml)
-      : xml
-  }
+  const fragment = (index: number, insideLink: boolean): string =>
+    fragments?.get(givenRuns[index]) ?? runFragmentXml(runs[index], insideLink)
   // comment ranges: re-emit start/end/reference markers around the first..last
   // run each id covers, so editing a commented paragraph keeps its comments
   const firstOf = new Map<string, number>()
   const lastOf = new Map<string, number>()
   runs.forEach((run, i) => {
-    if (!runDraws(run)) return
     for (const id of run.commentIds ?? []) {
       if (!firstOf.has(id)) firstOf.set(id, i)
       lastOf.set(id, i)
@@ -3438,8 +3413,6 @@ function splitGlyphRuns(
 }
 
 function runFragmentXml(run: Run, insideLink: boolean): string {
-  // an element the model does not represent: written back as it was read
-  if (run.opaqueXml !== undefined) return run.opaqueXml
   // atomic inline formula: the stored <m:oMath> fragment is already valid
   // paragraph content (patch.ts adds the xmlns:m declaration when missing)
   if (run.math) {

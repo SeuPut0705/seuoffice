@@ -1,7 +1,11 @@
-// Run-level structure the run model has no field for: wrapper elements around
-// runs (w:sdt, w:smartTag, w:customXml, w:dir, w:bdo) and paragraph-level
-// elements without text (w:permStart, range markers...). Their bytes ride on
-// the runs (Run.wrap, Run.opaqueXml) so a rebuilt paragraph writes them back.
+// Run-level wrapper elements the run model has no field for (w:sdt,
+// w:smartTag, w:customXml, w:dir, w:bdo). The bytes of a wrapper that holds
+// runs ride on those runs (Run.wrap), opaque to the model, so a rebuilt
+// paragraph writes the wrapper back around them. A wrapper that holds no run
+// and the text-less markers of a paragraph (w:permStart, the customXml range
+// markers, w:subDoc) are not carried: bookmarks and comment ranges are kept on
+// the block, move ranges are rebuilt from the move's name, proofing marks are
+// Word's to recompute, and the rest stays out of the model as it always did.
 import { decodeEntities } from './parse-xml-text'
 import type { InlineWrap, Run } from './types'
 import { attrsOf, childrenOf, escapeXmlAttr, nameOf, serializeXNode, type XNode } from './xml-utils'
@@ -15,47 +19,9 @@ const WRAPPER_PROPS: Readonly<Record<string, string | undefined>> = {
   'w:bdo': undefined,
 }
 
-/** A preserved zero-width element is not a text/picture/field run. */
-export const runDraws = (run: Run): boolean => run.opaqueXml === undefined
-
-/** The first drawing run in a direction, including `from` itself. */
-export function neighbouringRun(
-  runs: readonly Run[],
-  from: number,
-  direction: 1 | -1 = 1,
-): Run | undefined {
-  for (let i = from; i >= 0 && i < runs.length; i += direction) {
-    if (runDraws(runs[i])) return runs[i]
-  }
-  return undefined
-}
-
 export function isInlineWrapper(name: string): boolean {
   return Object.hasOwn(WRAPPER_PROPS, name)
 }
-
-/**
- * Text-less run-level elements kept verbatim at their position (CT_P /
- * EG_RunLevelElements members the model has no field for). Anything else the
- * run walk does not know stays out of the model, as it always did: bookmarks
- * and comment ranges are kept on the block, move ranges are rebuilt from the
- * move's name, proofing marks are Word's to recompute, and the property
- * children of a container the walk descends into (m:oMathParaPr, w:fldData)
- * are not paragraph content.
- */
-export const INLINE_KEPT_ELEMENTS: ReadonlySet<string> = new Set([
-  'w:permStart',
-  'w:permEnd',
-  'w:customXmlInsRangeStart',
-  'w:customXmlInsRangeEnd',
-  'w:customXmlDelRangeStart',
-  'w:customXmlDelRangeEnd',
-  'w:customXmlMoveFromRangeStart',
-  'w:customXmlMoveFromRangeEnd',
-  'w:customXmlMoveToRangeStart',
-  'w:customXmlMoveToRangeEnd',
-  'w:subDoc',
-])
 
 // ---- which bytes may be carried: one strict, positive check ----
 //
@@ -73,6 +39,13 @@ const EXTENSION_PREFIX_RE = /^w1[4-9][a-z]*$/
 const EXTENSION_NAMESPACE_START = 'http://schemas.microsoft.com/office/word/'
 /** nesting inside one carried element; real controls sit a few levels deep */
 const MAX_CARRIED_DEPTH = 32
+/**
+ * Opening and closing bytes of one wrapper together, in UTF-16 code units.
+ * Checked before anything scans them, so the scan never meets an element
+ * with more children than a call may spread (the shortest element is four
+ * code units: about 16,000 of them fit).
+ */
+const MAX_WRAP_LENGTH = 65536
 
 /** the namespace declarations on the root element of a part */
 export function partNamespaces(partXml: string): Map<string, string> {
@@ -155,8 +128,8 @@ const isSpace = (code: number): boolean =>
  * else: no text, comment, CDATA, processing instruction or doctype. Every
  * tag has to be well-formed (names, quoting, one of each attribute, attribute
  * values as XML allows them) and a namespace declared inside the bytes has to
- * be the w namespace itself or one of Word's extension namespaces. One
- * segment is a whole element; two are a wrapper split around its content.
+ * be the w namespace itself or one of Word's extension namespaces. The two
+ * segments are a wrapper split around its content.
  */
 function scanCarried(segments: readonly string[]): CarriedScan | null {
   const roots: CarriedElement[] = []
@@ -319,13 +292,15 @@ function isInlineWrapShape(wrap: unknown): wrap is InlineWrap {
 
 /**
  * The prefixes a wrapper needs its part root to declare, null when it may not
- * be carried. It may when it is one allowed wrapper element split where the
- * parser splits it: around the content of its one w:sdtContent (a control),
- * or after its property element (a smart tag, custom xml) or its own opening
- * tag (w:dir, w:bdo), with nothing but property elements beside the content.
+ * be carried. It may when it is no larger than MAX_WRAP_LENGTH and is one
+ * allowed wrapper element split where the parser splits it: around the
+ * content of its one w:sdtContent (a control), or after its property element
+ * (a smart tag, custom xml) or its own opening tag (w:dir, w:bdo), with
+ * nothing but property elements beside the content.
  */
 export function inlineWrapPrefixes(wrap: unknown): ReadonlySet<string> | null {
   if (!isInlineWrapShape(wrap)) return null
+  if (wrap.open.length + wrap.close.length > MAX_WRAP_LENGTH) return null
   const scan = scanCarried([wrap.open, wrap.close])
   if (!scan?.holder) return null
   const { root, holder } = scan
@@ -351,47 +326,9 @@ export function inlineWrapPrefixes(wrap: unknown): ReadonlySet<string> | null {
   return ok ? scan.outer : null
 }
 
-/**
- * The prefixes a kept element needs its part root to declare, null when it
- * may not be carried. It may when it is one of the text-less markers, empty,
- * or a wrapper that holds no run at all: only its properties, such wrappers
- * and such markers.
- */
-export function inlineOpaquePrefixes(xml: unknown): ReadonlySet<string> | null {
-  if (typeof xml !== 'string') return null
-  const scan = scanCarried([xml])
-  if (!scan) return null
-  const todo = [scan.root]
-  for (let el = todo.pop(); el; el = todo.pop()) {
-    if (INLINE_KEPT_ELEMENTS.has(el.name)) {
-      if (el.children.length > 0) return null
-      continue
-    }
-    if (!isInlineWrapper(el.name)) return null
-    const props = WRAPPER_PROPS[el.name]
-    for (let i = 0; i < el.children.length; i++) {
-      const child = el.children[i]
-      if (el.name === 'w:sdt') {
-        if (child.name === 'w:sdtContent') todo.push(...child.children)
-        else if (child.name !== 'w:sdtPr' && child.name !== 'w:sdtEndPr') return null
-        else if (!propertiesOnly(child)) return null
-      } else if (i === 0 && child.name === props) {
-        if (!propertiesOnly(child)) return null
-      } else todo.push(child)
-    }
-  }
-  return scan.outer
-}
-
 /** the wrapper may be carried in a part whose root declares `namespaces` (unknown: not judged) */
 export function validInlineWrap(wrap: unknown, namespaces?: PartNamespaces): wrap is InlineWrap {
   const prefixes = inlineWrapPrefixes(wrap)
-  return prefixes !== null && declaredBy(prefixes, namespaces)
-}
-
-/** the kept element may be carried in a part whose root declares `namespaces` (unknown: not judged) */
-export function validInlineOpaque(xml: unknown, namespaces?: PartNamespaces): xml is string {
-  const prefixes = inlineOpaquePrefixes(xml)
   return prefixes !== null && declaredBy(prefixes, namespaces)
 }
 
@@ -450,7 +387,7 @@ const elementChildren = (node: XNode): XNode[] =>
 
 /**
  * The source text a parse tree came from, with the byte range of each of its
- * elements. Wrapper and marker bytes are sliced from it; without one (or for
+ * elements. Wrapper bytes are sliced from it; without one (or for
  * an element that does not line up with the text) the serialized parse tree
  * stands in, which keeps the meaning but not the exact bytes.
  */
@@ -491,12 +428,6 @@ const openTagXml = (node: XNode): string =>
   `<${nameOf(node)}${Object.entries(attrsOf(node))
     .map(([k, v]) => ` ${k}="${escapeXmlAttr(String(v))}"`)
     .join('')}>`
-
-/** the element's own bytes when its range is known, else the serialized parse tree */
-export function inlineElementXml(node: XNode, source: InlineRawSource | undefined): string {
-  const raw = source?.of(node)
-  return source && raw ? source.xml.slice(raw.start, raw.end) : serializeXNode(node)
-}
 
 /**
  * A wrapper element split around its run content: the bytes before and after
@@ -754,12 +685,10 @@ function sharesWrapPrefix(
 
 /**
  * A run as it goes into ANOTHER paragraph or document (a mail-merge record
- * after the first, the other side of a comparison): content controls and kept
- * elements carry ids that belong to the original, so the copy goes without
- * them. Null for a run that is nothing but a kept element.
+ * after the first, the other side of a comparison): a content control carries
+ * an id that belongs to the original, so the copy goes without it.
  */
-export function runCopiedElsewhere(run: Run): Run | null {
-  if (run.opaqueXml !== undefined) return null
+export function runCopiedElsewhere(run: Run): Run {
   if (!run.wrap?.some(isContentControl)) return run
   const { wrap, ...rest } = run
   const kept = wrap.filter((w) => !isContentControl(w))

@@ -2,7 +2,7 @@ import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import { generateParagraphXml, parseDocx, saveDocx, type Run, type SaveBlock } from '../src/index'
 import { buildDocx } from './helpers/build-docx'
-import { buildWithHeader, count, genCtx, T } from './helpers/inline-wrap'
+import { buildWithHeader, genCtx, skeleton, T } from './helpers/inline-wrap'
 
 /**
  * Bytes carried on runs are written under an element the engine generates, in
@@ -41,13 +41,15 @@ const APPEARANCE_PR =
 const APPEARANCE = (inner: string) =>
   `<w:sdt>${APPEARANCE_PR}<w:sdtContent>${inner}</w:sdtContent></w:sdt>`
 
-describe('a header rewritten as text declares the prefixes of what it carries', () => {
+describe('a header rewritten as text is written under a root the engine generates', () => {
   const ROOT = `${W14} ${W15} xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="w14 w15"`
   const rewritten = async (headerXml: string, edit: boolean): Promise<string> => {
     const doc = await parseDocx(await buildWithHeader(headerXml, {}, ROOT))
     const paras = doc.headerParas!.map((p) => ({
       ...p,
-      runs: p.runs.map((r) => (edit && r.text === ' end' ? { ...r, text: ' enD' } : r)),
+      runs: p.runs.map((r) =>
+        edit && r.text.endsWith(' end') ? { ...r, text: r.text.replace(/ end$/, ' enD') } : r,
+      ),
     }))
     return part(
       await saveDocx(doc, originals(doc), { header: { text: '', paras } }),
@@ -55,24 +57,88 @@ describe('a header rewritten as text declares the prefixes of what it carries', 
     )
   }
   const CONTROL = `<w:p>${T('Doc ')}${APPEARANCE(T('Annual report'))}${T(' end')}</w:p>`
+  const PLAIN_PR = '<w:sdtPr><w:alias w:val="Title"/><w:id w:val="5"/></w:sdtPr>'
 
   it.each([true, false])(
-    'a control with a w15 property keeps it, and the new root declares w15 (text edited=%s)',
+    'a control with a w15 property is not carried: the header reads and is rewritten as the same header without it (text edited=%s)',
     async (edit) => {
+      const doc = await parseDocx(await buildWithHeader(CONTROL, {}, ROOT))
+      expect(doc.headerParas!.flatMap((p) => p.runs).filter((r) => r.wrap)).toEqual([])
       const xml = await rewritten(CONTROL, edit)
-      expect(xml).toContain(APPEARANCE_PR)
+      expect(skeleton(xml)).toContain(`[Doc Annual report en${edit ? 'D' : 'd'}]`)
+      expect(xml).toBe(
+        await rewritten(`<w:p>${T('Doc ')}${T('Annual report')}${T(' end')}</w:p>`, edit),
+      )
       expect(undeclaredPrefixes(xml)).toEqual([])
-      expect(/<w:hdr[^>]*>/.exec(xml)![0]).toContain(W15)
     },
   )
 
-  it('a kept marker with a w14 attribute keeps it, and the new root declares w14', async () => {
-    const marker = '<w:permStart w:id="1" w:edGrp="everyone" w14:x="1"/>'
+  it('a wrapper a peer put on a run of such a header is written as its text', async () => {
+    const doc = await parseDocx(
+      await buildWithHeader(
+        `<w:p>${T('Doc ')}${T('Annual report', '<w:rPr><w:b/></w:rPr>')}</w:p>`,
+        {},
+        ROOT,
+      ),
+    )
+    const wrap = [
+      { seq: 0, open: `<w:sdt>${APPEARANCE_PR}<w:sdtContent>`, close: '</w:sdtContent></w:sdt>' },
+    ]
+    const paras = doc.headerParas!.map((p) => ({
+      ...p,
+      runs: p.runs.map((r) => (r.text === 'Annual report' ? { ...r, wrap } : r)),
+    }))
+    const xml = await part(
+      await saveDocx(doc, originals(doc), { header: { text: '', paras } }),
+      'word/header1.xml',
+    )
+    expect(xml).not.toContain('<w:sdt>')
+    expect(xml).toContain('Annual report')
+    expect(undeclaredPrefixes(xml)).toEqual([])
+  })
+
+  it('a control that uses the w prefix only is kept', async () => {
     const xml = await rewritten(
-      `<w:p>${marker}${T('free')}<w:permEnd w:id="1"/>${T(' end')}</w:p>`,
+      `<w:p>${T('Doc ')}<w:sdt>${PLAIN_PR}<w:sdtContent>${T('Annual report')}</w:sdtContent></w:sdt>${T(' end')}</w:p>`,
       true,
     )
-    expect(xml).toContain(marker)
+    expect(skeleton(xml)).toContain(
+      `[Doc ]<w:sdt>${PLAIN_PR}<w:sdtContent>[Annual report]</w:sdtContent></w:sdt>[ enD]`,
+    )
+    expect(undeclaredPrefixes(xml)).toEqual([])
+  })
+
+  it.each([
+    ['urn:schemas-microsoft-com:office:word', true],
+    ['urn:another', false],
+  ])(
+    'a control using a prefix the new root declares is kept only while the prefix means the same (%s)',
+    async (uri, kept) => {
+      const pr = '<w:sdtPr><w:id w:val="5" w10:note="x"/></w:sdtPr>'
+      const header = `<w:p>${T('Doc ')}<w:sdt>${pr}<w:sdtContent>${T('Annual report')}</w:sdtContent></w:sdt></w:p>`
+      const doc = await parseDocx(await buildWithHeader(header, {}, `xmlns:w10="${uri}"`))
+      const xml = await part(
+        await saveDocx(doc, originals(doc), { header: { text: '', paras: doc.headerParas! } }),
+        'word/header1.xml',
+      )
+      expect(skeleton(xml)).toContain(
+        kept
+          ? `[Doc ]<w:sdt>${pr}<w:sdtContent>[Annual report]</w:sdtContent></w:sdt>`
+          : '[Doc Annual report]',
+      )
+      expect(undeclaredPrefixes(xml)).toEqual([])
+    },
+  )
+
+  it('a header that keeps its own root (it holds a table) keeps the control with its w15 property', async () => {
+    const table =
+      '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr><w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid>' +
+      `<w:tr><w:tc><w:tcPr><w:tcW w:w="4000" w:type="dxa"/></w:tcPr><w:p>${T('cell')}</w:p></w:tc></w:tr></w:tbl>`
+    const xml = await rewritten(table + CONTROL, true)
+    expect(/<w:hdr[^>]*>/.exec(xml)![0]).toContain('mc:Ignorable="w14 w15"')
+    expect(skeleton(xml)).toContain(
+      `[Doc ]<w:sdt>${APPEARANCE_PR}<w:sdtContent>[Annual report]</w:sdtContent></w:sdt>[ enD]`,
+    )
     expect(undeclaredPrefixes(xml)).toEqual([])
   })
 
@@ -98,7 +164,7 @@ describe('a wrapper whose prefixes the part root does not declare is not carried
         await buildDocx({ bodyXml, ...(docRootExtraAttrs ? { docRootExtraAttrs } : {}) }),
       )
     ).blocks[0].runs!
-  const carried = (runs: Run[]) => runs.filter((r) => r.wrap || r.opaqueXml !== undefined)
+  const carried = (runs: Run[]) => runs.filter((r) => r.wrap)
 
   it('declared on the paragraph only: the control reads and rebuilds as plain runs', async () => {
     const pr = '<w:sdtPr><w:id w:val="5"/><x1:meta x1:k="v"/></w:sdtPr>'
@@ -107,14 +173,6 @@ describe('a wrapper whose prefixes the part root does not declare is not carried
     )
     expect(carried(runs)).toEqual([])
     expect(rebuilt(runs)).toBe(rebuilt(await reads(`<w:p>${T('a ')}${T('in')}${T(' z')}</w:p>`)))
-  })
-
-  it('declared on the paragraph only: the marker that uses it is not kept', async () => {
-    const runs = await reads(
-      `<w:p xmlns:x1="urn:x1">${T('a ')}<w:permStart w:id="1" x1:k="v"/>${T('in')}${T(' z')}</w:p>`,
-    )
-    expect(carried(runs)).toEqual([])
-    expect(rebuilt(runs)).not.toContain('x1:')
   })
 
   it('declared nowhere in the part: not carried; declared on the root: carried byte for byte', async () => {
@@ -158,11 +216,6 @@ describe('bytes on a run that did not come from the parser', () => {
   }
   const withWrap = (wrap: unknown) => (runs: Run[]) =>
     runs.map((r) => (r.wrap ? { ...r, wrap: [wrap] } : r))
-  const withOpaque = (opaqueXml: unknown) => (runs: Run[]) => [
-    runs[0],
-    { text: '', opaqueXml },
-    ...runs.slice(1),
-  ]
   const smart = (uri: string) => ({
     seq: 0,
     open: `<w:smartTag w:uri="${uri}" w:element="e">`,
@@ -251,56 +304,84 @@ describe('bytes on a run that did not come from the parser', () => {
     expect(body).toContain(`${wrap.open}${T('in')}</w:smartTag>`)
   })
 
-  const BAD_OPAQUE: Array<[string, unknown]> = [
-    [
-      'a control holding a table',
-      '<w:sdt><w:sdtContent><w:tbl><w:tr><w:tc><w:p/></w:tc></w:tr></w:tbl></w:sdtContent></w:sdt>',
-    ],
-    [
-      'a control holding a section',
-      '<w:sdt><w:sdtContent><w:sectPr><w:pgSz w:w="1" w:h="1"/></w:sectPr></w:sdtContent></w:sdt>',
-    ],
-    ['a control holding an empty paragraph', '<w:sdt><w:sdtContent><w:p/></w:sdtContent></w:sdt>'],
-    [
-      'a control holding a tracked insertion',
-      '<w:smartTag w:uri="u" w:element="e"><w:ins w:id="1" w:author="x"/></w:smartTag>',
-    ],
-    ['a marker with a raw < in an attribute', '<w:permStart w:id="</w:p>"/>'],
-    ['a marker with a raw & in an attribute', '<w:permStart w:id="a&b"/>'],
-    ['a marker with a prefix the part does not declare', '<w:permStart w:id="1" zz:a="1"/>'],
-    ['a marker holding an element', '<w:permStart w:id="1"><w:foo/></w:permStart>'],
-    ['an element that is not kept', '<w:br w:type="page"/>'],
-    ['a value that is not a string', 42],
-    [
-      'wrappers nested past any real document',
-      `${'<w:bdo w:val="rtl">'.repeat(2000)}${'</w:bdo>'.repeat(2000)}`,
-    ],
-  ]
-  it.each(BAD_OPAQUE)(
-    'kept element that is %s: nothing of it is written',
-    async (_name, opaqueXml) => {
-      const { body, text } = await saved(withOpaque(opaqueXml))
-      expect(text).toBe('a in z')
-      expect(body).toBe(SOURCE)
-    },
-  )
+  it('nesting inside the control properties past any real document: the text is written without it', async () => {
+    const open = `<w:sdt><w:sdtPr>${'<w:rPr>'.repeat(40)}${'</w:rPr>'.repeat(40)}</w:sdtPr><w:sdtContent>`
+    const { body } = await saved(withWrap(control(open)))
+    expect(body).toBe(PLAIN)
+  })
+})
 
-  it('a kept element on a run that also holds text: the text is written', async () => {
-    const { body, text } = await saved((runs) => [
-      runs[0],
-      { text: 'KEEP', opaqueXml: '<w:permStart w:id="1"/>' },
-      ...runs.slice(1),
-    ])
-    expect(text).toBe('a KEEPin z')
-    expect(count(body, 'KEEP')).toBe(1)
+describe('a wrapper larger than 64 KiB is not carried', () => {
+  const CLOSE = '</w:sdtContent></w:sdt>'
+  /** a control whose opening bytes are exactly `size` characters: a long drop-down list */
+  const openOf = (size: number): string => {
+    const head = '<w:sdt><w:sdtPr><w:alias w:val="'
+    const mid = '"/><w:id w:val="5"/><w:dropDownList>'
+    const tail = '</w:dropDownList></w:sdtPr><w:sdtContent>'
+    const fixed = head.length + mid.length + tail.length
+    let items = ''
+    for (let i = 0; ; i++) {
+      const item = `<w:listItem w:displayText="Option ${i}" w:value="${i}"/>`
+      if (fixed + items.length + item.length > size) break
+      items += item
+    }
+    // the title takes what is left over
+    return head + 'x'.repeat(size - fixed - items.length) + mid + items + tail
+  }
+  /** a control whose properties hold one element with `children` children */
+  const wide = (children: number): string =>
+    `<w:sdt><w:sdtPr><w:rPr>${'<w:b/>'.repeat(children)}</w:rPr></w:sdtPr><w:sdtContent>`
+  const reads = async (open: string): Promise<Run[]> =>
+    (
+      await parseDocx(
+        await buildDocx({ bodyXml: `<w:p>${T('a ')}${open}${T('in')}${CLOSE}${T(' z')}</w:p>` }),
+      )
+    ).blocks[0].runs!
+  const plain = async (): Promise<string> =>
+    rebuilt(
+      (await parseDocx(await buildDocx({ bodyXml: `<w:p>${T('a ')}${T('in')}${T(' z')}</w:p>` })))
+        .blocks[0].runs!,
+    )
+
+  it('a control with 60 KiB of real properties is carried byte for byte', async () => {
+    const open = openOf(60 * 1024)
+    expect(open).toHaveLength(60 * 1024)
+    expect(rebuilt(await reads(open))).toBe(
+      `<w:p>${T('a ')}${open}${T('in')}${CLOSE}${T(' z')}</w:p>`,
+    )
   })
 
-  it('an empty control holding only empty controls and markers is written as it is', async () => {
-    const whole =
-      '<w:sdt><w:sdtPr><w:id w:val="8"/></w:sdtPr><w:sdtContent>' +
-      '<w:smartTag w:uri="u" w:element="e"><w:permStart w:id="1" w:edGrp="everyone"/></w:smartTag>' +
-      '<w:sdt><w:sdtPr><w:id w:val="9"/></w:sdtPr><w:sdtContent/></w:sdt></w:sdtContent></w:sdt>'
-    const { body } = await saved(withOpaque(whole))
-    expect(body).toContain(`${T('a ')}${whole}${CONTROL}`)
+  it('the bound is on the opening and closing bytes together', async () => {
+    const atBound = openOf(65536 - CLOSE.length)
+    expect(rebuilt(await reads(atBound))).toContain(atBound)
+    const runs = await reads(openOf(65536 - CLOSE.length + 1))
+    expect(runs.filter((r) => r.wrap)).toEqual([])
+    expect(rebuilt(runs)).toBe(await plain())
+  })
+
+  it('a file whose control properties hold 200,000 children opens, and reads as plain runs', async () => {
+    const runs = await reads(wide(200_000))
+    expect(runs.map(({ effective: _effective, ...run }) => run)).toEqual([{ text: 'a in z' }])
+    expect(rebuilt(runs)).toBe(await plain())
+  })
+
+  it('the same wrapper put on a run: the paragraph is saved without it, text kept', async () => {
+    const doc = await parseDocx(
+      await buildDocx({
+        bodyXml: `<w:p>${T('a ')}${T('in', '<w:rPr><w:b/></w:rPr>')}${T(' z')}</w:p>`,
+      }),
+    )
+    const [first] = doc.blocks
+    const runs = first.runs!.map((r) =>
+      r.text === 'in' ? { ...r, wrap: [{ seq: 0, open: wide(200_000), close: CLOSE }] } : r,
+    )
+    const bytes = await saveDocx(doc, [
+      { kind: 'generated', block: { type: 'paragraph', runs }, docxIndex: first.docxIndex! },
+    ])
+    const again = await parseDocx(bytes)
+    expect(again.blocks[0].runs!.map((r) => r.text).join('')).toBe('a in z')
+    expect(bodyOf(again.internal.documentXml)).toBe(
+      `<w:p>${T('a ')}${T('in', '<w:rPr><w:b/></w:rPr>')}${T(' z')}</w:p>`,
+    )
   })
 })

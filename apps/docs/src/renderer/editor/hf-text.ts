@@ -79,14 +79,9 @@ export function applyHfText(value: HeaderFooter | null, text: string): HeaderFoo
   const edited: HfParagraph[] = lines.map((line, i) => {
     const template = templates[Math.min(i, templates.length - 1)]
     const { leading, text: textRuns, trailing } = hfPictureRuns(template.runs)
-    // The line takes the styling of the paragraph's first text run. A kept
-    // element (w:permStart...) is not text, and a wrapper (a content control)
-    // is not styling: the retyped line is plain text beside neither.
-    const {
-      wrap: _wrap,
-      opaqueXml: _opaqueXml,
-      ...style
-    } = textRuns.find((r) => r.opaqueXml === undefined) ?? { text: '' }
+    // The line takes the styling of the paragraph's first text run. A wrapper
+    // (a content control) is not styling: the retyped line is plain text.
+    const { wrap: _wrap, ...style } = textRuns[0] ?? { text: '' }
     return {
       ...template,
       runs: [...leading, ...(line === '' ? [] : [{ ...style, text: line }]), ...trailing],

@@ -46,7 +46,6 @@ import {
 } from './dark-page'
 import { hfCellGeometry, hfCellParaStyle, hfRowStyle } from './hf-dom'
 import { INLINE_RULE_CLASS, inlineRuleDecls } from './inline-rule'
-import { holdsNoDrawnRun } from './inline-wrap-chain'
 import { fillInk } from './shading-ink'
 import { textColorDecls } from './text-color'
 import { textOutlineDecl } from './text-outline'
@@ -1995,7 +1994,7 @@ function textboxRowSpec(para: TextboxParaDisplay): DomSpec {
       const attrs: Record<string, string> = { class: 'page-hf-cell-para' }
       const style = styleText(hfCellParaStyle(cell.paraProps?.[k]))
       if (style) attrs.style = style
-      return holdsNoDrawnRun(runs) ? ['div', attrs, ' '] : ['div', attrs, ...runSpansWithPads(runs)]
+      return runs.length === 0 ? ['div', attrs, ' '] : ['div', attrs, ...runSpansWithPads(runs)]
     })
     return ['div', { class: 'page-hf-cell', style: decls.filter(Boolean).join(';') }, ...lines]
   })

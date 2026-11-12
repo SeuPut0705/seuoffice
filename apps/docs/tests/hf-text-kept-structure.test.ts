@@ -10,8 +10,8 @@ import { applyHfText, hfEditText } from '../src/renderer/editor/hf-text'
 
 /**
  * Retyping a header line as plain text (the AI set_header_footer tool, the
- * CLI header op) when the line holds structure the run model keeps as bytes:
- * an edit-permission range, a content control. The new text is the line.
+ * CLI header op) when the line holds a wrapper the run model keeps as bytes
+ * (a content control). The new text is the line.
  */
 
 async function retype(headerXml: string, text: string): Promise<string> {
@@ -28,14 +28,7 @@ async function retype(headerXml: string, text: string): Promise<string> {
   return (await JSZip.loadAsync(saved)).file('word/header1.xml')!.async('string')
 }
 
-describe('applyHfText on a line holding kept structure', () => {
-  it('a line inside an edit-permission range: the retyped text is written', async () => {
-    const header = `<w:p><w:permStart w:id="7" w:edGrp="everyone"/>${T('Old header')}<w:permEnd w:id="7"/></w:p>`
-    const hdr = await retype(header, 'New header')
-    expect(skeleton(hdr)).toContain('[New header]')
-    expect(hdr).not.toContain('Old header')
-  })
-
+describe('applyHfText on a line holding a content control', () => {
   it('a line that starts with a content control: the retyped text is not put inside the control', async () => {
     const header =
       '<w:p><w:sdt><w:sdtPr><w:alias w:val="Title"/><w:id w:val="5"/>' +
@@ -46,11 +39,12 @@ describe('applyHfText on a line holding kept structure', () => {
     expect(hdr).not.toContain('<w:sdt>')
   })
 
-  it("the line keeps the first text run's formatting", async () => {
+  it("the line keeps the first text run's formatting, without the control it sat in", async () => {
     const header =
-      `<w:p><w:permStart w:id="7" w:edGrp="everyone"/>${T('Old', '<w:rPr><w:b/></w:rPr>')}` +
-      `<w:permEnd w:id="7"/></w:p>`
+      '<w:p><w:sdt><w:sdtPr><w:id w:val="5"/></w:sdtPr>' +
+      `<w:sdtContent>${T('Old', '<w:rPr><w:b/></w:rPr>')}</w:sdtContent></w:sdt></w:p>`
     const hdr = await retype(header, 'New')
     expect(hdr).toMatch(/<w:r><w:rPr><w:b\/>.*?<\/w:rPr><w:t[^>]*>New<\/w:t><\/w:r>/)
+    expect(hdr).not.toContain('<w:sdt>')
   })
 })

@@ -1,26 +1,23 @@
 import { rawElements, type PartNamespaces, type RawElement } from './inline-opaque'
 import { decodeEntities } from './parse-xml-text'
-import { escapeXmlAttr } from './xml-utils'
 
 /**
  * One part as the run writer sees it while the part is put together.
  *
- * Namespaces: bytes carried on runs are written under elements the engine
- * generates, so every prefix they use has to be declared by the part root.
- * The writer asks before it writes them and the part remembers what it was
- * asked for, so a root the engine generates can declare it.
+ * Namespaces: wrapper bytes carried on runs are written under elements the
+ * engine generates, so every prefix they use has to be declared by the part
+ * root. The writer asks before it writes a wrapper.
  *
- * Control ids: a content control written from Run.wrap (or a whole empty
- * control from Run.opaqueXml) is the only kind that gives way when its w:id
- * is taken. The run writer marks it with a comment directly before its
- * opening tag; `finish` removes the comments and unwraps a marked control
- * whose id an unmarked control holds or an earlier marked one took. Nothing
- * unmarked is ever rewritten: original slices, verbatim fragments, checkbox
- * controls and the block control around a paragraph only take their id.
+ * Control ids: a content control written from Run.wrap is the only kind that
+ * gives way when its w:id is taken. The run writer marks it with a comment
+ * directly before its opening tag; `finish` removes the comments and unwraps
+ * a marked control whose id an unmarked control holds or an earlier marked
+ * one took. Nothing unmarked is ever rewritten: original slices, verbatim
+ * fragments, checkbox controls and the block control around a paragraph
+ * only take their id.
  */
 export class ContentControlPart {
   private readonly marker: string
-  private readonly asked = new Set<string>()
 
   /**
    * `source`: every text copied into the part as it is (the marker must not
@@ -38,24 +35,12 @@ export class ContentControlPart {
     this.marker = `<!--${name}-->`
   }
 
-  /** the part root declares all of `prefixes`; they are remembered for `rootDeclarations` */
+  /** the part root declares all of `prefixes` (a root that is not known: not judged) */
   takes(prefixes: ReadonlySet<string>): boolean {
     const namespaces = this.namespaces
     if (!namespaces) return true
     for (const prefix of prefixes) if (!namespaces.has(prefix)) return false
-    for (const prefix of prefixes) this.asked.add(prefix)
     return true
-  }
-
-  /** xmlns attributes for the prefixes carried bytes were written with, except `declared` ones */
-  rootDeclarations(declared: PartNamespaces): string {
-    let out = ''
-    for (const prefix of this.asked) {
-      const uri = this.namespaces?.get(prefix)
-      if (uri !== undefined && !declared.has(prefix))
-        out += ` xmlns:${prefix}="${escapeXmlAttr(uri)}"`
-    }
-    return out
   }
 
   /** `controlXml` (bytes starting a w:sdt) marked as written from a run: it gives way to a taken id */

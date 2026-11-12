@@ -20,7 +20,6 @@ import { dropActiveSubEditor, notifySubEditorState, setActiveSubEditor } from '.
 import { inlineToRuns, runsToInline, type PmNode } from './convert'
 import { TextboxParagraph, textboxSubExtensions } from './extensions'
 import { hfParasOf, hfPictureRuns } from './hf-text'
-import { holdsNoDrawnRun } from './inline-wrap-chain'
 
 export type HfFieldKind = 'PAGE' | 'NUMPAGES' | 'SECTIONPAGES'
 
@@ -231,7 +230,7 @@ function paraFromNode(node: PmNode, template: HfParagraph): HfParagraph {
     }
   } else delete para.tabStops
   // a blank line takes its own mark size; the old value would size a line that no longer exists
-  if (!holdsNoDrawnRun(para.runs)) delete para.emptyRunSizeHalfPoints
+  if (para.runs.length > 0) delete para.emptyRunSizeHalfPoints
   return para
 }
 

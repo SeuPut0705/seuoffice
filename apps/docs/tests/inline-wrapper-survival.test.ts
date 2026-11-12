@@ -10,18 +10,23 @@ import { executeTool } from '../src/renderer/ai/tools'
 import { FindPanel, findMatches } from '../src/renderer/components/FindPanel'
 import { takeOdtRefusal } from '../src/renderer/odt-gate'
 import { blocksToPmDoc, pmDocToSavePlan, type PmNode } from '../src/renderer/editor/convert'
-import { editorExtensions, textboxSubExtensions } from '../src/renderer/editor/extensions'
+import { editorExtensions } from '../src/renderer/editor/extensions'
 import { mountHfEditor } from '../src/renderer/editor/hf-editor'
 import { PASTED_CONTENT } from '../src/renderer/editor/inline-wrap'
-import { acceptAllRevisions, collectRevisions } from '../src/renderer/editor/revisions'
+import {
+  acceptAllRevisions,
+  collectRevisions,
+  rejectAllRevisions,
+  type TrackChangesStorage,
+} from '../src/renderer/editor/revisions'
 
 /**
- * A paragraph the user edits keeps the run-level structure the editor has no
+ * A paragraph the user edits keeps the run-level wrappers the editor has no
  * model for: inline content controls (w:sdt inside w:p), w:smartTag,
- * w:customXml, w:bdo, w:dir, and elements without text (w:permStart /
- * w:permEnd, customXml range markers). Each test opens a document the way the
- * editor does (parse -> editor document), edits, builds the save plan and
- * saves with the engine.
+ * w:customXml, w:bdo, w:dir. Each test opens a document the way the editor
+ * does (parse -> editor document), edits, builds the save plan and saves with
+ * the engine. Elements without text (w:permStart / w:permEnd, an empty
+ * control) are not carried: the last group pins what their paragraph does.
  */
 
 ;(globalThis as { CSS?: unknown }).CSS ??= { escape: (s: string) => s }
@@ -70,14 +75,6 @@ const KINDS: Record<string, Kind> = {
   },
   'w:bdo': { open: "<w:bdo w:val='rtl'>", close: '</w:bdo>' },
   'w:dir': { open: '<w:dir w:val="rtl">', close: '</w:dir>' },
-  'w:permStart / w:permEnd': {
-    open: '<w:permStart w:id=\'77\' w:edGrp="everyone"/>',
-    close: '<w:permEnd w:id="77"/>',
-  },
-  'customXml range markers': {
-    open: '<w:customXmlInsRangeStart w:id="3" w:author="A" w:date="2024-01-01T00:00:00Z"/>',
-    close: '<w:customXmlInsRangeEnd w:id="3"/>',
-  },
 }
 
 const around = (kind: Kind) =>
@@ -88,8 +85,6 @@ const around = (kind: Kind) =>
 const OTHER = '<w:p><w:r><w:t>Untouched paragraph</w:t></w:r></w:p>'
 const OTHER_YEAR = '<w:p><w:r><w:t>Untouched year 2024 paragraph</w:t></w:r></w:p>'
 const NUM_IDS = { bullet: null, ordered: null }
-const PNG =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
 ;(globalThis as { ClipboardEvent?: unknown }).ClipboardEvent ??= class extends Event {}
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -257,22 +252,6 @@ describe('editing text beside run-level structure keeps the structure', () => {
     const { xml } = await save(editor, parsed)
     expect(xml.match(/<w:sdt>/g)).toHaveLength(1)
     expect(skeleton(xml)).toContain(`${UNLOCKED.open}[5/6][/2024]${UNLOCKED.close}`)
-  })
-
-  it('Backspace right after an invisible marker reaches the text before it, not the marker', async () => {
-    const perm = KINDS['w:permStart / w:permEnd']
-    const { editor, parsed } = await open(around(perm) + OTHER)
-    const afterMarker = posOf(editor, '5/6/2024')
-    editor.commands.setTextSelection(afterMarker)
-    editor.view.dom.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }),
-    )
-    // the caret stepped over the marker; the key then deletes what is before it
-    const caret = editor.state.selection.from
-    expect(caret).toBeLessThan(afterMarker)
-    editor.commands.deleteRange({ from: caret - 1, to: caret })
-    const { xml } = await save(editor, parsed)
-    expect(skeleton(xml)).toContain(`[Due on]${perm.open}[5/6/2024]${perm.close}[ at noon]`)
   })
 
   it('a paragraph split before the control keeps the control in the second half', async () => {
@@ -558,103 +537,73 @@ describe('the same paragraph inside a container', () => {
   })
 })
 
-describe('a paragraph that holds only invisible elements is still an empty paragraph', () => {
-  const PS = '<w:permStart w:id="7" w:edGrp="everyone"/>'
-  const PE = '<w:permEnd w:id="7"/>'
-  const BULLET =
-    '<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr>' +
-    `${PS}${PE}</w:p>`
-  // the class and style these paragraphs were drawn with before the editor
-  // carried the elements (they were dropped on load then): pinned, not derived
-  const LATIN = '--doc-line-factor: var(--doc-line-factor-latin,1.2);'
-  const DRAWN: Array<[string, string, string, string]> = [
-    [
-      'range markers alone, with a paragraph mark size',
-      `<w:p><w:pPr><w:rPr><w:sz w:val="48"/></w:rPr></w:pPr>${PS}${PE}</w:p>`,
-      'doc-p-empty',
-      `direction: ltr; font-size: 24pt; ${LATIN}`,
-    ],
-    [
-      'an empty list item',
-      BULLET,
-      'doc-li doc-li-bullet ilvl-0 doc-p-empty',
-      `direction: ltr; ${LATIN}`,
-    ],
-    [
-      'an empty control alone',
-      '<w:p><w:sdt><w:sdtPr><w:id w:val="5"/></w:sdtPr><w:sdtContent></w:sdtContent></w:sdt></w:p>',
-      'doc-p-empty',
-      `direction: ltr; ${LATIN}`,
-    ],
-  ]
-  for (const [name, xml, className, style] of DRAWN) {
-    it(`${name}: drawn with the attributes of an empty paragraph`, async () => {
-      const { editor } = await open(xml + OTHER)
-      const el = editor.view.dom.firstElementChild!
-      expect(el.getAttribute('class')).toBe(className)
-      expect(el.getAttribute('style')).toBe(style)
-    })
+describe('elements without text are not carried: their paragraph behaves as it always did', () => {
+  const T = (text: string) => `<w:r><w:t xml:space="preserve">${text}</w:t></w:r>`
+  const HELD: Record<string, string> = {
+    'a permission range':
+      `<w:p>${T('Due on ')}<w:permStart w:id="7" w:edGrp="everyone"/>${T('5/6/2024')}` +
+      `<w:permEnd w:id="7"/>${T(' at noon')}</w:p>`,
+    'an empty control':
+      `<w:p>${T('Due on ')}<w:sdt><w:sdtPr><w:id w:val="5"/></w:sdtPr><w:sdtContent>` +
+      `</w:sdtContent></w:sdt>${T('5/6/2024 at noon')}</w:p>`,
+  }
+  /** the paragraph's text deleted with change tracking on, as a person does it */
+  function trackDeleteFirstParagraph(editor: Editor): void {
+    const tracking = editor.storage.trackChanges as TrackChangesStorage
+    tracking.enabled = true
+    tracking.author = 'User'
+    editor.commands.setTextSelection({ from: 1, to: 1 + editor.state.doc.child(0).content.size })
+    editor.commands.deleteSelection()
+    tracking.enabled = false
   }
 
-  it('a picture-only paragraph that also holds markers keeps the picture line', () => {
-    const marker = (xml: string) => ({ type: 'docInlineOpaque', attrs: { xml } })
-    const editor = new Editor({
-      element: document.createElement('div'),
-      extensions: editorExtensions,
-      content: {
-        type: 'doc',
-        content: [
-          {
-            type: 'docParagraph',
-            attrs: { docxIndex: null },
-            content: [
-              marker(PS),
-              { type: 'docInlineImage', attrs: { dataUrl: PNG, widthPx: 10, heightPx: 10 } },
-              marker(PE),
-            ],
-          },
-        ],
-      },
+  for (const [name, xml] of Object.entries(HELD)) {
+    it(`${name}: the paragraph opens as its text, and untouched it saves as the original bytes`, async () => {
+      const { editor, parsed, source } = await open(xml + OTHER)
+      expect(texts(editor)).toEqual(['Due on 5/6/2024 at noon', 'Untouched paragraph'])
+      expect(editor.state.doc.child(0).childCount).toBe(1)
+      const plan = pmDocToSavePlan(editor.getJSON() as PmNode, parsed.blocks)
+      expect(plan.changedCount).toBe(0)
+      expect(await saveDocx(parsed, plan.saveBlocks)).toEqual(source)
     })
-    editors.push(editor)
-    expect(editor.view.dom.firstElementChild!.classList.contains('doc-p-pic')).toBe(true)
-  })
 
-  it('a text box paragraph holding only a marker is drawn as an empty one', () => {
-    const editor = new Editor({
-      element: document.createElement('div'),
-      extensions: textboxSubExtensions,
-      content: {
-        type: 'doc',
-        content: [
-          { type: 'docParagraph', content: [{ type: 'docInlineOpaque', attrs: { xml: PS } }] },
-        ],
-      },
+    it(`${name}: an edited paragraph is written from its text; the other keeps its bytes`, async () => {
+      const { editor, parsed } = await open(xml + OTHER)
+      editor.commands.insertContentAt(1, 'X')
+      const saved = (await save(editor, parsed)).xml
+      const edited = saved.slice(saved.indexOf('<w:p>'), saved.indexOf(OTHER))
+      expect(skeleton(edited).replace(/\]\[/g, '')).toBe('<w:p>[XDue on 5/6/2024 at noon]</w:p>')
+      expect(saved).toContain(OTHER)
     })
-    editors.push(editor)
-    const el = editor.view.dom.querySelector('.doc-textbox-para')!
-    expect(el.classList.contains('doc-textbox-para-empty')).toBe(true)
-  })
 
-  it('Enter on an empty list item that holds markers leaves the list and keeps the markers', async () => {
-    const { editor, parsed } = await open(BULLET + OTHER)
-    expect(editor.state.doc.child(0).type.name).toBe('docListItem')
-    editor.commands.setTextSelection(1)
-    press(editor, 'Enter')
-    expect(editor.state.doc.childCount).toBe(2)
-    expect(editor.state.doc.child(0).type.name).toBe('docParagraph')
-    const { xml } = await save(editor, parsed)
-    expect(xml).toContain(PS + PE)
-  })
+    it(`${name}: its text deleted with tracking on, Accept All leaves nothing pending`, async () => {
+      const { editor, parsed } = await open(xml + OTHER)
+      trackDeleteFirstParagraph(editor)
+      expect(collectRevisions(editor.state.doc).map((r) => r.kind)).toEqual(['del'])
+      expect(acceptAllRevisions(editor)).toEqual([])
+      expect(collectRevisions(editor.state.doc)).toEqual([])
+      expect(texts(editor)).toEqual(['Untouched paragraph'])
+      expect((await save(editor, parsed)).xml).not.toMatch(/<w:(?:del|ins)\b/)
+    })
+
+    it(`${name}: its text deleted with tracking on, Reject All gives the file back`, async () => {
+      const { editor, parsed, source } = await open(xml + OTHER)
+      trackDeleteFirstParagraph(editor)
+      expect(rejectAllRevisions(editor)).toEqual([])
+      expect(collectRevisions(editor.state.doc)).toEqual([])
+      const plan = pmDocToSavePlan(editor.getJSON() as PmNode, parsed.blocks)
+      expect(await saveDocx(parsed, plan.saveBlocks)).toEqual(source)
+    })
+  }
 })
 
-describe('text that reads continuously is found across a marker or a wrapper', () => {
+describe('text that reads continuously is found across a wrapper', () => {
   const live = (kind: Kind) =>
     '<w:p><w:r><w:t xml:space="preserve">I live in </w:t></w:r>' +
     `${kind.open}<w:r><w:t>Paris</w:t></w:r>${kind.close}` +
     '<w:r><w:t xml:space="preserve"> now</w:t></w:r></w:p>'
 
-  for (const name of ['w:permStart / w:permEnd', 'w:smartTag', 'w:sdt']) {
+  for (const name of ['w:smartTag', 'w:sdt']) {
     const source = KINDS[name]
     // the control's text changes in each of these, so it is written in its edited form
     const kind = name === 'w:sdt' ? UNLOCKED_EDITED : source
@@ -826,26 +775,6 @@ describe('one control stays one control', () => {
     expect(skeleton(xml)).toContain(
       `[Due on ]${UNLOCKED.open}[5/6/2024]${UNLOCKED.close}[ at noon]`,
     )
-  })
-
-  it('range markers move with a cut and are not doubled by a copy', async () => {
-    const perm = KINDS['w:permStart / w:permEnd']
-    const { editor, parsed } = await open(around(perm) + OTHER)
-    const from = posOf(editor, '5/6/2024') - 1
-    const to = from + '5/6/2024'.length + 2
-    const html = clipboardHtml(editor, from, to)
-    editor.commands.deleteRange({ from, to })
-    pasteAtEnd(editor, html)
-    const moved = await save(editor, parsed)
-    expect(skeleton(moved.xml)).toContain(
-      `[Untouched paragraph]${perm.open}[5/6/2024]${perm.close}</w:p>`,
-    )
-    // a second paste of the same clipboard is a copy: the text arrives, the markers do not
-    pasteAtEnd(editor, html)
-    const copied = await save(editor, parsed)
-    expect(texts(editor)[1]).toBe('Untouched paragraph5/6/20245/6/2024')
-    expect(occurrences(copied.xml, '<w:permStart')).toBe(1)
-    expect(occurrences(copied.xml, '<w:permEnd')).toBe(1)
   })
 })
 

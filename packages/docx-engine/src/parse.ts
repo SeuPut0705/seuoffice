@@ -243,18 +243,14 @@ import {
 } from './parse-package'
 import { parseSdtBlock, sdtMeta, sdtRanges, sdtTableXml, splitSdtParts } from './parse-sdt'
 import { sdtCheckboxControl } from './checkbox-control'
+import { hfKeptRoot, hfWrapNamespaces, type HfRootName } from './hf-root'
 import {
-  INLINE_KEPT_ELEMENTS,
-  inlineElementXml,
   inlineRawSource,
   inlineWrapTextOf,
   inlineWrapperShell,
   partNamespaces,
   isInlineWrapper,
-  neighbouringRun,
-  runDraws,
   sdtFollowsItsText,
-  validInlineOpaque,
   validInlineWrap,
   type InlineRawSource,
   type PartNamespaces,
@@ -793,7 +789,7 @@ interface BuildContext {
    *  every level and every block of a split control */
   sdtGroupSeq: number
   /** source text of the table being read: cell paragraphs slice their wrapper
-   *  and marker bytes from it (see extractRuns) */
+   *  bytes from it (see extractRuns) */
   tableRaw?: InlineRawSource
   /** settings.xml compatibilityMode (0 = legacy layout) */
   compatibilityMode?: number
@@ -2440,15 +2436,14 @@ function buildTextParagraph(
     inlineRawSource(xml, pNode),
   )
   shadowParaFormat(ctx, 'body', pPr, styleBidiOf(ctx, styleId, listRef), direct, runs)
-  const textRuns = lineRuns(runs)
-  const spaceOnly = textRuns.length > 0 && spaceOnlyRuns(textRuns) && !hasLayoutRunContent(pNode)
+  const spaceOnly = runs.length > 0 && spaceOnlyRuns(runs) && !hasLayoutRunContent(pNode)
   // a paragraph holding only page/column breaks lays its break line like an
   // empty one: by the mark's face and size, else the break run's
   const breakOnly =
-    textRuns.length > 0 &&
-    breakOnlyRuns(textRuns) &&
+    runs.length > 0 &&
+    breakOnlyRuns(runs) &&
     !hasLayoutRunContent(pNode, LAYOUT_RUN_CONTENT_BESIDES_BREAKS)
-  if (textRuns.length === 0 || spaceOnly || breakOnly) {
+  if (runs.length === 0 || spaceOnly || breakOnly) {
     // the mark sizes the line; a run-less line without a sized mark still takes
     // the dropped empty / break run's w:sz (Word sizes 1pt spacer lines by it)
     const emptySz =
@@ -2811,7 +2806,7 @@ function collectTxbxParas(
         ),
       )
       if (styleId) para.styleId = styleId
-      if (spaceOnlyRuns(lineRuns(para.runs)) && !hasLayoutRunContent(child)) {
+      if (spaceOnlyRuns(para.runs) && !hasLayoutRunContent(child)) {
         const markSz = emptyParaSizeHalfPoints(child, pPr, true)
         if (markSz) para.emptyRunSizeHalfPoints = markSz
       }
@@ -2847,18 +2842,7 @@ function txbxTableParas(tbl: XNode, ctx: BuildContext): TextboxParaDisplay[] {
 
 /** a paragraph the box shows: text runs or a table row */
 function txbxParaVisible(p: TextboxParaDisplay): boolean {
-  return lineRuns(p.runs).length > 0 || (p.cells?.length ?? 0) > 0
-}
-
-/**
- * The runs that put something on the line. An element kept verbatim
- * (w:permStart, a bare wrapper...) puts nothing there, so every judgment
- * about an empty or space-only line reads the paragraph without them.
- */
-function lineRuns(runs: Run[]): Run[] {
-  return runs.some((r) => r.opaqueXml !== undefined)
-    ? runs.filter((r) => r.opaqueXml === undefined)
-    : runs
+  return p.runs.length > 0 || (p.cells?.length ?? 0) > 0
 }
 
 /** a textless top-level v:shape/rect/roundrect/oval placed with position:absolute */
@@ -4342,7 +4326,6 @@ const RESULT_FORMAT_SKIP = new Set([
   'fldDirty',
   'sdtCheckboxXml',
   'wrap',
-  'opaqueXml',
   'commentIds',
   'ins',
   'del',
@@ -4402,8 +4385,8 @@ function extractRuns(
   withImages = false,
   zoteroField?: ZoteroFieldParagraph,
   para?: ParaResolve,
-  /** the text pNode was parsed from: wrapper and marker bytes are sliced from
-   *  it; without it they come from the serialized parse tree */
+  /** the text pNode was parsed from: wrapper bytes are sliced from it; without
+   *  it they come from the serialized parse tree */
   raw?: InlineRawSource,
 ): Run[] {
   const runs: Run[] = []
@@ -4449,11 +4432,7 @@ function extractRuns(
   }
   /** something the editor can hold a wrapper on: text, a picture or an atom */
   const carriesWrap = (r: Run) =>
-    r.text !== '' ||
-    r.image !== undefined ||
-    r.xeTerm !== undefined ||
-    r.math !== undefined ||
-    r.opaqueXml !== undefined
+    r.text !== '' || r.image !== undefined || r.xeTerm !== undefined || r.math !== undefined
   // inline field state: XE folds into Run.xeTerm, REF (cross-reference) into Run.refField
   let fieldDepth = zoteroField && zoteroField.part !== 'begin' ? 1 : 0
   let fieldInstr = zoteroField?.instruction ?? ''
@@ -4488,8 +4467,8 @@ function extractRuns(
     run.commentIds = [...new Set([...(run.commentIds ?? []), ...ids])].sort()
   }
   const pushRun = (run: Run, rev?: RevCtx) => {
-    if (runDraws(run) && activeComments.size > 0) run.commentIds = [...activeComments].sort()
-    if (runDraws(run) && pendingRefIds.length > 0) {
+    if (activeComments.size > 0) run.commentIds = [...activeComments].sort()
+    if (pendingRefIds.length > 0) {
       addCommentIds(run, pendingRefIds)
       pendingRefIds = []
     }
@@ -4499,15 +4478,6 @@ function extractRuns(
     runs.push(run)
   }
   const namespaces = ctx.partNamespaces ?? NO_NAMESPACES
-  /** a text-less element the model has no field for (w:permStart, a wrapper
-   *  holding no run): kept verbatim at its position, inside the hyperlink it
-   *  sat in, when its bytes can be written back in this part */
-  const pushKept = (node: XNode, link: Run['link'] | undefined, rev?: RevCtx): boolean => {
-    const xml = inlineElementXml(node, raw)
-    if (!validInlineOpaque(xml, namespaces)) return false
-    pushRun({ text: '', opaqueXml: xml, ...(link ? { link } : {}) }, rev)
-    return true
-  }
   const pushZoteroCachedRuns = (part: ZoteroFieldPart, rev?: RevCtx) => {
     const cachedRuns = fieldCachedRuns.length > 0 ? fieldCachedRuns : [{ text: fieldCached || ' ' }]
     const id = zoteroField?.id ?? ctx.nextZoteroFieldId ?? 1
@@ -4723,7 +4693,7 @@ function extractRuns(
     if (commentRef) {
       const id = attrsOf(commentRef)['w:id']
       if (id && ctx.referenceOnlyComments?.has(id)) {
-        const prev = neighbouringRun(runs, runs.length - 1, -1)
+        const prev = runs[runs.length - 1]
         if (prev) addCommentIds(prev, [id])
         else pendingRefIds.push(id)
       }
@@ -4777,10 +4747,7 @@ function extractRuns(
     }
     const first = runs.length
     walk(childrenOf(node), link, rev)
-    const inside = runs.splice(first)
-    // A folded field has no positions for markers in its result. Do not carry
-    // them rather than move the permission/custom-XML range before the field.
-    const cached = inside.filter(runDraws)
+    const cached = runs.splice(first)
     const text = cached.map((r) => r.text).join('')
     const format = cached[0]
       ? Object.fromEntries(Object.entries(cached[0]).filter(([k]) => !RESULT_FORMAT_SKIP.has(k)))
@@ -4915,9 +4882,7 @@ function extractRuns(
         const control = sdtCheckboxControl(node)!
         const first = runs.length
         walk(childrenOf(node), link, rev)
-        const base =
-          runs.slice(first).find((r) => runDraws(r) && r.text.trim() !== '') ??
-          neighbouringRun(runs, first)
+        const base = runs.slice(first).find((r) => r.text.trim() !== '') ?? runs[first]
         runs.length = first
         pushRun({ ...(base ?? {}), text: control.glyph, sdtCheckboxXml: control.sdtPrXml }, rev)
       } else if (name !== undefined && isInlineWrapper(name)) {
@@ -4925,9 +4890,9 @@ function extractRuns(
         const first = runs.length
         const fieldDepthAtEntry = fieldDepth
         if (!shell) {
-          // nowhere to hold runs (no w:sdtContent, a self-closing element): one
-          // kept element when it can ride whole, else read through as plain content
-          if (fieldDepth > 0 || !pushKept(node, link, rev)) walk(childrenOf(node), link, rev)
+          // nowhere to hold runs (no w:sdtContent, a self-closing element):
+          // read through as plain content
+          walk(childrenOf(node), link, rev)
         } else {
           const wrap: InlineWrap = {
             seq: wrapSeq++,
@@ -4949,12 +4914,9 @@ function extractRuns(
             // bytes that cannot be written back in this part are not carried
             if (!validInlineWrap(wrap, namespaces)) notCarried.add(wrap)
             else if (sdtFollowsItsText(wrap.open)) wrap.text = inlineWrapTextOf(inside)
-          } else if (pushKept(node, link, rev)) {
-            // nothing in it the model reads: the whole element rides as one
-            runs.splice(first, inside.length)
           } else {
-            // it holds runs, but none this reading carries (a picture in a part
-            // read without pictures): read as if the wrapper were not there
+            // nothing in it to hold the wrapper on (it is empty, or holds a
+            // picture in a part read without pictures): read as if it were not there
             notCarried.add(wrap)
           }
         }
@@ -4976,8 +4938,6 @@ function extractRuns(
       } else if (name === 'w:br') {
         // Word honors a <w:br> sitting outside any <w:r> (direct child of w:p / w:ins)
         pushRun({ text: breakCharOf(attrsOf(node)) }, rev)
-      } else if (name !== undefined && INLINE_KEPT_ELEMENTS.has(name)) {
-        if (fieldDepth === 0) pushKept(node, link, rev)
       }
     }
   }
@@ -6355,9 +6315,8 @@ function extractCell(
     const direct = resolvedParaFormat(eff0, pPr, ctx.themeColors)
     shadowParaFormat(ctx, 'cell', pPr, styleBidiOf(ctx, cellStyleId, cellRef), direct, runs)
     const format = foldEffectiveFormat(direct, pPr, eff)
-    const textRuns = lineRuns(runs)
-    const spaceOnly = textRuns.length > 0 && spaceOnlyRuns(textRuns) && !hasLayoutRunContent(p)
-    const markSized = textRuns.length === 0 || spaceOnly
+    const spaceOnly = runs.length > 0 && spaceOnlyRuns(runs) && !hasLayoutRunContent(p)
+    const markSized = runs.length === 0 || spaceOnly
     const emptySz = markSized
       ? (markSizeOf(eff, pPr) ??
         (spaceOnly
@@ -7419,6 +7378,7 @@ function hfParagraphs(
   }
   const root = parsed.find((n) => nameOf(n) === 'w:hdr' || nameOf(n) === 'w:ftr')
   if (!root) return []
+  const rootName = nameOf(root) as HfRootName
   // header parts have their own rels; hyperlink targets are not resolved here
   const ctx = {
     rels: new Map(),
@@ -7427,7 +7387,9 @@ function hfParagraphs(
     themeFonts,
     styles,
     xmlSpacePreserve: attrsOf(root)['xml:space'] === 'preserve',
-    partNamespaces: partNamespaces(partXml),
+    // a wrapper is carried when the root a rewrite of the part is written
+    // under declares its prefixes
+    partNamespaces: hfWrapNamespaces(partXml, hfKeptRoot(rootName, partXml) !== null),
     ...(resolver ? { resolver } : {}),
   } as unknown as BuildContext
   const out: HfParagraph[] = []
@@ -7465,11 +7427,7 @@ function hfParagraphs(
     // Word lays an inline picture out at its run position (after a tab, on the
     // text line); only a picture sharing its paragraph with text takes this
     // path, picture-only paragraphs stay on the part-level image list
-    if (
-      lineRuns(runs).length > 0 &&
-      tableMedia &&
-      hasDeepChildOutside(pNode, WP_INLINE, TXBX_CONTENT)
-    ) {
+    if (runs.length > 0 && tableMedia && hasDeepChildOutside(pNode, WP_INLINE, TXBX_CONTENT)) {
       runs = extractRuns(
         pNode,
         { ...ctx, mediaByRid: tableMedia } as BuildContext,
@@ -7490,7 +7448,7 @@ function hfParagraphs(
     const boxed = hasDeepChild(pNode, TXBX_CONTENT) ? textboxParagraphs(pNode, ctx) : []
     // runs carrying only w:rPr are a blank line like a bare w:p (genoffice#2116)
     if (
-      lineRuns(runs).length === 0 &&
+      runs.length === 0 &&
       !hfOnlyEmptyRuns(pNode) &&
       (findChild(pNode, 'w:r') || findChild(pNode, 'w:pict'))
     ) {
@@ -7896,7 +7854,7 @@ function textboxParagraphs(pNode: XNode, ctx: BuildContext): HfParagraph[] {
     if (name === 'w:txbxContent') {
       for (const inner of findChildren(node, 'w:p')) {
         const runs = extractRuns(inner, ctx)
-        if (lineRuns(runs).length === 0) continue
+        if (runs.length === 0) continue
         const pPr = findChild(inner, 'w:pPr')
         // content of a floating box draws at the anchor, not in the strip flow:
         // it must not push the body down (Word), only display does
