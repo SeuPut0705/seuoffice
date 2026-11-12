@@ -39,7 +39,7 @@ use crate::html::atomic_write::atomic_write_file as html_atomic_write_file;
 use crate::html::generate_handoff_ipc::{
     HandoffEvent, HandoffHandler, HandoffIpc, register_html_handoff_ipc,
 };
-use crate::html::old_names::OLD_ASSET_MANIFEST_FILENAMES;
+use crate::html::old_names::{ASSET_MANIFEST_FILENAME_WRITTEN, OLD_ASSET_MANIFEST_FILENAMES};
 use crate::html::preview_document::{
     ASSET_SCHEME, PREVIEW_SCHEME, asset_base_href, build_preview_document, preview_url_for,
 };
@@ -245,6 +245,9 @@ fn call_named(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
                 .map(|name| (*name).to_owned())
                 .collect(),
         ))),
+        "html/old-names.ASSET_MANIFEST_FILENAME_WRITTEN" => {
+            Ok(Some(Value::from(ASSET_MANIFEST_FILENAME_WRITTEN)))
+        }
         "html/generate-handoff-ipc.registerHtmlHandoffIpc" => handoff_ipc_call(args, cx),
         "preview-document.PREVIEW_SCHEME" => Ok(Some(Value::from(PREVIEW_SCHEME))),
         "preview-document.ASSET_SCHEME" => Ok(Some(Value::from(ASSET_SCHEME))),

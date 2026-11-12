@@ -48,6 +48,7 @@ import {
   uploadImageToHost,
 } from '../../../apps/markdown/src/main/image-host.ts'
 import {
+  ASSET_MANIFEST_FILENAME_WRITTEN,
   OLD_ASSET_MANIFEST_FILENAMES,
   OLD_CONVERSION_SESSION_MARKERS,
 } from '../../../apps/markdown/src/main/old-names.ts'
@@ -3605,6 +3606,7 @@ const assetConstant = constant(ASSET_MANIFEST_FILENAME)
 
 export const group: Group = {
   'markdown/old-names.OLD_ASSET_MANIFEST_FILENAMES': constant([...OLD_ASSET_MANIFEST_FILENAMES]),
+  'markdown/old-names.ASSET_MANIFEST_FILENAME_WRITTEN': constant(ASSET_MANIFEST_FILENAME_WRITTEN),
   'markdown/old-names.OLD_CONVERSION_SESSION_MARKERS': constant([
     ...OLD_CONVERSION_SESSION_MARKERS,
   ]),

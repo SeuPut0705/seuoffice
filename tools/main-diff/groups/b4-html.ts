@@ -55,7 +55,10 @@ import {
 } from '../../../apps/html/src/main/asset-mime.ts'
 import { atomicWriteFile as htmlAtomicWriteFile } from '../../../apps/html/src/main/atomic-write.ts'
 import { registerHtmlHandoffIpc } from '../../../apps/html/src/main/generate-handoff-ipc.ts'
-import { OLD_ASSET_MANIFEST_FILENAMES } from '../../../apps/html/src/main/old-names.ts'
+import {
+  ASSET_MANIFEST_FILENAME_WRITTEN,
+  OLD_ASSET_MANIFEST_FILENAMES,
+} from '../../../apps/html/src/main/old-names.ts'
 import {
   ASSET_SCHEME,
   PREVIEW_SCHEME,
@@ -1546,6 +1549,11 @@ const htmlGroup: Group = {
   },
   'html/old-names.OLD_ASSET_MANIFEST_FILENAMES': {
     ts: () => [...OLD_ASSET_MANIFEST_FILENAMES],
+    cases: [{ args: [] }],
+    single: CONSTANT,
+  },
+  'html/old-names.ASSET_MANIFEST_FILENAME_WRITTEN': {
+    ts: () => ASSET_MANIFEST_FILENAME_WRITTEN,
     cases: [{ args: [] }],
     single: CONSTANT,
   },

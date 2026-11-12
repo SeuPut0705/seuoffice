@@ -23,7 +23,9 @@ use crate::markdown::image_host::{
     self as host, FetchBody, FetchFailure, FetchInit, FetchResponse, ResponseHeaders,
     SigV4Credentials,
 };
-use crate::markdown::old_names::{OLD_ASSET_MANIFEST_FILENAMES, OLD_CONVERSION_SESSION_MARKERS};
+use crate::markdown::old_names::{
+    ASSET_MANIFEST_FILENAME_WRITTEN, OLD_ASSET_MANIFEST_FILENAMES, OLD_CONVERSION_SESSION_MARKERS,
+};
 use crate::markdown::ord_map::OrdMap;
 use crate::markdown::wiki_create::{CreateNoteOptions, create_wiki_note};
 use crate::markdown::wiki_fragment::WikiFragments;
@@ -42,6 +44,9 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
     Some(match name {
         "markdown/old-names.OLD_ASSET_MANIFEST_FILENAMES" => {
             Ok(Some(json!(OLD_ASSET_MANIFEST_FILENAMES)))
+        }
+        "markdown/old-names.ASSET_MANIFEST_FILENAME_WRITTEN" => {
+            Ok(Some(json!(ASSET_MANIFEST_FILENAME_WRITTEN)))
         }
         "markdown/old-names.OLD_CONVERSION_SESSION_MARKERS" => {
             Ok(Some(json!(OLD_CONVERSION_SESSION_MARKERS)))
