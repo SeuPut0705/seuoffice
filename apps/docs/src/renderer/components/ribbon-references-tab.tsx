@@ -371,8 +371,10 @@ export function ReferencesTab({
       window.alert(t('ribbonNoIndexEntries'))
       return
     }
-    const unique = indexTerms(terms, getDocumentLocale())
-    const nodes = generateIndexFieldXml(unique).map((xml, i) => ({
+    const locale = getDocumentLocale()
+    const unique = indexTerms(terms, locale)
+    // the field's cached lines in the same order as the entries shown for them
+    const nodes = generateIndexFieldXml(unique, locale).map((xml, i) => ({
       type: 'docProtected',
       attrs: {
         docxIndex: null,

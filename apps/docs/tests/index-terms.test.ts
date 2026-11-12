@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { documentLocale, normalizeLang, requestedLanguage, setUiLang } from '@genoffice/i18n'
+import { generateIndexFieldXml } from '@genoffice/docx-engine'
 import { indexTerms } from '../src/renderer/index-terms'
 
 // A new index lists its entries in the alphabetical order of the document's
@@ -33,6 +34,15 @@ describe('the entries of a new index', () => {
 
     expect(korean).toEqual(['가나', '국가', '國家', '대한', '大韓'])
     expect(korean).not.toEqual([...terms].sort((a, b) => a.localeCompare(b, 'zh-CN')))
+  })
+
+  it('match the field lines written for them, line for line', () => {
+    const locale = startInstall('ko-KR')
+    const entries = indexTerms(['大韓', '국가', '가나', '國家', 'Alpha'], locale)
+    const lines = generateIndexFieldXml(entries, locale)
+
+    expect(lines).toHaveLength(entries.length)
+    entries.forEach((entry, i) => expect(lines[i]).toContain(entry))
   })
 
   it('keep Latin entries in alphabetical order on every install', () => {
