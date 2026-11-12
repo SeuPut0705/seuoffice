@@ -7,7 +7,7 @@ import { openOnce } from './compare-package'
 import { rustRoundTrip, typescriptRoundTrip } from './compare-xml'
 import { rustEntries, textWithoutBuffer } from './compare-zip'
 import { toolDir } from './harness'
-import { oddContainers } from './package-zips'
+import { hostDependentContainers, oddContainers } from './package-zips'
 
 /** A known difference, with what each side returns for the input. */
 type Divergence = { id: string; typescript: unknown; rust: unknown; reason: string } & (
@@ -28,7 +28,9 @@ async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust:
   }
   if (entry.comparison === 'call') return callOutcomes(entry.fn, entry.text, entry.args ?? {})
   if (entry.comparison === 'loadDocx') {
-    const docx = oddContainers().find(([name]) => name === entry.container)?.[1]
+    const docx =
+      oddContainers().find(([name]) => name === entry.container)?.[1] ??
+      hostDependentContainers()[entry.container]
     if (!docx) return { typescript: 'no such container', rust: 'no such container' }
     return { typescript: openOnce('typescript', docx), rust: openOnce('rust', docx) }
   }

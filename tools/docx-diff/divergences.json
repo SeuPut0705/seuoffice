@@ -44,6 +44,16 @@
     "reason": "The zip gate ends this message with the text of the error DecompressionStream rejects with. That text belongs to the host: Node 22 rejects with a TypeError whose message is empty, so the gate falls back to its name, and a browser words it differently. Rust writes one sentence of its own. The gate compares the message up to \"cannot be inflated:\", which is the part the TypeScript wrote."
   },
   {
+    "id": "bytes-after-a-deflate-stream-are-the-hosts-to-refuse",
+    "comparison": "loadDocx",
+    "container": "bytes after the deflate stream",
+    "typescript": "opens",
+    "rust": {
+      "refused": "zip rejected: part word/styles.xml cannot be inflated: bytes follow the end of the deflate data"
+    },
+    "reason": "The zip gate inflates every entry through the host's DecompressionStream, and hosts differ on bytes that follow the end of a deflate stream inside an entry. Measured on 2026-11-12 with the gate's own read loop: Node 22.22.3 reads past them and the document opens; Node 26.5.0 rejects with TypeError \"Trailing junk found after the end of the compressed stream\"; Chromium 151.0.7922.34 (Playwright, headless) rejects with TypeError \"Junk found after end of compressed data.\", as the Compression Streams standard has it. The product's hosts are Chromium (the Electron renderer, the web); Electron 43 itself was not run, its Chromium is taken to do the same. Rust refuses, by the owner's decision of that day: same result as the product, not as the test host. The comparison runs on Node 22, so this container is listed here and kept out of the built containers; the TypeScript gate is to be made to answer alike on every host on main, and then this entry goes. Not mirrored: where such an entry also declares less than it inflates to, Rust always names the declaration, while in Chromium the answer depends on how much output was delivered before the error (64 KiB chunks; of 300,000 bytes 131,072 arrived)."
+  },
+  {
     "id": "latex-nested-deeper-than-rust-reads",
     "comparison": "call",
     "fn": "math.latexToOmml",
