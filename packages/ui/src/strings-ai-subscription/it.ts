@@ -154,7 +154,6 @@ export const it = {
     'Ancora niente? Copia i dati di connessione e inviali a chi ti sta aiutando. Non contengono account né percorsi di file.',
   actionCopyInfo: 'Copia i dati per l’assistenza',
   copyInfoDone: 'Copiato',
-  actionConnectHelp: 'Guarda ogni passaggio sullo schermo (pagina in coreano)',
   guidePathChatGptBody:
     'Accedi con il tuo account ChatGPT e usa il tuo piano. Non c’è nulla da installare. Il piano gratuito consente solo un uso limitato.',
   guideUseCodex: 'Usi già il programma Codex su questo PC? Collegati con Codex',

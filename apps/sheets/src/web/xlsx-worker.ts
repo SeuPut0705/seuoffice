@@ -3,6 +3,7 @@
 import wasmUrl from './generated/xlsx-wasm.wasm?url'
 import { ConsoleStdout, File, OpenFile, PreopenDirectory, WASI } from '@seuoffice/web-platform/wasi'
 import type { ResolvedWorkbookSave } from '../main/workbook-save-resolve'
+import { readRedactions } from './xlsx-entries'
 
 const PROTOCOL_VERSION = 1
 
@@ -11,6 +12,7 @@ export type WorkerRequest =
   | { id: number; kind: 'drop'; name: string }
   | { id: number; kind: 'call'; request: unknown }
   | { id: number; kind: 'save'; source: string; target: string; save: ResolvedWorkbookSave }
+  | { id: number; kind: 'redactions'; source: string }
 
 export type WorkerReply =
   { id: number; ok: true; result?: unknown } | { id: number; ok: false; error: string }
@@ -136,6 +138,14 @@ scope.addEventListener('message', (event) => {
   if (message.kind === 'save') {
     save(message).then(
       (result) => scope.postMessage({ id, ok: true, result }, [result.bytes.buffer]),
+      (error: unknown) => fail(id, error),
+    )
+    return
+  }
+  if (message.kind === 'redactions') {
+    // a view-only page asks this on every open: it runs without the planner `save` loads
+    readRedactions({ command, work, scratch }, message.source).then(
+      (result) => scope.postMessage({ id, ok: true, result }),
       (error: unknown) => fail(id, error),
     )
     return

@@ -29,7 +29,6 @@ import type {
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
   AI_TOOL_CAPABILITIES_CHANNEL,
-  SUBSCRIPTION_CONNECT_HELP_CHANNEL,
   SUBSCRIPTION_INSTALL_HELP_CHANNEL,
   imageGenerationAvailableOf,
   subscriptionLaunchResultOf,
@@ -81,9 +80,6 @@ const subscription: SubscriptionApi = {
   },
   openInstallHelp: async (provider) => {
     await ipcRenderer.invoke(SUBSCRIPTION_INSTALL_HELP_CHANNEL, provider)
-  },
-  openConnectHelp: async (path) => {
-    await ipcRenderer.invoke(SUBSCRIPTION_CONNECT_HELP_CHANNEL, path)
   },
 }
 
@@ -157,6 +153,8 @@ const api: PdfApi = {
   consumePending: () => ipcRenderer.invoke(PDF_CHANNELS.consumePending),
   openSourcePath: (path: string) => ipcRenderer.invoke('home:open-path', path),
   readFile: (path) => ipcRenderer.invoke(PDF_CHANNELS.readFile, path),
+  readFileChunk: (path: string, start: number, end: number) =>
+    ipcRenderer.invoke(PDF_CHANNELS.readFileChunk, path, start, end),
   decryptPdf: (bytes, password) => ipcRenderer.invoke(PDF_CHANNELS.decryptPdf, bytes, password),
   save: (request) => ipcRenderer.invoke(PDF_CHANNELS.save, request),
   pickAttachmentFile: () => ipcRenderer.invoke(PDF_CHANNELS.pickAttachmentFile),
@@ -193,6 +191,7 @@ const api: PdfApi = {
   mergePdf: (request) => ipcRenderer.invoke(PDF_CHANNELS.mergePdf, request),
   mergePages: (request) => ipcRenderer.invoke(PDF_CHANNELS.mergePages, request),
   replacePages: (request) => ipcRenderer.invoke(PDF_CHANNELS.replacePages, request),
+  restoreFile: (request) => ipcRenderer.invoke(PDF_CHANNELS.restoreFile, request),
   setPageSize: (request) => ipcRenderer.invoke(PDF_CHANNELS.setPageSize, request),
   splitPages: (request) => ipcRenderer.invoke(PDF_CHANNELS.splitPages, request),
   cropPages: (request) => ipcRenderer.invoke(PDF_CHANNELS.cropPages, request),
@@ -267,6 +266,13 @@ const api: PdfApi = {
       (value) => value === true,
       () => false,
     ),
+  onUsernameChanged: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, name: unknown) => {
+      if (typeof name === 'string') handler(name)
+    }
+    ipcRenderer.on(PDF_CHANNELS.authorNameChanged, listener)
+    return () => ipcRenderer.removeListener(PDF_CHANNELS.authorNameChanged, listener)
+  },
   setDirty: (dirty) => ipcRenderer.send(PDF_CHANNELS.dirtyChanged, dirty),
   onCloseSaveRequest: (handler) => {
     const listener = (_e: unknown, opts?: { flushAll?: boolean }) =>

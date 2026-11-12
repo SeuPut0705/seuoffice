@@ -29,7 +29,15 @@ export { SKILL_NAME }
 export const LEDGER_KEY = 'agentSkillInstalls'
 
 export type AgentId =
-  'claude-code' | 'agents' | 'codex' | 'cursor' | 'gemini' | 'copilot' | 'opencode' | 'windsurf'
+  | 'claude-code'
+  | 'agents'
+  | 'codex'
+  | 'cursor'
+  | 'gemini'
+  | 'copilot'
+  | 'opencode'
+  | 'dsh'
+  | 'windsurf'
 
 export interface AgentTarget {
   id: AgentId
@@ -138,6 +146,14 @@ const AGENTS: readonly AgentDef[] = [
     label: 'OpenCode',
     role: 'reader',
     probe: (env, home) => join(env.XDG_CONFIG_HOME || join(home, '.config'), 'opencode'),
+    skills: (p) => join(p, 'skills'),
+  },
+  {
+    // DSH_HOME (default ~/.dsh): reads the shared folder; the row lets `mcp` find the dotfolder for its Cordis patch
+    id: 'dsh',
+    label: 'DeepSeek Harness (dsh)',
+    role: 'reader',
+    probe: (env, home) => env.DSH_HOME || join(home, '.dsh'),
     skills: (p) => join(p, 'skills'),
   },
   {

@@ -5,7 +5,7 @@ import { fieldKindsOf } from '../main/field-kinds'
 import type { SaveBase } from '../main/save-fixes'
 import { bytesMatchFormat } from '../main/save-plan'
 import { sectionTailsOf } from '../main/section-tails'
-import { hasTrackedChanges, withoutTrackedChanges } from '../main/tracked-changes'
+import { trackedChangesOf, withoutTrackedChanges } from '../main/tracked-changes'
 
 export interface OpenedHwp {
   bytes: Uint8Array
@@ -13,6 +13,8 @@ export interface OpenedHwp {
   trackingDropped: boolean
   /** the file has tracked changes that could not be left out: it is never saved */
   tracked: boolean
+  /** the file could not be read here (the compound-file gate refused it): it is never saved over */
+  unverified: boolean
   /** what a save corrects against; empty unless the document was opened to be saved */
   base: SaveBase
 }
@@ -30,7 +32,8 @@ export function openHwpFromBytes(doc: WebDocument, forSave: boolean): OpenedHwp 
   let bytes: Uint8Array = doc.bytes
   let trackingDropped = false
   let tracked = false
-  if (bytesMatchFormat(bytes, 'hwp') && hasTrackedChanges(bytes)) {
+  const tracking = bytesMatchFormat(bytes, 'hwp') ? trackedChangesOf(bytes) : 'none'
+  if (tracking === 'tracked') {
     // the editor gets the document as it reads now; one that cannot be had is not saved
     const current = withoutTrackedChanges(bytes)
     if (current) {
@@ -45,5 +48,5 @@ export function openHwpFromBytes(doc: WebDocument, forSave: boolean): OpenedHwp 
     base.tails = sectionTailsOf(bytes) ?? undefined
     base.kinds = fieldKindsOf(bytes) ?? undefined
   }
-  return { bytes, trackingDropped, tracked, base }
+  return { bytes, trackingDropped, tracked, unverified: tracking === 'unreadable', base }
 }

@@ -156,7 +156,6 @@ export const de = {
     'Klappt es immer noch nicht? Kopieren Sie die Verbindungsdaten und senden Sie sie an die Person, die Ihnen hilft. Sie enthalten weder Konto noch Dateipfade.',
   actionCopyInfo: 'Infos für Hilfe kopieren',
   copyInfoDone: 'Kopiert',
-  actionConnectHelp: 'Jeden Schritt am Bildschirm ansehen (Seite auf Koreanisch)',
   guidePathChatGptBody:
     'Melden Sie sich mit Ihrem ChatGPT-Konto an und nutzen Sie Ihren Tarif. Keine Installation nötig. Der kostenlose Tarif erlaubt nur wenig Nutzung.',
   guideUseCodex: 'Nutzen Sie das Codex-Programm bereits auf diesem PC? Über Codex verbinden',

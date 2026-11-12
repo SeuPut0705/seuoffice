@@ -151,7 +151,6 @@ export const ja = {
     'それでもうまくいきませんか？接続情報をコピーして、手伝ってくれる人に送ってください。アカウントとファイルのパスは含まれません。',
   actionCopyInfo: 'サポート用の情報をコピー',
   copyInfoDone: 'コピーしました',
-  actionConnectHelp: '手順を画面で見る（韓国語のページ）',
   guidePathChatGptBody:
     'ChatGPT のアカウントでログインし、そのプランの範囲で使います。インストールは不要です。無料プランで使える量はわずかです。',
   guideUseCodex: 'この PC で Codex プログラムをすでに使っていますか？Codex で接続',

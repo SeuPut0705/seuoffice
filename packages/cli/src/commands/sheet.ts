@@ -93,6 +93,11 @@ export const sheetCommand: CommandDef = {
         "links: re-read reachable sources and write the computed values as the formulas' cached values (formulas untouched)",
     },
     {
+      name: 'remote-sources',
+      description:
+        'links --update: also read the sources the workbook places on another computer (\\\\host\\share, file://host/…) or on a drive that may be a network drive; the workbook chose that place and Windows signs in to it, so pass it only when the user asked',
+    },
+    {
       name: 'break',
       value: 'indices',
       description:
@@ -260,26 +265,32 @@ async function links(
   }
   if (update) {
     const output = writeOutput()
-    const result = await updateExternalLinkCaches(path, output)
+    const remoteSources = flagBool(args, 'remote-sources')
+    const result = await updateExternalLinkCaches(path, output, { remoteSources })
     return {
       summary:
         `updated ${result.updated} formula cache(s) from ${result.reachable} reachable link(s)` +
-        (result.broken > 0 ? `; ${result.broken} broken link(s) kept their cached values` : ''),
+        (result.broken > 0 ? `; ${result.broken} broken link(s) kept their cached values` : '') +
+        (result.remoteSkipped > 0
+          ? `; ${result.remoteSkipped} of them on another computer or a drive that may be a network drive, not contacted (--remote-sources reads them)`
+          : ''),
       outputPath: output,
       detail: result,
     }
   }
   const links = await readExternalLinks(path)
   const reachable = links.filter((link) => link.reachable).length
+  const unchecked = links.filter((link) => link.reachable === null).length
   return {
     summary:
       links.length === 0
         ? `${basename(path)} has no external links`
-        : `${basename(path)}: ${links.length} external link(s), ${reachable} reachable`,
+        : `${basename(path)}: ${links.length} external link(s), ${reachable} reachable` +
+          (unchecked > 0 ? `, ${unchecked} not checked` : ''),
     detail: {
       links,
       units:
-        'index is the [n] formulas use; source is the resolved path; reachable = the file exists',
+        'index is the [n] formulas use; source is the resolved path; reachable = the file exists, null = not checked (unchecked: remote = the target names another computer, drive = a drive that may be a network drive)',
     },
   }
 }

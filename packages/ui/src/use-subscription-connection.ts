@@ -12,17 +12,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   AiSubscriptionProviderId,
   AiSubscriptionState,
-  SubscriptionConnectHelpPath,
   SubscriptionLaunchResult,
   SubscriptionLoginMode,
   SubscriptionMeteredResult,
   SubscriptionOffResult,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
-import {
-  checkingSubscriptionStatuses,
-  subscriptionConnectHelpUrl,
-} from '@genoffice/ai-provider/browser'
+import { checkingSubscriptionStatuses } from '@genoffice/ai-provider/browser'
 import { AI_SUBSCRIPTION_INSTALL_HELP_URLS } from './ai-subscription'
 
 /** The part of a preload's subscription bridge this hook calls */
@@ -49,7 +45,6 @@ export interface SubscriptionApiLike {
   ): Promise<SubscriptionOffResult>
   codexImageAvailable?(): Promise<boolean>
   openInstallHelp?(provider: AiSubscriptionProviderId): Promise<void>
-  openConnectHelp?(path: SubscriptionConnectHelpPath | null): Promise<void>
 }
 
 /** a login or install that could not be started, a sign-out that did not go through, or a switch (decision 0114) that could not be stored */
@@ -90,8 +85,6 @@ export interface SubscriptionConnection {
    */
   readonly setOff: (provider: AiSubscriptionProviderId, off: boolean) => void
   readonly openInstallHelp: (provider: AiSubscriptionProviderId) => void
-  /** open the website's step-by-step connect help at the guide's path */
-  readonly openConnectHelp: (path: SubscriptionConnectHelpPath | null) => void
   /** read the statuses again without a card asking (shell/slides) or check them (editors) */
   readonly refresh: (providers?: AiSubscriptionProviderId[]) => void
 }
@@ -191,18 +184,6 @@ export function useSubscriptionConnection(
       return
     }
     const url = AI_SUBSCRIPTION_INSTALL_HELP_URLS[provider]
-    if (openUrl) openUrl(url)
-    else window.open(url)
-  }, [])
-
-  const openConnectHelp = useCallback((path: SubscriptionConnectHelpPath | null) => {
-    const { api, help = 'auto', openUrl } = optionsRef.current
-    const bridge = safeApi(api)
-    if (help !== 'window' && bridge?.openConnectHelp) {
-      void attempt(api, (value) => value.openConnectHelp!(path))
-      return
-    }
-    const url = subscriptionConnectHelpUrl(path)
     if (openUrl) openUrl(url)
     else window.open(url)
   }, [])
@@ -390,7 +371,6 @@ export function useSubscriptionConnection(
     acceptMetered,
     setOff,
     openInstallHelp: openHelp,
-    openConnectHelp,
     refresh,
   }
 }

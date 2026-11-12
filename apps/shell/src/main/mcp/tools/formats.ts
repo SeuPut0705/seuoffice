@@ -58,8 +58,9 @@ export const FORMAT_FAMILIES: readonly FormatFamily[] = [
     label: 'Word document',
     // .odt opens in the same Word tab and its Save As offers docx and ODT. MCP
     // sessions stay docx (a dialog-free save never changes a tab's format);
-    // read_docx also reads .odt
-    editorOpen: ['docx', 'odt'],
+    // read_docx also reads .odt. Legacy Word .doc/.dot open as a converted
+    // .docx copy, so they are open-only (never in editorSave)
+    editorOpen: ['docx', 'odt', 'doc', 'dot'],
     editorSave: ['docx', 'odt'],
     editorExport: ['pdf'],
     mcp: { generate: 'docx', save: ['docx'], read: 'docx' },
@@ -80,7 +81,10 @@ export const FORMAT_FAMILIES: readonly FormatFamily[] = [
   {
     family: 'pptx',
     label: 'presentation',
-    editorOpen: ['pptx'],
+    // .odp/.otp and the legacy .ppt open as converted copies and save as
+    // .pptx, so they are open-only formats like .ods: they must not appear in
+    // editorSave
+    editorOpen: ['pptx', 'odp', 'otp', 'ppt'],
     editorSave: ['pptx'],
     editorExport: ['pdf'],
     mcp: { generate: 'pptx', save: ['pptx'] },

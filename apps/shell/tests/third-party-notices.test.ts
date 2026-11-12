@@ -236,6 +236,16 @@ function packWithNotice(notice: string | null, regenerated: string | null) {
             }
             return fs.readFileSync(path, encoding)
           },
+          // the linux sidecar guard reads its ELF header: an x86_64 one for the x64 pass
+          openSync: () => 42,
+          readSync: (_fd: number, buffer: Buffer, offset: number) => {
+            const header = Buffer.alloc(20)
+            header.write('\x7fELF', 0, 'latin1')
+            header.writeUInt16LE(0x3e, 18)
+            header.copy(buffer, offset)
+            return header.length
+          },
+          closeSync: () => undefined,
         }
       }
       return require(id)

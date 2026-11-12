@@ -10,4 +10,8 @@ export const es = {
   diskIgnore: 'Ignorar',
   diskDismiss: 'Aceptar',
   diskReloadFailed: 'No se pudo volver a cargar el archivo: {detail}',
+  diskChangedNoUndo:
+    'Otro programa cambió o eliminó este archivo, por lo que no se aplicó Deshacer ni Rehacer a este cambio.',
+  pageOpNoUndoConfirm:
+    'Este archivo ({size}) supera el tamaño que se conserva para Deshacer ({limit}), por lo que esta operación de páginas no se podrá deshacer. ¿Continuar?',
 } satisfies Record<keyof typeof zh, string>

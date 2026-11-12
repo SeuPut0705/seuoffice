@@ -4,7 +4,10 @@ import { basename, dirname, extname, isAbsolute, join, resolve as resolvePath } 
 import { PdfLoadError } from '@genoffice/pdf2docx'
 import { assertOptionValues, flagBool, flagString, type ParsedArgs } from '../args'
 import { csvToXlsx, sheetNameFromStem } from '../formats/csv'
+import { convertHwp } from '../formats/hwp'
 import { convertLegacyDoc } from '../formats/legacy-doc'
+import { convertLegacyPpt } from '../formats/legacy-ppt'
+import { convertOdp } from '../formats/odf'
 import { convertPdf, type PdfTarget } from '../formats/pdf'
 import { convertLegacyWorkbook, convertToOds, sheetToCsv } from '../formats/xlsx'
 import { exportViaApp, type AppExportTarget } from '../formats/app-export'
@@ -51,6 +54,13 @@ const NODE_ROUTES: Record<string, readonly string[]> = {
   ods: ['xlsx'],
   doc: ['docx'],
   dot: ['docx'],
+  // Hancom documents become a .docx through the hwp2docx import filter
+  hwpx: ['docx'],
+  hwp: ['docx'],
+  // an ODF presentation or template becomes a .pptx through the import filter
+  odp: ['pptx'],
+  otp: ['pptx'],
+  ppt: ['pptx'],
   md: ['docx', 'html'],
   markdown: ['docx', 'html'],
   docx: ['md', 'hwp', 'hwpx'],
@@ -267,8 +277,20 @@ async function run(
     const { bytes, hwp_report } = await docxToHangul(readInput(input), to, ctx)
     return { bytes, detail: { hwp_report } }
   }
+  if (from === 'odp' || from === 'otp') {
+    const r = await convertOdp(readInput(input))
+    return { bytes: r.bytes, detail: r.detail }
+  }
+  if (from === 'hwp' || from === 'hwpx') {
+    const r = await convertHwp(readInput(input))
+    return { bytes: r.bytes, detail: r.detail }
+  }
   if (from === 'doc' || from === 'dot') {
     const r = await convertLegacyDoc(readInput(input))
+    return { bytes: r.bytes, detail: r.detail }
+  }
+  if (from === 'ppt') {
+    const r = await convertLegacyPpt(readInput(input))
     return { bytes: r.bytes, detail: r.detail }
   }
   const r = await convertLegacyWorkbook(input, output)

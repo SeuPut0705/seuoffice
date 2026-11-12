@@ -38,7 +38,7 @@ use crate::recalc::{
 };
 use crate::rels_normalize::load_model;
 
-/// One `[n]` link of the workbook, as the report carries it.
+/// One `[n]` link of the workbook, as the update report carries it.
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExternalLinkStatus {
@@ -47,8 +47,55 @@ pub struct ExternalLinkStatus {
     /// The resolved local path when the target names one; `None` for schemes
     /// the sidecar cannot read (an `http://` source never becomes reachable).
     pub source: Option<String>,
+    /// False as well for a source that is not plainly on this computer when
+    /// the update was not allowed to contact it.
     pub reachable: bool,
     pub sheet_names: Vec<String>,
+}
+
+/// One `[n]` link as the CLI's link report carries it: the update report's
+/// shape, except that a source the report must not ask the disk about says
+/// so instead of answering.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalLinkReadStatus {
+    pub index: usize,
+    pub raw_target: String,
+    pub source: Option<String>,
+    /// `None` (JSON `null`) when the source was not asked about.
+    pub reachable: Option<bool>,
+    /// Why it was not asked about: `remote` — the target names another
+    /// computer; `drive` — a drive letter that may be a network drive.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unchecked: Option<&'static str>,
+    pub sheet_names: Vec<String>,
+}
+
+/// One `[n]` link as the panel's listing carries it. Deliberately no
+/// `reachable`: opening a workbook (and its links panel) must not probe the
+/// targets on disk — a network share can block for seconds if it is gone —
+/// so reachability is answered only by the explicit update.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalLinkListStatus {
+    pub index: usize,
+    pub raw_target: String,
+    /// The resolved local path when the target names one; `None` for schemes
+    /// the sidecar cannot read.
+    pub source: Option<String>,
+    pub sheet_names: Vec<String>,
+}
+
+/// The kind of an external-formula cell's value, so a host can write the
+/// cache with the right XML type: a boolean result belongs in `t="b"`, an
+/// error in `t="e"`, not in a text cache that spells TRUE or #DIV/0!.
+#[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum ExternalLinkCellKind {
+    Number,
+    Text,
+    Boolean,
+    Error,
 }
 
 /// One external-formula cell of the report, exactly one entry per
@@ -67,7 +114,19 @@ pub struct ExternalLinkCell {
     pub column: u32,
     pub formatted: String,
     pub number: Option<f64>,
+    /// The value's kind; `None` when there is no usable value (a formula cell
+    /// the file never cached cannot be written as one). Skipped, not `null`:
+    /// the host schema only knows an absent `kind`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<ExternalLinkCellKind>,
     pub formula: String,
+}
+
+/// The panel listing, shaped like the update report's `links` so the host
+/// reads both with one schema.
+#[derive(serde::Serialize)]
+pub struct ExternalLinksListing {
+    pub links: Vec<ExternalLinkListStatus>,
 }
 
 #[derive(serde::Serialize)]
@@ -77,32 +136,141 @@ pub struct ExternalLinksReport {
     pub cells: Vec<ExternalLinkCell>,
 }
 
+/// Where a link's source lives, as far as its spelling tells. The workbook
+/// chose the spelling, and on Windows merely asking whether a file exists on
+/// `\\host\share` signs the machine in to that host (an NTLM response leaves
+/// it), so the place decides which requests may ask the disk about a source.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SourcePlace {
+    /// On this computer, or beside the workbook wherever the user keeps it.
+    Here,
+    /// A Windows drive letter that is neither the workbook's nor the
+    /// system's: it may be a mapped network drive.
+    OtherDrive,
+    /// The target names a host: `\\host\share\…`, `//host/…`, `file://host/…`.
+    AnotherComputer,
+}
+
 /// A link's parsed identity, kept private: the report carries the flattened
 /// status, the update pass needs nothing beyond the resolved source.
 struct LinkEntry {
     index: usize,
     raw_target: String,
     source: Option<PathBuf>,
+    place: SourcePlace,
     sheet_names: Vec<String>,
 }
 
 impl LinkEntry {
-    fn status(&self) -> ExternalLinkStatus {
+    /// The update's verdict on the link. Without `allow_remote_sources` only
+    /// a source that is plainly here is asked about: a drive that may be a
+    /// network drive gets the same answer as a named host.
+    fn status(&self, allow_remote_sources: bool) -> ExternalLinkStatus {
         ExternalLinkStatus {
             index: self.index,
             raw_target: self.raw_target.clone(),
-            source: self
-                .source
-                .as_ref()
-                .map(|path| path.to_string_lossy().into_owned()),
-            reachable: self.reachable(),
+            source: self.source_text(),
+            reachable: (allow_remote_sources || self.place == SourcePlace::Here)
+                && self.source_is_file(),
             sheet_names: self.sheet_names.clone(),
         }
     }
 
-    fn reachable(&self) -> bool {
-        self.source.as_ref().is_some_and(|path| path.is_file())
+    /// The link report's shape: reachability only for a source that is
+    /// plainly on this computer.
+    fn checked_status(&self) -> ExternalLinkReadStatus {
+        let unchecked = match self.place {
+            SourcePlace::Here => None,
+            SourcePlace::OtherDrive => Some("drive"),
+            SourcePlace::AnotherComputer => Some("remote"),
+        };
+        ExternalLinkReadStatus {
+            index: self.index,
+            raw_target: self.raw_target.clone(),
+            source: self.source_text(),
+            reachable: match unchecked {
+                None => Some(self.source_is_file()),
+                Some(_) => None,
+            },
+            unchecked,
+            sheet_names: self.sheet_names.clone(),
+        }
     }
+
+    /// The listing's shape: everything but reachability, which needs a disk
+    /// probe the open path must not pay for.
+    fn read_status(&self) -> ExternalLinkListStatus {
+        ExternalLinkListStatus {
+            index: self.index,
+            raw_target: self.raw_target.clone(),
+            source: self.source_text(),
+            sheet_names: self.sheet_names.clone(),
+        }
+    }
+
+    fn source_text(&self) -> Option<String> {
+        self.source
+            .as_ref()
+            .map(|path| path.to_string_lossy().into_owned())
+    }
+
+    /// Whether the source is a file on disk: the one place this module asks
+    /// the filesystem about a path the workbook chose.
+    fn source_is_file(&self) -> bool {
+        let Some(path) = self.source.as_deref() else {
+            return false;
+        };
+        #[cfg(test)]
+        tests::PROBED.with(|probed| probed.borrow_mut().push(path.to_path_buf()));
+        path.is_file()
+    }
+}
+
+/// Classifies a resolved source. `relative` marks a target that named no
+/// location of its own and was resolved beside the workbook; `home_drives`
+/// are the drive letters known to be the user's own (the workbook's and the
+/// system's). `windows` selects the rule set, a parameter so both are
+/// testable on any host.
+fn source_place(
+    path: &Path,
+    relative: bool,
+    home_drives: &[Option<u8>; 2],
+    windows: bool,
+) -> SourcePlace {
+    let text = path.to_string_lossy();
+    let bytes = text.as_bytes();
+    let is_separator = |byte: Option<&u8>| matches!(byte, Some(b'/' | b'\\'));
+    if windows {
+        if relative {
+            return SourcePlace::Here;
+        }
+        if let Some(drive) = drive_letter(&text)
+            && is_separator(bytes.get(2))
+        {
+            return if home_drives.contains(&Some(drive)) {
+                SourcePlace::Here
+            } else {
+                SourcePlace::OtherDrive
+            };
+        }
+        // `\\host\…`, and every other absolute spelling: Windows routes more
+        // than the two-backslash form to a network provider (`\??\UNC\…`)
+        return SourcePlace::AnotherComputer;
+    }
+    if is_separator(bytes.first()) && is_separator(bytes.get(1)) {
+        return SourcePlace::AnotherComputer;
+    }
+    // the automounter's conventional `-hosts` map, where the path picks the
+    // host to mount; `..` in a relative target can climb there too
+    if normalize_path(path).starts_with("/net") {
+        return SourcePlace::AnotherComputer;
+    }
+    SourcePlace::Here
+}
+
+/// The upper-cased letter of a `C:…` spelling.
+fn drive_letter(path: &str) -> Option<u8> {
+    starts_with_drive(path).then(|| path.as_bytes()[0].to_ascii_uppercase())
 }
 
 /// Where a `[n]Sheet!REF` span points, normalized to 0-based bounds.
@@ -125,8 +293,20 @@ impl RefSpan {
 /// cached value. A `<v>`-worth of data, not a whole external sheet.
 const MAX_INLINE_CELLS: u64 = 65_536;
 
-/// Parses the workbook's external links in `[n]` index order.
-fn parse_external_links(workbook: &Path) -> Result<Vec<LinkEntry>, SidecarError> {
+/// Parses the workbook's external links in `[n]` index order. `base_dir` is
+/// the folder relative targets resolve against when the file at `workbook`
+/// is not where the workbook really lives (a decrypted temporary copy).
+fn parse_external_links(
+    workbook: &Path,
+    base_dir: Option<&Path>,
+) -> Result<Vec<LinkEntry>, SidecarError> {
+    let base = base_dir.or_else(|| workbook.parent());
+    let home_drives = [
+        base.and_then(|folder| drive_letter(&folder.to_string_lossy())),
+        std::env::var("SystemDrive")
+            .ok()
+            .and_then(|drive| drive_letter(&drive)),
+    ];
     let mut links = Vec::new();
     let file = match std::fs::File::open(workbook) {
         Ok(file) => file,
@@ -166,11 +346,20 @@ fn parse_external_links(workbook: &Path) -> Result<Vec<LinkEntry>, SidecarError>
         };
         let sheet_names = external_sheet_names(&part_xml);
         let raw_target = external_link_path(&mut archive, &part).unwrap_or_default();
-        let source = resolve_external_path(workbook, &raw_target);
+        let source = resolve_external_path(base, &raw_target);
+        let place = source.as_deref().map_or(SourcePlace::Here, |path| {
+            source_place(
+                path,
+                is_relative_target(&raw_target),
+                &home_drives,
+                cfg!(windows),
+            )
+        });
         links.push(LinkEntry {
             index,
             raw_target,
             source,
+            place,
             sheet_names,
         });
     }
@@ -229,9 +418,9 @@ fn external_link_path(archive: &mut zip::ZipArchive<std::fs::File>, part: &str) 
 /// Resolves a stored source path the way Excel does: a `file:///` URI decodes
 /// to a local path (a two-slash `file://host/…` is an UNC spelling), a path
 /// that already looks absolute stays as written, and everything else is
-/// relative to the dependent workbook's own folder. `None` marks a target the
-/// sidecar cannot read at all (an `http://` source).
-fn resolve_external_path(workbook: &Path, raw: &str) -> Option<PathBuf> {
+/// relative to `base`, the dependent workbook's own folder. `None` marks a
+/// target the sidecar cannot read at all (an `http://` source).
+fn resolve_external_path(base: Option<&Path>, raw: &str) -> Option<PathBuf> {
     let raw = raw.trim();
     if let Some(rest) = raw.strip_prefix("file://") {
         if let Some(path) = rest.strip_prefix('/') {
@@ -263,11 +452,21 @@ fn resolve_external_path(workbook: &Path, raw: &str) -> Option<PathBuf> {
     if raw.contains("://") {
         return None;
     }
-    if raw.starts_with('\\') || Path::new(raw).is_absolute() || starts_with_drive(raw) {
+    if !is_relative_target(raw) {
         return Some(Path::new(raw).to_path_buf());
     }
-    let base = workbook.parent()?;
-    Some(normalize_path(&base.join(raw)))
+    Some(normalize_path(&base?.join(raw)))
+}
+
+/// A stored target that names no location of its own: it is resolved beside
+/// the workbook.
+fn is_relative_target(raw: &str) -> bool {
+    let raw = raw.trim();
+    !(raw.contains("://")
+        || raw.starts_with("//")
+        || raw.starts_with('\\')
+        || Path::new(raw).is_absolute()
+        || starts_with_drive(raw))
 }
 
 /// `C:/…` (or `C:\…`): a Windows drive spelling — absolute on Windows, and
@@ -320,31 +519,69 @@ fn join_package_path(base: &str, target: &str) -> String {
     format!("{base}/{target}")
 }
 
-/// The link list without touching any source: what `sheet links` prints and
-/// the panel lists.
+/// The CLI's link report (`sheet links`): the links, and for each source that
+/// is plainly on this computer whether the file exists (one `stat`, nothing
+/// is opened). A source that names another computer, or a drive that may be
+/// a network drive, is not asked about and says so.
 pub fn read_external_link_statuses(
     workbook: &Path,
-) -> Result<Vec<ExternalLinkStatus>, SidecarError> {
-    Ok(parse_external_links(workbook)?
+) -> Result<Vec<ExternalLinkReadStatus>, SidecarError> {
+    Ok(parse_external_links(workbook, None)?
         .iter()
-        .map(LinkEntry::status)
+        .map(LinkEntry::checked_status)
         .collect())
+}
+
+/// The link list without touching any source: no `is_file()` on the targets,
+/// nothing is opened, nothing is evaluated. This is what the editor's links
+/// panel reads when it opens; the explicit update answers reachability.
+pub(crate) fn list_external_link_statuses(
+    workbook: &Path,
+    base_dir: Option<&Path>,
+) -> Result<ExternalLinksListing, SidecarError> {
+    Ok(ExternalLinksListing {
+        links: parse_external_links(workbook, base_dir)?
+            .iter()
+            .map(LinkEntry::read_status)
+            .collect(),
+    })
 }
 
 /// Computes fresh values for every external-formula cell against the reachable
 /// sources. The workbook is never written here — the caller carries the
 /// returned values into the save pipeline as cached `<v>`s, formulas intact.
+///
+/// A source that is not plainly on this computer — it names a host, or sits
+/// on a drive that may be a network drive — is neither looked for nor opened,
+/// and reports unreachable, unless `allow_remote_sources`: the caller sets it
+/// when a person asked for those sources, never for a document it was merely
+/// handed.
 pub fn update_external_link_values(
     workbook: &Path,
+    base_dir: Option<&Path>,
+    allow_remote_sources: bool,
 ) -> Result<ExternalLinksReport, SidecarError> {
-    let links = parse_external_links(workbook)?;
-    let statuses: Vec<ExternalLinkStatus> = links.iter().map(LinkEntry::status).collect();
+    let links = parse_external_links(workbook, base_dir)?;
+    update_values_from(workbook, &links, allow_remote_sources)
+}
+
+/// The update over links already parsed: which sources it may ask the disk
+/// about is decided here, from each link's place.
+fn update_values_from(
+    workbook: &Path,
+    links: &[LinkEntry],
+    allow_remote_sources: bool,
+) -> Result<ExternalLinksReport, SidecarError> {
+    let statuses: Vec<ExternalLinkStatus> = links
+        .iter()
+        .map(|link| link.status(allow_remote_sources))
+        .collect();
 
     // One live source model per reachable link, loaded lazily: an update of
     // three links where only one source exists opens one workbook.
     let mut sources: Vec<Option<Model<'static>>> = Vec::with_capacity(links.len());
-    for link in &links {
-        sources.push(if link.reachable() {
+    for (link, status) in links.iter().zip(&statuses) {
+        sources.push(if status.reachable {
             load_model(link.source.as_ref().unwrap()).ok()
         } else {
             None
@@ -403,15 +640,16 @@ pub fn update_external_link_values(
     let mut cells: Vec<ExternalLinkCell> = Vec::new();
     for (sheet, row, column, text, cached) in &pending {
         let rewritten_now = rewritten.contains(&(*sheet, *row, *column));
-        let (formatted, number) = if rewritten_now {
+        let (formatted, number, kind) = if rewritten_now {
             (
                 model
                     .get_formatted_cell_value(*sheet, *row, *column)
                     .unwrap_or_default(),
                 raw_number(&model, *sheet, *row, *column),
+                Some(cell_kind(&model, *sheet, *row, *column)),
             )
         } else {
-            (cached.formatted(), cached.number())
+            (cached.formatted(), cached.number(), cached.kind())
         };
         cells.push(ExternalLinkCell {
             sheet: model.workbook.worksheets[*sheet as usize].name.clone(),
@@ -419,6 +657,7 @@ pub fn update_external_link_values(
             column: (*column - 1) as u32,
             formatted,
             number,
+            kind,
             formula: text.clone(),
         });
     }
@@ -445,6 +684,7 @@ enum CachedValue {
     Number(f64),
     Text(String),
     Bool(bool),
+    Error(String),
     Missing,
 }
 
@@ -454,6 +694,8 @@ impl CachedValue {
             FormulaValue::Number(number) => CachedValue::Number(*number),
             FormulaValue::Text(text) => CachedValue::Text(text.clone()),
             FormulaValue::Boolean(flag) => CachedValue::Bool(*flag),
+            // the cached error's own spelling: #DIV/0!, #N/A, …
+            FormulaValue::Error { ei, .. } => CachedValue::Error(ei.to_string()),
             _ => CachedValue::Missing,
         }
     }
@@ -465,6 +707,18 @@ impl CachedValue {
         }
     }
 
+    /// The kind a host needs to write this cache with the right XML type;
+    /// `None` for a cell with no usable cache.
+    fn kind(&self) -> Option<ExternalLinkCellKind> {
+        match self {
+            CachedValue::Number(_) => Some(ExternalLinkCellKind::Number),
+            CachedValue::Text(_) => Some(ExternalLinkCellKind::Text),
+            CachedValue::Bool(_) => Some(ExternalLinkCellKind::Boolean),
+            CachedValue::Error(_) => Some(ExternalLinkCellKind::Error),
+            CachedValue::Missing => None,
+        }
+    }
+
     /// A skipped cell's report value: the file's own cache, spelled the way
     /// the model carries it — numbers bare, text as the string itself.
     fn formatted(&self) -> String {
@@ -473,8 +727,22 @@ impl CachedValue {
             CachedValue::Text(text) => text.clone(),
             CachedValue::Bool(true) => "TRUE".into(),
             CachedValue::Bool(false) => "FALSE".into(),
+            CachedValue::Error(text) => text.clone(),
             CachedValue::Missing => String::new(),
         }
+    }
+}
+
+/// The kind of a rewritten (live) cell's value, from the model's own cell type.
+fn cell_kind(model: &Model, sheet: u32, row: i32, column: i32) -> ExternalLinkCellKind {
+    match model.get_cell_type(sheet, row, column) {
+        Ok(CellType::Number) => ExternalLinkCellKind::Number,
+        Ok(CellType::LogicalValue) => ExternalLinkCellKind::Boolean,
+        Ok(CellType::ErrorValue) => ExternalLinkCellKind::Error,
+        Ok(CellType::Text) => ExternalLinkCellKind::Text,
+        // arrays/compound data have no per-cell cache of their own; their
+        // formatted text is the value a host can write
+        _ => ExternalLinkCellKind::Text,
     }
 }
 
@@ -833,10 +1101,397 @@ fn cell_literal(model: &Model, sheet: u32, row: u32, column: u32) -> Option<Stri
     }
 }
 
+/// The value a break freezes one cell at: the file-cached `<v>` with its
+/// cell type. Mirrors the gateway's `literalCell` spelling one-to-one, so the
+/// cells reported here are exactly the cells a break transform converts.
+/// Struct variants on purpose — serde's internally-tagged enums reject
+/// scalar newtype variants.
+#[derive(serde::Serialize, Clone, Debug, PartialEq)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum UsageValue {
+    Number { value: f64 },
+    Text { value: String },
+    Bool { value: bool },
+    /// An error result keeps its `t="e"` spelling (`#REF!`, `#NAME?`, …).
+    Error { value: String },
+    Missing,
+}
+
+/// One formula cell that references an external link, as the usage report
+/// carries it. `row`/`column` are 0-based.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalLinkUsageCell {
+    pub sheet: String,
+    pub row: u32,
+    pub column: u32,
+    pub value: UsageValue,
+}
+
+/// Every cell of the workbook that references link `[n]`.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalLinkUsage {
+    pub index: usize,
+    pub cells: Vec<ExternalLinkUsageCell>,
+}
+
+/// Decodes the XML entities a hand-read `<v>`/`<f>` text may carry.
+fn decode_xml_entities(text: &str) -> String {
+    if !text.contains('&') {
+        return text.to_string();
+    }
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = rest.find('&') {
+        out.push_str(&rest[..at]);
+        let tail = &rest[at..];
+        let (entity, skip): (Option<char>, usize) = if let Some(digits) = tail.strip_prefix("&#x") {
+            match digits.find(';') {
+                Some(end) => (
+                    u32::from_str_radix(&digits[..end], 16).ok().and_then(char::from_u32),
+                    end + 4,
+                ),
+                None => (None, 1),
+            }
+        } else if let Some(digits) = tail.strip_prefix("&#") {
+            match digits.find(';') {
+                Some(end) => (
+                    digits[..end].parse::<u32>().ok().and_then(char::from_u32),
+                    end + 3,
+                ),
+                None => (None, 1),
+            }
+        } else if tail.starts_with("&amp;") {
+            (Some('&'), 5)
+        } else if tail.starts_with("&lt;") {
+            (Some('<'), 4)
+        } else if tail.starts_with("&gt;") {
+            (Some('>'), 4)
+        } else if tail.starts_with("&quot;") {
+            (Some('"'), 6)
+        } else if tail.starts_with("&apos;") {
+            (Some('\''), 6)
+        } else {
+            (None, 1)
+        };
+        match entity {
+            Some(decoded) => out.push(decoded),
+            // not an entity we know: keep the `&` verbatim
+            None => out.push('&'),
+        }
+        rest = &rest[at + skip..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// `A1`-style reference → 0-based row and column.
+fn parse_cell_reference(reference: &str) -> Option<(u32, u32)> {
+    let split = reference.find(|ch: char| ch.is_ascii_digit())?;
+    let (letters, digits) = reference.split_at(split);
+    if letters.is_empty() || letters.len() > 3 || digits.is_empty() {
+        return None;
+    }
+    let mut column = 0u32;
+    for ch in letters.chars() {
+        let upper = ch.to_ascii_uppercase();
+        if !upper.is_ascii_uppercase() {
+            return None;
+        }
+        column = column * 26 + u32::from(upper as u8 - b'A') + 1;
+    }
+    let row = digits.parse::<u32>().ok()?;
+    if row == 0 {
+        return None;
+    }
+    Some((row - 1, column - 1))
+}
+
+/// The link indices one formula body references — the same two spellings the
+/// gateway's break transform matches: `'[1]Sheet Name'` (quotes doubled
+/// inside) and `[1]Sheet1` (sheet-name characters run to a delimiter).
+fn link_indexes(body: &str) -> Vec<usize> {
+    let chars: Vec<char> = body.chars().collect();
+    let mut out = Vec::new();
+    let mut at = 0;
+    while at < chars.len() {
+        if chars[at] != '[' {
+            at += 1;
+            continue;
+        }
+        let mut cursor = at + 1;
+        while cursor < chars.len() && chars[cursor].is_ascii_digit() {
+            cursor += 1;
+        }
+        if cursor == at + 1 || cursor >= chars.len() || chars[cursor] != ']' {
+            at += 1;
+            continue;
+        }
+        let index: usize = chars[at + 1..cursor].iter().collect::<String>().parse().unwrap_or(0);
+        // the bare spelling needs at least one sheet-name character after
+        // `]`; the quoted spelling needs the closing quote of `'[n]…'`
+        let bare = cursor + 1 < chars.len() && is_sheet_name_char(chars[cursor + 1]);
+        let mut quoted = false;
+        if at > 0 && chars[at - 1] == '\'' {
+            let mut scan = cursor + 1;
+            while scan < chars.len() {
+                if chars[scan] == '\'' {
+                    if scan + 1 < chars.len() && chars[scan + 1] == '\'' {
+                        scan += 2;
+                        continue;
+                    }
+                    quoted = true;
+                    break;
+                }
+                scan += 1;
+            }
+        }
+        if (bare || quoted) && index > 0 && !out.contains(&index) {
+            out.push(index);
+        }
+        at = cursor + 1;
+    }
+    out
+}
+
+/// A character the bare `[n]Sheet1` spelling allows inside the sheet name —
+/// the inverse of the gateway's `BARE_REF` terminator set.
+fn is_sheet_name_char(ch: char) -> bool {
+    !matches!(
+        ch,
+        ' ' | '!'
+            | '('
+            | ')'
+            | ','
+            | ';'
+            | '"'
+            | '\''
+            | '^'
+            | '&'
+            | '*'
+            | '<'
+            | '>'
+            | '='
+            | '+'
+            | '-'
+            | '/'
+            | '['
+            | ']'
+    ) && !ch.is_whitespace()
+}
+
+/// Start offset of the next real `<tag` element at or after `from` — one whose
+/// next character ends the name, so `<c` never matches `<cols`.
+fn element_start(xml: &str, tag: &str, from: usize) -> Option<usize> {
+    let mut at = from;
+    while let Some(found) = xml[at..].find(&format!("<{tag}")) {
+        let open = found + at;
+        match xml.as_bytes().get(open + 1 + tag.len()) {
+            Some(b' ') | Some(b'>') | Some(b'/') | Some(b'\t') | Some(b'\n') | Some(b'\r') => {
+                return Some(open)
+            }
+            _ => at = open + 1,
+        }
+    }
+    None
+}
+
+/// `(tag start, body start, body end)` of the first `<tag …>` element at or
+/// after `from`. A self-closing `<tag/>` reports an empty body; the offsets
+/// index the same string the caller slices.
+fn element_span(xml: &str, tag: &str, from: usize) -> Option<(usize, usize, usize)> {
+    let open = element_start(xml, tag, from)?;
+    let after_open = xml[open..].find('>')? + open + 1;
+    // the slice ends at the `>`, so a self-closing tag spells `/>`
+    if xml[open..after_open].ends_with("/>") {
+        return Some((open, after_open, after_open));
+    }
+    let close = xml[after_open..].find(&format!("</{tag}>"))? + after_open;
+    Some((open, after_open, close))
+}
+
+/// Reads one attribute of a tag's opening text (` t="str"`, ` si="2"`).
+fn attribute_value(tag: &str, name: &str) -> Option<String> {
+    let pattern = format!(r#" {name}=""#);
+    let start = tag.find(&pattern)? + pattern.len();
+    let end = tag[start..].find('"')? + start;
+    Some(tag[start..end].to_string())
+}
+
+/// The cell's cached value, spelled the way a break freezes it.
+fn usage_value(cell_open: &str, body: &str) -> UsageValue {
+    let raw = element_span(body, "v", 0).map(|(_open, inner, close)| body[inner..close].to_string());
+    match attribute_value(cell_open, "t").as_deref() {
+        Some("str") => UsageValue::Text {
+            value: raw.map(|v| decode_xml_entities(&v)).unwrap_or_default(),
+        },
+        Some("e") => UsageValue::Error {
+            value: raw.map(|v| decode_xml_entities(&v)).unwrap_or_default(),
+        },
+        Some("b") => UsageValue::Bool {
+            value: raw.as_deref() == Some("1") || raw.as_deref() == Some("true"),
+        },
+        _ => match raw.as_deref() {
+            Some(text) if text.is_empty() => UsageValue::Missing,
+            Some(text) => match text.parse::<f64>() {
+                Ok(value) => UsageValue::Number { value },
+                Err(_) => UsageValue::Text {
+                    value: decode_xml_entities(text),
+                },
+            },
+            None => UsageValue::Missing,
+        },
+    }
+}
+
+/// Scans the workbook's sheet parts for formulas that reference each `[n]`
+/// link and reports every such cell with the literal its cached `<v>` freezes
+/// at. A file-level scan on purpose: it sees exactly the `<f>` bodies and
+/// `t="e"` caches the gateway's break transform sees, where a model pass
+/// would lose the errors.
+pub(crate) fn read_external_link_usage(
+    workbook: &Path,
+) -> Result<Vec<ExternalLinkUsage>, SidecarError> {
+    let mut usages: Vec<ExternalLinkUsage> = Vec::new();
+    let file = match std::fs::File::open(workbook) {
+        Ok(file) => file,
+        Err(_) => return Ok(usages),
+    };
+    let mut archive = zip::ZipArchive::new(file)?;
+    let (workbook_xml, rels_xml) = match (
+        crate::xml_util::read_zip_string(&mut archive, "xl/workbook.xml"),
+        crate::xml_util::read_zip_string(&mut archive, "xl/_rels/workbook.xml.rels"),
+    ) {
+        (Ok(xml), Ok(rels)) => (xml, rels),
+        _ => return Ok(usages),
+    };
+    let rel_targets = relationship_targets(&rels_xml);
+    // worksheet part → sheet name, so the report speaks sheet names
+    let mut sheet_names: HashMap<String, String> = HashMap::new();
+    if let Ok(doc) = roxmltree::Document::parse(&workbook_xml) {
+        for node in doc.descendants() {
+            if node.tag_name().name() != "sheet" {
+                continue;
+            }
+            if let (Some(name), Some(rid)) = (node.attribute("name"), node.attribute("id")) {
+                if let Some(target) = rel_targets.get(rid) {
+                    sheet_names.insert(join_package_path("xl", target), name.to_string());
+                }
+            }
+        }
+    }
+    let mut part_paths: Vec<String> = Vec::new();
+    for index in 0..archive.len() {
+        let Ok(file) = archive.by_index_raw(index) else {
+            continue;
+        };
+        // zip 9 made name() fallible (non-UTF-8 entry names); skip that
+        // entry like the other per-index failures above
+        let Ok(name) = file.name() else {
+            continue;
+        };
+        let name = name.into_owned();
+        if name.starts_with("xl/worksheets/sheet") && name.ends_with(".xml") {
+            part_paths.push(name);
+        }
+    }
+    part_paths.sort();
+    for part in part_paths {
+        let xml = match crate::xml_util::read_zip_string(&mut archive, &part) {
+            Ok(xml) => xml,
+            Err(_) => continue,
+        };
+        let sheet_name = sheet_names.get(&part).cloned().unwrap_or_else(|| part.clone());
+        // shared anchors: si → formula body; instances inherit their anchor's
+        let mut shared_bodies: HashMap<String, String> = HashMap::new();
+        let mut cursor = 0;
+        while let Some((open, inner, close)) = element_span(&xml, "f", cursor) {
+            let tag = &xml[open..inner];
+            if tag.contains("t=\"shared\"") && inner < close {
+                if let Some(si) = attribute_value(tag, "si") {
+                    shared_bodies.insert(si, xml[inner..close].to_string());
+                }
+            }
+            cursor = close + 4;
+        }
+        cursor = 0;
+        while let Some((open, inner, close)) = element_span(&xml, "c", cursor) {
+            cursor = close + 4;
+            let cell_open = &xml[open..inner];
+            let body = &xml[inner..close];
+            let Some((_f_open, f_inner, f_close)) = element_span(body, "f", 0) else {
+                continue;
+            };
+            let f_tag = &body[..f_inner];
+            let formula = if f_tag.contains("t=\"shared\"") && f_inner == f_close {
+                // a shared instance carries no body; its anchor's does
+                match attribute_value(f_tag, "si").and_then(|si| shared_bodies.get(&si)) {
+                    Some(shared) => shared.clone(),
+                    None => continue,
+                }
+            } else {
+                body[f_inner..f_close].to_string()
+            };
+            let indexes = link_indexes(&decode_xml_entities(&formula));
+            if indexes.is_empty() {
+                continue;
+            }
+            let Some(reference) = attribute_value(cell_open, "r") else {
+                continue;
+            };
+            let Some((row, column)) = parse_cell_reference(&reference) else {
+                continue;
+            };
+            let value = usage_value(cell_open, body);
+            for index in indexes {
+                let entry = match usages.iter_mut().find(|usage| usage.index == index) {
+                    Some(entry) => entry,
+                    None => {
+                        usages.push(ExternalLinkUsage {
+                            index,
+                            cells: Vec::new(),
+                        });
+                        usages.last_mut().unwrap()
+                    }
+                };
+                entry.cells.push(ExternalLinkUsageCell {
+                    sheet: sheet_name.clone(),
+                    row,
+                    column,
+                    value: value.clone(),
+                });
+            }
+        }
+    }
+    for usage in &mut usages {
+        usage.cells.sort_by_key(|cell| (cell.sheet.clone(), cell.row, cell.column));
+    }
+    usages.sort_by_key(|usage| usage.index);
+    Ok(usages)
+}
+
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::io::Write;
+
+    thread_local! {
+        /// Every path `source_is_file` was asked about on this thread.
+        pub(super) static PROBED: std::cell::RefCell<Vec<PathBuf>> =
+            const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    /// Runs `run` and returns its result with the source paths the disk was
+    /// asked about meanwhile.
+    fn probed_by<T>(run: impl FnOnce() -> T) -> (T, Vec<PathBuf>) {
+        PROBED.with(|probed| probed.borrow_mut().clear());
+        let out = run();
+        (out, PROBED.with(|probed| probed.take()))
+    }
+
+    const UNC_TARGET: &str = "\\\\fileserver\\share\\budget.xlsx";
+    const FILE_HOST_TARGET: &str = "file://fileserver/share/q3.xlsx";
 
     /// A tiny source workbook: Sheet1 holds A1=10, A2=20, A3=30, B1="Total".
     pub(crate) fn write_source_fixture(path: &Path) {
@@ -1011,7 +1666,7 @@ mod tests {
         let path = dir.path().join("book.xlsx");
         // a relative target resolves against the dependent workbook's folder
         write_dependent_fixture(&path, "source.xlsx");
-        let report = update_external_link_values(&path).unwrap();
+        let report = update_external_link_values(&path, None, false).unwrap();
         assert_eq!(report.links.len(), 1);
         assert!(report.links[0].reachable);
         assert!(
@@ -1054,7 +1709,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("book.xlsx");
         write_dependent_fixture(&path, "gone.xlsx");
-        let report = update_external_link_values(&path).unwrap();
+        let report = update_external_link_values(&path, None, false).unwrap();
         assert!(!report.links[0].reachable);
         assert_eq!(cell_of(&report, "[1]Sheet1!A1*2").formatted, "84");
         assert_eq!(
@@ -1065,9 +1720,9 @@ mod tests {
     }
 
     /// A partial rewrite pins, it does not poison: two links, the first
-    /// reachable through a POSIX-absolute `file:///Users/…`-shaped URI (the
-    /// leading slash must survive resolution), the second gone. A formula
-    /// mixing both stays whole on its cache and reports once; the gone
+    /// reachable through an absolute file URI (a drive on Windows, a leading
+    /// slash on Unix), the second gone. A formula mixing both stays whole on
+    /// its cache and reports once; the gone
     /// link's own cell and its dependents keep their caches instead of
     /// cascading `#ERROR!`; a text cache reports its text; and a `[1]…`
     /// spelling inside a string literal stays text.
@@ -1076,14 +1731,21 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         write_source_fixture(&dir.path().join("source.xlsx"));
         let path = dir.path().join("book.xlsx");
-        let target = format!("file://{}", dir.path().join("source.xlsx").display());
+        let source = dir.path().join("source.xlsx");
+        #[cfg(windows)]
+        let target = format!(
+            "file:///{}",
+            source.display().to_string().replace('\\', "/")
+        );
+        #[cfg(not(windows))]
+        let target = format!("file://{}", source.display());
         write_two_link_dependent_fixture(&path, &target, "gone.xlsx");
-        let report = update_external_link_values(&path).unwrap();
+        let report = update_external_link_values(&path, None, false).unwrap();
 
         assert_eq!(report.links.len(), 2);
         assert!(
             report.links[0].reachable,
-            "a file:///Users/… target keeps its leading slash: {:?}",
+            "an absolute file URI resolves to the source: {:?}",
             report.links[0].source
         );
         assert!(!report.links[1].reachable);
@@ -1122,36 +1784,481 @@ mod tests {
         assert_eq!(literal.formatted, "10[1]Sheet1!A2");
     }
 
+    /// The dependent workbook with one link and four formula cells covering
+    /// the report's value kinds: a number, a text, a boolean and an error.
+    fn write_kind_dependent_fixture(path: &Path, target: &str) {
+        let entries: [(&str, &str); 7] = [
+            (
+                "[Content_Types].xml",
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/externalLinks/externalLink1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.externalLink+xml"/></Types>"#,
+            ),
+            (
+                "_rels/.rels",
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>"#,
+            ),
+            (
+                "xl/workbook.xml",
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets><externalReferences><externalReference r:id="rId3"/></externalReferences></workbook>"#,
+            ),
+            (
+                "xl/_rels/workbook.xml.rels",
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/externalLink" Target="externalLinks/externalLink1.xml"/></Relationships>"#,
+            ),
+            (
+                "xl/styles.xml",
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>"#,
+            ),
+            (
+                "xl/externalLinks/externalLink1.xml",
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><externalLink xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><externalBook r:id="rId1"><sheetNames><sheetName val="Sheet1"/></sheetNames></externalBook></externalLink>"#,
+            ),
+            (
+                "xl/externalLinks/_rels/externalLink1.xml.rels",
+                &format!(
+                    r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/externalLinkPath" Target="{target}" TargetMode="External"/></Relationships>"#
+                ),
+            ),
+        ];
+        let mut writer = zip::ZipWriter::new(std::fs::File::create(path).unwrap());
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        // the four kind cells are package-internal, so they are written here
+        // instead of in the array above
+        for (name, content) in entries {
+            writer.start_file(name, options).unwrap();
+            writer.write_all(content.as_bytes()).unwrap();
+        }
+        writer
+            .start_file("xl/worksheets/sheet1.xml", options)
+            .unwrap();
+        writer
+            .write_all(
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:D1"/><sheetData><row r="1"><c r="A1"><f>[1]Sheet1!A1*2</f><v>20</v></c><c r="B1" t="str"><f>[1]Sheet1!A1&amp;"!"</f><v>10!</v></c><c r="C1" t="b"><f>[1]Sheet1!A1&gt;5</f><v>1</v></c><c r="D1" t="e"><f>[1]Sheet1!A1/0</f><v>#DIV/0!</v></c></row></sheetData></worksheet>"#
+                    .as_bytes(),
+            )
+            .unwrap();
+        writer.finish().unwrap();
+    }
+
+    /// The read path lists link identity only: the listing never asks the
+    /// disk about the target and its JSON carries no reachability flag, so
+    /// opening the links panel cannot block on a dead network share.
+    #[test]
+    fn read_lists_links_without_probing() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("book.xlsx");
+        write_dependent_fixture(&path, "gone.xlsx");
+        let links = list_external_link_statuses(&path, None).unwrap().links;
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].index, 1);
+        assert_eq!(links[0].raw_target, "gone.xlsx");
+        assert!(links[0].source.as_deref().unwrap().ends_with("gone.xlsx"));
+        assert_eq!(links[0].sheet_names, vec!["Sheet1", "Missing Sheet"]);
+        let json = serde_json::to_value(&links).unwrap();
+        assert!(
+            json[0].get("reachable").is_none(),
+            "the listing must not answer reachability: {json}"
+        );
+        // a file:/// target resolves without being opened
+        write_dependent_fixture(&path, "file:///Users/me/source.xlsx");
+        let links = list_external_link_statuses(&path, None).unwrap().links;
+        assert_eq!(links[0].source.as_deref(), Some("/Users/me/source.xlsx"));
+    }
+
+    /// The link report asks the disk about a source that is plainly on this
+    /// computer and about no other: one that names another computer comes
+    /// back unchecked, in every spelling of a host.
+    #[test]
+    fn link_report_never_asks_the_disk_about_a_source_on_another_computer() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("book.xlsx");
+        write_two_link_dependent_fixture(&path, UNC_TARGET, FILE_HOST_TARGET);
+        let (links, probed) = probed_by(|| read_external_link_statuses(&path).unwrap());
+        assert_eq!(probed, Vec::<PathBuf>::new());
+        for link in &links {
+            assert_eq!(link.reachable, None);
+            assert_eq!(link.unchecked, Some("remote"));
+        }
+        let json = serde_json::to_value(&links).unwrap();
+        assert_eq!(json[0]["reachable"], serde_json::Value::Null);
+        assert_eq!(json[0]["unchecked"], serde_json::json!("remote"));
+
+        // beside a host, a missing absolute path on this computer is looked for
+        let missing = dir.path().join("missing.xlsx");
+        write_two_link_dependent_fixture(
+            &path,
+            "//fileserver/share/a.xlsx",
+            &missing.to_string_lossy(),
+        );
+        let (links, probed) = probed_by(|| read_external_link_statuses(&path).unwrap());
+        assert_eq!(probed, vec![missing]);
+        assert_eq!(links[0].unchecked, Some("remote"));
+        assert_eq!(links[1].reachable, Some(false));
+        let json = serde_json::to_value(&links).unwrap();
+        assert!(json[1].get("unchecked").is_none(), "{json}");
+
+        // and a source beside the workbook is found
+        write_source_fixture(&dir.path().join("source.xlsx"));
+        write_two_link_dependent_fixture(&path, "source.xlsx", UNC_TARGET);
+        let links = read_external_link_statuses(&path).unwrap();
+        assert_eq!(links[0].reachable, Some(true));
+        assert_eq!(links[1].reachable, None);
+    }
+
+    /// The panel's listing of a workbook whose links name another computer,
+    /// or an absolute path that is not there, asks the disk about none.
+    #[test]
+    fn listing_asks_the_disk_nothing_about_a_source() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("book.xlsx");
+        write_two_link_dependent_fixture(&path, UNC_TARGET, FILE_HOST_TARGET);
+        let (listing, probed) = probed_by(|| list_external_link_statuses(&path, None).unwrap());
+        assert_eq!(probed, Vec::<PathBuf>::new());
+        let sources: Vec<Option<&str>> = listing
+            .links
+            .iter()
+            .map(|link| link.source.as_deref())
+            .collect();
+        assert_eq!(
+            sources,
+            vec![
+                Some("\\\\fileserver\\share\\budget.xlsx"),
+                Some("\\\\fileserver\\share\\q3.xlsx")
+            ]
+        );
+
+        write_two_link_dependent_fixture(&path, "//fileserver/share/a.xlsx", "/nowhere/b.xlsx");
+        let (listing, probed) = probed_by(|| list_external_link_statuses(&path, None).unwrap());
+        assert_eq!(probed, Vec::<PathBuf>::new());
+        assert_eq!(listing.links.len(), 2);
+    }
+
+    /// An update reads the source beside the workbook and leaves the one on
+    /// another computer alone: not looked for, not opened, its cells on their
+    /// cached values. Only a caller that says a person asked gets it looked
+    /// for.
+    #[test]
+    fn update_leaves_a_source_on_another_computer_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        write_source_fixture(&dir.path().join("source.xlsx"));
+        let path = dir.path().join("book.xlsx");
+        write_two_link_dependent_fixture(&path, "source.xlsx", UNC_TARGET);
+        let (report, probed) =
+            probed_by(|| update_external_link_values(&path, None, false).unwrap());
+        assert_eq!(probed, vec![dir.path().join("source.xlsx")]);
+        assert!(report.links[0].reachable);
+        assert!(!report.links[1].reachable);
+        assert_eq!(cell_of(&report, "[2]Sheet1!A1").formatted, "5");
+
+        // not on Windows, where asking would go looking for the host
+        #[cfg(not(windows))]
+        {
+            let (_, probed) = probed_by(|| update_external_link_values(&path, None, true).unwrap());
+            assert!(
+                probed.contains(&PathBuf::from(UNC_TARGET)),
+                "the disk was asked about {probed:?}"
+            );
+        }
+    }
+
+    /// A drive letter that may be a mapped network drive is treated like a
+    /// host: an update neither looks for the source nor opens it, and its
+    /// cells stay on their cached values, until the caller says a person
+    /// asked. The source file really exists here, so a probe or an open
+    /// would show in the recorder or as a live value.
+    #[test]
+    fn update_leaves_a_source_on_an_uncertain_drive_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("source.xlsx");
+        write_source_fixture(&source);
+        let path = dir.path().join("book.xlsx");
+        write_dependent_fixture(&path, "source.xlsx");
+        // what a `Z:\…` target parses to on Windows
+        let links = [LinkEntry {
+            index: 1,
+            raw_target: "Z:\\data\\source.xlsx".into(),
+            source: Some(source.clone()),
+            place: SourcePlace::OtherDrive,
+            sheet_names: vec!["Sheet1".into()],
+        }];
+
+        let (report, probed) = probed_by(|| update_values_from(&path, &links, false).unwrap());
+        assert_eq!(probed, Vec::<PathBuf>::new());
+        assert!(!report.links[0].reachable);
+        // the file's cache, not the 20 the source would give
+        assert_eq!(cell_of(&report, "[1]Sheet1!A1*2").formatted, "84");
+
+        let (report, probed) = probed_by(|| update_values_from(&path, &links, true).unwrap());
+        assert_eq!(probed, vec![source]);
+        assert!(report.links[0].reachable);
+        assert_eq!(cell_of(&report, "[1]Sheet1!A1*2").formatted, "20");
+    }
+
+    /// Which spellings count as this computer, per platform rule set.
+    #[test]
+    fn places_a_source_by_its_spelling() {
+        use SourcePlace::{AnotherComputer, Here, OtherDrive};
+        // (resolved source, target was relative, Windows rules, where it is)
+        let cases = [
+            ("\\\\host\\share\\s.xlsx", false, true, AnotherComputer),
+            ("//host/share/s.xlsx", false, true, AnotherComputer),
+            ("/\\host\\share\\s.xlsx", false, true, AnotherComputer),
+            ("\\??\\UNC\\host\\share\\s.xlsx", false, true, AnotherComputer),
+            ("\\\\?\\UNC\\host\\share\\s.xlsx", false, true, AnotherComputer),
+            ("C:\\data\\s.xlsx", false, true, Here),
+            ("d:/data/s.xlsx", false, true, Here),
+            // a letter that is neither the workbook's nor the system's may be mapped
+            ("Z:\\data\\s.xlsx", false, true, OtherDrive),
+            // beside the workbook, even when the user keeps the workbook on a share
+            ("\\\\office\\team\\s.xlsx", true, true, Here),
+            ("\\\\host\\share\\s.xlsx", false, false, AnotherComputer),
+            ("//host/share/s.xlsx", false, false, AnotherComputer),
+            ("/net/host/share/s.xlsx", false, false, AnotherComputer),
+            ("/tmp/../net/host/s.xlsx", true, false, AnotherComputer),
+            ("/Users/me/s.xlsx", false, false, Here),
+            ("/network/s.xlsx", false, false, Here),
+        ];
+        // the workbook is on D:, the system on C:
+        let home = [Some(b'D'), Some(b'C')];
+        for (path, relative, windows, place) in cases {
+            assert_eq!(
+                source_place(Path::new(path), relative, &home, windows),
+                place,
+                "{path}"
+            );
+        }
+    }
+
+    /// A relative target resolves under the caller's folder when one is
+    /// given (the workbook was opened from a copy elsewhere), under the
+    /// workbook's own folder when not; an absolute target ignores both.
+    #[test]
+    fn relative_targets_resolve_against_a_caller_given_folder() {
+        let copy = tempfile::tempdir().unwrap();
+        let home = tempfile::tempdir().unwrap();
+        write_source_fixture(&home.path().join("source.xlsx"));
+        let path = copy.path().join("book.xlsx");
+        write_two_link_dependent_fixture(&path, "source.xlsx", UNC_TARGET);
+
+        let beside_the_copy = list_external_link_statuses(&path, None).unwrap().links;
+        assert_eq!(
+            beside_the_copy[0].source.as_deref().map(PathBuf::from),
+            Some(copy.path().join("source.xlsx"))
+        );
+        let in_the_folder = list_external_link_statuses(&path, Some(home.path()))
+            .unwrap()
+            .links;
+        assert_eq!(
+            in_the_folder[0].source.as_deref().map(PathBuf::from),
+            Some(home.path().join("source.xlsx"))
+        );
+        assert_eq!(in_the_folder[1].source.as_deref(), Some(UNC_TARGET));
+
+        // the update reads the source from that folder
+        let beside_the_copy = update_external_link_values(&path, None, false).unwrap();
+        assert!(!beside_the_copy.links[0].reachable);
+        let report = update_external_link_values(&path, Some(home.path()), false).unwrap();
+        assert!(report.links[0].reachable);
+        let live = cell_of(&report, "[1]Sheet1!A1&\"[1]Sheet1!A2\"");
+        assert_eq!(live.formatted, "10[1]Sheet1!A2");
+    }
+
+    /// Live values report their kind so the host caches booleans and errors
+    /// with t="b" / t="e" instead of spelling them as text.
+    #[test]
+    fn update_reports_live_value_kinds() {
+        let dir = tempfile::tempdir().unwrap();
+        write_source_fixture(&dir.path().join("source.xlsx"));
+        let path = dir.path().join("book.xlsx");
+        write_kind_dependent_fixture(&path, "source.xlsx");
+        let report = update_external_link_values(&path, None, false).unwrap();
+        let number = cell_of(&report, "[1]Sheet1!A1*2");
+        assert_eq!(number.kind, Some(ExternalLinkCellKind::Number));
+        assert_eq!(number.formatted, "20");
+        let text = cell_of(&report, "[1]Sheet1!A1&\"!\"");
+        assert_eq!(text.kind, Some(ExternalLinkCellKind::Text));
+        assert_eq!(text.formatted, "10!");
+        let boolean = cell_of(&report, "[1]Sheet1!A1>5");
+        assert_eq!(boolean.kind, Some(ExternalLinkCellKind::Boolean));
+        let error = cell_of(&report, "[1]Sheet1!A1/0");
+        assert_eq!(error.kind, Some(ExternalLinkCellKind::Error));
+        assert_eq!(error.formatted, "#DIV/0!");
+    }
+
+    /// An uncached cell serializes without a `kind` key: the host rejects
+    /// `kind: null`.
+    #[test]
+    fn uncached_cell_omits_kind() {
+        let cell = ExternalLinkCell {
+            sheet: "Sheet1".into(),
+            row: 0,
+            column: 0,
+            formatted: String::new(),
+            number: None,
+            kind: None,
+            formula: "[1]Sheet1!A1".into(),
+        };
+        let json = serde_json::to_value(&cell).unwrap();
+        assert!(json.get("kind").is_none(), "{json}");
+    }
+
+    /// A skipped cell (unreachable source) keeps its kind from the file's
+    /// own cache, so the panel applies the cached boolean/error unchanged.
+    #[test]
+    fn update_reports_cached_value_kinds_when_the_source_is_gone() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("book.xlsx");
+        write_kind_dependent_fixture(&path, "gone.xlsx");
+        let report = update_external_link_values(&path, None, false).unwrap();
+        assert!(!report.links[0].reachable);
+        let number = cell_of(&report, "[1]Sheet1!A1*2");
+        assert_eq!(number.kind, Some(ExternalLinkCellKind::Number));
+        let text = cell_of(&report, "[1]Sheet1!A1&\"!\"");
+        assert_eq!(text.kind, Some(ExternalLinkCellKind::Text));
+        let boolean = cell_of(&report, "[1]Sheet1!A1>5");
+        assert_eq!(boolean.kind, Some(ExternalLinkCellKind::Boolean));
+        assert_eq!(boolean.formatted, "TRUE");
+        let error = cell_of(&report, "[1]Sheet1!A1/0");
+        assert_eq!(error.kind, Some(ExternalLinkCellKind::Error));
+        assert_eq!(error.formatted, "#DIV/0!");
+    }
+
     /// Path resolution, Excel-style: file URIs, UNC spellings, drive paths
     /// and folder-relative targets.
     #[test]
     fn resolves_stored_source_paths() {
-        let workbook = Path::new("/tmp/dep/book.xlsx");
+        let folder = Some(Path::new("/tmp/dep"));
         assert_eq!(
-            resolve_external_path(workbook, "file:///C:/data/source.xlsx").unwrap(),
+            resolve_external_path(folder, "file:///C:/data/source.xlsx").unwrap(),
             PathBuf::from("C:/data/source.xlsx")
         );
         // Excel for Mac, LibreOffice and openpyxl spell a POSIX source with
         // all three slashes; the leading slash is part of the path
         assert_eq!(
-            resolve_external_path(workbook, "file:///Users/me/source.xlsx").unwrap(),
+            resolve_external_path(folder, "file:///Users/me/source.xlsx").unwrap(),
             PathBuf::from("/Users/me/source.xlsx")
         );
         assert_eq!(
-            resolve_external_path(workbook, "source.xlsx").unwrap(),
+            resolve_external_path(folder, "source.xlsx").unwrap(),
             PathBuf::from("/tmp/dep/source.xlsx")
         );
         assert_eq!(
-            resolve_external_path(workbook, "../data/source.xlsx").unwrap(),
+            resolve_external_path(folder, "../data/source.xlsx").unwrap(),
             PathBuf::from("/tmp/data/source.xlsx")
         );
         assert_eq!(
-            resolve_external_path(workbook, "\\\\server\\share\\s.xlsx").unwrap(),
+            resolve_external_path(folder, "\\\\server\\share\\s.xlsx").unwrap(),
             PathBuf::from("\\\\server\\share\\s.xlsx")
         );
         assert_eq!(
-            resolve_external_path(workbook, "https://example.com/s.xlsx"),
+            resolve_external_path(folder, "https://example.com/s.xlsx"),
             None
         );
     }
+
+    /// A minimal three-part workbook for the usage scan: one sheet named
+    /// `Data`, no externalLink parts needed — the scan is formula-text-only.
+    fn write_usage_fixture(path: &Path, sheet1: &str) {
+        let entries = [
+            (
+                "xl/workbook.xml",
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Data" sheetId="1" r:id="rId1"/></sheets></workbook>"#,
+            ),
+            (
+                "xl/_rels/workbook.xml.rels",
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>"#,
+            ),
+            ("xl/worksheets/sheet1.xml", sheet1),
+        ];
+        let mut writer = zip::ZipWriter::new(std::fs::File::create(path).unwrap());
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        for (name, content) in entries {
+            writer.start_file(name, options).unwrap();
+            writer.write_all(content.as_bytes()).unwrap();
+        }
+        writer.finish().unwrap();
+    }
+
+    /// The usage scan reports every formula cell that references the link
+    /// with the literal its cached `<v>` freezes at — numbers and formula
+    /// string results alike — sorted by position.
+    #[test]
+    fn usage_scan_reports_every_referencing_cell_with_its_cached_value() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("book.xlsx");
+        write_dependent_fixture(&path, "gone.xlsx");
+        let usages = read_external_link_usage(&path).unwrap();
+        assert_eq!(usages.len(), 1);
+        let usage = &usages[0];
+        assert_eq!(usage.index, 1);
+        assert!(usage.cells.iter().all(|cell| cell.sheet == "Sheet1"));
+        let values: Vec<(String, UsageValue)> = usage
+            .cells
+            .iter()
+            .map(|cell| (cell_reference(cell.row, cell.column), cell.value.clone()))
+            .collect();
+        assert_eq!(
+            values,
+            vec![
+                ("A1".to_string(), UsageValue::Number { value: 84.0 }),
+                ("B1".to_string(), UsageValue::Number { value: 2.0 }),
+                ("C1".to_string(), UsageValue::Text { value: "Total!".to_string() }),
+                ("A2".to_string(), UsageValue::Number { value: 60.0 }),
+                ("A3".to_string(), UsageValue::Number { value: 9.0 }),
+            ]
+        );
+    }
+
+    /// Shared-formula instances inherit their anchor's body, and an error
+    /// cache keeps its `t="e"` spelling — both land in the report.
+    #[test]
+    fn usage_scan_resolves_shared_instances_and_error_caches() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("book.xlsx");
+        super::tests::write_usage_fixture(
+            &path,
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1"><f t="shared" si="0">[1]Sheet1!A1*2</f><v>84</v></c><c r="B1"><f t="shared" si="0"/><v>84</v></c><c r="C1" t="e"><f>[1]Sheet1!ZZZ9</f><v>#REF!</v></c></row></sheetData></worksheet>"#,
+        );
+        let usages = read_external_link_usage(&path).unwrap();
+        assert_eq!(usages.len(), 1);
+        let values: Vec<(String, UsageValue)> = usages[0]
+            .cells
+            .iter()
+            .map(|cell| (cell_reference(cell.row, cell.column), cell.value.clone()))
+            .collect();
+        assert_eq!(
+            values,
+            vec![
+                ("A1".to_string(), UsageValue::Number { value: 84.0 }),
+                ("B1".to_string(), UsageValue::Number { value: 84.0 }),
+                ("C1".to_string(), UsageValue::Error { value: "#REF!".to_string() }),
+            ]
+        );
+    }
+
+    /// Reference detection mirrors the gateway's break transform: `[1]`
+    /// inside a string literal is not a reference, a bare `[1]` needs a
+    /// sheet name after `]`, and the quoted spelling tolerates doubled quotes.
+    #[test]
+    fn usage_reference_detection_matches_the_break_transform() {
+        assert_eq!(link_indexes("\"see [1] notes\"+1"), Vec::<usize>::new());
+        assert_eq!(link_indexes("[1]"), Vec::<usize>::new());
+        assert_eq!(link_indexes("[0]Sheet1!A1"), Vec::<usize>::new());
+        assert_eq!(link_indexes("'[1]My Sheet'!A1+1"), vec![1]);
+        assert_eq!(link_indexes("'[1]It''s'!A1"), vec![1]);
+        assert_eq!(link_indexes("SUM([2]Sheet1!A1:B3)"), vec![2]);
+        assert_eq!(link_indexes("[1]Sheet1!A1+[2]Sheet1!B1"), vec![1, 2]);
+    }
+
+    fn cell_reference(row: u32, column: u32) -> String {
+        let mut letters = String::new();
+        let mut rest = column + 1;
+        while rest > 0 {
+            letters.insert(0, (b'A' + ((rest - 1) % 26) as u8) as char);
+            rest = (rest - 1) / 26;
+        }
+        format!("{letters}{}", row + 1)
+    }
 }
+

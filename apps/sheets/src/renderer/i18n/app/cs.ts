@@ -1,6 +1,24 @@
 import type { zh } from './zh'
 
 export const cs = {
+  // ── Withholding cells from the model ──
+  redactMenuLabel: 'Skrýt výběr před AI',
+  redactDialogDesc:
+    'Vybraný obsah zůstane v dokumentu i v souboru; model uvidí jen zástupný symbol. Pojmenujte ho, aby věděl, co zastupuje.',
+  redactDialogScope:
+    'Skrýtí se týká jen AI v této aplikaci. CLI, nástroje MCP a headless export čtou soubor přímo a tato slova stále vidí.',
+  redactDialogPlaceholder: 'Název zástupného symbolu, např. telefon zákazníka',
+  redactCancel: 'Zrušit',
+  redactInsert: 'Skrýt',
+  redactEnable: 'Pravým klikem na výběr jej skryjete před modelem.',
+  redactNeedsSavedRow: 'Tento řádek zatím není v souboru. Nejprve uložte, pak buňku skryjte.',
+  redactNeedsSavedSheet:
+    'Tento list nebo jeho kopie zatím není v souboru. Nejprve uložte, pak změňte, co je skryté.',
+  redactMoveRefused:
+    'Neprovedeno: přesunuly nebo zkopírovaly by se buňky skryté před AI a jejich hodnoty by už skryté nebyly. Nejprve skrytí zrušte, nebo tyto buňky z oblasti vynechte.',
+  redactRecoveredFromNames:
+    'Jiná aplikace tento soubor přepsala a zahodila záznam o tom, co je skrytoé. Skryté buňky byly obnoveny z názvů v sešitě; uložením se obnoví celý záznam.',
+
   appMergeWorkbooks: 'Sloučit sešity',
   appMergeWorkbooksTip: 'Připojit listy z jiných souborů Excelu do tohoto sešitu',
   appMergeWorkbooksPicking: 'Vyberte soubory ke sloučení…',
@@ -8,6 +26,8 @@ export const cs = {
   appMergeWorkbooksDone:
     'Sloučeno {sheets} listů z {files} souborů (vzorce importovány jako hodnoty).',
   appMergeWorkbooksFailed: 'Sloučení sešitů se nezdařilo.',
+  appMergeWorkbooksHiddenCells:
+    'Nic nebylo sloučeno: {file} obsahuje buňky skryté před AI a sloučení by sem přeneslo jejich hodnoty bez tohoto skrytí. Otevřete ten soubor, zrušte skrytí těchto buněk nebo je odstraňte, uložte a slučte znovu.',
   appMergeWorkbooksInsertFailed: 'Nepodařilo se vytvořit list {sheet}.',
   appMergeWorkbooksLocked: 'Sešit se stále načítá; sloučení teď není k dispozici.',
   appFormulaBarShown: 'Řádek vzorců zobrazen.',
@@ -518,6 +538,7 @@ export const cs = {
   appBridgeUnavailable:
     'Souborové rozhraní počítače není k dispozici. Restartujte aplikaci Electron.',
   appOpenCanceled: 'Výběr sešitu zrušen.',
+  appImportCanceled: 'Import zrušen.',
   appOpeningWorkbook: 'Otevírání sešitu…',
   appOpened: 'Otevřeno {name} — úpravy buněk se uloží zpět pomocí ⌘S.',
   appOpenFailed: 'Sešit nelze otevřít.',
@@ -611,6 +632,8 @@ export const cs = {
     'Tento typ grafu danou úpravu nepodporuje; ukládání přerušeno — vraťte změnu grafu zpět.',
   appSaveErrMoveOverlap:
     'Přes přesouvané řádky zasahuje vzorec, formátovaná oblast, kresba nebo tabulka; ukládání přerušeno — vraťte přesun zpět.',
+  appSaveErrHiddenCellsUnreadable:
+    'Záznam o buňkách skrytých před AI v tomto sešitě nelze přečíst, proto změny řádků, sloupců a listů nelze uložit: skryté buňky by přestaly být chráněné. Vraťte tyto změny zpět a uložte znovu.',
   appFromTextCsvTitle: 'Importovat soubor CSV/text do aktuálního výběru',
   appCsvImported: 'Importováno {rows} řádků × {columns} sloupců ze souboru do {cell}.',
   appCsvEmpty: 'Soubor CSV neobsahuje žádná data.',
@@ -713,6 +736,7 @@ export const cs = {
   appExportPdfTitle: 'Exportovat do PDF',
   appSaveTitle: 'Uložit (⌘S)',
   appSaveAs: 'Uložit jako',
+  aiNameFile: 'Pojmenovat pomocí AI…',
   appUndo: 'Zpět',
   appRedo: 'Znovu',
   appQuickAccessCustomize: 'Přizpůsobit panel nástrojů Rychlý přístup',
@@ -1166,6 +1190,20 @@ export const cs = {
   appWatchCell: 'Buňka',
   appWatchValue: 'Hodnota',
   appWatchFormula: 'Vzorec',
+  appLinksPanel: 'Externí odkazy',
+  appLinksPanelDetail: 'Zobrazení, aktualizace a přerušení odkazů na jiné sešity',
+  appLinksUpdate: 'Aktualizovat hodnoty',
+  appLinksNone: 'Tento sešit neobsahuje odkazy na jiné sešity.',
+  appLinksUnsaved: 'Než vypíšete externí odkazy, uložte tento sešit.',
+  appLinksSource: 'Zdroj',
+  appLinksStatus: 'Stav',
+  appLinksSheets: 'Listy',
+  appLinksLocate: 'Zobrazit zdrojový soubor',
+  appLinksReachable: 'K dispozici',
+  appLinksBroken: 'Není k dispozici',
+  appLinksBreak: 'Přerušit odkaz',
+  appLinksBreakConfirm: 'Potvrdit přerušení',
+  appLinksChangeSource: 'Změnit zdroj',
   appGroupCalculation: 'Výpočet',
   appCalculationOptions: 'Možnosti výpočtů',
   appCalculationOptionsTitle: 'Automatický nebo ruční přepočet',
@@ -1182,6 +1220,12 @@ export const cs = {
   appGroupGetData: 'Načíst data',
   appFromTextCsv: 'Z textu/CSV',
   appRefreshAll: 'Aktualizovat vše',
+  appRefreshQuery: 'Obnovit dotaz',
+  appQueryConnectionsTitle: 'Aktualizovat dotazy sešita',
+  appQueryRefreshing: 'Obnovuji {name}…',
+  appQueryRefreshed: '{name} aktualizováno ({rows} řádků)',
+  appQueryRefreshedClipped: '{name} aktualizováno ({rows} řádků, {dropped} se nevešlo do rozsahu)',
+  appQueryRefreshFailed: '{name} se nepodařilo aktualizovat',
   appWorkbookNoPivot: 'V tomto sešitu nejsou žádné kontingenční tabulky.',
   appRefreshAllTitle: 'Aktualizovat všechny kontingenční tabulky',
   appQueriesConnections: 'Dotazy a připojení',
@@ -1257,6 +1301,10 @@ export const cs = {
   appFontSizeTip: 'Velikost písma',
   appZoomIn: 'Přiblížit',
   appZoomOut: 'Oddálit',
+  appImgActualSize: 'Skutečná velikost',
+  appImgFitWindow: 'Přizpůsobit oknu',
+  appImgSaveAs: 'Uložit obrázek jako…',
+  appImgClose: 'Zavřít (Esc)',
   appZoomSheetTitle: 'Přiblížit nebo oddálit list',
   appResetZoom: 'Obnovit lupu',
   appZoomToSelection: 'Přiblížit na výběr',
@@ -1299,6 +1347,19 @@ export const cs = {
   appOpenFileFirst: 'Nejprve otevřete soubor',
   appNoPassword: 'Bez hesla',
   appProtectWorkbook: 'Zamknout sešit',
+  appChangePassword: 'Změnit heslo',
+  appWorkbookPasswordChanged: 'Heslo sešitu bylo aktualizováno.',
+  appChangePasswordTitle: 'Změnit heslo sešitu',
+  appChangePasswordCopy: 'Zvolte nové heslo a potvrďte je níže.',
+  appNewPasswordLabel: 'Nové heslo',
+  appConfirmPasswordLabel: 'Potvrdit nové heslo',
+  appPasswordsMismatch: 'Hesla se neshodují.',
+  appPasswordTooLong:
+    'Heslo je příliš dlouhé. Použijte nejvýše {max} znaků, delší heslo Excel nepřijme.',
+  appPasswordUpdateFailed: 'Heslo sešitu se nepodařilo aktualizovat.',
+  appPasswordUpdating: 'Aktualizuje se…',
+  appUpdatePassword: 'Aktualizovat heslo',
+  appWorkbookNotPasswordProtected: 'Tento sešit není chráněn heslem pro otevření.',
   appAllowEditRanges: 'Povolit úpravy oblastí',
   appGroupClipboard: 'Schránka',
   appPaste: 'Vložit',
@@ -1532,6 +1593,8 @@ export const cs = {
   appVisualSendBackward: 'Přenést dál',
   appVisualSizeProperties: 'Velikost a vlastnosti…',
   appVisualHyperlink: 'Hypertextový odkaz…',
+  appVisualEmbedInCell: 'Vložit obrázek do buňky',
+  appVisualEmbedFailed: 'Tento obrázek se nepodařilo vložit do buňky.',
   appVisualDelete: 'Odstranit',
   appVisualArranged: 'Objekt aktualizován — uložte pomocí ⌘S.',
   appVisualCopied: 'Objekt zkopírován.',

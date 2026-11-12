@@ -10,6 +10,7 @@
  * AES-256/SHA-512), and both open either — so we decrypt both and re-encrypt
  * with Agile, matching Word 2013+ defaults.
  */
+import { assertCompoundFile, hasOle2Signature } from '@genoffice/compound-file'
 import officeCrypto from 'officecrypto-tool'
 
 const CFB_MAGIC = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])
@@ -20,9 +21,29 @@ export function isCfbFile(bytes: Buffer): boolean {
   return bytes.length >= 8 && bytes.subarray(0, 8).equals(CFB_MAGIC)
 }
 
-/** ECMA-376 encrypted OOXML: CFB magic + an EncryptedPackage stream in the directory. */
+/**
+ * How the open path takes the bytes of a .docx path:
+ * - `encrypted`: an ECMA-376 encrypted OOXML file, a compound file that names an
+ *   EncryptedPackage stream. It opens with its password.
+ * - `damaged`: a compound file whose container the shared gate refuses. No password opens
+ *   it, whatever stream names its bytes hold, so it is not a protected document.
+ * - `plain`: everything else, handed on as it is (a docx is a zip; a sound compound file
+ *   without an encrypted package is a legacy .doc under the wrong name).
+ * The gate only runs behind the OLE2 signature: other bytes cost one comparison.
+ */
+export function docxOpenKind(bytes: Buffer): 'plain' | 'encrypted' | 'damaged' {
+  if (!isCfbFile(bytes)) return 'plain'
+  try {
+    assertCompoundFile(bytes)
+  } catch {
+    return 'damaged'
+  }
+  return bytes.includes(ENCRYPTED_STREAM_UTF16) ? 'encrypted' : 'plain'
+}
+
+/** ECMA-376 encrypted OOXML: a sound compound file with an EncryptedPackage stream. */
 export function isEncryptedDocx(bytes: Buffer): boolean {
-  return isCfbFile(bytes) && bytes.includes(ENCRYPTED_STREAM_UTF16)
+  return docxOpenKind(bytes) === 'encrypted'
 }
 
 export type DecryptFailReason = 'wrong-password' | 'unsupported'
@@ -38,10 +59,16 @@ export class DocxDecryptError extends Error {
 /**
  * Decrypt an encrypted docx into plain zip bytes. Throws DocxDecryptError with
  * reason 'wrong-password' (verifier mismatch — reprompt) or 'unsupported'
- * (exotic scheme, e.g. WPS account encryption or Extensible encryption).
+ * (exotic scheme, e.g. WPS account encryption or Extensible encryption, or a
+ * damaged container).
  */
 export async function decryptDocx(bytes: Buffer, password: string): Promise<Buffer> {
   try {
+    // The library reads a compound file with cfb on its own, and cfb follows a
+    // looping sector chain until memory runs out: the shared gate refuses such
+    // a file first, with a CompoundFileError. Bytes without the OLE2 signature
+    // are not the gate's to judge and reach the library as they always did.
+    if (hasOle2Signature(bytes)) assertCompoundFile(bytes)
     return await officeCrypto.decrypt(bytes, { password })
   } catch (err) {
     const message = String((err as Error)?.message ?? err)
@@ -232,7 +259,8 @@ export async function decryptRecoveryCopy(
   filePath: string,
   bytes: Buffer,
 ): Promise<Buffer> {
-  if (!isEncryptedDocx(bytes)) return bytes
+  // a damaged copy goes on to the decryption, which refuses it: it is not a document to return
+  if (docxOpenKind(bytes) === 'plain') return bytes
   const password = docPasswordFor(wcId, filePath)
   if (!password) {
     throw new DocxDecryptError('unsupported', 'missing password for encrypted recovery copy')

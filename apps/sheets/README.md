@@ -22,6 +22,7 @@ An AI-native spreadsheet app for macOS and Windows.
 - Per-edge border editing, full font/fill/border color pickers, and fill clearing, written copy-on-write into the stylesheet's borders/fills tables.
 - Row heights, column widths, autofit resets, and hidden rows/columns saved as ordered axis-attribute operations; Fill Down/Right and Clear Contents/Formats/All (format clears reset cells to the default style in the file).
 - Chart editing (title, column/bar/line/area type conversion, series colors) with surgical chart-part patching and live SVG preview.
+- Range copies include a clipboard picture for image-taking apps; pasting the editor's own range back into a sheet preserves editable cells and formulas rather than inserting that picture.
 - Preservation checks for untouched OOXML entries.
 - Generated compatibility fixtures.
 

@@ -108,8 +108,10 @@ export function modelEchoesReasoning(model: string): boolean {
 }
 
 /**
- * The direct API 400s on the versioned pool spelling we list (verified
- * 2026-09-21: GET /v1/models serves only `deepseek-flash` and `deepseek-v4-pro`).
+ * The old versioned spelling is not a vendor id: the direct API 400s on it
+ * (verified 2026-09-21 — GET /v1/models serves only `deepseek-flash` and
+ * `deepseek-v4-pro`). Settings read from disk are rewritten by RETIRED_MODELS,
+ * but in-memory state bypasses that, so the adapter still maps the alias here.
  */
 const DEEPSEEK_WIRE_IDS: Record<string, string> = { [DEEPSEEK_V41_FLASH]: 'deepseek-flash' }
 
@@ -181,8 +183,9 @@ function opencodeEndpoint(
     // a stored base URL replaces the gateway root; the documented `/v1` API base is tolerated
     const base = stripTrailingV1(normalizeBaseUrl(config.baseUrl, root))
     const model = config.model ?? ''
-    const omit =
-      model !== '' && (modelHasFixedSampling(model) || model.toLowerCase().startsWith('kimi-'))
+    // Kimi fixes sampling whether the gateway spells the id bare (kimi-k3) or
+    // lab-prefixed (moonshotai/Kimi-K3), as Command Code does
+    const omit = model !== '' && (modelHasFixedSampling(model) || /(^|\/)kimi-/i.test(model))
     const sampling = omit ? { omitTemperature: true as const } : {}
     if (routes.anthropic.test(model)) return { protocol: 'anthropic', baseUrl: base, ...sampling }
     if (routes.gemini?.test(model)) {
@@ -411,6 +414,18 @@ export const AI_PROVIDER_ADAPTERS: Record<AiProviderId, ProviderAdapter> = {
     // one chat-completions endpoint for every model; the bare model id picks it
     resolveEndpoint: fixedEndpoint('openai-compatible', 'https://cloudgpu.app/v1'),
   },
+  siliconflow: {
+    meta: metaOf('siliconflow'),
+    capabilities: { auth: 'api-key', vision: true },
+    // one chat-completions endpoint for every model; the namespaced id picks it
+    resolveEndpoint: fixedEndpoint('openai-compatible', 'https://api.siliconflow.cn/v1'),
+  },
+  ppio: {
+    meta: metaOf('ppio'),
+    capabilities: { auth: 'api-key', vision: true },
+    // the official SDK base_url is https://api.ppio.com/openai; chat rides /v1
+    resolveEndpoint: fixedEndpoint('openai-compatible', 'https://api.ppio.com/openai/v1'),
+  },
   'opencode-zen': {
     meta: metaOf('opencode-zen'),
     capabilities: { auth: 'api-key', vision: true },
@@ -428,6 +443,15 @@ export const AI_PROVIDER_ADAPTERS: Record<AiProviderId, ProviderAdapter> = {
     // OpenCode ships routes only 3.8 Flash there — follow the running client)
     resolveEndpoint: opencodeEndpoint(OPENCODE_GATEWAY_ROOTS.go, {
       anthropic: /^(minimax-|qwen3\.8-flash$)/,
+    }),
+  },
+  commandcode: {
+    meta: metaOf('commandcode'),
+    capabilities: { auth: 'api-key', vision: true },
+    // Claude ids answer only on /v1/messages (docs: they 400 on
+    // chat-completions); everything else is chat-completions at /provider/v1
+    resolveEndpoint: opencodeEndpoint('https://api.commandcode.ai/provider', {
+      anthropic: /^claude-/,
     }),
   },
   custom: {

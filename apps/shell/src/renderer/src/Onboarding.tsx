@@ -251,7 +251,6 @@ export function Onboarding({
               onRecheck={connection.recheck}
               onAcceptMetered={(id) => void connection.acceptMetered(id)}
               onOpenInstallHelp={connection.openInstallHelp}
-              onOpenConnectHelp={connection.openConnectHelp}
               // no subscription: the free connections open right here
               freeContent={<FreeAiCards t={t} compact />}
               freeConnected={freeConnected}

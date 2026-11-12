@@ -9,6 +9,7 @@
  */
 import {
   encodeRunLink,
+  tagHangulRun,
   type Paragraph,
   type ParagraphFormatPatch,
   type TextRun,
@@ -215,7 +216,10 @@ export function applyEditParagraphs(oldParas: Paragraph[], edited: EditParagraph
           else delete merged.letterSpacing
           merged.letterSpacingEdited = true
         }
-        return merged
+        // Text this edit wrote into a run with no language of its own: Hangul gets
+        // PowerPoint's ko-KR so it wraps by word. A run whose text did not change keeps its
+        // bytes, and a language the run already has (its source's) is never replaced.
+        return r.text !== oldRun?.text ? tagHangulRun(merged) : merged
       }),
       align: p.align ?? oldPara?.align,
       // Indent level: returned by the editor after Tab adjustment; 0 resets to the default

@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { openPptx, type TextElement, type PictureElement } from '@genoffice/pptx-engine'
-import { HeuristicMetrics } from '@genoffice/pptx-render'
+import { buildRenderSlide, EMU_PER_PX_96, HeuristicMetrics } from '@genoffice/pptx-render'
 import { parsePageSpec, buildPagePptx, type PageSpec } from '../src/slides/page-spec'
 
 // 1x1 red PNG
@@ -474,5 +474,92 @@ describe('buildPagePptx shape flip', () => {
     ) as TextElement | undefined
     expect(el?.transform.flipV).toBe(true)
     expect(el?.anchor.originalXml).toContain('flipV="1"')
+  })
+})
+
+describe('buildPagePptx Korean text', () => {
+  const deps = { fetchImage: async () => null, fontMetrics: new HeuristicMetrics() }
+  // Nine space-delimited words; the longest (6 syllables at 24pt = 192px) fits the 230px box
+  const SENTENCE = '올해 매출은 지난해보다 크게 늘었고 신규 고객도 꾸준히 증가했습니다'
+  const narrowBox = (runs: Array<{ text: string; sizePt?: number }>) => ({
+    type: 'text' as const,
+    x: 100,
+    y: 100,
+    w: 230,
+    h: 400,
+    paragraphs: [{ runs }],
+  })
+
+  /** Every text body of the built page as the app draws it: one string per laid-out line. */
+  async function builtLines(spec: PageSpec): Promise<string[][]> {
+    const { bytes } = await buildPagePptx(spec, deps)
+    const opened = await openPptx(bytes)
+    const rendered = buildRenderSlide(opened.deck.slides[0]!, opened.deck.size, {
+      fitWidthPx: opened.deck.size.cx / EMU_PER_PX_96,
+      metrics: deps.fontMetrics,
+    })
+    return rendered.nodes.flatMap((node) =>
+      (node.type === 'text' || node.type === 'shape') && node.text
+        ? [
+            node.text.lines.map((line) =>
+              line.runs
+                .map((run) => run.text)
+                .join('')
+                .trim(),
+            ),
+          ]
+        : [],
+    )
+  }
+
+  it('wraps a long Korean sentence in a narrow box at spaces, never inside a word', async () => {
+    const bodies = await builtLines({
+      elements: [
+        narrowBox([{ text: SENTENCE, sizePt: 24 }]),
+        {
+          type: 'shape',
+          shape: 'roundRect',
+          x: 500,
+          y: 100,
+          w: 230,
+          h: 400,
+          fill: '#FFFFFF',
+          paragraphs: [{ runs: [{ text: SENTENCE, sizePt: 24 }] }],
+        },
+      ],
+    })
+    expect(bodies).toHaveLength(2)
+    for (const lines of bodies) {
+      expect(lines.length).toBeGreaterThan(2)
+      // a word cut by a line break would show up here as two pieces
+      expect(lines.flatMap((line) => line.split(' '))).toEqual(SENTENCE.split(' '))
+    }
+  })
+
+  it('tags the runs that hold Hangul lang="ko-KR" and no other run', async () => {
+    const { bytes } = await buildPagePptx(
+      {
+        elements: [
+          narrowBox([
+            { text: '매출 성장', sizePt: 24 },
+            { text: 'Revenue 2026', sizePt: 24 },
+            { text: 'AI 도입 효과', sizePt: 24 },
+          ]),
+        ],
+      },
+      deps,
+    )
+    const opened = await openPptx(bytes)
+    const slide = opened.deck.slides[0]!
+    const xml = opened.archive.readText(slide.path)!
+    expect(xml).toContain('<a:rPr lang="ko-KR" sz="2400"/><a:t>매출 성장</a:t>')
+    expect(xml).toContain('<a:rPr sz="2400"/><a:t>Revenue 2026</a:t>')
+    expect(xml).toContain('<a:rPr lang="ko-KR" sz="2400"/><a:t>AI 도입 효과</a:t>')
+    const el = slide.elements.find((e): e is TextElement => e.type === 'text')!
+    expect(el.text!.paragraphs[0]!.runs.map((run) => run.eaLang ?? null)).toEqual([
+      'ko',
+      null,
+      'ko',
+    ])
   })
 })

@@ -41,7 +41,7 @@
 ## 맡지 않는 것 (경계)
 
 - 문서 편집과 형식별 저장·내보내기는 이 모듈의 범위가 아니다. 각 에디터(`apps/docs`, `apps/sheets`, `apps/slides`, `apps/pdf`, `apps/markdown`, `apps/html`, `apps/mindmap`, `apps/hwp`, `apps/epub`, `apps/diagram`)가 한다. shell은 그 메인 모듈의 내보낸 함수(`createDocsView`, `configureSheetsRuntime` 등)를 부른다.
-- AI 요청의 실행은 범위가 아니다. `ai:*` 채널과 구독 IPC 채널은 `apps/docs/src/main/docs-main.ts`의 `registerAiIpc`가 등록한다. shell은 그것을 한 번 호출할 뿐이고, AI와 관련해 직접 응답하는 채널은 `home:open-subscription-install-help`(벤더의 설치 안내 페이지 열기), `home:open-connect-help`(소개 사이트의 AI 연결 도움말 열기. 주소는 고정이고 화면은 길 이름만 넘긴다), `ai:open-model-settings`(홈 탭의 설정 화면 열기)뿐이다.
+- AI 요청의 실행은 범위가 아니다. `ai:*` 채널과 구독 IPC 채널은 `apps/docs/src/main/docs-main.ts`의 `registerAiIpc`가 등록한다. shell은 그것을 한 번 호출할 뿐이고, AI와 관련해 직접 응답하는 채널은 `home:open-subscription-install-help`(벤더의 설치 안내 페이지 열기), `ai:open-model-settings`(홈 탭의 설정 화면 열기)뿐이다.
 - 제공자 선택 규칙, 구독 프로그램 실행은 `packages/ai-provider`, 연결 카드와 알림 컴포넌트는 `packages/ui`의 범위다.
 - 새 문서의 글을 쓰는 것은 만들 문서 쪽 에디터(PPT, HTML, 마인드맵)의 AI다. 이 모듈은 생성 코드를 갖지 않고, 요청을 새 탭 앞으로 맡겨 둘 뿐이다. 맡겨 두는 곳은 `packages/electron-utils`의 `generate-handoff.ts`이고(`src/main/generate/handoff.ts`는 그것을 다시 내보낸다), 가져가는 창구(`<에디터>:handoff-take`)는 각 에디터가 등록한다.
 - 파일을 글로 읽는 일과 가리기 적용은 `packages/file-parse`, 지도 파일의 해석과 개요 글은 `packages/xmind-engine`, EPUB 책의 해석·저장·번역 결과는 `packages/epub-engine`의 범위다. 책 번역 작업은 EPUB 편집기 화면 안에서 돌고, 셸은 끝나지 않은 작업 기록 옮기기(`job-migration.ts`)만 빌려준다.
@@ -110,6 +110,9 @@
 - **에이전트 세션은 사람이 시작한 창에만 속한다.** 채널은 그 창의 webContents만 받고, 세션은 그 창이 닫히면 끝난다. 경고 확인과 폴더 검사와 연결 확인은 화면이 아니라 뒷단이 시작할 때마다 다시 한다. 창에는 오류 문장을 보내지 않고 종류만 보낸다(`agentEventView`).
 - **에이전트 세션은 사람이 시작한 창에만 속한다.** 채널은 그 창의 webContents만 받고, 세션은 그 창이 닫히면 끝난다. 경고 확인과 폴더 검사와 연결 확인은 화면이 아니라 뒷단이 시작할 때마다 다시 한다. 창에는 오류 문장을 보내지 않고 종류만 보낸다(`agentEventView`). 시작하지 못한 까닭은 `AgentStartFailure`(`shared/agent-api.ts`)로 보내고, 창은 종류마다 정한 문장과 신고용 코드를 보인다(`renderer/src/agent/start-error.ts`). **세션을 시작한 뒤 새로 연 문서는 프로그램의 권한 규칙에 들어가지 않는다.** 다음 메시지 전에 그 사실을 한 번 알리고(`documents-unprotected` 이벤트), 앱 쪽 권한 판단에는 새 목록을 넘긴다(`setOpenDocuments`). 보호를 받으려면 세션을 멈추고 다시 시작해야 한다.
 - **세션 MCP 서버의 도구는 `AGENT_MCP_TOOL_NAMES`뿐이다.** 탭 닫기, 자체 편집 세션, 창 없는 파일 만들기를 더하지 않는다. 읽기는 가린 자리를 `{{이름}}`으로 내보내고(`withholdingSlides`, `withholdingOpenDocuments`), 가린 내용이 있는 PPT는 고치지 않는다. 연동의 앱 안 MCP 서버는 출력이 바깥에 약속된 것이라 이 처리를 하지 않는다(결정 0016).
+- **이름 짓기(NameWithAI)는 저장된 설정을 정규화해서 읽는다.** `ai-naming-provider.ts`가 `normalizeAiSettings`로 읽고, 구독 제공자는 현재 문구의 첫 연결 안내를 읽은 뒤에만 요청한다(`reason: 'notice'`, 테스트 `ai-naming-provider.test.ts`). 실패 사유(`reason`)는 IPC로 모든 편집기까지 그대로 보낸다(`ai-naming-service.ts`, 테스트 `ai-naming-service.test.ts`).
+- **MCP의 PDF "저장 안 함"은 편집기의 "저장 안 함"과 같은 복구 사본 삭제를 쓴다.** `open-documents-bridge.ts`의 `discard`가 `recovery-shell.ts`의 `discardPdfRecovery`를 부른다(`open-documents-pdf-discard.test.ts`).
+- **`sheet_links`의 쓰기(`update`·`breakIndices`)는 MCP 설정의 백그라운드 생성이 켜져 있을 때만 된다.** 꺼져 있으면 `sheets-tools.ts`가 거절한다. 목록 읽기는 계속 된다.
 
 ## 이 모듈의 방식
 

@@ -145,7 +145,7 @@ describe('open_documents close: discard cleanup', () => {
 })
 
 describe('open_documents: restored tabs and recovery copies', () => {
-  it.each(['docs', 'mindmap', 'hwp'] as const)(
+  it.each(['docs', 'pdf', 'mindmap', 'hwp'] as const)(
     'drops a %s document’s recovery copy on discard, before the tab goes',
     async (kind) => {
       const order: string[] = []
@@ -368,10 +368,47 @@ describe('open_documents on a diagram tab', () => {
 })
 
 describe('open_documents close: PDF guard', () => {
-  it('refuses to close a PDF tab, naming the reason', async () => {
+  it('closes a clean PDF tab by default (there is nothing to save)', async () => {
+    const closed: string[] = []
+    const doc = tab({
+      id: 't6',
+      kind: 'pdf',
+      title: 'six.pdf',
+      filePath: 'C:/docs/six.pdf',
+      dirty: false,
+    })
+    const { call } = await controlWith([doc], {
+      closeTab: (id) => {
+        closed.push(id)
+        return true
+      },
+    })
+
+    const result = await call({ action: 'close', target: 't6' })
+    expect(result.closed).toBe(true)
+    expect(closed).toEqual(['t6'])
+  })
+
+  it('closes a PDF with unsaved annotations when the caller discards them', async () => {
+    const closed: string[] = []
+    const doc = tab({ id: 't6', kind: 'pdf', title: 'six.pdf', filePath: 'C:/docs/six.pdf' })
+    const { call } = await controlWith([doc], {
+      closeTab: (id) => {
+        closed.push(id)
+        return true
+      },
+    })
+
+    const result = await call({ action: 'close', target: 't6', unsaved: 'discard' })
+    expect(result.closed).toBe(true)
+    expect(result.discardedUnsavedChanges).toBe(true)
+    expect(closed).toEqual(['t6'])
+  })
+
+  it('refuses a save-close of a dirty PDF, since a PDF cannot be saved here', async () => {
     const doc = tab({ id: 't6', kind: 'pdf', title: 'six.pdf', filePath: 'C:/docs/six.pdf' })
     const { call } = await controlWith([doc])
-    await expect(call({ action: 'close', target: 't6' })).rejects.toThrow(/viewer/)
+    await expect(call({ action: 'close', target: 't6' })).rejects.toThrow(/unsaved:"discard"/)
   })
 })
 

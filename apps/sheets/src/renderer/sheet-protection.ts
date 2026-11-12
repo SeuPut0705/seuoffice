@@ -415,6 +415,7 @@ const READ_ONLY_RIBBON_COMMANDS = [
   'trace-dependents',
   'remove-arrows',
   'watch-window',
+  'external-links-panel',
   'workbook-statistics',
   'toggle-cross-highlight',
   'toggle-formula-bar',

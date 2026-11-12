@@ -5,7 +5,7 @@ O editor Markdown abre .md / .markdown — e .txt / .json, direto na visão de c
 - **Abrir**: a partir do Início ou de Arquivo ▸ Abrir…; também funciona a partir da linha de comandos.
 - **Editar**: edição de texto simples; as extensões GFM (tabelas, listas de tarefas, rasurado, ligações automáticas) são renderizadas na pré-visualização.
 - **Pré-visualização**: em tempo real; os recursos relativos, como imagens, são resolvidos ao lado do documento.
-- **Salvar**: fiel byte a byte — o BOM, o CRLF e a presença de uma quebra de linha no fim do ficheiro são preservados; um salvamento sem alterações não reescreve o ficheiro.
+- **Salvar**: fiel byte a byte — o BOM, o CRLF e a presença de uma quebra de linha no fim do arquivo são preservados; um salvamento sem alterações não reescreve o arquivo.
 - **Pesquisar e substituir**: o ctrl+F pesquisa no código; Substituir grava o resultado de volta.
 - **IA**: botões prontos deixam o assistente reescrever, desenvolver ou traduzir o documento. Uma seleção pode ser ocultada da IA (veja o capítulo do painel de IA).
 - **Abrir links**: ao editar, Ctrl+clique em um link (⌘ no Mac) o abre no navegador; um clique normal coloca o cursor no texto do link para editá-lo. Na apresentação (F5), um clique normal o abre.
@@ -19,8 +19,8 @@ Uma fila de botões por cima do editor (passe o cursor para ver as dicas):
 - **Estilo de parágrafo** (menu suspenso): alterna entre o texto do corpo e os vários níveis de título.
 - **Formatação na linha**: **negrito**, _itálico_, ~~tachado~~, `código embutido`, ligação.
 - **Listas**: lista com marcadores, lista numerada, lista de tarefas.
-- **Inserir**: tabela, imagem, separador horizontal.
-- **Propriedades**: insere ou salta para o bloco YAML front matter no topo do ficheiro.
+- **Inserir**: tabela, imagem, guia horizontal.
+- **Propriedades**: insere ou salta para o bloco YAML front matter no topo do arquivo.
 - **Estrutura**: salta pela hierarquia de títulos.
 - **Ortografia**: liga ou desliga a verificação ortográfica deste documento.
 - **Configurações de hospedagem de imagens**: imagens coladas ou arrastadas vão primeiro para o seu próprio armazenamento — compatível com S3 (R2/OSS/COS/MinIO), SM.MS ou GitHub — com a cópia local em assets como reserva.
@@ -42,7 +42,7 @@ Menu Arquivo, tudo local e tudo pergunta onde colocar o resultado:
 
 ## Vista de código-fonte
 
-O friso traz um interruptor **Código-fonte** (localizado com a aplicação). Ligue-o e o editor é substituído pelo Markdown em bruto: exatamente o texto que uma gravação escreve, nada embelezado, nada normalizado por baixo de si.
+A faixa de opções traz um interruptor **Código-fonte** (localizado com o aplicativo). Ligue-o e o editor é substituído pelo Markdown em bruto: exatamente o texto que uma gravação escreve, nada embelezado, nada normalizado por baixo de si.
 
 - **Teclado**: Ctrl+E (⌘E no Mac) alterna entre a vista de código-fonte e a tela de edição renderizada. Pressione F5 para ler em tela cheia.
 - **A edição é fiel byte a byte.** Uma gravação a partir da vista de código-fonte produz exatamente os mesmos bytes que uma gravação a partir do editor — o BOM, o CRLF e a presença de uma quebra de linha no fim sobrevivem todos.

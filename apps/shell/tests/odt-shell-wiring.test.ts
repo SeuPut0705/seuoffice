@@ -43,8 +43,8 @@ function localeBlock(locale: string): string {
 describe('ODT in the shell lists', () => {
   it('counts .odt as a Word document in every docx family list', () => {
     expect(EXT_FAMILY.docx).toContain('odt')
-    expect(literal(main, 'SEARCH_EXT_FAMILY')).toMatch(/docx: \['docx', 'doc', 'odt'\]/)
-    expect(literal(home, 'FILTER_FAMILY')).toMatch(/docx: \['docx', 'doc', 'odt'\]/)
+    expect(literal(main, 'SEARCH_EXT_FAMILY')).toMatch(/docx: \['docx', 'doc', 'dot', 'odt'\]/)
+    expect(literal(home, 'FILTER_FAMILY')).toMatch(/docx: \['docx', 'doc', 'dot', 'odt'\]/)
   })
 
   it('shows .odt in the folder tree, the open dialog and the open card', () => {
@@ -57,7 +57,9 @@ describe('ODT in the shell lists', () => {
 
   it('routes .odt to the Word tab in the single open router', () => {
     const route = fnSource('routeDocumentPath')
-    expect(route).toContain('if (DOCX_RE.test(filePath) || ODT_RE.test(filePath)) {')
+    expect(route).toContain(
+      'if (DOCX_RE.test(filePath) || ODT_RE.test(filePath) || WORD97_RE.test(filePath)) {',
+    )
     expect(route.indexOf('ODT_RE')).toBeLessThan(route.indexOf('openDocsTab'))
   })
 

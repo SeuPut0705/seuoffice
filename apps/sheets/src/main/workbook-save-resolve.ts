@@ -179,6 +179,10 @@ export function resolveWorkbookSave(
     shape: addition.shape,
     image: addition.image,
   }))
+  const cellImageAdditions = (request.cellImageAdditions ?? []).map(({ sheetId, ...addition }) => ({
+    sheetName: resolveSheetName(sheetId),
+    ...addition,
+  }))
   const tableAdditions = request.tableAdditions.map((table) => ({
     sheetName: resolveSheetName(table.sheetId),
     area: table.area,
@@ -228,6 +232,18 @@ export function resolveWorkbookSave(
     sheetName: resolveSheetName(sheetId),
     ...group,
   }))
+  // Slicer panels: same sheetId → sheet name mapping as the other
+  // additions; part paths stay package-absolute.
+  const slicerState =
+    request.slicerState === null
+      ? null
+      : {
+          slicers: request.slicerState.slicers.map(({ sheetId, ...control }) => ({
+            ...control,
+            sheetName: resolveSheetName(sheetId),
+          })),
+          removals: [...request.slicerState.removals],
+        }
   // Recalculated formula values: sheetId → file sheet name, the same
   // resolution the cell edits use.
   const formulaValuesBySheet = new Map<
@@ -244,6 +260,28 @@ export function resolveWorkbookSave(
     sheetName,
     cells,
   }))
+  // The redaction part is keyed by sheet NAME, so there is nothing to resolve
+  // here: the marks arrive under the names the session loaded, which is what
+  // the gateway's re-keying against this save's renames and removals expects.
+  // null = the renderer never loaded the marks, so the part stays as it is.
+  const redactionStates =
+    request.redactionStates?.map((state) => ({
+      sheetName: state.sheetName,
+      marks: state.marks.map((mark) => ({
+        startRow: mark.startRow,
+        endRow: mark.endRow,
+        startColumn: mark.startColumn,
+        endColumn: mark.endColumn,
+        label: mark.label,
+        // Carried through, not rebuilt from the known fields: this mapping is
+        // the third place a mark passes through (the zod schema, the preload's
+        // hand-rolled check, and here), and only the zod one refuses an unknown
+        // key. The other two drop it silently, which is how a field added to the
+        // mark can vanish between the renderer and the file with nothing failing.
+        // Omitted when absent so an older part's bytes stay identical.
+        ...('previousFill' in mark ? { previousFill: mark.previousFill ?? null } : {}),
+      })),
+    })) ?? null
   return {
     edits,
     bulkConstantFills,
@@ -263,12 +301,14 @@ export function resolveWorkbookSave(
     workbookProtectionState: request.workbookProtectionState,
     protectedRangeStates,
     visualAdditions,
+    cellImageAdditions,
     pageSetupStates,
     noteStates,
     tableAdditions,
     tableEdits,
     pivotAdditions,
     sparklineAdditions,
+    slicerState,
     formulaValues,
     pivotCacheRefreshPaths: request.pivotCacheRefreshPaths,
     // Output-area expansion from layout growth: sheetId → sheet name; the part
@@ -286,5 +326,9 @@ export function resolveWorkbookSave(
             }))(update.relayout),
           }),
     })),
+    // The marks ride in a package part of their own; the gateway re-keys them
+    // for the renames and removals `sheetPlan` carries.
+    redactionStates,
+    externalLinkOps: request.externalLinkOps,
   }
 }

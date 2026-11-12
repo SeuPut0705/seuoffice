@@ -3,7 +3,6 @@
 // save_archive writes the new package with untouched entries raw-copied.
 // Mirrors saveWorkbookViaSidecar (xlsx-package-io), which needs Node's file system.
 import { planCellEditsToXlsx, type EntrySource } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
-import { normalizeOoxmlPartPrefix } from '@genoffice/xlsx-gateway/gateway/xlsx-namespace'
 import {
   assertManifestPreserved,
   type ArchiveEntry,
@@ -11,15 +10,7 @@ import {
 import { MAX_PATCH_ENTRY_BYTES } from '@genoffice/xlsx-gateway/shared/edit-schemas'
 import { File } from '@seuoffice/web-platform/wasi'
 import type { ResolvedWorkbookSave } from '../main/workbook-save-resolve'
-
-/** The worker's engine: one protocol command, and the files behind /work and /save */
-export interface EngineFiles {
-  command(name: string, fields: Record<string, unknown>): Promise<unknown>
-  /** /work: workbooks the engine opens; the saved package lands here too */
-  readonly work: Map<string, File>
-  /** /save: one save's extracted entries and planned contents, emptied after it */
-  readonly scratch: Map<string, File>
-}
+import { readEntryText, type EngineFiles } from './xlsx-entries'
 
 export interface SavedWorkbook {
   readonly bytes: Uint8Array
@@ -27,8 +18,6 @@ export interface SavedWorkbook {
 }
 
 const encoder = new TextEncoder()
-// Node's utf8 read keeps a leading BOM; the planner must see the same text the desktop does
-const decoder = new TextDecoder('utf-8', { ignoreBOM: true })
 
 /** Writes /work/<target> from /work/<source> with the edits applied and returns its bytes */
 export async function saveWorkbook(
@@ -71,6 +60,9 @@ export async function saveWorkbook(
       save.tabColorStates ?? [],
       save.tableEdits ?? [],
       save.cellImageAdditions ?? [],
+      save.externalLinkOps ?? null,
+      save.redactionStates ?? null,
+      save.slicerState ?? null,
     )
     const result = (await engine.command('save_archive', {
       sourcePath,
@@ -94,7 +86,6 @@ export async function saveWorkbook(
     engine.scratch.clear()
   }
 }
-
 /** The entries of the engine's copy, read through the engine (as createSidecarEntrySource does) */
 function entrySource(
   engine: EngineFiles,
@@ -123,17 +114,7 @@ function entrySource(
       const cached = cache.get(path)
       if (cached !== undefined) return cached
       if (!entryByName.has(path)) throw new Error(`Workbook is missing ${path}.`)
-      const { entries } = (await engine.command('read_entries', {
-        path: sourcePath,
-        entries: [path],
-        outputDir: '/save',
-      })) as { entries: { name: string; path: string }[] }
-      const name = entries[0]?.path.replace(/^\/save\//, '')
-      const extracted = name === undefined ? undefined : engine.scratch.get(name)
-      if (name === undefined || !extracted)
-        throw new Error(`The xlsx engine did not extract ${path}.`)
-      engine.scratch.delete(name)
-      const content = normalizeOoxmlPartPrefix(decoder.decode(extracted.data))
+      const content = await readEntryText(engine, sourcePath, path)
       cache.set(path, content)
       return content
     },

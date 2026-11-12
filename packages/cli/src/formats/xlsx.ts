@@ -2,11 +2,11 @@ import JSZip from 'jszip'
 import { assertZipInflatesWithinLimits } from '@genoffice/docx-engine'
 import * as numfmt from 'numfmt'
 import {
-  blankXlsxBuffer,
   isNumericCell,
   parseCsv,
   resolveImportDelimiter,
 } from '@genoffice/xlsx-gateway/gateway/csv-import'
+import { blankXlsxBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
 import { columnLabel, parseAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
 import {
   XLSX_ZIP_LIMITS,
@@ -1366,13 +1366,17 @@ export async function writeWorkbook(
 
 // ── external links (genoffice#2109) ────────────────────────────────────
 
-export interface ExternalLinkInfo {
-  index: number
-  rawTarget: string
-  source: string | null
-  reachable: boolean
-  sheetNames: string[]
-}
+const externalLinkInfoSchema = z.object({
+  index: z.number(),
+  rawTarget: z.string(),
+  source: z.string().nullable(),
+  /** null: the source was not asked about, `unchecked` says why */
+  reachable: z.boolean().nullable(),
+  /** `remote`: the target names another computer; `drive`: a drive that may be a network drive */
+  unchecked: z.enum(['remote', 'drive']).optional(),
+  sheetNames: z.array(z.string()),
+})
+export type ExternalLinkInfo = z.infer<typeof externalLinkInfoSchema>
 
 /** A worksheet relationship target resolved to a package part path. */
 function worksheetPartPath(target: string): string {
@@ -1495,16 +1499,18 @@ function cacheMatches(
 }
 
 /** The workbook's external links, as the file stores them: index (the [n]
- * formulas use), the stored source path, the resolved local path, whether
- * that file exists, and the source's sheet names. No source is opened. */
+ * formulas use), the stored source path, the resolved path, whether that
+ * file exists, and the source's sheet names. No source is opened, and one
+ * the workbook places on another computer is not even asked about: its
+ * `reachable` is null. */
 export async function readExternalLinks(path: string): Promise<ExternalLinkInfo[]> {
   // only the existence gate is local: the sidecar reads the package
   await access(path)
-  return withSidecar(async (client) => {
+  return withSidecar(async (client) =>
     // the sidecar's read command answers the link array itself (the update
     // command is the one that wraps its cells in a report object)
-    return (await client.readExternalLinks({ path })) as ExternalLinkInfo[]
-  })
+    z.array(externalLinkInfoSchema).parse(await client.readExternalLinks({ path })),
+  )
 }
 
 const updateReportSchema = z.object({
@@ -1528,20 +1534,40 @@ const updateReportSchema = z.object({
 
 /** Re-reads every reachable source and writes the computed values as the
  * formulas' cached <v> — formula text untouched, unreachable links keep their
- * cache. Returns what changed and what stayed behind. */
+ * cache. A source that is not plainly on this computer (it names another
+ * computer, or sits on a drive that may be a network drive) is left alone
+ * (counted in `remoteSkipped`, and as broken) unless `remoteSources` says the
+ * user asked for it. Returns what changed and what stayed behind. */
 export async function updateExternalLinkCaches(
   path: string,
   outputPath: string,
+  options: { remoteSources?: boolean } = {},
 ): Promise<{
   updated: number
   kept: number
   reachable: number
   broken: number
+  remoteSkipped: number
 }> {
   const source = await readFile(path)
-  const report = await withSidecar(async (client) =>
-    updateReportSchema.parse(await client.updateExternalLinks({ path })),
-  )
+  const { report, remoteSkipped } = await withSidecar(async (client) => {
+    const report = updateReportSchema.parse(
+      await client.updateExternalLinks({
+        path,
+        ...(options.remoteSources ? { allowRemoteSources: true } : {}),
+      }),
+    )
+    // why a link stayed behind: the read that contacts none of them says
+    // which sources are not plainly here, the ones this update did not look for
+    const remoteSkipped =
+      options.remoteSources || report.links.every((link) => link.reachable)
+        ? 0
+        : z
+            .array(externalLinkInfoSchema)
+            .parse(await client.readExternalLinks({ path }))
+            .filter((link) => link.unchecked !== undefined).length
+    return { report, remoteSkipped }
+  })
   const cached = await cachedFormulaValues(source, report.cells)
   const bySheet = new Map<string, { row: number; column: number; value: FormulaCachedValue }[]>()
   let kept = 0
@@ -1570,6 +1596,7 @@ export async function updateExternalLinkCaches(
     kept,
     reachable: report.links.filter((link) => link.reachable).length,
     broken: report.links.filter((link) => !link.reachable).length,
+    remoteSkipped,
   }
 }
 

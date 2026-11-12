@@ -45,9 +45,13 @@ export const PDF_TOOLS_HANDOFF = [
 ] as const
 export type PdfToolsHandoffTool = (typeof PDF_TOOLS_HANDOFF)[number]
 
+/** largest slice readFileChunk hands over IPC; the renderer loops over them */
+export const PDF_READ_CHUNK_BYTES = 8 * 1024 * 1024
+
 export const PDF_CHANNELS = {
   consumePending: 'pdf:consume-pending',
   readFile: 'pdf:read-file',
+  readFileChunk: 'pdf:read-file-chunk',
   decryptPdf: 'pdf:decrypt',
   save: 'pdf:save',
   pickAttachmentFile: 'pdf:pick-attachment-file',
@@ -82,6 +86,7 @@ export const PDF_CHANNELS = {
   setPageSize: 'pdf:set-page-size',
   splitPages: 'pdf:split-pages',
   cropPages: 'pdf:crop-pages',
+  restoreFile: 'pdf:restore-file',
   exportImages: 'pdf:export-images',
   // Save As › PNG page images: the shell picked the name; the renderer draws the pages
   exportImagesRequest: 'pdf:export-images-request',
@@ -166,6 +171,7 @@ export const PDF_CHANNELS = {
   convertReleaseTarget: 'pdf:convert-release-target',
   convertOpenResult: 'pdf:convert-open-result',
   convertRevealResult: 'pdf:convert-reveal-result',
+  authorNameChanged: 'app:author-name-changed',
 } as const
 
 export const VISUAL_SIGNATURE_CONTENT_PREFIX = 'GenOffice visual signature field: '
@@ -551,7 +557,7 @@ export type DrawingInput =
       color: [number, number, number]
       at: [number, number]
       contents: string
-      /** Annotation author (/T); omitted → 'GenOffice' */
+      /** Annotation author (/T); omitted → the request's annotationAuthor */
       author?: string
       /** Creation time (ms since epoch) → /CreationDate and /M; omitted → save time */
       createdMs?: number
@@ -952,6 +958,9 @@ export interface SavePdfRequest {
       from `encryption.userPassword`. */
   decryption?: { userPassword: string }
   markups: MarkupInput[]
+  /** Author (/T) of the markups and drawings this save adds; a note keeps its own
+      author when it has one. Omitted → 'GenOffice' */
+  annotationAuthor?: string
   /** Saved markup annotations to remove (applied before every other stage) */
   annotDeletes?: AnnotDeleteInput[]
   drawings: DrawingInput[]
@@ -1149,6 +1158,16 @@ export type ReplacePagesResult =
   | { ok: true; removed: number; inserted: number }
   | { ok: true; canceled: true }
   | { ok: false; error: string }
+
+/** The file put back as it was around a change written in place (Undo and Redo of that change) */
+export interface RestoreFileRequest {
+  path: string
+  bytes: ArrayBuffer
+}
+
+/** `external-modified`: nothing was written, because the file is no longer what this view's
+ *  last write in place left there (another program changed or removed it) */
+export type RestoreFileResult = { ok: true } | { ok: false; error: string }
 
 /** Resize all pages to a target paper size (points), content scaled to fit; written back in place */
 export interface SetPageSizeRequest {
@@ -1681,6 +1700,14 @@ export interface PdfApi {
   openSourcePath(path: string): Promise<void>
   /** Read pdf bytes. Only paths granted to this view are allowed */
   readFile(path: string): Promise<ArrayBuffer>
+  /** one slice of a granted file, with the file's size so the reader loop
+   *  needs no separate stat: a 42 MB one-shot ArrayBuffer over IPC has
+   *  killed renderers before first paint on Windows (genoffice#2366) */
+  readFileChunk(
+    path: string,
+    start: number,
+    end: number,
+  ): Promise<{ data: Uint8Array; fileSize: number }>
   /** Open a password-protected document for editing: plain bytes, the /P the file
       carried, whether a password was needed at all (false: owner-only file) and
       which password opened it (the owner's ignores the /P limits) */
@@ -1806,6 +1833,7 @@ export interface PdfApi {
   setPageSize(request: SetPageSizeRequest): Promise<SetPageSizeResult>
   splitPages(request: SplitPagesRequest): Promise<SplitPagesResult>
   cropPages(request: CropPagesRequest): Promise<CropPagesResult>
+  restoreFile(request: RestoreFileRequest): Promise<RestoreFileResult>
   exportImages(request: ExportImagesRequest): Promise<ExportImagesResult>
   /** Shell Save As › PNG page images → draw every page and export it with `saveAs: true` */
   onExportImagesRequest(handler: () => void): () => void
@@ -1856,7 +1884,7 @@ export interface PdfApi {
   addSavedSignature(data: SignatureData): Promise<SavedSignature[]>
   /** Delete one saved signature by id; returns the updated list */
   removeSavedSignature(id: string): Promise<SavedSignature[]>
-  /** OS account name, used as the default author of new note comments; '' when unavailable */
+  /** Settings → General user name (the OS account name when unset), used as the default author of new note comments */
   getUsername(): Promise<string>
   /** The /Subj of the markup annotations in a granted file (accepted AI highlights' categories) */
   annotSubjects(path: string): Promise<PdfAnnotSubject[]>
@@ -1866,6 +1894,7 @@ export interface PdfApi {
   noteInsert(request: PdfNoteInsertRequest): Promise<PdfNoteResult>
   /** this view's PDF has no path the person saved yet (a new blank before its first save): the note buttons wait */
   noteUnsaved(): Promise<boolean>
+  onUsernameChanged(handler: (name: string) => void): () => void
   /** Mirror unsaved-changes state to the main process; drives the save prompt before closing a tab/window */
   setDirty(dirty: boolean): void
   /** Main process asks for a save (close prompt, menu Save, export flows) and waits for sendCloseSaveResult.

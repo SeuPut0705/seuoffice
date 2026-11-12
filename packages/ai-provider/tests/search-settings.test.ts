@@ -14,10 +14,12 @@ describe('search settings', () => {
       providers: {
         serper: { apiKey: '' },
         serply: { apiKey: '' },
+        searchapi: { apiKey: '' },
         tavily: { apiKey: '' },
         parallel: { apiKey: '' },
         exa: { apiKey: '' },
         firecrawl: { apiKey: '' },
+        keenable: { apiKey: '' },
       },
     })
     expect(defaultAiSettings().search?.provider).toBe('parallel')
@@ -47,10 +49,12 @@ describe('search settings', () => {
           providers: {
             serper: { apiKey: '' },
             serply: { apiKey: '' },
+            searchapi: { apiKey: '' },
             tavily: { apiKey: '' },
             parallel: { apiKey: '' },
             exa: { apiKey: '' },
             firecrawl: { apiKey: '' },
+            keenable: { apiKey: '' },
           },
         },
       }),
@@ -62,10 +66,12 @@ describe('search settings', () => {
           providers: {
             serper: { apiKey: 'k' },
             serply: { apiKey: '' },
+            searchapi: { apiKey: '' },
             tavily: { apiKey: '' },
             parallel: { apiKey: '' },
             exa: { apiKey: '' },
             firecrawl: { apiKey: '' },
+            keenable: { apiKey: '' },
           },
         },
       }),
@@ -77,10 +83,12 @@ describe('search settings', () => {
           providers: {
             serper: { apiKey: '   ' },
             serply: { apiKey: '' },
+            searchapi: { apiKey: '' },
             tavily: { apiKey: '' },
             parallel: { apiKey: '' },
             exa: { apiKey: '' },
             firecrawl: { apiKey: '' },
+            keenable: { apiKey: '' },
           },
         },
       }),
@@ -103,6 +111,26 @@ describe('Serply search settings', () => {
     expect(
       activeSearchProvider({
         search: { ...settings, providers: { ...settings.providers, serply: { apiKey: '  ' } } },
+      }),
+    ).toBeNull()
+  })
+})
+
+describe('SearchApi search settings', () => {
+  it('restores and trims a saved SearchApi key and activates it only with a key', () => {
+    const settings = resolveAiSearchSettings({
+      provider: 'searchapi',
+      providers: { searchapi: { apiKey: ' searchapi-key ' } } as never,
+    })
+    expect(settings.provider).toBe('searchapi')
+    expect(settings.providers.searchapi.apiKey).toBe('searchapi-key')
+    expect(activeSearchProvider({ search: settings })).toBe('searchapi')
+    expect(
+      activeSearchProvider({
+        search: {
+          ...settings,
+          providers: { ...settings.providers, searchapi: { apiKey: '  ' } },
+        },
       }),
     ).toBeNull()
   })
@@ -167,10 +195,12 @@ describe('exa and firecrawl providers', () => {
         providers: {
           serper: { apiKey: '' },
           serply: { apiKey: '' },
+          searchapi: { apiKey: '' },
           tavily: { apiKey: '' },
           parallel: { apiKey: '' },
           exa: { apiKey: id === 'exa' ? apiKey : '' },
           firecrawl: { apiKey: id === 'firecrawl' ? apiKey : '' },
+          keenable: { apiKey: '' },
         },
       },
     })
@@ -191,5 +221,39 @@ describe('exa and firecrawl providers', () => {
     expect(s.providers.exa.apiKey).toBe('k')
     expect(s.providers.firecrawl.apiKey).toBe('fc')
     expect(s.provider).toBe('exa')
+  })
+})
+
+describe('Keenable search settings', () => {
+  it('is in the catalog without image search and defaults to an empty key', () => {
+    expect(AI_SEARCH_PROVIDERS.find((m) => m.id === 'keenable')?.imageSearch).toBe(false)
+    expect(defaultAiSearchSettings().providers.keenable.apiKey).toBe('')
+  })
+
+  it('keeps Keenable selected for free search when the key is blank', () => {
+    const settings = resolveAiSearchSettings(
+      JSON.parse(
+        JSON.stringify({
+          provider: 'keenable',
+          providers: { keenable: { apiKey: '   ' } },
+        }),
+      ),
+    )
+    expect(settings.providers.keenable.apiKey).toBe('')
+    expect(activeSearchProvider({ search: settings })).toBe('keenable')
+  })
+
+  it('restores and trims a saved Keenable key', () => {
+    const settings = resolveAiSearchSettings({
+      provider: 'keenable',
+      providers: { keenable: { apiKey: ' kn-key ' } } as never,
+    })
+    expect(settings.providers.keenable.apiKey).toBe('kn-key')
+    expect(activeSearchProvider({ search: settings })).toBe('keenable')
+  })
+
+  it('leaves the default provider on free Parallel search', () => {
+    expect(defaultAiSearchSettings().provider).toBe('parallel')
+    expect(activeSearchProvider({ search: defaultAiSearchSettings() })).toBe('parallel')
   })
 })

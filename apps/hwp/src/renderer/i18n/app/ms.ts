@@ -28,6 +28,10 @@ export const ms = {
     'Dokumen ini mengandungi perubahan yang dijejak. Anda melihat teks semasanya, dengan perubahan digunakan; menyimpan akan mengekalkan teks ini dan membuang rekod perubahan.',
   saveTracked:
     'Tidak disimpan: dokumen ini mempunyai penjejakan perubahan; menyimpannya di sini akan menghilangkannya dan mungkin menghasilkan fail yang tidak dapat dibuka oleh Hancom Hangul.',
+  openedUnverified:
+    'Struktur fail ini tidak dapat disahkan, jadi sebahagian kandungannya mungkin tiada di sini. Anda boleh membaca dan menyuntingnya, tetapi ia tidak disimpan menimpa fail asal: gunakan Simpan Sebagai untuk menyimpan salinan dengan nama lain.',
+  saveUnverified:
+    'Tidak disimpan: struktur fail ini tidak dapat disahkan, dan menimpa fail asal boleh menyebabkan kandungan hilang. Dalam Simpan Sebagai, simpan salinan dengan nama lain, sebaik-baiknya dalam format HWPX.',
   savedTailsLost:
     'Disimpan, tetapi sebahagian halaman induk atau memo daripada fail asal tidak dapat dikekalkan, dan Hancom Hangul mungkin tidak dapat membuka fail yang disimpan. Buka untuk menyemak.',
   missingFonts:

@@ -28,6 +28,8 @@ import type {
   AddInkOp,
   AddMediaBytesOp,
   ReplacePictureBytesOp,
+  AddModel3dOp,
+  SetModel3dViewOp,
   AddSmartArtOp,
   ApplyThemeOp,
   AddBlankSlideOp,
@@ -61,6 +63,7 @@ import type {
   TableStructureIpcOp,
   TableMergeIpcOp,
   ReorderElementOp,
+  SaveRecordingOp,
   SetAdvanceTimesOp,
   SetAnimationsOp,
   SetSlideHiddenOp,
@@ -105,6 +108,8 @@ import type {
   SavePictureOp,
   ExportPdfOp,
   PrintSlidesOp,
+  PrinterInfo,
+  PrinterOption,
   MenuCommand,
   OpenResult,
   SlidesApi,
@@ -369,8 +374,11 @@ const api: SlidesApi = {
   addMediaBytes: (op: AddMediaBytesOp) => ipcRenderer.invoke('slides:add-media-bytes', op),
   getMediaData: (slideIndex: number, sourceId: string) =>
     ipcRenderer.invoke('slides:media-data', slideIndex, sourceId),
-  insertModel3d: (slideIndex: number, fitWidthPx: number) =>
-    ipcRenderer.invoke('slides:insert-model3d', slideIndex, fitWidthPx),
+  pickModel3d: () => ipcRenderer.invoke('slides:pick-model3d'),
+  addModel3d: (op: AddModel3dOp) => ipcRenderer.invoke('slides:add-model3d', op),
+  getModel3dData: (slideIndex: number, sourceId: string) =>
+    ipcRenderer.invoke('slides:model3d-data', slideIndex, sourceId),
+  setModel3dView: (op: SetModel3dViewOp) => ipcRenderer.invoke('slides:set-model3d-view', op),
   setLink: (op: SetLinkOp) => ipcRenderer.invoke('slides:set-link', op),
   getLink: (slideIndex: number, sourceId: string) =>
     ipcRenderer.invoke('slides:get-link', slideIndex, sourceId),
@@ -382,7 +390,13 @@ const api: SlidesApi = {
   applyTheme: (op: ApplyThemeOp) => ipcRenderer.invoke('slides:apply-theme', op),
   setTransition: (op: SetTransitionOp) => ipcRenderer.invoke('slides:set-transition', op),
   getTransition: (slideIndex: number) => ipcRenderer.invoke('slides:get-transition', slideIndex),
+  getShowTiming: (slideIndex: number) => ipcRenderer.invoke('slides:get-show-timing', slideIndex),
   setAdvanceTimes: (op: SetAdvanceTimesOp) => ipcRenderer.invoke('slides:set-advance-times', op),
+  saveRecording: (op: SaveRecordingOp) => ipcRenderer.invoke('slides:save-recording', op),
+  clearNarration: (slideIndexes: number[]) =>
+    ipcRenderer.invoke('slides:clear-narration', slideIndexes),
+  microphoneAccess: () => ipcRenderer.invoke('slides:microphone-access'),
+  microphoneRelease: () => ipcRenderer.send('slides:microphone-release'),
   getAnimations: (slideIndex: number) => ipcRenderer.invoke('slides:get-animations', slideIndex),
   getShapeKeys: (slideIndex: number) => ipcRenderer.invoke('slides:get-shape-keys', slideIndex),
   setAnimations: (op: SetAnimationsOp) => ipcRenderer.invoke('slides:set-animations', op),
@@ -424,6 +438,45 @@ const api: SlidesApi = {
   savePicture: (op: SavePictureOp) => ipcRenderer.invoke('slides:save-picture', op),
   exportPdf: (op: ExportPdfOp) => ipcRenderer.invoke('slides:export-pdf', op),
   printSlides: (op: PrintSlidesOp) => ipcRenderer.invoke('slides:print', op),
+  listPrinters: async () => {
+    const result: unknown = await ipcRenderer.invoke('slides:printers')
+    if (!Array.isArray(result)) throw new Error('Invalid printers response.')
+    return result.map((entry): PrinterInfo => {
+      if (
+        typeof entry !== 'object' ||
+        entry === null ||
+        typeof (entry as Record<string, unknown>).name !== 'string' ||
+        typeof (entry as Record<string, unknown>).displayName !== 'string'
+      ) {
+        throw new Error('Invalid printers entry.')
+      }
+      const { name, displayName } = entry as Record<string, string>
+      return { name, displayName }
+    })
+  },
+  printerOptions: async (queue: string) => {
+    const result: unknown = await ipcRenderer.invoke('slides:printer-options', queue)
+    if (!Array.isArray(result)) throw new Error('Invalid printer-options response.')
+    return result.map((entry): PrinterOption => {
+      const shape = entry as Record<string, unknown>
+      if (
+        typeof entry !== 'object' ||
+        entry === null ||
+        typeof shape.name !== 'string' ||
+        typeof shape.translation !== 'string' ||
+        !Array.isArray(shape.values) ||
+        !shape.values.every((v) => typeof v === 'string')
+      ) {
+        throw new Error('Invalid printer-option entry.')
+      }
+      return {
+        name: shape.name,
+        translation: shape.translation,
+        values: shape.values,
+        ...(typeof shape.defaultValue === 'string' ? { defaultValue: shape.defaultValue } : {}),
+      }
+    })
+  },
   save: (auto?: boolean) => ipcRenderer.invoke('slides:save', auto === true),
   saveAs: (defaultName: string) => ipcRenderer.invoke('slides:save-as', defaultName),
   saveIntoProject: () => ipcRenderer.invoke('slides:save-into-project'),
@@ -560,6 +613,29 @@ const api: SlidesApi = {
   templateBytes: () => ipcRenderer.invoke('slides:template-bytes'),
 }
 
+/**
+ * Model file naming: the transport half of `suggestFileName`.
+ *
+ * Inlined rather than imported — a preload entry must stay a single-file bundle,
+ * or the sandbox drops every global it exposed. The one `ai:` channel is
+ * registered app-wide by the shell (`registerAiNamingIpc`), not by this app, the
+ * same arrangement the `project:*` bridge below already depends on. A slides
+ * window running on its own has no such handler: the invoke rejects, and the
+ * shared client treats that as a declined naming, which leaves the deck with
+ * the name it already had.
+ *
+ * `content` crosses this bridge verbatim and the main process cannot see what
+ * this editor withheld, so what the caller hands over is exactly what the model
+ * sees. A caller that passed raw document text would undo its own redactions.
+ *
+ * The global is `aiNamingApi`, not `aiOffice`: `aiOffice` is the shell's home
+ * API, and a partial one in an editor window would shadow it there.
+ */
+const aiNamingApi = {
+  suggestFileName: (input: { content: string }) =>
+    ipcRenderer.invoke('ai:suggest-file-name', input),
+}
+
 contextBridge.exposeInMainWorld('slidesApi', api)
 // Google Drive for this editor's AI: search and read only (decision 0033)
 contextBridge.exposeInMainWorld('aiOfficeDriveAi', driveAiBridge())
@@ -570,6 +646,7 @@ contextBridge.exposeInMainWorld('aiOfficeMcpTools', mcpToolsBridge())
 contextBridge.exposeInMainWorld(USER_SKILLS_BRIDGE_KEY, userSkillsBridge())
 // The shell's document picker, for this editor's AI attach button
 contextBridge.exposeInMainWorld(DOC_ATTACH_BRIDGE_KEY, docAttachBridge())
+contextBridge.exposeInMainWorld('aiNamingApi', aiNamingApi)
 
 // Chat attachment bridge: method names/signatures match the window.desktop attachment subset in docs, so the renderer's files-skill is copied over wholesale
 const filesApi: DesktopFilesApi = {

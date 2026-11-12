@@ -1,9 +1,9 @@
 import {
-  csvToXlsxBuffer,
   decodeCsvBuffer,
   parseCsv,
   resolveImportDelimiter,
 } from '@genoffice/xlsx-gateway/gateway/csv-import'
+import { csvToXlsxBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
 import { normalizeLang, type Lang } from '@genoffice/i18n'
 import { cutIndex } from '../preview'
 

@@ -1,6 +1,25 @@
 import type { zh } from './zh'
 
 export const nl = {
+  // ── Withholding cells from the model ──
+  redactMenuLabel: 'Selectie verbergen voor de AI',
+  redactDialogDesc:
+    'De selectie blijft in het document en het bestand; het model ziet alleen de placeholder. Geef hem een naam.',
+  redactDialogScope:
+    'Verbergen geldt alleen voor de AI in deze app. De CLI, MCP-tools en de export zonder venster lezen het bestand rechtstreeks en zien deze woorden nog steeds.',
+  redactDialogPlaceholder: 'Naam van placeholder, bv. telefoonnummer klant',
+  redactCancel: 'Annuleren',
+  redactInsert: 'Verbergen',
+  redactEnable: 'Rechtsklik op een selectie om die voor het model te verbergen.',
+  redactNeedsSavedRow:
+    'Deze rij staat nog niet in het bestand. Sla eerst op en verberg daarna de cel.',
+  redactNeedsSavedSheet:
+    'Dit blad of een kopie ervan staat nog niet in het bestand. Sla eerst op en wijzig daarna wat verborgen is.',
+  redactMoveRefused:
+    'Niet uitgevoerd: hierdoor zouden cellen die voor AI verborgen zijn worden verplaatst of gekopieerd, en hun waarden zouden niet meer verborgen zijn. Maak het verbergen eerst ongedaan of laat de cellen buiten het bereik.',
+  redactRecoveredFromNames:
+    'Een andere app heeft dit bestand herschreven en het overzicht van wat verborgen is weggegooid. De verborgen cellen zijn teruggevonden in de namen van de werkmap; bij opslaan wordt het volledige overzicht teruggeschreven.',
+
   appMergeWorkbooks: 'Werkmappen samenvoegen',
   appMergeWorkbooksTip: 'Bladen uit andere Excel-bestanden aan deze werkmap toevoegen',
   appMergeWorkbooksPicking: 'Kies bestanden om samen te voegen…',
@@ -8,6 +27,8 @@ export const nl = {
   appMergeWorkbooksDone:
     '{sheets} bladen uit {files} bestanden samengevoegd (formules als waarden geïmporteerd).',
   appMergeWorkbooksFailed: 'Samenvoegen van werkmappen mislukt.',
+  appMergeWorkbooksHiddenCells:
+    'Er is niets samengevoegd: {file} bevat cellen die voor de AI verborgen zijn, en bij samenvoegen zouden hun waarden zonder die afscherming binnenkomen. Open dat bestand, maak het verbergen ongedaan of verwijder die cellen, sla op en voeg daarna opnieuw samen.',
   appMergeWorkbooksInsertFailed: 'Kan blad {sheet} niet maken.',
   appMergeWorkbooksLocked: 'De werkmap wordt nog geladen; samenvoegen is nu niet beschikbaar.',
   appFormulaBarShown: 'Formulebalk weergegeven.',
@@ -546,6 +567,7 @@ export const nl = {
   appBridgeUnavailable:
     'De bestandsbridge van de desktop is niet beschikbaar. Start de Electron-app opnieuw.',
   appOpenCanceled: 'Werkmapselectie geannuleerd.',
+  appImportCanceled: 'Import geannuleerd.',
   appOpeningWorkbook: 'Werkmap openen…',
   appOpened: '{name} geopend — celbewerkingen slaat u terug op met ⌘S.',
   appOpenFailed: 'Kan de werkmap niet openen.',
@@ -644,6 +666,8 @@ export const nl = {
     'Dit grafiektype ondersteunt die bewerking niet; opslaan afgebroken — maak de grafiekwijziging ongedaan.',
   appSaveErrMoveOverlap:
     'Een formule, opgemaakt bereik, vorm of tabel loopt over de verplaatste rijen; opslaan afgebroken — maak de verplaatsing ongedaan.',
+  appSaveErrHiddenCellsUnreadable:
+    'Het overzicht van de voor de AI verborgen cellen in deze werkmap is onleesbaar, dus wijzigingen in rijen, kolommen en bladen kunnen niet worden opgeslagen: de verborgen cellen zouden dan niet meer afgeschermd zijn. Maak die wijzigingen ongedaan en sla opnieuw op.',
   appFromTextCsvTitle: 'Een CSV-/tekstbestand in de huidige selectie importeren',
   appCsvImported: '{rows} rijen × {columns} kolommen uit het bestand geïmporteerd naar {cell}.',
   appCsvEmpty: 'Het CSV-bestand bevat geen gegevens.',
@@ -750,6 +774,7 @@ export const nl = {
   appExportPdfTitle: 'Exporteren als PDF',
   appSaveTitle: 'Opslaan (⌘S)',
   appSaveAs: 'Opslaan als',
+  aiNameFile: 'Naam geven met AI…',
   appUndo: 'Ongedaan maken',
   appRedo: 'Opnieuw',
   appQuickAccessCustomize: 'Werkbalk Snelle toegang aanpassen',
@@ -1202,6 +1227,20 @@ export const nl = {
   appWatchCell: 'Cel',
   appWatchValue: 'Waarde',
   appWatchFormula: 'Formule',
+  appLinksPanel: 'Externe koppelingen',
+  appLinksPanelDetail: 'Koppelingen naar andere werkmappen tonen, bijwerken en verbreken',
+  appLinksUpdate: 'Waarden bijwerken',
+  appLinksNone: 'Deze werkmap heeft geen koppelingen naar andere werkmappen.',
+  appLinksUnsaved: 'Sla deze werkmap op voordat u de externe koppelingen toont.',
+  appLinksSource: 'Bron',
+  appLinksStatus: 'Status',
+  appLinksSheets: 'Bladen',
+  appLinksLocate: 'Bronbestand tonen',
+  appLinksReachable: 'Beschikbaar',
+  appLinksBroken: 'Niet beschikbaar',
+  appLinksBreak: 'Koppeling verbreken',
+  appLinksBreakConfirm: 'Verbreken bevestigen',
+  appLinksChangeSource: 'Bron wijzigen',
   appGroupCalculation: 'Berekening',
   appCalculationOptions: 'Berekeningsopties',
   appCalculationOptionsTitle: 'Automatisch of handmatig herberekenen',
@@ -1218,6 +1257,12 @@ export const nl = {
   appGroupGetData: 'Gegevens ophalen',
   appFromTextCsv: 'Uit tekst/CSV',
   appRefreshAll: 'Alles vernieuwen',
+  appRefreshQuery: 'Query vernieuwen',
+  appQueryConnectionsTitle: 'Werkmapquery’s vernieuwen',
+  appQueryRefreshing: '{name} wordt vernieuwd…',
+  appQueryRefreshed: '{name} vernieuwd ({rows} rijen)',
+  appQueryRefreshedClipped: '{name} vernieuwd ({rows} rijen, {dropped} pasten niet in het bereik)',
+  appQueryRefreshFailed: 'Kan {name} niet vernieuwen',
   appWorkbookNoPivot: 'Geen draaitabellen in deze werkmap.',
   appRefreshAllTitle: 'Alle draaitabellen vernieuwen',
   appQueriesConnections: 'Query’s en verbindingen',
@@ -1293,6 +1338,10 @@ export const nl = {
   appFontSizeTip: 'Tekengrootte',
   appZoomIn: 'Inzoomen',
   appZoomOut: 'Uitzoomen',
+  appImgActualSize: 'Ware grootte',
+  appImgFitWindow: 'Aanpassen aan venster',
+  appImgSaveAs: 'Afbeelding opslaan als…',
+  appImgClose: 'Sluiten (Esc)',
   appZoomSheetTitle: 'In-/uitzoomen op het werkblad',
   appResetZoom: 'Zoomniveau herstellen',
   appZoomToSelection: 'Inzoomen op selectie',
@@ -1335,6 +1384,19 @@ export const nl = {
   appOpenFileFirst: 'Open eerst een bestand',
   appNoPassword: 'Geen wachtwoord',
   appProtectWorkbook: 'Werkmap beveiligen',
+  appChangePassword: 'Wachtwoord wijzigen',
+  appWorkbookPasswordChanged: 'Het wachtwoord van de werkmap is bijgewerkt.',
+  appChangePasswordTitle: 'Wachtwoord van werkmap wijzigen',
+  appChangePasswordCopy: 'Kies een nieuw wachtwoord en bevestig het hieronder.',
+  appNewPasswordLabel: 'Nieuw wachtwoord',
+  appConfirmPasswordLabel: 'Nieuw wachtwoord bevestigen',
+  appPasswordsMismatch: 'De wachtwoorden komen niet overeen.',
+  appPasswordTooLong:
+    'Het wachtwoord is te lang. Gebruik hoogstens {max} tekens, de grootste lengte die Excel accepteert.',
+  appPasswordUpdateFailed: 'Het wachtwoord van de werkmap kon niet worden bijgewerkt.',
+  appPasswordUpdating: 'Bijwerken…',
+  appUpdatePassword: 'Wachtwoord bijwerken',
+  appWorkbookNotPasswordProtected: 'Deze werkmap is niet beveiligd met een openingswachtwoord.',
   appAllowEditRanges: 'Bewerken van bereiken toestaan',
   appGroupClipboard: 'Klembord',
   appPaste: 'Plakken',
@@ -1573,6 +1635,8 @@ export const nl = {
   appVisualSendBackward: 'Naar achteren',
   appVisualSizeProperties: 'Grootte en eigenschappen…',
   appVisualHyperlink: 'Hyperlink…',
+  appVisualEmbedInCell: 'Afbeelding in cel insluiten',
+  appVisualEmbedFailed: 'Deze afbeelding kon niet in de cel worden ingesloten.',
   appVisualDelete: 'Verwijderen',
   appVisualArranged: 'Object bijgewerkt — opslaan met ⌘S.',
   appVisualCopied: 'Object gekopieerd.',

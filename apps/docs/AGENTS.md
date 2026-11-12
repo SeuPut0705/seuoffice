@@ -77,6 +77,10 @@ Word 문서(.docx)와 ODT(.odt) 에디터다. 그리고 배포되는 앱 전체�
 - `registerAiIpc`가 `ai:local-models`·`ai:local-inspect`·`ai:local-test`·`ai:local-test-cancel`을 등록한다. 입력은 `local-ipc.ts` 파서로 검사하고, 실패는 `shape`로 답한다. 연결 테스트는 보낸 창(`event.sender.id`)과 `testId`로 끊을 수 있고, 보낸 창이 닫혀도 끊긴다(`abortOnDestroyed`).
 - `ai:stream`은 활성 `custom`+`kind:'local'`일 때 그 서버의 `timeoutMs`를 `streamForProvider`에 넘기고, 기다리는 동안 `ai-keepalive.ts`의 `ping`을 보낸다. 다른 제공자에는 적용하지 않는다.
 
+## 원본과 다른 점
+
+- 공동 편집에서 문서 모델의 속성은 `apps/docs/src/web/collab-attr-classes.ts`에 적힌 종류(token·text 등)로만 받는다. 표에 없는 속성은 거절하고, 이름만 보고 판단하지 않는다. 새 속성은 표 항목과 `tests/collab-attr-classes.test.ts`가 함께 붙어야 들어간다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/docs`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/docs`. 환경은 `jsdom`이다. docx 픽스처가 필요한 테스트가 있으므로 처음 한 번, 그리고 `packages/docx-engine`을 바꾼 뒤에는 저장소 루트에서 `npm run fixtures`를 돌린다.

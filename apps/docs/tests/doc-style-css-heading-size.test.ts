@@ -25,6 +25,29 @@ describe('heading style without w:sz', () => {
   })
 })
 
+describe('paragraph style off the Normal chain', () => {
+  it('takes its run size from docDefaults, not Normal', async () => {
+    const css = docStyleCss(
+      await parseDocx(
+        await buildDocx({
+          bodyXml: '<w:p><w:pPr><w:pStyle w:val="Author"/></w:pPr><w:r><w:t>A</w:t></w:r></w:p>',
+          stylesXml:
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+            '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+            '<w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val="24"/></w:rPr></w:rPrDefault></w:docDefaults>' +
+            '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:sz w:val="22"/></w:rPr></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="Author"><w:name w:val="Author"/><w:pPr><w:jc w:val="center"/></w:pPr></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="Sub"><w:name w:val="Sub"/><w:basedOn w:val="Normal"/></w:style></w:styles>',
+        }),
+      ),
+    )
+    const rules = (id: string) =>
+      css.split('\n').filter((l) => l.startsWith(`.doc-page [data-style="${id}"] {`))
+    expect(rules('Author').join('\n')).toContain('font-size:12pt')
+    expect(rules('Sub').join('\n')).not.toContain('font-size:12pt')
+  })
+})
+
 describe('paragraph style with a Korean East Asian face', () => {
   it('re-anchors the hangul line factor for its paragraphs', async () => {
     const css = docStyleCss(
@@ -45,8 +68,8 @@ describe('paragraph style with a Korean East Asian face', () => {
       ),
     )
     const rule = (id: string) => css.split('\n').find((l) => l.includes(`[data-style="${id}"]`))
-    expect(css).toContain('--doc-line-factor-kr:1.7371')
-    expect(rule('NormalWeb')).toContain('--doc-line-factor-kr:1.3029')
+    expect(css).toContain('--doc-line-factor-kr:1.7291')
+    expect(rule('NormalWeb')).toContain('--doc-line-factor-kr:1.3')
     expect(rule('Body')).not.toContain('--doc-line-factor-kr')
   })
 })
@@ -90,7 +113,7 @@ describe('empty EA theme slot resolved to a Japanese face', () => {
   const rule = (css: string) => css.split('\n').find((l) => l.includes('[data-style="Title"]'))
 
   it('sizes hangul lines by the Malgun fallback under themeFontLang ja-JP', async () => {
-    expect(rule(await cssFor('ja-JP'))).toContain('--doc-line-factor-kr:1.7371')
+    expect(rule(await cssFor('ja-JP'))).toContain('--doc-line-factor-kr:1.7291')
   })
 
   it('leaves a Korean face resolved under ko-KR to the document factor', async () => {

@@ -153,7 +153,6 @@ export const nl = {
     'Lukt het nog steeds niet? Kopieer de verbindingsgegevens en stuur ze naar degene die je helpt. Er staan geen account en geen bestandspaden in.',
   actionCopyInfo: 'Gegevens kopiëren voor hulp',
   copyInfoDone: 'Gekopieerd',
-  actionConnectHelp: 'Bekijk elke stap op het scherm (pagina in het Koreaans)',
   guidePathChatGptBody:
     'Meld je aan met je ChatGPT-account en gebruik je abonnement. Je hoeft niets te installeren. Met het gratis abonnement kun je maar weinig gebruiken.',
   guideUseCodex: 'Gebruik je het Codex-programma al op deze pc? Verbinden via Codex',

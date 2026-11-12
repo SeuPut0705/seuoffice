@@ -1,6 +1,24 @@
 import type { zh } from './zh'
 
 export const hi = {
+  // ── Withholding cells from the model ──
+  redactMenuLabel: 'चयन को AI से छिपाएँ',
+  redactDialogDesc:
+    'चुनी हुई सामग्री दस्तावेज़ और फ़ाइल में बनी रहती है; मॉडल को केवल नीचे वाला प्लेसहोल्डर दिखता है। नाम दें ताकि उसे पता चले कि यह किसका स्थान है।',
+  redactDialogScope:
+    'यह छिपाना केवल इस ऐप के AI पर लागू होता है। CLI, MCP टूल और बिना इंटरफ़ेस वाला निर्यात फ़ाइल को सीधे पढ़ते हैं, इसलिए ये शब्द उन्हें अब भी दिखते हैं।',
+  redactDialogPlaceholder: 'प्लेसहोल्डर का नाम, जैसे ग्राहक का फ़ोन',
+  redactCancel: 'रद्द करें',
+  redactInsert: 'छिपाएँ',
+  redactEnable: 'चयनित पाठ पर राइट-क्लिक करके इसे मॉडल से छिपाएँ।',
+  redactNeedsSavedRow: 'यह पंक्ति अभी फ़ाइल में नहीं है। पहले सहेजें, फिर सेल छिपाएँ।',
+  redactNeedsSavedSheet:
+    'यह शीट या इसकी प्रति अभी फ़ाइल में नहीं है। पहले सहेजें, फिर जो छिपा है उसे बदलें।',
+  redactMoveRefused:
+    'नहीं किया गया: इससे AI से छिपाए गए सेल दूसरी जगह चले जाते या कॉपी हो जाते और उनके मान छिपे नहीं रहते। पहले उन्हें छिपाना बंद करें, या उन सेल को श्रेणी से बाहर रखें।',
+  redactRecoveredFromNames:
+    'किसी अन्य ऐप ने इस फ़ाइल को दोबारा लिखा और छिपे हुए चीज़ों का रिकॉर्ड हटा दिया। छिपे हुए सेल वर्कबुक के नामों से वापस मिला लिए गए थे; सहेजने पर पूरा रिकॉर्ड वापस आ जाता है।',
+
   appMergeWorkbooks: 'वर्कबुक मर्ज करें',
   appMergeWorkbooksTip: 'अन्य Excel फ़ाइलों की शीट इस वर्कबुक में जोड़ें',
   appMergeWorkbooksPicking: 'मर्ज करने के लिए फ़ाइलें चुनें…',
@@ -8,6 +26,8 @@ export const hi = {
   appMergeWorkbooksDone:
     '{files} फ़ाइलों से {sheets} शीट मर्ज की गईं (सूत्र मानों के रूप में आयात हुए)।',
   appMergeWorkbooksFailed: 'वर्कबुक मर्ज नहीं हो सकीं।',
+  appMergeWorkbooksHiddenCells:
+    'कुछ भी मर्ज नहीं किया गया: {file} में AI से छिपाए गए सेल हैं, और मर्ज करने पर उनके मान बिना छिपाए यहाँ आ जाते। वह फ़ाइल खोलें, उन सेल को छिपाना बंद करें या उन्हें हटाएँ, सहेजें, फिर दोबारा मर्ज करें।',
   appMergeWorkbooksInsertFailed: 'शीट {sheet} नहीं बनाई जा सकी।',
   appMergeWorkbooksLocked: 'वर्कबुक अभी लोड हो रही है; मर्ज अभी उपलब्ध नहीं है।',
   appFormulaBarShown: 'सूत्र पट्टी दिखाई गई।',
@@ -516,6 +536,7 @@ export const hi = {
   appColumnLabel: 'स्तंभ {col}',
   appBridgeUnavailable: 'डेस्कटॉप फ़ाइल ब्रिज उपलब्ध नहीं है। Electron ऐप पुनः प्रारंभ करें।',
   appOpenCanceled: 'कार्यपुस्तिका चयन रद्द किया गया।',
+  appImportCanceled: 'आयात रद्द किया गया।',
   appOpeningWorkbook: 'कार्यपुस्तिका खोली जा रही है…',
   appOpened: '{name} खोला गया — सेल संपादन ⌘S से फ़ाइल में वापस सहेजे जाते हैं।',
   appOpenFailed: 'कार्यपुस्तिका खोली नहीं जा सकी।',
@@ -610,6 +631,8 @@ export const hi = {
     'यह चार्ट प्रकार उस संपादन का समर्थन नहीं करता; सहेजना रोक दिया गया — चार्ट बदलाव को पूर्ववत करें।',
   appSaveErrMoveOverlap:
     'कोई सूत्र, स्वरूपित श्रेणी, आकृति या तालिका स्थानांतरित पंक्तियों पर फैली है; सहेजना रोक दिया गया — उस स्थानांतरण को पूर्ववत करें।',
+  appSaveErrHiddenCellsUnreadable:
+    'इस वर्कबुक में AI से छिपाए गए सेल का रिकॉर्ड पढ़ा नहीं जा सका, इसलिए पंक्तियों, स्तंभों और शीट के बदलाव सहेजे नहीं जा सकते: छिपे हुए सेल फिर ढके नहीं रहेंगे। इन बदलावों को पूर्ववत करें, फिर दोबारा सहेजें।',
   appFromTextCsvTitle: 'CSV/पाठ फ़ाइल को वर्तमान चयन में आयात करें',
   appCsvImported: 'फ़ाइल से {rows} पंक्तियाँ × {columns} स्तंभ {cell} में आयात किए गए।',
   appCsvEmpty: 'CSV फ़ाइल में कोई डेटा नहीं है।',
@@ -713,6 +736,7 @@ export const hi = {
   appExportPdfTitle: 'PDF के रूप में निर्यात करें',
   appSaveTitle: 'सहेजें (⌘S)',
   appSaveAs: 'इस रूप में सहेजें',
+  aiNameFile: 'AI से नाम दें…',
   appUndo: 'पूर्ववत करें',
   appRedo: 'फिर से करें',
   appQuickAccessCustomize: 'त्वरित पहुँच टूलबार अनुकूलित करें',
@@ -1164,6 +1188,20 @@ export const hi = {
   appWatchCell: 'सेल',
   appWatchValue: 'मान',
   appWatchFormula: 'सूत्र',
+  appLinksPanel: 'बाहरी लिंक',
+  appLinksPanelDetail: 'अन्य कार्यपुस्तिकाओं के लिंक सूचीबद्ध, अपडेट और तोड़ें',
+  appLinksUpdate: 'मान अपडेट करें',
+  appLinksNone: 'इस कार्यपुस्तिका में अन्य कार्यपुस्तिकाओं के लिंक नहीं हैं।',
+  appLinksUnsaved: 'इसकी बाहरी लिंक सूचीबद्ध करने से पहले इस कार्यपुस्तिका को सहेजें।',
+  appLinksSource: 'स्रोत',
+  appLinksStatus: 'स्थिति',
+  appLinksSheets: 'शीट',
+  appLinksLocate: 'स्रोत फ़ाइल खोलें',
+  appLinksReachable: 'उपलब्ध',
+  appLinksBroken: 'अनुपलब्ध',
+  appLinksBreak: 'लिंक तोड़ें',
+  appLinksBreakConfirm: 'तोड़ने की पुष्टि करें',
+  appLinksChangeSource: 'स्रोत बदलें',
   appGroupCalculation: 'गणना',
   appCalculationOptions: 'गणना विकल्प',
   appCalculationOptionsTitle: 'स्वचालित या मैन्युअल पुनर्गणना',
@@ -1180,6 +1218,13 @@ export const hi = {
   appGroupGetData: 'डेटा प्राप्त करें',
   appFromTextCsv: 'पाठ/CSV से',
   appRefreshAll: 'सभी ताज़ा करें',
+  appRefreshQuery: 'क्वेरी रीफ़्रेश करें',
+  appQueryConnectionsTitle: 'वर्कबुक के प्रश्न रीफ़्रेश करें',
+  appQueryRefreshing: '{name} रीफ़्रेश हो रहा है…',
+  appQueryRefreshed: '{name} रीफ़्रेश हो गया ({rows} पंक्तियाँ)',
+  appQueryRefreshedClipped:
+    '{name} रीफ़्रेश हो गया ({rows} पंक्तियाँ, {dropped} सीमा में नहीं आईं)',
+  appQueryRefreshFailed: '{name} रीफ़्रेश नहीं हो सका',
   appWorkbookNoPivot: 'इस वर्कबुक में कोई पिवट टेबल नहीं।',
   appRefreshAllTitle: 'सभी पिवट टेबल रीफ़्रेश करें',
   appQueriesConnections: 'क्वेरी और कनेक्शन',
@@ -1255,6 +1300,10 @@ export const hi = {
   appFontSizeTip: 'फ़ॉन्ट का आकार',
   appZoomIn: 'ज़ूम इन',
   appZoomOut: 'ज़ूम आउट',
+  appImgActualSize: 'वास्तविक आकार',
+  appImgFitWindow: 'विंडो में फ़िट करें',
+  appImgSaveAs: 'चित्र इस रूप में सहेजें…',
+  appImgClose: 'बंद करें (Esc)',
   appZoomSheetTitle: 'शीट ज़ूम करें',
   appResetZoom: 'ज़ूम रीसेट करें',
   appZoomToSelection: 'चयन पर ज़ूम करें',
@@ -1297,6 +1346,19 @@ export const hi = {
   appOpenFileFirst: 'पहले एक फ़ाइल खोलें',
   appNoPassword: 'कोई पासवर्ड नहीं',
   appProtectWorkbook: 'कार्यपुस्तिका सुरक्षित करें',
+  appChangePassword: 'पासवर्ड बदलें',
+  appWorkbookPasswordChanged: 'कार्यपुस्तिका का पासवर्ड अपडेट किया गया।',
+  appChangePasswordTitle: 'वर्कबुक पासवर्ड बदलें',
+  appChangePasswordCopy: 'नया पासवर्ड चुनें और नीचे उसकी पुष्टि करें।',
+  appNewPasswordLabel: 'नया पासवर्ड',
+  appConfirmPasswordLabel: 'नए पासवर्ड की पुष्टि करें',
+  appPasswordsMismatch: 'पासवर्ड मेल नहीं खाते।',
+  appPasswordTooLong:
+    'पासवर्ड बहुत लंबा है। अधिकतम {max} वर्ण रखें, Excel इससे लंबा पासवर्ड स्वीकार नहीं करता।',
+  appPasswordUpdateFailed: 'वर्कबुक पासवर्ड अपडेट नहीं किया जा सका।',
+  appPasswordUpdating: 'अपडेट हो रहा है…',
+  appUpdatePassword: 'पासवर्ड अपडेट करें',
+  appWorkbookNotPasswordProtected: 'यह वर्कबुक खोलने वाले पासवर्ड से सुरक्षित नहीं है।',
   appAllowEditRanges: 'श्रेणियाँ संपादित करने दें',
   appGroupClipboard: 'क्लिपबोर्ड',
   appPaste: 'चिपकाएँ',
@@ -1530,6 +1592,8 @@ export const hi = {
   appVisualSendBackward: 'पीछे भेजें (एक स्तर)',
   appVisualSizeProperties: 'आकार और गुण…',
   appVisualHyperlink: 'हाइपरलिंक…',
+  appVisualEmbedInCell: 'छवि को कक्ष में एम्बेड करें',
+  appVisualEmbedFailed: 'इस छवि को कक्ष में एम्बेड नहीं किया जा सका।',
   appVisualDelete: 'हटाएँ',
   appVisualArranged: 'ऑब्जेक्ट अपडेट हुआ — ⌘S से सहेजें।',
   appVisualCopied: 'ऑब्जेक्ट कॉपी हुआ।',

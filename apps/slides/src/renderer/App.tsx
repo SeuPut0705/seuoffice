@@ -56,7 +56,8 @@ import { runHeadlessPdfExport } from './headless-export'
 import { syncPrivateFonts } from './doc-fonts'
 import { toPickerHex } from './color-input'
 import { InkOverlay } from './InkOverlay'
-import { inkNodesOf, type InkPenSettings, type InkStroke, type InkTool } from './ink'
+import { inkNodesOf, type InkStroke, type InkTool } from './ink'
+import { loadInkPresets, saveInkPresets, type InkPreset } from './ink-presets'
 import type { SlideThemePreset } from './themes'
 import { Ribbon, type FormatCmd, type SlidesViewMode } from './components/Ribbon'
 import {
@@ -66,6 +67,7 @@ import {
   type ContextTabRequest,
 } from './components/context-tabs'
 import { SlideShowView } from './components/SlideShowView'
+import type { NarrationTake } from './narration/use-recording'
 import { IconNotes, IconPlayBoxed } from './components/icons'
 import { PresenterView } from './components/PresenterView'
 import { CustomShowDialog } from './components/CustomShowDialog'
@@ -155,6 +157,9 @@ import { formatRulerValue, type RulerUnit } from './ruler-ticks'
 import * as fileActions from './file-actions'
 import * as clipboardActions from './clipboard-actions'
 import * as insertActions from './insert-actions'
+import * as model3dActions from './model3d/actions'
+import { Model3dTurnHandle } from './model3d/Model3dTurnHandle'
+import type { Model3dRotation } from '@genoffice/pptx-engine/model3d'
 import { bytesToBase64 } from './insert-actions'
 import { classifyDroppedFile, fileExt } from '../shared/media-kinds'
 import * as animationActions from './animation-actions'
@@ -428,12 +433,14 @@ export function App() {
   const [scaleBox, setScaleBox] = useState<{ w: number; h: number } | null>(null)
   const [dirty, setDirty] = useState(false)
   const [status, setStatus] = useState('')
+  const [namingRunning, setNamingRunning] = useState(false)
   // Status messages auto-dismiss after 4s: operation feedback needs only a brief showing; persistent info (page number/file name) lives on the left and in the title bar
   useEffect(() => {
-    if (!status) return
+    // A naming request can take 30 s: keep its progress up until the answer.
+    if (!status || namingRunning) return
     const t = window.setTimeout(() => setStatus(''), 4000)
     return () => window.clearTimeout(t)
-  }, [status])
+  }, [status, namingRunning])
   const [showThumbs, setShowThumbs] = useState(true)
   // ── Thumbnail sidebar width (drag the divider to resize; persisted) ─────────
   const [thumbsW, setThumbsW] = useState(loadThumbsW)
@@ -531,11 +538,13 @@ export function App() {
   /** Ribbon hover preview: the hovered effect played on the selection without applying */
   const [hoverAnim, setHoverAnim] = useState<{ nonce: number; items: AnimationItem[] } | null>(null)
   const [inkTool, setInkTool] = useState<InkTool>('select')
-  const [inkPen, setInkPen] = useState<InkPenSettings>({ color: 'C00000', width: 2 })
-  const [inkHighlighter, setInkHighlighter] = useState<InkPenSettings>({
-    color: 'FFFF00',
-    width: 10,
-  })
+  const [inkPresets, setInkPresets] = useState<InkPreset[]>(loadInkPresets)
+  const [inkActiveId, setInkActiveId] = useState(() => loadInkPresets()[0]!.id)
+  const inkActive = inkPresets.find((p) => p.id === inkActiveId) ?? inkPresets[0]!
+  const onInkPresets = useCallback((next: InkPreset[]) => {
+    setInkPresets(next)
+    saveInkPresets(next)
+  }, [])
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState>(null)
   /** "Change Shape" gallery popover: anchor point + the shape it retargets */
   const [shapeGalleryAt, setShapeGalleryAt] = useState<{
@@ -568,6 +577,7 @@ export function App() {
   const [findOpen, setFindOpen] = useState(false)
   /** Per-page dwell seconds awaiting confirmation after rehearsal (non-null shows the "save?" confirmation dialog) */
   const [pendingRehearse, setPendingRehearse] = useState<number[] | null>(null)
+  const [pendingRecording, setPendingRecording] = useState<NarrationTake | null>(null)
   const [showRuler, setShowRuler] = useState(false)
   const [showGrid, setShowGrid] = useState(false)
   const [showGuides, setShowGuides] = useState(false)
@@ -1105,6 +1115,14 @@ export function App() {
   }, [autoSave, path, editing, editingCell, save])
 
   const saveAs = useCallback(() => fileActions.saveAs(() => ctxRef.current), [])
+  const nameWithAi = useCallback(async () => {
+    setNamingRunning(true)
+    try {
+      await fileActions.nameWithAi(() => ctxRef.current)
+    } finally {
+      setNamingRunning(false)
+    }
+  }, [])
   const exportImages = useCallback(
     (format: 'png' | 'jpg' = 'png') => fileActions.exportImages(ctxRef.current, format),
     [],
@@ -1821,7 +1839,7 @@ export function App() {
     (kind: 'video' | 'audio') => insertActions.insertMediaFile(ctxRef.current, kind),
     [],
   )
-  const insertModel3dFile = useCallback(() => insertActions.insertModel3dFile(ctxRef.current), [])
+  const insertModel3dFile = useCallback(() => model3dActions.insertModel3dFile(ctxRef.current), [])
   const toggleScreenRecord = useCallback(() => insertActions.toggleScreenRecord(ctxRef.current), [])
 
   // Reflect the current page's transition effect on page/document changes
@@ -2038,6 +2056,19 @@ export function App() {
     [],
   )
   const saveRehearseTimings = useCallback(() => showActions.saveRehearseTimings(ctxRef.current), [])
+  const startRecordShow = useCallback(
+    (fromStart: boolean) => showActions.startRecordShow(ctxRef.current, fromStart),
+    [],
+  )
+  const onRecordDone = useCallback(
+    (take: Promise<NarrationTake | null>) => showActions.onRecordDone(ctxRef.current, take),
+    [],
+  )
+  const saveRecording = useCallback(() => showActions.saveRecording(ctxRef.current), [])
+  const clearNarration = useCallback(
+    (all: boolean) => void showActions.clearNarration(ctxRef.current, all),
+    [],
+  )
   const startPresenterView = useCallback(
     (fromStart: boolean) => showActions.startPresenterView(ctxRef.current, fromStart),
     [],
@@ -2496,6 +2527,7 @@ export function App() {
       if (cmd === 'open') void openDialog()
       else if (cmd === 'save') void save()
       else if (cmd === 'save-as') void saveAs()
+      else if (cmd === 'name-with-ai') void nameWithAi()
       // macOS has no File ribbon tab, so these only exist in the menu
       else if (cmd === 'export-pdf') void exportPdf()
       else if (cmd === 'export-images') void exportImages('png')
@@ -2524,6 +2556,7 @@ export function App() {
     openDialog,
     save,
     saveAs,
+    nameWithAi,
     exportPdf,
     exportImages,
     undo,
@@ -3053,6 +3086,14 @@ export function App() {
     [selectedIds, findNodeCtx],
   )
 
+  const model3dNode = useMemo(
+    () =>
+      selectedNode?.type === 'picture' && selectedNode.model3d
+        ? (selectedNode as PictureRenderNode & { model3d: Model3dRotation })
+        : null,
+    [selectedNode],
+  )
+
   const [selectedChartData, setSelectedChartData] = useState<Awaited<
     ReturnType<typeof window.slidesApi.getChartData>
   > | null>(null)
@@ -3336,6 +3377,8 @@ export function App() {
     setCustomShowDlgOpen,
     pendingRehearse,
     setPendingRehearse,
+    pendingRecording,
+    setPendingRecording,
     sections,
     setSections,
     renamingSec,
@@ -3412,18 +3455,13 @@ export function App() {
 
   // ---- Draw (freehand ink): one stroke = one transparent PNG picture element; undo/save use the existing pipeline ----
 
-  const onInkTool = useCallback(
-    (tool: InkTool) => {
-      // Clicking the currently active tool again = cancel (back to select mode)
-      const next = tool !== 'select' && inkTool === tool ? 'select' : tool
-      setInkTool(next)
-      if (next !== 'select') {
-        setSelectedIds([])
-        setEditing(null)
-      }
-    },
-    [inkTool],
-  )
+  const onInkTool = useCallback((tool: InkTool) => {
+    setInkTool(tool)
+    if (tool !== 'select') {
+      setSelectedIds([])
+      setEditing(null)
+    }
+  }, [])
 
   const commitInk = useCallback(
     (stroke: InkStroke) => arrangeActions.commitInk(ctxRef.current, stroke),
@@ -3506,6 +3544,7 @@ export function App() {
         onUndo={() => void undo()}
         onRedo={() => void redo()}
         onSaveAs={() => void saveAs()}
+        onNameWithAi={() => void nameWithAi()}
         onExportPdf={() => void exportPdf()}
         onPrint={() => setPrintDlgOpen(true)}
         onExportImages={() => void exportImages('png')}
@@ -3612,14 +3651,16 @@ export function App() {
         onPresenterView={startPresenterView}
         onCustomShow={() => setCustomShowDlgOpen(true)}
         onRehearse={startRehearseShow}
+        onRecord={startRecordShow}
+        onClearNarration={clearNarration}
         currentHidden={!!slide?.hidden}
         onToggleHidden={() => void toggleHidden()}
         inkTool={inkTool}
         onInkTool={onInkTool}
-        inkPen={inkPen}
-        onInkPen={setInkPen}
-        inkHighlighter={inkHighlighter}
-        onInkHighlighter={setInkHighlighter}
+        inkPresets={inkPresets}
+        inkActiveId={inkActive.id}
+        onInkPresets={onInkPresets}
+        onInkActivate={setInkActiveId}
         inkCount={inkCount}
         onInkClearAll={() => void clearInk()}
         viewMode={viewMode}
@@ -3655,6 +3696,17 @@ export function App() {
         recording={recording}
         onToggleScreenRecord={() => void toggleScreenRecord()}
         contextElementType={contextElementType}
+        onModel3dView={
+          model3dNode
+            ? (rot) =>
+                void model3dActions.storeModel3dView(
+                  ctxRef.current,
+                  model3dNode.sourceId,
+                  model3dNode.box,
+                  rot,
+                )
+            : undefined
+        }
         tabRequest={contextTabRequest}
         contextElementId={selectedNode?.sourceId}
         contextSlideIndex={current}
@@ -4459,6 +4511,22 @@ export function App() {
                                 onContextMenu={onTextContextMenu}
                               />
                             )}
+                            {model3dNode && !mediaPlay && !cropTarget && (
+                              <Model3dTurnHandle
+                                key={model3dNode.sourceId}
+                                node={model3dNode}
+                                slideIndex={current}
+                                onTurn={(rot, view) =>
+                                  model3dActions.storeModel3dView(
+                                    ctxRef.current,
+                                    model3dNode.sourceId,
+                                    model3dNode.box,
+                                    rot,
+                                    view,
+                                  )
+                                }
+                              />
+                            )}
                             {mediaPlay && mediaPlayNode && (
                               <div
                                 style={{
@@ -4546,12 +4614,8 @@ export function App() {
                               <InkOverlay
                                 slide={slide}
                                 tool={inkTool}
-                                color={
-                                  inkTool === 'highlighter' ? inkHighlighter.color : inkPen.color
-                                }
-                                width={
-                                  inkTool === 'highlighter' ? inkHighlighter.width : inkPen.width
-                                }
+                                color={inkActive.color}
+                                width={inkActive.width}
                                 onCommit={(stroke) => void commitInk(stroke)}
                                 onErase={(ids) => void eraseInk(ids)}
                               />
@@ -4801,6 +4865,8 @@ export function App() {
           customOrder={slideShow.customOrder}
           rehearseMode={slideShow.rehearse}
           onRehearseDone={onRehearseDone}
+          recordMode={slideShow.record}
+          onRecordDone={onRecordDone}
           onExit={exitSlideShow}
         />
       )}
@@ -4935,6 +5001,23 @@ export function App() {
               <button onClick={() => setPendingRehearse(null)}>{t('appRehearseDiscard')}</button>
               <button className="primary" onClick={() => void saveRehearseTimings()}>
                 {t('appRehearseSave')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingRecording && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <h2>{t('appRecordTitle')}</h2>
+            <p className="rehearse-summary">
+              {t('appRecordSummary', { duration: formatClock(pendingRecording.endMs) })}
+            </p>
+            <div className="modal-actions">
+              <button onClick={() => setPendingRecording(null)}>{t('appRecordDiscard')}</button>
+              <button className="primary" onClick={() => void saveRecording()}>
+                {t('appRecordSave')}
               </button>
             </div>
           </div>
