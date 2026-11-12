@@ -38,7 +38,11 @@ pub enum SlideBackgroundFill {
 #[serde(untagged)]
 pub enum BackgroundImageSource {
     #[serde(rename_all = "camelCase")]
-    Bytes { bytes: Vec<u8>, ext: String },
+    Bytes {
+        #[serde(deserialize_with = "crate::json_bytes::bytes")]
+        bytes: Vec<u8>,
+        ext: String,
+    },
     #[serde(rename_all = "camelCase")]
     MediaPath { media_path: String },
 }

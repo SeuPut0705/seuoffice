@@ -1142,6 +1142,7 @@ pub fn set_element_fill(
 #[serde(untagged)]
 pub enum ImageFillSource {
     Bytes {
+        #[serde(deserialize_with = "crate::json_bytes::bytes")]
         bytes: Vec<u8>,
         ext: String,
     },

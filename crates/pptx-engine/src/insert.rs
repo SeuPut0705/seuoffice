@@ -891,6 +891,7 @@ const IMAGE_REL_TYPE: &str =
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewPictureOptions {
+    #[serde(deserialize_with = "crate::json_bytes::bytes")]
     pub bytes: Vec<u8>,
     pub ext: String,
     pub offset: EmuRect,

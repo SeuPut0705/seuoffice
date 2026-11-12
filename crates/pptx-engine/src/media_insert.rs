@@ -18,7 +18,7 @@ use std::io::Write;
 use flate2::Compression;
 use flate2::write::ZlibEncoder;
 use jscompat::{JsNum, js_regex, number_to_string, to_number};
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 
 use crate::crc32::crc32;
 use crate::deck::{OpenedPptx, append_raw_elements, replace_picture_bytes};
@@ -66,16 +66,10 @@ fn media_mime(ext: &str) -> Option<&'static str> {
     })
 }
 
-/// A byte array that crosses JSON as base64.
-fn base64_bytes<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
-    let text = String::deserialize(d)?;
-    jscompat::atob(&text).map_err(serde::de::Error::custom)
-}
-
 /// `{ bytes, ext }` of a poster frame.
 #[derive(Debug, Clone, Deserialize)]
 pub struct MediaBytes {
-    #[serde(deserialize_with = "base64_bytes")]
+    #[serde(deserialize_with = "crate::json_bytes::bytes")]
     pub bytes: Vec<u8>,
     pub ext: String,
 }
@@ -297,7 +291,7 @@ pub enum NewMediaKind {
 #[serde(rename_all = "camelCase")]
 pub struct NewMediaOptions {
     pub kind: NewMediaKind,
-    #[serde(deserialize_with = "base64_bytes")]
+    #[serde(deserialize_with = "crate::json_bytes::bytes")]
     pub bytes: Vec<u8>,
     /// Lowercase extension (mp4/mov/webm/mp3/wav/m4a…)
     pub ext: String,
@@ -421,7 +415,7 @@ pub fn add_media(
 #[serde(rename_all = "camelCase")]
 pub struct NewModel3dOptions {
     /// glTF binary
-    #[serde(deserialize_with = "base64_bytes")]
+    #[serde(deserialize_with = "crate::json_bytes::bytes")]
     pub bytes: Vec<u8>,
     pub ext: String,
     /// The model's rendering: the Fallback picture and am3d:raster (a placeholder when omitted)

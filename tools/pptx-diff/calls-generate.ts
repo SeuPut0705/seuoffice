@@ -382,9 +382,28 @@ function textArgs(text: unknown, extra: Args = {}): Args {
   return { text, ...extra }
 }
 
+/**
+ * A model value as the slides app holds it, from its JSON: types.ts declares
+ * no null, so a null there is a NaN (or an infinity) that JSON.stringify
+ * wrote as null. The Rust model reads it back as NaN; the TypeScript is given
+ * the same number.
+ */
+function asModel<T>(value: T): T {
+  if (value === null) return Number.NaN as T
+  if (Array.isArray(value)) return value.map(asModel) as T
+  if (typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, asModel(item)]),
+  ) as T
+}
+
 /** The model call `fn(el)`: the element is a text element carrying `args.text`. */
 const modelElement = (args: Args): TextElement =>
-  ({ type: 'text', text: args.text, textMoved: args.textMoved }) as unknown as TextElement
+  ({
+    type: 'text',
+    text: asModel(args.text),
+    textMoved: args.textMoved,
+  }) as unknown as TextElement
 
 const FRAMES: string[] = [
   '<p:graphicFrame><p:nvGraphicFramePr/><p:xfrm><a:off x="0" y="0"/><a:ext cx="1" cy="1"/></p:xfrm><a:graphic><a:graphicData><a:xfrm><a:off x="9" y="9"/></a:xfrm></a:graphicData></a:graphic></p:graphicFrame>',
@@ -645,7 +664,7 @@ export const GENERATE: CallSpec[] = [
   },
   {
     fn: 'pptxGenerate.generate.generateParagraphXml',
-    call: (_t, args) => noGuid(generateParagraphXml(args.p as Paragraph)),
+    call: (_t, args) => noGuid(generateParagraphXml(asModel(args.p as Paragraph))),
     mutation: 'none',
     argMutation: true,
     built: [
@@ -798,7 +817,7 @@ export const GENERATE: CallSpec[] = [
   },
   {
     fn: 'pptxGenerate.generate.generateXfrmXml',
-    call: (_t, args) => generateXfrmXml(args.t as never, args.tag as string | undefined),
+    call: (_t, args) => generateXfrmXml(asModel(args.t as never), args.tag as string | undefined),
     mutation: 'none',
     argMutation: true,
     built: TRANSFORMS().flatMap((t) =>

@@ -10,6 +10,7 @@ use jscompat::{
     JsNum, JsObject, TryJsRegex, js_regex, math_round, number_to_string, number_truthy,
     regex_escape,
 };
+use serde::Serialize;
 use serde_json::Value;
 
 use super::{
@@ -310,11 +311,13 @@ pub(crate) fn element_end(xml: &str, start: usize, tag: &str) -> Result<Option<u
 }
 
 /// `GroupChildSlice`; `start` and `end` are byte offsets.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GroupChildSlice {
     pub start: usize,
     pub end: usize,
     pub xml: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub nv_id: Option<String>,
 }
 
