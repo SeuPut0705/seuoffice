@@ -15,7 +15,7 @@ const encode = new TextEncoder()
 const decode = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
 
 /** Documents the comparison must reach: the corpus is 185 files, some of them encrypted. */
-const DOCUMENT_FLOOR = 100
+const DOCUMENT_FLOOR = 183
 
 const documents = new Comparison('(h) parseDocx, corpus documents (all but blocks)', DOCUMENT_FLOOR)
 const blocks = new Map<string, Comparison>()
