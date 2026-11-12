@@ -4,8 +4,15 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import JSZip from 'jszip'
-import { editedCommentModelText, parseDocx, saveDocx, type SaveBlock } from '../src'
-import { withheldDrawingLabel } from '../src/withheld'
+import {
+  editedCommentModelText,
+  parseDocx,
+  saveDocx,
+  withheldLabelOf,
+  type SaveBlock,
+} from '../src'
+import { buildDocx } from './helpers/build-docx'
+import { withheldBlockLabel } from '../src/withheld'
 import {
   hiddenStoriesDocx,
   mutatedStoriesDocx,
@@ -84,20 +91,35 @@ describe('a picture in a hidden run', () => {
       `<w:rPr><redact xmlns="${OWN_REDACT_NS}" w:label="id card"/></w:rPr>`,
     ]
     for (const rPr of spellings) {
-      expect(withheldDrawingLabel(`<w:p><w:r>${rPr}${drawing}</w:r></w:p>`)).toBe('id card')
+      expect(withheldBlockLabel(`<w:p><w:r>${rPr}${drawing}</w:r></w:p>`)).toBe('id card')
     }
-    expect(withheldDrawingLabel(`<w:p><w:r>${drawing}</w:r></w:p>`)).toBeNull()
+    expect(withheldBlockLabel(`<w:p><w:r>${drawing}</w:r></w:p>`)).toBeNull()
+    // any marked run in the block withholds the block: its preview, picture and display data are its runs' content
     expect(
-      withheldDrawingLabel(
+      withheldBlockLabel(
         `<w:p><w:r><w:rPr><go:redact w:label="id card"/></w:rPr><w:t>words</w:t></w:r><w:r>${drawing}</w:r></w:p>`,
       ),
-    ).toBeNull()
+    ).toBe('id card')
+  })
+
+  it('finds a marked run inside a text box, and in a field result', () => {
+    const run = '<w:r><w:rPr><go:redact w:label="id card"/></w:rPr><w:t>words</w:t></w:r>'
+    expect(
+      withheldBlockLabel(
+        `<w:p><w:r><w:drawing><w:txbxContent><w:p>${run}</w:p></w:txbxContent></w:drawing></w:r></w:p>`,
+      ),
+    ).toBe('id card')
+    expect(
+      withheldBlockLabel(
+        `<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> REF a </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>${run}<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`,
+      ),
+    ).toBe('id card')
   })
 
   it('withholds a drawing in a marked run that sits inside a hyperlink, a field or a control', () => {
     const run = '<w:r><w:rPr><go:redact w:label="id card"/></w:rPr><w:drawing/></w:r>'
     for (const wrap of ['w:hyperlink', 'w:fldSimple', 'w:smartTag', 'w:sdt', 'w:ins']) {
-      expect(withheldDrawingLabel(`<w:p><${wrap}>${run}</${wrap}></w:p>`)).toBe('id card')
+      expect(withheldBlockLabel(`<w:p><${wrap}>${run}</${wrap}></w:p>`)).toBe('id card')
     }
   })
 })
@@ -181,5 +203,29 @@ describe('a note edited so that its hidden runs cannot be patched around', () =>
     const out = await (await JSZip.loadAsync(saved)).file('word/footnotes.xml')!.async('string')
     expect(out.split('<w:drawing>').length - 1).toBe(2)
     expect(out).not.toMatch(/<(?:\w+:)?redact[\s/>]/)
+  })
+})
+
+describe('a field whose cached result holds a hidden run', () => {
+  const hid = `<w:r><w:rPr><go:redact xmlns:go="${OWN_REDACT_NS}" w:label="client phone"/></w:rPr><w:t>${SECRET}</w:t></w:r>`
+  const plain = '<w:r><w:t>plain </w:t></w:r>'
+  const complex = (result: string, instr = 'REF A') =>
+    `<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> ${instr} </w:instrText></w:r>` +
+    `<w:r><w:fldChar w:fldCharType="separate"/></w:r>${result}<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`
+  const simple = (result: string, instr = 'REF A') =>
+    `<w:p><w:fldSimple w:instr=" ${instr} ">${result}</w:fldSimple></w:p>`
+
+  it.each([
+    ['a REF field', complex(hid)],
+    ['a REF field whose hidden run is not the first', complex(plain + hid)],
+    ['a simple REF field', simple(hid)],
+    ['a simple REF field whose hidden run is not the first', simple(plain + hid)],
+    ['a mail merge field', complex(hid, 'MERGEFIELD Name')],
+    ['a date field', complex(hid, 'DATE')],
+  ])('%s shows its result under the mark', async (_name, paragraph) => {
+    const doc = await parseDocx(await buildDocx({ bodyXml: paragraph }))
+    const runs = doc.blocks.flatMap((b) => b.runs ?? []).filter((r) => r.text.includes(SECRET))
+    expect(runs.length).toBeGreaterThan(0)
+    for (const r of runs) expect(withheldLabelOf(r.rawRPr)).toBe('client phone')
   })
 })

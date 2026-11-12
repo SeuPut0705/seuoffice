@@ -345,7 +345,7 @@ export const TAG_MUTATIONS = {
 export type TagMutation = keyof typeof TAG_MUTATIONS | 'all'
 export const TAG_MUTATION_NAMES = [...Object.keys(TAG_MUTATIONS), 'all'] as TagMutation[]
 
-function mutate(xml: string, mutation: TagMutation): string {
+export function mutate(xml: string, mutation: TagMutation): string {
   if (mutation !== 'all') return TAG_MUTATIONS[mutation](xml)
   const order: Array<keyof typeof TAG_MUTATIONS> = [
     'single quotes',
