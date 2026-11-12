@@ -31,7 +31,7 @@ import { sha256Hex } from '../../packages/pdf-structure/src/tree/hash'
 import { runsText } from '../../packages/pdf-structure/src/tree/inline'
 import type { InlineRun } from '../../packages/pdf-structure/src/tree/types'
 import { easyStyleLines, translationStyleLines } from '../../packages/pdf-structure/src/translate/style'
-import { defaultTargetLanguage, translationLanguageName } from '../../packages/pdf-structure/src/translate/language'
+import { defaultTargetLanguage, translationLanguageName, translationLanguageOf } from '../../packages/pdf-structure/src/translate/language'
 import type { TranslationMode } from '../../packages/pdf-structure/src/store/job-keys'
 import { normalizeLang } from '../../packages/i18n/src/index'
 import { mulberry32 } from '../docx-diff/synthetic'
@@ -954,13 +954,20 @@ add({
   built: () => distinct('guess', [...SAMPLES, ...randomScripts()].map(([label, text]) => (/[\uD800-\uDFFF]/.test(text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '')) ? { label, args: { text: units(text) } } : { label, text }))),
 })
 const UI_LANGS = ['en', 'ko', 'zh', 'zh-TW', 'zh-CN', 'zh-Hant', 'zh_HK', 'ja-JP', 'in', 'in-ID', 'iw', 'iw-IL', 'xx', '', ' ko ', 'KO', 'Zh_tw', 'pt-BR', 'it_IT', 'inx', 'iwx', 'en-US', 'fr', 'he', 'id', 'ms-MY', 'vi-VN']
+const LOCALE_VALUES: Array<string | null | undefined> = [
+  ...UI_LANGS, ...LANGS, '  \u00A0zh-TW\uFEFF', 'ZH-HANT-TW', 'z', 'zh-', 'zh-x', 'in\u00E9', 'in-', 'in_x', 'iw\u00E9', 'zh\u212A', '\u0130N', null, undefined,
+]
+// the one UI language besides English is Korean: its spellings, and what only looks like it
+const KOREAN_VALUES = ['ko', 'KO', 'Ko', ' ko ', '\u00A0ko\uFEFF', 'ko-KR', 'ko_KR', 'KO_kr', 'ko-', 'ko_', 'ko-Hang-KR', 'kor', 'korean', 'k', 'ko\u00E9', 'ko KR', 'kok', 'ko.KR', 'ko\u212A', '\u212Ao', '\u0131ko', 'x-ko', ' ', '\n']
 add({
   fn: 'normalizeLang', ...noText, mutation: 'none',
   call: ({ args = {} }) => normalizeLang(args.value as string | null | undefined),
-  built: () => {
-    const values: Array<string | null | undefined> = [...UI_LANGS, ...LANGS, '  \u00A0zh-TW\uFEFF', 'ZH-HANT-TW', 'z', 'zh-', 'zh-x', 'in\u00E9', 'in-', 'in_x', 'iw\u00E9', 'zh\u212A', '\u0130N', null, undefined]
-    return distinct('normalize', values.map(value => ({ label: JSON.stringify(value) ?? 'undefined', args: value === undefined ? {} : { value } })))
-  },
+  built: () => distinct('normalize', [...LOCALE_VALUES, ...KOREAN_VALUES].map(value => ({ label: JSON.stringify(value) ?? 'undefined', args: value === undefined ? {} : { value } }))),
+})
+add({
+  fn: 'translationLanguageOf', ...noText, mutation: 'none',
+  call: ({ args = {} }) => translationLanguageOf(args.value as string | null | undefined),
+  built: () => distinct('tlangof', [...LOCALE_VALUES, ...KOREAN_VALUES].map(value => ({ label: JSON.stringify(value) ?? 'undefined', args: value === undefined ? {} : { value } }))),
 })
 add({
   fn: 'translationLanguageName', ...noText, mutation: 'none',

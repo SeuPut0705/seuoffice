@@ -31,7 +31,7 @@ use epub_engine::notation::{
 };
 use epub_engine::pdf_structure::{
     InlineRun, LANGUAGE_SAMPLE_CHARS, TranslationBlockKey, TranslationMode,
-    default_target_language, easy_style_lines, guess_language_from_text, normalize_lang, runs_text,
+    default_target_language, easy_style_lines, guess_language_from_text, normalize_lang, runs_text, translation_language_of,
     sha256_hex, sha256_hex_text, translation_language_name, translation_style_lines,
 };
 use epub_engine::ranges::RangeReplacement;
@@ -1024,6 +1024,9 @@ fn dispatch(function: &str, text: &str, bytes: &[u8], args: &Value) -> Option<An
         // pdf-structure and i18n pieces
         "normalizeLang" => Ok(Value::String(
             normalize_lang(args.get("value").and_then(Value::as_str)).to_owned(),
+        )),
+        "translationLanguageOf" => Ok(Value::String(
+            translation_language_of(args.get("value").and_then(Value::as_str)).to_owned(),
         )),
         "translationLanguageName" => str_arg(args, "code")
             .map(|code| Value::String(translation_language_name(code))),

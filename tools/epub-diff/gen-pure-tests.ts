@@ -15,6 +15,7 @@ import { guessLanguageFromText } from '../../packages/pdf-structure/src/epub/lan
 import { defaultTargetLanguage } from '../../packages/pdf-structure/src/translate/language'
 import { easyStyleLines, translationStyleLines } from '../../packages/pdf-structure/src/translate/style'
 import { normalizeLang } from '../../packages/i18n/src/index'
+import { translationLanguageOf } from '../../packages/pdf-structure/src/translate/language'
 import { sha256Hex } from '../../packages/pdf-structure/src/tree/hash'
 import { createHash } from 'node:crypto'
 
@@ -213,7 +214,9 @@ for (const t of ['\uC548\uB155\uD558\uC138\uC694 \uC138\uACC4 '.repeat(4), 'The 
 for (const [ui, doc, mode] of [['ko', 'The quick brown fox jumps over the lazy dog.', 'translate'], ['en', 'The quick brown fox jumps over the lazy dog.', 'translate'], ['zh-CN', '\u4F60\u597D\u4E16\u754C'.repeat(6), 'translate'], ['zh-TW', '\u4F60\u597D\u4E16\u754C'.repeat(6), 'translate'], ['ko', 'x', 'easy'], ['xx', '', 'translate']] as const) {
   langs.push(`assert_eq!(default_target_language(${lit(ui)}, &u(${lit(doc)}), ${mode === 'easy' ? 'TranslationMode::Easy' : 'TranslationMode::Translate'}), ${lit(defaultTargetLanguage(ui, doc, mode))});`)
 }
-for (const v of ['zh-HK', 'ZH_hant', 'ja-JP', 'in', 'iw-IL', 'pt-BR', 'xx', '', ' ko ']) langs.push(`assert_eq!(normalize_lang(Some(${lit(v)})), ${lit(normalizeLang(v))});`)
+for (const v of ['zh-HK', 'ZH_hant', 'ja-JP', 'in', 'iw-IL', 'pt-BR', 'xx', '', ' ko ']) langs.push(`assert_eq!(translation_language_of(Some(${lit(v)})), ${lit(translationLanguageOf(v))});`)
+langs.push(`assert_eq!(translation_language_of(None), "en");`)
+for (const v of ['ko', 'KO_kr', ' ko-KR ', 'ko-', 'kor', 'zh-TW', 'ja-JP', 'in', '']) langs.push(`assert_eq!(normalize_lang(Some(${lit(v)})), ${lit(normalizeLang(v))});`)
 langs.push(`assert_eq!(normalize_lang(None), "en");`)
 for (const [ls, sample] of [[['und', ' fr_CA '], ''], [[], 'The quick brown fox jumps over the lazy dog.'], [['en-US'], '']] as const) {
   const b = epubBookLanguage([...ls], sample)
@@ -242,7 +245,7 @@ use epub_engine::notation::{
 };
 use epub_engine::pdf_structure::{
     InlineRun, TranslationMode, default_target_language, easy_style_lines, guess_language_from_text,
-    normalize_lang, sha256_hex, sha256_hex_text, translation_style_lines,
+    normalize_lang, sha256_hex, sha256_hex_text, translation_language_of, translation_style_lines,
 };
 use epub_engine::ranges::RangeReplacement;
 use epub_engine::translate::keys::{

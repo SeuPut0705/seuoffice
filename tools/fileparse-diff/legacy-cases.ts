@@ -346,7 +346,9 @@ function builtPpt(): Input[] {
     named('two group shapes in one drawing, the last wins', pptOf(container(RT.slide, container(RT.drawing, container(RT.dgContainer, group(shape(textbox(textChars('one')))), group(shape(textbox(textChars('two'))))))))),
     named('shape with two text boxes, the last wins', pptOf(container(RT.slide, container(RT.drawing, container(RT.dgContainer, group(shape(textbox(textChars('a')), textbox(textChars('b'))))))))),
     named('records the reader does not know, and ones it skips', pptOf(atom(0x1234, Buffer.alloc(5)), atom(0x6969, Buffer.alloc(3)), slideOf(textChars('kept')), atom(0xffff, EMPTY))),
-    named('headers and footers record is read again as records', pptOf(documentOf(container(RT.headersFooters, atom(RT.textHeader, le32(1)), slideListWith(textChars('inside'))), listed))),
+    // its mutants reach records ppt-to-text reads again without end (a defect of
+    // the TypeScript, reported); Rust refuses them, the TypeScript never answers
+    { ...named('headers and footers record is read again as records', pptOf(documentOf(container(RT.headersFooters, atom(RT.textHeader, le32(1)), slideListWith(textChars('inside'))), listed))), mutate: false },
     named('end document atom with a body (thrown string)', pptOf(atom(RT.endDocument, Buffer.alloc(4)), slideOf(textChars('x')))),
     named('end document atom inside a document', pptOf(documentOf(atom(RT.endDocument, Buffer.alloc(2))))),
     named('slide persist atom of any size', pptOf(documentOf(container(RT.slideList, atom(RT.slidePersist, Buffer.alloc(3)), textChars('after short persist'), atom(RT.slidePersist, Buffer.alloc(40)), textBytes('after long persist'))))),
