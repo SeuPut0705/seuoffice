@@ -115,7 +115,7 @@ pub struct TblBgRef {
 /// `TableStyleFlags`: the region toggles of `a:tblPr`. A flag the caller
 /// leaves out reads as off, as an `undefined` one does in the TypeScript.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", default)]
+#[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct TableStyleFlags {
     pub first_row: bool,
     pub last_row: bool,

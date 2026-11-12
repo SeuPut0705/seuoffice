@@ -106,6 +106,12 @@ impl Uids {
         }
     }
 
+    /// The number the next `uid` takes: a host that keeps parse.ts's
+    /// process-wide counter across calls starts the next call's `Uids` here.
+    pub fn next(&self) -> u64 {
+        self.next.get()
+    }
+
     /// `uid(prefix)`
     pub fn uid(&self, prefix: &str) -> String {
         let n = self.next.get();
