@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AI_SUBSCRIPTION_NOTICE_VERSION,
   defaultAiSettings,
   type AiSettings,
   type AiSubscriptionState,
@@ -30,9 +31,26 @@ const CLAUDE_READY: AiSubscriptionStatuses = {
   codex: status('codex', 'signed-out'),
 }
 
+/** The first-connection notice, acknowledged in its current wording */
+const NOTICE_SEEN = {
+  subscriptionNoticeSeen: true,
+  subscriptionNoticeVersion: AI_SUBSCRIPTION_NOTICE_VERSION,
+}
+
 describe('resolveNamingProvider', () => {
-  it('declines when the settings file could not be read at all', () => {
-    expect(resolveNamingProvider(null, CLAUDE_READY)).toBeNull()
+  // the file as every other AI path reads it: what it does not say is the default
+  it('reads a settings file without a selection as the default one', () => {
+    const stored = { providers: {}, ...NOTICE_SEEN }
+    expect(resolveNamingProvider(stored, CLAUDE_READY)?.provider).toBe('claude-code')
+  })
+
+  it('reads a selection this build no longer has as the default one', () => {
+    const stored = { provider: 'a-provider-of-an-older-build', providers: {}, ...NOTICE_SEEN }
+    expect(resolveNamingProvider(stored, CLAUDE_READY)?.provider).toBe('claude-code')
+  })
+
+  it('declines a settings file that could not be read when no subscription is ready', () => {
+    expect(resolveNamingProvider(null, {})).toBeNull()
   })
 
   it('runs auto on the ready subscription', () => {

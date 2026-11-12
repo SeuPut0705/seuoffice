@@ -10,10 +10,10 @@ import { resolveNamingProvider } from './ai-naming-provider'
 export const AI_NAMING_SUGGEST_CHANNEL = 'ai:suggest-file-name'
 
 /**
- * The AI settings, read the same way `registerAiIpc` reads them: a plain
- * `ai-settings.json` in userData. The naming service is registered from the same
- * process, so it can read the file itself rather than round-tripping the value
- * through an IPC hop that already exists for renderers.
+ * The AI settings file as it is on disk: a plain `ai-settings.json` in
+ * userData. The naming service is registered from the same process as
+ * `registerAiIpc`, so it can read the file itself rather than round-tripping
+ * the value through an IPC hop that already exists for renderers.
  */
 function readAiSettingsFile(): unknown {
   try {
@@ -21,7 +21,7 @@ function readAiSettingsFile(): unknown {
       readFileSync(join(app.getPath('userData'), 'ai-settings.json'), 'utf8'),
     ) as unknown
   } catch {
-    // no file yet, or unreadable: a naming attempt will simply be declined
+    // no file yet, or unreadable: the default settings, as for every other reader
     return {}
   }
 }
