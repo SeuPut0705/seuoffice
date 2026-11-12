@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { HttpError } from 'builder-util-runtime'
@@ -455,13 +463,13 @@ describe('initAutoUpdater', () => {
     expect(checkForUpdates).not.toHaveBeenCalled()
   })
 
-  it('configures manual full-package download and checks after the initial delay', async () => {
+  it('configures manual differential download and checks after the initial delay', async () => {
     const { initAutoUpdater } = await loadUpdater()
     initAutoUpdater(() => null)
     expect(updaterState.autoDownload).toBe(false)
     // the installer is started at will-quit by the updater itself
     expect(updaterState.autoInstallOnAppQuit).toBe(false)
-    expect(updaterState.disableDifferentialDownload).toBe(true)
+    expect(updaterState.disableDifferentialDownload).toBe(false)
     // full changelog: the window shows the bodies of every skipped release
     expect(updaterState.fullChangelog).toBe(true)
     expect(checkForUpdates).not.toHaveBeenCalled()
@@ -605,7 +613,99 @@ describe('initAutoUpdater', () => {
     const recorded = JSON.parse(
       readFileSync(join(appState.dataDir, 'update-install-attempt.json'), 'utf8'),
     )
-    expect(recorded).toEqual({ version: '0.2.0', fromVersion: '0.1.0', visible: true, tries: 1 })
+    expect(recorded).toEqual({
+      version: '0.2.0',
+      fromVersion: '0.1.0',
+      visible: true,
+      tries: 1,
+      startedAt: expect.any(String),
+    })
+  })
+
+  /** the `phase` lines of the update record, without their timestamps */
+  function recordedSteps(): string[] {
+    return readFileSync(join(appState.dataDir, 'update-log.txt'), 'utf8')
+      .split('\n')
+      .filter((line) => / info phase /.test(line))
+      .map((line) => line.replace(/^\S+ info /, ''))
+  }
+
+  it('marks each step of an update in the record, up to the installer start', async () => {
+    const installer = join(appState.dataDir, 'SeuOffice-Setup-0.2.0.exe')
+    writeFileSync(installer, 'bytes')
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+    lastShownActions().onDownload()
+    updaterState.listeners.get('download-progress')!({ percent: 50, transferred: 4, total: 5 })
+    updaterState.listeners.get('update-downloaded')!({
+      version: '0.2.0',
+      downloadedFile: installer,
+    })
+    lastShownActions().onInstall()
+    vi.advanceTimersByTime(0)
+    quitCompletes()
+    expect(recordedSteps()).toEqual([
+      'phase download-start version=0.2.0',
+      expect.stringMatching(/^phase download-end ms=\d+ version=0\.2\.0 bytes=5 transferred=4$/),
+      'phase quit-requested version=0.2.0',
+      'phase will-quit version=0.2.0',
+      'phase installer-start version=0.2.0',
+    ])
+  })
+
+  it('tells at the first start on the new version how long the update took since the installer started', async () => {
+    writeFileSync(
+      join(appState.dataDir, 'update-install-attempt.json'),
+      JSON.stringify({
+        version: '0.2.0',
+        fromVersion: '0.1.0',
+        visible: true,
+        tries: 1,
+        startedAt: new Date(Date.now() - 95_000).toISOString(),
+      }),
+    )
+    appState.version = '0.2.0'
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    expect(recordedSteps()).toEqual([
+      expect.stringMatching(
+        /^phase app-started version=0\.2\.0 from=0\.1\.0 since-install-start-s=95\.0 uptime-s=\d+\.\d$/,
+      ),
+    ])
+  })
+
+  /** an update offered and its download started, which runs until the test ends */
+  async function downloadRunning(): Promise<void> {
+    downloadUpdate.mockImplementation(() => new Promise(() => {}))
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+    lastShownActions().onDownload()
+  }
+
+  it('asks the feed nothing on schedule while a download runs', async () => {
+    await downloadRunning()
+    vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS + RECHECK_INTERVAL_MS)
+    expect(checkForUpdates).not.toHaveBeenCalled()
+  })
+
+  it('asks the feed nothing on schedule while a finished download waits for the restart', async () => {
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+    lastShownActions().onDownload()
+    updaterState.listeners.get('update-downloaded')!({ version: '0.2.0' })
+    vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS + RECHECK_INTERVAL_MS)
+    expect(checkForUpdates).not.toHaveBeenCalled()
+  })
+
+  it('keeps a running download when a check made meanwhile fails', async () => {
+    await downloadRunning()
+    // electron-updater reports a failed check through the same 'error' event
+    updaterState.listeners.get('error')!(new Error('net::ERR_NETWORK_CHANGED'))
+    updaterState.listeners.get('download-progress')!({ percent: 40, transferred: 4, total: 10 })
+    expect(pushUpdateState).toHaveBeenLastCalledWith({ phase: 'downloading', percent: 40 })
   })
 
   it('writes what it did to the update record in the data folder', async () => {
@@ -704,6 +804,28 @@ describe('initAutoUpdater', () => {
       await flushAsync()
       expect(existsSync(installer)).toBe(false)
     })
+
+    // The installer that reopened the app runs on for a few seconds and holds
+    // its own file (Windows answers EPERM); a folder without write permission
+    // makes the removal fail the same way here.
+    it.skipIf(process.platform === 'win32')(
+      'is removed a little later when the installer still held it at the start',
+      async () => {
+        const { cacheDir, installer } = staleCache()
+        updaterState.cacheHelper = () => Promise.resolve({ cacheDir })
+        chmodSync(join(cacheDir, 'pending'), 0o555)
+        try {
+          const { initAutoUpdater } = await loadUpdater()
+          initAutoUpdater(() => null)
+          await flushAsync()
+          expect(existsSync(installer)).toBe(true)
+        } finally {
+          chmodSync(join(cacheDir, 'pending'), 0o755)
+        }
+        await vi.advanceTimersByTimeAsync(60_000)
+        expect(existsSync(installer)).toBe(false)
+      },
+    )
 
     it('stays once a download is running', async () => {
       const { cacheDir, installer } = staleCache()
@@ -1063,6 +1185,7 @@ describe('macOS: the app installs its own update (decision 0097)', () => {
       zip,
       bundle: '/Applications/IeumOffice.app',
       version: '0.2.0',
+      step: expect.any(Function),
     })
     expect(squirrelServe).not.toHaveBeenCalled()
     expect(pushUpdateState).toHaveBeenLastCalledWith({
@@ -1092,6 +1215,7 @@ describe('macOS: the app installs its own update (decision 0097)', () => {
       fromVersion: CURRENT_VERSION,
       visible: false,
       tries: 1,
+      startedAt: expect.any(String),
     })
   })
 

@@ -190,6 +190,31 @@ describe('stageMacUpdate', () => {
     expect(existsSync(join(macStagingDir(bundle), 'Old.app'))).toBe(false)
   })
 
+  it('marks where unpacking and checking start and end, between the programs they run', async () => {
+    const bundle = installedBundle()
+    const mac = fakeMac({})
+    const seen: string[] = []
+    const run: RunProgram = (file, args) => {
+      seen.push(file)
+      return mac.run(file, args)
+    }
+    await stageMacUpdate({
+      zip: 'update.zip',
+      bundle,
+      version: '0.2.0',
+      run,
+      step: (s) => seen.push(s),
+    })
+    expect(seen.filter((s) => !s.includes('PlistBuddy'))).toEqual([
+      'unpack-start',
+      '/usr/bin/ditto',
+      'unpack-end',
+      'verify-start',
+      '/usr/bin/codesign',
+      'verify-end',
+    ])
+  })
+
   const refusals: [string, Parameters<typeof fakeMac>[0], RegExp][] = [
     ['a zip that does not unpack', { dittoFails: true }, /PKZip/],
     ['a zip without an app', { apps: {} }, /0 apps/],
@@ -420,7 +445,16 @@ describe.skipIf(process.platform === 'win32')('the swap script', () => {
     expect(existsSync(macStagingDir(bundle))).toBe(false)
     expect(existsSync(macPreviousDir(bundle))).toBe(false)
     expect(opened()).toEqual([bundle, '--args', '--updated'])
-    expect(readFileSync(log, 'utf8')).toMatch(/^\S+Z info \[swap\] installed the new version\n$/)
+    expect(
+      readFileSync(log, 'utf8')
+        .trimEnd()
+        .split('\n')
+        .map((line) => line.replace(/^\S+Z info /, '')),
+    ).toEqual([
+      '[swap] phase swap-start',
+      '[swap] installed the new version',
+      '[swap] phase relaunch',
+    ])
   })
 
   it('puts the old version back and opens it when the new one cannot move in', async () => {

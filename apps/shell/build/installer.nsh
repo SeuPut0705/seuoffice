@@ -259,8 +259,14 @@
 !macroend
 
 !macro customUnInstall
-  Push "$INSTDIR\resources\cli"
-  Call un.GenOfficeRemoveFromUserPath
+  ; An update (the old version's uninstaller, run with --updated) keeps the
+  ; install folder, so the CLI's PATH entry stays: removing it here and adding
+  ; it back in the installer broadcast the change to every window twice, each
+  ; broadcast waiting up to 5 s per window that does not answer.
+  ${ifNot} ${isUpdated}
+    Push "$INSTDIR\resources\cli"
+    Call un.GenOfficeRemoveFromUserPath
+  ${endIf}
   Push $0
   !insertmacro GenOfficeUnregisterShellNew "docx" "seuoffice.WordDocument"
   !insertmacro GenOfficeUnregisterShellNew "xlsx" "seuoffice.ExcelWorkbook"
@@ -274,7 +280,10 @@
   !insertmacro GenOfficeUnregisterOpenWithVsdx
   !insertmacro GenOfficeUnregisterApplicationCapabilities
   Pop $0
-  !insertmacro UPDATEFILEASSOC
+  ; the installer that runs next tells Explorer once, after registering again
+  ${ifNot} ${isUpdated}
+    !insertmacro UPDATEFILEASSOC
+  ${endIf}
 !macroend
 
 !ifndef BUILD_UNINSTALLER
