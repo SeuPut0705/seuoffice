@@ -196,10 +196,25 @@ export function createDocsRecovery(store: RecoveryStore): DocsRecovery {
         ...(originalPath ? { originalPath } : {}),
       })
       if (result !== 'written') return 'skipped'
-      if (!isUntitledIdentity(identity)) {
+      if (isUntitledIdentity(identity)) {
+        // a docx copy of an ODT tab (marked content) is newer than any ODT copy
+        // the tab wrote before its content was marked: that one must not be
+        // offered again beside it
+        if (originalPath) {
+          if (store.deleteCopy(fileIdentity(originalPath), 'saved') === 'deleted') {
+            pathsByTab.get(tabId)?.delete(originalPath)
+          }
+        }
+      } else {
         const paths = pathsByTab.get(tabId) ?? new Set<string>()
         paths.add(identity.filePath)
         pathsByTab.set(tabId, paths)
+        // the tab writes its file's copy again (its marks are gone): the docx
+        // copy it wrote while marked is stale
+        const slot = untitledByTab.get(tabId)
+        if (slot && store.copyInfo(slot)?.originalPath === identity.filePath) {
+          dropUntitled(tabId, 'saved')
+        }
       }
       // a copy means unsaved changes: an earlier "clean" answer no longer holds
       if (outcomes.get(tabId) === 'clean') outcomes.delete(tabId)

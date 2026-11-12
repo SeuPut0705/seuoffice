@@ -258,6 +258,7 @@ import {
 import { isExternallyModified, type DiskFileState } from './external-change'
 import {
   docFormatOfPath,
+  isOdtPackage,
   prepareRecoveryBytes,
   prepareSaveBytes,
   recoveryExtFor,
@@ -1544,6 +1545,14 @@ async function loadDocx(
       recovered = false
       docsRecovery.restoreFailed(filePath)
     }
+  }
+  // a copy under an ODT's path is the ODT itself; anything else (a docx copy
+  // of a marked ODT tab belongs to an untitled slot) is never opened as that
+  // file's content, so a save cannot turn it into an unmarked .odt
+  if (recovered && format === 'odt' && !isOdtPackage(bytes)) {
+    bytes = plainBytes
+    recovered = false
+    docsRecovery.restoreFailed(filePath)
   }
   if (recovered && format === 'docx') await adoptLazyMediaHashes(bytes, filePath, wcId)
   pushRecent(filePath)
