@@ -351,15 +351,60 @@ What is particular to these gates:
   `@exodus/bytes` in place of Node's the TypeScript gives the Rust answer
   for every one of them: they are defects of the TypeScript.
 
-Not ported, each for the parser or library it needs:
+Left to the host (`crates/seu-host`). In stage 1 the engines run as wasm
+inside the React screens (decision 0026), where pdfjs, parse5 and the
+TypeScript engines not ported yet already run. A step the engine cannot take
+itself is the import `seu_host.host_call(name, input)`, with JSON in and out.
+Each step is one call at the place where the TypeScript calls the library, and
+the host answers what the TypeScript computes there. The gates supply the
+steps in `tools/fileparse-diff/host-steps*.ts`, and each gate case sends the
+same inputs through both sides. A host step that copies TypeScript code (the
+`sourceElements` walk of html-redaction) is checked against the original by
+its gate, which fails once the original changes. The steps:
 
-- `file-parse`: `html-redaction.ts` (parse5), `pdf.ts`, `hwp.ts`, `doc.ts` and
-  `ppt.ts` (their extractors; only the compound reader under them is here),
-  `odt.ts`, `xmind.ts`, `diagram.ts`, `epub.ts`, the dispatcher `parse.ts`.
-- `epub-engine`: everything that parses text with saxes or parse5
-  (`parseXml`, `parseHtml`, `openEpub`, chapter text, blocks, notation, edits,
-  save, `buildToc`) and `translate/`. The tree readers here take the tree the
-  TypeScript parser gives, so the parsers themselves are not compared.
+- `fileparse.htmlSourceElements`: parse5's elements with source locations, for
+  `redactHtmlSource` (`file_parse::html`).
+- PDF text (pdfjs) and the readers of odt, xmind and draw.io, until those
+  engines are ported.
+- epub-engine: the three parse5 calls: `epub.parseHtml` (`parseHtml`),
+  `epub.parseFragmentText` (the lookup of `resolveHtmlEntity`, whose cache and
+  decision stay in Rust) and `epub.chapterTextRoots` (the HTML fallback of
+  `extractChapterText`). `tools/fileparse-diff/host-steps-epub.ts` has them;
+  the two that copy TypeScript are checked against its source text by
+  `tools/epub-diff/xml-cases.ts`.
+
+A native build has no host: those steps answer `HostUnavailable`.
+
+Not ported yet (batch D1 is porting the rest of file-parse and epub-engine):
+`parse.ts`, `pdf.ts` through the host, `hwp.ts` through `vendor/rhwp-core`,
+`doc.ts` and `ppt.ts` with their extractors (word-extractor, ppt-to-text) and
+the compound-file gate, the saxes reader (`crates/saxes`), and the parts of
+epub-engine that read XML.
+
+### Notes for the odt port (stream C)
+
+- **Entry points** (`packages/odt-engine/src/index.ts`): `odtToText` (the text
+  file-parse attaches; `packages/file-parse/src/odt.ts` wraps it and maps
+  `OdtNotTextError`/`isOdtOpenError` in `parse.ts`), `odtToDocx` (the bridge
+  docx, the `BridgeMap` and the conversion report), `saveOdt` (narrow patches
+  back into the received ODT; untouched parts keep their bytes, no edit gives
+  the original bytes), `docxToOdt`, `protectedCellsOf`, `parseKeepName`. The
+  errors are `OdtOpenError` with an `OdtOpenErrorCode`, `OdtEncryptedError`
+  and `OdtNotTextError`.
+- **Corpus**: no `.odt` is tracked. The package's own tests build ODTs in
+  `tests/helpers/*-fixtures.ts`, and `tests/assemble-corpus.test.ts` reads a
+  folder named by `ODT_CORPUS`. A gate needs built ODTs from those helpers,
+  mutated content.xml/styles.xml through the `zip-xml` mutation of
+  `tools/fileparse-diff/runner.ts`, and container mutations.
+- **What to compare**: `odtToText` as a string. `odtToDocx` as the bridge
+  docx's parts (unzip both and compare part names, then each XML part as text
+  and the rest as bytes; JSZip writes entries in order) plus the BridgeMap
+  and the report as JSON, with their key order. `saveOdt` as bytes when there
+  is no edit (it must give back the original) and as parts otherwise. The odt
+  engine reads XML with saxes, which `crates/saxes` is.
+- **Shared with docx**: `odtToDocx` writes through the docx engine, so the
+  comparison follows stream B's docx-diff conventions for generated parts
+  (`tools/docx-diff/package-zips.ts`).
 
 Open on these crates:
 
@@ -396,6 +441,14 @@ Open on these crates:
   (MIT OR Apache-2.0). Its licence files are in the directory; a shipped
   build needs it in the third-party notices like any other dependency, and
   the notices are not written yet.
+- Third-party code ported into the crates, each needing its notice in a
+  shipped build: saxes 6.0.0 (ISC, `crates/saxes`), ppt-to-text 1.0.1 and
+  cfb 1.2.2 (Apache-2.0, `file-parse` `ppt` and `compound`), word-extractor
+  (MIT, `file-parse` `doc`).
+- parse5 port needed when the central process becomes Rust (stage 2), unless
+  that process keeps a JS host for it. Until then html-redaction and the
+  three parse5 calls of epub-engine are host steps, and a native build
+  answers `HostUnavailable` there.
 - `cargo-deny` (`deny.toml`) is not run in CI. Run by hand with 0.20.2 on
   the commit that vendored `regress`: advisories, bans, licences and sources
   ok.

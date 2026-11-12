@@ -24,7 +24,35 @@ fn number(value: f64) -> Value {
     )
 }
 
+/// What a reader written to answer `Option<Result<Value, String>>` threw, as
+/// `{ name, message }`: the legacy readers write `name\u{1}message`, the HWP
+/// reader only the message, whose name is `DamagedFileError` for the gate's
+/// refusal and `Error` otherwise.
+fn delegated(function: &str, text: &str, bytes: &[u8], args: &Value) -> Option<Result<Value, (String, String)>> {
+    if function == "epubToText" {
+        return crate::epub_xml::run_named(function, text, bytes, args);
+    }
+    if let Some(result) = crate::file_parse_legacy::run(function, text, bytes, args) {
+        return Some(result.map_err(|thrown| match thrown.split_once('\u{1}') {
+            Some((name, message)) => (name.to_owned(), message.to_owned()),
+            None => ("Error".to_owned(), thrown),
+        }));
+    }
+    let result = crate::file_parse_hwp::run(function, text, bytes, args)?;
+    Some(result.map_err(|message| {
+        let name = if message.starts_with("The file is damaged or is not a valid ") { "DamagedFileError" } else { "Error" };
+        (name.to_owned(), message)
+    }))
+}
+
 pub fn run(function: &str, text: &str, bytes: &[u8], args: &Value) -> Vec<u8> {
+    if let Some(result) = delegated(function, text, bytes, args) {
+        let outcome = match result {
+            Ok(value) => serde_json::json!({ "value": value }),
+            Err((name, message)) => serde_json::json!({ "error": { "name": name, "message": message } }),
+        };
+        return serde_json::to_vec(&outcome).expect("attachment outcome contains only JSON values");
+    }
     let string = |key: &str| args.get(key).and_then(Value::as_str).unwrap_or_default();
     // `maxChars` and `budget` travel as the text of a number, so NaN and infinity cross
     let numeric = |key: &str| {
@@ -47,6 +75,16 @@ pub fn run(function: &str, text: &str, bytes: &[u8], args: &Value) -> Vec<u8> {
         "redactMarkdownSource" => {
             file_parse::markdown::redact_markdown_source(text).map(Value::String)
         }
+        "parseFileToText" => Ok(file_parse::parse::parse_file_to_text(
+            text,
+            bytes,
+            file_parse::parse::ParseFileOptions {
+                max_chars: args.get("maxChars").and_then(Value::as_f64),
+                whole_zip_max_bytes: args.get("wholeZipMaxBytes").and_then(Value::as_f64),
+            },
+            args.get("hosted"),
+        )),
+        "redactHtmlSource" => file_parse::html::redact_html_source(text).map(Value::String),
         "redactPptxPartXml" => {
             file_parse::pptx_redaction::redact_pptx_part_xml(text).map(Value::String)
         }

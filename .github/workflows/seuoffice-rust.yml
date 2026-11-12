@@ -59,6 +59,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # the hwp reader compiles rhwp from upstream v0.9.0 with vendor/rhwp-core's
+      # patches; cargo resolves that path dependency on every call, so it is
+      # prepared before any of them
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('vendor/rhwp-core/**', 'tools/build-rhwp-core.mjs') }}
+      - name: rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        run: node tools/build-rhwp-core.mjs --source-only
+
       - name: Is the Rust engine in this tree
         id: has
         run: |
@@ -151,6 +163,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # the hwp reader compiles rhwp from upstream v0.9.0 with vendor/rhwp-core's
+      # patches; cargo resolves that path dependency on every call, so it is
+      # prepared before any of them
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('vendor/rhwp-core/**', 'tools/build-rhwp-core.mjs') }}
+      - name: rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        run: node tools/build-rhwp-core.mjs --source-only
+
       - name: Rust toolchain with the WASI target
         run: |
           rustup toolchain install stable --profile minimal
@@ -193,6 +217,18 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+
+      # the hwp reader compiles rhwp from upstream v0.9.0 with vendor/rhwp-core's
+      # patches; cargo resolves that path dependency on every call, so it is
+      # prepared before any of them
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('vendor/rhwp-core/**', 'tools/build-rhwp-core.mjs') }}
+      - name: rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        run: node tools/build-rhwp-core.mjs --source-only
       - name: Is the attachment gate in this tree
         id: has
         run: |
@@ -241,6 +277,18 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+
+      # the hwp reader compiles rhwp from upstream v0.9.0 with vendor/rhwp-core's
+      # patches; cargo resolves that path dependency on every call, so it is
+      # prepared before any of them
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('vendor/rhwp-core/**', 'tools/build-rhwp-core.mjs') }}
+      - name: rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        run: node tools/build-rhwp-core.mjs --source-only
       - name: Is the attachment fault gate in this tree
         id: has
         run: |
@@ -290,6 +338,18 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+
+      # the hwp reader compiles rhwp from upstream v0.9.0 with vendor/rhwp-core's
+      # patches; cargo resolves that path dependency on every call, so it is
+      # prepared before any of them
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('vendor/rhwp-core/**', 'tools/build-rhwp-core.mjs') }}
+      - name: rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        run: node tools/build-rhwp-core.mjs --source-only
       - name: Is the EPUB gate in this tree
         id: has
         run: |
