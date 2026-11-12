@@ -5,6 +5,7 @@
 const certSignStrings = {
   certSign: 'Certificate sign',
   certSignHint: 'Sign this PDF with a digital certificate (.p12 / .pfx)',
+  certSignUnavailable: 'Certificate signing is only available in the desktop app',
   certSignTitle: 'Sign with a digital certificate',
   certSignIntro:
     'The signed copy is saved as a new file, so the original stays unchanged. Signing locks in the file as it is on disk.',
@@ -128,6 +129,7 @@ const localizedCertSignStrings: Readonly<
   ko: {
     certSign: '인증서 서명',
     certSignHint: '디지털 인증서(.p12 / .pfx)로 이 PDF에 서명합니다',
+    certSignUnavailable: '인증서 서명은 데스크톱 앱에서만 할 수 있습니다',
     certSignTitle: '디지털 인증서로 서명',
     certSignIntro:
       '서명한 사본은 새 파일로 저장되므로 원본은 그대로 남습니다. 서명은 디스크에 저장된 상태의 파일을 고정합니다.',

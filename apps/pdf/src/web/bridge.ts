@@ -213,6 +213,8 @@ const pdfApi: Partial<PdfApi> = {
   store: undefined,
   subscription: undefined,
   noteOpen: undefined,
+  // certificates, keys and the signed copy all live on the desktop
+  signWithCertificate: undefined,
 }
 
 export function installBridges(): void {

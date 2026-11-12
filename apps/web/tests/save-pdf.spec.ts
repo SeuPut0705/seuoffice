@@ -146,6 +146,47 @@ test('a text edit, which needs the desktop engine, is refused and kept unsaved',
   expect(errors).toEqual([])
 })
 
+test('certificate signing, which needs the desktop app, says so instead of opening', async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  const app = await open(page, FIXTURE, true)
+
+  await app.locator('.ribbon-tab', { hasText: '주석' }).click()
+  await app.getByRole('button', { name: '인증서 서명', exact: true }).click()
+  await expect(app.getByText('인증서 서명은 데스크톱 앱에서만 할 수 있습니다')).toBeVisible()
+  await expect(app.locator('.pdf-cert-dialog')).toBeHidden()
+  expect(errors).toEqual([])
+})
+
+test('a drawn signature is saved into the PDF as a stamp', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  const app = await open(page, FIXTURE, true)
+
+  await app.locator('.ribbon-tab', { hasText: '주석' }).click()
+  await app.getByRole('button', { name: '서명', exact: true }).click()
+  const pad = await app.locator('.pdf-sign-pad').boundingBox()
+  if (!pad) throw new Error('no signature pad')
+  await page.mouse.move(pad.x + pad.width * 0.2, pad.y + pad.height * 0.6)
+  await page.mouse.down()
+  await page.mouse.move(pad.x + pad.width * 0.5, pad.y + pad.height * 0.3, { steps: 6 })
+  await page.mouse.move(pad.x + pad.width * 0.8, pad.y + pad.height * 0.6, { steps: 6 })
+  await page.mouse.up()
+  await app.locator('.pdf-modal-btn.primary').click()
+  const sheet = await app.locator('.pdf-page-content').first().boundingBox()
+  if (!sheet) throw new Error('no first page')
+  await page.mouse.click(sheet.x + sheet.width * 0.5, sheet.y + sheet.height * 0.7)
+
+  const saving = page.waitForEvent('download')
+  await page.keyboard.press('ControlOrMeta+s')
+  const saved = await loaded(await saving)
+  expect(annotSubtypes(saved.pdf)).toEqual(['/Stamp'])
+  expect(pageContent(saved.pdf)).toBe(pageContent(await PDFDocument.load(FIXTURE)))
+  expect(errors).toEqual([])
+})
+
 test('a PDF opened for viewing can be neither changed nor saved', async ({ page }) => {
   const app = await open(page, FIXTURE, false)
   await expect(page.locator('#save')).toBeHidden()
