@@ -1,5 +1,6 @@
 import { decodeEntities } from './parse-xml-text'
 import { escapeXmlText, maskOpaque } from './xml-utils'
+import { hasWithheldTrace } from './withheld'
 
 /**
  * Paragraph-level surgical text patch (saving edits to rich-text entries such as
@@ -198,6 +199,14 @@ function patchOneParagraph(paraXml: string, newText: string, skipLeading: boolea
     return null
   }
 
+  // A change that spans a run hidden from AI and a run that is not would move
+  // hidden words into the plain run (or plain words under the mark): no patch.
+  const masked = maskOpaque(paraXml)
+  const hiddenAt = (i: number) => sliceHidden(masked, slices[i].tagStart)
+  for (let i = first + 1; i <= last; i++) {
+    if (hiddenAt(i) !== hiddenAt(first)) return null
+  }
+
   // Rewrite [first..last]: first takes the prefix remainder + replacement text + last's
   // suffix remainder; the rest are emptied
   const newInner: string[] = []
@@ -222,4 +231,11 @@ function patchOneParagraph(paraXml: string, newText: string, skipLeading: boolea
       out.slice(closeEnd)
   }
   return out
+}
+
+/** whether the w:t at `tagStart` sits in a run whose properties carry the hidden-from-AI mark */
+function sliceHidden(maskedPara: string, tagStart: number): boolean {
+  let runStart = -1
+  for (const m of maskedPara.slice(0, tagStart).matchAll(/<w:r(?=[\s>])/g)) runStart = m.index!
+  return runStart !== -1 && hasWithheldTrace(maskedPara.slice(runStart, tagStart))
 }
