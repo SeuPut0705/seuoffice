@@ -81,3 +81,17 @@ describe('a character a locked control refused', () => {
     expect(editor.state.selection.head).toBe(2)
   })
 })
+
+describe('text typed over a selection a locked control refused', () => {
+  it('leaves the selection as it was', async () => {
+    const editor = await load()
+    // 'A-' of the control, from 7 to 9
+    editor.commands.setTextSelection({ from: 7, to: 9 })
+    const { view } = editor
+    const deflt = () => view.state.tr.insertText('x', 7, 9)
+    const handled = view.someProp('handleTextInput', (f) => f(view, 7, 9, 'x', deflt))
+    if (!handled) view.dispatch(deflt())
+    expect(editor.state.doc.textContent).toBe('Code: A-1 end')
+    expect([editor.state.selection.from, editor.state.selection.to]).toEqual([7, 9])
+  })
+})

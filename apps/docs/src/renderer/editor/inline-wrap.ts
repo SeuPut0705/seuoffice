@@ -517,13 +517,15 @@ export const InlineWrapGuardExtension = Extension.create({
           // moves the caret into the control: refusing that change whole
           // (filterTransaction) left the caret where it was before the click,
           // and the next text typed landed there as a real edit. The caret
-          // goes where the text was typed instead, and nothing is inserted.
+          // goes where the text was typed instead (a selection typed over
+          // stays selected), and nothing is inserted.
           handleTextInput: (view, from, to, _text) => {
             if (!lockedControlRefuses(view.state.doc, from, to, true)) return false
             recordOdtRefusal('lockedControl')
             notifyOdt('appOdtLockedObject')
-            const caret = TextSelection.create(view.state.doc, from)
-            if (!view.state.selection.eq(caret)) view.dispatch(view.state.tr.setSelection(caret))
+            // over a selection the selection stays, as the text did not replace it
+            const kept = TextSelection.create(view.state.doc, from, to)
+            if (!view.state.selection.eq(kept)) view.dispatch(view.state.tr.setSelection(kept))
             return true
           },
           handleDOMEvents: {
