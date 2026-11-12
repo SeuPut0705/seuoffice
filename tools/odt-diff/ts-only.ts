@@ -5,7 +5,7 @@
 // fewer than two is named).
 import '../docx-diff/host'
 import { isDeepStrictEqual } from 'node:util'
-import { parseDocx } from '@seuoffice/docx-engine'
+import { parseDocx } from '../docx-diff/reference/index'
 import { mulberry32 } from '../docx-diff/synthetic'
 import {
   type OdtCase,

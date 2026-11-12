@@ -14,7 +14,7 @@
 //   odtTable.constant   args `name`: the value of the exported constant of that name of the group (or the
 //        answer of a function that takes nothing); the names are the keys of the spec at the end of this file.
 
-import type { TableModel } from '@seuoffice/docx-engine'
+import type { TableModel } from '../docx-diff/reference/index'
 import { elementFragments } from '../docx-diff/fragments'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { distinct, constantSpec } from './calls-support'

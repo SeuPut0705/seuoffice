@@ -14,7 +14,7 @@ import {
   type ParsedDocFull,
   type SectionInfo,
   type TableModel,
-} from '@seuoffice/docx-engine'
+} from '../docx-diff/reference/index'
 import { withClock } from './clock'
 import * as ts from './ts'
 

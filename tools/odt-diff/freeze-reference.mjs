@@ -11,8 +11,16 @@
 //
 //   reference/src/            <- packages/odt-engine/src
 //   reference/tests/helpers/  <- packages/odt-engine/tests/helpers
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -37,6 +45,27 @@ writeFileSync(
   tsPath,
   text.replaceAll(SRC, './reference/src').replaceAll(HELPERS, './reference/tests/helpers'),
 )
+// The docx engine the frozen copy and the harness call is the docx gate's
+// frozen TypeScript (tools/docx-diff/reference), never the package, whose
+// exports call the wasm since batch B4.
+const DOCX = "'@seuoffice/docx-engine'"
+const docxReference = resolve(root, 'tools/docx-diff/reference/index')
+function repointDocx(file) {
+  const text = readFileSync(file, 'utf8')
+  if (!text.includes(DOCX)) return
+  let path = relative(dirname(file), docxReference)
+  if (!path.startsWith('.')) path = `./${path}`
+  writeFileSync(file, text.replaceAll(DOCX, `'${path}'`))
+}
+function walk(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = resolve(dir, entry.name)
+    if (entry.isDirectory()) walk(path)
+    else if (entry.name.endsWith('.ts')) repointDocx(path)
+  }
+}
+walk(reference)
+for (const entry of readdirSync(here)) if (entry.endsWith('.ts')) repointDocx(resolve(here, entry))
 console.log(
-  'odt-diff: the TypeScript engine is frozen in tools/odt-diff/reference; ts.ts points at it',
+  'odt-diff: the TypeScript engine is frozen in tools/odt-diff/reference; ts.ts points at it, and it and the harness call the frozen docx engine of tools/docx-diff/reference',
 )

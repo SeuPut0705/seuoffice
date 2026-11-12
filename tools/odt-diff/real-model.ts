@@ -2,7 +2,7 @@
 // Rust model is strict (a Block needs its `id`, `docxIndex` ... ), so a partial
 // literal is refused where it would be accepted by the TypeScript. These are
 // the blocks and tables of the docx fixtures of the odt tests, parsed once.
-import { parseDocx, type Block, type TableModel } from '@seuoffice/docx-engine'
+import { parseDocx, type Block, type TableModel } from '../docx-diff/reference/index'
 import { withClock } from './clock'
 import { builtDocxSpecs } from './corpus'
 import * as ts from './ts'
