@@ -1,7 +1,7 @@
 name: seuoffice rust
 
 # The Rust document engines (crates/) and their parity gates against the
-# TypeScript engines (tools/docx-diff, tools/pptx-diff), on a GitHub runner.
+# TypeScript engines (tools/docx-diff, tools/pptx-diff, tools/odt-diff), on a GitHub runner.
 # Decision 0025.
 #
 # crates/ lives on a branch until its first unit is merged, so this file does
@@ -19,8 +19,10 @@ on:
         'crates/**',
         'tools/docx-diff/**',
         'tools/pptx-diff/**',
+        'tools/odt-diff/**',
         'packages/docx-engine/src/**',
         'packages/pptx-engine/src/**',
+        'packages/odt-engine/src/**',
       ]
   workflow_dispatch:
     inputs:
@@ -292,4 +294,117 @@ jobs:
         with:
           name: pptx-faults-out-${{ matrix.shard }}
           path: tools/pptx-diff/out/faults
+          if-no-files-found: ignore
+
+  odt:
+    if: ${{ !inputs.faults }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is the odt gate in this tree
+        id: has
+        run: |
+          if [ -f tools/odt-diff/package.json ]; then echo "odt=true" >> "$GITHUB_OUTPUT"; else echo "odt=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Rust toolchain with the WASI target
+        if: steps.has.outputs.odt == 'true'
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-wasip1
+
+      - uses: actions/cache@v4
+        if: steps.has.outputs.odt == 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: seuoffice-rust-odt-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: seuoffice-rust-${{ runner.os }}-
+
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.odt == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.has.outputs.odt == 'true'
+        run: npm ci
+
+      - name: Odt gate typecheck
+        if: steps.has.outputs.odt == 'true'
+        run: npm --prefix tools/odt-diff run typecheck
+
+      - name: Odt parity gate
+        if: ${{ !cancelled() && steps.has.outputs.odt == 'true' }}
+        shell: bash
+        run: |
+          mkdir -p tools/odt-diff/out
+          npm --prefix tools/odt-diff run gate 2>&1 | tee tools/odt-diff/out/gate.txt
+
+      - name: Keep the odt gate output
+        if: always() && steps.has.outputs.odt == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: odt-diff-out
+          path: tools/odt-diff/out
+          if-no-files-found: ignore
+
+  # One Rust fault at a time through the odt gate: each must be caught.
+  odt-faults:
+    if: ${{ !inputs.faults }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is the odt gate in this tree
+        id: has
+        run: |
+          if [ -f tools/odt-diff/package.json ]; then echo "odt=true" >> "$GITHUB_OUTPUT"; else echo "odt=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Rust toolchain with the WASI target
+        if: steps.has.outputs.odt == 'true'
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-wasip1
+
+      - uses: actions/cache@v4
+        if: steps.has.outputs.odt == 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: seuoffice-rust-odt-faults-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: seuoffice-rust-${{ runner.os }}-
+
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.odt == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.has.outputs.odt == 'true'
+        run: npm ci
+
+      - name: Odt fault probes
+        if: steps.has.outputs.odt == 'true'
+        run: npm --prefix tools/odt-diff run faults -- --shard ${{ matrix.shard }}/4
+
+      - name: Keep the fault probe output
+        if: always() && steps.has.outputs.odt == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: odt-faults-out-${{ matrix.shard }}
+          path: tools/odt-diff/out/faults
           if-no-files-found: ignore
