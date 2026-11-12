@@ -63,11 +63,14 @@ pub enum SettingsPath<'a> {
     Lazy(&'a dyn Fn() -> String),
 }
 
+/// `SplitMemoryOptions.writeSetting`: (settings path, key, value or undefined)
+pub type WriteSetting<'a> = &'a dyn Fn(&str, &str, Option<JsonValue>) -> Result<(), NodeError>;
+
 /// `SplitMemoryOptions`
 pub struct SplitMemoryOptions<'a> {
     pub settings_path: SettingsPath<'a>,
     pub read_settings: Option<&'a dyn Fn(&str) -> Settings>,
-    pub write_setting: Option<&'a dyn Fn(&str, &str, Option<JsonValue>) -> Result<(), NodeError>>,
+    pub write_setting: Option<WriteSetting<'a>>,
 }
 
 fn resolve_settings_path(options: &SplitMemoryOptions) -> String {

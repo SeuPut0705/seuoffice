@@ -139,7 +139,7 @@ fn is_windows_reserved_name(path: &[u16], colon_index: i64) -> bool {
 }
 
 fn is_windows_device_root(code: i32) -> bool {
-    (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
+    (65..=90).contains(&code) || (97..=122).contains(&code)
 }
 
 /// Resolves . and .. elements in a path with directory names
@@ -283,48 +283,49 @@ fn basename_u(path: &[u16], suffix: Option<&[u16]>, win: bool) -> U {
         start = 2;
     }
 
-    if let Some(suffix) = suffix {
-        if !suffix.is_empty() && suffix.len() <= path.len() {
-            if suffix == path {
-                return U::new();
-            }
-            let mut ext_idx = suffix.len() as i64 - 1;
-            let mut first_non_slash_end: i64 = -1;
-            let mut i = path.len() as i64 - 1;
-            while i >= start {
-                let code = at(path, i);
-                if is_sep(code) {
-                    if !matched_slash {
-                        start = i + 1;
-                        break;
-                    }
-                } else {
-                    if first_non_slash_end == -1 {
-                        matched_slash = false;
-                        first_non_slash_end = i + 1;
-                    }
-                    if ext_idx >= 0 {
-                        if code == at(suffix, ext_idx) {
-                            ext_idx -= 1;
-                            if ext_idx == -1 {
-                                end = i;
-                            }
-                        } else {
-                            ext_idx = -1;
-                            end = first_non_slash_end;
+    if let Some(suffix) = suffix
+        && !suffix.is_empty()
+        && suffix.len() <= path.len()
+    {
+        if suffix == path {
+            return U::new();
+        }
+        let mut ext_idx = suffix.len() as i64 - 1;
+        let mut first_non_slash_end: i64 = -1;
+        let mut i = path.len() as i64 - 1;
+        while i >= start {
+            let code = at(path, i);
+            if is_sep(code) {
+                if !matched_slash {
+                    start = i + 1;
+                    break;
+                }
+            } else {
+                if first_non_slash_end == -1 {
+                    matched_slash = false;
+                    first_non_slash_end = i + 1;
+                }
+                if ext_idx >= 0 {
+                    if code == at(suffix, ext_idx) {
+                        ext_idx -= 1;
+                        if ext_idx == -1 {
+                            end = i;
                         }
+                    } else {
+                        ext_idx = -1;
+                        end = first_non_slash_end;
                     }
                 }
-                i -= 1;
             }
-
-            if start == end {
-                end = first_non_slash_end;
-            } else if end == -1 {
-                end = path.len() as i64;
-            }
-            return slice(path, start, end);
+            i -= 1;
         }
+
+        if start == end {
+            end = first_non_slash_end;
+        } else if end == -1 {
+            end = path.len() as i64;
+        }
+        return slice(path, start, end);
     }
     let mut i = path.len() as i64 - 1;
     while i >= start {
@@ -1295,10 +1296,10 @@ pub mod posix {
     }
 
     fn resolve_u(cwd: &[u16], args: &[U]) -> U {
-        if args.is_empty() || (args.len() == 1 && (args[0].is_empty() || args[0] == [DOT as u16])) {
-            if at(cwd, 0) == FS {
-                return cwd.to_vec();
-            }
+        if (args.is_empty() || (args.len() == 1 && (args[0].is_empty() || args[0] == [DOT as u16])))
+            && at(cwd, 0) == FS
+        {
+            return cwd.to_vec();
         }
         let mut resolved_path = U::new();
         let mut resolved_absolute = false;
@@ -1516,13 +1517,12 @@ pub mod posix {
             return ret;
         }
         let is_absolute = at(&path, 0) == FS;
-        let start: i64;
-        if is_absolute {
+        let start: i64 = if is_absolute {
             ret.root = "/".to_string();
-            start = 1;
+            1
         } else {
-            start = 0;
-        }
+            0
+        };
         let mut start_dot: i64 = -1;
         let mut start_part: i64 = 0;
         let mut end: i64 = -1;

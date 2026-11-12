@@ -45,10 +45,10 @@ fn payload_launch_paths(additional_data: Option<&JsonValue>) -> Vec<String> {
             .collect(),
         _ => Vec::new(),
     };
-    if let Some(JsonValue::String(s)) = data.get("launchPath").as_deref() {
-        if !s.is_empty() {
-            paths.push(s.clone());
-        }
+    if let Some(JsonValue::String(s)) = data.get("launchPath").as_deref()
+        && !s.is_empty()
+    {
+        paths.push(s.clone());
     }
     paths
 }

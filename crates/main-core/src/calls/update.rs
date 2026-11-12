@@ -266,10 +266,7 @@ fn collect_launch_paths(args: &[Value]) -> Answer {
         .iter()
         .map(|v| v.as_str().ok_or_else(|| bad("an argv entry")))
         .collect::<Result<_, _>>()?;
-    let additional = match arg(args, 1) {
-        None => None,
-        Some(v) => Some(js_value(v)),
-    };
+    let additional = arg(args, 1).map(js_value);
     let paths =
         launch_paths::collect_launch_paths(&argv, additional.as_ref(), &|p| Path::new(p).exists());
     Ok(Some(Value::Array(
