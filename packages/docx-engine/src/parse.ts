@@ -244,7 +244,7 @@ import {
   resolveMainDocumentPath,
   resolveRelationshipTargetPath,
 } from './parse-package'
-import { parseSdtBlock, sdtMeta, sdtRanges, sdtTableXml, splitSdtParts } from './parse-sdt'
+import { parseSdtBlock, sdtMeta, sdtTableXml, splitSdtParts } from './parse-sdt'
 import { sdtCheckboxControl } from './checkbox-control'
 import { hfKeptRoot, hfWrapNamespaces, type HfRootName } from './hf-root'
 import {

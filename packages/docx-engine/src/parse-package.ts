@@ -8,7 +8,6 @@ import {
   findChild,
   findChildren,
   nameOf,
-  textOf,
   xmlParser,
   type XNode,
 } from './xml-utils'
