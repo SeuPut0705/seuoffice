@@ -61,6 +61,25 @@ describe('docx attachment: a span hidden from AI', () => {
     expect(JSON.stringify(result)).not.toContain(SECRET)
   })
 
+  it.each([
+    ['the old namespace', OLD_REDACT_NS],
+    ['this product’s own namespace', OWN_REDACT_NS],
+  ])('withholds a mark that binds %s as its default namespace', async (_n, ns) => {
+    const result = await read(
+      `<w:p><w:r><w:rPr><redact xmlns="${ns}" w:label="${LABEL}"/></w:rPr><w:t>${SECRET}</w:t></w:r></w:p>`,
+    )
+    expect(JSON.stringify(result)).not.toContain(SECRET)
+    expect(result.ok && result.text).toContain(`{{${LABEL}}}`)
+  })
+
+  it('fails the read when a default namespace declared above the run names the mark', async () => {
+    const result = await read(
+      `<w:p><w:r><w:rPr xmlns="${OWN_REDACT_NS}"><redact w:label="${LABEL}"/></w:rPr><w:t>${SECRET}</w:t></w:r></w:p>`,
+    )
+    expect(result.ok).toBe(false)
+    expect(JSON.stringify(result)).not.toContain(SECRET)
+  })
+
   it('an unmarked document reads exactly as before', async () => {
     const result = await read(
       '<w:p><w:r><w:t xml:space="preserve">Call </w:t></w:r><w:r><w:t>everyone</w:t></w:r></w:p>' +

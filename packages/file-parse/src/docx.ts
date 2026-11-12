@@ -300,7 +300,7 @@ function scanBody(
       continue
     }
     const opening = !close
-    if (opening && name !== undefined && redactElements.has(name)) {
+    if (opening && name !== undefined && isRedactElement(redactElements, name, attrs!)) {
       const label = /(?:^|\s)w:label="([^"]*)"/.exec(attrs!)?.[1]
       if (!label) throw new RedactionMarkError('a mark carries no label')
       // outside a run (a paragraph mark's properties) there are no words to withhold
@@ -468,20 +468,32 @@ function scanBody(
  * The element names a part's "hidden from AI" mark goes by: the prefixes the
  * part binds to either namespace the mark has been saved under, and how many
  * such elements it holds. Every one has to be read by the scan above; a trace
- * it cannot account for (no prefix bound, a mark outside any run) fails the
- * read, as the deck and workbook readers do.
+ * it cannot account for (no prefix bound, a mark outside any run, an
+ * unprefixed mark whose namespace is declared on an ancestor) fails the read,
+ * as the deck and workbook readers do.
  */
 function redactElementNames(xml: string): Set<string> & { count: number } {
   const names = new Set<string>() as Set<string> & { count: number }
   names.count = 0
-  if (!REDACT_NAMESPACES.some((ns) => xml.includes(ns)) && !/<[\w.-]+:redact\b/.test(xml)) {
+  const namespaced = REDACT_NAMESPACES.some((ns) => xml.includes(ns))
+  if (!namespaced && !/<[\w.-]+:redact\b/.test(xml)) {
     return names
   }
   for (const m of xml.matchAll(/xmlns:([\w.-]+)="([^"]*)"/g)) {
     if (REDACT_NAMESPACES.includes(m[2]!)) names.add(`${m[1]}:redact`)
   }
-  names.count = (xml.match(/<[\w.-]+:redact\b/g) ?? []).length
+  names.count =
+    (xml.match(/<[\w.-]+:redact\b/g) ?? []).length +
+    (namespaced ? (xml.match(/<redact\b/g) ?? []).length : 0)
   return names
+}
+
+/** A mark: a bound prefix, or an unprefixed element that declares the mark's namespace itself. */
+function isRedactElement(names: Set<string>, name: string, attrs: string): boolean {
+  if (names.has(name)) return true
+  if (name !== 'redact') return false
+  const ns = /(?:^|\s)xmlns=(["'])([^"']*)\1/.exec(attrs)?.[2]
+  return ns !== undefined && REDACT_NAMESPACES.includes(ns)
 }
 
 function decodeEntities(text: string): string {
