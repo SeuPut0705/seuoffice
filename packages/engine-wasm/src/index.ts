@@ -289,3 +289,5 @@ export function engineCall<Header extends object>(
   cursor += 4
   return { header: replyHeader, blobs: Array.from({ length: count }, take) }
 }
+
+export * from './invoke'

@@ -4,7 +4,7 @@ import {
   generateIndexFieldXml,
   generateTocFieldXml,
   type TocEntry,
-} from '../../packages/docx-engine/src/generate'
+} from './reference/generate'
 import type { CallSpec, Input } from './calls-spec'
 
 interface Para {

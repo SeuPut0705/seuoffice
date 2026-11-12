@@ -8,9 +8,7 @@ use docx_engine::model::{
     Block, NewChartSeriesItem, ParsedDocFull, SourceInfo, ThemeColors, ThemeFonts,
 };
 use docx_engine::save::features::chart_write::{self, ChartPatch};
-use docx_engine::save::features::compare::{
-    self, CompareGranularity, CompareIgnore, CompareOptions,
-};
+use docx_engine::save::features::compare::{self, CompareOptions};
 use docx_engine::save::features::content_control::{self, ContentControlSpec};
 use docx_engine::save::features::doc_properties_write::{self, PropertyChanges};
 use docx_engine::save::features::mail_merge::{self, MergeData, MergeRecord};
@@ -163,7 +161,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Option<Returned> {
         "parsePropertyChanges" => |_, args| {
             let changes =
                 doc_properties_write::parse_property_changes(&required::<Value>(args, "input")?)?;
-            value(property_changes_json(&changes))
+            value(changes.to_json())
         },
         "applyPropertyChanges" => |_, args| {
             let mut package = package(args)?;
@@ -275,39 +273,6 @@ fn to_number_arg(args: &Value, key: &str) -> Result<f64, String> {
 /// zips with the time it runs at, which the comparison does not read.
 const CLOCK_MS: f64 = 1_700_000_000_000.0;
 
-/// The `CompareOptions` a JSON object names; a field of another type is
-/// absent, as the TypeScript reads `options.author?.trim()` of a string.
-pub fn compare_options(options: Option<&Value>) -> CompareOptions {
-    let text_of = |name: &str| {
-        options
-            .and_then(|options| options.get(name))
-            .and_then(Value::as_str)
-            .map(str::to_owned)
-    };
-    let ignore: Vec<CompareIgnore> = options
-        .and_then(|options| options.get("ignore"))
-        .and_then(Value::as_array)
-        .map(|names| {
-            names
-                .iter()
-                .filter_map(|name| match name.as_str() {
-                    Some("formatting") => Some(CompareIgnore::Formatting),
-                    Some("case") => Some(CompareIgnore::Case),
-                    Some("whitespace") => Some(CompareIgnore::Whitespace),
-                    _ => None,
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-    CompareOptions {
-        author: text_of("author"),
-        date: text_of("date"),
-        granularity: (text_of("granularity").as_deref() == Some("char"))
-            .then_some(CompareGranularity::Char),
-        ignore,
-    }
-}
-
 /// `compareDocuments` over two parsed documents (each its model and its
 /// bytes): the redline as a docx and the summary as JSON.
 pub fn compare_documents(
@@ -316,14 +281,18 @@ pub fn compare_documents(
     options: Option<&Value>,
     now_ms: f64,
 ) -> Result<(Vec<u8>, Value), String> {
-    let (bytes, summary) =
-        compare::compare_documents(&original, &revised, &compare_options(options), now_ms)?;
+    let (bytes, summary) = compare::compare_documents(
+        &original,
+        &revised,
+        &CompareOptions::from_json(options),
+        now_ms,
+    )?;
     let summary = serde_json::to_value(summary).map_err(|error| error.to_string())?;
     Ok((bytes, summary))
 }
 
 fn compare_blocks(_text: &str, args: &Value) -> Returned {
-    let options = compare_options(args.get("options"));
+    let options = CompareOptions::from_json(args.get("options"));
     let document_xml: String = arg(args, "documentXml")?.unwrap_or_default();
     value(compare::compare_block_lists(
         &required::<Vec<Block>>(args, "original")?,
@@ -333,34 +302,6 @@ fn compare_blocks(_text: &str, args: &Value) -> Returned {
         // every input of the comparison names its date
         "1970-01-01T00:00:00.000Z",
     ))
-}
-
-/// `PropertyChanges` as `parsePropertyChanges` builds it: `clear` first, then
-/// the sections in the order they were read.
-fn property_changes_json(changes: &PropertyChanges) -> Value {
-    let mut out = serde_json::Map::new();
-    if changes.clear_all {
-        out.insert("clear".to_owned(), json!("all"));
-    }
-    if let Some(core) = &changes.core {
-        out.insert(
-            "core".to_owned(),
-            serde_json::to_value(core).unwrap_or(Value::Null),
-        );
-    }
-    if let Some(app) = &changes.app {
-        out.insert(
-            "app".to_owned(),
-            serde_json::to_value(app).unwrap_or(Value::Null),
-        );
-    }
-    if let Some(custom) = &changes.custom {
-        out.insert(
-            "custom".to_owned(),
-            serde_json::to_value(custom).unwrap_or(Value::Null),
-        );
-    }
-    Value::Object(out)
 }
 
 /// The entries of a package, in order: `[name, text]`, `null` for a folder.

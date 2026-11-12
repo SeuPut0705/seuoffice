@@ -1,6 +1,6 @@
 // Group `section`: the readers of section.ts, watermark.ts and notes.ts, and
 // the parse-vml.ts helpers the watermark readers stand on.
-import { nextNoteId, parseNotesXml, rootAttributes } from '../../packages/docx-engine/src/notes'
+import { nextNoteId, parseNotesXml, rootAttributes } from './reference/notes'
 import {
   anchorRelH,
   anchorRelV,
@@ -11,7 +11,7 @@ import {
   vmlRotationDeg,
   vmlStyleDimPx,
   vmlStyleProp,
-} from '../../packages/docx-engine/src/parse-vml'
+} from './reference/parse-vml'
 import {
   hfReferenceRId,
   hfReferenceTags,
@@ -24,13 +24,13 @@ import {
   sectionFromSectPr,
   sectionSettingsFromXml,
   xmlFlagOn,
-} from '../../packages/docx-engine/src/section'
+} from './reference/section'
 import type {
   HfImage,
   ParsedDoc,
   SectionInfo,
   SectionSettings,
-} from '../../packages/docx-engine/src/types'
+} from './reference/types'
 import {
   isPictureWatermark,
   isPictureWatermarkShape,
@@ -47,7 +47,7 @@ import {
   type PictureWatermarkSpec,
   type Watermark,
   type WatermarkSpec,
-} from '../../packages/docx-engine/src/watermark'
+} from './reference/watermark'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments, tagTokens } from './fragments'
 
@@ -742,32 +742,11 @@ const ROOT_INPUTS: Input[] = ROOTS.flatMap((text) =>
   ),
 )
 
-/**
- * Page border sides and header/footer references are objects filled in file
- * order, which JSON compares without: they cross as their entries.
- */
-function orderedSettings(settings: SectionSettings): unknown {
-  const props = settings.pageBorderProps
-  if (!props) return settings
-  return { ...settings, pageBorderProps: { ...props, sides: Object.entries(props.sides ?? {}) } }
-}
-
-function orderedSection(section: SectionInfo): unknown {
-  return {
-    ...section,
-    settings: orderedSettings(section.settings),
-    headerRefs: Object.entries(section.headerRefs),
-    footerRefs: Object.entries(section.footerRefs),
-  }
-}
-
 export const SECTION: CallSpec[] = [
   {
     fn: 'section.sectionSettingsFromXml',
     call: (text, args) =>
-      orderedSettings(
-        sectionSettingsFromXml(text, { gutterAtTop: args.gutterAtTop as boolean | undefined }),
-      ),
+      sectionSettingsFromXml(text, { gutterAtTop: args.gutterAtTop as boolean | undefined }),
     fromDocument: (parts) =>
       sectPrsOf(parts).map((text) => ({ text, args: { gutterAtTop: gutterAtTopOf(parts) } })),
     built: SECT_PRS.flatMap((text) => [{ text }, { text, args: { gutterAtTop: true } }]),
@@ -791,7 +770,7 @@ export const SECTION: CallSpec[] = [
   },
   {
     fn: 'section.readSectionSettings',
-    call: (_text, args) => orderedSettings(readSectionSettings(parsedOf(args))),
+    call: (_text, args) => readSectionSettings(parsedOf(args)),
     fromDocument: (parts) => [
       { args: { blocks: blocksOf(documentOf(parts)), gutterAtTop: gutterAtTopOf(parts) } },
     ],
@@ -849,13 +828,11 @@ export const SECTION: CallSpec[] = [
   {
     fn: 'section.sectionFromSectPr',
     call: (text, args) =>
-      orderedSection(
-        sectionFromSectPr(
-          text,
-          args.first as number,
-          args.last as number,
-          args.gutterAtTop as boolean | undefined,
-        ),
+      sectionFromSectPr(
+        text,
+        args.first as number,
+        args.last as number,
+        args.gutterAtTop as boolean | undefined,
       ),
     fromDocument: (parts) =>
       sectPrsOf(parts).map((text, i) => ({
@@ -869,7 +846,7 @@ export const SECTION: CallSpec[] = [
   },
   {
     fn: 'section.readSections',
-    call: (_text, args) => readSections(parsedOf(args)).map(orderedSection),
+    call: (_text, args) => readSections(parsedOf(args)),
     fromDocument: (parts) => [
       { args: { blocks: blocksOf(documentOf(parts)), gutterAtTop: gutterAtTopOf(parts) } },
     ],

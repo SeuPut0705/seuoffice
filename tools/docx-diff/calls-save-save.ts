@@ -3,9 +3,9 @@
 // them), run-picture.ts, and the write halves of section.ts, notes.ts and
 // xml-number.ts. `saveDocx` itself is compared whole by model-save.ts, comparison
 // (i), over the corpus and edited models.
-import { buildNotesXml } from '../../packages/docx-engine/src/notes'
-import { missingHeadingLevels, nextFreeRelId, type SaveBlock } from '../../packages/docx-engine/src/patch'
-import { patchHfPicturesXml, patchRunPictureXml } from '../../packages/docx-engine/src/run-picture'
+import { buildNotesXml } from './reference/notes'
+import { missingHeadingLevels, nextFreeRelId, type SaveBlock } from './reference/patch'
+import { patchHfPicturesXml, patchRunPictureXml } from './reference/run-picture'
 import {
   applyPageNumType,
   applySectionSettings,
@@ -13,8 +13,8 @@ import {
   applyTitlePg,
   injectIntoSectPr,
   pageBordersXml,
-} from '../../packages/docx-engine/src/section'
-import { usableNumber, usablePictureSize, usablePositionOffset } from '../../packages/docx-engine/src/xml-number'
+} from './reference/section'
+import { usableNumber, usablePictureSize, usablePositionOffset } from './reference/xml-number'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { saveInternals } from './save-internals'
 

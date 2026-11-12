@@ -172,7 +172,7 @@ impl AlternateContent {
 
 /// `vmlFloatAnchor(style, image)` on an `HfImage`: the keys the VML anchor
 /// reads are set on the image, after the keys it has.
-fn float_anchor(style: &str, image: &mut HfImage) {
+pub fn float_anchor(style: &str, image: &mut HfImage) {
     let mut anchor = FloatAnchor::default();
     vml_float_anchor(style, &mut anchor);
     for key in anchor.keys() {

@@ -21,6 +21,8 @@ pub mod list_markers;
 pub mod model;
 pub mod notes;
 pub mod numbering;
+#[path = "old-names.rs"]
+pub mod old_names;
 pub mod package;
 pub mod parse;
 pub mod props;
@@ -37,6 +39,7 @@ pub mod styles;
 pub mod symbol_fonts;
 pub mod theme;
 pub mod vml;
+pub mod warnings;
 pub mod watermark;
 pub mod xml_number;
 pub mod xml_tag;

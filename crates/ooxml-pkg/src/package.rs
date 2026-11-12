@@ -26,6 +26,9 @@ impl std::error::Error for ReadError {}
 pub struct Part {
     pub name: String,
     pub is_dir: bool,
+    /// The date of a loaded entry (a time value), which a save keeps; `None`
+    /// for a part the save writes new, which takes the time of the save.
+    pub date: Option<f64>,
     content: Result<Vec<u8>, String>,
     text: OnceCell<String>,
 }
@@ -35,9 +38,16 @@ impl Part {
         Self {
             name,
             is_dir,
+            date: None,
             content,
             text: OnceCell::new(),
         }
+    }
+
+    /// The part with the date of its entry: `out.file(name, data, { date })`.
+    pub fn with_date(mut self, date: Option<f64>) -> Self {
+        self.date = date;
+        self
     }
 
     /// `file.async('uint8array')`
@@ -128,8 +138,13 @@ impl Package {
     /// `zip.file(name, data)`: the folders above the file are created first
     /// where they are missing, as JSZip does by default.
     pub fn set_file(&mut self, name: String, bytes: Vec<u8>) {
+        self.set_file_dated(name, bytes, None);
+    }
+
+    /// `zip.file(name, bytes, { date })`
+    pub fn set_file_dated(&mut self, name: String, bytes: Vec<u8>, date: Option<f64>) {
         self.add_parent_folders(&name);
-        self.set(Part::new(name, false, Ok(bytes)));
+        self.set(Part::new(name, false, Ok(bytes)).with_date(date));
     }
 
     /// The folders above `name` that are missing, created outermost first. A

@@ -1,8 +1,8 @@
 // Group genRpr: the run property builders of generate.ts (RPR_CHILD_ORDER
 // through mergeRPrModel). runRPrXml is not exported; mergeRPrModel over an
 // unrecognizable rPr ('' or '<w:rPr/>') takes its no-raw path.
-import { mergeRPrModel } from '../../packages/docx-engine/src/generate'
-import type { Run } from '../../packages/docx-engine/src/types'
+import { mergeRPrModel } from './reference/generate'
+import type { Run } from './reference/types'
 import type { CallSpec, Input } from './calls-spec'
 import { rprModelInputs } from './generate-model-inputs'
 

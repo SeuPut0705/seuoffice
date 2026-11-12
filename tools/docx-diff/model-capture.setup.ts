@@ -2,12 +2,12 @@ import { appendFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { threadId } from 'node:worker_threads'
 import { expect, vi } from 'vitest'
-import type * as ParseModule from '../../packages/docx-engine/src/parse'
-import type { ParseExtras, ParseOptions } from '../../packages/docx-engine/src/parse'
-import type { ParsedDoc } from '../../packages/docx-engine/src/types'
+import type * as ParseModule from './reference/parse'
+import type { ParseExtras, ParseOptions } from './reference/parse'
+import type { ParsedDoc } from './reference/types'
 import { modelDigest, modelJson } from './model-wire'
 
-vi.mock('../../packages/docx-engine/src/parse', async (importOriginal) => {
+vi.mock('./reference/parse', async (importOriginal) => {
   const actual = await importOriginal<typeof ParseModule>()
   return {
     ...actual,

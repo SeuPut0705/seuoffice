@@ -154,7 +154,7 @@ pub struct BuildContext<'a> {
     /// `compatibilityMode`
     pub compatibility_mode: Option<JsNum>,
     /// `resolveDiff`: shadow mode collector (none: shadow mode off)
-    pub resolve_diff: Option<RefCell<Vec<ShadowDiff>>>,
+    pub resolve_diff: Option<Rc<RefCell<Vec<ShadowDiff>>>>,
     /// `xmlSpacePreserve`
     pub xml_space_preserve: bool,
     /// `partNamespaces`: prefix to namespace URI of the part root (none: no declarations known)

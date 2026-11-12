@@ -11,8 +11,8 @@ import {
   isLatinAlnumChar,
   textHasEastAsian,
   textHasHangulChars,
-} from '../../packages/docx-engine/src/char-class'
-import { findStartTag, removeElements } from '../../packages/docx-engine/src/xml-tag'
+} from './reference/char-class'
+import { findStartTag, removeElements } from './reference/xml-tag'
 import type { CallSpec, Input } from './calls-spec'
 
 /** Every boundary of every range charClass names, one either side, and a few inside. */

@@ -1,7 +1,7 @@
 // Documents built to reach parser paths the tracked corpus does not, so that
 // the key orders observed in parse results (model-gen.ts --observe-orders)
 // include the orders those paths write. Each one names the producer in
-// packages/docx-engine/src it reaches. The capture (model-inputs.ts) and the
+// tools/docx-diff/reference it reaches. The capture (model-inputs.ts) and the
 // gate (model-run.ts) parse every one with the same buildDocx call.
 import { buildDocx, type BuildDocxOptions } from '../../packages/docx-engine/tests/helpers/build-docx'
 

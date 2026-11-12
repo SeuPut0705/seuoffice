@@ -11,6 +11,7 @@ use crate::model::ImageWrap;
 use crate::xml_number::{
     xml_decimal, xml_int, xml_position_offset, xml_positive_coordinate, xml_unsigned_int,
 };
+use serde::{Deserialize, Deserializer};
 
 const EMU_PER_PX: f64 = 9525.0;
 
@@ -53,16 +54,34 @@ fn replace_str(text: &str, pattern: &str, template: &str) -> String {
     }
 }
 
+/// A field that tells `undefined` (absent) from `null` (`Some(None)`).
+pub(crate) fn nullable<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::<T>::deserialize(deserializer).map(Some)
+}
+
 /// `ImagePatch`. `align` is `None` for undefined and `Some(None)` for null.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ImagePatch {
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub width_px: Option<f64>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub height_px: Option<f64>,
+    #[serde(default, deserialize_with = "nullable")]
     pub align: Option<Option<String>>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub pos_offset_x: Option<f64>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub pos_offset_y: Option<f64>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub rot_deg: Option<f64>,
+    #[serde(default)]
     pub flip_h: Option<bool>,
+    #[serde(default)]
     pub flip_v: Option<bool>,
 }
 
@@ -257,15 +276,19 @@ pub fn apply_image_z_order(xml: &str, z_order: Option<f64>) -> String {
 }
 
 /// `posOffset` of `applyImageWrap`; `relative_to` is `'page' | 'margin'`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PosOffset {
+    #[serde(deserialize_with = "jscompat::js_f64")]
     pub x: f64,
+    #[serde(deserialize_with = "jscompat::js_f64")]
     pub y: f64,
+    #[serde(default)]
     pub relative_to: Option<String>,
 }
 
 /// `marginAlign` of `applyImageWrap`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MarginAlign {
     pub h: String,
     pub v: String,
@@ -436,9 +459,12 @@ fn box_drawing_segments(paragraph_xml: &str) -> Vec<(usize, usize)> {
 }
 
 /// `ShapeDrawingLocation`. `box_index` is a number: only an array index finds a drawing.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ShapeDrawingLocation {
+    #[serde(default)]
     pub shape_id: Option<String>,
+    #[serde(deserialize_with = "jscompat::js_f64")]
     pub box_index: f64,
 }
 
@@ -745,9 +771,12 @@ fn is_box_drawing(drawing_xml: &str) -> bool {
 }
 
 /// `TextboxSizePatch`; `None` is null or undefined.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TextboxSizePatch {
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub w_px: Option<f64>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub h_px: Option<f64>,
 }
 
@@ -829,11 +858,16 @@ pub fn patch_textbox_sizes(paragraph_xml: &str, sizes: &[Option<TextboxSizePatch
 }
 
 /// `ShapeStylePatch`: `None` is undefined (keep), `Some(None)` is null.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ShapeStylePatch {
+    #[serde(default, deserialize_with = "nullable")]
     pub fill_hex: Option<Option<String>>,
+    #[serde(default, deserialize_with = "nullable")]
     pub border_hex: Option<Option<String>>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_nullable")]
     pub rot_deg: Option<Option<f64>>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_nullable")]
     pub border_width_px: Option<Option<f64>>,
 }
 

@@ -5,8 +5,8 @@
 // Every input that carries bookmarks has `bookmarkIds: true`: without an
 // allocator both engines fall back to a process-wide counter whose value
 // depends on what ran before, which a comparison cannot line up.
-import { generateParagraphXml, type GenerateContext } from '../../packages/docx-engine/src/generate'
-import type { GeneratedBlock, ParsedDoc, Run } from '../../packages/docx-engine/src/types'
+import { generateParagraphXml, type GenerateContext } from './reference/generate'
+import type { GeneratedBlock, ParsedDoc, Run } from './reference/types'
 import type { CallSpec, Input } from './calls-spec'
 
 interface CtxArg {

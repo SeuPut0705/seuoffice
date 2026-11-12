@@ -83,6 +83,7 @@ pub fn run_resolve_of<'a>(
         rctx,
         memo: JsMap::new(),
         para_rtl,
+        diff: ctx.resolve_diff.clone(),
     })
 }
 
@@ -286,7 +287,8 @@ pub fn ppr_only_format_map(p_pr: &XNode, theme: Option<&ThemeColors>) -> Map<Str
             }
         }
     }
-    if let Some(sides) = para_border_sides_of(p_pr, theme) {
+    // `paraBorderSidesOf(pPr)`: the model keeps the literal colour, no theme
+    if let Some(sides) = para_border_sides_of(p_pr, None) {
         assign(
             &mut format,
             super::convert::into_map(json(&para_borders_of(&sides))),

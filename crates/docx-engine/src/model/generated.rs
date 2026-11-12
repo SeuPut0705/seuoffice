@@ -78,6 +78,10 @@ impl<'de> Deserialize<'de> for PictureWatermarkInfo {
                 let mut v_height_pt = None;
                 let mut v_washout = None;
                 while let Some(Key(key)) = map.next_key::<Key<PictureWatermarkInfoKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -174,6 +178,10 @@ impl<'de> Deserialize<'de> for RevisionInfo {
                 let mut v_id = None;
                 let mut v_move = None;
                 while let Some(Key(key)) = map.next_key::<Key<RevisionInfoKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -310,6 +318,10 @@ impl<'de> Deserialize<'de> for PropChangeInfo {
                 let mut v_v_merge_orig = None;
                 let mut v_resolved = None;
                 while let Some(Key(key)) = map.next_key::<Key<PropChangeInfoKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -424,6 +436,10 @@ impl<'de> Deserialize<'de> for TextOutline {
                 let mut v_width_pt = None;
                 let mut v_alpha = None;
                 while let Some(Key(key)) = map.next_key::<Key<TextOutlineKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -540,6 +556,10 @@ impl<'de> Deserialize<'de> for TextGlow {
                 let mut v_radius_pt = None;
                 let mut v_alpha = None;
                 while let Some(Key(key)) = map.next_key::<Key<TextGlowKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -772,6 +792,10 @@ impl<'de> Deserialize<'de> for Run {
                 let mut seen = Seen::default();
                 let mut b_0 = Run::default();
                 while let Some(Key(key)) = map.next_key::<Key<RunKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -906,6 +930,10 @@ impl<'de> Deserialize<'de> for RunThemeRFonts {
                 let mut v_font = None;
                 let mut v_font_ascii = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunThemeRFontsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -1024,6 +1052,10 @@ impl<'de> Deserialize<'de> for RunBdr {
                 let mut v_color = None;
                 let mut v_space = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunBdrKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -1198,6 +1230,10 @@ impl<'de> Deserialize<'de> for EffectiveRPr {
                 let mut v_source = None;
                 let mut v_style_xor = None;
                 while let Some(Key(key)) = map.next_key::<Key<EffectiveRPrKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -1304,6 +1340,10 @@ impl<'de> Deserialize<'de> for EffectiveRPrFonts {
                 let mut v_cs = None;
                 let mut v_ea_slot_empty = None;
                 while let Some(Key(key)) = map.next_key::<Key<EffectiveRPrFontsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -1607,6 +1647,10 @@ impl<'de> Deserialize<'de> for RunLink {
                 let mut v_tooltip = None;
                 let mut v_plain = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunLinkKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -1680,6 +1724,10 @@ impl<'de> Deserialize<'de> for RunNoteRef {
                 let mut v_kind = None;
                 let mut v_id = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunNoteRefKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -1836,6 +1884,10 @@ impl<'de> Deserialize<'de> for InlineWrap {
                 let mut v_inside = None;
                 let mut v_text = None;
                 while let Some(Key(key)) = map.next_key::<Key<InlineWrapKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -1976,6 +2028,10 @@ impl<'de> Deserialize<'de> for RunRPrChange {
                 let mut v_old_r_pr = None;
                 let mut v_old = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunRPrChangeKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -2189,6 +2245,10 @@ impl<'de> Deserialize<'de> for RunRPrChangeOld {
                 let mut v_rtl = None;
                 let mut v_theme_color = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunRPrChangeOldKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -2350,6 +2410,10 @@ impl<'de> Deserialize<'de> for RunMath {
                 let mut v_display = None;
                 let mut v_break_after = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunMathKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -2422,6 +2486,10 @@ impl<'de> Deserialize<'de> for RunSym {
                 let mut v_font = None;
                 let mut v_char = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunSymKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -2493,6 +2561,10 @@ impl<'de> Deserialize<'de> for RunRuby {
                 let mut v_rt = None;
                 let mut v_xml = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunRubyKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -2711,6 +2783,10 @@ impl<'de> Deserialize<'de> for RunImage {
                 let mut v_layers = None;
                 let mut v_rule = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunImageKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -2988,6 +3064,10 @@ impl<'de> Deserialize<'de> for RunImageBorder {
                 let mut v_color = None;
                 let mut v_width_pt = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunImageBorderKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -3074,6 +3154,10 @@ impl<'de> Deserialize<'de> for RunImageLayersItem {
                 let mut v_w = None;
                 let mut v_h = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunImageLayersItemKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -3173,6 +3257,10 @@ impl<'de> Deserialize<'de> for RunImageRule {
                 let mut v_width_px = None;
                 let mut v_align = None;
                 while let Some(Key(key)) = map.next_key::<Key<RunImageRuleKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -3286,6 +3374,10 @@ impl<'de> Deserialize<'de> for CommentImage {
                 let mut v_width_px = None;
                 let mut v_height_px = None;
                 while let Some(Key(key)) = map.next_key::<Key<CommentImageKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -3453,6 +3545,10 @@ impl<'de> Deserialize<'de> for NewImage {
                 let mut v_flip_h = None;
                 let mut v_flip_v = None;
                 while let Some(Key(key)) = map.next_key::<Key<NewImageKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -3611,6 +3707,10 @@ impl<'de> Deserialize<'de> for NewImagePosOffsetEmu {
                 let mut v_y = None;
                 let mut v_relative_to = None;
                 while let Some(Key(key)) = map.next_key::<Key<NewImagePosOffsetEmuKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -3796,6 +3896,10 @@ impl<'de> Deserialize<'de> for NewImageParaSpacing {
                 let mut v_line_twips = None;
                 let mut v_line_rule = None;
                 while let Some(Key(key)) = map.next_key::<Key<NewImageParaSpacingKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -3945,6 +4049,10 @@ impl<'de> Deserialize<'de> for CommentInfo {
                 let mut v_done = None;
                 let mut v_para_id = None;
                 while let Some(Key(key)) = map.next_key::<Key<CommentInfoKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -4131,6 +4239,10 @@ impl<'de> Deserialize<'de> for SdtShell {
                 let mut v_close_block = None;
                 let mut v_close_offset = None;
                 while let Some(Key(key)) = map.next_key::<Key<SdtShellKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -4269,6 +4381,10 @@ impl<'de> Deserialize<'de> for InlineContentControl {
                 let mut v_id = None;
                 let mut v_text = None;
                 while let Some(Key(key)) = map.next_key::<Key<InlineContentControlKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -4364,6 +4480,10 @@ impl<'de> Deserialize<'de> for TabStop {
                 let mut v_rel = None;
                 let mut v_inherited = None;
                 while let Some(Key(key)) = map.next_key::<Key<TabStopKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -4571,6 +4691,10 @@ impl<'de> Deserialize<'de> for ParaBorderLine {
                 let mut v_space_pt = None;
                 let mut v_none = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParaBorderLineKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -4662,6 +4786,10 @@ impl<'de> Deserialize<'de> for ParaBorderSides {
                 let mut v_l = None;
                 let mut v_r = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParaBorderSidesKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -4810,6 +4938,10 @@ impl<'de> Deserialize<'de> for ParaFrame {
                 let mut v_y_align = None;
                 let mut v_anchor_lock = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParaFrameKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -5169,6 +5301,10 @@ impl<'de> Deserialize<'de> for ImageEffects {
                 let mut v_grayscale = None;
                 let mut v_bi_level_thresh = None;
                 while let Some(Key(key)) = map.next_key::<Key<ImageEffectsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -5274,6 +5410,10 @@ impl<'de> Deserialize<'de> for ParaFrameBox {
                 let mut v_v_space_twips = None;
                 let mut v_float_side = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParaFrameBoxKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -5425,6 +5565,10 @@ impl<'de> Deserialize<'de> for CharIndents {
                 let mut v_first_line = None;
                 let mut v_hanging = None;
                 while let Some(Key(key)) = map.next_key::<Key<CharIndentsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -5648,6 +5792,10 @@ impl<'de> Deserialize<'de> for ParaFormat {
                 let mut seen = Seen::default();
                 let mut b_0 = ParaFormat::default();
                 while let Some(Key(key)) = map.next_key::<Key<ParaFormatKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -5806,6 +5954,10 @@ impl<'de> Deserialize<'de> for ParaFormatBorderStyle {
                 let mut v_sz_eighths = None;
                 let mut v_space_pt = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParaFormatBorderStyleKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -5896,6 +6048,10 @@ impl<'de> Deserialize<'de> for ParaFormatBorderLines {
                 let mut v_l = None;
                 let mut v_r = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParaFormatBorderLinesKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -5987,6 +6143,10 @@ impl<'de> Deserialize<'de> for ParaFormatBorderPad {
                 let mut v_l = None;
                 let mut v_r = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParaFormatBorderPadKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -6060,6 +6220,10 @@ impl<'de> Deserialize<'de> for ParaFormatDropCap {
                 let mut v_type = None;
                 let mut v_lines = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParaFormatDropCapKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -6282,6 +6446,10 @@ impl<'de> Deserialize<'de> for EffectivePPr {
                 let mut v_hidden = None;
                 let mut v_source = None;
                 while let Some(Key(key)) = map.next_key::<Key<EffectivePPrKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -6387,6 +6555,10 @@ impl<'de> Deserialize<'de> for EffectivePPrIndent {
                 let mut v_first_line = None;
                 let mut v_chars = None;
                 while let Some(Key(key)) = map.next_key::<Key<EffectivePPrIndentKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -6477,6 +6649,10 @@ impl<'de> Deserialize<'de> for EffectivePPrSpacing {
                 let mut v_after_auto = None;
                 let mut v_line = None;
                 while let Some(Key(key)) = map.next_key::<Key<EffectivePPrSpacingKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -6551,6 +6727,10 @@ impl<'de> Deserialize<'de> for LineSpacing {
                 let mut v_rule = None;
                 let mut v_raw = None;
                 while let Some(Key(key)) = map.next_key::<Key<LineSpacingKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -6662,6 +6842,10 @@ impl<'de> Deserialize<'de> for EffectivePPrList {
                 let mut v_ilvl = None;
                 let mut v_level = None;
                 while let Some(Key(key)) = map.next_key::<Key<EffectivePPrListKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -6872,6 +7056,10 @@ impl<'de> Deserialize<'de> for NumberingLevel {
                 let mut v_p_style = None;
                 let mut v_lvl_restart = None;
                 while let Some(Key(key)) = map.next_key::<Key<NumberingLevelKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -7041,6 +7229,10 @@ impl<'de> Deserialize<'de> for LineNumbering {
                 let mut v_distance = None;
                 let mut v_restart = None;
                 while let Some(Key(key)) = map.next_key::<Key<LineNumberingKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -7156,6 +7348,10 @@ impl<'de> Deserialize<'de> for DocGrid {
                 let mut v_line_pitch = None;
                 let mut v_char_space = None;
                 while let Some(Key(key)) = map.next_key::<Key<DocGridKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -7263,6 +7459,10 @@ impl<'de> Deserialize<'de> for NoteProps {
                 let mut seen = Seen::default();
                 let mut b_0 = NoteProps::default();
                 while let Some(Key(key)) = map.next_key::<Key<NotePropsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -7553,6 +7753,10 @@ impl<'de> Deserialize<'de> for SectionSettings {
                 let mut v_footnote_pr = None;
                 let mut v_endnote_pr = None;
                 while let Some(Key(key)) = map.next_key::<Key<SectionSettingsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -7711,6 +7915,10 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderProps {
                 let mut v_color = None;
                 let mut v_sides = None;
                 while let Some(Key(key)) = map.next_key::<Key<SectionSettingsPageBorderPropsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -7888,6 +8096,10 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsSides {
                 let mut v_bottom = None;
                 let mut v_left = None;
                 while let Some(Key(key)) = map.next_key::<Key<SectionSettingsPageBorderPropsSidesKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -7994,6 +8206,10 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsSidesValue {
                 let mut v_shadow = None;
                 let mut v_frame = None;
                 while let Some(Key(key)) = map.next_key::<Key<SectionSettingsPageBorderPropsSidesValueKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -8158,6 +8374,10 @@ impl<'de> Deserialize<'de> for SectionInfo {
                 let mut v_footer_refs = None;
                 let mut v_pending_break = None;
                 while let Some(Key(key)) = map.next_key::<Key<SectionInfoKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -8290,6 +8510,10 @@ impl<'de> Deserialize<'de> for SectionInfoHeaderRefs {
                 let mut v_first = None;
                 let mut v_even = None;
                 while let Some(Key(key)) = map.next_key::<Key<SectionInfoHeaderRefsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -8373,6 +8597,10 @@ impl<'de> Deserialize<'de> for SectionInfoFooterRefs {
                 let mut v_first = None;
                 let mut v_even = None;
                 while let Some(Key(key)) = map.next_key::<Key<SectionInfoFooterRefsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -8684,6 +8912,10 @@ impl<'de> Deserialize<'de> for HfParagraph {
                 let mut seen = Seen::default();
                 let mut b_0 = HfParagraph::default();
                 while let Some(Key(key)) = map.next_key::<Key<HfParagraphKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -8886,6 +9118,10 @@ impl<'de> Deserialize<'de> for HfTextBox {
                 let mut seen = Seen::default();
                 let mut b_0 = HfTextBox::default();
                 while let Some(Key(key)) = map.next_key::<Key<HfTextBoxKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -9026,6 +9262,10 @@ impl<'de> Deserialize<'de> for HfImage {
                 let mut seen = Seen::default();
                 let mut b_0 = HfImage::default();
                 while let Some(Key(key)) = map.next_key::<Key<HfImageKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -9304,6 +9544,10 @@ impl<'de> Deserialize<'de> for HfImageWashout {
                 let mut v_gain = None;
                 let mut v_black_level = None;
                 while let Some(Key(key)) = map.next_key::<Key<HfImageWashoutKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -9401,6 +9645,10 @@ impl<'de> Deserialize<'de> for HfImageWordArt {
                 let mut v_color_hex = None;
                 let mut v_opacity = None;
                 while let Some(Key(key)) = map.next_key::<Key<HfImageWordArtKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -9519,6 +9767,10 @@ impl<'de> Deserialize<'de> for HfImageCrop {
                 let mut v_r = None;
                 let mut v_b = None;
                 while let Some(Key(key)) = map.next_key::<Key<HfImageCropKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -9602,6 +9854,10 @@ impl<'de> Deserialize<'de> for HfImageWrapDistPx {
                 let mut v_t = None;
                 let mut v_b = None;
                 while let Some(Key(key)) = map.next_key::<Key<HfImageWrapDistPxKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -9834,6 +10090,10 @@ impl<'de> Deserialize<'de> for HfTableCell {
                 let mut v_rewrite_format = None;
                 let mut v_prior_para_props = None;
                 while let Some(Key(key)) = map.next_key::<Key<HfTableCellKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -9992,6 +10252,10 @@ impl<'de> Deserialize<'de> for HfCellParaProps {
                 let mut v_style_id = None;
                 let mut v_size_half_points = None;
                 while let Some(Key(key)) = map.next_key::<Key<HfCellParaPropsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -10077,6 +10341,10 @@ impl<'de> Deserialize<'de> for CellBorders {
                 let mut seen = Seen::default();
                 let mut b_0 = CellBorders::default();
                 while let Some(Key(key)) = map.next_key::<Key<CellBordersKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -10161,6 +10429,10 @@ impl<'de> Deserialize<'de> for CellBorder {
                 let mut v_sz_eighths = None;
                 let mut v_color = None;
                 while let Some(Key(key)) = map.next_key::<Key<CellBorderKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -10264,6 +10536,10 @@ impl<'de> Deserialize<'de> for CellMargins {
                 let mut seen = Seen::default();
                 let mut b_0 = CellMargins::default();
                 while let Some(Key(key)) = map.next_key::<Key<CellMarginsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -10397,6 +10673,10 @@ impl<'de> Deserialize<'de> for HfTableRow {
                 let mut v_width_twips = None;
                 let mut v_float = None;
                 while let Some(Key(key)) = map.next_key::<Key<HfTableRowKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -10534,6 +10814,10 @@ impl<'de> Deserialize<'de> for HfTableRowSource {
                 let mut v_tbl = None;
                 let mut v_tr = None;
                 while let Some(Key(key)) = map.next_key::<Key<HfTableRowSourceKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -10659,6 +10943,10 @@ impl<'de> Deserialize<'de> for HfTableFloat {
                 let mut v_vert_anchor = None;
                 let mut v_x_spec = None;
                 while let Some(Key(key)) = map.next_key::<Key<HfTableFloatKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -10850,6 +11138,10 @@ impl<'de> Deserialize<'de> for NumberingDef {
                 let mut v_levels = None;
                 let mut v_start_overrides = None;
                 while let Some(Key(key)) = map.next_key::<Key<NumberingDefKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -10967,6 +11259,10 @@ impl<'de> Deserialize<'de> for HeaderFooter {
                 let mut v_revisions_resolved = None;
                 let mut v_keep_content = None;
                 while let Some(Key(key)) = map.next_key::<Key<HeaderFooterKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -11044,6 +11340,10 @@ impl<'de> Deserialize<'de> for HeaderFooterNewPicturesValue {
                 let mut v_base64 = None;
                 let mut v_mime = None;
                 while let Some(Key(key)) = map.next_key::<Key<HeaderFooterNewPicturesValueKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -11129,6 +11429,10 @@ impl<'de> Deserialize<'de> for HfPictureEdit {
                 let mut v_width_px = None;
                 let mut v_height_px = None;
                 while let Some(Key(key)) = map.next_key::<Key<HfPictureEditKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -11204,6 +11508,10 @@ impl<'de> Deserialize<'de> for RevisionResolution {
                 let mut v_mode = None;
                 let mut v_filter = None;
                 while let Some(Key(key)) = map.next_key::<Key<RevisionResolutionKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -11329,6 +11637,10 @@ impl<'de> Deserialize<'de> for RevisionXmlFilter {
                 let mut v_date = None;
                 let mut v_ids = None;
                 while let Some(Key(key)) = map.next_key::<Key<RevisionXmlFilterKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -11452,6 +11764,10 @@ impl<'de> Deserialize<'de> for HfPartInfo {
                 let mut v_paras = None;
                 let mut v_images = None;
                 while let Some(Key(key)) = map.next_key::<Key<HfPartInfoKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -11604,6 +11920,10 @@ impl<'de> Deserialize<'de> for NoteRun {
                 let mut v_ins = None;
                 let mut v_del = None;
                 while let Some(Key(key)) = map.next_key::<Key<NoteRunKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -11761,6 +12081,10 @@ impl<'de> Deserialize<'de> for NoteInfo {
                 let mut v_spacing = None;
                 let mut v_revisions_resolved = None;
                 while let Some(Key(key)) = map.next_key::<Key<NoteInfoKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -11856,6 +12180,10 @@ impl<'de> Deserialize<'de> for NoteInfoSpacing {
                 let mut v_line_rule = None;
                 let mut v_line_raw_twips = None;
                 while let Some(Key(key)) = map.next_key::<Key<NoteInfoSpacingKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -12034,6 +12362,10 @@ impl<'de> Deserialize<'de> for FieldRun {
                 let mut v_style_id = None;
                 let mut v_math = None;
                 while let Some(Key(key)) = map.next_key::<Key<FieldRunKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -12320,6 +12652,10 @@ impl<'de> Deserialize<'de> for FieldDisplay {
                 let mut v_indent_first_line_twips = None;
                 let mut v_additive_spacing = None;
                 while let Some(Key(key)) = map.next_key::<Key<FieldDisplayKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -12609,6 +12945,10 @@ impl<'de> Deserialize<'de> for FormulaDisplay {
                 let mut v_indent_first_line_twips = None;
                 let mut v_additive_spacing = None;
                 while let Some(Key(key)) = map.next_key::<Key<FormulaDisplayKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -12761,6 +13101,10 @@ impl<'de> Deserialize<'de> for ChartAxis {
                 let mut v_color = None;
                 let mut v_grid_line = None;
                 while let Some(Key(key)) = map.next_key::<Key<ChartAxisKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -12873,6 +13217,10 @@ impl<'de> Deserialize<'de> for ChartSeries {
                 let mut v_sizes = None;
                 let mut v_line = None;
                 while let Some(Key(key)) = map.next_key::<Key<ChartSeriesKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -13004,6 +13352,10 @@ impl<'de> Deserialize<'de> for ChartDisplay {
                 let mut seen = Seen::default();
                 let mut b_0 = ChartDisplay::default();
                 while let Some(Key(key)) = map.next_key::<Key<ChartDisplayKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -13255,6 +13607,10 @@ impl<'de> Deserialize<'de> for ChartDisplayDataLabels {
                 let mut v_color = None;
                 let mut v_num_fmt = None;
                 while let Some(Key(key)) = map.next_key::<Key<ChartDisplayDataLabelsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -13388,6 +13744,10 @@ impl<'de> Deserialize<'de> for ChartDisplayDataTable {
                 let mut v_outline = None;
                 let mut v_line = None;
                 while let Some(Key(key)) = map.next_key::<Key<ChartDisplayDataTableKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -13542,6 +13902,10 @@ impl<'de> Deserialize<'de> for DiagramShape {
                 let mut v_text_color_hex = None;
                 let mut v_rot_deg = None;
                 while let Some(Key(key)) = map.next_key::<Key<DiagramShapeKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -13635,6 +13999,10 @@ impl<'de> Deserialize<'de> for DiagramShapeFillRect {
                 let mut v_r = None;
                 let mut v_b = None;
                 while let Some(Key(key)) = map.next_key::<Key<DiagramShapeFillRectKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -13741,6 +14109,10 @@ impl<'de> Deserialize<'de> for DiagramDisplay {
                 let mut v_floating = None;
                 let mut v_canvas = None;
                 while let Some(Key(key)) = map.next_key::<Key<DiagramDisplayKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -13829,6 +14201,10 @@ impl<'de> Deserialize<'de> for NewChart {
                 let mut v_categories = None;
                 let mut v_series = None;
                 while let Some(Key(key)) = map.next_key::<Key<NewChartKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -13935,6 +14311,10 @@ impl<'de> Deserialize<'de> for NewChartSeriesItem {
                 let mut v_name = None;
                 let mut v_values = None;
                 while let Some(Key(key)) = map.next_key::<Key<NewChartSeriesItemKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -14257,6 +14637,10 @@ impl<'de> Deserialize<'de> for TableParagraph {
                 let mut v_style_id = None;
                 let mut v_list = None;
                 while let Some(Key(key)) = map.next_key::<Key<TableParagraphKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -14379,6 +14763,10 @@ impl<'de> Deserialize<'de> for TableParagraphList {
                 let mut v_num_id = None;
                 let mut v_ilvl = None;
                 while let Some(Key(key)) = map.next_key::<Key<TableParagraphListKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -14531,6 +14919,10 @@ impl<'de> Deserialize<'de> for TableBorders {
                 let mut v_inside_h = None;
                 let mut v_inside_v = None;
                 while let Some(Key(key)) = map.next_key::<Key<TableBordersKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -14675,6 +15067,10 @@ impl<'de> Deserialize<'de> for TableCell {
                 let mut seen = Seen::default();
                 let mut b_0 = TableCell::default();
                 while let Some(Key(key)) = map.next_key::<Key<TableCellKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -15000,6 +15396,10 @@ impl<'de> Deserialize<'de> for TableModel {
                 let mut v_raw_tbl_pr_exs = None;
                 let mut v_row_tbl_pr_ex_changes = None;
                 while let Some(Key(key)) = map.next_key::<Key<TableModelKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -15204,6 +15604,10 @@ impl<'de> Deserialize<'de> for TableModelFloatPos {
                 let mut v_y_spec = None;
                 let mut v_distance_twips = None;
                 while let Some(Key(key)) = map.next_key::<Key<TableModelFloatPosKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -15514,6 +15918,10 @@ impl<'de> Deserialize<'de> for TableModelRowRevisionsItem {
                 let mut v_id = None;
                 let mut v_move = None;
                 while let Some(Key(key)) = map.next_key::<Key<TableModelRowRevisionsItemKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -15638,6 +16046,10 @@ impl<'de> Deserialize<'de> for TableLook {
                 let mut v_banded_rows = None;
                 let mut v_banded_columns = None;
                 while let Some(Key(key)) = map.next_key::<Key<TableLookKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -15855,6 +16267,10 @@ impl<'de> Deserialize<'de> for TextboxDisplay {
                 let mut seen = Seen::default();
                 let mut b_0 = TextboxDisplay::default();
                 while let Some(Key(key)) = map.next_key::<Key<TextboxDisplayKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -15990,6 +16406,10 @@ impl<'de> Deserialize<'de> for TextboxDisplayPathData {
                 let mut v_fill_path = None;
                 let mut v_stroke_path = None;
                 while let Some(Key(key)) = map.next_key::<Key<TextboxDisplayPathDataKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -16062,6 +16482,10 @@ impl<'de> Deserialize<'de> for TextboxDisplayTextOutline {
                 let mut v_color_hex = None;
                 let mut v_width_px = None;
                 while let Some(Key(key)) = map.next_key::<Key<TextboxDisplayTextOutlineKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -16427,6 +16851,10 @@ impl<'de> Deserialize<'de> for TextboxParaDisplay {
                 let mut v_cells = None;
                 let mut v_row = None;
                 while let Some(Key(key)) = map.next_key::<Key<TextboxParaDisplayKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -16618,6 +17046,10 @@ impl<'de> Deserialize<'de> for TextboxListMarker {
                 let mut v_sz_half_points = None;
                 let mut v_oversized = None;
                 while let Some(Key(key)) = map.next_key::<Key<TextboxListMarkerKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -16792,6 +17224,10 @@ impl<'de> Deserialize<'de> for TextboxDisplayWrapDistPx {
                 let mut v_t = None;
                 let mut v_b = None;
                 while let Some(Key(key)) = map.next_key::<Key<TextboxDisplayWrapDistPxKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -17075,6 +17511,10 @@ impl<'de> Deserialize<'de> for TableCellCellRevision {
                 let mut v_id = None;
                 let mut v_move = None;
                 while let Some(Key(key)) = map.next_key::<Key<TableCellCellRevisionKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -17206,6 +17646,10 @@ impl<'de> Deserialize<'de> for NewInkImage {
                 let mut v_offset_y_px = None;
                 let mut v_payload = None;
                 while let Some(Key(key)) = map.next_key::<Key<NewInkImageKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -17307,6 +17751,10 @@ impl<'de> Deserialize<'de> for InkInfo {
                 let mut v_data_url = None;
                 let mut v_payload = None;
                 while let Some(Key(key)) = map.next_key::<Key<InkInfoKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -17439,6 +17887,10 @@ impl<'de> Deserialize<'de> for StrayIndent {
                 let mut v_right_twips = None;
                 let mut v_first_line_twips = None;
                 while let Some(Key(key)) = map.next_key::<Key<StrayIndentKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -17535,6 +17987,10 @@ impl<'de> Deserialize<'de> for RuleOverlay {
                 let mut v_thickness_px = None;
                 let mut v_color_hex = None;
                 while let Some(Key(key)) = map.next_key::<Key<RuleOverlayKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -17887,6 +18343,10 @@ impl<'de> Deserialize<'de> for Block {
                 let mut seen = Seen::default();
                 let mut b_0 = Block::default();
                 while let Some(Key(key)) = map.next_key::<Key<BlockKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -18070,6 +18530,10 @@ impl<'de> Deserialize<'de> for BlockList {
                 let mut v_num_id = None;
                 let mut v_ilvl = None;
                 while let Some(Key(key)) = map.next_key::<Key<BlockListKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -18181,6 +18645,10 @@ impl<'de> Deserialize<'de> for BlockImageCrop {
                 let mut v_r = None;
                 let mut v_b = None;
                 while let Some(Key(key)) = map.next_key::<Key<BlockImageCropKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -18264,6 +18732,10 @@ impl<'de> Deserialize<'de> for BlockImageFillRect {
                 let mut v_r = None;
                 let mut v_b = None;
                 while let Some(Key(key)) = map.next_key::<Key<BlockImageFillRectKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -18381,6 +18853,10 @@ impl<'de> Deserialize<'de> for BlockAnchorLine {
                 let mut v_format = None;
                 let mut v_clear = None;
                 while let Some(Key(key)) = map.next_key::<Key<BlockAnchorLineKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -18647,6 +19123,10 @@ impl<'de> Deserialize<'de> for BlockImageBorder {
                 let mut v_color = None;
                 let mut v_width_pt = None;
                 while let Some(Key(key)) = map.next_key::<Key<BlockImageBorderKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -18718,6 +19198,10 @@ impl<'de> Deserialize<'de> for BlockStrayList {
                 let mut v_num_id = None;
                 let mut v_ilvl = None;
                 while let Some(Key(key)) = map.next_key::<Key<BlockStrayListKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -18841,6 +19325,10 @@ impl<'de> Deserialize<'de> for BlockPPrChangeInfo {
                 let mut v_id = None;
                 let mut v_old = None;
                 while let Some(Key(key)) = map.next_key::<Key<BlockPPrChangeInfoKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -19262,6 +19750,10 @@ impl<'de> Deserialize<'de> for BlockPPrChangeInfoOld {
                 let mut v_num_id = None;
                 let mut v_ilvl = None;
                 while let Some(Key(key)) = map.next_key::<Key<BlockPPrChangeInfoOldKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -19472,6 +19964,10 @@ impl<'de> Deserialize<'de> for BlockBlockRevision {
                 let mut v_id = None;
                 let mut v_move = None;
                 while let Some(Key(key)) = map.next_key::<Key<BlockBlockRevisionKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -19592,6 +20088,10 @@ impl<'de> Deserialize<'de> for BlockParaMarkDel {
                 let mut v_date_utc = None;
                 let mut v_id = None;
                 while let Some(Key(key)) = map.next_key::<Key<BlockParaMarkDelKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -19681,6 +20181,10 @@ impl<'de> Deserialize<'de> for BlockParaMarkIns {
                 let mut v_date_utc = None;
                 let mut v_id = None;
                 while let Some(Key(key)) = map.next_key::<Key<BlockParaMarkInsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -19770,6 +20274,10 @@ impl<'de> Deserialize<'de> for BlockParaMarkRPrChange {
                 let mut v_date_utc = None;
                 let mut v_id = None;
                 while let Some(Key(key)) = map.next_key::<Key<BlockParaMarkRPrChangeKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -19869,6 +20377,10 @@ impl<'de> Deserialize<'de> for FinalBlockV0 {
                 let mut v_source = None;
                 let mut v_docx_index = None;
                 while let Some(Key(key)) = map.next_key::<Key<FinalBlockV0Key>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -19965,6 +20477,10 @@ impl<'de> Deserialize<'de> for FinalBlockV1 {
                 let mut v_source = None;
                 let mut v_block = None;
                 while let Some(Key(key)) = map.next_key::<Key<FinalBlockV1Key>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -20187,6 +20703,10 @@ impl<'de> Deserialize<'de> for GeneratedBlock {
                 let mut v_sect_pr_change = None;
                 let mut v_block_revision = None;
                 while let Some(Key(key)) = map.next_key::<Key<GeneratedBlockKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -20314,6 +20834,10 @@ impl<'de> Deserialize<'de> for GeneratedBlockList {
                 let mut v_num_id = None;
                 let mut v_ilvl = None;
                 while let Some(Key(key)) = map.next_key::<Key<GeneratedBlockListKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -20443,6 +20967,10 @@ impl<'de> Deserialize<'de> for GeneratedBlockBlockRevision {
                 let mut v_id = None;
                 let mut v_move = None;
                 while let Some(Key(key)) = map.next_key::<Key<GeneratedBlockBlockRevisionKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -20683,6 +21211,10 @@ impl<'de> Deserialize<'de> for StyleDisplay {
                 let mut seen = Seen::default();
                 let mut b_0 = StyleDisplay::default();
                 while let Some(Key(key)) = map.next_key::<Key<StyleDisplayKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -20983,6 +21515,10 @@ impl<'de> Deserialize<'de> for TableCondFormat {
                 let mut v_para_spacing = None;
                 let mut v_para_jc = None;
                 while let Some(Key(key)) = map.next_key::<Key<TableCondFormatKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -21122,6 +21658,10 @@ impl<'de> Deserialize<'de> for TableParaSpacing {
                 let mut v_line_rule = None;
                 let mut v_line_spacing = None;
                 while let Some(Key(key)) = map.next_key::<Key<TableParaSpacingKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -21260,6 +21800,10 @@ impl<'de> Deserialize<'de> for TableStyleDisplay {
                 let mut seen = Seen::default();
                 let mut b_0 = TableStyleDisplay::default();
                 while let Some(Key(key)) = map.next_key::<Key<TableStyleDisplayKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -21369,6 +21913,10 @@ impl<'de> Deserialize<'de> for TableStyleDisplayWholeTable {
                 let mut v_size_half_points = None;
                 let mut v_kern_half_points = None;
                 while let Some(Key(key)) = map.next_key::<Key<TableStyleDisplayWholeTableKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -21546,6 +22094,10 @@ impl<'de> Deserialize<'de> for StyleInfo {
                 let mut v_num_pr = None;
                 let mut v_is_default = None;
                 while let Some(Key(key)) = map.next_key::<Key<StyleInfoKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -21691,6 +22243,10 @@ impl<'de> Deserialize<'de> for StyleInfoNumPrV0 {
                 let mut v_num_id = None;
                 let mut v_ilvl = None;
                 while let Some(Key(key)) = map.next_key::<Key<StyleInfoNumPrV0Key>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -21844,6 +22400,10 @@ impl<'de> Deserialize<'de> for DocDefaults {
                 let mut seen = Seen::default();
                 let mut b_0 = DocDefaults::default();
                 while let Some(Key(key)) = map.next_key::<Key<DocDefaultsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -22006,6 +22566,10 @@ impl<'de> Deserialize<'de> for DocProtection {
                 let mut v_spin_count = None;
                 let mut v_algorithm_sid = None;
                 while let Some(Key(key)) = map.next_key::<Key<DocProtectionKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -22106,6 +22670,10 @@ impl<'de> Deserialize<'de> for WriteProtection {
                 let mut v_spin_count = None;
                 let mut v_algorithm_sid = None;
                 while let Some(Key(key)) = map.next_key::<Key<WriteProtectionKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -22209,6 +22777,10 @@ impl<'de> Deserialize<'de> for SourceInfo {
                 let mut v_publisher = None;
                 let mut v_url = None;
                 while let Some(Key(key)) = map.next_key::<Key<SourceInfoKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -22341,6 +22913,10 @@ impl<'de> Deserialize<'de> for ThemeFonts {
                 let mut v_major_scripts = None;
                 let mut v_minor_scripts = None;
                 while let Some(Key(key)) = map.next_key::<Key<ThemeFontsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -22464,6 +23040,10 @@ impl<'de> Deserialize<'de> for FontTableEntry {
                 let mut v_pitch = None;
                 let mut v_embedded = None;
                 while let Some(Key(key)) = map.next_key::<Key<FontTableEntryKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -22559,6 +23139,10 @@ impl<'de> Deserialize<'de> for FontTableEntryEmbedded {
                 let mut v_italic = None;
                 let mut v_bold_italic = None;
                 while let Some(Key(key)) = map.next_key::<Key<FontTableEntryEmbeddedKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -22634,6 +23218,10 @@ impl<'de> Deserialize<'de> for EmbeddedFontRef {
                 let mut v_r_id = None;
                 let mut v_font_key = None;
                 while let Some(Key(key)) = map.next_key::<Key<EmbeddedFontRefKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -22747,6 +23335,10 @@ impl<'de> Deserialize<'de> for EmbeddedFontLineMetrics {
                 let mut v_descent = None;
                 let mut v_line_gap = None;
                 while let Some(Key(key)) = map.next_key::<Key<EmbeddedFontLineMetricsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -22836,6 +23428,10 @@ impl<'de> Deserialize<'de> for EmbeddedFont {
                 let mut v_data = None;
                 let mut v_line_metrics = None;
                 while let Some(Key(key)) = map.next_key::<Key<EmbeddedFontKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -22991,6 +23587,10 @@ impl<'de> Deserialize<'de> for ThemeColors {
                 let mut v_accent5 = None;
                 let mut v_accent6 = None;
                 while let Some(Key(key)) = map.next_key::<Key<ThemeColorsKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -23411,6 +24011,10 @@ impl<'de> Deserialize<'de> for ParsedDoc {
                 let mut v_numbering = None;
                 let mut v_internal = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParsedDocKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -23544,6 +24148,10 @@ impl<'de> Deserialize<'de> for DocumentProperties {
                 let mut v_custom = None;
                 let mut v_custom_types = None;
                 while let Some(Key(key)) = map.next_key::<Key<DocumentPropertiesKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -23637,6 +24245,10 @@ impl<'de> Deserialize<'de> for ParsedDocInternal {
                 let mut v_body_content_start = None;
                 let mut v_body_content_end = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParsedDocInternalKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -24055,6 +24667,10 @@ impl<'de> Deserialize<'de> for ParsedDocFull {
                 let mut v_internal = None;
                 let mut v_extras = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParsedDocFullKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -24203,6 +24819,10 @@ impl<'de> Deserialize<'de> for ParseExtras {
                 let mut v_alt_chunks_need_converter = None;
                 let mut v_resolve_diff = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParseExtrasKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -24283,6 +24903,10 @@ impl<'de> Deserialize<'de> for BodyElement {
                 let mut v_start = None;
                 let mut v_end = None;
                 while let Some(Key(key)) = map.next_key::<Key<BodyElementKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -24355,6 +24979,10 @@ impl<'de> Deserialize<'de> for ParseExtrasOpaqueRegionsItem {
                 let mut v_start = None;
                 let mut v_end = None;
                 while let Some(Key(key)) = map.next_key::<Key<ParseExtrasOpaqueRegionsItemKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
@@ -24449,6 +25077,10 @@ impl<'de> Deserialize<'de> for ResolveDiff {
                 let mut v_eff = None;
                 let mut v_text = None;
                 while let Some(Key(key)) = map.next_key::<Key<ResolveDiffKey>>()? {
+                    let Some(key) = key else {
+                        map.next_value::<serde::de::IgnoredAny>()?;
+                        continue;
+                    };
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }

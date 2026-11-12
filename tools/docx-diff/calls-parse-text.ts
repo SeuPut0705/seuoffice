@@ -10,13 +10,13 @@
 // numbering, a header's may have no styles; any other value (a nested parse,
 // a table of styles merged into later) is not an input. A ResolveCtx crosses
 // as `args.parts`, `args.compat` and `args.table`.
-import { parseNumbering } from '../../packages/docx-engine/src/parse-package'
-import { parseStyles } from '../../packages/docx-engine/src/parse-styles'
-import { resolveCtxOf, type ResolveCtx } from '../../packages/docx-engine/src/resolve-props'
-import { scanBody } from '../../packages/docx-engine/src/scan'
-import type { DocDefaults, NumberingDef, StyleInfo, ThemeColors, ThemeFonts } from '../../packages/docx-engine/src/types'
-import { parseNotesXml, type NoteKind, type NoteParagraphReader } from '../../packages/docx-engine/src/notes'
-import { nameOf, serializeXNode, xmlParser, type XNode } from '../../packages/docx-engine/src/xml-utils'
+import { parseNumbering } from './reference/parse-package'
+import { parseStyles } from './reference/parse-styles'
+import { resolveCtxOf, type ResolveCtx } from './reference/resolve-props'
+import { scanBody } from './reference/scan'
+import type { DocDefaults, NumberingDef, StyleInfo, ThemeColors, ThemeFonts } from './reference/types'
+import { parseNotesXml, type NoteKind, type NoteParagraphReader } from './reference/notes'
+import { nameOf, serializeXNode, xmlParser, type XNode } from './reference/xml-utils'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { parseInternals } from './parse-internals'
 

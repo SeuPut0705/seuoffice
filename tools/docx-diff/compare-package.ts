@@ -9,11 +9,11 @@ import {
   FONT_TABLE_PART_PATH,
   parseFontTable,
   readEmbeddedFonts,
-} from '../../packages/docx-engine/src/font-table'
+} from './reference/font-table'
 import {
   needsOoxmlNormalization,
   normalizeOoxmlXml,
-} from '../../packages/docx-engine/src/ooxml-normalize'
+} from './reference/ooxml-normalize'
 import {
   parseComments,
   parseNumbering,
@@ -23,23 +23,23 @@ import {
   parseWriteProtection,
   resolveMainDocumentPath,
   resolveRelationshipTargetPath,
-} from '../../packages/docx-engine/src/parse-package'
-import { parseStyles } from '../../packages/docx-engine/src/parse-styles'
+} from './reference/parse-package'
+import { parseStyles } from './reference/parse-styles'
 import {
   DEFAULT_THEME_COLORS,
   readThemeColors,
   readThemeFonts,
   THEME_PART_PATH,
-} from '../../packages/docx-engine/src/theme'
-import type { StyleInfo, ThemeColors, ThemeFonts } from '../../packages/docx-engine/src/types'
+} from './reference/theme'
+import type { StyleInfo, ThemeColors, ThemeFonts } from './reference/types'
 import {
   attrsOf,
   findChildren,
   nameOf,
   type XNode,
   xmlParser,
-} from '../../packages/docx-engine/src/xml-utils'
-import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
+} from './reference/xml-utils'
+import { loadDocxZip } from './reference/zip-load'
 import { failed } from './engine'
 import { type Comparison, describeTextDifference, engine, repoRoot, SHOW, toolDir } from './harness'
 import { RAW_HOST_ENV } from './host'
@@ -235,7 +235,7 @@ const PARSE_TS_SNIPPETS = [
 
 /** The copied readers that parse.ts no longer holds as copied. */
 export function driftedCopies(): number {
-  const parseTs = readFileSync(resolve(repoRoot, 'packages/docx-engine/src/parse.ts'), 'utf8')
+  const parseTs = readFileSync(resolve(repoRoot, 'tools/docx-diff/reference/parse.ts'), 'utf8')
   return PARSE_TS_SNIPPETS.filter((snippet) => !parseTs.includes(snippet)).length
 }
 

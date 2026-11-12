@@ -25,13 +25,21 @@ pub fn override_tags() -> &'static TryJsRegex {
 
 /// `decodeXmlEntities`: character references, then the five named entities.
 /// A reference to half of a surrogate pair reads as U+FFFD (a Rust string has
-/// no lone surrogate; remove-parts.ts replaces one the same way).
+/// no lone surrogate; remove-parts.ts replaces one the same way), except that
+/// a high half right before a low half is the character the pair spells, as
+/// the TypeScript's `/[\uD800-\uDFFF]/gu` leaves it.
 pub fn decode_xml_entities(value: &str) -> String {
+    // a surrogate half is held as SURROGATE and its four hex digits until the
+    // halves are paired
+    const SURROGATE: char = '\u{FDD0}';
     fn code_point(whole: &str, raw: &str, radix: Radix) -> String {
         let value = parse_int(raw, radix);
         if value.fract() == 0.0 && (0.0..=1_114_111.0).contains(&value) {
-            return char::from_u32(value as u32)
-                .map_or_else(|| "\u{FFFD}".to_owned(), String::from);
+            let unit = value as u32;
+            return match char::from_u32(unit) {
+                Some(c) => String::from(c),
+                None => format!("{SURROGATE}{unit:04X}"),
+            };
         }
         whole.to_owned()
     }
@@ -45,12 +53,51 @@ pub fn decode_xml_entities(value: &str) -> String {
     let decimal = js_regex!(r"&#(\d+);", "g").replace_all(&hex, |found| {
         code_point(found.as_str(), found.get(1).unwrap_or_default(), Radix::Ten)
     });
-    decimal
+    let paired = if decimal.contains(SURROGATE) {
+        pair_surrogates(&decimal, SURROGATE)
+    } else {
+        decimal
+    };
+    paired
         .replace("&quot;", "\"")
         .replace("&apos;", "'")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
         .replace("&amp;", "&")
+}
+
+/// The halves `decode_xml_entities` held as `mark` and four hex digits: a
+/// high half before a low half is their character, any other is U+FFFD. A
+/// `mark` the document wrote itself, not followed by a half, stays.
+fn pair_surrogates(text: &str, mark: char) -> String {
+    let half = |rest: &str| -> Option<u32> {
+        let digits = rest.strip_prefix(mark)?.get(..4)?;
+        u32::from_str_radix(digits, 16).ok().filter(|unit| (0xD800..=0xDFFF).contains(unit))
+    };
+    let width = mark.len_utf8() + 4;
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = rest.find(mark) {
+        out.push_str(&rest[..at]);
+        rest = &rest[at..];
+        let Some(high) = half(rest) else {
+            out.push(mark);
+            rest = &rest[mark.len_utf8()..];
+            continue;
+        };
+        rest = &rest[width..];
+        if (0xD800..0xDC00).contains(&high)
+            && let Some(low) = half(rest).filter(|low| *low >= 0xDC00)
+        {
+            rest = &rest[width..];
+            let unit = 0x10000 + ((high - 0xD800) << 10) + (low - 0xDC00);
+            out.push(char::from_u32(unit).unwrap_or('\u{FFFD}'));
+        } else {
+            out.push('\u{FFFD}');
+        }
+    }
+    out.push_str(rest);
+    out
 }
 
 /// `xmlAttr`: an attribute of a tag by its name, both quote styles.

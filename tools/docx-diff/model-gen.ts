@@ -1,5 +1,5 @@
 // Writes the Rust model, crates/docx-engine/src/model/generated.rs, from the
-// schema model-schema.ts reads out of packages/docx-engine/src/types.ts at the
+// schema model-schema.ts reads out of tools/docx-diff/reference/types.ts at the
 // commit of main MODEL_SOURCE pins, and from the key orders in
 // model-orders.json.
 //
@@ -389,6 +389,10 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
           .map((level) => `                let mut ${level.local} = ${level.name}::default();`)),
     ...fields.filter((field) => !field.slot).map((field) => `                let mut ${field.local} = None;`),
     `                while let Some(Key(key)) = map.next_key::<Key<${key}>>()? {`,
+    '                    let Some(key) = key else {',
+    '                        map.next_value::<serde::de::IgnoredAny>()?;',
+    '                        continue;',
+    '                    };',
     '                    if !seen.insert(key.index()) {',
     '                        return Err(A::Error::duplicate_field(key.name()));',
     '                    }',

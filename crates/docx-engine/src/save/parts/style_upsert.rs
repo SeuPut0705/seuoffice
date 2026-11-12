@@ -59,7 +59,7 @@ pub struct StyleRunProps {
     pub highlight: Option<Option<String>>,
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub size_half_points: Option<Option<f64>>,
@@ -92,39 +92,39 @@ pub struct StyleParaProps {
     pub align: Option<Option<String>>,
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub space_before_twips: Option<Option<f64>>,
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub space_after_twips: Option<Option<f64>>,
     /// line spacing as a multiple (auto)
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub line_spacing: Option<Option<f64>>,
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub indent_left_twips: Option<Option<f64>>,
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub indent_right_twips: Option<Option<f64>>,
     /// positive = first-line indent, negative = hanging indent
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub first_line_twips: Option<Option<f64>>,
@@ -137,7 +137,7 @@ pub struct StyleParaProps {
     /// 1-9 (`w:outlineLvl` val + 1)
     #[serde(
         default,
-        deserialize_with = "nullable",
+        deserialize_with = "jscompat::js_f64_nullable",
         skip_serializing_if = "Option::is_none"
     )]
     pub outline_level: Option<Option<f64>>,

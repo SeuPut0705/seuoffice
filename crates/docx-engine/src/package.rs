@@ -5,7 +5,7 @@
 use jscompat::{JsMap, decode_uri_component, js_regex, truthy, try_js_regex};
 use ooxml_pkg::Package;
 use ooxml_xml::{XNode, parse_ordered};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::props::XML_PARSER_MAX_NESTED_TAGS;
 
@@ -23,7 +23,7 @@ pub fn part_text<'a>(package: &'a Package, path: &str) -> Result<Option<&'a str>
     package.text(path).map_err(|error| error.to_string())
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RelInfo {
     pub target: String,

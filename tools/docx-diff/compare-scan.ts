@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util'
-import { type BodyScan, scanBody } from '../../packages/docx-engine/src/scan'
+import { type BodyScan, scanBody } from './reference/scan'
 import { failed } from './engine'
 import { engine, excerpt } from './harness'
 import { keyOrderDifference } from './key-order'

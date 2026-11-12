@@ -1,14 +1,14 @@
 import { isDeepStrictEqual } from 'node:util'
-import { charIndentsOf, paraBorderSidesOf } from '../../packages/docx-engine/src/parse-props'
-import { DEFAULT_THEME_COLORS } from '../../packages/docx-engine/src/theme'
+import { charIndentsOf, paraBorderSidesOf } from './reference/parse-props'
+import { DEFAULT_THEME_COLORS } from './reference/theme'
 import type {
   CharIndents,
   ParaBorderSides,
   ParaFormat,
   Run,
   ThemeFonts,
-} from '../../packages/docx-engine/src/types'
-import { nameOf, type XNode, xmlParser } from '../../packages/docx-engine/src/xml-utils'
+} from './reference/types'
+import { nameOf, type XNode, xmlParser } from './reference/xml-utils'
 import { failed } from './engine'
 import { tagTokens } from './fragments'
 import { type Comparison, engine, option } from './harness'

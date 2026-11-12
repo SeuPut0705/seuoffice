@@ -25,6 +25,8 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.test.ts'],
+    // the engine behind @seuoffice/docx-engine/math starts here: the alias skips the package's `node` entry
+    setupFiles: [resolve(here, '../engine-wasm/src/node.ts')],
     environment: 'node',
   },
 })

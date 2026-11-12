@@ -27,6 +27,24 @@ use crate::vml::vml_rotation_deg;
 use crate::xml_text::{auto_color_of, color_from, decode_numeric_char_refs, on_off_of, strip_hash};
 
 /// `TEXT_EFFECTS`
+/// `DIRECT_RUN_KEYS`: the direct run fields the resolver reads for extractRun
+const DIRECT_RUN_KEYS: [&str; 14] = [
+    "bold",
+    "italic",
+    "sizeHalfPoints",
+    "underline",
+    "strike",
+    "caps",
+    "charSpacingTwips",
+    "kernHalfPoints",
+    "vertAlign",
+    "font",
+    "fontAscii",
+    "eastAsiaFont",
+    "eaSlotEmpty",
+    "csFont",
+];
+
 const TEXT_EFFECTS: [&str; 4] = ["outline", "emboss", "imprint", "shadow"];
 
 /// `findChild(node, name)` over the children of a run.
@@ -330,6 +348,30 @@ pub fn build_run(
         let inherited_rtl = style_of(r_style).and_then(|d| *d.rtl).or(res.para_rtl);
         for (key, value) in super::convert::into_map(json(&direct_run_format(&eff))) {
             run.insert(key, value);
+        }
+        if let Some(collector) = &res.diff {
+            let legacy = json(&super::runs::legacy_direct_run_format(
+                r_pr,
+                eff.cs,
+                theme_fonts,
+            ));
+            let resolved = Value::Object(run.clone());
+            let keys: Vec<String> = DIRECT_RUN_KEYS
+                .iter()
+                .map(|key| (*key).to_owned())
+                .collect();
+            let units: Vec<u16> = text.encode_utf16().take(40).collect();
+            let shown = String::from_utf16_lossy(&units);
+            for diff in crate::resolve::shadow_compare(Some(&legacy), Some(&resolved), Some(&keys))
+            {
+                collector.borrow_mut().push(super::context::ShadowDiff {
+                    surface: "run",
+                    key: diff.key,
+                    old: diff.old,
+                    eff: diff.eff,
+                    text: shown.clone(),
+                });
+            }
         }
         let color = color_from(Some(r_pr), theme)
             .filter(|c| !c.is_empty())

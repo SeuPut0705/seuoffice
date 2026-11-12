@@ -55,12 +55,15 @@ use crate::vml::shape::vml_shape_type_table;
 pub struct ParseOptions {
     /// expand w:altChunk parts into display blocks (off inside the chunk's own parse)
     pub expand_alt_chunks: bool,
+    /// run the property resolver beside the legacy path and collect disagreements in `extras.resolveDiff`
+    pub shadow_resolve: bool,
 }
 
 impl Default for ParseOptions {
     fn default() -> Self {
         Self {
             expand_alt_chunks: true,
+            shadow_resolve: false,
         }
     }
 }
@@ -75,6 +78,15 @@ struct Parsed {
 /// `parseDocx(bytes)` with its `extras`: `Err` is what the TypeScript throws.
 pub fn parse_docx_full(bytes: &[u8], host: &dyn MediaHost) -> Result<ParsedDocFull, String> {
     parse_docx_with(bytes, host, ParseOptions::default()).map(|parsed| parsed.doc)
+}
+
+/// `parseDocx(bytes, options)` with its `extras`.
+pub fn parse_docx_full_with(
+    bytes: &[u8],
+    host: &dyn MediaHost,
+    options: ParseOptions,
+) -> Result<ParsedDocFull, String> {
+    parse_docx_with(bytes, host, options).map(|parsed| parsed.doc)
 }
 
 /// `parseDocx(bytes)` without its `extras`: the `ParsedDoc` of the model.
@@ -247,7 +259,9 @@ fn parse_docx_with(
         sdt_group_seq: Cell::new(0.0),
         table_raw: RefCell::new(None),
         compatibility_mode: Some(JsNum(compatibility_mode)),
-        resolve_diff: None,
+        resolve_diff: options
+            .shadow_resolve
+            .then(|| Rc::new(RefCell::new(Vec::new()))),
         xml_space_preserve: part_xml_space_preserve(&document_xml, "w:document")
             .map_err(|error| error.to_string())?,
         part_namespaces: Some(part_namespaces(&document_xml).map_err(|l| l.to_string())?),
@@ -753,6 +767,30 @@ fn parse_docx_with(
     if unconverted.get() > 0.0 {
         extras.insert("altChunksNeedConverter".to_owned(), num(unconverted.get()));
     }
+    if let Some(collector) = &ctx.resolve_diff {
+        extras.insert(
+            "resolveDiff".to_owned(),
+            Value::Array(
+                collector
+                    .borrow()
+                    .iter()
+                    .map(|diff| {
+                        let mut d = Map::new();
+                        d.insert("key".to_owned(), Value::from(diff.key.as_str()));
+                        if let Some(old) = &diff.old {
+                            d.insert("old".to_owned(), old.clone());
+                        }
+                        if let Some(eff) = &diff.eff {
+                            d.insert("eff".to_owned(), eff.clone());
+                        }
+                        d.insert("surface".to_owned(), Value::from(diff.surface));
+                        d.insert("text".to_owned(), Value::from(diff.text.as_str()));
+                        Value::Object(d)
+                    })
+                    .collect(),
+            ),
+        );
+    }
     doc.insert("extras".to_owned(), Value::Object(extras));
 
     let styles_out: Vec<(String, StyleInfo)> = ctx
@@ -790,7 +828,7 @@ const MAX_CHUNK_BYTES: usize = 64 * 1024 * 1024;
 
 /// `altChunkToDocx`: the chunk as docx bytes, or none where the part is
 /// missing, of an unsupported type, or no HTML converter is installed.
-fn alt_chunk_to_docx(
+pub fn alt_chunk_to_docx(
     zip: &Package,
     rels: &JsMap<crate::package::RelInfo>,
     r_id: &str,
@@ -890,6 +928,7 @@ fn expand_alt_chunk_inner(
         host,
         ParseOptions {
             expand_alt_chunks: false,
+            shadow_resolve: false,
         },
     )?;
     let resolver = Rc::make_mut(&mut ctx.resolver);

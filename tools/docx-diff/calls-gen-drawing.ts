@@ -18,8 +18,8 @@ import {
   swapAnchorWrap,
   type TextboxSizePatch,
   xmlSegments,
-} from '../../packages/docx-engine/src/generate'
-import type { ImageWrap } from '../../packages/docx-engine/src/types'
+} from './reference/generate'
+import type { ImageWrap } from './reference/types'
 import type { CallSpec, Input } from './calls-spec'
 
 const n = (v: unknown): number => (typeof v === 'string' ? Number(v) : (v as number))

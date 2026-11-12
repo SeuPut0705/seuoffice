@@ -66,6 +66,8 @@ export interface ModelSchema {
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(HERE, '../..')
+// the path the declarations have at the pinned commit (MODEL_SOURCE), which
+// predates the frozen copy in tools/docx-diff/reference
 const ENGINE_SRC = join(REPO_ROOT, 'packages/docx-engine/src')
 const TYPES_PATH = join(ENGINE_SRC, 'types.ts')
 export const ORDERS_PATH = join(HERE, 'model-orders.json')

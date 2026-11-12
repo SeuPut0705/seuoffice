@@ -3,17 +3,17 @@
 // the resolver are built on both sides from `args.parts` as the `resolve`
 // group builds them. `args.resolver: false` calls it without a resolver,
 // `args.styles: false` without the styles map.
-import { parseNumbering } from '../../packages/docx-engine/src/parse-package'
-import { fieldDisplayOf } from '../../packages/docx-engine/src/parse-fields'
-import { parseStyles } from '../../packages/docx-engine/src/parse-styles'
-import { resolveCtxOf, type ResolveCtx } from '../../packages/docx-engine/src/resolve-props'
+import { parseNumbering } from './reference/parse-package'
+import { fieldDisplayOf } from './reference/parse-fields'
+import { parseStyles } from './reference/parse-styles'
+import { resolveCtxOf, type ResolveCtx } from './reference/resolve-props'
 import type {
   DocDefaults,
   NumberingDef,
   StyleInfo,
   ThemeColors,
   ThemeFonts,
-} from '../../packages/docx-engine/src/types'
+} from './reference/types'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { parseTheme } from './compare-package'
 import { elementFragments } from './fragments'

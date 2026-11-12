@@ -1,4 +1,4 @@
-import type { ParsedDoc, ParaFormat, Run } from '../../packages/docx-engine/src/types'
+import type { ParsedDoc, ParaFormat, Run } from './reference/types'
 import { runModelInputs } from './calls-gen-runs'
 import type { Input } from './calls-spec'
 

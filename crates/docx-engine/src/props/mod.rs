@@ -2,7 +2,7 @@
 //! (packages/docx-engine/src/parse-props.ts): no document context, no
 //! recursion into block builders.
 
-mod borders;
+pub mod borders;
 mod fields;
 mod fonts;
 mod indent;

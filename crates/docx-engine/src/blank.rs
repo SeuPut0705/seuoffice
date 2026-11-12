@@ -967,7 +967,7 @@ fn iso_string(time: f64) -> Result<String, String> {
 }
 
 /// The W3CDTF stamp Word writes into core properties (seconds, Z)
-fn w3cdtf_stamp(time: f64) -> Result<String, String> {
+pub fn w3cdtf_stamp(time: f64) -> Result<String, String> {
     let iso = iso_string(time)?;
     Ok(js_regex!(r"\.\d{3}Z$").replace_all(&iso, |_| "Z".to_owned()))
 }
@@ -975,7 +975,7 @@ fn w3cdtf_stamp(time: f64) -> Result<String, String> {
 /// Word-like core part of a freshly created document: no creator or other
 /// people data, just the creation/modification stamp and revision 0: the
 /// template has not been saved anywhere yet.
-fn new_document_core_properties_xml(created: f64) -> Result<String, String> {
+pub fn new_document_core_properties_xml(created: f64) -> Result<String, String> {
     let stamp = w3cdtf_stamp(created)?;
     Ok(format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\
@@ -990,7 +990,7 @@ fn new_document_core_properties_xml(created: f64) -> Result<String, String> {
 }
 
 /// Word-like extended part of a freshly created document (no company/manager)
-fn new_document_app_properties_xml(options: &BlankDocxOptions) -> String {
+pub fn new_document_app_properties_xml(options: &BlankDocxOptions) -> String {
     let template = options.template.as_deref().unwrap_or(NEW_DOCUMENT_TEMPLATE);
     let fields = if options.omit_generator_fields {
         String::new()

@@ -1,5 +1,5 @@
-import { inlineRunsXml } from '../../packages/docx-engine/src/generate'
-import type { ParsedDoc, Run } from '../../packages/docx-engine/src/types'
+import { inlineRunsXml } from './reference/generate'
+import type { ParsedDoc, Run } from './reference/types'
 import type { CallSpec, Input } from './calls-spec'
 
 export function runModelInputs(doc: ParsedDoc): Input[] {

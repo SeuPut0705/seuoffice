@@ -8,8 +8,8 @@ import {
   decodeHtmlBytes,
   decodeMhtToHtml,
   decodeQuotedPrintable,
-} from '../../packages/docx-engine/src/alt-chunk'
-import type { RelInfo } from '../../packages/docx-engine/src/parse-xml-text'
+} from './reference/alt-chunk'
+import type { RelInfo } from './reference/parse-xml-text'
 import type { CallSpec, Input } from './calls-spec'
 
 const bytesOf = (text: string, args: Record<string, unknown>): Uint8Array =>

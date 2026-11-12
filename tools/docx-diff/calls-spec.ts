@@ -2,7 +2,7 @@
 // function, in calls-<group>.ts. The Rust side answers to the same name in
 // crates/office-wasm/src/calls/<group>.rs.
 import JSZip from 'jszip'
-import type { ParsedDoc } from '../../packages/docx-engine/src/types'
+import type { ParsedDoc } from './reference/types'
 
 /** One call: the text argument (or the text the Rust side parses), and the rest. */
 export interface Input {

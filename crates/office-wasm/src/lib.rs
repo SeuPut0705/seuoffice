@@ -10,12 +10,23 @@
 //! The release profile aborts on panic, which traps and poisons the instance:
 //! input errors are replies, never panics.
 
+use std::collections::HashMap;
+
+#[cfg(target_arch = "wasm32")]
+mod grow;
+
+#[cfg(target_arch = "wasm32")]
+#[global_allocator]
+static ALLOCATOR: grow::Doubling = grow::Doubling;
+
 use docx_engine::scan::{BodyScan, scan_body};
 use ooxml_pkg::{decode_text, needs_ooxml_normalization, normalize_ooxml_xml, read_entries};
 use ooxml_xml::{Utf16Map, parse_ordered, serialize};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 mod calls;
+mod invoke;
 mod odt;
 mod package;
 mod props;
@@ -47,10 +58,39 @@ enum Command {
     NormalizeOoxml,
     /// Blob 0: one model value as JSON. Reply blob 0: typed value serialized again.
     ModelRoundTrip { type_name: String },
-    /// Blob 0: a docx. Reply blob 0: the `ParsedDocFull` `parseDocx` returns for
-    /// it, as the model comparison's JSON (a Map as its entries, bytes as
-    /// `{ "$bytes" }`), read with no media converter installed.
-    ParseDocx,
+    /// Blob 0: a docx (blobs 1..: what `resolved` names). Reply blob 0: the
+    /// `ParsedDocFull` `parseDocx` returns for it, as the model comparison's
+    /// JSON (a Map as its entries, bytes as `{ "$bytes" }`; with `blobRefs`,
+    /// bytes are `{ "$blob": n }` reply blobs and `internal.originalBytes` is
+    /// `{ "$input": 0 }`). The media converters only the host has are
+    /// two-pass: a conversion owed answers `pending` and no model; call again
+    /// with `resolved` (conversion id to `null`, a data URL or a blob).
+    ParseDocx {
+        #[serde(default)]
+        options: ParseOptionsWire,
+        #[serde(default)]
+        alt_chunk_converter: bool,
+        #[serde(default)]
+        resolved: HashMap<String, Value>,
+        #[serde(default)]
+        blob_refs: bool,
+    },
+    /// A TypeScript export by name with its arguments positionally (see
+    /// `invoke`). Blobs: the `Uint8Array` arguments.
+    Invoke {
+        #[serde(rename = "fn")]
+        function: String,
+        #[serde(default)]
+        args: Vec<Value>,
+        #[serde(default)]
+        callbacks: HashMap<String, u32>,
+        #[serde(default)]
+        now_ms: f64,
+        #[serde(default)]
+        resolved: HashMap<String, Value>,
+        #[serde(default)]
+        alt_chunk_converter: bool,
+    },
     /// Blob 0: the original docx. Blob 1: the `ParsedDocFull` of it as the
     /// model comparison's JSON (its `internal.originalBytes` is taken from
     /// blob 0). Header: `blocks` (`SaveBlock[]`), `options` (`SaveOptions`) and
@@ -86,6 +126,14 @@ enum Command {
     OdtToText,
 }
 
+/// `ParseOptions` of parse.ts on the wire.
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ParseOptionsWire {
+    expand_alt_chunks: Option<bool>,
+    shadow_resolve: Option<bool>,
+}
+
 #[derive(Deserialize)]
 struct Request {
     version: u8,
@@ -117,6 +165,23 @@ enum Reply<'a> {
     },
     ModelRoundTrip {
         model: bool,
+    },
+    /// `parseDocx`: the model is reply blob 0 unless conversions are owed.
+    Parsed {
+        model: bool,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pending: Vec<invoke::host::Pending>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        warnings: Vec<String>,
+    },
+    /// `invoke`: the value of the call, `undefined` as absent.
+    Invoked {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        value: Option<Value>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pending: Vec<invoke::host::Pending>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        warnings: Vec<String>,
     },
     Failure {
         error: Failure,
@@ -383,6 +448,144 @@ fn compare_documents(
     calls::save::features::compare_documents(original, revised, options, now_ms)
 }
 
+/// What the host resolved of the conversions an earlier pass owed.
+fn resolved_of(
+    resolved: &HashMap<String, Value>,
+    blobs: &[&[u8]],
+) -> Result<HashMap<String, invoke::host::Resolved>, String> {
+    resolved
+        .iter()
+        .map(|(id, value)| {
+            let answer = match value {
+                Value::Null => invoke::host::Resolved::Null,
+                Value::String(url) => invoke::host::Resolved::Text(url.clone()),
+                other => {
+                    let index = other
+                        .get("$blob")
+                        .and_then(Value::as_u64)
+                        .ok_or("resolved: a null, a string or a blob")?;
+                    let bytes = blobs
+                        .get(index as usize)
+                        .ok_or("resolved: blob is missing")?;
+                    invoke::host::Resolved::Bytes(bytes.to_vec())
+                }
+            };
+            Ok((id.clone(), answer))
+        })
+        .collect()
+}
+
+/// The conversions a pass recorded, as pending entries with reply blobs holding their inputs.
+fn pending_of(
+    media: &invoke::host::RecordingHost,
+    reply_blobs: &mut Vec<Vec<u8>>,
+) -> Vec<invoke::host::Pending> {
+    media
+        .take_recorded()
+        .into_iter()
+        .map(|recorded| {
+            let blob = reply_blobs.len();
+            reply_blobs.push(recorded.input);
+            invoke::host::Pending {
+                id: recorded.id,
+                kind: recorded.kind,
+                mime: recorded.mime,
+                blob,
+            }
+        })
+        .collect()
+}
+
+/// `parseDocx(bytes, options)`: the reply and its blobs.
+fn parse_docx_command(
+    docx: &[u8],
+    blobs: &[&[u8]],
+    options: &ParseOptionsWire,
+    alt_chunk_converter: bool,
+    resolved: &HashMap<String, Value>,
+    blob_refs: bool,
+) -> Result<(Reply<'static>, Vec<Vec<u8>>), String> {
+    docx_engine::warnings::take();
+    let media =
+        invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
+    let parsed = docx_engine::parse::parse_docx_full_with(
+        docx,
+        &media,
+        docx_engine::parse::ParseOptions {
+            expand_alt_chunks: options.expand_alt_chunks != Some(false),
+            shadow_resolve: options.shadow_resolve == Some(true),
+        },
+    );
+    let warnings = docx_engine::warnings::take();
+    let model = parsed?;
+    // blob 0 is the model: the conversions owed follow it
+    let mut reply_blobs: Vec<Vec<u8>> = vec![Vec::new()];
+    let pending = pending_of(&media, &mut reply_blobs);
+    if !pending.is_empty() {
+        // the model of a pass that owes conversions is not the answer
+        return Ok((
+            Reply::Parsed {
+                model: false,
+                pending,
+                warnings,
+            },
+            reply_blobs,
+        ));
+    }
+    let text = if blob_refs {
+        let mut value = serde_json::to_value(&model).map_err(|error| error.to_string())?;
+        if let Some(internal) = value.get_mut("internal").and_then(Value::as_object_mut) {
+            internal.insert(
+                "originalBytes".to_owned(),
+                serde_json::json!({ "$input": 0 }),
+            );
+        }
+        invoke::blobify(&mut value, &mut reply_blobs);
+        value.to_string()
+    } else {
+        serde_json::to_string(&model).map_err(|error| error.to_string())?
+    };
+    reply_blobs[0] = text.into_bytes();
+    Ok((
+        Reply::Parsed {
+            model: true,
+            pending,
+            warnings,
+        },
+        reply_blobs,
+    ))
+}
+
+/// One `invoke`: the reply and its blobs.
+fn invoke_command(
+    blobs: &[&[u8]],
+    function: &str,
+    args: &[Value],
+    callbacks: HashMap<String, u32>,
+    now_ms: f64,
+    resolved: &HashMap<String, Value>,
+    alt_chunk_converter: bool,
+) -> Result<(Reply<'static>, Vec<Vec<u8>>), String> {
+    docx_engine::warnings::take();
+    let media =
+        invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
+    let mut env = invoke::InvokeEnv::new(blobs, callbacks, now_ms, media);
+    // the product's calls: a model value read as the TypeScript reads it (wire.rs)
+    let result = jscompat::reading_leniently(|| invoke::table::invoke(&mut env, function, args));
+    let warnings = docx_engine::warnings::take();
+    let value = result?;
+    let (mut reply_blobs, media) = env.into_reply_blobs();
+    let pending = pending_of(&media, &mut reply_blobs);
+    Ok((
+        Reply::Invoked {
+            value,
+            pending,
+            warnings,
+        },
+        reply_blobs,
+    ))
+}
+
 fn respond(input: &[u8]) -> Vec<u8> {
     let mut reply_blobs = Vec::new();
     let header = match decode_frame(input) {
@@ -419,21 +622,53 @@ fn respond(input: &[u8]) -> Vec<u8> {
                         Err(error) => json(&Reply::failure("model_refused", error)),
                     }
                 }
-                (Command::ParseDocx, Some(docx)) => {
-                    match docx_engine::parse::parse_docx_full(
-                        docx,
-                        &docx_engine::parse::drawings::host::NoHost,
-                    )
-                    .and_then(|model| {
-                        serde_json::to_string(&model).map_err(|error| error.to_string())
-                    }) {
-                        Ok(text) => {
-                            reply_blobs.push(text.into_bytes());
-                            json(&Reply::ModelRoundTrip { model: true })
-                        }
-                        Err(error) => json(&Reply::failure("parse_refused", error)),
+                (
+                    Command::ParseDocx {
+                        options,
+                        alt_chunk_converter,
+                        resolved,
+                        blob_refs,
+                    },
+                    Some(docx),
+                ) => match parse_docx_command(
+                    docx,
+                    &frame.blobs,
+                    &options,
+                    alt_chunk_converter,
+                    &resolved,
+                    blob_refs,
+                ) {
+                    Ok((reply, blobs)) => {
+                        reply_blobs = blobs;
+                        json(&reply)
                     }
-                }
+                    Err(error) => json(&Reply::failure("parse_refused", error)),
+                },
+                (
+                    Command::Invoke {
+                        function,
+                        args,
+                        callbacks,
+                        now_ms,
+                        resolved,
+                        alt_chunk_converter,
+                    },
+                    _,
+                ) => match invoke_command(
+                    &frame.blobs,
+                    &function,
+                    &args,
+                    callbacks,
+                    now_ms,
+                    &resolved,
+                    alt_chunk_converter,
+                ) {
+                    Ok((reply, blobs)) => {
+                        reply_blobs = blobs;
+                        json(&reply)
+                    }
+                    Err(error) => json(&Reply::failure("thrown", error)),
+                },
                 (
                     Command::SaveDocx {
                         blocks,
@@ -441,7 +676,9 @@ fn respond(input: &[u8]) -> Vec<u8> {
                         now_ms,
                     },
                     Some(docx),
-                ) => match save_docx(docx, frame.blobs.get(1), blocks, options, now_ms) {
+                ) => match jscompat::reading_leniently(|| {
+                    save_docx(docx, frame.blobs.get(1), blocks, options, now_ms)
+                }) {
                     Ok(saved) => {
                         reply_blobs.push(saved);
                         json(&Reply::ModelRoundTrip { model: true })
@@ -449,7 +686,9 @@ fn respond(input: &[u8]) -> Vec<u8> {
                     Err(error) => json(&Reply::failure("save_refused", error)),
                 },
                 (Command::CompareDocuments { options, now_ms }, _) => {
-                    match compare_documents(&frame.blobs, options.as_ref(), now_ms) {
+                    match jscompat::reading_leniently(|| {
+                        compare_documents(&frame.blobs, options.as_ref(), now_ms)
+                    }) {
                         Ok((docx, summary)) => {
                             reply_blobs.push(docx);
                             reply_blobs.push(summary.to_string().into_bytes());
@@ -471,7 +710,7 @@ fn respond(input: &[u8]) -> Vec<u8> {
                     | Command::ZipEntries
                     | Command::Package
                     | Command::ModelRoundTrip { .. }
-                    | Command::ParseDocx
+                    | Command::ParseDocx { .. }
                     | Command::SaveDocx { .. }
                     | Command::PptxPackage,
                     None,

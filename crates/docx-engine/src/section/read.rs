@@ -3,7 +3,7 @@
 //! the page colour.
 
 use jscompat::{
-    JsMap, JsNum, JsRegex, Radix, js_regex, math_round, parse_float, parse_int, truthy,
+    JsNum, JsObject, JsRegex, Radix, js_regex, math_round, parse_float, parse_int, truthy,
 };
 use serde::{Deserialize, Serialize};
 
@@ -142,7 +142,7 @@ pub struct PageBorderProps {
     pub color: Option<String>,
     /// Per-side lines (top, left, bottom, right) in the order the file sets
     /// them; a missing side draws no border.
-    pub sides: JsMap<PageBorderSide>,
+    pub sides: JsObject<PageBorderSide>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -233,8 +233,8 @@ pub struct SectionInfo {
     pub page_number_fmt: Option<String>,
     /// Header reference rIds by variant (default, first, even), in the order
     /// the sectPr sets them.
-    pub header_refs: JsMap<String>,
-    pub footer_refs: JsMap<String>,
+    pub header_refs: JsObject<String>,
+    pub footer_refs: JsObject<String>,
 }
 
 /// The fields of a body block the section readers look at.
@@ -325,7 +325,7 @@ fn page_border_props_of(xml: &str) -> Option<PageBorderProps> {
     let mut space_pt = 0.0;
     let mut width_pt = 0.0;
     let mut color: Option<&str> = None;
-    let mut sides = JsMap::new();
+    let mut sides = JsObject::new();
     for side in border_sides_of(pg_borders) {
         let Some(val) = truthy(str_attr!(side, "w:val")) else {
             continue;
@@ -571,8 +571,8 @@ pub fn hf_reference_r_id(tag: &str) -> Option<&str> {
         .and_then(|found| found.get(1))
 }
 
-fn hf_refs(xml: &str, kind: HfKind) -> JsMap<String> {
-    let mut refs = JsMap::new();
+fn hf_refs(xml: &str, kind: HfKind) -> JsObject<String> {
+    let mut refs = JsObject::new();
     for reference in hf_reference_tags(xml, kind) {
         let variant = match hf_reference_type(reference) {
             Some("first") => "first",

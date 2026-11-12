@@ -40,6 +40,42 @@ pub struct CompareOptions {
     pub ignore: Vec<CompareIgnore>,
 }
 
+impl CompareOptions {
+    /// The options a JSON object names, as the TypeScript reads `options`: a
+    /// field of another type is absent, an `ignore` entry that names no rule is
+    /// skipped and any granularity but "char" is "word".
+    pub fn from_json(options: Option<&serde_json::Value>) -> Self {
+        let text_of = |name: &str| {
+            options
+                .and_then(|options| options.get(name))
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+        };
+        let ignore = options
+            .and_then(|options| options.get("ignore"))
+            .and_then(serde_json::Value::as_array)
+            .map(|names| {
+                names
+                    .iter()
+                    .filter_map(|name| match name.as_str() {
+                        Some("formatting") => Some(CompareIgnore::Formatting),
+                        Some("case") => Some(CompareIgnore::Case),
+                        Some("whitespace") => Some(CompareIgnore::Whitespace),
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        Self {
+            author: text_of("author"),
+            date: text_of("date"),
+            granularity: (text_of("granularity").as_deref() == Some("char"))
+                .then_some(CompareGranularity::Char),
+            ignore,
+        }
+    }
+}
+
 /// `CompareSummary`
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 #[serde(crate = "jscompat::serde", rename_all = "camelCase")]

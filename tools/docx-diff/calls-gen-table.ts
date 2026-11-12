@@ -3,8 +3,8 @@
 // Corpus tables come as parsed TableModel values: CallSpec.fromDocument is
 // synchronous and parseDocx is not, so `tableModelInputs` takes a parsed
 // document and the runner calls it where it holds one.
-import { generateTableModelXml, generateTableXml } from '../../packages/docx-engine/src/generate'
-import type { CellBorder, TableCell, TableModel } from '../../packages/docx-engine/src/types'
+import { generateTableModelXml, generateTableXml } from './reference/generate'
+import type { CellBorder, TableCell, TableModel } from './reference/types'
 import type { CallSpec, Input } from './calls-spec'
 
 const PER_DOC = 12

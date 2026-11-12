@@ -2,7 +2,7 @@
 // tracked .docx has a field, a ruby, a VML shape or a comment range, and their
 // XML is machine-written in one style. Each text below is run through every
 // reader, as a part and as the elements it holds, and seeds the mutations.
-import type { Run } from '../../packages/docx-engine/src/types'
+import type { Run } from './reference/types'
 
 const p = (inner: string, attrs = ''): string => `<w:p${attrs}>${inner}</w:p>`
 const r = (inner: string, rPr = ''): string =>

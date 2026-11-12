@@ -54,6 +54,16 @@ docx 한 파일의 읽기와 쓰기 전부를 맡는다.
 - "전체 목록" 옵션(`comments`, `footnotes`, `endnotes`, `sources`, `inks`)은 값을 주면 해당 파트를 목록에서 다시 만들고, `undefined`면 바이트를 유지한다. `inks: []`는 이 앱이 넣은 잉크를 전부 지운다는 뜻이다.
 - `settings.xml`의 자식은 스키마 순서(`SETTINGS_CHILD_ORDER`)에 맞는 자리에 끼운다. 순서가 틀리면 Word가 복구를 제안한다.
 
+## 엔진 시작 (wasm 바인딩)
+
+구현 모듈은 Rust 엔진(`crates/office-wasm`)을 `@seuoffice/engine-wasm`으로 부르는 얇은 함수다. 호출은 동기이고 엔진은 프로세스(또는 워커)마다 한 번 시작한다.
+
+- `node` 조건으로 이 패키지를 import하면 `src/node/*.ts`가 `@seuoffice/engine-wasm/node`를 먼저 불러 엔진을 동기로 시작한다. wasm은 `SEUOFFICE_WASM`이 가리키는 파일, 없으면 `crates/target/wasm32-wasip1/release/office_wasm.wasm`이다. 그 파일이 없으면 시작하지 않고(번들이 import만 하는 경우를 죽이지 않으려는 것), 엔진을 부르는 순간 "call initEngine or initEngineSync first"로 알린다.
+- 별칭으로 소스 경로를 직접 가리키는 곳(vitest 설정, electron-vite 설정)은 `node` 조건을 거치지 않는다. 시험은 `setupFiles`에 `packages/engine-wasm/src/node.ts`를 넣고, 앱의 Electron main·워커 스레드는 `engine-init.ts`(`?asset`으로 번들에 담은 wasm)에서 `initDocxEngineSync`를, 렌더러·웹·웹 워커는 `await initDocxEngine(engineUrl)`(`./engine-url`의 `?url`)을 가장 먼저 import하는 모듈에서 부른다. CSP에 `'wasm-unsafe-eval'`이 있어야 한다.
+- 명령줄은 번들이 CommonJS 한 파일이라 `packages/cli/src/engine-init.ts`가 `engineWasmPath()`(`Resources/wasm/office_wasm.wasm`)로 시작한다.
+- 이 패키지의 모듈은 스스로 엔진을 시작하지 않는다(`src/engine.ts`는 시작됐는지만 본다). 인자와 답을 오가게 하는 코덱(`engineInvokeRaw`, `revive`, 오류 이름 복원 `engineErrorOf`)은 `@seuoffice/engine-wasm`의 것이고, 이 패키지는 `Run.wrap` 경계 규칙만 더한다. `metafile.ts`, `tiff.ts`, `xml-utils.ts`와 `vendor/`는 엔진 없는 TypeScript로 남는다.
+- 바인딩 이전의 TypeScript 구현은 `tools/docx-diff/reference/`에 얼려 두었고 게이트는 그것과 비교한다. 거기는 고치지 않는다.
+
 ## 원본과 다른 점 (결정 0092)
 
 결정 0092의 네 수정(머리글·꼬리말의 `SECTIONPAGES`, 직접 만든 스타일의 목차 줄, 쪽 기준 도형의 감싸기, 대체 글꼴)은 원본 #2364로 원본에 들어갔다. 그 시험(`tests/hf-section-pages.test.ts`, `tests/field-display.test.ts`, `tests/page-anchored-wrap.test.ts`, `tests/wrap-topbottom-band.test.ts`)은 원본의 것으로 남는다.

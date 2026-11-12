@@ -107,6 +107,34 @@ pub struct PropertyChanges {
 }
 
 impl PropertyChanges {
+    /// The changes as `parsePropertyChanges` builds the object: `clear` first,
+    /// then the sections core, app and custom.
+    pub fn to_json(&self) -> Value {
+        let mut out = serde_json::Map::new();
+        if self.clear_all {
+            out.insert("clear".to_owned(), Value::from("all"));
+        }
+        if let Some(core) = &self.core {
+            out.insert(
+                "core".to_owned(),
+                serde_json::to_value(core).unwrap_or(Value::Null),
+            );
+        }
+        if let Some(app) = &self.app {
+            out.insert(
+                "app".to_owned(),
+                serde_json::to_value(app).unwrap_or(Value::Null),
+            );
+        }
+        if let Some(custom) = &self.custom {
+            out.insert(
+                "custom".to_owned(),
+                serde_json::to_value(custom).unwrap_or(Value::Null),
+            );
+        }
+        Value::Object(out)
+    }
+
     /// The changes a JSON object holds, as the TypeScript reads a typed
     /// `PropertyChanges` that nothing has validated: a value of another type
     /// than the interface names is left out.

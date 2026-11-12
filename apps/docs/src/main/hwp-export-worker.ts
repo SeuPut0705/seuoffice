@@ -4,6 +4,8 @@
  */
 // first: variables set under the old prefix are taken over before anything reads its own
 import '@seuoffice/i18n/old-names-env'
+// the Hangul export reads a docx through @seuoffice/docx-engine: this thread starts its own engine
+import './engine-init'
 import { readFileSync } from 'node:fs'
 import { parentPort } from 'node:worker_threads'
 import { Docx2HwpError, HwpEngine, docxToHwp } from '@seuoffice/docx2hwp'

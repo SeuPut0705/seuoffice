@@ -2,14 +2,14 @@
 // (group `save` of comparison (f)), this writes a copy of the module to
 // out/save-internals.ts in which every top-level function and constant is
 // exported. The copy is the same code: only `export ` is added, and the
-// relative imports point back at packages/docx-engine/src.
+// relative imports point back at tools/docx-diff/reference.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
 import { repoRoot, toolDir } from './harness'
 
-const SOURCE = resolve(repoRoot, 'packages/docx-engine/src/patch.ts')
+const SOURCE = resolve(repoRoot, 'tools/docx-diff/reference/patch.ts')
 const COPY = resolve(toolDir, 'out/save-internals.ts')
 
 function writeCopy(): void {

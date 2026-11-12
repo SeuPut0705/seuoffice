@@ -301,6 +301,7 @@ fn effective_run_of(text: &str, args: &Value) -> Returned {
             rctx,
             memo: JsMap::new(),
             para_rtl: None,
+            diff: None,
         };
         if let Some(earlier) = &earlier {
             with_named(&earlier.text, earlier.node.as_deref(), |r_pr| {

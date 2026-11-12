@@ -14,8 +14,8 @@ import {
   type BlankDocxOptions,
   type BlankPaperSize,
   type CustomNumberingLevel,
-} from '../../packages/docx-engine/src/blank'
-import { parseNumbering } from '../../packages/docx-engine/src/parse-package'
+} from './reference/blank'
+import { parseNumbering } from './reference/parse-package'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { mulberry32 } from './synthetic'
 
