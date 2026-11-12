@@ -343,7 +343,7 @@ fn read(ext: &str, bytes: &[u8], opts: ParseFileOptions, hosted: Option<&Value>)
         "odt" => return parse_odt(hosted).map(Some),
         "ppt" => crate::ppt::ppt_to_text(bytes).map_err(caught_js)?,
         "pptx" => crate::pptx::pptx_to_text(bytes).map_err(caught)?,
-        "xlsx" | "xlsm" => crate::xlsx::xlsx_to_text(bytes, opts.max_chars).map_err(caught)?,
+        "xlsx" | "xlsm" => crate::xlsx::xlsx_to_text(bytes, opts.max_chars, None).map_err(caught)?,
         "pdf" => hosted_text(hosted, "pdf")?,
         "xmind" => hosted_text(hosted, "xmind")?,
         "epub" => crate::epub::epub_to_text(bytes).map_err(caught)?,

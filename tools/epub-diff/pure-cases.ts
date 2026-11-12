@@ -1127,3 +1127,10 @@ add({
   }),
   built: () => [{ label: 'constants', args: {} }],
 })
+
+// an input that crosses as units has no text to mutate: it seeds no mutations
+for (const [index, spec] of SPECS.entries()) {
+  if (spec.mutation !== 'text') continue
+  const built = spec.built
+  SPECS[index] = { ...spec, built: async () => (await built()).map(input => (input.text === undefined ? { ...input, mutate: false } : input)) }
+}

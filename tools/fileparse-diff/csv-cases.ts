@@ -93,7 +93,7 @@ export const SPECS: Spec[] = [
     fn: 'decodeCsvBuffer',
     extensions: ['csv', 'tsv'],
     mutation: 'none',
-    call: ({ bytes = new Uint8Array(), args = {} }) => decodeCsvBuffer(bytes, args.preferred as string | undefined),
+    call: async ({ bytes = new Uint8Array(), args = {} }) => decodeCsvBuffer(bytes, typeof args.preferred === "string" ? args.preferred : undefined),
     built,
   },
 ]

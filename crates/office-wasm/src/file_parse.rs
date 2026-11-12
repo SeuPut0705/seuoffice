@@ -92,7 +92,12 @@ pub fn run(function: &str, text: &str, bytes: &[u8], args: &Value) -> Vec<u8> {
             file_parse::docx::docx_to_text(bytes, numeric("maxChars")).map(Value::String)
         }
         "xlsxToText" => {
-            file_parse::xlsx::xlsx_to_text(bytes, numeric("maxChars")).map(Value::String)
+            file_parse::xlsx::xlsx_to_text(
+                bytes,
+                numeric("maxChars"),
+                numeric("formulaScanMaxBytes"),
+            )
+            .map(Value::String)
         }
         "sheetXmlByteLimit" => Ok(number(file_parse::xlsx::sheet_xml_byte_limit(
             jscompat::to_number(text),

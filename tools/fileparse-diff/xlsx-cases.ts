@@ -262,6 +262,479 @@ async function redactionInputs(): Promise<Input[]> {
   return out
 }
 
+const COLUMN_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+/** Text cells from A1 over `rows` × `columns`, each naming its place, so a withheld one is seen by its absence. */
+function grid(rows: number, columns: number): string {
+  let out = ''
+  for (let r = 1; r <= rows; r++) {
+    let cells = ''
+    for (let k = 0; k < columns; k++) cells += c(`${COLUMN_LETTERS[k]}${r}`, v(`g${COLUMN_LETTERS[k]}${r}`), ' t="str"')
+    out += row(r, cells)
+  }
+  return out
+}
+
+/** A formula cell with the value it was last calculated to. */
+const fc = (ref: string | null, formula: string, cached = '0', attrs = '') => c(ref, f(formula, attrs) + v(cached))
+const marked = (sheets: Book['sheets'], marks: unknown, extra: Partial<Book> = {}): Book => ({
+  ...extra,
+  sheets,
+  files: { 'xl/gxRedactions.json': part(marks), ...extra.files },
+})
+const PAY_B1 = [{ name: 'Pay', marks: [mark(0, 0, 1, 1, 'Salary')] }]
+const rawRels = (items: Array<[id: string, type: string, target: string, mode?: string]>) =>
+  `${DECL}<Relationships xmlns="${PKG}">${items
+    .map(([id, type, target, mode]) => `<Relationship Id="${id}" Type="${type}" Target="${target}"${mode ? ` TargetMode="${mode}"` : ''}/>`)
+    .join('')}</Relationships>`
+const STRICT = 'http://purl.oclc.org/ooxml/officeDocument/relationships'
+
+const PIVOT_LOCATION = (ref: string, attrs = '') => `<location ref="${ref}" firstHeaderRow="1" firstDataRow="2" firstDataCol="1"${attrs}/>`
+const PIVOT_PAGE_FIELDS = (count: number, prefix = '') =>
+  count === 0 ? '' : `<${prefix}pageFields count="${count}">${`<${prefix}pageField fld="0" hier="-1"/>`.repeat(count)}</${prefix}pageFields>`
+const pivotXml = (location: string, fields = '') =>
+  `${DECL}<pivotTableDefinition xmlns="${S}" name="PivotTable1" cacheId="1">${location}<pivotFields count="1"><pivotField axis="axisRow" showAll="0"/></pivotFields>${fields}</pivotTableDefinition>`
+const WORKSHEET_SOURCE = (attrs: string) => `<cacheSource type="worksheet"><worksheetSource ${attrs}/></cacheSource>`
+const cacheXml = (source: string, { root = `xmlns="${S}" xmlns:r="${R}" r:id="rId1"`, before = '', after = '' } = {}) =>
+  `${DECL}<pivotCacheDefinition ${root} refreshOnLoad="1">${before}${source}<cacheFields count="1"><cacheField name="Region" numFmtId="0"/></cacheFields>${after}</pivotCacheDefinition>`
+const DATA_SHEET = sheet(
+  row(1, c('A1', v('Region'), ' t="str"'), c('B1', v('Units'), ' t="str"'), c('C1', v('Amount'), ' t="str"')) +
+  row(2, c('A2', v('East'), ' t="str"'), c('B2', v('3')), c('C2', v('300'))) +
+  row(3, c('A3', v('West'), ' t="str"'), c('B3', v('4')), c('C3', v('400'))) +
+  row(4, c('A4', v('North'), ' t="str"'), c('B4', v('5')), c('C4', v('500'))),
+)
+const REPORT_SHEET = sheet(grid(12, 4) + row(13, fc('A13', 'SUM(B4:B8)', '10'), fc('B13', 'SUM(D4:D8)', '1'), fc('C13', 'SUM(A1:A3)', '1')))
+const DATA_C2 = [{ name: 'Data', marks: [mark(1, 1, 2, 2, 'Amount')] }]
+const SALES_NAME = '<definedName name="Sales">Data!$A$1:$C$4</definedName>'
+
+interface PivotSpec {
+  pivot?: string | null
+  pivotRels?: string | null
+  cache?: string | null
+  sheetRels?: string
+  definedNames?: string
+  /** `null`: no record of withheld cells is written */
+  marks?: unknown
+  files?: Record<string, string>
+}
+const PIVOT_PART = 'xl/pivotTables/pivotTable1.xml'
+const CACHE_PART = 'xl/pivotCache/pivotCacheDefinition1.xml'
+const PIVOT_RELS = rels([['rId1', 'pivotTable', '../pivotTables/pivotTable1.xml']])
+const CACHE_RELS = rels([['rId1', 'pivotCacheDefinition', '../pivotCache/pivotCacheDefinition1.xml']])
+function pivotBook(spec: PivotSpec = {}): Book {
+  const files: Record<string, string> = { 'xl/worksheets/_rels/sheet2.xml.rels': spec.sheetRels ?? PIVOT_RELS }
+  if (spec.pivot !== null) files[PIVOT_PART] = spec.pivot ?? pivotXml(PIVOT_LOCATION('A3:B8'))
+  if (spec.pivotRels !== null) files['xl/pivotTables/_rels/pivotTable1.xml.rels'] = spec.pivotRels ?? CACHE_RELS
+  if (spec.cache !== null) files[CACHE_PART] = spec.cache ?? cacheXml(WORKSHEET_SOURCE('ref="A1:C4" sheet="Data"'))
+  const sheets: Book['sheets'] = [['Data', DATA_SHEET], ['Report', REPORT_SHEET]]
+  const extra: Partial<Book> = {
+    ...(spec.definedNames === undefined ? {} : { definedNames: spec.definedNames }),
+    files: { ...files, ...spec.files },
+  }
+  return spec.marks === null ? { ...extra, sheets } : marked(sheets, spec.marks ?? DATA_C2, extra)
+}
+
+/** What the formula trace withholds beyond the marks, and what it leaves alone. */
+async function derivedInputs(): Promise<Input[]> {
+  const out: Input[] = []
+  const add = async (label: string, spec: Book, args: Record<string, string> = {}, mutate = true) =>
+    out.push({ label: `derived: ${label}`, bytes: await book(spec), args, ...(mutate ? {} : { mutate: false }) })
+
+  // references: direct, absolute, chained, ranges, whole columns and rows
+  await add('direct references and chains', marked([['Pay', sheet(
+    row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'B1', '1000'), fc('D1', '$B$1+1', '1001'), fc('E1', 'C1*2', '2000'), fc('F1', 'A1', '5'), fc('G1', 'b1', '1000'), fc('H1', 'B1:B2', '1000')) +
+    row(2, c('A2', v('plain 2')), c('B2', v('2000')), fc('C2', 'SUM(B2:B3)', '2000'), fc('D2', 'SUM(A1:A9)', '6'), fc('E2', 'SUM(A1:C1)', '2000'), fc('F2', 'IF(A1="B1",1,2)', '2'), fc('G2', 'A1&amp;"x"', '5'), fc('H2', 'B2')) +
+    row(3, fc('A3', 'E1', '2000'), fc('B3', 'A3+1', '2001'), fc('C3', 'F1', '5'), fc('D3', 'H1', '1000'), fc('E3', "'Pay'!B1", '1000'), fc('F3', 'Pay!$B$1', '1000'), fc('G3', '-B1', '-1000'), fc('H3', '(B1)', '1000')) +
+    row(4, fc('A4', 'SUM(B:B)', '3000'), fc('B4', 'SUM(Z:Z)'), fc('C4', 'SUM(1:1)', '9'), fc('D4', 'SUM(9:9)'), fc('E4', 'SUM(A:C)', '5'), fc('F4', 'SUM(C:D)', '1'), fc('G4', 'SUM($A$9:$A$12)'), fc('H4', 'COUNT(B1,B2)', '2')),
+  )]], PAY_B1))
+  await add('rectangles, overlaps and distant rows', marked([['Pay', sheet(
+    row(1, c('A1', v('plain')), c('D1', v('d1'))) +
+    row(5, c('D5', v('hidden 1')), c('E5', v('hidden 2')), c('F5', v('open'))) +
+    row(6, c('D6', v('hidden 3')), c('E6', v('hidden 4')), fc('F6', 'D5', '1')) +
+    row(7, fc('A7', 'SUM(C4:D5)'), fc('B7', 'SUM(E6:F7)'), fc('C7', 'SUM(F6:G7)'), fc('D7', 'SUM(E6:D5)'), fc('E7', 'SUM(G9:H10)'), fc('F7', 'F6+1')) +
+    row(300, c('A300', v('buried')), c('B300', v('hidden 5'))) +
+    row(301, fc('A301', 'SUM(A1:A1000)'), fc('B301', 'SUM(B1:B299)'), fc('C301', 'SUM(B1:B5000)'), fc('D301', 'SUM(1:2)'), fc('E301', 'B300')) +
+    row(5000, fc('A5000', 'SUM(A1:A4999)'), c('B5000', v('hidden 6'))) +
+    row(5001, fc('A5001', 'SUM(B4:B6000)'), fc('B5001', 'SUM(A:A)'), fc('C5001', 'SUM(C:C)'), fc('D5001', 'A5001')) +
+    row(1048576, c('A1048576', v('last row')), c('B1048576', v('hidden 7'))) +
+    row(1048575, fc('A1048575', 'A1048576'), fc('B1048575', 'B1048576'), fc('C1048575', 'SUM(B1048570:B1048576)')),
+  )]], [{ name: 'Pay', marks: [
+    mark(4, 5, 3, 4, 'Block'), mark(299, 299, 1, 1, 'Buried'), mark(4999, 4999, 1, 1, 'Deep'), mark(1048575, 1048575, 1, 1, 'Last'),
+  ] }]))
+  await add('other sheets', marked([
+    ['Pay', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'Report!A1', '1000'), fc('D1', 'Report!B9', '1')) + row(2, fc('A2', 'Report!A4', '1')))],
+    ['Report', sheet(
+      row(1, fc('A1', 'Pay!B1', '1000'), fc('B1', "'Pay'!B1", '1000'), fc('C1', 'PAY!b1', '1000'), fc('D1', 'Pay!B2', '1'), fc('E1', "'Pay'!A1:C1", '1')) +
+      row(2, fc('A2', 'Gone!A1'), fc('B2', 'Pay!B1+Other!A1', '1'), fc('C2', 'Pay!A1', '1'), fc('D2', "'My sheet'!A1"), fc('E2', 'A1', '1')) +
+      row(4, fc('A4', 'Pay!D1', '1'), fc('B4', 'Pay!C1', '1')) +
+      row(9, fc('B9', 'Pay!D1', '1'), fc('C9', 'Pay!A2', '1')),
+    )],
+  ], PAY_B1))
+  await add('sheet names that need quoting, entities and case', marked([
+    ['Pay', sheet(row(1, c('A1', v('plain')), c('B1', v('1000'))))],
+    ["Q1 'Plan'", sheet(row(1, fc('A1', "Pay!B1", '1'), fc('B1', "'Q1 ''Plan'''!A1", '1'), fc('C1', "'Q1 ''PLAN'''!A2", '1'), fc('D1', "'Q1 '''!A1", '1')) + row(2, c('A2', v('own'))))],
+    ['R&amp;D', sheet(row(1, fc('A1', "'R&amp;D'!B1", '1'), c('B1', v('lab')), fc('C1', "'Q1 ''Plan'''!A1", '1'), fc('D1', "'R&amp;D'!A1", '1')))],
+    ['Données', sheet(row(1, c('A1', v('d')), fc('B1', 'DONNÉES!A1', '1'), fc('C1', 'données!A1+Pay!B1', '1'), fc('D1', 'Pay!B1:Données!A1', '1')))],
+  ], [{ name: 'Pay', marks: [mark(0, 0, 1, 1, 'Salary')] }, { name: 'R&D', marks: [mark(0, 0, 1, 1, 'Lab')] }]))
+
+  // defined names: resolved, unqualified, undefined, recursive, scoped
+  const NAMES =
+    '<definedName name="Secret">Pay!$B$1</definedName>' +
+    '<definedName name="SecretRange" localSheetId="1">Pay!$A$1:$C$1</definedName>' +
+    '<definedName name="Chain">Secret+1</definedName>' +
+    '<definedName name="Local">$B$1</definedName>' +
+    '<definedName name="Safe">Pay!$A$1</definedName>' +
+    '<definedName name="Loop1">Loop2+1</definedName><definedName name="Loop2">Loop1+1</definedName>' +
+    '<definedName name="Twice">Pay!$A$1</definedName><definedName name="Twice" localSheetId="0">Pay!$B$1</definedName>' +
+    '<definedName name="Ext">[1]Sheet1!$A$1</definedName>' +
+    '<definedName name="Fn">INDIRECT("B1")</definedName>' +
+    '<definedName name="Bad">Gone!$A$1</definedName>' +
+    '<definedName name="Const">42</definedName>' +
+    '<definedName name="Text">"B1"</definedName>' +
+    '<definedName name="Blank"/>' +
+    '<definedName>no name</definedName>' +
+    '<definedName name="Amp">Pay!$A$1&amp;Pay!$B$1</definedName>' +
+    '<definedName name="Nested">Chain*Safe</definedName>'
+  const nameFormulas = ['Secret', 'Secret*2', 'Chain', 'Local', 'Safe', 'Loop1', 'Twice', 'Ext', 'Fn', 'Bad', 'Const', 'Text', 'SECRET', 'Blank', 'Missing', 'Pay!Secret', "'Pay'!Secret", 'SecretRange', 'SUM(SecretRange)', 'Undefined1+Const', 'Amp', 'Nested', 'Safe+Const', 'Print_Area']
+  const nameCells = nameFormulas.map((formula, i) => fc(`${COLUMN_LETTERS[i % 6]}${1 + Math.floor(i / 6)}`, formula, '1'))
+  const nameSheets: Book['sheets'] = [
+    ['Pay', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), c('C1', v('open'))))],
+    ['Report', sheet([0, 1, 2, 3].map(rowIndex => row(rowIndex + 1, ...nameCells.slice(rowIndex * 6, rowIndex * 6 + 6))).join(''))],
+  ]
+  await add('defined names', marked(nameSheets, PAY_B1, { definedNames: NAMES }))
+  await add('defined names beside a mirror of the marks', { sheets: nameSheets, definedNames: NAMES + mirror(0, mirrorMark(0, [0, 1], [0, 1], 'Salary')) })
+  await add('defined names with a mark that covers the name target', marked(nameSheets, [{ name: 'Pay', marks: [mark(0, 0, 0, 0, 'Plain')] }], { definedNames: NAMES }))
+  await add('no defined name is known', marked(nameSheets, PAY_B1))
+
+  // shared formulas, with their master, without it, and out of order
+  await add('shared formulas', marked([['Rates', sheet(
+    row(1, c('A1', v('plain')), c('B1', v('1')), fc('G1', 'SUM(A:A)', '1', ' t="shared" ref="G1:H1" si="3"'), c('H1', f('', ' t="shared" si="3"') + v('1'))) +
+    row(2, c('B2', v('2')), fc('C2', 'B1+1', '2', ' t="shared" ref="C2:C5" si="0"'), c('D2', f('', ' t="shared" si="1"') + v('1')), c('E2', f('', ' t="shared" si="2"') + v('1'))) +
+    row(3, c('B3', v('3')), c('C3', f('', ' t="shared" si="0"') + v('3')), c('E3', f('', ' t="shared" si="2"') + v('1')), fc('F3', 'B3', '1', ' t="shared"')) +
+    row(4, c('B4', v('4')), c('C4', f('', ' t="shared" si="0"') + v('4')), fc('E4', 'B5*2', '1', ' t="shared" ref="E2:E4" si="2"')) +
+    row(5, c('B5', v('5')), c('C5', f('', ' t="shared" si="0"') + v('5')), fc('A5', 'B3', '1', " si='5' t='shared'")) +
+    row(6, c('A6', f('', " t = 'shared' si = '5'") + v('1')), fc('B7', 'A1+1', '1', ' t="shared" ref="A7:B7" si="6"'), c('A7', f('', ' t="shared" si="6"') + v('1')), c('C7', f('', ' t="shared" si=" 6"') + v('1'))) +
+    row(8, fc('A8', 'D2', '1'), fc('B8', 'D3', '1'), fc('C8', 'C4', '1'), fc('D8', 'E3', '1'), fc('E8', 'F3', '1'), fc('F8', 'C1', '1')),
+  )]], [{ name: 'Rates', marks: [mark(2, 2, 1, 1, 'Rate')] }]))
+  await add('shared formula master withheld', marked([['Rates', SHARED_MASTER_SHEET], ['Other', sheet(row(1, fc('A1', 'Rates!A2', '1'), fc('B1', 'Rates!B2', '1')))]], [{ name: 'Rates', marks: [mark(0, 0, 0, 0, 'Rate')] }]))
+
+  // array formulas and what-if data tables
+  await add('array formulas', marked([['Pay', sheet(
+    row(1, c('A1', v('plain')), c('B1', v('1')), fc('D1', 'B1:B3*2', '2', ' t="array" ref="D1:D3"'), fc('F1', 'A1', '1', ' t="array" ref="F1:F1"'), fc('G1', 'B3', '1', ' t="array" ref="G3:G1"'), fc('E1', 'D2', '2')) +
+    row(2, c('B2', v('2')), c('D2', v('4')), fc('E2', 'D4', '1'), c('G2', v('inside'))) +
+    row(3, c('B3', v('3')), c('D3', v('6')), c('G3', v('corner')), fc('E3', 'G2', '1')) +
+    row(5, c('A5', f('', ' t="array" ref="A5:A6"') + v('1')), c('A6', v('under'))),
+  )]], PAY_B1))
+  await add('array formula without a range withholds the sheet', marked([['Pay', sheet(row(1, c('A1', v('plain')), c('B1', v('1')), c('C1', f('B1*2', ' t="array"') + v('2'))))]], PAY_B1))
+  await add('array formula with an unreadable range withholds the sheet', marked([['Pay', sheet(row(1, c('A1', v('plain')), c('B1', v('1')), c('C1', f('B1*2', ' t="array" ref="C1:C"') + v('2'))))]], PAY_B1))
+  await add('what-if data table', marked([['Pay', sheet(
+    row(1, c('A1', v('plain')), c('B1', v('10')), fc('E1', 'C3', '1'), fc('F1', 'A1', '1')) +
+    row(2, c('A2', v('plain 2')), c('B2', f('', ' t="dataTable" ref="B2:C3" dt2D="1" dtr="1" r1="A1" r2="A2"') + v('5')), c('C2', v('6')), fc('E2', 'B3', '1')) +
+    row(3, c('B3', v('7')), c('C3', v('8')), fc('E3', 'SUM(B:B)', '1')),
+  )]], PAY_B1))
+  await add('data table without a range withholds the sheet', marked([['Pay', sheet(row(1, c('A1', v('plain')), c('B1', v('10')), c('C1', f('', ' t="dataTable"') + v('1'))))]], PAY_B1))
+  await add('data table with an empty range withholds the sheet', marked([['Pay', sheet(row(1, c('A1', v('plain')), c('B1', v('10')), c('C1', f('', ' t="dataTable" ref=""') + v('1'))))]], PAY_B1))
+
+  // reads that cannot be listed, and references out of the workbook
+  const untraceable = [
+    'INDIRECT("B1")', 'OFFSET(A1,0,1)', 'GETPIVOTDATA("Sales",A3)', 'CELL("contents",A1)', '_xlfn.ANCHORARRAY(A1)', 'A1#', 'SUM(A1:INDEX(B:B,3))', 'SUM(INDEX(B:B,3):A1)',
+    'Table1[Amount]', 'Table1[[#This Row],[Amount]]', '[@Amount]', 'Unknown(1)', 'LET(x,1,x)', 'LAMBDA(x,x)(1)', "'Sheet1:Sheet3'!A1", 'Sheet1:Sheet3!A1',
+    '[1]Sheet1!A1', "'[Book.xlsx]Sheet1'!A1", '[Book.xlsx]Sheet1!A1', '[1]!Name', 'SUM([1]Sheet1!A1:B2)', "'[1]Pay'!B1",
+    'ZZZ1', 'A0', 'A1048577', '$A$1:$B', 'A1:B', 'A:B1', 'A1§', '~1', "'unterminated", '"unterminated', 'Pay!', 'Pay!#REF!+1', 'Pay!+1', "'Pay'!", '(A1', 'A1)', '[1]', '#', '1#', '$', 'A1 B2',
+  ]
+  const untraceableCells = untraceable.map((formula, i) => fc(`${COLUMN_LETTERS[i % 8]}${1 + Math.floor(i / 8)}`, formula, '1'))
+  const untraceableRows = Array.from({ length: Math.ceil(untraceable.length / 8) }, (_, rowIndex) => row(rowIndex + 1, ...untraceableCells.slice(rowIndex * 8, rowIndex * 8 + 8))).join('')
+  await add('formulas that cannot be traced', marked([['Pay', sheet(row(1, c('A1', v('plain')), c('B1', v('1000'))))], ['Report', sheet(untraceableRows)]], PAY_B1))
+  const traceable = [
+    'A1', 'SUM(A1:A3)', 'IF(A1>1,B1,C1)', 'IF(A1&gt;1,"B1",C1)', '_xlfn.XLOOKUP(1,A1:A3,B1:B3)', '_xlfn._xlws.FILTER(A1:A3,B1:B3&gt;1)', '_xlfn.STDEV.S(A1:A3)', '{1,2;3,4}',
+    '1+2', 'TRUE', 'false', '"B1"', '"say ""B1"""', '#REF!', 'A1+#N/A', '1E3', '.5', '5.', 'Rate2024.q', 'LOG10(100)', 'A1B', 'sum(a1)', 'A1:B2 B2:C3', '-A1%', 'A1^2', 'A1=B1', 'A1&lt;&gt;B1',
+    'ROUND(A1,2)&amp;"%"', 'T(A1)', 'ÄÖ+1', '_xlfn.ZZZ_UNKNOWN(1)', 'INDEX(A1:A3,2)', 'CHOOSE(2,A1,B1)', 'N(B2)',
+  ]
+  const traceableCells = traceable.map((formula, i) => fc(`${COLUMN_LETTERS[i % 8]}${1 + Math.floor(i / 8)}`, formula, '1'))
+  const traceableRows = Array.from({ length: Math.ceil(traceable.length / 8) }, (_, rowIndex) => row(rowIndex + 1, ...traceableCells.slice(rowIndex * 8, rowIndex * 8 + 8))).join('')
+  await add('formulas that are traced', marked([['Report', sheet(traceableRows)], ['Pay', sheet(row(1, c('A1', v('plain')), c('B1', v('1000'))))]], PAY_B1))
+  await add('formulas that read a cell that cannot be traced', marked([['Pay', sheet(
+    row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'INDIRECT("A1")', '1'), fc('D1', 'C1+1', '1'), fc('E1', 'A1', '1')) +
+    row(2, fc('A2', 'SUM(C:C)', '1'), fc('B2', 'SUM(E:E)', '1'), fc('C2', 'Report!A1', '1')),
+  )], ['Report', sheet(row(1, fc('A1', 'Pay!D1', '1'), fc('B1', 'Pay!E1', '1'), fc('C1', 'Pay!C2', '1')))]], PAY_B1))
+
+  // how the sheet XML is scanned
+  const scanned = (label: string, xml: string, marks: unknown = PAY_B1) => add(label, marked([['Pay', xml]], marks))
+  await scanned('formula in a cell without an address withholds the sheet', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), c(null, f('B1') + v('1')), c('D1', v('late')))))
+  await scanned('formula in a cell with an address that cannot be read withholds the sheet', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), c('C0', f('B1') + v('1')), c('D1', v('late')))))
+  await scanned('formula after a self-closed cell withholds the sheet', sheet(row(1, c('A1', v('plain')), '<c r="C1"/>' + '<f>B1</f>', c('D1', v('late')))))
+  await scanned('formula outside any cell withholds the sheet', sheet(row(1, '<f>B1</f>', c('A1', v('plain')), c('B1', v('1000')))))
+  await scanned('formula after the cell that closed reads as that cell', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), c('C1', v('3')) + '<f>B1</f>', fc('D1', 'C1', '1'), fc('E1', 'A1', '1'))))
+  await scanned('prefixed elements', `${DECL}<x:worksheet xmlns:x="${S}" xmlns:r="${R}"><x:sheetData><x:row r="1"><x:c r="A1"><x:v>plain</x:v></x:c><x:c r="B1"><x:v>1000</x:v></x:c><x:c r="C1"><x:f>B1</x:f><x:v>1</x:v></x:c><x:c r="D1"><x:f>A1</x:f><x:v>2</x:v></x:c><x:c r="E1"><x:f t="shared" si="0" ref="E1:F1">A1+B1</x:f></x:c><x:c r="F1"><x:f t="shared" si="0"/></x:c></x:row></x:sheetData></x:worksheet>`)
+  await scanned('formula the scan cannot see', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), c('C1', '<é:f>B1</é:f><v>1</v>'), c('D1', '<f>A1</f><v>2</v>'), fc('E1', 'C1', '3'))))
+  await scanned('formula in a comment is scanned and the parser does not see it', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), '<!-- <c r="Z9"><f>B1</f></c> -->', fc('C1', 'Z9', '1'), fc('D1', 'Y9', '1'))))
+  await scanned('self-closed formula in a cell', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), c('C1', '<f/><v>1</v>'), c('D1', '<f /><v>1</v>'), c('E1', '<f t="shared" si="0"/>'), c('F1', '<f></f><v>1</v>'), fc('G1', 'C1', '1'))))
+  await scanned('formula text with entities', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', '&#66;1', '1'), fc('D1', '&#x42;1', '1'), fc('E1', '&#x0042;&#49;', '1'), fc('F1', 'A1&amp;&quot;x&quot;&apos;y&apos;', '1'), fc('G1', '&nbsp;A1', '1'), fc('H1', '&amp;lt;', '1')) +
+    row(2, fc('A2', 'A1&lt;B1', '1'), fc('B2', 'A&#49;', '1'), fc('C2', '&#X42;1', '1'), fc('D2', '&#65;&#32;1', '1'), fc('E2', '&B1;', '1'), fc('F2', '&#66', '1'), fc('G2', 'B1&', '1'), fc('H2', '&constructor;A1', '1'))))
+  await scanned('formula text with a character reference past the last code point', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'A1&#1114112;', '1'))))
+  await scanned('formula text with a hexadecimal reference past the last code point', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'A1&#x110000;', '1'))))
+  await scanned('formula text with a huge hexadecimal reference', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', `A1&#x${'F'.repeat(40)};`, '1'))))
+  await scanned('formula text with a huge decimal reference', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', `A1&#${'9'.repeat(30)};`, '1'))))
+  await scanned('formula text in CDATA', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), c('C1', '<f><![CDATA[B1]]></f><v>1</v>'), fc('D1', 'A1', '1'))))
+  await scanned('formula attributes in other quotes and orders', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')),
+    c('C1', f('B1*2', " ca='1' t='normal'") + v('1')), c('D1', f('B1', ' t = "shared"  si = "0" ref="D1:E1"') + v('1')), c('E1', f('', ' si="0"  t="shared"') + v('1')),
+    c('F1', f('A1', ' t="shared" xt="shared" si="1"') + v('1')), c('G1', f('B1', ' t="shared" ref="G1:H1" si=\'2\'') + v('1')), c('H1', f('', ' t="shared" si=\'2\'') + v('1')))))
+  await scanned('formula text with surrounding space and breaks', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', ' \n\tB1 \r\n', '1'), fc('D1', '\u00a0B1\u00a0', '1'), fc('E1', '\ufeffB1', '1'), fc('F1', ' = B1', '1'), fc('G1', '=B1', '1'))))
+  await scanned('formula text with astral characters', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', '"\u{1F600}"&amp;B1', '1'), fc('D1', '"\u{1F600}"&amp;A1', '1'), fc('E1', '\u{1F600}', '1'), fc('F1', "'\u{1F600}'!B1", '1'), fc('G1', '"\u{1F600}', '1'))))
+  await scanned('no sheet data', `${DECL}<worksheet xmlns="${S}"/>`)
+  await scanned('self-closed sheet data', `${DECL}<worksheet xmlns="${S}"><sheetData/></worksheet>`)
+  await scanned('formulas after the sheet data are not scanned', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'B1', '1')), '<f>B1</f><c r="D1"><f>B1</f></c>'))
+  await scanned('sheet data close before its open', `${DECL}<worksheet xmlns="${S}"></sheetData><sheetData>${row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'B1', '1'))}</sheetData></worksheet>`)
+  await scanned('sheet data without a close', `${DECL}<worksheet xmlns="${S}"><sheetData>${row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'B1', '1'))}</worksheet>`)
+  await scanned('sheet data element with attributes', `${DECL}<worksheet xmlns="${S}"><sheetData\tx="1">${row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'B1', '1'))}</sheetData></worksheet>`)
+  await scanned('cells with an address in lower case and spaces', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), c('c1', f('B1') + v('1')), c(' D1 ', f('B1') + v('1')), c('E1', f('b1') + v('1')))))
+  await scanned('marks that cover only cells with no formula', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'A1', '1'))))
+  await scanned('formulas on a sheet with a mark that covers the whole sheet', sheet(row(1, c('A1', v('plain')), fc('B1', 'A1', '1'))), [{ name: 'Pay', marks: [mark(0, 1048575, 0, 16383, 'All')] }])
+
+  // a sheet past the scan limit is withheld whole, and so is every read of it
+  const small = sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'B1', '1'), fc('D1', 'A1', '1'), fc('E1', 'Big!A1', '1')))
+  const bigRows = Array.from({ length: 200 }, (_, index) => row(index + 1, c(`A${index + 1}`, v(`big ${index}`), ' t="str"'), fc(`B${index + 1}`, `SUM(A1:A${index + 1})`, '1'))).join('')
+  const bigSheet = sheet(bigRows)
+  const byteLength = (xml: string) => new TextEncoder().encode(xml).length
+  const twoSheets = marked([['Pay', small], ['Big', bigSheet]], PAY_B1)
+  for (const limit of [0, 1, 1000, byteLength(small) - 1, byteLength(small), byteLength(small) + 1, byteLength(bigSheet) - 1, byteLength(bigSheet), byteLength(bigSheet) + 1, 20_000, 1e9, Infinity, -Infinity, -1, Number.NaN, 0.5]) {
+    await add(`scan limit ${limit}, a sheet beyond it`, twoSheets, { formulaScanMaxBytes: String(limit) })
+  }
+  out.push({ label: 'derived: scan limit 1000, a sheet stored beyond it', bytes: await book(twoSheets, 'STORE'), args: { formulaScanMaxBytes: '1000' } })
+  const hugeRows = Array.from({ length: 1500 }, (_, index) => row(index + 1, c(`A${index + 1}`, v(`huge ${index}`), ' t="str"'), fc(`B${index + 1}`, `A${index + 1}`, '1'), fc(`C${index + 1}`, `SUM(A1:A${index + 1})`, '1'))).join('')
+  const hugeSheet = sheet(hugeRows)
+  const hugeBook = marked([['Pay', small], ['Big', hugeSheet]], PAY_B1)
+  for (const [limit, compression] of [[20_000, 'STORE'], [20_000, 'DEFLATE'], [byteLength(hugeSheet), 'STORE'], [byteLength(hugeSheet) + 1, 'STORE'], [16_384, 'STORE'], [32_768, 'STORE']] as const) {
+    out.push({ label: `derived: scan limit ${limit}, a larger sheet ${compression.toLowerCase()}d`, bytes: await book(hugeBook, compression), args: { formulaScanMaxBytes: String(limit) } })
+  }
+  await add('scan limit with a sheet that is missing', marked([['Pay', small], ['Missing', null]], PAY_B1), { formulaScanMaxBytes: '100' })
+  await add('scan limit with budget', twoSheets, { formulaScanMaxBytes: '1000', maxChars: '300' })
+  await add('scan limit and no marks', { sheets: [['Pay', small], ['Big', bigSheet]] }, { formulaScanMaxBytes: '1' })
+
+  // reading budgets leave the trace over every sheet
+  const budgeted = marked([
+    ['Pay', sheet(row(1, c('A1', v('plain')), fc('B1', 'Third!A1', '1')) + row(2, c('A2', v('plain 2')), c('B2', v('1000'))))],
+    ['Report', sheet(wideRows(60, n => `row ${n}`) + row(61, fc('A61', 'Pay!B2', '1'), fc('B61', 'Third!B1', '1')))],
+    ['Third', sheet(row(1, c('A1', v('third')), fc('B1', 'Report!A61', '1')))],
+  ], [{ name: 'Pay', marks: [mark(1, 1, 1, 1, 'Salary')] }, { name: 'Third', marks: [mark(0, 0, 0, 0, 'Name')] }])
+  for (const maxChars of [1, 30, 200, 1500, 100000]) await add(`budget maxChars=${maxChars}`, budgeted, { maxChars: String(maxChars) })
+
+  // sheets the trace has no part for
+  await add('a sheet whose part is missing', marked([['Pay', small], ['Missing', null]], PAY_B1))
+  await add('a sheet with no relationship', marked([['Pay', small], ['Other', sheet(row(1, c('A1', v('other'))))]], PAY_B1, {
+    files: { 'xl/workbook.xml': `${DECL}<workbook xmlns="${S}" xmlns:r="${R}"><sheets><sheet name="Pay" sheetId="1" r:id="rId1"/><sheet name="Other" sheetId="2"/></sheets></workbook>` },
+  }))
+  await add('a sheet whose part is empty', marked([['Pay', small], ['Empty', '']], PAY_B1))
+  await add('a sheet whose part does not inflate', marked([['Pay', small], ['Other', sheet(row(1, c('A1', v('other'))) + ' '.repeat(200))]], PAY_B1))
+  out.push({ label: 'derived: a sheet part that does not inflate', bytes: breakEntry(await book(marked([['Pay', small], ['Other', sheet(row(1, c('A1', v('other'))) + ' '.repeat(200))]], PAY_B1)), 'xl/worksheets/sheet2.xml') })
+  out.push({ label: 'derived: a sheet part that does not inflate, scan limit 1', bytes: breakEntry(await book(marked([['Pay', small], ['Other', sheet(row(1, c('A1', v('other'))) + ' '.repeat(200))]], PAY_B1)), 'xl/worksheets/sheet2.xml'), args: { formulaScanMaxBytes: '1' } })
+  await add('a sheet that does not parse', marked([['Pay', small], ['Broken', `${DECL}<worksheet xmlns="${S}"><sheetData><row><c r="A1"><f>B1</f></c>`]], PAY_B1))
+  await add('a pivot relationship part that does not parse', pivotBook({ sheetRels: PIVOT_RELS.replace('</Relationships>', '<Relationship') }))
+
+  // workbooks without marks read as before, whatever their formulas and pivots say
+  await add('no part, formulas that cannot be traced', { sheets: [['Pay', sheet(row(1, c('A1', v('plain')), fc('B1', 'INDIRECT("A1")', '1'), fc('C1', 'Table1[Amount]', '1'), c(null, f('A1') + v('1'))))]] })
+  await add('part without marks, formulas', { sheets: [['Pay', sheet(row(1, c('A1', v('plain')), fc('B1', 'A1', '1'), c('C1', f('A1', ' t="array"') + v('1'))))]], files: { 'xl/gxRedactions.json': part([{ name: 'Pay', marks: [] }]) } })
+  await add('empty part, formulas', { sheets: [['Pay', sheet(row(1, c('A1', v('plain')), fc('B1', 'A1', '1'), c(null, f('A1') + v('1'))))]], files: { 'xl/gxRedactions.json': part([]) } })
+  await add('no marks, a pivot with an unreadable source', pivotBook({ marks: null, cache: cacheXml('<cacheSource type="external"/>') }))
+  await add('no marks, a pivot with a source in this workbook', pivotBook({ marks: null }))
+  await add('no marks, a formula without an address and a defined name', { sheets: [['Pay', sheet(row(1, c('A1', v('plain')), c(null, f('Secret') + v('1')), c('B1', f('Secret') + v('2'))))]], definedNames: '<definedName name="Secret">Pay!$B$1</definedName>' })
+
+  // PivotTables: where the output is, and what it was computed from
+  const sources: Array<[string, string, string?]> = [
+    ['source range of this workbook', 'ref="A1:C4" sheet="Data"'],
+    ['source range that misses the mark', 'ref="A1:B4" sheet="Data"'],
+    ['source range with dollars', 'ref="$A$1:$C$4" sheet="Data"'],
+    ['source range that is the marked cell', 'ref="C2" sheet="Data"'],
+    ['source range reversed', 'ref="C4:A1" sheet="Data"'],
+    ['source sheet in another case', 'ref="A1:C4" sheet="DATA"'],
+    ['source sheet that is not there', 'ref="A1:C4" sheet="Gone"'],
+    ['source range that cannot be read', 'ref="A1:C" sheet="Data"'],
+    ['source range of whole columns', 'ref="C:C" sheet="Data"'],
+    ['source name that is defined', 'name="Sales"', SALES_NAME],
+    ['source name that is a table', 'name="Table1"', SALES_NAME],
+    ['source name defined without a sheet', 'name="Local"', '<definedName name="Local">$A$1:$C$4</definedName>'],
+    ['source name of another sheet that misses the mark', 'name="Elsewhere"', '<definedName name="Elsewhere">Report!$A$1:$C$4</definedName>'],
+    ['source range alone', 'ref="A1:C4"'],
+    ['source sheet alone', 'sheet="Data"'],
+    ['source name beside a range', 'name="Sales" ref="A1:C4"', SALES_NAME],
+    ['source name beside a sheet', 'name="Sales" sheet="Data"', SALES_NAME],
+    ['source with no attributes', ''],
+    ['source sheet with a reference in its name', 'ref="A1:C4" sheet="Da&#116;a"'],
+    ['source name with a reference in it', 'name="S&#97;les"', SALES_NAME],
+    ['source sheet with a code point past the last', 'ref="A1:C4" sheet="Da&#1114112;ta"'],
+    ['source name with a code point past the last', 'name="S&#x110000;les"', SALES_NAME],
+    ['source attributes in single quotes', "ref='A1:C4' sheet='Data'"],
+    ['source attributes with spaces around the sign', 'ref = "A1:C4"  sheet = "Data"'],
+  ]
+  for (const [label, attributes, definedNames] of sources) await add(`pivot, ${label}`, pivotBook({ cache: cacheXml(WORKSHEET_SOURCE(attributes)), ...(definedNames === undefined ? {} : { definedNames }) }))
+  await add('pivot, source sheet with an apostrophe', marked([['Pay\'s Data', DATA_SHEET], ['Report', REPORT_SHEET]], [{ name: "Pay's Data", marks: [mark(1, 1, 2, 2, 'Amount')] }], {
+    files: {
+      'xl/worksheets/_rels/sheet2.xml.rels': PIVOT_RELS, [PIVOT_PART]: pivotXml(PIVOT_LOCATION('A3:B8')),
+      'xl/pivotTables/_rels/pivotTable1.xml.rels': CACHE_RELS, [CACHE_PART]: cacheXml(WORKSHEET_SOURCE('ref="A1:C4" sheet="Pay&apos;s Data"')),
+    },
+  }))
+
+  // a relationship on the source means another workbook, however it is written
+  const externals: Array<[string, string, string?]> = [
+    ['relationship id', ' r:id="rId1"'],
+    ['relationship id in single quotes', " r:id='rId1'"],
+    ['relationship id with spaces around the sign', ' r:id = "rId1"'],
+    ['relationship id that is empty', ' r:id=""'],
+    ['relationship prefix bound on the source', ` q:id="rId1" xmlns:q="${R}"`],
+    ['relationship prefix bound on the root', ' q:id="rId1"', `xmlns="${S}" xmlns:q="${R}"`],
+    ['relationship prefix bound to the strict namespace', ' s:id="rId1"', `xmlns="${S}" xmlns:s="${STRICT}"`],
+    ['relationship prefix that nobody declares', ' r:id="rId1"', `xmlns="${S}"`],
+    ['relationship prefix r bound to another namespace', ' r:id="rId1"', `xmlns="${S}" xmlns:r="urn:other"`],
+    ['relationship prefix bound twice, relationships first', ' q:id="rId1" xmlns:q="urn:other"', `xmlns="${S}" xmlns:q="${R}"`],
+    ['relationship prefix bound twice, relationships last', ` q:id="rId1" xmlns:q="${R}"`, `xmlns="${S}" xmlns:q="urn:other"`],
+    ['revision id', ' xr:id="{0}"', `xmlns="${S}" xmlns:r="${R}" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision"`],
+    ['text that looks like an id in another attribute', ` title='x r:id="1"'`],
+    ['id with no prefix', ' id="rId1"'],
+    ['id in the name of another attribute', ' xr:rid="rId1"'],
+    ['relationship id after a greater-than sign in a value', ' title="a>b" r:id="rId1"'],
+  ]
+  for (const [label, attributes, root] of externals) {
+    await add(`pivot, source with ${label}`, pivotBook({ cache: cacheXml(WORKSHEET_SOURCE(`ref="A1:C4" sheet="Data"${attributes}`), root === undefined ? {} : { root }) }))
+  }
+  await add('pivot, source after elements that bind the prefix', pivotBook({ cache: cacheXml(WORKSHEET_SOURCE('ref="A1:C4" sheet="Data" r:id="rId1"'), { root: `xmlns="${S}"`, before: `<x:a xmlns:r="${R}" r:id="rId2"/>` }) }))
+  await add('pivot, source in a prefixed element', pivotBook({ cache: cacheXml(`<x:cacheSource type="worksheet"><x:worksheetSource ref="A1:C4" sheet="Data"/></x:cacheSource>`, { root: `xmlns:x="${S}" xmlns:r="${R}"` }) }))
+
+  // sources that are not worksheets, and caches that cannot be read
+  const caches: Array<[string, PivotSpec]> = [
+    ['consolidation', { cache: cacheXml('<cacheSource type="consolidation"><consolidation autoPage="1"><pages count="1"/><rangeSets count="1"><rangeSet ref="A1:C4" sheet="Data"/></rangeSets></consolidation></cacheSource>') }],
+    ['external connection', { cache: cacheXml('<cacheSource type="external" connectionId="1"/>') }],
+    ['scenario', { cache: cacheXml('<cacheSource type="scenario"/>') }],
+    ['source without a type', { cache: cacheXml('<cacheSource><worksheetSource ref="A1:C4" sheet="Data"/></cacheSource>') }],
+    ['source with a type in other quotes', { cache: cacheXml(`<cacheSource type = 'worksheet'><worksheetSource ref="A1:C4" sheet="Data"/></cacheSource>`) }],
+    ['worksheet source outside the cache source', { cache: cacheXml('<cacheSource type="worksheet"/><worksheetSource ref="A1:C4" sheet="Data"/>') }],
+    ['worksheet source without a cache source', { cache: cacheXml('<worksheetSource ref="A1:C4" sheet="Data"/>') }],
+    ['cache source without a worksheet source', { cache: cacheXml('<cacheSource type="worksheet"/>') }],
+    ['two worksheet sources, the first misses', { cache: cacheXml('<cacheSource type="worksheet"><worksheetSource ref="A1:B4" sheet="Data"/><worksheetSource ref="A1:C4" sheet="Data"/></cacheSource>') }],
+    ['source that is not an element of the document', { cache: `${DECL}<pivotCacheDefinition xmlns="${S}"><!-- <cacheSource type="worksheet"><worksheetSource ref="A1:B4" sheet="Data"/> --><cacheSource type="worksheet"><worksheetSource ref="A1:C4" sheet="Data"/></cacheSource></pivotCacheDefinition>` }],
+    ['no cache definition', { cache: null }],
+    ['an empty cache definition', { cache: '' }],
+    ['no relationship to the cache', { pivotRels: rels([]) }],
+    ['no relationships of the pivot', { pivotRels: null }],
+    ['relationships of the pivot that do not parse', { pivotRels: `${DECL}<Relationships><Relationship` }],
+    ['relationship to the cache of another kind', { pivotRels: rels([['rId1', 'pivotCacheRecords', '../pivotCache/pivotCacheDefinition1.xml']]) }],
+    ['relationship to the cache in the strict namespace', { pivotRels: rawRels([['rId1', `${STRICT}/pivotCacheDefinition`, '../pivotCache/pivotCacheDefinition1.xml']]) }],
+    ['relationship to the cache that is external', { pivotRels: rels([['rId1', 'pivotCacheDefinition', 'https://example.com/cache.xml', 'External']]) }],
+    ['relationship to the cache with no target', { pivotRels: rels([['rId1', 'pivotCacheDefinition', '  ']]) }],
+    ['relationship to a cache that is not there', { pivotRels: rels([['rId1', 'pivotCacheDefinition', '../pivotCache/none.xml']]) }],
+    ['relationship to the cache by an absolute target', { pivotRels: rels([['rId1', 'pivotCacheDefinition', '/xl/pivotCache/pivotCacheDefinition1.xml']]) }],
+    ['relationship to the cache by an encoded target', { pivotRels: rels([['rId1', 'pivotCacheDefinition', '../pivotCache/pivotCacheDefinition%31.xml']]) }],
+    ['two relationships to caches, the first is missing', { pivotRels: rels([['rId1', 'pivotCacheDefinition', '../pivotCache/none.xml'], ['rId2', 'pivotCacheDefinition', '../pivotCache/pivotCacheDefinition1.xml']]) }],
+    ['two relationships to caches, the first is external', { pivotRels: rels([['rId1', 'pivotCacheDefinition', 'https://example.com/cache.xml', 'EXTERNAL'], ['rId2', 'pivotCacheDefinition', '../pivotCache/pivotCacheDefinition1.xml']]) }],
+    ['relationship to a URL target', { pivotRels: rels([['rId1', 'pivotCacheDefinition', 'https://example.com/cache.xml']]) }],
+    ['no pivot part', { pivot: null }],
+    ['an empty pivot part', { pivot: '' }],
+    ['no relationships of the sheet', { sheetRels: rels([]) }],
+    ['relationship to the pivot of another kind', { sheetRels: rels([['rId1', 'drawing', '../pivotTables/pivotTable1.xml']]) }],
+    ['relationship to the pivot in the strict namespace', { sheetRels: rawRels([['rId1', `${STRICT}/pivotTable`, '../pivotTables/pivotTable1.xml']]) }],
+    ['relationship to the pivot that is external', { sheetRels: rels([['rId1', 'pivotTable', '../pivotTables/pivotTable1.xml', 'External']]) }],
+    ['relationship to the pivot with no target', { sheetRels: rels([['rId1', 'pivotTable', '']]) }],
+    ['relationship to the pivot by an absolute target', { sheetRels: rels([['rId1', 'pivotTable', '/xl/pivotTables/pivotTable1.xml']]) }],
+    ['relationship to the pivot that is not there', { sheetRels: rels([['rId1', 'pivotTable', '../pivotTables/none.xml']]) }],
+    ['relationships of the sheet that do not parse', { sheetRels: `${DECL}<Relationships><Relationship Id=` }],
+    ['two pivots, the second reads the mark', {
+      sheetRels: rels([['rId1', 'pivotTable', '../pivotTables/pivotTable2.xml'], ['rId2', 'pivotTable', '../pivotTables/pivotTable1.xml']]),
+      files: {
+        'xl/pivotTables/pivotTable2.xml': pivotXml(PIVOT_LOCATION('C9:D12')), 'xl/pivotTables/_rels/pivotTable2.xml.rels': rels([['rId1', 'pivotCacheDefinition', '../pivotCache/pivotCacheDefinition2.xml']]),
+        'xl/pivotCache/pivotCacheDefinition2.xml': cacheXml(WORKSHEET_SOURCE('ref="A1:B4" sheet="Data"')),
+      },
+    }],
+    ['two pivots, neither reads the mark', {
+      sheetRels: rels([['rId1', 'pivotTable', '../pivotTables/pivotTable2.xml'], ['rId2', 'pivotTable', '../pivotTables/pivotTable1.xml']]),
+      cache: cacheXml(WORKSHEET_SOURCE('ref="A1:B4" sheet="Data"')),
+      files: {
+        'xl/pivotTables/pivotTable2.xml': pivotXml(PIVOT_LOCATION('C9:D12')), 'xl/pivotTables/_rels/pivotTable2.xml.rels': rels([['rId1', 'pivotCacheDefinition', '../pivotCache/pivotCacheDefinition2.xml']]),
+        'xl/pivotCache/pivotCacheDefinition2.xml': cacheXml(WORKSHEET_SOURCE('ref="B1:B4" sheet="Data"')),
+      },
+    }],
+    ['a pivot with a mark on its own sheet', { marks: [{ name: 'Data', marks: [mark(1, 1, 2, 2, 'Amount')] }, { name: 'Report', marks: [mark(8, 8, 3, 3, 'Own')] }] }],
+    ['a pivot whose source holds no mark', { marks: [{ name: 'Report', marks: [mark(0, 0, 3, 3, 'Own')] }] }],
+  ]
+  for (const [label, spec] of caches) await add(`pivot, ${label}`, pivotBook(spec))
+
+  // the cache definition is read as far as its head
+  const padding = (bytes: number) => `<!--${'x'.repeat(bytes)}-->`
+  await add('pivot, cache source before a megabyte of other content', pivotBook({ cache: cacheXml(WORKSHEET_SOURCE('ref="A1:C4" sheet="Data"'), { after: padding(1_200_000) }) }))
+  await add('pivot, cache source after a megabyte of other content', pivotBook({ cache: cacheXml(WORKSHEET_SOURCE('ref="A1:C4" sheet="Data"'), { before: padding(1_100_000) }) }))
+  await add('pivot, cache source just inside the head', pivotBook({ cache: cacheXml(WORKSHEET_SOURCE('ref="A1:C4" sheet="Data"'), { before: padding(1_048_576 - 700) }) }))
+  await add('pivot, cache source just past the head', pivotBook({ cache: cacheXml(WORKSHEET_SOURCE('ref="A1:C4" sheet="Data"'), { before: padding(1_048_576 - 100) }) }))
+  const headSource = WORKSHEET_SOURCE('ref="A1:C4" sheet="Data"')
+  const headRoom = 1_048_576 - byteLength(cacheXml(headSource))
+  for (const extra of [-1, 0, 1]) {
+    await add(`pivot, cache definition ${extra === 0 ? 'of exactly' : extra < 0 ? 'one byte under' : 'one byte over'} the head`, pivotBook({ cache: cacheXml(headSource, { after: padding(headRoom + extra - 7) }) }))
+  }
+
+  // report filters: how far above and beside the output the pivot reaches
+  const pages: Array<[string, string, string]> = [
+    ['no report filters', PIVOT_LOCATION('A6:C10'), ''],
+    ['one filter above', PIVOT_LOCATION('A6:C10', ' rowPageCount="1" colPageCount="1"'), PIVOT_PAGE_FIELDS(1)],
+    ['two filters in two rows', PIVOT_LOCATION('A6:C10', ' rowPageCount="2" colPageCount="1"'), PIVOT_PAGE_FIELDS(2)],
+    ['two filters side by side', PIVOT_LOCATION('A6:A10', ' rowPageCount="1" colPageCount="2"'), PIVOT_PAGE_FIELDS(2)],
+    ['three filters in a grid of four', PIVOT_LOCATION('B7:C10', ' rowPageCount="2" colPageCount="2"'), PIVOT_PAGE_FIELDS(3)],
+    ['filters past the declared layout', PIVOT_LOCATION('A6:C10', ' rowPageCount="1" colPageCount="1"'), PIVOT_PAGE_FIELDS(2)],
+    ['filters with no layout', PIVOT_LOCATION('A6:C10'), PIVOT_PAGE_FIELDS(2)],
+    ['a layout with no filters', PIVOT_LOCATION('A6:C10', ' rowPageCount="2" colPageCount="1"'), ''],
+    ['a layout of zero with no filters', PIVOT_LOCATION('A6:C10', ' rowPageCount="0" colPageCount="0"'), ''],
+    ['one count only', PIVOT_LOCATION('A6:C10', ' rowPageCount="2"'), PIVOT_PAGE_FIELDS(1)],
+    ['the other count only', PIVOT_LOCATION('A6:C10', ' colPageCount="2"'), PIVOT_PAGE_FIELDS(1)],
+    ['a count that is not whole', PIVOT_LOCATION('A6:C10', ' rowPageCount="1.5" colPageCount="1"'), PIVOT_PAGE_FIELDS(1)],
+    ['a count in words', PIVOT_LOCATION('A6:C10', ' rowPageCount="two" colPageCount="1"'), PIVOT_PAGE_FIELDS(1)],
+    ['a count of zero', PIVOT_LOCATION('A6:C10', ' rowPageCount="0" colPageCount="1"'), PIVOT_PAGE_FIELDS(1)],
+    ['a negative count', PIVOT_LOCATION('A6:C10', ' rowPageCount="-1" colPageCount="1"'), PIVOT_PAGE_FIELDS(1)],
+    ['a count with spaces', PIVOT_LOCATION('A6:C10', ' rowPageCount=" 2 " colPageCount="1"'), PIVOT_PAGE_FIELDS(2)],
+    ['a count in hexadecimal and one in exponent form', PIVOT_LOCATION('A6:C10', ' rowPageCount="0x2" colPageCount="1e0"'), PIVOT_PAGE_FIELDS(2)],
+    ['a count that is not finite', PIVOT_LOCATION('A6:C10', ' rowPageCount="Infinity" colPageCount="1"'), PIVOT_PAGE_FIELDS(1)],
+    ['a layout wider than the output', PIVOT_LOCATION('A6:B10', ' rowPageCount="1" colPageCount="3"'), PIVOT_PAGE_FIELDS(1)],
+    ['a layout taller than the sheet above', PIVOT_LOCATION('A3:C10', ' rowPageCount="5" colPageCount="1"'), PIVOT_PAGE_FIELDS(1)],
+    ['a layout at the last columns', PIVOT_LOCATION('XFC6:XFD10', ' rowPageCount="1" colPageCount="3"'), PIVOT_PAGE_FIELDS(1)],
+    ['an output that is one cell', PIVOT_LOCATION('B7', ' rowPageCount="1" colPageCount="1"'), PIVOT_PAGE_FIELDS(1)],
+    ['the filter list only, with no filter in it', PIVOT_LOCATION('A6:C10'), '<pageFields count="0"/>'],
+    ['filters named in another prefix', PIVOT_LOCATION('A6:C10', ' rowPageCount="1" colPageCount="1"'), PIVOT_PAGE_FIELDS(2, 'x:')],
+    ['filters named with no attributes', PIVOT_LOCATION('A6:C10', ' rowPageCount="1" colPageCount="2"'), '<pageFields><pageField/><pageField></pageField></pageFields>'],
+    ['filter text that is not an element', PIVOT_LOCATION('A6:C10'), '<!-- <pageField fld="0"/> --><pageFieldX/>'],
+    ['an output with dollars and reversed ends', PIVOT_LOCATION('$C$10:$A$6'), ''],
+    ['an output in lower case', PIVOT_LOCATION('a6:c10'), ''],
+    ['an output with spaces', PIVOT_LOCATION(' A6 : C10 '), ''],
+    ['an output that is not a range', PIVOT_LOCATION('A6:'), ''],
+    ['an output that is not an address', PIVOT_LOCATION('bad'), ''],
+    ['an output of whole columns', PIVOT_LOCATION('A:C'), ''],
+    ['an output of three corners', PIVOT_LOCATION('A6:C10:D12'), ''],
+    ['an output with no reference', '<location firstHeaderRow="1"/>', ''],
+    ['an output with an empty reference', '<location ref=""/>', ''],
+    ['no output', '', ''],
+    ['an output named in a prefix', '<x:location ref="A6:C10"/>', ''],
+    ['an output with a reference in single quotes', "<location ref='A6:C10'/>", ''],
+    ['an output with the reference after other attributes', '<location firstHeaderRow="1" ref = "A6:C10" firstDataRow="2"></location>', ''],
+    ['an element that only starts like an output', '<locations ref="A1:A2"/>' + PIVOT_LOCATION('A6:C10'), ''],
+    ['two outputs, the first counts', PIVOT_LOCATION('A6:B8') + PIVOT_LOCATION('A6:C10'), ''],
+    ['an output in the pivot of an unreadable source', PIVOT_LOCATION('A6:C10', ' rowPageCount="1" colPageCount="1"'), PIVOT_PAGE_FIELDS(1)],
+  ]
+  for (const [label, location, fields] of pages) {
+    await add(`pivot, ${label}`, pivotBook({ pivot: pivotXml(location, fields) }))
+    await add(`pivot, ${label}, source from another workbook`, pivotBook({
+      pivot: pivotXml(location, fields), cache: cacheXml(WORKSHEET_SOURCE('ref="A1:C4" sheet="Data" r:id="rId1"')),
+    }))
+  }
+  await add('pivot, output that no source reaches, filters above', pivotBook({
+    pivot: pivotXml(PIVOT_LOCATION('A6:C10', ' rowPageCount="2" colPageCount="1"'), PIVOT_PAGE_FIELDS(2)), cache: cacheXml(WORKSHEET_SOURCE('ref="A1:B4" sheet="Data"')),
+  }))
+
+  // a pivot part is read up to 64 MB: what lies past that is not known
+  const MEGABYTE = 1024 * 1024
+  const past = padding(65 * MEGABYTE)
+  await add('pivot, output past what was read', pivotBook({ pivot: `${DECL}<pivotTableDefinition xmlns="${S}" name="PivotTable1" cacheId="1">${past}${PIVOT_LOCATION('A6:C10')}</pivotTableDefinition>` }), {}, false)
+  await add('pivot, filters past what was read', pivotBook({ pivot: `${DECL}<pivotTableDefinition xmlns="${S}" name="PivotTable1" cacheId="1">${PIVOT_LOCATION('A6:C10', ' rowPageCount="1" colPageCount="1"')}${past}${PIVOT_PAGE_FIELDS(2)}</pivotTableDefinition>` }), {}, false)
+  await add('pivot, filters past what was read, source from another workbook', pivotBook({
+    pivot: `${DECL}<pivotTableDefinition xmlns="${S}" name="PivotTable1" cacheId="1">${PIVOT_LOCATION('A6:C10', ' rowPageCount="1" colPageCount="1"')}${past}</pivotTableDefinition>`,
+    cache: cacheXml(WORKSHEET_SOURCE('ref="A1:C4" sheet="Data" r:id="rId1"')),
+  }), {}, false)
+  await add('pivot, filters just inside what was read', pivotBook({ pivot: `${DECL}<pivotTableDefinition xmlns="${S}" name="PivotTable1" cacheId="1">${PIVOT_LOCATION('A6:C10', ' rowPageCount="1" colPageCount="1"')}${padding(64 * MEGABYTE - 4096)}${PIVOT_PAGE_FIELDS(1)}</pivotTableDefinition>` }), {}, false)
+  return out
+}
+
 async function inputs(): Promise<Input[]> {
   const out: Input[] = []
   const add = (label: string, bytes: Uint8Array, maxChars?: number) =>
@@ -378,6 +851,7 @@ async function inputs(): Promise<Input[]> {
   add('empty archive', await zip({}))
 
   out.push(...await redactionInputs())
+  out.push(...await derivedInputs())
   out.push(...hostileZipInputs())
   return out
 }
@@ -419,7 +893,10 @@ export const SPECS: Spec[] = [
     extensions: ['xlsx', 'xlsm'],
     built: inputs,
     call: ({ bytes = new Uint8Array(0), args = {} }) =>
-      xlsxToText(bytes, 'maxChars' in args ? { maxChars: Number(args.maxChars) } : {}),
+      xlsxToText(bytes, {
+        ...('maxChars' in args ? { maxChars: Number(args.maxChars) } : {}),
+        ...('formulaScanMaxBytes' in args ? { formulaScanMaxBytes: Number(args.formulaScanMaxBytes) } : {}),
+      }),
   },
   {
     fn: 'sheetXmlByteLimit',

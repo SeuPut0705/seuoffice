@@ -5,6 +5,9 @@
 //! `parseSheetElements` of `gateway/xlsx-sheets.ts`, `offsetFormulaRefs` of
 //! `domain/formula-shift.ts`, `parseAddress` and `columnIndex` of
 //! `domain/cell-address.ts`, `decodeXlsxEscapes` of `gateway/xlsx-escapes.ts`.
+//! The cells that compute from a withheld cell are
+//! `xlsx-formula-redaction.ts` ([`crate::xlsx_formula_redaction`]), which reads
+//! the formulas as `formula-reads.ts` ([`crate::xlsx_formula_reads`]) lists them.
 //!
 //! Every part goes through one fast-xml-parser 5.10.1 option set, the one
 //! `manifestParser` of pptx.ts also uses: [`fxp`] gives the object it returns.
@@ -14,6 +17,11 @@ use ooxml_pkg::{Package, load_zip_package};
 use serde_json::Value;
 
 use crate::opc::resolve_target;
+use crate::xlsx_formula_reads::{NameDefinition, RangeBounds};
+use crate::xlsx_formula_redaction::{
+    DerivedInput, DerivedSheet, FORMULA_SCAN_MAX_BYTES, PivotOutput, pivot_output_of,
+    read_derived_cells,
+};
 use crate::redaction::{redaction_error, sanitize_label};
 use crate::xlsx_dates::{
     DateFormatParts, builtin_date_format, classify_format_code, format_serial,
@@ -537,7 +545,7 @@ fn column_label(column: f64) -> Result<String, String> {
 }
 
 /// `columnIndex` of cell-address.ts, for letters a pattern already matched.
-fn letters_index(letters: &str) -> f64 {
+pub(crate) fn letters_index(letters: &str) -> f64 {
     letters
         .to_ascii_uppercase()
         .bytes()
@@ -620,7 +628,11 @@ fn split_rewrite_skips(formula: &str) -> Result<Vec<&str>, RegexLimit> {
 
 /// `offsetFormulaRefs` of formula-shift.ts. Its `[A-Z]` under the `i` flag
 /// matches the ASCII letters of both cases only, written out here.
-fn offset_formula_refs(formula: &str, row_delta: f64, column_delta: f64) -> Result<String, String> {
+pub(crate) fn offset_formula_refs(
+    formula: &str,
+    row_delta: f64,
+    column_delta: f64,
+) -> Result<String, String> {
     if row_delta == 0.0 && column_delta == 0.0 {
         return Ok(formula.to_owned());
     }
@@ -1400,31 +1412,92 @@ fn marker(label: &str) -> String {
     )
 }
 
-/// `withheldCellMarker`: the marker standing in for the cell at `cell_ref`,
-/// or `None` when no mark of this sheet covers it.
+/// `withheldCellMarker`: the marker standing in for the cell at `cell_ref`, or
+/// `None` when the cell reads as itself. `marks` are one sheet's marks and
+/// `derived` what the formula trace found on it; a workbook without marks
+/// passes neither.
 fn withheld_cell_marker(
     marks: Option<&[RedactionMark]>,
     cell_ref: Option<&JVal>,
+    derived: Option<&DerivedSheet>,
+    has_formula: bool,
 ) -> Option<String> {
-    let marks = marks?;
+    if marks.is_none() && derived.is_none() {
+        return None;
+    }
     let cell_ref = cell_ref.map(js_string);
     let at = cell_ref
         .as_deref()
         .and_then(|cell_ref| js_regex!(r"^([A-Za-z]{1,3})([1-9]\d{0,6})$").exec(cell_ref));
     let Some(at) = at else {
-        return Some(marker(UNKNOWN_LABEL));
+        return (marks.is_some() || derived.is_some_and(|derived| derived.any) || has_formula)
+            .then(|| marker(UNKNOWN_LABEL));
     };
     let row = to_number(at.get(2).unwrap_or_default()) - 1.0;
     let column = letters_index(at.get(1).unwrap_or_default());
-    marks
-        .iter()
-        .find(|mark| {
-            row >= mark.start_row
-                && row <= mark.end_row
-                && column >= mark.start_column
-                && column <= mark.end_column
-        })
-        .map(|mark| marker(&mark.label))
+    if let Some(mark) = marks.unwrap_or_default().iter().find(|mark| {
+        row >= mark.start_row
+            && row <= mark.end_row
+            && column >= mark.start_column
+            && column <= mark.end_column
+    }) {
+        return Some(marker(&mark.label));
+    }
+    let derived = derived?;
+    // A formula the worksheet parser sees and the scan did not was never traced.
+    (derived.withheld(row, column) || (has_formula && !derived.known_formula(row, column)))
+        .then(|| marker(UNKNOWN_LABEL))
+}
+
+/// A cache definition opens with its `<cacheSource>`; the member lists that
+/// follow can run to megabytes, and one that names its source later is not
+/// searched for it (the pivot's output is then withheld untraced).
+const PIVOT_CACHE_HEAD_BYTES: f64 = 1024.0 * 1024.0;
+/// A pivot part is read whole: its `<location>` comes first, but its report
+/// filters (`<pageFields>`) come after the fields and every item of them. One
+/// larger than this is read as far as this and treated as not fully known.
+const PIVOT_PART_MAX_BYTES: f64 = FORMULA_SCAN_MAX_BYTES;
+
+/// the relationships of one kind a part declares, as part paths; external ones are left out
+fn related_parts(zip: &Package, part_path: &str, kind: &str) -> Result<Vec<String>, String> {
+    let Some(rels_xml) = zip_text(zip, &sheet_rels_path(part_path))?.filter(|xml| !xml.is_empty())
+    else {
+        return Ok(Vec::new());
+    };
+    let rels = fxp::parse(rels_xml)?;
+    let mut parts = Vec::new();
+    for rel in as_array(prop(prop(Some(&rels), "Relationships"), "Relationship")) {
+        let target = field(rel, "@_Target");
+        if field(rel, "@_Type").ends_with(&format!("/{kind}"))
+            && field(rel, "@_TargetMode").to_lowercase() != "external"
+            && !trim(&target).is_empty()
+        {
+            parts.push(resolve_target(part_path, &target));
+        }
+    }
+    Ok(parts)
+}
+
+/// every PivotTable whose output is on this sheet, with the source its cache names
+fn sheet_pivot_outputs(zip: &Package, sheet_path: &str) -> Result<Vec<PivotOutput>, String> {
+    let mut outputs = Vec::new();
+    for pivot_path in related_parts(zip, sheet_path, "pivotTable")? {
+        let cache_path = related_parts(zip, &pivot_path, "pivotCacheDefinition")?
+            .into_iter()
+            .next();
+        let pivot = zip_text_prefix(zip, &pivot_path, PIVOT_PART_MAX_BYTES)?;
+        let cache = match cache_path {
+            None => None,
+            Some(cache_path) => {
+                zip_text_prefix(zip, &cache_path, PIVOT_CACHE_HEAD_BYTES)?.map(|(text, _)| text)
+            }
+        };
+        outputs.push(pivot_output_of(
+            pivot.as_ref().map(|(text, truncated)| (text.as_str(), *truncated)),
+            cache.as_deref(),
+        )?);
+    }
+    Ok(outputs)
 }
 
 fn plural(count: f64) -> &'static str {
@@ -1432,8 +1505,13 @@ fn plural(count: f64) -> &'static str {
 }
 
 /// extract sheet text from an xlsx: one "# SheetName" section per sheet, cells
-/// joined with " | ". `max_chars` is `opts.maxChars`, `None` for none given.
-pub fn xlsx_to_text(bytes: &[u8], max_chars: Option<f64>) -> Result<String, String> {
+/// joined with " | ". `max_chars` is `opts.maxChars` and `formula_scan_max_bytes`
+/// is `opts.formulaScanMaxBytes`, `None` for none given.
+pub fn xlsx_to_text(
+    bytes: &[u8],
+    max_chars: Option<f64>,
+    formula_scan_max_bytes: Option<f64>,
+) -> Result<String, String> {
     let max_chars = max_chars.unwrap_or(f64::INFINITY);
     let mut used = 0.0;
     let zip = load_zip_package(bytes)?;
@@ -1492,11 +1570,66 @@ pub fn xlsx_to_text(bytes: &[u8], max_chars: Option<f64>) -> Result<String, Stri
     // fails the whole workbook, and no sheet is handed over without its marks.
     let sheet_names: Vec<String> = sheets.iter().map(|sheet| field(sheet, "@_name")).collect();
     let redactions = read_xlsx_redactions(&zip, &sheet_names)?;
+    // Nor without the formulas that compute from those cells, which may sit on
+    // any sheet and reach the cell through any other.
+    let scan_limit = formula_scan_max_bytes.unwrap_or(FORMULA_SCAN_MAX_BYTES);
+    let derived: Option<Vec<DerivedSheet>> = if redactions.is_empty() {
+        None
+    } else {
+        let zip = &zip;
+        let inputs: Vec<DerivedInput<'_>> = sheets
+            .iter()
+            .zip(&sheet_names)
+            .map(|(sheet, name)| {
+                let part = rel_targets.get(&relationship_id(sheet));
+                DerivedInput {
+                    name: name.clone(),
+                    xml: match part {
+                        Some(part) => Some(Box::new(move || zip_text_prefix(zip, part, scan_limit))),
+                        None => None,
+                    },
+                    marks: redactions
+                        .iter()
+                        .find(|(redacted, _)| redacted == name)
+                        .map(|(_, marks)| {
+                            marks
+                                .iter()
+                                .map(|mark| RangeBounds {
+                                    start_row: mark.start_row,
+                                    start_column: mark.start_column,
+                                    end_row: mark.end_row,
+                                    end_column: mark.end_column,
+                                })
+                                .collect()
+                        })
+                        .unwrap_or_default(),
+                    pivots: match part {
+                        Some(part) => Some(Box::new(move || sheet_pivot_outputs(zip, part))),
+                        None => None,
+                    },
+                }
+            })
+            .collect();
+        let defined_names: Vec<NameDefinition> = as_array(prop(
+            prop(prop(Some(&workbook), "workbook"), "definedNames"),
+            "definedName",
+        ))
+        .into_iter()
+        .filter_map(|defined| match defined {
+            JVal::Obj(_) => prop(Some(defined), "@_name").map(|name| NameDefinition {
+                name: js_string(name),
+                formula: text_of(Some(defined)),
+            }),
+            _ => None,
+        })
+        .collect();
+        Some(read_derived_cells(inputs, &defined_names)?)
+    };
 
     let mut sections: Vec<String> = Vec::new();
     let mut sheets_with_data = 0.0;
     let mut image_only_sheets = 0.0;
-    for (sheet, sheet_name) in sheets.iter().zip(&sheet_names) {
+    for (sheet_index, (sheet, sheet_name)) in sheets.iter().zip(&sheet_names).enumerate() {
         if used >= max_chars {
             break;
         }
@@ -1520,6 +1653,7 @@ pub fn xlsx_to_text(bytes: &[u8], max_chars: Option<f64>) -> Result<String, Stri
             .iter()
             .find(|(name, _)| name == sheet_name)
             .map(|(_, marks)| marks.as_slice());
+        let derived_cells = derived.as_ref().map(|derived| &derived[sheet_index]);
         let mut lines: Vec<String> = vec![format!("# {sheet_name}")];
         let mut sheet_chars = units(&lines[0]);
         let rows = as_array(prop(prop(worksheet, "sheetData"), "row"));
@@ -1536,8 +1670,14 @@ pub fn xlsx_to_text(bytes: &[u8], max_chars: Option<f64>) -> Result<String, Stri
             for cell in as_array(prop(Some(row), "c")) {
                 let cell_ref = prop(Some(cell), "@_r");
                 // A withheld cell is its marker and nothing else: neither its
-                // cached value nor its formula is read into the row.
-                let text = match withheld_cell_marker(marks, cell_ref) {
+                // cached value nor its formula is read into the row. The same
+                // goes for a formula that computes from one.
+                let text = match withheld_cell_marker(
+                    marks,
+                    cell_ref,
+                    derived_cells,
+                    prop(Some(cell), "f").is_some(),
+                ) {
                     Some(marker) => marker,
                     None => cell_text(cell, &shared, &date_styles, date_1904, &shared_formulas)?,
                 };

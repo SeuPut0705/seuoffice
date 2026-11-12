@@ -340,16 +340,13 @@ What is particular to these gates:
 - **First runs** are kept in `evidence/`, untouched; those above 200 KB are
   gzip-compressed. `decisions.tsv` is the trail.
 - **CSV decoding** (`file_parse::csv`, `decodeCsvBuffer` of xlsx-gateway)
-  decodes with `encoding_rs`, the WHATWG Encoding Standard; the TypeScript
-  decodes with Node's `TextDecoder`, which is not that standard for three of
-  the charsets it tries: `euc-kr` is KS X 1001 where the standard is
-  windows-949, `big5` has no HKSCS, `shift_jis` moves 0x1A, 0x1C and 0x7F and
-  rejects 0x80, and Node does not know `x-user-defined`. gb18030, UTF-8,
-  UTF-16 and windows-1252 agree on every one and two byte sequence and every
-  gb18030 four byte one. The ledger lists each input that differs, and
-  `npx tsx csv-decoders.ts` checks that with the WHATWG decoder of
-  `@exodus/bytes` in place of Node's the TypeScript gives the Rust answer
-  for every one of them: they are defects of the TypeScript.
+  decodes with `encoding_rs`, the WHATWG Encoding Standard, as the
+  TypeScript does through `@exodus/bytes` since main's cb4a067b5. Before
+  that it decoded with Node's `TextDecoder`, which differs from the standard
+  for `euc-kr` (KS X 1001, not windows-949), `big5` (no HKSCS), `shift_jis`
+  (0x1A, 0x1C, 0x7F moved, 0x80 rejected) and `x-user-defined` (unknown):
+  49 inputs of the gate showed it, and went from the ledger with the fix. The
+  TypeScript function is async; the Rust one decodes in place.
 
 Left to the host (`crates/seu-host`). In stage 1 the engines run as wasm
 inside the React screens (decision 0026), where pdfjs, parse5 and the
@@ -364,8 +361,13 @@ its gate, which fails once the original changes. The steps:
 
 - `fileparse.htmlSourceElements`: parse5's elements with source locations, for
   `redactHtmlSource` (`file_parse::html`).
-- PDF text (pdfjs) and the readers of odt, xmind and draw.io, until those
-  engines are ported.
+- `fileparse.diagramFormatOf`, `fileparse.readDiagramText`: the draw.io reader
+  (drawio-model), for `parseFileToText`.
+- PDF (pdfjs), mind maps (xmind-engine) and OpenDocument text (odt-engine)
+  await in the TypeScript, which an import of the wasm cannot. The host runs
+  the reader the extension names before `parseFileToText` and passes what it
+  read (`hosted`); every check the TypeScript makes before that reader is made
+  in Rust first, in the same order.
 - epub-engine: the three parse5 calls: `epub.parseHtml` (`parseHtml`),
   `epub.parseFragmentText` (the lookup of `resolveHtmlEntity`, whose cache and
   decision stay in Rust) and `epub.chapterTextRoots` (the HTML fallback of
@@ -375,11 +377,14 @@ its gate, which fails once the original changes. The steps:
 
 A native build has no host: those steps answer `HostUnavailable`.
 
-Not ported yet (batch D1 is porting the rest of file-parse and epub-engine):
-`parse.ts`, `pdf.ts` through the host, `hwp.ts` through `vendor/rhwp-core`,
-`doc.ts` and `ppt.ts` with their extractors (word-extractor, ppt-to-text) and
-the compound-file gate, the saxes reader (`crates/saxes`), and the parts of
-epub-engine that read XML.
+All of file-parse and epub-engine is ported (batch D1), with these
+exceptions. pdf, xmind, odt and draw.io go through the host as above. The
+job functions of epub translation hand over to pdf-structure's job engine,
+which is not ported. `hwp` compiles rhwp v0.9.0 with the 32 patches of
+`vendor/rhwp-core`, from the tree `node tools/build-rhwp-core.mjs
+--source-only` prepares in `crates/.rhwp-source` (gitignored, outside the
+workspace). Cargo reads that path dependency on every call, so the tree must
+exist before any cargo command; CI prepares it first in every job.
 
 ### Notes for the odt port (stream C)
 

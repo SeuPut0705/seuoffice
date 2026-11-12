@@ -5,13 +5,15 @@ use serde_json::{Value, json};
 type Call = fn(&str, &str, &[u8], &Value) -> Result<Value, (String, String)>;
 
 /// A function name belongs to one module; the first that knows it answers.
+/// The package module answers its own error for a name it does not know, so
+/// it comes last.
 const MODULES: [Call; 6] = [
     epub_engine::primitives::call,
     epub_engine::ranges::call,
-    epub_engine::package::call,
     crate::epub_pure::call,
     saxes_call,
     xml_call,
+    epub_engine::package::call,
 ];
 
 /// The XML half and the book reader, which answer `None` for a name they do not know.

@@ -29,9 +29,10 @@ async function hostedRead(name: string, bytes: Uint8Array): Promise<unknown> {
 
 /** Tracked files of each extension, at most `per` of each, smallest first. */
 function trackedFiles(exts: readonly string[], per: number): string[] {
-  const listed = execFileSync('git', ['ls-files', ...exts.map(ext => `*.${ext}`)], { cwd: repoRoot, encoding: 'utf8' })
+  // -z: a path outside ASCII comes out as it is, not quoted and escaped
+  const listed = execFileSync('git', ['ls-files', '-z', ...exts.map(ext => `*.${ext}`)], { cwd: repoRoot, encoding: 'utf8' })
   const byExt = new Map<string, string[]>()
-  for (const path of listed.split('\n').filter(Boolean)) {
+  for (const path of listed.split('\0').filter(Boolean)) {
     const ext = extname(path).slice(1).toLowerCase()
     byExt.set(ext, [...(byExt.get(ext) ?? []), path])
   }

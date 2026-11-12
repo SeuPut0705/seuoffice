@@ -31,4 +31,8 @@ pub mod redaction;
 #[cfg(feature = "xlsx")]
 pub mod xlsx;
 pub mod xlsx_dates;
+#[cfg(feature = "xlsx")]
+pub mod xlsx_formula_reads;
+#[cfg(feature = "xlsx")]
+pub mod xlsx_formula_redaction;
 pub mod zip_text_parts;
