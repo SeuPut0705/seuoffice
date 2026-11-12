@@ -19979,8 +19979,8 @@ pub struct GeneratedBlock {
     pub hidden_bookmarks: Option<Vec<String>>,
     pub comment_starts: Option<Vec<String>>,
     pub comment_ends: Option<Vec<String>>,
-    pub runs: Vec<Run>,
     pub sdt_shell: Option<SdtShell>,
+    pub runs: Vec<Run>,
     pub p_pr_change: Option<Option<String>>,
     pub para_mark_del: Option<Option<String>>,
     pub para_mark_ins: Option<Option<String>>,
@@ -20085,10 +20085,10 @@ impl Serialize for GeneratedBlock {
         if let Some(value) = &self.comment_ends {
             map.serialize_entry("commentEnds", value)?;
         }
-        map.serialize_entry("runs", &self.runs)?;
         if let Some(value) = &self.sdt_shell {
             map.serialize_entry("sdtShell", value)?;
         }
+        map.serialize_entry("runs", &self.runs)?;
         if let Some(value) = &self.p_pr_change {
             map.serialize_entry("pPrChange", value)?;
         }

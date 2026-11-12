@@ -83,6 +83,9 @@ pub struct StyleRunProps {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StyleParaProps {
+    /// declared first: builtInHeadingStyleUpsert builds `keepNext` before the spacing keys
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keep_next: Option<bool>,
     /// left, center, right or justify
     #[serde(
         default,
@@ -128,8 +131,6 @@ pub struct StyleParaProps {
         skip_serializing_if = "Option::is_none"
     )]
     pub first_line_twips: Option<Option<f64>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub keep_next: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keep_lines: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -214,9 +215,9 @@ pub struct StyleUpsert {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub built_in: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub r_pr: Option<StyleRunProps>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub p_pr: Option<StyleParaProps>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub r_pr: Option<StyleRunProps>,
 }
 
 /// `DefaultFonts`: only the default font slots to patch.

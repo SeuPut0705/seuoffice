@@ -21,7 +21,7 @@ use ooxml_pkg::{Package, write::generate};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use super::super::{Returned, arg, package, required, value};
+use super::super::{Returned, arg, optional, package, required, value};
 
 /// None: not a function of this module.
 pub fn dispatch(function: &str, text: &str, args: &Value) -> Option<Returned> {
@@ -227,7 +227,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Option<Returned> {
         "pendingHeadingLevel" => |text, args| {
             let pending = required::<JsObject<StyleUpsert>>(args, "pending")?;
             let existing = required::<JsObject<StyleHeadingInfo>>(args, "existing")?;
-            value(style_upsert::pending_heading_level(
+            optional(style_upsert::pending_heading_level(
                 text,
                 &|id| pending.get(id).cloned(),
                 &|id| existing.get(id).cloned(),

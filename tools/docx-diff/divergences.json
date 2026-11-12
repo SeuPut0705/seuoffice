@@ -80,5 +80,152 @@
       "value": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200%200.01%20L%200%200%20C%200%200%200%200.01%200%200.01%20L%200%200.01%22%20fill%3D%22%231f497d%22%2F%3E%3C%2Fsvg%3E"
     },
     "reason": "TypeScript defect, the class of the same id in tools/pptx-diff/divergences.json (reported 2026-11-12, fix pending on main). parseCustGeom of pptx-engine/src/custgeom.ts reads guide values from a plain object by a document name (lines 86 and 283) and assigns them by name (line 150): a name every object inherits (constructor, toString, valueOf, __proto__...) answers with a function or the prototype, NaN in the path, a guide named __proto__ is lost, and an arc whose radius is NaN draws nothing. The Rust (pptx_engine::custgeom::parse_cust_geom) reads own guides only: an unknown name is 0 like any undefined guide, and a __proto__ guide is stored. Class predicate: custgeomInheritedGuide of listed.ts."
+  },
+  {
+    "id": "merge-file-name-cuts-a-surrogate-pair",
+    "comparison": "call",
+    "fn": "save.mergeOutputFileName",
+    "text": "a\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00",
+    "args": {
+      "record": {},
+      "fields": []
+    },
+    "typescript": {
+      "value": "a\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d"
+    },
+    "rust": {
+      "value": "a\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ufffd"
+    },
+    "reason": "mergeOutputFileName ends with slice(0, 120), which counts UTF-16 units, so a name whose 120th unit is the first half of a character outside the BMP keeps that half alone in the result. A Rust string cannot hold a lone surrogate, so the Rust cut writes U+FFFD in its place (the class of cdata-opener-cuts-a-surrogate-pair). A file name with a lone surrogate is no name on most file systems, so no caller is helped by matching it. Class predicate: mergeFileNameLongAstral of listed.ts."
+  },
+  {
+    "id": "compare-char-granularity-cuts-a-surrogate-pair",
+    "comparison": "call",
+    "fn": "save.compareBlocks",
+    "text": "",
+    "args": {
+      "original": [
+        {
+          "id": "built-0",
+          "type": "paragraph",
+          "docxIndex": 0,
+          "originalXml": null,
+          "runs": [
+            {
+              "text": "Emoji \ud83d\ude00 text"
+            }
+          ]
+        }
+      ],
+      "revised": [
+        {
+          "id": "built-0",
+          "type": "paragraph",
+          "docxIndex": 0,
+          "originalXml": null,
+          "runs": [
+            {
+              "text": "Emoji \ud83d\ude01 text"
+            }
+          ]
+        }
+      ],
+      "documentXml": "",
+      "options": {
+        "date": "2024-05-06T07:08:09Z",
+        "granularity": "char"
+      }
+    },
+    "typescript": {
+      "value": {
+        "blocks": [
+          {
+            "kind": "generated",
+            "block": {
+              "type": "paragraph",
+              "runs": [
+                {
+                  "text": "Emoji \ud83d"
+                },
+                {
+                  "text": "\ude00",
+                  "del": {
+                    "author": "SeuOffice",
+                    "date": "2024-05-06T07:08:09Z",
+                    "id": "9001"
+                  }
+                },
+                {
+                  "text": "\ude01",
+                  "ins": {
+                    "author": "SeuOffice",
+                    "date": "2024-05-06T07:08:09Z",
+                    "id": "9002"
+                  }
+                },
+                {
+                  "text": " text"
+                }
+              ]
+            }
+          }
+        ],
+        "summary": {
+          "insertedParagraphs": 0,
+          "deletedParagraphs": 0,
+          "changedParagraphs": 1,
+          "unchangedParagraphs": 0,
+          "insertions": 1,
+          "deletions": 1
+        },
+        "nextRevisionId": 9003
+      }
+    },
+    "rust": {
+      "value": {
+        "blocks": [
+          {
+            "kind": "generated",
+            "block": {
+              "type": "paragraph",
+              "runs": [
+                {
+                  "text": "Emoji \ufffd"
+                },
+                {
+                  "text": "\ufffd",
+                  "del": {
+                    "author": "SeuOffice",
+                    "date": "2024-05-06T07:08:09Z",
+                    "id": "9001"
+                  }
+                },
+                {
+                  "text": "\ufffd",
+                  "ins": {
+                    "author": "SeuOffice",
+                    "date": "2024-05-06T07:08:09Z",
+                    "id": "9002"
+                  }
+                },
+                {
+                  "text": " text"
+                }
+              ]
+            }
+          }
+        ],
+        "summary": {
+          "insertedParagraphs": 0,
+          "deletedParagraphs": 0,
+          "changedParagraphs": 1,
+          "unchangedParagraphs": 0,
+          "insertions": 1,
+          "deletions": 1
+        },
+        "nextRevisionId": 9003
+      }
+    },
+    "reason": "With granularity 'char' compareBlocks of the TypeScript diffs UTF-16 units, so two characters outside the BMP that share their first half are split into a common lone high surrogate and two lone low surrogates, and runs of the result hold them. A Rust string cannot hold a lone surrogate, so the Rust writes U+FFFD for each (the class of cdata-opener-cuts-a-surrogate-pair). Word granularity, the default, is not affected. Class predicate: compareCharAstral of listed.ts."
   }
 ]

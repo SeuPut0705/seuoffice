@@ -318,7 +318,7 @@ const HFS: Array<Record<string, unknown>> = [
       {
         runs: [
           run('One', {
-            wrap: [{ open: `<w:smartTag w:uri="urn:x" w:element="e">`, close: '</w:smartTag>' }],
+            wrap: [{ seq: 1, open: `<w:smartTag w:uri="urn:x" w:element="e">`, close: '</w:smartTag>' }],
           }),
           run('Two'),
         ],
@@ -343,7 +343,7 @@ const HFS: Array<Record<string, unknown>> = [
   },
   { text: '', paras: [{ runs: [run('a & <b>')] }] },
   { text: 'a & <b> \u0001 "q"' },
-  { text: '', paras: [{ runs: [run('x')], alignOriginal: 'left' }], revisionsResolved: [] },
+  { text: '', paras: [{ runs: [run('x')], align: 'left' }], revisionsResolved: [] },
 ]
 
 const WATERMARK_XMLS: Array<string | undefined> = [
@@ -1517,24 +1517,24 @@ export const SAVE_PARTS: CallSpec[] = [
       { hf: { text: '' }, originalXml: '' },
       { hf: { text: '', revisionsResolved: [] }, originalXml: REVISED_PART },
       {
-        hf: { text: '', revisionsResolved: [{ id: '1', action: 'accept' }] },
+        hf: { text: '', revisionsResolved: [{ mode: 'accept', filter: { ids: ['1'] } }] },
         originalXml: REVISED_PART,
       },
       {
         hf: {
           text: '',
           revisionsResolved: [
-            { id: '2', action: 'reject' },
-            { id: '1', action: 'reject' },
+            { mode: 'reject', filter: { ids: ['2'] } },
+            { mode: 'reject', filter: { ids: ['1'] } },
           ],
         },
         originalXml: REVISED_PART,
       },
       {
-        hf: { text: '', revisionsResolved: [{ id: '99', action: 'accept' }] },
+        hf: { text: '', revisionsResolved: [{ mode: 'accept', filter: { ids: ['99'] } }] },
         originalXml: REVISED_PART,
       },
-      { hf: { text: '', revisionsResolved: [{ id: '1', action: 'accept' }] }, originalXml: null },
+      { hf: { text: '', revisionsResolved: [{ mode: 'accept', filter: { ids: ['1'] } }] }, originalXml: null },
     ].map((args): Input => ({ args })),
     mutation: 'none',
   },

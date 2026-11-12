@@ -27,6 +27,24 @@ fn number(args: &Value, key: &str) -> Result<f64, String> {
     Ok(arg::<f64>(args, key)?.unwrap_or(f64::NAN))
 }
 
+/// `result` with the keys of each object in the order `input` has them
+/// (keys the input lacks follow), as a JavaScript spread of `input` leaves them.
+fn in_input_order(input: &Value, result: Value) -> Value {
+    match (input, result) {
+        (Value::Object(input), Value::Object(mut result)) => {
+            let mut ordered = serde_json::Map::new();
+            for (key, from) in input {
+                if let Some(to) = result.remove(key) {
+                    ordered.insert(key.clone(), in_input_order(from, to));
+                }
+            }
+            ordered.extend(result);
+            Value::Object(ordered)
+        }
+        (_, result) => result,
+    }
+}
+
 /// None: not a function of this module.
 pub fn dispatch(function: &str, text: &str, args: &Value) -> Option<Returned> {
     Some(match function {
@@ -76,17 +94,35 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Option<Returned> {
             value(ids)
         }),
         "missingHeadingLevels" => missing_heading_levels(args),
-        "usableNewImage" => required::<NewImage>(args, "image")
-            .and_then(|image| value(helpers::usable_new_image(&image))),
+        "usableNewImage" => required::<NewImage>(args, "image").and_then(|image| {
+            let mut result = serde_json::to_value(helpers::usable_new_image(&image))
+                .map_err(|error| error.to_string())?;
+            // `{ ...image }` keeps the order the keys came in; the model writes its own
+            if let Some(input) = args.get("image") {
+                result = in_input_order(input, result);
+            }
+            Ok(Some(result))
+        }),
         "saveBlockDocxIndex" => {
             required::<SaveBlock>(args, "block").and_then(|block| optional(block.docx_index()))
         }
         "replaceAbstractNumLevel" => replace_abstract_num_level(text, args),
         "patchCoreProps" => arg::<String>(args, "savedAt").and_then(|saved_at| {
-            helpers::patch_core_props(text, saved_at.as_deref(), 0.0).and_then(optional)
+            helpers::patch_core_props(text, saved_at.as_deref(), 0.0).and_then(value)
         }),
-        "defaultParagraphStyleId" => required::<Vec<(String, StyleInfo)>>(args, "styles")
-            .and_then(|styles| optional(helpers::default_paragraph_style_id(&MapEntries(styles)))),
+        "defaultParagraphStyleId" => {
+            required::<Vec<(String, StyleInfo)>>(args, "styles").and_then(|pairs| {
+                // `new Map(pairs)`: a key met again keeps its place and takes the last value
+                let mut styles: Vec<(String, StyleInfo)> = Vec::new();
+                for (key, info) in pairs {
+                    match styles.iter_mut().find(|(have, _)| *have == key) {
+                        Some(entry) => entry.1 = info,
+                        None => styles.push((key, info)),
+                    }
+                }
+                optional(helpers::default_paragraph_style_id(&MapEntries(styles)))
+            })
+        }
         "insertBeforeClosingTag" => required::<String>(args, "content")
             .and_then(|content| value(helpers::insert_before_closing_tag(text, &content))),
         "markParagraphRevision" => required::<String>(args, "kind").and_then(|kind| {

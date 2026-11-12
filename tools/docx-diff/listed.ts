@@ -37,3 +37,27 @@ export function custgeomInheritedGuide(text: string, _args: Args): string | unde
   }
   return undefined
 }
+
+/**
+ * A name pattern long enough for mergeOutputFileName's slice(0, 120) to reach a
+ * character outside the BMP: the cut may leave half of it, which a Rust string
+ * cannot hold.
+ */
+export function mergeFileNameLongAstral(text: string, _args: Args): string | undefined {
+  return text.length > 120 && /[\ud800-\udbff][\udc00-\udfff]/.test(text)
+    ? 'merge-file-name-cuts-a-surrogate-pair'
+    : undefined
+}
+
+/**
+ * A character-granularity comparison of text holding a character outside the
+ * BMP: the TypeScript diff may split it into lone surrogates, which a Rust
+ * string cannot hold.
+ */
+export function compareCharAstral(_text: string, args: Args): string | undefined {
+  const options = args.options as { granularity?: unknown } | undefined
+  return options?.granularity === 'char' &&
+    /[\ud800-\udbff][\udc00-\udfff]/.test(JSON.stringify([args.original, args.revised]))
+    ? 'compare-char-granularity-cuts-a-surrogate-pair'
+    : undefined
+}
