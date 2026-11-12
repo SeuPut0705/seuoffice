@@ -12,7 +12,7 @@
  *    into solid colors over the white/table background. Unknown GUIDs return undefined
  *    (keeping the unstyled rendering).
  */
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from './xml-parser'
 import { applyColorMods } from './color'
 import { resolveSchemeColor, type Theme } from './theme'
 import type { Fill, Stroke } from './types'
@@ -513,7 +513,7 @@ export function cellStyleBorders(
 
 // ── tableStyles.xml parsing ─────────────────────────────────────────
 
-const tsParser = new XMLParser({
+const tsParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   isArray: (name) => name === 'a:tblStyle',

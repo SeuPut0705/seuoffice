@@ -131,7 +131,8 @@ function appendRels(
     const mode = rel.external ? ' TargetMode="External"' : ''
     xml = xml.replace(
       '</Relationships>',
-      `<Relationship Id="${rid}" Type="${rel.type}" Target="${escapeXmlAttr(rel.target)}"${mode}/></Relationships>`,
+      () =>
+        `<Relationship Id="${rid}" Type="${rel.type}" Target="${escapeXmlAttr(rel.target)}"${mode}/></Relationships>`,
     )
   }
   opened.archive.entries.set(relsPath, Buffer.from(xml, 'utf8'))

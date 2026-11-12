@@ -7,6 +7,7 @@
  * now-unreachable resource subgraph.
  */
 import type { Slide } from './types'
+import { attributeOf, decodeXml } from './xml-utils'
 import { PackageArchive, relsPathFor, resolveTarget } from './zip'
 
 export interface ResourceCleanupStats {
@@ -28,8 +29,6 @@ const EMPTY_STATS: ResourceCleanupStats = {
 
 const RELATIONSHIP_TAG = /<Relationship\b[^>]*\/\s*>/g
 const ATTRIBUTE = /\s[\w:.-]+\s*=\s*(["'])(.*?)\1/g
-const ID_ATTRIBUTE = /\bId\s*=\s*(["'])(.*?)\1/
-const PART_NAME_ATTRIBUTE = /\bPartName\s*=\s*(["'])(.*?)\1/
 const OVERRIDE_TAG = /<Override\b[^>]*\/\s*>/g
 const MODEL_3D_MARKER = 'aislides-3d:'
 const MODEL_3D_REF = /aislides-3d:(ppt\/media\/[^"'&<\s]+)/g
@@ -66,9 +65,10 @@ function isOwnedResourcePath(path: string): boolean {
   return OWNED_RESOURCE_PREFIXES.some((prefix) => path.startsWith(prefix))
 }
 
+/** Every attribute value of the XML, decoded: a relationship id is looked for among them. */
 function attributeValues(xml: string): Set<string> {
   const out = new Set<string>()
-  for (const match of xml.matchAll(ATTRIBUTE)) out.add(match[2]!)
+  for (const match of xml.matchAll(ATTRIBUTE)) out.add(decodeXml(match[2]!))
   return out
 }
 
@@ -110,7 +110,7 @@ function sourcePartForRels(path: string): string | null {
 
 function stripRelationships(xml: string, ids: ReadonlySet<string>): string {
   return xml.replace(RELATIONSHIP_TAG, (tag) => {
-    const id = ID_ATTRIBUTE.exec(tag)?.[2]
+    const id = attributeOf(tag, 'Id')
     return id && ids.has(id) ? '' : tag
   })
 }
@@ -124,7 +124,7 @@ function removeContentTypeOverrides(
   const xml = archive.readText(path)
   if (!xml) return
   const next = xml.replace(OVERRIDE_TAG, (tag) => {
-    const partName = PART_NAME_ATTRIBUTE.exec(tag)?.[2]?.replace(/^\//, '')
+    const partName = attributeOf(tag, 'PartName')?.replace(/^\//, '')
     return partName && removedParts.has(partName) ? '' : tag
   })
   if (next !== xml) archive.entries.set(path, Buffer.from(next, 'utf8'))

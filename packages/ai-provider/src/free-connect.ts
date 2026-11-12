@@ -17,7 +17,7 @@ import { createHash, randomBytes } from 'node:crypto'
 // it evaluates its WebSocket getter, which compiles undici's WebAssembly parser,
 // and the command line reaches this module through the ChatGPT sign-in.
 import type { IncomingMessage, Server, ServerResponse } from 'node:http'
-import { aiFetch } from './fetch'
+import { aiFetch, keyedFetch } from './fetch'
 import { GEMINI_FREE_MODEL, OPENROUTER_FREE_MODELS } from './free-ai'
 import type { FreeAiConnectFailure, FreeAiQuota } from './free-ai'
 
@@ -197,12 +197,17 @@ export async function exchangeOpenRouterCode(
   signal?: AbortSignal,
 ): Promise<{ ok: true; apiKey: string } | { ok: false; reason: FreeConnectFailure }> {
   try {
-    const response = await fetchImpl(OPENROUTER_KEYS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, code_verifier: verifier, code_challenge_method: 'S256' }),
-      signal: withTimeout(signal),
-    })
+    const response = await keyedFetch(
+      OPENROUTER_KEYS_URL,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, code_verifier: verifier, code_challenge_method: 'S256' }),
+        signal: withTimeout(signal),
+      },
+      undefined,
+      fetchImpl,
+    )
     if (response.status === 400 || response.status === 403) return { ok: false, reason: 'denied' }
     if (!response.ok) return { ok: false, reason: 'network' }
     const body = (await response.json()) as { key?: unknown }
@@ -283,10 +288,12 @@ export async function connectGemini(
   const apiKey = plausibleApiKey(rawKey)
   if (!apiKey) return { ok: false, reason: 'invalid' }
   try {
-    const response = await fetchImpl(`${GEMINI_MODELS_URL}?pageSize=1`, {
-      headers: { 'x-goog-api-key': apiKey },
-      signal: withTimeout(signal),
-    })
+    const response = await keyedFetch(
+      `${GEMINI_MODELS_URL}?pageSize=1`,
+      { headers: { 'x-goog-api-key': apiKey }, signal: withTimeout(signal) },
+      undefined,
+      fetchImpl,
+    )
     if (response.ok) return { ok: true, apiKey, model: GEMINI_FREE_MODEL }
     if (response.status === 400 || response.status === 401 || response.status === 403) {
       return { ok: false, reason: 'invalid' }
@@ -309,10 +316,12 @@ export async function openRouterFreeQuota(
 ): Promise<FreeAiQuota | null> {
   if (!apiKey.trim()) return null
   try {
-    const response = await fetchImpl(OPENROUTER_KEY_INFO_URL, {
-      headers: { Authorization: `Bearer ${apiKey.trim()}` },
-      signal: withTimeout(signal),
-    })
+    const response = await keyedFetch(
+      OPENROUTER_KEY_INFO_URL,
+      { headers: { Authorization: `Bearer ${apiKey.trim()}` }, signal: withTimeout(signal) },
+      undefined,
+      fetchImpl,
+    )
     if (!response.ok) return null
     const body = (await response.json()) as {
       data?: {

@@ -35,13 +35,13 @@ export interface ParsedFile {
 }
 
 /** No text extraction for images: callers read raw bytes and go multimodal (see @genoffice/ai-provider images support) */
-const IMAGE_MIMES: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  gif: 'image/gif',
-  webp: 'image/webp',
-}
+const IMAGE_MIMES = new Map<string, string>([
+  ['png', 'image/png'],
+  ['jpg', 'image/jpeg'],
+  ['jpeg', 'image/jpeg'],
+  ['gif', 'image/gif'],
+  ['webp', 'image/webp'],
+])
 
 const TEXT_EXTS = new Set([
   'txt',
@@ -249,7 +249,7 @@ export async function parseFileToText(
       return { ok: false, kind: 'text', error: e instanceof Error ? e.message : String(e) }
     }
   }
-  const imageMime = IMAGE_MIMES[ext]
+  const imageMime = IMAGE_MIMES.get(ext)
   if (imageMime) return { ok: true, kind: 'image', mime: imageMime }
   try {
     if (TEXT_EXTS.has(ext)) {

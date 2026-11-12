@@ -3,10 +3,10 @@
  * Provides color scheme and font scheme lookups so inheritance resolution can turn
  * schemeClr / theme fonts into final values.
  */
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from './xml-parser'
 import { asXmlNode, xmlArray, type XmlNode } from './xml-utils'
 
-const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' })
+const parser = xmlParser({ ignoreAttributes: false, attributeNamePrefix: '@_' })
 
 export interface Theme {
   /** clrScheme: dk1/lt1/dk2/lt2/accent1..6/hlink/folHlink → #RRGGBB */

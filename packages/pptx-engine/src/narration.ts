@@ -140,10 +140,12 @@ export function setShowNarration(opened: OpenedPptx): void {
     let tag = showPr[0]
     for (const [name, value] of Object.entries(flags)) {
       tag = new RegExp(`\\s${name}="[^"]*"`).test(tag)
-        ? tag.replace(new RegExp(`\\s${name}="[^"]*"`), ` ${name}="${value}"`)
-        : tag.replace(/^<p:showPr/, `<p:showPr ${name}="${value}"`)
+        ? tag.replace(new RegExp(`\\s${name}="[^"]*"`), () => ` ${name}="${value}"`)
+        : tag.replace(/^<p:showPr/, () => `<p:showPr ${name}="${value}"`)
     }
-    next = xml.replace(showPr[0], tag)
+    // A function, not a string: the tag is the deck's own <p:showPr>, and a replacement string
+    // would expand a `$&` or `$$` in its attributes
+    next = xml.replace(showPr[0], () => tag)
   } else {
     const element = `<p:showPr showNarration="1" useTimings="1"/>`
     const selfClosed = xml.replace(/<p:presentationPr\b([^>]*?)\/>/, (_m, attrs: string) => {

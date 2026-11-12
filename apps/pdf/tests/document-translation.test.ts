@@ -428,6 +428,8 @@ async function mount(
     lang?: DocumentTranslationProps['lang']
     /** mount AI page reading beside it (the resume offer lives there) */
     withAiRead?: boolean
+    /** where the save before the files are written leaves the document (default: where it is) */
+    savedTo?: string
   } = {},
 ) {
   bridge = fakeBridge({
@@ -439,7 +441,7 @@ async function mount(
   const handle = createRef<DocumentTranslationHandle>()
   const session = new DocumentJobSession(new DocumentJobRegistry())
   const onOpenAiRead = vi.fn()
-  const prepare = vi.fn(async () => true)
+  const prepare = vi.fn(async (): Promise<string | null> => o.savedTo ?? PATH)
   const lang = o.lang ?? 'en'
   const props: DocumentTranslationProps = {
     filePath: PATH,
@@ -787,6 +789,29 @@ describe('translation window: confirmation', () => {
     await click(m.el, '[data-action="export"]')
     await until(() => q(m.el, '.pdf-translate-report') !== null, 'the report')
     expect(channels.writeBacks[0]).toMatchObject({ payload: { lang: 'de', bilingual: true } })
+  })
+
+  it('writes the files from where the save of the pending edits left the document', async () => {
+    // an untitled copy: the save asked where it goes, and the old path is no longer this view's
+    const MOVED = 'C:\\docs\\picked.pdf'
+    const channels = fakeChannels({
+      stored: { lang: 'de', provider: 'claude-code', model: '', blocks: 3 },
+    })
+    const m = await mount({ channels, savedTo: MOVED })
+    await openWindow(m, { lang: 'de', pages: null })
+    await click(m.el, '[data-field="format-md"]')
+    await click(m.el, '[data-action="next"]')
+    await until(() => q(m.el, '[data-nothing]') !== null, 'the confirmation')
+    await click(m.el, '[data-action="export"]')
+    await until(() => q(m.el, '.pdf-translate-report') !== null, 'the report')
+
+    expect(m.prepare).toHaveBeenCalledTimes(1)
+    expect(channels.writeBacks.map((request) => request.path)).toEqual([MOVED])
+    expect(channels.converts.map((request) => request.path)).toEqual([MOVED])
+    expect(channels.api.releaseTarget).toHaveBeenCalledWith({
+      source: MOVED,
+      path: 'C:\\out\\report.de.md',
+    })
   })
 })
 

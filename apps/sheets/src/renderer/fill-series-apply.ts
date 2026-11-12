@@ -7,6 +7,7 @@ import {
   planFillSeries,
 } from './fill-series'
 import type { TFunc } from './i18n/locale'
+import { holdsHiddenCells } from './redact-move-guard'
 import type { UniverRuntime } from './univer-state'
 
 /// Writes the series into the active selection; each write is a normal
@@ -22,6 +23,10 @@ export function applyFillSeries(
   const sheet = workbook?.getActiveSheet()
   const active = workbook?.getActiveRange()
   if (!sheet || !active) return t('appSelectRangeFirst')
+  // The series continues the numbers already in the selection.
+  if (holdsHiddenCells(runtime, sheet.getSheetId(), [active.getRange()])) {
+    return t('redactMoveRefused')
+  }
   const { startRow, startColumn } = active.getRange()
   const cells = active.getCellDatas()
   const computed = active.getValues()

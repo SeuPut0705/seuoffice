@@ -40,6 +40,7 @@ import {
 import type { SlicerMember, SlicerUiState } from './SlicerPanel'
 import type { TimelineUiState } from './TimelinePanel'
 import { resolvePivotSource } from './pivot-source'
+import { holdsHiddenCells, WHOLE_SHEET } from './redact-move-guard'
 import type { LazyWorkbookState, UniverRuntime, UniverWorksheet } from './univer-state'
 import {
   applyAiPivotAdd,
@@ -247,6 +248,16 @@ export function refreshPivotTables(ctx: PivotActionContext, sheetId: string): nu
       .find((sheet) => sheet.getSheetName() === definition.sourceSheet)
     if (!sourceSheet) {
       throw new Error(t('appPivotSourceSheetMissing', { name: definition.sourceSheet }))
+    }
+    // The output is plain cells holding the labels and totals of the source.
+    let sourceBounds = WHOLE_SHEET
+    try {
+      sourceBounds = parseRange(definition.sourceRef)
+    } catch {
+      // a source that is not a plain range: every cell of the sheet counts
+    }
+    if (holdsHiddenCells(runtime, sourceSheet.getSheetId(), [sourceBounds])) {
+      throw new Error(t('redactMoveRefused'))
     }
     const sourceValues = readPivotSourceGrid(
       sourceSheet.getRange(definition.sourceRef),

@@ -352,7 +352,7 @@ register({
     const dash = line.dash ? `<a:prstDash val="${line.dash}"/>` : ''
     el.anchor.originalXml = el.anchor.originalXml
       .replace(/<a:headEnd\b[^>]*\/>|<a:tailEnd\b[^>]*\/>/g, '')
-      .replace('</a:ln>', `${dash}${head}${tail}</a:ln>`)
+      .replace('</a:ln>', () => `${dash}${head}${tail}</a:ln>`)
     // direction lives in the xfrm flips; dirtyTransform makes setElementConnection bake them in
     el.transform = { ...el.transform, flipH: p1.x > p2.x, flipV: p1.y > p2.y }
     el.dirtyTransform = true
