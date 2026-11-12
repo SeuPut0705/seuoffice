@@ -95,7 +95,8 @@ export function xnodeArg(node: XNode | null | undefined): string | null {
 
 const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/
 
-const wellFormed = (text: unknown): boolean => typeof text === 'string' && !LONE_SURROGATE.test(text)
+const wellFormed = (text: unknown): boolean =>
+  typeof text === 'string' && !LONE_SURROGATE.test(text)
 
 /**
  * An entry of `Run.wrap` the engine's model can hold: the TypeScript skipped

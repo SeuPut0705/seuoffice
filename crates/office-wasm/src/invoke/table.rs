@@ -212,7 +212,6 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "buildTextboxParagraphXml" => r_build_textbox_paragraph_xml(env, args),
         "buildWordArtParagraphXml" => r_build_word_art_paragraph_xml(env, args),
         "builtInHeadingStyleUpsert" => r_built_in_heading_style_upsert(env, args),
-        "charClass" => r_char_class(env, args),
         "citationText" => r_citation_text(env, args),
         "cleanMoveRangeMarkers" => r_clean_move_range_markers(env, args),
         "colorNodeHex" => r_color_node_hex(env, args),
@@ -260,13 +259,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "inlinePictureDrawingXml" => r_inline_picture_drawing_xml(env, args),
         "inlineRunsXml" => r_inline_runs_xml(env, args),
         "inlineWrapContentLocked" => r_inline_wrap_content_locked(env, args),
-        "isCjkLetterChar" => r_is_cjk_letter_char(env, args),
         "isContentControlLock" => r_is_content_control_lock(env, args),
-        "isDoubleByteChar" => r_is_double_byte_char(env, args),
-        "isEastAsianChar" => r_is_east_asian_char(env, args),
-        "isEastAsianLangTag" => r_is_east_asian_lang_tag(env, args),
-        "isHangulChar" => r_is_hangul_char(env, args),
-        "isLatinAlnumChar" => r_is_latin_alnum_char(env, args),
         "isLazyMediaPart" => routes::is_lazy_media_part(env, &args.resolved()?),
         "isPictureWatermark" => r_is_picture_watermark(env, args),
         "isSfnt" => routes::is_sfnt(env, &args.resolved()?),
@@ -414,8 +407,6 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "swapAnchorWrap" => r_swap_anchor_wrap(env, args),
         "symbolGlyph" => r_symbol_glyph(env, args),
         "symbolPuaChar" => r_symbol_pua_char(env, args),
-        "textHasEastAsian" => r_text_has_east_asian(env, args),
-        "textHasHangulChars" => r_text_has_hangul_chars(env, args),
         "textWatermarkBoxPt" => r_text_watermark_box_pt(env, args),
         "textWatermarkPreviewImage" => r_text_watermark_preview_image(env, args),
         "themeLangEaSlotFont" => r_theme_lang_ea_slot_font(env, args),
@@ -698,12 +689,6 @@ fn r_built_in_heading_style_upsert(env: &mut InvokeEnv<'_>, args: Args<'_>) -> O
     let p0 = num(args, 0)?;
     let p1 = ostr(args, 1)?;
     let r = docx_engine::save::parts::style_upsert::built_in_heading_style_upsert(p0, p1);
-    Ok(Some(to_json(&r)?))
-}
-
-fn r_char_class(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0: u32 = req(args, 0)?;
-    let r = docx_engine::char_class::char_class(p0);
     Ok(Some(to_json(&r)?))
 }
 
@@ -1076,46 +1061,9 @@ fn r_inline_wrap_content_locked(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out 
     Ok(Some(to_json(&r)?))
 }
 
-fn r_is_cjk_letter_char(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0: u32 = req(args, 0)?;
-    let r = docx_engine::char_class::is_cjk_letter_char(p0);
-    Ok(Some(to_json(&r)?))
-}
-
 fn r_is_content_control_lock(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let r = docx_engine::save::features::content_control::is_content_control_lock(p0);
-    Ok(Some(to_json(&r)?))
-}
-
-fn r_is_double_byte_char(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0: u32 = req(args, 0)?;
-    let r = docx_engine::char_class::is_double_byte_char(p0);
-    Ok(Some(to_json(&r)?))
-}
-
-fn r_is_east_asian_char(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0: u32 = req(args, 0)?;
-    let r = docx_engine::char_class::is_east_asian_char(p0);
-    Ok(Some(to_json(&r)?))
-}
-
-fn r_is_east_asian_lang_tag(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0 = ostr(args, 0)?;
-    let p1: bool = req(args, 1)?;
-    let r = docx_engine::char_class::is_east_asian_lang_tag(p0, p1);
-    Ok(Some(to_json(&r)?))
-}
-
-fn r_is_hangul_char(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0: u32 = req(args, 0)?;
-    let r = docx_engine::char_class::is_hangul_char(p0);
-    Ok(Some(to_json(&r)?))
-}
-
-fn r_is_latin_alnum_char(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0: u32 = req(args, 0)?;
-    let r = docx_engine::char_class::is_latin_alnum_char(p0);
     Ok(Some(to_json(&r)?))
 }
 
@@ -2083,18 +2031,6 @@ fn r_symbol_glyph(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
 fn r_symbol_pua_char(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let r = docx_engine::symbol_fonts::symbol_pua_char(p0);
-    Ok(Some(to_json(&r)?))
-}
-
-fn r_text_has_east_asian(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0 = rstr(args, 0)?;
-    let r = docx_engine::char_class::text_has_east_asian(p0);
-    Ok(Some(to_json(&r)?))
-}
-
-fn r_text_has_hangul_chars(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0 = rstr(args, 0)?;
-    let r = docx_engine::char_class::text_has_hangul_chars(p0);
     Ok(Some(to_json(&r)?))
 }
 
