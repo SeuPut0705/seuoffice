@@ -1,6 +1,6 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { PRODUCT_NAME } from '@seuoffice/i18n'
+import { OLD_MCP_RESOURCE_SCHEMES, PRODUCT_NAME } from '@seuoffice/i18n'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import type { BatchCounts } from '../batch'
 import { defaultRegistry, VERSION } from '../cli'
@@ -163,15 +163,31 @@ export async function createMcpServer(
     )
   }
 
-  for (const g of [...GUIDES, ...(await templateGuides())]) {
+  const guides = [...GUIDES, ...(await templateGuides())]
+  const readGuide = async (g: (typeof guides)[number], href: string) => {
+    const r = await runJson(g.argv, ctx)
+    const text = r.ok ? r.ok.summary : `${r.error.message}`
+    return { contents: [{ uri: href, mimeType: 'text/plain', text }] }
+  }
+  for (const g of guides) {
     server.registerResource(
       g.name,
       g.uri,
       { description: g.description, mimeType: 'text/plain' },
-      async (uri) => {
-        const r = await runJson(g.argv, ctx)
-        const text = r.ok ? r.ok.summary : `${r.error.message}`
-        return { contents: [{ uri: uri.href, mimeType: 'text/plain', text }] }
+      async (uri) => readGuide(g, uri.href),
+    )
+  }
+  // the agent skill an earlier version installed names the guides under the
+  // old scheme: they answer there too, without being listed a second time
+  for (const scheme of OLD_MCP_RESOURCE_SCHEMES) {
+    server.registerResource(
+      `${scheme} guides`,
+      new ResourceTemplate(`${scheme}://guide/{+path}`, { list: undefined }),
+      { description: `the guides under the scheme of an earlier version`, mimeType: 'text/plain' },
+      async (uri, { path }) => {
+        const g = guides.find((x) => x.uri === `seuoffice://guide/${String(path)}`)
+        if (!g) throw new Error(`No guide at ${uri.href}`)
+        return readGuide(g, uri.href)
       },
     )
   }

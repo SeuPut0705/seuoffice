@@ -78,6 +78,12 @@ export const OLD_MCP_TOOL_NAMES: Readonly<Record<string, string>> = {
 }
 
 /**
+ * Scheme of the MCP resources (`<scheme>://guide/…`): the agent skill an
+ * earlier version installed names the guides under it
+ */
+export const OLD_MCP_RESOURCE_SCHEMES: readonly string[] = ['ieumoffice']
+
+/**
  * The name to use for something that may exist under an old name: the current
  * one when it exists; else the first old name that exists (what an earlier
  * version left is used where it is, never copied or moved); else the current
