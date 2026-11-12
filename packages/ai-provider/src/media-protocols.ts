@@ -810,19 +810,116 @@ async function generateImageStability(
   return { bytes, mime: sniffImageMime(bytes, resp.headers.get('content-type') ?? 'image/png') }
 }
 
-/** BFL serves one endpoint per model; the job is async and polled to a URL */
-function bflPollSleep(guard: AbortSignal, ms: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(resolve, ms)
-    guard.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer)
-        reject(new Error('FLUX generation timed out or was cancelled'))
-      },
-      { once: true },
+const BFL_CANCELLED = 'FLUX generation timed out or was cancelled'
+
+/** the waits between the polls of one queued FLUX job */
+interface BflPollWaits {
+  /** resolves after `ms`; rejects at once when the guard aborts */
+  next(ms: number): Promise<void>
+  /** takes the listener off the guard; call once when the polling is over */
+  done(): void
+}
+
+/**
+ * BFL serves one endpoint per model; the job is async and polled to a URL.
+ * The guard carries ONE abort listener for the whole poll loop: a listener
+ * per wait stayed on the signal after its wait was over, so a long job piled
+ * them up.
+ */
+function bflPollWaits(guard: AbortSignal): BflPollWaits {
+  let cancelWait: (() => void) | undefined
+  const onAbort = (): void => cancelWait?.()
+  guard.addEventListener('abort', onAbort)
+  return {
+    next: (ms) =>
+      new Promise((resolve, reject) => {
+        if (guard.aborted) {
+          reject(new Error(BFL_CANCELLED))
+          return
+        }
+        const timer = setTimeout(() => {
+          cancelWait = undefined
+          resolve()
+        }, ms)
+        cancelWait = () => {
+          clearTimeout(timer)
+          reject(new Error(BFL_CANCELLED))
+        }
+      }),
+    done: () => guard.removeEventListener('abort', onAbort),
+  }
+}
+
+/** generic second-level labels under a country code: `co.uk`, `com.au`, `or.kr` */
+const COUNTRY_SECOND_LEVELS = new Set([
+  'co',
+  'com',
+  'org',
+  'net',
+  'ac',
+  'gov',
+  'edu',
+  'or',
+  'ne',
+  'go',
+])
+
+/**
+ * The registrable domain of a host name (`bfl.ai` for `api.eu1.bfl.ai`), or
+ * null for an IP literal or a one-label name, which have none.
+ *
+ * No public suffix list ships with the app, so the suffix is read as the last
+ * label, or the last two for a generic second level under a country code. A
+ * host under any other multi-label suffix (`name.workers.dev`,
+ * `name.github.io`) is therefore read one label short and matches its
+ * neighbours there. That needs a base URL the person set to such a host, and
+ * the reply that names the neighbour comes from that host, which was already
+ * given the key with the job.
+ */
+function registrableDomain(host: string): string | null {
+  const labels = host.replace(/\.$/, '').split('.')
+  const top = labels[labels.length - 1]!
+  // the URL parser writes every IPv4 form as four numbers and IPv6 in brackets
+  if (labels.length < 2 || host.startsWith('[') || /^\d+$/.test(top)) return null
+  const second = labels[labels.length - 2]!
+  const suffixLabels = top.length === 2 && COUNTRY_SECOND_LEVELS.has(second) ? 2 : 1
+  if (labels.length <= suffixLabels) return null
+  return labels.slice(-(suffixLabels + 1)).join('.')
+}
+
+/**
+ * Where to poll a queued FLUX job. Every poll carries the API key, so an
+ * address the provider's reply names is used only when it is the provider's
+ * own: the origin the job went to, or an `https:` host of the same registrable
+ * domain (BFL answers `api.bfl.ai` with a regional host such as
+ * `api.eu1.bfl.ai`). A base URL the person set is held to its own host the
+ * same way; an IP address or a one-label name has to match exactly. Anything
+ * else ends the generation before a request goes out.
+ */
+function bflPollUrl(base: string, queued: Record<string, unknown>): string {
+  const named = queued.polling_url
+  if (typeof named !== 'string' || !named) {
+    return `${base}/v1/get_result?id=${encodeURIComponent(String(queued.id ?? ''))}`
+  }
+  const submitted = new URL(base)
+  let poll: URL
+  try {
+    poll = new URL(named)
+  } catch {
+    throw new Error(
+      'FLUX generation failed: the provider answered with a polling address that is not a URL. The API key was not sent to it.',
     )
-  })
+  }
+  const site = registrableDomain(submitted.hostname)
+  const sameSite =
+    poll.hostname === submitted.hostname ||
+    (site !== null && site === registrableDomain(poll.hostname))
+  if (poll.origin !== submitted.origin && !(poll.protocol === 'https:' && sameSite)) {
+    throw new Error(
+      `FLUX generation failed: the provider answered with a polling address that is not its own (${poll.protocol}//${poll.host.slice(0, 100)}). The API key was not sent to it.`,
+    )
+  }
+  return poll.href
 }
 
 /** FLUX.2 Pro / FLUX 1.1 take width/height (256..1440, multiples of 32),
@@ -875,40 +972,42 @@ async function generateImageBfl(
   })
   if (!submit.ok) return failFrom('FLUX generation failed:', submit)
   const queued = await readJson('FLUX', submit)
-  const pollUrl =
-    typeof queued.polling_url === 'string' && queued.polling_url
-      ? queued.polling_url
-      : `${base}/v1/get_result?id=${encodeURIComponent(String(queued.id ?? ''))}`
+  const pollUrl = bflPollUrl(base, queued)
   // the job is queued server-side; results come as status Ready + sample_url
-  for (;;) {
-    await bflPollSleep(signal, 1_500)
-    const poll = await aiFetch(pollUrl, { headers: { 'x-key': config.apiKey }, signal })
-    if (!poll.ok) return failFrom('FLUX generation failed:', poll)
-    const json = await readJson('FLUX result', poll)
-    const status = String(json.status ?? '')
-    if (status === 'Ready') {
-      // BFL's quick start: result.result.sample
-      const result = (json.result ?? {}) as Record<string, unknown>
-      const sample =
-        typeof result.sample === 'string' && result.sample
-          ? result.sample
-          : typeof json.sample_url === 'string' && json.sample_url
-            ? json.sample_url
-            : undefined
-      if (!sample) {
-        throw new Error(`FLUX returned no image URL: ${JSON.stringify(json).slice(0, 200)}`)
+  const waits = bflPollWaits(signal)
+  try {
+    for (;;) {
+      await waits.next(1_500)
+      const poll = await aiFetch(pollUrl, { headers: { 'x-key': config.apiKey }, signal })
+      if (!poll.ok) return await failFrom('FLUX generation failed:', poll)
+      const json = await readJson('FLUX result', poll)
+      const status = String(json.status ?? '')
+      if (status === 'Ready') {
+        // BFL's quick start: result.result.sample
+        const result = (json.result ?? {}) as Record<string, unknown>
+        const sample =
+          typeof result.sample === 'string' && result.sample
+            ? result.sample
+            : typeof json.sample_url === 'string' && json.sample_url
+              ? json.sample_url
+              : undefined
+        if (!sample) {
+          throw new Error(`FLUX returned no image URL: ${JSON.stringify(json).slice(0, 200)}`)
+        }
+        return await downloadImage('FLUX', sample, signal)
       }
-      return downloadImage('FLUX', sample, signal)
+      if (
+        status === 'Error' ||
+        status === 'Failed' ||
+        status === 'No Card Generated' ||
+        status === 'Content Moderated' ||
+        status === 'Request Moderated'
+      ) {
+        throw new Error(`FLUX generation failed: ${status}`)
+      }
     }
-    if (
-      status === 'Error' ||
-      status === 'Failed' ||
-      status === 'No Card Generated' ||
-      status === 'Content Moderated' ||
-      status === 'Request Moderated'
-    ) {
-      throw new Error(`FLUX generation failed: ${status}`)
-    }
+  } finally {
+    waits.done()
   }
 }
 
