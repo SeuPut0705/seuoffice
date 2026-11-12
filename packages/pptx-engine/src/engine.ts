@@ -74,12 +74,12 @@ function openedArg(opened: OpenedPptx): unknown {
 }
 
 function writeBack(target: unknown, kind: Changed, answer: unknown): void {
-  if (kind === 'json') {
-    adopt(target as object, answer as Parameters<typeof adopt>[1])
-    return
-  }
   if (kind === 'archive') {
     adoptArchive(target as PackageArchive, answer as ArchiveChanges)
+    return
+  }
+  if (kind !== 'opened') {
+    adopt(target as object, answer as Parameters<typeof adopt>[1])
     return
   }
   const opened = target as OpenedPptx
