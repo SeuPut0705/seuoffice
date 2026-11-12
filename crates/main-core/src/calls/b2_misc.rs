@@ -796,10 +796,20 @@ fn apply_step(step: &Step) {
     if let Some(path) = &step.mkdir {
         let _ = fs::create_dir_all(path);
     }
-    #[cfg(unix)]
     if let Some((path, mode)) = &step.chmod {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = fs::set_permissions(path, fs::Permissions::from_mode(*mode));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = fs::set_permissions(path, fs::Permissions::from_mode(*mode));
+        }
+        // fs.chmodSync on Windows sets the read-only attribute alone, from the
+        // owner's write bit
+        #[cfg(not(unix))]
+        if let Ok(meta) = fs::metadata(path) {
+            let mut permissions = meta.permissions();
+            permissions.set_readonly(mode & 0o200 == 0);
+            let _ = fs::set_permissions(path, permissions);
+        }
     }
 }
 

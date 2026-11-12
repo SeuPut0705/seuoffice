@@ -47,9 +47,15 @@ pub fn mkdtemp(prefix: &str) -> Result<String, NodeError> {
             })
             .collect();
         let path = format!("{prefix}{suffix}");
-        let mut builder = std::fs::DirBuilder::new();
+        // fs.mkdtemp creates the folder with mode 0o700
         #[cfg(unix)]
-        std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+        let builder = {
+            let mut builder = std::fs::DirBuilder::new();
+            std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+            builder
+        };
+        #[cfg(not(unix))]
+        let builder = std::fs::DirBuilder::new();
         match builder.create(&path) {
             Ok(()) => return Ok(path),
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
