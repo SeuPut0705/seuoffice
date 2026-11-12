@@ -1,0 +1,60 @@
+{
+ "faults": [
+  {
+   "name": "porter: nextFreeRelId starts its search at rId0 instead of rId1",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/save/helpers.rs",
+   "old": "let mut n = 1u64;",
+   "new": "let mut n = 0u64;"
+  },
+  {
+   "name": "porter: applySectionSettings writes the last column with a gap (i <= last, not i < last)",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/save/section_write.rs",
+   "old": "if i < last {",
+   "new": "if i <= last {"
+  },
+  {
+   "name": "porter: buildNotesXml no longer escapes the text of a rich note run (& and <)",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/save/notes_write.rs",
+   "old": "text(&run.text)",
+   "new": "&run.text"
+  },
+  {
+   "name": "porter: xmlTagEnd ends the tag one byte early (before the >)",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/markup.rs",
+   "old": "b'>' => return start + 1 + offset + 1,",
+   "new": "b'>' => return start + 1 + offset,"
+  },
+  {
+   "name": "porter: normalizeItemId no longer trims the GUID text",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/remove_parts.rs",
+   "old": "jscompat::trim(&value.replace(['{', '}'], \"\")).to_uppercase()",
+   "new": "value.replace(['{', '}'], \"\").to_uppercase()"
+  },
+  {
+   "name": "porter: STYLE_CHILD_ORDER puts w:next before w:basedOn",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/style_upsert.rs",
+   "old": "    \"w:basedOn\",\n    \"w:next\",\n",
+   "new": "    \"w:next\",\n    \"w:basedOn\",\n"
+  },
+  {
+   "name": "porter: protection cryptAlgorithmSid defaults to 15, not 14",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/settings.rs",
+   "old": "jscompat::number_to_string(sid.unwrap_or(14.0))",
+   "new": "jscompat::number_to_string(sid.unwrap_or(15.0))"
+  },
+  {
+   "name": "porter: commentsExtended writes the parent link as w15:parentId, not w15:paraIdParent",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/comments.rs",
+   "old": "w15:paraIdParent=",
+   "new": "w15:parentId="
+  }
+ ]
+}
