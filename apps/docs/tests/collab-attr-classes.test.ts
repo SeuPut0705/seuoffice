@@ -141,6 +141,12 @@ const LOOSENED: { at: string[]; leaf?: string }[] = [
   { at: CONTENT, leaf: 'oldRPr' },
   // a cell's paragraph texts (a nested table's cells, a table's merged-away cells)
   { at: CONTENT, leaf: 'paras' },
+  // The bytes before and after the runs of a run-level wrapper, in whatever shape the chain
+  // arrives: no page draws them (the mark shows a token of its own making), and the engine
+  // checks them again before it writes them (docx-engine inline-opaque.ts). The rules by key
+  // kept them only in a list of wrappers.
+  { at: ['inlineWrap.chain'], leaf: 'open' },
+  { at: ['inlineWrap.chain'], leaf: 'close' },
 ]
 
 const loosened = (type: string, attr: string, leaf: string): boolean =>

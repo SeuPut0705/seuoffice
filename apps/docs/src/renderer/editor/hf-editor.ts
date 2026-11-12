@@ -7,7 +7,8 @@
  */
 import { Editor, Extension, Node } from '@tiptap/core'
 import { Plugin, PluginKey, TextSelection, type EditorState } from '@tiptap/pm/state'
-import type { ResolvedPos } from '@tiptap/pm/model'
+import type { Node as ProseMirrorNode, ResolvedPos } from '@tiptap/pm/model'
+import { Transform } from '@tiptap/pm/transform'
 import type { EditorView } from '@tiptap/pm/view'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import {
@@ -28,6 +29,7 @@ import { setDkBackground, setDkBackgroundImage, setDkBorder } from './dark-page'
 import { TextboxParagraph, textboxSubExtensions } from './extensions'
 import { hfCellGeometry, hfRowStyle } from './hf-dom'
 import { hfParasOf } from './hf-text'
+import { INLINE_WRAP_MARK } from './inline-wrap-chain'
 
 export type HfFieldKind = 'PAGE' | 'NUMPAGES' | 'SECTIONPAGES'
 
@@ -610,6 +612,17 @@ export interface HfEditorHandle {
   discard(): void
 }
 
+/**
+ * The document with the wrapper mark taken off. Removing a mark is a replace,
+ * which joins the text it stood on with neighbours that now carry the same
+ * marks, so read text and retyped text come out as the same nodes.
+ */
+function withoutWrappers(doc: ProseMirrorNode): string {
+  const type = doc.type.schema.marks[INLINE_WRAP_MARK]
+  const bare = type ? new Transform(doc).removeMark(0, doc.content.size, type).doc : doc
+  return JSON.stringify(bare.toJSON())
+}
+
 export function mountHfEditor(
   host: HTMLElement,
   opts: {
@@ -664,12 +677,19 @@ export function mountHfEditor(
     }),
   )
   // compared after schema normalization, so untouched null attrs never read as an edit
+  const mountedDoc = editor.state.doc
   const initialDoc = editor.getJSON() as PmNode
   const initialSig = JSON.stringify(initialDoc)
 
   const changed = (): HeaderFooter | null => {
     const doc = editor.getJSON() as PmNode
-    return JSON.stringify(doc) === initialSig ? null : hfValueFromDoc(doc, opts.value, initialDoc)
+    if (JSON.stringify(doc) === initialSig) return null
+    // a part that differs from the mounted one by its wrapper marks alone (the
+    // text of a control typed again) reads as it did: it is not handed over, so
+    // it keeps its original bytes, wrappers included, as a body paragraph does
+    // (`normalizedRuns` in convert.ts). Any other difference is an edit.
+    if (withoutWrappers(editor.state.doc) === withoutWrappers(mountedDoc)) return null
+    return hfValueFromDoc(doc, opts.value, initialDoc)
   }
   let exited = false
   const onCommitEvent = () => {

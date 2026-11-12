@@ -865,7 +865,17 @@ export function fillFromHtml(doc: OpenDocument, html: string): number {
     })
   }
   const last = doc.editor.state.doc.childCount - 1
-  doc.mods.protocol.replaceBlockRange(doc.editor, 0, last, nodes)
+  // The editor refuses a replacement that would change or drop the text of a
+  // content control locked against editing, and then writes nothing: say so
+  // instead of reporting blocks that never went in.
+  if (!doc.mods.protocol.replaceBlockRange(doc.editor, 0, last, nodes)) {
+    throw new CliError(
+      EXIT.usage,
+      'the document was left unchanged: it holds a content control locked against editing, and the new content would change or drop its text',
+      undefined,
+      { reason: 'op_rejected' },
+    )
+  }
   return nodes.length
 }
 

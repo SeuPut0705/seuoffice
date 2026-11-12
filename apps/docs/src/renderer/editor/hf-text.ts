@@ -84,8 +84,15 @@ export function applyHfText(value: HeaderFooter | null, text: string): HeaderFoo
   const edited: HfParagraph[] = lines.map((line, i) => {
     const template = templates[Math.min(i, templates.length - 1)]
     const { leading, text: textRuns, trailing } = hfPictureRuns(template.runs)
-    // the rewritten line is the accepted text: it must not inherit a tracked wrapper
-    const { ins: _ins, del: _del, ...style } = textRuns.find((r) => !r.del) ?? textRuns[0] ?? {}
+    // The line takes the styling of the paragraph's first text run that is not a tracked
+    // deletion. A wrapper (a content control) is not styling: the retyped line is plain
+    // text. It is also the accepted text: it must not inherit a tracked wrapper.
+    const {
+      ins: _ins,
+      del: _del,
+      wrap: _wrap,
+      ...style
+    } = textRuns.find((r) => !r.del) ?? textRuns[0] ?? { text: '' }
     return {
       ...template,
       runs: [...leading, ...(line === '' ? [] : [{ ...style, text: line }]), ...trailing],
