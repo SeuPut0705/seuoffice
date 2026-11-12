@@ -11,7 +11,7 @@ import {
 } from '../../packages/docx-engine/src/alt-chunk'
 import type { RelInfo } from '../../packages/docx-engine/src/parse-xml-text'
 import type { CallSpec, Input } from './calls-spec'
-import { legacyCharset } from './listed'
+import { legacyCharsetOfHtml, legacyCharsetOfMht } from './listed'
 
 const bytesOf = (text: string, args: Record<string, unknown>): Uint8Array =>
   Array.isArray(args.bytes)
@@ -611,7 +611,7 @@ export const ALTCHUNK: CallSpec[] = [
   {
     fn: 'altchunk.decodeHtmlBytes',
     call: (text, args) => decodeHtmlBytes(bytesOf(text, args)),
-    listed: legacyCharset,
+    listed: legacyCharsetOfHtml,
     fromDocument: (parts) =>
       [...parts]
         .filter(([path]) => path.endsWith('.xml'))
@@ -668,7 +668,7 @@ export const ALTCHUNK: CallSpec[] = [
   {
     fn: 'altchunk.decodeMhtToHtml',
     call: (text, args) => decodeMhtToHtml(bytesOf(text, args)),
-    listed: legacyCharset,
+    listed: legacyCharsetOfMht,
     fromDocument: (parts) => {
       const document = parts.get('word/document.xml')
       if (document === undefined) return []

@@ -12,7 +12,7 @@ import {
 } from '../../packages/docx-engine/src/revision-xml'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
-import { revisionClass } from './listed'
+import { revisionClass, singleQuotedRevisionAttribute } from './listed'
 
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 
@@ -444,7 +444,7 @@ export const REVISION: CallSpec[] = [
   {
     fn: 'revision.readPropChangeXml',
     call: (text, args) => readPropChangeXml(text, args.changeName as string),
-    listed: revisionClass,
+    listed: singleQuotedRevisionAttribute,
     fromDocument: fragmentInputs,
     built: PROP_FRAGMENTS.flatMap((text) =>
       FRAGMENT_NAMES.map((changeName) => ({ text, args: { changeName } })),

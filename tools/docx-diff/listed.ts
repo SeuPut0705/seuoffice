@@ -32,16 +32,28 @@ export function nestedWrapNone(text: string): string | undefined {
     : undefined
 }
 
+const SINGLE_QUOTED_REVISION_ATTRIBUTE =
+  /\s(?:w:author|w:date|w:id|w16du:dateUtc|w:vMerge|w:vMergeOrig)='/
+
+/** An attribute the revision readers look for, in single quotes. */
+export function singleQuotedRevisionAttribute(text: string): string | undefined {
+  return SINGLE_QUOTED_REVISION_ATTRIBUTE.test(text)
+    ? 'revision-attribute-in-single-quotes'
+    : undefined
+}
+
 /**
- * What the revision functions answer differently by decision: an attribute
- * they look for in single quotes, or a w:pPrChange right after the open tag of
- * its w:pPr, whose old properties a reject loses in the TypeScript.
+ * What the functions that resolve revisions answer differently by decision:
+ * an attribute in single quotes, or, where the call can revert it (no accept,
+ * and for resolvePropChangeXml the change it is asked for), a w:pPrChange
+ * right after the open tag of its w:pPr, whose old properties the TypeScript
+ * loses. An input of both is counted under the first.
  */
-export function revisionClass(text: string): string | undefined {
-  if (/\s(?:w:author|w:date|w:id|w16du:dateUtc|w:vMerge|w:vMergeOrig)='/.test(text)) {
-    return 'revision-attribute-in-single-quotes'
-  }
-  return /<w:pPr(?:\s[^>]*)?><w:pPrChange[\s>]/.test(text)
+export function revisionClass(text: string, args: Args): string | undefined {
+  if (SINGLE_QUOTED_REVISION_ATTRIBUTE.test(text)) return 'revision-attribute-in-single-quotes'
+  const reverts =
+    args.mode !== 'accept' && (args.changeName === undefined || args.changeName === 'w:pPrChange')
+  return reverts && /<w:pPr(?:\s[^>]*)?><w:pPrChange[\s>]/.test(text)
     ? 'reject-of-a-ppr-change-that-opens-its-ppr'
     : undefined
 }
@@ -49,7 +61,7 @@ export function revisionClass(text: string): string | undefined {
 /** A v:fill opacity given as a percentage. */
 export function percentOpacity(text: string, args: Args): string | undefined {
   const types = typeof args.types === 'string' ? args.types : ''
-  return /\bopacity\s*=\s*(?:"[^"]*%\s*"|'[^']*%\s*')/.test(text + types)
+  return /<v:fill\b[^>]*\bopacity\s*=\s*(?:"[^"]*%\s*"|'[^']*%\s*')/.test(text + types)
     ? 'vml-fill-opacity-in-percent'
     : undefined
 }
@@ -57,16 +69,38 @@ export function percentOpacity(text: string, args: Args): string | undefined {
 const SAME_ON_EVERY_HOST =
   /^(?:utf-?8|utf-16(?:le|be)?|unicode|us-ascii|ascii|latin1|iso-8859-1|windows-1252|cp1252)$/i
 
+const bytesOf = (text: string, args: Args): Buffer =>
+  Array.isArray(args.bytes) ? Buffer.from(args.bytes as number[]) : Buffer.from(text, 'utf8')
+
 /**
- * Bytes that declare a legacy charset: `TextDecoder` is ICU's on Node and the
- * Encoding Standard's in Chromium and in the Rust, and they differ on bytes
- * outside the common tables.
+ * The bytes decodeHtmlBytes decodes with a legacy charset: `TextDecoder` is
+ * ICU's on Node and the Encoding Standard's in Chromium and in the Rust, and
+ * they differ on bytes outside the common tables. The label is read as the
+ * function reads it: none after a byte order mark, else the first meta
+ * charset or xml encoding of the first 4096 bytes.
  */
-export function legacyCharset(text: string, args: Args): string | undefined {
-  const head = Array.isArray(args.bytes)
-    ? String.fromCharCode(...(args.bytes as number[]).slice(0, 70_000))
-    : text
-  for (const found of head.matchAll(/(?:charset|encoding)\s*=\s*["']?\s*([\w-]+)/gi)) {
+export function legacyCharsetOfHtml(text: string, args: Args): string | undefined {
+  const bytes = bytesOf(text, args)
+  const mark = bytes.subarray(0, 3).toString('hex')
+  if (mark === 'efbbbf' || mark.startsWith('fffe') || mark.startsWith('feff')) return undefined
+  const head = bytes.subarray(0, 4096).toString('latin1')
+  const label =
+    /<meta[^>]+charset\s*=\s*["']?\s*([\w-]+)/i.exec(head)?.[1] ??
+    /<\?xml[^>]+encoding\s*=\s*["']([\w-]+)/i.exec(head)?.[1]
+  return label !== undefined && !SAME_ON_EVERY_HOST.test(label)
+    ? 'legacy-charset-decoding-is-the-hosts'
+    : undefined
+}
+
+/**
+ * The same for decodeMhtToHtml, where the label is in a MIME header or in the
+ * part once its transfer encoding is undone: any legacy label anywhere in the
+ * message. Wider than the defect, since reading it as the function does
+ * would be the function again.
+ */
+export function legacyCharsetOfMht(text: string, args: Args): string | undefined {
+  const message = bytesOf(text, args).toString('latin1')
+  for (const found of message.matchAll(/(?:charset|encoding)\s*=\s*["']?\s*([\w-]+)/gi)) {
     if (!SAME_ON_EVERY_HOST.test(found[1]!)) return 'legacy-charset-decoding-is-the-hosts'
   }
   return undefined
