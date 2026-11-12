@@ -4,9 +4,10 @@
  * skill folder whose path or real place is inside it is skipped before it is
  * opened.
  */
-import type { Dirent } from 'node:fs'
+import { existsSync, type Dirent } from 'node:fs'
 import { readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { join } from 'node:path'
+import { OLD_HOME_DIR_NAMES, existingOrCurrent } from '@seuoffice/i18n'
 import { BUILTIN_SKILLS_MANIFEST } from './constants'
 import { isInsideDir, readUserSkillFolder } from './folder'
 import { isReservedUserSkillName } from './names'
@@ -16,7 +17,7 @@ export interface UserSkillSourceOptions {
   homeDir: string
   /** the app's builtin skills folder; left out when not given */
   builtinDir?: string | undefined
-  /** the app's own skills folder; `~/.seuoffice/skills` when not given */
+  /** the app's own skills folder; `appSkillsDirOf(homeDir)` when not given */
   appSkillsDir?: string | undefined
   /** the agent window's project folder; its skills are read only when given */
   projectRoot?: string | undefined
@@ -41,9 +42,22 @@ export async function isInsideCodexHome(path: string, homeDir: string): Promise<
   return real !== undefined && (isInsideDir(real, codexHome) || isInsideDir(real, codexReal))
 }
 
+/**
+ * The app's folder under the home folder (`~/.seuoffice`): skills a person
+ * made, the CLI audit log, the launcher record. Where only a folder an earlier
+ * version made under its old name exists, that one is used as it is; once
+ * `~/.seuoffice` exists it is used whatever appears beside it later.
+ */
+export function appHomeDir(homeDir: string): string {
+  const name = existingOrCurrent('.seuoffice', OLD_HOME_DIR_NAMES, (candidate) =>
+    existsSync(join(homeDir, candidate)),
+  )
+  return join(homeDir, name)
+}
+
 /** The app's own skills folder, the only one the app writes to */
 export function appSkillsDirOf(homeDir: string): string {
-  return join(homeDir, '.seuoffice', 'skills')
+  return join(appHomeDir(homeDir), 'skills')
 }
 
 /**

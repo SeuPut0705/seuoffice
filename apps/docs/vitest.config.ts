@@ -80,6 +80,8 @@ export default defineConfig({
         '../../packages/ai-provider/src/subscription.ts',
       ),
       '@seuoffice/ai-provider': local('../../packages/ai-provider/src/index.ts'),
+      // before the package alias below, which would otherwise swallow the subpath
+      '@seuoffice/i18n/old-names-env': local('../../packages/i18n/src/old-names-env.ts'),
       '@seuoffice/i18n': local('../../packages/i18n/src/index.ts'),
       '@seuoffice/ui/template-fonts': local('../../packages/ui/src/template-fonts.ts'),
       '@seuoffice/ui/ai-subscription-login-window': local(

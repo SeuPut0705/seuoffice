@@ -8,7 +8,7 @@ PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰
 | --------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `src/tree`            | PDF → 문서 나무와 페이지 지문. 번역 나무·대역 나무 만들기                                                        | `extractDocumentTree`, `deriveTranslatedTree`, `deriveBilingualTree`, `textUnits`                                   |
 | `src/images`          | 페이지에 박힌 그림 객체를 원래 해상도의 PNG로 꺼내기                                                             | `extractEmbeddedImages`                                                                                             |
-| `src/markdown`        | 나무 → Markdown 글, `assets/`의 그림, 앱 소유 목록(`.genoffice-assets.json`) 항목, 경고                          | `treeToMarkdown`, `mergeAssetManifest`                                                                              |
+| `src/markdown`        | 나무 → Markdown 글, `assets/`의 그림, 앱 소유 목록(`.seuoffice-assets.json`) 항목, 경고                          | `treeToMarkdown`, `mergeAssetManifest`                                                                              |
 | `src/epub`            | 나무 → EPUB 3 바이트. 문서 언어 추정                                                                             | `writeEpub`, `guessLanguageFromText`                                                                                |
 | `src/structured-text` | 나무 → AI 창의 `read_pages`와 `pdf read --structured`가 쓰는 페이지별 구조화 글                                  | `treeToStructuredText`, `formatStructuredPage`                                                                      |
 | `src/store`           | 결과 보관소. AI가 읽은 페이지, 번역, 작업 기록, 읽기 도우미의 카드·핵심 표시·개요, 노트 연결 기록. **Node 전용** | `@seuoffice/pdf-structure/store`의 `ResultStore`, `documentHash`                                                    |
@@ -120,7 +120,7 @@ PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰
 - 원본 PDF 바이트를 바꾸지 않는다. 페이지 범위는 메모리 안의 사본으로 분석하고, 번역 PDF는 사본에 쓴다.
 - 보관소 항목은 통째로 원자적으로 쓴다. 읽을 수 없는 항목은 없는 것으로 보고, 읽기 함수는 예외를 던지지 않는다. 열쇠 모양과 배치를 바꾸면 이미 보관된 결과를 잃는다. 바꿔야 하면 형식 번호를 올리고 옮기는 길을 만든다.
 - 아랍어·히브리어·힌디어(`ar`, `he`, `hi`)는 번역 PDF에 쓸 수 없다. 번역문에 그 문자 체계(복잡한 문자 배치가 필요한 문자)가 있으면 그 블록은 `script-unsupported`로 원문을 둔다. 호출자는 이 세 언어에서 번역 PDF 형식을 고르지 못하게 한다(PDF 편집기의 번역 창, 명령줄의 `PDF_UNWRITABLE_LANGUAGES`).
-- 저장되는 식별자를 바꾸지 않는다. Markdown의 앱 소유 목록 이름은 `.genoffice-assets.json`이다. 목록에 없는 `assets/`의 파일은 덮어쓰지 않는다(`mergeAssetManifest`).
+- Markdown의 앱 소유 목록 이름은 `.seuoffice-assets.json`이다. 이전 버전이 만든 `assets/`에는 목록이 옛 이름(`src/old-names.ts`의 `OLD_ASSET_MANIFEST_FILENAMES`)으로 있고, 쓰는 쪽(shell의 `writeMarkdownOutput`)은 그 파일에 합친다. 목록의 이름을 바꾸거나 둘째 목록을 만들지 않는다. 두 이름 모두 그림 이름으로 받지 않는다. 목록에 없는 `assets/`의 파일은 덮어쓰지 않는다(`mergeAssetManifest`).
 - 엔진과 모델 호출 함수는 스스로 시작하거나 이어 가지 않는다. 다른 제공자로 바꾸지 않는다.
 
 ## 이 모듈의 방식

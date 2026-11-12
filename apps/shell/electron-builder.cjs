@@ -831,6 +831,13 @@ const config = {
       from: '../../packages/cli/bin/seuoffice.cmd',
       to: 'cli/seuoffice.cmd',
     },
+    // the launchers and bundle under the names an earlier version registered
+    // (PATH links, the deb's /usr/bin link, agent MCP entries); each hands over
+    // to the file above
+    {
+      from: '../../packages/cli/bin/old-names',
+      to: 'cli',
+    },
     // the CLI's version (Settings → Integrations shows it) and the agent skill
     // the same pane installs into Claude Code / Codex / …; bytes identical to the repo file
     {

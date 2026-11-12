@@ -1,6 +1,6 @@
 # packages/cli (`@seuoffice/cli`)
 
-`ieumoffice` 명령줄과 MCP 서버다. 앱과 같은 문서 엔진으로 문서를 만들고·읽고·고치고·변환하며, 창 없이 앱에 번들된 Node 런타임에서 돈다. 사람이 아니라 코딩 에이전트나 스크립트가 부르는 "자동 호출 경로"의 입구이기도 하다.
+`seuoffice` 명령줄과 MCP 서버다. 앱과 같은 문서 엔진으로 문서를 만들고·읽고·고치고·변환하며, 창 없이 앱에 번들된 Node 런타임에서 돈다. 사람이 아니라 코딩 에이전트나 스크립트가 부르는 "자동 호출 경로"의 입구이기도 하다.
 
 ## 맡은 범위
 
@@ -14,7 +14,7 @@
 - 다이어그램 명령: `diagram read`·`diagram apply`(`src/commands/diagram.ts`, MCP `diagram_read`·`diagram_apply`), `create --type drawio`(MCP `create_drawio`), `convert <다이어그램> --to pdf|png|svg`, `guide diagram`. 판단은 `src/formats/diagram.ts`, 앱 띄우기는 `src/formats/diagram-app.ts`다.
 - PC에 등록하는 이름(`src/names.ts`)과 등록 작업: PATH 연결(`src/install.ts`), 에이전트 MCP 설정에 항목 쓰기(`src/agent-mcp.ts`), 스킬 설치(`src/agent-skills.ts`), MCP 클라이언트가 실행할 명령 조립(`src/mcp-launch.ts`).
 - 실행 중인 앱과의 연결: 제어 채널(`src/control.ts`, `src/control-protocol.ts`), 열려 있는 문서 확인(`src/gui.ts`), 앱 실행 파일과 번들 자원 찾기(`src/resources.ts`).
-- 경로 정책과 감사 기록(`src/fs.ts`, `src/audit.ts`), 번들 빌드(`build.mjs`, `collect-deps.mjs`), 실행기(`bin/ieumoffice`, `bin/ieumoffice.cmd`).
+- 경로 정책과 감사 기록(`src/fs.ts`, `src/audit.ts`), 번들 빌드(`build.mjs`, `collect-deps.mjs`), 실행기(`bin/seuoffice`, `bin/seuoffice.cmd`)와 예전 이름의 실행기·번들(`bin/old-names/`), 독립 실행 묶음(`pack-tarball.mjs`).
 
 ## 맡지 않는 것 (경계)
 
@@ -27,11 +27,12 @@
 ## 항상 지켜야 하는 것
 
 - 앱이 봉인한 키(`sealed:v1:`)는 `runCli`가 등록하는 `cliSecretCodecFor`(`src/secrets.ts`)가 앱을 창 없이 `--reveal-ai-secrets`로 띄워 풀고 그 프로세스의 메모리에만 둔다. 명령줄은 봉인하지 않고, 푼 값을 파일·로그·출력에 쓰지 않는다(결정 0063).
-- PC에 등록하는 이름은 전부 이 제품의 것이다. 명령 `ieumoffice`, MCP 항목 `ieumoffice`, 스킬 `ieumoffice`, 홈 폴더 `~/.ieumoffice`이고 `src/names.ts`의 상수로만 쓴다. 문자열로 다시 적지 않는다.
-- 원본 GenOffice가 같은 PC에 설치돼 있을 수 있다. 그 앱이 등록한 것(`genoffice` 명령, `[mcp_servers.genoffice]` 같은 MCP 항목, `genoffice` 스킬 폴더, `~/.genoffice`, 그 앱의 실행 파일)은 읽지도, 우리 것으로 간주하지도, 바꾸지도, 지우지도, 실행하지도 않는다. `isOurLauncher`·`isGenofficeLauncher`·`installedAppBinaries`가 이 구분을 한다.
-- 번들 파일 이름 `genoffice.cjs`(`CLI_BUNDLE_FILE`)는 앱 안의 내부 파일이라 원본 이름을 유지한다. 그래서 "이 번들을 실행한다"만으로는 우리 항목인지 알 수 없다. 원본 실행 파일로 이 이름의 번들을 실행하는 MCP 항목은 원본의 것으로 판정한다.
-- 내부 이름은 바꾸지 않는다. 패키지 이름 `@seuoffice/cli`, 환경 변수 `SEUOFFICE_*`(`SEUOFFICE_USER_DATA`, `SEUOFFICE_AI_SETTINGS`, `SEUOFFICE_APP_BIN`, `SEUOFFICE_ALLOWED_ROOTS`, `SEUOFFICE_AUDIT_LOG` 등), 함수 이름(`genofficeUserDataDir`)은 원본 표기 그대로다.
-- 도움말·도구 설명 같은 고정 문구는 소스에 `GenOffice`로 적고 출력할 때 `branded()`로 바꾼다. 경로를 담은 메시지에는 `branded()`를 쓰지 않고 `PRODUCT_NAME`을 직접 넣는다(실제로 `GenOffice`라는 이름의 폴더는 있는 그대로 찍혀야 한다).
+- PC에 등록하는 이름은 전부 이 제품의 것이다. 명령 `seuoffice`, MCP 항목 `seuoffice`, 스킬 `seuoffice`, 홈 폴더 `~/.seuoffice`이고 `src/names.ts`의 상수로만 쓴다. 문자열로 다시 적지 않는다.
+- 예전 버전이 PC에 남긴 것(이름 목록은 `@seuoffice/i18n`의 `old-names.ts`)은 계속 동작해야 한다. 홈 폴더는 `appHomeDir`(`@seuoffice/ai-provider`)가 정한다. 예전 이름의 폴더가 있으면 그 폴더를 통째로 쓰고(감사 기록, 실행기 위치 기록, 사용자가 만든 스킬), 없으면 `HOME_DIR_NAME`이다. 옮기거나 복사하지 않는다. 예전 명령 이름의 실행기(sh, `.cmd`)와 예전 번들 이름의 파일은 `bin/old-names/`에 있고 옆의 새 실행기·번들로 넘긴다. `electron-builder.cjs`와 `pack-tarball.mjs`가 이것들을 `cli/`에 함께 넣는다. `isOurLauncher`는 예전 명령 이름의 우리 실행기도 우리 것으로 보고, `installCliLink`는 예전 이름의 링크를 지우거나 바꾸지 않는다(사용자의 스크립트가 계속 돈다). sh 실행기는 `SEUOFFICE_NODE`가 없으면 예전 접두사의 같은 변수를 쓴다.
+- 원본 GenOffice가 같은 PC에 설치돼 있을 수 있다. 그 앱이 등록한 것(`genoffice` 명령, `[mcp_servers.genoffice]` 같은 MCP 항목, `genoffice` 스킬 폴더, `~/.genoffice`, 그 앱의 실행 파일)은 읽지도, 우리 것으로 간주하지도, 바꾸지도, 지우지도, 실행하지도 않는다. `isOurLauncher`·`isSeuofficeLauncher`·`installedAppBinaries`가 이 구분을 한다.
+- 번들 파일 이름은 `CLI_BUNDLE_FILE`이다. 예전 이름들(명령 `OLD_CLI_COMMANDS`, MCP 키 `OLD_MCP_SERVER_NAMES`, 번들 `OLD_CLI_BUNDLE_FILES`)은 다른 앱도 지금 등록하는 이름이라, 이름만으로는 우리 항목이라고 보지 않는다. 예전 이름을 쓰는 항목은 이 제품을 실행한다는 것이 보일 때만 우리 것이다(`isSeuofficeLauncher`). 예전 명령 이름의 실행기는 경로가 이 제품의 설치 폴더(`<제품 이름>.app/Contents/Resources/cli`, 다른 OS는 `<제품 이름>/resources/cli`) 안일 때, 경로 없는 예전 명령은 PATH(`ctx.env`)로 찾아 링크를 따라간 실행기가 그럴 때만이다. 판정은 경로의 모양으로 하고 디스크를 보지 않는다(항목은 설치보다 오래 남고, 그 경로가 없는 PC에서도 읽힌다). 예전 번들 이름은 아무것도 증명하지 않는다. 그 번들을 실행하는 실행 파일이 우리 것(`<제품 이름>.exe`)일 때만 우리 것이다. 지금 이름의 항목은 예전처럼 이름으로 판정한다.
+- 내부 이름은 우리 것이다(결정 0024). 패키지 이름 `@seuoffice/cli`, 환경 변수 `SEUOFFICE_*`(`SEUOFFICE_USER_DATA`, `SEUOFFICE_AI_SETTINGS`, `SEUOFFICE_APP_BIN`, `SEUOFFICE_ALLOWED_ROOTS`, `SEUOFFICE_AUDIT_LOG` 등), 함수 이름(`seuofficeUserDataDir`). 예전 접두사로 설정된 환경 변수는 진입 파일(`cli.ts`)의 첫 import가 넘겨받는다.
+- 도움말·도구 설명 같은 고정 문구는 제품 이름을 `SeuOffice`라고 직접 적는다. 경로를 담은 메시지는 `PRODUCT_NAME`을 넣는다.
 - 이 모듈의 모든 명령과 그것을 실행하는 모든 MCP 도구는 자동 호출 경로다. 검색·이미지·미디어 명령은 반드시 `headlessCall`로 얻은 컨텍스트(`path: 'headless'`, `dataDir`)를 도구에 넘긴다. 컨텍스트 없이 도구를 부르면 화면 경로로 취급되어 스위치와 차례가 적용되지 않는다.
 - 자동 호출 경로는 사용자가 앱 설정에서 켰을 때만 구독을 쓴다. 켜져 있다는 것은 지금 판의 경고(시간당 한도 없음, 문서 전체와 페이지 그림이 보내질 수 있음, 계정 제한 위험)에 동의했다는 뜻이고, 예전 판에 동의한 스위치는 꺼진 것으로 읽는다. 횟수 한도는 없다(결정 0011). 명령·MCP 프로세스를 통틀어 요청을 하나씩 차례로 처리한다. 꺼져 있으면 구독이 없는 것처럼 동작한다. 검색은 구독을 쓰지 않는다.
 - `pdf ai-read`·`pdf translate`·`epub translate`(MCP `pdf_ai_read`·`pdf_translate`·`epub_translate`)는 `--yes`(`yes`)가 없으면 아무것도 보내지 않고 예상(`detail.estimate`, `detail.started: false`)만 답한다. 가는 길이 요금 경로(키 제공자, 허용된 종량 로그인)면 `--allow-paid`(`allow_paid`)도 있어야 하고, 없으면 종료 코드 4, `paid_route_not_allowed`다. 사용자가 대화용으로 키 제공자를 골라 둔 경우도 같다. 이 두 검사를 건너뛰는 옵션이나 환경 변수를 만들지 않는다.
@@ -54,6 +55,7 @@
 - `slides read --comments`는 저장된 pptx의 클래식 메모를 페이지별 `comments`(`authorId`·`idx`·`작성자`·`시각`·`본문`)와 `hidden`으로 낸다. `--slide`·`--full`과 독립이고, 터미널 읽기는 다른 읽기 명령처럼 가리기를 적용하지 않는다.
 - 스킬 본문을 고치면 `metadata.version`을 올린다. 스킬은 사용자의 에이전트 폴더로 복사되고 버전이 커질 때만 교체되기 때문이다(`npm run check:skill-version`).
 - 스킬 설치 자리 표(`src/agent-skills.ts`의 `AGENTS`)는 줄마다 역할이 있다. `own`(Claude Code, Windsurf)과 `shared`(`agents`, `~/.agents/skills`)만 새로 설치하는 줄이고, `reader`(Codex, Cursor, Gemini CLI, Copilot, OpenCode)는 공용 폴더를 읽는 도구라 자기 폴더에는 이 앱이 예전에 쓴 사본을 맞추거나 지우는 일만 한다. 그 사본을 자동으로 지우는 코드를 넣지 않는다(결정 0095). `mcp`가 도구를 찾을 때는 스킬 줄과 상관없이 `agentPresent`·`agentLabel`·`agentConfigDir`로 각 도구의 자기 폴더를 본다.
+- 장부(`agentSkillInstalls`)는 SKILL.md의 절대 경로를 키로 하므로 예전 스킬 이름(`OLD_SKILL_NAMES`)의 폴더에 쓴 기록도 그대로 읽힌다. 그 폴더의 사본은 장부에 경로가 있으면 이 앱이 쓴 것이다. 새 이름의 폴더가 없으면 상태는 그 사본에서 읽고 업데이트가 필요한 것으로 낸다(`installed`는 `outdated`가 되고 `older`가 선다). 설치는 새 폴더를 먼저 쓴 뒤, 장부의 sha256과 바이트가 같은 예전 사본만 지운다. 고친 사본과 장부에 없는 사본은 남긴다(에이전트에는 둘 다 보인다). 제거는 두 이름 모두에서 장부에 있는 것을 지운다. 예전 이름의 폴더라도 우리 스킬이 아니면 없는 것으로 보고 건드리지 않는다.
 - MCP 도구는 명령의 두 번째 구현이 아니다. 도구 호출을 명령줄 인자로 바꿔(`buildArgv`) 같은 명령을 실행한다. 인라인 값(ops, 명세, Markdown)은 임시 파일에 써서 경로로 넘긴다.
 - 명령줄은 Electron 없이 앱의 userData를 찾는다(`genofficeUserDataDir`). AI 설정은 그 안의 `ai-settings.json`이고, 자동 호출의 잠금·장부와 종량 허용 기록은 같은 폴더에 둔다(`aiDataDir`). PDF 결과 보관소도 같은 폴더의 `pdf-store`다. 앱과 모든 명령줄 프로세스가 같은 폴더를 써야 차례가 하나로 지켜지고 보관된 결과를 함께 쓴다.
 - 번역 PDF는 HarfBuzz의 `hb-subset.wasm`이 있어야 쓴다. 설치본에서는 `Resources/wasm/hb-subset.wasm`, 저장소에서는 `harfbuzzjs`의 것을 찾고, `SEUOFFICE_HB_SUBSET_WASM`으로 바꿀 수 있다(`hbSubsetWasmPath`).
@@ -62,7 +64,7 @@
 - 문서 명령의 DOM은 jsdom이 만든다(`src/dom.ts`). jsdom 28은 자기 undici 사본의 쿠키 모듈에서 `globalThis.Headers`를 읽는데, 그 전역은 Node 내장 undici와 그 wasm 파서를 그 자리에서 깨운다. 가상 메모리 상한(`ulimit -v`)이 낮은 환경에서는 그 순간 프로세스가 죽으므로 `withInertHeaders`가 jsdom을 불러오는 동안만 빈 클래스로 바꾸고 곧바로 되돌린다. 이 감싸기를 걷어내지 않는다.
 - MCP 도구 목록 전체의 크기에는 상한이 있다(`tests/mcp.test.ts`, 119KiB, 간추린 스키마는 51KiB). 도구를 더할 때는 설명과 옵션 설명을 짧게 쓴다.
 - MCP 클라이언트는 셸 없이 프로세스를 띄운다. Windows에서 `.cmd`나 `cmd /c`를 등록하면 공백이 든 경로가 쪼개지므로, 등록하는 명령은 "앱 실행 파일을 Node로, 번들 CLI를 인자로"다(`src/mcp-launch.ts`). 이 파일은 순수 문자열 코드라 렌더러도 import한다.
-- 에이전트 설정 파일은 키 하나만 쓰거나 지운다. `ieumoffice` 이름의 항목이 우리 실행기가 아닌 것을 가리키면 강제 옵션 없이는 바꾸지 않는다. JSON 설정은 다시 직렬화되고 TOML은 해당 표만 줄 단위로 바꾼다. symlink인 설정은 대상에 써서 링크를 보존한다.
+- 에이전트 설정 파일은 우리 키만 쓰거나 지운다. `MCP_SERVER_NAME` 항목이 우리 실행기가 아닌 것을 가리키면 강제 옵션 없이는 바꾸지 않는다. 예전 키(`OLD_MCP_SERVER_NAMES`)의 항목은 위 규칙으로 이 제품을 실행한다고 보일 때만 우리 것이다. 읽을 때는 `stale`로 알리고(새 키 항목이 옆에 있어도 `registered`가 아니다, 에이전트가 서버를 두 번 띄우므로), 쓸 때는 같은 쓰기에서 지워 새 키로 옮기고, 제거할 때 함께 지운다. 그렇게 보이지 않으면 강제 옵션이 있어도 건드리지 않고 없는 것으로 알린다. JSON 설정은 다시 직렬화되고 TOML은 해당 표만 줄 단위로 바꾼다. symlink인 설정은 대상에 써서 링크를 보존한다.
 - 한글 문서 고치기(`src/formats/hwp-edit.ts`, 결정 0079): 연산 하나는 `{ "op": <도구 이름>, ...입력 }`이고, `apps/hwp/src/renderer/ai/hwp-skill.ts`의 `createHwpSkill`이 `apps/hwp/studio-plugin/agent-plugin.mjs`를 부르는 길을 그대로 탄다. 편집기 대신 `headlessHost`가 플러그인의 호스트가 된다: 변경 하나는 엔진 스냅숏 하나이고(`saveSnapshot`, 던지면 `restoreSnapshot`), 끝날 때마다 `document-changed`를 알려 플러그인이 기억한 글자를 버리게 한다. 이 호스트를 바꾸지 않는다: 편집기의 변경 묶음과 같아야 플러그인의 "개체를 잃으면 되돌린다"가 여기서도 선다. 메모를 지울 변경은 물어볼 사람이 없으니 거절한다(`confirmMemoRemoval`이 거짓). 화면·네트워크·모델이 필요한 도구(`NOT_HEADLESS`)는 `unsupported`로 거절한다. 저장(`saveHwpSession`)은 앱의 저장 순서와 같다: `.hwp`는 `exportHwpVerify`의 쪽수가 같을 때만, 새 탭은 플러그인의 `measureTabs`로 재고, `applySaveFixes`, 컨테이너 형식 확인, HWPX는 메모 유실 수. 열 때(`openHwpForEdit`)는 앱의 열기처럼 변경 추적을 빼고 구역 뒤 목록과 필드 종류를 간직한다. 그래서 `apps/hwp`의 도구 정의·플러그인·`src/main`의 저장 모듈을 고치면 명령어도 바뀐다. 그쪽 테스트와 함께 `tests/hwp-apply.test.ts`를 돌린다. 연산 목록(`guide hwp`, MCP `hwp-ops` 형식)은 도구 정의에서 만들므로 엔진을 띄우지 않는다.
 - 다이어그램(`src/formats/diagram.ts`): 파일 형식·읽기 표·연산의 뜻은 `@seuoffice/drawio-model`의 것을 그대로 쓴다(번들에 들어간다). `.drawio`·`.dio`는 `applyDiagramOpsToFile`로 이 프로세스에서 쓴다(고치지 않은 쪽은 바이트 그대로). `insert_mermaid`가 있거나 `.drawio.svg`·`.drawio.png`를 쓰거나 그림으로 바꿀 때만 앱을 창 없이 띄운다(`--headless-export`, `apps/diagram/src/main/headless-main.ts`). 앱이 쓴 다이어그램은 임시 폴더에서 받아 다이어그램으로 열리는지 확인한 뒤 `writeOutput`으로 쓴다. 그림의 이름은 앱의 내보내기와 같은 `pageFilePaths`(`apps/diagram/src/main/export-paths.ts`)로 정한다. `--page`가 없으면 쪽이 하나여도 쪽마다 `<이름>-p<n>`이다. `.vsdx`는 종료 코드 2, `unsupported`다. 연산 목록(`guide diagram`, MCP `diagram-ops` 형식)은 `DIAGRAM_OPS`에서 만든다.
 - ODT(`src/formats/odt.ts`): `.odt`는 `odtToDocx`의 다리 docx로 열고(`openDocumentFile`이 `OpenDocument.odt`에 원본·다리 지도·보고를 둔다) `saveDocument`가 `saveOdt`로 원본에 좁게 되돌려 쓴다. 엔진 패키지(`@seuoffice/odt-engine`)는 공개 API만 쓰고 고치지 않는다.
@@ -79,7 +81,7 @@
 
 - 실행: `npm run test -w @seuoffice/cli`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @seuoffice/cli`. 테스트는 `tests/helpers.ts`의 `run()`으로 `runCli`를 프로세스 안에서 부른다.
 - 어떤 테스트도 벤더 프로그램이나 네트워크에 닿으면 안 된다. `tests/headless-tools.test.ts`처럼 `@seuoffice/ai-provider/subscription`의 `detectSubscriptionLogin`과 키 제공자 호출을 `vi.mock`으로 바꾼다. 구독 경로에 닿을 수 있는 테스트는 도구나 이미지 생성기도 함께 바꾼다.
-- `tests/upstream-coexistence.test.ts`는 원본 앱과의 공존을 고정한다. 등록·삭제·판정 코드를 바꾸면 "원본의 항목이 그대로 남는다"는 경우를 여기에 추가한다.
+- `tests/upstream-coexistence.test.ts`는 원본 앱과의 공존을 고정한다. 등록·삭제·판정 코드를 바꾸면 "원본의 항목이 그대로 남는다"는 경우를 여기에 추가한다. 예전 버전이 남긴 우리 항목과 스킬 폴더의 경우(원본 항목이 함께 있을 때 포함)는 `tests/agent-mcp.old-names.test.ts`·`tests/agent-skills.old-names.test.ts`가 고정한다. 예전 이름은 이런 `*.old-names.test.ts`에만 글자로 적는다.
 - 바꾸면 반드시 테스트하는 것: 설정 스위치 켬·끔·예전 판 동의에 따른 `capabilities`와 실제 명령의 답이 같은지, 한도 소진(`rate-limit`) 때 봉투의 `errorCode`·`resetsAt`, PDF 작업 명령의 예상만 답하기·요금 경로 거절·`--partial` 유무·이어하기·MCP가 바로 답하기·`pdf_status` 모양(`tests/pdf-ai-jobs.test.ts`, `tests/pdf-structure-commands.test.ts`), EPUB 번역 명령의 같은 것들과 `--chapters` 범위 오류·`unsupported` 이유·성공 `detail` 모양(`tests/epub-jobs.test.ts`), 허용 폴더 밖 경로와 symlink 우회, 앱이 열어 둔 파일 쓰기, 부분 적용 배치(`status: "partial"`).
 - 다이어그램 시험: 앱 없이 되는 것과 앱이 없을 때(`tests/diagram.test.ts`, `SEUOFFICE_APP_BIN`을 없는 경로로), 앱이 할 일과 그 답의 처리(`tests/diagram-app.test.ts`, `runDiagramApp`을 `vi.mock`으로 바꾼다).
 - ODT 시험(`tests/odt.test.ts`, `tests/odt-convert.test.ts`)은 `packages/odt-engine/tests/helpers`의 합성 한컴 조각으로 파일을 만든다(`tests/odt-fixtures.ts`). 실제 파일은 넣지 않는다. 앱 경유 변환은 `exportViaApp`을 `vi.mock`으로 바꾼다.

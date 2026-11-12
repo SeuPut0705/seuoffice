@@ -227,7 +227,7 @@ describe('seuoffice mcp install', () => {
     const forced = await run(['mcp', 'install', 'cursor', '--force', '--json'], { env: m.env })
     expect(forced.code).toBe(0)
     expect(forced.json().detail.agents[0].status).toBe('updated')
-    expect(readJson(file).mcpServers.ieumoffice.command).toBe(LAUNCHER)
+    expect(readJson(file).mcpServers.seuoffice.command).toBe(LAUNCHER)
   })
 
   it('install all writes only detected agents; an undetected agent needs --force', async () => {
@@ -298,7 +298,7 @@ describe('seuoffice mcp install', () => {
     const env = { ...m.env, CLAUDE_CONFIG_DIR: custom }
     const r2 = await run(['mcp', 'install', 'claude-code', '--json'], { env })
     expect(r2.code).toBe(0)
-    expect(readJson(join(custom, '.claude.json')).mcpServers.ieumoffice.command).toBe(LAUNCHER)
+    expect(readJson(join(custom, '.claude.json')).mcpServers.seuoffice.command).toBe(LAUNCHER)
   })
 
   it('--dir points one agent at a custom config folder, resolved against the working directory', async () => {
@@ -327,7 +327,7 @@ describe('seuoffice mcp install', () => {
     const r = await run(['mcp', 'install', 'cursor', '--json'], { env: m.env })
     expect(r.code).toBe(2)
     expect(r.json().detail.status).toBe('manual')
-    expect(JSON.parse(r.json().detail.snippet).mcpServers.ieumoffice.command).toBe(LAUNCHER)
+    expect(JSON.parse(r.json().detail.snippet).mcpServers.seuoffice.command).toBe(LAUNCHER)
     expect(readFileSync(join(m.home, '.cursor', 'mcp.json'), 'utf-8')).toBe(
       '{ "mcpServers": { broken ',
     )
@@ -374,7 +374,7 @@ describe('seuoffice mcp install summaries', () => {
     const r = await run(['mcp', 'install', 'cursor', '--json'], { env: m.env })
     expect(r.code).toBe(0)
     expect(r.json().detail.agents[0].status).toBe('installed')
-    expect(readJson(file).mcpServers.ieumoffice.command).toBe(LAUNCHER)
+    expect(readJson(file).mcpServers.seuoffice.command).toBe(LAUNCHER)
   })
 })
 
@@ -398,7 +398,7 @@ describe('seuoffice mcp with a symlinked config', () => {
       seuoffice: { type: 'stdio', command: LAUNCHER, args: ['mcp'] },
     })
     expect(lstatSync(join(m.home, '.claude.json')).isSymbolicLink()).toBe(true)
-    expect(readJson(claudeTarget).mcpServers.ieumoffice.command).toBe(LAUNCHER)
+    expect(readJson(claudeTarget).mcpServers.seuoffice.command).toBe(LAUNCHER)
 
     const u = await run(['mcp', 'uninstall', 'cursor', '--json'], { env: m.env })
     expect(u.json().detail.agents[0].status).toBe('removed')
@@ -421,7 +421,7 @@ describe('seuoffice mcp with a symlinked config directory', () => {
     const r = await run(['mcp', 'install', 'cursor', '--json'], { env: m.env })
     expect(r.code).toBe(0)
     expect(r.json().detail.agents[0].status).toBe('installed')
-    expect(readJson(target).mcpServers.ieumoffice.command).toBe(LAUNCHER)
+    expect(readJson(target).mcpServers.seuoffice.command).toBe(LAUNCHER)
     expect(lstatSync(join(m.home, '.cursor')).isSymbolicLink()).toBe(true)
     expect(lstatSync(join(dotfiles, 'cursor', 'mcp.json')).isSymbolicLink()).toBe(true)
     expect(existsSync(join(m.home, 'store'))).toBe(false)
@@ -502,7 +502,7 @@ describe('seuoffice mcp uninstall', () => {
     const r = await run(['mcp', 'uninstall', 'gemini', '--json'], { env: m.env })
     expect(r.code).toBe(2)
     expect(r.json().detail.status).toBe('occupied')
-    expect(readJson(file).mcpServers.ieumoffice.command).toBe('npx')
+    expect(readJson(file).mcpServers.seuoffice.command).toBe('npx')
     const forced = await run(['mcp', 'uninstall', 'gemini', '--force', '--json'], { env: m.env })
     expect(forced.code).toBe(0)
     expect(readJson(file)).toEqual({ mcpServers: {} })

@@ -4,7 +4,7 @@
  * writes, imports, GitHub updates, export, and the AI's reads. No Electron
  * here; the IPC layer adds dialogs, the OS trash and who may ask.
  *
- * Writes go only to the app's skills folder (`~/.seuoffice/skills`); other
+ * Writes go only to the app's skills folder (`appSkillsDirOf`); other
  * sources are read only. Imports and update checks also use their own
  * temporary folder under the OS temp folder.
  */

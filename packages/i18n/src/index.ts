@@ -185,21 +185,17 @@ export function onUiLangChange(listener: (lang: Lang) => void): () => void {
  * the key set; every other language must cover exactly the same keys
  * (compile-time checked), so a missing translation is a type error, not a
  * runtime fallback.
- *
- * Dictionaries spell the product name as upstream does ("GenOffice"); every
- * string leaves here with the product name of its language instead (see
- * ./product). Write `{{GenOffice}}` where the upstream name itself is meant.
  */
 export function createI18n<D extends Record<string, string>>(dicts: LangDicts<D>) {
   return (lang: Lang, key: keyof D, params?: Params): string => {
     // A shard that predates a key must degrade (en, then the key) instead of
     // throwing inside format()
     const text = dicts[lang]?.[key] ?? dicts.en[key] ?? String(key)
-    // the product name is swapped into the template, never into a param value
     return format(platformShortcuts(text), params)
   }
 }
 
 export * from './font-names'
+export * from './old-names'
 export * from './product'
 export * from './common-ribbon'

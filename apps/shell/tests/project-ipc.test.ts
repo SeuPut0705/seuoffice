@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   PROJECT_FOLDER_CHANNELS,
+  PROJECT_FOLDER_NAMES,
   PROJECT_FOLDER_EVENTS,
   type ProjectChatAppendedEvent,
   type ProjectChatInfo,
@@ -29,6 +30,7 @@ import { PROJECT_SCOPE_UNKNOWN } from '../src/main/projects/project-tools'
  * and "open this chat / screen" waits for a window that is not listening yet.
  */
 
+const { dataDir } = PROJECT_FOLDER_NAMES
 const ROOT = join(process.cwd(), 'fake-projects', 'Report')
 const DOC = join(ROOT, 'draft.docx')
 const OUTSIDE_DOC = join(process.cwd(), 'elsewhere', 'notes.md')
@@ -554,11 +556,11 @@ describe('dialogs', () => {
       t.dialogs.askTrust.mockResolvedValueOnce('view').mockResolvedValueOnce('without')
       const result = await t.call('addFolder', DOCS)
       expect(t.openDocument.mock.calls.map(([path]) => path)).toEqual([
-        join(ROOT, '.seuoffice', 'instructions.md'),
+        join(ROOT, dataDir, 'instructions.md'),
         join(ROOT, 'AGENTS.md'),
         join(ROOT, 'CLAUDE.md'),
       ])
-      expect(t.openFolder).toHaveBeenCalledWith(join(ROOT, '.seuoffice', 'chats'))
+      expect(t.openFolder).toHaveBeenCalledWith(join(ROOT, dataDir, 'chats'))
       expect(t.dialogs.waitForReturn).toHaveBeenCalledWith(DOCS)
       expect(t.dialogs.askTrust).toHaveBeenCalledTimes(2)
       expect(t.dialogs.askTrust).toHaveBeenLastCalledWith(DOCS, quoted)
@@ -604,7 +606,7 @@ describe('dialogs', () => {
       const ask = t.guide.decideTrust.mock.calls[0]?.[2] as (p: ProjectTrustPrompt) => unknown
       t.dialogs.askTrust.mockResolvedValueOnce('view').mockResolvedValueOnce('use')
       expect(await ask(trustPrompt)).toBe('use')
-      expect(t.openDocument).toHaveBeenCalledWith(join(ROOT, '.seuoffice', 'instructions.md'))
+      expect(t.openDocument).toHaveBeenCalledWith(join(ROOT, dataDir, 'instructions.md'))
       expect(t.dialogs.waitForReturn).toHaveBeenCalledWith(SHEETS)
     })
   })

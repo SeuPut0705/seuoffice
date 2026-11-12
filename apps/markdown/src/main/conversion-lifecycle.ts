@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { basename, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { OLD_CONVERSION_SESSION_MARKERS } from './old-names'
 
 export const MARKDOWN_CONVERSION_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const SESSION_MARKER = '.seuoffice-markdown-conversion.json'
@@ -41,24 +42,28 @@ function safeBaseName(input: string): string {
   )
 }
 
+/** A session an earlier version made carries its marker under the old name and expires like any other. */
 async function readSessionMarker(directory: string): Promise<ConversionSessionMarker | null> {
-  try {
-    const value = JSON.parse(await readFile(join(directory, SESSION_MARKER), 'utf8')) as {
-      version?: unknown
-      createdAt?: unknown
+  for (const name of [SESSION_MARKER, ...OLD_CONVERSION_SESSION_MARKERS]) {
+    try {
+      const value = JSON.parse(await readFile(join(directory, name), 'utf8')) as {
+        version?: unknown
+        createdAt?: unknown
+      }
+      if (
+        value.version !== 1 ||
+        typeof value.createdAt !== 'number' ||
+        !Number.isFinite(value.createdAt) ||
+        value.createdAt < 0
+      ) {
+        return null
+      }
+      return { version: 1, createdAt: value.createdAt }
+    } catch (error) {
+      if (errorCode(error) !== 'ENOENT') return null
     }
-    if (
-      value.version !== 1 ||
-      typeof value.createdAt !== 'number' ||
-      !Number.isFinite(value.createdAt) ||
-      value.createdAt < 0
-    ) {
-      return null
-    }
-    return { version: 1, createdAt: value.createdAt }
-  } catch {
-    return null
   }
+  return null
 }
 
 /**

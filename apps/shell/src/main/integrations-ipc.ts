@@ -12,7 +12,7 @@ import {
   legacySkillCopies,
   readInstallState,
   SHARED_AGENT_ID,
-  skillFilePath,
+  skillFilesWritten,
   skillRows,
   uninstallSkill,
   type BundledSkill,
@@ -83,7 +83,9 @@ export function registerIntegrationsIpc(deps: IntegrationsDeps): void {
       }
       const l = ledger()
       // a tool the shared row serves gets no new copy of its own: only one this app already wrote is rewritten
-      if (row?.legacy && !l[skillFilePath(skillsDir)]) throw new Error('unknown skill target')
+      if (row?.legacy && !skillFilesWritten(skillsDir, l).length) {
+        throw new Error('unknown skill target')
+      }
       const skill = bundled()
       installSkill(skillsDir, skill, l)
       // the shared row brings the older copies along so a tool never finds two versions under one

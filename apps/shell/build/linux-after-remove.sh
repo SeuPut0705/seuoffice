@@ -1,5 +1,5 @@
 #!/bin/sh
-# deb/rpm post-remove: drop the seuoffice symlink only on a real uninstall.
+# deb/rpm post-remove: drop our command links only on a real uninstall.
 # rpm runs the old package's %postun after the new %post during an upgrade
 # (with $1 = 1); deb passes "upgrade" there. Removing then would kill the
 # link the new version just created.
@@ -17,13 +17,10 @@ if [ -f "$profile" ]; then
   fi
   rm -f "$profile"
 fi
-link="/usr/bin/seuoffice"
-# same ownership rule as the post-install: only a link into our install dir is ours
-if [ -L "$link" ]; then
-  case "$(readlink "$link")" in
-    /opt/SeuOffice/*) rm -f "$link" ;;
-  esac
-fi
+# same ownership rule as the post-install: only a link into our install dir is
+# ours. That covers the command under its current name and the name an earlier
+# version linked, and never another program's link (the upstream genoffice one).
+find /usr/bin/ -maxdepth 1 -type l -lname '/opt/SeuOffice/*' -exec rm -f {} + 2>/dev/null || true
 # Drop the KDE "Create New" templates the post-install step installed. Only
 # our exact file names are removed, so the directory and every other app's
 # templates stay (genoffice#2384).

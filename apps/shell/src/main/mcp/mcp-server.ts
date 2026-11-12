@@ -1,11 +1,12 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import type { Socket } from 'node:net'
-import { PRODUCT_NAME } from '@seuoffice/i18n'
+import { OLD_MCP_TOOL_NAMES, PRODUCT_NAME } from '@seuoffice/i18n'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
+import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
 import type { ZodRawShape } from 'zod'
 
 /**
@@ -147,7 +148,11 @@ export class McpServerService {
         }) as never,
       )
     }
-    return server
+    const names = new Set(tools.map((tool) => tool.name))
+    const renamed = new Map(
+      Object.entries(OLD_MCP_TOOL_NAMES).filter(([old, now]) => names.has(now) && !names.has(old)),
+    )
+    return renamed.size ? answeringOldToolNames(server, renamed) : server
   }
 
   // ── request handling ──────────────────────────────────────────────────────
@@ -521,6 +526,32 @@ export class McpServerService {
     this.running = false
     await new Promise<void>((resolve) => server.close(() => resolve()))
     this.logger('[mcp] stopped')
+  }
+}
+
+/**
+ * A client may still call a renamed tool by its old name (an allow list, a
+ * saved prompt): the call runs the tool under its new name, and `tools/list`
+ * shows only the new one.
+ */
+function answeringOldToolNames(
+  server: McpSessionServer,
+  renamed: ReadonlyMap<string, string>,
+): McpSessionServer {
+  return {
+    async connect(transport) {
+      await server.connect(transport)
+      const deliver = transport.onmessage
+      transport.onmessage = (message, extra) => {
+        const params =
+          'method' in message && message.method === 'tools/call' ? message.params : undefined
+        const now = typeof params?.name === 'string' ? renamed.get(params.name) : undefined
+        deliver?.(
+          now ? ({ ...message, params: { ...params, name: now } } as JSONRPCMessage) : message,
+          extra,
+        )
+      }
+    },
   }
 }
 

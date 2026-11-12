@@ -57,7 +57,7 @@ const OURS: McpLaunch = {
 const OURS_WINDOWS: McpLaunch = {
   command:
     'C:\\Users\\u\\AppData\\Local\\Programs\\seuoffice\\resources\\cli\\..\\..\\SeuOffice.exe',
-  args: ['C:\\Users\\u\\AppData\\Local\\Programs\\seuoffice\\resources\\cli\\genoffice.cjs', 'mcp'],
+  args: ['C:\\Users\\u\\AppData\\Local\\Programs\\seuoffice\\resources\\cli\\seuoffice.cjs', 'mcp'],
   env: { ELECTRON_RUN_AS_NODE: '1' },
 }
 const UPSTREAM_POSIX = {
@@ -81,8 +81,10 @@ describe('registered names', () => {
     expect(HOME_DIR_NAME).toBe('.seuoffice')
   })
 
-  it('keeps the audit log under ~/.seuoffice', () => {
-    expect(auditLogPath({})).toBe(join(homedir(), '.seuoffice', 'cli-audit.jsonl'))
+  it('keeps the audit log under ~/.seuoffice, never in the upstream home folder', () => {
+    const home = tempDir()
+    mkdirSync(join(home, '.genoffice'))
+    expect(auditLogPath({}, home)).toBe(join(home, '.seuoffice', 'cli-audit.jsonl'))
     expect(auditLogPath({ SEUOFFICE_AUTH_DIR: '/custom' })).toBe(join('/custom', 'cli-audit.jsonl'))
   })
 })
@@ -226,7 +228,7 @@ describe('recognising our own launcher in an existing entry', () => {
     expect(isSeuofficeLauncher(OURS_WINDOWS.command, OURS_WINDOWS.args)).toBe(true)
     expect(isSeuofficeLauncher('seuoffice', ['mcp'])).toBe(true)
     // a checkout runs the bundle on the system node
-    expect(isSeuofficeLauncher('node', ['/src/packages/cli/dist/genoffice.cjs', 'mcp'])).toBe(true)
+    expect(isSeuofficeLauncher('node', ['/src/packages/cli/dist/seuoffice.cjs', 'mcp'])).toBe(true)
 
     expect(isSeuofficeLauncher(UPSTREAM_POSIX.command, UPSTREAM_POSIX.args)).toBe(false)
     expect(isSeuofficeLauncher('C:\\GenOffice\\resources\\cli\\genoffice.cmd')).toBe(false)
@@ -421,7 +423,7 @@ describe('an upstream genoffice launcher on the PATH', () => {
     }
     const ours = join(dir, 'opt', 'seuoffice', 'resources', 'cli')
     mkdirSync(ours, { recursive: true })
-    for (const f of ['seuoffice', 'genoffice.cjs', 'seuoffice.cmd']) {
+    for (const f of ['seuoffice', 'seuoffice.cjs', 'seuoffice.cmd']) {
       writeFileSync(join(ours, f), '')
     }
     return { dir, upstream: join(upstream, 'genoffice'), launcher: join(ours, 'seuoffice') }
@@ -468,7 +470,7 @@ describe('an upstream genoffice launcher on the PATH', () => {
     const older = join(m.dir, 'old', 'seuoffice', 'resources', 'cli')
     mkdirSync(older, { recursive: true })
     writeFileSync(join(older, 'seuoffice'), '')
-    writeFileSync(join(older, 'genoffice.cjs'), '')
+    writeFileSync(join(older, 'seuoffice.cjs'), '')
     expect(isOurLauncher(join(older, 'seuoffice'), m.launcher)).toBe(true)
     const bin = join(m.dir, 'bin')
     mkdirSync(bin)
@@ -545,7 +547,7 @@ describe('finding the app', () => {
     const dir = 'C:\\Users\\Jane Doe\\AppData\\Local\\Programs\\seuoffice\\resources\\cli'
     expect(mcpLaunch({ status: 'present', launcherDir: dir })).toEqual({
       command: `${dir}\\..\\..\\SeuOffice.exe`,
-      args: [`${dir}\\genoffice.cjs`, 'mcp'],
+      args: [`${dir}\\seuoffice.cjs`, 'mcp'],
       env: { ELECTRON_RUN_AS_NODE: '1' },
     })
     const mac = '/Applications/seuoffice.app/Contents/Resources/cli'
@@ -558,10 +560,12 @@ describe('finding the app', () => {
       args: ['mcp'],
     })
 
-    const upstreamOnly = (p: string) => p.endsWith('GenOffice.exe') || p.endsWith('genoffice.cjs')
-    expect(mcpLaunchFromLauncher(`${dir}\\seuoffice.cmd`, { exists: upstreamOnly })).toEqual({
+    // the upstream app and its bundle are there too: neither is started
+    const upstreamToo = (p: string) =>
+      p.endsWith('GenOffice.exe') || p.endsWith('genoffice.cjs') || p === `${dir}\\seuoffice.cjs`
+    expect(mcpLaunchFromLauncher(`${dir}\\seuoffice.cmd`, { exists: upstreamToo })).toEqual({
       command: 'node',
-      args: [`${dir}\\genoffice.cjs`, 'mcp'],
+      args: [`${dir}\\seuoffice.cjs`, 'mcp'],
     })
     const ours = (p: string) => p === `${dir}\\..\\..\\SeuOffice.exe`
     expect(mcpLaunchFromLauncher(`${dir}\\seuoffice.cmd`, { exists: ours }).command).toBe(
@@ -658,13 +662,13 @@ describe('what the CLI prints and tells agents to run', () => {
 
   it('ships launchers named seuoffice that start only this product', () => {
     const bin = join(REPO, 'packages', 'cli', 'bin')
-    expect(readdirSync(bin).sort()).toEqual(['seuoffice', 'seuoffice.cmd'])
+    const files = readdirSync(bin, { withFileTypes: true }).filter((e) => e.isFile())
+    expect(files.map((e) => e.name).sort()).toEqual(['seuoffice', 'seuoffice.cmd'])
     const sh = readFileSync(join(bin, 'seuoffice'), 'utf-8')
     const cmd = readFileSync(join(bin, 'seuoffice.cmd'), 'utf-8')
     expect(sh).toContain('MacOS/SeuOffice')
     expect(sh).toContain('SeuOffice.exe')
     expect(sh).toContain('"$here/../../seuoffice"')
-    expect(sh).not.toContain('"$here/../../seuoffice"')
     expect(sh).not.toContain('"$here/../../genoffice"')
     expect(cmd).toContain('SeuOffice.exe')
     expect(sh).not.toMatch(/GenOffice/)

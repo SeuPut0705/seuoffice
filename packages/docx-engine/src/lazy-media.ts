@@ -7,9 +7,13 @@
  * original bytes (see zip-splice.ts).
  */
 
+import { OLD_LAZY_MEDIA_MAGICS } from './old-names'
+
 export const LAZY_MEDIA_SCHEME = 'seuoffice-docx-media'
 
 const MAGIC = 'SEUOFFICE-LAZY-MEDIA\n'
+/** a recovery copy an earlier version wrote can still hold its placeholders */
+const READ_MAGICS = [MAGIC, ...OLD_LAZY_MEDIA_MAGICS]
 const HASH_RE = /^[0-9a-f]{64}$/
 
 export const LAZY_MEDIA_PLACEHOLDER_BYTES = MAGIC.length + 64 + 1
@@ -22,8 +26,9 @@ export function lazyMediaPlaceholder(hash: string): Uint8Array {
 export function lazyMediaHashOf(bytes: Uint8Array): string | null {
   if (bytes.length !== LAZY_MEDIA_PLACEHOLDER_BYTES) return null
   const text = new TextDecoder('latin1').decode(bytes)
-  if (!text.startsWith(MAGIC) || !text.endsWith('\n')) return null
-  const hash = text.slice(MAGIC.length, MAGIC.length + 64)
+  const magic = READ_MAGICS.find((m) => text.startsWith(m))
+  if (!magic || !text.endsWith('\n')) return null
+  const hash = text.slice(magic.length, magic.length + 64)
   return HASH_RE.test(hash) ? hash : null
 }
 

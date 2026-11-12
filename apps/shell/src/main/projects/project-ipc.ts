@@ -25,6 +25,7 @@ import {
 } from '@seuoffice/project-store'
 import type { KbRunScopes } from '../knowledge-base'
 import type { ProjectChatStore } from './chat-store'
+import { dataDirName } from './folder-files'
 import type { ProjectFolderPickPurpose, ProjectTrustChoice } from './project-dialog-text'
 import { listIgnoredFiles, toEntry, withCloudFlags, type CloudOnlyResolver } from './project-files'
 import type { NewProjectRequest, ProjectGuide, SelectionTarget, TrustAsk } from './project-guide'
@@ -358,9 +359,10 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
   const showTrustFiles = async (prompt: ProjectTrustPrompt): Promise<boolean> => {
     const N = PROJECT_FOLDER_NAMES
     const root = prompt.folderPath
+    const dataDir = join(root, dataDirName(root))
     const files: Array<[string | null, string]> = [
-      [prompt.instructions, join(root, N.dataDir, N.instructionsFile)],
-      [prompt.memory, join(root, N.dataDir, N.memoryFile)],
+      [prompt.instructions, join(dataDir, N.instructionsFile)],
+      [prompt.memory, join(dataDir, N.memoryFile)],
       [prompt.agents, join(root, N.rootAgentsFile)],
       [prompt.claude, join(root, N.rootClaudeFile)],
     ]
@@ -371,7 +373,7 @@ export function registerProjectFolderIpc(deps: ProjectIpcDeps): ProjectIpcContro
     }
     if (prompt.foreignChats.length > 0) {
       try {
-        await deps.openFolder(join(root, N.dataDir, N.chatsDir))
+        await deps.openFolder(join(dataDir, N.chatsDir))
       } catch {
         // The prompt still lists the chats by title.
       }

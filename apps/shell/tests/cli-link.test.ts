@@ -1,5 +1,4 @@
-import { readFileSync, statSync } from 'node:fs'
-import { mkdtempSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
@@ -10,10 +9,12 @@ import { isEphemeralInstall, launcherFilePath, writeLauncherFile } from '../src/
 
 describe('seuoffice launcher file', () => {
   it('lives in the seuoffice auth directory, overridable like auth.json', () => {
-    expect(launcherFilePath({})).toBe(join(process.env.HOME ?? '', '.seuoffice', 'launcher'))
-    // the upstream app keeps its own record in ~/.genoffice: never ours to write
-    expect(launcherFilePath({})).not.toContain('.genoffice')
-    expect(launcherFilePath({ SEUOFFICE_AUTH_DIR: '/tmp/x' })).toBe(join('/tmp/x', 'launcher'))
+    const home = mkdtempSync(join(tmpdir(), 'seuoffice-home-'))
+    mkdirSync(join(home, '.genoffice')) // the upstream app's own record lives there: never ours to write
+    expect(launcherFilePath({}, home)).toBe(join(home, '.seuoffice', 'launcher'))
+    expect(launcherFilePath({ SEUOFFICE_AUTH_DIR: '/tmp/x' }, home)).toBe(
+      join('/tmp/x', 'launcher'),
+    )
   })
 
   it('writes one line, creates the directory, and only rewrites on change', () => {

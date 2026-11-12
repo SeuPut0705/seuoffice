@@ -55,7 +55,8 @@ vi.mock('@seuoffice/cli/agent-skills', () => {
     skillRows: () => [rows['claude-code'], rows.agents, ...legacy()],
     legacySkillCopies: () => legacy(),
     agentTarget: (id: string) => rows[id] ?? null,
-    skillFilePath,
+    skillFilesWritten: (dir: string, ledger: Record<string, unknown>) =>
+      [skillFilePath(dir)].filter((file) => ledger[file]),
     installSkill: (dir: string) => {
       h.installed.push(dir)
     },

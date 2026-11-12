@@ -142,7 +142,7 @@ export function ProjectNoticeList({
 
 /**
  * "This document is in the '<name>' project folder [Use]": the document sits
- * under an unregistered folder holding `.seuoffice/project.json`. Shown above
+ * under an unregistered folder whose data folder holds `project.json`. Shown above
  * the project chip; nothing is used until the person presses [Use].
  */
 export function ProjectFolderHintLine({

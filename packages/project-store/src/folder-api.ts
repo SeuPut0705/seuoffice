@@ -42,6 +42,9 @@ export function isValidProjectId(value: unknown): value is ProjectId {
 
 /**
  * Names inside a project folder. Fixed regardless of the UI language; text is UTF-8.
+ * `dataDir` is the name a new project's data folder gets; a project an older
+ * version made keeps the folder under the name it had (the shell main process
+ * resolves which one a folder uses, and guards both).
  *
  * ```
  * <project folder>/
@@ -267,7 +270,7 @@ export type FolderRefusalReason =
   | 'drive-root'
   /** The whole user folder */
   | 'user-home'
-  /** An agent-mode protected folder (`~/.claude`, `~/.codex`, `~/.genoffice`, `~/.seuoffice`, app data) */
+  /** An agent-mode protected folder (`~/.claude`, `~/.codex`, the upstream app's `~/.genoffice`, `~/.seuoffice` and its earlier names, app data) */
   | 'protected'
   /** A folder that contains a protected folder */
   | 'contains-protected'

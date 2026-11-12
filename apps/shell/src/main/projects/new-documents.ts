@@ -1,6 +1,7 @@
 import { lstat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { PROJECT_FOLDER_NAMES, type ProjectId } from '@seuoffice/project-store'
+import type { ProjectId } from '@seuoffice/project-store'
+import { isDataDirName } from './folder-files'
 import type { ProjectGuide } from './project-guide'
 import { relativeInside } from './paths'
 import { ProjectWriteRefused } from './write-guard'
@@ -42,7 +43,8 @@ export const NEW_DOCUMENT_NAME_ATTEMPTS = 1000
 
 /**
  * The folder rule (spec 6): `docPath`'s folder when it is inside `root` and not
- * under `.seuoffice/`, else `root`. The result keeps the root's spelling.
+ * under the data folder (by any name it has had), else `root`. The result keeps
+ * the root's spelling.
  */
 export function newDocumentFolder(
   root: string,
@@ -55,7 +57,7 @@ export function newDocumentFolder(
   const segments = rel.split('/')
   segments.pop()
   if (segments.length === 0) return root
-  if (segments[0]!.toLowerCase() === PROJECT_FOLDER_NAMES.dataDir) return root
+  if (isDataDirName(segments[0]!)) return root
   return join(root, ...segments)
 }
 

@@ -13,7 +13,7 @@ import { readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import JSZip from 'jszip'
 import type { SkillProposal } from '@seuoffice/agent-core'
-import { REDACT_NS } from '@seuoffice/agent-core/redact-range'
+import { REDACT_NAMESPACES } from '@seuoffice/agent-core/redact-range'
 import { skillEditorsOf } from '@seuoffice/agent-core/skill-editors'
 import {
   IEUM_TEMPLATE_KEY,
@@ -403,7 +403,12 @@ export async function templateRedactionOf(
         for (const entry of Object.values(zip.files)) {
           if (entry.dir || !/\.xml$/i.test(entry.name)) continue
           const xml = await entry.async('string')
-          if (xml.includes(REDACT_NS) || xml.includes(PPTX_REDACT_EXT_URI)) return 'redacted'
+          if (
+            REDACT_NAMESPACES.some((ns) => xml.includes(ns)) ||
+            xml.includes(PPTX_REDACT_EXT_URI)
+          ) {
+            return 'redacted'
+          }
         }
         return 'none'
       } catch {

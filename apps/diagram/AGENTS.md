@@ -37,7 +37,7 @@
   - `document/mermaid.ts`: `convertMermaidInEditor(frame, text)`(변환만, 이름 없는 새 다이어그램을 Mermaid로 만들 때도 이것을 쓴다)와, 계획이 그림 뒤의 연산을 맞게 보도록 변환된 XML을 계획용 셀(`m1`, `m2`…, 그 자리로 옮김)로 바꾸는 `plannedMermaidCells`. 다이어그램에 들어가는 것은 이 셀이 아니라 draw.io의 XML 그대로다(선의 꺾임점까지).
   - `ai/`: AI 창. 다른 편집기와 같은 부품과 규칙(제공자 선택은 `selectAiProvider`를 거친 공용 설정, 보내기 문지기 `useAiSendGate`, 막힌 실행 알림, 오류 글 `aiRunErrorText`, 첨부·검색·사용자 스킬·MCP)을 쓰고, 다이어그램 능력만 따로 있다.
     - `diagram-tools.ts`: 도구 두 개를 `DIAGRAM_OPS` 한 곳에서 만든다. `read_diagram`(= `read`), `apply_diagram_ops`(바꾸는 연산 전부의 목록, 항목 스키마는 모든 연산의 키를 합친 것). 호출 하나가 되돌리기 한 번이고, 하나라도 거절되면 다이어그램은 그대로다.
-    - `diagram-skill.ts`: 지시문(영어, `brandText`)과 요청마다 붙는 문맥. 모델은 다이어그램을 **글로만** 읽는다. 요청마다 지금 쪽의 읽기 표가 `<diagram_page>` 안에 선택 id와 함께 가고, 그림은 만들지 않는다. 새 순서도·시퀀스·ER 등은 `insert_mermaid`를 먼저 쓰라고 적는다.
+    - `diagram-skill.ts`: 지시문(영어, 제품 이름을 직접 적는다)과 요청마다 붙는 문맥. 모델은 다이어그램을 **글로만** 읽는다. 요청마다 지금 쪽의 읽기 표가 `<diagram_page>` 안에 선택 id와 함께 가고, 그림은 만들지 않는다. 새 순서도·시퀀스·ER 등은 `insert_mermaid`를 먼저 쓰라고 적는다.
     - `AiPanel.tsx`·`AiDock.tsx`: 창과 오른쪽 끝 자리. AI 차례마다 그 차례의 호출들을 되돌리는 목록이 있다. `diagramAiHost`가 틀 쪽 실행기(`live-ops.ts`)를 도구에 잇는다.
     - `files-skill.ts`·`search-skill.ts`·`transport.ts`·`connection.ts`·`subscription-client.ts`·`lang-directive.ts`: 마인드맵 편집기의 것과 같다.
   - `i18n/app/<언어>.ts` 두 개(`en.ts`가 키 집합)와 `strings-app.ts`, AI 창의 `i18n/ai/<언어>.ts` 두 개와 `strings-ai.ts`, 둘을 언어별로 합치는 `strings.ts`, `locale.tsx`. `theme.ts`: 앱 테마 → draw.io 어두운 보기.

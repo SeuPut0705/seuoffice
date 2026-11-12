@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { PROJECT_FOLDER_NAMES } from '@seuoffice/project-store'
 
 /**
  * A chat whose messages cannot be read to the end counts as written elsewhere
@@ -30,11 +31,12 @@ vi.mock('node:fs', async (importOriginal) => {
 
 const { hasForeignMessage } = await import('../src/main/projects/trust')
 
+const { dataDir } = PROJECT_FOLDER_NAMES
 const INSTALL = 'install-here'
 let root: string
 
 function chatFile(name: string, lines: object[]): void {
-  const dir = join(root, '.seuoffice', 'chats')
+  const dir = join(root, dataDir, 'chats')
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, name), lines.map((line) => `${JSON.stringify(line)}\n`).join(''))
 }

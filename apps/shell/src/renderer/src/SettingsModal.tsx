@@ -13,7 +13,7 @@ import {
   clampAiCustomFontSize,
 } from '@seuoffice/ui'
 import type { AiFontSize, AiPanelPrefs, AiPanelSide, AiPanelStart } from '@seuoffice/ui'
-import { PRODUCT_REPO_SLUG } from '@seuoffice/i18n'
+import { PRODUCT_REPO_SLUG, UPSTREAM_PRODUCT_NAME } from '@seuoffice/i18n'
 import type { Lang } from '@seuoffice/i18n'
 import type {
   AuthorNameSetting,
@@ -2264,7 +2264,9 @@ export function SettingsModal({
                 </div>
                 <div className="set-field">
                   <div className="set-field-text">
-                    <div className="set-field-desc">{t('setBasedOn')}</div>
+                    <div className="set-field-desc">
+                      {t('setBasedOn', { upstream: UPSTREAM_PRODUCT_NAME })}
+                    </div>
                     <div className="set-field-desc">{t('setHwpNotice')}</div>
                     <div className="set-field-desc">{t('setTrademarks')}</div>
                     <div className="set-field-desc">{t('setDisclaimer')}</div>

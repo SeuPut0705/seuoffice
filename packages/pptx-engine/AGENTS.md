@@ -21,7 +21,7 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 - 저장할 때 슬라이드 파트 이름을 바꾸지 않는다. 슬라이드 영속 id(`s_<n>`)가 파트 경로에서 나온다.
 - `mc:AlternateContent`에 걸린 요소는 모델을 만든 가지에 패치한다. 위치·채움·선·자르기 패치는 같은 태그의 형제 가지에도 똑같이 적용하고, 텍스트 패치는 형제 가지에 적용하지 않는다. Choice 쪽 본문이 수식 같은 다른 어휘일 수 있다.
 - "모델에 숨김" 표시는 실제 글자를 지우지 않는다. 표시는 런의 `a:rPr`(그림은 `nvPr`) 안 `a:extLst` 확장으로 저장하고, 파싱할 때 모델로 읽어 저장할 때 다시 쓴다.
-- 문서 안에 남는 식별자는 바꾸지 않는다: 가리기 확장의 `uri`(`REDACT_EXT_URI`), 가리기 기능의 이름공간 주소(`REDACT_NS`, `@seuoffice/agent-core/redact-range`에서 가져온다), 이 앱이 만든 차트를 알아보는 `descr="aislides-chart"`, 3D 모델 참조 표지 `aislides-3d:`.
+- 문서 안에 남는 식별자는 바꾸지 않는다: 가리기 확장의 `uri`(`REDACT_EXT_URI`), 이 앱이 만든 차트를 알아보는 `descr="aislides-chart"`, 3D 모델 참조 표지 `aislides-3d:`. 가리기 기능의 이름공간 주소는 `@seuoffice/agent-core/redact-range`의 규칙을 따른다: 쓸 때는 `REDACT_NS_WRITTEN`, 읽을 때는 접두사 `go:redact`로 알아보므로 두 주소(`REDACT_NAMESPACES`) 모두 읽힌다.
 - 열 때 거부하는 한도는 파트 10,000개, 파트당 512 MiB, 합계 1.5 GiB(`PPTX_ZIP_LIMITS`)다. 파트를 실제로 풀어 보는 검사가 JSZip 로드보다 먼저다.
 - 예산을 넘는 입력은 버리지 않고 원본 바이트를 지닌 `passthrough`로 남긴다: 그룹 중첩 64단계, 한 슬라이드의 도형 10,000개. 그 밖의 상한은 차트 점 1,048,576개·계열 256개, chartEx 점 10,000개, 글자 크기 1pt 이상 4000pt 이하, 표 삽입 75×75다. 슬라이드 id는 256 이상 2147483647 이하에서만 낸다.
 - 관계 대상은 `resolveTarget`으로만 푼다. 스킴이 붙은 대상과 디코딩할 수 없는 대상은 빈 경로가 된다.

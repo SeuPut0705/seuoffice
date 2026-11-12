@@ -11,22 +11,23 @@ import {
 } from 'node:fs/promises'
 import { isAbsolute, join, posix, win32 } from 'node:path'
 import { tempPathBeside } from '@seuoffice/electron-utils/atomic-write'
-import { PROJECT_FOLDER_NAMES } from '@seuoffice/project-store'
 import { atomicWriteFile } from '../atomic-write'
 import { isValidRenameName } from '../rename-validation'
+import { dataDirName, isDataDirName } from './folder-files'
 import { comparablePath, isPlainSegment, pathApi, relativeInside, samePath } from './paths'
 
 /**
  * The single write guard for project folders (spec 3, invariants 3 and 9).
  *
  * The app writes into a person's folder in two places only: under the project's
- * `.seuoffice/`, and a new document the AI made inside the project folder. Every
- * such write goes through this class, which checks each time that the project
- * root is still its canonical path, that the target stays below it (no `..`, no
- * drive or stream names), and that no folder on the way nor the target itself is
- * a link or junction. JSON and Markdown are written to a temporary file and
- * renamed; writes to one file run one at a time in arrival order. `.seuoffice/`
- * and its subfolders are created only by an actual write.
+ * data folder (`dataDirName`), and a new document the AI made inside the project
+ * folder (never under the data folder, by any name it has had). Every such write
+ * goes through this class, which checks each time that the project root is still
+ * its canonical path, that the target stays below it (no `..`, no drive or stream
+ * names), and that no folder on the way nor the target itself is a link or
+ * junction. JSON and Markdown are written to a temporary file and renamed; writes
+ * to one file run one at a time in arrival order. The data folder and its
+ * subfolders are created only by an actual write.
  *
  * A policy refusal throws `ProjectWriteRefused`; a file system failure throws the
  * original error. Neither is swallowed.
@@ -35,7 +36,7 @@ import { comparablePath, isPlainSegment, pathApi, relativeInside, samePath } fro
 export type ProjectWriteRefusal =
   /** The relative path is empty, absolute, or holds `..`, `.`, a stream or control characters */
   | 'bad-path'
-  /** The target is not below the project folder (or, for a new document, inside `.seuoffice/`) */
+  /** The target is not below the project folder (or, for a new document, inside the data folder) */
   | 'outside'
   /** A folder on the way, or the target, is a link or junction */
   | 'link'
@@ -101,32 +102,53 @@ export class ProjectWriteGuard {
 
   constructor(private readonly platform: NodeJS.Platform = process.platform) {}
 
-  /** The absolute path of a file under `<root>/.seuoffice/`; checks the name only, touches nothing */
-  dataPath(root: string, relPath: string): string {
-    return join(root, PROJECT_FOLDER_NAMES.dataDir, ...dataSegments(relPath))
+  /**
+   * The data folder and the file `relPath` names in it. `dataDir` is the name an
+   * operation of several writes resolved once (`dataDirName`), so all its writes
+   * land in one folder; only the data folder's own names are taken.
+   */
+  private locate(
+    root: string,
+    relPath: string,
+    dataDir: string | undefined,
+  ): { dir: string; target: string } {
+    const name = dataDir ?? dataDirName(root)
+    if (!isDataDirName(name)) throw new ProjectWriteRefused('bad-path', name)
+    const dir = join(root, name)
+    return { dir, target: join(dir, ...dataSegments(relPath)) }
   }
 
-  /** Replace a file under `.seuoffice/` (temporary file, then rename) */
-  async writeData(root: string, relPath: string, data: string | Uint8Array): Promise<void> {
-    const target = this.dataPath(root, relPath)
+  /** The absolute path of a file in `root`'s data folder; checks the name only, touches nothing */
+  dataPath(root: string, relPath: string, dataDir?: string): string {
+    return this.locate(root, relPath, dataDir).target
+  }
+
+  /** Replace a file in the data folder (temporary file, then rename) */
+  async writeData(
+    root: string,
+    relPath: string,
+    data: string | Uint8Array,
+    dataDir?: string,
+  ): Promise<void> {
+    const { dir, target } = this.locate(root, relPath, dataDir)
     await this.serialize(target, async () => {
-      await this.prepareData(root, relPath, true)
+      await this.prepareData(root, dir, relPath, true)
       await atomicWriteFile(target, typeof data === 'string' ? Buffer.from(data, 'utf8') : data)
     })
   }
 
-  /** Append to a file under `.seuoffice/` (chat message lines) */
-  async appendData(root: string, relPath: string, text: string): Promise<void> {
-    const target = this.dataPath(root, relPath)
+  /** Append to a file in the data folder (chat message lines) */
+  async appendData(root: string, relPath: string, text: string, dataDir?: string): Promise<void> {
+    const { dir, target } = this.locate(root, relPath, dataDir)
     await this.serialize(target, async () => {
-      const existing = await this.prepareData(root, relPath, true)
+      const existing = await this.prepareData(root, dir, relPath, true)
       if (existing && existing.nlink > 1) throw new ProjectWriteRefused('hard-link', target)
       await appendFile(target, text, { encoding: 'utf8' })
     })
   }
 
   /**
-   * Read, change and write one file under `.seuoffice/` without another write to
+   * Read, change and write one file in the data folder without another write to
    * that file in between. `change` gets the current text (null when absent) and
    * returns the new text, or null/undefined to leave the file (and the folder) alone.
    */
@@ -136,24 +158,25 @@ export class ProjectWriteGuard {
     change: (
       current: string | null,
     ) => string | null | undefined | Promise<string | null | undefined>,
+    dataDir?: string,
   ): Promise<DataUpdateResult> {
-    const target = this.dataPath(root, relPath)
+    const { dir, target } = this.locate(root, relPath, dataDir)
     return this.serialize(target, async () => {
-      const existing = await this.prepareData(root, relPath, false)
+      const existing = await this.prepareData(root, dir, relPath, false)
       const current = existing ? await readFile(target, 'utf8') : null
       const next = await change(current)
       if (next === null || next === undefined) return { written: false, text: current }
-      await this.prepareData(root, relPath, true)
+      await this.prepareData(root, dir, relPath, true)
       await atomicWriteFile(target, Buffer.from(next, 'utf8'))
       return { written: true, text: next }
     })
   }
 
-  /** Delete one file under `.seuoffice/` (old memory backups); a missing file is fine */
-  async removeData(root: string, relPath: string): Promise<void> {
-    const target = this.dataPath(root, relPath)
+  /** Delete one file in the data folder (old memory backups); a missing file is fine */
+  async removeData(root: string, relPath: string, dataDir?: string): Promise<void> {
+    const { dir, target } = this.locate(root, relPath, dataDir)
     await this.serialize(target, async () => {
-      const existing = await this.prepareData(root, relPath, false)
+      const existing = await this.prepareData(root, dir, relPath, false)
       if (existing) await unlink(target)
     })
   }
@@ -176,7 +199,7 @@ export class ProjectWriteGuard {
     if (rel === null) throw new ProjectWriteRefused('outside', target)
     const segments = rel.split('/')
     if (!segments.every(isPlainSegment)) throw new ProjectWriteRefused('bad-path', target)
-    if (segments[0]!.toLowerCase() === PROJECT_FOLDER_NAMES.dataDir) {
+    if (isDataDirName(segments[0]!)) {
       throw new ProjectWriteRefused('outside', target)
     }
     let dir = root
@@ -254,14 +277,20 @@ export class ProjectWriteGuard {
   }
 
   /**
-   * Checks the way from the root to a data file. With `create`, missing folders
-   * below the root are made one level at a time; without it, a missing folder means
-   * the file is absent. Resolves to the target's stats, or null when it is absent.
+   * Checks the way from the root through `dataDir` to a data file. With `create`,
+   * missing folders below the root are made one level at a time; without it, a
+   * missing folder means the file is absent. Resolves to the target's stats, or
+   * null when it is absent.
    */
-  private async prepareData(root: string, relPath: string, create: boolean): Promise<Stats | null> {
+  private async prepareData(
+    root: string,
+    dataDir: string,
+    relPath: string,
+    create: boolean,
+  ): Promise<Stats | null> {
     const segments = dataSegments(relPath)
     await this.assertRoot(root)
-    let dir = join(root, PROJECT_FOLDER_NAMES.dataDir)
+    let dir = dataDir
     const folders = [dir]
     for (const segment of segments.slice(0, -1)) {
       dir = join(dir, segment)
@@ -291,9 +320,4 @@ export class ProjectWriteGuard {
     if (!info.isFile()) throw new ProjectWriteRefused('not-a-folder', target)
     return info
   }
-}
-
-/** The folder a data file lives in; exported for callers that list `.seuoffice/` */
-export function dataDirOf(root: string): string {
-  return join(root, PROJECT_FOLDER_NAMES.dataDir)
 }

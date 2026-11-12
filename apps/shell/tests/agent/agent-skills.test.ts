@@ -20,6 +20,7 @@ import {
   createAgentSkillTools,
   startAgentMcpServer,
 } from '../../src/main/agent/agent-mcp'
+import { agentProtectedPaths } from '../../src/main/agent/agent-sessions'
 import {
   AGENT_WINDOW_MANAGE_CHANNELS,
   agentSessionSkillsOf,
@@ -561,11 +562,7 @@ describe('reading a candidate in main', () => {
   it('never reads the sign-in stores, the original app’s folder or the app’s own data', async () => {
     const home = temp()
     const userData = join(home, 'AppData', 'IeumOffice')
-    const guard = {
-      homeDir: home,
-      protectedPaths: ['.claude', '.codex', '.genoffice', '.seuoffice'].map((n) => join(home, n)),
-    }
-    guard.protectedPaths.push(userData)
+    const guard = { homeDir: home, protectedPaths: agentProtectedPaths(home, userData) }
     for (const dir of [...guard.protectedPaths]) {
       mkdirSync(dir, { recursive: true })
       writeFileSync(join(dir, 'form.docx'), 'secret')
@@ -588,7 +585,7 @@ describe('reading a candidate in main', () => {
     expect(read.ok && new TextDecoder().decode(read.bytes)).toBe('mine')
     // a linked folder leading into one of them is judged by where it really is
     try {
-      symlinkSync(join(home, '.genoffice'), join(docs, 'linked'), 'junction')
+      symlinkSync(join(home, '.genoffice'), join(docs, 'linked'), 'junction') // the upstream app's folder
     } catch {
       return
     }

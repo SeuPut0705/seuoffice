@@ -218,12 +218,12 @@ describe('the list', () => {
     expect(ids(await listUserSkills({ homeDir: home }))).toEqual(['user:shared'])
   })
 
-  it('never reads the seuoffice or seuoffice skill, in any case, by folder or by name', async () => {
+  it('never reads the upstream skill or our own, in any case, by folder or by name', async () => {
     const home = temp()
     const claude = join(home, '.claude', 'skills')
-    skill(claude, 'seuoffice')
-    skill(claude, 'IeumOffice')
-    skill(claude, 'other-folder', { name: 'SeuOffice' })
+    skill(claude, 'genoffice') // the upstream app's skill
+    skill(claude, 'SeuOffice')
+    skill(claude, 'other-folder', { name: 'GenOffice' }) // upstream, by name
     skill(claude, 'kept')
     skill(join(home, '.seuoffice', 'skills'), 'seuoffice')
     const skills = await listUserSkills({ homeDir: home })
@@ -343,7 +343,8 @@ async function readOne(...args: Parameters<typeof readUserSkillFolder>): Promise
 describe('one skill folder', () => {
   it('reads nothing of a folder with a reserved name', async () => {
     const base = temp()
-    expect(await readUserSkillFolder(skill(base, 'SeuOffice'), { source: 'app' })).toBeUndefined()
+    const upstream = skill(base, 'GenOffice')
+    expect(await readUserSkillFolder(upstream, { source: 'app' })).toBeUndefined()
     expect(
       await readUserSkillFolder(skill(base, 'x', { name: 'seuoffice' }), { source: 'app' }),
     ).toBeUndefined()

@@ -250,7 +250,7 @@ function list(ctx: CommandContext) {
   const detected = mcpDetected(ctx)
   const agents = mcpAgentIds().map((id) => {
     const t = target(id, undefined, detected, ctx)
-    const state = readMcpEntry(id, t.file, launch)
+    const state = readMcpEntry(id, t.file, launch, ctx.env)
     return { ...row(t, state), status: state.status }
   })
   const found = agents.filter((a) => a.detected)
@@ -352,7 +352,7 @@ function edit(
   const warnings: Warning[] = []
   const rows: Array<AgentRow & { status: InstallStatus | UninstallStatus; snippet?: string }> = []
   for (const t of targets) {
-    const before = readMcpEntry(t.id, t.file, launch)
+    const before = readMcpEntry(t.id, t.file, launch, ctx.env)
     let status: InstallStatus | UninstallStatus
     if (!t.detected && !force) status = 'not_detected'
     else if (before.status === 'manual') status = 'manual'
@@ -364,11 +364,11 @@ function edit(
         before.status === 'registered' && (before.compactSchemas === true) === compactSchemas
       if (sameForm) status = 'unchanged'
       else {
-        writeMcpEntry(t.id, t.file, wanted)
+        writeMcpEntry(t.id, t.file, wanted, ctx.env)
         status = before.status === 'absent' ? 'installed' : 'updated'
       }
-    } else status = removeMcpEntry(t.id, t.file) ? 'removed' : 'absent'
-    const after = status === 'manual' ? before : readMcpEntry(t.id, t.file, launch)
+    } else status = removeMcpEntry(t.id, t.file, ctx.env) ? 'removed' : 'absent'
+    const after = status === 'manual' ? before : readMcpEntry(t.id, t.file, launch, ctx.env)
     const r = { ...row(t, after), status }
     rows.push(
       status === 'manual' && verb === 'install' ? { ...r, snippet: mcpSnippet(t.id, wanted) } : r,

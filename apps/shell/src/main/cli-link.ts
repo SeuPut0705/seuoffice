@@ -2,7 +2,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { app } from 'electron'
-import { HOME_DIR_NAME, installCliLink, launcherFileName } from '@seuoffice/cli/install'
+import { appHomeDir } from '@seuoffice/ai-provider'
+import { installCliLink, launcherFileName } from '@seuoffice/cli/install'
 import { readAppSettings, writeAppSetting } from './app-settings'
 
 const SETTING_KEY = 'cliLink'
@@ -15,7 +16,7 @@ interface CliLinkRecord {
 
 /**
  * Every launch: record where the seuoffice launcher lives so agents can find it
- * without a PATH (the `seuoffice` skill reads `~/.seuoffice/launcher`), then
+ * without a PATH (the `seuoffice` skill reads `launcher` in the app's home folder), then
  * try to expose it on the PATH. The dmg has no installer step to do that, so
  * macOS retries on each start until a writable directory turns up; Windows
  * gets its PATH entry from the installer and only re-checks once per version
@@ -54,9 +55,9 @@ export function isEphemeralInstall(resourcesPath: string, env: NodeJS.ProcessEnv
   return /^\/Volumes\//.test(resourcesPath) || /\/\.mount_[^/]+\//.test(resourcesPath)
 }
 
-/** Same directory the seuoffice CLI uses for its audit log; never the upstream app's `~/.genoffice`. */
-export function launcherFilePath(env: NodeJS.ProcessEnv): string {
-  return join(env.SEUOFFICE_AUTH_DIR || join(homedir(), HOME_DIR_NAME), 'launcher')
+/** Same folder the seuoffice CLI uses for its audit log; never the upstream app's `~/.genoffice`. */
+export function launcherFilePath(env: NodeJS.ProcessEnv, homeDir: string = homedir()): string {
+  return join(env.SEUOFFICE_AUTH_DIR || appHomeDir(homeDir), 'launcher')
 }
 
 /** One line, the directory holding seuoffice / seuoffice.cmd; rewritten only when it changed. */

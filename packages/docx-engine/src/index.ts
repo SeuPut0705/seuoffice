@@ -1,5 +1,5 @@
 // one definition, in the package both carriers and both apps can reach
-export { REDACT_EL, REDACT_NS, REDACT_PREFIX } from '@seuoffice/agent-core/redact-range'
+export { REDACT_EL, REDACT_NS_WRITTEN, REDACT_PREFIX } from '@seuoffice/agent-core/redact-range'
 export * from './types'
 export {
   deobfuscateOdttf,

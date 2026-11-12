@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { tempPathBeside } from '@seuoffice/electron-utils/atomic-write'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { PROJECT_FOLDER_NAMES } from '@seuoffice/project-store'
 import {
   addIgnoreLine,
   compileIgnore,
@@ -11,7 +12,9 @@ import {
 } from '../src/main/projects/ignore'
 import { isAiVisiblePath } from '../src/main/projects/visibility'
 
-/** `.seuoffice/ignore` syntax (spec 3) and "is this file visible to AI" */
+/** `ignore` syntax (spec 3) and "is this file visible to AI" */
+
+const { dataDir } = PROJECT_FOLDER_NAMES
 
 describe('compileIgnore', () => {
   const sensitive = (text: string) => compileIgnore(text, { caseInsensitive: false })
@@ -142,8 +145,8 @@ describe('isAiVisiblePath', () => {
     expect(isAiVisiblePath(root, '~$report.docx', none)).toBe(false)
     expect(isAiVisiblePath(root, 'Thumbs.db', none)).toBe(false)
     expect(isAiVisiblePath(root, 'node_modules/x.md', none)).toBe(false)
-    expect(isAiVisiblePath(root, '.seuoffice/memory.md', none)).toBe(false)
-    expect(isAiVisiblePath(root, '.seuoffice', none, true)).toBe(false)
+    expect(isAiVisiblePath(root, `${dataDir}/memory.md`, none)).toBe(false)
+    expect(isAiVisiblePath(root, dataDir, none, true)).toBe(false)
   })
 
   // A save stages `<name>.<12 hex>.tmp` beside the document (no leading dot

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Editor } from '@tiptap/core'
 import { TextSelection } from '@tiptap/pm/state'
 import JSZip from 'jszip'
-import { parseDocx, saveDocx, REDACT_NS, REDACT_PREFIX } from '@seuoffice/docx-engine'
+import { parseDocx, saveDocx, REDACT_NS_WRITTEN, REDACT_PREFIX } from '@seuoffice/docx-engine'
 import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 import { blocksToPmDoc, pmDocToSavePlan, type PmNode } from '../src/renderer/editor/convert'
 import { editorExtensions } from '../src/renderer/editor/extensions'
@@ -120,7 +120,7 @@ describe('a saved file is XML a word processor can open', () => {
 
   it('still carries the label where a reader can find it', async () => {
     const doc = new DOMParser().parseFromString(await saveWithMark(), 'application/xml')
-    const marker = doc.getElementsByTagNameNS(REDACT_NS, 'redact')
+    const marker = doc.getElementsByTagNameNS(REDACT_NS_WRITTEN, 'redact')
     expect(marker.length).toBe(1)
   })
 

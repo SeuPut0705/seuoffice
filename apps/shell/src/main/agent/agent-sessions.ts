@@ -25,6 +25,8 @@ import type {
   AiSubscriptionStatus,
 } from '@seuoffice/ai-provider'
 import { subscriptionConnection, subscriptionOffIn } from '@seuoffice/ai-provider'
+import { HOME_DIR_NAME } from '@seuoffice/cli/install'
+import { OLD_HOME_DIR_NAMES } from '@seuoffice/i18n'
 import {
   AGENT_RUN_ERROR_KINDS,
   type AgentPrepareStep,
@@ -188,8 +190,8 @@ export function agentProtectedPaths(homeDir: string, userData: string): string[]
   return [
     join(homeDir, '.claude'),
     join(homeDir, '.codex'),
-    join(homeDir, '.genoffice'),
-    join(homeDir, '.ieumoffice'),
+    join(homeDir, '.genoffice'), // the upstream app's home folder
+    ...[HOME_DIR_NAME, ...OLD_HOME_DIR_NAMES].map((name) => join(homeDir, name)),
     userData,
   ]
 }

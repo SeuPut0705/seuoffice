@@ -5,6 +5,8 @@
  * pdf2docx-local.ts does, runs the job and answers. The parent ends the
  * process after the answer, on cancel, and when the document's tab closes.
  */
+// first: variables set under the old prefix are taken over before anything reads its own
+import '@seuoffice/i18n/old-names-env'
 import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import type { OcrEngine, PdfiumModule } from '../../../../../packages/pdf2docx/src'

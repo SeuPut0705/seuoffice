@@ -19,13 +19,17 @@ import type { HashedTexts } from './trust'
 /** Instructions sent per request, all sources together; the tail past this is dropped with a notice */
 export const INSTRUCTIONS_LIMIT_CHARS = 32_000
 
-const INSTRUCTION_PARTS: readonly { source: ProjectInstructionsSource; label: string }[] = [
+/** The line naming each part; `instructions.md` is named in the data folder it was read from */
+const INSTRUCTION_PARTS: readonly {
+  source: ProjectInstructionsSource
+  label: (dataDir: string) => string
+}[] = [
   {
     source: 'instructions',
-    label: `${PROJECT_FOLDER_NAMES.dataDir}/${PROJECT_FOLDER_NAMES.instructionsFile}`,
+    label: (dataDir) => `${dataDir}/${PROJECT_FOLDER_NAMES.instructionsFile}`,
   },
-  { source: 'agents', label: PROJECT_FOLDER_NAMES.rootAgentsFile },
-  { source: 'claude', label: PROJECT_FOLDER_NAMES.rootClaudeFile },
+  { source: 'agents', label: () => PROJECT_FOLDER_NAMES.rootAgentsFile },
+  { source: 'claude', label: () => PROJECT_FOLDER_NAMES.rootClaudeFile },
 ]
 
 export interface TrustedContext {
@@ -89,7 +93,7 @@ export function assembleTrustedContext(
     if (part.source !== 'instructions' && !switches.readAgentsFiles) continue
     const text = texts[part.source]
     if (text === null || text.trim() === '') continue
-    parts.push({ source: part.source, text: `[${part.label}]\n${text.trim()}` })
+    parts.push({ source: part.source, text: `[${part.label(texts.dataDir)}]\n${text.trim()}` })
   }
   if (parts.length > 0) {
     const full = parts.map((part) => part.text).join('\n\n')

@@ -93,7 +93,7 @@ describe.skipIf(process.platform === 'win32')('linux cli link scripts (genoffice
     const upstream = join(t.root, 'opt', 'GenOffice', 'resources', 'cli', 'genoffice')
     mkdirSync(join(upstream, '..'), { recursive: true })
     writeFileSync(upstream, '#!/bin/sh\n')
-    const upstreamLink = join(t.bin, 'seuoffice')
+    const upstreamLink = join(t.bin, 'genoffice') // the upstream app's command
     symlinkSync(upstream, upstreamLink)
 
     expect(t.install()).toEqual({ code: 0, stderr: '' })

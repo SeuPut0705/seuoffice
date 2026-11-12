@@ -16,7 +16,7 @@ export type { AgentId, AgentTarget, SkillInstallState, SkillInstallStatus }
 export const SHARED_AGENT_ID = 'agents' satisfies AgentId
 
 export interface CliStatus extends InstallOutcome {
-  /** directory holding the seuoffice launcher (what `~/.genoffice/launcher` points at) */
+  /** directory holding the seuoffice launcher (what the `launcher` record in the home folder points at) */
   launcherDir: string
   /** app runs from a dmg / AppImage mount: the launcher path will not survive a restart */
   ephemeral: boolean

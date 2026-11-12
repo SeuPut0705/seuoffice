@@ -11,7 +11,8 @@ import {
   type Stats,
 } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { OLD_SKILL_NAMES } from '@seuoffice/i18n'
 import JSZip from 'jszip'
 import { SKILL_NAME } from './names'
 
@@ -20,7 +21,10 @@ import { SKILL_NAME } from './names'
  * machine, shared by Settings → Integrations and `seuoffice skill`. Every write
  * is a click in that pane or an explicit command; nothing installs on its own.
  * Pure functions over an injected home / env so the state table is
- * unit-testable without touching the real dotfolders.
+ * unit-testable without touching the real dotfolders. A copy this app wrote
+ * under a name the skill had before (`OLD_SKILL_NAMES`) is read as an outdated
+ * install, replaced by an install when nobody changed it, and removed by an
+ * uninstall; any other folder under such a name is never touched.
  */
 
 export { SKILL_NAME }
@@ -71,7 +75,7 @@ export type SkillInstallStatus =
 
 export interface SkillInstallState {
   status: SkillInstallStatus
-  /** `<skillsDir>/seuoffice/SKILL.md` */
+  /** `<skillsDir>/seuoffice/SKILL.md`, or the copy under an earlier name when only that one is there */
   path: string
   installedVersion?: string
   /** installed version is older than the bundled one (foreign rows offer an update then) */
@@ -263,7 +267,8 @@ export function legacySkillCopies(
     if (a.role !== 'reader') continue
     if (only && only !== SHARED_AGENT_ID && only !== a.id) continue
     const t = targetOf(a, env, home)
-    if (ledger[skillFilePath(t.skillsDir)] && existsSync(join(t.skillsDir, SKILL_NAME))) out.push(t)
+    if (skillFilesWritten(t.skillsDir, ledger).some((file) => existsSync(dirname(file))))
+      out.push(t)
   }
   return out
 }
@@ -355,14 +360,45 @@ export function skillFilePath(skillsDir: string): string {
   return join(skillsDir, SKILL_NAME, 'SKILL.md')
 }
 
+/** Every folder name the skill has had: the current one first */
+const SKILL_FOLDER_NAMES = [SKILL_NAME, ...OLD_SKILL_NAMES]
+
+/** The SKILL.md files the ledger says this app wrote in `skillsDir`, under the current name or an earlier one */
+export function skillFilesWritten(skillsDir: string, ledger: SkillLedger): string[] {
+  return SKILL_FOLDER_NAMES.map((name) => join(skillsDir, name, 'SKILL.md')).filter(
+    (file) => ledger[file],
+  )
+}
+
+/**
+ * The skill in `skillsDir`: the current folder decides; without one, a copy of
+ * ours under an earlier name reads as needing an update (it tells the agent the
+ * old command), and a folder of that name holding anything else is not ours.
+ */
 export function readInstallState(
   skillsDir: string,
   bundled: BundledSkill,
   ledger: SkillLedger,
 ): SkillInstallState {
-  const path = skillFilePath(skillsDir)
-  const dir = join(skillsDir, SKILL_NAME)
-  if (!existsSync(dir)) return { status: 'missing', path }
+  const current = folderState(skillsDir, SKILL_NAME, bundled, ledger)
+  if (current.status !== 'missing') return current
+  for (const name of OLD_SKILL_NAMES) {
+    const old = folderState(skillsDir, name, bundled, ledger)
+    if (old.status === 'missing' || old.status === 'occupied') continue
+    if (old.status === 'newer') return old
+    return { ...old, status: old.status === 'installed' ? 'outdated' : old.status, older: true }
+  }
+  return current
+}
+
+function folderState(
+  skillsDir: string,
+  folder: string,
+  bundled: BundledSkill,
+  ledger: SkillLedger,
+): SkillInstallState {
+  const path = join(skillsDir, folder, 'SKILL.md')
+  if (!existsSync(join(skillsDir, folder))) return { status: 'missing', path }
   let text: string
   try {
     text = readFileSync(path, 'utf-8')
@@ -370,7 +406,7 @@ export function readInstallState(
     return { status: 'occupied', path }
   }
   const fm = parseSkillFrontmatter(text)
-  if (!fm || fm.name !== SKILL_NAME) return { status: 'occupied', path }
+  if (!fm || !SKILL_FOLDER_NAMES.includes(fm.name)) return { status: 'occupied', path }
   const installedVersion = fm.version
   const cmp = compareVersions(installedVersion, bundled.version)
   if (cmp > 0) return { status: 'newer', path, installedVersion }
@@ -382,7 +418,11 @@ export function readInstallState(
   return { status: 'installed', path, installedVersion }
 }
 
-/** Copy the bundled SKILL.md byte for byte and remember the write. Returns the file path. */
+/**
+ * Copy the bundled SKILL.md byte for byte and remember the write. Returns the
+ * file path. A copy under an earlier name goes once the new one is written,
+ * and only when this app wrote it and it is unchanged since.
+ */
 export function installSkill(
   skillsDir: string,
   bundled: BundledSkill,
@@ -405,20 +445,33 @@ export function installSkill(
     at: new Date().toISOString(),
     channel,
   }
+  for (const old of skillFilesWritten(skillsDir, ledger)) {
+    if (old !== path && unchangedSince(old, ledger[old]!)) removeSkillFile(old, ledger)
+  }
   return path
 }
 
-/** Remove only what this app wrote; a folder holding other files keeps them. */
-export function uninstallSkill(skillsDir: string, ledger: SkillLedger): boolean {
-  const path = skillFilePath(skillsDir)
-  if (!ledger[path]) return false
-  rmSync(path, { force: true })
-  const dir = join(skillsDir, SKILL_NAME)
+function unchangedSince(file: string, written: LedgerEntry): boolean {
   try {
-    if (readdirSync(dir).length === 0) rmSync(dir, { recursive: true })
+    return !lstatSync(file).isSymbolicLink() && sha256(readFileSync(file)) === written.sha256
+  } catch {
+    return false
+  }
+}
+
+/** Remove only what this app wrote, under the current name and earlier ones; a folder holding other files keeps them. */
+export function uninstallSkill(skillsDir: string, ledger: SkillLedger): boolean {
+  const written = skillFilesWritten(skillsDir, ledger)
+  for (const file of written) removeSkillFile(file, ledger)
+  return written.length > 0
+}
+
+function removeSkillFile(file: string, ledger: SkillLedger): void {
+  rmSync(file, { force: true })
+  try {
+    if (readdirSync(dirname(file)).length === 0) rmSync(dirname(file), { recursive: true })
   } catch {}
-  delete ledger[path]
-  return true
+  delete ledger[file]
 }
 
 /** `seuoffice/SKILL.md` inside a zip: the layout claude.ai and the desktop apps accept for an uploaded skill. */

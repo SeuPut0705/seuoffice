@@ -16,18 +16,21 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, extname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(here, '../..')
 const ARCHIVE_ROOT = 'seuoffice-cli'
+/** Launchers and bundle under the names an earlier version registered; each hands over to the current file. */
+const OLD_NAMES_DIR = join(here, 'bin', 'old-names')
 
 /** Every entry the archive must carry; a missing one means a broken app build. */
 const REQUIRED = [
@@ -124,6 +127,11 @@ export function packTarball({ from, out, platform, arch, notices, env = process.
     }
     // the launcher resolves its own location through a PATH symlink, so it must stay executable
     chmodSync(join(staging, ARCHIVE_ROOT, 'cli/seuoffice'), 0o755)
+    for (const name of readdirSync(OLD_NAMES_DIR)) {
+      const file = join(staging, ARCHIVE_ROOT, 'cli', name)
+      cpSync(join(OLD_NAMES_DIR, name), file)
+      if (!extname(name)) chmodSync(file, 0o755)
+    }
     execFileSync('tar', ['-czf', archive, '-C', staging, ARCHIVE_ROOT], { stdio: 'inherit' })
   } finally {
     rmSync(staging, { recursive: true, force: true })

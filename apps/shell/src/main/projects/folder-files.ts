@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto'
-import { realpath, type Stats } from 'node:fs'
+import { lstatSync, realpath, type Stats } from 'node:fs'
 import { lstat, readdir, readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { promisify } from 'node:util'
+import { existingOrCurrent, OLD_PROJECT_DATA_DIR_NAMES } from '@seuoffice/i18n'
 import {
   isValidProjectId,
   PROJECT_FOLDER_NAMES,
@@ -121,9 +122,45 @@ export async function readFolderText(
   }
 }
 
-/** A file under `.seuoffice/` */
-export function readDataText(root: string, name: string): Promise<string | null> {
-  return readFolderText(root, [PROJECT_FOLDER_NAMES.dataDir, name])
+/**
+ * Every name the data folder has had. The protections treat each as the data
+ * folder whichever one a project uses, so a folder planted under the other name
+ * is as closed to the AI as the real one.
+ */
+const DATA_DIR_NAMES: readonly string[] = [
+  PROJECT_FOLDER_NAMES.dataDir,
+  ...OLD_PROJECT_DATA_DIR_NAMES,
+]
+
+/** Whether a folder-relative first segment names the data folder, by any name it has had */
+export function isDataDirName(segment: string): boolean {
+  return DATA_DIR_NAMES.includes(segment.toLowerCase())
+}
+
+/**
+ * The name of `root`'s data folder: the current one when a real folder of that
+ * name is there; else an earlier name while a real folder of that name is there
+ * (a project an older version made keeps its folder; nothing is copied or moved,
+ * and a link reads as absent); else the current one. Judged on every call rather
+ * than remembered, so it follows the folder as it is on disk.
+ */
+export function dataDirName(root: string): string {
+  return existingOrCurrent(PROJECT_FOLDER_NAMES.dataDir, OLD_PROJECT_DATA_DIR_NAMES, (name) => {
+    try {
+      return lstatSync(join(root, name)).isDirectory()
+    } catch {
+      return false
+    }
+  })
+}
+
+/** A file in the project's data folder: `dataDir` when an operation resolved it already */
+export function readDataText(
+  root: string,
+  name: string,
+  dataDir: string = dataDirName(root),
+): Promise<string | null> {
+  return readFolderText(root, [dataDir, name])
 }
 
 /** A project name as stored: one line, at most `PROJECT_NAME_MAX_CHARS` characters */
@@ -132,9 +169,12 @@ export function cleanProjectName(name: string): string {
   return Array.from(oneLine).slice(0, PROJECT_NAME_MAX_CHARS).join('')
 }
 
-/** `.seuoffice/project.json` when present and well-formed (a bad id makes the file count as absent) */
-export async function readProjectFile(root: string): Promise<ProjectFolderFile | null> {
-  const text = await readDataText(root, PROJECT_FOLDER_NAMES.projectFile)
+/** `project.json` in the data folder when present and well-formed (a bad id makes the file count as absent) */
+export async function readProjectFile(
+  root: string,
+  dataDir: string = dataDirName(root),
+): Promise<ProjectFolderFile | null> {
+  const text = await readDataText(root, PROJECT_FOLDER_NAMES.projectFile, dataDir)
   if (text === null) return null
   try {
     const raw = JSON.parse(text) as Record<string, unknown>

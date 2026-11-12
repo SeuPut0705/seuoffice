@@ -9,7 +9,6 @@ import {
   DEV_USER_DATA_DIR_NAME,
   LANGS,
   PRODUCT_NAME,
-  UPSTREAM_NAME_LITERAL,
   UPSTREAM_PRODUCT_NAME,
   USER_DATA_DIR_NAME,
   productName,
@@ -122,11 +121,11 @@ describe('the name in the shell UI', () => {
 
   it('acknowledges the upstream project by its real name in every language', () => {
     for (const lang of LANGS) {
-      // the dictionary escapes the name, so the product-name swap leaves it alone
-      expect(strings[lang].setBasedOn, lang).toContain(UPSTREAM_NAME_LITERAL)
-      const shown = t(lang, 'setBasedOn')
+      // the dictionary takes the name as a parameter, so the literal stays in product.ts
+      expect(strings[lang].setBasedOn, lang).toContain('{upstream}')
+      const shown = t(lang, 'setBasedOn', { upstream: UPSTREAM_PRODUCT_NAME })
       expect(shown, lang).toContain(UPSTREAM_PRODUCT_NAME)
-      expect(shown, lang).not.toContain('{{')
+      expect(shown, lang).not.toContain('{')
       expect(shown, lang).not.toContain(productName(lang))
     }
   })

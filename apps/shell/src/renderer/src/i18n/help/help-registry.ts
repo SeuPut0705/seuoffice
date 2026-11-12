@@ -8,7 +8,7 @@
  * this list rather than an invisible one.
  */
 
-import { LANGS } from '@seuoffice/i18n'
+import { LANGS, OLD_PROJECT_DATA_DIR_NAMES } from '@seuoffice/i18n'
 import { topicTitle } from './help-titles'
 
 export type HelpGroupId = 'start' | 'apps' | 'ai' | 'manage'
@@ -313,6 +313,8 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
       'memory',
       'ignore',
       '.seuoffice',
+      // a project made before the rename still shows its data folder under the old name
+      ...OLD_PROJECT_DATA_DIR_NAMES,
       'AGENTS.md',
       'CLAUDE.md',
     ],

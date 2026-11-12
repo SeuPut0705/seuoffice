@@ -4,7 +4,7 @@
 
 ## 공통
 
-- 모든 바깥 이름은 `seuoffice`다. 명령어, MCP 등록 이름, 에이전트 스킬 이름과 폴더, 홈 폴더 아래 `.seuoffice`, 프로젝트 폴더 안의 `.seuoffice`.
+- 모든 바깥 이름은 `seuoffice`다. 명령어, MCP 등록 이름, 에이전트 스킬 이름과 폴더, 홈 폴더 아래 `.seuoffice`, 프로젝트 폴더 안의 `.seuoffice`. 두 폴더는, 그 폴더가 없고 이전 판이 만든 `.ieumoffice`가 있으면 그 폴더를 그대로 쓴다.
 - 원본이 쓰는 이름(`genoffice` 명령어, `~/.genoffice`, `genoffice` 연동 항목과 스킬 폴더)은 읽지도 쓰지도 않는다. 두 프로그램은 한 PC에 함께 있을 수 있다.
 - 문서 명령은 PC 안에서 끝난다. 밖으로 무언가를 보내는 명령은 `search`, `image`, `media`, `read-url`, `pdf ai-read`, `pdf translate`, `epub translate` 일곱뿐이다. 뒤의 셋은 `--yes`가 있을 때만 보낸다.
 
@@ -288,7 +288,7 @@ draw.io 다이어그램(`.drawio`, `.dio`, `.drawio.svg`, `.drawio.png`)을 읽�
 명령어 쪽 서버와 다른 것이다. 실행 중인 앱이 직접 여는 서버이고, 열려 있는 문서를 다룬다.
 
 - 설정 → 연동에서 켠다. 기본은 꺼짐이다. 기본 포트는 3093이고 이 PC(`127.0.0.1`)에서만 닿는다. 인증은 없고, 요청의 Host·Origin이 이 PC의 것이 아니면 거절한다.
-- 도구: `get_app_info`, `open_documents`, `open_in_seuoffice`(이 이름은 예전 철자를 유지한다), `create_session`, `save_session`, `read_document`, `read_docx`, `read_sheet`, `read_deck`, `read_pdf`, `create_docx`, `create_xlsx`, `create_pptx`, `apply_ops`, `apply_sheet_ops`, `apply_slide_ops`, `insert_content`, `replace_blocks`, `insert_picture`, `read_diagram`, `apply_diagram_ops`.
+- 도구: `get_app_info`, `open_documents`, `open_in_seuoffice`(이전 이름 `open_in_genoffice`로 불러도 같은 도구다), `create_session`, `save_session`, `read_document`, `read_docx`, `read_sheet`, `read_deck`, `read_pdf`, `create_docx`, `create_xlsx`, `create_pptx`, `apply_ops`, `apply_sheet_ops`, `apply_slide_ops`, `insert_content`, `replace_blocks`, `insert_picture`, `read_diagram`, `apply_diagram_ops`.
 - `fill_template`·`convert_document`은 설정 → 연동의 "백그라운드 생성"을 켰을 때만 등록된다. `fill_template`은 `.docx`·`.pptx`·`.xlsx` 서식에 `data`를 채워 새 파일을 쓰고, `convert_document`는 `path`를 `to` 형식으로 바꾼 파일을 쓴다(입력 파일은 바꾸지 않는다). `check_document`(`.docx`·`.odt`, 읽기만)와 `read_docx_properties`(`.docx`, 읽기만)는 항상 등록된다.
 - `insert_picture`는 열린 워드 탭에 그림을 넣는다(원본 genoffice#2267). 앱 안 AI의 같은 이름 도구를 그대로 거치므로 그림 주소는 http(s)와 `data:image/`만 받고, http(s) 주소면 앱이 그 주소에서 그림을 받아 온다. 에이전트 모드의 세션 서버에는 없다.
 - 열린 ODT 탭은 워드 문서로 다룬다(`open_documents`의 `format`이 `odt`). `read_docx`는 `.odt` 파일도 읽는다. `save_session`은 탭의 형식으로만 저장한다. 다른 확장자의 경로를 주면 거절하고 `seuoffice convert`를 쓰라고 안내한다. 대화 상자가 없는 경로에서 형식이 조용히 바뀌지 않게 하기 위해서다.

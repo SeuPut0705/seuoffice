@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll } from 'vitest'
+import { OLD_ENV_NAMES, OLD_ENV_PREFIX } from '../packages/i18n/src/old-names'
 
 /**
  * Vitest setup file (`test.setupFiles` of a workspace): the test process gets a
@@ -49,6 +50,8 @@ for (const name of [
   'SEUOFFICE_AUDIT_LOG',
   'SEUOFFICE_USER_DATA',
   'SEUOFFICE_AI_SETTINGS',
+  // the spelling of an earlier version: product code under test takes these over
+  ...OLD_ENV_NAMES.map((taken) => OLD_ENV_PREFIX + taken),
 ]) {
   delete process.env[name]
 }

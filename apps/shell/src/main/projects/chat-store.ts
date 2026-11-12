@@ -22,7 +22,7 @@ import {
   type RenameProjectChatArgs,
   type ToolActivity,
 } from '@seuoffice/project-store'
-import { plainFileIn, plainFolderEntries, readFolderText } from './folder-files'
+import { dataDirName, plainFileIn, plainFolderEntries, readFolderText } from './folder-files'
 import type { ProjectGuide } from './project-guide'
 import { hasForeignMessage } from './trust'
 
@@ -83,7 +83,12 @@ const MAX_OPEN_LIMIT = 10_000
 const TAIL_READ_BYTES = 8 * 1024 * 1024
 const TAIL_HARD_CAP_BYTES = 64 * 1024 * 1024
 
-const { dataDir, chatsDir, chatInfoExt, chatMessagesExt } = PROJECT_FOLDER_NAMES
+const { chatsDir, chatInfoExt, chatMessagesExt } = PROJECT_FOLDER_NAMES
+
+/** `<data folder>/chats/<name>` as path segments below the project root */
+function chatPath(dataDir: string, name: string): string[] {
+  return [dataDir, chatsDir, name]
+}
 
 /** The guide calls the chat store uses */
 export type ChatStoreGuide = Pick<
@@ -136,6 +141,8 @@ interface PendingEntry {
 }
 
 interface ChatState {
+  /** The data folder name this state was read from; its writes go there too */
+  dataDir: string
   nextSeq: number
   /** The chat has a file (info or messages) in the folder */
   materialized: boolean
@@ -505,17 +512,39 @@ export class ProjectChatStore {
     return [...documents.filter((item) => !this.sameRel(item, rel)), rel]
   }
 
+  /**
+   * The chat's state, read from the data folder in use now. A state read from the
+   * other folder (an older version made the old-named one meanwhile) is dropped and
+   * the chat read again, so its numbering never runs on across two folders; nothing
+   * is copied or moved. A chat with nothing on disk yet keeps its unsaved opening
+   * messages: there is nothing to split.
+   */
   private async state(projectId: ProjectId, chatId: ProjectId, root: string): Promise<ChatState> {
     const key = `${projectId}/${chatId}`
+    const dataDir = dataDirName(root)
     const known = this.states.get(key)
-    if (known) {
-      // most recently used last
-      this.states.delete(key)
-      this.states.set(key, known)
-      return known
+    let state: ChatState
+    if (known && known.dataDir === dataDir) {
+      state = known
+    } else {
+      const read = await this.readState(projectId, chatId, root, dataDir)
+      state = known && !known.materialized && !read.materialized ? { ...known, dataDir } : read
     }
-    const messagesPath = await plainFileIn(root, [dataDir, chatsDir, `${chatId}${chatMessagesExt}`])
-    const rawInfo = await readFolderText(root, [dataDir, chatsDir, `${chatId}${chatInfoExt}`])
+    // most recently used last
+    this.states.delete(key)
+    this.states.set(key, state)
+    if (state !== known) this.trimStates(key)
+    return state
+  }
+
+  private async readState(
+    projectId: ProjectId,
+    chatId: ProjectId,
+    root: string,
+    dataDir: string,
+  ): Promise<ChatState> {
+    const messagesPath = await plainFileIn(root, chatPath(dataDir, `${chatId}${chatMessagesExt}`))
+    const rawInfo = await readFolderText(root, chatPath(dataDir, `${chatId}${chatInfoExt}`))
     const info = parseInfo(rawInfo, chatId)
     let maxSeq = -1
     if (messagesPath) {
@@ -527,7 +556,8 @@ export class ProjectChatStore {
         console.warn(`[projects] cannot read chat ${chatId}:`, error)
       }
     }
-    const state: ChatState = {
+    return {
+      dataDir,
       nextSeq: maxSeq + 1,
       materialized: messagesPath !== null || rawInfo !== null,
       otherProject: info !== null && info.projectId !== projectId,
@@ -536,15 +566,12 @@ export class ProjectChatStore {
       attachDocs: [],
       title: null,
     }
-    this.states.set(key, state)
-    this.trimStates(key)
-    return state
   }
 
-  private async isForeign(root: string, info: ProjectChatInfo): Promise<boolean> {
+  private async isForeign(root: string, dataDir: string, info: ProjectChatInfo): Promise<boolean> {
     const installId = this.guide.installId()
     if (info.origin !== installId) return true
-    const path = await plainFileIn(root, [dataDir, chatsDir, `${info.id}${chatMessagesExt}`])
+    const path = await plainFileIn(root, chatPath(dataDir, `${info.id}${chatMessagesExt}`))
     if (!path) return false
     const stats = await lstat(path).catch(() => null)
     if (!stats) return false
@@ -555,7 +582,7 @@ export class ProjectChatStore {
       this.foreignCache.set(path, cached)
       return cached.foreign
     }
-    const foreign = await hasForeignMessage(root, info.id, installId)
+    const foreign = await hasForeignMessage(root, info.id, installId, dataDir)
     this.foreignCache.delete(path)
     this.foreignCache.set(path, { size, mtimeMs, foreign })
     for (const oldest of this.foreignCache.keys()) {
@@ -569,14 +596,15 @@ export class ProjectChatStore {
   private async visible(
     projectId: ProjectId,
     root: string,
+    dataDir: string,
     chatId: ProjectId,
   ): Promise<ListedChat | null> {
     const info = parseInfo(
-      await readFolderText(root, [dataDir, chatsDir, `${chatId}${chatInfoExt}`]),
+      await readFolderText(root, chatPath(dataDir, `${chatId}${chatInfoExt}`)),
       chatId,
     )
     if (!info || info.projectId !== projectId) return null
-    const foreign = await this.isForeign(root, info)
+    const foreign = await this.isForeign(root, dataDir, info)
     if (foreign && this.guide.trustState(projectId) !== 'use') return null
     return { info, foreign }
   }
@@ -585,12 +613,13 @@ export class ProjectChatStore {
   private async visibleChats(projectId: ProjectId): Promise<ListedChat[]> {
     const root = this.guide.projectRoot(projectId)
     if (!root) return []
+    const dataDir = dataDirName(root)
     const out: ListedChat[] = []
     for (const name of await plainFolderEntries(root, [dataDir, chatsDir])) {
       if (!name.endsWith(chatInfoExt)) continue
       const chatId = name.slice(0, -chatInfoExt.length)
       if (!isValidProjectId(chatId)) continue
-      const chat = await this.visible(projectId, root, chatId)
+      const chat = await this.visible(projectId, root, dataDir, chatId)
       if (chat) out.push(chat)
     }
     return out.sort(
@@ -612,35 +641,40 @@ export class ProjectChatStore {
     const attached = state.attachDocs
     const rename = state.title
     if (entries.length === 0 && attached.length === 0 && rename === null) return { status: 'ok' }
-    const outcome = await this.guide.updateData(projectId, infoRel(chatId), (current) => {
-      const parsed = parseInfo(current, chatId)
-      if (parsed && parsed.projectId !== projectId) return null
-      const at = entries[0]?.message.ts ?? this.now().toISOString()
-      const info: ProjectChatInfo = parsed ?? {
-        version: PROJECT_FORMAT_VERSION,
-        id: chatId,
-        projectId,
-        title: '',
-        createdAt: at,
-        updatedAt: at,
-        origin: this.guide.installId(),
-        lastEditor: entries[0]?.message.editor ?? 'home',
-        documents: [],
-      }
-      for (const entry of entries) {
-        info.updatedAt = entry.message.ts
-        info.lastEditor = entry.message.editor
-        if (entry.docRel !== null) info.documents = this.moveToEnd(info.documents, entry.docRel)
-      }
-      for (const rel of attached) info.documents = this.moveToEnd(info.documents, rel)
-      if (rename !== null) {
-        info.title = rename
-      } else if (info.title === '') {
-        const first = entries.find((entry) => entry.message.role === 'user')
-        if (first) info.title = oneLine(first.message.text, CHAT_TITLE_CHARS)
-      }
-      return infoText(info)
-    })
+    const outcome = await this.guide.updateData(
+      projectId,
+      infoRel(chatId),
+      (current) => {
+        const parsed = parseInfo(current, chatId)
+        if (parsed && parsed.projectId !== projectId) return null
+        const at = entries[0]?.message.ts ?? this.now().toISOString()
+        const info: ProjectChatInfo = parsed ?? {
+          version: PROJECT_FORMAT_VERSION,
+          id: chatId,
+          projectId,
+          title: '',
+          createdAt: at,
+          updatedAt: at,
+          origin: this.guide.installId(),
+          lastEditor: entries[0]?.message.editor ?? 'home',
+          documents: [],
+        }
+        for (const entry of entries) {
+          info.updatedAt = entry.message.ts
+          info.lastEditor = entry.message.editor
+          if (entry.docRel !== null) info.documents = this.moveToEnd(info.documents, entry.docRel)
+        }
+        for (const rel of attached) info.documents = this.moveToEnd(info.documents, rel)
+        if (rename !== null) {
+          info.title = rename
+        } else if (info.title === '') {
+          const first = entries.find((entry) => entry.message.role === 'user')
+          if (first) info.title = oneLine(first.message.text, CHAT_TITLE_CHARS)
+        }
+        return infoText(info)
+      },
+      state.dataDir,
+    )
     if (outcome.status !== 'ok') return outcome
     state.unrecorded = state.unrecorded.slice(entries.length)
     state.attachDocs = state.attachDocs.slice(attached.length)
@@ -657,7 +691,10 @@ export class ProjectChatStore {
   ): Promise<ProjectWriteResult> {
     const batch = state.pending
     if (batch.length > 0) {
-      const existing = await plainFileIn(root, [dataDir, chatsDir, `${chatId}${chatMessagesExt}`])
+      const existing = await plainFileIn(
+        root,
+        chatPath(state.dataDir, `${chatId}${chatMessagesExt}`),
+      )
       let prefix = ''
       if (existing) {
         try {
@@ -667,7 +704,12 @@ export class ProjectChatStore {
         }
       }
       const lines = batch.map((entry) => `${JSON.stringify(entry.message)}\n`).join('')
-      const appended = await this.guide.appendData(projectId, messagesRel(chatId), prefix + lines)
+      const appended = await this.guide.appendData(
+        projectId,
+        messagesRel(chatId),
+        prefix + lines,
+        state.dataDir,
+      )
       if (appended.status !== 'ok') return appended
       state.pending = state.pending.slice(batch.length)
       state.unrecorded.push(...batch)
@@ -702,14 +744,14 @@ export class ProjectChatStore {
   /** A new chat id for the project; nothing is written until the first assistant reply */
   async newChat(projectId: ProjectId): Promise<{ chatId: ProjectId }> {
     assertId(projectId, 'project id')
-    this.rootOf(projectId)
+    const dataDir = dataDirName(this.rootOf(projectId))
     for (;;) {
       const chatId = this.newId()
       if (!isValidProjectId(chatId)) throw new Error('newId produced an invalid chat id')
       if (this.states.has(`${projectId}/${chatId}`)) continue
       let taken = false
       for (const rel of [infoRel(chatId), messagesRel(chatId)]) {
-        const path = this.guide.dataPath(projectId, rel)
+        const path = this.guide.dataPath(projectId, rel, dataDir)
         if (path && (await lstat(path).catch(() => null))) taken = true
       }
       if (!taken) return { chatId }
@@ -734,7 +776,7 @@ export class ProjectChatStore {
     assertId(ref.chatId, 'chat id')
     const root = this.guide.projectRoot(ref.projectId)
     if (!root) return null
-    return (await this.visible(ref.projectId, root, ref.chatId))?.info ?? null
+    return (await this.visible(ref.projectId, root, dataDirName(root), ref.chatId))?.info ?? null
   }
 
   /** The most recent messages of a visible chat (lenient tail read, unsaved messages of this run included) */
@@ -746,9 +788,10 @@ export class ProjectChatStore {
     if (!root) return { status: 'not-found' }
     const limit = normalizeLimit(args.limit)
     return this.serialize(`${projectId}/${chatId}`, async () => {
-      const chat = await this.visible(projectId, root, chatId)
+      const dataDir = dataDirName(root)
+      const chat = await this.visible(projectId, root, dataDir, chatId)
       if (!chat) return { status: 'not-found' as const }
-      const path = await plainFileIn(root, [dataDir, chatsDir, `${chatId}${chatMessagesExt}`])
+      const path = await plainFileIn(root, chatPath(dataDir, `${chatId}${chatMessagesExt}`))
       let records: ProjectChatMessage[] = []
       if (path) {
         try {
@@ -757,7 +800,8 @@ export class ProjectChatStore {
           console.warn(`[projects] cannot read chat ${chatId}:`, error)
         }
       }
-      const pending = this.states.get(`${projectId}/${chatId}`)?.pending ?? []
+      const held = this.states.get(`${projectId}/${chatId}`)
+      const pending = held?.dataDir === dataDir ? held.pending : []
       const messages = [...records, ...pending.map((entry) => entry.message)]
         .map((record) => ({
           ...record,
@@ -876,7 +920,7 @@ export class ProjectChatStore {
       if (state.otherProject) return { status: 'ok' as const }
       if (this.guide.isUnwritable(projectId)) return { status: 'unwritable' as const }
       for (const rel of [infoRel(chatId), messagesRel(chatId)]) {
-        const path = this.guide.dataPath(projectId, rel)
+        const path = this.guide.dataPath(projectId, rel, state.dataDir)
         if (!path) continue
         const stats = await lstat(path).catch(() => null)
         if (!stats || stats.isDirectory()) continue
@@ -916,6 +960,6 @@ export class ProjectChatStore {
     const selection = await this.guide.getSelection({ kind: 'document', path: docPath })
     const chatId = selection.projectId === projectId ? selection.initialChatId : null
     if (!chatId || !isValidProjectId(chatId)) return null
-    return (await this.visible(projectId, root, chatId)) ? chatId : null
+    return (await this.visible(projectId, root, dataDirName(root), chatId)) ? chatId : null
   }
 }

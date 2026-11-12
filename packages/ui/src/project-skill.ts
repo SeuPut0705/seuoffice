@@ -96,7 +96,7 @@ export interface ProjectRun {
   readonly bridge: ProjectSkillBridge
   /** the snapshot of the request in flight; null outside prepare → finish */
   readonly snapshot: ProjectRunSnapshot | null
-  /** `.seuoffice/` of the chosen project could not be written during this window's life */
+  /** the chosen project's data folder could not be written during this window's life */
   readonly unwritable: boolean
   /** read the context and open a run scope for the request about to be sent */
   prepare(): Promise<ProjectRunPrepared>

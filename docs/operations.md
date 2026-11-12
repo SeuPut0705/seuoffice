@@ -73,6 +73,8 @@ cd apps/shell && npx vitest run tests/<파일>.test.ts   # 파일 하나만
 | `XLSX_SIDECAR_PATH`                                             | 엑셀 처리 프로그램의 위치를 바꾼다. 설치본과 엑셀 편집기 테스트에는 듣지 않는다                                    | 혼자 띄운 엑셀 편집기, 명령어                                                                                     |
 | `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY`                      | 프록시                                                                                                             | 앱이 직접 보내는 요청, 명령어. 구독 프로그램에는 이 변수가 그대로 전달된다(프로그램이 따르는지는 확인하지 않았다) |
 
+`~/.seuoffice`는, 그 폴더가 없고 이전 판이 만든 `~/.ieumoffice`가 있으면 그 폴더를 그대로 쓴다.
+
 이름에 `GENOFFICE_`가 남아 있는 것은 일부러다. 내부 이름은 원본과 같게 둔다.
 
 ## 실제 구독으로 확인하기

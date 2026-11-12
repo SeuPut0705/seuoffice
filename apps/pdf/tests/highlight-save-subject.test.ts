@@ -50,14 +50,14 @@ const MARKUPS: MarkupInput[] = [
 
 /**
  * Taken with the save code before MarkupInput.subject existed: output
- * 3928334e…d99f4 then. SeuOffice 5b53ada7c (#2467) writes a markup's author as
- * a text string, so each of the three markups holds
- * `/T <FEFF00470065006E004F00660066006900630065>` ("SeuOffice", the author when
- * the request names none) where it held the name `/T /SeuOffice`; nothing else
- * in the file differs but the offsets after them.
+ * 3928334e…d99f4 then. The upstream commit 5b53ada7c (#2467) writes a markup's author as
+ * a text string, so each of the three markups holds `/T <FEFF…>` (the product's
+ * name, the author when the request names none) where it held a name object;
+ * the baseline was retaken when that default author became this product's own
+ * name. Nothing else in the file differs but the offsets after them.
  */
 const BASELINE_INPUT = '5ea9553c3809ce08868b54dfb6386b4a1ccedd14bd8f817c197003ad5cf3cbba'
-const BASELINE_OUTPUT = '99815a44814d269ca0948df081854b3b70ae22a09b65988614179e852e275419'
+const BASELINE_OUTPUT = '15a4f7618d5f475a911332146b66e54faa400147e1941159c3274f247195c79b'
 
 const sha = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
 

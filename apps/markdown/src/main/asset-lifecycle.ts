@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { constants } from 'node:fs'
+import { constants, existsSync } from 'node:fs'
 import {
   copyFile,
   lstat,
@@ -12,9 +12,25 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { existingOrCurrent } from '@seuoffice/i18n'
 import { atomicWriteFile } from './atomic-write'
+import { OLD_ASSET_MANIFEST_FILENAMES } from './old-names'
 
 export const ASSET_MANIFEST_FILENAME = '.seuoffice-assets.json'
+
+/** never a picture's name: the list, under its current or an earlier name */
+const MANIFEST_NAMES: ReadonlySet<string> = new Set([
+  ASSET_MANIFEST_FILENAME,
+  ...OLD_ASSET_MANIFEST_FILENAMES,
+])
+
+/** An assets folder an earlier version made keeps its list under the name it was given. */
+function manifestPathIn(assetsDir: string): string {
+  const name = existingOrCurrent(ASSET_MANIFEST_FILENAME, OLD_ASSET_MANIFEST_FILENAMES, (old) =>
+    existsSync(join(assetsDir, old)),
+  )
+  return join(assetsDir, name)
+}
 
 export interface OwnedAssetRecord {
   name: string
@@ -83,7 +99,7 @@ function isSafeAssetName(name: string): boolean {
     name.length <= 180 &&
     name !== '.' &&
     name !== '..' &&
-    name !== ASSET_MANIFEST_FILENAME &&
+    !MANIFEST_NAMES.has(name) &&
     basename(name) === name &&
     !name.includes('/') &&
     !name.includes('\\') &&
@@ -113,7 +129,7 @@ function sanitizeAssetName(input: string): string {
       .slice(0, maxStem)
       .replace(/[. ]+$/g, '') || 'image'
   const name = `${stem}${ext}`
-  return name === ASSET_MANIFEST_FILENAME ? `image-${name}` : name
+  return MANIFEST_NAMES.has(name) ? `image-${name}` : name
 }
 
 function nameWithSuffix(name: string, suffix: number): string {
@@ -237,10 +253,12 @@ async function assertSafeManifestFile(path: string): Promise<void> {
   }
 }
 
-async function readManifestUnlocked(documentPath: string): Promise<OwnedAssetManifest> {
+async function readManifestUnlocked(
+  documentPath: string,
+  manifestPath: string,
+): Promise<OwnedAssetManifest> {
   const assetsDir = await existingAssetsDir(documentPath)
   if (!assetsDir) return emptyManifest()
-  const manifestPath = join(assetsDir, ASSET_MANIFEST_FILENAME)
   try {
     await assertSafeManifestFile(manifestPath)
     return normalizedManifest(JSON.parse(await readFile(manifestPath, 'utf8')))
@@ -256,16 +274,23 @@ async function readManifestUnlocked(documentPath: string): Promise<OwnedAssetMan
 async function writeManifestUnlocked(
   documentPath: string,
   manifest: OwnedAssetManifest,
+  manifestPath: string,
 ): Promise<void> {
-  const assetsDir = await ensureAssetsDir(documentPath)
+  await ensureAssetsDir(documentPath)
   const normalized = normalizedManifest(manifest)
   const text = `${JSON.stringify(normalized, null, 2)}\n`
-  const manifestPath = join(assetsDir, ASSET_MANIFEST_FILENAME)
   await assertSafeManifestFile(manifestPath)
   await atomicWriteFile(manifestPath, Buffer.from(text, 'utf8'))
 }
 
-async function withManifestLock<T>(documentPath: string, run: () => Promise<T>): Promise<T> {
+/**
+ * `run` gets the manifest path, resolved once with the lock held: its read and
+ * its write use the same file even if a list under the other name appears.
+ */
+async function withManifestLock<T>(
+  documentPath: string,
+  run: (manifestPath: string) => Promise<T>,
+): Promise<T> {
   const key = manifestPathFor(documentPath)
   const previous = manifestLocks.get(key) ?? Promise.resolve()
   let release!: () => void
@@ -276,7 +301,7 @@ async function withManifestLock<T>(documentPath: string, run: () => Promise<T>):
   manifestLocks.set(key, queued)
   await previous.catch(() => {})
   try {
-    return await run()
+    return await run(manifestPathIn(assetsDirFor(documentPath)))
   } finally {
     release()
     if (manifestLocks.get(key) === queued) manifestLocks.delete(key)
@@ -290,8 +315,8 @@ async function sha256File(path: string): Promise<string> {
 }
 
 async function addOwnedRecord(documentPath: string, record: OwnedAssetRecord): Promise<void> {
-  await withManifestLock(documentPath, async () => {
-    const manifest = await readManifestUnlocked(documentPath)
+  await withManifestLock(documentPath, async (manifestPath) => {
+    const manifest = await readManifestUnlocked(documentPath, manifestPath)
     const existing = manifest.files.find((file) => file.name === record.name)
     if (existing && existing.sha256 !== record.sha256) {
       throw new Error('asset manifest already owns a different file with this name')
@@ -299,7 +324,7 @@ async function addOwnedRecord(documentPath: string, record: OwnedAssetRecord): P
     if (!existing) manifest.files.push(record)
     const key = documentKey(documentPath)
     manifest.pending[key] = [...new Set([...(manifest.pending[key] ?? []), record.name])].sort()
-    await writeManifestUnlocked(documentPath, manifest)
+    await writeManifestUnlocked(documentPath, manifest, manifestPath)
   })
 }
 
@@ -930,8 +955,8 @@ async function removeCreatedRecords(
   created: readonly OwnedAssetRecord[],
 ): Promise<void> {
   if (created.length === 0) return
-  await withManifestLock(documentPath, async () => {
-    const manifest = await readManifestUnlocked(documentPath)
+  await withManifestLock(documentPath, async (manifestPath) => {
+    const manifest = await readManifestUnlocked(documentPath, manifestPath)
     const createdNames = new Set(created.map((record) => record.name))
     const key = documentKey(documentPath)
     manifest.pending[key] = (manifest.pending[key] ?? []).filter((name) => !createdNames.has(name))
@@ -968,7 +993,7 @@ async function removeCreatedRecords(
       manifest.pending[key] = manifest.pending[key]!.filter((name) => !removeNames.has(name))
       if (manifest.pending[key]!.length === 0) delete manifest.pending[key]
     }
-    await writeManifestUnlocked(documentPath, manifest)
+    await writeManifestUnlocked(documentPath, manifest, manifestPath)
   })
 }
 
@@ -999,8 +1024,8 @@ export async function prepareAssetsForSaveAs(
   const rewrites = new Map<string, string>()
   const targetAssetsDir = await ensureAssetsDir(targetDocumentPath)
   try {
-    await withManifestLock(targetDocumentPath, async () => {
-      const manifest = await readManifestUnlocked(targetDocumentPath)
+    await withManifestLock(targetDocumentPath, async (manifestPath) => {
+      const manifest = await readManifestUnlocked(targetDocumentPath, manifestPath)
       const reservedNames = new Set(manifest.files.map((file) => file.name))
       const copiedByRealPath = new Map<string, string>()
       for (const source of allImageSources) {
@@ -1048,7 +1073,7 @@ export async function prepareAssetsForSaveAs(
           throw new Error('could not safely rewrite a Markdown image during Save As')
         }
       }
-      await writeManifestUnlocked(targetDocumentPath, manifest)
+      await writeManifestUnlocked(targetDocumentPath, manifest, manifestPath)
     })
   } catch (error) {
     for (const record of created) {
@@ -1073,8 +1098,8 @@ export async function rollbackPreparedSaveAsAssets(plan: PreparedSaveAsAssets): 
 
 export async function pendingOwnedAssetsForDocument(documentPath: string): Promise<string[]> {
   try {
-    return await withManifestLock(documentPath, async () => {
-      const manifest = await readManifestUnlocked(documentPath)
+    return await withManifestLock(documentPath, async (manifestPath) => {
+      const manifest = await readManifestUnlocked(documentPath, manifestPath)
       return [...(manifest.pending[documentKey(documentPath)] ?? [])]
     })
   } catch {
@@ -1088,8 +1113,8 @@ async function resolvePendingOwnedAssets(
 ): Promise<ReconcileResult> {
   const result: ReconcileResult = { deleted: [], preserved: [], errors: [] }
   try {
-    return await withManifestLock(documentPath, async () => {
-      const manifest = await readManifestUnlocked(documentPath)
+    return await withManifestLock(documentPath, async (manifestPath) => {
+      const manifest = await readManifestUnlocked(documentPath, manifestPath)
       const key = documentKey(documentPath)
       const currentPending = manifest.pending[key] ?? []
       const requested = new Set(pendingAtOperationStart ?? currentPending)
@@ -1152,7 +1177,7 @@ async function resolvePendingOwnedAssets(
           if (references[referenceKey]!.length === 0) delete references[referenceKey]
         }
       }
-      await writeManifestUnlocked(documentPath, manifest)
+      await writeManifestUnlocked(documentPath, manifest, manifestPath)
       return result
     })
   } catch (error) {
@@ -1187,8 +1212,8 @@ export async function reconcileOwnedAssets(
 ): Promise<ReconcileResult> {
   const result: ReconcileResult = { deleted: [], preserved: [], errors: [] }
   try {
-    return await withManifestLock(documentPath, async () => {
-      const manifest = await readManifestUnlocked(documentPath)
+    return await withManifestLock(documentPath, async (manifestPath) => {
+      const manifest = await readManifestUnlocked(documentPath, manifestPath)
       const assetsDir = await existingAssetsDir(documentPath)
       if (!assetsDir) return result
 
@@ -1295,7 +1320,7 @@ export async function reconcileOwnedAssets(
         if (manifest.pending[doc]!.length === 0) delete manifest.pending[doc]
       }
       try {
-        await writeManifestUnlocked(documentPath, manifest)
+        await writeManifestUnlocked(documentPath, manifest, manifestPath)
       } catch (error) {
         result.errors.push(error instanceof Error ? error.message : String(error))
       }
@@ -1312,8 +1337,8 @@ export async function renameOwnedAssetDocument(
   newDocumentPath: string,
 ): Promise<void> {
   if (resolve(dirname(oldDocumentPath)) !== resolve(dirname(newDocumentPath))) return
-  await withManifestLock(newDocumentPath, async () => {
-    const manifest = await readManifestUnlocked(newDocumentPath)
+  await withManifestLock(newDocumentPath, async (manifestPath) => {
+    const manifest = await readManifestUnlocked(newDocumentPath, manifestPath)
     const oldKey = documentKey(oldDocumentPath)
     const newKey = documentKey(newDocumentPath)
     const oldReferences = manifest.documents[oldKey]
@@ -1331,7 +1356,7 @@ export async function renameOwnedAssetDocument(
       ].sort()
       delete manifest.pending[oldKey]
     }
-    await writeManifestUnlocked(newDocumentPath, manifest)
+    await writeManifestUnlocked(newDocumentPath, manifest, manifestPath)
   })
 }
 
@@ -1341,7 +1366,7 @@ export async function readOwnedAssetManifest(
   try {
     const assetsDir = await existingAssetsDir(documentPath)
     if (!assetsDir) return null
-    return await readManifestUnlocked(documentPath)
+    return await readManifestUnlocked(documentPath, manifestPathIn(assetsDir))
   } catch {
     return null
   }

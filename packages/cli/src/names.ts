@@ -1,11 +1,12 @@
-import { brandText, PRODUCT_NAME } from '@seuoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 
 /**
- * The names this product registers on a user's machine. The upstream GenOffice
- * may be installed beside it and registers `seuoffice` everywhere, so every
- * name here is our own: nothing in this package reads, replaces or removes a
- * `seuoffice` command, MCP entry, skill folder or `~/.genoffice`. Pure
- * constants (the renderer imports them through mcp-launch.ts).
+ * The names this product registers on a user's machine. Every name here is our
+ * own: the upstream GenOffice may be installed beside this product, and nothing
+ * in this package reads, replaces or removes what that upstream app registered
+ * (its command, MCP entry, skill folder or home folder). The names this product
+ * itself used before it took its own are in @seuoffice/i18n (old-names.ts).
+ * Pure constants (the renderer imports them through mcp-launch.ts).
  */
 
 /** the terminal command, and the launcher file in <resources>/cli (Windows: `<name>.cmd`) */
@@ -29,14 +30,4 @@ export const APP_BINARY_NAME = PRODUCT_NAME
 /** the launcher file for a platform */
 export function launcherFileName(platform: string): string {
   return platform === 'win32' ? `${CLI_COMMAND}.cmd` : CLI_COMMAND
-}
-
-/**
- * The product name in static CLI / MCP text (command summaries, option and tool
- * descriptions), which keeps saying "SeuOffice" in source like every other
- * dictionary. Never for a message that carries a path: a folder that really is
- * called SeuOffice must be printed as it is, so those name PRODUCT_NAME directly.
- */
-export function branded(text: string): string {
-  return brandText(text, 'en')
 }

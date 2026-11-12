@@ -181,8 +181,9 @@ describe('audit log', () => {
     expect(redactArgv(['info', 'a.pdf', '--password'])).toEqual(['info', 'a.pdf', '--password'])
   })
 
-  it('defaults under ~/.genoffice and honours SEUOFFICE_AUDIT_LOG', () => {
-    expect(auditLogPath({})).toMatch(/[\\/]\.seuoffice[\\/]cli-audit\.jsonl$/)
+  it('defaults under the home folder and honours SEUOFFICE_AUDIT_LOG', () => {
+    // a home of its own: the machine running the test may have a folder an earlier version made
+    expect(auditLogPath({}, tempDir())).toMatch(/[\\/]\.seuoffice[\\/]cli-audit\.jsonl$/)
     expect(auditLogPath({ SEUOFFICE_AUDIT_LOG: 'off' })).toBeNull()
     expect(auditLogPath({ SEUOFFICE_AUDIT_LOG: '/x/y.jsonl' })).toBe('/x/y.jsonl')
   })

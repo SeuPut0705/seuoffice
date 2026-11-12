@@ -11,9 +11,13 @@ import {
   unlinkSync,
 } from 'node:fs'
 import { basename, dirname, isAbsolute, join, resolve, win32 } from 'node:path'
+import { OLD_CLI_BUNDLE_FILES, OLD_CLI_COMMANDS } from '@seuoffice/i18n'
 import { CLI_BUNDLE_FILE, CLI_COMMAND } from './names'
 
 export { CLI_COMMAND, HOME_DIR_NAME, launcherFileName } from './names'
+
+const OUR_COMMANDS = [CLI_COMMAND, ...OLD_CLI_COMMANDS]
+const OUR_BUNDLES = [CLI_BUNDLE_FILE, ...OLD_CLI_BUNDLE_FILES]
 
 /**
  * Making `seuoffice` reachable from a terminal. The launcher ships inside the app
@@ -206,11 +210,15 @@ function linkState(
 }
 
 /**
- * A link is ours when it resolves to the launcher we are installing, or to an
- * `seuoffice` launcher shipped by another copy of the app (an earlier version,
- * a second install dir): one that has our CLI bundle or the Windows twin beside
- * it. A path that merely ends in `/cli/seuoffice` belongs to whoever put it there,
- * and the upstream app's `genoffice` launcher is never ours.
+ * A link is ours when it resolves to the launcher we are installing, or to a
+ * launcher shipped by another copy of the app (an earlier version, a second
+ * install dir), under the current command name or one it had before: one that
+ * has our CLI bundle or a Windows twin beside it. A path that merely ends in
+ * `/cli/seuoffice` belongs to whoever put it there, and a launcher of the
+ * upstream app (`genoffice`) is never ours.
+ *
+ * A link under an earlier command name is never replaced or removed here: the
+ * app still ships a launcher of that name, so the person's scripts keep working.
  */
 export function isOurLauncher(target: string, launcher: string): boolean {
   let real: string
@@ -222,9 +230,12 @@ export function isOurLauncher(target: string, launcher: string): boolean {
   try {
     if (real === realpathSync(launcher)) return true
   } catch {}
-  if (basename(real) !== CLI_COMMAND) return false
+  if (!OUR_COMMANDS.includes(basename(real))) return false
   const dir = dirname(real)
-  return existsSync(join(dir, CLI_BUNDLE_FILE)) || existsSync(join(dir, `${CLI_COMMAND}.cmd`))
+  return (
+    OUR_BUNDLES.some((bundle) => existsSync(join(dir, bundle))) ||
+    OUR_COMMANDS.some((command) => existsSync(join(dir, `${command}.cmd`)))
+  )
 }
 
 function writable(dir: string): boolean {
