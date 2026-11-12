@@ -1386,6 +1386,8 @@ export const it = {
   appNewPasswordLabel: 'Nuova password',
   appConfirmPasswordLabel: 'Conferma nuova password',
   appPasswordsMismatch: 'Le password non corrispondono.',
+  appPasswordTooLong:
+    'La password è troppo lunga. Usa al massimo {max} caratteri, la lunghezza massima accettata da Excel.',
   appPasswordUpdateFailed: 'Impossibile aggiornare la password della cartella di lavoro.',
   appPasswordUpdating: 'Aggiornamento…',
   appUpdatePassword: 'Aggiorna password',

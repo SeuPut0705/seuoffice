@@ -1412,6 +1412,8 @@ export const fr = {
   appNewPasswordLabel: 'Nouveau mot de passe',
   appConfirmPasswordLabel: 'Confirmer le nouveau mot de passe',
   appPasswordsMismatch: 'Les mots de passe ne correspondent pas.',
+  appPasswordTooLong:
+    'Le mot de passe est trop long. Utilisez au plus {max} caractères, la longueur maximale acceptée par Excel.',
   appPasswordUpdateFailed: 'Impossible de mettre à jour le mot de passe du classeur.',
   appPasswordUpdating: 'Mise à jour…',
   appUpdatePassword: 'Mettre à jour le mot de passe',

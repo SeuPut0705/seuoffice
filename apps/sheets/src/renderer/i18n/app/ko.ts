@@ -1361,6 +1361,7 @@ export const ko = {
   appNewPasswordLabel: '새 암호',
   appConfirmPasswordLabel: '새 암호 확인',
   appPasswordsMismatch: '암호가 일치하지 않습니다.',
+  appPasswordTooLong: '암호가 너무 깁니다. Excel에서 받는 최대 길이인 {max}자 이하로 입력하세요.',
   appPasswordUpdateFailed: '통합 문서 암호를 업데이트할 수 없습니다.',
   appPasswordUpdating: '업데이트 중…',
   appUpdatePassword: '암호 업데이트',

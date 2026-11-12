@@ -1389,6 +1389,8 @@ export const es = {
   appNewPasswordLabel: 'Nueva contraseña',
   appConfirmPasswordLabel: 'Confirmar nueva contraseña',
   appPasswordsMismatch: 'Las contraseñas no coinciden.',
+  appPasswordTooLong:
+    'La contraseña es demasiado larga. Usa como máximo {max} caracteres, la longitud máxima que acepta Excel.',
   appPasswordUpdateFailed: 'No se pudo actualizar la contraseña del libro.',
   appPasswordUpdating: 'Actualizando…',
   appUpdatePassword: 'Actualizar contraseña',

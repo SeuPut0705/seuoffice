@@ -1401,6 +1401,8 @@ export const de = {
   appNewPasswordLabel: 'Neues Kennwort',
   appConfirmPasswordLabel: 'Neues Kennwort bestätigen',
   appPasswordsMismatch: 'Die Kennwörter stimmen nicht überein.',
+  appPasswordTooLong:
+    'Das Kennwort ist zu lang. Verwenden Sie höchstens {max} Zeichen, ein längeres nimmt Excel nicht an.',
   appPasswordUpdateFailed: 'Das Kennwort der Arbeitsmappe konnte nicht aktualisiert werden.',
   appPasswordUpdating: 'Wird aktualisiert…',
   appUpdatePassword: 'Kennwort aktualisieren',

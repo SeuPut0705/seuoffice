@@ -1254,6 +1254,7 @@ export const zhTW = {
   appNewPasswordLabel: '新密碼',
   appConfirmPasswordLabel: '確認新密碼',
   appPasswordsMismatch: '兩次輸入的密碼不一致。',
+  appPasswordTooLong: '密碼過長。請使用不超過 {max} 個字元的密碼，這是 Excel 接受的最大長度。',
   appPasswordUpdateFailed: '無法更新活頁簿密碼。',
   appPasswordUpdating: '正在更新…',
   appUpdatePassword: '更新密碼',

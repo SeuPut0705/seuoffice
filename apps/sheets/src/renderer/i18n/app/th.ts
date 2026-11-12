@@ -1307,6 +1307,8 @@ export const th = {
   appNewPasswordLabel: 'รหัสผ่านใหม่',
   appConfirmPasswordLabel: 'ยืนยันรหัสผ่านใหม่',
   appPasswordsMismatch: 'รหัสผ่านไม่ตรงกัน',
+  appPasswordTooLong:
+    'รหัสผ่านยาวเกินไป โปรดใช้ไม่เกิน {max} อักขระ ซึ่งเป็นความยาวสูงสุดที่ Excel ยอมรับ',
   appPasswordUpdateFailed: 'ไม่สามารถอัปเดตรหัสผ่านเวิร์กบุ๊กได้',
   appPasswordUpdating: 'กำลังอัปเดต…',
   appUpdatePassword: 'อัปเดตรหัสผ่าน',

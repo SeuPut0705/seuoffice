@@ -1322,6 +1322,8 @@ export const en = {
   appNewPasswordLabel: 'New password',
   appConfirmPasswordLabel: 'Confirm new password',
   appPasswordsMismatch: 'The passwords do not match.',
+  appPasswordTooLong:
+    'The password is too long. Use {max} characters or fewer, the longest Excel accepts.',
   appPasswordUpdateFailed: 'Could not update the workbook password.',
   appPasswordUpdating: 'Updating…',
   appUpdatePassword: 'Update Password',

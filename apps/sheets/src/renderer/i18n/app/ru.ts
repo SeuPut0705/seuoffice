@@ -1363,6 +1363,8 @@ export const ru = {
   appNewPasswordLabel: 'Новый пароль',
   appConfirmPasswordLabel: 'Подтвердите новый пароль',
   appPasswordsMismatch: 'Пароли не совпадают.',
+  appPasswordTooLong:
+    'Пароль слишком длинный. Используйте не более {max} символов: более длинный пароль Excel не принимает.',
   appPasswordUpdateFailed: 'Не удалось обновить пароль книги.',
   appPasswordUpdating: 'Обновление…',
   appUpdatePassword: 'Обновить пароль',

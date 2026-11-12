@@ -1345,6 +1345,8 @@ export const hi = {
   appNewPasswordLabel: 'नया पासवर्ड',
   appConfirmPasswordLabel: 'नए पासवर्ड की पुष्टि करें',
   appPasswordsMismatch: 'पासवर्ड मेल नहीं खाते।',
+  appPasswordTooLong:
+    'पासवर्ड बहुत लंबा है। अधिकतम {max} वर्ण रखें, Excel इससे लंबा पासवर्ड स्वीकार नहीं करता।',
   appPasswordUpdateFailed: 'वर्कबुक पासवर्ड अपडेट नहीं किया जा सका।',
   appPasswordUpdating: 'अपडेट हो रहा है…',
   appUpdatePassword: 'पासवर्ड अपडेट करें',

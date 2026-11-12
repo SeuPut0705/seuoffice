@@ -1346,6 +1346,8 @@ export const cs = {
   appNewPasswordLabel: 'Nové heslo',
   appConfirmPasswordLabel: 'Potvrdit nové heslo',
   appPasswordsMismatch: 'Hesla se neshodují.',
+  appPasswordTooLong:
+    'Heslo je příliš dlouhé. Použijte nejvýše {max} znaků, delší heslo Excel nepřijme.',
   appPasswordUpdateFailed: 'Heslo sešitu se nepodařilo aktualizovat.',
   appPasswordUpdating: 'Aktualizuje se…',
   appUpdatePassword: 'Aktualizovat heslo',

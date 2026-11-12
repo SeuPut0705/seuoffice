@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { WORKBOOK_PASSWORD_MAX_LENGTH } from '../shared/desktop-api'
 import { useI18n } from './i18n/locale'
 import { useModalDialog } from './modal-dialog'
 
@@ -21,6 +22,12 @@ export function ChangeWorkbookPasswordDialog({
     if (busy || !password || !confirmation) return
     if (password !== confirmation) {
       setError(t('appPasswordsMismatch'))
+      return
+    }
+    // Said here rather than cut short by the field: a password trimmed
+    // without a word is one its owner does not know.
+    if (password.length > WORKBOOK_PASSWORD_MAX_LENGTH) {
+      setError(t('appPasswordTooLong', { max: WORKBOOK_PASSWORD_MAX_LENGTH }))
       return
     }
     setBusy(true)

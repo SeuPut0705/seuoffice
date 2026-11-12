@@ -1347,6 +1347,8 @@ export const ms = {
   appNewPasswordLabel: 'Kata laluan baharu',
   appConfirmPasswordLabel: 'Sahkan kata laluan baharu',
   appPasswordsMismatch: 'Kata laluan tidak sepadan.',
+  appPasswordTooLong:
+    'Kata laluan terlalu panjang. Gunakan selebih-lebihnya {max} aksara, had terpanjang yang diterima Excel.',
   appPasswordUpdateFailed: 'Tidak dapat mengemas kini kata laluan buku kerja.',
   appPasswordUpdating: 'Mengemas kini…',
   appUpdatePassword: 'Kemas Kini Kata Laluan',

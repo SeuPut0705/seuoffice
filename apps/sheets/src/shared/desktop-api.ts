@@ -2457,6 +2457,18 @@ export const workbookExportOdsRequestSchema = z
   })
   .strict()
 
+/// The longest open password Excel takes. A workbook locked with a longer
+/// one opens here and nowhere else, so Change Password refuses it.
+export const WORKBOOK_PASSWORD_MAX_LENGTH = 255
+
+/// Review › Change Password: the open session and the password its file gets.
+export const workbookPasswordUpdateRequestSchema = z
+  .object({
+    sessionId: z.string().uuid(),
+    newPassword: z.string().min(1).max(WORKBOOK_PASSWORD_MAX_LENGTH),
+  })
+  .strict()
+
 export const workbookSaveResultSchema = z.union([
   z
     .object({

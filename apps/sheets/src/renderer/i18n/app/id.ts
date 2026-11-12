@@ -1346,6 +1346,8 @@ export const id = {
   appNewPasswordLabel: 'Kata sandi baru',
   appConfirmPasswordLabel: 'Konfirmasi kata sandi baru',
   appPasswordsMismatch: 'Kata sandi tidak cocok.',
+  appPasswordTooLong:
+    'Kata sandi terlalu panjang. Gunakan paling banyak {max} karakter, batas terpanjang yang diterima Excel.',
   appPasswordUpdateFailed: 'Tidak dapat memperbarui kata sandi buku kerja.',
   appPasswordUpdating: 'Memperbarui…',
   appUpdatePassword: 'Perbarui Kata Sandi',

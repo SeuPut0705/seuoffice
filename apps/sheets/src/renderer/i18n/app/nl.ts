@@ -1383,6 +1383,8 @@ export const nl = {
   appNewPasswordLabel: 'Nieuw wachtwoord',
   appConfirmPasswordLabel: 'Nieuw wachtwoord bevestigen',
   appPasswordsMismatch: 'De wachtwoorden komen niet overeen.',
+  appPasswordTooLong:
+    'Het wachtwoord is te lang. Gebruik hoogstens {max} tekens, de grootste lengte die Excel accepteert.',
   appPasswordUpdateFailed: 'Het wachtwoord van de werkmap kon niet worden bijgewerkt.',
   appPasswordUpdating: 'Bijwerken…',
   appUpdatePassword: 'Wachtwoord bijwerken',

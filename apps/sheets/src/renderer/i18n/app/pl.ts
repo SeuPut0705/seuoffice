@@ -1373,6 +1373,8 @@ export const pl = {
   appNewPasswordLabel: 'Nowe hasło',
   appConfirmPasswordLabel: 'Potwierdź nowe hasło',
   appPasswordsMismatch: 'Hasła nie są zgodne.',
+  appPasswordTooLong:
+    'Hasło jest za długie. Użyj najwyżej {max} znaków: dłuższego Excel nie przyjmie.',
   appPasswordUpdateFailed: 'Nie udało się zaktualizować hasła skoroszytu.',
   appPasswordUpdating: 'Aktualizowanie…',
   appUpdatePassword: 'Aktualizuj hasło',

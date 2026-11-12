@@ -240,6 +240,7 @@ import {
   workbookSaveEditsBeginSchema,
   saveEditsChunkArraySchema,
   workbookSaveEditsChunkSchema,
+  workbookPasswordUpdateRequestSchema,
   workbookSaveRequestSchema,
   workbookSlicerStateRequestSchema,
   workbookSlicerStateResultSchema,
@@ -4240,13 +4241,7 @@ export function registerSheetsIpc(): void {
   // under the new password. The session's plaintext snapshot is those contents
   // (the renderer saves pending edits first), so nothing is decrypted here.
   ipcMain.handle(IPC_CHANNELS.updateWorkbookPassword, async (event, input: unknown) => {
-    const { sessionId, newPassword } = z
-      .object({
-        sessionId: z.string().uuid(),
-        newPassword: z.string().min(1).max(1024),
-      })
-      .strict()
-      .parse(input)
+    const { sessionId, newPassword } = workbookPasswordUpdateRequestSchema.parse(input)
     const entry = sessionFor(event)
     const session = entry.sessions.get(sessionId)
     if (!session) throw new Error('Unknown workbook session.')
@@ -4259,14 +4254,33 @@ export function registerSheetsIpc(): void {
       throw new Error(tm('errDiskChanged'))
     }
     const encryptedBytes = encryptOoxml(await readFile(session.snapshotPath), newPassword)
-    await atomicWriteFile(encryptedPath, encryptedBytes)
-    const diskState = await recordDiskState(encryptedPath)
+    const encryptedSha = createHash('sha256').update(encryptedBytes).digest('hex')
+    try {
+      await atomicWriteFile(encryptedPath, encryptedBytes)
+    } catch (error) {
+      // A write can fail after its bytes are in place (the cleanup behind the
+      // rename). The file then opens with the new password only, so what is
+      // answered is what the file holds, not how the call ended: "failed"
+      // would send the person back to a password that no longer opens it.
+      const landed = await sha256File(encryptedPath).catch(() => undefined)
+      if (landed !== encryptedSha) throw error
+    }
+    // The session follows the file before anything else is awaited: a save
+    // under the old password would lock the file with it again, and one
+    // checked against the old digest would be refused as an outside change.
     entry.sessions.set(sessionId, {
       ...session,
       password: newPassword,
-      restoreTargetSha: createHash('sha256').update(encryptedBytes).digest('hex'),
-      ...(diskState === null ? {} : { diskState: { path: encryptedPath, state: diskState } }),
+      restoreTargetSha: encryptedSha,
     })
+    const diskState = await recordDiskState(encryptedPath)
+    const current = entry.sessions.get(sessionId)
+    if (diskState !== null && current !== undefined) {
+      entry.sessions.set(sessionId, {
+        ...current,
+        diskState: { path: encryptedPath, state: diskState },
+      })
+    }
   })
 
   ipcMain.handle(IPC_CHANNELS.reopenWorkbook, async (event, path: unknown) => {

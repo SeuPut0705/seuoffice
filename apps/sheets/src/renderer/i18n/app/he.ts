@@ -1285,6 +1285,7 @@ export const he = {
   appNewPasswordLabel: 'סיסמה חדשה',
   appConfirmPasswordLabel: 'אישור הסיסמה החדשה',
   appPasswordsMismatch: 'הסיסמאות אינן תואמות.',
+  appPasswordTooLong: 'הסיסמה ארוכה מדי. השתמש ב-{max} תווים לכל היותר, האורך המרבי ש-Excel מקבל.',
   appPasswordUpdateFailed: 'לא ניתן לעדכן את סיסמת חוברת העבודה.',
   appPasswordUpdating: 'מעדכן…',
   appUpdatePassword: 'עדכן סיסמה',

@@ -1335,6 +1335,8 @@ export const vi = {
   appNewPasswordLabel: 'Mật khẩu mới',
   appConfirmPasswordLabel: 'Xác nhận mật khẩu mới',
   appPasswordsMismatch: 'Mật khẩu không khớp.',
+  appPasswordTooLong:
+    'Mật khẩu quá dài. Hãy dùng tối đa {max} ký tự, độ dài lớn nhất mà Excel chấp nhận.',
   appPasswordUpdateFailed: 'Không thể cập nhật mật khẩu sổ làm việc.',
   appPasswordUpdating: 'Đang cập nhật…',
   appUpdatePassword: 'Cập nhật mật khẩu',

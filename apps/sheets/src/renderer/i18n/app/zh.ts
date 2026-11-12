@@ -1281,6 +1281,7 @@ export const zh = {
   appNewPasswordLabel: '新密码',
   appConfirmPasswordLabel: '确认新密码',
   appPasswordsMismatch: '两次输入的密码不一致。',
+  appPasswordTooLong: '密码过长。请使用不超过 {max} 个字符的密码，这是 Excel 接受的最大长度。',
   appPasswordUpdateFailed: '无法更新工作簿密码。',
   appPasswordUpdating: '正在更新…',
   appUpdatePassword: '更新密码',

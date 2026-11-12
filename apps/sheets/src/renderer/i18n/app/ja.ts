@@ -1395,6 +1395,8 @@ export const ja = {
   appNewPasswordLabel: '新しいパスワード',
   appConfirmPasswordLabel: '新しいパスワードの確認',
   appPasswordsMismatch: 'パスワードが一致しません。',
+  appPasswordTooLong:
+    'パスワードが長すぎます。Excel が受け付ける上限の {max} 文字以内にしてください。',
   appPasswordUpdateFailed: 'ブックのパスワードを更新できませんでした。',
   appPasswordUpdating: '更新中…',
   appUpdatePassword: 'パスワードを更新',

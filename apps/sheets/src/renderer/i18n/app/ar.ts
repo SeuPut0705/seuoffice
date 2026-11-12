@@ -1308,6 +1308,8 @@ export const ar = {
   appNewPasswordLabel: 'كلمة المرور الجديدة',
   appConfirmPasswordLabel: 'تأكيد كلمة المرور الجديدة',
   appPasswordsMismatch: 'كلمتا المرور غير متطابقتين.',
+  appPasswordTooLong:
+    'كلمة المرور طويلة جدًا. استخدم {max} حرفًا على الأكثر، وهو أقصى طول يقبله Excel.',
   appPasswordUpdateFailed: 'تعذّر تحديث كلمة مرور المصنف.',
   appPasswordUpdating: 'جارٍ التحديث…',
   appUpdatePassword: 'تحديث كلمة المرور',
