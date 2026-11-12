@@ -789,6 +789,9 @@ const THEME_PART = {
 const { kitchenSink, TOC } = ts.helpersDocxFixtures
 
 /** The docx fixtures of the odt tests (kitchenSink and the specs of assemble-export.test.ts). */
+/** The namespace the editor's "hidden from AI" mark is written under (agent-core `OWN_REDACT_NS`). */
+const HIDDEN_NS = 'https://github.com/SeuPut0705/seuoffice/redaction/2026'
+
 export async function builtDocxSpecs(): Promise<Array<[string, Parameters<typeof buildDocx>[0]]>> {
   const br = '<w:r><w:br w:type="page"/></w:r>'
   const cell = (t: string, pPr = '') =>
@@ -821,6 +824,32 @@ export async function builtDocxSpecs(): Promise<Array<[string, Parameters<typeof
             contentType: 'application/xml',
           },
         ],
+      },
+    ],
+    [
+      // runs marked hidden from AI (the editor's `go:redact` in the rPr, another
+      // prefix, a default namespace, a header, a note, a comment holding the tag)
+      // and two near names that are no mark: an ODT keeps none of the marks
+      'hidden-from-ai',
+      {
+        body:
+          p('\uBCF8\uBB38') +
+          `<w:p><w:r><w:rPr><go:redact xmlns:go="${HIDDEN_NS}" w:label="client"/></w:rPr><w:t>\uC774\uB984</w:t></w:r>` +
+          `<w:r><w:rPr><hx:redact xmlns:hx="${HIDDEN_NS}" w:label="client"/><w:b/></w:rPr><w:t>\uBC88\uD638</w:t></w:r>` +
+          `<w:r><w:rPr><redact xmlns="${HIDDEN_NS}"/></w:rPr><w:t>\uC8FC\uC18C</w:t></w:r>` +
+          `<w:r><w:rPr><go:redaction xmlns:go="${HIDDEN_NS}"/><go:redacted xmlns:go="${HIDDEN_NS}"/></w:rPr><w:t>\uBCF4\uC784</w:t></w:r></w:p>` +
+          `<!-- <go:redact w:label="old"/> -->` +
+          '<w:p><w:r><w:t>\uC8FC</w:t></w:r><w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteReference w:id="1"/></w:r></w:p>' +
+          '<w:sectPr><w:headerReference w:type="default" r:id="rIdH"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>',
+        parts: {
+          rIdH: {
+            kind: 'header',
+            inner: `<w:p><w:r><w:rPr><go:redact xmlns:go="${HIDDEN_NS}" w:label="client"/></w:rPr><w:t>\uBA38\uB9AC</w:t></w:r></w:p>`,
+          },
+        },
+        footnotes: {
+          '1': `</w:t></w:r><w:r><w:rPr><go:redact xmlns:go="${HIDDEN_NS}" w:label="note"/></w:rPr><w:t>\uAC01\uC8FC`,
+        },
       },
     ],
     [

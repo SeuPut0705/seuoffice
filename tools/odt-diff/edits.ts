@@ -129,6 +129,17 @@ export async function editsFor(
       ]),
     })
   }
+  // a paragraph marked hidden from AI: the ODT keeps its text but not the mark,
+  // which the save reports
+  always.push({
+    name: 'a paragraph hidden from AI before the first',
+    make: save(docx, (blocks) => [
+      {
+        xml: '<w:p><w:r><w:rPr><go:redact xmlns:go="https://github.com/SeuPut0705/seuoffice/redaction/2026" w:label="client"/></w:rPr><w:t>hidden</w:t></w:r></w:p>',
+      },
+      ...blocks.map((_, i) => ({ keep: i })),
+    ]),
+  })
   const commented = visible.findIndex((b) => /<w:commentRangeEnd\b/.test(b.originalXml ?? ''))
   if (commented >= 0) {
     const b = visible[commented]!
