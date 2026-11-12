@@ -66,6 +66,9 @@ export class Engine {
             decoder.decode(new Uint8Array(buffer, b, bLength)),
           )
         },
+        // the gate's commands pass no callbacks: refused, as @seuoffice/engine-wasm
+        // answers a slot that has none (CALLBACK_REFUSED)
+        host_callback: (): bigint => 0xffff_ffff_ffff_ffffn,
       },
     })
     const exports = instance.exports as unknown as EngineExports
