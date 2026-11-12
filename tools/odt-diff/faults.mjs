@@ -31,11 +31,11 @@ const leaf = 'crates/odt-engine/src/'
 /** [name, compared function, file, original, faulty, occurrences of the original (1)] */
 const faults = [
   [
-    'docx-length-round',
+    'page-right-round',
     'odtToDocx',
-    leaf + 'core/docx_package.rs',
-    'math_round(n * f)',
-    '(n * f).round()',
+    leaf + 'page/geometry.rs',
+    'right: JsNum(math_round(margin(p, "right").unwrap_or(DEFAULT_MARGIN))),',
+    'right: JsNum(margin(p, "right").unwrap_or(DEFAULT_MARGIN).round()),',
   ],
   [
     'package-central-order',
@@ -136,11 +136,11 @@ const faults = [
     'if floor <= 0.0 || floor < current {',
   ],
   [
-    'export-columns-min',
+    'export-columns-half-gap',
     'odtAssemble.columnsXml',
     leaf + 'assemble/export/styles.rs',
-    'let count = math_max(1.0, math_round(columns.count));',
-    'let count = math_round(columns.count);',
+    'let half = twips_to_length(gap / 2.0);',
+    'let half = twips_to_length(gap);',
   ],
   [
     'zip-dos-seconds',
@@ -164,11 +164,11 @@ const faults = [
     'let line = c.text.trim_end().to_owned();',
   ],
   [
-    'report-zero',
+    'report-count-sum',
     'odtToDocx',
     leaf + 'assemble/report.rs',
-    'if count == 0 {',
-    'if count == usize::MAX {',
+    'self.counts[row][feature.index()] += count;',
+    'self.counts[row][feature.index()] = count;',
   ],
   [
     'meta-people-swap',
@@ -285,15 +285,21 @@ const mainArgs = [
   '--by-function',
 ]
 
-/** Differences a report shows on the lines starting with `prefix`: `(a)` ... or, for a function of (f), its own line. */
-function differencesOf(text, prefix, fn) {
+/**
+ * Differences the run shows on every comparison line (`(a)` ... `(f+)`), and
+ * its panics: the gate's own verdict. The function a fault names is where it
+ * was meant to show; any line counts, since a fault the gate sees anywhere
+ * fails the gate. Null where the run ended before its tally.
+ */
+function differencesOf(text) {
   let total = 0
   let found = false
   for (const line of text.split('\n')) {
     const trimmed = line.trim()
-    const matches = fn ? trimmed.startsWith(fn + ' ') : trimmed.startsWith(prefix)
-    if (!matches) continue
-    const count = /differences\s+(\d+)/.exec(trimmed)
+    const panics = /^rust panics .*: (\d+)$/.exec(trimmed)
+    if (panics) total += Number(panics[1])
+    if (!/^\([a-f]\+?\) /.test(trimmed)) continue
+    const count = /\bdifferences\s+(\d+)/.exec(trimmed)
     if (count) {
       found = true
       total += Number(count[1])
@@ -350,7 +356,7 @@ for (const [id, fn, file, before, after, occurrences = 1] of selected) {
           ODT_DIFF_OUT: resolve(out, id),
         })
     writeFileSync(resolve(out, `${id}.log`), (compared.stdout ?? '') + (compared.stderr ?? ''))
-    const differences = differencesOf(compared.stdout ?? '', wire ? WIRE[fn] : '', wire ? null : fn)
+    const differences = differencesOf(compared.stdout ?? '')
     // no tally: the comparison ended before its report (the fault made the module abort)
     const aborted = differences === null
     result = {
