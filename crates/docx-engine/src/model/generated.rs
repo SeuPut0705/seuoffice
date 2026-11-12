@@ -4132,6 +4132,8 @@ pub struct CommentInfo {
     pub initials: Option<String>,
     pub date: Option<String>,
     pub text: String,
+    pub model_text: Option<String>,
+    pub marked_xml: Option<String>,
     pub para_id: Option<String>,
     pub image: Option<CommentImage>,
     pub parent_id: Option<String>,
@@ -4146,6 +4148,8 @@ pub enum CommentInfoKey {
     Initials,
     Date,
     Text,
+    ModelText,
+    MarkedXml,
     Image,
     ParentId,
     Done,
@@ -4153,7 +4157,7 @@ pub enum CommentInfoKey {
 }
 
 impl FieldKey for CommentInfoKey {
-    const NAMES: &'static [&'static str] = &["id", "author", "initials", "date", "text", "image", "parentId", "done", "paraId"];
+    const NAMES: &'static [&'static str] = &["id", "author", "initials", "date", "text", "modelText", "markedXml", "image", "parentId", "done", "paraId"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -4162,6 +4166,8 @@ impl FieldKey for CommentInfoKey {
             "initials" => Some(Self::Initials),
             "date" => Some(Self::Date),
             "text" => Some(Self::Text),
+            "modelText" => Some(Self::ModelText),
+            "markedXml" => Some(Self::MarkedXml),
             "image" => Some(Self::Image),
             "parentId" => Some(Self::ParentId),
             "done" => Some(Self::Done),
@@ -4189,6 +4195,12 @@ impl Serialize for CommentInfo {
             map.serialize_entry("date", value)?;
         }
         map.serialize_entry("text", &self.text)?;
+        if let Some(value) = &self.model_text {
+            map.serialize_entry("modelText", value)?;
+        }
+        if let Some(value) = &self.marked_xml {
+            map.serialize_entry("markedXml", value)?;
+        }
         if let Some(value) = &self.para_id {
             map.serialize_entry("paraId", value)?;
         }
@@ -4222,6 +4234,8 @@ impl<'de> Deserialize<'de> for CommentInfo {
                 let mut v_initials = None;
                 let mut v_date = None;
                 let mut v_text = None;
+                let mut v_model_text = None;
+                let mut v_marked_xml = None;
                 let mut v_image = None;
                 let mut v_parent_id = None;
                 let mut v_done = None;
@@ -4240,13 +4254,15 @@ impl<'de> Deserialize<'de> for CommentInfo {
                         CommentInfoKey::Initials => v_initials = map.next_value::<wire::OrAbsent<String>>()?.0,
                         CommentInfoKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
                         CommentInfoKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        CommentInfoKey::ModelText => v_model_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        CommentInfoKey::MarkedXml => v_marked_xml = map.next_value::<wire::OrAbsent<String>>()?.0,
                         CommentInfoKey::Image => v_image = map.next_value::<wire::OrAbsent<CommentImage>>()?.0,
                         CommentInfoKey::ParentId => v_parent_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         CommentInfoKey::Done => v_done = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         CommentInfoKey::ParaId => v_para_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(CommentInfo { id: v_id.map_or_else(|| wire::absent("id").map(|()| Default::default()), Ok)?, author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, initials: v_initials, date: v_date, text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, image: v_image, parent_id: v_parent_id, done: v_done, para_id: v_para_id })
+                Ok(CommentInfo { id: v_id.map_or_else(|| wire::absent("id").map(|()| Default::default()), Ok)?, author: v_author.map_or_else(|| wire::absent("author").map(|()| Default::default()), Ok)?, initials: v_initials, date: v_date, text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, model_text: v_model_text, marked_xml: v_marked_xml, image: v_image, parent_id: v_parent_id, done: v_done, para_id: v_para_id })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -4506,6 +4522,7 @@ pub struct InlineContentControl {
     pub lock: String,
     pub id: String,
     pub text: String,
+    pub model_text: Option<String>,
 }
 
 /// The keys of `InlineContentControl`, in declaration order.
@@ -4516,10 +4533,11 @@ pub enum InlineContentControlKey {
     Lock,
     Id,
     Text,
+    ModelText,
 }
 
 impl FieldKey for InlineContentControlKey {
-    const NAMES: &'static [&'static str] = &["tag", "title", "lock", "id", "text"];
+    const NAMES: &'static [&'static str] = &["tag", "title", "lock", "id", "text", "modelText"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -4528,6 +4546,7 @@ impl FieldKey for InlineContentControlKey {
             "lock" => Some(Self::Lock),
             "id" => Some(Self::Id),
             "text" => Some(Self::Text),
+            "modelText" => Some(Self::ModelText),
             _ => None,
         }
     }
@@ -4547,6 +4566,9 @@ impl Serialize for InlineContentControl {
         map.serialize_entry("lock", &self.lock)?;
         map.serialize_entry("id", &self.id)?;
         map.serialize_entry("text", &self.text)?;
+        if let Some(value) = &self.model_text {
+            map.serialize_entry("modelText", value)?;
+        }
         map.end()
     }
 }
@@ -4568,6 +4590,7 @@ impl<'de> Deserialize<'de> for InlineContentControl {
                 let mut v_lock = None;
                 let mut v_id = None;
                 let mut v_text = None;
+                let mut v_model_text = None;
                 while let Some(Key(key)) = map.next_key::<Key<InlineContentControlKey>>()? {
                     let Some(key) = key else {
                         map.next_value::<serde::de::IgnoredAny>()?;
@@ -4582,9 +4605,10 @@ impl<'de> Deserialize<'de> for InlineContentControl {
                         InlineContentControlKey::Lock => v_lock = map.next_value::<wire::OrAbsent<String>>()?.0,
                         InlineContentControlKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         InlineContentControlKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        InlineContentControlKey::ModelText => v_model_text = map.next_value::<wire::OrAbsent<String>>()?.0,
                     }
                 }
-                Ok(InlineContentControl { tag: v_tag.map_or_else(|| wire::absent("tag").map(|()| Default::default()), Ok)?, title: v_title.map_or_else(|| wire::absent("title").map(|()| Default::default()), Ok)?, lock: v_lock.map_or_else(|| wire::absent("lock").map(|()| Default::default()), Ok)?, id: v_id.map_or_else(|| wire::absent("id").map(|()| Default::default()), Ok)?, text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)? })
+                Ok(InlineContentControl { tag: v_tag.map_or_else(|| wire::absent("tag").map(|()| Default::default()), Ok)?, title: v_title.map_or_else(|| wire::absent("title").map(|()| Default::default()), Ok)?, lock: v_lock.map_or_else(|| wire::absent("lock").map(|()| Default::default()), Ok)?, id: v_id.map_or_else(|| wire::absent("id").map(|()| Default::default()), Ok)?, text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, model_text: v_model_text })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -12280,6 +12304,7 @@ impl<'de> Deserialize<'de> for HfPartInfo {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct NoteRun {
     pub text: String,
+    pub redact: Option<String>,
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub underline: Option<bool>,
@@ -12298,6 +12323,7 @@ pub struct NoteRun {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NoteRunKey {
     Text,
+    Redact,
     Bold,
     Italic,
     Underline,
@@ -12313,11 +12339,12 @@ pub enum NoteRunKey {
 }
 
 impl FieldKey for NoteRunKey {
-    const NAMES: &'static [&'static str] = &["text", "bold", "italic", "underline", "strike", "color", "sizeHalfPoints", "fontAscii", "font", "caps", "textOutline", "ins", "del"];
+    const NAMES: &'static [&'static str] = &["text", "redact", "bold", "italic", "underline", "strike", "color", "sizeHalfPoints", "fontAscii", "font", "caps", "textOutline", "ins", "del"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
             "text" => Some(Self::Text),
+            "redact" => Some(Self::Redact),
             "bold" => Some(Self::Bold),
             "italic" => Some(Self::Italic),
             "underline" => Some(Self::Underline),
@@ -12345,6 +12372,9 @@ impl Serialize for NoteRun {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("text", &self.text)?;
+        if let Some(value) = &self.redact {
+            map.serialize_entry("redact", value)?;
+        }
         if let Some(value) = &self.bold {
             map.serialize_entry("bold", value)?;
         }
@@ -12398,6 +12428,7 @@ impl<'de> Deserialize<'de> for NoteRun {
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<NoteRun, A::Error> {
                 let mut seen = Seen::default();
                 let mut v_text = None;
+                let mut v_redact = None;
                 let mut v_bold = None;
                 let mut v_italic = None;
                 let mut v_underline = None;
@@ -12420,6 +12451,7 @@ impl<'de> Deserialize<'de> for NoteRun {
                     }
                     match key {
                         NoteRunKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NoteRunKey::Redact => v_redact = map.next_value::<wire::OrAbsent<String>>()?.0,
                         NoteRunKey::Bold => v_bold = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         NoteRunKey::Italic => v_italic = map.next_value::<wire::OrAbsent<bool>>()?.0,
                         NoteRunKey::Underline => v_underline = map.next_value::<wire::OrAbsent<bool>>()?.0,
@@ -12434,7 +12466,7 @@ impl<'de> Deserialize<'de> for NoteRun {
                         NoteRunKey::Del => v_del = map.next_value::<wire::OrAbsent<RevisionInfo>>()?.0,
                     }
                 }
-                Ok(NoteRun { text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, bold: v_bold, italic: v_italic, underline: v_underline, strike: v_strike, color: v_color, size_half_points: v_size_half_points, font_ascii: v_font_ascii, font: v_font, caps: v_caps, text_outline: v_text_outline, ins: v_ins, del: v_del })
+                Ok(NoteRun { text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, redact: v_redact, bold: v_bold, italic: v_italic, underline: v_underline, strike: v_strike, color: v_color, size_half_points: v_size_half_points, font_ascii: v_font_ascii, font: v_font, caps: v_caps, text_outline: v_text_outline, ins: v_ins, del: v_del })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -12486,6 +12518,7 @@ impl<'de> Deserialize<'de> for NoteRunCaps {
 pub struct NoteInfo {
     pub id: String,
     pub text: String,
+    pub model_text: Option<String>,
     pub rich_paras: Option<Vec<Vec<NoteRun>>>,
     pub style_id: Option<String>,
     pub zotero_field: Option<True>,
@@ -12499,6 +12532,7 @@ pub struct NoteInfo {
 pub enum NoteInfoKey {
     Id,
     Text,
+    ModelText,
     RichParas,
     NoRefMark,
     StyleId,
@@ -12508,12 +12542,13 @@ pub enum NoteInfoKey {
 }
 
 impl FieldKey for NoteInfoKey {
-    const NAMES: &'static [&'static str] = &["id", "text", "richParas", "noRefMark", "styleId", "zoteroField", "spacing", "revisionsResolved"];
+    const NAMES: &'static [&'static str] = &["id", "text", "modelText", "richParas", "noRefMark", "styleId", "zoteroField", "spacing", "revisionsResolved"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
             "id" => Some(Self::Id),
             "text" => Some(Self::Text),
+            "modelText" => Some(Self::ModelText),
             "richParas" => Some(Self::RichParas),
             "noRefMark" => Some(Self::NoRefMark),
             "styleId" => Some(Self::StyleId),
@@ -12536,6 +12571,9 @@ impl Serialize for NoteInfo {
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("id", &self.id)?;
         map.serialize_entry("text", &self.text)?;
+        if let Some(value) = &self.model_text {
+            map.serialize_entry("modelText", value)?;
+        }
         if let Some(value) = &self.rich_paras {
             map.serialize_entry("richParas", value)?;
         }
@@ -12572,6 +12610,7 @@ impl<'de> Deserialize<'de> for NoteInfo {
                 let mut seen = Seen::default();
                 let mut v_id = None;
                 let mut v_text = None;
+                let mut v_model_text = None;
                 let mut v_rich_paras = None;
                 let mut v_no_ref_mark = None;
                 let mut v_style_id = None;
@@ -12589,6 +12628,7 @@ impl<'de> Deserialize<'de> for NoteInfo {
                     match key {
                         NoteInfoKey::Id => v_id = map.next_value::<wire::OrAbsent<String>>()?.0,
                         NoteInfoKey::Text => v_text = map.next_value::<wire::OrAbsent<String>>()?.0,
+                        NoteInfoKey::ModelText => v_model_text = map.next_value::<wire::OrAbsent<String>>()?.0,
                         NoteInfoKey::RichParas => v_rich_paras = map.next_value::<wire::OrAbsent<Vec<Vec<NoteRun>>>>()?.0,
                         NoteInfoKey::NoRefMark => v_no_ref_mark = map.next_value::<wire::OrAbsent<True>>()?.0,
                         NoteInfoKey::StyleId => v_style_id = map.next_value::<wire::OrAbsent<String>>()?.0,
@@ -12597,7 +12637,7 @@ impl<'de> Deserialize<'de> for NoteInfo {
                         NoteInfoKey::RevisionsResolved => v_revisions_resolved = map.next_value::<wire::OrAbsent<Vec<RevisionResolution>>>()?.0,
                     }
                 }
-                Ok(NoteInfo { id: v_id.map_or_else(|| wire::absent("id").map(|()| Default::default()), Ok)?, text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, rich_paras: v_rich_paras, no_ref_mark: v_no_ref_mark, style_id: v_style_id, zotero_field: v_zotero_field, spacing: v_spacing, revisions_resolved: v_revisions_resolved })
+                Ok(NoteInfo { id: v_id.map_or_else(|| wire::absent("id").map(|()| Default::default()), Ok)?, text: v_text.map_or_else(|| wire::absent("text").map(|()| Default::default()), Ok)?, model_text: v_model_text, rich_paras: v_rich_paras, no_ref_mark: v_no_ref_mark, style_id: v_style_id, zotero_field: v_zotero_field, spacing: v_spacing, revisions_resolved: v_revisions_resolved })
             }
         }
         deserializer.deserialize_map(Fields)

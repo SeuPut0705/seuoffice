@@ -26,7 +26,7 @@ afterEach(() => {
 })
 
 describe('the launcher record', () => {
-  it('is in ~/.seuoffice when that exists, else in an existing ~/.ieumoffice, else in a new ~/.seuoffice', () => {
+  it('is in ~/.seuoffice when that holds data, else in an existing ~/.ieumoffice, else in a new ~/.seuoffice', () => {
     const home = temp()
     expect(launcherFilePath({}, home)).toBe(join(home, '.seuoffice', 'launcher'))
 
@@ -34,6 +34,9 @@ describe('the launcher record', () => {
     expect(launcherFilePath({}, home)).toBe(join(home, '.ieumoffice', 'launcher'))
 
     mkdirSync(join(home, '.seuoffice'))
+    expect(launcherFilePath({}, home)).toBe(join(home, '.ieumoffice', 'launcher'))
+
+    writeFileSync(join(home, '.seuoffice', 'cli-audit.jsonl'), '{}\n')
     expect(launcherFilePath({}, home)).toBe(join(home, '.seuoffice', 'launcher'))
     expect(launcherFilePath({ SEUOFFICE_AUTH_DIR: '/tmp/x' }, home)).toBe(
       join('/tmp/x', 'launcher'),

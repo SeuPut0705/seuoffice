@@ -357,7 +357,12 @@ export interface ProjectContextBundle {
    * Instructions text as sent (already cut to the limit), or null when there are none
    * or trust is `without`.
    */
-  instructions: { text: string; sources: ProjectInstructionsSource[] } | null
+  instructions: {
+    text: string
+    sources: ProjectInstructionsSource[]
+    /** the data folder the project uses (`.seuoffice`, or the older name it keeps); absent means the current one */
+    dataDir?: string
+  } | null
   /** Full `memory.md` (never cut), or null when empty or trust is `without` */
   memory: { text: string; chars: number } | null
   /** File names the AI sees, most recently modified first, up to the list limit */

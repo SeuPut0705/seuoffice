@@ -33,7 +33,7 @@ const INSTRUCTION_PARTS: readonly {
 ]
 
 export interface TrustedContext {
-  instructions: { text: string; sources: ProjectInstructionsSource[] } | null
+  instructions: { text: string; sources: ProjectInstructionsSource[]; dataDir: string } | null
   memory: { text: string; chars: number } | null
   notices: ProjectNotice[]
   /** New hash per changed file; null drops the hash of a file that is gone */
@@ -104,7 +104,7 @@ export function assembleTrustedContext(
       if (offset < text.length) sources.push(part.source)
       offset += part.text.length + 2
     }
-    instructions = { text, sources }
+    instructions = { text, sources, dataDir: texts.dataDir }
     if (text.length < full.length) {
       notices.push({ kind: 'instructions-truncated', chars: full.length, limit: limitChars })
     }

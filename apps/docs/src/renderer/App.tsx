@@ -122,11 +122,12 @@ import { AiPanel } from './ai/AiPanel'
 import { AI_REVISION_AUTHOR } from './ai/revision-author'
 import { useAiDock } from './ai/use-ai-dock'
 import type { AiCommentsAccess, AiDocExtras, AiHeaderFooterAccess } from './ai/tools'
+import type { AiHfState, HfStateSlot } from './ai/protocol'
 import type { AiStyleInfo } from './ai/style-ops'
 import { applyResolvedPageSetup, describeSection, type AiPageSetupAccess } from './ai/page-setup'
 import { patchPendingSectPr, sectionIndexAtBlock } from './ai/pending-sections'
 import { protectedNoteMarkBlock, type AiNotesAccess } from './ai/note-ops'
-import { applyHfText, hfEditText } from './editor/hf-text'
+import { applyHfModelText, hfModelTableText, hfModelText } from './editor/hf-text'
 import {
   insertHfField,
   insertHfInstrField,
@@ -7536,7 +7537,18 @@ export function App() {
         const ctx = aiHfCtxRef.current
         const textOf = (kind: 'header' | 'footer', view: HfView) => {
           const value = ctx.valueOf(kind, view)
-          return value ? hfEditText(value) : ''
+          return value ? hfModelText(value) : ''
+        }
+        const tables: NonNullable<AiHfState['tables']> = {}
+        const tableOf = (kind: 'header' | 'footer', view: HfView, slot: HfStateSlot) => {
+          const value = ctx.valueOf(kind, view)
+          const table = value ? hfModelTableText(value) : ''
+          if (table) tables[slot] = table
+        }
+        for (const kind of ['header', 'footer'] as const) {
+          tableOf(kind, 'default', kind)
+          if (ctx.titlePg) tableOf(kind, 'first', `${kind}First`)
+          if (ctx.evenOddHf) tableOf(kind, 'even', `${kind}Even`)
         }
         return {
           header: textOf('header', 'default'),
@@ -7548,11 +7560,14 @@ export function App() {
           titlePg: ctx.titlePg,
           evenOddHf: ctx.evenOddHf,
           multiSection: ctx.multiHf,
+          ...(Object.keys(tables).length > 0 ? { tables } : {}),
         }
       },
       set: (kind, view, text) => {
         const ctx = aiHfCtxRef.current
         if (ctx.locked) return 'the document is read-only; headers/footers cannot be edited'
+        const next = applyHfModelText(ctx.valueOf(kind, view), text)
+        if (typeof next === 'string') return next
         if (view === 'first' && !ctx.titlePg) {
           setTitlePg(true)
           setTitlePgDirty(true)
@@ -7563,7 +7578,6 @@ export function App() {
           setEvenOddHfDirty(true)
           ctx.evenOddHf = true
         }
-        const next = applyHfText(ctx.valueOf(kind, view), text)
         ctx.commit(kind, next, view)
         ctx.overlay.set(`${kind}:${view}`, next)
         return null

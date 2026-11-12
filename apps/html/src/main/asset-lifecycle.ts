@@ -14,7 +14,7 @@ import {
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { existingOrCurrent } from '@seuoffice/i18n'
 import { atomicWriteFile } from './atomic-write'
-import { OLD_ASSET_MANIFEST_FILENAMES } from './old-names'
+import { ASSET_MANIFEST_FILENAME_WRITTEN, OLD_ASSET_MANIFEST_FILENAMES } from './old-names'
 
 export const ASSET_MANIFEST_FILENAME = '.seuoffice-assets.json'
 
@@ -29,6 +29,10 @@ function manifestPathIn(assetsDir: string): string {
   const name = existingOrCurrent(ASSET_MANIFEST_FILENAME, OLD_ASSET_MANIFEST_FILENAMES, (old) =>
     existsSync(join(assetsDir, old)),
   )
+  // neither exists: a new folder gets the name 0.12.37 can read
+  if (name === ASSET_MANIFEST_FILENAME && !existsSync(join(assetsDir, name))) {
+    return join(assetsDir, ASSET_MANIFEST_FILENAME_WRITTEN)
+  }
   return join(assetsDir, name)
 }
 

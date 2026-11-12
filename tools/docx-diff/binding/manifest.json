@@ -1641,6 +1641,32 @@
       "route": "none"
     },
     {
+      "module": "comment-slices",
+      "name": "commentEntries",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "{ id: string; xml: string; }[]",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
       "module": "compare",
       "name": "compareDocuments",
       "kind": "function",
@@ -7987,6 +8013,32 @@
     },
     {
       "module": "notes",
+      "name": "noteModelText",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "richParas",
+          "type": "readonly NoteRun[][]",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string | undefined",
+        "null": false,
+        "undef": true,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["index", "package", "test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "notes",
       "name": "parseNotesXml",
       "kind": "function",
       "async": false,
@@ -8426,16 +8478,15 @@
       },
       "required": [],
       "rust": {
-        "path": "docx_engine::generate::drawing_build::line_kind",
-        "file": "crates/docx-engine/src/generate/drawing_build.rs",
-        "name": "line_kind",
+        "path": "pptx_engine::own_value::own_value",
+        "file": "crates/pptx-engine/src/own_value.rs",
+        "name": "own_value",
         "vis": "pub",
-        "params": ["kind: &str"],
-        "ret": "Option<LineKind>",
+        "params": ["table: &'a JsMap<V>", "key: &str"],
+        "ret": "Option<&'a V>",
         "reachable": true
       },
-      "route": "ts",
-      "reason": "arity differs: TypeScript 2 (table, key), Rust 1"
+      "route": "table"
     },
     {
       "module": "own-value",
@@ -8474,16 +8525,16 @@
       },
       "required": [],
       "rust": {
-        "path": "docx_engine::vml::shape::parse_tag_attrs",
-        "file": "crates/docx-engine/src/vml/shape.rs",
-        "name": "parse_tag_attrs",
-        "vis": "",
-        "params": ["tag: &str"],
-        "ret": "JsObject<String>",
+        "path": "pptx_engine::own_value::set_own",
+        "file": "crates/pptx-engine/src/own_value.rs",
+        "name": "set_own",
+        "vis": "pub",
+        "params": ["record: &mut JsMap<V>", "key: &str", "value: V"],
+        "ret": "",
         "reachable": true
       },
       "route": "ts",
-      "reason": "the port is not public (private, reachable): docx_engine::vml::shape::parse_tag_attrs"
+      "reason": "its Rust signature is not one a row can read: (record: &mut JsMap<V>, key: &str, value: V) -> "
     },
     {
       "module": "parse-block-passes",
@@ -9961,6 +10012,39 @@
         "reachable": true
       },
       "route": "table"
+    },
+    {
+      "module": "parse-package",
+      "name": "editedCommentModelText",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "markedXml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "text",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string | undefined",
+        "null": false,
+        "undef": true,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["index", "package"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
     },
     {
       "module": "parse-package",
@@ -20516,6 +20600,337 @@
       "route": "none"
     },
     {
+      "module": "withheld",
+      "name": "withheldLabelOf",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "rPrXml",
+          "type": "string | undefined",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string | null",
+        "null": true,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["index", "package"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "hasWithheldTrace",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "boolean",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "hasMarkElement",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "node",
+          "type": "XNode",
+          "optional": false,
+          "rest": false,
+          "codec": "xnode"
+        }
+      ],
+      "ret": {
+        "type": "boolean",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "withheldNode",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "node",
+          "type": "XNode",
+          "optional": false,
+          "rest": false,
+          "codec": "xnode"
+        }
+      ],
+      "ret": {
+        "type": "XNode | null",
+        "null": true,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "runsText",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "node",
+          "type": "XNode",
+          "optional": false,
+          "rest": false,
+          "codec": "xnode"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "parseEntry",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "XNode | undefined",
+        "null": false,
+        "undef": true,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "withheldText",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "node",
+          "type": "XNode",
+          "optional": false,
+          "rest": false,
+          "codec": "xnode"
+        },
+        {
+          "name": "textOf",
+          "type": "(node: XNode) => string",
+          "optional": false,
+          "rest": false,
+          "codec": "callback"
+        }
+      ],
+      "ret": {
+        "type": "string | undefined",
+        "null": false,
+        "undef": true,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "firstMarkLabel",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "entryXml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "overWithheldModelText",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "text",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "overWithheld",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "entryXml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "withRedactNamespace",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "partXml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "rootTag",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "withheld",
+      "name": "WITHHELD_ENTRY_TEXT",
+      "kind": "const",
+      "async": false,
+      "params": [],
+      "ret": {
+        "type": "",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": ["index", "package"],
+      "rust": null,
+      "route": "none"
+    },
+    {
       "module": "xml-number",
       "name": "xmlInt",
       "kind": "function",
@@ -21398,6 +21813,32 @@
         "bytes": false
       },
       "required": ["test"],
+      "rust": null,
+      "route": "ts",
+      "reason": "a module of the host side of the package: it stays TypeScript and engine-free"
+    },
+    {
+      "module": "xml-utils",
+      "name": "maskOpaque",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
       "rust": null,
       "route": "ts",
       "reason": "a module of the host side of the package: it stays TypeScript and engine-free"

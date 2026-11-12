@@ -8,11 +8,21 @@ import {
   findChild,
   findChildren,
   nameOf,
-  textOf,
   xmlParser,
   type XNode,
 } from './xml-utils'
 import { customEnumItems } from './list-markers'
+import { commentEntries } from './comment-slices'
+import {
+  firstMarkLabel,
+  hasMarkElement,
+  overWithheldModelText,
+  parseEntry,
+  runsText,
+  WITHHELD_ENTRY_TEXT,
+  withheldNode,
+} from './withheld'
+import { patchParagraphTexts } from './text-patch'
 import { decodeNumericCharRefs, onOffOf, type RelInfo } from './parse-xml-text'
 import type {
   CommentImage,
@@ -92,17 +102,6 @@ export async function parseRels(zip: JSZip, path: string): Promise<Map<string, R
 }
 
 /** w:t text only: field instructions (w:instrText) and deleted runs are not part of the display text */
-function resultTextOf(node: XNode): string {
-  let out = ''
-  for (const child of childrenOf(node)) {
-    if ('#text' in child) continue
-    const name = nameOf(child)
-    if (name === 'w:t') out += textOf(child)
-    else if (name !== 'w:instrText' && name !== 'w:delInstrText' && name !== 'w:delText')
-      out += resultTextOf(child)
-  }
-  return out
-}
 
 /**
  * The first picture a comment carries: the blip's relationship resolves
@@ -152,13 +151,49 @@ async function commentImageOf(zip: JSZip, comment: XNode): Promise<CommentImage 
   }
 }
 
+/**
+ * A comment's text as a model may read it, from the parser's own node: each
+ * hidden run as its placeholder, the whole comment withheld when a mark sits
+ * where no run accounts for it; undefined when it hides nothing.
+ */
+function commentModelText(node: XNode): string | undefined {
+  if (!hasMarkElement(node)) return undefined
+  const view = withheldNode(node)
+  return view === null ? WITHHELD_ENTRY_TEXT : findChildren(view, 'w:p').map(runsText).join('\n')
+}
+
+/**
+ * What a model reads of a marked comment once a person's edit has given it
+ * `text`: the save patches the text into the comment's own XML, keeping its
+ * runs and their marks (patchParagraphTexts, as buildCommentsXml does). An
+ * edit the runs cannot carry is written with every word hidden, and reads so.
+ */
+export function editedCommentModelText(markedXml: string, text: string): string | undefined {
+  const patched = patchParagraphTexts(markedXml, text)
+  // an edit the runs cannot carry is saved with every word hidden under the
+  // first label (buildCommentsXml), and reads that way now
+  const node = patched === null ? undefined : parseEntry(patched)
+  const modelText = node
+    ? commentModelText(node)
+    : overWithheldModelText(text, firstMarkLabel(markedXml))
+  return modelText === text ? undefined : modelText
+}
+
+/** the model's text of a comment, kept only where it differs from what the comment says */
+function modelTextOf(modelText: string | undefined, text: string): { modelText?: string } {
+  return modelText !== undefined && modelText !== text ? { modelText } : {}
+}
+
 /** word/comments.xml (+ reply/resolved relations from commentsExtended) -> display list, file order */
 export async function parseComments(zip: JSZip): Promise<CommentInfo[]> {
   const file = zip.file('word/comments.xml')
   if (!file) return []
-  const parsed = xmlParser.parse(await file.async('string')) as XNode[]
+  const xml = await file.async('string')
+  const parsed = xmlParser.parse(xml) as XNode[]
   const root = parsed.find((n) => nameOf(n) === 'w:comments')
   if (!root) return []
+  // each marked comment's own bytes, for a person's edit to be read against
+  const slices = new Map(commentEntries(xml).map((e) => [e.id, e.xml]))
   const out: CommentInfo[] = []
   for (const node of findChildren(root, 'w:comment')) {
     const attrs = attrsOf(node)
@@ -166,12 +201,17 @@ export async function parseComments(zip: JSZip): Promise<CommentInfo[]> {
     const paras = findChildren(node, 'w:p')
     const paraId = paras.length > 0 ? attrsOf(paras[paras.length - 1])['w14:paraId'] : undefined
     const image = await commentImageOf(zip, node)
+    const text = paras.map(runsText).join('\n')
     out.push({
       id: attrs['w:id'],
       author: attrs['w:author'] ?? '',
       initials: attrs['w:initials'],
       date: attrs['w:date'],
-      text: paras.map(resultTextOf).join('\n'),
+      text,
+      ...modelTextOf(commentModelText(node), text),
+      ...(hasMarkElement(node) && slices.has(attrs['w:id'])
+        ? { markedXml: slices.get(attrs['w:id'])! }
+        : {}),
       ...(paraId ? { paraId } : {}),
       ...(image ? { image } : {}),
     })

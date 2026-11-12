@@ -1,5 +1,3 @@
-// Structured document tags (w:sdt): block-level SDT classification and the
-// split of an SDT's run/table content.
 import type { SdtShell } from './types'
 
 /** a <w:sdt>…</w:sdt> element's absolute byte ranges inside the scanned xml */

@@ -1,3 +1,4 @@
+import { maskOpaque } from './xml-utils'
 // Structured document tags (w:sdt): block-level SDT classification and the
 // split of an SDT's run/table content.
 import type { SdtShell } from './types'
@@ -29,8 +30,10 @@ export function sdtRanges(xml: string): SdtRange[] {
   const ranges: SdtRange[] = []
   const stack: Array<{ openStart: number; openEnd: number; closeStart: number }> = []
   const tagRe = /<(\/?)([A-Za-z0-9:._-]+)((?:"[^"]*"|'[^']*'|[^"'>])*)>/g
+  // tags are found where comments and CDATA cannot fake one
+  const masked = maskOpaque(xml)
   let m: RegExpExecArray | null
-  while ((m = tagRe.exec(xml)) !== null) {
+  while ((m = tagRe.exec(masked)) !== null) {
     const closing = m[1] === '/'
     const selfClosing = m[3].endsWith('/')
     const top = stack[stack.length - 1]
