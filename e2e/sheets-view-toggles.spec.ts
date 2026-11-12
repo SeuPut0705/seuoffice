@@ -9,8 +9,10 @@ import { launchShell, closeAndSaveVideo, waitForPageWithUrl, screenshotPath } fr
  * could not find it (genoffice#2081).
  *
  * The compact ribbon already lays this group out side by side; the normal
- * density did not. jsdom cannot compute layout, so the measurement has to
- * come from the real band.
+ * density did not. The group now holds its toggles in two `.check-column`s
+ * (three and two), so the measurement covers the whole group rather than one
+ * column. jsdom cannot compute layout, so the measurement has to come from
+ * the real band.
  */
 test('sheets: the View tab shows every display toggle', async () => {
   test.setTimeout(240_000)
@@ -43,8 +45,8 @@ test('sheets: the View tab shows every display toggle', async () => {
       const bands = [...document.querySelectorAll('[data-ribbon-body]')] as HTMLElement[]
       const body = bands.find((b) => b.offsetParent !== null) ?? bands[0]
       if (!body) return null
-      const column = body.querySelector('.check-column') as HTMLElement | null
-      const items = column ? ([...column.querySelectorAll('.check-item')] as HTMLElement[]) : []
+      const group = body.querySelector('.check-column')?.closest('.ribbon-group') ?? null
+      const items = group ? ([...group.querySelectorAll('.check-item')] as HTMLElement[]) : []
       const band = body.getBoundingClientRect()
       return {
         avail: body.clientHeight,
