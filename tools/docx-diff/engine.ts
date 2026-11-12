@@ -53,12 +53,11 @@ export class Engine {
   static load(wasmPath: string, steps: Record<string, (input: unknown) => unknown> = {}): Engine {
     const wasi = new WASI({ version: 'preview1' })
     const module = new WebAssembly.Module(readFileSync(wasmPath))
-    let exports: EngineExports | undefined
     const instance = new WebAssembly.Instance(module, {
       wasi_snapshot_preview1: wasi.wasiImport,
       seu_host: {
         host_callback: (slot: number, pointer: number, length: number): bigint => {
-          if (slot !== 0 || !exports) return 0xffff_ffff_ffff_ffffn
+          if (slot !== 0) return 0xffff_ffff_ffff_ffffn
           let answer: unknown
           try {
             const { name, input } = JSON.parse(decoder.decode(new Uint8Array(exports.memory.buffer, pointer, length))) as { name: string; input: unknown }
@@ -83,7 +82,7 @@ export class Engine {
           locale: number,
           localeLength: number,
         ): number => {
-          const { buffer } = exports!.memory
+          const { buffer } = exports.memory
           const collator = collatorOf(decoder.decode(new Uint8Array(buffer, locale, localeLength)))
           if (!collator) return -2147483648
           return collator.compare(
@@ -93,7 +92,7 @@ export class Engine {
         },
       },
     })
-    exports = instance.exports as unknown as EngineExports
+    const exports = instance.exports as unknown as EngineExports
     wasi.initialize(instance)
     return new Engine(exports)
   }
