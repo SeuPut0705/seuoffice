@@ -237,6 +237,7 @@ import {
   pasteSourceHoldsHidden,
   type RedactMoveGuardDeps,
 } from './redact-move-guard'
+import { installWithheldCopyMark } from './redact-clipboard'
 import { installLazyFindBridge } from './lazy-find'
 import { startFullLoad } from './full-load'
 import { opensInFormulaMode, workbookCellCounts } from './load-budget'
@@ -3067,6 +3068,11 @@ export function App({
     // Range copies also carry a picture of the cells, as Excel's do, so chat
     // apps that paste images (KakaoTalk) get the table as a photo.
     const copyPictureDisposable = installCopyPicture(runtime)
+    // A copy that holds cells hidden from AI says so on the clipboard, and no
+    // paste in the app takes such a copy: in another tab or window the cells
+    // would arrive without their marks (redact-clipboard.ts). Layered over
+    // copy-picture's clipboard write, so it is taken off first.
+    const withheldCopyDisposable = installWithheldCopyMark(runtime, redactMoveGuardDeps)
     statusBarStatsFilterRef.current = installStatusBarStatsFilter(
       runtime,
       () => statusBarFuncsRef.current,
@@ -4382,6 +4388,8 @@ export function App({
       redactMenuDisposable.dispose()
       redactMoveGuardDisposable.dispose()
       derivedCellsDisposable?.dispose()
+      // outermost layer on the clipboard write and on the internal paste: off first
+      withheldCopyDisposable.dispose()
       redactPasteGuardDisposable.dispose()
       contextSubmenuReopenDisposable.dispose()
       multiRowAutofitDisposable.dispose()
@@ -5260,6 +5268,9 @@ export function App({
     ) {
       return t('redactMoveRefused')
     }
+    // The same cells copied in another tab or window of the app arrive as the
+    // clipboard's text; their copy says what it held (redact-clipboard.ts).
+    if (source.kind === 'text' && source.withheld) return t('redactMoveRefused')
     const result = await applyPasteSpecial(runtime, source, options)
     if (result.ok) return null
     return t(

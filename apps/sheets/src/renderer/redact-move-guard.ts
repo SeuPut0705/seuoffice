@@ -251,18 +251,23 @@ export function installRedactMoveGuard(
   }
 }
 
-/** Whether the cells a copy or cut took hold a hidden one. */
+/**
+ * Whether the cells a copy or cut took hold a hidden one. With `dependents`
+ * a formula that computes from a hidden cell counts too: its value says what
+ * the hidden cell holds, which matters once the copy leaves this workbook.
+ */
 export function pasteSourceHoldsHidden(
   index: RedactionIndex,
   source: { subUnitId: string; rows: readonly number[]; cols: readonly number[] },
+  dependents = false,
 ): boolean {
-  return index
-    .marksFor(source.subUnitId)
-    .some(
-      (mark) =>
-        source.rows.some((row) => row >= mark.startRow && row <= mark.endRow) &&
-        source.cols.some((column) => column >= mark.startColumn && column <= mark.endColumn),
-    )
+  const within = (area: Bounds): boolean =>
+    source.rows.some((row) => row >= area.startRow && row <= area.endRow) &&
+    source.cols.some((column) => column >= area.startColumn && column <= area.endColumn)
+  return (
+    index.marksFor(source.subUnitId).some(within) ||
+    (dependents && (index.derivedFor?.(source.subUnitId) ?? []).some(within))
+  )
 }
 
 /** The slice of Univer's clipboard service a paste from this workbook goes through. */
@@ -280,7 +285,7 @@ export interface InternalPasteService {
 }
 
 /** Paste kinds that put no value down: formatting and column widths. */
-const VALUE_FREE_PASTES: ReadonlySet<unknown> = new Set([
+export const VALUE_FREE_PASTES: ReadonlySet<unknown> = new Set([
   'special-paste-format',
   'special-paste-col-width',
 ])

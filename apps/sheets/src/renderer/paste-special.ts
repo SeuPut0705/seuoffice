@@ -38,6 +38,7 @@ import {
 import { COPY_TYPE, ISheetClipboardService } from '@univerjs/sheets-ui'
 
 import { formatAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { isWithheldCopy } from './redact-clipboard'
 import { sharedFormulaResolverFor } from './shared-formula-journal'
 import type { UniverRuntime } from './univer-state'
 
@@ -85,7 +86,12 @@ export type PasteSpecialSource =
       readonly cols: readonly number[]
       readonly cut: boolean
     }
-  | { readonly kind: 'text'; readonly rows: CellGrid<string> }
+  | {
+      readonly kind: 'text'
+      readonly rows: CellGrid<string>
+      /** set when the text is a copy of this app that held cells hidden from AI */
+      readonly withheld?: true
+    }
   | { readonly kind: 'none' }
 
 /// Paste types the dialog disables (Univer has no note/validation-only paste).
@@ -514,7 +520,12 @@ export async function readPasteSpecialSource(runtime: UniverRuntime): Promise<Pa
   const copyId = /data-copy-id="([^\s"]+)"/.exec(html)?.[1] ?? null
   const internal = internalSource(cache, copyId)
   if (internal) return internal
-  if (text.trim() !== '') return { kind: 'text', rows: parseClipboardText(text) }
+  if (text.trim() !== '') {
+    const rows = parseClipboardText(text)
+    // A copy from another tab or window of the app: its copy id is not in
+    // this editor's cache, but its mark still says what it holds.
+    return isWithheldCopy(html) ? { kind: 'text', rows, withheld: true } : { kind: 'text', rows }
+  }
   return lastCopy ?? { kind: 'none' }
 }
 
