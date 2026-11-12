@@ -1,0 +1,112 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "drawing",
+      "argRefused": 0,
+      "populations": {
+        "corpus": {
+          "compared": 1342,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 3165,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 3299,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "drawing.constants",
+          "checks": 8,
+          "differences": 0,
+          "distinctResults": 7,
+          "typescriptThrew": 2
+        },
+        {
+          "fn": "drawing.colorNodeHex",
+          "checks": 813,
+          "differences": 0,
+          "distinctResults": 64,
+          "typescriptThrew": 51
+        },
+        {
+          "fn": "drawing.solidFillAlpha",
+          "checks": 392,
+          "differences": 0,
+          "distinctResults": 8,
+          "typescriptThrew": 73
+        },
+        {
+          "fn": "drawing.topLevelDrawings",
+          "checks": 434,
+          "differences": 0,
+          "distinctResults": 319,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "drawing.drawingAnchorMeta",
+          "checks": 463,
+          "differences": 0,
+          "distinctResults": 248,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "drawing.resolveAnchorPagePos",
+          "checks": 1146,
+          "differences": 0,
+          "distinctResults": 120,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "drawing.resolveAnchorPageYEmu",
+          "checks": 1146,
+          "differences": 0,
+          "distinctResults": 56,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "drawing.gradFillApproxHex",
+          "checks": 359,
+          "differences": 0,
+          "distinctResults": 20,
+          "typescriptThrew": 54
+        },
+        {
+          "fn": "drawing.w14TextFillHex",
+          "checks": 1079,
+          "differences": 0,
+          "distinctResults": 57,
+          "typescriptThrew": 55
+        },
+        {
+          "fn": "drawing.w14GlowOf",
+          "checks": 794,
+          "differences": 0,
+          "distinctResults": 39,
+          "typescriptThrew": 65
+        },
+        {
+          "fn": "drawing.composeGroupCtm",
+          "checks": 351,
+          "differences": 0,
+          "distinctResults": 75,
+          "typescriptThrew": 49
+        },
+        {
+          "fn": "drawing.lineBoxOf",
+          "checks": 821,
+          "differences": 0,
+          "distinctResults": 96,
+          "typescriptThrew": 48
+        }
+      ]
+    }
+  ]
+}
