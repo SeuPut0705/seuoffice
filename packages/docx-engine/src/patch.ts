@@ -2879,11 +2879,15 @@ const COMMENTS_NS =
 function commentEntries(xml: string): Array<{ id: string; xml: string }> {
   const out: Array<{ id: string; xml: string }> = []
   const open = /<w:comment\b((?:[^>"']|"[^"]*"|'[^']*')*?)(\/?)>/g
+  const endTag = /<\/w:comment\s*>/g
   let m: RegExpExecArray | null
   while ((m = open.exec(xml)) !== null) {
-    const end = m[2] ? open.lastIndex : xml.indexOf('</w:comment>', open.lastIndex)
-    if (end < 0) break
-    const close = m[2] ? end : end + '</w:comment>'.length
+    let close = open.lastIndex
+    if (!m[2]) {
+      endTag.lastIndex = open.lastIndex
+      if (!endTag.exec(xml)) break
+      close = endTag.lastIndex
+    }
     const id = /(?:^|\s)w:id\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(m[1]!)
     const value = id ? (id[1] ?? id[2]) : undefined
     if (value) out.push({ id: decodeEntities(value), xml: xml.slice(m.index, close) })
