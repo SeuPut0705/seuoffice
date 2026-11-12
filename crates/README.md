@@ -101,7 +101,8 @@ the workspace and fails on a pattern `JsRegex::new` refuses.
 A search keeps at most `BACKTRACK_LIMIT` (2^22) entries on the backtrack
 stack of the vendored `regress` (`crates/vendor/regress/VENDORED.md`); an
 entry is 48 bytes on a 64-bit target, so one search holds about 250 MB at
-most, measured by `jscompat/tests/limit.rs`. A loop whose body is more than
+most, measured by `jscompat/tests/limit.rs`; on wasm32 the linear memory grew
+to about 170 MB, and a wasm memory never shrinks (`limit_wasm.rs`). A loop whose body is more than
 one character matcher keeps entries for each turn, so
 `<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>` answers over 1.39M characters and passes
 the bound at 1.40M; V8 answers up to about 8M and throws `RangeError` past
