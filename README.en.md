@@ -1,509 +1,153 @@
-# IeumOffice
+<p align="center"><a href="README.md">한국어</a> · <b>English</b></p>
 
-[한국어](README.md) · **English**
+<p align="center">
+  <img src="apps/shell/build/brand/app-icon.svg" width="96" height="96" alt="SeuOffice">
+</p>
 
-[![Stars](https://img.shields.io/github/stars/pblsketch/ieumoffice?style=social)](https://github.com/pblsketch/ieumoffice/stargazers)
+<h1 align="center">SeuOffice</h1>
 
-If IeumOffice helps you, please tap the **star** above. Every star makes it
-easier for the next person to find this program.
+<p align="center">
+  An office suite for the web and the PC that views and edits PDF, Word, Excel, PowerPoint and Hangul documents, and edits them with AI
+</p>
 
-IeumOffice (이음오피스) is a free, open-source desktop office suite. It opens
-and edits Word, Excel, PowerPoint, PDF, Markdown and HTML documents, mind
-maps and diagrams in one window, and its AI works on the document itself instead of
-answering in a chat box beside it.
+<p align="center">
+  <a href="https://github.com/SeuPut0705/seuoffice/releases/latest/download/SeuOffice-mac-arm64.dmg"><img src="docs/seuoffice/readme/download-mac.svg" width="300" alt="Download for macOS (Apple Silicon)"></a>
+  &nbsp;
+  <a href="https://github.com/SeuPut0705/seuoffice/releases/latest/download/SeuOffice-windows-x64.exe"><img src="docs/seuoffice/readme/download-windows.svg" width="300" alt="Download for Windows (x64)"></a>
+</p>
 
-The AI runs on **the Claude subscription or ChatGPT plan you already pay
-for**. You do not create an API key and you do not pay IeumOffice anything.
-Without a subscription you can connect a **free AI** (OpenRouter or Google
-Gemini).
+<p align="center">
+  <sub>Apple Silicon Mac · Windows x64 · Free · Apache-2.0 · <a href="https://github.com/SeuPut0705/seuoffice/releases">All versions and preview versions</a></sub>
+</p>
 
-IeumOffice is a modified version of the open-source project
-[GenOffice](https://github.com/genspark-ai/genoffice) (see
-[License and acknowledgement](#license-and-acknowledgement)).
+<p align="center">
+  <img src="docs/seuoffice/readme/hero.jpg" width="820" alt="SeuOffice opening PDF, DOCX, XLSX, PPTX and HWP documents on a laptop and in a browser">
+</p>
 
-## Contents
+## What it does
 
-- [Why it was made](#why-it-was-made)
-- [What works today](#what-works-today)
-- [Connecting your subscription](#connecting-your-subscription)
-- [Using it for free, without a subscription](#using-it-for-free-without-a-subscription)
-- [What the app never does with your login](#what-the-app-never-does-with-your-login)
-- [What it costs](#what-it-costs)
-- [Images, pictures and search](#images-pictures-and-search)
-- [Terminal command, MCP and agent skill](#terminal-command-mcp-and-agent-skill)
-- [Download and install](#download-and-install)
-- [Updates](#updates)
-- [Building from source](#building-from-source)
-- [Known limitations](#known-limitations)
-- [Planned, not available yet](#planned-not-available-yet)
-- [Privacy](#privacy)
-- [Contributing and reporting problems](#contributing-and-reporting-problems)
-- [License and acknowledgement](#license-and-acknowledgement)
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/seuoffice/readme/web-and-pc.jpg" width="220" alt=""></td>
+    <td align="center" width="33%"><img src="docs/seuoffice/readme/ai-review.jpg" width="220" alt=""></td>
+    <td align="center" width="33%"><img src="docs/seuoffice/readme/edit-lock.jpg" width="220" alt=""></td>
+  </tr>
+  <tr>
+    <td valign="top"><b>The same editors on the web and the PC</b><br>The editors of the PC app run in the browser as they are. They need only static files, no conversion server, and can be embedded in another web app.</td>
+    <td valign="top"><b>AI edits, a person accepts</b><br>In Word, an AI edit is recorded as a tracked change. In Hangul, Excel and PowerPoint, what the AI changed stays a suggestion and enters the document only when a person accepts it.</td>
+    <td valign="top"><b>Editing together (trial stage)</b><br>Word, Excel, PowerPoint and PDF documents can be edited by several people at the same moment. It is on only when the host runs a co-editing server, and it has not been used in a real service yet. Hangul documents, and every other case, are edited by the one person who holds the edit lock while the others read.</td>
+  </tr>
+</table>
 
-## Why it was made
+| Format           | View | Edit and save in the same format |     AI editing     |
+| ---------------- | :--: | :------------------------------: | :----------------: |
+| PDF              |  ✅  |                ✅                |         ✅         |
+| Word docx        |  ✅  |                ✅                | ✅ tracked changes |
+| Excel xlsx       |  ✅  |                ✅                |   ✅ suggestions   |
+| PowerPoint pptx  |  ✅  |                ✅                |   ✅ suggestions   |
+| Hangul hwp, hwpx |  ✅  |                ✅                |   ✅ suggestions   |
 
-IeumOffice began as a tool a Korean high-school teacher built for their own
-reading and writing. Sorting out ideas in a mind map, handing them to an AI,
-then moving what the AI produced into Hangul (HWP) or PowerPoint to fix it
-meant hopping between several programs. The starting point was to join those
-steps in one window and let people edit what the AI made with their own hands.
+The current stage and the plan are in `docs/seuoffice/로드맵.md` (Korean).
 
-- **It is not meant to replace Microsoft Office or Hancom Office.** The author
-  still uses both alongside IeumOffice, and owes a great deal of their work
-  over the years to them.
-- **It is shared for the public good.** It is free, open-source software that
-  anyone can use, and it is not sold.
-- **It was not built by reverse engineering commercial software.** It is based
-  on open-source projects such as GenOffice and rhwp, and on the HWP format
-  documentation Hancom has published (see
-  [License and acknowledgement](#license-and-acknowledgement)).
+## Install
 
-The author's own account, in Korean, is at
-[이음오피스를 만든 이유](https://ieumoffice.com/story).
+Download with the buttons above. On both platforms the app fetches and installs new versions itself.
 
-## What works today
+For now the app is released without code signing (decision 0013). The operating system blocks it once, the first time you open it.
 
-- **Editors in one tabbed window**: Word (`.docx`), Excel (`.xlsx`),
-  PowerPoint (`.pptx`), PDF, Hangul (`.hwp`, `.hwpx`), Markdown, HTML, mind
-  maps and diagrams (draw.io files `.drawio`). Files are opened and saved in their real formats on your own PC; edits are written back as narrow changes
-  to the original file, so the parts you did not touch are kept as they were.
-- **An AI panel in every editor.** You ask in plain words, and the AI changes
-  the document through the app's own editing tools. You see what was changed
-  and you can undo it.
-- **PDF**: edit text on the page and convert a PDF to Word, Excel or
-  PowerPoint on your PC.
-- **Slides from a request**: the deck is generated on your PC.
-- **Mind maps**: opens and saves XMind files (`.xmind`) in place. Elements the
-  editor does not show are kept when you save, and a map you did not change is
-  saved byte for byte as it was. Several sheets, themes, export to a picture,
-  PDF or Markdown outline, and printing. FreeMind and Freeplane files (`.mm`)
-  are imported as new maps and saved as `.xmind`.
-- **Diagrams**: opens draw.io files (`.drawio`, `.dio`, `.drawio.svg`,
-  `.drawio.png`) and saves them in the same format. The drawing screen runs
-  on this PC only and sends nothing to the internet.
-  Visio files (`.vsdx`) are imported as new diagrams. Export to PNG, SVG or
-  PDF, printing, and drawing from Mermaid in the AI panel.
-- **New documents from your documents**: start "Make a new document" from a
-  starred group on the home screen, from files you picked, or from an
-  editor's File menu, and the material is turned into a PowerPoint deck, an
-  HTML page or a mind map. The AI of the editor for the new document writes
-  it. Maps and Markdown convert into each other, and a map into a slide
-  outline, without AI. File → View Sources shows which files a document was
-  made from; that record stays on your PC.
-- **Search across your documents** from the home screen, indexed on your PC.
-- **A terminal command (`ieumoffice`), an MCP server and an agent skill**, so a
-  coding agent can read, create and edit the same files.
-- **21 interface languages.** Korean and English were written by hand; the
-  other 19 are machine translations.
+- **Mac**: open the dmg and move SeuOffice to the Applications folder. If it is blocked the first time you open it, choose "Open Anyway" under System Settings → Privacy & Security.
+- **Windows**: if a "Windows protected your PC" window appears when you run the installer, choose "More info" → "Run anyway".
 
-Released for **Windows**, with separate **betas for Macs (Apple Silicon and
-Intel) and 64-bit Linux (x64)**. The developer has not been able to check the
-Mac or Linux builds on those machines; please report problems as
-[issues](https://github.com/pblsketch/ieumoffice/issues).
+## Open in the browser
 
-## Connecting your subscription
+The five formats open in the browser in the suite's own editors. It needs only static files, no conversion server.
 
-IeumOffice does not sign you in to anything. You need one of these:
+- Build: `npm run build -w @seuoffice/web`. The result is `apps/web/dist/`; the first build downloads the rhwp studio from GitHub and builds the Excel engine for `wasm32-wasip1`.
+- Preview: `npm run preview -w @seuoffice/web` → http://localhost:5300. Pick a file or drop one to open it.
+- Test: `npm run test -w @seuoffice/web` (Playwright, after a build).
 
-1. A Claude subscription of your own, and **Claude Code** installed on the PC
-   and signed in. IeumOffice starts that program, hands it your request, and
-   reads the answer.
-2. A ChatGPT plan of your own. There is no program to install. Press
-   **Continue with ChatGPT** on the ChatGPT card: OpenAI's ChatGPT sign-in page
-   opens in your browser, and once you sign in and allow this app to use your
-   ChatGPT plan, it is connected. Requests go from your PC straight to
-   `api.openai.com`. If you already use the **Codex** program on this PC, you
-   can connect through it instead, the same way as Claude Code.
+## Embedding in another web app
 
-The first-run guide and **Settings → AI → Subscription connection** (the
-Claude, ChatGPT and Codex cards) show the state of each connection and offer a
-button for the step that is missing. For Claude Code and Codex:
+To embed it in another web app, use `@seuoffice/embed`.
 
-- **Install** runs the vendor's official install command in a terminal window
-  you can watch. The app does not download an installer itself.
-  - Claude Code: `irm https://claude.ai/install.ps1 | iex`
-  - Codex: `winget install OpenAI.Codex`
-- **Sign in** starts the program's own sign-in (`claude auth login`,
-  `codex login`). The sign-in page that opens belongs to Anthropic or OpenAI,
-  not to this app.
+```ts
+import { openDocument } from '@seuoffice/embed'
 
-With **AI to use** left on _Automatic_, the app uses the connected
-subscriptions in this order: Claude, then ChatGPT, then Codex. You can pick
-one yourself in the same place or in the model picker of the AI panel. Claude Code 2.1.248 or newer is required;
-an older one is reported as needing an update.
-
-## Using it for free, without a subscription
-
-The first-run guide and **Settings → AI → Use for free** connect a free AI.
-
-- **OpenRouter**: press **Connect in browser**, sign up or sign in to
-  OpenRouter in the browser that opens, and allow access. There is no key to
-  copy. Only free models are used, and the card shows how many free requests
-  are left today.
-- **Google Gemini**: **Get a key** opens Google AI Studio, where you make a
-  key; paste it and press **Connect**. Only for people aged 18 or older. A key
-  from a Google project with billing turned on can be charged.
-
-Once connected, that AI becomes the **AI to use**. Free models are weaker than
-the subscription ones and have a daily limit (one edit of a document takes
-several requests). When it runs out, the app says so and when it frees again.
-While you use it for free, what you send may be used to improve that
-company's AI, so take care with documents that hold personal information.
-
-The subscription program is only the "brain". Editing the document, showing
-the changes and undoing them are done by the app. The program is started in an
-empty temporary folder with its own tools switched off, and a Claude run is
-refused if the program reports that any tool is still available.
-
-## What the app never does with your login
-
-- It never reads, copies or stores your Claude or Codex login: not
-  `~/.codex/auth.json`, not the Claude credential store, not a session token.
-- The one sign-in the app keeps is the one OpenAI gives this app when you
-  connect ChatGPT directly. It can only use your ChatGPT plan, and it is not
-  the Codex program's login. Disconnecting asks OpenAI to revoke it and deletes
-  it from your PC; other programs on the PC stay as they are.
-- It has no Claude or ChatGPT sign-in form of its own. Signing in always
-  happens in the vendor's program or on the vendor's page in your browser.
-- It never modifies or wraps the vendor programs. They run as distributed.
-- It never pays for, resells or relays anyone's AI usage. Your usage is billed
-  to your own account by Anthropic or OpenAI.
-- It never starts an AI request in the background. A request starts when you
-  ask for one.
-- It never leaves a vendor program running after you cancel a request or quit
-  the app.
-
-## What it costs
-
-IeumOffice itself is free. What the AI costs depends on the connection:
-
-| Connection                                                                                     | Cost                                                                     | When it is used                                                 |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| Claude or Codex signed in with a **subscription**, or ChatGPT connected directly in the app    | Nothing beyond the subscription; requests count against its usage limits | By default (_Automatic_)                                        |
-| Claude or Codex signed in in a way that is **billed by usage** (an API key, a metered account) | You pay the vendor for what you use                                      | Only after you read the warning and choose **Use anyway**       |
-| An **API-key provider** set up under **Settings → AI → Advanced**                              | You pay that provider for what you use                                   | Only while you have chosen it yourself under **AI to use**      |
-| OpenRouter or Gemini connected under **Settings → AI → Use for free**                          | Nothing within the free limit                                            | Once connected, or while you have chosen it under **AI to use** |
-
-The app never moves your AI chat to a connection that costs money on its own.
-When a subscription runs out of its limit, or a login expires, the request
-stops and says why (with the time the limit resets, when the program reports
-it). If your other subscription is connected you get a button to continue with
-it; nothing switches by itself. From 80% of a usage limit on, the AI panel
-shows how much is used and when it resets.
-
-One thing to know before choosing Codex: **using a Codex subscription inside
-an app is not a method officially recommended by OpenAI.** Whether and how you
-may use a subscription this way is a matter between you and Anthropic or
-OpenAI, and their terms can change.
-
-## Images, pictures and search
-
-- **Image generation** works when you have entered the key of an image
-  provider under **Settings → AI → Advanced**, or when the Codex program on
-  this PC is signed in with a paid ChatGPT plan; pictures made through Codex
-  are charged to that plan. ChatGPT connected directly in the app does not
-  make images. Without either, slides use pictures found by search instead.
-- **Looking at pictures**: a picture you attach is shown to the AI you are
-  using, subscription included. Video and sound analysis need a key-based
-  provider that supports video.
-- **Web and image search are free by default** and need no key: Parallel's
-  free search, then DuckDuckGo. A key-based search provider can be chosen
-  under Advanced.
-
-## Terminal command, MCP and agent skill
-
-The installer puts an `ieumoffice` command on the PATH (open a new terminal
-after installing). It reads, creates, converts and edits the same file types
-without opening a window:
-
-```bash
-ieumoffice --version
-ieumoffice info report.docx --json
-ieumoffice convert report.md --to pdf
-ieumoffice create --type docx --from notes.md --out notes.docx
-ieumoffice docs read report.docx --range 0-9 --json
-ieumoffice open report.docx
+const doc = openDocument(document.getElementById('viewer')!, {
+  baseUrl: 'https://office.example/', // where apps/web/dist is served
+  bytes, // ArrayBuffer or Uint8Array
+  fileName: 'minutes.hwpx',
+})
+await doc.opened // rejects with SeuofficeEmbedError (code: unsupported_format | too_large | open_failed | timeout)
 ```
 
-`ieumoffice help` lists every command; the full reference is
-[packages/cli/README.md](packages/cli/README.md).
+To let the user edit and save, the host first takes the edit lock of that document and opens it with `mode: 'edit'`. Without the lock, open it in read mode (the default). One document is edited by one person.
 
-- **Agent skill.** **Settings → Integrations** lists the coding agents found
-  on the PC and installs the `ieumoffice` skill into the ones you choose. From
-  a terminal: `npx skills add pblsketch/ieumoffice`.
-- **MCP server.** `ieumoffice mcp` serves the same commands as Model Context
-  Protocol tools. The same settings page shows ready-made snippets, for
-  example `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`.
-
-Document commands run entirely on your PC. Only `search`, `image`, `media` and
-`read-url` send anything out. `read-url` sends the address it is given to that
-site, and the rest go through the same routes as the app.
-
-**Requests that arrive this way do not use your subscription unless you allow
-it.** A terminal command or an MCP tool call is made by a program, not by a
-person looking at the screen, and neither Anthropic nor OpenAI recommends
-letting a program use a subscription automatically; an account may be
-restricted for it. So **Settings → AI → Advanced → Let automatic requests use
-a subscription** is off by default. While it is off, these requests use a key
-provider if you set one up and are otherwise answered with "unavailable".
-While it is on, they run one at a time, with no hourly limit. Even then they
-use Claude Code or Codex, never ChatGPT connected directly in the app.
-`ieumoffice capabilities --json` reports what is available and by which route.
-
-IeumOffice can be installed next to GenOffice. It registers only its own names
-(`ieumoffice`, `~/.ieumoffice`) and does not read or change GenOffice's.
-
-## Download and install
-
-Installers are published on the
-[Releases page](https://github.com/pblsketch/ieumoffice/releases) as
-`IeumOffice-Setup-<version>.exe`, for 64-bit Windows 10 and 11. If that page
-is still empty, no release has been published yet; build from source instead.
-
-**The installer is not code-signed.** Windows will warn that the publisher is
-unknown, typically with a "Windows protected your PC" window in which you
-choose **More info → Run anyway** (the wording differs between Windows
-versions). Download the installer only from the Releases page of this
-repository.
-
-### Mac (beta)
-
-The same Releases page carries two disk images, both for macOS 12 or newer:
-
-- Apple Silicon Macs (M1 and later): `IeumOffice-<version>-arm64.dmg`
-- Intel Macs: `IeumOffice-<version>-x64.dmg`
-
-**About This Mac** in the Apple menu shows which one yours is: a "Chip" line
-(Apple M…) or a "Processor" line (Intel …).
-
-The Mac build has no Apple Developer signature, so macOS warns that it cannot
-verify the app the first time you open it. Allow it once:
-
-1. Open the dmg and drag **IeumOffice** to **Applications**.
-2. Open IeumOffice from Applications. When the warning appears, choose **Done**.
-3. Open **System Settings → Privacy & Security**, find "IeumOffice was blocked"
-   near the bottom, choose **Open Anyway** and enter your Mac password.
-4. Choose **Open** in the window that follows. From then on it opens normally.
-
-If macOS says the app "is damaged and can't be opened", do not move it to the
-Trash; run this in Terminal and open it again (it removes the mark macOS puts
-on downloaded files):
-
-```sh
-xattr -dr com.apple.quarantine /Applications/IeumOffice.app
+```ts
+const doc = openDocument(viewer, {
+  baseUrl,
+  bytes,
+  fileName: 'minutes.hwpx',
+  mode: 'edit',
+  // when the user saves, the bytes arrive in the same format under the same name; rejecting shows a failed save on screen
+  onSave: async ({ fileName, bytes }) => uploadNewVersion(fileName, bytes),
+  onDirtyChange: (dirty) => setUnsaved(dirty),
+})
+await doc.save() // when the host makes it save before closing; rejects with SeuofficeEmbedError (code: save_failed)
 ```
 
-What differs on a Mac:
+The host owns the lock (decision 0008). Give the lock an expiry and extend it while the editing screen is open. In `onSave`, check that the lock is still yours and that the save lands on the version you opened, and reject otherwise. When someone asks to take over, call `doc.save()` and then release the lock.
 
-- **The app installs updates itself.** In the update window, **Update Now**
-  then **Restart & Install** closes the app, swaps in the new version and opens
-  it again; there is no second "Open Anyway". This works for an app moved into
-  Applications. One opened straight from the disk image, or kept in a folder
-  you cannot write to, opens the download page instead. Coming from an older
-  version without this, install the new dmg over the old app once.
-- The AI connection card has **no install button**. Install from Terminal
-  instead: `curl -fsSL https://claude.ai/install.sh | bash` for Claude Code,
-  `npm install -g @openai/codex` for Codex. The card's "official install
-  instructions" link says the same.
-- **A PATH set for your terminal does not reach the app.** An app opened from
-  the Dock or Applications never sees what `~/.zshrc` adds to PATH. The app
-  looks in the places the installers and package managers use instead
-  (`~/.local/bin`, Homebrew, MacPorts, nvm/fnm/volta/asdf/mise, the global npm
-  prefix). If it still cannot find the program, you can type its path under
-  **Settings → AI → Advanced**.
-- Signing in finishes in the browser. If the browser asks you to paste a code,
-  run `claude auth login` or `codex login` in Terminal yourself.
+To let several people edit at the same moment, pass `collab` and run the co-editing server (`@seuoffice/collab/server`, decision 0023). It is at a trial stage. What works per format, what the host has to do, and what was and was not checked are in [`docs/seuoffice/공동-편집.md`](docs/seuoffice/공동-편집.md) (Korean).
 
-### Linux (beta)
+To turn on the AI assistant inside the document, pass `ai` (in both view and edit modes). The page holds no token. For each AI turn it hands the host an OpenAI Chat Completions request body (`gateway-complete`, decision 0009), and the host calls the gateway with its own login token and returns the response as it is (decision 0017).
 
-The same Releases page carries three 64-bit (x86_64) Linux packages:
-
-- `IeumOffice-<version>.AppImage`: a single-file bundle you can make executable
-  (`chmod +x`) and run directly.
-- `ieumoffice_<version>_amd64.deb`: for Ubuntu and Debian distributions
-  (`sudo apt install ./ieumoffice_<version>_amd64.deb`).
-- `ieumoffice-<version>.x86_64.rpm`: for Fedora, RHEL and openSUSE distributions
-  (`sudo dnf install ./ieumoffice-<version>.x86_64.rpm`).
-
-The `deb` and `rpm` packages install under `/opt/IeumOffice` and link the
-terminal command at `/usr/bin/ieumoffice`.
-
-What differs on Linux:
-
-- **Only the `AppImage` updates itself.** A `deb` or `rpm` install tells you
-  when a new version is out and opens the download page.
-- As on a Mac, the AI connection card has **no install button**, and if a
-  sign-in page asks you to paste a code, run `claude auth login` or
-  `codex login` in a terminal yourself. The install commands, and the places
-  the app looks for the programs, are the same as on a Mac.
-
-To use only the terminal command without the desktop app (a server without a
-screen, or an AI agent's workspace), use the command-line archive
-`ieumoffice-cli_<version>_linux-x64.tar.gz` from the same release. The script
-below downloads the archive, checks its checksum, fetches Node 22 when no Node
-22 or newer is installed, and writes only under `~/.local`, without
-administrator rights.
-
-```sh
-curl -fsSL https://ieumoffice.com/cli/install.sh | sh
+```ts
+const doc = openDocument(viewer, {
+  baseUrl,
+  bytes,
+  fileName: 'minutes.docx',
+  mode: 'edit',
+  onSave,
+  ai: {
+    request: (body, signal) =>
+      fetch(`${gatewayUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal, // aborted when the user stops or doc.destroy() is called
+      }),
+  },
+})
 ```
 
-Exporting to PDF, HTML or PNG and `open` / `selection` need the app's renderer,
-so the archive does not offer them. See
-[packaging/cli/README.md](packaging/cli/README.md) for details.
+Without `ai`, the AI shows as "not connected" and no request arrives. Pass `ai` only for people who may use AI, and limit the number of requests and the amount of tokens per person and per document on the host side. Return a refusal as a non-2xx response such as 429 and the page shows the same wording as the desktop app. Of the response headers only `Content-Type` and `Retry-After` reach the page. Do not put a token in an error body. AI runs on the web for all five formats. The AI editing tool for pptx on the web is `apply_ops` alone.
 
-## Updates
+What to keep to in operation:
 
-The Windows app and the Linux `AppImage` look at this repository's GitHub
-Releases shortly after they start and every four hours after that, and offer
-the new version in an update window. If there is no release, no network or the
-check fails, nothing happens and the app keeps working. To check yourself, use
-**Menu (☰) → Check for Updates…** at the left of the tab bar
-(**Help → Check for Updates…** on a Mac). Pre-release versions are offered
-only when you choose the beta channel under **Settings → About**. The Mac build
-installs updates itself when it sits in Applications; the Linux `deb` and `rpm`
-installs only tell you about a new version.
+- The SeuOffice page needs `script-src 'self' 'wasm-unsafe-eval'` and `worker-src 'self' blob:` in its CSP (pdf.js, rhwp and the Excel engine use WASM and workers).
+- The host page lists the SeuOffice origin in `frame-src`.
+- To send documents from another origin, give `VITE_SEUOFFICE_EMBED_ORIGINS` (a comma-separated list of origins) when you build SeuOffice. Documents sent by an origin that is not on the list are not accepted.
+- The file size limit is 50 MiB (`MAX_EMBED_BYTES`).
+- Serve the static files compressed (brotli or gzip). `application/wasm` and fonts (`font/ttf`, `font/otf`) are often missing from a server's default compression list, so add them yourself. Uncompressed, the first open of a Hangul document downloads 30.8 MB; with brotli it is 9.6 MB (per-format figures are in `apps/web/README.md`).
 
-## Building from source
+## Ownership and boundaries
 
-You need Node 22.12 or newer (npm 10 or newer) and a Rust toolchain with
-`cargo` on the PATH (for the spreadsheet engine).
+- SeuOffice is the personal asset of SeuPut (GitHub SeuPut0705). It is made on SeuPut's own time and at SeuPut's own cost, and is not a deliverable of a contract with Yuyu Healthcare. Yuyu Healthcare is a user that takes SeuOffice and uses it.
+- The code, settings and data of the Yuyu Healthcare repository (`yuyuhealthcare/yuyu-mos`) are not brought into this repository. Neither are Yuyu's real data or customers' original documents. Tests use mock documents and documents whose rights have been checked.
+- The code that connects SeuOffice to Yuyu's messenger and work apps (handing an attachment to the viewer, checking permissions) lives in yuyu-mos. SeuOffice provides a "bytes + file name → screen" part (`@seuoffice/embed`) and a static web bundle.
+- The whole repository is public under Apache-2.0 (`docs/seuoffice/decisions/0007-전부-공개.md`). Yuyu Healthcare takes the versioned `@seuoffice/*` bundles and the stable PC app for Yuyu, and there is no separate permission document.
 
-```bash
-git clone https://github.com/pblsketch/ieumoffice.git
-cd ieumoffice
-npm install
-npm run dev      # all editors and the shell, against development servers
-npm run shell    # or: build everything, then run the app
-```
+## Development
 
-To make the Windows installer (also needs the Windows 10/11 SDK):
+- Node 22 or newer, npm 10 or newer. Rust stable (the Excel engine), and the `wasm32-wasip1` target for the web build.
+- `npm ci`, then `npm run shell` to run the desktop app. The other commands and the working rules are in `AGENTS.md` (Korean).
 
-```bash
-npm run native:build -w @genoffice/sheets
-# copy apps/sheets/native/xlsx-engine/target/release/xlsx-sidecar.exe
-#   to apps/sheets/native/xlsx-engine/target/x86_64-pc-windows-gnu/release/
-npm run dist:win -- -- --publish never
-```
+## License and origin
 
-The installer appears in `apps/shell/release`. The Mac installer is built by
-running "macOS build" and the Linux packages by running "Linux build" in this
-repository's GitHub Actions (locally, `npm run build:all` and then
-`npm run dist:mac -w @genoffice/shell -- --publish never` on a Mac or
-`npm run dist:linux -w @genoffice/shell -- --publish never` on Linux).
-The release procedure is in [docs/releasing.ko.md](docs/releasing.ko.md)
-(Korean).
-
-Package names and environment variables inside the code still say `genoffice`
-/ `GENOFFICE_`. That is deliberate: it keeps engine fixes from the upstream
-project easy to take.
-
-## Known limitations
-
-- **Windows, Macs (beta, Apple Silicon and Intel) and 64-bit Linux (beta)
-  only.** The developer cannot check the Mac or Linux builds directly; they are
-  checked through user reports.
-- **Unsigned installers**, as described above. That is also why the Mac build
-  swaps in its updates itself instead of using Apple's update mechanism.
-- **Claude Code and Codex answer a little later than an API key.** Each
-  request starts the program first, so the first words take a few seconds to
-  appear (about four seconds with Claude on the development PC).
-- **Codex cannot be told to ignore all of your personal Codex settings.** The
-  app overrides what it can (your MCP servers, hooks and plugins are switched
-  off), but Codex still adds `~/.codex/AGENTS.md` to the conversation, and
-  settings the app does not override still apply. The app switches off Codex's
-  conversation history, but Codex keeps a diagnostic log of its own.
-- **Any ChatGPT login shows as connected**, a free plan included. What it can
-  actually do is decided by that plan.
-- **Usage display for Codex** appears only when Codex reports a five-hour or
-  seven-day limit. ChatGPT connected directly has no usage display;
-  **Manage usage** on the ChatGPT card opens the usage page of your ChatGPT
-  settings.
-- **Proxies.** The app's own requests (search, key providers, ChatGPT
-  connected directly, update checks) follow the proxy environment variables or
-  the Windows proxy setting. Claude Code and Codex are separate programs: they
-  see only the proxy environment variables (`HTTPS_PROXY` and the like), not a
-  proxy that is set in Windows alone.
-- **Image generation needs a key**, as described above.
-- **Translations.** 19 of the 21 interface languages are machine-translated
-  and have not been reviewed by native speakers.
-- **Hiding does not reach everywhere.** Parts you hid from AI in the
-  PowerPoint, Markdown and HTML editors stay hidden when the file is attached
-  in another editor or asked about on the home screen, but hiding marks in
-  Word documents are not recognised, and the terminal command and MCP read
-  files as written. Until they are fixed, hidden text can also reach AI in
-  these cases: in PowerPoint, hidden text with no character formatting of its
-  own can be saved without the mark; in Markdown, inline code inside a hidden
-  part is saved outside it; and a Markdown document saved as `.txt` or `.json`
-  shows its hidden text to the Markdown editor's AI when reopened there.
-  [PRIVACY.md](PRIVACY.md) has the details.
-- **Old XMind 8 files** (with only `content.xml` inside) and password-protected
-  mind maps do not open.
-- **Updating from a real GitHub release had not been exercised end to end**
-  when this was written, because no release existed yet.
-
-## Planned, not available yet
-
-These belong to a later stage and are **not in the app today**:
-
-- Making Word and Markdown documents with AI (today: PowerPoint, HTML and mind
-  maps).
-- Importing old XMind 8 files.
-- Showing a theme chosen in XMind with a similar look (today such a map is
-  drawn with the default look, and the file's theme is left as it is).
-- Mind maps in the terminal command (`ieumoffice`).
-
-## Privacy
-
-IeumOffice has no server of its own and no usage analytics. Your documents
-stay on your PC. When you use AI, the document content and the conversation go
-to Anthropic or OpenAI under your own account (or to the company whose API key
-you entered), and whether they are used for training is decided by your
-account settings there. Search queries go to Parallel and DuckDuckGo by
-default, and update checks go to GitHub. When an editor or the app stops
-abnormally, only the time, what stopped, the reason, the editor and the memory
-use at that moment (numbers only) are written to `crash-log.jsonl` in the data
-folder, and the same numbers are written when the PC or the app runs short of
-memory. To tell when the whole app went down, the running app also writes its
-memory numbers to `crash-heartbeat.json` every 30 seconds; no document text, file names or paths, and it is never sent
-anywhere. The full list is in [PRIVACY.md](PRIVACY.md).
-
-## Reporting problems
-
-Bugs and requests:
-[GitHub Issues](https://github.com/SeuPut0705/seuoffice/issues).
-
-### Contributors
-
-IeumOffice is built with help from many people. See
-[CONTRIBUTORS.md](CONTRIBUTORS.md) for the full list.
-
-- [@CauchyRiemannEquations](https://github.com/CauchyRiemannEquations) — math editing in the HTML editor
-- [@dossamlab](https://github.com/dossamlab) — spreadsheet PDF export
-- [@hahadark](https://github.com/hahadark) — first-run hang under Controlled Folder Access
-- [@hunkim](https://github.com/hunkim) — Upstage Solar provider, test fixes
-- [@Neosiki](https://github.com/Neosiki) — CLI, HWP and ODT fixes
-- [@thecodinglog](https://github.com/thecodinglog) — spreadsheet formula bar and cell menu
-- [@wlsgur11](https://github.com/wlsgur11) — Markdown export
-- [@wonby1n](https://github.com/wonby1n) — EPUB MCP reads
-
-## License and acknowledgement
-
-IeumOffice is licensed under the [Apache License 2.0](LICENSE).
-
-**IeumOffice is based on [GenOffice](https://github.com/genspark-ai/genoffice)**,
-the open-source office suite by Genspark (Mainfunc, Inc.), which is also
-licensed under Apache-2.0. The document engines and editors come from that
-project; IeumOffice changes how the AI is connected, removes the parts tied to
-Genspark's services and renames the product. The original copyright notices
-are kept, and [NOTICE](NOTICE) records the attribution and the fact that this
-is a modified version.
-
-The slide design templates are re-authored from the designs in
-[frontend-slides](https://github.com/zarazhangrui/frontend-slides) (MIT
-License), and their fonts are all licensed under the SIL Open Font License
-1.1; [NOTICE](NOTICE) carries the notice and the font list. The templates'
-Korean font pairings referred to [k-slide](https://k-slide.web.app).
+- Apache-2.0 (`LICENSE`). The notices are in `NOTICE`.
+- Based on: IeumOffice https://github.com/pblsketch/ieumoffice (imported at commit aea1414), and its original, GenOffice https://github.com/genspark-ai/genoffice. GenOffice's `ee/` (Enterprise License) is not included.
+- The Hangul engine rhwp (MIT, Edward Kim) and its IeumOffice-patched build (`vendor/rhwp-core`).
 
 The Hangul (HWP/HWPX) editor is built on
 [rhwp](https://github.com/edwardkim/rhwp) (MIT License). As Hancom requires of
@@ -519,37 +163,29 @@ The diagram editor is built on the web editor of
 [draw.io](https://github.com/jgraph/drawio) (Apache License 2.0). Parts under
 licenses outside the project's allowlist (the PlantUML converter, libavoid and
 ELK) are left out; what was left out and how is listed in the installed
-`THIRD-PARTY-NOTICES.txt`. IeumOffice is not affiliated with or endorsed by
+`THIRD-PARTY-NOTICES.txt`. SeuOffice is not affiliated with or endorsed by
 the company that makes draw.io.
 
-IeumOffice is an independent project. It is not affiliated with, sponsored by
-or endorsed by Genspark / Mainfunc, Inc., Anthropic, OpenAI, Microsoft, Hancom,
-Adobe, XMind Ltd. or Google. "GenOffice" and "Genspark", and their logos, are trademarks of
-their owners; so are "Claude", "Codex" and "ChatGPT". "Microsoft", "Windows",
-"Word", "Excel" and "PowerPoint" are trademarks of Microsoft Corporation;
-"한글" (Hangul), "한컴" (Hancom), "HWP" and "HWPX" are registered trademarks of
-Hancom Inc.; "XMind" is a trademark of XMind Ltd.; and "Google Drive" is a
-trademark of Google LLC. Other product names in this document belong to their
-owners. They are named here only to say what this software is based on, what
-it works with and which files it opens.
+The slide design templates are re-authored from the designs in
+[frontend-slides](https://github.com/zarazhangrui/frontend-slides) (MIT
+License), and their fonts are all licensed under the SIL Open Font License
+1.1; [NOTICE](NOTICE) carries the notice and the font list. The templates'
+Korean font pairings referred to [k-slide](https://k-slide.web.app).
 
-### Official downloads and redistribution
-
-IeumOffice is free. Its only official downloads are the
-[GitHub releases](https://github.com/pblsketch/ieumoffice/releases) and
-[ieumoffice.com](https://ieumoffice.com); a copy sold for money is not an
-official release.
-
-The Apache License 2.0 lets anyone modify and redistribute the software. A
-redistribution must include [LICENSE](LICENSE) and [NOTICE](NOTICE) and state
-which files were changed. The license grants no trademark rights (sections 4
-and 6): the names and logos "IeumOffice", "이음오피스" and "GenOffice" may not
-be used as the name of another product. The projects IeumOffice builds on,
-GenOffice, rhwp and the others listed in [NOTICE](NOTICE) and in the installed
-`THIRD-PARTY-NOTICES.txt`, keep their own license terms.
+SeuOffice is not affiliated with, sponsored by or endorsed by Genspark /
+Mainfunc, Inc., the IeumOffice contributors, Anthropic, OpenAI, Microsoft,
+Hancom, Adobe, XMind Ltd. or Google. The names GenOffice and IeumOffice
+(이음오피스) identify the original works only. "GenOffice" and "Genspark", and
+their logos, are trademarks of their owners; so are "Claude", "Codex" and
+"ChatGPT". "Microsoft", "Windows", "Word", "Excel" and "PowerPoint" are
+trademarks of Microsoft Corporation; "한글" (Hangul), "한컴" (Hancom), "HWP"
+and "HWPX" are registered trademarks of Hancom Inc.; "XMind" is a trademark of
+XMind Ltd.; and "Google Drive" is a trademark of Google LLC. Other product
+names in this document belong to their owners. They are named here only to say
+what this software is based on, what it works with and which files it opens.
 
 ### No warranty
 
-IeumOffice is provided as is, without warranties of any kind, under sections 7
+SeuOffice is provided as is, without warranties of any kind, under sections 7
 and 8 of the Apache License 2.0. AI-generated content can be wrong: check it
 before you use it. Making sure you have the right to use it is up to you.
