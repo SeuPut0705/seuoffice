@@ -44,6 +44,7 @@ import {
   univerDefinedNames,
   revealCellBelowFreeze,
 } from './univer-sync'
+import { holdsHiddenCells, refuseHiddenSource } from './redact-move-guard'
 import type { LazyWorkbookState, UniverRuntime, UniverWorksheet } from './univer-state'
 import { applyAiTableAdd } from './workbook-ops'
 
@@ -275,6 +276,13 @@ export function handleCreateNamesFromSelection(ctx: DataToolsContext, mode: 'top
     endColumn,
     Math.max(worksheet.getLastColumn(), (fileSheet?.columnCount ?? 0) - 1),
   )
+  // A name is made of its label's text, and names are listed to the AI.
+  const runtime = ctx.univerRef.current
+  const labels =
+    mode === 'top'
+      ? { startRow, endRow: startRow, startColumn, endColumn: labelEndColumn }
+      : { startRow, endRow: labelEndRow, startColumn, endColumn: startColumn }
+  if (runtime && refuseHiddenSource(runtime, worksheet.getSheetId(), [labels])) return
   // Labels come from the formatted display text — a date header must name
   // like "Jan_2023", not its raw serial.
   const entries: { label: string; ref: string }[] = []
@@ -401,6 +409,20 @@ export function handleCreateSubtotal(
   if (groupOffset === valueOffset) return t('appSubtotalSameColumns')
   const body = values.slice(1)
   if (body.length === 0) return t('appRangeNoDataRows')
+  // Each total row is named after its group cell; the totals themselves are
+  // formulas over the value column and stay withheld with it.
+  if (
+    holdsHiddenCells(runtime, worksheet.getSheetId(), [
+      {
+        startRow: startRow + 1,
+        endRow: startRow + body.length,
+        startColumn: config.groupCol,
+        endColumn: config.groupCol,
+      },
+    ])
+  ) {
+    return t('redactMoveRefused')
+  }
   // SUBTOTAL function numbers: 9 = SUM, 3 = COUNTA, 1 = AVERAGE.
   const fn = config.agg === 'sum' ? 9 : config.agg === 'count' ? 3 : 1
   const valueColumn = columnLetter(config.valueCol)
@@ -521,6 +543,23 @@ export function handleCreateConsolidate(
   const target = { row: active.getRow(), column: active.getColumn() }
   let matrix: OutputCell[][]
   if (config.leftLabels) {
+    // The labels are copied as text; the numbers are reached through formulas.
+    for (const [index, area] of areas.entries()) {
+      const source = sources[index]
+      if (
+        source &&
+        holdsHiddenCells(runtime, source.getSheetId(), [
+          {
+            startRow: area.startRow,
+            endRow: area.startRow + area.rows - 1,
+            startColumn: area.startColumn,
+            endColumn: area.startColumn,
+          },
+        ])
+      ) {
+        return t('redactMoveRefused')
+      }
+    }
     const areaLabels = areas.map((area, index) =>
       (
         sources[index]?.getRange(area.startRow, area.startColumn, area.rows, 1).getValues() ?? []

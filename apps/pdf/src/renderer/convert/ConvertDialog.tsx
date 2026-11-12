@@ -60,8 +60,9 @@ export interface ConvertDialogProps {
   /** a target the shell's Save As dialog already picked: Markdown converts to it
       right away; EPUB keeps the form (book information) with the target chosen */
   initialTarget?: string
-  /** save pending edits so the job reads what is on screen; false = not saved (the editor said why) */
-  prepare: () => Promise<boolean>
+  /** save pending edits so the job reads what is on screen: where the open file is afterwards
+      (the save can move the document), null = not saved (the editor said why) */
+  prepare: () => Promise<string | null>
   /** text of a 1-based page as shown (for "Fill with AI") */
   pageText: (page: number) => Promise<string>
   onClose: () => void
@@ -103,6 +104,12 @@ export function ConvertDialog(props: ConvertDialogProps): ReactElement {
   const aliveRef = useRef(true)
   const propsRef = useRef(props)
   propsRef.current = props
+  /** Where the open file is: the prop, or where the save before a run left the document,
+      which this dialog hears of before the editor renders it again */
+  const sourceRef = useRef(filePath)
+  useEffect(() => {
+    sourceRef.current = filePath
+  }, [filePath])
 
   useEffect(() => {
     aliveRef.current = true
@@ -128,12 +135,12 @@ export function ConvertDialog(props: ConvertDialogProps): ReactElement {
     epub && language.trim() && !isLanguageTag(language.trim()) ? t('cvBookLanguageInvalid') : null
   const formValid = !rangeError && !titleError && !languageError
 
-  const output = (path: string): PdfConvertOutputRequest => ({ source: filePath, path })
+  const output = (path: string): PdfConvertOutputRequest => ({ source: sourceRef.current, path })
 
   const chooseTarget = async (): Promise<string | null> => {
     const picked = await api.pickTarget({
       kind: format,
-      path: filePath,
+      path: sourceRef.current,
       title: t(epub ? 'cvTitleEpub' : 'cvTitleMd'),
     })
     if (picked && aliveRef.current) setOutPath(picked)
@@ -164,7 +171,7 @@ export function ConvertDialog(props: ConvertDialogProps): ReactElement {
     try {
       result = await api.convert({
         jobId,
-        path: filePath,
+        path: sourceRef.current,
         ...(password !== undefined ? { password } : {}),
         ...(pages ? { pages } : {}),
         format,
@@ -224,13 +231,21 @@ export function ConvertDialog(props: ConvertDialogProps): ReactElement {
     await runJob(target)
   }
 
+  /** Save the pending edits; false = not saved, or the dialog is gone */
+  const saved = async (): Promise<boolean> => {
+    const source = await props.prepare()
+    if (source === null || !aliveRef.current) return false
+    sourceRef.current = source
+    return true
+  }
+
   /** Save pending edits, free the target, then run (the Save As › Markdown path) */
   const startingRef = useRef(false)
   const startWith = async (target: string): Promise<void> => {
     if (startingRef.current) return
     startingRef.current = true
     try {
-      if (!(await props.prepare()) || !aliveRef.current) return
+      if (!(await saved())) return
       await runOn(target)
     } finally {
       startingRef.current = false
@@ -242,7 +257,7 @@ export function ConvertDialog(props: ConvertDialogProps): ReactElement {
     setShowErrors(true)
     if (!formValid) return
     setMessage(null)
-    if (!(await props.prepare()) || !aliveRef.current) return
+    if (!(await saved())) return
     const target = outPath ?? (await chooseTarget())
     if (!target || !aliveRef.current) return
     await runOn(target)
@@ -273,10 +288,10 @@ export function ConvertDialog(props: ConvertDialogProps): ReactElement {
       return
     }
     if (now.kind === 'done' && format === 'md') {
-      void propsRef.current.api.openResult({ source: filePath, path: now.outPath })
+      void propsRef.current.api.openResult({ source: sourceRef.current, path: now.outPath })
     }
     propsRef.current.onClose()
-  }, [filePath, format])
+  }, [format])
   const dialogRef = useModalDialog(dismiss, { escape: stage.kind !== 'password' })
 
   const collectText = useCallback(

@@ -16,6 +16,7 @@ import {
 } from './edit-journal'
 import { fileTableId, planFileTableRegistrations } from './file-tables'
 import { t } from './i18n/locale'
+import { holdsHiddenCells } from './redact-move-guard'
 import { inferContinuousRegion, type TableRegion } from './table-actions'
 import {
   TABLE_OPTION_KEYS,
@@ -362,6 +363,10 @@ async function createTable(
     if (areasIntersect(room.area, refArea(other))) {
       throw new Error(t('appTableOverlapsSession', { name: refName(other) }))
     }
+  }
+  // Making room for a header row moves the data block down as plain values.
+  if (room.shiftDown && holdsHiddenCells(runtime, sheetId, [requested])) {
+    throw new Error(t('redactMoveRefused'))
   }
   if (room.shiftDown) shiftDataDown(worksheet, requested)
   const area = room.area
@@ -753,6 +758,14 @@ async function resizeTable(ctx: TableDesignContext, rawRef: string): Promise<str
   }
   // Every refusal happens before the first cell write.
   if (options.totalsRow) assertTotalsRowCanMove(worksheet, current, next)
+  // The totals row is carried to the table's new last row.
+  if (
+    options.totalsRow &&
+    current.endRow !== next.endRow &&
+    holdsHiddenCells(selected.runtime, ref.sheetId, [{ ...current, startRow: current.endRow }])
+  ) {
+    throw new Error(t('redactMoveRefused'))
+  }
   const width = next.endColumn - next.startColumn + 1
   let columnNames: string[]
   if (options.headerRow) {

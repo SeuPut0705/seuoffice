@@ -130,6 +130,8 @@ const hwpApi: Partial<HwpApi> = {
   },
   trackingDropped: async () => trackingDropped,
   structureUnverified: async () => opened?.hwp.unverified ?? false,
+  // one save target, the opened file: the editor's notices do not point at a Save As
+  noSaveAs: true,
   getLanguage: async () => webLanguage(),
   onLanguageChanged: unsubscribe,
   getTheme: async () => 'system',

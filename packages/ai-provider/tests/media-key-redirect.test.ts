@@ -9,9 +9,10 @@ import {
 } from '../src/media-protocols'
 
 /**
- * FLUX, Gemini and Microsoft Foundry take the person's API key in a header of
- * their own (`x-key`, `x-goog-api-key`, `api-key`). A redirect that is followed
- * repeats such a header at whatever address it names, so a request carrying
+ * A media request carries the person's API key: FLUX, Gemini and Microsoft
+ * Foundry in a header of their own (`x-key`, `x-goog-api-key`, `api-key`), the
+ * others as a Bearer token. A redirect that is followed repeats the request,
+ * and the key with it, at whatever address it names, so a request carrying
  * one stops at the redirect instead.
  *
  * Two real servers on 127.0.0.1 play the parts: the provider, which answers a
@@ -218,7 +219,7 @@ describe('FLUX key and a redirect', () => {
   })
 })
 
-describe('the other keys sent in a header of their own, and a redirect', () => {
+describe('the other media keys and a redirect', () => {
   const gemini = (baseUrl: string) => ({
     apiKey: KEY,
     baseUrl: `${baseUrl}/v1beta`,
@@ -353,20 +354,71 @@ describe('the other keys sent in a header of their own, and a redirect', () => {
     expect(result.error).toMatch(REFUSED)
   })
 
-  it('leaves a Bearer key to fetch, which drops it when a redirect leaves the origin', async () => {
+  const bearer = (baseUrl: string, imageModel = '', analysisModel = '') => ({
+    apiKey: KEY,
+    baseUrl,
+    imageModel,
+    analysisModel,
+  })
+
+  // Node's fetch would drop the Bearer header at another origin but still repeat
+  // the prompt and the picture there; Electron's net.fetch repeats the header too
+  const bearerRequests: [name: string, run: (base: string) => Promise<unknown>][] = [
+    [
+      'an OpenAI image generation',
+      (base) => generateImageWithProvider('openai', bearer(base, 'gpt-image-2'), { prompt: 'x' }),
+    ],
+    [
+      'an OpenAI image edit',
+      (base) =>
+        generateImageWithProvider('openai', bearer(base, 'gpt-image-2'), {
+          prompt: 'x',
+          references: [reference],
+        }),
+    ],
+    [
+      'a Qwen image generation',
+      (base) => generateImageWithProvider('qwen', bearer(base, 'qwen-image-plus'), { prompt: 'x' }),
+    ],
+    [
+      'a MiniMax image generation',
+      (base) => generateImageWithProvider('minimax', bearer(base, 'image-01'), { prompt: 'x' }),
+    ],
+    [
+      'a Stability image generation',
+      (base) =>
+        generateImageWithProvider('stability', bearer(base, 'stable-image-core'), { prompt: 'x' }),
+    ],
+    [
+      'an OpenAI-shaped media analysis',
+      (base) =>
+        analyzeMediaWithProvider('openai', bearer(base, '', 'gpt-5.6-luna'), {
+          media: [reference],
+          requirements: 'describe',
+        }),
+    ],
+  ]
+
+  it.each(bearerRequests)('stops %s at a redirect and sends nothing on', async (_name, run) => {
+    const other = await collector()
+    const provider = await serve((_seen, res) => redirect(res, 307, `${other.origin}/taken`))
+
+    const message = await messageOf(run(provider.origin))
+
+    expect(other.seen).toEqual([])
+    expect(message).toMatch(REFUSED)
+    expect(keysIn(provider.seen)).toEqual(['authorization'])
+  })
+
+  it('fails a Bearer credential check at a redirect', async () => {
     const other = await collector()
     const provider = await serve((_seen, res) => redirect(res, 302, `${other.origin}/models`))
 
-    const result = await testMediaProvider('custom', {
-      apiKey: KEY,
-      baseUrl: `${provider.origin}/v1`,
-      imageModel: '',
-      analysisModel: '',
-    })
+    const result = await testMediaProvider('custom', bearer(`${provider.origin}/v1`))
 
-    expect(result).toEqual({ ok: true })
+    expect(other.seen).toEqual([])
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(REFUSED)
     expect(keysIn(provider.seen)).toEqual(['authorization'])
-    expect(other.seen).toHaveLength(1)
-    expect(keysIn(other.seen)).toEqual([])
   })
 })

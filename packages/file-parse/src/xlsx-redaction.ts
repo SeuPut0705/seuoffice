@@ -7,6 +7,7 @@ import {
   type SheetRedactionState,
 } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { RedactionMarkError } from './redaction-error'
+import type { DerivedSheet } from './xlsx-formula-redaction'
 
 /**
  * Withheld cells of a workbook, read as another file's material.
@@ -28,9 +29,13 @@ import { RedactionMarkError } from './redaction-error'
  * Two places are stricter than the editor, never looser. A part naming a
  * sheet the workbook does not have fails the read, where the editor drops
  * those marks: a sheet renamed in another program keeps its values hidden
- * instead of losing the mark with the name. And on a sheet that has marks, a
- * cell whose address cannot be read is withheld, because whether a mark
- * covers it cannot be decided.
+ * instead of losing the mark with the name. And on a sheet that withholds
+ * anything, a cell whose address cannot be read is withheld, because whether
+ * it is one of the withheld cells cannot be decided.
+ *
+ * A formula that computes from a withheld cell is withheld as well, as
+ * `{{private}}` (it is not the cell the reader labelled): see
+ * `xlsx-formula-redaction`.
  */
 
 const WORKBOOK_PART_PATH = 'xl/workbook.xml'
@@ -85,22 +90,24 @@ function marker(label: string): string {
 }
 
 /**
- * The marker standing in for the cell at `ref`, or null when no mark of this
- * sheet covers it. `marks` are one sheet's marks; pass none for a sheet
- * without any and every cell reads as itself.
+ * The marker standing in for the cell at `ref`, or null when the cell reads
+ * as itself. `marks` are one sheet's marks and `derived` what the formula
+ * trace found on it; a workbook without marks passes neither.
  */
 export function withheldCellMarker(
   marks: readonly RedactionMark[] | undefined,
   ref: string | undefined,
+  derived?: DerivedSheet,
+  hasFormula = false,
 ): string | null {
-  if (!marks) return null
+  if (!marks && !derived) return null
   const at = ref === undefined ? null : CELL_REF.exec(ref)
-  if (!at) return marker(UNKNOWN_LABEL)
+  if (!at) return marks || derived?.any || hasFormula ? marker(UNKNOWN_LABEL) : null
   const row = Number(at[2]) - 1
   let column = 0
   for (const letter of at[1]!.toUpperCase()) column = column * 26 + (letter.charCodeAt(0) - 64)
   column -= 1
-  for (const mark of marks) {
+  for (const mark of marks ?? []) {
     if (
       row >= mark.startRow &&
       row <= mark.endRow &&
@@ -109,6 +116,11 @@ export function withheldCellMarker(
     ) {
       return marker(mark.label)
     }
+  }
+  if (!derived) return null
+  // A formula the worksheet parser sees and the scan did not was never traced.
+  if (derived.withheld(row, column) || (hasFormula && !derived.knownFormula(row, column))) {
+    return marker(UNKNOWN_LABEL)
   }
   return null
 }

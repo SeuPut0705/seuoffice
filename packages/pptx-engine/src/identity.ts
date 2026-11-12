@@ -14,7 +14,7 @@
  * after ungroup that same id would suddenly mean the child.
  */
 import type { Slide, SlideElement } from './types'
-import { creationIdExtXml, creationIdXml } from './xml-utils'
+import { attributeOf, creationIdExtXml, creationIdXml } from './xml-utils'
 
 const CREATION_ID_RE = /<a16:creationId[^>]*\bid="\{?([0-9A-Fa-f-]{36})\}?"/
 
@@ -96,15 +96,32 @@ export function ensureCreationId(el: SlideElement): void {
   if (CREATION_ID_RE.test(own)) return
   // extLst has maxOccurs=1: merge into an existing one (decorative/compat
   // extensions) rather than appending a second, invalid, extLst. cNvPr's own
-  // extLst is its LAST child — an earlier </a:extLst> belongs to a nested
-  // hlinkClick/hlinkHover extension list and must not receive the GUID.
-  const extLstClose = own.lastIndexOf('</a:extLst>')
-  if (extLstClose >= 0 && own.slice(extLstClose + '</a:extLst>'.length).trim() === '') {
-    const at = open.index + extLstClose
-    el.anchor.originalXml = xml.slice(0, at) + creationIdExtXml() + xml.slice(at)
+  // extLst is its LAST child — an earlier one belongs to a nested
+  // hlinkClick/hlinkHover extension list and must not receive the GUID. The
+  // list may be written empty (`<a:extLst/>`) or with white space in its end
+  // tag: both are the same list.
+  const ownList = /(?:<\/a:extLst\s*>|<a:extLst\s*\/>)\s*$/.exec(own)
+  if (ownList) {
+    const at = open.index + ownList.index
+    const rest = xml.slice(at)
+    el.anchor.originalXml = ownList[0].startsWith('</')
+      ? xml.slice(0, at) + creationIdExtXml() + rest
+      : xml.slice(0, at) + creationIdXml() + rest.slice(ownList[0].trimEnd().length)
     return
   }
   el.anchor.originalXml = xml.slice(0, close) + creationIdXml() + xml.slice(close)
+}
+
+/**
+ * The <p:cNvPr> open tag whose own id attribute is exactly `id`. The id is whatever the deck
+ * says, so it is compared as text: built into a RegExp, a `(` in it threw, a `.` matched any
+ * character (another element answered) and a `$` matched nothing.
+ */
+function cNvPrOpenWithId(xml: string, id: string): RegExpMatchArray | null {
+  for (const open of xml.matchAll(/<p:cNvPr\b[^>]*?(\/?)>/g)) {
+    if (attributeOf(open[0], 'id') === id) return open
+  }
+  return null
 }
 
 /**
@@ -118,12 +135,13 @@ export function groupChildDurableId(grp: SlideElement, child: SlideElement): str
   const nvId = (child as { nvId?: number | string }).nvId
   const xml = grp.anchor?.originalXml
   if (xml && nvId != null) {
-    const open = new RegExp(`<p:cNvPr\\b[^>]*\\bid="${nvId}"[^>]*?(\\/?)>`).exec(xml)
+    const open = cNvPrOpenWithId(xml, String(nvId))
     if (open) {
+      const at = open.index!
       const own =
         open[1] === '/'
           ? open[0]
-          : xml.slice(open.index, xml.indexOf('</p:cNvPr>', open.index) + '</p:cNvPr>'.length)
+          : xml.slice(at, xml.indexOf('</p:cNvPr>', at) + '</p:cNvPr>'.length)
       const creation = CREATION_ID_RE.exec(own)
       if (creation) return `e_${creation[1]!.slice(0, 8).toLowerCase()}`
     }

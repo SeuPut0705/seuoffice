@@ -21,7 +21,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import { resolveTarget } from './zip'
-import { escapeXmlAttr } from './xml-utils'
+import { attributeOf, escapeXmlAttr } from './xml-utils'
 import { unescapeXml } from './notes'
 import type { OpenedPptx } from './index'
 
@@ -66,7 +66,7 @@ function readSlideEntries(opened: OpenedPptx): SlideEntry[] {
   const out: SlideEntry[] = []
   for (const m of inner.matchAll(/<p:sldId\b[^>]*\/>/g)) {
     const sldId = /\bid="(\d+)"/.exec(m[0])?.[1]
-    const rId = /\br:id="([^"]+)"/.exec(m[0])?.[1]
+    const rId = attributeOf(m[0], 'r:id')
     if (!sldId || !rId) continue
     const rel = rels.get(rId)
     const path = rel ? resolveTarget(PRES_PATH, rel.target) : undefined

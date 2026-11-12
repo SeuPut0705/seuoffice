@@ -19,7 +19,7 @@ import {
   TurnTextScanner,
   type ClaudeCodeContentBlock,
 } from '../claude-code-cli'
-import { aiFetch } from '../fetch'
+import { aiFetch, keyedFetch } from '../fetch'
 import { isPlainObject, sseDataEvents, usageCount, type StreamCallbacks } from '../protocols/shared'
 import { AiRunError } from '../run-error'
 import type { AiChatResponse, AiProviderConfig, AiSubscriptionModel } from '../types'
@@ -230,16 +230,21 @@ async function postTurn(
   const fetchImpl = deps.fetch ?? aiFetch
   const accessToken = await connection.accessToken(cb.signal)
   const model = await modelFor(config, accessToken, deps, cb.signal)
-  const response = await fetchImpl(CHATGPT_RESPONSES_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-      Accept: 'text/event-stream',
+  const response = await keyedFetch(
+    CHATGPT_RESPONSES_URL,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+      },
+      body: chatGptRequestBody(model, parts),
+      signal: cb.signal,
     },
-    body: chatGptRequestBody(model, parts),
-    signal: cb.signal,
-  })
+    undefined,
+    fetchImpl,
+  )
   if (!response.ok) {
     const body = (await response.json().catch(() => undefined)) as unknown
     throw await chatGptFailure(response.status, body, connection)
@@ -378,10 +383,15 @@ export async function readChatGptModels(
   signal?: AbortSignal,
 ): Promise<AiSubscriptionModel[]> {
   const timeout = AbortSignal.timeout(MODEL_LIST_TIMEOUT_MS)
-  const response = await fetchImpl(CHATGPT_MODELS_URL, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-  })
+  const response = await keyedFetch(
+    CHATGPT_MODELS_URL,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    },
+    undefined,
+    fetchImpl,
+  )
   if (!response.ok) throw new Error(`ChatGPT model list failed with HTTP ${response.status}`)
   return chatGptModelsOf(await response.json())
 }

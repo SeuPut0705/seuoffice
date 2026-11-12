@@ -6,12 +6,12 @@
  * sunburst (multi-level strDim hierarchy + leaf sizes → rings). Other
  * layoutIds (waterfall, treemap, …) return null and fall back to the chip.
  */
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from './xml-parser'
 import { type Theme } from './theme'
 import { resolveColorNode } from './color'
 import type { ChartModel } from './chart'
 
-const cxParser = new XMLParser({
+const cxParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   trimValues: false,

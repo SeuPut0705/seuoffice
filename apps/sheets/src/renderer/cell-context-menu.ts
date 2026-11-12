@@ -38,6 +38,7 @@ import type { IMenuButtonItem, IMenuSelectorItem, MenuSchemaType } from '@univer
 import { getLang, t, tFor, type StringKey } from './i18n/locale'
 import { NUMBER_FORMAT_LABEL, numberFormatCategories } from './number-format'
 import { collectPickListValues, filterCriteriaForText } from './pick-from-list'
+import { holdsHiddenCells } from './redact-move-guard'
 import type { UniverRuntime } from './univer-state'
 import { visualPasteDisabled$ } from './visual-arrange-actions'
 import type { Observable } from 'rxjs'
@@ -309,6 +310,11 @@ function pickFromList(accessor: IAccessor, runtime: UniverRuntime): boolean {
     },
     row,
     worksheet.getRowCount(),
+    // picking an entry writes it into this cell: a copy of the cell it came from
+    (r) =>
+      holdsHiddenCells(runtime, subUnitId, [
+        { startRow: r, endRow: r, startColumn: col, endColumn: col },
+      ]),
   )
   if (entries.length === 0) return false
   const byDisplay = new Map(entries.map((entry) => [entry.display, entry]))

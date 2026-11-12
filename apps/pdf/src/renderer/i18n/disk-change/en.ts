@@ -10,4 +10,6 @@ export const en = {
     'Another program changed or removed this file, so Undo and Redo of this change were not applied.',
   pageOpNoUndoConfirm:
     'This file ({size}) is larger than the {limit} kept for Undo, so this page operation cannot be undone. Continue?',
+  undoNoRedoConfirm:
+    'The file as it is now ({size}) is larger than the {limit} kept for Redo, so this Undo cannot be redone. Continue?',
 }

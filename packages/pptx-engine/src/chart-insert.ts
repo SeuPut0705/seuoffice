@@ -9,6 +9,7 @@
  */
 import type { EmuRect, Slide } from './types'
 import {
+  attributeOf,
   creationIdXml,
   escapeXmlAttr,
   escapeXmlText,
@@ -310,7 +311,7 @@ export function buildChartSpaceXml(opts: NewChartOptions, externalDataRId?: stri
     legend +
     '<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart>' +
     (externalDataRId
-      ? `<c:externalData r:id="${externalDataRId}"><c:autoUpdate val="0"/></c:externalData>`
+      ? `<c:externalData r:id="${escapeXmlAttr(externalDataRId)}"><c:autoUpdate val="0"/></c:externalData>`
       : '') +
     '</c:chartSpace>'
   return injectSeriesColors(xml, opts)
@@ -360,7 +361,8 @@ export function writeChartWorkbook(
     ...(opts.kind === 'scatter' ? { xValues: scatterXValues(opts.categories) } : {}),
   })
   const current = archive.readText(chartPath) ?? ''
-  const linkedId = /<c:externalData\b[^>]*\br:id="([^"]+)"/.exec(current)?.[1]
+  const linkedTag = /<c:externalData\b[^>]*>/.exec(current)?.[0]
+  const linkedId = (linkedTag && attributeOf(linkedTag, 'r:id')) || undefined
   const linked = linkedId ? archive.readRels(chartPath).get(linkedId) : undefined
   if (linked?.type === CHART_WORKBOOK_REL_TYPE && linked.targetMode !== 'External') {
     archive.entries.set(resolveTarget(chartPath, linked.target), bytes)
