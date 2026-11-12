@@ -74,7 +74,8 @@ export interface DocsControl {
 }
 
 const DOCX_EXT = `.${generateExtension('docx')}`
-// read_docx goes through the CLI's `docs read`, which reads .odt the same way
+// read_docx and check_document go through the CLI's `docs read` / `docs check`,
+// which open .odt the same way
 const READABLE_WORD_EXTS = new Set([DOCX_EXT, '.odt'])
 
 /** sanitize a title into a file base name (mirrors docs' sanitizeAiDocFileBase) */
@@ -354,6 +355,8 @@ function createCheckDocumentTool(deps: DocToolDeps): McpToolDefinition {
     handler: async (args) => {
       const filePath = String(args.path ?? '')
       if (!isAbsolute(filePath)) throw new Error('path must be absolute')
+      if (!READABLE_WORD_EXTS.has(extname(filePath).toLowerCase()))
+        throw new Error('path must point to a .docx or .odt file')
       if (!existsSync(filePath)) throw new Error(`file not found: ${filePath}`)
       if (!deps.cli) throw new Error('headless generation is not available in this build')
       const json = await docsCheckViaCli(deps.cli, filePath)

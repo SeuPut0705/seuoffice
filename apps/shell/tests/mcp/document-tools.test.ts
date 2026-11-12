@@ -754,4 +754,27 @@ describe('headless convert_document / check_document', () => {
     expect(failed.isError).toBe(true)
     expect(text(failed.content)).toContain('cannot open document')
   })
+
+  it('check_document refuses a file that is not a .docx or .odt, the way read_docx does', async () => {
+    for (const name of ['setup.exe', 'notes.txt']) {
+      const path = join(dir, name)
+      await writeFile(path, 'not a document')
+      const before = cli.calls.length
+      const checked = await client!.callTool({ name: 'check_document', arguments: { path } })
+      const read = await client!.callTool({ name: 'read_docx', arguments: { path } })
+      expect(checked.isError).toBe(true)
+      expect(text(checked.content)).toContain('path must point to a .docx or .odt file')
+      expect(text(checked.content)).toBe(text(read.content))
+      // refused before the CLI is asked to open the file
+      expect(cli.calls.length).toBe(before)
+    }
+
+    for (const name of ['report.docx', 'REPORT.DOCX', 'letter.odt']) {
+      const path = join(dir, name)
+      await writeFile(path, 'document bytes')
+      const checked = await client!.callTool({ name: 'check_document', arguments: { path } })
+      expect(checked.isError).toBeFalsy()
+      expect(cli.last()).toEqual(['docs', 'check', path, '--json'])
+    }
+  })
 })
