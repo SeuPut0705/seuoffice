@@ -346,9 +346,12 @@ const ensureInputs: Input[] = [
   { text: 'x', args: { styleId: STYLE_IDS[0]![0], styleDefXml: 'd', nullish: 'undefined' } },
   { text: 'x', args: { styleId: '', styleDefXml: 'd', nullish: 'null' } },
   // the callback form expands nothing: the same on both sides
+  // equal here (a function replacement), but a mutation that breaks the
+  // closing tag sends it to the template of ledger tblstylelst-dollar
   {
     text: '<a:tblStyleLst def="x"></a:tblStyleLst>',
     args: { styleId: 'Z', styleDefXml: DOLLAR_DEF },
+    seed: false,
   },
   // ledger tblstylelst-dollar: TypeScript expands the `$&` of a namespace URI into markup
   {
