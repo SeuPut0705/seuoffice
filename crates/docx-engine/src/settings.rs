@@ -3,7 +3,9 @@
 //! `parseWriteProtection`, `parseRemovePersonalInfo` of
 //! packages/docx-engine/src/parse-package.ts).
 
-use jscompat::{JsNum, JsRegex, Radix, base64, js_regex, math_round, parse_int, truthy};
+use jscompat::{
+    JsNum, JsRegex, Radix, TryJsRegex, base64, js_regex, math_round, parse_int, truthy,
+};
 use ooxml_pkg::Package;
 use ooxml_xml::XNode;
 use serde::Serialize;
@@ -329,7 +331,7 @@ pub fn parse_remove_personal_info(package: &Package) -> Result<bool, Thrown> {
         .map(|prefix| escape_regex(prefix))
         .collect();
     let compile = |pattern: String, flags: &str| {
-        JsRegex::new(&pattern, flags).map_err(|error| error.to_string())
+        TryJsRegex::new(&pattern, flags).map_err(|error| error.to_string())
     };
     for prefix in prefixes {
         let q_name = if prefix.is_empty() {
@@ -342,7 +344,10 @@ pub fn parse_remove_personal_info(package: &Package) -> Result<bool, Thrown> {
             format!(r"<{escaped_name}\b[^>]*(?:\/\s*>|>\s*<\/{escaped_name}\s*>)"),
             "",
         )?;
-        let Some(tag) = tag_pattern.exec(xml) else {
+        let Some(tag) = tag_pattern
+            .try_exec(xml)
+            .map_err(|limit| limit.to_string())?
+        else {
             continue;
         };
         let val_prefix = if escaped_prefixes.is_empty() {
@@ -354,7 +359,9 @@ pub fn parse_remove_personal_info(package: &Package) -> Result<bool, Thrown> {
             format!(r#"(?:^|\s)(?:{val_prefix})?val\s*=\s*(["'])(0|false)\1"#),
             "i",
         )?;
-        return Ok(!val.test(tag.as_str()));
+        return Ok(!val
+            .try_test(tag.as_str())
+            .map_err(|limit| limit.to_string())?);
     }
     Ok(false)
 }

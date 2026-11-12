@@ -2,6 +2,7 @@
 // function, in calls-<group>.ts. The Rust side answers to the same name in
 // crates/office-wasm/src/calls/<group>.rs.
 import JSZip from 'jszip'
+import type { ParsedDoc } from '../../packages/docx-engine/src/types'
 
 /** One call: the text argument (or the text the Rust side parses), and the rest. */
 export interface Input {
@@ -26,10 +27,26 @@ export interface CallSpec {
    * and .rels entry by name.
    */
   fromDocument?(parts: ReadonlyMap<string, string>): Input[]
+  /** Inputs from the actual parser model, before Maps and bytes cross the wire. */
+  fromModel?(doc: ParsedDoc): Input[]
+  /**
+   * The inputs parseDocx gives an internal function of parse.ts: `fn` names
+   * it, and `input` turns the arguments of one of its calls during a parse of
+   * a corpus document into an Input (undefined: not one), at the call.
+   */
+  fromParse?: {
+    fn: string
+    input(args: unknown[], parts: ReadonlyMap<string, string>): Input | undefined
+  }
   /** Inputs written for what the corpus lacks, and the seeds of the mutations. */
   built: Input[]
   /** `none` where the text is not what the function reads, so mutating it compares nothing. */
   mutation?: 'none'
+  /**
+   * The arguments are a model value: compare mutations of them as well
+   * (calls-arg-mutation.ts), each inside the types the seeds showed.
+   */
+  argMutation?: true
   /**
    * The id of the entry of divergences.json an input may differ under: a class
    * where main decided that the Rust is right and the TypeScript is to be
@@ -39,6 +56,16 @@ export interface CallSpec {
    * class narrow.
    */
   listed?(text: string, args: Record<string, unknown>): string | undefined
+  /**
+   * The id of the entry of divergences.json an input is compared under a mask
+   * for (`maskNonFinite` of listed.ts): where the TypeScript wrote a
+   * non-finite number into its result, that value is replaced by a
+   * placeholder on both sides and everything else is compared exactly. Where
+   * it wrote none, the input is a check like any other.
+   */
+  masked?(text: string, args: Record<string, unknown>): string | undefined
+  /** With `masked`: a builder has no earlier value to keep, so there the Rust must refuse the call. */
+  maskedRefuses?: true
 }
 
 /** The package a function over a zip reads, from `args.parts`: `[name, text]` pairs. */

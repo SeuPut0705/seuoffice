@@ -1,0 +1,72 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "revision",
+      "argRefused": 0,
+      "populations": {
+        "corpus": {
+          "compared": 1572,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 3977,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 1783,
+          "differences": [
+            "mutation 113: revision.applyTrackedChangesXml: revision.applyTrackedChangesXml(\"<w:document xmlns:w=\\\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\\\"&><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:cellIns w:id=\\\"122\\\" w:author=\\\"kim\\\" w:date=\\\"2024-01-01T00:00:00Z\\\"></w:cellIns><w:tcPrChange w:id=\\\"123\\\" w:author=\\\"kim\\\" w:date=\\\"2024-01-01T00:00:00Z\\\"><w:tcPr><w:tcW w:, {\"mode\":\"reject\"})\n      typescript {\"value\":{\"xml\":\"<w:document xmlns:w=\\\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\\\"&><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:tcPrChange w:id=\\\"123\\\" w:author=\\\"kim\\\" w:date=\\\"2024-01-01T00:00:00Z\\\"><w:tcPr><w:tcW w:w=\\\"9\\\"/></w:tcPr></w:tcPrChange></wPr><w:p><w:r><w:t>c</w:t></w:r></\n      rust       {\"value\":{\"xml\":\"<w:document xmlns:w=\\\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\\\"&><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:tcW w:w=\\\"9\\\"/><w:tcPrChange w:id=\\\"123\\\" w:author=\\\"kim\\\" w:date=\\\"2024-01-01T00:00:00Z\\\"><w:tcPr><w:tcW w:w=\\\"9\\\"/></w:tcPr></w:tcPrChange></wPr><w:p><w:r><w"
+          ],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "revision.countTrackedChangesXml",
+          "checks": 641,
+          "differences": 0,
+          "distinctResults": 8,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "revision.applyTrackedChangesXml",
+          "checks": 1536,
+          "differences": 1,
+          "distinctResults": 623,
+          "typescriptThrew": 19
+        },
+        {
+          "fn": "revision.applyRevisionResolutions",
+          "checks": 764,
+          "differences": 0,
+          "distinctResults": 533,
+          "typescriptThrew": 93
+        },
+        {
+          "fn": "revision.readPropChangeXml",
+          "checks": 1099,
+          "differences": 0,
+          "distinctResults": 29,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "revision.resolvePropChangeXml",
+          "checks": 2700,
+          "differences": 0,
+          "distinctResults": 360,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "revision.cleanMoveRangeMarkers",
+          "checks": 592,
+          "differences": 0,
+          "distinctResults": 566,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

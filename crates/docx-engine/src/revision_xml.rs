@@ -676,7 +676,14 @@ fn byte_at(xml: &str, cursor: &mut (usize, usize), unit: usize) -> Option<usize>
 
 /// `applyEdits`
 fn apply_edits(xml: &str, mut edits: Vec<Edit<'_>>) -> String {
-    edits.sort_by(|a, b| a.start.cmp(&b.start).then(b.end.cmp(&a.end)));
+    // at one start, insertions (zero length) first in plan order, then the
+    // longest replacement: an insertion where a replacement starts is kept
+    edits.sort_by(|a, b| {
+        a.start
+            .cmp(&b.start)
+            .then((a.end != a.start).cmp(&(b.end != b.start)))
+            .then(b.end.cmp(&a.end))
+    });
     // an edit inside a region another edit replaces is moot
     let mut cutoff: Option<usize> = None;
     edits.retain(|e| {

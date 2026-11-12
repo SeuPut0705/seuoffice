@@ -1,0 +1,76 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "genDrawingBuild",
+      "populations": {
+        "corpus": {
+          "compared": 132,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 168,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 300,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "genDrawingBuild.LINE_KINDS",
+          "checks": 309,
+          "differences": 0,
+          "distinctResults": 6,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genDrawingBuild.buildLineParagraphXml",
+          "checks": 64,
+          "differences": 0,
+          "distinctResults": 56,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genDrawingBuild.inlinePictureDrawingXml",
+          "checks": 54,
+          "differences": 0,
+          "distinctResults": 52,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genDrawingBuild.buildTextboxParagraphXml",
+          "checks": 30,
+          "differences": 0,
+          "distinctResults": 27,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+          "checks": 27,
+          "differences": 0,
+          "distinctResults": 25,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genDrawingBuild.buildShapeParagraphXml",
+          "checks": 58,
+          "differences": 0,
+          "distinctResults": 56,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genDrawingBuild.buildWordArtParagraphXml",
+          "checks": 58,
+          "differences": 0,
+          "distinctResults": 56,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

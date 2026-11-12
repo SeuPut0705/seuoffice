@@ -2,7 +2,7 @@
 //! relationships, the main part, content types
 //! (packages/docx-engine/src/parse-package.ts and `contentTypesOf` of parse.ts).
 
-use jscompat::{JsMap, decode_uri_component, js_regex, truthy};
+use jscompat::{JsMap, decode_uri_component, js_regex, truthy, try_js_regex};
 use ooxml_pkg::Package;
 use ooxml_xml::{XNode, parse_ordered};
 use serde::Serialize;
@@ -50,11 +50,11 @@ pub fn parse_rels(package: &Package, path: &str) -> Result<JsMap<RelInfo>, Throw
     // the parser rejects a DOCTYPE; the prologue is dropped so the document
     // still opens (entities never resolve, and a Relationship carries
     // everything in attributes)
-    let doctype = js_regex!(
+    let doctype = try_js_regex!(
         r#"<!DOCTYPE(?:[^>"'\x5B\x5D]|\[[\s\S]*?\]|"[^"]*"|'[^']*')*>"#,
         "i"
     );
-    let rels_xml = match doctype.exec(text) {
+    let rels_xml = match doctype.try_exec(text).map_err(|limit| limit.to_string())? {
         Some(found) => format!("{}{}", &text[..found.start()], &text[found.end()..]),
         None => text.to_owned(),
     };

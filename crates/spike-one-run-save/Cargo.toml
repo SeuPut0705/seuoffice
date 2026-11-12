@@ -7,7 +7,7 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
-docx-engine.workspace = true
+docx-engine = { workspace = true, features = ["icu-collation"] }
 flate2.workspace = true
 jscompat.workspace = true
 ooxml-pkg.workspace = true

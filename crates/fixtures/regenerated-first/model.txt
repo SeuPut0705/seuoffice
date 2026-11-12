@@ -1,0 +1,17 @@
+(node:87364) ExperimentalWarning: WASI is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Model corpus: 185 documents, 2 encrypted skipped, 0 parser refusals
+(h) test capture: 60 calls, 40 distinct results, 0 refusals
+(h) typed model, corpus documents              compared    183  floor    183  differences 0
+(h) typed model, built documents               compared    233  floor    220  differences 0
+(h) typed model, captured test results         compared     40  floor     40  differences 0
+(h) typed model, independently built values    compared   5081  floor   5081  differences 0
+(h) typed model, invalid values refused        compared  13835  floor  13835  differences 0
+(h) typed model, paragraph blocks              compared   3699  floor   3685  differences 0
+(h) typed model, passthrough blocks            compared    662  floor    641  differences 0
+(h) typed model, heading blocks                compared    122  floor    122  differences 0
+(h) typed model, table blocks                  compared    144  floor    143  differences 0
+(h) typed model, listItem blocks               compared    145  floor    145  differences 0
+(h) typed model, image blocks                  compared     21  floor     21  differences 0
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+(h) fields: 934/1663 from parser results; 0 below field floors; 0 schema refusals; built document refusals 2 (floor      2)

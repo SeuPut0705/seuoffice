@@ -24,7 +24,7 @@ mod value;
 
 pub use atob::{InvalidCharacterError, atob};
 pub use date::utc_date_parts;
-pub use json::JsNum;
+pub use json::{JsNum, json_to_string};
 pub use json_value::{
     JSON_MAX_DEPTH, JsTypeError, JsonSyntaxError, JsonValue, Primitive, json_parse,
     string_from_char_code, text_decoder_decode, to_primitive, to_property_key,
@@ -39,8 +39,12 @@ pub use number::{
     to_string_radix16,
 };
 pub use object::{JsObject, Slot, array_index, camel, camel_len};
-pub use regex::{JsMatch, JsRegex, RegexSyntaxError};
-pub use replace::{get_substitution, replace_first, slice_utf16, string_less_than};
+pub use regex::{
+    BACKTRACK_LIMIT, JsMatch, JsMatches, JsRegex, RegexLimit, RegexSyntaxError, TryJsRegex,
+};
+pub use replace::{
+    get_substitution, replace_first, replace_first_string, slice_utf16, string_less_than,
+};
 pub use search::{index_of, last_index_of, prefix_utf16, regex_escape, replace_first_with};
 pub use sort::sort_by_number;
 pub use space::{is_js_space, trim, trim_start};

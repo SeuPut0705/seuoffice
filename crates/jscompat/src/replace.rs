@@ -114,3 +114,41 @@ pub fn replace_first(regex: &JsRegex, groups: usize, text: &str, replacement: &s
     out.push_str(&text[found.end()..]);
     out
 }
+
+/// `text.replace(needle, replacement)` with a string `needle`: the first
+/// occurrence only, the replacement patterns applied.
+pub fn replace_first_string(text: &str, needle: &str, replacement: &str) -> String {
+    match text.find(needle) {
+        Some(at) => {
+            let end = at + needle.len();
+            let piece = get_substitution(&text[at..end], text, at, &[], replacement);
+            format!("{}{piece}{}", &text[..at], &text[end..])
+        }
+        None => text.to_owned(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // answers of node 22: 'a-b-c'.replace('-', R)
+    #[test]
+    fn string_patterns() {
+        assert_eq!(replace_first_string("a-b-c", "-", "[$&]"), "a[-]b-c");
+        assert_eq!(replace_first_string("a-b-c", "-", "$$"), "a$b-c");
+        assert_eq!(replace_first_string("a-b-c", "-", "$`"), "aab-c");
+        assert_eq!(replace_first_string("a-b-c", "-", "$'"), "ab-cb-c");
+        assert_eq!(replace_first_string("a-b-c", "-", "$1$"), "a$1$b-c");
+        assert_eq!(replace_first_string("a-b-c", "x", "$&"), "a-b-c");
+        assert_eq!(replace_first_string("abc", "", "$&!"), "!abc");
+    }
+
+    // 'xaby'.replace(/(a)(b)?/, R) and /(a)/ for $nn falling back to $n
+    #[test]
+    fn group_patterns() {
+        let g = [Some("a"), None];
+        assert_eq!(get_substitution("a", "xay", 1, &g, "<$1|$2|$3>"), "<a||$3>");
+        assert_eq!(get_substitution("a", "xay", 1, &g, "$01$10$0"), "aa0$0");
+    }
+}

@@ -8,14 +8,27 @@ use serde_json::Value;
 
 mod altchunk;
 mod blank;
+mod blockpasses;
+mod chart;
 mod checkbox;
 mod docprops;
 mod drawing;
 mod fielddisplay;
 mod fields;
+mod gen_drawing;
+mod gen_drawing_build;
+mod gen_fields;
+mod gen_paragraph;
+mod gen_props;
+mod gen_rpr;
+mod gen_runs;
+mod gen_table;
+mod gen_text;
 mod images;
+mod ink;
 mod markers;
 mod math;
+mod parse;
 mod pptx_anim;
 mod pptx_bytes;
 mod pptx_chart;
@@ -79,17 +92,30 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
     match group {
         "altchunk" => Some(altchunk::dispatch(function, text, args)),
         "blank" => Some(blank::dispatch(function, text, args)),
+        "blockpasses" => Some(blockpasses::dispatch(function, text, args)),
+        "chart" => Some(chart::dispatch(function, text, args)),
         "checkbox" => Some(checkbox::dispatch(function, text, args)),
         "docprops" => Some(docprops::dispatch(function, text, args)),
         "drawing" => Some(drawing::dispatch(function, text, args)),
         "fielddisplay" => Some(fielddisplay::dispatch(function, text, args)),
         "fields" => Some(fields::dispatch(function, text, args)),
         "images" => Some(images::dispatch(function, text, args)),
+        "ink" => Some(ink::dispatch(function, text, args)),
+        "parse" => Some(parse::dispatch(function, text, args)),
         "markers" => Some(markers::dispatch(function, text, args)),
         "math" => Some(math::dispatch(function, text, args)),
         "resolve" => Some(resolve::dispatch(function, text, args)),
         "revision" => Some(revision::dispatch(function, text, args)),
         "section" => Some(section::dispatch(function, text, args)),
+        "genRpr" => Some(gen_rpr::dispatch(function, text, args)),
+        "genProps" => Some(gen_props::dispatch(function, text, args)),
+        "genDrawing" => Some(gen_drawing::dispatch(function, text, args)),
+        "genDrawingBuild" => Some(gen_drawing_build::dispatch(function, text, args)),
+        "genText" => Some(gen_text::dispatch(function, text, args)),
+        "genTable" => Some(gen_table::dispatch(function, text, args)),
+        "genFields" => Some(gen_fields::dispatch(function, text, args)),
+        "genRuns" => Some(gen_runs::dispatch(function, text, args)),
+        "genParagraph" => Some(gen_paragraph::dispatch(function, text, args)),
         "pptxAnim" => Some(pptx_anim::dispatch(function, text, args)),
         "pptxBytes" => Some(pptx_bytes::dispatch(function, text, args)),
         "pptxChart" => Some(pptx_chart::dispatch(function, text, args)),

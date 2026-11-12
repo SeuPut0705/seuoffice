@@ -27,6 +27,8 @@ export function failed(header: object): header is EngineFailure {
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
+// the collator of generateIndexFieldXml's `a.localeCompare(b, 'zh-CN')`
+const collator = new Intl.Collator('zh-CN')
 
 export class Engine {
   private constructor(private readonly exports: EngineExports) {}
@@ -36,9 +38,19 @@ export class Engine {
     const module = new WebAssembly.Module(readFileSync(wasmPath))
     const instance = new WebAssembly.Instance(module, {
       wasi_snapshot_preview1: wasi.wasiImport,
+      seu_host: {
+        host_collate: (a: number, aLength: number, b: number, bLength: number): number => {
+          const { buffer } = exports.memory
+          return collator.compare(
+            decoder.decode(new Uint8Array(buffer, a, aLength)),
+            decoder.decode(new Uint8Array(buffer, b, bLength)),
+          )
+        },
+      },
     })
+    const exports = instance.exports as unknown as EngineExports
     wasi.initialize(instance)
-    return new Engine(instance.exports as unknown as EngineExports)
+    return new Engine(exports)
   }
 
   call<Header extends object>(command: object, blobs: Uint8Array[] = []): Reply<Header> {

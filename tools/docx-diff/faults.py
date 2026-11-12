@@ -31,6 +31,14 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT = ROOT / "tools/docx-diff/out/faults.txt"
 # the lines of a group's report that say how the two sides compare
 TELLING = re.compile(r"^\(f\+?\) |^key order|^ +\S+\.\S+ +checks ")
+# a function's line: its name, its differences and those in key order only
+FUNCTION = re.compile(r"^(\S+\.\S+) +checks +\d+ +differences +(\d+) +key order only +(\d+)")
+
+
+def differing(told: list[str]) -> dict[str, tuple[int, int]]:
+    """The differences each function of the report shows."""
+    found = (FUNCTION.match(line) for line in told)
+    return {m.group(1): (int(m.group(2)), int(m.group(3))) for m in found if m}
 
 
 def compare(group: str) -> tuple[str, list[str]]:
@@ -53,9 +61,13 @@ def main() -> int:
             return 1
     OUT.parent.mkdir(parents=True, exist_ok=True)
     broken = 0
-    counts = {"caught": 0, "MISSED": 0}
-    # what each group reports without a fault: a fault is caught when its
-    # report differs from that (the tree may hold known differences)
+    counts = {"caught": 0, "MISSED": 0, "SET ASIDE": 0}
+    # what each group reports without a fault. A fault is caught when a
+    # function shows more differences than that (the tree may hold known
+    # ones). A report that changed in nothing but its counts, or in the lines
+    # of the listed classes, did not catch it: the fault moved inputs into a
+    # class of divergences.json, where the gate does not look. That is SET
+    # ASIDE, and it is a miss.
     baseline = {}
     for group in sorted({fault.get("group", spec.get("group")) for fault in faults}):
         text, baseline[group] = compare(group)
@@ -73,11 +85,16 @@ def main() -> int:
             finally:
                 path.write_text(original)
             seen = [line for line in told if line not in baseline[group]]
+            before = differing(baseline[group])
+            more = [
+                name for name, shown in differing(told).items()
+                if any(now > was for now, was in zip(shown, before.get(name, (0, 0))))
+            ]
             if "cargo build failed" in text or "(f) " not in text:
                 broken += 1
                 verdict = "DID NOT RUN"
             else:
-                verdict = "caught" if seen else "MISSED"
+                verdict = "caught" if more else ("SET ASIDE" if seen else "MISSED")
                 counts[verdict] += 1
             lines = [f"== {fault['name']} [{group}]: {verdict}"] + [f"   {line}" for line in seen]
             if verdict == "DID NOT RUN":
@@ -85,7 +102,10 @@ def main() -> int:
             report = "\n".join(lines)
             print(report, flush=True)
             out.write(report + "\n")
-        summary = f"faults {len(faults)}: caught {counts['caught']}, missed {counts['MISSED']}, did not run {broken}"
+        summary = (
+            f"faults {len(faults)}: caught {counts['caught']}, missed {counts['MISSED']}, "
+            f"set aside by a listed class {counts['SET ASIDE']}, did not run {broken}"
+        )
         print(summary)
         out.write(summary + "\n")
     return 1 if broken else 0

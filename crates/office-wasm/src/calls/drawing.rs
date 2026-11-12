@@ -4,7 +4,7 @@
 //! text both sides read with `sectionSettingsFromXml`.
 
 use docx_engine::drawing_geometry::anchor::{self, DrawingAnchorMeta, GroupCtm};
-use docx_engine::drawing_geometry::fill;
+use docx_engine::drawing_geometry::{fill, line_box};
 use docx_engine::props::XML_PARSER_MAX_NESTED_TAGS;
 use docx_engine::section::{SectionSettings, section_settings_from_xml};
 use docx_engine::theme::ThemeColors;
@@ -106,6 +106,12 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let outer: GroupCtm = required(args, "outer")?;
             with_element(text, args, |group| {
                 value(anchor::compose_group_ctm(group, &outer))
+            })
+        }
+        "lineBoxOf" => {
+            let theme = theme()?;
+            with_element(text, args, |shape| {
+                value(line_box::line_box_of(shape, theme.as_ref()))
             })
         }
         _ => Err(format!("no function {function}")),
