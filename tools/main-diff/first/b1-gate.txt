@@ -1,0 +1,225 @@
+
+> main-diff@0.1.0 gate
+> node build.mjs && tsx main.ts --show 40
+
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling memchr v2.8.3
+   Compiling libc v0.2.191
+   Compiling cfg-if v1.0.5
+   Compiling serde_core v1.0.229
+   Compiling zmij v1.0.23
+   Compiling futures-sink v0.3.34
+   Compiling napi-build v2.6.0
+   Compiling futures-core v0.3.34
+   Compiling futures-channel v0.3.34
+   Compiling syn v3.0.10
+   Compiling getrandom v0.4.3
+   Compiling serde_json v1.0.154
+   Compiling hashbrown v0.17.1
+   Compiling pin-project-lite v0.2.17
+   Compiling equivalent v1.0.3
+   Compiling libm v0.2.16
+   Compiling serde v1.0.229
+   Compiling futures-task v0.3.34
+   Compiling futures-io v0.3.34
+   Compiling slab v0.4.12
+   Compiling indexmap v2.14.2
+   Compiling itoa v1.0.19
+   Compiling unicode-segmentation v1.13.3
+   Compiling napi-sys v3.4.1
+   Compiling foldhash v0.2.0
+   Compiling convert_case v0.12.0
+   Compiling napi v3.16.2
+   Compiling regress v0.12.0 (/home/runner/work/seuoffice/seuoffice/crates/vendor/regress)
+   Compiling libloading v0.9.0
+   Compiling ryu v1.0.23
+   Compiling semver v1.0.28
+   Compiling napi-derive-backend v7.0.1
+   Compiling main-node v0.1.0 (/home/runner/work/seuoffice/seuoffice/crates/main-node)
+   Compiling rustc-hash v2.1.3
+   Compiling ctor v1.0.13
+   Compiling futures-macro v0.3.34
+   Compiling serde_derive v1.0.229
+   Compiling futures-util v0.3.34
+   Compiling bitflags v2.13.2
+   Compiling nohash-hasher v0.2.0
+   Compiling napi-derive v3.7.1
+   Compiling jscompat v0.1.0 (/home/runner/work/seuoffice/seuoffice/crates/jscompat)
+   Compiling futures-executor v0.3.34
+   Compiling futures v0.3.34
+   Compiling main-core v0.1.0 (/home/runner/work/seuoffice/seuoffice/crates/main-core)
+    Finished `node` profile [optimized] target(s) in 23.45s
+path.posix.sep: 1 checks, 0 differences, 0 listed, 1 distinct
+path.posix.delimiter: 1 checks, 0 differences, 0 listed, 1 distinct
+path.posix.resolve: 689 checks, 0 differences, 0 listed, 472 distinct
+path.posix.normalize: 511 checks, 0 differences, 0 listed, 409 distinct
+path.posix.isAbsolute: 511 checks, 0 differences, 0 listed, 10 distinct
+path.posix.dirname: 511 checks, 0 differences, 0 listed, 93 distinct
+path.posix.extname: 511 checks, 0 differences, 0 listed, 79 distinct
+path.posix.parse: 511 checks, 0 differences, 0 listed, 405 distinct
+path.posix.join: 915 checks, 0 differences, 0 listed, 752 distinct
+path.posix.relative: 736 checks, 1 differences, 0 listed, 387 distinct
+path.posix.toNamespacedPath: 209 checks, 0 differences, 0 listed, 183 distinct
+path.posix.basename: 1782 checks, 0 differences, 0 listed, 346 distinct
+path.posix.format: 1118 checks, 3 differences, 0 listed, 661 distinct
+path.win32.sep: 1 checks, 0 differences, 0 listed, 1 distinct
+path.win32.delimiter: 1 checks, 0 differences, 0 listed, 1 distinct
+path.win32.resolve: 1277 checks, 0 differences, 0 listed, 479 distinct
+path.win32.normalize: 511 checks, 0 differences, 0 listed, 382 distinct
+path.win32.isAbsolute: 511 checks, 0 differences, 0 listed, 10 distinct
+path.win32.dirname: 511 checks, 0 differences, 0 listed, 200 distinct
+path.win32.extname: 511 checks, 0 differences, 0 listed, 48 distinct
+path.win32.parse: 511 checks, 0 differences, 0 listed, 406 distinct
+path.win32.join: 915 checks, 0 differences, 0 listed, 721 distinct
+path.win32.relative: 784 checks, 0 differences, 0 listed, 271 distinct
+path.win32.toNamespacedPath: 359 checks, 1 differences, 0 listed, 303 distinct
+path.win32.basename: 1782 checks, 0 differences, 0 listed, 253 distinct
+path.win32.format: 1118 checks, 2 differences, 0 listed, 687 distinct
+update-attempt.INSTALL_ATTEMPT_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+update-attempt.nextAttemptTries: 9 checks, 0 differences, 0 listed, 6 distinct
+update-attempt.recordInstallAttempt: 9 checks, 0 differences, 0 listed, 9 distinct
+update-attempt.readInstallAttempt: 27 checks, 0 differences, 0 listed, 27 distinct
+update-attempt.clearInstallAttempt: 4 checks, 0 differences, 0 listed, 3 distinct
+update-attempt.installDidNotApply: 6 checks, 0 differences, 0 listed, 2 distinct
+update-attempt.installFailureLevel: 8 checks, 0 differences, 0 listed, 3 distinct
+update-attempt.installDirWritable: 11 checks, 0 differences, 0 listed, 7 distinct
+update-cache.pruneUpdateCache: 33 checks, 0 differences, 0 listed, 25 distinct
+update-build-channel.buildChannelFromAppUpdateYml: 29 checks, 0 differences, 0 listed, 2 distinct
+update-build-channel.packagedUpdateChannel: 9 checks, 0 differences, 0 listed, 8 distinct
+update-log.UPDATE_LOG_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+update-log.UPDATE_LOG_MAX_BYTES: 2 checks, 0 differences, 0 listed, 2 distinct
+update-log.createUpdateLog: 45 checks, 0 differences, 0 listed, 37 distinct
+update-log.createUpdateSteps: 24 checks, 0 differences, 0 listed, 24 distinct
+update-log.fileBytes: 11 checks, 0 differences, 0 listed, 7 distinct
+launch-paths.LAUNCHABLE_EXTS: 2 checks, 0 differences, 0 listed, 2 distinct
+launch-paths.LAUNCHABLE_DOUBLE_EXTS: 2 checks, 0 differences, 0 listed, 2 distinct
+launch-paths.LAUNCHABLE_UNCLAIMED_EXTS: 2 checks, 0 differences, 0 listed, 2 distinct
+launch-paths.collectLaunchPaths: 36 checks, 0 differences, 0 listed, 22 distinct
+states.normalizeUserSkillSettings: 16 checks, 0 differences, 0 listed, 9 distinct
+folder-api.isValidProjectId: 19 checks, 0 differences, 0 listed, 2 distinct
+app-settings.readAppSettings: 18 checks, 0 differences, 0 listed, 17 distinct
+app-settings.writeAppSettings: 26 checks, 0 differences, 0 listed, 19 distinct
+app-settings.writeAppSetting: 12 checks, 0 differences, 0 listed, 11 distinct
+app-settings.writeAppSettingThen: 5 checks, 0 differences, 0 listed, 5 distinct
+app-settings.SKILLS_SETTING_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.AGENT_SKILL_NOTICE_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.AGENT_PROJECT_PREFS_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.PROJECTS_SETTING_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.DEFAULT_AGENT_PROJECT_PREF: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.readSkillSettings: 6 checks, 0 differences, 0 listed, 6 distinct
+app-settings.writeSkillSettings: 7 checks, 0 differences, 0 listed, 7 distinct
+app-settings.updateSkillSettings: 9 checks, 0 differences, 0 listed, 8 distinct
+app-settings.agentSkillNoticeDue: 16 checks, 0 differences, 0 listed, 16 distinct
+app-settings.markAgentSkillNoticeSeen: 4 checks, 0 differences, 0 listed, 4 distinct
+app-settings.writeAgentPrefs: 10 checks, 0 differences, 0 listed, 9 distinct
+app-settings.normalizeAgentProjectPrefs: 6 checks, 0 differences, 0 listed, 2 distinct
+app-settings.readAgentProjectPref: 11 checks, 0 differences, 0 listed, 7 distinct
+app-settings.writeAgentProjectPref: 10 checks, 0 differences, 0 listed, 9 distinct
+app-settings.normalizeProjectsSettings: 13 checks, 0 differences, 0 listed, 6 distinct
+app-settings.readProjectsSettings: 4 checks, 0 differences, 0 listed, 4 distinct
+app-settings.writeProjectsSettings: 14 checks, 1 differences, 0 listed, 7 distinct
+app-settings.updateProjectsSettings: 15 checks, 0 differences, 0 listed, 13 distinct
+folder-roots.FOLDER_ROOTS_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+folder-roots.readExtraRoots: 8 checks, 0 differences, 0 listed, 6 distinct
+folder-roots.withExtraRoot: 6 checks, 0 differences, 0 listed, 4 distinct
+folder-roots.withoutExtraRoot: 5 checks, 0 differences, 0 listed, 4 distinct
+folder-roots.describeExtraRoot: 13 checks, 0 differences, 0 listed, 13 distinct
+split-memory.SPLIT_MEMORY_SETTING_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+split-memory.readSplitMemory: 27 checks, 0 differences, 0 listed, 27 distinct
+split-memory.writeSplitMemory: 23 checks, 0 differences, 0 listed, 15 distinct
+split-memory.clearSplitMemory: 5 checks, 0 differences, 0 listed, 4 distinct
+window-bounds.WINDOW_BOUNDS_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.SHELL_WINDOW_DEFAULT_WIDTH: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.SHELL_WINDOW_DEFAULT_HEIGHT: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.SHELL_WINDOW_MIN_WIDTH: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.SHELL_WINDOW_MIN_HEIGHT: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.WINDOW_BOUNDS_SAVE_DEBOUNCE_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.WINDOW_BOUNDS_SETTLE_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.parseShellWindowState: 23 checks, 0 differences, 0 listed, 10 distinct
+window-bounds.isShellWindowVisible: 22 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.readShellWindowState: 9 checks, 0 differences, 0 listed, 9 distinct
+window-bounds.applyShellWindowState: 5 checks, 0 differences, 0 listed, 5 distinct
+window-bounds.installShellWindowBoundsPersistence: 21 checks, 0 differences, 0 listed, 12 distinct
+app-routing.DOCX_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.ODT_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.WORD97_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.ODS_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.XLSX_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.PPTX_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.PDF_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.HTML_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.MINDMAP_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.HWP_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.EPUB_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.DIAGRAM_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.TEXT_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.documentExtension: 61 checks, 0 differences, 0 listed, 50 distinct
+app-routing.appForPath: 56 checks, 0 differences, 0 listed, 11 distinct
+app-routing.renameStaysInApp: 40 checks, 0 differences, 0 listed, 2 distinct
+recent-files.STAT_PATHS_MAX: 2 checks, 0 differences, 0 listed, 2 distinct
+recent-files.EXT_FAMILY: 2 checks, 0 differences, 0 listed, 2 distinct
+recent-files.statPathEntries: 5 checks, 0 differences, 0 listed, 5 distinct
+recent-files.statPathEntriesAsync: 5 checks, 0 differences, 0 listed, 5 distinct
+recent-files.capStatPaths: 7 checks, 0 differences, 0 listed, 5 distinct
+recent-files.normalizeRecentQuery: 32 checks, 0 differences, 0 listed, 16 distinct
+recent-files.matchesExtFamily: 21 checks, 0 differences, 0 listed, 3 distinct
+recent-files.pageRecentPaths: 18 checks, 0 differences, 0 listed, 15 distinct
+rename-validation.RENAME_ILLEGAL_NAME_CHARS: 17 checks, 0 differences, 0 listed, 2 distinct
+rename-validation.isValidRawRenameName: 58 checks, 0 differences, 0 listed, 2 distinct
+rename-validation.isValidRenameName: 58 checks, 0 differences, 0 listed, 2 distinct
+rename-validation.isSameFile: 11 checks, 0 differences, 0 listed, 7 distinct
+rename-validation.pdfSaveAsTarget: 9 checks, 0 differences, 0 listed, 6 distinct
+crash-log.CRASH_LOG_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+crash-log.CRASH_LOG_MAX_BYTES: 2 checks, 0 differences, 0 listed, 2 distinct
+crash-log.crashLine: 32 checks, 0 differences, 0 listed, 23 distinct
+crash-log.errorReason: 17 checks, 0 differences, 0 listed, 11 distinct
+crash-log.appendCrashLog: 16 checks, 0 differences, 0 listed, 15 distinct
+crash-heartbeat.HEARTBEAT_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+crash-heartbeat.HEARTBEAT_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+crash-heartbeat.heartbeatPath: 7 checks, 0 differences, 0 listed, 7 distinct
+crash-heartbeat.parseHeartbeat: 28 checks, 0 differences, 0 listed, 10 distinct
+crash-heartbeat.goneEntryFrom: 8 checks, 0 differences, 0 listed, 6 distinct
+crash-heartbeat.startHeartbeat: 17 checks, 0 differences, 0 listed, 12 distinct
+atomic-write.isSaveTempName: 22 checks, 0 differences, 0 listed, 2 distinct
+atomic-write.tempPathBeside: 12 checks, 0 differences, 0 listed, 10 distinct
+atomic-write.atomicWriteFile: 13 checks, 0 differences, 0 listed, 10 distinct
+atomic-write.atomicCopyFile: 9 checks, 0 differences, 0 listed, 8 distinct
+atomic-write.atomicMoveFile: 8 checks, 0 differences, 0 listed, 7 distinct
+atomic-write.atomicWriteVia: 7 checks, 0 differences, 0 listed, 5 distinct
+atomic-write.writeJsonAtomic: 18 checks, 0 differences, 0 listed, 17 distinct
+
+DIFF path.posix.relative case 6
+  typescript: {"answer":"{\"value\":\"\\ude00/😀.x\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"�/😀.x\"}","files":{}}
+
+DIFF path.posix.format case 92
+  typescript: {"answer":"{\"value\":true}","files":{}}
+  rust:       {"answer":"{\"value\":\"true\"}","files":{}}
+
+DIFF path.posix.format case 304
+  typescript: {"answer":"{\"value\":true}","files":{}}
+  rust:       {"answer":"{\"value\":\"true\"}","files":{}}
+
+DIFF path.posix.format case 389
+  typescript: {"answer":"{\"value\":1.5}","files":{}}
+  rust:       {"answer":"{\"value\":\"1.5\"}","files":{}}
+
+DIFF path.win32.toNamespacedPath case 357 (returned as given)
+  typescript: {"answer":"{}","files":{}}
+  rust:       {"answer":"{\"value\":null}","files":{}}
+
+DIFF path.win32.format case 136
+  typescript: {"answer":"{\"value\":1.5}","files":{}}
+  rust:       {"answer":"{\"value\":\"1.5\"}","files":{}}
+
+DIFF path.win32.format case 221
+  typescript: {"answer":"{\"value\":1.5}","files":{}}
+  rust:       {"answer":"{\"value\":\"1.5\"}","files":{}}
+
+DIFF app-settings.writeProjectsSettings case 0 (undefined)
+  typescript: {"answer":"{}","files":{"app-settings.json":"file 644 \"{\\n  \\\"keep\\\": 1,\\n  \\\"projects\\\": {\\n    \\\"installId\\\": \\\"\\\",\\n    \\\"list\\\": [],\\n    \\\"trust\\\": {},\\n    \\\"outsideDocuments\\\": {},\\n    \\\"optedOutDocuments\\\": {},\\n    \\\"settings\\\": {},\\n    \\\"syncNoticeShown\\\": []\\n  }\\n}\""}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"value is missing\"}}","files":{"app-settings.json":"file 644 \"{\\\"keep\\\":1}\""}}
+
+18839 checks, 18831 equal, 8 differences, 0 listed, 138 functions
