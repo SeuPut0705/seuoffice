@@ -1,11 +1,18 @@
 import { defineConfig } from 'vitest/config'
+import {
+  ENGINE_NODE_SETUP,
+  engineWasmAsset,
+  engineWasmEnv,
+} from '../../packages/engine-wasm/src/vitest'
 
 export default defineConfig({
+  // the engine behind @seuoffice/file-parse: the mains start it from a ?asset path
+  plugins: [engineWasmAsset()],
   test: {
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     environment: 'jsdom',
-    // the engine behind @seuoffice/file-parse starts here, before the mains' engine-init reads its ?asset path
-    setupFiles: ['../../packages/engine-wasm/src/node.ts', 'tests/setup.ts'],
+    env: engineWasmEnv(),
+    setupFiles: [ENGINE_NODE_SETUP, 'tests/setup.ts'],
     testTimeout: 20000,
   },
 })
