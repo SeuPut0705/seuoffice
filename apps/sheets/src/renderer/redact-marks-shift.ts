@@ -61,16 +61,3 @@ export function opsWouldMoveMarks(
     })
   )
 }
-
-/** The states as the grid shows them, from a sheet list that maps names to ids. */
-export function statesOnScreen(
-  states: readonly { sheetName: string; marks: readonly CellMark[] }[],
-  opsFor: (sheetName: string) => readonly StructuralJournalOp[],
-): { sheetName: string; marks: CellMark[] }[] {
-  return states.map((state) => {
-    const ops = opsFor(state.sheetName)
-    return ops.length === 0
-      ? { sheetName: state.sheetName, marks: [...state.marks] }
-      : { sheetName: state.sheetName, marks: shiftMarksThroughOps(state.marks, ops) }
-  })
-}

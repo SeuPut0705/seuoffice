@@ -225,7 +225,7 @@ import {
 import { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
 import { cfRuleUnsaveableReason, iconSetSaveable } from '@genoffice/xlsx-gateway/gateway/xlsx-cf'
 import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
-import { statesOnScreen } from './redact-marks-shift'
+import { markPlaceInFile, sessionRedactionIndex, type MarkPlace } from './redact-session'
 import { installLazyFindBridge } from './lazy-find'
 import { startFullLoad } from './full-load'
 import { opensInFormulaMode, workbookCellCounts } from './load-budget'
@@ -428,7 +428,6 @@ import {
   addMark,
   clearMark,
   hasPendingRedactionChange,
-  indexFor,
   redactIntentFor,
   type MarkKey,
   type RedactDialogState,
@@ -2412,10 +2411,11 @@ export function App({
   /**
    * The index the grid, the tint and the model all read.
    *
-   * `redactionStatesRef` holds the marks in file coordinates — where the
-   * reader put them, and where a save writes them. The grid is somewhere else
-   * after this session's row and column edits, so the index is derived by
-   * replaying the journal's structural ops rather than by moving the marks and
+   * `redactionStatesRef` holds the marks as the file holds them — under the
+   * name the file knows each sheet by and in file coordinates, where a save
+   * writes them. The grid is somewhere else after this session's renames and
+   * row and column edits, so the index is derived per sheet id by replaying
+   * the journal (`redact-session.ts`) rather than by moving the marks and
    * trying to move them back on undo. The journal is already how a streamed
    * viewport survives the same shift, and it cancels an insert/remove pair on
    * undo, so a mark follows the grid for free and returns with ⌘Z.
@@ -2425,15 +2425,11 @@ export function App({
     // empty store would answer "nothing withheld" for a workbook whose part is
     // still on its way, or could not be read at all.
     if (redactionLoadRef.current.status !== 'loaded') return
-    const journal = lazyWorkbookRef.current?.editJournal
-    if (!journal) return
-    const sheets = getActiveSheetInfo().sheets
-    const idByName = new Map(sheets.map((sheet) => [sheet.name, sheet.id]))
-    const onScreen = statesOnScreen(redactionStatesRef.current, (name) => {
-      const id = idByName.get(name)
-      return id === undefined ? [] : (journal.structuralOps.get(id) ?? [])
-    })
-    redactionLoadRef.current = loadedRedactions(indexFor(onScreen, sheets))
+    const state = lazyWorkbookRef.current
+    if (!state) return
+    redactionLoadRef.current = loadedRedactions(
+      sessionRedactionIndex(redactionStatesRef.current, state.file.sheets, state.editJournal),
+    )
   }
 
   function getActiveSheetInfo(): ActiveSheetInfo {
@@ -2459,6 +2455,14 @@ export function App({
     })
   }
 
+  /** Tell the person why a selection cannot be hidden or shown yet. */
+  function refuseMarkPlace(place: Extract<MarkPlace, { ok: false }>): void {
+    showToast(
+      t(place.reason === 'unsaved-row' ? 'redactNeedsSavedRow' : 'redactNeedsSavedSheet'),
+      'error',
+    )
+  }
+
   /** Turn a grid right-click into either a dialog or an immediate clear. */
   function onRedactSelection(request: SelectionRequest) {
     const state = lazyWorkbookRef.current
@@ -2471,37 +2475,30 @@ export function App({
     if (intent.kind === 'ignore') return
     if (intent.kind === 'clear') {
       // The tint was clicked on the grid, so what arrives is in screen
-      // coordinates; the store keeps file coordinates. Same translation the
-      // create path makes, so the two actually meet.
-      const clearOps = lazyWorkbookRef.current?.editJournal.structuralOps.get(request.sheetId) ?? []
-      const clearRow = screenToFile(clearOps, 'row', intent.mark.startRow)
-      const clearEndRow = screenToFile(clearOps, 'row', intent.mark.endRow)
-      const clearCol = screenToFile(clearOps, 'column', intent.mark.startColumn)
-      const clearEndCol = screenToFile(clearOps, 'column', intent.mark.endColumn)
+      // coordinates under the sheet's current name; the store keeps the file's.
+      // Same translation the create path makes, so the two actually meet.
+      const place = markPlaceInFile(
+        state.file.sheets,
+        state.editJournal,
+        request.sheetId,
+        intent.mark,
+      )
+      if (!place.ok) {
+        refuseMarkPlace(place)
+        return
+      }
       // The same gesture that withheld it stops withholding it — one item, and
       // no second string in a locale set that must not grow.
-      const marked =
-        clearRow === null || clearEndRow === null || clearCol === null || clearEndCol === null
-          ? undefined
-          : redactionStatesRef.current
-              .find((entry) => entry.sheetName === intent.sheetName)
-              ?.marks.find(
-                (mark) =>
-                  mark.startRow === clearRow &&
-                  mark.endRow === clearEndRow &&
-                  mark.startColumn === clearCol &&
-                  mark.endColumn === clearEndCol,
-              )
-      const next =
-        clearRow === null || clearEndRow === null || clearCol === null || clearEndCol === null
-          ? redactionStatesRef.current
-          : clearMark(redactionStatesRef.current, intent.sheetName, {
-              ...intent.mark,
-              startRow: clearRow,
-              endRow: clearEndRow,
-              startColumn: clearCol,
-              endColumn: clearEndCol,
-            })
+      const marked = redactionStatesRef.current
+        .find((entry) => entry.sheetName === place.sheetName)
+        ?.marks.find(
+          (mark) =>
+            mark.startRow === place.area.startRow &&
+            mark.endRow === place.area.endRow &&
+            mark.startColumn === place.area.startColumn &&
+            mark.endColumn === place.area.endColumn,
+        )
+      const next = clearMark(redactionStatesRef.current, place.sheetName, place.area)
       redactionStatesRef.current = next
       rebuildRedactionIndex()
       // The tint is the only thing the mark ever did to the reader's own
@@ -2520,6 +2517,13 @@ export function App({
           // not a reason to keep the mark; the mark is already gone.
         }
       }
+      return
+    }
+    // Asked before the label, not after it: a selection with no place in the
+    // file yet cannot be marked whatever the person types.
+    const place = markPlaceInFile(state.file.sheets, state.editJournal, request.sheetId, request)
+    if (!place.ok) {
+      refuseMarkPlace(place)
       return
     }
     // A single cell offers its own text as the label, so the common case is
@@ -2552,22 +2556,18 @@ export function App({
     if (!clean) return
     const workbook = univerRef.current?.univerAPI.getActiveWorkbook()
     const worksheet = workbook?.getSheetBySheetId(pending.sheetId)
-    // A mark is written into the package part, so it has to name the cell the
-    // FILE has, not the one the grid is showing: this session may have
-    // inserted rows above it that the file has never seen. `screenToFile`
-    // answers null for a row inserted this session — it has no file coordinate
-    // to write down — so the reader is told to save rather than handed a mark
-    // the save would later shift a second time.
-    const ops = lazyWorkbookRef.current?.editJournal.structuralOps.get(pending.sheetId) ?? []
-    const startRow = screenToFile(ops, 'row', pending.startRow)
-    const endRow = screenToFile(ops, 'row', pending.endRow)
-    const startColumn = screenToFile(ops, 'column', pending.startColumn)
-    const endColumn = screenToFile(ops, 'column', pending.endColumn)
-    if (startRow === null || endRow === null || startColumn === null || endColumn === null) {
-      showToast(t('redactNeedsSavedRow'), 'error')
+    // A mark is written into the package part, so it has to name the sheet and
+    // the cell the FILE has, not the ones the grid is showing: this session
+    // may have renamed the sheet or inserted rows above the cell, which the
+    // file has never seen (`markPlaceInFile`).
+    const state = lazyWorkbookRef.current
+    if (!state) return
+    const place = markPlaceInFile(state.file.sheets, state.editJournal, pending.sheetId, pending)
+    if (!place.ok) {
+      refuseMarkPlace(place)
       return
     }
-    const inFile = { startRow, endRow, startColumn, endColumn }
+    const inFile = place.area
     // buildMark reads the fill, paints the tint and returns both, so the mark
     // cannot be assembled without the value that has to be restored later. The
     // tint is drawn on the grid, so it takes the screen bounds.
@@ -2593,11 +2593,11 @@ export function App({
       // unmarked on screen, which is the same state the reader is in anyway
       // for a sheet that has not finished streaming.
     }
-    const next = addMark(redactionStatesRef.current, pending.sheetName, mark)
+    const next = addMark(redactionStatesRef.current, place.sheetName, mark)
     redactionStatesRef.current = next
-    // Not `indexFor(next, …)`: the states are in file coordinates now, and the
-    // index the grid reads has to be the screen ones. The same replay the
-    // loaded marks go through covers this one.
+    // The states are in the file's terms now, and the index the grid reads has
+    // to be the screen's. The same replay the loaded marks go through covers
+    // this one.
     rebuildRedactionIndex()
   }
 

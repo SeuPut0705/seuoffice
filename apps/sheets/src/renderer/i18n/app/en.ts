@@ -12,6 +12,8 @@ export const en = {
   redactInsert: 'Hide',
   redactEnable: 'Right-click a selection to hide it from the model.',
   redactNeedsSavedRow: 'This row is not in the file yet. Save first, then hide a cell in it.',
+  redactNeedsSavedSheet:
+    'This sheet or a copy of it is not in the file yet. Save first, then change what is hidden.',
   redactRecoveredFromNames:
     'Another app rewrote this file and dropped the record of what is hidden. The hidden cells were recovered from the names in the workbook; saving restores the full record.',
 

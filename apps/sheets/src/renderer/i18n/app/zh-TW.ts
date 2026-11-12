@@ -12,6 +12,7 @@ export const zhTW = {
   redactInsert: '隱藏',
   redactEnable: '選中文字後右鍵，即可對 AI 隱藏。',
   redactNeedsSavedRow: '這一列還沒存進檔案。請先存檔，再隱藏其中的儲存格。',
+  redactNeedsSavedSheet: '這張工作表或它的副本還沒存進檔案。請先存檔，再變更隱藏的內容。',
   redactRecoveredFromNames:
     '這個檔案被其他軟體改寫過，記錄隱藏內容的元件不見了。已從活頁簿裡的名稱找回隱藏的儲存格；存檔一次即可還原完整記錄。',
 

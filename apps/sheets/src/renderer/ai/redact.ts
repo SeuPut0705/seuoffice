@@ -176,17 +176,33 @@ export function buildRedactionIndex(
   for (const state of states) {
     const sheetId = idByName.get(state.sheetName)
     if (sheetId === undefined) continue
-    const marks = bySheet.get(sheetId) ?? []
-    for (const mark of state.marks) {
-      marks.push({
+    bySheet.set(sheetId, [...(bySheet.get(sheetId) ?? []), ...state.marks])
+  }
+  return redactionIndexBySheetId(bySheet)
+}
+
+/**
+ * The lookup over marks already placed on the sheets they belong to, by sheet
+ * id and in screen coordinates.
+ *
+ * A session knows its sheets by id while their names change under it (see
+ * `redact-session`), so it places the marks itself and builds from here.
+ */
+export function redactionIndexBySheetId(
+  marksBySheet: ReadonlyMap<string, readonly CellMark[]>,
+): RedactionIndex {
+  const bySheet = new Map<string, CellMark[]>()
+  for (const [sheetId, marks] of marksBySheet) {
+    bySheet.set(
+      sheetId,
+      marks.map((mark) => ({
         startRow: mark.startRow,
         endRow: mark.endRow,
         startColumn: mark.startColumn,
         endColumn: mark.endColumn,
         label: sanitizeLabel(mark.label),
-      })
-    }
-    bySheet.set(sheetId, marks)
+      })),
+    )
   }
   if (bySheet.size === 0) return EMPTY_INDEX
 

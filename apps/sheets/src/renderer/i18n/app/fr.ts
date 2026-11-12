@@ -13,6 +13,8 @@ export const fr = {
   redactEnable: 'Clic droit sur une sélection pour la masquer au modèle.',
   redactNeedsSavedRow:
     "Cette ligne n'est pas encore dans le fichier. Enregistrez d'abord, puis masquez la cellule.",
+  redactNeedsSavedSheet:
+    "Cette feuille, ou une copie de celle-ci, n'est pas encore dans le fichier. Enregistrez d'abord, puis modifiez ce qui est masqué.",
   redactRecoveredFromNames:
     'Une autre application a réécrit ce fichier et effacé la trace de ce qui est masqué. Les cellules masquées ont été retrouvées dans les noms du classeur ; la sauvegarde restaure la trace complète.',
 

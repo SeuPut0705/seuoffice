@@ -13,6 +13,8 @@ export const pl = {
   redactEnable: 'Kliknij prawym na zaznaczeniu, aby ukryć je przed modelem.',
   redactNeedsSavedRow:
     'Ten wiersz nie jest jeszcze w pliku. Zapisz najpierw, a potem ukryj komórkę.',
+  redactNeedsSavedSheet:
+    'Tego arkusza lub jego kopii nie ma jeszcze w pliku. Zapisz najpierw, a potem zmień to, co jest ukryte.',
   redactRecoveredFromNames:
     'Inna aplikacja zapisała ten plik od nowa i usunęła rejestr tego, co jest ukryte. Ukryte komórki odtworzono z nazw w skoroszycie; zapisanie przywraca pełny rejestr.',
 

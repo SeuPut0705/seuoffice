@@ -13,6 +13,8 @@ export const ko = {
   redactEnable: '선택한 부분을 오른쪽 클릭해 AI에서 숨깁니다.',
   redactNeedsSavedRow:
     '이 행은 아직 파일에 저장되지 않았습니다. 먼저 저장한 다음 셀을 숨겨 주세요.',
+  redactNeedsSavedSheet:
+    '이 시트나 이 시트의 복사본이 아직 파일에 저장되지 않았습니다. 먼저 저장한 다음 숨김을 바꿔 주세요.',
   redactRecoveredFromNames:
     '다른 앱이 이 파일을 다시 저장하며 숨겨진 내용을 기록한 부품이 사라졌습니다. 숨겨진 셀은 통합 문서의 이름에서 복구되었습니다. 저장하면 전체 기록이 다시 기록됩니다.',
 

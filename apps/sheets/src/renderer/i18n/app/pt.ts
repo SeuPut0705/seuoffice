@@ -13,6 +13,8 @@ export const pt = {
   redactEnable: 'Clique com o botão direito em uma seleção para ocultá-la do modelo.',
   redactNeedsSavedRow:
     'Esta linha ainda não está no arquivo. Salve primeiro e depois oculte a célula.',
+  redactNeedsSavedSheet:
+    'Esta planilha ou uma cópia dela ainda não está no arquivo. Salve primeiro e depois altere o que está oculto.',
   redactRecoveredFromNames:
     'Outro aplicativo reescreveu este arquivo e descartou o registro do que está oculto. As células ocultas foram recuperadas a partir dos nomes na pasta de trabalho; salvar restaura o registro completo.',
 
