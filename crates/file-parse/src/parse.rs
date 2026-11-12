@@ -20,7 +20,7 @@
 //! The answer is the `ParsedFile` object, its keys in the order each branch of
 //! the TypeScript writes them.
 
-use encoding_rs::{UTF_16BE, UTF_8, WINDOWS_1252};
+use encoding_rs::{UTF_8, UTF_16BE, WINDOWS_1252};
 use serde_json::{Map, Value, json};
 
 use crate::csv::decode_csv_buffer;
@@ -40,15 +40,28 @@ pub struct ParseFileOptions {
 }
 
 fn object(entries: impl IntoIterator<Item = (&'static str, Value)>) -> Value {
-    Value::Object(entries.into_iter().map(|(key, value)| (key.to_owned(), value)).collect::<Map<_, _>>())
+    Value::Object(
+        entries
+            .into_iter()
+            .map(|(key, value)| (key.to_owned(), value))
+            .collect::<Map<_, _>>(),
+    )
 }
 
 fn read_ok(text: String) -> Value {
-    object([("ok", json!(true)), ("kind", json!("text")), ("text", Value::String(text))])
+    object([
+        ("ok", json!(true)),
+        ("kind", json!("text")),
+        ("text", Value::String(text)),
+    ])
 }
 
 fn read_failed(error: String) -> Value {
-    object([("ok", json!(false)), ("kind", json!("text")), ("error", Value::String(error))])
+    object([
+        ("ok", json!(false)),
+        ("kind", json!("text")),
+        ("error", Value::String(error)),
+    ])
 }
 
 /// `extname(filePath).slice(1)`: after the last dot of the last segment,
@@ -81,7 +94,10 @@ fn image_mime(ext: &str) -> Option<&'static str> {
 
 /// `TEXT_EXTS.has(ext)`
 fn is_text_ext(ext: &str) -> bool {
-    matches!(ext, "txt" | "md" | "markdown" | "csv" | "tsv" | "json" | "xml" | "html" | "htm" | "log" | "py")
+    matches!(
+        ext,
+        "txt" | "md" | "markdown" | "csv" | "tsv" | "json" | "xml" | "html" | "htm" | "log" | "py"
+    )
 }
 
 /// A text reader's redaction: the source with every withheld span rewritten.
@@ -98,7 +114,10 @@ fn text_redactor(ext: &str) -> Option<TextRedactor> {
 
 /// `ZIP_DOCUMENT_EXTS.has(ext)`
 fn is_zip_document_ext(ext: &str) -> bool {
-    matches!(ext, "docx" | "pptx" | "xlsx" | "xlsm" | "hwpx" | "odt" | "epub" | "xmind" | "doc" | "hwp")
+    matches!(
+        ext,
+        "docx" | "pptx" | "xlsx" | "xlsm" | "hwpx" | "odt" | "epub" | "xmind" | "doc" | "hwp"
+    )
 }
 
 /// `isUtf32BomDeclared(bytes)`
@@ -116,7 +135,12 @@ fn decode_text_bytes(bytes: &[u8]) -> Option<String> {
         return None;
     }
     if let Some(rest) = bytes.strip_prefix(&[0xff, 0xfe]) {
-        let units: Vec<u16> = rest.as_chunks::<2>().0.iter().map(|pair| u16::from_le_bytes(*pair)).collect();
+        let units: Vec<u16> = rest
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|pair| u16::from_le_bytes(*pair))
+            .collect();
         return Some(String::from_utf16_lossy(&units));
     }
     if let Some(rest) = bytes.strip_prefix(&[0xfe, 0xff]) {
@@ -128,7 +152,12 @@ fn decode_text_bytes(bytes: &[u8]) -> Option<String> {
     if !had_errors {
         return Some(text.into_owned());
     }
-    Some(WINDOWS_1252.decode_without_bom_handling(payload).0.into_owned())
+    Some(
+        WINDOWS_1252
+            .decode_without_bom_handling(payload)
+            .0
+            .into_owned(),
+    )
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -158,7 +187,10 @@ fn sniff_binary(bytes: &[u8]) -> BinaryKind {
         return BinaryKind::Zip;
     }
     // pdf.js scans the first 1024 bytes for the header
-    if bytes[..bytes.len().min(1024)].windows(5).any(|window| window == b"%PDF-") {
+    if bytes[..bytes.len().min(1024)]
+        .windows(5)
+        .any(|window| window == b"%PDF-")
+    {
         return BinaryKind::Pdf;
     }
     if bytes.starts_with(&[0xd0, 0xcf, 0x11, 0xe0]) {
@@ -173,7 +205,10 @@ fn sniff_binary(bytes: &[u8]) -> BinaryKind {
 /// `bytes.includes(ENCRYPTED_PACKAGE_STREAM)`: the stream an encrypted OOXML
 /// package lives in, its name in UTF-16LE.
 fn holds_encrypted_package(bytes: &[u8]) -> bool {
-    let name: Vec<u8> = "EncryptedPackage".encode_utf16().flat_map(u16::to_le_bytes).collect();
+    let name: Vec<u8> = "EncryptedPackage"
+        .encode_utf16()
+        .flat_map(u16::to_le_bytes)
+        .collect();
     bytes.windows(name.len()).any(|window| window == name)
 }
 
@@ -196,14 +231,25 @@ fn hosted_text(hosted: Option<&Value>, reader: &str) -> Result<String, (String, 
         return Ok(text.to_owned());
     }
     let error = hosted.get("error");
-    let field = |key: &str| error.and_then(|error| error.get(key)).and_then(Value::as_str);
-    Err((field("message").unwrap_or_default().to_owned(), field("name") == Some("DamagedFileError")))
+    let field = |key: &str| {
+        error
+            .and_then(|error| error.get(key))
+            .and_then(Value::as_str)
+    };
+    Err((
+        field("message").unwrap_or_default().to_owned(),
+        field("name") == Some("DamagedFileError"),
+    ))
 }
 
 /// `parseOdt(bytes)` over what the host's odt-engine read.
 fn parse_odt(hosted: Option<&Value>) -> Result<Value, (String, bool)> {
     let error = hosted.and_then(|hosted| hosted.get("error"));
-    let field = |key: &str| error.and_then(|error| error.get(key)).and_then(Value::as_str);
+    let field = |key: &str| {
+        error
+            .and_then(|error| error.get(key))
+            .and_then(Value::as_str)
+    };
     match field("code") {
         Some("not-odt-text") => {
             return Ok(read_failed(format!(
@@ -212,7 +258,9 @@ fn parse_odt(hosted: Option<&Value>) -> Result<Value, (String, bool)> {
             )));
         }
         Some("encrypted") => {
-            return Ok(read_failed("Password-protected ODT: remove the password and attach it again".to_owned()));
+            return Ok(read_failed(
+                "Password-protected ODT: remove the password and attach it again".to_owned(),
+            ));
         }
         _ => {}
     }
@@ -232,23 +280,40 @@ fn read_diagram(file_path: &str, bytes: &[u8]) -> Option<Value> {
         Err(error) => return Some(read_failed(error.message)),
     };
     if read.get("ok") == Some(&json!(true)) {
-        return Some(read_ok(read.get("text").and_then(Value::as_str).unwrap_or_default().to_owned()));
+        return Some(read_ok(
+            read.get("text")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_owned(),
+        ));
     }
     let field = |key: &str| read.get(key).and_then(Value::as_str).unwrap_or_default();
     if field("reason") == "no_original" {
         return None;
     }
-    Some(read_failed(format!("Cannot read diagram ({}): {}", field("reason"), field("message"))))
+    Some(read_failed(format!(
+        "Cannot read diagram ({}): {}",
+        field("reason"),
+        field("message")
+    )))
 }
 
 /// `parseFileToText(filePath, opts)` over the file's `bytes`; `hosted` is what
 /// the host read for a PDF, a mind map or an OpenDocument text.
-pub fn parse_file_to_text(file_path: &str, bytes: &[u8], opts: ParseFileOptions, hosted: Option<&Value>) -> Value {
+pub fn parse_file_to_text(
+    file_path: &str,
+    bytes: &[u8],
+    opts: ParseFileOptions,
+    hosted: Option<&Value>,
+) -> Value {
     let ext = extension_of(file_path).to_lowercase();
     let ext = ext.as_str();
     // a draw.io diagram is named first: `.drawio.png` and `.drawio.svg` are read
     // as diagram text, not by their last extension
-    match seu_host::call("fileparse.diagramFormatOf", &json!({ "filePath": file_path })) {
+    match seu_host::call(
+        "fileparse.diagramFormatOf",
+        &json!({ "filePath": file_path }),
+    ) {
         Ok(Value::Null) => {}
         Ok(_) => {
             if let Some(answer) = read_diagram(file_path, bytes) {
@@ -258,14 +323,24 @@ pub fn parse_file_to_text(file_path: &str, bytes: &[u8], opts: ParseFileOptions,
         Err(error) => return read_failed(error.message),
     }
     if let Some(mime) = image_mime(ext) {
-        return object([("ok", json!(true)), ("kind", json!("image")), ("mime", json!(mime))]);
+        return object([
+            ("ok", json!(true)),
+            ("kind", json!("image")),
+            ("mime", json!(mime)),
+        ]);
     }
     match read(ext, bytes, opts, hosted) {
         Ok(Some(answer)) => answer,
         Ok(None) => object([
             ("ok", json!(false)),
             ("kind", json!("unsupported")),
-            ("error", Value::String(format!("Unsupported file type: .{}", if ext.is_empty() { "unknown" } else { ext }))),
+            (
+                "error",
+                Value::String(format!(
+                    "Unsupported file type: .{}",
+                    if ext.is_empty() { "unknown" } else { ext }
+                )),
+            ),
         ]),
         Err((message, damaged)) => thrown(message, damaged),
     }
@@ -273,7 +348,12 @@ pub fn parse_file_to_text(file_path: &str, bytes: &[u8], opts: ParseFileOptions,
 
 /// The `try` block of `parseFileToText`: `Ok(None)` where it falls through to
 /// "Unsupported file type", `Err` what it caught.
-fn read(ext: &str, bytes: &[u8], opts: ParseFileOptions, hosted: Option<&Value>) -> Result<Option<Value>, (String, bool)> {
+fn read(
+    ext: &str,
+    bytes: &[u8],
+    opts: ParseFileOptions,
+    hosted: Option<&Value>,
+) -> Result<Option<Value>, (String, bool)> {
     let caught = |message: String| {
         let damaged = message.starts_with(DAMAGED);
         (message, damaged)
@@ -303,14 +383,20 @@ fn read(ext: &str, bytes: &[u8], opts: ParseFileOptions, hosted: Option<&Value>)
     // the file's bytes, or for a large zip-based document its text parts only
     let limit = opts.whole_zip_max_bytes.unwrap_or(WHOLE_ZIP_READ_MAX_BYTES);
     let parts;
-    let bytes = if is_zip_document_ext(ext) && bytes.len() as f64 > limit && bytes.starts_with(b"PK") {
-        parts = crate::zip_text_parts::read_zip_text_parts(bytes).map_err(caught)?;
-        parts.as_slice()
-    } else {
-        bytes
-    };
+    let bytes =
+        if is_zip_document_ext(ext) && bytes.len() as f64 > limit && bytes.starts_with(b"PK") {
+            parts = crate::zip_text_parts::read_zip_text_parts(bytes).map_err(caught)?;
+            parts.as_slice()
+        } else {
+            bytes
+        };
     let sniffed = sniff_binary(bytes);
-    let mismatch = || Ok(Some(read_failed(format!("Content mismatch: .{ext} file has {} magic bytes", sniffed.name()))));
+    let mismatch = || {
+        Ok(Some(read_failed(format!(
+            "Content mismatch: .{ext} file has {} magic bytes",
+            sniffed.name()
+        ))))
+    };
     if ext == "pdf" && sniffed != BinaryKind::Pdf {
         return mismatch();
     }
@@ -328,25 +414,35 @@ fn read(ext: &str, bytes: &[u8], opts: ParseFileOptions, hosted: Option<&Value>)
         return mismatch();
     }
     // a DOCX saved under a .doc name is common enough that it parses as OOXML
-    if (ext == "doc" && sniffed != BinaryKind::Ole2 && sniffed != BinaryKind::Zip) || (ext == "ppt" && sniffed != BinaryKind::Ole2) {
+    if (ext == "doc" && sniffed != BinaryKind::Ole2 && sniffed != BinaryKind::Zip)
+        || (ext == "ppt" && sniffed != BinaryKind::Ole2)
+    {
         return mismatch();
     }
     // .hwpx is a zip; a .hwp is Hangul 5 (OLE2) or Hangul 3, and now and then
     // an HWPX saved under the old name, which the engine reads by its content
     if (ext == "hwpx" && sniffed != BinaryKind::Zip)
-        || (ext == "hwp" && !matches!(sniffed, BinaryKind::Ole2 | BinaryKind::Hwp3 | BinaryKind::Zip))
+        || (ext == "hwp"
+            && !matches!(
+                sniffed,
+                BinaryKind::Ole2 | BinaryKind::Hwp3 | BinaryKind::Zip
+            ))
     {
         return mismatch();
     }
     let text = match ext {
         "hwp" | "hwpx" => crate::hwp::hwp_to_text(bytes).map_err(caught)?,
-        "doc" if sniffed == BinaryKind::Zip => crate::docx::docx_to_text(bytes, opts.max_chars).map_err(caught)?,
+        "doc" if sniffed == BinaryKind::Zip => {
+            crate::docx::docx_to_text(bytes, opts.max_chars).map_err(caught)?
+        }
         "doc" => crate::doc::doc_to_text(bytes).map_err(caught_js)?,
         "docx" => crate::docx::docx_to_text(bytes, opts.max_chars).map_err(caught)?,
         "odt" => return parse_odt(hosted).map(Some),
         "ppt" => crate::ppt::ppt_to_text(bytes).map_err(caught_js)?,
         "pptx" => crate::pptx::pptx_to_text(bytes).map_err(caught)?,
-        "xlsx" | "xlsm" => crate::xlsx::xlsx_to_text(bytes, opts.max_chars, None).map_err(caught)?,
+        "xlsx" | "xlsm" => {
+            crate::xlsx::xlsx_to_text(bytes, opts.max_chars, None).map_err(caught)?
+        }
         "pdf" => hosted_text(hosted, "pdf")?,
         "xmind" => hosted_text(hosted, "xmind")?,
         "epub" => crate::epub::epub_to_text(bytes).map_err(caught)?,

@@ -17,14 +17,14 @@ use ooxml_pkg::{Package, load_zip_package};
 use serde_json::Value;
 
 use crate::opc::resolve_target;
+use crate::redaction::{redaction_error, sanitize_label};
+use crate::xlsx_dates::{
+    DateFormatParts, builtin_date_format, classify_format_code, format_serial,
+};
 use crate::xlsx_formula_reads::{NameDefinition, RangeBounds};
 use crate::xlsx_formula_redaction::{
     DerivedInput, DerivedSheet, FORMULA_SCAN_MAX_BYTES, PivotOutput, pivot_output_of,
     read_derived_cells,
-};
-use crate::redaction::{redaction_error, sanitize_label};
-use crate::xlsx_dates::{
-    DateFormatParts, builtin_date_format, classify_format_code, format_serial,
 };
 
 use fxp::JVal;
@@ -1493,7 +1493,9 @@ fn sheet_pivot_outputs(zip: &Package, sheet_path: &str) -> Result<Vec<PivotOutpu
             }
         };
         outputs.push(pivot_output_of(
-            pivot.as_ref().map(|(text, truncated)| (text.as_str(), *truncated)),
+            pivot
+                .as_ref()
+                .map(|(text, truncated)| (text.as_str(), *truncated)),
             cache.as_deref(),
         )?);
     }
@@ -1585,7 +1587,9 @@ pub fn xlsx_to_text(
                 DerivedInput {
                     name: name.clone(),
                     xml: match part {
-                        Some(part) => Some(Box::new(move || zip_text_prefix(zip, part, scan_limit))),
+                        Some(part) => {
+                            Some(Box::new(move || zip_text_prefix(zip, part, scan_limit)))
+                        }
                         None => None,
                     },
                     marks: redactions

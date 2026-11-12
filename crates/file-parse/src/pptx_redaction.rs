@@ -254,7 +254,10 @@ fn escape_text(value: &str) -> String {
 /// One slide or notes part with every withheld run rewritten to its `{{label}}`
 /// marker. A part with no trace of the mark is returned as it came, unparsed.
 pub fn redact_pptx_part_xml(xml: &str) -> Result<String, String> {
-    if !xml.contains(PPTX_REDACT_EXT_URI) && !xml.contains(REDACT_EL) && !REDACT_NAMESPACES.iter().any(|ns| xml.contains(ns)) {
+    if !xml.contains(PPTX_REDACT_EXT_URI)
+        && !xml.contains(REDACT_EL)
+        && !REDACT_NAMESPACES.iter().any(|ns| xml.contains(ns))
+    {
         return Ok(xml.to_owned());
     }
     let all = scan_elements(xml)?;
@@ -292,7 +295,11 @@ pub fn redact_pptx_part_xml(xml: &str) -> Result<String, String> {
     // extension, the namespace under another prefix, a mark inside a comment)
     if count_of(xml, PPTX_REDACT_EXT_URI) != understood
         || count_of(xml, &format!("<{REDACT_EL}")) != understood
-        || REDACT_NAMESPACES.iter().map(|ns| count_of(xml, ns)).sum::<usize>() > understood
+        || REDACT_NAMESPACES
+            .iter()
+            .map(|ns| count_of(xml, ns))
+            .sum::<usize>()
+            > understood
     {
         return Err(redaction_error(
             "a mark is written in a form that cannot be read",

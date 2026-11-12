@@ -70,10 +70,9 @@ fn source_elements(source: &str) -> Result<Vec<SourceElement>, String> {
         .map_err(|error| format!("fileparse.htmlSourceElements answered {error}"))?;
     let bytes = byte_of_unit(source);
     let byte = |unit: u32| {
-        bytes
-            .get(unit as usize)
-            .copied()
-            .ok_or_else(|| format!("fileparse.htmlSourceElements answered offset {unit} past the source"))
+        bytes.get(unit as usize).copied().ok_or_else(|| {
+            format!("fileparse.htmlSourceElements answered offset {unit} past the source")
+        })
     };
     elements
         .into_iter()
@@ -90,7 +89,12 @@ fn source_elements(source: &str) -> Result<Vec<SourceElement>, String> {
 
 /// An attribute's value range inside a start tag, in source coordinates, or `None`.
 fn attr_value_range(start_tag_xml: &str, tag_start: usize, name: &str) -> Option<[usize; 2]> {
-    for m in js_regex!(r#"([^\s"'>/=]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))"#, "dg").find_iter(start_tag_xml) {
+    for m in js_regex!(
+        r#"([^\s"'>/=]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))"#,
+        "dg"
+    )
+    .find_iter(start_tag_xml)
+    {
         if m.get(1) != Some(name) {
             continue;
         }
@@ -116,10 +120,13 @@ fn attr_names(start_tag_xml: &str) -> Vec<&str> {
         Some(found) => &start_tag_xml[found.end()..],
         None => start_tag_xml,
     };
-    js_regex!(r#"([^\s"'>/=]+)\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'=<>`]+))"#, "g")
-        .find_iter(head)
-        .filter_map(|m| m.get(1))
-        .collect()
+    js_regex!(
+        r#"([^\s"'>/=]+)\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'=<>`]+))"#,
+        "g"
+    )
+    .find_iter(head)
+    .filter_map(|m| m.get(1))
+    .collect()
 }
 
 /// the next string literal after `from`, or `None`
@@ -162,7 +169,11 @@ fn collect_withheld(source: &str) -> Result<Vec<Span>, String> {
         // data-gx-redact="label" → this element's content
         let own = attr_value_range(start_tag, e.start_tag[0], MARK_ATTR);
         if let Some(own) = own {
-            out.push(Span { raw_from: e.inner[0], raw_to: e.inner[1], label: source[own[0]..own[1]].to_owned() });
+            out.push(Span {
+                raw_from: e.inner[0],
+                raw_to: e.inner[1],
+                label: source[own[0]..own[1]].to_owned(),
+            });
         }
 
         // data-gx-redact-<attr>="label" → that one attribute's value
@@ -185,7 +196,10 @@ fn collect_withheld(source: &str) -> Result<Vec<Span>, String> {
             out.push(Span {
                 raw_from: range[0],
                 raw_to: range[1],
-                label: mark.map_or_else(|| target.to_owned(), |mark| source[mark[0]..mark[1]].to_owned()),
+                label: mark.map_or_else(
+                    || target.to_owned(),
+                    |mark| source[mark[0]..mark[1]].to_owned(),
+                ),
             });
         }
 
@@ -195,13 +209,21 @@ fn collect_withheld(source: &str) -> Result<Vec<Span>, String> {
             let name = attr.name.to_lowercase();
             if name == MARK_ATTR {
                 if own.is_none() && e.inner[1] > e.inner[0] {
-                    return Err(redaction_error(&format!("a {MARK_ATTR} mark on <{}> cannot be read", e.tag_name)));
+                    return Err(redaction_error(&format!(
+                        "a {MARK_ATTR} mark on <{}> cannot be read",
+                        e.tag_name
+                    )));
                 }
             } else if let Some(target) = name.strip_prefix(MARK_ATTR_PREFIX) {
                 let held = e.attrs.iter().find(|a| a.name.to_lowercase() == target);
                 // no such attribute, or an empty one: the mark has nothing to withhold
-                if held.is_some_and(|held| !held.value.is_empty()) && !reached.iter().any(|r| r == target) {
-                    return Err(redaction_error(&format!("a {name} mark on <{}> cannot be read", e.tag_name)));
+                if held.is_some_and(|held| !held.value.is_empty())
+                    && !reached.iter().any(|r| r == target)
+                {
+                    return Err(redaction_error(&format!(
+                        "a {name} mark on <{}> cannot be read",
+                        e.tag_name
+                    )));
                 }
             }
         }
@@ -219,9 +241,15 @@ fn collect_withheld(source: &str) -> Result<Vec<Span>, String> {
         // whatever literal comes next when that one is past the script: either way
         // the value the mark was put in front of is not the one being withheld
         let Some(lit) = lit.filter(|lit| lit[1] <= script[1]) else {
-            return Err(redaction_error("a script mark has no string literal after it"));
+            return Err(redaction_error(
+                "a script mark has no string literal after it",
+            ));
         };
-        out.push(Span { raw_from: lit[0], raw_to: lit[1], label: m.get(1).unwrap_or_default().to_owned() });
+        out.push(Span {
+            raw_from: lit[0],
+            raw_to: lit[1],
+            label: m.get(1).unwrap_or_default().to_owned(),
+        });
     }
 
     Ok(outermost(out))
@@ -236,7 +264,10 @@ fn outermost(mut spans: Vec<Span>) -> Vec<Span> {
         if s.raw_to <= s.raw_from {
             continue;
         }
-        if out.iter().any(|k| s.raw_from >= k.raw_from && s.raw_to <= k.raw_to) {
+        if out
+            .iter()
+            .any(|k| s.raw_from >= k.raw_from && s.raw_to <= k.raw_to)
+        {
             continue;
         }
         out.push(s);
@@ -249,7 +280,10 @@ fn outermost(mut spans: Vec<Span>) -> Vec<Span> {
 /// in a script comment, where `*` and `/` would end it.
 fn placeholder_source(label: &str) -> String {
     let label = sanitize_label(&label.replace(['*', '/'], ""));
-    format!("{{{{{}}}}}", if label.is_empty() { "private" } else { &label })
+    format!(
+        "{{{{{}}}}}",
+        if label.is_empty() { "private" } else { &label }
+    )
 }
 
 /// `redactHtmlSource(source)`: the page's source with every withheld region

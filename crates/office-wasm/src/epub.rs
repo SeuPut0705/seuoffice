@@ -17,13 +17,23 @@ const MODULES: [Call; 6] = [
 ];
 
 /// The XML half and the book reader, which answer `None` for a name they do not know.
-fn xml_call(function: &str, text: &str, bytes: &[u8], args: &Value) -> Result<Value, (String, String)> {
+fn xml_call(
+    function: &str,
+    text: &str,
+    bytes: &[u8],
+    args: &Value,
+) -> Result<Value, (String, String)> {
     crate::epub_xml::run_named(function, text, bytes, args)
         .unwrap_or_else(|| Err(("Error".to_owned(), format!("unknown function {function}"))))
 }
 
 /// `saxesEvents`, whose recorder answers what saxes threw inside its result.
-fn saxes_call(function: &str, text: &str, bytes: &[u8], args: &Value) -> Result<Value, (String, String)> {
+fn saxes_call(
+    function: &str,
+    text: &str,
+    bytes: &[u8],
+    args: &Value,
+) -> Result<Value, (String, String)> {
     match crate::saxes_calls::run(function, text, bytes, args) {
         None => Err(("Error".to_owned(), format!("unknown function {function}"))),
         Some(result) => result.map_err(|message| ("Error".to_owned(), message)),

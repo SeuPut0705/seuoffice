@@ -18,12 +18,12 @@ pub mod hwp;
 #[cfg(feature = "redaction")]
 pub mod markdown;
 pub mod opc;
-#[cfg(feature = "pptx")]
-pub mod pptx;
 #[cfg(feature = "dispatch")]
 pub mod parse;
 #[cfg(feature = "ppt")]
 pub mod ppt;
+#[cfg(feature = "pptx")]
+pub mod pptx;
 #[cfg(feature = "redaction")]
 pub mod pptx_redaction;
 #[cfg(feature = "redaction")]

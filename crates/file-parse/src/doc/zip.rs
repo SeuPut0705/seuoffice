@@ -488,8 +488,13 @@ fn run_inflate(compressed: &[u8], limit: f64, pushed: &mut Vec<Vec<u8>>) -> Resu
         }
         let mut input = chunk;
         loop {
-            let (consumed, _, status, space_after) =
-                call(&mut decoder, input, FlushDecompress::None, &mut offset, &mut total)?;
+            let (consumed, _, status, space_after) = call(
+                &mut decoder,
+                input,
+                FlushDecompress::None,
+                &mut offset,
+                &mut total,
+            )?;
             if total > limit {
                 return Ok(());
             }
@@ -510,8 +515,13 @@ fn run_inflate(compressed: &[u8], limit: f64, pushed: &mut Vec<Vec<u8>>) -> Resu
     }
     // the flush: no input, and the end of the stream asked for
     loop {
-        let (_, _, status, space_after) =
-            call(&mut decoder, &[], FlushDecompress::Finish, &mut offset, &mut total)?;
+        let (_, _, status, space_after) = call(
+            &mut decoder,
+            &[],
+            FlushDecompress::Finish,
+            &mut offset,
+            &mut total,
+        )?;
         if total > limit {
             return Ok(());
         }
@@ -569,13 +579,19 @@ mod tests {
         let mut pushed = Vec::new();
         let _ = run_inflate(&packed, 1.0, &mut pushed);
         let produced: usize = pushed.iter().map(Vec::len).sum();
-        assert!(produced <= 1 << 15, "inflated {produced} bytes past a declared size of 1");
+        assert!(
+            produced <= 1 << 15,
+            "inflated {produced} bytes past a declared size of 1"
+        );
         let delivery = inflate(&packed, 1.0);
         assert!(delivery.chunks.is_empty());
         let message = match delivery.end {
             Err(thrown) => format!("{thrown:?}"),
             Ok(()) => panic!("a stream past its size was read"),
         };
-        assert!(message.contains("too many bytes in the stream. expected 1. got at least "), "{message}");
+        assert!(
+            message.contains("too many bytes in the stream. expected 1. got at least "),
+            "{message}"
+        );
     }
 }

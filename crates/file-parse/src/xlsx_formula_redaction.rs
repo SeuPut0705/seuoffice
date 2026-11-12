@@ -10,7 +10,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use jscompat::{JsMap, JsRegex, Radix, js_regex, number_to_string, parse_int, to_number, trim, try_js_regex};
+use jscompat::{
+    JsMap, JsRegex, Radix, js_regex, number_to_string, parse_int, to_number, trim, try_js_regex,
+};
 
 use crate::xlsx::{letters_index, offset_formula_refs};
 use crate::xlsx_formula_reads::{
@@ -34,7 +36,11 @@ const WHOLE_SHEET: RangeBounds = RangeBounds {
 macro_rules! xml_attribute {
     ($attributes:expr, $name:literal) => {
         $crate::xlsx_formula_redaction::attribute_in(
-            ::jscompat::js_regex!(concat!(r"(?:^|\s)", $name, r#"\s*=\s*(?:"([^"]*)"|'([^']*)')"#)),
+            ::jscompat::js_regex!(concat!(
+                r"(?:^|\s)",
+                $name,
+                r#"\s*=\s*(?:"([^"]*)"|'([^']*)')"#
+            )),
             $attributes,
         )
     };
@@ -55,36 +61,35 @@ fn decode_entities(text: &str) -> Result<String, String> {
         return Ok(text.to_owned());
     }
     let mut failure: Option<String> = None;
-    let decoded =
-        js_regex!(r"&(#x[0-9a-fA-F]+|#[0-9]+|[a-z]+);").replace_all(text, |found| {
-            let body = found.get(1).unwrap_or_default();
-            let code = if let Some(hex) = body.strip_prefix("#x") {
-                parse_int(hex, Radix::Sixteen)
-            } else if let Some(decimal) = body.strip_prefix('#') {
-                to_number(decimal)
-            } else {
-                return match body {
-                    "amp" => "&",
-                    "lt" => "<",
-                    "gt" => ">",
-                    "quot" => "\"",
-                    "apos" => "'",
-                    "constructor" => "function Object() { [native code] }",
-                    _ => found.as_str(),
-                }
-                .to_owned();
-            };
-            match u32::try_from(code as u64)
-                .ok()
-                .filter(|point| *point <= 0x10_FFFF && f64::from(*point) == code)
-            {
-                Some(point) => char::from_u32(point).unwrap_or('\u{FFFD}').to_string(),
-                None => {
-                    failure.get_or_insert(format!("Invalid code point {}", number_to_string(code)));
-                    String::new()
-                }
+    let decoded = js_regex!(r"&(#x[0-9a-fA-F]+|#[0-9]+|[a-z]+);").replace_all(text, |found| {
+        let body = found.get(1).unwrap_or_default();
+        let code = if let Some(hex) = body.strip_prefix("#x") {
+            parse_int(hex, Radix::Sixteen)
+        } else if let Some(decimal) = body.strip_prefix('#') {
+            to_number(decimal)
+        } else {
+            return match body {
+                "amp" => "&",
+                "lt" => "<",
+                "gt" => ">",
+                "quot" => "\"",
+                "apos" => "'",
+                "constructor" => "function Object() { [native code] }",
+                _ => found.as_str(),
             }
-        });
+            .to_owned();
+        };
+        match u32::try_from(code as u64)
+            .ok()
+            .filter(|point| *point <= 0x10_FFFF && f64::from(*point) == code)
+        {
+            Some(point) => char::from_u32(point).unwrap_or('\u{FFFD}').to_string(),
+            None => {
+                failure.get_or_insert(format!("Invalid code point {}", number_to_string(code)));
+                String::new()
+            }
+        }
+    });
     match failure {
         Some(error) => Err(error),
         None => Ok(decoded),
@@ -255,7 +260,9 @@ pub fn scan_sheet_formulas(xml: &str) -> Result<SheetFormulas, String> {
     }
     for follower in followers {
         let Some(master) = masters.get(&follower.si) else {
-            result.unknown.push(cell_area((follower.row, follower.column)));
+            result
+                .unknown
+                .push(cell_area((follower.row, follower.column)));
             continue;
         };
         result.formulas.push(FormulaCell {
@@ -369,9 +376,11 @@ pub fn pivot_output_of(
     } else {
         RangeBounds {
             start_row: (output.start_row - page_rows - 1.0).max(0.0),
-            end_column: WHOLE_SHEET
-                .end_column
-                .min(output.end_column.max(output.start_column + page_columns * 3.0 - 2.0)),
+            end_column: WHOLE_SHEET.end_column.min(
+                output
+                    .end_column
+                    .max(output.start_column + page_columns * 3.0 - 2.0),
+            ),
             ..output
         }
     };
@@ -386,7 +395,8 @@ fn pivot_source_formula(cache_xml: Option<&str>) -> Result<Option<String>, Strin
     let cache_source = js_regex!(r"<(?:[\w.-]+:)?cacheSource(?=[\s/>])([^>]*)>")
         .exec(cache_xml)
         .and_then(|found| found.get(1));
-    let source_element = js_regex!(r"<(?:[\w.-]+:)?worksheetSource(?=[\s/>])([^>]*)>").exec(cache_xml);
+    let source_element =
+        js_regex!(r"<(?:[\w.-]+:)?worksheetSource(?=[\s/>])([^>]*)>").exec(cache_xml);
     let (Some(cache_source), Some(source_element)) = (cache_source, source_element) else {
         return Ok(None);
     };
@@ -520,10 +530,11 @@ pub fn relationship_id_of(
     ];
     // Root start tag; the quote alternation keeps '>' inside attribute values
     // (legal in XML) from ending the match early.
-    let tag = match try_js_regex!(r#"<(?![?!])(?:[^>"']|"[^"]*"|'[^']*')*?\/?>"#).try_exec(start_tag)? {
-        Some(found) => found.as_str(),
-        None => start_tag,
-    };
+    let tag =
+        match try_js_regex!(r#"<(?![?!])(?:[^>"']|"[^"]*"|'[^']*')*?\/?>"#).try_exec(start_tag)? {
+            Some(found) => found.as_str(),
+            None => start_tag,
+        };
     let mut bound: HashMap<String, bool> = HashMap::new();
     let declarations = format!("{preceding_xml} {tag}");
     for declaration in js_regex!(r#"(?:^|\s)xmlns:([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')"#)
@@ -538,9 +549,7 @@ pub fn relationship_id_of(
         let before = bound.get(prefix) == Some(&true);
         bound.insert(prefix.to_owned(), to_relationships || before);
     }
-    for attribute in
-        js_regex!(r#"([^\s=<>/"']+)\s*=\s*(?:"([^"]*)"|'([^']*)')"#).find_iter(tag)
-    {
+    for attribute in js_regex!(r#"([^\s=<>/"']+)\s*=\s*(?:"([^"]*)"|'([^']*)')"#).find_iter(tag) {
         let name = attribute.get(1).unwrap_or_default();
         let Some(prefix) = name.strip_suffix(":id") else {
             continue;

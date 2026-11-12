@@ -100,7 +100,7 @@ impl Archive {
             .parts()
             .iter()
             .filter(|part| !part.is_dir)
-            .map(|part| part.name.clone())
+            .map(|part| part.name.to_string())
             .collect();
         let mut by_lower_case = HashMap::new();
         for name in &names {

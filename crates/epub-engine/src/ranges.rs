@@ -1038,7 +1038,9 @@ pub fn call(
         "isVerticalWritingMode" => Value::Bool(writing_mode::is_vertical_writing_mode(
             args.get("value").and_then(Value::as_str),
         )),
-        "cssDeclaresVerticalWriting" => Value::Bool(writing_mode::css_declares_vertical_writing(text)),
+        "cssDeclaresVerticalWriting" => {
+            Value::Bool(writing_mode::css_declares_vertical_writing(text))
+        }
         // the dispatcher asks the next module on exactly this answer
         _ => return Err(wire_error(format!("unknown function {function}"))),
     })

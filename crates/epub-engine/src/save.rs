@@ -417,8 +417,8 @@ pub fn save_epub(
     let changed_chapters: Vec<String> = package
         .parts()
         .iter()
-        .filter(|part| texts.iter().any(|(name, _, _)| *name == part.name))
-        .map(|part| part.name.clone())
+        .filter(|part| texts.iter().any(|(name, _, _)| part.name == name.as_str()))
+        .map(|part| part.name.to_string())
         .collect();
     let now = options.now;
 
@@ -537,7 +537,7 @@ fn record_of<'a>(
             bytes: &[],
             deflate: false,
         }
-    } else if let Some((_, bytes)) = replaced.iter().find(|(name, _)| *name == part.name) {
+    } else if let Some((_, bytes)) = replaced.iter().find(|(name, _)| part.name == *name) {
         RecordData::Content {
             bytes,
             deflate: !compressed.is_some_and(|c| c.stored),

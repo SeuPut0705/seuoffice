@@ -31,8 +31,9 @@ use epub_engine::notation::{
 };
 use epub_engine::pdf_structure::{
     InlineRun, LANGUAGE_SAMPLE_CHARS, TranslationBlockKey, TranslationMode,
-    default_target_language, easy_style_lines, guess_language_from_text, normalize_lang, runs_text, translation_language_of,
-    sha256_hex, sha256_hex_text, translation_language_name, translation_style_lines,
+    default_target_language, easy_style_lines, guess_language_from_text, normalize_lang, runs_text,
+    sha256_hex, sha256_hex_text, translation_language_name, translation_language_of,
+    translation_style_lines,
 };
 use epub_engine::ranges::RangeReplacement;
 use epub_engine::translate::keys::{

@@ -30,4 +30,3 @@ pub fn run_named(
         answered => Some(answered),
     }
 }
-

@@ -23,9 +23,7 @@ pub fn is_lang(value: &str) -> bool {
 pub fn normalize_lang(raw: Option<&str>) -> &'static str {
     let value = raw.map(|raw| trim(raw).to_lowercase());
     match value {
-        Some(value)
-            if value == "ko" || value.starts_with("ko-") || value.starts_with("ko_") =>
-        {
+        Some(value) if value == "ko" || value.starts_with("ko-") || value.starts_with("ko_") => {
             "ko"
         }
         _ => "en",

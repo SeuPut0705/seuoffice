@@ -29,7 +29,12 @@ fn number(value: f64) -> Value {
 /// What a reader written to answer `Option<Result<Value, String>>` threw, as
 /// `{ name, message }`: the legacy readers write `name\u{1}message`, the HWP
 /// reader only the message, named as the binding names it.
-fn delegated(function: &str, text: &str, bytes: &[u8], args: &Value) -> Option<Result<Value, (String, String)>> {
+fn delegated(
+    function: &str,
+    text: &str,
+    bytes: &[u8],
+    args: &Value,
+) -> Option<Result<Value, (String, String)>> {
     if function == "epubToText" {
         return crate::epub_xml::run_named(function, text, bytes, args);
     }
@@ -47,7 +52,9 @@ pub fn run(function: &str, text: &str, bytes: &[u8], args: &Value) -> Vec<u8> {
     if let Some(result) = delegated(function, text, bytes, args) {
         let outcome = match result {
             Ok(value) => serde_json::json!({ "value": value }),
-            Err((name, message)) => serde_json::json!({ "error": { "name": name, "message": message } }),
+            Err((name, message)) => {
+                serde_json::json!({ "error": { "name": name, "message": message } })
+            }
         };
         return serde_json::to_vec(&outcome).expect("attachment outcome contains only JSON values");
     }
@@ -89,14 +96,12 @@ pub fn run(function: &str, text: &str, bytes: &[u8], args: &Value) -> Vec<u8> {
         "docxToText" => {
             file_parse::docx::docx_to_text(bytes, numeric("maxChars")).map(Value::String)
         }
-        "xlsxToText" => {
-            file_parse::xlsx::xlsx_to_text(
-                bytes,
-                numeric("maxChars"),
-                numeric("formulaScanMaxBytes"),
-            )
-            .map(Value::String)
-        }
+        "xlsxToText" => file_parse::xlsx::xlsx_to_text(
+            bytes,
+            numeric("maxChars"),
+            numeric("formulaScanMaxBytes"),
+        )
+        .map(Value::String),
         "sheetXmlByteLimit" => Ok(number(file_parse::xlsx::sheet_xml_byte_limit(
             jscompat::to_number(text),
         ))),
