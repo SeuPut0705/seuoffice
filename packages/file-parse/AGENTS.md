@@ -15,6 +15,19 @@
 | HTML     | `html-redaction.ts`     | `data-gx-redact`(요소의 내용), `data-gx-redact-<속성>`(그 속성의 값), `<script>` 안의 `/*gx:redact:이름*/` 뒤 문자열. 색인의 HTML 갈래도 `redactHtmlSource`를 쓴다                                                                                    |
 | 엑셀     | `xlsx-redaction.ts`     | 통합 문서 파트 `xl/gxRedactions.json`(시트 이름별 사각형)과 그 사본인 숨은 정의 이름 `_gxRedaction_N`이 가리키는 셀. 값과 수식을 모두 이름표로 바꾼다. 그 셀에서 계산된 수식 셀은 `{{private}}`로 낸다(`xlsx-formula-redaction.ts`). `.xlsx`, `.xlsm` |
 
+## 구현: Rust 읽기와 호스트
+
+읽기는 Rust다(`crates/file-parse`, 결정 0025·0026). `src/*.ts`는 내보낸 이름과 형을 그대로 두고 `src/engine.ts`의 `callEngine`으로 wasm 엔진(`crates/office-wasm`, `invoke`의 `fileParse.<이름>`, 길은 `invoke/file_parse.rs`)을 부르는 얇은 함수다. 로더는 `@seuoffice/engine-wasm` 하나이고 문서 엔진들과 인스턴스를 함께 쓴다. 엔진의 오류는 TypeScript가 던지던 클래스(`RedactionMarkError`, `DamagedFileError`, `RangeError`, `TypeError`)로 되살린다.
+
+호스트(이 패키지의 TypeScript)에 남는 것과 까닭:
+
+- 파일 시스템: 파일 읽기, 큰 zip의 글 파트만 디스크에서 옮기기(`readZipTextParts`, 파일 전체를 wasm 메모리에 올리지 않으려고. wasm 메모리는 줄지 않는다), `diagramPictureExtOf`의 파일 읽기.
+- 기다리는 읽기 셋: PDF(pdfjs), 지도(`xmind-engine`), ODT(`odt-engine`). wasm에서 기다릴 수 없어 `parseFileToText`가 호출 전에 확장자로 골라 읽고 결과를 `hosted`로 넘긴다. 확장자·매직 바이트 검사는 Rust가 먼저 하므로 이름이 틀린 파일은 그 결과를 쓰지 않는다.
+- 호스트 단계(`src/host-steps.ts`): parse5의 HTML 트리(HTML 가리기, EPUB 장), draw.io 읽기, `epub-engine`의 `parseHtml`. 엔진이 호출마다 콜백 칸 0(`seu_host.host_callback`)으로 부른다.
+- 상수(`ATTACHABLE_*`, `WHOLE_ZIP_READ_MAX_BYTES`, `PPTX_REDACT_EXT_URI`)는 TypeScript 글자로 두고 `tests/engine-constants.test.ts`가 Rust 쪽과 견준다.
+
+엔진 시작: `node` 내보내기 조건에서는 패키지가 스스로 시작한다(`@seuoffice/engine-wasm/node`). 패키지를 번들하는 Electron 메인과 색인 작업자 스레드는 `@seuoffice/file-parse/init`의 `initFileParseEngineSync`로 묶음에 든 wasm에서 시작한다(`apps/*/src/main/engine-init.ts`). 대조 관문(`tools/fileparse-diff`)은 TypeScript 구현을 얼린 사본(`tools/fileparse-diff/reference/`)과 엔진을 견준다.
+
 ## 맡지 않는 것 (경계)
 
 - 편집용 파싱이 아니다. 서식, 위치, 왕복 보존에 필요한 정보는 버린다. 문서를 열고 저장하는 일은 `packages/docx-engine`, `packages/odt-engine`, `packages/pptx-engine`, `packages/xlsx-gateway`와 Rust 사이드카가 한다.
@@ -28,7 +41,7 @@
 - 워드(`.docx`)의 가리기 표시는 처리하지 않는다. 이 저장소에도 원본의 공개 저장소에도 그 표시를 쓰거나 읽는 코드가 없어 모양을 확인하지 못했고, 확인되기 전에 짐작으로 만들지 않는다.
 - 파일을 읽기 전에 "저장하지 않은 변경이 있는 파일인가"를 묻는 일은 호출자가 한다(`packages/electron-utils`의 `assertFileSaved`·`withoutUnsavedFiles`).
 - 터미널 명령어(`packages/cli`)의 읽기는 이 패키지를 지나지 않고, 가리기를 적용하지 않는다.
-- 한글 문서를 고치거나 저장하지 않는다. 그것은 `apps/hwp`의 편집기가 한다. 여기서는 같은 엔진(`@rhwp/core`)으로 열어 글자만 꺼낸다.
+- 한글 문서를 고치거나 저장하지 않는다. 그것은 `apps/hwp`의 편집기가 한다. 여기서는 같은 엔진(rhwp, Rust 읽기에 함께 컴파일됨)으로 열어 글자만 꺼낸다.
 - 읽기에 시간 제한을 두지 않는다. 칸이 수만 개인 표가 든 한글 문서는 엔진이 여는 데만 10초 넘게 걸린다. 파일 색인은 작업자 스레드와 120초 제한 안에서 부르지만, 첨부·MCP·열린 탭 읽기는 메인 프로세스에서 바로 부른다.
 
 ## 항상 지켜야 하는 것
@@ -42,7 +55,7 @@
 - 적대적인 xlsx에 메모리를 내주지 않는다. 열 번호가 16,384(`MAX_XLSX_COLS`) 이상이거나 참조가 잘못된 셀은 그 자리를 채우지 않고 뒤에 붙이고, 빈 칸이 8개 넘게 이어지면 `(N empty)`로 줄인다.
 - 입력 바이트를 바꾸지 않는다. pdfjs는 받은 버퍼의 소유권을 가져가므로 복사본을 넘긴다.
 - **가리기는 닫힌 쪽으로 실패한다.** 표시가 있는데 무엇을 감추는지 확실히 정할 수 없으면 원문을 내주지 않고 `RedactionMarkError`를 던진다. `parseFileToText`는 이것을 `{ ok: false, error }`로 바꾼다. 실패하면 원문으로 돌아가는 대체 경로를 만들지 않는다. 덜 가리느니 읽지 않는다.
-- **가리는 자리는 그 형식의 편집기가 가리는 자리와 같아야 한다.** 이 패키지는 앱이나 문서 엔진을 가져올 수 없어서 표시의 모양을 다시 적었다. 편집기나 엔진의 표시를 바꾸면 여기도 같이 바꾼다. PPT의 확장 식별자는 테스트가 엔진의 상수와 견준다. 엑셀만은 이 패키지가 이미 의존하는 `xlsx-gateway`의 파서(`parseRedactionPart`, `parseRedactionNameMirror`)를 그대로 불러 읽는다. 결과는 편집기보다 더 가릴 수는 있어도 덜 가리면 안 된다.
+- **가리는 자리는 그 형식의 편집기가 가리는 자리와 같아야 한다.** 이 패키지는 앱이나 문서 엔진을 가져올 수 없어서 표시의 모양을 다시 적었다. 편집기나 엔진의 표시를 바꾸면 여기도 같이 바꾼다. PPT의 확장 식별자는 테스트가 엔진의 상수와 견준다. 엑셀은 `xlsx-gateway`의 파서(`parseRedactionPart`, `parseRedactionNameMirror`)를 옮긴 Rust가 읽는다. 결과는 편집기보다 더 가릴 수는 있어도 덜 가리면 안 된다.
 - **엑셀은 편집기가 읽는 순서를 따른다.** 파트가 읽히면 파트를 쓰고, 파트가 없거나 깨졌으면 정의 이름 사본을 쓰며, 둘 다 읽지 못하면 통합 문서 전체를 읽지 않는다(`RedactionMarkError`). 편집기보다 엄한 곳이 둘 있다. 파트가 통합 문서에 없는 시트 이름을 가리키면 읽기를 실패시킨다(편집기는 그 표시를 버린다. 다른 프로그램에서 시트 이름을 바꾼 파일이 여기에 해당한다). 표시가 있는 시트에서 주소를 읽을 수 없는 셀은 `{{private}}`로 낸다. 가린 셀은 캐시된 값도 수식도 내지 않는다.
 - **엑셀은 가린 셀에서 계산된 수식도 가린다.** `=B2`, `=SUM(B:B)`, 그런 셀을 다시 읽는 수식은 파일에 남은 계산 결과가 가린 값이거나 그것을 드러내므로, 값도 수식 글도 내지 않고 `{{private}}`로 낸다(그 셀의 이름표가 아니므로 `{{이름}}`을 쓰지 않는다. 편집기도 같다). 판정은 `xlsx-gateway`의 `formula-reads.ts`가 하고, 읽는 셀을 다 적을 수 없는 수식(`INDIRECT`, 정의를 모르는 이름, 표 참조 등 그 파일의 표)도 가린다. 표시가 있는 통합 문서에서만, 첫 셀을 내기 전에 **모든** 시트의 `<f>`를 훑는다(`xlsx-formula-redaction.ts`). 글자 예산 밖의 시트도 훑는다(사슬이 그 시트를 지날 수 있다). DOM을 만들지 않고 원문에서 찾으며, 시트 XML이 64MB(`FORMULA_SCAN_MAX_BYTES`)를 넘거나 주소 없는 수식 셀·범위 없는 배열 수식이 있으면 그 시트를 통째로 가린다. 주인 없는 공유 수식 따름 셀, 글이 없는 수식, 가상 분석 표(`t="dataTable"`)의 셀도 가린다. 시트 파서가 본 수식 셀을 훑기가 못 봤으면 그 셀을 가린다. 표시가 없는 통합 문서는 예전과 똑같이 읽는다. 시험: `tests/redaction.test.ts`의 "a formula that depends on a withheld cell".
 - **엑셀은 가린 셀로 만든 피벗의 출력도 가린다.** 피벗 출력은 원본 범위의 이름표와 합계를 담은 일반 셀이다. 시트의 관계(`pivotTable`)로 피벗 파트를 찾아 출력 위치(`<location>`)를 읽고, 그 위의 보고서 필터가 뻗는 범위는 `rowPageCount`·`colPageCount`로만 정하며(둘이 필터를 다 담지 못하거나 수가 아니면 시트 맨 위부터 출력 끝 줄까지 모든 열을 그 피벗의 것으로 친다. 필터 수로 짐작하지 않는다), 캐시 정의의 `<worksheetSource>`가 가리키는 원본을 읽는 수식처럼 추적한다(`pivotOutputOf`). 원본이 이 통합 문서의 시트 범위이거나 정의된 이름이면 따라가고, 원본에 가린 셀이나 가린 셀에서 계산된 수식이 있으면 출력 전체와 그 출력을 읽는 수식을 `{{private}}`로 낸다. 원본을 알 수 없으면(다른 통합 문서의 범위, 연결·통합 원본, 표 이름, 없는 시트, 캐시 파트 없음, 캐시 정의의 첫 1MB 안에 원본이 없음) 출력을 가리고, 피벗이 출력 위치를 밝히지 않으면 그 시트를 통째로 가린다. 다른 통합 문서인지는 `xlsx-gateway`의 `relationshipIdOf`로 읽는다(편집기의 `parsePivotDefinition`과 같은 함수). 피벗 파트는 머리만 읽지 않고 끝까지 읽는다: 보고서 필터(`<pageFields>`)는 필드와 그 항목 목록 뒤에 있어 큰 피벗에서는 수 MB 뒤에 온다. 파트가 64MB(`FORMULA_SCAN_MAX_BYTES`)를 넘어 끝까지 읽지 못했으면 필터 수를 모르는 것이므로 시트 맨 위부터 출력 끝 줄까지 모든 열을 가리고, 읽은 데까지에 출력 위치가 없으면 시트를 통째로 가린다. 표시가 없는 통합 문서에서는 피벗 파트를 읽지 않는다. 차트 파트는 이 읽기가 내지 않는다. 시험: `tests/redaction.test.ts`의 "the output of a PivotTable".
@@ -64,18 +77,19 @@
 - pptx의 슬라이드 순서는 파일 이름이 아니라 `presentation.xml`의 슬라이드 목록을 따른다. 목록에 없는 슬라이드 파트는 빼고, 목록 파일이 없을 때만 파일 번호순으로 읽는다.
 - 글자가 없고 그림만 있는 슬라이드·시트·워드 문서는 제목만 남기지 않고 그림 수와 함께 추출할 글자가 없다는 표시를 넣는다. 표시가 없으면 모델과 사용자가 내용이 전달되지 않은 슬라이드를 읽힌 것으로 여긴다. 워드는 그림의 대체 텍스트(`wp:docPr`의 `descr`, 없으면 `title`)가 있으면 그 글자를 `[image: …]` 괄호로 묶어 둘레 글과 섞이지 않게 적고, 숨긴 그림(`hidden="1"`/`"true"`)은 `w:vanish` 실행과 같이 대체 텍스트를 넣지 않는다.
 - 텍스트 파일은 BOM을 보고 UTF-8과 UTF-16을 풀고, UTF-8로 읽히지 않으면 windows-1252로 읽는다. BOM이 UTF-32라고 알리는 파일만 거부한다.
-- 설치본에서만 깨지는 문제를 막는 우회가 두 군데 있고, 개발 실행에서는 드러나지 않으므로 지우지 않는다. pdfjs는 `DOMMatrix`가 없으면 import 단계에서 죽어서 순수 JS 대체 구현을 먼저 설치하고, 워커 모듈을 글자 그대로의 경로로 import해 번들에 넣는다. `ppt-to-text`는 의존성을 번들러가 따라가지 못하는 require 뒤에 숨기므로 `globalThis.CFB`와 `cptable`을 먼저 채운 뒤 지연 import한다.
+- 설치본에서만 깨지는 문제를 막는 우회가 하나 있고, 개발 실행에서는 드러나지 않으므로 지우지 않는다. pdfjs는 `DOMMatrix`가 없으면 import 단계에서 죽어서 순수 JS 대체 구현을 먼저 설치하고, 워커 모듈을 글자 그대로의 경로로 import해 번들에 넣는다.
 - 옛 PPT의 글자 디코딩은 코드페이지 1200(UTF-16LE)만 지원한다.
 - zip으로 된 문서가 `WHOLE_ZIP_READ_MAX_BYTES`(50MB)를 넘으면 `readZipTextParts`로 글이 든 파트(XML·관계·JSON·HTML·평문, 확장자 없는 파트)만 디스크에서 압축된 채 옮겨 작은 zip을 만들고, 나머지 파트는 이름만 남겨 내용을 비운다. 형식별 읽기와 zip 관문은 그 작은 zip에 그대로 돈다. 그 이하는 통째로 읽는다. 읽은 글은 통째로 읽을 때와 같아야 한다(`tests/large-documents.test.ts`). zip64는 거절한다(결정 0091).
 - 한글 문서는 문단을 한 줄로, 표를 행마다 칸을 `|`로 이어 적는다. 병합된 칸은 첫 자리에 적고 걸친 자리는 비우되, 줄 끝에 이어지는 빈 자리는 적지 않는다. 한 칸에 문단이 셋을 넘는 표(글을 배치하려고 쓴 표)는 행으로 적지 않고 칸의 문단을 줄로 푼다. 메모가 있으면 본문·표 뒤에 `### Comments` 블록을 붙인다. 첫 줄은 `- 작성자 (p.N): 첫 줄`이고 이어지는 줄은 두 칸 들여쓰며, 작성자가 없으면 `unknown`, 쪽을 모르면 `(p.N)`을 뺀다. 메모가 없으면 블록을 붙이지 않아 본문 출력이 그대로다.
 - 문단과 표를 따라가는 읽기가 닿지 못한 글자(글상자, 머리말, 표 안의 표 등)는 엔진의 평문 내보내기에서 찾아 제자리에 끼워 넣는다(`withMissingText`). 엔진 평문만 쓰지 않는 이유는 그쪽이 빈 누름틀에 안내 문구를 적고 표를 줄 구분 없이 풀기 때문이다.
-- 엔진 WASM(`rhwp_bg.wasm`, 약 12MB)은 한글 문서를 처음 읽을 때 한 번 올린다. 위치는 `SEUOFFICE_RHWP_WASM`, `node_modules`의 `@rhwp/core`, 설치본의 `Resources/wasm` 순으로 찾는다. `@rhwp/core`는 패치해 빌드한 `vendor/rhwp-core`를 가리킨다(결정 0050). 연 문서는 반드시 `free()`한다(WASM 메모리는 저절로 풀리지 않는다).
+- 한글 문서 엔진 rhwp는 패치한 소스(`vendor/rhwp-core/patches`, 결정 0050)로 Rust 읽기에 함께 컴파일된다. cargo 명령 전에 `node tools/build-rhwp-core.mjs --source-only`로 소스를 한 번 받아 둔다. `rhwpWasmPath()`는 rhwp를 JavaScript로 돌리는 호출자(워드 편집기의 한글 내보내기, 명령줄)를 위해 `rhwp_bg.wasm` 위치를 `SEUOFFICE_RHWP_WASM`, `node_modules`의 `@rhwp/core`, 설치본의 `Resources/wasm` 순으로 찾는다.
 - `hwpMemosOf(bytes)`는 저장 검증을 위해 메모를 구조(id·index·author·date·text·place·path·page)로 돌려준다. 받은 바이트를 복사해 엔진에 넘기고 `free()`하며, HWPX는 zip 관문을 먼저 거친다. 엔진이 배열이 아닌 값을 주면 빈 배열이다. 엔진이 모델에 담지 못한 원시 기록은 이 함수에 나오지 않으므로, 저장 손실을 세는 쪽은 `hwpxMemoCountOf`와 함께 본다(결정 0072).
 - 암호가 걸린 한글 문서는 읽지 않고 그렇다고 알린다. 암호를 받는 길은 없다.
 
 ## 테스트
 
-- `npm run test -w @seuoffice/file-parse`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃은 20초다.
+- `npm run test -w @seuoffice/file-parse`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃은 20초다. 엔진의 릴리스 빌드(`node crates/office-wasm/build.mjs`, 결과 `crates/target/wasm32-wasip1/release/office_wasm.wasm`, 또는 `SEUOFFICE_WASM`)가 있어야 한다. vitest 설정이 그것으로 엔진을 시작한다.
+- Rust 읽기 자체의 대조는 `tools/fileparse-diff`(얼린 TypeScript 사본과 견줌)와 `cargo test -p file-parse`가 맡는다. 이 패키지의 시험은 바인딩을 거친 동작을 본다.
 - OOXML 픽스처는 `tests/helpers/fixtures.ts`가 JSZip으로 그때그때 만들어 임시 폴더에 쓴다. ODT 픽스처는 `tests/odt.test.ts`가 손으로 묶거나(글상자 안 표, 각주, 암호 manifest) docx 픽스처를 `docxToOdt`로 바꿔 만든다. 파일로 들어 있는 것은 옛 형식 두 개(`tests/fixtures/legacy-sample.doc`, `legacy-sample.ppt`)뿐이다. `npm run fixtures`는 필요 없다. 한글 문서는 `tests/hwp.test.ts`가 엔진으로 직접 만든다(문단을 모두 만든 뒤 표를 붙인다. 표가 놓인 문단을 나누면 엔진이 표를 옮긴다).
 - 형식 처리를 바꾸면 정상 추출, 깨진 파일이 던지지 않고 `ok: false`가 되는 경우, 글자 원형 보존(앞자리 0, 런 사이 공백)을 덮는다. zip을 여는 경로를 건드리면 `tests/zip-bomb-gate.test.ts`도 함께 본다.
 - 가리기를 바꾸면 형식마다, 표시 종류마다 "가린 글이 결과에 남지 않는다"와 "표시를 처리하지 못하면 원문이 아니라 실패가 나온다"를 덮는다(`tests/redaction.test.ts`). 마크다운은 "끝을 짐작하지 않는다"와 "표시가 될 수 있는 것만 실패한다"를 함께 본다. 지도 읽기는 `tests/xmind.test.ts`, EPUB 읽기와 DRM·손상·인코딩 거절은 `tests/epub.test.ts`. 다이어그램 네 형식·압축 쪽·깨진 파일·원본 없는 그림·`.vsdx`는 `tests/diagram.test.ts`이고, 시험 파일 `tests/fixtures/out.drawio*`는 `packages/drawio-model/tests/fixtures`에서 복사했다.
