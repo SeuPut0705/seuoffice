@@ -2,6 +2,11 @@
 // name) as a schema, read from the TypeScript source with the compiler's
 // parser. `model-gen.ts` writes the Rust model from it; `walkWire` checks a
 // model value as it crosses the wire against it.
+//
+// The declarations are read from main at the commit MODEL_SOURCE pins, not
+// from the working tree, because the model is what ships; the parser and the
+// save side of this branch's TypeScript are older until main is merged.
+import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -62,35 +67,33 @@ export interface ModelSchema {
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(HERE, '../..')
 const ENGINE_SRC = join(REPO_ROOT, 'packages/docx-engine/src')
-export const TYPES_PATH = join(ENGINE_SRC, 'types.ts')
+const TYPES_PATH = join(ENGINE_SRC, 'types.ts')
 export const ORDERS_PATH = join(HERE, 'model-orders.json')
 
 /**
- * The declarations of `fix/inline-wrappers` that types.ts on this branch does
- * not hold yet, in the branch's own words. Members of an interface types.ts
- * declares go after the member `after` names, where the branch has them.
- * Extraction fails once types.ts declares any of them: then delete this.
- * `model-gen.ts --check` compares the result with types.ts at `commit`, the
- * branch head the overlay was copied from, and fails when that commit is not
- * in the clone.
+ * The commit of main the declarations are read from: every file the
+ * extraction opens (types.ts, resolve-props.ts, parse.ts for the result of
+ * parseDocx, and what they import) is `git show <commit>:<path>`. A clone
+ * without the commit fails; the workflow fetches the whole history.
  */
-export const INLINE_WRAPPERS = {
-  branch: 'fix/inline-wrappers',
-  commit: '4c91bd7e00a9ab8d944537df2a28a66f260ea0d7',
-  after: { Run: 'sdtCheckboxXml' } as Record<string, string>,
-  source: `
-export interface Run {
-  wrap?: InlineWrap[]
-  opaqueXml?: string
+export const MODEL_SOURCE = {
+  ref: 'origin/main',
+  commit: 'ca8f1414b5347e5078711a523412507d9d67fe8e',
 }
-export interface InlineWrap {
-  seq: number
-  open: string
-  close: string
-  inside?: 'revision' | 'link'
-  text?: string
-}
-`,
+
+/** A file of the repository as the pinned commit holds it. */
+function sourceAt(path: string): string {
+  const at = `${MODEL_SOURCE.commit}:${relative(REPO_ROOT, path).replaceAll('\\', '/')}`
+  try {
+    return execFileSync('git', ['show', at], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      maxBuffer: 64 << 20,
+    })
+  } catch (error) {
+    throw new SchemaError(`cannot read ${at} (${MODEL_SOURCE.ref}); fetch it, a shallow clone lacks it: ${String(error)}`)
+  }
 }
 
 /** `parseDocx` returns the root type: `Promise<ParsedDoc & { extras: ParseExtras }>` today. */
@@ -168,17 +171,13 @@ class Extractor {
   readonly types = new Map<string, TypeDef | null>()
   private readonly modules = new Map<string, Module>()
   private readonly declaredIn = new Map<string, string>()
-  /** overlay members of an interface types.ts declares, after the member named */
-  private readonly spliced = new Map<string, { after: string; members: ts.TypeElement[] }>()
   /** each member is read once: an indexed access may read it before its interface does */
   private readonly fields = new Map<ts.TypeElement, Field | null>()
-
-  constructor(private readonly sources: Map<string, string>) {}
 
   module(path: string): Module {
     let module = this.modules.get(path)
     if (!module) {
-      module = parseModule(path, this.sources.get(path) ?? readFileSync(path, 'utf8'))
+      module = parseModule(path, sourceAt(path))
       this.modules.set(path, module)
     }
     return module
@@ -202,31 +201,6 @@ class Extractor {
     }
     const node = this.node(module, promise.args[0]!, name, 'other')
     if (node.kind !== 'ref' || node.name !== name) fail(returned, `the result is no object type of its own`)
-  }
-
-  /** Adds the overlay to types.ts, refusing what types.ts already declares. */
-  overlay(overlay: typeof INLINE_WRAPPERS): void {
-    const types = this.module(TYPES_PATH)
-    const extra = parseModule(join(ENGINE_SRC, '(inline-wrappers overlay).ts'), overlay.source)
-    for (const [name, declaration] of extra.declarations) {
-      const base = types.declarations.get(name)
-      if (!base) {
-        types.declarations.set(name, declaration)
-        continue
-      }
-      const after = overlay.after[name]
-      if (!after || !ts.isInterfaceDeclaration(base) || !ts.isInterfaceDeclaration(declaration)) {
-        fail(base, `types.ts declares ${name} of ${overlay.branch}: delete INLINE_WRAPPERS`)
-      }
-      const names = new Set(base.members.map((member) => member.name?.getText()))
-      if (!names.has(after)) fail(base, `the overlay goes after ${name}.${after}, which is gone`)
-      for (const member of declaration.members) {
-        if (names.has(member.name?.getText())) {
-          fail(base, `types.ts declares ${name}.${member.name?.getText()} of ${overlay.branch}: delete INLINE_WRAPPERS`)
-        }
-      }
-      this.spliced.set(name, { after, members: [...declaration.members] })
-    }
   }
 
   /** The schema name of a declared type, building its definition when first met. */
@@ -259,13 +233,7 @@ class Extractor {
   }
 
   private members(module: Module, declaration: ts.InterfaceDeclaration, path: string): Field[] {
-    const splice = this.spliced.get(declaration.name.text)
-    const members: ts.TypeElement[] = []
-    for (const member of declaration.members) {
-      members.push(member)
-      if (splice && member.name?.getText() === splice.after) members.push(...splice.members)
-    }
-    return members.map((member) => this.field(module, member, path))
+    return declaration.members.map((member) => this.field(module, member, path))
   }
 
   /**
@@ -278,8 +246,7 @@ class Extractor {
     if (!resolved || !ts.isInterfaceDeclaration(resolved.declaration)) return undefined
     const name = resolved.declaration.name.text
     if (this.types.get(name) !== null) return undefined
-    const members = [...resolved.declaration.members, ...(this.spliced.get(name)?.members ?? [])]
-    const member = members.find((candidate) => candidate.name?.getText() === key)
+    const member = resolved.declaration.members.find((candidate) => candidate.name?.getText() === key)
     return member && this.field(resolved.module, member, name)
   }
 
@@ -530,19 +497,12 @@ function merge(into: Field[], fields: readonly Field[], at: ts.Node): Field[] {
   return into
 }
 
-export interface ExtractOptions {
-  /** the text of types.ts instead of the file (the branch's, for the drift check) */
-  typesSource?: string
-  /** add INLINE_WRAPPERS; default true */
-  overlay?: boolean
-}
-
-/** Reads the model from the source. Throws `SchemaError` on any syntax it does not model. */
-export function extractModelSchema(options: ExtractOptions = {}): ModelSchema {
-  const sources = new Map<string, string>()
-  if (options.typesSource !== undefined) sources.set(TYPES_PATH, options.typesSource)
-  const extractor = new Extractor(sources)
-  if (options.overlay ?? true) extractor.overlay(INLINE_WRAPPERS)
+/**
+ * Reads the model from the declarations at MODEL_SOURCE. Throws `SchemaError`
+ * on any syntax it does not model and when the commit is not in the clone.
+ */
+export function extractModelSchema(): ModelSchema {
+  const extractor = new Extractor()
   const types = extractor.module(TYPES_PATH)
   for (const declaration of types.declarations.values()) extractor.named(types, declaration)
   extractor.root(extractor.module(PARSE_PATH), PARSE_FUNCTION, 'ParsedDocFull')

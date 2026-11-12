@@ -613,7 +613,6 @@ jscompat::js_object! {
         pub fld_dirty: True,
         pub sdt_checkbox_xml: String,
         pub wrap: Vec<InlineWrap>,
-        pub opaque_xml: String,
         pub r_pr_change: RunRPrChange,
         pub math: RunMath,
         pub sym: RunSym,
@@ -678,7 +677,6 @@ pub enum RunKey {
     FldDirty,
     SdtCheckboxXml,
     Wrap,
-    OpaqueXml,
     RPrChange,
     Math,
     Sym,
@@ -687,7 +685,7 @@ pub enum RunKey {
 }
 
 impl FieldKey for RunKey {
-    const NAMES: &'static [&'static str] = &["text", "rawRPr", "styleId", "bold", "italic", "underline", "strike", "color", "sizeHalfPoints", "font", "eaSlotEmpty", "fontAscii", "eastAsiaFont", "eastAsiaLang", "fontCs", "themeRFonts", "themeColor", "csFont", "rtl", "charSpacingTwips", "kernHalfPoints", "caps", "vanish", "vanishOwn", "charScalePct", "highlight", "shading", "shadingDisplay", "textOutline", "textEffect", "dstrike", "glow", "positionHalfPoints", "bdr", "cs", "effective", "vertAlign", "em", "link", "commentIds", "ins", "del", "noteRef", "xeTerm", "refField", "refInstr", "instrField", "zoteroFieldId", "zoteroFieldPart", "fldBeginXml", "fldDirty", "sdtCheckboxXml", "wrap", "opaqueXml", "rPrChange", "math", "sym", "ruby", "image"];
+    const NAMES: &'static [&'static str] = &["text", "rawRPr", "styleId", "bold", "italic", "underline", "strike", "color", "sizeHalfPoints", "font", "eaSlotEmpty", "fontAscii", "eastAsiaFont", "eastAsiaLang", "fontCs", "themeRFonts", "themeColor", "csFont", "rtl", "charSpacingTwips", "kernHalfPoints", "caps", "vanish", "vanishOwn", "charScalePct", "highlight", "shading", "shadingDisplay", "textOutline", "textEffect", "dstrike", "glow", "positionHalfPoints", "bdr", "cs", "effective", "vertAlign", "em", "link", "commentIds", "ins", "del", "noteRef", "xeTerm", "refField", "refInstr", "instrField", "zoteroFieldId", "zoteroFieldPart", "fldBeginXml", "fldDirty", "sdtCheckboxXml", "wrap", "rPrChange", "math", "sym", "ruby", "image"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -744,7 +742,6 @@ impl FieldKey for RunKey {
             "fldDirty" => Some(Self::FldDirty),
             "sdtCheckboxXml" => Some(Self::SdtCheckboxXml),
             "wrap" => Some(Self::Wrap),
-            "opaqueXml" => Some(Self::OpaqueXml),
             "rPrChange" => Some(Self::RPrChange),
             "math" => Some(Self::Math),
             "sym" => Some(Self::Sym),
@@ -832,7 +829,6 @@ impl<'de> Deserialize<'de> for Run {
                         RunKey::FldDirty => b_0.fld_dirty.set(map.next_value()?),
                         RunKey::SdtCheckboxXml => b_0.sdt_checkbox_xml.set(map.next_value()?),
                         RunKey::Wrap => b_0.wrap.set(map.next_value()?),
-                        RunKey::OpaqueXml => b_0.opaque_xml.set(map.next_value()?),
                         RunKey::RPrChange => b_0.r_pr_change.set(map.next_value()?),
                         RunKey::Math => b_0.math.set(map.next_value()?),
                         RunKey::Sym => b_0.sym.set(map.next_value()?),
@@ -1066,6 +1062,7 @@ pub struct EffectiveRPr {
     pub shading: Option<String>,
     pub east_asia_lang: Option<String>,
     pub source: JsObject<PropSource>,
+    pub style_xor: Option<Vec<EffectiveRPrStyleXorItem>>,
 }
 
 /// The keys of `EffectiveRPr`, in declaration order.
@@ -1089,10 +1086,11 @@ pub enum EffectiveRPrKey {
     Shading,
     EastAsiaLang,
     Source,
+    StyleXor,
 }
 
 impl FieldKey for EffectiveRPrKey {
-    const NAMES: &'static [&'static str] = &["styleId", "cs", "bold", "italic", "sizeHalfPoints", "fonts", "color", "underline", "strike", "caps", "vanish", "charSpacingTwips", "kernHalfPoints", "vertAlign", "bdr", "shading", "eastAsiaLang", "source"];
+    const NAMES: &'static [&'static str] = &["styleId", "cs", "bold", "italic", "sizeHalfPoints", "fonts", "color", "underline", "strike", "caps", "vanish", "charSpacingTwips", "kernHalfPoints", "vertAlign", "bdr", "shading", "eastAsiaLang", "source", "styleXor"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -1114,6 +1112,7 @@ impl FieldKey for EffectiveRPrKey {
             "shading" => Some(Self::Shading),
             "eastAsiaLang" => Some(Self::EastAsiaLang),
             "source" => Some(Self::Source),
+            "styleXor" => Some(Self::StyleXor),
             _ => None,
         }
     }
@@ -1160,6 +1159,9 @@ impl Serialize for EffectiveRPr {
             map.serialize_entry("eastAsiaLang", value)?;
         }
         map.serialize_entry("source", &self.source)?;
+        if let Some(value) = &self.style_xor {
+            map.serialize_entry("styleXor", value)?;
+        }
         map.end()
     }
 }
@@ -1194,6 +1196,7 @@ impl<'de> Deserialize<'de> for EffectiveRPr {
                 let mut v_shading = None;
                 let mut v_east_asia_lang = None;
                 let mut v_source = None;
+                let mut v_style_xor = None;
                 while let Some(Key(key)) = map.next_key::<Key<EffectiveRPrKey>>()? {
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
@@ -1217,9 +1220,10 @@ impl<'de> Deserialize<'de> for EffectiveRPr {
                         EffectiveRPrKey::Shading => v_shading = Some(map.next_value()?),
                         EffectiveRPrKey::EastAsiaLang => v_east_asia_lang = Some(map.next_value()?),
                         EffectiveRPrKey::Source => v_source = Some(map.next_value()?),
+                        EffectiveRPrKey::StyleXor => v_style_xor = Some(map.next_value()?),
                     }
                 }
-                Ok(EffectiveRPr { style_id: v_style_id, cs: v_cs.ok_or_else(|| A::Error::missing_field("cs"))?, bold: v_bold.ok_or_else(|| A::Error::missing_field("bold"))?, italic: v_italic.ok_or_else(|| A::Error::missing_field("italic"))?, size_half_points: v_size_half_points.ok_or_else(|| A::Error::missing_field("sizeHalfPoints"))?, fonts: v_fonts.ok_or_else(|| A::Error::missing_field("fonts"))?, color: v_color, underline: v_underline.ok_or_else(|| A::Error::missing_field("underline"))?, strike: v_strike.ok_or_else(|| A::Error::missing_field("strike"))?, caps: v_caps.ok_or_else(|| A::Error::missing_field("caps"))?, vanish: v_vanish.ok_or_else(|| A::Error::missing_field("vanish"))?, char_spacing_twips: v_char_spacing_twips.ok_or_else(|| A::Error::missing_field("charSpacingTwips"))?, kern_half_points: v_kern_half_points, vert_align: v_vert_align, bdr: v_bdr, shading: v_shading, east_asia_lang: v_east_asia_lang, source: v_source.ok_or_else(|| A::Error::missing_field("source"))? })
+                Ok(EffectiveRPr { style_id: v_style_id, cs: v_cs.ok_or_else(|| A::Error::missing_field("cs"))?, bold: v_bold.ok_or_else(|| A::Error::missing_field("bold"))?, italic: v_italic.ok_or_else(|| A::Error::missing_field("italic"))?, size_half_points: v_size_half_points.ok_or_else(|| A::Error::missing_field("sizeHalfPoints"))?, fonts: v_fonts.ok_or_else(|| A::Error::missing_field("fonts"))?, color: v_color, underline: v_underline.ok_or_else(|| A::Error::missing_field("underline"))?, strike: v_strike.ok_or_else(|| A::Error::missing_field("strike"))?, caps: v_caps.ok_or_else(|| A::Error::missing_field("caps"))?, vanish: v_vanish.ok_or_else(|| A::Error::missing_field("vanish"))?, char_spacing_twips: v_char_spacing_twips.ok_or_else(|| A::Error::missing_field("charSpacingTwips"))?, kern_half_points: v_kern_half_points, vert_align: v_vert_align, bdr: v_bdr, shading: v_shading, east_asia_lang: v_east_asia_lang, source: v_source.ok_or_else(|| A::Error::missing_field("source"))?, style_xor: v_style_xor })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -1423,6 +1427,43 @@ impl<'de> Deserialize<'de> for PropSource {
             "tableStyle" => Some(Self::TableStyle),
             "docDefaults" => Some(Self::DocDefaults),
             "builtin" => Some(Self::Builtin),
+            _ => None,
+        })
+    }
+}
+
+/// `EffectiveRPr.styleXor[]`
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+pub enum EffectiveRPrStyleXorItem {
+    #[serde(rename = "bold")]
+    Bold,
+    #[serde(rename = "italic")]
+    Italic,
+    #[serde(rename = "strike")]
+    Strike,
+    #[serde(rename = "vanish")]
+    Vanish,
+}
+
+impl EffectiveRPrStyleXorItem {
+    /// The string the TypeScript holds.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Bold => "bold",
+            Self::Italic => "italic",
+            Self::Strike => "strike",
+            Self::Vanish => "vanish",
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for EffectiveRPrStyleXorItem {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        wire::string_enum(deserializer, "EffectiveRPr.styleXor[]", |text| match text {
+            "bold" => Some(Self::Bold),
+            "italic" => Some(Self::Italic),
+            "strike" => Some(Self::Strike),
+            "vanish" => Some(Self::Vanish),
             _ => None,
         })
     }
@@ -3972,13 +4013,13 @@ impl<'de> Deserialize<'de> for ParaAlign {
 pub struct SdtShell {
     pub alias: String,
     pub tag: String,
+    pub control_type: SdtShellControlType,
     pub lock: String,
     pub id: String,
-    pub control_type: SdtShellControlType,
     pub open_xml: String,
     pub close_xml: String,
-    pub group: Option<JsNum>,
     pub level: Option<JsNum>,
+    pub group: Option<JsNum>,
     pub open_block: Option<JsNum>,
     pub open_offset: Option<JsNum>,
     pub close_block: Option<JsNum>,
@@ -4037,16 +4078,16 @@ impl Serialize for SdtShell {
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("alias", &self.alias)?;
         map.serialize_entry("tag", &self.tag)?;
+        map.serialize_entry("controlType", &self.control_type)?;
         map.serialize_entry("lock", &self.lock)?;
         map.serialize_entry("id", &self.id)?;
-        map.serialize_entry("controlType", &self.control_type)?;
         map.serialize_entry("openXml", &self.open_xml)?;
         map.serialize_entry("closeXml", &self.close_xml)?;
-        if let Some(value) = &self.group {
-            map.serialize_entry("group", value)?;
-        }
         if let Some(value) = &self.level {
             map.serialize_entry("level", value)?;
+        }
+        if let Some(value) = &self.group {
+            map.serialize_entry("group", value)?;
         }
         if let Some(value) = &self.open_block {
             map.serialize_entry("openBlock", value)?;
@@ -8924,6 +8965,7 @@ jscompat::js_object! {
         pub anchor_para: JsNum,
         pub crop: HfImageCrop,
         pub drawing: JsNum,
+        pub wrap_dist_px: HfImageWrapDistPx,
     }
 }
 
@@ -8950,10 +8992,11 @@ pub enum HfImageKey {
     AnchorPara,
     Crop,
     Drawing,
+    WrapDistPx,
 }
 
 impl FieldKey for HfImageKey {
-    const NAMES: &'static [&'static str] = &["dataUrl", "widthPx", "heightPx", "floating", "behind", "watermark", "posH", "posV", "posXPx", "posYPx", "posHRel", "posVRel", "wrap", "washout", "rotationDeg", "wordArt", "align", "anchorPara", "crop", "drawing"];
+    const NAMES: &'static [&'static str] = &["dataUrl", "widthPx", "heightPx", "floating", "behind", "watermark", "posH", "posV", "posXPx", "posYPx", "posHRel", "posVRel", "wrap", "washout", "rotationDeg", "wordArt", "align", "anchorPara", "crop", "drawing", "wrapDistPx"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -8977,6 +9020,7 @@ impl FieldKey for HfImageKey {
             "anchorPara" => Some(Self::AnchorPara),
             "crop" => Some(Self::Crop),
             "drawing" => Some(Self::Drawing),
+            "wrapDistPx" => Some(Self::WrapDistPx),
             _ => None,
         }
     }
@@ -9026,6 +9070,7 @@ impl<'de> Deserialize<'de> for HfImage {
                         HfImageKey::AnchorPara => b_0.anchor_para.set(map.next_value()?),
                         HfImageKey::Crop => b_0.crop.set(map.next_value()?),
                         HfImageKey::Drawing => b_0.drawing.set(map.next_value()?),
+                        HfImageKey::WrapDistPx => b_0.wrap_dist_px.set(map.next_value()?),
                     }
                 }
                 if !b_0.data_url.has_key() {
@@ -9511,6 +9556,89 @@ impl<'de> Deserialize<'de> for HfImageCrop {
     }
 }
 
+/// `HfImage.wrapDistPx`
+#[derive(Debug, Clone, PartialEq)]
+pub struct HfImageWrapDistPx {
+    pub l: JsNum,
+    pub r: JsNum,
+    pub t: JsNum,
+    pub b: JsNum,
+}
+
+/// The keys of `HfImage.wrapDistPx`, in declaration order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum HfImageWrapDistPxKey {
+    L,
+    R,
+    T,
+    B,
+}
+
+impl FieldKey for HfImageWrapDistPxKey {
+    const NAMES: &'static [&'static str] = &["l", "r", "t", "b"];
+
+    fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "l" => Some(Self::L),
+            "r" => Some(Self::R),
+            "t" => Some(Self::T),
+            "b" => Some(Self::B),
+            _ => None,
+        }
+    }
+
+    fn index(self) -> usize {
+        self as usize
+    }
+}
+
+const _: () = assert!(HfImageWrapDistPxKey::NAMES.len() <= wire::MAX_KEYS);
+
+impl Serialize for HfImageWrapDistPx {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(None)?;
+        map.serialize_entry("l", &self.l)?;
+        map.serialize_entry("r", &self.r)?;
+        map.serialize_entry("t", &self.t)?;
+        map.serialize_entry("b", &self.b)?;
+        map.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for HfImageWrapDistPx {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Fields;
+        impl<'de> Visitor<'de> for Fields {
+            type Value = HfImageWrapDistPx;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("an object: HfImage.wrapDistPx")
+            }
+
+            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<HfImageWrapDistPx, A::Error> {
+                let mut seen = Seen::default();
+                let mut v_l = None;
+                let mut v_r = None;
+                let mut v_t = None;
+                let mut v_b = None;
+                while let Some(Key(key)) = map.next_key::<Key<HfImageWrapDistPxKey>>()? {
+                    if !seen.insert(key.index()) {
+                        return Err(A::Error::duplicate_field(key.name()));
+                    }
+                    match key {
+                        HfImageWrapDistPxKey::L => v_l = Some(map.next_value()?),
+                        HfImageWrapDistPxKey::R => v_r = Some(map.next_value()?),
+                        HfImageWrapDistPxKey::T => v_t = Some(map.next_value()?),
+                        HfImageWrapDistPxKey::B => v_b = Some(map.next_value()?),
+                    }
+                }
+                Ok(HfImageWrapDistPx { l: v_l.ok_or_else(|| A::Error::missing_field("l"))?, r: v_r.ok_or_else(|| A::Error::missing_field("r"))?, t: v_t.ok_or_else(|| A::Error::missing_field("t"))?, b: v_b.ok_or_else(|| A::Error::missing_field("b"))? })
+            }
+        }
+        deserializer.deserialize_map(Fields)
+    }
+}
+
 /// `HfTextBox.vAlign`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 pub enum HfTextBoxVAlign {
@@ -9584,6 +9712,8 @@ pub struct HfTableCell {
     pub para_props: Option<Vec<Option<HfCellParaProps>>>,
     pub align: Option<ParaAlign>,
     pub fill: Option<String>,
+    pub v_span: Option<JsNum>,
+    pub v_merge_continue: Option<True>,
     pub locked: Option<True>,
     pub width_pct: Option<JsNum>,
     pub width_twips: Option<JsNum>,
@@ -9607,6 +9737,8 @@ pub enum HfTableCellKey {
     Borders,
     VAlign,
     MarTwips,
+    VSpan,
+    VMergeContinue,
     Locked,
     Rewrite,
     RewriteFormat,
@@ -9614,7 +9746,7 @@ pub enum HfTableCellKey {
 }
 
 impl FieldKey for HfTableCellKey {
-    const NAMES: &'static [&'static str] = &["paras", "paraProps", "align", "widthPct", "widthTwips", "fill", "borders", "vAlign", "marTwips", "locked", "rewrite", "rewriteFormat", "priorParaProps"];
+    const NAMES: &'static [&'static str] = &["paras", "paraProps", "align", "widthPct", "widthTwips", "fill", "borders", "vAlign", "marTwips", "vSpan", "vMergeContinue", "locked", "rewrite", "rewriteFormat", "priorParaProps"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -9627,6 +9759,8 @@ impl FieldKey for HfTableCellKey {
             "borders" => Some(Self::Borders),
             "vAlign" => Some(Self::VAlign),
             "marTwips" => Some(Self::MarTwips),
+            "vSpan" => Some(Self::VSpan),
+            "vMergeContinue" => Some(Self::VMergeContinue),
             "locked" => Some(Self::Locked),
             "rewrite" => Some(Self::Rewrite),
             "rewriteFormat" => Some(Self::RewriteFormat),
@@ -9654,6 +9788,12 @@ impl Serialize for HfTableCell {
         }
         if let Some(value) = &self.fill {
             map.serialize_entry("fill", value)?;
+        }
+        if let Some(value) = &self.v_span {
+            map.serialize_entry("vSpan", value)?;
+        }
+        if let Some(value) = &self.v_merge_continue {
+            map.serialize_entry("vMergeContinue", value)?;
         }
         if let Some(value) = &self.locked {
             map.serialize_entry("locked", value)?;
@@ -9707,6 +9847,8 @@ impl<'de> Deserialize<'de> for HfTableCell {
                 let mut v_borders = None;
                 let mut v_v_align = None;
                 let mut v_mar_twips = None;
+                let mut v_v_span = None;
+                let mut v_v_merge_continue = None;
                 let mut v_locked = None;
                 let mut v_rewrite = None;
                 let mut v_rewrite_format = None;
@@ -9725,13 +9867,15 @@ impl<'de> Deserialize<'de> for HfTableCell {
                         HfTableCellKey::Borders => v_borders = Some(map.next_value()?),
                         HfTableCellKey::VAlign => v_v_align = Some(map.next_value()?),
                         HfTableCellKey::MarTwips => v_mar_twips = Some(map.next_value()?),
+                        HfTableCellKey::VSpan => v_v_span = Some(map.next_value()?),
+                        HfTableCellKey::VMergeContinue => v_v_merge_continue = Some(map.next_value()?),
                         HfTableCellKey::Locked => v_locked = Some(map.next_value()?),
                         HfTableCellKey::Rewrite => v_rewrite = Some(map.next_value()?),
                         HfTableCellKey::RewriteFormat => v_rewrite_format = Some(map.next_value()?),
                         HfTableCellKey::PriorParaProps => v_prior_para_props = Some(map.next_value()?),
                     }
                 }
-                Ok(HfTableCell { paras: v_paras.ok_or_else(|| A::Error::missing_field("paras"))?, para_props: v_para_props, align: v_align, width_pct: v_width_pct, width_twips: v_width_twips, fill: v_fill, borders: v_borders, v_align: v_v_align, mar_twips: v_mar_twips, locked: v_locked, rewrite: v_rewrite, rewrite_format: v_rewrite_format, prior_para_props: v_prior_para_props })
+                Ok(HfTableCell { paras: v_paras.ok_or_else(|| A::Error::missing_field("paras"))?, para_props: v_para_props, align: v_align, width_pct: v_width_pct, width_twips: v_width_twips, fill: v_fill, borders: v_borders, v_align: v_v_align, mar_twips: v_mar_twips, v_span: v_v_span, v_merge_continue: v_v_merge_continue, locked: v_locked, rewrite: v_rewrite, rewrite_format: v_rewrite_format, prior_para_props: v_prior_para_props })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -12769,32 +12913,34 @@ impl<'de> Deserialize<'de> for ChartSeries {
     }
 }
 
-/// `ChartDisplay`
-#[derive(Debug, Clone, PartialEq)]
-pub struct ChartDisplay {
-    pub part_path: String,
-    pub kind: ChartDisplayKind,
-    pub horizontal: Option<bool>,
-    pub grouping: Option<ChartDisplayGrouping>,
-    pub markers: Option<bool>,
-    pub radar_style: Option<ChartDisplayRadarStyle>,
-    pub hole_pct: Option<JsNum>,
-    pub explosion_pct: Option<JsNum>,
-    pub data_labels: Option<ChartDisplayDataLabels>,
-    pub legend_pos: Option<ChartDisplayLegendPos>,
-    pub legend_font_pt: Option<JsNum>,
-    pub no_legend: Option<bool>,
-    pub frame_line: Option<String>,
-    pub y_axis: Option<ChartAxis>,
-    pub x_axis: Option<ChartAxis>,
-    pub data_table: Option<ChartDisplayDataTable>,
-    pub title: Option<String>,
-    pub title_font_pt: Option<JsNum>,
-    pub categories: Vec<String>,
-    pub series: Vec<ChartSeries>,
-    pub palette: Option<Vec<String>>,
-    pub width_px: Option<JsNum>,
-    pub height_px: Option<JsNum>,
+jscompat::js_object! {
+    /// `ChartDisplay`: the keys go out in the order they were set
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct ChartDisplay {
+        pub part_path: String,
+        pub kind: ChartDisplayKind,
+        pub horizontal: bool,
+        pub grouping: ChartDisplayGrouping,
+        pub markers: bool,
+        pub radar_style: ChartDisplayRadarStyle,
+        pub hole_pct: JsNum,
+        pub explosion_pct: JsNum,
+        pub data_labels: ChartDisplayDataLabels,
+        pub title_font_pt: JsNum,
+        pub legend_font_pt: JsNum,
+        pub legend_pos: ChartDisplayLegendPos,
+        pub no_legend: bool,
+        pub frame_line: String,
+        pub x_axis: ChartAxis,
+        pub y_axis: ChartAxis,
+        pub data_table: ChartDisplayDataTable,
+        pub title: String,
+        pub categories: Vec<String>,
+        pub series: Vec<ChartSeries>,
+        pub palette: Vec<String>,
+        pub width_px: JsNum,
+        pub height_px: JsNum,
+    }
 }
 
 /// The keys of `ChartDisplay`, in declaration order.
@@ -12864,74 +13010,6 @@ impl FieldKey for ChartDisplayKey {
 
 const _: () = assert!(ChartDisplayKey::NAMES.len() <= wire::MAX_KEYS);
 
-impl Serialize for ChartDisplay {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("partPath", &self.part_path)?;
-        map.serialize_entry("kind", &self.kind)?;
-        if let Some(value) = &self.horizontal {
-            map.serialize_entry("horizontal", value)?;
-        }
-        if let Some(value) = &self.grouping {
-            map.serialize_entry("grouping", value)?;
-        }
-        if let Some(value) = &self.markers {
-            map.serialize_entry("markers", value)?;
-        }
-        if let Some(value) = &self.radar_style {
-            map.serialize_entry("radarStyle", value)?;
-        }
-        if let Some(value) = &self.hole_pct {
-            map.serialize_entry("holePct", value)?;
-        }
-        if let Some(value) = &self.explosion_pct {
-            map.serialize_entry("explosionPct", value)?;
-        }
-        if let Some(value) = &self.data_labels {
-            map.serialize_entry("dataLabels", value)?;
-        }
-        if let Some(value) = &self.legend_pos {
-            map.serialize_entry("legendPos", value)?;
-        }
-        if let Some(value) = &self.legend_font_pt {
-            map.serialize_entry("legendFontPt", value)?;
-        }
-        if let Some(value) = &self.no_legend {
-            map.serialize_entry("noLegend", value)?;
-        }
-        if let Some(value) = &self.frame_line {
-            map.serialize_entry("frameLine", value)?;
-        }
-        if let Some(value) = &self.y_axis {
-            map.serialize_entry("yAxis", value)?;
-        }
-        if let Some(value) = &self.x_axis {
-            map.serialize_entry("xAxis", value)?;
-        }
-        if let Some(value) = &self.data_table {
-            map.serialize_entry("dataTable", value)?;
-        }
-        if let Some(value) = &self.title {
-            map.serialize_entry("title", value)?;
-        }
-        if let Some(value) = &self.title_font_pt {
-            map.serialize_entry("titleFontPt", value)?;
-        }
-        map.serialize_entry("categories", &self.categories)?;
-        map.serialize_entry("series", &self.series)?;
-        if let Some(value) = &self.palette {
-            map.serialize_entry("palette", value)?;
-        }
-        if let Some(value) = &self.width_px {
-            map.serialize_entry("widthPx", value)?;
-        }
-        if let Some(value) = &self.height_px {
-            map.serialize_entry("heightPx", value)?;
-        }
-        map.end()
-    }
-}
-
 impl<'de> Deserialize<'de> for ChartDisplay {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Fields;
@@ -12944,60 +13022,50 @@ impl<'de> Deserialize<'de> for ChartDisplay {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<ChartDisplay, A::Error> {
                 let mut seen = Seen::default();
-                let mut v_part_path = None;
-                let mut v_kind = None;
-                let mut v_horizontal = None;
-                let mut v_grouping = None;
-                let mut v_markers = None;
-                let mut v_radar_style = None;
-                let mut v_hole_pct = None;
-                let mut v_explosion_pct = None;
-                let mut v_data_labels = None;
-                let mut v_title_font_pt = None;
-                let mut v_legend_font_pt = None;
-                let mut v_legend_pos = None;
-                let mut v_no_legend = None;
-                let mut v_frame_line = None;
-                let mut v_x_axis = None;
-                let mut v_y_axis = None;
-                let mut v_data_table = None;
-                let mut v_title = None;
-                let mut v_categories = None;
-                let mut v_series = None;
-                let mut v_palette = None;
-                let mut v_width_px = None;
-                let mut v_height_px = None;
+                let mut b_0 = ChartDisplay::default();
                 while let Some(Key(key)) = map.next_key::<Key<ChartDisplayKey>>()? {
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        ChartDisplayKey::PartPath => v_part_path = Some(map.next_value()?),
-                        ChartDisplayKey::Kind => v_kind = Some(map.next_value()?),
-                        ChartDisplayKey::Horizontal => v_horizontal = Some(map.next_value()?),
-                        ChartDisplayKey::Grouping => v_grouping = Some(map.next_value()?),
-                        ChartDisplayKey::Markers => v_markers = Some(map.next_value()?),
-                        ChartDisplayKey::RadarStyle => v_radar_style = Some(map.next_value()?),
-                        ChartDisplayKey::HolePct => v_hole_pct = Some(map.next_value()?),
-                        ChartDisplayKey::ExplosionPct => v_explosion_pct = Some(map.next_value()?),
-                        ChartDisplayKey::DataLabels => v_data_labels = Some(map.next_value()?),
-                        ChartDisplayKey::TitleFontPt => v_title_font_pt = Some(map.next_value()?),
-                        ChartDisplayKey::LegendFontPt => v_legend_font_pt = Some(map.next_value()?),
-                        ChartDisplayKey::LegendPos => v_legend_pos = Some(map.next_value()?),
-                        ChartDisplayKey::NoLegend => v_no_legend = Some(map.next_value()?),
-                        ChartDisplayKey::FrameLine => v_frame_line = Some(map.next_value()?),
-                        ChartDisplayKey::XAxis => v_x_axis = Some(map.next_value()?),
-                        ChartDisplayKey::YAxis => v_y_axis = Some(map.next_value()?),
-                        ChartDisplayKey::DataTable => v_data_table = Some(map.next_value()?),
-                        ChartDisplayKey::Title => v_title = Some(map.next_value()?),
-                        ChartDisplayKey::Categories => v_categories = Some(map.next_value()?),
-                        ChartDisplayKey::Series => v_series = Some(map.next_value()?),
-                        ChartDisplayKey::Palette => v_palette = Some(map.next_value()?),
-                        ChartDisplayKey::WidthPx => v_width_px = Some(map.next_value()?),
-                        ChartDisplayKey::HeightPx => v_height_px = Some(map.next_value()?),
+                        ChartDisplayKey::PartPath => b_0.part_path.set(map.next_value()?),
+                        ChartDisplayKey::Kind => b_0.kind.set(map.next_value()?),
+                        ChartDisplayKey::Horizontal => b_0.horizontal.set(map.next_value()?),
+                        ChartDisplayKey::Grouping => b_0.grouping.set(map.next_value()?),
+                        ChartDisplayKey::Markers => b_0.markers.set(map.next_value()?),
+                        ChartDisplayKey::RadarStyle => b_0.radar_style.set(map.next_value()?),
+                        ChartDisplayKey::HolePct => b_0.hole_pct.set(map.next_value()?),
+                        ChartDisplayKey::ExplosionPct => b_0.explosion_pct.set(map.next_value()?),
+                        ChartDisplayKey::DataLabels => b_0.data_labels.set(map.next_value()?),
+                        ChartDisplayKey::TitleFontPt => b_0.title_font_pt.set(map.next_value()?),
+                        ChartDisplayKey::LegendFontPt => b_0.legend_font_pt.set(map.next_value()?),
+                        ChartDisplayKey::LegendPos => b_0.legend_pos.set(map.next_value()?),
+                        ChartDisplayKey::NoLegend => b_0.no_legend.set(map.next_value()?),
+                        ChartDisplayKey::FrameLine => b_0.frame_line.set(map.next_value()?),
+                        ChartDisplayKey::XAxis => b_0.x_axis.set(map.next_value()?),
+                        ChartDisplayKey::YAxis => b_0.y_axis.set(map.next_value()?),
+                        ChartDisplayKey::DataTable => b_0.data_table.set(map.next_value()?),
+                        ChartDisplayKey::Title => b_0.title.set(map.next_value()?),
+                        ChartDisplayKey::Categories => b_0.categories.set(map.next_value()?),
+                        ChartDisplayKey::Series => b_0.series.set(map.next_value()?),
+                        ChartDisplayKey::Palette => b_0.palette.set(map.next_value()?),
+                        ChartDisplayKey::WidthPx => b_0.width_px.set(map.next_value()?),
+                        ChartDisplayKey::HeightPx => b_0.height_px.set(map.next_value()?),
                     }
                 }
-                Ok(ChartDisplay { part_path: v_part_path.ok_or_else(|| A::Error::missing_field("partPath"))?, kind: v_kind.ok_or_else(|| A::Error::missing_field("kind"))?, horizontal: v_horizontal, grouping: v_grouping, markers: v_markers, radar_style: v_radar_style, hole_pct: v_hole_pct, explosion_pct: v_explosion_pct, data_labels: v_data_labels, title_font_pt: v_title_font_pt, legend_font_pt: v_legend_font_pt, legend_pos: v_legend_pos, no_legend: v_no_legend, frame_line: v_frame_line, x_axis: v_x_axis, y_axis: v_y_axis, data_table: v_data_table, title: v_title, categories: v_categories.ok_or_else(|| A::Error::missing_field("categories"))?, series: v_series.ok_or_else(|| A::Error::missing_field("series"))?, palette: v_palette, width_px: v_width_px, height_px: v_height_px })
+                if !b_0.part_path.has_key() {
+                    return Err(A::Error::missing_field("partPath"));
+                }
+                if !b_0.kind.has_key() {
+                    return Err(A::Error::missing_field("kind"));
+                }
+                if !b_0.categories.has_key() {
+                    return Err(A::Error::missing_field("categories"));
+                }
+                if !b_0.series.has_key() {
+                    return Err(A::Error::missing_field("series"));
+                }
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
@@ -15633,6 +15701,7 @@ jscompat::js_object! {
         pub txbx_index: JsNum,
         pub shape_id: String,
         pub read_only: bool,
+        pub picture: bool,
         pub paras: Vec<TextboxParaDisplay>,
         pub offset_x_emu: JsNum,
         pub offset_y_emu: JsNum,
@@ -15690,6 +15759,7 @@ pub enum TextboxDisplayKey {
     TxbxIndex,
     ShapeId,
     ReadOnly,
+    Picture,
     Paras,
     OffsetXEmu,
     OffsetYEmu,
@@ -15724,7 +15794,7 @@ pub enum TextboxDisplayKey {
 }
 
 impl FieldKey for TextboxDisplayKey {
-    const NAMES: &'static [&'static str] = &["fill", "fillAlpha", "borderColor", "widthPx", "heightPx", "minHeightPx", "insetTopPx", "insetRightPx", "insetBottomPx", "insetLeftPx", "prst", "pathData", "wordArtId", "textOutline", "nowrap", "vAlign", "textColor", "txbxIndex", "shapeId", "readOnly", "paras", "offsetXEmu", "offsetYEmu", "floating", "behind", "noWrap", "z", "pagePinned", "pageRelV", "pageRelVFrom", "pageRelX", "pageRelXFrom", "outsideCell", "bandBottomPx", "inlineExtentPx", "bandTopPx", "bandOverflow", "wrapSides", "wrapDistPx", "wrapSide", "wrapEdgePx", "wrapGapPx", "bandBeside", "rotDeg", "borderWidthPx", "borderDash", "fillImageDataUrl", "fillTile", "lineDiag", "flipH", "flipV"];
+    const NAMES: &'static [&'static str] = &["fill", "fillAlpha", "borderColor", "widthPx", "heightPx", "minHeightPx", "insetTopPx", "insetRightPx", "insetBottomPx", "insetLeftPx", "prst", "pathData", "wordArtId", "textOutline", "nowrap", "vAlign", "textColor", "txbxIndex", "shapeId", "readOnly", "picture", "paras", "offsetXEmu", "offsetYEmu", "floating", "behind", "noWrap", "z", "pagePinned", "pageRelV", "pageRelVFrom", "pageRelX", "pageRelXFrom", "outsideCell", "bandBottomPx", "inlineExtentPx", "bandTopPx", "bandOverflow", "wrapSides", "wrapDistPx", "wrapSide", "wrapEdgePx", "wrapGapPx", "bandBeside", "rotDeg", "borderWidthPx", "borderDash", "fillImageDataUrl", "fillTile", "lineDiag", "flipH", "flipV"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -15748,6 +15818,7 @@ impl FieldKey for TextboxDisplayKey {
             "txbxIndex" => Some(Self::TxbxIndex),
             "shapeId" => Some(Self::ShapeId),
             "readOnly" => Some(Self::ReadOnly),
+            "picture" => Some(Self::Picture),
             "paras" => Some(Self::Paras),
             "offsetXEmu" => Some(Self::OffsetXEmu),
             "offsetYEmu" => Some(Self::OffsetYEmu),
@@ -15828,6 +15899,7 @@ impl<'de> Deserialize<'de> for TextboxDisplay {
                         TextboxDisplayKey::TxbxIndex => b_0.txbx_index.set(map.next_value()?),
                         TextboxDisplayKey::ShapeId => b_0.shape_id.set(map.next_value()?),
                         TextboxDisplayKey::ReadOnly => b_0.read_only.set(map.next_value()?),
+                        TextboxDisplayKey::Picture => b_0.picture.set(map.next_value()?),
                         TextboxDisplayKey::Paras => b_0.paras.set(map.next_value()?),
                         TextboxDisplayKey::OffsetXEmu => b_0.offset_x_emu.set(map.next_value()?),
                         TextboxDisplayKey::OffsetYEmu => b_0.offset_y_emu.set(map.next_value()?),
@@ -16220,24 +16292,6 @@ impl Serialize for TextboxParaDisplay {
             map.serialize_entry("effective", value)?;
         }
         map.serialize_entry("runs", &self.runs)?;
-        if let Some(value) = &*self.para_format.space_before_auto {
-            map.serialize_entry("spaceBeforeAuto", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_after_auto {
-            map.serialize_entry("spaceAfterAuto", value)?;
-        }
-        if let Some(value) = &*self.para_format.shading_clear {
-            map.serialize_entry("shadingClear", value)?;
-        }
-        if let Some(value) = &*self.para_format.drop_cap {
-            map.serialize_entry("dropCap", value)?;
-        }
-        if let Some(value) = &*self.para_format.frame_box {
-            map.serialize_entry("frameBox", value)?;
-        }
-        if let Some(value) = &*self.para_format.frame {
-            map.serialize_entry("frame", value)?;
-        }
         if let Some(value) = &*self.para_format.bidi {
             map.serialize_entry("bidi", value)?;
         }
@@ -16255,6 +16309,12 @@ impl Serialize for TextboxParaDisplay {
         }
         if let Some(value) = &*self.para_format.line_rule {
             map.serialize_entry("lineRule", value)?;
+        }
+        if let Some(value) = &*self.para_format.space_before_auto {
+            map.serialize_entry("spaceBeforeAuto", value)?;
+        }
+        if let Some(value) = &*self.para_format.space_after_auto {
+            map.serialize_entry("spaceAfterAuto", value)?;
         }
         if let Some(value) = &*self.para_format.space_before {
             map.serialize_entry("spaceBefore", value)?;
@@ -16313,6 +16373,9 @@ impl Serialize for TextboxParaDisplay {
         if let Some(value) = &*self.para_format.shading_display {
             map.serialize_entry("shadingDisplay", value)?;
         }
+        if let Some(value) = &*self.para_format.shading_clear {
+            map.serialize_entry("shadingClear", value)?;
+        }
         if let Some(value) = &*self.para_format.borders {
             map.serialize_entry("borders", value)?;
         }
@@ -16327,6 +16390,15 @@ impl Serialize for TextboxParaDisplay {
         }
         if let Some(value) = &*self.para_format.tab_stops {
             map.serialize_entry("tabStops", value)?;
+        }
+        if let Some(value) = &*self.para_format.drop_cap {
+            map.serialize_entry("dropCap", value)?;
+        }
+        if let Some(value) = &*self.para_format.frame_box {
+            map.serialize_entry("frameBox", value)?;
+        }
+        if let Some(value) = &*self.para_format.frame {
+            map.serialize_entry("frame", value)?;
         }
         if let Some(value) = &*self.para_format.text_direction {
             map.serialize_entry("textDirection", value)?;
@@ -17403,6 +17475,105 @@ impl<'de> Deserialize<'de> for StrayIndent {
     }
 }
 
+/// `RuleOverlay`
+#[derive(Debug, Clone, PartialEq)]
+pub struct RuleOverlay {
+    pub x_px: JsNum,
+    pub y_px: JsNum,
+    pub width_px: JsNum,
+    pub space_before_px: JsNum,
+    pub thickness_px: Option<JsNum>,
+    pub color_hex: Option<String>,
+}
+
+/// The keys of `RuleOverlay`, in declaration order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RuleOverlayKey {
+    XPx,
+    YPx,
+    WidthPx,
+    SpaceBeforePx,
+    ThicknessPx,
+    ColorHex,
+}
+
+impl FieldKey for RuleOverlayKey {
+    const NAMES: &'static [&'static str] = &["xPx", "yPx", "widthPx", "spaceBeforePx", "thicknessPx", "colorHex"];
+
+    fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "xPx" => Some(Self::XPx),
+            "yPx" => Some(Self::YPx),
+            "widthPx" => Some(Self::WidthPx),
+            "spaceBeforePx" => Some(Self::SpaceBeforePx),
+            "thicknessPx" => Some(Self::ThicknessPx),
+            "colorHex" => Some(Self::ColorHex),
+            _ => None,
+        }
+    }
+
+    fn index(self) -> usize {
+        self as usize
+    }
+}
+
+const _: () = assert!(RuleOverlayKey::NAMES.len() <= wire::MAX_KEYS);
+
+impl Serialize for RuleOverlay {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(None)?;
+        map.serialize_entry("xPx", &self.x_px)?;
+        map.serialize_entry("yPx", &self.y_px)?;
+        map.serialize_entry("widthPx", &self.width_px)?;
+        map.serialize_entry("spaceBeforePx", &self.space_before_px)?;
+        if let Some(value) = &self.thickness_px {
+            map.serialize_entry("thicknessPx", value)?;
+        }
+        if let Some(value) = &self.color_hex {
+            map.serialize_entry("colorHex", value)?;
+        }
+        map.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for RuleOverlay {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Fields;
+        impl<'de> Visitor<'de> for Fields {
+            type Value = RuleOverlay;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("an object: RuleOverlay")
+            }
+
+            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<RuleOverlay, A::Error> {
+                let mut seen = Seen::default();
+                let mut v_x_px = None;
+                let mut v_y_px = None;
+                let mut v_width_px = None;
+                let mut v_space_before_px = None;
+                let mut v_thickness_px = None;
+                let mut v_color_hex = None;
+                while let Some(Key(key)) = map.next_key::<Key<RuleOverlayKey>>()? {
+                    if !seen.insert(key.index()) {
+                        return Err(A::Error::duplicate_field(key.name()));
+                    }
+                    match key {
+                        RuleOverlayKey::XPx => v_x_px = Some(map.next_value()?),
+                        RuleOverlayKey::YPx => v_y_px = Some(map.next_value()?),
+                        RuleOverlayKey::WidthPx => v_width_px = Some(map.next_value()?),
+                        RuleOverlayKey::SpaceBeforePx => v_space_before_px = Some(map.next_value()?),
+                        RuleOverlayKey::ThicknessPx => v_thickness_px = Some(map.next_value()?),
+                        RuleOverlayKey::ColorHex => v_color_hex = Some(map.next_value()?),
+                    }
+                }
+                Ok(RuleOverlay { x_px: v_x_px.ok_or_else(|| A::Error::missing_field("xPx"))?, y_px: v_y_px.ok_or_else(|| A::Error::missing_field("yPx"))?, width_px: v_width_px.ok_or_else(|| A::Error::missing_field("widthPx"))?, space_before_px: v_space_before_px.ok_or_else(|| A::Error::missing_field("spaceBeforePx"))?, thickness_px: v_thickness_px, color_hex: v_color_hex })
+            }
+        }
+        deserializer.deserialize_map(Fields)
+    }
+}
+
 jscompat::js_object! {
     /// `Block`: the keys go out in the order they were set
     #[derive(Debug, Clone, PartialEq)]
@@ -17452,6 +17623,7 @@ jscompat::js_object! {
         pub image_effect_extent_top_px: JsNum,
         pub image_effect_extent_bottom_px: JsNum,
         pub anchor_line: BlockAnchorLine,
+        pub rule_overlays: Vec<RuleOverlay>,
         pub image_align: BlockImageAlign,
         pub image_indent_left_twips: JsNum,
         pub image_wrap: ImageWrap,
@@ -17554,6 +17726,7 @@ pub enum BlockKey {
     ImageEffectExtentTopPx,
     ImageEffectExtentBottomPx,
     AnchorLine,
+    RuleOverlays,
     ImageAlign,
     ImageIndentLeftTwips,
     ImageWrap,
@@ -17608,7 +17781,7 @@ pub enum BlockKey {
 }
 
 impl FieldKey for BlockKey {
-    const NAMES: &'static [&'static str] = &["id", "type", "docxIndex", "originalXml", "altChunk", "level", "outlineOnly", "styleId", "list", "format", "bookmarks", "hiddenBookmarks", "commentStarts", "commentEnds", "rawPPr", "runs", "label", "previewText", "imageDataUrl", "oleProgId", "imageWidthPx", "imageHeightPx", "imageCrop", "imageEffects", "imageFillRect", "imageLeadingText", "imageLeadingFont", "imageLeadingExplicitSpaceWidthPx", "imageLeadingImplicitSpaceCount", "imageParagraphIndentLeft", "imageParagraphIndentRight", "imageParagraphIndentFirstLine", "imageParagraphSpaceBefore", "imageParagraphSpaceAfter", "imageParagraphSpaceBeforeAuto", "imageParagraphSpaceAfterAuto", "imageParagraphAdditiveSpacing", "imageParagraphLineTwips", "imageParagraphLineRule", "imageMarkFont", "imageMarkFontEastAsia", "imageMarkSizeHalfPoints", "imageEffectExtentTopPx", "imageEffectExtentBottomPx", "anchorLine", "imageAlign", "imageIndentLeftTwips", "imageWrap", "imageBand", "imageWrapDistTopEmu", "imageWrapDistBottomEmu", "imageWrapDistLeftEmu", "imageWrapDistRightEmu", "imageZOrder", "imageZOrderNormalized", "imageOffsetXEmu", "imageOffsetYEmu", "imageRelV", "imageRelH", "imageAnchorLocked", "imagePosH", "imagePosV", "imageRotDeg", "imageFlipH", "imageFlipV", "imageBorder", "table", "fieldDisplay", "hidden", "decorative", "ruleColorHex", "ruleThicknessPx", "ruleWidthPx", "brokenImage", "invisibleMarker", "textboxes", "anchorSnapToGrid", "strayRuns", "strayStyleId", "strayIndent", "strayAlign", "strayList", "formulaDisplay", "chartDisplay", "diagramDisplay", "sdtShell", "sdtShells", "inlineContentControls", "moveRevision", "pPrChangeInfo", "blockRevision", "paraMarkDel", "paraMarkIns", "paraMarkRPrChange", "numberingChange", "sectPrChange"];
+    const NAMES: &'static [&'static str] = &["id", "type", "docxIndex", "originalXml", "altChunk", "level", "outlineOnly", "styleId", "list", "format", "bookmarks", "hiddenBookmarks", "commentStarts", "commentEnds", "rawPPr", "runs", "label", "previewText", "imageDataUrl", "oleProgId", "imageWidthPx", "imageHeightPx", "imageCrop", "imageEffects", "imageFillRect", "imageLeadingText", "imageLeadingFont", "imageLeadingExplicitSpaceWidthPx", "imageLeadingImplicitSpaceCount", "imageParagraphIndentLeft", "imageParagraphIndentRight", "imageParagraphIndentFirstLine", "imageParagraphSpaceBefore", "imageParagraphSpaceAfter", "imageParagraphSpaceBeforeAuto", "imageParagraphSpaceAfterAuto", "imageParagraphAdditiveSpacing", "imageParagraphLineTwips", "imageParagraphLineRule", "imageMarkFont", "imageMarkFontEastAsia", "imageMarkSizeHalfPoints", "imageEffectExtentTopPx", "imageEffectExtentBottomPx", "anchorLine", "ruleOverlays", "imageAlign", "imageIndentLeftTwips", "imageWrap", "imageBand", "imageWrapDistTopEmu", "imageWrapDistBottomEmu", "imageWrapDistLeftEmu", "imageWrapDistRightEmu", "imageZOrder", "imageZOrderNormalized", "imageOffsetXEmu", "imageOffsetYEmu", "imageRelV", "imageRelH", "imageAnchorLocked", "imagePosH", "imagePosV", "imageRotDeg", "imageFlipH", "imageFlipV", "imageBorder", "table", "fieldDisplay", "hidden", "decorative", "ruleColorHex", "ruleThicknessPx", "ruleWidthPx", "brokenImage", "invisibleMarker", "textboxes", "anchorSnapToGrid", "strayRuns", "strayStyleId", "strayIndent", "strayAlign", "strayList", "formulaDisplay", "chartDisplay", "diagramDisplay", "sdtShell", "sdtShells", "inlineContentControls", "moveRevision", "pPrChangeInfo", "blockRevision", "paraMarkDel", "paraMarkIns", "paraMarkRPrChange", "numberingChange", "sectPrChange"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -17657,6 +17830,7 @@ impl FieldKey for BlockKey {
             "imageEffectExtentTopPx" => Some(Self::ImageEffectExtentTopPx),
             "imageEffectExtentBottomPx" => Some(Self::ImageEffectExtentBottomPx),
             "anchorLine" => Some(Self::AnchorLine),
+            "ruleOverlays" => Some(Self::RuleOverlays),
             "imageAlign" => Some(Self::ImageAlign),
             "imageIndentLeftTwips" => Some(Self::ImageIndentLeftTwips),
             "imageWrap" => Some(Self::ImageWrap),
@@ -17782,6 +17956,7 @@ impl<'de> Deserialize<'de> for Block {
                         BlockKey::ImageEffectExtentTopPx => b_0.image_effect_extent_top_px.set(map.next_value()?),
                         BlockKey::ImageEffectExtentBottomPx => b_0.image_effect_extent_bottom_px.set(map.next_value()?),
                         BlockKey::AnchorLine => b_0.anchor_line.set(map.next_value()?),
+                        BlockKey::RuleOverlays => b_0.rule_overlays.set(map.next_value()?),
                         BlockKey::ImageAlign => b_0.image_align.set(map.next_value()?),
                         BlockKey::ImageIndentLeftTwips => b_0.image_indent_left_twips.set(map.next_value()?),
                         BlockKey::ImageWrap => b_0.image_wrap.set(map.next_value()?),
@@ -18707,46 +18882,46 @@ impl<'de> Deserialize<'de> for BlockPPrChangeInfo {
 /// `Block.pPrChangeInfo.old`
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct BlockPPrChangeInfoOld {
+    pub char_indents: Option<CharIndents>,
+    pub direct_char_indents: Option<CharIndents>,
+    pub east_asia_lang: Option<String>,
+    pub border_style: Option<ParaFormatBorderStyle>,
+    pub bidi: Option<bool>,
     pub align: Option<ParaAlign>,
+    pub line_raw_twips: Option<JsNum>,
     pub line_spacing: Option<JsNum>,
     pub line_rule: Option<ParaFormatLineRule>,
-    pub line_raw_twips: Option<JsNum>,
+    pub space_before_auto: Option<bool>,
+    pub space_after_auto: Option<bool>,
+    pub space_before: Option<JsNum>,
+    pub space_after: Option<JsNum>,
     pub indent_left: Option<JsNum>,
     pub indent_right: Option<JsNum>,
     pub indent_first_line: Option<JsNum>,
-    pub char_indents: Option<CharIndents>,
-    pub direct_char_indents: Option<CharIndents>,
-    pub space_before: Option<JsNum>,
-    pub space_after: Option<JsNum>,
-    pub space_before_auto: Option<bool>,
-    pub space_after_auto: Option<bool>,
     pub page_break_before: Option<bool>,
     pub keep_next: Option<bool>,
     pub keep_lines: Option<bool>,
     pub suppress_line_numbers: Option<bool>,
-    pub widow_control: Option<bool>,
     pub snap_to_grid: Option<bool>,
-    pub auto_space: Option<AutoSpace>,
+    pub widow_control: Option<bool>,
+    pub contextual_spacing: Option<bool>,
     pub auto_space_d_e: Option<bool>,
     pub auto_space_d_n: Option<bool>,
+    pub auto_space: Option<AutoSpace>,
     pub word_wrap: Option<bool>,
     pub overflow_punct: Option<bool>,
-    pub east_asia_lang: Option<String>,
-    pub contextual_spacing: Option<bool>,
     pub shading_fill: Option<String>,
     pub shading_display: Option<String>,
     pub shading_clear: Option<bool>,
     pub borders: Option<String>,
-    pub border_style: Option<ParaFormatBorderStyle>,
     pub border_lines: Option<ParaFormatBorderLines>,
     pub border_reset: Option<String>,
     pub border_pad: Option<ParaFormatBorderPad>,
     pub tab_stops: Option<Vec<TabStop>>,
     pub drop_cap: Option<ParaFormatDropCap>,
-    pub frame: Option<ParaFrame>,
     pub frame_box: Option<ParaFrameBox>,
+    pub frame: Option<ParaFrame>,
     pub text_direction: Option<TextFlowDirection>,
-    pub bidi: Option<bool>,
     pub bidi_inherited: Option<bool>,
     pub empty_run_size_half_points: Option<JsNum>,
     pub empty_run_font_family: Option<String>,
@@ -18886,8 +19061,26 @@ const _: () = assert!(BlockPPrChangeInfoOldKey::NAMES.len() <= wire::MAX_KEYS);
 impl Serialize for BlockPPrChangeInfoOld {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
+        if let Some(value) = &self.char_indents {
+            map.serialize_entry("charIndents", value)?;
+        }
+        if let Some(value) = &self.direct_char_indents {
+            map.serialize_entry("directCharIndents", value)?;
+        }
+        if let Some(value) = &self.east_asia_lang {
+            map.serialize_entry("eastAsiaLang", value)?;
+        }
+        if let Some(value) = &self.border_style {
+            map.serialize_entry("borderStyle", value)?;
+        }
+        if let Some(value) = &self.bidi {
+            map.serialize_entry("bidi", value)?;
+        }
         if let Some(value) = &self.align {
             map.serialize_entry("align", value)?;
+        }
+        if let Some(value) = &self.line_raw_twips {
+            map.serialize_entry("lineRawTwips", value)?;
         }
         if let Some(value) = &self.line_spacing {
             map.serialize_entry("lineSpacing", value)?;
@@ -18895,8 +19088,17 @@ impl Serialize for BlockPPrChangeInfoOld {
         if let Some(value) = &self.line_rule {
             map.serialize_entry("lineRule", value)?;
         }
-        if let Some(value) = &self.line_raw_twips {
-            map.serialize_entry("lineRawTwips", value)?;
+        if let Some(value) = &self.space_before_auto {
+            map.serialize_entry("spaceBeforeAuto", value)?;
+        }
+        if let Some(value) = &self.space_after_auto {
+            map.serialize_entry("spaceAfterAuto", value)?;
+        }
+        if let Some(value) = &self.space_before {
+            map.serialize_entry("spaceBefore", value)?;
+        }
+        if let Some(value) = &self.space_after {
+            map.serialize_entry("spaceAfter", value)?;
         }
         if let Some(value) = &self.indent_left {
             map.serialize_entry("indentLeft", value)?;
@@ -18906,24 +19108,6 @@ impl Serialize for BlockPPrChangeInfoOld {
         }
         if let Some(value) = &self.indent_first_line {
             map.serialize_entry("indentFirstLine", value)?;
-        }
-        if let Some(value) = &self.char_indents {
-            map.serialize_entry("charIndents", value)?;
-        }
-        if let Some(value) = &self.direct_char_indents {
-            map.serialize_entry("directCharIndents", value)?;
-        }
-        if let Some(value) = &self.space_before {
-            map.serialize_entry("spaceBefore", value)?;
-        }
-        if let Some(value) = &self.space_after {
-            map.serialize_entry("spaceAfter", value)?;
-        }
-        if let Some(value) = &self.space_before_auto {
-            map.serialize_entry("spaceBeforeAuto", value)?;
-        }
-        if let Some(value) = &self.space_after_auto {
-            map.serialize_entry("spaceAfterAuto", value)?;
         }
         if let Some(value) = &self.page_break_before {
             map.serialize_entry("pageBreakBefore", value)?;
@@ -18937,14 +19121,14 @@ impl Serialize for BlockPPrChangeInfoOld {
         if let Some(value) = &self.suppress_line_numbers {
             map.serialize_entry("suppressLineNumbers", value)?;
         }
-        if let Some(value) = &self.widow_control {
-            map.serialize_entry("widowControl", value)?;
-        }
         if let Some(value) = &self.snap_to_grid {
             map.serialize_entry("snapToGrid", value)?;
         }
-        if let Some(value) = &self.auto_space {
-            map.serialize_entry("autoSpace", value)?;
+        if let Some(value) = &self.widow_control {
+            map.serialize_entry("widowControl", value)?;
+        }
+        if let Some(value) = &self.contextual_spacing {
+            map.serialize_entry("contextualSpacing", value)?;
         }
         if let Some(value) = &self.auto_space_d_e {
             map.serialize_entry("autoSpaceDE", value)?;
@@ -18952,17 +19136,14 @@ impl Serialize for BlockPPrChangeInfoOld {
         if let Some(value) = &self.auto_space_d_n {
             map.serialize_entry("autoSpaceDN", value)?;
         }
+        if let Some(value) = &self.auto_space {
+            map.serialize_entry("autoSpace", value)?;
+        }
         if let Some(value) = &self.word_wrap {
             map.serialize_entry("wordWrap", value)?;
         }
         if let Some(value) = &self.overflow_punct {
             map.serialize_entry("overflowPunct", value)?;
-        }
-        if let Some(value) = &self.east_asia_lang {
-            map.serialize_entry("eastAsiaLang", value)?;
-        }
-        if let Some(value) = &self.contextual_spacing {
-            map.serialize_entry("contextualSpacing", value)?;
         }
         if let Some(value) = &self.shading_fill {
             map.serialize_entry("shadingFill", value)?;
@@ -18975,9 +19156,6 @@ impl Serialize for BlockPPrChangeInfoOld {
         }
         if let Some(value) = &self.borders {
             map.serialize_entry("borders", value)?;
-        }
-        if let Some(value) = &self.border_style {
-            map.serialize_entry("borderStyle", value)?;
         }
         if let Some(value) = &self.border_lines {
             map.serialize_entry("borderLines", value)?;
@@ -18994,17 +19172,14 @@ impl Serialize for BlockPPrChangeInfoOld {
         if let Some(value) = &self.drop_cap {
             map.serialize_entry("dropCap", value)?;
         }
-        if let Some(value) = &self.frame {
-            map.serialize_entry("frame", value)?;
-        }
         if let Some(value) = &self.frame_box {
             map.serialize_entry("frameBox", value)?;
         }
+        if let Some(value) = &self.frame {
+            map.serialize_entry("frame", value)?;
+        }
         if let Some(value) = &self.text_direction {
             map.serialize_entry("textDirection", value)?;
-        }
-        if let Some(value) = &self.bidi {
-            map.serialize_entry("bidi", value)?;
         }
         if let Some(value) = &self.bidi_inherited {
             map.serialize_entry("bidiInherited", value)?;
@@ -21030,6 +21205,8 @@ jscompat::js_object! {
         pub last_row: TableCondFormat,
         pub band1_fill: String,
         pub band2_fill: String,
+        pub band1_horz: TableCondFormat,
+        pub band2_horz: TableCondFormat,
         pub row_band_size: JsNum,
         pub borders: TableBorders,
         pub cell_mar_twips: CellMargins,
@@ -21049,6 +21226,8 @@ pub enum TableStyleDisplayKey {
     LastRow,
     Band1Fill,
     Band2Fill,
+    Band1Horz,
+    Band2Horz,
     RowBandSize,
     Borders,
     CellMarTwips,
@@ -21057,7 +21236,7 @@ pub enum TableStyleDisplayKey {
 }
 
 impl FieldKey for TableStyleDisplayKey {
-    const NAMES: &'static [&'static str] = &["fill", "wholeTable", "firstRow", "firstCol", "lastCol", "lastRow", "band1Fill", "band2Fill", "rowBandSize", "borders", "cellMarTwips", "paraSpacing", "paraJc"];
+    const NAMES: &'static [&'static str] = &["fill", "wholeTable", "firstRow", "firstCol", "lastCol", "lastRow", "band1Fill", "band2Fill", "band1Horz", "band2Horz", "rowBandSize", "borders", "cellMarTwips", "paraSpacing", "paraJc"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -21069,6 +21248,8 @@ impl FieldKey for TableStyleDisplayKey {
             "lastRow" => Some(Self::LastRow),
             "band1Fill" => Some(Self::Band1Fill),
             "band2Fill" => Some(Self::Band2Fill),
+            "band1Horz" => Some(Self::Band1Horz),
+            "band2Horz" => Some(Self::Band2Horz),
             "rowBandSize" => Some(Self::RowBandSize),
             "borders" => Some(Self::Borders),
             "cellMarTwips" => Some(Self::CellMarTwips),
@@ -21111,6 +21292,8 @@ impl<'de> Deserialize<'de> for TableStyleDisplay {
                         TableStyleDisplayKey::LastRow => b_0.last_row.set(map.next_value()?),
                         TableStyleDisplayKey::Band1Fill => b_0.band1_fill.set(map.next_value()?),
                         TableStyleDisplayKey::Band2Fill => b_0.band2_fill.set(map.next_value()?),
+                        TableStyleDisplayKey::Band1Horz => b_0.band1_horz.set(map.next_value()?),
+                        TableStyleDisplayKey::Band2Horz => b_0.band2_horz.set(map.next_value()?),
                         TableStyleDisplayKey::RowBandSize => b_0.row_band_size.set(map.next_value()?),
                         TableStyleDisplayKey::Borders => b_0.borders.set(map.next_value()?),
                         TableStyleDisplayKey::CellMarTwips => b_0.cell_mar_twips.set(map.next_value()?),
@@ -24357,6 +24540,7 @@ pub fn round_trip(type_name: &str, json: &str) -> Result<String, String> {
         "EffectiveRPr.caps" => wire::round_trip::<EffectiveRPrCaps>(json),
         "EffectiveRPr.vertAlign" => wire::round_trip::<EffectiveRPrVertAlign>(json),
         "PropSource" => wire::round_trip::<PropSource>(json),
+        "EffectiveRPr.styleXor[]" => wire::round_trip::<EffectiveRPrStyleXorItem>(json),
         "Run.vertAlign" => wire::round_trip::<RunVertAlign>(json),
         "Run.em" => wire::round_trip::<RunEm>(json),
         "Run.link" => wire::round_trip::<RunLink>(json),
@@ -24466,6 +24650,7 @@ pub fn round_trip(type_name: &str, json: &str) -> Result<String, String> {
         "HfImage.wordArt" => wire::round_trip::<HfImageWordArt>(json),
         "HfImage.align" => wire::round_trip::<HfImageAlign>(json),
         "HfImage.crop" => wire::round_trip::<HfImageCrop>(json),
+        "HfImage.wrapDistPx" => wire::round_trip::<HfImageWrapDistPx>(json),
         "HfTextBox.vAlign" => wire::round_trip::<HfTextBoxVAlign>(json),
         "HfParagraph.ptabAligns[]" => wire::round_trip::<HfParagraphPtabAlignsItem>(json),
         "HfTableCell" => wire::round_trip::<HfTableCell>(json),
@@ -24559,6 +24744,7 @@ pub fn round_trip(type_name: &str, json: &str) -> Result<String, String> {
         "InkInfo" => wire::round_trip::<InkInfo>(json),
         "BlockType" => wire::round_trip::<BlockType>(json),
         "StrayIndent" => wire::round_trip::<StrayIndent>(json),
+        "RuleOverlay" => wire::round_trip::<RuleOverlay>(json),
         "Block" => wire::round_trip::<Block>(json),
         "Block.list" => wire::round_trip::<BlockList>(json),
         "Block.list.kind" => wire::round_trip::<BlockListKind>(json),

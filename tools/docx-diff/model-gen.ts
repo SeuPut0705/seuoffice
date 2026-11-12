@@ -1,6 +1,7 @@
 // Writes the Rust model, crates/docx-engine/src/model/generated.rs, from the
-// schema model-schema.ts reads out of packages/docx-engine/src/types.ts and
-// from the key orders in model-orders.json.
+// schema model-schema.ts reads out of packages/docx-engine/src/types.ts at the
+// commit of main MODEL_SOURCE pins, and from the key orders in
+// model-orders.json.
 //
 //   tsx model-gen.ts                 write generated.rs
 //   tsx model-gen.ts --sync-orders   bring model-orders.json in line with the schema first
@@ -8,10 +9,9 @@
 //                                    derive model-orders.json from captured parse results
 //                                    (ModelInput lines); report in out/model-orders-report.json
 //   tsx model-gen.ts --out PATH      write the Rust model to PATH instead of generated.rs
-//   tsx model-gen.ts --check         write nothing; exit 1 when generated.rs is stale or the
-//                                    inline-wrappers overlay drifted from its branch
+//   tsx model-gen.ts --check         write nothing; exit 1 when generated.rs is stale for the
+//                                    declarations at the pinned commit
 // Every run refuses a model-orders.json that does not list each object type's fields once.
-import { execFileSync } from 'node:child_process'
 import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
@@ -19,8 +19,8 @@ import { fileURLToPath } from 'node:url'
 import { builtModelInputs } from './model-built'
 import {
   extractModelSchema,
-  INLINE_WRAPPERS,
   loadOrders,
+  MODEL_SOURCE,
   type ModelSchema,
   ORDERS_PATH,
   type OrderTable,
@@ -654,25 +654,6 @@ function formatOrders(orders: OrderTable): string {
   return ['{', ...lines, '}', ''].join('\n')
 }
 
-/** types.ts at the commit the overlay was copied from; fails when the clone lacks it. */
-function branchTypes(): string {
-  const at = `${INLINE_WRAPPERS.commit}:packages/docx-engine/src/types.ts`
-  try {
-    return execFileSync('git', ['show', at], {
-      cwd: REPO_ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      maxBuffer: 64 << 20,
-    })
-  } catch (error) {
-    throw new Error(
-      `cannot read ${at} (${INLINE_WRAPPERS.branch}); fetch it, a shallow clone lacks it: ${String(error)}`,
-    )
-  }
-}
-
-const schemaText = (schema: ModelSchema): string => JSON.stringify([...schema.types])
-
 type Source = 'parser' | 'built'
 
 /** Every key order each object type was met in, by where the value came from. */
@@ -848,10 +829,8 @@ async function main(): Promise<void> {
   const source = generate(schema, orders)
   if (check) {
     const current = existsSync(GENERATED_PATH) ? readFileSync(GENERATED_PATH, 'utf8') : ''
-    if (current.replaceAll('\r\n', '\n') !== source) stale.push(`${GENERATED_PATH} is stale`)
-    const branch = branchTypes()
-    if (schemaText(extractModelSchema({ typesSource: branch, overlay: false })) !== schemaText(schema)) {
-      stale.push(`INLINE_WRAPPERS no longer reads as types.ts of ${INLINE_WRAPPERS.commit} does`)
+    if (current.replaceAll('\r\n', '\n') !== source) {
+      stale.push(`${GENERATED_PATH} is stale for the declarations at ${MODEL_SOURCE.commit}`)
     }
   } else {
     mkdirSync(dirname(out), { recursive: true })
@@ -862,6 +841,7 @@ async function main(): Promise<void> {
     process.exit(1)
   }
   const objects = [...schema.types.values()].filter((definition) => definition.kind === 'object').length
+  console.log(`declarations of ${MODEL_SOURCE.ref} at ${MODEL_SOURCE.commit}`)
   console.log(`${schema.types.size} model types (${objects} objects): ${check ? 'up to date' : 'written'}`)
 }
 

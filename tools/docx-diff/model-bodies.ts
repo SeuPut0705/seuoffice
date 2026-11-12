@@ -29,6 +29,27 @@ const p = (pPr: string, runs: string): string => `<w:p>${pPr ? `<w:pPr>${pPr}</w
 const r = (text: string, rPr = ''): string =>
   `<w:r>${rPr ? `<w:rPr>${rPr}</w:rPr>` : ''}<w:t xml:space="preserve">${text}</w:t></w:r>`
 
+const FRAME_BOX =
+  '<w:framePr w:w="2000" w:h="400" w:hRule="exact" w:wrap="around" w:vAnchor="text" w:hAnchor="margin" w:x="100" w:y="600"/>'
+const DROP_CAP = '<w:framePr w:dropCap="drop" w:lines="2" w:wrap="around" w:vAnchor="text" w:hAnchor="text"/>'
+const SHADED = '<w:shd w:val="pct25" w:color="FF0000" w:fill="FFFFFF"/>'
+const CLEARED = '<w:shd w:val="clear" w:color="auto" w:fill="auto"/>'
+
+/**
+ * Every w:pPr child extractParaFormat (parse.ts) reads, in schema order, with
+ * one frame, one shading and the direction given: the parser writes their
+ * keys in its own order, which a document with fewer of them leaves open.
+ */
+const everyParaProperty = (style: string, frame: string, shading: string, bidi: string): string =>
+  `${style}<w:keepNext/><w:keepLines/><w:pageBreakBefore/>${frame}<w:widowControl w:val="0"/><w:suppressLineNumbers/>` +
+  '<w:pBdr><w:top w:val="single" w:sz="4" w:space="1" w:color="000000"/><w:bottom w:val="nil" w:space="4"/><w:left w:val="none"/></w:pBdr>' +
+  `${shading}<w:tabs><w:tab w:val="left" w:pos="1440"/></w:tabs>` +
+  '<w:wordWrap w:val="0"/><w:overflowPunct w:val="0"/><w:autoSpaceDE w:val="0"/><w:autoSpaceDN w:val="0"/>' +
+  `${bidi}<w:snapToGrid w:val="0"/>` +
+  '<w:spacing w:before="0" w:beforeAutospacing="1" w:after="0" w:afterAutospacing="1" w:line="276" w:lineRule="auto"/>' +
+  '<w:ind w:left="240" w:right="120" w:hanging="120"/><w:contextualSpacing/><w:jc w:val="right"/><w:textDirection w:val="tbRl"/>' +
+  '<w:rPr><w:lang w:eastAsia="ko-KR"/></w:rPr>'
+
 /** vmlWordArtBox (parse-vml.ts) writes `{ runs, align }`; a text box paragraph (collectTxbxParas) writes runs, its format, then styleId */
 const WORDART_BESIDE_TEXT_BOX = p(
   '',
@@ -61,6 +82,11 @@ const WORDART_BESIDE_TEXT_BOX = p(
       '<w:framePr w:w="2000" w:h="400" w:hRule="exact" w:hSpace="120" w:wrap="around" w:vAnchor="text" w:hAnchor="margin" w:x="100" w:y="100"/>',
       r('Framed in a box'),
     ) +
+    // extractParaFormat writes every key it reads in one order, bidi (or bidiInherited) first
+    p(everyParaProperty('', FRAME_BOX, SHADED, '<w:bidi/>'), r('Boxed')) +
+    p(everyParaProperty('', DROP_CAP, CLEARED, '<w:bidi/>'), r('R')) +
+    p(everyParaProperty('<w:pStyle w:val="RtlPara"/>', FRAME_BOX, SHADED, ''), r('Boxed, direction inherited')) +
+    p(everyParaProperty('<w:pStyle w:val="RtlPara"/>', DROP_CAP, CLEARED, ''), r('I')) +
     '<w:tbl><w:tblPr><w:tblW w:w="3000" w:type="dxa"/></w:tblPr><w:tblGrid><w:gridCol w:w="1500"/><w:gridCol w:w="1500"/></w:tblGrid>' +
     `<w:tr><w:tc>${p('', r('Box cell A'))}</w:tc><w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="CCCCCC"/></w:tcPr>${p('', r('Box cell B'))}</w:tc></w:tr></w:tbl>` +
     '</w:txbxContent></v:textbox></v:shape></w:pict></w:r>' +
@@ -139,7 +165,21 @@ const PARAGRAPH_PROPERTY_CHANGES =
   p(
     `<w:pPrChange w:id="42" ${AT}><w:pPr><w:pStyle w:val="Heading1"/><w:ind w:left="360"/></w:pPr></w:pPrChange>`,
     r('Was a heading'),
-  )
+  ) +
+  // extractParaFormat writes every key it reads in one order, bidi first
+  p(`<w:pPrChange w:id="44" ${AT}><w:pPr>${everyParaProperty('', FRAME_BOX, SHADED, '<w:bidi/>')}</w:pPr></w:pPrChange>`, r('Was boxed')) +
+  p(`<w:pPrChange w:id="45" ${AT}><w:pPr>${everyParaProperty('', DROP_CAP, CLEARED, '<w:bidi/>')}</w:pPr></w:pPrChange>`, r('Was a drop cap'))
+
+/**
+ * sdtMeta (parse-sdt.ts) writes alias, tag, controlType, lock, id: a block
+ * control of one paragraph (parseDocx) and one of two (parseSdtBlock)
+ */
+const BLOCK_CONTROLS =
+  '<w:sdt><w:sdtPr><w:alias w:val="Choice"/><w:tag w:val="choice"/><w:id w:val="701"/><w:lock w:val="sdtLocked"/>' +
+  '<w:dropDownList><w:listItem w:displayText="A" w:value="A"/></w:dropDownList></w:sdtPr>' +
+  `<w:sdtContent>${p('', r('A'))}</w:sdtContent></w:sdt>` +
+  '<w:sdt><w:sdtPr><w:alias w:val="Notes"/><w:tag w:val="notes"/><w:id w:val="702"/><w:richText/></w:sdtPr>' +
+  `<w:sdtContent>${p('', r('First note'))}${p('', r('Second note'))}</w:sdtContent></w:sdt>`
 
 /** a run formatting revision (w:rPrChange) and a framed paragraph (w:framePr) */
 const RUN_CHANGE_AND_FRAME =
@@ -237,10 +277,30 @@ const CHART_XML =
   '<c:legend><c:legendPos val="t"/><c:overlay val="0"/><c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="1000"/></a:pPr></a:p></c:txPr></c:legend>' +
   '</c:chart><c:spPr><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr></c:chartSpace>'
 
-const CHART_PARAGRAPH =
-  '<w:p><w:r><w:drawing><wp:inline><wp:extent cx="5486400" cy="3200400"/><wp:docPr id="11" name="Chart 1"/>' +
+/**
+ * parseChartPartXml spreads axesOf, whose keys follow the axes of the part:
+ * catAx (axPos b, so xAxis) before valAx (axPos l, so yAxis), the order of
+ * most charts and the reverse of CHART_XML. No c:legend gives noLegend.
+ */
+const LINE_CHART_XML =
+  XML_DECL +
+  '<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" ' +
+  'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ' +
+  `${R}><c:chart>` +
+  '<c:plotArea><c:layout/><c:lineChart><c:grouping val="standard"/>' +
+  '<c:ser><c:idx val="0"/><c:order val="0"/><c:marker><c:symbol val="circle"/></c:marker>' +
+  '<c:cat><c:strRef><c:f>Sheet1!$A$2:$A$3</c:f><c:strCache><c:ptCount val="2"/><c:pt idx="0"><c:v>Q1</c:v></c:pt><c:pt idx="1"><c:v>Q2</c:v></c:pt></c:strCache></c:strRef></c:cat>' +
+  '<c:val><c:numRef><c:f>Sheet1!$B$2:$B$3</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="2"/><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>5</c:v></c:pt></c:numCache></c:numRef></c:val>' +
+  '</c:ser><c:marker val="1"/><c:axId val="333"/><c:axId val="444"/></c:lineChart>' +
+  '<c:catAx><c:axId val="333"/><c:delete val="0"/><c:axPos val="b"/><c:crossAx val="444"/></c:catAx>' +
+  '<c:valAx><c:axId val="444"/><c:delete val="0"/><c:axPos val="l"/><c:majorGridlines/><c:crossAx val="333"/></c:valAx>' +
+  '</c:plotArea>' +
+  '</c:chart></c:chartSpace>'
+
+const chartParagraph = (rId: string, id: number): string =>
+  `<w:p><w:r><w:drawing><wp:inline><wp:extent cx="5486400" cy="3200400"/><wp:docPr id="${id}" name="Chart ${id}"/>` +
   '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">' +
-  '<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="rId31"/>' +
+  `<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="${rId}"/>` +
   '</a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>'
 
 const picture = (rId: string, extra = ''): string =>
@@ -373,14 +433,23 @@ export const MODEL_BODIES: ModelBody[] = [
     bodyXml:
       TABLE_WITH_EVERY_CELL_PROPERTY +
       PARAGRAPH_PROPERTY_CHANGES +
+      BLOCK_CONTROLS +
       RUN_CHANGE_AND_FRAME +
       TOC_LINES +
-      CHART_PARAGRAPH,
-    extraRels: `<Relationship Id="rId31" Type="${REL}/chart" Target="charts/chart1.xml"/>`,
+      chartParagraph('rId31', 11) +
+      chartParagraph('rId32', 12),
+    extraRels:
+      `<Relationship Id="rId31" Type="${REL}/chart" Target="charts/chart1.xml"/>` +
+      `<Relationship Id="rId32" Type="${REL}/chart" Target="charts/chart2.xml"/>`,
     extraParts: [
       {
         path: 'word/charts/chart1.xml',
         xml: CHART_XML,
+        contentType: 'application/vnd.openxmlformats-officedocument.drawingml.chart+xml',
+      },
+      {
+        path: 'word/charts/chart2.xml',
+        xml: LINE_CHART_XML,
         contentType: 'application/vnd.openxmlformats-officedocument.drawingml.chart+xml',
       },
       {
