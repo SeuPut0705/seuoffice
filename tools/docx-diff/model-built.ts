@@ -17,7 +17,8 @@ export function builtModelInputs(schema: ModelSchema = extractModelSchema()): Mo
   const valueOf = (node: SchemaNode, variant: number, stack: ReadonlySet<string>): unknown => {
     switch (node.kind) {
       case 'string': return variant % 2 === 0 ? '' : 'A&<"\t\n\u{1f600}'
-      case 'number': return [0, -2.5, 1e21, 1e-7, 9_007_199_254_740_992][variant % 5]
+      // 2^53 is the last integer written digit for digit; 2^55 is written as its shortest round-trip digits
+      case 'number': return [0, -2.5, 1e21, 1e-7, 9_007_199_254_740_992, 36_028_797_018_963_968][variant % 6]
       case 'boolean': return variant % 2 !== 0
       case 'literal': return node.value
       case 'ref': {
@@ -42,7 +43,8 @@ export function builtModelInputs(schema: ModelSchema = extractModelSchema()): Mo
         const item = valueOf(node.value, variant, stack)
         return Object.fromEntries((node.key === 'number' ? ['10', '2', '-1'] : ['z', '10', '__proto__', '2', '01']).map((key) => [key, item]))
       }
-      case 'bytes': return { $bytes: variant % 2 === 0 ? '' : 'AP8BgA==' }
+      // one padding character and two: the unused bits differ (2 and 4)
+      case 'bytes': return { $bytes: ['', 'AP8BgA==', 'YWI='][variant % 3] }
       case 'opaque': return { z: variant, a: null }
       case 'union': return valueOf(node.variants[variant % node.variants.length]!, variant, stack)
     }
@@ -60,7 +62,7 @@ export function builtModelInputs(schema: ModelSchema = extractModelSchema()): Mo
     return objectOf(type.name, entries)
   }
   for (const [name, type] of schema.types) {
-    for (let variant = 0; variant < 5; variant++) {
+    for (let variant = 0; variant < 6; variant++) {
       inputs.push({ where: `built ${name} ${variant}`, population: 'built', type: name,
         json: modelJson(definitionValue(type, variant, new Set([name]))) })
     }

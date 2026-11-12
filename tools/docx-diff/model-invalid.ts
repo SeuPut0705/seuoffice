@@ -80,9 +80,11 @@ export function invalidModelInputs(schema: ModelSchema = extractModelSchema()): 
         }
       }
       if (bytesField(field.type)) {
-        // 'B' before '==' leaves padding bits set: Buffer never writes it
-        refuse(`${name}.${field.name} bytes padding`, name,
-          JSON.stringify({ ...withField, [field.name]: { $bytes: 'AP8BgB==' } }))
+        // padding bits set, which Buffer never writes: each of the four bits '==' leaves unused, each of the two of '='
+        for (const base64 of ['AP8BgB==', 'AP8BgC==', 'AP8BgE==', 'AP8BgI==', 'YWJ=', 'YWK=']) {
+          refuse(`${name}.${field.name} bytes padding ${base64}`, name,
+            JSON.stringify({ ...withField, [field.name]: { $bytes: base64 } }))
+        }
       }
     }
 
