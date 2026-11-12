@@ -51,7 +51,11 @@ export function isLang(value: unknown): value is Lang {
   return typeof value === 'string' && (LANGS as readonly string[]).includes(value)
 }
 
-/** map a raw locale string ('zh-CN', 'zh-Hans', 'ja-JP', 'ko-KR', …) to a supported Lang */
+/**
+ * The one place a language value from outside becomes a Lang: a stored choice,
+ * the system locale, an environment override, a host's `?lang=`. Every reader
+ * of such a value goes through here.
+ */
 export function normalizeLang(raw: string | null | undefined): Lang {
   const value = raw?.trim().toLowerCase()
   if (!value) return 'en'
@@ -66,6 +70,15 @@ export function normalizeLang(raw: string | null | undefined): Lang {
   // 'iw' is the legacy ISO code for Hebrew
   if (/^iw\b/.test(value) || /^iw[-_]/.test(value)) return 'he'
   return 'en'
+}
+
+/**
+ * The language an install shows: the choice it stored, else the system's. A
+ * stored choice is read through normalizeLang like any other value, so one
+ * that is not a UI language shows English instead of the system's language.
+ */
+export function installLang(stored: unknown, system: string | null | undefined): Lang {
+  return normalizeLang(typeof stored === 'string' && stored.trim() ? stored : system)
 }
 
 const HTML_LANGS: Record<Lang, string> = {

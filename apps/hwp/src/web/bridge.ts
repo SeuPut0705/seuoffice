@@ -15,7 +15,6 @@ import {
   webLanguage,
 } from '@seuoffice/web-platform'
 import type { WebDocument } from '@seuoffice/web-platform'
-import type { Lang } from '@genoffice/i18n'
 import { READ_ONLY_ATTRIBUTE } from '../../studio-plugin/read-only.mjs'
 import { hwpFormatOfPath } from '../shared/ipc'
 import type { CommitSaveResult, HwpApi, HwpFormat, SaveMode } from '../shared/ipc'
@@ -131,7 +130,7 @@ const hwpApi: Partial<HwpApi> = {
   },
   trackingDropped: async () => trackingDropped,
   structureUnverified: async () => opened?.hwp.unverified ?? false,
-  getLanguage: async () => webLanguage() as Lang,
+  getLanguage: async () => webLanguage(),
   onLanguageChanged: unsubscribe,
   getTheme: async () => 'system',
   onThemeChanged: unsubscribe,

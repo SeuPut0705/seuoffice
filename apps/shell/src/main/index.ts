@@ -70,7 +70,14 @@ import menuDiagramIcon1x from './assets/menu-diagram.png?asset'
 import menuDiagramIcon2x from './assets/menu-diagram@2x.png?asset'
 import menuHomeIcon1x from './assets/menu-home.png?asset'
 import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
-import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoffice/i18n'
+import {
+  createI18n,
+  installLang,
+  isLang,
+  normalizeLang,
+  setUiLang,
+  type Lang,
+} from '@genoffice/i18n'
 import {
   DEV_USER_DATA_DIR_NAME,
   PRODUCT_NAME,
@@ -1066,9 +1073,7 @@ function currentLang(): Lang {
     setUiLang(uiLang)
     return uiLang
   }
-  const saved = readAppSettings(APP_SETTINGS_PATH()).language
-  if (isLang(saved)) uiLang = saved
-  uiLang ??= normalizeLang(app.getLocale())
+  uiLang = installLang(readAppSettings(APP_SETTINGS_PATH()).language, app.getLocale())
   setUiLang(uiLang)
   return uiLang
 }

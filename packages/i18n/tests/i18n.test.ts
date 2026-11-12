@@ -4,6 +4,7 @@ import {
   format,
   htmlDir,
   htmlLang,
+  installLang,
   isLang,
   isRtlLang,
   LANGS,
@@ -76,6 +77,26 @@ describe('normalizeLang', () => {
     expect(normalizeLang('de-DE')).toBe('de')
     expect(normalizeLang('de_DE')).toBe('de')
     expect(normalizeLang('es-419')).toBe('es')
+  })
+})
+
+describe('installLang', () => {
+  it('shows the stored choice, read like any other language value', () => {
+    expect(installLang('ko', 'en-US')).toBe('ko')
+    expect(installLang('en', 'ko-KR')).toBe('en')
+    expect(installLang('ko-KR', 'en-US')).toBe('ko')
+  })
+
+  it('shows English for a stored choice that is no UI language, whatever the system is', () => {
+    expect(installLang('xx', 'ko-KR')).toBe('en')
+  })
+
+  it('follows the system on a first run, when nothing usable is stored', () => {
+    expect(installLang(undefined, 'ko-KR')).toBe('ko')
+    expect(installLang('', 'ko')).toBe('ko')
+    expect(installLang(42, 'ko_KR')).toBe('ko')
+    expect(installLang(undefined, 'sv-SE')).toBe('en')
+    expect(installLang(undefined, undefined)).toBe('en')
   })
 })
 
