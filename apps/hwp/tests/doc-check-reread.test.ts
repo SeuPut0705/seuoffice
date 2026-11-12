@@ -106,6 +106,28 @@ describe('the document check, opened in an app that has already counted changes'
     expect(handed).toHaveLength(1)
     expect(handed[0]).toContain('표 안의 표')
   })
+
+  it('keeps its findings and its switch where they are while the user turns the switch on', async () => {
+    // A read hides the findings: the panel shrinks and its footer moves under a click aimed at
+    // the switch ("Include the checks that are off by default"), which then lands elsewhere.
+    const doc = readingBridge()
+    await mount(doc.bridge, 2, () => undefined)
+    await doc.answer()
+    const findings = () => container.querySelectorAll('.doc-check-finding').length
+    const shown = findings()
+    expect(shown).toBeGreaterThan(0)
+    // the moment a second read would start, and well after it
+    await later()
+    expect(container.textContent).not.toContain(t('checkRunning'))
+    expect(findings()).toBe(shown)
+    const toggle = container.querySelector<HTMLInputElement>('.doc-check-extra input')!
+    await act(async () => toggle.click())
+    expect(toggle.checked).toBe(true)
+    // the switch judges the facts already read: no read for it either
+    await later()
+    expect(doc.reads()).toBe(1)
+    expect(toggle.checked).toBe(true)
+  })
 })
 
 describe('the document check, when the document changes while it is open', () => {
