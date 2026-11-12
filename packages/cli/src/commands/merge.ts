@@ -559,10 +559,14 @@ async function mergeXlsx(
   for (const sheet of (await workbookSummary(path)).sheets) {
     if (!sheet.rows || !sheet.columns) continue
     const range = `A1:${columnLabel(sheet.columns - 1)}${sheet.rows}`
-    const read = await readSheet(path, { sheet: sheet.name, range })
+    // a cell hidden from AI reads as its placeholder: that is not the template's key,
+    // and the cell is not the template's to fill
+    const withheld = new Set<string>()
+    const read = await readSheet(path, { sheet: sheet.name, range, withheldRefs: withheld })
     read.rows.forEach((row, r) =>
       row.forEach((value, c) => {
         const address = `${columnLabel(c)}${r + 1}`
+        if (withheld.has(address)) return
         const formula = read.formulas[address]
         if (formula) {
           // a formula is never rewritten, so a placeholder inside its text stays; say so

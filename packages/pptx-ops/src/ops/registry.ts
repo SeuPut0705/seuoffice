@@ -182,6 +182,8 @@ export interface OpContext {
   parts: Map<string, Slide>
   /** Parts resolved during apply; the executor flushes these back to entries once per transaction. */
   touchedParts: Set<string>
+  /** The ops come from an agent: text hidden from AI is not searched, rewritten or dropped (withhold-guard.ts). */
+  withhold?: boolean
 }
 
 export interface OpDef {

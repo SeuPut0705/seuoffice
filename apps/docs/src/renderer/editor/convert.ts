@@ -1017,6 +1017,7 @@ function blockToPmNode(
           pageBreakBefore: block.format?.pageBreakBefore ?? false,
           label: block.label ?? block.type,
           previewText: block.previewText ?? '',
+          redact: block.redact ?? null,
           imageDataUrl: block.imageDataUrl ?? null,
           oleProgId: block.oleProgId ?? null,
           imageWidthPx: block.imageWidthPx ?? null,

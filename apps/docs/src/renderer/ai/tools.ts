@@ -909,7 +909,7 @@ function rangeError(editor: Editor): string {
 function imageBlockSource(
   editor: Editor,
   index: unknown,
-): { src: string; label: string | undefined } | null {
+): { src: string; label: string | undefined; hidden: boolean } | null {
   if (!Number.isInteger(index)) return null
   const i = Number(index)
   const doc = editor.state.doc
@@ -918,7 +918,12 @@ function imageBlockSource(
   if (node.type.name !== 'docProtected' || node.attrs.blockType !== 'image') return null
   const src = typeof node.attrs.imageDataUrl === 'string' ? node.attrs.imageDataUrl : ''
   if (!src) return null
-  return { src, label: typeof node.attrs.label === 'string' ? node.attrs.label : undefined }
+  return {
+    src,
+    label: typeof node.attrs.label === 'string' ? node.attrs.label : undefined,
+    // a picture in a run hidden from AI: the bytes never go to a model
+    hidden: typeof node.attrs.redact === 'string',
+  }
 }
 
 function validRange(
@@ -1016,6 +1021,12 @@ async function executeAsyncTool(
         : []
       if (call.input.blockIndex !== undefined) {
         const image = imageBlockSource(editor, call.input.blockIndex)
+        if (image?.hidden) {
+          return fail(
+            t('aiSumAnalyzeMedia'),
+            `block ${String(call.input.blockIndex)} holds a picture the person hid from AI and cannot be analysed here; tell the person what to look at and let them describe it`,
+          )
+        }
         if (!image) {
           return fail(
             t('aiSumAnalyzeMedia'),

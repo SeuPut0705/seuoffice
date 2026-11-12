@@ -1,4 +1,5 @@
 import { checkPlaceholders, placeholderSource, REDACT_MARK } from './redact'
+import { protectedPreviewOf } from './redact-view'
 import type { Editor } from '@tiptap/core'
 import { Mark, type Node as PmDocNode, type Schema } from '@tiptap/pm/model'
 import type { Transaction } from '@tiptap/pm/state'
@@ -433,7 +434,7 @@ function topLevelBlocks(doc: PmDocNode): TopBlock[] {
 
 function blockText(node: PmDocNode): string {
   if (node.type.name === 'docProtected') {
-    return [node.attrs.label, node.attrs.previewText].filter(Boolean).join(' ')
+    return [node.attrs.label, protectedPreviewOf(node.attrs)].filter(Boolean).join(' ')
   }
   // match against current content only, or targets would hit already-deleted revision text
   return liveText(node)
