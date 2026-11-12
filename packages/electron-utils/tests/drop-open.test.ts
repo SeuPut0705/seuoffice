@@ -187,6 +187,20 @@ describe('partitionDropPayload', () => {
     expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.ppt')).toBe(false)
   })
 
+  // The Word tab imports a legacy .doc/.dot as a converted .docx copy: the Open
+  // dialog and the file association open both, so a drop must too.
+  it('treats a dropped legacy .doc/.dot as openable (the Word tab imports a .docx copy), not as unsupported', () => {
+    const result = partitionDropPayload(['/docs/old.doc', 'C:/x/FORM.DOT', 'z.rtf'])
+    expect(result.supported).toEqual(['/docs/old.doc', 'C:/x/FORM.DOT'])
+    expect(result.unsupportedExts).toEqual(['rtf'])
+  })
+
+  it('opens a dropped Hangul document in either form', () => {
+    const result = partitionDropPayload(['/docs/report.hwp', 'C:/x/REPORT.HWPX'])
+    expect(result.supported).toEqual(['/docs/report.hwp', 'C:/x/REPORT.HWPX'])
+    expect(result.unsupportedExts).toEqual([])
+  })
+
   it('routes dropped mind maps, a FreeMind / Freeplane map included, as openable', () => {
     const result = partitionDropPayload(['/maps/plan.xmind', '/maps/PLAN.MM', '/maps/plan.mmap'])
     expect(result.supported).toEqual(['/maps/plan.xmind', '/maps/PLAN.MM'])
@@ -214,9 +228,9 @@ describe('partitionDropPayload', () => {
   })
 
   it('collects known-unsupported extensions uniquely, first-seen order', () => {
-    const result = partitionDropPayload(['old.doc', 'x.pages', 'y.rtf', 'z.doc'])
+    const result = partitionDropPayload(['old.xlsb', 'x.pages', 'y.rtf', 'z.xlsb'])
     expect(result.supported).toEqual([])
-    expect(result.unsupportedExts).toEqual(['doc', 'pages', 'rtf'])
+    expect(result.unsupportedExts).toEqual(['xlsb', 'pages', 'rtf'])
   })
 
   it('sets SKILL.md files and zip files apart for the shell to look into', () => {
@@ -359,10 +373,27 @@ describe('installDropOpenBridge', () => {
     electronMocks.getPathForFile.mockImplementation((f: { name: string }) => `/tmp/${f.name}`)
     const win = install()
     try {
-      const ev = fileDrag(['legacy.doc'])
+      const ev = fileDrag(['legacy.rtf'])
       win.fire('drop', ev)
       await vi.waitFor(() =>
-        expect(electronMocks.send).toHaveBeenCalledWith(DROP_OPEN_CHANNEL, ['/tmp/legacy.doc']),
+        expect(electronMocks.send).toHaveBeenCalledWith(DROP_OPEN_CHANNEL, ['/tmp/legacy.rtf']),
+      )
+    } finally {
+      uninstall(win)
+    }
+  })
+
+  it('forwards a dropped legacy Word template, which the Open dialog also offers', async () => {
+    electronMocks.getPathForFile.mockImplementation((f: { name: string }) => `/tmp/${f.name}`)
+    const win = install()
+    try {
+      const ev = fileDrag(['letterhead.dot', 'legacy.doc'])
+      win.fire('drop', ev)
+      await vi.waitFor(() =>
+        expect(electronMocks.send).toHaveBeenCalledWith(DROP_OPEN_CHANNEL, [
+          '/tmp/letterhead.dot',
+          '/tmp/legacy.doc',
+        ]),
       )
     } finally {
       uninstall(win)
