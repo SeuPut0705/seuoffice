@@ -69,6 +69,7 @@ import {
   maxRelationshipIdNumber,
   withRelationshipIds,
 } from './xml-utils'
+import { ownValue, setOwn } from './own-value'
 import { elementSpid } from './animation'
 import { stripStaleEmbeddedFonts } from './embedded-fonts'
 import { ensureCreationId, matchesElementRef } from './identity'
@@ -2288,7 +2289,9 @@ export function mergeSlideFromSource(
       const ext = (srcMediaPath.split('.').pop() || 'png').toLowerCase()
       const destPath = nextMediaPath(archive, ext)
       archive.entries.set(destPath, bytes)
-      ensureDefaultContentType(archive, ext, MIME_BY_EXT[ext] ?? 'application/octet-stream')
+      // the extension is the source deck's: the table answers its own extensions only
+      const mime = ownValue(MIME_BY_EXT, ext) ?? 'application/octet-stream'
+      ensureDefaultContentType(archive, ext, mime)
       const newRid = nextRid()
       ridMap.set(rel.id, newRid)
       const relTarget = '../media/' + destPath.slice('ppt/media/'.length)
@@ -4298,8 +4301,10 @@ export function pasteElements(
   const bundledParts: Record<string, string> = {}
   const bundledCT: Record<string, string> = {}
   for (const item of items) {
-    Object.assign(bundledParts, item.parts ?? {})
-    Object.assign(bundledCT, item.contentTypes ?? {})
+    // own entries, also under a name such as `__proto__`, which Object.assign would set the
+    // prototype with: a content type keyed by the extension of the document
+    for (const [k, v] of Object.entries(item.parts ?? {})) setOwn(bundledParts, k, v)
+    for (const [k, v] of Object.entries(item.contentTypes ?? {})) setOwn(bundledCT, k, v)
   }
   const pathMap = Object.keys(bundledParts).length
     ? importClipboardParts(archive, bundledParts, bundledCT)

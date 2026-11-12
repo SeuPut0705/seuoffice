@@ -36,6 +36,7 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 - 남이 만든 파트를 고칠 때 요소 이름의 접두사(`p:`)를 가정하지 않는다. 파트는 같은 이름공간을 기본 이름공간(`xmlns="…"`)이나 다른 접두사로 묶을 수 있으므로, 그 파트가 루트에서 묶은 접두사(`rootPrefixOf`)로 요소를 찾고(`elementRange`, 글자 비교) 같은 접두사로 써 넣는다. 찾을 곳이 없으면 아무것도 쓰기 전에 거절한다(반쯤 쓰지 않는다). 엔진이 새로 만드는 파트는 자기 선언과 함께 `p:`로 쓴다. 시험: `tests/notes-default-namespace.test.ts`.
 - 요소를 속성값으로 찾을 때(확장 `a:ext`의 `uri`, 자리표시자의 `type` 등) `uri="…"`처럼 따옴표와 철자를 박은 정규식으로 찾지 않는다. 태그를 이름으로 찾은 뒤 `attributeOf`로 읽어 글자로 비교한다. 읽는 쪽(파서)은 작은따옴표나 `=` 앞뒤 공백도 같은 값으로 읽으므로, 쓰는 쪽이 한 철자만 찾으면 사용자가 지운 표시가 남거나 같은 확장이 둘 써진다. 시험: `tests/redaction-ext-forms.test.ts`.
 - 문서에서 온 값(색 이름, 스타일 id, `clrMap`이 가리키는 칸 이름 등)으로 일반 객체 표를 찾을 때는 `ownValue`(`own-value.ts`)를 거친다. `constructor`, `toString`, `__proto__` 같은 이름은 모든 객체가 물려받아서, 그대로 `TABLE[value]`로 찾으면 함수나 `Object.prototype`이 나오고 그 뒤에서 슬라이드 읽기가 터진다. 나쁜 값 하나가 슬라이드를 잃게 해서는 안 되며, 이를 막으려고 통째로 `try`로 감싸지 않는다. 시험: `tests/object-key-values-keep-slide.test.ts`.
+- 문서가 정한 이름을 키로 기록할 때(가이드 이름, 글꼴 script, 파트 확장자 등)는 `record[name] = value`나 `Object.assign` 대신 `setOwn`을 쓴다. `__proto__`라는 이름은 대입하면 항목이 생기지 않고 프로토타입이 바뀌어 값이 사라진다. 문서·편집기·AI op에서 온 값으로 엔진 밖(`packages/pptx-ops`)의 표를 찾을 때도 같은 규칙이다(`Object.hasOwn`). 시험: `tests/object-key-values-own.test.ts`, `packages/pptx-ops/tests/op-values-own-keys.test.ts`.
 - 파서가 준 노드는 객체라고 가정하지 않는다. 빈 요소나 글자만 든 요소(`<p:grpSpPr/>`, `<p:spPr>text</p:spPr>`)는 문자열로 나오고, 문자열에 `'a:noFill' in node`를 쓰면 TypeError가 난다. `asXmlNode`로 받거나 `typeof node === 'object'`를 먼저 본다.
 
 ## 이 모듈의 방식

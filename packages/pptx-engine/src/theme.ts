@@ -4,7 +4,7 @@
  * schemeClr / theme fonts into final values.
  */
 import { xmlParser } from './xml-parser'
-import { ownValue } from './own-value'
+import { ownValue, setOwn } from './own-value'
 import { asXmlNode, xmlArray, type XmlNode } from './xml-utils'
 
 const parser = xmlParser({ ignoreAttributes: false, attributeNamePrefix: '@_' })
@@ -104,7 +104,8 @@ function scriptFonts(scheme: XmlNode, font: string): Record<string, string> | un
     const n = asXmlNode(f)
     const script = n['@_script']
     const face = n['@_typeface']
-    if (typeof script === 'string' && typeof face === 'string' && face) out[script] = face
+    // a script the document names `__proto__` is an entry like any other
+    if (typeof script === 'string' && typeof face === 'string' && face) setOwn(out, script, face)
   }
   return Object.keys(out).length ? out : undefined
 }

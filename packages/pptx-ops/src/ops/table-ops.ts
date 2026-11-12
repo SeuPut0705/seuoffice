@@ -245,7 +245,9 @@ interface ResolvedTableStyle {
 
 function resolveTableStyle(op: Op): ResolvedTableStyle {
   if (op.styleName != null) {
-    const preset = TABLE_STYLE_PRESETS[String(op.styleName)]
+    // the name is the op's: only the presets' own names are presets, not `constructor` & co.
+    const name = String(op.styleName)
+    const preset = Object.hasOwn(TABLE_STYLE_PRESETS, name) ? TABLE_STYLE_PRESETS[name] : undefined
     if (!preset) {
       throw new GuidedError(
         `op "setTableStyle": unknown styleName "${String(op.styleName)}". Presets: ${Object.keys(TABLE_STYLE_PRESETS).join(', ')}.`,
