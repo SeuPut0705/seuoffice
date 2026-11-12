@@ -664,7 +664,9 @@ export const SLIDES: SlideInput[] = [
         p(r('i3'), '<a:pPr><a:buBlip><a:blip r:embed="rId6"/></a:buBlip></a:pPr>') +
         p(r('i4'), '<a:pPr><a:buBlip/></a:pPr>') +
         p(r('i5'), '<a:pPr><a:buBlip><a:blip/></a:buBlip></a:pPr>') +
-        p(r('i6'), '<a:pPr><a:buBlip><a:blip r:embed="constructor"/></a:buBlip></a:pPr>'),
+        p(r('i6'), '<a:pPr><a:buBlip><a:blip r:embed="constructor"/></a:buBlip></a:pPr>') +
+        p(r('i7'), '<a:pPr><a:buBlip><a:blip r:embed=""><a:extLst><a:ext uri="x"><asvg:svgBlip r:embed="rId5"/></a:ext></a:extLst></a:blip></a:buBlip></a:pPr>') +
+        p(r('i8'), '<a:pPr><a:buBlip><a:blip r:embed=""/></a:buBlip></a:pPr>'),
     ),
     ctx: CTX,
   },
@@ -676,6 +678,14 @@ export const SLIDES: SlideInput[] = [
         p(r('c'), '<a:pPr><a:buClr/><a:buFont typeface=""/><a:buSzPct val="x"/><a:buSzPts val="y"/><a:buChar char="*"/></a:pPr>') +
         p(r('d'), '<a:pPr><a:buClr><a:srgbClr val="0000FF"><a:alpha val="50000"/></a:srgbClr></a:buClr><a:buFont typeface="+mj-lt"/><a:buSzPct val=""/><a:buAutoNum type="arabicPeriod"/></a:pPr>') +
         p(r('e'), '<a:pPr><a:buSzPts val="-100"/><a:buSzPct val="250000"/><a:buBlip><a:blip r:embed="rId5"/></a:buBlip></a:pPr>'),
+    ),
+    ctx: CTX,
+  },
+  {
+    name: 'bullet and paragraph defRPr color: repeated srgbClr children are a plain color',
+    spTree: shapes(
+      p(r('a'), '<a:pPr><a:buClr><a:srgbClr val="FF0000"/><a:srgbClr val="00FF00"/></a:buClr><a:buChar char="o"/></a:pPr>') +
+        p(r('b'), '<a:pPr><a:defRPr><a:solidFill><a:srgbClr val="010203"/><a:srgbClr val="040506"/></a:solidFill></a:defRPr></a:pPr>'),
     ),
     ctx: CTX,
   },

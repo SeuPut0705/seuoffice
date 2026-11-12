@@ -270,6 +270,16 @@ export const SLIDES: Array<{ name: string; spTree: string; ctx?: Record<string, 
     ),
   },
   {
+    name: 'cell borders: a width spelled 00 or empty is not the zero string',
+    spTree: frame(
+      tbl(
+        '',
+        grid('100', '100'),
+        tr('100', tc('a', '', `<a:tcPr>${BORDER('a:lnL', ' w="00"', SOLID('FF0000'))}${BORDER('a:lnR', ' w=""', SOLID('00FF00'))}${BORDER('a:lnT', ' w="0.0"', SOLID('0000FF'))}</a:tcPr>`), tc('b')),
+      ),
+    ),
+  },
+  {
     name: 'cell borders with style inside lines',
     spTree: frame(
       tbl(

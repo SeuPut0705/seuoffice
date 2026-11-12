@@ -677,6 +677,10 @@ const AUTO = suffix(PPT_AUTO)
 const OLD_AUTO = readSlideTimingXml(AUTO)
 const INK = suffix(PPT_INK)
 const OLD_INK = readSlideTimingXml(INK)
+const BUILT_DIR = suffix(
+  buildTimingXml([anim(2, 'fade'), anim(3, 'flyIn', 'onClick', { direction: 'left' })]),
+)
+const OLD_DIR = readSlideTimingXml(BUILT_DIR)
 
 const edit = (
   list: SlideAnimation[],
@@ -775,6 +779,9 @@ const PATCH_INPUTS: Input[] = [
   // only the direction of one effect differs: a list that is not the same list
   { text: BUILT1, args: { anims: edit(OLD1, 1, { direction: 'right' }) } },
   { text: BUILT1, args: { anims: edit(OLD1, 1, { direction: 'top' }) } },
+  { text: BUILT_DIR, args: { anims: edit(OLD_DIR, 1, { direction: 'right' }) } },
+  { text: BUILT_DIR, args: { anims: edit(OLD_DIR, 1, { direction: undefined }) } },
+  { text: BUILT1, args: { anims: edit(OLD1, 3, { direction: 'left' }) } },
   { text: BUILT1, args: { anims: edit(OLD1, 3, { motionPath: 'M 0 0 L 0 1' }) } },
   { text: BUILT1, args: { anims: edit(OLD1, 0, { durationMs: 900 }) } },
   { text: BUILT1, args: { anims: edit(OLD1, 2, { delayMs: 100, effect: 'spin' }) } },
