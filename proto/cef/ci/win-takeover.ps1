@@ -55,8 +55,19 @@ foreach ($root in @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall',
 $oldKey = Get-ChildItem $uninstallRoot | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like 'SeuOffice*' } | Select-Object -First 1
 if (-not $oldKey) { throw 'the Electron installer left no uninstall key with DisplayName SeuOffice' }
 $oldProps = Get-ItemProperty $oldKey.PSPath
-Write-Host "Electron uninstall key: $($oldKey.PSChildName) InstallLocation=$($oldProps.InstallLocation) Version=$($oldProps.DisplayVersion)"
+Write-Host "Electron uninstall key $($oldKey.PSChildName):"
+$oldProps.PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' } | ForEach-Object { Write-Host "  $($_.Name) = $($_.Value)" }
+foreach ($name in @($oldKey.PSChildName, "{$($oldKey.PSChildName)}")) {
+  $k = "HKCU:\Software\$name"
+  if (Test-Path $k) {
+    Write-Host "install registry key ${k}:"
+    (Get-ItemProperty $k).PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' } | ForEach-Object { Write-Host "  $($_.Name) = $($_.Value)" }
+  }
+}
+# electron-builder's uninstall entry carries no InstallLocation: the uninstaller's path is the install folder
 $oldDir = $oldProps.InstallLocation
+if (-not $oldDir) { $oldDir = [regex]::Match($oldProps.UninstallString, '^"?(.*)\\Uninstall SeuOffice\.exe').Groups[1].Value }
+Write-Host "Electron install folder: $oldDir"
 if (-not (Test-Path (Join-Path $oldDir 'resources\app.asar'))) { Fail 'the Electron install has no resources\app.asar' }
 
 # 2. userData markers an existing user would have
