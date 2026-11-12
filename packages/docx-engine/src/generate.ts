@@ -37,7 +37,7 @@ import {
   xmlPositiveCoordinate,
   xmlUnsignedInt,
 } from './xml-number'
-import { findStartTag, removeElements, xmlSegments } from './xml-tag'
+import { findStartTag, removeElements, replaceSegments, xmlSegments } from './xml-tag'
 
 export interface GenerateContext {
   /** heading level -> styleId existing in the original styles.xml */
@@ -1109,7 +1109,7 @@ export function patchTextboxHeights(
   let resizedXml = out + paragraphXml.slice(cursor)
 
   let fallbackIndex = -1
-  resizedXml = resizedXml.replace(/<mc:Fallback>[\s\S]*?<\/mc:Fallback>/g, (fallback) => {
+  resizedXml = replaceSegments(resizedXml, 'mc:Fallback', (fallback) => {
     if (!fallback.includes('<w:txbxContent') || paraPlainText(fallback) === '') return fallback
     fallbackIndex++
     const heightPx = heightsPx[fallbackIndex]
@@ -1175,7 +1175,7 @@ export function patchTextboxSizes(
   let resizedXml = out + paragraphXml.slice(cursor)
 
   let fallbackIndex = -1
-  resizedXml = resizedXml.replace(/<mc:Fallback>[\s\S]*?<\/mc:Fallback>/g, (fallback) => {
+  resizedXml = replaceSegments(resizedXml, 'mc:Fallback', (fallback) => {
     if (!isBoxDrawing(fallback) && !fallback.includes('<w:txbxContent')) return fallback
     if (fallback.includes('<w:txbxContent') && paraPlainText(fallback) === '') return fallback
     fallbackIndex++

@@ -5,6 +5,7 @@ import { EMU_PER_PX } from './parse-xml-text'
 import { DEFAULT_THEME_COLORS } from './theme'
 import { ownValue } from './own-value'
 import { xmlSegments } from './xml-tag'
+import { canonicalXmlSyntax } from './ooxml-normalize'
 import type { SectionSettings, TextGlow, TextOutline, TextboxDisplay, ThemeColors } from './types'
 
 /**
@@ -261,7 +262,8 @@ export function topLevelDrawings(xml: string): string[] {
   return xmlSegments(xml, 'w:drawing', 0, xml.length).map((seg) => xml.slice(seg.start, seg.end))
 }
 
-export function drawingAnchorMeta(frag: string): DrawingAnchorMeta {
+export function drawingAnchorMeta(source: string): DrawingAnchorMeta {
+  const frag = canonicalXmlSyntax(source)
   const anchorTag = /<wp:anchor[^>]*>/.exec(frag)?.[0]
   if (!anchorTag) return {}
   const meta: DrawingAnchorMeta = { anchored: true }

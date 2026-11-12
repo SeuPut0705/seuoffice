@@ -86,6 +86,18 @@ function startTagEnd(xml: string, from: number): number {
 }
 
 /**
+ * What an element holds: its XML between its start tag and its end tag (the
+ * last one in `xml`, which is the element's own). '' for a self-closing element.
+ */
+export function elementInner(xml: string): string {
+  const masked = maskOpaque(xml)
+  const open = findStartTag(masked)
+  if (!open || open.selfClosing) return ''
+  const close = masked.lastIndexOf('</')
+  return close < open.end ? '' : xml.slice(open.end, close)
+}
+
+/**
  * Top-level segments of `tag` between [from, to), depth-aware for nesting.
  * Tags are read the way an XML parser reads them: markup inside a comment, a
  * CDATA section or a processing instruction is no tag, a `>` inside a quoted
@@ -125,4 +137,28 @@ export function xmlSegments(
     depth++
   }
   return segs
+}
+
+/**
+ * `xml` with each top-level `tag` element (to its own end tag, nested ones
+ * inside it) replaced by `replace(element)`; `replace` returns '' to drop it.
+ * The elements are found as xmlSegments finds them.
+ */
+export function replaceSegments(
+  xml: string,
+  tag: string,
+  replace: (element: string) => string,
+): string {
+  let out = ''
+  let cursor = 0
+  for (const seg of xmlSegments(xml, tag, 0, xml.length)) {
+    out += xml.slice(cursor, seg.start) + replace(xml.slice(seg.start, seg.end))
+    cursor = seg.end
+  }
+  return cursor === 0 ? xml : out + xml.slice(cursor)
+}
+
+/** `xml` without its top-level `tag` elements */
+export function removeSegments(xml: string, tag: string): string {
+  return replaceSegments(xml, tag, () => '')
 }
