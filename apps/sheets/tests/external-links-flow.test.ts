@@ -64,6 +64,10 @@ describe('updateExternalLinksFlow', () => {
     })
     const statuses: ExternalLinksUpdateResult[] = []
     const updated = await updateExternalLinksFlow({
+      check: async () => {},
+      onError: (error) => {
+        throw error
+      },
       save,
       update,
       apply,
@@ -87,6 +91,10 @@ describe('updateExternalLinksFlow', () => {
     const update = vi.fn(async () => REPORT)
     const apply = vi.fn()
     const updated = await updateExternalLinksFlow({
+      check: async () => {},
+      onError: (error) => {
+        throw error
+      },
       save,
       update,
       apply,
@@ -102,6 +110,10 @@ describe('updateExternalLinksFlow', () => {
     const update = vi.fn(async () => REPORT)
     const apply = vi.fn()
     const updated = await updateExternalLinksFlow({
+      check: async () => {},
+      onError: (error) => {
+        throw error
+      },
       save: vi.fn(async () => ({ ok: false })),
       update,
       apply,
@@ -116,6 +128,10 @@ describe('updateExternalLinksFlow', () => {
     const save = vi.fn(async () => ({ ok: true }))
     const apply = vi.fn()
     const updated = await updateExternalLinksFlow({
+      check: async () => {},
+      onError: (error) => {
+        throw error
+      },
       save,
       update: vi.fn(async () => ({ links: [], cells: [] })),
       apply,

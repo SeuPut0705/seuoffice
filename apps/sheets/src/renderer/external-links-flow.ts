@@ -1,4 +1,5 @@
 import type {
+  DesktopApi,
   ExternalLinkOps,
   ExternalLinkUsageCell,
   ExternalLinkUsageResult,
@@ -7,6 +8,10 @@ import type {
 
 /** What the links panel's Update action needs from the editor. */
 export interface ExternalLinksUpdateDeps {
+  /** Refuses an unavailable host before the first save can write anything. */
+  readonly check: () => Promise<unknown>
+  /** User-facing error reporting at the panel's async event boundary. */
+  readonly onError: (error: unknown) => void
   /**
    * The ordinary save. `reason: 'no-edits'` is a benign no-op (nothing was
    * pending, so the disk already matches the grid); any other failure aborts.
@@ -33,13 +38,37 @@ export interface ExternalLinksUpdateDeps {
  * matches.
  */
 export async function updateExternalLinksFlow(deps: ExternalLinksUpdateDeps): Promise<boolean> {
-  const saved = await deps.save()
-  if (!saved.ok && saved.reason !== 'no-edits') return false
-  const report = await deps.update()
-  deps.apply(report)
-  deps.onStatuses(report)
-  await deps.save()
-  return true
+  try {
+    await deps.check()
+    const saved = await deps.save()
+    if (!saved.ok && saved.reason !== 'no-edits') return false
+    const report = await deps.update()
+    deps.apply(report)
+    deps.onStatuses(report)
+    await deps.save()
+    return true
+  } catch (error: unknown) {
+    deps.onError(error)
+    return false
+  }
+}
+
+/**
+ * Probe the read-only listing, not Update: Update reads sources against the
+ * saved file and must still run after the first save. The web bridge refuses
+ * the listing explicitly; older bridges may omit either member entirely.
+ */
+export async function checkExternalLinksUpdate(
+  api: Partial<Pick<DesktopApi, 'listExternalLinks' | 'updateExternalLinks'>>,
+  sessionId: string,
+): Promise<void> {
+  if (
+    typeof api.listExternalLinks !== 'function' ||
+    typeof api.updateExternalLinks !== 'function'
+  ) {
+    throw new Error('External link updates are not available in this window.')
+  }
+  await api.listExternalLinks({ sessionId })
 }
 
 /** What the links panel's Break action needs from the editor. */

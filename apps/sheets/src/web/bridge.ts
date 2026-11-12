@@ -403,6 +403,9 @@ const desktopApi: WebDesktopApi = {
   // a web query is fetched by main through its SSRF gate: the page lists none, so Refresh query stays hidden
   listWorkbookConnections: async () => ({ connections: [] }),
   refreshWorkbookConnection: unsupported('sheets.queryRefresh'),
+  // Listing is the read-only preflight before the panel saves to update links.
+  listExternalLinks: unsupported('sheets.externalLinks'),
+  updateExternalLinks: unsupported('sheets.externalLinks'),
   // slicer parts are read from the desktop session snapshot: the page restores no panel, and the
   // open path calls this for every workbook
   readSlicerState: async () => [],

@@ -706,7 +706,11 @@ import { applyOpsForMcp, readCellsForMcp } from './mcp-sheet-handlers'
 import { SlicerFieldPicker, SlicerPanels, type SlicerUiState } from './SlicerPanel'
 import { WatchWindowPanel, watchKey, type WatchCell, type WatchRowValue } from './WatchWindowPanel'
 import { ExternalLinksPanel } from './ExternalLinksPanel'
-import { breakExternalLinkFlow, updateExternalLinksFlow } from './external-links-flow'
+import {
+  breakExternalLinkFlow,
+  checkExternalLinksUpdate,
+  updateExternalLinksFlow,
+} from './external-links-flow'
 import { externalFileTarget } from './external-link-target'
 import { applyExternalLinkValues, journalExternalLinkLiterals } from './univer-sync'
 import { TimelineFieldPicker, TimelinePanels, type TimelineUiState } from './TimelinePanel'
@@ -6902,6 +6906,13 @@ export function App({
               setLinksBusy(true)
               try {
                 await updateExternalLinksFlow({
+                  check: () => checkExternalLinksUpdate(window.desktopApi, file.sessionId),
+                  onError: (error) => {
+                    const reason = t('appQueryRefreshFailed', { name: t('appLinksPanel') })
+                    setMessage(reason)
+                    showToast(reason, 'error')
+                    console.error('External link update failed', error)
+                  },
                   // quiet: a no-op first save is expected here, not a toast.
                   // Real failures still land in the message bar.
                   save: () => handleSave('save', true),
