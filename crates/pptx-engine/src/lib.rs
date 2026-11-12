@@ -12,6 +12,7 @@ pub mod glb_bounds;
 pub mod identity;
 pub mod model3d;
 pub mod named_action;
+pub mod placeholder;
 pub mod preset_shape_types;
 pub mod redaction_xml;
 pub mod scan;

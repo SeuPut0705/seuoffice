@@ -50,5 +50,9 @@
   "callsThemeCorpus": 2652,
   "callsThemeBuilt": 2100,
   "callsThemeMutated": 3300,
-  "callsThemeFunctions": 11
+  "callsThemeFunctions": 11,
+  "callsPlaceholderCorpus": 2820,
+  "callsPlaceholderBuilt": 4889,
+  "callsPlaceholderMutated": 3600,
+  "callsPlaceholderFunctions": 14
 }

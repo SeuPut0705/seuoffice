@@ -7,6 +7,7 @@ import { LAYOUT } from './calls-layout'
 import { LEAVES } from './calls-leaves'
 import { MTX } from './calls-mtx'
 import { PACKAGE } from './calls-package'
+import { PLACEHOLDER } from './calls-placeholder'
 import { TABLES } from './calls-tables'
 import { THEME } from './calls-theme'
 import { XML_TREE } from './calls-xml-tree'
@@ -23,4 +24,5 @@ export const { callOutcomes, callsOnDocument, callsAfterCorpus, reportCalls } = 
   ident: IDENT,
   mtx: MTX,
   theme: THEME,
+  placeholder: PLACEHOLDER,
 })

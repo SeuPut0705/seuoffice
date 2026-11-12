@@ -24,6 +24,7 @@ mod pptx_layout;
 mod pptx_leaves;
 mod pptx_mtx;
 mod pptx_package;
+mod pptx_placeholder;
 mod pptx_tables;
 mod pptx_theme;
 mod pptx_xml;
@@ -94,6 +95,7 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "pptxLeaves" => Some(pptx_leaves::dispatch(function, text, args)),
         "pptxMtx" => Some(pptx_mtx::dispatch(function, text, args)),
         "pptxPackage" => Some(pptx_package::dispatch(function, text, args)),
+        "pptxPlaceholder" => Some(pptx_placeholder::dispatch(function, text, args)),
         "pptxTables" => Some(pptx_tables::dispatch(function, text, args)),
         "pptxTheme" => Some(pptx_theme::dispatch(function, text, args)),
         "pptxXml" => Some(pptx_xml::dispatch(function, text, args)),
