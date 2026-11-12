@@ -1,0 +1,607 @@
+[
+  {
+    "name": "integrator: DEFAULT_AI_SEARCH_PROVIDER changed (control)",
+    "file": "main-core/src/packages/ai_provider/legacy_settings.rs",
+    "find": "pub const DEFAULT_AI_SEARCH_PROVIDER: &str = \"parallel\";",
+    "replace": "pub const DEFAULT_AI_SEARCH_PROVIDER: &str = \"exa\";",
+    "fn": ["ai-provider/legacy-settings.DEFAULT_AI_SEARCH_PROVIDER"]
+  },
+  {
+    "name": "notice-version-uncapped",
+    "file": "main-core/src/packages/ai_provider/providers.rs",
+    "find": "return v.min(AI_SUBSCRIPTION_NOTICE_VERSION);",
+    "replace": "return v;",
+    "fn": [
+      "ai-provider/providers.subscriptionNoticeVersionOf",
+      "ai-provider/legacy-settings.normalizeAiSettings"
+    ]
+  },
+  {
+    "name": "output-cap-no-floor",
+    "file": "main-core/src/packages/ai_provider/providers.rs",
+    "find": "MAX_MAX_OUTPUT_TOKENS.min(MIN_MAX_OUTPUT_TOKENS.max(n))",
+    "replace": "MAX_MAX_OUTPUT_TOKENS.min(n)",
+    "fn": ["ai-provider/providers.clampMaxOutputTokens", "ai-provider/providers.maxOutputTokensOf"]
+  },
+  {
+    "name": "consent-strict",
+    "file": "main-core/src/packages/ai_provider/providers.rs",
+    "find": "headless_consent_version_of(consent_version) >= HEADLESS_SUBSCRIPTION_CONSENT_VERSION",
+    "replace": "headless_consent_version_of(consent_version) > HEADLESS_SUBSCRIPTION_CONSENT_VERSION",
+    "fn": [
+      "ai-provider/providers.headlessSubscriptionOn",
+      "ai-provider/legacy-settings.normalizeAiSettings"
+    ]
+  },
+  {
+    "name": "auto-skips-checking",
+    "file": "main-core/src/packages/ai_provider/provider_selection.rs",
+    "find": "if name == Some(\"ready\") || name == Some(\"checking\") {",
+    "replace": "if name == Some(\"ready\") {",
+    "fn": ["ai-provider/provider-selection.selectAiProvider"]
+  },
+  {
+    "name": "off-error-kind",
+    "file": "main-core/src/packages/ai_provider/provider_selection.rs",
+    "find": "\"off\" => (\"off-in-app\", \"off-in-app\"),",
+    "replace": "\"off\" => (\"off-in-app\", \"not-connected\"),",
+    "fn": ["ai-provider/provider-selection.selectAiProvider", "docs/ai-run.resolveAiRun"]
+  },
+  {
+    "name": "token-provider-keeps-key",
+    "file": "main-core/src/packages/ai_provider/legacy_settings.rs",
+    "find": "if meta.request_token {",
+    "replace": "if false {",
+    "fn": ["ai-provider/legacy-settings.normalizeAiSettings"]
+  },
+  {
+    "name": "image-fixed-choices-dropped",
+    "file": "main-core/src/packages/ai_provider/legacy_settings.rs",
+    "find": "Some(JsonValue::String(t)) if fixed.contains(&t.as_str()) => text(t.as_str()),",
+    "replace": "",
+    "fn": ["ai-provider/legacy-settings.normalizeAiSettings"]
+  },
+  {
+    "name": "cli-path-length",
+    "file": "main-core/src/packages/ai_provider/ai_settings_guard.rs",
+    "find": "if value.encode_utf16().count() > MAX_CLI_PATH_LENGTH {",
+    "replace": "if value.encode_utf16().count() >= MAX_CLI_PATH_LENGTH {",
+    "fn": ["ai-provider/ai-settings-guard.validCliPath"]
+  },
+  {
+    "name": "internet-tools-any-bool",
+    "file": "main-core/src/packages/ai_provider/ai_settings_guard.rs",
+    "find": "if matches!(raw.get(\"internetTools\"), Some(JsonValue::Bool(false))) {",
+    "replace": "if matches!(raw.get(\"internetTools\"), Some(JsonValue::Bool(_))) {",
+    "fn": ["ai-provider/ai-settings-guard.sanitizeAiSettings"]
+  },
+  {
+    "name": "base-url-credentials",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "!parsed.username().is_empty() ||",
+    "replace": "",
+    "fn": [
+      "ai-provider/registry.normalizeBaseUrl",
+      "ai-provider/ai-settings-guard.sanitizeAiSettings"
+    ]
+  },
+  {
+    "name": "base-url-fragment",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "parsed.set_fragment(None);",
+    "replace": "",
+    "fn": ["ai-provider/registry.normalizeBaseUrl"]
+  },
+  {
+    "name": "seal-empty",
+    "file": "main-core/src/packages/ai_provider/settings_secrets.rs",
+    "find": "if value.is_empty() || value.starts_with(SEALED_PREFIX) {",
+    "replace": "if value.starts_with(SEALED_PREFIX) {",
+    "fn": [
+      "ai-provider/settings-secrets.sealSecretValue",
+      "ai-provider/settings-secrets.sealAiSecrets"
+    ]
+  },
+  {
+    "name": "proto-key-kept",
+    "file": "main-core/src/packages/ai_provider/settings_secrets.rs",
+    "find": "assign(&mut out, id, mapped);",
+    "replace": "out.set(id, mapped);",
+    "fn": ["ai-provider/settings-secrets.mapAiSecrets"]
+  },
+  {
+    "name": "overloaded-as-network",
+    "file": "main-core/src/packages/ai_provider/run_error.rs",
+    "find": "out.set(\"errorCode\", text(\"overloaded\"));",
+    "replace": "out.set(\"errorCode\", text(\"network\"));",
+    "fn": ["ai-provider/run-error.aiStreamErrorFields"]
+  },
+  {
+    "name": "timeout-as-credits",
+    "file": "main-core/src/packages/ai_provider/run_error.rs",
+    "find": "out.set(\"errorCode\", text(\"timeout\"));",
+    "replace": "out.set(\"errorCode\", text(\"credits\"));",
+    "fn": ["ai-provider/run-error.aiStreamErrorFields"]
+  },
+  {
+    "name": "credits-with-status",
+    "file": "main-core/src/packages/ai_provider/overload_error.rs",
+    "find": "!(credits.test(text) && !http_status.test(text))",
+    "replace": "!credits.test(text)",
+    "fn": [
+      "ai-provider/overload-error.isAiOverloadedError",
+      "ai-provider/run-error.aiStreamErrorFields"
+    ]
+  },
+  {
+    "name": "cause-depth",
+    "file": "main-core/src/packages/ai_provider/overload_error.rs",
+    "find": "if depth >= 5 {",
+    "replace": "if depth >= 6 {",
+    "fn": ["ai-provider/overload-error.isAiOverloadedError"]
+  },
+  {
+    "name": "no-epipe",
+    "file": "main-core/src/packages/ai_provider/network_error.rs",
+    "find": "|EPIPE|",
+    "replace": "|",
+    "fn": ["ai-provider/network-error.isAiNetworkError"]
+  },
+  {
+    "name": "network-case-sensitive",
+    "file": "main-core/src/packages/ai_provider/network_error.rs",
+    "find": "        \"i\"\n",
+    "replace": "        \"\"\n",
+    "fn": ["ai-provider/network-error.isAiNetworkError"]
+  },
+  {
+    "name": "reset-seconds",
+    "file": "main-core/src/packages/ai_provider/free_ai.rs",
+    "find": "* if reset.len() == 10 { 1000.0 } else { 1.0 }",
+    "replace": "* 1000.0",
+    "fn": ["ai-provider/free-ai.freeLimitOf", "ai-provider/run-error.aiStreamErrorFields"]
+  },
+  {
+    "name": "dst-1967",
+    "file": "main-core/src/packages/ai_provider/free_ai.rs",
+    "find": "1967..=1986 => (last_sunday(year, 4), last_sunday(year, 10)),",
+    "replace": "1967..=1986 => (nth_sunday(year, 4, 1), last_sunday(year, 10)),",
+    "fn": ["ai-provider/free-ai.nextPacificMidnight"]
+  },
+  {
+    "name": "free-tier-underscore",
+    "file": "main-core/src/packages/ai_provider/free_ai.rs",
+    "find": "r\"FreeTier|free_tier\"",
+    "replace": "r\"FreeTier\"",
+    "fn": [
+      "ai-provider/free-ai.isFreeTierModelRefusal",
+      "ai-provider/run-error.aiStreamErrorFields"
+    ]
+  },
+  {
+    "name": "timeout-zero",
+    "file": "main-core/src/packages/ai_provider/watchdog.rs",
+    "find": "if ms.is_nan() || ms <= 0.0 {",
+    "replace": "if ms.is_nan() || ms < 0.0 {",
+    "fn": ["ai-provider/watchdog.normalizeWatchdogTimeout"]
+  },
+  {
+    "name": "effort-untrimmed",
+    "file": "main-core/src/packages/ai_provider/effort.rs",
+    "find": "let effort = trim(as_str(value)?);",
+    "replace": "let effort = as_str(value)?;",
+    "fn": ["ai-provider/effort.aiEffortOf", "ai-provider/effort.aiEffortsOf"]
+  },
+  {
+    "name": "effort-table-bound",
+    "file": "main-core/src/packages/ai_provider/effort.rs",
+    "find": "if count >= MAX_MODEL_EFFORTS {",
+    "replace": "if count > MAX_MODEL_EFFORTS {",
+    "fn": ["ai-provider/effort.aiModelEffortsOf"]
+  },
+  {
+    "name": "search-key-untrimmed",
+    "file": "main-core/src/packages/ai_provider/search_settings.rs",
+    "find": "text(jscompat::trim(key))",
+    "replace": "text(key)",
+    "fn": [
+      "ai-provider/search-settings.resolveAiSearchSettings",
+      "ai-provider/legacy-settings.normalizeAiSettings"
+    ]
+  },
+  {
+    "name": "video-needs-no-flag",
+    "file": "main-core/src/packages/ai_provider/media.rs",
+    "find": "MediaCapability::Video => meta.analysis_protocol.is_some() && meta.video_analysis,",
+    "replace": "MediaCapability::Video => meta.analysis_protocol.is_some(),",
+    "fn": ["ai-provider/legacy-settings.normalizeAiSettings"]
+  },
+  {
+    "name": "media-video-default",
+    "file": "main-core/src/packages/ai_provider/media.rs",
+    "find": "== Some(\"chat\")",
+    "replace": "== Some(\"none\")",
+    "fn": ["ai-provider/media.resolveAiMediaSettings"]
+  },
+  {
+    "name": "timeout-floor",
+    "file": "main-core/src/packages/ai_provider/local_profile.rs",
+    "find": "pub const MIN_LOCAL_TIMEOUT_MS: f64 = 60_000.0;",
+    "replace": "pub const MIN_LOCAL_TIMEOUT_MS: f64 = 59_999.0;",
+    "fn": ["ai-provider/local-profile.localEndpointFieldsOf"]
+  },
+  {
+    "name": "local-kind",
+    "file": "main-core/src/packages/ai_provider/local_profile.rs",
+    "find": "if as_str(raw.get(\"kind\")) == Some(\"local\") {",
+    "replace": "if as_str(raw.get(\"kind\")).is_some() {",
+    "fn": ["ai-provider/local-profile.localEndpointFieldsOf"]
+  },
+  {
+    "name": "endpoint-duplicates",
+    "file": "main-core/src/packages/ai_provider/custom_endpoints.rs",
+    "find": "if id.is_empty() || seen.contains(&id) {",
+    "replace": "if id.is_empty() {",
+    "fn": [
+      "ai-provider/custom-endpoints.resolveCustomEndpoints",
+      "ai-provider/legacy-settings.normalizeAiSettings"
+    ]
+  },
+  {
+    "name": "stale-active-id",
+    "file": "main-core/src/packages/ai_provider/custom_endpoints.rs",
+    "find": ".or(Some(0))",
+    "replace": ".or(None)",
+    "fn": [
+      "ai-provider/custom-endpoints.resolveCustomEndpoints",
+      "ai-provider/legacy-settings.normalizeAiSettings"
+    ]
+  },
+  {
+    "name": "credits-class",
+    "file": "main-core/src/packages/ai_provider/protocols_shared.rs",
+    "find": "== ErrorClass::AiCreditsError",
+    "replace": "== ErrorClass::Error",
+    "fn": ["ai-provider/run-error.aiStreamErrorFields"]
+  },
+  {
+    "name": "keepalive-double-clear",
+    "file": "main-core/src/docs/ai_keepalive.rs",
+    "find": "        if self.stopped {",
+    "replace": "        if false {",
+    "fn": ["ai-keepalive.startAiKeepalive", "ai-keepalive.startFirstChunkKeepalive"]
+  },
+  {
+    "name": "keepalive-interval",
+    "file": "main-core/src/docs/ai_keepalive.rs",
+    "find": "interval_ms.unwrap_or(AI_KEEPALIVE_INTERVAL_MS)",
+    "replace": "interval_ms.unwrap_or(1000.0)",
+    "fn": ["ai-keepalive.startAiKeepalive"]
+  },
+  {
+    "name": "not-installed-text",
+    "file": "main-core/src/docs/ai_run.rs",
+    "find": "program was not found on this PC.",
+    "replace": "program is missing.",
+    "fn": ["docs/ai-run.resolveAiRun"]
+  },
+  {
+    "name": "subscription-off-empty",
+    "file": "main-core/src/docs/ai_run.rs",
+    "find": "    if next.is_empty() {",
+    "replace": "    if false {",
+    "fn": ["docs/ai-run.withSubscriptionOff"]
+  },
+  {
+    "name": "page-strings",
+    "file": "main-core/src/docs/free_ai_strings.rs",
+    "find": "Go back to the app and try again.",
+    "replace": "Go back to the app and retry.",
+    "fn": ["free-ai-strings.FREE_AI_PAGE_STRINGS"]
+  },
+  {
+    "name": "block-reason",
+    "file": "main-core/src/sheets/ai_run.rs",
+    "find": "reason.unwrap_or(\"undefined\")",
+    "replace": "reason.unwrap_or(\"\")",
+    "fn": ["sheets/ai-run.resolveAiRunTarget"]
+  },
+  {
+    "name": "block-chunk-type",
+    "file": "main-core/src/sheets/ai_run.rs",
+    "find": "chunk.set(\"type\", text(\"error\"));",
+    "replace": "chunk.set(\"type\", text(\"done\"));",
+    "fn": ["sheets/ai-run.aiRunBlockChunk"]
+  },
+  {
+    "name": "title-size",
+    "file": "main-core/src/slides/ai_default_fonts.rs",
+    "find": "pub const TITLE_ROLE_MIN_PT: f64 = 28.0;",
+    "replace": "pub const TITLE_ROLE_MIN_PT: f64 = 29.0;",
+    "fn": ["ai-default-fonts.fillMissingRunFonts", "ai-default-fonts.TITLE_ROLE_MIN_PT"]
+  },
+  {
+    "name": "role-length-trimmed",
+    "file": "main-core/src/slides/ai_default_fonts.rs",
+    "find": "length16(t) <= 80",
+    "replace": "trimmed.len() <= 80",
+    "fn": ["ai-default-fonts.parseFontRoles"]
+  },
+  {
+    "name": "family-delete",
+    "file": "main-core/src/packages/ui.rs",
+    "find": "code >= 0x20 && code != 0x7f && *ch != '\"'",
+    "replace": "code >= 0x20 && *ch != '\"'",
+    "fn": ["slides-ai-fonts.normalizeSlidesAiFonts"]
+  },
+  {
+    "name": "default-mode",
+    "file": "main-core/src/packages/ui.rs",
+    "find": "if lang == \"ko\" || lang == \"en\" {",
+    "replace": "if lang == \"ko\" {",
+    "fn": ["slides-ai-fonts.defaultSlidesAiFonts", "slides-ai-fonts.normalizeSlidesAiFonts"]
+  },
+  {
+    "name": "notice-gate",
+    "file": "main-core/src/shell/ai_naming_provider.rs",
+    "find": "&& notice_version < AI_SUBSCRIPTION_NOTICE_VERSION",
+    "replace": "&& notice_version <= AI_SUBSCRIPTION_NOTICE_VERSION",
+    "fn": ["ai-naming-provider.resolveNamingProvider"]
+  },
+  {
+    "name": "no-notice-migration",
+    "file": "main-core/src/shell/ai_naming_provider.rs",
+    "find": "let migrated = stored.and_then(with_migrated_subscription_notice_version);",
+    "replace": "let migrated: Option<JsonValue> = None;",
+    "fn": ["ai-naming-provider.resolveNamingProvider"]
+  },
+  {
+    "name": "stem-cut",
+    "file": "main-core/src/shell/ai_naming.rs",
+    "find": "Some(at) if at > MAX_NAME_LENGTH / 2 => {",
+    "replace": "Some(at) if at >= MAX_NAME_LENGTH / 2 => {",
+    "fn": ["ai-naming.sanitizeFileStem"]
+  },
+  {
+    "name": "stem-reserved-case",
+    "file": "main-core/src/shell/ai_naming.rs",
+    "find": "RESERVED_STEMS.contains(&name.to_lowercase().as_str())",
+    "replace": "RESERVED_STEMS.contains(&name.as_str())",
+    "fn": ["ai-naming.sanitizeFileStem"]
+  },
+  {
+    "name": "stem-length",
+    "file": "main-core/src/shell/ai_naming.rs",
+    "find": "const MAX_NAME_LENGTH: usize = 60;",
+    "replace": "const MAX_NAME_LENGTH: usize = 61;",
+    "fn": ["ai-naming.sanitizeFileStem"]
+  },
+  {
+    "name": "stdin-bound",
+    "file": "main-core/src/shell/ai_secrets.rs",
+    "find": "if size > MAX_STDIN_BYTES {",
+    "replace": "if size >= MAX_STDIN_BYTES {",
+    "fn": ["ai-secrets.runRevealEntry"]
+  },
+  {
+    "name": "keyring-list",
+    "file": "main-core/src/shell/ai_secrets.rs",
+    "find": "[\"gnome_libsecret\", \"kwallet\", \"kwallet5\", \"kwallet6\"]",
+    "replace": "[\"gnome_libsecret\", \"kwallet\", \"kwallet5\", \"kwallet5\"]",
+    "fn": ["ai-secrets.linuxKeyringSeals", "ai-secrets.platformSeals"]
+  },
+  {
+    "name": "windows-key-wait",
+    "file": "main-core/src/shell/ai_secrets.rs",
+    "find": "(self.platform != \"win32\" || (self.key_on_disk)())",
+    "replace": "true",
+    "fn": ["ai-secrets.safeStorageCodec"]
+  },
+  {
+    "name": "seal-all-or-nothing",
+    "file": "main-core/src/shell/ai_secrets.rs",
+    "find": "if holds_plain_secrets(&sealed) {",
+    "replace": "if false {",
+    "fn": ["ai-secrets.sealStoredAiSettings"]
+  },
+  {
+    "name": "guard-slot",
+    "file": "main-core/src/packages/electron_utils/ai_run_guard.rs",
+    "find": "self.guard = next;",
+    "replace": "let _ = next;",
+    "fn": ["ai-run-guard.aiRunRefusal", "ai-run-guard.setAiRunGuard"]
+  },
+  {
+    "name": "drive-training-ack",
+    "file": "main-core/src/packages/electron_utils/drive_ai_channels.rs",
+    "find": "        && matches!(prop(state, \"trainingAck\"), Some(JsonValue::Bool(true)))\n",
+    "replace": "",
+    "fn": ["drive-ai-channels.driveAiOn"]
+  },
+  {
+    "name": "base64-urlsafe",
+    "file": "jscompat/src/node_buffer_base64.rs",
+    "find": "b'+' | b'-' => 62,",
+    "replace": "b'+' => 62,",
+    "fn": ["ai-secrets.safeStorageCodec"]
+  },
+  {
+    "name": "base64-stop-at-padding",
+    "file": "jscompat/src/node_buffer_base64.rs",
+    "find": "if c == b'=' || *i >= srclen {",
+    "replace": "if *i >= srclen {",
+    "fn": ["ai-secrets.safeStorageCodec"]
+  },
+  {
+    "name": "integrator: max model length",
+    "file": "main-core/src/packages/ai_provider/ai_settings_guard.rs",
+    "find": "const MAX_MODEL_LENGTH: usize = 256;",
+    "replace": "const MAX_MODEL_LENGTH: usize = 255;",
+    "fn": ["ai-provider/ai-settings-guard.sanitizeAiSettings"]
+  },
+  {
+    "name": "integrator: default endpoint slot",
+    "file": "main-core/src/packages/ai_provider/custom_endpoints.rs",
+    "find": ".or(Some(0))",
+    "replace": ".or(None)",
+    "fn": ["ai-provider/custom-endpoints.resolveCustomEndpoints"]
+  },
+  {
+    "name": "integrator: claude effort order",
+    "file": "main-core/src/packages/ai_provider/effort.rs",
+    "find": "CLAUDE_EFFORTS: [&str; 5] = [\"low\", \"medium\", \"high\", \"xhigh\", \"max\"]",
+    "replace": "CLAUDE_EFFORTS: [&str; 5] = [\"low\", \"medium\", \"high\", \"max\", \"xhigh\"]",
+    "fn": ["ai-provider/effort.aiEffortsOf", "ai-provider/effort.aiModelEffortsOf"]
+  },
+  {
+    "name": "integrator: civil year of february",
+    "file": "main-core/src/packages/ai_provider/free_ai.rs",
+    "find": "let y = if month <= 2 { year - 1 } else { year };",
+    "replace": "let y = if month < 2 { year - 1 } else { year };",
+    "fn": ["ai-provider/free-ai.nextPacificMidnight"]
+  },
+  {
+    "name": "integrator: infinity counted as integer",
+    "file": "main-core/src/packages/ai_provider/jsval.rs",
+    "find": "x.is_finite() && x.trunc() == x\n",
+    "replace": "x.trunc() == x\n",
+    "fn": [
+      "ai-provider/ai-settings-guard.sanitizeAiSettings",
+      "ai-provider/local-profile.localEndpointFieldsOf",
+      "ai-provider/effort.aiModelEffortsOf"
+    ]
+  },
+  {
+    "name": "integrator: integer range upper bound",
+    "file": "main-core/src/packages/ai_provider/local_profile.rs",
+    "find": "*x >= min && *x <= max =>",
+    "replace": "*x >= min && *x < max =>",
+    "fn": ["ai-provider/local-profile.localEndpointFieldsOf"]
+  },
+  {
+    "name": "integrator: minimax base url",
+    "file": "main-core/src/packages/ai_provider/media.rs",
+    "find": "pub const MINIMAX_BASE_URL: &str = \"https://api.minimax.io/v1\";",
+    "replace": "pub const MINIMAX_BASE_URL: &str = \"https://api.minimax.io/v1/\";",
+    "fn": ["ai-provider/media.defaultAiMediaSettings", "ai-provider/media.resolveAiMediaSettings"]
+  },
+  {
+    "name": "integrator: cause chain depth",
+    "file": "main-core/src/packages/ai_provider/network_error.rs",
+    "find": "if depth >= 5 {",
+    "replace": "if depth > 5 {",
+    "fn": ["ai-provider/network-error.isAiNetworkError"]
+  },
+  {
+    "name": "integrator: status 529 dropped",
+    "file": "main-core/src/packages/ai_provider/overload_error.rs",
+    "find": "HTTP (429|503|529)\\b|overload",
+    "replace": "HTTP (429|503)\\b|overload",
+    "fn": ["ai-provider/overload-error.isAiOverloadedError"]
+  },
+  {
+    "name": "integrator: credits class",
+    "file": "main-core/src/packages/ai_provider/protocols_shared.rs",
+    "find": "error_class(err) == ErrorClass::AiCreditsError",
+    "replace": "error_class(err) == ErrorClass::AiRunError",
+    "fn": [
+      "docs/ai-run.aiChatFailure",
+      "docs/ai-run.aiStreamErrorChunk",
+      "ai-provider/run-error.aiStreamErrorFields"
+    ]
+  },
+  {
+    "name": "integrator: checking subscription stops the search",
+    "file": "main-core/src/packages/ai_provider/provider_selection.rs",
+    "find": "if name == Some(\"ready\") || name == Some(\"checking\") {",
+    "replace": "if name == Some(\"ready\") {",
+    "fn": ["ai-provider/provider-selection.selectAiProvider"]
+  },
+  {
+    "name": "integrator: default consent version",
+    "file": "main-core/src/packages/ai_provider/providers.rs",
+    "find": "(\"headlessSubscriptionConsentVersion\", number(0.0)),",
+    "replace": "(\"headlessSubscriptionConsentVersion\", number(1.0)),",
+    "fn": ["ai-provider/providers.defaultAiSettings"]
+  },
+  {
+    "name": "integrator: base url length limit",
+    "file": "main-core/src/packages/ai_provider/registry.rs",
+    "find": "length16(candidate) > 2048",
+    "replace": "length16(candidate) >= 2048",
+    "fn": ["ai-provider/registry.normalizeBaseUrl"]
+  },
+  {
+    "name": "integrator: run error class",
+    "file": "main-core/src/packages/ai_provider/run_error.rs",
+    "find": "if error_class(err) == ErrorClass::AiRunError {",
+    "replace": "if error_class(err) == ErrorClass::AiTimeoutError {",
+    "fn": ["ai-provider/run-error.aiStreamErrorFields"]
+  },
+  {
+    "name": "integrator: tavily image search",
+    "file": "main-core/src/packages/ai_provider/search_settings.rs",
+    "find": "key_placeholder: \"tvly-...\",\n        image_search: false,",
+    "replace": "key_placeholder: \"tvly-...\",\n        image_search: true,",
+    "fn": [
+      "ai-provider/search-settings.defaultAiSearchSettings",
+      "ai-provider/search-settings.resolveAiSearchSettings"
+    ]
+  },
+  {
+    "name": "integrator: empty value sealed",
+    "file": "main-core/src/packages/ai_provider/settings_secrets.rs",
+    "find": "if value.is_empty() || value.starts_with(SEALED_PREFIX) {",
+    "replace": "if value.starts_with(SEALED_PREFIX) {",
+    "fn": ["ai-provider/settings-secrets.sealSecretValue"]
+  },
+  {
+    "name": "integrator: min timeout boundary",
+    "file": "main-core/src/packages/ai_provider/watchdog.rs",
+    "find": "if ms < AI_WATCHDOG_MIN_TIMEOUT_MS {",
+    "replace": "if ms <= AI_WATCHDOG_MIN_TIMEOUT_MS {",
+    "fn": ["ai-provider/watchdog.normalizeWatchdogTimeout"]
+  },
+  {
+    "name": "integrator: blocked error code",
+    "file": "main-core/src/sheets/ai_run.rs",
+    "find": "error_code: Some(\"not-connected\"),",
+    "replace": "error_code: Some(\"not-configured\"),",
+    "fn": ["sheets/ai-run.resolveAiRunTarget"]
+  },
+  {
+    "name": "integrator: cut window length",
+    "file": "main-core/src/shell/ai_naming.rs",
+    "find": "&units[..MAX_NAME_LENGTH + 1]",
+    "replace": "&units[..MAX_NAME_LENGTH]",
+    "fn": ["ai-naming.sanitizeFileStem"]
+  },
+  {
+    "name": "integrator: notice version boundary",
+    "file": "main-core/src/shell/ai_naming_provider.rs",
+    "find": "notice_version < AI_SUBSCRIPTION_NOTICE_VERSION",
+    "replace": "notice_version <= AI_SUBSCRIPTION_NOTICE_VERSION",
+    "fn": ["ai-naming-provider.resolveNamingProvider"]
+  },
+  {
+    "name": "integrator: reveal value cap",
+    "file": "main-core/src/shell/ai_secrets.rs",
+    "find": "if items.len() > MAX_REVEAL_VALUES {",
+    "replace": "if items.len() >= MAX_REVEAL_VALUES {",
+    "fn": ["ai-secrets.revealRequestOf"]
+  },
+  {
+    "name": "integrator: guard never set",
+    "file": "main-core/src/packages/electron_utils/ai_run_guard.rs",
+    "find": "        self.guard = next;",
+    "replace": "        let _ = next;",
+    "fn": ["ai-run-guard.setAiRunGuard", "ai-run-guard.aiRunRefusal"]
+  },
+  {
+    "name": "integrator: training ack inverted",
+    "file": "main-core/src/packages/electron_utils/drive_ai_channels.rs",
+    "find": "matches!(prop(state, \"trainingAck\"), Some(JsonValue::Bool(true)))",
+    "replace": "matches!(prop(state, \"trainingAck\"), Some(JsonValue::Bool(false)))",
+    "fn": ["drive-ai-channels.driveAiOn"]
+  }
+]

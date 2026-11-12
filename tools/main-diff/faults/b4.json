@@ -1,0 +1,2723 @@
+[
+  {
+    "name": "integrator: ZOTERO_INTEGRATION_PORT changed (control)",
+    "file": "main-core/src/docs/zotero_wire.rs",
+    "find": "pub const ZOTERO_INTEGRATION_PORT: f64 = 23116.0;",
+    "replace": "pub const ZOTERO_INTEGRATION_PORT: f64 = 23117.0;",
+    "fn": ["zotero-wire.ZOTERO_INTEGRATION_PORT"]
+  },
+  {
+    "name": "close_guard-0",
+    "file": "main-core/src/sheets/close_guard.rs",
+    "find": "if pending_edits <= 0.0 {",
+    "replace": "if pending_edits < 0.0 {",
+    "fn": ["close-guard.closeGuardDecision"]
+  },
+  {
+    "name": "close_guard-1",
+    "file": "main-core/src/sheets/close_guard.rs",
+    "find": "    if shutting_down {",
+    "replace": "    if false {",
+    "fn": ["close-guard.closeGuardDecision"]
+  },
+  {
+    "name": "close_guard-2",
+    "file": "main-core/src/sheets/close_guard.rs",
+    "find": "        self.shutting_down = false;",
+    "replace": "        self.shutting_down = true;",
+    "fn": ["close-guard.ShutdownLatch"]
+  },
+  {
+    "name": "csv_digest-3",
+    "file": "main-core/src/sheets/csv_digest.rs",
+    "find": "if file_identity(source).as_deref() == Some(target_id.as_str()) {",
+    "replace": "if file_identity(source).is_some() {",
+    "fn": ["csv-digest.refreshCsvDigest"]
+  },
+  {
+    "name": "csv_digest-4",
+    "file": "main-core/src/sheets/csv_digest.rs",
+    "find": "Value::from(written_sha)",
+    "replace": "Value::from(\"\")",
+    "fn": ["csv-digest.refreshCsvDigest"]
+  },
+  {
+    "name": "csv_import_limit-5",
+    "file": "main-core/src/sheets/csv_import_limit.rs",
+    "find": "|| bytes <= 0.0 {",
+    "replace": "|| bytes < 0.0 {",
+    "fn": [
+      "sheets/csv-import-limit.setDelimitedImportLimit",
+      "sheets/csv-import-limit.delimitedImportLimit"
+    ]
+  },
+  {
+    "name": "csv_import_limit-6",
+    "file": "main-core/src/sheets/csv_import_limit.rs",
+    "find": "if !(bytes.is_finite() && bytes.fract() == 0.0)",
+    "replace": "if !bytes.is_finite()",
+    "fn": [
+      "sheets/csv-import-limit.setDelimitedImportLimit",
+      "sheets/csv-import-limit.delimitedImportLimit"
+    ]
+  },
+  {
+    "name": "document_locale-7",
+    "file": "main-core/src/sheets/document_locale.rs",
+    "find": "legacy_csv_charset_for(&document_locale(requested_locale))",
+    "replace": "legacy_csv_charset_for(requested_locale)",
+    "fn": ["document-locale.legacyCsvCharset"]
+  },
+  {
+    "name": "xlsx_gateway-8",
+    "file": "main-core/src/packages/xlsx_gateway.rs",
+    "find": "\"zh-TW\" => Some(\"big5\"),",
+    "replace": "\"zh-TW\" => Some(\"gb18030\"),",
+    "fn": ["xlsx-gateway/document-locale.legacyCsvCharsetFor", "document-locale.legacyCsvCharset"]
+  },
+  {
+    "name": "xlsx_gateway-9",
+    "file": "main-core/src/packages/xlsx_gateway.rs",
+    "find": "CSV_IMPORT_DEFAULT_LIMIT_MB: f64 = 256.0",
+    "replace": "CSV_IMPORT_DEFAULT_LIMIT_MB: f64 = 128.0",
+    "fn": [
+      "xlsx-gateway/csv-limits.CSV_IMPORT_DEFAULT_LIMIT_MB",
+      "sheets/csv-import-limit.delimitedImportLimit"
+    ]
+  },
+  {
+    "name": "import_registry-10",
+    "file": "main-core/src/sheets/import_registry.rs",
+    "find": "if !self.running[at].1.same(controller) {",
+    "replace": "if false {",
+    "fn": ["import-registry.ImportRegistry"]
+  },
+  {
+    "name": "import_registry-11",
+    "file": "main-core/src/sheets/import_registry.rs",
+    "find": "        self.running[at].1.abort();\n",
+    "replace": "",
+    "fn": ["import-registry.ImportRegistry"]
+  },
+  {
+    "name": "import_registry-12",
+    "file": "main-core/src/sheets/import_registry.rs",
+    "find": "Some(at) => self.running[at].1 = controller.clone(),",
+    "replace": "Some(_) => self.running.push((owner, controller.clone())),",
+    "fn": ["import-registry.ImportRegistry"]
+  },
+  {
+    "name": "pdf_page_variants-13",
+    "file": "main-core/src/sheets/pdf_page_variants.rs",
+    "find": "if page_number % 2.0 == 0.0 && flags.has_even {",
+    "replace": "if page_number % 2.0 == 1.0 && flags.has_even {",
+    "fn": ["pdf-page-variants.variantForPage", "pdf-page-variants.stitchPlan"]
+  },
+  {
+    "name": "pdf_page_variants-14",
+    "file": "main-core/src/sheets/pdf_page_variants.rs",
+    "find": "        page += 2.0;",
+    "replace": "        page += 3.0;",
+    "fn": ["pdf-page-variants.evenPageRanges"]
+  },
+  {
+    "name": "pdf_page_variants-15",
+    "file": "main-core/src/sheets/pdf_page_variants.rs",
+    "find": "PageVariant::Even => page / 2.0 - 1.0,",
+    "replace": "PageVariant::Even => page / 2.0,",
+    "fn": ["pdf-page-variants.stitchPlan"]
+  },
+  {
+    "name": "print_options-16",
+    "file": "main-core/src/sheets/print_options.rs",
+    "find": "Value::Bool(device_name.is_some())",
+    "replace": "Value::Bool(false)",
+    "fn": ["print-options.printOptionsFor"]
+  },
+  {
+    "name": "print_options-17",
+    "file": "main-core/src/sheets/print_options.rs",
+    "find": "rounded(number_of(request.get(\"scale\")) * 100.0)",
+    "replace": "rounded(number_of(request.get(\"scale\")) * 10.0)",
+    "fn": ["print-options.printOptionsFor"]
+  },
+  {
+    "name": "print_options-18",
+    "file": "main-core/src/sheets/print_options.rs",
+    "find": "pub const CSS_PX_PER_INCH: f64 = 96.0;",
+    "replace": "pub const CSS_PX_PER_INCH: f64 = 72.0;",
+    "fn": ["print-options.CSS_PX_PER_INCH", "print-options.printOptionsFor"]
+  },
+  {
+    "name": "save_as_formats-19",
+    "file": "main-core/src/sheets/save_as_formats.rs",
+    "find": "if offer_copies && lower.ends_with(\".pdf\") {",
+    "replace": "if lower.ends_with(\".pdf\") {",
+    "fn": ["sheets/save-as-formats.resolveSheetsSaveAsPick"]
+  },
+  {
+    "name": "save_as_formats-20",
+    "file": "main-core/src/sheets/save_as_formats.rs",
+    "find": "after.contains('.')",
+    "replace": "after.contains('_')",
+    "fn": ["sheets/save-as-formats.resolveSheetsSaveAsPick"]
+  },
+  {
+    "name": "save_as_formats-21",
+    "file": "main-core/src/sheets/save_as_formats.rs",
+    "find": "if self.targets[at].1 != file_path {",
+    "replace": "if false {",
+    "fn": ["sheets/save-as-formats.SaveAsExportTargets"]
+  },
+  {
+    "name": "save_edits_transfer-22",
+    "file": "main-core/src/sheets/save_edits_transfer.rs",
+    "find": "if self.transfers.len() >= MAX_OPEN_TRANSFERS {",
+    "replace": "if self.transfers.len() > MAX_OPEN_TRANSFERS {",
+    "fn": ["save-edits-transfer.SaveEditsTransferStore"]
+  },
+  {
+    "name": "save_edits_transfer-23",
+    "file": "main-core/src/sheets/save_edits_transfer.rs",
+    "find": "if request.seq != self.transfers[at].chunks.len() as f64 {",
+    "replace": "if false {",
+    "fn": ["save-edits-transfer.SaveEditsTransferStore"]
+  },
+  {
+    "name": "save_edits_transfer-24",
+    "file": "main-core/src/sheets/save_edits_transfer.rs",
+    "find": "self.timers.set_interval(TRANSFER_IDLE_EXPIRY_MS / 4.0);",
+    "replace": "self.timers.set_interval(TRANSFER_IDLE_EXPIRY_MS / 2.0);",
+    "fn": ["save-edits-transfer.SaveEditsTransferStore"]
+  },
+  {
+    "name": "save_failure_log-25",
+    "file": "main-core/src/sheets/save_failure_log.rs",
+    "find": "const SCHEMA_ISSUES_SHOWN: usize = 4;",
+    "replace": "const SCHEMA_ISSUES_SHOWN: usize = 3;",
+    "fn": ["save-failure-log.describeReopenFailure"]
+  },
+  {
+    "name": "save_failure_log-26",
+    "file": "main-core/src/sheets/save_failure_log.rs",
+    "find": "if length_utf16(&one_line) > DETAIL_MAX_CHARS {",
+    "replace": "if length_utf16(&one_line) >= DETAIL_MAX_CHARS {",
+    "fn": ["save-failure-log.scrubDetail", "save-failure-log.describeReopenFailure"]
+  },
+  {
+    "name": "save_failure_log-27",
+    "file": "main-core/src/sheets/save_failure_log.rs",
+    "find": "if meta.len() as f64 <= max_bytes {",
+    "replace": "if (meta.len() as f64) < max_bytes {",
+    "fn": ["save-failure-log.appendSaveFailure"]
+  },
+  {
+    "name": "save_failure_log-28",
+    "file": "main-core/src/sheets/save_failure_log.rs",
+    "find": "let path = if path.is_empty() { \"(root)\" } else { &path };",
+    "replace": "let path = if path.is_empty() { \"\" } else { &path };",
+    "fn": ["save-failure-log.describeReopenFailure"]
+  },
+  {
+    "name": "session_rename-29",
+    "file": "main-core/src/sheets/session_rename.rs",
+    "find": "&& !field_is(session, \"path\", old_path)",
+    "replace": "&& true",
+    "fn": ["session-rename.sessionAfterRename"]
+  },
+  {
+    "name": "session_rename-30",
+    "file": "main-core/src/sheets/session_rename.rs",
+    "find": "patch(\"odsSourcePath\", new_path);",
+    "replace": "patch(\"restoreTarget\", new_path);",
+    "fn": ["session-rename.sessionAfterRename"]
+  },
+  {
+    "name": "session_reopen-31",
+    "file": "main-core/src/sheets/session_reopen.rs",
+    "find": "|| defined(session, \"odsSourcePath\")",
+    "replace": "|| false",
+    "fn": ["session-reopen.sessionToContinue"]
+  },
+  {
+    "name": "session_reopen-32",
+    "file": "main-core/src/sheets/session_reopen.rs",
+    "find": "            found = Some(session);",
+    "replace": "            if found.is_none() {\n                found = Some(session);\n            }",
+    "fn": ["session-reopen.sessionToContinue"]
+  },
+  {
+    "name": "temp_files-33",
+    "file": "main-core/src/sheets/temp_files.rs",
+    "find": "7.0 * 24.0 * 60.0",
+    "replace": "6.0 * 24.0 * 60.0",
+    "fn": ["temp-files.PASTED_FILE_TTL_MS", "temp-files.cleanupExpiredPastedFiles"]
+  },
+  {
+    "name": "temp_files-34",
+    "file": "main-core/src/sheets/temp_files.rs",
+    "find": ".mtime_ms >= cutoff",
+    "replace": ".mtime_ms > cutoff",
+    "fn": ["temp-files.cleanupExpiredPastedFiles"]
+  },
+  {
+    "name": "temp_files-35",
+    "file": "main-core/src/sheets/temp_files.rs",
+    "find": "    entries.sort();\n",
+    "replace": "    entries.reverse();\n",
+    "fn": ["temp-files.cleanupExpiredPastedFiles"]
+  },
+  {
+    "name": "workbook_save_resolve-36",
+    "file": "main-core/src/sheets/workbook_save_resolve.rs",
+    "find": "source_name.filter(|name| !name.is_empty())",
+    "replace": "source_name.filter(|_| true)",
+    "fn": ["workbook-save-resolve.resolveWorkbookSave"]
+  },
+  {
+    "name": "workbook_save_resolve-37",
+    "file": "main-core/src/sheets/workbook_save_resolve.rs",
+    "find": "order_changed = true;",
+    "replace": "order_changed = false;",
+    "fn": ["workbook-save-resolve.resolveWorkbookSave"]
+  },
+  {
+    "name": "workbook_save_resolve-38",
+    "file": "main-core/src/sheets/workbook_save_resolve.rs",
+    "find": "        .any(|op| !is_kind(op, \"set-sheet-tab-color\"))",
+    "replace": "        .all(|op| !is_kind(op, \"set-sheet-tab-color\"))",
+    "fn": ["workbook-save-resolve.resolveWorkbookSave"]
+  },
+  {
+    "name": "xlsx_sidecar_client-39",
+    "file": "main-core/src/sheets/xlsx_sidecar_client.rs",
+    "find": "if !pending.is_close {",
+    "replace": "if true {",
+    "fn": ["xlsx-sidecar-client.XlsxSidecarClient"]
+  },
+  {
+    "name": "xlsx_sidecar_client-40",
+    "file": "main-core/src/sheets/xlsx_sidecar_client.rs",
+    "find": "const MAX_STDERR_LENGTH: usize = 8_192;",
+    "replace": "const MAX_STDERR_LENGTH: usize = 4_096;",
+    "fn": ["xlsx-sidecar-client.XlsxSidecarClient"]
+  },
+  {
+    "name": "xlsx_sidecar_client-41",
+    "file": "main-core/src/sheets/xlsx_sidecar_client.rs",
+    "find": "Reply::Nothing => None,",
+    "replace": "Reply::Nothing => result,",
+    "fn": ["xlsx-sidecar-client.XlsxSidecarClient"]
+  },
+  {
+    "name": "xlsx_sidecar_client-42",
+    "file": "main-core/src/sheets/xlsx_sidecar_client.rs",
+    "find": "Some(200.0)",
+    "replace": "Some(100.0)",
+    "fn": ["xlsx-sidecar-client.XlsxSidecarClient"]
+  },
+  {
+    "name": "old-names asset manifest renamed",
+    "file": "main-core/src/markdown/old_names.rs",
+    "find": "\".genoffice-assets.json\"",
+    "replace": "\".genoffice-assets.jsonx\"",
+    "fn": [
+      "markdown/old-names.OLD_ASSET_MANIFEST_FILENAMES",
+      "markdown/asset-lifecycle.readOwnedAssetManifest"
+    ]
+  },
+  {
+    "name": "old-names conversion marker renamed",
+    "file": "main-core/src/markdown/old_names.rs",
+    "find": "\".genoffice-markdown-conversion.json\"",
+    "replace": "\".genoffice-markdown-conversion.jsn\"",
+    "fn": [
+      "markdown/old-names.OLD_CONVERSION_SESSION_MARKERS",
+      "conversion-lifecycle.cleanupStaleMarkdownConversions"
+    ]
+  },
+  {
+    "name": "atomic write drops the last byte",
+    "file": "main-core/src/calls/b4_markdown.rs",
+    "find": "atomic_write_file(path, text.as_bytes())",
+    "replace": "atomic_write_file(path, &text.as_bytes()[..text.len().saturating_sub(1)])",
+    "fn": ["markdown/atomic-write.atomicWriteFile"]
+  },
+  {
+    "name": "atomic write temp mask changed",
+    "file": "main-core/src/calls/b4_markdown.rs",
+    "find": "|_| \".<hex>.tmp\".to_owned()",
+    "replace": "|_| \".<hex>.tmpx\".to_owned()",
+    "fn": ["markdown/atomic-write.atomicWriteFile"]
+  },
+  {
+    "name": "conversion ttl boundary",
+    "file": "main-core/src/markdown/conversion_lifecycle.rs",
+    "find": "if now - created_at < ttl_ms {",
+    "replace": "if now - created_at <= ttl_ms {",
+    "fn": ["conversion-lifecycle.cleanupStaleMarkdownConversions"]
+  },
+  {
+    "name": "conversion id cut at 79",
+    "file": "main-core/src/markdown/conversion_lifecycle.rs",
+    "find": "let kept = slice_utf16(&kept, 0.0, Some(80.0));",
+    "replace": "let kept = slice_utf16(&kept, 0.0, Some(79.0));",
+    "fn": [
+      "conversion-lifecycle.createMarkdownConversionSession",
+      "conversion-lifecycle.writeMarkdownConversion"
+    ]
+  },
+  {
+    "name": "conversion name cut at 101",
+    "file": "main-core/src/markdown/conversion_lifecycle.rs",
+    "find": "let cleaned = slice_utf16(cleaned, 0.0, Some(100.0));",
+    "replace": "let cleaned = slice_utf16(cleaned, 0.0, Some(101.0));",
+    "fn": ["conversion-lifecycle.writeMarkdownConversion"]
+  },
+  {
+    "name": "export page number not checked in order",
+    "file": "main-core/src/markdown/image_export.rs",
+    "find": "if !is_safe_integer || page != (session.pages + 1) as f64 {",
+    "replace": "if !is_safe_integer {",
+    "fn": ["image-export.ImageExportSessions"]
+  },
+  {
+    "name": "export owner not checked",
+    "file": "main-core/src/markdown/image_export.rs",
+    "find": "Some(session) if session.owner == owner => Ok(session),",
+    "replace": "Some(session) => Ok(session),",
+    "fn": ["image-export.ImageExportSessions"]
+  },
+  {
+    "name": "dispose finishes every owner",
+    "file": "main-core/src/markdown/image_export.rs",
+    "find": ".filter(|(_, session)| session.owner == owner)",
+    "replace": ".filter(|_| true)",
+    "fn": ["image-export.ImageExportSessions"]
+  },
+  {
+    "name": "object key slash without prefix",
+    "file": "main-core/src/markdown/image_host.rs",
+    "find": "let slash = if prefix_text.is_empty() { \"\" } else { \"/\" };",
+    "replace": "let slash = \"/\";",
+    "fn": ["image-host.imageObjectKey", "image-host.uploadImageToHost"]
+  },
+  {
+    "name": "signed headers joined by comma",
+    "file": "main-core/src/markdown/image_host.rs",
+    "find": "let signed_headers = lowered.join(\";\");",
+    "replace": "let signed_headers = lowered.join(\",\");",
+    "fn": ["image-host.sigV4", "image-host.uploadImageToHost"]
+  },
+  {
+    "name": "response cap off by one",
+    "file": "main-core/src/markdown/image_host.rs",
+    "find": "declared > MAX_RESPONSE_BYTES",
+    "replace": "declared >= MAX_RESPONSE_BYTES",
+    "fn": ["image-host.uploadImageToHost"]
+  },
+  {
+    "name": "github redirect message lost",
+    "file": "main-core/src/markdown/image_host.rs",
+    "find": "Err(Thrown::RedirectRefused(message)) if normalized.kind == \"github\" => {",
+    "replace": "Err(Thrown::RedirectRefused(message)) if normalized.kind == \"gitlab\" => {",
+    "fn": ["image-host.uploadImageToHost"]
+  },
+  {
+    "name": "config region default",
+    "file": "main-core/src/markdown/image_host.rs",
+    "find": "config.region = Some(or(s(\"region\", 64.0), \"auto\"));",
+    "replace": "config.region = Some(or(s(\"region\", 64.0), \"us-east-1\"));",
+    "fn": [
+      "image-host.normalizeImageHostConfig",
+      "image-host.isImageHostUsable",
+      "image-host.uploadImageToHost"
+    ]
+  },
+  {
+    "name": "create note keeps trailing space",
+    "file": "main-core/src/markdown/wiki_create.rs",
+    "find": "let cleaned = replaced.trim_end_matches(['.', ' ']);",
+    "replace": "let cleaned = replaced.trim_end_matches('.');",
+    "fn": ["wiki-create.createWikiNote"]
+  },
+  {
+    "name": "create note extension case",
+    "file": "main-core/src/markdown/wiki_create.rs",
+    "find": "let ext = extname(base).to_lowercase();",
+    "replace": "let ext = extname(base);",
+    "fn": ["wiki-create.createWikiNote"]
+  },
+  {
+    "name": "create note keeps dot segments",
+    "file": "main-core/src/markdown/wiki_create.rs",
+    "find": ".filter(|segment| !segment.is_empty() && *segment != \".\")",
+    "replace": ".filter(|segment| !segment.is_empty())",
+    "fn": ["wiki-create.createWikiNote"]
+  },
+  {
+    "name": "fragment cap off by one",
+    "file": "main-core/src/markdown/wiki_fragment.rs",
+    "find": "while self.pending.len() >= MAX_PENDING {",
+    "replace": "while self.pending.len() > MAX_PENDING {",
+    "fn": ["wiki-fragment.rememberWikiFragment", "wiki-fragment.takeWikiFragment"]
+  },
+  {
+    "name": "fragment empty does not cancel",
+    "file": "main-core/src/markdown/wiki_fragment.rs",
+    "find": "if fragment.is_empty() {",
+    "replace": "if false {",
+    "fn": ["wiki-fragment.rememberWikiFragment", "wiki-fragment.takeWikiFragment"]
+  },
+  {
+    "name": "heads closing fence length",
+    "file": "main-core/src/markdown/wiki_heads.rs",
+    "find": "&& run.len() >= opened.len()",
+    "replace": "&& run.len() > opened.len()",
+    "fn": ["wiki-heads.parseWikiHeads", "wiki-heads.wikiHeads"]
+  },
+  {
+    "name": "heads cap off by one",
+    "file": "main-core/src/markdown/wiki_heads.rs",
+    "find": "if headings < MAX_HEAD_ENTRIES_PER_KIND {",
+    "replace": "if headings <= MAX_HEAD_ENTRIES_PER_KIND {",
+    "fn": ["wiki-heads.parseWikiHeads", "wiki-heads.wikiHeads"]
+  },
+  {
+    "name": "heads trailing text untrimmed",
+    "file": "main-core/src/markdown/wiki_heads.rs",
+    "find": "text: trim(&line[..trailing.start()]).to_owned(),",
+    "replace": "text: line[..trailing.start()].to_owned(),",
+    "fn": ["wiki-heads.parseWikiHeads", "wiki-heads.wikiHeads"]
+  },
+  {
+    "name": "index depth off by one",
+    "file": "main-core/src/markdown/wiki_index.rs",
+    "find": "if seen.len() >= MAX_INDEX_FILES || depth + 1 > MAX_DEPTH {",
+    "replace": "if seen.len() >= MAX_INDEX_FILES || depth + 1 >= MAX_DEPTH {",
+    "fn": ["wiki-index.wikiTags", "wiki-index.wikiBacklinks", "wiki-index.wikiGraph"]
+  },
+  {
+    "name": "graph keeps edges to nodes outside",
+    "file": "main-core/src/markdown/wiki_index.rs",
+    "find": "if !node_set.contains(from) {",
+    "replace": "if false {",
+    "fn": ["wiki-index.wikiGraph"]
+  },
+  {
+    "name": "tags least used first",
+    "file": "main-core/src/markdown/wiki_index.rs",
+    "find": "let by_count = b.files.len().cmp(&a.files.len());",
+    "replace": "let by_count = a.files.len().cmp(&b.files.len());",
+    "fn": ["wiki-index.wikiTags"]
+  },
+  {
+    "name": "edge memo never dropped",
+    "file": "main-core/src/markdown/wiki_index.rs",
+    "find": "if set_moved {",
+    "replace": "if false {",
+    "fn": ["wiki-index.wikiBacklinks", "wiki-index.wikiGraph"]
+  },
+  {
+    "name": "tag after slash",
+    "file": "main-core/src/markdown/wiki_index.rs",
+    "find": "r\"(^|[^\\w#/])#(\\p{L}[\\p{L}\\p{N}/_-]*)\"",
+    "replace": "r\"(^|[^\\w#])#(\\p{L}[\\p{L}\\p{N}/_-]*)\"",
+    "fn": ["wiki-index.extractTags"]
+  },
+  {
+    "name": "notes depth off by one",
+    "file": "main-core/src/markdown/wiki_notes.rs",
+    "find": "if out.len() as f64 >= cap || depth + 1 > MAX_DEPTH {",
+    "replace": "if out.len() as f64 >= cap || depth > MAX_DEPTH {",
+    "fn": ["wiki-notes.listWikiNotes"]
+  },
+  {
+    "name": "notes extension list",
+    "file": "main-core/src/markdown/wiki_notes.rs",
+    "find": "\".ico\",",
+    "replace": "\".icx\",",
+    "fn": ["wiki-notes.listWikiNotes"]
+  },
+  {
+    "name": "listing ttl",
+    "file": "main-core/src/markdown/wiki_resolve.rs",
+    "find": "const LISTING_TTL_MS: f64 = 2000.0;",
+    "replace": "const LISTING_TTL_MS: f64 = 2001.0;",
+    "fn": ["wiki-resolve.nodeFs", "wiki-index.wikiBacklinks"]
+  },
+  {
+    "name": "max depth",
+    "file": "main-core/src/markdown/wiki_resolve.rs",
+    "find": "pub const MAX_DEPTH: usize = 6;",
+    "replace": "pub const MAX_DEPTH: usize = 7;",
+    "fn": ["wiki-resolve.MAX_DEPTH", "wiki-resolve.resolveWikiLinks", "wiki-notes.listWikiNotes"]
+  },
+  {
+    "name": "split target untrimmed",
+    "file": "main-core/src/markdown/wiki_resolve.rs",
+    "find": "name: trim(&raw[..hash]).to_owned(),",
+    "replace": "name: raw[..hash].to_owned(),",
+    "fn": ["wiki-resolve.splitTarget"]
+  },
+  {
+    "name": "asset stem length",
+    "file": "main-core/src/markdown/asset_lifecycle.rs",
+    "find": "let max_stem = 140 - utf16_len(&ext);",
+    "replace": "let max_stem = 141 - utf16_len(&ext);",
+    "fn": [
+      "markdown/asset-lifecycle.writeImageIntoOwnedAssets",
+      "markdown/asset-lifecycle.copyImageIntoOwnedAssets"
+    ]
+  },
+  {
+    "name": "asset name length",
+    "file": "main-core/src/markdown/asset_lifecycle.rs",
+    "find": "&& length <= 180",
+    "replace": "&& length < 180",
+    "fn": [
+      "markdown/asset-lifecycle.reconcileOwnedAssets",
+      "markdown/asset-lifecycle.readOwnedAssetManifest"
+    ]
+  },
+  {
+    "name": "doc dir equal target",
+    "file": "main-core/src/markdown/asset_lifecycle.rs",
+    "find": "if target == dir {",
+    "replace": "if false {",
+    "fn": ["markdown/asset-lifecycle.isInDocDir"]
+  },
+  {
+    "name": "old manifest name ignored",
+    "file": "main-core/src/markdown/asset_lifecycle.rs",
+    "find": "fs::metadata(namespaced(&join(&[assets_dir, old]))).is_ok()",
+    "replace": "fs::metadata(namespaced(&join(&[assets_dir, old]))).is_err()",
+    "fn": [
+      "markdown/asset-lifecycle.readOwnedAssetManifest",
+      "markdown/asset-lifecycle.reconcileOwnedAssets",
+      "markdown/asset-lifecycle.copyImageIntoOwnedAssets"
+    ]
+  },
+  {
+    "name": "manifest files in byte order",
+    "file": "main-core/src/markdown/asset_lifecycle.rs",
+    "find": "files.sort_by(|a, b| compare(&a.name, &b.name));",
+    "replace": "files.sort_by(|a, b| a.name.cmp(&b.name));",
+    "fn": [
+      "markdown/asset-lifecycle.writeImageIntoOwnedAssets",
+      "markdown/asset-lifecycle.readOwnedAssetManifest"
+    ]
+  },
+  {
+    "name": "nbsp entity",
+    "file": "main-core/src/markdown/asset_scan.rs",
+    "find": "\"nbsp\" => \"\\u{a0}\".to_owned(),",
+    "replace": "\"nbsp\" => \" \".to_owned(),",
+    "fn": ["markdown/asset-lifecycle.extractMarkdownImageSources"]
+  },
+  {
+    "name": "title cut ignores unit offset",
+    "file": "main-core/src/markdown/asset_scan.rs",
+    "find": "end = start + raw[..title.start()].encode_utf16().count();",
+    "replace": "end = start + title.start();",
+    "fn": [
+      "markdown/asset-lifecycle.extractMarkdownImageSources",
+      "markdown/asset-lifecycle.rewriteMarkdownImageSources"
+    ]
+  },
+  {
+    "name": "annot tolerance tighter",
+    "file": "main-core/src/pdf/annot_delete.rs",
+    "find": "const RECT_TOL: f64 = 2.0;",
+    "replace": "const RECT_TOL: f64 = 1.0;",
+    "fn": ["annot-delete.applyAnnotDeletes", "annot-delete.removeMatchingAnnots"]
+  },
+  {
+    "name": "underline code wrong",
+    "file": "main-core/src/pdf/annot_delete.rs",
+    "find": "\"underline\" => Some(10),",
+    "replace": "\"underline\" => Some(11),",
+    "fn": ["annot-delete.applyAnnotDeletes"]
+  },
+  {
+    "name": "contents never compared",
+    "file": "main-core/src/pdf/annot_delete.rs",
+    "find": "Ok(found.iter().copied().eq(contents.encode_utf16()))",
+    "replace": "Ok(true)",
+    "fn": ["annot-delete.applyAnnotDeletes", "annot-delete.removeMatchingAnnots"]
+  },
+  {
+    "name": "flatten result 2 is failure",
+    "file": "main-core/src/pdf/annot_flatten.rs",
+    "find": "const FLATTEN_FAILED: i32 = 0;",
+    "replace": "const FLATTEN_FAILED: i32 = 2;",
+    "fn": ["annot-flatten.flattenAnnotsBytes"]
+  },
+  {
+    "name": "flatten pages without annotations",
+    "file": "main-core/src/pdf/annot_flatten.rs",
+    "find": "if m.fpdf_page_get_annot_count(page) == 0 {",
+    "replace": "if m.fpdf_page_get_annot_count(page) < 0 {",
+    "fn": ["annot-flatten.flattenAnnotsBytes"]
+  },
+  {
+    "name": "write a newline too",
+    "file": "main-core/src/pdf/atomic_write.rs",
+    "find": "atomic_write_file(target_path, bytes)",
+    "replace": "atomic_write_file(target_path, &[bytes, b\"\\n\"].concat())",
+    "fn": ["pdf/atomic-write.writePdfAtomically"]
+  },
+  {
+    "name": "ink luma 150",
+    "file": "main-core/src/pdf/blank_pages.rs",
+    "find": "const INK_LUMA: f64 = 160.0;",
+    "replace": "const INK_LUMA: f64 = 150.0;",
+    "fn": ["blank-pages.isNearlyWhite", "blank-pages.findBlankPages"]
+  },
+  {
+    "name": "one thumbnail fewer",
+    "file": "main-core/src/pdf/blank_pages.rs",
+    "find": "pub const MAX_THUMBS: usize = 120;",
+    "replace": "pub const MAX_THUMBS: usize = 119;",
+    "fn": ["blank-pages.MAX_THUMBS", "blank-pages.findBlankPages"]
+  },
+  {
+    "name": "no-break space is visible",
+    "file": "main-core/src/pdf/blank_pages.rs",
+    "find": "code != 0xa0 &&",
+    "replace": "code != 0xa1 &&",
+    "fn": ["blank-pages.findBlankPages"]
+  },
+  {
+    "name": "one wait fewer",
+    "file": "main-core/src/pdf/disk_watch.rs",
+    "find": "pub const DISK_WATCH_MAX_WAITS: u32 = 20;",
+    "replace": "pub const DISK_WATCH_MAX_WAITS: u32 = 19;",
+    "fn": ["disk-watch.DISK_WATCH_MAX_WAITS", "disk-watch.watchDiskFile"]
+  },
+  {
+    "name": "missing reported at once",
+    "file": "main-core/src/pdf/disk_watch.rs",
+    "find": "if self.missing_seen < DISK_WATCH_MISSING_CONFIRMATIONS {",
+    "replace": "if self.missing_seen <= DISK_WATCH_MISSING_CONFIRMATIONS {",
+    "fn": ["disk-watch.watchDiskFile"]
+  },
+  {
+    "name": "names always exact",
+    "file": "main-core/src/pdf/disk_watch.rs",
+    "find": "filename.to_lowercase() == self.name.to_lowercase()",
+    "replace": "filename == self.name",
+    "fn": ["disk-watch.watchDiskFile"]
+  },
+  {
+    "name": "largest safe integer refused",
+    "file": "main-core/src/pdf/export_images.rs",
+    "find": "x.abs() <= 9_007_199_254_740_991.0",
+    "replace": "x.abs() < 9_007_199_254_740_991.0",
+    "fn": [
+      "pdf/export-images.isValidExportPageNumber",
+      "pdf/export-images.hasValidExportPageNumbers",
+      "pdf/export-images.buildExportImagePaths"
+    ]
+  },
+  {
+    "name": "pipe allowed in a name",
+    "file": "main-core/src/pdf/export_images.rs",
+    "find": "js_regex!(r#\"[/\\\\:*?\"<>|]\"#, \"g\")",
+    "replace": "js_regex!(r#\"[/\\\\:*?\"<>]\"#, \"g\")",
+    "fn": ["pdf/export-images.buildExportImagePaths"]
+  },
+  {
+    "name": "other message for bad pages",
+    "file": "main-core/src/pdf/export_images.rs",
+    "find": "pdf: invalid page numbers",
+    "replace": "pdf: invalid page number",
+    "fn": ["pdf/export-images.buildExportImagePaths"]
+  },
+  {
+    "name": "only encoding 1 on platform 3",
+    "file": "main-core/src/pdf/font_cmap.rs",
+    "find": "(encoding == 1 || encoding == 10)",
+    "replace": "(encoding == 1)",
+    "fn": ["font-cmap.fontCoversText"]
+  },
+  {
+    "name": "glyph past a group",
+    "file": "main-core/src/pdf/font_cmap.rs",
+    "find": "return Ok(0); // groups are sorted ascending",
+    "replace": "return Ok(1); // groups are sorted ascending",
+    "fn": ["font-cmap.fontCoversText"]
+  },
+  {
+    "name": "delta not masked",
+    "file": "main-core/src/pdf/font_cmap.rs",
+    "find": "return Ok((cp + i16_at(font, deltas + s)?) & 0xffff);",
+    "replace": "return Ok(cp + i16_at(font, deltas + s)?);",
+    "fn": ["font-cmap.fontCoversText"]
+  },
+  {
+    "name": "CFF is TrueType",
+    "file": "main-core/src/pdf/font_locate.rs",
+    "find": "b.len() >= 4 && u32_at(b, 0) != Ok(OTTO_TAG)",
+    "replace": "b.len() >= 4 && u32_at(b, 0) == Ok(OTTO_TAG)",
+    "fn": ["font-locate.isTruetype"]
+  },
+  {
+    "name": "extras raise the style score",
+    "file": "main-core/src/pdf/font_locate.rs",
+    "find": "hits * 4 + near_weight * 2 - extras + regular_bonus",
+    "replace": "hits * 4 + near_weight * 2 + extras + regular_bonus",
+    "fn": [
+      "font-locate.findSystemFont",
+      "font-locate.findFontCovering",
+      "font-similar.similarFontFor"
+    ]
+  },
+  {
+    "name": "PANOSE sans stops at 14",
+    "file": "main-core/src/pdf/font_similar.rs",
+    "find": "else if (11..=15).contains(&serif_style) {",
+    "replace": "else if (11..=14).contains(&serif_style) {",
+    "fn": ["font-similar.os2Traits", "font-similar.sourceTraits"]
+  },
+  {
+    "name": "weight 600 is not bold",
+    "file": "main-core/src/pdf/font_similar.rs",
+    "find": "os2.weight.unwrap_or(0.0) >= 600.0",
+    "replace": "os2.weight.unwrap_or(0.0) > 600.0",
+    "fn": ["font-similar.sourceTraits"]
+  },
+  {
+    "name": "italic flag is bit 5",
+    "file": "main-core/src/pdf/font_similar.rs",
+    "find": "const FLAG_ITALIC: i32 = 1 << 6;",
+    "replace": "const FLAG_ITALIC: i32 = 1 << 5;",
+    "fn": ["font-similar.sourceTraits", "font-similar.similarFontFor"]
+  },
+  {
+    "name": "charset format 2 unknown",
+    "file": "main-core/src/pdf/font_subset.rs",
+    "find": "Some(f @ (1 | 2)) => {",
+    "replace": "Some(f @ 1) => {",
+    "fn": ["font-subset.identityCffCharset"]
+  },
+  {
+    "name": "range needs 6 bytes",
+    "file": "main-core/src/pdf/font_subset.rs",
+    "find": "if n_glyphs >= 2.0 && old_size >= 5.0 {",
+    "replace": "if n_glyphs >= 2.0 && old_size >= 6.0 {",
+    "fn": ["font-subset.identityCffCharset"]
+  },
+  {
+    "name": "other hb message",
+    "file": "main-core/src/pdf/font_subset.rs",
+    "find": "hb_subset_or_fail failed (corrupt font?)",
+    "replace": "hb_subset_or_fail failed",
+    "fn": ["font-subset.subsetTtf"]
+  },
+  {
+    "name": "extension test is exact case",
+    "file": "main-core/src/pdf/generated_output.rs",
+    "find": "js_regex!(r\"\\.pdf$\", \"i\").test(&file_name)",
+    "replace": "js_regex!(r\"\\.pdf$\").test(&file_name)",
+    "fn": ["generated-output.uniqueGeneratedPdfPath"]
+  },
+  {
+    "name": "numbering starts at 3",
+    "file": "main-core/src/pdf/generated_output.rs",
+    "find": "let mut i = 2;",
+    "replace": "let mut i = 3;",
+    "fn": ["generated-output.uniqueGeneratedPdfPath"]
+  },
+  {
+    "name": "an odd run of slashes is not escaped",
+    "file": "main-core/src/pdf/note_link.rs",
+    "find": "if slashes.len() % 2 == 1 {",
+    "replace": "if slashes.len() % 2 == 0 {",
+    "fn": ["note-link.noteInsertText", "note-link.createNoteLinkService"]
+  },
+  {
+    "name": "title cut at 299",
+    "file": "main-core/src/pdf/note_link.rs",
+    "find": "const MAX_TITLE_CHARS: f64 = 300.0;",
+    "replace": "const MAX_TITLE_CHARS: f64 = 299.0;",
+    "fn": ["note-link.parseNoteInsertRequest", "note-link.parseNoteOpenRequest"]
+  },
+  {
+    "name": "parentheses stay in links",
+    "file": "main-core/src/pdf/note_link.rs",
+    "find": ".replace('(', \"%28\")",
+    "replace": ".replace('(', \"(\")",
+    "fn": ["note-link.pdfLinkFromNote", "note-link.noteInsertText"]
+  },
+  {
+    "name": "a relative note path is accepted",
+    "file": "main-core/src/pdf/note_link.rs",
+    "find": "if !p.is_absolute(&picked) {",
+    "replace": "if false {",
+    "fn": ["note-link.createNoteLinkService"]
+  },
+  {
+    "name": "helper existence unchecked",
+    "file": "main-core/src/pdf/ocr.rs",
+    "find": "if platform != Platform::Darwin || !exists(helper_path) {",
+    "replace": "if platform != Platform::Darwin {",
+    "fn": ["ocr.ocrPagePng"]
+  },
+  {
+    "name": "byte order mark kept",
+    "file": "main-core/src/pdf/ocr.rs",
+    "find": "let text = text.strip_prefix('\\u{feff}').unwrap_or(&text);",
+    "replace": "let text = &*text;",
+    "fn": ["ocr.ocrPagePng"]
+  },
+  {
+    "name": "exit status ignored",
+    "file": "main-core/src/pdf/ocr.rs",
+    "find": "if run.ended != Ended::Exited(Some(0)) {",
+    "replace": "if matches!(run.ended, Ended::NotFound) {",
+    "fn": ["ocr.ocrPagePng"]
+  },
+  {
+    "name": "same-line tolerance 0.5",
+    "file": "main-core/src/pdf/read_text.rs",
+    "find": "(ny - py).abs() < size * 0.3",
+    "replace": "(ny - py).abs() < size * 0.5",
+    "fn": ["read-text.readPdfText"]
+  },
+  {
+    "name": "gap becomes a space later",
+    "file": "main-core/src/pdf/read_text.rs",
+    "find": "if nx - px > size * 2.0 {",
+    "replace": "if nx - px > size * 3.0 {",
+    "fn": ["read-text.readPdfText"]
+  },
+  {
+    "name": "budget spent exactly still reads",
+    "file": "main-core/src/pdf/read_text.rs",
+    "find": "if spent >= budget {",
+    "replace": "if spent > budget {",
+    "fn": ["read-text.readPdfText"]
+  },
+  {
+    "name": "float32 range smaller",
+    "file": "main-core/src/pdf/redaction.rs",
+    "find": "const MAX_FLOAT32: f64 = 3.402823466e38;",
+    "replace": "const MAX_FLOAT32: f64 = 3.402823466e37;",
+    "fn": ["redaction.validateRedactionRegions", "redaction.redactPdf"]
+  },
+  {
+    "name": "a twice placed image is private",
+    "file": "main-core/src/pdf/redaction.rs",
+    "find": ".copied().unwrap_or(0) > 1",
+    "replace": ".copied().unwrap_or(0) > 2",
+    "fn": ["redaction.redactPdf"]
+  },
+  {
+    "name": "one region more",
+    "file": "main-core/src/pdf/redaction.rs",
+    "find": "pub const MAX_REDACTION_REGIONS: usize = 500;",
+    "replace": "pub const MAX_REDACTION_REGIONS: usize = 501;",
+    "fn": ["redaction.MAX_REDACTION_REGIONS", "redaction.validateRedactionRegions"]
+  },
+  {
+    "name": "eleven signatures kept",
+    "file": "main-core/src/pdf/signature_store.rs",
+    "find": "pub const MAX_SAVED_SIGNATURES: usize = 10;",
+    "replace": "pub const MAX_SAVED_SIGNATURES: usize = 11;",
+    "fn": ["signature-store.MAX_SAVED_SIGNATURES", "signature-store.addSignature"]
+  },
+  {
+    "name": "a path of two numbers is a stroke",
+    "file": "main-core/src/pdf/signature_store.rs",
+    "find": "points.len() >= 4",
+    "replace": "points.len() >= 2",
+    "fn": ["signature-store.isSignatureData", "signature-store.sanitizeSignatures"]
+  },
+  {
+    "name": "odd paths allowed",
+    "file": "main-core/src/pdf/signature_store.rs",
+    "find": "&& points.len() % 2 == 0",
+    "replace": "&& points.len() % 2 < 2",
+    "fn": ["signature-store.isSignatureData", "signature-store.sanitizeSignatures"]
+  },
+  {
+    "name": "EC keys offered",
+    "file": "main-core/src/pdf/system_certificates.rs",
+    "find": "&& m.get(1) == Some(\"rsa\")",
+    "replace": "&& m.get(1) == Some(\"ec\")",
+    "fn": ["system-certificates.parseNssKeyList", "system-certificates.listSystemCertificates"]
+  },
+  {
+    "name": "expired reversed",
+    "file": "main-core/src/pdf/system_certificates.rs",
+    "find": "expired: date_parse(&summary.valid_to) < now,",
+    "replace": "expired: date_parse(&summary.valid_to) > now,",
+    "fn": ["system-certificates.listSystemCertificates"]
+  },
+  {
+    "name": "tokens are no lock",
+    "file": "main-core/src/pdf/system_certificates.rs",
+    "find": "|authentication|SEC_ERROR_BAD_PASSWORD|token",
+    "replace": "|authentication|SEC_ERROR_BAD_PASSWORD",
+    "fn": ["system-certificates.listSystemCertificates", "system-certificates.openSystemSigner"]
+  },
+  {
+    "name": "thumbprint kept as written",
+    "file": "main-core/src/pdf/system_certificates.rs",
+    "find": "thumbprint: thumbprint.to_uppercase(),",
+    "replace": "thumbprint: thumbprint.to_owned(),",
+    "fn": [
+      "system-certificates.parseWindowsCertificates",
+      "system-certificates.listSystemCertificates"
+    ]
+  },
+  {
+    "name": "exists unchecked",
+    "file": "main-core/src/pdf/wasm_path.rs",
+    "find": "if (env.exists)(&p) {",
+    "replace": "if true {",
+    "fn": ["wasm-path.hbSubsetWasmPath"]
+  },
+  {
+    "name": "other hb subpath",
+    "file": "main-core/src/pdf/wasm_path.rs",
+    "find": "\"harfbuzzjs/hb-subset.wasm\"",
+    "replace": "\"harfbuzzjs/hb-subset2.wasm\"",
+    "fn": ["wasm-path.hbSubsetWasmPath"]
+  },
+  {
+    "name": "other qpdf name",
+    "file": "main-core/src/pdf/wasm_path.rs",
+    "find": "\"qpdf.wasm\"])",
+    "replace": "\"qpdf2.wasm\"])",
+    "fn": ["wasm-path.qpdfWasmPath"]
+  },
+  {
+    "name": "looksLikeZip-signature",
+    "file": "main-core/src/docs/atomic_write.rs",
+    "find": "0x0403_4b50",
+    "replace": "0x0403_4b51",
+    "fn": ["docs/atomic-write.looksLikeZip"]
+  },
+  {
+    "name": "handoff-count-cap",
+    "file": "main-core/src/docs/byte_handoff.rs",
+    "find": "pub const MAX_PENDING_HANDOFFS: usize = 8;",
+    "replace": "pub const MAX_PENDING_HANDOFFS: usize = 9;",
+    "fn": ["byte-handoff.handOffBytes", "byte-handoff.pendingHandoffCount"]
+  },
+  {
+    "name": "handoff-ttl",
+    "file": "main-core/src/docs/byte_handoff.rs",
+    "find": "pub const HANDOFF_TTL_MS: f64 = 60_000.0;",
+    "replace": "pub const HANDOFF_TTL_MS: f64 = 59_999.0;",
+    "fn": ["byte-handoff.takeHandoff", "byte-handoff.pendingHandoffCount"]
+  },
+  {
+    "name": "image-url-cap",
+    "file": "main-core/src/docs/copy_image_guard.rs",
+    "find": "text.len() > max && text.encode_utf16().count() > max",
+    "replace": "text.len() >= max && text.encode_utf16().count() >= max",
+    "fn": ["copy-image-guard.validCopyImageDataUrl", "copy-image-guard.copyImageDisplaySize"]
+  },
+  {
+    "name": "image-size-clamp",
+    "file": "main-core/src/docs/copy_image_guard.rs",
+    "find": ".min(100_000.0)",
+    "replace": ".min(100_001.0)",
+    "fn": ["copy-image-guard.copyImageDisplaySize"]
+  },
+  {
+    "name": "zip-lowest-scan",
+    "file": "main-core/src/docs/doc_format.rs",
+    "find": "saturating_sub(22 + 0xffff)",
+    "replace": "saturating_sub(22 + 0xfffe)",
+    "fn": ["doc-format.zipEntryNames", "doc-format.isOdtPackage"]
+  },
+  {
+    "name": "odt-needs-no-ooxml",
+    "file": "main-core/src/docs/doc_format.rs",
+    "find": "&& !names.iter().any(|name| name == \"[Content_Types].xml\")",
+    "replace": "",
+    "fn": ["doc-format.isOdtPackage", "doc-format.prepareSaveBytes"]
+  },
+  {
+    "name": "empty-password-encrypts",
+    "file": "main-core/src/docs/doc_format.rs",
+    "find": "let password = jscompat::truthy(deps.password);",
+    "replace": "let password = deps.password;",
+    "fn": ["doc-format.prepareSaveBytes"]
+  },
+  {
+    "name": "external-mtime-only",
+    "file": "main-core/src/docs/external_change.rs",
+    "find": "if mtime_ms == recorded.mtime_ms && size == recorded.size {",
+    "replace": "if mtime_ms == recorded.mtime_ms {",
+    "fn": ["external-change.isExternallyModified"]
+  },
+  {
+    "name": "hwpx-ext-case",
+    "file": "main-core/src/docs/hwp_export.rs",
+    "find": "jscompat::js_regex!(r\"\\.hwpx$\", \"i\")",
+    "replace": "jscompat::js_regex!(r\"\\.hwpx$\", \"\")",
+    "fn": ["hwp-export.exportHwp"]
+  },
+  {
+    "name": "export-stillopen-after-confirm",
+    "file": "main-core/src/docs/hwp_export.rs",
+    "find": "if !save || !steps.still_open()? {",
+    "replace": "if !save {",
+    "fn": ["hwp-export.exportHwp"]
+  },
+  {
+    "name": "loss-count-threshold",
+    "file": "main-core/src/docs/hwp_export.rs",
+    "find": "if count > 1.0 {",
+    "replace": "if count >= 1.0 {",
+    "fn": ["hwp-export.hwpLossMessageBox"]
+  },
+  {
+    "name": "inline-dedupe",
+    "file": "main-core/src/docs/lazy_media_inline.rs",
+    "find": "if !urls.contains(&found.as_str()) {",
+    "replace": "if true {",
+    "fn": ["lazy-media-inline.inlineLazyMediaInHtml"]
+  },
+  {
+    "name": "inline-class-whitespace",
+    "file": "main-core/src/docs/lazy_media_inline.rs",
+    "find": "[^\"\\s<>]+",
+    "replace": "[^\"<>]+",
+    "fn": ["lazy-media-inline.inlineLazyMediaInHtml"]
+  },
+  {
+    "name": "merge-name-trim",
+    "file": "main-core/src/docs/merge_output.rs",
+    "find": "let base = trim(&replaced);",
+    "replace": "let base = replaced.as_str();",
+    "fn": ["merge-output.mergeOutputFileName", "merge-output.mergeOutputPath"]
+  },
+  {
+    "name": "merge-counter-start",
+    "file": "main-core/src/docs/merge_output.rs",
+    "find": "let mut i = 2u64;",
+    "replace": "let mut i = 1u64;",
+    "fn": ["merge-output.mergeOutputPath"]
+  },
+  {
+    "name": "print-dim-floor",
+    "file": "main-core/src/docs/print_args.rs",
+    "find": "(144.0..=72000.0).contains(&x)",
+    "replace": "(143.0..=72000.0).contains(&x)",
+    "fn": [
+      "print-args.validPrintDim",
+      "print-args.validPrintGeometry",
+      "print-args.validPrintPaper"
+    ]
+  },
+  {
+    "name": "paper-microns",
+    "file": "main-core/src/docs/print_args.rs",
+    "find": "geometry.width_twips * 25_400.0 / 1440.0",
+    "replace": "geometry.width_twips * 25_000.0 / 1440.0",
+    "fn": ["print-args.printPaperOption"]
+  },
+  {
+    "name": "readurl-offset-default",
+    "file": "main-core/src/docs/read_url_ipc.rs",
+    "find": "_ => 0.0,",
+    "replace": "_ => 1.0,",
+    "fn": ["read-url-ipc.normalizeReadUrlRequest"]
+  },
+  {
+    "name": "saveas-ext-regex",
+    "file": "main-core/src/docs/save_as_formats.rs",
+    "find": "js_regex!(r\"\\.([^./\\\\]+)$\")",
+    "replace": "js_regex!(r\"\\.([^.]+)$\")",
+    "fn": ["docs/save-as-formats.saveAsTarget", "docs/save-as-formats.hwpExportTarget"]
+  },
+  {
+    "name": "saveas-label-order",
+    "file": "main-core/src/docs/save_as_formats.rs",
+    "find": "vec![odt, word]",
+    "replace": "vec![word, odt]",
+    "fn": ["docs/save-as-formats.saveAsFilters"]
+  },
+  {
+    "name": "mindmap-xmind-ci",
+    "file": "main-core/src/mindmap/save_as_formats.rs",
+    "find": "js_regex!(r\"\\.xmind$\", \"i\").test(file_path)",
+    "replace": "js_regex!(r\"\\.xmind$\", \"\").test(file_path)",
+    "fn": ["mindmap/save-as-formats.saveAsTarget"]
+  },
+  {
+    "name": "starred-group-trim",
+    "file": "main-core/src/docs/starred_files.rs",
+    "find": "let name = group.map_or(\"\", trim);",
+    "replace": "let name = group.unwrap_or(\"\");",
+    "fn": ["starred-files.assignStarredGroup"]
+  },
+  {
+    "name": "starred-toggle-append",
+    "file": "main-core/src/docs/starred_files.rs",
+    "find": "next.push(StarredItem::ungrouped(file_path));",
+    "replace": "next.insert(0, StarredItem::ungrouped(file_path));",
+    "fn": ["starred-files.toggleStarredItem"]
+  },
+  {
+    "name": "coalesce-merge-same-type",
+    "file": "main-core/src/docs/stream_coalesce.rs",
+    "find": "&& merged_type(pending) == merged_type(&chunk)",
+    "replace": "&& merged_type(pending) == merged_type(pending)",
+    "fn": ["stream-coalesce.createChunkCoalescer"]
+  },
+  {
+    "name": "coalesce-window",
+    "file": "main-core/src/docs/stream_coalesce.rs",
+    "find": "pub const STREAM_COALESCE_MS: f64 = 32.0;",
+    "replace": "pub const STREAM_COALESCE_MS: f64 = 33.0;",
+    "fn": ["stream-coalesce.STREAM_COALESCE_MS", "stream-coalesce.createChunkCoalescer"]
+  },
+  {
+    "name": "zotero-max-payload",
+    "file": "main-core/src/docs/zotero_wire.rs",
+    "find": "const MAX_PAYLOAD_BYTES: u64 = 16 * 1024 * 1024;",
+    "replace": "const MAX_PAYLOAD_BYTES: u64 = 16 * 1024 * 1024 + 1;",
+    "fn": ["zotero-wire.ZoteroFrameDecoder", "zotero-wire.ZoteroWireClient"]
+  },
+  {
+    "name": "zotero-defer-write",
+    "file": "main-core/src/docs/zotero_wire.rs",
+    "find": "                self.pending.push_back(Pending {",
+    "replace": "                self.pending.push_front(Pending {",
+    "fn": ["zotero-wire.ZoteroWireClient"]
+  },
+  {
+    "name": "csp-print-script",
+    "file": "main-core/src/diagram/drawio_protocol.rs",
+    "find": "\"script-src 'none'\".to_owned(),",
+    "replace": "\"script-src 'self'\".to_owned(),",
+    "fn": ["drawio-protocol.PRINT_PAGE_CSP"]
+  },
+  {
+    "name": "drawio-escape-check",
+    "file": "main-core/src/diagram/drawio_protocol.rs",
+    "find": "js_regex!(r\"%2f|%5c|%00\", \"i\")",
+    "replace": "js_regex!(r\"%2f|%5c|%00\", \"\")",
+    "fn": ["drawio-protocol.resolveDrawioRequest"]
+  },
+  {
+    "name": "drawio-inside-root",
+    "file": "main-core/src/diagram/drawio_protocol.rs",
+    "find": "if file == base || !file.starts_with(&format!(\"{base}{}\", host::SEP)) {",
+    "replace": "if file == base || !file.starts_with(&base) {",
+    "fn": ["drawio-protocol.resolveDrawioRequest"]
+  },
+  {
+    "name": "inject-after-head",
+    "file": "main-core/src/diagram/drawio_protocol.rs",
+    "find": "let at = head.end();",
+    "replace": "let at = head.start();",
+    "fn": ["drawio-protocol.injectBridge"]
+  },
+  {
+    "name": "page-path-perpage",
+    "file": "main-core/src/diagram/export_paths.rs",
+    "find": "if !per_page && page_numbers.len() == 1 {",
+    "replace": "if page_numbers.len() == 1 {",
+    "fn": ["export-paths.pageFilePaths"]
+  },
+  {
+    "name": "safe-name-cut",
+    "file": "main-core/src/diagram/export_paths.rs",
+    "find": "Some(80.0)",
+    "replace": "Some(81.0)",
+    "fn": ["export-paths.pageFilePaths"]
+  },
+  {
+    "name": "refused-kept",
+    "file": "main-core/src/diagram/network_guard.rs",
+    "find": "pub const REFUSED_ADDRESSES_KEPT: usize = 100;",
+    "replace": "pub const REFUSED_ADDRESSES_KEPT: usize = 101;",
+    "fn": ["network-guard.REFUSED_ADDRESSES_KEPT", "network-guard.screenRequest"]
+  },
+  {
+    "name": "guard-ws-origin",
+    "file": "main-core/src/diagram/network_guard.rs",
+    "find": "if protocol == \"ws:\" { \"http\" } else { \"https\" },",
+    "replace": "if protocol == \"ws:\" { \"https\" } else { \"http\" },",
+    "fn": ["network-guard.isAllowedDiagramRequest"]
+  },
+  {
+    "name": "guard-packaged",
+    "file": "main-core/src/diagram/network_guard.rs",
+    "find": "if packaged {\n        return Vec::new();\n    }",
+    "replace": "",
+    "fn": ["network-guard.devServerOrigins"]
+  },
+  {
+    "name": "print-sheet-fallback",
+    "file": "main-core/src/diagram/print_document.rs",
+    "find": "let sheet_width = units(page.page_width, 827.0);",
+    "replace": "let sheet_width = units(page.page_width, 826.0);",
+    "fn": ["diagram/print-document.buildPrintHtml"]
+  },
+  {
+    "name": "inert-attr-regex",
+    "file": "main-core/src/diagram/print_document.rs",
+    "find": "js_regex!(r#\"\\son[a-z]+\\s*=\\s*(\"[^\"]*\"|'[^']*')\"#, \"gi\")",
+    "replace": "js_regex!(r#\"\\son[a-z]+\\s*=\\s*(\"[^\"]*\")\"#, \"gi\")",
+    "fn": ["diagram/print-document.inertSvg", "diagram/print-document.buildPrintHtml"]
+  },
+  {
+    "name": "print-take-keeps",
+    "file": "main-core/src/diagram/print_document.rs",
+    "find": "self.documents.remove(token)\n    }\n\n    pub fn drop_print_document",
+    "replace": "self.documents.get(token).cloned()\n    }\n\n    pub fn drop_print_document",
+    "fn": ["diagram/print-document.takePrintDocument"]
+  },
+  {
+    "name": "cfb: skip the damaged check",
+    "file": "main-core/src/slides/cfb_sniff.rs",
+    "find": "if is_damaged_compound_file(bytes) {",
+    "replace": "if false && is_damaged_compound_file(bytes) {",
+    "fn": ["cfb-sniff.cfbKind"]
+  },
+  {
+    "name": "cfb gate: accept version 2",
+    "file": "main-core/src/packages/compound_file.rs",
+    "find": "if !((major == 3 && sector_shift == 9) || (major == 4 && sector_shift == 12)) {",
+    "replace": "if !((major >= 2 && sector_shift == 9) || (major == 4 && sector_shift == 12)) {",
+    "fn": ["cfb-sniff.cfbKind"]
+  },
+  {
+    "name": "export-images: pad width 2 at 100",
+    "file": "main-core/src/slides/export_images.rs",
+    "find": "if count >= 100.0 { 3 } else { 2 }",
+    "replace": "if count > 100.0 { 3 } else { 2 }",
+    "fn": ["slides/export-images.buildExportImagePaths"]
+  },
+  {
+    "name": "font-scan: drop the isFile filter",
+    "file": "main-core/src/slides/font_scan.rs",
+    "find": ".filter(|name| is_file(&join(&[dir, name])))",
+    "replace": ".filter(|_| true)",
+    "fn": ["font-scan.scanFontDirs"]
+  },
+  {
+    "name": "generated-page: cutoff inclusive",
+    "file": "main-core/src/slides/generated_page_temp.rs",
+    "find": "StatInfo::of(&info).mtime_ms >= cutoff",
+    "replace": "StatInfo::of(&info).mtime_ms > cutoff",
+    "fn": ["generated-page-temp.cleanupExpiredGeneratedPages"]
+  },
+  {
+    "name": "jpeg: also rewrite orientation 0",
+    "file": "main-core/src/slides/jpeg_orientation.rs",
+    "find": "if cur == 1 || cur == 0 {",
+    "replace": "if cur == 1 {",
+    "fn": ["jpeg-orientation.neutralizeJpegOrientation"]
+  },
+  {
+    "name": "jpeg: big endian written as little",
+    "file": "main-core/src/slides/jpeg_orientation.rs",
+    "find": "out[(e + 8) as usize] = 0;",
+    "replace": "out[(e + 8) as usize] = 1;",
+    "fn": ["jpeg-orientation.neutralizeJpegOrientation"]
+  },
+  {
+    "name": "media-mime: webp needs no WEBP",
+    "file": "main-core/src/slides/media_mime.rs",
+    "find": "&& starts_with(bytes, &[0x57, 0x45, 0x42, 0x50], 8)",
+    "replace": "",
+    "fn": ["media-mime.sniffImageMime", "media-mime.rasterImageExt", "media-mime.displayMime"]
+  },
+  {
+    "name": "media-mime: constructor is png",
+    "file": "main-core/src/slides/media_mime.rs",
+    "find": "\"constructor\" => DisplayMime::ObjectConstructor,",
+    "replace": "",
+    "fn": ["media-mime.displayMime"]
+  },
+  {
+    "name": "metafile: bold at 700",
+    "file": "main-core/src/slides/metafile_fonts.rs",
+    "find": "add(out, &family, weight >= 600, italic);",
+    "replace": "add(out, &family, weight >= 700, italic);",
+    "fn": ["metafile-fonts.scanMetafileFonts", "metafile-fonts.listMetafileFonts"]
+  },
+  {
+    "name": "metafile: gunzip limit off by one",
+    "file": "main-core/src/slides/metafile_fonts.rs",
+    "find": "if (out.len() - before) as u64 > room {",
+    "replace": "if (out.len() - before) as u64 >= room {",
+    "fn": ["metafile-fonts.scanMetafileFonts"]
+  },
+  {
+    "name": "mp4: handler from minf",
+    "file": "main-core/src/slides/mp4_audio_sniff.rs",
+    "find": "&& parent == \"mdia\" {",
+    "replace": "{",
+    "fn": ["mp4-audio-sniff.audioSampleFormats", "mp4-audio-sniff.unplayableAudioCodec"]
+  },
+  {
+    "name": "mp4: ignore the rotation",
+    "file": "main-core/src/slides/mp4_audio_sniff.rs",
+    "find": "let rotated = a == 0 && d == 0 && b != 0 && c != 0;",
+    "replace": "let rotated = false;",
+    "fn": ["mp4-audio-sniff.mp4VideoSize", "video-size.videoSize"]
+  },
+  {
+    "name": "paste-cascade: original not counted",
+    "file": "main-core/src/slides/paste_cascade.rs",
+    "find": "clip.source_key.as_deref() == Some(target_key)",
+    "replace": "false",
+    "fn": ["paste-cascade.pasteShiftPx"]
+  },
+  {
+    "name": "pdf: overlays keep a non-finite rect",
+    "file": "main-core/src/slides/pdf_export.rs",
+    "find": "if v.is_finite() {",
+    "replace": "if true {",
+    "fn": ["slides/pdf-export.buildPdfLinkOverlays", "slides/pdf-export.buildPdfExportHtml"]
+  },
+  {
+    "name": "pdf: width clamp",
+    "file": "main-core/src/slides/pdf_export.rs",
+    "find": "jscompat::math_max(ratio, 0.2)",
+    "replace": "jscompat::math_max(ratio, 0.25)",
+    "fn": ["slides/pdf-export.exportPageWidthIn"]
+  },
+  {
+    "name": "pdf: timeout wins never",
+    "file": "main-core/src/slides/pdf_export.rs",
+    "find": "Step::Hangs => return Err(timed_out()),\n        }\n        match win.execute_javascript",
+    "replace": "Step::Hangs => {}\n        }\n        match win.execute_javascript",
+    "fn": ["slides/pdf-export.exportSlidesPdf"]
+  },
+  {
+    "name": "picture-frame: enlarge small pictures",
+    "file": "main-core/src/slides/picture_frame.rs",
+    "find": "let mut scale = math_min(1.0, fit);",
+    "replace": "let mut scale = fit;",
+    "fn": ["picture-frame.pictureFrame"]
+  },
+  {
+    "name": "save-as: png checked before pdf kind",
+    "file": "main-core/src/slides/save_as_formats.rs",
+    "find": ".is_some_and(|dot| dot as i64 > slash + 1);",
+    "replace": ".is_some_and(|dot| dot as i64 > slash);",
+    "fn": ["slides/save-as-formats.resolveSlidesSaveAsPick"]
+  },
+  {
+    "name": "save-as: take keeps the target",
+    "file": "main-core/src/slides/save_as_formats.rs",
+    "find": "self.forget(wc_id);\n        numbered_export_paths",
+    "replace": "numbered_export_paths",
+    "fn": ["slides/save-as-formats.SaveAsImageTargets"]
+  },
+  {
+    "name": "seed-queue: take does not remove",
+    "file": "main-core/src/slides/seed_queue.rs",
+    "find": "Some(self.seeds.remove(at).1)",
+    "replace": "Some(self.seeds[at].1.clone())",
+    "fn": ["seed-queue.takeSlidesSeed", "seed-queue.takeSlidesSeedEntry"]
+  },
+  {
+    "name": "seed-queue: destroyed contents still queued",
+    "file": "main-core/src/slides/seed_queue.rs",
+    "find": "if contents.is_destroyed() {\n            return;\n        }",
+    "replace": "",
+    "fn": ["seed-queue.queueSlidesSeedFor"]
+  },
+  {
+    "name": "template: cut keeps the half pair",
+    "file": "main-core/src/slides/template_selection.rs",
+    "find": "&& (0xd800..=0xdbff).contains(last)",
+    "replace": "&& (0xd800..=0xdbff).contains(last)\n        && false",
+    "fn": [
+      "template-selection-store.TemplateSelectionStore",
+      "template-selection-store.TemplateSelectionMemory"
+    ]
+  },
+  {
+    "name": "template: touch interval",
+    "file": "main-core/src/slides/template_selection_store.rs",
+    "find": "now - entry.used_at >= TEMPLATE_SELECTION_TOUCH_INTERVAL_MS",
+    "replace": "now - entry.used_at > TEMPLATE_SELECTION_TOUCH_INTERVAL_MS * 2.0",
+    "fn": ["template-selection-store.TemplateSelectionStore"]
+  },
+  {
+    "name": "template: put forgets nothing without a record",
+    "file": "main-core/src/slides/template_selection_store.rs",
+    "find": "if selection.is_none() && found.is_none() {\n            return Ok(());\n        }",
+    "replace": "",
+    "fn": ["template-selection-store.TemplateSelectionStore"]
+  },
+  {
+    "name": "video: webm display size ignored",
+    "file": "main-core/src/slides/video_size.rs",
+    "find": "let both = truthy(found.dw) && truthy(found.dh);",
+    "replace": "let both = false;",
+    "fn": ["video-size.videoSize"]
+  },
+  {
+    "name": "video: avi pad byte dropped",
+    "file": "main-core/src/slides/video_size.rs",
+    "find": "off += 8 + size + (size & 1);",
+    "replace": "off += 8 + size;",
+    "fn": ["video-size.videoSize"]
+  },
+  {
+    "name": "video: frame not shrunk",
+    "file": "main-core/src/slides/video_size.rs",
+    "find": "let scale = math_min(math_min(1.0, slide.width / w), slide.height / h);",
+    "replace": "let scale = 1.0;",
+    "fn": ["video-size.videoFrame"]
+  },
+  {
+    "name": "wav-mime",
+    "file": "main-core/src/html/asset_mime.rs",
+    "find": "return Some(\"audio/wav\");",
+    "replace": "return Some(\"audio/x-wav\");",
+    "fn": ["asset-mime.sniffBinaryAssetMime", "asset-mime.extensionlessAssetMime"]
+  },
+  {
+    "name": "ttf-table-bound",
+    "file": "main-core/src/html/asset_mime.rs",
+    "find": "if num_tables > 0 && num_tables <= 64 {",
+    "replace": "if num_tables > 0 && num_tables < 64 {",
+    "fn": ["asset-mime.sniffBinaryAssetMime"]
+  },
+  {
+    "name": "accept-case",
+    "file": "main-core/src/html/asset_mime.rs",
+    "find": "let first = trim(accept.unwrap_or(\"\")).to_lowercase();",
+    "replace": "let first = trim(accept.unwrap_or(\"\")).to_owned();",
+    "fn": ["asset-mime.slotFromAccept", "asset-mime.extensionlessAssetMime"]
+  },
+  {
+    "name": "base-colon",
+    "file": "main-core/src/html/preview_document.rs",
+    "find": "js_regex!(r\"%3A\", \"i\").replace_all(&encode_uri_component(segment), |_| \":\".to_owned())",
+    "replace": "encode_uri_component(segment)",
+    "fn": ["preview-document.assetBaseHref"]
+  },
+  {
+    "name": "author-base-ignored",
+    "file": "main-core/src/html/preview_document.rs",
+    "find": "if opening_tag(text, \"base\").is_some() {",
+    "replace": "if false {",
+    "fn": ["preview-document.buildPreviewDocument"]
+  },
+  {
+    "name": "script-close-space",
+    "file": "main-core/src/html/preview_document.rs",
+    "find": "\"script\" => js_regex!(r\"</script\\s*>\", \"i\"),",
+    "replace": "\"script\" => js_regex!(r\"</script>\", \"i\"),",
+    "fn": ["preview-document.buildPreviewDocument"]
+  },
+  {
+    "name": "single-suffix-case",
+    "file": "main-core/src/html/single_file_html.rs",
+    "find": "js_regex!(r\"\\.single$\", \"i\")",
+    "replace": "js_regex!(r\"\\.single$\")",
+    "fn": ["single-file-html.singleFileExportBaseName"]
+  },
+  {
+    "name": "svg-ext-case",
+    "file": "main-core/src/html/single_file_html.rs",
+    "find": "(extname(&target).to_lowercase() == \".svg\")",
+    "replace": "(extname(&target) == \".svg\")",
+    "fn": ["single-file-html.inlineImagesForSingleFile"]
+  },
+  {
+    "name": "inlined-count",
+    "file": "main-core/src/html/single_file_html.rs",
+    "find": "inlined: inlined_imgs + rewritten,",
+    "replace": "inlined: inlined_imgs,",
+    "fn": ["single-file-html.inlineImagesForSingleFile"]
+  },
+  {
+    "name": "code-point-bound",
+    "file": "main-core/src/html/asset_lifecycle.rs",
+    "find": "|| code_point > 1_114_111.0",
+    "replace": "|| code_point >= 1_114_111.0",
+    "fn": [
+      "html/asset-lifecycle.extractHtmlImageSources",
+      "html/asset-lifecycle.extractDocumentImageSources"
+    ]
+  },
+  {
+    "name": "name-length",
+    "file": "main-core/src/html/asset_lifecycle.rs",
+    "find": "&& length <= 180",
+    "replace": "&& length < 180",
+    "fn": [
+      "html/asset-lifecycle.readOwnedAssetManifest",
+      "html/asset-lifecycle.reconcileOwnedAssets"
+    ]
+  },
+  {
+    "name": "stem-length",
+    "file": "main-core/src/html/asset_lifecycle.rs",
+    "find": "let max_stem = 140 - ext.len();",
+    "replace": "let max_stem = 139 - ext.len();",
+    "fn": [
+      "html/asset-lifecycle.writeImageIntoOwnedAssets",
+      "html/asset-lifecycle.copyImageIntoOwnedAssets"
+    ]
+  },
+  {
+    "name": "constructor-entity",
+    "file": "main-core/src/html/asset_lifecycle.rs",
+    "find": "\"constructor\" => \"function Object() { [native code] }\".to_owned(),",
+    "replace": "\"constructor\" => entity.to_owned(),",
+    "fn": [
+      "html/asset-lifecycle.extractHtmlImageSources",
+      "html/asset-lifecycle.extractDocumentImageSources"
+    ]
+  },
+  {
+    "name": "file-order",
+    "file": "main-core/src/html/asset_lifecycle.rs",
+    "find": "sort_by_number(&mut files, |a, b| locale_compare(&a.name, &b.name));",
+    "replace": "sort_by_number(&mut files, |a, b| if a.name < b.name { -1.0 } else { 1.0 });",
+    "fn": ["html/asset-lifecycle.readOwnedAssetManifest"]
+  },
+  {
+    "name": "positions-limit",
+    "file": "main-core/src/epub/reading_state.rs",
+    "find": "if file.positions.len() > MAX_POSITIONS {",
+    "replace": "if file.positions.len() >= MAX_POSITIONS {",
+    "fn": ["reading-state.createReadingState"]
+  },
+  {
+    "name": "font-scale-max",
+    "file": "main-core/src/epub/reading_state.rs",
+    "find": "out.font_scale = clamp(x, 0.5, 3.0);",
+    "replace": "out.font_scale = clamp(x, 0.5, 4.0);",
+    "fn": ["reading-state.viewPrefsOf", "reading-state.createReadingState"]
+  },
+  {
+    "name": "path-length",
+    "file": "main-core/src/epub/result_paths.rs",
+    "find": "path.encode_utf16().count() > 4096",
+    "replace": "path.len() > 4096",
+    "fn": ["result-paths.checkResultPath"]
+  },
+  {
+    "name": "epub-ext-case",
+    "file": "main-core/src/epub/result_paths.rs",
+    "find": "js_regex!(r\"\\.epub$\", \"i\").test(path)",
+    "replace": "js_regex!(r\"\\.epub$\").test(path)",
+    "fn": ["result-paths.checkResultPath"]
+  },
+  {
+    "name": "key-fold",
+    "file": "main-core/src/epub/result_paths.rs",
+    "find": "resolved.to_lowercase()",
+    "replace": "resolved.to_uppercase()",
+    "fn": ["result-paths.pathKey", "result-paths.samePath", "reading-state.createReadingState"]
+  },
+  {
+    "name": "max-blocks",
+    "file": "main-core/src/epub/store_handlers.rs",
+    "find": "const MAX_BLOCKS: usize = 10_000;",
+    "replace": "const MAX_BLOCKS: usize = 10_001;",
+    "fn": ["store-handlers.createEpubStoreHandlers"]
+  },
+  {
+    "name": "meta-length",
+    "file": "main-core/src/epub/store_handlers.rs",
+    "find": ".filter(|text| text.encode_utf16().count() <= MAX_META)",
+    "replace": ".filter(|text| text.len() <= MAX_META)",
+    "fn": ["store-handlers.createEpubStoreHandlers"]
+  },
+  {
+    "name": "job-mode-unchecked",
+    "file": "main-core/src/epub/store_handlers.rs",
+    "find": "if mode_of(job.get(\"mode\")) != Some(mode) {",
+    "replace": "if false {",
+    "fn": ["store-handlers.createEpubStoreHandlers"]
+  },
+  {
+    "name": "highlight-key",
+    "file": "main-core/src/packages/pdf_structure.rs",
+    "find": "(kind == \"highlight\").then_some(\"runId\")",
+    "replace": "(kind == \"highlight\").then_some(\"lang\")",
+    "fn": ["pdf-structure/job-keys.jobKeyOf"]
+  },
+  {
+    "name": "empty-errno",
+    "file": "main-core/src/packages/pdf_structure.rs",
+    "find": "let errno = cause_code.unwrap_or(\"unknown\");",
+    "replace": "let errno = cause_code.filter(|c| !c.is_empty()).unwrap_or(\"unknown\");",
+    "fn": ["pdf-structure/files.StoreWriteError"]
+  },
+  {
+    "name": "summary-keyed",
+    "file": "main-core/src/packages/pdf_structure.rs",
+    "find": "[\"translate\", \"translate-page\", \"summary\"];",
+    "replace": "[\"translate\", \"translate-page\", \"highlight\"];",
+    "fn": ["pdf-structure/job-keys.jobKeyOf"]
+  },
+  {
+    "name": "opened-view-takes",
+    "file": "main-core/src/html/generate_handoff_ipc.rs",
+    "find": "if opened_on_file(id) {",
+    "replace": "if false {",
+    "fn": ["html/generate-handoff-ipc.registerHtmlHandoffIpc"]
+  },
+  {
+    "name": "wrong-target",
+    "file": "main-core/src/html/generate_handoff_ipc.rs",
+    "find": ".take_generate_handoff(GenerateHandoffTarget::Html, id);",
+    "replace": ".take_generate_handoff(GenerateHandoffTarget::Slides, id);",
+    "fn": ["html/generate-handoff-ipc.registerHtmlHandoffIpc"]
+  },
+  {
+    "name": "old-list-name",
+    "file": "main-core/src/html/old_names.rs",
+    "find": ".genoffice-assets.json",
+    "replace": ".genoffice-assets.js",
+    "fn": ["html/old-names.OLD_ASSET_MANIFEST_FILENAMES"]
+  },
+  {
+    "name": "hwp dialog: an English title worded differently",
+    "file": "main-core/src/hwp/dialog_strings.rs",
+    "find": "\"Save HWP Document\",",
+    "replace": "\"Save HWP Documents\",",
+    "fn": ["dialog-strings.tm"]
+  },
+  {
+    "name": "hwp dialog: the language of the caller is ignored",
+    "file": "main-core/src/hwp/dialog_strings.rs",
+    "find": "TRANSLATOR.t(lang, key, vars)",
+    "replace": "TRANSLATOR.t(Lang::En, key, vars)",
+    "fn": ["dialog-strings.tm"]
+  },
+  {
+    "name": "hwp dialog: Cancel worded differently",
+    "file": "main-core/src/hwp/dialog_strings.rs",
+    "find": "\"Cancel\",",
+    "replace": "\"Cancelled\",",
+    "fn": ["dialog-strings.tm"]
+  },
+  {
+    "name": "field kinds: the unknown kind is another id",
+    "file": "main-core/src/hwp/field_kinds.rs",
+    "find": "const UNKNOWN_FIELD: u32 = 0x2575_6e6b; // '%unk'",
+    "replace": "const UNKNOWN_FIELD: u32 = 0x2575_6e6c; // '%unl'",
+    "fn": ["field-kinds.fieldKindsOf", "field-kinds.restoreFieldKinds"]
+  },
+  {
+    "name": "field kinds: a field that does not open the field is read",
+    "file": "main-core/src/hwp/field_kinds.rs",
+    "find": "&& unit == FIELD_BEGIN",
+    "replace": "&& unit != FIELD_BEGIN",
+    "fn": ["field-kinds.fieldKindsOf", "field-kinds.restoreFieldKinds"]
+  },
+  {
+    "name": "field kinds: a control cut at the end of the text is not read",
+    "file": "main-core/src/hwp/field_kinds.rs",
+    "find": "if at + 16 > text.end {",
+    "replace": "if at + 16 >= text.end {",
+    "fn": ["field-kinds.fieldKindsOf", "field-kinds.restoreFieldKinds"]
+  },
+  {
+    "name": "field kinds: the kind is written two bytes late",
+    "file": "main-core/src/hwp/field_kinds.rs",
+    "find": "write_u32_f64(&mut data, kind, field.at)?;",
+    "replace": "write_u32_f64(&mut data, kind, field.at + 2)?;",
+    "fn": ["field-kinds.restoreFieldKinds"]
+  },
+  {
+    "name": "print: paper snap ten times wider",
+    "file": "main-core/src/hwp/print_document.rs",
+    "find": "const PAPER_SNAP_MM: f64 = 0.05;",
+    "replace": "const PAPER_SNAP_MM: f64 = 0.5;",
+    "fn": ["hwp/print-document.sideMm", "hwp/print-document.printableHtml"]
+  },
+  {
+    "name": "print: sides rounded to hundredths",
+    "file": "main-core/src/hwp/print_document.rs",
+    "find": "math_round(mm * 1000.0) / 1000.0",
+    "replace": "math_round(mm * 100.0) / 100.0",
+    "fn": ["hwp/print-document.sideMm", "hwp/print-document.printableHtml"]
+  },
+  {
+    "name": "save as: the other format first",
+    "file": "main-core/src/hwp/save_as_formats.rs",
+    "find": "if fallback == HwpFormat::Hwpx {",
+    "replace": "if fallback == HwpFormat::Hwp {",
+    "fn": ["hwp/save-as-formats.saveAsFilters"]
+  },
+  {
+    "name": "save as: .pdf read case-sensitively",
+    "file": "main-core/src/hwp/save_as_formats.rs",
+    "find": "js_regex!(r\"\\.pdf$\", \"i\")",
+    "replace": "js_regex!(r\"\\.pdf$\")",
+    "fn": ["hwp/save-as-formats.saveAsTarget"]
+  },
+  {
+    "name": "save as: PDF first",
+    "file": "main-core/src/hwp/save_as_formats.rs",
+    "find": "native.push(SaveAsFilter {",
+    "replace": "native.insert(0, SaveAsFilter {",
+    "fn": ["hwp/save-as-formats.saveAsFilters"]
+  },
+  {
+    "name": "save plan: a backup when the target is new or unwritten",
+    "file": "main-core/src/hwp/save_plan.rs",
+    "find": "target_exists && !written.contains(target)",
+    "replace": "target_exists || !written.contains(target)",
+    "fn": ["save-plan.needsBackup"]
+  },
+  {
+    "name": "save plan: another backup extension",
+    "file": "main-core/src/hwp/save_plan.rs",
+    "find": "format!(\"{path}.bak\")",
+    "replace": "format!(\"{path}.bk\")",
+    "fn": ["save-plan.backupPathFor"]
+  },
+  {
+    "name": "save plan: the magic must be shorter than the bytes",
+    "file": "main-core/src/hwp/save_plan.rs",
+    "find": "if bytes.len() < magic.len() {",
+    "replace": "if bytes.len() <= magic.len() {",
+    "fn": ["save-plan.bytesMatchFormat"]
+  },
+  {
+    "name": "save fixes: kinds restored for the wrong format",
+    "file": "main-core/src/hwp/save_fixes.rs",
+    "find": "let kinds = if format == HwpFormat::Hwp {",
+    "replace": "let kinds = if format == HwpFormat::Hwpx {",
+    "fn": ["save-fixes.applySaveFixes"]
+  },
+  {
+    "name": "save fixes: tails never restored",
+    "file": "main-core/src/hwp/save_fixes.rs",
+    "find": "base.tails.as_ref()",
+    "replace": "None",
+    "fn": ["save-fixes.applySaveFixes"]
+  },
+  {
+    "name": "save fixes: tabs written only for an empty list",
+    "file": "main-core/src/hwp/save_fixes.rs",
+    "find": "&& !tabs.is_empty()",
+    "replace": "&& tabs.is_empty()",
+    "fn": ["save-fixes.applySaveFixes"]
+  },
+  {
+    "name": "section tails: the master page key cut at another offset",
+    "file": "main-core/src/hwp/section_tails.rs",
+    "find": "const MASTER_PAGE_KIND_AT: usize = 16;",
+    "replace": "const MASTER_PAGE_KIND_AT: usize = 17;",
+    "fn": ["section-tails.sectionTailsOf", "section-tails.restoreSectionTails"]
+  },
+  {
+    "name": "section tails: id mappings of exactly the least length refused",
+    "file": "main-core/src/hwp/section_tails.rs",
+    "find": "if payload.len() < 4 * (1 + FONT_LANGUAGES) {",
+    "replace": "if payload.len() <= 4 * (1 + FONT_LANGUAGES) {",
+    "fn": ["section-tails.sectionTailsOf"]
+  },
+  {
+    "name": "section tails: the kept list put back over the saved one",
+    "file": "main-core/src/hwp/section_tails.rs",
+    "find": "lists.push(left.remove(at));",
+    "replace": "lists.push(kept[0].clone());",
+    "fn": ["section-tails.restoreSectionTails"]
+  },
+  {
+    "name": "section tails: the section count check inverted",
+    "file": "main-core/src/hwp/section_tails.rs",
+    "find": "if section_count(&opened) as f64 != kept.sections {",
+    "replace": "if section_count(&opened) as f64 == kept.sections {",
+    "fn": ["section-tails.restoreSectionTails"]
+  },
+  {
+    "name": "tab widths: a bigger most of tabs",
+    "file": "main-core/src/hwp/tab_widths.rs",
+    "find": "pub const MAX_NEW_TABS: usize = 5000;",
+    "replace": "pub const MAX_NEW_TABS: usize = 5001;",
+    "fn": ["tab-widths.MAX_NEW_TABS", "tab-widths.newTabsOf", "tab-widths.writeTabWidths"]
+  },
+  {
+    "name": "tab widths: a tab at the end of its text is not read",
+    "file": "main-core/src/hwp/tab_widths.rs",
+    "find": "if at + 16 > text.end {",
+    "replace": "if at + 16 >= text.end {",
+    "fn": ["tab-widths.newTabsOf", "tab-widths.writeTabWidths"]
+  },
+  {
+    "name": "tab widths: the kind written as it is numbered, not one above",
+    "file": "main-core/src/hwp/tab_widths.rs",
+    "find": "(((value.kind + 1) << 8) | value.fill) as u16",
+    "replace": "((value.kind << 8) | value.fill) as u16",
+    "fn": ["tab-widths.writeTabWidths"]
+  },
+  {
+    "name": "tab widths: the HWPX type written as it is numbered",
+    "file": "main-core/src/hwp/tab_widths.rs",
+    "find": "format!(\" type=\\\"{}\\\"\", value.kind + 1)",
+    "replace": "format!(\" type=\\\"{}\\\"\", value.kind)",
+    "fn": ["tab-widths.writeTabWidths"]
+  },
+  {
+    "name": "hwp5 file: a distribution copy is read",
+    "file": "main-core/src/hwp/hwp5_file.rs",
+    "find": "if flags & (ENCRYPTED | DISTRIBUTION) != 0 {",
+    "replace": "if flags & ENCRYPTED != 0 {",
+    "fn": ["field-kinds.fieldKindsOf", "section-tails.sectionTailsOf"]
+  },
+  {
+    "name": "hwp5 file: streams may inflate to a kilobyte only",
+    "file": "main-core/src/hwp/hwp5_file.rs",
+    "find": "pub const MAX_STREAM_INFLATE_BYTES: usize = 64 * 1024 * 1024;",
+    "replace": "pub const MAX_STREAM_INFLATE_BYTES: usize = 1024;",
+    "fn": ["field-kinds.fieldKindsOf", "tab-widths.newTabsOf"]
+  },
+  {
+    "name": "cfb: the byte order field written as 0xffff",
+    "file": "main-core/src/hwp/cfb.rs",
+    "find": "o.w2(0xfffe);",
+    "replace": "o.w2(0xffff);",
+    "fn": [
+      "field-kinds.restoreFieldKinds",
+      "section-tails.restoreSectionTails",
+      "tab-widths.writeTabWidths"
+    ]
+  },
+  {
+    "name": "cfb: the colour of every entry written black",
+    "file": "main-core/src/hwp/cfb.rs",
+    "find": "o.w1(i64::from(file.color));",
+    "replace": "o.w1(0);",
+    "fn": [
+      "field-kinds.restoreFieldKinds",
+      "section-tails.restoreSectionTails",
+      "tab-widths.writeTabWidths"
+    ]
+  },
+  {
+    "name": "integrator: keepalive interval",
+    "file": "main-core/src/docs/ai_keepalive.rs",
+    "find": "pub const AI_KEEPALIVE_INTERVAL_MS: f64 = 5_000.0;",
+    "replace": "pub const AI_KEEPALIVE_INTERVAL_MS: f64 = 5_500.0;",
+    "fn": ["ai-keepalive.AI_KEEPALIVE_INTERVAL_MS", "ai-keepalive.startAiKeepalive"]
+  },
+  {
+    "name": "integrator: not-configured reason inverted",
+    "file": "main-core/src/docs/ai_run.rs",
+    "find": "if *reason == Some(\"not-configured\") {",
+    "replace": "if *reason != Some(\"not-configured\") {",
+    "fn": ["docs/ai-run.resolveAiRun"]
+  },
+  {
+    "name": "integrator: pending handoff cap",
+    "file": "main-core/src/docs/byte_handoff.rs",
+    "find": "pub const MAX_PENDING_HANDOFFS: usize = 8;",
+    "replace": "pub const MAX_PENDING_HANDOFFS: usize = 9;",
+    "fn": ["byte-handoff.handOffBytes", "byte-handoff.pendingHandoffCount"]
+  },
+  {
+    "name": "integrator: display size cap",
+    "file": "main-core/src/docs/copy_image_guard.rs",
+    "find": "x.is_finite() && *x > 0.0 => Some(math_round(*x).min(100_000.0))",
+    "replace": "x.is_finite() && *x > 0.0 => Some(math_round(*x).min(10_000.0))",
+    "fn": ["copy-image-guard.copyImageDisplaySize"]
+  },
+  {
+    "name": "integrator: zip64 sentinel and",
+    "file": "main-core/src/docs/doc_format.rs",
+    "find": "if count == 0xffff || offset == 0xffff_ffff {",
+    "replace": "if count == 0xffff && offset == 0xffff_ffff {",
+    "fn": ["doc-format.zipEntryNames", "doc-format.isOdtPackage"]
+  },
+  {
+    "name": "integrator: unchanged stat or",
+    "file": "main-core/src/docs/external_change.rs",
+    "find": "if mtime_ms == recorded.mtime_ms && size == recorded.size {",
+    "replace": "if mtime_ms == recorded.mtime_ms || size == recorded.size {",
+    "fn": ["external-change.isExternallyModified"]
+  },
+  {
+    "name": "integrator: dotdot name kept",
+    "file": "main-core/src/docs/merge_output.rs",
+    "find": "base == \".\" || base == \"..\"",
+    "replace": "base == \".\"",
+    "fn": ["merge-output.mergeOutputFileName", "merge-output.mergeOutputPath"]
+  },
+  {
+    "name": "integrator: print dim upper bound exclusive",
+    "file": "main-core/src/docs/print_args.rs",
+    "find": "(144.0..=72000.0).contains(&x)",
+    "replace": "(144.0..72000.0).contains(&x)",
+    "fn": ["print-args.validPrintDim", "print-args.validPrintGeometry"]
+  },
+  {
+    "name": "integrator: blank url accepted",
+    "file": "main-core/src/docs/read_url_ipc.rs",
+    "find": "Some(JsonValue::String(url)) if !trim(url).is_empty() =>",
+    "replace": "Some(JsonValue::String(url)) if !url.is_empty() =>",
+    "fn": ["read-url-ipc.normalizeReadUrlRequest"]
+  },
+  {
+    "name": "integrator: unstar keeps only the path",
+    "file": "main-core/src/docs/starred_files.rs",
+    "find": "if items.iter().any(|item| item.path == file_path) {\n        items\n            .iter()\n            .filter(|item| item.path != file_path)",
+    "replace": "if items.iter().any(|item| item.path == file_path) {\n        items\n            .iter()\n            .filter(|item| item.path == file_path)",
+    "fn": ["starred-files.toggleStarredItem"]
+  },
+  {
+    "name": "integrator: coalesce window",
+    "file": "main-core/src/docs/stream_coalesce.rs",
+    "find": "pub const STREAM_COALESCE_MS: f64 = 32.0;",
+    "replace": "pub const STREAM_COALESCE_MS: f64 = 16.0;",
+    "fn": ["stream-coalesce.STREAM_COALESCE_MS", "stream-coalesce.createChunkCoalescer"]
+  },
+  {
+    "name": "integrator: transaction 0 not ignored",
+    "file": "main-core/src/docs/zotero_wire.rs",
+    "find": "if frame.transaction_id == 0 {\n            return;",
+    "replace": "if frame.transaction_id == 1 {\n            return;",
+    "fn": ["zotero-wire.ZoteroWireClient"]
+  },
+  {
+    "name": "integrator: duplicate media urls kept",
+    "file": "main-core/src/docs/lazy_media_inline.rs",
+    "find": "if !urls.contains(&found.as_str()) {",
+    "replace": "if true {",
+    "fn": ["lazy-media-inline.inlineLazyMediaInHtml"]
+  },
+  {
+    "name": "integrator: odt-first filter order",
+    "file": "main-core/src/docs/save_as_formats.rs",
+    "find": "vec![odt, word]",
+    "replace": "vec![word, odt]",
+    "fn": ["docs/save-as-formats.saveAsFilters"]
+  },
+  {
+    "name": "integrator: count shown for one",
+    "file": "main-core/src/docs/hwp_export.rs",
+    "find": "if count > 1.0 {",
+    "replace": "if count >= 1.0 {",
+    "fn": ["hwp-export.hwpLossMessageBox"]
+  },
+  {
+    "name": "integrator: title case of en string",
+    "file": "main-core/src/docs/hwp_export_strings.rs",
+    "find": "\"Export as HWP Document\"",
+    "replace": "\"Export as HWP document\"",
+    "fn": ["hwp-export-strings.HWP_EXPORT_STRINGS"]
+  },
+  {
+    "name": "integrator: en title period",
+    "file": "main-core/src/docs/free_ai_strings.rs",
+    "find": "\"Connected to SeuOffice\"",
+    "replace": "\"Connected to SeuOffice.\"",
+    "fn": ["free-ai-strings.FREE_AI_PAGE_STRINGS"]
+  },
+  {
+    "name": "integrator: pathname limit off by one",
+    "file": "main-core/src/diagram/drawio_protocol.rs",
+    "find": "pathname.encode_utf16().count() > 4096",
+    "replace": "pathname.encode_utf16().count() >= 4096",
+    "fn": ["drawio-protocol.resolveDrawioRequest"]
+  },
+  {
+    "name": "integrator: name stem length",
+    "file": "main-core/src/diagram/export_paths.rs",
+    "find": "trim(&slice_utf16(&replaced, 0.0, Some(80.0))).to_owned()",
+    "replace": "trim(&slice_utf16(&replaced, 0.0, Some(81.0))).to_owned()",
+    "fn": ["export-paths.pageFilePaths"]
+  },
+  {
+    "name": "integrator: refused log trimmed one early",
+    "file": "main-core/src/diagram/network_guard.rs",
+    "find": "if log.blocked.len() > REFUSED_ADDRESSES_KEPT {",
+    "replace": "if log.blocked.len() >= REFUSED_ADDRESSES_KEPT {",
+    "fn": ["network-guard.isAllowedDiagramRequest", "network-guard.REFUSED_ADDRESSES_KEPT"]
+  },
+  {
+    "name": "integrator: max unit exclusive",
+    "file": "main-core/src/diagram/print_document.rs",
+    "find": "value > 0.0 && value <= MAX_UNITS",
+    "replace": "value > 0.0 && value < MAX_UNITS",
+    "fn": ["diagram/print-document.buildPrintHtml"]
+  },
+  {
+    "name": "integrator: svg extension [save_as_formats.rs]",
+    "file": "main-core/src/mindmap/save_as_formats.rs",
+    "find": "(MapSaveAsKind::Svg, \"filterSvg\", \"svg\")",
+    "replace": "(MapSaveAsKind::Svg, \"filterSvg\", \"svgz\")",
+    "fn": ["mindmap/save-as-formats.saveAsFilters", "mindmap/save-as-formats.saveAsTarget"]
+  },
+  {
+    "name": "integrator: zero pending edits counted",
+    "file": "main-core/src/sheets/close_guard.rs",
+    "find": "if pending_edits <= 0.0 {",
+    "replace": "if pending_edits < 0.0 {",
+    "fn": ["close-guard.closeGuardDecision"]
+  },
+  {
+    "name": "integrator: zero inode taken as identity",
+    "file": "main-core/src/sheets/csv_digest.rs",
+    "find": "if ino == 0.0 {",
+    "replace": "if ino < 0.0 {",
+    "fn": ["csv-digest.refreshCsvDigest"]
+  },
+  {
+    "name": "integrator: zero limit accepted",
+    "file": "main-core/src/sheets/csv_import_limit.rs",
+    "find": "|| bytes <= 0.0 {",
+    "replace": "|| bytes < 0.0 {",
+    "fn": ["sheets/csv-import-limit.setDelimitedImportLimit"]
+  },
+  {
+    "name": "integrator: requested locale not normalized",
+    "file": "main-core/src/sheets/document_locale.rs",
+    "find": "legacy_csv_charset_for(&document_locale(requested_locale))",
+    "replace": "legacy_csv_charset_for(requested_locale)",
+    "fn": ["document-locale.legacyCsvCharset"]
+  },
+  {
+    "name": "integrator: NaN owner differs [import_registry.rs]",
+    "file": "main-core/src/sheets/import_registry.rs",
+    "find": "a == b || (a.is_nan() && b.is_nan())",
+    "replace": "a == b",
+    "fn": ["import-registry.ImportRegistry"]
+  },
+  {
+    "name": "integrator: even page test",
+    "file": "main-core/src/sheets/pdf_page_variants.rs",
+    "find": "if page_number % 2.0 == 0.0 && flags.has_even {",
+    "replace": "if page_number % 2.0 == 1.0 && flags.has_even {",
+    "fn": ["pdf-page-variants.variantForPage"]
+  },
+  {
+    "name": "integrator: scale factor percent",
+    "file": "main-core/src/sheets/print_options.rs",
+    "find": "rounded(number_of(request.get(\"scale\")) * 100.0),",
+    "replace": "rounded(number_of(request.get(\"scale\")) * 10.0),",
+    "fn": ["print-options.printOptionsFor"]
+  },
+  {
+    "name": "integrator: csv offered for macro workbooks",
+    "file": "main-core/src/sheets/save_as_formats.rs",
+    "find": "if !macro_enabled && lower.ends_with(\".csv\") {",
+    "replace": "if macro_enabled && lower.ends_with(\".csv\") {",
+    "fn": ["sheets/save-as-formats.resolveSheetsSaveAsPick"]
+  },
+  {
+    "name": "integrator: open transfer cap off by one",
+    "file": "main-core/src/sheets/save_edits_transfer.rs",
+    "find": "if self.transfers.len() >= MAX_OPEN_TRANSFERS {",
+    "replace": "if self.transfers.len() > MAX_OPEN_TRANSFERS {",
+    "fn": ["save-edits-transfer.SaveEditsTransferStore"]
+  },
+  {
+    "name": "integrator: detail cut length",
+    "file": "main-core/src/sheets/save_failure_log.rs",
+    "find": "Some((DETAIL_MAX_CHARS - 1) as f64)",
+    "replace": "Some(DETAIL_MAX_CHARS as f64)",
+    "fn": ["save-failure-log.scrubDetail"]
+  },
+  {
+    "name": "integrator: path test inverted",
+    "file": "main-core/src/sheets/session_rename.rs",
+    "find": "&& !field_is(session, \"path\", old_path)",
+    "replace": "&& field_is(session, \"path\", old_path)",
+    "fn": ["session-rename.sessionAfterRename"]
+  },
+  {
+    "name": "integrator: password key typo",
+    "file": "main-core/src/sheets/session_reopen.rs",
+    "find": "|| defined(session, \"password\")",
+    "replace": "|| defined(session, \"passwor\")",
+    "fn": ["session-reopen.sessionToContinue"]
+  },
+  {
+    "name": "integrator: cutoff boundary [temp_files.rs]",
+    "file": "main-core/src/sheets/temp_files.rs",
+    "find": "StatInfo::of(&info).mtime_ms >= cutoff",
+    "replace": "StatInfo::of(&info).mtime_ms > cutoff",
+    "fn": ["temp-files.cleanupExpiredPastedFiles"]
+  },
+  {
+    "name": "integrator: empty added sheet name accepted",
+    "file": "main-core/src/sheets/workbook_save_resolve.rs",
+    "find": "Some(name) if value_truthy(Some(&name)) => Ok(name),",
+    "replace": "Some(name) => Ok(name),",
+    "fn": ["workbook-save-resolve.resolveWorkbookSave"]
+  },
+  {
+    "name": "integrator: teardown message length",
+    "file": "main-core/src/sheets/xlsx_sidecar_client.rs",
+    "find": "self.teardown(process, &slice_utf16(&message, 0.0, Some(200.0)));",
+    "replace": "self.teardown(process, &slice_utf16(&message, 0.0, Some(201.0)));",
+    "fn": ["xlsx-sidecar-client.XlsxSidecarClient"]
+  },
+  {
+    "name": "integrator: title role boundary",
+    "file": "main-core/src/slides/ai_default_fonts.rs",
+    "find": "if *x >= TITLE_ROLE_MIN_PT)",
+    "replace": "if *x > TITLE_ROLE_MIN_PT)",
+    "fn": ["ai-default-fonts.fillMissingRunFonts"]
+  },
+  {
+    "name": "integrator: encrypted stream name case",
+    "file": "main-core/src/slides/cfb_sniff.rs",
+    "find": "b'E', 0, b'n', 0,",
+    "replace": "b'e', 0, b'n', 0,",
+    "fn": ["cfb-sniff.cfbKind"]
+  },
+  {
+    "name": "integrator: padding at 100",
+    "file": "main-core/src/slides/export_images.rs",
+    "find": "if count >= 100.0 { 3 } else { 2 }",
+    "replace": "if count > 100.0 { 3 } else { 2 }",
+    "fn": ["slides/export-images.buildExportImagePaths"]
+  },
+  {
+    "name": "integrator: zero timeout allowed",
+    "file": "main-core/src/slides/font_scan.rs",
+    "find": "if ms.is_nan() || ms <= 0.0 {",
+    "replace": "if ms.is_nan() || ms < 0.0 {",
+    "fn": ["font-scan.scanFontDirs"]
+  },
+  {
+    "name": "integrator: cutoff boundary [generated_page_temp.rs]",
+    "file": "main-core/src/slides/generated_page_temp.rs",
+    "find": "StatInfo::of(&info).mtime_ms >= cutoff",
+    "replace": "StatInfo::of(&info).mtime_ms > cutoff",
+    "fn": ["generated-page-temp.cleanupExpiredGeneratedPages"]
+  },
+  {
+    "name": "integrator: orientation 0 rewritten",
+    "file": "main-core/src/slides/jpeg_orientation.rs",
+    "find": "if cur == 1 || cur == 0 {",
+    "replace": "if cur == 1 {",
+    "fn": ["jpeg-orientation.neutralizeJpegOrientation"]
+  },
+  {
+    "name": "integrator: bmp signature",
+    "file": "main-core/src/slides/media_mime.rs",
+    "find": "starts_with(bytes, &[0x42, 0x4d], 0)",
+    "replace": "starts_with(bytes, &[0x42, 0x4e], 0)",
+    "fn": ["media-mime.sniffImageMime"]
+  },
+  {
+    "name": "integrator: bold weight boundary",
+    "file": "main-core/src/slides/metafile_fonts.rs",
+    "find": "add(out, &family, weight >= 600, italic);\n",
+    "replace": "add(out, &family, weight > 600, italic);\n",
+    "fn": ["metafile-fonts.scanMetafileFonts", "metafile-fonts.listMetafileFonts"]
+  },
+  {
+    "name": "integrator: container box name",
+    "file": "main-core/src/slides/mp4_audio_sniff.rs",
+    "find": "[\"moov\", \"trak\", \"mdia\", \"minf\", \"stbl\"]",
+    "replace": "[\"moov\", \"trak\", \"mdia\", \"mnif\", \"stbl\"]",
+    "fn": [
+      "mp4-audio-sniff.audioSampleFormats",
+      "mp4-audio-sniff.mp4VideoSize",
+      "mp4-audio-sniff.unplayableAudioCodec"
+    ]
+  },
+  {
+    "name": "integrator: paste shift step",
+    "file": "main-core/src/slides/paste_cascade.rs",
+    "find": "16.0 * landed",
+    "replace": "15.0 * landed",
+    "fn": ["paste-cascade.pasteShiftPx"]
+  },
+  {
+    "name": "integrator: default aspect",
+    "file": "main-core/src/slides/picture_frame.rs",
+    "find": "(box_w * 3.0) / 4.0",
+    "replace": "(box_w * 3.0) / 5.0",
+    "fn": ["picture-frame.pictureFrame"]
+  },
+  {
+    "name": "integrator: NaN owner differs [seed_queue.rs]",
+    "file": "main-core/src/slides/seed_queue.rs",
+    "find": "a == b || (a.is_nan() && b.is_nan())",
+    "replace": "a == b",
+    "fn": [
+      "seed-queue.queueSlidesSeedFor",
+      "seed-queue.takeSlidesSeed",
+      "seed-queue.takeSlidesSeedEntry"
+    ]
+  },
+  {
+    "name": "integrator: saved kind name",
+    "file": "main-core/src/slides/template_selection.rs",
+    "find": "kind == \"saved\" =>",
+    "replace": "kind == \"save\" =>",
+    "fn": [
+      "template-selection-store.TemplateSelectionStore",
+      "template-selection-store.TemplateSelectionMemory"
+    ]
+  },
+  {
+    "name": "integrator: touch interval boundary",
+    "file": "main-core/src/slides/template_selection_store.rs",
+    "find": "now - entry.used_at >= TEMPLATE_SELECTION_TOUCH_INTERVAL_MS",
+    "replace": "now - entry.used_at > TEMPLATE_SELECTION_TOUCH_INTERVAL_MS",
+    "fn": ["template-selection-store.TemplateSelectionStore"]
+  },
+  {
+    "name": "integrator: ttl boundary",
+    "file": "main-core/src/markdown/conversion_lifecycle.rs",
+    "find": "if now - created_at < ttl_ms {",
+    "replace": "if now - created_at <= ttl_ms {",
+    "fn": ["conversion-lifecycle.cleanupStaleMarkdownConversions"]
+  },
+  {
+    "name": "integrator: parent root accepted",
+    "file": "main-core/src/markdown/fs_util.rs",
+    "find": "&& from_root != \"..\"",
+    "replace": "&& from_root != \".\"",
+    "fn": [
+      "markdown/asset-lifecycle.resolveSafeRelativeImagePath",
+      "markdown/asset-lifecycle.resolveSafeVaultImagePath"
+    ]
+  },
+  {
+    "name": "integrator: page sequence check",
+    "file": "main-core/src/markdown/image_export.rs",
+    "find": "page != (session.pages + 1) as f64",
+    "replace": "page != session.pages as f64",
+    "fn": ["image-export.ImageExportSessions"]
+  },
+  {
+    "name": "integrator: old marker name",
+    "file": "main-core/src/markdown/old_names.rs",
+    "find": "\".genoffice-markdown-conversion.json\"",
+    "replace": "\".genoffice-markdown-conversions.json\"",
+    "fn": ["markdown/old-names.OLD_CONVERSION_SESSION_MARKERS"]
+  },
+  {
+    "name": "integrator: set keeps old value",
+    "file": "main-core/src/markdown/ord_map.rs",
+    "find": "                slot.1 = value;",
+    "replace": "                let _ = value;",
+    "fn": ["wiki-fragment.rememberWikiFragment", "wiki-fragment.takeWikiFragment"]
+  },
+  {
+    "name": "integrator: note extension",
+    "file": "main-core/src/markdown/wiki_create.rs",
+    "find": "[\".md\", \".markdown\", \".txt\"]",
+    "replace": "[\".md\", \".markdown\", \".text\"]",
+    "fn": ["wiki-create.createWikiNote"]
+  },
+  {
+    "name": "integrator: pending cap",
+    "file": "main-core/src/markdown/wiki_fragment.rs",
+    "find": "while self.pending.len() >= MAX_PENDING {",
+    "replace": "while self.pending.len() > MAX_PENDING {",
+    "fn": ["wiki-fragment.rememberWikiFragment"]
+  },
+  {
+    "name": "integrator: fence close length",
+    "file": "main-core/src/markdown/wiki_heads.rs",
+    "find": "&& run.len() >= opened.len()",
+    "replace": "&& run.len() > opened.len()",
+    "fn": ["wiki-heads.parseWikiHeads", "wiki-heads.wikiHeads"]
+  },
+  {
+    "name": "integrator: depth limit",
+    "file": "main-core/src/markdown/wiki_notes.rs",
+    "find": "depth + 1 > MAX_DEPTH",
+    "replace": "depth + 1 >= MAX_DEPTH",
+    "fn": ["wiki-notes.listWikiNotes"]
+  },
+  {
+    "name": "integrator: file stem budget [asset_lifecycle.rs]",
+    "file": "main-core/src/markdown/asset_lifecycle.rs",
+    "find": "let max_stem = 140 - utf16_len(&ext);",
+    "replace": "let max_stem = 141 - utf16_len(&ext);",
+    "fn": [
+      "markdown/asset-lifecycle.copyImageIntoOwnedAssets",
+      "markdown/asset-lifecycle.writeImageIntoOwnedAssets"
+    ]
+  },
+  {
+    "name": "integrator: uppercase hex entity",
+    "file": "main-core/src/markdown/asset_scan.rs",
+    "find": "is_some_and(|c| c == 'x' || c == 'X')",
+    "replace": "is_some_and(|c| c == 'x')",
+    "fn": ["markdown/asset-lifecycle.extractMarkdownImageSources"]
+  },
+  {
+    "name": "integrator: github api version",
+    "file": "main-core/src/markdown/image_host.rs",
+    "find": "\"2022-11-28\"",
+    "replace": "\"2022-11-29\"",
+    "fn": ["image-host.uploadImageToHost"]
+  },
+  {
+    "name": "integrator: index depth limit",
+    "file": "main-core/src/markdown/wiki_index.rs",
+    "find": "seen.len() >= MAX_INDEX_FILES || depth + 1 > MAX_DEPTH",
+    "replace": "seen.len() >= MAX_INDEX_FILES || depth + 1 >= MAX_DEPTH",
+    "fn": [
+      "wiki-index.wikiBacklinks",
+      "wiki-index.wikiTags",
+      "wiki-index.wikiGraph",
+      "wiki-index.warmWikiIndex"
+    ]
+  },
+  {
+    "name": "integrator: dotdot segment test",
+    "file": "main-core/src/markdown/wiki_resolve.rs",
+    "find": "name.split(['\\\\', '/']).any(|segment| segment == \"..\")",
+    "replace": "name.split(['\\\\', '/']).any(|segment| segment == \".\")",
+    "fn": ["wiki-resolve.resolveWikiLinks"]
+  },
+  {
+    "name": "integrator: mp3 frame mask",
+    "file": "main-core/src/html/asset_mime.rs",
+    "find": "(head[1] & 0xe6) == 0xe2",
+    "replace": "(head[1] & 0xe4) == 0xe2",
+    "fn": ["asset-mime.sniffBinaryAssetMime"]
+  },
+  {
+    "name": "integrator: channel name",
+    "file": "main-core/src/html/generate_handoff_ipc.rs",
+    "find": "\"html:handoff-take\"",
+    "replace": "\"html:handoff-taken\"",
+    "fn": ["html/generate-handoff-ipc.registerHtmlHandoffIpc"]
+  },
+  {
+    "name": "integrator: old manifest name",
+    "file": "main-core/src/html/old_names.rs",
+    "find": "\".genoffice-assets.json\"",
+    "replace": "\".genoffice-asset.json\"",
+    "fn": ["html/old-names.OLD_ASSET_MANIFEST_FILENAMES"]
+  },
+  {
+    "name": "integrator: raw text tag",
+    "file": "main-core/src/html/preview_document.rs",
+    "find": "[\"script\", \"style\", \"textarea\", \"title\"]",
+    "replace": "[\"script\", \"style\", \"textarea\", \"titl\"]",
+    "fn": ["preview-document.buildPreviewDocument"]
+  },
+  {
+    "name": "integrator: svg extension [single_file_html.rs]",
+    "file": "main-core/src/html/single_file_html.rs",
+    "find": "(extname(&target).to_lowercase() == \".svg\")",
+    "replace": "(extname(&target).to_lowercase() == \".svgz\")",
+    "fn": ["single-file-html.inlineImagesForSingleFile"]
+  },
+  {
+    "name": "integrator: file stem budget [asset_lifecycle.rs]",
+    "file": "main-core/src/html/asset_lifecycle.rs",
+    "find": "let max_stem = 140 - ext.len();",
+    "replace": "let max_stem = 141 - ext.len();",
+    "fn": [
+      "html/asset-lifecycle.copyImageIntoOwnedAssets",
+      "html/asset-lifecycle.writeImageIntoOwnedAssets"
+    ]
+  },
+  {
+    "name": "integrator: font scale upper bound",
+    "file": "main-core/src/epub/reading_state.rs",
+    "find": "clamp(x, 0.5, 3.0)",
+    "replace": "clamp(x, 0.5, 2.5)",
+    "fn": ["reading-state.viewPrefsOf", "reading-state.createReadingState"]
+  },
+  {
+    "name": "integrator: path length limit",
+    "file": "main-core/src/epub/result_paths.rs",
+    "find": "path.encode_utf16().count() > 4096",
+    "replace": "path.encode_utf16().count() >= 4096",
+    "fn": ["result-paths.checkResultPath"]
+  },
+  {
+    "name": "integrator: block cap",
+    "file": "main-core/src/epub/store_handlers.rs",
+    "find": "if blocks.len() > MAX_BLOCKS {",
+    "replace": "if blocks.len() >= MAX_BLOCKS {",
+    "fn": ["store-handlers.createEpubStoreHandlers"]
+  },
+  {
+    "name": "integrator: strikeout subtype code",
+    "file": "main-core/src/pdf/annot_delete.rs",
+    "find": "\"strikeout\" => Some(12),",
+    "replace": "\"strikeout\" => Some(13),",
+    "fn": ["annot-delete.applyAnnotDeletes", "annot-delete.removeMatchingAnnots"]
+  },
+  {
+    "name": "integrator: flatten failure code",
+    "file": "main-core/src/pdf/annot_flatten.rs",
+    "find": "const FLATTEN_FAILED: i32 = 0;",
+    "replace": "const FLATTEN_FAILED: i32 = 2;",
+    "fn": ["annot-flatten.flattenAnnotsBytes"]
+  },
+  {
+    "name": "integrator: ink luma threshold",
+    "file": "main-core/src/pdf/blank_pages.rs",
+    "find": "const INK_LUMA: f64 = 160.0;",
+    "replace": "const INK_LUMA: f64 = 180.0;",
+    "fn": ["blank-pages.findBlankPages", "blank-pages.isNearlyWhite"]
+  },
+  {
+    "name": "integrator: output cap ignored",
+    "file": "main-core/src/pdf/child.rs",
+    "find": "kept.extend_from_slice(&chunk[..n.min(room)]);",
+    "replace": "kept.extend_from_slice(&chunk[..n]);",
+    "fn": ["system-certificates.runCommand"]
+  },
+  {
+    "name": "integrator: missing confirmations",
+    "file": "main-core/src/pdf/disk_watch.rs",
+    "find": "if self.missing_seen < DISK_WATCH_MISSING_CONFIRMATIONS {",
+    "replace": "if self.missing_seen <= DISK_WATCH_MISSING_CONFIRMATIONS {",
+    "fn": ["disk-watch.watchDiskFile"]
+  },
+  {
+    "name": "integrator: duplicate page test",
+    "file": "main-core/src/pdf/export_images.rs",
+    "find": "seen.windows(2).all(|pair| pair[0] != pair[1])",
+    "replace": "seen.windows(2).all(|pair| pair[0] < pair[1])",
+    "fn": ["pdf/export-images.hasValidExportPageNumbers"]
+  },
+  {
+    "name": "integrator: subset prefix length",
+    "file": "main-core/src/pdf/font_classes.rs",
+    "find": "js_regex!(r\"^[A-Z]{6}\\+\")",
+    "replace": "js_regex!(r\"^[A-Z]{5}\\+\")",
+    "fn": [
+      "font-locate.findSystemFont",
+      "font-locate.findFontCovering",
+      "font-similar.similarFontFor"
+    ]
+  },
+  {
+    "name": "integrator: cmap encoding 10 skipped",
+    "file": "main-core/src/pdf/font_cmap.rs",
+    "find": "(encoding == 1 || encoding == 10)",
+    "replace": "(encoding == 1)",
+    "fn": ["font-cmap.fontCoversText"]
+  },
+  {
+    "name": "integrator: boldish name",
+    "file": "main-core/src/pdf/font_locate.rs",
+    "find": "[\"bold\", \"semibold\", \"demibold\", \"extrabold\"]",
+    "replace": "[\"bold\", \"semibold\", \"demibold\", \"extrabld\"]",
+    "fn": ["font-locate.findSystemFont"]
+  },
+  {
+    "name": "integrator: force bold flag",
+    "file": "main-core/src/pdf/font_similar.rs",
+    "find": "const FLAG_FORCE_BOLD: i32 = 1 << 18;",
+    "replace": "const FLAG_FORCE_BOLD: i32 = 1 << 19;",
+    "fn": ["font-similar.sourceTraits", "font-similar.similarFontFor"]
+  },
+  {
+    "name": "integrator: charset sid bound",
+    "file": "main-core/src/pdf/font_subset.rs",
+    "find": "n_glyphs - 2.0 <= 255.0",
+    "replace": "n_glyphs - 2.0 <= 254.0",
+    "fn": ["font-subset.identityCffCharset"]
+  },
+  {
+    "name": "integrator: dotdot name",
+    "file": "main-core/src/pdf/generated_output.rs",
+    "find": "file_name.is_empty() || file_name == \".\" || file_name == \"..\"",
+    "replace": "file_name.is_empty() || file_name == \".\"",
+    "fn": ["generated-output.uniqueGeneratedPdfPath"]
+  },
+  {
+    "name": "integrator: tmp env order",
+    "file": "main-core/src/pdf/node_io.rs",
+    "find": "[\"TMPDIR\", \"TMP\", \"TEMP\"]",
+    "replace": "[\"TMP\", \"TMPDIR\", \"TEMP\"]",
+    "fn": ["system-certificates.listSystemCertificates", "system-certificates.openSystemSigner"]
+  },
+  {
+    "name": "integrator: max page exclusive",
+    "file": "main-core/src/pdf/note_link.rs",
+    "find": "*x >= 1.0 && *x <= MAX_PAGE",
+    "replace": "*x >= 1.0 && *x < MAX_PAGE",
+    "fn": ["note-link.parseNoteInsertRequest", "note-link.parseNoteOpenRequest"]
+  },
+  {
+    "name": "integrator: helper presence on mac",
+    "file": "main-core/src/pdf/ocr.rs",
+    "find": "if platform != Platform::Darwin || !exists(helper_path) {",
+    "replace": "if platform != Platform::Darwin && !exists(helper_path) {",
+    "fn": ["ocr.ocrPagePng"]
+  },
+  {
+    "name": "integrator: password terminator",
+    "file": "main-core/src/pdf/pdfium.rs",
+    "find": "            *byte = 0;",
+    "replace": "            *byte = b'x';",
+    "fn": ["read-text.readPdfText", "redaction.redactPdf", "annot-delete.applyAnnotDeletes"]
+  },
+  {
+    "name": "integrator: empty meta text",
+    "file": "main-core/src/pdf/read_text.rs",
+    "find": "if size <= 2 {",
+    "replace": "if size < 2 {",
+    "fn": ["read-text.readPdfText"]
+  },
+  {
+    "name": "integrator: page index range",
+    "file": "main-core/src/pdf/redaction.rs",
+    "find": "if page_index >= f64::from(page_count) {",
+    "replace": "if page_index > f64::from(page_count) {",
+    "fn": ["redaction.validateRedactionRegions", "redaction.redactPdf"]
+  },
+  {
+    "name": "integrator: stroke point minimum",
+    "file": "main-core/src/pdf/signature_store.rs",
+    "find": "points.len() >= 4",
+    "replace": "points.len() > 4",
+    "fn": ["signature-store.isSignatureData", "signature-store.sanitizeSignatures"]
+  },
+  {
+    "name": "integrator: nss key type",
+    "file": "main-core/src/pdf/system_certificates.rs",
+    "find": "m.get(1) == Some(\"rsa\")",
+    "replace": "m.get(1) == Some(\"ec\")",
+    "fn": ["system-certificates.parseNssKeyList"]
+  },
+  {
+    "name": "integrator: subset wasm name",
+    "file": "main-core/src/pdf/wasm_path.rs",
+    "find": "\"harfbuzz-subset.wasm\"",
+    "replace": "\"hb-subset.wasm\"",
+    "fn": ["wasm-path.hbSubsetWasmPath"]
+  },
+  {
+    "name": "integrator: fat sector count rounding",
+    "file": "main-core/src/hwp/cfb.rs",
+    "find": "let mut fat_cnt = (fat_base + 0x7f) >> 7;",
+    "replace": "let mut fat_cnt = (fat_base + 0x7e) >> 7;",
+    "fn": [
+      "field-kinds.restoreFieldKinds",
+      "section-tails.restoreSectionTails",
+      "tab-widths.writeTabWidths"
+    ]
+  },
+  {
+    "name": "integrator: en dialog title",
+    "file": "main-core/src/hwp/dialog_strings.rs",
+    "find": "\"Save HWP Document\"",
+    "replace": "\"Save HWP document\"",
+    "fn": ["dialog-strings.tm"]
+  },
+  {
+    "name": "integrator: field control minimum size",
+    "file": "main-core/src/hwp/field_kinds.rs",
+    "find": "&& control.end - control.body >= 4",
+    "replace": "&& control.end - control.body > 4",
+    "fn": ["field-kinds.fieldKindsOf", "field-kinds.restoreFieldKinds"]
+  },
+  {
+    "name": "integrator: cfb end of chain marker",
+    "file": "main-core/src/hwp/hwp5_file.rs",
+    "find": "const END_OF_CHAIN: u32 = 0xffff_fffe;",
+    "replace": "const END_OF_CHAIN: u32 = 0xffff_fffd;",
+    "fn": [
+      "field-kinds.fieldKindsOf",
+      "field-kinds.restoreFieldKinds",
+      "section-tails.restoreSectionTails",
+      "tab-widths.writeTabWidths"
+    ]
+  },
+  {
+    "name": "integrator: print page cap",
+    "file": "main-core/src/hwp/ipc.rs",
+    "find": "pub const MAX_PRINT_PAGES: usize = 5000;",
+    "replace": "pub const MAX_PRINT_PAGES: usize = 5001;",
+    "fn": ["hwp/print-document.badJob"]
+  },
+  {
+    "name": "integrator: paper snap tolerance",
+    "file": "main-core/src/hwp/print_document.rs",
+    "find": "const PAPER_SNAP_MM: f64 = 0.05;",
+    "replace": "const PAPER_SNAP_MM: f64 = 0.06;",
+    "fn": ["hwp/print-document.sideMm"]
+  },
+  {
+    "name": "integrator: pdf offered without exports",
+    "file": "main-core/src/hwp/save_as_formats.rs",
+    "find": "if offer_exports && js_regex!(r\"\\.pdf$\", \"i\").test(file_path) {",
+    "replace": "if js_regex!(r\"\\.pdf$\", \"i\").test(file_path) {",
+    "fn": ["hwp/save-as-formats.saveAsTarget"]
+  },
+  {
+    "name": "integrator: empty tabs written",
+    "file": "main-core/src/hwp/save_fixes.rs",
+    "find": "&& !tabs.is_empty()",
+    "replace": "&& tabs.is_empty()",
+    "fn": ["save-fixes.applySaveFixes"]
+  },
+  {
+    "name": "integrator: backup for new files",
+    "file": "main-core/src/hwp/save_plan.rs",
+    "find": "target_exists && !written.contains(target)",
+    "replace": "target_exists || !written.contains(target)",
+    "fn": ["save-plan.needsBackup"]
+  },
+  {
+    "name": "integrator: tail head size",
+    "file": "main-core/src/hwp/section_tails.rs",
+    "find": "if head.end - head.body < 4 {",
+    "replace": "if head.end - head.body <= 4 {",
+    "fn": ["section-tails.sectionTailsOf", "section-tails.restoreSectionTails"]
+  },
+  {
+    "name": "integrator: max tab fill exclusive",
+    "file": "main-core/src/hwp/tab_widths.rs",
+    "find": "(0.0..=MAX_TAB_FILL).contains(&fill)",
+    "replace": "(0.0..MAX_TAB_FILL).contains(&fill)",
+    "fn": ["tab-widths.writeTabWidths"]
+  },
+  {
+    "name": "integrator: raw deflate with zlib header",
+    "file": "main-core/src/hwp/zlib.rs",
+    "find": "let mut decoder = Decompress::new(false);",
+    "replace": "let mut decoder = Decompress::new(true);",
+    "fn": ["field-kinds.fieldKindsOf", "section-tails.sectionTailsOf"]
+  },
+  {
+    "name": "integrator: copy_file exclusive flag",
+    "file": "main-core/src/node_fs.rs",
+    "find": "            options.create_new(true);",
+    "replace": "            options.create(true);",
+    "fn": [
+      "markdown/asset-lifecycle.copyImageIntoOwnedAssets",
+      "html/asset-lifecycle.copyImageIntoOwnedAssets"
+    ]
+  },
+  {
+    "name": "integrator: mkdtemp mode",
+    "file": "main-core/src/node_fs.rs",
+    "find": "std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);",
+    "replace": "std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o755);",
+    "fn": ["image-export.ImageExportSessions", "hwp/print-document.printJobToPdf"]
+  },
+  {
+    "name": "integrator: url-safe underscore",
+    "file": "jscompat/src/node_buffer_base64.rs",
+    "find": "b'/' | b'_' => 63,",
+    "replace": "b'/' => 63,",
+    "fn": ["hwp/print-document.imageFile", "image-export.ImageExportSessions"]
+  },
+  {
+    "name": "integrator: v8 unexpected token message",
+    "file": "jscompat/src/json_value.rs",
+    "find": "\"Unexpected token '{token}', \\\"{}\\\" is not valid JSON\",",
+    "replace": "\"Unexpected token '{token}', \\\"{}\\\" is not valid JSON.\",",
+    "fn": ["zotero-wire.ZoteroWireClient"]
+  }
+]
