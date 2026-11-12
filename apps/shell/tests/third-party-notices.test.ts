@@ -166,6 +166,12 @@ describe('third-party license aggregation', () => {
     expect(section).toContain('Brennan T. Vincent, MPL-2.0')
     expect(section).toContain('Mozilla Public License Version 2.0')
     expect(section).toContain('W3C EOT submission')
+    // and the PATENTS file its LICENSE points to, verbatim, after that LICENSE
+    const mtx = 'packages/pptx-engine/src/vendor/mtx'
+    const patents = readFileSync(join(root, mtx, 'PATENTS'), 'utf8').trim()
+    const licenseAt = section.indexOf(`${mtx}/LICENSE`)
+    expect(licenseAt).toBeGreaterThan(-1)
+    expect(section.indexOf(patents, licenseAt)).toBeGreaterThan(licenseAt)
   })
 })
 

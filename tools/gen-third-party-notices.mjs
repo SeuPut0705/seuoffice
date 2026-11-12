@@ -973,7 +973,8 @@ out += hr('8. Third-party source code included in this application')
 out += `
 These directories hold source code of other projects, adapted and compiled into
 the application with the package they sit in. Each one's description (upstream,
-authors, license, what was changed) and license are reproduced verbatim. The
+authors, license, what was changed), its license, and the PATENTS or NOTICE
+file that comes with it, if any, are reproduced verbatim. The
 source of each, as shipped, is in the directory named, in this application's
 source repository: ${SOURCE_REPO}
 `
@@ -988,6 +989,13 @@ for (const dir of vendoredSources()) {
   out += `${read('README.md')}\n\n`
   out += sub(`${dir}/LICENSE`)
   out += `${read('LICENSE')}\n`
+  // files a license points to (libeot's LICENSE: "Read the PATENTS file"), or that Apache-2.0
+  // 4(d) asks to pass on, travel with it
+  for (const extra of ['PATENTS', 'NOTICE']) {
+    if (!existsSync(join(ROOT, dir, extra))) continue
+    out += sub(`${dir}/${extra}`)
+    out += `${read(extra)}\n`
+  }
 }
 
 for (const term of ['@embedpdf/pdfium', 'Copyright 2014 PDFium Authors', 'Apache License']) {
