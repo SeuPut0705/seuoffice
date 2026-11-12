@@ -145,7 +145,7 @@ pub fn txbx_content_paras(
                 marker.oversized = Some(true);
             }
         }
-        out[item.index].list_marker = Some(marker);
+        out[item.index].list_marker.set(marker);
     }
     Ok(out)
 }
@@ -220,18 +220,19 @@ pub fn collect_txbx_paras(
                     doc_offset,
                 )?;
                 let mut para = TextboxParaDisplay {
-                    runs,
+                    runs: jscompat::Slot::of(runs),
                     ..TextboxParaDisplay::default()
                 };
                 if let Some(format) = format {
                     para.para_format.assign(&format);
                 }
                 if let Some(style_id) = style_id.filter(|id| !id.is_empty()) {
-                    para.style_id = Some(style_id.to_owned());
+                    para.style_id.set(style_id.to_owned());
                 }
                 let texts: Vec<&str> = para
                     .runs
                     .iter()
+                    .flatten()
                     .map(|run| run.text.as_deref().unwrap_or(""))
                     .collect();
                 if space_only_runs(&texts)
@@ -245,8 +246,13 @@ pub fn collect_txbx_paras(
                         .set(JsNum(mark_sz));
                 }
                 if let Some(list_ref) = list_ref {
-                    let text_size_half =
-                        para_text_size_half_points(ctx, &para.runs, child, p_pr, style_id);
+                    let text_size_half = para_text_size_half_points(
+                        ctx,
+                        para.runs.as_deref().unwrap_or_default(),
+                        child,
+                        p_pr,
+                        style_id,
+                    );
                     list_items.push(TxbxListItem {
                         index: out.len(),
                         list_ref,
@@ -278,11 +284,15 @@ pub fn txbx_table_paras(
     let compat_mode = ctx.compatibility_mode.map_or(0.0, |mode| mode.0);
     Ok(hf_table_row_paragraphs(tbl, ctx, compat_mode)?
         .into_iter()
-        .map(|p| TextboxParaDisplay {
-            runs: Vec::new(),
-            cells: (*p.cells).clone(),
-            row: (*p.row).clone(),
-            ..TextboxParaDisplay::default()
+        .map(|p| {
+            // `{ runs: [], cells: p.cells, row: p.row }`: the keys are there even where undefined
+            let mut para = TextboxParaDisplay {
+                runs: jscompat::Slot::of(Vec::new()),
+                ..TextboxParaDisplay::default()
+            };
+            para.cells.assign((*p.cells).clone());
+            para.row.assign((*p.row).clone());
+            para
         })
         .collect())
 }
@@ -306,7 +316,7 @@ pub fn paragraph_stray_box(
         return Ok(None);
     };
     let mut para = TextboxParaDisplay {
-        runs: extract_runs_plain(first, ctx, false)?,
+        runs: jscompat::Slot::of(extract_runs_plain(first, ctx, false)?),
         ..TextboxParaDisplay::default()
     };
     if let Some(p_pr) = first.find_child("w:pPr")
@@ -317,6 +327,7 @@ pub fn paragraph_stray_box(
     if !para
         .runs
         .iter()
+        .flatten()
         .any(|run| !jscompat::trim(run.text.as_deref().unwrap_or("")).is_empty())
     {
         return Ok(None);
@@ -2073,7 +2084,7 @@ impl<'a, 'c> Textboxes<'a, 'c> {
                 }
                 if !runs.is_empty() {
                     let mut para = TextboxParaDisplay {
-                        runs,
+                        runs: jscompat::Slot::of(runs),
                         ..TextboxParaDisplay::default()
                     };
                     if p.find_child("a:pPr").and_then(|p_pr| p_pr.attr("algn")) == Some("ctr") {

@@ -112,6 +112,7 @@ fn box_para_texts(textbox: &crate::model::TextboxDisplay) -> Vec<String> {
         .map(|p| {
             p.runs
                 .iter()
+                .flatten()
                 .map(|r| r.text.as_deref().unwrap_or(""))
                 .collect::<String>()
         })
@@ -905,7 +906,7 @@ fn drawing_branch(
                 .iter()
                 .any(|t| {
                     t.paras.iter().flatten().any(|p| {
-                        p.runs.iter().any(run_has_text)
+                        p.runs.iter().flatten().any(run_has_text)
                             || p.cells.as_ref().is_some_and(|cells| {
                                 cells
                                     .iter()

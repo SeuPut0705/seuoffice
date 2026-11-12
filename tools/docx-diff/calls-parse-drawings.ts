@@ -1549,6 +1549,9 @@ const TXBX_CONTENTS = [
   ),
   txbxParas(para(INLINE_PIC)),
   txbxParas(para(run('chars'), '<w:ind w:leftChars="100" w:firstLineChars="50"/>')),
+  // w:firstLine in twips with a character-unit left: the TypeScript sets
+  // indentFirstLine before indentLeft, the other order of the two keys
+  txbxParas(para(run('chars'), '<w:ind w:leftChars="100" w:firstLine="50"/>')),
   '<w:txbxContent/>',
   txbxParas(
     para(

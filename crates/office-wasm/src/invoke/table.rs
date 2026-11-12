@@ -676,7 +676,7 @@ fn r_compare_blocks(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let now: String = req(args, 4)?;
     put(docx_engine::save::features::compare::compare_block_lists(
         &original, &revised, &xml, &options, &now,
-    ))
+    )?)
 }
 
 fn r_compare_operands(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {

@@ -304,7 +304,7 @@ fn compare_blocks(_text: &str, args: &Value) -> Returned {
         &options,
         // every input of the comparison names its date
         "1970-01-01T00:00:00.000Z",
-    ))
+    )?)
 }
 
 /// The entries of a package, in order: `[name, text]`, `null` for a folder.

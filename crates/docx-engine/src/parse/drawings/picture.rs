@@ -182,7 +182,7 @@ pub fn picture_overhangs_column(meta: &Block, xml: &str, sect: Option<&SectionSe
 
 /// `txbxParaVisible`: a paragraph the box shows, text runs or a table row.
 pub fn txbx_para_visible(p: &TextboxParaDisplay) -> bool {
-    !p.runs.is_empty() || p.cells.as_ref().map_or(0, Vec::len) > 0
+    p.runs.as_ref().is_some_and(|runs| !runs.is_empty()) || p.cells.as_ref().map_or(0, Vec::len) > 0
 }
 
 js_object! {

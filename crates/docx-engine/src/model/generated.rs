@@ -16066,16 +16066,17 @@ impl<'de> Deserialize<'de> for TextboxDisplayVAlign {
     }
 }
 
-/// `TextboxParaDisplay`
+/// `TextboxParaDisplay`: the keys go out in the order they were set, those of
+/// `ParaFormat` among its own
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TextboxParaDisplay {
     /// the fields of `ParaFormat`, which `TextboxParaDisplay` extends
     pub para_format: ParaFormat,
-    pub runs: Vec<Run>,
-    pub style_id: Option<String>,
-    pub list_marker: Option<TextboxListMarker>,
-    pub cells: Option<Vec<HfTableCell>>,
-    pub row: Option<HfTableRow>,
+    pub style_id: jscompat::Slot<String>,
+    pub runs: jscompat::Slot<Vec<Run>>,
+    pub list_marker: jscompat::Slot<TextboxListMarker>,
+    pub cells: jscompat::Slot<Vec<HfTableCell>>,
+    pub row: jscompat::Slot<HfTableRow>,
 }
 
 impl std::ops::Deref for TextboxParaDisplay {
@@ -16215,154 +16216,112 @@ const _: () = assert!(TextboxParaDisplayKey::NAMES.len() <= wire::MAX_KEYS);
 
 impl Serialize for TextboxParaDisplay {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut keys: Vec<(u64, TextboxParaDisplayKey)> = Vec::new();
+        if let Some(at) = self.para_format.align.set_at() { keys.push((at, TextboxParaDisplayKey::Align)); }
+        if let Some(at) = self.para_format.line_spacing.set_at() { keys.push((at, TextboxParaDisplayKey::LineSpacing)); }
+        if let Some(at) = self.para_format.line_rule.set_at() { keys.push((at, TextboxParaDisplayKey::LineRule)); }
+        if let Some(at) = self.para_format.line_raw_twips.set_at() { keys.push((at, TextboxParaDisplayKey::LineRawTwips)); }
+        if let Some(at) = self.para_format.indent_left.set_at() { keys.push((at, TextboxParaDisplayKey::IndentLeft)); }
+        if let Some(at) = self.para_format.indent_right.set_at() { keys.push((at, TextboxParaDisplayKey::IndentRight)); }
+        if let Some(at) = self.para_format.indent_first_line.set_at() { keys.push((at, TextboxParaDisplayKey::IndentFirstLine)); }
+        if let Some(at) = self.para_format.char_indents.set_at() { keys.push((at, TextboxParaDisplayKey::CharIndents)); }
+        if let Some(at) = self.para_format.direct_char_indents.set_at() { keys.push((at, TextboxParaDisplayKey::DirectCharIndents)); }
+        if let Some(at) = self.para_format.space_before.set_at() { keys.push((at, TextboxParaDisplayKey::SpaceBefore)); }
+        if let Some(at) = self.para_format.space_after.set_at() { keys.push((at, TextboxParaDisplayKey::SpaceAfter)); }
+        if let Some(at) = self.para_format.space_before_auto.set_at() { keys.push((at, TextboxParaDisplayKey::SpaceBeforeAuto)); }
+        if let Some(at) = self.para_format.space_after_auto.set_at() { keys.push((at, TextboxParaDisplayKey::SpaceAfterAuto)); }
+        if let Some(at) = self.para_format.page_break_before.set_at() { keys.push((at, TextboxParaDisplayKey::PageBreakBefore)); }
+        if let Some(at) = self.para_format.keep_next.set_at() { keys.push((at, TextboxParaDisplayKey::KeepNext)); }
+        if let Some(at) = self.para_format.keep_lines.set_at() { keys.push((at, TextboxParaDisplayKey::KeepLines)); }
+        if let Some(at) = self.para_format.suppress_line_numbers.set_at() { keys.push((at, TextboxParaDisplayKey::SuppressLineNumbers)); }
+        if let Some(at) = self.para_format.widow_control.set_at() { keys.push((at, TextboxParaDisplayKey::WidowControl)); }
+        if let Some(at) = self.para_format.snap_to_grid.set_at() { keys.push((at, TextboxParaDisplayKey::SnapToGrid)); }
+        if let Some(at) = self.para_format.auto_space.set_at() { keys.push((at, TextboxParaDisplayKey::AutoSpace)); }
+        if let Some(at) = self.para_format.auto_space_d_e.set_at() { keys.push((at, TextboxParaDisplayKey::AutoSpaceDE)); }
+        if let Some(at) = self.para_format.auto_space_d_n.set_at() { keys.push((at, TextboxParaDisplayKey::AutoSpaceDN)); }
+        if let Some(at) = self.para_format.word_wrap.set_at() { keys.push((at, TextboxParaDisplayKey::WordWrap)); }
+        if let Some(at) = self.para_format.overflow_punct.set_at() { keys.push((at, TextboxParaDisplayKey::OverflowPunct)); }
+        if let Some(at) = self.para_format.east_asia_lang.set_at() { keys.push((at, TextboxParaDisplayKey::EastAsiaLang)); }
+        if let Some(at) = self.para_format.contextual_spacing.set_at() { keys.push((at, TextboxParaDisplayKey::ContextualSpacing)); }
+        if let Some(at) = self.para_format.shading_fill.set_at() { keys.push((at, TextboxParaDisplayKey::ShadingFill)); }
+        if let Some(at) = self.para_format.shading_display.set_at() { keys.push((at, TextboxParaDisplayKey::ShadingDisplay)); }
+        if let Some(at) = self.para_format.shading_clear.set_at() { keys.push((at, TextboxParaDisplayKey::ShadingClear)); }
+        if let Some(at) = self.para_format.borders.set_at() { keys.push((at, TextboxParaDisplayKey::Borders)); }
+        if let Some(at) = self.para_format.border_style.set_at() { keys.push((at, TextboxParaDisplayKey::BorderStyle)); }
+        if let Some(at) = self.para_format.border_lines.set_at() { keys.push((at, TextboxParaDisplayKey::BorderLines)); }
+        if let Some(at) = self.para_format.border_reset.set_at() { keys.push((at, TextboxParaDisplayKey::BorderReset)); }
+        if let Some(at) = self.para_format.border_pad.set_at() { keys.push((at, TextboxParaDisplayKey::BorderPad)); }
+        if let Some(at) = self.para_format.tab_stops.set_at() { keys.push((at, TextboxParaDisplayKey::TabStops)); }
+        if let Some(at) = self.para_format.drop_cap.set_at() { keys.push((at, TextboxParaDisplayKey::DropCap)); }
+        if let Some(at) = self.para_format.frame.set_at() { keys.push((at, TextboxParaDisplayKey::Frame)); }
+        if let Some(at) = self.para_format.frame_box.set_at() { keys.push((at, TextboxParaDisplayKey::FrameBox)); }
+        if let Some(at) = self.para_format.text_direction.set_at() { keys.push((at, TextboxParaDisplayKey::TextDirection)); }
+        if let Some(at) = self.para_format.bidi.set_at() { keys.push((at, TextboxParaDisplayKey::Bidi)); }
+        if let Some(at) = self.para_format.bidi_inherited.set_at() { keys.push((at, TextboxParaDisplayKey::BidiInherited)); }
+        if let Some(at) = self.para_format.empty_run_size_half_points.set_at() { keys.push((at, TextboxParaDisplayKey::EmptyRunSizeHalfPoints)); }
+        if let Some(at) = self.para_format.empty_run_font_family.set_at() { keys.push((at, TextboxParaDisplayKey::EmptyRunFontFamily)); }
+        if let Some(at) = self.para_format.mark_size_half_points.set_at() { keys.push((at, TextboxParaDisplayKey::MarkSizeHalfPoints)); }
+        if let Some(at) = self.para_format.effective.set_at() { keys.push((at, TextboxParaDisplayKey::Effective)); }
+        if let Some(at) = self.style_id.set_at() { keys.push((at, TextboxParaDisplayKey::StyleId)); }
+        if let Some(at) = self.runs.set_at() { keys.push((at, TextboxParaDisplayKey::Runs)); }
+        if let Some(at) = self.list_marker.set_at() { keys.push((at, TextboxParaDisplayKey::ListMarker)); }
+        if let Some(at) = self.cells.set_at() { keys.push((at, TextboxParaDisplayKey::Cells)); }
+        if let Some(at) = self.row.set_at() { keys.push((at, TextboxParaDisplayKey::Row)); }
+        keys.sort_unstable_by_key(|&(at, _)| at);
         let mut map = serializer.serialize_map(None)?;
-        if let Some(value) = &*self.para_format.east_asia_lang {
-            map.serialize_entry("eastAsiaLang", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_style {
-            map.serialize_entry("borderStyle", value)?;
-        }
-        if let Some(value) = &*self.para_format.empty_run_font_family {
-            map.serialize_entry("emptyRunFontFamily", value)?;
-        }
-        if let Some(value) = &*self.para_format.mark_size_half_points {
-            map.serialize_entry("markSizeHalfPoints", value)?;
-        }
-        if let Some(value) = &*self.para_format.effective {
-            map.serialize_entry("effective", value)?;
-        }
-        map.serialize_entry("runs", &self.runs)?;
-        if let Some(value) = &*self.para_format.bidi {
-            map.serialize_entry("bidi", value)?;
-        }
-        if let Some(value) = &*self.para_format.bidi_inherited {
-            map.serialize_entry("bidiInherited", value)?;
-        }
-        if let Some(value) = &*self.para_format.align {
-            map.serialize_entry("align", value)?;
-        }
-        if let Some(value) = &*self.para_format.line_raw_twips {
-            map.serialize_entry("lineRawTwips", value)?;
-        }
-        if let Some(value) = &*self.para_format.line_spacing {
-            map.serialize_entry("lineSpacing", value)?;
-        }
-        if let Some(value) = &*self.para_format.line_rule {
-            map.serialize_entry("lineRule", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_before_auto {
-            map.serialize_entry("spaceBeforeAuto", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_after_auto {
-            map.serialize_entry("spaceAfterAuto", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_before {
-            map.serialize_entry("spaceBefore", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_after {
-            map.serialize_entry("spaceAfter", value)?;
-        }
-        if let Some(value) = &*self.para_format.indent_left {
-            map.serialize_entry("indentLeft", value)?;
-        }
-        if let Some(value) = &*self.para_format.indent_right {
-            map.serialize_entry("indentRight", value)?;
-        }
-        if let Some(value) = &*self.para_format.indent_first_line {
-            map.serialize_entry("indentFirstLine", value)?;
-        }
-        if let Some(value) = &*self.para_format.page_break_before {
-            map.serialize_entry("pageBreakBefore", value)?;
-        }
-        if let Some(value) = &*self.para_format.keep_next {
-            map.serialize_entry("keepNext", value)?;
-        }
-        if let Some(value) = &*self.para_format.keep_lines {
-            map.serialize_entry("keepLines", value)?;
-        }
-        if let Some(value) = &*self.para_format.suppress_line_numbers {
-            map.serialize_entry("suppressLineNumbers", value)?;
-        }
-        if let Some(value) = &*self.para_format.snap_to_grid {
-            map.serialize_entry("snapToGrid", value)?;
-        }
-        if let Some(value) = &*self.para_format.widow_control {
-            map.serialize_entry("widowControl", value)?;
-        }
-        if let Some(value) = &*self.para_format.contextual_spacing {
-            map.serialize_entry("contextualSpacing", value)?;
-        }
-        if let Some(value) = &*self.para_format.auto_space_d_e {
-            map.serialize_entry("autoSpaceDE", value)?;
-        }
-        if let Some(value) = &*self.para_format.auto_space_d_n {
-            map.serialize_entry("autoSpaceDN", value)?;
-        }
-        if let Some(value) = &*self.para_format.auto_space {
-            map.serialize_entry("autoSpace", value)?;
-        }
-        if let Some(value) = &*self.para_format.word_wrap {
-            map.serialize_entry("wordWrap", value)?;
-        }
-        if let Some(value) = &*self.para_format.overflow_punct {
-            map.serialize_entry("overflowPunct", value)?;
-        }
-        if let Some(value) = &*self.para_format.shading_fill {
-            map.serialize_entry("shadingFill", value)?;
-        }
-        if let Some(value) = &*self.para_format.shading_display {
-            map.serialize_entry("shadingDisplay", value)?;
-        }
-        if let Some(value) = &*self.para_format.shading_clear {
-            map.serialize_entry("shadingClear", value)?;
-        }
-        if let Some(value) = &*self.para_format.borders {
-            map.serialize_entry("borders", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_lines {
-            map.serialize_entry("borderLines", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_reset {
-            map.serialize_entry("borderReset", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_pad {
-            map.serialize_entry("borderPad", value)?;
-        }
-        if let Some(value) = &*self.para_format.tab_stops {
-            map.serialize_entry("tabStops", value)?;
-        }
-        if let Some(value) = &*self.para_format.drop_cap {
-            map.serialize_entry("dropCap", value)?;
-        }
-        if let Some(value) = &*self.para_format.frame_box {
-            map.serialize_entry("frameBox", value)?;
-        }
-        if let Some(value) = &*self.para_format.frame {
-            map.serialize_entry("frame", value)?;
-        }
-        if let Some(value) = &*self.para_format.text_direction {
-            map.serialize_entry("textDirection", value)?;
-        }
-        if let Some(value) = &*self.para_format.char_indents {
-            map.serialize_entry("charIndents", value)?;
-        }
-        if let Some(value) = &*self.para_format.direct_char_indents {
-            map.serialize_entry("directCharIndents", value)?;
-        }
-        if let Some(value) = &*self.para_format.empty_run_size_half_points {
-            map.serialize_entry("emptyRunSizeHalfPoints", value)?;
-        }
-        if let Some(value) = &self.style_id {
-            map.serialize_entry("styleId", value)?;
-        }
-        if let Some(value) = &self.list_marker {
-            map.serialize_entry("listMarker", value)?;
-        }
-        if let Some(value) = &self.cells {
-            map.serialize_entry("cells", value)?;
-        }
-        if let Some(value) = &self.row {
-            map.serialize_entry("row", value)?;
+        for (_, key) in keys {
+            match key {
+                TextboxParaDisplayKey::Align => if let Some(value) = &*self.para_format.align { map.serialize_entry("align", value)?; },
+                TextboxParaDisplayKey::LineSpacing => if let Some(value) = &*self.para_format.line_spacing { map.serialize_entry("lineSpacing", value)?; },
+                TextboxParaDisplayKey::LineRule => if let Some(value) = &*self.para_format.line_rule { map.serialize_entry("lineRule", value)?; },
+                TextboxParaDisplayKey::LineRawTwips => if let Some(value) = &*self.para_format.line_raw_twips { map.serialize_entry("lineRawTwips", value)?; },
+                TextboxParaDisplayKey::IndentLeft => if let Some(value) = &*self.para_format.indent_left { map.serialize_entry("indentLeft", value)?; },
+                TextboxParaDisplayKey::IndentRight => if let Some(value) = &*self.para_format.indent_right { map.serialize_entry("indentRight", value)?; },
+                TextboxParaDisplayKey::IndentFirstLine => if let Some(value) = &*self.para_format.indent_first_line { map.serialize_entry("indentFirstLine", value)?; },
+                TextboxParaDisplayKey::CharIndents => if let Some(value) = &*self.para_format.char_indents { map.serialize_entry("charIndents", value)?; },
+                TextboxParaDisplayKey::DirectCharIndents => if let Some(value) = &*self.para_format.direct_char_indents { map.serialize_entry("directCharIndents", value)?; },
+                TextboxParaDisplayKey::SpaceBefore => if let Some(value) = &*self.para_format.space_before { map.serialize_entry("spaceBefore", value)?; },
+                TextboxParaDisplayKey::SpaceAfter => if let Some(value) = &*self.para_format.space_after { map.serialize_entry("spaceAfter", value)?; },
+                TextboxParaDisplayKey::SpaceBeforeAuto => if let Some(value) = &*self.para_format.space_before_auto { map.serialize_entry("spaceBeforeAuto", value)?; },
+                TextboxParaDisplayKey::SpaceAfterAuto => if let Some(value) = &*self.para_format.space_after_auto { map.serialize_entry("spaceAfterAuto", value)?; },
+                TextboxParaDisplayKey::PageBreakBefore => if let Some(value) = &*self.para_format.page_break_before { map.serialize_entry("pageBreakBefore", value)?; },
+                TextboxParaDisplayKey::KeepNext => if let Some(value) = &*self.para_format.keep_next { map.serialize_entry("keepNext", value)?; },
+                TextboxParaDisplayKey::KeepLines => if let Some(value) = &*self.para_format.keep_lines { map.serialize_entry("keepLines", value)?; },
+                TextboxParaDisplayKey::SuppressLineNumbers => if let Some(value) = &*self.para_format.suppress_line_numbers { map.serialize_entry("suppressLineNumbers", value)?; },
+                TextboxParaDisplayKey::WidowControl => if let Some(value) = &*self.para_format.widow_control { map.serialize_entry("widowControl", value)?; },
+                TextboxParaDisplayKey::SnapToGrid => if let Some(value) = &*self.para_format.snap_to_grid { map.serialize_entry("snapToGrid", value)?; },
+                TextboxParaDisplayKey::AutoSpace => if let Some(value) = &*self.para_format.auto_space { map.serialize_entry("autoSpace", value)?; },
+                TextboxParaDisplayKey::AutoSpaceDE => if let Some(value) = &*self.para_format.auto_space_d_e { map.serialize_entry("autoSpaceDE", value)?; },
+                TextboxParaDisplayKey::AutoSpaceDN => if let Some(value) = &*self.para_format.auto_space_d_n { map.serialize_entry("autoSpaceDN", value)?; },
+                TextboxParaDisplayKey::WordWrap => if let Some(value) = &*self.para_format.word_wrap { map.serialize_entry("wordWrap", value)?; },
+                TextboxParaDisplayKey::OverflowPunct => if let Some(value) = &*self.para_format.overflow_punct { map.serialize_entry("overflowPunct", value)?; },
+                TextboxParaDisplayKey::EastAsiaLang => if let Some(value) = &*self.para_format.east_asia_lang { map.serialize_entry("eastAsiaLang", value)?; },
+                TextboxParaDisplayKey::ContextualSpacing => if let Some(value) = &*self.para_format.contextual_spacing { map.serialize_entry("contextualSpacing", value)?; },
+                TextboxParaDisplayKey::ShadingFill => if let Some(value) = &*self.para_format.shading_fill { map.serialize_entry("shadingFill", value)?; },
+                TextboxParaDisplayKey::ShadingDisplay => if let Some(value) = &*self.para_format.shading_display { map.serialize_entry("shadingDisplay", value)?; },
+                TextboxParaDisplayKey::ShadingClear => if let Some(value) = &*self.para_format.shading_clear { map.serialize_entry("shadingClear", value)?; },
+                TextboxParaDisplayKey::Borders => if let Some(value) = &*self.para_format.borders { map.serialize_entry("borders", value)?; },
+                TextboxParaDisplayKey::BorderStyle => if let Some(value) = &*self.para_format.border_style { map.serialize_entry("borderStyle", value)?; },
+                TextboxParaDisplayKey::BorderLines => if let Some(value) = &*self.para_format.border_lines { map.serialize_entry("borderLines", value)?; },
+                TextboxParaDisplayKey::BorderReset => if let Some(value) = &*self.para_format.border_reset { map.serialize_entry("borderReset", value)?; },
+                TextboxParaDisplayKey::BorderPad => if let Some(value) = &*self.para_format.border_pad { map.serialize_entry("borderPad", value)?; },
+                TextboxParaDisplayKey::TabStops => if let Some(value) = &*self.para_format.tab_stops { map.serialize_entry("tabStops", value)?; },
+                TextboxParaDisplayKey::DropCap => if let Some(value) = &*self.para_format.drop_cap { map.serialize_entry("dropCap", value)?; },
+                TextboxParaDisplayKey::Frame => if let Some(value) = &*self.para_format.frame { map.serialize_entry("frame", value)?; },
+                TextboxParaDisplayKey::FrameBox => if let Some(value) = &*self.para_format.frame_box { map.serialize_entry("frameBox", value)?; },
+                TextboxParaDisplayKey::TextDirection => if let Some(value) = &*self.para_format.text_direction { map.serialize_entry("textDirection", value)?; },
+                TextboxParaDisplayKey::Bidi => if let Some(value) = &*self.para_format.bidi { map.serialize_entry("bidi", value)?; },
+                TextboxParaDisplayKey::BidiInherited => if let Some(value) = &*self.para_format.bidi_inherited { map.serialize_entry("bidiInherited", value)?; },
+                TextboxParaDisplayKey::EmptyRunSizeHalfPoints => if let Some(value) = &*self.para_format.empty_run_size_half_points { map.serialize_entry("emptyRunSizeHalfPoints", value)?; },
+                TextboxParaDisplayKey::EmptyRunFontFamily => if let Some(value) = &*self.para_format.empty_run_font_family { map.serialize_entry("emptyRunFontFamily", value)?; },
+                TextboxParaDisplayKey::MarkSizeHalfPoints => if let Some(value) = &*self.para_format.mark_size_half_points { map.serialize_entry("markSizeHalfPoints", value)?; },
+                TextboxParaDisplayKey::Effective => if let Some(value) = &*self.para_format.effective { map.serialize_entry("effective", value)?; },
+                TextboxParaDisplayKey::StyleId => if let Some(value) = &*self.style_id { map.serialize_entry("styleId", value)?; },
+                TextboxParaDisplayKey::Runs => if let Some(value) = &*self.runs { map.serialize_entry("runs", value)?; },
+                TextboxParaDisplayKey::ListMarker => if let Some(value) = &*self.list_marker { map.serialize_entry("listMarker", value)?; },
+                TextboxParaDisplayKey::Cells => if let Some(value) = &*self.cells { map.serialize_entry("cells", value)?; },
+                TextboxParaDisplayKey::Row => if let Some(value) = &*self.row { map.serialize_entry("row", value)?; },
+            }
         }
         map.end()
     }
@@ -16380,70 +16339,68 @@ impl<'de> Deserialize<'de> for TextboxParaDisplay {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<TextboxParaDisplay, A::Error> {
                 let mut seen = Seen::default();
-                let mut b_1 = ParaFormat::default();
-                let mut v_style_id = None;
-                let mut v_runs = None;
-                let mut v_list_marker = None;
-                let mut v_cells = None;
-                let mut v_row = None;
+                let mut b_0 = TextboxParaDisplay::default();
                 while let Some(Key(key)) = map.next_key::<Key<TextboxParaDisplayKey>>()? {
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TextboxParaDisplayKey::Align => b_1.align.set(map.next_value()?),
-                        TextboxParaDisplayKey::LineSpacing => b_1.line_spacing.set(map.next_value()?),
-                        TextboxParaDisplayKey::LineRule => b_1.line_rule.set(map.next_value()?),
-                        TextboxParaDisplayKey::LineRawTwips => b_1.line_raw_twips.set(map.next_value()?),
-                        TextboxParaDisplayKey::IndentLeft => b_1.indent_left.set(map.next_value()?),
-                        TextboxParaDisplayKey::IndentRight => b_1.indent_right.set(map.next_value()?),
-                        TextboxParaDisplayKey::IndentFirstLine => b_1.indent_first_line.set(map.next_value()?),
-                        TextboxParaDisplayKey::CharIndents => b_1.char_indents.set(map.next_value()?),
-                        TextboxParaDisplayKey::DirectCharIndents => b_1.direct_char_indents.set(map.next_value()?),
-                        TextboxParaDisplayKey::SpaceBefore => b_1.space_before.set(map.next_value()?),
-                        TextboxParaDisplayKey::SpaceAfter => b_1.space_after.set(map.next_value()?),
-                        TextboxParaDisplayKey::SpaceBeforeAuto => b_1.space_before_auto.set(map.next_value()?),
-                        TextboxParaDisplayKey::SpaceAfterAuto => b_1.space_after_auto.set(map.next_value()?),
-                        TextboxParaDisplayKey::PageBreakBefore => b_1.page_break_before.set(map.next_value()?),
-                        TextboxParaDisplayKey::KeepNext => b_1.keep_next.set(map.next_value()?),
-                        TextboxParaDisplayKey::KeepLines => b_1.keep_lines.set(map.next_value()?),
-                        TextboxParaDisplayKey::SuppressLineNumbers => b_1.suppress_line_numbers.set(map.next_value()?),
-                        TextboxParaDisplayKey::WidowControl => b_1.widow_control.set(map.next_value()?),
-                        TextboxParaDisplayKey::SnapToGrid => b_1.snap_to_grid.set(map.next_value()?),
-                        TextboxParaDisplayKey::AutoSpace => b_1.auto_space.set(map.next_value()?),
-                        TextboxParaDisplayKey::AutoSpaceDE => b_1.auto_space_d_e.set(map.next_value()?),
-                        TextboxParaDisplayKey::AutoSpaceDN => b_1.auto_space_d_n.set(map.next_value()?),
-                        TextboxParaDisplayKey::WordWrap => b_1.word_wrap.set(map.next_value()?),
-                        TextboxParaDisplayKey::OverflowPunct => b_1.overflow_punct.set(map.next_value()?),
-                        TextboxParaDisplayKey::EastAsiaLang => b_1.east_asia_lang.set(map.next_value()?),
-                        TextboxParaDisplayKey::ContextualSpacing => b_1.contextual_spacing.set(map.next_value()?),
-                        TextboxParaDisplayKey::ShadingFill => b_1.shading_fill.set(map.next_value()?),
-                        TextboxParaDisplayKey::ShadingDisplay => b_1.shading_display.set(map.next_value()?),
-                        TextboxParaDisplayKey::ShadingClear => b_1.shading_clear.set(map.next_value()?),
-                        TextboxParaDisplayKey::Borders => b_1.borders.set(map.next_value()?),
-                        TextboxParaDisplayKey::BorderStyle => b_1.border_style.set(map.next_value()?),
-                        TextboxParaDisplayKey::BorderLines => b_1.border_lines.set(map.next_value()?),
-                        TextboxParaDisplayKey::BorderReset => b_1.border_reset.set(map.next_value()?),
-                        TextboxParaDisplayKey::BorderPad => b_1.border_pad.set(map.next_value()?),
-                        TextboxParaDisplayKey::TabStops => b_1.tab_stops.set(map.next_value()?),
-                        TextboxParaDisplayKey::DropCap => b_1.drop_cap.set(map.next_value()?),
-                        TextboxParaDisplayKey::Frame => b_1.frame.set(map.next_value()?),
-                        TextboxParaDisplayKey::FrameBox => b_1.frame_box.set(map.next_value()?),
-                        TextboxParaDisplayKey::TextDirection => b_1.text_direction.set(map.next_value()?),
-                        TextboxParaDisplayKey::Bidi => b_1.bidi.set(map.next_value()?),
-                        TextboxParaDisplayKey::BidiInherited => b_1.bidi_inherited.set(map.next_value()?),
-                        TextboxParaDisplayKey::EmptyRunSizeHalfPoints => b_1.empty_run_size_half_points.set(map.next_value()?),
-                        TextboxParaDisplayKey::EmptyRunFontFamily => b_1.empty_run_font_family.set(map.next_value()?),
-                        TextboxParaDisplayKey::MarkSizeHalfPoints => b_1.mark_size_half_points.set(map.next_value()?),
-                        TextboxParaDisplayKey::Effective => b_1.effective.set(map.next_value()?),
-                        TextboxParaDisplayKey::StyleId => v_style_id = Some(map.next_value()?),
-                        TextboxParaDisplayKey::Runs => v_runs = Some(map.next_value()?),
-                        TextboxParaDisplayKey::ListMarker => v_list_marker = Some(map.next_value()?),
-                        TextboxParaDisplayKey::Cells => v_cells = Some(map.next_value()?),
-                        TextboxParaDisplayKey::Row => v_row = Some(map.next_value()?),
+                        TextboxParaDisplayKey::Align => b_0.para_format.align.set(map.next_value()?),
+                        TextboxParaDisplayKey::LineSpacing => b_0.para_format.line_spacing.set(map.next_value()?),
+                        TextboxParaDisplayKey::LineRule => b_0.para_format.line_rule.set(map.next_value()?),
+                        TextboxParaDisplayKey::LineRawTwips => b_0.para_format.line_raw_twips.set(map.next_value()?),
+                        TextboxParaDisplayKey::IndentLeft => b_0.para_format.indent_left.set(map.next_value()?),
+                        TextboxParaDisplayKey::IndentRight => b_0.para_format.indent_right.set(map.next_value()?),
+                        TextboxParaDisplayKey::IndentFirstLine => b_0.para_format.indent_first_line.set(map.next_value()?),
+                        TextboxParaDisplayKey::CharIndents => b_0.para_format.char_indents.set(map.next_value()?),
+                        TextboxParaDisplayKey::DirectCharIndents => b_0.para_format.direct_char_indents.set(map.next_value()?),
+                        TextboxParaDisplayKey::SpaceBefore => b_0.para_format.space_before.set(map.next_value()?),
+                        TextboxParaDisplayKey::SpaceAfter => b_0.para_format.space_after.set(map.next_value()?),
+                        TextboxParaDisplayKey::SpaceBeforeAuto => b_0.para_format.space_before_auto.set(map.next_value()?),
+                        TextboxParaDisplayKey::SpaceAfterAuto => b_0.para_format.space_after_auto.set(map.next_value()?),
+                        TextboxParaDisplayKey::PageBreakBefore => b_0.para_format.page_break_before.set(map.next_value()?),
+                        TextboxParaDisplayKey::KeepNext => b_0.para_format.keep_next.set(map.next_value()?),
+                        TextboxParaDisplayKey::KeepLines => b_0.para_format.keep_lines.set(map.next_value()?),
+                        TextboxParaDisplayKey::SuppressLineNumbers => b_0.para_format.suppress_line_numbers.set(map.next_value()?),
+                        TextboxParaDisplayKey::WidowControl => b_0.para_format.widow_control.set(map.next_value()?),
+                        TextboxParaDisplayKey::SnapToGrid => b_0.para_format.snap_to_grid.set(map.next_value()?),
+                        TextboxParaDisplayKey::AutoSpace => b_0.para_format.auto_space.set(map.next_value()?),
+                        TextboxParaDisplayKey::AutoSpaceDE => b_0.para_format.auto_space_d_e.set(map.next_value()?),
+                        TextboxParaDisplayKey::AutoSpaceDN => b_0.para_format.auto_space_d_n.set(map.next_value()?),
+                        TextboxParaDisplayKey::WordWrap => b_0.para_format.word_wrap.set(map.next_value()?),
+                        TextboxParaDisplayKey::OverflowPunct => b_0.para_format.overflow_punct.set(map.next_value()?),
+                        TextboxParaDisplayKey::EastAsiaLang => b_0.para_format.east_asia_lang.set(map.next_value()?),
+                        TextboxParaDisplayKey::ContextualSpacing => b_0.para_format.contextual_spacing.set(map.next_value()?),
+                        TextboxParaDisplayKey::ShadingFill => b_0.para_format.shading_fill.set(map.next_value()?),
+                        TextboxParaDisplayKey::ShadingDisplay => b_0.para_format.shading_display.set(map.next_value()?),
+                        TextboxParaDisplayKey::ShadingClear => b_0.para_format.shading_clear.set(map.next_value()?),
+                        TextboxParaDisplayKey::Borders => b_0.para_format.borders.set(map.next_value()?),
+                        TextboxParaDisplayKey::BorderStyle => b_0.para_format.border_style.set(map.next_value()?),
+                        TextboxParaDisplayKey::BorderLines => b_0.para_format.border_lines.set(map.next_value()?),
+                        TextboxParaDisplayKey::BorderReset => b_0.para_format.border_reset.set(map.next_value()?),
+                        TextboxParaDisplayKey::BorderPad => b_0.para_format.border_pad.set(map.next_value()?),
+                        TextboxParaDisplayKey::TabStops => b_0.para_format.tab_stops.set(map.next_value()?),
+                        TextboxParaDisplayKey::DropCap => b_0.para_format.drop_cap.set(map.next_value()?),
+                        TextboxParaDisplayKey::Frame => b_0.para_format.frame.set(map.next_value()?),
+                        TextboxParaDisplayKey::FrameBox => b_0.para_format.frame_box.set(map.next_value()?),
+                        TextboxParaDisplayKey::TextDirection => b_0.para_format.text_direction.set(map.next_value()?),
+                        TextboxParaDisplayKey::Bidi => b_0.para_format.bidi.set(map.next_value()?),
+                        TextboxParaDisplayKey::BidiInherited => b_0.para_format.bidi_inherited.set(map.next_value()?),
+                        TextboxParaDisplayKey::EmptyRunSizeHalfPoints => b_0.para_format.empty_run_size_half_points.set(map.next_value()?),
+                        TextboxParaDisplayKey::EmptyRunFontFamily => b_0.para_format.empty_run_font_family.set(map.next_value()?),
+                        TextboxParaDisplayKey::MarkSizeHalfPoints => b_0.para_format.mark_size_half_points.set(map.next_value()?),
+                        TextboxParaDisplayKey::Effective => b_0.para_format.effective.set(map.next_value()?),
+                        TextboxParaDisplayKey::StyleId => b_0.style_id.set(map.next_value()?),
+                        TextboxParaDisplayKey::Runs => b_0.runs.set(map.next_value()?),
+                        TextboxParaDisplayKey::ListMarker => b_0.list_marker.set(map.next_value()?),
+                        TextboxParaDisplayKey::Cells => b_0.cells.set(map.next_value()?),
+                        TextboxParaDisplayKey::Row => b_0.row.set(map.next_value()?),
                     }
                 }
-                Ok(TextboxParaDisplay { para_format: b_1, style_id: v_style_id, runs: v_runs.ok_or_else(|| A::Error::missing_field("runs"))?, list_marker: v_list_marker, cells: v_cells, row: v_row })
+                if !b_0.runs.has_key() {
+                    return Err(A::Error::missing_field("runs"));
+                }
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
