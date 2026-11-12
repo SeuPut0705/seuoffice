@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { Editor } from '@tiptap/core'
 import { parseDocx } from '@seuoffice/docx-engine'
-import { editorExtensions } from '../src/renderer/editor/extensions'
-import { blocksToPmDoc } from '../src/renderer/editor/convert'
-import { buildDocumentContext } from '../src/renderer/ai/protocol'
-import { modelTextOf } from '../src/renderer/ai/redact-view'
-import { exportDocxBytes } from '../../markdown/src/renderer/export/docxExport'
+import { editorExtensions } from '../../docs/src/renderer/editor/extensions'
+import { blocksToPmDoc } from '../../docs/src/renderer/editor/convert'
+import { buildDocumentContext } from '../../docs/src/renderer/ai/protocol'
+import { modelTextOf } from '../../docs/src/renderer/ai/redact-view'
+import { exportDocxBytes } from '../src/renderer/export/docxExport'
 
 /**
  * A .docx exported by the Markdown app holds each hidden span under the mark the
