@@ -16,6 +16,7 @@ use ooxml_xml::{Utf16Map, parse_ordered, serialize};
 use serde::{Deserialize, Serialize};
 
 mod calls;
+mod odt;
 mod package;
 mod props;
 
@@ -67,6 +68,22 @@ enum Command {
         options: Option<serde_json::Value>,
         now_ms: f64,
     },
+    /// The odt engine (`crates/odt-engine/C3-PLAN.md`, "The wire"). Blob 0:
+    /// an ODT; `now` dates the bridge docx's entries. Reply `{ report }`;
+    /// blob 0 the bridge docx, blob 1 the bridge JSON.
+    OdtToDocx { now: odt::WireNow },
+    /// Blobs: the received ODT, its bridge JSON, the edited docx. Reply
+    /// `{ unchanged }`; blob 0 the saved ODT unless unchanged.
+    SaveOdt { now: odt::WireNow },
+    /// Blob 0: a docx; `rendered` names, per object key, the blob of its PNG.
+    /// Reply `{ report }`; blob 0 the new ODT.
+    DocxToOdt {
+        #[serde(default)]
+        rendered: Vec<(String, odt::WireRendered)>,
+        now: odt::WireNow,
+    },
+    /// Blob 0: an ODT. Reply `{ text }`.
+    OdtToText,
 }
 
 #[derive(Deserialize)]
@@ -231,6 +248,10 @@ fn encode_frame(header: &[u8], blobs: &[Vec<u8>]) -> Vec<u8> {
 
 fn json(reply: &Reply<'_>) -> Vec<u8> {
     serde_json::to_vec(reply).unwrap_or_else(|_| b"{}".to_vec())
+}
+
+fn odt_reply(reply: serde_json::Value) -> Vec<u8> {
+    serde_json::to_vec(&reply).unwrap_or_else(|_| b"{}".to_vec())
 }
 
 fn scan(xml: &[u8]) -> Vec<u8> {
@@ -455,6 +476,19 @@ fn respond(input: &[u8]) -> Vec<u8> {
                     | Command::PptxPackage,
                     None,
                 ) => json(&Reply::failure("invalid_request", "blob 0 is missing")),
+                (Command::OdtToDocx { now }, _) => {
+                    odt_reply(odt::odt_to_docx(&frame.blobs, now, &mut reply_blobs))
+                }
+                (Command::SaveOdt { now }, _) => {
+                    odt_reply(odt::save_odt(&frame.blobs, now, &mut reply_blobs))
+                }
+                (Command::DocxToOdt { rendered, now }, _) => odt_reply(odt::docx_to_odt(
+                    &frame.blobs,
+                    rendered,
+                    now,
+                    &mut reply_blobs,
+                )),
+                (Command::OdtToText, _) => odt_reply(odt::odt_to_text(&frame.blobs)),
             },
         },
     };
