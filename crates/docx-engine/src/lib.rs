@@ -7,6 +7,7 @@ pub mod eq_field;
 pub mod field_balance;
 pub mod fields;
 pub mod font_table;
+pub mod generate;
 pub mod list_markers;
 pub mod model;
 pub mod notes;
