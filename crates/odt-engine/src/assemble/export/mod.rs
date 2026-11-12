@@ -29,7 +29,8 @@ use docx_engine::section::{
     SectionBlock, SectionInfo, SectionSettings, read_page_color, read_sections,
 };
 use jscompat::{
-    JsMap, JsNum, js_regex, number_to_string, replace_first_string, replace_first_with, trim,
+    JsMap, JsNum, JsObject, js_regex, number_to_string, replace_first_string, replace_first_with,
+    trim,
 };
 use ooxml_pkg::{DEFAULT_ZIP_LIMITS, Package};
 
@@ -753,8 +754,8 @@ fn page_groups(
                 title_pg: false,
                 page_number_start: None,
                 page_number_fmt: None,
-                header_refs: JsMap::new(),
-                footer_refs: JsMap::new(),
+                header_refs: JsObject::new(),
+                footer_refs: JsObject::new(),
             },
             master: fallback,
             parts: Vec::new(),
