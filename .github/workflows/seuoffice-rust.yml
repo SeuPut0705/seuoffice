@@ -135,6 +135,24 @@ jobs:
           path: tools/docx-diff/out
           if-no-files-found: ignore
 
+      # the central process (decision 0029): crates/main-core through its
+      # Node-API addon against the TypeScript main process
+      - name: Central process comparison
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        shell: bash
+        run: |
+          npm --prefix tools/main-diff run typecheck
+          mkdir -p tools/main-diff/out
+          npm --prefix tools/main-diff run gate -- --show 40 2>&1 | tee tools/main-diff/out/gate.txt
+
+      - name: Keep the central process comparison
+        if: ${{ always() && steps.has.outputs.crates == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-diff-out
+          path: tools/main-diff/out
+          if-no-files-found: ignore
+
   # Fault injection: each fault of the file through comparison (f), one at a
   # time. It rebuilds the wasm once per fault, which is why it runs here.
   faults:

@@ -1,0 +1,13 @@
+{
+  "name": "main-diff",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "Parity gate: the Rust central process (crates/main-core) against the TypeScript main process, function by function",
+  "scripts": {
+    "build": "node build.mjs",
+    "gate": "node build.mjs && tsx main.ts",
+    "typecheck": "tsc --noEmit"
+  }
+}
