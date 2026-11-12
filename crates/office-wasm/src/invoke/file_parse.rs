@@ -96,12 +96,12 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
             blob(0)?,
             option(args, 1, "maxChars")?,
         )),
-        "docToText" => string_out(
-            file_parse::doc::doc_to_text(blob(0)?).map_err(|error| error.message),
-        ),
-        "pptToText" => string_out(
-            file_parse::ppt::ppt_to_text(blob(0)?).map_err(|error| error.message),
-        ),
+        "docToText" => {
+            string_out(file_parse::doc::doc_to_text(blob(0)?).map_err(|error| error.message))
+        }
+        "pptToText" => {
+            string_out(file_parse::ppt::ppt_to_text(blob(0)?).map_err(|error| error.message))
+        }
         "pptxToText" => string_out(file_parse::pptx::pptx_to_text(blob(0)?)),
         "xlsxToText" => string_out(file_parse::xlsx::xlsx_to_text(
             blob(0)?,

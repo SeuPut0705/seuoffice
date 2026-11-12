@@ -71,8 +71,7 @@ fn raw_call(name: &str, input: &str) -> Result<String, HostError> {
         serde_json::Value::String(name.to_owned())
     );
     // SAFETY: the host only reads `request` during the call; a length fits u32 on wasm32
-    let packed =
-        unsafe { host_callback(HOST_STEP_SLOT, request.as_ptr(), request.len() as u32) };
+    let packed = unsafe { host_callback(HOST_STEP_SLOT, request.as_ptr(), request.len() as u32) };
     if packed == u64::MAX {
         return Err(HostError {
             name: "HostUnavailable".to_owned(),

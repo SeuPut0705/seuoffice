@@ -100,7 +100,8 @@ jobs:
 
       - name: Format
         if: steps.has.outputs.crates == 'true'
-        run: cargo fmt --manifest-path crates/Cargo.toml --all -- --check
+        # the workspace's members only: --all would walk the rhwp source too
+        run: cargo fmt --manifest-path crates/Cargo.toml -- --check
 
       # every check below runs whether or not an earlier one failed, so that one
       # run says everything: the job is red when any of them is
