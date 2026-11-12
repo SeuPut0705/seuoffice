@@ -147,6 +147,26 @@ describe('third-party license aggregation', () => {
     expect(text).toContain('Copyright (c) 2021, Kil Hyung-jin')
     expect(text).toContain('3. Rust crates (rhwp HWP engine, compiled into rhwp_bg.wasm)')
   })
+
+  it('carries the attribution and the license of the third-party source the packages bundle', () => {
+    const text = readFileSync(join(root, 'apps/shell/build/THIRD-PARTY-NOTICES.txt'), 'utf8')
+    const section = text.slice(text.indexOf('8. Third-party source code included'))
+    expect(section.length).toBeGreaterThan(0)
+    for (const dir of [
+      'packages/pptx-engine/src/vendor/mtx',
+      'packages/docx-engine/src/vendor/emf-converter',
+    ]) {
+      // the license verbatim, and the attribution as the directory states it
+      const license = readFileSync(join(root, dir, 'LICENSE'), 'utf8').trim()
+      const readme = readFileSync(join(root, dir, 'README.md'), 'utf8').trim()
+      expect(section, dir).toContain(license)
+      expect(section, dir).toContain(readme)
+    }
+    // MTX: derived from libeot (MPL-2.0), with Monotype's code and the W3C EOT patent grants
+    expect(section).toContain('Brennan T. Vincent, MPL-2.0')
+    expect(section).toContain('Mozilla Public License Version 2.0')
+    expect(section).toContain('W3C EOT submission')
+  })
 })
 
 interface ExtraResource {
