@@ -233,9 +233,21 @@ function patchOneParagraph(paraXml: string, newText: string, skipLeading: boolea
   return out
 }
 
-/** whether the w:t at `tagStart` sits in a run whose properties carry the hidden-from-AI mark */
+/**
+ * whether the w:t at `tagStart` sits in a run hidden from AI: its own run or
+ * any run around it (a text box inside a hidden run) whose properties carry
+ * the mark, as withheldNode reads it
+ */
 function sliceHidden(maskedPara: string, tagStart: number): boolean {
-  let runStart = -1
-  for (const m of maskedPara.slice(0, tagStart).matchAll(/<w:r(?=[\s>])/g)) runStart = m.index!
-  return runStart !== -1 && hasWithheldTrace(maskedPara.slice(runStart, tagStart))
+  const open: number[] = []
+  for (const m of maskedPara.slice(0, tagStart).matchAll(/<w:r(?=[\s>/])[^>]*?(\/?)>|<\/w:r>/g)) {
+    if (m[0] === '</w:r>') open.pop()
+    else if (!m[1]) open.push(m.index!)
+  }
+  return open.some((start) => {
+    const rPr = /^<w:r\b[^>]*>\s*(<w:rPr\b[^>]*\/>|<w:rPr\b[^>]*>[\s\S]*?<\/w:rPr>)?/.exec(
+      maskedPara.slice(start, tagStart),
+    )?.[1]
+    return rPr !== undefined && hasWithheldTrace(rPr)
+  })
 }

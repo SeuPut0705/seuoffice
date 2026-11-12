@@ -13,7 +13,15 @@ import {
 } from './xml-utils'
 import { customEnumItems } from './list-markers'
 import { commentEntries } from './comment-slices'
-import { hasMarkElement, parseEntry, runsText, WITHHELD_ENTRY_TEXT, withheldNode } from './withheld'
+import {
+  firstMarkLabel,
+  hasMarkElement,
+  overWithheldModelText,
+  parseEntry,
+  runsText,
+  WITHHELD_ENTRY_TEXT,
+  withheldNode,
+} from './withheld'
 import { patchParagraphTexts } from './text-patch'
 import { decodeNumericCharRefs, onOffOf, type RelInfo } from './parse-xml-text'
 import type {
@@ -158,14 +166,16 @@ function commentModelText(node: XNode): string | undefined {
  * What a model reads of a marked comment once a person's edit has given it
  * `text`: the save patches the text into the comment's own XML, keeping its
  * runs and their marks (patchParagraphTexts, as buildCommentsXml does). An
- * edit the runs cannot carry reads as the whole comment withheld.
+ * edit the runs cannot carry is written with every word hidden, and reads so.
  */
 export function editedCommentModelText(markedXml: string, text: string): string | undefined {
   const patched = patchParagraphTexts(markedXml, text)
-  // an edit the runs cannot carry cannot be saved (buildCommentsXml refuses it),
-  // and which of its words are hidden is no longer known
+  // an edit the runs cannot carry is saved with every word hidden under the
+  // first label (buildCommentsXml), and reads that way now
   const node = patched === null ? undefined : parseEntry(patched)
-  const modelText = node ? commentModelText(node) : WITHHELD_ENTRY_TEXT
+  const modelText = node
+    ? commentModelText(node)
+    : overWithheldModelText(text, firstMarkLabel(markedXml))
   return modelText === text ? undefined : modelText
 }
 

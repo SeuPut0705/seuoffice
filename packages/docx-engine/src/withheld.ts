@@ -1,6 +1,16 @@
 import { placeholderSource } from '@seuoffice/agent-core/redact-core'
 import { decodeEntities } from './parse-xml-text'
-import { attrsOf, childrenOf, findChild, nameOf, textOf, xmlParser, type XNode } from './xml-utils'
+import {
+  attrsOf,
+  childrenOf,
+  escapeXmlAttr,
+  findChild,
+  nameOf,
+  textOf,
+  xmlParser,
+  type XNode,
+} from './xml-utils'
+import { REDACT_EL, REDACT_NS_WRITTEN, REDACT_PREFIX } from '@seuoffice/agent-core/redact-range'
 
 /**
  * Text a person marked "hidden from AI" outside the body: in a header, a
@@ -160,17 +170,75 @@ export function withheldText(node: XNode, textOf: (node: XNode) => string): stri
   return modelText === textOf(node) ? undefined : modelText
 }
 
+/** the label of the first mark in an entry's XML, `private` when it carries none that is read */
+export function firstMarkLabel(entryXml: string): string {
+  const node = parseEntry(entryXml)
+  const mark = node ? markIn(node) : undefined
+  return (mark && attrsOf(mark)['w:label']) || 'private'
+}
+
 /**
- * A save refused because an edit cannot be written into a comment or note that
- * hides words from AI: written anew from its text, the entry would lose its
- * mark and show a model the words; kept as it was, the edit would be lost.
+ * What a model reads of an entry written whole under one mark (`overWithheld`):
+ * one placeholder per line that holds words (a blank line reads as it is).
  */
-export class HiddenEntrySaveError extends Error {
-  constructor(kind: 'comment' | 'footnote' | 'endnote', id: string) {
-    super(
-      `${kind} ${id} holds text hidden from AI, and this edit cannot be written into it ` +
-        '(it adds or removes a paragraph): keep its paragraphs as they were, or show the text to AI first',
+export function overWithheldModelText(text: string, label: string): string {
+  return text
+    .split('\n')
+    .map((line) => (/\S/.test(line) ? placeholderSource(label) : line))
+    .join('\n')
+}
+
+/**
+ * An entry written anew from its text, with every run that holds words hidden
+ * under `label`. For an edit that cannot be patched around an entry's hidden
+ * runs (a paragraph added, a change across hidden and plain words): which of
+ * the new words are the hidden ones is no longer known, so all of them are,
+ * and the person can show them to AI again. `entryXml` is the entry as this
+ * engine generates it (one run per text piece, no comments or CDATA).
+ */
+export function overWithheld(entryXml: string, label: string): string {
+  const mark =
+    '<w:bdr w:val="single" w:sz="6" w:color="6B4FC0"/>' +
+    `<${REDACT_EL} xmlns:${REDACT_PREFIX}="${REDACT_NS_WRITTEN}" w:label="${escapeXmlAttr(label)}"/>`
+  return entryXml.replace(
+    /<w:r(\s[^>]*)?>([\s\S]*?)<\/w:r>/g,
+    (run, attrs: string | undefined, inner: string) => {
+      // a run with no words (a reference mark, a spacer) stays as it is
+      if (!/<w:t(?:\s[^>]*)?>[^<]*\S[^<]*<\/w:t>/.test(inner)) return run
+      const marked = inner.includes('</w:rPr>')
+        ? inner.replace('</w:rPr>', `${mark}</w:rPr>`)
+        : `<w:rPr>${mark}</w:rPr>${inner}`
+      return `<w:r${attrs ?? ''}>${marked}</w:r>`
+    },
+  )
+}
+
+/**
+ * A part's root with the mark's namespace declared and ignorable, so a
+ * consumer that does not know it skips the element instead of rejecting the
+ * run that carries it (as the document root gets on save).
+ */
+export function withRedactNamespace(partXml: string, rootTag: string): string {
+  const open = new RegExp(`<${rootTag}\\b[^>]*>`).exec(partXml)
+  if (!open || !partXml.includes(`<${REDACT_EL}`)) return partXml
+  let tag = open[0]
+  const bound = new RegExp(`xmlns:${REDACT_PREFIX}=["']([^"']*)["']`).exec(tag)
+  if (bound && bound[1] !== REDACT_NS_WRITTEN) return partXml
+  if (!bound)
+    tag = tag.replace(`<${rootTag}`, `<${rootTag} xmlns:${REDACT_PREFIX}="${REDACT_NS_WRITTEN}"`)
+  if (!/xmlns:mc=/.test(tag)) {
+    tag = tag.replace(
+      `<${rootTag}`,
+      `<${rootTag} xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"`,
     )
-    this.name = 'HiddenEntrySaveError'
   }
+  const ignorable = /mc:Ignorable="([^"]*)"/.exec(tag)
+  if (!ignorable) tag = tag.replace(`<${rootTag}`, `<${rootTag} mc:Ignorable="${REDACT_PREFIX}"`)
+  else if (!new RegExp(`\\b${REDACT_PREFIX}\\b`).test(ignorable[1] ?? '')) {
+    tag = tag.replace(
+      /mc:Ignorable="([^"]*)"/,
+      `mc:Ignorable="${(ignorable[1] ?? '').trim()} ${REDACT_PREFIX}"`,
+    )
+  }
+  return partXml.slice(0, open.index) + tag + partXml.slice(open.index + open[0].length)
 }

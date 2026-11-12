@@ -13,11 +13,13 @@ import {
 } from './xml-utils'
 import { placeholderSource } from '@seuoffice/agent-core/redact-core'
 import {
-  HiddenEntrySaveError,
+  firstMarkLabel,
   hasWithheldTrace,
+  overWithheld,
   parseEntry,
   runsText,
   withheldText,
+  withRedactNamespace,
 } from './withheld'
 
 /**
@@ -399,15 +401,16 @@ export function buildNotesXml(
         stripFirstParaLeadingSpace: true,
       })
       if (patched !== null) return patched
-      // written anew, the note would lose the mark that hides some of its words,
-      // and kept as it was, the person's edit would be lost: refuse
-      if (hasWithheldTrace(orig.xml)) throw new HiddenEntrySaveError(kind, n.id)
-      return noteEntryXml(kind, n, revAttrs)
+      // an edit that cannot be patched around hidden runs: written anew, every
+      // word of the note is hidden under the first label it carried
+      const entry = noteEntryXml(kind, n, revAttrs)
+      return hasWithheldTrace(orig.xml) ? overWithheld(entry, firstMarkLabel(orig.xml)) : entry
     })
     .join('')
-  return (
+  return withRedactNamespace(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-    `<${ROOT[kind]} ${rootAttributes(originalXml, ROOT[kind], NOTE_NS)}>${structural}${body}</${ROOT[kind]}>`
+      `<${ROOT[kind]} ${rootAttributes(originalXml, ROOT[kind], NOTE_NS)}>${structural}${body}</${ROOT[kind]}>`,
+    ROOT[kind],
   )
 }
 

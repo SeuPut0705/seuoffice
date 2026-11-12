@@ -117,7 +117,14 @@ import {
 } from './watermark'
 import { escapeXmlAttr, escapeXmlText, findChildren } from './xml-utils'
 import { commentEntries } from './comment-slices'
-import { HiddenEntrySaveError, hasWithheldTrace, parseEntry, runsText } from './withheld'
+import {
+  firstMarkLabel,
+  hasWithheldTrace,
+  overWithheld,
+  parseEntry,
+  runsText,
+  withRedactNamespace,
+} from './withheld'
 import {
   buildContentControlXml,
   nextContentControlId,
@@ -2897,10 +2904,10 @@ function buildCommentsXml(
         // multiple paragraphs, and inline links
         const patched = patchParagraphTexts(orig.xml, c.text)
         if (patched !== null) return patched
-        // written anew, the comment would lose the mark that hides some of its
-        // words, and kept as it was, the person's edit would be lost: refuse
-        if (hasWithheldTrace(orig.xml)) throw new HiddenEntrySaveError('comment', c.id)
       }
+      // an edit that cannot be patched around hidden runs: written anew, every
+      // word of the comment is hidden under the first label it carried
+      const hiddenLabel = orig && hasWithheldTrace(orig.xml) ? firstMarkLabel(orig.xml) : null
       const attrs =
         `w:id="${escapeXmlAttr(c.id)}" w:author="${escapeXmlAttr(c.author)}"` +
         (c.initials ? ` w:initials="${escapeXmlAttr(c.initials)}"` : '') +
@@ -2918,7 +2925,8 @@ function buildCommentsXml(
       if (run && paras.length > 0) {
         paras[paras.length - 1] = paras[paras.length - 1]!.replace(/<\/w:p>$/, `${run}</w:p>`)
       }
-      return `<w:comment ${attrs}>${paras.join('')}</w:comment>`
+      const entry = `<w:comment ${attrs}>${paras.join('')}</w:comment>`
+      return hiddenLabel === null ? entry : overWithheld(entry, hiddenLabel)
     })
     .join('')
   // Rebuilt comments always emit w14:paraId (ensured above), so w14 must be bound even
@@ -2933,7 +2941,10 @@ function buildCommentsXml(
         }
       : {}),
   })
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:comments ${ns}>${body}</w:comments>`
+  return withRedactNamespace(
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:comments ${ns}>${body}</w:comments>`,
+    'w:comments',
+  )
 }
 
 /** word/commentsExtended.xml: one commentEx per comment (reply parent-child + resolved flag) */
