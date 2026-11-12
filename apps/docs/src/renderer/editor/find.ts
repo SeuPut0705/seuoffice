@@ -56,7 +56,7 @@ export const LEAF_CHAR = '\u0000'
 export const BREAK_CHAR = '\n'
 /** wildcard `?`: any character that is not a leaf or a break */
 const ANY_CHAR = '[^\\u0000\\n]'
-const isWordChar = (ch: string | undefined) => !!ch && /[\p{L}\p{N}_]/u.test(ch)
+export const isWordChar = (ch: string | undefined) => !!ch && /[\p{L}\p{N}_]/u.test(ch)
 
 /** length-preserving lowercase: chars whose lowercase grows ('İ' → 'i̇') stay as-is so match offsets never shift */
 export function foldCase(s: string): string {

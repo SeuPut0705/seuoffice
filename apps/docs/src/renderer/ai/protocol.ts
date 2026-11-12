@@ -1,10 +1,11 @@
 import { brandText } from '@genoffice/i18n'
 import type { Editor } from '@tiptap/core'
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
+import type { Mark as PmMarkValue, Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { TextSelection } from '@tiptap/pm/state'
 import { Transform } from '@tiptap/pm/transform'
 import {
   TABLE_HEADER_FILL,
+  inlineWrapContentLocked,
   sameInlineWrap,
   type InlineWrap,
   type Block,
@@ -13,7 +14,7 @@ import {
   type TableModel,
 } from '@genoffice/docx-engine'
 import { pmTableToModel, tableModelToPmNode, type PmMark, type PmNode } from '../editor/convert'
-import { findInDoc } from '../editor/find'
+import { findInDoc, isWordChar, type FindMatch } from '../editor/find'
 import { lockedControlsIn } from '../editor/inline-wrap'
 import {
   INLINE_OPAQUE_NODE,
@@ -1314,7 +1315,7 @@ export function inheritBlockFormatting(
 }
 
 /** every place `text` stands, letter for letter, in the textblocks of `holder` */
-function exactHits(holder: ProseMirrorNode, text: string): Array<{ from: number; to: number }> {
+function exactHits(holder: ProseMirrorNode, text: string): FindMatch[] {
   return findInDoc(
     holder,
     { mode: 'literal', re: null, needle: text, anchorStart: false, anchorEnd: false },
@@ -1323,9 +1324,43 @@ function exactHits(holder: ProseMirrorNode, text: string): Array<{ from: number;
 }
 
 /**
- * A block rewrite cannot see raw inline structure. Put it back around the
- * same ordinal occurrence of unchanged text; a locked control must survive.
- * All positions are measured before adding zero-width marker atoms.
+ * Does the text stand in `now` without cutting a word it did not cut in `was`?
+ * An end of it that is a letter or a digit may have one right beside it only
+ * when that very character stood beside it before: Korean writes a particle
+ * or a counter straight after the word ("서울에서", "2024년"), while "5" found
+ * inside "15" is another number.
+ */
+function keepsItsWordEnds(was: FindMatch, now: FindMatch): boolean {
+  const { text } = now
+  const before = now.blockText[now.offset - 1]
+  const after = now.blockText[now.offset + text.length]
+  return (
+    !(isWordChar(text[0]) && isWordChar(before) && before !== was.blockText[was.offset - 1]) &&
+    !(
+      isWordChar(text[text.length - 1]) &&
+      isWordChar(after) &&
+      after !== was.blockText[was.offset + text.length]
+    )
+  )
+}
+
+/** the wrappers an inline node sits in, outermost first */
+const wrapChainOf = (node: ProseMirrorNode): InlineWrap[] =>
+  inlineWrapChainOf(node.marks.find((m) => m.type.name === INLINE_WRAP_MARK)?.attrs.chain)
+
+/**
+ * The blocks that replace [from, to) with the run-level structure of the old
+ * blocks back around its text; null when a control locked against editing
+ * cannot be kept.
+ *
+ * A rewrite arrives as plain blocks: the model never sees a wrapper or a
+ * marker, only the text. Structure goes back only where that cannot be the
+ * wrong place: its text (for a pair of markers, the text between the two) is
+ * not blank, stands exactly once in the old blocks and exactly once in the new
+ * ones, cuts no word there that it did not cut before, and no other wrapper
+ * (or pair) of the old blocks stood around the same text. Anything else is
+ * dropped; for a locked control, whose text may not change, the rewrite is
+ * refused instead.
  */
 function withInlineStructure(
   doc: ProseMirrorNode,
@@ -1333,77 +1368,100 @@ function withInlineStructure(
   to: number,
   blocks: ProseMirrorNode[],
 ): ProseMirrorNode[] | null {
+  interface Wrapped {
+    wrap: InlineWrap
+    /** null when the wrapper holds more than text (a picture, a field, a break) */
+    text: string | null
+    /** where the text starts in the old blocks; -1 before any */
+    from: number
+  }
+  interface Marker {
+    node: ProseMirrorNode
+    pos: number
+    /** what its other half shares with it */
+    key: string
+    end: boolean
+  }
   const before = doc.type.create(null, doc.slice(from, to).content)
-  const after = new Transform(doc.type.create(null, blocks))
-  const destination = (text: string, start: number) => {
-    const was = exactHits(before, text)
-    const now = exactHits(after.doc, text)
-    const nth = was.findIndex((hit) => hit.from === start)
-    return nth >= 0 && now.length === was.length ? now[nth] : undefined
-  }
-  for (const control of lockedControlsIn(doc, from, to)) {
-    if (!control.text || !destination(control.text, control.from - from)) return null
-  }
-  type WrappedText = { from: number; text: string | null; wrap: InlineWrap }
-  const wrapped: WrappedText[] = []
-  let active: WrappedText[] = []
-  const markers: Array<{ node: ProseMirrorNode; pos: number; key: string; end: boolean }> = []
+  const wrapped: Wrapped[] = []
+  const markers: Marker[] = []
+  let open: Wrapped[] = []
   before.descendants((node, pos) => {
     if (!node.isInline) {
-      active = []
+      open = []
       return true
     }
-    const chain = inlineWrapChainOf(
-      node.marks.find((m) => m.type.name === INLINE_WRAP_MARK)?.attrs.chain,
-    )
-    active = chain.map((wrap) => {
-      let span = active.find((candidate) => sameInlineWrap(candidate.wrap, wrap))
+    const kept = node.type.name === INLINE_OPAQUE_NODE
+    open = wrapChainOf(node).map((wrap) => {
+      let span = open.find((candidate) => sameInlineWrap(candidate.wrap, wrap))
       if (!span) {
-        span = { from: pos, text: '', wrap }
+        span = { wrap, text: '', from: -1 }
         wrapped.push(span)
       }
-      if (node.type.name !== INLINE_OPAQUE_NODE) {
-        span.text = node.isText && span.text !== null ? span.text + node.text : null
-      } else if (span.text === '') span.from = pos + node.nodeSize
+      if (kept) return span
+      if (span.from < 0) span.from = pos
+      span.text = node.isText && span.text !== null ? span.text + node.text : null
       return span
     })
-    if (node.type.name === INLINE_OPAQUE_NODE) {
+    if (kept) {
       const xml = String(node.attrs.xml)
       const tag = /^<w:(perm|customXml(?:Ins|Del|MoveFrom|MoveTo)Range)(Start|End)\b/.exec(xml)
       const id = /\bw:id\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(xml)
-      if (tag && id)
+      if (tag && id) {
         markers.push({ node, pos, key: `${tag[1]}:${id[1] ?? id[2]}`, end: tag[2] === 'End' })
-      return false
+      }
     }
     return false
   })
+  if (wrapped.length === 0 && markers.length === 0) return blocks
+
+  const after = new Transform(doc.type.create(null, blocks))
+  const wrapType = doc.type.schema.marks[INLINE_WRAP_MARK]
+  // a table cell whose text the rewrite left alone arrives with its content as it was
+  const present: InlineWrap[] = []
+  const presentKept = new Set<string>()
+  after.doc.descendants((node) => {
+    if (!node.isInline) return true
+    if (node.type.name === INLINE_OPAQUE_NODE) presentKept.add(String(node.attrs.xml))
+    for (const wrap of wrapChainOf(node)) {
+      if (!present.some((other) => sameInlineWrap(other, wrap))) present.push(wrap)
+    }
+    return false
+  })
+  /** where `text`, which stood at `start` in the old blocks, stands in the new ones beyond doubt */
+  const sole = (text: string | null, start: number): FindMatch | undefined => {
+    if (!text || text.trim() === '') return undefined
+    const was = exactHits(before, text)
+    const now = exactHits(after.doc, text)
+    if (was.length !== 1 || now.length !== 1 || was[0].from !== start) return undefined
+    return keepsItsWordEnds(was[0], now[0]) ? now[0] : undefined
+  }
+
   for (const span of wrapped) {
-    const hit = span.text && destination(span.text, span.from)
-    if (!hit) continue
+    if (present.some((wrap) => sameInlineWrap(wrap, span.wrap))) continue
+    const twin = wrapped.some((other) => other !== span && other.text === span.text)
+    const hit = twin ? undefined : sole(span.text, span.from)
+    if (!hit) {
+      if (inlineWrapContentLocked(span.wrap)) return null
+      continue
+    }
     const marks: Array<{ from: number; to: number; chain: InlineWrap[] }> = []
     after.doc.nodesBetween(hit.from, hit.to, (node, pos) => {
       if (!node.isInline) return true
-      const chain = inlineWrapChainOf(
-        node.marks.find((m) => m.type.name === INLINE_WRAP_MARK)?.attrs.chain,
-      )
       marks.push({
         from: Math.max(pos, hit.from),
         to: Math.min(pos + node.nodeSize, hit.to),
-        chain: chain.some((wrap) => sameInlineWrap(wrap, span.wrap))
-          ? chain
-          : [...chain, span.wrap],
+        chain: [...wrapChainOf(node), span.wrap],
       })
       return false
     })
-    for (const mark of marks)
-      after.addMark(
-        mark.from,
-        mark.to,
-        doc.type.schema.marks[INLINE_WRAP_MARK].create({ chain: inlineWrapChainAttr(mark.chain) }),
-      )
+    for (const mark of marks) {
+      after.addMark(mark.from, mark.to, wrapType.create({ chain: inlineWrapChainAttr(mark.chain) }))
+    }
   }
-  const inserts: Array<{ pos: number; order: number; node: ProseMirrorNode }> = []
-  const starts = new Map<string, (typeof markers)[number]>()
+
+  const pairs: Array<{ start: Marker; end: Marker; text: string; from: number }> = []
+  const starts = new Map<string, Marker>()
   for (const marker of markers) {
     if (!marker.end) {
       starts.set(marker.key, marker)
@@ -1412,22 +1470,52 @@ function withInlineStructure(
     const start = starts.get(marker.key)
     starts.delete(marker.key)
     if (!start) continue
-    const text = before.textBetween(start.pos + start.node.nodeSize, marker.pos, '\n', (node) =>
-      node.type.name === INLINE_OPAQUE_NODE ? '' : '\uFFFC',
+    const inside = start.pos + start.node.nodeSize
+    const text = before.textBetween(inside, marker.pos, '\n', (leaf) =>
+      leaf.type.name === INLINE_OPAQUE_NODE ? '' : '\uFFFC',
     )
-    if (!text) continue
-    let textStart: number | undefined
-    before.nodesBetween(start.pos + start.node.nodeSize, marker.pos, (node, pos) => {
-      if (node.isText && textStart === undefined) textStart = pos
+    let textFrom = -1
+    before.nodesBetween(inside, marker.pos, (node, pos) => {
+      if (node.isText && textFrom < 0) textFrom = pos
       return !node.isInline
     })
-    const hit = textStart === undefined ? undefined : destination(text, textStart)
-    if (!hit) continue
-    inserts.push(
-      { pos: hit.from, order: start.pos, node: start.node },
-      { pos: hit.to, order: marker.pos, node: marker.node },
+    pairs.push({ start, end: marker, text, from: textFrom })
+  }
+  /**
+   * The marker as it stands beside text with `marks`: it takes those marks,
+   * and of the wrappers it stood in, the ones that are back around that text
+   * (a control that was dropped does not survive around its marker alone).
+   */
+  const beside = (marker: Marker, marks: readonly PmMarkValue[]): ProseMirrorNode => {
+    const near = inlineWrapChainOf(marks.find((m) => m.type === wrapType)?.attrs.chain)
+    const chain = wrapChainOf(marker.node).filter((wrap) =>
+      near.some((other) => sameInlineWrap(other, wrap)),
+    )
+    const rest = marks.filter((m) => m.type !== wrapType)
+    return marker.node.mark(
+      chain.length > 0
+        ? wrapType.create({ chain: inlineWrapChainAttr(chain) }).addToSet(rest)
+        : rest,
     )
   }
+  const inserts: Array<{ pos: number; order: number; node: ProseMirrorNode }> = []
+  for (const pair of pairs) {
+    if (presentKept.has(String(pair.start.node.attrs.xml))) continue
+    if (presentKept.has(String(pair.end.node.attrs.xml))) continue
+    if (pairs.some((other) => other !== pair && other.text === pair.text)) continue
+    const hit = sole(pair.text, pair.from)
+    if (!hit) continue
+    // read before any marker goes in: the text is still what stands at both ends
+    const first = after.doc.resolve(hit.from).nodeAfter
+    const last = after.doc.resolve(hit.to).nodeBefore
+    if (!first || !last) continue
+    inserts.push(
+      { pos: hit.from, order: pair.start.pos, node: beside(pair.start, first.marks) },
+      { pos: hit.to, order: pair.end.pos, node: beside(pair.end, last.marks) },
+    )
+  }
+  // from the end, so the positions found above stay true; markers that share
+  // a position keep the order they had
   for (const insertion of inserts.sort((a, b) => b.pos - a.pos || b.order - a.order)) {
     after.insert(insertion.pos, insertion.node)
   }
@@ -1439,13 +1527,16 @@ function withInlineStructure(
 /**
  * Replace the top-level block range with the parsed nodes (marked aiChanged).
  * The new blocks inherit the replaced blocks' formatting (see
- * inheritBlockFormatting). With `track`, plain text blocks without inline
- * structure use del/ins marks. Structured content uses paired block revisions:
- * retiring either copy must not strand markers or remove a locked control.
+ * inheritBlockFormatting). With `track`, and when both sides are plain text
+ * blocks, this becomes a tracked rewrite instead: the old blocks stay struck
+ * through (del) and the new blocks follow with ins marks — accept/reject via Review.
  *
  * False, with nothing changed, when the range holds a control locked against
- * editing whose text the new blocks change or drop: the refusal is recorded
- * for the tool that asked, as the editor's own guard records one.
+ * editing that the rewrite would not leave as it is: the refusal is recorded
+ * for the tool that asked, as the editor's own guard records one. Untracked,
+ * that is a rewrite that changes, drops or cannot place its text. Tracked, it
+ * is any rewrite: the old and the new blocks stand side by side until the
+ * user decides, and the control can be in one of them only.
  */
 export function replaceBlockRange(
   editor: Editor,
@@ -1459,25 +1550,18 @@ export function replaceBlockRange(
   // ones, so the anchors stay with the old blocks until the user accepts
   const nodes = inheritBlockFormatting(editor, startIndex, endIndex, parsed, !track)
   const { from, to } = blockRangePositions(editor, startIndex, endIndex)
-  const pmNodes = withInlineStructure(
-    editor.state.doc,
-    from,
-    to,
-    nodes.map((n) => editor.schema.nodeFromJSON(n)),
-  )
-  if (!pmNodes) {
+  const pmNodes = nodes.map((n) => editor.schema.nodeFromJSON(n))
+  // before either way of applying it, so neither goes around the lock
+  const kept = !track
+    ? withInlineStructure(editor.state.doc, from, to, pmNodes)
+    : lockedControlsIn(editor.state.doc, from, to).length > 0
+      ? null
+      : pmNodes
+  if (!kept) {
     recordOdtRefusal('lockedControl')
     notifyOdt('appOdtLockedObject')
     return false
   }
-  let hasStructure = false
-  editor.state.doc.nodesBetween(from, to, (node) => {
-    if (
-      node.type.name === INLINE_OPAQUE_NODE ||
-      node.marks.some((m) => m.type.name === INLINE_WRAP_MARK)
-    )
-      hasStructure = true
-  })
 
   let oldTrackable = true
   editor.state.doc.nodesBetween(from, to, (node, _pos, parent) => {
@@ -1485,7 +1569,7 @@ export function replaceBlockRange(
     return false
   })
   const newTrackable = nodes.every((n) => TRACKABLE_TYPES.has(n.type))
-  if (track && oldTrackable && newTrackable && !hasStructure) {
+  if (track && oldTrackable && newTrackable) {
     const { ins, del } = editor.schema.marks
     const date = revisionDate()
     // revision marks are the change indicator; no yellow aiChanged on top
@@ -1542,7 +1626,7 @@ export function replaceBlockRange(
     editor.view.dispatch(tr)
     return true
   }
-  editor.view.dispatch(editor.state.tr.replaceWith(from, to, pmNodes))
+  editor.view.dispatch(editor.state.tr.replaceWith(from, to, kept))
   return true
 }
 

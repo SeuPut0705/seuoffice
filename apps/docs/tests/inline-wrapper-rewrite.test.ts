@@ -5,20 +5,54 @@ import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-doc
 import { executeTool } from '../src/renderer/ai/tools'
 import { blocksToPmDoc, pmDocToSavePlan, type PmNode } from '../src/renderer/editor/convert'
 import { editorExtensions } from '../src/renderer/editor/extensions'
-import { acceptAllRevisions, rejectAllRevisions } from '../src/renderer/editor/revisions'
+import {
+  acceptAllRevisions,
+  collectRevisions,
+  rejectAllRevisions,
+  type TrackChangesStorage,
+} from '../src/renderer/editor/revisions'
 import { takeOdtRefusal } from '../src/renderer/odt-gate'
 import { createDocsAdapter, type DocsOp } from '../src/web/collab-adapter'
+
+/**
+ * An AI block rewrite arrives as plain blocks: the model sees the text of a
+ * paragraph, never the content controls, smart tags and permission ranges in
+ * it. These tests open a document the way the editor does, run the public
+ * tool, and read the saved XML.
+ */
 
 ;(globalThis as { CSS?: unknown }).CSS ??= { escape: (s: string) => s }
 ;(globalThis as { ClipboardEvent?: unknown }).ClipboardEvent ??= class extends Event {}
 const run = (text: string) => `<w:r><w:t xml:space="preserve">${text}</w:t></w:r>`
-const control = (locked = false) =>
-  `<w:sdt><w:sdtPr><w:id w:val="1234567"/>${locked ? '<w:lock w:val="contentLocked"/>' : ''}</w:sdtPr><w:sdtContent>${run('5/6/2024')}</w:sdtContent></w:sdt>`
+const struck = (text: string) => `<w:r><w:delText xml:space="preserve">${text}</w:delText></w:r>`
+const LOCK = '<w:lock w:val="contentLocked"/>'
+/** a content control around `inner` */
+const sdtOf = (inner: string, id: number, locked = false) =>
+  `<w:sdt><w:sdtPr><w:id w:val="${id}"/>${locked ? LOCK : ''}</w:sdtPr><w:sdtContent>${inner}</w:sdtContent></w:sdt>`
+const sdt = (text: string, id: number, locked = false) => sdtOf(run(text), id, locked)
+const control = (locked = false) => sdt('5/6/2024', 1234567, locked)
 const PS = '<w:permStart w:id="77" w:edGrp="everyone"/>'
 const PE = '<w:permEnd w:id="77"/>'
 const smart = `<w:smartTag w:uri="urn:place" w:element="city">${run('Paris')}</w:smartTag>`
-const body = (inside: string) =>
-  `<w:p>${run('Due on ')}${inside}${run(' at noon')}</w:p><w:p>${run('tail')}</w:p>`
+const TAIL = `<w:p>${run('tail')}</w:p>`
+const para = (inner: string) => `<w:p>${inner}</w:p>${TAIL}`
+const body = (inside: string) => para(run('Due on ') + inside + run(' at noon'))
+/** a revision's attributes, as Word writes them */
+const rev = (id: number) => `w:id="${id}" w:author="Ann" w:date="2024-01-01T00:00:00Z"`
+const cell = (inner: string) =>
+  `<w:tc><w:tcPr><w:tcW w:w="2000" w:type="dxa"/></w:tcPr><w:p>${inner}</w:p></w:tc>`
+/** a one-column table: a row that stays, then a row marked `mark` holding a locked control */
+const tableWithRow = (mark: 'ins' | 'del') =>
+  `<w:p>${run('before')}</w:p><w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr>` +
+  `<w:tblGrid><w:gridCol w:w="2000"/></w:tblGrid><w:tr>${cell(run('keep'))}</w:tr>` +
+  `<w:tr><w:trPr><w:${mark} ${rev(1)}/></w:trPr>${cell(run('Due ') + sdt('5/6/2024', 5, true))}</w:tr>` +
+  `</w:tbl>${TAIL}`
+
+/** the xml with every text run reduced to [its text] */
+const flat = (xml: string) =>
+  xml.replace(/<w:r>(?:<w:rPr>.*?<\/w:rPr>)?<w:t[^>]*>([^<]*)<\/w:t><\/w:r>/g, '[$1]')
+const count = (xml: string, tag: string) => xml.split(`<w:${tag}`).length - 1
+
 const editors: Editor[] = []
 afterEach(() => {
   editors.splice(0).forEach((editor) => editor.destroy())
@@ -68,7 +102,6 @@ const rewrite = (editor: Editor, html: string, tracked = false, name = 'replace_
       },
     },
   )
-const count = (xml: string, tag: string) => xml.split(`<w:${tag}`).length - 1
 function posOf(editor: Editor, text: string) {
   let found = -1
   editor.state.doc.descendants((node, pos) => {
@@ -78,8 +111,17 @@ function posOf(editor: Editor, text: string) {
   if (found < 0) throw new Error(`Missing ${text}`)
   return found
 }
+/** the text of every top-level block */
+function texts(editor: Editor): string[] {
+  const out: string[] = []
+  editor.state.doc.forEach((node) => out.push(node.textContent))
+  return out
+}
+const pending = (editor: Editor) => collectRevisions(editor.state.doc).map((r) => r.kind)
+const finish = (editor: Editor, mode: 'accept' | 'reject') =>
+  mode === 'accept' ? acceptAllRevisions(editor) : rejectAllRevisions(editor)
 
-describe('AI rewrites preserve untouched inline structure', () => {
+describe('an AI block rewrite and a control locked against editing', () => {
   for (const name of ['replace_blocks', 'write_document']) {
     it(`${name}: refuses changing a locked date into a table with and without tracking`, async () => {
       const { editor, save } = await open(body(control(true)))
@@ -98,78 +140,382 @@ describe('AI rewrites preserve untouched inline structure', () => {
       }
     })
   }
-  for (const tracked of [false, true]) {
-    for (const [label, inside, html, tags] of [
-      ['unlocked date', control(), '<p>Due on 5/6/2024 at night</p>', ['sdt>']],
-      [
-        'permission range',
-        `${PS}${run('5/6/2024')}${PE}`,
-        '<p>Due on 5/6/2024 at night</p>',
-        ['permStart', 'permEnd'],
-      ],
-      ['smart tag', smart, '<p>Due on Paris at night</p>', ['smartTag ']],
-      [
-        'locked date and neighbouring range',
-        `${control(true)}${PS}${run(' Paris')}${PE}`,
-        '<p>Due on 5/6/2024 Paris at night</p>',
-        ['sdt>', 'permStart', 'permEnd'],
-      ],
-    ] as const) {
-      it(`tracked=${tracked}: keeps ${label} when only outside text changes`, async () => {
-        const { editor, save } = await open(body(inside))
-        const result = await rewrite(editor, html, tracked)
-        expect(result.isError).toBeFalsy()
-        if (tracked) acceptAllRevisions(editor)
-        const xml = await save()
-        for (const tag of tags) expect(count(xml, tag)).toBe(1)
-        if (label === 'permission range') {
-          const flat = xml.replace(
-            /<w:r>(?:<w:rPr>.*?<\/w:rPr>)?<w:t[^>]*>([^<]*)<\/w:t><\/w:r>/g,
-            '[$1]',
-          )
-          expect(flat).toContain(`${PS}[5/6/2024]${PE}`)
-        }
-        expect(editor.state.doc.textContent).toContain('at night')
-        expect(xml).not.toContain('at noon')
-        if (!tracked && (label === 'unlocked date' || label === 'permission range')) {
-          await rewrite(editor, '<p>Due on 5/6/2025 at night</p>')
-          const changed = await save()
-          for (const tag of tags) expect(count(changed, tag)).toBe(0)
-          expect(editor.state.doc.textContent).toContain('5/6/2025')
-        }
-      })
-    }
-  }
-  for (const mode of ['accept', 'reject'] as const) {
-    it(`${mode} all leaves a pre-existing whole-block locked-content deletion pending`, async () => {
+
+  for (const html of [
+    '<p>Due on 5/6/2024 at night</p>',
+    '<table><tr><td>Due on 5/6/2024 at night</td></tr></table>',
+  ]) {
+    it(`a tracked rewrite of its block is refused though its text is kept: ${html}`, async () => {
       const { editor, save } = await open(body(control(true)))
-      const node = editor.state.doc.firstChild!
-      editor.view.dispatch(
-        editor.state.tr.setNodeMarkup(0, undefined, {
-          ...node.attrs,
-          blockRevision: { kind: mode === 'accept' ? 'del' : 'ins', author: 'Probe' },
-        }),
-      )
       const before = await save()
-      const skipped = mode === 'accept' ? acceptAllRevisions(editor) : rejectAllRevisions(editor)
-      expect(skipped).toHaveLength(1)
+      const result = await rewrite(editor, html, true)
+      expect(result.isError).toBe(true)
+      expect(result.mutated).not.toBe(true)
+      expect(pending(editor)).toEqual([])
       expect(await save()).toBe(before)
     })
   }
-  it('accept and reject all preserve the locked control in a valid tracked rewrite', async () => {
-    for (const mode of ['accept', 'reject'] as const) {
-      const { editor, save } = await open(body(control(true)))
-      const result = await rewrite(
-        editor,
-        '<table><tr><td>Due on 5/6/2024 at night</td></tr></table>',
-        true,
-      )
+})
+
+describe('an untracked AI block rewrite keeps the structure it cannot misplace', () => {
+  for (const [label, inside, html, tags] of [
+    ['unlocked date', control(), '<p>Due on 5/6/2024 at night</p>', ['sdt>']],
+    [
+      'permission range',
+      `${PS}${run('5/6/2024')}${PE}`,
+      '<p>Due on 5/6/2024 at night</p>',
+      ['permStart', 'permEnd'],
+    ],
+    ['smart tag', smart, '<p>Due on Paris at night</p>', ['smartTag ']],
+    [
+      'locked date and neighbouring range',
+      `${control(true)}${PS}${run(' Paris')}${PE}`,
+      '<p>Due on 5/6/2024 Paris at night</p>',
+      ['sdt>', 'permStart', 'permEnd'],
+    ],
+  ] as const) {
+    it(`keeps ${label} when only outside text changes`, async () => {
+      const { editor, save } = await open(body(inside))
+      const result = await rewrite(editor, html)
       expect(result.isError).toBeFalsy()
-      const skipped = mode === 'accept' ? acceptAllRevisions(editor) : rejectAllRevisions(editor)
-      expect(skipped).toHaveLength(0)
-      expect(count(await save(), 'sdt>')).toBe(1)
-      expect(editor.state.doc.textContent).toContain(mode === 'accept' ? 'night' : 'noon')
+      const xml = await save()
+      for (const tag of tags) expect(count(xml, tag)).toBe(1)
+      if (label === 'permission range') expect(flat(xml)).toContain(`${PS}[5/6/2024]${PE}`)
+      if (label === 'locked date and neighbouring range') {
+        expect(flat(xml)).toContain(`</w:sdt>${PS}[ Paris]${PE}`)
+      }
+      expect(editor.state.doc.textContent).toContain('at night')
+      expect(xml).not.toContain('at noon')
+      if (label === 'unlocked date' || label === 'permission range') {
+        await rewrite(editor, '<p>Due on 5/6/2025 at night</p>')
+        const changed = await save()
+        for (const tag of tags) expect(count(changed, tag)).toBe(0)
+        expect(editor.state.doc.textContent).toContain('5/6/2025')
+      }
+    })
+  }
+
+  it('keeps a permission range around a control outside the control', async () => {
+    const { editor, save } = await open(body(`${PS}${control()}${PE}`))
+    const result = await rewrite(editor, '<p>Due on 5/6/2024 at night</p>')
+    expect(result.isError).toBeFalsy()
+    const xml = flat(await save())
+    expect(xml).toContain(`[Due on ]${PS}<w:sdt>`)
+    expect(xml).toContain(`[5/6/2024]</w:sdtContent></w:sdt>${PE}[ at night]`)
+  })
+
+  it('a range inside a control that is dropped goes back around its text without the control', async () => {
+    const inside = `${PS}${run('noon')}${PE}${run(' today')}`
+    const { editor, save } = await open(para(run('Due ') + sdtOf(inside, 25)))
+    const result = await rewrite(editor, '<p>Due noon tomorrow</p>')
+    expect(result.isError).toBeFalsy()
+    const xml = await save()
+    expect(count(xml, 'sdt>')).toBe(0)
+    expect(flat(xml)).toContain(`${PS}[noon]${PE}`)
+    expect(texts(editor)).toEqual(['Due noon tomorrow', 'tail'])
+  })
+
+  it('a range inside a control that is kept stays inside it', async () => {
+    const inside = `${PS}${run('noon')}${PE}${run(' today')}`
+    const { editor, save } = await open(para(run('Due ') + sdtOf(inside, 25) + run(' ok')))
+    const result = await rewrite(editor, '<p>Due noon today, fine</p>')
+    expect(result.isError).toBeFalsy()
+    const xml = flat(await save())
+    expect(xml).toContain(`<w:sdtContent>${PS}[noon]${PE}[ today]</w:sdtContent>`)
+  })
+
+  it('a range whose text the model made bold stays around the bold text', async () => {
+    const { editor, save } = await open(body(`${PS}${run('5/6/2024')}${PE}`))
+    const result = await rewrite(editor, '<p>Due on <strong>5/6/2024</strong> at night</p>')
+    expect(result.isError).toBeFalsy()
+    const xml = await save()
+    expect(xml).toMatch(
+      /<w:permStart [^>]*\/><w:r><w:rPr>(?:(?!<\/w:rPr>).)*<w:b\/>(?:(?!<\/w:rPr>).)*<\/w:rPr><w:t[^>]*>5\/6\/2024<\/w:t><\/w:r><w:permEnd [^>]*\/>/,
+    )
+    expect(flat(xml)).toContain(`[Due on ]${PS}`)
+    expect(flat(xml)).toContain(`${PE}[ at night]`)
+  })
+
+  it('writes the structure of a table cell it left alone once', async () => {
+    const { editor, save } = await open(
+      '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr><w:tblGrid><w:gridCol w:w="2000"/>' +
+        `<w:gridCol w:w="2000"/></w:tblGrid><w:tr>${cell(PS + control() + PE)}${cell(run('noon'))}</w:tr>` +
+        `</w:tbl>${TAIL}`,
+    )
+    const result = await rewrite(editor, '<table><tr><td>5/6/2024</td><td>night</td></tr></table>')
+    expect(result.isError).toBeFalsy()
+    let markers = 0
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === 'docInlineOpaque') markers++
+    })
+    expect(markers).toBe(2)
+    const xml = await save()
+    for (const tag of ['sdt>', 'permStart', 'permEnd']) expect(count(xml, tag)).toBe(1)
+    expect(editor.state.doc.textContent).toContain('night')
+  })
+
+  // where the old rule (the same occurrence, counted from the start) put the
+  // structure around other text than it was around
+  const MISPLACED: Array<{
+    name: string
+    inner: (locked: boolean) => string
+    html: string
+    text: string
+    tags: string[]
+    lockable: boolean
+  }> = [
+    {
+      name: 'its text also stands inside a number ("5" beside "15")',
+      inner: (locked) => run('Order ') + sdt('5', 11, locked) + run(' of 15 items'),
+      html: '<p>15 items in order 5</p>',
+      text: '15 items in order 5',
+      tags: ['sdt>'],
+      lockable: true,
+    },
+    {
+      name: 'its text stands twice and the clauses change places',
+      inner: (locked) => run('Signed 2024, due ') + sdt('2024', 12, locked),
+      html: '<p>Due 2024, signed 2024</p>',
+      text: 'Due 2024, signed 2024',
+      tags: ['sdt>'],
+      lockable: true,
+    },
+    {
+      name: 'it is around one letter of a word',
+      inner: (locked) => run('A c') + sdt('a', 16, locked) + run('t sat'),
+      html: '<p>a dog sat</p>',
+      text: 'a dog sat',
+      tags: ['sdt>'],
+      lockable: true,
+    },
+    {
+      name: 'it is around a single space',
+      inner: (locked) => run('one two') + sdt(' ', 15, locked) + run('three'),
+      html: '<p>zero one twothree</p>',
+      text: 'zero one twothree',
+      tags: ['sdt>'],
+      lockable: true,
+    },
+    {
+      name: 'two controls are around the same text',
+      inner: (locked) =>
+        run('From ') + sdt('2024', 17, locked) + run(' to ') + sdt('2024', 18, locked),
+      html: '<p>To 2024 from 2024</p>',
+      text: 'To 2024 from 2024',
+      tags: ['sdt>'],
+      lockable: true,
+    },
+    {
+      name: 'a permission range is on a word another word ends with ("noon", "afternoon")',
+      inner: () =>
+        run('Meet at ') +
+        '<w:permStart w:id="24" w:edGrp="everyone"/>' +
+        run('noon') +
+        '<w:permEnd w:id="24"/>' +
+        run(', afternoon is free'),
+      html: '<p>Afternoon is free, meet at noon</p>',
+      text: 'Afternoon is free, meet at noon',
+      tags: ['permStart', 'permEnd'],
+      lockable: false,
+    },
+    {
+      name: 'a smart tag is on a word that stands twice ("Paris")',
+      inner: () => run('From ') + smart + run(' to Paris'),
+      html: '<p>To Paris from Paris</p>',
+      text: 'To Paris from Paris',
+      tags: ['smartTag '],
+      lockable: false,
+    },
+    {
+      name: 'the particle after it changes ("서울에서" becomes "서울은")',
+      inner: (locked) => sdt('서울', 31, locked) + run('에서 열립니다'),
+      html: '<p>서울은 큽니다</p>',
+      text: '서울은 큽니다',
+      tags: ['sdt>'],
+      lockable: true,
+    },
+    {
+      name: 'a digit is put in front of its number ("5" becomes "15")',
+      inner: (locked) => run('Order ') + sdt('5', 32, locked) + run(' of ten'),
+      html: '<p>Order 15 of ten</p>',
+      text: 'Order 15 of ten',
+      tags: ['sdt>'],
+      lockable: true,
+    },
+  ]
+  for (const { name, inner, html, text, tags, lockable } of MISPLACED) {
+    it(`drops the structure instead of putting it elsewhere: ${name}`, async () => {
+      const { editor, save } = await open(para(inner(false)))
+      const result = await rewrite(editor, html)
+      expect(result.isError).toBeFalsy()
+      const xml = await save()
+      for (const tag of tags) expect(count(xml, tag)).toBe(0)
+      expect(texts(editor)).toEqual([text, 'tail'])
+    })
+    if (!lockable) continue
+    it(`refuses the rewrite when the control is locked: ${name}`, async () => {
+      const { editor, save } = await open(para(inner(true)))
+      const before = await save()
+      const result = await rewrite(editor, html)
+      expect(result.isError).toBe(true)
+      expect(result.mutated).not.toBe(true)
+      expect(await save()).toBe(before)
+    })
+  }
+
+  // Korean writes a particle or a counter right after the word, without a space
+  for (const locked of [false, true]) {
+    const which = locked ? 'a locked control' : 'a control'
+    it(`keeps ${which} that a particle follows when the rewrite keeps both ("홍길동님께")`, async () => {
+      const { editor, save } = await open(para(sdt('홍길동', 41, locked) + run('님께 보냅니다')))
+      const result = await rewrite(editor, '<p>홍길동님께 드립니다</p>')
+      expect(result.isError).toBeFalsy()
+      expect(flat(await save())).toContain(
+        '<w:sdtContent>[홍길동]</w:sdtContent></w:sdt>[님께 드립니다]',
+      )
+    })
+
+    it(`keeps ${which} around a year and one around a month when only other text changes`, async () => {
+      const { editor, save } = await open(
+        para(sdt('2024', 42, locked) + run('년 ') + sdt('5', 43, locked) + run('월 회의')),
+      )
+      const result = await rewrite(editor, '<p>2024년 5월 총회</p>')
+      expect(result.isError).toBeFalsy()
+      const xml = flat(await save())
+      expect(xml).toContain('<w:sdtContent>[2024]</w:sdtContent></w:sdt>[년 ]<w:sdt>')
+      expect(xml).toContain('<w:sdtContent>[5]</w:sdtContent></w:sdt>[월 총회]')
+    })
+  }
+})
+
+describe('a tracked AI block rewrite of a paragraph with unlocked structure', () => {
+  const KINDS: Array<[string, string, string, string[]]> = [
+    ['content control', control(), '<p>Due on 5/6/2024 at night</p>', ['sdt>']],
+    ['smart tag', smart, '<p>Due on Paris at night</p>', ['smartTag ']],
+    [
+      'permission range',
+      `${PS}${run('5/6/2024')}${PE}`,
+      '<p>Due on 5/6/2024 at night</p>',
+      ['permStart', 'permEnd'],
+    ],
+  ]
+  // a permission range in a tracked change is only looked at while it is
+  // pending: the review list holds text, so a struck marker has no entry (the
+  // same after a deletion by hand)
+  for (const [label, inside, html, tags] of KINDS) {
+    it(`${label}: strikes the old text and inserts the new, and the file holds the structure once`, async () => {
+      const { editor, save } = await open(body(inside))
+      const result = await rewrite(editor, html, true)
+      expect(result.isError).toBeFalsy()
+      expect(new Set(pending(editor))).toEqual(new Set(['del', 'ins']))
+      const xml = await save()
+      // a deleted or inserted paragraph is marked inside the paragraph, never around it
+      expect(xml).not.toMatch(/<w:(?:del|ins) [^>]*><w:p[ >]/)
+      for (const tag of tags) expect(count(xml, tag)).toBe(1)
+    })
+    if (label === 'permission range') continue
+
+    it(`${label}: Accept All leaves the new paragraph and nothing pending`, async () => {
+      const { editor, save } = await open(body(inside))
+      await rewrite(editor, html, true)
+      expect(acceptAllRevisions(editor)).toEqual([])
+      expect(pending(editor)).toEqual([])
+      expect(texts(editor)).toEqual([html.replace(/<\/?p>/g, ''), 'tail'])
+      expect(await save()).not.toMatch(/<w:(?:del|ins)\b/)
+    })
+
+    it(`${label}: Reject All gives the file back as it was`, async () => {
+      const { editor, save } = await open(body(inside))
+      const before = await save()
+      await rewrite(editor, html, true)
+      expect(rejectAllRevisions(editor)).toEqual([])
+      expect(pending(editor)).toEqual([])
+      expect(await save()).toBe(before)
+    })
+  }
+})
+
+describe('Accept All and Reject All finish a change that takes a locked control whole', () => {
+  const FILES: Array<[string, string, string[], string[]]> = [
+    [
+      'a deletion of all the text of the control, from a file',
+      para(
+        run('Due on ') +
+          sdtOf(`<w:del ${rev(1)}>${struck('5/6/2024')}</w:del>`, 5, true) +
+          run(' at noon'),
+      ),
+      ['Due on  at noon', 'tail'],
+      ['Due on 5/6/2024 at noon', 'tail'],
+    ],
+    [
+      'a deleted paragraph that holds the control, from a file',
+      `<w:p><w:pPr><w:rPr><w:del ${rev(4)}/></w:rPr></w:pPr><w:del ${rev(1)}>${struck('Due on ')}</w:del>` +
+        sdtOf(`<w:del ${rev(2)}>${struck('5/6/2024')}</w:del>`, 5, true) +
+        `<w:del ${rev(3)}>${struck(' at noon')}</w:del></w:p>${TAIL}`,
+      ['tail'],
+      ['Due on 5/6/2024 at noon', 'tail'],
+    ],
+    [
+      'a deleted table row that holds the control, from a file',
+      tableWithRow('del'),
+      ['before', 'keep', 'tail'],
+      ['before', 'keepDue 5/6/2024', 'tail'],
+    ],
+    [
+      'an inserted table row that holds the control, from a file',
+      tableWithRow('ins'),
+      ['before', 'keepDue 5/6/2024', 'tail'],
+      ['before', 'keep', 'tail'],
+    ],
+  ]
+  for (const [name, xml, accepted, rejected] of FILES) {
+    for (const mode of ['accept', 'reject'] as const) {
+      it(`${name}: ${mode} all`, async () => {
+        const { editor, save } = await open(xml)
+        expect(pending(editor)).not.toEqual([])
+        expect(finish(editor, mode)).toEqual([])
+        expect(pending(editor)).toEqual([])
+        expect(texts(editor)).toEqual(mode === 'accept' ? accepted : rejected)
+        // the text is decided; a paragraph mark's own revision is not this test's
+        expect(await save()).not.toMatch(/<w:delText\b|<w:ins\b/)
+      })
     }
+  }
+
+  for (const mode of ['accept', 'reject'] as const) {
+    it(`the control deleted whole by hand with tracking on: ${mode} all`, async () => {
+      const { editor, save } = await open(body(control(true)))
+      const before = await save()
+      const tracking = editor.storage.trackChanges as TrackChangesStorage
+      tracking.enabled = true
+      tracking.author = 'User'
+      const from = posOf(editor, '5/6/2024')
+      editor.commands.setTextSelection({ from, to: from + '5/6/2024'.length })
+      editor.commands.deleteSelection()
+      tracking.enabled = false
+      expect(pending(editor)).toEqual(['del'])
+      expect(finish(editor, mode)).toEqual([])
+      expect(pending(editor)).toEqual([])
+      if (mode === 'reject') expect(await save()).toBe(before)
+      else {
+        expect(texts(editor)).toEqual(['Due on  at noon', 'tail'])
+        expect(count(await save(), 'sdt>')).toBe(0)
+      }
+    })
+  }
+
+  it('a deletion of part of its text stays pending on Accept All', async () => {
+    const { editor, save } = await open(
+      para(
+        run('Due on ') +
+          sdtOf(run('5/6/') + `<w:del ${rev(1)}>${struck('2024')}</w:del>`, 5, true) +
+          run(' at noon'),
+      ),
+    )
+    const before = await save()
+    expect(acceptAllRevisions(editor)).toHaveLength(1)
+    expect(pending(editor)).toEqual(['del'])
+    expect(await save()).toBe(before)
   })
 })
 
