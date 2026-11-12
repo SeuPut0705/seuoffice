@@ -6,13 +6,21 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
+mod altchunk;
 mod blank;
+mod checkbox;
 mod docprops;
+mod drawing;
+mod fielddisplay;
 mod fields;
+mod images;
 mod markers;
 mod math;
 mod resolve;
+#[cfg(feature = "u2_revision")]
+mod revision;
 mod section;
+mod vml;
 
 /// What a call gives: a value, nothing where the TypeScript function returns
 /// `undefined`, or an error where it throws.
@@ -55,13 +63,21 @@ pub fn package(args: &Value) -> Result<Package, String> {
 pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
     let (group, function) = name.split_once('.')?;
     match group {
+        "altchunk" => Some(altchunk::dispatch(function, text, args)),
         "blank" => Some(blank::dispatch(function, text, args)),
+        "checkbox" => Some(checkbox::dispatch(function, text, args)),
         "docprops" => Some(docprops::dispatch(function, text, args)),
+        "drawing" => Some(drawing::dispatch(function, text, args)),
+        "fielddisplay" => Some(fielddisplay::dispatch(function, text, args)),
         "fields" => Some(fields::dispatch(function, text, args)),
+        "images" => Some(images::dispatch(function, text, args)),
         "markers" => Some(markers::dispatch(function, text, args)),
         "math" => Some(math::dispatch(function, text, args)),
         "resolve" => Some(resolve::dispatch(function, text, args)),
+        #[cfg(feature = "u2_revision")]
+        "revision" => Some(revision::dispatch(function, text, args)),
         "section" => Some(section::dispatch(function, text, args)),
+        "vml" => Some(vml::dispatch(function, text, args)),
         _ => None,
     }
 }

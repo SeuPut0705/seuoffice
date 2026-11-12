@@ -20,3 +20,7 @@ serde_json.workspace = true
 
 [dev-dependencies]
 zip.workspace = true
+
+# see docx-engine: the group still being ported
+[features]
+u2_revision = ["docx-engine/u2_revision"]

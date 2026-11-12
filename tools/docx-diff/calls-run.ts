@@ -1,13 +1,19 @@
 // Comparison (f): the functions of the modules ported after the property
 // readers, each called by name on both sides: over the corpus, over built
 // inputs and over seeded mutations of both.
+import { ALTCHUNK } from './calls-altchunk'
 import { BLANK } from './calls-blank'
+import { CHECKBOX } from './calls-checkbox'
 import { DOCPROPS } from './calls-docprops'
+import { DRAWING } from './calls-drawing'
+import { FIELDDISPLAY } from './calls-fielddisplay'
 import { FIELDS } from './calls-fields'
+import { IMAGES } from './calls-images'
 import { MARKERS } from './calls-markers'
 import { MATH } from './calls-math'
 import { RESOLVE } from './calls-resolve'
 import { SECTION } from './calls-section'
+import { VML } from './calls-vml'
 import type { CallSpec, Input } from './calls-spec'
 import { byFunction, checkOutcome, flush, type Outcome, rustOutcome } from './compare-props'
 import { mutate } from './compare-xml'
@@ -32,13 +38,19 @@ interface Group {
 const titled = (name: string): string => name[0]!.toUpperCase() + name.slice(1)
 
 const groups: Group[] = Object.entries({
+  altchunk: ALTCHUNK,
   blank: BLANK,
+  checkbox: CHECKBOX,
   docprops: DOCPROPS,
+  drawing: DRAWING,
+  fielddisplay: FIELDDISPLAY,
   fields: FIELDS,
+  images: IMAGES,
   markers: MARKERS,
   math: MATH,
   resolve: RESOLVE,
   section: SECTION,
+  vml: VML,
 })
   .filter(([name, specs]) => specs.length > 0 && (ONLY_GROUP ?? name) === name)
   .map(([name, specs]) => ({
