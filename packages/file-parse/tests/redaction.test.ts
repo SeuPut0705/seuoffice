@@ -4,9 +4,24 @@ import { REDACT_EL, REDACT_NS } from '@genoffice/agent-core/redact-range'
 // the writer's own helpers, by path: the marks under test are the ones the deck
 // engine really saves, not a copy of their shape kept in this file
 import { REDACT_EXT_URI, setRedactExt } from '../../pptx-engine/src/redaction-xml'
-import { parseFileToText, pptxToText, redactHtmlSource, redactMarkdownSource } from '../src/index'
+import {
+  parseFileToText,
+  pptxToText,
+  redactHtmlSource,
+  redactMarkdownSource,
+  xlsxToText,
+} from '../src/index'
 import { PPTX_REDACT_EXT_URI } from '../src/pptx-redaction'
 import { writeFixture } from './helpers/fixtures'
+// the workbook gateway's own writers: the part and its defined-name copy under
+// test are the ones a save really produces
+import {
+  applyRedactionNameMirror,
+  rekeyRedactionStates,
+  serializeRedactionPart,
+  type RedactionMark,
+  type SheetRedactionState,
+} from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
 
 /**
  * A file read as another file's material (attachment, knowledge base, search
@@ -619,5 +634,265 @@ describe('html: a mark that cannot be processed fails the read', () => {
 
   it('throws from redactHtmlSource itself, for a caller that reads the file on its own', () => {
     expect(() => redactHtmlSource(`<span data-gx-redact>${SECRET}</span>`)).toThrow(/redaction/i)
+  })
+})
+
+const SHEET_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
+const REL_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+const REDACTION_PART = 'xl/gxRedactions.json'
+
+interface BookSheet {
+  name: string
+  /** the `<row>` elements of the sheet */
+  rows: string
+}
+
+interface BookMarks {
+  /** the part's text, written verbatim (a damaged part is a string too) */
+  part?: string
+  /** the marks copied into the workbook's defined names */
+  mirror?: readonly SheetRedactionState[]
+  /** raw `<definedName>` elements, for a copy no save would write */
+  definedNames?: string
+  sharedStrings?: string
+}
+
+const inline = (ref: string, text: string) =>
+  `<c r="${ref}" t="inlineStr"><is><t>${text}</t></is></c>`
+
+/** `B2` and friends as a mark's zero-based rectangle */
+function mark(from: string, to = from, label = LABEL): RedactionMark {
+  const at = (ref: string) => ({
+    column: ref.charCodeAt(0) - 65,
+    row: Number(ref.slice(1)) - 1,
+  })
+  return {
+    startRow: at(from).row,
+    startColumn: at(from).column,
+    endRow: at(to).row,
+    endColumn: at(to).column,
+    label,
+  }
+}
+
+async function book(sheets: readonly BookSheet[], marks: BookMarks = {}): Promise<Uint8Array> {
+  const zip = new JSZip()
+  let workbookXml =
+    `${XML_DECL}<workbook xmlns="${SHEET_NS}" xmlns:r="${REL_NS}"><sheets>` +
+    sheets
+      .map((s, i) => `<sheet name="${s.name}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`)
+      .join('') +
+    '</sheets>' +
+    (marks.definedNames ? `<definedNames>${marks.definedNames}</definedNames>` : '') +
+    '</workbook>'
+  if (marks.mirror) {
+    workbookXml = applyRedactionNameMirror(
+      workbookXml,
+      marks.mirror,
+      sheets.map((s) => s.name),
+    )
+  }
+  zip.file('xl/workbook.xml', workbookXml)
+  zip.file(
+    'xl/_rels/workbook.xml.rels',
+    `${XML_DECL}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      sheets
+        .map(
+          (_, i) =>
+            `<Relationship Id="rId${i + 1}" Type="${REL_NS}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`,
+        )
+        .join('') +
+      `<Relationship Id="rId90" Type="${REL_NS}/sharedStrings" Target="sharedStrings.xml"/>` +
+      '</Relationships>',
+  )
+  zip.file(
+    'xl/sharedStrings.xml',
+    `${XML_DECL}<sst xmlns="${SHEET_NS}">${marks.sharedStrings ?? ''}</sst>`,
+  )
+  sheets.forEach((s, i) =>
+    zip.file(
+      `xl/worksheets/sheet${i + 1}.xml`,
+      `${XML_DECL}<worksheet xmlns="${SHEET_NS}"><sheetData>${s.rows}</sheetData></worksheet>`,
+    ),
+  )
+  if (marks.part !== undefined) zip.file(REDACTION_PART, marks.part)
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
+}
+
+/** a workbook as a save leaves it: the part, and the same marks in the defined names */
+function savedBook(sheets: readonly BookSheet[], states: readonly SheetRedactionState[]) {
+  return book(sheets, { part: serializeRedactionPart(states), mirror: states })
+}
+
+async function readBook(bytes: Uint8Array | Promise<Uint8Array>) {
+  return parseFileToText(writeFixture(`withheld-${++fixtureSeq}.xlsx`, await bytes))
+}
+
+const CLIENTS: BookSheet = {
+  name: 'Clients',
+  rows:
+    `<row r="1">${inline('A1', 'Name')}${inline('B1', 'Phone')}</row>` +
+    `<row r="2">${inline('A2', 'Kim')}<c r="B2"><v>${SECRET}</v></c></row>`,
+}
+
+describe('xlsx: a withheld cell reads as its marker', () => {
+  it('replaces the one cell and leaves its neighbours', async () => {
+    const result = await readBook(
+      savedBook([CLIENTS], [{ sheetName: 'Clients', marks: [mark('B2')] }]),
+    )
+    expect(result).toEqual({
+      ok: true,
+      kind: 'text',
+      text: `# Clients\nName | Phone\nKim | ${MARKER}`,
+    })
+  })
+
+  it('covers every cell of a range, whatever holds the value', async () => {
+    const sheet: BookSheet = {
+      name: 'Clients',
+      rows:
+        `<row r="1">${inline('A1', 'Name')}${inline('B1', 'Phone')}</row>` +
+        // a number, a shared string, an inline string, a formula with its
+        // cached result, a formula nothing has calculated yet, an empty cell
+        `<row r="2">${inline('A2', 'Kim')}<c r="B2"><v>${SECRET}</v></c></row>` +
+        `<row r="3">${inline('A3', 'Lee')}<c r="B3" t="s"><v>0</v></c></row>` +
+        `<row r="4">${inline('A4', 'Park')}${inline('B4', SECRET)}</row>` +
+        `<row r="5">${inline('A5', 'Choi')}<c r="B5" t="str"><f>"138"&amp;"00138000"</f><v>${SECRET}</v></c></row>` +
+        `<row r="6">${inline('A6', 'Jung')}<c r="B6"><f>${SECRET}+0</f></c></row>` +
+        `<row r="7">${inline('A7', 'Han')}<c r="B7"/></row>` +
+        `<row r="8">${inline('A8', 'Total')}<c r="B8"><v>6</v></c></row>`,
+    }
+    const bytes = await book([sheet], {
+      part: serializeRedactionPart([{ sheetName: 'Clients', marks: [mark('B2', 'B7')] }]),
+      sharedStrings: `<si><t>${SECRET}</t></si>`,
+    })
+    const text = await xlsxToText(bytes)
+    expect(text).toBe(
+      '# Clients\nName | Phone\n' +
+        ['Kim', 'Lee', 'Park', 'Choi', 'Jung', 'Han'].map((n) => `${n} | ${MARKER}`).join('\n') +
+        '\nTotal | 6',
+    )
+    expect(text).not.toContain('138')
+  })
+
+  it('keeps two marks on one sheet under their own names', async () => {
+    const result = await readBook(
+      savedBook(
+        [CLIENTS],
+        [{ sheetName: 'Clients', marks: [mark('B2'), mark('A2', 'A2', 'client name')] }],
+      ),
+    )
+    expect(result.text).toBe(`# Clients\nName | Phone\n{{client name}} | ${MARKER}`)
+  })
+
+  it('follows a sheet the editor renamed, and only that sheet', async () => {
+    const states = rekeyRedactionStates(
+      [{ sheetName: 'Clients', marks: [mark('B2')] }],
+      [{ sheetName: 'Clients', newName: 'Customers' }],
+      [],
+    )
+    const other: BookSheet = { name: 'Stock', rows: CLIENTS.rows.replace(SECRET, '42') }
+    const result = await readBook(savedBook([other, { ...CLIENTS, name: 'Customers' }], states))
+    expect(result.text).toBe(
+      `# Stock\nName | Phone\nKim | 42\n\n# Customers\nName | Phone\nKim | ${MARKER}`,
+    )
+  })
+
+  it('reads the marks from the defined names when another program dropped the part', async () => {
+    const result = await readBook(
+      book([CLIENTS], { mirror: [{ sheetName: 'Clients', marks: [mark('B2')] }] }),
+    )
+    expect(result.text).toBe(`# Clients\nName | Phone\nKim | ${MARKER}`)
+  })
+
+  it('falls back to the defined names when the part is damaged, as the editor does', async () => {
+    const result = await readBook(
+      book([CLIENTS], {
+        part: '{"version":1,"sheets":[',
+        mirror: [{ sheetName: 'Clients', marks: [mark('B2')] }],
+      }),
+    )
+    expect(result.text).toBe(`# Clients\nName | Phone\nKim | ${MARKER}`)
+  })
+
+  it('writes the label the way the sheet editor shows it to its own model', async () => {
+    const result = await readBook(
+      savedBook(
+        [CLIENTS],
+        [{ sheetName: 'Clients', marks: [mark('B2', 'B2', 'client*/{phone}')] }],
+      ),
+    )
+    expect(result.text).toBe('# Clients\nName | Phone\nKim | {{clientphone}}')
+  })
+
+  it('withholds a cell it cannot place on a sheet that has marks', async () => {
+    const loose: BookSheet = {
+      name: 'Clients',
+      rows: `<row r="1">${inline('A1', 'Name')}</row><row r="2">${inline('A2', 'Kim')}<c><v>${SECRET}</v></c></row>`,
+    }
+    const plain: BookSheet = { name: 'Plain', rows: '<row r="1"><c><v>7</v></c></row>' }
+    const result = await readBook(
+      savedBook([loose, plain], [{ sheetName: 'Clients', marks: [mark('D9')] }]),
+    )
+    expect(result.text).toBe('# Clients\nName\nKim | {{private}}\n\n# Plain\n7')
+  })
+
+  it('reads a text-parts copy of a large workbook the same way', async () => {
+    const bytes = await savedBook([CLIENTS], [{ sheetName: 'Clients', marks: [mark('B2')] }])
+    const result = await parseFileToText(writeFixture(`withheld-${++fixtureSeq}.xlsx`, bytes), {
+      wholeZipMaxBytes: 1,
+    })
+    expect(result.text).toBe(`# Clients\nName | Phone\nKim | ${MARKER}`)
+  })
+
+  it('reads a workbook with no marks as before', async () => {
+    const names = '<definedName name="Phones">Clients!$B$2:$B$9</definedName>'
+    for (const bytes of [book([CLIENTS]), book([CLIENTS], { definedNames: names })]) {
+      expect((await readBook(bytes)).text).toBe(`# Clients\nName | Phone\nKim | ${SECRET}`)
+    }
+  })
+})
+
+describe('xlsx: marks that cannot be processed fail the read', () => {
+  const damaged: Array<[string, string]> = [
+    ['is not JSON', '{"version":1,"sheets":['],
+    ['has a version this reader does not know', '{"version":2,"sheets":[]}'],
+    [
+      'holds a mark with no label',
+      '{"version":1,"sheets":[{"name":"Clients","marks":[{"startRow":1,"endRow":1,"startColumn":1,"endColumn":1}]}]}',
+    ],
+    [
+      'holds a mark with no rectangle',
+      `{"version":1,"sheets":[{"name":"Clients","marks":[{"label":"${LABEL}"}]}]}`,
+    ],
+  ]
+  it.each(damaged)('a part that %s', async (_name, part) => {
+    expectClosedFailure(await readBook(book([CLIENTS], { part })))
+  })
+
+  it('a part naming a sheet the workbook does not have', async () => {
+    // renamed in another program: the part still says "Clients"
+    const part = serializeRedactionPart([{ sheetName: 'Clients', marks: [mark('B2')] }])
+    expectClosedFailure(await readBook(book([{ ...CLIENTS, name: 'Customers' }], { part })))
+  })
+
+  it('a defined-name copy that cannot be read, with no part beside it', async () => {
+    const definedNames = '<definedName name="_gxRedaction_1" hidden="1">"not a mark"</definedName>'
+    expectClosedFailure(await readBook(book([CLIENTS], { definedNames })))
+  })
+
+  it('a defined-name copy pointing past the last sheet', async () => {
+    const mirrored = applyRedactionNameMirror(
+      '<workbook><sheets/></workbook>',
+      [{ sheetName: 'Second', marks: [mark('B2')] }],
+      ['First', 'Second'],
+    )
+    const definedNames = /<definedNames>([\s\S]*)<\/definedNames>/.exec(mirrored)?.[1] ?? ''
+    expect(definedNames).toContain('_gxRedaction_1')
+    expectClosedFailure(await readBook(book([CLIENTS], { definedNames })))
+  })
+
+  it('throws from xlsxToText itself, for a caller that reads the file on its own', async () => {
+    await expect(xlsxToText(await book([CLIENTS], { part: 'x' }))).rejects.toThrow(/redaction/i)
   })
 })
