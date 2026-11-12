@@ -323,7 +323,7 @@ export async function runSuite(config: SuiteConfig): Promise<boolean> {
   for (const spec of specs) {
     const tally = tallies.get(spec.fn)!
     console.log(`${spec.fn}: ${tally.compared} checks, ${tally.differences} differences, ${tally.listed} listed, ${tally.outcomes.size} distinct results, ${tally.errors} errors`)
-    if (tally.outcomes.size < 2) {
+    if (tally.outcomes.size < 2 && !spec.constant) {
       console.error(`${spec.fn} gave fewer than two distinct TypeScript results`)
       failGate()
     }

@@ -102,6 +102,29 @@ pub fn run(function: &str, text: &str, bytes: &[u8], args: &Value) -> Vec<u8> {
             numeric("formulaScanMaxBytes"),
         )
         .map(Value::String),
+        "xlsxWithheldCells" => file_parse::xlsx::xlsx_withheld_cells(bytes).map(|withheld| {
+            // `queries` is a list of `[sheet, ref, hasFormula]`; the answer to each is its marker or null
+            withheld.map_or(Value::Null, |withheld| {
+                Value::Array(
+                    args.get("queries")
+                        .and_then(Value::as_array)
+                        .into_iter()
+                        .flatten()
+                        .map(|query| {
+                            let text = |index: usize| {
+                                query.get(index).and_then(Value::as_str).unwrap_or_default()
+                            };
+                            let has_formula =
+                                query.get(2).and_then(Value::as_bool).unwrap_or(false);
+                            withheld
+                                .marker(text(0), text(1), has_formula)
+                                .map_or(Value::Null, Value::String)
+                        })
+                        .collect(),
+                )
+            })
+        }),
+        "unknownCellMarker" => Ok(Value::String(file_parse::xlsx::unknown_cell_marker())),
         "sheetXmlByteLimit" => Ok(number(file_parse::xlsx::sheet_xml_byte_limit(
             jscompat::to_number(text),
         ))),

@@ -1,5 +1,6 @@
 import JSZip from 'jszip'
-import { clipSheetXml, sheetXmlByteLimit, xlsxToText } from './reference/xlsx'
+import { clipSheetXml, sheetXmlByteLimit, xlsxToText, xlsxWithheldCells } from './reference/xlsx'
+import { UNKNOWN_CELL_MARKER } from './reference/xlsx-redaction'
 import { hostileZipInputs } from './hostile'
 import type { Input, Spec } from './spec'
 import { fixtureBytes } from './zip-fixture'
@@ -887,6 +888,59 @@ function clipInputs(): Input[] {
   return out
 }
 
+type Query = [sheet: string, ref: string, hasFormula: boolean]
+
+const NO_SUCH_SHEET = 'No such sheet'
+const ODD_REFS = [
+  '', 'ZZ9999', 'A1048576', 'XFD1048576', 'A1048577', 'A9999999', 'A10000000', 'A0', 'A01', 'AAAA1', '1A', 'A', '$A$1', ' A1', 'A1 ', 'A1\n',
+  'a1', 'b2', 'xfd7', 'zz9999', '\uFF21' + '1', 'A' + '\uFF11', '\u017F1',
+]
+const MAX_QUERY_REFS = 150
+
+const decodeAttribute = (text: string) =>
+  text.replace(/&(?:#x([0-9a-f]+)|#(\d+)|(quot|apos|lt|gt|amp));/gi, (_, hex?: string, decimal?: string, named?: string) =>
+    named === undefined ? String.fromCodePoint(Number.parseInt(hex ?? decimal!, hex === undefined ? 10 : 16)) : { quot: '"', apos: "'", lt: '<', gt: '>', amp: '&' }[named.toLowerCase()]!)
+
+async function partText(zip: JSZip, name: string): Promise<string> {
+  try {
+    return (await zip.file(name)?.async('string')) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+/** Every cell the workbook's worksheets write, asked about under every sheet name, with and without a formula, beside refs no sheet has and names no sheet carries. */
+async function withheldQueries(bytes: Uint8Array): Promise<Query[]> {
+  const names: string[] = []
+  const cellRefs: string[] = []
+  try {
+    const zip = await JSZip.loadAsync(bytes)
+    for (const [, name] of (await partText(zip, 'xl/workbook.xml')).matchAll(/<sheet\b[^>]*?\bname="([^"]*)"/g)) names.push(decodeAttribute(name!))
+    for (const part of Object.keys(zip.files).filter(name => /^xl\/worksheets\/[^/]+\.xml$/.test(name))) {
+      for (const [, ref] of (await partText(zip, part)).matchAll(/<c\b[^>]*?\br="([^"]*)"/g)) cellRefs.push(decodeAttribute(ref!))
+    }
+  } catch {
+    // not a workbook this reads: only the refs and names that need no workbook are asked
+  }
+  const written = [...new Set(cellRefs)].slice(0, MAX_QUERY_REFS)
+  const refs = [...new Set([...written, ...written.slice(0, 12).map(ref => ref.toLowerCase()), ...ODD_REFS])]
+  const known = [...new Set(names)]
+  const sheets = [...known, ...known.slice(0, 1).map(name => name.toLowerCase()), NO_SUCH_SHEET, '']
+  return sheets.flatMap(sheet =>
+    (known.includes(sheet) ? refs : refs.slice(-ODD_REFS.length)).flatMap((ref): Query[] => [[sheet, ref, false], [sheet, ref, true]]))
+}
+
+async function withheldInputs(): Promise<Input[]> {
+  const seeds = (await inputs()).filter(({ label, args = {} }) =>
+    !('formulaScanMaxBytes' in args) && (/^(withheld|derived): /.test(label) || [
+      'values and shared strings', 'formulas cached, uncomputed and shared', 'workbook missing', 'workbook unclosed tag', 'not a zip', 'empty bytes',
+    ].includes(label)))
+  const same = await book(marked([['Pay', GRID_SHEET], ['Pay', sheet(row(1, fc('A1', 'B2', '1'), c('B2', v('later')), fc('C1', 'B1', '2')))]], [{ name: 'Pay', marks: [mark(1, 1, 1, 1, 'Salary')] }]))
+  const all: Input[] = [...seeds.map(({ label, bytes, mutate }) => ({ label: `queries: ${label}`, bytes, ...(mutate === false ? { mutate } : {}) })),
+    { label: 'queries: two sheets of one name, the first answers', bytes: same }]
+  return Promise.all(all.map(async input => ({ ...input, args: { queries: await withheldQueries(input.bytes!) } })))
+}
+
 export const SPECS: Spec[] = [
   {
     fn: 'xlsxToText',
@@ -897,6 +951,23 @@ export const SPECS: Spec[] = [
         ...('maxChars' in args ? { maxChars: Number(args.maxChars) } : {}),
         ...('formulaScanMaxBytes' in args ? { formulaScanMaxBytes: Number(args.formulaScanMaxBytes) } : {}),
       }),
+  },
+  {
+    fn: 'xlsxWithheldCells',
+    extensions: ['xlsx', 'xlsm'],
+    built: withheldInputs,
+    call: async ({ bytes = new Uint8Array(0), args = {} }) => {
+      const marker = await xlsxWithheldCells(bytes)
+      return marker === null ? null : ((args.queries ?? []) as Query[]).map(([sheet, ref, hasFormula]) => marker(sheet, ref, hasFormula))
+    },
+  },
+  {
+    fn: 'unknownCellMarker',
+    extensions: [],
+    mutation: 'none',
+    constant: true,
+    built: () => [{ label: 'the marker of a cell that cannot be checked' }],
+    call: () => UNKNOWN_CELL_MARKER,
   },
   {
     fn: 'sheetXmlByteLimit',

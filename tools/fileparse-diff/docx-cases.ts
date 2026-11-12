@@ -1,4 +1,5 @@
 import JSZip from 'jszip'
+import { OWN_REDACT_NS, REDACT_NAMESPACES } from '../../packages/agent-core/src/redact-range'
 import { docxToText } from './reference/docx'
 import type { Input, Spec } from './spec'
 import { fixtureBytes } from './zip-fixture'
@@ -172,6 +173,75 @@ async function inputs(): Promise<Input[]> {
   add('image with alt is text', await imageOnly(p(drawing(' descr="alt"'))))
   add('empty body', await imageOnly(''))
   add('only blank paras', await imageOnly('<w:p/><w:p/>'))
+
+  // withheld ("hidden from AI") runs
+  const [OWN, OLD] = [OWN_REDACT_NS, REDACT_NAMESPACES[1]!]
+  const GO = (ns: string, prefix = 'go') => `xmlns:${prefix}="${ns}"`
+  const mark = (label: string | null, prefix = 'go') => `<${prefix}:redact${label === null ? '' : ` w:label="${label}"`}/>`
+  const wr = (text: string, label?: string | null, prefix = 'go') =>
+    `<w:r>${label === undefined ? '' : `<w:rPr>${mark(label, prefix)}</w:rPr>`}<w:t>${text}</w:t></w:r>`
+  const rdoc = (body: string, decl = GO(OWN)) =>
+    `<?xml version="1.0"?><w:document ${W} ${decl}><w:body>${body}</w:body></w:document>`
+  const redactCase = async (label: string, body: string, decl?: string, maxChars?: number, extra: Record<string, string> = {}) =>
+    add(label, await zip({ 'word/document.xml': rdoc(body, decl), ...extra }), maxChars)
+  await redactCase('redact one run', p(wr('keep ') + wr('secret', 'Pay') + wr(' tail')))
+  await redactCase('redact adjacent same label', p(wr('a') + wr('s1', 'Pay') + wr('s2', 'Pay') + wr('b')))
+  await redactCase('redact adjacent different labels', p(wr('s1', 'Pay') + wr('s2', 'Name') + wr('b')))
+  await redactCase('redact same label split by plain run', p(wr('s1', 'Pay') + wr('plain') + wr('s2', 'Pay')))
+  await redactCase('redact same label across paragraphs', p(wr('s1', 'Pay')) + p(wr('s2', 'Pay')))
+  await redactCase('redact label with entities', p(wr('s', 'A &amp; B &#65; &lt;x&gt;')))
+  await redactCase('redact label over 40 units', p(wr('s', 'L'.repeat(60))))
+  await redactCase('redact label with lone surrogate ref', p(wr('s', 'a&#xD800;')))
+  await redactCase('redact empty label', p(wr('s', '')))
+  await redactCase('redact missing label', p(wr('s', null)))
+  await redactCase('redact label attr substring only', p(`<w:r><w:rPr><go:redact xw:label="x"/></w:rPr><w:t>s</w:t></w:r>`))
+  await redactCase('redact mark in paragraph mark rPr', p(wr('text'), `<w:rPr>${mark('Pay')}</w:rPr>`))
+  await redactCase('redact mark after run label stays with run', p(`<w:r><w:rPr>${mark('One')}${mark('Two')}</w:rPr><w:t>s</w:t></w:r>`))
+  await redactCase('redact self-closing run', p('<w:r/>' + wr('a') + `<w:r>${mark('Pay')}</w:r>` + wr('b')))
+  await redactCase('redact run without text', p(`<w:r>${mark('Pay')}</w:r>`))
+  await redactCase('redact unprefixed own ns', p(`<w:r><w:rPr><redact xmlns="${OWN}" w:label="x"/></w:rPr><w:t>s</w:t></w:r>`), '')
+  await redactCase('redact unprefixed single-quoted ns', p(`<w:r><w:rPr><redact xmlns='${OLD}' w:label="x"/></w:rPr><w:t>s</w:t></w:r>`), '')
+  await redactCase('redact unprefixed unknown ns', p(`<w:r><w:rPr><redact xmlns="urn:other" w:label="x"/></w:rPr><w:t>s</w:t></w:r>`), '')
+  await redactCase('redact unprefixed no xmlns in namespaced part', p(`<w:r><w:rPr><redact w:label="x"/></w:rPr><w:t>s</w:t></w:r>`))
+  await redactCase('redact unprefixed no xmlns in plain part', p(`<w:r><w:rPr><redact w:label="x"/></w:rPr><w:t>s</w:t></w:r>`), '')
+  await redactCase('redact prefix bound to old ns', p(wr('s', 'Pay', 'o')), GO(OLD, 'o'))
+  await redactCase('redact prefix bound to own ns', p(wr('s', 'Pay', 'n')), GO(OWN, 'n'))
+  await redactCase('redact both prefixes', p(wr('s', 'Pay', 'o') + wr('t', 'Name', 'n')), GO(OLD, 'o') + ' ' + GO(OWN, 'n'))
+  await redactCase('redact prefix unbound', p(wr('s', 'Pay', 'x')), '')
+  await redactCase('redact prefix bound to other ns', p(wr('s', 'Pay', 'x')), GO('urn:other', 'x'))
+  await redactCase('redact prefix bound with single quotes', p(wr('s', 'Pay', 'x')), `xmlns:x='${OWN}'`)
+  await redactCase('redact word merely starting redact', p(wr('a') + '<go:redactor/>' + wr('b')), GO(OWN))
+  await redactCase('redact in nested text box', p(`<w:r><w:rPr>${mark('Box')}</w:rPr><w:pict><v:textbox><w:txbxContent>${p(r('inner box'))}</w:txbxContent></v:textbox></w:pict></w:r>` + r('outer')))
+  await redactCase('redact text box in plain run holds withheld run', p(`<w:r><w:pict><v:textbox><w:txbxContent>${p(wr('boxed', 'Pay') + r('ok'))}</w:txbxContent></v:textbox></w:pict></w:r>` + r('outer')))
+  await redactCase('redact tab and break inside', p(`<w:r><w:rPr>${mark('Pay')}</w:rPr><w:t>a</w:t><w:tab/><w:br/><w:noBreakHyphen/><w:sym w:char="0041"/><w:ptab/><w:cr/>${'<wp:docPr descr="alt"/>'}</w:r>` + r('after')))
+  await redactCase('redact mark late in run', p(`<w:r><w:t>before</w:t><w:tab/><w:rPr>${mark('Late')}</w:rPr><w:t>after</w:t></w:r>` + r('x')))
+  await redactCase('redact alt text in withheld run', p(`<w:r><w:rPr>${mark('Pic')}</w:rPr>${'<w:drawing><wp:docPr descr="secret alt"/></w:drawing>'}</w:r>`))
+  await redactCase('redact in table cell', `<w:tbl><w:tr><w:tc>${p(wr('s', 'Cell'))}</w:tc><w:tc>${p(r('b'))}</w:tc></w:tr></w:tbl>`)
+  await redactCase('redact in heading', p(wr('s', 'Pay'), '<w:pStyle w:val="Heading2"/>'))
+  for (const maxChars of [1, 5, 6, 8, 20])
+    await redactCase(`redact cut maxChars=${maxChars}`, p(wr('keep')) + p(wr('s', 'Pay')) + p(wr('tail one')) + p(wr('tail two', 'Late')), undefined, maxChars)
+  await redactCase('redact mark after cut is unread', p(wr('keep one')) + p(wr('keep two')) + p(wr('s', 'Pay')), undefined, 3)
+  await redactCase('redact unreadable mark before cut', p(wr('keep one')) + p(wr('s', 'Pay', 'x')) + p(wr('keep two')), '', 3)
+  await redactCase('redact unreadable mark after cut', p(wr('keep one')) + p(wr('keep two')) + p(wr('s', 'Pay', 'x')), '', 3)
+  await redactCase('redact unreadable mark after cut namespaced', p(wr('keep one')) + p(wr('keep two')) + `<redact w:label="x"/>`, undefined, 3)
+  await redactCase('redact mark exactly at cut', p(wr('keep one')) + p(wr('s', 'Pay')), undefined, 8)
+  await redactCase('redact in footnotes', p(r('body')), undefined, undefined, {
+    'word/footnotes.xml': `<w:footnotes ${W} ${GO(OWN)}><w:footnote w:id="1">${p(wr('note ') + wr('secret', 'Pay'))}</w:footnote></w:footnotes>`,
+    'word/endnotes.xml': `<w:endnotes ${W} ${GO(OLD)}><w:endnote w:id="1">${p(wr('end ') + wr('secret', 'Pay'))}</w:endnote></w:endnotes>`,
+  })
+  await redactCase('redact unreadable in footnotes', p(r('body')), undefined, undefined, {
+    'word/footnotes.xml': `<w:footnotes ${W}><w:footnote w:id="1">${p(wr('secret', 'Pay', 'x'))}</w:footnote></w:footnotes>`,
+  })
+  const hdrDoc = (body: string, decl = GO(OWN)) => `<w:hdr ${W} ${decl}>${body}</w:hdr>`
+  await redactCase('redact in header and comment', p(r('body')), undefined, undefined, {
+    'word/_rels/document.xml.rels': rels([['header', 'header1.xml'], ['comments', 'comments.xml']]),
+    'word/header1.xml': hdrDoc(p(wr('head ') + wr('secret', 'Pay'))),
+    'word/comments.xml': `<w:comments ${W} ${GO(OLD)}><w:comment w:id="0">${p(wr('c') + wr('secret', 'Pay'))}</w:comment></w:comments>`,
+  })
+  await redactCase('redact unreadable in header', p(r('body')), undefined, undefined, {
+    'word/_rels/document.xml.rels': rels([['header', 'header1.xml']]),
+    'word/header1.xml': hdrDoc(p(wr('secret', 'Pay', 'x')), ''),
+  })
 
   // main document found through _rels/.rels
   const relsTo = (target: string, type = 'officeDocument', mode?: string) =>

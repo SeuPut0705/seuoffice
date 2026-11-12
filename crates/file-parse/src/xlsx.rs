@@ -1418,17 +1418,15 @@ fn marker(label: &str) -> String {
 /// passes neither.
 fn withheld_cell_marker(
     marks: Option<&[RedactionMark]>,
-    cell_ref: Option<&JVal>,
+    cell_ref: Option<&str>,
     derived: Option<&DerivedSheet>,
     has_formula: bool,
 ) -> Option<String> {
     if marks.is_none() && derived.is_none() {
         return None;
     }
-    let cell_ref = cell_ref.map(js_string);
-    let at = cell_ref
-        .as_deref()
-        .and_then(|cell_ref| js_regex!(r"^([A-Za-z]{1,3})([1-9]\d{0,6})$").exec(cell_ref));
+    let at =
+        cell_ref.and_then(|cell_ref| js_regex!(r"^([A-Za-z]{1,3})([1-9]\d{0,6})$").exec(cell_ref));
     let Some(at) = at else {
         return (marks.is_some() || derived.is_some_and(|derived| derived.any) || has_formula)
             .then(|| marker(UNKNOWN_LABEL));
@@ -1447,6 +1445,12 @@ fn withheld_cell_marker(
     // A formula the worksheet parser sees and the scan did not was never traced.
     (derived.withheld(row, column) || (has_formula && !derived.known_formula(row, column)))
         .then(|| marker(UNKNOWN_LABEL))
+}
+
+/// `UNKNOWN_CELL_MARKER`: what a model reads in place of text that may be a
+/// withheld cell (a chart title, say).
+pub fn unknown_cell_marker() -> String {
+    marker(UNKNOWN_LABEL)
 }
 
 /// A cache definition opens with its `<cacheSource>`; the member lists that
@@ -1506,32 +1510,42 @@ fn plural(count: f64) -> &'static str {
     if count == 1.0 { "" } else { "s" }
 }
 
-/// extract sheet text from an xlsx: one "# SheetName" section per sheet, cells
-/// joined with " | ". `max_chars` is `opts.maxChars` and `formula_scan_max_bytes`
-/// is `opts.formulaScanMaxBytes`, `None` for none given.
-pub fn xlsx_to_text(
-    bytes: &[u8],
-    max_chars: Option<f64>,
-    formula_scan_max_bytes: Option<f64>,
-) -> Result<String, String> {
-    let max_chars = max_chars.unwrap_or(f64::INFINITY);
-    let mut used = 0.0;
-    let zip = load_zip_package(bytes)?;
-    let Some(workbook_xml) = zip_text(&zip, WORKBOOK_PART_PATH)?.filter(|xml| !xml.is_empty())
+/// What `readWorkbookIndex` returns. The sheets are those of `workbook`, as
+/// `sheets` gives them.
+struct WorkbookIndex {
+    workbook: JVal,
+    /// relationship id -> part path, from the workbook's own relationships
+    rel_targets: JsMap<String>,
+    styles_path: String,
+    shared_strings_path: String,
+    date_1904: bool,
+    /// `xl/_rels/workbook.xml.rels` is there, empty or not
+    has_rels_xml: bool,
+}
+
+impl WorkbookIndex {
+    fn sheets(&self) -> Vec<&JVal> {
+        as_array(prop(
+            prop(prop(Some(&self.workbook), "workbook"), "sheets"),
+            "sheet",
+        ))
+    }
+}
+
+/// `readWorkbookIndex`: sheet order, names and parts, as workbook.xml and its
+/// relationships give them. Sheet order and names come from workbook.xml;
+/// r:id maps to the actual sheet path via the workbook rels.
+fn read_workbook_index(zip: &Package) -> Result<WorkbookIndex, String> {
+    let Some(workbook_xml) = zip_text(zip, WORKBOOK_PART_PATH)?.filter(|xml| !xml.is_empty())
     else {
         return Err("Invalid xlsx: missing xl/workbook.xml".to_owned());
     };
 
-    // Sheet order and names come from workbook.xml; r:id maps to the actual
-    // sheet path via the workbook rels
     let workbook = fxp::parse(workbook_xml)?;
-    let sheets = as_array(prop(
-        prop(prop(Some(&workbook), "workbook"), "sheets"),
-        "sheet",
-    ));
     let date_1904 = is_date_1904(&workbook);
 
-    let rels_xml = zip_text(&zip, "xl/_rels/workbook.xml.rels")?;
+    let rels_xml = zip_text(zip, "xl/_rels/workbook.xml.rels")?;
+    let has_rels_xml = rels_xml.is_some();
     let mut rel_targets: JsMap<String> = JsMap::new();
     let mut styles_path = "xl/styles.xml".to_owned();
     let mut shared_strings_path = "xl/sharedStrings.xml".to_owned();
@@ -1560,25 +1574,58 @@ pub fn xlsx_to_text(
         }
     }
 
-    let date_styles = load_date_styles(&zip, &styles_path)?;
-    let mut shared: Vec<String> = Vec::new();
-    if let Some(shared_xml) = zip_text(&zip, &shared_strings_path)?.filter(|xml| !xml.is_empty()) {
-        let sst = fxp::parse(shared_xml)?;
-        for si in as_array(prop(prop(Some(&sst), "sst"), "si")) {
-            shared.push(shared_string_text(si));
-        }
+    Ok(WorkbookIndex {
+        workbook,
+        rel_targets,
+        styles_path,
+        shared_strings_path,
+        date_1904,
+        has_rels_xml,
+    })
+}
+
+/// The cells a workbook withholds from a model, and the cells that compute
+/// from them: the result of `readWithheldCells`, which `xlsxWithheldCells`
+/// hands out as a reader.
+pub struct WithheldCells {
+    sheet_names: Vec<String>,
+    redactions: Vec<(String, Vec<RedactionMark>)>,
+    /// one entry per sheet; `None` for a workbook that withholds nothing
+    derived: Option<Vec<DerivedSheet>>,
+}
+
+impl WithheldCells {
+    /// The placeholder to give instead of the value and formula of the cell at
+    /// `cell_ref` on `sheet`, or `None` when the cell reads as itself.
+    pub fn marker(&self, sheet: &str, cell_ref: &str, has_formula: bool) -> Option<String> {
+        let index = self.sheet_names.iter().position(|name| name == sheet);
+        let marks = self
+            .redactions
+            .iter()
+            .find(|(name, _)| name == sheet)
+            .map(|(_, marks)| marks.as_slice());
+        let derived = index.and_then(|index| self.derived.as_ref()?.get(index));
+        withheld_cell_marker(marks, Some(cell_ref), derived, has_formula)
     }
-    // Read before any cell is: a record of withheld cells that cannot be read
-    // fails the whole workbook, and no sheet is handed over without its marks.
+}
+
+/// `readWithheldCells`. Read before any cell is: a record of withheld cells
+/// that cannot be read fails the whole workbook, and no sheet is handed over
+/// without its marks.
+fn read_withheld_cells(
+    zip: &Package,
+    workbook: &JVal,
+    sheets: &[&JVal],
+    rel_targets: &JsMap<String>,
+    scan_limit: f64,
+) -> Result<WithheldCells, String> {
     let sheet_names: Vec<String> = sheets.iter().map(|sheet| field(sheet, "@_name")).collect();
-    let redactions = read_xlsx_redactions(&zip, &sheet_names)?;
+    let redactions = read_xlsx_redactions(zip, &sheet_names)?;
     // Nor without the formulas that compute from those cells, which may sit on
     // any sheet and reach the cell through any other.
-    let scan_limit = formula_scan_max_bytes.unwrap_or(FORMULA_SCAN_MAX_BYTES);
     let derived: Option<Vec<DerivedSheet>> = if redactions.is_empty() {
         None
     } else {
-        let zip = &zip;
         let inputs: Vec<DerivedInput<'_>> = sheets
             .iter()
             .zip(&sheet_names)
@@ -1615,7 +1662,7 @@ pub fn xlsx_to_text(
             })
             .collect();
         let defined_names: Vec<NameDefinition> = as_array(prop(
-            prop(prop(Some(&workbook), "workbook"), "definedNames"),
+            prop(prop(Some(workbook), "workbook"), "definedNames"),
             "definedName",
         ))
         .into_iter()
@@ -1629,6 +1676,67 @@ pub fn xlsx_to_text(
         .collect();
         Some(read_derived_cells(inputs, &defined_names)?)
     };
+
+    Ok(WithheldCells {
+        sheet_names,
+        redactions,
+        derived,
+    })
+}
+
+/// `xlsxWithheldCells`: the reader for the cells of a workbook that its sheet
+/// editor withholds from a model, or `None` for a workbook that withholds
+/// nothing. A workbook whose record cannot be read is an `Err`.
+pub fn xlsx_withheld_cells(bytes: &[u8]) -> Result<Option<WithheldCells>, String> {
+    let zip = load_zip_package(bytes)?;
+    let index = read_workbook_index(&zip)?;
+    let withheld = read_withheld_cells(
+        &zip,
+        &index.workbook,
+        &index.sheets(),
+        &index.rel_targets,
+        FORMULA_SCAN_MAX_BYTES,
+    )?;
+    Ok((!withheld.redactions.is_empty()).then_some(withheld))
+}
+
+/// extract sheet text from an xlsx: one "# SheetName" section per sheet, cells
+/// joined with " | ". `max_chars` is `opts.maxChars` and `formula_scan_max_bytes`
+/// is `opts.formulaScanMaxBytes`, `None` for none given.
+pub fn xlsx_to_text(
+    bytes: &[u8],
+    max_chars: Option<f64>,
+    formula_scan_max_bytes: Option<f64>,
+) -> Result<String, String> {
+    let max_chars = max_chars.unwrap_or(f64::INFINITY);
+    let mut used = 0.0;
+    let zip = load_zip_package(bytes)?;
+    let index = read_workbook_index(&zip)?;
+    let sheets = index.sheets();
+    let rel_targets = &index.rel_targets;
+    let date_1904 = index.date_1904;
+
+    let date_styles = load_date_styles(&zip, &index.styles_path)?;
+    let mut shared: Vec<String> = Vec::new();
+    if let Some(shared_xml) =
+        zip_text(&zip, &index.shared_strings_path)?.filter(|xml| !xml.is_empty())
+    {
+        let sst = fxp::parse(shared_xml)?;
+        for si in as_array(prop(prop(Some(&sst), "sst"), "si")) {
+            shared.push(shared_string_text(si));
+        }
+    }
+    let WithheldCells {
+        sheet_names,
+        redactions,
+        derived,
+    } = read_withheld_cells(
+        &zip,
+        &index.workbook,
+        &sheets,
+        rel_targets,
+        formula_scan_max_bytes.unwrap_or(FORMULA_SCAN_MAX_BYTES),
+    )?;
 
     let mut sections: Vec<String> = Vec::new();
     let mut sheets_with_data = 0.0;
@@ -1678,7 +1786,7 @@ pub fn xlsx_to_text(
                 // goes for a formula that computes from one.
                 let text = match withheld_cell_marker(
                     marks,
-                    cell_ref,
+                    cell_ref.map(js_string).as_deref(),
                     derived_cells,
                     prop(Some(cell), "f").is_some(),
                 ) {
@@ -1741,13 +1849,13 @@ pub fn xlsx_to_text(
     }
     if !sheets.is_empty() && sections.is_empty() {
         let declared = sheets.len() as f64;
-        return Err(match rels_xml {
-            None => format!(
+        return Err(match index.has_rels_xml {
+            false => format!(
                 "Invalid xlsx: xl/_rels/workbook.xml.rels is missing, so none of the {} declared sheet{} can be resolved",
                 number_to_string(declared),
                 plural(declared)
             ),
-            Some(_) => format!(
+            true => format!(
                 "Invalid xlsx: no sheet relationship in xl/_rels/workbook.xml.rels resolves to a readable worksheet part ({} declared)",
                 number_to_string(declared)
             ),

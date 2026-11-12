@@ -223,7 +223,7 @@ fn label_of<'a>(all: &'a [XmlElement<'a>], ext: usize) -> Result<&'a str, String
         .children
         .iter()
         .map(|&child| &all[child])
-        .filter(|c| c.name == REDACT_EL);
+        .filter(|c| is_mark(c));
     let label = match (marks.next(), marks.next()) {
         (Some(mark), None) => mark.attr("label"),
         _ => None,
@@ -232,6 +232,25 @@ fn label_of<'a>(all: &'a [XmlElement<'a>], ext: usize) -> Result<&'a str, String
         Some(label) if ext.children.len() == 1 && !label.is_empty() => Ok(label),
         _ => Err(redaction_error("a mark carries no label")),
     }
+}
+
+/// `isMark`: the engine's prefix, or no prefix with the mark's namespace
+/// declared on the element itself. One whose namespace comes from an element
+/// around it is not read, and the trace count fails the deck.
+fn is_mark(el: &XmlElement) -> bool {
+    el.name == REDACT_EL
+        || (el.name == "redact" && el.attr("xmlns").is_some_and(|ns| REDACT_NAMESPACES.contains(&ns)))
+}
+
+/// `(xml.match(/<redact\b/g) ?? []).length`
+fn unprefixed_marks(xml: &str) -> usize {
+    xml.match_indices("<redact")
+        .filter(|&(at, _)| {
+            !xml.as_bytes()
+                .get(at + "<redact".len())
+                .is_some_and(|&next| next.is_ascii_alphanumeric() || next == b'_')
+        })
+        .count()
 }
 
 /// the element whose properties hold this extension list entry, or None
@@ -294,7 +313,7 @@ pub fn redact_pptx_part_xml(xml: &str) -> Result<String, String> {
     // left over is a mark that was not read above (a label under someone else's
     // extension, the namespace under another prefix, a mark inside a comment)
     if count_of(xml, PPTX_REDACT_EXT_URI) != understood
-        || count_of(xml, &format!("<{REDACT_EL}")) != understood
+        || count_of(xml, &format!("<{REDACT_EL}")) + unprefixed_marks(xml) != understood
         || REDACT_NAMESPACES
             .iter()
             .map(|ns| count_of(xml, ns))

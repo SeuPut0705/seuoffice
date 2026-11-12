@@ -31,4 +31,6 @@ export interface Spec {
   isActive?(input: Input): boolean
   /** Every input of this spec, corpus, built and mutated, runs isolated as `Input.isolate` does. */
   isolate?: boolean
+  /** The function has one answer whatever it is given: the gate does not ask for two distinct results. */
+  constant?: boolean
 }

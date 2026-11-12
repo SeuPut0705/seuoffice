@@ -11,6 +11,7 @@ use jscompat::{Radix, is_js_space, js_regex, number_to_string, parse_int, to_num
 use ooxml_pkg::{Package, ReadError};
 
 use crate::opc::resolve_target;
+use crate::redaction::{REDACT_NAMESPACES, placeholder_source, redaction_error};
 
 type Units = Vec<u16>;
 
@@ -305,6 +306,8 @@ impl TextSink {
 
 struct Para {
     text: Units,
+    /// the placeholder the paragraph text currently ends with, when a withheld run put it there
+    marker: Option<String>,
     heading: f64,
     list: bool,
 }
@@ -382,10 +385,68 @@ fn collapse_line_breaks(text: &[u16]) -> Units {
     out
 }
 
-fn append_text(paras: &mut [Para], text: &[u16]) {
+fn append_text(paras: &mut [Para], run_labels: &[Option<Units>], text: &[u16]) {
+    // a withheld run holds no word the reader may pass on: nothing inside it
+    // (text, tabs, a picture's alt text, a nested text box) is collected
+    if run_labels.iter().any(Option::is_some) {
+        return;
+    }
     if let Some(p) = paras.last_mut() {
         p.text.extend_from_slice(text);
+        p.marker = None;
     }
+}
+
+const MARK_UNREADABLE: &str = "a mark is written in a form that cannot be read";
+
+/// The element names a part's mark goes by, and how many such elements it holds.
+struct RedactElements {
+    names: HashSet<String>,
+    count: usize,
+    namespaced: bool,
+}
+
+fn redact_element_names(xml: &str) -> RedactElements {
+    let namespaced = REDACT_NAMESPACES.iter().any(|ns| xml.contains(ns));
+    let mut found = RedactElements {
+        names: HashSet::new(),
+        count: 0,
+        namespaced,
+    };
+    if !namespaced && !js_regex!(r"<[\w.-]+:redact\b").test(xml) {
+        return found;
+    }
+    for m in js_regex!(r#"xmlns:([\w.-]+)="([^"]*)""#).find_iter(xml) {
+        if REDACT_NAMESPACES.contains(&m.get(2).unwrap_or("")) {
+            found.names.insert(format!("{}:redact", m.get(1).unwrap_or("")));
+        }
+    }
+    found.count = count_marks(xml, namespaced);
+    found
+}
+
+/// Elements in `xml` that may be a mark: any prefix, or none in a part that names a mark namespace.
+fn count_marks(xml: &str, namespaced: bool) -> usize {
+    js_regex!(r"<[\w.-]+:redact\b").find_iter(xml).count()
+        + if namespaced {
+            js_regex!(r"<redact\b").find_iter(xml).count()
+        } else {
+            0
+        }
+}
+
+/// A mark: a bound prefix, or an unprefixed element that declares the mark's namespace itself.
+fn is_redact_element(found: &RedactElements, name: &str, attrs: &str) -> bool {
+    if found.names.contains(name) {
+        return true;
+    }
+    if name != "redact" {
+        return false;
+    }
+    js_regex!(r#"(?:^|\s)xmlns=(["'])([^"']*)\1"#)
+        .exec(attrs)
+        .and_then(|m| m.get(2))
+        .is_some_and(|ns| REDACT_NAMESPACES.contains(&ns))
 }
 
 fn emit_para(
@@ -457,17 +518,25 @@ fn scan_body(
     let mut depth: i64 = 0;
     let mut in_text = false;
     let mut run_hidden = false;
+    // one entry per open run: the label of its "hidden from AI" mark, or None
+    let mut run_labels: Vec<Option<Units>> = Vec::new();
+    let redact_elements = redact_element_names(xml);
+    let mut redact_seen: usize = 0;
     let mut note_separator = false;
     let mut note_lines: Vec<Units> = Vec::new();
 
     for m in js_regex!(r"<(\/?)([\w:.-]+)([^>]*?)(\/?)>|([^<]+)").find_iter(xml) {
         if out.full {
+            // the text collected so far may already hold a run whose mark was not read
+            if redact_seen != count_marks(&xml[..m.start()], redact_elements.namespaced) {
+                return Err(redaction_error(MARK_UNREADABLE));
+            }
             return Ok(());
         }
         if let Some(text) = m.get(5) {
             if in_text && skip.is_none() && !run_hidden {
                 let decoded = decode_entities(text)?;
-                append_text(&mut paras, &decoded);
+                append_text(&mut paras, &run_labels, &decoded);
             }
             continue;
         }
@@ -476,6 +545,22 @@ fn scan_body(
         let attrs = m.get(3).unwrap_or("");
         let self_close = !m.get(4).unwrap_or("").is_empty();
         let opening = !close;
+        if opening && is_redact_element(&redact_elements, name, attrs) {
+            let label = js_regex!(r#"(?:^|\s)w:label="([^"]*)""#)
+                .exec(attrs)
+                .and_then(|m| m.get(1))
+                .filter(|label| !label.is_empty());
+            let Some(label) = label else {
+                return Err(redaction_error("a mark carries no label"));
+            };
+            // outside a run (a paragraph mark's properties) there are no words to withhold
+            if let Some(top) = run_labels.last_mut()
+                && top.is_none()
+            {
+                *top = Some(decode_entities(label)?);
+            }
+            redact_seen += 1;
+        }
         let closing = close && !self_close;
         // a self-closing element opens and ends in one token
         let ending = closing || self_close;
@@ -502,6 +587,7 @@ fn scan_body(
                 if opening {
                     paras.push(Para {
                         text: Vec::new(),
+                        marker: None,
                         heading: 0.0,
                         list: false,
                     });
@@ -567,6 +653,25 @@ fn scan_body(
             "w:r" => {
                 if opening {
                     run_hidden = false;
+                    if !self_close {
+                        run_labels.push(None);
+                    }
+                } else if closing && let Some(label) = run_labels.pop() {
+                    // the run's own placeholder, once; adjacent runs of one label read as one
+                    if let Some(label) = label
+                        && run_labels.iter().all(Option::is_none)
+                    {
+                        let label = String::from_utf16(&label).map_err(|_| {
+                            "docx: the TypeScript answer holds a lone surrogate, which a Rust string cannot".to_owned()
+                        })?;
+                        let marker = placeholder_source(&label);
+                        if let Some(p) = paras.last_mut()
+                            && p.marker.as_deref() != Some(marker.as_str())
+                        {
+                            p.text.extend(marker.encode_utf16());
+                            p.marker = Some(marker);
+                        }
+                    }
                 }
             }
             "w:vanish" => {
@@ -577,18 +682,18 @@ fn scan_body(
             "w:t" => in_text = opening && !self_close,
             "w:tab" | "w:ptab" => {
                 if opening && !run_hidden {
-                    append_text(&mut paras, &[u16::from(b'\t')]);
+                    append_text(&mut paras, &run_labels, &[u16::from(b'\t')]);
                 }
             }
             "w:br" | "w:cr" => {
                 // page and column breaks are layout, not text
                 if opening && !run_hidden && !js_regex!(r#"w:type="(page|column)""#).test(attrs) {
-                    append_text(&mut paras, &[u16::from(b'\n')]);
+                    append_text(&mut paras, &run_labels, &[u16::from(b'\n')]);
                 }
             }
             "w:noBreakHyphen" => {
                 if opening && !run_hidden {
-                    append_text(&mut paras, &[u16::from(b'-')]);
+                    append_text(&mut paras, &run_labels, &[u16::from(b'-')]);
                 }
             }
             "w:sym" => {
@@ -598,7 +703,7 @@ fn scan_body(
                         .and_then(|m| m.get(1));
                     if let Some(code) = truthy(code) {
                         // `String.fromCharCode`: four hex digits are one code unit
-                        append_text(&mut paras, &[parse_int(code, Radix::Sixteen) as u16]);
+                        append_text(&mut paras, &run_labels, &[parse_int(code, Radix::Sixteen) as u16]);
                     }
                 }
             }
@@ -619,7 +724,7 @@ fn scan_body(
                         let mut text = units("[image: ");
                         text.extend_from_slice(&alt);
                         text.push(u16::from(b']'));
-                        append_text(&mut paras, &text);
+                        append_text(&mut paras, &run_labels, &text);
                     }
                 }
             }
@@ -683,6 +788,9 @@ fn scan_body(
         if closing {
             depth -= 1;
         }
+    }
+    if redact_seen != redact_elements.count {
+        return Err(redaction_error(MARK_UNREADABLE));
     }
     Ok(())
 }
