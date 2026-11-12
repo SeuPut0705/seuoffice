@@ -14,8 +14,3 @@ ooxml-xml.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
-
-# A group of modules still being ported sits behind a feature, so that it
-# stops no other while it does not build. It goes when the group is wired in.
-[features]
-u2_revision = []

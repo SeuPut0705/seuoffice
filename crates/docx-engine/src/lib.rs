@@ -17,7 +17,6 @@ pub mod package;
 pub mod props;
 pub mod protection;
 pub mod resolve;
-#[cfg(feature = "u2_revision")]
 pub mod revision_xml;
 pub mod scan;
 pub mod sdt;

@@ -12,6 +12,7 @@ import { IMAGES } from './calls-images'
 import { MARKERS } from './calls-markers'
 import { MATH } from './calls-math'
 import { RESOLVE } from './calls-resolve'
+import { REVISION } from './calls-revision'
 import { SECTION } from './calls-section'
 import { VML } from './calls-vml'
 import type { CallSpec, Input } from './calls-spec'
@@ -49,6 +50,7 @@ const groups: Group[] = Object.entries({
   markers: MARKERS,
   math: MATH,
   resolve: RESOLVE,
+  revision: REVISION,
   section: SECTION,
   vml: VML,
 })
@@ -106,12 +108,27 @@ export async function callOutcomes(
   }
 }
 
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+
+/** No string in `value`, key or value, holds half a surrogate pair. */
+function wellFormed(value: unknown): boolean {
+  if (typeof value === 'string') return !LONE_SURROGATE.test(value)
+  if (Array.isArray(value)) return value.every(wellFormed)
+  if (typeof value !== 'object' || value === null) return true
+  return Object.entries(value).every(([key, item]) => wellFormed(key) && wellFormed(item))
+}
+
 async function check(
   comparison: Comparison,
   where: string,
   spec: CallSpec,
   { text = '', args = {} }: Input,
 ): Promise<void> {
+  // JSON cannot carry half a surrogate pair to Rust: the whole batch would be
+  // refused, so the input that holds one is named here instead
+  if (!wellFormed(text) || !wellFormed(args)) {
+    throw new Error(`${where}: ${spec.fn}: the input holds a lone surrogate`)
+  }
   const outcome = await typescriptOutcome(spec, text, args)
   checkOutcome(comparison, `${where}: ${spec.fn}`, spec.fn, text, args, () => outcome)
 }

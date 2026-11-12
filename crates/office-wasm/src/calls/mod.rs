@@ -17,7 +17,6 @@ mod images;
 mod markers;
 mod math;
 mod resolve;
-#[cfg(feature = "u2_revision")]
 mod revision;
 mod section;
 mod vml;
@@ -74,7 +73,6 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "markers" => Some(markers::dispatch(function, text, args)),
         "math" => Some(math::dispatch(function, text, args)),
         "resolve" => Some(resolve::dispatch(function, text, args)),
-        #[cfg(feature = "u2_revision")]
         "revision" => Some(revision::dispatch(function, text, args)),
         "section" => Some(section::dispatch(function, text, args)),
         "vml" => Some(vml::dispatch(function, text, args)),
