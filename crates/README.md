@@ -263,10 +263,10 @@ are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
   class never differ is not told apart, so a class can stay on a function
   that has no such defect. `legacyCharsetOfMht` is wider than its defect by
   design; the others read the input as their function does.
-- `tools/docx-diff/out/` is ignored by git: the decision trail
-  (`decisions.tsv`) and the copies of the first comparisons are on the
-  machine of the session that made them. The runs they come from are named
-  in this file.
+- `tools/docx-diff/out/` is ignored by git. What must outlive a machine and
+  the retention of GitHub artifacts is in `crates/docs/trail/`: the decision
+  trail of unit 2, its first comparisons and its fault results, unedited,
+  with their checksums. A unit adds its own there.
 - `parseNotesXml` is ported without its paragraph reader callback, which
   `parse.ts` supplies.
 - `blank/locale.rs` answers `paperSizeForLocale` from a table of likely
@@ -352,7 +352,18 @@ byte cap of `decodeHtmlBytes` moved its inputs into the legacy charset
 class, whose predicate was wider than the function reads, and the first
 verdict of `faults.py` took any changed line for a catch. Both are narrowed
 since (a report that changed in nothing but counts and class lines is SET
-ASIDE, a miss). Four of the nine misses named inputs that are now there
+ASIDE, a miss), and the 22 faults of the groups with classes were run again
+by that rule (run 43161902762): 18 caught, two equivalent, and two that the
+classes cost. `tblGrid exclusion dropped` had only ever been caught by one
+mutated text; it has built inputs of its own now (a grid change whose old
+grid is empty, in tables without another change). `edits sort drops end
+tiebreak` is NOT compared: the one input that showed it is the paragraph
+change that opens its `w:pPr`, which the Rust now answers with a single edit
+and which sits in a class. Look there first: a zero-length insertion at the
+start of a `w:pPr` can also meet the removal of a paragraph-mark `w:rPr` that
+stands first (`<w:pPr><w:rPr><w:ins/></w:rPr><w:pPrChange>`), which was not
+measured and may lose the old properties in the TypeScript the same way.
+Four of the nine first misses named inputs that are now there
 and are caught (run 43157250362): text outside ASCII before a rewritten
 `w:delText`, a property change that is the first child of its holder, two
 range starts sharing an id under a filter, a tab stop at a negative
