@@ -73,7 +73,9 @@ $startupOut = Join-Path $Out 'force-run.jsonl'
 Remove-Item -Force -ErrorAction SilentlyContinue $startupOut, (Join-Path $ud 'proto-shell-started.json')
 $env:BENCH_OUT = $startupOut
 $sw = [Diagnostics.Stopwatch]::StartNew()
-$p = Start-Process -FilePath $Installer -ArgumentList '--updated', '/S', '--force-run' -PassThru -Wait
+# -Wait would also wait for the app the installer starts (it waits for descendants), electron-updater does not
+$p = Start-Process -FilePath $Installer -ArgumentList '--updated', '/S', '--force-run' -PassThru
+if (-not $p.WaitForExit(180000)) { $p.Kill(); $problems.Add('the installer did not finish in 180 s') }
 $seconds = [math]::Round($sw.Elapsed.TotalSeconds, 1)
 Remove-Item Env:\BENCH_OUT
 Write-Host "prototype installer exit $($p.ExitCode) in $seconds s"
