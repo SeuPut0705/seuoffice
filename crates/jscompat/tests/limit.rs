@@ -75,4 +75,30 @@ fn a_search_that_passes_the_bound_refuses_within_it() {
     );
     assert_eq!(answer, Ok(false));
     assert!(peak <= room(&text), "{peak} bytes in the lookahead");
+
+    // a lookahead entered with a large stack set aside: that one keeps room
+    // to double (at most 4,096 entries and twice what it holds), the
+    // lookahead's own grows to what is left of the bound, so together they
+    // hold twice the bound at most
+    let twice = |text: &str| BACKTRACK_LIMIT * 40 * 2 + 4096 * 40 + 2 * text.len();
+    for (pattern, text) in [
+        (
+            "^(?:(?:a|b)*x|(?:a|b){600000})(?=((?:a|b)*)c)",
+            format!("{}c", "a".repeat(1_000_000)),
+        ),
+        (
+            "^(?:(?:a|b)*x|(?:a|b){1050000})(?=(?:a|b)*y)",
+            "a".repeat(1_700_000),
+        ),
+        ("^(?:(?!x)[\\s\\S])*y", "a".repeat(2_000_000)),
+    ] {
+        let regex = TryJsRegex::new(pattern, "").unwrap();
+        let (answer, peak) = peak_of(&regex, &text);
+        println!(
+            "/{pattern}/ over {} characters: {answer:?}, {} MB at most",
+            text.len(),
+            peak / 1_000_000
+        );
+        assert!(peak <= twice(&text), "/{pattern}/: {peak} bytes");
+    }
 }

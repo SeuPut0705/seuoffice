@@ -103,7 +103,8 @@ the workspace and fails on a pattern `JsRegex::new` refuses.
 A search keeps at most `BACKTRACK_LIMIT` (2^22) entries on the backtrack
 stack of the vendored `regress` (`crates/vendor/regress/VENDORED.md`); an
 entry is 40 bytes on a 64-bit target, so one search holds 209 MB at most,
-measured by `jscompat/tests/limit.rs`; on wasm32 an entry is 20 bytes, the
+and up to twice the bound while a lookaround runs on its own stack (263 MB
+measured), by `jscompat/tests/limit.rs`; on wasm32 an entry is 20 bytes, the
 linear memory grew to about 135 MB, and a wasm memory never shrinks
 (`limit_wasm.rs`). A loop whose body is more than
 one character matcher keeps entries for each turn, so
