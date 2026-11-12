@@ -240,7 +240,11 @@ describe('docs read: a comment whose open tag is spelled another valid way', () 
 })
 
 describe('docs read: a picture in a comment that holds words hidden from AI', () => {
-  it('lists the comment without the picture bytes', async () => {
+  it.each([
+    ['a picture alone', ''],
+    // the hidden run's own words equal its placeholder, so the model text equals the text
+    ['a picture beside words that read like the placeholder', '<w:t>{{id card}}</w:t>'],
+  ])('lists the comment without the picture bytes: %s', async (_case, runText) => {
     const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
     const DRAW =
       'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ' +
@@ -267,7 +271,7 @@ describe('docs read: a picture in a comment that holds words hidden from AI', ()
             `<w:r><w:rPr><go:redact xmlns:go="${NAMESPACES[1]![1]}" w:label="id card"/></w:rPr>` +
             '<w:drawing><wp:inline><wp:extent cx="9525" cy="9525"/><a:graphic><a:graphicData><pic:pic>' +
             '<pic:blipFill><a:blip r:embed="rIdImg"/></pic:blipFill></pic:pic></a:graphicData></a:graphic>' +
-            '</wp:inline></w:drawing></w:r></w:p></w:comment></w:comments>',
+            `</wp:inline></w:drawing>${runText}</w:r></w:p></w:comment></w:comments>`,
         },
       ],
     })
