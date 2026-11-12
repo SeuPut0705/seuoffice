@@ -109,6 +109,7 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 ## 원본과 다른 점
 
 - 쪽 작업 되돌리기는 파일 바이트 합계 256 MiB(`WRITTEN_HISTORY_BUDGET_BYTES`)와 10단계를 넘지 않는다. 넘으면 가장 먼 단계부터 버리고, 문서 하나가 그 상한보다 크면 되돌리기 단계를 아예 남기지 않는다(`written-history.ts`). 렌더러에 기가바이트를 쥐게 하지 않는다.
+- 되돌리기 단계로 둘 수 없을 만큼 큰 파일에 제자리 쪽 작업(페이지 교체, 페이지 크기, 자르기, PDF 넣기)을 쓰기 전에는 되돌릴 수 없다고 묻는다(`written-history.ts`의 `writeInPlace`, 문구 `pageOpNoUndoConfirm`, 다른 파괴적 작업처럼 `window.confirm`). 취소하면 아무것도 쓰지 않는다. 보류 중인 편집이 있으면 그 편집을 저장하기 전에 묻는다(`agreesToNoUndo`). 동의는 문서마다 한 번이다(`App.tsx`의 `noUndoConsentRef`. 탭에 다른 문서를 열거나 탭을 다시 열면 처음부터 묻는다). 10단계나 합계 상한 때문에 가장 먼 단계가 밀려나는 것은 평범한 되돌리기 깊이라 묻지 않는다. 제자리 쪽 작업을 더하면 `writeInPlace`를 거친다.
 - 디스크에서 다시 읽기로 버릴 때는 복구 사본을 `discardForDiskReload`(`pdf-main.ts`)로 버린다. 그 밖의 복구 사본 버리기는 `discardPdfRecovery`를 거친다.
 
 ## 테스트

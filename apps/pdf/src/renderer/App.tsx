@@ -163,7 +163,7 @@ import { LinkLayer, followLinkAt } from './LinkLayer'
 import { OutlinePanel } from './OutlinePanel'
 import { ComparePanel } from './ComparePanel'
 import { compareDocuments, type CompareResult, type PageText } from './compare-text'
-import { AttachmentsPanel, type AttachmentRow } from './AttachmentsPanel'
+import { AttachmentsPanel, humanBytes, type AttachmentRow } from './AttachmentsPanel'
 import type { OutlineNode } from './OutlinePanel'
 import {
   buildHeadingOutline,
@@ -174,10 +174,13 @@ import {
 import { printPdf } from './print'
 import { readFileBytes } from './file-bytes'
 import {
+  agreesToNoUndo,
   NO_WRITTEN_STEPS,
-  readWrittenSnapshot,
   recordWritten,
   stepWrittenFile,
+  writeInPlace,
+  type NoUndoConsent,
+  type NoUndoGate,
   type WrittenSteps,
 } from './written-history'
 import { mayChangeProtection } from './protection-gate'
@@ -1374,6 +1377,10 @@ export default function App() {
     setWrittenCounts({ undo: steps.undo.length, redo: steps.redo.length })
   }
   const writtenStepBusyRef = useRef(false)
+  /** Whether the person agreed to page operations that cannot be undone because the file is
+      too large to keep for Undo. Asked once per document: opening a document in this tab
+      starts over, and a reloaded or reopened tab starts with a new renderer */
+  const noUndoConsentRef = useRef<NoUndoConsent>({ given: false })
   const [pwInput, setPwInput] = useState('')
   const [pwWrong, setPwWrong] = useState(false)
   const [extractDlg, setExtractDlg] = useState(false)
@@ -2065,6 +2072,7 @@ export default function App() {
   const openPath = useCallback(
     async (path: string) => {
       try {
+        noUndoConsentRef.current = { given: false }
         setFilePath(path)
         setOpenError(null)
         await loadDoc(path, null)
@@ -7814,13 +7822,32 @@ export default function App() {
     return true
   }
 
+  const noUndoGate = (): NoUndoGate => ({
+    consent: noUndoConsentRef.current,
+    confirm: ({ fileBytes, limitBytes }) =>
+      window.confirm(
+        t('pageOpNoUndoConfirm', { size: humanBytes(fileBytes), limit: humanBytes(limitBytes) }),
+      ),
+  })
+  /** Asked before the flush saves the pending edits, so that Cancel leaves the file as it is.
+      Work the flush refuses anyway is not asked about, and a document with nothing pending is
+      asked by writeInPlace, from the size of the file it reads */
+  const mayFlushForRewrite = async (): Promise<boolean> => {
+    if (!dirty || redactions.length > 0 || collabRef.current) return true
+    return agreesToNoUndo(fileSize, noUndoGate())
+  }
+
   const rewriteInPlace = async (
     run: () => Promise<{ ok: true } | { ok: true; canceled: true } | { ok: false; error: string }>,
   ): Promise<FileOpResult> => {
+    if (!(await mayFlushForRewrite())) return { ok: true, canceled: true, flushed: false }
     const held: { before: Uint8Array | null } = { before: null }
     const result = await runFileOp(async () => {
-      held.before = await readWrittenSnapshot(window.pdfApi, filePath)
-      return run()
+      const change = await writeInPlace(window.pdfApi, filePath, run, noUndoGate())
+      // declined: reported like a dismissed picker, this operation wrote nothing
+      if (change.declined) return { ok: true, canceled: true } as const
+      held.before = change.before
+      return change.result
     })
     if (!result.ok || 'canceled' in result) return result
     if (held.before) return { ok: true, pageCount: await reloadWritten(held.before) }
@@ -7908,12 +7935,19 @@ export default function App() {
     showNotice(savedPct > 0 ? t('reduceDone', { pct: savedPct }) : t('reduceAlreadySmall'))
   }
 
-  const insertPdf = (afterOrigIdx: number) => {
+  const insertPdf = async (afterOrigIdx: number) => {
     // the flush bakes the visible order into the file, so the anchor becomes its visible position
     const afterPageIndex = visListOf(orderRef.current).indexOf(afterOrigIdx)
+    if (!(await mayFlushForRewrite())) return
     return flushThen(async () => {
-      const before = await readWrittenSnapshot(window.pdfApi, filePath)
-      const result = await window.pdfApi.insertPdf({ path: filePath, afterPageIndex })
+      const change = await writeInPlace(
+        window.pdfApi,
+        filePath,
+        () => window.pdfApi.insertPdf({ path: filePath, afterPageIndex }),
+        noUndoGate(),
+      )
+      if (change.declined) return
+      const { result, before } = change
       if (!result.ok) {
         opFailed(result.error)
         return

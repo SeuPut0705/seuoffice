@@ -10,4 +10,6 @@ export const pt = {
   diskReloadFailed: 'Não foi possível recarregar o arquivo: {detail}',
   diskChangedNoUndo:
     'Outro programa alterou ou removeu este arquivo, por isso Desfazer e Refazer não foram aplicados a esta alteração.',
+  pageOpNoUndoConfirm:
+    'Este arquivo ({size}) é maior que o tamanho mantido para Desfazer ({limit}), por isso esta operação de páginas não poderá ser desfeita. Continuar?',
 } satisfies Record<keyof typeof zh, string>

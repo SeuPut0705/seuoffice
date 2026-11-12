@@ -10,4 +10,6 @@ export const ar = {
   diskReloadFailed: 'تعذّرت إعادة تحميل الملف: {detail}',
   diskChangedNoUndo:
     'غيّر برنامج آخر هذا الملف أو حذفه، لذلك لم يُنفَّذ التراجع أو الإعادة لهذا التغيير.',
+  pageOpNoUndoConfirm:
+    'هذا الملف ({size}) أكبر من الحجم الذي يُحتفَظ به للتراجع ({limit})، لذلك لا يمكن التراجع عن عملية الصفحات هذه. هل تريد المتابعة؟',
 } satisfies Record<keyof typeof zh, string>

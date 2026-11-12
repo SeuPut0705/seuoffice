@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  agreesToNoUndo,
   MAX_WRITTEN_STEPS,
   NO_WRITTEN_STEPS,
-  readWrittenSnapshot,
   recordWritten,
   stepWrittenFile,
+  writeInPlace,
+  type NoUndoQuestion,
   type WrittenSteps,
 } from '../src/renderer/written-history'
 import { PDF_READ_CHUNK_BYTES } from '../src/shared/ipc'
@@ -66,16 +68,24 @@ const bytesOf = (...values: number[]) => new Uint8Array(values)
 const held = (steps: WrittenSteps) =>
   [...steps.undo, ...steps.redo].reduce((sum, each) => sum + each.byteLength, 0)
 
-/** One change written in place: the file before it is kept, then the file becomes `after` */
+/** One change written in place by a person who goes on whatever is asked: the file before it
+ *  is kept, then the file becomes `after` */
 async function change(
   file: FakeFile,
   steps: WrittenSteps,
   after: Uint8Array,
   limits?: { bytes: number; steps: number },
 ): Promise<WrittenSteps> {
-  const before = await readWrittenSnapshot(file.api, PATH, limits)
-  file.disk = after
-  return recordWritten(steps, before, limits)
+  const written = await writeInPlace(
+    file.api,
+    PATH,
+    async () => {
+      file.disk = after
+    },
+    { consent: { given: false }, confirm: () => true, limits },
+  )
+  if (written.declined) throw new Error('the change was declined')
+  return recordWritten(steps, written.before, limits)
 }
 
 describe('the file kept around a page operation, for Undo and Redo', () => {
@@ -153,7 +163,12 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
     expect(earlier.undo).toHaveLength(1)
 
     const file = fakeFile(new Uint8Array(2 * PDF_READ_CHUNK_BYTES + 5))
-    const before = await readWrittenSnapshot(file.api, PATH, limits)
+    const written = await writeInPlace(file.api, PATH, async () => {}, {
+      consent: { given: false },
+      confirm: () => true,
+      limits,
+    })
+    const before = written.declined ? undefined : written.before
     // not toBeNull: a failure would print sixteen million bytes
     expect(before === null).toBe(true)
     expect(file.wholeReads).toEqual([])
@@ -241,5 +256,166 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
       reason: 'disk-changed',
     })
     expect(file.restores).toBe(0)
+  })
+})
+
+/** The person asked about a change that cannot be undone: what they were asked, and their answer */
+function person(answer: boolean) {
+  const asked: NoUndoQuestion[] = []
+  return {
+    asked,
+    confirm: (question: NoUndoQuestion) => {
+      asked.push(question)
+      return answer
+    },
+  }
+}
+
+/** A page operation that would leave `after` in the file, counting how often it was asked to write */
+function operation(file: FakeFile, after: Uint8Array) {
+  const op = {
+    writes: 0,
+    write: async () => {
+      op.writes += 1
+      file.disk = after
+      return 'written' as const
+    },
+  }
+  return op
+}
+
+describe('a page operation on a file too large to keep for Undo', () => {
+  const limits = { bytes: 4, steps: MAX_WRITTEN_STEPS }
+  const LARGE = [1, 2, 3, 4, 5, 6]
+
+  it('asks before anything is written, naming the file size and the limit', async () => {
+    const file = fakeFile(bytesOf(...LARGE))
+    const op = operation(file, bytesOf(9))
+    const asked: Array<NoUndoQuestion & { writesSoFar: number }> = []
+
+    const out = await writeInPlace(file.api, PATH, op.write, {
+      consent: { given: false },
+      confirm: (question) => {
+        asked.push({ ...question, writesSoFar: op.writes })
+        return true
+      },
+      limits,
+    })
+
+    expect(asked).toEqual([{ fileBytes: 6, limitBytes: 4, writesSoFar: 0 }])
+    expect(out).toEqual({ declined: false, result: 'written', before: null })
+    expect([...file.disk]).toEqual([9])
+  })
+
+  it('writes nothing and leaves the steps as they were when the person cancels', async () => {
+    // one step from when the file was still small enough to keep
+    const file = fakeFile(bytesOf(7))
+    const steps = await change(file, NO_WRITTEN_STEPS, bytesOf(...LARGE), limits)
+    expect(steps.undo).toHaveLength(1)
+    const op = operation(file, bytesOf(9))
+    const user = person(false)
+
+    const out = await writeInPlace(file.api, PATH, op.write, {
+      consent: { given: false },
+      confirm: user.confirm,
+      limits,
+    })
+
+    expect(out).toEqual({ declined: true })
+    expect(user.asked).toHaveLength(1)
+    expect(op.writes).toBe(0)
+    expect(file.restores).toBe(0)
+    expect([...file.disk]).toEqual(LARGE)
+    // the step from before is still the way back
+    const undone = await stepWrittenFile(file.api, PATH, steps, 'undo', {
+      diskChanged: false,
+      limits,
+    })
+    expect(undone.ok && [...file.disk]).toEqual([7])
+  })
+
+  it('asks again the next time after a cancel', async () => {
+    const file = fakeFile(bytesOf(...LARGE))
+    const user = person(false)
+    const gate = { consent: { given: false }, confirm: user.confirm, limits }
+
+    await writeInPlace(file.api, PATH, operation(file, bytesOf(8)).write, gate)
+    await writeInPlace(file.api, PATH, operation(file, bytesOf(9)).write, gate)
+
+    expect(user.asked).toHaveLength(2)
+    expect([...file.disk]).toEqual(LARGE)
+  })
+
+  it('goes on after Continue and does not ask again for the same document', async () => {
+    const file = fakeFile(bytesOf(...LARGE))
+    const user = person(true)
+    const gate = { consent: { given: false }, confirm: user.confirm, limits }
+
+    const first = operation(file, bytesOf(2, 2, 2, 2, 2, 2, 2))
+    expect(await writeInPlace(file.api, PATH, first.write, gate)).toMatchObject({ declined: false })
+    const second = operation(file, bytesOf(3, 3, 3, 3, 3, 3, 3, 3))
+    expect(await writeInPlace(file.api, PATH, second.write, gate)).toMatchObject({
+      declined: false,
+    })
+
+    expect([first.writes, second.writes]).toEqual([1, 1])
+    expect(user.asked).toEqual([{ fileBytes: 6, limitBytes: 4 }])
+    expect([...file.disk]).toEqual([3, 3, 3, 3, 3, 3, 3, 3])
+
+    // another document has not been agreed to
+    const other = fakeFile(bytesOf(...LARGE))
+    await writeInPlace(other.api, PATH, operation(other, bytesOf(9)).write, {
+      consent: { given: false },
+      confirm: user.confirm,
+      limits,
+    })
+    expect(user.asked).toHaveLength(2)
+  })
+
+  it('never asks about a file that fits, and keeps it for Undo', async () => {
+    const file = fakeFile(bytesOf(1, 2, 3, 4))
+    const user = person(false)
+    const op = operation(file, bytesOf(9))
+
+    const out = await writeInPlace(file.api, PATH, op.write, {
+      consent: { given: false },
+      confirm: user.confirm,
+      limits,
+    })
+
+    expect(user.asked).toEqual([])
+    expect(op.writes).toBe(1)
+    expect(out.declined === false && [...out.before!]).toEqual([1, 2, 3, 4])
+  })
+
+  it('does not ask when a change only pushes the oldest step out', async () => {
+    const file = fakeFile(bytesOf(0))
+    const user = person(false)
+    const gate = { consent: { given: false }, confirm: user.confirm }
+    let steps: WrittenSteps = NO_WRITTEN_STEPS
+    for (let n = 1; n <= MAX_WRITTEN_STEPS + 2; n++) {
+      const out = await writeInPlace(file.api, PATH, operation(file, bytesOf(n)).write, gate)
+      if (!out.declined) steps = recordWritten(steps, out.before)
+    }
+    expect(steps.undo).toHaveLength(MAX_WRITTEN_STEPS)
+    expect([...file.disk]).toEqual([MAX_WRITTEN_STEPS + 2])
+    expect(user.asked).toEqual([])
+  })
+
+  it('takes an answer given before the pending edits were saved as the one time', async () => {
+    const file = fakeFile(bytesOf(...LARGE))
+    const user = person(true)
+    const gate = { consent: { given: false }, confirm: user.confirm, limits }
+
+    // the size the document was read at, asked about before the save that precedes the change
+    expect(await agreesToNoUndo(3, gate)).toBe(true)
+    expect(user.asked).toEqual([])
+    expect(await agreesToNoUndo(6, gate)).toBe(true)
+    expect(user.asked).toEqual([{ fileBytes: 6, limitBytes: 4 }])
+
+    const op = operation(file, bytesOf(9))
+    await writeInPlace(file.api, PATH, op.write, gate)
+    expect(op.writes).toBe(1)
+    expect(user.asked).toHaveLength(1)
   })
 })

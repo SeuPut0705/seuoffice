@@ -11,4 +11,6 @@ export const hi = {
   diskReloadFailed: 'फ़ाइल फिर से लोड नहीं हो सकी: {detail}',
   diskChangedNoUndo:
     'किसी दूसरे प्रोग्राम ने यह फ़ाइल बदल दी या हटा दी है, इसलिए इस बदलाव को पूर्ववत या फिर से नहीं किया गया।',
+  pageOpNoUndoConfirm:
+    'यह फ़ाइल ({size}) पूर्ववत करने के लिए रखे जाने वाले आकार ({limit}) से बड़ी है, इसलिए पृष्ठों की यह कार्रवाई पूर्ववत नहीं की जा सकेगी। जारी रखें?',
 } satisfies Record<keyof typeof zh, string>

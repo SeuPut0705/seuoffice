@@ -8,4 +8,7 @@ export const zh = {
   diskDismiss: '确定',
   diskReloadFailed: '无法重新载入文件：{detail}',
   diskChangedNoUndo: '此文件已被其他程序更改或删除，因此未执行此更改的撤销或重做。',
+  // asked before a page operation on a file too large to keep for Undo
+  pageOpNoUndoConfirm:
+    '此文件（{size}）超过了可为撤销保留的大小（{limit}），因此此页面操作无法撤销。是否继续？',
 }

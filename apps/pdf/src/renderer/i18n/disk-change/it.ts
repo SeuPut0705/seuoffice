@@ -12,4 +12,6 @@ export const it = {
   diskReloadFailed: 'Impossibile ricaricare il file: {detail}',
   diskChangedNoUndo:
     'Un altro programma ha modificato o rimosso questo file, quindi Annulla e Ripeti non sono stati applicati a questa modifica.',
+  pageOpNoUndoConfirm:
+    'Questo file ({size}) supera la dimensione conservata per Annulla ({limit}), quindi questa operazione sulle pagine non potrà essere annullata. Continuare?',
 } satisfies Record<keyof typeof zh, string>

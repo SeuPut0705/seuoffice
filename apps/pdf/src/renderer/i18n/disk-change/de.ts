@@ -11,4 +11,6 @@ export const de = {
   diskReloadFailed: 'Die Datei konnte nicht neu geladen werden: {detail}',
   diskChangedNoUndo:
     'Ein anderes Programm hat diese Datei geändert oder entfernt. „Rückgängig“ und „Wiederholen“ wurden für diese Änderung daher nicht ausgeführt.',
+  pageOpNoUndoConfirm:
+    'Diese Datei ({size}) ist größer als die für „Rückgängig“ aufbewahrte Größe ({limit}). Dieser Seitenvorgang kann daher nicht rückgängig gemacht werden. Fortfahren?',
 } satisfies Record<keyof typeof zh, string>

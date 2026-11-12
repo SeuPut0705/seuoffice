@@ -11,4 +11,6 @@ export const pl = {
   diskReloadFailed: 'Nie udało się ponownie wczytać pliku: {detail}',
   diskChangedNoUndo:
     'Inny program zmienił lub usunął ten plik, dlatego Cofnij i Ponów nie zostały wykonane dla tej zmiany.',
+  pageOpNoUndoConfirm:
+    'Ten plik ({size}) jest większy niż rozmiar przechowywany na potrzeby Cofnij ({limit}), dlatego tej operacji na stronach nie będzie można cofnąć. Kontynuować?',
 } satisfies Record<keyof typeof zh, string>
