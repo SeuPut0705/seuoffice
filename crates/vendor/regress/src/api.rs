@@ -438,6 +438,19 @@ impl Regex {
         self.find_iter(text).next()
     }
 
+    /// Bounds the backtrack stack of each search with this regex to `entries`
+    /// entries, or lifts the bound with `None`, the default.
+    ///
+    /// A loop whose body is more than one character matcher keeps entries on
+    /// the stack for each turn until the match attempt ends, so without a
+    /// bound one search can take memory in proportion to the text. A search
+    /// that would need more than `entries` stops instead: its iterator ends
+    /// and [`Matches::limit_exceeded`] returns true. Its absence of a match
+    /// then means nothing; check before taking it as "no match".
+    pub fn set_backtrack_limit(&mut self, entries: Option<usize>) {
+        self.cr.backtrack_limit = entries;
+    }
+
     /// Searches `text`, returning an iterator over non-overlapping matches.
     /// Note that the resulting Iterator borrows both the regex `'r` and the
     /// input string as `'t`.

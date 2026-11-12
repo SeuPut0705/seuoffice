@@ -454,6 +454,7 @@ pub fn emit(n: &ir::Regex) -> CompiledRegex {
             group_names: Box::new([]),
             flags: n.flags,
             start_pred: startpredicate::predicate_for_re(n),
+            backtrack_limit: None,
         },
     };
     emitter.emit_node(&n.node);

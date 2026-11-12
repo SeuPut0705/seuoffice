@@ -41,6 +41,18 @@ an engine that reads documents someone sent:
 Each is its own commit, carries no code of this project, and is written so it
 could be offered upstream.
 
+1. **A bound on the backtrack stack** (`classicalbacktrack.rs`, `exec.rs`,
+   `api.rs`, `insn.rs`, `emit.rs`, `tests/backtrack_limit.rs`).
+   `Regex::set_backtrack_limit(Some(entries))` bounds the stack of each
+   search; the default, `None`, changes nothing. The bound is checked before
+   each instruction; the entries of a stack a lookaround sets aside count
+   against it. A search that would pass it stops: the iterator ends and
+   `Matches::limit_exceeded()` is true, and no search runs after it. The stack
+   grows by doubling below a quarter of the bound and then to the bound in one
+   step, so its capacity stops at the bound and a reallocation holds 1.25
+   times it at most. After each match attempt a stack above 4,096 entries is
+   shrunk back to that, so one large search does not keep its memory.
+
 ## Dropping it
 
 When a release of regress has both changes (or equivalents), remove this
