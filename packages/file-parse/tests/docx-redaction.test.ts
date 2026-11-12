@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { OLD_REDACT_NS } from '../../agent-core/src/old-names'
 import { buildDocx } from '../../docx-engine/tests/helpers/build-docx'
+import { docxToText } from '../src/docx'
 import { parseFileToText } from '../src/index'
 import { writeFixture } from './helpers/fixtures'
 
@@ -78,6 +79,15 @@ describe('docx attachment: a span hidden from AI', () => {
     )
     expect(result.ok).toBe(false)
     expect(JSON.stringify(result)).not.toContain(SECRET)
+  })
+
+  it('fails on an unreadable mark even when the length budget stops the read early', async () => {
+    const bytes = await buildDocx({
+      bodyXml:
+        `<w:p><w:r><w:rPr xmlns="${OWN_REDACT_NS}"><redact w:label="${LABEL}"/></w:rPr><w:t>${SECRET}</w:t></w:r></w:p>` +
+        '<w:p><w:r><w:t>after</w:t></w:r></w:p>',
+    })
+    await expect(docxToText(bytes, { maxChars: 1 })).rejects.toThrow()
   })
 
   it('an unmarked document reads exactly as before', async () => {

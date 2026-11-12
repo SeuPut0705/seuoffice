@@ -293,7 +293,13 @@ function scanBody(
   TOKEN.lastIndex = 0
   let m: RegExpExecArray | null
   while ((m = TOKEN.exec(xml)) !== null) {
-    if (out.full) return
+    if (out.full) {
+      // the text collected so far may already hold a run whose mark was not read
+      if (redactSeen !== countMarks(xml.slice(0, m.index), redactElements.namespaced)) {
+        throw new RedactionMarkError('a mark is written in a form that cannot be read')
+      }
+      return
+    }
     const [, close, name, attrs, selfClose, text] = m
     if (text !== undefined) {
       if (inText && !skip && !runHidden) appendText(decodeEntities(text))
@@ -472,20 +478,26 @@ function scanBody(
  * unprefixed mark whose namespace is declared on an ancestor) fails the read,
  * as the deck and workbook readers do.
  */
-function redactElementNames(xml: string): Set<string> & { count: number } {
-  const names = new Set<string>() as Set<string> & { count: number }
+function redactElementNames(xml: string): Set<string> & { count: number; namespaced: boolean } {
+  const names = new Set<string>() as Set<string> & { count: number; namespaced: boolean }
+  names.namespaced = REDACT_NAMESPACES.some((ns) => xml.includes(ns))
   names.count = 0
-  const namespaced = REDACT_NAMESPACES.some((ns) => xml.includes(ns))
-  if (!namespaced && !/<[\w.-]+:redact\b/.test(xml)) {
+  if (!names.namespaced && !/<[\w.-]+:redact\b/.test(xml)) {
     return names
   }
   for (const m of xml.matchAll(/xmlns:([\w.-]+)="([^"]*)"/g)) {
     if (REDACT_NAMESPACES.includes(m[2]!)) names.add(`${m[1]}:redact`)
   }
-  names.count =
+  names.count = countMarks(xml, names.namespaced)
+  return names
+}
+
+/** Elements in `xml` that may be a mark: any prefix, or none in a part that names a mark namespace. */
+function countMarks(xml: string, namespaced: boolean): number {
+  return (
     (xml.match(/<[\w.-]+:redact\b/g) ?? []).length +
     (namespaced ? (xml.match(/<redact\b/g) ?? []).length : 0)
-  return names
+  )
 }
 
 /** A mark: a bound prefix, or an unprefixed element that declares the mark's namespace itself. */
