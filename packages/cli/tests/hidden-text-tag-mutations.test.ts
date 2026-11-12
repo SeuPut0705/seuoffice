@@ -79,3 +79,68 @@ describe.each(Object.keys(SLIDE_MUTATIONS))('slide tags rewritten: %s', (mutatio
     expect(text).not.toContain(SECRET)
   })
 })
+
+/**
+ * A change elsewhere in the document, saved: whatever the tags looked like,
+ * every hidden run keeps its words and its mark, and no reader of the saved
+ * file hands a hidden word over.
+ */
+const CHANGES: Record<string, unknown[]> = {
+  'add a note': [{ op: 'insert_footnote', blockIndex: 0, text: 'Extra note.' }],
+  'add a comment': [{ op: 'add_comment', blockIndex: 0, comment: 'Extra comment.' }],
+  'add a paragraph': [{ op: 'insert_content', html: '<p>Appended.</p>' }],
+  'edit the header': [{ op: 'set_header_footer', kind: 'header', text: 'Head 2 {{client phone}}' }],
+}
+
+describe.each(TAG_MUTATION_NAMES)('tags rewritten: %s, then saved', (mutation) => {
+  it.each(Object.keys(CHANGES))('%s keeps every hidden run hidden', async (change) => {
+    const { writeFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const JSZip = (await import('jszip')).default
+    const dir = tempDir()
+    const file = await mutatedStoriesDocx(dir, mutation)
+    const ops = join(dir, 'ops.json')
+    writeFileSync(ops, JSON.stringify(CHANGES[change]))
+    const applied = await run(['docs', 'apply', file, '--ops', ops, '--json'])
+    expect(applied.stdout).not.toContain(SECRET)
+    expect(applied.code).toBe(0)
+
+    // the words are kept in the file
+    const zip = await JSZip.loadAsync(readFileSync(file))
+    const parts = await Promise.all(
+      Object.keys(zip.files)
+        .filter((path) => /^word\/[^/]+\.xml$/.test(path))
+        .map((path) => zip.file(path)!.async('string')),
+    )
+    for (const tag of ['B', 'H', 'F', 'C', 'N', 'S']) {
+      expect(parts.some((xml) => xml.includes(`${SECRET}${tag}`))).toBe(true)
+    }
+    // and still withheld from every reader
+    const read = await run([
+      'docs',
+      'read',
+      file,
+      '--full',
+      '--html',
+      '--header-footer',
+      '--comments',
+      '--notes',
+      '--json',
+    ])
+    expect(read.code).toBe(0)
+    expect(read.stdout).not.toContain(SECRET)
+    const detail = read.json().detail
+    expect(detail.items[0].text).toContain('{{client phone}}')
+    expect(detail.headerFooter.header).toContain('{{client phone}}')
+    expect(detail.headerFooter.footer).toContain('{{client phone}}')
+    expect(detail.comments.find((c: { id: string }) => c.id === '1').text).toContain('{{')
+    expect(detail.notes.find((n: { id: string }) => n.id === '1').text).toContain('{{')
+    const attachment = await docxToText(new Uint8Array(readFileSync(file))).catch(
+      (err: unknown) => {
+        if (err instanceof RedactionMarkError) return ''
+        throw err
+      },
+    )
+    expect(attachment).not.toContain(SECRET)
+  })
+})

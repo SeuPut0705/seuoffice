@@ -26,6 +26,28 @@ async function commentedDocx(attrs: string, end = '</w:comment>'): Promise<Uint8
 }
 
 describe('saving comments keeps a hidden run however the comment tag is spelled', () => {
+  it('a hidden run whose CDATA holds a comment end tag keeps its mark', async () => {
+    const bytes = await commentedDocx('w:id="1" w:author="K"')
+    const JSZip = (await import('jszip')).default
+    const zip = await JSZip.loadAsync(bytes)
+    const xml = await zip.file('word/comments.xml')!.async('string')
+    zip.file(
+      'word/comments.xml',
+      xml.replace(`<w:t>${SECRET}</w:t>`, `<w:t><![CDATA[</w:comment>]]>${SECRET}</w:t>`),
+    )
+    const doc = await parseDocx(await zip.generateAsync({ type: 'uint8array' }))
+    expect(doc.comments[0]!.modelText).toBe(`Note: ${PLACEHOLDER}`)
+    const blocks = doc.blocks
+      .filter((block) => !block.hidden)
+      .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+    const saved = await saveDocx(doc, blocks, {
+      comments: [...doc.comments, { id: '2', author: 'Lee', text: 'reply', parentId: '1' }],
+    })
+    const first = (await parseDocx(saved)).comments.find((c) => c.id === '1')!
+    expect(first.text).toContain(SECRET)
+    expect(first.modelText).toBe(`Note: ${PLACEHOLDER}`)
+  })
+
   it('a comment whose end tag has white space before > keeps its mark', async () => {
     const doc = await parseDocx(await commentedDocx('w:id="1" w:author="K"', '</w:comment >'))
     const blocks = doc.blocks

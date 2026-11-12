@@ -212,3 +212,42 @@ describe('docs read: a comment whose open tag is spelled another valid way', () 
     },
   )
 })
+
+describe('docs apply: add_comment and words hidden from AI', () => {
+  it('answers a search for hidden words as it answers one for absent words', async () => {
+    const dir = tempDir()
+    const file = await hiddenStoriesDocx(dir, NAMESPACES[1]![1])
+    const before = readFileSync(file)
+    const messages: string[] = []
+    for (const text of [`${SECRET}B`, 'absent words']) {
+      const r = await run([
+        'docs',
+        'apply',
+        file,
+        '--ops',
+        opsFile(dir, [{ op: 'add_comment', blockIndex: 0, text, comment: 'x' }]),
+        '--json',
+      ])
+      expect(r.code).not.toBe(0)
+      messages.push(r.json().message.replace(text, '<text>'))
+    }
+    expect(messages[0]).toBe(messages[1])
+    expect(readFileSync(file)).toEqual(before)
+  })
+
+  it('reports the anchored block as a model may read it', async () => {
+    const dir = tempDir()
+    const file = await hiddenStoriesDocx(dir, NAMESPACES[1]![1])
+    const r = await run([
+      'docs',
+      'apply',
+      file,
+      '--ops',
+      opsFile(dir, [{ op: 'add_comment', blockIndex: 0, comment: 'x' }]),
+      '--json',
+    ])
+    expect(r.code).toBe(0)
+    expect(r.stdout).not.toContain(SECRET)
+    expect(r.stdout).toContain(PLACEHOLDER)
+  })
+})
