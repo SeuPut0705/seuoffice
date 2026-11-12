@@ -66,6 +66,8 @@ export class Engine {
             decoder.decode(new Uint8Array(buffer, b, bLength)),
           )
         },
+        // the gate passes no callback: the engine refuses a call that asks for one
+        host_callback: (): bigint => 0xffff_ffff_ffff_ffffn,
       },
     })
     const exports = instance.exports as unknown as EngineExports
