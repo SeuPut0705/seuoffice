@@ -26,6 +26,8 @@ while :; do
   if mkdir "$lock" 2>/dev/null; then echo $$ > "$lock/pid"; break; fi
   holder=$(cat "$lock/pid" 2>/dev/null)
   if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then rm -rf "$lock"; continue; fi
+  # a holder killed between its mkdir and its pid file leaves no pid: stale after 30 s
+  if [ -z "$holder" ] && [ $(($(date +%s) - $(stat -c %Y "$lock"))) -gt 30 ]; then rm -rf "$lock"; continue; fi
   sleep 3
 done
 # release only a lock that is still ours: if it was removed and taken by another
