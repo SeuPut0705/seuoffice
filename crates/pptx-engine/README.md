@@ -148,8 +148,8 @@ the preserved artifacts are the actual run's output and complete differences.
 any comparison: `pptxgenjs` needed its CommonJS constructor under `tsx`. It is
 kept too, not presented as the first completed comparison.
 
-After the parser fix and the merge of `origin/feat/rust-docx-u1` at
-`b471da31d`, `evidence/u1-local-verified.stdout.log` records 12,896 checks, no
+After the parser fix and the merges of `origin/feat/rust-docx-u1` (to
+`6e28d6fdd`), `evidence/u1-local-verified.stdout.log` records 12,902 checks, no
 unlisted difference, no key-order difference, and at least two distinct
 TypeScript results for each of the 27 functions. The ledger has four classes
 with 28 exact inputs, all still reproducing. The first run listed 50: the
@@ -196,12 +196,21 @@ leaves no fault in the working tree. It runs the comparisons of (f) and
 requires differences in the tally of the function the fault is in. Three of
 its probes were selected by an independent reviewer without the porters'
 lists: a byte offset instead of a UTF-16 offset, ignored URI decoding, and
-reversed repeated XML children. `--only <id,...>` runs some of them. The
-workflow runs all of them on the runner; so do the tests and clippy of the
-whole workspace and the Word gate.
+reversed repeated XML children. `--only <id,...>` runs some of them.
+
+On the runner (run 43149681436, at `927027607`) the slides gate passed and 29
+of the 30 faults were caught. One passed: `>=` for `>` at the part-count limit
+of `assertZipWithinLimits`, because no input had exactly 10,000 parts. Inputs
+with 10,000 parts, 10,001 parts and 10,000 parts beside a folder close it (2
+differences under that fault now). The independent URI-decoding fault was
+caught by a single input, so three more encoded targets were added (17
+differences now). The Word gate of that run had no difference on any line and
+failed on one floor that `origin/feat/rust-docx-u1` had at `b471da31d` and
+lowered in `3bf9fa6fe`, merged since.
 
 Local runtime: Node 22.23.5, npm 11.19.1, Rust 1.99.1, `wasm32-wasip1`.
-The release wasm is 2,070,717 bytes, the Word engine included (2,070,274
-before the parser fix; the size before this unit was not measured here). The
-changed crates' native tests passed 93 tests. Neither that test count nor
-compilation is the parity proof; the recorded comparison is.
+The release wasm, the Word engine included, was 2,070,717 bytes before the
+merge that brought the Word engine's `resolve-props` port and is 2,175,276
+after it; the size before this unit was not measured here. The changed
+crates' native tests passed 93 tests. Neither that test count nor compilation
+is the parity proof; the recorded comparison is.
