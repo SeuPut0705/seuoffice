@@ -16,13 +16,14 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  realpath,
   rm,
   stat,
   unlink,
   writeFile,
 } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { basename, dirname, isAbsolute, join, extname } from 'node:path'
+import { basename, dirname, isAbsolute, join, extname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import {
   BrowserWindow,
@@ -301,6 +302,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice 只编辑 .docx，不编辑 Word 97-2003 旧版 .doc。正文、标题、列表、表格和图片会转换过来；脚注、批注和文本框不会完整保留。原文件不会被修改，转换出的 .docx 是一份独立副本，之后的保存都写入它。', // public-hygiene: allow
     docImportConvertBtn: '转换并打开',
+    docImportOriginalTarget: '不能覆盖原始文档。请选择其他名称。',
     dlgSaveAs: '另存为',
     closeUnsavedMsg: '此文档有未保存的更改。',
     closeUnsavedDetail: '关闭前是否保存？',
@@ -444,6 +446,8 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice edits .docx, not Word 97-2003 documents. Body text, headings, lists, tables and images carry over; footnotes, comments and text boxes are not fully preserved. The original file is never changed; the converted .docx is a separate copy that later saves write to.',
     docImportConvertBtn: 'Convert and open',
+    docImportOriginalTarget:
+      'The original document cannot be overwritten. Choose a different name.',
     dlgSaveAs: 'Save As',
     closeUnsavedMsg: 'This document has unsaved changes.',
     closeUnsavedDetail: 'Do you want to save them before closing?',
@@ -587,6 +591,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice chỉnh sửa .docx chứ không chỉnh sửa tài liệu Word 97-2003 (.doc). Nội dung, tiêu đề, danh sách, bảng và hình ảnh được chuyển đổi; chú thích cuối trang, bình luận và hộp văn bản không được giữ đầy đủ. Tệp gốc không bao giờ bị sửa; bản .docx sau chuyển đổi là một bản sao độc lập để tiếp tục chỉnh sửa và lưu.',
     docImportConvertBtn: 'Chuyển đổi và mở',
+    docImportOriginalTarget: 'Không thể ghi đè tài liệu gốc. Hãy chọn tên khác.',
     dlgSaveAs: 'Lưu dưới dạng',
     closeUnsavedMsg: 'Tài liệu này có những thay đổi chưa được lưu.',
     closeUnsavedDetail: 'Bạn có muốn lưu các thay đổi trước khi đóng không?',
@@ -731,6 +736,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice は Word 97-2003 形式（.doc）ではなく .docx を編集します。本文・見出し・リスト・表・画像は変換されますが、脚注・コメント・テキストボックスは完全には保持されません。元のファイルは変更されず、変換後の .docx は独立したコピーとして以後の保存先になります。',
     docImportConvertBtn: '変換して開く',
+    docImportOriginalTarget: '元の文書は上書きできません。別の名前を選んでください。',
     dlgSaveAs: '名前を付けて保存',
     closeUnsavedMsg: 'このドキュメントに未保存の変更があります。',
     closeUnsavedDetail: '閉じる前に保存しますか？',
@@ -875,6 +881,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice은 Word 97-2003(.doc) 문서가 아니라 .docx를 편집합니다. 본문, 제목, 목록, 표, 이미지는 변환되지만 각주, 메모, 텍스트 상자는 완전히 유지되지 않습니다. 원본 파일은 변경되지 않으며, 변환된 .docx는 이후 저장이 기록되는 독립적인 사본입니다.',
     docImportConvertBtn: '변환 후 열기',
+    docImportOriginalTarget: '원본 문서는 덮어쓸 수 없습니다. 다른 이름을 선택하세요.',
     dlgSaveAs: '다른 이름으로 저장',
     closeUnsavedMsg: '이 문서에 저장하지 않은 변경 사항이 있습니다.',
     closeUnsavedDetail: '닫기 전에 저장하시겠습니까?',
@@ -1019,6 +1026,8 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice modifie des .docx, pas de documents Word 97-2003 (.doc). Le texte, les titres, les listes, les tableaux et les images sont convertis ; les notes de bas de page, les commentaires et les zones de texte ne sont pas entièrement conservés. Le fichier d’origine n’est jamais modifié ; le .docx converti est une copie distincte où s’effectuent les enregistrements suivants.',
     docImportConvertBtn: 'Convertir et ouvrir',
+    docImportOriginalTarget:
+      'Le document d’origine ne peut pas être écrasé. Choisissez un autre nom.',
     dlgSaveAs: 'Enregistrer sous',
     closeUnsavedMsg: 'Ce document contient des modifications non enregistrées.',
     closeUnsavedDetail: 'Voulez-vous les enregistrer avant de fermer ?',
@@ -1164,6 +1173,8 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice bearbeitet .docx, nicht Word 97-2003-Dokumente (.doc). Text, Überschriften, Listen, Tabellen und Bilder werden übernommen; Fußnoten, Kommentare und Textfelder werden nicht vollständig bewahrt. Die Originaldatei bleibt unverändert; die konvertierte .docx-Kopie ist eigenständig, und spätere Speicherungen landen in ihr.',
     docImportConvertBtn: 'Konvertieren und öffnen',
+    docImportOriginalTarget:
+      'Das ursprüngliche Dokument darf nicht überschrieben werden. Wählen Sie einen anderen Namen.',
     dlgSaveAs: 'Speichern unter',
     closeUnsavedMsg: 'Dieses Dokument enthält ungespeicherte Änderungen.',
     closeUnsavedDetail: 'Vor dem Schließen speichern?',
@@ -1309,6 +1320,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice edita .docx, no documentos de Word 97-2003 (.doc). El texto, los títulos, las listas, las tablas y las imágenes se convierten; las notas al pie, los comentarios y los cuadros de texto no se conservan por completo. El archivo original nunca se modifica; el .docx convertido es una copia independiente en la que se guardan los cambios posteriores.',
     docImportConvertBtn: 'Convertir y abrir',
+    docImportOriginalTarget: 'No se puede sobrescribir el documento original. Elija otro nombre.',
     dlgSaveAs: 'Guardar como',
     closeUnsavedMsg: 'Este documento tiene cambios sin guardar.',
     closeUnsavedDetail: '¿Desea guardarlos antes de cerrar?',
@@ -1454,6 +1466,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice แก้ไข .docx ไม่ใช่เอกสาร Word 97-2003 (.doc) ข้อความ หัวข้อ รายการ ตาราง และรูปภาพจะถูกแปลง ส่วนเชิงอรรถ ความคิดเห็น และกล่องข้อความจะไม่ถูกเก็บไว้ทั้งหมด ไฟล์ต้นทางจะไม่ถูกแก้ไข และไฟล์ .docx ที่แปลงแล้วเป็นสำเนาแยกต่างหากที่การบันทึกครั้งต่อไปจะเขียนลง',
     docImportConvertBtn: 'แปลงแล้วเปิด',
+    docImportOriginalTarget: 'เขียนทับเอกสารต้นฉบับไม่ได้ กรุณาเลือกชื่ออื่น',
     dlgSaveAs: 'บันทึกเป็น',
     closeUnsavedMsg: 'เอกสารนี้มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก',
     closeUnsavedDetail: 'ต้องการบันทึกก่อนปิดหรือไม่?',
@@ -1598,6 +1611,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice mengedit .docx, bukan dokumen Word 97-2003 (.doc). Teks isi, judul, daftar, tabel, dan gambar ikut dikonversi; catatan kaki, komentar, dan kotak teks tidak sepenuhnya dipertahankan. File asli tidak pernah diubah; salinan .docx hasil konversi berdiri sendiri dan penyimpanan berikutnya ditulis ke sana.',
     docImportConvertBtn: 'Konversi dan buka',
+    docImportOriginalTarget: 'Dokumen asli tidak boleh ditimpa. Pilih nama lain.',
     dlgSaveAs: 'Simpan Sebagai',
     closeUnsavedMsg: 'Dokumen ini memiliki perubahan yang belum disimpan.',
     closeUnsavedDetail: 'Simpan sebelum menutup?',
@@ -1742,6 +1756,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice редактирует .docx, а не документы Word 97-2003 (.doc). Текст, заголовки, списки, таблицы и изображения переносятся; сноски, примечания и надписи сохраняются не полностью. Исходный файл никогда не изменяется; преобразованный .docx — отдельная копия, в которую записывается дальнейшее сохранение.',
     docImportConvertBtn: 'Преобразовать и открыть',
+    docImportOriginalTarget: 'Нельзя перезаписать исходный документ. Выберите другое имя.',
     dlgSaveAs: 'Сохранить как',
     closeUnsavedMsg: 'В этом документе есть несохранённые изменения.',
     closeUnsavedDetail: 'Сохранить их перед закрытием?',
@@ -1886,6 +1901,7 @@ const tMain = createI18n({
     docImportDetail:
       'يحرّر GenOffice ملفات ‎.docx ولا يحرّر مستندات Word 97-2003 (‎.doc). يُحوَّل النص والعناوين والقوائم والجداول والصور؛ أما الحواشي السفلية والتعليقات ومربعات النص فلا تُحفظ بالكامل. لا يتغيّر الملف الأصلي أبدًا؛ والملف ‎.docx المحوَّل نسخة مستقلة تُكتب فيها عمليات الحفظ اللاحقة.',
     docImportConvertBtn: 'تحويل وفتح',
+    docImportOriginalTarget: 'لا يمكن استبدال المستند الأصلي. اختر اسمًا آخر.',
     dlgSaveAs: 'حفظ باسم',
     closeUnsavedMsg: 'يحتوي هذا المستند على تغييرات غير محفوظة.',
     closeUnsavedDetail: 'هل تريد حفظها قبل الإغلاق؟',
@@ -2030,6 +2046,7 @@ const tMain = createI18n({
     docImportDetail:
       'O GenOffice edita .docx, não documentos do Word 97-2003 (.doc). Texto, títulos, listas, tabelas e imagens são convertidos; notas de rodapé, comentários e caixas de texto não são preservados por completo. O arquivo original nunca é alterado; o .docx convertido é uma cópia independente em que os salvamentos seguintes são gravados.',
     docImportConvertBtn: 'Converter e abrir',
+    docImportOriginalTarget: 'O documento original não pode ser substituído. Escolha outro nome.',
     dlgSaveAs: 'Salvar Como',
     closeUnsavedMsg: 'Este documento tem alterações não salvas.',
     closeUnsavedDetail: 'Deseja salvá-las antes de fechar?',
@@ -2174,6 +2191,8 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice modifica .docx, non documenti Word 97-2003 (.doc). Testo, titoli, elenchi, tabelle e immagini vengono convertiti; note a piè di pagina, commenti e caselle di testo non sono conservati completamente. Il file originale non viene mai modificato; il .docx convertito è una copia indipendente su cui vengono salvate le modifiche successive.',
     docImportConvertBtn: 'Converti e apri',
+    docImportOriginalTarget:
+      'Non è possibile sovrascrivere il documento originale. Scegli un altro nome.',
     dlgSaveAs: 'Salva con nome',
     closeUnsavedMsg: 'Questo documento contiene modifiche non salvate.',
     closeUnsavedDetail: 'Salvarle prima di chiudere?',
@@ -2318,6 +2337,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice edytuje .docx, a nie dokumenty Word 97-2003 (.doc). Tekst, nagłówki, listy, tabele i obrazy są konwertowane; przypisy, komentarze i pola tekstowe nie są zachowywane w całości. Plik oryginalny nigdy nie jest zmieniany; skonwertowany .docx to niezależna kopia, do której trafiają kolejne zapisy.',
     docImportConvertBtn: 'Konwertuj i otwórz',
+    docImportOriginalTarget: 'Nie można nadpisać oryginalnego dokumentu. Wybierz inną nazwę.',
     dlgSaveAs: 'Zapisz jako',
     closeUnsavedMsg: 'Ten dokument zawiera niezapisane zmiany.',
     closeUnsavedDetail: 'Czy zapisać je przed zamknięciem?',
@@ -2462,6 +2482,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice upravuje .docx, nikoli dokumenty Word 97-2003 (.doc). Text, nadpisy, seznamy, tabulky a obrázky se převedou; poznámky pod čarou, komentáře a textová pole se nepřevezmou úplně. Původní soubor se nikdy nemění; převedený .docx je samostatná kopie, do níž se dalším ukládáním zapisuje.',
     docImportConvertBtn: 'Převést a otevřít',
+    docImportOriginalTarget: 'Původní dokument nelze přepsat. Zvolte jiný název.',
     dlgSaveAs: 'Uložit jako',
     closeUnsavedMsg: 'Tento dokument obsahuje neuložené změny.',
     closeUnsavedDetail: 'Chcete je před zavřením uložit?',
@@ -2606,6 +2627,8 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice bewerkt .docx, geen Word 97-2003-documenten (.doc). Tekst, koppen, lijsten, tabellen en afbeeldingen worden omgezet; voetnoten, opmerkingen en tekstvakken niet volledig. Het oorspronkelijke bestand wordt nooit gewijzigd; de omgezette .docx is een zelfstandige kopie waarin volgende opslaan-acties terechtkomen.',
     docImportConvertBtn: 'Converteren en openen',
+    docImportOriginalTarget:
+      'Het oorspronkelijke document kan niet worden overschreven. Kies een andere naam.',
     dlgSaveAs: 'Opslaan als',
     closeUnsavedMsg: 'Dit document bevat niet-opgeslagen wijzigingen.',
     closeUnsavedDetail: 'Wilt u ze opslaan voordat u sluit?',
@@ -2750,6 +2773,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice menyunting .docx, bukan dokumen Word 97-2003 (.doc). Teks kandungan, tajuk, senarai, jadual dan imej ditukar; nota kaki, komen dan kotak teks tidak dikekalkan sepenuhnya. Fail asal tidak pernah diubah; salinan .docx yang ditukar ialah salinan berasingan tempat simpanan seterusnya ditulis.',
     docImportConvertBtn: 'Tukar dan buka',
+    docImportOriginalTarget: 'Dokumen asal tidak boleh ditimpa. Pilih nama lain.',
     dlgSaveAs: 'Simpan Sebagai',
     closeUnsavedMsg: 'Dokumen ini mempunyai perubahan yang belum disimpan.',
     closeUnsavedDetail: 'Adakah anda mahu menyimpannya sebelum menutup?',
@@ -2894,6 +2918,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice עורך קבצי ‎.docx ולא מסמכי Word 97-2003 (‎.doc). טקסט, כותרות, רשימות, טבלאות ותמונות מומרים; הערות שוליים, תגובות ותיבות טקסט לא נשמרים במלואם. קובץ המקור לעולם אינו משתנה; קובץ ה‑.docx שהומר הוא עותק נפרד שאליו נכתבות השמירות הבאות.',
     docImportConvertBtn: 'המר ופתח',
+    docImportOriginalTarget: 'לא ניתן לדרוס את המסמך המקורי. בחרו שם אחר.',
     dlgSaveAs: 'שמירה בשם',
     closeUnsavedMsg: 'במסמך זה יש שינויים שלא נשמרו.',
     closeUnsavedDetail: 'האם לשמור אותם לפני הסגירה?',
@@ -3038,6 +3063,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice Word 97-2003 (.doc) दस्तावेज़ नहीं, .docx संपादित करता है। मुख्य पाठ, शीर्षक, सूचियाँ, तालिकाएँ और चित्र बदल दिए जाते हैं; फुटनोट, टिप्पणियाँ और टेक्स्ट बॉक्स पूरी तरह नहीं रखे जाते। मूल फ़ाइल कभी नहीं बदलती; बदली हुई .docx एक स्वतंत्र प्रति है जिसमें आगे के सेव लिखे जाते हैं।',
     docImportConvertBtn: 'बदलकर खोलें',
+    docImportOriginalTarget: 'मूल दस्तावेज़ को अधिलेखित नहीं किया जा सकता। दूसरा नाम चुनें।',
     dlgSaveAs: 'इस रूप में सहेजें',
     closeUnsavedMsg: 'इस दस्तावेज़ में सहेजे नहीं गए परिवर्तन हैं।',
     closeUnsavedDetail: 'क्या आप बंद करने से पहले उन्हें सहेजना चाहते हैं?',
@@ -3182,6 +3208,7 @@ const tMain = createI18n({
     docImportDetail:
       'GenOffice 只編輯 .docx，不編輯 Word 97-2003 舊版 .doc。內文、標題、清單、表格與圖片會轉換過來；註腳、註解與文字方塊不會完整保留。原始檔案不會被修改，轉換後的 .docx 是獨立副本，之後的儲存都寫入它。', // public-hygiene: allow
     docImportConvertBtn: '轉換並開啟',
+    docImportOriginalTarget: '不能覆寫原始文件。請選擇其他名稱。',
     dlgSaveAs: '另存新檔',
     closeUnsavedMsg: '此文件有未儲存的變更。',
     closeUnsavedDetail: '關閉前是否要儲存？',
@@ -4029,11 +4056,81 @@ const docsRecoveryEditor: RecoveryEditorContract = {
 // Word's own .docx ceiling
 const MAX_OPEN_BYTES = 512 * 1024 * 1024
 
-async function showOpenError(wcId: number, detail: string): Promise<void> {
-  const parent = hostWindowFor(webContents.fromId(wcId)) ?? mainWindow
+async function showOpenErrorIn(
+  parent: BrowserWindow | null | undefined,
+  detail: string,
+): Promise<void> {
   const options = { type: 'error' as const, message: tm('dlgOpenDoc'), detail }
   if (parent && !parent.isDestroyed()) await dialog.showMessageBox(parent, options)
   else await dialog.showMessageBox(options)
+}
+
+async function showOpenError(wcId: number, detail: string): Promise<void> {
+  await showOpenErrorIn(hostWindowFor(webContents.fromId(wcId)) ?? mainWindow, detail)
+}
+
+/** `path` through symlinks; a name that does not exist yet resolves through its folder */
+async function canonicalPath(path: string): Promise<string> {
+  const absolute = resolve(path)
+  try {
+    return await realpath(absolute)
+  } catch {
+    try {
+      return join(await realpath(dirname(absolute)), basename(absolute))
+    } catch {
+      return absolute
+    }
+  }
+}
+
+/**
+ * Whether two paths name one file. Case is ignored on every platform, the rule
+ * the Excel editor protects an ODS original with: refusing a name the user can
+ * change is cheaper than writing over the original on a disk that folds case.
+ */
+async function sameFilePath(a: string, b: string): Promise<boolean> {
+  const [left, right] = await Promise.all([canonicalPath(a), canonicalPath(b)])
+  return left.toLowerCase() === right.toLowerCase()
+}
+
+/**
+ * Where the converted copy of a legacy document goes: a .docx that is not the
+ * original, or null when the user cancels. The dialog's .docx filter does not
+ * bind the name typed, so the answer is checked here: the original is refused
+ * and asked again, and a name with another extension gets .docx added, as in
+ * Save As.
+ */
+async function pickLegacyImportTarget(
+  sourcePath: string,
+  parent: BrowserWindow | undefined,
+): Promise<string | null> {
+  let defaultPath = join(
+    dirname(sourcePath),
+    basename(sourcePath).replace(/\.(doc|dot)$/i, '.docx'),
+  )
+  for (;;) {
+    const picked = await showSaveDialogWithMemory(
+      dialog,
+      parent,
+      {
+        title: tm('dlgSaveAs'),
+        defaultPath,
+        filters: [{ name: tm('filterWord'), extensions: ['docx'] }],
+      },
+      defaultSaveDir(),
+    )
+    if (picked.canceled || !picked.filePath) return null
+    if (await sameFilePath(picked.filePath, sourcePath)) {
+      await showOpenErrorIn(parent, tm('docImportOriginalTarget'))
+      continue
+    }
+    if (docFormatOfPath(picked.filePath) === 'docx') return picked.filePath
+    const target = `${picked.filePath}.docx`
+    if (!existsSync(target)) return target
+    // The dialog confirmed the typed name, not this one. Offered under its
+    // full name, replacing the file there is the user's own answer.
+    defaultPath = target
+  }
 }
 
 /**
@@ -4072,20 +4169,11 @@ async function prepareDocumentForOpen(
       }
     }
   }
-  const picked = await showSaveDialogWithMemory(
-    dialog,
-    parent,
-    {
-      title: tm('dlgSaveAs'),
-      defaultPath: join(dirname(filePath), basename(filePath).replace(/\.(doc|dot)$/i, '.docx')),
-      filters: [{ name: tm('filterWord'), extensions: ['docx'] }],
-    },
-    defaultSaveDir(),
-  )
-  if (picked.canceled || !picked.filePath) return null
+  const target = await pickLegacyImportTarget(filePath, parent)
+  if (!target) return null
   try {
     const result = await convertLegacyDocToDocx(new Uint8Array(await readFile(filePath)))
-    await atomicWriteFile(picked.filePath, Buffer.from(result.docx))
+    await atomicWriteFile(target, Buffer.from(result.docx))
   } catch {
     const detail = `${basename(filePath)}: ${tm('errUnreadable')}`
     if (parent && !parent.isDestroyed()) {
@@ -4093,7 +4181,7 @@ async function prepareDocumentForOpen(
     }
     return null
   }
-  return picked.filePath
+  return target
 }
 
 async function loadDocx(
