@@ -520,13 +520,16 @@ export interface DesktopApi {
   /**
    * Crash-recovery copy of a dirty document, stored under userData. `path`
    * null: a never-saved document (its copy stays in app data under the tab's
-   * untitled slot; `meta` names it and gives its format). `failed`: a disk
+   * untitled slot; `meta` names it and gives its format; `originalPath`: the
+   * file the document came from, offered as the first Save As, for a draft
+   * that cannot be written back to it, as a marked ODT tab's docx copy).
+   * `failed`: a disk
    * error, back off before the next try.
    */
   writeRecoveryCopy(
     path: string | null,
     data: ArrayBuffer,
-    meta?: { title: string; format: 'docx' | 'odt' },
+    meta?: { title: string; format: 'docx' | 'odt'; originalPath?: string },
   ): Promise<{ ok: boolean; failed?: boolean }>
   /** the OS is ending the session: write the recovery copy now, then call `done` */
   onWriteRecoveryNow?(handler: (done: () => void) => void): () => void

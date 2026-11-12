@@ -137,7 +137,7 @@ const api: DesktopApi = {
   writeRecoveryCopy: (
     path: string | null,
     data: ArrayBuffer,
-    meta?: { title: string; format: 'docx' | 'odt' },
+    meta?: { title: string; format: 'docx' | 'odt'; originalPath?: string },
   ) => ipcRenderer.invoke('docs:write-recovery', path, data, meta),
   onWriteRecoveryNow: (handler) => {
     const listener = (_event: IpcRendererEvent, token: unknown) =>

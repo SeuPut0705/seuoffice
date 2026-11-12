@@ -28,6 +28,7 @@ import {
   readSections,
   readSectionSettings,
   saveDocx,
+  docxHoldsHiddenContent,
   type Block,
   type CommentInfo,
   type DocProtection,
@@ -1102,10 +1103,13 @@ export async function writeRecoveryCopy(
     const docx = await buildDocBytes(ctx)
     if (!docx) return 'skipped'
     // an ODT tab's copy is the ODT a save would write now: restoring it opens
-    // an ODT document again, and its save writes ODT
-    // (marked content cannot go into an ODT: such a tab has no recovery copy, and the
-    // caller backs off)
-    const bytes = isOdtDoc(doc) ? await odtBytesFor(doc.odt, docx) : docx
+    // an ODT document again, and its save writes ODT. An ODT cannot hold the
+    // mark that hides content from AI: such a tab's copy is its docx (marks
+    // kept), kept in an untitled slot that names the ODT as its original, so
+    // it restores as a docx draft of that tab and its save follows the normal
+    // path (saving over the .odt meets the marked-ODT refusal).
+    const asDocx = isOdtDoc(doc) && (await docxHoldsHiddenContent(docx))
+    const bytes = isOdtDoc(doc) && !asDocx ? await odtBytesFor(doc.odt, docx) : docx
     const last = lastRecoveryCopy
     // not the bytes: two serializations a tick apart differ in their time stamps
     const unchanged =
@@ -1120,9 +1124,17 @@ export async function writeRecoveryCopy(
     }
     if (unchanged) return 'skipped'
     const result = await window.desktop.writeRecoveryCopy(
-      doc.filePath,
+      asDocx ? null : doc.filePath,
       toArrayBuffer(bytes),
-      doc.filePath ? undefined : { title: doc.fileName, format: isOdtDoc(doc) ? 'odt' : 'docx' },
+      asDocx
+        ? {
+            title: doc.fileName,
+            format: 'docx',
+            ...(doc.filePath ? { originalPath: doc.filePath } : {}),
+          }
+        : doc.filePath
+          ? undefined
+          : { title: doc.fileName, format: isOdtDoc(doc) ? 'odt' : 'docx' },
     )
     if (result.ok) {
       lastRecoveryCopy = { generation, saves, path: doc.filePath, bytes }

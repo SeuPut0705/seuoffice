@@ -1294,14 +1294,23 @@ async function takeDocsUntitledCopy(
     accept: (bytes) => docxOpenKind(bytes) === 'plain',
   })
   if (!taken || contents.isDestroyed()) return null
-  const suggested = request.saveAsDefaultPath ? basename(request.saveAsDefaultPath) : ''
   // the tab title the shell kept, else the one the copy was written under
   const title =
     request.title ||
     docsRecovery.store.copyInfo(taken.identity)?.title ||
     taken.identity.untitledId.slice(0, 8)
-  const titled = docFormatOfPath(title) ? title : `${title}${ext}`
-  const name = suggested && docFormatOfPath(suggested) ? suggested : titled
+  const named = (candidate: string): string => {
+    const format = docFormatOfPath(candidate)
+    if (format === (ext === '.odt' ? 'odt' : 'docx')) return candidate
+    // the bytes are a docx draft of an ODT tab: it must not open as the .odt it came from
+    const stem = format ? candidate.slice(0, candidate.lastIndexOf('.')) : candidate
+    return `${stem}${ext}`
+  }
+  const saveAsOrigin =
+    request.saveAsDefaultPath ??
+    docsRecovery.store.copyInfo(taken.identity)?.originalPath ??
+    undefined
+  const name = named(saveAsOrigin ? basename(saveAsOrigin) : title)
   return {
     path: name,
     name,
@@ -1309,7 +1318,7 @@ async function takeDocsUntitledCopy(
     hash: '',
     untitledCopy: true,
     recovered: true,
-    ...(request.saveAsDefaultPath ? { saveAsDefaultPath: request.saveAsDefaultPath } : {}),
+    ...(saveAsOrigin ? { saveAsDefaultPath: saveAsOrigin } : {}),
     bytes: taken.bytes,
   }
 }
@@ -2768,7 +2777,7 @@ export function registerDocsIpc(): void {
       event,
       filePath: string | null,
       data: ArrayBuffer,
-      meta?: { title?: unknown; format?: unknown },
+      meta?: { title?: unknown; format?: unknown; originalPath?: unknown },
     ): Promise<{ ok: boolean; failed?: boolean }> => {
       const wcId = event.sender.id
       if (tornDownWcIds.has(wcId) || !(data instanceof ArrayBuffer)) return { ok: false }
@@ -2782,6 +2791,10 @@ export function registerDocsIpc(): void {
           : 'docx'
         : (docFormatOfPath(filePath) ?? 'docx')
       const title = typeof meta?.title === 'string' ? meta.title.slice(0, 260) : ''
+      const originalPath =
+        untitled && typeof meta?.originalPath === 'string' && meta.originalPath
+          ? meta.originalPath
+          : undefined
       try {
         const result = await docsRecovery.writeCopy(
           wcId,
@@ -2809,6 +2822,7 @@ export function registerDocsIpc(): void {
                   : prepareRecoveryDocx(wcId, filePath, plain),
             }),
           untitled ? title : basename(filePath),
+          originalPath,
         )
         return { ok: result === 'written' }
       } catch {
