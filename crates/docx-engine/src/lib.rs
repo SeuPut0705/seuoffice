@@ -8,6 +8,7 @@ pub mod field_balance;
 pub mod fields;
 pub mod font_table;
 pub mod list_markers;
+pub mod model;
 pub mod notes;
 pub mod numbering;
 pub mod package;
