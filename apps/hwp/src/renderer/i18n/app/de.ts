@@ -28,6 +28,10 @@ export const de = {
     'Dieses Dokument enthält nachverfolgte Änderungen. Angezeigt wird der aktuelle Text mit übernommenen Änderungen; beim Speichern bleibt dieser Text erhalten, die Änderungsverfolgung entfällt.',
   saveTracked:
     'Nicht gespeichert: Dieses Dokument enthält nachverfolgte Änderungen. Beim Speichern hier gingen sie verloren, und Hancom Hangul könnte die Datei nicht öffnen.',
+  openedUnverified:
+    'Die Struktur dieser Datei konnte nicht geprüft werden; Teile des Inhalts fehlen hier möglicherweise. Sie können sie lesen und bearbeiten, aber das Original wird nicht überschrieben: Speichern Sie mit „Speichern unter“ eine Kopie unter anderem Namen.',
+  saveUnverified:
+    'Nicht gespeichert: Die Struktur dieser Datei konnte nicht geprüft werden, beim Überschreiben könnte Inhalt verloren gehen. Speichern Sie in „Speichern unter“ eine Kopie unter anderem Namen, am besten als HWPX.',
   savedTailsLost:
     'Gespeichert, aber einige Masterseiten oder Memos der Originaldatei konnten nicht übernommen werden. Hancom Hangul kann die gespeicherte Datei möglicherweise nicht öffnen. Bitte dort zur Kontrolle öffnen.',
   missingFonts:

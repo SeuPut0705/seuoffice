@@ -1,10 +1,10 @@
 # Tipos de letra: tipos do sistema e instalação de ficheiros de tipos de letra
 
-## As listas de tipos de letra
+## As listas de fontes
 
 Os controlos de tipo de letra ficam no separador Página Inicial de cada editor.
 
-O seletor de tipos de letra de cada editor junta: tipos de letra instalados localmente + candidatos habituais da plataforma (as famílias comuns do Windows e do macOS, ocidentais e CJK, incluindo os nomes localizados que os tipos CJK indicam nos seus próprios sistemas). Quando o sistema consegue enumerar os tipos locais, a lista é agrupada pelo que existe de facto; caso contrário, degrada para a lista completa de candidatos.
+O seletor de fontes de cada editor junta: fontes instaladas localmente + candidatos habituais da plataforma (as famílias comuns do Windows e do macOS, ocidentais e CJK, incluindo os nomes localizados que os tipos CJK indicam nos seus próprios sistemas). Quando o sistema consegue enumerar os tipos locais, a lista é agrupada conforme as fontes disponíveis; caso contrário, degrada para a lista completa de candidatos.
 
 Todos os tipos de letra da lista estão instalados neste PC ou vêm com a aplicação. Nada é transferido.
 

@@ -169,6 +169,15 @@ describe('genoffice capabilities', () => {
     expect(d.image_search).toEqual({ available: true, via: 'serply', route: 'key' })
   })
 
+  it('counts a SearchApi key as search + image search', async () => {
+    const settings = settingsFile(tempDir(), {
+      search: { provider: 'searchapi', providers: { searchapi: { apiKey: 'k' } } },
+    })
+    const d = (await run(['capabilities', '--json'], { env: envFor(settings) })).json().detail
+    expect(d.search).toEqual({ available: true, via: 'searchapi', route: 'key' })
+    expect(d.image_search).toEqual({ available: true, via: 'searchapi', route: 'key' })
+  })
+
   it.each(['tavily', 'parallel'])(
     '%s with a key answers web search, images stay on the free route',
     async (provider) => {

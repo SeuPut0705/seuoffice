@@ -28,6 +28,10 @@ export const es = {
     'Este documento tiene control de cambios. Ve su texto actual, con los cambios aplicados; al guardar se conserva este texto y se descarta el registro de cambios.',
   saveTracked:
     'No se guardó: este documento tiene control de cambios; guardarlo aquí los perdería y podría crear un archivo que Hancom Hangul no puede abrir.',
+  openedUnverified:
+    'No se pudo verificar la estructura de este archivo, así que puede faltar parte de su contenido. Puedes leerlo y editarlo, pero no se guarda sobre el original: usa Guardar como para conservar una copia con otro nombre.',
+  saveUnverified:
+    'No se guardó: no se pudo verificar la estructura de este archivo, y guardarlo sobre el original podría perder contenido. En Guardar como, guarda una copia con otro nombre, preferiblemente en HWPX.',
   savedTailsLost:
     'Guardado, pero no se pudieron conservar algunas páginas maestras o notas del archivo original; es posible que Hancom Hangul no abra el archivo guardado. Ábralo para comprobarlo.',
   missingFonts:

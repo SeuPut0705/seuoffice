@@ -108,6 +108,11 @@
 - `src/local-ipc.ts`의 파서가 `ai:local-models`·`ai:local-inspect`·`ai:local-test` 입력을 검사한다. 연결 테스트는 `testId`(영문·숫자·`_`·`-`, 128자까지)를 받아 보낸 쪽과 함께 기억하고, `cancelLocalTestForIpc`가 그 테스트의 요청을 이 프로세스에서 끊는다. 끊긴 테스트는 더 보내지 않고 `cancelled: true`와 남은 확인 `skip`으로 답한다. `customEndpoint: ''`는 "없음"이고 `providers.custom`도 비운다.
 - 새 export는 `./local-models`, `./local-test`; `context-budget`은 `@genoffice/agent-core`의 것이다.
 
+## 원본과 다른 점
+
+- FLUX(BFL) 작업 조회 주소는 제공자가 답한 `polling_url`이라도 `https:`이고 제출 주소와 같은 호스트이거나 같은 등록 도메인(사설 접미사 포함, `github.io` 등 호스트별 테넌트는 서로 다름)일 때만 쓴다(`bflPollUrl`, `media-protocols.ts`). 그 밖이면 API 키를 보내지 않고 요청 전에 끝낸다. 사용자가 적은 기본 주소도 같은 규칙이다.
+- FLUX 조회 루프는 중단 신호에 리스너를 하나만 걸고, 루프가 끝나면 한 번 떼어 낸다(`bflPollWaits`).
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/ai-provider`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/ai-provider`.

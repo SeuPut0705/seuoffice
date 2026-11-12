@@ -8,8 +8,9 @@
  */
 import { Editor } from '@tiptap/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ParsedDocFull } from '@genoffice/docx-engine'
-import { docStyleCss } from '../src/renderer/doc-style-css'
+import { parseDocx, type ParsedDocFull } from '@genoffice/docx-engine'
+import { buildKitchenSinkDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
+import { docBodyEaFont, docStyleCss } from '../src/renderer/doc-style-css'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 
 ;(globalThis as { CSS?: unknown }).CSS ??= { escape: (s: string) => s }
@@ -39,17 +40,48 @@ describe('blockAttrs .doc-grid-strut class', () => {
     })
     expect(pOf(editor).classList.contains('doc-grid-strut')).toBe(true)
     expect(pOf(editor).style.fontFamily).toBe('')
+    const run = pOf(editor).querySelector('span[style*="font-family"]') as HTMLElement
+    expect(run.style.getPropertyValue('--doc-run-ff').replace(/'/g, '"').replace(/,/g, ', ')).toBe(
+      run.style.fontFamily,
+    )
     editor.destroy()
   })
 
-  it('all-declared paragraphs keep the direct family swap instead', () => {
+  it('a declared Latin + East Asian face pair marks the paragraph', () => {
     const editor = new Editor({
       element: document.createElement('div'),
       extensions: editorExtensions,
-      content: para([text('本研究は', { font: 'ＭＳ 明朝', fontAscii: 'ＭＳ 明朝' })]),
+      content: para([text('\u4e2d\u6587', { font: 'Microsoft YaHei', fontAscii: 'Calibri' })]),
+    })
+    expect(pOf(editor).classList.contains('doc-grid-strut')).toBe(true)
+    editor.destroy()
+  })
+
+  // the strut face carries the document base face's box (doc-style-css), so a
+  // single declared face has nothing to union and keeps its own face leading
+  // the line: Meiryo UI body lines under a Mincho default sat 2-3px above Word
+  it('a single declared face on every slot keeps the family swap and stays unmarked', () => {
+    const editor = new Editor({
+      element: document.createElement('div'),
+      extensions: editorExtensions,
+      content: para([text('\u4e2d\u6587', { font: 'Meiryo UI', fontAscii: 'Meiryo UI' })]),
+    })
+    const p = pOf(editor)
+    expect(p.classList.contains('doc-grid-strut')).toBe(false)
+    expect(p.style.fontFamily).not.toBe('')
+    expect(
+      p.style.getPropertyValue('--doc-grid-strut-tail').replace(/'/g, '"').replace(/,/g, ', '),
+    ).toBe(p.style.fontFamily)
+    editor.destroy()
+  })
+
+  it('all-declared Latin paragraphs stay unmarked', () => {
+    const editor = new Editor({
+      element: document.createElement('div'),
+      extensions: editorExtensions,
+      content: para([text('Latin', { font: 'Arial', fontAscii: 'Arial' })]),
     })
     expect(pOf(editor).classList.contains('doc-grid-strut')).toBe(false)
-    expect(pOf(editor).style.fontFamily).not.toBe('')
     editor.destroy()
   })
 
@@ -135,16 +167,35 @@ describe('docStyleCss grid strut face', () => {
     // the Office-private MS Mincho renders through a stand-in, so the
     // inheriting .doc-ea-strut paragraphs share the strut too
     expect(css).toContain(
-      ".doc-page :is(.doc-grid-strut,.doc-ea-strut) { font-family:'GenOffice Grid Strut',var(--doc-grid-strut-tail,serif) }",
+      // !important: all-declared CJK paragraphs carry their chain inline and get the class too
+      ".doc-page :is(.doc-grid-strut,.doc-ea-strut) { font-family:'GenOffice Grid Strut',var(--doc-grid-strut-tail,serif) !important }",
     )
     expect(css).toContain('--doc-grid-strut-tail:')
   })
 
-  it('emits nothing without an EA face or with a Latin one', () => {
+  it('aligns the implicit SimSun spans in the kitchen-sink fixture without a grid', async () => {
+    stubMetricsCanvas(1160, 288)
+    mountBlankFace()
+    const parsed = await parseDocx(await buildKitchenSinkDocx())
+    expect(parsed.docDefaults?.eastAsiaFont).toBeUndefined()
+    expect(docBodyEaFont(parsed)).toBe('SimSun')
+    const css = docStyleCss(parsed)
+    expect(css).toContain('--doc-line-factor-cjk:1.3')
+    expect(css).toContain('--doc-line-mult:1.15')
+    expect(css).toContain("--doc-east-asian-font:'SimSun'")
+    expect(css).toContain("@font-face { font-family:'GenOffice Grid Strut'")
+    expect(css).toContain('ascent-override:116%')
+    expect(css).toContain('descent-override:28.8%')
+    expect(css).toContain(
+      ".doc-page :is(.doc-grid-strut,.doc-ea-strut) .doc-east-asian-font { font-family:'GenOffice Grid Strut',",
+    )
+  })
+
+  it('aligns the effective fallback face without an EA declaration or with a Latin slot', () => {
     stubMetricsCanvas(1143, 286)
     mountBlankFace()
-    expect(docStyleCss(parsedWith(GRID_SECT))).not.toContain('Grid Strut')
-    expect(docStyleCss(parsedWith(null, 'Century'))).not.toContain('Grid Strut')
+    expect(docStyleCss(parsedWith(GRID_SECT))).toContain('Grid Strut')
+    expect(docStyleCss(parsedWith(null, 'Century'))).toContain('Grid Strut')
   })
 
   it('a missing EA face rendered by a stand-in gets the strut without a grid', () => {
@@ -156,6 +207,11 @@ describe('docStyleCss grid strut face', () => {
     expect(css).toContain("@font-face { font-family:'GenOffice Grid Strut'")
     expect(css).toContain('ascent-override:88%')
     expect(css).toContain('.doc-page :is(.doc-grid-strut,.doc-ea-strut) {')
+    // the CJK spans lead with the strut face too: their loaded range alias is
+    // not the face the strut measured, and offset boxes union past the grid
+    expect(css).toContain(
+      ".doc-page :is(.doc-grid-strut,.doc-ea-strut) .doc-east-asian-font { font-family:'GenOffice Grid Strut',",
+    )
     expect(docStyleCss(parsedWith(null, '\uff2d\uff33 \u660e\u671d'))).toContain('.doc-ea-strut')
   })
 
@@ -165,7 +221,7 @@ describe('docStyleCss grid strut face', () => {
     const resolved = parsedWith(GRID_SECT, 'PMingLiU', { eaSlotEmpty: true, eaFromLang: true })
     expect(docStyleCss(resolved)).toContain('ascent-override:95.2%')
     const unresolved = parsedWith(GRID_SECT, 'Yu Gothic', { eaSlotEmpty: true })
-    expect(docStyleCss(unresolved)).not.toContain('Grid Strut')
+    expect(docStyleCss(unresolved)).toContain('Grid Strut')
   })
 
   it('Office-private faces under a metric alias get the strut without a grid', () => {

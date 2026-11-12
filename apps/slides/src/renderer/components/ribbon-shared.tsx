@@ -15,7 +15,8 @@ import type {
   InsertKind,
   TransitionKind,
 } from '../../shared/ipc'
-import type { InkPenSettings, InkTool } from '../ink'
+import type { InkTool } from '../ink'
+import type { InkPreset } from '../ink-presets'
 import type { WordArtPreset } from '@genoffice/ui'
 import type { ChartPresetDef, IconDef, SmartArtDef } from '../insert-presets'
 import type { ZoomMode } from '../zoom-actions'
@@ -24,7 +25,8 @@ import type { CaseMode } from '../text-case'
 import type { MergeMode } from '../merge-shapes'
 import type { ChartStyleInfo } from '@genoffice/pptx-render'
 import { BUILTIN_FONT_FAMILIES } from '@genoffice/ui'
-import type { ContextTabRequest } from './context-tabs'
+import type { Model3dRotation } from '@genoffice/pptx-engine/model3d'
+import type { ContextElementType, ContextTabRequest } from './context-tabs'
 import { useI18n } from '../i18n/locale'
 import { layoutLabel } from '../layout-names'
 
@@ -225,6 +227,7 @@ export type RibbonPanelKey =
   | 'collapse'
   | 'pen'
   | 'slideShow'
+  | 'record'
 
 /** Ribbon popups are mutually exclusive: a trigger closes every sibling popup
  *  on mousedown, before its own click-toggle runs. A trigger rendered inside
@@ -305,6 +308,8 @@ export interface Props {
   onUndo: () => void
   onRedo: () => void
   onSaveAs: () => void
+  /** Ask the model for a name, then open Save As with it prefilled */
+  onNameWithAi: () => void
   /** Export as PDF (hidden slides skipped) */
   onExportPdf: () => void
   onPrint: () => void
@@ -464,6 +469,10 @@ export interface Props {
   onCustomShow: () => void
   /** Start rehearsal timing (plays the show recording each page's dwell time; can be saved as auto-advance times afterwards) */
   onRehearse: () => void
+  /** Slide Show > Record from the start (true) or from the current slide */
+  onRecord: (fromStart: boolean) => void
+  /** Clear the recorded narration of all slides (true) or of the current one */
+  onClearNarration: (all: boolean) => void
   /** Whether the current page is hidden (hide-slide button display) */
   currentHidden: boolean
   /** Hide/unhide the current page */
@@ -471,10 +480,10 @@ export interface Props {
   /** Drawing tool (select = exit drawing) */
   inkTool: InkTool
   onInkTool: (tool: InkTool) => void
-  inkPen: InkPenSettings
-  onInkPen: (settings: InkPenSettings) => void
-  inkHighlighter: InkPenSettings
-  onInkHighlighter: (settings: InkPenSettings) => void
+  inkPresets: InkPreset[]
+  inkActiveId: string
+  onInkPresets: (presets: InkPreset[]) => void
+  onInkActivate: (id: string) => void
   /** Current page's stroke count (clear button availability) */
   inkCount: number
   /** Clear all ink on the current page */
@@ -535,7 +544,9 @@ export interface Props {
   onToggleScreenRecord: () => void
   // ── Contextual tabs: table design / chart design / picture format ────────────────
   /** Current selection category used to expose and activate contextual tabs */
-  contextElementType?: 'table' | 'chart' | 'picture' | 'shape' | 'textShape' | 'mixed' | null
+  contextElementType?: ContextElementType
+  /** Turn the selected 3D model to one of the 3D Model Views */
+  onModel3dView?: (rot: Model3dRotation) => void
   /** Double-click on the canvas asks for the object's tools tab */
   tabRequest?: ContextTabRequest | null
   /** Currently selected element sourceId (for contextual tab operation callbacks) */

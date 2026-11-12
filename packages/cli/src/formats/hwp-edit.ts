@@ -89,6 +89,11 @@ export interface HwpEditSession {
   originalHwpx: Uint8Array | null
   /** tracked changes were dropped on open: the document holds its current text only */
   trackingDropped: boolean
+  /**
+   * the opened `.hwp` could not be read by the app's own readers (the compound-file gate
+   * refuses it): what a save has to keep of it is unknown, so it is not written over
+   */
+  unverified: boolean
   mods: AppModules
 }
 
@@ -160,7 +165,7 @@ function bridgeOf(surface: AgentPluginSurface): AgentBridge {
 async function sessionOf(
   doc: HwpDocument,
   mods: AppModules,
-  extra: Pick<HwpEditSession, 'base' | 'originalHwpx' | 'trackingDropped'>,
+  extra: Pick<HwpEditSession, 'base' | 'originalHwpx' | 'trackingDropped' | 'unverified'>,
 ): Promise<HwpEditSession> {
   const surface = mods.plugin.agentPlugin.activate(headlessHost(doc)) as AgentPluginSurface
   const { skill } = mods.skill.createHwpSkill({
@@ -180,8 +185,10 @@ export async function openHwpForEdit(bytes: Uint8Array): Promise<HwpEditSession>
   const [{ HwpDocument }, mods] = await Promise.all([loadEngine(), appModules()])
   let data = bytes
   let trackingDropped = false
-  const isHwp = mods.savePlan.bytesMatchFormat(data, 'hwp')
-  if (isHwp && mods.tracked.hasTrackedChanges(data)) {
+  const tracking = mods.savePlan.bytesMatchFormat(data, 'hwp')
+    ? mods.tracked.trackedChangesOf(data)
+    : null
+  if (tracking === 'tracked') {
     // the engine reads and writes the second body of a tracked document in a way Hangul
     // cannot open again (decision 0027): edit the document as it reads now, or not at all
     const current = mods.tracked.withoutTrackedChanges(data)
@@ -200,7 +207,7 @@ export async function openHwpForEdit(bytes: Uint8Array): Promise<HwpEditSession>
     trackingDropped = true
   }
   const base: SaveBase = {}
-  if (isHwp) {
+  if (tracking === 'none' || tracking === 'tracked') {
     base.tails = mods.tails.sectionTailsOf(data) ?? undefined
     base.kinds = mods.kinds.fieldKindsOf(data) ?? undefined
   }
@@ -211,7 +218,12 @@ export async function openHwpForEdit(bytes: Uint8Array): Promise<HwpEditSession>
     throw openFailure(thrown)
   }
   const originalHwpx = mods.savePlan.bytesMatchFormat(data, 'hwpx') ? data : null
-  return sessionOf(doc, mods, { base, originalHwpx, trackingDropped })
+  return sessionOf(doc, mods, {
+    base,
+    originalHwpx,
+    trackingDropped,
+    unverified: tracking === 'unreadable',
+  })
 }
 
 /** A new document: the engine's blank one (one empty paragraph on an A4 page), as a new HWP tab starts. */
@@ -219,7 +231,12 @@ export async function blankHwpForEdit(): Promise<HwpEditSession> {
   const [{ HwpDocument }, mods] = await Promise.all([loadEngine(), appModules()])
   const doc = HwpDocument.createEmpty()
   doc.createBlankDocument()
-  return sessionOf(doc, mods, { base: {}, originalHwpx: null, trackingDropped: false })
+  return sessionOf(doc, mods, {
+    base: {},
+    originalHwpx: null,
+    trackingDropped: false,
+    unverified: false,
+  })
 }
 
 export function closeHwpSession(session: HwpEditSession): void {

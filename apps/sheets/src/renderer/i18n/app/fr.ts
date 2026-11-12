@@ -1,6 +1,25 @@
 import type { zh } from './zh'
 
 export const fr = {
+  // ── Withholding cells from the model ──
+  redactMenuLabel: 'Masquer la sélection à l’IA',
+  redactDialogDesc:
+    'La sélection reste dans le document et dans le fichier ; le modèle ne voit que le marqueur ci-dessous. Donnez-lui un nom pour qu’il sache ce qu’il désigne.',
+  redactDialogScope:
+    'Le masquage ne concerne que l’IA de cette application. La CLI, les outils MCP et l’exportation sans interface lisent le fichier directement et voient toujours ces mots.',
+  redactDialogPlaceholder: 'Nom du placeholder, ex. : téléphone du client',
+  redactCancel: 'Annuler',
+  redactInsert: 'Masquer',
+  redactEnable: 'Clic droit sur une sélection pour la masquer au modèle.',
+  redactNeedsSavedRow:
+    "Cette ligne n'est pas encore dans le fichier. Enregistrez d'abord, puis masquez la cellule.",
+  redactNeedsSavedSheet:
+    "Cette feuille, ou une copie de celle-ci, n'est pas encore dans le fichier. Enregistrez d'abord, puis modifiez ce qui est masqué.",
+  redactMoveRefused:
+    "Non effectué : cela déplacerait ou copierait des cellules masquées pour l'IA, et leurs valeurs ne seraient plus masquées. Arrêtez d'abord de les masquer, ou retirez-les de la plage.",
+  redactRecoveredFromNames:
+    'Une autre application a réécrit ce fichier et effacé la trace de ce qui est masqué. Les cellules masquées ont été retrouvées dans les noms du classeur ; la sauvegarde restaure la trace complète.',
+
   appMergeWorkbooks: 'Fusionner des classeurs',
   appMergeWorkbooksTip: "Ajouter les feuilles d'autres fichiers Excel à ce classeur",
   appMergeWorkbooksPicking: 'Choisissez les fichiers à fusionner…',
@@ -8,6 +27,8 @@ export const fr = {
   appMergeWorkbooksDone:
     '{sheets} feuilles fusionnées depuis {files} fichiers (formules importées comme valeurs).',
   appMergeWorkbooksFailed: 'Échec de la fusion des classeurs.',
+  appMergeWorkbooksHiddenCells:
+    'Rien n’a été fusionné : {file} contient des cellules masquées à l’IA, et la fusion importerait leurs valeurs sans ce masquage. Ouvrez ce fichier, démasquez ou supprimez ces cellules, enregistrez, puis fusionnez de nouveau.',
   appMergeWorkbooksInsertFailed: 'Impossible de créer la feuille {sheet}.',
   appMergeWorkbooksLocked:
     'Le classeur est encore en cours de chargement ; fusion indisponible pour le moment.',
@@ -571,6 +592,7 @@ export const fr = {
   appBridgeUnavailable:
     "Le pont de fichiers du bureau est indisponible. Redémarrez l'application Electron.",
   appOpenCanceled: 'Sélection du classeur annulée.',
+  appImportCanceled: 'Import annulé.',
   appOpeningWorkbook: 'Ouverture du classeur…',
   appOpened: '{name} ouvert — les modifications de cellules se réenregistrent avec ⌘S.',
   appOpenFailed: "Impossible d'ouvrir le classeur.",
@@ -669,6 +691,8 @@ export const fr = {
     'Ce type de graphique ne prend pas en charge cette modification ; enregistrement interrompu — annulez la modification du graphique.',
   appSaveErrMoveOverlap:
     'Une formule, une plage mise en forme, une forme ou un tableau chevauche les lignes déplacées ; enregistrement interrompu — annulez le déplacement.',
+  appSaveErrHiddenCellsUnreadable:
+    'La trace des cellules masquées à l’IA dans ce classeur est illisible ; les modifications de lignes, de colonnes et de feuilles ne peuvent donc pas être enregistrées : les cellules masquées ne seraient plus protégées. Annulez ces modifications, puis enregistrez de nouveau.',
   appFromTextCsvTitle: 'Importer un fichier CSV/texte dans la sélection actuelle',
   appCsvImported: '{rows} lignes × {columns} colonnes importées du fichier vers {cell}.',
   appCsvEmpty: 'Le fichier CSV ne contient aucune donnée.',
@@ -778,6 +802,7 @@ export const fr = {
   appExportPdfTitle: 'Exporter en PDF',
   appSaveTitle: 'Enregistrer (⌘S)',
   appSaveAs: 'Enregistrer sous',
+  aiNameFile: "Nommer avec l'IA…",
   appUndo: 'Annuler',
   appRedo: 'Rétablir',
   appQuickAccessCustomize: 'Personnaliser la barre d’outils Accès rapide',
@@ -1231,6 +1256,20 @@ export const fr = {
   appWatchCell: 'Cellule',
   appWatchValue: 'Valeur',
   appWatchFormula: 'Formule',
+  appLinksPanel: 'Liaisons externes',
+  appLinksPanelDetail: 'Lister, mettre à jour et rompre les liaisons vers d’autres classeurs',
+  appLinksUpdate: 'Mettre à jour les valeurs',
+  appLinksNone: 'Ce classeur ne contient aucune liaison vers un autre classeur.',
+  appLinksUnsaved: 'Enregistrez ce classeur avant de lister ses liens externes.',
+  appLinksSource: 'Source',
+  appLinksStatus: 'État',
+  appLinksSheets: 'Feuilles',
+  appLinksLocate: 'Localiser le fichier source',
+  appLinksReachable: 'Disponible',
+  appLinksBroken: 'Indisponible',
+  appLinksBreak: 'Rompre le lien',
+  appLinksBreakConfirm: 'Confirmer la rupture',
+  appLinksChangeSource: 'Modifier la source',
   appGroupCalculation: 'Calcul',
   appCalculationOptions: 'Options de calcul',
   appCalculationOptionsTitle: 'Recalcul automatique ou manuel',
@@ -1247,6 +1286,12 @@ export const fr = {
   appGroupGetData: 'Obtenir des données',
   appFromTextCsv: 'À partir de texte/CSV',
   appRefreshAll: 'Actualiser tout',
+  appRefreshQuery: 'Actualiser la requête',
+  appQueryConnectionsTitle: 'Actualiser les requêtes du classeur',
+  appQueryRefreshing: 'Actualisation de {name}…',
+  appQueryRefreshed: '{name} actualisé ({rows} lignes)',
+  appQueryRefreshedClipped: '{name} actualisé ({rows} lignes, {dropped} hors de la plage fixe)',
+  appQueryRefreshFailed: 'Impossible d’actualiser {name}',
   appWorkbookNoPivot: 'Aucun tableau croisé dans ce classeur.',
   appRefreshAllTitle: 'Actualiser tous les tableaux croisés',
   appQueriesConnections: 'Requêtes et connexions',
@@ -1322,6 +1367,10 @@ export const fr = {
   appFontSizeTip: 'Taille de police',
   appZoomIn: 'Zoom avant',
   appZoomOut: 'Zoom arrière',
+  appImgActualSize: 'Taille réelle',
+  appImgFitWindow: 'Ajuster à la fenêtre',
+  appImgSaveAs: "Enregistrer l'image sous…",
+  appImgClose: 'Fermer (Échap)',
   appZoomSheetTitle: 'Zoomer la feuille',
   appResetZoom: 'Réinitialiser le zoom',
   appZoomToSelection: 'Zoom sur la sélection',
@@ -1364,6 +1413,19 @@ export const fr = {
   appOpenFileFirst: "Ouvrez d'abord un fichier",
   appNoPassword: 'Sans mot de passe',
   appProtectWorkbook: 'Protéger le classeur',
+  appChangePassword: 'Modifier le mot de passe',
+  appWorkbookPasswordChanged: 'Le mot de passe du classeur a été mis à jour.',
+  appChangePasswordTitle: 'Modifier le mot de passe du classeur',
+  appChangePasswordCopy: 'Choisissez un nouveau mot de passe et confirmez-le ci-dessous.',
+  appNewPasswordLabel: 'Nouveau mot de passe',
+  appConfirmPasswordLabel: 'Confirmer le nouveau mot de passe',
+  appPasswordsMismatch: 'Les mots de passe ne correspondent pas.',
+  appPasswordTooLong:
+    'Le mot de passe est trop long. Utilisez au plus {max} caractères, la longueur maximale acceptée par Excel.',
+  appPasswordUpdateFailed: 'Impossible de mettre à jour le mot de passe du classeur.',
+  appPasswordUpdating: 'Mise à jour…',
+  appUpdatePassword: 'Mettre à jour le mot de passe',
+  appWorkbookNotPasswordProtected: "Ce classeur n'est pas protégé par un mot de passe d'ouverture.",
   appAllowEditRanges: 'Permettre la modification des plages',
   appGroupClipboard: 'Presse-papiers',
   appPaste: 'Coller',
@@ -1603,6 +1665,8 @@ export const fr = {
   appVisualSendBackward: 'Reculer',
   appVisualSizeProperties: 'Taille et propriétés…',
   appVisualHyperlink: 'Lien hypertexte…',
+  appVisualEmbedInCell: "Incorporer l'image dans la cellule",
+  appVisualEmbedFailed: "Impossible d'incorporer cette image dans la cellule.",
   appVisualDelete: 'Supprimer',
   appVisualArranged: 'Objet mis à jour — enregistrez avec ⌘S.',
   appVisualCopied: 'Objet copié.',

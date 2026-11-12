@@ -499,7 +499,7 @@ describe('what the app itself makes', () => {
         continue
       }
       const doc = asJson(blocksToPmDoc(parsed.blocks))
-      expect(safeNode(doc, {}), path).toBe(doc)
+      expect(safeNode(doc), path).toBe(doc)
       // the whole body pasted over itself, as a local step: from the nodes as the editor
       // holds them, not through JSON, so no value only a round trip would clean is hidden
       const node = schema.nodeFromJSON(blocksToPmDoc(parsed.blocks))

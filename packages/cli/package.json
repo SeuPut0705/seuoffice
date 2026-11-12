@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./install": "./src/install.ts",
+    "./args": "./src/args.ts",
     "./agent-skills": "./src/agent-skills.ts",
     "./mcp-launch": "./src/mcp-launch.ts",
     "./control-protocol": "./src/control-protocol.ts"
@@ -30,9 +31,12 @@
     "@genoffice/docx2hwp": "*",
     "@genoffice/drawio-model": "*",
     "@genoffice/file-parse": "*",
+    "@genoffice/hwp2docx": "*",
+    "@genoffice/odf2ooxml": "*",
     "@genoffice/odt-engine": "*",
     "@genoffice/pdf2docx": "*",
     "@genoffice/pipelines": "*",
+    "@genoffice/ppt2pptx": "*",
     "@genoffice/pptx-engine": "*",
     "@genoffice/pptx-ops": "*",
     "@genoffice/pptx-render": "*",
@@ -43,13 +47,13 @@
     "jszip": "^3.10.1",
     "numfmt": "^3.2.6",
     "pngjs": "^7.0.0",
-    "undici": "^6.29.0",
-    "zod": "^4.3.6"
+    "undici": "^6.29.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
     "esbuild": "^0.25.12",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   }
 }

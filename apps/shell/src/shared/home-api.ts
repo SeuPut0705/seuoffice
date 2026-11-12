@@ -77,6 +77,16 @@ export interface AutoSaveDefault {
   updatedAt: number
 }
 
+/**
+ * The ceilings a delimited import (a .csv/.tsv opened as a workbook) may
+ * reach, in megabytes. The core owns them (the gateway's csv-limits); the
+ * shell offers them as a setting.
+ */
+export {
+  CSV_IMPORT_DEFAULT_LIMIT_MB,
+  CSV_IMPORT_LIMIT_CHOICES_MB,
+} from '@genoffice/xlsx-gateway/gateway/csv-limits'
+
 /** local MCP server state (persisted in userData/app-settings.json) */
 export interface McpStatus {
   running: boolean
@@ -156,13 +166,30 @@ export interface FileSearchHit extends RecentEntry {
 }
 
 /**
- * Endpoints the search reranker can judge against. The hosted Jev routes are
- * OpenRouter and TypeSafe's own API; Perplexity, Cloudflare and Liquid AI host
- * their own decision models; Kev and Rizzo Flow are local /v1/systemone
- * servers; `custom` points at any other /v1/systemone-compatible server.
+ * The decision-model routes the app can call. Several vendors publish more
+ * than one size or generation behind the same URL, and the difference is only
+ * the `model` in the body — but they are listed separately rather than folded
+ * into one option with a model picker, because picking the wrong one costs
+ * real money per call and a dropdown that names them is the safer surface.
  */
 export type DecisionEndpoint =
-  'openrouter' | 'direct' | 'perplexity' | 'liquid' | 'cloudflare' | 'kev' | 'rizzo' | 'custom'
+  | 'openrouter'
+  | 'direct'
+  | 'perplexity'
+  | 'perplexity-v12'
+  | 'perplexity-flash'
+  | 'liquid'
+  | 'liquid-ultra'
+  | 'openai'
+  | 'cloudflare'
+  | 'cloudflare-flash'
+  | 'kev'
+  | 'rizzo'
+  | 'custom'
+
+export function isCloudflareEndpoint(endpoint: DecisionEndpoint): boolean {
+  return endpoint === 'cloudflare' || endpoint === 'cloudflare-flash'
+}
 
 /** home search options persisted in app-settings.json under `fileSearch` */
 export interface FileSearchSettings {
@@ -175,9 +202,9 @@ export interface FileSearchSettings {
   customBaseUrl: string
   /** `custom` endpoint only: model id the server expects */
   customModel: string
-  /** `cloudflare` endpoint only: Workers AI account id */
+  /** `cloudflare`/`cloudflare-flash` only: Workers AI account id */
   cloudflareAccountId: string
-  /** `cloudflare` endpoint only: Workers AI model path, e.g. @cf/cloudflare/clef or @cf/cloudflare/clef-omni */
+  /** `cloudflare`/`cloudflare-flash` only: Workers AI model path, e.g. @cf/cloudflare/clef */
   cloudflareModel: string
 }
 
@@ -349,6 +376,10 @@ export interface HomeApi {
   getAutoSaveDefault(): Promise<AutoSaveDefault>
   /** persist the AutoSave default; broadcasts 'app:auto-save-default-changed' to all web contents */
   setAutoSaveDefault(on: boolean): Promise<void>
+  /** the ceiling a delimited import (a .csv/.tsv opened as a workbook) may reach, in MB */
+  getCsvImportLimit(): Promise<number>
+  /** persist that ceiling; the editors take it at once */
+  setCsvImportLimit(mb: number): Promise<void>
   /** current local MCP server state (running/enabled/port/url) */
   getMcpStatus(): Promise<McpStatus>
   /** enable/disable the MCP server and/or change its port/background/logging; applies and persists, returns the new state */
@@ -366,6 +397,8 @@ export interface HomeApi {
   openMcpLogFile(): Promise<void>
   /** name on comments and tracked changes; `value` is the stored override ('' = use `fallback`, the OS account) */
   getAuthorName(): Promise<AuthorNameSetting>
+  getLegacyImportPrompt(): Promise<boolean>
+  setLegacyImportPrompt(prompt: boolean): Promise<boolean>
   /** persist; broadcasts 'app:author-name-changed' (the effective name) to all web contents */
   setAuthorName(value: string): Promise<AuthorNameSetting>
   /** AI panel text size + chat-input spellcheck (persisted in userData/app-settings.json) */
@@ -603,12 +636,16 @@ export const HOME_CHANNELS = {
   setDocumentTheme: 'home:set-document-theme',
   getAutoSaveDefault: 'home:get-auto-save-default',
   setAutoSaveDefault: 'home:set-auto-save-default',
+  getCsvImportLimit: 'home:get-csv-import-limit',
+  setCsvImportLimit: 'home:set-csv-import-limit',
   getMcpStatus: 'home:get-mcp-status',
   setMcpSettings: 'home:set-mcp-settings',
   getMcpLogs: 'home:get-mcp-logs',
   clearMcpLogs: 'home:clear-mcp-logs',
   openMcpLogFile: 'home:open-mcp-log-file',
   getAuthorName: 'home:get-author-name',
+  getLegacyImportPrompt: 'home:get-legacy-import-prompt',
+  setLegacyImportPrompt: 'home:set-legacy-import-prompt',
   setAuthorName: 'home:set-author-name',
   getAiPanelPrefs: 'home:get-ai-panel-prefs',
   setAiPanelPrefs: 'home:set-ai-panel-prefs',

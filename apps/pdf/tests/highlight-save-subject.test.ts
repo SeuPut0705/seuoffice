@@ -2,7 +2,8 @@
  * AI highlights in the saved file (reading-assist spec 3.9, 5.7): an accepted
  * suggestion is saved as a /Highlight whose /Subj is its category; a markup
  * without `subject` saves exactly as before (the bytes are compared with a
- * baseline taken from the save code before `subject` existed).
+ * baseline taken from the save code before `subject` existed, moved once since
+ * by upstream's /T change, see BASELINE_OUTPUT).
  */
 import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
@@ -47,9 +48,16 @@ const MARKUPS: MarkupInput[] = [
   },
 ]
 
-/** taken with the save code before MarkupInput.subject existed */
+/**
+ * Taken with the save code before MarkupInput.subject existed: output
+ * 3928334e…d99f4 then. GenOffice 5b53ada7c (#2467) writes a markup's author as
+ * a text string, so each of the three markups holds
+ * `/T <FEFF00470065006E004F00660066006900630065>` ("GenOffice", the author when
+ * the request names none) where it held the name `/T /GenOffice`; nothing else
+ * in the file differs but the offsets after them.
+ */
 const BASELINE_INPUT = '5ea9553c3809ce08868b54dfb6386b4a1ccedd14bd8f817c197003ad5cf3cbba'
-const BASELINE_OUTPUT = '3928334e29d69dd9c28984fbb16cb53430108541e6c5960502685d5df29d99f4'
+const BASELINE_OUTPUT = '99815a44814d269ca0948df081854b3b70ae22a09b65988614179e852e275419'
 
 const sha = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
 

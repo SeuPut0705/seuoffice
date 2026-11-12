@@ -4889,7 +4889,7 @@ fn cancelled_open_registers_no_session() {
 #[test]
 fn cancel_after_the_cache_directory_is_created_reclaims_it() {
     let session_id = Uuid::new_v4().to_string();
-    let path = std::env::temp_dir().join(format!("genspark-ai-excel-{session_id}"));
+    let path = std::env::temp_dir().join(format!("ai-excel-session-{session_id}"));
 
     let error = create_cache_directory(&session_id, &AtomicBool::new(true)).unwrap_err();
     assert!(matches!(error, SidecarError::Cancelled), "{error:?}");
@@ -4905,7 +4905,7 @@ fn cancel_after_the_cache_directory_is_created_reclaims_it() {
 #[test]
 fn cache_directory_outlives_the_open_only_once_committed() {
     let committed_id = Uuid::new_v4().to_string();
-    let committed = std::env::temp_dir().join(format!("genspark-ai-excel-{committed_id}"));
+    let committed = std::env::temp_dir().join(format!("ai-excel-session-{committed_id}"));
     let mut directory = create_cache_directory(&committed_id, &AtomicBool::new(false)).unwrap();
     assert!(committed.exists());
     directory.commit();
@@ -4918,7 +4918,7 @@ fn cache_directory_outlives_the_open_only_once_committed() {
 
     // Uncommitted, the guard reclaims it on drop.
     let abandoned_id = Uuid::new_v4().to_string();
-    let abandoned = std::env::temp_dir().join(format!("genspark-ai-excel-{abandoned_id}"));
+    let abandoned = std::env::temp_dir().join(format!("ai-excel-session-{abandoned_id}"));
     drop(create_cache_directory(&abandoned_id, &AtomicBool::new(false)).unwrap());
     assert!(!abandoned.exists());
 }
@@ -4945,7 +4945,7 @@ fn an_uncancelled_open_completes_and_keeps_its_cache_directory() {
     let metadata = sessions
         .open_with_locale(&path, "zh", None, &AtomicBool::new(false))
         .unwrap();
-    let cache = std::env::temp_dir().join(format!("genspark-ai-excel-{}", metadata.session_id));
+    let cache = std::env::temp_dir().join(format!("ai-excel-session-{}", metadata.session_id));
     assert!(cache.exists(), "a completed open lost its cache directory");
     assert_eq!(sessions.session_count(), 1);
     // Close still reclaims it.
@@ -4981,6 +4981,39 @@ fn rejects_xml_entry_that_inflates_past_its_declared_size() {
     assert!(
         result.is_err(),
         "an entry declaring 12 bytes inflated to 4 MiB and was read anyway"
+    );
+}
+
+/// An honestly declared metadata part still has a ceiling: a highly
+/// compressible `xl/workbook.xml` far past `MAX_METADATA_PART_BYTES` is refused
+/// before it is materialised (genoffice#1002).
+#[test]
+fn rejects_oversized_metadata_part_that_declares_its_size() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("big-workbook.xlsx");
+    let size = crate::xml_util::MAX_METADATA_PART_BYTES as usize + 1;
+    {
+        let mut writer = zip::ZipWriter::new(File::create(&path).unwrap());
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        writer.start_file("xl/workbook.xml", options).unwrap();
+        writer.write_all(b"<workbook>").unwrap();
+        let chunk = vec![b' '; 1 << 20];
+        let mut written = 0;
+        while written < size {
+            writer.write_all(&chunk).unwrap();
+            written += chunk.len();
+        }
+        writer.write_all(b"</workbook>").unwrap();
+        writer.finish().unwrap();
+    }
+    assert!(std::fs::metadata(&path).unwrap().len() < 1024 * 1024);
+
+    let mut archive = zip::ZipArchive::new(File::open(&path).unwrap()).unwrap();
+    let error = crate::xml_util::read_zip_string(&mut archive, "xl/workbook.xml").unwrap_err();
+    assert!(
+        error.to_string().contains("metadata part limit"),
+        "unexpected error: {error}"
     );
 }
 

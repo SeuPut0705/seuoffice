@@ -28,6 +28,10 @@ export const cs = {
     'Tento dokument obsahuje sledované změny. Vidíte jeho aktuální text s použitými změnami; uložením se tento text zachová a záznam změn se odstraní.',
   saveTracked:
     'Neuloženo: tento dokument obsahuje sledované změny; uložením zde by se ztratily a soubor by Hancom Hangul nemusel otevřít.',
+  openedUnverified:
+    'Strukturu tohoto souboru se nepodařilo ověřit, takže část obsahu zde může chybět. Můžete jej číst a upravovat, ale původní soubor se nepřepíše: pomocí Uložit jako uložte kopii pod jiným názvem.',
+  saveUnverified:
+    'Neuloženo: strukturu tohoto souboru se nepodařilo ověřit a přepsáním původního souboru by se mohl ztratit obsah. V dialogu Uložit jako uložte kopii pod jiným názvem, nejlépe ve formátu HWPX.',
   savedTailsLost:
     'Uloženo, ale některé předlohy stránek nebo poznámky z původního souboru se nepodařilo zachovat; Hancom Hangul nemusí uložený soubor otevřít. Otevřete jej pro kontrolu.',
   missingFonts:

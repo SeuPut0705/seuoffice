@@ -17,6 +17,7 @@
   "devDependencies": {
     "@genoffice/agent-core": "*",
     "@genoffice/ai-provider": "*",
+    "@genoffice/compound-file": "*",
     "@genoffice/doc-rules": "*",
     "@genoffice/electron-utils": "*",
     "@genoffice/file-parse": "*",

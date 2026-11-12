@@ -22,7 +22,7 @@ import { setModuleLang, t } from '../src/renderer/i18n/locale'
 import { ODT_OFF_FEATURES, isOdtSession, odtOffProps, refuseInOdt } from '../src/renderer/odt-gate'
 import { AGENT_TOOLS, executeTool } from '../src/renderer/ai/tools'
 import { createDocsSkill } from '../src/renderer/ai/docs-skill'
-import { ATTACHMENT_CARD_ICONS } from '../src/renderer/ai/AiPanel'
+import { ATTACHMENT_CARD_ICONS } from '@genoffice/ui'
 import { CommentsPanel } from '../src/renderer/components/CommentsPanel'
 import { ProtectDialog } from '../src/renderer/components/ProtectDialog'
 import {
@@ -574,7 +574,12 @@ describe('comments in an ODT document', () => {
       )
     })
     expect(host.textContent).toContain('메모 내용')
-    const actions = [...host.querySelectorAll<HTMLButtonElement>('.comment-thread-actions button')]
+    // Resolve sits in the card head and Reply is the inline box under the thread
+    const actions = [
+      ...host.querySelectorAll<HTMLButtonElement | HTMLInputElement>(
+        '.comment-resolve, .comment-reply-input',
+      ),
+    ]
     expect(actions).toHaveLength(2)
     for (const button of actions) {
       expect(button.disabled).toBe(true)

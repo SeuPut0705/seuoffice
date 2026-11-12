@@ -1,6 +1,25 @@
 import type { zh } from './zh'
 
 export const ja = {
+  // ── Withholding cells from the model ──
+  redactMenuLabel: '選択範囲をAIから隠す',
+  redactDialogDesc:
+    '選択した内容はドキュメントとファイルに残り、AI には下のマーカーしか見えません。名前をつけると、何を表すかAIが理解できます。',
+  redactDialogScope:
+    'これはこのアプリの AI に限られます。CLI、MCP ツール、GUI なしのエクスポートはファイルを直接読み込むため、これらの文字はまだ見えています。',
+  redactDialogPlaceholder: 'プレースホルダー名（例：顧客電話）',
+  redactCancel: 'キャンセル',
+  redactInsert: '隠す',
+  redactEnable: '選択範囲を右クリックしてAIから隠します。',
+  redactNeedsSavedRow:
+    'この行はまだファイルに保存されていません。保存してからセルを非表示にしてください。',
+  redactNeedsSavedSheet:
+    'このシートまたはそのコピーはまだファイルに保存されていません。保存してから非表示の設定を変更してください。',
+  redactMoveRefused:
+    '実行しませんでした。AIから隠したセルを移動またはコピーすることになり、値が隠されなくなります。先に非表示を解除するか、そのセルを範囲から外してください。',
+  redactRecoveredFromNames:
+    '別のアプリがこのファイルを書き換え、非表示にする情報を記録した部品が失われました。非表示のセルはワークブックの名前から復元されました。保存すれば完全な記録が書き戻されます。',
+
   appMergeWorkbooks: 'ブックの結合',
   appMergeWorkbooksTip: '他の Excel ファイルのシートをこのブックに追加します',
   appMergeWorkbooksPicking: '結合するファイルを選択…',
@@ -8,6 +27,8 @@ export const ja = {
   appMergeWorkbooksDone:
     '{files} 個のファイルから {sheets} 枚のシートを結合しました（数式は値として取り込み）。',
   appMergeWorkbooksFailed: 'ブックの結合に失敗しました。',
+  appMergeWorkbooksHiddenCells:
+    '結合しませんでした。{file} にはAIから隠したセルがあり、結合するとその値が隠されないまま取り込まれます。そのファイルを開いて、該当セルをAIから隠す設定を解除するかセルを削除し、保存してからもう一度結合してください。',
   appMergeWorkbooksInsertFailed: 'シート {sheet} を作成できませんでした。',
   appMergeWorkbooksLocked: 'ブックの読み込み中のため、今は結合できません。',
   appFormulaBarShown: '数式バーを表示しました。',
@@ -547,6 +568,7 @@ export const ja = {
   appBridgeUnavailable:
     'デスクトップファイルブリッジが利用できません。Electron アプリを再起動してください。',
   appOpenCanceled: 'ブックの選択をキャンセルしました。',
+  appImportCanceled: 'インポートをキャンセルしました。',
   appOpeningWorkbook: 'ブックを開いています…',
   appOpened: '{name} を開きました — セルの編集は ⌘S でファイルに保存されます。',
   appOpenFailed: 'ブックを開けません。',
@@ -643,6 +665,8 @@ export const ja = {
     'このグラフの種類はこの編集をサポートしていないため保存を中止しました — グラフの変更を元に戻してください。',
   appSaveErrMoveOverlap:
     '数式、書式設定された範囲、図形、またはテーブルが移動対象の行にまたがっているため保存を中止しました — 移動を元に戻してください。',
+  appSaveErrHiddenCellsUnreadable:
+    'このワークブックでAIから隠したセルの記録を読み取れないため、行・列・シートの変更は保存できません。保存すると隠したセルが保護されなくなります。これらの変更を元に戻してから、もう一度保存してください。',
   appFromTextCsvTitle: 'CSV/テキストファイルを現在の選択範囲にインポート',
   appCsvImported: 'ファイルから {rows} 行 × {columns} 列を {cell} にインポートしました。',
   appCsvEmpty: 'CSV ファイルにデータがありません。',
@@ -750,6 +774,7 @@ export const ja = {
   appExportPdfTitle: 'PDF としてエクスポート',
   appSaveTitle: '保存（⌘S）',
   appSaveAs: '名前を付けて保存',
+  aiNameFile: 'AI で名前を変更…',
   appUndo: '元に戻す',
   appRedo: 'やり直し',
   appQuickAccessCustomize: 'クイック アクセス ツール バーのユーザー設定',
@@ -1211,6 +1236,20 @@ export const ja = {
   appWatchCell: 'セル',
   appWatchValue: '値',
   appWatchFormula: '数式',
+  appLinksPanel: '外部リンク',
+  appLinksPanelDetail: '他のブックへのリンクの表示・更新・切断',
+  appLinksUpdate: '値の更新',
+  appLinksNone: 'このブックに他のブックへのリンクはありません。',
+  appLinksUnsaved: '外部リンクを一覧する前に、このブックを保存してください。',
+  appLinksSource: 'ソース',
+  appLinksStatus: '状態',
+  appLinksSheets: 'シート',
+  appLinksLocate: 'ソースファイルを表示',
+  appLinksReachable: '利用可能',
+  appLinksBroken: '利用不可',
+  appLinksBreak: 'リンクの解除',
+  appLinksBreakConfirm: '解除を確認',
+  appLinksChangeSource: 'ソースの変更',
   appGroupCalculation: '計算方法',
   appCalculationOptions: '計算方法の設定',
   appCalculationOptionsTitle: '自動または手動で再計算',
@@ -1228,6 +1267,12 @@ export const ja = {
   appGroupGetData: 'データの取得',
   appFromTextCsv: 'テキスト/CSV から',
   appRefreshAll: 'すべて更新',
+  appRefreshQuery: 'クエリを更新',
+  appQueryConnectionsTitle: 'ワークブックのクエリを更新します',
+  appQueryRefreshing: '{name} を更新中…',
+  appQueryRefreshed: '{name} を更新しました（{rows} 行）',
+  appQueryRefreshedClipped: '{name} を更新しました（{rows} 行、{dropped} 行は範囲外）',
+  appQueryRefreshFailed: '{name} を更新できませんでした',
   appWorkbookNoPivot: 'ブックにピボットテーブルがありません。',
   appRefreshAllTitle: 'すべてのピボットテーブルを更新',
   appQueriesConnections: 'クエリと接続',
@@ -1304,6 +1349,10 @@ export const ja = {
   appFontSizeTip: 'フォントサイズ',
   appZoomIn: '拡大',
   appZoomOut: '縮小',
+  appImgActualSize: '実際のサイズ',
+  appImgFitWindow: 'ウィンドウに合わせる',
+  appImgSaveAs: '画像を名前を付けて保存…',
+  appImgClose: '閉じる (Esc)',
   appZoomSheetTitle: 'シートをズーム',
   appResetZoom: 'ズームのリセット',
   appZoomToSelection: '選択範囲に合わせて拡大/縮小',
@@ -1347,6 +1396,19 @@ export const ja = {
   appOpenFileFirst: '先にファイルを開いてください',
   appNoPassword: 'パスワードなし',
   appProtectWorkbook: 'ブックの保護',
+  appChangePassword: 'パスワードの変更',
+  appWorkbookPasswordChanged: 'ブックのパスワードを更新しました。',
+  appChangePasswordTitle: 'ブックのパスワードを変更',
+  appChangePasswordCopy: '新しいパスワードを入力し、下で確認してください。',
+  appNewPasswordLabel: '新しいパスワード',
+  appConfirmPasswordLabel: '新しいパスワードの確認',
+  appPasswordsMismatch: 'パスワードが一致しません。',
+  appPasswordTooLong:
+    'パスワードが長すぎます。Excel が受け付ける上限の {max} 文字以内にしてください。',
+  appPasswordUpdateFailed: 'ブックのパスワードを更新できませんでした。',
+  appPasswordUpdating: '更新中…',
+  appUpdatePassword: 'パスワードを更新',
+  appWorkbookNotPasswordProtected: 'このブックには読み取りパスワードが設定されていません。',
   appAllowEditRanges: '範囲の編集を許可',
   // Home tab
   appGroupClipboard: 'クリップボード',
@@ -1581,6 +1643,8 @@ export const ja = {
   appVisualSendBackward: '背面へ移動',
   appVisualSizeProperties: 'サイズとプロパティ…',
   appVisualHyperlink: 'ハイパーリンク…',
+  appVisualEmbedInCell: 'セルに画像を埋め込む',
+  appVisualEmbedFailed: 'この画像をセルに埋め込めませんでした。',
   appVisualDelete: '削除',
   appVisualArranged: 'オブジェクトを更新しました — ⌘S で保存。',
   appVisualCopied: 'オブジェクトをコピーしました。',

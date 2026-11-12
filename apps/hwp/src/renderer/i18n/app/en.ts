@@ -27,6 +27,10 @@ export const en = {
     'This document has tracked changes. You see its current text, with the changes applied; saving keeps this text and drops the record of changes.',
   saveTracked:
     'Not saved: this document has tracked changes, and saving it here would lose them and may write a file Hancom Hangul cannot open.',
+  openedUnverified:
+    'The structure of this file could not be verified, so some of its content may be missing here. You can read and edit it, but it is not saved over the original: use Save As to keep a copy under another name.',
+  saveUnverified:
+    'Not saved: the structure of this file could not be verified, so saving over it could lose content. In Save As, save a copy under another name, preferably as HWPX.',
   savedTailsLost:
     'Saved, but some master pages or memos of the original file could not be carried over, and Hancom Hangul may not open the saved file. Please open it there to check.',
   missingFonts:

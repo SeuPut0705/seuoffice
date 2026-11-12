@@ -478,7 +478,7 @@ async function attachmentText(filePath: string): Promise<string> {
   if (stat.size > attachableMaxBytes(capExt)) throw new Error(tm('errFileTooLarge'))
   const parsed = await parseFileToText(filePath)
   if (!parsed.ok || parsed.kind !== 'text' || parsed.text == null) {
-    throw new Error(parsed.error ?? tm('errParseFailed'))
+    throw new Error((!parsed.damaged && parsed.error) || tm('errParseFailed'))
   }
   textCache.set(filePath, { stamp, text: parsed.text })
   if (textCache.size > 8) {

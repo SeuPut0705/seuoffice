@@ -9,4 +9,8 @@ export const ru = {
   diskIgnore: 'Пропустить',
   diskDismiss: 'ОК',
   diskReloadFailed: 'Не удалось загрузить файл заново: {detail}',
+  diskChangedNoUndo:
+    'Другая программа изменила или удалила этот файл, поэтому отмена и повтор этого изменения не выполнены.',
+  pageOpNoUndoConfirm:
+    'Этот файл ({size}) больше размера, который сохраняется для отмены ({limit}), поэтому эту операцию со страницами нельзя будет отменить. Продолжить?',
 } satisfies Record<keyof typeof zh, string>

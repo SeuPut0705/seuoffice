@@ -195,6 +195,7 @@ export const strings = {
     setSearchRerankCustomModel: '模型 ID',
     setSearchRerankAccount: '账户 ID',
     setAiPanelSide: 'AI 侧边栏位置',
+    csvImportLimit: 'CSV 导入上限',
     aiPanelSideLeft: '左侧',
     aiPanelSideRight: '右侧',
     setAiFontSize: 'AI 面板文字大小',
@@ -203,6 +204,9 @@ export const strings = {
     aiFontSizeXLarge: '特大',
     aiFontSizeCustom: '自定义',
     setAiSpellcheck: 'AI 对话拼写检查',
+    setLegacyImportPrompt: '打开旧格式前先提示',
+    setLegacyImportPromptDesc:
+      '打开 .doc、.odt、.hwp、.ods、.odp 等旧格式文件时，先说明哪些内容会转换过来。关闭后直接进入另存为。',
     setDefaultApp: '设为 Office 文档默认程序',
     setDefaultAppDesc: '双击 .docx、.xlsx、.pptx 文件时用 GenOffice 打开。',
     setDefaultAppIs: 'GenOffice 已是默认程序。',
@@ -225,7 +229,8 @@ export const strings = {
     aiPanelStartCollapsed: '收起',
     aiPanelStartLast: '上次状态',
     setAuthorName: '用户名',
-    setAuthorNameDesc: '作为批注和修订的作者显示在 Docs、Sheets、Slides 中。留空则使用电脑账户名。',
+    setAuthorNameDesc:
+      '作为批注和修订的作者显示在 Docs、Sheets、Slides、PDF 中。留空则使用电脑账户名。',
     settings: '设置',
     setSecAccount: '账户',
     setSecGeneral: '通用',
@@ -317,11 +322,10 @@ export const strings = {
     intgCopy: '复制',
     intgStep2Title: '试一试',
     intgStep2Desc: '在助手里新开一个对话，用平常说话的方式提需求，例如：',
-    intgStep2DescBefore: '装好后，在助手里新开一个对话，用平常说话的方式提需求，例如：',
     intgExample1: '把 ~/Downloads/report.md 转成 Word 文档',
     intgExample2: '做一份 6 页的幻灯片，介绍我们第三季度的业绩',
     intgExample3: '把 budget.xlsx 转成 PDF，并在 GenOffice 里打开',
-    intgStep2Note: '助手会自己调用 ieumoffice 命令行，你不需要输入任何命令。',
+    intgStep2Note: '助手会自己调用 GenOffice（命令行或 MCP），你不需要输入任何命令。',
     intgCliPartTitle: 'CLI · 命令行 + skill',
     intgCliPartDesc:
       '适合能运行终端命令的助手（Claude Code、Codex、Cursor 等）。安装 skill 后，助手会自己调用 ieumoffice 命令行创建、转换、读取和编辑文件，你不需要输入任何命令。',
@@ -336,7 +340,6 @@ export const strings = {
     intgMcpHttpDesc:
       '在 GenOffice 内运行，助手通过网址连接，可以看着它在 Word 编辑器里逐步生成。需要 GenOffice 保持打开；目前只支持 Word。',
     intgMcpHttpAdvanced: '高级：其他地址与日志',
-    intgMcpTryNote: '助手会通过 MCP 调用 GenOffice，你不需要输入任何命令。',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: '在终端运行一次：',
     intgMcpOtherTitle: 'Cursor、Claude Desktop 或其他支持 MCP 的助手',
@@ -409,9 +412,12 @@ export const strings = {
     setSecAiMedia: '生图、媒体与搜索',
     setAiSearchSerperHint: 'Serper 用你的 key 同时提供网页与图片搜索。',
     setAiSearchSerplyHint: 'Serply 用你的 key 同时提供网页与图片搜索。',
+    setAiSearchSearchApiHint: 'SearchApi 用你的 key 同时提供网页与图片搜索。',
     setAiSearchTavilyHint: 'Tavily 用你的 key 提供网页搜索；图片搜索改用免费来源。',
     setAiSearchParallelHint:
       '留空 API key 即可免费使用 Parallel 搜索（用量有限）。填写 key 可使用你的 Parallel 账户。图片搜索使用其他来源。',
+    setAiSearchKeenableHint:
+      '留空 API key 即可免费使用 Keenable 搜索（用量有限）。填写 key 可使用你的 Keenable 账户。图片搜索使用其他来源。',
     setAiCapImage: '生图',
     setAiCapAnalysis: '图片解析',
     setAiCapVideo: '视频解析',
@@ -773,6 +779,7 @@ export const strings = {
     setSearchRerankCustomModel: 'Model ID',
     setSearchRerankAccount: 'Account ID',
     setAiPanelSide: 'AI sidebar position',
+    csvImportLimit: 'CSV import limit',
     aiPanelSideLeft: 'Left',
     aiPanelSideRight: 'Right',
     setAiFontSize: 'AI panel text size',
@@ -781,6 +788,9 @@ export const strings = {
     aiFontSizeXLarge: 'Extra large',
     aiFontSizeCustom: 'Custom',
     setAiSpellcheck: 'Spell check in AI chat',
+    setLegacyImportPrompt: 'Ask before converting legacy files',
+    setLegacyImportPromptDesc:
+      'Explain what carries over before opening .doc, .odt, .hwp, .ods or .odp files. When off, Save As opens right away.',
     setDefaultApp: 'Default app for Office documents',
     setDefaultAppDesc: 'Open .docx, .xlsx and .pptx files in GenOffice when double-clicked.',
     setDefaultAppIs: 'GenOffice is already the default.',
@@ -805,7 +815,7 @@ export const strings = {
     aiPanelStartLast: 'Last state',
     setAuthorName: 'User name',
     setAuthorNameDesc:
-      'Shown as the author of comments and tracked changes in Docs, Sheets and Slides. Leave blank to use your computer account name.',
+      'Shown as the author of comments and tracked changes in Docs, Sheets, Slides and PDF. Leave blank to use your computer account name.',
     settings: 'Settings',
     setSecAccount: 'Account',
     setSecGeneral: 'General',
@@ -905,13 +915,11 @@ export const strings = {
     intgCopy: 'Copy',
     intgStep2Title: 'Try it',
     intgStep2Desc: 'Open a new chat in your assistant and ask in plain words, for example:',
-    intgStep2DescBefore:
-      'Once installed, open a new chat in your assistant and ask in plain words, for example:',
     intgExample1: 'Turn ~/Downloads/report.md into a Word document',
     intgExample2: 'Make a 6-slide deck about our Q3 results',
     intgExample3: 'Convert budget.xlsx to PDF and open it in GenOffice',
     intgStep2Note:
-      'The assistant runs the ieumoffice command line itself; you never have to type it.',
+      'The assistant calls GenOffice itself, through the command line or MCP; you never have to type a command.',
     intgCliPartTitle: 'CLI · command line + skill',
     intgCliPartDesc:
       'For assistants that can run terminal commands (Claude Code, Codex, Cursor and others). Once the skill is installed, the assistant calls the ieumoffice command line itself to create, convert, read and edit files.',
@@ -926,7 +934,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Runs inside GenOffice; the assistant connects to a URL and you can watch it build the document step by step in the Word editor. GenOffice must stay open; Word documents only for now.',
     intgMcpHttpAdvanced: 'Advanced: other endpoints and log',
-    intgMcpTryNote: 'The assistant calls GenOffice through MCP; you never type a command.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Run this once in a terminal:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop or any other MCP-capable assistant',
@@ -1001,10 +1008,13 @@ export const strings = {
     setSecAiMedia: 'AI Media & Search',
     setAiSearchSerperHint: 'Serper serves both web and image search with your key.',
     setAiSearchSerplyHint: 'Serply serves both web and image search with your key.',
+    setAiSearchSearchApiHint: 'SearchApi serves both web and image search with your key.',
     setAiSearchTavilyHint:
       'Tavily serves web search with your key; image search falls back to free sources.',
     setAiSearchParallelHint:
       'Leave the key blank for free Parallel search (limited usage). Add a key to use your Parallel account. Image search uses other sources.',
+    setAiSearchKeenableHint:
+      'Leave the key blank for free Keenable search (limited usage). Add a key to use your Keenable account. Image search uses other sources.',
     setAiCapImage: 'Image generation',
     setAiCapAnalysis: 'Image analysis',
     setAiCapVideo: 'Video analysis',
@@ -1375,6 +1385,7 @@ export const strings = {
     setSearchRerankCustomModel: 'ID mô hình',
     setSearchRerankAccount: 'ID tài khoản',
     setAiPanelSide: 'Vị trí thanh bên AI',
+    csvImportLimit: 'Giới hạn nhập CSV',
     aiPanelSideLeft: 'Trái',
     aiPanelSideRight: 'Phải',
     setAiFontSize: 'Cỡ chữ bảng điều khiển AI',
@@ -1383,6 +1394,9 @@ export const strings = {
     aiFontSizeXLarge: 'Rất lớn',
     aiFontSizeCustom: 'Tùy chỉnh',
     setAiSpellcheck: 'Kiểm tra chính tả trong trò chuyện AI',
+    setLegacyImportPrompt: 'Hỏi trước khi chuyển đổi tệp cũ',
+    setLegacyImportPromptDesc:
+      'Giải thích nội dung được giữ lại trước khi mở tệp .doc, .odt, .hwp, .ods hoặc .odp. Khi tắt, hộp thoại Lưu dưới dạng mở ngay.',
     setDefaultApp: 'Ứng dụng mặc định cho tài liệu Office',
     setDefaultAppDesc: 'Mở các tệp .docx, .xlsx và .pptx bằng GenOffice khi bấm đúp.',
     setDefaultAppIs: 'GenOffice đã là ứng dụng mặc định.',
@@ -1407,7 +1421,7 @@ export const strings = {
     aiPanelStartLast: 'Trạng thái gần nhất',
     setAuthorName: 'Tên người dùng',
     setAuthorNameDesc:
-      'Hiển thị là tác giả của nhận xét và thay đổi được theo dõi trong Docs, Sheets và Slides. Để trống để dùng tên tài khoản máy tính.',
+      'Hiển thị là tác giả của nhận xét và thay đổi được theo dõi trong Docs, Sheets, Slides và PDF. Để trống để dùng tên tài khoản máy tính.',
     settings: 'Cài đặt',
     setSecAccount: 'Tài khoản',
     setSecGeneral: 'Chung',
@@ -1507,12 +1521,11 @@ export const strings = {
     intgStep2Title: 'Dùng thử',
     intgStep2Desc:
       'Mở một cuộc trò chuyện mới trong trợ lý của bạn và hỏi bằng ngôn ngữ tự nhiên, ví dụ:',
-    intgStep2DescBefore:
-      'Sau khi cài đặt, hãy mở một cuộc trò chuyện mới trong trợ lý của bạn và hỏi bằng ngôn ngữ tự nhiên, ví dụ:',
     intgExample1: 'Chuyển đổi ~/Downloads/report.md thành tài liệu Word',
     intgExample2: 'Tạo bài thuyết trình 6 trang trình bày về kết quả quý 3 của chúng tôi',
     intgExample3: 'Chuyển đổi budget.xlsx sang PDF và mở trong GenOffice',
-    intgStep2Note: 'Trợ lý tự chạy dòng lệnh ieumoffice; bạn không bao giờ phải nhập lệnh.',
+    intgStep2Note:
+      'Trợ lý tự gọi GenOffice qua dòng lệnh hoặc MCP; bạn không bao giờ phải nhập lệnh.',
     intgCliPartTitle: 'CLI · dòng lệnh + kỹ năng',
     intgCliPartDesc:
       'Dành cho các trợ lý có thể chạy lệnh terminal (Claude Code, Codex, Cursor và các trợ lý khác). Khi kỹ năng đã được cài đặt, trợ lý sẽ tự gọi dòng lệnh ieumoffice để tạo, chuyển đổi, đọc và chỉnh sửa tệp; bạn không cần nhập lệnh.',
@@ -1527,7 +1540,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Chạy bên trong GenOffice; trợ lý kết nối với một URL và bạn có thể theo dõi nó tạo tài liệu từng bước trong trình chỉnh sửa Word. GenOffice phải luôn mở; hiện tại chỉ hỗ trợ tài liệu Word.',
     intgMcpHttpAdvanced: 'Nâng cao: các điểm cuối khác và nhật ký',
-    intgMcpTryNote: 'Trợ lý gọi GenOffice thông qua MCP; bạn không bao giờ phải nhập lệnh.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Chạy lệnh này một lần trong terminal:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop hoặc bất kỳ trợ lý hỗ trợ MCP nào khác',
@@ -1604,10 +1616,13 @@ export const strings = {
     setSecAiMedia: 'Phương tiện AI & Tìm kiếm',
     setAiSearchSerperHint: 'Serper cung cấp cả tìm kiếm web và hình ảnh bằng khóa của bạn.',
     setAiSearchSerplyHint: 'Serply cung cấp cả tìm kiếm web và hình ảnh bằng key của bạn.',
+    setAiSearchSearchApiHint: 'SearchApi cung cấp cả tìm kiếm web và hình ảnh bằng key của bạn.',
     setAiSearchTavilyHint:
       'Tavily cung cấp tìm kiếm web bằng khóa của bạn; tìm kiếm hình ảnh sẽ chuyển sang dùng các nguồn miễn phí.',
     setAiSearchParallelHint:
       'Để trống khóa để dùng tìm kiếm Parallel miễn phí (giới hạn lượt dùng). Nhập khóa để dùng tài khoản Parallel của bạn. Tìm kiếm hình ảnh sử dụng các nguồn khác.',
+    setAiSearchKeenableHint:
+      'Để trống khóa để dùng tìm kiếm Keenable miễn phí (giới hạn lượt dùng). Nhập khóa để dùng tài khoản Keenable của bạn. Tìm kiếm hình ảnh sử dụng các nguồn khác.',
     setAiCapImage: 'Tạo hình ảnh',
     setAiCapAnalysis: 'Phân tích hình ảnh',
     setAiCapVideo: 'Phân tích video',
@@ -1986,6 +2001,7 @@ export const strings = {
     setSearchRerankCustomModel: 'モデル ID',
     setSearchRerankAccount: 'アカウント ID',
     setAiPanelSide: 'AI サイドバーの位置',
+    csvImportLimit: 'CSV インポートの上限',
     aiPanelSideLeft: '左側',
     aiPanelSideRight: '右側',
     setAiFontSize: 'AI パネルの文字サイズ',
@@ -1994,6 +2010,9 @@ export const strings = {
     aiFontSizeXLarge: '特大',
     aiFontSizeCustom: 'カスタム',
     setAiSpellcheck: 'AI チャットのスペルチェック',
+    setLegacyImportPrompt: '旧形式ファイルの変換前に確認する',
+    setLegacyImportPromptDesc:
+      '.doc、.odt、.hwp、.ods、.odp を開く前に、引き継がれる内容を説明します。オフにすると直接「名前を付けて保存」が開きます。',
     setDefaultApp: 'Office 文書の既定のアプリ',
     setDefaultAppDesc:
       '.docx、.xlsx、.pptx ファイルをダブルクリックしたとき GenOffice で開きます。',
@@ -2019,7 +2038,7 @@ export const strings = {
     aiPanelStartLast: '前回の状態',
     setAuthorName: 'ユーザー名',
     setAuthorNameDesc:
-      'Docs、Sheets、Slides でコメントと変更履歴の作成者として表示されます。空欄の場合はパソコンのアカウント名を使います。',
+      'Docs、Sheets、Slides、PDF でコメントと変更履歴の作成者として表示されます。空欄の場合はパソコンのアカウント名を使います。',
     settings: '設定',
     setSecAccount: 'アカウント',
     setSecGeneral: '一般',
@@ -2119,13 +2138,11 @@ export const strings = {
     intgCopy: 'コピー',
     intgStep2Title: '試してみる',
     intgStep2Desc: 'アシスタントで新しいチャットを開き、普通の言葉で頼んでください。例：',
-    intgStep2DescBefore:
-      'インストール後、アシスタントで新しいチャットを開き、普通の言葉で頼んでください。例：',
     intgExample1: '~/Downloads/report.md を Word 文書にして',
     intgExample2: '第 3 四半期の業績について 6 枚のスライドを作って',
     intgExample3: 'budget.xlsx を PDF に変換して GenOffice で開いて',
     intgStep2Note:
-      'ieumoffice コマンドラインはアシスタントが自分で実行します。あなたが入力する必要はありません。',
+      'アシスタントがコマンドラインまたは MCP 経由で GenOffice を自分で呼び出します。あなたが入力する必要はありません。',
     intgCliPartTitle: 'CLI · コマンドライン + skill',
     intgCliPartDesc:
       'ターミナルコマンドを実行できるアシスタント（Claude Code、Codex、Cursor など）向け。skill をインストールすると、アシスタントが自分で ieumoffice コマンドラインを呼び出してファイルを作成・変換・読み取り・編集します。コマンドを入力する必要はありません。',
@@ -2140,8 +2157,6 @@ export const strings = {
     intgMcpHttpDesc:
       'GenOffice 内で動作し、アシスタントは URL で接続します。Word エディター上で文書が段階的に生成される様子を見られます。GenOffice を開いたままにする必要があり、現時点では Word のみ対応です。',
     intgMcpHttpAdvanced: '詳細：その他のエンドポイントとログ',
-    intgMcpTryNote:
-      'アシスタントが MCP 経由で GenOffice を呼び出します。コマンドを入力する必要はありません。',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'ターミナルで一度だけ実行します：',
     intgMcpOtherTitle: 'Cursor、Claude Desktop、その他 MCP 対応のアシスタント',
@@ -2217,10 +2232,13 @@ export const strings = {
     setSecAiMedia: 'AI メディアと検索',
     setAiSearchSerperHint: 'Serper はあなたのキーで Web 検索と画像検索の両方を提供します。',
     setAiSearchSerplyHint: 'Serply はあなたのキーで Web 検索と画像検索の両方を提供します。',
+    setAiSearchSearchApiHint: 'SearchApi はあなたのキーで Web 検索と画像検索の両方を提供します。',
     setAiSearchTavilyHint:
       'Tavily はあなたのキーで Web 検索を提供します。画像検索は無料ソースにフォールバックします。',
     setAiSearchParallelHint:
       'キーを空欄にすると Parallel 検索を無料で使えます（利用制限あり）。キーを入力すると自分の Parallel アカウントを使用します。画像検索には他のソースを使用します。',
+    setAiSearchKeenableHint:
+      'キーを空欄にすると Keenable 検索を無料で使えます（利用制限あり）。キーを入力すると自分の Keenable アカウントを使用します。画像検索には他のソースを使用します。',
     setAiCapImage: '画像生成',
     setAiCapAnalysis: '画像解析',
     setAiCapVideo: '動画解析',
@@ -2603,6 +2621,7 @@ export const strings = {
     setSearchRerankCustomModel: '모델 ID',
     setSearchRerankAccount: '계정 ID',
     setAiPanelSide: 'AI 창 위치',
+    csvImportLimit: 'CSV 가져오기 한도',
     aiPanelSideLeft: '왼쪽',
     aiPanelSideRight: '오른쪽',
     setAiFontSize: 'AI 창 글자 크기',
@@ -2611,6 +2630,9 @@ export const strings = {
     aiFontSizeXLarge: '더 크게',
     aiFontSizeCustom: '사용자 지정',
     setAiSpellcheck: 'AI 채팅 맞춤법 검사',
+    setLegacyImportPrompt: '이전 형식 파일 변환 전 확인',
+    setLegacyImportPromptDesc:
+      '.doc, .odt, .hwp, .ods, .odp 파일을 열기 전에 어떤 내용이 유지되는지 안내합니다. 끄면 바로 다른 이름으로 저장이 열립니다.',
     setDefaultApp: 'Office 문서 기본 앱',
     setDefaultAppDesc: '.docx, .xlsx, .pptx 파일을 두 번 클릭하면 GenOffice로 엽니다.',
     setDefaultAppIs: 'GenOffice가 이미 기본 앱입니다.',
@@ -2635,7 +2657,7 @@ export const strings = {
     aiPanelStartLast: '마지막 상태',
     setAuthorName: '사용자 이름',
     setAuthorNameDesc:
-      'Docs, Sheets, Slides에서 메모와 변경 내용 추적의 작성자로 표시됩니다. 비워 두면 컴퓨터 계정 이름을 사용합니다.',
+      'Docs, Sheets, Slides, PDF에서 메모와 변경 내용 추적의 작성자로 표시됩니다. 비워 두면 컴퓨터 계정 이름을 사용합니다.',
     settings: '설정',
     setSecAccount: '계정',
     setSecGeneral: '일반',
@@ -2731,11 +2753,11 @@ export const strings = {
     intgCopy: '복사',
     intgStep2Title: '사용해 보기',
     intgStep2Desc: '어시스턴트에서 새 대화를 열고 평소 말투로 요청하세요. 예:',
-    intgStep2DescBefore: '설치 후 어시스턴트에서 새 대화를 열고 평소 말투로 요청하세요. 예:',
     intgExample1: '~/Downloads/report.md를 Word 문서로 만들어 줘',
     intgExample2: '3분기 실적을 소개하는 6장짜리 슬라이드를 만들어 줘',
     intgExample3: 'budget.xlsx를 PDF로 변환해서 GenOffice에서 열어 줘',
-    intgStep2Note: 'ieumoffice 명령줄은 어시스턴트가 실행하므로 직접 입력할 필요가 없습니다.',
+    intgStep2Note:
+      '어시스턴트가 명령줄이나 MCP로 GenOffice를 직접 호출하므로 명령을 입력할 필요가 없습니다.',
     intgCliPartTitle: 'CLI · 명령줄 + 스킬',
     intgCliPartDesc:
       '터미널 명령을 실행할 수 있는 어시스턴트(Claude Code, Codex, Cursor 등)용입니다. 스킬을 설치하면 어시스턴트가 스스로 ieumoffice 명령줄을 호출해 파일을 만들고 변환하고 읽고 편집합니다.',
@@ -2750,8 +2772,6 @@ export const strings = {
     intgMcpHttpDesc:
       'GenOffice 안에서 실행되며 어시스턴트가 URL로 연결합니다. Word 편집기에서 문서가 단계별로 만들어지는 과정을 볼 수 있습니다. GenOffice를 열어 두어야 하며 현재는 Word만 지원합니다.',
     intgMcpHttpAdvanced: '고급: 기타 주소와 로그',
-    intgMcpTryNote:
-      '어시스턴트가 MCP를 통해 GenOffice를 호출합니다. 명령을 직접 입력할 필요가 없습니다.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: '터미널에서 한 번만 실행하세요:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop 또는 MCP를 지원하는 다른 어시스턴트',
@@ -2824,10 +2844,13 @@ export const strings = {
     setSecAiMedia: 'AI 미디어 및 검색',
     setAiSearchSerperHint: 'Serper는 내 키로 웹 검색과 이미지 검색을 모두 제공합니다.',
     setAiSearchSerplyHint: 'Serply는 내 키로 웹 검색과 이미지 검색을 모두 제공합니다.',
+    setAiSearchSearchApiHint: 'SearchApi는 내 키로 웹 검색과 이미지 검색을 모두 제공합니다.',
     setAiSearchTavilyHint:
       'Tavily는 내 키로 웹 검색을 제공합니다. 이미지 검색은 무료 소스로 대체됩니다.',
     setAiSearchParallelHint:
       '키를 비워 두면 Parallel 검색을 무료로 사용할 수 있습니다(사용량 제한). 키를 입력하면 자신의 Parallel 계정을 사용합니다. 이미지 검색은 다른 소스를 사용합니다.',
+    setAiSearchKeenableHint:
+      '키를 비워 두면 Keenable 검색을 무료로 사용할 수 있습니다(사용량 제한). 키를 입력하면 자신의 Keenable 계정을 사용합니다. 이미지 검색은 다른 소스를 사용합니다.',
     setAiCapImage: '이미지 생성',
     setAiCapAnalysis: '이미지 분석',
     setAiCapVideo: '동영상 분석',
@@ -3208,6 +3231,7 @@ export const strings = {
     setSearchRerankCustomModel: 'ID du modèle',
     setSearchRerankAccount: 'ID du compte',
     setAiPanelSide: 'Position de la barre latérale IA',
+    csvImportLimit: "Limite d'importation CSV",
     aiPanelSideLeft: 'Gauche',
     aiPanelSideRight: 'Droite',
     setAiFontSize: 'Taille du texte du panneau IA',
@@ -3216,6 +3240,9 @@ export const strings = {
     aiFontSizeXLarge: 'Très grande',
     aiFontSizeCustom: 'Personnalisé',
     setAiSpellcheck: 'Correction orthographique dans le chat IA',
+    setLegacyImportPrompt: 'Demander avant de convertir les anciens fichiers',
+    setLegacyImportPromptDesc:
+      'Explique ce qui est conservé avant d’ouvrir un fichier .doc, .odt, .hwp, .ods ou .odp. Désactivé, Enregistrer sous s’ouvre directement.',
     setDefaultApp: 'Application par défaut pour les documents Office',
     setDefaultAppDesc: 'Ouvrir les fichiers .docx, .xlsx et .pptx dans GenOffice par double-clic.',
     setDefaultAppIs: 'GenOffice est déjà l’application par défaut.',
@@ -3241,7 +3268,7 @@ export const strings = {
     aiPanelStartLast: 'Dernier état',
     setAuthorName: 'Nom d’utilisateur',
     setAuthorNameDesc:
-      'Affiché comme auteur des commentaires et des modifications suivies dans Docs, Sheets et Slides. Laissez vide pour utiliser le nom de votre compte.',
+      'Affiché comme auteur des commentaires et des modifications suivies dans Docs, Sheets, Slides et PDF. Laissez vide pour utiliser le nom de votre compte.',
     settings: 'Paramètres',
     setSecAccount: 'Compte',
     setSecGeneral: 'Général',
@@ -3344,13 +3371,11 @@ export const strings = {
     intgStep2Title: 'Essayez',
     intgStep2Desc:
       'Ouvrez une nouvelle discussion dans votre assistant et demandez simplement, par exemple :',
-    intgStep2DescBefore:
-      'Une fois installé, ouvrez une nouvelle discussion dans votre assistant et demandez simplement, par exemple :',
     intgExample1: 'Transforme ~/Downloads/report.md en document Word',
     intgExample2: 'Prépare une présentation de 6 diapositives sur nos résultats du T3',
     intgExample3: 'Convertis budget.xlsx en PDF et ouvre-le dans GenOffice',
     intgStep2Note:
-      "L'assistant lance lui-même la ligne de commande ieumoffice ; vous n'avez jamais à la saisir.",
+      "L'assistant appelle lui-même GenOffice, par la ligne de commande ou MCP ; vous n'avez jamais à saisir de commande.",
     intgCliPartTitle: 'CLI · ligne de commande + skill',
     intgCliPartDesc:
       'Pour les assistants capables de lancer des commandes dans le terminal (Claude Code, Codex, Cursor, etc.). Une fois le skill installé, l’assistant appelle lui-même la ligne de commande ieumoffice pour créer, convertir, lire et modifier les fichiers ; vous ne tapez jamais de commande.',
@@ -3365,7 +3390,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Tourne dans GenOffice ; l’assistant se connecte à une URL et vous voyez le document se construire pas à pas dans l’éditeur Word. GenOffice doit rester ouvert ; documents Word uniquement pour l’instant.',
     intgMcpHttpAdvanced: 'Avancé : autres adresses et journal',
-    intgMcpTryNote: 'L’assistant appelle GenOffice via MCP ; vous ne tapez jamais de commande.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Exécutez ceci une fois dans un terminal :',
     intgMcpOtherTitle: 'Cursor, Claude Desktop ou tout autre assistant compatible MCP',
@@ -3444,10 +3468,14 @@ export const strings = {
       "Serper assure la recherche web et la recherche d'images avec votre clé.",
     setAiSearchSerplyHint:
       "Serply assure la recherche web et la recherche d'images avec votre clé.",
+    setAiSearchSearchApiHint:
+      "SearchApi assure la recherche web et la recherche d'images avec votre clé.",
     setAiSearchTavilyHint:
       "Tavily assure la recherche web avec votre clé ; la recherche d'images se rabat sur des sources gratuites.",
     setAiSearchParallelHint:
       'Laissez la clé vide pour la recherche Parallel gratuite (usage limité). Ajoutez une clé pour utiliser votre compte Parallel. La recherche d’images utilise d’autres sources.',
+    setAiSearchKeenableHint:
+      'Laissez la clé vide pour la recherche Keenable gratuite (usage limité). Ajoutez une clé pour utiliser votre compte Keenable. La recherche d’images utilise d’autres sources.',
     setAiCapImage: "Génération d'images",
     setAiCapAnalysis: "Analyse d'images",
     setAiCapVideo: 'Analyse vidéo',
@@ -3837,6 +3865,7 @@ export const strings = {
     setSearchRerankCustomModel: 'Modell-ID',
     setSearchRerankAccount: 'Konto-ID',
     setAiPanelSide: 'Position der KI-Seitenleiste',
+    csvImportLimit: 'CSV-Importlimit',
     aiPanelSideLeft: 'Links',
     aiPanelSideRight: 'Rechts',
     setAiFontSize: 'Textgröße im KI-Bereich',
@@ -3845,6 +3874,9 @@ export const strings = {
     aiFontSizeXLarge: 'Sehr groß',
     aiFontSizeCustom: 'Benutzerdefiniert',
     setAiSpellcheck: 'Rechtschreibprüfung im KI-Chat',
+    setLegacyImportPrompt: 'Vor dem Konvertieren alter Dateien nachfragen',
+    setLegacyImportPromptDesc:
+      'Erklärt vor dem Öffnen von .doc-, .odt-, .hwp-, .ods- oder .odp-Dateien, was übernommen wird. Ausgeschaltet öffnet sich direkt „Speichern unter“.',
     setDefaultApp: 'Standard-App für Office-Dokumente',
     setDefaultAppDesc: '.docx-, .xlsx- und .pptx-Dateien per Doppelklick in GenOffice öffnen.',
     setDefaultAppIs: 'GenOffice ist bereits die Standard-App.',
@@ -3871,7 +3903,7 @@ export const strings = {
     aiPanelStartLast: 'Letzter Zustand',
     setAuthorName: 'Benutzername',
     setAuthorNameDesc:
-      'Wird in Docs, Sheets und Slides als Autor von Kommentaren und nachverfolgten Änderungen angezeigt. Leer lassen, um den Kontonamen des Computers zu verwenden.',
+      'Wird in Docs, Sheets, Slides und PDF als Autor von Kommentaren und nachverfolgten Änderungen angezeigt. Leer lassen, um den Kontonamen des Computers zu verwenden.',
     settings: 'Einstellungen',
     setSecAccount: 'Konto',
     setSecGeneral: 'Allgemein',
@@ -3975,13 +4007,11 @@ export const strings = {
     intgStep2Title: 'Ausprobieren',
     intgStep2Desc:
       'Öffnen Sie einen neuen Chat in Ihrem Assistenten und fragen Sie in normalen Worten, zum Beispiel:',
-    intgStep2DescBefore:
-      'Öffnen Sie nach der Installation einen neuen Chat in Ihrem Assistenten und fragen Sie in normalen Worten, zum Beispiel:',
     intgExample1: 'Mach aus ~/Downloads/report.md ein Word-Dokument',
     intgExample2: 'Erstelle eine Präsentation mit 6 Folien zu unseren Q3-Ergebnissen',
     intgExample3: 'Wandle budget.xlsx in PDF um und öffne es in GenOffice',
     intgStep2Note:
-      'Der Assistent ruft die ieumoffice-Befehlszeile selbst auf; Sie müssen sie nie eintippen.',
+      'Der Assistent ruft GenOffice selbst auf – über die Befehlszeile oder MCP; Sie müssen nie einen Befehl eintippen.',
     intgCliPartTitle: 'CLI · Kommandozeile + Skill',
     intgCliPartDesc:
       'Für Assistenten, die Terminalbefehle ausführen können (Claude Code, Codex, Cursor u. a.). Nach der Installation des Skills ruft der Assistent die ieumoffice-Kommandozeile selbst auf, um Dateien zu erstellen, zu konvertieren, zu lesen und zu bearbeiten; Sie tippen nie einen Befehl.',
@@ -3996,7 +4026,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Läuft in GenOffice; der Assistent verbindet sich über eine URL, und Sie sehen im Word-Editor zu, wie das Dokument Schritt für Schritt entsteht. GenOffice muss geöffnet bleiben; derzeit nur Word-Dokumente.',
     intgMcpHttpAdvanced: 'Erweitert: weitere Adressen und Protokoll',
-    intgMcpTryNote: 'Der Assistent ruft GenOffice über MCP auf; Sie tippen nie einen Befehl.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Einmal im Terminal ausführen:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop oder ein anderer MCP-fähiger Assistent',
@@ -4073,10 +4102,13 @@ export const strings = {
     setSecAiMedia: 'KI-Medien & Suche',
     setAiSearchSerperHint: 'Serper liefert mit deinem Schlüssel Web- und Bildsuche.',
     setAiSearchSerplyHint: 'Serply liefert mit deinem Schlüssel Web- und Bildsuche.',
+    setAiSearchSearchApiHint: 'SearchApi liefert mit deinem Schlüssel Web- und Bildsuche.',
     setAiSearchTavilyHint:
       'Tavily liefert mit deinem Schlüssel die Websuche; die Bildsuche greift auf kostenlose Quellen zurück.',
     setAiSearchParallelHint:
       'Ohne Schlüssel ist die Parallel-Suche kostenlos (begrenzte Nutzung). Mit einem Schlüssel verwenden Sie Ihr Parallel-Konto. Die Bildsuche nutzt andere Quellen.',
+    setAiSearchKeenableHint:
+      'Ohne Schlüssel ist die Keenable-Suche kostenlos (begrenzte Nutzung). Mit einem Schlüssel verwenden Sie Ihr Keenable-Konto. Die Bildsuche nutzt andere Quellen.',
     setAiCapImage: 'Bildgenerierung',
     setAiCapAnalysis: 'Bildanalyse',
     setAiCapVideo: 'Videoanalyse',
@@ -4469,6 +4501,7 @@ export const strings = {
     setSearchRerankCustomModel: 'ID del modelo',
     setSearchRerankAccount: 'ID de la cuenta',
     setAiPanelSide: 'Posición de la barra lateral de IA',
+    csvImportLimit: 'Límite de importación de CSV',
     aiPanelSideLeft: 'Izquierda',
     aiPanelSideRight: 'Derecha',
     setAiFontSize: 'Tamaño del texto del panel de IA',
@@ -4477,6 +4510,9 @@ export const strings = {
     aiFontSizeXLarge: 'Muy grande',
     aiFontSizeCustom: 'Personalizado',
     setAiSpellcheck: 'Corrección ortográfica en el chat de IA',
+    setLegacyImportPrompt: 'Preguntar antes de convertir archivos antiguos',
+    setLegacyImportPromptDesc:
+      'Explica qué se conserva antes de abrir archivos .doc, .odt, .hwp, .ods u .odp. Desactivado, se abre directamente Guardar como.',
     setDefaultApp: 'App predeterminada para documentos de Office',
     setDefaultAppDesc: 'Abrir archivos .docx, .xlsx y .pptx en GenOffice al hacer doble clic.',
     setDefaultAppIs: 'GenOffice ya es la app predeterminada.',
@@ -4503,7 +4539,7 @@ export const strings = {
     aiPanelStartLast: 'Último estado',
     setAuthorName: 'Nombre de usuario',
     setAuthorNameDesc:
-      'Se muestra como autor de los comentarios y los cambios con seguimiento en Docs, Sheets y Slides. Déjalo vacío para usar el nombre de tu cuenta.',
+      'Se muestra como autor de los comentarios y los cambios con seguimiento en Docs, Sheets, Slides y PDF. Déjalo vacío para usar el nombre de tu cuenta.',
     settings: 'Configuración',
     setSecAccount: 'Cuenta',
     setSecGeneral: 'General',
@@ -4605,13 +4641,11 @@ export const strings = {
     intgCopy: 'Copiar',
     intgStep2Title: 'Pruébalo',
     intgStep2Desc: 'Abre un chat nuevo en tu asistente y pídelo con tus palabras, por ejemplo:',
-    intgStep2DescBefore:
-      'Una vez instalado, abre un chat nuevo en tu asistente y pídelo con tus palabras, por ejemplo:',
     intgExample1: 'Convierte ~/Downloads/report.md en un documento de Word',
     intgExample2: 'Haz una presentación de 6 diapositivas sobre nuestros resultados del T3',
     intgExample3: 'Convierte budget.xlsx a PDF y ábrelo en GenOffice',
     intgStep2Note:
-      'El asistente ejecuta la línea de comandos ieumoffice por sí mismo; nunca tienes que escribirla.',
+      'El asistente llama a GenOffice por sí mismo, mediante la línea de comandos o MCP; nunca tienes que escribir un comando.',
     intgCliPartTitle: 'CLI · línea de comandos + skill',
     intgCliPartDesc:
       'Para asistentes que pueden ejecutar comandos de terminal (Claude Code, Codex, Cursor y otros). Con el skill instalado, el asistente llama por sí mismo a la línea de comandos ieumoffice para crear, convertir, leer y editar archivos; nunca escribes un comando.',
@@ -4626,7 +4660,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Se ejecuta dentro de GenOffice; el asistente se conecta a una URL y puedes ver cómo construye el documento paso a paso en el editor de Word. GenOffice debe permanecer abierto; por ahora solo documentos Word.',
     intgMcpHttpAdvanced: 'Avanzado: otras direcciones y registro',
-    intgMcpTryNote: 'El asistente llama a GenOffice a través de MCP; nunca escribes un comando.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Ejecuta esto una vez en una terminal:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop o cualquier otro asistente compatible con MCP',
@@ -4702,10 +4735,13 @@ export const strings = {
     setSecAiMedia: 'Medios de IA y búsqueda',
     setAiSearchSerperHint: 'Serper ofrece búsqueda web y de imágenes con tu clave.',
     setAiSearchSerplyHint: 'Serply ofrece búsqueda web y de imágenes con tu clave.',
+    setAiSearchSearchApiHint: 'SearchApi ofrece búsqueda web y de imágenes con tu clave.',
     setAiSearchTavilyHint:
       'Tavily ofrece búsqueda web con tu clave; la búsqueda de imágenes recurre a fuentes gratuitas.',
     setAiSearchParallelHint:
       'Deja la clave vacía para usar la búsqueda gratuita de Parallel (uso limitado). Añade una clave para usar tu cuenta de Parallel. Las imágenes se buscan en otras fuentes.',
+    setAiSearchKeenableHint:
+      'Deja la clave vacía para usar la búsqueda gratuita de Keenable (uso limitado). Añade una clave para usar tu cuenta de Keenable. Las imágenes se buscan en otras fuentes.',
     setAiCapImage: 'Generación de imágenes',
     setAiCapAnalysis: 'Análisis de imágenes',
     setAiCapVideo: 'Análisis de vídeo',
@@ -5085,6 +5121,7 @@ export const strings = {
     setSearchRerankCustomModel: 'รหัสโมเดล',
     setSearchRerankAccount: 'รหัสบัญชี',
     setAiPanelSide: 'ตำแหน่งแถบด้านข้าง AI',
+    csvImportLimit: 'ขีดจำกัดการนำเข้า CSV',
     aiPanelSideLeft: 'ซ้าย',
     aiPanelSideRight: 'ขวา',
     setAiFontSize: 'ขนาดตัวอักษรในแผง AI',
@@ -5093,6 +5130,9 @@ export const strings = {
     aiFontSizeXLarge: 'ใหญ่มาก',
     aiFontSizeCustom: 'กำหนดเอง',
     setAiSpellcheck: 'ตรวจการสะกดในแชท AI',
+    setLegacyImportPrompt: 'ถามก่อนแปลงไฟล์รูปแบบเก่า',
+    setLegacyImportPromptDesc:
+      'อธิบายว่าเนื้อหาใดจะถูกแปลงมาก่อนเปิดไฟล์ .doc, .odt, .hwp, .ods หรือ .odp เมื่อปิด จะเปิดบันทึกเป็นทันที',
     setDefaultApp: 'แอปเริ่มต้นสำหรับเอกสาร Office',
     setDefaultAppDesc: 'เปิดไฟล์ .docx, .xlsx และ .pptx ด้วย GenOffice เมื่อดับเบิลคลิก',
     setDefaultAppIs: 'GenOffice เป็นแอปเริ่มต้นอยู่แล้ว',
@@ -5117,7 +5157,7 @@ export const strings = {
     aiPanelStartLast: 'สถานะล่าสุด',
     setAuthorName: 'ชื่อผู้ใช้',
     setAuthorNameDesc:
-      'แสดงเป็นผู้เขียนความคิดเห็นและการติดตามการเปลี่ยนแปลงใน Docs, Sheets และ Slides เว้นว่างไว้เพื่อใช้ชื่อบัญชีคอมพิวเตอร์',
+      'แสดงเป็นผู้เขียนความคิดเห็นและการติดตามการเปลี่ยนแปลงใน Docs, Sheets, Slides และ PDF เว้นว่างไว้เพื่อใช้ชื่อบัญชีคอมพิวเตอร์',
     settings: 'การตั้งค่า',
     setSecAccount: 'บัญชี',
     setSecGeneral: 'ทั่วไป',
@@ -5215,11 +5255,10 @@ export const strings = {
     intgCopy: 'คัดลอก',
     intgStep2Title: 'ลองใช้ดู',
     intgStep2Desc: 'เปิดแชตใหม่ในผู้ช่วยแล้วสั่งด้วยภาษาธรรมดา เช่น:',
-    intgStep2DescBefore: 'เมื่อติดตั้งแล้ว เปิดแชตใหม่ในผู้ช่วยแล้วสั่งด้วยภาษาธรรมดา เช่น:',
     intgExample1: 'แปลง ~/Downloads/report.md เป็นเอกสาร Word',
     intgExample2: 'ทำสไลด์ 6 หน้าเกี่ยวกับผลประกอบการไตรมาส 3 ของเรา',
     intgExample3: 'แปลง budget.xlsx เป็น PDF แล้วเปิดใน GenOffice',
-    intgStep2Note: 'ผู้ช่วยจะเรียกใช้บรรทัดคำสั่ง ieumoffice เอง คุณไม่ต้องพิมพ์คำสั่งใด ๆ',
+    intgStep2Note: 'ผู้ช่วยจะเรียก GenOffice เองผ่านบรรทัดคำสั่งหรือ MCP คุณไม่ต้องพิมพ์คำสั่งใด ๆ',
     intgCliPartTitle: 'CLI · บรรทัดคำสั่ง + skill',
     intgCliPartDesc:
       'สำหรับผู้ช่วยที่รันคำสั่งเทอร์มินัลได้ (Claude Code, Codex, Cursor และอื่น ๆ) เมื่อติดตั้ง skill แล้ว ผู้ช่วยจะเรียกบรรทัดคำสั่ง ieumoffice เองเพื่อสร้าง แปลง อ่าน และแก้ไขไฟล์ คุณไม่ต้องพิมพ์คำสั่งใด ๆ',
@@ -5234,7 +5273,6 @@ export const strings = {
     intgMcpHttpDesc:
       'ทำงานอยู่ใน GenOffice ผู้ช่วยเชื่อมต่อผ่าน URL และคุณจะเห็นเอกสารค่อย ๆ ถูกสร้างขึ้นในตัวแก้ไข Word ต้องเปิด GenOffice ไว้ตลอด ปัจจุบันรองรับเฉพาะ Word',
     intgMcpHttpAdvanced: 'ขั้นสูง: ที่อยู่อื่นและบันทึก',
-    intgMcpTryNote: 'ผู้ช่วยจะเรียก GenOffice ผ่าน MCP คุณไม่ต้องพิมพ์คำสั่งใด ๆ',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'รันคำสั่งนี้ครั้งเดียวในเทอร์มินัล:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop หรือผู้ช่วยอื่นที่รองรับ MCP',
@@ -5308,10 +5346,13 @@ export const strings = {
     setSecAiMedia: 'สื่อ AI และการค้นหา',
     setAiSearchSerperHint: 'Serper ให้บริการค้นหาเว็บและภาพด้วยคีย์ของคุณ',
     setAiSearchSerplyHint: 'Serply ให้บริการค้นหาเว็บและภาพด้วยคีย์ของคุณ',
+    setAiSearchSearchApiHint: 'SearchApi ให้บริการค้นหาเว็บและภาพด้วยคีย์ของคุณ',
     setAiSearchTavilyHint:
       'Tavily ให้บริการค้นหาเว็บด้วยคีย์ของคุณ ส่วนการค้นหาภาพจะใช้แหล่งข้อมูลฟรีแทน',
     setAiSearchParallelHint:
       'เว้นคีย์ว่างไว้เพื่อค้นหาด้วย Parallel ฟรี (จำกัดการใช้งาน) เพิ่มคีย์เพื่อใช้บัญชี Parallel ของคุณ การค้นหารูปภาพใช้แหล่งข้อมูลอื่น',
+    setAiSearchKeenableHint:
+      'เว้นคีย์ว่างไว้เพื่อค้นหาด้วย Keenable ฟรี (จำกัดการใช้งาน) เพิ่มคีย์เพื่อใช้บัญชี Keenable ของคุณ การค้นหารูปภาพใช้แหล่งข้อมูลอื่น',
     setAiCapImage: 'สร้างภาพ',
     setAiCapAnalysis: 'วิเคราะห์ภาพ',
     setAiCapVideo: 'วิเคราะห์วิดีโอ',
@@ -5692,6 +5733,7 @@ export const strings = {
     setSearchRerankCustomModel: 'ID model',
     setSearchRerankAccount: 'ID akun',
     setAiPanelSide: 'Posisi bilah samping AI',
+    csvImportLimit: 'Batas impor CSV',
     aiPanelSideLeft: 'Kiri',
     aiPanelSideRight: 'Kanan',
     setAiFontSize: 'Ukuran teks panel AI',
@@ -5700,6 +5742,9 @@ export const strings = {
     aiFontSizeXLarge: 'Sangat besar',
     aiFontSizeCustom: 'Kustom',
     setAiSpellcheck: 'Pemeriksaan ejaan di obrolan AI',
+    setLegacyImportPrompt: 'Tanya sebelum mengonversi file lama',
+    setLegacyImportPromptDesc:
+      'Jelaskan apa yang ikut terbawa sebelum membuka file .doc, .odt, .hwp, .ods, atau .odp. Jika nonaktif, Simpan Sebagai langsung terbuka.',
     setDefaultApp: 'Aplikasi default untuk dokumen Office',
     setDefaultAppDesc: 'Buka file .docx, .xlsx, dan .pptx di GenOffice saat diklik dua kali.',
     setDefaultAppIs: 'GenOffice sudah menjadi aplikasi default.',
@@ -5725,7 +5770,7 @@ export const strings = {
     aiPanelStartLast: 'Status terakhir',
     setAuthorName: 'Nama pengguna',
     setAuthorNameDesc:
-      'Ditampilkan sebagai penulis komentar dan perubahan terlacak di Docs, Sheets, dan Slides. Kosongkan untuk memakai nama akun komputer.',
+      'Ditampilkan sebagai penulis komentar dan perubahan terlacak di Docs, Sheets, Slides, dan PDF. Kosongkan untuk memakai nama akun komputer.',
     settings: 'Pengaturan',
     setSecAccount: 'Akun',
     setSecGeneral: 'Umum',
@@ -5826,13 +5871,11 @@ export const strings = {
     intgCopy: 'Salin',
     intgStep2Title: 'Coba sekarang',
     intgStep2Desc: 'Buka obrolan baru di asisten Anda dan minta dengan bahasa biasa, misalnya:',
-    intgStep2DescBefore:
-      'Setelah terpasang, buka obrolan baru di asisten Anda dan minta dengan bahasa biasa, misalnya:',
     intgExample1: 'Ubah ~/Downloads/report.md menjadi dokumen Word',
     intgExample2: 'Buat presentasi 6 slide tentang hasil Q3 kami',
     intgExample3: 'Konversi budget.xlsx ke PDF dan buka di GenOffice',
     intgStep2Note:
-      'Asisten menjalankan baris perintah ieumoffice sendiri; Anda tidak perlu mengetiknya.',
+      'Asisten memanggil GenOffice sendiri, melalui baris perintah atau MCP; Anda tidak perlu mengetik perintah apa pun.',
     intgCliPartTitle: 'CLI · baris perintah + skill',
     intgCliPartDesc:
       'Untuk asisten yang bisa menjalankan perintah terminal (Claude Code, Codex, Cursor, dan lainnya). Setelah skill terpasang, asisten memanggil baris perintah ieumoffice sendiri untuk membuat, mengonversi, membaca, dan mengedit file; Anda tidak pernah mengetik perintah.',
@@ -5847,7 +5890,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Berjalan di dalam GenOffice; asisten terhubung lewat URL dan Anda bisa melihat dokumen dibangun langkah demi langkah di editor Word. GenOffice harus tetap terbuka; untuk saat ini hanya dokumen Word.',
     intgMcpHttpAdvanced: 'Lanjutan: alamat lain dan log',
-    intgMcpTryNote: 'Asisten memanggil GenOffice melalui MCP; Anda tidak pernah mengetik perintah.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Jalankan ini sekali di terminal:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop, atau asisten lain yang mendukung MCP',
@@ -5922,10 +5964,13 @@ export const strings = {
     setSecAiMedia: 'Media & Pencarian AI',
     setAiSearchSerperHint: 'Serper menyediakan pencarian web dan gambar dengan kunci Anda.',
     setAiSearchSerplyHint: 'Serply menyediakan pencarian web dan gambar dengan kunci Anda.',
+    setAiSearchSearchApiHint: 'SearchApi menyediakan pencarian web dan gambar dengan kunci Anda.',
     setAiSearchTavilyHint:
       'Tavily menyediakan pencarian web dengan kunci Anda; pencarian gambar memakai sumber gratis.',
     setAiSearchParallelHint:
       'Kosongkan kunci untuk pencarian Parallel gratis (penggunaan terbatas). Tambahkan kunci untuk menggunakan akun Parallel Anda. Pencarian gambar memakai sumber lain.',
+    setAiSearchKeenableHint:
+      'Kosongkan kunci untuk pencarian Keenable gratis (penggunaan terbatas). Tambahkan kunci untuk menggunakan akun Keenable Anda. Pencarian gambar memakai sumber lain.',
     setAiCapImage: 'Pembuatan gambar',
     setAiCapAnalysis: 'Analisis gambar',
     setAiCapVideo: 'Analisis video',
@@ -6310,6 +6355,7 @@ export const strings = {
     setSearchRerankCustomModel: 'ID модели',
     setSearchRerankAccount: 'ID аккаунта',
     setAiPanelSide: 'Положение боковой панели ИИ',
+    csvImportLimit: 'Ограничение импорта CSV',
     aiPanelSideLeft: 'Слева',
     aiPanelSideRight: 'Справа',
     setAiFontSize: 'Размер текста панели ИИ',
@@ -6318,6 +6364,9 @@ export const strings = {
     aiFontSizeXLarge: 'Очень крупный',
     aiFontSizeCustom: 'Другой',
     setAiSpellcheck: 'Проверка орфографии в чате ИИ',
+    setLegacyImportPrompt: 'Спрашивать перед конвертацией старых файлов',
+    setLegacyImportPromptDesc:
+      'Перед открытием файлов .doc, .odt, .hwp, .ods или .odp поясняет, что будет перенесено. Если выключено, сразу открывается «Сохранить как».',
     setDefaultApp: 'Приложение по умолчанию для документов Office',
     setDefaultAppDesc: 'Открывать файлы .docx, .xlsx и .pptx в GenOffice по двойному щелчку.',
     setDefaultAppIs: 'GenOffice уже является приложением по умолчанию.',
@@ -6343,7 +6392,7 @@ export const strings = {
     aiPanelStartLast: 'Последнее состояние',
     setAuthorName: 'Имя пользователя',
     setAuthorNameDesc:
-      'Отображается как автор примечаний и исправлений в Docs, Sheets и Slides. Оставьте пустым, чтобы использовать имя учётной записи компьютера.',
+      'Отображается как автор примечаний и исправлений в Docs, Sheets, Slides и PDF. Оставьте пустым, чтобы использовать имя учётной записи компьютера.',
     settings: 'Настройки',
     setSecAccount: 'Аккаунт',
     setSecGeneral: 'Общие',
@@ -6444,13 +6493,11 @@ export const strings = {
     intgCopy: 'Копировать',
     intgStep2Title: 'Попробуйте',
     intgStep2Desc: 'Откройте новый чат в ассистенте и попросите обычными словами, например:',
-    intgStep2DescBefore:
-      'После установки откройте новый чат в ассистенте и попросите обычными словами, например:',
     intgExample1: 'Преврати ~/Downloads/report.md в документ Word',
     intgExample2: 'Сделай презентацию из 6 слайдов о наших результатах за 3-й квартал',
     intgExample3: 'Конвертируй budget.xlsx в PDF и открой в GenOffice',
     intgStep2Note:
-      'Ассистент сам запускает командную строку ieumoffice; вводить её вам не придётся.',
+      'Ассистент сам вызывает GenOffice — через командную строку или MCP; вам не нужно вводить команды.',
     intgCliPartTitle: 'CLI · командная строка + skill',
     intgCliPartDesc:
       'Для ассистентов, умеющих выполнять команды терминала (Claude Code, Codex, Cursor и другие). После установки skill ассистент сам вызывает командную строку ieumoffice, чтобы создавать, конвертировать, читать и редактировать файлы; вам не нужно вводить команды.',
@@ -6465,7 +6512,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Работает внутри GenOffice; ассистент подключается по URL, и вы видите, как документ шаг за шагом собирается в редакторе Word. GenOffice должен оставаться открытым; пока только документы Word.',
     intgMcpHttpAdvanced: 'Дополнительно: другие адреса и журнал',
-    intgMcpTryNote: 'Ассистент обращается к GenOffice через MCP; вам не нужно вводить команды.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Выполните один раз в терминале:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop или другой ассистент с поддержкой MCP',
@@ -6540,10 +6586,14 @@ export const strings = {
     setSecAiMedia: 'Медиа и поиск ИИ',
     setAiSearchSerperHint: 'Serper обеспечивает веб-поиск и поиск изображений с вашим ключом.',
     setAiSearchSerplyHint: 'Serply обеспечивает веб-поиск и поиск изображений с вашим ключом.',
+    setAiSearchSearchApiHint:
+      'SearchApi обеспечивает веб-поиск и поиск изображений с вашим ключом.',
     setAiSearchTavilyHint:
       'Tavily обеспечивает веб-поиск с вашим ключом; поиск изображений использует бесплатные источники.',
     setAiSearchParallelHint:
       'Оставьте ключ пустым для бесплатного поиска Parallel (с ограничениями). Добавьте ключ для использования своего аккаунта Parallel. Поиск изображений использует другие источники.',
+    setAiSearchKeenableHint:
+      'Оставьте ключ пустым для бесплатного поиска Keenable (с ограничениями). Добавьте ключ для использования своего аккаунта Keenable. Поиск изображений использует другие источники.',
     setAiCapImage: 'Генерация изображений',
     setAiCapAnalysis: 'Анализ изображений',
     setAiCapVideo: 'Анализ видео',
@@ -6927,6 +6977,7 @@ export const strings = {
     setSearchRerankCustomModel: 'معرّف النموذج',
     setSearchRerankAccount: 'معرّف الحساب',
     setAiPanelSide: 'موضع الشريط الجانبي للذكاء الاصطناعي',
+    csvImportLimit: 'حد استيراد CSV',
     aiPanelSideLeft: 'اليسار',
     aiPanelSideRight: 'اليمين',
     setAiFontSize: 'حجم نص لوحة الذكاء الاصطناعي',
@@ -6935,6 +6986,9 @@ export const strings = {
     aiFontSizeXLarge: 'كبير جدًا',
     aiFontSizeCustom: 'مخصص',
     setAiSpellcheck: 'التدقيق الإملائي في محادثة الذكاء الاصطناعي',
+    setLegacyImportPrompt: 'السؤال قبل تحويل الملفات القديمة',
+    setLegacyImportPromptDesc:
+      'يوضح ما سيتم نقله قبل فتح ملفات .doc أو .odt أو .hwp أو .ods أو .odp. عند الإيقاف يُفتح «حفظ باسم» مباشرة.',
     setDefaultApp: 'التطبيق الافتراضي لمستندات Office',
     setDefaultAppDesc: 'فتح ملفات .docx و.xlsx و.pptx في GenOffice عند النقر المزدوج.',
     setDefaultAppIs: 'GenOffice هو التطبيق الافتراضي بالفعل.',
@@ -6959,7 +7013,7 @@ export const strings = {
     aiPanelStartLast: 'الحالة الأخيرة',
     setAuthorName: 'اسم المستخدم',
     setAuthorNameDesc:
-      'يظهر كمؤلف التعليقات والتغييرات المتعقبة في Docs وSheets وSlides. اتركه فارغًا لاستخدام اسم حساب الكمبيوتر.',
+      'يظهر كمؤلف التعليقات والتغييرات المتعقبة في Docs وSheets وSlides وPDF. اتركه فارغًا لاستخدام اسم حساب الكمبيوتر.',
     settings: 'الإعدادات',
     setSecAccount: 'الحساب',
     setSecGeneral: 'عام',
@@ -7055,11 +7109,11 @@ export const strings = {
     intgCopy: 'نسخ',
     intgStep2Title: 'جرّبها',
     intgStep2Desc: 'افتح محادثة جديدة في مساعدك واطلب بكلمات عادية، مثلاً:',
-    intgStep2DescBefore: 'بعد التثبيت، افتح محادثة جديدة في مساعدك واطلب بكلمات عادية، مثلاً:',
     intgExample1: 'حوّل ~/Downloads/report.md إلى مستند Word',
     intgExample2: 'أنشئ عرضاً من 6 شرائح عن نتائج الربع الثالث',
     intgExample3: 'حوّل budget.xlsx إلى PDF وافتحه في GenOffice',
-    intgStep2Note: 'المساعد يشغّل سطر أوامر ieumoffice بنفسه؛ لن تحتاج إلى كتابته أبداً.',
+    intgStep2Note:
+      'المساعد يستدعي GenOffice بنفسه، عبر سطر الأوامر أو MCP؛ لن تحتاج إلى كتابة أي أمر.',
     intgCliPartTitle: 'CLI · سطر الأوامر + skill',
     intgCliPartDesc:
       'للمساعدين الذين يستطيعون تنفيذ أوامر الطرفية (Claude Code وCodex وCursor وغيرها). بعد تثبيت skill، يستدعي المساعد سطر أوامر ieumoffice بنفسه لإنشاء الملفات وتحويلها وقراءتها وتحريرها؛ لن تكتب أي أمر.',
@@ -7074,7 +7128,6 @@ export const strings = {
     intgMcpHttpDesc:
       'يعمل داخل GenOffice؛ يتصل المساعد عبر عنوان URL ويمكنك مشاهدة المستند يُبنى خطوة بخطوة في محرر Word. يجب أن يبقى GenOffice مفتوحًا؛ مستندات Word فقط حاليًا.',
     intgMcpHttpAdvanced: 'متقدم: عناوين أخرى والسجل',
-    intgMcpTryNote: 'يستدعي المساعد GenOffice عبر MCP؛ لن تكتب أي أمر.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'شغّل هذا مرة واحدة في الطرفية:',
     intgMcpOtherTitle: 'Cursor أو Claude Desktop أو أي مساعد آخر يدعم MCP',
@@ -7148,10 +7201,13 @@ export const strings = {
     setSecAiMedia: 'وسائط الذكاء الاصطناعي والبحث',
     setAiSearchSerperHint: 'يوفّر Serper البحث في الويب والصور بمفتاحك.',
     setAiSearchSerplyHint: 'يوفّر Serply البحث في الويب والصور بمفتاحك.',
+    setAiSearchSearchApiHint: 'يوفّر SearchApi البحث في الويب والصور بمفتاحك.',
     setAiSearchTavilyHint:
       'يوفّر Tavily البحث في الويب بمفتاحك؛ ويعود البحث في الصور إلى مصادر مجانية.',
     setAiSearchParallelHint:
       'اترك المفتاح فارغًا لاستخدام بحث Parallel مجانًا (استخدام محدود). أضف مفتاحًا لاستخدام حسابك في Parallel. يستخدم بحث الصور مصادر أخرى.',
+    setAiSearchKeenableHint:
+      'اترك المفتاح فارغًا لاستخدام بحث Keenable مجانًا (استخدام محدود). أضف مفتاحًا لاستخدام حسابك في Keenable. يستخدم بحث الصور مصادر أخرى.',
     setAiCapImage: 'توليد الصور',
     setAiCapAnalysis: 'تحليل الصور',
     setAiCapVideo: 'تحليل الفيديو',
@@ -7358,11 +7414,11 @@ export const strings = {
     askSend: 'Enviar',
     askStop: 'Parar',
     askHeroTagline:
-      'Marque com estrela os arquivos que você lê com frequência e a IA poderá pesquisá-los e citar a fonte — clique numa citação para abrir.',
+      'Marque com estrela os arquivos que você lê com frequência e a IA poderá pesquisá-los e citar a fonte — clique em uma citação para abrir.',
     askStep1Title: 'Marcar arquivos',
     askStep1Desc: 'Em Recentes ou Pastas, clique na estrela da linha do arquivo',
     askStep2Title: 'Faça perguntas',
-    askStep2Desc: 'Pergunte como num chat, sem abrir nenhum documento antes',
+    askStep2Desc: 'Pergunte como em um chat, sem abrir nenhum documento antes',
     askStep3Title: 'Abrir citações',
     askStep3Desc: 'As respostas citam o arquivo de origem; clique para ir até ele',
     askCtaRecents: 'Marcar de Recentes',
@@ -7526,6 +7582,7 @@ export const strings = {
     setSearchRerankCustomModel: 'ID do modelo',
     setSearchRerankAccount: 'ID da conta',
     setAiPanelSide: 'Posição da barra lateral de IA',
+    csvImportLimit: 'Limite de importação de CSV',
     aiPanelSideLeft: 'Esquerda',
     aiPanelSideRight: 'Direita',
     setAiFontSize: 'Tamanho do texto do painel de IA',
@@ -7534,6 +7591,9 @@ export const strings = {
     aiFontSizeXLarge: 'Muito grande',
     aiFontSizeCustom: 'Personalizado',
     setAiSpellcheck: 'Verificação ortográfica no chat de IA',
+    setLegacyImportPrompt: 'Perguntar antes de converter arquivos antigos',
+    setLegacyImportPromptDesc:
+      'Explica o que é preservado antes de abrir arquivos .doc, .odt, .hwp, .ods ou .odp. Desativado, Salvar como abre diretamente.',
     setDefaultApp: 'App padrão para documentos do Office',
     setDefaultAppDesc: 'Abrir arquivos .docx, .xlsx e .pptx no GenOffice ao clicar duas vezes.',
     setDefaultAppIs: 'O GenOffice já é o app padrão.',
@@ -7560,7 +7620,7 @@ export const strings = {
     aiPanelStartLast: 'Último estado',
     setAuthorName: 'Nome de usuário',
     setAuthorNameDesc:
-      'Exibido como autor dos comentários e das alterações controladas no Docs, Sheets e Slides. Deixe em branco para usar o nome da conta do computador.',
+      'Exibido como autor dos comentários e das alterações controladas no Docs, Sheets, Slides e PDF. Deixe em branco para usar o nome da conta do computador.',
     settings: 'Configurações',
     setSecAccount: 'Conta',
     setSecGeneral: 'Geral',
@@ -7662,13 +7722,11 @@ export const strings = {
     intgCopy: 'Copiar',
     intgStep2Title: 'Experimente',
     intgStep2Desc: 'Abra um chat novo no seu assistente e peça com suas palavras, por exemplo:',
-    intgStep2DescBefore:
-      'Depois de instalar, abra um chat novo no seu assistente e peça com suas palavras, por exemplo:',
     intgExample1: 'Transforme ~/Downloads/report.md em um documento Word',
     intgExample2: 'Monte uma apresentação de 6 slides sobre nossos resultados do 3º trimestre',
     intgExample3: 'Converta budget.xlsx para PDF e abra no GenOffice',
     intgStep2Note:
-      'O assistente executa a linha de comando ieumoffice sozinho; você nunca precisa digitá-la.',
+      'O assistente chama o GenOffice sozinho, pela linha de comando ou MCP; você nunca precisa digitar um comando.',
     intgCliPartTitle: 'CLI · linha de comando + skill',
     intgCliPartDesc:
       'Para assistentes que executam comandos de terminal (Claude Code, Codex, Cursor e outros). Com o skill instalado, o assistente chama a linha de comando ieumoffice sozinho para criar, converter, ler e editar arquivos; você nunca digita um comando.',
@@ -7683,7 +7741,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Roda dentro do GenOffice; o assistente conecta por URL e você acompanha o documento sendo montado passo a passo no editor Word. O GenOffice precisa ficar aberto; por enquanto só documentos Word.',
     intgMcpHttpAdvanced: 'Avançado: outros endereços e log',
-    intgMcpTryNote: 'O assistente chama o GenOffice via MCP; você nunca digita um comando.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Execute isto uma vez no terminal:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop ou qualquer outro assistente compatível com MCP',
@@ -7760,10 +7817,13 @@ export const strings = {
     setSecAiMedia: 'Mídia e busca de IA',
     setAiSearchSerperHint: 'O Serper oferece busca na web e de imagens com a sua chave.',
     setAiSearchSerplyHint: 'O Serply oferece busca na web e de imagens com a sua chave.',
+    setAiSearchSearchApiHint: 'A SearchApi oferece busca na web e de imagens com a sua chave.',
     setAiSearchTavilyHint:
       'O Tavily oferece busca na web com a sua chave; a busca de imagens recorre a fontes gratuitas.',
     setAiSearchParallelHint:
       'Deixe a chave vazia para pesquisar gratuitamente com Parallel (uso limitado). Adicione uma chave para usar sua conta Parallel. A pesquisa de imagens usa outras fontes.',
+    setAiSearchKeenableHint:
+      'Deixe a chave vazia para pesquisar gratuitamente com Keenable (uso limitado). Adicione uma chave para usar sua conta Keenable. A pesquisa de imagens usa outras fontes.',
     setAiCapImage: 'Geração de imagens',
     setAiCapAnalysis: 'Análise de imagens',
     setAiCapVideo: 'Análise de vídeo',
@@ -8140,6 +8200,7 @@ export const strings = {
     setSearchRerankCustomModel: 'ID modello',
     setSearchRerankAccount: 'ID account',
     setAiPanelSide: 'Posizione della barra laterale IA',
+    csvImportLimit: 'Limite di importazione CSV',
     aiPanelSideLeft: 'Sinistra',
     aiPanelSideRight: 'Destra',
     setAiFontSize: 'Dimensione del testo del pannello IA',
@@ -8148,6 +8209,9 @@ export const strings = {
     aiFontSizeXLarge: 'Molto grande',
     aiFontSizeCustom: 'Personalizzato',
     setAiSpellcheck: 'Controllo ortografico nella chat IA',
+    setLegacyImportPrompt: 'Chiedi prima di convertire i file legacy',
+    setLegacyImportPromptDesc:
+      'Spiega cosa viene mantenuto prima di aprire file .doc, .odt, .hwp, .ods o .odp. Se disattivato, Salva con nome si apre subito.',
     setDefaultApp: 'App predefinita per i documenti Office',
     setDefaultAppDesc: 'Apri i file .docx, .xlsx e .pptx in GenOffice con un doppio clic.',
     setDefaultAppIs: 'GenOffice è già l’app predefinita.',
@@ -8173,7 +8237,7 @@ export const strings = {
     aiPanelStartLast: 'Ultimo stato',
     setAuthorName: 'Nome utente',
     setAuthorNameDesc:
-      'Mostrato come autore di commenti e revisioni in Docs, Sheets e Slides. Lascia vuoto per usare il nome dell’account del computer.',
+      'Mostrato come autore di commenti e revisioni in Docs, Sheets, Slides e PDF. Lascia vuoto per usare il nome dell’account del computer.',
     settings: 'Impostazioni',
     setSecAccount: 'Account',
     setSecGeneral: 'Generale',
@@ -8276,13 +8340,11 @@ export const strings = {
     intgStep2Title: 'Provalo',
     intgStep2Desc:
       'Apri una nuova chat nel tuo assistente e chiedi con parole semplici, ad esempio:',
-    intgStep2DescBefore:
-      "Dopo l'installazione, apri una nuova chat nel tuo assistente e chiedi con parole semplici, ad esempio:",
     intgExample1: 'Trasforma ~/Downloads/report.md in un documento Word',
     intgExample2: 'Prepara una presentazione di 6 slide sui nostri risultati del terzo trimestre',
     intgExample3: 'Converti budget.xlsx in PDF e aprilo in GenOffice',
     intgStep2Note:
-      "L'assistente esegue da solo la riga di comando ieumoffice; non dovrai mai digitarla.",
+      "L'assistente richiama GenOffice da solo, tramite la riga di comando o MCP; non dovrai mai digitare un comando.",
     intgCliPartTitle: 'CLI · riga di comando + skill',
     intgCliPartDesc:
       'Per assistenti che possono eseguire comandi da terminale (Claude Code, Codex, Cursor e altri). Installato lo skill, l’assistente richiama da sé la riga di comando ieumoffice per creare, convertire, leggere e modificare file; non digiti mai un comando.',
@@ -8297,7 +8359,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Gira dentro GenOffice; l’assistente si collega a un URL e puoi vedere il documento prendere forma passo dopo passo nell’editor Word. GenOffice deve restare aperto; per ora solo documenti Word.',
     intgMcpHttpAdvanced: 'Avanzato: altri indirizzi e registro',
-    intgMcpTryNote: 'L’assistente richiama GenOffice tramite MCP; non digiti mai un comando.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Esegui questo una volta nel terminale:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop o qualsiasi altro assistente compatibile con MCP',
@@ -8373,10 +8434,13 @@ export const strings = {
     setSecAiMedia: 'Media e ricerca IA',
     setAiSearchSerperHint: 'Serper offre ricerca web e di immagini con la tua chiave.',
     setAiSearchSerplyHint: 'Serply offre ricerca web e di immagini con la tua chiave.',
+    setAiSearchSearchApiHint: 'SearchApi offre ricerca web e di immagini con la tua chiave.',
     setAiSearchTavilyHint:
       'Tavily offre la ricerca web con la tua chiave; la ricerca di immagini ricorre a fonti gratuite.',
     setAiSearchParallelHint:
       'Lascia la chiave vuota per la ricerca Parallel gratuita (uso limitato). Aggiungi una chiave per usare il tuo account Parallel. Le immagini vengono cercate in altre fonti.',
+    setAiSearchKeenableHint:
+      'Lascia la chiave vuota per la ricerca Keenable gratuita (uso limitato). Aggiungi una chiave per usare il tuo account Keenable. Le immagini vengono cercate in altre fonti.',
     setAiCapImage: 'Generazione di immagini',
     setAiCapAnalysis: 'Analisi di immagini',
     setAiCapVideo: 'Analisi video',
@@ -8754,6 +8818,7 @@ export const strings = {
     setSearchRerankCustomModel: 'ID modelu',
     setSearchRerankAccount: 'ID konta',
     setAiPanelSide: 'Położenie panelu bocznego AI',
+    csvImportLimit: 'Limit importu CSV',
     aiPanelSideLeft: 'Lewa',
     aiPanelSideRight: 'Prawa',
     setAiFontSize: 'Rozmiar tekstu panelu AI',
@@ -8762,6 +8827,9 @@ export const strings = {
     aiFontSizeXLarge: 'Bardzo duży',
     aiFontSizeCustom: 'Niestandardowy',
     setAiSpellcheck: 'Sprawdzanie pisowni w czacie AI',
+    setLegacyImportPrompt: 'Pytaj przed konwersją starych plików',
+    setLegacyImportPromptDesc:
+      'Wyjaśnia, co zostanie przeniesione przed otwarciem plików .doc, .odt, .hwp, .ods lub .odp. Po wyłączeniu od razu otwiera się Zapisz jako.',
     setDefaultApp: 'Domyślna aplikacja dla dokumentów Office',
     setDefaultAppDesc: 'Otwieraj pliki .docx, .xlsx i .pptx w GenOffice po dwukrotnym kliknięciu.',
     setDefaultAppIs: 'GenOffice jest już aplikacją domyślną.',
@@ -8787,7 +8855,7 @@ export const strings = {
     aiPanelStartLast: 'Ostatni stan',
     setAuthorName: 'Nazwa użytkownika',
     setAuthorNameDesc:
-      'Wyświetlana jako autor komentarzy i śledzonych zmian w Docs, Sheets i Slides. Pozostaw puste, aby użyć nazwy konta komputera.',
+      'Wyświetlana jako autor komentarzy i śledzonych zmian w Docs, Sheets, Slides i PDF. Pozostaw puste, aby użyć nazwy konta komputera.',
     settings: 'Ustawienia',
     setSecAccount: 'Konto',
     setSecGeneral: 'Ogólne',
@@ -8888,13 +8956,11 @@ export const strings = {
     intgCopy: 'Kopiuj',
     intgStep2Title: 'Wypróbuj',
     intgStep2Desc: 'Otwórz nowy czat w asystencie i poproś zwykłymi słowami, na przykład:',
-    intgStep2DescBefore:
-      'Po instalacji otwórz nowy czat w asystencie i poproś zwykłymi słowami, na przykład:',
     intgExample1: 'Zamień ~/Downloads/report.md na dokument Word',
     intgExample2: 'Zrób prezentację z 6 slajdów o naszych wynikach za III kwartał',
     intgExample3: 'Przekonwertuj budget.xlsx do PDF i otwórz w GenOffice',
     intgStep2Note:
-      'Asystent sam uruchamia wiersz poleceń ieumoffice; nigdy nie musisz go wpisywać.',
+      'Asystent sam wywołuje GenOffice — przez wiersz poleceń lub MCP; nigdy nie musisz wpisywać polecenia.',
     intgCliPartTitle: 'CLI · wiersz poleceń + skill',
     intgCliPartDesc:
       'Dla asystentów, które potrafią uruchamiać polecenia terminala (Claude Code, Codex, Cursor i inne). Po zainstalowaniu skilla asystent sam wywołuje wiersz poleceń ieumoffice, aby tworzyć, konwertować, czytać i edytować pliki; nigdy nie wpisujesz polecenia.',
@@ -8909,7 +8975,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Działa wewnątrz GenOffice; asystent łączy się przez URL, a Ty widzisz, jak dokument powstaje krok po kroku w edytorze Word. GenOffice musi pozostać otwarty; na razie tylko dokumenty Word.',
     intgMcpHttpAdvanced: 'Zaawansowane: inne adresy i dziennik',
-    intgMcpTryNote: 'Asystent wywołuje GenOffice przez MCP; nigdy nie wpisujesz polecenia.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Uruchom to raz w terminalu:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop lub inny asystent obsługujący MCP',
@@ -8985,10 +9050,13 @@ export const strings = {
     setSecAiMedia: 'Media i wyszukiwanie AI',
     setAiSearchSerperHint: 'Serper zapewnia wyszukiwanie w sieci i obrazów z Twoim kluczem.',
     setAiSearchSerplyHint: 'Serply zapewnia wyszukiwanie w sieci i obrazów z Twoim kluczem.',
+    setAiSearchSearchApiHint: 'SearchApi zapewnia wyszukiwanie w sieci i obrazów z Twoim kluczem.',
     setAiSearchTavilyHint:
       'Tavily zapewnia wyszukiwanie w sieci z Twoim kluczem; wyszukiwanie obrazów używa darmowych źródeł.',
     setAiSearchParallelHint:
       'Pozostaw klucz pusty, aby bezpłatnie korzystać z wyszukiwania Parallel (z limitami). Dodaj klucz, aby używać swojego konta Parallel. Obrazy są wyszukiwane w innych źródłach.',
+    setAiSearchKeenableHint:
+      'Pozostaw klucz pusty, aby bezpłatnie korzystać z wyszukiwania Keenable (z limitami). Dodaj klucz, aby używać swojego konta Keenable. Obrazy są wyszukiwane w innych źródłach.',
     setAiCapImage: 'Generowanie obrazów',
     setAiCapAnalysis: 'Analiza obrazów',
     setAiCapVideo: 'Analiza wideo',
@@ -9438,12 +9506,11 @@ export const strings = {
     intgCopy: 'Kopírovat',
     intgStep2Title: 'Vyzkoušejte',
     intgStep2Desc: 'Otevřete v asistentovi nový chat a požádejte běžnými slovy, například:',
-    intgStep2DescBefore:
-      'Po instalaci otevřete v asistentovi nový chat a požádejte běžnými slovy, například:',
     intgExample1: 'Převeď ~/Downloads/report.md na dokument Word',
     intgExample2: 'Udělej prezentaci o 6 snímcích o našich výsledcích za 3. čtvrtletí',
     intgExample3: 'Převeď budget.xlsx do PDF a otevři ho v GenOffice',
-    intgStep2Note: 'Asistent spouští příkazový řádek ieumoffice sám; nikdy ho nemusíte psát.',
+    intgStep2Note:
+      'Asistent volá GenOffice sám – přes příkazový řádek nebo MCP; nikdy nemusíte psát žádný příkaz.',
     intgCliPartTitle: 'CLI · příkazový řádek + skill',
     intgCliPartDesc:
       'Pro asistenty, kteří umí spouštět příkazy terminálu (Claude Code, Codex, Cursor a další). Po instalaci skillu asistent sám volá příkazový řádek ieumoffice k vytváření, převodu, čtení a úpravám souborů; žádný příkaz nepíšete.',
@@ -9458,7 +9525,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Běží uvnitř GenOffice; asistent se připojí přes URL a v editoru Word sledujete, jak dokument krok za krokem vzniká. GenOffice musí zůstat otevřený; zatím jen dokumenty Word.',
     intgMcpHttpAdvanced: 'Pokročilé: další adresy a protokol',
-    intgMcpTryNote: 'Asistent volá GenOffice přes MCP; žádný příkaz nepíšete.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Spusťte jednou v terminálu:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop nebo jiný asistent s podporou MCP',
@@ -9534,10 +9600,13 @@ export const strings = {
     setSecAiMedia: 'AI média a vyhledávání',
     setAiSearchSerperHint: 'Serper zajišťuje webové i obrázkové vyhledávání s vaším klíčem.',
     setAiSearchSerplyHint: 'Serply zajišťuje webové i obrázkové vyhledávání s vaším klíčem.',
+    setAiSearchSearchApiHint: 'SearchApi zajišťuje webové i obrázkové vyhledávání s vaším klíčem.',
     setAiSearchTavilyHint:
       'Tavily zajišťuje webové vyhledávání s vaším klíčem; obrázkové vyhledávání použije bezplatné zdroje.',
     setAiSearchParallelHint:
       'Nechte klíč prázdný pro bezplatné vyhledávání Parallel (omezené použití). Zadejte klíč pro použití svého účtu Parallel. Obrázky se vyhledávají v jiných zdrojích.',
+    setAiSearchKeenableHint:
+      'Nechte klíč prázdný pro bezplatné vyhledávání Keenable (omezené použití). Zadejte klíč pro použití svého účtu Keenable. Obrázky se vyhledávají v jiných zdrojích.',
     setAiCapImage: 'Generování obrázků',
     setAiCapAnalysis: 'Analýza obrázků',
     setAiCapVideo: 'Analýza videí',
@@ -9656,6 +9725,7 @@ export const strings = {
     setSearchRerankCustomModel: 'ID modelu',
     setSearchRerankAccount: 'ID účtu',
     setAiPanelSide: 'Pozice postranního panelu AI',
+    csvImportLimit: 'Limit importu CSV',
     aiPanelSideLeft: 'Vlevo',
     aiPanelSideRight: 'Vpravo',
     setAiFontSize: 'Velikost textu panelu AI',
@@ -9664,6 +9734,9 @@ export const strings = {
     aiFontSizeXLarge: 'Extra velké',
     aiFontSizeCustom: 'Vlastní',
     setAiSpellcheck: 'Kontrola pravopisu v chatu AI',
+    setLegacyImportPrompt: 'Ptát se před převodem starších souborů',
+    setLegacyImportPromptDesc:
+      'Před otevřením souborů .doc, .odt, .hwp, .ods nebo .odp vysvětlí, co se převede. Při vypnutí se rovnou otevře Uložit jako.',
     setDefaultApp: 'Výchozí aplikace pro dokumenty Office',
     setDefaultAppDesc: 'Otevírat soubory .docx, .xlsx a .pptx v GenOffice poklepáním.',
     setDefaultAppIs: 'GenOffice už je výchozí aplikací.',
@@ -9688,7 +9761,7 @@ export const strings = {
     aiPanelStartLast: 'Poslední stav',
     setAuthorName: 'Uživatelské jméno',
     setAuthorNameDesc:
-      'Zobrazuje se jako autor komentářů a sledovaných změn v Docs, Sheets a Slides. Ponechte prázdné pro použití názvu účtu počítače.',
+      'Zobrazuje se jako autor komentářů a sledovaných změn v Docs, Sheets, Slides a PDF. Ponechte prázdné pro použití názvu účtu počítače.',
     helpSearchPlaceholder: 'Hledat v příručce… (stiskněte /)',
     helpSearchLabel: 'Hledat v příručce',
     helpContentsLabel: 'Obsah příručky',
@@ -9966,6 +10039,7 @@ export const strings = {
     setSearchRerankCustomModel: 'Model-ID',
     setSearchRerankAccount: 'Account-ID',
     setAiPanelSide: 'Positie AI-zijbalk',
+    csvImportLimit: 'CSV-importlimiet',
     aiPanelSideLeft: 'Links',
     aiPanelSideRight: 'Rechts',
     setAiFontSize: 'Tekstgrootte AI-paneel',
@@ -9974,6 +10048,9 @@ export const strings = {
     aiFontSizeXLarge: 'Extra groot',
     aiFontSizeCustom: 'Aangepast',
     setAiSpellcheck: 'Spellingcontrole in AI-chat',
+    setLegacyImportPrompt: 'Vragen voor het converteren van oude bestanden',
+    setLegacyImportPromptDesc:
+      'Legt uit wat behouden blijft voordat een .doc-, .odt-, .hwp-, .ods- of .odp-bestand wordt geopend. Uitgeschakeld opent direct Opslaan als.',
     setDefaultApp: 'Standaardapp voor Office-documenten',
     setDefaultAppDesc: '.docx-, .xlsx- en .pptx-bestanden in GenOffice openen bij dubbelklikken.',
     setDefaultAppIs: 'GenOffice is al de standaardapp.',
@@ -10000,7 +10077,7 @@ export const strings = {
     aiPanelStartLast: 'Laatste status',
     setAuthorName: 'Gebruikersnaam',
     setAuthorNameDesc:
-      'Wordt weergegeven als auteur van opmerkingen en bijgehouden wijzigingen in Docs, Sheets en Slides. Laat leeg om de accountnaam van je computer te gebruiken.',
+      'Wordt weergegeven als auteur van opmerkingen en bijgehouden wijzigingen in Docs, Sheets, Slides en PDF. Laat leeg om de accountnaam van je computer te gebruiken.',
     settings: 'Instellingen',
     setSecAccount: 'Account',
     setSecGeneral: 'Algemeen',
@@ -10102,13 +10179,11 @@ export const strings = {
     intgStep2Title: 'Probeer het',
     intgStep2Desc:
       'Open een nieuwe chat in uw assistent en vraag het in gewone woorden, bijvoorbeeld:',
-    intgStep2DescBefore:
-      'Open na de installatie een nieuwe chat in uw assistent en vraag het in gewone woorden, bijvoorbeeld:',
     intgExample1: 'Maak van ~/Downloads/report.md een Word-document',
     intgExample2: 'Maak een presentatie van 6 dia’s over onze Q3-resultaten',
     intgExample3: 'Zet budget.xlsx om naar PDF en open het in GenOffice',
     intgStep2Note:
-      'De assistent voert de ieumoffice-opdrachtregel zelf uit; u hoeft die nooit te typen.',
+      'De assistent roept GenOffice zelf aan, via de opdrachtregel of MCP; u hoeft nooit een opdracht te typen.',
     intgCliPartTitle: 'CLI · opdrachtregel + skill',
     intgCliPartDesc:
       'Voor assistenten die terminalopdrachten kunnen uitvoeren (Claude Code, Codex, Cursor en andere). Na installatie van de skill roept de assistent zelf de ieumoffice-opdrachtregel aan om bestanden te maken, converteren, lezen en bewerken; je typt nooit een opdracht.',
@@ -10123,7 +10198,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Draait in GenOffice; de assistent verbindt via een URL en je ziet het document stap voor stap ontstaan in de Word-editor. GenOffice moet open blijven; voorlopig alleen Word-documenten.',
     intgMcpHttpAdvanced: 'Geavanceerd: andere adressen en logboek',
-    intgMcpTryNote: 'De assistent roept GenOffice aan via MCP; je typt nooit een opdracht.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Voer dit één keer uit in een terminal:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop of een andere assistent met MCP-ondersteuning',
@@ -10197,10 +10271,13 @@ export const strings = {
     setSecAiMedia: 'AI-media en zoeken',
     setAiSearchSerperHint: 'Serper levert web- en afbeeldingszoeken met je sleutel.',
     setAiSearchSerplyHint: 'Serply levert web- en afbeeldingszoeken met je sleutel.',
+    setAiSearchSearchApiHint: 'SearchApi levert web- en afbeeldingszoeken met je sleutel.',
     setAiSearchTavilyHint:
       'Tavily levert webzoeken met je sleutel; afbeeldingszoeken valt terug op gratis bronnen.',
     setAiSearchParallelHint:
       'Laat de sleutel leeg voor gratis zoeken met Parallel (beperkt gebruik). Voeg een sleutel toe om je Parallel-account te gebruiken. Afbeeldingen komen uit andere bronnen.',
+    setAiSearchKeenableHint:
+      'Laat de sleutel leeg voor gratis zoeken met Keenable (beperkt gebruik). Voeg een sleutel toe om je Keenable-account te gebruiken. Afbeeldingen komen uit andere bronnen.',
     setAiCapImage: 'Afbeeldingen genereren',
     setAiCapAnalysis: 'Afbeeldingsanalyse',
     setAiCapVideo: 'Video-analyse',
@@ -10576,6 +10653,7 @@ export const strings = {
     setSearchRerankCustomModel: 'ID model',
     setSearchRerankAccount: 'ID akaun',
     setAiPanelSide: 'Kedudukan bar sisi AI',
+    csvImportLimit: 'Had import CSV',
     aiPanelSideLeft: 'Kiri',
     aiPanelSideRight: 'Kanan',
     setAiFontSize: 'Saiz teks panel AI',
@@ -10584,6 +10662,9 @@ export const strings = {
     aiFontSizeXLarge: 'Sangat besar',
     aiFontSizeCustom: 'Tersuai',
     setAiSpellcheck: 'Semakan ejaan dalam sembang AI',
+    setLegacyImportPrompt: 'Tanya sebelum menukar fail lama',
+    setLegacyImportPromptDesc:
+      'Terangkan apa yang dikekalkan sebelum membuka fail .doc, .odt, .hwp, .ods atau .odp. Jika dimatikan, Simpan Sebagai terus dibuka.',
     setDefaultApp: 'Apl lalai untuk dokumen Office',
     setDefaultAppDesc: 'Buka fail .docx, .xlsx dan .pptx dalam GenOffice apabila diklik dua kali.',
     setDefaultAppIs: 'GenOffice sudah menjadi apl lalai.',
@@ -10610,7 +10691,7 @@ export const strings = {
     aiPanelStartLast: 'Keadaan terakhir',
     setAuthorName: 'Nama pengguna',
     setAuthorNameDesc:
-      'Dipaparkan sebagai pengarang komen dan perubahan dijejak dalam Docs, Sheets dan Slides. Biarkan kosong untuk menggunakan nama akaun komputer.',
+      'Dipaparkan sebagai pengarang komen dan perubahan dijejak dalam Docs, Sheets, Slides dan PDF. Biarkan kosong untuk menggunakan nama akaun komputer.',
     settings: 'Tetapan',
     setSecAccount: 'Akaun',
     setSecGeneral: 'Umum',
@@ -10712,13 +10793,11 @@ export const strings = {
     intgStep2Title: 'Cuba sekarang',
     intgStep2Desc:
       'Buka sembang baharu dalam pembantu anda dan minta dengan bahasa biasa, contohnya:',
-    intgStep2DescBefore:
-      'Selepas dipasang, buka sembang baharu dalam pembantu anda dan minta dengan bahasa biasa, contohnya:',
     intgExample1: 'Tukar ~/Downloads/report.md kepada dokumen Word',
     intgExample2: 'Buat pembentangan 6 slaid tentang hasil S3 kami',
     intgExample3: 'Tukar budget.xlsx kepada PDF dan buka dalam GenOffice',
     intgStep2Note:
-      'Pembantu menjalankan baris arahan ieumoffice sendiri; anda tidak perlu menaipnya.',
+      'Pembantu memanggil GenOffice sendiri, melalui baris arahan atau MCP; anda tidak perlu menaip sebarang arahan.',
     intgCliPartTitle: 'CLI · baris arahan + skill',
     intgCliPartDesc:
       'Untuk pembantu yang boleh menjalankan arahan terminal (Claude Code, Codex, Cursor dan lain-lain). Setelah skill dipasang, pembantu memanggil baris arahan ieumoffice sendiri untuk mencipta, menukar, membaca dan mengedit fail; anda tidak perlu menaip sebarang arahan.',
@@ -10733,8 +10812,6 @@ export const strings = {
     intgMcpHttpDesc:
       'Berjalan di dalam GenOffice; pembantu menyambung melalui URL dan anda boleh melihat dokumen dibina langkah demi langkah dalam editor Word. GenOffice mesti kekal dibuka; buat masa ini dokumen Word sahaja.',
     intgMcpHttpAdvanced: 'Lanjutan: alamat lain dan log',
-    intgMcpTryNote:
-      'Pembantu memanggil GenOffice melalui MCP; anda tidak perlu menaip sebarang arahan.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Jalankan ini sekali dalam terminal:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop atau pembantu lain yang menyokong MCP',
@@ -10811,10 +10888,13 @@ export const strings = {
     setSecAiMedia: 'Media & Carian AI',
     setAiSearchSerperHint: 'Serper menyediakan carian web dan imej dengan kunci anda.',
     setAiSearchSerplyHint: 'Serply menyediakan carian web dan imej dengan kunci anda.',
+    setAiSearchSearchApiHint: 'SearchApi menyediakan carian web dan imej dengan kunci anda.',
     setAiSearchTavilyHint:
       'Tavily menyediakan carian web dengan kunci anda; carian imej menggunakan sumber percuma.',
     setAiSearchParallelHint:
       'Biarkan kunci kosong untuk carian Parallel percuma (penggunaan terhad). Tambah kunci untuk menggunakan akaun Parallel anda. Carian imej menggunakan sumber lain.',
+    setAiSearchKeenableHint:
+      'Biarkan kunci kosong untuk carian Keenable percuma (penggunaan terhad). Tambah kunci untuk menggunakan akaun Keenable anda. Carian imej menggunakan sumber lain.',
     setAiCapImage: 'Penjanaan imej',
     setAiCapAnalysis: 'Analisis imej',
     setAiCapVideo: 'Analisis video',
@@ -11184,6 +11264,7 @@ export const strings = {
     setSearchRerankCustomModel: 'מזהה מודל',
     setSearchRerankAccount: 'מזהה חשבון',
     setAiPanelSide: 'מיקום סרגל הצד של הבינה המלאכותית',
+    csvImportLimit: 'מגבלת ייבוא CSV',
     aiPanelSideLeft: 'שמאל',
     aiPanelSideRight: 'ימין',
     setAiFontSize: 'גודל הטקסט בחלונית ה-AI',
@@ -11192,6 +11273,9 @@ export const strings = {
     aiFontSizeXLarge: 'גדול מאוד',
     aiFontSizeCustom: 'מותאם אישית',
     setAiSpellcheck: 'בדיקת איות בצ׳אט ה-AI',
+    setLegacyImportPrompt: 'לשאול לפני המרת קבצים ישנים',
+    setLegacyImportPromptDesc:
+      'מסביר מה יישמר לפני פתיחת קובצי ‎.doc, ‎.odt, ‎.hwp, ‎.ods או ‎.odp. כשכבוי, „שמירה בשם” נפתח מיד.',
     setDefaultApp: 'אפליקציית ברירת המחדל למסמכי Office',
     setDefaultAppDesc: 'פתיחת קובצי .docx‏, .xlsx ו‑.pptx ב‑GenOffice בלחיצה כפולה.',
     setDefaultAppIs: 'GenOffice היא כבר ברירת המחדל.',
@@ -11216,7 +11300,7 @@ export const strings = {
     aiPanelStartLast: 'מצב אחרון',
     setAuthorName: 'שם משתמש',
     setAuthorNameDesc:
-      'מוצג כמחבר ההערות והשינויים במעקב ב‑Docs, Sheets ו‑Slides. השאירו ריק כדי להשתמש בשם חשבון המחשב.',
+      'מוצג כמחבר ההערות והשינויים במעקב ב‑Docs, Sheets, Slides ו‑PDF. השאירו ריק כדי להשתמש בשם חשבון המחשב.',
     settings: 'הגדרות',
     setSecAccount: 'חשבון',
     setSecGeneral: 'כללי',
@@ -11312,11 +11396,11 @@ export const strings = {
     intgCopy: 'העתקה',
     intgStep2Title: 'נסו',
     intgStep2Desc: 'פתחו שיחה חדשה בעוזר ובקשו במילים פשוטות, למשל:',
-    intgStep2DescBefore: 'לאחר ההתקנה, פתחו שיחה חדשה בעוזר ובקשו במילים פשוטות, למשל:',
     intgExample1: 'הפוך את ~/Downloads/report.md למסמך Word',
     intgExample2: 'הכן מצגת של 6 שקופיות על תוצאות הרבעון השלישי שלנו',
     intgExample3: 'המר את budget.xlsx ל-PDF ופתח אותו ב-GenOffice',
-    intgStep2Note: 'העוזר מריץ בעצמו את שורת הפקודה ieumoffice; לעולם לא תצטרכו להקליד אותה.',
+    intgStep2Note:
+      'העוזר קורא ל-GenOffice בעצמו, דרך שורת הפקודה או MCP; לעולם לא תצטרכו להקליד פקודה.',
     intgCliPartTitle: 'CLI · שורת פקודה + skill',
     intgCliPartDesc:
       'לעוזרים שיכולים להריץ פקודות טרמינל (Claude Code‏, Codex‏, Cursor ואחרים). לאחר התקנת ה‑skill העוזר קורא בעצמו לשורת הפקודה ieumoffice כדי ליצור, להמיר, לקרוא ולערוך קבצים; אתם לא מקלידים שום פקודה.',
@@ -11331,7 +11415,6 @@ export const strings = {
     intgMcpHttpDesc:
       'פועל בתוך GenOffice; העוזר מתחבר דרך כתובת URL ואפשר לראות את המסמך נבנה צעד אחר צעד בעורך Word. GenOffice חייב להישאר פתוח; בשלב זה מסמכי Word בלבד.',
     intgMcpHttpAdvanced: 'מתקדם: כתובות נוספות ויומן',
-    intgMcpTryNote: 'העוזר קורא ל‑GenOffice דרך MCP; אתם לא מקלידים שום פקודה.',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'הריצו זאת פעם אחת בטרמינל:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop או כל עוזר אחר התומך ב-MCP',
@@ -11404,10 +11487,13 @@ export const strings = {
     setSecAiMedia: 'מדיה וחיפוש AI',
     setAiSearchSerperHint: 'Serper מספק חיפוש באינטרנט ובתמונות עם המפתח שלך.',
     setAiSearchSerplyHint: 'Serply מספק חיפוש באינטרנט ובתמונות עם המפתח שלך.',
+    setAiSearchSearchApiHint: 'SearchApi מספק חיפוש באינטרנט ובתמונות עם המפתח שלך.',
     setAiSearchTavilyHint:
       'Tavily מספק חיפוש באינטרנט עם המפתח שלך; חיפוש תמונות חוזר למקורות חינמיים.',
     setAiSearchParallelHint:
       'השאירו את המפתח ריק לחיפוש Parallel בחינם (שימוש מוגבל). הוסיפו מפתח כדי להשתמש בחשבון Parallel שלכם. חיפוש תמונות משתמש במקורות אחרים.',
+    setAiSearchKeenableHint:
+      'השאירו את המפתח ריק לחיפוש Keenable בחינם (שימוש מוגבל). הוסיפו מפתח כדי להשתמש בחשבון Keenable שלכם. חיפוש תמונות משתמש במקורות אחרים.',
     setAiCapImage: 'יצירת תמונות',
     setAiCapAnalysis: 'ניתוח תמונות',
     setAiCapVideo: 'ניתוח וידאו',
@@ -11773,6 +11859,7 @@ export const strings = {
     setSearchRerankCustomModel: 'मॉडल ID',
     setSearchRerankAccount: 'खाता ID',
     setAiPanelSide: 'AI साइडबार की स्थिति',
+    csvImportLimit: 'CSV आयात सीमा',
     aiPanelSideLeft: 'बाईं ओर',
     aiPanelSideRight: 'दाईं ओर',
     setAiFontSize: 'AI पैनल का टेक्स्ट आकार',
@@ -11781,6 +11868,9 @@ export const strings = {
     aiFontSizeXLarge: 'बहुत बड़ा',
     aiFontSizeCustom: 'कस्टम',
     setAiSpellcheck: 'AI चैट में वर्तनी जाँच',
+    setLegacyImportPrompt: 'पुरानी फ़ाइलें बदलने से पहले पूछें',
+    setLegacyImportPromptDesc:
+      '.doc, .odt, .hwp, .ods या .odp फ़ाइलें खोलने से पहले बताता है कि क्या-क्या बदला जाएगा। बंद होने पर सीधे “इस रूप में सहेजें” खुलता है।',
     setDefaultApp: 'Office दस्तावेज़ों के लिए डिफ़ॉल्ट ऐप',
     setDefaultAppDesc: '.docx, .xlsx और .pptx फ़ाइलें डबल-क्लिक करने पर GenOffice में खोलें।',
     setDefaultAppIs: 'GenOffice पहले से डिफ़ॉल्ट ऐप है।',
@@ -11805,7 +11895,7 @@ export const strings = {
     aiPanelStartLast: 'पिछली स्थिति',
     setAuthorName: 'उपयोगकर्ता नाम',
     setAuthorNameDesc:
-      'Docs, Sheets और Slides में टिप्पणियों और ट्रैक किए गए परिवर्तनों के लेखक के रूप में दिखाया जाता है। कंप्यूटर खाता नाम उपयोग करने के लिए खाली छोड़ें।',
+      'Docs, Sheets, Slides और PDF में टिप्पणियों और ट्रैक किए गए परिवर्तनों के लेखक के रूप में दिखाया जाता है। कंप्यूटर खाता नाम उपयोग करने के लिए खाली छोड़ें।',
     settings: 'सेटिंग्स',
     setSecAccount: 'खाता',
     setSecGeneral: 'सामान्य',
@@ -11905,12 +11995,11 @@ export const strings = {
     intgCopy: 'कॉपी करें',
     intgStep2Title: 'आज़माएँ',
     intgStep2Desc: 'अपने असिस्टेंट में नई चैट खोलें और सादे शब्दों में कहें, जैसे:',
-    intgStep2DescBefore:
-      'इंस्टॉल होने के बाद अपने असिस्टेंट में नई चैट खोलें और सादे शब्दों में कहें, जैसे:',
     intgExample1: '~/Downloads/report.md को Word दस्तावेज़ बना दो',
     intgExample2: 'हमारे Q3 नतीजों पर 6 स्लाइड का प्रेज़ेंटेशन बनाओ',
     intgExample3: 'budget.xlsx को PDF में बदलो और GenOffice में खोलो',
-    intgStep2Note: 'ieumoffice कमांड लाइन असिस्टेंट खुद चलाता है; आपको कभी टाइप नहीं करना पड़ता।',
+    intgStep2Note:
+      'असिस्टेंट GenOffice को कमांड लाइन या MCP के ज़रिए खुद कॉल करता है; आपको कभी कोई कमांड टाइप नहीं करनी पड़ती।',
     intgCliPartTitle: 'CLI · कमांड लाइन + skill',
     intgCliPartDesc:
       'उन सहायकों के लिए जो टर्मिनल कमांड चला सकते हैं (Claude Code, Codex, Cursor आदि)। skill इंस्टॉल होने के बाद सहायक फ़ाइलें बनाने, बदलने, पढ़ने और संपादित करने के लिए खुद ieumoffice कमांड लाइन चलाता है; आपको कोई कमांड टाइप नहीं करना पड़ता।',
@@ -11925,8 +12014,6 @@ export const strings = {
     intgMcpHttpDesc:
       'GenOffice के अंदर चलता है; सहायक URL से जुड़ता है और आप Word संपादक में दस्तावेज़ को चरण-दर-चरण बनते देख सकते हैं। GenOffice खुला रहना चाहिए; अभी केवल Word दस्तावेज़।',
     intgMcpHttpAdvanced: 'उन्नत: अन्य पते और लॉग',
-    intgMcpTryNote:
-      'सहायक MCP के ज़रिये GenOffice को बुलाता है; आपको कोई कमांड टाइप नहीं करना पड़ता।',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'टर्मिनल में इसे एक बार चलाएँ:',
     intgMcpOtherTitle: 'Cursor, Claude Desktop या कोई अन्य MCP-समर्थित असिस्टेंट',
@@ -12000,10 +12087,13 @@ export const strings = {
     setSecAiMedia: 'AI मीडिया और खोज',
     setAiSearchSerperHint: 'Serper आपकी कुंजी से वेब और इमेज खोज दोनों देता है।',
     setAiSearchSerplyHint: 'Serply आपकी कुंजी से वेब और इमेज खोज दोनों देता है।',
+    setAiSearchSearchApiHint: 'SearchApi आपकी कुंजी से वेब और इमेज खोज दोनों देता है।',
     setAiSearchTavilyHint:
       'Tavily आपकी कुंजी से वेब खोज देता है; इमेज खोज मुफ़्त स्रोतों पर लौट जाती है।',
     setAiSearchParallelHint:
       'मुफ़्त Parallel खोज के लिए कुंजी खाली छोड़ें (सीमित उपयोग)। अपने Parallel खाते का उपयोग करने के लिए कुंजी जोड़ें। इमेज खोज अन्य स्रोतों का उपयोग करती है।',
+    setAiSearchKeenableHint:
+      'मुफ़्त Keenable खोज के लिए कुंजी खाली छोड़ें (सीमित उपयोग)। अपने Keenable खाते का उपयोग करने के लिए कुंजी जोड़ें। इमेज खोज अन्य स्रोतों का उपयोग करती है।',
     setAiCapImage: 'इमेज जनरेशन',
     setAiCapAnalysis: 'इमेज विश्लेषण',
     setAiCapVideo: 'वीडियो विश्लेषण',
@@ -12366,6 +12456,7 @@ export const strings = {
     setSearchRerankCustomModel: '模型 ID',
     setSearchRerankAccount: '帳戶 ID',
     setAiPanelSide: 'AI 側邊欄位置',
+    csvImportLimit: 'CSV 匯入上限',
     aiPanelSideLeft: '左側',
     aiPanelSideRight: '右側',
     setAiFontSize: 'AI 面板文字大小',
@@ -12374,6 +12465,9 @@ export const strings = {
     aiFontSizeXLarge: '特大',
     aiFontSizeCustom: '自訂',
     setAiSpellcheck: 'AI 對話拼字檢查',
+    setLegacyImportPrompt: '開啟舊格式前先提示',
+    setLegacyImportPromptDesc:
+      '開啟 .doc、.odt、.hwp、.ods、.odp 等舊格式檔案時，先說明哪些內容會轉換過來。關閉後直接進入另存新檔。',
     setDefaultApp: '設為 Office 文件預設程式',
     setDefaultAppDesc: '雙擊 .docx、.xlsx、.pptx 檔案時用 GenOffice 開啟。',
     setDefaultAppIs: 'GenOffice 已是預設程式。',
@@ -12397,7 +12491,7 @@ export const strings = {
     aiPanelStartLast: '上次狀態',
     setAuthorName: '使用者名稱',
     setAuthorNameDesc:
-      '作為註解和追蹤修訂的作者顯示在 Docs、Sheets、Slides 中。留空則使用電腦帳戶名稱。',
+      '作為註解和追蹤修訂的作者顯示在 Docs、Sheets、Slides、PDF 中。留空則使用電腦帳戶名稱。',
     settings: '設定',
     setSecAccount: '帳戶',
     setSecGeneral: '一般',
@@ -12488,11 +12582,10 @@ export const strings = {
     intgCopy: '複製',
     intgStep2Title: '試試看',
     intgStep2Desc: '在助理中開一個新對話，用平常說話的方式提出需求，例如：',
-    intgStep2DescBefore: '安裝好後，在助理中開一個新對話，用平常說話的方式提出需求，例如：',
     intgExample1: '把 ~/Downloads/report.md 轉成 Word 文件',
     intgExample2: '做一份 6 頁的簡報，介紹我們第三季的業績',
     intgExample3: '把 budget.xlsx 轉成 PDF，並在 GenOffice 中開啟',
-    intgStep2Note: '助理會自行呼叫 ieumoffice 命令列，你不需要輸入任何指令。',
+    intgStep2Note: '助理會透過命令列或 MCP 自行呼叫 GenOffice，你不需要輸入任何指令。',
     intgCliPartTitle: 'CLI · 命令列 + skill',
     intgCliPartDesc:
       '適合能執行終端機指令的助理（Claude Code、Codex、Cursor 等）。安裝 skill 後，助理會自己呼叫 ieumoffice 命令列建立、轉換、讀取和編輯檔案，你不需要輸入任何指令。',
@@ -12507,7 +12600,6 @@ export const strings = {
     intgMcpHttpDesc:
       '在 GenOffice 內執行，助理透過網址連線，可以看著它在 Word 編輯器裡逐步產生。需要 GenOffice 保持開啟；目前只支援 Word。',
     intgMcpHttpAdvanced: '進階：其他位址與記錄',
-    intgMcpTryNote: '助理會透過 MCP 呼叫 GenOffice，你不需要輸入任何指令。',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: '在終端機執行一次：',
     intgMcpOtherTitle: 'Cursor、Claude Desktop 或其他支援 MCP 的助理',
@@ -12579,9 +12671,12 @@ export const strings = {
     setSecAiMedia: '生圖、媒體與搜尋',
     setAiSearchSerperHint: 'Serper 用你的 key 同時提供網頁與圖片搜尋。',
     setAiSearchSerplyHint: 'Serply 用你的 key 同時提供網頁與圖片搜尋。',
+    setAiSearchSearchApiHint: 'SearchApi 用你的 key 同時提供網頁與圖片搜尋。',
     setAiSearchTavilyHint: 'Tavily 用你的 key 提供網頁搜尋；圖片搜尋改用免費來源。',
     setAiSearchParallelHint:
       '留空 API key 即可免費使用 Parallel 搜尋（用量有限）。填寫 key 可使用你的 Parallel 帳戶。圖片搜尋使用其他來源。',
+    setAiSearchKeenableHint:
+      '留空 API key 即可免費使用 Keenable 搜尋（用量有限）。填寫 key 可使用你的 Keenable 帳戶。圖片搜尋使用其他來源。',
     setAiCapImage: '生圖',
     setAiCapAnalysis: '圖片解析',
     setAiCapVideo: '影片解析',

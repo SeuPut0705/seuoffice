@@ -15,12 +15,13 @@ import {
   nativeImage,
   session as electronSession,
   shell,
+  systemPreferences,
   webContents,
   WebContentsView,
 } from 'electron'
 import type { WebContents } from 'electron'
 import { execFile } from 'node:child_process'
-import { readFile, writeFile, mkdir, open } from 'node:fs/promises'
+import { readFile, writeFile, rm, mkdir, open, realpath, stat } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
@@ -35,8 +36,13 @@ import {
 import { exportSlidesPdf } from './pdf-export'
 import { printSlidesHtml } from './print-window'
 import { shutdownSubscriptionChildren } from '@genoffice/ai-provider/subscription'
+import { loadPrintHtml } from '@genoffice/electron-utils/print-window'
+import { printOutcome, printJobOptions } from '@genoffice/electron-utils/print-job'
+import { printPdfViaCups, printToPdfOptionsFor } from '@genoffice/electron-utils/print-cups'
+import { queryPrinterOptions, DRIVER_OPTION_NAMES } from '@genoffice/electron-utils/printer-options'
 import {
   appMenuLabels,
+  appMenuTemplate,
   configuredAuthorName,
   configuredDefaultSaveDir,
   confirmOverwriteIfConflicted,
@@ -56,6 +62,7 @@ import {
   showSaveDialogWithMemory,
   helpMenuTemplate,
   toggleDevToolsItem,
+  settingsMenuItem,
   installRendererProtocol,
   registerRendererScheme,
   rendererUrl,
@@ -69,7 +76,11 @@ import {
   type RecoveryIdentity,
   type RecoveryOpenFileRequest,
   type RecoveryOpenUntitledRequest,
+  readLegacyImportSkip,
+  writeLegacyImportSkip,
 } from '@genoffice/electron-utils'
+import { createMainProcessProxyDispatcher } from '@genoffice/electron-utils/main-proxy'
+import { installPermissionGuard } from '../../../../packages/electron-utils/src/permission-guard'
 import {
   resolveGroupChildId,
   runTxn,
@@ -81,7 +92,10 @@ import {
 import { matchesElementRef } from '@genoffice/pptx-engine/identity'
 import { buildPagePptx, parsePageSpec } from '@genoffice/pipelines/slides'
 import { fillMissingRunFonts, parseFontRoles } from './ai-default-fonts'
+import { convertOdpToPptx } from '../../../../packages/odf2ooxml/src'
+import { convertPptToPptx, PPT_LIMITS } from '../../../../packages/ppt2pptx/src'
 import { sniffImageMime } from './media-mime'
+import { ATTACHABLE_MAX_BYTES, ATTACHABLE_IMAGE_MAX_BYTES } from '@genoffice/file-parse'
 import {
   newPasteCascade,
   pageKey,
@@ -97,7 +111,7 @@ import {
   writeElementClipboardImage,
 } from './element-clipboard'
 import { familyInfoFor } from '@genoffice/font-metrics'
-import { getUiLang, normalizeLang, PRODUCT_NAME, setUiLang } from '@genoffice/i18n'
+import { brandText, getUiLang, normalizeLang, PRODUCT_NAME, setUiLang } from '@genoffice/i18n'
 import { ProjectStore } from '@genoffice/project-store'
 import {
   copyElementData,
@@ -121,6 +135,8 @@ import {
   getSlideNotes,
   getSlideTransition,
   elementSpid,
+  narrationSpids,
+  getSlideAdvanceTime,
   getSlideAnimations,
   listEmbeddedFonts,
   openPptx,
@@ -170,6 +186,7 @@ import { unplayableAudioCodec } from './mp4-audio-sniff'
 import { audioFrame, videoFrame, videoSize, type Point, type Size } from './video-size'
 import { AUDIO_EXTS, VIDEO_EXTS } from '../shared/media-kinds'
 import { baseName } from '../shared/base-name'
+import { OPENABLE_DECK_EXTENSIONS, deckExtension } from '../shared/deck-open-formats'
 import type {
   AddChartOp,
   AddCommentOp,
@@ -177,6 +194,8 @@ import type {
   AddImageBytesOp,
   AddInkOp,
   ReplacePictureBytesOp,
+  AddModel3dOp,
+  SetModel3dViewOp,
   AddMediaBytesOp,
   AddMediaResult,
   AddBlankSlideOp,
@@ -246,7 +265,9 @@ import type {
   SetTableCellAnchorOp,
   TableStructureIpcOp,
   ReorderElementOp,
+  SaveRecordingOp,
   SetAdvanceTimesOp,
+  ShowTiming,
   SetAnimationsOp,
   SetNotesOp,
   SetSlideHiddenOp,
@@ -266,7 +287,7 @@ import type {
 } from '../shared/ipc'
 import { DECK_LINK_PROTOCOLS } from '../shared/run-link'
 import { planSlideDuplicates, planSlideMoves } from '../shared/slide-selection'
-import { buildPrintDocumentHtml } from '../shared/print-html'
+import { buildPrintDocumentHtml, printPageSizeIn } from '../shared/print-html'
 
 import { tm } from './i18n-main'
 import { tiffToPng } from './tiff-decode'
@@ -458,12 +479,16 @@ export function trackSlidesWebContents(wc: WebContents): void {
     const session = sessions.get(wc.id)
     if (session) dropAiRunOf(session, wc.id)
   }
-  wc.on('render-process-gone', dropAiRun)
+  const endRendererRun = () => {
+    dropAiRun()
+    closeNarrationMicrophone(wc.id)
+  }
+  wc.on('render-process-gone', endRendererRun)
   wc.on('did-start-navigation', (details: { isMainFrame: boolean; isSameDocument: boolean }) => {
-    if (details.isMainFrame && !details.isSameDocument) dropAiRun()
+    if (details.isMainFrame && !details.isSameDocument) endRendererRun()
   })
   wc.once('destroyed', () => {
-    dropAiRun()
+    endRendererRun()
     releaseSlidesRecovery(wc.id)
     sessions.delete(wc.id)
     pendingByWc.delete(wc.id)
@@ -474,6 +499,29 @@ export function trackSlidesWebContents(wc: WebContents): void {
     saveAsImageTargets.forget(wc.id)
     if (windowRefs.activeWebContents === wc) windowRefs.activeWebContents = null
   })
+}
+
+/** The main process bounds an allowance even if the recording never reports its end. */
+const NARRATION_MICROPHONE_MAX_MS = 4 * 60 * 60 * 1000
+
+interface NarrationMicrophone {
+  timer: ReturnType<typeof setTimeout> | undefined
+}
+
+/** A pending OS question or a recording, owned by one slides editor. */
+const narrationMicrophones = new Map<number, NarrationMicrophone>()
+
+function closeNarrationMicrophone(wcId: number): void {
+  clearTimeout(narrationMicrophones.get(wcId)?.timer)
+  narrationMicrophones.delete(wcId)
+}
+
+/**
+ * True from the moment this editor's narration recording was let start until
+ * it stops: the only time the permission guard lets a page open the microphone.
+ */
+export function slidesMicrophoneOpen(wcId: number): boolean {
+  return narrationMicrophones.get(wcId)?.timer !== undefined
 }
 
 /** Save As › PNG names the dialog returned, accepted once by the image export */
@@ -545,6 +593,7 @@ export function saveSessionDeckTo(session: Session, filePath: string): Promise<v
 }
 
 const RECENT_PATH = () => join(app.getPath('userData'), 'slides-recent.json')
+const APP_SETTINGS_PATH = () => join(app.getPath('userData'), 'app-settings.json')
 
 /** Settings → General author name, falling back to the OS account */
 function commentAuthorName(): string {
@@ -976,6 +1025,153 @@ async function recoveredOpenBytes(
 }
 
 /**
+ * Reuse the whole-attachment budget for one GLB or an entire narration request
+ * (50 MiB decoded), and the picture budget for model posters (5 MiB). Bound
+ * encoded input before decoding, including padding at the exact byte limit.
+ */
+function boundedBase64Size(value: string, limit: number): number | null {
+  if (value.length > 4 * Math.ceil(limit / 3)) return null
+  const size = Buffer.byteLength(value, 'base64')
+  return size <= limit ? size : null
+}
+
+function refuseOversizedMedia(limit: number): null {
+  void showPresentationError(tm('errTooLarge', { mb: limit / 1024 / 1024 }))
+  return null
+}
+
+async function showPresentationError(detail: string): Promise<void> {
+  const options = { type: 'error' as const, message: PRODUCT_NAME, detail }
+  const parent = dialogParent()
+  if (parent) await dialog.showMessageBox(parent, options)
+  else await dialog.showMessageBox(options)
+}
+
+/** Resolve symlink aliases, including an existing parent of a new destination. */
+async function canonicalPresentationPath(path: string): Promise<string> {
+  const absolute = resolve(path)
+  try {
+    return await realpath(absolute)
+  } catch {
+    try {
+      return join(await realpath(dirname(absolute)), basename(absolute))
+    } catch {
+      return absolute
+    }
+  }
+}
+
+/** As in Docs, conservatively protect originals even on case-folding disks. */
+async function pickPresentationImportTarget(
+  sourcePath: string,
+  defaultPath: string,
+): Promise<string | null> {
+  const original = (await canonicalPresentationPath(sourcePath)).toLowerCase()
+  for (;;) {
+    const picked = await showSaveDialogWithMemory(
+      dialog,
+      dialogParent(),
+      { defaultPath, filters: [{ name: 'PowerPoint', extensions: ['pptx'] }] },
+      getDraftsDir(),
+    )
+    if (picked.canceled || !picked.filePath) return null
+    if ((await canonicalPresentationPath(picked.filePath)).toLowerCase() === original) {
+      await showPresentationError(tm('importOriginalTarget'))
+      continue
+    }
+    if (deckExtension(picked.filePath) === 'pptx') return picked.filePath
+    const target = `${picked.filePath}.pptx`
+    if (!existsSync(target)) return target
+    // The OS confirmed the typed name, not the appended name. Ask about the actual copy.
+    defaultPath = target
+  }
+}
+
+/**
+ * Legacy decks open as separate .pptx copies. PPT stage 1 is text-only and
+ * always discloses that loss; ODF retains its optional confirmation.
+ * Canonical destination checks protect the original, and an appended suffix
+ * is confirmed by the OS before any existing copy is replaced. Null cancels.
+ */
+async function preparePresentationForOpen(filePath: string): Promise<string | null> {
+  const extension = deckExtension(filePath)
+  if (extension !== 'odp' && extension !== 'otp' && extension !== 'ppt') return filePath
+  // a legacy .ppt rides the same flow as the ODF decks: confirm the lossy
+  // import, pick the destination, convert, write atomically and open the copy
+  const legacyPpt = extension === 'ppt'
+  const detailKey = legacyPpt ? 'pptImportDetail' : 'odpImportDetail'
+  const failedTitleKey = legacyPpt ? 'pptImportFailedTitle' : 'odpImportFailedTitle'
+  const failedBodyKey = legacyPpt ? 'pptImportFailedBody' : 'odpImportFailedBody'
+  const parent = dialogParent()
+  // The converter also checks this, but only after its input is in memory.
+  if (legacyPpt && ((await stat(filePath).catch(() => null))?.size ?? 0) > PPT_LIMITS.maxBytes) {
+    await showPresentationError(tm('errTooLarge', { mb: PPT_LIMITS.maxBytes / 1024 / 1024 }))
+    return null
+  }
+  if (legacyPpt || !readLegacyImportSkip(APP_SETTINGS_PATH(), 'odp')) {
+    const options = {
+      type: 'warning' as const,
+      message: tm('odpImportMsg', { ext: extension }),
+      detail: tm(detailKey),
+      buttons: [tm('odpImportConvertBtn'), tm('btnCancel')],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+      ...(!legacyPpt ? { checkboxLabel: tm('importSkipConfirm') } : {}),
+    }
+    const { response, checkboxChecked } = parent
+      ? await dialog.showMessageBox(parent, options)
+      : await dialog.showMessageBox(options)
+    if (response !== 0) return null
+    if (!legacyPpt && checkboxChecked) {
+      try {
+        writeLegacyImportSkip(APP_SETTINGS_PATH(), 'odp', true)
+      } catch {
+        /* unwritable settings: ask again next time */
+      }
+    }
+  }
+  const target = await pickPresentationImportTarget(
+    filePath,
+    join(
+      dirname(filePath),
+      legacyPpt
+        ? tm('pptImportCopyName', { stem: basename(filePath).replace(/\.ppt$/i, '') })
+        : basename(filePath).replace(/\.(odp|otp)$/i, '.pptx'),
+    ),
+  )
+  if (!target) return null
+  try {
+    const source = new Uint8Array(await readFile(filePath))
+    const converted = legacyPpt ? await convertPptToPptx(source) : null
+    const out = converted ? converted.bytes : (await convertOdpToPptx(source)).pptx
+    // atomic like the Docs and shell copies: a plain write leaves a truncated
+    // .pptx where the user expects a deck if the process dies mid-write
+    await atomicWriteFile(target, Buffer.from(out))
+    if (converted?.warnings.length) {
+      const warningOptions = {
+        type: 'warning' as const,
+        message: tm('odpImportMsg', { ext: extension }),
+        detail: brandText(converted.warnings.join('\n'), getUiLang()),
+        buttons: [tm('legacyPptOk')],
+      }
+      if (parent) await dialog.showMessageBox(parent, warningOptions)
+      else await dialog.showMessageBox(warningOptions)
+    }
+  } catch {
+    const errorOptions = {
+      type: 'error' as const,
+      message: tm(failedTitleKey),
+      detail: tm(failedBodyKey),
+    }
+    if (parent) await dialog.showMessageBox(parent, errorOptions)
+    else await dialog.showMessageBox(errorOptions)
+    return null
+  }
+  return target
+}
+
+/**
  * A copy chosen for restoring could not be opened and the deck opens from
  * its file instead. Choosing it marked the copy loaded (undecided), yet no
  * tab holds it: undecided it would make every later quit look abnormal. It
@@ -1098,6 +1294,7 @@ interface UnlockedDeck {
  * .ppt (97-2003 binary compound document) is unsupported: show an actionable message instead of a parse error.
  * Detection uses the magic number rather than the extension -- a binary ppt with a renamed suffix is caught too. A CFB containing an
  * EncryptedPackage stream is a password-protected pptx: ask for its password and hand back the decrypted package.
+ * A CFB whose container does not hold is damaged: no password is asked for, and the message says the file is damaged.
  * Resolves 'plain' for an ordinary pptx and 'rejected' when the file will not open (the user was told why, or cancelled the prompt).
  */
 async function preparePptxOpen(path: string): Promise<'plain' | 'rejected' | UnlockedDeck> {
@@ -1121,9 +1318,14 @@ async function preparePptxOpen(path: string): Promise<'plain' | 'rejected' | Unl
     // on read failure, fall back to the legacy-format message
   }
   const parent = dialogParent()
-  // a headless export has no one to ask, so an encrypted deck is simply not opened
-  if (bytes !== null && cfbKind(bytes) === 'encrypted' && isHeadlessMode()) return 'rejected'
-  if (bytes !== null && cfbKind(bytes) === 'encrypted') {
+  const kind = bytes === null ? null : cfbKind(bytes)
+  // a headless export has no one to ask or tell, so such a deck is simply not opened
+  if ((kind === 'encrypted' || kind === 'damaged') && isHeadlessMode()) return 'rejected'
+  if (kind === 'damaged') {
+    await showPresentationError(tm('pptImportFailedBody'))
+    return 'rejected'
+  }
+  if (bytes !== null && kind === 'encrypted') {
     const prompt = passwordPromptFactory?.(parent, basename(path))
     let unlocked: Awaited<ReturnType<typeof unlockOfficeFile>> | 'failed'
     try {
@@ -1144,7 +1346,7 @@ async function preparePptxOpen(path: string): Promise<'plain' | 'rejected' | Unl
       return { bytes: new Uint8Array(unlocked.bytes), password: unlocked.password }
     }
   }
-  const encrypted = bytes !== null && cfbKind(bytes) === 'encrypted'
+  const encrypted = kind === 'encrypted'
   const options = {
     type: 'warning' as const,
     buttons: [tm('legacyPptOk')],
@@ -1577,25 +1779,24 @@ export function registerSlidesIpc(): void {
     const parent = dialogParent()
     const options = {
       properties: ['openFile' as const],
-      filters: [{ name: 'PowerPoint', extensions: ['pptx', 'ppt'] }],
+      filters: [{ name: 'PowerPoint', extensions: [...OPENABLE_DECK_EXTENSIONS] }],
     }
     const r = await showOpenDialogWithMemory(dialog, parent, options)
     if (r.canceled || !r.filePaths[0]) return null
-    const prepared = await preparePptxOpen(r.filePaths[0])
+    const deckPath = await preparePresentationForOpen(r.filePaths[0])
+    if (!deckPath) return null
+    const prepared = await preparePptxOpen(deckPath)
     if (prepared === 'rejected') return null
-    return openAndBuild(
-      e.sender,
-      r.filePaths[0],
-      fitWidthPx,
-      prepared === 'plain' ? undefined : prepared,
-    )
+    return openAndBuild(e.sender, deckPath, fitWidthPx, prepared === 'plain' ? undefined : prepared)
   })
 
   ipcMain.handle('slides:open-path', async (e, path: string, fitWidthPx: number) => {
     if (!path || !existsSync(path)) return null
-    const prepared = await preparePptxOpen(path)
+    const deckPath = await preparePresentationForOpen(path)
+    if (!deckPath) return null
+    const prepared = await preparePptxOpen(deckPath)
     if (prepared === 'rejected') return null
-    return openAndBuild(e.sender, path, fitWidthPx, prepared === 'plain' ? undefined : prepared)
+    return openAndBuild(e.sender, deckPath, fitWidthPx, prepared === 'plain' ? undefined : prepared)
   })
 
   ipcMain.handle('slides:consume-pending-open', async (e, fitWidthPx: number) => {
@@ -1610,18 +1811,20 @@ export function registerSlidesIpc(): void {
         if (pendingByWc.get(e.sender.id) === queued) pendingByWc.delete(e.sender.id)
         if (pendingOpenPath === queued) pendingOpenPath = null
       }
-      // A legacy .ppt (possibly misnamed .pptx) can never parse, and an encrypted
-      // deck whose prompt was cancelled will not open: tell the user and drop it,
-      // or every relaunch restores a blank tab
-      const prepared = await preparePptxOpen(queued)
-      if (prepared === 'rejected') {
+      // An .odp/.otp whose import was declined, a legacy .ppt (possibly
+      // misnamed .pptx) that can never parse, and an encrypted deck whose
+      // prompt was cancelled will not open: tell the user and drop it, or
+      // every relaunch restores a blank tab
+      const deckPath = await preparePresentationForOpen(queued)
+      const prepared = deckPath ? await preparePptxOpen(deckPath) : 'rejected'
+      if (!deckPath || prepared === 'rejected') {
         dropQueued()
         return null
       }
       // Clear the queue only after a successful open: keep it on parse failure or a mid-flight renderer reload, so a remount can retry
       const result = await openAndBuild(
         e.sender,
-        queued,
+        deckPath,
         fitWidthPx,
         prepared === 'plain' ? undefined : prepared,
       )
@@ -2084,9 +2287,10 @@ export function registerSlidesIpc(): void {
       // append/replace_at/insert_at: land the extracted pages as insertSlidePptx ops
       // (earlier pages are untouched; landing shows up in the op journal like any edit).
       const readCloudPage = async (marker: string): Promise<{ bytes: Uint8Array }> => {
-        if (!marker.startsWith(CLOUD_PAGE_PREFIX)) throw new Error('expected a cloud page marker')
+        if (!marker.startsWith(CLOUD_PAGE_PREFIX))
+          throw new Error('expected a generated page marker')
         const path = marker.slice(CLOUD_PAGE_PREFIX.length)
-        if (!issuedCloudPages.has(path)) throw new Error('unknown cloud page marker')
+        if (!issuedCloudPages.has(path)) throw new Error('unknown generated page marker')
         return { bytes: new Uint8Array(await readFile(path)) }
       }
       const assembleDeck = async (): Promise<{ bytes: Uint8Array }> => {
@@ -4212,54 +4416,87 @@ export function registerSlidesIpc(): void {
   })
 
   // 3D model (simplified): glb embed + poster placeholder image
-  ipcMain.handle('slides:insert-model3d', async (e, slideIndex: number, fitWidthPx: number) => {
-    const session = sessions.get(e.sender.id)
-    if (!session || !session.opened.deck.slides[slideIndex]) return null
-    const parent = dialogParent()
-    const options = {
+  ipcMain.handle('slides:pick-model3d', async () => {
+    const r = await showOpenDialogWithMemory(dialog, dialogParent(), {
       title: tm('dlgInsert3d'),
       properties: ['openFile' as const],
-      filters: [{ name: tm('filter3d'), extensions: ['glb', 'gltf'] }],
-    }
-    const r = await showOpenDialogWithMemory(dialog, parent, options)
+      filters: [{ name: tm('filter3d'), extensions: ['glb'] }],
+    })
     if (r.canceled || !r.filePaths[0]) return null
-    const filePath = r.filePaths[0]
-    const bytes = await readFile(filePath)
-    const ext = filePath.split('.').pop()!.toLowerCase()
+    if ((await stat(r.filePaths[0])).size > ATTACHABLE_MAX_BYTES)
+      return refuseOversizedMedia(ATTACHABLE_MAX_BYTES)
+    const bytes = await readFile(r.filePaths[0])
+    if (bytes.byteLength > ATTACHABLE_MAX_BYTES) return refuseOversizedMedia(ATTACHABLE_MAX_BYTES)
+    return { name: baseName(r.filePaths[0]), bytes: new Uint8Array(bytes) }
+  })
 
-    let poster: { bytes: Uint8Array; ext: string } | undefined
-    try {
-      const thumb = await nativeImage.createThumbnailFromPath(filePath, { width: 640, height: 640 })
-      if (!thumb.isEmpty()) poster = { bytes: new Uint8Array(thumb.toPNG()), ext: 'png' }
-    } catch {
-      /* Dark-gray fallback */
-    }
-
+  ipcMain.handle('slides:add-model3d', (e, op: AddModel3dOp) => {
+    const session = sessions.get(e.sender.id)
+    if (!session || !session.opened.deck.slides[op.slideIndex]) return null
+    if (op.bytes.byteLength > ATTACHABLE_MAX_BYTES)
+      return refuseOversizedMedia(ATTACHABLE_MAX_BYTES)
+    if (op.posterBase64 && boundedBase64Size(op.posterBase64, ATTACHABLE_IMAGE_MAX_BYTES) === null)
+      return refuseOversizedMedia(ATTACHABLE_IMAGE_MAX_BYTES)
     const deckSize = session.opened.deck.size
     const cy = Math.round(deckSize.cy * 0.5)
-    const cx = cy
+    const cx = Math.round(cy * op.aspect)
     const txn = sessionTxn(session, {
       ops: [
         {
           op: 'addModel3d',
-          target: { slide: slideIndex },
-          bytes: new Uint8Array(bytes),
-          ext,
-          ...(poster ? { poster } : {}),
+          target: { slide: op.slideIndex },
+          bytes: op.bytes,
+          ext: 'glb',
+          ...(op.posterBase64
+            ? {
+                poster: {
+                  bytes: new Uint8Array(Buffer.from(op.posterBase64, 'base64')),
+                  ext: 'png',
+                },
+              }
+            : {}),
           offset: {
             x: Math.round((deckSize.cx - cx) / 2),
             y: Math.round((deckSize.cy - cy) / 2),
             cx,
             cy,
           },
-          name: baseName(filePath),
+          name: op.name,
         },
       ],
     })
     if (!txn) return null
-    session.fitWidthPx = fitWidthPx
-    const rebuilt = rebuildSlide(session, slideIndex)
+    session.fitWidthPx = op.fitWidthPx
+    const rebuilt = rebuildSlide(session, op.slideIndex)
     return rebuilt ? { slide: rebuilt, sourceId: txn.records![0]!.created![0]! } : null
+  })
+
+  ipcMain.handle('slides:model3d-data', (e, slideIndex: number, sourceId: string) => {
+    const session = sessions.get(e.sender.id)
+    const el = session?.opened.deck.slides[slideIndex]?.elements.find((x) => x.id === sourceId)
+    const target = el?.type === 'picture' ? el.model3d?.target : undefined
+    const bytes = target ? session!.opened.archive.readBytes(target) : undefined
+    if (bytes && bytes.byteLength > ATTACHABLE_MAX_BYTES)
+      return refuseOversizedMedia(ATTACHABLE_MAX_BYTES)
+    return bytes ? new Uint8Array(bytes) : null
+  })
+
+  ipcMain.handle('slides:set-model3d-view', (e, op: SetModel3dViewOp) => {
+    const session = sessions.get(e.sender.id)
+    if (!session?.opened.deck.slides[op.slideIndex]) return null
+    if (op.posterBase64 && boundedBase64Size(op.posterBase64, ATTACHABLE_IMAGE_MAX_BYTES) === null)
+      return refuseOversizedMedia(ATTACHABLE_IMAGE_MAX_BYTES)
+    const r = sessionTxn(session, {
+      ops: [
+        {
+          op: 'setModel3dView',
+          target: { slide: op.slideIndex, el: op.sourceId },
+          ...op.rot,
+          ...(op.posterBase64 ? { poster: op.posterBase64, posterExt: 'png' } : {}),
+        },
+      ],
+    })
+    return r ? rebuildSlide(session, op.slideIndex) : null
   })
 
   ipcMain.handle('slides:set-link', (e, op: SetLinkOp) => {
@@ -4388,6 +4625,18 @@ export function registerSlidesIpc(): void {
     return slide ? getSlideTransition(slide) : 'none'
   })
 
+  ipcMain.handle('slides:get-show-timing', (e, slideIndex: number): ShowTiming => {
+    const slide = sessions.get(e.sender.id)?.opened.deck.slides[slideIndex]
+    if (!slide) return { advanceMs: null, narrationIds: [] }
+    const narration = new Set(narrationSpids(slide))
+    return {
+      advanceMs: getSlideAdvanceTime(slide),
+      narrationIds: slide.elements
+        .filter((el) => narration.has(elementSpid(el) ?? -1))
+        .map((el) => el.id),
+    }
+  })
+
   // Rehearsal timing save: batch-write each page's auto-advance time (<p:transition advTm>, ms)
   ipcMain.handle('slides:set-advance-times', (e, op: SetAdvanceTimesOp) => {
     const session = sessions.get(e.sender.id)
@@ -4404,6 +4653,71 @@ export function registerSlidesIpc(): void {
     })
     return r !== null
   })
+
+  // ── Slide Show > Record: narration per slide plus its advance time, one undo step ──
+  ipcMain.handle('slides:save-recording', (e, op: SaveRecordingOp) => {
+    closeNarrationMicrophone(e.sender.id)
+    const session = sessions.get(e.sender.id)
+    if (!session) return null
+    let totalBytes = 0
+    for (const slide of op.slides) {
+      const size = boundedBase64Size(slide.wavBase64, ATTACHABLE_MAX_BYTES - totalBytes)
+      if (size === null) return refuseOversizedMedia(ATTACHABLE_MAX_BYTES)
+      totalBytes += size
+    }
+    const slides = session.opened.deck.slides
+    const recorded = op.slides.filter((s) => slides[s.slideIndex])
+    if (recorded.length === 0) return null
+    const r = sessionTxn(session, {
+      ops: recorded.flatMap((s) => [
+        {
+          op: 'addNarration',
+          target: { slide: s.slideIndex },
+          bytes: s.wavBase64,
+          ext: 'wav',
+          durationMs: s.durationMs,
+        },
+        { op: 'setAdvanceTime', target: { slide: s.slideIndex }, ms: s.advanceMs },
+      ]),
+    })
+    return r ? slides.map((_, i) => rebuildSlide(session, i)) : null
+  })
+
+  ipcMain.handle('slides:clear-narration', (e, slideIndexes: number[]) => {
+    const session = sessions.get(e.sender.id)
+    if (!session) return null
+    const slides = session.opened.deck.slides
+    const targets = slideIndexes.filter((i) => slides[i] && narrationSpids(slides[i]).length > 0)
+    if (targets.length === 0) return null
+    const r = sessionTxn(session, {
+      ops: targets.map((i) => ({ op: 'clearNarration', target: { slide: i } })),
+    })
+    return r ? slides.map((_, i) => rebuildSlide(session, i)) : null
+  })
+
+  ipcMain.handle('slides:microphone-access', async (e) => {
+    const wcId = e.sender.id
+    // only an editor with a deck open records
+    if (!sessions.has(wcId)) return false
+    closeNarrationMicrophone(wcId)
+    const recording: NarrationMicrophone = { timer: undefined }
+    narrationMicrophones.set(wcId, recording)
+    const granted =
+      process.platform !== 'darwin' ||
+      systemPreferences.getMediaAccessStatus('microphone') === 'granted' ||
+      (await systemPreferences.askForMediaAccess('microphone'))
+    // Stop, navigation or a newer recording invalidates this OS question.
+    if (narrationMicrophones.get(wcId) !== recording) return false
+    if (!granted || !sessions.has(wcId)) {
+      closeNarrationMicrophone(wcId)
+      return false
+    }
+    recording.timer = setTimeout(() => closeNarrationMicrophone(wcId), NARRATION_MICROPHONE_MAX_MS)
+    recording.timer.unref()
+    return true
+  })
+
+  ipcMain.on('slides:microphone-release', (e) => closeNarrationMicrophone(e.sender.id))
 
   // ── Shape animations (<p:timing>; the spid <-> temporary element id mapping happens here) ──
   ipcMain.handle('slides:get-animations', (e, slideIndex: number): AnimationItem[] => {
@@ -4980,6 +5294,19 @@ export function registerSlidesIpc(): void {
     })
   })
 
+  // The driver option groups one queue advertises, for the print dialog's
+  // dropdowns (same surface the PDF dialog exposes; genoffice#2347's chain).
+  ipcMain.handle('slides:printer-options', async (_e, queue: unknown) => {
+    if (typeof queue !== 'string' || !/^[A-Za-z0-9_.+-]{1,128}$/.test(queue)) return []
+    const groups = await queryPrinterOptions(queue)
+    return groups.filter((g) => DRIVER_OPTION_NAMES.includes(g.name))
+  })
+
+  ipcMain.handle('slides:printers', async (e) => {
+    const printers = await e.sender.getPrintersAsync()
+    return printers.map((p) => ({ name: p.name, displayName: p.displayName || p.name }))
+  })
+
   ipcMain.handle(
     'slides:print',
     async (e, op: PrintSlidesOp): Promise<{ ok: boolean; error?: string }> => {
@@ -4990,23 +5317,68 @@ export function registerSlidesIpc(): void {
         layout: op.layout ?? 'full',
         ...(op.notes ? { notes: op.notes } : {}),
         ...(op.orientation ? { orientation: op.orientation } : {}),
+        ...(op.order ? { order: op.order } : {}),
         ...(op.frame ? { frame: true } : {}),
       })
       const owner = hostWindowFor(e.sender) ?? dialogParent()
-      const win = new BrowserWindow({
-        show: false,
-        ...(owner && !owner.isDestroyed() ? { parent: owner } : {}),
-        ...(process.platform === 'win32'
-          ? {
-              width: 900,
-              height: 700,
-              autoHideMenuBar: true,
-              closable: false,
-              skipTaskbar: true,
-            }
-          : {}),
-        webPreferences: { sandbox: true },
-      })
+      const buildWindow = (visibleDialog: boolean) =>
+        new BrowserWindow({
+          show: false,
+          ...(owner && !owner.isDestroyed() ? { parent: owner } : {}),
+          // Windows attaches the native dialog to the printed window: only the
+          // system-dialog route needs it visible and sized
+          ...(process.platform === 'win32' && visibleDialog
+            ? {
+                width: 900,
+                height: 700,
+                autoHideMenuBar: true,
+                closable: false,
+                skipTaskbar: true,
+              }
+            : {}),
+          webPreferences: { sandbox: true },
+        })
+      const opts = printJobOptions(op.job)
+      if (opts.silent) {
+        const win = buildWindow(false)
+        let tempDir: string | null = null
+        try {
+          tempDir = (await loadPrintHtml(win, html, 'slides.html', 'genoffice-slides-print-'))
+            .tempDir
+          if (process.platform === 'darwin') {
+            // Chromium's silent print can drop a job outright on macOS — no
+            // queue entry, no callback error (genoffice#2347). Bake the sheets
+            // at the layout's own paper and spool through lp instead.
+            const size = printPageSizeIn(
+              op.layout ?? 'full',
+              op.orientation,
+              op.widthPx / op.heightPx,
+            )
+            const printed = await win.webContents.printToPDF(
+              printToPdfOptionsFor({
+                marginsIn: { top: 0, bottom: 0, left: 0, right: 0 },
+                widthIn: size.width,
+                heightIn: size.height,
+              }),
+            )
+            return printPdfViaCups(printed, opts)
+          }
+          const result = await new Promise<{ success: boolean; failureReason: string }>(
+            (resolve) => {
+              win.webContents.print({ ...opts, printBackground: true }, (success, failureReason) =>
+                resolve({ success, failureReason }),
+              )
+            },
+          )
+          return printOutcome(result.success, result.failureReason, true)
+        } catch (err) {
+          return { ok: false, error: err instanceof Error ? err.message : String(err) }
+        } finally {
+          if (tempDir) await rm(tempDir, { recursive: true, force: true })
+          if (!win.isDestroyed()) win.destroy()
+        }
+      }
+      const win = buildWindow(true)
       return printSlidesHtml(html, win)
     },
   )
@@ -5385,8 +5757,12 @@ export function buildSlidesMenu(): Menu {
     )
   const isMac = process.platform === 'darwin'
   const labels = appMenuLabels(getUiLang())
+  const appMenu = appMenuTemplate(process.platform, labels, {
+    appLabel: app.name,
+    extra: [settingsMenuItem(labels)],
+  })
   const template: Electron.MenuItemConstructorOptions[] = [
-    ...(isMac ? [{ role: 'appMenu' as const }] : []),
+    ...(appMenu ? [appMenu] : []),
     {
       label: tm('menuFile'),
       submenu: [
@@ -5408,6 +5784,8 @@ export function buildSlidesMenu(): Menu {
         { type: 'separator' },
         { label: tm('menuSave'), accelerator: 'CmdOrCtrl+S', click: () => send('save') },
         { label: tm('menuSaveAs'), accelerator: 'CmdOrCtrl+Shift+S', click: () => send('save-as') },
+        // macOS has no File ribbon tab: this is its only AI naming entry
+        { label: labels.nameWithAi, click: () => send('name-with-ai') },
         { type: 'separator' },
         // The ribbon's File tab is Windows-only, so without these macOS had no way
         // to export or print at all
@@ -5427,6 +5805,8 @@ export function buildSlidesMenu(): Menu {
           : isMac
             ? { role: 'close' as const, label: tm('menuClose') }
             : { role: 'quit' as const, label: tm('menuQuit') },
+        { type: 'separator' },
+        settingsMenuItem(labels),
       ],
     },
     {
@@ -5474,12 +5854,14 @@ export function installSlidesMenu(): void {
 async function applyMainProcessProxy(): Promise<void> {
   const setDispatcher = async (proxyUrl: string) => {
     try {
-      const { ProxyAgent, setGlobalDispatcher } = await import('undici')
-      setGlobalDispatcher(new ProxyAgent(proxyUrl))
+      const { setGlobalDispatcher } = await import('undici')
+      // loopback stays direct: a Custom provider on 127.0.0.1 must not ride
+      // the proxy as an absolute-form request (#2084)
+      setGlobalDispatcher(await createMainProcessProxyDispatcher(proxyUrl))
       // strip user:pass credentials before logging
       console.log('[proxy] main-process fetch via', proxyUrl.replace(/\/\/[^@/]*@/, '//***@'))
     } catch (e) {
-      console.warn('[proxy] failed to set ProxyAgent:', e)
+      console.warn('[proxy] failed to set proxy dispatcher:', e)
     }
   }
   const envProxy =
@@ -5513,6 +5895,10 @@ async function applyMainProcessProxy(): Promise<void> {
 export function startSlidesStandalone(): void {
   registerRendererScheme()
   installNavigationGuard(app)
+  installPermissionGuard(app, electronSession, {
+    pages: { devUrls: { slides: runtime.rendererDevUrl } },
+    microphoneOpen: slidesMicrophoneOpen,
+  })
   installContextMenu(app, () => contextMenuLabels(getUiLang()))
   // Optional debug switch: enable CDP only in dev with SLIDES_CDP_PORT explicitly set (for
   // automated testing/troubleshooting); packaged builds (isPackaged) are unaffected.

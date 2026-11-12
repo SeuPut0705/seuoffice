@@ -242,6 +242,14 @@ export async function runHwpBatch(
       failures,
     )
   }
+  if (session.unverified && target.output === target.input) {
+    throw new CliError(
+      EXIT.usage,
+      'the structure of this file could not be checked, so it is not written over: content the edit cannot see could be lost',
+      { batch: counts },
+      { reason: 'unsupported', suggestion: 'write the result to another file with --out' },
+    )
+  }
   // A same-format copy of a read-only batch needs no reserialization.
   const original = !changed && target.input ? readInput(target.input) : undefined
   const copy =

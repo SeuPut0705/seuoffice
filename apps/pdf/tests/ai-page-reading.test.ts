@@ -439,7 +439,7 @@ describe('AI page reading: picker and confirmation', () => {
     await click(m.el, '[data-model-picker] .ai-model-chip')
     await until(() => q(m.el, '[role="option"]') !== null, 'the model list')
     const flash = [...m.el.querySelectorAll('[role="option"]')].find((option) =>
-      option.textContent?.includes('deep-seek-v4.1-flash'),
+      option.textContent?.includes('deepseek-flash'),
     ) as HTMLElement | undefined
     expect(flash).toBeTruthy()
     await act(async () => flash!.click())

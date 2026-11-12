@@ -147,6 +147,53 @@ describe('DrawingML colours read from a document', () => {
   )
 })
 
+describe('theme fonts', () => {
+  const BATANG = '\ubc14\ud0d5'
+  const MALGUN = '\ub9d1\uc740 \uace0\ub515'
+  const themePart = (scripts: string) => ({
+    path: 'word/theme/theme1.xml',
+    xml:
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      `<a:theme ${A_NS} name="T"><a:themeElements><a:fontScheme name="T">` +
+      `<a:majorFont><a:latin typeface="Aptos Display"/><a:ea typeface="${BATANG}"/><a:cs typeface=""/>${scripts}</a:majorFont>` +
+      `<a:minorFont><a:latin typeface="Aptos"/><a:ea typeface="${BATANG}"/><a:cs typeface=""/>${scripts}</a:minorFont>` +
+      '</a:fontScheme></a:themeElements></a:theme>',
+    contentType: 'application/vnd.openxmlformats-officedocument.theme+xml',
+  })
+  const settingsPart = (eaLang: string) => ({
+    path: 'word/settings.xml',
+    xml:
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      `<w:themeFontLang w:val="en-US" w:eastAsia="${eaLang}"/></w:settings>`,
+    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml',
+  })
+
+  it.each(['Constructor', ...LOWER_CASE_INHERITED_KEYS])(
+    'themeFontLang w:eastAsia="%s" picks no script-table face',
+    async (lang) => {
+      // what the inherited value reads as when it is taken for a script name
+      const inheritedScript = String(({} as Record<string, unknown>)[lang.toLowerCase()])
+      const scripts =
+        `<a:font script="Hang" typeface="${MALGUN}"/>` +
+        `<a:font script="${inheritedScript}" typeface="Wrong Face"/>`
+      const fontOf = async (eaLang: string) => {
+        const parsed = await parseDocx(
+          await buildDocx({
+            bodyXml:
+              '<w:p><w:r><w:rPr><w:rFonts w:eastAsiaTheme="minorEastAsia"/></w:rPr>' +
+              '<w:t>\ubcf8\ubb38</w:t></w:r></w:p>',
+            extraParts: [themePart(scripts), settingsPart(eaLang)],
+          }),
+        )
+        return parsed.blocks[0]!.runs![0]!.font
+      }
+      expect(await fontOf('ko-KR')).toBe(MALGUN)
+      expect(await fontOf(lang)).toBe(BATANG)
+    },
+  )
+})
+
 describe('charts', () => {
   it.each(INHERITED_KEYS)('a cx:series with layoutId="%s" is an unknown chart kind', (key) => {
     const chartex = (layoutId: string) =>

@@ -12,6 +12,16 @@ async function documentXml(path: string): Promise<string> {
   return zip.file('word/document.xml')!.async('string')
 }
 
+/** every package part as bytes, for byte-for-byte round-trip assertions */
+async function zipBuffers(path: string): Promise<Map<string, Buffer>> {
+  const zip = await JSZip.loadAsync(readFileSync(path))
+  const out = new Map<string, Buffer>()
+  for (const [name, file] of Object.entries(zip.files)) {
+    if (!file.dir) out.set(name, await file.async('nodebuffer'))
+  }
+  return out
+}
+
 describe('genoffice docx (docs editor under jsdom)', () => {
   it('creates a document from markdown and from a restricted-HTML fragment', async () => {
     const dir = tempDir()
@@ -563,7 +573,12 @@ describe('docs guard rails', () => {
     const docx = join(dir, 'a.docx')
     expect((await run(['create', '--type', 'docx', '--from', md, '--out', docx])).code).toBe(0)
     const zip = await JSZip.loadAsync(readFileSync(docx))
-    expect(Object.keys(zip.files).filter((n) => n.startsWith('word/media/'))).toHaveLength(2)
+    // the embedded image as a file entry (the save writes no folder entries,
+    // so the old media/ dir entry that made this count 2 is gone)
+    expect(
+      Object.keys(zip.files).filter((n) => n.startsWith('word/media/') && !zip.files[n]!.dir),
+    ).toHaveLength(1)
+    expect(zip.files['word/media/aidocs1.png']).toBeTruthy()
   })
 })
 
@@ -732,6 +747,103 @@ describe('genoffice docs: comments, revisions, header/footer, images, charts', (
     expect(xml).not.toContain('Tracked addition')
     const after = await run(['docs', 'read', path, '--revisions', '--json'])
     expect(after.json().detail.revisions).toEqual([])
+  })
+
+  it('accept_changes all: moves keep untouched text, paragraph marks merge, headers and footers are included (genoffice#2086)', async () => {
+    const { buildDocx } = await import(HELPERS)
+    const dir = tempDir()
+    const path = join(dir, 'tracked.docx')
+    const AT = 'w:author="X" w:date="2026-01-01T00:00:00Z"'
+    const R = (t: string) => `<w:r><w:t xml:space="preserve">${t}</w:t></w:r>`
+    const DR = (t: string) => `<w:r><w:delText xml:space="preserve">${t}</w:delText></w:r>`
+    const hfPart = (tag: string, inner: string) =>
+      `${XML_DECL}<w:${tag} ${W_NS}><w:p>${inner}</w:p></w:${tag}>`
+    writeFileSync(
+      path,
+      await buildDocx({
+        bodyXml:
+          `<w:p>${R('P0 intro')}</w:p>` +
+          `<w:p>${R('P1 alpha ')}<w:moveFromRangeStart w:id="1" ${AT} w:name="m"/><w:moveFrom w:id="2" ${AT}>${DR('MOVED ')}</w:moveFrom><w:moveFromRangeEnd w:id="1"/>${R('beta')}</w:p>` +
+          `<w:p>${R('P2 gamma ')}<w:moveToRangeStart w:id="3" ${AT} w:name="m"/><w:moveTo w:id="4" ${AT}>${R('MOVED ')}</w:moveTo><w:moveToRangeEnd w:id="3"/>${R('delta')}</w:p>` +
+          `<w:p><w:pPr><w:rPr><w:del w:id="5" ${AT}/></w:rPr></w:pPr>${R('P3 joins ')}</w:p>` +
+          `<w:p><w:pPr><w:rPr><w:ins w:id="6" ${AT}/></w:rPr></w:pPr>${R('P4 tail')}</w:p>`,
+        extraParts: [
+          {
+            path: 'word/header1.xml',
+            xml: hfPart(
+              'hdr',
+              `${R('H ')}<w:ins w:id="7" ${AT}>${R('new')}</w:ins><w:del w:id="8" ${AT}>${DR(' old')}</w:del>`,
+            ),
+            contentType:
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml',
+          },
+          {
+            path: 'word/footer1.xml',
+            xml: hfPart(
+              'ftr',
+              `${R('F ')}<w:del w:id="9" ${AT}>${DR('dropped ')}</w:del>${R('end')}`,
+            ),
+            contentType:
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml',
+          },
+        ],
+        extraRels:
+          '<Relationship Id="rId60" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>' +
+          '<Relationship Id="rId61" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>',
+        sectPrExtra:
+          '<w:headerReference w:type="default" r:id="rId60"/><w:footerReference w:type="default" r:id="rId61"/>',
+      }),
+    )
+    const listed = await run(['docs', 'read', path, '--revisions', '--json'])
+    const detail = listed.json().detail
+    expect(detail.revisions.map((r: Record<string, unknown>) => [r.id, r.type, r.text])).toEqual([
+      ['r1', 'move', 'MOVED'],
+      ['r2', 'move', 'MOVED'],
+      ['r3', 'deletion', 'P3 joins'],
+      ['r4', 'insertion', 'P4 tail'],
+    ])
+    expect(detail.revisionsElsewhere.count).toBe(3)
+
+    // ids address the body only; the message says what is left elsewhere
+    const opsFile = join(dir, 'ops.json')
+    writeFileSync(opsFile, JSON.stringify([{ op: 'accept_changes', ids: ['r1'] }]))
+    const partial = await run([
+      'docs',
+      'apply',
+      path,
+      '--ops',
+      opsFile,
+      '--out',
+      join(dir, 'partial.docx'),
+      '--json',
+    ])
+    expect(partial.code).toBe(0)
+    expect(partial.json().detail.results[0].output).toMatch(
+      /Accepted 1 tracked change\(s\) \(r1\)\. Still 2 pending.*and 3 in headers, footers and notes \(ids address the body/,
+    )
+
+    writeFileSync(opsFile, JSON.stringify([{ op: 'accept_changes', all: true }]))
+    const applied = await run(['docs', 'apply', path, '--ops', opsFile, '--json'])
+    expect(applied.code).toBe(0)
+    expect(applied.json().detail.results[0].output).toBe(
+      'Accepted 4 tracked change(s) (r1, r2, r3, r4) and 3 in headers, footers and notes. No tracked changes remain.',
+    )
+    const zip = await JSZip.loadAsync(readFileSync(path))
+    const body = await zip.file('word/document.xml')!.async('string')
+    const texts = [...body.matchAll(/<w:p>[\s\S]*?<\/w:p>/g)].map((m) =>
+      [...m[0].matchAll(/<w:t[^>]*>([^<]*)</g)].map((t) => t[1]).join(''),
+    )
+    expect(texts).toEqual(['P0 intro', 'P1 alpha beta', 'P2 gamma MOVED delta', 'P3 joins P4 tail'])
+    const header = await zip.file('word/header1.xml')!.async('string')
+    const footer = await zip.file('word/footer1.xml')!.async('string')
+    for (const xml of [body, header, footer])
+      expect(xml).not.toMatch(/<w:(?:ins|del|moveFrom|moveTo|delText)\b/)
+    expect(header).toContain('new')
+    expect(header).not.toContain('old')
+    expect(footer).not.toContain('dropped')
+    const after = await run(['docs', 'read', path, '--revisions', '--json'])
+    expect(after.json().detail.revisions).toEqual([])
+    expect(after.json().detail.revisionsElsewhere).toBeUndefined()
   })
 
   it('replies to and resolves comment threads, saving comments.xml', async () => {
@@ -906,6 +1018,150 @@ describe('genoffice docs: comments, revisions, header/footer, images, charts', (
       headerFirst: 'Cover',
       titlePg: true,
     })
+  })
+
+  it('accepts an explicit section 0 on a single-section document', async () => {
+    const dir = tempDir()
+    const copy = join(dir, 'hf-section0.docx')
+    writeFileSync(copy, readFileSync(DOCX))
+    const ops = join(dir, 'ops.json')
+    writeFileSync(
+      ops,
+      JSON.stringify([
+        { op: 'set_header_footer', kind: 'footer', section: 0, text: 'Page footer' },
+      ]),
+    )
+    const r = await run(['docs', 'apply', copy, '--ops', ops, '--json'])
+    expect(r.code).toBe(0)
+    expect(r.json().detail.results[0].output).toBe('Updated the footer.')
+    const read = await run(['docs', 'read', copy, '--header-footer', '--json'])
+    expect(read.json().detail.headerFooter).toMatchObject({
+      footer: 'Page footer',
+      sections: [{ index: 0, footer: 'Page footer' }],
+    })
+  })
+
+  it('writes one selected section per set_header_footer{section} call', async () => {
+    const dir = tempDir()
+    const path = join(dir, 'section-hf.docx')
+    writeFileSync(path, readFileSync(DOCX))
+    const ops = join(dir, 'ops.json')
+    // one break per apply: the next run parses it as a real section
+    writeFileSync(ops, JSON.stringify([{ op: 'insert_section_break', afterBlockIndex: 1 }]))
+    expect((await run(['docs', 'apply', path, '--ops', ops, '--json'])).code).toBe(0)
+    writeFileSync(ops, JSON.stringify([{ op: 'insert_section_break', afterBlockIndex: 3 }]))
+    expect((await run(['docs', 'apply', path, '--ops', ops, '--json'])).code).toBe(0)
+    const sections = (await run(['docs', 'read', path, '--sections', '--json'])).json().detail
+      .sections
+    expect(sections).toHaveLength(3)
+
+    // package parts before the header edits (round-trip gate: untouched parts stay byte-identical)
+    const before = await zipBuffers(path)
+
+    writeFileSync(
+      ops,
+      JSON.stringify([
+        { op: 'set_header_footer', kind: 'header', section: 0, text: 'Header of section 0' },
+        { op: 'set_header_footer', kind: 'header', section: 1, text: 'Header of section 1' },
+        { op: 'set_header_footer', kind: 'header', section: 2, text: 'Header of section 2' },
+      ]),
+    )
+    const r = await run(['docs', 'apply', path, '--ops', ops, '--json'])
+    expect(r.code).toBe(0)
+    expect(r.json().detail.results).toHaveLength(3)
+
+    const read = (await run(['docs', 'read', path, '--header-footer', '--json'])).json().detail
+      .headerFooter
+    expect(read.multiSection).toBe(true)
+    expect(read.sections.map((s: { header: string }) => s.header)).toEqual([
+      'Header of section 0',
+      'Header of section 1',
+      'Header of section 2',
+    ])
+    // each section carries its own header reference, and each text lives in one part
+    const xml = await documentXml(path)
+    expect(xml.match(/<w:headerReference w:type="default"/g)).toHaveLength(3)
+    const after = await zipBuffers(path)
+    const headerParts = [...after.keys()].filter((f) => /^word\/header\d+\.xml$/.test(f))
+    expect(headerParts).toHaveLength(3)
+    const headerTexts = headerParts.map((p) => after.get(p)!.toString('utf8'))
+    expect(headerTexts.filter((t) => t.includes('Header of section 0'))).toHaveLength(1)
+    expect(headerTexts.filter((t) => t.includes('Header of section 1'))).toHaveLength(1)
+    // untouched package parts survive byte-for-byte: only the three parts the edit
+    // created, document.xml, the rels/content-types that register them and the core
+    // properties (modified stamp) may differ
+    const allowed = new Set([
+      'word/document.xml',
+      'docProps/core.xml',
+      '[Content_Types].xml',
+      'word/_rels/document.xml.rels',
+      ...headerParts,
+    ])
+    for (const [name, bytes] of before) {
+      if (allowed.has(name)) continue
+      expect(after.get(name)?.equals(bytes), `${name} changed`).toBe(true)
+    }
+    expect([...after.keys()].filter((n) => !before.has(n)).sort()).toEqual([...headerParts].sort())
+
+    // a later edit of one section leaves the other sections' own parts byte-identical
+    writeFileSync(
+      ops,
+      JSON.stringify([
+        { op: 'set_header_footer', kind: 'header', section: 1, text: 'Second pass' },
+      ]),
+    )
+    expect((await run(['docs', 'apply', path, '--ops', ops, '--json'])).code).toBe(0)
+    const second = await zipBuffers(path)
+    const sectionZeroPart = headerParts.find((p) =>
+      after.get(p)!.toString('utf8').includes('Header of section 0'),
+    )!
+    const sectionOnePart = headerParts.find((p) =>
+      after.get(p)!.toString('utf8').includes('Header of section 1'),
+    )!
+    expect(second.get(sectionOnePart)!.equals(after.get(sectionOnePart)!)).toBe(false)
+    expect(second.get(sectionZeroPart)!.equals(after.get(sectionZeroPart)!)).toBe(true)
+
+    // the optionless op keeps writing the trailing section (documented headless behaviour)
+    writeFileSync(
+      ops,
+      JSON.stringify([{ op: 'set_header_footer', kind: 'header', text: 'Trailing header' }]),
+    )
+    expect((await run(['docs', 'apply', path, '--ops', ops, '--json'])).code).toBe(0)
+    const trailing = (await run(['docs', 'read', path, '--header-footer', '--json'])).json().detail
+      .headerFooter
+    expect(trailing.sections.map((s: { header: string }) => s.header)).toEqual([
+      'Header of section 0',
+      'Second pass',
+      'Trailing header',
+    ])
+
+    // a first-page variant on a non-last section turns on that section's titlePg
+    writeFileSync(
+      ops,
+      JSON.stringify([
+        {
+          op: 'set_header_footer',
+          kind: 'footer',
+          view: 'first',
+          section: 0,
+          text: 'Cover footer',
+        },
+      ]),
+    )
+    expect((await run(['docs', 'apply', path, '--ops', ops, '--json'])).code).toBe(0)
+    const withFirst = (await run(['docs', 'read', path, '--header-footer', '--json'])).json().detail
+      .headerFooter
+    expect(withFirst.sections[0].footerFirst).toBe('Cover footer')
+    expect((await documentXml(path)).match(/<w:titlePg\/>/g)).toHaveLength(1)
+
+    // an out-of-range section is rejected with the valid range
+    writeFileSync(
+      ops,
+      JSON.stringify([{ op: 'set_header_footer', kind: 'header', section: 3, text: 'nope' }]),
+    )
+    const rejected = await run(['docs', 'apply', path, '--ops', ops, '--json'])
+    expect(rejected.code).toBe(1)
+    expect(rejected.json().message).toContain('section must be an integer 0-2')
   })
 
   it('changes the page setup, lists sections and inserts a section break', async () => {

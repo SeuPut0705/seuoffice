@@ -105,6 +105,10 @@ async function mainDocumentPath(zip: JSZip): Promise<string | null> {
     if (!/Type="[^"]*\/officeDocument"/.test(tag) || /TargetMode="External"/.test(tag)) continue
     const target = /Target="([^"]+)"/.exec(tag)?.[1]
     if (!target) continue
+    // OPC targets are percent-encoded; the zip entry name is the decoded path.
+    const resolved = resolveTarget('', target)
+    if (resolved && zip.file(resolved)) return resolved
+    // resolveTarget rejects malformed escapes (a literal `%`); keep the raw lookup for those.
     const path = target.replace(/^\//, '')
     if (zip.file(path)) return path
   }
@@ -207,6 +211,8 @@ const SKIP_SUBTREES = new Set([
   'w:instrText',
   'w:delInstrText',
   'w:delText',
+  // ruby guide text (furigana, pinyin); the base text is read, as parseDocx does
+  'w:rt',
   'w:rPrChange',
   'w:pPrChange',
   'w:tabs',

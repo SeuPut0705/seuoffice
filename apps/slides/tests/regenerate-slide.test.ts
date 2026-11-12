@@ -126,13 +126,13 @@ describe('regenerate_slide', () => {
     expect(regenerateSlide).not.toHaveBeenCalled()
   })
 
-  it('local image failures show up in the redo report', async () => {
+  it('image failures show up in the redo report', async () => {
     const skill = createSlidesSkill(
       mkAccess([page], {
         regenerateSlide: vi.fn(async () => ({ ok: true })),
         generatePageLocal: vi.fn(async () => ({
           ok: true,
-          marker: 'localpptx:/tmp/p.pptx',
+          marker: 'genpptx:/tmp/p.pptx',
           imageFailures: ['https://img.example/broken.jpg'],
         })),
         retryBackoffMs: 0,

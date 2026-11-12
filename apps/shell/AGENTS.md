@@ -110,6 +110,9 @@
 - **에이전트 세션은 사람이 시작한 창에만 속한다.** 채널은 그 창의 webContents만 받고, 세션은 그 창이 닫히면 끝난다. 경고 확인과 폴더 검사와 연결 확인은 화면이 아니라 뒷단이 시작할 때마다 다시 한다. 창에는 오류 문장을 보내지 않고 종류만 보낸다(`agentEventView`).
 - **에이전트 세션은 사람이 시작한 창에만 속한다.** 채널은 그 창의 webContents만 받고, 세션은 그 창이 닫히면 끝난다. 경고 확인과 폴더 검사와 연결 확인은 화면이 아니라 뒷단이 시작할 때마다 다시 한다. 창에는 오류 문장을 보내지 않고 종류만 보낸다(`agentEventView`). 시작하지 못한 까닭은 `AgentStartFailure`(`shared/agent-api.ts`)로 보내고, 창은 종류마다 정한 문장과 신고용 코드를 보인다(`renderer/src/agent/start-error.ts`). **세션을 시작한 뒤 새로 연 문서는 프로그램의 권한 규칙에 들어가지 않는다.** 다음 메시지 전에 그 사실을 한 번 알리고(`documents-unprotected` 이벤트), 앱 쪽 권한 판단에는 새 목록을 넘긴다(`setOpenDocuments`). 보호를 받으려면 세션을 멈추고 다시 시작해야 한다.
 - **세션 MCP 서버의 도구는 `AGENT_MCP_TOOL_NAMES`뿐이다.** 탭 닫기, 자체 편집 세션, 창 없는 파일 만들기를 더하지 않는다. 읽기는 가린 자리를 `{{이름}}`으로 내보내고(`withholdingSlides`, `withholdingOpenDocuments`), 가린 내용이 있는 PPT는 고치지 않는다. 연동의 앱 안 MCP 서버는 출력이 바깥에 약속된 것이라 이 처리를 하지 않는다(결정 0016).
+- **이름 짓기(NameWithAI)는 저장된 설정을 정규화해서 읽는다.** `ai-naming-provider.ts`가 `normalizeAiSettings`로 읽고, 구독 제공자는 현재 문구의 첫 연결 안내를 읽은 뒤에만 요청한다(`reason: 'notice'`, 테스트 `ai-naming-provider.test.ts`). 실패 사유(`reason`)는 IPC로 모든 편집기까지 그대로 보낸다(`ai-naming-service.ts`, 테스트 `ai-naming-service.test.ts`).
+- **MCP의 PDF "저장 안 함"은 편집기의 "저장 안 함"과 같은 복구 사본 삭제를 쓴다.** `open-documents-bridge.ts`의 `discard`가 `recovery-shell.ts`의 `discardPdfRecovery`를 부른다(`open-documents-pdf-discard.test.ts`).
+- **`sheet_links`의 쓰기(`update`·`breakIndices`)는 MCP 설정의 백그라운드 생성이 켜져 있을 때만 된다.** 꺼져 있으면 `sheets-tools.ts`가 거절한다. 목록 읽기는 계속 된다.
 
 ## 이 모듈의 방식
 

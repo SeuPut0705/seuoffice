@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path'
 import * as CFB from 'cfb'
 import { beforeAll, describe, expect, it } from 'vitest'
 import init, { HwpDocument } from '@rhwp/core'
-import { hasTrackedChanges, withoutTrackedChanges } from '../src/main/tracked-changes'
+import { trackedChangesOf, withoutTrackedChanges } from '../src/main/tracked-changes'
 
 const require = createRequire(import.meta.url)
 
@@ -44,23 +44,33 @@ function variant(
   return new Uint8Array(CFB.write(cfb, { type: 'buffer' }) as Buffer)
 }
 
-describe('hasTrackedChanges', () => {
-  it('is false for an ordinary document', () => {
-    expect(hasTrackedChanges(exported())).toBe(false)
+describe('trackedChangesOf', () => {
+  it('is none for an ordinary document', () => {
+    expect(trackedChangesOf(exported())).toBe('none')
   })
 
-  it('is true when the header says so and the view copy of the body is there', () => {
-    expect(hasTrackedChanges(variant(exported(), { property: true, viewCopy: true }))).toBe(true)
+  it('is tracked when the header says so and the view copy of the body is there', () => {
+    expect(trackedChangesOf(variant(exported(), { property: true, viewCopy: true }))).toBe(
+      'tracked',
+    )
   })
 
   it('takes both: the property alone or the copy alone is not it', () => {
-    expect(hasTrackedChanges(variant(exported(), { property: true }))).toBe(false)
-    expect(hasTrackedChanges(variant(exported(), { viewCopy: true }))).toBe(false)
+    expect(trackedChangesOf(variant(exported(), { property: true }))).toBe('none')
+    expect(trackedChangesOf(variant(exported(), { viewCopy: true }))).toBe('none')
   })
 
-  it('is false for bytes that are not an HWP file', () => {
-    expect(hasTrackedChanges(new Uint8Array([0x50, 0x4b, 0x03, 0x04]))).toBe(false)
-    expect(hasTrackedChanges(new Uint8Array(0))).toBe(false)
+  it('is unreadable, not none, for bytes that are not a compound file', () => {
+    expect(trackedChangesOf(new Uint8Array([0x50, 0x4b, 0x03, 0x04]))).toBe('unreadable')
+    expect(trackedChangesOf(new Uint8Array(0))).toBe('unreadable')
+  })
+
+  it('is unreadable, not none, for a tracked document whose container the gate refuses', () => {
+    const file = variant(exported(), { property: true, viewCopy: true })
+    // the header counts one FAT sector more than the file lists
+    const view = new DataView(file.buffer, file.byteOffset)
+    view.setUint32(44, view.getUint32(44, true) + 1, true)
+    expect(trackedChangesOf(file)).toBe('unreadable')
   })
 })
 
@@ -99,7 +109,7 @@ describe('withoutTrackedChanges', () => {
     expect(textOf(file)[0]).toBe('본문 지운 글')
     const current = withoutTrackedChanges(file)!
     expect(current).not.toBeNull()
-    expect(hasTrackedChanges(current)).toBe(false)
+    expect(trackedChangesOf(current)).toBe('none')
     const cfb = CFB.read(Buffer.from(current), { type: 'buffer' })
     expect(cfb.FullPaths.some((path) => /ViewText/.test(path))).toBe(false)
     const header = Buffer.from(CFB.find(cfb, '/FileHeader')!.content as Uint8Array)
