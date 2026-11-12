@@ -102,9 +102,10 @@ the workspace and fails on a pattern `JsRegex::new` refuses.
 
 A search keeps at most `BACKTRACK_LIMIT` (2^22) entries on the backtrack
 stack of the vendored `regress` (`crates/vendor/regress/VENDORED.md`); an
-entry is 48 bytes on a 64-bit target, so one search holds about 250 MB at
-most, measured by `jscompat/tests/limit.rs`; on wasm32 the linear memory grew
-to about 170 MB, and a wasm memory never shrinks (`limit_wasm.rs`). A loop whose body is more than
+entry is 40 bytes on a 64-bit target, so one search holds 209 MB at most,
+measured by `jscompat/tests/limit.rs`; on wasm32 an entry is 20 bytes, the
+linear memory grew to about 135 MB, and a wasm memory never shrinks
+(`limit_wasm.rs`). A loop whose body is more than
 one character matcher keeps entries for each turn, so
 `<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>` answers over 1.39M characters and passes
 the bound at 1.40M; V8 answers up to about 8M and throws `RangeError` past
@@ -116,8 +117,13 @@ it. A search past the bound stops with `RegexLimit`:
   already gives for a file it cannot read, never into a default answer.
 - Every other pattern is a `JsRegex`, whose methods panic on `RegexLimit`.
   `tests/sites.rs` fails on a `JsRegex` with such a loop, and on one whose
-  pattern it cannot read (not a literal of the call or a `const` of the
-  file), so that panic is not reached.
+  pattern it cannot read, so that panic is not reached. It reads a literal
+  of the call, a `const` of the file, and a macro that writes its pattern as
+  `concat!` of literals and one literal parameter, at each use of the macro.
+  A `format!` template is not read: what goes into it can come from the
+  document (`settings.rs` puts an `r:embed` there), so a pattern built at run
+  time is a `TryJsRegex`, and a function that builds one returns
+  `RegexError`, the `SyntaxError` of the constructor or the limit.
 - `jscompat/examples/limit_wasm.rs` runs the same pattern over 25M characters
   on wasm32 in CI: it refuses where 0.12.0 trapped at 22.4M.
 
