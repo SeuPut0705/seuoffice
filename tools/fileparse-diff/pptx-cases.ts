@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { REDACT_EL, REDACT_NS } from '../../packages/agent-core/src/redact-range'
+import { REDACT_EL, REDACT_NS_WRITTEN as REDACT_NS } from '../../packages/agent-core/src/redact-range'
 import { pptxToText } from '../../packages/file-parse/src/pptx'
 import { PPTX_REDACT_EXT_URI } from '../../packages/file-parse/src/pptx-redaction'
 import { buildPptxFixture } from '../../packages/file-parse/tests/helpers/fixtures'

@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { inflateRawSync } from 'node:zlib'
 import JSZip from 'jszip'
-import { decodeEntryText } from '../../packages/epub-engine/src/encoding'
 import { openEpub } from '../../packages/epub-engine/src/open'
 import { formatModifiedTimestamp, maskUndefinedEntities, modifiedReplacements, saveEpub } from '../../packages/epub-engine/src/save'
 import { extractChapterText } from '../../packages/epub-engine/src/text'
@@ -31,11 +30,6 @@ import { builtBooks, buildEpub, epub2Files, epub3Files, opf, utf16, xhtml, zipEn
 export const DEFAULT_NOW = 1781526645000
 
 const units = (text: string): number[] => Array.from({ length: text.length }, (_, i) => text.charCodeAt(i))
-const fromUnits = (codes: readonly number[]): string => {
-  let text = ''
-  for (let i = 0; i < codes.length; i += 8192) text += String.fromCharCode(...codes.slice(i, i + 8192))
-  return text
-}
 const wireNumber = (n: number): number | string => (Object.is(n, -0) ? '-0' : Number.isFinite(n) ? n : String(n))
 const readNumber = (value: unknown): number => (typeof value === 'number' ? value : Number(value))
 const sha1 = (data: Uint8Array | string): string => createHash('sha1').update(data).digest('hex')
@@ -360,7 +354,7 @@ export async function openCall(bytes: Uint8Array): Promise<unknown> {
   const opened = await openEpub(bytes)
   if (!opened.ok) return { ok: false, reason: opened.reason, detail: withoutHostText(opened.detail) }
   const { book } = opened
-  const { has, read, readText, readForRendering, ...info } = book
+  const { has: _has, read, readText, readForRendering, ...info } = book
   const entries = []
   for (const name of book.entryNames.slice(0, 60)) {
     const stored = await read(name)
