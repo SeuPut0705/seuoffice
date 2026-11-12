@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseDocx, saveDocx, type SaveBlock } from '../src'
+import { HiddenEntrySaveError, parseDocx, saveDocx, type SaveBlock } from '../src'
 import { buildDocx } from './helpers/build-docx'
 import { OWN_REDACT_NS, PLACEHOLDER, SECRET } from './helpers/hidden-stories'
 
@@ -98,5 +98,28 @@ describe('an edited comment or note whose hidden run holds CDATA keeps its mark'
     const first = (await parseDocx(saved)).comments.find((c) => c.id === '1')!
     expect(first.text).toBe(`Later: ${SECRET}`)
     expect(first.modelText).toBe(`Later: ${PLACEHOLDER}`)
+  })
+})
+
+describe('an edit that cannot be patched into a marked comment', () => {
+  it('fails the save rather than drop its mark or the edit', async () => {
+    const JSZip = (await import('jszip')).default
+    const zip = await JSZip.loadAsync(await commentedDocx('w:id="1" w:author="K"'))
+    const xml = await zip.file('word/comments.xml')!.async('string')
+    zip.file(
+      'word/comments.xml',
+      xml.replace(`<w:t>${SECRET}</w:t>`, `<w:t><![CDATA[${SECRET}]]></w:t>`),
+    )
+    const doc = await parseDocx(await zip.generateAsync({ type: 'uint8array' }))
+    const blocks = doc.blocks
+      .filter((block) => !block.hidden)
+      .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+    // a second paragraph: the runs of the first cannot carry it
+    const edited = { ...doc.comments[0]!, text: `Note: ${SECRET}\nthanks` }
+    await expect(
+      saveDocx(doc, blocks, {
+        comments: [edited, { id: '2', author: 'Lee', text: 'reply', parentId: '1' }],
+      }),
+    ).rejects.toThrow(HiddenEntrySaveError)
   })
 })

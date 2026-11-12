@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseDocx, saveDocx, type SaveBlock } from '../src'
+import { HiddenEntrySaveError, parseDocx, saveDocx, type SaveBlock } from '../src'
 import { buildDocx } from './helpers/build-docx'
 import { OWN_REDACT_NS, PLACEHOLDER, SECRET } from './helpers/hidden-stories'
 
@@ -68,5 +68,23 @@ describe('an edited note whose hidden run holds CDATA keeps its mark', () => {
     const first = (await parseDocx(saved)).footnotes.find((n) => n.id === '1')!
     expect(first.text).toBe(`Read ${SECRET}`)
     expect(first.modelText).toBe(`Read ${PLACEHOLDER}`)
+  })
+})
+
+describe('an edit that cannot be patched into a marked note', () => {
+  it('fails the save rather than drop its mark or the edit', async () => {
+    const doc = await parseDocx(await notedDocx('w:id="1"'))
+    const blocks = doc.blocks
+      .filter((block) => !block.hidden)
+      .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+    const { richParas: _rich, ...note } = doc.footnotes[0]!
+    await expect(
+      saveDocx(doc, blocks, {
+        footnotes: [
+          { ...note, text: `See ${SECRET}\nmore` },
+          { id: '5', text: 'plain' },
+        ],
+      }),
+    ).rejects.toThrow(HiddenEntrySaveError)
   })
 })
