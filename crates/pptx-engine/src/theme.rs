@@ -2,11 +2,12 @@
 //! format schemes of a theme part, the theme font and scheme colour lookups,
 //! and the colour mapping of a master, layout or slide.
 
+use crate::xml_utils::xml_parse_object as parse_object;
 use jscompat::{
     JsObject, JsRegex, RegexLimit, TryJsRegex, js_object, js_regex, truthy, try_js_regex,
     value_to_string, value_truthy,
 };
-use ooxml_xml::{ObjectOptions, parse_object};
+use ooxml_xml::ObjectOptions;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -138,8 +139,7 @@ fn script_fonts(scheme: &Value, font: &str) -> Option<JsObject<String>> {
             (f.get("@_script"), f.get("@_typeface"))
             && !face.is_empty()
         {
-            // ledger theme-script-font-proto: `out[script] = face` in the
-            // TypeScript sets no key for a script named `__proto__`.
+            // `setOwn`: a script named `__proto__` is an entry like any other
             out.set(script.clone(), face.clone());
         }
     }
@@ -387,8 +387,7 @@ pub fn resolve_scheme_color<'a>(
         .map(String::as_str)
         .or(standard)
         .unwrap_or(name);
-    // ledger inherited-key-theme-257: the TypeScript reads `colors[key]`
-    // through the prototype, so a mapping to `constructor` gives a function.
+    // `ownValue`: the table answers its own keys only
     theme
         .and_then(|theme| theme.colors.as_ref())
         .and_then(|colors| colors.get(key))

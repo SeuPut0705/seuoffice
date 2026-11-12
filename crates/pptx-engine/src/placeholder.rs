@@ -4,18 +4,19 @@
 //! as PowerPoint does: exact first, then idx, then type, then the title and
 //! body families. Read-only: nothing here writes a part.
 
+use crate::xml_utils::xml_parse_object as parse_object;
 use jscompat::{
     JsMap, JsNum, Radix, Slot, js_object, math_min, number_truthy, parse_int, truthy,
     value_to_string, value_truthy,
 };
-use ooxml_xml::{ObjectOptions, parse_object};
+use ooxml_xml::ObjectOptions;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::color::resolve_color_node;
 use crate::theme::{EaScript, Theme, ea_script_of_lang, resolve_font_ref};
 use crate::types::{EaLang, EmuRect, TextAlign, Transform};
-use crate::xml_utils::{as_xml_node, decode_numeric_char_refs, percent_fraction, xml_array};
+use crate::xml_utils::{as_xml_node, percent_fraction, xml_array};
 
 /// `MAX_AUTO_NUM_START`: the spec (and PowerPoint UI) ceiling for
 /// `<a:buAutoNum startAt>`.
@@ -266,9 +267,7 @@ fn is_function(t: &str) -> bool {
 
 /// `ANCHOR_MAP[key]` for its own keys.
 fn anchor_of(key: &str) -> Option<PlaceholderAnchor> {
-    // ledger inherited-key-placeholder-233: the TypeScript table also answers
-    // for `constructor`, `toString`, `__proto__`... (a function or
-    // Object.prototype); the table here answers for its own keys only.
+    // `ownValue`: the table answers its own keys only
     match key {
         "t" => Some(PlaceholderAnchor::Top),
         "ctr" => Some(PlaceholderAnchor::Middle),
@@ -429,9 +428,7 @@ pub fn parse_placeholder_map(
 
 /// `ALIGN_MAP[key]` for its own keys.
 fn align_of(key: &str) -> Option<TextAlign> {
-    // ledger inherited-key-placeholder-317: the TypeScript table also answers
-    // for `constructor`, `toString`, `__proto__`... (a function or
-    // Object.prototype); the table here answers for its own keys only.
+    // `ownValue`: the table answers its own keys only
     match key {
         "l" => Some(TextAlign::Left),
         "ctr" => Some(TextAlign::Center),
@@ -508,8 +505,7 @@ fn parse_lvl_ppr(
     } else if let Some(bu_char) = bu_char {
         let mut b = Bullet::default();
         b.r#type.set(BulletType::Char);
-        b.char
-            .set(decode_numeric_char_refs(&value_to_string(Some(bu_char))));
+        b.char.set(value_to_string(Some(bu_char)));
         bullet = Some(b);
     } else if value_truthy(p_pr.get("a:buAutoNum")) {
         let mut b = Bullet::default();

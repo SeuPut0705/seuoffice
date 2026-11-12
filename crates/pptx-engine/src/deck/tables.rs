@@ -8,12 +8,13 @@ use std::sync::Arc;
 
 use jscompat::{
     JsNum, JsRegex, index_of, js_regex, last_index_of, math_max, math_round, number_to_string,
-    number_truthy, replace_first, replace_first_string, replace_first_with, to_number,
+    number_truthy, replace_first, replace_first_with, to_number,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::deck::{OpenedPptx, materialize_slide, patched_element_xml};
 use crate::generate::generate_paragraph_xml;
+use crate::notes::replace_literal;
 use crate::table_edit::{TableStyleEdit, ensure_table_style_xml, patch_table_style_xml};
 use crate::types::{
     Paragraph, Slide, SlideElement, TableCell, TableElement, TextAnchor, TextBody, TextInsets,
@@ -318,7 +319,7 @@ pub fn ensure_table_style_part(opened: &mut OpenedPptx, style_id: &str, style_de
     if let Some(ct) = ct.filter(|ct| !ct.is_empty())
         && !has_content_type_override(&ct, path)
     {
-        let patched = replace_first_string(
+        let patched = replace_literal(
             &ct,
             "</Types>",
             &format!(
@@ -339,7 +340,7 @@ pub fn ensure_table_style_part(opened: &mut OpenedPptx, style_id: &str, style_de
             "<Relationship Id=\"rId{}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles\" Target=\"tableStyles.xml\"/>",
             number_to_string(max_rid + 1.0)
         );
-        let patched = replace_first_string(
+        let patched = replace_literal(
             &pres_rels,
             "</Relationships>",
             &format!("{rel}</Relationships>"),

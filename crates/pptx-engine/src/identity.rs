@@ -5,24 +5,102 @@
 //!
 //! The element search is scoped to the element's own `<p:cNvPr>`, the first
 //! in the fragment: a group embeds its children's bytes, and a wrapper
-//! without a creationId must not take a child's.
+//! without a creationId must not take a child's. Tags are read as XML reads
+//! them (`attribute_of`: any quotes, white space around `=`, decoded once).
 
 use std::sync::Arc;
 
-use jscompat::{JsMatch, JsRegex, TryJsRegex, js_regex, regex_escape, trim, truthy};
+use jscompat::{RegexLimit, is_js_space, js_regex, replace_first_with, truthy, try_js_regex};
 
 use crate::types::{ByteAnchor, Slide, SlideElement};
 use crate::with_element;
-use crate::xml_utils::{creation_id_ext_xml, creation_id_xml};
+use crate::xml_utils::{
+    ElementRange, attribute_of, creation_id_ext_xml, creation_id_xml, element_range,
+};
 
+/// The uri of the a:ext that holds a shape's a16:creationId.
+const CREATION_ID_URI: &str = "{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}";
 const CNVPR_CLOSE: &str = "</p:cNvPr>";
 
-fn creation_id_re() -> &'static JsRegex {
-    js_regex!(r#"<a16:creationId[^>]*\bid="\{?([0-9A-Fa-f-]{36})\}?""#)
+fn limit(error: RegexLimit) -> String {
+    error.to_string()
 }
 
-fn cnvpr_open_re() -> &'static JsRegex {
-    js_regex!(r"<p:cNvPr\b[^>]*?(\/?)>")
+/// The tag, with its closing `/>` turned into `>`.
+fn opened(tag: &str) -> String {
+    format!("{}>", tag.strip_suffix("/>").unwrap_or(tag))
+}
+
+/// The GUID of the creation id in `own` (a `<p:cNvPr>` and what it holds): the creationId inside
+/// an a:ext whose uri is the creation id's.
+fn creation_guid_of(own: &str) -> Result<Option<String>, String> {
+    let ext_open = try_js_regex!(r#"<a:ext\b(?:[^>"']|"[^"]*"|'[^']*')*>"#);
+    let creation_tag = try_js_regex!(r#"<(?:[^\s/>:]+:)?creationId\b(?:[^>"']|"[^"]*"|'[^']*')*>"#);
+    for open in ext_open.try_find_iter(own) {
+        let open = open.map_err(limit)?;
+        if attribute_of(open.as_str(), "uri").as_deref() != Some(CREATION_ID_URI) {
+            continue;
+        }
+        let Some(ext) = element_range(own, "a:ext", open.start())? else {
+            continue;
+        };
+        let content = own
+            .get(ext.content_start..ext.content_end)
+            .unwrap_or_default();
+        for tag in creation_tag.try_find_iter(content) {
+            let tag = tag.map_err(limit)?;
+            let id = attribute_of(tag.as_str(), "id").unwrap_or_default();
+            if let Some(guid) = js_regex!(r"^\{?([0-9A-Fa-f-]{36})\}?$")
+                .exec(&id)
+                .and_then(|found| found.get(1).map(str::to_owned))
+            {
+                return Ok(Some(guid));
+            }
+        }
+    }
+    Ok(None)
+}
+
+/// `xml` with every creation id given a new GUID, however the id is written. `next_uuid` is
+/// `crypto.randomUUID()`, drawn once per creation id rewritten.
+pub fn with_fresh_creation_ids(
+    xml: &str,
+    mut next_uuid: impl FnMut() -> String,
+) -> Result<String, String> {
+    let creation_tag = try_js_regex!(r#"<(?:[^\s/>:]+:)?creationId\b(?:[^>"']|"[^"]*"|'[^']*')*>"#);
+    creation_tag
+        .try_replace_all(xml, |found| {
+            let tag = found.as_str();
+            let id = attribute_of(tag, "id").unwrap_or_default();
+            if !js_regex!(r"^\{?([0-9A-Fa-f-]{36})\}?$").test(&id) {
+                return tag.to_owned();
+            }
+            replace_first_with(
+                js_regex!(r#"(\sid\s*=\s*)(["'])[^"']*\2"#),
+                tag,
+                |id_attr| {
+                    format!(
+                        "{}{}{{{}}}{}",
+                        id_attr.get(1).unwrap_or_default(),
+                        id_attr.get(2).unwrap_or_default(),
+                        next_uuid().to_uppercase(),
+                        id_attr.get(2).unwrap_or_default(),
+                    )
+                },
+            )
+        })
+        .map_err(limit)
+}
+
+/// The own `<p:cNvPr>` block of `xml`: its first cNvPr, from the open tag through its end tag.
+fn own_cnvpr(xml: &str, from: usize) -> Result<Option<ElementRange>, String> {
+    element_range(xml, "p:cNvPr", from)
+}
+
+/// The numeric id a `<p:cNvPr>` open tag gives, however it is quoted.
+fn cnvpr_number(open_tag: &str) -> Option<String> {
+    attribute_of(open_tag, "id")
+        .filter(|id| !id.is_empty() && id.bytes().all(|byte| byte.is_ascii_digit()))
 }
 
 /// `el.anchor?.originalXml`, `None` where JavaScript reads it as false.
@@ -45,45 +123,25 @@ fn nv_id_form(el: &SlideElement) -> Option<String> {
     nv_id_of(el).map(|nv_id| format!("e_{nv_id}"))
 }
 
-/// The element's own `<p:cNvPr>`: the tag when self-closing, else up to its
-/// closing tag. Without one the TypeScript's `indexOf` gives -1 and the slice
-/// ends at index 9, too short to hold a creationId: that reads as empty here.
-fn own_cnvpr<'t>(xml: &'t str, open: &JsMatch<'t>) -> &'t str {
-    if open.get(1) == Some("/") {
-        return open.as_str();
-    }
-    let from = open.start();
-    match xml.get(from..).and_then(|rest| rest.find(CNVPR_CLOSE)) {
-        Some(at) => xml.get(from..from + at + CNVPR_CLOSE.len()).unwrap_or(""),
-        None => "",
-    }
-}
-
-/// `e_${creation[1].slice(0, 8).toLowerCase()}`: the capture is 36 ASCII
-/// characters.
-fn guid_form(creation: &JsMatch<'_>) -> String {
-    let guid = creation.get(1).unwrap_or_default();
+/// `e_${guid.slice(0, 8).toLowerCase()}`: the GUID is ASCII.
+fn guid_form(guid: &str) -> String {
     format!("e_{}", guid.get(..8).unwrap_or(guid).to_ascii_lowercase())
 }
 
-/// `e_<n>` of the `id="<digits>"` in a `<p:cNvPr>` open tag.
-fn cnvpr_id_form(open_tag: &str) -> Option<String> {
-    let id = js_regex!(r#"\bid="(\d+)""#).exec(open_tag)?;
-    Some(format!("e_{}", id.get(1).unwrap_or_default()))
-}
-
-pub fn element_durable_id(el: &SlideElement) -> Option<String> {
+pub fn element_durable_id(el: &SlideElement) -> Result<Option<String>, String> {
     let Some(xml) = xml_of(el) else {
         // a group child has no byte slice of its own; its persisted cNvPr id,
         // parsed as nvId, still names it
-        return nv_id_form(el);
+        return Ok(nv_id_form(el));
     };
-    let open = cnvpr_open_re().exec(xml)?;
-    let own = own_cnvpr(xml, &open);
-    if let Some(creation) = creation_id_re().exec(own) {
-        return Some(guid_form(&creation));
+    let Some(own) = own_cnvpr(xml, 0)? else {
+        return Ok(None);
+    };
+    let block = xml.get(own.start..own.end).unwrap_or_default();
+    if let Some(guid) = creation_guid_of(block)? {
+        return Ok(Some(guid_form(&guid)));
     }
-    cnvpr_id_form(open.as_str())
+    Ok(cnvpr_number(block).map(|n| format!("e_{n}")))
 }
 
 pub fn slide_durable_id(slide: &Slide) -> String {
@@ -103,116 +161,122 @@ pub fn slide_durable_id(slide: &Slide) -> String {
 
 /// The pre-upgrade form `e_<cNvPr id>`, whether or not a creationId exists:
 /// it stays an alias after `ensureCreationId` mints a GUID.
-pub fn element_cnvpr_id(el: &SlideElement) -> Option<String> {
+pub fn element_cnvpr_id(el: &SlideElement) -> Result<Option<String>, String> {
     let Some(xml) = xml_of(el) else {
-        return nv_id_form(el);
+        return Ok(nv_id_form(el));
     };
-    let open = cnvpr_open_re().exec(xml)?;
-    cnvpr_id_form(open.as_str())
+    let Some(own) = own_cnvpr(xml, 0)? else {
+        return Ok(None);
+    };
+    let block = xml.get(own.start..own.end).unwrap_or_default();
+    Ok(cnvpr_number(block).map(|n| format!("e_{n}")))
 }
 
 /// A ref matches the parse-time id, the durable id or the cNvPr form.
-pub fn matches_element_ref(el: &SlideElement, id: &str) -> bool {
-    el.id() == id
-        || element_durable_id(el).as_deref() == Some(id)
-        || element_cnvpr_id(el).as_deref() == Some(id)
+pub fn matches_element_ref(el: &SlideElement, id: &str) -> Result<bool, String> {
+    Ok(el.id() == id
+        || element_durable_id(el)?.as_deref() == Some(id)
+        || element_cnvpr_id(el)?.as_deref() == Some(id))
 }
 
 /// Mints an a16:creationId into the element's own `<p:cNvPr>` when it lacks
 /// one. `uuid` is what `crypto.randomUUID()` gives `creationIdXml` and
 /// `creationIdExtXml`; at most one is drawn.
-pub fn ensure_creation_id(el: &mut SlideElement, uuid: &str) {
+pub fn ensure_creation_id(el: &mut SlideElement, uuid: &str) -> Result<(), String> {
     let Some(anchor) = anchor_mut(el) else {
-        return;
+        return Ok(());
     };
-    if let Some(next) = with_creation_id(&anchor.original_xml, uuid) {
+    if let Some(next) = with_creation_id(&anchor.original_xml, uuid)? {
         anchor.original_xml = Arc::from(next);
     }
+    Ok(())
 }
 
 /// The slice `ensureCreationId` leaves, `None` where it returns early.
-fn with_creation_id(xml: &str, uuid: &str) -> Option<String> {
+fn with_creation_id(xml: &str, uuid: &str) -> Result<Option<String>, String> {
     if xml.is_empty() {
-        return None;
+        return Ok(None);
     }
-    let open = cnvpr_open_re().exec(xml)?;
-    if open.get(1) == Some("/") {
+    let Some(own) = own_cnvpr(xml, 0)? else {
+        return Ok(None);
+    };
+    let before = xml.get(..own.start).unwrap_or_default();
+    if own.content_start == own.end {
         // self-closing: expand into a tag pair carrying the extLst
-        let tag = open.as_str();
-        return Some(format!(
-            "{}{}>{}{CNVPR_CLOSE}{}",
-            xml.get(..open.start()).unwrap_or_default(),
-            tag.strip_suffix("/>").unwrap_or(tag),
+        let head = opened(xml.get(own.start..own.end).unwrap_or_default());
+        return Ok(Some(format!(
+            "{before}{head}{}{CNVPR_CLOSE}{}",
             creation_id_xml(uuid),
-            xml.get(open.end()..).unwrap_or_default(),
-        ));
+            xml.get(own.end..).unwrap_or_default(),
+        )));
     }
-    let close = open.start() + xml.get(open.start()..)?.find(CNVPR_CLOSE)?;
-    let own = xml.get(open.start()..close).unwrap_or_default();
-    if creation_id_re().test(own) {
-        return None;
+    if creation_guid_of(xml.get(own.start..own.end).unwrap_or_default())?.is_some() {
+        return Ok(None);
     }
-    // extLst has maxOccurs=1 and is cNvPr's last child: merge into an existing
-    // one. An earlier list belongs to a nested hlinkClick or hlinkHover.
-    // ledger cnvpr-own-extlst-forms: the TypeScript finds that list only by a
-    // literal `</a:extLst>`, so a self-closing `<a:extLst/>` or a closing tag
-    // with white space before its `>` got a second extLst, which
-    // CT_NonVisualDrawingProps forbids.
-    let own_list = js_regex!(r"<\/a:extLst\s*>|<a:extLst\b[^>]*?\/>")
-        .find_iter(own)
-        .last();
-    if let Some(list) = own_list
-        && trim(own.get(list.end()..).unwrap_or_default()).is_empty()
-    {
-        let at = open.start() + list.start();
-        let before = xml.get(..at).unwrap_or_default();
-        return Some(match list.as_str().strip_suffix("/>") {
-            Some(head) => format!(
-                "{before}{head}>{}</a:extLst>{}",
-                creation_id_ext_xml(uuid),
-                xml.get(at + list.as_str().len()..).unwrap_or_default(),
-            ),
-            None => format!(
-                "{before}{}{}",
-                creation_id_ext_xml(uuid),
-                xml.get(at..).unwrap_or_default()
-            ),
-        });
+    // extLst has maxOccurs=1 and is cNvPr's last child: merge into an existing one, a list
+    // that ends where cNvPr's content ends. An earlier one belongs to a nested hlinkClick or
+    // hlinkHover and must not receive the GUID. However the list is written (empty, with
+    // attributes, with white space in its tags) it is the same list.
+    let content = xml
+        .get(own.content_start..own.content_end)
+        .unwrap_or_default();
+    let content_end = own.content_start + content.trim_end_matches(is_js_space).len();
+    let mut list = element_range(xml, "a:extLst", own.content_start)?;
+    while let Some(found) = list {
+        if found.end > content_end {
+            break;
+        }
+        if found.end == content_end {
+            let ext = creation_id_ext_xml(uuid);
+            return Ok(Some(if found.content_start == found.end {
+                format!(
+                    "{}{}{ext}</a:extLst>{}",
+                    xml.get(..found.start).unwrap_or_default(),
+                    opened(xml.get(found.start..found.end).unwrap_or_default()),
+                    xml.get(found.end..).unwrap_or_default(),
+                )
+            } else {
+                format!(
+                    "{}{ext}{}",
+                    xml.get(..found.content_end).unwrap_or_default(),
+                    xml.get(found.content_end..).unwrap_or_default(),
+                )
+            }));
+        }
+        list = element_range(xml, "a:extLst", found.end)?;
     }
-    Some(format!(
+    Ok(Some(format!(
         "{}{}{}",
-        xml.get(..close).unwrap_or_default(),
+        xml.get(..own.content_end).unwrap_or_default(),
         creation_id_xml(uuid),
-        xml.get(close..).unwrap_or_default(),
-    ))
+        xml.get(own.content_end..).unwrap_or_default(),
+    )))
+}
+
+/// The `<p:cNvPr>` block (open tag through end tag) whose own id attribute is exactly `id`. The
+/// id is whatever the deck says, so it is compared as text, never built into a pattern.
+fn cnvpr_with_id<'x>(xml: &'x str, id: &str) -> Result<Option<&'x str>, String> {
+    for open in js_regex!(r"<p:cNvPr\b[^>]*?(\/?)>").find_iter(xml) {
+        if attribute_of(open.as_str(), "id").as_deref() != Some(id) {
+            continue;
+        }
+        return Ok(own_cnvpr(xml, open.start())?.and_then(|own| xml.get(own.start..own.end)));
+    }
+    Ok(None)
 }
 
 /// Durable id of a group child: its bytes, creationId included, live in the
 /// group's slice, so its `<p:cNvPr>` is found there by nvId. Falls back to
 /// `element_durable_id` of the child.
-///
-/// ledger group-child-nvid-pattern: the TypeScript pastes the nvId, which is
-/// the document's `id` attribute, into a pattern as it is, so `(` throws and
-/// `+21` matches no tag. Here the nvId is literal text.
 pub fn group_child_durable_id(
     grp: &SlideElement,
     child: &SlideElement,
 ) -> Result<Option<String>, String> {
-    if let (Some(xml), Some(nv_id)) = (xml_of(grp), nv_id_of(child)) {
-        let regex = TryJsRegex::new(
-            &format!(
-                r#"<p:cNvPr\b[^>]*\bid="{}"[^>]*?(\/?)>"#,
-                regex_escape(nv_id)
-            ),
-            "",
-        )
-        .map_err(|error| error.to_string())?;
-        if let Some(open) = regex.try_exec(xml).map_err(|limit| limit.to_string())? {
-            let own = own_cnvpr(xml, &open);
-            if let Some(creation) = creation_id_re().exec(own) {
-                return Ok(Some(guid_form(&creation)));
-            }
-        }
+    if let (Some(xml), Some(nv_id)) = (xml_of(grp), nv_id_of(child))
+        && let Some(own) = cnvpr_with_id(xml, nv_id)?
+        && let Some(guid) = creation_guid_of(own)?
+    {
+        return Ok(Some(guid_form(&guid)));
     }
-    Ok(element_durable_id(child))
+    element_durable_id(child)
 }

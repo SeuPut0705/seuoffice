@@ -16,14 +16,16 @@
 use std::collections::{HashMap, HashSet};
 
 use jscompat::{
-    JsMap, JsObject, TryJsRegex, base64, js_regex, math_max, number_to_string, regex_escape,
-    replace_first_string, slice_utf16, to_number,
+    JsMap, JsObject, base64, js_regex, math_max, number_to_string, slice_utf16, to_number,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::layout::{is_object_prototype_name, replace_literal};
 use crate::types::SlideSize;
-use crate::xml_utils::{has_content_type_override, max_relationship_id_number};
+use crate::xml_utils::{
+    attribute_of, c_sld_name_of, decode_xml, default_content_type_for, has_content_type_override,
+    has_default_for, max_relationship_id_number,
+};
 use crate::zip::{PackageArchive, Relationship, rels_path_for, resolve_target};
 
 const LAYOUT_REL: &str = "/slideLayout";
@@ -92,10 +94,6 @@ pub struct LayoutRef {
     pub path: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-}
-
-fn regex_error(error: impl std::fmt::Display) -> String {
-    error.to_string()
 }
 
 /// `Buffer.from(text, 'base64')`: both alphabets, every other character
@@ -168,40 +166,17 @@ fn ext_of(path: &str) -> String {
     }
 }
 
-fn override_content_type(ct: Option<&str>, part_path: &str) -> Result<Option<String>, String> {
-    let Some(ct) = ct.filter(|ct| !ct.is_empty()) else {
-        return Ok(None);
-    };
-    let re = TryJsRegex::new(
-        &format!(
-            r#"<Override[^>]*PartName=["']/{}["'][^>]*ContentType=["']([^"']+)["']"#,
-            regex_escape(part_path)
-        ),
-        "",
-    )
-    .map_err(regex_error)?;
-    Ok(re
-        .try_exec(ct)
-        .map_err(regex_error)?
-        .and_then(|found| found.get(1))
-        .map(str::to_owned))
-}
-
-fn default_content_type(ct: Option<&str>, ext: &str) -> Result<Option<String>, String> {
-    let Some(ct) = ct.filter(|ct| !ct.is_empty()) else {
-        return Ok(None);
-    };
-    // the extension is pasted into the pattern as it is: it can fail to compile
-    let re = TryJsRegex::new(
-        &format!(r#"<Default[^>]*Extension="{ext}"[^>]*ContentType="([^"]+)""#),
-        "i",
-    )
-    .map_err(regex_error)?;
-    Ok(re
-        .try_exec(ct)
-        .map_err(regex_error)?
-        .and_then(|found| found.get(1))
-        .map(str::to_owned))
+/// The content type an Override declares for the part; read decoded, so it is escaped when
+/// written.
+fn override_content_type(ct: Option<&str>, part_path: &str) -> Option<String> {
+    let ct = ct.filter(|ct| !ct.is_empty())?;
+    let wanted = format!("/{part_path}");
+    for tag in js_regex!(r"<Override\b[^>]*>", "g").find_iter(ct) {
+        if attribute_of(tag.as_str(), "PartName").as_deref() == Some(wanted.as_str()) {
+            return attribute_of(tag.as_str(), "ContentType");
+        }
+    }
+    None
 }
 
 /// One call of `collectPart`: the part's own entries written, and the parts its
@@ -222,13 +197,18 @@ fn visit_part(
 
     let ct = archive.read_text("[Content_Types].xml");
     let ct = ct.as_deref();
-    if let Some(over) = override_content_type(ct, part_path)? {
+    if let Some(over) = override_content_type(ct, part_path) {
         assign(content_types, part_path, over);
     } else {
         let ext = ext_of(part_path);
-        let dflt = default_content_type(ct, &ext)?;
+        let dflt = ct
+            .filter(|ct| !ct.is_empty())
+            .and_then(|ct| default_content_type_for(ct, &ext))
+            .filter(|dflt| !dflt.is_empty());
         if let (false, Some(dflt)) = (ext.is_empty(), dflt) {
-            assign(content_types, &ext, dflt);
+            // keyed by the part's extension, the document's: `__proto__` is an entry like any
+            // other
+            content_types.set(&ext, dflt);
         }
     }
 
@@ -279,10 +259,7 @@ fn layout_name_of(archive: &PackageArchive, layout_path: &str) -> Option<String>
     let xml = archive
         .read_text(layout_path)
         .filter(|xml| !xml.is_empty())?;
-    js_regex!(r#"<p:cSld[^>]*\sname="([^"]*)""#)
-        .exec(&xml)
-        .and_then(|found| found.get(1))
-        .map(str::to_owned)
+    c_sld_name_of(&xml)
 }
 
 /// Snapshot a slide and its dependencies. `slide_xml` is passed in so callers can
@@ -494,7 +471,7 @@ fn write_parts(
             if js_regex!(r"^[a-z]+:", "i").test(target) {
                 return whole.to_owned();
             }
-            let absolute = resolve_target(source_path, target);
+            let absolute = resolve_target(source_path, &decode_xml(target));
             match path_map.get(&absolute).filter(|mapped| !mapped.is_empty()) {
                 Some(mapped) => {
                     format!(
@@ -609,12 +586,14 @@ pub fn materialize_slide_bundle(
 ) -> Result<String, String> {
     let path_map = write_parts(archive, &bundle.parts, &bundle.content_types, None)?;
 
+    // The ids are the source deck's own, kept so the slide XML needs no rewriting. They were read
+    // decoded, so they are escaped here: an id holding `&` or `"` would break the part otherwise.
     let mut rel_lines = String::new();
     for rel in &bundle.rels {
+        let id = escape_attr(&rel.id);
         if rel.layout == Some(true) {
             rel_lines.push_str(&format!(
-                "<Relationship Id=\"{}\" Type=\"{}\" Target=\"{}\"/>",
-                rel.id,
+                "<Relationship Id=\"{id}\" Type=\"{}\" Target=\"{}\"/>",
                 rel.r#type,
                 escape_attr(&relative(slide_path, layout_path))
             ));
@@ -622,8 +601,7 @@ pub fn materialize_slide_bundle(
         }
         if rel.external == Some(true) {
             rel_lines.push_str(&format!(
-                "<Relationship Id=\"{}\" Type=\"{}\" Target=\"{}\" TargetMode=\"External\"/>",
-                rel.id,
+                "<Relationship Id=\"{id}\" Type=\"{}\" Target=\"{}\" TargetMode=\"External\"/>",
                 rel.r#type,
                 escape_attr(&rel.target)
             ));
@@ -631,8 +609,7 @@ pub fn materialize_slide_bundle(
         }
         let mapped = path_map.get(&rel.target).unwrap_or(&rel.target);
         rel_lines.push_str(&format!(
-            "<Relationship Id=\"{}\" Type=\"{}\" Target=\"{}\"/>",
-            rel.id,
+            "<Relationship Id=\"{id}\" Type=\"{}\" Target=\"{}\"/>",
             rel.r#type,
             escape_attr(&relative(slide_path, mapped))
         ));
@@ -662,21 +639,25 @@ fn ensure_content_types(
             let Some(target_path) = path_map.get(key).filter(|path| !path.is_empty()) else {
                 continue;
             };
-            let over =
-                format!("<Override PartName=\"/{target_path}\" ContentType=\"{content_type}\"/>");
+            let over = format!(
+                "<Override PartName=\"/{}\" ContentType=\"{}\"/>",
+                escape_attr(target_path),
+                escape_attr(content_type)
+            );
             if !has_content_type_override(&ct, target_path) {
                 ct = replace_literal(&ct, "</Types>", &format!("{over}</Types>"));
             }
         } else {
-            // the extension is pasted into the pattern as it is: it can fail to compile
-            let re = TryJsRegex::new(&format!(r#"<Default[^>]*Extension="{key}""#), "i")
-                .map_err(regex_error)?;
-            if !re.try_test(&ct).map_err(regex_error)? {
-                ct = replace_first_string(
+            if !has_default_for(&ct, key) {
+                // A function replacement: the extension and its content type come from the
+                // source deck, so they are written as given, escaped (they were read decoded).
+                ct = replace_literal(
                     &ct,
                     "</Types>",
                     &format!(
-                        "<Default Extension=\"{key}\" ContentType=\"{content_type}\"/></Types>"
+                        "<Default Extension=\"{}\" ContentType=\"{}\"/></Types>",
+                        escape_attr(key),
+                        escape_attr(content_type)
                     ),
                 );
             }
@@ -753,7 +734,7 @@ fn register_master(archive: &mut PackageArchive, master_path: &str) -> bool {
     let rid = format!("rId{}", number_to_string(max_rid + 1.0));
     archive.entries_mut().set(
         pres_rels_path,
-        replace_first_string(
+        replace_literal(
             &pres_rels,
             "</Relationships>",
             &format!(
@@ -770,7 +751,7 @@ fn register_master(archive: &mut PackageArchive, master_path: &str) -> bool {
     }
     archive.entries_mut().set(
         PRES_PATH,
-        replace_first_string(
+        replace_literal(
             &pres,
             "</p:sldMasterIdLst>",
             &format!(

@@ -7,8 +7,8 @@ use serde_json::Value;
 
 use super::model::{ChartAxisStyle, ChartDataTable};
 use super::node::{
-    Node, TsBoolRead, as_str, at0, first, get, has_key, int, is, is_object, list, number,
-    string_of, truthy, val, xsd_bool,
+    Node, as_str, at0, ct_boolean, first, get, has_key, int, is, is_object, list, number,
+    string_of, truthy, val, xsd_boolean,
 };
 use super::points::read_str_points;
 use crate::color::resolve_color_node;
@@ -19,7 +19,7 @@ fn color(node: Node<'_>, theme: Option<&Theme>) -> Option<String> {
 }
 
 pub(crate) fn parse_data_table(node: Node<'_>, theme: Option<&Theme>) -> ChartDataTable {
-    let on = |k: &str| xsd_bool(get(node, k), TsBoolRead::NotZero);
+    let on = |k: &str| ct_boolean(get(node, k), true, true);
     let mut out = ChartDataTable {
         show_keys: on("c:showKeys"),
         horz_border: on("c:showHorzBorder"),
@@ -107,7 +107,7 @@ pub(crate) fn parse_axis(
         return Ok(None);
     }
     let mut out = ChartAxisStyle::default();
-    if xsd_bool(get(ax, "c:delete"), TsBoolRead::EqOne) {
+    if ct_boolean(get(ax, "c:delete"), false, false) {
         out.hidden = Some(true);
     }
     let scaling = get(ax, "c:scaling");
@@ -152,7 +152,7 @@ pub(crate) fn parse_axis(
         if ax_sz.is_finite() && ax_sz > 0.0 {
             out.label_size_pt = Some(JsNum(ax_sz / 100.0));
         }
-        if is(get(def_r_pr, "@_b"), "1") {
+        if xsd_boolean(get(def_r_pr, "@_b"), false) {
             out.label_bold = Some(true);
         }
         if is(get(def_r_pr, "@_cap"), "all") {
@@ -257,7 +257,7 @@ pub(crate) fn parse_axis(
     };
     if let Some(title) = title.filter(|t| !t.is_empty()) {
         out.title = Some(title);
-        if xsd_bool(get(title_node, "c:overlay"), TsBoolRead::EqOne) {
+        if ct_boolean(get(title_node, "c:overlay"), false, false) {
             out.title_overlay = Some(true);
         }
         let tp0 = first(get(get(get(title_node, "c:tx"), "c:rich"), "a:p"));
@@ -271,10 +271,10 @@ pub(crate) fn parse_axis(
             if sz.is_finite() && sz > 0.0 {
                 out.title_size_pt = Some(JsNum(sz / 100.0));
             }
-            if is(get(r_pr, "@_b"), "1") {
+            if xsd_boolean(get(r_pr, "@_b"), false) {
                 out.title_bold = Some(true);
             }
-            if is(get(r_pr, "@_i"), "1") {
+            if xsd_boolean(get(r_pr, "@_i"), false) {
                 out.title_italic = Some(true);
             }
             out.title_color = color(get(r_pr, "a:solidFill"), theme);

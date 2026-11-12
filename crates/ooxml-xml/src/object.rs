@@ -46,8 +46,20 @@ const TEXT_NODE_NAME: &str = "#text";
 /// The tag name of the document node.
 const DOCUMENT: &str = "!xml";
 
-/// `parser.parse(xml)`
+/// An entity decoder: the text and whether the document declared XML 1.1.
+pub type EntityDecoder = for<'t> fn(&'t str, bool) -> Cow<'t, str>;
+
+/// `parser.parse(xml)` with the library's own entity decoder.
 pub fn parse_object(xml: &str, options: &ObjectOptions<'_>) -> Result<Value, ParseError> {
+    parse_object_with(xml, options, decode_entities)
+}
+
+/// `parser.parse(xml)` with the `entityDecoder` option set to `decode`.
+pub fn parse_object_with(
+    xml: &str,
+    options: &ObjectOptions<'_>,
+    decode: EntityDecoder,
+) -> Result<Value, ParseError> {
     let source = normalize_newlines(xml);
     let root = Parser {
         source: &source,
@@ -57,6 +69,7 @@ pub fn parse_object(xml: &str, options: &ObjectOptions<'_>) -> Result<Value, Par
         detached: false,
         text: String::new(),
         xml_1_1: false,
+        decode,
     }
     .run()?;
     Ok(Value::Object(compress(root, options)))
@@ -120,6 +133,7 @@ struct Parser<'a> {
     /// `textData`
     text: String,
     xml_1_1: bool,
+    decode: EntityDecoder,
 }
 
 impl Parser<'_> {
@@ -194,7 +208,7 @@ impl Parser<'_> {
         let value = if escape_entities {
             Cow::Borrowed(value)
         } else {
-            decode_entities(value, self.xml_1_1)
+            (self.decode)(value, self.xml_1_1)
         };
         Some(if trim_values || trim(&value) == value {
             parse_value(&value, self.options.parse_tag_value)
@@ -343,7 +357,7 @@ impl Parser<'_> {
             } else {
                 value
             };
-            let value = decode_entities(value, self.xml_1_1).into_owned();
+            let value = (self.decode)(value, self.xml_1_1).into_owned();
             let name = format!("{ATTRIBUTE_PREFIX}{}", token.name);
             match attrs.iter_mut().find(|(key, _)| *key == name) {
                 Some(entry) => entry.1 = value,

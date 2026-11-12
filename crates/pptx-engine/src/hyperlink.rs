@@ -20,12 +20,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::deck::{OpenedPptx, materialize_slide, patch_slide_xml, patched_element_xml};
 use crate::named_action::{named_action_attr, named_action_of};
-use crate::notes::unescape_xml;
 use crate::parse::slice_group_child_xmls;
 use crate::resource_cleanup::cleanup_superseded_slide_resources;
 use crate::types::{ElementType, Paragraph, Slide, SlideElement};
 use crate::with_element;
-use crate::xml_utils::{escape_xml_attr, max_relationship_id_number};
+use crate::xml_utils::{attribute_of, escape_xml_attr, max_relationship_id_number};
 use crate::zip::{PackageArchive, rels_path_for, resolve_target};
 
 const HYPERLINK_REL_TYPE: &str =
@@ -132,9 +131,7 @@ fn append_rel(
 
 fn tooltip_of(tag: Option<&str>) -> Option<String> {
     let tag = tag.filter(|t| !t.is_empty())?;
-    let m = js_regex!(r#"\btooltip=(?:"([^"]*)"|'([^']*)')"#).exec(tag)?;
-    let raw = truthy(m.get(1)).or_else(|| truthy(m.get(2)))?;
-    Some(unescape_xml(raw))
+    attribute_of(tag, "tooltip").filter(|t| !t.is_empty())
 }
 
 /// Strip the hlinkClick inside the element XML's first cNvPr (keeping other children).
@@ -506,21 +503,19 @@ fn resolve_link_in_xml(
         return Ok(None);
     };
     let tooltip = tooltip_of(Some(tag));
-    let action_attr = js_regex!(r#"\baction=(?:"([^"]*)"|'([^']*)')"#)
-        .exec(tag)
-        .and_then(|m| truthy(m.get(1)).or_else(|| truthy(m.get(2))));
-    if let Some(action) = named_action_of(action_attr) {
+    let action_attr = attribute_of(tag, "action").filter(|a| !a.is_empty());
+    if let Some(action) = named_action_of(action_attr.as_deref()) {
         return Ok(Some(LinkTarget::Action {
             action: action.to_owned(),
             tooltip,
         }));
     }
-    let Some(m) = js_regex!(r#"\br:id=(?:"(rId\d+)"|'(rId\d+)')"#).exec(tag) else {
+    // the id whatever its shape: only a named action has none
+    let Some(rid) = attribute_of(tag, "r:id").filter(|id| !id.is_empty()) else {
         return Ok(None);
     };
-    let rid = m.get(1).or_else(|| m.get(2)).unwrap_or_default();
     let rels = opened.archive.read_rels(slide_path)?;
-    let Some(rel) = rels.get(rid) else {
+    let Some(rel) = rels.get(rid.as_str()) else {
         return Ok(None);
     };
     let slide_paths: Vec<String> = opened.deck.slides.iter().map(slide_path_of).collect();

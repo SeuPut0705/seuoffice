@@ -142,10 +142,6 @@ const PICTURES: NewPictureOptions[] = [
   { bytes: new Uint8Array([7]), ext: 'constructor', offset: OFFSET },
 ]
 const pictureArgs = (o: NewPictureOptions) => ({ ...o, bytes: [...o.bytes] })
-// ledger insert-inherited-image-ext: IMAGE_MIME is a plain object, so an extension named like an
-// inherited member (`constructor`) reads a function as its MIME type and the TypeScript writes
-// that function's source as a ContentType; the Rust finds no type and adds no image.
-const inheritedExt = (ext: string) => (ext === 'constructor' ? { seed: false as const } : {})
 const toBytes = (a: unknown) => new Uint8Array(a as number[])
 
 const SMART: NewSmartArtOptions[] = ['list', 'process', 'cycle', 'hierarchy', 'pyramid', 'matrix', 'venn', 'other'].map(
@@ -219,10 +215,7 @@ export const INSERT: CallSpec[] = [
         addImageMediaAndRel(opened, at.slide(0), toBytes(args.bytes), args.ext as string),
       ),
     built: [
-      ...PICTURES.map((o) => ({
-        ...deckInput(GEN, { slide: 0, bytes: [...o.bytes], ext: o.ext }),
-        ...inheritedExt(o.ext),
-      })),
+      ...PICTURES.map((o) => deckInput(GEN, { slide: 0, bytes: [...o.bytes], ext: o.ext })),
       deckInput(BLANK, { slide: 0, bytes: PNG, ext: 'png' }),
     ],
   },
@@ -235,10 +228,7 @@ export const INSERT: CallSpec[] = [
           return addPicture(opened, at.slide(0), { ...o, bytes: toBytes(o.bytes) } as NewPictureOptions)
         }),
       ),
-    built: PICTURES.map((o) => ({
-      ...deckInput(GEN, { slide: 0, opts: pictureArgs(o) }),
-      ...inheritedExt(o.ext),
-    })),
+    built: PICTURES.map((o) => deckInput(GEN, { slide: 0, opts: pictureArgs(o) })),
   },
   {
     fn: 'pptxInsert.insert.deleteElement',

@@ -4,15 +4,17 @@
 use std::collections::HashMap;
 
 use jscompat::{
-    JsMap, JsObject, TryJsRegex, index_of, js_regex, number_to_string, regex_escape,
-    replace_first_with, to_number,
+    JsMap, JsObject, index_of, js_regex, number_to_string, replace_first_with, to_number,
 };
 use serde::{Deserialize, Serialize};
 
 use super::{OpenedPptx, append_raw_elements, patched_element_xml, random_uuid};
+use crate::identity::with_fresh_creation_ids;
 use crate::insert::next_c_nv_pr_id;
 use crate::slide_transfer::{collect_part, import_clipboard_parts};
-use crate::xml_utils::{escape_xml_attr, max_relationship_id_number};
+use crate::xml_utils::{
+    decode_xml, escape_xml_attr, max_relationship_id_number, with_relationship_ids,
+};
 use crate::zip::{rels_path_for, resolve_target};
 
 /// One of `rels` of an `ElementClipboardItem`.
@@ -74,15 +76,21 @@ pub fn copy_element_data(
     let mut parts: JsObject<String> = JsObject::new();
     let mut content_types: JsObject<String> = JsObject::new();
     let mut seen: Vec<String> = Vec::new();
-    // Quote-agnostic like the other relationship scanners: a slide written by a
-    // producer that prefers single quotes still names its rIds.
-    for m in js_regex!(r#"\br:(?:embed|link|id)\s*=\s*(["'])(rId\d+)\1"#, "g").find_iter(&xml) {
-        let rid = m.get(2).unwrap_or_default();
-        if seen.iter().any(|s| s == rid) {
+    // The references an element carries with it. The id is taken whatever its shape: it is the
+    // name the producer chose (`rId7`, `R7a3f`, `id5`). Quote-agnostic like the other scanners.
+    for m in js_regex!(
+        r#"\br:(?:embed|link|id)\s*=\s*(?:"([^"]*)"|'([^']*)')"#,
+        "g"
+    )
+    .find_iter(&xml)
+    {
+        // decoded: the rels part may spell the same id another way
+        let rid = decode_xml(m.get(1).or_else(|| m.get(2)).unwrap_or_default());
+        if seen.contains(&rid) {
             continue;
         }
-        seen.push(rid.to_owned());
-        let Some(rel) = slide_rels.get(rid) else {
+        seen.push(rid.clone());
+        let Some(rel) = slide_rels.get(rid.as_str()) else {
             continue;
         };
         let external = rel.target_mode.as_deref() == Some("External");
@@ -97,7 +105,7 @@ pub fn copy_element_data(
             collect_part(archive, &target, &mut parts, &mut content_types)?;
         }
         rels.push(ClipboardRel {
-            rid: rid.to_owned(),
+            rid,
             r#type: rel.r#type.clone(),
             target,
             external: external.then_some(true),
@@ -179,7 +187,7 @@ pub fn paste_elements(
         let mut next_id = next_c_nv_pr_id(slide);
         let mut xmls: Vec<String> = Vec::with_capacity(items.len());
         for item in items {
-            let mut xml = item.xml.clone();
+            let mut rid_map: JsMap<String> = JsMap::new();
             for rel in &item.rels {
                 let landed: String = if rel.external == Some(true) {
                     rel.target.clone()
@@ -227,19 +235,10 @@ pub fn paste_elements(
                     }
                 };
                 if rid != rel.rid {
-                    let re = TryJsRegex::new(
-                        &format!(r#"\br:(embed|link|id)="{}""#, regex_escape(&rel.rid)),
-                        "g",
-                    )
-                    .map_err(|error| error.to_string())?;
-                    // the new rId is written as given, `$` patterns not expanded
-                    xml = re
-                        .try_replace_all(&xml, |m| {
-                            format!("r:{}=\"{rid}\"", m.get(1).unwrap_or_default())
-                        })
-                        .map_err(|error| error.to_string())?;
+                    rid_map.set(rel.rid.clone(), rid);
                 }
             }
+            let mut xml = with_relationship_ids(&item.xml, &["embed", "link", "id"], &rid_map);
             xml = js_regex!(r#"(<p:cNvPr\s[^>]*\bid=["'])\d+(["'])"#, "g").replace_all(&xml, |m| {
                 let out = format!(
                     "{}{}{}",
@@ -250,19 +249,9 @@ pub fn paste_elements(
                 next_id += 1.0;
                 out
             });
-            // Pasted elements are new identities: mint fresh creationIds
-            xml = js_regex!(
-                r#"(<a16:creationId[^>]*\bid=")\{?[0-9A-Fa-f-]{36}\}?(")"#,
-                "g"
-            )
-            .replace_all(&xml, |m| {
-                format!(
-                    "{}{{{}}}{}",
-                    m.get(1).unwrap_or_default(),
-                    random_uuid().to_uppercase(),
-                    m.get(2).unwrap_or_default()
-                )
-            });
+            // Pasted elements are new identities: mint fresh creationIds so durable ids never
+            // collide with their source elements on the same slide, however the id is written
+            xml = with_fresh_creation_ids(&xml, random_uuid)?;
             // Offset only the outermost xfrm's off (group child coordinate systems stay put)
             xml = replace_first_with(js_regex!(r"<a:off\b[^>]*\/>"), &xml, |tag| {
                 let shifted =

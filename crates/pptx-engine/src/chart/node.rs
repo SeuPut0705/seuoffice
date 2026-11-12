@@ -122,37 +122,35 @@ pub(crate) fn not_same(a: Node<'_>, b: Node<'_>) -> bool {
     }
 }
 
-/// How the TypeScript reads a CT_Boolean `val` at a site.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TsBoolRead {
-    /// `el?.['@_val'] === '1'`
-    EqOne,
-    /// `el?.['@_val'] !== '0'`
-    NotZero,
-}
-
-/// A CT_Boolean element (`<c:delete val="1"/>`), the one place its `val`
-/// is read.
-///
-/// ledger chart-xsd-boolean: the TypeScript compares `val` with `'1'` or
-/// `'0'` only. By ECMA-376 `val` is an xsd:boolean (`1`, `true`, `0`,
-/// `false`) and an element without it is true. Those two cases are read by
-/// the format; an absent element and any other `val` keep the reading of
-/// the TypeScript, so text that is not valid answers as it does there.
-pub fn xsd_bool(el: Node<'_>, ts: TsBoolRead) -> bool {
-    let Some(present) = el else {
-        return ts == TsBoolRead::NotZero;
-    };
-    if is(Some(present), "") {
-        return true;
-    }
-    let raw = get(Some(present), "@_val");
-    match as_str(raw) {
+/// `xsdBoolean`: an xsd:boolean as XML Schema spells it: "1" and "true" are
+/// true, "0" and "false" are false. Any other text is no boolean, and the
+/// caller says what it reads then (`otherwise`).
+pub fn xsd_boolean(value: Node<'_>, otherwise: bool) -> bool {
+    match as_str(value) {
         Some("1" | "true") => true,
         Some("0" | "false") => false,
-        _ => match ts {
-            TsBoolRead::EqOne => is(raw, "1"),
-            TsBoolRead::NotZero => !is(raw, "0"),
-        },
+        _ => otherwise,
+    }
+}
+
+/// `ctBoolean`: a CT_Boolean element of the chart (`<c:delete val="1"/>`),
+/// its `val` as xsd:boolean, and true when the element is written without
+/// `val`. `absent` answers for an element that is not there, `otherwise` for
+/// a `val` no boolean spells.
+pub fn ct_boolean(node: Node<'_>, absent: bool, otherwise: bool) -> bool {
+    let one = match node {
+        Some(Value::Array(items)) => items.first(),
+        other => other,
+    };
+    let Some(one) = one else {
+        return absent;
+    };
+    let val = match one {
+        Value::Object(_) => get(Some(one), "@_val"),
+        _ => None,
+    };
+    match val {
+        None => true,
+        Some(_) => xsd_boolean(val, otherwise),
     }
 }

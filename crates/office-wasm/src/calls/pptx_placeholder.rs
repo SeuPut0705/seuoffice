@@ -8,7 +8,7 @@
 //! is `master`) and of `args.masterXml` / `args.layoutXml`.
 
 use jscompat::{JsMap, JsNum};
-use ooxml_xml::{ObjectOptions, parse_object};
+use ooxml_xml::ObjectOptions;
 use pptx_engine::placeholder::{
     LstStyleSource, MAX_AUTO_NUM_START, MasterTextStyles, PlaceholderMap, TextStyleLevels,
     merge_text_style_chain, parse_def_r_pr_style, parse_default_text_style, parse_lst_style_levels,
@@ -17,6 +17,7 @@ use pptx_engine::placeholder::{
     resolve_placeholder_insets, resolve_placeholder_preset_geom, resolve_placeholder_transform,
 };
 use pptx_engine::theme::Theme;
+use pptx_engine::xml_utils::xml_parse_object as parse_object;
 use serde_json::Value;
 
 use super::{Returned, arg, optional, required, value};

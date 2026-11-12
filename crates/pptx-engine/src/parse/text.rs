@@ -28,7 +28,7 @@ use crate::types::{
     ParagraphDefaultRunProps, RunGradient, RunStyleSource, ShadowEffect, TabStop, TextAlign,
     TextAnchor, TextBody, TextInsets, TextOutline, TextRun, TextVert, TxWarp,
 };
-use crate::xml_utils::{decode_numeric_char_refs, percent_fraction};
+use crate::xml_utils::percent_fraction;
 
 /// `node?.[key]` where `node` is an element: a string or a list has no such
 /// key (the keys read here are never indices or string methods).
@@ -208,15 +208,11 @@ pub(crate) fn parse_text_body(
                 if value_truthy(name)
                     && let Some(m) = js_regex!(r"^val (-?\d+)$").exec(&fmla)
                 {
-                    let key = value_to_string(name);
-                    // `adj[key] = n` on a plain object: `__proto__` goes to the
-                    // prototype setter, which ignores a number, and adds no key
-                    if key != "__proto__" {
-                        adj.set(
-                            key,
-                            JsNum(parse_int(m.get(1).unwrap_or_default(), Radix::Ten)),
-                        );
-                    }
+                    // `setOwn`: a guide named `__proto__` is an entry like any other
+                    adj.set(
+                        value_to_string(name),
+                        JsNum(parse_int(m.get(1).unwrap_or_default(), Radix::Ten)),
+                    );
                 }
             }
             tx_warp = Some(TxWarp {
@@ -417,8 +413,7 @@ pub(crate) fn parse_paragraph(
     } else if let Some(ch) = bu_char {
         let mut b = ParagraphBullet::default();
         b.r#type.set(BulletType::Char);
-        b.char
-            .set(decode_numeric_char_refs(&value_to_string(Some(ch))));
+        b.char.set(value_to_string(Some(ch)));
         bullet = Some(b);
     } else if value_truthy(bu_auto_num) {
         let mut b = ParagraphBullet::default();
@@ -779,14 +774,14 @@ fn run_of(
     dflt: Option<&LevelTextStyle>,
 ) -> TextRun {
     let redact_label = read_redact_label(r_pr);
-    let text = decode_numeric_char_refs(&match raw_t {
+    let text = match raw_t {
         Some(Value::String(t)) => Cow::Borrowed(t.as_str()),
         None | Some(Value::Null) => Cow::Borrowed(""),
         Some(t @ (Value::Object(_) | Value::Array(_))) => Cow::Owned(
             defined(get(Some(t), "#text")).map_or_else(String::new, |t| value_to_string(Some(t))),
         ),
         Some(t) => Cow::Owned(value_to_string(Some(t))),
-    });
+    };
     let hlink = get(r_pr, "a:hlinkClick");
     let action = get(hlink, "@_action");
     let action_text = value_truthy(action).then(|| value_to_string(action));
@@ -1096,7 +1091,7 @@ fn run_of(
     };
 
     let mut run = TextRun::default();
-    run.text.set(text);
+    run.text.set(text.into_owned());
     run.style_src.set(style_src);
     run.bold.set(match b_attr {
         Some(b) => is(Some(b), "1") || is(Some(b), "true"),

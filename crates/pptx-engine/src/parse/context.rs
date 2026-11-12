@@ -5,8 +5,9 @@
 
 use std::cell::Cell;
 
+use crate::xml_utils::xml_parse_object as parse_object;
 use jscompat::{JsMap, JsNum};
-use ooxml_xml::{ObjectOptions, parse_object};
+use ooxml_xml::ObjectOptions;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 

@@ -5,8 +5,8 @@
 //
 // Private functions are proven through the export that reaches them:
 //   patchOwnCNvPrAttr    setElementHidden, setElementName
-//   escapeRegex          editChartElement (a relationship id with regex metacharacters
-//                        and a decoy id the unescaped pattern would take)
+//   (the chart's relationship id is compared as text, never built into a pattern:
+//    editChartElement with ids carrying regex metacharacters and decoy ids)
 //   applyFontPatch       setElementFont
 //   escapeRegExp         replaceAllInDeck (find texts with metacharacters)
 //   mergePPrDirty        setElementParagraphFormat (`then`: a second patch on the same element)
@@ -418,6 +418,20 @@ const EDIT_CHART_INPUTS: Input[] = [
     { slide: 0, element: EL.chart(0), patch: {} },
     SLIDE_XML.replace('r:id="rIdC0"', "r:id='rIdC0'"),
   ),
+  // the id as XML reads it: spaced around `=`, and spelled with references
+  on(
+    { slide: 0, element: EL.chart(0), patch: { title: 'Decoded' } },
+    SLIDE_XML.replace('r:id="rIdC0"', 'r:id = "rId&#67;0"'),
+  ),
+  on(
+    { slide: 0, element: EL.chart(0), patch: { title: 'Named' } },
+    SLIDE_XML.replace('r:id="rIdC0"', 'r:id="rId&#x43;0" note="a>b"'),
+  ),
+  // another r:id before the chart's own is no longer the chart's
+  on(
+    { slide: 0, element: EL.chart(0), patch: { title: 'Decoy' } },
+    SLIDE_XML.replace('<c:chart ', '<a:hlinkClick r:id="rIdC1"/><c:chart '),
+  ),
   // a patch on the blank deck: no chart there
   blank({ patch: { title: 't' } }),
   // a series index no sane patch reaches: refused rather than allocated
@@ -518,17 +532,16 @@ const NAME_INPUTS: Input[] = [
   ),
   // the same name again: the bytes stay as they are
   on({ slide: 0, element: 0, name: 'Same' }, slideXml(sp(2, 'Same', '<a:p/>'))),
-  // ledger cnvpr-attr-dollar: the TypeScript puts the name into a replacement string, `$&` expands
+  // the name goes in as a function replacement: `$&` stays as typed
   ...DOLLAR_NAMES.flatMap((name) =>
-    [EL.text, EL.gtName, EL.group].map((e): Input => ({ ...onElement(e, { name }), seed: false })),
+    [EL.text, EL.gtName, EL.group].map((e): Input => onElement(e, { name })),
   ),
-  ...DOLLAR_NAMES.map((name): Input => ({
-    ...on(
+  ...DOLLAR_NAMES.map((name): Input =>
+    on(
       { slide: 0, element: 0, name },
       slideXml(sp(2, 'q', '<a:p/>', '<p:cNvPr id="2" />')),
     ),
-    seed: false,
-  })),
+  ),
 ]
 
 // ── getChartElementData ─────────────────────────────────────────────────

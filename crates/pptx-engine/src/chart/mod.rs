@@ -12,8 +12,9 @@ mod points;
 mod series;
 mod style;
 
+use crate::xml_utils::xml_parse_object as parse_object;
 use jscompat::{JsNum, math_min, trim};
-use ooxml_xml::{ObjectOptions, parse_object};
+use ooxml_xml::ObjectOptions;
 use serde_json::{Value, json};
 
 use crate::color::{apply_color_mods, resolve_color_node, scale_luminance};
@@ -25,7 +26,7 @@ pub use model::{
     ChartModel, ChartSeries, ChartStock, DLblOverride, LegendLayout, OfPie, PlotLayout, PointLine,
     SparseColors, Sunburst, UserLine,
 };
-pub use node::{TsBoolRead, xsd_bool};
+pub use node::{ct_boolean, xsd_boolean};
 
 pub(crate) use node::{Node, get, int, list, string_of};
 use node::{as_str, first, is, is_object, not_same, number, or0, truthy, val};
@@ -65,13 +66,13 @@ struct DLblsInfo {
 /// Data labels: plot-level or any series-level c:dLbls (delete=1 counts as none).
 fn d_lbls_info(owner: Node<'_>) -> DLblsInfo {
     let d = get(owner, "c:dLbls");
-    if !truthy(d) || !is_object(d) || xsd_bool(get(d, "c:delete"), TsBoolRead::EqOne) {
+    if !truthy(d) || !is_object(d) || ct_boolean(get(d, "c:delete"), false, false) {
         return DLblsInfo::default();
     }
-    let show_val = xsd_bool(get(d, "c:showVal"), TsBoolRead::EqOne);
-    let show_pct = xsd_bool(get(d, "c:showPercent"), TsBoolRead::EqOne);
-    let show_ser = xsd_bool(get(d, "c:showSerName"), TsBoolRead::EqOne);
-    let show_cat = xsd_bool(get(d, "c:showCatName"), TsBoolRead::EqOne);
+    let show_val = ct_boolean(get(d, "c:showVal"), false, false);
+    let show_pct = ct_boolean(get(d, "c:showPercent"), false, false);
+    let show_ser = ct_boolean(get(d, "c:showSerName"), false, false);
+    let show_cat = ct_boolean(get(d, "c:showCatName"), false, false);
     let fmt = as_str(get(get(d, "c:numFmt"), "@_formatCode"));
     let d_p = get(get(d, "c:txPr"), "a:p");
     let d_r_pr = get(get(first(d_p), "a:pPr"), "a:defRPr");
@@ -89,7 +90,7 @@ fn d_lbls_info(owner: Node<'_>) -> DLblsInfo {
             .filter(|f| !f.is_empty() && *f != "General")
             .map(str::to_owned),
         size_pt: (d_sz.is_finite() && d_sz > 0.0).then(|| d_sz / 100.0),
-        bold: is(get(d_r_pr, "@_b"), "1").then_some(true),
+        bold: xsd_boolean(get(d_r_pr, "@_b"), false).then_some(true),
         rot_deg: (d_rot.is_finite() && d_rot != 0.0 && d_rot.abs() <= 5_400_000.0)
             .then(|| d_rot / 60000.0),
         caps: is(get(d_r_pr, "@_cap"), "all").then_some(true),
@@ -246,7 +247,7 @@ pub fn parse_chart_xml(
     let sec_val_ax_node: Node<'_> = if kind != ChartKind::Scatter && cartesian.len() > 1 {
         val_axes.iter().find(|a| {
             let a = Some(*a);
-            is(val(a, "c:axPos"), "r") && !xsd_bool(get(a, "c:delete"), TsBoolRead::EqOne)
+            is(val(a, "c:axPos"), "r") && !ct_boolean(get(a, "c:delete"), false, false)
         })
     } else {
         None
@@ -319,14 +320,14 @@ pub fn parse_chart_xml(
         };
         let ser_ax = get(plot_area, "c:serAx");
         let ser_ax_labels = ser_ax.is_some()
-            && !xsd_bool(get(ser_ax, "c:delete"), TsBoolRead::EqOne)
+            && !ct_boolean(get(ser_ax, "c:delete"), false, false)
             && !is(val(ser_ax, "c:tickLblPos"), "none");
         if truthy(b3) {
             model.bar3_d.set(Bar3D {
                 rot_x: num(get(v3, "c:rotX"), 15.0),
                 rot_y: num(get(v3, "c:rotY"), 20.0),
                 depth_pct: num(get(v3, "c:depthPercent"), 100.0),
-                r_ang_ax: xsd_bool(get(v3, "c:rAngAx"), TsBoolRead::NotZero),
+                r_ang_ax: ct_boolean(get(v3, "c:rAngAx"), true, true),
                 gap_depth_pct: num(get(b3, "c:gapDepth"), 150.0),
                 ser_ax_labels,
             });
@@ -378,7 +379,7 @@ pub fn parse_chart_xml(
             model.first_slice_ang_deg.set(JsNum(or0(int(first_ang))));
         }
         // vary === '0' || vary === 'false', which is the xsd reading already
-        if !xsd_bool(get(plot_node, "c:varyColors"), TsBoolRead::NotZero) {
+        if !ct_boolean(get(plot_node, "c:varyColors"), true, true) {
             model.vary_colors.set(false);
         }
     }
@@ -430,12 +431,13 @@ pub fn parse_chart_xml(
             None => "r".to_owned(),
         });
         // Measured PowerPoint behavior: explicit <c:overlay val="1"/> floats the legend, and so does
-        // a legend with no <c:legendPos> at all (unless overlay is explicitly 0). The presence
-        // test of `val` is not a boolean reading.
+        // a legend with no <c:legendPos> at all (unless overlay is explicitly 0)
         let overlay_node = get(legend_node, "c:overlay");
-        if xsd_bool(overlay_node, TsBoolRead::EqOne)
-            || (get(overlay_node, "@_val").is_none() && legend_pos.is_none())
-        {
+        let floats = match overlay_node {
+            None => legend_pos.is_none(),
+            Some(_) => ct_boolean(overlay_node, false, false),
+        };
+        if floats {
             model.legend_overlay.set(true);
         }
         let man = get(get(legend_node, "c:layout"), "c:manualLayout");
@@ -475,13 +477,13 @@ pub fn parse_chart_xml(
         if leg_sz.is_finite() && leg_sz > 0.0 {
             model.legend_pt.set(JsNum(leg_sz / 100.0));
         }
-        if is(get(leg_r_pr, "@_b"), "1") {
+        if xsd_boolean(get(leg_r_pr, "@_b"), false) {
             model.legend_bold.set(true);
         }
         if let Some(c) = color(get(leg_r_pr, "a:solidFill"), theme) {
             model.legend_color.set(c);
         }
-        if is(get(leg_p_pr, "@_rtl"), "1") {
+        if xsd_boolean(get(leg_p_pr, "@_rtl"), false) {
             model.legend_rtl.set(true);
         }
         // PowerPoint lists entries per plot group; a stacked group next to a side legend runs
@@ -494,7 +496,7 @@ pub fn parse_chart_xml(
             .chain(list(get(plot_area, "c:dateAx")))
             .any(|ax| {
                 let ax = Some(ax);
-                !xsd_bool(get(ax, "c:delete"), TsBoolRead::EqOne)
+                !ct_boolean(get(ax, "c:delete"), false, false)
                     && is(val(get(ax, "c:scaling"), "c:orientation"), "maxMin")
             });
         let mut order: Vec<usize> = Vec::new();
@@ -509,7 +511,7 @@ pub fn parse_chart_xml(
         }
         let deleted: Vec<f64> = list(get(legend_node, "c:legendEntry"))
             .iter()
-            .filter(|e| xsd_bool(get(Some(*e), "c:delete"), TsBoolRead::EqOne))
+            .filter(|e| ct_boolean(get(Some(*e), "c:delete"), false, false))
             .map(|e| int(val(Some(e), "c:idx")))
             .collect();
         let shown: Vec<usize> = order
@@ -710,14 +712,14 @@ pub fn parse_chart_xml(
             .into_iter()
             .next(),
     };
-    if xsd_bool(get(title_node, "c:overlay"), TsBoolRead::EqOne) {
+    if ct_boolean(get(title_node, "c:overlay"), false, false) {
         model.title_overlay.set(true);
     }
     if let Some(title) = chart_title.filter(|t| !t.is_empty()) {
         model.title.set(title);
     } else if truthy(title_node)
         && !truthy(get(title_node, "c:tx"))
-        && !xsd_bool(get(chart, "c:autoTitleDeleted"), TsBoolRead::EqOne)
+        && !ct_boolean(get(chart, "c:autoTitleDeleted"), false, false)
     {
         // Auto title: the sole series name; with several series the literal "Chart Title"
         let name = if series.len() == 1 {
@@ -761,9 +763,9 @@ pub fn parse_chart_xml(
         let style_attr = |k: &str| style_attr(&style_layers, k);
         let b = style_attr("@_b");
         if b.is_some() {
-            model.title_bold.set(is(b, "1"));
+            model.title_bold.set(xsd_boolean(b, false));
         }
-        if is(style_attr("@_i"), "1") {
+        if xsd_boolean(style_attr("@_i"), false) {
             model.title_italic.set(true);
         }
         if let Some(c) = color(style_attr("a:solidFill"), theme) {
@@ -917,7 +919,7 @@ pub fn parse_chart_xml(
             .collect();
         let pick = cat_cands
             .iter()
-            .find(|(n, _)| !xsd_bool(get(Some(*n), "c:delete"), TsBoolRead::EqOne))
+            .find(|(n, _)| !ct_boolean(get(Some(*n), "c:delete"), false, false))
             .or_else(|| cat_cands.first());
         let is_date = pick.is_some_and(|(_, date)| *date);
         let cat_ax = parse_axis(pick.map(|(n, _)| *n), theme, &mut budget)?;

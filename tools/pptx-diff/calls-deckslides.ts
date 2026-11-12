@@ -186,7 +186,41 @@ const ODD_LIST = await (async () => {
   })
 })()
 
+/** The slide list written so the engine cannot add to it: an attribute on it, or no `p:` prefix. */
+const ATTR_LIST = await (async () => {
+  const pres = await textOf(GEN, PRES)
+  return custom(GEN, (zip) => {
+    zip.file(PRES, pres.replace('<p:sldIdLst>', '<p:sldIdLst xmlns:q="x">'))
+  })
+})()
+const DEFAULT_NS_LIST = await (async () => {
+  const pres = await textOf(GEN, PRES)
+  return custom(GEN, (zip) => {
+    zip.file(PRES, pres.replace(/<(\/?)p:(sldIdLst|sldId)\b/g, '<$1$2'))
+  })
+})()
+/** Entries that hold an extension list, spaced and spelled ids: the list is walked, not matched by text. */
+const EXT_LIST = await (async () => {
+  const pres = await textOf(GEN, PRES)
+  return custom(GEN, (zip) => {
+    zip.file(
+      PRES,
+      pres.replace(/<p:sldId\b([^>]*?)\/>/g, '<p:sldId$1><p:extLst><p:ext uri="x"><x:y xmlns:x="z"/></p:ext></p:extLst></p:sldId>'),
+    )
+  })
+})()
+const SPELLED_LIST = await (async () => {
+  const pres = await textOf(GEN, PRES)
+  const rels = await textOf(GEN, PRES_RELS)
+  return custom(GEN, (zip) => {
+    zip.file(PRES, pres.replace(/ r:id="rId2"/, ' r:id = "rId&#50;"').replace(/ id="(\d+)"/, ' id = "$1"'))
+    zip.file(PRES_RELS, rels.replace(/ Id="rId2"/, ' Id = \'rId&#50;\''))
+  })
+})()
+const LIST_FORMS = [ATTR_LIST, DEFAULT_NS_LIST, EXT_LIST, SPELLED_LIST]
+
 const DUPLICATE: Input[] = [
+  ...LIST_FORMS.flatMap((deck) => [over(deck, { slide: 0 }), over(deck, { slide: 1, clearText: true })]),
   ...SLIDE_DECKS.flatMap((name) => [
     deckInput(name, { slide: 0 }),
     deckInput(name, { slide: 1, clearText: true }),
@@ -216,6 +250,10 @@ const DUPLICATE: Input[] = [
 ]
 
 const PASTE: Input[] = [
+  ...LIST_FORMS.flatMap((deck) => [
+    over(deck, { after: 0, from: 0 }),
+    over(deck, { after: -1, from: 0, other: b64(BLANK) }),
+  ]),
   ...[BLANK, GEN, BIZ, UNICODE].flatMap((name) => [
     deckInput(name, { after: 0, from: 0 }),
     deckInput(name, { after: -1, from: 0 }),
@@ -232,6 +270,7 @@ const PASTE: Input[] = [
 ]
 
 const BLANK_INSERT: Input[] = [
+  ...LIST_FORMS.flatMap((deck) => [over(deck, { slide: 0 }), over(deck, { slide: 1 })]),
   ...SLIDE_DECKS.flatMap((name) => [deckInput(name, { slide: 0 }), deckInput(name, { slide: 1 })]),
   deckInput(GEN, { slide: 9 }),
   deckInput(GEN, { slide: -1 }),
@@ -297,8 +336,41 @@ const MISSING_SLIDE_SOURCE = await custom(BLANK, (zip) => {
   zip.remove(SLIDE1)
 })
 
+/** A source whose media ids swap under the new numbering, and whose extensions are inherited names. */
+const SWAP_SOURCE = await (async () => {
+  const rel = (id: string, type: string, target: string): string =>
+    `<Relationship Id="${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/${type}" Target="${target}"/>`
+  const layout = rel('rId9', 'slideLayout', '../slideLayouts/slideLayout1.xml')
+  return custom(BLANK, (zip) => {
+    zip.file(
+      SLIDE1,
+      slideXml(
+        '<p:pic><p:nvPicPr><p:cNvPr id="2" name="P"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>' +
+          '<p:blipFill><a:blip r:embed="rId2"/></p:blipFill><p:spPr/></p:pic>' +
+          "<p:pic><p:nvPicPr><p:cNvPr id=\"3\" name=\"Q\"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed = 'rId1' r:link = \"rId&#50;\"/></p:blipFill><p:spPr/></p:pic>" +
+          '<p:pic><p:nvPicPr><p:cNvPr id="4" name="R"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId3"/></p:blipFill><p:spPr/></p:pic>',
+      ),
+    )
+    zip.file(
+      'ppt/slides/_rels/slide1.xml.rels',
+      `<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${layout}` +
+        rel('rId2', 'image', '../media/a.png') +
+        rel('rId1', 'image', '../media/b.png') +
+        rel('rId3', 'image', '../media/c.constructor') +
+        rel('rId4', 'image', '../media/d.__proto__') +
+        '</Relationships>',
+    )
+    zip.file('ppt/media/a.png', new Uint8Array([1, 2, 3]))
+    zip.file('ppt/media/b.png', new Uint8Array([4, 5, 6]))
+    zip.file('ppt/media/c.constructor', new Uint8Array([7]))
+    zip.file('ppt/media/d.__proto__', new Uint8Array([8]))
+  })
+})()
+
 const MERGE_TARGETS = [BLANK, GEN, BIZ]
 const MERGE: Input[] = [
+  ...[BLANK, GEN].map((name) => deckInput(name, { other: SWAP_SOURCE })),
+  ...LIST_FORMS.map((deck) => over(deck, { other: b64(BLANK) })),
   ...MERGE_TARGETS.flatMap((name) => [
     deckInput(name, { other: b64(BLANK) }),
     deckInput(name, { other: b64(GEN) }),
@@ -337,6 +409,7 @@ const LAYOUTS = [
 ]
 
 const INSERT_LAYOUT: Input[] = [
+  ...LIST_FORMS.map((deck) => over(deck, { slide: 0, layout: 'ppt/slideLayouts/slideLayout1.xml' })),
   ...[BLANK, GEN, BIZ, UNICODE, GAPS].flatMap((name) =>
     LAYOUTS.flatMap((layout, i) => (i % 2 === 0 || name === GEN ? [deckInput(name, { slide: 0, layout })] : [])),
   ),
@@ -349,6 +422,7 @@ const INSERT_LAYOUT: Input[] = [
 ]
 
 const DELETE: Input[] = [
+  ...LIST_FORMS.flatMap((deck) => [over(deck, { slide: 0 }), over(deck, { slide: 1 })]),
   ...[GEN, BIZ, UNICODE, GAPS].flatMap((name) => [
     deckInput(name, { slide: 0 }),
     deckInput(name, { slide: 1 }),
@@ -416,7 +490,15 @@ const PLACEHOLDERS = slideXml(
     sp(8, 'Odd', [100, 200, 300, 400], 'rect', '', "<p:ph type='obj' idx='2'/>"),
 )
 
+/** A deck with a layout part whose name holds `$&` and `&`: written as typed, escaped in the rels. */
+const DOLLAR_LAYOUT = await custom(BLANK, async (zip) => {
+  const layout = await zip.file('ppt/slideLayouts/slideLayout1.xml')!.async('string')
+  zip.file('ppt/slideLayouts/a$&b&c.xml', layout)
+})
+
 const SET_LAYOUT: Input[] = [
+  over(DOLLAR_LAYOUT, { slide: 0, layout: 'ppt/slideLayouts/a$&b&c.xml' }),
+  over(DOLLAR_LAYOUT, { slide: 0, layout: 'ppt/slideLayouts/a$&b&c.xml' }, { part: 'ppt/slides/_rels/slide1.xml.rels', text: '<Relationships/>' }),
   ...[BLANK, GEN, BIZ, UNICODE, GAPS].flatMap((name) =>
     LAYOUTS.map((layout) => deckInput(name, { slide: 0, layout })),
   ),
@@ -1055,6 +1137,9 @@ const LIST: Input[] = [
   over(FONTS_ONE, {}, { part: PRES, text: 'embeddedFont <p:presentation>' }),
   over(FONTS_ONE, {}, { part: PRES, text: '<p:presentation><p:embeddedFont' }),
   over(FONTS_ONE, {}, { part: PRES, text: '<root embeddedFont/>' }),
+  over(FONTS_ONE, {}, { part: PRES, text: "<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font typeface = 'Single'/><p:regular r:id = 'rIdF1'/></p:embeddedFont></p:embeddedFontLst></p:presentation>" }),
+  over(FONTS_ONE, {}, { part: PRES, text: '<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font typeface="Si&#110;gle"/><p:regular r:id="rId&#70;1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>' }),
+  over(FONTS_ONE, {}, { part: PRES, text: '<p:presentation><p:embeddedFontLst><p:embeddedFont><p:font note="a>b" typeface="Single"/><p:regular note="x>y" r:id="rIdF1"/></p:embeddedFont></p:embeddedFontLst></p:presentation>' }),
 ]
 
 // ── the specs ──────────────────────────────────────────────────────────

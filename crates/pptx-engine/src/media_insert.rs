@@ -17,7 +17,7 @@ use std::io::Write;
 
 use flate2::Compression;
 use flate2::write::ZlibEncoder;
-use jscompat::{JsNum, js_regex, number_to_string, replace_first_string, to_number};
+use jscompat::{JsNum, js_regex, number_to_string, to_number};
 use serde::{Deserialize, Deserializer};
 
 use crate::crc32::crc32;
@@ -50,9 +50,7 @@ const MEDIA_EXT_URI: &str = "{DAA4B4D4-6D71-4841-9C94-3DE7FCFB9230}";
 /// height cannot ask for an unbounded allocation.
 const MAX_PNG_RAW: usize = 1 << 28;
 
-/// `MEDIA_MIME[ext]`. The TypeScript reads a plain object, so `constructor`
-/// and `__proto__` find an inherited value there and go on with it as a mime
-/// type; here they are no entry (ledger media-mime-inherited).
+/// `ownValue(MEDIA_MIME, ext)`: the table answers its own extensions only.
 fn media_mime(ext: &str) -> Option<&'static str> {
     Some(match ext {
         "mp4" | "m4v" => "video/mp4",
@@ -199,7 +197,7 @@ pub fn ensure_default_content_type(
     else {
         return Ok(());
     };
-    if !has_default_for(&ct, ext).map_err(|e| e.to_string())? {
+    if !has_default_for(&ct, ext) {
         let dflt = format!("<Default Extension=\"{ext}\" ContentType=\"{mime}\"/>");
         let next = replace_first_literal(&ct, "</Types>", &format!("{dflt}</Types>"));
         opened.archive.entries_mut().set(ct_path, next.into_bytes());
@@ -249,8 +247,8 @@ fn append_rels(opened: &mut OpenedPptx, slide_path: &str, rels: &[NewRel<'_>]) -
         max_rid += 1.0;
         let rid = format!("rId{}", number_to_string(max_rid));
         rids.push(rid.clone());
-        // a string replacement: its `$` patterns apply to the escaped target
-        xml = replace_first_string(
+        // a function replacement: the escaped target is written as given
+        xml = replace_first_literal(
             &xml,
             "</Relationships>",
             &format!(

@@ -129,11 +129,8 @@ pub(super) fn find_balanced_close(xml: &str, open_start: usize, tag: Balanced) -
 /// Span `(start, end)` of the nth effect `<p:par>` of the main sequence, in
 /// the order `readSlideTimingXml` reads them.
 ///
-/// Ledger `anim-nth-par-skips-untargeted`: the TypeScript counts every
-/// presetClass cTn, also one without a `<p:spTgt spid>` (an ink target, a
-/// sound) that `readSlideTimingXml` leaves out, so after such an effect the
-/// edit lands on the wrong `<p:par>`. Here an effect `readSlideTimingXml`
-/// leaves out is not counted.
+/// An effect without a `<p:spTgt spid>` (an ink target, a sound) is not counted,
+/// as in the TypeScript's `modeledEffects`.
 fn nth_effect_par_span(timing: &str, n: usize) -> Option<(usize, usize)> {
     let (seq_start, seq_end) = main_seq_span(timing)?;
     let mut ctns = EffectCtns::new(timing, seq_start);

@@ -5,7 +5,7 @@
 // gate, so the comparison cannot drift from what the engine parses with.
 import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from '../../packages/pptx-engine/src/xml-parser'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
 interface TreeOptions {
@@ -52,23 +52,23 @@ function readOptions(where: string, literal: string): TreeOptions {
   return options
 }
 
-/** One entry per `new XMLParser` of the engine, named by file and line. */
+/** One entry per `xmlParser(...)` of the engine, named by file and line. */
 const ENGINE_PARSERS: Array<[string, TreeOptions]> = readdirSync(ENGINE_SOURCE, {
   encoding: 'utf8',
   recursive: true,
 })
-  .filter((file) => file.endsWith('.ts'))
+  .filter((file) => file.endsWith('.ts') && file !== 'xml-parser.ts')
   .sort()
   .flatMap((file) => {
     const source = readFileSync(`${ENGINE_SOURCE}${file}`, 'utf8')
-    return [...source.matchAll(/new XMLParser\(\{([\s\S]*?)\}\)/g)].map(
+    return [...source.matchAll(/xmlParser\(\{([\s\S]*?)\}\)/g)].map(
       (match): [string, TreeOptions] => {
         const where = `${file.replace(/\\/g, '/')}:${source.slice(0, match.index).split('\n').length}`
         return [where, readOptions(where, match[1]!)]
       },
     )
   })
-if (ENGINE_PARSERS.length === 0) throw new Error('calls-xml-tree: no XMLParser found in the engine')
+if (ENGINE_PARSERS.length === 0) throw new Error('calls-xml-tree: no xmlParser found in the engine')
 
 /** The engine's option sets once each, as the arguments that cross the wire. */
 const ENGINE_OPTIONS: TreeOptions[] = [
@@ -85,7 +85,7 @@ const OTHER_OPTIONS: TreeOptions[] = [
 
 function parseObject(text: string, args: Record<string, unknown>): unknown {
   const { trimValues, parseTagValue, arrayNames = [] } = args as Partial<TreeOptions>
-  return new XMLParser({
+  return xmlParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
     ...(trimValues === undefined ? {} : { trimValues }),
@@ -260,7 +260,15 @@ const EDGES: string[] = [
   'x<?pi a="1"?>',
   '<a><?pi b="1"?>t</a>',
   '<?a="1"?><a/>',
-  // entities
+  // entities: one decoder, one pass (xml-parser.ts)
+  '<a>r&amp;1|r&#38;1|r&#x26;1|rId&#49;</a>',
+  '<a b="X&amp;#38;1" c="X&#38;1"/>',
+  '<a>&#xD800;&#x110000;&#0;&#1;&#9;&#10;&#13;&#31;&#32;</a>',
+  '<a>&#X41;&AMP;&#65 ;&#;&#x;</a>',
+  '<a b="&#X41;&#x41;"/>',
+  '<?xml version="1.1"?><a>&#1;&#x1F;x</a>',
+  '<a>&#1114111;&#x10FFFF;&#1114112;</a>',
+  '<a>&#999999999999999999999;&#x%s;</a>'.replace('%s', 'f'.repeat(40)),
   '<a>&lt;&gt;&amp;&quot;&apos;&nbsp;&#x41;&#0;&#xD800;&#65;</a>',
   '<a>&amp;lt;</a>',
   `<a>&${'x'.repeat(40)};</a>`,

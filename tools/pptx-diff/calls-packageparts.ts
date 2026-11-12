@@ -195,6 +195,28 @@ const NOTES_TEXTS: string[] = [
   'not xml <p:sp>...',
 ]
 
+const NS_A = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+const NS_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+// the notes part binds its namespaces under other prefixes, or to the default one
+NOTES_TEXTS.push(
+  `<notes xmlns="${NS_P}" xmlns:a="${NS_A}"><cSld><spTree><sp><nvSpPr><nvPr><ph type="body"/></nvPr></nvSpPr><txBody><a:p><a:r><a:t>default &amp; bound</a:t></a:r></a:p><a:p><a:r><a:t>second</a:t></a:r></a:p></txBody></sp></spTree></cSld></notes>`,
+  `<q:notes xmlns:q="${NS_P}" xmlns:w="${NS_A}"><q:cSld><q:spTree><q:sp><q:nvSpPr><q:nvPr><q:ph type='body'/></q:nvPr></q:nvSpPr><q:txBody><w:p><w:r><w:t>prefixed</w:t></w:r></w:p></q:txBody></q:sp></q:spTree></q:cSld></q:notes>`,
+  `<q:notes xmlns:q="${NS_P}" xmlns:w="${NS_A}"><q:cSld><q:spTree><q:sp><q:nvSpPr><q:nvPr><q:ph type="sldImg"/></q:nvPr></q:nvSpPr></q:sp></q:spTree></q:cSld></q:notes>`,
+  `<q:notes xmlns:q="${NS_P}" xmlns:w="${NS_A}"><q:cSld><q:spTree/></q:cSld></q:notes>`,
+  `<q:notes xmlns:q="${NS_P}" xmlns:w="${NS_A}"><q:cSld><q:spTree></q:spTree></q:cSld></q:notes>`,
+  `<p:notes xmlns:p="${NS_P}"><p:cSld><p:spTree><p:sp><p:nvSpPr><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>a unbound</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:notes>`,
+  `<p:notes xmlns:p="other" xmlns:a="${NS_A}"><p:cSld/></p:notes>`,
+  // the body shape with attributes, the type spelled with a reference, text runs with attributes
+  notesXml(
+    '<p:sp xmlns:x="y" id="s"><p:nvSpPr><p:nvPr><p:ph idx="1" type = "b&#111;dy"/></p:nvPr></p:nvSpPr><p:txBody x="1"><a:p x="2"><a:r><a:t xml:space="preserve">kept </a:t></a:r><a:r><a:t x="z/">tail</a:t></a:r></a:p></p:txBody></p:sp>',
+  ),
+  notesXml('<p:sp><p:nvSpPr><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr></p:sp>'),
+  notesXml('<p:sp><p:nvSpPr><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:txBody/></p:sp>'),
+  notesXml(
+    '<p:sp><p:nvSpPr><p:nvPr><p:ph type="title"/><p:ph type="body"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>nested</a:t><a:t>two</a:t></a:r></a:p></p:txBody></p:sp>',
+  ),
+)
+
 const NOTES_DECK = await build({
   [SLIDE1_RELS]: slideRels(rel('rId2', 'notesSlide', '../notesSlides/notesSlide1.xml')),
 })
@@ -234,6 +256,17 @@ const PRES_NOTES: string[] = [
   presXml(1, '', '<p:notesMasterIdLst xmlns:q="z"/>'),
   presXml(1, '', '<p:notesMasterIdLst>\n</p:notesMasterIdLst>'),
   `${DECL}<p:presentation ${NS}><p:sldSz cx="1" cy="1"/></p:presentation>`,
+  // the list goes after sldMasterIdLst, under the prefixes the part binds
+  `${DECL}<q:presentation xmlns:q="${NS_P}" xmlns:w="${NS_R}"><q:sldMasterIdLst/><q:sldIdLst>${sldIds(1).replace(/r:id/g, 'w:id')}</q:sldIdLst></q:presentation>`,
+  `${DECL}<presentation xmlns="${NS_P}" xmlns:r="${NS_R}"><sldMasterIdLst/><sldIdLst/></presentation>`,
+  `${DECL}<presentation xmlns="${NS_P}"><sldIdLst/></presentation>`,
+  `${DECL}<q:presentation xmlns:q="${NS_P}" xmlns:p="other"><q:sldSz cx="1" cy="1"/><q:notesSz cx="1" cy="1"/></q:presentation>`,
+  `${DECL}<q:presentation xmlns:q="${NS_P}"><q:notesSz cx="1" cy="1"/><q:handoutMasterIdLst/></q:presentation>`,
+  `${DECL}<p:presentation xmlns:p="other"><p:sldMasterIdLst/></p:presentation>`,
+  `${DECL}<p:presentation xmlns="${NS_P}" xmlns:p="${NS_P}"><p:sldMasterIdLst/></p:presentation>`,
+  presXml(1, '', '<p:notesMasterIdLst a="1"><p:notesMasterId r:id="rId9"/></p:notesMasterIdLst>'),
+  presXml(1, '', '<p:handoutMasterIdLst/>'),
+  presXml(1, '', "<p:notesMasterIdLst r:x = 'a&amp;b'/>"),
 ]
 
 // ---- sections
@@ -352,6 +385,10 @@ const QUIRK_DECK = await build({
   'ppt/slides/slide2.xml': SLIDE,
   'ppt/slides/_rels/slide2.xml.rels': slideRels(),
 })
+
+SECTION_TEXTS.spaced = presXml(4, extLst(TWO)).replace('r:id="rId2"', "r:id = 'rId2'")
+SECTION_TEXTS.referenced = presXml(4, extLst(TWO)).replace('r:id="rId3"', 'r:id="rId&#51;"')
+SECTION_TEXTS.notlisted = presXml(4, extLst(TWO)).replace(/ r:id="rId4"/, '')
 
 const sec = (name: string, args: Record<string, unknown> = {}): Input =>
   inp(FOUR_DECK, args, PRES, SECTION_TEXTS[name]!)
@@ -530,11 +567,13 @@ interface ResOptions {
   marker2?: boolean
   /** slide 1's XML holds a picture of rId2 */
   pic1?: boolean
+  /** the ids and part names are spelled as XML allows: spaced `=`, single quotes, references */
+  spelled?: boolean
 }
 
 /** A two-slide deck with media, a chart with its workbook, a notes part, orphans and 3D models. */
 async function resDeck(o: ResOptions = {}): Promise<{ deck: string; slide1Rels: string }> {
-  const slide1Rels = slideRels(
+  const plainRels = slideRels(
     rel('rId2', 'image', '../media/image1.png'),
     rel('rId3', 'chart', '../charts/chart1.xml'),
     rel('rId4', 'hyperlink', 'http://example.com/', ' TargetMode="External"'),
@@ -542,6 +581,16 @@ async function resDeck(o: ResOptions = {}): Promise<{ deck: string; slide1Rels: 
     rel('rId6', 'image', '../media/image2.png'),
     rel('rId7', 'slideLayout', '../slideLayouts/slideLayout1.xml'),
   )
+  const slide1Rels = o.spelled
+    ? plainRels
+        .replace(' Id="rId2"', ' Id = "rId&#50;"')
+        .replace(' Id="rId3"', " Id = 'rId3'")
+        .replace(' Id="rId6"', " Id='rId&#x36;'")
+    : plainRels
+  const override3 = (part: string, type: string): string =>
+    o.spelled
+      ? override(part, type).replace(`PartName="/${part}"`, `PartName = '/${part}'`)
+      : override(part, type)
   const slide2Rels = slideRels(
     ...(o.sharedImage ? [rel('rId2', 'image', '../media/image1.png')] : []),
     ...(o.sharedChart ? [rel('rId3', 'chart', '../charts/chart1.xml')] : []),
@@ -571,9 +620,9 @@ async function resDeck(o: ResOptions = {}): Promise<{ deck: string; slide1Rels: 
       rel('rId2', 'slide', '../slides/slide1.xml'),
     ),
     '[Content_Types].xml': withCt(
-      override('ppt/slides/slide2.xml', SLIDE_CT),
-      override('ppt/charts/chart1.xml', CHART_CT),
-      override(NOTES1, NOTES_CT),
+      override3('ppt/slides/slide2.xml', SLIDE_CT),
+      override3('ppt/charts/chart1.xml', CHART_CT),
+      override3(NOTES1, NOTES_CT),
     ),
   })
   return { deck, slide1Rels }
@@ -586,6 +635,8 @@ const RES_VARIANTS: Array<[string, ResOptions]> = [
   ['marker2', { marker2: true }],
   ['everything shared', { sharedImage: true, sharedChart: true, marker2: true }],
   ['picture kept', { pic1: true }],
+  ['spelled ids and part names', { spelled: true }],
+  ['spelled and kept', { spelled: true, pic1: true }],
 ]
 const RES = new Map<string, { deck: string; slide1Rels: string }>()
 for (const [name, options] of RES_VARIANTS) RES.set(name, await resDeck(options))
@@ -598,6 +649,8 @@ const PREVIOUS: string[] = [
   `<p:sld descr="aislides-3d:ppt/media/model1.glb aislides-3d:ppt/media/model2.glb;aislides-3d:ppt/media/model3.glb&amp;x"/>`,
   `<p:sld><a:blip r:embed="rId7"/><a:blip r:embed="rId99"/></p:sld>`,
   `<p:sld xmlns:r="x"/>`,
+  // the ids as XML reads them: references, other quotes, other spacing
+  `<p:sld><a:blip r:embed="rId&#50;" r:link = 'rId&#x34;'/><a:blip r:embed='rId6'/></p:sld>`,
   '',
 ]
 const CURRENT: string[] = [
@@ -606,6 +659,7 @@ const CURRENT: string[] = [
   `<p:sld><a:blip r:embed="rId6" r:id="rId3"/></p:sld>`,
   `<p:sld><p:cNvPr descr="aislides-3d:ppt/media/model1.glb"/></p:sld>`,
   `<p:sld><p:cNvPr descr="aislides-3d:ppt/media/model2.glb"/></p:sld>`,
+  `<p:sld><a:blip r:embed="rId&#x32;"/><a:blip r:embed = 'rId&#54;'/></p:sld>`,
   '',
 ]
 
@@ -634,12 +688,12 @@ export const PACKAGEPARTS: CallSpec[] = [
     ].map((text) => ({ text })),
   },
   {
-    // ledger notes-unescape-numeric-entity: a numeric reference that decodes to the start of a named one
+    // a numeric reference that decodes to the start of a named one: read once, never again
     fn: 'pptxPackageparts.notes.unescapeXml',
     call: (text) => unescapeXml(text),
     mutation: 'none',
     built: ['&#38;lt;', '&#38;amp;', '&#x26;gt;&#34;', 'a&#38;quot;b&#38;apos;', '&#38;#38;lt;'].map(
-      (text) => ({ text, seed: false as const }),
+      (text) => ({ text }),
     ),
   },
   {
@@ -768,6 +822,7 @@ export const PACKAGEPARTS: CallSpec[] = [
         [
           ['ppt/slides/slide1.xml', 'T', 'a.xml'],
           ['ppt/slides/slide1.xml', 'T$&', 'x$&y$`z$\'w$$q$1'],
+          ['ppt/slides/slide1.xml', 'T', 'a&b<c>"d$&.xml'],
         ].map(([part, type, target]) =>
           inp(BLANK_DECK, { part, type, target }, SLIDE1_RELS, text),
         ),
@@ -908,11 +963,10 @@ export const PACKAGEPARTS: CallSpec[] = [
       ...CD_BY_AUTHORS.flatMap((deck) =>
         CM_TEXTS.map((text) => inp(deck, { path: SLIDE_PATH }, COMMENT1, text)),
       ),
-      // ledger notes-unescape-numeric-entity: `&#38;amp;` is one `&amp;` text; the TypeScript decodes it twice
-      ...[cmLst(cm(0, 1, '&#38;amp; &#38;lt;b&#38;gt;'))].map((text) => ({
-        ...inp(CD_A, { path: SLIDE_PATH }, COMMENT1, text),
-        seed: false as const,
-      })),
+      // `&#38;amp;` is one `&amp;` text: read once
+      ...[cmLst(cm(0, 1, '&#38;amp; &#38;lt;b&#38;gt;'))].map((text) =>
+        inp(CD_A, { path: SLIDE_PATH }, COMMENT1, text),
+      ),
       inp(CD_A, { path: SLIDE_PATH }),
       inp(CD_A_NO_REL, { path: SLIDE_PATH }),
       inp(CD_A, { path: 'ppt/slides/slide9.xml' }),

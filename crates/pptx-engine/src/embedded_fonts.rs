@@ -10,12 +10,12 @@
 use std::collections::{HashMap, HashSet};
 
 use jscompat::{JsMap, JsRegex, is_js_space, js_regex, replace_first_string, value_to_string};
-use ooxml_xml::{ObjectOptions, parse_object};
+use ooxml_xml::ObjectOptions;
 use serde::Serialize;
 use serde_json::Value;
 
 use crate::types::{Slide, SlideElement, TextRun};
-use crate::xml_utils::{as_xml_node, xml_array};
+use crate::xml_utils::{as_xml_node, attribute_of, xml_array, xml_parse_object};
 use crate::zip::{PackageArchive, resolve_target};
 
 /// `EmbeddedFontStyle`
@@ -436,22 +436,15 @@ fn embedded_font_blocks(pres: &str) -> Vec<EmbeddedFontBlock> {
     let mut out = Vec::new();
     for m in js_regex!(r"<p:embeddedFont>[\s\S]*?<\/p:embeddedFont>", "g").find_iter(pres) {
         let xml = m.as_str();
-        let typeface = js_regex!(r#"<p:font\b[^>]*\btypeface="([^"]*)""#)
+        let typeface = js_regex!(r"<p:font\b[^>]*>")
             .exec(xml)
-            .and_then(|f| f.get(1))
-            .unwrap_or_default()
-            .to_owned();
+            .and_then(|open| attribute_of(open.as_str(), "typeface"))
+            .unwrap_or_default();
         let mut parts: JsMap<String> = JsMap::new();
-        for r in js_regex!(
-            r#"<p:(regular|bold|italic|boldItalic)\b[^>]*\br:id="([^"]*)""#,
-            "g"
-        )
-        .find_iter(xml)
-        {
-            parts.set(
-                r.get(1).unwrap_or_default().to_owned(),
-                r.get(2).unwrap_or_default().to_owned(),
-            );
+        for r in js_regex!(r"<p:(regular|bold|italic|boldItalic)\b[^>]*>", "g").find_iter(xml) {
+            if let Some(rel_id) = attribute_of(r.as_str(), "r:id") {
+                parts.set(r.get(1).unwrap_or_default().to_owned(), rel_id);
+            }
         }
         out.push(EmbeddedFontBlock {
             xml: xml.to_owned(),
@@ -620,19 +613,13 @@ pub fn strip_embedded_fonts(
         let next_rels = js_regex!(r"<Relationship\b[^>]*\/>", "g").replace_all(&rels, |m| {
             let tag = m.as_str();
             let is_font = js_regex!(r#"\bType=["'][^"']*\/font["']"#).test(tag);
-            let id = js_regex!(r#"\bId=["']([^"']*)["']"#)
-                .exec(tag)
-                .and_then(|f| f.get(1))
-                .unwrap_or_default();
-            if !is_font || !(remove_all || rel_ids.contains(id)) {
+            let id = attribute_of(tag, "Id").unwrap_or_default();
+            if !is_font || !(remove_all || rel_ids.contains(id.as_str())) {
                 return tag.to_owned();
             }
-            let target = js_regex!(r#"\bTarget=["']([^"']*)["']"#)
-                .exec(tag)
-                .and_then(|f| f.get(1))
-                .filter(|target| !target.is_empty());
+            let target = attribute_of(tag, "Target").filter(|target| !target.is_empty());
             if let Some(target) = target {
-                parts.insert(resolve_target(pres_path, target));
+                parts.insert(resolve_target(pres_path, &target));
             }
             String::new()
         });
@@ -655,11 +642,8 @@ pub fn strip_embedded_fonts(
     if let Some(ct) = archive.read_text(ct_path).map(|ct| ct.into_owned()) {
         let mut next_ct = js_regex!(r"<Override\b[^>]*\/>", "g").replace_all(&ct, |m| {
             let tag = m.as_str();
-            let part_name = js_regex!(r#"\bPartName=["']([^"']*)["']"#)
-                .exec(tag)
-                .and_then(|f| f.get(1))
-                .unwrap_or_default();
-            let bare = part_name.strip_prefix('/').unwrap_or(part_name);
+            let part_name = attribute_of(tag, "PartName").unwrap_or_default();
+            let bare = part_name.strip_prefix('/').unwrap_or(&part_name);
             if parts.contains(bare) {
                 String::new()
             } else {
@@ -730,7 +714,7 @@ pub fn list_embedded_fonts(archive: &PackageArchive) -> Result<Vec<EmbeddedFontF
         array_names: &["p:embeddedFont"],
         ..ObjectOptions::default()
     };
-    let Ok(parsed) = parse_object(&pres_xml, &options) else {
+    let Ok(parsed) = xml_parse_object(&pres_xml, &options) else {
         return Ok(Vec::new());
     };
     let root = as_xml_node(as_xml_node(Some(&parsed)).get("p:presentation"));

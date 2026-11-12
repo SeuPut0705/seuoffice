@@ -41,6 +41,7 @@ use crate::types::{
     Transform,
 };
 use crate::with_element;
+use crate::xml_utils::attribute_of;
 use crate::zip::{PackageArchive, resolve_target};
 
 pub mod background;
@@ -471,25 +472,22 @@ pub(crate) fn parse_slide_from_archive(
             if let Some(vml) = truthy(vml_text.as_deref()) {
                 let vml_rels = archive.read_rels(&vml_path)?;
                 for m in js_regex!(r"<v:shape\b([^>]*)>([\s\S]*?)<\/v:shape>").find_iter(vml) {
-                    let relid = js_regex!(r#"<v:imagedata\b[^>]*\bo:relid="([^"]+)""#)
+                    let image_data = js_regex!(r"<v:imagedata\b[^>]*>")
                         .exec(m.get(2).unwrap_or_default())
-                        .and_then(|r| r.get(1));
-                    let img_rel = relid.and_then(|id| vml_rels.get(id));
+                        .map(|r| r.as_str());
+                    let relid = image_data
+                        .and_then(|tag| attribute_of(tag, "o:relid"))
+                        .filter(|id| !id.is_empty());
+                    let img_rel = relid.and_then(|id| vml_rels.get(id.as_str()));
                     let Some(img_rel) = img_rel else {
                         continue;
                     };
                     let target = resolve_target(&vml_path, &img_rel.target);
-                    let attrs = m.get(1).unwrap_or_default();
-                    let ids = [
-                        js_regex!(r#"\bid="([^"]+)""#)
-                            .exec(attrs)
-                            .and_then(|r| r.get(1)),
-                        js_regex!(r#"\bo:spid="([^"]+)""#)
-                            .exec(attrs)
-                            .and_then(|r| r.get(1)),
-                    ];
-                    for v in ids.into_iter().flatten() {
-                        vml_previews.set(v.to_owned(), target.clone());
+                    // decoded: the slide's oleObj names the shape by the value, which the parser reads
+                    for key in ["id", "o:spid"] {
+                        if let Some(v) = attribute_of(m.as_str(), key).filter(|v| !v.is_empty()) {
+                            vml_previews.set(v, target.clone());
+                        }
                     }
                 }
             }
@@ -503,12 +501,15 @@ pub(crate) fn parse_slide_from_archive(
             if let Some(data_xml) = data_xml {
                 diagram_datas.set(rel.id.clone(), data_xml.to_owned());
             }
-            let rel_id = data_xml.and_then(|xml| {
-                js_regex!(r#"<dsp:dataModelExt\b[^>]*\brelId="([^"]+)""#)
+            let model_ext = data_xml.and_then(|xml| {
+                js_regex!(r"<dsp:dataModelExt\b[^>]*>")
                     .exec(xml)
-                    .and_then(|m| m.get(1))
+                    .map(|m| m.as_str())
             });
-            if let Some(rel_id) = rel_id {
+            let rel_id = model_ext
+                .and_then(|tag| attribute_of(tag, "relId"))
+                .filter(|id| !id.is_empty());
+            if let Some(rel_id) = rel_id.as_deref() {
                 let own = archive.read_rels(&data_path);
                 let in_slide = rels.get(rel_id);
                 let draw_rel = match in_slide {
@@ -934,7 +935,7 @@ pub(crate) fn try_patched_element_xml(el: &mut SlideElement) -> Result<String, S
     // rewritten anyway gets a creationId minted into its anchor (idempotent).
     // Clean elements pass through untouched, so unedited decks stay byte-identical.
     if element_is_dirty(el) {
-        ensure_creation_id(el, &random_uuid());
+        ensure_creation_id(el, &random_uuid())?;
     }
     let el: &SlideElement = el;
     let Some(original) =

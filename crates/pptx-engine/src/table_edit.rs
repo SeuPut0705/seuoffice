@@ -10,7 +10,7 @@ use jscompat::{
 };
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::xml_utils::escape_xml_attr;
+use crate::xml_utils::{attribute_of, escape_xml_attr};
 
 /// `undefined` as `None`, `null` as `Some(None)`.
 fn nullable<'de, D: Deserializer<'de>, T: Deserialize<'de>>(
@@ -339,9 +339,7 @@ pub fn ensure_table_style_xml(
         return xml.to_owned();
     }
     if let Some(sc) = js_regex!(r"<a:tblStyleLst([^>]*)\/>").exec(xml) {
-        // ledger tblstylelst-dollar: the TypeScript passes this as a replacement
-        // string, so a `$&`, `$'` or `` $` `` in the attributes or the definition
-        // expands into markup; spliced here as written.
+        // The TypeScript now replaces with a function too: spliced as written.
         return format!(
             "{}<a:tblStyleLst{}>{style_def_xml}</a:tblStyleLst>{}",
             &xml[..sc.start()],
@@ -366,10 +364,8 @@ pub fn patch_table_style_xml(original_xml: &str, edit: &TableStyleEdit) -> Strin
         // Presets carry their own firstRow/bandRow but never rtl: table direction
         // survives a style change (PowerPoint behavior)
         let mut next = tbl_pr_xml.clone();
-        let rtl = js_regex!(r#"<a:tblPr[^>]*\srtl="([^"]*)""#)
-            .exec(&xml)
-            .and_then(|found| found.get(1));
-        if matches!(rtl, Some("1" | "true")) && !js_regex!(r#"\srtl=""#).test(&next) {
+        let rtl = tbl_pr_attr(&xml, "rtl");
+        if matches!(rtl.as_deref(), Some("1" | "true")) && tbl_pr_attr(&next, "rtl").is_none() {
             next = replace_first(js_regex!(r"^<a:tblPr"), 0, &next, r#"<a:tblPr rtl="1""#);
         }
         xml = replace_tbl_pr(&xml, &next);
@@ -473,26 +469,25 @@ fn replace_tbl_pr(xml: &str, new_tbl_pr: &str) -> String {
     )
 }
 
-/// The attribute `key` of a start tag's attribute text, in either quote style
-/// and with white space around `=`.
-fn attr_pattern(key: &str) -> &'static JsRegex {
-    match key {
-        "firstRow" => js_regex!(r#"\sfirstRow\s*=\s*(?:"[^"]*"|'[^']*')"#),
-        "lastRow" => js_regex!(r#"\slastRow\s*=\s*(?:"[^"]*"|'[^']*')"#),
-        "firstCol" => js_regex!(r#"\sfirstCol\s*=\s*(?:"[^"]*"|'[^']*')"#),
-        "lastCol" => js_regex!(r#"\slastCol\s*=\s*(?:"[^"]*"|'[^']*')"#),
-        "bandRow" => js_regex!(r#"\sbandRow\s*=\s*(?:"[^"]*"|'[^']*')"#),
-        "bandCol" => js_regex!(r#"\sbandCol\s*=\s*(?:"[^"]*"|'[^']*')"#),
-        _ => js_regex!(r#"\srtl\s*=\s*(?:"[^"]*"|'[^']*')"#),
-    }
+/// The value of the first `<a:tblPr>`'s own `key` attribute, `None` when it has none.
+fn tbl_pr_attr(xml: &str, key: &str) -> Option<String> {
+    let open = js_regex!(r"<a:tblPr\b[^>]*>").exec(xml)?;
+    attribute_of(open.as_str(), key)
 }
 
-/// Set or remove key="value" in an XML attribute string (remove: `None`).
+/// Set or remove an attribute in an XML attribute string (remove: `None`). The
+/// string is read attribute by attribute, as the TypeScript's `ATTR_RE` reads it:
+/// every attribute named `key`, in either quote style and with white space
+/// around `=`, goes before the new one is written.
 fn set_attr(attrs: &str, key: &str, value: Option<&str>) -> String {
-    // ledger tblpr-attr-quote: the TypeScript matches only key="..." and so
-    // writes a second firstRow beside firstRow='1' (or firstRow = "1"), which
-    // is not well-formed XML, and cannot remove it.
-    let cleaned = replace_first(attr_pattern(key), 0, attrs, "");
+    let cleaned =
+        js_regex!(r#"\s+([^\s=/>]+)\s*=\s*(?:"[^"]*"|'[^']*')"#).replace_all(attrs, |found| {
+            if found.get(1) == Some(key) {
+                String::new()
+            } else {
+                found.as_str().to_owned()
+            }
+        });
     match value {
         None => cleaned,
         Some(value) => format!(r#"{cleaned} {key}="{}""#, escape_xml_attr(value)),
@@ -726,10 +721,7 @@ fn patch_cells_tc_pr(xml: &str, cells: &[CellRef], edit: &TableStyleEdit) -> Str
                 )
             }
             // tcPr follows txBody in CT_TableCell.
-            // ledger tcpr-color-dollar: the TypeScript passes the new tcPr as a
-            // replacement string, so a `$&`, `$$`, `$'` or `` $` `` in a shading or
-            // border color that is not a color expands into markup; written as
-            // given here.
+            // The TypeScript replaces with a function: written as given.
             None => replace_first_with(js_regex!(r"<\/a:tc>$"), tc_xml, |_| {
                 format!("<a:tcPr>{}</a:tcPr></a:tc>", apply_tc_pr_edit("", edit))
             }),
