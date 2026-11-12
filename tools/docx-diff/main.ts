@@ -135,8 +135,8 @@ for (const path of corpus) {
     continue
   }
   mainParts.push(documentXml)
-  const { typescript, difference } = compareScan(path, documentXml)
-  comparisons.scan.record(difference)
+  const { typescript, difference, keyOrderOnly } = compareScan(path, documentXml)
+  comparisons.scan.record(difference, keyOrderOnly)
   if ('scan' in typescript) {
     const elements = typescript.scan.elements.map((e) => documentXml.slice(e.start, e.end))
     compareRoundTrips(comparisons.bodyElements, `${path}: ${mainPath}`, elements)
@@ -145,7 +145,8 @@ for (const path of corpus) {
 }
 
 for (const [name, xml] of Object.entries(SCAN_CASES)) {
-  comparisons.scanSynthetic.record(compareScan(`synthetic "${name}"`, xml).difference)
+  const synthetic = compareScan(`synthetic "${name}"`, xml)
+  comparisons.scanSynthetic.record(synthetic.difference, synthetic.keyOrderOnly)
 }
 for (const [group, fragments] of Object.entries(XML_CASES)) {
   compareRoundTrips(comparisons.xmlSynthetic, `synthetic "${group}"`, fragments)

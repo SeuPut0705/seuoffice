@@ -12,6 +12,7 @@ import { nameOf, type XNode, xmlParser } from '../../packages/docx-engine/src/xm
 import { failed } from './engine'
 import { tagTokens } from './fragments'
 import { type Comparison, engine } from './harness'
+import { keyOrderDifference } from './key-order'
 import { type Args, MODEL_FUNCTIONS, type Population, READERS, type Themes } from './props-registry'
 
 export type Outcome = { value?: unknown } | { error: string }
@@ -30,7 +31,13 @@ interface Case {
  */
 export const byFunction = new Map<
   string,
-  { checks: number; differences: number; threw: number; outcomes: Set<string> }
+  {
+    checks: number
+    differences: number
+    keyOrderOnly: number
+    threw: number
+    outcomes: Set<string>
+  }
 >()
 
 const textIds = new Map<string, number>()
@@ -39,13 +46,19 @@ const pending: Array<{ comparison: Comparison; where: string; key: string; fn: s
 /** Each distinct case reaches Rust once. `difference` is `null` for an equal case. */
 const settled = new Map<
   string,
-  { difference: string | null; typescriptThrew: boolean; outcome: string }
+  { difference: string | null; keyOrderOnly: boolean; typescriptThrew: boolean; outcome: string }
 >()
 const queued = new Map<string, Case>()
 
 function record(comparison: Comparison, fn: string, key: string, where: string): void {
-  const { difference, typescriptThrew, outcome } = settled.get(key)!
-  const tally = byFunction.get(fn) ?? { checks: 0, differences: 0, threw: 0, outcomes: new Set() }
+  const { difference, keyOrderOnly, typescriptThrew, outcome } = settled.get(key)!
+  const tally = byFunction.get(fn) ?? {
+    checks: 0,
+    differences: 0,
+    keyOrderOnly: 0,
+    threw: 0,
+    outcomes: new Set(),
+  }
   tally.checks += 1
   if (typescriptThrew) {
     comparison.typescriptThrew += 1
@@ -53,8 +66,9 @@ function record(comparison: Comparison, fn: string, key: string, where: string):
   }
   tally.outcomes.add(outcome)
   if (difference !== null) tally.differences += 1
+  if (keyOrderOnly) tally.keyOrderOnly += 1
   byFunction.set(fn, tally)
-  comparison.record(difference === null ? null : `${where}: ${difference}`)
+  comparison.record(difference === null ? null : `${where}: ${difference}`, keyOrderOnly)
 }
 
 const BATCH_CHARS = 2_000_000
@@ -83,14 +97,20 @@ export function flush(): void {
       cases.forEach(([key, { fn, text, args, typescript }], index) => {
         const rust = header.results[input]![index]!
         const same = 'error' in typescript ? 'error' in rust : isDeepStrictEqual(typescript, rust)
+        const call = `${fn}(${JSON.stringify(texts[text]).slice(0, 300)}, ${JSON.stringify(args).slice(0, 200)})`
+        const order =
+          same && !('error' in typescript) ? keyOrderDifference(fn, typescript, rust) : null
         settled.set(key, {
           typescriptThrew: 'error' in typescript,
           outcome: 'error' in typescript ? 'error' : JSON.stringify(typescript),
-          difference: same
-            ? null
-            : `${fn}(${JSON.stringify(texts[text]).slice(0, 300)}, ${JSON.stringify(args).slice(0, 200)})\n` +
+          keyOrderOnly: order !== null,
+          difference: !same
+            ? `${call}\n` +
               `      typescript ${JSON.stringify(typescript).slice(0, 300)}\n` +
-              `      rust       ${JSON.stringify(rust).slice(0, 300)}`,
+              `      rust       ${JSON.stringify(rust).slice(0, 300)}`
+            : order === null
+              ? null
+              : `${call}\n      ${order}`,
         })
       })
     })

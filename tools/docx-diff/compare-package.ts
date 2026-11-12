@@ -42,6 +42,7 @@ import {
 import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
 import { failed } from './engine'
 import { type Comparison, describeTextDifference, engine, repoRoot, toolDir } from './harness'
+import { keyOrderDifference } from './key-order'
 
 export type Outcome = { value?: unknown } | { error: string }
 
@@ -446,9 +447,12 @@ export function compareModels(
 ): void {
   const check = (name: string, left: unknown, right: unknown): void => {
     if (threw(left)) comparison.typescriptThrew += 1
-    comparison.record(
-      sameOutcome(left, right) ? null : `${where}: ${name} ${firstDifference(left, right)}`,
-    )
+    if (!sameOutcome(left, right)) {
+      comparison.record(`${where}: ${name} ${firstDifference(left, right)}`)
+      return
+    }
+    const order = threw(left) ? null : keyOrderDifference(`package ${name}`, left, right)
+    comparison.record(order === null ? null : `${where}: ${name} ${order}`, order !== null)
   }
   for (const key of MODEL_VALUES) check(key, typescript[key], rust[key])
   const parts = Math.max(typescript.relationships.length, rust.relationships.length)
@@ -492,8 +496,16 @@ export async function comparePackage(
     entryErrorsAsFlags(typescript.entries),
     entryErrorsAsFlags(rust.entries),
   )
+  const order = same
+    ? keyOrderDifference('package entries', typescript.entries, rust.entries)
+    : null
   opened.record(
-    same ? null : `${where}: entries ${firstDifference(typescript.entries, rust.entries)}`,
+    !same
+      ? `${where}: entries ${firstDifference(typescript.entries, rust.entries)}`
+      : order === null
+        ? null
+        : `${where}: entries ${order}`,
+    order !== null,
   )
   compareModels(values, where, typescript.model, rust.model)
   return typescript

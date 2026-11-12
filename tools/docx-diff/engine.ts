@@ -1,6 +1,7 @@
 // Node host of crates/office-wasm. The frame is described in its src/lib.rs.
 import { readFileSync } from 'node:fs'
 import { WASI } from 'node:wasi'
+import { parseKeepingOrder } from './key-order'
 
 const PROTOCOL_VERSION = 1
 
@@ -75,7 +76,8 @@ export class Engine {
       cursor += 4 + partLength
       return part
     }
-    const replyHeader = JSON.parse(decoder.decode(take())) as Header | EngineFailure
+    // not JSON.parse: the order Rust wrote the keys in is compared
+    const replyHeader = parseKeepingOrder(decoder.decode(take())) as Header | EngineFailure
     const count = replyView.getUint32(cursor, true)
     cursor += 4
     return { header: replyHeader, blobs: Array.from({ length: count }, take) }

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Engine } from './engine'
+import { reportKeyOrder } from './key-order'
 
 export const toolDir = dirname(fileURLToPath(import.meta.url))
 export const repoRoot = resolve(toolDir, '../..')
@@ -25,6 +26,8 @@ export class Comparison {
   compared = 0
   typescriptThrew = 0
   readonly differences: string[] = []
+  /** Of the differences: results equal as JSON whose keys are in another order. */
+  keyOrderOnly = 0
   /**
    * `floor` is the least population the comparison must reach: a key of
    * floors.json, or the number itself where an option sets it.
@@ -36,9 +39,11 @@ export class Comparison {
     registered.push(this)
   }
 
-  record(difference: string | null): void {
+  record(difference: string | null, keyOrderOnly = false): void {
     this.compared += 1
-    if (difference !== null) this.differences.push(difference)
+    if (difference === null) return
+    this.differences.push(difference)
+    if (keyOrderOnly) this.keyOrderOnly += 1
   }
 }
 
@@ -68,7 +73,7 @@ export function atFloor(count: number, floor: string | number): string {
 /**
  * Prints every comparison, grouped by its letter: a module registers its
  * lines when it is imported, which is not the order of the report. A
- * difference fails the gate.
+ * difference fails the gate, a difference of key order like any other.
  */
 export function reportComparisons(): void {
   const byLetter = [...registered].sort((a, b) => a.label[1]!.localeCompare(b.label[1]!))
@@ -77,6 +82,7 @@ export function reportComparisons(): void {
     console.log(
       `${comparison.label.padEnd(46)} compared ${String(comparison.compared).padStart(6)}  ` +
         `${atFloor(comparison.compared, comparison.floor)}  differences ${comparison.differences.length}` +
+        (comparison.keyOrderOnly > 0 ? `  (key order only: ${comparison.keyOrderOnly})` : '') +
         (comparison.typescriptThrew > 0
           ? `  (TypeScript threw in ${comparison.typescriptThrew}: Rust must refuse those too)`
           : ''),
@@ -87,6 +93,7 @@ export function reportComparisons(): void {
       console.log(`    ... ${comparison.differences.length - SHOW} more (--show N)`)
     }
   }
+  reportKeyOrder(option('--places', 40))
 }
 
 export function excerpt(text: string, at: number): string {

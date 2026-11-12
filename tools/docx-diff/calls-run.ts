@@ -165,6 +165,7 @@ export function reportCalls(): void {
       console.log(
         `    ${fn.padEnd(40)} checks ${String(tally?.checks ?? 0).padStart(7)}  ` +
           `differences ${String(tally?.differences ?? 0).padStart(6)}  ` +
+          `key order only ${String(tally?.keyOrderOnly ?? 0).padStart(6)}  ` +
           `distinct results ${String(tally?.outcomes.size ?? 0).padStart(5)}  ` +
           `TypeScript threw ${tally?.threw ?? 0}`,
       )

@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from 'node:util'
 import { type BodyScan, scanBody } from '../../packages/docx-engine/src/scan'
 import { failed } from './engine'
 import { engine, excerpt } from './harness'
+import { keyOrderDifference } from './key-order'
 
 export type ScanOutcome = { scan: BodyScan } | { error: string }
 
@@ -16,7 +17,7 @@ export function rustScan(documentXml: Uint8Array): ScanOutcome {
 export function compareScan(
   where: string,
   documentXml: string,
-): { typescript: ScanOutcome; difference: string | null } {
+): { typescript: ScanOutcome; difference: string | null; keyOrderOnly?: boolean } {
   let typescript: ScanOutcome
   try {
     typescript = { scan: scanBody(documentXml) }
@@ -24,7 +25,12 @@ export function compareScan(
     typescript = { error: (error as Error).message }
   }
   const rust = rustScan(encoder.encode(documentXml))
-  if (isDeepStrictEqual(typescript, rust)) return { typescript, difference: null }
+  if (isDeepStrictEqual(typescript, rust)) {
+    const order = keyOrderDifference('scanBody', typescript, rust)
+    return order === null
+      ? { typescript, difference: null }
+      : { typescript, difference: `${where}\n      ${order}`, keyOrderOnly: true }
+  }
 
   let detail = `typescript ${JSON.stringify(typescript).slice(0, 300)}\n      rust       ${JSON.stringify(rust).slice(0, 300)}`
   if ('scan' in typescript && 'scan' in rust) {

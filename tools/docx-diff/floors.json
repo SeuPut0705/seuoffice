@@ -25,8 +25,8 @@
   "packageValueChecks": 2953,
   "normalizedParts": 1224,
   "normalizedStrictParts": 1250,
-  "builtContainers": 96,
-  "builtValueChecks": 630,
+  "builtContainers": 97,
+  "builtValueChecks": 640,
   "refusalKinds": 22,
   "mutatedContainersRefused": 1900,
   "mutatedContainerValueChecks": 14000,
@@ -45,7 +45,7 @@
   "callsFieldsMutated": 4100,
   "callsFieldsFunctions": 18,
   "callsMarkersCorpus": 910,
-  "callsMarkersBuilt": 33000,
+  "callsMarkersBuilt": 37000,
   "callsMarkersMutated": 4100,
   "callsMarkersFunctions": 15,
   "callsMathCorpus": 72,
@@ -56,5 +56,5 @@
   "callsSectionBuilt": 6700,
   "callsSectionMutated": 7700,
   "callsSectionFunctions": 33,
-  "writtenZips": 1656
+  "writtenZips": 1662
 }
