@@ -999,7 +999,7 @@ pub fn clean_move_range_markers(xml: &str) -> CleanedMoveRanges<'_> {
 /// `Date.parse(text)` as V8 12.4 answers it: `ParseDateTimeString` of
 /// src/builtins/builtins-date.cc over the parser of src/date/dateparser*.
 /// A date and time without a zone is local time there; here it is read as UTC.
-fn date_parse(text: &str) -> f64 {
+pub fn date_parse(text: &str) -> f64 {
     const MAX_TIME_IN_MS: f64 = 8.64e15;
     const MAX_TIME_BEFORE_UTC_IN_MS: f64 = MAX_TIME_IN_MS + 86_400_000.0 * 30.0;
     let Some(fields) = parse_date_fields(text) else {
