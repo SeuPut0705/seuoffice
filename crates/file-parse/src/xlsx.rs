@@ -1,14 +1,10 @@
-//! packages/file-parse/src/xlsx.ts, with the withheld cells of
-//! packages/file-parse/src/xlsx-redaction.ts as commit 9fd49c8fb
-//! (origin/sync/genoffice-20261111) adds them, and the gateway readers that
-//! file calls: `parseRedactionPart` and `parseRedactionNameMirror` of
-//! xlsx-gateway `gateway/xlsx-redaction.ts`, `parseSheetElements` of
-//! `gateway/xlsx-sheets.ts`, `offsetFormulaRefs` of `domain/formula-shift.ts`,
-//! `parseAddress` and `columnIndex` of `domain/cell-address.ts`,
-//! `decodeXlsxEscapes` of `gateway/xlsx-escapes.ts`.
-//!
-//! The local TypeScript this is compared with does not read the marks yet:
-//! a workbook with withheld cells is a listed difference until it does.
+//! packages/file-parse/src/xlsx.ts with the withheld cells of
+//! packages/file-parse/src/xlsx-redaction.ts, and the gateway readers that
+//! file calls: `readRedactionRecord`, `parseRedactionPart` and
+//! `parseRedactionNameMirror` of xlsx-gateway `gateway/xlsx-redaction.ts`,
+//! `parseSheetElements` of `gateway/xlsx-sheets.ts`, `offsetFormulaRefs` of
+//! `domain/formula-shift.ts`, `parseAddress` and `columnIndex` of
+//! `domain/cell-address.ts`, `decodeXlsxEscapes` of `gateway/xlsx-escapes.ts`.
 //!
 //! Every part goes through one fast-xml-parser 5.10.1 option set, the one
 //! `manifestParser` of pptx.ts also uses: [`fxp`] gives the object it returns.
@@ -27,14 +23,22 @@ use fxp::JVal;
 
 /// `new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_',
 /// trimValues: false, parseTagValue: false, removeNSPrefix: false,
-/// transformTagName: stripNamespacePrefix, attributeValueProcessor: trim })`
-/// without `preserveOrder`: the object `parse` returns.
+/// transformTagName: stripNamespacePrefix, attributeValueProcessor })` without
+/// `preserveOrder`: the object `parse` returns. The processor trims every
+/// attribute value but the `name` of a workbook's `<sheet>`.
 mod fxp {
-    use jscompat::{JsObject, is_js_space, trim, trim_start};
+    use jscompat::{JsObject, is_js_space, js_regex, trim, trim_start};
     use ooxml_xml::{AttributeMode, ParseError, XNode, parse_ordered_with_attributes};
 
     /// The parser's default `maxNestedTags`.
     const MAX_NESTED_TAGS: usize = 100;
+
+    /// An element's name as the parser gives it, and whether the attribute
+    /// value processor leaves its `name` attribute as written.
+    struct ElementName {
+        name: String,
+        keeps_name: bool,
+    }
 
     /// A value of the object the parser returns.
     pub enum JVal {
@@ -144,7 +148,7 @@ mod fxp {
     /// The name the parser gives each element, in document order (`None`: a
     /// processing instruction, named as written), or the message of the first
     /// thing it throws on.
-    fn element_names(xml: &str) -> Result<Vec<Option<String>>, String> {
+    fn element_names(xml: &str) -> Result<Vec<Option<ElementName>>, String> {
         let source = normalize_newlines(xml);
         let source = source.as_str();
         let mut names = Vec::new();
@@ -208,6 +212,23 @@ mod fxp {
                     return Err(format!("Invalid tag name: {first}"));
                 }
                 let self_closing = tag_exp.ends_with('/');
+                // the processor's path ends in this element: its name after the
+                // first transform (a self-closing name loses its slash first),
+                // behind the prefix the raw name was written with
+                let path_tag = if self_closing {
+                    first.strip_suffix('/').unwrap_or(&first)
+                } else {
+                    &first
+                };
+                let segment = match raw_name
+                    .find(':')
+                    .filter(|at| *at > 0)
+                    .map(|at| &raw_name[..at])
+                {
+                    Some(prefix) if prefix != "xmlns" => format!("{prefix}:{path_tag}"),
+                    _ => path_tag.to_owned(),
+                };
+                let keeps_name = js_regex!(r"(?:^|[.:])sheet$").test(&segment);
                 let name = if self_closing {
                     let bare = first.strip_suffix('/').unwrap_or(&first);
                     // the self-closing branch runs the name transform a second time
@@ -224,7 +245,7 @@ mod fxp {
                 if !self_closing {
                     depth += 1;
                 }
-                names.push(Some(name));
+                names.push(Some(ElementName { name, keeps_name }));
                 text_pending = false;
                 cursor = close + 1;
             }
@@ -241,14 +262,20 @@ mod fxp {
         }
     }
 
-    fn rename(nodes: &mut [XNode], names: &mut impl Iterator<Item = Option<String>>) {
+    /// `attributeValueProcessor`: every attribute value trimmed, except the
+    /// `name` of an element whose path matches `/(?:^|[.:])sheet$/`
+    fn rename(nodes: &mut [XNode], names: &mut impl Iterator<Item = Option<ElementName>>) {
         for node in nodes {
             if let XNode::Element(element) = node {
-                if let Some(Some(name)) = names.next() {
-                    element.name = name;
+                let mut keeps_name = false;
+                if let Some(Some(named)) = names.next() {
+                    element.name = named.name;
+                    keeps_name = named.keeps_name;
                 }
-                for (_, value) in &mut element.attrs {
-                    *value = trim(value).to_owned();
+                for (attribute, value) in &mut element.attrs {
+                    if !(keeps_name && attribute == "name") {
+                        *value = trim(value).to_owned();
+                    }
                 }
                 rename(&mut element.children, names);
             }
@@ -1282,28 +1309,33 @@ fn sheet_element_names(workbook_xml: &str) -> Vec<String> {
         .collect()
 }
 
-/// `readStates` of xlsx-redaction.ts: the part when it reads, the defined
-/// names when the part is missing or damaged, a refusal when neither reads.
-fn read_states(zip: &Package, workbook_xml: &str) -> Result<Vec<SheetRedactionState>, String> {
-    let mut part_damaged = false;
+/// `readRedactionRecord` of the gateway: the part when it parses, the copy in
+/// the defined names when the part is missing or damaged. An empty copy
+/// beside a damaged part is not "no marks".
+fn read_redaction_record(
+    zip: &Package,
+    workbook_xml: &str,
+) -> Result<Vec<SheetRedactionState>, Unreadable> {
+    let mut damaged = false;
     if let Some(part) = zip.file(REDACTION_PART_PATH) {
         match part.text().ok().map(parse_redaction_part) {
             Some(Ok(states)) => return Ok(states),
-            _ => part_damaged = true,
+            _ => damaged = true,
         }
     }
-    if let Ok(mirrored) =
-        parse_redaction_name_mirror(workbook_xml, &sheet_element_names(workbook_xml))
-    {
-        // the copy in the defined names answers for a damaged part only when
-        // it has marks to give
-        if !part_damaged || !mirrored.is_empty() {
-            return Ok(mirrored);
-        }
+    let mirrored = parse_redaction_name_mirror(workbook_xml, &sheet_element_names(workbook_xml))?;
+    if damaged && mirrored.is_empty() {
+        return Err(Unreadable);
     }
-    Err(redaction_error(
-        "the record of the cells withheld in this workbook cannot be read",
-    ))
+    Ok(mirrored)
+}
+
+/// `readStates` of xlsx-redaction.ts: whatever the record's reader throws is
+/// one refusal.
+fn read_states(zip: &Package, workbook_xml: &str) -> Result<Vec<SheetRedactionState>, String> {
+    read_redaction_record(zip, workbook_xml).map_err(|_| {
+        redaction_error("the record of the cells withheld in this workbook cannot be read")
+    })
 }
 
 /// `readXlsxRedactions`: the marks of every sheet that has any, by sheet name.

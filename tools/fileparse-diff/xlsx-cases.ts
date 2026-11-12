@@ -197,6 +197,15 @@ async function redactionInputs(): Promise<Input[]> {
   await add('part all marks empty', withPart(part([{ name: 'Pay', marks: [] }])))
   await add('part previousFill and extra keys', withPart(part([{ name: 'Pay', extra: true, marks: [mark(1, 1, 1, 1, 'Fill', { previousFill: 'FFFF0000', other: [1] })] }])))
   await add('part shared formula master withheld', { sheets: [['Rates', SHARED_MASTER_SHEET]], files: { 'xl/gxRedactions.json': part([{ name: 'Rates', marks: [mark(0, 0, 0, 0, 'Rate')] }]) } })
+  await add('part keys a sheet name with edge spaces', {
+    sheets: [['  Pay ', GRID_SHEET]],
+    files: { 'xl/gxRedactions.json': part([{ name: '  Pay ', marks: [mark(1, 1, 1, 1, 'Spaced')] }]) },
+  })
+  await add('part keys the trimmed name of a spaced sheet', {
+    sheets: [['  Pay ', GRID_SHEET]],
+    files: { 'xl/gxRedactions.json': part([{ name: 'Pay', marks: [mark(1, 1, 1, 1, 'Trimmed')] }]) },
+  })
+  await add('mirror on a sheet whose name has edge spaces', { sheets: [[' Pay\t', GRID_SHEET]], definedNames: mirror(0, mirrorMark(0, [1, 1], [1, 1], 'Spaced')) })
   await add('part sheet name with entities', {
     sheets: [['R&amp;D &lt;1&gt;', GRID_SHEET]],
     files: { 'xl/gxRedactions.json': part([{ name: 'R&D <1>', marks: [mark(1, 1, 1, 1, 'Lab')] }]) },
@@ -299,6 +308,8 @@ async function inputs(): Promise<Input[]> {
     ['sheet element as text', wb('<sheet>text</sheet>'), rels([]), {}],
     ['sheet part empty', wb(ws('rId1')), rels([['rId1', 'worksheet', 'worksheets/a.xml']]), { 'xl/worksheets/a.xml': '' }],
     ['sheet part is a folder', wb(ws('rId1')), rels([['rId1', 'worksheet', 'worksheets/a.xml']]), { 'xl/worksheets/a.xml/inner.xml': one }],
+    ['prefixed sheet keeps its name as written', `<x:workbook xmlns:x="${S}" xmlns:r="${R}"><x:sheets><x:sheet name="  S  " r:id=" rId1 "/></x:sheets></x:workbook>`, rels([['rId1', 'worksheet', 'worksheets/a.xml']]), { 'xl/worksheets/a.xml': one }],
+    ['sheet name trimmed only on sheet elements', wb('<sheet name=" A " r:id="rId1"/><sheetX name=" B "/><a.sheet name=" C " r:id="rId1"/>'), rels([['rId1', 'worksheet', 'worksheets/a.xml']]), { 'xl/worksheets/a.xml': one }],
   ]
   for (const [label, workbookXml, relsXml, files] of relCases) {
     add(`relationships: ${label}`, await zip({ 'xl/workbook.xml': workbookXml, ...(relsXml === null ? {} : { 'xl/_rels/workbook.xml.rels': relsXml }), ...files }))
