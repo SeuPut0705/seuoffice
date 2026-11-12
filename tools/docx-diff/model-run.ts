@@ -80,12 +80,24 @@ export async function modelAfterCorpus(): Promise<void> {
   for (const input of invalidModelInputs()) compareModel(invalid, input)
 }
 
+/**
+ * The field floors of this run, parser evidence and schema-built evidence
+ * apart. `--write-field-floors` commits them to model-field-floors.json
+ * instead of checking against it.
+ */
 export function reportModel(): void {
   const missingFloors: string[] = []
-  for (const [name, parsed] of parserCoverage.fields) {
-    const floor = fieldFloors[name]
-    const built = builtCoverage.fields.get(name)
-    if (!floor || parsed.values < floor.parser || !built || built.values < floor.built) missingFloors.push(name)
+  if (process.argv.includes('--write-field-floors')) {
+    // one field a line, so a floor that moves is one line of a diff
+    const lines = [...parserCoverage.fields].map(([name, parsed]) =>
+      `  ${JSON.stringify(name)}: { "parser": ${parsed.values}, "built": ${builtCoverage.fields.get(name)?.values ?? 0} }`)
+    writeFileSync(resolve(toolDir, 'model-field-floors.json'), `{\n${lines.join(',\n')}\n}\n`)
+  } else {
+    for (const [name, parsed] of parserCoverage.fields) {
+      const floor = fieldFloors[name]
+      const built = builtCoverage.fields.get(name)
+      if (!floor || parsed.values < floor.parser || !built || built.values < floor.built) missingFloors.push(name)
+    }
   }
   if (missingFloors.length > 0 || parserCoverage.refused.length || builtCoverage.refused.length) failGate()
   const report = { parser: parserCoverage.report(), built: builtCoverage.report(), refusals, belowFieldFloor: missingFloors }
