@@ -2,7 +2,7 @@
 // runs (w:sdt, w:smartTag, w:customXml, w:dir, w:bdo) and paragraph-level
 // elements without text (w:permStart, range markers...). Their bytes ride on
 // the runs (Run.wrap, Run.opaqueXml) so a rebuilt paragraph writes them back.
-import { XMLValidator } from 'fast-xml-parser'
+import { decodeEntities } from './parse-xml-text'
 import type { InlineWrap, Run } from './types'
 import { attrsOf, childrenOf, escapeXmlAttr, nameOf, serializeXNode, type XNode } from './xml-utils'
 
@@ -57,34 +57,342 @@ export const INLINE_KEPT_ELEMENTS: ReadonlySet<string> = new Set([
   'w:subDoc',
 ])
 
-/**
- * Content that keeps a wrapper from being carried whole as one element: runs
- * and run containers (the model reads them, so the whole element would write
- * them a second time) and the markers a rebuilt block emits on its own.
- */
-const NOT_WHOLE: ReadonlySet<string> = new Set([
-  'w:r',
-  'w:hyperlink',
-  'w:fldSimple',
-  'm:oMath',
-  'm:oMathPara',
-  'w:bookmarkStart',
-  'w:bookmarkEnd',
-  'w:commentRangeStart',
-  'w:commentRangeEnd',
-])
+// ---- which bytes may be carried: one strict, positive check ----
+//
+// The same check decides what the parser puts on a run and what the writer
+// takes from one. A run list can come from a co-editing peer, so the writer
+// cannot assume the parser made it; and what the parser carries must be
+// writable, so it never carries bytes the writer would refuse.
 
-/** the wrapper holds nothing the model reads or re-emits: it can ride as one element */
-export function inlineWrapperIsBare(node: XNode): boolean {
-  // explicit stack: a cell paragraph of a hostile table can nest very deep
-  const todo = [...childrenOf(node)]
-  for (let next = todo.pop(); next; next = todo.pop()) {
-    const name = nameOf(next)
-    if (name === undefined) continue
-    if (NOT_WHOLE.has(name)) return false
-    todo.push(...childrenOf(next))
+/** prefix -> namespace URI, as the root element of a part declares them */
+export type PartNamespaces = ReadonlyMap<string, string>
+
+const W_NAMESPACE = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+/** Word's own extension namespaces: w14, w15, w16cid, w16sdtdh... */
+const EXTENSION_PREFIX_RE = /^w1[4-9][a-z]*$/
+const EXTENSION_NAMESPACE_START = 'http://schemas.microsoft.com/office/word/'
+/** nesting inside one carried element; real controls sit a few levels deep */
+const MAX_CARRIED_DEPTH = 32
+
+/** the namespace declarations on the root element of a part */
+export function partNamespaces(partXml: string): Map<string, string> {
+  const out = new Map<string, string>()
+  let at = 0
+  // the declaration, comments and a doctype may come before the root element
+  for (;;) {
+    while (at < partXml.length && /[\s\uFEFF]/.test(partXml[at])) at++
+    const closer = partXml.startsWith('<?', at)
+      ? '?>'
+      : partXml.startsWith('<!--', at)
+        ? '-->'
+        : partXml.startsWith('<!', at)
+          ? '>'
+          : null
+    if (closer === null) break
+    const end = partXml.indexOf(closer, at)
+    if (end < 0) return out
+    at = end + closer.length
+  }
+  const rootRe = /<[A-Za-z_][\w:.-]*((?:"[^"]*"|'[^']*'|[^"'>])*)>/y
+  rootRe.lastIndex = at
+  const root = rootRe.exec(partXml)
+  if (!root) return out
+  // each match takes a whole attribute, so text inside a value is never read as one
+  for (const attr of root[1].matchAll(/\s+([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+    if (attr[1].startsWith('xmlns:'))
+      out.set(attr[1].slice(6), decodeEntities(attr[2] ?? attr[3] ?? ''))
+  }
+  return out
+}
+
+/** element of strictly scanned bytes: names only, text and attributes are checked while scanning */
+interface CarriedElement {
+  name: string
+  children: CarriedElement[]
+}
+
+interface CarriedScan {
+  root: CarriedElement
+  /** the element the runs go into (a wrapper split around its content), with its children before them */
+  holder?: { element: CarriedElement; before: number }
+  /** prefixes the bytes use without declaring them: the part root has to */
+  outer: ReadonlySet<string>
+}
+
+const NAME_RE = /[A-Za-z_][A-Za-z0-9_.-]*(?::[A-Za-z_][A-Za-z0-9_.-]*)?/y
+const REFERENCE_RE = /&(?:lt|gt|amp|quot|apos|#([0-9]{1,8})|#x([0-9A-Fa-f]{1,7}));/y
+
+const isXmlChar = (code: number): boolean =>
+  code === 0x9 ||
+  code === 0xa ||
+  code === 0xd ||
+  (code >= 0x20 && code <= 0xd7ff) ||
+  (code >= 0xe000 && code <= 0xfffd) ||
+  (code >= 0x10000 && code <= 0x10ffff)
+
+/** an attribute value as XML allows it: no `<`, only real references, only XML characters */
+function validAttributeValue(value: string): boolean {
+  // eslint-disable-next-line no-control-regex
+  if (/[<\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/.test(value)) return false
+  if (/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(value))
+    return false
+  for (let at = value.indexOf('&'); at >= 0; at = value.indexOf('&', at + 1)) {
+    REFERENCE_RE.lastIndex = at
+    const ref = REFERENCE_RE.exec(value)
+    if (!ref) return false
+    const digits = ref[1] ?? ref[2]
+    if (digits !== undefined && !isXmlChar(parseInt(digits, ref[1] !== undefined ? 10 : 16)))
+      return false
   }
   return true
+}
+
+const isSpace = (code: number): boolean =>
+  code === 0x20 || code === 0x9 || code === 0xa || code === 0xd
+
+/**
+ * Strict scan of carried bytes. They may hold tags and white space, nothing
+ * else: no text, comment, CDATA, processing instruction or doctype. Every
+ * tag has to be well-formed (names, quoting, one of each attribute, attribute
+ * values as XML allows them) and a namespace declared inside the bytes has to
+ * be the w namespace itself or one of Word's extension namespaces. One
+ * segment is a whole element; two are a wrapper split around its content.
+ */
+function scanCarried(segments: readonly string[]): CarriedScan | null {
+  const roots: CarriedElement[] = []
+  const stack: Array<{ element: CarriedElement; declared: string[] }> = []
+  const active = new Map<string, number>()
+  const outer = new Set<string>()
+  let holder: CarriedScan['holder']
+  for (let s = 0; s < segments.length; s++) {
+    const xml = segments[s]
+    const n = xml.length
+    let i = 0
+    const skipSpace = () => {
+      while (i < n && isSpace(xml.charCodeAt(i))) i++
+    }
+    while (i < n) {
+      if (isSpace(xml.charCodeAt(i))) {
+        i++
+        continue
+      }
+      if (xml.charCodeAt(i) !== 0x3c) return null
+      i++
+      const closing = xml.charCodeAt(i) === 0x2f
+      if (closing) i++
+      NAME_RE.lastIndex = i
+      const name = NAME_RE.exec(xml)?.[0]
+      if (name === undefined) return null
+      i += name.length
+      if (closing) {
+        skipSpace()
+        if (xml.charCodeAt(i) !== 0x3e) return null
+        i++
+        const top = stack.pop()
+        if (!top || top.element.name !== name) return null
+        for (const prefix of top.declared) active.set(prefix, active.get(prefix)! - 1)
+        continue
+      }
+      const colon = name.indexOf(':')
+      if (colon < 0) return null
+      const used = [name.slice(0, colon)]
+      const declared: string[] = []
+      const seen = new Set<string>()
+      let selfClosing = false
+      for (;;) {
+        const before = i
+        skipSpace()
+        const next = xml.charCodeAt(i)
+        if (next === 0x3e) {
+          i++
+          break
+        }
+        if (next === 0x2f) {
+          if (xml.charCodeAt(i + 1) !== 0x3e) return null
+          i += 2
+          selfClosing = true
+          break
+        }
+        if (i === before) return null
+        NAME_RE.lastIndex = i
+        const attr = NAME_RE.exec(xml)?.[0]
+        if (attr === undefined || seen.has(attr)) return null
+        seen.add(attr)
+        i += attr.length
+        skipSpace()
+        if (xml.charCodeAt(i) !== 0x3d) return null
+        i++
+        skipSpace()
+        const quote = xml[i]
+        if (quote !== '"' && quote !== "'") return null
+        const end = xml.indexOf(quote, i + 1)
+        if (end < 0) return null
+        const value = xml.slice(i + 1, end)
+        i = end + 1
+        if (!validAttributeValue(value)) return null
+        if (attr === 'xmlns') return null
+        if (attr.startsWith('xmlns:')) {
+          const prefix = attr.slice(6)
+          const allowed =
+            prefix === 'w'
+              ? value === W_NAMESPACE
+              : EXTENSION_PREFIX_RE.test(prefix) && value.startsWith(EXTENSION_NAMESPACE_START)
+          if (!allowed) return null
+          declared.push(prefix)
+        } else {
+          const at = attr.indexOf(':')
+          if (at >= 0 && !attr.startsWith('xml:')) used.push(attr.slice(0, at))
+        }
+      }
+      for (const prefix of declared) active.set(prefix, (active.get(prefix) ?? 0) + 1)
+      for (const prefix of used) if (!active.get(prefix)) outer.add(prefix)
+      const element: CarriedElement = { name, children: [] }
+      const parent = stack[stack.length - 1]
+      if (parent) parent.element.children.push(element)
+      else roots.push(element)
+      if (selfClosing) {
+        for (const prefix of declared) active.set(prefix, active.get(prefix)! - 1)
+      } else {
+        if (stack.length >= MAX_CARRIED_DEPTH) return null
+        stack.push({ element, declared })
+      }
+    }
+    if (s < segments.length - 1) {
+      const top = stack[stack.length - 1]
+      if (!top) return null
+      holder = { element: top.element, before: top.element.children.length }
+    }
+  }
+  if (stack.length > 0 || roots.length !== 1) return null
+  return { root: roots[0], ...(holder ? { holder } : {}), outer }
+}
+
+/**
+ * The w: elements that describe a wrapper (CT_SdtPr, CT_SdtEndPr,
+ * CT_SmartTagPr, CT_CustomXmlPr and the run properties inside them). An
+ * element of one of Word's extension namespaces may sit among them; nothing
+ * that is document content (a run, a paragraph, a table, a section) may.
+ */
+const PROPERTY_NAMES: ReadonlySet<string> = new Set(
+  (
+    'alias tag id lock placeholder docPart temporary showingPlcHdr dataBinding label tabIndex ' +
+    'equation comboBox listItem date dateFormat lid storeMappedDataAs calendar docPartObj ' +
+    'docPartList docPartGallery docPartCategory docPartUnique dropDownList picture richText ' +
+    'text citation group bibliography attr ' +
+    'rPr rPrChange rStyle rFonts b bCs i iCs caps smallCaps strike dstrike outline shadow ' +
+    'emboss imprint noProof snapToGrid vanish webHidden color spacing w kern position sz szCs ' +
+    'highlight u effect bdr shd fitText vertAlign rtl cs em lang eastAsianLayout specVanish oMath'
+  )
+    .split(' ')
+    .map((name) => `w:${name}`),
+)
+
+/** every element below `holder` describes the wrapper: nothing there is content */
+function propertiesOnly(holder: CarriedElement): boolean {
+  const todo = [...holder.children]
+  for (let el = todo.pop(); el; el = todo.pop()) {
+    if (!PROPERTY_NAMES.has(el.name) && !EXTENSION_PREFIX_RE.test(el.name.split(':')[0]))
+      return false
+    todo.push(...el.children)
+  }
+  return true
+}
+
+const declaredBy = (
+  prefixes: ReadonlySet<string>,
+  namespaces: PartNamespaces | undefined,
+): boolean => namespaces === undefined || [...prefixes].every((prefix) => namespaces.has(prefix))
+
+/** the value has the fields of an InlineWrap, each of its type */
+function isInlineWrapShape(wrap: unknown): wrap is InlineWrap {
+  if (typeof wrap !== 'object' || wrap === null) return false
+  const { seq, open, close, inside, text } = wrap as Record<string, unknown>
+  return (
+    typeof seq === 'number' &&
+    Number.isFinite(seq) &&
+    typeof open === 'string' &&
+    typeof close === 'string' &&
+    (inside === undefined || inside === 'revision' || inside === 'link') &&
+    (text === undefined || typeof text === 'string')
+  )
+}
+
+/**
+ * The prefixes a wrapper needs its part root to declare, null when it may not
+ * be carried. It may when it is one allowed wrapper element split where the
+ * parser splits it: around the content of its one w:sdtContent (a control),
+ * or after its property element (a smart tag, custom xml) or its own opening
+ * tag (w:dir, w:bdo), with nothing but property elements beside the content.
+ */
+export function inlineWrapPrefixes(wrap: unknown): ReadonlySet<string> | null {
+  if (!isInlineWrapShape(wrap)) return null
+  const scan = scanCarried([wrap.open, wrap.close])
+  if (!scan?.holder) return null
+  const { root, holder } = scan
+  if (!isInlineWrapper(root.name)) return null
+  if (root.name === 'w:sdt') {
+    const ok =
+      holder.element.name === 'w:sdtContent' &&
+      holder.element.children.length === 0 &&
+      root.children.includes(holder.element) &&
+      root.children.every(
+        (child) =>
+          child === holder.element ||
+          ((child.name === 'w:sdtPr' || child.name === 'w:sdtEndPr') && propertiesOnly(child)),
+      )
+    return ok ? scan.outer : null
+  }
+  const props = WRAPPER_PROPS[root.name]
+  const ok =
+    holder.element === root &&
+    holder.before === root.children.length &&
+    root.children.length <= (props === undefined ? 0 : 1) &&
+    root.children.every((child) => child.name === props && propertiesOnly(child))
+  return ok ? scan.outer : null
+}
+
+/**
+ * The prefixes a kept element needs its part root to declare, null when it
+ * may not be carried. It may when it is one of the text-less markers, empty,
+ * or a wrapper that holds no run at all: only its properties, such wrappers
+ * and such markers.
+ */
+export function inlineOpaquePrefixes(xml: unknown): ReadonlySet<string> | null {
+  if (typeof xml !== 'string') return null
+  const scan = scanCarried([xml])
+  if (!scan) return null
+  const todo = [scan.root]
+  for (let el = todo.pop(); el; el = todo.pop()) {
+    if (INLINE_KEPT_ELEMENTS.has(el.name)) {
+      if (el.children.length > 0) return null
+      continue
+    }
+    if (!isInlineWrapper(el.name)) return null
+    const props = WRAPPER_PROPS[el.name]
+    for (let i = 0; i < el.children.length; i++) {
+      const child = el.children[i]
+      if (el.name === 'w:sdt') {
+        if (child.name === 'w:sdtContent') todo.push(...child.children)
+        else if (child.name !== 'w:sdtPr' && child.name !== 'w:sdtEndPr') return null
+        else if (!propertiesOnly(child)) return null
+      } else if (i === 0 && child.name === props) {
+        if (!propertiesOnly(child)) return null
+      } else todo.push(child)
+    }
+  }
+  return scan.outer
+}
+
+/** the wrapper may be carried in a part whose root declares `namespaces` (unknown: not judged) */
+export function validInlineWrap(wrap: unknown, namespaces?: PartNamespaces): wrap is InlineWrap {
+  const prefixes = inlineWrapPrefixes(wrap)
+  return prefixes !== null && declaredBy(prefixes, namespaces)
+}
+
+/** the kept element may be carried in a part whose root declares `namespaces` (unknown: not judged) */
+export function validInlineOpaque(xml: unknown, namespaces?: PartNamespaces): xml is string {
+  const prefixes = inlineOpaquePrefixes(xml)
+  return prefixes !== null && declaredBy(prefixes, namespaces)
 }
 
 /** one element of the scanned xml: the byte ranges of its tags and its element children */
@@ -268,78 +576,6 @@ export function sameInlineWrap(a: InlineWrap | undefined, b: InlineWrap | undefi
 /** Stable across copied mark objects, scoped to one paragraph's writer. */
 export const inlineWrapKey = (wrap: InlineWrap): string =>
   JSON.stringify([wrap.seq, wrap.open, wrap.close])
-
-/** No literal content is hidden between an element's element children. */
-function onlyElementChildren(xml: string, el: RawElement): boolean {
-  let at = el.openEnd
-  for (const child of el.children) {
-    if (xml.slice(at, child.start).trim() !== '') return false
-    at = child.end
-  }
-  return xml.slice(at, el.closeStart).trim() === ''
-}
-
-/**
- * Validate bytes at the writer boundary: co-editing can supply marks that
- * did not come from this parser. A shell contains just one allowed wrapper,
- * its properties, and exactly one content hole at the parser's split point.
- */
-export function validInlineWrap(wrap: InlineWrap): boolean {
-  const xml = wrap.open + '<inline-hole/>' + wrap.close
-  if (XMLValidator.validate(xml) !== true) return false
-  const roots = rawElements(xml)
-  const root = roots[0]
-  if (
-    roots.length !== 1 ||
-    !root ||
-    root.start !== 0 ||
-    root.end !== xml.length ||
-    !isInlineWrapper(root.name) ||
-    !onlyElementChildren(xml, root)
-  )
-    return false
-  const holeAt = wrap.open.length
-  const isHole = (el: RawElement) =>
-    el.name === 'inline-hole' && el.start === holeAt && el.end === holeAt + 14
-  if (root.name === 'w:sdt') {
-    const contents = root.children.filter((c) => c.name === 'w:sdtContent')
-    return (
-      contents.length === 1 &&
-      onlyElementChildren(xml, contents[0]) &&
-      contents[0].children.length === 1 &&
-      isHole(contents[0].children[0]) &&
-      root.children.every(
-        (c) => c === contents[0] || c.name === 'w:sdtPr' || c.name === 'w:sdtEndPr',
-      )
-    )
-  }
-  const props = WRAPPER_PROPS[root.name]
-  return (
-    root.children.length >= 1 &&
-    root.children.length <= (props ? 2 : 1) &&
-    isHole(root.children[root.children.length - 1]) &&
-    (root.children.length === 1 || root.children[0].name === props)
-  )
-}
-
-/** One allowed text-less element, not a fragment that can escape its paragraph. */
-export function validInlineOpaque(xml: string): boolean {
-  if (XMLValidator.validate(xml) !== true) return false
-  const roots = rawElements(xml)
-  const root = roots[0]
-  if (roots.length !== 1 || !root || root.start !== 0 || root.end !== xml.length) return false
-  if (INLINE_KEPT_ELEMENTS.has(root.name)) {
-    return root.children.length === 0 && xml.slice(root.openEnd, root.closeStart).trim() === ''
-  }
-  if (!isInlineWrapper(root.name)) return false
-  const todo = [root]
-  for (let el = todo.pop(); el; el = todo.pop()) {
-    if (NOT_WHOLE.has(el.name)) return false
-    if (!onlyElementChildren(xml, el)) return false
-    todo.push(...el.children)
-  }
-  return true
-}
 
 /** two runs sit in the same chain of wrapper elements */
 export function sameInlineWrapChain(

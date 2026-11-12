@@ -1,14 +1,14 @@
 import { ContentControlPart } from './inline-control-ids'
 import { sdtCheckboxGlyphs, sdtCheckboxIsChecked, syncSdtCheckbox } from './checkbox-control'
 import {
+  inlineOpaquePrefixes,
   inlineWrapKey,
+  inlineWrapPrefixes,
   inlineWrapTextOf,
   inlineWrapWritesOnce,
   placeInlineWraps,
   sameInlineWrap,
   sdtOpenForChangedText,
-  validInlineOpaque,
-  validInlineWrap,
   runDraws,
 } from './inline-opaque'
 import type {
@@ -16,6 +16,7 @@ import type {
   CharIndents,
   GeneratedBlock,
   ImageWrap,
+  InlineWrap,
   ParaFormat,
   ParaFrame,
   PropChangeInfo,
@@ -46,6 +47,13 @@ export interface GenerateContext {
   allocateBookmarkId?: (name: string) => number
   /** Mint w:id for a tracked change that has none; document-wide so two edited paragraphs never share ids */
   allocateRevisionId?: () => string
+  /**
+   * The part the block is written into. With it the run writer checks that
+   * the part root declares the prefixes of the bytes a run carries, and marks
+   * the controls it writes from runs so the part can let a repeated id give
+   * way (ContentControlPart.finish, which the caller runs over the part).
+   */
+  part?: ContentControlPart
 }
 
 const EMU_PER_PX = 9525
@@ -697,14 +705,14 @@ function patchCellXml(
       const pPr = entry.format
         ? mergeCellParaFormat(pPrOf(template), entry.format, entry.original)
         : pPrOf(template)
-      const emitted = entry.xml ?? runsXml(entry.runs, null)
+      const emitted = entry.xml ?? runsXml(entry.runs, null, { part })
       const emittedMedia = new Set(mediaRIds(emitted))
       const keep = aligned
         ? carriedRunsOf(template, emittedMedia)
         : i === 0
           ? originals.map((p) => carriedRunsOf(p, emittedMedia)).join('')
           : ''
-      return `<w:p>${pPr}${part.generated(emitted)}${keep}</w:p>`
+      return `<w:p>${pPr}${emitted}${keep}</w:p>`
     })
     .join('')
   return openTag + tcPr + body + '</w:tc>'
@@ -944,7 +952,7 @@ function patchTxbxContent(
     if (patch.align !== undefined) pPr = pPrWithJc(pPr, patch.align)
     // no rel allocation inside textboxes: only links that already have an rId
     // survive re-generation, new links degrade to plain text
-    parts.push(`<w:p>${pPr}${part.generated(runsXml(patch.runs, null))}</w:p>`)
+    parts.push(`<w:p>${pPr}${runsXml(patch.runs, null, { part })}</w:p>`)
   }
   return open + parts.join('') + '</w:txbxContent>'
 }
@@ -1031,7 +1039,7 @@ function injectShapeText(
       const body = entry.paras
         .map(
           (p) =>
-            `<w:p>${pPrWithJc(pPrWithIndLeft('', p.indentLeft ?? null), p.align)}${part.generated(runsXml(p.runs, null))}</w:p>`,
+            `<w:p>${pPrWithJc(pPrWithIndLeft('', p.indentLeft ?? null), p.align)}${runsXml(p.runs, null, { part })}</w:p>`,
         )
         .join('')
       const txbx = `<wps:txbx><w:txbxContent>${body}</w:txbxContent></wps:txbx>`
@@ -2551,7 +2559,7 @@ function tableCellXml(
     // The parsed format, not just w:jc: hand-building the pPr here dropped w:bidi and
     // discarded every other paragraph property the model carries.
     const pPr = mergePPrFormat(`<w:pPr>${numPr}</w:pPr>`, paragraph)
-    return `<w:p>${pPr}${part.generated(runsXml(paragraph.runs, null))}</w:p>`
+    return `<w:p>${pPr}${runsXml(paragraph.runs, null, { part })}</w:p>`
   })
   // nested tables are regenerated from the model at their paragraph anchors (reverse
   // insertion keeps anchor indexes valid); OOXML requires tc to end with w:p
@@ -3104,20 +3112,25 @@ export function generateIndexFieldXml(terms: string[]): string[] {
 }
 
 function generateRunsXml(runs: Run[], ctx: GenerateContext): string {
-  return runsXml(runs, ctx.allocateHyperlinkRel, ctx.allocateRevisionId)
+  return runsXml(runs, ctx.allocateHyperlinkRel, {
+    allocateRevisionId: ctx.allocateRevisionId,
+    part: ctx.part,
+  })
 }
 
-/**
- * OOXML runs without relationship allocation (header/footer parts, ...).
- * `written`: the content controls already written for this paragraph, shared
- * by a caller that writes one paragraph's runs in several calls.
- */
-export function inlineRunsXml(
-  runs: Run[],
-  written?: Set<string>,
-  fieldFragments?: ReadonlyMap<Run, string>,
-): string {
-  return runsXml(runs, null, undefined, written, fieldFragments)
+export interface RunsXmlOptions {
+  /** the content controls already written for this paragraph, shared by a
+   *  caller that writes one paragraph's runs in several calls */
+  written?: Set<string>
+  /** xml written in place of a run (the fields of a header) */
+  fragments?: ReadonlyMap<Run, string>
+  /** the part the runs are written into (see GenerateContext.part) */
+  part?: ContentControlPart
+}
+
+/** OOXML runs without relationship allocation (header/footer parts, ...). */
+export function inlineRunsXml(runs: Run[], options?: RunsXmlOptions): string {
+  return runsXml(runs, null, options)
 }
 
 /**
@@ -3128,41 +3141,57 @@ export function inlineRunsXml(
 function runsXml(
   runs: Run[],
   allocate: ((href: string) => string) | null,
-  allocateRevisionId?: () => string,
-  written: Set<string> = new Set(),
-  fieldFragments?: ReadonlyMap<Run, string>,
+  options: RunsXmlOptions & { allocateRevisionId?: () => string } = {},
 ): string {
-  // Validate once per distinct shell/element in this write, not once per run.
-  // Invalid remote marks lose only their structure, never their visible text.
-  const originalRuns = runs
-  if (runs.some((r) => r.wrap?.length || r.opaqueXml !== undefined)) {
-    const validWraps = new Map<string, boolean>()
-    const validOpaque = new Map<string, boolean>()
-    runs = runs.map((run) => {
-      const wrap = run.wrap?.filter((w) => {
-        const key = inlineWrapKey(w)
-        let valid = validWraps.get(key)
-        if (valid === undefined) {
-          valid = validInlineWrap(w)
-          validWraps.set(key, valid)
-        }
-        return valid
-      })
-      let opaqueXml = run.opaqueXml
-      if (opaqueXml !== undefined) {
-        let valid = validOpaque.get(opaqueXml)
-        if (valid === undefined) {
-          valid = validInlineOpaque(opaqueXml)
-          validOpaque.set(opaqueXml, valid)
-        }
-        if (!valid) opaqueXml = undefined
+  const { allocateRevisionId, fragments, part } = options
+  const written = options.written ?? new Set<string>()
+  // The bytes a run carries may come from a co-editing peer: each wrapper and
+  // kept element is checked before it is written, and one that fails goes
+  // without taking the run's text with it. Nothing here may throw on a value
+  // of the wrong type.
+  const givenRuns = runs
+  if (runs.some((r) => r.wrap !== undefined || r.opaqueXml !== undefined)) {
+    const writable = (prefixes: ReadonlySet<string> | null): boolean =>
+      prefixes !== null && (part ? part.takes(prefixes) : true)
+    const wraps = new Map<unknown, boolean>()
+    const wrapOk = (wrap: unknown): wrap is InlineWrap => {
+      let ok = wraps.get(wrap)
+      if (ok === undefined) {
+        ok = writable(inlineWrapPrefixes(wrap))
+        wraps.set(wrap, ok)
       }
-      if (wrap?.length === run.wrap?.length && opaqueXml === run.opaqueXml) return run
-      return { ...run, wrap: wrap?.length ? wrap : undefined, opaqueXml }
+      return ok
+    }
+    const opaques = new Map<unknown, boolean>()
+    const opaqueOk = (xml: unknown): boolean => {
+      let ok = opaques.get(xml)
+      if (ok === undefined) {
+        ok = writable(inlineOpaquePrefixes(xml))
+        opaques.set(xml, ok)
+      }
+      return ok
+    }
+    runs = runs.map((run) => {
+      const given: unknown = run.wrap
+      const wrap = Array.isArray(given) ? given.filter(wrapOk) : []
+      // a kept element is text-less: on a run that holds text, the text is what is written
+      const opaque = run.opaqueXml !== undefined && run.text === '' && opaqueOk(run.opaqueXml)
+      const wrapKept = given === undefined || (Array.isArray(given) && wrap.length === given.length)
+      if (wrapKept && opaque === (run.opaqueXml !== undefined)) return run
+      const { wrap: _wrap, opaqueXml, ...rest } = run
+      return { ...rest, ...(wrap.length > 0 ? { wrap } : {}), ...(opaque ? { opaqueXml } : {}) }
     })
   }
-  const fragment = (index: number, insideLink: boolean) =>
-    fieldFragments?.get(originalRuns[index]) ?? runFragmentXml(runs[index], insideLink)
+  const fragment = (index: number, insideLink: boolean): string => {
+    const given = fragments?.get(givenRuns[index])
+    if (given !== undefined) return given
+    const run = runs[index]
+    const xml = runFragmentXml(run, insideLink)
+    // a whole empty control gives way to a taken id like one around runs
+    return part && run.opaqueXml !== undefined && /^<w:sdt[\s/>]/.test(xml)
+      ? part.yielding(xml)
+      : xml
+  }
   // comment ranges: re-emit start/end/reference markers around the first..last
   // run each id covers, so editing a commented paragraph keeps its comments
   const firstOf = new Map<string, number>()
@@ -3249,7 +3278,9 @@ function runsXml(
           // text typed into a placeholder or a data-bound control: the two
           // properties that would make Word discard it go (see InlineWrap.text)
           const edited = wrap.text !== undefined && inlineWrapTextOf(runs, g, end) !== wrap.text
-          parts.push(edited ? sdtOpenForChangedText(wrap.open) : wrap.open)
+          const open = edited ? sdtOpenForChangedText(wrap.open) : wrap.open
+          // a control written from runs is the one that gives way to a taken id
+          parts.push(once && part ? part.yielding(open) : open)
           within(g, end, level, depth + 1, leaf)
           parts.push(wrap.close)
         }

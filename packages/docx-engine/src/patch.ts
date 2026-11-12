@@ -31,6 +31,7 @@ import {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
+import { partNamespaces } from './inline-opaque'
 import { resolveRelationshipTargetPath } from './parse-package'
 import { applyRemoveParts, planRemoveParts, type RemovePartsOptions } from './remove-parts'
 import { assertZipWithinLimits, resolveMainDocumentPath, type ParseExtras } from './parse'
@@ -873,6 +874,12 @@ export async function saveDocx(
   }
   const styleUpserts = [...(options.styleUpserts ?? []), ...headingUpserts]
 
+  // the body as the run writer sees it: what the document root declares, and
+  // the bytes copied into it as they are (their control ids are taken)
+  const bodyControls = new ContentControlPart(
+    [documentXml, ...finalBlocks.flatMap((b) => (b.kind === 'xml' ? [b.xml] : []))],
+    partNamespaces(documentXml),
+  )
   const genCtx = {
     headingStyleIds,
     listParagraphStyleId: parsed.listParagraphStyleId,
@@ -882,6 +889,7 @@ export async function saveDocx(
       [documentXml, ...(await storyPartsXml(zip))],
       options.revisionIdFloor,
     ),
+    part: bodyControls,
   }
 
   const newMedia: Array<{ path: string; base64: string }> = []
@@ -1800,10 +1808,6 @@ export async function saveDocx(
   })
 
   const parts: string[] = [...detachedOpaque]
-  const bodyControls = new ContentControlPart([
-    documentXml,
-    ...finalBlocks.flatMap((b) => (b.kind === 'xml' ? [b.xml] : [])),
-  ])
   for (let i = 0; i < finalBlocks.length; i++) {
     const fb = finalBlocks[i]
     let xml: string
@@ -1888,7 +1892,6 @@ export async function saveDocx(
       if (wrap.first === i) xml = wrap.shell.openXml + xml
       if (wrap.last === i) xml = xml + wrap.shell.closeXml
     }
-    if (fb.kind === 'generated') xml = bodyControls.generated(xml)
     parts.push(xml)
   }
   // Trailing hidden elements (w:sectPr) always keep their original bytes and position,
@@ -2524,6 +2527,13 @@ function patchWatermarkInPart(originalXml: string, watermarkXml: string): string
   return `${prefix}${rootOpen}${watermarkXml}${kept.map((c) => c.xml).join('')}</w:hdr>`
 }
 
+/** what the root of a header/footer part written anew declares */
+const HF_ROOT_ATTRS =
+  ' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"' +
+  ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"' +
+  WATERMARK_NS
+const HF_ROOT_NAMESPACES = partNamespaces(`<w:hdr${HF_ROOT_ATTRS}>`)
+
 /** the part's bytes with the editor's accept / reject decisions replayed (the regeneration basis) */
 function hfOriginalXml(hf: HeaderFooter, originalXml: string | null): string | null {
   if (!originalXml || !hf.revisionsResolved?.length) return originalXml
@@ -2538,7 +2548,10 @@ function headerFooterPartXml(
   originalXml: string | null = null,
   pageCount = 1,
 ): string {
-  const controls = new ContentControlPart(originalXml ?? '')
+  const controls = new ContentControlPart(
+    originalXml ?? '',
+    originalXml ? partNamespaces(originalXml) : HF_ROOT_NAMESPACES,
+  )
   const root = kind === 'header' ? 'w:hdr' : 'w:ftr'
   const textRun = (t: string) =>
     t ? `<w:r><w:t xml:space="preserve">${escapeXmlText(t)}</w:t></w:r>` : ''
@@ -2587,7 +2600,7 @@ function headerFooterPartXml(
       const held: Run[] = []
       const text = (piece: Run) => {
         if (grouped) held.push(piece)
-        else xml += inlineRunsXml([piece], written)
+        else xml += inlineRunsXml([piece], { written, part: controls })
       }
       const field = (fieldXml: string, host: Run, logicalText: string) => {
         if (grouped) {
@@ -2630,8 +2643,8 @@ function headerFooterPartXml(
           text(run)
         }
       }
-      if (held.length > 0) xml += inlineRunsXml(held, written, fragments)
-      return controls.generated(xml)
+      if (held.length > 0) xml += inlineRunsXml(held, { written, fragments, part: controls })
+      return xml
     }
     // rows live in the original w:tbl bytes (edited cells are patched into them
     // below); a rebuild without the original part flattens them to paragraphs
@@ -2773,11 +2786,10 @@ function headerFooterPartXml(
       }
     }
   }
+  // a root written anew declares what the bytes carried on runs were written with
   return controls.finish(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      `<${root} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"` +
-      ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"' +
-      `${WATERMARK_NS}>` +
+      `<${root}${HF_ROOT_ATTRS}${controls.rootDeclarations(HF_ROOT_NAMESPACES)}>` +
       `${body}</${root}>`,
   )
 }

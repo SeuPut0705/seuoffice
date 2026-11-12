@@ -63,7 +63,8 @@ describe('only engine-generated controls yield a duplicate id in their own part'
 
   it('verbatim xml reserves its ids and bytes even after a generated paragraph', async () => {
     const doc = await parseDocx(await buildDocx({ bodyXml: P('first') }))
-    const raw = `<!--seuoffice-inline-generated:start-->${P('verbatim').replace('w:val="7"', "w:val='7'")}<!--seuoffice-inline-generated:end-->`
+    // the comment the engine itself puts before a control that may give way
+    const raw = `<w:p><!--seuoffice-inline-yields-->${C('verbatim').replace('w:val="7"', "w:val='7'")}</w:p>`
     const xml = await part(
       await saveDocx(doc, [generated(doc.blocks[0].runs!), { kind: 'xml', xml: raw }]),
     )
@@ -135,4 +136,142 @@ describe('only engine-generated controls yield a duplicate id in their own part'
     expect(xml).toContain(`<w:p>${T('edited')}</w:p>`)
     expect(count(xml, '<w:sdt>')).toBe(1)
   })
+})
+
+/**
+ * Controls the engine wrote before runs carried wrappers (a checkbox control,
+ * the block control a paragraph sits in) repeat their id wherever the source
+ * or a copy repeats it: a rebuilt paragraph writes them as it always did.
+ */
+describe('a checkbox control and a block control never give up their id', () => {
+  const CB = (id: string) =>
+    `<w:sdt><w:sdtPr><w:id w:val="${id}"/><w14:checkbox xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml">` +
+    '<w14:checked w14:val="0"/><w14:checkedState w14:val="2612" w14:font="MS Gothic"/>' +
+    '<w14:uncheckedState w14:val="2610" w14:font="MS Gothic"/></w14:checkbox></w:sdtPr>' +
+    '<w:sdtContent><w:r><w:t>\u2610</w:t></w:r></w:sdtContent></w:sdt>'
+  const BLK = (id: string, inner: string) =>
+    `<w:sdt><w:sdtPr><w:alias w:val="Blk"/><w:tag w:val="t${id}"/><w:id w:val="${id}"/></w:sdtPr><w:sdtContent>${inner}</w:sdtContent></w:sdt>`
+  const TAIL = `<w:p>${T('tail')}</w:p>`
+  type Doc = Awaited<ReturnType<typeof parseDocx>>
+  type Blk = Doc['blocks'][number]
+  const original = (b: Blk): SaveBlock => ({ kind: 'original', docxIndex: b.docxIndex! })
+  /** the block rebuilt from its runs: `edit` retypes its first plain text, `anchored` false = a pasted copy */
+  const rebuilt = (b: Blk, edit = false, anchored = true): SaveBlock => ({
+    kind: 'generated',
+    block: {
+      type: 'paragraph',
+      runs: b.runs!.map((r, i) => (edit && i === 0 ? { ...r, text: r.text.toUpperCase() } : r)),
+      ...(b.sdtShell ? { sdtShell: b.sdtShell } : {}),
+    },
+    ...(anchored ? { docxIndex: b.docxIndex! } : {}),
+  })
+  const saved = async (bodyXml: string, plan: (blocks: Blk[]) => SaveBlock[]): Promise<string> => {
+    const doc = await parseDocx(await buildDocx({ bodyXml }))
+    const xml = await part(await saveDocx(doc, plan(doc.blocks.filter((b) => !b.hidden))))
+    return xml.slice(xml.indexOf('<w:body>') + 8, xml.lastIndexOf('<w:sectPr'))
+  }
+
+  const TWO_BOXES = `<w:p>${T('agree ')}${CB('42')}</w:p><w:p>${T('also ')}${CB('42')}</w:p>${TAIL}`
+  it.each([0, 1])(
+    'two checkboxes with one id in the source: text edited in paragraph %s, both boxes stay',
+    async (edited) => {
+      const body = await saved(TWO_BOXES, (v) =>
+        v.map((b, i) => (i === edited ? rebuilt(b, true) : original(b))),
+      )
+      expect(count(body, '<w14:checkbox')).toBe(2)
+      expect(count(body, '<w:id w:val="42"/>')).toBe(2)
+    },
+  )
+
+  const ONE_BOX = `<w:p>${T('agree ')}${CB('42')}</w:p>${TAIL}`
+  it.each([true, false])(
+    'a pasted copy of a checkbox paragraph keeps its checkbox (source paragraph edited=%s)',
+    async (edited) => {
+      const body = await saved(ONE_BOX, (v) => [
+        edited ? rebuilt(v[0], true) : original(v[0]),
+        rebuilt(v[0], false, false),
+        original(v[1]),
+      ])
+      expect(count(body, '<w14:checkbox')).toBe(2)
+    },
+  )
+
+  it('one run holding two box glyphs is written as two checkboxes', async () => {
+    const doc = await parseDocx(await buildDocx({ bodyXml: ONE_BOX }))
+    const [first, tail] = doc.blocks.filter((b) => !b.hidden)
+    const runs = first.runs!.map((r) => (r.sdtCheckboxXml ? { ...r, text: r.text + r.text } : r))
+    const xml = await part(
+      await saveDocx(doc, [
+        { kind: 'generated', block: { type: 'paragraph', runs }, docxIndex: first.docxIndex! },
+        original(tail),
+      ]),
+    )
+    expect(count(xml, '<w14:checkbox')).toBe(2)
+  })
+
+  const TWO_BLOCKS = `${BLK('5', `<w:p>${T('one')}</w:p>`)}${BLK('5', `<w:p>${T('two')}</w:p>`)}${TAIL}`
+  it.each([0, 1])(
+    'two block controls with one id in the source: paragraph %s edited, both controls stay',
+    async (edited) => {
+      const body = await saved(TWO_BLOCKS, (v) =>
+        v.map((b, i) => (i === edited ? rebuilt(b, true) : original(b))),
+      )
+      expect(count(body, '<w:alias w:val="Blk"/>')).toBe(2)
+      expect(count(body, '<w:sdtContent>')).toBe(2)
+    },
+  )
+
+  it('a copied paragraph of a block control keeps the control around it', async () => {
+    const body = await saved(`${BLK('5', `<w:p>${T('one')}</w:p>`)}${TAIL}`, (v) => [
+      rebuilt(v[0], true),
+      rebuilt(v[0], false, false),
+      original(v[1]),
+    ])
+    expect(count(body, '<w:alias w:val="Blk"/>')).toBe(2)
+  })
+
+  it('a checkbox with the id of the block control it sits in stays', async () => {
+    const body = await saved(`${BLK('5', `<w:p>${T('agree ')}${CB('5')}</w:p>`)}${TAIL}`, (v) =>
+      v.map((b, i) => (i === 0 ? rebuilt(b, true) : original(b))),
+    )
+    expect(count(body, '<w:alias w:val="Blk"/>')).toBe(1)
+    expect(count(body, '<w14:checkbox')).toBe(1)
+  })
+
+  it('a text box written twice by Word (mc:Choice and mc:Fallback): both copies keep the checkbox', async () => {
+    const inner = `<w:txbxContent><w:p>${T('agree ')}${CB('42')}</w:p></w:txbxContent>`
+    const box =
+      `<w:p>${T('anchor ')}<w:r><mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">` +
+      '<mc:Choice Requires="wps"><w:drawing><wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="1" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">' +
+      '<wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="column"><wp:posOffset>0</wp:posOffset></wp:positionH>' +
+      '<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx="1000000" cy="500000"/>' +
+      '<wp:wrapNone/><wp:docPr id="1" name="Text Box 1"/><a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">' +
+      '<wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:cNvSpPr txBox="1"/>' +
+      '<wps:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1000000" cy="500000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></wps:spPr>' +
+      `<wps:txbx>${inner}</wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice>` +
+      '<mc:Fallback><w:pict><v:shape xmlns:v="urn:schemas-microsoft-com:vml" type="#_x0000_t202" style="width:80pt;height:40pt">' +
+      `<v:textbox>${inner}</v:textbox></v:shape></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>`
+    const doc = await parseDocx(await buildDocx({ bodyXml: box + TAIL }))
+    const block = doc.blocks[0]
+    const runs = block.textboxes![0].paras[0].runs.map((r, i) =>
+      i === 0 ? { ...r, text: r.text.toUpperCase() } : r,
+    )
+    const xml = patchTextboxParas(block.originalXml!, { byIndex: [[{ runs }]] })
+    expect(count(xml, 'AGREE ')).toBe(2)
+    expect(count(xml, '<w14:checkbox')).toBe(2)
+  })
+
+  it.each([true, false])(
+    'a checkbox still takes its id: a run-carried control with that id yields (control first=%s)',
+    async (controlFirst) => {
+      const control = `<w:p>${T('plain ')}${C('ctl', '42')}</w:p>`
+      const boxed = `<w:p>${T('agree ')}${CB('42')}</w:p>`
+      const body = await saved(controlFirst ? control + boxed : boxed + control, (v) =>
+        v.map((b) => rebuilt(b, true)),
+      )
+      expect(count(body, '<w14:checkbox')).toBe(1)
+      expect(count(body, '<w:sdt>')).toBe(1)
+      expect(body).toContain(`<w:p>${T('PLAIN ')}${T('ctl')}</w:p>`)
+    },
+  )
 })

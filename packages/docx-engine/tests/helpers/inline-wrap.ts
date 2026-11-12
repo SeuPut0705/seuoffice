@@ -35,10 +35,11 @@ const HDR_NS =
   'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ' +
   'xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"'
 
-/** a document whose default header holds `headerXml` (w:hdr children) */
+/** a document whose default header holds `headerXml` (w:hdr children); `rootAttrs` go on w:hdr */
 export function buildWithHeader(
   headerXml: string,
   options: Partial<BuildDocxOptions> = {},
+  rootAttrs = '',
 ): Promise<Uint8Array> {
   return buildDocx({
     bodyXml: `<w:p>${T('body')}</w:p>`,
@@ -50,7 +51,7 @@ export function buildWithHeader(
       ...(options.extraParts ?? []),
       {
         path: 'word/header1.xml',
-        xml: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${HDR_NS}>${headerXml}</w:hdr>`,
+        xml: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${HDR_NS}${rootAttrs ? ` ${rootAttrs}` : ''}>${headerXml}</w:hdr>`,
         contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml',
       },
     ],

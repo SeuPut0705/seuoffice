@@ -248,13 +248,16 @@ import {
   inlineElementXml,
   inlineRawSource,
   inlineWrapTextOf,
-  inlineWrapperIsBare,
   inlineWrapperShell,
+  partNamespaces,
   isInlineWrapper,
   neighbouringRun,
   runDraws,
   sdtFollowsItsText,
+  validInlineOpaque,
+  validInlineWrap,
   type InlineRawSource,
+  type PartNamespaces,
 } from './inline-opaque'
 import { paraCsFormat, parseStyles } from './parse-styles'
 import { ownValue, setOwn } from './own-value'
@@ -509,6 +512,7 @@ export async function parseDocx(
     sdtGroupSeq: 0,
     ...(defaultParaStyle ? { defaultParaStyle } : {}),
     xmlSpacePreserve: partXmlSpacePreserve(documentXml, 'w:document'),
+    partNamespaces: partNamespaces(documentXml),
     ...(documentXml.includes('<v:shapetype')
       ? { vmlShapeTypes: vmlShapeTypeTable(documentXml) }
       : {}),
@@ -802,6 +806,9 @@ interface BuildContext {
   /** part root declares xml:space="preserve" (inherited XML scope; PDF converters
    *  rely on it instead of per-w:t attributes) */
   xmlSpacePreserve?: boolean
+  /** the namespace declarations of the part root: bytes carried on runs are
+   *  written back under it, so they may use no other prefix (absent: none) */
+  partNamespaces?: PartNamespaces
   /** document-wide v:shapetype templates (a shape may point at one declared in an earlier paragraph) */
   vmlShapeTypes?: ReadonlyMap<string, Record<string, string>>
   /** Per-document identity source for editable Zotero fields. */
@@ -4385,6 +4392,8 @@ function fieldResultRuns(xml: string, ctx: BuildContext, visible: string): Field
   return runs
 }
 
+const NO_NAMESPACES: PartNamespaces = new Map()
+
 function extractRuns(
   pNode: XNode,
   ctx: BuildContext,
@@ -4489,10 +4498,16 @@ function extractRuns(
     if (rev?.wrap) run.wrap = rev.wrap
     runs.push(run)
   }
-  /** a text-less element the model has no field for (w:permStart, a bare wrapper...):
-   *  kept verbatim at its position, inside the hyperlink it sat in */
-  const pushKept = (node: XNode, link: Run['link'] | undefined, rev?: RevCtx) =>
-    pushRun({ text: '', opaqueXml: inlineElementXml(node, raw), ...(link ? { link } : {}) }, rev)
+  const namespaces = ctx.partNamespaces ?? NO_NAMESPACES
+  /** a text-less element the model has no field for (w:permStart, a wrapper
+   *  holding no run): kept verbatim at its position, inside the hyperlink it
+   *  sat in, when its bytes can be written back in this part */
+  const pushKept = (node: XNode, link: Run['link'] | undefined, rev?: RevCtx): boolean => {
+    const xml = inlineElementXml(node, raw)
+    if (!validInlineOpaque(xml, namespaces)) return false
+    pushRun({ text: '', opaqueXml: xml, ...(link ? { link } : {}) }, rev)
+    return true
+  }
   const pushZoteroCachedRuns = (part: ZoteroFieldPart, rev?: RevCtx) => {
     const cachedRuns = fieldCachedRuns.length > 0 ? fieldCachedRuns : [{ text: fieldCached || ' ' }]
     const id = zoteroField?.id ?? ctx.nextZoteroFieldId ?? 1
@@ -4911,9 +4926,8 @@ function extractRuns(
         const fieldDepthAtEntry = fieldDepth
         if (!shell) {
           // nowhere to hold runs (no w:sdtContent, a self-closing element): one
-          // kept element when it is bare, else read through as plain content
-          if (fieldDepth === 0 && inlineWrapperIsBare(node)) pushKept(node, link, rev)
-          else walk(childrenOf(node), link, rev)
+          // kept element when it can ride whole, else read through as plain content
+          if (fieldDepth > 0 || !pushKept(node, link, rev)) walk(childrenOf(node), link, rev)
         } else {
           const wrap: InlineWrap = {
             seq: wrapSeq++,
@@ -4932,11 +4946,12 @@ function extractRuns(
             // built where the field ends, so it is not this wrapper's to hold
             notCarried.add(wrap)
           } else if (inside.some(carriesWrap)) {
-            if (sdtFollowsItsText(wrap.open)) wrap.text = inlineWrapTextOf(inside)
-          } else if (inlineWrapperIsBare(node)) {
+            // bytes that cannot be written back in this part are not carried
+            if (!validInlineWrap(wrap, namespaces)) notCarried.add(wrap)
+            else if (sdtFollowsItsText(wrap.open)) wrap.text = inlineWrapTextOf(inside)
+          } else if (pushKept(node, link, rev)) {
             // nothing in it the model reads: the whole element rides as one
-            runs.length = first
-            pushKept(node, link, rev)
+            runs.splice(first, inside.length)
           } else {
             // it holds runs, but none this reading carries (a picture in a part
             // read without pictures): read as if the wrapper were not there
@@ -7412,6 +7427,7 @@ function hfParagraphs(
     themeFonts,
     styles,
     xmlSpacePreserve: attrsOf(root)['xml:space'] === 'preserve',
+    partNamespaces: partNamespaces(partXml),
     ...(resolver ? { resolver } : {}),
   } as unknown as BuildContext
   const out: HfParagraph[] = []
