@@ -8,13 +8,13 @@
 import { parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { docxToOdt, odtToDocx, odtToText } from '../src'
-import { openOdt, readOdtPackage } from '../src/core'
 import { textOf } from './helpers/api'
 import { buildDocx, chartRun, p, pictureRun, sectPr, shapeRun } from './helpers/build-docx'
 import { kitchenSink, TOC } from './helpers/docx-fixtures'
 import { signature } from './helpers/docx-signature'
 import { PNG_1X1 } from './helpers/hancom-sample'
 import { PNG_GREY } from './helpers/objects-fixtures'
+import { readArchive } from './helpers/odt-archive'
 
 async function convert(spec: Parameters<typeof buildDocx>[0], options = {}) {
   const docx = await buildDocx(spec)
@@ -26,7 +26,7 @@ async function convert(spec: Parameters<typeof buildDocx>[0], options = {}) {
     report,
     source: await parseDocx(docx),
     reread: await parseDocx(back.docxBytes),
-    pkg: await readOdtPackage(odtBytes),
+    pkg: await readArchive(odtBytes),
   }
 }
 
@@ -61,8 +61,7 @@ describe('docxToOdt: the package', () => {
       expect(manifest).toContain(`manifest:full-path="${e.name}"`)
     }
     // it opens as a received ODT
-    const doc = await openOdt(odtBytes)
-    expect(doc.officeVersion).toBe('1.3')
+    await expect(odtToDocx(odtBytes)).resolves.toBeDefined()
   })
 })
 

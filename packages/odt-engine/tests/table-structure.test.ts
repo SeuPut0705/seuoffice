@@ -8,19 +8,19 @@
 import { type Block, type TableCell, type TableModel, parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import JSZip from 'jszip'
-import { type TableExt, mapSequence } from '../src/table'
+import type { TableExt } from './helpers/bridge-ext'
 import { editorSave, odtToBridge, writeBack } from './helpers/bridge'
 import { buildOdt } from './helpers/build-odt'
 import { COVERED_CELL, hCell, hPara, hRow } from './helpers/hancom-fragments'
-import { firstDiff, regenerate, tableRegistry, tableTexts } from './helpers/table-editor'
+import { firstDiff, regenerate, tableTexts } from './helpers/table-editor'
 import { type TableDoc, gridDoc, tablesDoc } from './helpers/table-fixtures'
 
 async function open(doc: TableDoc) {
-  const bridge = await odtToBridge(await buildOdt(doc.options), tableRegistry())
+  const bridge = await odtToBridge(await buildOdt(doc.options))
   const parsed = await parseDocx(bridge.docx)
   const visible = parsed.blocks.filter((b) => !b.hidden)
   const ext = bridge.map.ext.table as unknown as TableExt
-  return { bridge, visible, doc, ext, xml: bridge.doc.contentXml }
+  return { bridge, visible, doc, ext, xml: bridge.content }
 }
 type Opened = Awaited<ReturnType<typeof open>>
 
@@ -30,8 +30,8 @@ async function restructure(o: Opened, index: number, change: (m: TableModel) => 
   )
   const wb = await writeBack(o.bridge, bytes)
   let stripped = wb.content
-  for (const x of wb.rctx.newAutomaticStyles('content.xml')) stripped = stripped.replace(x, '')
-  return { wb, stripped, styles: wb.rctx.newAutomaticStyles('content.xml') }
+  for (const x of wb.newAutomaticStyles('content.xml')) stripped = stripped.replace(x, '')
+  return { wb, stripped, styles: wb.newAutomaticStyles('content.xml') }
 }
 
 const expectSame = (actual: string, expected: string) =>
@@ -91,7 +91,7 @@ const frameStyleOf = (styles: readonly string[]) =>
 describe('rows', () => {
   it('an added row copies its neighbour row and the frame grows by its height', async () => {
     const o = await open(gridDoc(3, 2))
-    const { wb, stripped, styles } = await restructure(o, 1, (m) => insertRow(m, 2, ['n0', 'n1']))
+    const { stripped, styles } = await restructure(o, 1, (m) => insertRow(m, 2, ['n0', 'n1']))
     const table =
       '<table:table table:style-name="Table6"><table:table-column table:style-name="Table6.A"/><table:table-column table:style-name="Table6.B"/>' +
       row6('r0c0', 'r0c1') +
@@ -109,7 +109,6 @@ describe('rows', () => {
     // rows are 24.34pt (0.859cm): 2.576cm → 3.435cm
     expect(frameStyleOf(styles)).toContain('fo:min-height="3.435cm"')
     expect(styles).toHaveLength(1)
-    expect(wb.rctx.warnings).toEqual([])
   })
 
   it('a deleted row is dropped and the frame shrinks', async () => {
@@ -188,10 +187,7 @@ describe('blank rows and columns inserted together', () => {
           const zip = await JSZip.loadAsync(await buildOdt(doc.options))
           zip.file('content.xml', wb.content)
           zip.file('styles.xml', wb.styles)
-          const reopened = await odtToBridge(
-            await zip.generateAsync({ type: 'uint8array' }),
-            tableRegistry(),
-          )
+          const reopened = await odtToBridge(await zip.generateAsync({ type: 'uint8array' }))
           const parsed = await parseDocx(reopened.docx)
           const table = parsed.blocks.find((block) => block.table)!
           const expected = Array.from({ length: 3 }, (_, r) =>
@@ -231,7 +227,7 @@ describe('merging and splitting', () => {
       .replace(hPara('a'), hPara('a') + hPara('b'))
     const table = p.table1.replace(p.row1, hRow([p.lockedCell, merged, COVERED_CELL]))
     expectSame(stripped, o.xml.replace(p.table1, table))
-    expect(wb.rctx.newAutomaticStyles('content.xml')).toEqual([])
+    expect(wb.newAutomaticStyles('content.xml')).toEqual([])
   })
 
   it('a split cell: the first part keeps the cell, the new ones copy its style', async () => {
@@ -262,7 +258,6 @@ describe('locked cells in structural edits', () => {
       delete m.rows[1][0].vMerge
     })
     expect(wb.content).toBe(o.xml)
-    expect(wb.rctx.warnings.join('\n')).toMatch(/locked cells/)
   })
 
   it('a structure change elsewhere keeps the locked cell byte for byte', async () => {
@@ -279,19 +274,10 @@ describe('locked cells in structural edits', () => {
                 .wb.content,
             },
           }),
-          tableRegistry(),
         )
       ).docx,
     )
     const t = parsed.blocks.filter((b) => !b.hidden)[1]
     expect(tableTexts(t)[3]).toEqual(['', '끝 1', '끝 2'])
-  })
-})
-
-describe('row and column matching', () => {
-  it('maps equal rows in order and pairs the rest positionally', () => {
-    expect(mapSequence(['a', 'b', 'c'], ['a', 'x', 'b', 'c'])).toEqual([0, -1, 1, 2])
-    expect(mapSequence(['a', 'b', 'c'], ['a', 'c'])).toEqual([0, 2])
-    expect(mapSequence(['a', 'b', 'c'], ['a', "b'", 'x', 'c'])).toEqual([0, 1, -1, 2])
   })
 })

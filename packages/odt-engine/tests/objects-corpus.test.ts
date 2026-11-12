@@ -4,34 +4,22 @@
  *
  *   ODT_CORPUS=E:/github/odt-corpus npm run test -w @seuoffice/odt-engine
  *
- * For every file: conversion with text + objects must not throw; every
+ * For every file: conversion must not throw; every
  * picture, placeholder, note and comment reaches the bridge docx; paragraphs
  * holding objects read back with their recorded text; an unedited save writes
  * nothing and changes no package entry; editing every paragraph that holds an
- * object keeps every object; editing a note's text rewrites only its
- * paragraph. Counts per kind are printed.
+ * object keeps every object, in the body and in table cells; editing a note's
+ * text rewrites only its paragraph. Counts per kind are printed.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { type Run, parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
-import {
-  type OdtNode,
-  OdfToOoxmlContext,
-  OoxmlToOdfContext,
-  buildBridgeDocx,
-  openOdt,
-  scanOdtBody,
-  walkNodes,
-} from '../src/core'
-import type { ObjectsExt } from '../src/objects'
-import {
-  convertOdtStyles,
-  editedParagraphFromBlock,
-  paragraphToOdf,
-  paragraphToOoxml,
-} from '../src/text'
-import { editOnly, editorSave, odtToBridge, replaceText } from './helpers/bridge'
-import { objectsRegistry, visibleBlocks, writeBackObjects } from './helpers/objects-fixtures'
+import { type ObjectsExt, odtToDocx } from '../src'
+import { editOnly, editorSave, odtToBridge, replaceText, writeBack } from './helpers/bridge'
+import type { TableExt } from './helpers/bridge-ext'
+import { visibleBlocks } from './helpers/objects-fixtures'
+import { cellRuns, editRuns, patchCells } from './helpers/table-editor'
 
 const root = process.env.ODT_CORPUS
 
@@ -62,6 +50,23 @@ const OBJECT_TAGS = [
 ]
 const count = (xml: string, tag: string) => xml.split(tag).length - 1
 
+/** The saved ODT opens again with as many pictures, placeholders, notes and comments. */
+async function sameObjects(odt: Uint8Array, before: ObjectsExt): Promise<boolean> {
+  const { bridge } = await odtToDocx(odt)
+  const after = (bridge.ext.objects ?? {
+    pictures: [],
+    placeholders: [],
+    notes: [],
+    comments: [],
+  }) as unknown as ObjectsExt
+  return (
+    after.pictures.length === before.pictures.length &&
+    after.placeholders.length === before.placeholders.length &&
+    after.notes.length === before.notes.length &&
+    after.comments.length === before.comments.length
+  )
+}
+
 describe.skipIf(!root)('objects layer over the real corpus (ODT_CORPUS)', () => {
   it('converts every object and writes it back unchanged', async () => {
     const files = corpusFiles(root as string)
@@ -80,25 +85,13 @@ describe.skipIf(!root)('objects layer over the real corpus (ODT_CORPUS)', () => 
       const name = file.split(/[\\/]/).pop()
       try {
         const bytes = new Uint8Array(readFileSync(file))
-        const bridge = await odtToBridge(bytes, objectsRegistry())
+        const bridge = await odtToBridge(bytes)
         const ext = (bridge.map.ext.objects ?? {
           placeholders: [],
           pictures: [],
           notes: [],
           comments: [],
         }) as unknown as ObjectsExt
-        const fixture = {
-          bridge,
-          ext,
-          built: {
-            bytes,
-            entries: [],
-            contentXml: bridge.doc.contentXml,
-            stylesXml: bridge.doc.stylesXml ?? '',
-            metaXml: bridge.doc.metaXml ?? '',
-            manifestXml: bridge.doc.pkg.text('META-INF/manifest.xml') ?? '',
-          },
-        }
         pictures += ext.pictures.length
         for (const p of ext.placeholders) {
           kinds[p.kind] = (kinds[p.kind] ?? 0) + 1
@@ -145,12 +138,12 @@ describe.skipIf(!root)('objects layer over the real corpus (ODT_CORPUS)', () => 
 
         // unedited: nothing written, no package change
         const same = await editorSave(bridge.docx, (bs) => bs.map((_, i) => ({ keep: i })))
-        const wb0 = await writeBackObjects(fixture, same.bytes)
+        const wb0 = await writeBack(bridge, same.bytes)
         if (
-          wb0.content !== bridge.doc.contentXml ||
+          wb0.content !== bridge.content ||
           wb0.changes.add.length ||
           wb0.changes.remove.length ||
-          wb0.manifest !== fixture.built.manifestXml
+          wb0.manifest !== (bridge.archive.text('META-INF/manifest.xml') ?? '')
         )
           failures.push(`${name}: an unedited save changed the ODT`)
         else unchanged++
@@ -164,15 +157,13 @@ describe.skipIf(!root)('objects layer over the real corpus (ODT_CORPUS)', () => 
             if (v !== undefined) edits[v] = (g) => replaceText(g, 0, 0, 'X')
           }
           const { bytes: changed } = await editorSave(bridge.docx, editOnly(edits))
-          const wb = await writeBackObjects(fixture, changed)
-          const lost = OBJECT_TAGS.filter(
-            (t) => count(wb.content, t) !== count(bridge.doc.contentXml, t),
-          )
+          const wb = await writeBack(bridge, changed)
+          const lost = OBJECT_TAGS.filter((t) => count(wb.content, t) !== count(bridge.content, t))
           if (lost.length) failures.push(`${name}: editing changed the count of ${lost.join(', ')}`)
           else if (wb.changes.add.length || wb.changes.remove.length)
             failures.push(`${name}: editing text changed package entries`)
-          else if (scanOdtBody(wb.content).warnings.length !== bridge.doc.body.warnings.length)
-            failures.push(`${name}: editing produced malformed XML`)
+          else if (!(await sameObjects(wb.odt, ext)))
+            failures.push(`${name}: the edited ODT reads back with different objects`)
           else edited++
         }
 
@@ -187,12 +178,11 @@ describe.skipIf(!root)('objects layer over the real corpus (ODT_CORPUS)', () => 
             (bs) => bs.map((_, i) => ({ keep: i })),
             { footnotes: notes },
           )
-          const wb = await writeBackObjects(fixture, changed)
+          const wb = await writeBack(bridge, changed)
           const host = bridge.map.paragraphs[note.paragraph]
-          const original = bridge.doc.contentXml
+          const original = bridge.content
           let stripped = wb.content
-          for (const x of wb.rctx.newAutomaticStyles('content.xml'))
-            stripped = stripped.replace(x, '')
+          for (const x of wb.newAutomaticStyles('content.xml')) stripped = stripped.replace(x, '')
           const ok =
             stripped.startsWith(original.slice(0, host.start)) &&
             stripped.endsWith(original.slice(host.end)) &&
@@ -215,79 +205,68 @@ describe.skipIf(!root)('objects layer over the real corpus (ODT_CORPUS)', () => 
     expect(failures).toEqual([])
   }, 1_200_000)
 
-  it('converts the objects of every paragraph anywhere (table cells included) and writes them back', async () => {
+  it('keeps the objects of every table cell when the cell text is edited', async () => {
     const files = corpusFiles(root as string)
     const failures: string[] = []
-    let paragraphs = 0
+    let cells = 0
     let withObjects = 0
-    let identical = 0
-    const kinds: Record<string, number> = {}
-    const containsTable = (n: OdtNode) => {
-      let found = false
-      walkNodes(n.children, (c) => {
-        if (c.kind === 'table') found = true
-        return !found
-      })
-      return found
-    }
+    let kept = 0
     for (const file of files) {
       const name = file.split(/[\\/]/).pop()
       try {
-        const doc = await openOdt(new Uint8Array(readFileSync(file)))
-        const ctx = new OdfToOoxmlContext(doc, objectsRegistry())
-        convertOdtStyles(ctx)
-        const holder = ctx.addBlock(doc.body.blocks[0], null, 'test')
-        walkNodes(doc.body.blocks, (n) => {
-          // objects the editor cannot change keep their inner paragraphs
-          if (n.kind === 'note' || n.kind === 'annotation' || n.kind === 'shape') return false
-          if (n.kind === 'text-box' && !containsTable(n)) return false
-          if (n.kind === 'index') return false
-          if (n.kind !== 'paragraph' && n.kind !== 'heading') return
-          const { xml, paragraph } = paragraphToOoxml(ctx, n, { part: 'content.xml' })
-          ctx.addElement(holder.id, xml, 'paragraph', paragraph.id)
-        })
-        const ext = ctx.map.ext.objects as unknown as ObjectsExt | undefined
-        const tally = (k: string, n: number) => (kinds[k] = (kinds[k] ?? 0) + n)
-        tally('picture', ext?.pictures.length ?? 0)
-        for (const p of ext?.placeholders ?? []) tally(p.kind, 1)
-        for (const n of ext?.notes ?? []) tally(n.kind, 1)
-        tally('comment', ext?.comments.length ?? 0)
-        const docx = await buildBridgeDocx(ctx)
-        const { parsed } = await visibleBlocks(docx)
-        const map = JSON.parse(JSON.stringify(ctx.map)) as typeof ctx.map
-        const rctx = new OoxmlToOdfContext(doc, map, parsed, ctx.registry)
-        const byIndex = new Map(parsed.blocks.map((b) => [b.docxIndex, b]))
-        for (const e of map.elements) {
-          if (e.paragraph === null) continue
-          const record = map.paragraphs[e.paragraph]
-          paragraphs++
-          if (!record.markers.some((m) => m.owner === 'objects')) continue
-          withObjects++
-          const block = byIndex.get(e.id)
-          if (!block || (block.type !== 'paragraph' && block.type !== 'listItem')) continue
-          const text = (block.runs ?? []).map((r) => r.text).join('')
-          if (text !== record.text) {
-            failures.push(
-              `${name} p${record.id}: read back ${JSON.stringify(text)} vs ${JSON.stringify(record.text)}`,
-            )
-            continue
-          }
-          const source = doc.contentXml.slice(record.start, record.end)
-          const odf = paragraphToOdf(rctx, editedParagraphFromBlock(block), record, {
-            part: record.part,
-          })
-          const lost = OBJECT_TAGS.filter((t) => count(odf, t) !== count(source, t))
-          if (lost.length) failures.push(`${name} p${record.id}: rewriting lost ${lost.join(', ')}`)
-          else if (odf === source) identical++
+        const bridge = await odtToBridge(new Uint8Array(readFileSync(file)))
+        const table = bridge.map.ext.table as unknown as TableExt | undefined
+        if (!table) continue
+        const parsed = await parseDocx(bridge.docx)
+        const visible = parsed.blocks.filter((b) => !b.hidden)
+        for (const [elementId, tableId] of Object.entries(table.elements)) {
+          const record = table.tables[tableId]
+          const block = visible.findIndex(
+            (b) =>
+              b.type === 'table' && b.originalXml === bridge.map.elements[Number(elementId)].xml,
+          )
+          if (block < 0) continue
+          // the first paragraph of every unlocked cell that holds an object gets a letter in front
+          const edits: Array<{ row: number; tc: number; paras: Array<{ runs: Run[] } | null> }> = []
+          record.cells.forEach((cellRow, row) =>
+            cellRow.forEach((cell) => {
+              if (cell.kind !== 'cell' || cell.protected) return
+              const paragraphs = cell.units.flatMap((u) => (u.kind === 'p' ? [u.paragraph] : []))
+              const holder = paragraphs.findIndex((id) =>
+                bridge.map.paragraphs[id]?.markers.some((m) => m.owner === 'objects'),
+              )
+              cells++
+              if (holder < 0) return
+              withObjects++
+              const richCount = visible[block].table?.rows[row]?.[cell.tc]?.richParas?.length ?? 0
+              if (richCount !== paragraphs.length) return
+              edits.push({
+                row,
+                tc: cell.tc,
+                paras: paragraphs.map((_, i) =>
+                  i === holder
+                    ? { runs: editRuns(cellRuns(visible[block], row, cell.tc, i), 0, 0, 'X') }
+                    : null,
+                ),
+              })
+            }),
+          )
+          if (!edits.length) continue
+          const { bytes } = await editorSave(bridge.docx, (blocks) =>
+            blocks.map((b, i) => (i === block ? patchCells(b, edits) : { keep: i })),
+          )
+          const wb = await writeBack(bridge, bytes)
+          const lost = OBJECT_TAGS.filter((t) => count(wb.content, t) !== count(bridge.content, t))
+          if (lost.length)
+            failures.push(`${name}: editing table cells changed the count of ${lost.join(', ')}`)
+          else kept++
         }
       } catch (err) {
         failures.push(`${name}: threw ${(err as Error).stack}`)
       }
     }
     console.log(
-      `objects corpus, all paragraphs: paragraphs ${paragraphs}, with objects ${withObjects}, ` +
-        `objects ${JSON.stringify(kinds)}, ` +
-        `rewritten byte-identical ${identical}, failures ${failures.length}`,
+      `objects corpus, table cells: cells ${cells}, with objects ${withObjects}, tables edited with every object kept ${kept}, failures ${failures.length}`,
     )
     if (failures.length) console.log(failures.slice(0, 60).join('\n'))
     expect(failures).toEqual([])

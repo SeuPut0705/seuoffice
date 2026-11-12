@@ -1,7 +1,7 @@
 import { type ParsedDocFull, parseDocx, saveDocx, scanBody } from '@seuoffice/docx-engine'
 import JSZip from 'jszip'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { type BridgeMap, editedItems } from '../src/core'
+import type { BridgeMap } from '../src'
 import {
   type Bridge,
   bodyOf,
@@ -59,14 +59,14 @@ describe('ODF → OOXML: the bridge docx', () => {
   })
 
   it('the bridge map is plain JSON', () => {
-    const json = JSON.stringify(bridge.ctx.map)
-    expect(JSON.parse(json)).toEqual(bridge.ctx.map)
+    const json = JSON.stringify(bridge.map)
+    expect(JSON.parse(json)).toEqual(bridge.map)
     const walk = (v: unknown): void => {
       if (v === null || ['string', 'number', 'boolean'].includes(typeof v)) return
       expect(Array.isArray(v) || Object.getPrototypeOf(v) === Object.prototype).toBe(true)
       for (const x of Object.values(v as object)) walk(x)
     }
-    walk(bridge.ctx.map)
+    walk(bridge.map)
   })
 
   it('an unedited saveDocx returns the bridge bytes and every element unchanged', async () => {
@@ -82,7 +82,9 @@ describe('ODF → OOXML: the bridge docx', () => {
       bridge.docx,
       editOnly({ 1: (g) => replaceText(g, 0, 0, '새 ') }),
     )
-    const items = editedItems(await parseDocx(bytes))
+    const items = (await parseDocx(bytes)).blocks
+      .filter((b) => !b.hidden)
+      .map((b) => ({ xml: b.originalXml }))
     expect(items).toHaveLength(bridge.map.elements.length)
     items.forEach((item, i) => {
       if (i === 1) expect(item.xml).not.toBe(bridge.map.elements[i].xml)
@@ -164,9 +166,9 @@ describe('ODF → OOXML: the bridge docx', () => {
       ...visible().map((b) => ({ kind: 'original' as const, docxIndex: b.docxIndex as number })),
     ])
     const wb = await writeBack(bridge, out)
-    expect(wb.content).toBe(bridge.doc.contentXml)
-    expect(wb.styles).toBe(bridge.doc.stylesXml)
-    expect(wb.rctx.newAutomaticStyles('content.xml')).toEqual([])
+    expect(wb.content).toBe(bridge.content)
+    expect(wb.styles).toBe(bridge.styles)
+    expect(wb.newAutomaticStyles('content.xml')).toEqual([])
   })
 })
 
@@ -176,7 +178,7 @@ describe('whole documents and details', () => {
     const sample = hancomSample()
     const b = await odtToBridge(await buildOdt(sample.options))
     const same = await writeBack(b, b.docx)
-    expect(same.content).toBe(b.doc.contentXml)
+    expect(same.content).toBe(b.content)
     const fieldIndex = b.map.elements.findIndex(
       (e) => e.paragraph !== null && b.map.paragraphs[e.paragraph].text.startsWith('안건'),
     )
@@ -191,7 +193,7 @@ describe('whole documents and details', () => {
         /<text:p text:style-name="P1_0"><text:span text:style-name="T1"><text:bookmark-start text:name="NormalField1[\s\S]*?<\/text:p>/,
         'X',
       ),
-    ).toBe(bodyOf(b.doc.contentXml).replace(edited, 'X'))
+    ).toBe(bodyOf(b.content).replace(edited, 'X'))
     expect(wb.content).toContain(
       '안건 <text:s/>내용!<text:bookmark-end text:name="NormalField1¡안건명¡안건명¡F¡T"/>',
     )
@@ -241,6 +243,6 @@ describe('page break after', () => {
     const { bytes } = await editorSave(b.docx, editOnly({ 0: (g) => replaceText(g, 0, 0, '맨 ') }))
     const wb = await writeBack(b, bytes)
     expect(bodyOf(wb.content)).toBe(hPara('맨 앞 쪽', { style: 'PA' }) + hPara('다음 쪽'))
-    expect(wb.rctx.newAutomaticStyles('content.xml')).toEqual([])
+    expect(wb.newAutomaticStyles('content.xml')).toEqual([])
   })
 })

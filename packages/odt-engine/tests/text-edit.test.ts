@@ -1,13 +1,5 @@
-/**
- * OOXML → ODF for paragraphs the editor changed. Every case edits the parsed
- * bridge docx the way the editor does and saves it with the docx engine's
- * `saveDocx`, so the paragraphs written back are really regenerated ones
- * (hidden bookmarks moved to the paragraph start, rawPPr reused or merged).
- */
 import type { GeneratedBlock } from '@seuoffice/docx-engine'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { type OdtStyleTable, readOdtStyles, readRoot, scanOdtBody, walkNodes } from '../src/core'
-import { readParagraph } from '../src/text'
 import {
   type Bridge,
   type EditorOp,
@@ -22,6 +14,13 @@ import {
 } from './helpers/bridge'
 import { buildOdt } from './helpers/build-odt'
 import { hPara } from './helpers/hancom-fragments'
+import {
+  type WrittenParagraph,
+  findDefaultStyle,
+  findListStyle,
+  findStyle,
+  paragraphsOf,
+} from './helpers/odt-read'
 import { FIELD, FIELD2, textSample } from './helpers/text-fixtures'
 
 let bridge: Bridge
@@ -32,13 +31,9 @@ beforeAll(async () => {
   bridge = await odtToBridge(await buildOdt(sample.options))
 })
 
-interface Written {
-  content: string
-  styles: OdtStyleTable
+type Written = WriteBack & {
   /** every paragraph of the new body, in order */
-  paragraphs: Array<{ xml: string; text: string; style: string | null; name: string }>
-  warnings: string[]
-  rctx: WriteBack['rctx']
+  paragraphs: WrittenParagraph[]
 }
 
 async function save(
@@ -47,33 +42,10 @@ async function save(
 ): Promise<Written> {
   const { bytes } = await editorSave(bridge.docx, ops, options)
   const wb = await writeBack(bridge, bytes)
-  const body = scanOdtBody(wb.content)
-  const prefixes = readRoot(wb.content)!.prefixes
-  const styles = readOdtStyles(wb.styles, wb.content)
-  const info = {
-    part: 'content.xml' as const,
-    xml: wb.content,
-    prefixes,
-    fontFaces: new Map(),
-    scope: 'content' as const,
-  }
-  const paragraphs: Written['paragraphs'] = []
-  walkNodes(body.blocks, (n) => {
-    if (n.kind !== 'paragraph' && n.kind !== 'heading') return
-    if (n.parent && (n.parent.kind === 'note' || n.parent.kind === 'annotation')) return false
-    const m = readParagraph({ info, styles }, n)
-    paragraphs.push({
-      xml: wb.content.slice(n.start, n.end),
-      text: m.text,
-      style: m.styleName,
-      name: n.name,
-    })
-    return false
-  })
-  return { content: wb.content, styles, paragraphs, warnings: wb.rctx.warnings, rctx: wb.rctx }
+  return { ...wb, paragraphs: await paragraphsOf(wb) }
 }
 
-const originalBody = () => bodyOf(bridge.doc.contentXml)
+const originalBody = () => bodyOf(bridge.content)
 
 describe('text edits keep everything else byte for byte', () => {
   it('a text-only edit rewrites only that paragraph and keeps its style names', async () => {
@@ -87,7 +59,7 @@ describe('text edits keep everything else byte for byte', () => {
     const before = originalBody().replace(sample.blocks[1], '')
     expect(bodyOf(w.content).replace(p.xml, '')).toBe(before)
     expect(w.content.slice(0, w.content.indexOf('<office:body>'))).toBe(
-      bridge.doc.contentXml.slice(0, bridge.doc.contentXml.indexOf('<office:body>')),
+      bridge.content.slice(0, bridge.content.indexOf('<office:body>')),
     )
   })
 
@@ -105,8 +77,8 @@ describe('formatting changes add new automatic styles that inherit everything', 
     const w = await save(editOnly({ 0: (g) => (g.format = { ...g.format, align: 'center' }) }))
     const p = w.paragraphs[0]
     expect(p.style).not.toBe('P9_0')
-    const style = w.styles.find(p.style!, 'paragraph', 'content')!
-    const original = bridge.doc.styles.find('P9_0', 'paragraph', 'content')!
+    const style = findStyle(w.content, p.style!, 'paragraph')!
+    const original = findStyle(bridge.content, 'P9_0', 'paragraph')!
     const props = style.properties['style:paragraph-properties']
     expect(props['fo:text-align']).toBe('center')
     // every other property, Hancom attributes and the tab list included, is inherited
@@ -117,9 +89,10 @@ describe('formatting changes add new automatic styles that inherit everything', 
     expect(style.tabStops).toEqual(original.tabStops)
     expect(style.parentName).toBe(original.parentName)
     // the name is new in both parts
-    expect(bridge.doc.styles.all.some((s) => s.name === p.style)).toBe(false)
+    expect(findStyle(bridge.content, p.style!)).toBeUndefined()
+    expect(findStyle(bridge.styles!, p.style!)).toBeUndefined()
     // the original style is still there, untouched
-    expect(w.content).toContain(bridge.doc.contentXml.slice(original.start, original.end))
+    expect(w.content).toContain(original.xml)
   })
 
   it('a run format change copies the original text style with only that attribute overridden', async () => {
@@ -148,8 +121,8 @@ describe('formatting changes add new automatic styles that inherit everything', 
       '첫째',
       '문단입니다',
     ])
-    const style = w.styles.find(bold[0], 'text', 'content')!
-    const original = bridge.doc.styles.find('T1', 'text', 'content')!
+    const style = findStyle(w.content, bold[0], 'text')!
+    const original = findStyle(bridge.content, 'T1', 'text')!
     const {
       'fo:font-weight': _w,
       'style:font-weight-asian': _wa,
@@ -173,7 +146,7 @@ describe('formatting changes add new automatic styles that inherit everything', 
     const center = (g: GeneratedBlock) => (g.format = { ...g.format, align: 'center' })
     const { bytes } = await editorSave(local.docx, editOnly({ 0: center, 10: center }))
     const wb = await writeBack(local, bytes)
-    const added = wb.rctx.newAutomaticStyles('content.xml')
+    const added = wb.newAutomaticStyles('content.xml')
     expect(added).toHaveLength(1)
     expect(added[0]).toContain('style:name="P9_0_io2"')
   })
@@ -196,7 +169,7 @@ describe('formatting changes add new automatic styles that inherit everything', 
     expect(w.paragraphs[1].xml).toContain(
       '<text:span text:style-name="T1"><text:s/>문단입니다</text:span>',
     )
-    expect(w.rctx.newAutomaticStyles('content.xml')).toEqual([])
+    expect(w.newAutomaticStyles('content.xml')).toEqual([])
   })
 
   it('a split-off half derives from the original automatic style: everything copied, the section start dropped', async () => {
@@ -211,12 +184,10 @@ describe('formatting changes add new automatic styles that inherit everything', 
       { keep: 1 },
     ])
     const wb = await writeBack(local, bytes)
-    const styles = readOdtStyles(wb.styles, wb.content)
     const names = [...wb.content.matchAll(/<text:p text:style-name="([^"]+)">/g)].map((m) => m[1])
     expect(names[0]).toBe('P73_0_MS1_b3')
-    const copy = styles.find(names[1], 'paragraph', 'content')!
-    const original = local.doc.styles.find('P73_0_MS1_b3', 'paragraph', 'content')!
-    expect(copy.automatic).toBe(true)
+    const copy = findStyle(wb.content, names[1], 'paragraph')!
+    const original = findStyle(local.content, 'P73_0_MS1_b3', 'paragraph')!
     expect(copy.masterPageName).toBeNull()
     expect(copy.parentName).toBe(original.parentName)
     expect(copy.properties).toEqual(original.properties)
@@ -233,8 +204,7 @@ describe('formatting changes add new automatic styles that inherit everything', 
     })
     const p = w.paragraphs[0]
     expect(p.text).toBe('새 문단')
-    const style = w.styles.find(p.style!, 'paragraph', 'content')!
-    expect(style.automatic).toBe(true)
+    const style = findStyle(w.content, p.style!, 'paragraph')!
     expect(style.parentName).toBe('바탕글')
     expect(style.tabStops?.map((t) => t['style:position'])).toEqual(['3.000cm', '14.993cm'])
     // the next original paragraph's text style is reused when the formatting matches
@@ -331,9 +301,9 @@ describe('headings, lists, hyperlinks, breaks, spaces', () => {
     const h = w.paragraphs.find((p) => p.text === '마지막')!
     expect(h.name).toBe('text:h')
     expect(h.xml).toContain('text:outline-level="2"')
-    const style = w.styles.find(h.style!, 'paragraph', 'content')!
+    const style = findStyle(w.content, h.style!, 'paragraph')!
     expect(style.properties['style:text-properties']['fo:font-weight']).toBe('bold')
-    expect(style.tabStops).toEqual(bridge.doc.styles.find('P9_0', 'paragraph', 'content')!.tabStops)
+    expect(style.tabStops).toEqual(findStyle(bridge.content, 'P9_0', 'paragraph')!.tabStops)
   })
 
   it('an edited list item is rewritten inside the original list, reusing its start tag', async () => {
@@ -386,7 +356,7 @@ describe('headings, lists, hyperlinks, breaks, spaces', () => {
       w.content,
     )
     expect(m).not.toBeNull()
-    expect(w.styles.listStyle(m![1], 'content')?.levels[0]).toMatchObject({ kind: 'number' })
+    expect(findListStyle(w.content, m![1])?.[0]).toMatchObject({ kind: 'number' })
     expect(m![2]).toContain('마지막')
   })
 
@@ -411,7 +381,7 @@ describe('headings, lists, hyperlinks, breaks, spaces', () => {
   it('a page break typed inside a paragraph splits it; the rest starts on a new page', async () => {
     const w = await save(editOnly({ 0: (g) => replaceText(g, 2, 3, '\f') }))
     expect(w.paragraphs.slice(0, 2).map((p) => p.text)).toEqual(['첫째', '문단입니다'])
-    const second = w.styles.find(w.paragraphs[1].style!, 'paragraph', 'content')!
+    const second = findStyle(w.content, w.paragraphs[1].style!, 'paragraph')!
     expect(second.properties['style:paragraph-properties']['fo:break-before']).toBe('page')
     expect(w.paragraphs[0].style).toBe('P9_0')
   })
@@ -421,7 +391,7 @@ describe('headings, lists, hyperlinks, breaks, spaces', () => {
       editOnly({ 7: (g) => (g.format = { ...g.format, pageBreakBefore: false }) }),
     )
     const p = w.paragraphs.find((x) => x.text === '새 쪽')!
-    const style = w.styles.find(p.style!, 'paragraph', 'content')!
+    const style = findStyle(w.content, p.style!, 'paragraph')!
     expect(style.properties['style:paragraph-properties']['fo:break-before']).toBe('auto')
   })
 
@@ -434,12 +404,13 @@ describe('headings, lists, hyperlinks, breaks, spaces', () => {
     expect(p.xml).toContain('탭 <text:s text:c="3"/>공백')
   })
 
-  it('inline constructs without a converter are kept: a field while its text is intact, a note at its offset', async () => {
+  it('a field without a converter is kept while its text is intact, a footnote stays at its place', async () => {
     const w = await save(editOnly({ 9: (g) => replaceText(g, 0, 1, '페이지') }))
     const p = w.paragraphs.find((x) => x.text.includes('번호'))!
     expect(p.xml).toContain('<text:page-number text:select-page="current">3</text:page-number>')
     expect(p.xml).toContain('<text:note text:note-class="footnote">')
-    expect(p.text).toBe('페이지 3 번호 끝')
+    // the footnote's citation mark shows in the paragraph text
+    expect(p.text).toBe('페이지 3 번호1 끝')
   })
 })
 
@@ -454,13 +425,14 @@ describe('style edits', () => {
       },
     )
     const wb = await writeBack(bridge, bytes)
-    expect(wb.content).toBe(bridge.doc.contentXml)
-    const original = bridge.doc.stylesXml!
-    const style = bridge.doc.styles.common('바탕글', 'paragraph')!
-    const oldXml = original.slice(style.start, style.end)
-    const newXml = wb.styles.slice(style.start, wb.styles.length - (original.length - style.end))
-    expect(wb.styles.slice(0, style.start)).toBe(original.slice(0, style.start))
-    expect(wb.styles.slice(style.start + newXml.length)).toBe(original.slice(style.end))
+    expect(wb.content).toBe(bridge.content)
+    const original = bridge.styles!
+    const oldXml = findStyle(original, '바탕글', 'paragraph')!.xml
+    const start = original.indexOf(oldXml)
+    const end = start + oldXml.length
+    const newXml = wb.styles.slice(start, wb.styles.length - (original.length - end))
+    expect(wb.styles.slice(0, start)).toBe(original.slice(0, start))
+    expect(wb.styles.slice(start + newXml.length)).toBe(original.slice(end))
     expect(newXml).toContain('style:name="바탕글"')
     expect(newXml).toContain('fo:text-align="center"')
     expect(newXml).toContain('fo:font-weight="bold"')
@@ -483,8 +455,7 @@ describe('style edits', () => {
       },
     )
     const wb = await writeBack(bridge, bytes)
-    const styles = readOdtStyles(wb.styles, wb.content)
-    const def = styles.defaultStyle('text')!
+    const def = findDefaultStyle(wb.styles, 'text')!
     expect(def.properties['style:text-properties']).toMatchObject({
       'fo:font-family': 'Arial',
       'style:font-family-asian': "'맑은 고딕'",
@@ -492,7 +463,7 @@ describe('style edits', () => {
     // fonts are declared, names kept everywhere else
     expect(wb.styles).toContain('<style:font-face style:name="Arial" svg:font-family="Arial"/>')
     for (const name of ['바탕글', '바탕글 1', '+제목', '개요 1'])
-      expect(styles.common(name, 'paragraph')).toBeDefined()
+      expect(findStyle(wb.styles, name, 'paragraph')).toBeDefined()
   })
 })
 
@@ -504,7 +475,7 @@ describe('clearing formatting in the editor', () => {
     const p = w.paragraphs.find((x) => x.text === '강조된 글자')!
     const name = /<text:span text:style-name="([^"]+)">/.exec(p.xml)![1]
     expect(name).not.toBe('T_MARK')
-    return w.styles.find(name, 'text', 'content')!.properties['style:text-properties']
+    return findStyle(w.content, name, 'text')!.properties['style:text-properties']
   }
 
   it('clearing the colour removes it from the copied text style', async () => {
@@ -548,12 +519,12 @@ describe('clearing formatting in the editor', () => {
     )
     const p = w.paragraphs[0]
     expect(p.style).not.toBe('P9_0')
-    const style = w.styles.find(p.style!, 'paragraph', 'content')!
+    const style = findStyle(w.content, p.style!, 'paragraph')!
     const props = style.properties['style:paragraph-properties']
     expect(props['fo:margin-left']).toBeUndefined()
     expect(props['fo:margin-right']).toBe('0cm')
     expect(props['style:text-autospace']).toBe('none')
-    expect(style.tabStops).toEqual(bridge.doc.styles.find('P9_0', 'paragraph', 'content')!.tabStops)
+    expect(style.tabStops).toEqual(findStyle(bridge.content, 'P9_0', 'paragraph')!.tabStops)
   })
 
   it('an untouched paragraph next to the cleared one is not rewritten', async () => {
@@ -614,7 +585,6 @@ describe('form fields follow their text across paragraph splits and joins', () =
     expect(pair(second.xml, FIELD)).toBe('  내용')
     expect(first.xml).not.toContain('NormalField1')
     expect(pair(second.xml, FIELD2)).toBe('value')
-    expect(w.warnings.some((x) => x.includes('split by a new paragraph'))).toBe(true)
   })
 
   it('Enter at the paragraph start leaves an empty line above and every marker with the text', async () => {

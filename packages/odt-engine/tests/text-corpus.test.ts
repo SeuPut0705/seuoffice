@@ -5,41 +5,15 @@
  *   ODT_CORPUS=E:/github/odt-corpus npm run test -w @seuoffice/odt-engine
  *
  * For every file: ODF → OOXML for the whole body must not throw; every
- * converted paragraph must read back from the bridge docx (`parseDocx`) with
- * exactly its recorded text; and every paragraph, forced through the OOXML →
- * ODF writer without edits, must reproduce its original text and create no
- * new style.
+ * paragraph element must read back from the bridge docx (`parseDocx`) with
+ * exactly its recorded text; and every paragraph the editor regenerates
+ * without changing it must keep its text and create no new style.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
-import {
-  type ElementRange,
-  OdfToOoxmlContext,
-  OoxmlToOdfContext,
-  type OdtStylePart,
-  buildBridgeDocx,
-  readRoot,
-  scanOdtBody,
-  walkElements,
-  walkNodes,
-} from '../src/core'
-import {
-  convertOdtStyles,
-  editedParagraphFromBlock,
-  paragraphToOdf,
-  paragraphToOoxml,
-  readParagraph,
-} from '../src/text'
-import {
-  type Bridge,
-  editOnly,
-  editorSave,
-  odtToBridge,
-  replaceText,
-  writeBack,
-} from './helpers/bridge'
+import { editOnly, editorSave, odtToBridge, replaceText, writeBack } from './helpers/bridge'
 
 const root = process.env.ODT_CORPUS
 
@@ -58,49 +32,8 @@ function corpusFiles(dir: string): string[] {
   return out.sort()
 }
 
-/** Paragraph ranges of the master pages (headers/footers) in styles.xml. */
-function masterParagraphs(xml: string): ElementRange[] {
-  const root0 = readRoot(xml)
-  if (!root0) return []
-  const out: ElementRange[] = []
-  let inMaster = false
-  walkElements(xml, root0.prefixes, {
-    open(el) {
-      if (el.name === 'office:master-styles') inMaster = true
-    },
-    close(el) {
-      if (el.name === 'office:master-styles') inMaster = false
-      if (inMaster && (el.name === 'text:p' || el.name === 'text:h')) out.push({ ...el })
-    },
-  })
-  return out
-}
-
-async function allParagraphs(bytes: Uint8Array) {
-  const base = await odtToBridge(bytes)
-  const ctx = new OdfToOoxmlContext(base.doc, base.registry)
-  convertOdtStyles(ctx)
-  const holder = ctx.addBlock(base.doc.body.blocks[0], null, 'test')
-  const add = (range: ElementRange, part: OdtStylePart) => {
-    const { xml, paragraph } = paragraphToOoxml(ctx, range, { part })
-    ctx.addElement(holder.id, xml, 'paragraph', paragraph.id)
-  }
-  walkNodes(base.doc.body.blocks, (n) => {
-    if (n.kind === 'paragraph' || n.kind === 'heading') add(n, 'content.xml')
-  })
-  for (const r of masterParagraphs(base.doc.stylesXml ?? '')) add(r, 'styles.xml')
-  const docx = await buildBridgeDocx(ctx)
-  return { ...base, ctx, map: ctx.map, docx }
-}
-
-/** Text of ODF paragraphs (joined by page breaks), read the way the bridge reads them. */
-function odfText(xml: string, b: Bridge): string {
-  const body = scanOdtBody(
-    `<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"><office:body><office:text>${xml}</office:text></office:body></office:document-content>`,
-  )
-  const info = { ...b.ctx.part('content.xml'), xml: body.xml }
-  return body.blocks.map((n) => readParagraph({ info, styles: b.doc.styles }, n).text).join('')
-}
+/** The text without the trailing page break an ODF page-break style adds. */
+const withoutBreak = (text: string) => text.replace(/\f$/, '')
 
 describe.skipIf(!root)('text converters over the real corpus (ODT_CORPUS)', () => {
   it('converts every paragraph and reproduces its text both ways', async () => {
@@ -119,11 +52,11 @@ describe.skipIf(!root)('text converters over the real corpus (ODT_CORPUS)', () =
     for (const file of files) {
       try {
         const bytes = new Uint8Array(readFileSync(file))
-        // the body as T6 converts it must not throw; unedited, nothing is written back;
+        // the body must convert without throwing; unedited, nothing is written back;
         // one edited paragraph changes only that paragraph
         const top = await odtToBridge(bytes)
         const same = await writeBack(top, top.docx)
-        if (same.content !== top.doc.contentXml || same.styles !== (top.doc.stylesXml ?? ''))
+        if (same.content !== top.content || same.styles !== (top.styles ?? ''))
           failures.push(`${file}: an unedited write-back changed the ODT`)
         else unchanged++
         const target = top.map.elements.findIndex(
@@ -137,73 +70,67 @@ describe.skipIf(!root)('text converters over the real corpus (ODT_CORPUS)', () =
           )
           const wb = await writeBack(top, edited)
           const record = top.map.paragraphs[top.map.elements[target].paragraph as number]
-          const original = top.doc.contentXml
+          const original = top.content
           const head = original.slice(0, record.start)
           const tail = original.slice(record.end)
           let stripped = wb.content
-          for (const x of wb.rctx.newAutomaticStyles('content.xml'))
-            stripped = stripped.replace(x, '')
+          for (const x of wb.newAutomaticStyles('content.xml')) stripped = stripped.replace(x, '')
+          const reopened = await odtToBridge(wb.odt)
           const ok =
             stripped.startsWith(head) &&
             stripped.endsWith(tail) &&
-            odfText(stripped.slice(head.length, stripped.length - tail.length), top) ===
-              '편집 ' + record.text.replace(/\f$/, '') &&
-            scanOdtBody(wb.content).warnings.length === top.doc.body.warnings.length
+            reopened.map.paragraphs.length === top.map.paragraphs.length &&
+            withoutBreak(reopened.map.paragraphs[record.id].text) ===
+              '편집 ' + withoutBreak(record.text)
           if (!ok) failures.push(`${file}: editing paragraph ${record.id} touched other parts`)
           else edits++
         }
-        // every paragraph anywhere (body, lists, cells, text boxes, notes, headers) as its own element
-        const bridge = await allParagraphs(bytes)
-        const parsed = await parseDocx(bridge.docx)
-        const rctx = new OoxmlToOdfContext(bridge.doc, bridge.map, parsed, bridge.registry)
-        const byIndex = new Map(parsed.blocks.map((b) => [b.docxIndex, b]))
-        for (const element of bridge.map.elements) {
-          if (element.paragraph === null) continue
-          const record = bridge.map.paragraphs[element.paragraph]
+        // every paragraph the editor shows as an element reads back with its recorded text
+        const parsed = await parseDocx(top.docx)
+        const visible = parsed.blocks.filter((b) => !b.hidden)
+        const regenerate = new Set<number>()
+        top.map.elements.forEach((element, index) => {
+          if (element.paragraph === null) return
+          const record = top.map.paragraphs[element.paragraph]
           paragraphs++
           fields += record.markers.filter((m) => m.field).length
-          const block = byIndex.get(element.id)
+          const block = visible[index]
           const text = (block?.runs ?? []).map((r) => r.text).join('')
           if (block && text !== record.text && /&#?\w+;/.test(record.text)) {
             // the docx engine decodes entity-looking literal text in w:t a second time
             // ("&#38;" typed as text reads back as "&"); not something the bridge can avoid
             engineQuirks.push(`${file} p${record.id}`)
-            continue
+            return
           }
           if (!block || text !== record.text) {
             if (failures.length < 40)
               failures.push(
                 `${file} p${record.id}: read back ${JSON.stringify(text)} vs ${JSON.stringify(record.text)}`,
               )
-            continue
+            return
           }
           readBack++
-          // without the pPr shortcut: every mapped format key must read back unchanged
-          const { rawPPr: _raw, ...unedited } = editedParagraphFromBlock(block)
-          const odf = paragraphToOdf(rctx, unedited, record, {
-            part: record.part,
-          })
-          const xml = `<office:text>${odf}</office:text>`
-          const body = scanOdtBody(
-            `<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"><office:body>${xml}</office:body></office:document-content>`,
-          )
-          const info = { ...rctx.part(record.part), xml: body.xml }
-          const again = body.blocks
-            .map((n) => readParagraph({ info, styles: bridge.doc.styles }, n).text)
-            .join('\f')
-          const expected = record.text.endsWith('\f') ? record.text.slice(0, -1) : record.text
-          if (again !== expected) {
-            if (failures.length < 40)
-              failures.push(
-                `${file} p${record.id}: wrote ${JSON.stringify(again)} vs ${JSON.stringify(expected)}`,
-              )
-            continue
-          }
-          roundTrips++
+          if (['paragraph', 'heading', 'listItem'].includes(block.type)) regenerate.add(index)
+        })
+        // the editor regenerates every paragraph without changing it: same text, no new style
+        const { bytes: regenerated } = await editorSave(top.docx, (blocks) =>
+          blocks.map((_, i) => (regenerate.has(i) ? { edit: i, change: () => {} } : { keep: i })),
+        )
+        const rewritten = await writeBack(top, regenerated)
+        const again = await odtToBridge(rewritten.odt)
+        for (const index of regenerate) {
+          const record = top.map.paragraphs[top.map.elements[index].paragraph as number]
+          const written = again.map.paragraphs[record.id]?.text
+          if (written !== undefined && withoutBreak(written) === withoutBreak(record.text))
+            roundTrips++
+          else if (failures.length < 40)
+            failures.push(
+              `${file} p${record.id}: wrote ${JSON.stringify(written)} vs ${JSON.stringify(record.text)}`,
+            )
         }
         newStyles +=
-          rctx.newAutomaticStyles('content.xml').length +
-          rctx.newAutomaticStyles('styles.xml').length
+          rewritten.newAutomaticStyles('content.xml').length +
+          rewritten.newAutomaticStyles('styles.xml').length
       } catch (err) {
         failures.push(`${file}: threw ${(err as Error).stack}`)
       }

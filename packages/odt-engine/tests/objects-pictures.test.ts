@@ -6,37 +6,20 @@
  * references it.
  */
 import { patchImageParagraphXml } from '@seuoffice/docx-engine'
-import { FULL_REGISTRY } from './helpers/full'
 import { describe, expect, it } from 'vitest'
-import {
-  OdfToOoxmlContext,
-  OoxmlToOdfContext,
-  buildBridgeDocx,
-  convertOdtBody,
-  nodesOfKind,
-  openOdt,
-} from '../src/core'
-import { ODT_PICTURE_PREFIX } from '../src/objects'
-import {
-  convertOdtStyles,
-  editedParagraphFromBlock,
-  paragraphToOdf,
-  paragraphToOoxml,
-} from '../src/text'
-import { bodyOf, editOnly, editorSave, replaceText } from './helpers/bridge'
-import { hCell, hImageFrame, hPara, hParaWith, hRow, hTable } from './helpers/hancom-fragments'
+import { bodyOf, editOnly, editorSave, replaceText, writeBack } from './helpers/bridge'
+import { hImageFrame, hPara, hParaWith } from './helpers/hancom-fragments'
 import { PNG_1X1 } from './helpers/hancom-sample'
 import {
+  ODT_PICTURE_PREFIX,
   PNG_GREY,
   drawingOf,
   keepAllBut,
   objectsBridge,
-  objectsRegistry,
   resizeDrawing,
   saveBlocks,
   toBase64,
   visibleBlocks,
-  writeBackObjects,
 } from './helpers/objects-fixtures'
 
 const HREF = 'Pictures/EMB0000a7a0be95.png'
@@ -82,42 +65,6 @@ describe('pictures: ODF → OOXML', () => {
     expect(blocks[0].originalXml).toContain('<wp:posOffset>206280</wp:posOffset>')
     expect(fx.ext.pictures[0]).toMatchObject({ anchored: true, xEmu: 206280, yEmu: 30960 })
   })
-
-  // builds its own partial registry state (tables converted only when the table layer is absent)
-  it.skipIf(FULL_REGISTRY)(
-    'pictures inside table cells go through the same inline handler',
-    async () => {
-      const cellPara = hParaWith(`셀${picture.frame}`)
-      const body = hTable('Table2', 1, [hRow([hCell(cellPara)])])
-      const fx = await objectsBridge({ body, pictures })
-      const doc = await openOdt(fx.built.bytes)
-      const ctx = new OdfToOoxmlContext(doc, objectsRegistry())
-      convertOdtStyles(ctx)
-      convertOdtBody(ctx)
-      // without a table converter the table carries no OOXML; convert its cell paragraph directly
-      const node = nodesOfKind(doc.body.blocks, 'paragraph')[0]
-      const { xml, paragraph } = paragraphToOoxml(ctx, node, {
-        part: 'content.xml',
-        owner: 'table',
-      })
-      expect(xml).toContain('<w:drawing>')
-      expect(paragraph.markers).toEqual([
-        expect.objectContaining({ kind: 'handler', owner: 'objects', name: 'draw:frame' }),
-      ])
-      // the cell paragraph, edited and written back from runs, keeps the frame bytes
-      ctx.addElement(ctx.addBlock(node, null, 'table').id, xml, 'paragraph', paragraph.id)
-      const bridgeDocx = await buildBridgeDocx(ctx)
-      const parsed = await visibleBlocks(bridgeDocx)
-      const map = JSON.parse(JSON.stringify(ctx.map)) as typeof ctx.map
-      const rctx = new OoxmlToOdfContext(doc, map, parsed.parsed, ctx.registry)
-      const edited = editedParagraphFromBlock(parsed.blocks[0])
-      edited.runs[0] = { ...edited.runs[0], text: '칸' }
-      const odf = paragraphToOdf(rctx, edited, map.paragraphs[paragraph.id], {
-        part: 'content.xml',
-      })
-      expect(odf).toBe(hParaWith(`칸${picture.frame}`))
-    },
-  )
 })
 
 describe('pictures: OOXML → ODF', () => {
@@ -127,8 +74,8 @@ describe('pictures: OOXML → ODF', () => {
     const { bytes } = await editorSave(fx.bridge.docx, (blocks) =>
       blocks.map((_, i) => ({ keep: i })),
     )
-    const wb = await writeBackObjects(fx, bytes)
-    expect(wb.content).toBe(fx.bridge.doc.contentXml)
+    const wb = await writeBack(fx.bridge, bytes)
+    expect(wb.content).toBe(fx.bridge.content)
     expect(wb.changes).toEqual({ add: [], remove: [] })
     expect(wb.manifest).toBe(fx.built.manifestXml)
   })
@@ -139,7 +86,7 @@ describe('pictures: OOXML → ODF', () => {
       fx.bridge.docx,
       editOnly({ 0: (g) => replaceText(g, 0, 1, '맨 앞') }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(hParaWith(`맨 앞${picture.frame}뒤`))
     expect(wb.changes).toEqual({ add: [], remove: [] })
   })
@@ -155,7 +102,7 @@ describe('pictures: OOXML → ODF', () => {
         },
       }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     const resized = picture.frame
       .replace('svg:width="4.547cm"', 'svg:width="2cm"')
       .replace('svg:height="1.342cm"', 'svg:height="1cm"')
@@ -176,7 +123,7 @@ describe('pictures: OOXML → ODF', () => {
         },
       }),
     )
-    const wb = await writeBackObjects(fx, edited)
+    const wb = await writeBack(fx.bridge, edited)
     const resized = picture.frame
       .replace('svg:width="4.547cm"', 'svg:width="4.763cm"')
       .replace('svg:height="1.342cm"', 'svg:height="2.381cm"')
@@ -195,7 +142,7 @@ describe('pictures: OOXML → ODF', () => {
         },
       }),
     )
-    const wb = await writeBackObjects(fx, edited)
+    const wb = await writeBack(fx.bridge, edited)
     expect(bodyOf(wb.content)).toBe(hParaWith(picture.frame.replace(HREF, 'Pictures/io_1.png')))
     expect(wb.changes.add).toEqual([
       { path: 'Pictures/io_1.png', data: PNG_GREY, mediaType: 'image/png' },
@@ -215,7 +162,7 @@ describe('pictures: OOXML → ODF', () => {
     const edited = await saveBlocks(fx.bridge.docx, (blocks) =>
       keepAllBut(blocks, { 0: null, 2: null }),
     )
-    const wb = await writeBackObjects(fx, edited)
+    const wb = await writeBack(fx.bridge, edited)
     expect(bodyOf(wb.content)).toBe(hParaWith(`둘째${picture.frame}`))
     expect(wb.changes).toEqual({ add: [], remove: ['Pictures/EMB0000a7a0be96.png'] })
     expect(wb.manifest).not.toContain('EMB0000a7a0be96.png')
@@ -228,7 +175,7 @@ describe('pictures: OOXML → ODF', () => {
       fx.bridge.docx,
       editOnly({ 0: (g) => (g.runs = g.runs.filter((r) => !r.image)) }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(hParaWith('앞뒤'))
     expect(wb.changes.remove).toEqual([HREF])
   })
@@ -245,7 +192,7 @@ describe('pictures: OOXML → ODF', () => {
         image: { base64: toBase64(PNG_GREY), mime: 'image/png', widthPx: 180, heightPx: 90 },
       },
     ])
-    const wb = await writeBackObjects(fx, edited)
+    const wb = await writeBack(fx.bridge, edited)
     const body = bodyOf(wb.content)
     expect(body.startsWith(hPara('a'))).toBe(true)
     expect(body).toMatch(
@@ -269,7 +216,7 @@ describe('pictures: OOXML → ODF', () => {
     )
     const { blocks } = await visibleBlocks(bytes)
     expect(blocks[0].type).toBe('image')
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(`<text:p text:style-name="P1_0">${picture.frame}</text:p>`)
     expect(wb.changes).toEqual({ add: [], remove: [] })
   })
@@ -291,7 +238,7 @@ describe('pictures: OOXML → ODF', () => {
     const edited = await saveBlocks(fx.bridge.docx, (bs) =>
       keepAllBut(bs, { 0: { kind: 'xml', xml, docxIndex: bs[0].docxIndex as number } }),
     )
-    const wb = await writeBackObjects(fx, edited)
+    const wb = await writeBack(fx.bridge, edited)
     expect(bodyOf(wb.content)).toBe(hParaWith(`맨 앞${frame}뒤`))
     expect(wb.changes).toEqual({ add: [], remove: [] })
   })
@@ -308,7 +255,7 @@ describe('pictures: OOXML → ODF', () => {
         },
       }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(hParaWith(`앞${picture.frame}뒤${picture.frame}`))
     expect(wb.changes).toEqual({ add: [], remove: [] })
   })

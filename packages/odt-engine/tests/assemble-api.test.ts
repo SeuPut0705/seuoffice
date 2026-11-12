@@ -7,8 +7,14 @@
  */
 import { describe, expect, it } from 'vitest'
 import { OdtEncryptedError, isOdtOpenError, odtToDocx, odtToText, saveOdt } from '../src'
-import { readOdtPackage } from '../src/core'
-import { changedRegion, diffPackages, expectedOrder, roundTrip, textOf } from './helpers/api'
+import {
+  changedRegion,
+  diffPackages,
+  docxPart,
+  expectedOrder,
+  roundTrip,
+  textOf,
+} from './helpers/api'
 import { type EditorOp, editOnly, editorSave, replaceText } from './helpers/bridge'
 import { buildOdt, buildOdtPackage } from './helpers/build-odt'
 import {
@@ -25,6 +31,7 @@ import { drawingOf, resizeDrawing } from './helpers/objects-fixtures'
 import { editedHf, sectionsOf } from './helpers/page-bridge'
 import { pageDoc } from './helpers/page-fixtures'
 import { cellRuns, editRuns, patchCells } from './helpers/table-editor'
+import { readArchive } from './helpers/odt-archive'
 
 const keepAll = (blocks: unknown[]) => blocks.map((_, i) => ({ keep: i }))
 
@@ -69,8 +76,8 @@ describe('saveOdt with one edit', () => {
     expect(diff.order).toEqual(await expectedOrder(odt))
     expect(diff.mimetypeFirst).toBe(true)
     expect(diff.mimetypeStored).toBe(true)
-    const before = textOf(await readOdtPackage(odt), 'content.xml')
-    const after = textOf(await readOdtPackage(saved), 'content.xml')
+    const before = textOf(await readArchive(odt), 'content.xml')
+    const after = textOf(await readArchive(saved), 'content.xml')
     const region = changedRegion(before, after)
     expect(paragraph).toContain(region.before)
     expect(after).toBe(before.replace(paragraph, paragraph.replace('after', 'before')))
@@ -93,8 +100,8 @@ describe('saveOdt with one edit', () => {
     )
     const diff = await diffPackages(odt, saved)
     expect(diff.changed).toEqual(['content.xml'])
-    const before = textOf(await readOdtPackage(odt), 'content.xml')
-    const after = textOf(await readOdtPackage(saved), 'content.xml')
+    const before = textOf(await readArchive(odt), 'content.xml')
+    const after = textOf(await readArchive(saved), 'content.xml')
     expect(after).toBe(before.replace(cellA, hCell(hPara('a1'))))
   })
 
@@ -114,8 +121,8 @@ describe('saveOdt with one edit', () => {
     )
     const diff = await diffPackages(odt, saved)
     expect(diff.changed).toEqual(['content.xml'])
-    const before = textOf(await readOdtPackage(odt), 'content.xml')
-    const after = textOf(await readOdtPackage(saved), 'content.xml')
+    const before = textOf(await readArchive(odt), 'content.xml')
+    const after = textOf(await readArchive(saved), 'content.xml')
     const frame = sample.pieces.image.frame
     expect(after).toBe(
       before.replace(
@@ -140,8 +147,8 @@ describe('saveOdt with one edit', () => {
     const saved = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
     const diff = await diffPackages(odt, saved)
     expect(diff.changed).toEqual(['styles.xml'])
-    const before = textOf(await readOdtPackage(odt), 'styles.xml')
-    const after = textOf(await readOdtPackage(saved), 'styles.xml')
+    const before = textOf(await readArchive(odt), 'styles.xml')
+    const after = textOf(await readArchive(saved), 'styles.xml')
     expect(changedRegion(before, after)).toEqual({ before: 'header', after: 'HEADER' })
   })
 })
@@ -164,8 +171,8 @@ describe('the editor paragraph after a final table', () => {
   ])('is not written when the document ends with %s', async (_, last) => {
     const odt = await buildOdt({ body: hPara('앞') + last() })
     const { saved } = await roundTrip(odt, (blocks) => [...editFirst(blocks), filler])
-    const before = textOf(await readOdtPackage(odt), 'content.xml')
-    const after = textOf(await readOdtPackage(saved), 'content.xml')
+    const before = textOf(await readArchive(odt), 'content.xml')
+    const after = textOf(await readArchive(saved), 'content.xml')
     expect(after).toBe(before.replace(hPara('앞'), hPara('첫')))
   })
 
@@ -178,7 +185,7 @@ describe('the editor paragraph after a final table', () => {
       ...blocks.map((_, i) => ({ keep: i })),
       typed,
     ])
-    const after = textOf(await readOdtPackage(saved), 'content.xml')
+    const after = textOf(await readArchive(saved), 'content.xml')
     expect(after).toMatch(/<\/table:table><text:p [^>]*>(?:<text:span[^>]*>)?끝/)
   })
 
@@ -188,8 +195,8 @@ describe('the editor paragraph after a final table', () => {
       ...blocks.map((_, i) => ({ keep: i })),
       filler,
     ])
-    const before = textOf(await readOdtPackage(odt), 'content.xml')
-    const after = textOf(await readOdtPackage(saved), 'content.xml')
+    const before = textOf(await readArchive(odt), 'content.xml')
+    const after = textOf(await readArchive(saved), 'content.xml')
     expect(after).not.toBe(before)
     expect(after).toContain(`${hPara('앞')}<text:p `)
   })
@@ -209,7 +216,7 @@ describe('a heading written as a paragraph with an outline-level style', () => {
         i === 0 ? { edit: 0, change: (g) => replaceText(g, 0, 0, '새 ') } : { keep: i },
       )
     })
-    const after = textOf(await readOdtPackage(saved), 'content.xml')
+    const after = textOf(await readArchive(saved), 'content.xml')
     expect(after).toContain('<text:p text:style-name="Heading1">새 제목</text:p>')
     expect(after).not.toContain('<text:h')
   })
@@ -229,7 +236,7 @@ describe('a heading written as a paragraph with an outline-level style', () => {
           : { keep: i },
       ),
     )
-    expect(textOf(await readOdtPackage(saved), 'content.xml')).toContain('text:outline-level="2"')
+    expect(textOf(await readArchive(saved), 'content.xml')).toContain('text:outline-level="2"')
   })
 })
 
@@ -240,7 +247,7 @@ describe('meta.xml', () => {
     const { saved } = await roundTrip(odt, keepAll, { removePersonalInfo: true })
     const diff = await diffPackages(odt, saved)
     expect(diff.changed).toEqual(['meta.xml'])
-    const meta = textOf(await readOdtPackage(saved), 'meta.xml')
+    const meta = textOf(await readArchive(saved), 'meta.xml')
     expect(built.metaXml).toContain('<dc:creator>tester</dc:creator>')
     expect(meta).toBe(built.metaXml.replace('<dc:creator>tester</dc:creator>', ''))
   })
@@ -248,8 +255,7 @@ describe('meta.xml', () => {
   it('the bridge docx carries the people fields', async () => {
     const odt = await buildOdt({ body: hPara('본문') })
     const { docxBytes } = await odtToDocx(odt)
-    const { readDocxPart } = await import('../src/core')
-    const core = await readDocxPart(docxBytes, 'docProps/core.xml')
+    const core = await docxPart(docxBytes, 'docProps/core.xml')
     expect(core).toContain('<cp:lastModifiedBy>tester</cp:lastModifiedBy>')
   })
 })

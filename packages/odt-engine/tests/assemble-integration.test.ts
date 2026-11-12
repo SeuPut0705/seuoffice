@@ -10,7 +10,6 @@
 import { type SaveBlock, parseDocx, saveDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { odtToDocx, saveOdt } from '../src'
-import { readOdtPackage } from '../src/core'
 import { diffPackages, roundTrip, textOf } from './helpers/api'
 import { replaceText } from './helpers/bridge'
 import { pageDoc } from './helpers/page-fixtures'
@@ -28,8 +27,9 @@ import {
 import { PNG_1X1 } from './helpers/hancom-sample'
 import { PNG_GREY } from './helpers/objects-fixtures'
 import { cellRuns, editRuns, patchCells, regenerate } from './helpers/table-editor'
+import { readArchive } from './helpers/odt-archive'
 
-const contentOf = async (odt: Uint8Array) => textOf(await readOdtPackage(odt), 'content.xml')
+const contentOf = async (odt: Uint8Array) => textOf(await readArchive(odt), 'content.xml')
 
 describe('a table inside a section', () => {
   it('is matched by the table layer when a new paragraph shares its gap', async () => {

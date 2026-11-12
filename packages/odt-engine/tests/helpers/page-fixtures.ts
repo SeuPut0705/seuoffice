@@ -124,7 +124,8 @@ export function singleRun(regions: Partial<Record<string, string[]>>, layout = l
 
 /** The XML of one named element (`style:master-page`, `style:page-layout`, `style:style`) in a part. */
 export function elementNamed(xml: string, element: string, name: string): string | null {
-  const re = new RegExp(`<${element} style:name="${name}"[^>]*?(?:/>|>[\\s\\S]*?</${element}>)`)
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`<${element} style:name="${escaped}"[^>]*?(?:/>|>[\\s\\S]*?</${element}>)`)
   return re.exec(xml)?.[0] ?? null
 }
 
