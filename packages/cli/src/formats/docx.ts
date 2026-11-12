@@ -647,7 +647,12 @@ export function describeDocument(
   for (let i = start; i <= Math.min(end, root.childCount - 1); i++) {
     const node = root.child(i)
     // the text is the AI readers' view: a span hidden from AI reads as its placeholder
-    const { text, truncated } = clipText(blockText(modelViewOf(doc, node)), maxChars)
+    const view = modelViewOf(doc, node)
+    // a picture hidden from AI has no words: the block lists as its placeholder
+    const { text, truncated } = clipText(
+      typeof view.attrs.redact === 'string' ? String(view.attrs.previewText) : blockText(view),
+      maxChars,
+    )
     out.push({
       index: i,
       type: node.type.name.replace(/^doc/, '').toLowerCase(),
@@ -2138,7 +2143,7 @@ export function listComments(doc: OpenDocument): CommentSummary[] {
   const anchors = doc.mods.protocol.commentAnchors(doc.editor)
   // markedXml is the comment's own XML, hidden words included: never listed.
   // A comment holding a mark lists no picture: the picture may sit in a hidden run.
-  // modelText alone is no sign of a mark: it is left out when it reads like the text.
+  // modelText is present exactly when the comment carries a mark, even when it reads like the text.
   return doc.side.comments.map(({ modelText, markedXml, image, ...c }) => {
     const a = anchors.get(c.parentId ?? c.id)
     const marked = markedXml !== undefined || modelText !== undefined

@@ -158,7 +158,7 @@ export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphR
     return {
       id,
       text,
-      ...(modelText !== undefined && modelText !== text ? { modelText } : {}),
+      ...(modelText !== undefined ? { modelText } : {}),
       ...(first ? { richParas } : {}),
       ...(styleId ? { styleId } : {}),
       ...(/ADDIN\s+(?:ZOTERO_|CSL_)/.test(entryXml) ? { zoteroField: true as const } : {}),

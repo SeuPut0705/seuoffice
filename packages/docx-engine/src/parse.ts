@@ -10,7 +10,13 @@ import { isTiffMime, tiffToDataUrlAsync } from './tiff'
 import { ommlEndsWithBreak, ommlFragmentsOf, ommlToLatex, ommlToMathML } from './math'
 import { splitXmlChildren } from './generate'
 import { readPropChangeXml } from './revision-xml'
-import { parseEntry, runsText, withheldLabelOf, withheldText } from './withheld'
+import {
+  parseEntry,
+  runsText,
+  withheldDrawingLabel,
+  withheldLabelOf,
+  withheldText,
+} from './withheld'
 import { NOTE_PART_PATH, parseNotesXml, type NoteParagraphReader } from './notes'
 import { scanBody, type BodyElement } from './scan'
 import {
@@ -997,7 +1003,26 @@ function attachInlineContentControls(block: Block, xml: string): void {
   if (inline.length > 0) block.inlineContentControls = inline
 }
 
+/**
+ * A block shown as a whole unit (a picture, a drawing) whose picture sits in a
+ * run marked hidden from AI carries the mark's label: the unit has no run for
+ * the mark to sit on, and its image, preview text and description are the
+ * run's content.
+ */
 async function buildBlock(
+  el: BodyElement,
+  index: number,
+  xml: string,
+  ctx: BuildContext,
+  zoteroField?: ZoteroFieldParagraph,
+): Promise<Block> {
+  const block = await buildBlockOf(el, index, xml, ctx, zoteroField)
+  if (block.type !== 'image' && block.type !== 'passthrough') return block
+  const redact = withheldDrawingLabel(xml)
+  return redact === null ? block : { ...block, redact }
+}
+
+async function buildBlockOf(
   el: BodyElement,
   index: number,
   xml: string,

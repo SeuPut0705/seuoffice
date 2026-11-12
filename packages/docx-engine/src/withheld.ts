@@ -132,6 +132,47 @@ export function withheldNode(node: XNode): XNode | null {
   return inner === null ? null : { ...node, [name]: inner }
 }
 
+const DRAWING_ELEMENTS = new Set(['w:drawing', 'w:pict', 'w:object', 'mc:AlternateContent'])
+
+function holdsDrawing(node: XNode): boolean {
+  return childrenOf(node).some((child) => {
+    const name = nameOf(child)
+    return (
+      name !== undefined && name !== 'w:rPr' && (DRAWING_ELEMENTS.has(name) || holdsDrawing(child))
+    )
+  })
+}
+
+function hiddenDrawingLabel(node: XNode): string | null {
+  for (const child of childrenOf(node)) {
+    const name = nameOf(child)
+    if (name === undefined) continue
+    const label = name === 'w:r' ? runLabel(child) : null
+    if (label !== null && holdsDrawing(child)) return label
+    const inner = hiddenDrawingLabel(child)
+    if (inner !== null) return inner
+  }
+  return null
+}
+
+/**
+ * The label of the first run marked hidden from AI that holds a picture,
+ * shape, text box or object, in a paragraph's XML; null when no such run
+ * is there. A picture's bytes, description, title and name are part of the
+ * run that holds it. Whole-unit blocks (an image, a drawing) carry no run of
+ * their own for the mark to sit on, so the parser asks here. A paragraph that
+ * does not parse and holds both the mark and a drawing is withheld as `private`.
+ */
+export function withheldDrawingLabel(paragraphXml: string): string | null {
+  const node = parseEntry(paragraphXml)
+  if (!node) {
+    return hasWithheldTrace(paragraphXml) && /<w:(?:drawing|pict|object)[\s>]/.test(paragraphXml)
+      ? 'private'
+      : null
+  }
+  return hiddenDrawingLabel(node)
+}
+
 /** The run text of a subtree as Word shows it: w:t, outside field codes and deletions. */
 export function runsText(node: XNode): string {
   let out = ''
@@ -159,15 +200,16 @@ export function parseEntry(xml: string): XNode | undefined {
 
 /**
  * What a model reads of a parsed entry, given how its reader reads text
- * (`textOf`): undefined when the entry hides nothing, else its text with each
+ * (`textOf`): undefined when the entry carries no mark, else its text with each
  * hidden run as its placeholder, or the whole entry withheld when a mark sits
- * where no run accounts for it.
+ * where no run accounts for it. It is defined whenever a mark is there, also
+ * when it reads the same as the entry's own words (a hidden run whose words are
+ * the placeholder): its presence is how a reader knows the entry hides something.
  */
 export function withheldText(node: XNode, textOf: (node: XNode) => string): string | undefined {
   if (!hasMarkElement(node)) return undefined
   const view = withheldNode(node)
-  const modelText = view === null ? WITHHELD_ENTRY_TEXT : textOf(view)
-  return modelText === textOf(node) ? undefined : modelText
+  return view === null ? WITHHELD_ENTRY_TEXT : textOf(view)
 }
 
 /** the label of the first mark in an entry's XML, `private` when it carries none that is read */

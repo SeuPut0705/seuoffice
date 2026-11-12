@@ -433,7 +433,7 @@ function topLevelBlocks(doc: PmDocNode): TopBlock[] {
 
 function blockText(node: PmDocNode): string {
   if (node.type.name === 'docProtected') {
-    return [node.attrs.label, node.attrs.previewText].filter(Boolean).join(' ')
+    return [node.attrs.label, protectedPreviewOf(node.attrs)].filter(Boolean).join(' ')
   }
   // match against current content only, or targets would hit already-deleted revision text
   return liveText(node)
