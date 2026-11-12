@@ -71,6 +71,64 @@ export function attributeOf(element: string, name: string): string | undefined {
   return undefined
 }
 
+/** An open, close or empty tag: its slash, its name, and whether it closes itself. */
+const TAG = /<(\/?)([^\s/>!?]+)(?:[^>"']|"[^"]*"|'[^']*')*?(\/?)>/g
+
+/**
+ * The prefix, with its colon, under which the root element of `xml` binds namespace `ns`: `p:`
+ * for `xmlns:p="…"`, '' for `xmlns="…"`; null when the root binds it to none. A part may bind
+ * a namespace either way, under any prefix, so an element of it is looked for and written with
+ * the prefix the part chose, never with the one this engine writes (`p:`).
+ */
+export function rootPrefixOf(xml: string, ns: string): string | null {
+  const root = /<(?![?!])(?:[^>"']|"[^"]*"|'[^']*')*>/.exec(xml)?.[0]
+  if (!root) return null
+  const own = /^<([^\s/>:]+:)?/.exec(root)?.[1] ?? ''
+  let found: string | null = null
+  for (const attr of root.matchAll(ATTRIBUTE)) {
+    const name = attr[1]!
+    if (name !== 'xmlns' && !name.startsWith('xmlns:')) continue
+    if (decodeXml(attr[2] ?? attr[3]!) !== ns) continue
+    const prefix = name === 'xmlns' ? '' : `${name.slice('xmlns:'.length)}:`
+    if (prefix === own) return prefix
+    found ??= prefix
+  }
+  return found
+}
+
+/**
+ * Where the first element named `name` (a qualified name, compared as text) at or after `from`
+ * lies in `xml`: from its open tag through its close tag, or its empty tag; with where its
+ * content starts and ends (equal for an empty tag). Null when there is none, or it is not closed.
+ */
+export function elementRange(
+  xml: string,
+  name: string,
+  from = 0,
+): { start: number; end: number; contentStart: number; contentEnd: number } | null {
+  const tags = new RegExp(TAG)
+  tags.lastIndex = from
+  let start = -1
+  let contentStart = -1
+  let depth = 0
+  for (let tag = tags.exec(xml); tag; tag = tags.exec(xml)) {
+    if (tag[2] !== name) continue
+    const end = tag.index + tag[0].length
+    if (tag[1]) {
+      if (start >= 0 && --depth === 0) return { start, end, contentStart, contentEnd: tag.index }
+    } else if (tag[3]) {
+      if (start < 0) return { start: tag.index, end, contentStart: end, contentEnd: end }
+    } else {
+      if (start < 0) {
+        start = tag.index
+        contentStart = end
+      }
+      depth++
+    }
+  }
+  return null
+}
+
 /** The name a slide, layout or master part gives itself (`<p:cSld name>`), as the reader has it. */
 export function cSldNameOf(partXml: string): string | undefined {
   const cSld = /<p:cSld\b[^>]*>/.exec(partXml)?.[0]

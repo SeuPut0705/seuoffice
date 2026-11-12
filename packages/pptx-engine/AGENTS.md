@@ -33,6 +33,7 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 - `replace`/`replaceAll`의 둘째 인자는 `$`가 없는 문자열 리터럴이거나 함수(`() => text`)여야 한다. 변수나 템플릿 문자열을 그대로 넘기면 그 안의 `$&`, `$$`, `$1`, `` $` ``, `$'`가 치환 패턴으로 풀려서, 문서나 사용자가 쓴 글자에 `$`가 있을 때 파트가 깨진다. 시험: `tests/replace-dollar-*.test.ts`.
 - 문서에서 온 값(관계 id, 확장자, 요소 id, 파트 이름)은 `RegExp`에 넣지 않고 글자로 비교한다. 관계 id는 만든 쪽이 정한 이름이라 어떤 모양이든 받는다(`rId7`만이 아니다). 시험: `tests/ids-as-text.test.ts`, `tests/relationship-id-*.test.ts`.
 - XML의 값은 한 번만 푼다. 푸는 함수는 `decodeXml` 하나다. 파서는 `xmlParser`(`xml-parser.ts`)로만 만들고(`new XMLParser`를 직접 쓰지 않는다), 파서가 준 값은 이미 푼 값이므로 다시 풀지 않는다. 원문 태그에서 정규식으로 읽는 속성은 `attributeOf`로 읽는다(따옴표 종류와 무관하게 읽고, 한 번 푼다). 이렇게 해야 `&amp;`, `&#38;`, `&#x26;`가 같은 값이 되고, `X&amp;#38;1`은 `X&#38;1`로 남는다. 읽은 값을 XML에 다시 쓸 때는 `escapeXmlAttr`/`escapeXmlText`를 한 번 거친다. 시험: `tests/decode-once.test.ts`.
+- 남이 만든 파트를 고칠 때 요소 이름의 접두사(`p:`)를 가정하지 않는다. 파트는 같은 이름공간을 기본 이름공간(`xmlns="…"`)이나 다른 접두사로 묶을 수 있으므로, 그 파트가 루트에서 묶은 접두사(`rootPrefixOf`)로 요소를 찾고(`elementRange`, 글자 비교) 같은 접두사로 써 넣는다. 찾을 곳이 없으면 아무것도 쓰기 전에 거절한다(반쯤 쓰지 않는다). 엔진이 새로 만드는 파트는 자기 선언과 함께 `p:`로 쓴다. 시험: `tests/notes-default-namespace.test.ts`.
 
 ## 이 모듈의 방식
 
