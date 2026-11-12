@@ -775,6 +775,11 @@ export const group: Group = {
         files: { 'crash-log.jsonl': crashLogLines(1) },
       },
       { args: ['$DIR/crash-log.jsonl', { kind: 'x' }, null, 0] },
+      {
+        args: ['$DIR/crash-log.jsonl', { kind: 'x' }, 80, null],
+        files: { 'crash-log.jsonl': 'line-0001\nline-0002\nline-0003\nline-0004\n' },
+        note: 'the new line (45 bytes) tips 40 + 45 over 80; the kept tail is exactly the budget of 40',
+      },
     ],
   },
 

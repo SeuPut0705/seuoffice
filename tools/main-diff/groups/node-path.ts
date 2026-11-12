@@ -367,6 +367,12 @@ function flavour(name: 'posix' | 'win32'): Group {
   for (const f of ['normalize', 'isAbsolute', 'dirname', 'extname', 'parse']) {
     g[key(f)] = spec((a) => p[f]!(...a), [...one(strings(seed + 3 + f.length)), ...wrong()])
   }
+  // appended last: divergences.json keys by case index. A relative path whose tail reads as a
+  // drive ("C:x") must get the ".\\" guard of CVE-2024-36139: the tail check, not the colon scan
+  // of the original path, is what catches a colon followed by a letter.
+  g[key('normalize')]!.cases.push(
+    ...one(['./C:x', '.\\C:x', 'a/../C:x', 'x\\..\\C:y\\z', 'ab:c/../C:x', 'ab:', 'ab:c', 'ab:c:']),
+  )
 
   {
     const rng = mulberry32(seed + 4)

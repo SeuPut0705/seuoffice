@@ -778,6 +778,11 @@ export const group: Group = {
           ],
           note: 'explicit clock',
         },
+        {
+          args: [L, 50, [['info', 'new']], 1_794_452_400_000],
+          files: { 'update-log.txt': `${'a'.repeat(38)}\nbbb\n` },
+          note: 'odd length 77 (43 + a 34-char entry): the newline at index 38 is skipped from keepFrom 39 but found from 38',
+        },
       ]
       return cases
     })(),

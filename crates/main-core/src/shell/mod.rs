@@ -1,17 +1,48 @@
-//! `apps/shell/src/main`, batch 1 of decision 0029: the bookkeeping that holds
-//! no Electron object.
+//! `apps/shell/src/main`: the modules that hold no Electron object (batches 1
+//! and 3 of decision 0029), one file per TypeScript file.
 
 pub mod app_routing;
 pub mod app_settings;
+pub mod atomic_write;
+pub mod control_handlers;
+pub mod control_server;
 pub mod crash_heartbeat;
 pub mod crash_log;
+pub mod csv_import_limit;
+pub mod default_app;
+pub mod diagram_open_gate;
+pub mod document_links;
+pub mod document_links_menu;
+pub mod document_password_prompt;
+pub mod feedback;
+pub mod file_targets;
 pub mod folder_roots;
 pub mod launch_paths;
+pub mod mac_update;
+pub mod open_documents;
+pub mod pdf_convert_ui_handlers;
+pub mod pdf_note_tabs;
+pub mod pdf_save_as_formats;
 pub mod recent_files;
 pub mod rename_validation;
+pub mod result_store_ipc;
+pub mod session_record;
+pub mod skill_target;
+pub mod split_layout;
 pub mod split_memory;
+pub mod tab_document_actions;
+pub mod tab_duplicate;
+pub mod tab_lifecycle;
+pub mod tab_menu;
+pub mod tab_shortcuts;
+pub mod title_bar_overlay;
 pub mod update_attempt;
 pub mod update_build_channel;
 pub mod update_cache;
 pub mod update_log;
+pub mod update_notes;
+pub mod update_restart;
+pub mod update_resume;
+pub mod window_background;
 pub mod window_bounds;
+pub mod window_close_guard;

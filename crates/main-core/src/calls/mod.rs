@@ -14,6 +14,9 @@ mod b2_misc;
 mod b2_print;
 mod b2_recovery;
 mod b2_remote;
+mod b3_session;
+mod b3_shell;
+mod b3_update;
 mod files;
 mod node_fs;
 mod node_path;
@@ -73,6 +76,9 @@ const GROUPS: &[Group] = &[
     b2_recovery::call,
     b2_remote::call,
     b2_print::call,
+    b3_session::call,
+    b3_update::call,
+    b3_shell::call,
 ];
 
 /// Runs `name` with `args`; `None` when no group has it.
