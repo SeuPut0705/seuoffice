@@ -27,7 +27,7 @@
   - `echo`: 원시 바이트를 받아 그대로 돌려준다.
   - `report { line }`: `BENCH_OUT`(JSONL)에 한 줄 덧붙인다.
   - `print_pdf { out, width, height }` → `{ ok, error? }`: 지금 최상위 페이지를 인치 단위 용지, 여백 0, 배경 포함으로 PDF로 `out`에 쓴다.
-- 켜자마자: `BENCH_OUT`이 있으면 `{ "kind": "startup", "shell", "pid", "userDataDir", "userDataEntries": [...] }` 한 줄을 쓴다. 그리고 환경 변수와 상관없이 늘 `<userData>/proto-shell-started.json`에 `{ shell, version, args, time }`을 쓴다. userData는 Electron 판의 폴더 그대로다: Windows `%APPDATA%\seuoffice`, macOS `~/Library/Application Support/seuoffice`.
+- 켜자마자: `BENCH_OUT`이 있으면 `{ "kind": "startup", "shell", "pid", "userDataDir", "userDataEntries": [...] }` 한 줄을 쓴다. 그리고 환경 변수와 상관없이 늘 `<userData>/proto-shell-started.json`에 `{ shell, version, args, time }`을 쓴다. userData는 Electron 판의 폴더 그대로다: Windows `%APPDATA%\seuoffice`, macOS `~/Library/Application Support/seuoffice`. 환경 변수 `BENCH_USER_DATA`가 있으면 그 폴더를 쓴다(이 맥북에서 돌릴 때 실제 사용자 폴더를 건드리지 않도록).
 - 명령줄: `--updated`, `--force-run`은 받아서 무시한다. 위치 인자로 온 `.docx` 경로는 interactive 모드로 그 파일을 연다(파일 연결 확인용).
 
 ### 묶을 때 (아티팩트 `proto-<shell>-<mac|win>`)

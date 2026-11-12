@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Turns the bench results of one runner into a Markdown table and image diffs.
+
+  python3 report.py DIR [os-label]
+
+DIR holds <shell>.json from bench.py (electron, tauri2, cef, electron-app ...),
+their screenshots and PDF page renders. Screenshots and PDF pages are compared
+with electron's: the share of pixels whose largest channel differs by more
+than 32 and the mean absolute difference; a diff image is written beside them.
+"""
+import json
+import os
+import statistics
+import sys
+
+import numpy as np
+from PIL import Image
+
+
+def load(path):
+    with open(path, encoding='utf-8') as f:
+        return json.load(f)
+
+
+def diff(a_path, b_path, out_path):
+    if not (os.path.exists(a_path) and os.path.exists(b_path)):
+        return None
+    a = Image.open(a_path).convert('RGB')
+    b = Image.open(b_path).convert('RGB')
+    w, h = min(a.width, b.width), min(a.height, b.height)
+    a = np.asarray(a.crop((0, 0, w, h)), dtype=np.int16)
+    b = np.asarray(b.crop((0, 0, w, h)), dtype=np.int16)
+    d = np.abs(a - b).max(axis=2)
+    changed = d > 32
+    vis = np.where(changed[..., None], np.array([255, 0, 0], dtype=np.uint8), (a // 3).astype(np.uint8))
+    Image.fromarray(vis.astype(np.uint8)).save(out_path)
+    return {
+        'size': [w, h],
+        'size_a': list(Image.open(a_path).size),
+        'size_b': list(Image.open(b_path).size),
+        'changed_pct': round(100 * changed.mean(), 2),
+        'mean_abs': round(float(np.abs(a - b).mean()), 2),
+    }
+
+
+def med(values):
+    values = [v for v in values if v is not None]
+    return round(statistics.median(values)) if values else None
+
+
+def mb(v):
+    return None if v is None else round(v / 1e6, 1)
+
+
+def summarize(r):
+    runs = r.get('runs', [])
+    ok = [x for x in runs if 'opened' in x]
+    warm = ok[1:] if len(ok) > 1 else ok
+    first = ok[0] if ok and ok[0].get('run') == 1 else None
+    ms = lambda x, k: x['opened']['ms'].get(k)  # noqa: E731
+    done = [x['done'] for x in runs if 'done' in x]
+    ipc = lambda k: med([d['ipc'][k]['median'] for d in done]) if done else None  # noqa: E731
+    ipc10 = [d['ipc']['10MB']['median'] for d in done]
+    return {
+        'installer_mb': {k: mb(v) for k, v in r.get('installer', {}).items()},
+        'installed_mb': mb(r.get('installed_bytes')),
+        'first_paint_cold_ms': ms(first, 'firstPaint') if first else None,
+        'first_paint_warm_ms': med([ms(x, 'firstPaint') for x in warm]),
+        'settled_warm_ms': med([ms(x, 'settled') for x in warm]),
+        'pages': ok[-1]['opened'].get('pages') if ok else None,
+        'rss_mb': mb(med([x['memory']['rss'] for x in warm if 'memory' in x])),
+        'private_mb': mb(med([x['memory']['private'] for x in warm if 'memory' in x])),
+        'processes': med([x['memory']['processes'] for x in warm if 'memory' in x]),
+        'ipc_1kb_ms': None if not done else round(statistics.median([d['ipc']['1KB']['median'] for d in done]), 3),
+        'ipc_10mb_ms': None if not ipc10 else round(statistics.median(ipc10), 1),
+        'ipc_intact': all(d['ipc'][k]['intact'] for d in done for k in ('1KB', '10MB')) if done else None,
+        'edit_typed': all(d['edit'].get('typed') for d in done) if done else None,
+        'save_ok': all(d['edit'].get('saveOk') for d in done) if done else None,
+        'errors': [x['error'] for x in runs if 'error' in x],
+        'pdf': r.get('pdf', {}).get('file') or {k: v for k, v in r.get('pdf', {}).items() if k != 'lines'},
+        'fonts': ok[-1]['opened'].get('fonts') if ok else None,
+        'user_agent': ok[-1]['opened'].get('userAgent') if ok else None,
+    }
+
+
+def main():
+    d = sys.argv[1]
+    label = sys.argv[2] if len(sys.argv) > 2 else ''
+    results = {}
+    for name in sorted(os.listdir(d)):
+        if name.endswith('.json') and not name.startswith('summary'):
+            r = load(os.path.join(d, name))
+            if isinstance(r, dict) and 'runs' in r:
+                results[r['shell']] = r
+    summary = {s: summarize(r) for s, r in results.items()}
+    for s, r in results.items():
+        if s == 'electron':
+            continue
+        last = max((x['run'] for x in r['runs'] if 'screenshot' in x), default=None)
+        if last:
+            summary[s]['screenshot_vs_electron'] = diff(
+                os.path.join(d, f'electron-run{last}.png'),
+                os.path.join(d, f'{s}-run{last}.png'),
+                os.path.join(d, f'diff-{s}-vs-electron.png'),
+            )
+        summary[s]['pdf_p1_vs_electron'] = diff(
+            os.path.join(d, 'electron-p1.png'),
+            os.path.join(d, f'{s}-p1.png'),
+            os.path.join(d, f'diff-pdf-{s}-vs-electron.png'),
+        )
+    with open(os.path.join(d, 'summary.json'), 'w', encoding='utf-8') as f:
+        json.dump(summary, f, indent=1, ensure_ascii=False)
+
+    rows = [
+        ('installer MB', lambda s: s['installer_mb']),
+        ('installed MB', lambda s: s['installed_mb']),
+        ('first paint cold ms', lambda s: s['first_paint_cold_ms']),
+        ('first paint warm ms (median)', lambda s: s['first_paint_warm_ms']),
+        ('layout settled warm ms', lambda s: s['settled_warm_ms']),
+        ('pages laid out', lambda s: s['pages']),
+        ('RSS MB after open', lambda s: s['rss_mb']),
+        ('private MB after open (win USS, mac footprint)', lambda s: s['private_mb']),
+        ('processes', lambda s: s['processes']),
+        ('IPC 1 KB ms', lambda s: s['ipc_1kb_ms']),
+        ('IPC 10 MB ms', lambda s: s['ipc_10mb_ms']),
+        ('edit + save', lambda s: f"typed={s['edit_typed']} saved={s['save_ok']}"),
+        ('PDF', lambda s: s['pdf']),
+        ('screenshot vs electron', lambda s: s.get('screenshot_vs_electron')),
+        ('PDF p1 vs electron', lambda s: s.get('pdf_p1_vs_electron')),
+        ('errors', lambda s: s['errors']),
+    ]
+    shells = list(summary)
+    lines = [f'### {label}', '', '| | ' + ' | '.join(shells) + ' |', '|---' * (len(shells) + 1) + '|']
+    for title, get in rows:
+        cells = []
+        for s in shells:
+            try:
+                v = get(summary[s])
+            except (KeyError, TypeError):
+                v = None
+            cells.append(json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else str(v))
+        lines.append(f'| {title} | ' + ' | '.join(cells) + ' |')
+    md = '\n'.join(lines) + '\n'
+    with open(os.path.join(d, 'summary.md'), 'w', encoding='utf-8') as f:
+        f.write(md)
+    print(md)
+
+
+if __name__ == '__main__':
+    main()

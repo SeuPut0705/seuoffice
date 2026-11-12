@@ -1,0 +1,155 @@
+# Throwaway (proto/README.md): measures the shell prototypes against Electron
+# on one runner per OS and candidate. Each job: the Electron baseline (same
+# host page and editor in Electron 43.8.3), the shipped Electron app v0.12.37
+# as installed by its release (size, memory), the update proof from that
+# install to the candidate, then the candidate itself. Nothing is published.
+name: proto measure
+
+on:
+  workflow_dispatch:
+    inputs:
+      tauri2_run:
+        description: proto-tauri2 build run id (empty = latest successful on the branch)
+        required: false
+      cef_run:
+        description: proto-cef build run id (empty = latest successful on the branch)
+        required: false
+      runs:
+        description: bench launches per shell (first one is the cold start)
+        default: '6'
+  push:
+    branches: [proto/rust-shell]
+    paths: ['.github/workflows/proto-measure.yml']
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  measure:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+        shell: [tauri2, cef]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      OSK: ${{ matrix.os == 'macos-latest' && 'mac' || 'win' }}
+      SHELL_NAME: ${{ matrix.shell }}
+      RUNS: ${{ inputs.runs || '6' }}
+      BUILD_RUN: ${{ matrix.shell == 'tauri2' && inputs.tauri2_run || inputs.cef_run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Screen size (Windows runners start at 1024x768)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          Get-CimInstance Win32_VideoController | Select-Object CurrentHorizontalResolution, CurrentVerticalResolution
+
+      - name: Tools and inputs
+        run: |
+          set -euo pipefail
+          python -m pip install -q psutil pillow numpy pypdfium2
+          if [ "$OSK" = mac ]; then python -m pip install -q pyobjc-framework-Quartz pyobjc-framework-CoreServices; fi
+          echo "RES=$RUNNER_TEMP/res" >> "$GITHUB_ENV"
+          echo "DOC=$RUNNER_TEMP/bench-50p.docx" >> "$GITHUB_ENV"
+          python proto/common/make-doc.py "$RUNNER_TEMP/bench-50p.docx"
+          proto/common/stage-dist.sh "$RUNNER_TEMP/dist"
+          (cd proto/electron && npm install --no-audit --no-fund)
+          mkdir -p "$RUNNER_TEMP/res"
+          system_profiler SPHardwareDataType 2>/dev/null | grep -E 'Model|Chip|Memory' || true
+          [ "$OSK" = win ] && powershell -c "Get-CimInstance Win32_Processor | Select Name,NumberOfLogicalProcessors; (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory; (Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' -ErrorAction SilentlyContinue).pv" || true
+
+      - name: Electron baseline (same page in Electron 43.8.3)
+        run: |
+          if [ "$OSK" = mac ]; then exe=proto/electron/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron
+          else exe=proto/electron/node_modules/electron/dist/electron.exe; fi
+          python proto/common/bench.py --shell electron --out "$RES" --doc "$DOC" --runs "$RUNS" \
+            --env BENCH_DIST="$RUNNER_TEMP/dist" --env BENCH_USER_DATA="$RUNNER_TEMP/ud-electron" -- "$exe" proto/electron
+
+      - name: Shipped Electron app v0.12.37 (install, size, memory)
+        run: |
+          set -euo pipefail
+          if [ "$OSK" = mac ]; then
+            gh release download v0.12.37 -R "$GITHUB_REPOSITORY" -p 'SeuOffice-0.12.37-arm64-mac.zip' -p 'SeuOffice-0.12.37-arm64.dmg' -D "$RUNNER_TEMP/rel"
+            ditto -x -k "$RUNNER_TEMP/rel/SeuOffice-0.12.37-arm64-mac.zip" /Applications/
+            exe=/Applications/SeuOffice.app/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' /Applications/SeuOffice.app/Contents/Info.plist)
+            python proto/common/real-app.py --out "$RES" --doc "$DOC" --installer "$RUNNER_TEMP/rel/SeuOffice-0.12.37-arm64.dmg" \
+              --installer "$RUNNER_TEMP/rel/SeuOffice-0.12.37-arm64-mac.zip" --installed /Applications/SeuOffice.app -- "$exe" || true
+          else
+            gh release download v0.12.37 -R "$GITHUB_REPOSITORY" -p 'SeuOffice-Setup-0.12.37.exe' -D "$RUNNER_TEMP/rel"
+            powershell -c "Start-Process -Wait -FilePath '$RUNNER_TEMP\\rel\\SeuOffice-Setup-0.12.37.exe' -ArgumentList '/S'"
+            dir="$LOCALAPPDATA/Programs/SeuOffice"
+            ls "$dir"
+            python proto/common/real-app.py --out "$RES" --doc "$DOC" --installer "$RUNNER_TEMP/rel/SeuOffice-Setup-0.12.37.exe" \
+              --installed "$dir" -- "$dir/seuoffice.exe" || true
+          fi
+          ls "$([ "$OSK" = mac ] && echo "$HOME/Library/Application Support/seuoffice" || echo "$APPDATA/seuoffice")"
+
+      - name: Candidate build
+        id: cand
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          id=$BUILD_RUN
+          [ -n "$id" ] || id=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "proto-$SHELL_NAME.yml" --branch proto/rust-shell --status success -L 1 --json databaseId -q '.[0].databaseId')
+          echo "build run $id"
+          gh run download "$id" -R "$GITHUB_REPOSITORY" -n "proto-$SHELL_NAME-$OSK" -D "$RUNNER_TEMP/cand"
+          echo "$id" > "$RES/build-run.txt"
+          ls -la "$RUNNER_TEMP/cand"
+          cat "$RUNNER_TEMP/cand/build-info.json"
+          cp "$RUNNER_TEMP/cand/build-info.json" "$RES/"
+
+      - name: Update proof (shipped install -> candidate)
+        if: steps.cand.outcome == 'success'
+        run: |
+          if [ "$OSK" = mac ]; then
+            proto/common/update-proof-mac.sh "$(ls "$RUNNER_TEMP"/cand/*.zip | head -1)" "$SHELL_NAME" "$RES/update" || true
+          else
+            pwsh -File proto/common/update-proof-win.ps1 -Installer "$(cygpath -w "$(ls "$RUNNER_TEMP"/cand/*.exe | head -1)")" -Shell "$SHELL_NAME" -Out "$(cygpath -w "$RES/update")" || true
+          fi
+
+      - name: Candidate bench
+        if: steps.cand.outcome == 'success'
+        run: |
+          set -euo pipefail
+          rel=$(python -c "import json;print(json.load(open('$RUNNER_TEMP/cand/build-info.json'))['exe'])")
+          if [ "$OSK" = mac ]; then
+            mkdir -p "$RUNNER_TEMP/cand-app"
+            ditto -x -k "$(ls "$RUNNER_TEMP"/cand/*.zip | head -1)" "$RUNNER_TEMP/cand-app"
+            exe="$RUNNER_TEMP/cand-app/$rel"
+            installed=$(ls -d "$RUNNER_TEMP"/cand-app/*.app | head -1)
+            inst=(); for f in "$RUNNER_TEMP"/cand/*.dmg "$RUNNER_TEMP"/cand/*.zip; do [ -f "$f" ] && inst+=(--installer "$f"); done
+          else
+            installed="$LOCALAPPDATA/Programs/SeuOffice"
+            if [ ! -f "$installed/$rel" ]; then
+              echo "::warning::candidate not in the Electron folder after the update proof; installing it fresh"
+              powershell -c "Start-Process -Wait -FilePath '$(cygpath -w "$(ls "$RUNNER_TEMP"/cand/*.exe | head -1)")' -ArgumentList '/S'"
+            fi
+            exe="$installed/$rel"
+            inst=(--installer "$(ls "$RUNNER_TEMP"/cand/*.exe | head -1)")
+          fi
+          python proto/common/bench.py --shell "$SHELL_NAME" --out "$RES" --doc "$DOC" --runs "$RUNS" "${inst[@]}" --installed "$installed" -- "$exe"
+
+      - name: Report
+        if: always()
+        run: python proto/common/report.py "$RES" "$OSK $SHELL_NAME" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: proto-measure-${{ env.OSK }}-${{ matrix.shell }}
+          path: ${{ runner.temp }}/res
