@@ -104,15 +104,27 @@ async function countPrompts(app: ElectronApplication): Promise<() => Promise<num
   return () => app.evaluate(() => (globalThis as { closePrompts?: number }).closePrompts ?? 0)
 }
 
-/** what the editor did, in the words a failure needs: each transaction that changed the document */
-interface Trace {
+/** One moment of the sequence, in the words a failure needs. */
+interface Moment {
+  step: string
+  /** the paragraph as the page shows it: the text in the DOM */
+  shown: string
+  /** the paragraph as the editor holds it */
+  held: string
+  /** the editor's caret, as [anchor, head] */
+  caret: [number, number]
+  /** the page's caret: the text of the node it is in, and the offset in it */
+  domCaret: string
   canUndo: boolean
   canRedo: boolean
+  /** every transaction since the watch began that changed the document */
   changes: string[]
 }
 interface TracedEditor {
   can(): { undo(): boolean; redo(): boolean }
   on(event: 'transaction', listener: (event: { transaction: TracedTransaction }) => void): void
+  state: { doc: { textContent: string }; selection: { anchor: number; head: number } }
+  commands: { focus(): boolean; setTextSelection(pos: number): boolean }
 }
 interface TracedTransaction {
   docChanged: boolean
@@ -133,62 +145,105 @@ const watchChanges = (page: Page) =>
     })
   })
 
-const trace = (page: Page): Promise<Trace> =>
-  page.evaluate(() => {
+const moment = (page: Page, step: string): Promise<Moment> =>
+  page.evaluate((label) => {
     const w = window as EditorWindow
-    const can = w.__aidocs!.editor.can()
-    return { canUndo: can.undo(), canRedo: can.redo(), changes: w.__changes ?? [] }
-  })
+    const editor = w.__aidocs!.editor
+    const can = editor.can()
+    const selection = window.getSelection()
+    const paragraph = [...document.querySelectorAll('.doc-page p')].find((p) =>
+      (p.textContent ?? '').includes('Code:'),
+    )
+    return {
+      step: label,
+      shown: paragraph?.textContent ?? '',
+      held: editor.state.doc.textContent,
+      caret: [editor.state.selection.anchor, editor.state.selection.head] as [number, number],
+      domCaret: `${JSON.stringify(selection?.focusNode?.textContent ?? null)}@${selection?.focusOffset ?? -1}`,
+      canUndo: can.undo(),
+      canRedo: can.redo(),
+      changes: [...(w.__changes ?? [])],
+    }
+  }, step)
 
-/** the paragraph as the page shows it: the text in the DOM, not the editor's own record */
-const shownText = (page: Page) =>
-  page.locator('.doc-page p', { hasText: 'Code:' }).first().innerText()
+/** what every moment of an untouched document reads, whatever the caret does */
+const untouched = (moments: Moment[]) =>
+  moments.map(({ step, shown, held, canUndo, canRedo, changes }) => ({
+    step,
+    shown,
+    held,
+    canUndo,
+    canRedo,
+    changes,
+  }))
+const UNTOUCHED = (step: string) => ({
+  step,
+  shown: TEXT,
+  held: TEXT,
+  canUndo: false,
+  canRedo: false,
+  changes: [] as string[],
+})
 
-const UNTOUCHED: Trace = { canUndo: false, canRedo: false, changes: [] }
+/** how the caret gets into the control: a click on it, or the editor putting it there */
+const WAYS_IN = ['a click', 'the caret set by the editor'] as const
 
 test.describe('a document with a locked content control', () => {
-  test('text it refused, then Ctrl+Z and Ctrl+Y, leave the document unchanged and the tab closes without asking', async () => {
-    const file = join(await mkdtemp(join(tmpdir(), 'seuoffice-locked-')), 'locked-control.docx')
-    await writeFile(file, await lockedControlDocx())
-    const launched = await launchShell({
-      onboardingSeen: true,
-      openFile: file,
-      videoDir: 'docs-locked-control-undo',
+  for (const way of WAYS_IN) {
+    test(`text it refused (caret put in by ${way}), then Ctrl+Z and Ctrl+Y, leave the document unchanged and the tab closes without asking`, async () => {
+      const file = join(await mkdtemp(join(tmpdir(), 'seuoffice-locked-')), 'locked-control.docx')
+      await writeFile(file, await lockedControlDocx())
+      const launched = await launchShell({
+        onboardingSeen: true,
+        openFile: file,
+        videoDir: 'docs-locked-control-undo',
+      })
+      const { app } = launched
+      const moments: Moment[] = []
+      try {
+        const prompts = await countPrompts(app)
+        const page = await waitForPageWithUrl(app, '://docs/')
+        await page.locator('.doc-page p', { hasText: 'Code:' }).first().waitFor()
+        const control = page.locator('.doc-page .doc-inline-wrap').first()
+        await expect(control).toHaveText('A-1')
+        // the page settles (fonts, pagination) before anything is compared
+        await page.evaluate(() => document.fonts.ready.then(() => undefined))
+        await page.waitForTimeout(1500)
+        await watchChanges(page)
+        const note = async (step: string) => moments.push(await moment(page, step))
+        await note('opened')
+
+        if (way === 'a click') await control.click()
+        else
+          await page.evaluate(() => {
+            const editor = (window as EditorWindow).__aidocs!.editor
+            editor.commands.focus()
+            // 'Code: ' is six characters: 8 is after the A of the control
+            editor.commands.setTextSelection(8)
+          })
+        await note('caret in the control')
+        // a key, then text handed over whole, as an input method hands it over
+        await page.keyboard.type('x')
+        await note('a key typed')
+        await page.keyboard.insertText('y')
+        await note('text inserted')
+        await page.keyboard.press('ControlOrMeta+z')
+        await note('undo')
+        await page.keyboard.press('ControlOrMeta+y')
+        await note('redo')
+
+        // the whole sequence at once, so a failure shows every moment of it
+        console.log(`[locked-control ${way}] ${JSON.stringify(moments, null, 1)}`)
+        expect(untouched(moments)).toEqual(moments.map(({ step }) => UNTOUCHED(step)))
+        // and the caret stayed where it was put: refused text moves nothing
+        expect(new Set(moments.slice(1).map((m) => m.caret.join(':'))).size).toBe(1)
+
+        await closeDocumentTab(app)
+        expect(await prompts()).toBe(0)
+        await expect.poll(() => documentTabs(app)).toBe(0)
+      } finally {
+        await closeAndSaveVideo(launched, 'docs-locked-control-undo')
+      }
     })
-    const { app } = launched
-    try {
-      const prompts = await countPrompts(app)
-      const page = await waitForPageWithUrl(app, '://docs/')
-      await page.locator('.doc-page p', { hasText: 'Code:' }).first().waitFor()
-      const control = page.locator('.doc-page .doc-inline-wrap').first()
-      await expect(control).toHaveText('A-1')
-      // the page settles (fonts, pagination) before anything is compared
-      await page.evaluate(() => document.fonts.ready.then(() => undefined))
-      await page.waitForTimeout(1500)
-      // a document just opened has nothing to take back
-      await watchChanges(page)
-      expect(await trace(page)).toEqual(UNTOUCHED)
-
-      // a key, and text handed over whole as an input method does
-      await control.click()
-      await page.keyboard.type('x')
-      await page.keyboard.insertText('y')
-      // the refused text is nowhere: not in the document and not left on the page
-      expect(await shownText(page)).toBe(TEXT)
-      expect(await trace(page)).toEqual(UNTOUCHED)
-
-      await page.keyboard.press('ControlOrMeta+z')
-      expect(await shownText(page)).toBe(TEXT)
-      expect(await trace(page)).toEqual(UNTOUCHED)
-      await page.keyboard.press('ControlOrMeta+y')
-      expect(await shownText(page)).toBe(TEXT)
-      expect(await trace(page)).toEqual(UNTOUCHED)
-
-      await closeDocumentTab(app)
-      expect(await prompts()).toBe(0)
-      await expect.poll(() => documentTabs(app)).toBe(0)
-    } finally {
-      await closeAndSaveVideo(launched, 'docs-locked-control-undo')
-    }
-  })
+  }
 })
