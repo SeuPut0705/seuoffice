@@ -1,0 +1,17 @@
+[package]
+name = "pptx-engine"
+description = "The slides engine, ported from packages/pptx-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+jscompat.workspace = true
+ooxml-pkg.workspace = true
+ooxml-xml.workspace = true
+serde = { workspace = true, features = ["rc"] }
+serde_json.workspace = true
+sha2.workspace = true
+mtx.workspace = true
+flate2.workspace = true

@@ -3,18 +3,17 @@
 // the resolver are built on both sides from `args.parts` as the `resolve`
 // group builds them. `args.resolver: false` calls it without a resolver,
 // `args.styles: false` without the styles map.
-import { missingParagraphStyle } from './listed'
-import { parseNumbering } from '../../packages/docx-engine/src/parse-package'
-import { fieldDisplayOf } from '../../packages/docx-engine/src/parse-fields'
-import { parseStyles } from '../../packages/docx-engine/src/parse-styles'
-import { resolveCtxOf, type ResolveCtx } from '../../packages/docx-engine/src/resolve-props'
+import { parseNumbering } from './reference/parse-package'
+import { fieldDisplayOf } from './reference/parse-fields'
+import { parseStyles } from './reference/parse-styles'
+import { resolveCtxOf, type ResolveCtx } from './reference/resolve-props'
 import type {
   DocDefaults,
   NumberingDef,
   StyleInfo,
   ThemeColors,
   ThemeFonts,
-} from '../../packages/docx-engine/src/types'
+} from './reference/types'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { parseTheme } from './compare-package'
 import { elementFragments } from './fragments'
@@ -226,6 +225,14 @@ const STYLES_BODY = [
     'toc 7',
   ),
   style('paragraph', 'TOC8', `<w:pPr>${tabs(stop('right', '0', 'dot'))}</w:pPr>`, '', 'toc 8'),
+  // a right stop at a negative position: a paragraph of this style gets no right tab position
+  style(
+    'paragraph',
+    'TocNegative',
+    `<w:pPr>${tabs(stop('right', '-720', 'dot'))}</w:pPr>`,
+    '',
+    'toc 4',
+  ),
   style(
     'paragraph',
     'TOC9',
@@ -688,6 +695,9 @@ const PARAS: string[] = [
   '<w:p><w:pPr><w:pStyle w:val="TOC1"/>' + t('no pPr end') + TAB + t('5'),
 ]
 
+/** The style's only right stop at a negative position (TOC8's at 0 drops later anyway); rich package only. */
+const NEGATIVE_STOP = entry('TocNegative', 'Negative style stop')
+
 const COMPAT_ADDITIVE = { doNotUseHTMLParagraphAutoSpacing: true }
 
 /** Every paragraph over the rich package; then without a resolver, without styles, both, and over the other packages. */
@@ -705,6 +715,8 @@ function built(): Input[] {
   })
   inputs.push({ text: PARAS[0]!, args: { parts: THROWS } })
   inputs.push({ text: PARAS[0]!, args: { parts: THROWS, resolver: false } })
+  for (const args of [{}, { resolver: false }, { styles: false }])
+    inputs.push({ text: NEGATIVE_STOP, args: { parts: RICH, ...args } })
   return inputs
 }
 
@@ -714,7 +726,6 @@ export const FIELDDISPLAY: CallSpec[] = [
   {
     fn: 'fielddisplay.fieldDisplayOf',
     call: displayOf,
-    listed: missingParagraphStyle,
     fromDocument: documentInputs,
     built: built(),
   },

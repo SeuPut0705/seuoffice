@@ -1,16 +1,19 @@
-//! Port of packages/docx-engine/src/zip-load.ts: the one way a docx is opened.
+//! Port of packages/docx-engine/src/zip-load.ts: the one way a docx is opened,
+//! and the part of it `PackageArchive.open` of the slides engine shares.
 
 use std::collections::HashMap;
 
 use jscompat::js_regex;
 
-use crate::gate::ZipLimits;
 use crate::gate::{
-    DEFAULT_ZIP_LIMITS, DeclaredPart, assert_declared_sizes_within_limits,
+    DEFAULT_ZIP_LIMITS, DeclaredPart, ZipLimits, assert_declared_sizes_within_limits,
     assert_zip_inflates_within_limits,
 };
 use crate::jszip::{self, LoadedEntry};
-use crate::normalize::{needs_ooxml_normalization, normalize_ooxml_xml};
+use crate::normalize::{
+    dedupe_style_refs, has_duplicate_style_refs, has_universal_measures, needs_ooxml_normalization,
+    normalize_ooxml_xml,
+};
 use crate::package::{Package, Part};
 
 const EOCD_SIG: u32 = 0x0605_4b50;
@@ -76,6 +79,19 @@ fn neutralize_unicode_path_fields(bytes: &[u8]) -> Option<Vec<u8>> {
     out
 }
 
+/// Parts holding paragraphs whose duplicate style refs get collapsed (last wins).
+fn is_word_part(name: &str) -> bool {
+    js_regex!(r"^word\/[^/]+\.xml$", "i").test(name)
+}
+
+fn is_story_part(name: &str) -> bool {
+    js_regex!(
+        r"^word\/(?:document|header\d*|footer\d*|footnotes|endnotes|comments\w*|glossary\/document)\.xml$",
+        "i"
+    )
+    .test(name)
+}
+
 /// The parts that carry the strict or non-canonical-prefix markers whenever
 /// the package needs normalizing.
 const NORMALIZE_GATE_PARTS: [&str; 3] = [
@@ -86,7 +102,8 @@ const NORMALIZE_GATE_PARTS: [&str; 3] = [
 
 /// ISO Strict OOXML and non-canonical namespace prefixes are normalized at
 /// this single entry point, so the parser's offsets and the save's patches
-/// see the same part text.
+/// see the same part text. Duplicate style refs of the story parts collapse
+/// here too, so every reader sees the winner.
 fn normalize_ooxml_parts(package: &mut Package) -> Result<(), String> {
     let mut needed = false;
     for path in NORMALIZE_GATE_PARTS {
@@ -97,20 +114,29 @@ fn normalize_ooxml_parts(package: &mut Package) -> Result<(), String> {
             break;
         }
     }
-    if !needed {
-        return Ok(());
-    }
-    let mut normalized = Vec::new();
+    let mut changed = Vec::new();
     for part in package.parts() {
-        if part.is_dir || !js_regex!(r"\.(xml|rels)$", "i").test(&part.name) {
+        if part.is_dir {
             continue;
         }
-        let xml = part.text().map_err(|error| error.reason)?;
-        if needs_ooxml_normalization(xml) {
-            normalized.push((part.name.clone(), normalize_ooxml_xml(xml)));
+        let story = is_story_part(&part.name);
+        let word_part = is_word_part(&part.name);
+        if !story && !word_part && (!needed || !js_regex!(r"\.(xml|rels)$", "i").test(&part.name)) {
+            continue;
+        }
+        let original = part.text().map_err(|error| error.reason)?;
+        let mut xml = original.to_owned();
+        if (needed || has_universal_measures(&xml)) && needs_ooxml_normalization(&xml) {
+            xml = normalize_ooxml_xml(&xml);
+        }
+        if story && has_duplicate_style_refs(&xml).map_err(|limit| limit.to_string())? {
+            xml = dedupe_style_refs(&xml).map_err(|limit| limit.to_string())?;
+        }
+        if xml != original {
+            changed.push((part.name.clone(), xml));
         }
     }
-    for (name, xml) in normalized {
+    for (name, xml) in changed {
         package.set_file(name, xml.into_bytes());
     }
     Ok(())
@@ -154,6 +180,29 @@ pub fn load_zip_package_staged(
     limits: &ZipLimits,
     keep_raw: bool,
 ) -> Result<Package, LoadFailure> {
+    load_staged(bytes, limits, keep_raw, |parts| {
+        assert_declared_sizes_within_limits(parts, limits)
+    })
+}
+
+/// The metered gate, `JSZip.loadAsync` and the declared-size check that runs
+/// on the loaded zip. The engines word that check differently, so each passes
+/// its own. `Err` is the message of what the TypeScript throws.
+pub fn load_package(
+    bytes: &[u8],
+    limits: &ZipLimits,
+    assert_declared: impl FnOnce(&[DeclaredPart<'_>]) -> Result<(), String>,
+) -> Result<Package, String> {
+    load_staged(bytes, limits, false, assert_declared).map_err(LoadFailure::into_message)
+}
+
+fn load_staged(
+    bytes: &[u8],
+    limits: &ZipLimits,
+    keep_raw: bool,
+    assert_declared: impl FnOnce(&[DeclaredPart<'_>]) -> Result<(), String>,
+) -> Result<Package, LoadFailure> {
+    // metered inflation first: past this point no part is larger than a limit
     assert_zip_inflates_within_limits(bytes, limits).map_err(LoadFailure::Gate)?;
     let entries = jszip::load(bytes, keep_raw).map_err(LoadFailure::Archive)?;
     let mut package = Package::default();
@@ -165,11 +214,16 @@ pub fn load_zip_package_staged(
         is_dir,
         uncompressed_size,
         content,
+        date,
         raw,
     } in entries
     {
         declared.insert(name.clone(), uncompressed_size.unwrap_or(0.0));
-        package.set(Part::new(name, is_dir, content).with_raw(raw));
+        package.set(
+            Part::new(name, is_dir, content)
+                .with_date(Some(date))
+                .with_raw(raw),
+        );
     }
     {
         let parts: Vec<DeclaredPart<'_>> = package
@@ -181,7 +235,7 @@ pub fn load_zip_package_staged(
                 usize: declared[&part.name],
             })
             .collect();
-        assert_declared_sizes_within_limits(&parts, limits).map_err(LoadFailure::Declared)?;
+        assert_declared(&parts).map_err(LoadFailure::Declared)?;
     }
     Ok(package)
 }

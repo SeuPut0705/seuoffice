@@ -1,0 +1,42 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "xmltag",
+      "argRefused": 0,
+      "populations": {
+        "corpus": {
+          "compared": 1689,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 546,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 600,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "xmltag.findStartTag",
+          "checks": 2479,
+          "differences": 0,
+          "distinctResults": 253,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "xmltag.removeElements",
+          "checks": 356,
+          "differences": 0,
+          "distinctResults": 309,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

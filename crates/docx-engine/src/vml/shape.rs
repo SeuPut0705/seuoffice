@@ -18,19 +18,6 @@ use super::{
     Dim, math_max, math_min, vml_color_hex, vml_fraction, vml_length_px, vml_style_dim_px,
 };
 
-/// The opacity of a `v:fill`: what `vmlFraction` reads, and a percentage,
-/// which it does not, so the TypeScript drops `opacity="50%"`
-/// (divergences.json: `vml-fill-opacity-in-percent`).
-fn fill_opacity(value: Option<&str>) -> Option<f64> {
-    match trim(value?).strip_suffix('%') {
-        Some(percent) => {
-            let percent = parse_float(percent);
-            percent.is_finite().then(|| percent / 100.0)
-        }
-        None => vml_fraction(value),
-    }
-}
-
 /// The source of `VML_WORDART_RE`.
 pub const VML_WORDART_SOURCE: &str = r#"<v:textpath[^>]*\bstring=""#;
 
@@ -328,7 +315,7 @@ pub struct VmlShapeSvg {
 /// `encodeURIComponent(text)` over a Rust string, which holds no lone
 /// surrogate, so it never throws.
 // to jscompat: encodeURIComponent, which it lacks
-fn encode_uri_component(text: &str) -> String {
+pub(crate) fn encode_uri_component(text: &str) -> String {
     const HEX: &[u8; 16] = b"0123456789ABCDEF";
     let mut out = String::with_capacity(text.len());
     for byte in text.bytes() {
@@ -442,7 +429,7 @@ pub fn vml_shape_svg(
     } else {
         "none".to_owned()
     };
-    let opacity = fill_opacity(attr(&fill_node, "opacity"));
+    let opacity = vml_fraction(attr(&fill_node, "opacity"));
     let stroked = !off(a("stroked")) && !off(attr(&stroke_node, "on"));
     let sw = if stroked {
         vml_length_px(a("strokeweight")).unwrap_or(1.0)

@@ -49,14 +49,19 @@ fn text(args: &[Value], index: usize) -> Result<&str, String> {
 
 /// A number argument; absent and `null` are `None` (`undefined`).
 fn number(args: &[Value], index: usize) -> Result<Option<f64>, String> {
-    jscompat::js_f64_opt(args.get(index).unwrap_or(&Value::Null))
+    number_of(args.get(index).unwrap_or(&Value::Null))
+}
+
+/// A number as the binding sends it: NaN and the infinities by their spelling.
+fn number_of(value: &Value) -> Result<Option<f64>, String> {
+    jscompat::js_f64_opt(value).map_err(|error| format!("TypeError: {error}"))
 }
 
 /// The property `key` of an options object as a number; absent is `None`.
 fn option(args: &[Value], index: usize, key: &str) -> Result<Option<f64>, String> {
     match args.get(index).and_then(|options| options.get(key)) {
         None => Ok(None),
-        Some(value) => jscompat::js_f64_opt(value),
+        Some(value) => number_of(value),
     }
 }
 

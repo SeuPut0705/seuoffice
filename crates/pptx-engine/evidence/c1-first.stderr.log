@@ -1,0 +1,11 @@
+(node:64656) ExperimentalWarning: WASI is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+C:\Users\admin\Desktop\github\seuoffice-rust-c\tools\pptx-diff\main.ts:115
+const fullDifferences = JSON.stringify(observedDifferences, null, 2) + '\n'
+                             ^
+
+RangeError: Invalid string length
+    at JSON.stringify (<anonymous>)
+    at <anonymous> (C:\Users\admin\Desktop\github\seuoffice-rust-c\tools\pptx-diff\main.ts:115:30)
+
+Node.js v22.23.5

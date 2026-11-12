@@ -1,0 +1,47 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "genTable",
+      "argRefused": 0,
+      "populations": {
+        "corpus": {
+          "compared": 928,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 90,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 300,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "argMutated": {
+          "compared": 3000,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "genTable.generateTableModelXml",
+          "checks": 2800,
+          "differences": 0,
+          "distinctResults": 847,
+          "typescriptThrew": 67
+        },
+        {
+          "fn": "genTable.generateTableXml",
+          "checks": 1518,
+          "differences": 0,
+          "distinctResults": 50,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

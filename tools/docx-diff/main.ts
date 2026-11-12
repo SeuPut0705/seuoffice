@@ -19,11 +19,11 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import JSZip from 'jszip'
-import { parseDocx } from '../../packages/docx-engine/src/index'
-import { resolveMainDocumentPath } from '../../packages/docx-engine/src/parse-package'
-import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
+import { parseDocx } from './reference/index'
+import { resolveMainDocumentPath } from './reference/parse-package'
+import { loadDocxZip } from './reference/zip-load'
 import { bench } from './bench'
-import { callsAfterCorpus, callsOnDocument, reportCalls } from './calls-run'
+import { callsAfterCorpus, callsOnDocument, callsOnModel, callsOnParse, reportCalls } from './calls-run'
 import { compareBlankBytes } from './compare-blank'
 import { compareScan } from './compare-scan'
 import { compareRoundTrips, mutate } from './compare-xml'
@@ -44,6 +44,7 @@ import type { Themes } from './props-registry'
 import { packageAfterCorpus, packageOnDocument, reportPackage } from './package-run'
 import { propsAfterCorpus, propsOnDocument, propsOnPart, reportProps } from './props-run'
 import { mulberry32, SCAN_CASES, XML_CASES, zipTextCases } from './synthetic'
+import { modelAfterCorpus, modelOnDocument, reportModel } from './model-run'
 
 const FUZZ_CASES = option('--fuzz', 20_000)
 
@@ -104,6 +105,8 @@ for (const path of corpus) {
   loadable.push(bytes)
   await packageOnDocument(path, bytes, zip)
   const parsed = await parseDocx(bytes).catch(() => null)
+  if (parsed) await callsOnModel(path, parsed)
+  if (parsed) modelOnDocument(path, parsed)
   const themes: Themes = {
     colors: parsed?.themeColors ?? undefined,
     fonts: parsed?.themeFonts ?? undefined,
@@ -120,6 +123,7 @@ for (const path of corpus) {
     if (!file.dir && /\.(xml|rels)$/i.test(name)) parts.set(name, await file.async('string'))
   }
   await callsOnDocument(path, parts)
+  await callsOnParse(path, bytes, parts)
   for (const [name, partXml] of parts) {
     if (!/\.xml$/i.test(name)) continue
     const fragments = elementFragments(partXml, 'w:rPr')
@@ -164,6 +168,7 @@ for (let done = 0; done < FUZZ_CASES; done += 500) {
 propsAfterCorpus(random)
 await packageAfterCorpus(random)
 await callsAfterCorpus(random)
+await modelAfterCorpus()
 const written = await compareBlankBytes()
 comparisons.writtenZips.compared = written.compared
 comparisons.writtenZips.differences.push(...written.differences)
@@ -198,6 +203,7 @@ reportComparisons()
 reportProps()
 reportPackage()
 reportCalls()
+reportModel()
 console.log(
   `(g) raw zip fields that differ between the two writers, each following from the deflate stream: ` +
     [...written.rawFields].map(([field, count]) => `${field} ${count}`).join(', '),

@@ -122,7 +122,7 @@ pub fn parse_ordered_with_attributes(
 }
 
 /// `xmlData.replace(/\r\n?/g, "\n")`
-fn normalize_newlines(xml: &str) -> Cow<'_, str> {
+pub(crate) fn normalize_newlines(xml: &str) -> Cow<'_, str> {
     if !xml.contains('\r') {
         return Cow::Borrowed(xml);
     }
@@ -367,11 +367,11 @@ impl Parser<'_> {
     }
 }
 
-fn find_from(text: &str, needle: &str, from: usize) -> Option<usize> {
+pub(crate) fn find_from(text: &str, needle: &str, from: usize) -> Option<usize> {
     text.get(from..)?.find(needle).map(|at| from + at)
 }
 
-fn skip_utf16_units(text: &str, from: usize, units: usize) -> Result<usize, ParseError> {
+pub(crate) fn skip_utf16_units(text: &str, from: usize, units: usize) -> Result<usize, ParseError> {
     let mut remaining = units;
     for (offset, ch) in text[from..].char_indices() {
         if remaining == 0 {
@@ -387,7 +387,11 @@ fn skip_utf16_units(text: &str, from: usize, units: usize) -> Result<usize, Pars
 /// `tagExpWithClosingIndex`: the text between `from` and the first `closing`
 /// outside quotes, with tabs outside quotes turned into spaces, and the byte
 /// offset of that `closing`.
-fn tag_expression<'a>(text: &'a str, from: usize, closing: &[u8]) -> Option<(Cow<'a, str>, usize)> {
+pub(crate) fn tag_expression<'a>(
+    text: &'a str,
+    from: usize,
+    closing: &[u8],
+) -> Option<(Cow<'a, str>, usize)> {
     let bytes = text.as_bytes();
     let mut quote = 0u8;
     let mut tabs = false;
@@ -434,7 +438,7 @@ fn tag_expression<'a>(text: &'a str, from: usize, closing: &[u8]) -> Option<(Cow
 
 /// `readTagExp`: the tag name and the attribute text. A tag with no whitespace
 /// has its whole expression as both.
-fn split_tag_expression(expression: &str) -> (&str, &str) {
+pub(crate) fn split_tag_expression(expression: &str) -> (&str, &str) {
     match expression.char_indices().find(|(_, ch)| is_js_space(*ch)) {
         Some((at, space)) => (
             &expression[..at],
@@ -456,7 +460,7 @@ const RENAMED_NAMES: [&str; 7] = [
 ];
 
 /// `sanitizeName`: names that would collide with JavaScript object internals.
-fn sanitize_name(name: &str) -> Result<Cow<'_, str>, ParseError> {
+pub(crate) fn sanitize_name(name: &str) -> Result<Cow<'_, str>, ParseError> {
     if RESERVED_NAMES.contains(&name) {
         return Err(ParseError::ReservedName(name.to_owned()));
     }
@@ -466,14 +470,14 @@ fn sanitize_name(name: &str) -> Result<Cow<'_, str>, ParseError> {
     Ok(Cow::Borrowed(name))
 }
 
-struct AttributeToken<'a> {
-    name: &'a str,
-    value: Option<&'a str>,
-    end: usize,
+pub(crate) struct AttributeToken<'a> {
+    pub(crate) name: &'a str,
+    pub(crate) value: Option<&'a str>,
+    pub(crate) end: usize,
 }
 
 /// One match of `([^\s=]+)\s*(=\s*(['"])([\s\S]*?)\3)?` at or after `from`.
-fn next_attribute(text: &str, from: usize) -> Option<AttributeToken<'_>> {
+pub(crate) fn next_attribute(text: &str, from: usize) -> Option<AttributeToken<'_>> {
     let is_name_char = |ch: char| !is_js_space(ch) && ch != '=';
     let start = from + text[from..].find(is_name_char)?;
     let name_end = text[start..]
@@ -554,7 +558,7 @@ fn array_index(key: &str) -> Option<u32> {
 /// replaced; a numeric reference is left as written unless it names U+0000, a
 /// surrogate or (in XML 1.0) a C0 control other than tab, LF and CR, which is
 /// removed; everything else stays.
-fn decode_entities(text: &str, xml_1_1: bool) -> Cow<'_, str> {
+pub(crate) fn decode_entities(text: &str, xml_1_1: bool) -> Cow<'_, str> {
     let Some(first) = text.find('&') else {
         return Cow::Borrowed(text);
     };

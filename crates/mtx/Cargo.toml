@@ -1,0 +1,11 @@
+[package]
+name = "mtx"
+description = "The MicroType Express font decoder, ported from packages/pptx-engine/src/vendor/mtx (libeot)"
+version.workspace = true
+edition.workspace = true
+# a derived work of libeot: this crate alone is under the Mozilla Public License
+license = "MPL-2.0"
+publish.workspace = true
+
+[dependencies]
+jscompat.workspace = true

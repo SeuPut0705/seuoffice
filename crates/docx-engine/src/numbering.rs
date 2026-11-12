@@ -7,12 +7,13 @@ use jscompat::{
 };
 use ooxml_pkg::Package;
 use ooxml_xml::XNode;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::package::{Thrown, parse_part, part_text};
 use crate::xml_text::{decode_numeric_char_refs, on_off_of};
 
 js_object! {
+    deserialize;
     /// One w:lvl of a numbering definition. The reader of the part and the
     /// list dialogs (`numberingLevelFromCustom`) write its keys in orders of
     /// their own.
@@ -65,7 +66,7 @@ pub type Levels = JsObject<NumberingLevel>;
 
 /// One w:num of word/numbering.xml: the levels of its abstractNum with the
 /// overrides applied.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NumberingDef {
     pub num_id: String,

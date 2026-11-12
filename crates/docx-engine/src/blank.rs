@@ -907,6 +907,25 @@ fn own_paper_size<'de, D: serde::Deserializer<'de>>(
     })
 }
 
+/// `if (options.omitGeneratorFields)` on a value from outside the type
+/// system: false, null, 0 and "" are falsy, everything else is true.
+fn js_truthy<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Unchecked {
+        Flag(bool),
+        Number(f64),
+        Text(String),
+        Other(serde::de::IgnoredAny),
+    }
+    Ok(match Option::<Unchecked>::deserialize(deserializer)? {
+        None | Some(Unchecked::Flag(false)) => false,
+        Some(Unchecked::Number(number)) => number != 0.0 && !number.is_nan(),
+        Some(Unchecked::Text(text)) => !text.is_empty(),
+        Some(Unchecked::Flag(true) | Unchecked::Other(_)) => true,
+    })
+}
+
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlankDocxOptions {
@@ -926,6 +945,10 @@ pub struct BlankDocxOptions {
     pub app_version: Option<String>,
     /// docProps/app.xml Template; defaults to Word's "Normal.dotm".
     pub template: Option<String>,
+    /// Drop the Application and AppVersion fields of docProps/app.xml (the
+    /// Template stays); defaults to false.
+    #[serde(default, deserialize_with = "js_truthy")]
+    pub omit_generator_fields: bool,
 }
 
 /// `date.toISOString()`; an invalid date throws a RangeError.
@@ -944,14 +967,15 @@ fn iso_string(time: f64) -> Result<String, String> {
 }
 
 /// The W3CDTF stamp Word writes into core properties (seconds, Z)
-fn w3cdtf_stamp(time: f64) -> Result<String, String> {
+pub fn w3cdtf_stamp(time: f64) -> Result<String, String> {
     let iso = iso_string(time)?;
     Ok(js_regex!(r"\.\d{3}Z$").replace_all(&iso, |_| "Z".to_owned()))
 }
 
 /// Word-like core part of a freshly created document: no creator or other
-/// people data, just the creation/modification stamp and revision 1.
-fn new_document_core_properties_xml(created: f64) -> Result<String, String> {
+/// people data, just the creation/modification stamp and revision 0: the
+/// template has not been saved anywhere yet.
+pub fn new_document_core_properties_xml(created: f64) -> Result<String, String> {
     let stamp = w3cdtf_stamp(created)?;
     Ok(format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\
@@ -960,33 +984,38 @@ fn new_document_core_properties_xml(created: f64) -> Result<String, String> {
          xmlns:dcmitype=\"http://purl.org/dc/dcmitype/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\
          <dcterms:created xsi:type=\"dcterms:W3CDTF\">{stamp}</dcterms:created>\
          <dcterms:modified xsi:type=\"dcterms:W3CDTF\">{stamp}</dcterms:modified>\
-         <cp:revision>1</cp:revision>\
+         <cp:revision>0</cp:revision>\
          </cp:coreProperties>"
     ))
 }
 
 /// Word-like extended part of a freshly created document (no company/manager)
-fn new_document_app_properties_xml(options: &BlankDocxOptions) -> String {
-    let application = options
-        .application
-        .as_deref()
-        .unwrap_or(NEW_DOCUMENT_APPLICATION);
-    let app_version = options
-        .app_version
-        .as_deref()
-        .unwrap_or(NEW_DOCUMENT_APP_VERSION);
+pub fn new_document_app_properties_xml(options: &BlankDocxOptions) -> String {
     let template = options.template.as_deref().unwrap_or(NEW_DOCUMENT_TEMPLATE);
+    let fields = if options.omit_generator_fields {
+        String::new()
+    } else {
+        let application = options
+            .application
+            .as_deref()
+            .unwrap_or(NEW_DOCUMENT_APPLICATION);
+        let app_version = options
+            .app_version
+            .as_deref()
+            .unwrap_or(NEW_DOCUMENT_APP_VERSION);
+        format!(
+            "<Application>{}</Application><AppVersion>{}</AppVersion>",
+            escape_xml_text(application),
+            escape_xml_text(app_version)
+        )
+    };
     format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\
          <Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\" \
          xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\">\
-         <Template>{}</Template>\
-         <Application>{}</Application>\
-         <AppVersion>{}</AppVersion>\
+         <Template>{}</Template>{fields}\
          </Properties>",
-        escape_xml_text(template),
-        escape_xml_text(application),
-        escape_xml_text(app_version)
+        escape_xml_text(template)
     )
 }
 

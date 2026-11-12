@@ -1,0 +1,68 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "chart",
+      "argRefused": 0,
+      "populations": {
+        "corpus": {
+          "compared": 0,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 2215,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 300,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "argMutated": {
+          "compared": 5996,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "chart.constants",
+          "checks": 6,
+          "differences": 0,
+          "distinctResults": 6,
+          "typescriptThrew": 1
+        },
+        {
+          "fn": "chart.parseChartPartXml",
+          "checks": 3177,
+          "differences": 0,
+          "distinctResults": 1565,
+          "typescriptThrew": 33
+        },
+        {
+          "fn": "chart.shadeHex",
+          "checks": 1799,
+          "differences": 0,
+          "distinctResults": 156,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "chart.tintHex",
+          "checks": 1799,
+          "differences": 0,
+          "distinctResults": 151,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "chart.lumHex",
+          "checks": 1730,
+          "differences": 0,
+          "distinctResults": 239,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

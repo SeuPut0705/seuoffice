@@ -137,3 +137,24 @@ fn an_invalid_creation_date_throws() {
     // the clock is only the default
     assert!(build_blank_docx(&BlankDocxOptions::default(), f64::NAN).is_err());
 }
+
+#[test]
+fn a_new_document_has_revision_zero_and_can_leave_out_the_generator_fields() {
+    let options = BlankDocxOptions {
+        omit_generator_fields: true,
+        ..BlankDocxOptions::default()
+    };
+    let package = blank_docx_package(&options, 0.0).expect("a valid date");
+    let core = package.text("docProps/core.xml").expect("readable");
+    assert!(core.is_some_and(|core| core.contains("<cp:revision>0</cp:revision>")));
+    let app = package.text("docProps/app.xml").expect("readable");
+    assert_eq!(
+        app,
+        Some(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\
+             <Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\" \
+             xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\">\
+             <Template>Normal.dotm</Template></Properties>"
+        )
+    );
+}

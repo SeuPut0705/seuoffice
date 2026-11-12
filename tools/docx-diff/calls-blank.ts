@@ -14,8 +14,8 @@ import {
   type BlankDocxOptions,
   type BlankPaperSize,
   type CustomNumberingLevel,
-} from '../../packages/docx-engine/src/blank'
-import { parseNumbering } from '../../packages/docx-engine/src/parse-package'
+} from './reference/blank'
+import { parseNumbering } from './reference/parse-package'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { mulberry32 } from './synthetic'
 
@@ -195,6 +195,8 @@ interface WireBlankOptions {
   application?: string
   appVersion?: string
   template?: string
+  /** Unchecked, as a caller outside the type system passes it: only truthiness counts. */
+  omitGeneratorFields?: unknown
 }
 
 type TextOption = 'eastAsiaFont' | 'application' | 'appVersion' | 'template'
@@ -213,10 +215,11 @@ export async function typescriptBlankDocx(
   const locale = args.locale as string | undefined
   let options: BlankDocxOptions | undefined
   if (wire !== undefined || textOption !== undefined || locale !== undefined) {
-    const { createdAt, paperSize, ...rest } = wire ?? {}
+    const { createdAt, paperSize, omitGeneratorFields, ...rest } = wire ?? {}
     options = {
       ...rest,
       paperSize: paperSize as BlankPaperSize | undefined,
+      omitGeneratorFields: omitGeneratorFields as boolean | undefined,
       createdAt: createdAt === undefined ? undefined : new Date(createdAt),
     }
     if (textOption !== undefined) options[textOption] = text
@@ -234,6 +237,7 @@ const CREATED_AT = [undefined, 0, 951_782_400_123, 253_402_300_800_000, -62_198_
 const APPLICATIONS = [undefined, '', 'Word & <Co>\u0001']
 const APP_VERSIONS = [undefined, '', '16.0000']
 const TEMPLATES = [undefined, '', 'Normal\u0007.dotm']
+const OMIT_GENERATOR_FIELDS = [true, false, 1, 0, '', 'x', null, {}, []]
 /**
  * Clock instants: DOS time's first and last representable seconds, before
  * 1980 (a negative DOS year), an odd second with milliseconds, and later.
@@ -279,6 +283,16 @@ BLANK_DOCX_MATRIX.push(
   { args: { options: { createdAt: 1.9 }, now: 0 } },
   { args: { options: { createdAt: -0.5 }, now: 0.7 } },
   ...UNKNOWN_PAPER_SIZES.map((paperSize) => ({ args: { options: { paperSize }, now: 0 } })),
+  // the generator fields dropped or kept: only truthiness counts, whatever the type
+  ...OMIT_GENERATOR_FIELDS.flatMap((omitGeneratorFields) =>
+    TEMPLATES.flatMap((template) =>
+      [{}, { application: 'Word & <Co>\u0001', appVersion: '16.0000' }].map((generator) => {
+        const options: WireBlankOptions = { omitGeneratorFields, ...generator }
+        if (template !== undefined) options.template = template
+        return { args: { options, now: 1_700_000_001_999 } }
+      }),
+    ),
+  ),
 )
 
 /** Seeds of the mutations: the text is the option `textOption` names. */

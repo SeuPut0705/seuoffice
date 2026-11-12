@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs'
 import { cpus, loadavg } from 'node:os'
-import { parseDocx } from '../../packages/docx-engine/src/index'
-import { scanBody } from '../../packages/docx-engine/src/scan'
+import { parseDocx } from './reference/index'
+import { scanBody } from './reference/scan'
 import { rustScan } from './compare-scan'
 import { WASM_PATH } from './harness'
 

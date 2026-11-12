@@ -5,10 +5,12 @@
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
+  dedupeStyleRefs,
+  hasDuplicateStyleRefs,
   needsOoxmlNormalization,
   normalizeOoxmlXml,
-} from '../../packages/docx-engine/src/ooxml-normalize'
-import { resolveRelationshipTargetPath } from '../../packages/docx-engine/src/parse-package'
+} from './reference/ooxml-normalize'
+import { resolveRelationshipTargetPath } from './reference/parse-package'
 import { typescriptOpen } from './compare-package'
 import { repoRoot } from './harness'
 import { oddContainers, STRICT_PARTS } from './package-zips'
@@ -46,6 +48,22 @@ const TARGETS = [
   '1:colon-after-a-digit',
 ]
 
+/** Repeated style refs of one property set, and the neighbours that are not. */
+const STYLE_REFS = [
+  '<w:pPr><w:pStyle w:val="Heading1"/><w:pStyle w:val="MdHeading1"/></w:pPr>',
+  '<w:pPr><w:pStyle w:val="A"/>\n  <w:pStyle w:val="B"/>\t<w:pStyle w:val="C"/><w:jc w:val="left"/></w:pPr>',
+  '<w:rPr><w:rStyle w:val="A"/><w:rStyle w:val="B"/></w:rPr>',
+  '<w:pPr><w:pStyle w:val="A"/><w:rStyle w:val="B"/></w:pPr>',
+  '<w:pPr><w:pStyle w:val="A"/><w:jc w:val="left"/><w:pStyle w:val="B"/></w:pPr>',
+  '<w:pPr><w:pStyle w:val="A"></w:pStyle><w:pStyle w:val="B"/></w:pPr>',
+  '<w:pPr><w:pStyle w:val="a/"/><w:pStyle w:val="b"/></w:pPr>',
+  '<w:pPr><w:pStyleX w:val="A"/><w:pStyle w:val="B"/></w:pPr>',
+  '<w:p><w:pPr><w:pStyle w:val="A"/></w:pPr></w:p><w:p><w:pPr><w:pStyle w:val="B"/></w:pPr></w:p>',
+  '<w:pPr><w:pStyle w:val="A"/><w:pStyle w:val="B"/></w:pPr><w:pPr><w:rStyle w:val="A"/><w:rStyle w:val="B"/><w:rStyle w:val="C"/></w:pPr>',
+  '<w:pStyle/><w:pStyle/>',
+  '',
+]
+
 const containers = []
 for (const [name, docx] of oddContainers()) {
   if (docx.length > LARGEST_CONTAINER) continue
@@ -64,6 +82,11 @@ const fixtures = {
     xml,
     needed: needsOoxmlNormalization(xml),
     normalized: normalizeOoxmlXml(xml),
+  })),
+  styleRefs: STYLE_REFS.map((xml) => ({
+    xml,
+    duplicated: hasDuplicateStyleRefs(xml),
+    deduped: dedupeStyleRefs(xml),
   })),
   targets: SOURCES.flatMap((source) =>
     TARGETS.map((target) => ({

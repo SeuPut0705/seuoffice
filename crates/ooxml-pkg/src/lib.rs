@@ -19,8 +19,13 @@ pub use gate::{
     assert_declared_sizes_within_limits, assert_zip_inflates_within_limits,
 };
 pub use jszip::{CompressedData, RawRecord};
-pub use load::{LoadFailure, load_docx_package, load_zip_package, load_zip_package_staged};
-pub use normalize::{needs_ooxml_normalization, normalize_ooxml_xml};
+pub use load::{
+    LoadFailure, load_docx_package, load_package, load_zip_package, load_zip_package_staged,
+};
+pub use normalize::{
+    dedupe_style_refs, has_duplicate_style_refs, has_universal_measures, needs_ooxml_normalization,
+    normalize_ooxml_xml,
+};
 pub use package::{Package, Part, ReadError};
 
 /// Per-entry cap, the `maxPartBytes` of the TypeScript zip gate.

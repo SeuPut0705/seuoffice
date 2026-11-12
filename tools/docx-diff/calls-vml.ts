@@ -1,6 +1,5 @@
 // Group `vml`: the shape readers of parse-vml.ts. The helpers the watermark
 // readers stand on (vmlLengthPx, vmlColorHex...) are in group `section`.
-import { percentOpacity } from './listed'
 import {
   VML_PICT_RID_RE,
   VML_WORDART_RE,
@@ -10,10 +9,11 @@ import {
   vmlShapeDimPx,
   vmlShapeSvg,
   vmlShapeTypeTable,
+  vmlWordArtBox,
   type VmlGroupScale,
   type VmlOrigin,
-} from '../../packages/docx-engine/src/parse-vml'
-import { nameOf, xmlParser, type XNode } from '../../packages/docx-engine/src/xml-utils'
+} from './reference/parse-vml'
+import { nameOf, xmlParser, type XNode } from './reference/xml-utils'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments, tagTokens } from './fragments'
 
@@ -539,6 +539,146 @@ const RE_TEXTS = [
   '',
 ]
 
+/** A WordArt v:shape: `style` of the shape, extra shape attributes, the v:textpath attributes. */
+const wordArt = (style: string, attrs: string, textpath: string, children = ''): string =>
+  `<v:shape id="WordArt" type="#_x0000_t136" style="${style}"${attrs}>${children}<v:textpath${textpath}/></v:shape>`
+
+const WA_STYLE = 'position:absolute;margin-left:10pt;margin-top:20.5pt;width:300pt;height:60pt'
+const WA_TEXTPATH = ' style="font-family:&quot;Arial Black&quot;;font-size:40pt" string="CONFIDENTIAL"'
+const wordArtTextpath = (string: string, style = 'font-family:&quot;Arial&quot;;font-size:40pt'): string =>
+  ` style="${style}" string="${string}"`
+
+/** WordArt shapes for every branch of vmlWordArtBox. */
+const WORD_ARTS: string[] = [
+  // no v:textpath, no string, empty and blank strings
+  `<v:shape style="${WA_STYLE}"><v:fill color="red"/></v:shape>`,
+  wordArt(WA_STYLE, '', ' style="font-size:40pt"'),
+  ...['', ' ', '\t\n', '\u3000', '\ufeff', '\u00a0', '&#10;', 'x', ' x '].map((string) =>
+    wordArt(WA_STYLE, '', wordArtTextpath(string)),
+  ),
+  // texts: non-ASCII, outside the BMP (two units each), entities, long
+  ...[
+    '\u4e2d\u6587\u6c34\u5370',
+    'Caf\u00e9 \u00fcber',
+    '\u{1F600}\u{1F600}\u{1F600}',
+    'A\u{20BB7}B',
+    'R&amp;D &lt;draft&gt;',
+    'DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT',
+  ].map((string) => wordArt(WA_STYLE, '', wordArtTextpath(string))),
+  // shape sizes with each unit, unitless, rounding to 0, negative, missing
+  ...[
+    'width:300pt;height:60pt',
+    'width:400px;height:80px',
+    'width:4in;height:1in',
+    'width:100mm;height:20mm',
+    'width:10cm;height:2cm',
+    'width:300;height:60',
+    'width:0.4px;height:0.5px',
+    'width:0.5px;height:0.4px',
+    'width:-10pt;height:-5pt',
+    'width:abc;height:',
+    'height:60pt',
+    'width:300pt',
+    '',
+    'width : 300pt',
+    ' width:2.5in ; height: 0.75in ',
+  ].flatMap((style) => [
+    wordArt(style, '', WA_TEXTPATH),
+    wordArt(style, '', wordArtTextpath('ABC', 'font-family:Arial')),
+  ]),
+  // floating: each margin spelling
+  ...[
+    'position:absolute',
+    'position: absolute;margin-left:-12.5pt;margin-top:0pt',
+    'position:absolute;margin-left:10px;margin-top:1in',
+    'position:absolute;margin-left:.pt;margin-top:-pt',
+    'position:absolute;margin-left:72pt;margin-top:36pt;width:200pt;height:50pt',
+    'position:absolute;x-margin-left:5pt;mso-margin-top:5pt',
+    'margin-left:10pt;margin-top:10pt;position:absolute',
+    'position:relative;margin-left:10pt',
+    'POSITION:absolute;margin-left:10pt',
+    'position:absolute;margin-left:0.00001pt;margin-top:1e3pt',
+  ].map((style) => wordArt(style, '', WA_TEXTPATH)),
+  // the textpath style: fonts with and without quotes, sizes with other units, bold, italic
+  ...[
+    'font-family:&quot;Arial Black&quot;;font-size:36pt',
+    'font-family:Impact;font-size:36.5pt',
+    "font-family:'Times New Roman';font-size:1pt",
+    'font-family: &quot; Courier New &quot; ;font-size:0pt',
+    'font-family:&quot;&quot;;font-size:.5pt',
+    'font-family:&quot; &quot;',
+    'font-family:\u5b8b\u4f53;font-size:36px',
+    'font-family:&quot;\u{1D400}Font&quot;;font-size:36',
+    'font-size:40pt;font-weight:bold',
+    'font-weight: bold;font-style: italic;font-size:20pt',
+    'font-weight:normal;font-style:normal',
+    'font-style:italic',
+    'v-text-kern:t;font-size:x40pt',
+    'font-size: 30pt',
+    '',
+  ].flatMap((style) => [
+    wordArt(WA_STYLE, '', wordArtTextpath('Hello', style)),
+    wordArt('width:300pt', '', wordArtTextpath('Hello', style)),
+    wordArt('', '', wordArtTextpath('Hello', style)),
+  ]),
+  // the font shrinks to the width: above, at and below the floor of 6 pt
+  ...[
+    'width:300pt;height:60pt',
+    'width:30pt;height:60pt',
+    'width:37.2pt;height:60pt',
+    'width:37pt;height:60pt',
+    'width:1pt;height:60pt',
+    'width:30pt',
+  ].flatMap((style) =>
+    ['WIDE', 'W', '\u{1F600}\u{1F600}', 'WIDEWIDEWIDEWIDE'].map((string) =>
+      wordArt(style, '', wordArtTextpath(string, 'font-size:40pt')),
+    ),
+  ),
+  // fill: fillcolor, v:fill color and color2, filled="f", unreadable colours
+  ...[
+    [' fillcolor="#ff0000"', ''],
+    [' fillcolor="red"', ''],
+    [' fillcolor="#abc"', ''],
+    [' fillcolor="#123456 [3204]"', ''],
+    [' fillcolor="bogus"', '<v:fill color="blue" color2="#00ff00"/>'],
+    ['', '<v:fill color="Silver"/>'],
+    ['', '<v:fill color="none" color2="#0f0"/>'],
+    ['', '<v:fill color2="yellow"/>'],
+    ['', '<v:fill/>'],
+    [' fillcolor=""', '<v:fill type="gradient"/>'],
+    [' filled="f" fillcolor="#ff0000"', '<v:fill color="blue"/>'],
+    [' filled="false" fillcolor="#ff0000"', ''],
+    [' filled="t" fillcolor="window [65]"', ''],
+  ].map(([attrs, children]) => wordArt(WA_STYLE, attrs!, WA_TEXTPATH, children)),
+  // stroke: off, colours, weights with and without units
+  ...[
+    ' stroked="f"',
+    ' stroked="false" strokecolor="#00ff00"',
+    ' strokecolor="#00ff00"',
+    ' strokecolor="navy"',
+    ' strokecolor="nope"',
+    ' strokeweight="1pt"',
+    ' strokeweight="1.5"',
+    ' strokeweight="0.75pt"',
+    ' strokeweight="0"',
+    ' strokeweight="0pt"',
+    ' strokeweight="2px"',
+    ' strokeweight="abc"',
+    ' strokeweight=""',
+    ' strokeweight=" 1pt"',
+    ' strokeweight="."',
+    ' strokeweight="0.001pt"',
+    ' strokecolor="#123" strokeweight="3pt"',
+  ].map((attrs) => wordArt(WA_STYLE, attrs, WA_TEXTPATH)),
+  wordArt(
+    WA_STYLE,
+    ' fillcolor="#c0c0c0" stroked="f"',
+    wordArtTextpath('\u00c9TAT', 'font-family:&quot;\u00c9l\u00e9gant&quot;;font-weight:bold;font-style:italic'),
+  ),
+  '<v:shape style="width:10pt"><v:textpath string="A"></v:shape>',
+  '',
+]
+
 export const VML: CallSpec[] = [
   {
     fn: 'vml.constants',
@@ -662,8 +802,26 @@ export const VML: CallSpec[] = [
     fn: 'vml.vmlShapeSvg',
     call: (text, args) =>
       vmlShapeSvg(text, typeof args.types === 'string' ? vmlShapeTypeTable(args.types) : undefined),
-    listed: percentOpacity,
     fromDocument: shapeInputsOf,
     built: SHAPE_BUILT,
+  },
+  {
+    fn: 'vml.vmlWordArtBox',
+    call: (text, args) =>
+      vmlWordArtBox(
+        (xmlParser.parse(text) as XNode[]).find((node) => nameOf(node) === args.node) ?? {},
+      ),
+    fromDocument: (parts) => {
+      const shapes = vmlParts(parts).flatMap((xml) => elementFragments(xml, 'v:shape'))
+      return [
+        ...shapes.filter((text) => text.includes('<v:textpath')).slice(0, PER_DOCUMENT),
+        ...shapes.filter((text) => !text.includes('<v:textpath')).slice(0, 3),
+      ].map((text) => ({ text, args: { node: 'v:shape' } }))
+    },
+    built: [
+      ...WORD_ARTS.map((text) => ({ text, args: { node: 'v:shape' } })),
+      { text: wordArt(WA_STYLE, '', WA_TEXTPATH), args: { node: 'v:textpath' } },
+      { text: wordArt(WA_STYLE, '', WA_TEXTPATH) },
+    ],
   },
 ]

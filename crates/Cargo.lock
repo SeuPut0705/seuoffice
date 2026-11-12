@@ -516,9 +516,14 @@ name = "docx-engine"
 version = "0.1.0"
 dependencies = [
  "encoding_rs",
+ "flate2",
+ "icu_collator",
+ "icu_locale_core",
  "jscompat",
+ "omml",
  "ooxml-pkg",
  "ooxml-xml",
+ "pptx-engine",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -870,6 +875,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "icu_collator"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24cb0205c419b2036da3f9082964905d6849b3f2130dd4a517940c45899a544b"
+dependencies = [
+ "icu_collator_data",
+ "icu_collections",
+ "icu_locale_core",
+ "icu_locale_fallback",
+ "icu_normalizer",
+ "icu_properties",
+ "icu_provider",
+ "smallvec",
+ "utf16_iter",
+ "utf8_iter",
+ "zerovec",
+]
+
+[[package]]
+name = "icu_collator_data"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "183f47e821a327661c1ebe152f61d5b6c2000010d228cadbbf226e0e2b8c2634"
+
+[[package]]
 name = "icu_collections"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -891,10 +921,31 @@ checksum = "25d29b57c17c6528d0dc4c2141cfa2d08200465acb537a3909c8b9b8a4a984c0"
 dependencies = [
  "displaydoc",
  "litemap",
+ "serde",
  "tinystr",
  "writeable",
  "zerovec",
 ]
+
+[[package]]
+name = "icu_locale_fallback"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "406e9ae5b95d8aa37db6293405931b766a6172d1848daee22d70eb44aa78a43c"
+dependencies = [
+ "icu_locale_core",
+ "icu_locale_fallback_data",
+ "icu_provider",
+ "potential_utf",
+ "tinystr",
+ "zerovec",
+]
+
+[[package]]
+name = "icu_locale_fallback_data"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3632ebbd0c5c3637ba1a40bdf8288f2cb9d2268e73441a69d5fc73d7cfbaa87c"
 
 [[package]]
 name = "icu_normalizer"
@@ -948,6 +999,8 @@ checksum = "413099315636c588ee8f011190b329b971a09a8fae9d157e01dcae8379468514"
 dependencies = [
  "displaydoc",
  "icu_locale_core",
+ "serde",
+ "stable_deref_trait",
  "writeable",
  "yoke",
  "zerofrom",
@@ -1036,6 +1089,8 @@ dependencies = [
 name = "jscompat"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.4.3",
+ "libm",
  "regress",
  "ryu",
  "serde",
@@ -1196,6 +1251,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mtx"
+version = "0.1.0"
+dependencies = [
+ "jscompat",
+]
+
+[[package]]
 name = "multiversion_no_op"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1230,13 +1292,16 @@ dependencies = [
  "epub-engine",
  "file-parse",
  "jscompat",
+ "mtx",
  "omml",
  "ooxml-pkg",
  "ooxml-xml",
+ "pptx-engine",
  "saxes",
  "serde",
  "serde_json",
  "seu-host",
+ "sha2 0.10.9",
  "zip",
 ]
 
@@ -1271,6 +1336,7 @@ name = "ooxml-xml"
 version = "0.1.0"
 dependencies = [
  "jscompat",
+ "serde_json",
 ]
 
 [[package]]
@@ -1408,7 +1474,23 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d83eb9bc6d8e5cf568e7a1101d60ee05e81ed50ea106026f3d18deeb046d7661"
 dependencies = [
+ "serde_core",
+ "writeable",
  "zerovec",
+]
+
+[[package]]
+name = "pptx-engine"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "jscompat",
+ "mtx",
+ "ooxml-pkg",
+ "ooxml-xml",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -2250,6 +2332,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "abc840c238154d58f9e86b2792261edfde565a17696e1cda1a449de27979801a"
 dependencies = [
  "displaydoc",
+ "serde_core",
  "zerovec",
 ]
 
@@ -2852,6 +2935,7 @@ dependencies = [
  "displaydoc",
  "yoke",
  "zerofrom",
+ "zerovec",
 ]
 
 [[package]]
@@ -2860,6 +2944,7 @@ version = "0.11.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f58a2799cfe9a1670c7ea8edbd52ef8edb93cb37a7f83bf31ba9e35d9dae6a40"
 dependencies = [
+ "serde",
  "yoke",
  "zerofrom",
  "zerovec-derive",

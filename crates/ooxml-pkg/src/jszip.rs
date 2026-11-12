@@ -415,6 +415,8 @@ pub struct LoadedEntry {
     pub uncompressed_size: Option<f64>,
     /// The content, or what reading it throws.
     pub content: Result<Vec<u8>, String>,
+    /// `entry.date` as a time value: JSZip reads the DOS time and date as UTC.
+    pub date: f64,
     /// Present when the caller asked to keep the raw records.
     pub raw: Option<RawRecord>,
 }
@@ -481,6 +483,7 @@ pub fn load(data: &[u8], keep_raw: bool) -> Result<Vec<LoadedEntry>, String> {
             name,
             is_dir,
             uncompressed_size: (!stored_empty).then_some(file.uncompressed_size as f64),
+            date: file.date(),
             content: if stored_empty {
                 Ok(Vec::new())
             } else {

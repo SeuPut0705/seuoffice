@@ -244,6 +244,13 @@ impl<T> Slot<T> {
         self.set_at != 0
     }
 
+    /// `object.key.inner = value`: the value of a key mutated in place; the
+    /// key keeps its place. `None` where the object has no such key or it
+    /// holds `undefined`.
+    pub fn as_mut(&mut self) -> Option<&mut T> {
+        self.value.as_mut()
+    }
+
     pub fn into_option(self) -> Option<T> {
         self.value
     }
@@ -467,6 +474,9 @@ macro_rules! js_object {
                         self,
                         mut map: A,
                     ) -> ::core::result::Result<$name, A::Error> {
+                        // the expansion uses one or both, by the field types
+                        #[allow(unused_imports)]
+                        use $crate::wire::{Owned as _, StaticStrRead as _};
                         let mut out = <$name>::default();
                         while let ::core::option::Option::Some(name) =
                             map.next_key::<::std::string::String>()?
@@ -475,7 +485,7 @@ macro_rules! js_object {
                             match key {
                                 $(::core::option::Option::Some((Key::$field, _)) => {
                                     out.$field.set_some(
-                                        map.next_value::<::core::option::Option<$ty>>()?,
+                                        (&$crate::wire::Probe::<$ty>::new()).read(&mut map)?,
                                     );
                                 })*
                                 ::core::option::Option::None => {
@@ -544,6 +554,11 @@ mod tests {
         indents.first_line.set(4.0);
         assert_eq!(json(&indents), r#"{"left":1.0,"type":"x","firstLine":4.0}"#);
         assert_eq!(indents.keys(), ["left", "type", "firstLine"]);
+        // a value mutated in place keeps its key where it was
+        if let Some(left) = indents.left.as_mut() {
+            *left = 5.0;
+        }
+        assert_eq!(json(&indents), r#"{"left":5.0,"type":"x","firstLine":4.0}"#);
     }
 
     #[test]

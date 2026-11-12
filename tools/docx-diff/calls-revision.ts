@@ -9,10 +9,9 @@ import {
   type RevisionResolution,
   type RevisionXmlFilter,
   type RevisionXmlMode,
-} from '../../packages/docx-engine/src/revision-xml'
+} from './reference/revision-xml'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
-import { singleQuotedRevisionAttribute } from './listed'
 
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 
@@ -87,6 +86,43 @@ const PPR_CHANGES = [
     `<w:pPr><w:pPrChange${at('61')}><w:pPr/></w:pPrChange><w:jc w:val="center"/><w:rPr><w:ins${at('62')}/></w:rPr></w:pPr>`,
   ),
   para(run('p'), `<w:pPr><w:jc w:val="center"/><w:pPrChange${at('63')}/></w:pPr>`),
+  // the record first in its holder: the restored properties and the record's removal share a start
+  para(
+    run('p'),
+    `<w:pPr><w:pPrChange${at('64')}><w:pPr><w:jc w:val="center"/></w:pPr></w:pPrChange></w:pPr>`,
+  ),
+]
+
+// a mark written with a close tag (no paragraph-mark or cell marker) and the
+// record after it: the mark's edit and the record's revert share a start, and
+// the longer one, the revert, is the one kept
+const SAME_START = (['Ins', 'Del'] as const).flatMap((mark) => [
+  para(
+    `<w:r><w:rPr><w:${mark.toLowerCase()}${at('120')}></w:${mark.toLowerCase()}>` +
+      `<w:rPrChange${at('121')}><w:rPr><w:b/></w:rPr></w:rPrChange></w:rPr><w:t>x</w:t></w:r>`,
+  ),
+  `<w:tbl><w:tr>${tc(
+    `<w:tcPr><w:cell${mark}${at('122')}></w:cell${mark}>` +
+      `<w:tcPrChange${at('123')}><w:tcPr><w:tcW w:w="9"/></w:tcPr></w:tcPrChange></w:tcPr>`,
+    'c',
+  )}</w:tr></w:tbl>`,
+])
+
+const afterMarkRPr = (rPr: string, before = ''): string =>
+  para(
+    run('p'),
+    `<w:pPr>${before}${rPr}<w:pPrChange${at('135')}><w:pPr><w:jc w:val="center"/></w:pPr></w:pPrChange></w:pPr>`,
+  )
+
+// a paragraph-mark rPr first in its pPr, before the record: where the reject
+// removes that rPr whole, its removal starts where the old properties go in
+const PPR_AFTER_MARK_RPR = [
+  afterMarkRPr(`<w:rPr><w:ins${at('130')}/></w:rPr>`),
+  afterMarkRPr(`<w:rPr><w:del${at('131')}/></w:rPr>`),
+  afterMarkRPr(`<w:rPr><w:rPrChange${at('132')}><w:rPr/></w:rPrChange></w:rPr>`),
+  // the rPr keeps a child, or white space stands before it
+  afterMarkRPr(`<w:rPr><w:ins${at('133')}/><w:b/></w:rPr>`),
+  afterMarkRPr(`<w:rPr><w:ins${at('134')}/></w:rPr>`, ' '),
 ]
 
 const SECT_CHANGE =
@@ -102,6 +138,15 @@ const TABLE_CHANGES =
   `${tc('<w:tcPr><w:tcW w:w="5"/><w:tcPrChange' + at('85') + '><w:tcPr><w:tcW w:w="9"/></w:tcPr></w:tcPrChange></w:tcPr>', 'c')}</w:tr>` +
   `<w:tr><w:trPr><w:trPrChange${at('86')}><w:trPr/></w:trPrChange></w:trPr>` +
   `${tc('<w:tcPr><w:tcPrChange' + at('87') + '/></w:tcPr>', 'd')}</w:tr></w:tbl>`
+
+// a grid change whose old grid is empty: the grid stays on reject, where any
+// other holder with nothing to restore is removed. Tables of their own, with
+// no other change in them, so that no listed class sets them aside.
+const EMPTY_GRID_CHANGES = ['<w:tblGrid/>', '<w:tblGrid> </w:tblGrid>'].map(
+  (old) =>
+    `<w:tbl><w:tblGrid><w:gridCol w:w="10"/><w:tblGridChange w:id="88">${old}</w:tblGridChange></w:tblGrid>` +
+    `<w:tr>${tc('', 'g')}</w:tr></w:tbl>`,
+)
 
 const NESTED = [
   para(`<w:del${at('90')}><w:ins${at('91', 'lee')}>${run('both')}</w:ins></w:del>`),
@@ -155,7 +200,15 @@ const MOVE_EDGES = [
   `<w:moveFromRangeStart w:id="3"></w:moveFromRangeStart>${para(DEL)}<w:moveFromRangeEnd/>`,
 ]
 
+/** non-ASCII text before a delText that reject mode renames: code units and bytes part there */
+const BEFORE_DEL_TEXT = [
+  doc(para(run('한글')) + para(DEL)),
+  doc(para(run('😀')) + para(DEL)),
+  doc(para(run('한 😀')) + para(`<w:del${at('110')}><w:r><w:delText>x</w:r></w:del>`)),
+]
+
 const XMLS: string[] = [
+  ...EMPTY_GRID_CHANGES.map(doc),
   doc(para(INS + run('old')) + para(DEL)),
   doc(MOVE),
   ...PARA_MARKS(`<w:ins${at('20')}/>`).map(doc),
@@ -164,11 +217,14 @@ const XMLS: string[] = [
   doc(NUMBERING),
   ...RPR_CHANGES.map((r) => doc(para(r))),
   ...PPR_CHANGES.map(doc),
+  ...SAME_START.map(doc),
+  ...PPR_AFTER_MARK_RPR.map(doc),
   `<w:body>${para(run('s'))}${SECT_CHANGE}</w:body>`,
   doc(TABLE_CHANGES),
   ...NESTED.map(doc),
   ...ODD,
   ...MOVE_EDGES,
+  ...BEFORE_DEL_TEXT,
 ]
 
 const MODES: unknown[] = ['accept', 'reject', '', 'other', 5]
@@ -243,6 +299,14 @@ const FILTERS: unknown[] = [
   { author: 5, type: 'move' },
 ]
 
+/** a range whose start a filter takes and whose end it does not: the end goes with its start */
+const SHARED_START_ID = doc(
+  `<w:moveFromRangeStart${at('7', 'kim', '2023-01-01T00:00:00Z')} w:name="a"/>` +
+    `<w:moveFromRangeStart${at('7', 'lee', '2025-01-01T00:00:00Z')} w:name="b"/>` +
+    para(INS) +
+    `<w:moveFromRangeEnd w:id="7"/>`,
+)
+
 /** an author type error is reached only when a revision is consulted */
 const UNCONSULTED = ['', 'plain', `<w:moveFromRangeEnd w:id="1"/>`, `<!-- <w:ins/> -->`]
 
@@ -252,6 +316,18 @@ const APPLY_INPUTS: Input[] = [
     ['accept', 'reject'].map((mode) => ({ text: DATED, args: { mode, filter } })),
   ),
   ...UNCONSULTED.map((text) => ({ text, args: { mode: 'accept', filter: { author: 5, ids: 5 } } })),
+  // only the formatting rejected: the paragraph-mark rPr stays, the old properties come back
+  ...PPR_AFTER_MARK_RPR.slice(0, 2).map((p) => ({
+    text: doc(p),
+    args: { mode: 'reject', filter: { type: 'formatting' } },
+  })),
+  ...[
+    { author: 'kim' },
+    { before: '2024-01-01T00:00:00Z' },
+    { date: '2023-01-01T00:00:00Z' },
+  ].flatMap((filter) =>
+    ['accept', 'reject'].map((mode) => ({ text: SHARED_START_ID, args: { mode, filter } })),
+  ),
   // local time: the answer depends on the zone of the host
   {
     text: para(`<w:ins${at('1', 'kim', '2024-01-01T08:00:00')}>${run('a')}</w:ins>`),
@@ -320,6 +396,7 @@ const ODD_NAMES = ['constructor', 'toString', '__proto__', 'w:(', '', 'w:ins']
 const PROP_FRAGMENTS: string[] = [
   ...elementFragments(TABLE_CHANGES, 'w:tblPr'),
   ...elementFragments(TABLE_CHANGES, 'w:tblGrid'),
+  ...EMPTY_GRID_CHANGES.flatMap((table) => elementFragments(table, 'w:tblGrid')),
   ...elementFragments(TABLE_CHANGES, 'w:tblPrEx'),
   ...elementFragments(TABLE_CHANGES, 'w:trPr'),
   ...elementFragments(TABLE_CHANGES, 'w:tcPr'),
@@ -327,6 +404,11 @@ const PROP_FRAGMENTS: string[] = [
   ...elementFragments(NUMBERING, 'w:numPr'),
   ...PPR_CHANGES.flatMap((p) => elementFragments(p, 'w:pPr').slice(0, 1)),
   ...RPR_CHANGES.flatMap((r) => elementFragments(r, 'w:rPr').slice(0, 1)),
+  ...SAME_START.flatMap((x) => [
+    ...elementFragments(x, 'w:rPr').slice(0, 1),
+    ...elementFragments(x, 'w:tcPr').slice(0, 1),
+  ]),
+  ...PPR_AFTER_MARK_RPR.flatMap((p) => elementFragments(p, 'w:pPr').slice(0, 1)),
   SECT_CHANGE,
   `<w:tcPr><w:cellMerge w:id="1" w:author="a" w:date="" w16du:dateUtc="2024-01-01T00:00:00Z" w:vMerge="" w:vMergeOrig="cont"/></w:tcPr>`,
   `<w:tcPr><w:cellMerge w:author='x' w:vMerge="rest"></w:cellMerge><w:cellMerge w:id="2"/></w:tcPr>`,
@@ -390,7 +472,6 @@ export const REVISION: CallSpec[] = [
         args.mode as RevisionXmlMode,
         args.filter as RevisionXmlFilter | undefined,
       ),
-    listed: singleQuotedRevisionAttribute,
     fromDocument: (parts) =>
       partsOf(parts).flatMap((text) => [
         { text, args: { mode: 'accept' } },
@@ -403,7 +484,6 @@ export const REVISION: CallSpec[] = [
     fn: 'revision.applyRevisionResolutions',
     call: (text, args) =>
       applyRevisionResolutions(text, args.resolutions as RevisionResolution[] | undefined),
-    listed: singleQuotedRevisionAttribute,
     fromDocument: (parts) =>
       partsOf(parts).map((text) => ({
         text,
@@ -416,7 +496,6 @@ export const REVISION: CallSpec[] = [
   {
     fn: 'revision.readPropChangeXml',
     call: (text, args) => readPropChangeXml(text, args.changeName as string),
-    listed: singleQuotedRevisionAttribute,
     fromDocument: fragmentInputs,
     built: PROP_FRAGMENTS.flatMap((text) =>
       FRAGMENT_NAMES.map((changeName) => ({ text, args: { changeName } })),

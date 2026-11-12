@@ -124,6 +124,8 @@ const RESTARTS_THAT_MAY_READ_AHEAD: &[(&str, usize)] = &[
     ("file-parse/src/markdown.rs", 1),
     // one pass over the attributes of one tag
     ("ooxml-pkg/src/normalize.rs", 1),
+    // scanSlide: one pass over the shape tree, once per part it scans
+    ("pptx-engine/src/scan.rs", 1),
 ];
 
 #[derive(Default, Debug, PartialEq)]

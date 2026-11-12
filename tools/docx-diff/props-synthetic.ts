@@ -2,7 +2,7 @@
 // tracked .docx has a field, a ruby, a VML shape or a comment range, and their
 // XML is machine-written in one style. Each text below is run through every
 // reader, as a part and as the elements it holds, and seeds the mutations.
-import type { Run } from '../../packages/docx-engine/src/types'
+import type { Run } from './reference/types'
 
 const p = (inner: string, attrs = ''): string => `<w:p${attrs}>${inner}</w:p>`
 const r = (inner: string, rPr = ''): string =>
@@ -473,6 +473,11 @@ export const PROPS_TEXTS: Record<string, string[]> = {
     ),
     p(r(t('x'), '<w:shd w:val="horzStr\u0131pe" w:color="00FF00" w:fill="000000"/>')),
     p(field('ADD\u0131N ZOTERO_ITEM CSL_CITATION {}') + field('C\u017fL_CITATION {}')),
+    // tags outside ASCII, with and without case, on and off
+    p(
+      r(t('x'), '<w:\uAC00/><w:\u00E9 w:val="0"/><w:\u00C9/>') +
+        r(t('y'), '<w:\uAC00 w:val="off"/>'),
+    ),
   ],
 }
 
@@ -579,6 +584,15 @@ export const PROPS_RUN_LISTS: Run[][] = [
     run('c', { link: { href: 'h', plain: true } }),
     run('d', { link: { href: '', rId: 'r1' } }),
     run('e'),
+  ],
+  [
+    run('a', { wrap: [{ seq: 1, open: '<w:smartTag>', close: '</w:smartTag>' }] }),
+    run('b', { wrap: [{ seq: 1, open: '<w:smartTag>', close: '</w:smartTag>' }] }),
+    run('c', { wrap: [{ seq: 2, open: '<w:smartTag>', close: '</w:smartTag>' }] }),
+    run('d', { wrap: [{ seq: 2, open: '<w:smartTag>', close: '</w:smartTag>' }, { seq: 3, open: '<w:ins>', close: '</w:ins>' }] }),
+    run('e', { wrap: [] }),
+    run('f'),
+    run('g', { wrap: [{ seq: 2, open: '<w:sdt>', close: '</w:sdt>' }] }),
   ],
   [
     run('a', { commentIds: ['1', '2'] }),
