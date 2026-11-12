@@ -14,6 +14,7 @@ mod json_print;
 mod json_value;
 mod map;
 mod math;
+mod node_buffer_base64;
 pub mod node_path;
 mod number;
 mod object;
@@ -48,6 +49,7 @@ pub use math::{
     math_atan2, math_cos, math_hypot, math_max, math_min, math_pow, math_sign, math_sin, math_tan,
     number_truthy,
 };
+pub use node_buffer_base64::buffer_from_base64;
 pub use number::{
     Radix, math_round, number_to_string, parse_float, parse_int, to_int32, to_number,
     to_string_radix16,
