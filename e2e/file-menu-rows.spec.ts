@@ -13,6 +13,7 @@ import { launchShell, closeAndSaveVideo, waitForPageWithUrl } from './helpers'
 type NewTab = 'newSlide' | 'newDoc'
 const APPS: { name: string; create: NewTab; url: string }[] = [
   { name: 'Slides', create: 'newSlide', url: '://slides/' },
+  { name: 'Word', create: 'newDoc', url: '://docs/' },
 ]
 
 for (const lang of ['ko', 'en']) {
