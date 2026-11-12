@@ -547,6 +547,9 @@ button {
   top: calc(100% + 2px);
   left: 0;
   z-index: 60;
+  /* as wide as its longest row: the box hangs off the narrow File tab, so left
+     to itself it shrinks to min-width and a long label with a shortcut wraps */
+  width: max-content;
   min-width: 210px;
   background: var(--surface);
   border: 1px solid var(--border-strong);
@@ -559,7 +562,9 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 24px;
   width: 100%;
+  white-space: nowrap;
   border: none;
   background: none;
   padding: 8px 12px;
