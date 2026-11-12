@@ -88,7 +88,14 @@ import {
   extensionlessAssetMime,
 } from './asset-mime'
 import { buildPreviewDocument } from './preview-document'
-import { confirmOdtReport, exportOdt, odtFilterName } from './odt-export'
+import {
+  askMarkedOdt,
+  confirmOdtReport,
+  exportOdt,
+  markedOdtRefusal,
+  odtFilterName,
+} from './odt-export'
+import { planMarkedOdt } from './marked-html'
 import { inlineImagesForSingleFile, singleFileExportBaseName } from './single-file-html'
 import { registerHtmlHandoffIpc } from './generate-handoff-ipc'
 import { registerHtmlSeedIpc } from './seed-main'
@@ -654,12 +661,41 @@ async function writeHtmlOdt(
   pickPath: () => Promise<string | null>,
   skipConfirm: boolean,
 ): Promise<ExportResult> {
+  // An ODT cannot keep content hidden from AI: a marked page is not exported as
+  // ODT. The person chooses Word instead, or the marks cleared for this copy;
+  // a headless export has no one to ask and writes nothing.
+  const plan = await planMarkedOdt(
+    html,
+    skipConfirm
+      ? null
+      : () =>
+          askMarkedOdt((options) =>
+            win ? dialog.showMessageBox(win, options) : dialog.showMessageBox(options),
+          ),
+  )
+  if (plan.kind === 'declined') {
+    return skipConfirm ? { ok: false, error: markedOdtRefusal() } : { ok: true, canceled: true }
+  }
+  if (plan.kind === 'save-as-docx') {
+    const stem = exportFileName(basename(docPath() ?? '', extname(docPath() ?? '')))
+    const picked = await showSaveDialogWithMemory(
+      dialog,
+      win,
+      {
+        defaultPath: `${stem}.docx`,
+        filters: [{ name: tm('filterWord'), extensions: ['docx'] }],
+      },
+      configuredDefaultSaveDir(app),
+    )
+    if (picked.canceled || !picked.filePath) return { ok: true, canceled: true }
+    return writeHtmlDocx(html, docPath(), picked.filePath)
+  }
   const outcome = await exportOdt({
     pickPath,
     docx: async () => {
       const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-html-docx-'))
       try {
-        return await renderHtmlDocx(html, docPath(), workDir)
+        return await renderHtmlDocx(plan.html, docPath(), workDir)
       } finally {
         await rm(workDir, { recursive: true, force: true }).catch(() => {})
       }

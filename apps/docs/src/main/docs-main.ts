@@ -82,6 +82,11 @@ import {
 } from '@seuoffice/electron-utils'
 import { aiRunRefusal } from '@seuoffice/electron-utils/ai-run-guard'
 import {
+  markedOdtBox,
+  markedOdtChoice,
+  type MarkedOdtChoice,
+} from '@seuoffice/electron-utils/marked-odt'
+import {
   configureExtraFontDirs,
   configureMetricsCache,
   familyAliases,
@@ -313,6 +318,12 @@ const tMain = createI18n({
     docImportOriginalTarget:
       'The original document cannot be overwritten. Choose a different name.',
     dlgSaveAs: 'Save As',
+    markedOdtTitle: 'Content hidden from AI',
+    markedOdtMessage: 'This document has content hidden from AI, and an ODT file cannot keep that.',
+    markedOdtDetail:
+      'Written as ODT, the hidden content would read as plain text to everyone, AI included. Save as Word (.docx) to keep it hidden, or clear the marks and save as ODT: the hidden content then becomes visible to AI in the new file. This document keeps its marks either way.',
+    markedOdtDocx: 'Save as Word (.docx)',
+    markedOdtClear: 'Clear marks and save as ODT',
     closeUnsavedMsg: 'This document has unsaved changes.',
     closeUnsavedDetail: 'Do you want to save them before closing?',
     closeNoReplyMsg: 'The document is not responding and may have unsaved changes.',
@@ -457,6 +468,12 @@ const tMain = createI18n({
     docImportConvertBtn: '변환 후 열기',
     docImportOriginalTarget: '원본 문서는 덮어쓸 수 없습니다. 다른 이름을 선택하세요.',
     dlgSaveAs: '다른 이름으로 저장',
+    markedOdtTitle: 'AI에게 숨긴 내용',
+    markedOdtMessage: '이 문서에는 AI에게 숨긴 내용이 있는데, ODT 파일에는 이를 담을 수 없습니다.',
+    markedOdtDetail:
+      'ODT로 저장하면 숨긴 내용이 AI를 포함한 모두에게 일반 글자로 보입니다. 숨김을 유지하려면 Word(.docx)로 저장하거나, 표시를 지우고 ODT로 저장하세요. 표시를 지우면 새 파일에서 숨긴 내용이 AI에게 보입니다. 어느 쪽이든 현재 문서의 표시는 그대로 남습니다.',
+    markedOdtDocx: 'Word(.docx)로 저장',
+    markedOdtClear: '표시 지우고 ODT로 저장',
     closeUnsavedMsg: '이 문서에 저장하지 않은 변경 사항이 있습니다.',
     closeUnsavedDetail: '닫기 전에 저장하시겠습니까?',
     closeNoReplyMsg: '문서가 응답하지 않으며 저장하지 않은 변경 사항이 있을 수 있습니다.',
@@ -3033,6 +3050,25 @@ export function registerDocsIpc(): void {
       }
     },
   )
+
+  // A write of marked content as ODT: one message box with the two ways out
+  // (Word, or the marks cleared); the renderer carries the answer out.
+  ipcMain.handle('docs:confirm-marked-odt', async (event): Promise<MarkedOdtChoice> => {
+    if (tornDownWcIds.has(event.sender.id)) return 'cancel'
+    const parent = hostWindowFor(event.sender)
+    const options = markedOdtBox({
+      title: tm('markedOdtTitle'),
+      message: tm('markedOdtMessage'),
+      detail: tm('markedOdtDetail'),
+      saveDocx: tm('markedOdtDocx'),
+      clearMarks: tm('markedOdtClear'),
+      cancel: tm('btnCancel'),
+    })
+    const { response } = parent
+      ? await dialog.showMessageBox(parent, options)
+      : await dialog.showMessageBox(options)
+    return markedOdtChoice(response)
+  })
 
   // docx → ODT Save As of a document with lazily served pictures: the
   // conversion needs the pictures themselves, not their placeholders

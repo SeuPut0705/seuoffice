@@ -183,6 +183,7 @@ const api: DesktopApi = {
   ) => ipcRenderer.invoke('docs:save-as-pick', defaultName, sourcePath, format, offerExports),
   saveDocxAs: (path: string, data: ArrayBuffer, sourcePath?: string | null) =>
     ipcRenderer.invoke('docs:save-as', path, data, sourcePath ?? null),
+  confirmMarkedOdt: () => ipcRenderer.invoke('docs:confirm-marked-odt'),
   materializeDocx: (data: ArrayBuffer) => ipcRenderer.invoke('docs:materialize-docx', data),
   captureRect: (rect: { x: number; y: number; width: number; height: number }) =>
     ipcRenderer.invoke('docs:capture-rect', rect),

@@ -569,6 +569,9 @@ export interface DesktopApi {
     format: DocFormat,
     offerExports?: boolean,
   ): Promise<{ path: string; kind?: SaveAsKind; dir?: string; pdfPath?: string } | null>
+  /** Content hidden from AI cannot be written into an ODT: asks the person (one
+   *  message box) to save as Word instead, or to clear the marks and write the ODT */
+  confirmMarkedOdt(): Promise<'docx' | 'clear' | 'cancel'>
   /** Save As, step two: write to the path step one returned (nothing else is
    *  accepted), docx or ODT bytes as its extension says. sourcePath: the
    *  document's current path — a docx write uses its desired next-save password

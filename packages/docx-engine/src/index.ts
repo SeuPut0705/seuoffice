@@ -10,6 +10,7 @@ export {
 } from './font-table'
 export { decodeEntities } from './parse-xml-text'
 export { WITHHELD_ENTRY_TEXT, withheldLabelOf } from './withheld'
+export { clearHiddenMarks, docxHoldsHiddenContent } from './hidden-content'
 export { editedCommentModelText } from './parse-package'
 export { noteModelText } from './notes'
 export { sdtCheckboxGlyphs, sdtCheckboxIsChecked } from './checkbox-control'

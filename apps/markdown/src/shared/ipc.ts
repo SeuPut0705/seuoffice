@@ -60,6 +60,7 @@ export const MARKDOWN_CHANNELS = {
   exportRequest: 'markdown:export-request',
   exportDocx: 'markdown:export-docx',
   exportOdt: 'markdown:export-odt',
+  confirmMarkedOdt: 'markdown:confirm-marked-odt',
   exportPdf: 'markdown:export-pdf',
   printPreview: 'markdown:print-preview',
   printDocument: 'markdown:print-document',
@@ -590,6 +591,8 @@ export interface MarkdownApi {
   exportDocx(request: ExportDocxRequest): Promise<ExportResult>
   /** save dialog (.odt) → docx → ODT → confirmation when something changes → write */
   exportOdt(request: ExportOdtRequest): Promise<ExportResult>
+  /** content hidden from AI cannot go into an ODT: one message box offers Word instead, or the marks cleared */
+  confirmMarkedOdt(): Promise<'docx' | 'clear' | 'cancel'>
   exportPdf(request: ExportPdfRequest): Promise<ExportResult>
   /** the PDF the print preview shows; the same options the PDF export uses */
   renderPrintPreview(request: MarkdownPrintPreviewRequest): Promise<MarkdownPrintPreviewResult>

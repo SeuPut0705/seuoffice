@@ -95,6 +95,33 @@ function withoutRedact(marks: Array<{ type?: string }> | undefined) {
   return kept.length ? kept : undefined
 }
 
+/** Whether any span of the document is hidden from AI. */
+export function holdsRedaction(node: unknown): boolean {
+  return redactLabels(node).length > 0
+}
+
+/**
+ * The document with every hiding taken off: the words stay, readable by anyone.
+ * For a copy that goes into a format that cannot keep the hiding (ODT); the
+ * document itself keeps its marks.
+ */
+export function clearRedaction<T>(json: T): T {
+  const walkClear = (node: unknown): unknown => {
+    if (Array.isArray(node)) return node.map(walkClear)
+    if (!node || typeof node !== 'object') return node
+    const obj = node as Record<string, unknown>
+    const out: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(obj)) {
+      if (key === 'marks' && Array.isArray(value)) {
+        const kept = value.filter((m) => (m as { type?: string })?.type !== REDACT_MARK)
+        if (kept.length > 0) out.marks = kept
+      } else out[key] = key === 'content' ? walkClear(value) : value
+    }
+    return out
+  }
+  return walkClear(json) as T
+}
+
 /** The labels currently withheld in a document, for the model's instruction. */
 export function redactLabels(node: unknown): string[] {
   const out: string[] = []
