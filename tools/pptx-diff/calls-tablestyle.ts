@@ -376,7 +376,10 @@ const OTHERS =
   tblStyle(cid(19), el('wholeTbl', el('tcTxStyle', '', ' b="on"')), `Named ${cid(18)}`) +
   tblStyle(cid(20).toLowerCase(), el('wholeTbl', tcStyle('', rgb('202020')))) +
   // a color written in lower case: the model holds it in upper case
-  tblStyle(cid(21), el('wholeTbl', tcStyle('', rgb('a0b1c2'))))
+  tblStyle(cid(21), el('wholeTbl', tcStyle('', rgb('a0b1c2')))) +
+  // upper-casing before the hex pairs are cut matters only where it changes
+  // the length: 'ß' becomes 'SS' and shifts every pair after it
+  tblStyle(cid(22), el('wholeTbl', tcStyle('', rgb('ß0a0b0'))))
 
 const CUSTOM_XML = tblStyleLst(
   FULL + NO_FILL + LN_REFS + ARRAYS + COLORS + FONTS + QUOTES + DUPLICATES + BACKGROUNDS + OTHERS,
@@ -385,6 +388,7 @@ const CUSTOM_IDS = [
   ...[1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(cid),
   cid(20).toLowerCase(),
   cid(21),
+  cid(22),
   MEDIUM2_A1,
   LIGHT1,
 ]
