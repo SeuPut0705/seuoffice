@@ -7,6 +7,7 @@
 
 mod atob;
 mod date;
+mod date_parse;
 mod json;
 mod json_value;
 mod map;
@@ -27,6 +28,7 @@ pub mod wire;
 
 pub use atob::{InvalidCharacterError, atob};
 pub use date::utc_date_parts;
+pub use date_parse::date_parse;
 pub use json::{JsNum, json_to_string};
 pub use json_value::{
     JSON_MAX_DEPTH, JsTypeError, JsonSyntaxError, JsonValue, Primitive, json_parse,
