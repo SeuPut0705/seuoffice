@@ -1075,9 +1075,10 @@ async function diskChangedExternally(wcId: number, filePath: string): Promise<bo
   })
 }
 
-/** A closed docs tab detaches without destroying its webContents (shell freeze
- * workaround), so the orphan must lose write access and stop its timers — otherwise
- * its 30s recovery loop resurrects content the user already discarded. */
+/** A closed docs tab detaches before its webContents is destroyed (shell freeze
+ * workaround: the shell ends the renderer first), so until then the orphan must
+ * lose write access and stop its timers — otherwise its 30s recovery loop
+ * resurrects content the user already discarded. */
 export function teardownDocsRenderer(contents: WebContents): void {
   teardownZoteroIpc(contents)
   tornDownWcIds.add(contents.id)

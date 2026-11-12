@@ -201,6 +201,7 @@ import {
   untilCellFontsLoaded,
 } from './cell-font-fallback'
 import { noteFormulaStreamChunk, requestFullRecalcAfterStream } from './formula-stream-hold'
+import { endLoadingNotice, showLoadingNotice } from './loading-notice'
 import { SharedFormulaLookup, indexedFormulas } from './shared-formula-index'
 import { threadStore } from './threaded-comments'
 
@@ -3585,8 +3586,11 @@ async function loadRange(
         isActiveSheet(runtime, sheetId) &&
         (result.indexedThroughRow === null || result.indexedThroughRow < mapped.fileEndRow)
       ) {
-        setMessage(
+        showLoadingNotice(
+          state,
+          sheetId,
           t('appIndexing', { name: sheet?.name ?? sheetId, rows: indexedRows.toLocaleString() }),
+          setMessage,
         )
       }
       const nextStalls =
@@ -3620,17 +3624,19 @@ async function loadRange(
         }, 250)
         state.retryTimers.set(sheetId, timer)
       }
-    } else if (isActiveSheet(runtime, sheetId)) {
-      setMessage(
-        t('appStreamingRows', {
-          name: state.file.name,
-          rows: sheet?.rowCount.toLocaleString() ?? '?',
-        }),
-      )
+    } else {
+      // the sheet is read to its end: nothing is streaming in any more, so the
+      // progress notice goes and no "streaming" line takes its place
+      endLoadingNotice(state, sheetId, setMessage)
     }
   } catch (error: unknown) {
     if (lazyWorkbookRef.current === state && isActiveSheet(runtime, sheetId)) {
-      setMessage(error instanceof Error ? error.message : t('appLoadRangeFailed'))
+      endLoadingNotice(
+        state,
+        sheetId,
+        setMessage,
+        error instanceof Error ? error.message : t('appLoadRangeFailed'),
+      )
     }
   } finally {
     if (state.loadingKeys.get(sheetId) === requestKey) {

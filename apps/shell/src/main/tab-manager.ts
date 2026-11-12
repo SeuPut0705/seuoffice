@@ -1772,13 +1772,13 @@ export class TabManager {
       removed.view.setVisible(false)
       this.shellWindow.contentView.removeChildView(removed.view)
       if (removed.kind === 'docs') {
-        // webContents.close()/.destroy() on a closed docs tab wedges Electron's whole
-        // UI thread in a native modal run loop (reproduced consistently; survives
-        // close() vs destroy(), teardown ordering, deferring, and disabling
-        // accessibility support — looks like an upstream WebContentsView/Chromium
-        // issue, not something fixable from here). Detaching without destroying
-        // avoids the freeze; the orphaned webContents object stays until the app
-        // quits, but its renderer process is ended now so its memory comes back.
+        // webContents.close()/.destroy() on a closed docs tab whose page is live
+        // wedges Electron's whole UI thread in a native modal run loop (reproduced
+        // consistently; survives close() vs destroy(), teardown ordering, deferring,
+        // and disabling accessibility support — looks like an upstream
+        // WebContentsView/Chromium issue). So the view is only detached here: its
+        // renderer process is ended, and the webContents is destroyed once that
+        // process is gone (renderer-disposal.ts), when no page is left to unload.
         teardownDocsRenderer(removed.view.webContents)
         releaseClosedRenderer(removed.view.webContents)
       } else {

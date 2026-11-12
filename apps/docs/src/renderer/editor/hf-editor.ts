@@ -29,7 +29,7 @@ import { setDkBackground, setDkBackgroundImage, setDkBorder } from './dark-page'
 import { TextboxParagraph, textboxSubExtensions } from './extensions'
 import { hfCellGeometry, hfRowStyle } from './hf-dom'
 import { hfParasOf } from './hf-text'
-import { INLINE_WRAP_MARK } from './inline-wrap-chain'
+import { INLINE_WRAP_MARK, nodeWrapSpans, wrapSpansKept } from './inline-wrap-chain'
 
 export type HfFieldKind = 'PAGE' | 'NUMPAGES' | 'SECTIONPAGES'
 
@@ -684,11 +684,16 @@ export function mountHfEditor(
   const changed = (): HeaderFooter | null => {
     const doc = editor.getJSON() as PmNode
     if (JSON.stringify(doc) === initialSig) return null
-    // a part that differs from the mounted one by its wrapper marks alone (the
-    // text of a control typed again) reads as it did: it is not handed over, so
-    // it keeps its original bytes, wrappers included, as a body paragraph does
-    // (`normalizedRuns` in convert.ts). Any other difference is an edit.
-    if (withoutWrappers(editor.state.doc) === withoutWrappers(mountedDoc)) return null
+    // a part that differs from the mounted one only by wrapper marks that are
+    // gone or cover less (the text of a control typed again) reads as it did:
+    // it is not handed over, so it keeps its original bytes, wrappers included,
+    // as a body paragraph does (`wrapSpansKept`). Any other difference is an
+    // edit, a wrapper over text it did not cover included.
+    if (
+      withoutWrappers(editor.state.doc) === withoutWrappers(mountedDoc) &&
+      wrapSpansKept(nodeWrapSpans(doc), nodeWrapSpans(initialDoc))
+    )
+      return null
     return hfValueFromDoc(doc, opts.value, initialDoc)
   }
   let exited = false

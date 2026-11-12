@@ -4600,6 +4600,10 @@ async function openWorkbookSession(
     unsavedNewWorkbooks.delete(path)
     return workbookFileSchema.parse({
       ...opened,
+      // The engine names the workbook after the file it was given, which is
+      // the snapshot (a uuid): the renderer is told the name of the document
+      // the user sees, the one its status line and loading notices speak of.
+      name: basename(restoreTarget ?? csvSourcePath ?? odsSourcePath ?? suggestSaveAs ?? path),
       // The renderer-facing path is what the user opened: for a restored
       // recovery copy that is the original file, not the copy under userData.
       path: restoreTarget ?? path,

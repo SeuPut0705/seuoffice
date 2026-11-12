@@ -233,12 +233,14 @@ describe('editing text beside run-level structure keeps the structure', () => {
     )
   })
 
-  it('text typed at the end of a control lands after it, not in it', async () => {
+  it('text typed at the end of a control joins it', async () => {
     const { editor, parsed } = await open(around(UNLOCKED) + OTHER)
     const end = posOf(editor, '5/6/2024') + '5/6/2024'.length
     editor.chain().setTextSelection(end).insertContent('X').run()
     const { xml } = await save(editor, parsed)
-    expect(skeleton(xml)).toContain(`${UNLOCKED.open}[5/6/2024]${UNLOCKED.close}[X]`)
+    expect(skeleton(xml)).toContain(
+      `${UNLOCKED_EDITED.open}[5/6/2024X]${UNLOCKED_EDITED.close}[ at noon]`,
+    )
   })
 
   it('formatting part of a control keeps one control around all of its runs', async () => {
