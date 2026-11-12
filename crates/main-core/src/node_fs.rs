@@ -370,3 +370,129 @@ pub fn node_error_named(code: &'static str, syscall: &str, path: &str) -> NodeEr
         message: format!("{code}: {}, {syscall} '{}'", text_of(code), shown(path)),
     }
 }
+
+/// `fs.copyFileSync(from, to[, COPYFILE_EXCL])` as libuv's `uv_fs_copyfile`
+/// does it. The target takes the source's mode. With `excl` an existing
+/// target is an `EEXIST`, without it the target is replaced.
+///
+/// - macOS: `copyfile(3)` with `COPYFILE_ALL`, which refuses a folder source
+///   with `ENOTSUP` before it touches the target.
+/// - other Unix: open the source, `fstat`, open the target `O_WRONLY |
+///   O_CREAT` (`| O_EXCL`); without `excl` stop when the target is the
+///   source itself, else truncate it; `fchmod` it to the source's mode, copy
+///   the bytes; a failure after the target was opened removes it.
+/// - Windows: `CopyFileW(from, to, excl)`.
+pub fn copy_file(from: &str, to: &str, excl: bool) -> Result<(), NodeError> {
+    let fail = |e: &io::Error| node_error2(e, "copyfile", from, to);
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        use windows_sys::Win32::Storage::FileSystem::CopyFileW;
+        let wide = |p: &str| -> Vec<u16> {
+            std::ffi::OsStr::new(&namespaced(p))
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect()
+        };
+        let (src, dst) = (wide(from), wide(to));
+        // SAFETY: both buffers are NUL-terminated and live for the call
+        if unsafe { CopyFileW(src.as_ptr(), dst.as_ptr(), i32::from(excl)) } == 0 {
+            return Err(fail(&io::Error::last_os_error()));
+        }
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        use std::fs;
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+        let mut source = fs::File::open(namespaced(from)).map_err(|e| fail(&e))?;
+        let info = source.metadata().map_err(|e| fail(&e))?;
+        #[cfg(target_os = "macos")]
+        if info.is_dir() {
+            return Err(NodeError {
+                code: Some("ENOTSUP"),
+                message: format!(
+                    "ENOTSUP: operation not supported on socket, copyfile '{}' -> '{}'",
+                    shown(from),
+                    shown(to)
+                ),
+            });
+        }
+        use std::os::unix::fs::MetadataExt;
+        let mode = info.permissions().mode() & 0o7777;
+        let mut options = fs::OpenOptions::new();
+        options.write(true).mode(mode);
+        if excl {
+            options.create_new(true);
+        } else {
+            options.create(true);
+        }
+        let mut target = options.open(namespaced(to)).map_err(|e| fail(&e))?;
+        if !excl {
+            // the same file under another name: nothing to copy (libuv checks
+            // this before it truncates, so the source is never emptied)
+            let same = target
+                .metadata()
+                .map(|t| t.dev() == info.dev() && t.ino() == info.ino())
+                .map_err(|e| fail(&e))?;
+            if same {
+                return Ok(());
+            }
+            target.set_len(0).map_err(|e| fail(&e))?;
+        }
+        let copied = target
+            .set_permissions(fs::Permissions::from_mode(mode))
+            .and_then(|()| io::copy(&mut source, &mut target).map(|_| ()));
+        if let Err(e) = copied {
+            drop(target);
+            let _ = fs::remove_file(namespaced(to));
+            return Err(fail(&e));
+        }
+        Ok(())
+    }
+}
+
+/// `fs.mkdtempSync(prefix)`: a new folder `prefix` + six characters, mode
+/// 0o700. libuv hands `prefixXXXXXX` to `mkdtemp(3)`, which tries names until
+/// one is free; `suffix` gives each try's six characters (the caller pins them
+/// for a comparison, [`mkdtemp_random`] draws them). An error names the
+/// template, as Node's does: `mkdtemp '/tmp/xXXXXXX'`.
+pub fn mkdtemp(prefix: &str, suffix: &mut dyn FnMut() -> String) -> Result<String, NodeError> {
+    let template = format!("{prefix}XXXXXX");
+    let mut last = None;
+    for _ in 0..128 {
+        let path = format!("{prefix}{}", suffix());
+        #[cfg(unix)]
+        let builder = {
+            let mut builder = std::fs::DirBuilder::new();
+            std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+            builder
+        };
+        #[cfg(not(unix))]
+        let builder = std::fs::DirBuilder::new();
+        match builder.create(namespaced(&path)) {
+            Ok(()) => return Ok(path),
+            Err(e) if code_of(&e) == Some("EEXIST") => last = Some(e),
+            Err(e) => return Err(node_error(&e, "mkdtemp", &template)),
+        }
+    }
+    Err(node_error(
+        &last.expect("the loop ran"),
+        "mkdtemp",
+        &template,
+    ))
+}
+
+/// [`mkdtemp`] with six random characters of `[A-Za-z0-9]`, as `mkdtemp(3)`
+/// draws them.
+pub fn mkdtemp_random(prefix: &str) -> Result<String, NodeError> {
+    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    mkdtemp(prefix, &mut || {
+        (0..6)
+            .map(|_| {
+                let at = (jscompat::math_random() * CHARS.len() as f64) as usize;
+                char::from(CHARS[at.min(CHARS.len() - 1)])
+            })
+            .collect()
+    })
+}
