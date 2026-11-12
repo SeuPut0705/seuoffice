@@ -707,9 +707,7 @@ jobs:
               echo "- Mac: 서명 없음(ad hoc). dmg에서 응용 프로그램 폴더로 옮긴 뒤 처음 열 때 막히면, 시스템 설정 → 개인정보 보호 및 보안 → '그래도 열기'를 누른다."
             fi
             echo
-            echo "바뀐 내용: https://github.com/$GITHUB_REPOSITORY/commits/$TAG"
-            echo
-            echo "웹에 붙이는 묶음(seuoffice-embed, seuoffice-web)과 공동 편집 서버 묶음(seuoffice-collab)도 이 릴리스에 있다."
+            echo "바뀐 내용: <https://github.com/$GITHUB_REPOSITORY/commits/$TAG>"
           } > notes.md
           cat notes.md
           {
@@ -718,6 +716,8 @@ jobs:
             echo "미리보기(pre-release)로 냈다. 일반 채널(latest) 설치본이 바로 받는다. 안정 채널로 올리려면:"
             echo
             echo "    gh release edit $TAG --prerelease=false --latest"
+            echo
+            echo "웹에 붙이는 묶음(seuoffice-embed, seuoffice-web)과 공동 편집 서버 묶음(seuoffice-collab)도 이 릴리스에 있다."
             echo
             echo "판 번호 없는 SeuOffice-mac-arm64.dmg와 SeuOffice-windows-x64.exe는 안정 채널 설치 파일의 사본이고, 안정 채널로 올라가면 README의 다운로드 버튼이 이 둘을 받는다. 웹 묶음을 붙이는 쪽은 안정 판의 주소로 설치한다(docs/seuoffice/판-내기.md). 미리보기 판은 10개가 넘으면 지워진다."
           } >> "$GITHUB_STEP_SUMMARY"
