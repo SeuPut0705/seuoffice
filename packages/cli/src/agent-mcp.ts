@@ -205,7 +205,7 @@ export function readMcpEntry(
   }
   const text = readFileSync(file, 'utf-8')
   if (def.shape.kind === 'toml') return tomlState(text, launch, env)
-  if (def.shape.kind === 'yaml-cordis') return cordisState(text, launch)
+  if (def.shape.kind === 'yaml-cordis') return cordisState(text, launch, env)
   if (!text.trim()) return { status: 'absent', command: null }
   const doc = parseJsonObject(text)
   if (!doc) return { status: 'manual', command: null }
@@ -291,7 +291,7 @@ export function writeMcpEntry(
     return
   }
   if (def.shape.kind === 'yaml-cordis') {
-    save(file, cordisUpsert(text, launch))
+    save(file, cordisUpsert(text, launch, env))
     return
   }
   const doc = text.trim() ? parseJsonObject(text) : {}
@@ -319,7 +319,7 @@ export function removeMcpEntry(
     return true
   }
   if (def.shape.kind === 'yaml-cordis') {
-    const next = cordisRemove(text)
+    const next = cordisRemove(text, env)
     if (next === text) return false
     save(file, next)
     return true
@@ -424,17 +424,34 @@ function cordisBlockInfo(block: string[]): { id: string | null; serverName: stri
 /** Our insert block's id; the upstream app's `mcp-genoffice` block is another program's. */
 const CORDIS_BLOCK_ID = `mcp-${MCP_SERVER_NAME}`
 
-function isOwnCordisBlock(block: string[]): boolean {
+/**
+ * Whether one insert block is this app's: under our id or server name; or under
+ * the name an earlier version wrote it with (`OLD_MCP_SERVER_NAMES`) while it
+ * starts our launcher, since another program may use that name too.
+ */
+function isOwnCordisBlock(block: string[], env: NodeJS.ProcessEnv): boolean {
   const { id, serverName } = cordisBlockInfo(block)
-  return id === CORDIS_BLOCK_ID || serverName === MCP_SERVER_NAME
+  if (id === CORDIS_BLOCK_ID || serverName === MCP_SERVER_NAME) return true
+  if (!OLD_MCP_SERVER_NAMES.some((name) => id === `mcp-${name}` || serverName === name)) {
+    return false
+  }
+  const { command, args } = cordisLaunchOf(block)
+  return isSeuofficeLauncher(command, args, env)
 }
 
-/** The line range of the block this app owns, or null when there is none. */
-function cordisOwnRange(lines: string[]): [number, number] | null {
-  for (const [start, end] of cordisBlockRanges(lines)) {
-    if (isOwnCordisBlock(lines.slice(start, end))) return [start, end]
-  }
-  return null
+/**
+ * The line ranges of the blocks this app owns, in file order: one, or two
+ * after an install that did not yet see the block an earlier version wrote.
+ */
+function cordisOwnRanges(lines: string[], env: NodeJS.ProcessEnv): [number, number][] {
+  return cordisBlockRanges(lines).filter(([start, end]) =>
+    isOwnCordisBlock(lines.slice(start, end), env),
+  )
+}
+
+/** `lines` without the ranges given (in file order) */
+function withoutRanges(lines: string[], ranges: [number, number][]): string[] {
+  return lines.filter((_, i) => !ranges.some(([start, end]) => i >= start && i < end))
 }
 
 /** The `command:` and `args:` of one insert block. */
@@ -459,23 +476,28 @@ function cordisLaunchOf(block: string[]): { command: string | null; args: string
   return { command, args }
 }
 
-function cordisState(text: string, launch: McpLaunch): McpEntryState {
+function cordisState(text: string, launch: McpLaunch, env: NodeJS.ProcessEnv): McpEntryState {
   const lines = text.split('\n')
   if (!cordisIsSequence(lines)) return { status: 'manual', command: null }
-  const own = cordisOwnRange(lines)
-  if (!own) return { status: 'absent', command: null }
-  const block = lines.slice(own[0], own[1])
+  const owned = cordisOwnRanges(lines, env)
+  if (owned.length === 0) return { status: 'absent', command: null }
+  const blocks = owned.map(([start, end]) => lines.slice(start, end))
+  // the one under our current id, if there is one: an older one beside it goes on update
+  const block =
+    blocks.find((b) => cordisBlockInfo(b).id === CORDIS_BLOCK_ID) ?? (blocks[0] as string[])
   const { command, args } = cordisLaunchOf(block)
   // the block is ours by id: registered when it says exactly what we would write
   const written = block.join('\n').trim()
   const entryText = (l: McpLaunch) => cordisEntryLines(l).join('\n').trim()
-  if (written === entryText(launch)) return { status: 'registered', command }
+  const alone = blocks.length === 1
+  if (alone && written === entryText(launch)) return { status: 'registered', command }
   // ... including the env toggle `mcp install --compact-schemas` writes
-  if (written === entryText(withCompactSchemas(launch)))
+  if (alone && written === entryText(withCompactSchemas(launch)))
     return { status: 'registered', command, compactSchemas: true }
-  // ours, but written for another install path: stale, and ours to update.
-  // A foreign command under our id is occupied — not ours to overwrite.
-  return { status: isSeuofficeLauncher(command, args) ? 'stale' : 'occupied', command }
+  // ours, but written for another install path or under an earlier name:
+  // stale, and ours to update. A foreign command under our id is occupied —
+  // not ours to overwrite.
+  return { status: isSeuofficeLauncher(command, args, env) ? 'stale' : 'occupied', command }
 }
 
 function cordisEntryLines(launch: McpLaunch): string[] {
@@ -503,13 +525,18 @@ function cordisSnippet(launch: McpLaunch): string {
   return cordisEntryLines(launch).join('\n')
 }
 
-/** Splice our block into the patch, leaving every other line byte for byte. */
-function cordisUpsert(text: string, launch: McpLaunch): string {
+/**
+ * Splice our block into the patch where our first block stood (any other of
+ * ours, such as the one an earlier version wrote, goes), leaving every other
+ * line byte for byte.
+ */
+function cordisUpsert(text: string, launch: McpLaunch, env: NodeJS.ProcessEnv): string {
   const lines = text.split('\n')
   if (!cordisIsSequence(lines)) return text
   const ours = cordisEntryLines(launch)
-  const own = cordisOwnRange(lines)
-  if (!own) {
+  const owned = cordisOwnRanges(lines, env)
+  const first = owned[0]
+  if (!first) {
     // `[]` cannot take a block item appended to it: the item replaces it.
     if (cordisIsEmptyFlowSequence(lines)) {
       const comments = lines.filter((line) => line.trim().startsWith('#'))
@@ -518,16 +545,24 @@ function cordisUpsert(text: string, launch: McpLaunch): string {
     const head = text.length === 0 || text.endsWith('\n') ? text : `${text}\n`
     return `${head}${ours.join('\n')}\n`
   }
-  return [...lines.slice(0, own[0]), ...ours, ...lines.slice(own[1])].join('\n')
+  const rest = owned.slice(1)
+  return [
+    ...lines.slice(0, first[0]),
+    ...ours,
+    ...withoutRanges(
+      lines.slice(first[1]),
+      rest.map(([start, end]) => [start - first[1], end - first[1]]),
+    ),
+  ].join('\n')
 }
 
-/** Drop our block; every other line keeps its bytes. */
-function cordisRemove(text: string): string {
+/** Drop our blocks; every other line keeps its bytes. */
+function cordisRemove(text: string, env: NodeJS.ProcessEnv): string {
   const lines = text.split('\n')
   if (!cordisIsSequence(lines)) return text
-  const own = cordisOwnRange(lines)
-  if (!own) return text
-  return [...lines.slice(0, own[0]), ...lines.slice(own[1])].join('\n')
+  const owned = cordisOwnRanges(lines, env)
+  if (owned.length === 0) return text
+  return withoutRanges(lines, owned).join('\n')
 }
 
 const LAUNCHER_NAMES = new Set(
