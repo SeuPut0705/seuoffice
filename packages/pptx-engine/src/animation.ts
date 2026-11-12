@@ -554,7 +554,7 @@ function placePresetXml(gen: IdGen, p: Placed): string {
   )
   xml = xml.replace(/<p:cTn\b[^>]*>/, (open) => {
     let o = open.replace(/\s(?:grpId|nodeType)="[^"]*"/g, '')
-    o = o.replace(/>$/, ` grpId="${p.grpId}" nodeType="${NODE_TYPE[p.a.trigger]}">`)
+    o = o.replace(/>$/, () => ` grpId="${p.grpId}" nodeType="${NODE_TYPE[p.a.trigger]}">`)
     return o
   })
   return xml.replace(/(<p:stCondLst><p:cond delay=")[^"]*(")/, (_m, a, b) => `${a}${p.startMs}${b}`)
@@ -1242,10 +1242,10 @@ export function pruneTimingForSpids(slide: Slide, spids: ReadonlySet<number>): b
       if (xml === prev) break
     }
   }
-  slide.bodySuffix =
-    /<p:spTgt\b/.test(xml) || /<p:bldDgm\b/.test(xml)
-      ? slide.bodySuffix.replace(timing, xml)
-      : slide.bodySuffix.replace(timing, '')
+  // A function, not a string: the timing is document text (animation formulas use `$`), and a
+  // replacement string would expand a `$&` or `$$` in it
+  const kept = /<p:spTgt\b/.test(xml) || /<p:bldDgm\b/.test(xml) ? xml : ''
+  slide.bodySuffix = slide.bodySuffix.replace(timing, () => kept)
   slide.structureDirty = true
   return true
 }
