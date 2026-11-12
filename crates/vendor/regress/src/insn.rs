@@ -211,4 +211,7 @@ pub struct CompiledRegex {
 
     // Flags controlling matching.
     pub flags: api::Flags,
+
+    // The most entries the backtrack stack of one search may hold, or None.
+    pub backtrack_limit: Option<usize>,
 }

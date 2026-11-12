@@ -22,6 +22,12 @@ pub trait MatchProducer: core::fmt::Debug {
         pos: Self::Position,
         next_start: &mut Option<Self::Position>,
     ) -> Option<Match>;
+
+    /// \return whether a search stopped because it would have needed more
+    /// backtrack stack than the regex allows. No match follows once it did.
+    fn limit_exceeded(&self) -> bool {
+        false
+    }
 }
 
 /// A trait for executing a regex.
@@ -44,6 +50,14 @@ impl<Producer: MatchProducer> Matches<Producer> {
     pub fn new(mp: Producer, start: usize) -> Self {
         let position = mp.initial_position(start);
         Matches { mp, position }
+    }
+
+    /// Whether the iteration ended because a search would have needed more
+    /// backtrack stack than [`crate::Regex::set_backtrack_limit`] allows,
+    /// rather than because there are no more matches. Only the backtracking
+    /// executor has a limit.
+    pub fn limit_exceeded(&self) -> bool {
+        self.mp.limit_exceeded()
     }
 }
 
