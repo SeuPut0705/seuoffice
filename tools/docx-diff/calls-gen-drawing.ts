@@ -449,6 +449,8 @@ const NF_ANCHOR =
   '<w:drawing><wp:anchor simplePos="0" relativeHeight="251659264" behindDoc="0"><wp:positionH relativeFrom="column"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx="952500" cy="476250"/><wp:wrapNone/><wp:docPr id="2" name="Picture 2"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx="952500" cy="476250"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>'
 const NF_BOX_PARA =
   '<w:p><w:r><w:drawing><wp:anchor relativeHeight="251660288" behindDoc="0"><wp:extent cx="1905000" cy="952500"/><wp:wrapSquare wrapText="bothSides"/><wp:docPr id="7" name="Text Box 7"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id="7" name="Text Box 7"/><wps:spPr><a:xfrm><a:ext cx="1905000" cy="952500"/></a:xfrm><a:ln w="9525"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>'
+/** A text box with a VML fallback: its style takes the size as text, a negative infinity too. */
+const NF_FALLBACK_PARA = para(ALT(BOX_A, FALLBACK('width:150pt;height:75pt')))
 
 /** One input per argument where the TypeScript writes NaN or Infinity into the XML and the Rust ignores the value. */
 export const NON_FINITE_DRAWING: Array<{ fn: string; text: string; args: Record<string, unknown> }> = [
@@ -461,6 +463,9 @@ export const NON_FINITE_DRAWING: Array<{ fn: string; text: string; args: Record<
   { fn: 'genDrawing.patchTextboxHeights', text: NF_BOX_PARA, args: { heightsPx: ['Infinity'] } },
   { fn: 'genDrawing.patchTextboxSizes', text: NF_BOX_PARA, args: { sizes: [{ wPx: 'NaN' }] } },
   { fn: 'genDrawing.patchTextboxSizes', text: NF_BOX_PARA, args: { sizes: [{ hPx: 'Infinity' }] } },
+  { fn: 'genDrawing.patchTextboxHeights', text: NF_FALLBACK_PARA, args: { heightsPx: ['-Infinity'] } },
+  { fn: 'genDrawing.patchTextboxSizes', text: NF_FALLBACK_PARA, args: { sizes: [{ wPx: '-Infinity' }] } },
+  { fn: 'genDrawing.patchTextboxSizes', text: NF_FALLBACK_PARA, args: { sizes: [{ hPx: '-Infinity' }] } },
   { fn: 'genDrawing.patchShapeStyles', text: NF_BOX_PARA, args: { styles: [{ rotDeg: 'NaN' }] } },
   { fn: 'genDrawing.patchShapeStyles', text: NF_BOX_PARA, args: { styles: [{ borderWidthPx: 'Infinity' }] } },
   { fn: 'genDrawing.patchDrawingExtent', text: `<w:p><w:r>${NF_INLINE}</w:r></w:p>`, args: { wPx: 'NaN', hPx: 50 } },

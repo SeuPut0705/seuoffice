@@ -45,6 +45,12 @@ interface Group {
   argMutated?: Comparison
   /** mutated arguments the typed reader of the Rust side refuses: not a call of the function */
   argRefused: number
+  /**
+   * Mutated arguments with a non-finite number that the TypeScript writes
+   * into its result as NaN or Infinity and the Rust does not: the defect
+   * divergences.json lists per function and argument, on another input.
+   */
+  argNonFinite: number
 }
 
 const titled = (name: string): string => name[0]!.toUpperCase() + name.slice(1)
@@ -77,6 +83,7 @@ const groups: Group[] = Object.entries({
       ? { argMutated: new Comparison(`(f+) ${name} on mutated arguments, checks`, `calls${titled(name)}ArgMutated`) }
       : {}),
     argRefused: 0,
+    argNonFinite: 0,
   }))
 
 const seeds = new Map<string, Map<string, Input>>()
@@ -189,18 +196,25 @@ export async function callsAfterCorpus(random: () => number): Promise<void> {
         keepArguments(spec, `built ${index}`, input, true)
       }
       const withArguments = argSeeds.get(spec.fn)
+      const nonFinite = (value: unknown): boolean => /NaN|Infinity/.test(JSON.stringify(value))
       if (group.argMutated && withArguments && withArguments.kept.length > 0) {
         let done = 0
         for (let tried = 0; done < ARG_FUZZ_CASES && tried < ARG_FUZZ_CASES * 4; tried++) {
           const seed = withArguments.kept[Math.floor(random() * withArguments.kept.length)]!
           const args = withArguments.pool.mutate(seed.args, random)
           if (args === undefined) continue
-          const rust = rustOutcome(spec.fn, seed.text ?? '', args)
+          const text = seed.text ?? ''
+          const rust = rustOutcome(spec.fn, text, args)
           if ('error' in rust && /^the \w+ argument: /.test(rust.error)) {
             group.argRefused += 1
             continue
           }
-          await check(group.argMutated, `argument mutation ${done}`, spec, { text: seed.text, args })
+          const typescript = await typescriptOutcome(spec, text, args)
+          if (nonFinite(args) && !nonFinite(text) && nonFinite(typescript) && !nonFinite(rust)) {
+            group.argNonFinite += 1
+            continue
+          }
+          checkOutcome(group.argMutated, `argument mutation ${done}: ${spec.fn}`, spec.fn, text, args, () => typescript)
           done += 1
         }
       }
@@ -221,10 +235,11 @@ export async function callsAfterCorpus(random: () => number): Promise<void> {
 
 /** The coverage of (f), after the comparison lines. */
 export function reportCalls(): void {
-  for (const { name, specs, argMutated, argRefused } of groups) {
+  for (const { name, specs, argMutated, argRefused, argNonFinite } of groups) {
     if (argMutated) {
       console.log(
-        `(f+) ${name}: ${argRefused} more mutated arguments were refused by the typed reader of the Rust side and compared nothing`,
+        `(f+) ${name}: ${argRefused} more mutated arguments were refused by the typed reader of the Rust side, ` +
+          `and in ${argNonFinite} the TypeScript wrote a non-finite number the Rust does not write (divergences.json): those compared nothing`,
       )
     }
     const tallies = specs.map(({ fn }) => ({ fn, tally: byFunction.get(fn) }))
@@ -256,9 +271,10 @@ export function reportCalls(): void {
 export function callsReport(): object {
   return {
     node: process.version,
-    groups: groups.map(({ name, corpus, built, mutated, argMutated, argRefused, specs }) => ({
+    groups: groups.map(({ name, corpus, built, mutated, argMutated, argRefused, argNonFinite, specs }) => ({
       name,
       argRefused,
+      argNonFinite,
       populations: Object.fromEntries(
         [['corpus', corpus], ['built', built], ['mutated', mutated], ...(argMutated ? [['argMutated', argMutated]] : [])].map(([name, comparison]) => {
           const value = comparison as Comparison
