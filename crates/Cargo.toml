@@ -62,3 +62,12 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# The fault probes of tools/pptx-diff: the release semantics (no overflow
+# checks, panic = abort) with builds that take seconds after one edit
+[profile.probe]
+inherits = "release"
+opt-level = 1
+lto = false
+codegen-units = 16
+incremental = true
