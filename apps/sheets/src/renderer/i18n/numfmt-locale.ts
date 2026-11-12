@@ -1,12 +1,16 @@
 /**
- * BCP-47 tags `numfmt` uses for cell number formats (weekday/month names,
+ * BCP-47 tags `numfmt` uses for number formats (weekday/month names,
  * decimal and grouping marks). This is deliberately separate from the React
  * i18n module so plain modules (Univer locale wiring, format previews) do not
  * pull the translation dictionaries into their graph.
  *
- * Malay has no numfmt pack, so it keeps English formatting (the rest of the
- * UI still renders in Malay).
+ * Keyed by document locale: the language documents are read for names more
+ * languages than the UI has, and every row here is reached through it.
+ *
+ * Malay has no numfmt pack, so it keeps English formatting.
  */
+import { getDocumentLocale } from '../document-locale'
+
 const NUMFMT_LOCALES: Record<string, string> = {
   zh: 'zh-CN',
   en: 'en',
@@ -31,6 +35,14 @@ const NUMFMT_LOCALES: Record<string, string> = {
   vi: 'vi-VN',
 }
 
-export function numfmtLocaleFor(lang: string): string {
-  return NUMFMT_LOCALES[lang] ?? 'en'
+export function numfmtLocaleFor(documentLocale: string): string {
+  return NUMFMT_LOCALES[documentLocale] ?? 'en'
+}
+
+/**
+ * The tag number formats are drawn with in this window. Cells, chart labels,
+ * clipboard text and the Format Cells preview all read it here, so they agree.
+ */
+export function numfmtLocale(): string {
+  return numfmtLocaleFor(getDocumentLocale())
 }

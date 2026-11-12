@@ -4,14 +4,14 @@
  * the matching Univer language pack and switches LocaleService, which
  * re-renders the whole Univer React tree (rule-management panels, dialogs,
  * menus). English boots directly and has no entry here; cell number formats
- * follow the app language separately (applyNumfmtLocale below).
+ * follow the language documents are read for, separately (applyNumfmtLocale below).
  */
 import { LocaleService, LocaleType, mergeLocales, type ILocales } from '@univerjs/core'
 import { SheetsNumfmtCellContentController } from '@univerjs/preset-sheets-core'
 import type { Lang } from '@genoffice/i18n'
 
 import { translateFor } from './i18n/locale'
-import { numfmtLocaleFor } from './i18n/numfmt-locale'
+import { numfmtLocale } from './i18n/numfmt-locale'
 import type { UniverRuntime } from './univer-state'
 
 type LocalePack = Record<string, unknown>
@@ -117,22 +117,23 @@ const localeLoadGeneration = new WeakMap<UniverRuntime, number>()
 /**
  * Number formats render through Univer's `numfmt` controller, whose locale
  * starts at English and never falls back to LocaleService. Without this call a
- * Korean `aaa`/`dddd` (or `mmm`, AM/PM) stays English while the rest of the UI
- * is Korean. The controller is the DI token the preset's numfmt plugin
- * registers.
+ * Korean `aaa`/`dddd` (or `mmm`, AM/PM) stays English on a Korean install. The
+ * locale is the one every other number format in the window is drawn with
+ * (chart labels, clipboard text), so a cell and a chart of it agree. The
+ * controller is the DI token the preset's numfmt plugin registers.
  */
-export function applyNumfmtLocale(runtime: UniverRuntime, lang: string): void {
+export function applyNumfmtLocale(runtime: UniverRuntime): void {
   const controller = runtime.univer.__getInjector().get(SheetsNumfmtCellContentController) as {
     setNumfmtLocal(locale: string): void
   }
-  controller.setNumfmtLocal(numfmtLocaleFor(lang))
+  controller.setNumfmtLocal(numfmtLocale())
 }
 
 export async function applyUniverLocale(runtime: UniverRuntime, lang: Lang): Promise<void> {
-  // Number formats have their own locale map and cover languages with no UI
+  // Number formats have their own locale and cover languages with no UI
   // pack here, so set it before the pack lookup returns.
   try {
-    applyNumfmtLocale(runtime, lang)
+    applyNumfmtLocale(runtime)
   } catch (error) {
     // Display-only: losing localized weekday names must not stop the UI packs.
     console.warn('[sheets] number-format locale', error)
