@@ -28,6 +28,10 @@ on:
         description: A faults file for tools/docx-diff/faults.py, run instead of the gate (on a rust-faults/* branch)
         required: false
         default: ''
+      main_faults:
+        description: A faults file for tools/main-diff/faults.mjs (the central process), run beside the gates
+        required: false
+        default: ''
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
@@ -197,6 +201,45 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: main-diff-windows-out
+          path: tools/main-diff/out
+          if-no-files-found: ignore
+
+  # Fault injection for the central process (decision 0029): each fault of
+  # the file rebuilds the Node-API addon and runs the comparison of its
+  # functions, which must then differ.
+  main-faults:
+    if: ${{ inputs.main_faults }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Faults
+        shell: bash
+        env:
+          FAULTS: ${{ inputs.main_faults }}
+        run: |
+          mkdir -p tools/main-diff/out
+          node tools/main-diff/faults.mjs "$FAULTS" 2>&1 | tee tools/main-diff/out/faults.txt
+
+      - name: Keep the result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-diff-faults
           path: tools/main-diff/out
           if-no-files-found: ignore
 
