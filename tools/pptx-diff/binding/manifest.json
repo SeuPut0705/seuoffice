@@ -13576,7 +13576,7 @@
         "shape": null,
         "bytes": false
       },
-      "required": ["index", "test"],
+      "required": ["index", "package", "test"],
       "rust": {
         "path": "pptx_engine::notes::notes_path_for_slide",
         "file": "crates/pptx-engine/src/notes.rs",
@@ -15435,7 +15435,7 @@
         "shape": null,
         "bytes": false
       },
-      "required": ["index", "test"],
+      "required": ["index", "package", "test"],
       "rust": {
         "path": "pptx_engine::redaction_xml::has_redact_ext_in",
         "file": "crates/pptx-engine/src/redaction_xml.rs",
@@ -15613,7 +15613,7 @@
         "shape": null,
         "bytes": false
       },
-      "required": ["index", "test"],
+      "required": ["index", "package", "test"],
       "rust": null,
       "route": "none"
     },

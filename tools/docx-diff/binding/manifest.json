@@ -5276,6 +5276,39 @@
     },
     {
       "module": "hf-root",
+      "name": "hfRootOpen",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "root",
+          "type": "HfRootName",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        },
+        {
+          "name": "originalXml",
+          "type": "string | null",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
+    },
+    {
+      "module": "hf-root",
       "name": "hfKeptRoot",
       "kind": "function",
       "async": false,
