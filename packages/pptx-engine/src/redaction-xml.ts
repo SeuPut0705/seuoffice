@@ -187,9 +187,11 @@ function spliceExtLst(inner: string, ext: string): string {
   // a:solidFill/a:latin/a:xfrm is a strict-validation failure
   if (!list) return `${inner}<a:extLst>${ext}</a:extLst>`
   const kept = list[0].replace(OUR_EXT_RE, '')
-  // our own extension goes last so a re-apply replaces rather than appends
+  // our own extension goes last so a re-apply replaces rather than appends. A function, not a
+  // string: `ext` carries the label the user typed, and a replacement string would expand a
+  // `$&` or `$$` in it
   const next = kept.includes('</a:extLst>')
-    ? kept.replace('</a:extLst>', `${ext}</a:extLst>`)
-    : kept.replace(/\/>$/, `>${ext}</a:extLst>`)
+    ? kept.replace('</a:extLst>', () => `${ext}</a:extLst>`)
+    : kept.replace(/\/>$/, () => `>${ext}</a:extLst>`)
   return inner.slice(0, list.index) + next + inner.slice(list.index + list[0].length)
 }
