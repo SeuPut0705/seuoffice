@@ -24,6 +24,7 @@ describe('assembleTrustedContext', () => {
       on,
     )
     expect(result.instructions).toEqual({
+      dataDir,
       text: `[${dataDir}/instructions.md]\nmine\n\n[AGENTS.md]\nagents\n\n[CLAUDE.md]\nclaude`,
       sources: ['instructions', 'agents', 'claude'],
     })

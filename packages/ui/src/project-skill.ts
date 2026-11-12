@@ -1,9 +1,11 @@
 import type { Lang } from '@seuoffice/i18n'
 import type { AgentSkill, AgentToolCall, AgentToolDef, ToolExecution } from '@seuoffice/agent-core'
+import { PROJECT_FOLDER_NAMES } from '@seuoffice/project-store'
 import type {
   PROJECT_TOOL_NAMES,
   ProjectContextBundle,
   ProjectFileEntry,
+  ProjectInstructionsSource,
   ProjectFolderApi,
   ProjectId,
   ProjectMemoryOp,
@@ -315,11 +317,13 @@ function fileLine(file: ProjectFileEntry, withSize = false): string {
   return `- ${parts.join(' | ')}`
 }
 
-const SOURCE_NAMES = {
-  instructions: '.seuoffice/instructions.md',
-  agents: 'AGENTS.md',
-  claude: 'CLAUDE.md',
-} as const
+/** The file each instructions source is read from; the data folder is the one the project uses */
+function sourceName(source: ProjectInstructionsSource, dataDir: string): string {
+  if (source === 'instructions') return `${dataDir}/${PROJECT_FOLDER_NAMES.instructionsFile}`
+  return source === 'agents'
+    ? PROJECT_FOLDER_NAMES.rootAgentsFile
+    : PROJECT_FOLDER_NAMES.rootClaudeFile
+}
 
 /** Whether `project_remember` is offered for this snapshot */
 function remembers(snapshot: ProjectRunSnapshot, unwritable: boolean, refused: boolean): boolean {
@@ -341,7 +345,8 @@ export function projectSystemPrompt(context: ProjectContextBundle, canRemember: 
   ]
   const trusted = context.trust === 'use'
   if (trusted && context.instructions?.text.trim()) {
-    const from = context.instructions.sources.map((s) => SOURCE_NAMES[s]).join(', ')
+    const dataDir = context.instructions.dataDir ?? PROJECT_FOLDER_NAMES.dataDir
+    const from = context.instructions.sources.map((s) => sourceName(s, dataDir)).join(', ')
     sections.push(
       `### Work rules the person set for this project${from ? ` (from ${from})` : ''}\n` +
         'Follow these rules in this project unless the person says otherwise in the chat.\n' +
