@@ -318,11 +318,14 @@ Not ported, each for the parser or library it needs:
 
 Open on these crates:
 
-- `xlsxToText` withholds the cells marked hidden from the model, as upstream
-  `9fd49c8fb` does; the TypeScript of this branch does not yet, so 43 inputs
-  are listed. When that fix arrives: delete those entries, and follow the
-  later upstream change of `xlsx-dates.ts` (a serial past 2958465 gives no
-  date), which `xlsx_dates.rs` does not have.
+- The record of withheld cells in an xlsx is JSON. `serde_json` refuses three
+  things `JSON.parse` reads (a number past the range of a double, a lone
+  surrogate escape, nesting past 128 levels); Rust then refuses the workbook
+  where the TypeScript withholds and answers. Listed; a JSON reader that
+  follows `JSON.parse` would close it.
+- The compound reader is compared with `cfb` read directly. The TypeScript now
+  has a gate of its own (`@genoffice/compound-file`, `assertCompoundFile`):
+  the refusals of `compound.rs` should be compared with it.
 - `xlsx.rs` holds a copy of the fast-xml-parser dialect of `pptx.rs` (`mod
   fxp`); the two should share one module.
 - `office-wasm` maps an error to its JavaScript name by the start of its
