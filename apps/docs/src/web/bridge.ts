@@ -130,7 +130,9 @@ const saveDocxToHost: DesktopApi['saveDocx'] = async (path, data) => {
  */
 async function joinDocsCollab(doc: WebDocument): Promise<void> {
   const page = await joinPageCollab<DocsCollabHandles, DocsOp>({
-    format: { name: 'docx', schema: 2 },
+    // 3: the same file opens as another document than under 2 (header and footer table rows are
+    // cell nodes, text inserted then deleted is two revisions), and the room shares track changes
+    format: { name: 'docx', schema: 3 },
     status: onSessionStatus,
     fileName: doc.fileName,
     bytes: doc.bytes,

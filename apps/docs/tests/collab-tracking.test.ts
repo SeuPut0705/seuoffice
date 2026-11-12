@@ -26,7 +26,7 @@ import { fakeApp, type FakeApp } from './helpers/collab-app'
 
 const para = (text: string) => `<w:p><w:r><w:t xml:space="preserve">${text}</w:t></w:r></w:p>`
 const BODY = para('alpha beta') + para('zeta eta')
-const FORMAT = { name: 'docx', schema: 2 }
+const FORMAT = { name: 'docx', schema: 3 }
 const DOCUMENT = 'memo'
 
 /** a document whose settings say tracking is on, as Word leaves one saved with Track Changes on */
