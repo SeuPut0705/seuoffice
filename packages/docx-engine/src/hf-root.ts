@@ -1,3 +1,4 @@
+import { maskOpaque } from './xml-utils'
 // The root element a rewritten header/footer part ends up under. It follows
 // from the part's own bytes, so the reader and the writer agree on it: a
 // wrapper carried on the part's runs may use only the prefixes that root
@@ -24,7 +25,7 @@ const HF_ROOT_NAMESPACES = partNamespaces(`<w:hdr${HF_ROOT_ATTRS}>`)
  */
 export function hfKeptRoot(root: HfRootName, originalXml: string) {
   const rootTag = findStartTag(originalXml, root)
-  const closeIdx = originalXml.lastIndexOf(`</${root}>`)
+  const closeIdx = maskOpaque(originalXml).lastIndexOf(`</${root}>`)
   if (!rootTag || closeIdx < 0) return null
   const { text: open, start: openIdx } = rootTag
   const children = splitXmlChildren(originalXml.slice(openIdx + open.length, closeIdx))
