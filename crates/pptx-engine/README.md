@@ -325,3 +325,36 @@ repairs or refuses the slides the listed defects produce was not tried.
 The MTX decoder is a derived work of libeot (MPL-2.0), as the TypeScript it
 is ported from; `src/mtx/LICENSE` is the licence text and each of the three
 files says so. The workspace licence field does not.
+
+### Input that must not abort the engine
+
+A reviewer read every slice, index, allocation, recursion and loop of the
+unit for an input that panics or aborts (release wasm aborts on either).
+Fixed:
+
+- `glb_bounds`: the port kept every child of every visited node on one
+  stack. A 40 KB model whose node lists itself ten thousand times as
+  `[0]` asked for gigabytes; the TypeScript recurses and needs one frame a
+  level. The port now walks a frame a level too, over the array in place,
+  and refuses a nesting deeper than 4,096 as the TypeScript's stack does
+  some thousands deeper. A model with 300 such children is a built input.
+- `mtx::ctf`: the flag and coordinate arrays of a glyph were sized without
+  a failure path, while a few dozen bytes of LZCOMP run-length data can ask
+  for a gigabyte of points. They fail as the other buffers of the decoder
+  do.
+- `AHuff::new(257)` indexed past its table. Only the gate can ask for it.
+
+Known and left, each only reachable from the gate's own arguments today: a
+`tag` of `syncRedactExt` that is a pattern with a hundred thousand
+alternatives (callers pass `a:rPr` or `p:spPr`), `BitWriter.writeValue` with
+a bit count past 2^53 and `colLetter(Infinity)` (neither returns in
+TypeScript either). `dgm_hier` recurses once a tree level; JSON arguments
+stop at 128 levels, and the model port of unit 4 has to bound it when it
+builds the tree from a document.
+
+Not fixed here, and not of this unit alone: the regular expression engine
+keeps its backtracking positions on the heap, a few a character for a
+pattern like the tag scanner of `custgeom.rs`, so one unclosed tag of about
+twenty million characters can exhaust wasm memory. Every pattern with a
+loop over document text in both engines shares it; a size limit on a part
+before it reaches a pattern would close it. Reported to main.
