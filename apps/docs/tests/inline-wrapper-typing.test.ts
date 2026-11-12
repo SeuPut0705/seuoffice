@@ -183,6 +183,20 @@ describe('a composition (an IME) at the edges of a content control', () => {
     expect(composingInControl(editor)).toBe(false)
   })
 
+  it('at the end of a smart tag, it is composed behind it', async () => {
+    const { editor } = await load(
+      para(
+        run('Name: ') +
+          '<w:smartTag w:uri="urn:place" w:element="city">' +
+          run('Seoul') +
+          '</w:smartTag>' +
+          run(' end'),
+      ) + OTHER,
+    )
+    editor.commands.setTextSelection(posOf(editor, 'Seoul') + 5)
+    expect(composingInControl(editor)).toBe(false)
+  })
+
   it('at the start of a paragraph that begins with it, it is composed in front of it', async () => {
     const { editor } = await load(para(OPEN + run('Hong') + CLOSE + run(' end')) + OTHER)
     editor.commands.setTextSelection(posOf(editor, 'Hong'))
@@ -217,5 +231,124 @@ describe('typing over a selection that holds a content control', () => {
     const xml = await saved(editor, parsed)
     expect(skeleton(xml)).toContain('<w:p>[Name:- end]</w:p>')
     expect(controls(xml)).toBe(0)
+  })
+})
+
+describe('the end of a wrapper that is not a plain content control', () => {
+  // only an unlocked content control that shows its own text takes what is
+  // typed at its end; every other wrapper ends where the file has it end
+  const SMART = '<w:smartTag w:uri="urn:place" w:element="city">'
+  const CUSTOM = '<w:customXml w:uri="urn:x" w:element="city">'
+  const DIR = '<w:dir w:val="rtl">'
+  const BDO = '<w:bdo w:val="rtl">'
+  const PLACEHOLDER = '<w:sdt><w:sdtPr><w:id w:val="88"/><w:showingPlcHdr/></w:sdtPr><w:sdtContent>'
+  const tagged = (open: string, close: string) =>
+    para(run('Name: ') + open + run('Seoul') + close + run(' end'))
+
+  it.each([
+    ['w:smartTag', SMART, '</w:smartTag>'],
+    ['w:customXml', CUSTOM, '</w:customXml>'],
+    ['w:dir', DIR, '</w:dir>'],
+    ['w:bdo', BDO, '</w:bdo>'],
+  ])('%s: text typed at its end lands behind it', async (_name, open, close) => {
+    const { editor, parsed } = await load(tagged(open, close) + OTHER)
+    editor.commands.setTextSelection(posOf(editor, 'Seoul') + 5)
+    type(editor, 'xy')
+    const xml = await saved(editor, parsed)
+    expect(skeleton(xml)).toContain(`${open}[Seoul]${close}[xy end]`)
+    expect(xml.split(open).length - 1).toBe(1)
+  })
+
+  it('w:smartTag: lines pasted at its end make no new tags', async () => {
+    const { editor, parsed } = await load(tagged(SMART, '</w:smartTag>') + OTHER)
+    editor.commands.setTextSelection(posOf(editor, 'Seoul') + 5)
+    editor.view.pasteText('one\ntwo')
+    const xml = await saved(editor, parsed)
+    expect(xml.split('<w:smartTag').length - 1).toBe(1)
+  })
+
+  it('a control inside a w:dir: text typed at their end lands behind both', async () => {
+    const { editor, parsed } = await load(
+      para(run('Name: ') + DIR + OPEN + run('Seoul') + CLOSE + '</w:dir>' + run(' end')) + OTHER,
+    )
+    editor.commands.setTextSelection(posOf(editor, 'Seoul') + 5)
+    type(editor, 'xy')
+    const xml = await saved(editor, parsed)
+    expect(skeleton(xml)).toContain(`${DIR}${OPEN}[Seoul]${CLOSE}</w:dir>[xy end]`)
+  })
+
+  it('a w:dir inside a control: text typed at their end joins the control, not the w:dir', async () => {
+    const { editor, parsed } = await load(
+      para(
+        run('Name: ') + OPEN + run('in ') + DIR + run('Seoul') + '</w:dir>' + CLOSE + run(' z'),
+      ) + OTHER,
+    )
+    editor.commands.setTextSelection(posOf(editor, 'Seoul') + 5)
+    type(editor, 'xy')
+    const xml = await saved(editor, parsed)
+    expect(skeleton(xml)).toContain(`${DIR}[Seoul]</w:dir>[xy]${CLOSE}[ z]`)
+    expect(xml.split(DIR).length - 1).toBe(1)
+  })
+
+  it('a locked control holding a w:dir: text typed at its end is plain text behind it', async () => {
+    const locked = open(true)
+    const { editor, parsed } = await load(
+      para(
+        run('Name: ') + locked + run('in ') + DIR + run('Seoul') + '</w:dir>' + CLOSE + run(' z'),
+      ) + OTHER,
+    )
+    editor.commands.setTextSelection(posOf(editor, 'Seoul') + 5)
+    type(editor, 'XY')
+    const xml = await saved(editor, parsed)
+    expect(skeleton(xml)).toContain(`${CLOSE}[XY z]`)
+    expect(xml.split(DIR).length - 1).toBe(1)
+  })
+
+  it('a locked control holding a w:dir: text pasted at its end is plain text behind it', async () => {
+    const locked = open(true)
+    const { editor, parsed } = await load(
+      para(
+        run('Name: ') + locked + run('in ') + DIR + run('Seoul') + '</w:dir>' + CLOSE + run(' z'),
+      ) + OTHER,
+    )
+    editor.commands.setTextSelection(posOf(editor, 'Seoul') + 5)
+    editor.view.pasteText('XY')
+    const xml = await saved(editor, parsed)
+    expect(skeleton(xml)).toContain(`${CLOSE}[XY z]`)
+    expect(xml.split(DIR).length - 1).toBe(1)
+  })
+
+  it('a control showing its placeholder: text typed at its end lands behind it, and it stays a placeholder', async () => {
+    const { editor, parsed } = await load(
+      para(run('Name: ') + PLACEHOLDER + run('Click here') + CLOSE + run(' end')) + OTHER,
+    )
+    editor.commands.setTextSelection(posOf(editor, 'Click here') + 10)
+    type(editor, 'xy')
+    const xml = await saved(editor, parsed)
+    expect(skeleton(xml)).toContain(`${PLACEHOLDER}[Click here]${CLOSE}[xy end]`)
+  })
+
+  it('a control inside a hyperlink that starts before it: typing at its end keeps the link whole', async () => {
+    const link = '<w:hyperlink w:anchor="target">'
+    const { editor, parsed } = await load(
+      para(
+        run('Name: ') +
+          link +
+          run('see ') +
+          OPEN +
+          run('Hong') +
+          CLOSE +
+          '</w:hyperlink>' +
+          run(' end'),
+      ) + OTHER,
+    )
+    editor.commands.setTextSelection(posOf(editor, 'Hong') + 4)
+    type(editor, 'xy')
+    const xml = await saved(editor, parsed)
+    expect(xml.split('<w:hyperlink').length - 1).toBe(1)
+    expect(controls(xml)).toBe(1)
+    expect(skeleton(xml)).toMatch(
+      /<w:hyperlink [^>]*>(?:<w:r>.*?<\/w:r>|\[see \])<w:sdt>.*?\[Hong\]<\/w:sdtContent><\/w:sdt><\/w:hyperlink>/,
+    )
   })
 })

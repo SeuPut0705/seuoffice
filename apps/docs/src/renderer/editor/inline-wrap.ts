@@ -6,9 +6,10 @@
  * - `inlineWrap` mark: the chain of wrapper elements around the text (inline
  *   content controls, w:smartTag, w:customXml, w:dir, w:bdo). Text typed
  *   inside stays inside. The caret has one position at an edge, so the edges
- *   take sides: text typed at the end joins the wrapper (as in Word), text
- *   typed at the start lands in front of it. The mark is structure, not
- *   formatting: "clear formatting" leaves it.
+ *   take sides: text typed at the end of an unlocked content control joins it
+ *   (as in Word); at the end of any other wrapper, and at every start, it
+ *   lands outside (`endTakesText`). The mark is structure, not formatting:
+ *   "clear formatting" leaves it.
  * - the guard: the content of a control locked against editing
  *   (w:lock contentLocked / sdtContentLocked) refuses changes. The control can
  *   still be deleted whole.
@@ -246,20 +247,42 @@ function bringsPastedContent(tr: Transaction): boolean {
 }
 
 /**
- * The wrappers text put in at `$pos` takes from its neighbour (the mark is
- * inclusive) and must not sit in:
- * - a control locked against editing that ends here: its content may not
- *   grow, so the text lands behind it;
- * - the wrappers of the text that starts the paragraph: a start belongs to
- *   no wrapper, and here the text behind the caret is the only neighbour.
+ * The wrapper whose end takes what is put there (the mark is inclusive): an
+ * unlocked content control that shows its own text. Every other wrapper ends
+ * where the file has it end, as before the mark was inclusive:
+ * - w:smartTag, w:customXml, w:dir, w:bdo: their element is the text it was
+ *   read with, and a w:dir or w:bdo would set the direction of typed text;
+ * - a locked control (any w:lock): its content may not grow, and nothing
+ *   inside it may be cloned around the typed text;
+ * - a control showing its placeholder: typed text there is no answer to it;
+ * - a control inside a hyperlink: the text behind it would split the link.
  */
-function wrapsLeftOutside($pos: ResolvedPos): InlineWrap[] {
-  if (!$pos.parent.inlineContent) return NO_WRAPS
-  const before = $pos.nodeBefore
-  const after = $pos.nodeAfter
-  if (!before) return after ? wrapsOf(after) : NO_WRAPS
-  const locked = lockedWrapsOf(before)
-  return after && locked.length > 0 ? locked.filter((wrap) => !sitsIn(after, wrap)) : locked
+function endTakesText(wrap: InlineWrap): boolean {
+  return (
+    /^<w:sdt[\s>]/.test(wrap.open) &&
+    wrap.inside !== 'link' &&
+    !/<w:lock\b/.test(wrap.open) &&
+    !/<w:showingPlcHdr\b/.test(wrap.open)
+  )
+}
+
+/**
+ * The wrappers content put in over [$from, $to) takes from its neighbour and
+ * must not sit in. At a wrapper's end the chain is kept from the outside in as
+ * long as each wrapper the text behind does not also sit in takes text
+ * (`endTakesText`): a w:dir inside a control drops off, a control inside a
+ * w:dir goes with it. At the start of a paragraph (an empty range only) the
+ * text after is the only neighbour, and a start belongs to no wrapper.
+ */
+function wrapsLeftOutside($from: ResolvedPos, $to: ResolvedPos = $from): InlineWrap[] {
+  if (!$from.parent.inlineContent) return NO_WRAPS
+  const before = $from.nodeBefore
+  const after = $from.sameParent($to) ? $to.nodeAfter : null
+  if (!before) return after && $from.pos === $to.pos ? wrapsOf(after) : NO_WRAPS
+  const chain = wrapsOf(before)
+  let kept = after ? sharedInlineWraps(chain, wrapsOf(after)).length : 0
+  while (kept < chain.length && endTakesText(chain[kept]!)) kept++
+  return chain.slice(kept)
 }
 
 /** What one step put into the document, as a range of the document the edits end in */
@@ -279,9 +302,9 @@ interface Arrival {
  * - content that landed between two pieces of one wrapper (a line break, a
  *   field, pasted text) goes inside it, or the save would write the wrapper
  *   twice around the halves;
- * - content put in at the end of a locked control, or at the start of a
- *   paragraph that begins with a wrapper, comes out of it (`wrapsLeftOutside`);
- *   clipboard content is left alone: what it brings is its own;
+ * - content typed or pasted at the end of a wrapper whose end takes no text,
+ *   or at the start of a paragraph that begins with a wrapper, comes out of
+ *   it (`wrapsLeftOutside`);
  * - a paragraph split inside a content control leaves the control on the
  *   first half: the save cannot see across paragraphs that both halves carry
  *   the same w:id. Wrappers without an id (w:bdo, w:dir, w:smartTag,
@@ -315,7 +338,9 @@ function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Tra
         const cut = inside
           ? sharedInlineWraps(wrapsOf($from.nodeBefore!), wrapsOf($to.nodeAfter!))
           : NO_WRAPS
-        const outside = !pasted && oldFrom === oldTo ? wrapsLeftOutside($from) : NO_WRAPS
+        // typed or pasted, at a point or over a range of one paragraph
+        const outside =
+          oldFrom === oldTo || $from.sameParent($to) ? wrapsLeftOutside($from, $to) : NO_WRAPS
         if (cut.length === 0 && outside.length === 0 && !pasted) return
         const rest = tr.mapping.slice(i + 1)
         arrivals.push({
