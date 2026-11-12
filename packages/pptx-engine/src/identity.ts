@@ -96,12 +96,17 @@ export function ensureCreationId(el: SlideElement): void {
   if (CREATION_ID_RE.test(own)) return
   // extLst has maxOccurs=1: merge into an existing one (decorative/compat
   // extensions) rather than appending a second, invalid, extLst. cNvPr's own
-  // extLst is its LAST child — an earlier </a:extLst> belongs to a nested
-  // hlinkClick/hlinkHover extension list and must not receive the GUID.
-  const extLstClose = own.lastIndexOf('</a:extLst>')
-  if (extLstClose >= 0 && own.slice(extLstClose + '</a:extLst>'.length).trim() === '') {
-    const at = open.index + extLstClose
-    el.anchor.originalXml = xml.slice(0, at) + creationIdExtXml() + xml.slice(at)
+  // extLst is its LAST child — an earlier one belongs to a nested
+  // hlinkClick/hlinkHover extension list and must not receive the GUID. The
+  // list may be written empty (`<a:extLst/>`) or with white space in its end
+  // tag: both are the same list.
+  const ownList = /(?:<\/a:extLst\s*>|<a:extLst\s*\/>)\s*$/.exec(own)
+  if (ownList) {
+    const at = open.index + ownList.index
+    const rest = xml.slice(at)
+    el.anchor.originalXml = ownList[0].startsWith('</')
+      ? xml.slice(0, at) + creationIdExtXml() + rest
+      : xml.slice(0, at) + creationIdXml() + rest.slice(ownList[0].trimEnd().length)
     return
   }
   el.anchor.originalXml = xml.slice(0, close) + creationIdXml() + xml.slice(close)
