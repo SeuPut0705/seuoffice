@@ -894,7 +894,7 @@ const FONTS_NO_CT = await fontDeck(
   { 'ppt/fonts/font1.fntdata': FONT_FILES['ppt/fonts/font1.fntdata']! },
   { rels: { rIdF1: 'fonts/font1.fntdata' }, noCt: true },
 )
-/** A font part of three bytes: the TypeScript throws a RangeError reading its magic. */
+/** A font part of three bytes: eotToSfnt refuses it (the size checks pass, the magic needs four bytes). */
 const FONTS_SHORT = await fontDeck(
   [{ typeface: 'Short', parts: [['regular', 'rIdF1']] }],
   { 'ppt/fonts/font1.fntdata': eot([0, 1, 0]) },

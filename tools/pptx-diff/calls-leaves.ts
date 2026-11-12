@@ -17,6 +17,7 @@ import {
   creationIdExtXml,
   creationIdXml,
   decodeNumericCharRefs,
+  percentFraction,
   escapeXmlAttr,
   escapeXmlText,
   hasContentTypeOverride,
@@ -437,6 +438,20 @@ export const LEAVES: CallSpec[] = [
       ]),
     built: nodeInputs,
     mutation: 'none',
+  },
+  {
+    fn: 'pptxLeaves.xml-utils.percentFraction',
+    call: (_text, args) => percentFraction(args.raw),
+    mutation: 'none',
+    built: [
+      ...['50%', '50000', '-25%', ' 7% ', '%', '', 'abc', '1e3', '1e999%', 'Infinity', '0', '-0', '100000', '12.5%', '50 %', '0x10']
+        .map((raw) => ({ args: { raw } })),
+      { args: { raw: 75000 } },
+      { args: { raw: null } },
+      { args: {} },
+      { args: { raw: true } },
+      { args: { raw: ['50%'] } },
+    ],
   },
   {
     fn: 'pptxLeaves.xml-utils.decodeNumericCharRefs',

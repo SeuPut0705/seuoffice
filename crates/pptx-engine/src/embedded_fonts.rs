@@ -66,15 +66,14 @@ fn u32_of(bytes: &[u8], at: usize, little: bool) -> Option<u32> {
 }
 
 /// Unwrap an EOT container to its sfnt payload; `None` when compressed or
-/// malformed. An `Err` is a `RangeError` of the TypeScript: its magic check
-/// reads a `DataView` of four bytes over a payload shorter than that.
-pub fn eot_to_sfnt(bytes: &[u8]) -> Result<Option<Vec<u8>>, String> {
+/// malformed (a payload shorter than the four bytes of the magic included).
+pub fn eot_to_sfnt(bytes: &[u8]) -> Option<Vec<u8>> {
     if bytes.len() < 16 {
-        return Ok(None);
+        return None;
     }
     // Some producers (LibreOffice) store the bare sfnt without an EOT wrapper
     if u32_of(bytes, 0, false).is_some_and(|magic| SFNT_MAGICS.contains(&magic)) {
-        return Ok(Some(bytes.to_vec()));
+        return Some(bytes.to_vec());
     }
     let eot_size = u32_of(bytes, 0, true).unwrap_or(0);
     let font_data_size = u32_of(bytes, 4, true).unwrap_or(0);
@@ -83,7 +82,7 @@ pub fn eot_to_sfnt(bytes: &[u8]) -> Result<Option<Vec<u8>>, String> {
         || font_data_size == 0
         || font_data_size as usize > bytes.len() - 16
     {
-        return Ok(None);
+        return None;
     }
     // The variable-length header precedes the payload, so the payload sits at the tail
     let mut sfnt: Vec<u8> = bytes
@@ -96,18 +95,15 @@ pub fn eot_to_sfnt(bytes: &[u8]) -> Result<Option<Vec<u8>>, String> {
         }
     }
     if flags & EOT_FLAG_COMPRESSED != 0 {
-        match mtx::mtx_to_sfnt(&sfnt) {
-            Some(inflated) => sfnt = inflated,
-            None => return Ok(None),
-        }
+        sfnt = mtx::mtx_to_sfnt(&sfnt)?;
     }
-    let Some(magic) = u32_of(&sfnt, 0, false) else {
-        return Err("RangeError: Offset is outside the bounds of the DataView".to_owned());
-    };
+    // FontDataSize can be 1..3 and still pass the checks above; refuse before
+    // reading the magic
+    let magic = u32_of(&sfnt, 0, false)?;
     if !SFNT_MAGICS.contains(&magic) {
-        return Ok(None);
+        return None;
     }
-    Ok(Some(sfnt))
+    Some(sfnt)
 }
 
 /// The code points one demand key asks of its part, in the order they were
@@ -517,7 +513,7 @@ pub fn stale_embedded_typefaces(
                     None => None,
                 };
                 let sfnt = match bytes {
-                    Some(bytes) => eot_to_sfnt(bytes)?,
+                    Some(bytes) => eot_to_sfnt(bytes),
                     None => None,
                 };
                 lookups.insert(
@@ -763,7 +759,7 @@ pub fn list_embedded_fonts(archive: &PackageArchive) -> Result<Vec<EmbeddedFontF
             let Some(bytes) = archive.read_bytes(&part) else {
                 continue;
             };
-            if let Some(sfnt) = eot_to_sfnt(bytes)? {
+            if let Some(sfnt) = eot_to_sfnt(bytes) {
                 out.push(EmbeddedFontFace {
                     typeface: typeface.clone(),
                     style,

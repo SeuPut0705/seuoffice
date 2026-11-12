@@ -929,7 +929,7 @@ const sizeMap = (args: Record<string, unknown>): FontSizeMap | undefined =>
 
 export const DECKTEXT: CallSpec[] = [
   {
-    fn: 'index.editChartElement',
+    fn: 'pptxDecktext.index.editChartElement',
     call: (text, args) =>
       deckOp(text, args, (opened, at) =>
         editChartElement(
@@ -942,7 +942,7 @@ export const DECKTEXT: CallSpec[] = [
     built: EDIT_CHART_INPUTS,
   },
   {
-    fn: 'index.markChartEditable',
+    fn: 'pptxDecktext.index.markChartEditable',
     call: (text, args) =>
       deckOp(text, args, (opened, at) =>
         markChartEditable(
@@ -953,7 +953,7 @@ export const DECKTEXT: CallSpec[] = [
     built: MARK_INPUTS,
   },
   {
-    fn: 'index.setElementHidden',
+    fn: 'pptxDecktext.index.setElementHidden',
     call: (text, args) =>
       deckOp(text, args, (opened, at) =>
         setElementHidden(
@@ -965,7 +965,7 @@ export const DECKTEXT: CallSpec[] = [
     built: HIDDEN_INPUTS,
   },
   {
-    fn: 'index.setElementName',
+    fn: 'pptxDecktext.index.setElementName',
     call: (text, args) =>
       deckOp(text, args, (opened, at) =>
         setElementName(
@@ -977,7 +977,7 @@ export const DECKTEXT: CallSpec[] = [
     built: NAME_INPUTS,
   },
   {
-    fn: 'index.getChartElementData',
+    fn: 'pptxDecktext.index.getChartElementData',
     call: (text, args) =>
       deckOp(text, args, (opened, at) =>
         getChartElementData(
@@ -988,7 +988,7 @@ export const DECKTEXT: CallSpec[] = [
     built: DATA_INPUTS,
   },
   {
-    fn: 'index.setElementFont',
+    fn: 'pptxDecktext.index.setElementFont',
     call: (text, args) =>
       deckOp(text, args, (opened, at) =>
         setElementFont(
@@ -1001,7 +1001,7 @@ export const DECKTEXT: CallSpec[] = [
     built: FONT_INPUTS,
   },
   {
-    fn: 'index.replaceAllInDeck',
+    fn: 'pptxDecktext.index.replaceAllInDeck',
     call: (text, args) =>
       deckOp(text, args, (opened, at) => {
         const opts = { ...(args.opts as Record<string, unknown>) }
@@ -1019,7 +1019,7 @@ export const DECKTEXT: CallSpec[] = [
     built: REPLACE_INPUTS,
   },
   {
-    fn: 'index.applyParagraphFormat',
+    fn: 'pptxDecktext.index.applyParagraphFormat',
     call: (_text, args) => {
       const paragraphs = structuredClone(args.paragraphs) as Parameters<typeof applyParagraphFormat>[0]
       const dirty = applyParagraphFormat(paragraphs, args.patch as ParagraphFormatPatch)
@@ -1029,7 +1029,7 @@ export const DECKTEXT: CallSpec[] = [
     built: APPLY_PARAGRAPH_INPUTS,
   },
   {
-    fn: 'index.setElementParagraphFormat',
+    fn: 'pptxDecktext.index.setElementParagraphFormat',
     call: (text, args) =>
       deckOp(text, args, (opened, at) => {
         const slide = at.slide(slideOf(args))
@@ -1052,7 +1052,7 @@ export const DECKTEXT: CallSpec[] = [
     built: SET_PARAGRAPH_INPUTS,
   },
   {
-    fn: 'index.setGroupChildParagraphFormat',
+    fn: 'pptxDecktext.index.setGroupChildParagraphFormat',
     call: (text, args) =>
       deckOp(text, args, (opened, at) => {
         const slide = at.slide(slideOf(args))

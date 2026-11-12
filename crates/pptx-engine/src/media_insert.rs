@@ -136,6 +136,44 @@ pub fn solid_png(w: u32, h: u32, rgb: [u8; 3]) -> Result<Vec<u8>, String> {
     Ok(out)
 }
 
+/// A PNG with its IDAT chunks inflated: the other chunks as they are, then the pixels. The gate
+/// compares this, because two zlibs write different bytes of one image. `None` where the bytes
+/// are not a PNG that this reads whole.
+pub fn png_pixels(bytes: &[u8]) -> Option<Vec<u8>> {
+    use std::io::Read;
+    const SIGNATURE: [u8; 8] = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    if bytes.get(..8)? != SIGNATURE {
+        return None;
+    }
+    let mut head: Vec<u8> = Vec::new();
+    let mut idat: Vec<u8> = Vec::new();
+    let mut at = 8usize;
+    while at < bytes.len() {
+        let length =
+            u32::from_be_bytes(bytes.get(at..at.checked_add(4)?)?.try_into().ok()?) as usize;
+        let end = at.checked_add(12)?.checked_add(length)?;
+        if end > bytes.len() {
+            return None;
+        }
+        if bytes.get(at + 4..at + 8)? == b"IDAT" {
+            idat.extend_from_slice(bytes.get(at + 8..at + 8 + length)?);
+        } else {
+            head.extend_from_slice(bytes.get(at..end)?);
+        }
+        at = end;
+    }
+    if idat.is_empty() {
+        return None;
+    }
+    let mut pixels = Vec::new();
+    flate2::read::ZlibDecoder::new(idat.as_slice())
+        .take(1 << 28)
+        .read_to_end(&mut pixels)
+        .ok()?;
+    head.extend_from_slice(&pixels);
+    Some(head)
+}
+
 // ── Shared part / rels surgery ─────────────────────────────────────────
 
 /// `text.replace(needle, () => replacement)`: the first occurrence, the

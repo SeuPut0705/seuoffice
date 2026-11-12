@@ -714,6 +714,14 @@ pub fn set_group_child_shape_adjust_values(
         let Some(grp) = group_at(slide, gi) else {
             return Ok(false);
         };
+        if !grp
+            .children
+            .as_deref()
+            .and_then(|c| c.get(ci))
+            .is_some_and(is_text_or_shape)
+        {
+            return Ok(false);
+        }
         let nv_id = child_nv_id(grp, ci);
         let mut swapped = false;
         let ok = patch_group_child_xml(grp, nv_id.as_deref(), |xml| {

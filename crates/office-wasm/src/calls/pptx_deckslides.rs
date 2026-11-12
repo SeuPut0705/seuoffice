@@ -276,7 +276,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         }),
         "embeddedFonts.eotToSfnt" => {
             let bytes: Vec<u8> = required(args, "bytes")?;
-            value(eot_to_sfnt(&bytes)?)
+            value(eot_to_sfnt(&bytes))
         }
         "embeddedFonts.demandKey" => {
             let style: String = required(args, "style")?;

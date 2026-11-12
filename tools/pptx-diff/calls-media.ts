@@ -43,12 +43,55 @@ import {
   narrationSpids,
   setShowNarration,
 } from '../../packages/pptx-engine/src/narration'
+import type { OpenedPptx } from '../../packages/pptx-engine/src/index'
 import type { Slide } from '../../packages/pptx-engine/src/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { deckInput, deckOp } from './deck-ops'
 import { withUuid } from './calls-leaves'
 
 type Args = Record<string, unknown>
+
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+
+/**
+ * A PNG with its IDAT chunks inflated: the other chunks as they are, then the pixels. The deflate
+ * streams of two zlibs are different bytes of one image, so the gate compares this (the Rust
+ * side: media_insert.rs `png_pixels`). null where the bytes are not a PNG that this reads whole.
+ */
+function pngPixels(bytes: Uint8Array): Buffer | null {
+  const png = Buffer.from(bytes)
+  if (png.length < 8 || !png.subarray(0, 8).equals(PNG_SIGNATURE)) return null
+  const head: Buffer[] = []
+  const idat: Buffer[] = []
+  let at = 8
+  while (at < png.length) {
+    if (png.length - at < 12) return null
+    const length = png.readUInt32BE(at)
+    const end = at + 12 + length
+    if (end > png.length) return null
+    if (png.toString('latin1', at + 4, at + 8) === 'IDAT') idat.push(png.subarray(at + 8, at + 8 + length))
+    else head.push(png.subarray(at, end))
+    at = end
+  }
+  if (idat.length === 0) return null
+  try {
+    return Buffer.concat([...head, inflateSync(Buffer.concat(idat))])
+  } catch {
+    return null
+  }
+}
+
+/** `run` under `withUuid`, then every PNG it added to the archive replaced by its `pngPixels`. */
+function withUuidAndPixels<T>(opened: OpenedPptx, run: () => T): T {
+  const known = new Set(opened.archive.entries.keys())
+  const result = withUuid(UUID, run)
+  for (const [path, bytes] of [...opened.archive.entries]) {
+    if (known.has(path)) continue
+    const pixels = pngPixels(bytes)
+    if (pixels) opened.archive.entries.set(path, pixels)
+  }
+  return result
+}
 
 const UUID = '6f1d2c3b-4a59-4687-9e0d-1c2b3a495867'
 const BLANK = 'blank deck'
@@ -196,11 +239,11 @@ const onSlide = (text: string, rest: Args = {}, deck = GENERATED): Input => ({
 const withRels = (text: string, rest: Args = {}): Input =>
   onSlide(text, { setRels: SLIDE_RELS, ...rest })
 
-/** What a call does first: the slide rels `args.setRels` written, the deck reparsed. */
+/** What a call does first: the slide rels `args.setRels` written, the deck reparsed (as `reparse_deck` does). */
 const prepare = (opened: Parameters<typeof reparseDeck>[0], args: Args): void => {
   if (typeof args.setRels === 'string') {
     opened.archive.entries.set(RELS_PART, new TextEncoder().encode(args.setRels))
-    reparseDeck(opened)
+    opened.deck = reparseDeck(opened).deck
   }
 }
 
@@ -378,6 +421,7 @@ export const MEDIA: CallSpec[] = [
     call: (text, args) =>
       deckOp(text, args, (opened) => {
         ensureDefaultContentType(opened, args.ext as string, args.mime as string)
+        return null
       }),
     built: [
       ['mp4', 'video/mp4'],
@@ -395,7 +439,7 @@ export const MEDIA: CallSpec[] = [
     fn: 'pptxMedia.media-insert.addMedia',
     call: (text, args) =>
       deckOp(text, args, (opened) =>
-        withUuid(UUID, () =>
+        withUuidAndPixels(opened, () =>
           added(
             addMedia(opened, (args.slide as number | undefined) ?? 0, mediaOptions(args.opts as Args)),
           ),
@@ -410,7 +454,7 @@ export const MEDIA: CallSpec[] = [
     fn: 'pptxMedia.media-insert.addModel3d',
     call: (text, args) =>
       deckOp(text, args, (opened) =>
-        withUuid(UUID, () =>
+        withUuidAndPixels(opened, () =>
           added(
             addModel3d(
               opened,
@@ -430,7 +474,7 @@ export const MEDIA: CallSpec[] = [
     // a model picture is added first (the view turns what `addModel3d` wrote), then viewed
     call: (text, args) =>
       deckOp(text, args, (opened, deckAt) =>
-        withUuid(UUID, () => {
+        withUuidAndPixels(opened, () => {
           const slide = (args.slide as number | undefined) ?? 0
           let id = ''
           if (args.model !== false) {
@@ -496,7 +540,7 @@ export const MEDIA: CallSpec[] = [
     fn: 'pptxMedia.narration.addNarration',
     call: (text, args) =>
       deckOp(text, args, (opened) =>
-        withUuid(UUID, () => {
+        withUuidAndPixels(opened, () => {
           const audio = { ...(args.audio as Args), bytes: fromB64((args.audio as Args).bytes) }
           return added(addNarration(opened, (args.slide as number) ?? 0, audio as never))
         }),
@@ -527,6 +571,7 @@ export const MEDIA: CallSpec[] = [
         }
         if (args.dropPresentation === true) opened.archive.entries.delete('ppt/presentation.xml')
         setShowNarration(opened)
+        return null
       }),
     built: [
       deckInput(BLANK),

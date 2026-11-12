@@ -5,6 +5,7 @@ use jscompat::{math_round, number_to_string};
 use serde::{Deserialize, Serialize};
 
 use crate::deck::{OpenedPptx, append_raw_elements};
+use crate::generate::hangul_lang;
 use crate::insert::next_c_nv_pr_id;
 use crate::smartart_layout::{SmartArtChildShape, layout_shapes};
 use crate::types::{EmuRect, Slide};
@@ -30,9 +31,10 @@ fn num(x: f64) -> String {
 fn child_sp_xml(id: f64, s: &SmartArtChildShape) -> String {
     let para = match s.text.as_deref().filter(|t| !t.is_empty()) {
         Some(text) => format!(
-            "<a:p><a:pPr algn=\"ctr\"/><a:r><a:rPr sz=\"{}\" b=\"1\">\
+            "<a:p><a:pPr algn=\"ctr\"/><a:r><a:rPr{} sz=\"{}\" b=\"1\">\
              <a:solidFill><a:srgbClr val=\"FFFFFF\"/></a:solidFill></a:rPr>\
              <a:t>{}</a:t></a:r></a:p>",
+            hangul_lang(text).map_or_else(String::new, |lang| format!(" lang=\"{lang}\"")),
             num(math_round(s.font_size.map_or(14.0, |f| f.0) * 100.0)),
             escape_xml_text(text)
         ),

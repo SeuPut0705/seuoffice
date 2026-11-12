@@ -236,8 +236,8 @@ const PLACEHOLDER_TEXTS: string[] = [
         `<p:sp><p:nvPr><p:ph type="body" idx="${v.length}"/></p:nvPr><a:xfrm><a:off x="${v}" y="1"/><a:ext cx="2" cy="3"/></a:xfrm></p:sp>`,
     )
     .join(''),
-  // names the hint table inherits, and ones it lacks
-  ['constructor', 'toString', 'hasOwnProperty', 'valueOf', 'custom', 'obj', 'subTitle', 'ctrTitle']
+  // names the hint table lacks, and ones it has
+  ['custom', 'obj', 'subTitle', 'ctrTitle']
     .map(
       (t) =>
         `<p:sp><p:nvPr><p:ph type="${t}"/></p:nvPr><a:xfrm><a:off x="1" y="2"/><a:ext cx="3" cy="4"/></a:xfrm></p:sp>`,
@@ -1031,6 +1031,15 @@ const LAYOUT_PART = /^ppt\/slide(?:Layouts|Masters)\/[^/]+\.xml$/
 
 const ph1 = { type: 'title', idx: '', x: 1, y: 2, cx: 3, cy: 4, hint: 'Click to add title' }
 
+// ledger inherited-key-layout-hint: PH_HINT_MAP is a plain object, so a placeholder type named like
+// an inherited member makes the TypeScript's hint a function; the Rust gives no hint
+const INHERITED_HINT_TEXT = ['constructor', 'toString', 'hasOwnProperty', 'valueOf']
+  .map(
+    (t) =>
+      `<p:sp><p:nvPr><p:ph type="${t}"/></p:nvPr><a:xfrm><a:off x="1" y="2"/><a:ext cx="3" cy="4"/></a:xfrm></p:sp>`,
+  )
+  .join('')
+
 export const LAYOUTS: CallSpec[] = [
   {
     fn: 'pptxLayouts.layout.parseLayoutPlaceholders',
@@ -1039,7 +1048,10 @@ export const LAYOUTS: CallSpec[] = [
       partsOf(parts, LAYOUT_PART)
         .slice(0, 40)
         .map(([, text]) => ({ text })),
-    built: PLACEHOLDER_TEXTS.map((text) => ({ text })),
+    built: [
+      ...PLACEHOLDER_TEXTS.map((text) => ({ text })),
+      { text: INHERITED_HINT_TEXT, seed: false as const },
+    ],
   },
   {
     fn: 'pptxLayouts.layout.listSlideLayouts',

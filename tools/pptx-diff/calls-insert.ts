@@ -48,6 +48,15 @@ function fixed<T>(args: Record<string, unknown>, run: () => T): T {
   }
 }
 
+/** `<a:fld>` takes a random GUID (generate.ts fieldGuid): both sides print it as one fixed text. */
+const FIELD_ID = /(<a:fld id=")\{[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}\}"/g
+function noFieldGuid(node: unknown): unknown {
+  if (typeof node === 'string') return node.replace(FIELD_ID, '$1{G}"')
+  if (Array.isArray(node)) return node.map(noFieldGuid)
+  if (node === null || typeof node !== 'object') return node
+  return Object.fromEntries(Object.entries(node).map(([key, value]) => [key, noFieldGuid(value)]))
+}
+
 const BLANK = 'blank deck'
 const GEN = 'pptxgenjs text, shape, table and two slides'
 const OFFSET = { x: 100, y: 200, cx: 3000, cy: 1500 }
@@ -133,6 +142,10 @@ const PICTURES: NewPictureOptions[] = [
   { bytes: new Uint8Array([7]), ext: 'constructor', offset: OFFSET },
 ]
 const pictureArgs = (o: NewPictureOptions) => ({ ...o, bytes: [...o.bytes] })
+// ledger insert-inherited-image-ext: IMAGE_MIME is a plain object, so an extension named like an
+// inherited member (`constructor`) reads a function as its MIME type and the TypeScript writes
+// that function's source as a ContentType; the Rust finds no type and adds no image.
+const inheritedExt = (ext: string) => (ext === 'constructor' ? { seed: false as const } : {})
 const toBytes = (a: unknown) => new Uint8Array(a as number[])
 
 const SMART: NewSmartArtOptions[] = ['list', 'process', 'cycle', 'hierarchy', 'pyramid', 'matrix', 'venn', 'other'].map(
@@ -206,7 +219,10 @@ export const INSERT: CallSpec[] = [
         addImageMediaAndRel(opened, at.slide(0), toBytes(args.bytes), args.ext as string),
       ),
     built: [
-      ...PICTURES.map((o) => deckInput(GEN, { slide: 0, bytes: [...o.bytes], ext: o.ext })),
+      ...PICTURES.map((o) => ({
+        ...deckInput(GEN, { slide: 0, bytes: [...o.bytes], ext: o.ext }),
+        ...inheritedExt(o.ext),
+      })),
       deckInput(BLANK, { slide: 0, bytes: PNG, ext: 'png' }),
     ],
   },
@@ -219,7 +235,10 @@ export const INSERT: CallSpec[] = [
           return addPicture(opened, at.slide(0), { ...o, bytes: toBytes(o.bytes) } as NewPictureOptions)
         }),
       ),
-    built: PICTURES.map((o) => deckInput(GEN, { slide: 0, opts: pictureArgs(o) })),
+    built: PICTURES.map((o) => ({
+      ...deckInput(GEN, { slide: 0, opts: pictureArgs(o) }),
+      ...inheritedExt(o.ext),
+    })),
   },
   {
     fn: 'pptxInsert.insert.deleteElement',
@@ -315,10 +334,12 @@ export const INSERT: CallSpec[] = [
   },
   {
     fn: 'pptxInsert.headerfooter.applyHeaderFooter',
-    call: (text, args) =>
-      deckOp(text, args, (opened) =>
-        fixed(args, () =>
-          applyHeaderFooter(opened, args.opts as never, args.indexes as number[] | undefined),
+    call: async (text, args) =>
+      noFieldGuid(
+        await deckOp(text, args, (opened) =>
+          fixed(args, () =>
+            applyHeaderFooter(opened, args.opts as never, args.indexes as number[] | undefined),
+          ),
         ),
       ),
     built: [

@@ -24,7 +24,7 @@ import { registerLedger, reportDivergences } from './divergences'
 
 useFloors(fileURLToPath(new URL('floors.json', import.meta.url)))
 registerLedger()
-observeDifferences()
+observeDifferences(option('--keep', 40))
 const callsOnly = process.argv.includes('--calls-only')
 const corpusPackages = callsOnly
   ? null

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::animation::{c_nv_pr_ids_in_xml, prune_timing_for_spids};
 use crate::deck::{OpenedPptx, materialize_slide};
-use crate::generate::generate_paragraph_xml;
+use crate::generate::{generate_paragraph_xml, tag_hangul_run};
 use crate::insert::next_c_nv_pr_id;
 use crate::types::{
     ByteAnchor, ElementType, EmuRect, Paragraph, Slide, SlideElement, TextAlign, TextElement,
@@ -187,7 +187,7 @@ pub fn apply_header_footer(
                         cx: math_round(cx * 0.22),
                         cy: bar_h,
                     },
-                    hf_paragraph(TextAlign::Left, hf_run(date, field)),
+                    hf_paragraph(TextAlign::Left, tag_hangul_run(&hf_run(date, field))),
                 ));
             }
             if let Some(footer) = opts.footer.as_deref().filter(|f| !f.is_empty()) {
@@ -200,7 +200,7 @@ pub fn apply_header_footer(
                         cx: math_round(cx * 0.4),
                         cy: bar_h,
                     },
-                    hf_paragraph(TextAlign::Center, hf_run(footer, None)),
+                    hf_paragraph(TextAlign::Center, tag_hangul_run(&hf_run(footer, None))),
                 ));
             }
             if opts.slide_num == Some(true) {

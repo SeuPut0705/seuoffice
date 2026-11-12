@@ -13,6 +13,7 @@ import {
   COORD_MAX,
   generateParagraphXml,
   generateXfrmXml,
+  hangulLang,
   isConnectorXml,
   patchBodyPrAutofit,
   patchElementFill,
@@ -33,6 +34,8 @@ import {
   rebuildTxBody,
   removeSlideBackgroundXml,
   szAttr,
+  tagHangulParagraphs,
+  tagHangulRun,
   topLevelChildren,
   TRANSITION_KINDS,
   type BackgroundFillPatch,
@@ -45,6 +48,7 @@ import type {
   PPrDirty,
   SlideElement,
   TextElement,
+  TextRun,
 } from '../../packages/pptx-engine/src/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
@@ -380,7 +384,59 @@ const FRAMES: string[] = [
   '<p:graphicFrame/>',
 ]
 
+const HANGUL_TEXTS = [
+  '',
+  'plain',
+  '\uD55C\uAE00',
+  'mixed \uD55C text',
+  '\u3131',
+  '\u1100',
+  '\uA960',
+  '\uD7B0',
+  '\uFFA0',
+  '\u65E5\u672C',
+  '\uD83D\uDE00',
+  '\uAC00'.repeat(3),
+]
+
+const HANGUL_RUNS: TextRun[] = [
+  { text: '\uD55C\uAE00' },
+  { text: 'plain' },
+  { text: '\uD55C', lang: 'en-US' },
+  { text: '\uD55C', lang: 'ko-KR' },
+  { text: '\uD55C', altLang: 'en-US' },
+  { text: '', lang: '' },
+  { text: '\uD55C', fontSize: 12, bold: true },
+]
+
 export const GENERATE: CallSpec[] = [
+  {
+    fn: 'pptxGenerate.generate.hangulLang',
+    call: (text) => hangulLang(text),
+    built: HANGUL_TEXTS.map((text) => ({ text })),
+  },
+  {
+    fn: 'pptxGenerate.generate.tagHangulRun',
+    call: (_text, args) => tagHangulRun(args.run as TextRun),
+    mutation: 'none',
+    built: HANGUL_RUNS.map((run) => ({ args: { run } })),
+  },
+  {
+    // the same array back when nothing changed: `null` says so here
+    fn: 'pptxGenerate.generate.tagHangulParagraphs',
+    call: (_text, args) => {
+      const paragraphs = args.paragraphs as Paragraph[]
+      const out = tagHangulParagraphs(paragraphs)
+      return out === paragraphs ? null : out
+    },
+    mutation: 'none',
+    built: [
+      { args: { paragraphs: [] } },
+      { args: { paragraphs: [{ runs: HANGUL_RUNS.slice(0, 2) }] } },
+      { args: { paragraphs: [{ runs: [{ text: 'plain' }] }, { runs: HANGUL_RUNS }] } },
+      { args: { paragraphs: [{ runs: [] }, { runs: [{ text: '\uD55C', lang: 'en-US' }] }] } },
+    ],
+  },
   {
     fn: 'pptxGenerate.generate.patchTextElementXml',
     call: (text, args) => noGuid(patchTextElementXml(modelElement(args), text)),

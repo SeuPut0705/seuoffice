@@ -2,7 +2,7 @@
 // lines 4179-4841 (element clipboard, slide transitions, advance time, hidden
 // slides, reassembleSlideXml, group / ungroup, in-group editing). The Rust side
 // answers in crates/office-wasm/src/calls/pptx_deckgroups.rs to
-// `pptxDeckGroups.index.<TypeScript name>`.
+// `pptxDeckgroups.index.<TypeScript name>`.
 //
 // Every input is the deck 'blank deck' with its first slide replaced by a slide
 // written here (`textPart`): a group with scaled child coordinates holding a
@@ -175,7 +175,7 @@ const spec = (
   run: (opened: Opened, at: At, args: Args) => unknown,
   built: Input[],
 ): CallSpec => ({
-  fn: `pptxDeckGroups.index.${fn}`,
+  fn: `pptxDeckgroups.index.${fn}`,
   call: (text, args) => deckOp(text, args, (opened, at) => withUuid(UUID, () => run(opened, at, args))),
   built,
 })
@@ -360,7 +360,7 @@ export const DECKGROUPS: CallSpec[] = [
   ),
   // ── in-group editing ──
   {
-    fn: 'pptxDeckGroups.index.groupChildSlices',
+    fn: 'pptxDeckgroups.index.groupChildSlices',
     call: (text) => groupChildSlices(text),
     built: [
       { text: NESTED },
@@ -478,7 +478,7 @@ export const DECKGROUPS: CallSpec[] = [
     ],
   ),
   {
-    fn: 'pptxDeckGroups.index.strokePatchToModel',
+    fn: 'pptxDeckgroups.index.strokePatchToModel',
     call: (_text, args) => strokePatchToModel(args.stroke as never),
     built: [
       { stroke: STROKE },

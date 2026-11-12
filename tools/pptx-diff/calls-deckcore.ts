@@ -117,9 +117,9 @@ async function savedEntries(bytes: Uint8Array): Promise<Array<[string, string, b
       lower.endsWith('.xml') || lower.endsWith('.rels')
         ? new TextDecoder().decode(data)
         : `bytes ${data.length} ${createHash('sha256').update(data).digest('hex')}`
-    const method = (file as unknown as { _data: { compression: { magic: string } } })._data
-      .compression.magic
-    out.push([path, value, method === '\x08\x00'])
+    // JSZip private field; an empty file is kept as a plain string with no compression object (stored, never deflated)
+    const stored = (file as unknown as { _data: { compression?: { magic: string } } })._data
+    out.push([path, value, data.length > 0 && stored.compression?.magic === '\x08\x00'])
   }
   return out
 }
@@ -601,16 +601,20 @@ export const DECKCORE: CallSpec[] = [
   {
     fn: 'pptxDeckcore.index.setSlideBackgroundImage',
     call: (text, args) =>
-      deckOp(text, args, (opened, at: At) =>
-        withUuid(UUID, () =>
+      deckOp(text, args, (opened, at: At) => {
+        // JSON carries the bytes as a list; the API takes a Uint8Array
+        const given = args.source as { bytes: number[]; ext: string } | { mediaPath: string }
+        const source =
+          'bytes' in given ? { bytes: Uint8Array.from(given.bytes), ext: given.ext } : given
+        return withUuid(UUID, () =>
           setSlideBackgroundImage(
             opened,
             at.slide(args.slide as number),
-            args.source as { bytes: Uint8Array; ext: string } | { mediaPath: string },
+            source,
             args.tile as boolean | undefined,
           ),
-        ),
-      ),
+        )
+      }),
     built: [
       ...[undefined, true, false].flatMap((tile) => [
         deckInput('blank deck', { slide: 0, source: { bytes: PNG, ext: 'png' }, tile }),

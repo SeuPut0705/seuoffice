@@ -17,9 +17,14 @@ export interface ListedDifference extends ObservedDifference {
 const listed = new Map<string, ListedDifference>()
 export const observedDifferences: ObservedDifference[] = []
 let observing = false
+// differences kept per function; a gate whose answers are whole decks would
+// otherwise hold every one of thousands in memory
+let perFunction = Number.POSITIVE_INFINITY
+const kept = new Map<string, number>()
 
-export function observeDifferences(): void {
+export function observeDifferences(limitPerFunction = Number.POSITIVE_INFINITY): void {
   observing = true
+  perFunction = limitPerFunction
 }
 
 export function registerDifferences(entries: ListedDifference[]): void {
@@ -32,7 +37,13 @@ export function registerDifferences(entries: ListedDifference[]): void {
 
 /** Accepts only a ledger input whose two complete answers still match. */
 export function listedDifference(observed: ObservedDifference): string | null {
-  if (observing) observedDifferences.push(observed)
+  if (observing) {
+    const count = kept.get(observed.fn) ?? 0
+    if (count < perFunction) {
+      observedDifferences.push(observed)
+      kept.set(observed.fn, count + 1)
+    }
+  }
   const entry = listed.get(JSON.stringify([observed.fn, observed.text, observed.args]))
   if (!entry) return null
   for (const side of ['typescript', 'rust'] as const) {

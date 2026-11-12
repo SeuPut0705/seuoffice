@@ -56,6 +56,17 @@ const PIC_TEXTS = [
   slideXml(
     '<p:pic><p:nvPicPr><p:cNvPr id="2" name="no blip"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill/><p:spPr/></p:pic>',
   ),
+  // a 3D model: the Choice caches its rendering in am3d:blip, which a picture swap re-points too
+  slideXml(
+    '<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">' +
+      '<mc:Choice Requires="am3d" xmlns:am3d="http://schemas.microsoft.com/office/drawing/2017/model3d">' +
+      '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="2" name="3D"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>' +
+      '<p:xfrm><a:off x="0" y="0"/><a:ext cx="1" cy="1"/></p:xfrm><a:graphic>' +
+      '<a:graphicData uri="http://schemas.microsoft.com/office/drawing/2017/model3d">' +
+      '<am3d:model3d r:embed="rId7"><am3d:raster rName="Office3DEngine" rVer="16.0.8326"><am3d:blip r:embed="rId9"/></am3d:raster></am3d:model3d>' +
+      '</a:graphicData></a:graphic></p:graphicFrame></mc:Choice>' +
+      `<mc:Fallback>${pic(2, BLIP)}</mc:Fallback></mc:AlternateContent>`,
+  ),
 ]
 const SHAPES = slideXml(
   sp(2, XFRM + '<a:prstGeom prst="rect"><a:avLst><a:gd name="adj" fmla="val 1"/></a:avLst></a:prstGeom><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>'),
@@ -97,7 +108,7 @@ const run = (text: string, args: Record<string, unknown>, f: (c: Ctx, x: Args) =
 
 export const DECKSHAPE: CallSpec[] = [
   {
-    fn: 'index.editPictureSrcRect',
+    fn: 'pptxDeckshape.index.editPictureSrcRect',
     call: (t, a) => run(t, a, (c, x) => editPictureSrcRect(c.slide, c.id, x.srcRect ?? null)),
     built: PIC_TEXTS.slice(0, 1).flatMap((t) =>
       [null, { l: 0, t: 0, r: 0, b: 0 }, { l: 1000, t: 0, r: 0, b: 0 }, { l: 1, t: 2, r: 3, b: 4 }].flatMap(
@@ -106,14 +117,14 @@ export const DECKSHAPE: CallSpec[] = [
     ),
   },
   {
-    fn: 'index.setShapePresetGeometry',
+    fn: 'pptxDeckshape.index.setShapePresetGeometry',
     call: (t, a) => run(t, a, (c, x) => setShapePresetGeometry(c.slide, c.id, x.prst)),
     built: ['ellipse', 'roundRect', 'nope', '', 'constructor', '__proto__'].flatMap((prst) =>
       ELEMENTS.map((e) => at(0, e, { prst })),
     ),
   },
   {
-    fn: 'index.setShapeCustomGeometry',
+    fn: 'pptxDeckshape.index.setShapeCustomGeometry',
     call: (t, a) => run(t, a, (c, x) => setShapeCustomGeometry(c.slide, c.id, x.geom)),
     built: [
       { w: 100, h: 50, cmds: [{ op: 'M', pts: [0, 0] }, { op: 'L', pts: [100, 50] }, { op: 'Z', pts: [] }] },
@@ -127,24 +138,24 @@ export const DECKSHAPE: CallSpec[] = [
     ].flatMap((geom) => ELEMENTS.map((e) => at(0, e, { geom }))),
   },
   {
-    fn: 'index.setShapeAdjustValues',
+    fn: 'pptxDeckshape.index.setShapeAdjustValues',
     call: (t, a) => run(t, a, (c, x) => setShapeAdjustValues(c.slide, c.id, x.adjust)),
     built: [{ adj: 12345.6 }, { adj1: 1, adj2: -2.5 }, {}, { 'a b': 1 }, { adj: 1e21 }, { '': 1 }].flatMap(
       (adjust) => ELEMENTS.map((e) => at(0, e, { adjust })),
     ),
   },
   {
-    fn: 'index.setElementTextAnchor',
+    fn: 'pptxDeckshape.index.setElementTextAnchor',
     call: (t, a) => run(t, a, (c, x) => setElementTextAnchor(c.slide, c.id, x.anchor)),
     built: ['top', 'middle', 'bottom'].flatMap((anchor) => ELEMENTS.map((e) => at(0, e, { anchor }))),
   },
   {
-    fn: 'index.autofitGeneratedTextBoxes',
+    fn: 'pptxDeckshape.index.autofitGeneratedTextBoxes',
     call: (t, a) => run(t, a, (c) => autofitGeneratedTextBoxes(c.slide)),
     built: [at(0, 0), at(0, 1, {}, slideXml(sp(2, XFRM, '<a:bodyPr/>', ' txBox="1"'), sp(3, XFRM, '<a:bodyPr></a:bodyPr>', ' txBox="1"')))],
   },
   {
-    fn: 'index.setElementTextBodyProps',
+    fn: 'pptxDeckshape.index.setElementTextBodyProps',
     call: (t, a) => run(t, a, (c, x) => setElementTextBodyProps(c.slide, c.id, x.patch)),
     built: [
       {},
@@ -162,7 +173,7 @@ export const DECKSHAPE: CallSpec[] = [
     ].flatMap((patch) => ELEMENTS.map((e) => at(0, e, { patch }))),
   },
   {
-    fn: 'index.setElementEffects',
+    fn: 'pptxDeckshape.index.setElementEffects',
     call: (t, a) => run(t, a, (c, x) => setElementEffects(c.slide, c.id, x.patch)),
     built: [
       {},
@@ -187,7 +198,7 @@ export const DECKSHAPE: CallSpec[] = [
     ),
   },
   {
-    fn: 'index.setElementFill',
+    fn: 'pptxDeckshape.index.setElementFill',
     call: (t, a) =>
       run(t, a, (c, x) => setElementFill(c.opened, c.slide, c.id, x.fill, x.groupId ? { groupId: c.a.slide(x.slide).elements[x.group]?.id ?? '' } : {})),
     built: [
@@ -206,7 +217,7 @@ export const DECKSHAPE: CallSpec[] = [
     ),
   },
   {
-    fn: 'index.setElementImageFill',
+    fn: 'pptxDeckshape.index.setElementImageFill',
     call: (t, a) =>
       run(t, a, (c, x) =>
         setElementImageFill(
@@ -230,21 +241,21 @@ export const DECKSHAPE: CallSpec[] = [
     ]),
   },
   {
-    fn: 'index.setElementRedaction',
+    fn: 'pptxDeckshape.index.setElementRedaction',
     call: (t, a) => run(t, a, (c, x) => setElementRedaction(c.slide, c.id, x.label ?? null)),
     built: [null, '', '  ', 'secret', ' a<b>"c" ', '\u{1F600}'].flatMap((label) =>
       [0, 1, 99].map((e) => at(0, e, { label }, PIC_TEXTS[0]!)),
     ),
   },
   {
-    fn: 'index.setPictureOpacity',
+    fn: 'pptxDeckshape.index.setPictureOpacity',
     call: (t, a) => run(t, a, (c, x) => setPictureOpacity(c.slide, c.id, x.opacity)),
     built: [0.5, 0, 1, 1.5, -1, 0.9995, 0.3333333].flatMap((opacity) =>
       PIC_TEXTS.flatMap((t) => [0, 99].map((e) => at(0, e, { opacity }, t))),
     ),
   },
   {
-    fn: 'index.replacePictureBytes',
+    fn: 'pptxDeckshape.index.replacePictureBytes',
     call: (t, a) =>
       run(t, a, (c, x) =>
         replacePictureBytes(c.opened, c.slide, c.id, bytes(x.bytes)!, x.ext, x.keep === undefined ? undefined : { keepSrcRect: x.keep }),

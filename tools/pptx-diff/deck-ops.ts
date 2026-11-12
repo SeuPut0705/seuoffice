@@ -94,7 +94,11 @@ function plain(value: unknown): unknown {
   ) as unknown
 }
 
-/** Every element id `<prefix>_<k>` rebased to a counter from 0, and every anchor's range left out. */
+/**
+ * Every element id `<prefix>_<k>` rebased to a counter from 0, and every anchor's range left out.
+ * The ids insert.ts mints (`spnew_<counter>_<clock>`, `picnew_<counter>_<clock>`) carry no uid
+ * counter: their clock is the stopped one of the spec, the same on both sides.
+ */
 function rebase(node: unknown, next: number, ids: Map<string, string>): void {
   if (Array.isArray(node)) {
     for (const item of node) rebase(item, next, ids)
@@ -102,7 +106,7 @@ function rebase(node: unknown, next: number, ids: Map<string, string>): void {
   }
   if (node === null || typeof node !== 'object') return
   const object = node as Record<string, unknown>
-  if ('anchor' in object && typeof object.id === 'string') {
+  if ('anchor' in object && typeof object.id === 'string' && !/^(?:spnew|picnew)_[0-9a-z]+_[0-9a-z]+$/.test(object.id)) {
     const m = /^(.*)_([0-9a-z]+)$/.exec(object.id)
     if (m) {
       const id = `${m[1]}_${(parseInt(m[2]!, 36) - next).toString(36)}`
@@ -138,6 +142,26 @@ async function deckBytes(text: string, args: Record<string, unknown>): Promise<U
 }
 
 /**
+ * What `crypto.randomUUID` answers while an operation runs: patching an element's
+ * bytes mints its creationId, which must be the same on both sides (the Rust side
+ * is DECK_UUID of crates/office-wasm/src/calls/pptx_deck.rs).
+ */
+const DECK_UUID = '0b8f1c2e-4d5a-4e6f-8a7b-9c0d1e2f3a4b'
+
+/** `run` with `crypto.randomUUID` answering `uuid` until its promise settles. */
+async function withUuid<T>(uuid: string, run: () => Promise<T> | T): Promise<T> {
+  const host = globalThis.crypto
+  const own = Object.getOwnPropertyDescriptor(host, 'randomUUID')
+  Object.defineProperty(host, 'randomUUID', { value: () => uuid, configurable: true, writable: true })
+  try {
+    return await run()
+  } finally {
+    if (own) Object.defineProperty(host, 'randomUUID', own)
+    else Reflect.deleteProperty(host, 'randomUUID')
+  }
+}
+
+/**
  * Open the deck of an input, run `op` on it, and answer what both sides
  * compare. What `op` throws is thrown.
  */
@@ -158,7 +182,7 @@ export async function deckOp(
     slide: (index) => opened.deck.slides[index]!,
     element: (slide, element) => opened.deck.slides[slide]?.elements[element]?.id ?? '',
   }
-  const value = await op(opened, at)
+  const value = await withUuid(DECK_UUID, () => op(opened, at))
   const after = opened.archive.entries
   const parts: Array<[string, string | null]> = []
   for (const path of new Set([...before.keys(), ...after.keys()])) {

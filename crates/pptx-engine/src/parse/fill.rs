@@ -2,8 +2,8 @@
 //! (3426-3677).
 
 use jscompat::{
-    JsNum, Radix, math_max, math_min, number_truthy, parse_float, parse_int, slice_utf16,
-    sort_by_number, trim, value_to_string, value_truthy,
+    JsNum, Radix, math_max, math_min, number_truthy, parse_int, slice_utf16, sort_by_number,
+    value_to_string, value_truthy,
 };
 use serde_json::{Map, Value};
 
@@ -13,6 +13,7 @@ use crate::types::{
     ClrChange, Fill, GradientFill, GradientPath, GradientStop, ImageFill, ImageMode, ImageTile,
     Insets, Lum, PatternFill,
 };
+use crate::xml_utils::percent_fraction;
 
 /// `node?.[key]` where `node` is an element: a string or a list has no such
 /// key (the keys read here are never indices or string methods).
@@ -296,8 +297,7 @@ fn parse_grad_fill(grad: Node<'_>, ctx: &ParseContext<'_>) -> Option<Fill> {
     let gs_lst = get(get(grad, "a:gsLst"), "a:gs");
     let mut stops = Vec::new();
     for gs in list(gs_lst) {
-        let pos = parse_int(&value_to_string(get(Some(gs), "@_pos")), Radix::Ten);
-        let pos = (if number_truthy(pos) { pos } else { 0.0 }) / 100000.0;
+        let pos = percent_fraction(get(Some(gs), "@_pos")).unwrap_or(0.0); // 0..100000 -> 0..1
         if let Some(color) = resolve_color_node(Some(gs), ctx).filter(|s| !s.is_empty()) {
             stops.push(GradientStop {
                 pos: JsNum(pos),
@@ -327,20 +327,7 @@ fn parse_grad_fill(grad: Node<'_>, ctx: &ParseContext<'_>) -> Option<Fill> {
             Some("1" | "true")
         );
     let ftr = get(path, "a:fillToRect");
-    // ST_Percentage is 1/1000 % ("50000") or the suffixed form ("50%")
-    let frac = |v: Node<'_>| match v {
-        None | Some(Value::Null) => 0.0,
-        Some(v) => {
-            let s = value_to_string(Some(v));
-            let n = parse_float(&s);
-            let n = if number_truthy(n) { n } else { 0.0 };
-            if trim(&s).ends_with('%') {
-                n / 100.0
-            } else {
-                n / 100000.0
-            }
-        }
-    };
+    let frac = |v: Node<'_>| percent_fraction(v).unwrap_or(0.0);
     let tr = get(grad, "a:tileRect");
     let tile_rect = is_object(tr).then(|| Insets {
         l: JsNum(frac(get(tr, "@_l"))),

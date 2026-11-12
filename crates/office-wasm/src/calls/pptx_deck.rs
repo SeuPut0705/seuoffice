@@ -4,12 +4,16 @@
 //! [`deck_op`] and answers `{ value, deck, parts, paths }`.
 
 use jscompat::{JsMap, atob};
-use pptx_engine::deck::{OpenedPptx, open_archive};
+use pptx_engine::deck::{OpenedPptx, open_archive, with_uuid};
 use pptx_engine::zip::PackageArchive;
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
 use super::{Returned, arg, required};
+
+/// What `crypto.randomUUID` answers while an operation runs: patching an element's
+/// bytes mints its creationId, which must be the same on both sides.
+const DECK_UUID: &str = "0b8f1c2e-4d5a-4e6f-8a7b-9c0d1e2f3a4b";
 
 /// The nesting a returned tree may have before `deck_op` refuses it.
 const MAX_TREE_DEPTH: u32 = 2048;
@@ -81,7 +85,7 @@ pub(super) fn deck_op(
 ) -> Returned {
     let mut opened = open_archive(archive_of(text, args)?)?;
     let before: JsMap<Vec<u8>> = opened.archive.entries().clone();
-    let value = op(&mut opened)?;
+    let value = with_uuid(DECK_UUID, || op(&mut opened))?;
     let after = opened.archive.entries();
     let mut paths: Vec<&str> = before.keys().collect();
     for path in after.keys() {

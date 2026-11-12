@@ -14,8 +14,8 @@ use serde_json::Value;
 
 use crate::color::resolve_color_node;
 use crate::theme::{EaScript, Theme, ea_script_of_lang, resolve_font_ref};
-use crate::types::{EmuRect, TextAlign, Transform};
-use crate::xml_utils::{as_xml_node, decode_numeric_char_refs, xml_array};
+use crate::types::{EaLang, EmuRect, TextAlign, Transform};
+use crate::xml_utils::{as_xml_node, decode_numeric_char_refs, percent_fraction, xml_array};
 
 /// `MAX_AUTO_NUM_START`: the spec (and PowerPoint UI) ceiling for
 /// `<a:buAutoNum startAt>`.
@@ -138,6 +138,7 @@ js_object! {
         pub ea_font_ref: String,
         pub cs_font: String,
         pub ea_script: EaScript,
+        pub ea_lang: EaLang,
         pub align: TextAlign,
         pub bullet: Bullet,
         pub mar_l: JsNum,
@@ -440,10 +441,21 @@ fn align_of(key: &str) -> Option<TextAlign> {
     }
 }
 
-/// `<a:spcPct val="150000"/>` as 150 (%).
+/// `<a:spcPct val="150000"/>` or `val="150%"` as 150 (%).
 fn spc_pct_val(node: Option<&Value>) -> Option<f64> {
-    let v = defined(as_xml_node(as_xml_node(node).get("a:spcPct")).get("@_val"))?;
-    Some(parse_int(&value_to_string(Some(v)), Radix::Ten) / 1000.0)
+    let ratio = percent_fraction(as_xml_node(as_xml_node(node).get("a:spcPct")).get("@_val"))?;
+    Some(ratio * 100.0)
+}
+
+/// `eaScript ?? 'none'`; `han` is never produced by `eaScriptOfLang`.
+pub(crate) fn ea_lang_of(script: Option<EaScript>) -> EaLang {
+    match script {
+        Some(EaScript::Ja) => EaLang::Ja,
+        Some(EaScript::Ko) => EaLang::Ko,
+        Some(EaScript::Sc) => EaLang::Sc,
+        Some(EaScript::Tc) => EaLang::Tc,
+        Some(EaScript::Han) | None => EaLang::None,
+    }
 }
 
 /// `<a:spcPts val="2400"/>` as 24 (pt).
@@ -633,6 +645,9 @@ pub fn parse_def_r_pr_style(
     let ea_script = ea_script_of_lang(def_r_pr.get("@_altLang"))
         .or_else(|| ea_script_of_lang(def_r_pr.get("@_lang")));
     out.ea_script.set_some(ea_script);
+    if defined(def_r_pr.get("@_altLang")).is_some() || defined(def_r_pr.get("@_lang")).is_some() {
+        out.ea_lang.set(ea_lang_of(ea_script));
+    }
     let latin_attr = typeface_attr(def_r_pr.get("a:latin"));
     if let Some(latin) = truthy(resolve_font_ref(latin_attr.as_deref(), theme, ea_script)) {
         out.latin_font.set(latin.to_owned());
@@ -979,6 +994,7 @@ pub fn merge_text_style_chain(
             src.cs_font.set(from.to_owned());
         }
         inherit(&mut out.ea_script, &lvl.ea_script);
+        inherit(&mut out.ea_lang, &lvl.ea_lang);
         if inherit(&mut out.align, &lvl.align) {
             src.align.set(from.to_owned());
         }

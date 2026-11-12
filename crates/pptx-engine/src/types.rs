@@ -332,6 +332,18 @@ pub enum FontScriptHint {
     Tc,
 }
 
+/// `eaLang` of a `TextRun` or level style: the line-breaking language's East
+/// Asian script, `none` for a tag that is not East Asian (en-US).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EaLang {
+    Ja,
+    Ko,
+    Sc,
+    Tc,
+    None,
+}
+
 /// `outline` of a `TextRun`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -387,6 +399,9 @@ js_object! {
         pub font_family: String,
         pub latin_family: String,
         pub font_script_hint: FontScriptHint,
+        pub ea_lang: EaLang,
+        pub lang: String,
+        pub alt_lang: String,
         pub color: ResolvedColor,
         pub color_follows_theme: bool,
         pub color_node_xml: String,

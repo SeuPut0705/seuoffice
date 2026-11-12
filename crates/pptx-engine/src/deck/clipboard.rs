@@ -74,8 +74,10 @@ pub fn copy_element_data(
     let mut parts: JsObject<String> = JsObject::new();
     let mut content_types: JsObject<String> = JsObject::new();
     let mut seen: Vec<String> = Vec::new();
-    for m in js_regex!(r#"\br:(?:embed|link|id)="(rId\d+)""#, "g").find_iter(&xml) {
-        let rid = m.get(1).unwrap_or_default();
+    // Quote-agnostic like the other relationship scanners: a slide written by a
+    // producer that prefers single quotes still names its rIds.
+    for m in js_regex!(r#"\br:(?:embed|link|id)\s*=\s*(["'])(rId\d+)\1"#, "g").find_iter(&xml) {
+        let rid = m.get(2).unwrap_or_default();
         if seen.iter().any(|s| s == rid) {
             continue;
         }

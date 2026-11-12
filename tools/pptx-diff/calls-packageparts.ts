@@ -465,7 +465,7 @@ const CM_TEXTS: string[] = [
   cmLst(cm('99999999999999999999', '99999999999999999999', 'huge'), cm('007', '008', 'zeros')),
   cmLst(cm(0, 1, null), cm(0, 2, ''), cm(0, 3, null, null)),
   cmLst('<p:cm authorId="0" idx="1"/>', cm(0, 2, 'after the self-closed one')),
-  cmLst(cm(0, 1, '&amp;lt; &#38;amp; \u{1F600} \ud55c\uae00 \u00e9')),
+  cmLst(cm(0, 1, '&amp;lt; &amp;amp; \u{1F600} \ud55c\uae00 \u00e9')),
   cmLst(cm(0, 1, 'a<b'), '<p:cm authorId="0" idx="3">no end'),
   cmLst(),
   '',
@@ -908,6 +908,11 @@ export const PACKAGEPARTS: CallSpec[] = [
       ...CD_BY_AUTHORS.flatMap((deck) =>
         CM_TEXTS.map((text) => inp(deck, { path: SLIDE_PATH }, COMMENT1, text)),
       ),
+      // ledger notes-unescape-numeric-entity: `&#38;amp;` is one `&amp;` text; the TypeScript decodes it twice
+      ...[cmLst(cm(0, 1, '&#38;amp; &#38;lt;b&#38;gt;'))].map((text) => ({
+        ...inp(CD_A, { path: SLIDE_PATH }, COMMENT1, text),
+        seed: false as const,
+      })),
       inp(CD_A, { path: SLIDE_PATH }),
       inp(CD_A_NO_REL, { path: SLIDE_PATH }),
       inp(CD_A, { path: 'ppt/slides/slide9.xml' }),

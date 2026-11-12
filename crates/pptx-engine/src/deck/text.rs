@@ -7,7 +7,7 @@ use jscompat::{JsNum, math_max, math_min};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::deck::{edit_table_cell_text, patch_group_child_text, patch_group_child_xml};
-use crate::generate::{patch_element_p_pr, rebuild_tx_body};
+use crate::generate::{hangul_lang, patch_element_p_pr, rebuild_tx_body, tag_hangul_run};
 use crate::placeholder::BulletType;
 use crate::types::{
     PPrDirty, Paragraph, ParagraphBullet, Slide, SlideDeck, SlideElement, TextAlign, TextElement,
@@ -317,6 +317,8 @@ impl Needle {
 struct Replacer {
     needle: Needle,
     replace: Vec<u16>,
+    /// `hangulLang(replace) !== undefined`
+    korean_replace: bool,
     /// `Infinity` or 1
     budget: f64,
     count: usize,
@@ -347,8 +349,9 @@ fn segments_of(p: &Paragraph) -> Vec<Vec<usize>> {
 }
 
 impl Replacer {
-    /// `replaceInRuns`: the new text of each run, `None` when nothing matched.
-    fn replace_in_runs(&mut self, texts: &[&str]) -> Option<Vec<String>> {
+    /// `replaceInRuns`: the new text of each run and which runs a replacement
+    /// landed in (`landed`), `None` when nothing matched.
+    fn replace_in_runs(&mut self, texts: &[&str]) -> Option<(Vec<String>, Vec<bool>)> {
         let mut full: Vec<u16> = Vec::new();
         let mut ends: Vec<usize> = Vec::with_capacity(texts.len());
         for t in texts {
@@ -379,6 +382,7 @@ impl Replacer {
         };
         let mut cursor = 0;
         let mut n = 0;
+        let mut landed = vec![false; texts.len()];
         while self.budget > 0.0 {
             let Some(at) = self.needle.find_at(&full, cursor) else {
                 break;
@@ -386,8 +390,12 @@ impl Replacer {
             n += 1;
             self.budget -= 1.0;
             keep(&mut out, cursor, at);
-            if let Some(dest) = out.get_mut(run_at(at)) {
+            let landing = run_at(at);
+            if let Some(dest) = out.get_mut(landing) {
                 dest.extend_from_slice(&self.replace);
+            }
+            if let Some(flag) = landed.get_mut(landing) {
+                *flag = true;
             }
             cursor = at + self.needle.units.len();
         }
@@ -396,11 +404,12 @@ impl Replacer {
         }
         keep(&mut out, cursor, full.len());
         self.count += n;
-        Some(
+        Some((
             out.into_iter()
                 .map(|units| String::from_utf16_lossy(&units))
                 .collect(),
-        )
+            landed,
+        ))
     }
 
     /// One segment of runs of a paragraph: true when something was replaced.
@@ -417,15 +426,19 @@ impl Replacer {
                 .collect();
             self.replace_in_runs(&texts)
         };
-        let Some(out) = out else {
+        let Some((out, landed)) = out else {
             return false;
         };
         if let Some(runs) = p.runs.as_mut() {
-            for (&i, new_text) in segment.iter().zip(out) {
-                if let Some(r) = runs.get_mut(i)
-                    && r.text.as_deref() != Some(new_text.as_str())
-                {
-                    r.text.set(new_text);
+            for ((&i, new_text), landed) in segment.iter().zip(out).zip(landed) {
+                if let Some(r) = runs.get_mut(i) {
+                    if r.text.as_deref() != Some(new_text.as_str()) {
+                        r.text.set(new_text);
+                    }
+                    // Hangul written into a run with no language of its own gets PowerPoint's ko-KR
+                    if self.korean_replace && landed {
+                        *r = tag_hangul_run(r);
+                    }
                 }
             }
         }
@@ -476,6 +489,7 @@ pub fn replace_all_in_deck(
     let mut replacer = Replacer {
         needle: Needle::new(find, opts.match_case == Some(true)),
         replace: replace.encode_utf16().collect(),
+        korean_replace: hangul_lang(replace).is_some(),
         budget: if opts.first_only == Some(true) {
             1.0
         } else {

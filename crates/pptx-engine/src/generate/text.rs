@@ -13,8 +13,8 @@ use super::{
 use crate::placeholder::BulletType;
 use crate::redaction_xml::{has_redact_ext_in, redact_ext_xml, sync_redact_ext};
 use crate::types::{
-    PPrDirty, PPrExplicit, Paragraph, ParagraphBullet, ParagraphDefaultRunProps, TextAlign,
-    TextAnchor, TextBody, TextElement, TextRun,
+    EaLang, FontScriptHint, PPrDirty, PPrExplicit, Paragraph, ParagraphBullet,
+    ParagraphDefaultRunProps, TextAlign, TextAnchor, TextBody, TextElement, TextRun,
 };
 
 use jscompat::math_round;
@@ -565,6 +565,58 @@ fn attr_re(name: &str) -> &'static JsRegex {
     }
 }
 
+/// Hangul syllables, jamo and compatibility jamo: what the layout wraps by word in a Korean run.
+fn hangul_re() -> &'static JsRegex {
+    js_regex!(r"[\u1100-\u11ff\u3130-\u318f\ua960-\ua97f\uac00-\ud7a3\ud7b0-\ud7ff]")
+}
+
+/// `hangulLang`: the language tag for text written without one: `ko-KR` when it holds Hangul
+/// (alone or mixed with Latin), which is what PowerPoint writes for a Korean user's typing.
+pub fn hangul_lang(text: &str) -> Option<&'static str> {
+    hangul_re().test(text).then_some("ko-KR")
+}
+
+/// The tag `tagHangulRun` would add; `None` where it returns the run itself.
+fn hangul_tag_of(run: &TextRun) -> Option<&'static str> {
+    if run.lang.is_some() || run.alt_lang.is_some() || ts(&run.raw_xml).is_some() {
+        return None;
+    }
+    hangul_lang(run.text.as_deref().unwrap_or_default())
+}
+
+/// `tagHangulRun`: a run as an authoring writer stores it, tagged per `hangulLang` unless it
+/// already carries a language, which is never replaced. Importers do not call this.
+pub fn tag_hangul_run(run: &TextRun) -> TextRun {
+    let mut out = run.clone();
+    if let Some(lang) = hangul_tag_of(run) {
+        out.lang.set(lang.to_owned());
+        out.ea_lang.set(EaLang::Ko);
+        out.font_script_hint.set(FontScriptHint::Ko);
+    }
+    out
+}
+
+/// `tagHangulParagraphs`: `tagHangulRun` over every run; `None` (the same array) when no run
+/// needed a tag.
+pub fn tag_hangul_paragraphs(paragraphs: &[Paragraph]) -> Option<Vec<Paragraph>> {
+    let mut changed = false;
+    let out = paragraphs
+        .iter()
+        .map(|p| {
+            if !runs_of(p).iter().any(|run| hangul_tag_of(run).is_some()) {
+                return p.clone();
+            }
+            changed = true;
+            let mut tagged = p.clone();
+            tagged
+                .runs
+                .set(runs_of(p).iter().map(tag_hangul_run).collect());
+            tagged
+        })
+        .collect();
+    changed.then_some(out)
+}
+
 /// Set a boolean attribute (true→="1", false→explicit ="0" overriding inheritance, undefined→untouched).
 fn set_bool_attr(tag: &str, name: &str, val: Option<bool>) -> String {
     match val {
@@ -595,6 +647,15 @@ fn set_attr(tag: &str, name: &str, value: Option<&str>) -> String {
 fn patch_run_props(run_xml: &str, run: &TextRun) -> Result<String, String> {
     let attr_patch = |rpr_open: &str| -> String {
         let mut tag = rpr_open.to_owned();
+        // A language the model gained (tagHangulRun on text written into an untagged run) is
+        // written; one that is already in the bytes is never replaced
+        if let Some(lang) = run.lang.as_deref()
+            && !js_regex!(r"\slang\s*=").test(&tag)
+            && let Some(rest) = tag.strip_prefix("<a:rPr")
+        {
+            // The value goes in as given, not as a JavaScript replacement string
+            tag = format!("<a:rPr lang=\"{}\"{rest}", escape_xml_attr(lang));
+        }
         tag = set_bool_attr(
             &tag,
             "b",
@@ -1205,6 +1266,13 @@ fn build_r_pr_attrs(run: &TextRun) -> String {
     // Explicit "off" values (b="0", u="none", strike="noStrike", spc="0"…) are overrides of
     // inherited styling, not defaults — dropping them on a rebuild flips the run.
     let mut s = String::new();
+    // The language tag picks the run's line-breaking rules: a rebuild must keep it
+    if let Some(lang) = run.lang.as_deref() {
+        s += &format!(" lang=\"{}\"", escape_xml_attr(lang));
+    }
+    if let Some(alt_lang) = run.alt_lang.as_deref() {
+        s += &format!(" altLang=\"{}\"", escape_xml_attr(alt_lang));
+    }
     if let Some(sz) = *run.font_size
         && !tb(&run.font_size_implicit)
     {

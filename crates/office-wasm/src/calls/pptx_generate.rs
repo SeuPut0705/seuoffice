@@ -6,7 +6,7 @@ use pptx_engine::generate::{
 };
 use pptx_engine::types::{
     ChartElement, ElementType, GroupElement, Insets, PPrDirty, Paragraph, PassthroughElement,
-    PictureElement, SlideElement, TableElement, TextBody, TextElement, Transform,
+    PictureElement, SlideElement, TableElement, TextBody, TextElement, TextRun, Transform,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -110,10 +110,14 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         ))),
         "generate.COORD_MAX" => value(JsNum(generate::COORD_MAX)),
         "generate.isConnectorXml" => value(generate::is_connector_xml(text)),
-        "generate.rebuildTxBody" => value(no_guid(&generate::rebuild_tx_body(
-            &text_element(args)?,
-            text,
-        ))),
+        "generate.rebuildTxBody" => {
+            // TypeScript reads `el.text!.paragraphs`: a missing model throws.
+            required::<TextBody>(args, "text")?;
+            value(no_guid(&generate::rebuild_tx_body(
+                &text_element(args)?,
+                text,
+            )))
+        }
         "generate.generateParagraphXml" => {
             value(no_guid(&generate::generate_paragraph_xml(&required::<
                 Paragraph,
@@ -123,7 +127,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         }
         "generate.alternateContentBranches" => {
             let branches = generate::alternate_content_branches(text)?;
-            optional(branches.map(|list| {
+            value(branches.map(|list| {
                 list.into_iter()
                     .map(|b| {
                         let start = utf16_at(text, b.start);
@@ -189,7 +193,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             ))
         }
         "generate.readSlideAdvanceTimeXml" => {
-            optional(generate::read_slide_advance_time_xml(text).map(JsNum))
+            value(generate::read_slide_advance_time_xml(text).map(JsNum))
         }
         "generate.patchSlideHiddenXml" => value(generate::patch_slide_hidden_xml(
             text,
@@ -207,6 +211,15 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let kind = required::<String>(args, "type")?;
             let el = element_of(&kind, required::<Transform>(args, "transform")?)?;
             value(generate::patch_element_xfrm(&el, text))
+        }
+        "generate.hangulLang" => optional(generate::hangul_lang(text)),
+        "generate.tagHangulRun" => {
+            let run: TextRun = required(args, "run")?;
+            value(generate::tag_hangul_run(&run))
+        }
+        "generate.tagHangulParagraphs" => {
+            let paragraphs: Vec<Paragraph> = required(args, "paragraphs")?;
+            value(generate::tag_hangul_paragraphs(&paragraphs))
         }
         "generate.patchBodyPrAutofit" => {
             let reduction: Option<JsNum> = arg(args, "lnSpcReduction")?;

@@ -3,7 +3,7 @@
 //! opened by `deck_op`, as tools/pptx-diff/calls-insert.ts does; `args.uuid`
 //! is what `crypto.randomUUID()` gives and `args.now` what `Date.now()` gives.
 
-use jscompat::JsNum;
+use jscompat::{JsNum, js_regex};
 use pptx_engine::background_promote::{is_background_like_element, promote_slide_background};
 use pptx_engine::deck::OpenedPptx;
 use pptx_engine::headerfooter::{HeaderFooterOptions, apply_header_footer, read_header_footer};
@@ -50,6 +50,22 @@ fn picture_opts(args: &Value, key: &str) -> Result<NewPictureOptions, String> {
 
 #[derive(Deserialize)]
 struct Bytes(Vec<u8>);
+
+/// `<a:fld>` takes a random GUID (generate.ts `fieldGuid`): both sides print it as one fixed text.
+fn no_field_guid(node: &mut Value) {
+    match node {
+        Value::String(text) => {
+            *text = js_regex!(
+                r#"(<a:fld id=")\{[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}\}""#,
+                "g"
+            )
+            .replace_all(text, |m| format!("{}{{G}}\"", m.get(1).unwrap_or_default()));
+        }
+        Value::Array(items) => items.iter_mut().for_each(no_field_guid),
+        Value::Object(object) => object.values_mut().for_each(no_field_guid),
+        _ => {}
+    }
+}
 
 pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
     match function {
@@ -133,16 +149,22 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
                 .collect();
             to_value(flags)
         }),
-        "headerfooter.applyHeaderFooter" => deck_op(text, args, |opened| {
-            let opts: HeaderFooterOptions = required(args, "opts")?;
-            let indexes: Option<Vec<f64>> = arg(args, "indexes")?;
-            to_value(apply_header_footer(
-                opened,
-                &opts,
-                indexes.as_deref(),
-                now(args)?,
-            )?)
-        }),
+        "headerfooter.applyHeaderFooter" => {
+            let answer = deck_op(text, args, |opened| {
+                let opts: HeaderFooterOptions = required(args, "opts")?;
+                let indexes: Option<Vec<f64>> = arg(args, "indexes")?;
+                to_value(apply_header_footer(
+                    opened,
+                    &opts,
+                    indexes.as_deref(),
+                    now(args)?,
+                )?)
+            })?;
+            Ok(answer.map(|mut answer| {
+                no_field_guid(&mut answer);
+                answer
+            }))
+        }
         "headerfooter.readHeaderFooter" => deck_op(text, args, |opened| {
             to_value(read_header_footer(slide_of(opened, 0)?))
         }),

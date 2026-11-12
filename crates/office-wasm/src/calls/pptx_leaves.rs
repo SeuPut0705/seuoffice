@@ -16,7 +16,7 @@ use pptx_engine::xml_utils::{
 use serde::Serialize;
 use serde_json::Value;
 
-use super::{Returned, arg, required, value};
+use super::{Returned, arg, optional, required, value};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -61,6 +61,10 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         "xml-utils.decodeNumericCharRefs" => value(decode_numeric_char_refs(text)),
         "xml-utils.escapeXmlText" => value(escape_xml_text(text)),
         "xml-utils.escapeXmlAttr" => value(escape_xml_attr(text)),
+        "xml-utils.percentFraction" => {
+            let raw: Option<serde_json::Value> = arg(args, "raw")?;
+            optional(pptx_engine::xml_utils::percent_fraction(raw.as_ref()).map(JsNum))
+        }
         "xml-utils.maxRelationshipIdNumber" => value(JsNum(max_relationship_id_number(text))),
         "xml-utils.hasContentTypeOverride" => value(has_content_type_override(
             text,
