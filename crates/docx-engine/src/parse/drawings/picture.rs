@@ -4,18 +4,20 @@
 
 use jscompat::{
     JsMap, JsNum, JsRegex, Radix, RegexError, RegexLimit, Slot, TryJsRegex, js_object, js_regex,
-    math_round, number_to_string, parse_float, parse_int, to_number,
+    math_max, math_round, number_to_string, parse_float, parse_int, to_number,
 };
 use ooxml_xml::XNode;
 use pptx_engine::custgeom::parse_cust_geom;
 use serde::Serialize;
 
 use super::{EMU_PER_PT, EMU_PER_PX, EMU_PER_TWIP};
-use crate::drawing_geometry::anchor::{IDENTITY_CTM, compose_group_ctm};
+use crate::drawing_geometry::anchor::{IDENTITY_CTM, MIN_WRAP_SLIVER_EMU, compose_group_ctm};
 use crate::model::{
     Block, HfImage, HfImagePosH, HfImagePosHRel, HfImagePosV, HfImagePosVRel, HfTextBox,
-    HfTextBoxVAlign, RunImageBorder, RunImageLayersItem, SectionSettings, TextboxParaDisplay,
+    HfTextBoxVAlign, ImageWrap, RunImageBorder, RunImageLayersItem, SectionSettings,
+    TextboxParaDisplay,
 };
+use crate::parse::text::FloatTableAhead;
 use crate::props::collect_nodes;
 use crate::vml::shape::encode_uri_component;
 use crate::vml::{anchor_rel_h, anchor_rel_v};
@@ -52,6 +54,130 @@ pub fn aligned_picture_x_emu(meta: &Block, xml: &str, sect: &SectionSettings) ->
         "right" | "outside" => math_round(frame_x + frame_w - pic_w),
         _ => frame_x,
     })
+}
+
+/// What `pictureColumnGeom` returns: the column-relative X extent (EMU) of a
+/// side-wrapped anchored picture, and its text clearance.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PictureColumnGeom {
+    pub x: JsNum,
+    pub right: JsNum,
+    pub dist_l: JsNum,
+    pub dist_r: JsNum,
+    #[serde(rename = "colWEmu")]
+    pub col_w_emu: JsNum,
+}
+
+/// `pictureColumnGeom`: the column-relative X extent (EMU) of a side-wrapped
+/// anchored picture in a single-column section.
+pub fn picture_column_geom(
+    meta: &Block,
+    xml: &str,
+    sect: Option<&SectionSettings>,
+) -> Option<PictureColumnGeom> {
+    let sect = sect?;
+    if sect.columns.0 > 1.0 {
+        return None;
+    }
+    if !matches!(
+        *meta.image_wrap,
+        Some(
+            ImageWrap::SquareLeft
+                | ImageWrap::SquareRight
+                | ImageWrap::TightLeft
+                | ImageWrap::TightRight
+                | ImageWrap::ThroughLeft
+                | ImageWrap::ThroughRight
+        )
+    ) {
+        return None;
+    }
+    let width = meta.image_width_px.map_or(0.0, |width| width.0);
+    if width == 0.0 || width.is_nan() {
+        return None;
+    }
+    let col_w_emu = (sect.page_width.0 - sect.margin_left.0 - sect.margin_right.0) * EMU_PER_TWIP;
+    let from_page = js_regex!(r#"<wp:positionH[^>]*relativeFrom="page""#).test(xml);
+    let x = match *meta.image_offset_x_emu {
+        Some(offset) => {
+            offset.0
+                - if from_page {
+                    sect.margin_left.0 * EMU_PER_TWIP
+                } else {
+                    0.0
+                }
+        }
+        None => aligned_picture_x_emu(meta, xml, sect)?,
+    };
+    // a quarter-turned picture wraps around its turned bounding box (Word turns
+    // the extent about its centre), not the wp:extent
+    let height = meta.image_height_px.map_or(0.0, |height| height.0);
+    let turned = height != 0.0
+        && !height.is_nan()
+        && meta.image_rot_deg.map_or(0.0, |rot| rot.0) % 180.0 == 90.0;
+    let bbox_w = if turned { height } else { width };
+    let inset = if turned {
+        ((width - height) / 2.0) * EMU_PER_PX
+    } else {
+        0.0
+    };
+    Some(PictureColumnGeom {
+        x: JsNum(x + inset),
+        right: JsNum(x + inset + bbox_w * EMU_PER_PX),
+        dist_l: JsNum(meta.image_wrap_dist_left_emu.map_or(0.0, |dist| dist.0)),
+        dist_r: JsNum(meta.image_wrap_dist_right_emu.map_or(0.0, |dist| dist.0)),
+        col_w_emu: JsNum(col_w_emu),
+    })
+}
+
+/// `pictureBesideFloatTable`: a side-wrapped picture sharing its anchor
+/// paragraph's column with a floating table, when the widest remaining gap is
+/// a sliver no text fits beside them, so Word resumes the text below both.
+pub fn picture_beside_float_table(
+    meta: &Block,
+    xml: &str,
+    table: &FloatTableAhead,
+    sect: Option<&SectionSettings>,
+) -> bool {
+    let Some(geo) = picture_column_geom(meta, xml, sect) else {
+        return false;
+    };
+    let picture = [geo.x.0 - geo.dist_l.0, geo.right.0 + geo.dist_r.0];
+    let tbl = [
+        table.left_twips.0 * EMU_PER_TWIP,
+        table.right_twips.0 * EMU_PER_TWIP,
+    ];
+    // `.sort((a, b) => a[0] - b[0])`: a NaN difference leaves the order
+    let spans = if tbl[0] - picture[0] > 0.0 {
+        [picture, tbl]
+    } else {
+        [tbl, picture]
+    };
+    let mut gap = 0.0;
+    let mut cursor = 0.0;
+    for [a, b] in spans {
+        gap = math_max(gap, a - cursor);
+        cursor = math_max(cursor, b);
+    }
+    math_max(gap, geo.col_w_emu.0 - cursor) < MIN_WRAP_SLIVER_EMU
+}
+
+/// `pictureOverhangsColumn`: a picture reaching past a column edge with no
+/// text room left beside it (cover art pinned to the paper); a CSS float
+/// would cap it at the column, so it takes the band route and keeps its
+/// extent.
+pub fn picture_overhangs_column(meta: &Block, xml: &str, sect: Option<&SectionSettings>) -> bool {
+    let Some(geo) = picture_column_geom(meta, xml, sect) else {
+        return false;
+    };
+    if geo.x.0 >= 0.0 && geo.right.0 <= geo.col_w_emu.0 {
+        return false;
+    }
+    math_max(
+        geo.x.0 - geo.dist_l.0,
+        geo.col_w_emu.0 - geo.right.0 - geo.dist_r.0,
+    ) < MIN_WRAP_SLIVER_EMU
 }
 
 /// `txbxParaVisible`: a paragraph the box shows, text runs or a table row.

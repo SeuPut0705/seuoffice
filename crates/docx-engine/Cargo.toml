@@ -9,6 +9,7 @@ publish.workspace = true
 [dependencies]
 encoding_rs.workspace = true
 jscompat.workspace = true
+omml.workspace = true
 ooxml-pkg.workspace = true
 ooxml-xml.workspace = true
 # parseCustGeom of the slides engine, which parse.ts imports

@@ -15,6 +15,8 @@ pub mod font_table;
 pub mod generate;
 pub mod image_kinds;
 pub mod ink;
+pub mod inline_opaque;
+pub mod lazy_media;
 pub mod list_markers;
 pub mod model;
 pub mod notes;

@@ -46,6 +46,10 @@ enum Command {
     NormalizeOoxml,
     /// Blob 0: one model value as JSON. Reply blob 0: typed value serialized again.
     ModelRoundTrip { type_name: String },
+    /// Blob 0: a docx. Reply blob 0: the `ParsedDocFull` `parseDocx` returns for
+    /// it, as the model comparison's JSON (a Map as its entries, bytes as
+    /// `{ "$bytes" }`), read with no media converter installed.
+    ParseDocx,
 }
 
 #[derive(Deserialize)]
@@ -338,6 +342,21 @@ fn respond(input: &[u8]) -> Vec<u8> {
                         Err(error) => json(&Reply::failure("model_refused", error)),
                     }
                 }
+                (Command::ParseDocx, Some(docx)) => {
+                    match docx_engine::parse::parse_docx_full(
+                        docx,
+                        &docx_engine::parse::drawings::host::NoHost,
+                    )
+                    .and_then(|model| {
+                        serde_json::to_string(&model).map_err(|error| error.to_string())
+                    }) {
+                        Ok(text) => {
+                            reply_blobs.push(text.into_bytes());
+                            json(&Reply::ModelRoundTrip { model: true })
+                        }
+                        Err(error) => json(&Reply::failure("parse_refused", error)),
+                    }
+                }
                 (Command::ScanBody, Some(xml)) => scan(xml),
                 (Command::ZipEntries, Some(container)) => zip_entries(container, &mut reply_blobs),
                 (Command::PptxPackage, Some(container)) => {
@@ -351,6 +370,7 @@ fn respond(input: &[u8]) -> Vec<u8> {
                     | Command::ZipEntries
                     | Command::Package
                     | Command::ModelRoundTrip { .. }
+                    | Command::ParseDocx
                     | Command::PptxPackage,
                     None,
                 ) => json(&Reply::failure("invalid_request", "blob 0 is missing")),

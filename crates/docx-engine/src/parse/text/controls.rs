@@ -138,3 +138,18 @@ pub fn cross_paragraph_zotero_fields(
     }
     result
 }
+
+/// `attachInlineContentControls`: attach the inline controls of a paragraph block, when it has any.
+pub fn attach_inline_content_controls(
+    block: &mut crate::model::Block,
+    xml: &str,
+) -> Result<(), RegexLimit> {
+    if block.inline_content_controls.is_some() || !js_regex!(r"^<w:p[\s/>]").test(xml) {
+        return Ok(());
+    }
+    let inline = inline_content_controls_of(xml)?;
+    if !inline.is_empty() {
+        block.inline_content_controls.set(inline);
+    }
+    Ok(())
+}

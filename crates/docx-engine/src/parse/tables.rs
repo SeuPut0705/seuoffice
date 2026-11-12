@@ -1,6 +1,12 @@
 //! Tables and headers and footers.
 
+pub mod extract;
 pub mod hf;
+pub mod hf_fields;
+pub mod hf_images;
+pub mod hf_paras;
+pub mod hf_part;
+pub mod hf_root;
 
 use jscompat::{JsNum, Radix, Slot, js_regex, math_max, parse_int, to_int32, to_number};
 use ooxml_xml::XNode;

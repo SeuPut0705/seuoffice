@@ -1,8 +1,13 @@
 //! Drawings, VML, media and the settings parts.
 
+pub mod diagram;
+pub mod hf_textbox;
+pub mod host;
+pub mod image;
 pub mod media;
 pub mod picture;
 pub mod settings;
+pub mod textbox;
 pub mod vml;
 
 /// `EMU_PER_TWIP`

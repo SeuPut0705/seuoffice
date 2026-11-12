@@ -94,6 +94,69 @@ pub fn parse_notes_xml(xml: &str, kind: NoteKind) -> Vec<NoteInfo> {
         .collect()
 }
 
+/// `NoteParagraph`: one note paragraph read through the document's run
+/// extraction and property resolver.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NoteParagraph {
+    /// display runs, the self-reference mark run excluded
+    pub runs: Vec<crate::model::NoteRun>,
+    /// w:pStyle of the paragraph
+    pub style_id: Option<String>,
+    /// before / after / line resolved through the style chain and docDefaults
+    pub spacing: crate::model::NoteInfoSpacing,
+}
+
+/// `parseNotesXml(xml, kind, read)` with a paragraph reader: the notes carry
+/// `richParas` and `spacing` as the model holds them. `Err` where the reader does.
+pub fn parse_notes_xml_with(
+    xml: &str,
+    kind: NoteKind,
+    read: &mut dyn FnMut(&str) -> Result<NoteParagraph, String>,
+) -> Result<Vec<crate::model::NoteInfo>, String> {
+    let mut out = Vec::new();
+    for entry in note_entries_of(xml, kind) {
+        let mut paras = Vec::new();
+        for p_xml in note_paragraphs_of(entry.xml) {
+            paras.push(read(p_xml)?);
+        }
+        let first = paras.first();
+        let mut rich_paras: Vec<Vec<crate::model::NoteRun>> =
+            paras.iter().map(|para| para.runs.clone()).collect();
+        // the first paragraph opens with the self-reference mark and a spacer; a
+        // spacer that was its own run empties out and is dropped entirely
+        if let Some(run) = rich_paras.first_mut().and_then(|runs| runs.first_mut()) {
+            run.text = trim_start(&run.text).to_owned();
+        }
+        if rich_paras
+            .first()
+            .and_then(|runs| runs.first())
+            .is_some_and(|run| run.text.is_empty())
+        {
+            rich_paras[0].remove(0);
+        }
+        let style_id = match first {
+            Some(first) => first.style_id.clone(),
+            None => js_regex!(r#"<w:pStyle w:val="([^"]+)""#)
+                .exec(entry.xml)
+                .and_then(|found| found.get(1))
+                .map(str::to_owned),
+        };
+        out.push(crate::model::NoteInfo {
+            id: entry.id.to_owned(),
+            text: entry.text,
+            rich_paras: first.is_some().then_some(rich_paras),
+            style_id: truthy(style_id.as_deref()).map(str::to_owned),
+            zotero_field: js_regex!(r"ADDIN\s+(?:ZOTERO_|CSL_)")
+                .test(entry.xml)
+                .then_some(crate::model::True),
+            spacing: first.map(|first| first.spacing.clone()),
+            no_ref_mark: (!has_note_ref_mark(entry.xml)).then_some(crate::model::True),
+            revisions_resolved: None,
+        });
+    }
+    Ok(out)
+}
+
 /// The entry's paragraph slices in order (self-closing form first: the
 /// open-to-close alternative would swallow it).
 fn note_paragraphs_of(entry_xml: &str) -> impl Iterator<Item = &str> {

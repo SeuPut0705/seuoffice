@@ -107,6 +107,7 @@ dependencies = [
  "icu_collator",
  "icu_locale_core",
  "jscompat",
+ "omml",
  "ooxml-pkg",
  "ooxml-xml",
  "pptx-engine",
