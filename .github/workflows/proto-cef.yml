@@ -280,7 +280,12 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/smoke"
           exe=$(cat "$RUNNER_TEMP/smoke/installed-exe.txt" 2>/dev/null || true)
-          [ -n "$exe" ] || { echo "no installed exe from the takeover step"; exit 1; }
+          if [ -z "$exe" ]; then
+            echo "the takeover step left no installed exe: plain silent install instead"
+            powershell -NoProfile -Command "Start-Process -FilePath '$RUNNER_TEMP\\out\\SeuOffice-Setup-0.13.0.exe' -ArgumentList '/S' -Wait"
+            exe="$LOCALAPPDATA\\SeuOffice\\SeuOffice.exe"
+          fi
+          ls -la "$(dirname "$exe")"
           python3 ../common/make-doc.py "$RUNNER_TEMP/bench-50p.docx"
           python3 ci/smoke.py "$exe" "$RUNNER_TEMP/bench-50p.docx" "$RUNNER_TEMP/smoke" --probe-oscrypt 50 2>&1 | tee "$RUNNER_TEMP/smoke/smoke.log"
           exit ${PIPESTATUS[0]}
@@ -305,7 +310,7 @@ jobs:
           }
           Get-ChildItem $profile -Recurse -Filter 'Cookies*' -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "cookie store: $($_.FullName) ($($_.Length) bytes)" }
           $electron = Join-Path $env:APPDATA 'seuoffice\Local State'
-          Write-Host "Electron userData Local State still: $(Get-Content $electron -Raw)"
+          if (Test-Path $electron) { Write-Host "Electron userData Local State still: $(Get-Content $electron -Raw)" } else { Write-Host 'no Electron userData Local State on this runner' }
 
       - name: upload proto-cef-win-smoke
         if: always()

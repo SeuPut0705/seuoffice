@@ -46,8 +46,12 @@ $electron = Join-Path $env:RUNNER_TEMP 'SeuOffice-Setup-0.12.37.exe'
 gh release download v0.12.37 -R SeuPut0705/seuoffice -p 'SeuOffice-Setup-0.12.37.exe' -D $env:RUNNER_TEMP --clobber
 if ($LASTEXITCODE -ne 0) { throw 'cannot download the Electron installer' }
 $t = Get-Date
-Start-Process -FilePath $electron -ArgumentList '/S', '/currentuser' -Wait
-Write-Host ("electron-builder installer took {0:n0}s" -f ((Get-Date) - $t).TotalSeconds)
+$ep = Start-Process -FilePath $electron -ArgumentList '/S', '/currentuser' -PassThru -Wait
+Write-Host ("electron-builder installer exit code {0}, {1:n0}s" -f $ep.ExitCode, ((Get-Date) - $t).TotalSeconds)
+Write-Host "per-user dir present: $(Test-Path $defaultDir); Program Files dir present: $(Test-Path 'C:\Program Files\SeuOffice')"
+foreach ($root in @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall')) {
+  Get-ChildItem $root -ErrorAction SilentlyContinue | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like '*SeuOffice*' } | ForEach-Object { Write-Host "uninstall key: $($_.Name)" }
+}
 $oldKey = Get-ChildItem $uninstallRoot | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -eq 'SeuOffice' } | Select-Object -First 1
 if (-not $oldKey) { throw 'the Electron installer left no uninstall key with DisplayName SeuOffice' }
 $oldProps = Get-ItemProperty $oldKey.PSPath
