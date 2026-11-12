@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { HiddenEntrySaveError, parseDocx, saveDocx, type SaveBlock } from '../src'
+import {
+  editedCommentModelText,
+  HiddenEntrySaveError,
+  parseDocx,
+  saveDocx,
+  type SaveBlock,
+} from '../src'
 import { buildDocx } from './helpers/build-docx'
 import { OWN_REDACT_NS, PLACEHOLDER, SECRET } from './helpers/hidden-stories'
 
@@ -121,5 +127,42 @@ describe('an edit that cannot be patched into a marked comment', () => {
         comments: [edited, { id: '2', author: 'Lee', text: 'reply', parentId: '1' }],
       }),
     ).rejects.toThrow(HiddenEntrySaveError)
+  })
+})
+
+describe('an edit across a hidden run and its neighbours', () => {
+  it.each([false, true])(
+    'is refused on save rather than move hidden words into a plain run (CDATA: %s)',
+    async (cdata) => {
+      const JSZip = (await import('jszip')).default
+      const zip = await JSZip.loadAsync(await commentedDocx('w:id="1" w:author="K"'))
+      const xml = await zip.file('word/comments.xml')!.async('string')
+      if (cdata) {
+        zip.file(
+          'word/comments.xml',
+          xml.replace(`<w:t>${SECRET}</w:t>`, `<w:t><![CDATA[${SECRET}]]></w:t>`),
+        )
+      }
+      const doc = await parseDocx(await zip.generateAsync({ type: 'uint8array' }))
+      const comment = doc.comments[0]!
+      // what the model reads of the edit before any save
+      expect(editedCommentModelText(comment.markedXml!, `Call: ${SECRET} thanks`)).toBe(
+        '{{private}}',
+      )
+      const blocks = doc.blocks
+        .filter((block) => !block.hidden)
+        .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+      await expect(
+        saveDocx(doc, blocks, { comments: [{ ...comment, text: `Call: ${SECRET} thanks` }] }),
+      ).rejects.toThrow(HiddenEntrySaveError)
+    },
+  )
+
+  it('an edit inside the plain words keeps the hidden run as it was', async () => {
+    const doc = await parseDocx(await commentedDocx('w:id="1" w:author="K"'))
+    const comment = doc.comments[0]!
+    expect(editedCommentModelText(comment.markedXml!, `Call: ${SECRET}`)).toBe(
+      `Call: ${PLACEHOLDER}`,
+    )
   })
 })

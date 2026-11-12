@@ -88,3 +88,16 @@ describe('an edit that cannot be patched into a marked note', () => {
     ).rejects.toThrow(HiddenEntrySaveError)
   })
 })
+
+describe('a note edit across a hidden run and its neighbours', () => {
+  it('is refused on save rather than move hidden words into a plain run', async () => {
+    const doc = await parseDocx(await notedDocx('w:id="1"'))
+    const blocks = doc.blocks
+      .filter((block) => !block.hidden)
+      .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+    const { richParas: _rich, ...note } = doc.footnotes[0]!
+    await expect(
+      saveDocx(doc, blocks, { footnotes: [{ ...note, text: `Read: ${SECRET} more` }] }),
+    ).rejects.toThrow(HiddenEntrySaveError)
+  })
+})
