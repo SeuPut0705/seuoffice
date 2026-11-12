@@ -173,6 +173,13 @@ import {
 } from './heading-outline'
 import { printPdf } from './print'
 import { readFileBytes } from './file-bytes'
+import {
+  NO_WRITTEN_STEPS,
+  readWrittenSnapshot,
+  recordWritten,
+  stepWrittenFile,
+  type WrittenSteps,
+} from './written-history'
 import { mayChangeProtection } from './protection-gate'
 import { PasswordDialog } from './PasswordDialog'
 import { PropertiesDialog } from './PropertiesDialog'
@@ -555,18 +562,6 @@ type MarkupMenu =
       y: number
     }
   | { kind: 'saved'; annot: SavedMarkupAnnot; x: number; y: number }
-
-/** The file's bytes before and after a change written to it at once */
-interface WrittenStep {
-  before: ArrayBuffer
-  after: ArrayBuffer
-}
-interface WrittenSteps {
-  undo: WrittenStep[]
-  redo: WrittenStep[]
-}
-/** Each step holds the whole file twice: a long history of them would hold that much memory */
-const MAX_WRITTEN_STEPS = 10
 
 export default function App() {
   const { lang, t } = useI18n()
@@ -1371,7 +1366,7 @@ export default function App() {
   const [redoStack, setRedoStack] = useState<EditSnapshot[]>([])
   /** The file around each change written to it at once (Replace pages, Page size, Crop, Insert
       PDF): Undo with no pending edit left writes it back as it was, Redo as the change left it */
-  const writtenRef = useRef<WrittenSteps>({ undo: [], redo: [] })
+  const writtenRef = useRef<WrittenSteps>(NO_WRITTEN_STEPS)
   /** Their counts, for the Undo and Redo buttons */
   const [written, setWrittenCounts] = useState({ undo: 0, redo: 0 })
   const setWritten = (steps: WrittenSteps) => {
@@ -7780,39 +7775,34 @@ export default function App() {
     else if ('canceled' in result) return { ok: true, canceled: true, flushed }
     return result as Exclude<R, { canceled: true }>
   }
-  /** Reloads the file a change just wrote, and keeps the file from *before* it as an Undo step */
-  const reloadWritten = async (before: ArrayBuffer): Promise<number> => {
-    const kept = writtenRef.current.undo
+  /** Reloads the file a change just wrote, and keeps the file from *before* it as an Undo step
+      (null: too large to keep, which ends the steps before it too) */
+  const reloadWritten = async (before: Uint8Array | null): Promise<number> => {
+    // the reload below empties the steps
+    const kept = writtenRef.current
     // the stored AI results of the kept pages follow the rewritten file before it is read again
     await aiReadRef.current?.afterPageOperation().catch(() => null)
     const pageCount = await loadDoc(filePath, doc)
-    const after = await window.pdfApi.readFile(filePath)
-    setWritten({ undo: [...kept.slice(-(MAX_WRITTEN_STEPS - 1)), { before, after }], redo: [] })
+    setWritten(recordWritten(kept, before))
     return pageCount
   }
 
   /** Undo or Redo of a change written at once, once no pending edit is left; false when there is none */
   const stepWritten = (direction: 'undo' | 'redo'): boolean => {
-    const { undo: undoable, redo: redoable } = writtenRef.current
-    const steps = direction === 'undo' ? undoable : redoable
-    const step = steps[steps.length - 1]
+    const steps = writtenRef.current
+    const step = steps[direction][steps[direction].length - 1]
     if (!step || dirty || writtenStepBusyRef.current) return false
     writtenStepBusyRef.current = true
     void (async () => {
       try {
-        const bytes = direction === 'undo' ? step.before : step.after
-        const result = await window.pdfApi.restoreFile({ path: filePath, bytes })
+        const result = await stepWrittenFile(window.pdfApi, filePath, steps, direction)
         if (!result.ok) {
           opFailed(result.error)
           return
         }
         await aiReadRef.current?.afterPageOperation().catch(() => null)
         await loadDoc(filePath, doc)
-        setWritten(
-          direction === 'undo'
-            ? { undo: undoable.slice(0, -1), redo: [...redoable, step] }
-            : { undo: [...undoable, step], redo: redoable.slice(0, -1) },
-        )
+        setWritten(result.steps)
       } finally {
         writtenStepBusyRef.current = false
       }
@@ -7823,16 +7813,13 @@ export default function App() {
   const rewriteInPlace = async (
     run: () => Promise<{ ok: true } | { ok: true; canceled: true } | { ok: false; error: string }>,
   ): Promise<FileOpResult> => {
-    const held: { before?: ArrayBuffer } = {}
+    const held: { before: Uint8Array | null } = { before: null }
     const result = await runFileOp(async () => {
-      held.before = await window.pdfApi.readFile(filePath)
+      held.before = await readWrittenSnapshot(window.pdfApi, filePath)
       return run()
     })
     if (!result.ok || 'canceled' in result) return result
-    if (held.before) return { ok: true, pageCount: await reloadWritten(held.before) }
-    // the stored AI results of the kept pages follow the rewritten file before it is read again
-    await aiReadRef.current?.afterPageOperation().catch(() => null)
-    return { ok: true, pageCount: await loadDoc(filePath, doc) }
+    return { ok: true, pageCount: await reloadWritten(held.before) }
   }
   const baseName = () => fileName.replace(/\.pdf$/i, '')
 
@@ -7917,7 +7904,7 @@ export default function App() {
     // the flush bakes the visible order into the file, so the anchor becomes its visible position
     const afterPageIndex = visListOf(orderRef.current).indexOf(afterOrigIdx)
     return flushThen(async () => {
-      const before = await window.pdfApi.readFile(filePath)
+      const before = await readWrittenSnapshot(window.pdfApi, filePath)
       const result = await window.pdfApi.insertPdf({ path: filePath, afterPageIndex })
       if (!result.ok) {
         opFailed(result.error)

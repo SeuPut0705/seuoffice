@@ -19,18 +19,31 @@ export async function readFileBytes(
   path: string,
   chunkBytes = PDF_READ_CHUNK_BYTES,
 ): Promise<Uint8Array> {
+  // nothing is larger than no limit, so this read always has its bytes
+  return (await readFileBytesWithin(api, path, Infinity, chunkBytes)) as Uint8Array
+}
+
+/** The same read for a caller that only wants a file of at most `maxBytes`:
+ * null as soon as a slice reports a larger one, so the rest is never fetched. */
+export async function readFileBytesWithin(
+  api: PdfFileChunkApi,
+  path: string,
+  maxBytes: number,
+  chunkBytes = PDF_READ_CHUNK_BYTES,
+): Promise<Uint8Array | null> {
   let offset = 0
   let fileSize = Infinity
   let out: Uint8Array | null = null
   do {
     const end = Math.min(offset + chunkBytes, fileSize)
     const { data, fileSize: size } = await api.readFileChunk(path, offset, end)
+    if (size > maxBytes) return null
     if (data.length === 0) break
     if (out === null) {
       // the first slice reports the whole size: allocate the result once and
       // copy every slice straight into it (three copies of the file never
       // exist at the same time - the point of the chunked route)
-      if (!Number.isFinite(size) || size < 0) return data.slice()
+      if (!Number.isFinite(size) || size < 0) return data.length > maxBytes ? null : data.slice()
       out = new Uint8Array(size)
     } else if (out.length !== size) {
       // the size changed between slices (should not happen): grow once
