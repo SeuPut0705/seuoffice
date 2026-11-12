@@ -107,7 +107,7 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
             )?)
         },
         "pictureColumnGeom" => |text, args| {
-            optional(picture::picture_column_geom(
+            value(picture::picture_column_geom(
                 &meta_of(args)?,
                 text,
                 section_arg(args)?.as_ref(),
@@ -142,17 +142,17 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
         "blipEffectsOf" => |text, _| optional(image::blip_effects_of(text)?),
         "extractDiagramText" => |text, args| {
             with_build_ctx(args, |ctx| {
-                optional(diagram::extract_diagram_text(text, ctx)?)
+                value(diagram::extract_diagram_text(text, ctx)?)
             })
         },
         "extractLockedCanvas" => |text, args| {
             with_build_ctx(args, |ctx| {
-                optional(diagram::extract_locked_canvas(text, ctx)?)
+                value(diagram::extract_locked_canvas(text, ctx)?)
             })
         },
         "extractDiagramDrawing" => |text, args| {
             with_build_ctx(args, |ctx| {
-                optional(diagram::extract_diagram_drawing(text, ctx)?)
+                value(diagram::extract_diagram_drawing(text, ctx)?)
             })
         },
         "imageMeta" => |text, args| {
@@ -209,7 +209,7 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
         },
         "paragraphStrayBox" => |text, args| {
             with_build_ctx(args, |ctx| {
-                optional(textbox::paragraph_stray_box(text, ctx)?)
+                value(textbox::paragraph_stray_box(text, ctx)?)
             })
         },
         "textboxParagraphs" => |text, args| {

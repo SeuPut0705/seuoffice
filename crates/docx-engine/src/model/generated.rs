@@ -13406,23 +13406,25 @@ impl<'de> Deserialize<'de> for ChartDisplayDataTable {
     }
 }
 
-/// `DiagramShape`
-#[derive(Debug, Clone, PartialEq)]
-pub struct DiagramShape {
-    pub x_px: JsNum,
-    pub y_px: JsNum,
-    pub w_px: JsNum,
-    pub h_px: JsNum,
-    pub ln_hex: Option<String>,
-    pub ln_w_px: Option<JsNum>,
-    pub fill_rect: Option<DiagramShapeFillRect>,
-    pub rot_deg: Option<JsNum>,
-    pub prst: Option<String>,
-    pub fill_hex: Option<String>,
-    pub image_data_url: Option<String>,
-    pub texts: Option<Vec<String>>,
-    pub font_size_pt: Option<JsNum>,
-    pub text_color_hex: Option<String>,
+jscompat::js_object! {
+    /// `DiagramShape`: the keys go out in the order they were set
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct DiagramShape {
+        pub x_px: JsNum,
+        pub y_px: JsNum,
+        pub w_px: JsNum,
+        pub h_px: JsNum,
+        pub prst: String,
+        pub fill_hex: String,
+        pub ln_hex: String,
+        pub ln_w_px: JsNum,
+        pub image_data_url: String,
+        pub fill_rect: DiagramShapeFillRect,
+        pub texts: Vec<String>,
+        pub font_size_pt: JsNum,
+        pub text_color_hex: String,
+        pub rot_deg: JsNum,
+    }
 }
 
 /// The keys of `DiagramShape`, in declaration order.
@@ -13474,47 +13476,6 @@ impl FieldKey for DiagramShapeKey {
 
 const _: () = assert!(DiagramShapeKey::NAMES.len() <= wire::MAX_KEYS);
 
-impl Serialize for DiagramShape {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("xPx", &self.x_px)?;
-        map.serialize_entry("yPx", &self.y_px)?;
-        map.serialize_entry("wPx", &self.w_px)?;
-        map.serialize_entry("hPx", &self.h_px)?;
-        if let Some(value) = &self.ln_hex {
-            map.serialize_entry("lnHex", value)?;
-        }
-        if let Some(value) = &self.ln_w_px {
-            map.serialize_entry("lnWPx", value)?;
-        }
-        if let Some(value) = &self.fill_rect {
-            map.serialize_entry("fillRect", value)?;
-        }
-        if let Some(value) = &self.rot_deg {
-            map.serialize_entry("rotDeg", value)?;
-        }
-        if let Some(value) = &self.prst {
-            map.serialize_entry("prst", value)?;
-        }
-        if let Some(value) = &self.fill_hex {
-            map.serialize_entry("fillHex", value)?;
-        }
-        if let Some(value) = &self.image_data_url {
-            map.serialize_entry("imageDataUrl", value)?;
-        }
-        if let Some(value) = &self.texts {
-            map.serialize_entry("texts", value)?;
-        }
-        if let Some(value) = &self.font_size_pt {
-            map.serialize_entry("fontSizePt", value)?;
-        }
-        if let Some(value) = &self.text_color_hex {
-            map.serialize_entry("textColorHex", value)?;
-        }
-        map.end()
-    }
-}
-
 impl<'de> Deserialize<'de> for DiagramShape {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Fields;
@@ -13527,42 +13488,41 @@ impl<'de> Deserialize<'de> for DiagramShape {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<DiagramShape, A::Error> {
                 let mut seen = Seen::default();
-                let mut v_x_px = None;
-                let mut v_y_px = None;
-                let mut v_w_px = None;
-                let mut v_h_px = None;
-                let mut v_prst = None;
-                let mut v_fill_hex = None;
-                let mut v_ln_hex = None;
-                let mut v_ln_w_px = None;
-                let mut v_image_data_url = None;
-                let mut v_fill_rect = None;
-                let mut v_texts = None;
-                let mut v_font_size_pt = None;
-                let mut v_text_color_hex = None;
-                let mut v_rot_deg = None;
+                let mut b_0 = DiagramShape::default();
                 while let Some(Key(key)) = map.next_key::<Key<DiagramShapeKey>>()? {
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        DiagramShapeKey::XPx => v_x_px = Some(map.next_value()?),
-                        DiagramShapeKey::YPx => v_y_px = Some(map.next_value()?),
-                        DiagramShapeKey::WPx => v_w_px = Some(map.next_value()?),
-                        DiagramShapeKey::HPx => v_h_px = Some(map.next_value()?),
-                        DiagramShapeKey::Prst => v_prst = Some(map.next_value()?),
-                        DiagramShapeKey::FillHex => v_fill_hex = Some(map.next_value()?),
-                        DiagramShapeKey::LnHex => v_ln_hex = Some(map.next_value()?),
-                        DiagramShapeKey::LnWPx => v_ln_w_px = Some(map.next_value()?),
-                        DiagramShapeKey::ImageDataUrl => v_image_data_url = Some(map.next_value()?),
-                        DiagramShapeKey::FillRect => v_fill_rect = Some(map.next_value()?),
-                        DiagramShapeKey::Texts => v_texts = Some(map.next_value()?),
-                        DiagramShapeKey::FontSizePt => v_font_size_pt = Some(map.next_value()?),
-                        DiagramShapeKey::TextColorHex => v_text_color_hex = Some(map.next_value()?),
-                        DiagramShapeKey::RotDeg => v_rot_deg = Some(map.next_value()?),
+                        DiagramShapeKey::XPx => b_0.x_px.set(map.next_value()?),
+                        DiagramShapeKey::YPx => b_0.y_px.set(map.next_value()?),
+                        DiagramShapeKey::WPx => b_0.w_px.set(map.next_value()?),
+                        DiagramShapeKey::HPx => b_0.h_px.set(map.next_value()?),
+                        DiagramShapeKey::Prst => b_0.prst.set(map.next_value()?),
+                        DiagramShapeKey::FillHex => b_0.fill_hex.set(map.next_value()?),
+                        DiagramShapeKey::LnHex => b_0.ln_hex.set(map.next_value()?),
+                        DiagramShapeKey::LnWPx => b_0.ln_w_px.set(map.next_value()?),
+                        DiagramShapeKey::ImageDataUrl => b_0.image_data_url.set(map.next_value()?),
+                        DiagramShapeKey::FillRect => b_0.fill_rect.set(map.next_value()?),
+                        DiagramShapeKey::Texts => b_0.texts.set(map.next_value()?),
+                        DiagramShapeKey::FontSizePt => b_0.font_size_pt.set(map.next_value()?),
+                        DiagramShapeKey::TextColorHex => b_0.text_color_hex.set(map.next_value()?),
+                        DiagramShapeKey::RotDeg => b_0.rot_deg.set(map.next_value()?),
                     }
                 }
-                Ok(DiagramShape { x_px: v_x_px.ok_or_else(|| A::Error::missing_field("xPx"))?, y_px: v_y_px.ok_or_else(|| A::Error::missing_field("yPx"))?, w_px: v_w_px.ok_or_else(|| A::Error::missing_field("wPx"))?, h_px: v_h_px.ok_or_else(|| A::Error::missing_field("hPx"))?, prst: v_prst, fill_hex: v_fill_hex, ln_hex: v_ln_hex, ln_w_px: v_ln_w_px, image_data_url: v_image_data_url, fill_rect: v_fill_rect, texts: v_texts, font_size_pt: v_font_size_pt, text_color_hex: v_text_color_hex, rot_deg: v_rot_deg })
+                if !b_0.x_px.has_key() {
+                    return Err(A::Error::missing_field("xPx"));
+                }
+                if !b_0.y_px.has_key() {
+                    return Err(A::Error::missing_field("yPx"));
+                }
+                if !b_0.w_px.has_key() {
+                    return Err(A::Error::missing_field("wPx"));
+                }
+                if !b_0.h_px.has_key() {
+                    return Err(A::Error::missing_field("hPx"));
+                }
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
@@ -23696,12 +23656,12 @@ pub struct ParsedDocFull {
     pub auto_hyphenation: Option<bool>,
     pub default_tab_stop_twips: Option<JsNum>,
     pub balance_dbcs_spacing: Option<bool>,
+    pub use_f_e_layout: Option<bool>,
     pub compress_punctuation: Option<bool>,
     pub adjust_line_height_in_table: Option<bool>,
     pub indent_not_numbering_tab_stop: Option<bool>,
     pub do_not_expand_shift_return: Option<bool>,
     pub do_not_use_h_t_m_l_paragraph_auto_spacing: Option<bool>,
-    pub use_f_e_layout: Option<bool>,
     pub header_first: Option<Option<HfPartInfo>>,
     pub footer_first: Option<Option<HfPartInfo>>,
     pub header_even: Option<Option<HfPartInfo>>,
@@ -23939,6 +23899,9 @@ impl Serialize for ParsedDocFull {
         if let Some(value) = &self.balance_dbcs_spacing {
             map.serialize_entry("balanceDbcsSpacing", value)?;
         }
+        if let Some(value) = &self.use_f_e_layout {
+            map.serialize_entry("useFELayout", value)?;
+        }
         if let Some(value) = &self.compress_punctuation {
             map.serialize_entry("compressPunctuation", value)?;
         }
@@ -23953,9 +23916,6 @@ impl Serialize for ParsedDocFull {
         }
         if let Some(value) = &self.do_not_use_h_t_m_l_paragraph_auto_spacing {
             map.serialize_entry("doNotUseHTMLParagraphAutoSpacing", value)?;
-        }
-        if let Some(value) = &self.use_f_e_layout {
-            map.serialize_entry("useFELayout", value)?;
         }
         if let Some(value) = &self.header_first {
             map.serialize_entry("headerFirst", value)?;
