@@ -547,16 +547,21 @@ fn remove_empty_folders(zip: &mut Package) {
         .iter()
         .map(|part| (part.name.clone(), part.is_dir))
         .collect();
-    let files: Vec<&str> = entries
+    let mut files: Vec<&str> = entries
         .iter()
         .filter(|(_, is_dir)| !is_dir)
         .map(|(name, _)| name.as_str())
         .collect();
+    // the names that start with a folder's name are one run of the sorted
+    // files, beginning at the first name not below it: one search per folder
+    files.sort_unstable();
+    let holds_a_file = |folder: &str| {
+        let at = files.partition_point(|file| *file < folder);
+        files.get(at).is_some_and(|file| file.starts_with(folder))
+    };
     let empty: Vec<PartName> = entries
         .iter()
-        .filter(|(name, is_dir)| {
-            *is_dir && !files.iter().any(|file| file.starts_with(name.as_str()))
-        })
+        .filter(|(name, is_dir)| *is_dir && !holds_a_file(name.as_str()))
         .map(|(name, _)| name.clone())
         .collect();
     zip.remove_all(empty.iter().map(|name| name.as_str()));
