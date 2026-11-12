@@ -24,7 +24,7 @@ import { formatRangeAggregate, type RangeAggregate } from './aggregate'
 import { guideCatalogSummary, loadGuides } from './guides'
 import { modelCellValueAt, NO_REDACTIONS, placeholderSource, type RedactionIndex } from './redact'
 import { UNKNOWN_REDACTION_LABEL } from './redact-load'
-import { redactGuardForOps } from './redact-guard'
+import { redactGuardForOps, redactGuardForSheetExport } from './redact-guard'
 
 /**
  * The workbook DSL as an AgentSkill tool set: read-only context/reader tools
@@ -1560,6 +1560,17 @@ export function executeWorkbookTool(
         }
         const parsedSheet = parseReadSheetId(call.input, deps.getActiveSheetInfo(), summary)
         if ('fail' in parsedSheet) return parsedSheet.fail
+        // The export writes every cell of the sheet as it shows, into a file
+        // without marks that the model can read back.
+        const info = deps.getActiveSheetInfo()
+        const exportedId = parsedSheet.sheetId ?? info.sheetId
+        const refusal = redactGuardForSheetExport(
+          'create_document',
+          deps.redactions?.() ?? NO_REDACTIONS,
+          exportedId,
+          info.sheets.find((sheet) => sheet.id === exportedId)?.name,
+        )
+        if (refusal) return fail(summary, refusal.reason)
         return create({
           type: typeRaw,
           sheetId: parsedSheet.sheetId,
