@@ -895,26 +895,27 @@ impl<F: FnMut(usize, usize) -> f64> TimSort<F> {
 /// `String::from_utf16_lossy`. A stylesheet comes out of `TextDecoder`,
 /// which leaves no lone surrogate.
 pub mod writing_mode {
-    use jscompat::{js_regex, trim};
+    use jscompat::{RegexLimit, js_regex, trim, try_js_regex};
 
     /// `isVerticalWritingMode`: `None` stands for anything not a string.
     pub fn is_vertical_writing_mode(value: Option<&str>) -> bool {
         value.is_some_and(|value| js_regex!(r"^vertical-", "i").test(trim(value)))
     }
 
-    /// `stripCommentsAndStrings`
-    fn strip_comments_and_strings(css: &str) -> String {
-        js_regex!(r#"\/\*[\s\S]*?(?:\*\/|$)|"(?:[^"\\\n]|\\[\s\S])*"|'(?:[^'\\\n]|\\[\s\S])*'"#)
-            .replace_all(css, |_| " ".to_owned())
+    /// `stripCommentsAndStrings`. A quoted string of more than about a
+    /// million characters passes the bound of one search.
+    fn strip_comments_and_strings(css: &str) -> Result<String, RegexLimit> {
+        try_js_regex!(r#"\/\*[\s\S]*?(?:\*\/|$)|"(?:[^"\\\n]|\\[\s\S])*"|'(?:[^'\\\n]|\\[\s\S])*'"#)
+            .try_replace_all(css, |_| " ".to_owned())
     }
 
     /// `cssDeclaresVerticalWriting`
-    pub fn css_declares_vertical_writing(css: &str) -> bool {
-        js_regex!(
+    pub fn css_declares_vertical_writing(css: &str) -> Result<bool, RegexLimit> {
+        Ok(js_regex!(
             r"(?:^|[\s;{])(?:-epub-|-webkit-)?writing-mode\s*:\s*vertical-",
             "i"
         )
-        .test(&strip_comments_and_strings(css))
+        .test(&strip_comments_and_strings(css)?))
     }
 }
 
@@ -968,9 +969,10 @@ pub fn call(
         "isVerticalWritingMode" => Value::Bool(writing_mode::is_vertical_writing_mode(
             args.get("value").and_then(Value::as_str),
         )),
-        "cssDeclaresVerticalWriting" => {
-            Value::Bool(writing_mode::css_declares_vertical_writing(text))
-        }
+        "cssDeclaresVerticalWriting" => Value::Bool(
+            writing_mode::css_declares_vertical_writing(text)
+                .map_err(|limit| ("RangeError".to_owned(), limit.to_string()))?,
+        ),
         // the dispatcher asks the next module on exactly this answer
         _ => return Err(wire_error(format!("unknown function {function}"))),
     })

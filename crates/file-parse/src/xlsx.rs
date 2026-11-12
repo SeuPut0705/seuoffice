@@ -9,7 +9,7 @@
 //! Every part goes through one fast-xml-parser 5.10.1 option set, the one
 //! `manifestParser` of pptx.ts also uses: [`fxp`] gives the object it returns.
 
-use jscompat::{JsMap, js_regex, number_to_string, to_number, trim};
+use jscompat::{JsMap, RegexLimit, js_regex, number_to_string, to_number, trim, try_js_regex};
 use ooxml_pkg::{Package, load_zip_package};
 use serde_json::Value;
 
@@ -601,19 +601,21 @@ fn sheet_prefix(quoted: Option<&str>, bare: Option<&str>) -> String {
 }
 
 /// `formula.split(REWRITE_SKIP_RE)`: the one capture group lands at the odd
-/// indexes. The pattern never matches empty.
-fn split_rewrite_skips(formula: &str) -> Vec<&str> {
+/// indexes. The pattern never matches empty. A quoted text of more than
+/// about a million characters passes the bound of one search.
+fn split_rewrite_skips(formula: &str) -> Result<Vec<&str>, RegexLimit> {
     let skip =
-        js_regex!(r#"((?:"(?:[^"]|"")*")|(?:(?<=[A-Za-z0-9_.])\[(?:[^\][]|\[[^\][]*\])*\]))"#);
+        try_js_regex!(r#"((?:"(?:[^"]|"")*")|(?:(?<=[A-Za-z0-9_.])\[(?:[^\][]|\[[^\][]*\])*\]))"#);
     let mut pieces = Vec::new();
     let mut start = 0;
-    for found in skip.find_iter(formula) {
+    for found in skip.try_find_iter(formula) {
+        let found = found?;
         pieces.push(&formula[start..found.start()]);
         pieces.push(found.get(1).unwrap_or_default());
         start = found.end();
     }
     pieces.push(&formula[start..]);
-    pieces
+    Ok(pieces)
 }
 
 /// `offsetFormulaRefs` of formula-shift.ts. Its `[A-Z]` under the `i` flag
@@ -629,15 +631,19 @@ fn offset_formula_refs(formula: &str, row_delta: f64, column_delta: f64) -> Resu
         String::new()
     }
     let mut rewritten = String::with_capacity(formula.len());
-    for (index, segment) in split_rewrite_skips(formula).into_iter().enumerate() {
+    for (index, segment) in split_rewrite_skips(formula)
+        .map_err(|limit| limit.to_string())?
+        .into_iter()
+        .enumerate()
+    {
         if index % 2 == 1 {
             rewritten.push_str(segment);
             continue;
         }
-        let mut out = js_regex!(
+        let mut out = try_js_regex!(
             r"(?<![A-Za-z0-9_.$!])(?:(?:'((?:[^']|'')+)'|([A-Za-z0-9_.]+))!)?(\$?)([A-Za-z]{1,3})(\$?)([0-9]{1,7})(?::(\$?)([A-Za-z]{1,3})(\$?)([0-9]{1,7}))?(?![A-Za-z0-9(])"
         )
-        .replace_all(segment, |found| {
+        .try_replace_all(segment, |found| {
             let group = |at| found.get(at).unwrap_or_default();
             let prefix = sheet_prefix(found.get(1), found.get(2));
             let first = offset_ref_part(
@@ -677,12 +683,13 @@ fn offset_formula_refs(formula: &str, row_delta: f64, column_delta: f64) -> Resu
                 Ok(text) => format!("{prefix}{text}"),
                 Err(error) => fail(&mut failure, error),
             }
-        });
+        })
+        .map_err(|limit| limit.to_string())?;
         if column_delta != 0.0 {
-            out = js_regex!(
+            out = try_js_regex!(
                 r"(?<![A-Za-z0-9_.$!:])(?:(?:'((?:[^']|'')+)'|([A-Za-z0-9_.]+))!)?(\$?)([A-Za-z]{1,3}):(\$?)([A-Za-z]{1,3})(?![A-Za-z0-9($!:])"
             )
-            .replace_all(&out, |found| {
+            .try_replace_all(&out, |found| {
                 let prefix = sheet_prefix(found.get(1), found.get(2));
                 let shift = |abs: &str, letters: &str| -> Result<Option<String>, String> {
                     if abs == "$" {
@@ -707,13 +714,14 @@ fn offset_formula_refs(formula: &str, row_delta: f64, column_delta: f64) -> Resu
                     (Some(first), Some(second)) => format!("{prefix}{first}:{second}"),
                     _ => format!("{prefix}#REF!"),
                 }
-            });
+            })
+            .map_err(|limit| limit.to_string())?;
         }
         if row_delta != 0.0 {
-            out = js_regex!(
+            out = try_js_regex!(
                 r"(?<![A-Za-z0-9_.$!:])(?:(?:'((?:[^']|'')+)'|([A-Za-z0-9_.]+))!)?(\$?)([0-9]{1,7}):(\$?)([0-9]{1,7})(?![A-Za-z0-9($!:])"
             )
-            .replace_all(&out, |found| {
+            .try_replace_all(&out, |found| {
                 let prefix = sheet_prefix(found.get(1), found.get(2));
                 let shift = |abs: &str, digits: &str| -> Option<String> {
                     if abs == "$" {
@@ -731,7 +739,8 @@ fn offset_formula_refs(formula: &str, row_delta: f64, column_delta: f64) -> Resu
                     (Some(first), Some(second)) => format!("{prefix}{first}:{second}"),
                     _ => format!("{prefix}#REF!"),
                 }
-            });
+            })
+            .map_err(|limit| limit.to_string())?;
         }
         rewritten.push_str(&out);
         if failure.is_some() {
@@ -1297,16 +1306,20 @@ fn decode_entities(input: &str) -> String {
 }
 
 /// The names `parseSheetElements` reads, in workbook order.
-fn sheet_element_names(workbook_xml: &str) -> Vec<String> {
-    js_regex!(r#"<sheet\b(?:"[^"]*"|'[^']*'|[^>"'])*?(?:/>|>[\s\S]*?</sheet>)"#)
-        .find_iter(workbook_xml)
-        .filter_map(|found| {
-            js_regex!(r#"(?:^|\s)name="([^"]*)""#)
-                .exec(found.as_str())
-                .and_then(|name| name.get(1))
-                .map(decode_entities)
-        })
-        .collect()
+fn sheet_element_names(workbook_xml: &str) -> Result<Vec<String>, RegexLimit> {
+    let mut names = Vec::new();
+    for found in try_js_regex!(r#"<sheet\b(?:"[^"]*"|'[^']*'|[^>"'])*?(?:/>|>[\s\S]*?</sheet>)"#)
+        .try_find_iter(workbook_xml)
+    {
+        let found = found?;
+        if let Some(name) = js_regex!(r#"(?:^|\s)name="([^"]*)""#)
+            .exec(found.as_str())
+            .and_then(|name| name.get(1))
+        {
+            names.push(decode_entities(name));
+        }
+    }
+    Ok(names)
 }
 
 /// `readRedactionRecord` of the gateway: the part when it parses, the copy in
@@ -1323,7 +1336,10 @@ fn read_redaction_record(
             _ => damaged = true,
         }
     }
-    let mirrored = parse_redaction_name_mirror(workbook_xml, &sheet_element_names(workbook_xml))?;
+    let mirrored = parse_redaction_name_mirror(
+        workbook_xml,
+        &sheet_element_names(workbook_xml).map_err(|_| Unreadable)?,
+    )?;
     if damaged && mirrored.is_empty() {
         return Err(Unreadable);
     }

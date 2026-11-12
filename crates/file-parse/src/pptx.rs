@@ -15,7 +15,8 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 
 use jscompat::{
-    JsMap, JsObject, is_js_space, js_regex, number_to_string, to_number, trim, trim_start,
+    JsMap, JsObject, RegexLimit, is_js_space, js_regex, number_to_string, to_number, trim,
+    trim_start, try_js_regex,
 };
 use ooxml_pkg::{Package, load_zip_package};
 use ooxml_xml::{AttributeMode, ParseError, XElement, XNode, parse_ordered_with_attributes};
@@ -597,7 +598,8 @@ fn attr<'a>(node: &'a XNode, key: &str) -> Option<&'a str> {
 /// unreadable parts just mean there is nothing to add, never a failed attachment.
 fn parse_comment_part(xml: Option<&str>) -> Option<Vec<XNode>> {
     let xml = xml?;
-    if !xml_validates(xml) {
+    // a part too large to validate is an unreadable part
+    if !xml_validates(xml).ok()? {
         return None;
     }
     parse_part(xml, Dialect::Stripped).ok()
@@ -1101,31 +1103,34 @@ fn read_attribute_str(data: &[u16], start: usize) -> Option<(String, usize, bool
     Some((String::from_utf16_lossy(&data[start..i]), i, tag_closed))
 }
 
-fn attribute_string_is_valid(attributes: &str) -> bool {
+/// A quoted value of more than about a million characters passes the bound
+/// of one search.
+fn attribute_string_is_valid(attributes: &str) -> Result<bool, RegexLimit> {
     let mut names: HashSet<&str> = HashSet::new();
-    for found in
-        js_regex!(r#"(\s*)([^\s=]+)(\s*=)?(\s*(['"])(([\s\S])*?)\5)?"#, "g").find_iter(attributes)
+    for found in try_js_regex!(r#"(\s*)([^\s=]+)(\s*=)?(\s*(['"])(([\s\S])*?)\5)?"#, "g")
+        .try_find_iter(attributes)
     {
+        let found = found?;
         if found.get(1).is_none_or(str::is_empty) {
-            return false;
+            return Ok(false);
         }
         if found.get(3).is_some() && found.get(4).is_none() {
-            return false;
+            return Ok(false);
         }
         if found.get(3).is_none() {
-            return false;
+            return Ok(false);
         }
         let name = found.get(2).unwrap_or_default();
         if !is_name(name) {
-            return false;
+            return Ok(false);
         }
         // `attrNames[name] = 1` on a plain object: `__proto__` sets the
         // prototype, never an own key, so it is never seen as repeated
         if name != "__proto__" && !names.insert(name) {
-            return false;
+            return Ok(false);
         }
     }
-    true
+    Ok(true)
 }
 
 /// `validateAmpersand`: `None` for its -1.
@@ -1176,7 +1181,7 @@ fn validate_ampersand(data: &[u16], at: usize) -> Option<usize> {
 }
 
 /// `XMLValidator.validate(xml) === true` with the default options.
-fn xml_validates(xml: &str) -> bool {
+fn xml_validates(xml: &str) -> Result<bool, RegexLimit> {
     let mut units: Vec<u16> = xml.encode_utf16().collect();
     if units.first() == Some(&0xFEFF) {
         units.remove(0);
@@ -1190,7 +1195,7 @@ fn xml_validates(xml: &str) -> bool {
         if unit_is(data, i, b'<') && unit_is(data, i + 1, b'?') {
             match read_pi(data, i + 2) {
                 Some(next) => i = next,
-                None => return false,
+                None => return Ok(false),
             }
         } else if unit_is(data, i, b'<') {
             i += 1;
@@ -1213,34 +1218,34 @@ fn xml_validates(xml: &str) -> bool {
                 i -= 1;
             }
             if !is_name(&tag_name) {
-                return false;
+                return Ok(false);
             }
             let Some((mut attribute_text, next, tag_closed)) = read_attribute_str(data, i) else {
-                return false;
+                return Ok(false);
             };
             i = next;
             if attribute_text.ends_with('/') {
                 attribute_text.pop();
-                if !attribute_string_is_valid(&attribute_text) {
-                    return false;
+                if !attribute_string_is_valid(&attribute_text)? {
+                    return Ok(false);
                 }
                 tag_found = true;
             } else if closing {
                 if !tag_closed || !trim(&attribute_text).is_empty() {
-                    return false;
+                    return Ok(false);
                 }
                 let Some(open) = tags.pop() else {
-                    return false;
+                    return Ok(false);
                 };
                 if tag_name != open {
-                    return false;
+                    return Ok(false);
                 }
                 if tags.is_empty() {
                     reached_root = true;
                 }
             } else {
-                if !attribute_string_is_valid(&attribute_text) || reached_root {
-                    return false;
+                if !attribute_string_is_valid(&attribute_text)? || reached_root {
+                    return Ok(false);
                 }
                 tags.push(tag_name);
                 tag_found = true;
@@ -1255,7 +1260,7 @@ fn xml_validates(xml: &str) -> bool {
                     } else if unit_is(data, i + 1, b'?') {
                         match read_pi(data, i + 1) {
                             Some(next) => i = next,
-                            None => return false,
+                            None => return Ok(false),
                         }
                     } else {
                         break;
@@ -1263,10 +1268,10 @@ fn xml_validates(xml: &str) -> bool {
                 } else if unit_is(data, i, b'&') {
                     match validate_ampersand(data, i) {
                         Some(next) => i = next,
-                        None => return false,
+                        None => return Ok(false),
                     }
                 } else if reached_root && !is_white_space(data[i]) {
-                    return false;
+                    return Ok(false);
                 }
                 i += 1;
             }
@@ -1274,9 +1279,9 @@ fn xml_validates(xml: &str) -> bool {
                 i -= 1;
             }
         } else if !is_white_space(data[i]) {
-            return false;
+            return Ok(false);
         }
         i += 1;
     }
-    tag_found && tags.is_empty()
+    Ok(tag_found && tags.is_empty())
 }
