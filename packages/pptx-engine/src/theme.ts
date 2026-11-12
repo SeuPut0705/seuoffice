@@ -4,6 +4,7 @@
  * schemeClr / theme fonts into final values.
  */
 import { xmlParser } from './xml-parser'
+import { ownValue } from './own-value'
 import { asXmlNode, xmlArray, type XmlNode } from './xml-utils'
 
 const parser = xmlParser({ ignoreAttributes: false, attributeNamePrefix: '@_' })
@@ -251,10 +252,12 @@ export function resolveSchemeColor(
   phClr?: string,
 ): string | undefined {
   if (name === 'phClr') return phClr
-  // Standard mapping: tx1→dk1, bg1→lt1, tx2→dk2, bg2→lt2
+  // Standard mapping: tx1→dk1, bg1→lt1, tx2→dk2, bg2→lt2. The name and the slot the map sends
+  // it to are the document's, so each table answers its own keys only (`ownValue`)
   const standard: Record<string, string> = { tx1: 'dk1', bg1: 'lt1', tx2: 'dk2', bg2: 'lt2' }
-  const key = theme?.clrMap?.[name] ?? standard[name] ?? name
-  return theme?.colors[key]
+  const mapped = theme?.clrMap ? ownValue(theme.clrMap, name) : undefined
+  const key = mapped ?? ownValue(standard, name) ?? name
+  return theme ? ownValue(theme.colors, key) : undefined
 }
 
 const CLR_MAP_NAMES = [

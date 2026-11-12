@@ -72,7 +72,7 @@ import {
   type TablePartStyle,
   type TableStyleFlags,
 } from './table-style'
-import { decodeXml, percentFraction } from './xml-utils'
+import { asXmlNode, decodeXml, percentFraction } from './xml-utils'
 import { readRedactLabel } from './redaction-xml'
 
 const parser = xmlParser({
@@ -967,7 +967,8 @@ function parseGroup(
   depth = 0,
   budget: GroupParseBudget = { remaining: MAX_GROUP_DESCENDANTS },
 ): GroupElement {
-  const grpSpPr = node['p:grpSpPr'] ?? {}
+  // an empty or text-only <p:grpSpPr> parses as a string: a group without properties
+  const grpSpPr: any = asXmlNode(node['p:grpSpPr'])
   const xfrm = grpSpPr['a:xfrm']
   const transform = parseXfrm(xfrm)
   const name = node['p:nvGrpSpPr']?.['p:cNvPr']?.['@_name']
@@ -2001,7 +2002,11 @@ export function layoutDiagramFallback(
   const colorOf = (node: DgmTreeNode, i: number): string | { spPr: any } => {
     if (node.spPr) return { spPr: node.spPr }
     const slot = node.styleLbl ? labelFills.get(node.styleLbl) : undefined
-    return slot ? slot[(node.styleIdx ?? 0) % slot.length]! : colors[i % colors.length]!
+    // presStyleIdx is the document's: -1 (the schema's "none"), or one too long to be a number,
+    // names no slot, and such a node takes the color cycle like one with no recorded slot
+    const idx = node.styleIdx ?? 0
+    const own = slot && Number.isSafeInteger(idx) && idx >= 0 ? slot[idx % slot.length] : undefined
+    return own ?? colors[i % colors.length]!
   }
   const hasHierarchy = roots.some((r) => r.children.length)
   const sps: any[] = []
@@ -3490,7 +3495,8 @@ function parseClrChange(
 }
 
 function parseFill(spPr: any, ctx: ParseContext): Fill | undefined {
-  if (!spPr) return undefined
+  // an element holding only text parses as a string: no fill of its own
+  if (!spPr || typeof spPr !== 'object') return undefined
   if ('a:noFill' in spPr) return { type: 'none' }
   // <a:grpFill/>: inherit the enclosing group's grpSpPr fill
   if ('a:grpFill' in spPr) return ctx.groupFill

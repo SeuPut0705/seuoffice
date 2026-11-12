@@ -480,7 +480,9 @@ export function parseChartXml(
       const palIdx = parseInt(ser['c:idx']?.['@_val'], 10)
       if (Number.isFinite(palIdx)) s.paletteIdx = palIdx
       if (secondary) s.secondaryAxis = true
-      if (plotKind === 'bar' && ser['c:spPr'] && 'a:noFill' in ser['c:spPr']) s.noFill = true
+      const serSpPr = ser['c:spPr']
+      if (plotKind === 'bar' && serSpPr && typeof serSpPr === 'object' && 'a:noFill' in serSpPr)
+        s.noFill = true
       if (fromStock) s.fromStock = true
       if (plotKind === 'scatter') {
         const xs = readNumPoints(ser['c:xVal'])
@@ -618,7 +620,8 @@ export function parseChartXml(
         for (const dPt of dPts) {
           const idx = parseInt(dPt['c:idx']?.['@_val'], 10)
           if (!Number.isFinite(idx) || idx < 0 || idx >= s.values.length) continue
-          const dSp = dPt['c:spPr']
+          // an element holding only text parses as a string: properties of none
+          const dSp = typeof dPt['c:spPr'] === 'object' ? dPt['c:spPr'] : undefined
           const c = resolveColorNode(dSp?.['a:solidFill'], theme)
           if (c != null) pointColors[idx] = c
           if (dSp && 'a:noFill' in dSp) pointNoFill[idx] = true
