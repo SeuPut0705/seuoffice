@@ -6,7 +6,7 @@ use docx_engine::generate::fields::{
 use jscompat::JsNum;
 use serde_json::Value;
 
-use super::{Returned, required, value};
+use super::{Returned, arg, required, value};
 
 pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
     match function {
@@ -21,7 +21,9 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         }
         "generateIndexFieldXml" => {
             let terms: Vec<String> = required(args, "terms")?;
-            value(generate_index_field_xml(&terms))
+            // an absent locale takes the default, as a JavaScript default parameter does
+            let locale = arg::<String>(args, "locale")?.unwrap_or_else(|| "zh-CN".to_owned());
+            value(generate_index_field_xml(&terms, &locale)?)
         }
         _ => Err(format!("genFields has no function {function}")),
     }

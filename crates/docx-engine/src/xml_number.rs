@@ -28,6 +28,31 @@ pub fn xml_decimal(n: f64) -> Option<String> {
     (n.is_finite() && !text.contains('e')).then_some(text)
 }
 
+/// `xmlIntIn`: `n` rounded, as plain digits, when it lies in `min..=max`.
+fn xml_int_in(n: f64, min: f64, max: f64) -> Option<String> {
+    let rounded = math_round(n);
+    (is_safe_integer(rounded) && rounded >= min && rounded <= max)
+        .then(|| number_to_string(rounded))
+}
+
+/// `MAX_COORDINATE_EMU`: the widest coordinate a drawing admits (ST_Coordinate).
+pub const MAX_COORDINATE_EMU: f64 = 27_273_042_316_900.0;
+
+/// `xmlPositionOffset`: wp:posOffset (ST_PositionOffset, an xsd:int), in EMU.
+pub fn xml_position_offset(emu: f64) -> Option<String> {
+    xml_int_in(emu, -2_147_483_648.0, 2_147_483_647.0)
+}
+
+/// `xmlPositiveCoordinate`: an extent's cx / cy (ST_PositiveCoordinate), in EMU.
+pub fn xml_positive_coordinate(emu: f64) -> Option<String> {
+    xml_int_in(emu, 0.0, MAX_COORDINATE_EMU)
+}
+
+/// `xmlUnsignedInt`: wp:anchor relativeHeight, distT / distB / distL / distR.
+pub fn xml_unsigned_int(n: f64) -> Option<String> {
+    xml_int_in(n, 0.0, 4_294_967_295.0)
+}
+
 /// `nonFinite`: a builder's refusal of an option that has no XML text. The
 /// TypeScript throws `RangeError(...)`; this is its message.
 pub fn non_finite(option: &str) -> String {
