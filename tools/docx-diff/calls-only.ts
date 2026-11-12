@@ -9,7 +9,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { parseDocx } from '../../packages/docx-engine/src/parse'
 import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
-import { callsAfterCorpus, callsOnDocument, callsOnModel, callsReport, reportCalls } from './calls-run'
+import { callsAfterCorpus, callsOnDocument, callsOnModel, callsOnParse, callsReport, reportCalls } from './calls-run'
 import { gateHasFailed, option, repoRoot, reportComparisons } from './harness'
 import { mulberry32 } from './synthetic'
 
@@ -30,7 +30,9 @@ for (const path of corpus) {
     if (!file.dir && /\.(xml|rels)$/i.test(name)) parts.set(name, await file.async('string'))
   }
   await callsOnDocument(path, parts)
-  const doc = await parseDocx(new Uint8Array(readFileSync(resolve(repoRoot, path)))).catch(() => null)
+  const bytes = new Uint8Array(readFileSync(resolve(repoRoot, path)))
+  await callsOnParse(path, bytes, parts)
+  const doc = await parseDocx(bytes).catch(() => null)
   if (doc) await callsOnModel(path, doc)
 }
 await callsAfterCorpus(mulberry32(option('--seed', 20261111)))

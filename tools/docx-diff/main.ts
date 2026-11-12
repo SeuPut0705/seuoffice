@@ -23,7 +23,7 @@ import { parseDocx } from '../../packages/docx-engine/src/index'
 import { resolveMainDocumentPath } from '../../packages/docx-engine/src/parse-package'
 import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
 import { bench } from './bench'
-import { callsAfterCorpus, callsOnDocument, callsOnModel, reportCalls } from './calls-run'
+import { callsAfterCorpus, callsOnDocument, callsOnModel, callsOnParse, reportCalls } from './calls-run'
 import { compareBlankBytes } from './compare-blank'
 import { compareScan } from './compare-scan'
 import { compareRoundTrips, mutate } from './compare-xml'
@@ -123,6 +123,7 @@ for (const path of corpus) {
     if (!file.dir && /\.(xml|rels)$/i.test(name)) parts.set(name, await file.async('string'))
   }
   await callsOnDocument(path, parts)
+  await callsOnParse(path, bytes, parts)
   for (const [name, partXml] of parts) {
     if (!/\.xml$/i.test(name)) continue
     const fragments = elementFragments(partXml, 'w:rPr')

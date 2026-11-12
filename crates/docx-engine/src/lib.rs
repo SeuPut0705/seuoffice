@@ -19,6 +19,7 @@ pub mod model;
 pub mod notes;
 pub mod numbering;
 pub mod package;
+pub mod parse;
 pub mod props;
 pub mod protection;
 pub mod resolve;

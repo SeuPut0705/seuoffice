@@ -27,6 +27,15 @@ export interface CallSpec {
   fromDocument?(parts: ReadonlyMap<string, string>): Input[]
   /** Inputs from the actual parser model, before Maps and bytes cross the wire. */
   fromModel?(doc: ParsedDoc): Input[]
+  /**
+   * The inputs parseDocx gives an internal function of parse.ts: `fn` names
+   * it, and `input` turns the arguments of one of its calls during a parse of
+   * a corpus document into an Input (undefined: not one), at the call.
+   */
+  fromParse?: {
+    fn: string
+    input(args: unknown[], parts: ReadonlyMap<string, string>): Input | undefined
+  }
   /** Inputs written for what the corpus lacks, and the seeds of the mutations. */
   built: Input[]
   /** `none` where the text is not what the function reads, so mutating it compares nothing. */

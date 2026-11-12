@@ -323,6 +323,19 @@ mutated value has the types of the seeds in a combination none had. A
 mutation the typed reader of the Rust side refuses is counted and compares
 nothing. A spec takes the model of a corpus document through `fromModel`.
 
+The functions parse.ts does not export are compared the same way, as group
+`parse` (`calls-parse.ts`, `crates/docx-engine/src/parse/`).
+`parse-internals.ts` writes a copy of parse.ts to `out/parse-internals.ts`,
+which adds two things to every top-level function: an `export`, and a first
+statement that reports the function's arguments to a hook. A spec's
+`fromParse` names the function and turns the arguments of one of its calls
+into an input at the moment of the call, so the corpus inputs are exactly
+what `parseDocx` passes, through the copy, over each document. On the first
+40 corpus documents the copy returned the same model as the module.
+`parse-graph.ts` prints the functions of parse.ts in leaf-first waves (154
+functions, 16 waves) and marks those a `/// \`name\`` comment in `crates/`
+has ported.
+
 ### What makes a comparison worth its line
 
 - **Count what was compared, and floor it.** A comparison that silently

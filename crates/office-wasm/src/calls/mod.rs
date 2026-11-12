@@ -28,6 +28,7 @@ mod images;
 mod ink;
 mod markers;
 mod math;
+mod parse;
 mod resolve;
 mod revision;
 mod section;
@@ -85,6 +86,7 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "fields" => Some(fields::dispatch(function, text, args)),
         "images" => Some(images::dispatch(function, text, args)),
         "ink" => Some(ink::dispatch(function, text, args)),
+        "parse" => Some(parse::dispatch(function, text, args)),
         "markers" => Some(markers::dispatch(function, text, args)),
         "math" => Some(math::dispatch(function, text, args)),
         "resolve" => Some(resolve::dispatch(function, text, args)),

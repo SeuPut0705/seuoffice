@@ -160,5 +160,10 @@
   "callsChartBuilt": 2215,
   "callsChartMutated": 280,
   "callsChartArgMutated": 5500,
-  "callsChartFunctions": 5
+  "callsChartFunctions": 5,
+  "callsParseCorpus": 2600,
+  "callsParseBuilt": 30,
+  "callsParseMutated": 280,
+  "callsParseArgMutated": 1400,
+  "callsParseFunctions": 2
 }

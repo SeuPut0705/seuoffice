@@ -25,6 +25,7 @@ import { IMAGES } from './calls-images'
 import { INK } from './calls-ink'
 import { MARKERS } from './calls-markers'
 import { MATH } from './calls-math'
+import { PARSE } from './calls-parse'
 import { RESOLVE } from './calls-resolve'
 import { REVISION } from './calls-revision'
 import { SECTION } from './calls-section'
@@ -35,6 +36,7 @@ import { byFunction, checkOutcome, flush, type Outcome, rustOutcome, SHOWN_CHARS
 import { mutate } from './compare-xml'
 import { maskNonFinite } from './listed'
 import { atFloor, Comparison, failGate, option } from './harness'
+import { captureCalls, parseInternals } from './parse-internals'
 
 const CALL_FUZZ_CASES = option('--call-fuzz', 300)
 const ARG_FUZZ_CASES = option('--call-arg-fuzz', 1500)
@@ -74,6 +76,7 @@ const groups: Group[] = Object.entries({
   fields: FIELDS,
   images: IMAGES,
   ink: INK,
+  parse: PARSE,
   markers: MARKERS,
   math: MATH,
   resolve: RESOLVE,
@@ -251,6 +254,18 @@ async function check(
   checkOutcome(comparison, `${where}: ${spec.fn}`, spec.fn, text, args, () => outcome)
 }
 
+/** One corpus input: compared, and kept as a seed of both mutations. */
+async function corpusInput(group: Group, where: string, spec: CallSpec, input: Input): Promise<void> {
+  const kept = seeds.get(spec.fn) ?? new Map<string, Input>()
+  seeds.set(spec.fn, kept)
+  await check(group.corpus, where, spec, input)
+  keepArguments(spec, where, input)
+  const text = input.text ?? ''
+  if (kept.size < SEEDS_KEPT && text.length > 0 && text.length < 20_000) {
+    kept.set(text, input)
+  }
+}
+
 /** The functions over what one corpus document holds. */
 export async function callsOnDocument(
   where: string,
@@ -258,19 +273,56 @@ export async function callsOnDocument(
 ): Promise<void> {
   for (const group of groups) {
     for (const spec of group.specs) {
-      const kept = seeds.get(spec.fn) ?? new Map<string, Input>()
-      seeds.set(spec.fn, kept)
-      for (const input of spec.fromDocument?.(parts) ?? []) {
-        await check(group.corpus, where, spec, input)
-        keepArguments(spec, where, input)
-        const text = input.text ?? ''
-        if (kept.size < SEEDS_KEPT && text.length > 0 && text.length < 20_000) {
-          kept.set(text, input)
-        }
-      }
+      for (const input of spec.fromDocument?.(parts) ?? []) await corpusInput(group, where, spec, input)
     }
   }
 }
+
+/** Captured calls of one function compared per document, at most; the rest repeat. */
+const PARSE_INPUTS_PER_DOCUMENT = 300
+/** What every `fromParse` spec has compared already, by its input as JSON. */
+const parseSeen = new Map<string, Set<string>>()
+
+/**
+ * The internal functions of parse.ts, with the arguments a parseDocx of this
+ * document calls them with (parse-internals.ts). The input is taken at the
+ * call, before the parser goes on to change what it passed.
+ */
+export async function callsOnParse(
+  where: string,
+  bytes: Uint8Array,
+  parts: ReadonlyMap<string, string>,
+): Promise<void> {
+  const byFn = new Map<string, Array<{ group: Group; spec: CallSpec }>>()
+  for (const group of groups) {
+    for (const spec of group.specs) {
+      if (spec.fromParse) byFn.set(spec.fromParse.fn, [...(byFn.get(spec.fromParse.fn) ?? []), { group, spec }])
+    }
+  }
+  if (byFn.size === 0) return
+  const internals = await parseInternals()
+  const taken: Array<{ group: Group; spec: CallSpec; input: Input }> = []
+  const perSpec = new Map<CallSpec, number>()
+  await captureCalls(
+    (fn, args) => {
+      for (const { group, spec } of byFn.get(fn) ?? []) {
+        if ((perSpec.get(spec) ?? 0) >= PARSE_INPUTS_PER_DOCUMENT) continue
+        const input = spec.fromParse!.input(args, parts)
+        if (!input) continue
+        const seen = parseSeen.get(spec.fn) ?? new Set<string>()
+        parseSeen.set(spec.fn, seen)
+        const key = JSON.stringify(input)
+        if (seen.has(key)) continue
+        seen.add(key)
+        perSpec.set(spec, (perSpec.get(spec) ?? 0) + 1)
+        taken.push({ group, spec, input })
+      }
+    },
+    () => Promise.resolve(internals.parseDocx!(bytes)).catch(() => null),
+  )
+  for (const { group, spec, input } of taken) await corpusInput(group, `${where} parse`, spec, input)
+}
+
 /** Save builders receive the same values parseDocx actually produced. */
 export async function callsOnModel(where: string, doc: ParsedDoc): Promise<void> {
   for (const group of groups) {
