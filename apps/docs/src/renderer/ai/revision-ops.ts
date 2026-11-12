@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/core'
 import type { Node as PmNode } from '@tiptap/pm/model'
+import { revisionDateMs } from '@genoffice/docx-engine'
 import {
   applyRevisions,
   collectRevisions,
@@ -45,7 +46,7 @@ export interface RevisionSelector {
   type?: RevisionType
   blockIndex?: number
   blockRange?: [number, number]
-  /** ISO date: only changes recorded strictly before it */
+  /** ISO date: only changes recorded strictly before it; without a zone designator it is UTC */
   before?: string
 }
 
@@ -235,7 +236,7 @@ export function validateSelector(
     sel.blockRange = [r[0], r[1]]
   }
   if (input.before !== undefined) {
-    if (typeof input.before !== 'string' || Number.isNaN(Date.parse(input.before)))
+    if (typeof input.before !== 'string' || Number.isNaN(revisionDateMs(input.before)))
       return { error: 'before must be an ISO date such as 2026-09-01 or 2026-09-01T12:00:00Z' }
     sel.before = input.before
   }
@@ -263,7 +264,7 @@ export function selectRevisions(
         error: `unknown revision id(s) ${unknown.join(', ')}; valid ids are r1–r${all.length} (call read_revisions after every edit, ids are positional)`,
       }
   }
-  const beforeMs = sel.before ? Date.parse(sel.before) : null
+  const beforeMs = sel.before ? revisionDateMs(sel.before) : null
   const entries = all.filter((e) => {
     if (sel.ids && !sel.ids.includes(e.id)) return false
     if (sel.author !== undefined && e.author.toLowerCase() !== sel.author.toLowerCase())
@@ -272,7 +273,7 @@ export function selectRevisions(
     if (sel.blockIndex !== undefined && e.blockIndex !== sel.blockIndex) return false
     if (sel.blockRange && (e.blockIndex < sel.blockRange[0] || e.blockIndex > sel.blockRange[1]))
       return false
-    if (beforeMs !== null && (!e.date || Date.parse(e.date) >= beforeMs)) return false
+    if (beforeMs !== null && (!e.date || revisionDateMs(e.date) >= beforeMs)) return false
     return true
   })
   if (entries.length === 0) {

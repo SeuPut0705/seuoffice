@@ -534,3 +534,42 @@ describe('bmpToPng', () => {
     expect(bmpToPng(bmp)).toBeNull()
   })
 })
+
+describe('picture geometry out of drawing range', () => {
+  // a corrupt or hostile file: the picture is converted with a usable size
+  // and position, and the conversion goes on
+  const convert = async (pic: string) => {
+    const xml = section(
+      `<hp:p paraPrIDRef="0"><hp:run charPrIDRef="0">${SEC_PR}${pic}</hp:run></hp:p>` +
+        '<hp:p paraPrIDRef="0"><hp:run charPrIDRef="0"><hp:t>after</hp:t></hp:run></hp:p>',
+    )
+    return documentXml(
+      (await convertHwpxToDocx(await hwpx(xml, { 'BinData/image1.bmp': tinyBmp() }))).docx,
+    )
+  }
+  const numbers = (doc: string) =>
+    [...doc.matchAll(/(?:\b(?:cx|cy|distL|relativeHeight)="|<wp:posOffset>)([^"<]*)/g)].map(
+      (m) => m[1],
+    )
+
+  it("a size of 1e300 HWPUNIT falls back to the picture's own pixels", async () => {
+    const doc = await convert(
+      '<hp:pic><hp:sz width="1e300" height="7500"/><hp:pos treatAsChar="1"/><hc:img binaryItemIDRef="image1"/></hp:pic>',
+    )
+    // the 2x2 bitmap: 2 px wide; the usable height stays 100 px
+    expect(doc).toContain('<wp:extent cx="19050" cy="952500"/>')
+    expect(doc).toContain('after')
+  })
+
+  it('an offset, margin and rank of 1e300 fall back to zero', async () => {
+    const doc = await convert(
+      '<hp:pic textWrap="SQUARE" zOrder="1e300"><hp:sz width="7500" height="7500"/>' +
+        '<hp:pos treatAsChar="0" horzRelTo="PARA" vertRelTo="PARA" horzOffset="1e300" vertOffset="-1e300"/>' +
+        '<hp:outMargin left="1e300" right="0" top="0" bottom="0"/><hc:img binaryItemIDRef="image1"/></hp:pic>',
+    )
+    expect(doc).toContain('<wp:posOffset>0</wp:posOffset><')
+    for (const n of numbers(doc)) expect(n).toMatch(/^-?\d+$/)
+    expect(doc).toContain('relativeHeight="251659264"')
+    expect(doc).toContain('distL="0"')
+  })
+})
