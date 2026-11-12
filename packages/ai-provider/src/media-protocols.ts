@@ -181,6 +181,40 @@ function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
   return signal ? AbortSignal.any([signal, timeout]) : timeout
 }
 
+/** the statuses fetch follows when the answer names a Location */
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
+
+/**
+ * For a request whose API key rides in a header of the vendor's own (`x-key`,
+ * `x-goog-api-key`, `api-key`). Fetch drops `Authorization` when a redirect
+ * leaves the origin but repeats every other header, so following one would
+ * hand the key to whatever address the answer names, plain http included.
+ * None of these APIs redirects, so a redirect ends the call. The mode is
+ * `manual` rather than `error` so that the refusal can be told apart from a
+ * network failure: Node hands back the 3xx itself, a browser an opaque
+ * stand-in for it.
+ */
+async function keyedFetch(url: string, init: RequestInit): Promise<Response> {
+  const resp = await aiFetch(url, { ...init, redirect: 'manual' })
+  const location = resp.headers.get('location')
+  const redirected =
+    resp.type === 'opaqueredirect' || (REDIRECT_STATUSES.has(resp.status) && location !== null)
+  if (!redirected) return resp
+  await resp.body?.cancel().catch(() => {})
+  let target = ''
+  if (location !== null) {
+    try {
+      const to = new URL(location, url)
+      target = ` to ${to.protocol}//${to.host.slice(0, 100)}`
+    } catch {
+      // an unreadable Location is not worth a second error
+    }
+  }
+  throw new Error(
+    `The provider answered with a redirect${target}, which a request carrying the API key does not follow. The API key was not sent on.`,
+  )
+}
+
 const MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024
 
 /** An error body is only ever read for a short diagnostic (httpBodyDetail keeps 500
@@ -533,7 +567,7 @@ async function generateImageGemini(
   const aspectRatio =
     input.aspectRatio && GEMINI_ASPECT_RATIOS.has(input.aspectRatio) ? input.aspectRatio : undefined
   if (model.startsWith('imagen-')) {
-    const resp = await aiFetch(endpointUrl(base, `/models/${model}:predict`), {
+    const resp = await keyedFetch(endpointUrl(base, `/models/${model}:predict`), {
       method: 'POST',
       headers: geminiHeaders(config),
       body: JSON.stringify({
@@ -550,7 +584,7 @@ async function generateImageGemini(
     }
     return fromBase64(first.bytesBase64Encoded, first.mimeType)
   }
-  const resp = await aiFetch(endpointUrl(base, `/models/${model}:generateContent`), {
+  const resp = await keyedFetch(endpointUrl(base, `/models/${model}:generateContent`), {
     method: 'POST',
     headers: geminiHeaders(config),
     body: JSON.stringify({
@@ -599,7 +633,7 @@ async function geminiUploadFile(
   const base = geminiBase(config)
   const root = new URL(base)
   root.pathname = trimSlash(root.pathname).replace(/\/v1(beta)?$/, '')
-  const start = await aiFetch(endpointUrl(root.toString(), '/upload/v1beta/files'), {
+  const start = await keyedFetch(endpointUrl(root.toString(), '/upload/v1beta/files'), {
     method: 'POST',
     headers: {
       ...geminiHeaders(config),
@@ -614,7 +648,7 @@ async function geminiUploadFile(
   if (!start.ok) return failFrom('Media upload failed:', start)
   const uploadUrl = start.headers.get('x-goog-upload-url')
   if (!uploadUrl) throw new Error('Media upload failed: no upload URL returned')
-  const upload = await aiFetch(uploadUrl, {
+  const upload = await keyedFetch(uploadUrl, {
     method: 'POST',
     headers: {
       'x-goog-api-key': config.apiKey,
@@ -634,7 +668,7 @@ async function geminiUploadFile(
       throw new Error('Media upload timed out while the file was processing')
     }
     await new Promise((r) => setTimeout(r, GEMINI_FILE_POLL_MS))
-    const poll = await aiFetch(endpointUrl(base, `/${String(file.name)}`), {
+    const poll = await keyedFetch(endpointUrl(base, `/${String(file.name)}`), {
       headers: { 'x-goog-api-key': config.apiKey },
       signal,
     })
@@ -663,14 +697,17 @@ async function analyzeMediaGemini(
         : await geminiUploadFile(config, blob, signal),
     )
   }
-  const resp = await aiFetch(endpointUrl(geminiBase(config), `/models/${model}:generateContent`), {
-    method: 'POST',
-    headers: geminiHeaders(config),
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [...mediaParts, { text: input.requirements }] }],
-    }),
-    signal,
-  })
+  const resp = await keyedFetch(
+    endpointUrl(geminiBase(config), `/models/${model}:generateContent`),
+    {
+      method: 'POST',
+      headers: geminiHeaders(config),
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [...mediaParts, { text: input.requirements }] }],
+      }),
+      signal,
+    },
+  )
   if (!resp.ok) return failFrom('Media analysis failed:', resp)
   const json = await readJson('Media analysis failed:', resp)
   const text = geminiParts((json.candidates as unknown[] | undefined)?.[0])
@@ -731,7 +768,7 @@ async function generateImageMai(
         ref.name ?? `ref-${i}.${ext}`,
       )
     })
-    const resp = await aiFetch(`${base}/mai/v1/images/edits`, {
+    const resp = await keyedFetch(`${base}/mai/v1/images/edits`, {
       method: 'POST',
       headers: auth,
       body: form,
@@ -739,7 +776,7 @@ async function generateImageMai(
     })
     return maiImageResult('MAI image edit failed:', resp)
   }
-  const resp = await aiFetch(`${base}/mai/v1/images/generations`, {
+  const resp = await keyedFetch(`${base}/mai/v1/images/generations`, {
     method: 'POST',
     headers: { ...auth, 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -931,7 +968,7 @@ async function generateImageBfl(
       if (dimensions) Object.assign(body, dimensions)
     }
   }
-  const submit = await aiFetch(`${base}/v1/${model}`, {
+  const submit = await keyedFetch(`${base}/v1/${model}`, {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
@@ -945,7 +982,10 @@ async function generateImageBfl(
   try {
     for (;;) {
       await waits.next(1_500)
-      const poll = await aiFetch(pollUrl, { headers: { 'x-key': config.apiKey }, signal })
+      const poll = await keyedFetch(pollUrl, {
+        headers: { 'x-key': config.apiKey },
+        signal,
+      })
       if (!poll.ok) return await failFrom('FLUX generation failed:', poll)
       const json = await readJson('FLUX result', poll)
       const status = String(json.status ?? '')
@@ -1068,7 +1108,7 @@ export async function testMediaProvider(
     // Bearer token
     let resp: Response
     if (provider === 'gemini') {
-      resp = await aiFetch(geminiModelsProbeUrl(config), {
+      resp = await keyedFetch(geminiModelsProbeUrl(config), {
         headers: { 'x-goog-api-key': config.apiKey },
         signal: guard,
       })
@@ -1077,12 +1117,12 @@ export async function testMediaProvider(
       // it answers 403 without a valid key, 422 for a malformed key and
       // 200 with the credit balance for a good one
       const base = trimSlash(config.baseUrl || BFL_BASE_URL)
-      resp = await aiFetch(`${base}/v1/credits`, {
+      resp = await keyedFetch(`${base}/v1/credits`, {
         headers: { 'x-key': config.apiKey },
         signal: guard,
       })
     } else if (provider === 'microsoft') {
-      resp = await aiFetch(endpointUrl(openAiBase(provider, config), '/models'), {
+      resp = await keyedFetch(endpointUrl(openAiBase(provider, config), '/models'), {
         headers: { 'api-key': config.apiKey },
         signal: guard,
       })
