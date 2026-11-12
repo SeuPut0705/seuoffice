@@ -95,6 +95,7 @@ import { fillMissingRunFonts, parseFontRoles } from './ai-default-fonts'
 import { convertOdpToPptx } from '../../../../packages/odf2ooxml/src'
 import { convertPptToPptx, PPT_LIMITS } from '../../../../packages/ppt2pptx/src'
 import { sniffImageMime } from './media-mime'
+import { ATTACHABLE_MAX_BYTES, ATTACHABLE_IMAGE_MAX_BYTES } from '@genoffice/file-parse'
 import {
   newPasteCascade,
   pageKey,
@@ -1021,6 +1022,22 @@ async function recoveredOpenBytes(
     }
   }
   return { bytes: new Uint8Array(copy), recovered: true }
+}
+
+/**
+ * Reuse the whole-attachment budget for one GLB or an entire narration request
+ * (50 MiB decoded), and the picture budget for model posters (5 MiB). Bound
+ * encoded input before decoding, including padding at the exact byte limit.
+ */
+function boundedBase64Size(value: string, limit: number): number | null {
+  if (value.length > 4 * Math.ceil(limit / 3)) return null
+  const size = Buffer.byteLength(value, 'base64')
+  return size <= limit ? size : null
+}
+
+function refuseOversizedMedia(limit: number): null {
+  void showPresentationError(tm('errTooLarge', { mb: limit / 1024 / 1024 }))
+  return null
 }
 
 async function showPresentationError(detail: string): Promise<void> {
@@ -4400,13 +4417,20 @@ export function registerSlidesIpc(): void {
       filters: [{ name: tm('filter3d'), extensions: ['glb'] }],
     })
     if (r.canceled || !r.filePaths[0]) return null
+    if ((await stat(r.filePaths[0])).size > ATTACHABLE_MAX_BYTES)
+      return refuseOversizedMedia(ATTACHABLE_MAX_BYTES)
     const bytes = await readFile(r.filePaths[0])
+    if (bytes.byteLength > ATTACHABLE_MAX_BYTES) return refuseOversizedMedia(ATTACHABLE_MAX_BYTES)
     return { name: baseName(r.filePaths[0]), bytes: new Uint8Array(bytes) }
   })
 
   ipcMain.handle('slides:add-model3d', (e, op: AddModel3dOp) => {
     const session = sessions.get(e.sender.id)
     if (!session || !session.opened.deck.slides[op.slideIndex]) return null
+    if (op.bytes.byteLength > ATTACHABLE_MAX_BYTES)
+      return refuseOversizedMedia(ATTACHABLE_MAX_BYTES)
+    if (op.posterBase64 && boundedBase64Size(op.posterBase64, ATTACHABLE_IMAGE_MAX_BYTES) === null)
+      return refuseOversizedMedia(ATTACHABLE_IMAGE_MAX_BYTES)
     const deckSize = session.opened.deck.size
     const cy = Math.round(deckSize.cy * 0.5)
     const cx = Math.round(cy * op.aspect)
@@ -4446,12 +4470,16 @@ export function registerSlidesIpc(): void {
     const el = session?.opened.deck.slides[slideIndex]?.elements.find((x) => x.id === sourceId)
     const target = el?.type === 'picture' ? el.model3d?.target : undefined
     const bytes = target ? session!.opened.archive.readBytes(target) : undefined
+    if (bytes && bytes.byteLength > ATTACHABLE_MAX_BYTES)
+      return refuseOversizedMedia(ATTACHABLE_MAX_BYTES)
     return bytes ? new Uint8Array(bytes) : null
   })
 
   ipcMain.handle('slides:set-model3d-view', (e, op: SetModel3dViewOp) => {
     const session = sessions.get(e.sender.id)
     if (!session?.opened.deck.slides[op.slideIndex]) return null
+    if (op.posterBase64 && boundedBase64Size(op.posterBase64, ATTACHABLE_IMAGE_MAX_BYTES) === null)
+      return refuseOversizedMedia(ATTACHABLE_IMAGE_MAX_BYTES)
     const r = sessionTxn(session, {
       ops: [
         {
@@ -4625,6 +4653,12 @@ export function registerSlidesIpc(): void {
     closeNarrationMicrophone(e.sender.id)
     const session = sessions.get(e.sender.id)
     if (!session) return null
+    let totalBytes = 0
+    for (const slide of op.slides) {
+      const size = boundedBase64Size(slide.wavBase64, ATTACHABLE_MAX_BYTES - totalBytes)
+      if (size === null) return refuseOversizedMedia(ATTACHABLE_MAX_BYTES)
+      totalBytes += size
+    }
     const slides = session.opened.deck.slides
     const recorded = op.slides.filter((s) => slides[s.slideIndex])
     if (recorded.length === 0) return null

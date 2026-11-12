@@ -103,7 +103,7 @@ async function openSource(ext = 'ppt') {
 }
 beforeAll(async () => {
   registerSlidesIpc()
-  state.bytes = await createBlankPptx()
+  state.bytes = new Uint8Array(await createBlankPptx())
 })
 beforeEach(() => {
   sessions.clear()
