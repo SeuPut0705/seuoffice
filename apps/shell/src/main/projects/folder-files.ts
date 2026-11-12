@@ -3,6 +3,7 @@ import { lstatSync, realpath, type Stats } from 'node:fs'
 import { lstat, readdir, readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { promisify } from 'node:util'
+import { folderHoldsData } from '@seuoffice/ai-provider'
 import { existingOrCurrent, OLD_PROJECT_DATA_DIR_NAMES } from '@seuoffice/i18n'
 import {
   isValidProjectId,
@@ -139,19 +140,26 @@ export function isDataDirName(segment: string): boolean {
 
 /**
  * The name of `root`'s data folder: the current one when a real folder of that
- * name is there; else an earlier name while a real folder of that name is there
- * (a project an older version made keeps its folder; nothing is copied or moved,
- * and a link reads as absent); else the current one. Judged on every call rather
- * than remembered, so it follows the folder as it is on disk.
+ * name holds data; else an earlier name while a real folder of that name is
+ * there (a project an older version made keeps its folder; nothing is copied or
+ * moved, a link reads as absent, and an empty folder made under the current
+ * name hides nothing); else the current one. Judged on every call rather than
+ * remembered, so it follows the folder as it is on disk.
  */
 export function dataDirName(root: string): string {
-  return existingOrCurrent(PROJECT_FOLDER_NAMES.dataDir, OLD_PROJECT_DATA_DIR_NAMES, (name) => {
+  const realFolder = (name: string) => {
     try {
       return lstatSync(join(root, name)).isDirectory()
     } catch {
       return false
     }
-  })
+  }
+  return existingOrCurrent(
+    PROJECT_FOLDER_NAMES.dataDir,
+    OLD_PROJECT_DATA_DIR_NAMES,
+    realFolder,
+    (name) => realFolder(name) && folderHoldsData(join(root, name)),
+  )
 }
 
 /** A file in the project's data folder: `dataDir` when an operation resolved it already */
