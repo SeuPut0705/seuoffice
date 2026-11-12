@@ -20,6 +20,8 @@ concurrency:
 
 env:
   CEF_CRATE_VERSION: '154.5.0'
+  # the build metadata of cef-dll-sys 154.5.0+154.0.34
+  CEF_VERSION: '154.0.34'
 
 jobs:
   mac:
@@ -71,6 +73,13 @@ jobs:
       - name: build the app bundle
         id: build
         run: |
+          # the CDN's index.json is past the 10 MB body limit of the cef crate's build script
+          python3 ci/cef-index-mirror.py 8099 "$CEF_VERSION" > "$RUNNER_TEMP/cef-mirror.log" 2>&1 &
+          mirror=$!
+          trap 'kill $mirror 2>/dev/null || true' EXIT
+          for i in $(seq 1 90); do curl -sf http://127.0.0.1:8099/index.json -o /dev/null && break; sleep 1; done
+          cat "$RUNNER_TEMP/cef-mirror.log"
+          export CEF_DOWNLOAD_URL=http://127.0.0.1:8099
           start=$(date +%s)
           npx tauri build --bundles app --verbose
           echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
@@ -210,6 +219,13 @@ jobs:
       - name: build the NSIS installer
         id: build
         run: |
+          # the CDN's index.json is past the 10 MB body limit of the cef crate's build script
+          python3 ci/cef-index-mirror.py 8099 "$CEF_VERSION" > "$RUNNER_TEMP/cef-mirror.log" 2>&1 &
+          mirror=$!
+          trap 'kill $mirror 2>/dev/null || true' EXIT
+          for i in $(seq 1 90); do curl -sf http://127.0.0.1:8099/index.json -o /dev/null && break; sleep 1; done
+          cat "$RUNNER_TEMP/cef-mirror.log"
+          export CEF_DOWNLOAD_URL=http://127.0.0.1:8099
           start=$(date +%s)
           npx tauri build --bundles nsis --verbose
           echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
