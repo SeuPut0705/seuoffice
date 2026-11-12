@@ -1,3 +1,5 @@
+// the engine starts before any module that calls it evaluates
+import './engine-init'
 /**
  * The main-process side of the EPUB editor. The shell imports this file by
  * relative path, so it is compiled into the shell bundle; a standalone window

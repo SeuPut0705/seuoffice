@@ -1,3 +1,5 @@
+// the engine starts before any module that calls it evaluates
+import './engine-init'
 import { existsSync } from 'node:fs'
 import { copyFile, readFile, stat } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'

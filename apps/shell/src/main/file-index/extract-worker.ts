@@ -2,6 +2,8 @@
  * Worker-thread entry: text extraction and directory walks run here so a slow
  * PDF or a stalled network folder never blocks the main process.
  */
+// this thread starts its own engine before the readers evaluate
+import './engine-init'
 import { parentPort } from 'node:worker_threads'
 import { extractText } from './extract'
 import { scanFiles, type ScannedFile } from './scan'
