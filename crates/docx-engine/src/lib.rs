@@ -1,12 +1,15 @@
 //! The docx engine. Pure: no I/O, no clock, no randomness.
 
+pub mod alt_chunk;
 pub mod blank;
+pub mod checkbox_control;
 pub mod doc_properties;
 pub mod drawing_geometry;
 pub mod eq_field;
 pub mod field_balance;
 pub mod fields;
 pub mod font_table;
+pub mod image_kinds;
 pub mod list_markers;
 pub mod notes;
 pub mod numbering;
@@ -14,6 +17,8 @@ pub mod package;
 pub mod props;
 pub mod protection;
 pub mod resolve;
+#[cfg(feature = "u2_revision")]
+pub mod revision_xml;
 pub mod scan;
 pub mod sdt;
 pub mod section;
