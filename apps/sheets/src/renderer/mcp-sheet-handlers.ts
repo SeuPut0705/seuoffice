@@ -3,7 +3,17 @@
  * the transport). Kept out of App.tsx so the answers an external agent gets can
  * be exercised without mounting the app; App supplies the live refs.
  */
-import type { CellScalar } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { WorkbookOperation } from '@genoffice/xlsx-gateway/domain/workbook-dsl'
+import type {
+  ApplyOutcome,
+  CellScalar,
+  CellState,
+  ChangePlan,
+} from '@genoffice/xlsx-gateway/domain/workbook.types'
+import { redactionIndexOf, type RedactionLoad } from './ai/redact-load'
+import { redactGuardForOps } from './ai/redact-guard'
+import type { SheetRef } from './mcp-sheet-refs'
+import { awaitFormulaValues, formulaTargetsFromOps, rememberFormulaValue } from './formula-values'
 import { readCells, type WorkbookReadContext } from './ai/workbook-readers'
 import { modelCellValue } from './univer-sync'
 
@@ -43,4 +53,72 @@ export function readCellsForMcp(
       ]
     }),
   )
+}
+
+/** The live workbook services the MCP apply command needs. */
+export interface McpApplyContext {
+  readonly redactionLoad: () => RedactionLoad
+  readonly sheets: () => readonly SheetRef[]
+  readonly plan: (ops: readonly WorkbookOperation[]) => ChangePlan
+  readonly apply: (ops: readonly WorkbookOperation[]) => Promise<ApplyOutcome>
+  readonly readCells: (addresses: readonly string[], sheetId: string) => Record<string, CellState>
+}
+
+/** Plan or apply one external agent batch, including computed formula readback. */
+export async function applyOpsForMcp(
+  ctx: McpApplyContext,
+  ops: readonly WorkbookOperation[],
+  dryRun: boolean,
+): Promise<unknown> {
+  // Check before planning too: a dry-run preview can contain values read from
+  // the grid, and formula readback can publish a withheld source in its target.
+  const load = ctx.redactionLoad()
+  if (load.status === 'not-loaded') {
+    return { ok: false, reason: 'The workbook privacy marks are still loading; retry the batch.' }
+  }
+  const sheets = ctx.sheets()
+  const refusal = redactGuardForOps(
+    ops,
+    redactionIndexOf(load),
+    (id) => sheets.find((sheet) => sheet.id === id)?.name,
+    (name) =>
+      sheets.find((sheet) => sheet.name === name)?.id ??
+      sheets.find((sheet) => sheet.name.toLowerCase() === name.toLowerCase())?.id,
+  )
+  if (refusal) {
+    return {
+      ok: false,
+      reason:
+        `Rejected — none of the ${ops.length} operation(s) were applied ` +
+        `(a batch is all-or-nothing): ${refusal.reason}`,
+    }
+  }
+  if (dryRun) {
+    try {
+      const plan = ctx.plan(ops)
+      return {
+        ok: true,
+        dryRun: true,
+        structuralChanges: plan.structuralChanges.map((change) => change.label),
+        formatChanges: plan.formatChanges.map((change) => change.label),
+        cellChanges: plan.cellChanges
+          .slice(0, 100)
+          .map((change) => ({ address: change.address, after: change.after.value })),
+        cellChangeCount: plan.cellChanges.length,
+        sheetRenames: plan.sheetRenames.map((rename) => `${rename.before} -> ${rename.after}`),
+      }
+    } catch (error: unknown) {
+      return { ok: false, reason: error instanceof Error ? error.message : String(error) }
+    }
+  }
+  const outcome = await ctx.apply(ops)
+  if (!outcome.ok) return outcome
+  // Formula text lands synchronously; its computed value arrives asynchronously.
+  const targets = formulaTargetsFromOps(ops)
+  if (targets.length === 0) return outcome
+  const values = await awaitFormulaValues(targets, ctx.readCells)
+  for (const cell of values) {
+    rememberFormulaValue(cell.sheetId, cell.address, { formula: cell.formula ?? '' })
+  }
+  return { ...outcome, formulaValues: values }
 }

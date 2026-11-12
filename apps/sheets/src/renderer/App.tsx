@@ -700,15 +700,9 @@ import {
 import { applyFillSeries, fillSeriesContext } from './fill-series-apply'
 import { solveGoalSeek } from './goal-seek'
 import { applyDataTable } from './data-table'
-import {
-  awaitFormulaValues,
-  clearVerifiedFormulaValues,
-  formulaTargetsFromOps,
-  hasUncomputedFormulaCells,
-  rememberFormulaValue,
-} from './formula-values'
+import { clearVerifiedFormulaValues, hasUncomputedFormulaCells } from './formula-values'
+import { applyOpsForMcp, readCellsForMcp } from './mcp-sheet-handlers'
 import { SlicerFieldPicker, SlicerPanels, type SlicerUiState } from './SlicerPanel'
-import { readCellsForMcp } from './mcp-sheet-handlers'
 import { WatchWindowPanel, watchKey, type WatchCell, type WatchRowValue } from './WatchWindowPanel'
 import { ExternalLinksPanel } from './ExternalLinksPanel'
 import { breakExternalLinkFlow, updateExternalLinksFlow } from './external-links-flow'
@@ -2422,11 +2416,11 @@ export function App({
    * undo, so a mark follows the grid for free and returns with ⌘Z.
    */
   function rebuildRedactionIndex(): void {
-    const journal = lazyWorkbookRef.current?.editJournal
     // Marks that were never read cannot be re-derived: an index built from the
     // empty store would answer "nothing withheld" for a workbook whose part is
     // still on its way, or could not be read at all.
     if (redactionLoadRef.current.status !== 'loaded') return
+    const journal = lazyWorkbookRef.current?.editJournal
     if (!journal) return
     const sheets = getActiveSheetInfo().sheets
     const idByName = new Map(sheets.map((sheet) => [sheet.name, sheet.id]))
@@ -6219,42 +6213,17 @@ export function App({
       if (!runtime || !state || !workbook) {
         return { ok: false, reason: t('appNoWorkbookOpen') }
       }
-      if (dryRun) {
-        try {
-          const plan = planFromOps(ops, workbook, 'mcp')
-          return {
-            ok: true,
-            dryRun: true,
-            structuralChanges: plan.structuralChanges.map((change) => change.label),
-            formatChanges: plan.formatChanges.map((change) => change.label),
-            cellChanges: plan.cellChanges
-              .slice(0, 100)
-              .map((change) => ({ address: change.address, after: change.after.value })),
-            cellChangeCount: plan.cellChanges.length,
-            sheetRenames: plan.sheetRenames.map((rename) => `${rename.before} -> ${rename.after}`),
-          }
-        } catch (error: unknown) {
-          return { ok: false, reason: error instanceof Error ? error.message : String(error) }
-        }
-      }
-      const outcome = await runUiOps(ops)
-      if (!outcome.ok) return outcome
-      // A formula's text lands synchronously but its result is computed
-      // asynchronously, so an immediate read of the cells this batch targeted
-      // would show null and an agent could read that as a failed edit. Report
-      // the computed values with the result (see formula-values.ts).
-      const targets = formulaTargetsFromOps(ops)
-      if (targets.length === 0) return outcome
-      const values = await awaitFormulaValues(targets, (addresses, sheetId) =>
-        readCellsImpl(readContext(), [...addresses], sheetId),
+      return applyOpsForMcp(
+        {
+          redactionLoad: () => redactionLoadRef.current,
+          sheets: () => getActiveSheetInfo().sheets,
+          plan: (batch) => planFromOps(batch, workbook, 'mcp'),
+          apply: runUiOps,
+          readCells: (addresses, sheetId) => readCellsImpl(readContext(), addresses, sheetId),
+        },
+        ops,
+        dryRun,
       )
-      // Remember which cells settled so the next save can write a real cached
-      // <v> for them (the overlay skips the very cells a batch just wrote); the
-      // value itself is read live at save time, see formula-values.ts.
-      for (const cell of values) {
-        rememberFormulaValue(cell.sheetId, cell.address, { formula: cell.formula ?? '' })
-      }
-      return { ...outcome, formulaValues: values }
     },
     saveTo: async (path, overwrite) => handleSave('save-as', true, { path, overwrite }),
   }
