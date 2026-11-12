@@ -16,7 +16,7 @@
  * formatting changed is reported as a deletion of the old run plus an
  * insertion of the new one, which is honest but more verbose than Word.
  */
-import { runCopiedElsewhere } from './inline-opaque'
+import { runCopiedElsewhere, runDraws } from './inline-opaque'
 import { saveDocx, type ParsedDocFull, type SaveBlock } from './patch'
 import type { Block, GeneratedBlock, RevisionInfo, Run } from './types'
 
@@ -177,10 +177,9 @@ export function compareBlocks(
           } else {
             summary.insertions++
             runs.push(
-              ...sliceRuns(rightRuns, chunk.right![0], chunk.right![1]).map((r) => ({
-                ...emittedRun(r),
-                ins: info,
-              })),
+              ...sliceRuns(rightRuns, chunk.right![0], chunk.right![1]).map((r) =>
+                runDraws(r) ? { ...emittedRun(r), ins: info } : emittedRun(r),
+              ),
             )
           }
         }
@@ -569,10 +568,17 @@ function tokenEqual(a: string, b: string, rules: Rules): boolean {
 function sliceRuns(runs: Run[], start: number, end: number): Run[] {
   const out: Run[] = []
   let pos = 0
+  const length = runs.reduce((n, r) => n + r.text.length, 0)
   for (const run of runs) {
     const runStart = pos
     const runEnd = pos + run.text.length
     pos = runEnd
+    // Zero-width structure belongs to the revised document, once at its
+    // logical offset (the next chunk, except at the paragraph's very end).
+    if (!runDraws(run)) {
+      if (pos >= start && (pos < end || (pos === end && end === length))) out.push(run)
+      continue
+    }
     if (runEnd <= start || runStart >= end) continue
     const from = Math.max(start, runStart)
     const to = Math.min(end, runEnd)

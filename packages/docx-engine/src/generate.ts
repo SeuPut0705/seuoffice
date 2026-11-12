@@ -1,13 +1,17 @@
+import { ContentControlPart } from './inline-control-ids'
 import { sdtCheckboxGlyphs, sdtCheckboxIsChecked, syncSdtCheckbox } from './checkbox-control'
 import {
+  inlineWrapKey,
   inlineWrapTextOf,
   inlineWrapWritesOnce,
   placeInlineWraps,
   sameInlineWrap,
   sdtOpenForChangedText,
+  validInlineOpaque,
+  validInlineWrap,
+  runDraws,
 } from './inline-opaque'
 import type {
-  InlineWrap,
   CellMargins,
   CharIndents,
   GeneratedBlock,
@@ -620,7 +624,11 @@ export function xmlSegments(
  * null entries keep the original paragraph bytes untouched.
  * Returns null when the cell is too complex to patch safely (nested table).
  */
-function patchCellXml(tcXml: string, paras: readonly CellParaPatch[]): string | null {
+function patchCellXml(
+  tcXml: string,
+  paras: readonly CellParaPatch[],
+  part: ContentControlPart,
+): string | null {
   if (tcXml.indexOf('<w:tbl', 1) !== -1) return null
   const openTag = /^<w:tc(?: [^>]*)?>/.exec(tcXml)?.[0]
   if (!openTag) return null
@@ -696,7 +704,7 @@ function patchCellXml(tcXml: string, paras: readonly CellParaPatch[]): string | 
         : i === 0
           ? originals.map((p) => carriedRunsOf(p, emittedMedia)).join('')
           : ''
-      return `<w:p>${pPr}${emitted}${keep}</w:p>`
+      return `<w:p>${pPr}${part.generated(emitted)}${keep}</w:p>`
     })
     .join('')
   return openTag + tcPr + body + '</w:tc>'
@@ -760,7 +768,9 @@ export type CellTextsPatch =
 export function patchTableCellTexts(
   tableXml: string,
   texts: ReadonlyArray<ReadonlyArray<CellTextsPatch | null | undefined> | null | undefined>,
+  part?: ContentControlPart,
 ): string {
+  const scope = part ?? new ContentControlPart(tableXml)
   const trSegs = xmlSegments(tableXml, 'w:tr', 0, tableXml.length)
   let out = ''
   let cursor = 0
@@ -773,14 +783,15 @@ export function patchTableCellTexts(
       if (entry == null) return
       const tcXml = tableXml.slice(tc.start, tc.end)
       const patched = Array.isArray(entry)
-        ? patchCellXml(tcXml, entry as CellParaPatch[])
-        : patchNestedInCell(tcXml, (entry as { nested?: unknown }).nested as never)
+        ? patchCellXml(tcXml, entry as CellParaPatch[], scope)
+        : patchNestedInCell(tcXml, (entry as { nested?: unknown }).nested as never, scope)
       if (patched === null) return
       out += tableXml.slice(cursor, tc.start) + patched
       cursor = tc.end
     })
   })
-  return out + tableXml.slice(cursor)
+  const xml = out + tableXml.slice(cursor)
+  return part ? xml : scope.finish(xml)
 }
 
 /** patch the cell's direct nested tables' cell texts (recursive surgical patch) */
@@ -791,6 +802,7 @@ function patchNestedInCell(
         ReadonlyArray<readonly CellParaPatch[] | null | undefined> | null | undefined
       > | null>
     | undefined,
+  part: ContentControlPart,
 ): string | null {
   if (!nested || nested.length === 0) return null
   const openTag = /^<w:tc(?: [^>]*)?>/.exec(tcXml)?.[0]
@@ -803,7 +815,8 @@ function patchNestedInCell(
     const grid = nested[i]
     if (!grid) return
     out +=
-      tcXml.slice(cursor, seg.start) + patchTableCellTexts(tcXml.slice(seg.start, seg.end), grid)
+      tcXml.slice(cursor, seg.start) +
+      patchTableCellTexts(tcXml.slice(seg.start, seg.end), grid, part)
     cursor = seg.end
   })
   return out + tcXml.slice(cursor)
@@ -910,6 +923,7 @@ function pPrWithJc(pPr: string, align: TextboxParaPatch['align']): string {
 function patchTxbxContent(
   segXml: string,
   paras: ReadonlyArray<TextboxParaPatch | null | undefined>,
+  part: ContentControlPart,
 ): string {
   const open = /^<w:txbxContent(?: [^>]*)?>/.exec(segXml)?.[0]
   if (!open) return segXml
@@ -930,7 +944,7 @@ function patchTxbxContent(
     if (patch.align !== undefined) pPr = pPrWithJc(pPr, patch.align)
     // no rel allocation inside textboxes: only links that already have an rId
     // survive re-generation, new links degrade to plain text
-    parts.push(`<w:p>${pPr}${runsXml(patch.runs, null)}</w:p>`)
+    parts.push(`<w:p>${pPr}${part.generated(runsXml(patch.runs, null))}</w:p>`)
   }
   return open + parts.join('') + '</w:txbxContent>'
 }
@@ -956,6 +970,7 @@ export interface TextboxParasPatchSet {
  * visible box so both renderings stay in sync.
  */
 export function patchTextboxParas(paragraphXml: string, patches: TextboxParasPatchSet): string {
+  const part = new ContentControlPart(paragraphXml)
   const byIndex = patches.byIndex ?? []
   const segs = xmlSegments(paragraphXml, 'w:txbxContent', 0, paragraphXml.length)
   let xml = paragraphXml
@@ -978,13 +993,13 @@ export function patchTextboxParas(paragraphXml: string, patches: TextboxParasPat
       if (current == null) continue
       out +=
         paragraphXml.slice(cursor, seg.start) +
-        patchTxbxContent(paragraphXml.slice(seg.start, seg.end), current)
+        patchTxbxContent(paragraphXml.slice(seg.start, seg.end), current, part)
       cursor = seg.end
     }
     xml = out + paragraphXml.slice(cursor)
   }
-  for (const entry of patches.inject ?? []) xml = injectShapeText(xml, entry)
-  return xml
+  for (const entry of patches.inject ?? []) xml = injectShapeText(xml, entry, part)
+  return part.finish(xml)
 }
 
 /**
@@ -999,6 +1014,7 @@ export function patchTextboxParas(paragraphXml: string, patches: TextboxParasPat
 function injectShapeText(
   paragraphXml: string,
   entry: { shapeId: string; paras: TextboxParaPatch[] },
+  part: ContentControlPart,
 ): string {
   for (const seg of xmlSegments(paragraphXml, 'wps:wsp', 0, paragraphXml.length)) {
     let shapeXml = paragraphXml.slice(seg.start, seg.end)
@@ -1009,13 +1025,13 @@ function injectShapeText(
       if (!content) return paragraphXml
       shapeXml =
         shapeXml.slice(0, content.start) +
-        patchTxbxContent(shapeXml.slice(content.start, content.end), entry.paras) +
+        patchTxbxContent(shapeXml.slice(content.start, content.end), entry.paras, part) +
         shapeXml.slice(content.end)
     } else {
       const body = entry.paras
         .map(
           (p) =>
-            `<w:p>${pPrWithJc(pPrWithIndLeft('', p.indentLeft ?? null), p.align)}${runsXml(p.runs, null)}</w:p>`,
+            `<w:p>${pPrWithJc(pPrWithIndLeft('', p.indentLeft ?? null), p.align)}${part.generated(runsXml(p.runs, null))}</w:p>`,
         )
         .join('')
       const txbx = `<wps:txbx><w:txbxContent>${body}</w:txbxContent></wps:txbx>`
@@ -2462,6 +2478,7 @@ function cellMergeXml(record: PropChangeInfo): string {
 function tableCellXml(
   cell: TableCell,
   width: number,
+  part: ContentControlPart,
   verticalMerge?: 'restart' | 'continue',
 ): string {
   // Surgical rawTcPr patch: modeled children are replaced/inserted in schema order;
@@ -2534,7 +2551,7 @@ function tableCellXml(
     // The parsed format, not just w:jc: hand-building the pPr here dropped w:bidi and
     // discarded every other paragraph property the model carries.
     const pPr = mergePPrFormat(`<w:pPr>${numPr}</w:pPr>`, paragraph)
-    return `<w:p>${pPr}${runsXml(paragraph.runs, null)}</w:p>`
+    return `<w:p>${pPr}${part.generated(runsXml(paragraph.runs, null))}</w:p>`
   })
   // nested tables are regenerated from the model at their paragraph anchors (reverse
   // insertion keeps anchor indexes valid); OOXML requires tc to end with w:p
@@ -2542,7 +2559,7 @@ function tableCellXml(
   const items = paraXmls.map((xml) => ({ tbl: false, xml }))
   for (let i = nested.length - 1; i >= 0; i--) {
     const at = Math.min(cell.nestedTableAnchors?.[i] ?? paraXmls.length, paraXmls.length)
-    items.splice(at, 0, { tbl: true, xml: generateTableModelXml(nested[i]) })
+    items.splice(at, 0, { tbl: true, xml: generateTableModelXml(nested[i], undefined, part) })
   }
   const tail = items.length === 0 || items[items.length - 1].tbl ? '<w:p/>' : ''
   const content = items.map((item) => item.xml).join('')
@@ -2619,7 +2636,12 @@ function originalTblPrOf(tableXml: string): string | undefined {
     ?.xml
 }
 
-export function generateTableModelXml(model: TableModel, originalTableXml?: string): string {
+export function generateTableModelXml(
+  model: TableModel,
+  originalTableXml?: string,
+  part?: ContentControlPart,
+): string {
+  const scope = part ?? new ContentControlPart(originalTableXml ?? '')
   // the widest row decides the column count; folding it in a loop keeps the
   // argument count off the call (a spread here blew the stack past ~125k rows)
   let columnCount = Math.max(1, model.colWidthsPct?.length ?? 0)
@@ -2695,7 +2717,7 @@ export function generateTableModelXml(model: TableModel, originalTableXml?: stri
           }
           continue
         }
-        cells.push(tableCellXml(cell, width))
+        cells.push(tableCellXml(cell, width, scope))
       }
       // trPr: original bytes passed through (tblHeader/cantSplit etc.); row height is
       // replaced/inserted/removed per the model
@@ -2871,7 +2893,8 @@ export function generateTableModelXml(model: TableModel, originalTableXml?: stri
       model.description ? `<w:tblDescription w:val="${escapeXmlAttr(model.description)}"/>` : null,
     )
   }
-  return `<w:tbl>${tblPr}${grid}${rows}</w:tbl>`
+  const xml = `<w:tbl>${tblPr}${grid}${rows}</w:tbl>`
+  return part ? xml : scope.finish(xml)
 }
 
 /** rId / docPr placeholder of a picture inserted by the editor; saveDocx resolves
@@ -3089,8 +3112,12 @@ function generateRunsXml(runs: Run[], ctx: GenerateContext): string {
  * `written`: the content controls already written for this paragraph, shared
  * by a caller that writes one paragraph's runs in several calls.
  */
-export function inlineRunsXml(runs: Run[], written?: InlineWrap[]): string {
-  return runsXml(runs, null, undefined, written)
+export function inlineRunsXml(
+  runs: Run[],
+  written?: Set<string>,
+  fieldFragments?: ReadonlyMap<Run, string>,
+): string {
+  return runsXml(runs, null, undefined, written, fieldFragments)
 }
 
 /**
@@ -3102,13 +3129,46 @@ function runsXml(
   runs: Run[],
   allocate: ((href: string) => string) | null,
   allocateRevisionId?: () => string,
-  written: InlineWrap[] = [],
+  written: Set<string> = new Set(),
+  fieldFragments?: ReadonlyMap<Run, string>,
 ): string {
+  // Validate once per distinct shell/element in this write, not once per run.
+  // Invalid remote marks lose only their structure, never their visible text.
+  const originalRuns = runs
+  if (runs.some((r) => r.wrap?.length || r.opaqueXml !== undefined)) {
+    const validWraps = new Map<string, boolean>()
+    const validOpaque = new Map<string, boolean>()
+    runs = runs.map((run) => {
+      const wrap = run.wrap?.filter((w) => {
+        const key = inlineWrapKey(w)
+        let valid = validWraps.get(key)
+        if (valid === undefined) {
+          valid = validInlineWrap(w)
+          validWraps.set(key, valid)
+        }
+        return valid
+      })
+      let opaqueXml = run.opaqueXml
+      if (opaqueXml !== undefined) {
+        let valid = validOpaque.get(opaqueXml)
+        if (valid === undefined) {
+          valid = validInlineOpaque(opaqueXml)
+          validOpaque.set(opaqueXml, valid)
+        }
+        if (!valid) opaqueXml = undefined
+      }
+      if (wrap?.length === run.wrap?.length && opaqueXml === run.opaqueXml) return run
+      return { ...run, wrap: wrap?.length ? wrap : undefined, opaqueXml }
+    })
+  }
+  const fragment = (index: number, insideLink: boolean) =>
+    fieldFragments?.get(originalRuns[index]) ?? runFragmentXml(runs[index], insideLink)
   // comment ranges: re-emit start/end/reference markers around the first..last
   // run each id covers, so editing a commented paragraph keeps its comments
   const firstOf = new Map<string, number>()
   const lastOf = new Map<string, number>()
   runs.forEach((run, i) => {
+    if (!runDraws(run)) return
     for (const id of run.commentIds ?? []) {
       if (!firstOf.has(id)) firstOf.set(id, i)
       lastOf.set(id, i)
@@ -3179,12 +3239,13 @@ function runsXml(
       } else {
         while (end < to && sameInlineWrap(placed[end][level][depth], wrap)) end++
         const once = inlineWrapWritesOnce(wrap)
-        if (once && written.some((w) => sameInlineWrap(w, wrap))) {
+        const key = inlineWrapKey(wrap)
+        if (once && written.has(key)) {
           // a content control is one element: runs that left its first group
           // go back without it rather than as a second control with its w:id
           within(g, end, level, depth + 1, leaf)
         } else {
-          if (once) written.push(wrap)
+          if (once) written.add(key)
           // text typed into a placeholder or a data-bound control: the two
           // properties that would make Word discard it go (see InlineWrap.text)
           const edited = wrap.text !== undefined && inlineWrapTextOf(runs, g, end) !== wrap.text
@@ -3219,7 +3280,7 @@ function runsXml(
         const inner = (insideLink: boolean): string => {
           const at = parts.length
           within(groupStart, groupEnd, 2, 0, (a, b) => {
-            for (let j = a; j < b; j++) parts.push(runFragmentXml(runs[j], insideLink))
+            for (let j = a; j < b; j++) parts.push(fragment(j, insideLink))
           })
           return parts.splice(at).join('')
         }
@@ -3244,7 +3305,7 @@ function runsXml(
         for (let j = groupStart; j < i; j++) parts.push(endsAt(j))
       } else {
         parts.push(startsAt(i))
-        parts.push(runFragmentXml(run, false))
+        parts.push(fragment(i, false))
         parts.push(endsAt(i))
         i++
       }

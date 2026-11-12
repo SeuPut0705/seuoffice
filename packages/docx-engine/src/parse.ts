@@ -251,6 +251,8 @@ import {
   inlineWrapperIsBare,
   inlineWrapperShell,
   isInlineWrapper,
+  neighbouringRun,
+  runDraws,
   sdtFollowsItsText,
   type InlineRawSource,
 } from './inline-opaque'
@@ -4477,8 +4479,8 @@ function extractRuns(
     run.commentIds = [...new Set([...(run.commentIds ?? []), ...ids])].sort()
   }
   const pushRun = (run: Run, rev?: RevCtx) => {
-    if (activeComments.size > 0) run.commentIds = [...activeComments].sort()
-    if (pendingRefIds.length > 0) {
+    if (runDraws(run) && activeComments.size > 0) run.commentIds = [...activeComments].sort()
+    if (runDraws(run) && pendingRefIds.length > 0) {
       addCommentIds(run, pendingRefIds)
       pendingRefIds = []
     }
@@ -4706,7 +4708,7 @@ function extractRuns(
     if (commentRef) {
       const id = attrsOf(commentRef)['w:id']
       if (id && ctx.referenceOnlyComments?.has(id)) {
-        const prev = runs[runs.length - 1]
+        const prev = neighbouringRun(runs, runs.length - 1, -1)
         if (prev) addCommentIds(prev, [id])
         else pendingRefIds.push(id)
       }
@@ -4761,12 +4763,9 @@ function extractRuns(
     const first = runs.length
     walk(childrenOf(node), link, rev)
     const inside = runs.splice(first)
-    // elements kept verbatim are not part of the cached result: they stay
-    const cached = inside.filter((r) => {
-      if (r.opaqueXml === undefined) return true
-      runs.push(r)
-      return false
-    })
+    // A folded field has no positions for markers in its result. Do not carry
+    // them rather than move the permission/custom-XML range before the field.
+    const cached = inside.filter(runDraws)
     const text = cached.map((r) => r.text).join('')
     const format = cached[0]
       ? Object.fromEntries(Object.entries(cached[0]).filter(([k]) => !RESULT_FORMAT_SKIP.has(k)))
@@ -4901,7 +4900,9 @@ function extractRuns(
         const control = sdtCheckboxControl(node)!
         const first = runs.length
         walk(childrenOf(node), link, rev)
-        const base = runs.slice(first).find((r) => r.text.trim() !== '') ?? runs[first]
+        const base =
+          runs.slice(first).find((r) => runDraws(r) && r.text.trim() !== '') ??
+          neighbouringRun(runs, first)
         runs.length = first
         pushRun({ ...(base ?? {}), text: control.glyph, sdtCheckboxXml: control.sdtPrXml }, rev)
       } else if (name !== undefined && isInlineWrapper(name)) {
@@ -4961,7 +4962,7 @@ function extractRuns(
         // Word honors a <w:br> sitting outside any <w:r> (direct child of w:p / w:ins)
         pushRun({ text: breakCharOf(attrsOf(node)) }, rev)
       } else if (name !== undefined && INLINE_KEPT_ELEMENTS.has(name)) {
-        pushKept(node, link, rev)
+        if (fieldDepth === 0) pushKept(node, link, rev)
       }
     }
   }

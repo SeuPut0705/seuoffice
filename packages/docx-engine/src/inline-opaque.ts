@@ -2,6 +2,7 @@
 // runs (w:sdt, w:smartTag, w:customXml, w:dir, w:bdo) and paragraph-level
 // elements without text (w:permStart, range markers...). Their bytes ride on
 // the runs (Run.wrap, Run.opaqueXml) so a rebuilt paragraph writes them back.
+import { XMLValidator } from 'fast-xml-parser'
 import type { InlineWrap, Run } from './types'
 import { attrsOf, childrenOf, escapeXmlAttr, nameOf, serializeXNode, type XNode } from './xml-utils'
 
@@ -12,6 +13,21 @@ const WRAPPER_PROPS: Readonly<Record<string, string | undefined>> = {
   'w:customXml': 'w:customXmlPr',
   'w:dir': undefined,
   'w:bdo': undefined,
+}
+
+/** A preserved zero-width element is not a text/picture/field run. */
+export const runDraws = (run: Run): boolean => run.opaqueXml === undefined
+
+/** The first drawing run in a direction, including `from` itself. */
+export function neighbouringRun(
+  runs: readonly Run[],
+  from: number,
+  direction: 1 | -1 = 1,
+): Run | undefined {
+  for (let i = from; i >= 0 && i < runs.length; i += direction) {
+    if (runDraws(runs[i])) return runs[i]
+  }
+  return undefined
 }
 
 export function isInlineWrapper(name: string): boolean {
@@ -72,7 +88,7 @@ export function inlineWrapperIsBare(node: XNode): boolean {
 }
 
 /** one element of the scanned xml: the byte ranges of its tags and its element children */
-interface RawElement {
+export interface RawElement {
   name: string
   start: number
   /** end of the opening tag */
@@ -84,15 +100,17 @@ interface RawElement {
   children: RawElement[]
 }
 
-function rawElements(xml: string): RawElement[] {
-  // comments, CDATA and processing instructions can hide tag-like text; the
-  // parse tree drops them, so the two would not line up
-  if (xml.includes('<!') || xml.includes('<?')) return []
+export function rawElements(xml: string, skipNonElements = false): RawElement[] {
+  // Pairing a parse tree cannot skip these (its element children differ).
+  // The save-time byte scanner may skip them without losing offsets.
+  if (!skipNonElements && (xml.includes('<!') || xml.includes('<?'))) return []
   const roots: RawElement[] = []
   const stack: RawElement[] = []
-  const tagRe = /<(\/?)([A-Za-z_][\w:.-]*)((?:"[^"]*"|'[^']*'|[^"'>])*)>/g
+  const tagRe =
+    /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<(\/?)([A-Za-z_][\w:.-]*)((?:"[^"]*"|'[^']*'|[^"'>])*)>/g
   let m: RegExpExecArray | null
   while ((m = tagRe.exec(xml)) !== null) {
+    if (m[2] === undefined) continue
     const end = m.index + m[0].length
     if (m[1] === '/') {
       const el = stack.pop()
@@ -188,7 +206,13 @@ export function inlineWrapperShell(
   const rawKids = raw && raw.children.length === kids.length ? raw.children : null
   if (name === 'w:sdt') {
     const at = kids.findIndex((k) => nameOf(k) === 'w:sdtContent')
-    if (at < 0) return null
+    // Only one content child may supply the visible runs. Anything else
+    // readable must be walked, never hidden in the shell's original bytes.
+    if (
+      at < 0 ||
+      kids.some((kid, i) => i !== at && nameOf(kid) !== 'w:sdtPr' && nameOf(kid) !== 'w:sdtEndPr')
+    )
+      return null
     const content = childrenOf(kids[at])
     const rawContent = rawKids?.[at]
     if (source && raw && rawContent?.name === 'w:sdtContent') {
@@ -239,6 +263,82 @@ export function inlineWrapperShell(
 export function sameInlineWrap(a: InlineWrap | undefined, b: InlineWrap | undefined): boolean {
   if (!a || !b) return a === b
   return a.seq === b.seq && a.open === b.open && a.close === b.close
+}
+
+/** Stable across copied mark objects, scoped to one paragraph's writer. */
+export const inlineWrapKey = (wrap: InlineWrap): string =>
+  JSON.stringify([wrap.seq, wrap.open, wrap.close])
+
+/** No literal content is hidden between an element's element children. */
+function onlyElementChildren(xml: string, el: RawElement): boolean {
+  let at = el.openEnd
+  for (const child of el.children) {
+    if (xml.slice(at, child.start).trim() !== '') return false
+    at = child.end
+  }
+  return xml.slice(at, el.closeStart).trim() === ''
+}
+
+/**
+ * Validate bytes at the writer boundary: co-editing can supply marks that
+ * did not come from this parser. A shell contains just one allowed wrapper,
+ * its properties, and exactly one content hole at the parser's split point.
+ */
+export function validInlineWrap(wrap: InlineWrap): boolean {
+  const xml = wrap.open + '<inline-hole/>' + wrap.close
+  if (XMLValidator.validate(xml) !== true) return false
+  const roots = rawElements(xml)
+  const root = roots[0]
+  if (
+    roots.length !== 1 ||
+    !root ||
+    root.start !== 0 ||
+    root.end !== xml.length ||
+    !isInlineWrapper(root.name) ||
+    !onlyElementChildren(xml, root)
+  )
+    return false
+  const holeAt = wrap.open.length
+  const isHole = (el: RawElement) =>
+    el.name === 'inline-hole' && el.start === holeAt && el.end === holeAt + 14
+  if (root.name === 'w:sdt') {
+    const contents = root.children.filter((c) => c.name === 'w:sdtContent')
+    return (
+      contents.length === 1 &&
+      onlyElementChildren(xml, contents[0]) &&
+      contents[0].children.length === 1 &&
+      isHole(contents[0].children[0]) &&
+      root.children.every(
+        (c) => c === contents[0] || c.name === 'w:sdtPr' || c.name === 'w:sdtEndPr',
+      )
+    )
+  }
+  const props = WRAPPER_PROPS[root.name]
+  return (
+    root.children.length >= 1 &&
+    root.children.length <= (props ? 2 : 1) &&
+    isHole(root.children[root.children.length - 1]) &&
+    (root.children.length === 1 || root.children[0].name === props)
+  )
+}
+
+/** One allowed text-less element, not a fragment that can escape its paragraph. */
+export function validInlineOpaque(xml: string): boolean {
+  if (XMLValidator.validate(xml) !== true) return false
+  const roots = rawElements(xml)
+  const root = roots[0]
+  if (roots.length !== 1 || !root || root.start !== 0 || root.end !== xml.length) return false
+  if (INLINE_KEPT_ELEMENTS.has(root.name)) {
+    return root.children.length === 0 && xml.slice(root.openEnd, root.closeStart).trim() === ''
+  }
+  if (!isInlineWrapper(root.name)) return false
+  const todo = [root]
+  for (let el = todo.pop(); el; el = todo.pop()) {
+    if (NOT_WHOLE.has(el.name)) return false
+    if (!onlyElementChildren(xml, el)) return false
+    todo.push(...el.children)
+  }
+  return true
 }
 
 /** two runs sit in the same chain of wrapper elements */

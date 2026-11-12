@@ -1,3 +1,4 @@
+import { ContentControlPart } from './inline-control-ids'
 import JSZip from 'jszip'
 import {
   applyRevisionResolutions,
@@ -30,7 +31,6 @@ import {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
-import { sameInlineWrap } from './inline-opaque'
 import { resolveRelationshipTargetPath } from './parse-package'
 import { applyRemoveParts, planRemoveParts, type RemovePartsOptions } from './remove-parts'
 import { assertZipWithinLimits, resolveMainDocumentPath, type ParseExtras } from './parse'
@@ -76,7 +76,6 @@ import type {
   GeneratedBlock,
   HeaderFooter,
   HfParagraph,
-  InlineWrap,
   Run,
   NewChart,
   NewImage,
@@ -1801,6 +1800,10 @@ export async function saveDocx(
   })
 
   const parts: string[] = [...detachedOpaque]
+  const bodyControls = new ContentControlPart([
+    documentXml,
+    ...finalBlocks.flatMap((b) => (b.kind === 'xml' ? [b.xml] : [])),
+  ])
   for (let i = 0; i < finalBlocks.length; i++) {
     const fb = finalBlocks[i]
     let xml: string
@@ -1885,6 +1888,7 @@ export async function saveDocx(
       if (wrap.first === i) xml = wrap.shell.openXml + xml
       if (wrap.last === i) xml = xml + wrap.shell.closeXml
     }
+    if (fb.kind === 'generated') xml = bodyControls.generated(xml)
     parts.push(xml)
   }
   // Trailing hidden elements (w:sectPr) always keep their original bytes and position,
@@ -1920,7 +1924,7 @@ export async function saveDocx(
 
   let newDocumentXml =
     documentXml.slice(0, bodyContentStart) +
-    balanceFieldChars(parts.join('')) +
+    balanceFieldChars(bodyControls.finish(parts.join(''))) +
     documentXml.slice(bodyContentEnd)
 
   // every ref-less body sectPr picks up the new header/footer references
@@ -2534,6 +2538,7 @@ function headerFooterPartXml(
   originalXml: string | null = null,
   pageCount = 1,
 ): string {
+  const controls = new ContentControlPart(originalXml ?? '')
   const root = kind === 'header' ? 'w:hdr' : 'w:ftr'
   const textRun = (t: string) =>
     t ? `<w:r><w:t xml:space="preserve">${escapeXmlText(t)}</w:t></w:r>` : ''
@@ -2573,32 +2578,25 @@ function headerFooterPartXml(
     let pageEmitted = !hf.pageNumber || hasPageMark
     const hfRunsXml = (paraRuns: Run[]): string => {
       let xml = ''
-      // Runs are written one by one, as they always were, except the runs of
-      // one wrapper element (a content control, a smart tag): those go out in
-      // one call so the wrapper stays one element around all of them. A field
-      // that sat inside the wrapper rides along as a kept element.
-      const written: InlineWrap[] = []
-      let held: Run[] = []
-      const flush = () => {
-        if (held.length > 0) xml += inlineRunsXml(held, written)
-        held = []
-      }
+      // A paragraph with wrappers goes through the same grouping as the body,
+      // including neighbouring runs of a hyperlink crossing a wrapper. Leave
+      // the legacy wrapper-less path byte-identical.
+      const grouped = paraRuns.some((r) => r.wrap?.length)
+      const written = new Set<string>()
+      const fragments = new Map<Run, string>()
+      const held: Run[] = []
       const text = (piece: Run) => {
-        const outer = piece.wrap?.[0]
-        if (!outer) {
-          flush()
-          xml += inlineRunsXml([piece], written)
-          return
-        }
-        if (held.length > 0 && !sameInlineWrap(held[0].wrap?.[0], outer)) flush()
-        held.push(piece)
+        if (grouped) held.push(piece)
+        else xml += inlineRunsXml([piece], written)
       }
-      const field = (fieldXml: string, host: Run) => {
-        if (host.wrap?.length) text({ text: '', opaqueXml: fieldXml, wrap: host.wrap })
-        else {
-          flush()
-          xml += fieldXml
-        }
+      const field = (fieldXml: string, host: Run, logicalText: string) => {
+        if (grouped) {
+          // Keep the logical field mark for the control's changed-text test.
+          // Trusted generated fields are not untrusted Run.opaqueXml bytes.
+          const piece = { ...host, text: logicalText }
+          fragments.set(piece, fieldXml)
+          held.push(piece)
+        } else xml += fieldXml
       }
       for (const run of paraRuns) {
         if (
@@ -2610,18 +2608,18 @@ function headerFooterPartXml(
           // SECTIONPAGES and NUMPAGES split alike: a mark between two segments is its field
           run.text.split(totalMarksRe).forEach((seg, k) => {
             if (k % 2 === 1) {
-              field(seg === SECTION_PAGES_MARK ? sectionPagesField : numPagesField, run)
+              field(seg === SECTION_PAGES_MARK ? sectionPagesField : numPagesField, run, seg)
               return
             }
             if (seg.includes(PAGE_MARK)) {
               seg.split(PAGE_MARK).forEach((piece, j) => {
-                if (j > 0) field(pageField, run)
+                if (j > 0) field(pageField, run, PAGE_MARK)
                 if (piece) text({ ...run, text: piece })
               })
             } else if (!pageEmitted && seg.includes('#')) {
               const [before, ...rest] = seg.split('#')
               if (before) text({ ...run, text: before })
-              field(pageField, run)
+              field(pageField, run, '#')
               if (rest.join('#')) text({ ...run, text: rest.join('#') })
               pageEmitted = true
             } else if (seg) {
@@ -2632,8 +2630,8 @@ function headerFooterPartXml(
           text(run)
         }
       }
-      flush()
-      return xml
+      if (held.length > 0) xml += inlineRunsXml(held, written, fragments)
+      return controls.generated(xml)
     }
     // rows live in the original w:tbl bytes (edited cells are patched into them
     // below); a rebuild without the original part flattens them to paragraphs
@@ -2725,7 +2723,7 @@ function headerFooterPartXml(
         let tblIndex = 0
         const patchTable = (xml: string): string => {
           const grid = cellPatches(tblIndex++)
-          return grid ? patchTableCellTexts(xml, grid) : xml
+          return grid ? patchTableCellTexts(xml, grid, controls) : xml
         }
         const openOf = (xml: string) => /^<[^>]*>/.exec(xml)?.[0] ?? ''
         const closeOf = (xml: string) => /<\/[^>]*>$/.exec(xml)?.[0] ?? ''
@@ -2769,16 +2767,18 @@ function headerFooterPartXml(
         }
         if (!injected) parts.unshift(body)
         const rootOpen = watermarkXml ? withWatermarkNs(open) : open
-        return `${originalXml.slice(0, openIdx)}${rootOpen}${parts.join('')}</${root}>`
+        return controls.finish(
+          `${originalXml.slice(0, openIdx)}${rootOpen}${parts.join('')}</${root}>`,
+        )
       }
     }
   }
-  return (
+  return controls.finish(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-    `<${root} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"` +
-    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"' +
-    `${WATERMARK_NS}>` +
-    `${body}</${root}>`
+      `<${root} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"` +
+      ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"' +
+      `${WATERMARK_NS}>` +
+      `${body}</${root}>`,
   )
 }
 

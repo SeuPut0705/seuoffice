@@ -197,14 +197,18 @@ export interface Run {
    * first. A rebuilt paragraph writes adjacent runs that share a wrapper back
    * inside one element, with the bytes it was read with. A content control is
    * written once per paragraph: a later group that is not adjacent to the
-   * first goes back as plain runs, so its w:id is never repeated.
+   * first goes back as plain runs. At save, copied original/verbatim slices
+   * reserve their control ids; only engine-generated duplicates in the same
+   * part lose their wrapper (text stays). Separate prebuilt XML fragments
+   * are immutable, so duplicate ids across those fragments are not repaired.
    */
   wrap?: InlineWrap[]
   /**
    * The run is one text-less element the model does not represent
    * (w:permStart / w:permEnd, customXml range markers, w:subDoc, a wrapper
-   * holding no run at all). `text` is empty; the element is written back
-   * verbatim at this position when the paragraph is rebuilt.
+   * holding no run at all). `text` is empty; the writer checks it is one
+   * allowed text-less element before writing it verbatim at this position.
+   * Invalid XML is omitted without discarding the run's visible text.
    */
   opaqueXml?: string
   /**
@@ -432,7 +436,8 @@ export interface InlineContentControl {
 
 /**
  * One run-level wrapper element kept around the runs it holds. The wrapper's
- * own bytes are never parsed into a model: they are stored and written back.
+ * own bytes are stored and written back only after validating the shell as
+ * one balanced allowed wrapper with the same content split as the parser.
  */
 export interface InlineWrap {
   /** ordinal of the wrapper element inside its paragraph: runs sharing it sat in the same element */
