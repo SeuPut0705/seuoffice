@@ -117,7 +117,7 @@ function variantsOf(doc: ParsedDocFull): Variant[] {
     { kind: 'chart', chart: { kind: 'bar', title: 'T', categories: ['a', 'b'], series: [{ name: 's', values: [1, null] }] }, extentPx: { w: 300, h: 200 } },
     {
       kind: 'generated',
-      block: { type: 'heading', level: 3, runs: [{ text: 'A new heading' }, { text: ' link', link: 'https://example.com/a?b=1&c=2' }], bookmarks: ['bm1'] } as unknown as GeneratedBlock,
+      block: { type: 'heading', level: 3, runs: [{ text: 'A new heading' }, { text: ' link', link: { href: 'https://example.com/a?b=1&c=2' } }], bookmarks: ['bm1'] } as unknown as GeneratedBlock,
     },
     { kind: 'generated', block: { type: 'listItem', list: { kind: 'bullet', numId: '1', ilvl: 0 }, runs: [{ text: 'item', bold: true }] } },
     ...base.slice(1),

@@ -1,0 +1,146 @@
+(node:73600) ExperimentalWarning: WASI is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Model corpus: 205 documents, 2 encrypted skipped, 0 parser refusals
+(h) test capture: 60 calls, 40 distinct results, 0 refusals
+(h) typed model, corpus documents              compared    203  floor    183  differences 1  (key order only: 1)
+    - e2e/assets/cover-photo-with-textboxes.docx (ParsedDocFull): first difference at code unit 517873 (lengths 988430 and 988430)
+      typescript "opTwips\":420,\"balanceDbcsSpacing\":true,\"useFELayout\":true,\"compressPunctuation\":"
+      rust       "opTwips\":420,\"balanceDbcsSpacing\":true,\"compressPunctuation\":true,\"adjustLineHei"
+(h) typed model, built documents               compared    233  floor    233  differences 0
+(h) typed model, captured test results         compared     40  floor     40  differences 0
+(h) typed model, independently built values    compared   5156  floor   5156  differences 25  (key order only: 25)
+    - built DiagramShape 1 (DiagramShape): first difference at code unit 46 (lengths 288 and 288)
+      typescript ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"prst\":\"A&<\\\"\\t\\n😀\",\"fillHex\":\"A&<\\\"\\t\\n"
+      rust       ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"lnHex\":\"A&<\\\"\\t\\n😀\",\"lnWPx\":-2.5,\"fillR"
+    - built DiagramShape 2 (DiagramShape): first difference at code unit 50 (lengths 233 and 233)
+      typescript "21,\"yPx\":1e+21,\"wPx\":1e+21,\"hPx\":1e+21,\"prst\":\"\",\"fillHex\":\"\",\"lnHex\":\"\",\"lnWPx\""
+      rust       "21,\"yPx\":1e+21,\"wPx\":1e+21,\"hPx\":1e+21,\"lnHex\":\"\",\"lnWPx\":1e+21,\"fillRect\":{\"l\":"
+    - built DiagramShape 3 (DiagramShape): first difference at code unit 46 (lengths 275 and 275)
+      typescript ":1e-7,\"yPx\":1e-7,\"wPx\":1e-7,\"hPx\":1e-7,\"prst\":\"A&<\\\"\\t\\n😀\",\"fillHex\":\"A&<\\\"\\t\\n"
+      rust       ":1e-7,\"yPx\":1e-7,\"wPx\":1e-7,\"hPx\":1e-7,\"lnHex\":\"A&<\\\"\\t\\n😀\",\"lnWPx\":1e-7,\"fillR"
+    - built DiagramShape 4 (DiagramShape): first difference at code unit 94 (lengths 354 and 354)
+      typescript "007199254740992,\"hPx\":9007199254740992,\"prst\":\"\",\"fillHex\":\"\",\"lnHex\":\"\",\"lnWPx\""
+      rust       "007199254740992,\"hPx\":9007199254740992,\"lnHex\":\"\",\"lnWPx\":9007199254740992,\"fill"
+    - built DiagramShape 5 (DiagramShape): first difference at code unit 98 (lengths 431 and 431)
+      typescript "28797018963970,\"hPx\":36028797018963970,\"prst\":\"A&<\\\"\\t\\n😀\",\"fillHex\":\"A&<\\\"\\t\\n"
+      rust       "28797018963970,\"hPx\":36028797018963970,\"lnHex\":\"A&<\\\"\\t\\n😀\",\"lnWPx\":36028797018"
+    - built DiagramDisplay 1 (DiagramDisplay): first difference at code unit 88 (lengths 398 and 398)
+      typescript ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"prst\":\"A&<\\\"\\t\\n😀\",\"fillHex\":\"A&<\\\"\\t\\n"
+      rust       ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"lnHex\":\"A&<\\\"\\t\\n😀\",\"lnWPx\":-2.5,\"fillR"
+    - built DiagramDisplay 2 (DiagramDisplay): first difference at code unit 94 (lengths 349 and 349)
+      typescript "21,\"yPx\":1e+21,\"wPx\":1e+21,\"hPx\":1e+21,\"prst\":\"\",\"fillHex\":\"\",\"lnHex\":\"\",\"lnWPx\""
+      rust       "21,\"yPx\":1e+21,\"wPx\":1e+21,\"hPx\":1e+21,\"lnHex\":\"\",\"lnWPx\":1e+21,\"fillRect\":{\"l\":"
+    - built DiagramDisplay 4 (DiagramDisplay): first difference at code unit 160 (lengths 514 and 514)
+      typescript "007199254740992,\"hPx\":9007199254740992,\"prst\":\"\",\"fillHex\":\"\",\"lnHex\":\"\",\"lnWPx\""
+      rust       "007199254740992,\"hPx\":9007199254740992,\"lnHex\":\"\",\"lnWPx\":9007199254740992,\"fill"
+    - built DiagramDisplay 5 (DiagramDisplay): first difference at code unit 166 (lengths 593 and 593)
+      typescript "28797018963970,\"hPx\":36028797018963970,\"prst\":\"A&<\\\"\\t\\n😀\",\"fillHex\":\"A&<\\\"\\t\\n"
+      rust       "28797018963970,\"hPx\":36028797018963970,\"lnHex\":\"A&<\\\"\\t\\n😀\",\"lnWPx\":36028797018"
+    - built DiagramDisplay.shapes present (DiagramDisplay): first difference at code unit 82 (lengths 326 and 326)
+      typescript ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"prst\":\"A&<\\\"\\t\\n😀\",\"fillHex\":\"A&<\\\"\\t\\n"
+      rust       ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"lnHex\":\"A&<\\\"\\t\\n😀\",\"lnWPx\":-2.5,\"fillR"
+    - built Block 1 (Block): first difference at code unit 40982 (lengths 46221 and 46221)
+      typescript ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"prst\":\"A&<\\\"\\t\\n😀\",\"fillHex\":\"A&<\\\"\\t\\n"
+      rust       ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"lnHex\":\"A&<\\\"\\t\\n😀\",\"lnWPx\":-2.5,\"fillR"
+    - built Block 2 (Block): first difference at code unit 35500 (lengths 39943 and 39943)
+      typescript "21,\"yPx\":1e+21,\"wPx\":1e+21,\"hPx\":1e+21,\"prst\":\"\",\"fillHex\":\"\",\"lnHex\":\"\",\"lnWPx\""
+      rust       "21,\"yPx\":1e+21,\"wPx\":1e+21,\"hPx\":1e+21,\"lnHex\":\"\",\"lnWPx\":1e+21,\"fillRect\":{\"l\":"
+    - built Block 4 (Block): first difference at code unit 42214 (lengths 47541 and 47541)
+      typescript "007199254740992,\"hPx\":9007199254740992,\"prst\":\"\",\"fillHex\":\"\",\"lnHex\":\"\",\"lnWPx\""
+      rust       "007199254740992,\"hPx\":9007199254740992,\"lnHex\":\"\",\"lnWPx\":9007199254740992,\"fill"
+    - built Block 5 (Block): first difference at code unit 48852 (lengths 55136 and 55136)
+      typescript "28797018963970,\"hPx\":36028797018963970,\"prst\":\"A&<\\\"\\t\\n😀\",\"fillHex\":\"A&<\\\"\\t\\n"
+      rust       "28797018963970,\"hPx\":36028797018963970,\"lnHex\":\"A&<\\\"\\t\\n😀\",\"lnWPx\":36028797018"
+    - built Block.diagramDisplay present (Block): first difference at code unit 169 (lengths 480 and 480)
+      typescript ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"prst\":\"A&<\\\"\\t\\n😀\",\"fillHex\":\"A&<\\\"\\t\\n"
+      rust       ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"lnHex\":\"A&<\\\"\\t\\n😀\",\"lnWPx\":-2.5,\"fillR"
+    - built ParsedDoc 1 (ParsedDoc): first difference at code unit 30507 (lengths 174483 and 174483)
+      typescript ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"prst\":\"A&<\\\"\\t\\n😀\",\"fillHex\":\"A&<\\\"\\t\\n"
+      rust       ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"lnHex\":\"A&<\\\"\\t\\n😀\",\"lnWPx\":-2.5,\"fillR"
+    - built ParsedDoc 2 (ParsedDoc): first difference at code unit 26604 (lengths 151541 and 151541)
+      typescript "21,\"yPx\":1e+21,\"wPx\":1e+21,\"hPx\":1e+21,\"prst\":\"\",\"fillHex\":\"\",\"lnHex\":\"\",\"lnWPx\""
+      rust       "21,\"yPx\":1e+21,\"wPx\":1e+21,\"hPx\":1e+21,\"lnHex\":\"\",\"lnWPx\":1e+21,\"fillRect\":{\"l\":"
+    - built ParsedDoc 4 (ParsedDoc): first difference at code unit 31521 (lengths 184024 and 184024)
+      typescript "007199254740992,\"hPx\":9007199254740992,\"prst\":\"\",\"fillHex\":\"\",\"lnHex\":\"\",\"lnWPx\""
+      rust       "007199254740992,\"hPx\":9007199254740992,\"lnHex\":\"\",\"lnWPx\":9007199254740992,\"fill"
+    - built ParsedDoc 5 (ParsedDoc): first difference at code unit 36271 (lengths 206344 and 206344)
+      typescript "28797018963970,\"hPx\":36028797018963970,\"prst\":\"A&<\\\"\\t\\n😀\",\"fillHex\":\"A&<\\\"\\t\\n"
+      rust       "28797018963970,\"hPx\":36028797018963970,\"lnHex\":\"A&<\\\"\\t\\n😀\",\"lnWPx\":36028797018"
+    - built ParsedDoc.blocks present (ParsedDoc): first difference at code unit 30507 (lengths 35516 and 35516)
+      typescript ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"prst\":\"A&<\\\"\\t\\n😀\",\"fillHex\":\"A&<\\\"\\t\\n"
+      rust       ":-2.5,\"yPx\":-2.5,\"wPx\":-2.5,\"hPx\":-2.5,\"lnHex\":\"A&<\\\"\\t\\n😀\",\"lnWPx\":-2.5,\"fillR"
+    ... 5 more (--show N)
+(h) typed model, invalid values refused        compared  13976  floor  13976  differences 0
+(h) typed model, paragraph blocks              compared   4160  floor   3704  differences 0
+(h) typed model, passthrough blocks            compared    696  floor    663  differences 0
+(h) typed model, heading blocks                compared    122  floor    122  differences 0
+(h) typed model, table blocks                  compared    158  floor    144  differences 0
+(h) typed model, listItem blocks               compared    145  floor    145  differences 0
+(h) typed model, image blocks                  compared     25  floor     21  differences 0
+(h) parseDocx, corpus documents (all but blocks) compared    203  floor    100  differences 2  (key order only: 1)
+    - apps/docs/tests/pagination-corpus/docx/24-header-footer-strips.docx: first difference at code unit 26767 (lengths 82199 and 82237)
+      typescript "cs\":\"docDefaults\"}},\"cs\":true,\"rtl\":true}]},{\"lineRule\":\"auto\",\"lineRawTwips\":24"
+      rust       "cs\":\"docDefaults\"}},\"cs\":true,\"rtl\":true,\"csFont\":\"Calibri\"}]},{\"lineRule\":\"auto"
+    - e2e/assets/cover-photo-with-textboxes.docx: first difference at code unit 4750 (lengths 475307 and 475307)
+      typescript "opTwips\":420,\"balanceDbcsSpacing\":true,\"useFELayout\":true,\"compressPunctuation\":"
+      rust       "opTwips\":420,\"balanceDbcsSpacing\":true,\"compressPunctuation\":true,\"adjustLineHei"
+(h) parseDocx, paragraph blocks                compared   3968  floor      1  differences 0
+(h) parseDocx, passthrough blocks              compared    279  floor      1  differences 0
+(h) parseDocx, heading blocks                  compared     92  floor      1  differences 0
+(h) parseDocx, table blocks                    compared    136  floor      1  differences 0
+(h) parseDocx, listItem blocks                 compared    105  floor      1  differences 0
+(h) parseDocx, image blocks                    compared     11  floor      1  differences 0
+(i) saveDocx, corpus documents saved           compared    203  floor    100  differences 0
+(i) saveDocx, unchanged                        compared    203  floor      1  differences 0
+(i) saveDocx, touched                          compared    203  floor      1  differences 0
+(i) saveDocx, regenerated blocks               compared    203  floor      1  differences 0
+(i) saveDocx, inserted blocks                  compared    203  floor      1  differences 0
+(i) saveDocx, tracked insertion                compared    203  floor      1  differences 0
+(i) saveDocx, comments, notes and sources      compared    203  floor      1  differences 0
+(i) saveDocx, headers and footers              compared    203  floor      1  differences 0
+(i) saveDocx, text watermark                   compared    203  floor      1  differences 0
+(i) saveDocx, watermark removed                compared    203  floor      1  differences 0
+(i) saveDocx, page setup                       compared    203  floor      1  differences 0
+(i) saveDocx, numbering                        compared    203  floor      1  differences 0
+(i) saveDocx, styles and theme                 compared    203  floor      1  differences 0
+(i) saveDocx, protection and personal information compared    203  floor      1  differences 0
+(i) saveDocx, zotero data                      compared    203  floor      1  differences 0
+(i) saveDocx, content controls                 compared    203  floor      1  differences 0
+(i) saveDocx, inks                             compared    203  floor      1  differences 0
+(i) saveDocx, move ranges and parts removed    compared    203  floor      1  differences 0
+(i) saveDocx, unchanged                        compared      3  floor      1  differences 0
+(i) saveDocx, touched                          compared      3  floor      1  differences 0
+(i) saveDocx, regenerated blocks               compared      3  floor      1  differences 0
+(i) saveDocx, inserted blocks                  compared      3  floor      1  differences 0
+(i) saveDocx, tracked insertion                compared      3  floor      1  differences 0
+(i) saveDocx, comments, notes and sources      compared      3  floor      1  differences 0
+(i) saveDocx, headers and footers              compared      3  floor      1  differences 0
+(i) saveDocx, text watermark                   compared      3  floor      1  differences 0
+(i) saveDocx, watermark removed                compared      3  floor      1  differences 0
+(i) saveDocx, page setup                       compared      3  floor      1  differences 0
+(i) saveDocx, numbering                        compared      3  floor      1  differences 0
+(i) saveDocx, styles and theme                 compared      3  floor      1  differences 0
+(i) saveDocx, protection and personal information compared      3  floor      1  differences 0
+(i) saveDocx, zotero data                      compared      3  floor      1  differences 0
+(i) saveDocx, content controls                 compared      3  floor      1  differences 0
+(i) saveDocx, inks                             compared      3  floor      1  differences 0
+(i) saveDocx, move ranges and parts removed    compared      3  floor      1  differences 0
+(i) saveDocx, reopened, unchanged              compared      3  floor      1  differences 0
+(i) saveDocx, reopened, touched                compared      3  floor      1  differences 0
+(i) saveDocx, reopened, regenerated blocks     compared      3  floor      1  differences 0
+(i) saveDocx, reopened, inserted blocks        compared      3  floor      1  differences 0
+(i) saveDocx, reopened, tracked insertion      compared      3  floor      1  differences 0
+(i) saveDocx, reopened, comments, notes and sources compared      3  floor      1  differences 0
+(i) saveDocx, reopened, headers and footers    compared      3  floor      1  differences 0
+(i) saveDocx, reopened, text watermark         compared      3  floor      1  differences 0
+(i) saveDocx, reopened, watermark removed      compared      3  floor      1  differences 0
+(i) saveDocx, reopened, page setup             compared      3  floor      1  differences 0
+(i) saveDocx, reopened, numbering              compared      3  floor      1  differences 0
+(i) saveDocx, reopened, styles and theme       compared      3  floor      1  differences 0
+(i) saveDocx, reopened, protection and personal information compared      3  floor      1  differences 0
+(i) saveDocx, reopened, zotero data            compared      3  floor      1  differences 0
+(i) saveDocx, reopened, content controls       compared      3  floor      1  differences 0
+(i) saveDocx, reopened, inks                   compared      3  floor      1  differences 0
+(i) saveDocx, reopened, move ranges and parts removed compared      3  floor      1  differences 0
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+(h) fields: 1021/1680 from parser results; 0 below field floors; 0 schema refusals; built document refusals 2 (floor      2)

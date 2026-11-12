@@ -7,3 +7,7 @@ The first comparison of batches B2 (read side) and B3 (write side), unedited.
   --by-function --show 20 --fuzz 2000 --container-fuzz 300 --part-fuzz 150
   --props-fuzz 400 --numbers 2000 --call-fuzz 30 --call-arg-fuzz 150`. The
   floors are the full run's, so "BELOW FLOOR" there says nothing.
+- model-full.txt: `model-full.ts --show 20` on Windows, the first run of the
+  (h) parseDocx and (i) saveDocx comparisons, with the inserted heading's link
+  fixed to `{ href }` (a string made the TypeScript saveDocx throw). Some
+  fixer edits of the parse side may already have been built into the wasm.

@@ -45,6 +45,9 @@ import { packageAfterCorpus, packageOnDocument, reportPackage } from './package-
 import { propsAfterCorpus, propsOnDocument, propsOnPart, reportProps } from './props-run'
 import { mulberry32, SCAN_CASES, XML_CASES, zipTextCases } from './synthetic'
 import { modelAfterCorpus, modelOnDocument, reportModel } from './model-run'
+import { parseOnDocument, reportParse } from './model-parse'
+import { reportSave, saveAfterCorpus, saveOnDocument } from './model-save'
+import type { ParsedDocFull } from './reference/patch'
 
 const FUZZ_CASES = option('--fuzz', 20_000)
 
@@ -106,7 +109,11 @@ for (const path of corpus) {
   await packageOnDocument(path, bytes, zip)
   const parsed = await parseDocx(bytes).catch(() => null)
   if (parsed) await callsOnModel(path, parsed)
-  if (parsed) modelOnDocument(path, parsed)
+  if (parsed) {
+    modelOnDocument(path, parsed)
+    parseOnDocument(path, bytes, parsed)
+    await saveOnDocument(path, bytes, parsed as ParsedDocFull)
+  }
   const themes: Themes = {
     colors: parsed?.themeColors ?? undefined,
     fonts: parsed?.themeFonts ?? undefined,
@@ -169,6 +176,7 @@ propsAfterCorpus(random)
 await packageAfterCorpus(random)
 await callsAfterCorpus(random)
 await modelAfterCorpus()
+await saveAfterCorpus()
 const written = await compareBlankBytes()
 comparisons.writtenZips.compared = written.compared
 comparisons.writtenZips.differences.push(...written.differences)
@@ -204,6 +212,8 @@ reportProps()
 reportPackage()
 reportCalls()
 reportModel()
+reportParse()
+reportSave()
 console.log(
   `(g) raw zip fields that differ between the two writers, each following from the deflate stream: ` +
     [...written.rawFields].map(([field, count]) => `${field} ${count}`).join(', '),
