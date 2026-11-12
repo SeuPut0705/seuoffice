@@ -1,0 +1,15 @@
+{
+  "name": "odt-diff",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "Parity gate for the Rust odt engine against packages/odt-engine",
+  "scripts": {
+    "gate": "node run.mjs",
+    "calls": "node run.mjs --calls-only",
+    "ts-only": "node run.mjs --ts-only",
+    "faults": "node faults.mjs",
+    "typecheck": "tsc --noEmit"
+  }
+}

@@ -1,0 +1,55 @@
+[
+  {
+    "id": "lone-surrogate-from-numeric-reference",
+    "reason": "A numeric character reference to a surrogate code point that does not pair with the next reference: the TypeScript writes a lone surrogate into the text, which is not a valid string and loses the character; a Rust string cannot hold one and writes U+FFFD. Adjacent high and low references decode to one character on both sides. TypeScript defect (TS-DEFECTS.md row 4).",
+    "cases": [
+      {
+        "fn": "odtCore.decodeXmlEntities",
+        "text": "&#xD800;&F;",
+        "args": {},
+        "typescript": {
+          "value": "\ud800&F;"
+        },
+        "rust": {
+          "value": "�&F;"
+        }
+      }
+    ]
+  },
+  {
+    "id": "offset-inside-surrogate-pair",
+    "reason": "An offset argument between the two halves of a surrogate pair: the TypeScript cuts the pair and keeps a lone half; a Rust byte offset cannot point inside a character, so the Rust reads from the end of it. No caller of the engine passes such an offset: every one is a tag boundary. TypeScript defect (TS-DEFECTS.md row 23).",
+    "cases": [
+      {
+        "fn": "odtCore.readAttributes",
+        "text": "<😀\">",
+        "args": {
+          "nameEnd": 2,
+          "tagEnd": 5
+        },
+        "typescript": {
+          "value": [
+            {
+              "name": "\ude00\"",
+              "raw": "",
+              "nameStart": 2,
+              "valueStart": 4,
+              "valueEnd": 4
+            }
+          ]
+        },
+        "rust": {
+          "value": [
+            {
+              "name": "\"",
+              "raw": "",
+              "nameStart": 3,
+              "valueStart": 4,
+              "valueEnd": 4
+            }
+          ]
+        }
+      }
+    ]
+  }
+]
