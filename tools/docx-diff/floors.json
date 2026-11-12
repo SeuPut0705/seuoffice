@@ -56,5 +56,17 @@
   "callsSectionBuilt": 6700,
   "callsSectionMutated": 7700,
   "callsSectionFunctions": 33,
+  "modelCorpus": 183,
+  "modelBuilt": 220,
+  "modelTests": 40,
+  "modelTypes": 4636,
+  "modelInvalid": 13246,
+  "modelBlocks paragraph": 3685,
+  "modelBlocks passthrough": 641,
+  "modelBlocks heading": 122,
+  "modelBlocks table": 143,
+  "modelBlocks listItem": 145,
+  "modelBlocks image": 21,
+  "modelBuiltRefusals": 2,
   "writtenZips": 1662
 }
