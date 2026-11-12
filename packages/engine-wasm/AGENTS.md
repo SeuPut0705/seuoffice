@@ -1,0 +1,21 @@
+# engine-wasm
+
+## 맡은 범위
+
+Rust 엔진의 WASM 빌드(`crates/office-wasm`)를 싣고 부르는 단 하나의 로더다. 엔진 바인딩(`@genoffice/pptx-engine`, `@genoffice/docx-engine`)이 이것으로 `seu_call`을 부른다. 시작 지점에서 한 번 인스턴스를 만들고(`initEngineSync(bytes)` 또는 `await initEngine(url)`), 그 뒤의 호출은 모두 동기다.
+
+## 맡지 않는 것 (경계)
+
+- wasm 파일을 찾는 일은 하지 않는다. 호스트(Electron main, 웹 페이지, Node 도구)가 바이트나 URL을 넘긴다.
+- 명령의 의미는 모른다. 헤더 JSON과 blob을 넘기고 받을 뿐이다.
+
+## 항상 지켜야 하는 것
+
+- `src/`에서 Node 내장 모듈을 import하지 않는다. Electron main, 웹 페이지, Node 어디서나 같은 코드가 돈다.
+- WASI는 엔진이 쓰는 다섯 함수(`random_get`, `environ_get`, `environ_sizes_get`, `fd_write`, `proc_exit`)만 직접 준다. 엔진이 새 import를 요구하면 여기에 더한다.
+- `seu_host.host_collate`는 `Intl.Collator('zh-CN')`이다(워드 엔진의 INDEX 필드 정렬).
+- 엔진의 실패 응답은 `EngineError`(code, message)로 던진다.
+
+## 테스트
+
+- `npx vitest run` (패키지 폴더). 릴리스 wasm(`crates/target/wasm32-wasip1/release/office_wasm.wasm`)이 없으면 건너뛴다.
