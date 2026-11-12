@@ -710,7 +710,7 @@ const faults = [
     'pptxMtx.lzcomp.AHuff',
     'crates/pptx-engine/src/mtx/lzcomp.rs',
     'range > 256 && range < 512',
-    'range >= 256',
+    'range > 256 && range <= 512',
   ],
   [
     'mtx-lz-three-byte-distance',
@@ -941,13 +941,17 @@ for (const [id, fn, file, before, after, occurrences = 1] of selected) {
       .split('\n')
       .find((line) => line.trim().startsWith(fn + ' '))
     const differences = Number(/differences\s+(\d+)/.exec(tally ?? '')?.[1] ?? 0)
-    result = { id, fn, file, before, after, differences, caught: differences > 0 }
+    // no tally: the comparison ended before its report (the fault made the module abort)
+    const aborted = tally === undefined
+    result = { id, fn, file, before, after, differences, aborted, caught: differences > 0 }
   } finally {
     writeFileSync(path, original)
   }
   results.push(result)
   console.log(
-    `${result.caught ? 'CAUGHT' : 'MISSED'} ${id}: ${fn}, ${result.differences} differences`,
+    result.aborted
+      ? `ABORTED ${id}: ${fn}, the comparison ended without its tally: out/faults/${id}.log`
+      : `${result.caught ? 'CAUGHT' : 'MISSED'} ${id}: ${fn}, ${result.differences} differences`,
   )
   writeFileSync(resolve(out, 'report.json'), JSON.stringify(results, null, 2) + '\n')
 }
