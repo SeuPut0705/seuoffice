@@ -236,19 +236,32 @@ export function pivotOutputOf(
   const location = LOCATION.exec(pivotXml ?? '')?.[1]
   const output = rangeAt(location === undefined ? undefined : attribute(location, 'ref'))
   if (location === undefined || output === null) return { area: WHOLE_SHEET, formula: null }
-  // Report filters sit above the output: a label and the chosen item per
-  // field, then a blank row; several per row when the person wrapped them.
-  const pageRows =
-    Number(attribute(location, 'rowPageCount')) || (pivotXml ?? '').match(PAGE_FIELD)?.length || 0
-  const pageColumns = Math.max(1, Number(attribute(location, 'colPageCount')) || 1)
+  // Report filters sit above the output: per row of them a label and the chosen item for
+  // each filter, a blank column between two filters, then a blank row. The location says
+  // how many rows and how many side by side. Nothing declared and no filters: there are
+  // none. A layout that is not two counts, or does not hold every filter, leaves their
+  // extent unknown, and it is not guessed: every row from the top of the sheet down to the
+  // end of the output is the pivot's, in every column.
+  const filters = (pivotXml ?? '').match(PAGE_FIELD)?.length ?? 0
+  const count = (name: string): number => {
+    const value = Number(attribute(location, name) ?? '')
+    return Number.isInteger(value) && value > 0 ? value : 0
+  }
+  const pageRows = count('rowPageCount')
+  const pageColumns = count('colPageCount')
   const area: RangeBounds =
-    pageRows === 0
+    filters === 0 && pageRows === 0 && pageColumns === 0
       ? output
-      : {
-          ...output,
-          startRow: Math.max(0, output.startRow - pageRows - 1),
-          endColumn: Math.max(output.endColumn, output.startColumn + pageColumns * 3 - 2),
-        }
+      : pageRows === 0 || pageColumns === 0 || pageRows * pageColumns < filters
+        ? { ...output, startRow: 0, startColumn: 0, endColumn: WHOLE_SHEET.endColumn }
+        : {
+            ...output,
+            startRow: Math.max(0, output.startRow - pageRows - 1),
+            endColumn: Math.min(
+              WHOLE_SHEET.endColumn,
+              Math.max(output.endColumn, output.startColumn + pageColumns * 3 - 2),
+            ),
+          }
   return { area, formula: pivotSourceFormula(cacheXml) }
 }
 

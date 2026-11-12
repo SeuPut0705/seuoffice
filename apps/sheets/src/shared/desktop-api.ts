@@ -2752,6 +2752,9 @@ export const workbookPivotDefinitionSchema = z
           .strict(),
       )
       .max(256),
+    /// The extent of the report filters above the output; absent when not known.
+    pageRows: z.number().int().nonnegative().max(1_048_576).optional(),
+    pageColumns: z.number().int().nonnegative().max(16_384).optional(),
     /// Value/label filters (pivotFilters); filtered-out members are hidden entries
     /// in fieldItems.
     filters: z

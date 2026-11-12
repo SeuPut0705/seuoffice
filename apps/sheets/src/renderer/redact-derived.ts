@@ -54,7 +54,7 @@ import {
   type IArrayFormulaRangeType,
 } from '@univerjs/engine-formula'
 
-import type { WorkbookFormulaCellsResult } from '../shared/desktop-api'
+import type { WorkbookFormulaCellsResult, WorkbookPivotDefinition } from '../shared/desktop-api'
 import type { RedactionIndex } from './ai/redact'
 import { UNKNOWN_REDACTION_LABEL } from './ai/redact-load'
 import { resolveDuplicateSource } from './edit-journal'
@@ -182,30 +182,74 @@ function pivotOutputsOf(
           )
         : null
       resolved.push(output)
-      // Report filters sit above the output: a label and the chosen item per
-      // field, then a blank row.
-      const pages = definition?.pageFields.length ?? 0
-      add(
-        sheet.id,
-        pages === 0
-          ? output
-          : {
-              ...output,
-              startRow: Math.max(0, output.startRow - pages - 1),
-              endColumn: Math.max(output.endColumn, output.startColumn + 1),
-            },
-        formula,
-      )
+      const relaid =
+        pivot.cachePath === null
+          ? undefined
+          : journal.pivotRefreshUpdates.get(pivot.cachePath)?.relayout?.pageFieldIndices?.length
+      add(sheet.id, withReportFilters(output, filterExtent(definition, relaid)), formula)
     }
-    // An output area no definition accounts for.
+    // An output area no definition accounts for: what sits above it is not known either.
     for (const range of sheet.pivotRanges) {
-      if (!resolved.some((output) => sameArea(output, range))) add(sheet.id, range, null)
+      if (!resolved.some((output) => sameArea(output, range))) {
+        add(sheet.id, withReportFilters(range, null), null)
+      }
     }
   }
   for (const pivot of journal.pivotAdds) {
-    add(pivot.sheetId, pivot.location, sourceFormula(pivot.sourceSheetId, pivot.sourceArea))
+    add(
+      pivot.sheetId,
+      withReportFilters(pivot.location, {
+        rows: pivot.pageFieldIndices?.length ?? 0,
+        columns: 1,
+      }),
+      sourceFormula(pivot.sourceSheetId, pivot.sourceArea),
+    )
   }
   return out
+}
+
+/** Rows of report filters above a pivot's output, and filters side by side in a row. */
+interface FilterExtent {
+  readonly rows: number
+  readonly columns: number
+}
+
+/**
+ * How far the report filters of a file's pivot reach, or null when that cannot be told: its
+ * definition was not read, or it has filters and no layout that holds them all. A pivot laid
+ * out again in this session (`relaid`: the filters it has now) has one filter per row, as
+ * the app writes them; the block the file had is counted with it, since cells of that block
+ * may still be on the sheet, and when the file's block is not known nothing is.
+ */
+function filterExtent(
+  definition: WorkbookPivotDefinition | undefined,
+  relaid: number | undefined,
+): FilterExtent | null {
+  if (definition === undefined) return null
+  const { pageRows: rows, pageColumns: columns } = definition
+  if (rows === undefined || columns === undefined) return null
+  if (relaid !== undefined) return { rows: Math.max(relaid, rows), columns: Math.max(1, columns) }
+  if (rows * columns < definition.pageFields.length) return null
+  return { rows, columns }
+}
+
+/**
+ * A pivot's output with the report filters above it: per row of filters a label and the
+ * chosen item for each filter, a blank column between two filters, then a blank row. With an
+ * extent that is not known, every row from the top of the sheet down to the end of the output,
+ * in every column: the filters are somewhere above the output, and how wide is not known.
+ */
+function withReportFilters(output: RangeBounds, extent: FilterExtent | null): RangeBounds {
+  if (extent === null) return { ...output, startRow: 0, startColumn: 0, endColumn: MAX_COLUMN }
+  if (extent.rows === 0) return output
+  return {
+    ...output,
+    startRow: Math.max(0, output.startRow - extent.rows - 1),
+    endColumn: Math.min(
+      MAX_COLUMN,
+      Math.max(output.endColumn, output.startColumn + Math.max(1, extent.columns) * 3 - 2),
+    ),
+  }
 }
 
 const cellKey = (row: number, column: number): number => row * (MAX_COLUMN + 1) + column

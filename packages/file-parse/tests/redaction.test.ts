@@ -1431,6 +1431,28 @@ describe('xlsx: the output of a PivotTable built from a withheld cell is withhel
     expect(text).not.toContain(SECRET)
   })
 
+  it.each([
+    // two filters in one row: label and item, a blank column, label and item (A1:B1, D1:E1)
+    ['side by side, wider than the output', ' rowPageCount="1" colPageCount="2"'],
+    // what cannot be told is not guessed: the filters are somewhere above the output
+    ['without saying how they are laid out', ''],
+    ['with a layout too small to hold them', ' rowPageCount="1" colPageCount="1"'],
+    ['with a layout that is no number', ' rowPageCount="1" colPageCount="x"'],
+  ])('withholds report filters given %s', async (_how, layout) => {
+    const text = await read(
+      {
+        source: worksheetSource('ref="A1:B2" sheet="Clients"'),
+        body:
+          `<location ref="A3:B4" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"${layout}/>` +
+          '<pageFields count="2"><pageField fld="0" hier="-1"/><pageField fld="1" item="0" hier="-1"/></pageFields>',
+      },
+      pivotReport(
+        `<row r="1">${inline('A1', 'Name')}${inline('B1', 'Kim')}${inline('D1', 'Phone')}<c r="E1"><v>${SECRET}</v></c></row>`,
+      ),
+    )
+    expect(text).not.toContain(SECRET)
+  })
+
   it('follows a source given as a defined name', async () => {
     const named = (range: string): BookMarks => ({
       part: serializeRedactionPart(CLIENT_MARKS),

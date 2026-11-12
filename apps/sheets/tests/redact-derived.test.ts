@@ -496,7 +496,13 @@ describe('what the in-app AI reads from the output of a PivotTable', () => {
   /** Put the pivot in the session's file state; `definition` null = its part has not been read. */
   function withPivot(
     session: Session,
-    definition: { sourceSheet: string; sourceRef: string; pageFields?: number } | null,
+    definition: {
+      sourceSheet: string
+      sourceRef: string
+      pageFields?: number
+      pageRows?: number
+      pageColumns?: number
+    } | null,
   ): Session {
     const file = session.state.file as unknown as { sheets: object[] }
     file.sheets = FILE_SHEETS.map((sheet) => ({
@@ -510,6 +516,8 @@ describe('what the in-app AI reads from the output of a PivotTable', () => {
         outputRef: 'E3:F4',
         sourceSheet: definition.sourceSheet,
         sourceRef: definition.sourceRef,
+        pageRows: definition.pageRows,
+        pageColumns: definition.pageColumns,
         pageFields: Array.from({ length: definition.pageFields ?? 0 }, () => ({
           field: 0,
           item: 0,
@@ -557,8 +565,83 @@ describe('what the in-app AI reads from the output of a PivotTable', () => {
       sourceSheet: 'Data',
       sourceRef: 'A1:B2',
       pageFields: 1,
+      pageRows: 1,
+      pageColumns: 1,
     })
     expect(session.read('s2', 'F1')).toBe(PRIVATE)
+    // the block is as wide as its filters: a cell beside it is an ordinary cell
+    expect(session.read('s2', 'H1')).toBeNull()
+  })
+
+  it('withholds report filters laid side by side, wider than the output', () => {
+    // two page fields in one row: label and item, a blank column, label and item (E1:F1, H1:I1)
+    const cells = {
+      ...OUTPUT,
+      E1: { v: 'Name' },
+      F1: { v: 'Kim' },
+      H1: { v: 'Phone' },
+      I1: { v: SECRET },
+    }
+    const session = withPivot(open(CLIENTS, cells), {
+      sourceSheet: 'Data',
+      sourceRef: 'A1:B2',
+      pageFields: 2,
+      pageRows: 1,
+      pageColumns: 2,
+    })
+    expect(session.read('s2', 'H1')).toBe(PRIVATE)
+    expect(session.read('s2', 'I1')).toBe(PRIVATE)
+  })
+
+  it('withholds every row down to the output when the extent of its report filters is not known', () => {
+    const cells = {
+      ...OUTPUT,
+      E1: { v: 'Name' },
+      F1: { v: 'Kim' },
+      H1: { v: 'Phone' },
+      I1: { v: SECRET },
+    }
+    // a definition that does not say how its filters are laid out
+    const unsized = withPivot(open(CLIENTS, cells), {
+      sourceSheet: 'Data',
+      sourceRef: 'A1:B2',
+      pageFields: 2,
+    })
+    expect(unsized.read('s2', 'I1')).toBe(PRIVATE)
+    // a pivot whose definition was not read: whether it has filters at all is not known
+    const unread = withPivot(open(CLIENTS, cells), null)
+    expect(unread.read('s2', 'I1')).toBe(PRIVATE)
+  })
+
+  it('withholds the report filters of a pivot made or laid out again this session', () => {
+    const cells = { ...OUTPUT, E1: { v: 'Phone' }, F1: { v: SECRET } }
+    const made = open(CLIENTS, cells)
+    made.state.editJournal.pivotAdds.push({
+      sheetId: 's2',
+      sourceSheetId: 's1',
+      sourceArea: { startRow: 0, endRow: 1, startColumn: 0, endColumn: 1 },
+      location: OUTPUT_AREA,
+      pageFieldIndices: [1],
+    } as never)
+    made.mark(HIDDEN_B2)
+    expect(made.read('s2', 'F1')).toBe(PRIVATE)
+
+    // a file pivot without filters that was given one in this session
+    const relaid = withPivot(open(CLIENTS, cells), {
+      sourceSheet: 'Data',
+      sourceRef: 'A1:B2',
+      pageRows: 0,
+      pageColumns: 0,
+    })
+    relaid.state.editJournal.pivotRefreshUpdates.set('cache1', {
+      sheetId: 's2',
+      newOutputRef: 'E3:F4',
+      relayout: { pageFieldIndices: [1] },
+    } as never)
+    relaid.mark(HIDDEN_B2)
+    expect(relaid.read('s2', 'F1')).toBe(PRIVATE)
+    // no wider than the one filter: the cell beside it is an ordinary cell
+    expect(relaid.read('s2', 'H1')).toBeNull()
   })
 
   it.each([
