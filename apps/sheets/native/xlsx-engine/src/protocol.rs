@@ -129,9 +129,10 @@ pub enum Command {
         /// not where the workbook really lives (a decrypted temporary copy).
         #[serde(default)]
         base_dir: Option<PathBuf>,
-        /// Also read sources the workbook places on another computer. The
-        /// workbook chose that host and Windows signs in to it, so a host
-        /// sets this only when a person asked for those sources.
+        /// Also read sources that are not plainly on this computer: a named
+        /// host, or a drive that may be a network drive. The workbook chose
+        /// that place and Windows signs in to it, so a host sets this only
+        /// when a person asked for those sources.
         #[serde(default)]
         allow_remote_sources: bool,
     },

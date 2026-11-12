@@ -95,7 +95,7 @@ export const sheetCommand: CommandDef = {
     {
       name: 'remote-sources',
       description:
-        'links --update: also read the sources the workbook places on another computer (\\\\host\\share, file://host/…); the workbook chose that host and Windows signs in to it, so pass it only when the user asked',
+        'links --update: also read the sources the workbook places on another computer (\\\\host\\share, file://host/…) or on a drive that may be a network drive; the workbook chose that place and Windows signs in to it, so pass it only when the user asked',
     },
     {
       name: 'break',
@@ -272,7 +272,7 @@ async function links(
         `updated ${result.updated} formula cache(s) from ${result.reachable} reachable link(s)` +
         (result.broken > 0 ? `; ${result.broken} broken link(s) kept their cached values` : '') +
         (result.remoteSkipped > 0
-          ? `; ${result.remoteSkipped} of them on another computer, not contacted (--remote-sources reads them)`
+          ? `; ${result.remoteSkipped} of them on another computer or a drive that may be a network drive, not contacted (--remote-sources reads them)`
           : ''),
       outputPath: output,
       detail: result,

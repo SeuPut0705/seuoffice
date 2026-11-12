@@ -105,6 +105,7 @@ function engineRequests(): () => Record<string, unknown>[] {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
 })
 
 describe('ieumoffice sheet links', () => {
@@ -194,6 +195,55 @@ describe('ieumoffice sheet links', () => {
       })
     },
   )
+
+  it('update counts a source left alone on a drive that may be a network drive', async () => {
+    // the engine as it answers on Windows for a `Z:\…` source: left alone by
+    // the update, and named as an unchecked drive by the link report
+    vi.stubEnv('XLSX_SIDECAR_PATH', 'stand-in-sidecar')
+    const proto = XlsxSidecarClient.prototype as unknown as {
+      request: (command: Record<string, unknown>) => Promise<unknown>
+    }
+    vi.spyOn(proto, 'request').mockImplementation(async (command) => {
+      if (command.command === 'update_external_links') {
+        return {
+          links: [
+            { index: 1, reachable: false },
+            { index: 2, reachable: false },
+          ],
+          cells: [],
+        }
+      }
+      if (command.command === 'read_external_links') {
+        return [
+          {
+            index: 1,
+            rawTarget: 'Z:\\data\\budget.xlsx',
+            source: 'Z:\\data\\budget.xlsx',
+            reachable: null,
+            unchecked: 'drive',
+            sheetNames: ['Sheet1'],
+          },
+          {
+            index: 2,
+            rawTarget: 'gone.xlsx',
+            source: 'C:\\books\\gone.xlsx',
+            reachable: false,
+            sheetNames: ['Sheet1'],
+          },
+        ]
+      }
+      throw new Error(`engine asked for ${String(command.command)}`)
+    })
+    const book = join(tempDir(), 'book.xlsx')
+    await writeDependent(book)
+
+    const r = await run(['sheet', 'links', book, '--update', '--json'])
+
+    expect(r.code).toBe(0)
+    // the drive source is the one --remote-sources would read; the missing local file is not
+    expect(r.json().detail).toMatchObject({ reachable: 0, broken: 2, remoteSkipped: 1 })
+    expect(r.json().summary).toContain('--remote-sources')
+  })
 
   it.skipIf(!sidecar)(
     'update does not blame another computer for a missing local source',

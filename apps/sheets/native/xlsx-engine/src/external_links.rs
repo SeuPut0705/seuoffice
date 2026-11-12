@@ -47,8 +47,8 @@ pub struct ExternalLinkStatus {
     /// The resolved local path when the target names one; `None` for schemes
     /// the sidecar cannot read (an `http://` source never becomes reachable).
     pub source: Option<String>,
-    /// False as well for a source on another computer the update was not
-    /// allowed to contact.
+    /// False as well for a source that is not plainly on this computer when
+    /// the update was not allowed to contact it.
     pub reachable: bool,
     pub sheet_names: Vec<String>,
 }
@@ -162,13 +162,15 @@ struct LinkEntry {
 }
 
 impl LinkEntry {
-    /// The update's verdict on the link.
+    /// The update's verdict on the link. Without `allow_remote_sources` only
+    /// a source that is plainly here is asked about: a drive that may be a
+    /// network drive gets the same answer as a named host.
     fn status(&self, allow_remote_sources: bool) -> ExternalLinkStatus {
         ExternalLinkStatus {
             index: self.index,
             raw_target: self.raw_target.clone(),
             source: self.source_text(),
-            reachable: (allow_remote_sources || self.place != SourcePlace::AnotherComputer)
+            reachable: (allow_remote_sources || self.place == SourcePlace::Here)
                 && self.source_is_file(),
             sheet_names: self.sheet_names.clone(),
         }
@@ -549,15 +551,27 @@ pub(crate) fn list_external_link_statuses(
 /// sources. The workbook is never written here — the caller carries the
 /// returned values into the save pipeline as cached `<v>`s, formulas intact.
 ///
-/// A source on another computer is neither looked for nor opened, and reports
-/// unreachable, unless `allow_remote_sources`: the caller sets it when a
-/// person asked for those sources, never for a document it was merely handed.
+/// A source that is not plainly on this computer — it names a host, or sits
+/// on a drive that may be a network drive — is neither looked for nor opened,
+/// and reports unreachable, unless `allow_remote_sources`: the caller sets it
+/// when a person asked for those sources, never for a document it was merely
+/// handed.
 pub fn update_external_link_values(
     workbook: &Path,
     base_dir: Option<&Path>,
     allow_remote_sources: bool,
 ) -> Result<ExternalLinksReport, SidecarError> {
     let links = parse_external_links(workbook, base_dir)?;
+    update_values_from(workbook, &links, allow_remote_sources)
+}
+
+/// The update over links already parsed: which sources it may ask the disk
+/// about is decided here, from each link's place.
+fn update_values_from(
+    workbook: &Path,
+    links: &[LinkEntry],
+    allow_remote_sources: bool,
+) -> Result<ExternalLinksReport, SidecarError> {
     let statuses: Vec<ExternalLinkStatus> = links
         .iter()
         .map(|link| link.status(allow_remote_sources))
@@ -1945,6 +1959,39 @@ pub(crate) mod tests {
                 "the disk was asked about {probed:?}"
             );
         }
+    }
+
+    /// A drive letter that may be a mapped network drive is treated like a
+    /// host: an update neither looks for the source nor opens it, and its
+    /// cells stay on their cached values, until the caller says a person
+    /// asked. The source file really exists here, so a probe or an open
+    /// would show in the recorder or as a live value.
+    #[test]
+    fn update_leaves_a_source_on_an_uncertain_drive_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("source.xlsx");
+        write_source_fixture(&source);
+        let path = dir.path().join("book.xlsx");
+        write_dependent_fixture(&path, "source.xlsx");
+        // what a `Z:\…` target parses to on Windows
+        let links = [LinkEntry {
+            index: 1,
+            raw_target: "Z:\\data\\source.xlsx".into(),
+            source: Some(source.clone()),
+            place: SourcePlace::OtherDrive,
+            sheet_names: vec!["Sheet1".into()],
+        }];
+
+        let (report, probed) = probed_by(|| update_values_from(&path, &links, false).unwrap());
+        assert_eq!(probed, Vec::<PathBuf>::new());
+        assert!(!report.links[0].reachable);
+        // the file's cache, not the 20 the source would give
+        assert_eq!(cell_of(&report, "[1]Sheet1!A1*2").formatted, "84");
+
+        let (report, probed) = probed_by(|| update_values_from(&path, &links, true).unwrap());
+        assert_eq!(probed, vec![source]);
+        assert!(report.links[0].reachable);
+        assert_eq!(cell_of(&report, "[1]Sheet1!A1*2").formatted, "20");
     }
 
     /// Which spellings count as this computer, per platform rule set.

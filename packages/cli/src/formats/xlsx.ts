@@ -1534,7 +1534,8 @@ const updateReportSchema = z.object({
 
 /** Re-reads every reachable source and writes the computed values as the
  * formulas' cached <v> — formula text untouched, unreachable links keep their
- * cache. A source the workbook places on another computer is left alone
+ * cache. A source that is not plainly on this computer (it names another
+ * computer, or sits on a drive that may be a network drive) is left alone
  * (counted in `remoteSkipped`, and as broken) unless `remoteSources` says the
  * user asked for it. Returns what changed and what stayed behind. */
 export async function updateExternalLinkCaches(
@@ -1556,15 +1557,15 @@ export async function updateExternalLinkCaches(
         ...(options.remoteSources ? { allowRemoteSources: true } : {}),
       }),
     )
-    // why a link stayed behind: the read that contacts no source says which
-    // of them name another computer, the ones this update did not look for
+    // why a link stayed behind: the read that contacts none of them says
+    // which sources are not plainly here, the ones this update did not look for
     const remoteSkipped =
       options.remoteSources || report.links.every((link) => link.reachable)
         ? 0
         : z
             .array(externalLinkInfoSchema)
             .parse(await client.readExternalLinks({ path }))
-            .filter((link) => link.unchecked === 'remote').length
+            .filter((link) => link.unchecked !== undefined).length
     return { report, remoteSkipped }
   })
   const cached = await cachedFormulaValues(source, report.cells)
