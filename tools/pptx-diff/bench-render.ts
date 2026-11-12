@@ -21,6 +21,8 @@ import { repoRoot } from '../docx-diff/harness'
 const REFERENCE = resolve(repoRoot, 'tools/pptx-diff/reference')
 const BINDING = resolve(repoRoot, 'packages/pptx-engine/src')
 const DECK_COUNT = 5
+/** Rounds run before the timed ones: they warm the JIT and the wasm instance. */
+const WARMUP_ROUNDS = 3
 
 /** The exports packages/pptx-render calls with a value, by the subpath it imports them from. */
 const RENDER_PATH: Record<string, string[]> = {
@@ -60,7 +62,7 @@ async function measure(config: string, rounds: number): Promise<Timing> {
     .slice(0, DECK_COUNT)
   const opens: number[] = []
   const renders: number[] = []
-  for (let round = 0; round < rounds + 3; round++) {
+  for (let round = 0; round < rounds + WARMUP_ROUNDS; round++) {
     let open = 0
     let render = 0
     for (const [, bytes] of decks) {
@@ -73,8 +75,7 @@ async function measure(config: string, rounds: number): Promise<Timing> {
       render += performance.now() - t1
       open += t1 - t0
     }
-    // the first three rounds warm the JIT and the wasm instance
-    if (round >= 3) {
+    if (round >= WARMUP_ROUNDS) {
       opens.push(open)
       renders.push(render)
     }
