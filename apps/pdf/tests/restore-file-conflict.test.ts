@@ -3,15 +3,26 @@
  * Undo and Redo of a page operation write a kept copy of the whole file back.
  * That copy holds nothing another program wrote since, so the write is refused
  * unless the file is still what this view's last write in place left there.
+ * The view's own moves of its document (first save of an untitled copy, a name
+ * taken from the content, a rename from the shell) are not another program's.
  */
-import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PDFDocument } from 'pdf-lib'
 
 type IpcHandler = (event: { sender: { id: number } }, ...args: unknown[]) => unknown
 const handlers = new Map<string, IpcHandler>()
+const showSaveDialog = vi.fn()
 
 interface FakeWebContents {
   id: number
@@ -19,13 +30,19 @@ interface FakeWebContents {
   on: ReturnType<typeof vi.fn>
   setWindowOpenHandler: ReturnType<typeof vi.fn>
   loadURL: ReturnType<typeof vi.fn>
+  isDestroyed: () => boolean
+  send: ReturnType<typeof vi.fn>
 }
 
 let nextWcId = 1
 
 vi.mock('electron', () => ({
-  app: { on: vi.fn(), whenReady: vi.fn(() => new Promise(() => {})) },
-  dialog: {},
+  app: {
+    on: vi.fn(),
+    whenReady: vi.fn(() => new Promise(() => {})),
+    getPath: (name: string) => join(tmpdir(), 'pdf-restore-conflict-app', name),
+  },
+  dialog: { showSaveDialog: (...args: unknown[]) => showSaveDialog(...args) },
   shell: {},
   BrowserWindow: class {
     static fromWebContents() {
@@ -39,6 +56,8 @@ vi.mock('electron', () => ({
       on: vi.fn(),
       setWindowOpenHandler: vi.fn(),
       loadURL: vi.fn(),
+      isDestroyed: () => false,
+      send: vi.fn(),
     }
   },
   ipcMain: {
@@ -52,9 +71,14 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { createPdfView } from '../src/main/pdf-main'
+import {
+  createPdfView,
+  markPdfUntitledCopy,
+  markPdfUntitledPath,
+  pdfFileRenamed,
+} from '../src/main/pdf-main'
 import { PDF_CHANNELS } from '../src/shared/ipc'
-import type { RestoreFileResult, SetPageSizeResult } from '../src/shared/ipc'
+import type { PdfAutoRenameResult, RestoreFileResult, SetPageSizeResult } from '../src/shared/ipc'
 
 const tempDirs = new Set<string>()
 
@@ -72,22 +96,26 @@ async function pdfBytes(label: string): Promise<Buffer> {
 }
 
 interface OpenView {
+  contents: FakeWebContents
   wcId: number
   path: string
   /** the file as the view first read it */
   before: Buffer
 }
 
-/** A view that read its file, as the renderer does on open */
-async function openedView(): Promise<OpenView> {
+/** A view that read its file, as the renderer does on open; `mark` is what the shell said of
+ *  the file before opening it */
+async function openedView(mark: (path: string) => void = () => {}): Promise<OpenView> {
   const dir = mkdtempSync(join(tmpdir(), 'pdf-restore-conflict-'))
   tempDirs.add(dir)
   const path = join(dir, 'document.pdf')
   const before = await pdfBytes('original')
   writeFileSync(path, before)
-  const wcId = (createPdfView(path).webContents as unknown as FakeWebContents).id
+  mark(path)
+  const contents = createPdfView(path).webContents as unknown as FakeWebContents
+  const wcId = contents.id
   await handlers.get(PDF_CHANNELS.readFileChunk)!({ sender: { id: wcId } }, path, 0, 1024)
-  return { wcId, path, before }
+  return { contents, wcId, path, before }
 }
 
 /** A page operation written in place; returns the file it left */
@@ -170,5 +198,86 @@ describe('writing a kept copy back over the file (Undo and Redo of a page operat
 
     expect(await restore(view, view.before)).toEqual({ ok: true })
     expect(readFileSync(view.path).equals(view.before)).toBe(true)
+  })
+})
+
+describe('Undo of a page operation after the view itself moved its document', () => {
+  /** The first Save of an untitled copy: the person picks `name` in the same folder */
+  async function saveToPickedPath(view: OpenView, name: string): Promise<OpenView> {
+    const target = join(dirname(view.path), name)
+    showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: target })
+    const adopted = await handlers.get(PDF_CHANNELS.adoptUntitledCopy)!(
+      { sender: { id: view.wcId } },
+      view.path,
+      name,
+    )
+    expect(adopted).toBe(target)
+    return { ...view, path: target }
+  }
+
+  /** The document takes its file name from its content after a save */
+  function renamedFromContent(view: OpenView, base: string): OpenView {
+    const renamed = handlers.get(PDF_CHANNELS.autoRename)!(
+      { sender: { id: view.wcId } },
+      view.path,
+      base,
+    ) as PdfAutoRenameResult
+    expect(renamed).toMatchObject({ renamed: true, name: `${base}.pdf` })
+    return { ...view, path: renamed.path! }
+  }
+
+  it('goes on once an untitled copy is saved to the path the person picked', async () => {
+    const view = await openedView(markPdfUntitledCopy)
+    const after = await resizePages(view)
+    const saved = await saveToPickedPath(view, 'picked.pdf')
+    expect(readFileSync(saved.path).equals(after)).toBe(true)
+
+    expect(await restore(saved, view.before)).toEqual({ ok: true })
+    expect(readFileSync(saved.path).equals(view.before)).toBe(true)
+    // and forward again: the write back was this view's own too
+    expect(await restore(saved, after)).toEqual({ ok: true })
+    expect(readFileSync(saved.path).equals(after)).toBe(true)
+  })
+
+  it('still refuses once another program changed the file the copy was saved to', async () => {
+    const view = await openedView(markPdfUntitledCopy)
+    await resizePages(view)
+    const saved = await saveToPickedPath(view, 'picked.pdf')
+    const outside = await pdfBytes('changed elsewhere')
+    writeFileSync(saved.path, outside)
+
+    expect(await restore(saved, view.before)).toEqual({ ok: false, error: 'external-modified' })
+    expect(readFileSync(saved.path).equals(outside)).toBe(true)
+  })
+
+  it('goes on once the document took its file name from its content', async () => {
+    const view = await openedView(markPdfUntitledPath)
+    await resizePages(view)
+    const renamed = renamedFromContent(view, 'Quarterly report')
+
+    expect(await restore(renamed, view.before)).toEqual({ ok: true })
+    expect(readFileSync(renamed.path).equals(view.before)).toBe(true)
+  })
+
+  it('still refuses once another program changed the file under its new name', async () => {
+    const view = await openedView(markPdfUntitledPath)
+    await resizePages(view)
+    const renamed = renamedFromContent(view, 'Quarterly report')
+    const outside = await pdfBytes('changed elsewhere')
+    writeFileSync(renamed.path, outside)
+
+    expect(await restore(renamed, view.before)).toEqual({ ok: false, error: 'external-modified' })
+    expect(readFileSync(renamed.path).equals(outside)).toBe(true)
+  })
+
+  it('goes on once the shell renamed the file', async () => {
+    const view = await openedView()
+    await resizePages(view)
+    const moved = { ...view, path: join(dirname(view.path), 'renamed.pdf') }
+    renameSync(view.path, moved.path)
+    pdfFileRenamed(view.contents as never, view.path, moved.path)
+
+    expect(await restore(moved, view.before)).toEqual({ ok: true })
+    expect(readFileSync(moved.path).equals(view.before)).toBe(true)
   })
 })

@@ -811,6 +811,17 @@ function forgetDiskState(wcId: number, path: string): void {
   if (states.size === 0) docDiskStates.delete(wcId)
 }
 
+/** The app renamed or moved the view's file, bytes untouched: what is recorded of it follows */
+function moveDiskState(wcId: number, oldPath: string, newPath: string): void {
+  for (const states of [docDiskStates.get(wcId), ownWriteStates.get(wcId)]) {
+    const recorded = states?.get(oldPath)
+    if (states && recorded) {
+      states.delete(oldPath)
+      states.set(newPath, recorded)
+    }
+  }
+}
+
 /** True while `path` still holds what this view's last write in place left there */
 async function holdsOwnLastWrite(wcId: number, path: string): Promise<boolean> {
   const left = ownWriteStates.get(wcId)?.get(path)
@@ -1275,13 +1286,7 @@ export function pdfFileRenamed(contents: WebContents, oldPath: string, newPath: 
   if (untitledPdfPaths.delete(oldPath)) untitledPdfPaths.add(newPath)
   if (unsavedBlankPdfPaths.delete(oldPath)) unsavedBlankPdfPaths.add(newPath)
   void recovery.renamed(wcId, oldPath, newPath)
-  for (const states of [docDiskStates.get(wcId), ownWriteStates.get(wcId)]) {
-    const recorded = states?.get(oldPath)
-    if (states && recorded) {
-      states.delete(oldPath)
-      states.set(newPath, recorded)
-    }
-  }
+  moveDiskState(wcId, oldPath, newPath)
   // the old name is gone because the app moved it: watch the new one, no notice
   if (diskWatchByWc.get(wcId)?.path === oldPath && !contents.isDestroyed()) {
     stopViewWatch(wcId)
@@ -2012,13 +2017,14 @@ function registerPdfIpc(): void {
         : await dialog.showSaveDialog(options)
       if (picked.canceled || !picked.filePath) return null
       const target = /\.pdf$/i.test(picked.filePath) ? picked.filePath : `${picked.filePath}.pdf`
-      await copyFile(path, target)
+      // the view writes the picked file itself: Undo of an earlier page operation goes on
+      // there, and only a later change by another program reads as one
+      await writeOwnFile(e.sender.id, target, () => copyFile(path, target))
       untitledCopyPdfPaths.delete(path)
       allowedByWc.set(e.sender.id, new Set([target]))
       openPathByWc.set(e.sender.id, target)
       recovery.adopted(e.sender.id, path, target)
-      forgetDiskState(e.sender.id, path)
-      await rememberDiskState(e.sender.id, target)
+      if (target !== path) forgetDiskState(e.sender.id, path)
       try {
         pdfRedactionSavedHook?.(e.sender, target)
       } catch (err) {
@@ -2120,6 +2126,8 @@ function registerPdfIpc(): void {
       untitledPdfPaths.delete(path)
       if (unsavedBlankPdfPaths.delete(path)) unsavedBlankPdfPaths.add(target)
       void recovery.renamed(e.sender.id, path, target)
+      // the move kept the bytes: the save guard's record and this view's own-write record follow
+      moveDiskState(e.sender.id, path, target)
       try {
         pdfRenamedHook?.(e.sender, path, target)
       } catch (err) {
