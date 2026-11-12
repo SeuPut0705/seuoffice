@@ -509,6 +509,7 @@ fn every_site_of_the_workspace_builds() {
     // literal it is given
     for pattern in &macros {
         let call = format!("{}!(", pattern.name);
+        let read_before = sites.from_macros;
         for (name, source) in &sources {
             for (start, _) in source.match_indices(&call) {
                 if source[..start].ends_with(|c: char| c.is_ascii_alphanumeric() || c == '_') {
@@ -550,6 +551,12 @@ fn every_site_of_the_workspace_builds() {
                 }
             }
         }
+        // a macro read under a wrong name would pass with no use read
+        assert!(
+            sites.from_macros > read_before,
+            "no use of {}! was read",
+            pattern.name
+        );
     }
     println!("{sites:?}");
     println!("{restarts:?}");
