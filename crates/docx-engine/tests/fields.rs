@@ -56,10 +56,10 @@ fn nested_controls_keep_their_own_ranges() {
         close_end,
     };
     assert_eq!(
-        sdt_ranges(nested),
+        sdt_ranges(nested).unwrap(),
         [range(0, 21, 115, 138), range(21, 80, 86, 109)]
     );
-    let parts = split_sdt_parts(nested).expect("two paragraphs");
+    let parts = split_sdt_parts(nested).unwrap().expect("two paragraphs");
     let summary: Vec<_> = parts
         .iter()
         .map(|part| {
@@ -77,7 +77,7 @@ fn nested_controls_keep_their_own_ranges() {
         summary,
         [("w:p", 0, 109, 80, 86, 2), ("w:p", 109, 138, 109, 115, 1)]
     );
-    let block = parse_sdt_block(nested).expect("a paragraph");
+    let block = parse_sdt_block(nested).unwrap().expect("a paragraph");
     assert_eq!(block.p_xml, "<w:p/>");
     // the outer control has no w:sdtPr of its own and reads the inner one's
     let tags: Vec<_> = block

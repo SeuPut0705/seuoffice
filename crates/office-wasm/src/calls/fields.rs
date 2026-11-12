@@ -176,6 +176,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         "sdtRanges" => {
             let map = Utf16Map::new(text);
             let ranges: Vec<Range16> = sdt::sdt_ranges(text)
+                .map_err(|limit| limit.to_string())?
                 .iter()
                 .map(|range| range16(range, &map))
                 .collect();
@@ -183,7 +184,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         }
         "parseSdtBlock" => {
             let map = Utf16Map::new(text);
-            let block = sdt::parse_sdt_block(text);
+            let block = sdt::parse_sdt_block(text).map_err(|limit| limit.to_string())?;
             value(block.as_ref().map(|block| Block16 {
                 shell: &block.shell,
                 p_xml: &block.p_xml,
@@ -193,7 +194,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         "sdtMeta" => value(sdt::sdt_meta(text)),
         "splitSdtParts" => {
             let map = Utf16Map::new(text);
-            let parts = sdt::split_sdt_parts(text);
+            let parts = sdt::split_sdt_parts(text).map_err(|limit| limit.to_string())?;
             value(parts.as_ref().map(|parts| {
                 parts
                     .iter()
