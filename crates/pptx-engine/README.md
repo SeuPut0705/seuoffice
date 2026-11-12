@@ -214,3 +214,114 @@ merge that brought the Word engine's `resolve-props` port and is 2,175,276
 after it; the size before this unit was not measured here. The changed
 crates' native tests passed 93 tests. Neither that test count nor compilation
 is the parity proof; the recorded comparison is.
+
+## Unit 2 local proof
+
+Twenty source files that need no theme (5,226 lines, 75 exports), ported in
+seven groups. Each group's first comparison is kept unchanged in
+`evidence/u2-<group>-first.{stdout.log,stderr.log,differences.json}`, taken
+before any change to the port other than what it needed to compile.
+
+| Group    | Source files                                                       | Functions | First checks | Different | Equal    |
+| -------- | ------------------------------------------------------------------ | --------- | ------------ | --------- | -------- |
+| `geom`   | `custgeom.ts`, `preset-shape-types.ts`                             | 7         | 1,298        | 11        | 99.153%  |
+| `layout` | `align.ts`, `dgm-hier.ts`, `smartart-layout.ts`, `format-brush.ts` | 8         | 2,688        | 0         | 100%     |
+| `tables` | `table-edit.ts`, `theme-apply.ts`                                  | 10        | 4,334        | 11        | 99.746%  |
+| `anim`   | `animation.ts`                                                     | 15        | 5,441        | 3         | 99.945%  |
+| `bytes`  | `glb-bounds.ts`, `chart-workbook.ts`                               | 7         | 1,117        | 0         | 100%     |
+| `ident`  | `identity.ts`, `redaction-xml.ts`, `model3d.ts`                    | 19        | 6,271        | 95        | 98.485%  |
+| `mtx`    | `vendor/mtx/index.ts`, `lzcomp.ts`, `ctf.ts`                       | 9         | 2,268        | 0         | 100%     |
+| Unit     |                                                                    | 75        | 23,417       | 120       | 99.4876% |
+
+None of the 120 was an error of the port. Each is a place where the
+TypeScript is wrong by the format's rules or loses content, the Rust was
+written right, and the difference is one ledger class with its exact inputs
+and both answers (`tools/pptx-diff/divergences.json`), all reported to main on
+2026-11-12:
+
+| Class                           | First differences | What the TypeScript does                                                                              |
+| ------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------- |
+| `custgeom-inherited-guide`      | 11                | A guide named `constructor`, `toString`, `__proto__` reads an inherited property: `NaN` in the path   |
+| `tblpr-attr-quote`              | 5                 | `firstRow='1'` or `bandRow = "1"` is not found, so the attribute is written a second time             |
+| `tblstylelst-dollar`            | 2                 | `$&` in tableStyles.xml or in the style definition expands into markup                                |
+| `theme-name-dollar`             | 4                 | `$&`, `$1`, `$'` in a theme or font name expand into markup                                           |
+| `anim-nth-par-skips-untargeted` | 2                 | An ink-target effect is counted by the writer and skipped by the reader: the wrong effect is replaced |
+| `anim-prune-dollar-patterns`    | 1                 | `$&` inside the timing expands when a shape's effects are pruned                                      |
+| `redact-label-dollar`           | 92                | `$$`, `$&`, `$'` in a redaction label are lost or expand (4 labels on 23 texts; 24 inputs are kept)   |
+| `cnvpr-own-extlst-forms`        | 3                 | A self-closing or spaced `a:extLst` of `p:cNvPr` gets a second `a:extLst` beside it                   |
+
+Main then asked for three behaviours the port had mirrored to be written
+right, and for every replacement string that is not a literal to be treated
+as suspect. Three more such sites were found by reading every `replace` of
+the ported files; their inputs had been mirrored and compared equal. The
+first comparison after those six corrections is
+`evidence/u2-corrections-first.*`: 36 new differences, 31 in the six classes
+below and 5 on seeded mutations, where an inserted `<w:x/>` or `=` made text
+that is not a tag look like one. The corrections were then narrowed to
+well-formed tags, text that is not a tag is read as the TypeScript reads it,
+and the 5 are gone.
+
+| Class                                   | Inputs | What the TypeScript does                                                                       |
+| --------------------------------------- | ------ | ---------------------------------------------------------------------------------------------- |
+| `redact-strip-drops-extlst-attributes`  | 5      | Removing a mark rewrites a list that keeps content without its attributes: a namespace is lost |
+| `redact-self-closing-ext-swallows-next` | 7      | A self-closing extension of ours takes the next extension with it                              |
+| `group-child-nvid-pattern`              | 5      | The `id` of a group child goes into a pattern unescaped: `(` throws, `+21` finds another shape |
+| `tcpr-color-dollar`                     | 7      | `$&` in a cell shading or border color expands into markup                                     |
+| `theme-color-dollar`                    | 2      | `$$` in a theme color loses a character                                                        |
+| `recolor-map-dollar`                    | 5      | `$&` in a color the recolor map gives expands into markup                                      |
+
+The local gate now makes 36,177 checks over (a) and (f) with no unlisted
+difference, no key-order difference, and at least two distinct TypeScript
+results for each of the 102 functions. The ledger has 18 classes with 111
+exact inputs, all reproducing. `evidence/u2-local-verified.stdout.log` is
+that run.
+
+### Replacement strings that are not literals
+
+`String.prototype.replace` reads `$$`, `$&`, `` $` ``, `$'` and `$1` in a
+replacement string. Every `replace` of the files ported so far was read; a
+site is listed when its replacement holds text from the document or from the
+caller. The Rust writes the value as given at each, and each has `$` inputs.
+
+| Site (at `df02c5700`)          | Replacement holds                    | Reached by                                                                  | Ledger class                 |
+| ------------------------------ | ------------------------------------ | --------------------------------------------------------------------------- | ---------------------------- |
+| `table-edit.ts:186`            | attributes of `a:tblStyleLst`, style | Table Design on a deck whose tableStyles.xml root is self-closing           | `tblstylelst-dollar`         |
+| `table-edit.ts:429`            | shading and border colors            | A cell shading or border edit whose color is not a color, cell without tcPr | `tcpr-color-dollar`          |
+| `theme-apply.ts:52`            | theme colors                         | Applying a theme whose color is not a color                                 | `theme-color-dollar`         |
+| `theme-apply.ts:57`            | theme name                           | Applying a theme with a typed name                                          | `theme-name-dollar`          |
+| `theme-apply.ts:60`, `:66`     | major and minor font names           | Applying a theme with typed font names                                      | `theme-name-dollar`          |
+| `theme-apply.ts:222`           | the color a map gives                | Recoloring a deck after a theme whose color is not a color                  | `recolor-map-dollar`         |
+| `animation.ts:1247`            | the whole pruned `p:timing`          | Deleting a shape on a slide whose timing holds a `$` pattern                | `anim-prune-dollar-patterns` |
+| `redaction-xml.ts:192`, `:193` | the redaction label                  | Marking a run or picture that already has an `a:extLst`, with a typed label | `redact-label-dollar`        |
+
+Colors reach the three color sites only from a caller that passes text that
+is not a color (an agent tool call, a pasted value); the color picker cannot.
+Read and not listed, because the replacement is a literal, a function, or
+digits made from numbers: `zip.ts:277`; `xml-utils.ts:24`, `:43`, `:47`,
+`:51`; `table-edit.ts:187`, `:205`, `:220`, `:254`, `:286`, `:310`-`:313`,
+`:331`-`:333`, `:338`, `:344`, `:345`, `:347`; `theme-apply.ts:43`, `:115`,
+`:220`; `animation.ts:551`, `:555`-`:557`, `:560`, `:695`, `:782`, `:889`,
+`:1230`, `:1235`, `:1239`, `:1248`; `identity.ts:45`; `redaction-xml.ts:126`,
+`:129`, `:141`, `:144`, `:189`; `model3d.ts:145`, `:147`, `:151`, `:155`,
+`:171`, `:173`.
+
+### What the corpus lacked, and what is not verified
+
+The three tracked decks gave 3 checks to `geom`, 15 to `bytes` and none to
+`mtx`: they have no `a:custGeom`, no guide list, no preset but `rect`, no
+3D model, no embedded font, no `a16:creationId`, no group, no redaction
+mark and no `a:extLst` inside `a:rPr` or `p:cNvPr`. Those functions are
+compared on built inputs and seeded mutations only. Byte inputs (`bytes`,
+`mtx`) carry their own seeded truncations and byte flips, since the runner
+mutates text.
+
+Not verified: `Math.sin`, `Math.cos` and `Math.hypot` agree to the last bit
+only on the inputs tried. NaN, infinities, `-0` and lone surrogates cannot
+cross JSON as arguments. `new AHuff(null, 257)` is left out because the
+TypeScript never returns for it (its constructor reads symbol 257 past its
+table); the decoder makes ranges 8 and 267 to 323 only. That PowerPoint
+repairs or refuses the slides the listed defects produce was not tried.
+
+The MTX decoder is a derived work of libeot (MPL-2.0), as the TypeScript it
+is ported from; `src/mtx/LICENSE` is the licence text and each of the three
+files says so. The workspace licence field does not.
