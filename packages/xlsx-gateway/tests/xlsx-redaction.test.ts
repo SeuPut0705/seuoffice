@@ -198,6 +198,52 @@ describe('rekeying for sheet edits done in the same save', () => {
     ])
   })
 
+  it('uses source-sheet coordinates before renaming the shifted marks', () => {
+    expect(
+      rekeyRedactionStates(
+        STATES,
+        [{ sheetName: 'Sheet1', newName: 'Q3' }],
+        [],
+        [
+          {
+            sheetName: 'Sheet1',
+            ops: [
+              { kind: 'insert-rows', index: 0, count: 2 },
+              { kind: 'insert-cols', index: 0, count: 1 },
+            ],
+          },
+        ],
+      ),
+    ).toEqual([
+      {
+        sheetName: 'Q3',
+        marks: [{ ...MARK, startRow: 3, endRow: 5, startColumn: 3, endColumn: 3 }],
+      },
+    ])
+  })
+
+  it('does not apply another source sheet’s ops when the output names are swapped', () => {
+    const other = { ...MARK, label: 'other' }
+    expect(
+      rekeyRedactionStates(
+        [...STATES, { sheetName: 'Other', marks: [other] }],
+        [
+          { sheetName: 'Sheet1', newName: 'Other' },
+          { sheetName: 'Other', newName: 'Sheet1' },
+        ],
+        [],
+        [
+          { sheetName: 'Sheet1', ops: [{ kind: 'insert-rows', index: 0, count: 1 }] },
+          { sheetName: 'Other', ops: [{ kind: 'insert-cols', index: 0, count: 2 }] },
+        ],
+      ),
+    ).toEqual([
+      { sheetName: 'Other', marks: [{ ...MARK, startRow: 2, endRow: 4 }] },
+      { sheetName: 'Sheet1', marks: [{ ...other, startColumn: 4, endColumn: 4 }] },
+    ])
+    expect(STATES).toEqual([{ sheetName: 'Sheet1', marks: [MARK] }])
+  })
+
   it('drops a mark whose rows the same save deletes outright', () => {
     // The value it withheld is gone; a rectangle clamped onto a neighbour
     // would withhold something the reader never hid. A delete that only takes
