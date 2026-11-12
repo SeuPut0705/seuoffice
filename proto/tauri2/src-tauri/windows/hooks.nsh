@@ -164,11 +164,22 @@ FunctionEnd
   WriteRegStr HKCU "${SEU_CAPABILITIES_KEY}\FileAssociations" ".docx" "seuoffice.WordDocument"
   ; SHCNE_ASSOCCHANGED: Explorer re-reads the file types
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
+  ; the prototype has no other window onto what a silent install did
+  FileOpen $R1 "$TEMP\seuoffice-proto-installer.log" w
+  FileWrite $R1 "cmdline=[$CMDLINE] instdir=[$INSTDIR] legacyKey=[$SeuLegacyKey]$\r$\n"
+  ${If} ${Silent}
+    FileWrite $R1 "silent$\r$\n"
+  ${EndIf}
+  FileClose $R1
   ${If} ${Silent}
     ; GetOptions does not take a flag with a leading "--", so the command line is searched by hand
     ${StrLoc} $R0 " $CMDLINE " " --force-run " ">"
     ${If} $R0 != ""
       Exec '"$INSTDIR\${MAINBINARYNAME}.exe" --updated'
+      FileOpen $R1 "$TEMP\seuoffice-proto-installer.log" a
+      FileSeek $R1 0 END
+      FileWrite $R1 "started $INSTDIR\${MAINBINARYNAME}.exe$\r$\n"
+      FileClose $R1
     ${EndIf}
   ${EndIf}
 !macroend

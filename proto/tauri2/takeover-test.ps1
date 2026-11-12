@@ -84,6 +84,11 @@ for ($i = 0; $i -lt 90 -and -not $started; $i++) {
   if (Test-Path $f) { $started = Get-Content -Raw $f | ConvertFrom-Json } else { Start-Sleep 1 }
 }
 Start-Sleep 3
+Write-Host '--- installer log (%TEMP%\seuoffice-proto-installer.log)'
+Get-Content (Join-Path $env:TEMP 'seuoffice-proto-installer.log') -ErrorAction SilentlyContinue | Write-Host
+Write-Host '--- SeuOffice processes'
+Get-Process SeuOffice -ErrorAction SilentlyContinue | Format-Table Id, Path | Out-String | Write-Host
+Get-WinEvent -LogName Application -MaxEvents 15 -ErrorAction SilentlyContinue | Where-Object { $_.Message -match 'SeuOffice' } | ForEach-Object { Write-Host $_.Message }
 Dump 'after the prototype installer'
 $after = @(Entries)
 $afterFiles = @(Get-ChildItem $installDir -Name -ErrorAction SilentlyContinue)
