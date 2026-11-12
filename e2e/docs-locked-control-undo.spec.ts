@@ -10,7 +10,11 @@ import { launchShell, closeAndSaveVideo, waitForPageWithUrl } from './helpers'
  * A document nobody changed closes without asking. Found on Windows: text
  * typed into a content control locked against editing was refused, as it
  * should be; after one Ctrl+Z and one Ctrl+Y the document read as the file
- * again, and closing the tab still asked whether to save.
+ * again, and closing the tab still asked whether to save. The page reports
+ * a click's caret a moment after the click, so the first key reached the
+ * editor together with the caret's move into the control; refusing the key
+ * refused the move, the caret fell back to the start, and the next input
+ * landed there as a real edit.
  *
  * The keys go through the browser (real key and input events), because that
  * is where it happened: an editor command would not show it.
@@ -266,10 +270,19 @@ test.describe('a document with a locked content control', () => {
         await note('redo')
 
         // the whole sequence at once, so a failure shows every moment of it
-        console.log(`[locked-control ${way}] ${JSON.stringify(moments, null, 1)}`)
+        await test.info().attach(`moments (${way})`, {
+          body: JSON.stringify(moments, null, 1),
+          contentType: 'application/json',
+        })
         expect(untouched(moments)).toEqual(moments.map(({ step }) => UNTOUCHED(step)))
-        // and the caret stayed where it was put: refused text moves nothing
-        expect(new Set(moments.slice(1).map((m) => m.caret.join(':'))).size).toBe(1)
+        // and from the first key on the caret stays in the control: refused
+        // text moves nothing (the page reports a click's caret a moment late,
+        // so right after the click the editor may not have it yet)
+        const carets = new Set(moments.slice(2).map((m) => m.caret.join(':')))
+        expect(carets.size).toBe(1)
+        // 'Code: ' is six characters: the control's text runs from 7 to 10
+        const [head] = moments[2]!.caret
+        expect(head >= 7 && head <= 10).toBe(true)
 
         await closeDocumentTab(app)
         expect(await prompts()).toBe(0)

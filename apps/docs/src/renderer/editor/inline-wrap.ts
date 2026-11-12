@@ -482,6 +482,21 @@ export const InlineWrapGuardExtension = Extension.create({
         },
         appendTransaction: (trs, _before, state) => keepWrappersWhole(trs, state),
         props: {
+          // Text typed into a locked control is refused here, before it is a
+          // transaction. The page reports a click's caret a moment after the
+          // click, so a key typed at once arrives as one change that also
+          // moves the caret into the control: refusing that change whole
+          // (filterTransaction) left the caret where it was before the click,
+          // and the next text typed landed there as a real edit. The caret
+          // goes where the text was typed instead, and nothing is inserted.
+          handleTextInput: (view, from, to, _text) => {
+            if (!lockedControlRefuses(view.state.doc, from, to, true)) return false
+            recordOdtRefusal('lockedControl')
+            notifyOdt('appOdtLockedObject')
+            const caret = TextSelection.create(view.state.doc, from)
+            if (!view.state.selection.eq(caret)) view.dispatch(view.state.tr.setSelection(caret))
+            return true
+          },
           handleDOMEvents: {
             // An IME draws its text where the caret's marks put it, and text
             // moved out of a wrapper afterwards (keepWrappersWhole) would be
