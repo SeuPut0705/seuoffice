@@ -29,6 +29,15 @@ describe('assembleTrustedContext', () => {
     })
   })
 
+  it('carries the data folder the project uses, so the prompt can name its instructions file', () => {
+    const result = assembleTrustedContext(
+      { ...texts({ instructions: 'mine' }), dataDir: '.ieumoffice' },
+      { decision: 'use', hashes: {} },
+      on,
+    )
+    expect(result.instructions?.dataDir).toBe('.ieumoffice')
+  })
+
   it('leaves out sources cut away entirely by the limit', () => {
     const result = assembleTrustedContext(
       texts({ instructions: 'x'.repeat(50), agents: 'agents' }),

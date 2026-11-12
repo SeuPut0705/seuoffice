@@ -108,6 +108,20 @@ describe('panelProjectSkill context (spec 5.4)', () => {
     expect(prompt).not.toContain('<!-- header -->')
   })
 
+  it('names the data folder the project actually uses for its instructions file', async () => {
+    const context = contextBundle({
+      instructions: {
+        text: '[.ieumoffice/instructions.md]\nWrite in short bullet points.',
+        sources: ['instructions'],
+        dataDir: '.ieumoffice',
+      },
+    })
+    const { skill, run } = setup({ context })
+    await run.prepare()
+    expect(skill.systemPrompt).toContain('(from .ieumoffice/instructions.md)')
+    expect(skill.systemPrompt).not.toContain('.seuoffice/instructions.md')
+  })
+
   it('tells how to write memory only when project_remember is offered', async () => {
     const on = setup()
     await on.run.prepare()
