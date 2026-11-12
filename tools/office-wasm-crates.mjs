@@ -13,10 +13,20 @@
  * code (crates/vendor/regress, crates/mtx after libeot, the rhwp tree) and is
  * listed with its own licence files.
  *
+ * Code ported into a crate of the repository's own work is declared in that
+ * crate's Cargo.toml, one entry per source, and listed like a crate:
+ *
+ *   [[package.metadata.notices.ported]]
+ *   name = "word-extractor"
+ *   version = "1.0.4"
+ *   license = "MIT"
+ *   npm = "word-extractor"   # its license files: the npm package's
+ *   # or: dir = "src/doc"    # its license files: a directory of the crate
+ *
  *   node tools/office-wasm-crates.mjs   prints {"count": N, "crates": [...]}
  */
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { licenseFiles } from './license-text.mjs'
@@ -91,8 +101,10 @@ export function officeWasmCrates() {
     p.source === null &&
     (p.license ?? own) === own &&
     licenseFiles(dirname(p.manifest_path)).length === 0
-  return meta.packages
-    .filter((p) => linked.has(`${p.name} ${p.version}`) && !isOwnWork(p))
+  const relativePath = (dir) => relative(ROOT, dir).split(sep).join('/')
+  const packages = meta.packages.filter((p) => linked.has(`${p.name} ${p.version}`))
+  const crates = packages
+    .filter((p) => !isOwnWork(p))
     .map((p) => ({
       name: p.name,
       version: p.version,
@@ -100,10 +112,41 @@ export function officeWasmCrates() {
       url: p.repository ?? `https://crates.io/crates/${p.name}`,
       dir: dirname(p.manifest_path),
       /** a crate of the workspace (vendored or ported code with a license of its own): its directory */
-      path:
-        p.source === null ? relative(ROOT, dirname(p.manifest_path)).split(sep).join('/') : null,
+      path: p.source === null ? relativePath(dirname(p.manifest_path)) : null,
+      portedInto: null,
     }))
-    .sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version))
+  const ported = packages
+    .filter((p) => p.source === null)
+    .flatMap((p) =>
+      (p.metadata?.notices?.ported ?? []).map((entry) => {
+        const crateDir = dirname(p.manifest_path)
+        return {
+          name: entry.name,
+          version: entry.version,
+          spdx: entry.license,
+          url: entry.url ?? (entry.npm ? `https://www.npmjs.com/package/${entry.npm}` : null),
+          dir: entry.npm ? npmPackageDir(entry.npm) : join(crateDir, entry.dir ?? '.'),
+          path: null,
+          portedInto: relativePath(crateDir),
+        }
+      }),
+    )
+  return [...crates, ...ported].sort(
+    (a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version),
+  )
+}
+
+/** where an npm package a port was made from is installed: the root's node_modules or a workspace's */
+function npmPackageDir(name) {
+  const roots = [
+    ROOT,
+    ...readdirSync(join(ROOT, 'packages')).map((dir) => join(ROOT, 'packages', dir)),
+  ]
+  return (
+    roots
+      .map((root) => join(root, 'node_modules', name))
+      .find((dir) => existsSync(join(dir, 'package.json'))) ?? null
+  )
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

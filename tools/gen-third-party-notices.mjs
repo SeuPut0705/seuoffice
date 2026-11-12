@@ -1027,13 +1027,16 @@ out += `
 The document engines ship as office_wasm.wasm, built from crates/ of this
 application's source repository, under the license and NOTICE of the work
 above. The crates below are compiled into it. Vendored and ported code
-(crates/vendor, crates/mtx and the like) is listed with its own license files.
+(crates/vendor, crates/mtx and the like) is listed with its own license files,
+and code ported into the crates of the work under the library it came from.
 `
 if (officeCrates === null) {
   gap('cargo could not list the crates of office_wasm.wasm (crates/office-wasm)')
   out += '\ncrate list unavailable at generation time; see crates/Cargo.lock.\n'
 } else {
-  const textless = officeCrates.filter((c) => !licenseText(c.name, c.dir))
+  const textless = officeCrates.filter(
+    (c) => !c.dir || !existsSync(c.dir) || !licenseText(c.name, c.dir),
+  )
   if (textless.length > 0) {
     throw new Error(
       `office_wasm.wasm crates without a license file: ${textless.map((c) => `${c.name} ${c.version}`).join(', ')}`,
@@ -1041,7 +1044,10 @@ if (officeCrates === null) {
   }
   out += `\n${officeCrates.length} crates compiled into office_wasm.wasm:\n\n`
   for (const c of officeCrates) {
-    out += `  ${c.name} ${c.version}  —  ${c.spdx}\n    ${c.path ?? c.url}\n`
+    const where = c.portedInto
+      ? `ported into ${c.portedInto}; ${c.url ?? 'source named there'}`
+      : (c.path ?? c.url)
+    out += `  ${c.name} ${c.version}  —  ${c.spdx}\n    ${where}\n`
   }
   const texts = new Map()
   for (const c of officeCrates) {
