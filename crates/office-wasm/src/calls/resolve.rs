@@ -68,7 +68,7 @@ thread_local! {
 }
 
 /// Calls `call` with the context of `args`.
-fn with_ctx(args: &Value, call: impl FnOnce(&ResolveCtx) -> Returned) -> Returned {
+pub(super) fn with_ctx(args: &Value, call: impl FnOnce(&ResolveCtx) -> Returned) -> Returned {
     let compat = compat_of(args)?;
     let table: Option<TableCtx> = arg(args, "table")?;
     let parts = args.get("parts").cloned().unwrap_or(Value::Null);

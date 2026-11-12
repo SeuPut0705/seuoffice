@@ -1575,7 +1575,10 @@ fn apply_r_layer(
 }
 
 /// `resolveRunProps(rPr, para, ctx)`. Of `para` the TypeScript reads
-/// `para.styleId` only, which is what this takes.
+/// `para.styleId` only, which is what this takes. A style id the document
+/// does not have falls back to the default paragraph style, as it does for the
+/// paragraph's own properties and as Word shows it; the TypeScript takes no
+/// paragraph style then (divergences.json: `run-of-a-paragraph-whose-style-is-missing`).
 pub fn resolve_run_props(
     r_pr: Option<&XNode>,
     para_style_id: Option<&str>,
@@ -1583,10 +1586,9 @@ pub fn resolve_run_props(
 ) -> EffectiveRPr {
     let r_style_id = r_pr.and_then(|r_pr| child_attr(r_pr, "w:rStyle", "w:val"));
     let char_style = truthy(r_style_id).and_then(|id| ctx.styles.get(id));
-    let para_style = match truthy(para_style_id) {
-        Some(id) => ctx.styles.get(id),
-        None => ctx.default_para_style(),
-    };
+    let para_style = truthy(para_style_id)
+        .and_then(|id| ctx.styles.get(id))
+        .or_else(|| ctx.default_para_style());
     let display_rtl = |style: Option<&StyleInfo>| {
         style
             .and_then(|style| style.display.as_ref())

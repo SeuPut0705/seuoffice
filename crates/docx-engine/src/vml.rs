@@ -8,6 +8,8 @@ use jscompat::{
 };
 use serde::Deserialize;
 
+pub mod shape;
+
 /// `vmlStyleProp(style, key)` for a literal key: the pattern compiles once per
 /// call site instead of once per call.
 macro_rules! style_prop {

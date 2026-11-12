@@ -213,6 +213,10 @@ const SECT_PRS: string[] = [
     "<w:bidi w:val='off'/>",
     '<w:BIDI/>',
     '<w:bidi w:val="true"/>',
+    // U+0131: an i only under Unicode case folding
+    '<w:b\u0131di/>',
+    '<w:B\u0131D\u0131 w:val="1"/>',
+    '<w:bid\u0131 w:val="0"/><w:bidi/>',
   ].map(sectPr),
   // page numbering
   ...[

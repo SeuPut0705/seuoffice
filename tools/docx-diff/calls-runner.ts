@@ -1,4 +1,5 @@
 // Shared function comparisons: corpus inputs, built inputs and seeded mutations.
+import { isDeepStrictEqual } from 'node:util'
 import type { CallSpec, Input } from './calls-spec'
 import { byFunction, checkOutcome, flush, type Outcome, rustOutcome } from './compare-props'
 import { mutate } from './compare-xml'
@@ -43,7 +44,22 @@ async function typescriptOutcome(
   }
 }
 
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+
+/** No string in `value`, key or value, holds half a surrogate pair. */
+function wellFormed(value: unknown): boolean {
+  if (typeof value === 'string') return !LONE_SURROGATE.test(value)
+  if (Array.isArray(value)) return value.every(wellFormed)
+  if (typeof value !== 'object' || value === null) return true
+  return Object.entries(value).every(([key, item]) => wellFormed(key) && wellFormed(item))
+}
+
 export function createCallsRunner(all: Record<string, CallSpec[]>) {
+  /**
+   * The classes of divergences.json the specs name (`CallSpec.listed`): how many
+   * inputs fell in each and how many of those differed.
+   */
+  const listedClasses = new Map<string, { inputs: number; differ: number }>()
   const groups: Group[] = Object.entries(all)
     .filter(([name, specs]) => specs.length > 0 && (ONLY_GROUP ?? name) === name)
     .map(([name, specs]) => ({
@@ -77,7 +93,24 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
     spec: CallSpec,
     { text = '', args = {} }: Input,
   ): Promise<void> {
+    // JSON cannot carry half a surrogate pair to Rust: the whole batch would be
+    // refused, so the input that holds one is named here instead
+    if (!wellFormed(text) || !wellFormed(args)) {
+      throw new Error(`${where}: ${spec.fn}: the input holds a lone surrogate`)
+    }
     const outcome = await typescriptOutcome(spec, text, args)
+    const id = spec.listed?.(text, args)
+    if (id !== undefined) {
+      const rust = rustOutcome(spec.fn, text, args)
+      const same = 'error' in outcome ? 'error' in rust : isDeepStrictEqual(outcome, rust)
+      const count = listedClasses.get(id) ?? { inputs: 0, differ: 0 }
+      listedClasses.set(id, count)
+      count.inputs++
+      if (!same) {
+        count.differ++
+        return
+      }
+    }
     checkOutcome(comparison, `${where}: ${spec.fn}`, spec.fn, text, args, () => outcome)
   }
 
@@ -143,7 +176,12 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
         )
       }
     }
+    for (const [id, { inputs, differ }] of listedClasses) {
+      console.log(
+        `(f) listed class ${id}: ${inputs} inputs, ${differ} differ as listed and are not counted above`,
+      )
+    }
   }
 
-  return { callOutcomes, callsOnDocument, callsAfterCorpus, reportCalls }
+  return { callOutcomes, callsOnDocument, callsAfterCorpus, reportCalls, listedClasses }
 }

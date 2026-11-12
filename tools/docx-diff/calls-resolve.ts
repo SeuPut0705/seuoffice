@@ -34,6 +34,7 @@ import type {
   ThemeFonts,
 } from '../../packages/docx-engine/src/types'
 import { nameOf, xmlParser, type XNode } from '../../packages/docx-engine/src/xml-utils'
+import { missingParagraphStyle } from './listed'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { parseTheme } from './compare-package'
 import { elementFragments, tagTokens } from './fragments'
@@ -401,6 +402,29 @@ const THROWS: Array<[string, string]> = [
   ['word/numbering.xml', `<w:numbering ${W}><w:num w:numId="1"`],
 ]
 const PACKAGES = [RICH, RTL, BARE, DAMAGED_STYLES]
+const CHAR_DEFAULT = style(
+  'character',
+  'CharDefault',
+  '<w:rPr><w:b/><w:color w:val="00AA00"/><w:sz w:val="40"/></w:rPr>',
+  ' w:default="1"',
+)
+const TABLE_DEFAULT = style(
+  'table',
+  'TableDefault',
+  '<w:pPr><w:spacing w:before="33" w:after="44"/></w:pPr><w:rPr><w:i/><w:color w:val="AA0000"/></w:rPr>',
+  ' w:default="1"',
+)
+const PARA_DEFAULT = style(
+  'paragraph',
+  'ParaDefault',
+  '<w:pPr><w:spacing w:before="120" w:after="240" w:line="360" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:rPr><w:caps/><w:sz w:val="30"/></w:rPr>',
+  ' w:default="1"',
+)
+/** A character and a table default ahead of the paragraph default: only the last is the default paragraph style. */
+const OTHER_DEFAULTS: Array<Array<[string, string]>> = [
+  [['word/styles.xml', `<w:styles ${W}>${CHAR_DEFAULT}${TABLE_DEFAULT}${PARA_DEFAULT}</w:styles>`]],
+  [['word/styles.xml', `<w:styles ${W}>${TABLE_DEFAULT}${CHAR_DEFAULT}${PARA_DEFAULT}</w:styles>`]],
+]
 
 const COMPATS: CompatArgs[] = [
   {},
@@ -480,6 +504,9 @@ const PARAS: string[] = [
   para(
     '<w:pStyle w:val="Base"/><w:snapToGrid/><w:autoSpaceDN/><w:rPr><w:vanish/><w:specVanish/></w:rPr>',
   ),
+  // a specVanish that is there but off: the mark stays hidden
+  para('<w:pStyle w:val="Base"/><w:rPr><w:vanish/><w:specVanish w:val="0"/></w:rPr>'),
+  para('<w:rPr><w:specVanish w:val="false"/><w:vanish w:val="1"/></w:rPr>'),
   para(
     '<w:pStyle w:val="GrandChild"/><w:rPr><w:rStyle w:val="Emph"/><w:vanish w:val="0"/></w:rPr>',
   ),
@@ -539,6 +566,8 @@ const RPRS: string[] = [
   '<w:rPr></w:rPr>',
   '<w:rPr><w:rStyle w:val="Emph"/></w:rPr>',
   '<w:rPr><w:rStyle w:val="Emph"/><w:b w:val="0"/><w:vanish/><w:specVanish/></w:rPr>',
+  '<w:rPr><w:vanish/><w:specVanish w:val="0"/></w:rPr>',
+  '<w:rPr><w:rStyle w:val="Emph"/><w:specVanish w:val="off"/><w:vanish w:val="true"/></w:rPr>',
   '<w:rPr><w:rStyle w:val="Emph"/><w:strike/><w:i w:val="1"/></w:rPr>',
   '<w:rPr><w:rStyle w:val="CsChar"/></w:rPr>',
   '<w:rPr><w:rStyle w:val="CsChar"/><w:rtl w:val="0"/></w:rPr>',
@@ -636,6 +665,12 @@ function paragraphBuilt(node?: 'w:pPr'): Input[] {
   }
   // a table without its conditions: cacheKey joins them and throws
   inputs.push({ text: text(styled('Base')), args: base({ table: { styleId: 'Grid' } }) })
+  // a paragraph without w:pStyle, with and without a w:pPr, takes the paragraph default only
+  for (const parts of OTHER_DEFAULTS) {
+    for (const p of [para(''), para('<w:ind w:left="10"/>')]) {
+      inputs.push({ text: text(p), args: { parts, ...(node ? { node } : {}) } })
+    }
+  }
   inputs.push({ text: text(styled('Base')), args: { parts: THROWS, ...(node ? { node } : {}) } })
   return inputs
 }
@@ -665,8 +700,14 @@ function runBuilt(): Input[] {
   inputs.push({ text: RPRS[2]!, args: { parts: THROWS, node: 'w:rPr' } })
   // tableStyleRLayer reads the conditions with `?? []`: no throw without them
   inputs.push({ text: RPRS[2]!, args: { parts: RICH, node: 'w:rPr', table: { styleId: 'Grid' } } })
+  // a run of a paragraph without a style takes the run properties of the paragraph default only
+  for (const parts of OTHER_DEFAULTS)
+    inputs.push({ text: RPRS[0]!, args: { parts, node: 'w:rPr' } })
   return inputs
 }
+
+/** What a plain object inherits: `constructor`, `toString`, ..., `__proto__`. */
+const PROTO_NAMES = Object.getOwnPropertyNames(Object.prototype)
 
 const SHADOWS: Array<Record<string, unknown>> = [
   { legacy: { a: 1, b: [1, 2] }, resolved: { a: 1, b: [2, 1] } },
@@ -686,6 +727,22 @@ const SHADOWS: Array<Record<string, unknown>> = [
   { legacy: { s: '\uD55C' }, resolved: { s: '\u{1F600}' }, keys: null },
   { legacy: {}, resolved: {}, keys: 5 },
   { legacy: {}, resolved: {}, keys: {} },
+  // an own key named after an Object.prototype member against the inherited member, either side;
+  // Object.fromEntries makes even `__proto__` an own key, as JSON.parse does for the Rust side
+  ...PROTO_NAMES.flatMap((name) => [
+    { legacy: Object.fromEntries([[name, 1]]), resolved: {} },
+    { legacy: {}, resolved: Object.fromEntries([[name, 1]]) },
+  ]),
+  {
+    legacy: Object.fromEntries(PROTO_NAMES.map((name) => [name, 1])),
+    resolved: {},
+    keys: PROTO_NAMES,
+  },
+  {
+    legacy: {},
+    resolved: Object.fromEntries(PROTO_NAMES.map((name) => [name, 1])),
+    keys: PROTO_NAMES,
+  },
 ]
 
 const LINES: Array<Record<string, unknown>> = [
@@ -700,6 +757,10 @@ const LINES: Array<Record<string, unknown>> = [
   { line: { rule: 'exact', raw: 0 } },
   { line: { rule: 'atLeast', raw: 12.5 } },
   { line: { rule: 'weird', raw: 300 } },
+  // a negative half hundredth: Math.round goes up (-2.5 to -2), never away from zero
+  { line: { rule: 'auto', raw: -6 } },
+  { line: { rule: 'auto', raw: -30 } },
+  { line: { rule: 'auto', raw: -1.2 } },
 ]
 
 // ---------------------------------------------------------------- the specs
@@ -727,6 +788,7 @@ export const RESOLVE: CallSpec[] = [
     built: [
       ...PACKAGES.flatMap((parts) => COMPATS.map((compat) => ({ args: { parts, compat } }))),
       { args: { parts: THROWS } },
+      ...OTHER_DEFAULTS.map((parts) => ({ args: { parts } })),
     ],
     mutation: 'none',
   },
@@ -734,18 +796,21 @@ export const RESOLVE: CallSpec[] = [
     fn: 'resolve.resolveParagraphProps',
     call: async (text, args) =>
       resolveParagraphProps(nodeOf(text, args), await ctxOf(args), optsOf(args)),
+    listed: missingParagraphStyle,
     fromDocument: (parts) => paragraphInputs(parts, 'w:pPr'),
     built: paragraphBuilt('w:pPr'),
   },
   {
     fn: 'resolve.resolveParagraphPropsXml',
     call: async (text, args) => (await effOf(text, args)).eff,
+    listed: missingParagraphStyle,
     fromDocument: (parts) => paragraphInputs(parts),
     built: paragraphBuilt(),
   },
   {
     fn: 'resolve.resolveRunProps',
     call: (text, args) => runEffOf(text, args),
+    listed: missingParagraphStyle,
     fromDocument: runInputs,
     built: runBuilt(),
   },
@@ -758,6 +823,7 @@ export const RESOLVE: CallSpec[] = [
   {
     fn: 'resolve.directRunFormat',
     call: async (text, args) => directRunFormat(await runEffOf(text, args)),
+    listed: missingParagraphStyle,
     fromDocument: runInputs,
     built: runBuilt(),
   },

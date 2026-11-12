@@ -1,15 +1,24 @@
 #!/bin/bash
-# Runs one heavy command (cargo, a wasm build, the gate) at a time on this
-# machine, and none between 03:28 and 05:00 KST: it waits instead. Every
-# session and every subagent that shares the machine goes through it.
+# Runs one heavy command (`cargo check -p <crate>`, `cargo test -p <crate>`)
+# at a time on this machine, and none between 03:28 and 05:00 KST: it waits
+# instead. Every session and every subagent that shares the machine goes
+# through it.
 #
-#   tools/docx-diff/heavy.sh cargo test --manifest-path crates/Cargo.toml --workspace
-#   tools/docx-diff/heavy.sh npm --prefix tools/docx-diff run gate
+#   tools/docx-diff/heavy.sh cargo check --manifest-path crates/Cargo.toml -p docx-engine
 #
-# The lock is the directory /tmp/heavy.lock, outside the repository so that
-# worktrees share it, holding the holder's pid. NEVER remove it by hand and
-# never kill by name across the machine (kill only pids you started): a lock
-# whose holder is gone is taken over by the next waiter by itself.
+# Where the machine has its own /tmp/heavy.sh, that one runs the command: one
+# queue and one limit for every checkout. It REFUSES (exit 75) when three jobs
+# already wait. The gate, clippy, the workspace tests and the wasm release
+# build do not belong on this machine at all:
+#
+#   gh workflow run "seuoffice rust" --ref <branch>
+#
+# The body below is the fallback for a machine without /tmp/heavy.sh. The lock
+# is the directory /tmp/heavy.lock, outside the repository so that worktrees
+# share it, holding the holder's pid. NEVER remove it by hand and never kill
+# by name across the machine (kill only pids you started): a lock whose
+# holder is gone is taken over by the next waiter by itself.
+[ -x /tmp/heavy.sh ] && exec /tmp/heavy.sh "$@"
 lock=/tmp/heavy.lock
 while :; do
   now=$((10#$(TZ=Asia/Seoul date +%H%M)))

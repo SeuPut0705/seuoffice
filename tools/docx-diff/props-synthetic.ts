@@ -459,6 +459,26 @@ export const PROPS_TEXTS: Record<string, string[]> = {
     '<w:footnotes a="1"xml:space="preserve"/>',
     '<w:styles><w:docDefaults/></w:styles>',
   ],
+  // U+0131 (dotless i), U+017F (long s) and U+212A (Kelvin sign) are an ASCII
+  // letter only under Unicode case folding, which /i without /u does not apply
+  'letters that fold to ASCII only in Unicode': [
+    p(r(t('x'), '<w:vanish/>') + r(t('y'), '<w:vanish w:val="fal\u017fe"/>')),
+    p(r(t('x'), '<w:vanish/>') + r(t('y'), '<w:van\u0131sh w:val="0"/>')),
+    p(r(t('x'), '<w:vanish/>') + r(t('y'), `<w:vani\u017fh w:val='off'/>`)),
+    p(r(t('x'), '<w:van\u0131sh/><w:\u0131/><w:rt\u212A/>')),
+    p(r(t('x'), '<w:vani\u017fh w:val="0"/><w:hdr\u017f/>')),
+    p(
+      '<w:pPr><w:shd w:val="thinHorz\u017ftripe" w:color="FF0000" w:fill="FFFFFF"/></w:pPr>' +
+        r(t('x'), '<w:shd w:val="diagCro\u017f\u017f" w:color="0000FF" w:fill="FFFF00"/>'),
+    ),
+    p(r(t('x'), '<w:shd w:val="horzStr\u0131pe" w:color="00FF00" w:fill="000000"/>')),
+    p(field('ADD\u0131N ZOTERO_ITEM CSL_CITATION {}') + field('C\u017fL_CITATION {}')),
+    // tags outside ASCII, with and without case, on and off
+    p(
+      r(t('x'), '<w:\uAC00/><w:\u00E9 w:val="0"/><w:\u00C9/>') +
+        r(t('y'), '<w:\uAC00 w:val="off"/>'),
+    ),
+  ],
 }
 
 export const PROPS_INSTRUCTIONS = [
@@ -494,6 +514,12 @@ export const PROPS_INSTRUCTIONS = [
   'ZOTERO_BIBL {"uncited":[]} CSL_BIBLIOGRAPHY',
   'addin  zotero_temp',
   'ADDIN CSL_CITATION {}',
+  'ADD\u0131N ZOTERO_ITEM CSL_CITATION {}',
+  'ZOTERO_\u0131TEM',
+  'zotero_b\u0131bl',
+  'C\u017fL_CITATION {}',
+  'ADDIN CSL_B\u0131BLIOGRAPHY',
+  'c\u017fl_item',
   'CSL_ITEMX',
   'ADDIN EN.CITE',
   ' XE "term" ',
