@@ -58,9 +58,15 @@ const R_IDS = ['rId7', '', 'rId"&<']
 const run = (inner: string): string =>
   `<w:r><w:drawing><wp:anchor>${inner}</wp:anchor></w:drawing></w:r>`
 
-const BUILT_RUNS: string[] = INKS.map((value, i) =>
-  anchoredInkRunXml(value as unknown as NewInkImage, R_IDS[i % R_IDS.length], i + 1),
-)
+// the runs the TypeScript writes for the seeds it accepts (it refuses a
+// measurement it cannot write)
+const BUILT_RUNS: string[] = INKS.flatMap((value, i) => {
+  try {
+    return [anchoredInkRunXml(value as unknown as NewInkImage, R_IDS[i % R_IDS.length], i + 1)]
+  } catch {
+    return []
+  }
+})
 
 /** Paragraph slices: generated runs, hand-made ink runs, foreign anchors and near misses. */
 const PARAGRAPHS: string[] = [
