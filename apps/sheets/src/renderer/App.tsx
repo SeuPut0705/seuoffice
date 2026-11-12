@@ -15,7 +15,6 @@ import {
   loadVisibleRange,
   loadWorkbookSkeleton,
   matrixBounds,
-  modelCellValue,
   navigateToAnchor,
   workbookStructureLocked,
   queueFormulaRecalc,
@@ -412,9 +411,15 @@ import {
   readSheetFeatures as readSheetFeaturesImpl,
   type WorkbookReadContext,
 } from './ai/workbook-readers'
-import { NO_REDACTIONS, sanitizeLabel, type RedactionIndex } from './ai/redact'
+import { sanitizeLabel, type RedactionIndex } from './ai/redact'
 import { modelSaveAsName } from './file-naming'
-import { redactionSessionFor } from './ai/redact-load'
+import {
+  followRedactionRead,
+  loadedRedactions,
+  redactionIndexOf,
+  REDACTIONS_NONE,
+  type RedactionLoad,
+} from './ai/redact-load'
 import { RedactDialog } from './components/RedactDialog'
 import { installRedactMenu, type SelectionRequest } from './redact-menu'
 import { buildMark, restoreCellFill } from './redact-tint'
@@ -703,6 +708,7 @@ import {
   rememberFormulaValue,
 } from './formula-values'
 import { SlicerFieldPicker, SlicerPanels, type SlicerUiState } from './SlicerPanel'
+import { readCellsForMcp } from './mcp-sheet-handlers'
 import { WatchWindowPanel, watchKey, type WatchCell, type WatchRowValue } from './WatchWindowPanel'
 import { ExternalLinksPanel } from './ExternalLinksPanel'
 import { breakExternalLinkFlow, updateExternalLinksFlow } from './external-links-flow'
@@ -776,12 +782,18 @@ export function App({
   const univerRef = useRef<UniverRuntime | null>(null)
   const lazyWorkbookRef = useRef<LazyWorkbookState | null>(null)
   /**
-   * The cells the reader withheld from the model, read once per open (see the
-   * `readWorkbookRedactions` call in openLazyWorkbook). A ref rather than
-   * state: the readers ask about it per cell and nothing renders from it, and
-   * the marks the user adds later replace it through the same ref.
+   * What is known about the cells the reader withheld from the model, read
+   * once per open (see the `readWorkbookRedactions` call in openLazyWorkbook).
+   * A ref rather than state: the readers ask about it per cell and nothing
+   * renders from it, and the marks the user adds later replace it through the
+   * same ref. Before any file is open there is nothing to withhold; from an
+   * open until its read lands the marks are unknown, and unknown withholds.
    */
-  const redactionIndexRef = useRef<RedactionIndex | null>(null)
+  const redactionLoadRef = useRef<RedactionLoad>(REDACTIONS_NONE)
+  /** The index the grid, the tint and the model all ask: every cell while the marks are unknown. */
+  function currentRedactions(): RedactionIndex {
+    return redactionIndexOf(redactionLoadRef.current)
+  }
   /**
    * The same marks, in the shape the save takes (keyed by sheet name, as the
    * package part is). Held here so a save can carry them even when nothing
@@ -2395,7 +2407,7 @@ export function App({
    * preview-then-apply path handlePlan/handleLazyPlan already exercise. */
   /** App-scope refs bundle for the extracted workbook readers (ai/workbook-readers.ts). */
   function readContext(): WorkbookReadContext {
-    return { univerRef, lazyWorkbookRef, adapterRef, redactionIndexRef }
+    return { univerRef, lazyWorkbookRef, adapterRef, redactionLoadRef }
   }
 
   /**
@@ -2411,6 +2423,10 @@ export function App({
    */
   function rebuildRedactionIndex(): void {
     const journal = lazyWorkbookRef.current?.editJournal
+    // Marks that were never read cannot be re-derived: an index built from the
+    // empty store would answer "nothing withheld" for a workbook whose part is
+    // still on its way, or could not be read at all.
+    if (redactionLoadRef.current.status !== 'loaded') return
     if (!journal) return
     const sheets = getActiveSheetInfo().sheets
     const idByName = new Map(sheets.map((sheet) => [sheet.name, sheet.id]))
@@ -2418,7 +2434,7 @@ export function App({
       const id = idByName.get(name)
       return id === undefined ? [] : (journal.structuralOps.get(id) ?? [])
     })
-    redactionIndexRef.current = indexFor(onScreen, sheets)
+    redactionLoadRef.current = loadedRedactions(indexFor(onScreen, sheets))
   }
 
   function getActiveSheetInfo(): ActiveSheetInfo {
@@ -2450,7 +2466,7 @@ export function App({
     if (!state) return
     const workbook = univerRef.current?.univerAPI.getActiveWorkbook()
     const sheetName = workbook?.getSheetBySheetId(request.sheetId)?.getSheetName()
-    const intent = redactIntentFor(request, redactionIndexRef.current ?? NO_REDACTIONS, (id) =>
+    const intent = redactIntentFor(request, currentRedactions(), (id) =>
       workbook?.getSheetBySheetId(id)?.getSheetName(),
     )
     if (intent.kind === 'ignore') return
@@ -2630,7 +2646,7 @@ export function App({
         traceWorkbookPrecedents(readContext(), sheetId, address),
       traceDependents: (sheetId, address) =>
         traceWorkbookDependents(readContext(), sheetId, address),
-      redactions: () => redactionIndexRef.current ?? NO_REDACTIONS,
+      redactions: currentRedactions,
       proposeOperations,
       attachmentPathOf: imageAttachmentPath,
       createDocument: (request) => createAiDocument({ univerRef, lazyWorkbookRef }, request),
@@ -5675,42 +5691,33 @@ export function App({
     lazyWorkbookRef.current = state
     void loadRowOutlines(state, lazyWorkbookRef)
     // The cells the reader withheld, read once per open: every read tool asks
-    // about cells, so a lazy read would either cost an archive read per call or
-    // leave a window in which the model sees the real values. The next workbook
-    // starts from nothing until its own read lands, and a part that exists but
-    // cannot be read withholds everything rather than nothing — see
-    // ai/redact-load.ts.
-    redactionIndexRef.current = null
+    // about cells, so a lazy read would cost an archive read per call. Until
+    // this workbook's own read lands its marks are unknown, and unknown
+    // withholds everything rather than nothing, as does a part that exists but
+    // cannot be read (see ai/redact-load.ts). A save reopens the workbook, so
+    // this is also the state right after every save.
     redactionStatesRef.current = []
     loadedRedactionStatesRef.current = null
-    void window.desktopApi
-      .readWorkbookRedactions({ sessionId: selected.sessionId })
-      .then((result) => {
+    followRedactionRead(
+      redactionLoadRef,
+      window.desktopApi.readWorkbookRedactions({ sessionId: selected.sessionId }),
+      {
         // A superseded session's answer must not install its marks.
-        if (lazyWorkbookRef.current !== state) return
-        const session = redactionSessionFor(result, getActiveSheetInfo().sheets, t)
-        redactionIndexRef.current = session.index
-        redactionStatesRef.current = result.status === 'ok' ? result.states : []
-        watchStructuralEditsForMarks()
-        // What the file holds is the baseline a later edit is measured against;
-        // an unreadable part has no baseline, and saves leave it in place.
-        loadedRedactionStatesRef.current =
-          result.status === 'unreadable' ? null : redactionStatesRef.current
-        const redactionMessage = session.error ?? session.notice
-        if (redactionMessage !== null) setMessage(redactionMessage)
-      })
-      .catch((error: unknown) => {
-        if (lazyWorkbookRef.current !== state) return
-        // The read itself failed, so the marks are unknown — the same state a
-        // damaged part produces, and the same answer: withhold, and say so.
-        const reason = error instanceof Error ? error.message : String(error)
-        redactionIndexRef.current = redactionSessionFor(
-          { status: 'unreadable', error: reason },
-          [],
-          t,
-        ).index
-        setMessage(reason)
-      })
+        isCurrent: () => lazyWorkbookRef.current === state,
+        sheets: () => getActiveSheetInfo().sheets,
+        t,
+        onSettled: (result, session) => {
+          redactionStatesRef.current = result.status === 'ok' ? result.states : []
+          watchStructuralEditsForMarks()
+          // What the file holds is the baseline a later edit is measured against;
+          // an unreadable part has no baseline, and saves leave it in place.
+          loadedRedactionStatesRef.current =
+            result.status === 'unreadable' ? null : redactionStatesRef.current
+          const redactionMessage = session.error ?? session.notice
+          if (redactionMessage !== null) setMessage(redactionMessage)
+        },
+      },
+    )
     // Pivot definitions load eagerly so refresh (a synchronous apply step)
     // never waits on IPC. Best effort: a failed parse just disables refresh.
     // Once they are in, the file's own slicer/timeline controls restore
@@ -6173,26 +6180,7 @@ export function App({
     hasWorkbook: () =>
       univerRef.current?.univerAPI.getActiveWorkbook() != null && lazyWorkbookRef.current != null,
     context: () => getActiveSheetInfo(),
-    // The MCP read is machine-facing: `value` is the model value, not the
-    // rendered text a number format or a narrow column produced. The rendered
-    // text rides along as `display` when the two differ, so a caller can still
-    // see what the user sees (see modelCellValue).
-    readCells: (addresses, sheetId) => {
-      const cells = readCellsImpl(readContext(), addresses, sheetId)
-      return Object.fromEntries(
-        Object.entries(cells).map(([address, cell]) => {
-          const value = modelCellValue(cell)
-          return [
-            address,
-            {
-              value,
-              ...(cell.value !== value ? { display: cell.value } : {}),
-              ...(cell.formula === undefined ? {} : { formula: cell.formula }),
-            },
-          ]
-        }),
-      )
-    },
+    readCells: (addresses, sheetId) => readCellsForMcp(readContext(), addresses, sheetId),
     sheets: () => getActiveSheetInfo().sheets.map((sheet) => ({ id: sheet.id, name: sheet.name })),
     // The user is watching this grid, so an edit to a sheet the view is not
     // showing would otherwise land invisibly. Switch the tab and bring the
@@ -6810,7 +6798,7 @@ export function App({
           onClose={() => setSpellDialogOpen(false)}
           getWorkbook={() => univerRef.current?.univerAPI.getActiveWorkbook() ?? null}
           isWithheld={(sheetId, row, column) =>
-            (redactionIndexRef.current ?? NO_REDACTIONS).labelAt(sheetId, row, column) !== null
+            currentRedactions().labelAt(sheetId, row, column) !== null
           }
           onJumpTo={(sheetId, row, column) => {
             void selectWorkbookRange(

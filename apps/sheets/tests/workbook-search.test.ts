@@ -9,6 +9,7 @@ import { ensureLazyRangeLoaded, readSheetRangeMapped } from '../src/renderer/uni
 import type { FindCellsOptions } from '../src/renderer/ai/tools'
 import type { WorkbookReadContext } from '../src/renderer/ai/workbook-readers'
 import { buildRedactionIndex } from '../src/renderer/ai/redact'
+import { loadedRedactions } from '../src/renderer/ai/redact-load'
 
 vi.mock('../src/renderer/univer-sync', () => ({
   readSheetRangeMapped: vi.fn(),
@@ -371,17 +372,19 @@ describe('findWorkbookCells: lazy workbook via sidecar', () => {
     vi.stubGlobal('window', { desktopApi: { findWorkbookCells: sidecarFind } })
     const ctx = {
       ...lazyCtx(lazyState(new Map()), [DATA_SHEET]),
-      redactionIndexRef: {
-        current: buildRedactionIndex(
-          [
-            {
-              sheetName: 'Data',
-              marks: [
-                { startRow: 1, endRow: 1, startColumn: 1, endColumn: 1, label: 'client phone' },
-              ],
-            },
-          ],
-          [{ name: 'Data', id: 'sh1' }],
+      redactionLoadRef: {
+        current: loadedRedactions(
+          buildRedactionIndex(
+            [
+              {
+                sheetName: 'Data',
+                marks: [
+                  { startRow: 1, endRow: 1, startColumn: 1, endColumn: 1, label: 'client phone' },
+                ],
+              },
+            ],
+            [{ name: 'Data', id: 'sh1' }],
+          ),
         ),
       },
     }
@@ -428,17 +431,19 @@ describe('find_cells treats a withheld cell as absent', () => {
           }),
         },
       },
-      redactionIndexRef: {
-        current: buildRedactionIndex(
-          [
-            {
-              sheetName: 'Customers',
-              marks: [
-                { startRow: 1, endRow: 1, startColumn: 1, endColumn: 1, label: 'client phone' },
-              ],
-            },
-          ],
-          [{ id: 'sh1', name: 'Customers' }],
+      redactionLoadRef: {
+        current: loadedRedactions(
+          buildRedactionIndex(
+            [
+              {
+                sheetName: 'Customers',
+                marks: [
+                  { startRow: 1, endRow: 1, startColumn: 1, endColumn: 1, label: 'client phone' },
+                ],
+              },
+            ],
+            [{ id: 'sh1', name: 'Customers' }],
+          ),
         ),
       },
     } as unknown as WorkbookReadContext
@@ -478,7 +483,7 @@ describe('find_cells on a streaming workbook treats a withheld cell as absent', 
   function lazyRedactionCtx(state: unknown): WorkbookReadContext {
     return {
       ...lazyCtx(state, [DATA_SHEET]),
-      redactionIndexRef: { current: withheldB2() },
+      redactionLoadRef: { current: loadedRedactions(withheldB2()) },
     } as unknown as WorkbookReadContext
   }
 

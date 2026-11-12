@@ -30,7 +30,11 @@ import {
   type SheetRedactionState,
 } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { NO_REDACTIONS } from '../src/renderer/ai/redact'
-import { redactionSessionFor, WITHHELD_UNKNOWN } from '../src/renderer/ai/redact-load'
+import {
+  redactionSessionFor,
+  WITHHELD_UNKNOWN,
+  type RedactionLoad,
+} from '../src/renderer/ai/redact-load'
 import { readCells, type WorkbookReadContext } from '../src/renderer/ai/workbook-readers'
 import { workbookRedactionsResultSchema } from '../src/shared/desktop-api'
 import type { TFunc } from '../src/renderer/i18n/locale'
@@ -99,8 +103,8 @@ const t = ((key: string) => key) as TFunc
  */
 const overIpc = workbookRedactionsResultSchema.parse
 
-/// A demo-mode read context carrying one index, holding the real value in B2.
-function context(index: ReturnType<typeof redactionSessionFor>['index']): WorkbookReadContext {
+/// A demo-mode read context carrying one session's state, holding the real value in B2.
+function context(load: RedactionLoad): WorkbookReadContext {
   const worksheet = {
     getSheetId: () => 'sh1',
     getSheetName: () => 'Customers',
@@ -128,7 +132,7 @@ function context(index: ReturnType<typeof redactionSessionFor>['index']): Workbo
         }),
       },
     } as never,
-    redactionIndexRef: { current: index },
+    redactionLoadRef: { current: load },
   }
 }
 
@@ -203,7 +207,7 @@ describe('when the part is gone — the LibreOffice case', () => {
     // placeholder carries the label, so the model knows what it lost.
     const result = await readWorkbookRedactionPart(cleanSnapshot(CLEAN_WORKBOOK_XML), '/snap.xlsx')
     const session = redactionSessionFor(overIpc(result), SHEETS, t)
-    const read = readCells(context(session.index), ['B2'])
+    const read = readCells(context(session.load), ['B2'])
     expect(read.B2).toEqual({ value: '{{client phone}}' })
     expect(JSON.stringify(read)).not.toContain('13800138000')
   })
@@ -308,14 +312,14 @@ describe('what the renderer installs for each answer', () => {
     // reason the state exists: with the part unreadable, read_cells hands over
     // a placeholder, never 13800138000.
     const session = redactionSessionFor({ status: 'unreadable', error: 'version 2' }, SHEETS, t)
-    const result = readCells(context(session.index), ['B2'])
+    const result = readCells(context(session.load), ['B2'])
     expect(result.B2).toEqual({ value: '{{private}}' })
     expect(JSON.stringify(result)).not.toContain('13800138000')
   })
 
   it('leaves a workbook that withholds nothing exactly as it was', () => {
     const session = redactionSessionFor({ status: 'absent' }, SHEETS, t)
-    const result = readCells(context(session.index), ['B2'])
+    const result = readCells(context(session.load), ['B2'])
     expect(result.B2).toEqual({ value: '13800138000' })
   })
 })

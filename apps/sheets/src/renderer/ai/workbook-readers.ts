@@ -15,6 +15,7 @@ import { lazyCellReader } from '../univer-sync'
 import { lazySheetScreenExtent, type LazyWorkbookState, type UniverRuntime } from '../univer-state'
 import type { ActiveSheetInfo, FrozenSelection } from './tools'
 import { NO_REDACTIONS, placeholderSource, type RedactionIndex } from './redact'
+import { redactionIndexOf, type RedactionLoad } from './redact-load'
 
 /** The App refs the readers need; passed per call so they never go stale. */
 export interface WorkbookReadContext {
@@ -22,16 +23,19 @@ export interface WorkbookReadContext {
   lazyWorkbookRef: { readonly current: LazyWorkbookState | null }
   adapterRef: { readonly current: InMemoryWorkbookAdapter }
   /**
-   * The cells the reader withheld from the model. Optional so a workbook that
-   * hides nothing costs nothing: `redactionsOf` falls back to NO_REDACTIONS and
-   * every reader below behaves exactly as it did before the feature existed.
+   * What is known about the cells the reader withheld from the model. A state
+   * rather than an index, so "not read yet" cannot be mistaken for "nothing
+   * withheld" (see `RedactionLoad`). Optional for a context that has no
+   * workbook file behind it at all: `redactionsOf` then answers NO_REDACTIONS
+   * and every reader below behaves exactly as it did before the feature
+   * existed.
    */
-  redactionIndexRef?: { readonly current: RedactionIndex | null } | undefined
+  redactionLoadRef?: { readonly current: RedactionLoad } | undefined
 }
 
-/// The workbook's withheld cells, or the shared "nothing withheld" index.
+/// The workbook's withheld cells: every cell while the marks are not known.
 export function redactionsOf(ctx: WorkbookReadContext): RedactionIndex {
-  return ctx.redactionIndexRef?.current ?? NO_REDACTIONS
+  return ctx.redactionLoadRef ? redactionIndexOf(ctx.redactionLoadRef.current) : NO_REDACTIONS
 }
 
 /// Feature-state report for the AI: what already exists before it edits.

@@ -9,6 +9,7 @@ import {
   placeholderSource,
   sanitizeLabel,
 } from '../src/renderer/ai/redact'
+import { loadedRedactions } from '../src/renderer/ai/redact-load'
 import {
   readCells,
   redactionsOf,
@@ -61,7 +62,7 @@ function demoContext(cells: Record<string, unknown>, redactions = index): Workbo
         }),
       },
     } as never,
-    redactionIndexRef: { current: redactions },
+    redactionLoadRef: { current: loadedRedactions(redactions) },
   }
 }
 
@@ -99,9 +100,9 @@ describe('the withheld-cell index', () => {
 
   it('shares one empty index for a workbook that withholds nothing', () => {
     expect(NO_REDACTIONS.isEmpty).toBe(true)
-    // A reader with no index ref at all must behave exactly as it did before.
+    // A reader with no redaction ref at all must behave exactly as it did before.
     const bare = demoContext({}, undefined)
-    delete bare.redactionIndexRef
+    delete bare.redactionLoadRef
     expect(redactionsOf(bare)).toBe(NO_REDACTIONS)
   })
 
@@ -278,7 +279,7 @@ describe('read_cells projects a withheld cell on the streaming path too', () => 
       // any non-null state selects the streaming branch
       lazyWorkbookRef: { current: {} as never },
       adapterRef: { current: { getSnapshot: () => ({ revision: 0, sheets: [] }) } } as never,
-      redactionIndexRef: { current: index },
+      redactionLoadRef: { current: loadedRedactions(index) },
     }
 
     const result = readCellsLazy(ctx, ['B2', 'B3'])

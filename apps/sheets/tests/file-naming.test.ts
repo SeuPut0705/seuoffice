@@ -28,6 +28,7 @@ import { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memor
 import type { WorkbookSnapshot } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { buildRedactionIndex, NO_REDACTIONS } from '../src/renderer/ai/redact'
+import { loadedRedactions, type RedactionLoad } from '../src/renderer/ai/redact-load'
 import type { WorkbookReadContext } from '../src/renderer/ai/workbook-readers'
 import { createEditJournal, recordSetRangeValues } from '../src/renderer/edit-journal'
 import { handleSave as handleSaveImpl, type SaveContext } from '../src/renderer/save-actions'
@@ -97,7 +98,7 @@ function fileContext(): WorkbookReadContext {
       },
     },
     adapterRef: { current: new InMemoryWorkbookAdapter({ revision: 1, sheets: [] }) },
-    redactionIndexRef: { current: NO_REDACTIONS },
+    redactionLoadRef: { current: loadedRedactions(NO_REDACTIONS) },
   } as never
 }
 
@@ -107,8 +108,8 @@ function context(withheld: boolean): WorkbookReadContext {
     univerRef: { current: null },
     lazyWorkbookRef: { current: null },
     adapterRef: { current: new InMemoryWorkbookAdapter(SNAPSHOT) },
-    redactionIndexRef: {
-      current: withheld ? buildRedactionIndex(MARKS, SHEETS) : NO_REDACTIONS,
+    redactionLoadRef: {
+      current: loadedRedactions(withheld ? buildRedactionIndex(MARKS, SHEETS) : NO_REDACTIONS),
     },
   }
 }
@@ -234,8 +235,8 @@ describe('the name the reader asked for', () => {
     expect(sent[0]).toContain('B2: 13800138000')
 
     // exactly what the app does when a mark is confirmed
-    const ref = ctx.redactionIndexRef as { current: ReturnType<typeof buildRedactionIndex> | null }
-    ref.current = buildRedactionIndex(MARKS, SHEETS)
+    const ref = ctx.redactionLoadRef as { current: RedactionLoad }
+    ref.current = loadedRedactions(buildRedactionIndex(MARKS, SHEETS))
     await modelSaveAsName(ctx)
     expect(sent[1]).not.toContain(SECRET)
     expect(sent[1]).toContain(`{{${LABEL}}}`)
@@ -283,7 +284,7 @@ describe('a naming that fails offers no name', () => {
       univerRef: { current: null },
       lazyWorkbookRef: { current: null },
       adapterRef: { current: new InMemoryWorkbookAdapter({ revision: 1, sheets: [] }) },
-      redactionIndexRef: { current: NO_REDACTIONS },
+      redactionLoadRef: { current: loadedRedactions(NO_REDACTIONS) },
     }
     expect(await modelSaveAsName(empty)).toBe('')
     expect(sent).toHaveLength(0)

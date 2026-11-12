@@ -4,6 +4,7 @@ import { parseRange } from '@genoffice/xlsx-gateway/domain/cell-address'
 import { aggregateWorkbookRange } from '../src/renderer/ai/aggregate-range'
 import type { WorkbookReadContext } from '../src/renderer/ai/workbook-readers'
 import { NO_REDACTIONS, buildRedactionIndex, type RedactionIndex } from '../src/renderer/ai/redact'
+import { loadedRedactions } from '../src/renderer/ai/redact-load'
 import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
 
 /// A mark over a cell of the fixture sheet, which the file calls `Data`.
@@ -113,7 +114,7 @@ function lazyCtx(options: {
       },
     },
     adapterRef: { current: { getSnapshot: () => ({ revision: 0, sheets: [] }) } },
-    redactionIndexRef: { current: options.redactions ?? NO_REDACTIONS },
+    redactionLoadRef: { current: loadedRedactions(options.redactions ?? NO_REDACTIONS) },
   } as unknown as WorkbookReadContext
 }
 
@@ -653,7 +654,7 @@ describe('the demo-workbook path withholds too', () => {
           }),
         },
       },
-      redactionIndexRef: { current: redactions },
+      redactionLoadRef: { current: loadedRedactions(redactions) },
     } as unknown as WorkbookReadContext
 
     const result = await aggregateWorkbookRange(ctx, 'demo-1', parseRange('A1:A3'))

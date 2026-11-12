@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { buildRedactionIndex } from '../src/renderer/ai/redact'
+import { loadedRedactions } from '../src/renderer/ai/redact-load'
 import { readSheetFeatures, type WorkbookReadContext } from '../src/renderer/ai/workbook-readers'
 
 const NOTE_TEXT = 'client phone 13800138000'
@@ -73,26 +74,28 @@ function ctxWith(options: { withheld: boolean }): WorkbookReadContext {
     },
     lazyWorkbookRef: { current: null },
     adapterRef: { current: { getSnapshot: () => ({ revision: 0, sheets: [] }) } } as never,
-    redactionIndexRef: {
-      current: options.withheld
-        ? buildRedactionIndex(
-            [
-              {
-                sheetName: 'Customers',
-                marks: [
-                  {
-                    startRow: 1,
-                    endRow: 9,
-                    startColumn: 1,
-                    endColumn: 1,
-                    label: 'client phone',
-                  },
-                ],
-              },
-            ],
-            [{ id: 'sh1', name: 'Customers' }],
-          )
-        : buildRedactionIndex([], [{ id: 'sh1', name: 'Customers' }]),
+    redactionLoadRef: {
+      current: loadedRedactions(
+        options.withheld
+          ? buildRedactionIndex(
+              [
+                {
+                  sheetName: 'Customers',
+                  marks: [
+                    {
+                      startRow: 1,
+                      endRow: 9,
+                      startColumn: 1,
+                      endColumn: 1,
+                      label: 'client phone',
+                    },
+                  ],
+                },
+              ],
+              [{ id: 'sh1', name: 'Customers' }],
+            )
+          : buildRedactionIndex([], [{ id: 'sh1', name: 'Customers' }]),
+      ),
     },
   } as unknown as WorkbookReadContext
 }

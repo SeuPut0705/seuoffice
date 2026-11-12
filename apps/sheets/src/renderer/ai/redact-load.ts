@@ -57,8 +57,43 @@ export const WITHHELD_UNKNOWN: RedactionIndex = {
   marksFor: () => [WHOLE_SHEET_MARK],
 }
 
+/**
+ * What is known about the open workbook's marks.
+ *
+ * Three states, because "no index yet" is not "nothing is withheld": every save
+ * reopens the workbook under a new session, and until that session's read
+ * lands the marks are as unknown as those of a part that cannot be read. Only
+ * `loaded` carries an index the readers may trust; the other two are answered
+ * with [`WITHHELD_UNKNOWN`] (see [`redactionIndexOf`]).
+ */
+export type RedactionLoad =
+  /** a workbook is open and its part has not been read yet */
+  | { readonly status: 'not-loaded' }
+  | { readonly status: 'loaded'; readonly index: RedactionIndex }
+  /** the part exists and could not be read, or the read itself failed */
+  | { readonly status: 'unreadable' }
+
+export const REDACTIONS_NOT_LOADED: RedactionLoad = { status: 'not-loaded' }
+export const REDACTIONS_UNREADABLE: RedactionLoad = { status: 'unreadable' }
+/** Nothing is withheld: a part that is absent, or a workbook with no file behind it. */
+export const REDACTIONS_NONE: RedactionLoad = { status: 'loaded', index: NO_REDACTIONS }
+
+export function loadedRedactions(index: RedactionIndex): RedactionLoad {
+  return { status: 'loaded', index }
+}
+
+/**
+ * The index every reader and guard asks. Anything but a loaded index withholds
+ * every cell, so a state nobody thought of fails in the direction that hides.
+ */
+export function redactionIndexOf(load: RedactionLoad): RedactionIndex {
+  return load.status === 'loaded' ? load.index : WITHHELD_UNKNOWN
+}
+
 /** What the open path installs for a session. */
 export interface RedactionSession {
+  readonly load: RedactionLoad
+  /** the index `load` answers with */
   readonly index: RedactionIndex
   /** the reason to show the user, or null when the part was read or absent */
   readonly error: string | null
@@ -70,6 +105,14 @@ export interface RedactionSession {
    * part back, so the reader is told rather than left guessing why.
    */
   readonly notice: string | null
+}
+
+function sessionOf(
+  load: RedactionLoad,
+  error: string | null,
+  notice: string | null,
+): RedactionSession {
+  return { load, index: redactionIndexOf(load), error, notice }
 }
 
 /**
@@ -87,13 +130,49 @@ export function redactionSessionFor(
   sheets: readonly SheetRefLike[],
   t: TFunc,
 ): RedactionSession {
-  if (result.status === 'unreadable') {
-    return { index: WITHHELD_UNKNOWN, error: result.error, notice: null }
+  if (result.status === 'unreadable') return sessionOf(REDACTIONS_UNREADABLE, result.error, null)
+  if (result.status === 'absent') return sessionOf(REDACTIONS_NONE, null, null)
+  return sessionOf(
+    loadedRedactions(buildRedactionIndex(result.states, sheets)),
+    null,
+    result.source === 'mirror' ? t('redactRecoveredFromNames') : null,
+  )
+}
+
+/**
+ * Follow one open's read of the redaction part, from "not known yet" to its
+ * answer.
+ *
+ * The state is `not-loaded` from this call until the read settles, so a read
+ * that arrives in between (an MCP `read_sheet` straight after `save_sheet`
+ * outruns the IPC round trip) gets placeholders rather than the values the
+ * marks were hiding. A read that rejects is the same answer as a part that
+ * cannot be read.
+ */
+export function followRedactionRead(
+  loadRef: { current: RedactionLoad },
+  read: Promise<WorkbookRedactionsResult>,
+  hooks: {
+    /** false once another open replaced this one: its answer must not install */
+    readonly isCurrent: () => boolean
+    readonly sheets: () => readonly SheetRefLike[]
+    readonly t: TFunc
+    /** the state is installed; the caller keeps the marks and tells the user */
+    readonly onSettled: (result: WorkbookRedactionsResult, session: RedactionSession) => void
+  },
+): void {
+  loadRef.current = REDACTIONS_NOT_LOADED
+  const settle = (result: WorkbookRedactionsResult): void => {
+    if (!hooks.isCurrent()) return
+    const session = redactionSessionFor(
+      result,
+      result.status === 'ok' ? hooks.sheets() : [],
+      hooks.t,
+    )
+    loadRef.current = session.load
+    hooks.onSettled(result, session)
   }
-  if (result.status === 'absent') return { index: NO_REDACTIONS, error: null, notice: null }
-  return {
-    index: buildRedactionIndex(result.states, sheets),
-    error: null,
-    notice: result.source === 'mirror' ? t('redactRecoveredFromNames') : null,
-  }
+  void read.then(settle).catch((error: unknown) => {
+    settle({ status: 'unreadable', error: error instanceof Error ? error.message : String(error) })
+  })
 }
