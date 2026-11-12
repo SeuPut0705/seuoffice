@@ -329,6 +329,18 @@ describe('the end of a wrapper that is not a plain content control', () => {
     },
   )
 
+  it('w:smartTag: a word typed over a selection from its start into the next paragraph is one word', async () => {
+    const { editor, parsed } = await load(tagged(SMART, '</w:smartTag>') + OTHER)
+    const from = posOf(editor, 'Seoul')
+    editor.commands.setTextSelection({ from, to: posOf(editor, 'paragraph') })
+    type(editor, 'Kim')
+    const xml = await saved(editor, parsed)
+    expect(xml).not.toContain('<w:smartTag')
+    expect([...xml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((m) => m[1]).join('')).toBe(
+      'Name: Kimparagraph',
+    )
+  })
+
   it('a control inside a w:dir: text typed at their end lands behind both', async () => {
     const { editor, parsed } = await load(
       para(run('Name: ') + DIR + OPEN + run('Seoul') + CLOSE + '</w:dir>' + run(' end')) + OTHER,
