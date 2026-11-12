@@ -2,13 +2,13 @@
 
 결정 0026 3항의 측정을 위한 시제품이다. `main`에 합치지 않는다. 고른 껍데기는 이 코드가 아니라 새 결정(`docs/seuoffice/decisions/`)과 그 뒤의 본 작업으로 이어진다.
 
-| 폴더             | 무엇                                                                              |
-| ---------------- | --------------------------------------------------------------------------------- |
-| `common/`        | 측정 호스트 페이지, 50쪽 모의 문서, 측정 하네스, 그림 비교                        |
-| `electron/`      | 비교 기준: 같은 호스트 페이지를 Electron 43.8.3(앱과 같은 판)으로 띄운다          |
-| `tauri2/`        | 후보 1: Tauri 2, 시스템 웹뷰(macOS WKWebView, Windows WebView2)                   |
-| `cef/`           | 후보 2: Tauri 3 알파 + `tauri-runtime-cef`(Chromium을 함께 싣는다)                |
-| `secrets/`       | Electron `safeStorage`가 봉한 비밀값을 Rust로 여는 증명                           |
+| 폴더        | 무엇                                                                     |
+| ----------- | ------------------------------------------------------------------------ |
+| `common/`   | 측정 호스트 페이지, 50쪽 모의 문서, 측정 하네스, 그림 비교               |
+| `electron/` | 비교 기준: 같은 호스트 페이지를 Electron 43.8.3(앱과 같은 판)으로 띄운다 |
+| `tauri2/`   | 후보 1: Tauri 2, 시스템 웹뷰(macOS WKWebView, Windows WebView2)          |
+| `cef/`      | 후보 2: Tauri 3 알파 + `tauri-runtime-cef`(Chromium을 함께 싣는다)       |
+| `secrets/`  | Electron `safeStorage`가 봉한 비밀값을 Rust로 여는 증명                  |
 
 ## 화면
 
