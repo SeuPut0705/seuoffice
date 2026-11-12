@@ -89,6 +89,18 @@ describe('packaged file associations', () => {
     }
   })
 
+  // These open as a converted copy and are never written back, so installing must not make the
+  // app their default on macOS either (a handler without a rank is LSHandlerRank Default, which
+  // macOS may pick when no other app owns the type).
+  it('offers the import-only formats for Open With only on macOS', () => {
+    for (const ext of ['doc', 'dot', 'ppt', 'odp', 'otp', 'ods']) {
+      const offered = fileAssociations.find((entry) => entry.ext === ext) as
+        { rank?: string } | undefined
+      expect(offered, `no file association declared for .${ext}`).toBeTruthy()
+      expect(offered!.rank, `.${ext}`).toBe('Alternate')
+    }
+  })
+
   // Installing must not take the default program for a mind map file away from
   // whatever the user already opens it with.
   it('keeps .xmind off the Windows list, and Open With only everywhere else', () => {
