@@ -244,10 +244,14 @@ for (const [fn, r] of Object.entries(report)) {
     `${fn}: ${r.checks} checks, ${r.checks - r.equal - r.listed} differences, ${r.listed} listed, ${r.distinct} distinct${floor}`,
   )
 }
+/** A printed answer stops at 4,000 characters (report.json keeps it whole): the
+ * Actions runner stalls on a log line of megabytes */
+const cut = (text: string): string =>
+  text.length <= 4000 ? text : `${text.slice(0, 4000)}... (${text.length} characters)`
 for (const d of differences.slice(0, show)) {
   console.log(`\nDIFF ${d.fn} case ${d.case}${d.note ? ` (${d.note})` : ''}`)
-  console.log(`  typescript: ${d.typescript}`)
-  console.log(`  rust:       ${d.rust}`)
+  console.log(`  typescript: ${cut(d.typescript)}`)
+  console.log(`  rust:       ${cut(d.rust)}`)
 }
 const stale = ledger.filter((d) => d.fn in report && !reproduced.has(d.id))
 for (const d of stale) console.log(`STALE ledger entry ${d.id}: it no longer reproduces`)
