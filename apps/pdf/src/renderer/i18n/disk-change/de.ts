@@ -9,4 +9,6 @@ export const de = {
   diskIgnore: 'Ignorieren',
   diskDismiss: 'OK',
   diskReloadFailed: 'Die Datei konnte nicht neu geladen werden: {detail}',
+  diskChangedNoUndo:
+    'Ein anderes Programm hat diese Datei geändert oder entfernt. „Rückgängig“ und „Wiederholen“ wurden für diese Änderung daher nicht ausgeführt.',
 } satisfies Record<keyof typeof zh, string>

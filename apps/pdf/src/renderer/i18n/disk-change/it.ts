@@ -10,4 +10,6 @@ export const it = {
   diskIgnore: 'Ignora',
   diskDismiss: 'OK',
   diskReloadFailed: 'Impossibile ricaricare il file: {detail}',
+  diskChangedNoUndo:
+    'Un altro programma ha modificato o rimosso questo file, quindi Annulla e Ripeti non sono stati applicati a questa modifica.',
 } satisfies Record<keyof typeof zh, string>

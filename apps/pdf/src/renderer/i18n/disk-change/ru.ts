@@ -9,4 +9,6 @@ export const ru = {
   diskIgnore: 'Пропустить',
   diskDismiss: 'ОК',
   diskReloadFailed: 'Не удалось загрузить файл заново: {detail}',
+  diskChangedNoUndo:
+    'Другая программа изменила или удалила этот файл, поэтому отмена и повтор этого изменения не выполнены.',
 } satisfies Record<keyof typeof zh, string>

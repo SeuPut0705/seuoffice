@@ -7795,9 +7795,13 @@ export default function App() {
     writtenStepBusyRef.current = true
     void (async () => {
       try {
-        const result = await stepWrittenFile(window.pdfApi, filePath, steps, direction)
+        const result = await stepWrittenFile(window.pdfApi, filePath, steps, direction, {
+          diskChanged: diskChange !== null,
+        })
         if (!result.ok) {
-          opFailed(result.error)
+          // the kept file would replace what another program wrote: say so, write nothing
+          if (result.reason === 'disk-changed') showNotice(t('diskChangedNoUndo'))
+          else opFailed(result.error)
           return
         }
         await aiReadRef.current?.afterPageOperation().catch(() => null)

@@ -8,4 +8,6 @@ export const th = {
   diskIgnore: 'ไม่สนใจ',
   diskDismiss: 'ตกลง',
   diskReloadFailed: 'โหลดไฟล์ใหม่ไม่ได้: {detail}',
+  diskChangedNoUndo:
+    'โปรแกรมอื่นเปลี่ยนแปลงหรือลบไฟล์นี้ จึงไม่ได้เลิกทำหรือทำซ้ำการเปลี่ยนแปลงนี้',
 } satisfies Record<keyof typeof zh, string>

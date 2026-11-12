@@ -9,4 +9,6 @@ export const ja = {
   diskIgnore: '無視',
   diskDismiss: 'OK',
   diskReloadFailed: 'ファイルを再読み込みできませんでした：{detail}',
+  diskChangedNoUndo:
+    'このファイルは別のプログラムによって変更または削除されたため、この変更の「元に戻す」と「やり直す」は実行されませんでした。',
 } satisfies Record<keyof typeof zh, string>

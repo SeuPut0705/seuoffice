@@ -1165,6 +1165,8 @@ export interface RestoreFileRequest {
   bytes: ArrayBuffer
 }
 
+/** `external-modified`: nothing was written, because the file is no longer what this view's
+ *  last write in place left there (another program changed or removed it) */
 export type RestoreFileResult = { ok: true } | { ok: false; error: string }
 
 /** Resize all pages to a target paper size (points), content scaled to fit; written back in place */

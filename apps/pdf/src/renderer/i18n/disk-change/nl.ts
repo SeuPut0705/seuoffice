@@ -10,4 +10,6 @@ export const nl = {
   diskIgnore: 'Negeren',
   diskDismiss: 'OK',
   diskReloadFailed: 'Het bestand kon niet opnieuw worden geladen: {detail}',
+  diskChangedNoUndo:
+    'Een ander programma heeft dit bestand gewijzigd of verwijderd. Ongedaan maken en Opnieuw zijn daarom niet uitgevoerd voor deze wijziging.',
 } satisfies Record<keyof typeof zh, string>

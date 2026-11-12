@@ -18,6 +18,8 @@ interface FakeFile {
   /** the slices asked for, in order */
   slices: Array<{ start: number; end: number }>
   restoreAnswer: RestoreFileResult
+  /** how many times a file was asked to be written back */
+  restores: number
   api: {
     readFile(path: string): Promise<ArrayBuffer>
     readFileChunk(
@@ -36,6 +38,7 @@ function fakeFile(initial: Uint8Array): FakeFile {
     wholeReads: [],
     slices: [],
     restoreAnswer: { ok: true },
+    restores: 0,
     api: {
       readFile: async (path) => {
         file.wholeReads.push(path)
@@ -49,6 +52,7 @@ function fakeFile(initial: Uint8Array): FakeFile {
         }
       },
       restoreFile: async ({ bytes }) => {
+        file.restores += 1
         if (file.restoreAnswer.ok) file.disk = new Uint8Array(bytes.slice(0))
         return file.restoreAnswer
       },
@@ -83,11 +87,11 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
     expect(steps.undo).toHaveLength(1)
     expect(steps.undo[0]!.byteLength).toBe(big.byteLength)
 
-    const undone = await stepWrittenFile(file.api, PATH, steps, 'undo')
+    const undone = await stepWrittenFile(file.api, PATH, steps, 'undo', { diskChanged: false })
     expect(undone.ok).toBe(true)
     if (undone.ok) steps = undone.steps
     expect(file.disk.byteLength).toBe(big.byteLength)
-    const redone = await stepWrittenFile(file.api, PATH, steps, 'redo')
+    const redone = await stepWrittenFile(file.api, PATH, steps, 'redo', { diskChanged: false })
     expect(redone.ok).toBe(true)
 
     expect(file.wholeReads).toEqual([])
@@ -104,8 +108,8 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
     expect([steps.undo.length, steps.redo.length]).toEqual([2, 0])
 
     const walk = async (direction: 'undo' | 'redo') => {
-      const result = await stepWrittenFile(file.api, PATH, steps, direction)
-      if (!result.ok) throw new Error(result.error)
+      const result = await stepWrittenFile(file.api, PATH, steps, direction, { diskChanged: false })
+      if (!result.ok) throw new Error(result.reason)
       steps = result.steps
       return [...file.disk]
     }
@@ -127,15 +131,15 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
     expect(steps.undo).toHaveLength(2)
     expect(held(steps)).toBeLessThanOrEqual(limits.bytes)
 
-    const first = await stepWrittenFile(file.api, PATH, steps, 'undo', limits)
-    expect(first.ok && [...file.disk]).toEqual([2, 2, 2, 2])
-    const second = await stepWrittenFile(
-      file.api,
-      PATH,
-      first.ok ? first.steps : steps,
-      'undo',
+    const first = await stepWrittenFile(file.api, PATH, steps, 'undo', {
+      diskChanged: false,
       limits,
-    )
+    })
+    expect(first.ok && [...file.disk]).toEqual([2, 2, 2, 2])
+    const second = await stepWrittenFile(file.api, PATH, first.ok ? first.steps : steps, 'undo', {
+      diskChanged: false,
+      limits,
+    })
     expect(second.ok && [...file.disk]).toEqual([1, 1, 1, 1])
     // what the Undo button reads: nothing older is left to go back to
     expect(second.ok && second.steps.undo).toEqual([])
@@ -166,7 +170,10 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
     steps = await change(file, steps, bytesOf(3, 3, 3, 3, 3, 3, 3, 3), limits)
     expect(held(steps)).toBe(8)
 
-    const undone = await stepWrittenFile(file.api, PATH, steps, 'undo', limits)
+    const undone = await stepWrittenFile(file.api, PATH, steps, 'undo', {
+      diskChanged: false,
+      limits,
+    })
     expect(undone.ok && [...file.disk]).toEqual([2, 2, 2, 2])
     // the 8-byte file now waits for Redo; with it, only 2 bytes are left for older steps
     expect(undone.ok && held(undone.steps)).toBeLessThanOrEqual(limits.bytes)
@@ -186,10 +193,53 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
     const steps = await change(file, NO_WRITTEN_STEPS, bytesOf(2))
     file.restoreAnswer = { ok: false, error: 'disk full' }
 
-    expect(await stepWrittenFile(file.api, PATH, steps, 'undo')).toEqual({
+    expect(await stepWrittenFile(file.api, PATH, steps, 'undo', { diskChanged: false })).toEqual({
       ok: false,
+      reason: 'failed',
       error: 'disk full',
     })
     expect([...file.disk]).toEqual([2])
+  })
+
+  it('asks for nothing to be written while the notice of a change on disk is up', async () => {
+    const file = fakeFile(bytesOf(1))
+    const steps = await change(file, NO_WRITTEN_STEPS, bytesOf(2))
+    const outside = bytesOf(9, 9, 9)
+    file.disk = outside
+
+    for (const direction of ['undo', 'redo'] as const) {
+      expect(
+        await stepWrittenFile(file.api, PATH, { undo: steps.undo, redo: steps.undo }, direction, {
+          diskChanged: true,
+        }),
+      ).toEqual({ ok: false, reason: 'disk-changed' })
+    }
+    expect(file.restores).toBe(0)
+    expect(file.disk).toBe(outside)
+  })
+
+  it('says the file changed on disk when the main process refuses for that', async () => {
+    const file = fakeFile(bytesOf(1))
+    const steps = await change(file, NO_WRITTEN_STEPS, bytesOf(2))
+    file.restoreAnswer = { ok: false, error: 'external-modified' }
+
+    expect(await stepWrittenFile(file.api, PATH, steps, 'undo', { diskChanged: false })).toEqual({
+      ok: false,
+      reason: 'disk-changed',
+    })
+  })
+
+  it('says the same when the file is no longer there to read', async () => {
+    const file = fakeFile(bytesOf(1))
+    const steps = await change(file, NO_WRITTEN_STEPS, bytesOf(2))
+    file.api.readFileChunk = async () => {
+      throw new Error('ENOENT: no such file or directory')
+    }
+
+    expect(await stepWrittenFile(file.api, PATH, steps, 'undo', { diskChanged: false })).toEqual({
+      ok: false,
+      reason: 'disk-changed',
+    })
+    expect(file.restores).toBe(0)
   })
 })

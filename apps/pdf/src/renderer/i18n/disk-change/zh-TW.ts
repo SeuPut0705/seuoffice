@@ -8,4 +8,5 @@ export const zhTW = {
   diskIgnore: '忽略',
   diskDismiss: '確定',
   diskReloadFailed: '無法重新載入檔案：{detail}',
+  diskChangedNoUndo: '此檔案已被其他程式變更或刪除，因此未執行此變更的復原或重做。',
 } satisfies Record<keyof typeof zh, string>

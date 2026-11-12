@@ -7,4 +7,5 @@ export const zh = {
   diskIgnore: '忽略',
   diskDismiss: '确定',
   diskReloadFailed: '无法重新载入文件：{detail}',
+  diskChangedNoUndo: '此文件已被其他程序更改或删除，因此未执行此更改的撤销或重做。',
 }

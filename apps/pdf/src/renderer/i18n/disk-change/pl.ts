@@ -9,4 +9,6 @@ export const pl = {
   diskIgnore: 'Ignoruj',
   diskDismiss: 'OK',
   diskReloadFailed: 'Nie udało się ponownie wczytać pliku: {detail}',
+  diskChangedNoUndo:
+    'Inny program zmienił lub usunął ten plik, dlatego Cofnij i Ponów nie zostały wykonane dla tej zmiany.',
 } satisfies Record<keyof typeof zh, string>

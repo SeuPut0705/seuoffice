@@ -10,4 +10,6 @@ export const id = {
   diskIgnore: 'Abaikan',
   diskDismiss: 'OK',
   diskReloadFailed: 'Tidak dapat memuat ulang file: {detail}',
+  diskChangedNoUndo:
+    'Program lain mengubah atau menghapus file ini, sehingga Urungkan dan Ulangi untuk perubahan ini tidak dijalankan.',
 } satisfies Record<keyof typeof zh, string>

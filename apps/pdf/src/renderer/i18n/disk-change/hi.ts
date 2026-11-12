@@ -9,4 +9,6 @@ export const hi = {
   diskIgnore: 'अनदेखा करें',
   diskDismiss: 'ठीक है',
   diskReloadFailed: 'फ़ाइल फिर से लोड नहीं हो सकी: {detail}',
+  diskChangedNoUndo:
+    'किसी दूसरे प्रोग्राम ने यह फ़ाइल बदल दी या हटा दी है, इसलिए इस बदलाव को पूर्ववत या फिर से नहीं किया गया।',
 } satisfies Record<keyof typeof zh, string>

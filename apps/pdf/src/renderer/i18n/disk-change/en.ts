@@ -8,4 +8,6 @@ export const en = {
   diskIgnore: 'Ignore',
   diskDismiss: 'OK',
   diskReloadFailed: 'Couldn’t reload the file: {detail}',
+  diskChangedNoUndo:
+    'Another program changed or removed this file, so Undo and Redo of this change were not applied.',
 } satisfies Record<keyof typeof zh, string>

@@ -8,4 +8,6 @@ export const he = {
   diskIgnore: 'התעלמות',
   diskDismiss: 'אישור',
   diskReloadFailed: 'לא ניתן היה לטעון את הקובץ מחדש: {detail}',
+  diskChangedNoUndo:
+    'תוכנה אחרת שינתה או מחקה את הקובץ הזה, ולכן ביטול הפעולה והביצוע מחדש של השינוי הזה לא בוצעו.',
 } satisfies Record<keyof typeof zh, string>

@@ -8,4 +8,6 @@ export const pt = {
   diskIgnore: 'Ignorar',
   diskDismiss: 'OK',
   diskReloadFailed: 'Não foi possível recarregar o arquivo: {detail}',
+  diskChangedNoUndo:
+    'Outro programa alterou ou removeu este arquivo, por isso Desfazer e Refazer não foram aplicados a esta alteração.',
 } satisfies Record<keyof typeof zh, string>

@@ -8,4 +8,6 @@ export const ar = {
   diskIgnore: 'تجاهل',
   diskDismiss: 'موافق',
   diskReloadFailed: 'تعذّرت إعادة تحميل الملف: {detail}',
+  diskChangedNoUndo:
+    'غيّر برنامج آخر هذا الملف أو حذفه، لذلك لم يُنفَّذ التراجع أو الإعادة لهذا التغيير.',
 } satisfies Record<keyof typeof zh, string>

@@ -76,29 +76,43 @@ export function recordWritten(
   return fit({ undo: [...steps.undo, before], redo: [] }, limits)
 }
 
-export type WrittenStepResult = { ok: true; steps: WrittenSteps } | { ok: false; error: string }
+export type WrittenStepResult =
+  | { ok: true; steps: WrittenSteps }
+  /** nothing was written: another program changed or removed the file the step was taken from */
+  | { ok: false; reason: 'disk-changed' }
+  | { ok: false; reason: 'failed'; error: string }
+
+export interface WrittenStepOptions {
+  /** the notice that another program changed or removed the file is up */
+  diskChanged: boolean
+  limits?: WrittenLimits
+}
 
 /**
  * Undo or Redo one step: the file as it is now becomes the step for the way
- * back, then the kept file is written over it. The caller offers the step
- * only when there is one.
+ * back, then the kept file is written over it. The kept file holds nothing
+ * another program wrote since, so nothing is asked for while that is known,
+ * and the main process refuses (`external-modified`) when it finds out first.
+ * The caller offers the step only when there is one.
  */
 export async function stepWrittenFile(
   api: WrittenHistoryApi,
   path: string,
   steps: WrittenSteps,
   direction: 'undo' | 'redo',
-  limits: WrittenLimits = DEFAULT_LIMITS,
+  { diskChanged, limits = DEFAULT_LIMITS }: WrittenStepOptions,
 ): Promise<WrittenStepResult> {
   const from = direction === 'undo' ? steps.undo : steps.redo
   const back = direction === 'undo' ? steps.redo : steps.undo
   const bytes = from[from.length - 1]
-  if (!bytes) return { ok: false, error: `pdf: nothing to ${direction}` }
+  if (!bytes) return { ok: false, reason: 'failed', error: `pdf: nothing to ${direction}` }
+  if (diskChanged) return { ok: false, reason: 'disk-changed' }
   let current: Uint8Array | null
   try {
     current = await readFileBytesWithin(api, path, limits.bytes)
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  } catch {
+    // it could be read when the step was taken: gone or locked is another program's doing
+    return { ok: false, reason: 'disk-changed' }
   }
   // the slices were copied into a buffer of the reported size: send exactly the file
   const whole = bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
@@ -108,7 +122,11 @@ export async function stepWrittenFile(
       ? bytes.buffer
       : bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)) as ArrayBuffer,
   })
-  if (!result.ok) return result
+  if (!result.ok) {
+    return result.error === 'external-modified'
+      ? { ok: false, reason: 'disk-changed' }
+      : { ok: false, reason: 'failed', error: result.error }
+  }
   const rest = from.slice(0, -1)
   // a file too large to keep ends the way back, the steps behind it included
   const wayBack = current ? [...back, current] : []

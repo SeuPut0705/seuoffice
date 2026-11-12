@@ -785,20 +785,44 @@ const redactionFlows = new Set<number>()
 // two panes a save can see the sibling pane's write. A manual save asks before
 // overwriting it; an automatic save defers silently to the next manual one.
 const docDiskStates = new Map<number, Map<string, SaveDiskState>>()
+/**
+ * What each view's last write in place left on disk. Kept apart from
+ * docDiskStates because a read moves that one: Undo and Redo of a page
+ * operation write a kept copy of the whole file back, and that copy may only
+ * replace this state. Reading a file another program changed (to print it,
+ * say) does not make the change this view's own.
+ */
+const ownWriteStates = new Map<number, Map<string, SaveDiskState>>()
 
-async function rememberDiskState(wcId: number, path: string): Promise<void> {
+async function rememberDiskState(wcId: number, path: string): Promise<SaveDiskState | null> {
   const state = await recordDiskState(path)
-  if (!state) return
+  if (!state) return null
   const states = docDiskStates.get(wcId) ?? new Map<string, SaveDiskState>()
   states.set(path, state)
   docDiskStates.set(wcId, states)
+  return state
 }
 
 function forgetDiskState(wcId: number, path: string): void {
+  ownWriteStates.get(wcId)?.delete(path)
   const states = docDiskStates.get(wcId)
   if (!states) return
   states.delete(path)
   if (states.size === 0) docDiskStates.delete(wcId)
+}
+
+/** True while `path` still holds what this view's last write in place left there */
+async function holdsOwnLastWrite(wcId: number, path: string): Promise<boolean> {
+  const left = ownWriteStates.get(wcId)?.get(path)
+  if (!left) return false
+  try {
+    const now = await stat(path)
+    // the save guard's rule: the same time and size skip the reread, otherwise the bytes decide
+    if (now.mtimeMs === left.mtimeMs && now.size === left.size) return true
+  } catch {
+    return false
+  }
+  return (await recordDiskState(path))?.hash === left.hash
 }
 
 /** True when this save must stop instead of writing: the sibling copy changed
@@ -902,7 +926,12 @@ async function writeOwnFile<T>(wcId: number, path: string, write: () => Promise<
   ownWritesInFlight.set(path, (ownWritesInFlight.get(path) ?? 0) + 1)
   try {
     const result = await write()
-    await rememberDiskState(wcId, path)
+    const written = await rememberDiskState(wcId, path)
+    const own = ownWriteStates.get(wcId) ?? new Map<string, SaveDiskState>()
+    // unreadable right after the write: nothing there is known to be this view's
+    if (written) own.set(path, written)
+    else own.delete(path)
+    ownWriteStates.set(wcId, own)
     const watcher = diskWatchByWc.get(wcId)
     if (watcher?.path === path) watcher.rebase(docDiskStates.get(wcId)?.get(path) ?? null)
     return result
@@ -1246,11 +1275,12 @@ export function pdfFileRenamed(contents: WebContents, oldPath: string, newPath: 
   if (untitledPdfPaths.delete(oldPath)) untitledPdfPaths.add(newPath)
   if (unsavedBlankPdfPaths.delete(oldPath)) unsavedBlankPdfPaths.add(newPath)
   void recovery.renamed(wcId, oldPath, newPath)
-  const states = docDiskStates.get(wcId)
-  const recorded = states?.get(oldPath)
-  if (states && recorded) {
-    states.delete(oldPath)
-    states.set(newPath, recorded)
+  for (const states of [docDiskStates.get(wcId), ownWriteStates.get(wcId)]) {
+    const recorded = states?.get(oldPath)
+    if (states && recorded) {
+      states.delete(oldPath)
+      states.set(newPath, recorded)
+    }
   }
   // the old name is gone because the app moved it: watch the new one, no notice
   if (diskWatchByWc.get(wcId)?.path === oldPath && !contents.isDestroyed()) {
@@ -2622,6 +2652,11 @@ function registerPdfIpc(): void {
       ) {
         return { ok: false, error: 'pdf: path not granted to this view' }
       }
+      // the kept copy holds nothing written since it was taken: another program's
+      // change (or a sibling pane's) is not overwritten with it
+      if (!(await holdsOwnLastWrite(e.sender.id, path))) {
+        return { ok: false, error: 'external-modified' }
+      }
       try {
         // ieum: through the view's own-write record, like the other in-place page operations
         await writeOwnFile(e.sender.id, path, () => writePdfAtomically(path, new Uint8Array(bytes)))
@@ -3058,6 +3093,7 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
     allowedByWc.delete(wcId)
     dirtyByWc.delete(wcId)
     docDiskStates.delete(wcId)
+    ownWriteStates.delete(wcId)
     stopViewWatch(wcId)
     certEntriesByWc.delete(wcId)
     saveAsTargetByWc.delete(wcId)
