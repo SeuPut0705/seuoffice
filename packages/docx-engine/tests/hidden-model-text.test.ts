@@ -127,3 +127,59 @@ describe('a comment edited so that its hidden runs cannot be patched around', ()
     expect(reopened.markedXml).toBeDefined()
   })
 })
+
+describe('a note edited so that its hidden runs cannot be patched around', () => {
+  it.each([
+    ['a paragraph added', (text: string) => `${text}\nmore`],
+    ['words changed across the hidden and plain ones', () => 'Different words'],
+  ])('keeps both its pictures, each in a marked run (%s)', async (_name, edit) => {
+    const doc = await parsed({ pictures: true })
+    const note = doc.footnotes.find((n) => n.id === '1')!
+    const blocks = doc.blocks
+      .filter((block) => !block.hidden)
+      .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+    const saved = await saveDocx(doc, blocks, {
+      // an edit of the text drops the display runs, as the editor's own edit does
+      footnotes: doc.footnotes.map((n) => (n.id === '1' ? { id: n.id, text: edit(n.text) } : n)),
+    })
+    const zip = await JSZip.loadAsync(saved)
+    const xml = await zip.file('word/footnotes.xml')!.async('string')
+    expect(xml).toMatch(/<w:footnotes\b[^>]*xmlns:wp=/)
+    const entry = /<w:footnote\b[^>]*\bw:id="1"[\s\S]*?<\/w:footnote>/.exec(xml)![0]
+    const pictureRuns = entry.match(/<w:r>(?:(?!<\/w:r>)[\s\S])*<w:drawing[\s\S]*?<\/w:r>/g) ?? []
+    expect(pictureRuns).toHaveLength(2)
+    for (const run of pictureRuns) expect(run).toMatch(/<(?:\w+:)?redact[\s/>]/)
+    expect(entry).toContain(`${SECRET}PN`)
+    expect(entry).toContain('Company logo')
+    expect(entry).toContain(edit(note.text).split('\n').pop()!)
+    // the rels of the part still hold both pictures' targets
+    const rels = await zip.file('word/_rels/footnotes.xml.rels')!.async('string')
+    for (const id of ['rId10', 'rIdPicN']) expect(rels).toContain(`Id="${id}"`)
+    const reopened = (await parseDocx(saved)).footnotes.find((n) => n.id === '1')!
+    expect(reopened.modelText).toBeDefined()
+    expect(reopened.modelText).not.toContain(SECRET)
+  })
+
+  it('an unmarked note keeps its pictures too, unmarked', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'plain-note-'))
+    const file = await hiddenStoriesDocx(dir, OWN_REDACT_NS, 'n.docx', 'go', { pictures: true })
+    const zip = await JSZip.loadAsync(readFileSync(file))
+    const notes = (await zip.file('word/footnotes.xml')!.async('string')).replace(
+      /<w:r><w:rPr>(?:(?!<\/w:rPr>)[\s\S])*redact[\s\S]*?<\/w:rPr>(?:<w:t>[^<]*<\/w:t>|(?=<w:drawing))/g,
+      '<w:r>',
+    )
+    zip.file('word/footnotes.xml', notes)
+    const doc = await parseDocx(await zip.generateAsync({ type: 'uint8array' }))
+    const blocks = doc.blocks
+      .filter((block) => !block.hidden)
+      .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+    const saved = await saveDocx(doc, blocks, {
+      footnotes: doc.footnotes.map((n) =>
+        n.id === '1' ? { id: n.id, text: `${n.text}\nmore` } : n,
+      ),
+    })
+    const out = await (await JSZip.loadAsync(saved)).file('word/footnotes.xml')!.async('string')
+    expect(out.split('<w:drawing>').length - 1).toBe(2)
+    expect(out).not.toMatch(/<(?:\w+:)?redact[\s/>]/)
+  })
+})
