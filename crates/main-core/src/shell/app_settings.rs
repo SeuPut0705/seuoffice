@@ -689,12 +689,13 @@ pub fn read_projects_settings(path: &str) -> StoredProjectsSettings {
 }
 
 /// `writeProjectsSettings(path, value)`; `value` is what the caller holds,
-/// normalized again on the way out.
-pub fn write_projects_settings(path: &str, value: &JsonValue) -> Result<(), NodeError> {
+/// normalized again on the way out (`None` is `undefined`, which normalizes
+/// to the empty registry).
+pub fn write_projects_settings(path: &str, value: Option<&JsonValue>) -> Result<(), NodeError> {
     write_app_setting(
         path,
         PROJECTS_SETTING_KEY,
-        Some(normalize_projects_settings(Some(value)).to_json()),
+        Some(normalize_projects_settings(value).to_json()),
     )
 }
 
@@ -706,6 +707,6 @@ pub fn update_projects_settings(
     let mut settings = read_projects_settings(path);
     change(&mut settings);
     let value = settings.to_json();
-    write_projects_settings(path, &value)?;
+    write_projects_settings(path, Some(&value))?;
     Ok(normalize_projects_settings(Some(&value)))
 }

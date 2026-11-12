@@ -674,8 +674,11 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             )?)))
         })(),
         "app-settings.writeProjectsSettings" => (|| {
-            let value = jv(args, 1).ok_or_else(|| plain("value is missing"))?;
-            done(aps::write_projects_settings(str_arg(args, 0)?, &value))
+            let value = jv(args, 1);
+            done(aps::write_projects_settings(
+                str_arg(args, 0)?,
+                value.as_ref(),
+            ))
         })(),
         "app-settings.updateProjectsSettings" => (|| {
             let ops = project_ops_of(arg(args, 1))?;
