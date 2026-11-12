@@ -73,7 +73,6 @@ import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
 import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoffice/i18n'
 import {
   DEV_USER_DATA_DIR_NAME,
-  PRODUCT_CONTACT_EMAIL,
   PRODUCT_NAME,
   USER_DATA_DIR_NAME,
   productName,
@@ -448,7 +447,6 @@ import {
   initSubscriptionChildTracking,
   sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
-  subscriptionConnectHelpUrl,
   trackedSubscriptionChildCount,
 } from '@genoffice/ai-provider/subscription'
 import { showErrorDialog } from './error-dialog'
@@ -617,6 +615,7 @@ import {
   type LinkedDocument,
 } from './document-links-shell'
 import {
+  applyShellWindowState,
   installShellWindowBoundsPersistence,
   readShellWindowState,
   SHELL_WINDOW_DEFAULT_HEIGHT,
@@ -5153,6 +5152,9 @@ function createShellWindow(): void {
     ...(restored ? { x: restored.x, y: restored.y } : {}),
     minWidth: SHELL_WINDOW_MIN_WIDTH,
     minHeight: SHELL_WINDOW_MIN_HEIGHT,
+    // shown below, once the stored geometry is applied: the sequence the fix
+    // was measured with on Windows, and no visible jump of a few pixels
+    show: false,
     title: productName(currentLang()),
     // Paint the theme's surface before the renderer's first frame so the window
     // does not flash white in dark mode. nativeTheme.themeSource is already set
@@ -5180,9 +5182,12 @@ function createShellWindow(): void {
       sandbox: true,
     },
   })
-  // the stored rectangle is the normal-state one, so a maximized session
-  // reopens maximized instead of as a screen-sized ordinary window
-  if (restored?.maximized) win.maximize()
+  // The constructor only gets the window near the right place and onto the
+  // right display: on a scaled Windows display it creates the window a few
+  // DIPs larger than asked. The stored content rectangle and the maximized
+  // flag are applied here, before anything listens to the window's geometry.
+  const baseline = applyShellWindowState(win, restored)
+  win.show()
   shellWindow = win
   nativeTheme.on('updated', refreshTitleBarOverlay)
   win.once('closed', () => nativeTheme.off('updated', refreshTitleBarOverlay))
@@ -5190,7 +5195,7 @@ function createShellWindow(): void {
   // DOM event anywhere — will-move is the only signal to dismiss popovers
   win.on('will-move', () => broadcastChromePressed())
   // remember the window's position and size for the next launch (issue #2049)
-  installShellWindowBoundsPersistence(APP_SETTINGS_PATH(), win)
+  installShellWindowBoundsPersistence(APP_SETTINGS_PATH(), win, { restored, baseline })
   // A detached editor window claims the process-global menu/active-editor targets
   // while focused; take them back when the shell window regains focus. Keyboard
   // focus must land back on the active tab's view too — regaining window focus
@@ -7143,16 +7148,6 @@ function registerHomeIpc(): void {
     void openThirdPartyNotices()
   })
 
-  ipcMain.handle(HOME_CHANNELS.openRightsContact, () => {
-    const url = safeExternalUrl(`mailto:${PRODUCT_CONTACT_EMAIL}`, {
-      allowedProtocols: ['mailto:'],
-    })
-    if (!url) return
-    shell.openExternal(url).catch(() => {
-      // no mail handler registered; the address is shown in Settings to copy by hand
-    })
-  })
-
   // the page is the vendor's fixed install guide; the renderer only names the provider
   ipcMain.handle(SHELL_SUBSCRIPTION_CHANNELS.openInstallHelp, (_event, provider: unknown) => {
     if (!isSubscriptionProviderId(provider)) return
@@ -7160,15 +7155,6 @@ function registerHomeIpc(): void {
     const url = safeExternalUrl(
       provider === 'chatgpt' ? SUBSCRIPTION_CHATGPT_USAGE_URL : SUBSCRIPTION_INSTALL_URLS[provider],
     )
-    if (!url) return
-    shell.openExternal(url).catch(() => {
-      // no browser handler available; nothing actionable for the user here
-    })
-  })
-
-  // the website's connect help: a fixed address, the renderer only names the path
-  ipcMain.handle(SHELL_SUBSCRIPTION_CHANNELS.openConnectHelp, (_event, path: unknown) => {
-    const url = safeExternalUrl(subscriptionConnectHelpUrl(path))
     if (!url) return
     shell.openExternal(url).catch(() => {
       // no browser handler available; nothing actionable for the user here
@@ -9855,8 +9841,6 @@ app.whenReady().then(async () => {
   // the editors take the ceiling before anything can be opened: the headless
   // export opens documents too
   setDelimitedImportLimit(currentCsvImportLimitMb() * 1024 * 1024)
-  // first scan waits for the windows to come up; later ones follow folder changes
-  setTimeout(() => ensureFileIndexer()?.refresh(), 4000)
   installRendererProtocol({
     docs: join(DOCS_OUT, 'renderer'),
     sheets: join(SHEETS_OUT, 'renderer'),
@@ -9878,6 +9862,10 @@ app.whenReady().then(async () => {
     await runHeadlessExportEntry(headlessArgv)
     return
   }
+  // first scan waits for the windows to come up; later ones follow folder changes.
+  // Past the headless branch: an export that outlasts the wait must not start
+  // walking the user's folders into the search index.
+  setTimeout(() => ensureFileIndexer()?.refresh(), 4000)
   const lockData = () =>
     pendingLaunchPaths.length > 0
       ? { launchPath: pendingLaunchPaths[0], launchPaths: pendingLaunchPaths }

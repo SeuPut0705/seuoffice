@@ -1,9 +1,20 @@
+import { ContentControlPart } from './inline-control-ids'
 import { sdtCheckboxGlyphs, sdtCheckboxIsChecked, syncSdtCheckbox } from './checkbox-control'
+import {
+  inlineWrapKey,
+  inlineWrapPrefixes,
+  inlineWrapTextOf,
+  inlineWrapWritesOnce,
+  placeInlineWraps,
+  sameInlineWrap,
+  sdtOpenForChangedText,
+} from './inline-opaque'
 import type {
   CellMargins,
   CharIndents,
   GeneratedBlock,
   ImageWrap,
+  InlineWrap,
   ParaFormat,
   ParaFrame,
   PropChangeInfo,
@@ -13,9 +24,12 @@ import type {
   TableCell,
   TableModel,
 } from './types'
+import { EMPHASIS_MARKS, TEXT_EFFECTS } from './types'
 import { escapeXmlAttr, escapeXmlText } from './xml-utils'
 import { resolvePropChangeXml } from './revision-xml'
 import { ownValue } from './own-value'
+import { nonFinite, xmlDecimal, xmlId, xmlInt } from './xml-number'
+import { removeElements } from './xml-tag'
 
 export interface GenerateContext {
   /** heading level -> styleId existing in the original styles.xml */
@@ -34,6 +48,13 @@ export interface GenerateContext {
   allocateBookmarkId?: (name: string) => number
   /** Mint w:id for a tracked change that has none; document-wide so two edited paragraphs never share ids */
   allocateRevisionId?: () => string
+  /**
+   * The part the block is written into. With it the run writer checks that
+   * the part root declares the prefixes of the bytes a run carries, and marks
+   * the controls it writes from runs so the part can let a repeated id give
+   * way (ContentControlPart.finish, which the caller runs over the part).
+   */
+  part?: ContentControlPart
 }
 
 const EMU_PER_PX = 9525
@@ -180,7 +201,9 @@ const WRAP_ELEMENT_RE =
  * producer values). No-op on inline images (no wp:anchor).
  */
 export function applyImageZOrder(xml: string, zOrder?: number): string {
-  return xml.replace(/(<wp:anchor[^>]*?relativeHeight=")\d+(")/, `$1${251658240 + (zOrder ?? 0)}$2`)
+  const rank = xmlInt(251658240 + (zOrder ?? 0))
+  if (rank === null) return xml
+  return xml.replace(/(<wp:anchor[^>]*?relativeHeight=")\d+(")/, `$1${rank}$2`)
 }
 
 /**
@@ -202,6 +225,10 @@ export function applyImageWrap(
   // Original wrapTight/wrapThrough bytes (including wp:wrapPolygon) — reused as a whole
   // when the target is still the same wrap kind
   const existingWrap = xml.match(WRAP_ELEMENT_RE)?.[0]
+  // what an anchor held, kept when the new value has no XML text
+  const keptH = xml.match(/<wp:positionH[\s\S]*?<\/wp:positionH>/)?.[0]
+  const keptV = xml.match(/<wp:positionV[\s\S]*?<\/wp:positionV>/)?.[0]
+  const keptRank = /<wp:anchor\b[^>]*?\brelativeHeight="(\d+)"/.exec(xml)?.[1]
   let out = xml
     .replace(/<wp:simplePos[^>]*\/>/, '')
     .replace(/<wp:positionH[\s\S]*?<\/wp:positionH>/, '')
@@ -222,26 +249,28 @@ export function applyImageWrap(
     wrap === 'tight-right' ||
     wrap === 'through-left' ||
     wrap === 'through-right'
-  let position: string
+  const hAlign = wrap.endsWith('-right') ? 'right' : wrap === 'topBottom' ? 'center' : 'left'
+  let positionH =
+    marginAlign !== undefined
+      ? `<wp:positionH relativeFrom="margin"><wp:align>${marginAlign.h}</wp:align></wp:positionH>`
+      : `<wp:positionH relativeFrom="column"><wp:align>${hAlign}</wp:align></wp:positionH>`
+  let positionV =
+    marginAlign !== undefined
+      ? `<wp:positionV relativeFrom="margin"><wp:align>${marginAlign.v}</wp:align></wp:positionV>`
+      : '<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>'
   if (posOffset !== undefined) {
-    const relH = posOffset.relativeTo ?? 'column'
-    const relV = posOffset.relativeTo ?? 'paragraph'
-    position =
-      '<wp:simplePos x="0" y="0"/>' +
-      `<wp:positionH relativeFrom="${relH}"><wp:posOffset>${Math.round(posOffset.x)}</wp:posOffset></wp:positionH>` +
-      `<wp:positionV relativeFrom="${relV}"><wp:posOffset>${Math.round(posOffset.y)}</wp:posOffset></wp:positionV>`
-  } else if (marginAlign !== undefined) {
-    position =
-      '<wp:simplePos x="0" y="0"/>' +
-      `<wp:positionH relativeFrom="margin"><wp:align>${marginAlign.h}</wp:align></wp:positionH>` +
-      `<wp:positionV relativeFrom="margin"><wp:align>${marginAlign.v}</wp:align></wp:positionV>`
-  } else {
-    const hAlign = wrap.endsWith('-right') ? 'right' : wrap === 'topBottom' ? 'center' : 'left'
-    position =
-      '<wp:simplePos x="0" y="0"/>' +
-      `<wp:positionH relativeFrom="column"><wp:align>${hAlign}</wp:align></wp:positionH>` +
-      '<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>'
+    const x = xmlInt(posOffset.x)
+    const y = xmlInt(posOffset.y)
+    positionH =
+      x === null
+        ? (keptH ?? positionH)
+        : `<wp:positionH relativeFrom="${posOffset.relativeTo ?? 'column'}"><wp:posOffset>${x}</wp:posOffset></wp:positionH>`
+    positionV =
+      y === null
+        ? (keptV ?? positionV)
+        : `<wp:positionV relativeFrom="${posOffset.relativeTo ?? 'paragraph'}"><wp:posOffset>${y}</wp:posOffset></wp:positionV>`
   }
+  const position = '<wp:simplePos x="0" y="0"/>' + positionH + positionV
   const keepKind = wrap.startsWith('tight-')
     ? 'wp:wrapTight'
     : wrap.startsWith('through-')
@@ -255,9 +284,10 @@ export function applyImageWrap(
         : wrap === 'topBottom'
           ? '<wp:wrapTopAndBottom/>'
           : '<wp:wrapNone/>'
+  const rank = xmlInt(251658240 + (zOrder ?? 0)) ?? keptRank ?? '251658240'
   const anchorOpen =
     `<wp:anchor distT="0" distB="0" distL="114300" distR="114300" simplePos="0"` +
-    ` relativeHeight="${251658240 + (zOrder ?? 0)}" behindDoc="${behind}" locked="0" layoutInCell="1" allowOverlap="1">`
+    ` relativeHeight="${rank}" behindDoc="${behind}" locked="0" layoutInCell="1" allowOverlap="1">`
   if (hasAnchor) {
     out = out.replace(/<wp:anchor[^>]*>/, anchorOpen)
   } else {
@@ -303,8 +333,10 @@ function shapeDrawingSegment(
 
 /** Re-encode the rank of the drawing's own wp:anchor tag, never a nested drawing's. */
 function setAnchorRank(drawingXml: string, zOrder: number): string {
+  const rank = xmlInt(251658240 + zOrder)
+  if (rank === null) return drawingXml
   return drawingXml.replace(/<wp:anchor[^>]*>/, (tag) =>
-    tag.replace(/relativeHeight="\d+"/, `relativeHeight="${251658240 + zOrder}"`),
+    tag.replace(/relativeHeight="\d+"/, `relativeHeight="${rank}"`),
   )
 }
 
@@ -613,7 +645,11 @@ export function xmlSegments(
  * null entries keep the original paragraph bytes untouched.
  * Returns null when the cell is too complex to patch safely (nested table).
  */
-function patchCellXml(tcXml: string, paras: readonly CellParaPatch[]): string | null {
+function patchCellXml(
+  tcXml: string,
+  paras: readonly CellParaPatch[],
+  part: ContentControlPart,
+): string | null {
   if (tcXml.indexOf('<w:tbl', 1) !== -1) return null
   const openTag = /^<w:tc(?: [^>]*)?>/.exec(tcXml)?.[0]
   if (!openTag) return null
@@ -682,7 +718,7 @@ function patchCellXml(tcXml: string, paras: readonly CellParaPatch[]): string | 
       const pPr = entry.format
         ? mergeCellParaFormat(pPrOf(template), entry.format, entry.original)
         : pPrOf(template)
-      const emitted = entry.xml ?? runsXml(entry.runs, null)
+      const emitted = entry.xml ?? runsXml(entry.runs, null, { part })
       const emittedMedia = new Set(mediaRIds(emitted))
       const keep = aligned
         ? carriedRunsOf(template, emittedMedia)
@@ -753,7 +789,9 @@ export type CellTextsPatch =
 export function patchTableCellTexts(
   tableXml: string,
   texts: ReadonlyArray<ReadonlyArray<CellTextsPatch | null | undefined> | null | undefined>,
+  part?: ContentControlPart,
 ): string {
+  const scope = part ?? new ContentControlPart(tableXml)
   const trSegs = xmlSegments(tableXml, 'w:tr', 0, tableXml.length)
   let out = ''
   let cursor = 0
@@ -766,14 +804,15 @@ export function patchTableCellTexts(
       if (entry == null) return
       const tcXml = tableXml.slice(tc.start, tc.end)
       const patched = Array.isArray(entry)
-        ? patchCellXml(tcXml, entry as CellParaPatch[])
-        : patchNestedInCell(tcXml, (entry as { nested?: unknown }).nested as never)
+        ? patchCellXml(tcXml, entry as CellParaPatch[], scope)
+        : patchNestedInCell(tcXml, (entry as { nested?: unknown }).nested as never, scope)
       if (patched === null) return
       out += tableXml.slice(cursor, tc.start) + patched
       cursor = tc.end
     })
   })
-  return out + tableXml.slice(cursor)
+  const xml = out + tableXml.slice(cursor)
+  return part ? xml : scope.finish(xml)
 }
 
 /** patch the cell's direct nested tables' cell texts (recursive surgical patch) */
@@ -784,6 +823,7 @@ function patchNestedInCell(
         ReadonlyArray<readonly CellParaPatch[] | null | undefined> | null | undefined
       > | null>
     | undefined,
+  part: ContentControlPart,
 ): string | null {
   if (!nested || nested.length === 0) return null
   const openTag = /^<w:tc(?: [^>]*)?>/.exec(tcXml)?.[0]
@@ -796,7 +836,8 @@ function patchNestedInCell(
     const grid = nested[i]
     if (!grid) return
     out +=
-      tcXml.slice(cursor, seg.start) + patchTableCellTexts(tcXml.slice(seg.start, seg.end), grid)
+      tcXml.slice(cursor, seg.start) +
+      patchTableCellTexts(tcXml.slice(seg.start, seg.end), grid, part)
     cursor = seg.end
   })
   return out + tcXml.slice(cursor)
@@ -903,6 +944,7 @@ function pPrWithJc(pPr: string, align: TextboxParaPatch['align']): string {
 function patchTxbxContent(
   segXml: string,
   paras: ReadonlyArray<TextboxParaPatch | null | undefined>,
+  part: ContentControlPart,
 ): string {
   const open = /^<w:txbxContent(?: [^>]*)?>/.exec(segXml)?.[0]
   if (!open) return segXml
@@ -923,7 +965,7 @@ function patchTxbxContent(
     if (patch.align !== undefined) pPr = pPrWithJc(pPr, patch.align)
     // no rel allocation inside textboxes: only links that already have an rId
     // survive re-generation, new links degrade to plain text
-    parts.push(`<w:p>${pPr}${runsXml(patch.runs, null)}</w:p>`)
+    parts.push(`<w:p>${pPr}${runsXml(patch.runs, null, { part })}</w:p>`)
   }
   return open + parts.join('') + '</w:txbxContent>'
 }
@@ -949,6 +991,7 @@ export interface TextboxParasPatchSet {
  * visible box so both renderings stay in sync.
  */
 export function patchTextboxParas(paragraphXml: string, patches: TextboxParasPatchSet): string {
+  const part = new ContentControlPart(paragraphXml)
   const byIndex = patches.byIndex ?? []
   const segs = xmlSegments(paragraphXml, 'w:txbxContent', 0, paragraphXml.length)
   let xml = paragraphXml
@@ -971,13 +1014,13 @@ export function patchTextboxParas(paragraphXml: string, patches: TextboxParasPat
       if (current == null) continue
       out +=
         paragraphXml.slice(cursor, seg.start) +
-        patchTxbxContent(paragraphXml.slice(seg.start, seg.end), current)
+        patchTxbxContent(paragraphXml.slice(seg.start, seg.end), current, part)
       cursor = seg.end
     }
     xml = out + paragraphXml.slice(cursor)
   }
-  for (const entry of patches.inject ?? []) xml = injectShapeText(xml, entry)
-  return xml
+  for (const entry of patches.inject ?? []) xml = injectShapeText(xml, entry, part)
+  return part.finish(xml)
 }
 
 /**
@@ -992,6 +1035,7 @@ export function patchTextboxParas(paragraphXml: string, patches: TextboxParasPat
 function injectShapeText(
   paragraphXml: string,
   entry: { shapeId: string; paras: TextboxParaPatch[] },
+  part: ContentControlPart,
 ): string {
   for (const seg of xmlSegments(paragraphXml, 'wps:wsp', 0, paragraphXml.length)) {
     let shapeXml = paragraphXml.slice(seg.start, seg.end)
@@ -1002,13 +1046,13 @@ function injectShapeText(
       if (!content) return paragraphXml
       shapeXml =
         shapeXml.slice(0, content.start) +
-        patchTxbxContent(shapeXml.slice(content.start, content.end), entry.paras) +
+        patchTxbxContent(shapeXml.slice(content.start, content.end), entry.paras, part) +
         shapeXml.slice(content.end)
     } else {
       const body = entry.paras
         .map(
           (p) =>
-            `<w:p>${pPrWithJc(pPrWithIndLeft('', p.indentLeft ?? null), p.align)}${runsXml(p.runs, null)}</w:p>`,
+            `<w:p>${pPrWithJc(pPrWithIndLeft('', p.indentLeft ?? null), p.align)}${runsXml(p.runs, null, { part })}</w:p>`,
         )
         .join('')
       const txbx = `<wps:txbx><w:txbxContent>${body}</w:txbxContent></wps:txbx>`
@@ -1034,7 +1078,7 @@ function injectShapeText(
  * size there resized the picture and left the box at its old size. A shape without an
  * explicit transform is left alone rather than resized through someone else's a:ext.
  */
-function setShapeExt(drawingXml: string, size: { cx?: number; cy?: number }): string {
+function setShapeExt(drawingXml: string, size: { cx?: string; cy?: string }): string {
   const spPr = /<wps:spPr(?:\s[^>]*)?>[\s\S]*?<\/wps:spPr>|<wps:spPr(?:\s[^>]*)?\/>/.exec(
     drawingXml,
   )
@@ -1054,6 +1098,32 @@ function setShapeExt(drawingXml: string, size: { cx?: number; cy?: number }): st
   )
 }
 
+/**
+ * Rewrite one length of a VML twin's style from CSS px, in the unit the style
+ * already uses (two decimals). A length with no plain decimal text keeps the old one.
+ */
+function setVmlStyleLength(xml: string, prop: 'width' | 'height', px: number): string {
+  return xml.replace(
+    new RegExp(`(style="[^"]*\\b${prop}:)\\s*[\\d.]+(pt|px)`),
+    (whole, prefix: string, unit: string) => {
+      const value = xmlDecimal(
+        unit === 'pt' ? Math.round(px * 75) / 100 : Math.round(px * 100) / 100,
+      )
+      return value === null ? whole : `${prefix}${value}${unit}`
+    },
+  )
+}
+
+/**
+ * One box length as both twins write it: DrawingML's EMU (at least 1) and the
+ * px the VML style takes from the same clamp, or null when the EMU has no
+ * plain-digit text, so the twins never disagree on a box's size.
+ */
+function boxLength(px: number): { emu: string; px: number } | null {
+  const emu = xmlInt(Math.max(1, px * EMU_PER_PX))
+  return emu === null ? null : { emu, px: Math.max(1 / EMU_PER_PX, px) }
+}
+
 /** Resize fixed DrawingML textboxes while preserving their anchors and styling. */
 export function patchTextboxHeights(
   paragraphXml: string,
@@ -1070,7 +1140,8 @@ export function patchTextboxHeights(
     boxIndex++
     const heightPx = heightsPx[boxIndex]
     if (!heightPx) continue
-    const cy = Math.max(1, Math.round(heightPx * EMU_PER_PX))
+    const cy = boxLength(heightPx)?.emu
+    if (cy === undefined) continue
     const resized = setShapeExt(
       drawingXml.replace(/(<wp:extent\b[^>]*\bcy=")\d+(")/, `$1${cy}$2`),
       { cy },
@@ -1085,15 +1156,8 @@ export function patchTextboxHeights(
     if (!fallback.includes('<w:txbxContent') || paraPlainText(fallback) === '') return fallback
     fallbackIndex++
     const heightPx = heightsPx[fallbackIndex]
-    if (!heightPx) return fallback
-    return fallback.replace(
-      /(style="[^"]*\bheight:)\s*[\d.]+(pt|px)/,
-      (_whole, prefix: string, unit: string) => {
-        const value =
-          unit === 'pt' ? Math.round(heightPx * 75) / 100 : Math.round(heightPx * 100) / 100
-        return `${prefix}${value}${unit}`
-      },
-    )
+    const height = heightPx ? boxLength(heightPx) : null
+    return height ? setVmlStyleLength(fallback, 'height', height.px) : fallback
   })
   return resizedXml
 }
@@ -1131,14 +1195,14 @@ export function patchTextboxSizes(
     const size = sizes[boxIndex]
     if (!size || (size.wPx == null && size.hPx == null)) continue
     let resized = drawingXml
-    if (size.wPx != null) {
-      const cx = Math.max(1, Math.round(size.wPx * EMU_PER_PX))
+    const cx = size.wPx == null ? null : (boxLength(size.wPx)?.emu ?? null)
+    if (cx !== null) {
       resized = setShapeExt(resized.replace(/(<wp:extent\b[^>]*\bcx=")\d+(")/, `$1${cx}$2`), {
         cx,
       })
     }
-    if (size.hPx != null) {
-      const cy = Math.max(1, Math.round(size.hPx * EMU_PER_PX))
+    const cy = size.hPx == null ? null : (boxLength(size.hPx)?.emu ?? null)
+    if (cy !== null) {
       resized = setShapeExt(resized.replace(/(<wp:extent\b[^>]*\bcy=")\d+(")/, `$1${cy}$2`), {
         cy,
       })
@@ -1161,26 +1225,10 @@ export function patchTextboxSizes(
     const size = sizes[fallbackIndex]
     if (!size) return fallback
     let next = fallback
-    if (size.hPx != null) {
-      next = next.replace(
-        /(style="[^"]*\bheight:)\s*[\d.]+(pt|px)/,
-        (_whole, prefix: string, unit: string) => {
-          const value =
-            unit === 'pt' ? Math.round(size.hPx! * 75) / 100 : Math.round(size.hPx! * 100) / 100
-          return `${prefix}${value}${unit}`
-        },
-      )
-    }
-    if (size.wPx != null) {
-      next = next.replace(
-        /(style="[^"]*\bwidth:)\s*[\d.]+(pt|px)/,
-        (_whole, prefix: string, unit: string) => {
-          const value =
-            unit === 'pt' ? Math.round(size.wPx! * 75) / 100 : Math.round(size.wPx! * 100) / 100
-          return `${prefix}${value}${unit}`
-        },
-      )
-    }
+    const height = size.hPx == null ? null : boxLength(size.hPx)
+    const width = size.wPx == null ? null : boxLength(size.wPx)
+    if (height) next = setVmlStyleLength(next, 'height', height.px)
+    if (width) next = setVmlStyleLength(next, 'width', width.px)
     return next
   })
   return resizedXml
@@ -1205,14 +1253,15 @@ export interface ShapeStylePatch {
 function patchShapeRotation(spPr: string, rotDeg: number | null): string {
   const norm = rotDeg == null ? 0 : ((rotDeg % 360) + 360) % 360
   // 360deg wraps to 0: never write a full turn
-  const emu = Math.round(norm * 60000) % 21600000
+  const emu = xmlInt(Math.round(norm * 60000) % 21600000)
+  if (emu === null) return spPr
   const xfrm = /<a:xfrm\b[^>]*>/.exec(spPr)
   if (!xfrm) {
-    if (emu === 0) return spPr
+    if (emu === '0') return spPr
     return spPr.replace(/^(<wps:spPr\b[^>]*>)/, `$1<a:xfrm rot="${emu}"/>`)
   }
   const tag =
-    emu === 0
+    emu === '0'
       ? xfrm[0].replace(/\s+rot="[^"]*"/, '')
       : /\brot="/.test(xfrm[0])
         ? xfrm[0].replace(/\brot="[^"]*"/, `rot="${emu}"`)
@@ -1226,7 +1275,8 @@ function patchShapeRotation(spPr: string, rotDeg: number | null): string {
  * schema position, after the fill and before any effects.
  */
 function patchShapeLineWidth(spPr: string, borderWidthPx: number | null): string {
-  const emu = borderWidthPx == null ? null : Math.max(1, Math.round(borderWidthPx * EMU_PER_PX))
+  const emu = borderWidthPx == null ? null : xmlInt(Math.max(1, borderWidthPx * EMU_PER_PX))
+  if (borderWidthPx != null && emu === null) return spPr
   const ln = /<a:ln\b[^>]*>/.exec(spPr)
   if (!ln) {
     if (emu === null) return spPr
@@ -1317,13 +1367,13 @@ export function patchShapeStyles(
 
 /** Rewrite the first drawing's extent (chart/SmartArt graphicFrame paragraphs). */
 export function patchDrawingExtent(paragraphXml: string, wPx: number, hPx: number): string {
-  const cx = Math.max(1, Math.round(wPx * EMU_PER_PX))
-  const cy = Math.max(1, Math.round(hPx * EMU_PER_PX))
+  const cx = xmlInt(Math.max(1, wPx * EMU_PER_PX))
+  const cy = xmlInt(Math.max(1, hPx * EMU_PER_PX))
   return paragraphXml
-    .replace(/(<wp:extent\b[^>]*\bcx=")\d+(")/, `$1${cx}$2`)
-    .replace(/(<wp:extent\b[^>]*\bcy=")\d+(")/, `$1${cy}$2`)
-    .replace(/(<a:ext\b[^>]*\bcx=")\d+(")/, `$1${cx}$2`)
-    .replace(/(<a:ext\b[^>]*\bcy=")\d+(")/, `$1${cy}$2`)
+    .replace(/(<wp:extent\b[^>]*\bcx=")\d+(")/, cx === null ? '$&' : `$1${cx}$2`)
+    .replace(/(<wp:extent\b[^>]*\bcy=")\d+(")/, cy === null ? '$&' : `$1${cy}$2`)
+    .replace(/(<a:ext\b[^>]*\bcx=")\d+(")/, cx === null ? '$&' : `$1${cx}$2`)
+    .replace(/(<a:ext\b[^>]*\bcy=")\d+(")/, cy === null ? '$&' : `$1${cy}$2`)
 }
 
 /** Insertable line/connector kinds: stroke-only wps:wsp with optional arrow ends */
@@ -1346,7 +1396,9 @@ export function buildLineParagraphXml(opts: {
   const def = ownValue(LINE_KINDS, opts.kind) ?? LINE_KINDS.line
   const widthEmu = opts.widthEmu ?? 1800000
   const heightEmu = opts.heightEmu ?? 114300
-  const id = opts.id ?? 1
+  const id = xmlId(opts.id ?? 1) ?? nonFinite('id')
+  const cx = xmlInt(widthEmu) ?? nonFinite('widthEmu')
+  const cy = xmlInt(heightEmu) ?? nonFinite('heightEmu')
   const colorHex = opts.colorHex ?? '000000'
 
   const ln =
@@ -1357,7 +1409,7 @@ export function buildLineParagraphXml(opts: {
 
   const spPr =
     `<wps:spPr>` +
-    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm>` +
+    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
     `<a:prstGeom prst="${def.prst}"><a:avLst/></a:prstGeom>` +
     `<a:noFill/>` +
     ln +
@@ -1383,7 +1435,7 @@ export function buildLineParagraphXml(opts: {
     `<wp:simplePos x="0" y="0"/>` +
     `<wp:positionH relativeFrom="column"><wp:align>center</wp:align></wp:positionH>` +
     `<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>` +
-    `<wp:extent cx="${widthEmu}" cy="${heightEmu}"/>` +
+    `<wp:extent cx="${cx}" cy="${cy}"/>` +
     `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
     `<wp:wrapSquare wrapText="bothSides"/>` +
     `<wp:docPr id="${id}" name="${def.prst} ${id}"/>` +
@@ -2199,13 +2251,8 @@ export function resolveParaMarkRPrChange(rawPPr: string, mode: 'accept' | 'rejec
 }
 
 export function stripPPrChange(rawPPr: string): string {
-  // pPrChange nests a <w:pPr> inside it, so we need depth-aware removal.
-  // Pattern: <w:pPrChange ...> ... </w:pPrChange>
-  const start = rawPPr.indexOf('<w:pPrChange')
-  if (start === -1) return rawPPr
-  const end = rawPPr.indexOf('</w:pPrChange>', start)
-  if (end === -1) return rawPPr
-  return rawPPr.slice(0, start) + rawPPr.slice(end + '</w:pPrChange>'.length)
+  // pPrChange nests a <w:pPr> inside it; a self-closing record is one element
+  return removeElements(rawPPr, 'w:pPrChange', 1)
 }
 
 /** Build a pPrChange child from the editor's JSON snapshot of the previous properties. */
@@ -2455,6 +2502,7 @@ function cellMergeXml(record: PropChangeInfo): string {
 function tableCellXml(
   cell: TableCell,
   width: number,
+  part: ContentControlPart,
   verticalMerge?: 'restart' | 'continue',
 ): string {
   // Surgical rawTcPr patch: modeled children are replaced/inserted in schema order;
@@ -2527,7 +2575,7 @@ function tableCellXml(
     // The parsed format, not just w:jc: hand-building the pPr here dropped w:bidi and
     // discarded every other paragraph property the model carries.
     const pPr = mergePPrFormat(`<w:pPr>${numPr}</w:pPr>`, paragraph)
-    return `<w:p>${pPr}${runsXml(paragraph.runs, null)}</w:p>`
+    return `<w:p>${pPr}${runsXml(paragraph.runs, null, { part })}</w:p>`
   })
   // nested tables are regenerated from the model at their paragraph anchors (reverse
   // insertion keeps anchor indexes valid); OOXML requires tc to end with w:p
@@ -2535,7 +2583,7 @@ function tableCellXml(
   const items = paraXmls.map((xml) => ({ tbl: false, xml }))
   for (let i = nested.length - 1; i >= 0; i--) {
     const at = Math.min(cell.nestedTableAnchors?.[i] ?? paraXmls.length, paraXmls.length)
-    items.splice(at, 0, { tbl: true, xml: generateTableModelXml(nested[i]) })
+    items.splice(at, 0, { tbl: true, xml: generateTableModelXml(nested[i], undefined, part) })
   }
   const tail = items.length === 0 || items[items.length - 1].tbl ? '<w:p/>' : ''
   const content = items.map((item) => item.xml).join('')
@@ -2612,7 +2660,12 @@ function originalTblPrOf(tableXml: string): string | undefined {
     ?.xml
 }
 
-export function generateTableModelXml(model: TableModel, originalTableXml?: string): string {
+export function generateTableModelXml(
+  model: TableModel,
+  originalTableXml?: string,
+  part?: ContentControlPart,
+): string {
+  const scope = part ?? new ContentControlPart(originalTableXml ?? '')
   // the widest row decides the column count; folding it in a loop keeps the
   // argument count off the call (a spread here blew the stack past ~125k rows)
   let columnCount = Math.max(1, model.colWidthsPct?.length ?? 0)
@@ -2688,7 +2741,7 @@ export function generateTableModelXml(model: TableModel, originalTableXml?: stri
           }
           continue
         }
-        cells.push(tableCellXml(cell, width))
+        cells.push(tableCellXml(cell, width, scope))
       }
       // trPr: original bytes passed through (tblHeader/cantSplit etc.); row height is
       // replaced/inserted/removed per the model
@@ -2864,7 +2917,8 @@ export function generateTableModelXml(model: TableModel, originalTableXml?: stri
       model.description ? `<w:tblDescription w:val="${escapeXmlAttr(model.description)}"/>` : null,
     )
   }
-  return `<w:tbl>${tblPr}${grid}${rows}</w:tbl>`
+  const xml = `<w:tbl>${tblPr}${grid}${rows}</w:tbl>`
+  return part ? xml : scope.finish(xml)
 }
 
 /** rId / docPr placeholder of a picture inserted by the editor; saveDocx resolves
@@ -2901,15 +2955,17 @@ export function resizeAnchoredPictureXml(xml: string, widthPx: number, heightPx:
 
 function resizeDrawingExtents(xml: string, widthPx: number, heightPx: number): string {
   if (!(widthPx > 0) || !(heightPx > 0)) return xml
-  const cx = Math.max(1, Math.round(widthPx * EMU_PER_PX))
-  const cy = Math.max(1, Math.round(heightPx * EMU_PER_PX))
+  const cx = xmlInt(Math.max(1, widthPx * EMU_PER_PX))
+  const cy = xmlInt(Math.max(1, heightPx * EMU_PER_PX))
   const extent = /<wp:extent\b[^>]*\bcx="(\d+)"[^>]*\bcy="(\d+)"/.exec(xml)
   if (!extent) return xml
   const samePx = (emu: string, px: number) =>
     Math.round((Number(emu) / EMU_PER_PX) * 100) / 100 === px
   if (samePx(extent[1], widthPx) && samePx(extent[2], heightPx)) return xml
   const ext = (tag: string) =>
-    tag.replace(/\bcx="\d+"/, `cx="${cx}"`).replace(/\bcy="\d+"/, `cy="${cy}"`)
+    tag
+      .replace(/\bcx="\d+"/, cx === null ? '$&' : `cx="${cx}"`)
+      .replace(/\bcy="\d+"/, cy === null ? '$&' : `cy="${cy}"`)
   let out = xml.replace(/<wp:extent\b[^>]*>/, ext)
   const pic = /<pic:spPr[\s>][\s\S]*?<\/pic:spPr>/.exec(out)
   if (pic) out = out.replace(pic[0], pic[0].replace(/<a:ext\b[^>]*>/, ext))
@@ -2920,20 +2976,22 @@ function resizeDrawingExtents(xml: string, widthPx: number, heightPx: number): s
 export function inlinePictureDrawingXml(o: InlinePictureXmlOptions): string {
   const cx = Math.max(1, Math.round(o.widthPx * EMU_PER_PX))
   const cy = Math.max(1, Math.round(o.heightPx * EMU_PER_PX))
+  const size = `cx="${xmlInt(cx) ?? nonFinite('widthPx')}" cy="${xmlInt(cy) ?? nonFinite('heightPx')}"`
   // Word lays the drawing out against the unrotated wp:extent plus
   // wp:effectExtent: a rotated non-square picture needs the bounding-box
   // overflow recorded there (same math as patchImageParagraphXml)
   const rot = o.rotDeg ? ((Math.round(o.rotDeg) % 360) + 360) % 360 : 0
+  const rotEmu = xmlInt(rot * 60000) ?? nonFinite('rotDeg')
   const rad = (rot * Math.PI) / 180
   const bw = Math.abs(cx * Math.cos(rad)) + Math.abs(cy * Math.sin(rad))
   const bh = Math.abs(cx * Math.sin(rad)) + Math.abs(cy * Math.cos(rad))
   const eeX = Math.max(0, Math.round((bw - cx) / 2))
   const eeY = Math.max(0, Math.round((bh - cy) / 2))
-  const id = String(o.docPrId)
+  const id = typeof o.docPrId === 'number' ? (xmlId(o.docPrId) ?? nonFinite('docPrId')) : o.docPrId
   const name = `Picture ${id}`
   return (
     '<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">' +
-    `<wp:extent cx="${cx}" cy="${cy}"/>` +
+    `<wp:extent ${size}/>` +
     `<wp:effectExtent l="${eeX}" t="${eeY}" r="${eeX}" b="${eeY}"/>` +
     `<wp:docPr id="${id}" name="${name}"${o.altText ? ` descr="${escapeXmlAttr(o.altText)}"` : ''}/>` +
     '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' +
@@ -2941,7 +2999,7 @@ export function inlinePictureDrawingXml(o: InlinePictureXmlOptions): string {
     '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
     `<pic:nvPicPr><pic:cNvPr id="${id}" name="${name}"/><pic:cNvPicPr/></pic:nvPicPr>` +
     `<pic:blipFill><a:blip r:embed="${o.rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
-    `<pic:spPr><a:xfrm${rot ? ` rot="${rot * 60000}"` : ''}${o.flipH ? ' flipH="1"' : ''}${o.flipV ? ' flipV="1"' : ''}><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
+    `<pic:spPr><a:xfrm${rot ? ` rot="${rotEmu}"` : ''}${o.flipH ? ' flipH="1"' : ''}${o.flipV ? ' flipV="1"' : ''}><a:off x="0" y="0"/><a:ext ${size}/></a:xfrm>` +
     '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>' +
     '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>'
   )
@@ -3074,12 +3132,25 @@ export function generateIndexFieldXml(terms: string[]): string[] {
 }
 
 function generateRunsXml(runs: Run[], ctx: GenerateContext): string {
-  return runsXml(runs, ctx.allocateHyperlinkRel, ctx.allocateRevisionId)
+  return runsXml(runs, ctx.allocateHyperlinkRel, {
+    allocateRevisionId: ctx.allocateRevisionId,
+    part: ctx.part,
+  })
 }
 
-/** OOXML runs without relationship allocation (header/footer parts, ...) */
-export function inlineRunsXml(runs: Run[]): string {
-  return runsXml(runs, null)
+export interface RunsXmlOptions {
+  /** the content controls already written for this paragraph, shared by a
+   *  caller that writes one paragraph's runs in several calls */
+  written?: Set<string>
+  /** xml written in place of a run (the fields of a header) */
+  fragments?: ReadonlyMap<Run, string>
+  /** the part the runs are written into (see GenerateContext.part) */
+  part?: ContentControlPart
+}
+
+/** OOXML runs without relationship allocation (header/footer parts, ...). */
+export function inlineRunsXml(runs: Run[], options?: RunsXmlOptions): string {
+  return runsXml(runs, null, options)
 }
 
 /**
@@ -3090,8 +3161,35 @@ export function inlineRunsXml(runs: Run[]): string {
 function runsXml(
   runs: Run[],
   allocate: ((href: string) => string) | null,
-  allocateRevisionId?: () => string,
+  options: RunsXmlOptions & { allocateRevisionId?: () => string } = {},
 ): string {
+  const { allocateRevisionId, fragments, part } = options
+  const written = options.written ?? new Set<string>()
+  // The wrappers a run carries may come from a co-editing peer: each is
+  // checked before it is written, and one that fails goes without taking the
+  // run's text with it. Nothing here may throw on a value of the wrong type.
+  const givenRuns = runs
+  if (runs.some((r) => r.wrap !== undefined)) {
+    const wraps = new Map<unknown, boolean>()
+    const wrapOk = (wrap: unknown): wrap is InlineWrap => {
+      let ok = wraps.get(wrap)
+      if (ok === undefined) {
+        const prefixes = inlineWrapPrefixes(wrap)
+        ok = prefixes !== null && (part ? part.takes(prefixes) : true)
+        wraps.set(wrap, ok)
+      }
+      return ok
+    }
+    runs = runs.map((run) => {
+      const given: unknown = run.wrap
+      const wrap = Array.isArray(given) ? given.filter(wrapOk) : []
+      if (given === undefined || (Array.isArray(given) && wrap.length === given.length)) return run
+      const { wrap: _wrap, ...rest } = run
+      return wrap.length > 0 ? { ...rest, wrap } : rest
+    })
+  }
+  const fragment = (index: number, insideLink: boolean): string =>
+    fragments?.get(givenRuns[index]) ?? runFragmentXml(runs[index], insideLink)
   // comment ranges: re-emit start/end/reference markers around the first..last
   // run each id covers, so editing a commented paragraph keeps its comments
   const firstOf = new Map<string, number>()
@@ -3119,55 +3217,6 @@ function runsXml(
 
   const parts: string[] = []
 
-  // serialize run indices [from, to) handling hyperlink grouping + comment markers
-  const emitRange = (from: number, to: number) => {
-    let i = from
-    while (i < to) {
-      const run = runs[i]
-      if (run.link) {
-        // group consecutive runs sharing the same link target; runs parsed from
-        // distinct w:hyperlink elements (own rId) stay separate so no relationship is orphaned
-        const group: Run[] = []
-        const groupStart = i
-        const href = run.link.href
-        let rId = run.link.rId
-        while (i < to && runs[i].link && runs[i].link!.href === href) {
-          const next = runs[i].link!.rId
-          if (group.length > 0 && next !== undefined && rId !== undefined && next !== rId) break
-          rId = rId ?? next
-          group.push(runs[i])
-          i++
-        }
-        // a comment boundary inside the link group widens to the whole hyperlink
-        for (let j = groupStart; j < i; j++) parts.push(startsAt(j))
-        const tooltip = group[0]?.link?.tooltip
-        const tipAttr = tooltip ? ` w:tooltip="${escapeXmlAttr(tooltip)}"` : ''
-        if (href.startsWith('#')) {
-          const inner = group.map((r) => runFragmentXml(r, true)).join('')
-          parts.push(
-            `<w:hyperlink w:anchor="${escapeXmlAttr(href.slice(1))}"${tipAttr}>${inner}</w:hyperlink>`,
-          )
-        } else {
-          const finalRId = rId ?? allocate?.(href)
-          if (finalRId) {
-            const inner = group.map((r) => runFragmentXml(r, true)).join('')
-            parts.push(
-              `<w:hyperlink r:id="${escapeXmlAttr(finalRId)}"${tipAttr}>${inner}</w:hyperlink>`,
-            )
-          } else {
-            parts.push(group.map((r) => runFragmentXml(r, false)).join(''))
-          }
-        }
-        for (let j = groupStart; j < i; j++) parts.push(endsAt(j))
-      } else {
-        parts.push(startsAt(i))
-        parts.push(runFragmentXml(run, false))
-        parts.push(endsAt(i))
-        i++
-      }
-    }
-  }
-
   // tracked changes: wrap consecutive runs of the same revision in w:ins / w:del.
   // An insertion later deleted (both set) nests w:del inside w:ins, as Word does.
   const revKey = (r: Run) =>
@@ -3185,6 +3234,112 @@ function runsXml(
           r.del?.move ?? null,
         ])
       : ''
+
+  // Wrapper elements the model keeps as bytes (w:sdt, w:smartTag...): each is
+  // written at the depth it was read at: outside the tracked-change element
+  // (level 0), inside it (1) or inside the hyperlink (2). Null = no wrappers.
+  const placed = placeInlineWraps(runs, revKey)
+  /**
+   * Runs [from, to) inside their wrappers of one level: adjacent runs that
+   * share a wrapper go back inside one element, written with the bytes it was
+   * read with; `leaf` writes what sits inside the innermost one.
+   */
+  const within = (
+    from: number,
+    to: number,
+    level: 0 | 1 | 2,
+    depth: number,
+    leaf: (from: number, to: number) => void,
+  ) => {
+    if (!placed) {
+      leaf(from, to)
+      return
+    }
+    let g = from
+    while (g < to) {
+      const wrap = placed[g][level][depth]
+      let end = g + 1
+      if (!wrap) {
+        while (end < to && !placed[end][level][depth]) end++
+        leaf(g, end)
+      } else {
+        while (end < to && sameInlineWrap(placed[end][level][depth], wrap)) end++
+        const once = inlineWrapWritesOnce(wrap)
+        const key = inlineWrapKey(wrap)
+        if (once && written.has(key)) {
+          // a content control is one element: runs that left its first group
+          // go back without it rather than as a second control with its w:id
+          within(g, end, level, depth + 1, leaf)
+        } else {
+          if (once) written.add(key)
+          // text typed into a placeholder or a data-bound control: the two
+          // properties that would make Word discard it go (see InlineWrap.text)
+          const edited = wrap.text !== undefined && inlineWrapTextOf(runs, g, end) !== wrap.text
+          const open = edited ? sdtOpenForChangedText(wrap.open) : wrap.open
+          // a control written from runs is the one that gives way to a taken id
+          parts.push(once && part ? part.yielding(open) : open)
+          within(g, end, level, depth + 1, leaf)
+          parts.push(wrap.close)
+        }
+      }
+      g = end
+    }
+  }
+
+  // serialize run indices [from, to) handling hyperlink grouping + comment markers
+  const emitRange = (from: number, to: number) => {
+    let i = from
+    while (i < to) {
+      const run = runs[i]
+      if (run.link) {
+        // group consecutive runs sharing the same link target; runs parsed from
+        // distinct w:hyperlink elements (own rId) stay separate so no relationship is orphaned
+        const groupStart = i
+        const href = run.link.href
+        let rId = run.link.rId
+        while (i < to && runs[i].link && runs[i].link!.href === href) {
+          const next = runs[i].link!.rId
+          if (i > groupStart && next !== undefined && rId !== undefined && next !== rId) break
+          rId = rId ?? next
+          i++
+        }
+        const groupEnd = i
+        // the group's runs, inside the wrappers that sat in the hyperlink
+        const inner = (insideLink: boolean): string => {
+          const at = parts.length
+          within(groupStart, groupEnd, 2, 0, (a, b) => {
+            for (let j = a; j < b; j++) parts.push(fragment(j, insideLink))
+          })
+          return parts.splice(at).join('')
+        }
+        // a comment boundary inside the link group widens to the whole hyperlink
+        for (let j = groupStart; j < i; j++) parts.push(startsAt(j))
+        const tooltip = runs[groupStart].link?.tooltip
+        const tipAttr = tooltip ? ` w:tooltip="${escapeXmlAttr(tooltip)}"` : ''
+        if (href.startsWith('#')) {
+          parts.push(
+            `<w:hyperlink w:anchor="${escapeXmlAttr(href.slice(1))}"${tipAttr}>${inner(true)}</w:hyperlink>`,
+          )
+        } else {
+          const finalRId = rId ?? allocate?.(href)
+          if (finalRId) {
+            parts.push(
+              `<w:hyperlink r:id="${escapeXmlAttr(finalRId)}"${tipAttr}>${inner(true)}</w:hyperlink>`,
+            )
+          } else {
+            parts.push(inner(false))
+          }
+        }
+        for (let j = groupStart; j < i; j++) parts.push(endsAt(j))
+      } else {
+        parts.push(startsAt(i))
+        parts.push(fragment(i, false))
+        parts.push(endsAt(i))
+        i++
+      }
+    }
+  }
+
   let revSeq = 9001
   const mintRevisionId = allocateRevisionId ?? (() => String(revSeq++))
   // a later edit splitting one w:ins in two leaves both halves with the stored id
@@ -3212,41 +3367,45 @@ function runsXml(
   const sameMove = (a: ReturnType<typeof moveOf>, b: ReturnType<typeof moveOf>) =>
     !!a && !!b && a.side === b.side && a.name === b.name
   let openRange: { side: 'From' | 'To'; id: string } | null = null
-  let g = 0
-  while (g < runs.length) {
-    const key = revKey(runs[g])
-    let end = g
-    while (end < runs.length && revKey(runs[end]) === key) end++
-    if (key === '') {
-      emitRange(g, end)
-    } else {
-      const { ins, del } = runs[g]
-      const move = moveOf(runs[g])
-      if (move && !sameMove(move, moveOf(runs[g - 1]))) {
-        const info = move.side === 'From' ? del! : ins!
-        const id = mintRevisionId()
-        parts.push(
-          `<w:move${move.side}RangeStart w:id="${escapeXmlAttr(id)}"` +
-            ` w:author="${escapeXmlAttr(info.author)}"` +
-            (info.date ? ` w:date="${escapeXmlAttr(info.date)}"` : '') +
-            ` w:name="${escapeXmlAttr(move.name)}"/>`,
-        )
-        openRange = { side: move.side, id }
+  // runs [from, to), each tracked-change group in its w:ins / w:del
+  const emitRevisions = (from: number, to: number) => {
+    let g = from
+    while (g < to) {
+      const key = revKey(runs[g])
+      let end = g
+      while (end < to && revKey(runs[end]) === key) end++
+      if (key === '') {
+        within(g, end, 1, 0, emitRange)
+      } else {
+        const { ins, del } = runs[g]
+        const move = moveOf(runs[g])
+        if (move && !sameMove(move, moveOf(runs[g - 1]))) {
+          const info = move.side === 'From' ? del! : ins!
+          const id = mintRevisionId()
+          parts.push(
+            `<w:move${move.side}RangeStart w:id="${escapeXmlAttr(id)}"` +
+              ` w:author="${escapeXmlAttr(info.author)}"` +
+              (info.date ? ` w:date="${escapeXmlAttr(info.date)}"` : '') +
+              ` w:name="${escapeXmlAttr(move.name)}"/>`,
+          )
+          openRange = { side: move.side, id }
+        }
+        const insTag = ins?.move ? 'w:moveTo' : 'w:ins'
+        const delTag = del?.move ? 'w:moveFrom' : 'w:del'
+        if (ins) parts.push(`<${insTag}${revAttrs(ins)}>`)
+        if (del) parts.push(`<${delTag}${revAttrs(del)}>`)
+        within(g, end, 1, 0, emitRange)
+        if (del) parts.push(`</${delTag}>`)
+        if (ins) parts.push(`</${insTag}>`)
+        if (openRange && !sameMove(move, moveOf(runs[end]))) {
+          parts.push(`<w:move${openRange.side}RangeEnd w:id="${escapeXmlAttr(openRange.id)}"/>`)
+          openRange = null
+        }
       }
-      const insTag = ins?.move ? 'w:moveTo' : 'w:ins'
-      const delTag = del?.move ? 'w:moveFrom' : 'w:del'
-      if (ins) parts.push(`<${insTag}${revAttrs(ins)}>`)
-      if (del) parts.push(`<${delTag}${revAttrs(del)}>`)
-      emitRange(g, end)
-      if (del) parts.push(`</${delTag}>`)
-      if (ins) parts.push(`</${insTag}>`)
-      if (openRange && !sameMove(move, moveOf(runs[end]))) {
-        parts.push(`<w:move${openRange.side}RangeEnd w:id="${escapeXmlAttr(openRange.id)}"/>`)
-        openRange = null
-      }
+      g = end
     }
-    g = end
   }
+  within(0, runs.length, 0, 0, emitRevisions)
   return parts.join('')
 }
 
@@ -3457,6 +3616,7 @@ const RUN_MANAGED_GROUPS: Array<{ key: string; tags: string[] }> = [
   { key: 'strike', tags: ['w:strike'] },
   { key: 'caps', tags: ['w:caps', 'w:smallCaps'] },
   { key: 'dstrike', tags: ['w:dstrike'] },
+  { key: 'textEffect', tags: ['w:outline', 'w:shadow', 'w:emboss', 'w:imprint'] },
   { key: 'vanish', tags: ['w:vanish'] },
   { key: 'color', tags: ['w:color'] },
   { key: 'spacing', tags: ['w:spacing'] },
@@ -3469,6 +3629,7 @@ const RUN_MANAGED_GROUPS: Array<{ key: string; tags: string[] }> = [
   { key: 'shading', tags: ['w:shd'] },
   { key: 'vertAlign', tags: ['w:vertAlign'] },
   { key: 'rtl', tags: ['w:rtl'] },
+  { key: 'em', tags: ['w:em'] },
   { key: 'rPrChange', tags: ['w:rPrChange'] },
 ]
 
@@ -3627,6 +3788,8 @@ function modelRPrChildren(run: Run, insideLink: boolean): PPrChild[] {
   }
   if (run.dstrike !== undefined)
     out.push({ name: 'w:dstrike', xml: onOffXml('w:dstrike', run.dstrike) })
+  if (run.textEffect && TEXT_EFFECTS.includes(run.textEffect))
+    out.push({ name: `w:${run.textEffect}`, xml: `<w:${run.textEffect}/>` })
   if (run.vanishOwn !== undefined)
     out.push({ name: 'w:vanish', xml: onOffXml('w:vanish', run.vanishOwn) })
   if (run.color)
@@ -3654,6 +3817,8 @@ function modelRPrChildren(run: Run, insideLink: boolean): PPrChild[] {
   if (run.vertAlign)
     out.push({ name: 'w:vertAlign', xml: `<w:vertAlign w:val="${run.vertAlign}"/>` })
   if (run.rtl) out.push({ name: 'w:rtl', xml: '<w:rtl/>' })
+  if (run.em && EMPHASIS_MARKS.includes(run.em))
+    out.push({ name: 'w:em', xml: `<w:em w:val="${run.em}"/>` })
   const rPrChange = revisionRPrChangeXml(run)
   if (rPrChange) out.push({ name: 'w:rPrChange', xml: rPrChange })
   return out
@@ -3677,9 +3842,10 @@ export function mergeRPrModel(rawRPr: string, run: Run, insideLink: boolean): st
   const rawOf = (tag: string) => rawChildren.find((c) => c.name === tag)?.xml
   // rtl runs decode bold/italic/size from the Cs twins on the parse side;
   // compare against the same elements or every untouched rtl run would get "rebuilt".
-  // run.cs can be dropped by round-trips that rebuild the Run (editor marks), so an
-  // explicit raw w:rtl re-selects the Cs set on its own.
-  const cs = !!run.cs || rawBool(rawOf('w:rtl'))
+  // The model's own w:rtl decides first: a run turned rtl must carry its bold
+  // in w:bCs, or it reopens plain. run.cs can be dropped by round-trips that
+  // rebuild the Run (editor marks), so an explicit raw w:rtl re-selects the Cs set on its own.
+  const cs = run.rtl ?? (!!run.cs || rawBool(rawOf('w:rtl')))
 
   // Compare model vs raw-encoded values group by group; equal → keep the original bytes
   // (drop the group from fresh)
@@ -3732,6 +3898,17 @@ export function mergeRPrModel(rawRPr: string, run: Run, insideLink: boolean): st
         return rawCaps(rawOf('w:caps'), rawOf('w:smallCaps')) === run.caps
       case 'dstrike':
         return rawBool(rawOf('w:dstrike')) === !!run.dstrike
+      // absent from the model is untouched, as for vanish: a Run built without
+      // them keeps the raw elements (there is no "no effect" in the model)
+      case 'textEffect':
+        return (
+          run.textEffect === undefined ||
+          TEXT_EFFECTS.find((e) => rawBool(rawOf(`w:${e}`))) === run.textEffect
+        )
+      case 'em': {
+        const raw = rawAttr(rawOf('w:em'), 'w:val')
+        return run.em === undefined || (raw !== 'none' ? raw : undefined) === run.em
+      }
       // `vanish` may be style-inherited; only the run's own value is compared
       case 'vanish':
         return run.vanishOwn === undefined || rawOnOff(rawOf('w:vanish')) === run.vanishOwn
@@ -3837,13 +4014,15 @@ export function buildTextboxParagraphXml(opts?: {
 }): string {
   const widthEmu = opts?.widthEmu ?? 1800000
   const heightEmu = opts?.heightEmu ?? 1080000
-  const id = opts?.id ?? 1
+  const id = xmlId(opts?.id ?? 1) ?? nonFinite('id')
+  const cx = xmlInt(widthEmu) ?? nonFinite('widthEmu')
+  const cy = xmlInt(heightEmu) ?? nonFinite('heightEmu')
   const fillHex = opts?.fillHex ?? 'FFFFFF'
   const borderHex = opts?.borderHex ?? '000000'
 
   const spPr =
     `<wps:spPr>` +
-    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm>` +
+    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
     `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>` +
     `<a:solidFill><a:srgbClr val="${fillHex}"/></a:solidFill>` +
     `<a:ln><a:solidFill><a:srgbClr val="${borderHex}"/></a:solidFill></a:ln>` +
@@ -3870,7 +4049,7 @@ export function buildTextboxParagraphXml(opts?: {
     `<wp:simplePos x="0" y="0"/>` +
     `<wp:positionH relativeFrom="column"><wp:align>center</wp:align></wp:positionH>` +
     `<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>` +
-    `<wp:extent cx="${widthEmu}" cy="${heightEmu}"/>` +
+    `<wp:extent cx="${cx}" cy="${cy}"/>` +
     `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
     `<wp:wrapSquare wrapText="bothSides"/>` +
     `<wp:docPr id="${id}" name="TextBox ${id}"/>` +
@@ -3950,8 +4129,10 @@ export interface AnchoredTextboxOptions {
  * measured card/column regions.
  */
 export function buildAnchoredTextboxParagraphXml(opts: AnchoredTextboxOptions): string {
-  const id = opts.id ?? 1
+  const id = xmlId(opts.id ?? 1) ?? nonFinite('id')
   const { xEmu, yEmu, widthEmu, heightEmu } = opts
+  const cx = xmlInt(widthEmu) ?? nonFinite('widthEmu')
+  const cy = xmlInt(heightEmu) ?? nonFinite('heightEmu')
 
   const contentParaXml = (p: TextboxContentParagraph): string => {
     const children = formatPPrChildren(p.format)
@@ -3979,7 +4160,7 @@ export function buildAnchoredTextboxParagraphXml(opts: AnchoredTextboxOptions): 
     : `<a:ln><a:noFill/></a:ln>`
   const spPr =
     `<wps:spPr>` +
-    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm>` +
+    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
     geom +
     fill +
     line +
@@ -3988,8 +4169,10 @@ export function buildAnchoredTextboxParagraphXml(opts: AnchoredTextboxOptions): 
   const ins = opts.insetsEmu ?? { l: 91440, t: 45720, r: 91440, b: 45720 }
   // fixed box: a:noAutofit keeps overflowing content from growing the region
   const bodyPr =
-    `<wps:bodyPr wrap="square" lIns="${Math.round(ins.l)}" tIns="${Math.round(ins.t)}" ` +
-    `rIns="${Math.round(ins.r)}" bIns="${Math.round(ins.b)}" anchor="t"><a:noAutofit/></wps:bodyPr>`
+    `<wps:bodyPr wrap="square" lIns="${xmlInt(ins.l) ?? nonFinite('insetsEmu.l')}" ` +
+    `tIns="${xmlInt(ins.t) ?? nonFinite('insetsEmu.t')}" ` +
+    `rIns="${xmlInt(ins.r) ?? nonFinite('insetsEmu.r')}" ` +
+    `bIns="${xmlInt(ins.b) ?? nonFinite('insetsEmu.b')}" anchor="t"><a:noAutofit/></wps:bodyPr>`
 
   const wsp =
     `<wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">` +
@@ -4008,22 +4191,22 @@ export function buildAnchoredTextboxParagraphXml(opts: AnchoredTextboxOptions): 
   const relFrom = opts.anchor === 'page' ? 'page' : undefined
   const posH =
     `<wp:positionH relativeFrom="${relFrom ?? 'column'}">` +
-    `<wp:posOffset>${Math.round(xEmu)}</wp:posOffset></wp:positionH>`
+    `<wp:posOffset>${xmlInt(xEmu) ?? nonFinite('xEmu')}</wp:posOffset></wp:positionH>`
   const posV =
     `<wp:positionV relativeFrom="${relFrom ?? 'paragraph'}">` +
-    `<wp:posOffset>${Math.round(yEmu)}</wp:posOffset></wp:positionV>`
+    `<wp:posOffset>${xmlInt(yEmu) ?? nonFinite('yEmu')}</wp:posOffset></wp:positionV>`
   const wrapMode = opts.wrap ?? (opts.anchor === 'page' ? 'none' : 'topAndBottom')
   const wrapEl = wrapMode === 'topAndBottom' ? '<wp:wrapTopAndBottom/>' : '<wp:wrapNone/>'
 
   const anchor =
     `<wp:anchor xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ` +
     `distT="0" distB="0" distL="0" distR="0" simplePos="0" ` +
-    `relativeHeight="${251658240 + (opts.zOrder ?? 0)}" behindDoc="${opts.behindDoc ? 1 : 0}" ` +
+    `relativeHeight="${xmlInt(251658240 + (opts.zOrder ?? 0)) ?? nonFinite('zOrder')}" behindDoc="${opts.behindDoc ? 1 : 0}" ` +
     `locked="0" layoutInCell="1" allowOverlap="1">` +
     `<wp:simplePos x="0" y="0"/>` +
     posH +
     posV +
-    `<wp:extent cx="${widthEmu}" cy="${heightEmu}"/>` +
+    `<wp:extent cx="${cx}" cy="${cy}"/>` +
     `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
     wrapEl +
     `<wp:docPr id="${id}" name="Region ${id}"/>` +
@@ -4056,11 +4239,11 @@ export function buildAnchoredTextboxParagraphXml(opts: AnchoredTextboxOptions): 
     opts.holderLineTwips !== undefined || opts.holderSpacingBeforeTwips !== undefined
       ? `<w:spacing` +
         (opts.holderSpacingBeforeTwips
-          ? ` w:before="${Math.round(opts.holderSpacingBeforeTwips)}"`
+          ? ` w:before="${xmlInt(opts.holderSpacingBeforeTwips) ?? nonFinite('holderSpacingBeforeTwips')}"`
           : '') +
         ` w:after="0"` +
         (opts.holderLineTwips !== undefined
-          ? ` w:line="${Math.round(opts.holderLineTwips)}" w:lineRule="exact"`
+          ? ` w:line="${xmlInt(opts.holderLineTwips) ?? nonFinite('holderLineTwips')}" w:lineRule="exact"`
           : '') +
         `/>`
       : ''
@@ -4085,13 +4268,15 @@ export function buildShapeParagraphXml(opts: {
 }): string {
   const widthEmu = opts.widthEmu ?? 1800000
   const heightEmu = opts.heightEmu ?? 1080000
-  const id = opts.id ?? 1
+  const id = xmlId(opts.id ?? 1) ?? nonFinite('id')
+  const cx = xmlInt(widthEmu) ?? nonFinite('widthEmu')
+  const cy = xmlInt(heightEmu) ?? nonFinite('heightEmu')
   const fillHex = opts.fillHex ?? '4472C4'
   const borderHex = opts.borderHex ?? '2F5496'
 
   const spPr =
     `<wps:spPr>` +
-    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm>` +
+    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
     `<a:prstGeom prst="${opts.prst}"><a:avLst/></a:prstGeom>` +
     `<a:solidFill><a:srgbClr val="${fillHex}"/></a:solidFill>` +
     `<a:ln><a:solidFill><a:srgbClr val="${borderHex}"/></a:solidFill></a:ln>` +
@@ -4140,7 +4325,7 @@ export function buildShapeParagraphXml(opts: {
     `<wp:simplePos x="0" y="0"/>` +
     `<wp:positionH relativeFrom="column"><wp:align>center</wp:align></wp:positionH>` +
     `<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>` +
-    `<wp:extent cx="${widthEmu}" cy="${heightEmu}"/>` +
+    `<wp:extent cx="${cx}" cy="${cy}"/>` +
     `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
     `<wp:wrapSquare wrapText="bothSides"/>` +
     `<wp:docPr id="${id}" name="${opts.prst} ${id}"/>` +
@@ -4188,7 +4373,9 @@ export function buildWordArtParagraphXml(opts: {
 }): string {
   const widthEmu = opts.widthEmu ?? 2700000 // ~7.5 cm
   const heightEmu = opts.heightEmu ?? 720000 // ~2 cm
-  const id = opts.id ?? 1
+  const id = xmlId(opts.id ?? 1) ?? nonFinite('id')
+  const cx = xmlInt(widthEmu) ?? nonFinite('widthEmu')
+  const cy = xmlInt(heightEmu) ?? nonFinite('heightEmu')
   const colorHex = opts.colorHex ?? '4472C4'
   const text = opts.text ?? 'WordArt'
 
@@ -4207,7 +4394,7 @@ export function buildWordArtParagraphXml(opts: {
 
   const spPr =
     `<wps:spPr>` +
-    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm>` +
+    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
     `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>` +
     `<a:noFill/>` +
     `<a:ln><a:noFill/></a:ln>` +
@@ -4235,7 +4422,7 @@ export function buildWordArtParagraphXml(opts: {
     `<wp:simplePos x="0" y="0"/>` +
     `<wp:positionH relativeFrom="column"><wp:align>center</wp:align></wp:positionH>` +
     `<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>` +
-    `<wp:extent cx="${widthEmu}" cy="${heightEmu}"/>` +
+    `<wp:extent cx="${cx}" cy="${cy}"/>` +
     `<wp:effectExtent l="0" t="0" r="0" b="0"/>` +
     `<wp:wrapSquare wrapText="bothSides"/>` +
     `<wp:docPr id="${id}" name="WordArt ${id}"/>` +

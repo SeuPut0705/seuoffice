@@ -1,6 +1,6 @@
 # apps/diagram (`@genoffice/diagram`)
 
-다이어그램 편집기다. draw.io(jgraph/drawio, Apache-2.0) 웹 편집기를 PC 안에서만 띄워 `.drawio`·`.dio`·`.drawio.svg`·`.drawio.png`를 탭에서 열고 고치고 저장하고 내보낸다. 화면에 보이는 이름은 "다이어그램"이고, "draw.io"는 어떤 파일을 다루는지 알리는 데만 쓴다(열기·저장 창의 형식 이름). draw.io 로고는 쓰지 않는다. 파일 형식·읽기 표·연산의 뜻은 `packages/drawio-model`에 있고, 이 모듈은 draw.io를 띄워 그 결과를 디스크와 잇는다. 계획과 까닭은 `docs/plans/diagram-editor.md`와 결정 0103(`docs/tracking/decisions/0103-diagram-editor.md`)에 있다.
+다이어그램 편집기다. draw.io(jgraph/drawio, Apache-2.0) 웹 편집기를 PC 안에서만 띄워 `.drawio`·`.dio`·`.drawio.svg`·`.drawio.png`를 탭에서 열고 고치고 저장하고 내보낸다. 화면에 보이는 이름은 "다이어그램"이고, "draw.io"는 어떤 파일을 다루는지 알리는 데만 쓴다(열기·저장 창의 형식 이름). draw.io 로고는 쓰지 않는다. 파일 형식·읽기 표·연산의 뜻은 `packages/drawio-model`에 있고, 이 모듈은 draw.io를 띄워 그 결과를 디스크와 잇는다. 계획과 까닭은 `docs/archive/ieum/plans/diagram-editor.md`와 결정 0103(`docs/archive/ieum/tracking/decisions/0103-diagram-editor.md`)에 있다.
 
 ## 맡은 범위
 

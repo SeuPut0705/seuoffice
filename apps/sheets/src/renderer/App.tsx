@@ -6704,7 +6704,6 @@ export function App({
           admitQueued: sendGate.admitQueued,
           busy: subscription.busy,
           actions: subscription.actions,
-          openConnectHelp: subscription.openConnectHelp,
           refresh: subscription.refresh,
           usage: subscriptionUsage,
           inputTruncated,

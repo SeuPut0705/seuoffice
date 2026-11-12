@@ -14,6 +14,7 @@ import {
 } from './update-attempt'
 import type { InstallFailureLevel } from './update-attempt'
 import { createUpdateLog, UPDATE_LOG_FILE } from './update-log'
+import { pruneUpdateCache } from './update-cache'
 import {
   installMacStaging,
   macAppBundle,
@@ -48,7 +49,7 @@ import { normalizeReleaseNotes } from './update-notes'
  * repository.
  *
  * A release carries the versioned installer and its `latest.yml`
- * (docs/releasing.ko.md is the procedure). The packaged app reads the
+ * (docs/archive/ieum/releasing.ko.md is the procedure). The packaged app reads the
  * repository from resources/app-update.yml, which electron-builder bakes in
  * from the `publish` config in apps/shell/electron-builder.cjs (provider
  * `github`); nothing is injected at build time and no token is involved. A
@@ -911,7 +912,7 @@ export function initAutoUpdater(
   selectChannel(channel)
   autoUpdater.autoDownload = false
   // The window shows what changed before the user starts the download
-  // (docs/plans/update-details.md). The full changelog collects the bodies of
+  // (docs/archive/ieum/plans/update-details.md). The full changelog collects the bodies of
   // every release newer than this install from the feed request the GitHub
   // provider already makes — no extra network call.
   autoUpdater.fullChangelog = true
@@ -1191,6 +1192,30 @@ export function initAutoUpdater(
       showUpdateWindow(getWindow(), windowState(info.version), actions, { inactive: true })
     }
   })
+
+  // What the last update left in electron-updater's download cache goes at a
+  // start (update-cache.ts). The folder is the updater's to name (it reads
+  // the name from app-update.yml); nothing is removed once a download runs
+  // or a finished one waits for the restart.
+  // AppUpdater.getOrCreateDownloadHelper is private in its typings; what it
+  // answers is checked before use, like `install` above
+  const cacheOwner = autoUpdater as unknown as {
+    getOrCreateDownloadHelper?: () => Promise<{ cacheDir?: unknown } | null>
+  }
+  const clearInstalledCache = async (): Promise<void> => {
+    try {
+      const helper = await cacheOwner.getOrCreateDownloadHelper?.()
+      if (typeof helper?.cacheDir !== 'string') {
+        log('the update cache was not looked at: the updater names no cache folder')
+        return
+      }
+      if (downloadInFlight || phase === 'downloaded') return
+      pruneUpdateCache({ cacheDir: helper.cacheDir, runningVersion: app.getVersion(), log })
+    } catch (err) {
+      log('the update cache was not looked at:', err instanceof Error ? err.message : String(err))
+    }
+  }
+  void clearInstalledCache()
 
   const check = (): void => {
     // turned off: only an explicit check (Help › Check for Updates…, a channel switch) asks the feed

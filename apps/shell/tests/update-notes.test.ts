@@ -8,7 +8,7 @@ import type { UpdateNoteBlock } from '../src/shared/update-api'
  * turns it into the safe block tree the update window draws. Remote text must
  * never survive as markup: links, images, scripts and unknown wrappers are
  * stripped to their text (or dropped), and the size caps bound what reaches
- * the UI state (docs/plans/update-details.md).
+ * the UI state (docs/archive/ieum/plans/update-details.md).
  */
 
 /** the real v0.12.1 release body (2026-10-17), trimmed to the shapes that matter */

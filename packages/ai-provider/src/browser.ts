@@ -66,8 +66,6 @@ export {
 } from './effort'
 export type { AiEffort, AiModelEffort } from './effort'
 export { keyEffortBody, keyModelEffort, keyProviderEffort, takesKeyEffort } from './key-effort'
-export { subscriptionConnectHelpUrl } from './connect-help'
-export type { SubscriptionConnectHelpPath } from './connect-help'
 export {
   SUBSCRIPTION_CHATGPT_USAGE_URL,
   SUBSCRIPTION_INSTALL_COMMANDS,

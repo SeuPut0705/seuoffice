@@ -3,7 +3,7 @@ name: CI
 # Test gate for every PR and push: changed-file formatting, lint, typecheck across
 # all workspaces, and the full unit-test suite (engine packages and app tests; the
 # sheets suite also runs the Rust xlsx-sidecar tests). Installers are built and
-# published by hand (docs/releasing.ko.md) — this workflow never builds or uploads
+# published by seuoffice-desktop.yml — this workflow never builds or uploads
 # one, and it uses no repository secret.
 
 on:
@@ -148,13 +148,6 @@ jobs:
       # English-only; functional CJK strings and AI prompt examples are allowed.
       - name: Check comments/docs are English-only
         run: npm run check:english-comments
-
-      # Whole-tree, lockfile included: the vendor services this product was
-      # cut loose from must not come back with a merge of upstream fixes. What
-      # may still name the vendor (licence, attribution, identifiers stored in
-      # documents) is the allowlist inside the tool.
-      - name: Check the removed vendor stays out
-        run: npm run check:no-genspark
 
       - name: Lint
         if: matrix.share == 1

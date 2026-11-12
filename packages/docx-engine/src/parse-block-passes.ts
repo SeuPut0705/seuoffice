@@ -4,6 +4,7 @@ import type { Block, Run, SectionSettings, TableModel, TextboxDisplay } from './
 import { charClass, isDoubleByteChar } from './char-class'
 import { EMU_PER_PX } from './parse-xml-text'
 import { stripTextboxes } from './parse-props'
+import { removeElements } from './xml-tag'
 
 /**
  * Word writes wp:anchor relativeHeight as 251658240 + rank, which decodes to
@@ -28,7 +29,7 @@ const PAGE_BR_RE = /<w:br\s[^>]*w:type=(["'])page\1/
 
 function hostParagraphBreaksBefore(xml: string): boolean {
   // w:pPrChange holds the tracked-change *previous* pPr, not the live setting
-  const live = xml.replace(/<w:pPrChange[\s>][\s\S]*?<\/w:pPrChange>/g, '')
+  const live = removeElements(xml, 'w:pPrChange')
   const pPr = PPR_HEAD_RE.exec(live)?.[1]
   return pPr !== undefined && PAGE_BREAK_BEFORE_RE.test(pPr)
 }

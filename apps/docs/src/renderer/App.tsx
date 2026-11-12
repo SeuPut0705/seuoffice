@@ -565,6 +565,7 @@ import { runHeadlessDocumentExport } from './headless-export'
 import { installMcpBridge } from './mcp-bridge'
 import { odtOffProps, refuseInOdt, useOdtSession } from './odt-gate'
 import { cleanOdtPaste } from './editor/odt-guard'
+import { PASTED_CONTENT } from './editor/inline-wrap'
 import {
   clampDocsZoom,
   DOCS_ZOOM_MAX,
@@ -1499,7 +1500,13 @@ export function App() {
                   if (slots) content = fillMissingRunFonts(content, slots, schema)
                 }
               }
-              view.dispatch(view.state.tr.replaceWith($from.before(1), $from.after(1), content))
+              // tagged as pasted: a copy of a content control the document
+              // still holds arrives without it (inline-wrap.ts)
+              view.dispatch(
+                view.state.tr
+                  .replaceWith($from.before(1), $from.after(1), content)
+                  .setMeta(PASTED_CONTENT, true),
+              )
               return true
             }
           } catch {

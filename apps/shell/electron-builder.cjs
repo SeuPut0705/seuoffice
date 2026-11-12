@@ -53,11 +53,11 @@ if (UPDATE_CHANNEL !== 'latest' && UPDATE_CHANNEL !== 'stable') {
   throw new Error(`SEUOFFICE_UPDATE_CHANNEL must be "latest" or "stable", got "${UPDATE_CHANNEL}"`)
 }
 
-// GENOFFICE_MAC_X64=1 — package the Intel (x64) dmg/zip alongside arm64.
-// The release build on GitHub's Mac runner sets it (.github/workflows/
-// mac-build.yml, decision 0065); both are the same unsigned beta, signed ad
-// hoc. Off by default, so a local `dist:mac` stays one arm64 package that
-// needs no universal sidecar.
+// GENOFFICE_MAC_X64=1 — package the Intel (x64) dmg/zip alongside arm64
+// (decision 0065); both are the same unsigned beta, signed ad hoc. No
+// workflow sets it: the SeuOffice release (electron-builder.seuoffice.cjs)
+// refuses it and ships arm64 only. Off by default, so a local `dist:mac`
+// stays one arm64 package that needs no universal sidecar.
 const includeMacX64 = process.env.GENOFFICE_MAC_X64 === '1'
 
 // GENOFFICE_WIN_ARM64=1 — package the Windows ARM64 installer instead of x64.
@@ -1171,7 +1171,7 @@ if (winSignMode) {
   }
 }
 
-// This product's macOS builds carry no Apple Developer ID (docs/tracking/
+// This product's macOS builds carry no Apple Developer ID (docs/archive/ieum/tracking/
 // decisions/0031-unsigned-mac-beta.md): the app is signed ad hoc, which
 // Apple Silicon needs before it runs a binary at all, and nothing is
 // notarized. Hardened runtime is off because, signed ad hoc, its library

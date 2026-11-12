@@ -234,15 +234,15 @@ describe('MIME decoding helpers', () => {
     expect([...out]).toEqual([0x61, 0x3d, 0x62, 0x63, 0xe9])
   })
 
-  it('single-part MHT without a boundary is the HTML itself', () => {
+  it('single-part MHT without a boundary is the HTML itself', async () => {
     const mht =
       'Content-Type: text/html; charset=windows-1252\r\n' +
       'Content-Transfer-Encoding: 8bit\r\n\r\n<html><body>\u00e9</body></html>'
     const bytes = Uint8Array.from(mht, (c) => c.charCodeAt(0) & 0xff)
-    expect(decodeMhtToHtml(bytes)).toBe('<html><body>\u00e9</body></html>')
+    expect(await decodeMhtToHtml(bytes)).toBe('<html><body>\u00e9</body></html>')
   })
 
-  it('inlines thousands of image parts in one pass over the html', () => {
+  it('inlines thousands of image parts in one pass over the html', async () => {
     const boundary = 'bomb'
     let mht =
       `Content-Type: multipart/related; boundary="${boundary}"\r\n\r\n` +
@@ -252,7 +252,7 @@ describe('MIME decoding helpers', () => {
     }
     mht += `--${boundary}--\r\n`
     const bytes = Uint8Array.from(mht, (c) => c.charCodeAt(0) & 0xff)
-    const html = decodeMhtToHtml(bytes)
+    const html = await decodeMhtToHtml(bytes)
     expect(html).toContain('<p>hi</p>')
     expect(html).toContain(
       '<img src="data:image/png;base64,eA=="><img src="data:image/png;base64,eA==">',

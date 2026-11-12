@@ -343,7 +343,7 @@ export function drawingAnchorMeta(frag: string): DrawingAnchorMeta {
   const ownXml = graphicAt === -1 ? frag : frag.slice(0, graphicAt)
   const behind = /behindDoc\s*=\s*["'](?:1|true)["']/.test(anchorTag)
   const ownWrapped = /<wp:wrap(?:Square|Tight|Through|TopAndBottom)\b/.test(ownXml)
-  if (frag.includes('<wp:wrapNone') || (behind && !ownWrapped)) meta.noWrap = true
+  if (ownXml.includes('<wp:wrapNone') || (behind && !ownWrapped)) meta.noWrap = true
   if (behind) meta.behind = true
   const relHeight = Number(/relativeHeight\s*=\s*["'](\d+)["']/.exec(anchorTag)?.[1] ?? NaN)
   if (Number.isFinite(relHeight) && relHeight - 251658240 !== 0) meta.z = relHeight - 251658240

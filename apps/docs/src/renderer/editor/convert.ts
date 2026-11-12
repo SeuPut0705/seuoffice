@@ -29,6 +29,8 @@ import {
   generateTableModelXml,
   resolvePropChangeXml,
   inlinePictureDrawingXml,
+  usableNumber,
+  usablePictureSize,
   patchRunPictureXml,
   type RunPictureGeometry,
   NEW_PICTURE_TOKEN_PREFIX,
@@ -86,6 +88,13 @@ import type { PictureLayer } from './image-rotation'
 import { tableFloatSideRoom } from './anchor-geometry'
 
 export { holdsDeclaredWidth }
+import {
+  INLINE_WRAP_MARK,
+  holdsInlineStructure,
+  inlineStructureKey,
+  inlineWrapMarkOf,
+  readInlineWrapMark,
+} from './inline-wrap-chain'
 
 /** minimal ProseMirror JSON shapes */
 export interface PmMark {
@@ -1551,14 +1560,17 @@ export function tableStructureSignature(table: PmNode): string {
 function inlineFormattingSignature(content: PmNode[] | undefined): string[] {
   const styles: string[] = []
   for (const node of content ?? []) {
-    // the schema re-sorts marks by rank on load, so the parse-side order must not count
-    // a picture adds no text, so one placed next to another must count on its
+    // the schema re-sorts marks by rank on load, so the parse-side order must not count;
+    // the wrapper mark is not formatting: a cell paragraph that reads as it did
+    // keeps its original bytes, as a body paragraph does (see `normalizedRuns`).
+    // A picture adds no text, so one placed next to another must count on its
     // own, and a resized one must regenerate the cell (its drawing carries the size)
     const atom = node.type === 'docInlineImage'
     const style =
       node.type === 'text'
         ? JSON.stringify(
-            [...(node.marks ?? [])]
+            (node.marks ?? [])
+              .filter((mark) => mark.type !== INLINE_WRAP_MARK)
               .sort((a, b) => a.type.localeCompare(b.type))
               .map((mark) => [mark.type, mark.attrs ?? null]),
           )
@@ -2164,6 +2176,8 @@ function runMarks(run: Run): PmMark[] {
   }
   if (run.sdtCheckboxXml !== undefined)
     marks.push({ type: 'ctrlCheckbox', attrs: { sdtPr: run.sdtCheckboxXml } })
+  const wrapMark = inlineWrapMarkOf(run)
+  if (wrapMark) marks.push(wrapMark)
   if (run.commentIds?.length)
     marks.push({ type: 'comment', attrs: { ids: run.commentIds.join(' ') } })
   if (run.ins) {
@@ -2952,16 +2966,20 @@ export function pmDocToSavePlan(inputDoc: PmNode, originalBlocks: Block[]): Save
       } else if (node.attrs?.genImage) {
         changedCount++
         const image = { ...(node.attrs.genImage as NewImage) }
-        if (node.attrs.imageWidthPx) image.widthPx = Number(node.attrs.imageWidthPx)
-        if (node.attrs.imageHeightPx) image.heightPx = Number(node.attrs.imageHeightPx)
+        const liveW = attrNumber(node.attrs.imageWidthPx, EMU_PER_PX)
+        const liveH = attrNumber(node.attrs.imageHeightPx, EMU_PER_PX)
+        if (liveW) image.widthPx = liveW
+        if (liveH) image.heightPx = liveH
         const align = node.attrs.imageAlign as NewImage['align'] | null
         if (align) image.align = align
         // the attrs carry the live state (wrap/drag/position-preset edits
         // mutate them, not the insert-time genImage payload): re-derive the
         // floating position or the drag is silently lost on save
         applyImageFloatAttrs(image, node.attrs)
-        if (node.attrs.imageZOrder != null) image.zOrder = Number(node.attrs.imageZOrder)
-        if (node.attrs.imageRotDeg) image.rotDeg = Number(node.attrs.imageRotDeg)
+        const z = attrNumber(node.attrs.imageZOrder)
+        if (z !== undefined) image.zOrder = z
+        const rot = attrNumber(node.attrs.imageRotDeg)
+        if (rot) image.rotDeg = rot
         if (node.attrs.imageFlipH) image.flipH = true
         if (node.attrs.imageFlipV) image.flipV = true
         pushBlock({ kind: 'image', image })
@@ -3159,8 +3177,8 @@ function applyImageFloatAttrs(image: NewImage, attrs: Record<string, unknown>): 
   const wrap = (attrs.imageWrap as ImageWrap | null) ?? null
   if (wrap) image.wrap = wrap
   else delete image.wrap
-  const offX = attrs.imageOffsetXEmu != null ? Number(attrs.imageOffsetXEmu) : undefined
-  const offY = attrs.imageOffsetYEmu != null ? Number(attrs.imageOffsetYEmu) : undefined
+  const offX = attrNumber(attrs.imageOffsetXEmu)
+  const offY = attrNumber(attrs.imageOffsetYEmu)
   if (wrap && offX !== undefined && offY !== undefined) {
     // NewImage.posOffsetEmu carries one basis for both axes: page wins over
     // margin (relH/relV are only set for page/margin-pinned floats; plain
@@ -3197,17 +3215,22 @@ function imageFromProtectedAttrs(node: PmNode): NewImage | null {
   const src = String(node.attrs?.imageDataUrl ?? '')
   const lazy = parseLazyMediaUrl(src)
   const m = lazy ? null : /^data:(image\/(?:png|jpeg|gif));base64,(.+)$/.exec(src)
-  const widthPx = Number(node.attrs?.imageWidthPx)
-  const heightPx = Number(node.attrs?.imageHeightPx)
-  if ((!m && !lazy) || !widthPx || !heightPx) return null
+  // no size at all is not materializable (the caller clones the original bytes)
+  if ((!m && !lazy) || !node.attrs?.imageWidthPx || !node.attrs?.imageHeightPx) return null
+  const size = usablePictureSize(
+    attrNumber(node.attrs?.imageWidthPx, EMU_PER_PX),
+    attrNumber(node.attrs?.imageHeightPx, EMU_PER_PX),
+  )
   const image: NewImage = lazy
-    ? { base64: '', mime: 'image/png', sourcePart: lazy.partPath, widthPx, heightPx }
-    : { base64: m![2], mime: m![1] as NewImage['mime'], widthPx, heightPx }
+    ? { base64: '', mime: 'image/png', sourcePart: lazy.partPath, ...size }
+    : { base64: m![2], mime: m![1] as NewImage['mime'], ...size }
   const align = node.attrs?.imageAlign as NewImage['align'] | null
   if (align) image.align = align
   applyImageFloatAttrs(image, node.attrs)
-  if (node.attrs?.imageZOrder != null) image.zOrder = Number(node.attrs.imageZOrder)
-  if (node.attrs?.imageRotDeg) image.rotDeg = Number(node.attrs.imageRotDeg)
+  const z = attrNumber(node.attrs?.imageZOrder)
+  if (z !== undefined) image.zOrder = z
+  const rot = attrNumber(node.attrs?.imageRotDeg)
+  if (rot) image.rotDeg = rot
   if (node.attrs?.imageFlipH) image.flipH = true
   if (node.attrs?.imageFlipV) image.flipV = true
   return image
@@ -4128,13 +4151,28 @@ function newPictureBytes(dataUrl: string): { base64: string; mime: NewImage['mim
   return m ? { base64: m[2], mime: m[1] as NewImage['mime'] } : null
 }
 
+/** EMU in one CSS px */
+const EMU_PER_PX = 9525
+
+/**
+ * A numeric node attribute (the editor's state, a peer's step, a value parsed
+ * from the file) as the save may take it: undefined when absent, not a number,
+ * or out of drawing range (usableNumber). Every number the save reads off a
+ * picture node passes here, so a value from the document never stops a save.
+ */
+function attrNumber(value: unknown, emuPerUnit = 1): number | undefined {
+  return value == null || value === '' ? undefined : usableNumber(Number(value), emuPerUnit)
+}
+
 /** a cell picture inserted by the editor has bytes but no drawing yet: emit one
  *  around a placeholder the save resolves once the media part exists */
 function newPictureXml(node: PmNode): string {
-  const widthPx = Number(node.attrs?.widthPx)
-  const heightPx = Number(node.attrs?.heightPx)
   const bytes = newPictureBytes(String(node.attrs?.dataUrl ?? ''))
-  if (!bytes || !(widthPx > 0) || !(heightPx > 0)) return ''
+  if (!bytes) return ''
+  const { widthPx, heightPx } = usablePictureSize(
+    attrNumber(node.attrs?.widthPx, EMU_PER_PX),
+    attrNumber(node.attrs?.heightPx, EMU_PER_PX),
+  )
   let token = newPictureTokenOf.get(node)
   if (!token) {
     token = `${NEW_PICTURE_TOKEN_PREFIX}${++newPictureSeq}`
@@ -4146,7 +4184,7 @@ function newPictureXml(node: PmNode): string {
     docPrId: token,
     widthPx,
     heightPx,
-    rotDeg: node.attrs?.rotDeg ? Number(node.attrs.rotDeg) : undefined,
+    rotDeg: attrNumber(node.attrs?.rotDeg) || undefined,
     flipH: !!node.attrs?.flipH,
     flipV: !!node.attrs?.flipV,
   })
@@ -4168,7 +4206,8 @@ export function inlineToRuns(content: PmNode[]): Run[] {
       const prev = runs[runs.length - 1]
       const prevAtomic =
         prev &&
-        (prev.noteRef ||
+        (holdsInlineStructure(prev) ||
+          prev.noteRef ||
           prev.xeTerm !== undefined ||
           prev.math ||
           prev.sym ||
@@ -4177,7 +4216,7 @@ export function inlineToRuns(content: PmNode[]): Run[] {
       if (node.marks?.length) runs.push(runFromMarks(ch, node.marks))
       // an unformatted break joins a plain run only: folding it into a
       // formatted neighbour re-authors a bare <w:br/> run as bold (genoffice#524)
-      else if (prev && !prevAtomic && runStyleKey(prev) === PLAIN_RUN_KEY) prev.text += ch
+      else if (prev && !prevAtomic && runMergeKey(prev) === PLAIN_RUN_KEY) prev.text += ch
       else runs.push({ text: ch })
       continue
     }
@@ -4294,6 +4333,7 @@ function atomBase(node: PmNode): Partial<Run> {
 function runFromMarks(text: string, marks: PmMark[]): Run {
   const run: Run = { text }
   for (const mark of marks) {
+    if (readInlineWrapMark(run, mark)) continue
     if (mark.type === 'redaction') {
       // rawRPr is the whole story: it carries both the w:bdr Word draws and the
       // custom element holding the label, and the save path writes it back
@@ -4415,11 +4455,12 @@ function runFromMarks(text: string, marks: PmMark[]): Run {
 
 function mergeRuns(runs: Run[]): Run[] {
   const merged: Run[] = []
+  let lastKey: string | null = null
   for (const run of runs) {
     const prev = merged[merged.length - 1]
     // reference markers / index entries / inline math / fields are atomic and
     // never merge — two identical FORMCHECKBOX runs must stay two fields
-    const atomic =
+    const ownAtomic =
       run.noteRef ||
       run.xeTerm !== undefined ||
       run.instrField !== undefined ||
@@ -4427,7 +4468,9 @@ function mergeRuns(runs: Run[]): Run[] {
       run.math ||
       run.sym ||
       run.ruby ||
-      run.image ||
+      run.image
+    const atomic =
+      ownAtomic ||
       prev?.noteRef ||
       prev?.xeTerm !== undefined ||
       prev?.instrField !== undefined ||
@@ -4436,61 +4479,99 @@ function mergeRuns(runs: Run[]): Run[] {
       prev?.sym ||
       prev?.ruby ||
       prev?.image
-    if (prev && !atomic && runStyleKey(prev) === runStyleKey(run)) prev.text += run.text
-    else merged.push({ ...run })
+    // runs written as one keep the first run's fields: they must differ in
+    // nothing but text, and sit in the same wrappers
+    const key = ownAtomic ? null : runMergeKey(run)
+    if (prev && !atomic && key === lastKey) prev.text += run.text
+    else {
+      merged.push({ ...run })
+      lastKey = key
+    }
   }
   return merged
 }
 
-/** Font-dialog fields that save from the model (mergeRPrModel rebuilds them when edited) */
-function charFormatKey(run: Run): unknown[] {
-  return [
-    run.charSpacingTwips ?? null,
-    run.charScalePct ?? null,
-    run.kernHalfPoints ?? null,
-    run.positionHalfPoints ?? null,
-    run.caps ?? null,
-    run.dstrike ?? null,
-    run.vanishOwn ?? null,
-  ]
+/** what two neighbouring runs must share to be written as one: their content and their wrappers */
+function runMergeKey(run: Run): string {
+  return `${runContentKey(run)}|${JSON.stringify(inlineStructureKey(run))}`
 }
 
-function runStyleKey(run: Run): string {
-  return JSON.stringify([
-    run.rawRPr ?? null,
-    run.styleId ?? null,
-    !!run.bold,
-    !!run.italic,
-    !!run.underline,
-    !!run.strike,
-    run.color ?? null,
-    run.sizeHalfPoints ?? null,
-    run.font ?? null,
-    run.fontAscii ?? null,
-    run.eastAsiaFont ?? null,
-    run.highlight ?? null,
-    run.shading ?? null,
-    ...charFormatKey(run),
-    run.textOutline ? JSON.stringify(run.textOutline) : null,
-    run.vertAlign ?? null,
-    run.link?.href ?? null,
-    run.link?.rId ?? null,
-    run.commentIds?.join(' ') ?? null,
-    revisionKey(run),
-    run.noteRef ? [run.noteRef.kind, run.noteRef.id] : null,
-    run.xeTerm ?? null,
-    run.refField ?? null,
-    run.instrField ?? null,
-    run.fldBeginXml ?? null,
-    run.fldDirty ?? null,
-    run.sdtCheckboxXml ?? null,
-    run.math?.omml ?? null,
-    run.sym ? [run.sym.font, run.sym.char] : null,
-    run.ruby?.xml ?? null,
-  ])
+// ---- run content: what makes two runs the same formatted text ----
+
+/**
+ * Run fields that are not content. Every other own field of a run is, so a
+ * field the reader and the editor's marks learn to carry is seen without a
+ * change here, by `mergeRuns` (neighbours written as one run) and by
+ * `normalizedRuns` (the "did this block change" signature). A hand-kept list
+ * of fields once let character shading, rtl, text effects and emphasis marks
+ * given to a word in the editor go unsaved, or merge into the run beside it.
+ */
+const RUN_FIELDS_NOT_CONTENT: ReadonlySet<string> = new Set<keyof Run>([
+  // compared on its own
+  'text',
+  // the wrappers around the run, not its formatting (apps/docs/AGENTS.md);
+  // mergeRuns keys them separately (inlineStructureKey)
+  'wrap',
+  // numbered afresh each time a document is opened (runMarks)
+  'zoteroFieldId',
+  // resolved at read for display; the field after the arrow is what saves
+  'effective', // the whole style chain -> the direct fields
+  'vanish', // inherited hidden text -> vanishOwn
+  'cs', // rtl chain -> rtl
+  'shadingDisplay', // pattern / theme shading -> shading
+  'eaSlotEmpty', // empty theme slot -> font
+  'csFont', // theme-resolved complex-script face -> rawRPr
+  // no mark carries it, so the editor cannot change it; rawRPr keeps it
+  'fontCs',
+])
+
+/** an explicit off toggle (w:b w:val="0") lives in rawRPr: the marks carry only
+ *  "on", and the writer writes off and unset alike */
+const OFF_IS_UNSET: ReadonlySet<string> = new Set<keyof Run>([
+  'bold',
+  'italic',
+  'underline',
+  'strike',
+])
+
+function runContentKey(run: Run): string {
+  const content: Record<string, unknown> = {}
+  for (const [field, value] of Object.entries(run)) {
+    if (value === undefined || RUN_FIELDS_NOT_CONTENT.has(field)) continue
+    if (value === false && OFF_IS_UNSET.has(field)) continue
+    content[field] = value
+  }
+  // a picture or a formula is its fragment: its other fields are display,
+  // read from the fragment or around it (a picture's preview may load later)
+  if (run.image) content.image = run.image.xml
+  if (run.math) content.math = run.math.omml
+  // the marks carry the decoded previous formatting, not its verbatim bytes,
+  // and a tracked change without the name of the move range it belongs to
+  if (run.rPrChange) {
+    const { oldRPr: _oldRPr, ...change } = run.rPrChange
+    content.rPrChange = change
+  }
+  if (run.ins) {
+    const { move: _move, ...ins } = run.ins
+    content.ins = ins
+  }
+  if (run.del) {
+    const { move: _move, ...del } = run.del
+    content.del = del
+  }
+  return sortedJson(content)
 }
 
-const PLAIN_RUN_KEY = runStyleKey({ text: '' })
+/** JSON with object keys sorted: the reader and the marks build fields in different orders */
+function sortedJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : v,
+  )
+}
+
+const PLAIN_RUN_KEY = runMergeKey({ text: '' })
 
 function revisionKey(run: Run): string | null {
   if (!run.ins && !run.del) return null
@@ -4510,44 +4591,17 @@ function revisionKey(run: Run): string | null {
 
 // ---- signatures: "did the user actually change this block?" ----
 
+// A signature knows text and formatting, not the run-level wrappers around
+// the text (Run.wrap): a block that reads as the file's block is the file's
+// block, wrappers included, whatever the editor's marks say. Wrappers are
+// written from the marks only when the block is written anew.
 function normalizedRuns(runs: Run[]): unknown[] {
-  return mergeRuns(runs).map((r) =>
+  return mergeRuns(runs.map(({ wrap: _wrap, ...run }) => run)).map((r) =>
     // a picture/rule run's rPr-derived display fields do not survive the image
     // node round trip; its identity is the fragment plus the raw rPr it re-emits
     r.text === '' && r.image
       ? ['image', r.rawRPr ?? null, r.image.xml, r.link?.href ?? null, revisionKey(r)]
-      : [
-          r.text,
-          r.rawRPr ?? null,
-          r.styleId ?? null,
-          !!r.bold,
-          !!r.italic,
-          !!r.underline,
-          !!r.strike,
-          r.color ?? null,
-          r.sizeHalfPoints ?? null,
-          r.font ?? null,
-          r.fontAscii ?? null,
-          r.eastAsiaFont ?? null,
-          r.highlight ?? null,
-          ...charFormatKey(r),
-          r.vertAlign ?? null,
-          r.link?.href ?? null,
-          r.commentIds?.join(' ') ?? null,
-          revisionKey(r),
-          r.noteRef ? [r.noteRef.kind, r.noteRef.id] : null,
-          r.xeTerm ?? null,
-          r.refField ?? null,
-          r.instrField ?? null,
-          r.zoteroFieldPart ?? null,
-          r.fldBeginXml ?? null,
-          r.fldDirty ?? null,
-          r.sdtCheckboxXml ?? null,
-          r.math?.omml ?? null,
-          r.sym ? [r.sym.font, r.sym.char] : null,
-          r.ruby?.xml ?? null,
-          r.image?.xml ?? null,
-        ],
+      : [r.text, runContentKey(r)],
   )
 }
 

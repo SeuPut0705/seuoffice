@@ -9,7 +9,7 @@ import type {
 /**
  * Converts the release body the GitHub update feed hands over — GitHub's own
  * HTML rendering of the release description — into the small, safe block tree
- * the update window draws (docs/plans/update-details.md). Remote text never
+ * the update window draws (docs/archive/ieum/plans/update-details.md). Remote text never
  * reaches the window as HTML: here it becomes plain runs only; images, links
  * and unknown markup lose everything but their text; scripts and styles are
  * dropped whole; size caps keep a runaway body out of the UI state.

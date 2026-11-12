@@ -589,9 +589,6 @@ const homeApi: HomeApi = {
   async openLicenseNotices() {
     await ipcRenderer.invoke(HOME_CHANNELS.openLicenseNotices)
   },
-  async openRightsContact() {
-    await ipcRenderer.invoke(HOME_CHANNELS.openRightsContact)
-  },
   // AI settings channels are registered once by the shell's aggregated docs handlers
   onAiSettingsChanged(handler) {
     const listener = () => handler()
@@ -901,9 +898,6 @@ const subscriptionApi: SubscriptionApi = {
   },
   async openInstallHelp(provider) {
     await ipcRenderer.invoke(SHELL_SUBSCRIPTION_CHANNELS.openInstallHelp, provider)
-  },
-  async openConnectHelp(path) {
-    await ipcRenderer.invoke(SHELL_SUBSCRIPTION_CHANNELS.openConnectHelp, path)
   },
 }
 contextBridge.exposeInMainWorld('aiOfficeSubscription', subscriptionApi)

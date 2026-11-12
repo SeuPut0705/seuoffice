@@ -121,8 +121,8 @@ describe('macOS builds carry no Apple Developer ID', () => {
     ])
   })
 
-  it('adds the Intel package when the release build asks for it, each dmg named by CPU', () => {
-    // decision 0065: the Mac runner sets GENOFFICE_MAC_X64=1 for a release
+  it('adds the Intel package when the build asks for it, each dmg named by CPU', () => {
+    // decision 0065: GENOFFICE_MAC_X64=1 adds the Intel package to a Mac build
     const config = loadBuilderConfig({ GENOFFICE_MAC_X64: '1' })
     expect(config.mac.target).toEqual([
       { target: 'dmg', arch: ['arm64', 'x64'] },

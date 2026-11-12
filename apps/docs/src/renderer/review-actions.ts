@@ -358,9 +358,14 @@ export function handleRevision(
   // stories first: textbox entries address their anchor node by position, which body edits shift
   if (scope === 'all') {
     ctx.applyStoryRevisions(stories, action, true)
-    if (action === 'accept') acceptAllRevisions(editor)
-    else rejectAllRevisions(editor)
-    ctx.setStatus(action === 'accept' ? t('appAllRevisionsAccepted') : t('appAllRevisionsRejected'))
+    const left = action === 'accept' ? acceptAllRevisions(editor) : rejectAllRevisions(editor)
+    // changes inside a control locked against editing stay pending (the editor
+    // says so): "all accepted" would not be true then
+    if (left.length === 0) {
+      ctx.setStatus(
+        action === 'accept' ? t('appAllRevisionsAccepted') : t('appAllRevisionsRejected'),
+      )
+    }
   } else if (scope === 'next') {
     const shown = filterRevisions(collectRevisions(editor.state.doc), ctx.revisionFilter)
     const head = editor.state.selection.head
@@ -406,8 +411,9 @@ export function handleRevision(
       return
     }
     const applied = ctx.applyStoryRevisions(storyTargets, action)
-    applyRevisions(editor, targets, action)
-    done(revisionCount(targets) + applied)
+    // changes inside a locked control stay pending and are not counted as handled
+    const left = applyRevisions(editor, targets, action)
+    done(revisionCount(targets) - revisionCount(left) + applied)
   }
   ctx.dirtyRef.current = true
 }

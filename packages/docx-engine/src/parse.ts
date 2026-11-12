@@ -27,7 +27,7 @@ import { emptyDocumentProperties, readDocumentProperties } from './doc-propertie
 import { computeListMarkerInfos, type ListItemRef } from './list-markers'
 import { FONT_TABLE_PART_PATH, parseFontTable, readEmbeddedFonts } from './font-table'
 import { DEFAULT_THEME_COLORS, THEME_PART_PATH, readThemeColors, readThemeFonts } from './theme'
-import { PAGE_MARK, SECTION_PAGES_MARK, TOTAL_PAGES_MARK } from './types'
+import { PAGE_MARK, SECTION_PAGES_MARK, TEXT_EFFECTS, TOTAL_PAGES_MARK } from './types'
 import { assertZipWithinLimits, loadDocxZip } from './zip-load'
 import { altChunkToDocx, hasAltChunkHtmlConverter } from './alt-chunk'
 import type {
@@ -40,6 +40,7 @@ import type {
   FieldRun,
   InkInfo,
   InlineContentControl,
+  InlineWrap,
   NoteInfo,
   NoteRun,
   NoteProps,
@@ -244,8 +245,21 @@ import {
 } from './parse-package'
 import { parseSdtBlock, sdtMeta, sdtRanges, sdtTableXml, splitSdtParts } from './parse-sdt'
 import { sdtCheckboxControl } from './checkbox-control'
+import { hfKeptRoot, hfWrapNamespaces, type HfRootName } from './hf-root'
+import {
+  inlineRawSource,
+  inlineWrapTextOf,
+  inlineWrapperShell,
+  partNamespaces,
+  isInlineWrapper,
+  sdtFollowsItsText,
+  validInlineWrap,
+  type InlineRawSource,
+  type PartNamespaces,
+} from './inline-opaque'
 import { paraCsFormat, parseStyles } from './parse-styles'
 import { ownValue, setOwn } from './own-value'
+import { removeElements } from './xml-tag'
 import {
   VML_PICT_RID_RE,
   VML_WORDART_RE,
@@ -497,6 +511,7 @@ export async function parseDocx(
     sdtGroupSeq: 0,
     ...(defaultParaStyle ? { defaultParaStyle } : {}),
     xmlSpacePreserve: partXmlSpacePreserve(documentXml, 'w:document'),
+    partNamespaces: partNamespaces(documentXml),
     ...(documentXml.includes('<v:shapetype')
       ? { vmlShapeTypes: vmlShapeTypeTable(documentXml) }
       : {}),
@@ -776,6 +791,9 @@ interface BuildContext {
   /** next block-level control chain id: one id per w:sdt instance, shared by
    *  every level and every block of a split control */
   sdtGroupSeq: number
+  /** source text of the table being read: cell paragraphs slice their wrapper
+   *  bytes from it (see extractRuns) */
+  tableRaw?: InlineRawSource
   /** settings.xml compatibilityMode (0 = legacy layout) */
   compatibilityMode?: number
   /** settings.xml compat flags the property resolver applies */
@@ -787,6 +805,9 @@ interface BuildContext {
   /** part root declares xml:space="preserve" (inherited XML scope; PDF converters
    *  rely on it instead of per-w:t attributes) */
   xmlSpacePreserve?: boolean
+  /** the namespace declarations of the part root: bytes carried on runs are
+   *  written back under it, so they may use no other prefix (absent: none) */
+  partNamespaces?: PartNamespaces
   /** document-wide v:shapetype templates (a shape may point at one declared in an earlier paragraph) */
   vmlShapeTypes?: ReadonlyMap<string, Record<string, string>>
   /** Per-document identity source for editable Zotero fields. */
@@ -2420,6 +2441,7 @@ function buildTextParagraph(
     withImages,
     zoteroField,
     { eff: eff0, rctx },
+    inlineRawSource(xml, pNode),
   )
   shadowParaFormat(ctx, 'body', pPr, styleBidiOf(ctx, styleId, listRef), direct, runs)
   const spaceOnly = runs.length > 0 && spaceOnlyRuns(runs) && !hasLayoutRunContent(pNode)
@@ -4348,6 +4370,7 @@ const RESULT_FORMAT_SKIP = new Set([
   'fldBeginXml',
   'fldDirty',
   'sdtCheckboxXml',
+  'wrap',
   'commentIds',
   'ins',
   'del',
@@ -4397,6 +4420,8 @@ function fieldResultRuns(xml: string, ctx: BuildContext, visible: string): Field
   return runs
 }
 
+const NO_NAMESPACES: PartNamespaces = new Map()
+
 function extractRuns(
   pNode: XNode,
   ctx: BuildContext,
@@ -4405,6 +4430,9 @@ function extractRuns(
   withImages = false,
   zoteroField?: ZoteroFieldParagraph,
   para?: ParaResolve,
+  /** the text pNode was parsed from: wrapper bytes are sliced from it; without
+   *  it they come from the serialized parse tree */
+  raw?: InlineRawSource,
 ): Run[] {
   const runs: Run[] = []
   let mathIndex = 0
@@ -4430,7 +4458,26 @@ function extractRuns(
   collectRangeIds(childrenOf(pNode))
   const complete = new Set([...starts].filter((id) => ends.has(id)))
   const activeComments = new Set<string>()
-  type RevCtx = { ins?: RevisionInfo; del?: RevisionInfo }
+  type RevCtx = { ins?: RevisionInfo; del?: RevisionInfo; wrap?: InlineWrap[] }
+  let wrapSeq = 0
+  /** wrappers this paragraph cannot carry: their runs are read as if they were not there */
+  const notCarried = new Set<InlineWrap>()
+  /**
+   * A wrapper is written back outside the run's tracked-change element,
+   * inside it, or inside the hyperlink (InlineWrap.inside). One that would
+   * have to sit between two of those the other way round (hyperlink >
+   * wrapper > w:ins, w:ins > wrapper > w:del) cannot be written back with its
+   * nesting, so it is not carried.
+   */
+  const enters = (container: 'revision' | 'link', chain: InlineWrap[] | undefined) => {
+    for (const wrap of chain ?? []) {
+      if (wrap.inside === 'link' || (container === 'revision' && wrap.inside === 'revision'))
+        notCarried.add(wrap)
+    }
+  }
+  /** something the editor can hold a wrapper on: text, a picture or an atom */
+  const carriesWrap = (r: Run) =>
+    r.text !== '' || r.image !== undefined || r.xeTerm !== undefined || r.math !== undefined
   // inline field state: XE folds into Run.xeTerm, REF (cross-reference) into Run.refField
   let fieldDepth = zoteroField && zoteroField.part !== 'begin' ? 1 : 0
   let fieldInstr = zoteroField?.instruction ?? ''
@@ -4472,8 +4519,10 @@ function extractRuns(
     }
     if (rev?.ins) run.ins = rev.ins
     if (rev?.del) run.del = rev.del
+    if (rev?.wrap) run.wrap = rev.wrap
     runs.push(run)
   }
+  const namespaces = ctx.partNamespaces ?? NO_NAMESPACES
   const pushZoteroCachedRuns = (part: ZoteroFieldPart, rev?: RevCtx) => {
     const cachedRuns = fieldCachedRuns.length > 0 ? fieldCachedRuns : [{ text: fieldCached || ' ' }]
     const id = zoteroField?.id ?? ctx.nextZoteroFieldId ?? 1
@@ -4803,6 +4852,7 @@ function extractRuns(
         if (attrs['w16du:dateUtc']) info.dateUtc = attrs['w16du:dateUtc']
         if (attrs['w:id']) info.id = attrs['w:id']
         const next: RevCtx = name === 'w:ins' ? { ...rev, ins: info } : { ...rev, del: info }
+        enters('revision', rev?.wrap)
         walk(childrenOf(node), link, next)
       } else if (name === 'w:moveFromRangeStart' || name === 'w:moveToRangeStart') {
         const attrs = attrsOf(node)
@@ -4829,6 +4879,7 @@ function extractRuns(
         const range = [...(ctx.openMoves ?? [])].reverse().find((m) => m.side === side)
         info.move = range?.name ?? attrs['w:name'] ?? `move${attrs['w:id'] ?? ''}`
         const next: RevCtx = side === 'from' ? { ...rev, del: info } : { ...rev, ins: info }
+        enters('revision', rev?.wrap)
         walk(childrenOf(node), link, next)
       } else if (name === 'w:r') {
         handleRun(node, link, rev)
@@ -4861,6 +4912,7 @@ function extractRuns(
             ? `#${anchor}`
             : ''
         const first = runs.length
+        enters('link', rev?.wrap)
         walk(childrenOf(node), { href, rId, ...(tooltip ? { tooltip } : {}) }, rev)
         // Word paints a bookmark link only through its character style: an
         // unstyled run (TOC entries under \h) keeps the paragraph's ink
@@ -4878,13 +4930,42 @@ function extractRuns(
         const base = runs.slice(first).find((r) => r.text.trim() !== '') ?? runs[first]
         runs.length = first
         pushRun({ ...(base ?? {}), text: control.glyph, sdtCheckboxXml: control.sdtPrXml }, rev)
-      } else if (
-        name === 'w:smartTag' ||
-        name === 'w:sdt' ||
-        name === 'w:sdtContent' ||
-        name === 'w:dir' ||
-        name === 'w:bdo'
-      ) {
+      } else if (name !== undefined && isInlineWrapper(name)) {
+        const shell = inlineWrapperShell(node, raw)
+        const first = runs.length
+        const fieldDepthAtEntry = fieldDepth
+        if (!shell) {
+          // nowhere to hold runs (no w:sdtContent, a self-closing element):
+          // read through as plain content
+          walk(childrenOf(node), link, rev)
+        } else {
+          const wrap: InlineWrap = {
+            seq: wrapSeq++,
+            open: shell.open,
+            close: shell.close,
+            ...(link
+              ? { inside: 'link' as const }
+              : rev?.ins || rev?.del
+                ? { inside: 'revision' as const }
+                : {}),
+          }
+          walk(shell.content, link, { ...rev, wrap: [...(rev?.wrap ?? []), wrap] })
+          const inside = runs.slice(first)
+          if (fieldDepthAtEntry > 0 || fieldDepth !== fieldDepthAtEntry) {
+            // inside a field, or cut by a field's edge: the field's result run is
+            // built where the field ends, so it is not this wrapper's to hold
+            notCarried.add(wrap)
+          } else if (inside.some(carriesWrap)) {
+            // bytes that cannot be written back in this part are not carried
+            if (!validInlineWrap(wrap, namespaces)) notCarried.add(wrap)
+            else if (sdtFollowsItsText(wrap.open)) wrap.text = inlineWrapTextOf(inside)
+          } else {
+            // nothing in it to hold the wrapper on (it is empty, or holds a
+            // picture in a part read without pictures): read as if it were not there
+            notCarried.add(wrap)
+          }
+        }
+      } else if (name === 'w:sdtContent') {
         walk(childrenOf(node), link, rev)
       } else if (name === 'm:oMathPara') {
         // display equation inside a cell paragraph: its m:oMath runs flag
@@ -4913,6 +4994,15 @@ function extractRuns(
     // fldChar end here; Word still shows the cached result of this paragraph
     for (const cached of fieldCachedRuns) pushRun(cached)
   }
+  if (notCarried.size > 0) {
+    for (const run of runs) {
+      if (!run.wrap) continue
+      const kept = run.wrap.filter((w) => !notCarried.has(w))
+      if (kept.length === run.wrap.length) continue
+      if (kept.length > 0) run.wrap = kept
+      else delete run.wrap
+    }
+  }
   return mergeRuns(runs)
 }
 
@@ -4925,8 +5015,6 @@ function wtText(raw: string, preserve: boolean): string {
 }
 
 const NO_MEDIA: ReadonlyMap<string, string> = new Map()
-
-const TEXT_EFFECTS = ['outline', 'emboss', 'imprint', 'shadow'] as const
 
 function buildRun(
   rNode: XNode,
@@ -5279,7 +5367,14 @@ function extractTable(xml: string, ctx: BuildContext, docOffset?: number): Table
     const parsed = deepXmlParser.parse(xml) as XNode[]
     const tbl = parsed.find((n) => nameOf(n) === 'w:tbl')
     if (!tbl) return undefined
-    const model = extractTableModel(tbl, ctx, 1, docOffset)
+    const outer = ctx.tableRaw
+    ctx.tableRaw = inlineRawSource(xml, tbl)
+    let model: TableModel | undefined
+    try {
+      model = extractTableModel(tbl, ctx, 1, docOffset)
+    } finally {
+      ctx.tableRaw = outer
+    }
     if (!model) return undefined
     const rawTrPrs: Array<string | null> = model.rows.map(() => null)
     attachRawTablePr(xml, model, rawTrPrs)
@@ -6299,7 +6394,16 @@ function extractCell(
     const mathFragments = hasDeepChild(p, MATH_HOSTS)
       ? ommlFragmentsOf(mathSourceXmlOf(serializeXNode(p)))
       : []
-    const runs = extractRuns(p, ctx, mathFragments, [], true, undefined, { eff: eff0, rctx })
+    const runs = extractRuns(
+      p,
+      ctx,
+      mathFragments,
+      [],
+      true,
+      undefined,
+      { eff: eff0, rctx },
+      ctx.tableRaw,
+    )
     const eff = eff0.indent.chars
       ? resolveParagraphProps(pPr, rctx, {
           charUnits: charUnitsOf(ctx, runs, p, pPr, cellStyleId, docOffset),
@@ -6973,7 +7077,7 @@ async function parseNoteProps(
 ): Promise<{ footnoteProps?: NoteProps; endnoteProps?: NoteProps }> {
   const settingsXml = (await zip.file('word/settings.xml')?.async('string')) ?? ''
   // a tracked w:sectPrChange embeds the previous sectPr after the live one
-  const bodyXml = documentXml.replace(/<w:sectPrChange\b[\s\S]*?<\/w:sectPrChange>/g, '')
+  const bodyXml = removeElements(documentXml, 'w:sectPrChange')
   const at = bodyXml.lastIndexOf('<w:sectPr')
   const lastSectPr = at >= 0 ? bodyXml.slice(at) : ''
   const merged = (tag: 'w:footnotePr' | 'w:endnotePr'): NoteProps | undefined => {
@@ -7492,6 +7596,7 @@ function hfParagraphs(
   }
   const root = parsed.find((n) => nameOf(n) === 'w:hdr' || nameOf(n) === 'w:ftr')
   if (!root) return []
+  const rootName = nameOf(root) as HfRootName
   // header parts have their own rels; hyperlink targets are not resolved here
   const ctx = {
     rels: new Map(),
@@ -7500,6 +7605,9 @@ function hfParagraphs(
     themeFonts,
     styles,
     xmlSpacePreserve: attrsOf(root)['xml:space'] === 'preserve',
+    // a wrapper is carried when the root a rewrite of the part is written
+    // under declares its prefixes
+    partNamespaces: hfWrapNamespaces(partXml, hfKeptRoot(rootName, partXml) !== null),
     ...(resolver ? { resolver } : {}),
   } as unknown as BuildContext
   const out: HfParagraph[] = []

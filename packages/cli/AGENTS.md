@@ -84,7 +84,7 @@
 - 다이어그램 시험: 앱 없이 되는 것과 앱이 없을 때(`tests/diagram.test.ts`, `GENOFFICE_APP_BIN`을 없는 경로로), 앱이 할 일과 그 답의 처리(`tests/diagram-app.test.ts`, `runDiagramApp`을 `vi.mock`으로 바꾼다).
 - ODT 시험(`tests/odt.test.ts`, `tests/odt-convert.test.ts`)은 `packages/odt-engine/tests/helpers`의 합성 한컴 조각으로 파일을 만든다(`tests/odt-fixtures.ts`). 실제 파일은 넣지 않는다. 앱 경유 변환은 `exportViaApp`을 `vi.mock`으로 바꾼다.
 - 워드 → 한글 시험(`tests/convert-docx-hwp.test.ts`)은 실제 엔진으로 `packages/docx2hwp/tests/fixtures/notice.docx`와 `apps/docs/tests/pagination-corpus/docx/fixture-kitchen-sink.docx`를 두 형식으로 바꾸고 결과를 `@rhwp/core`로 다시 열어 문단 글을 본다. 엔진이 만들어 줄 수 없는 두 답(WebAssembly 메모리 실패, `hwp-readback`)은 `tests/convert-docx-hwp-errors.test.ts`가 패키지를 `vi.mock`으로 바꿔 본다.
-- 저장소 검사 도구(`tools/check-no-genspark.mjs`, `tools/check-english-comments.mjs`)의 테스트도 이 폴더의 `tests/`에 있다.
+- 저장소 검사 도구(`tools/check-english-comments.mjs`)의 테스트도 이 폴더의 `tests/`에 있다.
 - Windows에서는 원본에서 물려받은 테스트 여럿이 변경과 무관하게 실패한다. 이 PC에서 실패하는 파일은 `app-export`, `cli`, `cloud`, `control`, `errors`, `install`, `mcp-http`, `mcp-install`, `mcp`, `suggest`(모두 `tests/*.test.ts`)이다. 파일 권한 비트, POSIX 경로와 symlink, 준비 훅의 시간 제한 같은 전제가 Windows에서 맞지 않아서다. 이 파일들에서 새 실패를 봤다면 손대지 않은 체크아웃의 결과와 비교한다. CI는 Linux에서 돈다.
 - `cli`·`errors` 테스트의 일부는 xlsx 사이드카 실행 파일이 필요하다. `XLSX_SIDECAR_PATH`로 빌드된 사이드카를 가리킬 수 있다.
 - 실제 앱을 띄우는 변환과 실제 에이전트 설정 파일에 대한 등록은 자동 테스트로 돌리지 않는다. 테스트는 `GENOFFICE_HOME`·`GENOFFICE_USER_DATA`로 임시 폴더를 가리키게 해서 실제 홈 폴더를 건드리지 않는다.

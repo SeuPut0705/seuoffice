@@ -72,6 +72,10 @@ const REFUSAL_TEXT: Record<OdtRefusal, string> = {
     'The edit was refused: it would change a protected table cell (locked in Hancom Office). Leave protected cells unchanged.',
   lockedObject:
     'The edit was refused: locked object placeholders can only be deleted whole, never resized, replaced or otherwise changed.',
+  // a docx rule (editor/inline-wrap.ts): recorded on the same channel so the
+  // tool call reports it
+  lockedControl:
+    'The edit was refused: it would change the content of a content control locked against editing (w:lock contentLocked). Leave that text unchanged, or delete the control whole.',
 }
 
 /** forget a refusal left over from before this tool call */

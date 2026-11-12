@@ -11,6 +11,12 @@ export {
 export { decodeEntities } from './parse-xml-text'
 export { sdtCheckboxGlyphs, sdtCheckboxIsChecked } from './checkbox-control'
 export {
+  inlineWrapContentLocked,
+  runCopiedElsewhere,
+  sameInlineWrap,
+  sameInlineWrapChain,
+} from './inline-opaque'
+export {
   buildContentControlXml,
   isContentControlLock,
   nextContentControlId,
@@ -239,6 +245,7 @@ export {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
+export { DEFAULT_PICTURE_PX, usableNumber, usablePictureSize } from './xml-number'
 export { bibliographyLine, citationText, parseSourcesXml } from './sources'
 export { parseZoteroDocumentDataXml, patchZoteroDocumentDataXml } from './zotero-doc-props'
 export { readThemeColors, readThemeFonts } from './theme'
@@ -279,6 +286,7 @@ export {
   cleanMoveRangeMarkers,
   countTrackedChangesXml,
   readPropChangeXml,
+  revisionDateMs,
   resolvePropChangeXml,
   type PropChangeRecord,
   type RevisionResolution,

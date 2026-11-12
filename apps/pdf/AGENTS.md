@@ -15,7 +15,7 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 - 문서 번역 화면(`src/renderer/translate/`): 언어·범위·형식 고르기와 시작 전 확인(`TranslateDialog.tsx`), 작업·멈춘 뒤의 선택·결과 파일 쓰기(`DocumentTranslation.tsx`), 결과 보고(`TranslateReport.tsx`).
 - 문서 작업 공용 부품(`src/renderer/doc-jobs/`): 탭의 작업 세션(`job-session.ts`), 쓸 제공자 정하기와 고정(`route.ts`), `ai:stream`으로 가는 모델 호출 하나(`model-call.ts`), 셸의 보관소 채널을 엔진의 보관소로 감싼 것(`ipc-store.ts`), 진행 줄(`JobProgressStrip.tsx`), 이어하기 제안(`ResumeOffer.tsx`), 작업에 고른 페이지 기억(`job-pages.ts`, 페이지 번호만).
 - AI 창에서 작업을 여는 도구 `start_ai_page_reading`, `start_document_translation`(`tools.ts`). 창만 열고 바로 끝난다.
-- PDF 읽기 도우미(결정 0043, 계획 `docs/plans/pdf-reading-assist.md`). 본체는 기능마다 자기 폴더에 있고 `App.tsx`에는 연결만 있다.
+- PDF 읽기 도우미(결정 0043, 계획 `docs/archive/ieum/plans/pdf-reading-assist.md`). 본체는 기능마다 자기 폴더에 있고 `App.tsx`에는 연결만 있다.
   - 선택 막대 단축키와 구절 카드(`src/renderer/reading/`): 단축키 판정(`shortcuts.ts`, 순수 함수), 앞뒤 글 뽑기(`passage-text.ts`), 지시문(`passage-prompt.ts`), 카드 보관·같은 구절 찾기(`passage-cards.ts`, `passage-controller.ts`, `usePassageCards.ts`), 카드와 점선(`PassageCard.tsx`, `PassageUnderlines.tsx`, `PassageReading.tsx`), 저장 성공 때 확정하는 장치(`save-confirmations.ts`, 카드와 AI 핵심 표시가 같이 쓴다).
   - 주석 모아 보기(`src/renderer/annot-panel/`): 목록 만들기(`items.ts`, `scan.ts`), 표시 아래의 글(`text-under.ts`), 거르기(`filter.ts`), Markdown 내보내기 글(`export.ts`), 단독 실행 판정(`host-capability.ts`), 패널과 깜빡임(`AnnotPanel.tsx`, `AnnotPanelHost.tsx`, `AnnotFlash.tsx`).
   - AI 창의 추천 질문(`ai/AiPanel.tsx`), 문단까지 가는 인용(`ai/pdf-nav.ts`의 `?q=`, 찾기 `ai/quote-find.ts`, 강조 `ai/QuoteFlash.tsx`), 문서 개요(`ai/insights/`: 나눔 계획 `insights-text.ts`, 지시문과 답 해석 `insights-prompt.ts`, 보관·작업 `insights-controller.ts`, 칸 `InsightsCard.tsx`).
