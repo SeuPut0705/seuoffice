@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { ProjectApi, ProjectFolderApi } from '@genoffice/project-store'
+import type { ProjectApi, ProjectFolderApi } from '@seuoffice/project-store'
 import type { EpubApi } from '../shared/ipc'
 
 declare global {

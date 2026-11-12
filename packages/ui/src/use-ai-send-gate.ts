@@ -4,7 +4,7 @@ import type {
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import {
   aiConnectPromptChoice,
   aiHeldRequestStep,

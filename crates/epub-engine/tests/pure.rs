@@ -16,7 +16,8 @@ use epub_engine::notation::{
 };
 use epub_engine::pdf_structure::{
     InlineRun, TranslationMode, default_target_language, easy_style_lines,
-    guess_language_from_text, normalize_lang, sha256_hex, sha256_hex_text, translation_style_lines,
+    guess_language_from_text, normalize_lang, sha256_hex, sha256_hex_text, translation_language_of,
+    translation_style_lines,
 };
 use epub_engine::ranges::RangeReplacement;
 use epub_engine::translate::keys::{
@@ -1231,15 +1232,25 @@ fn languages_and_hashes_follow_the_typescript() {
         default_target_language("xx", &u(""), TranslationMode::Translate),
         "en"
     );
-    assert_eq!(normalize_lang(Some("zh-HK")), "zh-TW");
-    assert_eq!(normalize_lang(Some("ZH_hant")), "zh-TW");
-    assert_eq!(normalize_lang(Some("ja-JP")), "ja");
-    assert_eq!(normalize_lang(Some("in")), "id");
-    assert_eq!(normalize_lang(Some("iw-IL")), "he");
-    assert_eq!(normalize_lang(Some("pt-BR")), "pt");
-    assert_eq!(normalize_lang(Some("xx")), "en");
+    assert_eq!(translation_language_of(Some("zh-HK")), "zh-TW");
+    assert_eq!(translation_language_of(Some("ZH_hant")), "zh-TW");
+    assert_eq!(translation_language_of(Some("ja-JP")), "ja");
+    assert_eq!(translation_language_of(Some("in")), "id");
+    assert_eq!(translation_language_of(Some("iw-IL")), "he");
+    assert_eq!(translation_language_of(Some("pt-BR")), "pt");
+    assert_eq!(translation_language_of(Some("xx")), "en");
+    assert_eq!(translation_language_of(Some("")), "en");
+    assert_eq!(translation_language_of(Some(" ko ")), "ko");
+    assert_eq!(translation_language_of(None), "en");
+    assert_eq!(normalize_lang(Some("ko")), "ko");
+    assert_eq!(normalize_lang(Some("KO_kr")), "ko");
+    assert_eq!(normalize_lang(Some(" ko-KR ")), "ko");
+    assert_eq!(normalize_lang(Some("ko-")), "ko");
+    assert_eq!(normalize_lang(Some("kor")), "en");
+    assert_eq!(normalize_lang(Some("zh-TW")), "en");
+    assert_eq!(normalize_lang(Some("ja-JP")), "en");
+    assert_eq!(normalize_lang(Some("in")), "en");
     assert_eq!(normalize_lang(Some("")), "en");
-    assert_eq!(normalize_lang(Some(" ko ")), "ko");
     assert_eq!(normalize_lang(None), "en");
     assert_eq!(
         epub_book_language(

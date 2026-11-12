@@ -1,25 +1,25 @@
 /**
  * Preload of the EPUB editor: exposes `window.epubApi` (see ../shared/ipc).
  */
-import type { AiPanelPrefs } from '@genoffice/ui'
+import type { AiPanelPrefs } from '@seuoffice/ui'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import { driveAiBridge } from '@genoffice/electron-utils/drive-ai-bridge'
-import { mcpToolsBridge } from '@genoffice/electron-utils/mcp-tools-bridge'
-import { outboundBridge } from '@genoffice/electron-utils/outbound-bridge'
-import { userSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
+import { driveAiBridge } from '@seuoffice/electron-utils/drive-ai-bridge'
+import { mcpToolsBridge } from '@seuoffice/electron-utils/mcp-tools-bridge'
+import { outboundBridge } from '@seuoffice/electron-utils/outbound-bridge'
+import { userSkillsBridge } from '@seuoffice/electron-utils/user-skills-bridge'
 import {
   PROJECT_FOLDER_BRIDGE_KEY,
   projectFolderBridge,
-} from '@genoffice/electron-utils/project-folder-bridge'
-import { USER_SKILLS_BRIDGE_KEY } from '@genoffice/electron-utils/user-skills-channels'
-import { docAttachBridge } from '@genoffice/electron-utils/doc-attach-bridge'
-import { DOC_ATTACH_BRIDGE_KEY } from '@genoffice/electron-utils/doc-attach-channels'
-import { SPLIT_PANE_BRIDGE_KEY, splitPaneBridge } from '@genoffice/electron-utils/split-pane-bridge'
-import type { Lang } from '@genoffice/i18n'
-import type { AiStreamChunk } from '@genoffice/ai-provider'
-import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
-import type { ProjectApi } from '@genoffice/project-store'
-import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
+} from '@seuoffice/electron-utils/project-folder-bridge'
+import { USER_SKILLS_BRIDGE_KEY } from '@seuoffice/electron-utils/user-skills-channels'
+import { docAttachBridge } from '@seuoffice/electron-utils/doc-attach-bridge'
+import { DOC_ATTACH_BRIDGE_KEY } from '@seuoffice/electron-utils/doc-attach-channels'
+import { SPLIT_PANE_BRIDGE_KEY, splitPaneBridge } from '@seuoffice/electron-utils/split-pane-bridge'
+import type { Lang } from '@seuoffice/i18n'
+import type { AiStreamChunk } from '@seuoffice/ai-provider'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@seuoffice/ai-provider/browser'
+import type { ProjectApi } from '@seuoffice/project-store'
+import { installDropOpenBridge } from '@seuoffice/electron-utils/drop-open'
 import { AI_CHANNELS, APP_CHANNELS, EPUB_CHANNELS } from '../shared/ipc'
 import type {
   AutoSaveDefault,

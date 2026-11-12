@@ -7,7 +7,7 @@ import {
   type ThemeFonts,
   type Watermark,
   type WatermarkSpec,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { WatermarkDialog, type WatermarkPageBox } from './WatermarkDialog'
 import { useI18n, type StringKey } from '../i18n/locale'
 import { odtOffProps, useOdtSession } from '../odt-gate'

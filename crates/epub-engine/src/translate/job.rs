@@ -7,7 +7,7 @@
 //! the shape of what planning is given (`planInput`). `planEpubTranslationJob`,
 //! `estimateEpubTranslationJob` and `startEpubTranslationJob` only hand those
 //! to `planTranslationJob`, `estimateTranslationJob` and `startTranslationJob`
-//! of `@genoffice/pdf-structure`, the job engine with its store and its
+//! of `@seuoffice/pdf-structure`, the job engine with its store and its
 //! document lock, which is not ported: a host that has the engine calls it
 //! with `plan_input` and `epub_translation_job_parts`.
 

@@ -1,7 +1,7 @@
-import type { AiPanelPrefs } from '@genoffice/ui'
-import type { Lang } from '@genoffice/i18n'
-import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
-import type { AiToolCapabilities } from '@genoffice/ai-search'
+import type { AiPanelPrefs } from '@seuoffice/ui'
+import type { Lang } from '@seuoffice/i18n'
+import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@seuoffice/ai-provider'
+import type { AiToolCapabilities } from '@seuoffice/ai-search'
 import type { ExportImageMime } from './export-image-mime'
 import type { SubscriptionApi } from './subscription-api'
 
@@ -56,7 +56,7 @@ export const MARKDOWN_CHANNELS = {
   getMarkdownTheme: 'markdown:get-theme',
   setMarkdownTheme: 'markdown:set-theme',
   uploadImage: 'markdown:upload-image',
-  viewImage: 'genoffice:view-image',
+  viewImage: 'seuoffice:view-image',
   exportRequest: 'markdown:export-request',
   exportDocx: 'markdown:export-docx',
   exportOdt: 'markdown:export-odt',

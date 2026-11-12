@@ -54,9 +54,9 @@ import {
  * GUID identifying the extension's schema, so it must be stable: a deck that
  * round-trips through this engine has to land on the same value.
  */
-export { REDACT_EL, REDACT_NS, REDACT_PREFIX } from '@genoffice/agent-core/redact-range'
+export { REDACT_EL, REDACT_NS_WRITTEN, REDACT_PREFIX } from '@seuoffice/agent-core/redact-range'
 
-import { REDACT_EL, REDACT_NS, REDACT_PREFIX } from '@genoffice/agent-core/redact-range'
+import { REDACT_EL, REDACT_NS_WRITTEN, REDACT_PREFIX } from '@seuoffice/agent-core/redact-range'
 
 export const REDACT_EXT_URI = '{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'
 
@@ -73,7 +73,7 @@ export function redactExtXml(label: string): string {
   // prefix's namespace, and this part is DrawingML: a `w:label` here would be a
   // second unbound prefix, the same parse error as the element's own.
   return (
-    `<a:ext uri="${REDACT_EXT_URI}" xmlns:${REDACT_PREFIX}="${REDACT_NS}">` +
+    `<a:ext uri="${REDACT_EXT_URI}" xmlns:${REDACT_PREFIX}="${REDACT_NS_WRITTEN}">` +
     `<${REDACT_EL} label="${escapeXmlAttr(label)}"/></a:ext>`
   )
 }

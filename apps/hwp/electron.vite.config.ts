@@ -4,12 +4,12 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { rhwpPatches } from './scripts/rhwp-patches.mjs'
 
 export default defineConfig({
-  // @genoffice/i18n and @genoffice/electron-utils ship as TS source — must be bundled
+  // @seuoffice/i18n and @seuoffice/electron-utils ship as TS source — must be bundled
   main: {
-    plugins: [externalizeDepsPlugin({ exclude: ['@genoffice/i18n', '@genoffice/electron-utils'] })],
+    plugins: [externalizeDepsPlugin({ exclude: ['@seuoffice/i18n', '@seuoffice/electron-utils'] })],
   },
   preload: {
-    plugins: [externalizeDepsPlugin({ exclude: ['@genoffice/i18n', '@genoffice/electron-utils'] })],
+    plugins: [externalizeDepsPlugin({ exclude: ['@seuoffice/i18n', '@seuoffice/electron-utils'] })],
   },
   renderer: {
     plugins: [react(), rhwpPatches('sdk-scheme')],

@@ -5,7 +5,7 @@
  * skill they cannot edit. Every list that filters by editor reads the scope
  * through `skillEditorScope` and `skillUsedIn` here.
  *
- * A file with no imports, exported as `@genoffice/agent-core/skill-editors`,
+ * A file with no imports, exported as `@seuoffice/agent-core/skill-editors`,
  * for the same reason as `user-skill-names.ts`: an editor's main process that
  * leaves the packages unbundled loads this source as it is.
  */

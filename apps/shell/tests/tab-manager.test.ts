@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('node:fs', () => {
   const realpathSync = ((path?: string) => {
@@ -66,6 +66,11 @@ function makeFakeView(): FakeView {
 
 vi.mock('electron', () => ({
   BrowserWindow: class {},
+  // the views the real renderer disposal weighs a closed view's process against
+  webContents: {
+    getAllWebContents: () =>
+      (globalThis as { __openWebContents?: unknown[] }).__openWebContents ?? [],
+  },
   // the manual's view is constructed inline in tab-manager (createHelpView),
   // unlike the editor views which arrive through mocked module factories, so
   // the electron mock itself must construct one. Self-contained: no outside
@@ -596,8 +601,8 @@ describe('spare sheets view', () => {
     }
   })
 
-  it('stays off under GENOFFICE_NO_SPARE_VIEW', () => {
-    vi.stubEnv('GENOFFICE_NO_SPARE_VIEW', '1')
+  it('stays off under SEUOFFICE_NO_SPARE_VIEW', () => {
+    vi.stubEnv('SEUOFFICE_NO_SPARE_VIEW', '1')
     vi.useFakeTimers()
     try {
       manager.openSheetsTab()
@@ -809,7 +814,7 @@ describe('closing tabs', () => {
     expect(view.webContents.close).toHaveBeenCalledTimes(1)
   })
 
-  it('detaches docs views without destroying the webContents (freeze workaround)', async () => {
+  it('detaches docs views and hands the webContents to the renderer disposal (freeze workaround)', async () => {
     const id = manager.openDocsTab()
     const view = lastCreatedView(createDocsView)
     await manager.closeTab(id)
@@ -1439,5 +1444,71 @@ describe('detach / attach (Open in New Window, tear-off, dock)', () => {
     expect(teardownDocsRenderer).toHaveBeenCalledWith(record.view.webContents)
     expect(record.view.webContents.close).not.toHaveBeenCalled()
     expect(manager.list()).toHaveLength(1)
+  })
+})
+
+describe('closed docs tabs leave nothing behind', () => {
+  /** a docs view whose webContents lives and dies like Electron's: a renderer
+   *  process that ends when told to, and a destruction that removes it */
+  function makeProcessBackedView(pid: number) {
+    const view = makeFakeView()
+    let processId = pid
+    let destroyed = false
+    const gone: Array<() => void> = []
+    const order: string[] = []
+    Object.assign(view.webContents, {
+      order,
+      isDestroyed: vi.fn(() => destroyed),
+      getOSProcessId: vi.fn(() => processId),
+      once: vi.fn((event: string, listener: () => void) => {
+        if (event === 'render-process-gone') gone.push(listener)
+      }),
+      forcefullyCrashRenderer: vi.fn(() => {
+        order.push('process ended')
+        processId = 0
+        setImmediate(() => {
+          for (const listener of gone.splice(0)) listener()
+        })
+      }),
+      close: vi.fn(() => {
+        order.push('destroyed')
+        destroyed = true
+      }),
+    })
+    return view as FakeView & { webContents: { order: string[] } }
+  }
+
+  afterEach(() => {
+    createDocsView.mockImplementation(() => makeFakeView())
+    releaseClosedRenderer.mockImplementation(() => true)
+    delete (globalThis as { __openWebContents?: unknown[] }).__openWebContents
+  })
+
+  it('eight documents opened and closed: every view is destroyed, after its renderer process ended', async () => {
+    const disposal = await vi.importActual<typeof import('../src/main/renderer-disposal')>(
+      '../src/main/renderer-disposal',
+    )
+    releaseClosedRenderer.mockImplementation(disposal.releaseClosedRenderer as never)
+    const views: Array<ReturnType<typeof makeProcessBackedView>> = []
+    createDocsView.mockImplementation(() => {
+      const view = makeProcessBackedView(7000 + views.length)
+      views.push(view)
+      return view
+    })
+    ;(globalThis as { __openWebContents?: unknown[] }).__openWebContents = views.map(
+      (v) => v.webContents,
+    )
+    const ids = Array.from({ length: 8 }, () => manager.openDocsTab())
+    ;(globalThis as { __openWebContents?: unknown[] }).__openWebContents = views.map(
+      (v) => v.webContents,
+    )
+    for (const id of ids) await manager.closeTab(id)
+    // the renderers end, Electron reports them gone, the deferred destruction runs
+    await new Promise((resolve) => setImmediate(resolve))
+    await new Promise((resolve) => setImmediate(resolve))
+    expect(manager.list()).toHaveLength(1)
+    expect(views).toHaveLength(8)
+    expect(views.map((v) => v.webContents.isDestroyed())).toEqual(Array(8).fill(true))
+    for (const view of views) expect(view.webContents.order).toEqual(['process ended', 'destroyed'])
   })
 })

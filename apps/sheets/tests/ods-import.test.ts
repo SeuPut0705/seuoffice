@@ -176,7 +176,7 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
 }))
 
 // the archive writer is stubbed: it lands the bytes it read plus a mark
-vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
+vi.mock('@seuoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   saveWorkbookViaSidecar: async (request: { sourcePath: string; targetPath: string }) => {
     const bytes = await readFile(request.sourcePath)
@@ -185,8 +185,8 @@ vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal
   },
 }))
 
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
@@ -274,8 +274,8 @@ async function saveWorkbook(
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-sheets-ods-'))
-  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'genoffice-sheets-ods-user-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-ods-'))
+  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-ods-user-'))
   convertCalls.length = 0
   formulasDropped.value = 2
   saveDialogs.length = 0

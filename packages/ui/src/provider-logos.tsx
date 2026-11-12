@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { AiProviderId } from '@genoffice/ai-provider/browser'
+import type { AiProviderId } from '@seuoffice/ai-provider/browser'
 
 // ── AI provider marks (settings provider picker, composer model chip) ──
 // No vendor logos: a provider is named in text beside its mark, and the marks

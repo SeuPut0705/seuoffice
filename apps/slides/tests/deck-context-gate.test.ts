@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { ContextWarning } from '@genoffice/agent-core'
+import type { ContextWarning } from '@seuoffice/agent-core'
 import { createDeckContextGate } from '../src/renderer/ai/deck-context-gate'
 
 /**

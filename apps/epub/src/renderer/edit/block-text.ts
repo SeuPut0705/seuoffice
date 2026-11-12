@@ -11,8 +11,8 @@
  * are, with their placeholders; an element whose text was all matched stays
  * as an empty element, so an `id` on it is kept.
  */
-import type { ChapterBlock, XmlElement, XmlNode } from '@genoffice/epub-engine'
-import { findInText } from '@genoffice/ui'
+import type { ChapterBlock, XmlElement, XmlNode } from '@seuoffice/epub-engine'
+import { findInText } from '@seuoffice/ui'
 import { normalizeQuery } from '../reader/book-search'
 import { OPAQUE_ELEMENTS, escapeNotationText } from './engine'
 

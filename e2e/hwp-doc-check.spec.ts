@@ -1,6 +1,6 @@
 /**
  * The document check over a real government form: the app's plugin reads the document,
- * `@genoffice/doc-rules` judges it, and the panel lists what it found. Nothing here calls
+ * `@seuoffice/doc-rules` judges it, and the panel lists what it found. Nothing here calls
  * a model, so the check must work on a PC with no AI connection at all.
  */
 import { test, expect } from '@playwright/test'

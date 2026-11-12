@@ -19,8 +19,8 @@ import {
 // one: the runner gives each test process a throwaway home (tools/test-home.ts)
 // and tests/setup-tmpdir.ts keeps this suite's temp dir beside that home
 // instead of around it.
-const outside = mkdtempSync(join(homedir(), '.genoffice-aisearch-outside-'))
-const inside = mkdtempSync(join(tmpdir(), 'genoffice-aisearch-inside-'))
+const outside = mkdtempSync(join(homedir(), '.seuoffice-aisearch-outside-'))
+const inside = mkdtempSync(join(tmpdir(), 'seuoffice-aisearch-inside-'))
 const secret = join(outside, 'private.png')
 
 afterAll(() => {
@@ -142,7 +142,7 @@ describe('loadMediaReference with caller-supplied roots', () => {
   })
 
   it('matches whole path segments, not string prefixes', () => {
-    const root = join(tmpdir(), 'genoffice-aisearch-root')
+    const root = join(tmpdir(), 'seuoffice-aisearch-root')
     const sibling = `${root}-evil`
     mkdirSync(root, { recursive: true })
     mkdirSync(sibling, { recursive: true })

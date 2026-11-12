@@ -17,7 +17,7 @@ const store = vi.hoisted(() => ({
   openPlan: vi.fn(() => ({ action: 'open' })),
 }))
 
-vi.mock('@genoffice/electron-utils', () => ({
+vi.mock('@seuoffice/electron-utils', () => ({
   createRecoveryStore: () => store,
   isUntitledIdentity: (identity: object) => 'untitledId' in identity,
   recoveryEditor: () => null,

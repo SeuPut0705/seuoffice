@@ -5,7 +5,7 @@
  * and what a click does. Pure; no PDF.js, no store, no AI.
  */
 import { describe, expect, it, vi } from 'vitest'
-import { createI18n } from '@genoffice/i18n'
+import { createI18n } from '@seuoffice/i18n'
 import type { PassageCard } from '../../../packages/pdf-structure/src/store/reading'
 import { strings } from '../src/renderer/i18n/strings'
 import type { TFunc } from '../src/renderer/i18n/locale'

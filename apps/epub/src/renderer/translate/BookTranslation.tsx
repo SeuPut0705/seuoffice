@@ -45,16 +45,16 @@ import {
   useSyncExternalStore,
 } from 'react'
 import type { ReactElement } from 'react'
-import type { AiProviderId, AiRunErrorKind } from '@genoffice/ai-provider/browser'
+import type { AiProviderId, AiRunErrorKind } from '@seuoffice/ai-provider/browser'
 import type {
   EpubTranslationOutputKind,
   EpubTranslationReport,
   EpubTranslationUnit,
-} from '@genoffice/epub-engine'
-import type { Lang } from '@genoffice/i18n'
-import type { TranslationJobItem, TranslationMode, TranslationSend } from '@genoffice/pdf-structure'
-import type { JobStatus } from '@genoffice/pdf-structure/store'
-import { aiRunErrorText } from '@genoffice/ui'
+} from '@seuoffice/epub-engine'
+import type { Lang } from '@seuoffice/i18n'
+import type { TranslationJobItem, TranslationMode, TranslationSend } from '@seuoffice/pdf-structure'
+import type { JobStatus } from '@seuoffice/pdf-structure/store'
+import { aiRunErrorText } from '@seuoffice/ui'
 import type {
   EpubAiApi,
   EpubBookSummary,

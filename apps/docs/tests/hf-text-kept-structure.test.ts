@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { parseDocx, saveDocx, type HeaderFooter } from '@genoffice/docx-engine'
+import { parseDocx, saveDocx, type HeaderFooter } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import {
   T,

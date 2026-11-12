@@ -7,7 +7,7 @@
  * the map.
  */
 import { useEffect, useRef, useState } from 'react'
-import { useDismissablePopover } from '@genoffice/ui'
+import { useDismissablePopover } from '@seuoffice/ui'
 import { useI18n } from '../i18n/locale'
 import type { ExportFormat } from '../../shared/ipc'
 

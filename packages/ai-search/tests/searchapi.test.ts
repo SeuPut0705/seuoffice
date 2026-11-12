@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defaultAiSettings } from '@genoffice/ai-provider'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { defaultAiSettings } from '@seuoffice/ai-provider'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { imageSearch, webSearch } from '../src/index'
 import { searchOptionsFromSettings, testSearchProvider } from '../src/search-tools'
 
@@ -11,7 +11,7 @@ const webResponse = () =>
     organic_results: [
       {
         position: 1,
-        title: 'GenOffice',
+        title: 'SeuOffice',
         link: 'https://office.example.com/',
         snippet: 'A free, open-source office suite.',
       },
@@ -55,7 +55,7 @@ describe('SearchApi web search', () => {
   it('sends a GET with a Bearer token and maps organic_results[]', async () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => webResponse())
     vi.stubGlobal('fetch', fetch)
-    const r = await webSearch('genoffice', 5, {
+    const r = await webSearch('seuoffice', 5, {
       searchapiKey: 'user-key',
       serperKey: 'serper-key',
       prefer: 'searchapi',
@@ -63,7 +63,7 @@ describe('SearchApi web search', () => {
     expect(r).toEqual({
       results: [
         {
-          title: 'GenOffice',
+          title: 'SeuOffice',
           url: 'https://office.example.com/',
           snippet: 'A free, open-source office suite.',
         },
@@ -76,7 +76,7 @@ describe('SearchApi web search', () => {
     const parsed = new URL(String(url))
     expect(`${parsed.origin}${parsed.pathname}`).toBe(endpoint)
     expect(parsed.searchParams.get('engine')).toBe('google')
-    expect(parsed.searchParams.get('q')).toBe('genoffice')
+    expect(parsed.searchParams.get('q')).toBe('seuoffice')
     // Google ignores a result count, so none is sent; the cap is applied locally
     expect(parsed.searchParams.get('num')).toBeNull()
     expect(parsed.searchParams.get('api_key')).toBeNull()
@@ -93,7 +93,7 @@ describe('SearchApi web search', () => {
       'fetch',
       vi.fn<typeof globalThis.fetch>(async () => webResponse()),
     )
-    const r = await webSearch('genoffice', 1)
+    const r = await webSearch('seuoffice', 1)
     expect(r.method).toBe('searchapi')
     expect(r.results.map((x) => x.url)).toEqual(['https://office.example.com/'])
   })
@@ -111,7 +111,7 @@ describe('SearchApi web search', () => {
         return fallback()
       }),
     )
-    const r = await webSearch('genoffice', 3, {
+    const r = await webSearch('seuoffice', 3, {
       searchapiKey: 'bad-key',
       prefer: 'searchapi',
     })
@@ -134,7 +134,7 @@ describe('SearchApi web search', () => {
         return fallback()
       }),
     )
-    const r = await webSearch('genoffice', 3, {
+    const r = await webSearch('seuoffice', 3, {
       searchapiKey: 'k',
       serperKey: 'serper-key',
       prefer: 'searchapi',

@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { MathfieldElement } from 'mathlive'
 import 'mathlive/fonts.css'
-import { useModalKeys } from '@genoffice/ui'
+import { useModalKeys } from '@seuoffice/ui'
 import { useI18n } from '../../i18n/locale'
 import { MATH_TEMPLATES, MAX_LATEX_LENGTH, renderMath, type MathValue } from './model'
 import './math.css'

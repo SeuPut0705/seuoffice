@@ -1,5 +1,5 @@
-import { parseDocx } from '@genoffice/docx-engine'
-import { odtToDocx } from '@genoffice/odt-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
+import { odtToDocx } from '@seuoffice/odt-engine'
 import type { ParseWorkerRequest, ParseWorkerResponse } from './parse-off-thread'
 
 /** Worker entry: parse a .docx (or convert an .odt and parse its bridge docx) off the UI thread and hand the model back. */

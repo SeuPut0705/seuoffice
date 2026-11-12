@@ -3,7 +3,7 @@
  * page (`convertMermaid` in the bridge), and the result goes into the diagram
  * as one of the steps of the call's single undo step.
  *
- * The planner of `@genoffice/drawio-model` asks for the cells a drawing adds
+ * The planner of `@seuoffice/drawio-model` asks for the cells a drawing adds
  * while it plans the call, so the ops after it see them. Those cells are made
  * here from draw.io's XML, placed the way draw.io will place them (the
  * drawing's top-left corner at the spot), under ids the plan alone uses. What
@@ -18,7 +18,7 @@ import {
   type DiagramPrimitive,
   type DiagramState,
   type MermaidRequest,
-} from '@genoffice/drawio-model'
+} from '@seuoffice/drawio-model'
 import type { DrawioFrame } from '../drawio/frame-client'
 
 export type MermaidConversion = { ok: true; xml: string } | { ok: false; error: string }

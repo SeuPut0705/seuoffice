@@ -10,7 +10,6 @@ import {
   type OpCatalog,
   type OpEntry,
 } from '../op-catalog'
-import { branded } from '../names'
 import { CliError, EXIT, type CommandResult } from '../result'
 import { didYouMean } from '../suggest'
 
@@ -47,16 +46,16 @@ export const guideCommand: CommandDef = {
         'guides available for: slides, docs, sheets, hwp, diagram',
         {
           usage:
-            'ieumoffice guide slides | ieumoffice guide docs | ieumoffice guide sheets | ieumoffice guide hwp | ieumoffice guide diagram',
+            'seuoffice guide slides | seuoffice guide docs | seuoffice guide sheets | seuoffice guide hwp | seuoffice guide diagram',
         },
         {
           reason: domain === undefined ? 'missing_argument' : 'invalid_argument',
-          suggestion: 'run `ieumoffice guide slides|docs|sheets|hwp|diagram`',
+          suggestion: 'run `seuoffice guide slides|docs|sheets|hwp|diagram`',
         },
       )
     }
     if (domain === 'slides' && (topic === 'design' || topic === 'spec')) {
-      const { SLIDES_GUIDES } = await import('@genoffice/pipelines/slides')
+      const { SLIDES_GUIDES } = await import('@seuoffice/pipelines/slides')
       return { summary: SLIDES_GUIDES[topic].content }
     }
     if (domain === 'slides' && topic === 'templates') {
@@ -86,7 +85,7 @@ export const guideCommand: CommandDef = {
           reason: 'invalid_argument',
           suggestion: guess
             ? `did you mean ${guess}?`
-            : `run \`ieumoffice guide ${domain}\` for the groups and ops`,
+            : `run \`seuoffice guide ${domain}\` for the groups and ops`,
         },
       )
     }
@@ -128,7 +127,7 @@ async function load(
     const { catalog, htmlRules } = await docsCatalog()
     return { catalog, text: (group) => docsGuideText(catalog, htmlRules, group) }
   }
-  const docs = await import('@genoffice/pptx-ops/op-docs')
+  const docs = await import('@seuoffice/pptx-ops/op-docs')
   const catalog = slidesCatalog(docs)
   return {
     catalog,
@@ -136,13 +135,13 @@ async function load(
       if (index) return docs.opSignatureIndex()
       if (group) return docs.opGuide(group)!
       return [
-        'Op groups (ieumoffice guide slides <group> prints one; ieumoffice guide slides <op> prints one op):',
+        'Op groups (seuoffice guide slides <group> prints one; seuoffice guide slides <op> prints one op):',
         docs.opGuideCatalog(),
         '',
-        'Building a new deck: `ieumoffice guide slides design` (the staged workflow: style sheet, outline, one page file at a time, build, QC) and `ieumoffice guide slides spec` (the outline and page spec JSON for `ieumoffice slides check` and `ieumoffice create --type pptx --spec`).',
+        'Building a new deck: `seuoffice guide slides design` (the staged workflow: style sheet, outline, one page file at a time, build, QC) and `seuoffice guide slides spec` (the outline and page spec JSON for `seuoffice slides check` and `seuoffice create --type pptx --spec`).',
         '',
         'Every op: { "op": "<name>", "target": { "slide": <index|"s_n">, "el"?: "e_*" }, ...fields }.',
-        'Units are EMU (914400 per inch; suffixes in/cm/mm/pt/px accepted); font sizes are pt. `ieumoffice slides read <file>` lists ids and geometry.',
+        'Units are EMU (914400 per inch; suffixes in/cm/mm/pt/px accepted); font sizes are pt. `seuoffice slides read <file>` lists ids and geometry.',
         'Vocabulary:',
         docs.opVocabulary(),
       ].join('\n')
@@ -150,7 +149,7 @@ async function load(
   }
 }
 
-type SlidesOpDocs = typeof import('@genoffice/pptx-ops/op-docs')
+type SlidesOpDocs = typeof import('@seuoffice/pptx-ops/op-docs')
 
 function slidesCatalog(docs: SlidesOpDocs): OpCatalog {
   const ops: OpEntry[] = Object.entries(docs.OP_DOCS)
@@ -166,8 +165,8 @@ function slidesCatalog(docs: SlidesOpDocs): OpCatalog {
 
 function docsGuideText(catalog: OpCatalog, htmlRules: string, group?: string): string {
   const lines = [
-    'Word ops (ieumoffice docs apply --ops): a JSON array; every entry has "op".',
-    'Targets: { "blockIndexes": [..] } or { "nodeType": "docHeading"|"docParagraph"|"docListItem"|"image", "headingLevel"? }; get indexes from `ieumoffice docs read`.',
+    'Word ops (seuoffice docs apply --ops): a JSON array; every entry has "op".',
+    'Targets: { "blockIndexes": [..] } or { "nodeType": "docHeading"|"docParagraph"|"docListItem"|"image", "headingLevel"? }; get indexes from `seuoffice docs read`.',
     'Field notation: bare = string, n = number, bool = boolean, ? = optional, a|b = one of.',
     '',
     ...renderGroups(catalog, group),
@@ -178,8 +177,8 @@ function docsGuideText(catalog: OpCatalog, htmlRules: string, group?: string): s
 
 function hwpGuideText(catalog: OpCatalog, group?: string): string {
   return [
-    'Hangul ops (ieumoffice hwp apply --ops, ieumoffice create --type hwp|hwpx --ops): a JSON array; every entry is { "op": "<name>", ...fields }. They are the tools the in-app AI uses on the same document, and answer with the same text.',
-    'Places are found by their text: anchor / find is exact text inside one paragraph or one table cell. When it occurs more than once the op is refused with the places listed; pass occurrence (1-based, as find_text lists them). Read the document first: `ieumoffice hwp read`, or the read ops below.',
+    'Hangul ops (seuoffice hwp apply --ops, seuoffice create --type hwp|hwpx --ops): a JSON array; every entry is { "op": "<name>", ...fields }. They are the tools the in-app AI uses on the same document, and answer with the same text.',
+    'Places are found by their text: anchor / find is exact text inside one paragraph or one table cell. When it occurs more than once the op is refused with the places listed; pass occurrence (1-based, as find_text lists them). Read the document first: `seuoffice hwp read`, or the read ops below.',
     'Nothing that would drop a table, picture, form field or memo is done: such an op is refused and the document stays as it was. The file is written in the format it was opened in (or the --out extension); an overwritten file is kept as <name>.bak.',
     'Field notation: bare = string, n = number, bool = boolean, ? = optional, a|b = one of.',
     '',
@@ -189,8 +188,8 @@ function hwpGuideText(catalog: OpCatalog, group?: string): string {
 
 function diagramGuideText(catalog: OpCatalog, group?: string): string {
   return [
-    'Diagram ops (ieumoffice diagram apply --ops, ieumoffice create --type drawio --ops): a JSON array; every entry is { "op": "<name>", ...fields }. They are the tools the in-app AI uses on a diagram, checked by the same rules.',
-    'Shapes, edges and pages are named by the ids `ieumoffice diagram read` lists (a page also by its name). Ops without "page" work on --page, else the first page. Later ops see what earlier ones made; a new id comes back in detail.results[].created.',
+    'Diagram ops (seuoffice diagram apply --ops, seuoffice create --type drawio --ops): a JSON array; every entry is { "op": "<name>", ...fields }. They are the tools the in-app AI uses on a diagram, checked by the same rules.',
+    'Shapes, edges and pages are named by the ids `seuoffice diagram read` lists (a page also by its name). Ops without "page" work on --page, else the first page. Later ops see what earlier ones made; a new id comes back in detail.results[].created.',
     'A batch is all or nothing by default: one rejected op leaves the file as it was. A batch of reads writes nothing. .drawio/.dio files are edited without the app and keep untouched pages byte for byte; insert_mermaid and .drawio.svg/.drawio.png need the app.',
     'Field notation: bare = string, n = number, bool = boolean, ? = optional, a|b = one of.',
     '',
@@ -212,7 +211,7 @@ function opText(entry: OpEntry): string {
  */
 async function templatesGuide(id: string | undefined, json: boolean): Promise<CommandResult> {
   const { listSlideTemplates, findSlideTemplate } =
-    await import('@genoffice/pipelines/slides/templates')
+    await import('@seuoffice/pipelines/slides/templates')
   const all = listSlideTemplates()
   const brief = ({ id, name, scheme, description, fonts }: (typeof all)[number]) => ({
     id,
@@ -234,7 +233,7 @@ async function templatesGuide(id: string | undefined, json: boolean): Promise<Co
     })
     return {
       summary: [
-        'Built-in deck templates (`ieumoffice guide slides templates <id>` prints one as a style sheet to save as deck/style.md):',
+        'Built-in deck templates (`seuoffice guide slides templates <id>` prints one as a style sheet to save as deck/style.md):',
         ...lines,
       ].join('\n'),
       ...(json ? { detail: { templates: all.map(brief) } } : {}),
@@ -252,13 +251,11 @@ async function templatesGuide(id: string | undefined, json: boolean): Promise<Co
         reason: 'invalid_argument',
         suggestion: guess
           ? `did you mean ${guess}?`
-          : 'run `ieumoffice guide slides templates` for the list',
+          : 'run `seuoffice guide slides templates` for the list',
       },
     )
   }
-  const shipped = branded(
-    `These fonts ship with GenOffice: ${fontList(t).join(', ')}; a deck that names them shows in them in the app and in \`ieumoffice slides render\`.`,
-  )
+  const shipped = `These fonts ship with SeuOffice: ${fontList(t).join(', ')}; a deck that names them shows in them in the app and in \`seuoffice slides render\`.`
   return {
     summary: `${t.styleSheet}\n\n${shipped}`,
     ...(json ? { detail: { ...brief(t), styleSheet: t.styleSheet } } : {}),

@@ -14,7 +14,7 @@
  *   paragraph (found by the picture's name) as origin. New picture paragraphs
  *   are written the same way without an origin.
  */
-import type { Run } from '@genoffice/docx-engine'
+import type { Run } from '@seuoffice/docx-engine'
 import { nodesOfKind, walkNodes, type OdtNode } from '../core/body'
 import type {
   BlockConverter,

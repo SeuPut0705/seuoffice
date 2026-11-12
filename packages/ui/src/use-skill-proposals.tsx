@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import {
   createBridgedUserSkillsSkill,
   windowUserSkillsBridge,
@@ -9,7 +9,7 @@ import {
   type SkillProposal,
   type UserSkillText,
   type UserSkillsBridgeLike,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import {
   readStoredSkillCards,
   skillCardBridge,

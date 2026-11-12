@@ -21,7 +21,7 @@ describe('MCP tools and outbound bridges in every AI window preload', () => {
     it(`${app} exposes the MCP tools bridge`, () => {
       const source = preload(app)
       expect(source).toContain(
-        "import { mcpToolsBridge } from '@genoffice/electron-utils/mcp-tools-bridge'",
+        "import { mcpToolsBridge } from '@seuoffice/electron-utils/mcp-tools-bridge'",
       )
       expect(source).toContain(
         "contextBridge.exposeInMainWorld('aiOfficeMcpTools', mcpToolsBridge())",
@@ -31,7 +31,7 @@ describe('MCP tools and outbound bridges in every AI window preload', () => {
     it(`${app} exposes the outbound bridge`, () => {
       const source = preload(app)
       expect(source).toContain(
-        "import { outboundBridge } from '@genoffice/electron-utils/outbound-bridge'",
+        "import { outboundBridge } from '@seuoffice/electron-utils/outbound-bridge'",
       )
       expect(source).toContain(
         "contextBridge.exposeInMainWorld('aiOfficeOutbound', outboundBridge())",

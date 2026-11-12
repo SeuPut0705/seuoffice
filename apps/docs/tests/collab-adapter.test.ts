@@ -1,4 +1,4 @@
-import { parseDocx } from '@genoffice/docx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
 import { MAX_CHANGE_BYTES, type Json } from '@seuoffice/collab/client'
 import { simulate, type SimulatedEditor } from '@seuoffice/collab/conformance'
 import { Editor } from '@tiptap/core'

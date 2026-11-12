@@ -33,7 +33,7 @@ export const KO_SERIF = [
   'GenOffice Myungjo',
   'Noto Serif KR',
 ]
-// 'GenOffice *' entries are CJK-only local() aliases (fonts.css): the underlying
+// 'SeuOffice *' entries are CJK-only local() aliases (fonts.css): the underlying
 // system faces draw Cyrillic/Greek fullwidth, so those scripts must pass through
 const TC_SANS = ['Microsoft JhengHei', 'PingFang TC', 'GenOffice Heiti TC', 'Noto Sans TC']
 // 'GenOffice Fullwidth TC' (fonts.css): fullwidth U+FF0D/FF0F/FF3C/FF3F/FF5E whose Songti TC glyphs look half-width

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
-import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import { InMemoryWorkbookAdapter } from '@seuoffice/xlsx-gateway/domain/in-memory-workbook'
+import type { ChangePlan } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import { createProposalBackend } from '../src/renderer/ai/proposal-backend'
 import {
   aiRunOpenRefusal,

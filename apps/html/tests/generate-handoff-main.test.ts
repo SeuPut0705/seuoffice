@@ -6,7 +6,7 @@ import {
   queueGenerateHandoff,
   resetGenerateHandoffsForTest,
   type GenerateHandoff,
-} from '@genoffice/electron-utils/generate-handoff'
+} from '@seuoffice/electron-utils/generate-handoff'
 import { registerHtmlHandoffIpc } from '../src/main/generate-handoff-ipc'
 import { HTML_HANDOFF_CHANNELS } from '../src/shared/ipc'
 

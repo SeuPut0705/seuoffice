@@ -1,5 +1,5 @@
 //! What the book translation of `packages/epub-engine/src/translate` imports
-//! from `@genoffice/pdf-structure` (and the one function it takes from
+//! from `@seuoffice/pdf-structure` (and the one function it takes from
 //! `packages/i18n`), and nothing else. Each item names its source.
 
 use jscompat::{js_regex, trim};
@@ -9,49 +9,27 @@ use crate::utf16::lossy;
 
 // ── packages/i18n/src/index.ts ──
 
-/// `LANGS`: the 21 UI languages.
-pub const LANGS: [&str; 21] = [
-    "zh", "en", "ja", "ko", "fr", "de", "es", "th", "id", "ru", "ar", "pt", "it", "pl", "cs", "nl",
-    "ms", "he", "hi", "zh-TW", "vi",
-];
+/// `LANGS`: the UI languages.
+pub const LANGS: [&str; 2] = ["en", "ko"];
 
 /// `isLang` of `packages/i18n/src/index.ts`.
 pub fn is_lang(value: &str) -> bool {
     LANGS.contains(&value)
 }
 
-/// `normalizeLang` of `packages/i18n/src/index.ts`: map a raw locale string
-/// ('zh-CN', 'zh-Hans', 'ja-JP', 'ko-KR', ...) to a supported language.
+/// `normalizeLang` of `packages/i18n/src/index.ts`: the one place a language
+/// value from outside becomes a UI language. Korean ('ko', 'ko-KR', 'ko_KR') is
+/// Korean; every other value, and none, is English.
 pub fn normalize_lang(raw: Option<&str>) -> &'static str {
     let value = raw.map(|raw| trim(raw).to_lowercase());
-    let Some(value) = value.filter(|v| !v.is_empty()) else {
-        return "en";
-    };
-    // traditional-script Chinese variants must win over the generic 'zh' prefix
-    if js_regex!(r"^zh[-_](tw|hk|mo|hant)").test(&value) {
-        return "zh-TW";
-    }
-    for lang in LANGS {
-        if lang == "en" || lang == "zh-TW" {
-            continue;
-        }
-        if value == lang
-            || value
-                .strip_prefix(lang)
-                .is_some_and(|rest| rest.starts_with('-') || rest.starts_with('_'))
+    match value {
+        Some(value)
+            if value == "ko" || value.starts_with("ko-") || value.starts_with("ko_") =>
         {
-            return lang;
+            "ko"
         }
+        _ => "en",
     }
-    // 'in' is the legacy ISO code for Indonesian still reported by some systems
-    if js_regex!(r"^in\b").test(&value) || js_regex!(r"^in[-_]").test(&value) {
-        return "id";
-    }
-    // 'iw' is the legacy ISO code for Hebrew
-    if js_regex!(r"^iw\b").test(&value) || js_regex!(r"^iw[-_]").test(&value) {
-        return "he";
-    }
-    "en"
 }
 
 // ── pdf-structure/src/store/job-keys.ts ──
@@ -74,6 +52,51 @@ pub struct TranslationRequest {
 }
 
 // ── pdf-structure/src/translate/language.ts ──
+
+/// `TARGETS` of `translate/language.ts`: the languages a document can be
+/// translated into, in the order they are offered (`TRANSLATION_LANGUAGES`).
+pub const TRANSLATION_LANGUAGES: [&str; 21] = [
+    "zh", "en", "ja", "ko", "fr", "de", "es", "th", "id", "ru", "ar", "pt", "it", "pl", "cs", "nl",
+    "ms", "he", "hi", "zh-TW", "vi",
+];
+
+/// `isTranslationLanguage`
+pub fn is_translation_language(code: &str) -> bool {
+    TRANSLATION_LANGUAGES.contains(&code)
+}
+
+/// `translationLanguageOf`: a raw language tag ('zh-Hans', 'pt-BR', 'ko_KR') as
+/// a target language; English when it names none of them.
+pub fn translation_language_of(raw: Option<&str>) -> &'static str {
+    let value = raw.map(|raw| trim(raw).to_lowercase());
+    let Some(value) = value.filter(|v| !v.is_empty()) else {
+        return "en";
+    };
+    // traditional-script Chinese variants must win over the generic 'zh' prefix
+    if js_regex!(r"^zh[-_](tw|hk|mo|hant)").test(&value) {
+        return "zh-TW";
+    }
+    for lang in TRANSLATION_LANGUAGES {
+        if lang == "en" || lang == "zh-TW" {
+            continue;
+        }
+        if value == lang
+            || value
+                .strip_prefix(lang)
+                .is_some_and(|rest| rest.starts_with('-') || rest.starts_with('_'))
+        {
+            return lang;
+        }
+    }
+    // 'in' and 'iw' are the legacy ISO codes for Indonesian and Hebrew
+    if js_regex!(r"^in\b").test(&value) || js_regex!(r"^in[-_]").test(&value) {
+        return "id";
+    }
+    if js_regex!(r"^iw\b").test(&value) || js_regex!(r"^iw[-_]").test(&value) {
+        return "he";
+    }
+    "en"
+}
 
 /// `LANGUAGE_NAMES`, by language.
 fn language_name(code: &str) -> Option<&'static str> {
@@ -125,11 +148,7 @@ pub fn default_target_language(
     document_text: &[u16],
     mode: TranslationMode,
 ) -> &'static str {
-    let ui = LANGS
-        .iter()
-        .find(|&&lang| lang == ui_language)
-        .copied()
-        .unwrap_or_else(|| normalize_lang(Some(ui_language)));
+    let ui = translation_language_of(Some(ui_language));
     if mode == TranslationMode::Easy {
         return ui;
     }

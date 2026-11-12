@@ -1,7 +1,7 @@
 /**
  * Image analysis by showing the image to the AI provider the chat runs on:
  * one turn, no tools, the answer collected from the stream. The one-shot
- * chat call of @genoffice/ai-provider takes text only, so this goes through
+ * chat call of @seuoffice/ai-provider takes text only, so this goes through
  * the streaming router, which carries images for every provider.
  */
 
@@ -11,7 +11,7 @@ import {
   type AiProviderConfig,
   type AiProviderId,
   type MediaBlob,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 
 /** Images of one request, as sent inline to a chat model; larger sets belong to a key analysis provider. */
 export const CHAT_ANALYSIS_MAX_BYTES = 20 * 1024 * 1024

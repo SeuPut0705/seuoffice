@@ -9,7 +9,7 @@
  * The bridge map is deep-copied first: the page and objects pre-steps edit
  * the map they are given.
  */
-import { parseDocx } from '@genoffice/docx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
 import {
   type BridgeMap,
   type JsonValue,

@@ -2,8 +2,8 @@ import {
   decodeCsvBuffer,
   parseCsv,
   resolveImportDelimiter,
-} from '@genoffice/xlsx-gateway/gateway/csv-import'
-import { csvToXlsxBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
+} from '@seuoffice/xlsx-gateway/gateway/csv-import'
+import { csvToXlsxBuffer } from '@seuoffice/xlsx-gateway/gateway/csv-import-xlsx'
 import { cutIndex } from '../preview'
 
 /**
@@ -23,7 +23,7 @@ function charsetLanguage(raw: string | undefined): string | undefined {
 
 /**
  * The legacy charset Excel writes CSV in on this machine, from the same language the app
- * uses (GENOFFICE_LANG, else the system locale). Without it the CLI broke the tie between
+ * uses (SEUOFFICE_LANG, else the system locale). Without it the CLI broke the tie between
  * GBK and the Korean code page the wrong way and read a Korean Excel CSV as Chinese.
  */
 export function legacyCsvCharset(env: NodeJS.ProcessEnv = process.env): string | undefined {
@@ -34,7 +34,7 @@ export function legacyCsvCharset(env: NodeJS.ProcessEnv = process.env): string |
     ko: 'euc-kr',
   }
   const raw =
-    env.GENOFFICE_LANG ||
+    env.SEUOFFICE_LANG ||
     env.LC_ALL ||
     env.LC_MESSAGES ||
     env.LANG ||

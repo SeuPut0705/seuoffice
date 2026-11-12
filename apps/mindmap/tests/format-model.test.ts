@@ -5,8 +5,8 @@
  * against a map read through a stand-in.
  */
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
-import type { ViewLayout } from '@genoffice/xmind-engine'
+import { LANGS } from '@seuoffice/i18n'
+import type { ViewLayout } from '@seuoffice/xmind-engine'
 import { formatModel, type FormatReader } from '../src/renderer/components/format-model'
 import { noticeText } from '../src/renderer/components/map-notices'
 import type { MapSelection } from '../src/renderer/map/controller'

@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process'
 import { homedir } from 'node:os'
 import { posix, win32 } from 'node:path'
-import { windowsSystemDir, windowsSystemTool } from '@genoffice/ai-provider/subscription'
+import { windowsSystemDir, windowsSystemTool } from '@seuoffice/ai-provider/subscription'
 
 /**
  * Which files of a project folder are "not on this PC" (spec 5.8).

@@ -11,7 +11,7 @@ import { redactJson } from '../src/renderer/editor/redact'
 
 /**
  * A markdown file read as another file's material (attachment, knowledge base,
- * search index) goes through `@genoffice/file-parse`, which cannot import this
+ * search index) goes through `@seuoffice/file-parse`, which cannot import this
  * app and so restates how a withheld span is persisted. This holds the two
  * together: what that reader hands to another conversation is the document this
  * editor hands its own model.

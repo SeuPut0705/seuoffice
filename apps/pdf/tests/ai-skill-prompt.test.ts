@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@seuoffice/i18n'
 import { createPdfSkill } from '../src/renderer/ai/pdf-skill'
 import type { PdfAiDeps } from '../src/renderer/ai/tools'
 

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
 import type { SpawnOptions } from 'node:child_process'
-import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@seuoffice/i18n'
 import { AiRunError } from '../src/run-error'
 import type { StreamCallbacks } from '../src/protocols/shared'
 import type { AiSettings, AiSubscriptionCliId, AiSubscriptionUsage } from '../src/types'
@@ -158,7 +158,7 @@ function harness(
     'config/read': () => ({ config: {} }),
     'thread/start': () => ({
       thread: { id: 'th-1' },
-      activePermissionProfile: { id: 'genoffice' },
+      activePermissionProfile: { id: 'seuoffice' },
     }),
     'mcpServerStatus/list': () => ({ data: [], nextCursor: null }),
     'thread/delete': () => ({}),
@@ -333,7 +333,7 @@ describe('Codex MCP servers', () => {
   it('passes the switch-off in both thread start modes', () => {
     const off = { files: { enabled: false as const } }
     const profile = codexThreadStartParams(CONFIG, '/tmp/x', 'profile', off)
-    expect(profile.config).toMatchObject({ default_permissions: 'genoffice', mcp_servers: off })
+    expect(profile.config).toMatchObject({ default_permissions: 'seuoffice', mcp_servers: off })
     const readOnly = codexThreadStartParams(CONFIG, '/tmp/x', 'read-only', off)
     expect(readOnly).toMatchObject({ sandbox: 'read-only', config: { mcp_servers: off } })
     expect(codexThreadStartParams(CONFIG, '/tmp/x', 'read-only')).not.toHaveProperty('config')
@@ -519,7 +519,7 @@ describe('Codex process lifetime', () => {
     const h = harness({
       'thread/start': () => ({
         thread: { id: `th-${++turns}` },
-        activePermissionProfile: { id: 'genoffice' },
+        activePermissionProfile: { id: 'seuoffice' },
       }),
       'turn/start': () => ({ turn: { id: 't1' } }),
     })

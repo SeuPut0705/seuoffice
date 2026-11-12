@@ -1,4 +1,4 @@
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import {
   CJK_FAMILY_ALIASES,
   JAPANESE_FAMILIES,
@@ -6,7 +6,7 @@ import {
   KOREAN_FAMILY_READINGS,
   SIMPLIFIED_CJK_FAMILIES,
   TRADITIONAL_CJK_FAMILIES,
-} from '@genoffice/i18n'
+} from '@seuoffice/i18n'
 
 /**
  * Font dropdown candidates grouped by script, ordered per UI language so the

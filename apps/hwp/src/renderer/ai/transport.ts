@@ -3,11 +3,11 @@ import {
   type AgentTransport,
   type IpcStreamError,
   type IpcSubscriptionUsage,
-} from '@genoffice/agent-core'
-import type { AiSettings } from '@genoffice/ai-provider'
-import type { Lang } from '@genoffice/i18n'
-import { localContextLimit } from '@genoffice/ai-provider/browser'
-import { aiContextConfirmText, aiRunErrorText } from '@genoffice/ui'
+} from '@seuoffice/agent-core'
+import type { AiSettings } from '@seuoffice/ai-provider'
+import type { Lang } from '@seuoffice/i18n'
+import { localContextLimit } from '@seuoffice/ai-provider/browser'
+import { aiContextConfirmText, aiRunErrorText } from '@seuoffice/ui'
 import { t } from '../i18n/locale'
 
 /** What the panel learns from a turn besides its text: the cause of a failure, subscription usage, a cut input */

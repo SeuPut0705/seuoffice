@@ -1,0 +1,16 @@
+#!/bin/sh
+# The command's name before SeuOffice took its own (old-names.ts, OLD_CLI_COMMANDS).
+# PATH links (/usr/local/bin, ~/.local/bin, the deb's /usr/bin) and agent MCP
+# configs made by an earlier version still start this file, so it hands every
+# call to the seuoffice launcher beside it. Reached through a symlink, so the
+# real location is resolved first, as that launcher does.
+self="$0"
+while [ -L "$self" ]; do
+  target=$(readlink "$self")
+  case "$target" in
+    /*) self="$target" ;;
+    *) self="$(dirname "$self")/$target" ;;
+  esac
+done
+here=$(cd "$(dirname "$self")" && pwd)
+exec "$here/seuoffice" "$@"

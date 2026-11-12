@@ -4,9 +4,9 @@
 /// by the caller instead of detected from the data.
 import { describe, expect, it } from 'vitest'
 
-import { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
-import { buildChartVisual } from '@genoffice/xlsx-gateway/domain/chart-visual'
-import type { WorkbookSnapshot } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import { InMemoryWorkbookAdapter } from '@seuoffice/xlsx-gateway/domain/in-memory-workbook'
+import { buildChartVisual } from '@seuoffice/xlsx-gateway/domain/chart-visual'
+import type { WorkbookSnapshot } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 
 /** Item, Units, Price, Revenue — the issue's table: Revenue against Item
     crosses two columns a single dataRange block would drag along. */

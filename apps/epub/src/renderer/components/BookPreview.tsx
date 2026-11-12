@@ -12,7 +12,7 @@
  * now, unsaved edits included, and is read again when the book changes.
  */
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import { Dropdown, type DropdownOption } from '@genoffice/ui'
+import { Dropdown, type DropdownOption } from '@seuoffice/ui'
 import { epubAssetUrl } from '../../shared/asset-url'
 import type { EpubBookSummary, EpubChapterResult } from '../../shared/ipc'
 import { useI18n, type StringKey } from '../i18n/locale'

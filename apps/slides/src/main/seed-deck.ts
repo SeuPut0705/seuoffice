@@ -14,7 +14,7 @@
  * Nothing here runs an AI or touches the AI code.
  */
 import type { WebContents } from 'electron'
-import { openPptx, type OpenedPptx } from '@genoffice/pptx-engine'
+import { openPptx, type OpenedPptx } from '@seuoffice/pptx-engine'
 import type { OpenResult } from '../shared/ipc'
 import {
   buildAllRenderSlides,

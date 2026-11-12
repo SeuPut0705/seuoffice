@@ -116,7 +116,7 @@ export function parseRedactionPart(text: string): SheetRedactionState[] {
   if (root.version !== PART_VERSION) {
     throw new RedactionError(
       `${REDACTION_PART_PATH} has version ${JSON.stringify(root.version)}, but this ` +
-        `version of GenOffice only understands ${PART_VERSION}. Refusing to save.`,
+        `version of SeuOffice only understands ${PART_VERSION}. Refusing to save.`,
     )
   }
   const sheets = root.sheets
@@ -484,7 +484,7 @@ export async function applyRedactionPart(
 ///
 /// ## Why a second copy
 ///
-/// The part survives Excel and GenOffice. It does not survive everything. A
+/// The part survives Excel and SeuOffice. It does not survive everything. A
 /// reader that rebuilds the package from its own model discards parts it does
 /// not model, along with their relationships and content-type overrides, and
 /// LibreOffice does exactly that: `soffice --convert-to xlsx` over a workbook
@@ -500,7 +500,7 @@ export async function applyRedactionPart(
 ///
 /// It buys the coordinates, which are what withhold a cell. It does not buy
 /// the sheet *name*: the sheet is recorded by position in workbook order, so a
-/// workbook reordered outside GenOffice can point a mark at the wrong table.
+/// workbook reordered outside SeuOffice can point a mark at the wrong table.
 /// That is the trade, and the direction it fails in is the safe one — a mark
 /// that lands on the wrong table withholds something the reader never hid,
 /// which they can undo, where a mark that is not recorded at all hands the
@@ -673,7 +673,7 @@ function mirrorMarkOf(
   if (record.v !== MIRROR_VERSION) {
     throw new RedactionError(
       `${where} holds mirror version ${JSON.stringify(record.v)}, but this version of ` +
-        `GenOffice only understands ${MIRROR_VERSION}. Refusing to open the workbook.`,
+        `SeuOffice only understands ${MIRROR_VERSION}. Refusing to open the workbook.`,
     )
   }
   if (!isNonNegativeInteger(record.sheet)) {

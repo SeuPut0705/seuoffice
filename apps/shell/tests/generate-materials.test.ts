@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import init, { HwpDocument } from '@rhwp/core'
-import { setOpenFilesSource } from '@genoffice/electron-utils/unsaved-files'
-import { ATTACHABLE_EXTS, attachableMaxBytes, parseFileToText } from '@genoffice/file-parse'
+import { setOpenFilesSource } from '@seuoffice/electron-utils/unsaved-files'
+import { ATTACHABLE_EXTS, attachableMaxBytes, parseFileToText } from '@seuoffice/file-parse'
 import {
   LONG_MATERIAL_NOTICE_CHARS,
   MAX_IMAGE_MATERIAL_BYTES,
@@ -44,7 +44,7 @@ beforeAll(async () => {
 })
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-generate-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-generate-'))
 })
 afterEach(() => {
   setOpenFilesSource(null)

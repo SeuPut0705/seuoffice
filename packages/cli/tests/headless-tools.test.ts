@@ -4,14 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   setCodexImageGenerationAvailable,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   createMeteredAcceptanceFileStore,
   detectSubscriptionLogin,
   meteredLoginFingerprint,
   type SubscriptionDetection,
-} from '@genoffice/ai-provider/subscription'
-import * as aiSearch from '@genoffice/ai-search'
+} from '@seuoffice/ai-provider/subscription'
+import * as aiSearch from '@seuoffice/ai-search'
 import { defaultRegistry } from '../src/cli'
 import { createContext, disposeContext, runWithInline } from '../src/mcp/run'
 import { buildArgv, resolveTools, TOOLS } from '../src/mcp/tools'
@@ -26,13 +26,13 @@ const fakes = vi.hoisted(() => ({
   analyzeWithKey: vi.fn(),
 }))
 
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   detectSubscriptionLogin: fakes.detect,
 }))
 
-vi.mock('@genoffice/ai-provider', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider')>()),
+vi.mock('@seuoffice/ai-provider', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider')>()),
   generateImageWithProvider: fakes.generateWithKey,
   analyzeMediaWithProvider: fakes.analyzeWithKey,
 }))
@@ -81,10 +81,10 @@ function dataFolder(settings: Record<string, unknown> = {}): {
     dir,
     env: {
       ...process.env,
-      GENOFFICE_USER_DATA: dir,
-      GENOFFICE_AI_SETTINGS: '',
-      GENOFFICE_AUDIT_LOG: 'off',
-      GENOFFICE_ALLOWED_ROOTS: '',
+      SEUOFFICE_USER_DATA: dir,
+      SEUOFFICE_AI_SETTINGS: '',
+      SEUOFFICE_AUDIT_LOG: 'off',
+      SEUOFFICE_ALLOWED_ROOTS: '',
     },
   }
 }
@@ -191,7 +191,7 @@ describe('image on the automatic-call path', () => {
     expect(readFileSync(out).equals(PNG)).toBe(true)
   })
 
-  it('keeps the ledger beside a settings file named by GENOFFICE_AI_SETTINGS', async () => {
+  it('keeps the ledger beside a settings file named by SEUOFFICE_AI_SETTINGS', async () => {
     setCodexImageGenerationAvailable(true)
     aiSearch.registerCodexImageGenerator(async () => ({
       bytes: new Uint8Array(PNG),
@@ -203,7 +203,7 @@ describe('image on the automatic-call path', () => {
     const settings = join(elsewhere, 'custom-settings.json')
     writeFileSync(settings, JSON.stringify({ provider: 'auto', providers: {}, ...ON }))
     const r = await run(['image', 'a cat', '--out', join(dir, 'cat.png'), '--json'], {
-      env: { ...env, GENOFFICE_AI_SETTINGS: settings },
+      env: { ...env, SEUOFFICE_AI_SETTINGS: settings },
     })
     expect(r.code).toBe(0)
     expect(tool.mock.calls[0]![0]).toBe(settings)
@@ -334,7 +334,7 @@ describe('media on the automatic-call path', () => {
     const { env, dir } = dataFolder(ON)
     const audit = join(dir, 'audit.jsonl')
     const r = await run(['media', photo(), '--json'], {
-      env: { ...env, GENOFFICE_AUDIT_LOG: audit },
+      env: { ...env, SEUOFFICE_AUDIT_LOG: audit },
     })
     expect(r.code).toBe(0)
     const context = tool.mock.calls[0]![2]!.context!
@@ -475,7 +475,7 @@ describe('subscription CLIs started for a request', () => {
     // a fresh copy of the module: the record is set up once per process
     vi.resetModules()
     const cloud = await import('../src/cloud')
-    const subscription = await import('@genoffice/ai-provider/subscription')
+    const subscription = await import('@seuoffice/ai-provider/subscription')
     const registry = subscription.sharedSubscriptionChildRegistry()
     const { env, dir } = dataFolder(ON)
     const record = subscription.leftoverRecordFile(dir)
@@ -497,7 +497,7 @@ describe('subscription CLIs started for a request', () => {
   it('are not prepared for at all when no subscription can answer', async () => {
     vi.resetModules()
     const cloud = await import('../src/cloud')
-    const subscription = await import('@genoffice/ai-provider/subscription')
+    const subscription = await import('@seuoffice/ai-provider/subscription')
     const { env, dir } = dataFolder()
     const before = process.listenerCount('exit')
     const call = await cloud.headlessCall(env, 'media')
@@ -582,7 +582,7 @@ describe('no trace of the removed login', () => {
   ])('%s does not look for the removed login or its command line', (file) => {
     const source = readFileSync(join(__dirname, '..', 'src', file), 'utf8')
     expect(source).not.toMatch(
-      /cloudToolsEnabled|auth\.json|GENOFFICE_AUTH_DIR|~\/\.(genoffice|ieumoffice)/,
+      /cloudToolsEnabled|auth\.json|SEUOFFICE_AUTH_DIR|~\/\.(seuoffice|seuoffice)/,
     )
   })
 })

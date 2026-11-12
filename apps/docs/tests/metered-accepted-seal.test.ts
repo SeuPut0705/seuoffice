@@ -9,7 +9,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest'
-import { setAiSecretCodec, type AiSettings } from '@genoffice/ai-provider'
+import { setAiSecretCodec, type AiSettings } from '@seuoffice/ai-provider'
 
 type Handler = (event: unknown, ...args: unknown[]) => unknown
 type MeteredWriter = (provider: 'claude-code' | 'codex', accepted: boolean) => unknown
@@ -45,21 +45,21 @@ vi.mock('electron', () => ({
   shell: {},
   webContents: { getAllWebContents: () => [], fromId: () => null },
 }))
-vi.mock('@genoffice/ai-search', () => ({
+vi.mock('@seuoffice/ai-search', () => ({
   createCodexImageCliGenerator: () => async () => ({ bytes: new Uint8Array(), mime: 'image/png' }),
   registerCodexImageGenerator: () => {},
 }))
-vi.mock('@genoffice/ai-provider/subscription', () => ({
+vi.mock('@seuoffice/ai-provider/subscription', () => ({
   ensureSubscriptionIpc: (_ipc: unknown, setup: { setMeteredAccepted: MeteredWriter }) => {
     state.setMeteredAccepted = setup.setMeteredAccepted
     return {}
   },
   sharedSubscriptionStatuses: () => ({}),
 }))
-vi.mock('@genoffice/ai-provider/codex-app-server', () => ({
+vi.mock('@seuoffice/ai-provider/codex-app-server', () => ({
   shutdownCodexAppServers: () => {},
 }))
-vi.mock('@genoffice/ai-provider/custom-models', () => ({}))
+vi.mock('@seuoffice/ai-provider/custom-models', () => ({}))
 vi.mock('../src/main/lazy-media', () => ({ readLazyMedia: async () => null }))
 vi.mock('../src/main/lazy-media-inline', () => ({}))
 

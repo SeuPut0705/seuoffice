@@ -93,9 +93,9 @@ async function waitForHealth(port: number, timeoutMs = 20_000): Promise<void> {
 test.describe('MCP visible grid session', () => {
   test('creates, fills and saves an xlsx through a visible sheets tab', async () => {
     const port = await freeMcpPort()
-    const outDir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-sheet-'))
+    const outDir = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-sheet-'))
     const outFile = join(outDir, 'mcp-sheet.xlsx')
-    const userDataDir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-sheet-userdata-'))
+    const userDataDir = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-sheet-userdata-'))
     await writeFile(
       join(userDataDir, 'app-settings.json'),
       // the blank workbook create_session writes lands in the default save folder

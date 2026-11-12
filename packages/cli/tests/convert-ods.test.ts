@@ -53,7 +53,7 @@ vi.mock('../../../apps/sheets/src/main/xlsx-sidecar-client', () => ({
   },
 }))
 
-const env = { ...process.env, GENOFFICE_AUDIT_LOG: 'off' }
+const env = { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' }
 
 beforeEach(() => {
   fake.ods.length = 0

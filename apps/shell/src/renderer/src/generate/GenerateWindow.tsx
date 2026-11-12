@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { htmlDir, htmlLang, type Params } from '@genoffice/i18n'
+import { htmlDir, htmlLang, type Params } from '@seuoffice/i18n'
 import './globals'
 import {
   AI_TARGET_KINDS,

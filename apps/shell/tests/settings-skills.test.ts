@@ -5,15 +5,15 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { SKILL_WARNING_RULES } from '@genoffice/ai-provider'
-import { LANGS, PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
-import { aiSubscriptionText, builtinSkillDesc, skillEditorsText } from '@genoffice/ui'
-import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
+import { SKILL_WARNING_RULES } from '@seuoffice/ai-provider'
+import { LANGS, PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@seuoffice/i18n'
+import { aiSubscriptionText, builtinSkillDesc, skillEditorsText } from '@seuoffice/ui'
+import type { UserSkillsBridge } from '@seuoffice/electron-utils/user-skills-bridge'
 import type {
   UserSkillImportCandidateView,
   UserSkillImportPreview,
   UserSkillView,
-} from '@genoffice/electron-utils/user-skills-channels'
+} from '@seuoffice/electron-utils/user-skills-channels'
 import type { HomeApi } from '../src/shared/home-api'
 import { LocaleProvider } from '../src/renderer/src/locale'
 import { SettingsModal } from '../src/renderer/src/SettingsModal'

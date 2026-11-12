@@ -7,7 +7,7 @@
  *
  * Not part of `npm test`: it needs a build and opens a window.
  *
- *   npm run build -w @genoffice/mindmap
+ *   npm run build -w @seuoffice/mindmap
  *   npx tsx apps/mindmap/tests/real-run/driver.ts
  *
  * Screenshots, the files it wrote and `result.json` go to the folder named by
@@ -36,7 +36,7 @@ import {
   type XmindDocument,
   type XmindSheet,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import { exportRun } from './export-run'
 import { lookRun } from './look-run'
 
@@ -193,8 +193,8 @@ async function launch(openFile?: string, options: LaunchOptions = {}): Promise<L
     args,
     env: {
       ...hostEnv,
-      GENOFFICE_USER_DATA: mkdtempSync(join(tmpdir(), 'mindmap-real-run-profile-')),
-      GENOFFICE_LANG: 'ko',
+      SEUOFFICE_USER_DATA: mkdtempSync(join(tmpdir(), 'mindmap-real-run-profile-')),
+      SEUOFFICE_LANG: 'ko',
     },
   })
   // A link is opened by the main process. The run records what it would open instead of starting a browser.

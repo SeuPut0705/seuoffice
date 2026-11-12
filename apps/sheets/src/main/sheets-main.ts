@@ -98,9 +98,9 @@ import {
   type RecoveryOpenFileRequest,
   type RecoveryOpenUntitledRequest,
   type SaveDiskState,
-} from '@genoffice/electron-utils'
-import { aiRunRefusal } from '@genoffice/electron-utils/ai-run-guard'
-import { createMainProcessProxyDispatcher } from '@genoffice/electron-utils/main-proxy'
+} from '@seuoffice/electron-utils'
+import { aiRunRefusal } from '@seuoffice/electron-utils/ai-run-guard'
+import { createMainProcessProxyDispatcher } from '@seuoffice/electron-utils/main-proxy'
 import {
   encryptOoxml,
   isCfbHeader,
@@ -108,22 +108,21 @@ import {
   OfficeDecryptError,
   unlockOfficeFile,
   type OfficePasswordAsk,
-} from '@genoffice/electron-utils/office-encryption'
+} from '@seuoffice/electron-utils/office-encryption'
 import {
-  brandText,
   createI18n,
   documentLocale,
   getUiLang,
   normalizeLang,
   PRODUCT_NAME,
   setUiLang,
-} from '@genoffice/i18n'
-import { fetchRemoteTable } from '@genoffice/electron-utils/remote-table'
-import { ProjectStore } from '@genoffice/project-store'
+} from '@seuoffice/i18n'
+import { fetchRemoteTable } from '@seuoffice/electron-utils/remote-table'
+import { ProjectStore } from '@seuoffice/project-store'
 import {
   aiChatGptSignInPages,
   aiSubscriptionLoginWindowText,
-} from '@genoffice/ui/ai-subscription-login-window'
+} from '@seuoffice/ui/ai-subscription-login-window'
 
 import {
   isAiOverloadedError,
@@ -136,21 +135,21 @@ import {
   type AiStreamChunk,
   sealAiSecrets,
   withStoredUnknownFields,
-} from '@genoffice/ai-provider'
-import { shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
-import { withStoredMainFields } from '@genoffice/ai-provider/key-models'
+} from '@seuoffice/ai-provider'
+import { shutdownCodexAppServers } from '@seuoffice/ai-provider/codex-app-server'
+import { withStoredMainFields } from '@seuoffice/ai-provider/key-models'
 import {
   ensureSubscriptionIpc,
   sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
-} from '@genoffice/ai-provider/subscription'
-import { decodeCsvBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import'
-import type { CsvImportProgress } from '@genoffice/xlsx-gateway/gateway/csv-import'
+} from '@seuoffice/ai-provider/subscription'
+import { decodeCsvBuffer } from '@seuoffice/xlsx-gateway/gateway/csv-import'
+import type { CsvImportProgress } from '@seuoffice/xlsx-gateway/gateway/csv-import'
 import { delimitedImportLimit } from './csv-import-limit'
 import {
   csvToXlsxBufferForOpen,
   sheetCsvToXlsxBuffer,
-} from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
+} from '@seuoffice/xlsx-gateway/gateway/csv-import-xlsx'
 import {
   abortMediaCalls,
   aiToolCapabilities,
@@ -162,7 +161,7 @@ import {
   localMediaRoots,
   withMediaCallSignal,
   type AiToolCapabilities,
-} from '@genoffice/ai-search'
+} from '@seuoffice/ai-search'
 import {
   parseFileToText,
   ATTACHABLE_EXTS,
@@ -172,8 +171,8 @@ import {
   ATTACHABLE_IMAGE_MAX_BYTES,
   diagramPictureExtOf,
   diagramPictureExtOfName,
-} from '@genoffice/file-parse'
-import { familyInfoFor } from '@genoffice/font-metrics'
+} from '@seuoffice/file-parse'
+import { familyInfoFor } from '@seuoffice/font-metrics'
 import { resolveWorkbookSave } from './workbook-save-resolve'
 import {
   promoteFileAtomically,
@@ -181,15 +180,15 @@ import {
   readArchiveEntryText,
   saveWorkbookViaSidecar,
   type ArchiveClient,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-package-io'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-package-io'
 import {
   connectionSourceOf,
   refreshableQueriesOf,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-connection-refresh'
-import type { PartReader } from '@genoffice/xlsx-gateway/gateway/xlsx-connections'
-import { parsePivotDefinition } from '@genoffice/xlsx-gateway/gateway/xlsx-pivot'
-import { parseSlicerState } from '@genoffice/xlsx-gateway/gateway/xlsx-slicer'
-import { listWorkbookQueries } from '@genoffice/xlsx-gateway/gateway/xlsx-connections'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-connection-refresh'
+import type { PartReader } from '@seuoffice/xlsx-gateway/gateway/xlsx-connections'
+import { parsePivotDefinition } from '@seuoffice/xlsx-gateway/gateway/xlsx-pivot'
+import { parseSlicerState } from '@seuoffice/xlsx-gateway/gateway/xlsx-slicer'
+import { listWorkbookQueries } from '@seuoffice/xlsx-gateway/gateway/xlsx-connections'
 import { manifestNamesSchema, readWorkbookRedactionPart } from './workbook-redactions'
 import type {
   AttachmentAddResult,
@@ -282,7 +281,7 @@ import {
 import {
   setSystemShortDate,
   shortDatePatternForSystemLocale,
-} from '@genoffice/xlsx-gateway/shared/short-date'
+} from '@seuoffice/xlsx-gateway/shared/short-date'
 import {
   cleanupExpiredPastedFiles,
   cleanupImportTempDirectory,
@@ -562,7 +561,7 @@ interface SessionInfo {
   /// Opened from a recovery copy and not saved since: the work exists only in
   /// the copy (the journal is empty), so the tab counts as unsaved.
   readonly unsavedRestore?: boolean
-  /// Split-view save guard (@genoffice/electron-utils/save-conflict): the disk
+  /// Split-view save guard (@seuoffice/electron-utils/save-conflict): the disk
   /// snapshot this copy last read or wrote, with the document path it belongs
   /// to (a CSV session's snapshot is its .csv, not the converted temp copy).
   /// Recorded at open and after every successful save.
@@ -588,7 +587,7 @@ interface SheetsRuntimeConfig {
   rendererFile: string
   /** absolute path to the Rust xlsx-sidecar binary */
   sidecarPath?: string | undefined
-  /** Shell router used to open exported/AI-generated files in a new GenOffice tab. */
+  /** Shell router used to open exported/AI-generated files in a new SeuOffice tab. */
   openGeneratedPath?: (path: string) => boolean
   /**
    * Host-owned cross-app document creator (the shell routes docx/pdf/md into Docs).
@@ -673,7 +672,7 @@ async function createStandaloneSheetsDocument(
     // read by the model as the tool's answer: English, with the product's own name
     return {
       ok: false,
-      error: brandText('Creating DOCX files requires the GenOffice shell or Docs app.', 'en'),
+      error: 'Creating DOCX files requires the SeuOffice shell or Docs app.',
     }
   }
   const title = sanitizeGeneratedFileBase(request.title)
@@ -816,7 +815,7 @@ async function connectionPartReader(
 function sheetsMediaRoots(wcId: number): string[] {
   const tab = sheetsTabs.get(wcId)
   const workbookDirs = tab ? [...tab.sessions.values()].map((s) => dirname(s.path)) : []
-  return localMediaRoots(...workbookDirs, join(app.getPath('temp'), 'genoffice-pasted'))
+  return localMediaRoots(...workbookDirs, join(app.getPath('temp'), 'seuoffice-pasted'))
 }
 
 /// A save request referencing a chunked edit transfer gets the accumulated
@@ -1461,7 +1460,7 @@ async function writeSessionCopy(
   const result = await recoveryStore.writeCopyStreamed(
     identity,
     async (storeTemp) => {
-      const directory = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+      const directory = join(app.getPath('temp'), 'seuoffice-imports', randomUUID())
       try {
         await mkdir(directory, { recursive: true })
         const target = join(directory, `recovery${untitledWorkbookExt(session.path)}`)
@@ -1587,7 +1586,7 @@ async function stageRecoveredCopy(
   bytes: Buffer,
   name: string,
 ): Promise<{ openPath: string; importTempDir: string }> {
-  const directory = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+  const directory = join(app.getPath('temp'), 'seuoffice-imports', randomUUID())
   await mkdir(directory, { recursive: true })
   const openPath = join(directory, name)
   try {
@@ -2140,7 +2139,7 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
         ? Buffer.from(data.buffer, data.byteOffset, data.byteLength)
         : null
   if (!bytes || bytes.byteLength === 0) return null
-  const dir = join(app.getPath('temp'), 'genoffice-pasted')
+  const dir = join(app.getPath('temp'), 'seuoffice-pasted')
   mkdirSync(dir, { recursive: true })
   const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')
   const filePath = join(dir, `pasted-${stamp}-${++pastedImageSeq}.${cleanExt}`)
@@ -2148,7 +2147,7 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
   return filePath
 }
 
-/** Attachment text extraction via @genoffice/file-parse (docx/pdf/pptx/xlsx/plain text) */
+/** Attachment text extraction via @seuoffice/file-parse (docx/pdf/pptx/xlsx/plain text) */
 async function extractAttachmentText(filePath: string): Promise<string> {
   // a file open with unsaved changes is not read (before the cache): a
   // withholding mark only reaches the file on save
@@ -3349,7 +3348,7 @@ export function registerSheetsIpc(): void {
     const copyDirectory =
       pending === undefined
         ? undefined
-        : join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+        : join(app.getPath('temp'), 'seuoffice-imports', randomUUID())
     let outcome: Awaited<ReturnType<typeof exportWorkbookAsOds>>
     try {
       let sourcePath = session.snapshotPath
@@ -3872,7 +3871,7 @@ export function registerSheetsIpc(): void {
     const request = resolveTransferredEdits(entry, workbookSaveRequestSchema.parse(input))
     const session = entry.sessions.get(request.sessionId)
     if (!session) return { ok: false }
-    const directory = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+    const directory = join(app.getPath('temp'), 'seuoffice-imports', randomUUID())
     try {
       await mkdir(directory, { recursive: true })
       const target = join(directory, 'template.xlsx')
@@ -4460,7 +4459,7 @@ async function snapshotWorkbook(path: string): Promise<string> {
 const SAVE_REOPEN_TIMEOUT_MS = 180_000
 
 async function reserveSnapshotPath(): Promise<string> {
-  const dir = join(app.getPath('temp'), 'genoffice-sheets-sessions')
+  const dir = join(app.getPath('temp'), 'seuoffice-sheets-sessions')
   await mkdir(dir, { recursive: true })
   return join(dir, `${randomUUID()}.xlsx`)
 }
@@ -4602,6 +4601,10 @@ async function openWorkbookSession(
     unsavedNewWorkbooks.delete(path)
     return workbookFileSchema.parse({
       ...opened,
+      // The engine names the workbook after the file it was given, which is
+      // the snapshot (a uuid): the renderer is told the name of the document
+      // the user sees, the one its status line and loading notices speak of.
+      name: basename(restoreTarget ?? csvSourcePath ?? odsSourcePath ?? suggestSaveAs ?? path),
       // The renderer-facing path is what the user opened: for a restored
       // recovery copy that is the original file, not the copy under userData.
       path: restoreTarget ?? path,
@@ -4640,7 +4643,7 @@ async function openEmptyXlsx(path: string): Promise<{
   restoreTarget: string
   emptySource: true
 }> {
-  const directory = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+  const directory = join(app.getPath('temp'), 'seuoffice-imports', randomUUID())
   await mkdir(directory, { recursive: true })
   const openPath = join(directory, basename(path))
   try {
@@ -4756,7 +4759,7 @@ async function prepareEncryptedWorkbook(
     return null
   }
   if (unlocked === null) return null
-  const directory = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+  const directory = join(app.getPath('temp'), 'seuoffice-imports', randomUUID())
   await mkdir(directory, { recursive: true })
   try {
     if (extension !== 'xls') {
@@ -4912,7 +4915,7 @@ async function prepareWorkbookForOpen(
     return { openPath: path }
   }
   const stem = basename(path).replace(/\.[^.]+$/, '')
-  const directory = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+  const directory = join(app.getPath('temp'), 'seuoffice-imports', randomUUID())
   await mkdir(directory, { recursive: true })
   const openPath = join(directory, `${stem}.xlsx`)
   let emptyCsv = false
@@ -5157,19 +5160,19 @@ export function startSheetsStandalone(): void {
   registerRendererScheme()
   installNavigationGuard(app)
   installContextMenu(app, () => contextMenuLabels(getUiLang()))
-  // GENOFFICE_USER_DATA: test drivers point this at a scratch dir so automated
+  // SEUOFFICE_USER_DATA: test drivers point this at a scratch dir so automated
   // instances get their own userData AND single-instance lock (the lock is scoped
   // to userData), allowing parallel instances alongside a normal dev run.
   // Same dev-only hook as apps/slides/src/main/slides-main.ts.
-  if (!app.isPackaged && process.env.GENOFFICE_USER_DATA) {
-    app.setPath('userData', process.env.GENOFFICE_USER_DATA)
+  if (!app.isPackaged && process.env.SEUOFFICE_USER_DATA) {
+    app.setPath('userData', process.env.SEUOFFICE_USER_DATA)
   }
   void applyMainProcessProxy()
   app.whenReady().then(() => {
     installRendererProtocol({ sheets: join(__dirname, '../renderer') })
     // the shell's Word editor serves these URLs there; alone, sheets does
     installStandaloneTemplateFontProtocol()
-    const requestedLang = process.env.GENOFFICE_LANG ?? app.getLocale()
+    const requestedLang = process.env.SEUOFFICE_LANG ?? app.getLocale()
     setUiLang(normalizeLang(requestedLang), requestedLang)
     app.setAccessibilitySupportEnabled(true)
     installApplicationMenu()

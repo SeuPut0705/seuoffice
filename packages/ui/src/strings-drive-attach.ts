@@ -1,4 +1,4 @@
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 
 /** "Attach from Drive" in every editor's AI panel (decisions 0033, 0085) */
 export interface DriveAttachStrings {

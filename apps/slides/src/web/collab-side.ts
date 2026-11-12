@@ -4,7 +4,7 @@
  * synced (text, slides added and deleted, notes); every other edit is refused with a message,
  * as are undo, redo and AI edits, which restore or hold whole deck snapshots no other page has.
  */
-import { slideDurableId } from '@genoffice/pptx-engine'
+import { slideDurableId } from '@seuoffice/pptx-engine'
 import { webLanguage } from '@seuoffice/web-platform'
 import type { CollabAdapter } from '@seuoffice/collab/client'
 import { showToast } from '../renderer/components/toast-bus'

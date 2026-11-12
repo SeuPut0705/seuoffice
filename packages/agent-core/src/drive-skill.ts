@@ -223,7 +223,7 @@ export function guardDriveContent(skill: AgentSkill, drive: DriveSkill | null): 
   }
 }
 
-/** The calls an editor's preload exposes for Drive (@genoffice/electron-utils/drive-ai-bridge) */
+/** The calls an editor's preload exposes for Drive (@seuoffice/electron-utils/drive-ai-bridge) */
 export interface DriveBridgeLike {
   driveAiEnabled(): Promise<boolean>
   driveSearch(query: string, limit: number): Promise<unknown>

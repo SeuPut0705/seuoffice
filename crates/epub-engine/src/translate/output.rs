@@ -37,7 +37,7 @@ use crate::notation::{
     parse_block_notation,
 };
 use crate::open::{EpubOpenResult, open_epub};
-use crate::pdf_structure::{TranslationMode, is_lang, normalize_lang};
+use crate::pdf_structure::{TranslationMode, translation_language_of};
 use crate::primitives::{
     ADOBE_FONT_OBFUSCATION, encode_entry_text, font_obfuscation_key, obfuscate_font, resolve_href,
 };
@@ -300,13 +300,10 @@ fn easy_label_of(lang: &str) -> &'static str {
 }
 
 /// `easyExplanationLabel`: the easy-explanation marker in `lang`; a tag that
-/// is not one of the 21 is read the way the UI reads a locale.
+/// is not one of the 21 is read as a locale (`zh-Hant` is `zh-TW`, unknown is
+/// English).
 pub fn easy_explanation_label(lang: &str) -> &'static str {
-    easy_label_of(if is_lang(lang) {
-        lang
-    } else {
-        normalize_lang(Some(lang))
-    })
+    easy_label_of(translation_language_of(Some(lang)))
 }
 
 /// `escapeText`: text escaped for XML content (characters XML does not allow

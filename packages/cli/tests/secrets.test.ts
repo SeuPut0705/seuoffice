@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SEALED_PREFIX } from '@genoffice/ai-provider'
+import { SEALED_PREFIX } from '@seuoffice/ai-provider'
 import { cliSecretCodec, revealedSecretsOf } from '../src/secrets'
 
 const dirs: string[] = []
@@ -25,7 +25,7 @@ function setup(stdout: string) {
     }),
   )
   const spawn = vi.fn(() => ({ stdout, status: 0 }))
-  const env = { GENOFFICE_USER_DATA: dir, GENOFFICE_APP_BIN: join(dir, 'app.exe') }
+  const env = { SEUOFFICE_USER_DATA: dir, SEUOFFICE_APP_BIN: join(dir, 'app.exe') }
   return { dir, spawn, codec: cliSecretCodec(env, { spawn }) }
 }
 
@@ -46,7 +46,7 @@ describe('cliSecretCodec', () => {
     expect(args).toEqual(['--reveal-ai-secrets'])
     expect(JSON.parse(options.input).sort()).toEqual([A, B])
     expect(options.env.ELECTRON_RUN_AS_NODE).toBeUndefined()
-    expect(options.env.GENOFFICE_USER_DATA).toBe(dir)
+    expect(options.env.SEUOFFICE_USER_DATA).toBe(dir)
     expect(codec.seal('sk')).toBeNull()
   })
 

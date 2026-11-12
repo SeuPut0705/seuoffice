@@ -46,8 +46,8 @@ import {
   placeRemoteEntries,
   useProjectPanel,
   type ProjectPanel,
-} from '@genoffice/ui'
-import { IconPicture, IconTable } from '@genoffice/ui/icons'
+} from '@seuoffice/ui'
+import { IconPicture, IconTable } from '@seuoffice/ui/icons'
 import { useEffect, useId, useRef, useState } from 'react'
 import type {
   DragEvent as ReactDragEvent,
@@ -62,13 +62,13 @@ import {
   windowMcpState,
   windowMcpUsableServers,
   toolStepLabel,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import type {
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
-} from '@genoffice/ai-provider/browser'
-import { localModelCapabilities } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
+import { localModelCapabilities } from '@seuoffice/ai-provider/browser'
 import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
@@ -105,7 +105,7 @@ import {
   type HoldState,
   type TurnProposal,
 } from './turn-proposal'
-import { isRtlLang } from '@genoffice/i18n'
+import { isRtlLang } from '@seuoffice/i18n'
 
 const PANEL_WIDTH_KEY = 'hwp-ai-panel-width'
 const PANEL_WIDTH_DEFAULT = 360

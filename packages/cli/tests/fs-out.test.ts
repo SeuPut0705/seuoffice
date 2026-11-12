@@ -8,10 +8,10 @@ import { EXIT } from '../src/result'
 
 describe('resolveOutput', () => {
   it('refuses an empty --out rather than falling back onto the input file', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'genoffice-out-'))
+    const dir = mkdtempSync(join(tmpdir(), 'seuoffice-out-'))
     const input = join(dir, 'deck.pptx')
     writeFileSync(input, 'source')
-    const ctx = { cwd: dir, env: { ...process.env, GENOFFICE_ALLOWED_ROOTS: '' } }
+    const ctx = { cwd: dir, env: { ...process.env, SEUOFFICE_ALLOWED_ROOTS: '' } }
     // `--out=` is an empty value, not an absent flag
     const args = parseArgs(['slides', 'apply', 'deck.pptx', '--ops', 'ops.json', '--out='])
     const out = flagString(args, 'out')
@@ -33,7 +33,7 @@ describe('resolveOutput', () => {
 
 describe('writeOutput', () => {
   it('replaces a file whose name is near the 255-byte file-name limit', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'genoffice-out-'))
+    const dir = mkdtempSync(join(tmpdir(), 'seuoffice-out-'))
     // 78 Hangul letters + ".docx" is 239 bytes; the temp name must not grow past 255
     const file = join(dir, `${'가'.repeat(78)}.docx`)
     writeFileSync(file, 'old')

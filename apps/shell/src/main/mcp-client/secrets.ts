@@ -1,4 +1,4 @@
-import { SEALED_PREFIX, isSealedSecret } from '@genoffice/ai-provider'
+import { SEALED_PREFIX, isSealedSecret } from '@seuoffice/ai-provider'
 import type { SafeStorageLike } from '../ai-secrets'
 import { driveTokenSeals } from '../drive/drive-vault'
 import type { McpSecretView } from '../../shared/mcp-servers-api'

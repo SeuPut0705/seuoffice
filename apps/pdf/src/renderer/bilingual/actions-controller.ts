@@ -35,9 +35,9 @@
  *   one-paragraph call and edits read and write the easy results only. The
  *   paid-route answer is the tab's, whatever the mode.
  */
-import type { AiProviderId, AiRunErrorKind } from '@genoffice/ai-provider/browser'
-import type { Lang } from '@genoffice/i18n'
-import { aiProviderDisplayName } from '@genoffice/ui'
+import type { AiProviderId, AiRunErrorKind } from '@seuoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
+import { aiProviderDisplayName } from '@seuoffice/ui'
 import {
   startTranslationJob,
   type TranslationJobItem,

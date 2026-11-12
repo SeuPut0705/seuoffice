@@ -15,7 +15,7 @@ import {
   type ParsedDocFull,
   type SectionInfo,
   type SectionSettings,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import {
   autoSpacingPt,
   autospaceMode,

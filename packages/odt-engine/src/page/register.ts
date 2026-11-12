@@ -22,7 +22,7 @@ import type {
   InlineConverter,
   OoxmlToOdfContext,
 } from '../core/convert'
-import { PAGE_MARK, TOTAL_PAGES_MARK } from '@genoffice/docx-engine'
+import { PAGE_MARK, TOTAL_PAGES_MARK } from '@seuoffice/docx-engine'
 import { decodeXmlEntities } from '../core/xml'
 import { editStyleXml, newStyleXml, patchStartTag } from '../text/style-xml'
 import { pageFieldRunWriter } from './hf'

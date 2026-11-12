@@ -24,7 +24,7 @@ body{margin:0;padding:40px;font:16px/1.5 sans-serif}
 
 test.describe('html editor: selecting several elements', () => {
   test('shift / ctrl+click and a rubber band select several elements; edits reach all of them', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-html-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-html-'))
     const htmlPath = join(dir, 'cards.html')
     await writeFile(htmlPath, SOURCE)
 

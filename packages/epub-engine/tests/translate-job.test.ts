@@ -4,8 +4,8 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { DocumentJobRegistry, type TranslationModelRequest } from '@genoffice/pdf-structure'
-import { blockKeyString, ResultStore } from '@genoffice/pdf-structure/store'
+import { DocumentJobRegistry, type TranslationModelRequest } from '@seuoffice/pdf-structure'
+import { blockKeyString, ResultStore } from '@seuoffice/pdf-structure/store'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { openEpub } from '../src/open'
 import {

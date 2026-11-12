@@ -23,7 +23,7 @@ import {
   positionDecl,
   textEffectDecls,
 } from './text-effects'
-import { symbolGlyph, symbolPuaChar } from '@genoffice/docx-engine'
+import { symbolGlyph, symbolPuaChar } from '@seuoffice/docx-engine'
 import { symbolFontCovers } from '../font-check'
 
 /**
@@ -491,7 +491,7 @@ export function fontAttrsFromFamilyChain(chain: string | undefined): Record<stri
         !/^var\(|\)$/.test(x) &&
         !/^(serif|sans-serif|monospace|cursive|fantasy|system-ui)$/i.test(x) &&
         !CSS_ONLY_FAMILY.test(x) &&
-        // internal fonts.css aliases are not user picks: 'GenOffice *', the
+        // internal fonts.css aliases are not user picks: 'SeuOffice *', the
         // '* GO' renamed/range-limited faces (Carlito GO, KR Theme Latin GO,
         // Noto Sans/Serif CJK GO...) and the size-adjusted Noto Arabic aliases
         !/^genoffice /i.test(x) &&

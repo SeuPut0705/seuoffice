@@ -4,7 +4,7 @@
  * The files are only read; nothing here copies, installs or downloads a font.
  */
 import { app, ipcMain, shell } from 'electron'
-import { templateFontsDir } from '@genoffice/electron-utils/template-fonts-dir'
+import { templateFontsDir } from '@seuoffice/electron-utils/template-fonts-dir'
 import { setTemplateFontDir } from './fonts'
 
 export function templateFontFolder(): string {

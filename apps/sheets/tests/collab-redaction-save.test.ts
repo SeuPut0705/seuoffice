@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+import type { SheetRedactionState } from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import {
   createEditJournal,
   recordStructuralOp,
@@ -15,12 +15,12 @@ import JSZip from 'jszip'
 import {
   applyCellEditsToXlsx,
   readBasicWorkbook,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
 import {
   REDACTION_PART_PATH,
   serializeRedactionPart,
   parseRedactionPart,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { loadedRedactions } from '../src/renderer/ai/redact-load'
 import { readCells, type WorkbookReadContext } from '../src/renderer/ai/workbook-readers'
 import { workbookSaveRequestSchema } from '../src/shared/desktop-api'

@@ -31,7 +31,7 @@ import {
   readSections,
   sectionFromSectPr,
   sectionSettingsFromXml,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import type { AlignedItem, EditedItem, OdtPartInfo, OoxmlToOdfContext } from '../core/convert'
 import { alignItems, editedItems, paragraphBlockOf } from '../core/flow'
 import type { OdtMasterPage, OdtStyle, OdtStyleTable } from '../core/styles'

@@ -1,6 +1,6 @@
 import { CellValueType } from '@univerjs/core'
 import { describe, expect, it } from 'vitest'
-import { workbookStyleEditSchema } from '@genoffice/xlsx-gateway/shared/edit-schemas'
+import { workbookStyleEditSchema } from '@seuoffice/xlsx-gateway/shared/edit-schemas'
 
 import {
   createEditJournal,

@@ -19,9 +19,9 @@ import {
   assertFileSaved,
   UNSAVED_CHANGES_MESSAGE,
   withoutUnsavedFiles,
-} from '@genoffice/electron-utils/unsaved-files'
-import { attachableMaxBytes, parseFileToText } from '@genoffice/file-parse'
-import type { ProjectId, ProjectReadResult } from '@genoffice/project-store'
+} from '@seuoffice/electron-utils/unsaved-files'
+import { attachableMaxBytes, parseFileToText } from '@seuoffice/file-parse'
+import type { ProjectId, ProjectReadResult } from '@seuoffice/project-store'
 
 /** characters of parsed text one read_knowledge_file page returns (aligned
  *  with the chat-attachment reader, files-skill.ts, so models meet one paging

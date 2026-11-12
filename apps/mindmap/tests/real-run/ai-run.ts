@@ -11,7 +11,7 @@
  *
  * Not part of `npm test`: it needs a build and opens a window.
  *
- *   npm run build -w @genoffice/mindmap
+ *   npm run build -w @seuoffice/mindmap
  *   npx tsx apps/mindmap/tests/real-run/ai-run.ts
  *
  * Screenshots and `result.json` go to MINDMAP_AI_RUN_OUT (a temp folder when
@@ -23,8 +23,8 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
-import { createXmindDocumentFromSheets, type XmindTopic } from '@genoffice/xmind-engine'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@seuoffice/ai-provider/browser'
+import { createXmindDocumentFromSheets, type XmindTopic } from '@seuoffice/xmind-engine'
 import { AI_CHANNELS } from '../../src/shared/ipc'
 
 const APP_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -115,8 +115,8 @@ async function launch(path: string): Promise<{ app: ElectronApplication; page: P
     args: [APP_DIR, path],
     env: {
       ...hostEnv,
-      GENOFFICE_USER_DATA: mkdtempSync(join(tmpdir(), 'mindmap-ai-run-profile-')),
-      GENOFFICE_LANG: 'ko',
+      SEUOFFICE_USER_DATA: mkdtempSync(join(tmpdir(), 'mindmap-ai-run-profile-')),
+      SEUOFFICE_LANG: 'ko',
     },
   })
   // The script runner wraps named functions in a helper the main process does not have.

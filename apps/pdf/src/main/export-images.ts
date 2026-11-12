@@ -1,5 +1,5 @@
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
-import { numberedExportPaths } from '@genoffice/electron-utils/numbered-export-paths'
+import { numberedExportPaths } from '@seuoffice/electron-utils/numbered-export-paths'
 
 export function isValidExportPageNumber(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) > 0

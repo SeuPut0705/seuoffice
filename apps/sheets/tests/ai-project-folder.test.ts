@@ -12,13 +12,13 @@ import { resolve } from 'node:path'
 import { act, createElement, useEffect } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AiSettings } from '@genoffice/ai-provider/browser'
+import type { AiSettings } from '@seuoffice/ai-provider/browser'
 import {
   AiChatPanel,
   type AiChatMessage,
   type AiPanelSubscription,
 } from '../src/renderer/ai/AiChatPanel'
-import { useProjectPanel, type ProjectPanel } from '@genoffice/ui'
+import { useProjectPanel, type ProjectPanel } from '@seuoffice/ui'
 import { t } from '../src/renderer/i18n/locale'
 import { fakeProjectFolder, type FakeProjectFolder } from './fake-project-folder'
 

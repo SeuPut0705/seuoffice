@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { chartWorkbookParts, colLetter } from '@genoffice/pptx-engine/chart-workbook'
+import { chartWorkbookParts, colLetter } from '@seuoffice/pptx-engine/chart-workbook'
 import type { ChartAxis, ChartDisplay, ChartSeries, NewChart, ThemeColors } from './types'
 import { DOCX_ZIP_LIMITS, assertZipInflatesWithinLimits } from './zip-load'
 import { ownValue } from './own-value'
@@ -15,7 +15,7 @@ import {
   type XNode,
 } from './xml-utils'
 
-export { CHART_WORKBOOK_REL_TYPE, colLetter } from '@genoffice/pptx-engine/chart-workbook'
+export { CHART_WORKBOOK_REL_TYPE, colLetter } from '@seuoffice/pptx-engine/chart-workbook'
 
 const CHART_KINDS: Record<string, ChartDisplay['kind']> = {
   'c:barChart': 'bar',

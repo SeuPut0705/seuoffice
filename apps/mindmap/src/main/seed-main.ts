@@ -13,7 +13,7 @@
  * Nothing here runs an AI.
  */
 import { ipcMain } from 'electron'
-import type { HandoffWebContents } from '@genoffice/electron-utils/generate-handoff'
+import type { HandoffWebContents } from '@seuoffice/electron-utils/generate-handoff'
 import { MINDMAP_CHANNELS, type MindmapSeed } from '../shared/ipc'
 
 /** queued content by webContents id: one per new tab at most */

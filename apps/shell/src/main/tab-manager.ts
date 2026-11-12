@@ -2,7 +2,7 @@ import { basename, join } from 'node:path'
 import { realpathSync } from 'node:fs'
 import { BrowserWindow, shell, WebContentsView } from 'electron'
 import type { Rectangle, WebContents } from 'electron'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 
 import {
   createDocsView,
@@ -70,7 +70,7 @@ import {
   setActiveSlidesWebContents,
   slidesIsDirty,
 } from '../../../slides/src/main/slides-main'
-import { rendererUrl, safeExternalUrl } from '@genoffice/electron-utils'
+import { rendererUrl, safeExternalUrl } from '@seuoffice/electron-utils'
 import type { DocumentTabKind, OpenDocumentTab, TabKind, TabSummary } from '../shared/tabs-api'
 import { isSettledRect, tabStripHeight } from '../shared/tab-drag-geometry'
 import type {
@@ -280,7 +280,7 @@ export class TabManager {
   }
 
   private scheduleSpareSheetsView(delayMs: number): void {
-    if (process.env.GENOFFICE_NO_SPARE_VIEW || this.spareSheetsTimer || this.spareSheetsView) return
+    if (process.env.SEUOFFICE_NO_SPARE_VIEW || this.spareSheetsTimer || this.spareSheetsView) return
     // a spare sheets view belongs to the single-pane shell; it must never
     // shadow a pane while a split is live
     if (this.split) return
@@ -1772,13 +1772,13 @@ export class TabManager {
       removed.view.setVisible(false)
       this.shellWindow.contentView.removeChildView(removed.view)
       if (removed.kind === 'docs') {
-        // webContents.close()/.destroy() on a closed docs tab wedges Electron's whole
-        // UI thread in a native modal run loop (reproduced consistently; survives
-        // close() vs destroy(), teardown ordering, deferring, and disabling
-        // accessibility support — looks like an upstream WebContentsView/Chromium
-        // issue, not something fixable from here). Detaching without destroying
-        // avoids the freeze; the orphaned webContents object stays until the app
-        // quits, but its renderer process is ended now so its memory comes back.
+        // webContents.close()/.destroy() on a closed docs tab whose page is live
+        // wedges Electron's whole UI thread in a native modal run loop (reproduced
+        // consistently; survives close() vs destroy(), teardown ordering, deferring,
+        // and disabling accessibility support — looks like an upstream
+        // WebContentsView/Chromium issue). So the view is only detached here: its
+        // renderer process is ended, and the webContents is destroyed once that
+        // process is gone (renderer-disposal.ts), when no page is left to unload.
         teardownDocsRenderer(removed.view.webContents)
         releaseClosedRenderer(removed.view.webContents)
       } else {

@@ -1,6 +1,6 @@
 /* Per-app accent (excel-green family) + sheets-only tokens.
  * Chrome tokens (surface/text/border/…, AI panel --color-*) come from
- * @genoffice/ui/tokens.css; nothing here may shadow those names. */
+ * @seuoffice/ui/tokens.css; nothing here may shadow those names. */
 :root {
   --excel-green: #217346;
   --excel-green-dark: #185c37;
@@ -181,14 +181,14 @@
  * Office sans families the OS lacks silently fall back to Chromium's serif
  * default on the grid canvas. local() keeps a real installed font first; the
  * bundled Carlito (metric-compatible with Calibri, shared via
- * @genoffice/ui/fonts) guarantees Excel-matching widths before the
+ * @seuoffice/ui/fonts) guarantees Excel-matching widths before the
  * Helvetica/Arial approximations. Canvas fillText never triggers @font-face
  * downloads, so main.tsx loads these explicitly. */
 @font-face {
   font-family: Aptos;
   src:
     local('Aptos'), local('Calibri'), local('Carlito'),
-    url('@genoffice/ui/fonts/Carlito-Regular.ttf'), local('Helvetica Neue'), local('Arial');
+    url('@seuoffice/ui/fonts/Carlito-Regular.ttf'), local('Helvetica Neue'), local('Arial');
   font-display: block;
 }
 
@@ -197,7 +197,7 @@
   font-weight: bold;
   src:
     local('Aptos Bold'), local('Calibri Bold'), local('Carlito Bold'),
-    url('@genoffice/ui/fonts/Carlito-Bold.ttf'), local('Helvetica Neue Bold'), local('Arial Bold');
+    url('@seuoffice/ui/fonts/Carlito-Bold.ttf'), local('Helvetica Neue Bold'), local('Arial Bold');
   font-display: block;
 }
 
@@ -206,7 +206,7 @@
   font-style: italic;
   src:
     local('Aptos Italic'), local('Calibri Italic'), local('Carlito Italic'),
-    url('@genoffice/ui/fonts/Carlito-Italic.ttf'), local('Helvetica Neue Italic'),
+    url('@seuoffice/ui/fonts/Carlito-Italic.ttf'), local('Helvetica Neue Italic'),
     local('Arial Italic');
   font-display: block;
 }
@@ -217,7 +217,7 @@
   font-style: italic;
   src:
     local('Aptos Bold Italic'), local('Calibri Bold Italic'), local('Carlito Bold Italic'),
-    url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf'), local('Helvetica Neue Bold Italic'),
+    url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf'), local('Helvetica Neue Bold Italic'),
     local('Arial Bold Italic');
   font-display: block;
 }
@@ -228,21 +228,21 @@
 
 @font-face {
   font-family: Carlito;
-  src: local('Carlito'), url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: local('Carlito'), url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   font-display: block;
 }
 
 @font-face {
   font-family: Carlito;
   font-weight: bold;
-  src: local('Carlito Bold'), url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: local('Carlito Bold'), url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   font-display: block;
 }
 
 @font-face {
   font-family: Carlito;
   font-style: italic;
-  src: local('Carlito Italic'), url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: local('Carlito Italic'), url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   font-display: block;
 }
 
@@ -250,14 +250,14 @@
   font-family: Carlito;
   font-weight: bold;
   font-style: italic;
-  src: local('Carlito Bold Italic'), url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: local('Carlito Bold Italic'), url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   font-display: block;
 }
 
 @font-face {
   font-family: Calibri;
   src:
-    local('Calibri'), local('Carlito'), url('@genoffice/ui/fonts/Carlito-Regular.ttf'),
+    local('Calibri'), local('Carlito'), url('@seuoffice/ui/fonts/Carlito-Regular.ttf'),
     local('Helvetica Neue'), local('Arial');
   font-display: block;
 }
@@ -266,7 +266,7 @@
   font-family: Calibri;
   font-weight: bold;
   src:
-    local('Calibri Bold'), local('Carlito Bold'), url('@genoffice/ui/fonts/Carlito-Bold.ttf'),
+    local('Calibri Bold'), local('Carlito Bold'), url('@seuoffice/ui/fonts/Carlito-Bold.ttf'),
     local('Helvetica Neue Bold'), local('Arial Bold');
   font-display: block;
 }
@@ -275,7 +275,7 @@
   font-family: Calibri;
   font-style: italic;
   src:
-    local('Calibri Italic'), local('Carlito Italic'), url('@genoffice/ui/fonts/Carlito-Italic.ttf'),
+    local('Calibri Italic'), local('Carlito Italic'), url('@seuoffice/ui/fonts/Carlito-Italic.ttf'),
     local('Helvetica Neue Italic'), local('Arial Italic');
   font-display: block;
 }
@@ -286,7 +286,7 @@
   font-style: italic;
   src:
     local('Calibri Bold Italic'), local('Carlito Bold Italic'),
-    url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf'), local('Helvetica Neue Bold Italic'),
+    url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf'), local('Helvetica Neue Bold Italic'),
     local('Arial Bold Italic');
   font-display: block;
 }
@@ -429,7 +429,7 @@ textarea:disabled {
  * ShapeGallerySelect / EditableMenuSelect -> .menu-select-drop; the ribbon
  * color tools -> .sheets-color-pop inline — the .sheets-color-pop-portal
  * variant is a child of body and is never trapped). Keying on the host also
- * keeps the header under a dialog's dim backdrop: html.genoffice-popover-open
+ * keeps the header under a dialog's dim backdrop: html.seuoffice-popover-open
  * also fires for the Dropdown/ColorDropdown inside Format Cells, Name
  * Manager, Pivot, Consolidate, Subtotal, Advanced Filter and Insert Function,
  * all under .dialog-backdrop (z-index: 40) — and "dialogs always dismiss the
@@ -456,7 +456,7 @@ textarea:disabled {
 
 /* While a popover is open the row must deliver presses (drag regions swallow
    them), so outside-press dismissal can see presses on the blank band */
-html.genoffice-popover-open .ribbon-tabs {
+html.seuoffice-popover-open .ribbon-tabs {
   -webkit-app-region: no-drag;
 }
 
@@ -1358,7 +1358,7 @@ html.genoffice-popover-open .ribbon-tabs {
   anchor-scope: --menu-select;
 }
 
-/* Anchor positioning for the shared Word-style color panel (@genoffice/ui
+/* Anchor positioning for the shared Word-style color panel (@seuoffice/ui
    .gcp-palette draws the chrome; this only places it under its trigger). */
 .sheets-color-pop {
   position: fixed;
@@ -5979,7 +5979,7 @@ textarea:focus {
   display: none;
 }
 
-/* ── Shared dropdown (@genoffice/ui gs-dd) app sizing ──────────────────────
+/* ── Shared dropdown (@seuoffice/ui gs-dd) app sizing ──────────────────────
    Ports the old native-select metrics per container so replacing <select>
    with the themed Dropdown doesn't shift layout (reference: the matching
    block in apps/slides styles.css). */

@@ -12,7 +12,7 @@
  * two sheets swapped names, laid over the other sheet's cells) until the next
  * save and reopen.
  */
-import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+import type { SheetRedactionState } from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 
 import {
   redactionIndexBySheetId,

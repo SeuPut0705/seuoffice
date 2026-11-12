@@ -23,6 +23,8 @@
  * unredacted text.
  */
 
+import { OLD_REDACT_NS } from './old-names'
+
 export interface WithheldMark {
   /** TipTap serialises a mark's type as its schema object rather than the name */
   type?: string | { name?: string }
@@ -193,8 +195,8 @@ function walkInline(
 }
 
 /**
- * The namespace the "withheld from the model" label lives in, and the prefix
- * bound to it.
+ * The prefix the "withheld from the model" label is written under, and the
+ * namespaces bound to it.
  *
  * Both file carriers write into it — a `go:redact` element in a docx run's rPr
  * and the same element inside a pptx `<a:ext>` — and an undeclared prefix is a
@@ -205,6 +207,28 @@ function walkInline(
  * It lives here rather than in either engine because the two of them need it,
  * and a per-app stack has to build with only the core and one app present.
  */
-export const REDACT_NS = 'https://genspark.ai/genoffice/redaction/2026'
 export const REDACT_PREFIX = 'go'
 export const REDACT_EL = `${REDACT_PREFIX}:redact`
+
+/** The namespace this product owns for the label. */
+export const OWN_REDACT_NS = 'https://github.com/SeuPut0705/seuoffice/redaction/2026'
+
+/**
+ * Every namespace a saved label may be under. A file keeps the one it was
+ * saved with, so a reader honours each, and a check that every trace of the
+ * mark was read counts each.
+ */
+export const REDACT_NAMESPACES: readonly string[] = [OWN_REDACT_NS, OLD_REDACT_NS]
+
+/**
+ * The namespace a label is written under: still the old one. A version
+ * installed before OWN_REDACT_NS existed knows the mark's namespace only by
+ * the old URI (the deck reader's check that every mark was read, the shell's
+ * "does this file withhold anything" gate), so there a mark under the new URI
+ * that it cannot read would pass both unnoticed.
+ *
+ * Switch this to OWN_REDACT_NS only when a version that reads both
+ * (REDACT_NAMESPACES) has been the stable release for at least 14 days.
+ * Until then the old URI is written.
+ */
+export const REDACT_NS_WRITTEN = OLD_REDACT_NS

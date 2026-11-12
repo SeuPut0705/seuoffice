@@ -4,7 +4,7 @@ import {
   SECTION_PAGES_MARK,
   TOTAL_PAGES_MARK,
   type HeaderFooter,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { makeGapHfEl } from '../src/renderer/editor/hf-dom'
 import { hfDocJson, hfValueFromDoc } from '../src/renderer/editor/hf-editor'
 import { applyHfText, hfEditText } from '../src/renderer/editor/hf-text'

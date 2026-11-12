@@ -6,13 +6,13 @@ import {
   type AiSettings,
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import {
   aiHoldReason,
   aiSendGate,
   withAiContinueProvider,
   withAiSubscriptionNoticeSeen,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import {
   aiBlockedRunOf,
   blockedRunSourceIndex,
@@ -36,7 +36,7 @@ const CLAUDE_READY: AiSubscriptionStatuses = {
   codex: status('codex', 'signed-out'),
 }
 
-// The gate itself is the one every editor shares (@genoffice/ui); these pin it on the
+// The gate itself is the one every editor shares (@seuoffice/ui); these pin it on the
 // settings and statuses the sheets panel hands it.
 describe('the send gate', () => {
   const NOT_CONNECTED: AiSubscriptionStatuses = {

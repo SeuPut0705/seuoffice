@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import {
   AI_SUBSCRIPTION_PROVIDERS,
   type AiSubscriptionProviderId,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import {
   aiSubscriptionStatusOf,
   aiSubscriptionVendorName,

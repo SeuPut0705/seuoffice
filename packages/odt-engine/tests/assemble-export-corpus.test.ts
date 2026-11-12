@@ -3,14 +3,14 @@
  * Skipped unless ODT_CORPUS points at the corpus folder; reads `<ODT_CORPUS>/docx`
  * and writes the ODTs to `<ODT_CORPUS>/out-docx2odt` (outside the repository).
  *
- *   ODT_CORPUS=E:/github/odt-corpus npm run test -w @genoffice/odt-engine
+ *   ODT_CORPUS=E:/github/odt-corpus npm run test -w @seuoffice/odt-engine
  *
  * Every converted file must re-read through `odtToDocx` with the same
  * paragraph count, text, table grids, drawables, notes and page geometry.
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { parseDocx } from '@genoffice/docx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { docxToOdt, odtToDocx } from '../src'
 import { type DocSignature, signature } from './helpers/docx-signature'

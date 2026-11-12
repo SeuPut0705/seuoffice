@@ -1,4 +1,4 @@
-import { getSystemShortDate } from '@genoffice/xlsx-gateway/shared/short-date'
+import { getSystemShortDate } from '@seuoffice/xlsx-gateway/shared/short-date'
 import {
   defaultNumfmtOptions,
   longDatePattern,

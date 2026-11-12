@@ -1,5 +1,5 @@
 {
-  "name": "@genoffice/docx2hwp",
+  "name": "@seuoffice/docx2hwp",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": true,
@@ -14,7 +14,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@genoffice/docx-engine": "*",
+    "@seuoffice/docx-engine": "*",
     "@rhwp/core": "file:../../vendor/rhwp-core"
   },
   "devDependencies": {

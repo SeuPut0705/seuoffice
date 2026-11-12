@@ -1,4 +1,4 @@
-import type { Run } from '@genoffice/docx-engine'
+import type { Run } from '@seuoffice/docx-engine'
 import { latinLineFactor } from '../line-metrics'
 
 /** engine rule plus the run's Latin face: the rule line is one line of that face */

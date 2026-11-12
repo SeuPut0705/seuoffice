@@ -5,7 +5,7 @@
  * which marks the sheet note-dirty for the save.
  */
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { formatAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { formatAddress } from '@seuoffice/xlsx-gateway/domain/cell-address'
 
 import { useI18n } from './i18n/locale'
 import { spellcheckEnabled } from './spellcheck-pref'

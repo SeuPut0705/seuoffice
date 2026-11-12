@@ -141,7 +141,7 @@ async function reopen(app: ElectronApplication, file: string): Promise<Page> {
 }
 
 test('a row added to a page-filling table saves as .hwp and opens again with the same pages', async () => {
-  const file = join(await mkdtemp(join(tmpdir(), 'genoffice-hwp-row-insert-')), 'full-page.hwp')
+  const file = join(await mkdtemp(join(tmpdir(), 'seuoffice-hwp-row-insert-')), 'full-page.hwp')
   await copyFile(FULL_PAGE, file)
   const launched = await launchShell({
     onboardingSeen: true,

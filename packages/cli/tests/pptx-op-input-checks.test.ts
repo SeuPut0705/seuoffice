@@ -6,7 +6,7 @@
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { OpenedPptx } from '@genoffice/pptx-engine'
+import type { OpenedPptx } from '@seuoffice/pptx-engine'
 import { applyOps, blankDeck } from '../src/formats/pptx'
 import { refuseOp } from '../src/formats/pptx-op-checks'
 import { run, tempDir } from './helpers'

@@ -13,7 +13,7 @@
  * reproduces the same `w:tcPr` for an untouched cell. The save side relies on
  * that to tell untouched cells from edited ones.
  */
-import type { CellBorder, CellBorders } from '@genoffice/docx-engine'
+import type { CellBorder, CellBorders } from '@seuoffice/docx-engine'
 import type { OdtNode } from '../core/body'
 import type { OdfToOoxmlContext } from '../core/convert'
 import { escapeXmlAttr } from '../core/xml'

@@ -4,7 +4,7 @@
  * web page has one save target, the opened file, and may not point at a Save As it lacks.
  */
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { strings } from '../src/renderer/i18n/strings'
 import { openedUnverifiedKey, saveFailureKey } from '../src/renderer/save-flow'
 

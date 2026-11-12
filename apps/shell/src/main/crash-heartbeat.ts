@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { writeJsonAtomic } from '@genoffice/electron-utils/atomic-write'
+import { writeJsonAtomic } from '@seuoffice/electron-utils/atomic-write'
 import { appendCrashLog } from './crash-log'
 import type { CrashEntry, CrashMemory } from './crash-log'
 

@@ -1,5 +1,5 @@
 import * as CFB from 'cfb'
-import { readCompoundFile } from '@genoffice/compound-file'
+import { readCompoundFile } from '@seuoffice/compound-file'
 import { SECTION, openHwp, sectionCount, writeContainer } from './hwp5-file'
 
 const SIGNATURE = 'HWP Document File'

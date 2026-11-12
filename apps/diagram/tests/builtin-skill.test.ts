@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { DIAGRAM_OP_NAMES, SHAPE_NAMES } from '@genoffice/drawio-model'
+import { DIAGRAM_OP_NAMES, SHAPE_NAMES } from '@seuoffice/drawio-model'
 import { DIAGRAM_TOOL_NAMES } from '../src/renderer/ai/diagram-tools'
 
 const SKILL = readFileSync(

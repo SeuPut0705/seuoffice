@@ -4,7 +4,7 @@ import { app } from 'electron'
 import {
   installLocalFontFiles as installIntoStore,
   type FontStoreEnv,
-} from '@genoffice/electron-utils/font-store'
+} from '@seuoffice/electron-utils/font-store'
 import { fontFileFamilies, setUserFontDir } from './fonts'
 
 export function fontStoreDir(): string {

@@ -183,8 +183,8 @@ jobs:
         # the Google Drive client goes into the shell build; without it the
         # build ships without Drive
         env:
-          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
-          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
+          SEUOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_ID || secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          SEUOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_SECRET || secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
 
       # the Windows config reads the sidecar from the x86_64-pc-windows-gnu
       # folder; a hand build copies it the same way (docs/archive/ieum/releasing.ko.md, 4-(2))
@@ -201,8 +201,8 @@ jobs:
         working-directory: apps/shell
         run: npm run notices && npx electron-builder --win --config electron-builder.seuoffice.cjs --publish never
         env:
-          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
-          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
+          SEUOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_ID || secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          SEUOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_SECRET || secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
@@ -213,18 +213,18 @@ jobs:
         env:
           SEUOFFICE_UPDATE_CHANNEL: stable
           BUILD_DIR: release-stable
-          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
-          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
+          SEUOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_ID || secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          SEUOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_SECRET || secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
       # a release build should carry the Drive client; say so when it does not
       - name: The Google Drive client is in the build
         env:
-          HAS_CLIENT: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID != '' }}
+          HAS_CLIENT: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_ID || secrets.GENOFFICE_GOOGLE_CLIENT_ID != '' }}
         run: |
           if [ "$HAS_CLIENT" != "true" ]; then
-            echo "::warning::GENOFFICE_GOOGLE_CLIENT_ID is not set; this build ships without Google Drive"
+            echo "::warning::SEUOFFICE_GOOGLE_CLIENT_ID is not set; this build ships without Google Drive"
             exit 0
           fi
           grep -rqs "apps.googleusercontent.com" apps/shell/out/main || {
@@ -246,8 +246,8 @@ jobs:
             "$unpacked/SeuOffice.exe" \
             "$unpacked/resources/native/xlsx-sidecar.exe" \
             "$unpacked/resources/ocr/win-ocr.exe" \
-            "$unpacked/resources/cli/genoffice.cjs" \
-            "$unpacked/resources/cli/ieumoffice.cmd"; do
+            "$unpacked/resources/cli/seuoffice.cjs" \
+            "$unpacked/resources/cli/seuoffice.cmd"; do
             test -f "$bin" || { echo "missing: $bin"; exit 1; }
           done
           # the editor modules ship without their own main bundles, which the
@@ -432,8 +432,8 @@ jobs:
       - name: Build apps
         run: npm run build:all
         env:
-          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
-          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
+          SEUOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_ID || secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          SEUOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_SECRET || secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
 
       # pass 1, the latest channel: Build apps already compiled the shell, so
       # only the notices are made here (dist:mac would compile it again)
@@ -447,8 +447,8 @@ jobs:
           npm run notices
           npx electron-builder --mac --config electron-builder.seuoffice.cjs --publish never
         env:
-          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
-          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
+          SEUOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_ID || secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          SEUOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_SECRET || secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -466,8 +466,8 @@ jobs:
         env:
           SEUOFFICE_UPDATE_CHANNEL: stable
           BUILD_DIR: release-stable
-          GENOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
-          GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
+          SEUOFFICE_GOOGLE_CLIENT_ID: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_ID || secrets.GENOFFICE_GOOGLE_CLIENT_ID }}
+          SEUOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_SECRET || secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -476,10 +476,10 @@ jobs:
 
       - name: The Google Drive client is in the build
         env:
-          HAS_CLIENT: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_ID != '' }}
+          HAS_CLIENT: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_ID || secrets.GENOFFICE_GOOGLE_CLIENT_ID != '' }}
         run: |
           if [ "$HAS_CLIENT" != "true" ]; then
-            echo "::warning::GENOFFICE_GOOGLE_CLIENT_ID is not set; this build ships without Google Drive"
+            echo "::warning::SEUOFFICE_GOOGLE_CLIENT_ID is not set; this build ships without Google Drive"
             exit 0
           fi
           grep -rqs "apps.googleusercontent.com" apps/shell/out/main || {

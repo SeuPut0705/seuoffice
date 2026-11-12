@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
+import { InMemoryWorkbookAdapter } from '@seuoffice/xlsx-gateway/domain/in-memory-workbook'
 import type { AppliedOutcome, TurnProposal } from '../src/renderer/ai/turn-proposal'
-import type { ChangePlan, WorkbookSnapshot } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { ChangePlan, WorkbookSnapshot } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {

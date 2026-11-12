@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { htmlDir, htmlLang, type Lang, type Params } from '@genoffice/i18n'
+import { htmlDir, htmlLang, type Lang, type Params } from '@seuoffice/i18n'
 import {
   pickerSkillsOf,
   projectPanelText,
@@ -10,7 +10,7 @@ import {
   type AiComposerSkills,
   type SkillChipView,
   type SkillPickerItem,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import './globals'
 import {
   AGENT_CODEX_WEB_SEARCH,

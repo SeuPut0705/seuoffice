@@ -7,7 +7,7 @@
  * the raw count against files the real engine wrote.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { HwpMemo } from '@genoffice/file-parse'
+import type { HwpMemo } from '@seuoffice/file-parse'
 import type { MemoSnapshot } from '../src/shared/ipc'
 
 const { memoList, rawCount } = vi.hoisted(() => ({
@@ -15,7 +15,7 @@ const { memoList, rawCount } = vi.hoisted(() => ({
   rawCount: vi.fn<(bytes: Uint8Array) => number | null>(),
 }))
 
-vi.mock('@genoffice/file-parse', () => ({ hwpMemosOf: memoList }))
+vi.mock('@seuoffice/file-parse', () => ({ hwpMemosOf: memoList }))
 vi.mock('../src/main/tab-widths', () => ({ hwpxMemoCountOf: rawCount }))
 
 const { lostMemoCountOf } = await import('../src/main/memos')

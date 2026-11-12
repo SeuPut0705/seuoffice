@@ -10,7 +10,7 @@ import {
   type AiSubscriptionState,
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import { AiBlockedNotice } from '../src/AiBlockedNotice'
 import { AiModelPicker, aiModelPopoverStyle, type AiModelPickerBridge } from '../src/AiModelPicker'
 import { AiConnectPrompt, AiSubscriptionCard } from '../src/AiSubscriptionCard'

@@ -147,7 +147,7 @@ test.describe('MCP and diagrams', () => {
       }
       expect(info.families.map((f) => f.family)).toContain('drawio')
       const page = await openDiagramPage(app, async () => {
-        const opened = await call('open_in_genoffice', { path })
+        const opened = await call('open_in_seuoffice', { path })
         expect(opened.isError, opened.text).toBe(false)
       })
 

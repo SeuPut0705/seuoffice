@@ -7,27 +7,27 @@
  */
 import { ipcMain, shell } from 'electron'
 import type { BrowserWindow, IpcMainInvokeEvent, WebContents } from 'electron'
-import { safeExternalUrl } from '@genoffice/electron-utils'
-import { createI18n, getUiLang } from '@genoffice/i18n'
+import { safeExternalUrl } from '@seuoffice/electron-utils'
+import { createI18n, getUiLang } from '@seuoffice/i18n'
 import {
   FREE_AI_IPC_CHANNELS,
   FREE_AI_KEY_PAGES,
   isFreeAiProvider,
   withFreeAiConnection,
   withoutFreeAiConnection,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import type {
   AiSettings,
   FreeAiConnectResult,
   FreeAiProviderId,
   FreeAiQuota,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import {
   connectGemini,
   connectOpenRouter,
   openRouterFreeQuota,
-} from '@genoffice/ai-provider/free-connect'
-import type { FreeConnectResult } from '@genoffice/ai-provider/free-connect'
+} from '@seuoffice/ai-provider/free-connect'
+import type { FreeConnectResult } from '@seuoffice/ai-provider/free-connect'
 import { FREE_AI_PAGE_STRINGS } from './free-ai-strings'
 
 const tPage = createI18n(FREE_AI_PAGE_STRINGS)

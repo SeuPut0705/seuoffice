@@ -11,9 +11,9 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { openPptx, type TextElement } from '@genoffice/pptx-engine'
-import type { RenderSlide } from '@genoffice/pptx-render'
-import { buildPagePptx, parsePageSpec } from '@genoffice/pipelines/slides'
+import { openPptx, type TextElement } from '@seuoffice/pptx-engine'
+import type { RenderSlide } from '@seuoffice/pptx-render'
+import { buildPagePptx, parsePageSpec } from '@seuoffice/pipelines/slides'
 import { createSlidesSkill, type DeckAccess } from '../src/renderer/ai/slides-skill'
 import type { AgentToolCall } from '../src/shared/ipc'
 
@@ -162,7 +162,7 @@ describe('the cloud generation route is gone', () => {
       const text = read(file)
       expect(text, file).not.toMatch(/slides:cloud-/)
       expect(text, file).not.toMatch(/cloudGenStatus|cloudGeneratePage|cloudPageCancel/)
-      expect(text, file).not.toMatch(/GENOFFICE_CLOUD_SLIDE/)
+      expect(text, file).not.toMatch(/SEUOFFICE_CLOUD_SLIDE/)
     }
   })
 

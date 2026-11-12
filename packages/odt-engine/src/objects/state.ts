@@ -4,7 +4,7 @@
  * assembled notes/comments parts, save bookkeeping) is kept here, keyed by
  * the conversion context.
  */
-import type { NoteInfo } from '@genoffice/docx-engine'
+import type { NoteInfo } from '@seuoffice/docx-engine'
 import type {
   DocxExtraPart,
   JsonValue,

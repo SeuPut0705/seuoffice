@@ -5,13 +5,13 @@ import {
   assembleWithJsZip,
   createBufferEntrySource,
   planCellEditsToXlsx,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
-import type { SheetCellImageAddition } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
+import type { SheetCellImageAddition } from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
 import {
   applyCellImageAdditions,
   type CellImageAddition,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-cell-image-add'
-import type { MutablePackage } from '@genoffice/xlsx-gateway/gateway/xlsx-drawing-add'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-cell-image-add'
+import type { MutablePackage } from '@seuoffice/xlsx-gateway/gateway/xlsx-drawing-add'
 import { buildEditFixture } from './fixture-builder'
 
 /// 1×1 PNG; the save copies the bytes, so the payload only has to decode.

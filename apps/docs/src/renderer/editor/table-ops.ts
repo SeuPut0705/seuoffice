@@ -411,6 +411,7 @@ export function splitTableAtSelection(): Command {
       blockRevision: null,
       originalStructure: null,
       originalFormatting: null,
+      originalWraps: null,
       tblCaption: null,
       tblDescription: null,
       tblAltEdited: false,

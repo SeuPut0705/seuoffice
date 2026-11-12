@@ -1,4 +1,4 @@
-import { createI18n, defineStrings, type Lang } from '@genoffice/i18n'
+import { createI18n, defineStrings, type Lang } from '@seuoffice/i18n'
 import type { LoopbackPages } from './oauth-loopback'
 
 /**
@@ -9,9 +9,9 @@ import type { LoopbackPages } from './oauth-loopback'
  */
 const en = {
   pageDoneTitle: 'Signed in',
-  pageDoneBody: 'You can close this tab and go back to GenOffice.',
+  pageDoneBody: 'You can close this tab and go back to SeuOffice.',
   pageFailedTitle: 'Sign-in did not finish',
-  pageFailedBody: 'Go back to GenOffice and try again.',
+  pageFailedBody: 'Go back to SeuOffice and try again.',
   problemNeedsCommandWindow: 'This command can’t run without a command window.',
   problemEmptyCommand: 'Enter the command to run.',
   problemNotAProgram: 'This file can’t be run as a program.',
@@ -25,9 +25,9 @@ export const MCP_HUB_STRINGS = defineStrings({
   en,
   ko: {
     pageDoneTitle: '로그인했습니다',
-    pageDoneBody: '이 탭을 닫고 GenOffice로 돌아가세요.',
+    pageDoneBody: '이 탭을 닫고 SeuOffice로 돌아가세요.',
     pageFailedTitle: '로그인을 마치지 못했습니다',
-    pageFailedBody: 'GenOffice로 돌아가 다시 시도하세요.',
+    pageFailedBody: 'SeuOffice로 돌아가 다시 시도하세요.',
     problemNeedsCommandWindow: '이 명령은 명령 창 없이 실행할 수 없습니다.',
     problemEmptyCommand: '실행할 명령을 넣으세요.',
     problemNotAProgram: '이 파일은 프로그램으로 실행할 수 없습니다.',

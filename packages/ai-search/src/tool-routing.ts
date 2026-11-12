@@ -30,7 +30,7 @@ import {
   type AiProviderId,
   type AiSettings,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import { codexImageGenerator } from './codex-image-generator'
 
 export type AiToolCallPath = 'screen' | 'headless'

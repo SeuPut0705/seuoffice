@@ -1,6 +1,6 @@
 import React from 'react'
-import type { Lang } from '@genoffice/i18n'
-import type { AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
+import type { AiSubscriptionUsage } from '@seuoffice/ai-provider/browser'
 import {
   AI_SUBSCRIPTION_USAGE_THRESHOLD,
   aiSubscriptionUsageAlerts,

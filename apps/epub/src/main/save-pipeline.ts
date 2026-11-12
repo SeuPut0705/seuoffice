@@ -13,8 +13,8 @@
  *   `epubMigrationInfo`), then the job records (the shell's
  *   `migrateJobRecords`). A failed migration does not undo the save.
  */
-import { epubMigrationInfo, type EpubBook } from '@genoffice/epub-engine'
-import type { MigrateResult, ResultStore } from '@genoffice/pdf-structure/store'
+import { epubMigrationInfo, type EpubBook } from '@seuoffice/epub-engine'
+import type { MigrateResult, ResultStore } from '@seuoffice/pdf-structure/store'
 import type { EpubBookSession } from './book-session'
 
 /** what the migration needs of the result store */

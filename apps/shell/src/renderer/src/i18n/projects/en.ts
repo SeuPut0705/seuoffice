@@ -59,7 +59,7 @@ export const en = {
   undoFailed: 'Could not undo.',
   removeMemoryAria: 'Delete this memory: {text}',
   filesDesc:
-    'Files the AI can see in this project. Hidden files and the .ieumoffice folder are left out.',
+    'Files the AI can see in this project. Hidden files and the .seuoffice folder are left out.',
   filesEmpty: 'There are no files the AI can see.',
   filesLoadFailed: 'The file list could not be read.',
   filesCount: '{count} files',

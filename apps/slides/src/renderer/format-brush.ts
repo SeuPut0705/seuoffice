@@ -22,7 +22,7 @@ import type {
   RenderShadow,
   RenderGlow,
   RenderReflection,
-} from '@genoffice/pptx-render'
+} from '@seuoffice/pptx-render'
 import type { EditStrokeOp, GradientFillSpec, SetEffectsPatch } from '../shared/ipc'
 
 type StrokeSpec = EditStrokeOp['stroke']

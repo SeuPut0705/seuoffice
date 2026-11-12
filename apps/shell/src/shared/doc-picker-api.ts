@@ -6,7 +6,7 @@
  * of what crosses the window↔shell boundary (channel names and data shapes);
  * validating the ids is the shell backend's job.
  */
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 
 export const DOC_PICKER_CHANNELS = {
   getInit: 'doc-picker:get-init',

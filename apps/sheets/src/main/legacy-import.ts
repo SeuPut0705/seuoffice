@@ -5,7 +5,7 @@ import {
   htmlTablesToXlsxBuffer,
   looksLikeHtmlWorkbook,
   parseHtmlTables,
-} from '@genoffice/xlsx-gateway/gateway/html-import'
+} from '@seuoffice/xlsx-gateway/gateway/html-import'
 
 /// HTML travels through the main process as a string, so it gets the same cap
 /// as a CSV import rather than the sidecar's archive limits.

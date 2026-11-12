@@ -2,7 +2,7 @@
 /// English-only and (for role:'windowMenu' on Windows/Linux) follow macOS
 /// conventions (Zoom, Ctrl+M minimize, Bring All to Front).
 import type { MenuItemConstructorOptions, WebContents } from 'electron'
-import { brandText, getUiLang, PRODUCT_NAME, productName } from '@genoffice/i18n'
+import { getUiLang, PRODUCT_NAME, productName } from '@seuoffice/i18n'
 import { baseLang, contextMenuLabels, type ContextMenuLabels } from './context-menu'
 
 export interface AppMenuLabels extends ContextMenuLabels {
@@ -48,7 +48,7 @@ const EN: Labels = {
   zoomOut: 'Zoom Out',
   fullscreen: 'Full Screen',
   help: 'Help',
-  about: 'About GenOffice',
+  about: 'About SeuOffice',
   checkUpdates: 'Check for Updates…',
   version: 'Version',
   settings: 'Settings…',
@@ -76,7 +76,7 @@ const LABELS: Record<string, Labels> = {
     zoomOut: '축소',
     fullscreen: '전체 화면',
     help: '도움말',
-    about: 'GenOffice 정보',
+    about: 'SeuOffice 정보',
     checkUpdates: '업데이트 확인…',
     version: '버전',
     nameWithAi: 'AI로 이름 지정…',
@@ -87,7 +87,7 @@ const LABELS: Record<string, Labels> = {
 export function appMenuLabels(lang: string): AppMenuLabels {
   const labels = { ...contextMenuLabels(lang), ...(LABELS[lang] ?? LABELS[baseLang(lang)] ?? EN) }
   // the table spells the product name as upstream does; show this product's
-  return { ...labels, about: brandText(labels.about, lang) }
+  return { ...labels, about: labels.about }
 }
 
 /** macOS keeps the native role (Minimize/Zoom/Front, window list); Windows/Linux

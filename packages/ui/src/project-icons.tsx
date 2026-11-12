@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { ProjectEditor } from '@genoffice/project-store'
+import type { ProjectEditor } from '@seuoffice/project-store'
 
 /**
  * Plain line icons for the project-folder parts of the AI panel. Generic

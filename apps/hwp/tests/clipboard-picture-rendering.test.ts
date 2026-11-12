@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { clipboardPictureIsRendering } from '@genoffice/ui/clipboard-picture'
+import { clipboardPictureIsRendering } from '@seuoffice/ui/clipboard-picture'
 import { ieumPictureIsRendering } from '../studio-plugin/clipboard-html.mjs'
 
 // The studio cannot import the shared package, so the rule is written twice; they must agree.

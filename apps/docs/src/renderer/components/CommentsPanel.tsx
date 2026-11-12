@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { Node as PmNode } from '@tiptap/pm/model'
-import type { CommentImage, CommentInfo } from '@genoffice/docx-engine'
+import type { CommentImage, CommentInfo } from '@seuoffice/docx-engine'
 import { useI18n } from '../i18n/locale'
 import { absoluteDate, authorInitials, authorInk } from '../editor/comment-card'
 import { revWhen } from '../editor/margin-annotations'

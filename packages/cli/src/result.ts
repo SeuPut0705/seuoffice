@@ -149,7 +149,7 @@ export function formatHuman(r: CommandResult): string {
 }
 
 export function formatHumanError(err: CliError): string {
-  const lines = [`ieumoffice: ${err.message}`]
+  const lines = [`seuoffice: ${err.message}`]
   if (err.suggestion) lines.push(`  hint: ${err.suggestion}`)
   if (err.detail) {
     const { batch, ...rest } = err.detail

@@ -13,8 +13,8 @@
  * op is checked here first, so a refused call names every refused op, not
  * only the first one the main process would meet.
  */
-import type { BlockKind, ChapterBlock, NotationContext, OpenChapter } from '@genoffice/epub-engine'
-import { findInText } from '@genoffice/ui'
+import type { BlockKind, ChapterBlock, NotationContext, OpenChapter } from '@seuoffice/epub-engine'
+import { findInText } from '@seuoffice/ui'
 import type { EpubBookSummary, EpubChapterResult, EpubReadOnlyReason } from '../../shared/ipc'
 import type { EditGroup, EditGroupsOutcome, FailedEdit, OkEdit } from '../edit/controller'
 import { blockReadingText } from '../edit/block-text'

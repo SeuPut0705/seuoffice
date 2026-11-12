@@ -13,9 +13,9 @@ import type {
   EpubTranslationOutputKind,
   EpubTranslationReport,
   EpubTranslationUnit,
-} from '@genoffice/epub-engine'
-import type { TranslationLanguage, TranslationMode } from '@genoffice/pdf-structure'
-import type { JobProgress, JobStatus } from '@genoffice/pdf-structure/store'
+} from '@seuoffice/epub-engine'
+import type { TranslationLanguage, TranslationMode } from '@seuoffice/pdf-structure'
+import type { JobProgress, JobStatus } from '@seuoffice/pdf-structure/store'
 import { defaultResultName } from '../../shared/asset-url'
 import type { EpubBookSummary } from '../../shared/ipc'
 import type { StringKey, TFunc } from '../i18n/locale'

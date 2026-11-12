@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { normalizeAiSettings } from '@genoffice/ai-provider/browser'
+import { normalizeAiSettings } from '@seuoffice/ai-provider/browser'
 
 /**
  * The end-to-end launcher (e2e/helpers.ts) starts every app run with the

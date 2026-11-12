@@ -488,7 +488,7 @@ describe('userSkillEntriesOf', () => {
       { id: 'no-colon', name: 'x' },
       null,
       'text',
-      { id: 'user:genoffice', source: 'user', name: 'GenOffice', enabled: true },
+      { id: 'user:seuoffice', source: 'user', name: 'SeuOffice', enabled: true },
     ])
     expect(entries).toEqual([
       {

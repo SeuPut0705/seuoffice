@@ -4,7 +4,7 @@
  * picture, and the object URLs of the pictures.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ViewImage } from '@genoffice/xmind-engine'
+import type { ViewImage } from '@seuoffice/xmind-engine'
 import {
   archivePictureEntry,
   PICTURE_MAX,

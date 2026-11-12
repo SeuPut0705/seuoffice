@@ -39,7 +39,7 @@ import type {
   PictureWatermarkSpec,
   Watermark,
   WatermarkSpec,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import {
   AiMark,
   Dropdown,
@@ -48,7 +48,7 @@ import {
   useDismissablePopover,
   useRibbonCollapse,
   useScrollWindow,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { HIGHLIGHT_CSS } from '../editor/extensions'
 import { applyCase, type CaseMode } from '../editor/case-transform'
 import { isRtlUiLang, setParagraphDirection, setSelectionAlign } from '../editor/direction'

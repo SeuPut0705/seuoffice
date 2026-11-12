@@ -17,7 +17,7 @@ import {
   type AiSubscriptionStatuses,
   type StreamCallbacks,
   type streamForProvider,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   resolveStreamTarget,
   runAiStream,

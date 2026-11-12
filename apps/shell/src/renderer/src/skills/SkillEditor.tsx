@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import { skillEditorsOf } from '@genoffice/agent-core/skill-editors'
+import type { Lang } from '@seuoffice/i18n'
+import { skillEditorsOf } from '@seuoffice/agent-core/skill-editors'
 import {
   SAME_NAME_ON,
   SkillEditorsChooser,
@@ -8,12 +8,12 @@ import {
   skillEditorsText,
   useNameFromTitle,
   type SkillEditorsDraft,
-} from '@genoffice/ui'
-import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
+} from '@seuoffice/ui'
+import type { UserSkillsBridge } from '@seuoffice/electron-utils/user-skills-bridge'
 import type {
   UserSkillSaveInput,
   UserSkillView,
-} from '@genoffice/electron-utils/user-skills-channels'
+} from '@seuoffice/electron-utils/user-skills-channels'
 import { skillsText, type SkillsStringKey } from '../i18n/strings-skills'
 import { SkillDialog } from './SkillDialog'
 import {

@@ -30,7 +30,7 @@ interface TabsApiOnWindow {
 
 /** A scratch copy so a test never changes the committed fixture. */
 async function scratchCopy(name: string): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-hwp-memo-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-hwp-memo-'))
   const file = join(dir, name)
   await copyFile(MEMO_HWP, file)
   return file
@@ -315,7 +315,7 @@ test('removes a memo and brings it back with undo', async () => {
 
 test('saves the memos into HWPX and reads them back', async () => {
   const file = await scratchCopy('memo.hwp')
-  const outDir = await mkdtemp(join(tmpdir(), 'genoffice-hwp-memo-hwpx-'))
+  const outDir = await mkdtemp(join(tmpdir(), 'seuoffice-hwp-memo-hwpx-'))
   const target = join(outDir, 'memo-copy.hwpx')
   const launched = await launchShell({
     onboardingSeen: true,

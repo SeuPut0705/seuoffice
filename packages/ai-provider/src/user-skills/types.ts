@@ -1,4 +1,4 @@
-import type { SkillEditorId, SkillEditorsChoice } from '@genoffice/agent-core/skill-editors'
+import type { SkillEditorId, SkillEditorsChoice } from '@seuoffice/agent-core/skill-editors'
 
 /**
  * Shapes of the person's skills: where one comes from, what was read from its
@@ -9,7 +9,7 @@ import type { SkillEditorId, SkillEditorsChoice } from '@genoffice/agent-core/sk
  * Where a skill comes from. Stored in the settings file as the first part of
  * an identifier, so the values never change:
  * - `builtin`: shipped with the app
- * - `app`: `~/.ieumoffice/skills` (also the ones installed from GitHub)
+ * - `app`: `~/.seuoffice/skills` (also the ones installed from GitHub)
  * - `user`: Claude's skill folder, `~/.claude/skills`
  * - `plugin`: the `skills` folder of an installed Claude plugin
  * - `codex`: the shared agents folder, `~/.agents/skills`

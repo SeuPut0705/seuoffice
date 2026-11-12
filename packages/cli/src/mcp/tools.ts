@@ -2,7 +2,6 @@ import { z } from 'zod'
 import type { CommandRegistry, OptionDef } from '../registry'
 import type { McpMode } from './run'
 import { READ_UNITS } from '../length-units'
-import { branded } from '../names'
 import type { JsonSchema } from '../op-catalog'
 import type { TypedKey, TypedSchemas } from './op-schemas'
 
@@ -51,7 +50,7 @@ export interface ToolSpec {
   readOnly?: boolean
   /** the call reaches a provider outside the machine (search, image, media); always the automatic-call path */
   openWorld?: boolean
-  /** needs the GenOffice window in front of the client, so not registered in http mode */
+  /** needs the SeuOffice window in front of the client, so not registered in http mode */
   localOnly?: boolean
 }
 
@@ -85,7 +84,7 @@ const OPS_JSON = 'inline-json' as const
 const READ_THEN_APPLY =
   'Read the file with the matching *_read tool first: ops target the ids and indexes it lists. '
 const GUI_OPEN =
-  'A file open in a GenOffice tab is refused without force (the editor would overwrite the edit on its next save).'
+  'A file open in a SeuOffice tab is refused without force (the editor would overwrite the edit on its next save).'
 
 export const TOOLS: ToolSpec[] = [
   {
@@ -101,7 +100,7 @@ export const TOOLS: ToolSpec[] = [
     name: 'convert',
     command: 'convert',
     description:
-      'Convert a document to another format with the GenOffice engines (pdf, docx, odt, xlsx, pptx, md, html, csv, epub, hwp; the `to` description lists the routes). Targets that need layout (to pdf, docx to html, html to docx, diagram to pdf/png/svg) start a hidden GenOffice process for 1-6 s. pdf to md/epub reflows the text (pictures in assets/ beside the .md) and uses pages read by pdf_ai_read. A diagram makes one PDF, or a PNG/SVG per page (<name>-p<n>, out is a folder) unless page picks one. Output defaults to the input name with the new extension.',
+      'Convert a document to another format with the SeuOffice engines (pdf, docx, odt, xlsx, pptx, md, html, csv, epub, hwp; the `to` description lists the routes). Targets that need layout (to pdf, docx to html, html to docx, diagram to pdf/png/svg) start a hidden SeuOffice process for 1-6 s. pdf to md/epub reflows the text (pictures in assets/ beside the .md) and uses pages read by pdf_ai_read. A diagram makes one PDF, or a PNG/SVG per page (<name>-p<n>, out is a folder) unless page picks one. Output defaults to the input name with the new extension.',
     positionals: [{ key: 'file', description: 'path of the source document' }],
     options: [
       'to',
@@ -165,7 +164,7 @@ export const TOOLS: ToolSpec[] = [
     name: 'create_pdf',
     command: 'create',
     description:
-      'Print a document (md, html, docx, xlsx, pptx) to a new PDF with the GenOffice renderer, in a hidden GenOffice process.',
+      'Print a document (md, html, docx, xlsx, pptx) to a new PDF with the SeuOffice renderer, in a hidden SeuOffice process.',
     fixed: ['--type', 'pdf'],
     options: [
       { key: 'from', description: 'path of the document to print', required: true },
@@ -206,7 +205,7 @@ export const TOOLS: ToolSpec[] = [
         key: 'render',
         kind: 'boolean',
         description:
-          'render one PNG per slide after writing and return them as images (detail.previews); starts a hidden GenOffice process for a few seconds',
+          'render one PNG per slide after writing and return them as images (detail.previews); starts a hidden SeuOffice process for a few seconds',
       },
       {
         key: 'audit',
@@ -243,7 +242,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'docs',
     verb: 'apply',
     description:
-      'Edit a .docx or .odt with a batch of ops (the op reference: guide docs, or the ieumoffice://guide/docs resource); an .odt is written back as .odt, ops of features an ODT keeps off (comments, tracked changes, TOC, equations, charts, text boxes, columns, watermark) are rejected as unsupported, and ops touching protected cells or locked objects as op_rejected. ' +
+      'Edit a .docx or .odt with a batch of ops (the op reference: guide docs, or the seuoffice://guide/docs resource); an .odt is written back as .odt, ops of features an ODT keeps off (comments, tracked changes, TOC, equations, charts, text boxes, columns, watermark) are rejected as unsupported, and ops touching protected cells or locked objects as op_rejected. ' +
       READ_THEN_APPLY +
       'Block indexes inside one batch are live: after an insert adds two blocks, later indexes shift by two. Atomic by default: one rejected op leaves the file untouched and comes back with its index and reason; fix that op and resend the whole batch. dry_run validates without writing. ' +
       GUI_OPEN,
@@ -324,7 +323,7 @@ export const TOOLS: ToolSpec[] = [
     verb: 'ai-read',
     openWorld: true,
     description:
-      'Read PDF pages (scans, formulas, tables) with the AI provider configured in GenOffice; each page image leaves the machine. Without yes: only detail.estimate, nothing sent; ask the user, then call with yes=true (and allow_paid when estimate.metered). With yes the job runs in this server and the call returns detail.started: true; follow it with pdf_status. Read pages are kept and skipped next time.',
+      'Read PDF pages (scans, formulas, tables) with the AI provider configured in SeuOffice; each page image leaves the machine. Without yes: only detail.estimate, nothing sent; ask the user, then call with yes=true (and allow_paid when estimate.metered). With yes the job runs in this server and the call returns detail.started: true; follow it with pdf_status. Read pages are kept and skipped next time.',
     positionals: [{ key: 'file', description: 'path of the .pdf' }],
     options: [{ key: 'pages', required: true }, 'yes', 'allow-paid', 'password'],
   },
@@ -334,7 +333,7 @@ export const TOOLS: ToolSpec[] = [
     verb: 'translate',
     openWorld: true,
     description:
-      'Translate a PDF with the AI provider configured in GenOffice (the text leaves the machine) into a translated PDF, md or epub. Without yes: only detail.estimate, nothing sent; ask the user, then call with yes=true (and allow_paid when estimate.metered). With yes the job runs in this server and the call returns detail.started: true; pdf_status shows progress, stop reason and job.outputs. Calling again continues a stopped job. ar/he/hi: format md,epub only.',
+      'Translate a PDF with the AI provider configured in SeuOffice (the text leaves the machine) into a translated PDF, md or epub. Without yes: only detail.estimate, nothing sent; ask the user, then call with yes=true (and allow_paid when estimate.metered). With yes the job runs in this server and the call returns detail.started: true; pdf_status shows progress, stop reason and job.outputs. Calling again continues a stopped job. ar/he/hi: format md,epub only.',
     positionals: [{ key: 'file', description: 'path of the .pdf' }],
     options: [
       { key: 'to', required: true },
@@ -356,7 +355,7 @@ export const TOOLS: ToolSpec[] = [
     verb: 'status',
     readOnly: true,
     description:
-      'Pages read by AI and translations GenOffice keeps for a PDF, each with its job { state, last_error?, resetsAt?, outputs, progress? }. Follows pdf_ai_read and pdf_translate. Runs locally.',
+      'Pages read by AI and translations SeuOffice keeps for a PDF, each with its job { state, last_error?, resetsAt?, outputs, progress? }. Follows pdf_ai_read and pdf_translate. Runs locally.',
     positionals: [{ key: 'file', description: 'path of the .pdf' }],
   },
   {
@@ -365,7 +364,7 @@ export const TOOLS: ToolSpec[] = [
     verb: 'translate',
     openWorld: true,
     description:
-      'Translate an EPUB book with the AI provider configured in GenOffice (the text leaves the machine). Without yes: only detail.estimate and detail.chapters, nothing sent; ask the user, then call with yes=true (and allow_paid when estimate.metered). With yes the job runs in this server (detail.started: true); epub_status follows it.',
+      'Translate an EPUB book with the AI provider configured in SeuOffice (the text leaves the machine). Without yes: only detail.estimate and detail.chapters, nothing sent; ask the user, then call with yes=true (and allow_paid when estimate.metered). With yes the job runs in this server (detail.started: true); epub_status follows it.',
     positionals: [{ key: 'file', description: 'path of the .epub' }],
     options: [
       { key: 'to', required: true },
@@ -385,7 +384,7 @@ export const TOOLS: ToolSpec[] = [
     verb: 'status',
     readOnly: true,
     description:
-      'Translations GenOffice keeps for an EPUB, each with its job as in pdf_status. Runs locally.',
+      'Translations SeuOffice keeps for an EPUB, each with its job as in pdf_status. Runs locally.',
     positionals: [{ key: 'file', description: 'path of the .epub' }],
   },
   {
@@ -403,7 +402,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'hwp',
     verb: 'apply',
     description:
-      'Edit a Hangul (.hwp / .hwpx) document locally with a batch of ops, the tools the in-app AI uses (op reference: guide hwp, or the ieumoffice://guide/hwp resource). Text is found by what it says; an anchor that occurs more than once is refused with the places listed (pass occurrence). An op that would drop a table, picture, form field or memo is refused. Read ops answer in detail.results; a batch of reads writes nothing. Written back in its own format (out: .hwp or .hwpx picks one); an overwritten file is kept as <name>.bak. Atomic by default. ' +
+      'Edit a Hangul (.hwp / .hwpx) document locally with a batch of ops, the tools the in-app AI uses (op reference: guide hwp, or the seuoffice://guide/hwp resource). Text is found by what it says; an anchor that occurs more than once is refused with the places listed (pass occurrence). An op that would drop a table, picture, form field or memo is refused. Read ops answer in detail.results; a batch of reads writes nothing. Written back in its own format (out: .hwp or .hwpx picks one); an overwritten file is kept as <name>.bak. Atomic by default. ' +
       GUI_OPEN,
     positionals: [{ key: 'file', description: 'path of the .hwp or .hwpx' }],
     options: [
@@ -459,7 +458,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'diagram',
     verb: 'apply',
     description:
-      'Edit a draw.io diagram with the in-app AI ops (guide diagram). Ids come from diagram_read; new ids come back in detail.results[].created. .drawio/.dio run locally, untouched pages kept byte for byte; insert_mermaid and .drawio.svg/.png start a hidden GenOffice. Reads write nothing. Atomic by default. ' +
+      'Edit a draw.io diagram with the in-app AI ops (guide diagram). Ids come from diagram_read; new ids come back in detail.results[].created. .drawio/.dio run locally, untouched pages kept byte for byte; insert_mermaid and .drawio.svg/.png start a hidden SeuOffice. Reads write nothing. Atomic by default. ' +
       GUI_OPEN,
     positionals: [{ key: 'file', description: 'path of the diagram' }],
     options: [
@@ -482,7 +481,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'create',
     fixed: ['--type', 'drawio'],
     description:
-      'Create a draw.io diagram: Mermaid drawn by draw.io (a hidden GenOffice process), then diagram_apply ops, on an empty page. The out name picks .drawio, .dio, .drawio.svg or .drawio.png.',
+      'Create a draw.io diagram: Mermaid drawn by draw.io (a hidden SeuOffice process), then diagram_apply ops, on an empty page. The out name picks .drawio, .dio, .drawio.svg or .drawio.png.',
     options: [
       {
         key: 'mermaid',
@@ -613,7 +612,7 @@ export const TOOLS: ToolSpec[] = [
     readOnly: true,
     images: true,
     description:
-      'One PNG per slide (960x540 at scale 1 for 16:9), written to a directory and returned as images so you can look at the pages. Starts a hidden GenOffice process (a few seconds). Use after building or editing a deck; slide renders one page.',
+      'One PNG per slide (960x540 at scale 1 for 16:9), written to a directory and returned as images so you can look at the pages. Starts a hidden SeuOffice process (a few seconds). Use after building or editing a deck; slide renders one page.',
     positionals: [{ key: 'file', description: 'path of the .pptx' }],
     options: [
       { key: 'out', description: 'directory for the PNGs (required)', required: true },
@@ -652,7 +651,7 @@ export const TOOLS: ToolSpec[] = [
     readOnly: true,
     images: true,
     description:
-      'One PNG per page of a document (docx, xlsx, pptx, pdf, md, html, hwp, hwpx) as the app prints it, written to a directory and returned as images. Starts a hidden GenOffice process. page renders one page; grid adds a contact sheet of every page.',
+      'One PNG per page of a document (docx, xlsx, pptx, pdf, md, html, hwp, hwpx) as the app prints it, written to a directory and returned as images. Starts a hidden SeuOffice process. page renders one page; grid adds a contact sheet of every page.',
     positionals: [{ key: 'file', description: 'path of the document' }],
     options: [
       { key: 'out', description: 'directory for the PNGs (required)', required: true },
@@ -671,7 +670,7 @@ export const TOOLS: ToolSpec[] = [
     readOnly: true,
     plainText: true,
     description:
-      'The op reference an agent reads before writing ops: guide("docs"), guide("sheets"), guide("slides"), guide("hwp") or guide("diagram") list the groups; topic narrows to one group or one op. guide("slides", "design") is the staged deck workflow and guide("slides", "spec") the outline and page spec format (deck_start returns both). guide("slides", "templates") lists the built-in design templates; guide("slides", "templates", "<id>") prints one as a ready-made style sheet to save as style.md. Also available as ieumoffice://guide/* resources.',
+      'The op reference an agent reads before writing ops: guide("docs"), guide("sheets"), guide("slides"), guide("hwp") or guide("diagram") list the groups; topic narrows to one group or one op. guide("slides", "design") is the staged deck workflow and guide("slides", "spec") the outline and page spec format (deck_start returns both). guide("slides", "templates") lists the built-in design templates; guide("slides", "templates", "<id>") prints one as a ready-made style sheet to save as style.md. Also available as seuoffice://guide/* resources.',
     positionals: [
       { key: 'domain', description: 'slides | docs | sheets | hwp | diagram' },
       {
@@ -700,7 +699,7 @@ export const TOOLS: ToolSpec[] = [
     openWorld: true,
     readOnly: true,
     description:
-      'Web search, or image search with images=true, through the free search or the search provider key selected in GenOffice (the query leaves the machine). Image results carry imageUrl, width and height for addPicture / insert_image.',
+      'Web search, or image search with images=true, through the free search or the search provider key selected in SeuOffice (the query leaves the machine). Image results carry imageUrl, width and height for addPicture / insert_image.',
     positionals: [{ key: 'query', description: 'the search query' }],
     options: ['images', 'max'],
   },
@@ -719,7 +718,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'image',
     openWorld: true,
     description:
-      'Generate an image from a prompt with the image provider configured in GenOffice and save it; the result names the real format. ref images steer an edit (key providers only). A failure names its cause in detail.errorCode (unavailable: not configured, do not retry; rate-limit: the subscription limit is used up, wait until detail.resetsAt when it is given).',
+      'Generate an image from a prompt with the image provider configured in SeuOffice and save it; the result names the real format. ref images steer an edit (key providers only). A failure names its cause in detail.errorCode (unavailable: not configured, do not retry; rate-limit: the subscription limit is used up, wait until detail.resetsAt when it is given).',
     positionals: [{ key: 'prompt', description: 'what to draw' }],
     options: ['out', 'aspect', 'size', 'ref', 'model', 'force'],
   },
@@ -729,7 +728,7 @@ export const TOOLS: ToolSpec[] = [
     openWorld: true,
     readOnly: true,
     description:
-      'Describe or extract from an image, audio or video file (or URL) with the provider configured in GenOffice; the file leaves the machine. A failure names its cause in detail.errorCode (unavailable: not configured, do not retry; rate-limit: the subscription limit is used up, wait until detail.resetsAt when it is given).',
+      'Describe or extract from an image, audio or video file (or URL) with the provider configured in SeuOffice; the file leaves the machine. A failure names its cause in detail.errorCode (unavailable: not configured, do not retry; rate-limit: the subscription limit is used up, wait until detail.resetsAt when it is given).',
     positionals: [{ key: 'source', description: 'path or URL of the media' }],
     options: ['ask'],
   },
@@ -738,7 +737,7 @@ export const TOOLS: ToolSpec[] = [
     command: 'open',
     localOnly: true,
     description:
-      'Open a document in the GenOffice app for the user (starts the app if needed), optionally selecting a slide, element, block, range or page. Only when the user asks to see the file: an open tab makes later *_apply calls refuse to write.',
+      'Open a document in the SeuOffice app for the user (starts the app if needed), optionally selecting a slide, element, block, range or page. Only when the user asks to see the file: an open tab makes later *_apply calls refuse to write.',
     positionals: [{ key: 'file', description: 'path of the document' }],
     options: ['slide', 'el', 'block', 'range', 'sheet', 'page'],
   },
@@ -748,8 +747,8 @@ export const TOOLS: ToolSpec[] = [
     localOnly: true,
     readOnly: true,
     description:
-      "What the user currently has selected in the GenOffice editor showing this file: slide + element ids, a block range with its text, a sheet range, or a pdf page. The user's own pointer for 'this one' / 'here'; needs the file open in the app.",
-    positionals: [{ key: 'file', description: 'path of the document open in GenOffice' }],
+      "What the user currently has selected in the SeuOffice editor showing this file: slide + element ids, a block range with its text, a sheet range, or a pdf page. The user's own pointer for 'this one' / 'here'; needs the file open in the app.",
+    positionals: [{ key: 'file', description: 'path of the document open in SeuOffice' }],
   },
 ]
 
@@ -770,16 +769,16 @@ export function resolveTool(tool: ToolSpec, registry: CommandRegistry): Resolved
       key: spec.key.replace(/-/g, '_'),
       option,
       kind: spec.kind ?? defaultKind(opt),
-      description: branded(spec.description ?? stripVerbPrefix(opt.description)),
+      description: spec.description ?? stripVerbPrefix(opt.description),
       required: spec.required ?? false,
       ...(spec.choices ? { choices: spec.choices } : {}),
       ...(spec.typed ? { typed: spec.typed } : {}),
     }
   })
-  const positionals = tool.positionals?.map((p) => ({ ...p, description: branded(p.description) }))
+  const positionals = tool.positionals?.map((p) => ({ ...p, description: p.description }))
   return {
     ...tool,
-    description: branded(tool.description),
+    description: tool.description,
     ...(positionals ? { positionals } : {}),
     params,
   }

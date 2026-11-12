@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { createI18n, type Lang } from '@genoffice/i18n'
+import { createI18n, type Lang } from '@seuoffice/i18n'
 import { strings } from '../src/renderer/i18n/strings'
 import { easyWordsRequest } from '../src/renderer/ai/easy-words'
 

@@ -15,7 +15,7 @@
  * A person's own change passes the same check before it is sent (collab-adapter.ts), so a
  * page never sends what its peers would stop on.
  */
-import { safeExternalUrl } from '@genoffice/electron-utils/safe-external-url'
+import { safeExternalUrl } from '@seuoffice/electron-utils/safe-external-url'
 import type { Json } from '@seuoffice/collab/client'
 import type { LocalMarkup } from '../renderer/annotations'
 import type { LocalDrawing } from '../renderer/DrawLayer'

@@ -1,6 +1,6 @@
 import { numfmt } from '@univerjs/core'
 
-import { getSystemShortDate } from '@genoffice/xlsx-gateway/shared/short-date'
+import { getSystemShortDate } from '@seuoffice/xlsx-gateway/shared/short-date'
 import { getLang } from './i18n/locale'
 import { numfmtLocale, numfmtLocaleFor } from './i18n/numfmt-locale'
 

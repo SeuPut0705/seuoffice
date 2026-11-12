@@ -5,7 +5,7 @@ import {
   type ViewSheet,
   type ViewTopic,
   type XmindDocument,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import { DocumentSession } from '../src/renderer/document/session'
 import { newMap, openMapBytes } from '../src/renderer/document/open'
 import { deleteSheetAfterConfirm } from '../src/renderer/document/sheet-actions'

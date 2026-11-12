@@ -42,7 +42,7 @@ Sheets 앱(메인과 렌더러)과 명령줄 도구(`packages/cli`)가 쓴다.
 - 숨김 표시는 구조 연산과 함께 원본 파일 좌표·원본 시트 이름으로 이동한 뒤 출력 시트 이름으로 바꾼다. 같은 저장의 이름 변경·이름 맞바꿈으로 연산 대상을 다시 찾지 않는다. 공동 편집 저장도 기초 파일 표시와 구조 일지를 함께 넘긴다.
 - CSV 가져오기는 값만 옮긴다. 숫자처럼 보이는 칸만 숫자가 되고 앞자리 0은 살며, 수식처럼 보이는 글자는 수식이 아니라 글자로 남는다. 예외는 `="0123"`처럼 따옴표 글 하나뿐인 칸이다: 시스템이 앞자리 0과 긴 번호를 지키려고 쓰는 꼴이라 Excel은 열 때 계산해 그 글을 보여 주므로, 계산 없이 그 글(글자 칸)로 옮긴다(`quotedTextFormula`, CSV와 HTML 표 가져오기 모두). Excel은 CSV를 시스템의 옛 문자셋으로 쓰므로, UTF-8로 읽히지 않으면 후보 문자셋(gb18030, shift_jis, big5, euc-kr, windows-1252)을 점수로 고른다.
 - HTML 표 가져오기(`gateway/html-import.ts`)도 값만 옮긴다. 웹 시스템이 `.xls` 이름으로 내려 주는 HTML 표를 사이드카 앞에서 읽으며, `colspan`·`rowspan`은 병합으로, `<br>`은 줄바꿈으로 남기고 `<x:Name>`이 있으면 시트 이름으로 쓴다. 스크립트·스타일은 읽지 않고, 숫자로 확정되는 칸만 숫자가 된다. 파일 내용을 보고 HTML인지 판단하는 일과 읽기 크기 한도는 `apps/sheets`의 `legacy-import.ts`가 맡는다.
-- 진입점 묶음 파일이 없다. `exports`가 `./*`를 `./src/*.ts`로 풀어서 `@genoffice/xlsx-gateway/gateway/xlsx-gateway`처럼 파일 경로로 import한다. 렌더러가 `domain/`·`shared/`와 `gateway/`의 일부 파일을 골라 가져가므로, `node:*` import는 지금처럼 `gateway/xlsx-gateway.ts`와 `gateway/xlsx-package-io.ts`에만 둔다.
+- 진입점 묶음 파일이 없다. `exports`가 `./*`를 `./src/*.ts`로 풀어서 `@seuoffice/xlsx-gateway/gateway/xlsx-gateway`처럼 파일 경로로 import한다. 렌더러가 `domain/`·`shared/`와 `gateway/`의 일부 파일을 골라 가져가므로, `node:*` import는 지금처럼 `gateway/xlsx-gateway.ts`와 `gateway/xlsx-package-io.ts`에만 둔다.
 - 이 패키지만 문서 주석을 `///`로 쓰고, 저장소 공통 설정을 상속하지 않는 자체 `tsconfig.json`(`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`)을 쓴다. 주변 방식을 따른다.
 - 명령 언어의 범위 연산은 2,000칸(`MAX_EXPANDED_CELL_OPS`)까지만 셀 단위로 펼치고, 그보다 크면 범위 연산 그대로 넘긴다. 범위 연산의 상한은 200,000칸이다.
 
@@ -60,7 +60,7 @@ Sheets 앱(메인과 렌더러)과 명령줄 도구(`packages/cli`)가 쓴다.
 
 ## 테스트
 
-- `npm run test -w @genoffice/xlsx-gateway`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃은 20초다. 테스트는 통합 문서를 코드로 만들어 쓰고, 사이드카 바이너리나 Rust 빌드가 필요 없다. `npm run fixtures`도 필요 없다.
+- `npm run test -w @seuoffice/xlsx-gateway`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃은 20초다. 테스트는 통합 문서를 코드로 만들어 쓰고, 사이드카 바이너리나 Rust 빌드가 필요 없다. `npm run fixtures`도 필요 없다.
 - 저장 경로를 건드리면 왕복으로 증명한다. 아무것도 바꾸지 않은 저장에서 손대지 않은 항목이 바이트 동일한지(`tests/csv-roundtrip.test.ts`에 그 형태가 있다), 편집한 저장에서 신고한 항목만 달라지는지를 본다.
 - HTML 표 가져오기는 `tests/html-import.test.ts`가 값·병합·줄바꿈·숫자·시트 이름·charset을 덮는다. 여러 시트를 쓰는 최소 통합 문서(`xlsxBufferFromSheets`)를 고치면 CSV 가져오기 시험도 함께 본다.
 - 패치 정규식을 바꾸면 생성기마다 다른 표기를 사례로 넣는다. 자기 닫힘 `<c/>`·`<row/>`, 속성 순서가 다른 요소, 접두사가 붙은 이름공간이 실제로 문제를 일으켰던 것들이다.

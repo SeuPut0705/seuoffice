@@ -45,7 +45,7 @@ import {
   type ContentControlSpec,
   type TableCell,
   type TableModel,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import type { FloatSpec } from '../../../../apps/docs/src/renderer/ai/floating-ops'
 import type { AiNotesAccess, NoteKind } from '../../../../apps/docs/src/renderer/ai/note-ops'
 import type { AiCommentsAccess } from '../../../../apps/docs/src/renderer/ai/tools'
@@ -76,7 +76,7 @@ import {
 /**
  * The Word editing surface lives in the docs renderer (Tiptap document,
  * restricted-HTML parser, op executor, save plan). Those modules are pure
- * apart from needing a DOM, so genoffice runs them under jsdom. They are loaded
+ * apart from needing a DOM, so seuoffice runs them under jsdom. They are loaded
  * lazily, after the DOM exists, and by relative path until they move into a
  * package of their own.
  */
@@ -932,7 +932,7 @@ const CONTENT_CONTROL_SCHEMAS: Record<(typeof CONTENT_CONTROL_OPS)[number], Json
       startBlockIndex: {
         type: 'integer',
         description:
-          'the first block of the range to wrap (0-based, as `ieumoffice docs read` numbers them)',
+          'the first block of the range to wrap (0-based, as `seuoffice docs read` numbers them)',
       },
       endBlockIndex: {
         type: 'integer',
@@ -966,7 +966,7 @@ const CONTENT_CONTROL_SCHEMAS: Record<(typeof CONTENT_CONTROL_OPS)[number], Json
 
 const CONTENT_CONTROL_NOTES: Record<(typeof CONTENT_CONTROL_OPS)[number], string> = {
   wrap_content_control:
-    'put a block range into one block-level content control (w:sdt); the blocks stay editable and the control carries the tag/title/lock; `ieumoffice docs read` shows the control chain on every block in it (contentControls, outermost first) and run-level controls as inlineContentControls',
+    'put a block range into one block-level content control (w:sdt); the blocks stay editable and the control carries the tag/title/lock; `seuoffice docs read` shows the control chain on every block in it (contentControls, outermost first) and run-level controls as inlineContentControls',
   unwrap_content_control:
     'remove every content control carrying that tag and leave its blocks as plain body blocks; nested controls unwrap level by level (unwrapping an inner tag keeps the outer shell around the content), inline/run-level controls are reported but not unwrapped',
 }
@@ -1094,10 +1094,10 @@ export async function applyDocOps(
       outcome = await applyRevisionOp(doc, op, name === 'accept_changes' ? 'accept' : 'reject')
     } else {
       const call = HTML_TOOLS.has(name)
-        ? { id: `genoffice-${index}`, name, input: htmlToolInput(doc, name, op) }
+        ? { id: `seuoffice-${index}`, name, input: htmlToolInput(doc, name, op) }
         : SIDE_TOOLS.has(name)
-          ? { id: `genoffice-${index}`, name, input: sideToolInput(doc, name, op) }
-          : { id: `genoffice-${index}`, name: 'apply_ops', input: { ops: [op] } }
+          ? { id: `seuoffice-${index}`, name, input: sideToolInput(doc, name, op) }
+          : { id: `seuoffice-${index}`, name: 'apply_ops', input: { ops: [op] } }
       const exec = await doc.mods.tools.executeTool(
         doc.editor,
         call,
@@ -1835,7 +1835,7 @@ function setSectionHeaderFooter(
   if (pageSetup.list().length !== sections.length)
     return {
       error:
-        'set_header_footer{section} addresses the saved sections; apply the section break in its own `genoffice docs apply` first, then edit the header/footer',
+        'set_header_footer{section} addresses the saved sections; apply the section break in its own `seuoffice docs apply` first, then edit the header/footer',
     }
   if (view === 'even' && !side.evenOddHf) {
     side.evenOddHf = true
@@ -2128,36 +2128,36 @@ const CONTENT_NOTES: Record<(typeof CONTENT_OPS)[number], string> = {
   set_watermark:
     'watermark behind every page, written into the page header (Word Design > Watermark): gray text (color "#RRGGBB", opacity 0-1, diagonal true/false) or a picture (image = local path / data: / http(s) URL; scale percent, default fits the margins; washout true/false); text null or image null removes it',
   define_style:
-    'create or patch a style in styles.xml; only the given fields change; put it on paragraphs with the block op { op: "applyStyle", target, styleId }; `ieumoffice docs read --styles` lists ids',
+    'create or patch a style in styles.xml; only the given fields change; put it on paragraphs with the block op { op: "applyStyle", target, styleId }; `seuoffice docs read --styles` lists ids',
   insert_chart:
     'native Word chart; values per series match the categories; appended when afterBlockIndex is omitted',
   edit_chart:
-    'change the data of a chart block (`ieumoffice docs read` lists blocks with kind "chart"); counts must match the original, null keeps a position',
+    'change the data of a chart block (`seuoffice docs read` lists blocks with kind "chart"); counts must match the original, null keeps a position',
   set_header_footer:
-    'plain text, \\n between lines, {PAGE} / {NUMPAGES} become page-number fields, "" clears; view first/even switches the different-first-page / odd-even setting on; section picks one section (0-based, `ieumoffice docs read --sections`; omitted = the trailing section); `ieumoffice docs read --header-footer` shows the text of every section',
+    'plain text, \\n between lines, {PAGE} / {NUMPAGES} become page-number fields, "" clears; view first/even switches the different-first-page / odd-even setting on; section picks one section (0-based, `seuoffice docs read --sections`; omitted = the trailing section); `seuoffice docs read --header-footer` shows the text of every section',
   set_page_setup:
-    'paper (A3/A4/A5/B5/Letter/Legal/Tabloid) or width/height, orientation, margins {top,right,bottom,left,header,footer,gutter}, columns {count,spacing}, titlePg, pageNumberStart/pageNumberFormat; lengths as "2.54cm" / "1in" / "72pt" or twips; section or blockIndex picks one section, neither = all; `ieumoffice docs read --sections` lists them',
+    'paper (A3/A4/A5/B5/Letter/Legal/Tabloid) or width/height, orientation, margins {top,right,bottom,left,header,footer,gutter}, columns {count,spacing}, titlePg, pageNumberStart/pageNumberFormat; lengths as "2.54cm" / "1in" / "72pt" or twips; section or blockIndex picks one section, neither = all; `seuoffice docs read --sections` lists them',
   insert_section_break:
     'the blocks after afterBlockIndex become a new section (a copy of the current setup, then change it with set_page_setup section: N); type nextPage (default) / continuous / evenPage / oddPage',
   add_comment:
     'new thread on a block, or on an exact text span inside it (occurrence picks one of several matches); the document text is untouched; author defaults to "AI Assistant"',
-  reply_comment: 'ids from `ieumoffice docs read --comments`; replies attach to the thread root',
-  resolve_comment: 'ids from `ieumoffice docs read --comments`',
+  reply_comment: 'ids from `seuoffice docs read --comments`; replies attach to the thread root',
+  resolve_comment: 'ids from `seuoffice docs read --comments`',
   accept_changes:
-    'selector: all: true, ids from `ieumoffice docs read --revisions` (positional, re-read after every edit), or author / type / blockIndex / blockRange / before; insertions become plain text, deleted text goes',
+    'selector: all: true, ids from `seuoffice docs read --revisions` (positional, re-read after every edit), or author / type / blockIndex / blockRange / before; insertions become plain text, deleted text goes',
   reject_changes:
     'same selector as accept_changes; inserted text goes, deleted text comes back, formatting reverts',
   insert_footnote:
-    'a superscript reference mark goes into blockIndex (right after afterText, else at the block end) and the note text prints at the page bottom; `ieumoffice docs read --notes` lists notes',
+    'a superscript reference mark goes into blockIndex (right after afterText, else at the block end) and the note text prints at the page bottom; `seuoffice docs read --notes` lists notes',
   insert_endnote: 'like insert_footnote, but the note text collects at the end of the document',
   edit_note:
-    'findReplace inside one footnote or endnote (id from `ieumoffice docs read --notes`; kind only when a footnote and an endnote share the id): every occurrence of find becomes replace, the note keeps its id, reference mark and formatting; matchCase defaults to true',
+    'findReplace inside one footnote or endnote (id from `seuoffice docs read --notes`; kind only when a footnote and an endnote share the id): every occurrence of find becomes replace, the note keeps its id, reference mark and formatting; matchCase defaults to true',
   delete_note:
-    'kind footnote|endnote and an id from `ieumoffice docs read --notes`; removes the reference mark too',
+    'kind footnote|endnote and an id from `seuoffice docs read --notes`; removes the reference mark too',
   delete_comment:
     'removes the comment and its anchor; a thread root with replies needs withReplies: true, a reply id removes just that reply',
   set_properties:
-    'the document properties of the file: core (title, subject, creator, keywords, description, lastModifiedBy, revision, created, modified, category, contentStatus, identifier, language, version), app (template, totalTime, pages, words, characters, application, docSecurity, lines, paragraphs, scaleCrop, company, linksUpToDate, charactersWithSpaces, sharedDoc, hyperlinksChanged, appVersion, manager) and custom (by name); a string sets a value, a number or boolean gives a typed custom value (i4/bool; an existing i4/i8/r8/bool/filetime/date property keeps its vt type when the value fits), null removes the property, clear: "all" empties all three parts; `ieumoffice docs read --properties` lists the current ones with their customTypes',
+    'the document properties of the file: core (title, subject, creator, keywords, description, lastModifiedBy, revision, created, modified, category, contentStatus, identifier, language, version), app (template, totalTime, pages, words, characters, application, docSecurity, lines, paragraphs, scaleCrop, company, linksUpToDate, charactersWithSpaces, sharedDoc, hyperlinksChanged, appVersion, manager) and custom (by name); a string sets a value, a number or boolean gives a typed custom value (i4/bool; an existing i4/i8/r8/bool/filetime/date property keeps its vt type when the value fits), null removes the property, clear: "all" empties all three parts; `seuoffice docs read --properties` lists the current ones with their customTypes',
 }
 
 const AFTER_BLOCK_INDEX =
@@ -2239,7 +2239,7 @@ function headerFooterSchema(schema: JsonSchema): JsonSchema {
     section: {
       type: 'integer',
       description:
-        'write this section instead of the trailing one: 0-based index from `genoffice docs read --sections`; a section break inserted in the same batch must be saved first',
+        'write this section instead of the trailing one: 0-based index from `seuoffice docs read --sections`; a section break inserted in the same batch must be saved first',
     },
   }
   return copy

@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
 import { PDFDocument } from 'pdf-lib'
-import { createXmindDocumentFromOutline } from '@genoffice/xmind-engine'
+import { createXmindDocumentFromOutline } from '@seuoffice/xmind-engine'
 import { closeAndSaveVideo, launchShell, waitForPageWithUrl, type LaunchedApp } from './helpers'
 
 /**
@@ -311,7 +311,7 @@ interface Fixtures {
 }
 
 async function makeFixtures(): Promise<Fixtures> {
-  const dir = await scratchDir('genoffice-recovery-docs-')
+  const dir = await scratchDir('seuoffice-recovery-docs-')
   const markdown = join(dir, 'note.md')
   await writeFile(markdown, '# Recovery note\n\nSeed line for recovery.\n')
 
@@ -567,7 +567,7 @@ test.describe('crash recovery', () => {
 
   test('a dismissed list asks per file on first click; a quick second crash loads nothing; a clean quit restores no tabs', async () => {
     test.setTimeout(480_000)
-    const dir = await scratchDir('genoffice-recovery-later-')
+    const dir = await scratchDir('seuoffice-recovery-later-')
     const note = join(dir, 'later.md')
     const other = join(dir, 'other.md')
     await writeFile(note, '# Later\n\nOriginal later text.\n')

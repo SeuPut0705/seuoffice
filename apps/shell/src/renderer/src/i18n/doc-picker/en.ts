@@ -1,5 +1,5 @@
 export const en = {
-  docPickTitle: 'Attach from GenOffice documents',
+  docPickTitle: 'Attach from SeuOffice documents',
   docPickPane: 'Other pane',
   docPickOpen: 'Open documents',
   docPickRecent: 'Recent documents',

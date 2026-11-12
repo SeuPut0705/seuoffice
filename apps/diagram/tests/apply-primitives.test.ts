@@ -1,7 +1,7 @@
 // Primitive changes on the live diagram: checked first, applied as one undo
 // step, pages switched inside the step, and taken back whole on failure.
 import { describe, expect, it } from 'vitest'
-import type { DiagramCell, DiagramPrimitive } from '@genoffice/drawio-model'
+import type { DiagramCell, DiagramPrimitive } from '@seuoffice/drawio-model'
 import { guardAutoRouting } from '../src/bridge/libavoid-guard'
 import {
   PrimitiveError,

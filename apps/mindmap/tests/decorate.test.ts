@@ -15,7 +15,7 @@ import {
   type ThemeId,
   type XmindDocument,
   type XmindSheet,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import { MapController, type MapHost, type MapStrings } from '../src/renderer/map/controller'
 import { DocumentSession } from '../src/renderer/document/session'
 import { mapStrings } from '../src/renderer/i18n/map-strings'

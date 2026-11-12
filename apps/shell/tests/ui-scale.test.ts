@@ -80,7 +80,7 @@ describe('readUiScale', () => {
   })
 
   it('treats a missing settings file as no scaling', () => {
-    expect(readUiScale(join(tmpdir(), 'genoffice-does-not-exist', 'app-settings.json'))).toBe(1)
+    expect(readUiScale(join(tmpdir(), 'seuoffice-does-not-exist', 'app-settings.json'))).toBe(1)
   })
 
   const rejected: readonly (readonly [string, unknown])[] = [

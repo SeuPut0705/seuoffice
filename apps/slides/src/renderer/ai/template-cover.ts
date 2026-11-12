@@ -4,8 +4,8 @@
  * (slides:template-cover-render), kept per template and language so reopening
  * the gallery draws at once. No AI and no network are involved.
  */
-import type { Lang } from '@genoffice/i18n'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import type { Lang } from '@seuoffice/i18n'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import type { TemplateCoverLang } from '../../shared/ipc'
 
 /** A Korean UI shows the Korean cover; the other 20 languages show the English one */

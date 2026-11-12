@@ -11,7 +11,7 @@ import {
   vi,
   type MockInstance,
 } from 'vitest'
-import { xlsxBufferFromSheets } from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
+import { xlsxBufferFromSheets } from '@seuoffice/xlsx-gateway/gateway/csv-import-xlsx'
 import { EXIT } from '../src/result'
 import { run, tempDir } from './helpers'
 
@@ -52,7 +52,7 @@ vi.mock('../../../apps/sheets/src/main/xlsx-sidecar-client', () => ({
   },
 }))
 
-const env = { ...process.env, GENOFFICE_AUDIT_LOG: 'off' }
+const env = { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' }
 
 /** What the CLI prints when the zip gate refuses a workbook (as `sheet apply --ops` does). */
 const REFUSAL = { status: 'error', message: 'zip: zip64 archives are not supported' }

@@ -1,11 +1,11 @@
 /// Bundled template fonts on the grid canvas. Each face is registered at boot as a
-/// FontFace whose source is its URL (@genoffice/ui/template-fonts), so nothing is
+/// FontFace whose source is its URL (@seuoffice/ui/template-fonts), so nothing is
 /// read until text first uses the family: a cell drawn in it, a picker preview, or a
 /// workbook that names it (loadTemplateFontsFor, before the first skeleton). Canvas
 /// fillText still draws the fallback while a face is in flight, and Univer measures a
 /// cell once, so a finished face re-lays the grid out (installTemplateFontRefresh).
 
-import { TEMPLATE_FONT_FACE_REGISTRATIONS, templateFontUrl } from '@genoffice/ui/template-fonts'
+import { TEMPLATE_FONT_FACE_REGISTRATIONS, templateFontUrl } from '@seuoffice/ui/template-fonts'
 
 import { TEMPLATE_FONT_FAMILY_KEYS } from '../shared/template-font-faces'
 import type { WorkbookFile } from '../shared/desktop-api'

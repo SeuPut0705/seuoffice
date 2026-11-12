@@ -3,21 +3,21 @@
  * refresh, slicer panels). Extracted from App.tsx; the App component passes a
  * PivotActionContext built fresh per call so refs and state never go stale.
  */
-import { columnLabel, parseRange } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { columnLabel, parseRange } from '@seuoffice/xlsx-gateway/domain/cell-address'
 import {
   applyPivotSlicer,
   growPivotDefinition,
   recomputePivotData,
-} from '@genoffice/xlsx-gateway/domain/pivot-engine'
+} from '@seuoffice/xlsx-gateway/domain/pivot-engine'
 import {
   timelineDomainOf,
   timelineSelection,
   type MonthKey,
-} from '@genoffice/xlsx-gateway/domain/pivot-timeline'
+} from '@seuoffice/xlsx-gateway/domain/pivot-timeline'
 import {
   defaultDataFieldCaption,
   isPivotAggregation,
-} from '@genoffice/xlsx-gateway/domain/pivot-value-modes'
+} from '@seuoffice/xlsx-gateway/domain/pivot-value-modes'
 import type {
   WorkbookFile,
   WorkbookPivotAdd,

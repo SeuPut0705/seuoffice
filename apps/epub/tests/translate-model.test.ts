@@ -5,7 +5,7 @@
  * for an easy explanation (its own names, remembered choice and offer).
  */
 import { afterEach, describe, expect, it } from 'vitest'
-import { epubTranslationUnits, openEpub, type EpubTranslationReport } from '@genoffice/epub-engine'
+import { epubTranslationUnits, openEpub, type EpubTranslationReport } from '@seuoffice/epub-engine'
 import { bookSummary } from '../src/main/book-session'
 import {
   chapterRows,

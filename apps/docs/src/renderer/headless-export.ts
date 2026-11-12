@@ -12,7 +12,7 @@ import {
   runHeadlessRendererExport,
   type HeadlessExportReport,
   type HeadlessWaitOptions,
-} from '@genoffice/electron-utils/headless-export'
+} from '@seuoffice/electron-utils/headless-export'
 import { fontAliasesSettled } from './system-fonts'
 
 /** Pagination publishes its PageCut signature here on every remeasure (App.tsx). */

@@ -34,9 +34,9 @@ import {
 } from '@univerjs/docs-ui'
 import { IRenderManagerService, SHEET_VIEWPORT_KEY } from '@univerjs/engine-render'
 import { SheetSkeletonManagerService } from '@univerjs/preset-sheets-core'
-import { columnLabel, formatAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
-import type { WorkbookOperation } from '@genoffice/xlsx-gateway/domain/workbook-dsl'
-import type { ApplyOutcome } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import { columnLabel, formatAddress } from '@seuoffice/xlsx-gateway/domain/cell-address'
+import type { WorkbookOperation } from '@seuoffice/xlsx-gateway/domain/workbook-dsl'
+import type { ApplyOutcome } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import { SET_ROW_IS_AUTO_HEIGHT_COMMAND } from './autofit-multi-row'
 import {
   CELL_HIDDEN_KEY,
@@ -52,11 +52,11 @@ import {
   comboSeriesSetDefaults,
   transposeChartSeries,
   type ChartSeriesVisualState,
-} from '@genoffice/xlsx-gateway/domain/chart-visual'
+} from '@seuoffice/xlsx-gateway/domain/chart-visual'
 import {
   applyFlashFillTemplate,
   inferFlashFillTemplate,
-} from '@genoffice/xlsx-gateway/domain/flash-fill'
+} from '@seuoffice/xlsx-gateway/domain/flash-fill'
 import type {
   WorkbookChartEdit,
   WorkbookStyleEdit,

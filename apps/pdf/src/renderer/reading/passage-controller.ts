@@ -11,7 +11,7 @@
  * The screen side subscribes to `snapshot()` (useSyncExternalStore); the
  * annotation panel reads the same instance: `list()`, `pageOf(card)`.
  */
-import type { AgentStreamRequest } from '@genoffice/agent-core'
+import type { AgentStreamRequest } from '@seuoffice/agent-core'
 import type {
   PassageCard,
   PassageCardInput,

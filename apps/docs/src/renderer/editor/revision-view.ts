@@ -6,7 +6,7 @@ import type {
   Run,
   TableModel,
   TextboxDisplay,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import type { RevisionRange } from './revisions'
 
 /**

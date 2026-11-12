@@ -16,7 +16,7 @@ import {
 let root: string
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'genoffice-save-dir-'))
+  root = mkdtempSync(join(tmpdir(), 'seuoffice-save-dir-'))
 })
 
 afterEach(() => {
@@ -56,7 +56,7 @@ describe('resolveDefaultSaveDir', () => {
   })
 
   it('creates and returns the fallback when nothing is configured', () => {
-    const fallback = join(root, 'Documents', 'GenOffice')
+    const fallback = join(root, 'Documents', 'SeuOffice')
     expect(resolveDefaultSaveDir(null, fallback)).toBe(fallback)
     expect(existsSync(fallback)).toBe(true)
   })

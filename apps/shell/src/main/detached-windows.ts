@@ -1,7 +1,7 @@
 import { basename } from 'node:path'
 import { BrowserWindow, screen } from 'electron'
 import type { Rectangle, WebContents, WebContentsView } from 'electron'
-import { resumeDiscardedCopies } from '@genoffice/electron-utils'
+import { resumeDiscardedCopies } from '@seuoffice/electron-utils'
 
 import {
   docsQueryDirty,
@@ -503,8 +503,9 @@ export function createDetachedEditorWindow(options: {
   const wcId = view.webContents.id
   let closeConfirmed = false
   // Detach the view before destroying the window so the docs teardown path
-  // (which must never close the webContents — see TabManager.closeTab) stays
-  // in control of the renderer's lifetime.
+  // (which must never close the webContents of a live page: see
+  // TabManager.removeTab and renderer-disposal.ts) stays in control of the
+  // renderer's lifetime.
   const tearDown = () => {
     if (win.isDestroyed() || rec.released) return
     closeConfirmed = true

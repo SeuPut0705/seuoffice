@@ -18,7 +18,7 @@ import {
 import { HEADLESS_SUBSCRIPTION_CONSENT_VERSION } from '../src/providers'
 import { activeSearchProvider } from '../src/search-settings'
 
-/** what an untouched GenOffice install has on disk */
+/** what an untouched SeuOffice install has on disk */
 function gensparkEraFile() {
   return {
     provider: 'genspark',

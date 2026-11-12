@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { odtToText } from '@genoffice/odt-engine'
+import { odtToText } from '@seuoffice/odt-engine'
 import { describe, expect, it } from 'vitest'
 import { closeDocument, openDocumentFile } from '../src/formats/docx'
 import { OdtEditGuard, odtDisabledFeature } from '../src/formats/odt'

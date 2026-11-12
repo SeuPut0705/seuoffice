@@ -81,7 +81,7 @@ const fixtures = join(__dirname, 'fixtures')
 let dir: string
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-diagram-visio-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-diagram-visio-'))
   configureDiagramRuntime({
     preloadPath: join(dir, 'out', 'preload', 'index.js'),
     rendererFile: join(dir, 'out', 'renderer', 'index.html'),

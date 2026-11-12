@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { openChapter, type EpubTocEntry } from '@genoffice/epub-engine'
+import { openChapter, type EpubTocEntry } from '@seuoffice/epub-engine'
 import App from '../src/renderer/App'
 import { LocaleProvider } from '../src/renderer/i18n/locale'
 import { BookPreview, PREVIEW_SETTINGS_KEY } from '../src/renderer/components/BookPreview'
@@ -329,7 +329,7 @@ describe('the book preview', () => {
     await click(container.querySelector('[data-action="preview-rotate"]'))
     expect(previewFrame()!.style.width).toBe('800px')
     expect(
-      previewFrame()!.contentDocument!.getElementById('genoffice-epub-view')?.textContent,
+      previewFrame()!.contentDocument!.getElementById('seuoffice-epub-view')?.textContent,
     ).toContain('font-size: 115% !important')
     expect(JSON.parse(window.localStorage.getItem(PREVIEW_SETTINGS_KEY) ?? '{}')).toMatchObject({
       device: 'ereader',

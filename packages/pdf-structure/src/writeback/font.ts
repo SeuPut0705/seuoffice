@@ -4,7 +4,7 @@
  * it for embedding.
  *
  * The installed-font lookup is the one the PDF editor's text editing uses
- * (@genoffice/font-metrics, coverage gated by the editor's cmap reader).
+ * (@seuoffice/font-metrics, coverage gated by the editor's cmap reader).
  * Only TrueType (glyf) faces are taken: PDFium embeds them as FontFile2
  * as they are, while CFF faces need a FontFile3 relabel pass afterwards.
  */

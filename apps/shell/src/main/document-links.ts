@@ -23,12 +23,12 @@
  */
 import { readFileSync, statSync } from 'node:fs'
 import { basename, resolve } from 'node:path'
-import { writeJsonAtomic } from '@genoffice/electron-utils/atomic-write'
+import { writeJsonAtomic } from '@seuoffice/electron-utils/atomic-write'
 import {
   generateConvertedEvents,
   generateRunStartedEvents,
   setGenerateTabIdResolver,
-} from '@genoffice/electron-utils/generate-handoff'
+} from '@seuoffice/electron-utils/generate-handoff'
 
 export const DOCUMENT_LINKS_FILE = 'document-links.json'
 

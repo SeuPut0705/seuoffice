@@ -4,7 +4,7 @@
 import { beforeAll, afterEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { DOC_ATTACH_BRIDGE_KEY } from '@genoffice/electron-utils/doc-attach-channels'
+import { DOC_ATTACH_BRIDGE_KEY } from '@seuoffice/electron-utils/doc-attach-channels'
 
 // react-konva's node entry requires the native 'canvas' package; nothing here draws
 vi.mock('react-konva', () => {

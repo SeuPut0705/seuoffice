@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import JSZip from 'jszip'
-import { buildBlankDocx } from '@genoffice/docx-engine'
+import { buildBlankDocx } from '@seuoffice/docx-engine'
 import { afterEach, describe, expect, it } from 'vitest'
 import { run } from './helpers'
 
@@ -12,7 +12,7 @@ afterEach(() => {
 })
 
 async function fixture(data: string) {
-  const dir = mkdtempSync(join(tmpdir(), 'ieumoffice-merge-bom-'))
+  const dir = mkdtempSync(join(tmpdir(), 'seuoffice-merge-bom-'))
   dirs.push(dir)
   const input = join(dir, 'template.docx'),
     values = join(dir, 'values.json'),

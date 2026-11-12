@@ -21,20 +21,20 @@ import { readFileSync } from 'node:fs'
  * workspace.
  */
 const SECONDS = {
-  '@genoffice/docs': 297,
-  '@genoffice/sheets': 207,
-  '@genoffice/cli': 134,
-  '@genoffice/slides': 106,
-  '@genoffice/markdown': 102,
-  '@genoffice/shell': 79,
-  '@genoffice/pdf': 70,
-  '@genoffice/hwp': 64,
-  '@genoffice/docx-engine': 43,
-  '@genoffice/mindmap': 33,
-  '@genoffice/pptx-engine': 32,
-  '@genoffice/html': 30,
-  '@genoffice/html2docx': 26,
-  '@genoffice/ui': 22,
+  '@seuoffice/docs': 297,
+  '@seuoffice/sheets': 207,
+  '@seuoffice/cli': 134,
+  '@seuoffice/slides': 106,
+  '@seuoffice/markdown': 102,
+  '@seuoffice/shell': 79,
+  '@seuoffice/pdf': 70,
+  '@seuoffice/hwp': 64,
+  '@seuoffice/docx-engine': 43,
+  '@seuoffice/mindmap': 33,
+  '@seuoffice/pptx-engine': 32,
+  '@seuoffice/html': 30,
+  '@seuoffice/html2docx': 26,
+  '@seuoffice/ui': 22,
 }
 const DEFAULT_SECONDS = 10
 

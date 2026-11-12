@@ -1,5 +1,5 @@
-import type { Block, FieldDisplay } from '@genoffice/docx-engine'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import type { Block, FieldDisplay } from '@seuoffice/docx-engine'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { excerpt, PLACEHOLDER, type IssueDraft } from '../check'
 import { headerFooterState, listComments, listRevisions, type OpenDocument } from './docx'
 
@@ -86,7 +86,7 @@ export function checkDocument(doc: OpenDocument): IssueDraft[] {
       level: 'info',
       path: `block[${revisions[0]!.blockIndex}]`,
       blockIndex: revisions[0]!.blockIndex,
-      message: `${revisions.length} tracked change(s) pending (${[...kinds].map(([k, n]) => `${k} ${n}`).join(', ')}); \`ieumoffice docs read --revisions\` lists them`,
+      message: `${revisions.length} tracked change(s) pending (${[...kinds].map(([k, n]) => `${k} ${n}`).join(', ')}); \`seuoffice docs read --revisions\` lists them`,
     })
   }
   const comments = listComments(doc)
@@ -99,7 +99,7 @@ export function checkDocument(doc: OpenDocument): IssueDraft[] {
       level: 'info',
       path: first?.blockIndex !== undefined ? `block[${first.blockIndex}]` : 'comments',
       ...(first?.blockIndex !== undefined ? { blockIndex: first.blockIndex } : {}),
-      message: `${open.length} comment thread(s) unresolved; \`ieumoffice docs read --comments\` lists them`,
+      message: `${open.length} comment thread(s) unresolved; \`seuoffice docs read --comments\` lists them`,
     })
   }
   return issues

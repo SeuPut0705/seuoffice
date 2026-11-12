@@ -4,8 +4,8 @@ import {
   type AiSettings,
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
-import { aiSendGate, withAiContinueProvider, withAiSubscriptionNoticeSeen } from '@genoffice/ui'
+} from '@seuoffice/ai-provider/browser'
+import { aiSendGate, withAiContinueProvider, withAiSubscriptionNoticeSeen } from '@seuoffice/ui'
 import { blockedRunOf, readImageGenerationAvailable } from '../src/renderer/ai/ai-connection'
 import {
   checkingSubscriptionStatuses,
@@ -32,7 +32,7 @@ const settings = (patch: Partial<AiSettings> = {}): AiSettings => ({
   ...patch,
 })
 
-// The gate itself is the one every editor shares (@genoffice/ui); these pin it on the
+// The gate itself is the one every editor shares (@seuoffice/ui); these pin it on the
 // settings and statuses the markdown panel hands it.
 describe('aiSendGate', () => {
   it('holds the send while settings or statuses are still unknown', () => {

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFString } from 'pdf-lib'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { systemAuthorName } from '@genoffice/electron-utils'
+import { systemAuthorName } from '@seuoffice/electron-utils'
 import type { PdfApi, SavePdfResult } from '../src/shared/ipc'
 
 type Handler = (event: { sender: FakeContents }, ...args: any[]) => any
@@ -59,7 +59,7 @@ vi.mock('electron', () => ({
     removeListener: (channel: string, fn: Listener) => rendererListeners.get(channel)?.delete(fn),
   },
 }))
-vi.mock('@genoffice/electron-utils/drop-open', () => ({ installDropOpenBridge: () => {} }))
+vi.mock('@seuoffice/electron-utils/drop-open', () => ({ installDropOpenBridge: () => {} }))
 import { createPdfView } from '../src/main/pdf-main'
 import '../src/preload/index'
 

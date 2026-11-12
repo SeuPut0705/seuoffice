@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { LANGS, PRODUCT_NAME } from '@genoffice/i18n'
+import { LANGS, PRODUCT_NAME } from '@seuoffice/i18n'
 import { docPickerStrings, docPickerText } from '../src/renderer/src/i18n/strings-doc-picker'
 import {
   DOC_PICK_GROUPS,
@@ -10,8 +10,8 @@ import {
 } from '../src/renderer/src/doc-picker/DocPickerWindow'
 
 /**
- * The "Attach from GenOffice documents" window: every string exists in every
- * language, the product name is written as the GenOffice token and localized
+ * The "Attach from SeuOffice documents" window: every string exists in every
+ * language, the product name is written as the SeuOffice token and localized
  * at output, the tick is capped, and the page deals in ids only.
  */
 
@@ -35,7 +35,7 @@ describe('doc-picker strings', () => {
     }
   })
 
-  it('writes the product name as the GenOffice token, localized at output', () => {
+  it('writes the product name as the SeuOffice token, localized at output', () => {
     for (const lang of LANGS) {
       const dict = docPickerStrings[lang] as Record<string, string>
       for (const value of Object.values(dict))

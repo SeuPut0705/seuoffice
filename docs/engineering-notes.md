@@ -2,27 +2,27 @@
 
 ## 빌드와 실행
 
-- **편집기 뒷단을 고쳤는데 아무 변화가 없다.** `apps/*/src/main`의 코드는 껍데기 앱을 빌드할 때 함께 묶인다. 고친 뒤 껍데기 앱을 다시 빌드하지 않으면 예전 코드가 그대로 돈다. 오류도 나지 않는다. → `npm run build -w @genoffice/shell` 후 실행해 확인한다.
+- **편집기 뒷단을 고쳤는데 아무 변화가 없다.** `apps/*/src/main`의 코드는 껍데기 앱을 빌드할 때 함께 묶인다. 고친 뒤 껍데기 앱을 다시 빌드하지 않으면 예전 코드가 그대로 돈다. 오류도 나지 않는다. → `npm run build -w @seuoffice/shell` 후 실행해 확인한다.
 - **개발 모드에서 편집기 화면이 하얗다.** preload를 고치고 다시 빌드하지 않으면 낡은 preload가 실려 화면이 비어 나온다. → preload를 고쳤으면 다시 빌드한다.
 - **설치본이 켜자마자 죽는다.** 앱의 `dependencies`에 넣은 작업 공간 패키지를 `externalizeDepsPlugin`의 `exclude`에 넣지 않았을 때다. 개발 모드에서는 멀쩡하다. → 둘을 함께 고친다.
 - **`npm run lint`가 수천 건의 구문 오류를 낸다.** 저장소 안에 다른 작업 사본(작업 트리)을 두면 그 안의 tsconfig까지 읽혀서 그렇다. → 그 폴더를 빼고 돌린다(`npx eslint . --ignore-pattern "<폴더>/**"`).
 - **`cargo`를 못 찾는다.** 이 PC에서는 Rust가 설치돼 있어도 PATH에 없다. → `export PATH="$HOME/.cargo/bin:$PATH"`.
 - **설치 파일 만들기가 엑셀 처리 프로그램을 못 찾고 멈춘다.** 빌드 설정은 `apps/sheets/native/xlsx-engine/target/x86_64-pc-windows-gnu/release/xlsx-sidecar.exe`를 찾는데, 이 PC의 Rust 빌드는 `target/release/`에 만든다. → 만들기 전에 그 파일을 앞의 경로로 복사한다.
-- **설치본(`release/win-unpacked`)을 띄우면 아무 창 없이 바로 끝난다.** 설치된 이음오피스가 켜져 있으면, 설치본은 같은 데이터 폴더와 단일 실행 잠금을 쓰므로 바로 끝나고 실행 인자를 켜져 있는 앱에 넘긴다. 설치본은 `GENOFFICE_USER_DATA`를 일부러 듣지 않는다. → 사용자의 앱을 끄지 말고 `--user-data-dir=<임시 폴더>`를 붙여 띄운다(Playwright `electron.launch`의 `args`에도 같다).
+- **설치본(`release/win-unpacked`)을 띄우면 아무 창 없이 바로 끝난다.** 설치된 이음오피스가 켜져 있으면, 설치본은 같은 데이터 폴더와 단일 실행 잠금을 쓰므로 바로 끝나고 실행 인자를 켜져 있는 앱에 넘긴다. 설치본은 `SEUOFFICE_USER_DATA`를 일부러 듣지 않는다. → 사용자의 앱을 끄지 말고 `--user-data-dir=<임시 폴더>`를 붙여 띄운다(Playwright `electron.launch`의 `args`에도 같다).
 - **WebAssembly 파일을 찾는 코드가 개발 실행에서만 맞다.** 묶어 빌드한 코드 옆에는 `node_modules`가 없다. 단위 테스트는 `node_modules`에서 돌아 이 차이를 보지 못한다. → 새 WebAssembly 의존성은 `extraResources`로 `resources/wasm`에 넣고, 빌드한 앱(가능하면 설치본)에서 한 번 돌려 본다.
 - **설치 파일 만들기가 GitHub에 올리려다 실패한다.** 빌드 설정에 릴리스 올리기 대상이 항상 들어 있다. → `npm run dist:win -- -- --publish never`. `--`를 두 번 써야 인자가 끝까지 전달된다.
 - **새로 띄우는 창이 빈 채로 뜬다.** 껍데기 앱의 별도 창(드라이브 고르기, 문서 고르기)은 `apps/shell/electron.vite.config.ts`의 preload 목록과 renderer 입력 목록 양쪽에 넣어야 한다. 한쪽만 넣으면 화면이 비어 나오고 오류도 잘 보이지 않는다. → 개발 모드에서도 다시 빌드한 뒤 확인한다.
-- **preload에서 `@genoffice/electron-utils` 루트를 가져오면 실행 직후 죽는다.** 루트 진입점은 Electron에 묶여 있다. 문서 고르기 다리(`doc-attach-bridge`)와 채널(`doc-attach-channels`)처럼 preload가 쓰는 모듈은 `package.json`의 `exports`에 하위 경로로 내보낸 것으로만 가져온다.
-- **화면(renderer)에서 `@genoffice/file-parse`를 값으로 가져올 수 없다.** Node에 묶여 있다. 첨부할 수 있는 형식 목록을 화면에도 보여야 하면, 그림 확장자 목록처럼 각 앱의 몫으로 둔다. 값은 편집기마다 같게 맞춘다(결정 0035).
+- **preload에서 `@seuoffice/electron-utils` 루트를 가져오면 실행 직후 죽는다.** 루트 진입점은 Electron에 묶여 있다. 문서 고르기 다리(`doc-attach-bridge`)와 채널(`doc-attach-channels`)처럼 preload가 쓰는 모듈은 `package.json`의 `exports`에 하위 경로로 내보낸 것으로만 가져온다.
+- **화면(renderer)에서 `@seuoffice/file-parse`를 값으로 가져올 수 없다.** Node에 묶여 있다. 첨부할 수 있는 형식 목록을 화면에도 보여야 하면, 그림 확장자 목록처럼 각 앱의 몫으로 둔다. 값은 편집기마다 같게 맞춘다(결정 0035).
 
 ## 테스트
 
-- **`npm test`가 첫 실패에서 멈춘다.** 작업 공간을 `&&`로 이어 돌리기 때문이다. Windows에서는 원본 코드 그대로도 실패하는 테스트가 있어(경로 구분자, 크롬 없음, 시간 초과), 한 번에 끝까지 가지 않는다. → 작업 공간별로 따로 돌리고(`npm run test -w @genoffice/<이름>`) 실패 목록을 이전 결과와 비교한다.
+- **`npm test`가 첫 실패에서 멈춘다.** 작업 공간을 `&&`로 이어 돌리기 때문이다. Windows에서는 원본 코드 그대로도 실패하는 테스트가 있어(경로 구분자, 크롬 없음, 시간 초과), 한 번에 끝까지 가지 않는다. → 작업 공간별로 따로 돌리고(`npm run test -w @seuoffice/<이름>`) 실패 목록을 이전 결과와 비교한다.
 - **부하가 걸리면 시간 초과로 떨어지는 테스트가 있다.** 껍데기 앱의 `third-party-notices`, `update-resume`, `pdf2docx-local-argv`, 워드 엔진의 암호 해시·압축 폭탄 테스트, AI 연결부의 실제 프로세스 끝내기 테스트(`subscription-process`의 "really ends a child and the grandchild"), 엑셀 편집기의 `table-design-create`가 그렇다. → 여러 작업을 동시에 돌리던 중의 실패는 그 파일만 따로 돌려 본 뒤 판단한다.
 - **마인드맵 화면 테스트가 CI에서만 가끔 실패한다(매번 다른 시험).** 엔진은 `.xmind`를 JSZip으로 읽고 쓰는데, JSZip은 일을 잘게 나눠 `setImmediate`로 이어 간다. `setTimeout(0)`을 정해진 횟수만 돌리는 기다림(`settle`)은 빠른 PC에서는 그 사이에 열기·저장이 끝나지만, 느린 CI에서는 끝나기 전에 시험이 확인을 시작한다. → 열기와 저장, 그림 읽기를 기다릴 때는 `apps/mindmap/tests/helpers/wait.ts`의 `until`로 그 상태("불러오는 중"이 사라짐, 저장이 넘어옴, 그림에 `blob:` 주소가 붙음)를 기다린다. 느린 PC는 시험 설정에서 `setImmediate`마다 몇 ms 늦춰 흉내 낼 수 있다.
 - **`npx vitest run --root packages/pdf-structure`로 돌리면 `markdown-roundtrip.test.ts`가 파일째 실패한다.** 같은 파일을 패키지 폴더에서 돌리면 통과한다. 원인은 아직 보지 않았다. → `pdf-structure` 시험은 그 폴더에서 `npx vitest run`으로 돌린다.
-- **엑셀 편집기 테스트가 Rust 빌드를 시작한다.** `npm run test -w @genoffice/sheets`는 먼저 엑셀 처리 프로그램을 빌드한다. → 필요 없으면 `apps/sheets`에서 `npx vitest run`을 쓴다.
-- **Rust를 고쳤는데 테스트는 예전 동작을 본다.** 엑셀 처리 프로그램이 필요한 엑셀 편집기 테스트는 `native/xlsx-engine/target/release/`의 실행 파일을 직접 연다. `XLSX_SIDECAR_PATH`는 듣지 않고, `cargo test`는 그 실행 파일을 다시 만들지 않는다. → Rust를 고쳤으면 release 빌드(`npm run native:build -w @genoffice/sheets`)를 먼저 한다. 저장소의 다른 사본에서는 그 파일이 없어 이 테스트들이 돌지 않는다.
+- **엑셀 편집기 테스트가 Rust 빌드를 시작한다.** `npm run test -w @seuoffice/sheets`는 먼저 엑셀 처리 프로그램을 빌드한다. → 필요 없으면 `apps/sheets`에서 `npx vitest run`을 쓴다.
+- **Rust를 고쳤는데 테스트는 예전 동작을 본다.** 엑셀 처리 프로그램이 필요한 엑셀 편집기 테스트는 `native/xlsx-engine/target/release/`의 실행 파일을 직접 연다. `XLSX_SIDECAR_PATH`는 듣지 않고, `cargo test`는 그 실행 파일을 다시 만들지 않는다. → Rust를 고쳤으면 release 빌드(`npm run native:build -w @seuoffice/sheets`)를 먼저 한다. 저장소의 다른 사본에서는 그 파일이 없어 이 테스트들이 돌지 않는다.
 - **명령어 패키지의 엑셀 테스트가 아무것도 시험하지 않고 통과한다.** 엑셀 처리 프로그램을 찾지 못하면 그 테스트들은 조용히 건너뛴다. → 통과 수가 아니라 건너뛴 수를 본다.
 - **구독 제공자로 가는 테스트는 진짜 프로그램을 띄운다.** 제공자가 `claude-code`나 `codex`로 정해지는데 연결부를 가짜로 바꾸지 않으면, 테스트가 사용자 PC의 실제 프로그램을 실행해 구독 한도를 쓴다. 테스트는 통과한 것처럼 보인다. → 연결부를 가짜로 바꾼 것을 확인한다.
 - **AI에게 보내는 화면 시험은 진짜 프로그램에 닿을 수 있다.** 구독이 연결된 PC에서는 보내기 문지기가 통과해 시험이 실제 Claude를 부르고 한도를 쓴다. 연결이 없는 PC(CI)에서는 문지기가 막아 보낸 말이 화면에 나오지 않고 시험이 실패한다. → 보내는 시험은 편집기 화면이 뜬 뒤 `e2e/helpers.ts`의 `stubAiReady(app)`을 부른다. 구독 상태와 `ai:stream`을 가짜로 바꾸고 열린 탭에 그 상태를 알린다.
@@ -53,7 +53,7 @@
 
 - **같은 주소를 다시 읽었는데 바뀐 글이 보이지 않는다.** `read_url`은 받은 글을 프로세스 메모리에만 3분 동안, 최종 주소(리다이렉트 뒤)와 요청 주소로 찾아 둔다(8개까지). 명령줄·MCP는 프로세스마다 캐시가 따로다. → 3분이 지나거나 프로세스를 다시 띄우면 새로 받는다. 캐시는 디스크에 쓰지 않는다.
 - **`fetchWithSsrfGuard`가 주소 거절과 호출자 취소를 모두 `null`로 돌려준다.** 가드는 `signal`이 끊겼을 때도, 사설·루프백 주소를 거절할 때도 `null`을 준다. → 어느 쪽인지는 호출자가 따로 본다. `read_url`은 30초 deadline과 호출자 signal을 `AbortSignal.any`로 함께 넘기고, deadline이 끊겼으면 `timeout`, 호출자 쪽이면 취소로 답한다.
-- **리다이렉트를 따라가면 머리글이 다음 홉에도 그대로 간다.** `headersForHop`을 주지 않으면 첫 요청에 준 `headers`가 모든 홉에 붙는다. → 비밀 값을 싣는 요청은 관문이 리다이렉트를 따라가게 두지 않는다. `fetchWithSsrfGuard`를 `redirect: 'manual'`로 한 홉씩 부르고, 따라갈지는 `@genoffice/ai-provider`의 `keyedDownload`가 정한다(다른 출처로 갈 때 비밀 값을 떼고, 돌아와도 다시 붙이지 않으며, https로만, 다섯 번까지). `headersForHop`은 호스트 이름만 보고 붙이는 훅이라 비밀 값에 쓰지 않는다: scheme과 포트가 다른 홉, 체인이 한 번 떠났다 돌아온 홉에도 붙는다. `read_url`의 GitHub 토큰은 `https://api.github.com` 출처에만 실린다.
+- **리다이렉트를 따라가면 머리글이 다음 홉에도 그대로 간다.** `headersForHop`을 주지 않으면 첫 요청에 준 `headers`가 모든 홉에 붙는다. → 비밀 값을 싣는 요청은 관문이 리다이렉트를 따라가게 두지 않는다. `fetchWithSsrfGuard`를 `redirect: 'manual'`로 한 홉씩 부르고, 따라갈지는 `@seuoffice/ai-provider`의 `keyedDownload`가 정한다(다른 출처로 갈 때 비밀 값을 떼고, 돌아와도 다시 붙이지 않으며, https로만, 다섯 번까지). `headersForHop`은 호스트 이름만 보고 붙이는 훅이라 비밀 값에 쓰지 않는다: scheme과 포트가 다른 홉, 체인이 한 번 떠났다 돌아온 홉에도 붙는다. `read_url`의 GitHub 토큰은 `https://api.github.com` 출처에만 실린다.
 - **`ai-settings.json`의 키가 `sealed:v1:…`로 보인다(Windows, 키링이 있는 Linux).** 앱이 운영체제 암호화로 봉인한 것이다(결정 0063). → 평문으로 바꿔 적어도 읽히고 다음 저장 때 다시 봉인된다. 다른 PC·계정에서 가져온 파일, Windows에서 데이터 폴더의 `Local State`를 지운 뒤의 파일, Linux에서 키링 항목을 지운 뒤의 파일은 풀리지 않아 빈 키가 된다. 키를 다시 넣는다.
 - **Linux에서 키가 봉인되지 않고 평문으로 남는다.** Electron이 고른 저장소가 `basic_text`(키링 없음, 알아보지 못한 데스크톱)이면 일부러 봉인하지 않는다(`platformSeals`). → 의도된 동작이다. 프로그램에 박힌 키로 감싼 값은 보호가 아니다.
 - **Linux에서 명령줄이 봉인된 키를 못 푼다.** 명령줄이 띄운 앱이 데스크톱 세션의 키링에 닿지 못하면(SSH 접속, `XDG_CURRENT_DESKTOP`이 없는 환경) 다른 저장소를 골라 풀지 못하고 빈 키가 된다. → 데스크톱 세션의 터미널에서 실행하거나 환경 변수 키(`SERPER_API_KEY` 등)를 쓴다.
@@ -202,7 +202,7 @@
 - **작업 사본을 지웠더니 본 저장소의 `node_modules`가 비었다.** 의존성을 연결(정션)로 나눠 쓰는 작업 사본을 `git worktree remove`로 지우면, 삭제가 연결을 따라가 본 설치를 지운다. → 지우기 전에 연결부터 끊는다. 지운 뒤 `node_modules/.bin`의 항목 수가 그대로인지 확인한다.
 - 연결로 나눠 쓰는 사본 안에서는 `npm install`·`npm ci`를 돌리지 않는다. 같은 이유다.
 - **작업 사본에서 한글 편집기 짓기가 실패한다.** `apps/hwp/scripts/build-studio.mjs`는 rhwp 스튜디오를 `apps/hwp/node_modules/.cache`에 받아 짓는데, 사본의 `node_modules`는 본 검사본을 가리키는 연결이라 캐시 경로가 사본 밖으로 풀린다. vite가 결과 이름에 `../../…/openoffice/…` 같은 상대 경로를 만들려다 "must be strings that are neither absolute nor relative paths"로 멈춘다. → **이미 지어 둔 검사본의 결과물**(`apps/hwp/public/studio`)을 사본에 복사해 온다. 스탬프(스크립트·플러그인 해시)가 같으면 다시 짓지 않는다.
-- **작업 사본에서 슬라이드를 열거나 내보내면 "slides renderer stopped (crashed)"가 난다.** 껍데기 앱은 슬라이드 화면을 `apps/slides/out`에서 읽는데, 새 사본에는 이 폴더가 없다. → 껍데기 앱과 함께 `npm run build -w @genoffice/slides`도 돌린다.
+- **작업 사본에서 슬라이드를 열거나 내보내면 "slides renderer stopped (crashed)"가 난다.** 껍데기 앱은 슬라이드 화면을 `apps/slides/out`에서 읽는데, 새 사본에는 이 폴더가 없다. → 껍데기 앱과 함께 `npm run build -w @seuoffice/slides`도 돌린다.
 - **작업 사본에서 마크다운 시험이 통째로 죽는다.** `Denied ID: …/node_modules/katex/dist/katex.min.css?inline` — vitest의 파일 접근 허용은 실제 경로로 따지는데, 연결된 `node_modules`가 사본 밖으로 풀려서다. → `node_modules/katex`처럼 `?inline`으로 불러오는 패키지는 연결 대신 실제 폴더로 복사한다.
 
 ## 화면

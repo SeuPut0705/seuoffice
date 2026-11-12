@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto'
-import type { McpServerView, McpToolView } from '@genoffice/agent-core'
-import { mapServerToolNames, serverNameProblem } from '@genoffice/agent-core/user-mcp/names'
+import type { McpServerView, McpToolView } from '@seuoffice/agent-core'
+import { mapServerToolNames, serverNameProblem } from '@seuoffice/agent-core/user-mcp/names'
 import {
   MCP_RESULT_MAX_CHARS,
   shapeMcpResult,
   shapedMcpAnswer,
   type McpCallAnswer,
-} from '@genoffice/agent-core/user-mcp/result'
-import type { Lang } from '@genoffice/i18n'
+} from '@seuoffice/agent-core/user-mcp/result'
+import type { Lang } from '@seuoffice/i18n'
 import {
   serverStatusOf,
   type McpFailReason,

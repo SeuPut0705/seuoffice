@@ -9,10 +9,10 @@
  * are listed separately below; this editor never registers those, it only
  * calls them.
  */
-import type { AiPanelPrefs } from '@genoffice/ui'
-import type { Lang } from '@genoffice/i18n'
-import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
-import type { AiToolCapabilities } from '@genoffice/ai-search'
+import type { AiPanelPrefs } from '@seuoffice/ui'
+import type { Lang } from '@seuoffice/i18n'
+import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@seuoffice/ai-provider'
+import type { AiToolCapabilities } from '@seuoffice/ai-search'
 import type { MindmapSubscriptionApi } from './subscription-api'
 
 export const MINDMAP_CHANNELS = {

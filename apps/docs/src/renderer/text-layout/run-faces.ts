@@ -4,7 +4,7 @@
  * inherits from its paragraph style chain, and the CSS declarations a run's
  * declared slots turn into.
  */
-import type { StyleDisplay } from '@genoffice/docx-engine'
+import type { StyleDisplay } from '@seuoffice/docx-engine'
 import type { ListNumberingStorage } from '../editor/extensions'
 import {
   cssCsFontFamily,

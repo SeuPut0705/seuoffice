@@ -46,7 +46,7 @@ PDF를 편집 가능한 문서로 되살린다. PDFium으로 글자·이미지·
 
 ## 테스트
 
-- `npm run test -w @genoffice/pdf2docx`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃은 20초다. PDFium wasm은 `tests/helpers/wasm.ts`가 `node_modules`에서 읽어 초기화한다.
+- `npm run test -w @seuoffice/pdf2docx`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃은 20초다. PDFium wasm은 `tests/helpers/wasm.ts`가 `node_modules`에서 읽어 초기화한다.
 - 입력 PDF는 저장소에 없고 `tests/helpers/fixtures.ts`가 그때그때 만든다. `tests/golden/`에는 아직 견본이 없고 안내문만 있다. `npm run fixtures`는 필요 없다.
 - 한중일 문자와 오른쪽에서 왼쪽으로 쓰는 문자의 통합 테스트는 `fixtures.ts`에 적힌 글꼴 파일이 있을 때만 돈다. Windows에서 찾는 경로는 `C:\Windows\Fonts\arialuni.ttf` 하나다. 이 파일이 없는 PC에서는 그 묶음이 건너뛰어지므로, 해당 스크립트의 분석을 바꿨다면 통과 표시만으로 검증됐다고 보지 않는다.
 - 테스트가 쓰는 `pdf-lib`는 이 패키지의 `package.json`에 없고 `apps/pdf`의 의존성으로 설치된 것을 쓴다.

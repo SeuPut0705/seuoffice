@@ -28,8 +28,8 @@ import {
   setHeadlessMode,
   type RecoveryCopyInfo,
   type RecoveryStore,
-} from '@genoffice/electron-utils'
-import { encryptOoxml } from '@genoffice/electron-utils/office-encryption'
+} from '@seuoffice/electron-utils'
+import { encryptOoxml } from '@seuoffice/electron-utils/office-encryption'
 import { IPC_CHANNELS } from '../src/shared/ipc-channels'
 import {
   LEGACY_UNSAVED_NEW_INDEX,
@@ -145,8 +145,8 @@ vi.mock('electron', () => ({
 /** how each copy reached the store: as bytes in memory or streamed to its temp path */
 const storeWrites = vi.hoisted(() => [] as ('bytes' | 'streamed')[])
 
-vi.mock('@genoffice/electron-utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@genoffice/electron-utils')>()
+vi.mock('@seuoffice/electron-utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@seuoffice/electron-utils')>()
   return {
     ...actual,
     createRecoveryStore: (options: Parameters<typeof actual.createRecoveryStore>[0]) => {
@@ -213,7 +213,7 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
 }))
 
 // the archive writer is stubbed: it lands the bytes it read plus a mark
-vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
+vi.mock('@seuoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   saveWorkbookViaSidecar: async (request: { sourcePath: string; targetPath: string }) => {
     const bytes = await readFile(request.sourcePath)
@@ -222,8 +222,8 @@ vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal
   },
 }))
 
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
@@ -329,8 +329,8 @@ const recoveryDir = () => join(userDataDirRef.value, 'sheets-autosave')
 const fileCopyPath = (path: string) => join(recoveryDir(), legacyCopyName(path))
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-sheets-recovery-'))
-  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'genoffice-sheets-recovery-user-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-recovery-'))
+  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-recovery-user-'))
   store = createRecoveryStore({ userDataDir: userDataDirRef.value })
   dialogAnswer.value = 0
   messageBoxes.length = 0
@@ -581,7 +581,7 @@ describe('untitled workbooks', () => {
     opened: Opened
     suggested: string
   }> {
-    const tempDir = mkdtempSync(join(tmpdir(), 'genoffice-imports-test-'))
+    const tempDir = mkdtempSync(join(tmpdir(), 'seuoffice-imports-test-'))
     const backing = join(tempDir, name)
     writeFileSync(backing, 'blank')
     const suggested = join(dir, name)
@@ -793,7 +793,7 @@ describe('copies survive the app ending', () => {
   })
 
   it('keeps an unsaved new workbook copy when its tab unmounts during shutdown', async () => {
-    const tempDir = mkdtempSync(join(tmpdir(), 'genoffice-imports-test-'))
+    const tempDir = mkdtempSync(join(tmpdir(), 'seuoffice-imports-test-'))
     const backing = join(tempDir, 'New Spreadsheet.xlsx')
     writeFileSync(backing, 'blank')
     markSheetsUnsavedNew(backing, join(dir, 'New Spreadsheet.xlsx'), tempDir)

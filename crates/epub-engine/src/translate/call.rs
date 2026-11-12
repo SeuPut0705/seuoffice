@@ -16,7 +16,7 @@
 //! The call was async over a `send` that awaits the model; `send` is a
 //! synchronous function here, and the abort signal a function that answers
 //! the reason it was aborted for. What the TypeScript imports from
-//! `@genoffice/pdf-structure` and nothing else is in this file too, each item
+//! `@seuoffice/pdf-structure` and nothing else is in this file too, each item
 //! naming its source.
 
 use std::collections::HashMap;

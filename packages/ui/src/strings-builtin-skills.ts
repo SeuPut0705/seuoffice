@@ -1,4 +1,4 @@
-import { createI18n, defineStrings, type Lang } from '@genoffice/i18n'
+import { createI18n, defineStrings, type Lang } from '@seuoffice/i18n'
 
 /**
  * Names of the skills shipped with the app (apps/shell/resources/builtin-skills).

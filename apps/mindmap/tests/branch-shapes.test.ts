@@ -7,7 +7,7 @@
  * pattern laid onto a line by its length.
  */
 import { describe, expect, it } from 'vitest'
-import { themeLook } from '@genoffice/xmind-engine'
+import { themeLook } from '@seuoffice/xmind-engine'
 import {
   type BranchBoxes,
   fittedLinePattern,

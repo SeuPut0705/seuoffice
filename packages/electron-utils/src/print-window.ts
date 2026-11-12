@@ -52,7 +52,7 @@ export async function loadPrintHtml(
   win: PrintDialogWindow,
   html: string,
   fileName = 'print.html',
-  dirPrefix = 'genoffice-print-',
+  dirPrefix = 'seuoffice-print-',
 ): Promise<{ tempDir: string }> {
   // a temp file, not a data: URL: long documents truncate the URL
   const tempDir = await mkdtemp(join(tmpdir(), dirPrefix))
@@ -88,7 +88,7 @@ export async function printHtmlDocument({
   html,
   window: win,
   fileName = 'print.html',
-  dirPrefix = 'genoffice-print-',
+  dirPrefix = 'seuoffice-print-',
   platform = process.platform,
 }: PrintDocumentOptions): Promise<PrintDialogOutcome> {
   let tempDir: string | null = null

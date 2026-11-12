@@ -42,10 +42,15 @@ describe('location', () => {
     expect(store.dir).toBe(join(root, STORE_DIR_NAME))
   })
 
-  it('refuses a relative root and the original program folder', () => {
+  it('refuses a relative root and the upstream program folder', () => {
     expect(() => new ResultStore('relative/dir')).toThrow(TypeError)
-    expect(() => new ResultStore(join(root, '.genoffice'))).toThrow(TypeError)
-    expect(() => new ResultStore(join(root, '.genoffice', 'x'))).toThrow(TypeError)
+    const upstreamHome = join(root, '.genoffice') // the upstream app's home folder
+    expect(() => new ResultStore(upstreamHome)).toThrow(TypeError)
+    expect(() => new ResultStore(join(upstreamHome, 'x'))).toThrow(TypeError)
+    // this product's own home folder is not the upstream's
+    expect(new ResultStore(join(root, '.seuoffice')).dir).toBe(
+      join(root, '.seuoffice', STORE_DIR_NAME),
+    )
   })
 })
 

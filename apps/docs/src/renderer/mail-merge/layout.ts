@@ -1,4 +1,4 @@
-import type { CellBorders, SectionSettings } from '@genoffice/docx-engine'
+import type { CellBorders, SectionSettings } from '@seuoffice/docx-engine'
 import type { PmNode } from '../editor/convert'
 
 /**

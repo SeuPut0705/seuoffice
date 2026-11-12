@@ -1,6 +1,6 @@
 {
-  "name": "@genoffice/markdown",
-  "productName": "GenOffice Markdown",
+  "name": "@seuoffice/markdown",
+  "productName": "SeuOffice Markdown",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": true,
@@ -21,15 +21,15 @@
     "@codemirror/search": "^6.7.2",
     "@codemirror/state": "^6.7.4",
     "@codemirror/view": "^6.43.11",
-    "@genoffice/agent-core": "*",
-    "@genoffice/ai-provider": "*",
-    "@genoffice/ai-search": "*",
-    "@genoffice/docx-engine": "*",
-    "@genoffice/electron-utils": "*",
-    "@genoffice/odt-engine": "*",
-    "@genoffice/i18n": "*",
-    "@genoffice/project-store": "*",
-    "@genoffice/ui": "*",
+    "@seuoffice/agent-core": "*",
+    "@seuoffice/ai-provider": "*",
+    "@seuoffice/ai-search": "*",
+    "@seuoffice/docx-engine": "*",
+    "@seuoffice/electron-utils": "*",
+    "@seuoffice/odt-engine": "*",
+    "@seuoffice/i18n": "*",
+    "@seuoffice/project-store": "*",
+    "@seuoffice/ui": "*",
     "@lezer/highlight": "^1.2.3",
     "@tiptap/core": "3.31.0",
     "@tiptap/extension-bold": "3.31.0",
@@ -61,7 +61,7 @@
     "vite": "^7.3.7",
     "vitest": "^4.1.12"
   },
-  "author": "GenOffice",
+  "author": "SeuOffice",
   "dependencies": {
     "@tiptap/extension-mathematics": "3.31.0",
     "katex": "^0.18.2",
@@ -69,6 +69,6 @@
     "mermaid": "^11.17.2",
     "wavedrom": "^3.7.0",
     "pdfjs-dist": "^6.2.108",
-    "@genoffice/agent-core": "*"
+    "@seuoffice/agent-core": "*"
   }
 }

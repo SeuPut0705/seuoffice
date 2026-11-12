@@ -14,7 +14,7 @@
  * this app does not know, keeps it. Every shape reaches as far as the
  * library's stem (10 past the spine), so the title stands as far from each.
  */
-import type { ViewSummaryStyle } from '@genoffice/xmind-engine'
+import type { ViewSummaryStyle } from '@seuoffice/xmind-engine'
 import { safeSummaryShape, type SummaryShape } from './style-values'
 
 export interface SummaryFrame {

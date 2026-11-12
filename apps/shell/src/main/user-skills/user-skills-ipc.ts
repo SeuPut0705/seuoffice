@@ -16,7 +16,7 @@ import {
   type GitHubSkillUpdateCheck,
   type SkillImport,
   type SkillImportSource,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   USER_SKILLS_CHANNELS as C,
   cardSaveInputOf,
@@ -30,7 +30,7 @@ import {
   type UserSkillUpdateCheck,
   type UserSkillsFail,
   type UserSkillsResult,
-} from '@genoffice/electron-utils/user-skills-channels'
+} from '@seuoffice/electron-utils/user-skills-channels'
 import { failureOf, importPreviewOf, type UserSkillsService } from './user-skills-service'
 
 export interface UserSkillsIpcDeps {

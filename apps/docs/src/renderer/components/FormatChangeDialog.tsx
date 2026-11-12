@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ReportItem } from '@genoffice/odt-engine'
+import type { ReportItem } from '@seuoffice/odt-engine'
 import { useI18n } from '../i18n/locale'
 import { useModalKeys } from './modal-keys'
 import {

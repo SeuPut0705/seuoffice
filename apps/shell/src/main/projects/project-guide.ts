@@ -33,7 +33,7 @@ import {
   type ProjectWriteResult,
   type UndoMemoryConsolidationArgs,
   type UndoMemoryConsolidationResult,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import {
   readProjectsSettings,
   updateProjectsSettings,
@@ -43,6 +43,7 @@ import { isValidRenameName } from '../rename-validation'
 import { isUnderKnownSyncFolder } from './cloud-files'
 import {
   cleanProjectName,
+  dataDirName,
   hashText,
   plainFolderEntries,
   projectFileText,
@@ -129,7 +130,7 @@ export type SelectionTarget =
 export interface ProjectAiVisibility {
   root: string
   matcher: IgnoreMatcher
-  /** Folder-relative path (either separator) is visible: inside, not hidden, not `.ieumoffice/`, not ignored */
+  /** Folder-relative path (either separator) is visible: inside, not hidden, not in the data folder, not ignored */
   isVisible(relPath: string, isDir?: boolean): boolean
   /** Same for the same rule (`ignore` text and case folding); a file list cache keys on it */
   ruleKey?: string
@@ -174,9 +175,11 @@ export interface ProjectGuideDeps {
  */
 export const PROJECT_TOUCH_WRITE_MS = 60_000
 
-/** Writes into one project's `.ieumoffice/`, each through the write guard */
+/** Writes into one project's data folder, each through the write guard */
 interface DataWriter {
   root: string
+  /** The data folder name every write of this operation goes to (`dataDirName`, resolved once) */
+  dataDir: string
   write(relPath: string, text: string): Promise<void>
   append(relPath: string, text: string): Promise<void>
   update(
@@ -225,7 +228,7 @@ export class ProjectGuide {
   private readonly newId: () => string
   private readonly language: () => string
   private readonly guard: ProjectWriteGuard
-  /** Projects whose `.ieumoffice/` could not be written during this app run */
+  /** Projects whose `.seuoffice/` could not be written during this app run */
   private readonly unwritable = new Set<ProjectId>()
   /** Copied folders listed under a new id whose `project.json` still names the original */
   private readonly pendingIdFix = new Set<ProjectId>()
@@ -292,7 +295,7 @@ export class ProjectGuide {
     return this.unwritable.has(id)
   }
 
-  /** Marks a project "unwritable" for this app run (a write into `.ieumoffice/` failed) */
+  /** Marks a project "unwritable" for this app run (a write into `.seuoffice/` failed) */
   markUnwritable(id: ProjectId): void {
     this.unwritable.add(id)
   }
@@ -550,7 +553,7 @@ export class ProjectGuide {
 
   /**
    * "New project" (spec 5.1): a new folder named `name` under the default save
-   * folder (or `parentDir`) with `.ieumoffice/project.json`, trusted without asking.
+   * folder (or `parentDir`) with `.seuoffice/project.json`, trusted without asking.
    * An existing folder of that name is never written to unless `useExisting` asks
    * to add it as a project (identity and trust as for "add folder").
    */
@@ -613,7 +616,7 @@ export class ProjectGuide {
 
   /** Undo a just-made project folder whose `project.json` could not be written */
   private async removeEmptyNewFolder(root: string): Promise<void> {
-    const dataDir = join(root, PROJECT_FOLDER_NAMES.dataDir)
+    const dataDir = join(root, dataDirName(root))
     for (const dir of [dataDir, root]) {
       try {
         await rmdir(dir)
@@ -648,11 +651,16 @@ export class ProjectGuide {
     this.unwritable.delete(id)
     const entry = this.entry(id)
     if (!entry) throw new Error(`unknown project ${id}`)
-    const fresh = projectFileText(await this.projectFileFor(id, entry.path))
+    const dataDir = dataDirName(entry.path)
+    const fresh = projectFileText(await this.projectFileFor(id, entry.path, dataDir))
     const result = await this.tryWrite(id, () =>
       this.guard
-        .updateData(entry.path, PROJECT_FOLDER_NAMES.projectFile, (current) =>
-          current === null || this.idNeedsFix(id, entry.path, current) ? fresh : current,
+        .updateData(
+          entry.path,
+          PROJECT_FOLDER_NAMES.projectFile,
+          (current) =>
+            current === null || this.idNeedsFix(id, entry.path, current) ? fresh : current,
+          dataDir,
         )
         .then(() => undefined),
     )
@@ -679,8 +687,12 @@ export class ProjectGuide {
     return original !== undefined && !samePath(original.path, root, this.platform)
   }
 
-  private async projectFileFor(id: ProjectId, root: string): Promise<ProjectFolderFile> {
-    const file = await readProjectFile(root)
+  private async projectFileFor(
+    id: ProjectId,
+    root: string,
+    dataDir: string,
+  ): Promise<ProjectFolderFile> {
+    const file = await readProjectFile(root, dataDir)
     return {
       version: PROJECT_FORMAT_VERSION,
       id,
@@ -704,93 +716,124 @@ export class ProjectGuide {
   }
 
   /**
-   * A write into a listed project's `.ieumoffice/`. Refused without trying while the
+   * A write into a listed project's data folder. Refused without trying while the
    * project is marked unwritable. The first file actually written also writes
    * `project.json` when the folder has none, so the folder carries its identity; an
-   * operation that ends up writing nothing creates nothing.
+   * operation that ends up writing nothing creates nothing. The data folder is
+   * resolved once (or given by a caller that already read from it), so an older
+   * version making the other folder meanwhile cannot split one operation across two.
    */
   private async writeWithIdentity(
     id: ProjectId,
     write: (data: DataWriter) => Promise<void>,
+    knownDataDir?: string,
   ): Promise<ProjectWriteResult> {
     const entry = this.entry(id)
     if (!entry) throw new Error(`unknown project ${id}`)
     if (this.unwritable.has(id)) return { status: 'unwritable' }
     const root = entry.path
-    const fresh = projectFileText(await this.projectFileFor(id, root))
+    const dataDir = knownDataDir ?? dataDirName(root)
+    const fresh = projectFileText(await this.projectFileFor(id, root, dataDir))
     let identified = false
     const identify = async (): Promise<void> => {
       if (identified) return
       identified = true
-      await this.guard.updateData(root, PROJECT_FOLDER_NAMES.projectFile, (current) =>
-        current === null || this.idNeedsFix(id, root, current) ? fresh : null,
+      await this.guard.updateData(
+        root,
+        PROJECT_FOLDER_NAMES.projectFile,
+        (current) => (current === null || this.idNeedsFix(id, root, current) ? fresh : null),
+        dataDir,
       )
       this.pendingIdFix.delete(id)
     }
     const data: DataWriter = {
       root,
+      dataDir,
       write: async (relPath, text) => {
         await identify()
-        await this.guard.writeData(root, relPath, text)
+        await this.guard.writeData(root, relPath, text, dataDir)
       },
       append: async (relPath, text) => {
         await identify()
-        await this.guard.appendData(root, relPath, text)
+        await this.guard.appendData(root, relPath, text, dataDir)
       },
       update: (relPath, change) =>
-        this.guard.updateData(root, relPath, async (current) => {
-          const next = await change(current)
-          if (next !== null && next !== undefined) await identify()
-          return next
-        }),
-      remove: (relPath) => this.guard.removeData(root, relPath),
+        this.guard.updateData(
+          root,
+          relPath,
+          async (current) => {
+            const next = await change(current)
+            if (next !== null && next !== undefined) await identify()
+            return next
+          },
+          dataDir,
+        ),
+      remove: (relPath) => this.guard.removeData(root, relPath, dataDir),
     }
     return this.tryWrite(id, () => write(data))
   }
 
-  /** Replace a file under `.ieumoffice/` (for the chat store) */
-  async writeData(id: ProjectId, relPath: string, text: string): Promise<ProjectWriteResult> {
+  /**
+   * Replace a file in the data folder (for the chat store). `dataDir` pins the
+   * folder a caller already read from; absent, it is resolved now.
+   */
+  async writeData(
+    id: ProjectId,
+    relPath: string,
+    text: string,
+    dataDir?: string,
+  ): Promise<ProjectWriteResult> {
     assertNotProjectFile(relPath)
-    return this.writeWithIdentity(id, (data) => data.write(relPath, text))
+    return this.writeWithIdentity(id, (data) => data.write(relPath, text), dataDir)
   }
 
-  /** Append to a file under `.ieumoffice/` (chat message lines) */
-  async appendData(id: ProjectId, relPath: string, text: string): Promise<ProjectWriteResult> {
+  /** Append to a file in the data folder (chat message lines); `dataDir` as for `writeData` */
+  async appendData(
+    id: ProjectId,
+    relPath: string,
+    text: string,
+    dataDir?: string,
+  ): Promise<ProjectWriteResult> {
     assertNotProjectFile(relPath)
-    return this.writeWithIdentity(id, (data) => data.append(relPath, text))
+    return this.writeWithIdentity(id, (data) => data.append(relPath, text), dataDir)
   }
 
-  /** Read-change-write one file under `.ieumoffice/`, serialized with every other write to it */
+  /** Read-change-write one file in the data folder, serialized with every other write to it */
   async updateData(
     id: ProjectId,
     relPath: string,
     change: (
       current: string | null,
     ) => string | null | undefined | Promise<string | null | undefined>,
+    dataDir?: string,
   ): Promise<DataUpdateOutcome> {
     assertNotProjectFile(relPath)
     let outcome: { written: boolean; text: string | null } = { written: false, text: null }
-    const result = await this.writeWithIdentity(id, async (data) => {
-      outcome = await data.update(relPath, change)
-    })
+    const result = await this.writeWithIdentity(
+      id,
+      async (data) => {
+        outcome = await data.update(relPath, change)
+      },
+      dataDir,
+    )
     return result.status === 'ok' ? { status: 'ok', ...outcome } : result
   }
 
-  /** Delete one file under `.ieumoffice/` */
-  async removeData(id: ProjectId, relPath: string): Promise<ProjectWriteResult> {
+  /** Delete one file in the data folder */
+  async removeData(id: ProjectId, relPath: string, dataDir?: string): Promise<ProjectWriteResult> {
     assertNotProjectFile(relPath)
-    return this.writeWithIdentity(id, (data) => data.remove(relPath))
+    return this.writeWithIdentity(id, (data) => data.remove(relPath), dataDir)
   }
 
-  /** The checked absolute path of a file under a listed project's `.ieumoffice/` (nothing is touched) */
-  dataPath(id: ProjectId, relPath: string): string | null {
+  /** The checked absolute path of a file in a listed project's data folder (nothing is touched) */
+  dataPath(id: ProjectId, relPath: string, dataDir?: string): string | null {
     const entry = this.entry(id)
-    return entry ? this.guard.dataPath(entry.path, relPath) : null
+    return entry ? this.guard.dataPath(entry.path, relPath, dataDir) : null
   }
 
   /**
    * Write a new document the AI made (spec 6) at `target`: inside the project folder,
-   * not under `.ieumoffice/`, in an existing folder, never over an existing entry.
+   * not under `.seuoffice/`, in an existing folder, never over an existing entry.
    * Throws `ProjectWriteRefused` (or the file system error); callers pick a free name.
    */
   async writeNewDocument(
@@ -905,7 +948,7 @@ export class ProjectGuide {
     const root = entry.path
     const texts = await readHashedTexts(root)
     const memory = texts.memory ?? ''
-    const names = await plainFolderEntries(root, [PROJECT_FOLDER_NAMES.dataDir])
+    const names = await plainFolderEntries(root, [texts.dataDir])
     const conflicts = names
       .filter(
         (name) =>
@@ -1079,7 +1122,7 @@ export class ProjectGuide {
     }
     const result = await this.writeWithIdentity(id, async (data) => {
       await data.update(PROJECT_FOLDER_NAMES.memoryFile, async (current) => {
-        backupName = await this.freeBackupName(data.root)
+        backupName = await this.freeBackupName(data)
         await data.write(backupName, current ?? '')
         written = buildMemoryText(args.entries, header, today)
         before = memoryEntries(current ?? '').length
@@ -1103,29 +1146,32 @@ export class ProjectGuide {
     if (typeof args.backupName !== 'string' || !MEMORY_BACKUP_PATTERN.test(args.backupName)) {
       return { status: 'no-backup' }
     }
-    const newest = (await this.backupNames(entry.path))[0]
+    const dataDir = dataDirName(entry.path)
+    const newest = (await this.backupNames(entry.path, dataDir))[0]
     if (newest !== args.backupName) return { status: 'no-backup' }
-    const text = await readDataText(entry.path, newest)
+    const text = await readDataText(entry.path, newest, dataDir)
     if (text === null) return { status: 'no-backup' }
-    const result = await this.writeWithIdentity(id, (data) =>
-      data.write(PROJECT_FOLDER_NAMES.memoryFile, text),
+    const result = await this.writeWithIdentity(
+      id,
+      (data) => data.write(PROJECT_FOLDER_NAMES.memoryFile, text),
+      dataDir,
     )
     if (result.status !== 'ok') return { status: 'unwritable' }
     this.recordHashes(id, { memory: hashText(text) })
     return { status: 'ok', entries: memoryEntries(text).length }
   }
 
-  /** Backup names, newest first */
-  private async backupNames(root: string): Promise<string[]> {
-    const names = await plainFolderEntries(root, [PROJECT_FOLDER_NAMES.dataDir])
+  /** Backup names in `dataDir`, newest first */
+  private async backupNames(root: string, dataDir: string): Promise<string[]> {
+    const names = await plainFolderEntries(root, [dataDir])
     return names
       .filter((name) => MEMORY_BACKUP_PATTERN.test(name))
       .sort()
       .reverse()
   }
 
-  private async freeBackupName(root: string): Promise<string> {
-    const taken = new Set(await this.backupNames(root))
+  private async freeBackupName(data: DataWriter): Promise<string> {
+    const taken = new Set(await this.backupNames(data.root, data.dataDir))
     let at = this.now().getTime()
     for (;;) {
       const name = memoryBackupName(new Date(at))
@@ -1135,7 +1181,7 @@ export class ProjectGuide {
   }
 
   private async pruneBackups(data: DataWriter): Promise<void> {
-    const names = await this.backupNames(data.root)
+    const names = await this.backupNames(data.root, data.dataDir)
     for (const name of names.slice(MEMORY_BACKUPS_KEPT)) await data.remove(name)
   }
 

@@ -4,7 +4,7 @@ import {
   type Block as WordBlock,
   type ParsedDoc,
   type Run,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { lowerDocument, DEFAULT_FACE } from '../src/lower'
 import { LossLedger } from '../src/losses'

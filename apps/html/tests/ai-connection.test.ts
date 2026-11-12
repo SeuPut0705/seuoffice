@@ -7,13 +7,13 @@ import {
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
   type AiSubscriptionUsage,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   aiHoldReason,
   aiSendGate,
   withAiContinueProvider,
   withAiSubscriptionNoticeSeen,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import {
   blockedRunFor,
   blockedRunOf,
@@ -41,7 +41,7 @@ const settings = (patch: Partial<AiSettings> = {}): AiSettings => ({
   ...patch,
 })
 
-// The gate itself is the one every editor shares (@genoffice/ui); these pin it on the
+// The gate itself is the one every editor shares (@seuoffice/ui); these pin it on the
 // settings and statuses the html panel hands it.
 describe('the send gate', () => {
   it('holds a request while the settings have not been read', () => {

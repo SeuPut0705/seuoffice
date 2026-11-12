@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * F5 / Ctrl+F5 wiring for the sheet presenter. The key classification is in
- * `@genoffice/ui`; this pins the grid side: fullscreen, the A1 start, and the
+ * `@seuoffice/ui`; this pins the grid side: fullscreen, the A1 start, and the
  * chrome the show hides. Plain F5 stays Excel's Go To.
  */
 describe('sheets presentation wiring', () => {

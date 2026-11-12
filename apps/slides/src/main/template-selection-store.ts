@@ -9,8 +9,8 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { writeJsonAtomic } from '@genoffice/electron-utils/atomic-write'
-import { canonicalPathKey } from '@genoffice/project-store'
+import { writeJsonAtomic } from '@seuoffice/electron-utils/atomic-write'
+import { canonicalPathKey } from '@seuoffice/project-store'
 import { normalizeTemplateSelection, type TemplateSelection } from '../shared/template-selection'
 
 /** The record file, directly in the user-data folder */

@@ -4,7 +4,7 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@seuoffice/ai-provider/browser'
 import {
   AGENT_CHANNELS,
   AGENT_WARNING_VERSION,

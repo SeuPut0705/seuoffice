@@ -1,6 +1,6 @@
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { analyzeMediaTool, localMediaRoots } from '@genoffice/ai-search'
+import { analyzeMediaTool, localMediaRoots } from '@seuoffice/ai-search'
 import { flagString } from '../args'
 import { cloudToolError, headlessCall, prepareCloud } from '../cloud'
 import { resolveInput } from '../fs'

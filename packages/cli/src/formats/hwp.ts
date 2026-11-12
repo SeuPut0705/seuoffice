@@ -1,5 +1,5 @@
-import { hwpToText } from '@genoffice/file-parse/hwp'
-import { convertHwpToDocx, HwpConvertError } from '@genoffice/hwp2docx'
+import { hwpToText } from '@seuoffice/file-parse/hwp'
+import { convertHwpToDocx, HwpConvertError } from '@seuoffice/hwp2docx'
 import { rhwpWasmPath } from '../resources'
 import { CliError, EXIT } from '../result'
 
@@ -26,7 +26,7 @@ export async function convertHwp(input: Uint8Array): Promise<{
   bytes: Uint8Array
   detail: Record<string, unknown>
 }> {
-  process.env.GENOFFICE_RHWP_WASM ??= rhwpWasmPath()
+  process.env.SEUOFFICE_RHWP_WASM ??= rhwpWasmPath()
   try {
     const result = await convertHwpToDocx(input)
     return {

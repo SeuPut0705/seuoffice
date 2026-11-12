@@ -14,7 +14,7 @@
  * did not, the entry made before the save is shown as stale ("the document has
  * changed"); a later "Regenerate" replaces it.
  */
-import type { AgentStreamRequest } from '@genoffice/agent-core'
+import type { AgentStreamRequest } from '@seuoffice/agent-core'
 import { applyStoredAiReadings } from '../../../../../../packages/pdf-structure/src/ai-read'
 import type { InsightsEntry } from '../../../../../../packages/pdf-structure/src/store/reading'
 import {

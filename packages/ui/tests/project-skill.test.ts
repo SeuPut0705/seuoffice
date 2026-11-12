@@ -7,7 +7,7 @@ import {
   type AgentStreamCallbacks,
   type AgentStreamRequest,
   type AgentTransport,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import {
   createProjectRun,
   forgetMemoryLine,

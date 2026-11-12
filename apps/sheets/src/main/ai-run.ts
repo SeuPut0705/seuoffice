@@ -17,7 +17,7 @@ import {
   type AiSubscriptionProviderId,
   type AiSubscriptionStatuses,
   type StreamCallbacks,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 
 /** The error fields of a request that was not started because no provider can run */
 export interface AiRunBlock {

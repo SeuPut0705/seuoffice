@@ -5,7 +5,7 @@
  * the image reference; a deleted one drops its entry when nothing else
  * references it.
  */
-import { patchImageParagraphXml } from '@genoffice/docx-engine'
+import { patchImageParagraphXml } from '@seuoffice/docx-engine'
 import { FULL_REGISTRY } from './helpers/full'
 import { describe, expect, it } from 'vitest'
 import {

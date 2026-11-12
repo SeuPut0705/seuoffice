@@ -30,7 +30,7 @@ vi.mock('../src/formats/diagram-app', async (importOriginal) => {
 })
 
 const FIXTURES = join(__dirname, '../../drawio-model/tests/fixtures')
-const env = () => ({ ...process.env, GENOFFICE_AUDIT_LOG: 'off', GENOFFICE_USER_DATA: tempDir() })
+const env = () => ({ ...process.env, SEUOFFICE_AUDIT_LOG: 'off', SEUOFFICE_USER_DATA: tempDir() })
 
 const model = (cells = '') =>
   `<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>${cells}</root></mxGraphModel>`

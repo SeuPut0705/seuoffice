@@ -9,7 +9,7 @@
  * buttons (`renderItemActions`) and a bar over the list (`toolbar`).
  */
 import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { useDismissablePopover } from '@genoffice/ui'
+import { useDismissablePopover } from '@seuoffice/ui'
 import type { TFunc } from '../i18n/locale'
 import {
   EMPTY_FILTER,

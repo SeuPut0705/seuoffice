@@ -10,7 +10,7 @@
  * added requests are attached to a style text.
  */
 import { useSyncExternalStore } from 'react'
-import { listSlideTemplates, type SlideTemplate } from '@genoffice/pipelines/slides/templates'
+import { listSlideTemplates, type SlideTemplate } from '@seuoffice/pipelines/slides/templates'
 import type {
   TemplateSelection,
   TemplateSelectionInput,

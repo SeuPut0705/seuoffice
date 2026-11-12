@@ -33,7 +33,7 @@
  * through `text-guard.ts`, so markup in them is shown as typed.
  */
 import type { NodeObj } from 'mind-elixir'
-import { undoDoubledEscapes } from '@genoffice/agent-core/doubled-escapes'
+import { undoDoubledEscapes } from '@seuoffice/agent-core/doubled-escapes'
 import {
   ARROW_SHAPES,
   BOUNDARY_SHAPES,
@@ -59,7 +59,7 @@ import {
   type ViewTopic,
   type XmindSheet,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import {
   boundariesOf,
   emptyMeta,

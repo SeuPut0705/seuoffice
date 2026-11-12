@@ -71,3 +71,68 @@ export function createUpdateLog(
     debug: (message) => write('debug', message),
   }
 }
+
+/**
+ * The steps of one update, from the check to the app's first start on the new
+ * version. Each is written as its own `phase <step>` line, so the time between
+ * any two steps reads off the timestamps and the slow one stands out. What the
+ * installer does after the app has quit leaves no line of the app's; the next
+ * start's `app-started` line carries the time since the installer or the Mac
+ * swap was started (update-attempt.ts keeps that moment). The Mac swap script
+ * writes its own `phase swap-start` and `phase relaunch` (mac-update.ts).
+ */
+export type UpdateStep =
+  | 'check-start'
+  | 'check-end'
+  | 'download-start'
+  | 'download-end'
+  | 'unpack-start'
+  | 'unpack-end'
+  | 'verify-start'
+  | 'verify-end'
+  | 'quit-requested'
+  | 'will-quit'
+  | 'installer-start'
+  | 'swap-scheduled'
+  | 'app-started'
+
+export type UpdateStepFields = Record<string, string | number | null | undefined>
+
+/**
+ * Writes update steps through `write`. An `*-end` step also gets `ms=`, the
+ * milliseconds since its `*-start` (none when that start was not seen in this
+ * process). Field values are single words: whitespace becomes `_`, and an
+ * absent value is left out.
+ */
+export function createUpdateSteps(
+  write: (line: string) => void,
+  now: () => number = () => performance.now(),
+): (step: UpdateStep, fields?: UpdateStepFields) => void {
+  const startedAt = new Map<string, number>()
+  return (step, fields = {}) => {
+    const at = now()
+    const span = step.replace(/-(start|end)$/, '')
+    const parts = [`phase ${step}`]
+    if (step.endsWith('-start')) startedAt.set(span, at)
+    if (step.endsWith('-end')) {
+      const start = startedAt.get(span)
+      startedAt.delete(span)
+      if (start !== undefined) parts.push(`ms=${Math.round(at - start)}`)
+    }
+    for (const [key, value] of Object.entries(fields)) {
+      if (value === null || value === undefined) continue
+      parts.push(`${key}=${String(value).replace(/\s+/g, '_')}`)
+    }
+    write(parts.join(' '))
+  }
+}
+
+/** the size of a downloaded file for a step line, or null when it cannot be read */
+export function fileBytes(file: unknown): number | null {
+  if (typeof file !== 'string') return null
+  try {
+    return statSync(file).size
+  } catch {
+    return null
+  }
+}

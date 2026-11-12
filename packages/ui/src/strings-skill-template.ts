@@ -1,4 +1,4 @@
-import { createI18n, defineStrings, type Lang } from '@genoffice/i18n'
+import { createI18n, defineStrings, type Lang } from '@seuoffice/i18n'
 
 /**
  * The template flow of the person's skills (spec 5.6, 5.7): a template skill

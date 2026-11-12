@@ -25,7 +25,7 @@ const base = require('./electron-builder.cjs')
 /** The only package each platform gets: electron platform name -> CPU. */
 const RELEASE_ARCH = { darwin: 'arm64', win32: 'x64' }
 
-for (const name of ['GENOFFICE_MAC_X64', 'GENOFFICE_WIN_ARM64']) {
+for (const name of ['SEUOFFICE_MAC_X64', 'SEUOFFICE_WIN_ARM64']) {
   if (process.env[name] === '1') {
     throw new Error(`${name}=1 asks for a package seuoffice does not release`)
   }
@@ -81,6 +81,25 @@ function withoutModuleMains(extraResources) {
   return entries
 }
 
+/**
+ * The Windows installer carries the app as a zip (nsis.useZip), which NSIS
+ * unzips straight into the install folder. The default 7z package is first
+ * unpacked into a temporary folder and then copied over, and the old
+ * folder's files are deleted afterwards: on a GitHub Windows runner an update
+ * install took 59-60 s that way and 28-30 s from the zip (decision 0028). The
+ * installer grows from 205 to 269 MB.
+ *
+ * electron-builder writes the installer's .blockmap only for its 7z package
+ * (differentialPackage), so writeInstallerBlockmap writes it: the updater
+ * downloads only the blocks that changed (updater.ts), and the release
+ * workflow checks and uploads the file.
+ */
+async function writeInstallerBlockmap(event) {
+  if (event.target?.name !== 'nsis' || !event.file.endsWith('.exe')) return
+  const { buildBlockMap } = require('app-builder-lib/out/targets/blockmap/blockmap')
+  await buildBlockMap(event.file, 'gzip', `${event.file}.blockmap`)
+}
+
 /** @type {import('electron-builder').Configuration} */
 const config = {
   ...shared,
@@ -88,6 +107,8 @@ const config = {
   mac,
   dmg: { ...base.dmg, sign: macSigned },
   win: { ...base.win, target: [{ target: 'nsis', arch: [RELEASE_ARCH.win32] }] },
+  nsis: { ...base.nsis, useZip: true, differentialPackage: false },
+  artifactBuildCompleted: writeInstallerBlockmap,
   beforePack: async (context) => {
     const arch = Arch[context.arch]
     if (RELEASE_ARCH[context.electronPlatformName] !== arch) {

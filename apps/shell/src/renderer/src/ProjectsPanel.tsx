@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
-import { createIpcTransport, type AgentTransport } from '@genoffice/agent-core'
-import type { AiSettings, AiSubscriptionStatuses } from '@genoffice/ai-provider/browser'
-import { localContextLimit } from '@genoffice/ai-provider/browser'
-import type { Lang, Params } from '@genoffice/i18n'
+import { createIpcTransport, type AgentTransport } from '@seuoffice/agent-core'
+import type { AiSettings, AiSubscriptionStatuses } from '@seuoffice/ai-provider/browser'
+import { localContextLimit } from '@seuoffice/ai-provider/browser'
+import type { Lang, Params } from '@seuoffice/i18n'
 import type {
   AddFolderResult,
   CreateProjectResult,
@@ -16,7 +16,7 @@ import type {
   ProjectId,
   ProjectListItem,
   ProjectScreenSection,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import {
   aiContextConfirmText,
   aiRunErrorText,
@@ -35,7 +35,7 @@ import {
   type ConsolidateProjectMemoryResult,
   type ProjectPanelStringKey,
   type ProjectProblem,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { useI18n } from './locale'
 import { projectsText, type ProjectsStringKey } from './i18n/strings-projects'
 import './projects-panel.css'

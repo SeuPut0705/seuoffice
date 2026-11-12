@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog, ipcMain, type MessageBoxOptions } from 'electron'
-import { createI18n, defineStrings, type Lang } from '@genoffice/i18n'
-import { OUTBOUND_CHANNELS, confirmRequestOf } from '@genoffice/electron-utils/outbound-channels'
+import { createI18n, defineStrings, type Lang } from '@seuoffice/i18n'
+import { OUTBOUND_CHANNELS, confirmRequestOf } from '@seuoffice/electron-utils/outbound-channels'
 
 /**
  * The main-process side of the editors' outbound guard (decision 0062):

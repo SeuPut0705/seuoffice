@@ -5,7 +5,7 @@
  * tests catch what the types cannot.
  */
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import {
   ARROW_SHAPES,
   BOUNDARY_SHAPES,
@@ -16,7 +16,7 @@ import {
   THEME_BAND_IDS,
   THEME_SKELETON_IDS,
   THEME_VARIANT_IDS,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import { strings } from '../src/renderer/i18n/strings'
 import { mapStrings } from '../src/renderer/i18n/map-strings'
 import { BAND_NAME, SKELETON_NAME, VARIANT_NAME } from '../src/renderer/components/ThemePanel'

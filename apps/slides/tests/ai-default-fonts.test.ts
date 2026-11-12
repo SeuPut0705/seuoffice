@@ -6,8 +6,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { PageSpec } from '@genoffice/pipelines/slides'
-import { documentLocale, normalizeLang, requestedLanguage, setUiLang } from '@genoffice/i18n'
+import type { PageSpec } from '@seuoffice/pipelines/slides'
+import { documentLocale, normalizeLang, requestedLanguage, setUiLang } from '@seuoffice/i18n'
 import {
   TITLE_ROLE_MIN_PT,
   fillMissingRunFonts,

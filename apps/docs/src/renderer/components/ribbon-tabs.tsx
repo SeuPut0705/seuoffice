@@ -7,7 +7,7 @@ import {
   useDismissablePopover,
   wordArtSolidColor,
   type WordArtPreset,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import {
   buildLineParagraphXml,
   buildShapeParagraphXml,
@@ -17,7 +17,7 @@ import {
   type HeaderFooter,
   type StyleInfo,
   type TextboxDisplay,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import type { DocsTabInfo } from '../../shared/ipc'
 import { runUiOps } from '../ai/ops'
 import { stepDocsZoom } from '../wheel-zoom'
@@ -29,7 +29,7 @@ import { insertPictureAtSelection } from '../editor/insert-picture'
 import { isStraightLineKind } from '../editor/shape-svg'
 import { HIGHLIGHTER_ALPHA, isPenKind, type InkPenKind, type InkTool } from '../editor/ink'
 import { colorsFor, newInkPreset, widthsFor, type InkPreset } from '../editor/ink-presets'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { t, useI18n, type StringKey } from '../i18n/locale'
 import { odtOffProps, useOdtSession } from '../odt-gate'
 import iconEditor from '../assets/icon-editor.png'

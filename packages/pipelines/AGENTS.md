@@ -17,9 +17,9 @@ AI가 슬라이드를 만들 때 거치는 결정적 단계들을 모아 둔다.
 - 스펙의 잘못된 요소는 페이지를 실패시키지 않고 버리면서 경고로 알린다. 남는 요소가 하나도 없을 때만 오류를 돌려준다. 오류와 경고 문구는 모델에 되돌려 고치게 하는 데 쓰이므로, 무엇이 왜 버려졌는지 요소 번호와 함께 적는다.
 - 이미지 주소는 기본적으로 http(s)만 받는다. 로컬 경로와 `data:` URL은 `localImages`를 켠 호출자(명령줄 도구)에서만 허용한다. 앱 경로에서는 이 옵션을 켜지 않는다.
 - 스펙 값은 유효한 OOXML이 되는 범위로 좁힌다. 모르는 도형 이름은 `rect`로 바꾸고, 색은 `#RGB`, `#RRGGBB`, `#RRGGBBAA`만 통과시키고, 글자 크기는 6pt 이상 160pt 이하, 선 두께는 0.25pt 이상 24pt 이하로 자른다.
-- `layout-audit.ts`는 `@genoffice/pptx-render`에서 타입만 import한다. 렌더러가 `@genoffice/pipelines/slides/layout-audit` 하위 경로로 이 파일만 가져가기 때문이다. `slides` 진입점은 Node 전용인 `pptx-engine`을 끌고 오므로 렌더러에서 import하지 않는다.
+- `layout-audit.ts`는 `@seuoffice/pptx-render`에서 타입만 import한다. 렌더러가 `@seuoffice/pipelines/slides/layout-audit` 하위 경로로 이 파일만 가져가기 때문이다. `slides` 진입점은 Node 전용인 `pptx-engine`을 끌고 오므로 렌더러에서 import하지 않는다.
 - Electron을 import하지 않는다.
-- 디자인 템플릿 폴더(`slides/templates/`, 하위 경로 `@genoffice/pipelines/slides/templates`)는 렌더러가 가져가는 곳이다. 자료와 찾기 함수(`listSlideTemplates`, `findSlideTemplate`)만 두고, 실행 시점에 다른 패키지나 폴더 밖 파일을 불러오지 않는다. 형은 `import type`으로만 가져온다. `tests/slide-templates.test.ts`가 import 그래프를 따라가고, `pptx-engine`·`pptx-render`를 막은 채 불러 본다.
+- 디자인 템플릿 폴더(`slides/templates/`, 하위 경로 `@seuoffice/pipelines/slides/templates`)는 렌더러가 가져가는 곳이다. 자료와 찾기 함수(`listSlideTemplates`, `findSlideTemplate`)만 두고, 실행 시점에 다른 패키지나 폴더 밖 파일을 불러오지 않는다. 형은 `import type`으로만 가져온다. `tests/slide-templates.test.ts`가 import 그래프를 따라가고, `pptx-engine`·`pptx-render`를 막은 채 불러 본다.
 - 템플릿 검사기 `validateSlideTemplate`(`slides/template-check.ts`)는 `pptx-engine`으로 견본 표지를 빌드하므로 Node 전용 `slides` 진입점에서만 내보낸다. 모델도 네트워크도 부르지 않는다.
 - 새 템플릿은 검사기의 문제가 0건이어야 한다. id는 `^[a-z0-9-]+$`이고 겹치지 않는다. 이름은 원본의 영어 이름 그대로다. 설명과 스타일 글은 영어이고, 스타일 글은 2,400자 이하다. 색은 모두 `#RRGGBB`로 적고 `palette`에 있어야 한다. 글꼴은 앱에 든 10개(`SLIDE_TEMPLATE_FONTS`)만 쓴다. 페이지 스펙이 그리지 못하는 효과(gradient, glow, blur, texture, shadow, rotate, animation)는 스타일 글에 적지 않는다. 견본 표지는 한국어·영어 두 장이고 구성이 같다. 그림 요소가 없고, 페이지 스펙 검증과 기하 점검을 통과하고, 글자색에 투명도가 없다. 한국어 표지에는 한글이, 영어 표지에는 한글이 없어야 하고, 템플릿 이름이나 견본 문구를 보이지 않는다. `source`는 원본 저장소, 40자 커밋, 템플릿 폴더다.
 - 보이는 순서는 `slides/templates/catalog.ts`의 배열 순서다. 템플릿을 더하면 import 하나와 배열 항목 하나를 넣고, `tests/slide-templates.test.ts`의 목록과 저장소 루트의 `NOTICE`(출처, 글꼴)를 함께 고친다. 새 글꼴이 필요하면 `packages/ui/template-fonts`에 먼저 넣는다(`apps/slides/tests/template-fonts-catalog.test.ts`가 앱에 든 글꼴만 쓰는지 본다).
@@ -42,7 +42,7 @@ AI가 슬라이드를 만들 때 거치는 결정적 단계들을 모아 둔다.
 
 ## 테스트
 
-- `npm run test -w @genoffice/pipelines`, 또는 패키지 폴더에서 `npx vitest run`. 픽스처 파일은 없고, 테스트가 스펙 객체와 렌더 노드를 코드로 만든다.
+- `npm run test -w @seuoffice/pipelines`, 또는 패키지 폴더에서 `npx vitest run`. 픽스처 파일은 없고, 테스트가 스펙 객체와 렌더 노드를 코드로 만든다.
 - vitest 별칭이 `pptx-engine`과 `pptx-render`를 소스 경로로 묶는다. 두 패키지의 새 하위 경로를 import하면 `vitest.config.ts`에 별칭을 추가하고, 더 구체적인 경로를 앞에 둔다.
 - 한도나 버림 규칙을 바꾸면 경계값 사례를, 점검 규칙을 바꾸면 걸리는 사례와 통과하는 사례를 함께 넣는다.
 - Windows에서 원본 코드 그대로도 실패하는 테스트는 없다.

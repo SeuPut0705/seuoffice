@@ -5,7 +5,7 @@ import {
   normalizeUserSkillSettings,
   type UserSkillSettings,
   type UserSkillStateSetting,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   isValidProjectId,
   type OutsideDocumentChoice,
@@ -13,7 +13,7 @@ import {
   type ProjectId,
   type ProjectsAppSettings,
   type ProjectTrustRecord,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import { AGENT_CODEX_WEB_SEARCH, type AgentCodexWebSearch } from '../shared/agent-api'
 
 /**

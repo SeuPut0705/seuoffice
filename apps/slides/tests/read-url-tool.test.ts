@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createSlidesSkill, type DeckAccess } from '../src/renderer/ai/slides-skill'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 
 const deck = { widthPx: 1280, heightPx: 720, nodes: [] } as unknown as RenderSlide
 

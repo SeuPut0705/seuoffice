@@ -15,7 +15,7 @@ import { callEngine } from './engine'
  * Resources/wasm (apps/shell/electron-builder.cjs), like the PDF engines.
  */
 export function rhwpWasmPath(): string {
-  const fromEnv = process.env.GENOFFICE_RHWP_WASM
+  const fromEnv = process.env.SEUOFFICE_RHWP_WASM
   if (fromEnv) return fromEnv
   try {
     return createRequire(import.meta.url).resolve('@rhwp/core/rhwp_bg.wasm')
@@ -24,7 +24,7 @@ export function rhwpWasmPath(): string {
   }
   const resources = (process as { resourcesPath?: string }).resourcesPath
   if (resources) return join(resources, 'wasm', 'rhwp_bg.wasm')
-  throw new Error('rhwp_bg.wasm not found (set GENOFFICE_RHWP_WASM)')
+  throw new Error('rhwp_bg.wasm not found (set SEUOFFICE_RHWP_WASM)')
 }
 
 /** One memo as the engine lists it: where its anchor sits in the body, and the note itself. */

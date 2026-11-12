@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { Engine, failed } from '../docx-diff/engine'
 import { SPECS as COMPOUND } from './compound-cases'
 import { SPECS as DOCX } from './docx-cases'
+import { SPECS as EPUB } from './epub-cases'
 import { SPECS as LEGACY } from './legacy-cases'
 import { SPECS as PARSE } from './parse-cases'
 import { stringifyAsWritten, typescriptOutcome } from './outcome'
@@ -22,7 +23,7 @@ if (side === 'rust') {
   // not JSON.stringify: an object moves its integer keys first, and the order Rust wrote is compared
   console.log(stringifyAsWritten(header))
 } else if (side === 'typescript') {
-  const spec = [...DOCX, ...PPTX, ...XLSX, ...ZIP_TEXT, ...COMPOUND, ...LEGACY, ...PARSE].find(spec => spec.fn === fn)
+  const spec = [...DOCX, ...PPTX, ...XLSX, ...ZIP_TEXT, ...COMPOUND, ...LEGACY, ...PARSE, ...EPUB].find(spec => spec.fn === fn)
   if (!spec) throw new Error(`No isolated reference function ${fn}`)
   console.log(JSON.stringify(await typescriptOutcome(spec, input)))
 } else {

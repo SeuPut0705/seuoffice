@@ -11,7 +11,7 @@
  * before it edits anything, so every applied run can be reverted.
  */
 import { ipcMain } from 'electron'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import {
   buildAllRenderSlides,
   pushHistory,

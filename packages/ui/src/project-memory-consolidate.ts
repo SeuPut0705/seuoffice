@@ -1,9 +1,9 @@
-import { streamText, type AgentTransport } from '@genoffice/agent-core'
+import { streamText, type AgentTransport } from '@seuoffice/agent-core'
 import type {
   ProjectFolderApi,
   ProjectId,
   UndoMemoryConsolidationResult,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import type { AiSendGate } from './ai-send-gate'
 import { windowProjectFolderBridge } from './project-skill'
 

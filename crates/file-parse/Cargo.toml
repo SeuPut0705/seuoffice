@@ -1,6 +1,6 @@
 [package]
 name = "file-parse"
-description = "Document attachment text readers, compared with @genoffice/file-parse"
+description = "Document attachment text readers, compared with @seuoffice/file-parse"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

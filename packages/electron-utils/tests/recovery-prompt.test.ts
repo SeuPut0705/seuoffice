@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import type { BrowserWindow } from 'electron'
 import {
   promptRecoveryForFile,
@@ -185,8 +185,8 @@ describe('resolveRecoveryOnOpen', () => {
   let store: RecoveryStore
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'genoffice-recovery-open-'))
-    docDir = mkdtempSync(join(tmpdir(), 'genoffice-recovery-open-doc-'))
+    root = mkdtempSync(join(tmpdir(), 'seuoffice-recovery-open-'))
+    docDir = mkdtempSync(join(tmpdir(), 'seuoffice-recovery-open-doc-'))
     store = createRecoveryStore({ userDataDir: () => root })
   })
 

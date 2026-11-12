@@ -3,7 +3,7 @@
  * serializations a format takes, whether pages are compressed, which name a
  * Save As gets, and when nothing is written at all (spec 3.1, 3.2).
  */
-import { detectDiagramFormat, type DiagramFile, type DiagramFormat } from '@genoffice/drawio-model'
+import { detectDiagramFormat, type DiagramFile, type DiagramFormat } from '@seuoffice/drawio-model'
 
 /** draw.io's embed export that produces a file of each format. */
 export type DrawioFileExport = 'xml' | 'xmlsvg' | 'xmlpng'

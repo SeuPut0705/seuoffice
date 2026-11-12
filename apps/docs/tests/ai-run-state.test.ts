@@ -8,9 +8,9 @@ import {
   type AiSubscriptionState,
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import { AI_PROVIDERS, type AiSettings } from '../src/shared/ipc'
-import { aiSendGate, withAiContinueProvider } from '@genoffice/ui'
+import { aiSendGate, withAiContinueProvider } from '@seuoffice/ui'
 import {
   isBlockedRunCause,
   mergeSubscriptionUsage,
@@ -91,7 +91,7 @@ describe('shouldRecheckAfter', () => {
   })
 })
 
-// The gate itself is the one every editor shares (@genoffice/ui).
+// The gate itself is the one every editor shares (@seuoffice/ui).
 describe('the first-connection notice', () => {
   const noticeDue = (stored: AiSettings, statuses: AiSubscriptionStatuses) =>
     aiSendGate(stored, statuses).kind === 'notice'

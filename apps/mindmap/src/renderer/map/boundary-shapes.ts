@@ -23,7 +23,7 @@
  * - `boundaryTitlePlace`: where a title's chip goes: on the outline's top
  *   edge, near its left end, as a legend sits on a frame.
  */
-import type { ViewBoundaryStyle } from '@genoffice/xmind-engine'
+import type { ViewBoundaryStyle } from '@seuoffice/xmind-engine'
 import {
   type BoundaryShape,
   type LinePattern,

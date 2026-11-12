@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import type { AiEffort, AiSettings, AiSubscriptionStatuses } from '@genoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
+import type { AiEffort, AiSettings, AiSubscriptionStatuses } from '@seuoffice/ai-provider/browser'
 import {
   aiEffortChoice,
   aiProviderPickerGroups,

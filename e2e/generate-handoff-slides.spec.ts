@@ -38,7 +38,7 @@ interface Snapshot {
 test.describe('generate hand-off: PPT editor', () => {
   test('make → slides tab: attachments and text in the composer, held by the gate, run on send', async () => {
     test.setTimeout(240_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-handoff-slides-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-handoff-slides-e2e-'))
     const brief = join(dir, 'brief.md')
     const notes = join(dir, 'notes.txt')
     await writeFile(brief, '# Kickoff brief\n\nGoals, owners and dates for the project.\n')
@@ -67,7 +67,7 @@ test.describe('generate hand-off: PPT editor', () => {
     const snapshot = () =>
       app.evaluate((): Snapshot => {
         const g = globalThis as unknown as Record<symbol | string, unknown>
-        const store = g[Symbol.for('genoffice.generate-handoff')] as
+        const store = g[Symbol.for('seuoffice.generate-handoff')] as
           | {
               queued: Map<number, unknown>
               taken: Map<number, unknown>

@@ -57,7 +57,7 @@ export const ko = {
   consolidateUndone: '정리하기 전으로 되돌렸습니다.',
   undoFailed: '되돌리지 못했습니다.',
   removeMemoryAria: '이 기억 지우기: {text}',
-  filesDesc: 'AI가 이 프로젝트에서 볼 수 있는 파일입니다. 숨김 파일과 .ieumoffice 폴더는 빠집니다.',
+  filesDesc: 'AI가 이 프로젝트에서 볼 수 있는 파일입니다. 숨김 파일과 .seuoffice 폴더는 빠집니다.',
   filesEmpty: 'AI가 볼 수 있는 파일이 없습니다.',
   filesLoadFailed: '파일 목록을 읽지 못했습니다.',
   filesCount: '파일 {count}개',

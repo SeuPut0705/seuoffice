@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { Editor } from '@tiptap/core'
-import { buildBlankDocx, parseDocx, saveDocx, type ParsedDocFull } from '@genoffice/docx-engine'
+import { buildBlankDocx, parseDocx, saveDocx, type ParsedDocFull } from '@seuoffice/docx-engine'
 import { insertTableAt } from '../src/renderer/components/ribbon-tabs'
 import { insertPictureAtSelection } from '../src/renderer/editor/insert-picture'
 import { blocksToPmDoc, pmDocToSavePlan, type PmNode } from '../src/renderer/editor/convert'

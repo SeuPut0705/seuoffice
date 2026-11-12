@@ -28,7 +28,7 @@ import {
   type ThemeLook,
   type ThemeTopicShape,
   type XmindSheet,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import { type BranchGeometry, mainBranchPath, subBranchPath } from './branches'
 import type { MapLineSettings } from './line-resolve'
 

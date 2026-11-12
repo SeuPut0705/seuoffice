@@ -21,7 +21,7 @@ async function waitForWorkbook(page: Page, sheetName = 'Sheet1'): Promise<void> 
 // row, so nothing may paint past its padding edge.
 for (const lang of ['ko', 'en']) {
   test(`sheets: Format Cells dialog content stays inside the card (${lang})`, async () => {
-    const scratch = await mkdtemp(join(tmpdir(), 'genoffice-fmtcells-e2e-'))
+    const scratch = await mkdtemp(join(tmpdir(), 'seuoffice-fmtcells-e2e-'))
     const workbook = join(scratch, 'format-cells.xlsx')
     await copyFile(FIXTURE, workbook)
 

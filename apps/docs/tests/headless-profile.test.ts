@@ -59,20 +59,20 @@ vi.mock('electron', () => ({
 }))
 // this workspace's test aliases do not reach the rest of these packages, and
 // the handlers under test use none of them
-vi.mock('@genoffice/ai-search', async () => ({
+vi.mock('@seuoffice/ai-search', async () => ({
   ...(await import('../../../packages/ai-search/src/media-call-abort')),
   documentMediaRoots: () => [],
   createCodexImageCliGenerator: () => async () => ({ bytes: new Uint8Array(), mime: 'image/png' }),
   registerCodexImageGenerator: () => {},
 }))
-vi.mock('@genoffice/ai-provider/subscription', () => ({
+vi.mock('@seuoffice/ai-provider/subscription', () => ({
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
-vi.mock('@genoffice/ai-provider/codex-app-server', () => ({
+vi.mock('@seuoffice/ai-provider/codex-app-server', () => ({
   shutdownCodexAppServers: () => {},
 }))
-vi.mock('@genoffice/ai-provider/custom-models', () => ({}))
+vi.mock('@seuoffice/ai-provider/custom-models', () => ({}))
 vi.mock('../src/main/lazy-media', () => ({
   registerLazyMediaProtocol: () => {},
   materializeLazyDocx: async (bytes: Buffer) => ({ bytes, hashes: new Set<string>() }),
@@ -85,8 +85,8 @@ vi.mock('../src/main/lazy-media', () => ({
 }))
 vi.mock('../src/main/lazy-media-inline', () => ({}))
 
-import { setHeadlessMode } from '@genoffice/electron-utils'
-import { buildBlankDocx } from '@genoffice/docx-engine'
+import { setHeadlessMode } from '@seuoffice/electron-utils'
+import { buildBlankDocx } from '@seuoffice/docx-engine'
 import { registerAiIpc, registerDocsIpc, registerProjectIpc } from '../src/main/docs-main'
 
 let nextTabId = 100

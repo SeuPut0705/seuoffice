@@ -310,7 +310,7 @@ interface SharedRecoveryState {
   discarded: Set<string>
 }
 
-const SHARED = Symbol.for('genoffice.recovery-store.shared')
+const SHARED = Symbol.for('seuoffice.recovery-store.shared')
 
 function shared(): SharedRecoveryState {
   const holder = globalThis as unknown as Record<symbol, SharedRecoveryState | undefined>

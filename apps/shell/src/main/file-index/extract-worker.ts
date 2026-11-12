@@ -2,6 +2,8 @@
  * Worker-thread entry: text extraction and directory walks run here so a slow
  * PDF or a stalled network folder never blocks the main process.
  */
+// first: variables set under the old prefix are taken over before anything reads its own
+import '@seuoffice/i18n/old-names-env'
 // this thread starts its own engine before the readers evaluate
 import './engine-init'
 import { parentPort } from 'node:worker_threads'

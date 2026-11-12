@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 import type { ReactElement } from 'react'
-import { ColorPicker, colorSwatchName } from '@genoffice/ui'
+import { ColorPicker, colorSwatchName } from '@seuoffice/ui'
 import { useI18n } from './i18n/locale'
 import { isHexColor } from './color-presets'
 

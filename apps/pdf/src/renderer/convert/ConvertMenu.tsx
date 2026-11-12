@@ -6,7 +6,7 @@
  */
 import { useRef, useState } from 'react'
 import type { ReactElement } from 'react'
-import { useDismissablePopover } from '@genoffice/ui'
+import { useDismissablePopover } from '@seuoffice/ui'
 import type { TFunc } from '../i18n/locale'
 import { IconConvertPdf, RbCaret } from '../icons'
 import type { PdfConvertFormat, PdfReflowFormat } from '../../shared/ipc'

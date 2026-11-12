@@ -8,7 +8,7 @@
  */
 import { LocaleService, LocaleType, mergeLocales, type ILocales } from '@univerjs/core'
 import { SheetsNumfmtCellContentController } from '@univerjs/preset-sheets-core'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 
 import { translateFor } from './i18n/locale'
 import { numfmtLocale } from './i18n/numfmt-locale'

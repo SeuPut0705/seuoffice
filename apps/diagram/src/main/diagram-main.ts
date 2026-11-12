@@ -50,22 +50,22 @@ import {
   registerRecoveryEditor,
   shouldDeferAutoSave,
   showSaveDialogWithMemory,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import type {
   RecoveryEditorKind,
   RecoveryIdentity,
   RecoveryOpenFileRequest,
   RecoveryOpenUntitledRequest,
   SaveDiskState,
-} from '@genoffice/electron-utils'
-import { atomicWriteFile } from '@genoffice/electron-utils/atomic-write'
+} from '@seuoffice/electron-utils'
+import { atomicWriteFile } from '@seuoffice/electron-utils/atomic-write'
 import {
   RENDERER_SCHEME,
   RENDERER_SCHEME_PRIVILEGE,
-} from '@genoffice/electron-utils/renderer-scheme'
-import { getUiLang, normalizeLang, setUiLang } from '@genoffice/i18n'
-import { detectDiagramFormat, openDiagram, type DiagramFormat } from '@genoffice/drawio-model'
-import { nodePageCodec } from '@genoffice/drawio-model/node'
+} from '@seuoffice/electron-utils/renderer-scheme'
+import { getUiLang, normalizeLang, setUiLang } from '@seuoffice/i18n'
+import { detectDiagramFormat, openDiagram, type DiagramFormat } from '@seuoffice/drawio-model'
+import { nodePageCodec } from '@seuoffice/drawio-model/node'
 import { APP_CHANNELS, DIAGRAM_CHANNELS } from '../shared/ipc'
 import type {
   DiagramMenuCommand,
@@ -1039,7 +1039,7 @@ export function registerDiagramPrivilegedSchemes(): void {
   protocol.registerSchemesAsPrivileged([RENDERER_SCHEME_PRIVILEGE, DRAWIO_SCHEME_PRIVILEGE])
 }
 
-/** Standalone window mode: `npm run dev -w @genoffice/diagram`, a diagram path passed via argv */
+/** Standalone window mode: `npm run dev -w @seuoffice/diagram`, a diagram path passed via argv */
 export function startDiagramStandalone(): void {
   registerDiagramPrivilegedSchemes()
   configureDiagramRuntime({
@@ -1047,12 +1047,12 @@ export function startDiagramStandalone(): void {
     rendererUrl: process.env.ELECTRON_RENDERER_URL,
     rendererFile: join(__dirname, '../renderer/index.html'),
   })
-  if (process.env.GENOFFICE_USER_DATA) app.setPath('userData', process.env.GENOFFICE_USER_DATA)
+  if (process.env.SEUOFFICE_USER_DATA) app.setPath('userData', process.env.SEUOFFICE_USER_DATA)
   void app.whenReady().then(() => {
-    setUiLang(normalizeLang(process.env.GENOFFICE_LANG ?? app.getLocale()))
+    setUiLang(normalizeLang(process.env.SEUOFFICE_LANG ?? app.getLocale()))
     registerDiagramIpc()
     // there is no shell to answer these: the theme comes from the environment or the system
-    const theme = process.env.GENOFFICE_THEME
+    const theme = process.env.SEUOFFICE_THEME
     ipcMain.handle(APP_CHANNELS.getTheme, () =>
       theme === 'light' || theme === 'dark' ? theme : 'system',
     )

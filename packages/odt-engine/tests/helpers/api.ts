@@ -6,7 +6,7 @@
 import { type OdtPackage, readOdtPackage } from '../../src/core'
 import { type BridgeMap, odtToDocx, saveOdt } from '../../src'
 import { type EditorOp, editorSave } from './bridge'
-import type { Block } from '@genoffice/docx-engine'
+import type { Block } from '@seuoffice/docx-engine'
 
 const decoder = new TextDecoder()
 

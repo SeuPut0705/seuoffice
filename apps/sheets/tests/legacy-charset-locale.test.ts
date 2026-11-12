@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { getUiLang, normalizeLang, requestedLanguage, setUiLang } from '@genoffice/i18n'
-import { decodeCsvBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import'
+import { getUiLang, normalizeLang, requestedLanguage, setUiLang } from '@seuoffice/i18n'
+import { decodeCsvBuffer } from '@seuoffice/xlsx-gateway/gateway/csv-import'
 import { legacyCsvCharset } from '../src/main/document-locale'
 
 // Excel saves a CSV in the legacy code page of the machine and marks nothing.

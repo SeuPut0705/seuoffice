@@ -72,10 +72,10 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('@genoffice/electron-utils', async (importOriginal) => ({
+vi.mock('@seuoffice/electron-utils', async (importOriginal) => ({
   // The save path now also runs the split-copy guard, so the real
   // save-conflict helpers must stay reachable alongside the stubs.
-  ...(await importOriginal<typeof import('@genoffice/electron-utils')>()),
+  ...(await importOriginal<typeof import('@seuoffice/electron-utils')>()),
   configuredDefaultSaveDir: vi.fn(() => tmpdir()),
   contextMenuLabels: vi.fn(() => ({})),
   installContextMenu: vi.fn(),

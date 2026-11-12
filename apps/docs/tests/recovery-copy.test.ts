@@ -9,7 +9,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Editor } from '@tiptap/core'
-import { buildBlankDocx, readDocxPartBase64 } from '@genoffice/docx-engine'
+import { buildBlankDocx, readDocxPartBase64 } from '@seuoffice/docx-engine'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import type { DocState } from '../src/renderer/doc-state'
 import type { OpenDocxResult } from '../src/shared/ipc'

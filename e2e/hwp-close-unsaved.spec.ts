@@ -66,7 +66,7 @@ async function openHwp(app: ElectronApplication): Promise<Page> {
 }
 
 async function blankCopy(name: string): Promise<string> {
-  const file = join(await mkdtemp(join(tmpdir(), 'genoffice-hwp-close-')), name)
+  const file = join(await mkdtemp(join(tmpdir(), 'seuoffice-hwp-close-')), name)
   await copyFile(BLANK, file)
   return file
 }

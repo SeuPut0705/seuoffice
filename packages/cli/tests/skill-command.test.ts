@@ -6,7 +6,7 @@ import { run, tempDir } from './helpers'
 
 const REPO = resolve(__dirname, '../../..')
 const bundledVersion = /^\s+version:\s*(\S+)/m.exec(
-  readFileSync(join(REPO, 'skills/ieumoffice/SKILL.md'), 'utf-8'),
+  readFileSync(join(REPO, 'skills/seuoffice/SKILL.md'), 'utf-8'),
 )![1]!
 
 function fakeMachine(agents: string[]) {
@@ -14,10 +14,10 @@ function fakeMachine(agents: string[]) {
   for (const dot of agents) mkdirSync(join(home, dot), { recursive: true })
   const userData = join(home, 'userData')
   mkdirSync(userData)
-  return { home, env: { GENOFFICE_HOME: home, GENOFFICE_USER_DATA: userData } }
+  return { home, env: { SEUOFFICE_HOME: home, SEUOFFICE_USER_DATA: userData } }
 }
 
-describe('genoffice skill', () => {
+describe('seuoffice skill', () => {
   it('path prints the bundled SKILL.md', async () => {
     const r = await run(['skill', 'path', '--json'])
     expect(r.code).toBe(0)
@@ -54,9 +54,9 @@ describe('genoffice skill', () => {
     const m = fakeMachine(['.claude'])
     const first = await run(['skill', 'install', 'claude-code', '--json'], { env: m.env })
     expect(first.code).toBe(0)
-    const path = join(m.home, '.claude', 'skills', 'ieumoffice', 'SKILL.md')
+    const path = join(m.home, '.claude', 'skills', 'seuoffice', 'SKILL.md')
     expect(readFileSync(path, 'utf-8')).toBe(
-      readFileSync(join(REPO, 'skills/ieumoffice/SKILL.md'), 'utf-8'),
+      readFileSync(join(REPO, 'skills/seuoffice/SKILL.md'), 'utf-8'),
     )
     expect(first.json().detail.agents[0]).toMatchObject({
       agent: 'claude-code',
@@ -65,7 +65,7 @@ describe('genoffice skill', () => {
       installed_version: bundledVersion,
     })
     const settings = JSON.parse(
-      readFileSync(join(m.env.GENOFFICE_USER_DATA, 'app-settings.json'), 'utf-8'),
+      readFileSync(join(m.env.SEUOFFICE_USER_DATA, 'app-settings.json'), 'utf-8'),
     )
     expect(settings.agentSkillInstalls[path]).toMatchObject({
       version: bundledVersion,
@@ -94,7 +94,7 @@ describe('genoffice skill', () => {
         .detail.agents.map((a: any) => a.agent)
         .sort(),
     ).toEqual(['agents', 'claude-code'])
-    expect(existsSync(join(m.home, '.agents', 'skills', 'ieumoffice', 'SKILL.md'))).toBe(true)
+    expect(existsSync(join(m.home, '.agents', 'skills', 'seuoffice', 'SKILL.md'))).toBe(true)
     expect(existsSync(join(m.home, '.codex', 'skills'))).toBe(false)
 
     const typo = await run(['skill', 'install', 'claud-code', '--json'], { env: m.env })
@@ -113,7 +113,7 @@ describe('genoffice skill', () => {
       // `all` above already wrote the shared folder Cursor reads
       expect.objectContaining({ agent: 'agents', action: 'unchanged', status: 'installed' }),
     ])
-    expect(existsSync(join(m.home, '.agents', 'skills', 'ieumoffice', 'SKILL.md'))).toBe(true)
+    expect(existsSync(join(m.home, '.agents', 'skills', 'seuoffice', 'SKILL.md'))).toBe(true)
     expect(existsSync(join(m.home, '.cursor'))).toBe(false)
   })
 
@@ -135,10 +135,10 @@ describe('genoffice skill', () => {
 
   it('refuses to downgrade a newer skill or overwrite a hand-edited one without --force', async () => {
     const m = fakeMachine(['.claude'])
-    const dir = join(m.home, '.claude', 'skills', 'ieumoffice')
+    const dir = join(m.home, '.claude', 'skills', 'seuoffice')
     mkdirSync(dir, { recursive: true })
     const path = join(dir, 'SKILL.md')
-    writeFileSync(path, '---\nname: ieumoffice\nmetadata:\n  version: 99.0.0\n---\nfuture\n')
+    writeFileSync(path, '---\nname: seuoffice\nmetadata:\n  version: 99.0.0\n---\nfuture\n')
     const newer = await run(['skill', 'install', 'claude-code', '--json'], { env: m.env })
     expect(newer.code).toBe(2)
     expect(newer.json()).toMatchObject({ error: 'output_exists', detail: { status: 'newer' } })
@@ -150,7 +150,7 @@ describe('genoffice skill', () => {
     expect(occupied.code).toBe(2)
     expect(occupied.json().detail.status).toBe('occupied')
 
-    writeFileSync(path, '---\nname: ieumoffice\nmetadata:\n  version: 0.0.1\n---\nold\n')
+    writeFileSync(path, '---\nname: seuoffice\nmetadata:\n  version: 0.0.1\n---\nold\n')
     const foreign = await run(['skill', 'install', 'claude-code', '--json'], { env: m.env })
     expect(foreign.code).toBe(0)
     expect(foreign.json().detail.agents[0].action).toBe('written')
@@ -173,47 +173,47 @@ describe('genoffice skill', () => {
       cwd: m.home,
     })
     expect(r.code).toBe(0)
-    expect(existsSync(join(dir, 'ieumoffice', 'SKILL.md'))).toBe(true)
+    expect(existsSync(join(dir, 'seuoffice', 'SKILL.md'))).toBe(true)
     expect(r.json().detail.agents[0]).toMatchObject({ agent: null, skills_dir: dir })
     const settings = JSON.parse(
-      readFileSync(join(m.env.GENOFFICE_USER_DATA, 'app-settings.json'), 'utf-8'),
+      readFileSync(join(m.env.SEUOFFICE_USER_DATA, 'app-settings.json'), 'utf-8'),
     )
-    expect(Object.keys(settings.agentSkillInstalls)).toEqual([join(dir, 'ieumoffice', 'SKILL.md')])
+    expect(Object.keys(settings.agentSkillInstalls)).toEqual([join(dir, 'seuoffice', 'SKILL.md')])
     const none = await run(['skill', 'install', 'all', '--json'], { env: m.env })
     expect(none.code).toBe(1)
   })
 
   it('creates the app data folder for the ledger on a machine that never ran the app', async () => {
     const m = fakeMachine(['.claude'])
-    const env = { ...m.env, GENOFFICE_USER_DATA: join(m.home, 'never', 'launched') }
+    const env = { ...m.env, SEUOFFICE_USER_DATA: join(m.home, 'never', 'launched') }
     const r = await run(['skill', 'install', 'claude-code', '--json'], { env })
     expect(r.code).toBe(0)
-    expect(existsSync(join(env.GENOFFICE_USER_DATA, 'app-settings.json'))).toBe(true)
+    expect(existsSync(join(env.SEUOFFICE_USER_DATA, 'app-settings.json'))).toBe(true)
   })
 
   it('install all refuses before writing anything when one target is blocked', async () => {
     const m = fakeMachine(['.claude', '.codex'])
-    const shared = join(m.home, '.agents', 'skills', 'ieumoffice')
+    const shared = join(m.home, '.agents', 'skills', 'seuoffice')
     mkdirSync(shared, { recursive: true })
     writeFileSync(join(shared, 'SKILL.md'), '---\nname: other-skill\n---\nx\n')
     const r = await run(['skill', 'install', 'all', '--json'], { env: m.env })
     expect(r.code).toBe(2)
     expect(r.json().detail).toMatchObject({ agent: 'agents', status: 'occupied' })
-    expect(existsSync(join(m.home, '.claude', 'skills', 'ieumoffice'))).toBe(false)
-    expect(existsSync(join(m.env.GENOFFICE_USER_DATA, 'app-settings.json'))).toBe(false)
+    expect(existsSync(join(m.home, '.claude', 'skills', 'seuoffice'))).toBe(false)
+    expect(existsSync(join(m.env.SEUOFFICE_USER_DATA, 'app-settings.json'))).toBe(false)
   })
 
   describe('a copy written into a tool folder before the shared row', () => {
     /** a SKILL.md this app wrote into ~/.codex/skills in an older version, with its ledger entry */
     function withLegacyCodexCopy(dots: string[]) {
       const m = fakeMachine(dots)
-      const dir = join(m.home, '.codex', 'skills', 'ieumoffice')
+      const dir = join(m.home, '.codex', 'skills', 'seuoffice')
       mkdirSync(dir, { recursive: true })
       const path = join(dir, 'SKILL.md')
-      const text = '---\nname: ieumoffice\nmetadata:\n  version: 0.0.1\n---\nold\n'
+      const text = '---\nname: seuoffice\nmetadata:\n  version: 0.0.1\n---\nold\n'
       writeFileSync(path, text)
       writeFileSync(
-        join(m.env.GENOFFICE_USER_DATA, 'app-settings.json'),
+        join(m.env.SEUOFFICE_USER_DATA, 'app-settings.json'),
         JSON.stringify({
           agentSkillInstalls: {
             [path]: {
@@ -258,10 +258,10 @@ describe('genoffice skill', () => {
           status: 'installed',
         }),
       ])
-      const bundledText = readFileSync(join(REPO, 'skills/ieumoffice/SKILL.md'), 'utf-8')
+      const bundledText = readFileSync(join(REPO, 'skills/seuoffice/SKILL.md'), 'utf-8')
       expect(readFileSync(m.path, 'utf-8')).toBe(bundledText)
       expect(
-        readFileSync(join(m.home, '.agents', 'skills', 'ieumoffice', 'SKILL.md'), 'utf-8'),
+        readFileSync(join(m.home, '.agents', 'skills', 'seuoffice', 'SKILL.md'), 'utf-8'),
       ).toBe(bundledText)
     })
 
@@ -297,7 +297,7 @@ describe('genoffice skill', () => {
     it('skill remove codex takes away only that old copy, and remove agents the shared one', async () => {
       const m = withLegacyCodexCopy(['.codex'])
       await run(['skill', 'install', 'agents', '--json'], { env: m.env })
-      const shared = join(m.home, '.agents', 'skills', 'ieumoffice', 'SKILL.md')
+      const shared = join(m.home, '.agents', 'skills', 'seuoffice', 'SKILL.md')
 
       const r = await run(['skill', 'remove', 'codex', '--json'], { env: m.env })
       expect(r.code).toBe(0)
@@ -310,7 +310,7 @@ describe('genoffice skill', () => {
       expect(existsSync(m.path)).toBe(false)
       expect(existsSync(shared)).toBe(true)
       const settings = JSON.parse(
-        readFileSync(join(m.env.GENOFFICE_USER_DATA, 'app-settings.json'), 'utf-8'),
+        readFileSync(join(m.env.SEUOFFICE_USER_DATA, 'app-settings.json'), 'utf-8'),
       )
       expect(Object.keys(settings.agentSkillInstalls)).toEqual([shared])
       const listed = await run(['skill', 'list', '--json'], { env: m.env })
@@ -329,11 +329,11 @@ describe('genoffice skill', () => {
 
     it('skill remove leaves a copy this app did not write', async () => {
       const m = fakeMachine(['.claude'])
-      const dir = join(m.home, '.claude', 'skills', 'ieumoffice')
+      const dir = join(m.home, '.claude', 'skills', 'seuoffice')
       mkdirSync(dir, { recursive: true })
       writeFileSync(
         join(dir, 'SKILL.md'),
-        '---\nname: ieumoffice\nmetadata:\n  version: 0.0.1\n---\n',
+        '---\nname: seuoffice\nmetadata:\n  version: 0.0.1\n---\n',
       )
       const r = await run(['skill', 'remove', 'claude-code', '--json'], { env: m.env })
       expect(r.code).toBe(0)

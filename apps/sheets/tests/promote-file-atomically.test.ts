@@ -19,7 +19,7 @@ import {
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { promoteFileAtomically } from '@genoffice/xlsx-gateway/gateway/xlsx-package-io'
+import { promoteFileAtomically } from '@seuoffice/xlsx-gateway/gateway/xlsx-package-io'
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>()
@@ -43,7 +43,7 @@ function blockRename(temporary: string, target: string): void {
 }
 
 async function scratchDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-promote-test-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-promote-test-'))
   scratches.push(dir)
   return dir
 }

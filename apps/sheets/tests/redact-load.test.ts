@@ -23,12 +23,12 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { readWorkbookRedactionPart } from '../src/main/workbook-redactions'
-import type { ArchiveClient } from '@genoffice/xlsx-gateway/gateway/xlsx-package-io'
+import type { ArchiveClient } from '@seuoffice/xlsx-gateway/gateway/xlsx-package-io'
 import {
   REDACTION_PART_PATH,
   applyRedactionNameMirror,
   type SheetRedactionState,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { NO_REDACTIONS } from '../src/renderer/ai/redact'
 import {
   redactionSessionFor,

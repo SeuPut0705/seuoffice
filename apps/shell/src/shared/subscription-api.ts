@@ -1,6 +1,6 @@
 // Contract between the shell renderer (Settings) and the main process for the
 // subscription providers (Claude, Codex). The request channels and payloads are
-// the shared ones from @genoffice/ai-provider; the main-process handlers are
+// the shared ones from @seuoffice/ai-provider; the main-process handlers are
 // registered once for the whole app by the docs main, never by the shell.
 
 import type {
@@ -10,7 +10,7 @@ import type {
   SubscriptionMeteredResult,
   SubscriptionOffResult,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 // Reading an IPC answer is the same in every app: one implementation, in the shared contract
 export {
@@ -19,7 +19,7 @@ export {
   subscriptionLaunchResultOf,
   subscriptionOffResultOf,
   subscriptionStatusMapOf,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 /** exposed on `window.aiOfficeSubscription` by the shell preload */
 export interface SubscriptionApi {

@@ -8,7 +8,7 @@
  * this list rather than an invisible one.
  */
 
-import { brandText, LANGS } from '@genoffice/i18n'
+import { LANGS, OLD_PROJECT_DATA_DIR_NAMES } from '@seuoffice/i18n'
 import { topicTitle } from './help-titles'
 
 export type HelpGroupId = 'start' | 'apps' | 'ai' | 'manage'
@@ -312,7 +312,9 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
       '기억',
       'memory',
       'ignore',
-      '.ieumoffice',
+      '.seuoffice',
+      // a project made before the rename still shows its data folder under the old name
+      ...OLD_PROJECT_DATA_DIR_NAMES,
       'AGENTS.md',
       'CLAUDE.md',
     ],
@@ -467,7 +469,7 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
     id: 'cli',
     group: 'manage',
     order: 3,
-    keywords: ['命令行', 'cli', 'ieumoffice', 'convert', 'render', '命令行工具', '终端'],
+    keywords: ['命令行', 'cli', 'seuoffice', 'convert', 'render', '命令行工具', '终端'],
   },
   {
     id: 'google-drive',
@@ -576,9 +578,9 @@ export function helpLangSuffix(lang: string): string {
 export async function helpBody(id: string, lang: string): Promise<string | null> {
   const own = helpLangSuffix(lang)
   const direct = bodies[`./topics/${id}.${own}.md`]
-  if (direct) return brandText((await direct()) as string, own)
+  if (direct) return (await direct()) as string
   const english = bodies[`./topics/${id}.en.md`]
-  if (english) return brandText((await english()) as string, 'en')
+  if (english) return (await english()) as string
   return null
 }
 

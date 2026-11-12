@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import { run, tempDir } from './helpers'
-const env = { ...process.env, GENOFFICE_AUDIT_LOG: 'off' }
+const env = { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' }
 
 describe('conversion only recognizes registered format names', () => {
   it.each(

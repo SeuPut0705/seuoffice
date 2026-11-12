@@ -72,13 +72,13 @@ vi.mock('../src/main/shaped-metrics', () => ({
   shapedMeasure: () => ({ width: 0 }),
 }))
 // no status check: registering the subscription channels would look for the CLIs
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
 
-import { createBlankPptx, openPptx } from '@genoffice/pptx-engine'
+import { createBlankPptx, openPptx } from '@seuoffice/pptx-engine'
 import { registerSlidesIpc, saveSessionDeckTo } from '../src/main/slides-main'
 import { sessions, type Session } from '../src/main/session-state'
 import {

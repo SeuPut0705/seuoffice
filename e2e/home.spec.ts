@@ -39,7 +39,7 @@ test.describe('home screen', () => {
     }
   })
 
-  test('renders Korean UI when GENOFFICE_LANG=ko-KR', async () => {
+  test('renders Korean UI when SEUOFFICE_LANG=ko-KR', async () => {
     const launched = await launchShell({
       onboardingSeen: true,
       lang: 'ko-KR',

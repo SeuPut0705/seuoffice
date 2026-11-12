@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { odtToDocx, odtToText } from '@genoffice/odt-engine'
+import { odtToDocx, odtToText } from '@seuoffice/odt-engine'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CliError, EXIT } from '../src/result'
 import { run, tempDir } from './helpers'
@@ -30,7 +30,7 @@ beforeEach(() => {
 
 /** Nothing the conversion staged is left beside the output. */
 function leftovers(dir: string): string[] {
-  return readdirSync(dir).filter((name) => name.startsWith('.ieumoffice-odt-'))
+  return readdirSync(dir).filter((name) => name.startsWith('.seuoffice-odt-'))
 }
 
 describe('convert routes through .odt', () => {

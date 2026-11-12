@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { PDF_CHANNELS } from '../../pdf/src/shared/ipc'
 import {
   createPdfConvertUiHandlers,

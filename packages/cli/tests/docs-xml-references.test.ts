@@ -1,10 +1,10 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { buildBlankDocx } from '@genoffice/docx-engine'
+import { buildBlankDocx } from '@seuoffice/docx-engine'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import { run, tempDir } from './helpers'
-const env = { ...process.env, GENOFFICE_AUDIT_LOG: 'off' }
+const env = { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' }
 const simple = (instruction: string, result: string) =>
   `<w:fldSimple w:instr="${instruction}"><w:r><w:t xml:space="preserve">${result}</w:t></w:r></w:fldSimple>`
 const complex = (instruction: string, result: string) =>

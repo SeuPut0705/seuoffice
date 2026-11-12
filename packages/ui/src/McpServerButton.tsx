@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import type { McpServerView, McpWindowState } from '@genoffice/agent-core'
+import type { Lang } from '@seuoffice/i18n'
+import type { McpServerView, McpWindowState } from '@seuoffice/agent-core'
 import { aiModelPopoverStyle } from './AiModelPicker'
 import { useDismissablePopover } from './popover-dismiss'
 import {

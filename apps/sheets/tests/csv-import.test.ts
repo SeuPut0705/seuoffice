@@ -9,13 +9,13 @@ import {
   resolveImportDelimiter,
   sniffDelimiter,
   splitSepDeclaration,
-} from '@genoffice/xlsx-gateway/gateway/csv-import'
+} from '@seuoffice/xlsx-gateway/gateway/csv-import'
 import {
   blankXlsxBuffer,
   csvToXlsxBuffer,
   csvToXlsxBufferForOpen,
   sheetCsvToXlsxBuffer,
-} from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
+} from '@seuoffice/xlsx-gateway/gateway/csv-import-xlsx'
 
 describe('decodeCsvBuffer', () => {
   const rows = '城市,人口\n东京,37\n'

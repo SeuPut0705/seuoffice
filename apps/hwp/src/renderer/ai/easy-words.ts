@@ -1,4 +1,4 @@
-import type { Params } from '@genoffice/i18n'
+import type { Params } from '@seuoffice/i18n'
 import type { AgentEasyWordsDetail } from '../../../studio-plugin/agent-plugin.mjs'
 
 /** A request for the AI panel: `autoRun` sends it as soon as it arrives. */

@@ -8,8 +8,8 @@ import {
   type AiSubscriptionState,
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
-import type { AiSubscriptionModel } from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
+import type { AiSubscriptionModel } from '@seuoffice/ai-provider'
 import {
   aiProviderPickerGroups,
   aiProviderPickerSelection,

@@ -12,7 +12,7 @@ import {
   aiSubscriptionText,
   useDismissablePopover,
   useRibbonCollapse,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { useI18n } from '../i18n/locale'
 import { SOURCE_VIEW_SHORTCUT } from '../source-view-key'
 import { editorFontChoices, useSystemFonts } from '../editor-font'

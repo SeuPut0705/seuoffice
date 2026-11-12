@@ -2,7 +2,7 @@
  * Local-only run of the page layer over real ODT files (never committed).
  * Skipped unless ODT_CORPUS points at a folder of `.odt` files (one level deep).
  *
- *   ODT_CORPUS=E:/github/odt-corpus npm run test -w @genoffice/odt-engine
+ *   ODT_CORPUS=E:/github/odt-corpus npm run test -w @seuoffice/odt-engine
  *
  * For every file: page layouts, master pages and sections convert without
  * throwing and read back as docx sections; an unedited save writes nothing;

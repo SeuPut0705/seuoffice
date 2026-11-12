@@ -9,7 +9,7 @@ import { inflateRawSync } from 'node:zlib'
 
 export const TOOL_DIR = dirname(fileURLToPath(import.meta.url))
 export const REPO_ROOT = resolve(TOOL_DIR, '..', '..')
-export const CLI_BUNDLE = join(REPO_ROOT, 'packages', 'cli', 'dist', 'genoffice.cjs')
+export const CLI_BUNDLE = join(REPO_ROOT, 'packages', 'cli', 'dist', 'seuoffice.cjs')
 export const DEFAULT_CORPUS = 'E:\\github\\odt-corpus'
 
 /** `--name value` options and positional arguments. */
@@ -45,7 +45,7 @@ export function runDir(opts) {
 
 export function requireCli() {
   if (!existsSync(CLI_BUNDLE)) {
-    throw new Error(`${CLI_BUNDLE} is missing: run \`npm run build -w @genoffice/cli\` first`)
+    throw new Error(`${CLI_BUNDLE} is missing: run \`npm run build -w @seuoffice/cli\` first`)
   }
   return CLI_BUNDLE
 }

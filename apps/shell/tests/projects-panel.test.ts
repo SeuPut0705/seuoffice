@@ -5,9 +5,9 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defaultAiSettings } from '@genoffice/ai-provider'
-import type { AiSettings } from '@genoffice/ai-provider'
-import type { AgentStreamRequest, AgentTransport } from '@genoffice/agent-core'
+import { defaultAiSettings } from '@seuoffice/ai-provider'
+import type { AiSettings } from '@seuoffice/ai-provider'
+import type { AgentStreamRequest, AgentTransport } from '@seuoffice/agent-core'
 import type {
   OpenProjectScreenEvent,
   ProjectChangedEvent,
@@ -16,7 +16,7 @@ import type {
   ProjectFileEntry,
   ProjectFolderApi,
   ProjectListItem,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import {
   projectFilePath,
   ProjectsPanel,

@@ -6,8 +6,8 @@ import { join } from 'node:path'
 import { launchShell, closeAndSaveVideo, waitForPageWithUrl } from './helpers'
 import { PRODUCT_NAME } from '../packages/i18n/src/product'
 
-// the preload exposes window.__genofficeDebug only under this env var
-process.env.GENOFFICE_DEBUG_HOOKS = '1'
+// the preload exposes window.__seuofficeDebug only under this env var
+process.env.SEUOFFICE_DEBUG_HOOKS = '1'
 
 /**
  * Regression for "filter dropdown selections vanish after reopening the
@@ -22,7 +22,7 @@ process.env.GENOFFICE_DEBUG_HOOKS = '1'
 test.describe('sheets: filter criteria survive save and reopen', () => {
   test('criteria restore, rows stay filtered, and re-filtering unhides', async () => {
     test.setTimeout(180_000)
-    const scratch = await mkdtemp(join(tmpdir(), 'genoffice-filter-reopen-'))
+    const scratch = await mkdtemp(join(tmpdir(), 'seuoffice-filter-reopen-'))
     const launched = await launchShell({
       onboardingSeen: true,
       videoDir: 'sheets-filter-reopen',
@@ -53,7 +53,7 @@ test.describe('sheets: filter criteria survive save and reopen', () => {
 
       // A1:B5 — header row plus four data rows, then filter B to "keep"
       await sheets.evaluate(async () => {
-        const debug = (window as unknown as Record<string, unknown>).__genofficeDebug as {
+        const debug = (window as unknown as Record<string, unknown>).__seuofficeDebug as {
           univerAPI: { getActiveWorkbook(): { getActiveSheet(): unknown } }
         }
         const sheet = debug.univerAPI.getActiveWorkbook().getActiveSheet() as {
@@ -117,7 +117,7 @@ test.describe('sheets: filter criteria survive save and reopen', () => {
       // the restore runs once the sheet finishes indexing — poll for it
       await sheets.waitForFunction(
         () => {
-          const debug = (window as unknown as Record<string, unknown>).__genofficeDebug as {
+          const debug = (window as unknown as Record<string, unknown>).__seuofficeDebug as {
             univerAPI: { getActiveWorkbook(): { getActiveSheet(): unknown } }
           }
           const sheet = debug.univerAPI.getActiveWorkbook().getActiveSheet() as {
@@ -132,7 +132,7 @@ test.describe('sheets: filter criteria survive save and reopen', () => {
       )
 
       const restored = await sheets.evaluate(() => {
-        const debug = (window as unknown as Record<string, unknown>).__genofficeDebug as {
+        const debug = (window as unknown as Record<string, unknown>).__seuofficeDebug as {
           univerAPI: { getActiveWorkbook(): { getActiveSheet(): unknown } }
         }
         const sheet = debug.univerAPI.getActiveWorkbook().getActiveSheet() as {
@@ -158,7 +158,7 @@ test.describe('sheets: filter criteria survive save and reopen', () => {
 
       // ...so broadening the filter really unhides them
       await sheets.evaluate(() => {
-        const debug = (window as unknown as Record<string, unknown>).__genofficeDebug as {
+        const debug = (window as unknown as Record<string, unknown>).__seuofficeDebug as {
           univerAPI: { getActiveWorkbook(): { getActiveSheet(): unknown } }
         }
         const sheet = debug.univerAPI.getActiveWorkbook().getActiveSheet() as {
@@ -173,7 +173,7 @@ test.describe('sheets: filter criteria survive save and reopen', () => {
       })
       await sheets.waitForTimeout(500)
       const widened = await sheets.evaluate(() => {
-        const debug = (window as unknown as Record<string, unknown>).__genofficeDebug as {
+        const debug = (window as unknown as Record<string, unknown>).__seuofficeDebug as {
           univerAPI: { getActiveWorkbook(): { getActiveSheet(): unknown } }
         }
         const sheet = debug.univerAPI.getActiveWorkbook().getActiveSheet() as {

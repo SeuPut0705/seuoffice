@@ -1,4 +1,4 @@
-import { createI18n, defineStrings, type Lang } from '@genoffice/i18n'
+import { createI18n, defineStrings, type Lang } from '@seuoffice/i18n'
 
 /**
  * The AI input's `@` document list: its name, the group labels (the project's

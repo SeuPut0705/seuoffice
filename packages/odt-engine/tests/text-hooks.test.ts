@@ -3,7 +3,7 @@
  * converters, run writers, injectors, containers and the safe defaults when
  * nothing is registered.
  */
-import { parseDocx } from '@genoffice/docx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
 import { FULL_REGISTRY } from './helpers/full'
 import { describe, expect, it } from 'vitest'
 import { type BlockConverter, ConversionRegistry, blockSource } from '../src/core'
