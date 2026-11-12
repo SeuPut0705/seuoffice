@@ -119,6 +119,18 @@ function wasiImports(memory: () => WebAssembly.Memory): WebAssembly.ModuleImport
 
 let engine: EngineExports | null = null
 
+/** A function the engine may call back during one `engineCall`: text in, text out. */
+export type EngineCallback = (input: string) => string
+
+/** What `host_callback` answers where the engine must refuse the call. */
+const CALLBACK_REFUSED = 0xffff_ffff_ffff_ffffn
+
+// the callbacks of each running call, innermost last: a callback may itself
+// call the engine, and its own call's callbacks are then the ones in force
+const activeCallbacks: Array<Readonly<Record<number, EngineCallback>>> = []
+// what a callback threw during the running call, rethrown once it returns
+const callbackErrors: unknown[] = []
+
 function imports(): WebAssembly.Imports {
   const memory = (): WebAssembly.Memory => {
     if (!engine) throw new Error('office-wasm: memory read before the instance exists')
@@ -148,6 +160,28 @@ function imports(): WebAssembly.Imports {
           decoder.decode(new Uint8Array(buffer, a, aLength)),
           decoder.decode(new Uint8Array(buffer, b, bLength)),
         )
+      },
+      // A JS function the engine calls back during `seu_call`: the callback
+      // registered under `slot` for the running call gets the UTF-8 text at
+      // `pointer`, `length` and answers text. The answer goes back in memory
+      // the engine allocates (`seu_alloc`), packed as `(pointer << 32) | length`,
+      // and the engine frees it. CALLBACK_REFUSED where there is no such
+      // callback or it threw: the engine refuses the call.
+      host_callback(slot: number, pointer: number, length: number): bigint {
+        const callback = activeCallbacks[activeCallbacks.length - 1]?.[slot]
+        if (!callback || !engine) return CALLBACK_REFUSED
+        let answer: Uint8Array
+        try {
+          const input = decoder.decode(new Uint8Array(memory().buffer, pointer, length))
+          answer = encoder.encode(callback(input))
+        } catch (error) {
+          callbackErrors.push(error)
+          return CALLBACK_REFUSED
+        }
+        const at = engine.seu_alloc(answer.length)
+        // seu_alloc may have grown the memory: take the buffer after it
+        new Uint8Array(memory().buffer, at, answer.length).set(answer)
+        return (BigInt(at) << 32n) | BigInt(answer.length)
       },
     },
   }
@@ -194,11 +228,14 @@ export function engineReady(): boolean {
 
 /**
  * One command: `command` is the header without `version`, `blobs` the bytes
- * that go beside it. Throws `EngineError` where the engine answers a failure.
+ * that go beside it, `callbacks` the functions the engine may call back by
+ * slot during this call (`seu_host.host_callback`). Throws `EngineError`
+ * where the engine answers a failure, and rethrows what a callback threw.
  */
 export function engineCall<Header extends object>(
   command: object,
   blobs: readonly Uint8Array[] = [],
+  callbacks: Readonly<Record<number, EngineCallback>> = {},
 ): EngineReply<Header> {
   if (!engine) throw new Error('office-wasm: call initEngine or initEngineSync first')
   const { memory, seu_alloc, seu_call, seu_free } = engine
@@ -219,7 +256,14 @@ export function engineCall<Header extends object>(
   offset += 4
   blobs.forEach(put)
 
-  const packed = seu_call(request, size)
+  activeCallbacks.push(callbacks)
+  const errorsBefore = callbackErrors.length
+  let packed: bigint
+  try {
+    packed = seu_call(request, size)
+  } finally {
+    activeCallbacks.pop()
+  }
   seu_free(request, size)
   const pointer = Number(packed >> 32n)
   const length = Number(packed & 0xffff_ffffn)
@@ -236,6 +280,8 @@ export function engineCall<Header extends object>(
     return part
   }
   const replyHeader = JSON.parse(decoder.decode(take())) as Header | EngineFailure
+  const thrown = callbackErrors.splice(errorsBefore)
+  if (thrown.length > 0) throw thrown[0]
   if ('error' in replyHeader) {
     throw new EngineError(replyHeader.error.code, replyHeader.error.message)
   }
