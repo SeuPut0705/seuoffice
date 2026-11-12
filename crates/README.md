@@ -291,10 +291,19 @@ State on 2026-11-12. The branch is on origin and is pushed at every unit
 boundary (never forced, never to main).
 
 - `feat/rust-docx-u1`: everything below, on main at 5f03509fd (merged, not
-  rebased). The gate passes with key order compared: 0 differences, 5 ledger
+  rebased). The gate passes with key order compared: 0 differences, 6 ledger
   entries, none stale.
-- Other streams (other engines, the model types) start from this branch on
-  origin, on another machine. Keep this file current for them.
+- Other streams start from this branch on origin, on another machine, and
+  merge it at unit boundaries: `feat/rust-docx-model` (the Word model types
+  generated from `types.ts` into `docx-engine/src/model/`, then the save
+  side), `feat/rust-pptx-u1` (slides), `feat/rust-fileparse-u1` (file
+  readers). They add to `ooxml-xml`, `ooxml-pkg`, `jscompat` and the harness
+  behind new functions and options; the Word gate has to stay as it is. The
+  model is not ported here a second time: a reader that is wired toward
+  `parse.ts` takes the model type as its return type and its local struct
+  goes in the same unit.
+- `EffectivePPr` and `EffectiveRPr` are not ported yet: the model stream
+  holds them opaque until `resolve-props.ts` lands here.
 
 ### What was done last
 
@@ -305,10 +314,20 @@ which build the inherited names as inputs instead), an unknown paper size
 gives A4, a record keeps an entry named `__proto__`, a character outside the
 BMP is one LaTeX argument, a surrogate character reference reads as U+FFFD.
 `parseTagAttrs` of `parse-vml.ts` writes a record with `setOwn` too and is
-not ported yet: keep the `__proto__` entry there. The ledger holds five
-entries: DOCTYPE and the CDATA opener (what fast-xml-parser reads and Rust
-refuses), the two host-dependent ones (`zip-text-in-hosts-without-buffer`,
-`inflate-failure-text-is-the-hosts`) and the LaTeX depth limit.
+not ported yet: keep the `__proto__` entry there.
+
+**The ledger holds six entries.** DOCTYPE and the CDATA opener (what
+fast-xml-parser reads and Rust refuses), the LaTeX depth limit, and three
+that belong to the host: `zip-text-in-hosts-without-buffer`,
+`inflate-failure-text-is-the-hosts`, and bytes after the end of a deflate
+stream, which Chromium refuses and Node 22 reads past. There the Rust
+follows the product's host, not the gate's, by the owner's decision, and
+`tools/docx-diff/host.ts` gives the TypeScript side a `DecompressionStream`
+that refuses them too, so that containers with such bytes (14 of 3,000
+mutated ones had them) are compared like any other; the ledger entry runs
+the TypeScript on Node as it is. Both go when main's zip gate answers alike
+on every host. The gate runs on Node 22 only (`host.ts` stops on another
+major): a fixture made on another one holds another host's answers.
 
 **Key order is part of parity.** The measurement, before anything was
 fixed, of 1,668,203 checks:

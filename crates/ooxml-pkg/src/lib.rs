@@ -15,7 +15,7 @@ mod package;
 pub mod write;
 
 pub use gate::{
-    DEFAULT_ZIP_LIMITS, DeclaredPart, INFLATE_FAILURE, ZipLimits,
+    DEFAULT_ZIP_LIMITS, DeclaredPart, INFLATE_FAILURE, INFLATE_TRAILING, ZipLimits,
     assert_declared_sizes_within_limits, assert_zip_inflates_within_limits,
 };
 pub use load::load_docx_package;

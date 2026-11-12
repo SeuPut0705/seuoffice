@@ -234,22 +234,27 @@ fn verified_size(bytes: &[u8], part: &ScannedPart) -> Result<u64, String> {
 /// the host's own text (Node 22 gives the bare name `TypeError`).
 pub const INFLATE_FAILURE: &str = "the deflate data is damaged or cut short";
 
+/// What Rust appends for bytes after the end of a deflate stream. Chromium
+/// says "Junk found after end of compressed data."; Node 22 reads past them.
+pub const INFLATE_TRAILING: &str = "bytes follow the end of the deflate data";
+
 /// Inflates and stops at the claim, so the payload is never held.
 ///
 /// The TypeScript gate reads a `DecompressionStream`: input goes in 64 KiB
 /// slices, output comes out as the inflater fills a 16 KiB buffer, and a
 /// failing call delivers nothing. A part that both lies about its size and is
 /// damaged is refused for whichever shows first in those steps, so the steps
-/// are the same here. Data after the end of the deflate stream is ignored.
+/// are the same here.
+///
+/// Data after the end of the deflate stream is refused, as the Compression
+/// Streams standard has it and as the product's hosts do (Chromium); the
+/// gate's own host, Node 22, ignores it, which is a listed divergence. What
+/// the stream held is counted against the claim first.
 fn inflate_raw_bounded(raw: &[u8], part: &ScannedPart) -> Result<u64, String> {
     const INPUT_SLICE: usize = 64 * 1024;
     const OUTPUT_BUFFER: usize = 16 * 1024;
-    let damaged = || {
-        format!(
-            "zip rejected: part {} cannot be inflated: {INFLATE_FAILURE}",
-            part.name
-        )
-    };
+    let refused = |why: &str| format!("zip rejected: part {} cannot be inflated: {why}", part.name);
+    let damaged = || refused(INFLATE_FAILURE);
     let mut inflater = Decompress::new(false);
     let mut buffer = vec![0u8; OUTPUT_BUFFER];
     let mut buffered = 0;
@@ -274,6 +279,9 @@ fn inflate_raw_bounded(raw: &[u8], part: &ScannedPart) -> Result<u64, String> {
                 buffered = 0;
             }
             if status == Status::StreamEnd {
+                if inflater.total_in() < raw.len() as u64 {
+                    return Err(refused(INFLATE_TRAILING));
+                }
                 return Ok(seen);
             }
             if !buffer_was_filled && (input.is_empty() || consumed + produced == 0) {

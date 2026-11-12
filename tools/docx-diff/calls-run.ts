@@ -16,6 +16,7 @@ import { DOCPROPS } from './calls-docprops'
 import { FIELDS } from './calls-fields'
 import { MARKERS } from './calls-markers'
 import { MATH } from './calls-math'
+import { RESOLVE } from './calls-resolve'
 import { SECTION } from './calls-section'
 import { ArgPool } from './calls-arg-mutation'
 import type { CallSpec, Input } from './calls-spec'
@@ -61,6 +62,7 @@ const groups: Group[] = Object.entries({
   fields: FIELDS,
   markers: MARKERS,
   math: MATH,
+  resolve: RESOLVE,
   section: SECTION,
   genRpr: GEN_RPR,
   genProps: GEN_PROPS,

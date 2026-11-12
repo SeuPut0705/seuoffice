@@ -11,6 +11,7 @@ mod docprops;
 mod fields;
 mod markers;
 mod math;
+mod resolve;
 mod section;
 mod gen_drawing;
 mod gen_drawing_build;
@@ -68,6 +69,7 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "fields" => Some(fields::dispatch(function, text, args)),
         "markers" => Some(markers::dispatch(function, text, args)),
         "math" => Some(math::dispatch(function, text, args)),
+        "resolve" => Some(resolve::dispatch(function, text, args)),
         "section" => Some(section::dispatch(function, text, args)),
         "genRpr" => Some(gen_rpr::dispatch(function, text, args)),
         "genProps" => Some(gen_props::dispatch(function, text, args)),
