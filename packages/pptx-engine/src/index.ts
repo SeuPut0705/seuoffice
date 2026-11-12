@@ -72,7 +72,7 @@ import {
 import { ownValue, setOwn } from './own-value'
 import { elementSpid } from './animation'
 import { stripStaleEmbeddedFonts } from './embedded-fonts'
-import { ensureCreationId, matchesElementRef } from './identity'
+import { ensureCreationId, matchesElementRef, withFreshCreationIds } from './identity'
 import { listMasterParts, parseMasterPart } from './master-edit'
 import type {
   Paragraph,
@@ -4342,12 +4342,8 @@ export function pasteElements(
       (_a, pre: string, post: string) => `${pre}${nextId++}${post}`,
     )
     // Pasted elements are new identities: mint fresh creationIds so durable ids
-    // never collide with their source elements on the same slide
-    xml = xml.replace(
-      /(<a16:creationId[^>]*\bid=")\{?[0-9A-Fa-f-]{36}\}?(")/g,
-      (_a, pre: string, post: string) =>
-        `${pre}{${globalThis.crypto.randomUUID().toUpperCase()}}${post}`,
-    )
+    // never collide with their source elements on the same slide, however the id is written
+    xml = withFreshCreationIds(xml)
     // Offset only the outermost xfrm's off (group child coordinate systems stay put)
     xml = xml.replace(/<a:off\b[^>]*\/>/, (tag) =>
       tag
