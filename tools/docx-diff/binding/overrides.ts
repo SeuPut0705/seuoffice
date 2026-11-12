@@ -205,10 +205,13 @@ export const OVERRIDES: Record<string, Override> = {
   // a Pick<> of a model type: the fields the builder does not read cross as placeholders
   anchoredInkRunXml: { args: ["{ blockIndex: 0, base64: '', ...ink }", 'rId', 'docPrId'] },
   // a style id that is no string (a caller's partial StyleInfo) matches no
-  // pattern and no key of the map in the TypeScript: it is no TOC level
+  // pattern and no key of the map in the TypeScript: it is no TOC level. Only
+  // the style it names crosses: the renderer asks once per paragraph style,
+  // and the whole map each time made opening a document 30% slower
   tocLevelOf: {
     body: `if (typeof styleId !== 'string') return null
-  return invoke('tocLevelOf', [styleId, styles]) as never`,
+  const style = styles?.get(styleId)
+  return invoke('tocLevelOf', [styleId, style ? new Map([[styleId, style]]) : undefined]) as never`,
   },
   // ---- a Rust tuple where the TypeScript answers an object
   mergeRecords: {
