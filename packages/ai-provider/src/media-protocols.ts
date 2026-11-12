@@ -9,7 +9,7 @@
  */
 
 import { getDomain } from 'tldts'
-import { aiFetch } from './fetch'
+import { aiFetch, keyedFetch } from './fetch'
 import { endpointUrl } from './protocols/shared'
 import { httpBodyDetail } from './http-error'
 import { openAiContentText, readCappedResponseText } from './protocols/shared'
@@ -181,40 +181,6 @@ function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
   return signal ? AbortSignal.any([signal, timeout]) : timeout
 }
 
-/** the statuses fetch follows when the answer names a Location */
-const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
-
-/**
- * For a request whose API key rides in a header of the vendor's own (`x-key`,
- * `x-goog-api-key`, `api-key`). Fetch drops `Authorization` when a redirect
- * leaves the origin but repeats every other header, so following one would
- * hand the key to whatever address the answer names, plain http included.
- * None of these APIs redirects, so a redirect ends the call. The mode is
- * `manual` rather than `error` so that the refusal can be told apart from a
- * network failure: Node hands back the 3xx itself, a browser an opaque
- * stand-in for it.
- */
-async function keyedFetch(url: string, init: RequestInit): Promise<Response> {
-  const resp = await aiFetch(url, { ...init, redirect: 'manual' })
-  const location = resp.headers.get('location')
-  const redirected =
-    resp.type === 'opaqueredirect' || (REDIRECT_STATUSES.has(resp.status) && location !== null)
-  if (!redirected) return resp
-  await resp.body?.cancel().catch(() => {})
-  let target = ''
-  if (location !== null) {
-    try {
-      const to = new URL(location, url)
-      target = ` to ${to.protocol}//${to.host.slice(0, 100)}`
-    } catch {
-      // an unreadable Location is not worth a second error
-    }
-  }
-  throw new Error(
-    `The provider answered with a redirect${target}, which a request carrying the API key does not follow. The API key was not sent on.`,
-  )
-}
-
 const MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024
 
 /** An error body is only ever read for a short diagnostic (httpBodyDetail keeps 500
@@ -350,7 +316,7 @@ async function generateImageOpenAi(
     )
   }
   if (refs.length === 0 || style.edits === 'inline') {
-    const resp = await aiFetch(endpointUrl(base, '/images/generations'), {
+    const resp = await keyedFetch(endpointUrl(base, '/images/generations'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...bearer(config) },
       body: JSON.stringify({
@@ -380,7 +346,7 @@ async function generateImageOpenAi(
       ref.name ?? `ref-${i}.${ext}`,
     )
   })
-  const resp = await aiFetch(endpointUrl(base, '/images/edits'), {
+  const resp = await keyedFetch(endpointUrl(base, '/images/edits'), {
     method: 'POST',
     headers: bearer(config),
     body: form,
@@ -413,7 +379,7 @@ async function generateImageDashscope(
     )
   }
   const size = input.aspectRatio ? DASHSCOPE_SIZES[input.aspectRatio] : undefined
-  const resp = await aiFetch(
+  const resp = await keyedFetch(
     endpointUrl(dashscopeRoot(config), '/api/v1/services/aigc/multimodal-generation/generation'),
     {
       method: 'POST',
@@ -460,7 +426,7 @@ async function generateImageMinimax(
   const base = trimSlash(config.baseUrl || MINIMAX_BASE_URL)
   const ratio =
     input.aspectRatio && MINIMAX_RATIOS.has(input.aspectRatio) ? input.aspectRatio : undefined
-  const resp = await aiFetch(endpointUrl(base, '/image_generation'), {
+  const resp = await keyedFetch(endpointUrl(base, '/image_generation'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...bearer(config) },
     body: JSON.stringify({
@@ -512,7 +478,7 @@ async function analyzeMediaOpenAi(
       )
     }
   }
-  const resp = await aiFetch(endpointUrl(openAiBase(provider, config), '/chat/completions'), {
+  const resp = await keyedFetch(endpointUrl(openAiBase(provider, config), '/chat/completions'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...bearer(config) },
     body: JSON.stringify({ model, messages: [{ role: 'user', content: parts }] }),
@@ -860,7 +826,7 @@ async function generateImageStability(
   }
   // Accept: image/* makes the API answer the rendered bytes directly instead of
   // a base64 JSON envelope
-  const resp = await aiFetch(
+  const resp = await keyedFetch(
     `${trimSlash(config.baseUrl || STABILITY_BASE_URL)}/v2beta/stable-image/generate/${endpoint.path}`,
     {
       method: 'POST',
@@ -1153,7 +1119,7 @@ export async function testMediaProvider(
         signal: guard,
       })
     } else {
-      resp = await aiFetch(endpointUrl(openAiBase(provider, config), '/models'), {
+      resp = await keyedFetch(endpointUrl(openAiBase(provider, config), '/models'), {
         headers: bearer(config),
         signal: guard,
       })

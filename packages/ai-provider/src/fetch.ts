@@ -157,6 +157,88 @@ export async function aiFetch(
   return response
 }
 
+/** the statuses fetch follows when the answer names a Location */
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
+
+/** A request that carried a credential was answered with a redirect, which it does not follow */
+export class AiRedirectRefusedError extends Error {
+  /** `target`: where the redirect pointed (scheme and host), when the answer said */
+  constructor(target = '') {
+    super(
+      `The provider answered with a redirect${target ? ` to ${target}` : ''}, which a request carrying the API key does not follow. The API key was not sent on.`,
+    )
+    this.name = 'AiRedirectRefusedError'
+  }
+}
+
+/**
+ * Electron's `net.fetch` cannot hand a 3xx back: told not to follow, it throws
+ * one of these two messages instead (seen with Electron 43).
+ */
+function refusedInsideFetch(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /^(Redirect was cancelled$|Attempted to redirect, but redirect policy was)/.test(error.message)
+  )
+}
+
+/** What `keyedFetch` sends through: `aiFetch`, or the fetch a caller was given */
+export type KeyedFetchBase = (
+  url: string,
+  init: RequestInit,
+  watch?: AiFetchWatch,
+) => Promise<Response>
+
+/**
+ * The fetch of every request that carries a credential: an API key in any
+ * header, a token in `Authorization`, a key in the address, a sign-in code or
+ * client secret in the body. Such a request never follows a redirect, so the
+ * credential reaches no address but the one it was sent to.
+ *
+ * A followed redirect repeats the request at whatever address the answer
+ * names, plain http included. Node's fetch drops `Authorization` when that
+ * address is another origin, but no header a vendor made up (`x-api-key`,
+ * `x-goog-api-key`, `api-key`, `x-key`), no query string and no body; Electron's
+ * `net.fetch` (the rescue path) drops nothing at all. None of the APIs called
+ * here redirects, so a redirect ends the call with `AiRedirectRefusedError`.
+ *
+ * The mode is `manual` rather than `error` so that the refusal can be told
+ * apart from a network failure: Node hands back the 3xx itself, a browser an
+ * opaque stand-in for it.
+ */
+export async function keyedFetch(
+  url: string,
+  init: RequestInit,
+  watch?: AiFetchWatch,
+  base: KeyedFetchBase = aiFetch,
+): Promise<Response> {
+  let response: Response
+  try {
+    const noFollow: RequestInit = { ...init, redirect: 'manual' }
+    // a base that is a plain fetch is called as one: two arguments
+    response = await (watch ? base(url, noFollow, watch) : base(url, noFollow))
+  } catch (error) {
+    if (refusedInsideFetch(error)) throw new AiRedirectRefusedError()
+    throw error
+  }
+  const location = response.headers.get('location')
+  const redirected =
+    response.type === 'opaqueredirect' ||
+    (REDIRECT_STATUSES.has(response.status) && location !== null)
+  if (!redirected) return response
+  await response.body?.cancel().catch(() => {})
+  let target = ''
+  if (location !== null) {
+    try {
+      const to = new URL(location, url)
+      target = `${to.protocol}//${to.host.slice(0, 100)}`
+    } catch {
+      // an unreadable Location is not worth a second error
+    }
+  }
+  throw new AiRedirectRefusedError(target)
+}
+
 async function fetchOnce(url: string, init: RequestInit, watch?: AiFetchWatch): Promise<Response> {
   const signal = init.signal as AbortSignal | null | undefined
   let response: Response
@@ -168,7 +250,9 @@ async function fetchOnce(url: string, init: RequestInit, watch?: AiFetchWatch): 
     watch?.onResend?.('failed')
     try {
       return await rescueFetch(url, init)
-    } catch {
+    } catch (rescueError) {
+      // a redirect the rescue fetch refused is the service's answer, not the first failure
+      if (refusedInsideFetch(rescueError)) throw rescueError
       throw primaryError
     }
   }

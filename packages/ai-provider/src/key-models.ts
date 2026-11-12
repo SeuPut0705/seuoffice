@@ -18,7 +18,7 @@
 // DeepSeek's `effort.supported_levels`, xAI's `capabilities.reasoning_effort`
 // (xAI's short list may leave it out, so its full list is read as well).
 import { AI_EFFORTS, aiModelEffortOf, type AiModelEffort } from './effort'
-import { withUserAgent } from './fetch'
+import { keyedFetch, withUserAgent } from './fetch'
 import { takesKeyEffort } from './key-effort'
 import { endpointUrl, readCappedResponseText } from './protocols/shared'
 import { currentModelId, opencodeSessionHeaders } from './providers'
@@ -167,12 +167,14 @@ async function getJson(
 ): Promise<unknown> {
   const watchdog = createStreamWatchdog(undefined, REQUEST_TIMEOUT_MS)
   return watchdog.guard(async () => {
-    const response = await fetchImpl(
+    const response = await keyedFetch(
       url,
       withUserAgent({
         headers: { Accept: 'application/json', ...headers },
         signal: watchdog.signal,
       }),
+      undefined,
+      fetchImpl,
     )
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     return JSON.parse(await readCappedResponseText(response, { maxBytes: MAX_BODY_BYTES }))

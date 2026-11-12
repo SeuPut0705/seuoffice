@@ -1,5 +1,5 @@
 import type { AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
-import { aiFetch } from '../fetch'
+import { keyedFetch } from '../fetch'
 import { httpBodyDetail } from '../http-error'
 import type { AiChatResponse, AiProviderConfig, AiTokenUsage } from '../types'
 import { createStreamWatchdog, type StreamWatchdog } from '../watchdog'
@@ -283,7 +283,7 @@ async function responsesTurn(
     wd.touch()
     cb.onActivity?.()
   }
-  const response = await aiFetch(endpointUrl(baseUrl, 'responses'), {
+  const response = await keyedFetch(endpointUrl(baseUrl, 'responses'), {
     method: 'POST',
     signal: wd.signal,
     headers: {
@@ -393,7 +393,7 @@ export async function chatOpenAiResponses(
   user: string,
   options: OpenAiResponsesOptions = {},
 ): Promise<AiChatResponse> {
-  const response = await aiFetch(endpointUrl(baseUrl, 'responses'), {
+  const response = await keyedFetch(endpointUrl(baseUrl, 'responses'), {
     method: 'POST',
     signal: wd.signal,
     headers: {
