@@ -73,12 +73,20 @@ fn our_ext(ext_lst: Option<&Value>) -> Option<&Value> {
         .find(|ext| ext.get("@_uri").and_then(Value::as_str) == Some(REDACT_EXT_URI))
 }
 
-/// The label, read out of an already-parsed `<a:rPr>` or `<p:spPr>` node.
+/// The label, read out of an already-parsed `<a:rPr>` or `<p:spPr>` node. The engine writes
+/// `go:redact`; another writer may use another prefix or none, so the first key of our extension
+/// that is `redact` under any prefix is the mark. Our extension exists only to carry the mark, so
+/// one whose label cannot be read still withholds, as `private`.
 pub fn read_redact_label(node: Option<&Value>) -> Option<&str> {
     let ext = our_ext(as_xml_node(node).get("a:extLst"))?;
-    match as_xml_node(ext.get(REDACT_EL)).get("@_label") {
+    let mark = ext.as_object().and_then(|object| {
+        object
+            .keys()
+            .find(|key| *key == REDACT_EL || js_regex!(r"^(?:[\w.-]+:)?redact$", "").test(key))
+    });
+    match mark.and_then(|key| as_xml_node(ext.get(key)).get("@_label")) {
         Some(Value::String(label)) if !label.is_empty() => Some(label.as_str()),
-        _ => None,
+        _ => Some("private"),
     }
 }
 
