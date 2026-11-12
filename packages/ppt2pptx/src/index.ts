@@ -26,7 +26,7 @@ export async function convertPptToPptx(bytes: Uint8Array): Promise<PptConversion
   const container = openPptContainer(bytes)
   const presentation = parsePptPresentation(container.document, container.currentUser)
   const out = await writePptxPresentation(presentation)
-  const warnings: string[] = []
+  const warnings: string[] = [...presentation.warnings]
   warnings.push('shapes land as stacked text boxes; the original geometry is a later stage')
   warnings.push('text formatting (runs, indents, autofit) is a later stage')
   return { bytes: out, slideCount: presentation.slides.length, warnings }

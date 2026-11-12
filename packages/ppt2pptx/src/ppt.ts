@@ -1,6 +1,7 @@
 import { LegacyPptError } from './errors'
 import {
   PPT_TYPES,
+  RECORD_HEADER,
   type PptRecord,
   decodeTextBytes,
   decodeTextChars,
@@ -17,6 +18,23 @@ const MAX_RECORD_DEPTH = 64
 const MAX_EDIT_CHAIN = 1024
 /** A single slide with more text sequences than this is not a real deck. */
 const MAX_TEXT_SEQUENCES = 100_000
+/**
+ * Text of the whole deck, in characters: 1,024 on every one of MAX_SLIDES
+ * slides, about two thousand printed pages. A real deck carries tens of
+ * thousands of characters, a very large one a few hundred thousand. The
+ * sibling importers cap what a document may expand to in bytes (64 MiB a part
+ * in odf2ooxml and hwp2docx, 128 MiB a stream in the OLE2 opener); here the
+ * stream cap alone would let 128 MiB of text through, and the reader and the
+ * writer each hold the text several times over (measured: about a gibibyte
+ * of resident memory at sixteen million characters).
+ */
+const MAX_TEXT_CHARS = MAX_SLIDES * 1024
+/**
+ * Paragraphs of the whole deck: 64 on every one of MAX_SLIDES slides. A
+ * paragraph mark is one byte in the file and about a hundred bytes of markup
+ * in the .pptx, so the character cap alone leaves a hundredfold blow-up.
+ */
+const MAX_PARAGRAPHS = MAX_SLIDES * 64
 
 /**
  * The PowerPoint slide surface is measured in master units: 576 per inch, so
@@ -46,6 +64,8 @@ export interface PptPresentation {
   /** slide surface in master units (576 per inch) */
   slideWidth: number
   slideHeight: number
+  /** what the reader left out of a damaged deck (repeated slide references) */
+  warnings: string[]
 }
 
 /**
@@ -217,6 +237,11 @@ export function parsePptPresentation(
     }
   }
 
+  const budget: TextBudget = { chars: MAX_TEXT_CHARS, paragraphs: MAX_PARAGRAPHS }
+  // stream offsets of the slides already named, and how many references named one again
+  const named = new Set<number>()
+  let repeats = 0
+
   // SlideListWithText instance 0 is the slide list; instance 1 is the main
   // master's outline and 2 the notes', so only 0 is the deck order.
   const slideEntries: { persistIdRef: number; outline: PptSlideText[] }[] = []
@@ -228,9 +253,19 @@ export function parsePptPresentation(
       if (inner.type === PPT_TYPES.slidePersistAtom) {
         if (inner.length < 4) continue
         const persistIdRef = viewOf(payloadOf(document, inner)).getUint32(0, true)
+        pendingKind = null
+        // PowerPoint lists a slide once. A list that names one container
+        // again (by the same persist id, or by another that resolves to the
+        // same offset) would have the slide read once per entry.
+        const offset = directory.get(persistIdRef)
+        if (offset !== undefined && named.has(offset)) {
+          repeats++
+          entry = null
+          continue
+        }
+        if (offset !== undefined) named.add(offset)
         entry = { persistIdRef, outline: [] }
         slideEntries.push(entry)
-        pendingKind = null
         continue
       }
       if (inner.type === PPT_TYPES.textHeaderAtom) {
@@ -239,7 +274,7 @@ export function parsePptPresentation(
       }
       if (inner.type !== PPT_TYPES.textCharsAtom && inner.type !== PPT_TYPES.textBytesAtom) continue
       if (!entry || pendingKind === null) continue
-      entry.outline.push({ kind: pendingKind, text: textOf(document, inner) })
+      entry.outline.push({ kind: pendingKind, text: textOf(document, inner, budget) })
       pendingKind = null
     }
   }
@@ -249,12 +284,17 @@ export function parsePptPresentation(
 
   const slides: PptSlide[] = []
   if (chained && slideEntries.length > 0) {
+    const records: PptRecord[] = []
     for (const entry of slideEntries) {
       const record = at(entry.persistIdRef)
       if (!record || record.type !== PPT_TYPES.slideContainer) {
         throw new LegacyPptError('bad_slide', `persist id ${entry.persistIdRef}`)
       }
-      slides.push(parseSlide(document, record, entry.outline))
+      records.push(record)
+    }
+    assertDisjointSlides(records)
+    for (const [index, record] of records.entries()) {
+      slides.push(parseSlide(document, record, slideEntries[index]!.outline, budget))
     }
   } else {
     // no usable slide list (a flat file still knows its containers): the
@@ -263,8 +303,15 @@ export function parsePptPresentation(
     if (chained) {
       for (const offset of directory.values()) {
         const record = recordAt(document, offset)
-        if (record?.type === PPT_TYPES.slideContainer) containers.push(record)
+        if (record?.type !== PPT_TYPES.slideContainer) continue
+        if (named.has(offset)) {
+          repeats++
+          continue
+        }
+        named.add(offset)
+        containers.push(record)
       }
+      assertDisjointSlides(containers)
     } else {
       for (const record of walkRecords(document)) {
         if (record.type === PPT_TYPES.slideContainer) containers.push(record)
@@ -278,10 +325,30 @@ export function parsePptPresentation(
       // a flat file still groups each slide's outline after its SlidePersistAtom
       const outline =
         !chained && slideEntries.length === containers.length ? slideEntries[index]!.outline : []
-      slides.push(parseSlide(document, record, outline))
+      slides.push(parseSlide(document, record, outline, budget))
     }
   }
-  return { slides, slideWidth, slideHeight }
+  const warnings: string[] = []
+  if (repeats > 0) {
+    warnings.push(`${repeats} repeated slide references were skipped; each slide was kept once`)
+  }
+  return { slides, slideWidth, slideHeight, warnings }
+}
+
+/**
+ * Slide containers are top-level records of the stream, so no two share a
+ * byte. A change directory that points into the middle of one (containers
+ * nested, or framed over each other) would have every such slide read the
+ * same bytes again: work and text many times the size of the file.
+ */
+function assertDisjointSlides(records: readonly PptRecord[]): void {
+  const ordered = [...records].sort((a, b) => a.offset - b.offset)
+  for (let index = 1; index < ordered.length; index++) {
+    const previous = ordered[index - 1]!
+    if (ordered[index]!.offset - RECORD_HEADER < previous.offset + previous.length) {
+      throw new LegacyPptError('bad_slide', 'slide containers overlap')
+    }
+  }
 }
 
 /** One slide's text: its outline entries first (title/body), then its own text boxes. */
@@ -289,6 +356,7 @@ function parseSlide(
   document: Uint8Array,
   slideRecord: PptRecord,
   outline: readonly PptSlideText[],
+  budget: TextBudget,
 ): PptSlide {
   const textSequences: PptSlideText[] = []
   const push = (sequence: PptSlideText): void => {
@@ -302,7 +370,7 @@ function parseSlide(
     textSequences.push(sequence)
   }
   for (const sequence of outline) push(sequence)
-  for (const sequence of textBoxesOf(document, slideRecord)) push(sequence)
+  for (const sequence of textBoxesOf(document, slideRecord, budget)) push(sequence)
   return { textSequences }
 }
 
@@ -311,9 +379,20 @@ function parseSlide(
  * OfficeArtDgContainer → OfficeArtSpgrContainer → OfficeArtSpContainer →
  * OfficeArtClientTextbox, so the walk follows every record container.
  */
-function textBoxesOf(document: Uint8Array, slideRecord: PptRecord): PptSlideText[] {
+function textBoxesOf(
+  document: Uint8Array,
+  slideRecord: PptRecord,
+  budget: TextBudget,
+): PptSlideText[] {
   const out: PptSlideText[] = []
-  collectTextBoxes(document, slideRecord.offset, slideRecord.offset + slideRecord.length, 0, out)
+  collectTextBoxes(
+    document,
+    slideRecord.offset,
+    slideRecord.offset + slideRecord.length,
+    0,
+    out,
+    budget,
+  )
   return out
 }
 
@@ -323,16 +402,24 @@ function collectTextBoxes(
   to: number,
   depth: number,
   out: PptSlideText[],
+  budget: TextBudget,
 ): void {
   if (depth > MAX_RECORD_DEPTH) return
   for (const record of walkRecords(document, from, to)) {
     if (record.type === PPT_TYPES.escherClientTextbox) {
-      const text = textOfTextbox(document, record)
+      const text = textOfTextbox(document, record, budget)
       if (text) out.push(text)
       continue
     }
     if (isRecordContainer(record)) {
-      collectTextBoxes(document, record.offset, record.offset + record.length, depth + 1, out)
+      collectTextBoxes(
+        document,
+        record.offset,
+        record.offset + record.length,
+        depth + 1,
+        out,
+        budget,
+      )
     }
   }
 }
@@ -342,7 +429,11 @@ function collectTextBoxes(
  * SlideListWithText carries an OutlineTextRefAtom and no text atom, so it
  * contributes nothing here — its text already came from the outline entries.
  */
-function textOfTextbox(document: Uint8Array, record: PptRecord): PptSlideText | null {
+function textOfTextbox(
+  document: Uint8Array,
+  record: PptRecord,
+  budget: TextBudget,
+): PptSlideText | null {
   let kind = 4 // TextHeaderEnum "other text"; a box without a header still reads as text
   let text: string | null = null
   for (const inner of walkRecords(document, record.offset, record.offset + record.length)) {
@@ -351,7 +442,7 @@ function textOfTextbox(document: Uint8Array, record: PptRecord): PptSlideText | 
       continue
     }
     if (inner.type !== PPT_TYPES.textCharsAtom && inner.type !== PPT_TYPES.textBytesAtom) continue
-    text = textOf(document, inner)
+    text = textOf(document, inner, budget)
   }
   return text === null ? null : { kind, text }
 }
@@ -362,11 +453,29 @@ function textKindOf(document: Uint8Array, record: PptRecord): number | null {
   return viewOf(payload).getInt32(0, true)
 }
 
-function textOf(document: Uint8Array, record: PptRecord): string {
+/** What is left of the deck-wide text allowance; every text atom read draws on it. */
+interface TextBudget {
+  chars: number
+  paragraphs: number
+}
+
+function textOf(document: Uint8Array, record: PptRecord, budget: TextBudget): string {
   const payload = payloadOf(document, record)
-  return record.type === PPT_TYPES.textCharsAtom
-    ? decodeTextChars(payload)
-    : decodeTextBytes(payload)
+  const wide = record.type === PPT_TYPES.textCharsAtom
+  // charged from the payload size, before decoding: an atom over the
+  // allowance never becomes a string
+  budget.chars -= wide ? payload.length >> 1 : payload.length
+  if (budget.chars < 0) {
+    throw new LegacyPptError('limits_exceeded', `more than ${MAX_TEXT_CHARS} characters of text`)
+  }
+  const text = wide ? decodeTextChars(payload) : decodeTextBytes(payload)
+  let paragraphs = 1
+  for (let at = text.indexOf('\n'); at !== -1; at = text.indexOf('\n', at + 1)) paragraphs++
+  budget.paragraphs -= paragraphs
+  if (budget.paragraphs < 0) {
+    throw new LegacyPptError('limits_exceeded', `more than ${MAX_PARAGRAPHS} paragraphs of text`)
+  }
+  return text
 }
 
 function viewOf(payload: Uint8Array): DataView {

@@ -25,6 +25,18 @@ export interface BuildOptions {
   outlineTexts?: boolean
   /** write the password-protected CurrentUserAtom headerToken (0xF3D1C4DF) */
   encrypted?: boolean
+  /**
+   * List every slide this many times in the SlideListWithText (a damaged or
+   * hostile slide list; PowerPoint lists a slide once).
+   */
+  slideListRepeats?: number
+  /** give every repeat its own persist id, all resolving to the one slide container */
+  aliasRepeats?: boolean
+  /**
+   * Wrap every slide container in this many further slide containers, each
+   * listed as a slide of its own, so the same text sits inside all of them.
+   */
+  nestSlides?: number
 }
 
 const record = (type: number, payload: Uint8Array, instance = 0, version = 0): Uint8Array => {
@@ -145,22 +157,42 @@ export function buildPptStreams(
   }
 
   for (const [generation, specs] of generations.entries()) {
-    const slides: { persistId: number; slideId: number }[] = []
+    const slides: { persistId: number; slideId: number; spec: SlideSpec }[] = []
+    const nestLevels = options.nestSlides ?? 0
+    // a wrapper's header and its SlideAtom precede the container it wraps
+    const wrapperBytes = 8 + slideAtom().length
     for (const spec of specs) {
+      let container = slideContainer(spec, outlineTexts)
+      for (let level = 0; level < nestLevels; level++) {
+        container = record(0x03ee, concat([slideAtom(), container]), 0, 0xf)
+      }
       const start = offset
-      const persistId = nextId++
-      const slideId = nextSlideId++
-      push(slideContainer(spec, outlineTexts))
-      slides.push({ persistId, slideId })
-      persistOffsets.set(persistId, start)
+      push(container)
+      // the outermost container first, then each one it wraps
+      for (let depth = 0; depth <= nestLevels; depth++) {
+        const persistId = nextId++
+        slides.push({ persistId, slideId: nextSlideId++, spec })
+        persistOffsets.set(persistId, start + depth * wrapperBytes)
+      }
+    }
+    const listedOnce = [...slides]
+    for (let repeat = 1; repeat < (options.slideListRepeats ?? 1); repeat++) {
+      for (const slide of listedOnce) {
+        const persistId = options.aliasRepeats ? nextId++ : slide.persistId
+        if (options.aliasRepeats) {
+          persistOffsets.set(persistId, persistOffsets.get(slide.persistId)!)
+        }
+        slides.push({ persistId, slideId: nextSlideId++, spec: slide.spec })
+      }
     }
 
     // DocumentContainer: DocumentAtom + SlideListWithText (instance 0 = slides)
     const listParts: Uint8Array[] = []
-    for (const [index, spec] of specs.entries()) {
-      const slide = slides[index]!
-      listParts.push(slidePersistAtom(slide.persistId, slide.slideId, spec.textSequences.length))
-      if (outlineTexts) listParts.push(...outlineText(spec))
+    for (const slide of slides) {
+      listParts.push(
+        slidePersistAtom(slide.persistId, slide.slideId, slide.spec.textSequences.length),
+      )
+      if (outlineTexts) listParts.push(...outlineText(slide.spec))
     }
     const docStart = offset
     push(
@@ -180,7 +212,7 @@ export function buildPptStreams(
 
     // PersistDirectoryAtom: one PersistDirectoryEntry per persist id (cPersist=1)
     const persistParts: Uint8Array[] = []
-    for (const id of [...slides.map((slide) => slide.persistId), docPersistId]) {
+    for (const id of [...new Set(slides.map((slide) => slide.persistId)), docPersistId]) {
       persistParts.push(u32(id | (1 << 20)), u32(persistOffsets.get(id)!))
     }
     const persistStart = offset

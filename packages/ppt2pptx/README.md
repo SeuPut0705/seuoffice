@@ -9,6 +9,7 @@ Legacy PowerPoint 97-2003 import: parse `.ppt` (OLE2/CFB + MS-PPT records) and r
 - every slide's text sequences as **editable text boxes**: the slide's SlideListWithText outline entries (where real PowerPoint stores placeholder title/body text) plus the text boxes nested five levels down under PPDrawing/Escher (OfficeArtClientTextbox), with PowerPoint's runes normalized (`\u000B` → newline, the bullet-in-paragraph marker → space, cp1252 smart quotes named)
 - the OLE2/CFB container opener is the **shared** one in `@genoffice/compound-file` (`openOle2Container`: 8-byte signature, 512-byte header, input/stream caps), with the PowerPoint-specific checks (presentation stream, encrypted headerToken 0xF3D1C4DF) layered on top
 - an explicit error model (`LegacyPptError`, stable codes, including `encrypted`)
+- **work that follows the file's size**: a slide the list names again (by the same persist id or by another that resolves to the same container) is read once and the repeats are reported in `warnings`; slide containers that overlap are refused (`bad_slide`); a deck is at most 4,096 slides, 4,194,304 characters and 262,144 paragraphs of text (`limits_exceeded` past that)
 - a regression test on the in-repo real deck `packages/file-parse/tests/fixtures/legacy-sample.ppt` (plus the byte builder for the change-directory cases)
 
 ## Not carried yet
