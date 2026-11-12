@@ -4,7 +4,6 @@
  * language. Pure functions; no model is called.
  */
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '../../i18n/src/index'
 import {
   BLOCK_OVERHEAD_TOKENS,
   TRANSLATION_BATCH_TOKENS,
@@ -17,6 +16,7 @@ import {
   defaultTargetLanguageForTree,
   encodeRuns,
   estimateTokens,
+  isTranslationLanguage,
   parseTranslationOutput,
   translationLanguageName,
   translationStyleLines,
@@ -293,7 +293,7 @@ describe('translation instruction and messages', () => {
   })
 
   it('carries the writing rules for every target language, before the structural rules', () => {
-    for (const lang of LANGS) {
+    for (const lang of TRANSLATION_LANGUAGES) {
       const system = translationSystemPrompt(lang)
       const name = translationLanguageName(lang)
       const style = system.indexOf('How the translation should read:')
@@ -322,7 +322,7 @@ describe('translation instruction and messages', () => {
     expect(ko).toContain('한 문서 안에서 섞지 않는다')
     expect(ko).toContain('~에 있어서')
     expect(ko).toContain('능동형')
-    for (const lang of LANGS.filter((l) => l !== 'ko')) {
+    for (const lang of TRANSLATION_LANGUAGES.filter((l) => l !== 'ko')) {
       expect(translationStyleLines(lang).join('\n')).not.toMatch(/[가-힣]/)
     }
   })
@@ -333,11 +333,16 @@ describe('translation instruction and messages', () => {
     expect(en).toMatch(/contract|report|notice/i)
   })
 
-  it('knows a name for every UI language', () => {
-    expect([...TRANSLATION_LANGUAGES]).toEqual([...LANGS])
-    for (const lang of LANGS) {
+  it('offers 21 target languages, more than the screen has, each with a name', () => {
+    expect([...TRANSLATION_LANGUAGES].sort()).toEqual(
+      'ar cs de en es fr he hi id it ja ko ms nl pl pt ru th vi zh zh-TW'.split(' '),
+    )
+    for (const lang of TRANSLATION_LANGUAGES) {
+      expect(isTranslationLanguage(lang)).toBe(true)
       expect(translationLanguageName(lang)).not.toBe(lang)
     }
+    expect(isTranslationLanguage('sv')).toBe(false)
+    expect(isTranslationLanguage('zh-CN')).toBe(false)
     expect(translationLanguageName('zh')).toMatch(/Simplified/)
     expect(translationLanguageName('zh-TW')).toMatch(/Traditional/)
   })
