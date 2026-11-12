@@ -133,7 +133,7 @@ import {
 } from '../../../apps/mindmap/src/main/save-as-formats.ts'
 import type { Case, FileSpec, FnSpec, Group } from '../types.ts'
 
-type Any = any // eslint-disable-line @typescript-eslint/no-explicit-any
+type Any = any
 
 const CONSTANT = 'a constant'
 const str = (a: unknown[], i: number): string => a[i] as string

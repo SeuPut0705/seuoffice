@@ -1340,7 +1340,7 @@ const vaultFsCases: Case[] = [
       { op: 'read', path: '$DIR/secret.md' },
       { op: 'mtime', path: '$DIR/secret.md' },
     ],
-    { 'secret.md': { text: 'x', mode: 0o000 } },
+    { 'secret.md': { text: 'x', mode: 0o000, mtimeMs: 1_700_000_000_000 } },
     'a file nobody may read',
   ),
 ]

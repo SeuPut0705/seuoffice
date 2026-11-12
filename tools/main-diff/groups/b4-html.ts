@@ -22,6 +22,7 @@
  * driven as scenarios: a list of steps answers one entry per step.
  */
 import { createHash } from 'node:crypto'
+import { createRequire } from 'node:module'
 import { writeFile } from 'node:fs/promises'
 import {
   ASSET_MANIFEST_FILENAME,
@@ -87,11 +88,17 @@ import {
   setGenerateTabIdResolver,
 } from '../../../packages/electron-utils/src/generate-handoff.ts'
 import type { GenerateHandoff } from '../../../packages/electron-utils/src/generate-handoff.ts'
-import { StoreWriteError } from '../../../packages/pdf-structure/src/store/files.ts'
 import { isTranslationMode, jobKeyOf } from '../../../packages/pdf-structure/src/store/job-keys.ts'
 import type { Case, FileSpec, Group, TsContext } from '../types.ts'
 
 const CONSTANT = 'a constant'
+
+// Code under apps/* is loaded as CommonJS and reads the CommonJS copy of the
+// store package; an ES import would be a second class, and the handler's
+// `err instanceof StoreWriteError` would miss the error the fake store throws.
+const { StoreWriteError } = createRequire(import.meta.url)(
+  '@seuoffice/pdf-structure/store',
+) as typeof import('../../../packages/pdf-structure/src/store/index.ts')
 
 const cases = (...lists: unknown[][]): Case[] => lists.map((args): Case => ({ args }))
 const hexOf = (text: string): string => Buffer.from(text, 'latin1').toString('hex')
@@ -2034,7 +2041,6 @@ const posEntry = (spineIndex: unknown, blockId: unknown, updatedAt: unknown): un
 
 function readingStateCases(): Case[] {
   const D = '$DIR/data'
-  const f = `${D}/${READING_STATE_FILE}`
   const get = (path: string | null): Step => ({ op: 'get', path })
   const set = (path: string, position: unknown): Step => ({ op: 'setPosition', path, position })
   const prefs = (patch: unknown): Step => ({ op: 'setViewPrefs', patch })
@@ -2185,7 +2191,7 @@ function readingStateCases(): Case[] {
       prefs({ lineHeight: 1 }),
       prefs({ lineHeight: 3 }),
     ]),
-    caseFor([prefs({ fontScale: 1.23456789012345678 })]),
+    caseFor([prefs({ fontScale: Number('1.23456789012345678') })]),
     caseFor(
       [set('/a.epub', P(1, 'x')), move('/a.epub', '/b.epub'), get('/a.epub'), get('/b.epub')],
       undefined,
@@ -2780,7 +2786,7 @@ const epubGroup: Group = {
         ],
       },
       { args: [null, { fontScale: 2, lineHeight: 1.5, dark: false }] },
-      { args: [{ fontScale: 1.23456789012345678, lineHeight: 2.5 }, null] },
+      { args: [{ fontScale: Number('1.23456789012345678'), lineHeight: 2.5 }, null] },
       { args: [{ fontScale: -0 }, null] },
       { args: [{ fontScale: 1e300, lineHeight: -1e300 }, null] },
     ],

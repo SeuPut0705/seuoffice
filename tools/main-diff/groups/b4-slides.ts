@@ -2254,7 +2254,7 @@ export const group: Group = {
             '/d/num': 5,
             '/d/arr': [1],
             '/d/big': { kind: 'builtin', key: 'z'.repeat(129) },
-            '/d/inf': { kind: 'saved', key: 'inf', updatedAt: 1e999, usedAt: -1e999 },
+            '/d/inf': { kind: 'saved', key: 'inf', updatedAt: Infinity, usedAt: -Infinity },
             '/d/long': { kind: 'saved', key: 'long', adjustments: ['p'.repeat(700)], updatedAt: 1 },
           }),
         ),

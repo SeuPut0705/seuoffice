@@ -29,7 +29,7 @@ import { readFileSync, readdirSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { crc32, deflateRawSync, inflateRawSync } from 'node:zlib'
 import * as CFB from 'cfb'
-import { getRequestedLocale, getUiLang, setUiLang } from '../../../packages/i18n/src/index.ts'
+import { createRequire } from 'node:module'
 import { hasOle2Signature } from '../../../packages/compound-file/src/index.ts'
 import { atomicWriteFile } from '../../../apps/hwp/src/main/atomic-write.ts'
 import { tm } from '../../../apps/hwp/src/main/dialog-strings.ts'
@@ -71,6 +71,17 @@ import {
 import type { MeasuredTab, TabSpot } from '../../../apps/hwp/src/main/tab-widths.ts'
 import type { HwpFormat } from '../../../apps/hwp/src/shared/ipc.ts'
 import type { Case, Group, TsContext } from '../types.ts'
+
+/**
+ * apps/hwp is CommonJS to the loader, so dialog-strings.ts reads the language from the CommonJS
+ * copy of @seuoffice/i18n; an ES import here would set the language of another copy. The
+ * language is set and read through the copy the module under test uses.
+ */
+const i18n = createRequire(import.meta.url)('@seuoffice/i18n') as {
+  getRequestedLocale: () => string
+  getUiLang: () => 'en' | 'ko'
+  setUiLang: (lang: 'en' | 'ko', requested?: string) => void
+}
 
 const str = (a: unknown[], i: number): string => a[i] as string
 const hex = (bytes: Uint8Array): string => Buffer.from(bytes).toString('hex')
@@ -136,7 +147,7 @@ function zipListing(zip: Buffer): unknown {
 function normalized(bytes: Uint8Array): unknown {
   const buffer = Buffer.from(bytes)
   if (!hasOle2Signature(buffer)) return { zip: zipListing(buffer) }
-  let opened: ReturnType<typeof openHwp> = null
+  let opened: ReturnType<typeof openHwp>
   try {
     opened = openHwp(buffer)
   } catch {
@@ -809,7 +820,6 @@ const FIELDS_ENGINE_DEFLATED = hwp({
 const FIELDS_OPENED_BIG = hwp({ sections: [fieldSection((n) => KINDS[n] as number, 120)] })
 const FIELDS_ENGINE_BIG = hwp({ sections: [fieldSection(() => UNKNOWN_FIELD, 120)] })
 const FIELDS_NONE = hwp({ sections: [para(0, chars('no fields'))] })
-const FIELDS_ALL_UNKNOWN = FIELDS_ENGINE
 
 const entriesOf = (kinds: FieldKinds | null): [string, number][] =>
   kinds ? [...kinds.entries()] : []
@@ -1251,16 +1261,16 @@ export const group: Group = {
   // ---------- dialog-strings ----------
   'dialog-strings.tm': {
     ts: (a: unknown[]) => {
-      const before = getUiLang()
-      const requested = getRequestedLocale()
-      setUiLang(str(a, 0) as 'en' | 'ko')
+      const before = i18n.getUiLang()
+      const requested = i18n.getRequestedLocale()
+      i18n.setUiLang(str(a, 0) as 'en' | 'ko')
       try {
         return tm(
           str(a, 1) as DlgKey,
           orUndefined(a[2]) as Record<string, string | number> | undefined,
         )
       } finally {
-        setUiLang(before, requested)
+        i18n.setUiLang(before, requested)
       }
     },
     cases: [

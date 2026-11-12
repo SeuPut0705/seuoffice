@@ -11,10 +11,9 @@
  */
 import childProcess from 'node:child_process'
 import { EventEmitter } from 'node:events'
-import { syncBuiltinESMExports } from 'node:module'
+import { createRequire, syncBuiltinESMExports } from 'node:module'
 import readline from 'node:readline'
 import { ZodError, z } from 'zod'
-import { getRequestedLocale, getUiLang, setUiLang } from '../../../packages/i18n/src/index.ts'
 import { CSV_IMPORT_DEFAULT_LIMIT_MB } from '../../../packages/xlsx-gateway/src/gateway/csv-limits.ts'
 import { legacyCsvCharsetFor } from '../../../packages/xlsx-gateway/src/shared/document-locale.ts'
 import { atomicWriteFile } from '../../../apps/sheets/src/main/atomic-write.ts'
@@ -67,8 +66,15 @@ import { resolveWorkbookSave } from '../../../apps/sheets/src/main/workbook-save
 import { XlsxSidecarClient } from '../../../apps/sheets/src/main/xlsx-sidecar-client.ts'
 import type { Case, FnSpec, Group, TsContext } from '../types.ts'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any
+
+// apps/* is loaded as CommonJS and reads its own copy of @seuoffice/i18n: the
+// language the spec sets must be set on that copy, not on an ES import's
+const i18n = createRequire(import.meta.url)('@seuoffice/i18n') as {
+  getRequestedLocale: () => string
+  getUiLang: () => string
+  setUiLang: (lang: string, requested?: string) => void
+}
 
 const str = (a: unknown[], i: number): string => a[i] as string
 
@@ -277,12 +283,12 @@ const csvImportLimit: Record<string, FnSpec> = {
 const documentLocale: Record<string, FnSpec> = {
   'document-locale.legacyCsvCharset': {
     ts: (a) => {
-      const before = getRequestedLocale()
-      setUiLang('en', str(a, 0))
+      const before = i18n.getRequestedLocale()
+      i18n.setUiLang('en', str(a, 0))
       try {
         return legacyCsvCharset()
       } finally {
-        setUiLang(getUiLang(), before)
+        i18n.setUiLang(i18n.getUiLang(), before)
       }
     },
     cases: each(

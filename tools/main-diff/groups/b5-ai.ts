@@ -156,9 +156,19 @@ import {
   driveAiOn,
   driveConnectedOf,
 } from '../../../packages/electron-utils/src/drive-ai-channels.ts'
+import { createRequire } from 'node:module'
 import type { Case, FileSpec, FnSpec, Group, TsContext } from '../types.ts'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/**
+ * The code under apps/* is loaded as CommonJS and reads `@seuoffice/ai-provider`
+ * from the CommonJS copy of the package: its own codec variable and its own
+ * error classes. The ES imports above are another copy, so what the apps'
+ * modules must see (the codec, `instanceof` of the errors) goes through this one.
+ */
+const aiProviderPackage = createRequire(import.meta.url)(
+  '@seuoffice/ai-provider',
+) as typeof import('@seuoffice/ai-provider')
+
 type J = any
 
 // ---- helpers ----
@@ -207,12 +217,19 @@ const fakeCodec: AiSecretCodec = {
 /** "no codec registered", for the functions that take a codec as a value */
 const noCodec: AiSecretCodec = { seal: () => null, open: () => null }
 
+/**
+ * The apps' modules (CommonJS) hold their own copy of the package, with its
+ * own codec variable: the codec is set on both copies.
+ */
 function withCodec<T>(mode: unknown, fn: () => T): T {
-  setAiSecretCodec(mode === 'fake' ? fakeCodec : null)
+  const codec = mode === 'fake' ? fakeCodec : null
+  setAiSecretCodec(codec)
+  aiProviderPackage.setAiSecretCodec(codec)
   try {
     return fn()
   } finally {
     setAiSecretCodec(null)
+    aiProviderPackage.setAiSecretCodec(null)
   }
 }
 
@@ -230,25 +247,29 @@ function withNow<T>(now: number, fn: () => T): T {
 }
 
 /** a descriptor built into the value it describes (see the header) */
-function build(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(build)
+function build(value: unknown, fromPackage = false): unknown {
+  // the app modules test `instanceof` against the classes of the package entry
+  const Run = fromPackage ? aiProviderPackage.AiRunError : AiRunError
+  const Timeout = fromPackage ? aiProviderPackage.AiTimeoutError : AiTimeoutError
+  const Credits = fromPackage ? aiProviderPackage.AiCreditsError : AiCreditsError
+  if (Array.isArray(value)) return value.map((v) => build(v, fromPackage))
   if (!value || typeof value !== 'object') return value
   const d = value as Record<string, J>
   const rest: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(d)) if (k !== '$class') rest[k] = build(v)
+  for (const [k, v] of Object.entries(d)) if (k !== '$class') rest[k] = build(v, fromPackage)
   let e: J
   switch (d.$class) {
     case 'Error':
       e = new Error(d.message)
       break
     case 'AiRunError':
-      e = new AiRunError(d.kind, d.message, { provider: d.provider, resetsAt: d.resetsAt })
+      e = new Run(d.kind, d.message, { provider: d.provider, resetsAt: d.resetsAt })
       break
     case 'AiTimeoutError':
-      e = new AiTimeoutError(d.ms)
+      e = new Timeout(d.ms)
       break
     case 'AiCreditsError':
-      e = new AiCreditsError(d.message)
+      e = new Credits(d.message)
       break
     default:
       return rest
@@ -2368,11 +2389,13 @@ const docsRunFns: Group = {
     cases: callbackCases,
   },
   'docs/ai-run.aiStreamErrorChunk': {
-    ts: (a, cx) => withNow(cx.now, () => docsAiRun.aiStreamErrorChunk(str(a, 0), build(a[1]))),
+    ts: (a, cx) =>
+      withNow(cx.now, () => docsAiRun.aiStreamErrorChunk(str(a, 0), build(a[1], true))),
     cases: [...toErrorCases, ...streamChunkCases],
   },
   'docs/ai-run.aiChatFailure': {
-    ts: (a, cx) => withNow(cx.now, () => docsAiRun.aiChatFailure(build(a[0]), () => str(a, 1))),
+    ts: (a, cx) =>
+      withNow(cx.now, () => docsAiRun.aiChatFailure(build(a[0], true), () => str(a, 1))),
     cases: failureCases,
   },
   'docs/ai-run.withMeteredAccepted': {
@@ -2485,7 +2508,8 @@ const sheetsRunFns: Group = {
     ],
   },
   'sheets/ai-run.aiStreamErrorChunk': {
-    ts: (a, cx) => withNow(cx.now, () => sheetsAiRun.aiStreamErrorChunk(str(a, 0), build(a[1]))),
+    ts: (a, cx) =>
+      withNow(cx.now, () => sheetsAiRun.aiStreamErrorChunk(str(a, 0), build(a[1], true))),
     cases: [...toErrorCases, ...streamChunkCases.slice(0, 8)],
   },
   'sheets/ai-run.subscriptionStreamCallbacks': {
@@ -2902,7 +2926,10 @@ const namingFns: Group = {
       c(['a\n\nb', null], 'two newlines stay'),
       c(['x'.repeat(4000), null], 'at the limit'),
       c(['x'.repeat(4001), null], 'past the limit'),
-      c([`${'y'.repeat(3999)}\u{1F600}z`, null], 'the cut lands before a pair'),
+      c(
+        [`${'y'.repeat(3998)}\u{1F600}z`, null],
+        'the cut lands right after a pair (a cut inside one leaves a lone surrogate no Rust string holds)',
+      ),
       c(['abcdef', 3]),
       c(['abcdef', 6]),
       c(['abcdef', 0]),

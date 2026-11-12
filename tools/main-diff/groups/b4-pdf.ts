@@ -1073,6 +1073,230 @@ const sourceCases: Case[] = [
   { args: [faceSpec('Foo', 4294967296 + 2 + 32), null], note: 'flags past 32 bits wrap as int32' },
 ]
 
+// ---- the installed fonts ------------------------------------------------------------------------------
+//
+// findSystemFont, findFontCovering and similarFontFor read the font folders of the machine, so their
+// answers depended on it. Both sides are pointed at a home folder of fixture fonts instead (the last
+// argument of each case): the TypeScript through HOME for the length of the call (os.homedir), the
+// Rust through the argument. The system folders are still scanned first, the same ones by both sides;
+// the families named below are not what a machine installs, so they are answered by the fixture alone.
+
+type NameRecord = [number, number, number, number, string]
+
+const be16 = (...values: number[]): number[] => values.flatMap((v) => [(v >> 8) & 0xff, v & 0xff])
+
+function nameTable(records: NameRecord[]): number[] {
+  const strings: number[] = []
+  const rows: number[] = []
+  for (const [platform, encoding, language, nameId, text] of records) {
+    const bytes =
+      platform === 1 ? [...Buffer.from(text, 'latin1')] : [...Buffer.from(text, 'utf16le').swap16()]
+    rows.push(...be16(platform, encoding, language, nameId, bytes.length, strings.length))
+    strings.push(...bytes)
+  }
+  return [...be16(0, records.length, 6 + 12 * records.length), ...rows, ...strings]
+}
+
+const asciiCmap = (): number[] => cmapTable([[3, 1, cmap4([[0x20, 0x7e, 1 - 0x20, 0]])]])
+
+interface FixtureFace {
+  family: string
+  sub: string
+  ps: string
+  cmap?: number[]
+  weight?: number
+  panose?: [number, number, number, number]
+  extraNames?: NameRecord[]
+  extraTables?: [string, number[]][]
+}
+
+function fixtureFace(spec: FixtureFace): number[] {
+  return sfnt(0x10000, [
+    ['head', [0, 0, 0, 0]],
+    ['glyf', [0, 0, 0, 0]],
+    [
+      'name',
+      nameTable([
+        [3, 1, 0x409, 1, spec.family],
+        [3, 1, 0x409, 2, spec.sub],
+        [3, 1, 0x409, 6, spec.ps],
+        ...(spec.extraNames ?? []),
+      ]),
+    ],
+    ['cmap', spec.cmap ?? asciiCmap()],
+    ['OS/2', os2Table(spec.weight ?? 400, spec.panose ?? [2, 11, 6, 4])],
+    ...(spec.extraTables ?? []),
+  ])
+}
+
+/** a collection of faces: the table records of every face point into the one file */
+function fixtureCollection(faces: number[][]): number[] {
+  const head = [0x74, 0x74, 0x63, 0x66, 0, 1, 0, 0, ...be16(0, faces.length)]
+  let base = head.length + 4 * faces.length
+  const offsets: number[] = []
+  const body: number[] = []
+  for (const face of faces) {
+    const shifted = [...face]
+    const tables = (face[4]! << 8) | face[5]!
+    for (let t = 0; t < tables; t++) {
+      const at = 12 + 16 * t + 8
+      const value =
+        (((face[at]! << 24) | (face[at + 1]! << 16) | (face[at + 2]! << 8) | face[at + 3]!) >>> 0) +
+        base
+      shifted.splice(
+        at,
+        4,
+        (value >>> 24) & 0xff,
+        (value >>> 16) & 0xff,
+        (value >>> 8) & 0xff,
+        value & 0xff,
+      )
+    }
+    offsets.push(base)
+    body.push(...shifted)
+    base += face.length
+  }
+  return [
+    ...head,
+    ...offsets.flatMap((o) => [(o >>> 24) & 0xff, (o >>> 16) & 0xff, (o >>> 8) & 0xff, o & 0xff]),
+    ...body,
+  ]
+}
+
+const HANGUL_CMAP = (): number[] =>
+  cmapTable([
+    [
+      3,
+      10,
+      cmap12([
+        [0x20, 0x7e, 1],
+        [0xac00, 0xd7a3, 100],
+      ]),
+    ],
+  ])
+
+const FIXTURE_FONTS: Record<string, number[]> = {
+  'arial.ttf': fixtureFace({ family: 'Arial', sub: 'Regular', ps: 'ArialMT' }),
+  'arialbd.ttf': fixtureFace({ family: 'Arial', sub: 'Bold', ps: 'Arial-BoldMT', weight: 700 }),
+  'arialbi.ttf': fixtureFace({
+    family: 'Arial',
+    sub: 'Bold Italic',
+    ps: 'Arial-BoldItalicMT',
+    weight: 700,
+  }),
+  'helvetica.ttf': fixtureFace({ family: 'Helvetica', sub: 'Regular', ps: 'Helvetica' }),
+  'sub/helvoblique.ttf': fixtureFace({
+    family: 'Helvetica',
+    sub: 'Oblique',
+    ps: 'Helvetica-Oblique',
+  }),
+  'cour.ttf': fixtureFace({
+    family: 'Courier New',
+    sub: 'Regular',
+    ps: 'CourierNewPSMT',
+    panose: [2, 2, 6, 9],
+  }),
+  'times.ttf': fixtureFace({
+    family: 'Times New Roman',
+    sub: 'Regular',
+    ps: 'TimesNewRomanPSMT',
+    panose: [2, 2, 6, 3],
+  }),
+  'timesbd.ttf': fixtureFace({
+    family: 'Times New Roman',
+    sub: 'Bold',
+    ps: 'TimesNewRomanPS-BoldMT',
+    weight: 700,
+    panose: [2, 2, 6, 3],
+  }),
+  'batang.ttf': fixtureFace({
+    family: 'Batang',
+    sub: 'Regular',
+    ps: 'Batang',
+    cmap: HANGUL_CMAP(),
+    panose: [2, 3, 6, 0],
+    extraNames: [[3, 1, 0x412, 1, '\ubc14\ud0d5']],
+  }),
+  'dotum.ttf': fixtureFace({
+    family: 'Dotum',
+    sub: 'Regular',
+    ps: 'Dotum',
+    cmap: HANGUL_CMAP(),
+  }),
+  'emoji.ttf': fixtureFace({
+    family: 'Color Emoji',
+    sub: 'Regular',
+    ps: 'ColorEmoji',
+    cmap: cmapTable([[3, 10, cmap12([[0x1f600, 0x1f64f, 1]])]]),
+    extraTables: [['sbix', [0, 0, 0, 0]]],
+  }),
+  'letters.ttf': fixtureFace({
+    family: 'Latin Extra',
+    sub: 'Regular',
+    ps: 'LatinExtra',
+    cmap: cmapTable([
+      [
+        3,
+        1,
+        cmap4([
+          [0x20, 0x20, 1 - 0x20, 0],
+          [0x131, 0x131, 1 - 0x131, 0],
+          [0x17f, 0x17f, 1 - 0x17f, 0],
+          [0x212a, 0x212a, 1 - 0x212a, 0],
+        ]),
+      ],
+    ]),
+  }),
+  'collection.ttc': fixtureCollection([
+    fixtureFace({ family: 'Collection Sans', sub: 'Regular', ps: 'CollectionSans-Regular' }),
+    fixtureFace({
+      family: 'Collection Sans',
+      sub: 'Bold',
+      ps: 'CollectionSans-Bold',
+      weight: 700,
+    }),
+  ]),
+  'a/b/deep.ttf': fixtureFace({ family: 'Deep Face', sub: 'Regular', ps: 'DeepFace' }),
+  'a/b/c/hidden.ttf': fixtureFace({ family: 'Hidden Face', sub: 'Regular', ps: 'HiddenFace' }),
+  'broken.ttf': [...Buffer.from('this is not a font file')],
+  'empty.ttf': [],
+  'short.otf': [0, 1, 0, 0, 0, 3, 0, 0],
+  'notes.txt': [...Buffer.from('not a font by its name')],
+}
+
+const FONT_HOME = ((): string => {
+  const home = mkdtempSync(join(tmpdir(), 'b4pdf-fonts-'))
+  const folder =
+    process.platform === 'darwin'
+      ? 'Library/Fonts'
+      : process.platform === 'win32'
+        ? 'AppData/Local/Microsoft/Windows/Fonts'
+        : '.fonts'
+  for (const [name, bytes] of Object.entries(FIXTURE_FONTS)) {
+    const target = join(home, folder, name)
+    mkdirSync(join(target, '..'), { recursive: true })
+    writeFileSync(target, Buffer.from(bytes))
+  }
+  process.on('exit', () => rmSync(home, { recursive: true, force: true }))
+  return home
+})()
+
+/** run the TypeScript with the process's home folder on the fixture fonts */
+function inFontHome<T>(run: () => T): T {
+  const before = process.env.HOME
+  process.env.HOME = FONT_HOME
+  try {
+    return run()
+  } finally {
+    if (before === undefined) delete process.env.HOME
+    else process.env.HOME = before
+  }
+}
+
+/** every case ends with the home folder, which the Rust side takes as its argument */
+const withFontHome = (cases: Case[]): Case[] =>
+  cases.map((c) => ({ ...c, args: [...(c.args as unknown[]), FONT_HOME] }))
+
 const similarCases: Case[] = [
   { args: [faceSpec('Arial'), 'Hello', false], note: 'Latin sans' },
   { args: [faceSpec('Arial-BoldItalicMT'), 'Hello', false], note: 'bold italic keeps its weight' },
@@ -1084,6 +1308,23 @@ const similarCases: Case[] = [
     note: 'a character no installed face maps',
   },
   { args: [faceSpec('Arial'), '', false], note: 'nothing drawn' },
+  { args: [faceSpec('TimesNewRomanPSMT'), 'Hello', false], note: 'Latin serif' },
+  {
+    args: [faceSpec('Times-Bold'), 'Hello', true],
+    note: 'bold and italic asked: the bold face comes, not stroked',
+  },
+  { args: [faceSpec('Helvetica'), 'Hello', false], note: 'the first look-alike that is installed' },
+  {
+    args: [faceSpec('Batang-Bold'), '\ud55c\uae00', false],
+    note: 'a bold source with a regular stand-in',
+  },
+  { args: [faceSpec('HYGothic'), '\ud55c\uae00', false], note: 'a Korean sans stand-in' },
+  { args: [faceSpec('Foo'), 'H\u0131', false], note: 'no look-alike draws every character' },
+  { args: [faceSpec('Foo', 1 | 32), 'abc', false], note: 'fixed pitch by the flags' },
+  {
+    args: [faceSpec('Foo', 0, os2Font(700, [2, 5, 0, 3])), 'abc', false],
+    note: 'serif and bold by the embedded OS/2',
+  },
 ]
 
 const locateCases: Case[] = [
@@ -1093,6 +1334,23 @@ const locateCases: Case[] = [
   { args: ['NoSuchFace', 'NoSuchFamily'], note: 'nothing' },
   { args: ['', ''], note: 'no name at all' },
   { args: ['HELVETICA', ''], note: 'case and punctuation do not matter' },
+  { args: ['Foo-Bold', 'Arial'], note: 'the style tokens of the name rank the family' },
+  { args: ['Foo-BoldItalic', 'Arial'], note: 'both tokens' },
+  {
+    args: ['Foo-Italic', 'Arial'],
+    note: 'a wanted token no face has: Regular wins by fewer extras',
+  },
+  { args: ['Foo-Demibold', 'Times New Roman'], note: 'a neighbouring weight' },
+  { args: ['', 'Times New Roman'], note: 'Regular preferred without tokens' },
+  { args: ['CollectionSans-Bold', ''], note: 'a face of a collection, extracted' },
+  { args: ['', 'Collection Sans'], note: 'the family of a collection' },
+  { args: ['', '\ubc14\ud0d5'], note: 'a localized family name' },
+  { args: ['', 'Hidden Face'], note: 'three folders down is not scanned' },
+  { args: ['', 'Deep Face'], note: 'two folders down is' },
+  { args: ['Helvetica-Oblique', ''], note: 'a face in a subfolder' },
+  { args: ['', 'Helvetica'], note: 'two faces of a family, Regular wins' },
+  { args: ['ColorEmoji', ''], note: 'a color font is found by name' },
+  { args: ['', 'Broken'], note: 'files that are no fonts are skipped' },
 ]
 
 const coveringCases: Case[] = [
@@ -1101,6 +1359,12 @@ const coveringCases: Case[] = [
   { args: ['\r\n'], note: 'only line breaks' },
   { args: ['\u{1F600}'], note: 'emoji: only color fonts' },
   { args: ['\u0131\u017f \u212a'], note: 'letters outside ASCII' },
+  { args: ['abc'], note: 'plain ASCII: the plainest face' },
+  { args: ['\ud55c\uae00 abc'], note: 'Hangul and Latin in one face' },
+  { args: ['ab\u0131'], note: 'no face has both' },
+  { args: [' '], note: 'only a space' },
+  { args: ['\u212a'], note: 'the Kelvin sign' },
+  { args: ['\u{1F600}a'], note: 'the color face does not count' },
 ]
 
 const truetypeCases: Case[] = [
@@ -2412,6 +2676,37 @@ const winParseCases: Case[] = [
     note: 'rows that are not certificate rows drop',
   },
   { args: ['{broken'], note: 'broken JSON' },
+  { args: ['[1,]'], note: 'array ends after a comma' },
+  { args: ['[1 2]'], note: 'missing comma in an array' },
+  { args: ['{"a":1,}'], note: 'object ends after a comma' },
+  { args: ['{"a" 1}'], note: 'missing colon' },
+  { args: ['{"a":1 "b":2}'], note: 'missing comma in an object' },
+  { args: ['01'], note: 'leading zero' },
+  { args: ['[-]'], note: 'minus alone' },
+  { args: ['[1.]'], note: 'fraction without digits' },
+  { args: ['[1e+]'], note: 'exponent without digits' },
+  { args: ['"abc'], note: 'unterminated string' },
+  { args: ['["a\\x"]'], note: 'bad escape' },
+  { args: ['["a\\u12G4"]'], note: 'bad unicode escape' },
+  { args: ['[tru'], note: 'cut literal' },
+  { args: ['[trux]'], note: 'wrong literal' },
+  { args: ['[fals1]'], note: 'a digit in a literal' },
+  { args: ['[1] x'], note: 'text after the value' },
+  { args: ['[\r\n\r\n 1 x'], note: 'line and column after CRLF' },
+  { args: ['this is not json at all really'], note: 'long source, error at the start' },
+  {
+    args: ['[1,2,3,4,5,6,7,8,9,10,11,12,x,13,14,15,16,17,18,19]'],
+    note: 'long source, error in the middle',
+  },
+  {
+    args: ['[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,x]'],
+    note: 'long source, error near the end',
+  },
+  { args: ['[1,2,3,4,5,6,7,8,9,10,x]'], note: 'source of 21 characters' },
+  { args: ['[1,2,3,4,5,6,7,8,9,x]'], note: 'source of 20 characters' },
+  { args: ['undefined'], note: 'undefined' },
+  { args: ['NaN'], note: 'NaN' },
+  { args: ['["\\\\'], note: 'cut escape' },
 ]
 
 const winChainCases: Case[] = [
@@ -2421,6 +2716,37 @@ const winChainCases: Case[] = [
   { args: [''] },
   { args: ['\ufeff[]'] },
   { args: ['{broken'], note: 'broken JSON' },
+  { args: ['[1,]'], note: 'array ends after a comma' },
+  { args: ['[1 2]'], note: 'missing comma in an array' },
+  { args: ['{"a":1,}'], note: 'object ends after a comma' },
+  { args: ['{"a" 1}'], note: 'missing colon' },
+  { args: ['{"a":1 "b":2}'], note: 'missing comma in an object' },
+  { args: ['01'], note: 'leading zero' },
+  { args: ['[-]'], note: 'minus alone' },
+  { args: ['[1.]'], note: 'fraction without digits' },
+  { args: ['[1e+]'], note: 'exponent without digits' },
+  { args: ['"abc'], note: 'unterminated string' },
+  { args: ['["a\\x"]'], note: 'bad escape' },
+  { args: ['["a\\u12G4"]'], note: 'bad unicode escape' },
+  { args: ['[tru'], note: 'cut literal' },
+  { args: ['[trux]'], note: 'wrong literal' },
+  { args: ['[fals1]'], note: 'a digit in a literal' },
+  { args: ['[1] x'], note: 'text after the value' },
+  { args: ['[\r\n\r\n 1 x'], note: 'line and column after CRLF' },
+  { args: ['this is not json at all really'], note: 'long source, error at the start' },
+  {
+    args: ['[1,2,3,4,5,6,7,8,9,10,11,12,x,13,14,15,16,17,18,19]'],
+    note: 'long source, error in the middle',
+  },
+  {
+    args: ['[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,x]'],
+    note: 'long source, error near the end',
+  },
+  { args: ['[1,2,3,4,5,6,7,8,9,10,x]'], note: 'source of 21 characters' },
+  { args: ['[1,2,3,4,5,6,7,8,9,x]'], note: 'source of 20 characters' },
+  { args: ['undefined'], note: 'undefined' },
+  { args: ['NaN'], note: 'NaN' },
+  { args: ['["\\\\'], note: 'cut escape' },
 ]
 
 const PSARGS = (script: string): string[] => ['-NoProfile', '-NonInteractive', '-Command', script]
@@ -2548,6 +2874,187 @@ const listCases: Case[] = [
     {},
     [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '{broken' }],
     'broken JSON: the call fails',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '[1,]' }],
+    'the call fails: array ends after a comma',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '[1 2]' }],
+    'the call fails: missing comma in an array',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '{"a":1,}' }],
+    'the call fails: object ends after a comma',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '{"a" 1}' }],
+    'the call fails: missing colon',
+  ),
+  winList(
+    {},
+    [
+      {
+        file: 'powershell.exe',
+        args: PSARGS(WINDOWS_LIST_SCRIPT),
+        code: 0,
+        stdout: '{"a":1 "b":2}',
+      },
+    ],
+    'the call fails: missing comma in an object',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '01' }],
+    'the call fails: leading zero',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '[-]' }],
+    'the call fails: minus alone',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '[1.]' }],
+    'the call fails: fraction without digits',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '[1e+]' }],
+    'the call fails: exponent without digits',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '"abc' }],
+    'the call fails: unterminated string',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '["a\\x"]' }],
+    'the call fails: bad escape',
+  ),
+  winList(
+    {},
+    [
+      {
+        file: 'powershell.exe',
+        args: PSARGS(WINDOWS_LIST_SCRIPT),
+        code: 0,
+        stdout: '["a\\u12G4"]',
+      },
+    ],
+    'the call fails: bad unicode escape',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '[tru' }],
+    'the call fails: cut literal',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '[trux]' }],
+    'the call fails: wrong literal',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '[fals1]' }],
+    'the call fails: a digit in a literal',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '[1] x' }],
+    'the call fails: text after the value',
+  ),
+  winList(
+    {},
+    [
+      {
+        file: 'powershell.exe',
+        args: PSARGS(WINDOWS_LIST_SCRIPT),
+        code: 0,
+        stdout: '[\r\n\r\n 1 x',
+      },
+    ],
+    'the call fails: line and column after CRLF',
+  ),
+  winList(
+    {},
+    [
+      {
+        file: 'powershell.exe',
+        args: PSARGS(WINDOWS_LIST_SCRIPT),
+        code: 0,
+        stdout: 'this is not json at all really',
+      },
+    ],
+    'the call fails: long source, error at the start',
+  ),
+  winList(
+    {},
+    [
+      {
+        file: 'powershell.exe',
+        args: PSARGS(WINDOWS_LIST_SCRIPT),
+        code: 0,
+        stdout: '[1,2,3,4,5,6,7,8,9,10,11,12,x,13,14,15,16,17,18,19]',
+      },
+    ],
+    'the call fails: long source, error in the middle',
+  ),
+  winList(
+    {},
+    [
+      {
+        file: 'powershell.exe',
+        args: PSARGS(WINDOWS_LIST_SCRIPT),
+        code: 0,
+        stdout: '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,x]',
+      },
+    ],
+    'the call fails: long source, error near the end',
+  ),
+  winList(
+    {},
+    [
+      {
+        file: 'powershell.exe',
+        args: PSARGS(WINDOWS_LIST_SCRIPT),
+        code: 0,
+        stdout: '[1,2,3,4,5,6,7,8,9,10,x]',
+      },
+    ],
+    'the call fails: source of 21 characters',
+  ),
+  winList(
+    {},
+    [
+      {
+        file: 'powershell.exe',
+        args: PSARGS(WINDOWS_LIST_SCRIPT),
+        code: 0,
+        stdout: '[1,2,3,4,5,6,7,8,9,x]',
+      },
+    ],
+    'the call fails: source of 20 characters',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: 'undefined' }],
+    'the call fails: undefined',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: 'NaN' }],
+    'the call fails: NaN',
+  ),
+  winList(
+    {},
+    [{ file: 'powershell.exe', args: PSARGS(WINDOWS_LIST_SCRIPT), code: 0, stdout: '["\\\\' }],
+    'the call fails: cut escape',
   ),
 ]
 
@@ -3102,11 +3609,16 @@ async function ocrOf(a: unknown[]) {
   const spec = a[0] as { resources: string | null; png: string }
   const saved = resources.get()
   resources.set(spec.resources)
+  // a copy of ocr.ts next to the original: the module keeps its engine in a variable, so every
+  // case needs a module of its own (a query on the import does not make tsx load it again)
+  const copy = join(mainDir, `ocr-b4pdf-${process.pid}-${++imports}.ts`)
+  copyFileSync(join(mainDir, 'ocr.ts'), copy)
   try {
-    const mod = await import(`${pathToFileURL(join(mainDir, 'ocr.ts')).href}?run=${++imports}`)
+    const mod = await import(pathToFileURL(copy).href)
     return await mod.ocrPagePng(spec.png)
   } finally {
     resources.set(saved ?? null)
+    rmSync(copy, { force: true })
   }
 }
 
@@ -3296,7 +3808,7 @@ function scriptedEnv(
     )
     args.forEach((a, i) => {
       if ((a === '-f' || a === '-w' || a === '-k') && args[i + 1] !== undefined) {
-        let content = ''
+        let content: string
         try {
           content = readFileSync(args[i + 1]!, 'utf8')
         } catch {
@@ -3453,12 +3965,12 @@ export const group: Group = {
     cases: truetypeCases,
   },
   'font-locate.findSystemFont': {
-    ts: (a) => bytesInfo(findSystemFont(a[0] as string, a[1] as string)),
-    cases: locateCases,
+    ts: (a) => inFontHome(() => bytesInfo(findSystemFont(a[0] as string, a[1] as string))),
+    cases: withFontHome(locateCases),
   },
   'font-locate.findFontCovering': {
-    ts: (a) => bytesInfo(findFontCovering(a[0] as string)),
-    cases: coveringCases,
+    ts: (a) => inFontHome(() => bytesInfo(findFontCovering(a[0] as string))),
+    cases: withFontHome(coveringCases),
   },
   'font-similar.os2Traits': {
     ts: (a) => os2Traits(a[0] === null ? null : Buffer.from(a[0] as string, 'hex')),
@@ -3474,10 +3986,12 @@ export const group: Group = {
   },
   'font-similar.similarFontFor': {
     ts: (a) => {
-      const found = similarFontFor(
-        face(a[0] as ReturnType<typeof faceSpec>),
-        a[1] as string,
-        a[2] ? { italic: true } : {},
+      const found = inFontHome(() =>
+        similarFontFor(
+          face(a[0] as ReturnType<typeof faceSpec>),
+          a[1] as string,
+          a[2] ? { italic: true } : {},
+        ),
       )
       return found
         ? {
@@ -3488,7 +4002,7 @@ export const group: Group = {
           }
         : null
     },
-    cases: similarCases,
+    cases: withFontHome(similarCases),
   },
   'font-subset.identityCffCharset': {
     ts: (a) => Buffer.from(identityCffCharset(Buffer.from(a[0] as string, 'hex'))).toString('hex'),
@@ -3632,7 +4146,7 @@ export const group: Group = {
           der: r.der.toString('hex'),
         }))
       } catch (error) {
-        if (error instanceof SyntaxError) return { syntaxError: true }
+        if (error instanceof SyntaxError) return { syntaxError: error.message }
         throw error
       }
     },
@@ -3643,7 +4157,7 @@ export const group: Group = {
       try {
         return parseWindowsChain(a[0] as string).map((b) => b.toString('hex'))
       } catch (error) {
-        if (error instanceof SyntaxError) return { syntaxError: true }
+        if (error instanceof SyntaxError) return { syntaxError: error.message }
         throw error
       }
     },
