@@ -87,6 +87,11 @@ const PPR_CHANGES = [
     `<w:pPr><w:pPrChange${at('61')}><w:pPr/></w:pPrChange><w:jc w:val="center"/><w:rPr><w:ins${at('62')}/></w:rPr></w:pPr>`,
   ),
   para(run('p'), `<w:pPr><w:jc w:val="center"/><w:pPrChange${at('63')}/></w:pPr>`),
+  // the record first in its holder: the restored properties and the record's removal share a start
+  para(
+    run('p'),
+    `<w:pPr><w:pPrChange${at('64')}><w:pPr><w:jc w:val="center"/></w:pPr></w:pPrChange></w:pPr>`,
+  ),
 ]
 
 const SECT_CHANGE =
@@ -155,6 +160,13 @@ const MOVE_EDGES = [
   `<w:moveFromRangeStart w:id="3"></w:moveFromRangeStart>${para(DEL)}<w:moveFromRangeEnd/>`,
 ]
 
+/** non-ASCII text before a delText that reject mode renames: code units and bytes part there */
+const BEFORE_DEL_TEXT = [
+  doc(para(run('한글')) + para(DEL)),
+  doc(para(run('😀')) + para(DEL)),
+  doc(para(run('한 😀')) + para(`<w:del${at('110')}><w:r><w:delText>x</w:r></w:del>`)),
+]
+
 const XMLS: string[] = [
   doc(para(INS + run('old')) + para(DEL)),
   doc(MOVE),
@@ -169,6 +181,7 @@ const XMLS: string[] = [
   ...NESTED.map(doc),
   ...ODD,
   ...MOVE_EDGES,
+  ...BEFORE_DEL_TEXT,
 ]
 
 const MODES: unknown[] = ['accept', 'reject', '', 'other', 5]
@@ -243,6 +256,14 @@ const FILTERS: unknown[] = [
   { author: 5, type: 'move' },
 ]
 
+/** a range whose start a filter takes and whose end it does not: the end goes with its start */
+const SHARED_START_ID = doc(
+  `<w:moveFromRangeStart${at('7', 'kim', '2023-01-01T00:00:00Z')} w:name="a"/>` +
+    `<w:moveFromRangeStart${at('7', 'lee', '2025-01-01T00:00:00Z')} w:name="b"/>` +
+    para(INS) +
+    `<w:moveFromRangeEnd w:id="7"/>`,
+)
+
 /** an author type error is reached only when a revision is consulted */
 const UNCONSULTED = ['', 'plain', `<w:moveFromRangeEnd w:id="1"/>`, `<!-- <w:ins/> -->`]
 
@@ -252,6 +273,13 @@ const APPLY_INPUTS: Input[] = [
     ['accept', 'reject'].map((mode) => ({ text: DATED, args: { mode, filter } })),
   ),
   ...UNCONSULTED.map((text) => ({ text, args: { mode: 'accept', filter: { author: 5, ids: 5 } } })),
+  ...[
+    { author: 'kim' },
+    { before: '2024-01-01T00:00:00Z' },
+    { date: '2023-01-01T00:00:00Z' },
+  ].flatMap((filter) =>
+    ['accept', 'reject'].map((mode) => ({ text: SHARED_START_ID, args: { mode, filter } })),
+  ),
   // local time: the answer depends on the zone of the host
   {
     text: para(`<w:ins${at('1', 'kim', '2024-01-01T08:00:00')}>${run('a')}</w:ins>`),

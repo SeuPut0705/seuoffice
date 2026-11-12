@@ -226,6 +226,14 @@ const STYLES_BODY = [
     'toc 7',
   ),
   style('paragraph', 'TOC8', `<w:pPr>${tabs(stop('right', '0', 'dot'))}</w:pPr>`, '', 'toc 8'),
+  // a right stop at a negative position: a paragraph of this style gets no right tab position
+  style(
+    'paragraph',
+    'TocNegative',
+    `<w:pPr>${tabs(stop('right', '-720', 'dot'))}</w:pPr>`,
+    '',
+    'toc 4',
+  ),
   style(
     'paragraph',
     'TOC9',
@@ -688,6 +696,9 @@ const PARAS: string[] = [
   '<w:p><w:pPr><w:pStyle w:val="TOC1"/>' + t('no pPr end') + TAB + t('5'),
 ]
 
+/** The style's only right stop at a negative position (TOC8's at 0 drops later anyway); rich package only. */
+const NEGATIVE_STOP = entry('TocNegative', 'Negative style stop')
+
 const COMPAT_ADDITIVE = { doNotUseHTMLParagraphAutoSpacing: true }
 
 /** Every paragraph over the rich package; then without a resolver, without styles, both, and over the other packages. */
@@ -705,6 +716,8 @@ function built(): Input[] {
   })
   inputs.push({ text: PARAS[0]!, args: { parts: THROWS } })
   inputs.push({ text: PARAS[0]!, args: { parts: THROWS, resolver: false } })
+  for (const args of [{}, { resolver: false }, { styles: false }])
+    inputs.push({ text: NEGATIVE_STOP, args: { parts: RICH, ...args } })
   return inputs
 }
 
