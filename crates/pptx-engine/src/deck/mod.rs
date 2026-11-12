@@ -108,7 +108,6 @@ thread_local! {
     static UUID_OVERRIDE: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
-
 /// Runs `run` with `random_uuid` answering `uuid` (the gate stubs
 /// `crypto.randomUUID` on the TypeScript side the same way).
 pub fn with_uuid<T>(uuid: &str, run: impl FnOnce() -> T) -> T {

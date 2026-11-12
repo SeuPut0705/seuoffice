@@ -13,8 +13,8 @@ mod map;
 mod math;
 mod number;
 mod object;
-mod regex;
 mod random;
+mod regex;
 mod replace;
 mod search;
 mod sort;
@@ -40,11 +40,11 @@ pub use number::{
     to_string_radix16,
 };
 pub use object::{JsObject, Slot, array_index, camel, camel_len};
+pub use random::{math_random, random_uuid};
 pub use regex::{
     BACKTRACK_LIMIT, JsMatch, JsMatches, JsRegex, RegexError, RegexLimit, RegexSyntaxError,
     TryJsRegex,
 };
-pub use random::{math_random, random_uuid};
 pub use replace::{
     get_substitution, replace_first, replace_first_string, slice_utf16, string_less_than,
 };

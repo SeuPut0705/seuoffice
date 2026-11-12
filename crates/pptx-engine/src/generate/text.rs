@@ -1,7 +1,6 @@
 //! Text half of generate.ts: surgical patches of runs and paragraphs, and the
 //! rebuild path that regenerates a `<p:txBody>`.
 
-
 use jscompat::{
     JsNum, JsRegex, index_of, js_regex, last_index_of, number_truthy, prefix_utf16,
     replace_first_with, try_js_regex,
