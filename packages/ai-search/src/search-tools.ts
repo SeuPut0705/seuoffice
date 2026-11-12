@@ -77,6 +77,12 @@ export function imageSearchTool(settingsPath: string, query: string, maxResults 
   return imageSearch(query, maxResults, searchOptionsFromSettings(readAiSettingsFile(settingsPath)))
 }
 
+/**
+ * A word every backend has results for. It goes to the provider as a search, and to the
+ * services the chain falls back to when the provider does not answer, so it names no product.
+ */
+const KEY_TEST_QUERY = 'weather'
+
 /** settings-UI test: the selected backend (keyed or free) must answer one minimal query. */
 export async function testSearchProvider(
   provider: AiSearchProviderId,
@@ -96,7 +102,7 @@ export async function testSearchProvider(
     keenableKey: provider === 'keenable' ? apiKey : '',
     prefer: provider,
   }
-  const r = await webSearch('GenOffice', 1, options)
+  const r = await webSearch(KEY_TEST_QUERY, 1, options)
   if (r.method === provider) return { ok: true }
   return {
     ok: false,

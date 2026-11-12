@@ -9,6 +9,7 @@
  * Without any key that leaves the free route: Parallel's Search MCP, then DuckDuckGo.
  */
 
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import {
   asRecord,
   isCopyrightHost,
@@ -17,6 +18,9 @@ import {
   type WebSearchResult,
 } from './shared'
 import { parallelMcpSearch } from './parallel-mcp'
+
+/** How this app names itself in a User-Agent header; search services log it. */
+const USER_AGENT = PRODUCT_NAME.toLowerCase()
 
 export type { ImageSearchResult, WebSearchResult } from './shared'
 export * from './media-tools'
@@ -155,7 +159,7 @@ async function serperWebSearch(
 }
 
 /** Serply's Google results API authenticates with X-Api-Key on a GET query string. */
-const SERPLY_HEADERS = (key: string) => ({ 'X-Api-Key': key, 'User-Agent': 'genoffice' })
+const SERPLY_HEADERS = (key: string) => ({ 'X-Api-Key': key, 'User-Agent': USER_AGENT })
 
 /** Serply Google web search; null when the key is empty, the call fails, or nothing comes back */
 async function serplyWebSearch(
@@ -195,7 +199,7 @@ async function serplyWebSearch(
 /** SearchApi's Google results API authenticates with a Bearer token on a GET query string. */
 const SEARCHAPI_HEADERS = (key: string) => ({
   Authorization: `Bearer ${key}`,
-  'User-Agent': 'genoffice',
+  'User-Agent': USER_AGENT,
 })
 
 /**
@@ -436,7 +440,7 @@ async function firecrawlWebSearch(
 }
 
 /** The keyless endpoint identifies the calling app by this header instead of a key. */
-const KEENABLE_TITLE = 'GenOffice'
+const KEENABLE_TITLE = PRODUCT_NAME
 const KEENABLE_SNIPPET_CHARS = 500
 
 /**

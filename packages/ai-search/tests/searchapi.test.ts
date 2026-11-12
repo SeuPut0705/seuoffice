@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultAiSettings } from '@genoffice/ai-provider'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import { imageSearch, webSearch } from '../src/index'
 import { searchOptionsFromSettings, testSearchProvider } from '../src/search-tools'
 
@@ -82,7 +83,7 @@ describe('SearchApi web search', () => {
     expect(init?.method).toBeUndefined()
     expect(init?.headers).toEqual({
       Authorization: 'Bearer user-key',
-      'User-Agent': 'genoffice',
+      'User-Agent': PRODUCT_NAME.toLowerCase(),
     })
   })
 
