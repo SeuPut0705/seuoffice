@@ -687,6 +687,13 @@ const desktopApi: DesktopApi = {
     }
     return result
   },
+  async refuseWithheldCsv() {
+    const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.csvWithheldRefusal)
+    if (result !== 'xlsx' && result !== 'cancel') {
+      throw new Error('Invalid CSV refusal response.')
+    }
+    return result
+  },
   async createDocument(request) {
     if (
       !isRecord(request) ||

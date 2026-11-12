@@ -376,7 +376,9 @@ const tMain = createI18n({
     odsLossShapes: 'Shapes and text boxes: {count}',
     odsLossSlicers: 'Slicers: {count}',
     odsLossSparklines: 'Sparklines: {count}',
-    odsLossRedactions: 'Hide-from-AI marks (the cells stay, no longer hidden): {count}',
+    withheldExportMsg: "A copy as {format} can't keep the cells hidden from the AI",
+    withheldExportDetail:
+      '{format} has nowhere to record which cells are hidden from the AI, so the copy would hand those cells to anyone who opens it, an AI included. Nothing was written.\n\nSave the workbook as .xlsx instead, which keeps the marks, or stop hiding the cells first (right-click a hidden cell and choose “Hide the selection from AI” again).',
     odsContinueBtn: 'Continue',
     errOdsExportFailed: 'The ODS export failed: {message}',
     errOdsReopenFailed:
@@ -467,7 +469,9 @@ const tMain = createI18n({
     odsLossShapes: '도형·글상자: {count}',
     odsLossSlicers: '슬라이서: {count}',
     odsLossSparklines: '스파크라인: {count}',
-    odsLossRedactions: 'AI에서 숨김 표시 (셀은 남고 더 이상 숨겨지지 않음): {count}',
+    withheldExportMsg: '{format} 사본에는 AI에서 숨긴 셀의 표시를 담을 수 없습니다',
+    withheldExportDetail:
+      '{format}에는 AI에서 숨긴 셀을 기록할 곳이 없어, 사본을 여는 누구에게나(AI 포함) 그 셀이 그대로 보입니다. 아무것도 저장하지 않았습니다.\n\n표시가 유지되는 .xlsx로 저장하거나, 먼저 숨긴 셀의 숨김을 해제해 주세요 (숨긴 셀을 오른쪽 클릭해 ‘선택한 부분을 AI에서 숨기기’를 한 번 더 선택).',
     odsContinueBtn: '계속',
     errOdsExportFailed: 'ODS 내보내기에 실패했습니다: {message}',
     errOdsReopenFailed: '내보낸 ODS 파일을 다시 열지 못해 지웠습니다. 워크북은 그대로입니다.',
@@ -923,7 +927,6 @@ const ODS_LOSS_LABELS: Record<OdsLossKind, Parameters<typeof tMain>[1]> = {
   shapes: 'odsLossShapes',
   slicers: 'odsLossSlicers',
   sparklines: 'odsLossSparklines',
-  redactions: 'odsLossRedactions',
 }
 
 /** One warning listing only what this workbook actually loses, then Continue/Cancel. */
@@ -951,6 +954,31 @@ async function confirmOdsLoss(
       ? await dialog.showMessageBox(parent, options)
       : await dialog.showMessageBox(options)
   return response === 0
+}
+
+/**
+ * A copy format that cannot keep the marks hiding cells from the AI is refused
+ * before anything is written. The person chooses the native format, which
+ * keeps them, or Cancel and clears the marks first.
+ */
+async function askWithheldExport(
+  parent: BrowserWindow | undefined,
+  format: 'ODS' | 'CSV',
+): Promise<'xlsx' | 'cancel'> {
+  const options = {
+    type: 'warning' as const,
+    message: tm('withheldExportMsg', { format }),
+    detail: tm('withheldExportDetail', { format }),
+    buttons: [tm('csvKeepXlsxBtn'), tm('btnCancel')],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true,
+  }
+  const { response } =
+    parent && !parent.isDestroyed()
+      ? await dialog.showMessageBox(parent, options)
+      : await dialog.showMessageBox(options)
+  return response === 0 ? 'xlsx' : 'cancel'
 }
 
 async function showOdsMessage(
@@ -3374,6 +3402,14 @@ export function registerSheetsIpc(): void {
     if (outcome.status === 'exported') {
       return { canceled: false, path: outcome.path, ...outcome.result }
     }
+    if (outcome.status === 'redacted') {
+      const choice = await askWithheldExport(parent, 'ODS')
+      return {
+        canceled: true,
+        reason: 'redacted',
+        ...(choice === 'xlsx' ? { saveAsXlsxInstead: true } : {}),
+      }
+    }
     if (outcome.status === 'unreadable') {
       await showOdsMessage(parent, 'error', tm('errOdsReopenFailed'))
       return { canceled: true, reason: 'unreadable' }
@@ -3434,6 +3470,11 @@ export function registerSheetsIpc(): void {
 
   // First Save of a CSV session: Excel's "keep this format?" question. The
   // renderer remembers the answer for the file, so it is asked once.
+  ipcMain.handle(IPC_CHANNELS.csvWithheldRefusal, async (event) => {
+    sessionFor(event)
+    return askWithheldExport(dialogParent(event), 'CSV')
+  })
+
   ipcMain.handle(IPC_CHANNELS.csvSaveConfirm, async (event) => {
     sessionFor(event)
     const options = {

@@ -30,10 +30,12 @@ import {
 import {
   activeCsvSheet,
   cellPatternLookup,
+  csvWouldExposeWithheld,
   handleExportCsv,
   serializeActiveSheetCsv,
 } from './csv-export'
 import type { CellScalar, CellState } from '@seuoffice/xlsx-gateway/domain/workbook.types'
+import { NO_REDACTIONS, type RedactionIndex } from './ai/redact'
 import type { SheetRedactionState } from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 /// The slicerState member of a save request (zod: non-strict object shape).
 type WorkbookSlicerSaveState = NonNullable<WorkbookSaveRequest['slicerState']>
@@ -80,6 +82,13 @@ export interface SaveContext {
    * claiming nothing is hidden.
    */
   redactionStates?: () => readonly SheetRedactionState[] | null
+  /**
+   * The cells the reader withheld from the model, as the grid sees them now.
+   * A CSV copy or a CSV session's own save cannot keep a mark, so one that
+   * would write a withheld cell is refused. Absent = nothing is withheld
+   * (a test context); the app always supplies it.
+   */
+  redactions?: () => RedactionIndex
   /**
    * Slicer panels to persist as OOXML parts on this save, null when the
    * session changed nothing slicer-related (any file parts stay
@@ -723,6 +732,21 @@ export async function handleSave(
     }
     const active = activeCsvSheet(ctx.univerRef.current)
     const runtime = ctx.univerRef.current
+    // The CSV records no mark: a withheld cell on the sheet is not written
+    if (
+      active !== null &&
+      csvWouldExposeWithheld(
+        ctx.redactions?.() ?? NO_REDACTIONS,
+        active.sheet.getSheetId(),
+        active.sheet.getSheetName(),
+      )
+    ) {
+      if ((await window.desktopApi.refuseWithheldCsv()) === 'xlsx') {
+        return await handleSave(ctx, 'save-as', quiet, explicitTarget)
+      }
+      ctx.setMessage(t('appSaveCanceled'))
+      return { ok: false }
+    }
     const serialized =
       active === null || runtime === null
         ? null
@@ -902,6 +926,7 @@ export async function handleSave(
             lazyWorkbookRef: ctx.lazyWorkbookRef,
             setMessage: ctx.setMessage,
             requestSaveAs: () => void handleSave(ctx, 'save-as', quiet),
+            redactions: ctx.redactions ?? (() => NO_REDACTIONS),
           },
           result.csvSaveAsPath,
         )

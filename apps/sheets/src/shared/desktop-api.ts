@@ -3334,7 +3334,13 @@ export const workbookExportOdsResultSchema = z.union([
       canceled: z.literal(true),
       /// Why nothing was written, so the renderer can stay quiet when the
       /// main process already showed a dialog.
-      reason: z.enum(['canceled', 'encrypted', 'original', 'failed', 'unreadable']).optional(),
+      reason: z
+        .enum(['canceled', 'encrypted', 'original', 'failed', 'unreadable', 'redacted'])
+        .optional(),
+      /// The workbook hides cells from the AI, ODS cannot keep that, and the
+      /// user chose "Save as .xlsx" in the refusal: the renderer routes into
+      /// the regular Save As flow.
+      saveAsXlsxInstead: z.boolean().optional(),
     })
     .strict(),
   z
@@ -3605,6 +3611,9 @@ export interface DesktopApi {
   exportOds(request: WorkbookExportOdsRequest): Promise<WorkbookExportOdsResult>
   /// First Save of a CSV session: native "keep this format?" dialog.
   confirmCsvSave(): Promise<'csv' | 'xlsx' | 'cancel'>
+  /// A CSV copy of a workbook that hides cells from the AI cannot keep the
+  /// marks: native dialog offering Save as .xlsx (or Cancel). Nothing is written.
+  refuseWithheldCsv(): Promise<'xlsx' | 'cancel'>
   /// AI create_document: write a new standalone file into the default save
   /// folder (no dialog) and open it in a new tab.
   createDocument(request: WorkbookCreateDocumentRequest): Promise<WorkbookCreateDocumentResult>

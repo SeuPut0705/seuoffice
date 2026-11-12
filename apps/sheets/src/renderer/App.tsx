@@ -1459,6 +1459,7 @@ export function App({
       lazyWorkbookRef,
       setMessage,
       requestSaveAs: () => void handleSaveRef.current('save-as'),
+      redactions: currentRedactions,
     }
   }
 
@@ -1467,6 +1468,7 @@ export function App({
       lazyWorkbookRef,
       setMessage,
       pendingEdits: async () => (await handleSaveRef.current('ods')).request ?? null,
+      requestSaveAs: () => void handleSaveRef.current('save-as'),
     }
   }
 
@@ -1494,6 +1496,7 @@ export function App({
       // would wipe the withheld-cell marks the file already carries.
       redactionStates: () =>
         loadedRedactionStatesRef.current === null ? null : redactionStatesRef.current,
+      redactions: currentRedactions,
       slicerState: () => {
         // Only a session that changed its slicers rides them on the save:
         // untouched panels keep their parts byte-identical (raw-copied), and
