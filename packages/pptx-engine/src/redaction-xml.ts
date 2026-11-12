@@ -94,11 +94,16 @@ export function syncRedactExt(xml: string, tag: string, label?: string): string 
   return xml.slice(0, open.index) + next + xml.slice(open.index + open[0].length)
 }
 
-/** One `<a:ext>` matching our URI, or null. */
+/**
+ * One `<a:ext>` matching our URI among the node's own extension lists, or null. A node should
+ * hold one list; a deck that holds two parses as an array, and reading it as a single node
+ * would miss a mark in either and hand the words to the model.
+ */
 function ourExt(extLst: unknown): XmlNode | null {
-  for (const ext of xmlArray(asXmlNode(extLst)['a:ext'])) {
-    const uri = ext['@_uri']
-    if (uri === REDACT_EXT_URI) return ext
+  for (const list of xmlArray(extLst)) {
+    for (const ext of xmlArray(list['a:ext'])) {
+      if (ext['@_uri'] === REDACT_EXT_URI) return ext
+    }
   }
   return null
 }
@@ -191,18 +196,33 @@ export function setRedactExt(propsXml: string, label: string): string {
   )
 }
 
-/** Replace our extension inside an existing `<a:extLst>`, or add one to the inner XML. */
+/**
+ * The node's inner XML with the mark in the node's OWN extension list, replacing any mark already
+ * in the node.
+ *
+ * The own list is the node's last child (both schemas put extLst last), and it is the only one
+ * the reader looks in. A list earlier in the node belongs to a child: PowerPoint gives
+ * <a:hlinkClick> one for the hyperlink colour, and an outline can carry one. Taking "the first
+ * extLst in the node" put the mark there, where it was written and never read back, so the words
+ * stopped being withheld once the deck was reopened.
+ */
 function spliceExtLst(inner: string, ext: string): string {
-  const list = /<a:extLst\b[^>]*?(?:\/>|>[\s\S]*?<\/a:extLst>)/.exec(inner)
-  // extLst is the last child both schemas allow here — prepending it before
-  // a:solidFill/a:latin/a:xfrm is a strict-validation failure
-  if (!list) return `${inner}<a:extLst>${ext}</a:extLst>`
-  const kept = list[0].replace(OUR_EXT_RE, '')
-  // our own extension goes last so a re-apply replaces rather than appends. A function, not a
-  // string: `ext` carries the label the user typed, and a replacement string would expand a
-  // `$&` or `$$` in it
-  const next = kept.includes('</a:extLst>')
-    ? kept.replace('</a:extLst>', () => `${ext}</a:extLst>`)
-    : kept.replace(/\/>$/, () => `>${ext}</a:extLst>`)
-  return inner.slice(0, list.index) + next + inner.slice(list.index + list[0].length)
+  // a mark already in the node goes first, wherever it sits, so a re-apply replaces it
+  const kept = inner.replace(OUR_EXT_RE, '')
+  const body = kept.trimEnd()
+  const tail = kept.slice(body.length)
+  // the last thing in the node closes its last child, so a list ending here is the node's own
+  const close = '</a:extLst>'
+  if (body.endsWith(close)) {
+    const at = body.length - close.length
+    return body.slice(0, at) + ext + close + tail
+  }
+  const selfClosing = /<a:extLst\b[^>]*\/>$/.exec(body)
+  if (selfClosing) {
+    const head = selfClosing[0].slice(0, -2)
+    return `${body.slice(0, selfClosing.index)}${head}>${ext}${close}${tail}`
+  }
+  // no list of its own: extLst is the last child both schemas allow here — prepending it
+  // before a:solidFill/a:latin/a:xfrm is a strict-validation failure
+  return `${kept}<a:extLst>${ext}${close}`
 }
