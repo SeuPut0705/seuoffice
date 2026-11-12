@@ -238,8 +238,8 @@ function redrawDeck(redraw: Redraw): void {
 async function joinSlidesCollab(doc: WebDocument): Promise<void> {
   let renderer: SlidesCollabHandles | null = null
   const page = await joinPageCollab<SlidesCollabHandles, SlidesOp>({
-    // 2: ids the engine mints while an edit applies come from the edit, field ids included
-    format: { name: 'pptx', schema: 2 },
+    // 3: rebuilt runs preserve language tags, and newly authored Hangul is tagged ko-KR
+    format: { name: 'pptx', schema: 3 },
     fileName: doc.fileName,
     bytes: doc.bytes,
     // the renderer's own save flow: an open text edit and notes are committed, then the session saves
