@@ -48,6 +48,16 @@
 - `.hwp`는 엔진이 쓴 파일을 다시 읽어 쪽 수가 같을 때만 쓴다(한글 편집기의 `.hwp` 저장 규칙). 다르면 파일을 쓰지 않고 종료 코드 3, `error: "conversion_failed"`, `detail.reason: "hwp-readback"`, `--to hwpx`로 다시 하라는 `suggestion`으로 답한다.
 - 워드 문서로 읽히지 않는 파일(zip이 아닌 파일, 깨진 파일)은 종료 코드 3, `conversion_failed`, `detail.reason: "not-docx"`다. 엔진이 WebAssembly 메모리를 만들지 못하면 다른 WebAssembly 명령처럼 종료 코드 3, `resource_limit`이다.
 
+**옛 한글 문서(`.hwp`·`.hwpx` → `.docx`).**
+
+- `convert <file.hwp|.hwpx> --to docx [--out <경로>] [--force]`는 앱을 띄우지 않고 명령 안에서 바꾼다. 바꾸며 빠진 것은 `detail.dropped`에 적는다. 변환이 실패하면 종료 코드 3이고 `detail.reason`에 변환기의 이유 코드가 온다.
+
+**프레젠테이션(`.odp`·`.otp`·`.ppt` → `.pptx`).**
+
+- `convert <file.odp|.otp|.ppt> --to pptx [--out <경로>] [--force]`다. `.odp`·`.otp`는 `detail.slides`와 `detail.dropped`를 준다.
+- `.ppt`는 1단계 변환이다. 슬라이드 순서대로 글상자의 글과 슬라이드 크기만 옮긴다. 도형 자리와 글꼴 서식, 그림, 마스터, 발표자 노트는 옮기지 않는다(`packages/ppt2pptx/README.md`). 이 제한은 명령과 MCP `convert` 모두에 적용된다.
+- 입력과 같은 경로로 쓰려 하면 종료 코드 1, `reason: "invalid_argument"`다. 지원하지 않는 짝은 종료 코드 1, `reason: "unsupported"`이고 `detail.supported`에 그 원본이 바꿀 수 있는 형식 목록이 온다.
+
 **엑셀 외부 연결(`sheet links`).**
 
 - `sheet links <file.xlsx>`는 수식이 `[n]`으로 가리키는 다른 통합 문서 목록을 읽기만 한다. `detail.links[]`의 `index`가 수식의 `[n]`, `source`가 푼 경로, `reachable`이 그 파일이 있는지다.
@@ -269,6 +279,7 @@ draw.io 다이어그램(`.drawio`, `.dio`, `.drawio.svg`, `.drawio.png`)을 읽�
 
 - 설정 → 연동에서 켠다. 기본은 꺼짐이다. 기본 포트는 3093이고 이 PC(`127.0.0.1`)에서만 닿는다. 인증은 없고, 요청의 Host·Origin이 이 PC의 것이 아니면 거절한다.
 - 도구: `get_app_info`, `open_documents`, `open_in_genoffice`(이 이름은 예전 철자를 유지한다), `create_session`, `save_session`, `read_document`, `read_docx`, `read_sheet`, `read_deck`, `read_pdf`, `create_docx`, `create_xlsx`, `create_pptx`, `apply_ops`, `apply_sheet_ops`, `apply_slide_ops`, `insert_content`, `replace_blocks`, `insert_picture`, `read_diagram`, `apply_diagram_ops`.
+- `fill_template`·`convert_document`은 설정 → 연동의 "백그라운드 생성"을 켰을 때만 등록된다. `fill_template`은 `.docx`·`.pptx`·`.xlsx` 서식에 `data`를 채워 새 파일을 쓰고, `convert_document`는 `path`를 `to` 형식으로 바꾼 파일을 쓴다(입력 파일은 바꾸지 않는다). `check_document`(`.docx`·`.odt`, 읽기만)와 `read_docx_properties`(`.docx`, 읽기만)는 항상 등록된다.
 - `insert_picture`는 열린 워드 탭에 그림을 넣는다(원본 genoffice#2267). 앱 안 AI의 같은 이름 도구를 그대로 거치므로 그림 주소는 http(s)와 `data:image/`만 받고, http(s) 주소면 앱이 그 주소에서 그림을 받아 온다. 에이전트 모드의 세션 서버에는 없다.
 - 열린 ODT 탭은 워드 문서로 다룬다(`open_documents`의 `format`이 `odt`). `read_docx`는 `.odt` 파일도 읽는다. `save_session`은 탭의 형식으로만 저장한다. 다른 확장자의 경로를 주면 거절하고 `ieumoffice convert`를 쓰라고 안내한다. 대화 상자가 없는 경로에서 형식이 조용히 바뀌지 않게 하기 위해서다.
 - 에이전트 설정에 넣는 항목 이름은 `ieumoffice-editor`다. 명령어 쪽 서버의 `ieumoffice`와 겹치지 않는다.
