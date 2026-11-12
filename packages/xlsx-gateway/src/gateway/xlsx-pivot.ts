@@ -210,9 +210,15 @@ export function parsePivotDefinition(
   if (!worksheetSource) {
     unsupported.push('the data source is not a worksheet range (external/consolidated source)')
   }
-  const sourceSheet = decodeEntities(attr(worksheetSource ?? '', 'sheet') ?? '')
-  const sourceRef = attr(worksheetSource ?? '', 'ref') ?? ''
-  if (worksheetSource && (!sourceSheet || !sourceRef)) {
+  // A relationship on the source means the sheet and range are those of
+  // another workbook. This one may hold a sheet of the same name: refreshing
+  // from it, or reading it as the pivot's source, would be wrong data.
+  const external = /\s[\w.-]+:id="/.test(worksheetSource ?? '')
+  const sourceSheet = external ? '' : decodeEntities(attr(worksheetSource ?? '', 'sheet') ?? '')
+  const sourceRef = external ? '' : (attr(worksheetSource ?? '', 'ref') ?? '')
+  if (external) {
+    unsupported.push('the data source is a range of another workbook')
+  } else if (worksheetSource && (!sourceSheet || !sourceRef)) {
     unsupported.push('the data source uses a defined name, recompute not supported yet')
   }
 
