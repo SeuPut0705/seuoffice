@@ -6,7 +6,9 @@ decompression half of [libeot](https://github.com/umanwizard/libeot) (Brennan
 T. Vincent, MPL-2.0; see `LICENSE`). libeot relicensed Monotype's original MTX
 reference code under the MPL and relies on the royalty-free patent grants
 Microsoft and Monotype attached to the
-[W3C EOT submission](http://www.w3.org/Submission/2008/01/).
+[W3C EOT submission](http://www.w3.org/Submission/2008/01/). `PATENTS`, which libeot's `LICENSE` asks the reader to read,
+is copied verbatim from libeot's repository root at commit
+`4e52d8b4a05f63d8c2059b0a4a3f11a44fbc6c5e` (git blob `6fafe00d3a3c`).
 
 This crate is under the Mozilla Public License 2.0, file by file, and is a
 crate of its own so that the boundary shows: the rest of the workspace is
