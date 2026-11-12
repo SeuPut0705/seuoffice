@@ -8,7 +8,7 @@ import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import { CompoundFileError } from '@genoffice/compound-file'
 import { DOC_INFO, openHwp, sectionCount, streamOf } from '../src/main/hwp5-file'
-import { hasTrackedChanges, withoutTrackedChanges } from '../src/main/tracked-changes'
+import { trackedChangesOf, withoutTrackedChanges } from '../src/main/tracked-changes'
 import {
   HOSTILE_FILES,
   REFUSAL_MS,
@@ -30,10 +30,10 @@ describe('a hostile compound file under an .hwp name', () => {
       expect((thrown as CompoundFileError).code).toBe(code)
     })
 
-    it(`${what}: it is taken to have no tracked changes, quickly`, () => {
+    it(`${what}: whether it has tracked changes is unknown, not "none", quickly`, () => {
       const bytes = build()
       const started = performance.now()
-      expect(hasTrackedChanges(bytes)).toBe(false)
+      expect(trackedChangesOf(bytes)).toBe('unreadable')
       expect(withoutTrackedChanges(bytes)).toBeNull()
       expect(performance.now() - started).toBeLessThan(REFUSAL_MS)
     })
@@ -47,7 +47,7 @@ describe('a sound file', () => {
     expect(opened).not.toBeNull()
     expect(sectionCount(opened!)).toBeGreaterThan(0)
     expect(streamOf(opened!, DOC_INFO)?.length).toBeGreaterThan(0)
-    expect(hasTrackedChanges(file)).toBe(false)
+    expect(trackedChangesOf(file)).toBe('none')
   })
 
   it('that is a zip (an HWPX) is not an HWP 5 container', async () => {

@@ -1,0 +1,57 @@
+// @vitest-environment jsdom
+/**
+ * The web page in edit mode has one save target, the opened file itself. A file the app's own
+ * readers refuse is opened as the engine reads it, the page is told so, and no save reaches
+ * the host.
+ */
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { installBridges } from '../src/web/bridge'
+
+/** The Hangul-written fixture with its header counting one FAT sector more than it lists. */
+function gateRefused(): Uint8Array {
+  const bytes = new Uint8Array(readFileSync(join(__dirname, 'fixtures/memo.hwp')))
+  const view = new DataView(bytes.buffer, bytes.byteOffset)
+  view.setUint32(44, view.getUint32(44, true) + 1, true)
+  return bytes
+}
+
+const refused = gateRefused()
+const doc = { id: 'memo', fileName: 'memo.hwp', bytes: refused, virtualPath: '/web/memo/memo.hwp' }
+
+const host = vi.hoisted(() => ({
+  saveToHost: vi.fn<(fileName: string, bytes: Uint8Array) => Promise<void>>(),
+}))
+
+vi.mock('@seuoffice/web-platform', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/web-platform')>()),
+  editMode: () => true,
+  documentByPath: () => doc,
+  waitForDocument: async () => doc,
+  reportOpened: () => {},
+  reportDirty: () => {},
+  saveToHost: host.saveToHost,
+  onHostSaveRequest: () => {},
+}))
+
+describe('a file the compound-file gate refuses, on the web page', () => {
+  let given: Uint8Array
+
+  beforeAll(async () => {
+    installBridges()
+    given = await window.hwpApi.readFile(doc.virtualPath)
+  })
+
+  it('opens as it is and is reported as unverified', async () => {
+    expect(Buffer.from(given).equals(Buffer.from(refused))).toBe(true)
+    expect(await window.hwpApi.structureUnverified()).toBe(true)
+  })
+
+  it('is not saved: the save is refused with the reason and nothing goes to the host', async () => {
+    expect(await window.hwpApi.beginSave('save')).toMatchObject({ ok: false, reason: 'unverified' })
+    // no save began, so bytes sent afterwards are not stored either
+    expect((await window.hwpApi.commitSave(refused, [])).ok).toBe(false)
+    expect(host.saveToHost).not.toHaveBeenCalled()
+  })
+})

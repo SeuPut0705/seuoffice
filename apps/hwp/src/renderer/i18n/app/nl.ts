@@ -28,6 +28,10 @@ export const nl = {
     'Dit document bevat bijgehouden wijzigingen. U ziet de huidige tekst, met de wijzigingen verwerkt; bij opslaan blijft deze tekst behouden en vervalt het overzicht van wijzigingen.',
   saveTracked:
     'Niet opgeslagen: dit document bevat bijgehouden wijzigingen; door het hier op te slaan gaan ze verloren en kan Hancom Hangul het bestand mogelijk niet openen.',
+  openedUnverified:
+    'De structuur van dit bestand kon niet worden gecontroleerd; een deel van de inhoud kan hier ontbreken. U kunt het lezen en bewerken, maar het wordt niet over het origineel opgeslagen: gebruik Opslaan als om een kopie onder een andere naam te bewaren.',
+  saveUnverified:
+    'Niet opgeslagen: de structuur van dit bestand kon niet worden gecontroleerd, en opslaan over het origineel kan inhoud verloren laten gaan. Sla in Opslaan als een kopie op onder een andere naam, bij voorkeur als HWPX.',
   savedTailsLost:
     "Opgeslagen, maar sommige basispagina's of memo's van het oorspronkelijke bestand konden niet worden behouden; Hancom Hangul kan het opgeslagen bestand mogelijk niet openen. Open het ter controle.",
   missingFonts:

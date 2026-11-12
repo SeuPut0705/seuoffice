@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { copyFile, readFile, stat } from 'node:fs/promises'
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { BrowserWindow, WebContentsView, app, dialog, ipcMain, shell } from 'electron'
 import type { WebContents } from 'electron'
 import {
@@ -49,7 +49,7 @@ import { saveAsDefaultPath, saveAsFilters, saveAsTarget } from './save-as-format
 import { sectionTailsOf } from './section-tails'
 import type { SectionTails } from './section-tails'
 import { newTabsOf } from './tab-widths'
-import { hasTrackedChanges, withoutTrackedChanges } from './tracked-changes'
+import { trackedChangesOf, withoutTrackedChanges } from './tracked-changes'
 import { HWP_CHANNELS, MAX_HWP_SAVE_BYTES, hwpFormatOfPath } from '../shared/ipc'
 import type {
   BeginSaveResult,
@@ -151,6 +151,12 @@ const trackedByWc = new Set<number>()
 /** Views whose file had tracked changes, opened without them; see tracked-changes.ts */
 const trackingDroppedByWc = new Set<number>()
 /**
+ * Views whose HWP file could not be read here (the compound-file gate refused it), by the
+ * path of that file. The engine reads it by its own means, but whether it has tracked
+ * changes, section tails or field kinds is unknown, so no save replaces that file.
+ */
+const unverifiedByWc = new Map<number, string>()
+/**
  * Disk snapshots per view: what each copy last read or wrote of a path. A save
  * from a split-pane copy compares its record with the file on disk to tell
  * whether a sibling copy changed it (decision 0036, see save-conflict in
@@ -196,6 +202,21 @@ async function rememberDiskState(wcId: number, path: string): Promise<void> {
   const states = diskStatesByWc.get(wcId) ?? new Map<string, SaveDiskState>()
   states.set(path, state)
   diskStatesByWc.set(wcId, states)
+}
+
+/** The two paths name one file: by their text, or by what the file system says of them. */
+async function sameFile(a: string, b: string): Promise<boolean> {
+  if (resolve(a) === resolve(b)) return true
+  try {
+    const [first, second] = await Promise.all([
+      stat(a, { bigint: true }),
+      stat(b, { bigint: true }),
+    ])
+    return first.dev === second.dev && first.ino === second.ino
+  } catch {
+    // one of them is not there, so they are not the same file
+    return false
+  }
 }
 
 /** Fired after a save lands on a NEW path (Save As); the shell syncs tab title, recents, projects */
@@ -568,7 +589,12 @@ function registerHwpIpc(): void {
     await rememberDiskState(wcId, path)
     trackedByWc.delete(wcId)
     trackingDroppedByWc.delete(wcId)
-    if (bytesMatchFormat(bytes, 'hwp') && hasTrackedChanges(bytes)) {
+    unverifiedByWc.delete(wcId)
+    const tracking = bytesMatchFormat(bytes, 'hwp') ? trackedChangesOf(bytes) : 'none'
+    if (tracking === 'unreadable') {
+      // it still goes to the editor, which reads it by its own means; it is not saved over
+      unverifiedByWc.set(wcId, path)
+    } else if (tracking === 'tracked') {
       // the editor gets the document as it reads now; one that cannot be had is not saved
       const current = withoutTrackedChanges(bytes)
       if (current) {
@@ -588,6 +614,7 @@ function registerHwpIpc(): void {
   })
 
   ipcMain.handle(HWP_CHANNELS.trackingDropped, (e) => trackingDroppedByWc.has(e.sender.id))
+  ipcMain.handle(HWP_CHANNELS.structureUnverified, (e) => unverifiedByWc.has(e.sender.id))
 
   /** one print or PDF at a time per view */
   const printing = new Set<number>()
@@ -704,6 +731,16 @@ function registerHwpIpc(): void {
       }
       const format = hwpFormatOfPath(target)
       if (!format) throw new Error('hwp: no save format for this file name')
+      // under Save and under a Save As that picks the file itself; any other name is a copy
+      const unverified = unverifiedByWc.get(wcId)
+      if (unverified !== undefined && (await sameFile(target, unverified))) {
+        settleSave(wcId, false)
+        return {
+          ok: false,
+          error: 'hwp: the structure of the opened file could not be checked',
+          reason: 'unverified',
+        }
+      }
       pendingSaveByWc.set(wcId, { path: target, format })
       return { ok: true, path: target, format }
     } catch (err) {
@@ -1072,6 +1109,7 @@ function grantAndTrack(
     fieldKindsByWc.delete(wcId)
     trackedByWc.delete(wcId)
     trackingDroppedByWc.delete(wcId)
+    unverifiedByWc.delete(wcId)
     diskStatesByWc.delete(wcId)
     closeSaveWaiters.get(wcId)?.(false)
     closeSaveWaiters.delete(wcId)

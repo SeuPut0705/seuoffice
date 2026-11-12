@@ -23,15 +23,19 @@ function trackedContainer(file: Uint8Array): { cfb: CFB.CFB$Container; header: B
 }
 
 /**
- * Whether an HWP file carries tracked changes: the property in its header, and the second
- * copy of the body (`ViewText`) Hangul keeps for them. Never throws; a file that cannot be
- * read here is taken to have none.
+ * `tracked`: the header says so and the second copy of the body (`ViewText`) Hangul keeps
+ * for tracked changes is there. `none`: the container was read and they are not.
+ * `unreadable`: the container could not be read here (the compound-file gate refuses it, or
+ * the bytes are no compound file at all), so nothing is known of the file: not `none`.
  */
-export function hasTrackedChanges(file: Uint8Array): boolean {
+export type TrackedChanges = 'none' | 'tracked' | 'unreadable'
+
+/** What an HWP file says of tracked changes. Never throws. */
+export function trackedChangesOf(file: Uint8Array): TrackedChanges {
   try {
-    return trackedContainer(file) !== null
+    return trackedContainer(file) ? 'tracked' : 'none'
   } catch {
-    return false
+    return 'unreadable'
   }
 }
 

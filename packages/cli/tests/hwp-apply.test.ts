@@ -214,6 +214,36 @@ describe('ieumoffice hwp apply', () => {
     expect(readFileSync(path).equals(Buffer.from(original))).toBe(true)
     expect(existsSync(`${path}.bak`)).toBe(false)
   })
+
+  it('does not write over a .hwp whose structure could not be checked; --out takes the result', async () => {
+    const dir = tempDir()
+    // an engine-written file with one header field wrong (the count of FAT sectors): the
+    // engine still opens it, the app's own readers of the original do not
+    const original = Uint8Array.from(report().exportHwp())
+    const header = new DataView(original.buffer)
+    header.setUint32(44, header.getUint32(44, true) + 1, true)
+    const path = write(dir, 'report.hwp', original)
+    const list = ops(dir, EDITS)
+
+    const refused = await run(['hwp', 'apply', path, '--ops', list, '--json'])
+    expect(refused.code).toBe(1)
+    expect(refused.json()).toMatchObject({ error: 'unsupported' })
+    expect(refused.json().message).toContain('could not be checked')
+    expect(refused.json().suggestion).toContain('--out')
+    expect(readFileSync(path).equals(Buffer.from(original))).toBe(true)
+    expect(existsSync(`${path}.bak`)).toBe(false)
+
+    const out = join(dir, 'copy.hwpx')
+    const copied = await run(['hwp', 'apply', path, '--ops', list, '--out', out, '--json'])
+    expect(copied.code, copied.stdout).toBe(0)
+    expect(textOf(out).join('\n')).toContain('8월 1일부터 시행합니다.')
+    expect(readFileSync(path).equals(Buffer.from(original))).toBe(true)
+
+    // reading it is not refused (this replaces the ops file, so it comes last)
+    const read = await run(['hwp', 'apply', path, '--ops', ops(dir, [{ op: 'list_tables' }])])
+    expect(read.code, read.stdout).toBe(0)
+    expect(readFileSync(path).equals(Buffer.from(original))).toBe(true)
+  })
 })
 
 describe('ieumoffice create --type hwp', () => {

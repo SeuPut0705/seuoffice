@@ -141,6 +141,21 @@ describe('runSave', () => {
     expect(host.commitSave).not.toHaveBeenCalled()
   })
 
+  it('writes nothing over a file whose structure could not be checked, and says why', async () => {
+    const ed = editor()
+    const host = api({
+      ok: false,
+      error: 'hwp: the structure of the opened file could not be checked',
+      reason: 'unverified',
+    })
+    const outcome = await runSave(ed, host, 'save')
+    // its own reason, so the editor shows its own message and not a write error
+    expect(outcome).toEqual({ kind: 'failed', reason: 'unverified' })
+    expect(ed.exportHwp).not.toHaveBeenCalled()
+    expect(ed.exportHwpx).not.toHaveBeenCalled()
+    expect(host.commitSave).not.toHaveBeenCalled()
+  })
+
   it('reports a save that could not carry master pages or memos over', async () => {
     const ed = editor()
     const host = api(
