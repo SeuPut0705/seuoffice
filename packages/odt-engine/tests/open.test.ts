@@ -35,7 +35,8 @@ describe('odtToDocx: lenient package reading', () => {
     expect(bridge.map.generator).toBe(HANCOM_DESKTOP_GENERATOR)
     // nothing edited: the original bytes come back, the same object
     expect(
-      await saveOdt({ originalOdt: built.bytes, bridge: bridge.map, editedDocx: bridge.docx }),
+      (await saveOdt({ originalOdt: built.bytes, bridge: bridge.map, editedDocx: bridge.docx }))
+        .odtBytes,
     ).toBe(built.bytes)
   })
 

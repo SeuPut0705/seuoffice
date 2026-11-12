@@ -45,7 +45,9 @@ use self::styles::{
 };
 use self::theme::{ThemeSources, unresolved_theme_references};
 use super::registry::odt_registry;
-use super::report::{ConversionReport, ReportBuilder, ReportFeature, ReportKind};
+use super::report::{
+    ConversionReport, ReportBuilder, ReportFeature, ReportKind, hidden_from_ai_marks,
+};
 use super::zip::{ZipEntryInput, write_zip};
 use crate::core::convert::{
     AlignedItem, BridgeStyleEntry, BridgeStyles, FlowEnv, ItemRef, OoxmlToOdfContext,
@@ -232,6 +234,11 @@ pub fn docx_to_odt(
             styles_xml: &styles_part,
             parts: hf_xml.iter().map(String::as_str).collect(),
         },
+    );
+    report.borrow_mut().add(
+        ReportKind::Dropped,
+        ReportFeature::HiddenFromAi,
+        hidden_from_ai_marks(&zip)?,
     );
     report
         .borrow_mut()

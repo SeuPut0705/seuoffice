@@ -24,6 +24,7 @@ import type {
   ProtectedCellRef,
   RenderedObject,
   SaveOdtInput,
+  SaveOdtResult,
 } from './types'
 
 const encoder = new TextEncoder()
@@ -89,14 +90,16 @@ export async function saveOdt({
   originalOdt,
   bridge,
   editedDocx,
-}: SaveOdtInput): Promise<Uint8Array> {
-  const reply = call<{ unchanged: boolean }>({ cmd: 'saveOdt', now: now() }, [
-    originalOdt,
-    encoder.encode(JSON.stringify(bridge)),
-    editedDocx,
-  ])
+}: SaveOdtInput): Promise<SaveOdtResult> {
+  const reply = call<{ unchanged: boolean; report: ConversionReport }>(
+    { cmd: 'saveOdt', now: now() },
+    [originalOdt, encoder.encode(JSON.stringify(bridge)), editedDocx],
+  )
   // no edit: the very bytes it was given
-  return reply.header.unchanged ? originalOdt : reply.blobs[0]!
+  return {
+    odtBytes: reply.header.unchanged ? originalOdt : reply.blobs[0]!,
+    report: reply.header.report,
+  }
 }
 
 export async function docxToOdt(

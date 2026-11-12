@@ -212,7 +212,7 @@ describe('a picture in the text paragraph of a framed table', () => {
           }
         : { kind: 'original', docxIndex: b.docxIndex as number },
     )
-    const saved = await saveOdt({
+    const { odtBytes: saved } = await saveOdt({
       originalOdt: odt,
       bridge,
       editedDocx: await saveDocx(parsed, save),

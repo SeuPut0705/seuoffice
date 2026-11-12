@@ -5,7 +5,9 @@
  *
  * - ODT → docx (`odtToDocx`): what changes if this ODT is saved as docx.
  * - docx → ODT (`docxToOdt`): what the ODT will not keep as it was.
+ * - edited docx → ODT (`saveOdt`): the same, for what the edit brought in.
  */
+import type JSZip from 'jszip'
 import type { BridgeMap } from '../core/convert'
 import type { OdtDocument } from '../core/open'
 import type { ObjectsExt } from '../objects'
@@ -31,6 +33,7 @@ export const REPORT_FEATURES = [
   'protection',
   'form_field',
   'object',
+  'hidden_from_ai',
 ] as const
 
 export type ReportFeature = (typeof REPORT_FEATURES)[number]
@@ -63,6 +66,28 @@ export class ReportBuilder {
       }
     return out
   }
+}
+
+/**
+ * The "hidden from AI" mark under any prefix or none, as the docx engine reads
+ * it (`withheld.ts`): the editor writes `<go:redact w:label="…"/>` in a run's
+ * rPr.
+ */
+const HIDDEN_MARK = /<(?:[\w.-]+:)?redact\b/g
+
+/**
+ * The "hidden from AI" marks of a docx package, counted in every XML part. An
+ * ODT has no place for the mark, so a conversion to ODT keeps none of them and
+ * the text they hid reads as plain text to anything that opens the ODT; a
+ * caller refuses on `dropped`/`hidden_from_ai`.
+ */
+export async function hiddenFromAiMarks(zip: JSZip): Promise<number> {
+  let count = 0
+  for (const file of Object.values(zip.files)) {
+    if (file.dir || !file.name.endsWith('.xml')) continue
+    count += (await file.async('string')).match(HIDDEN_MARK)?.length ?? 0
+  }
+  return count
 }
 
 /**

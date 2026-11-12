@@ -384,6 +384,7 @@ export const REPORT_FEATURES = [
   'protection',
   'form_field',
   'object',
+  'hidden_from_ai',
 ] as const
 
 export type ReportFeature = (typeof REPORT_FEATURES)[number]
@@ -438,4 +439,11 @@ export interface SaveOdtInput {
   bridge: BridgeMap
   /** the docx the editor saved */
   editedDocx: Uint8Array
+}
+
+export interface SaveOdtResult {
+  /** the saved ODT: the original bytes when nothing changed */
+  odtBytes: Uint8Array
+  /** what the saved ODT does not keep of the edited docx */
+  report: ConversionReport
 }

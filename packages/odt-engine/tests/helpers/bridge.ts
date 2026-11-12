@@ -194,7 +194,11 @@ function manifestMediaType(manifest: string, path: string): string {
 
 /** Saves the edited docx into the original ODT with the public API. */
 export async function writeBack(bridge: Bridge, edited: Uint8Array): Promise<WriteBack> {
-  const odt = await saveOdt({ originalOdt: bridge.odt, bridge: bridge.map, editedDocx: edited })
+  const { odtBytes: odt } = await saveOdt({
+    originalOdt: bridge.odt,
+    bridge: bridge.map,
+    editedDocx: edited,
+  })
   const archive = odt === bridge.odt ? bridge.archive : await readArchive(odt)
   const content = archive.text('content.xml') as string
   const styles = archive.text('styles.xml') ?? ''

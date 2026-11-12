@@ -20,6 +20,7 @@ export interface TsOpened {
 export interface TsSaved {
   unchanged: boolean
   bytes: Uint8Array | null
+  report: unknown
 }
 
 export interface TsExported {
@@ -64,12 +65,14 @@ export const tsSaveOdt = (
   editedDocx: Uint8Array,
 ): Promise<Outcome<TsSaved>> =>
   guarded(async () => {
-    const bytes = await ts.saveOdt({
+    const { odtBytes, report } = await ts.saveOdt({
       originalOdt,
       bridge: JSON.parse(bridgeJson) as ts.BridgeMap,
       editedDocx,
     })
-    return bytes === originalOdt ? { unchanged: true, bytes: null } : { unchanged: false, bytes }
+    return odtBytes === originalOdt
+      ? { unchanged: true, bytes: null, report }
+      : { unchanged: false, bytes: odtBytes, report }
   })
 
 export type RenderedList = Array<

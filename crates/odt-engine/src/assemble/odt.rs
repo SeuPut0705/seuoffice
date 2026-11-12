@@ -14,13 +14,17 @@ use std::rc::Rc;
 use docx_engine::parse::drawings::host::NoHost;
 use docx_engine::parse::parse_docx;
 use jscompat::JsMap;
+use ooxml_pkg::DEFAULT_ZIP_LIMITS;
 use serde::Serialize;
 
 use super::meta::{
     BridgeCoreProps, core_xml_for, personal_info_removed, read_meta_people, scrub_meta_xml,
 };
 use super::registry::odt_registry;
-use super::report::{ConversionReport, odt_to_docx_report};
+use super::report::{
+    ConversionReport, ReportBuilder, ReportFeature, ReportKind, hidden_from_ai_marks,
+    odt_to_docx_report,
+};
 use super::zip::{ZipEntryInput, write_zip};
 use crate::core::{
     BridgeMap, DocxExtraPart, DocxPartData, HostNow, OdfToOoxmlContext, OdtDocument, OdtError,
@@ -89,12 +93,20 @@ pub fn odt_to_docx(odt_bytes: &[u8], now: HostNow) -> Result<OdtToDocxResult, Od
     })
 }
 
-/// What `saveOdt` answers: the very bytes it was given, or the new package.
+/// What `saveOdt` writes: the very bytes it was given, or the new package.
 #[derive(Debug)]
 pub enum SavedOdt {
     /// nothing changed: the original bytes come back as they are
     Unchanged,
     Bytes(Vec<u8>),
+}
+
+/// `SaveOdtResult`
+#[derive(Debug)]
+pub struct SaveOdtResult {
+    pub saved: SavedOdt,
+    /// what the saved ODT does not keep of the edited docx
+    pub report: ConversionReport,
 }
 
 /// `saveOdt`: writes the edited docx back into the received ODT: only what
@@ -105,7 +117,7 @@ pub fn save_odt(
     bridge: &BridgeMap,
     edited_docx: &[u8],
     now: HostNow,
-) -> Result<SavedOdt, OdtError> {
+) -> Result<SaveOdtResult, OdtError> {
     let doc = Rc::new(open_odt(original_odt, &OpenOdtOptions::default())?);
     let map = bridge.clone();
     // `map.ext[ASSEMBLE_EXT_KEY]?.core ?? null`
@@ -115,6 +127,16 @@ pub fn save_odt(
         .and_then(|ext| ext.get("core"))
         .and_then(|core| serde_json::from_value(core.clone()).ok());
     let edited = Rc::new(parse_docx(edited_docx, &NoHost).map_err(OdtError::thrown)?);
+    // `JSZip.loadAsync(editedDocx)`: `parseDocx` already passed the gate
+    let edited_zip = ooxml_pkg::load_package(edited_docx, &DEFAULT_ZIP_LIMITS, |_| Ok(()))
+        .map_err(OdtError::thrown)?;
+    let report = ReportBuilder::new()
+        .add(
+            ReportKind::Dropped,
+            ReportFeature::HiddenFromAi,
+            hidden_from_ai_marks(&edited_zip)?,
+        )
+        .build();
     let edited_styles_xml = read_docx_part(edited_docx, "word/styles.xml")?;
     let mut rctx = OoxmlToOdfContext::new(
         Rc::clone(&doc),
@@ -170,9 +192,15 @@ pub fn save_odt(
         }
     }
     if replaced.is_empty() && changes.add.is_empty() && changes.remove.is_empty() {
-        return Ok(SavedOdt::Unchanged);
+        return Ok(SaveOdtResult {
+            saved: SavedOdt::Unchanged,
+            report,
+        });
     }
-    Ok(SavedOdt::Bytes(repack_odt(&doc, &replaced, &changes, now)?))
+    Ok(SaveOdtResult {
+        saved: SavedOdt::Bytes(repack_odt(&doc, &replaced, &changes, now)?),
+        report,
+    })
 }
 
 /// The value type of `repackOdt`'s `replaced` map: `string | Uint8Array`.

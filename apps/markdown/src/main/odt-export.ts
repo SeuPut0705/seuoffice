@@ -118,6 +118,7 @@ const FEATURE_KEY: Record<ReportFeature, OdtKey> = {
   protection: 'featProtection',
   form_field: 'featFormField',
   object: 'featObject',
+  hidden_from_ai: 'featHiddenFromAi',
 }
 
 const tOdt = createI18n({
@@ -148,6 +149,7 @@ const tOdt = createI18n({
     featProtection: 'Editing restrictions and read-only recommendation',
     featFormField: 'Form fields',
     featObject: 'Other objects',
+    featHiddenFromAi: 'Hidden-from-AI marks (the text stays, readable by AI)',
   },
   ko: {
     filterOdt: 'ODT 문서',
@@ -176,6 +178,7 @@ const tOdt = createI18n({
     featProtection: '편집 제한·읽기 전용 권장',
     featFormField: '누름틀',
     featObject: '기타 개체',
+    featHiddenFromAi: 'AI에게 가린 표시(글은 남고 AI가 읽을 수 있음)',
   },
 })
 

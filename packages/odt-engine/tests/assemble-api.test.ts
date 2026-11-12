@@ -42,7 +42,7 @@ describe('saveOdt without edits', () => {
     expect(saved).toEqual(odt)
     // the bridge docx itself saved back is no edit either
     const { bridge } = await odtToDocx(odt)
-    expect(await saveOdt({ originalOdt: odt, bridge, editedDocx: docx })).toEqual(odt)
+    expect((await saveOdt({ originalOdt: odt, bridge, editedDocx: docx })).odtBytes).toEqual(odt)
   })
 
   it('does not modify the bridge map it is given', async () => {
@@ -144,7 +144,7 @@ describe('saveOdt with one edit', () => {
     const { bytes } = await editorSave(docxBytes, keepAll, {
       sectionHf: [{ lastBlockIndex: sections[1].lastBlockIndex, kind: 'header', hf }],
     })
-    const saved = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
+    const { odtBytes: saved } = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
     const diff = await diffPackages(odt, saved)
     expect(diff.changed).toEqual(['styles.xml'])
     const before = textOf(await readArchive(odt), 'styles.xml')

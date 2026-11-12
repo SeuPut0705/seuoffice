@@ -71,7 +71,11 @@ describe.skipIf(!root)('public API over the corpus', () => {
         totals.text++
         const keep = await editorSave(docxBytes, (blocks) => blocks.map((_, i) => ({ keep: i })))
         const t2 = performance.now()
-        const same = await saveOdt({ originalOdt: odt, bridge, editedDocx: keep.bytes })
+        const { odtBytes: same } = await saveOdt({
+          originalOdt: odt,
+          bridge,
+          editedDocx: keep.bytes,
+        })
         const t3 = performance.now()
         if (odt.length > largest.size)
           largest = { name, size: odt.length, open: t1 - t0, save: t3 - t2 }
@@ -112,7 +116,7 @@ describe.skipIf(!root)('public API over the corpus', () => {
                 : { keep: i },
             ),
           )
-          const saved = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
+          const { odtBytes: saved } = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
           const diff = await diffPackages(odt, saved)
           const after = textOf(await readArchive(saved), 'content.xml')
           if (diff.changed.join() !== 'content.xml' || diff.added.length || diff.removed.length)
@@ -162,7 +166,11 @@ describe.skipIf(!root)('public API over the corpus', () => {
                     : { keep: i },
                 ),
               )
-              const saved = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
+              const { odtBytes: saved } = await saveOdt({
+                originalOdt: odt,
+                bridge,
+                editedDocx: bytes,
+              })
               const diff = await diffPackages(odt, saved)
               const after = textOf(await readArchive(saved), 'content.xml')
               if (diff.changed.join() !== 'content.xml' || diff.added.length)
@@ -190,7 +198,7 @@ describe.skipIf(!root)('public API over the corpus', () => {
             (blocks) => blocks.map((_, i) => ({ keep: i })),
             { section: { ...last.settings, marginLeft: last.settings.marginLeft + 567 } },
           )
-          const saved = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
+          const { odtBytes: saved } = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
           const diff = await diffPackages(odt, saved)
           const styles = textOf(pkg, 'styles.xml')
           const after = textOf(await readArchive(saved), 'styles.xml')

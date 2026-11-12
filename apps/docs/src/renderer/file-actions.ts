@@ -1302,8 +1302,12 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 }
 
 /** The edited bridge docx written back into the document's ODT (no edit → the ODT's own bytes). */
-export function odtBytesFor(baseline: OdtBaseline, editedDocx: Uint8Array): Promise<Uint8Array> {
-  return saveOdt({ originalOdt: baseline.original, bridge: baseline.bridge, editedDocx })
+export async function odtBytesFor(
+  baseline: OdtBaseline,
+  editedDocx: Uint8Array,
+): Promise<Uint8Array> {
+  return (await saveOdt({ originalOdt: baseline.original, bridge: baseline.bridge, editedDocx }))
+    .odtBytes
 }
 
 /** a docx → ODT conversion drops the document's open password: say so in the list */

@@ -148,7 +148,10 @@ export function makeComparisons(): Comparisons {
     docxMutated: new Comparison('(a+) odtToDocx: mutated ODTs, docx entries', 'openMutatedDocx'),
     bridge: new Comparison('(a) odtToDocx: the bridge JSON as written', 'openBridge'),
     report: new Comparison('(a) odtToDocx: the report', 'openReport'),
-    saveResult: new Comparison('(b) saveOdt: unchanged or not, or the refusal', 'saveResult'),
+    saveResult: new Comparison(
+      '(b) saveOdt: unchanged or not, the report, or the refusal',
+      'saveResult',
+    ),
     saveEntries: new Comparison('(b) saveOdt: the saved ODT, entries', 'saveEntries'),
     exportRendered: new Comparison('(c) docxToOdt: with rendered objects', 'exportRendered'),
     text: new Comparison('(d) odtToText: the text, or the refusal', 'text'),
@@ -242,7 +245,7 @@ export async function compareSave(
 ): Promise<void> {
   const typescript = await tsSaveOdt(odt, bridgeJson, edited)
   const encoder = new TextEncoder()
-  const rust = rustCall<{ unchanged: boolean }>({ cmd: 'saveOdt', now: NOW }, [
+  const rust = rustCall<{ unchanged: boolean; report: unknown }>({ cmd: 'saveOdt', now: NOW }, [
     odt,
     encoder.encode(bridgeJson),
     edited,
@@ -257,14 +260,15 @@ export async function compareSave(
     c.saveResult.record(difference === '' ? null : `${where}: ${difference}`)
     return
   }
-  const { unchanged, bytes } = typescript.value
+  const { unchanged, bytes, report } = typescript.value
   if (unchanged !== rust.header.unchanged) {
     c.saveResult.record(
       `${where}: TypeScript ${unchanged ? 'returns the original' : 'saves'}, Rust ${rust.header.unchanged ? 'returns the original' : 'saves'}`,
     )
     return
   }
-  c.saveResult.record(null)
+  const reported = valueDifference('report', report, rust.header.report)
+  c.saveResult.record(reported === null ? null : `${where}: ${reported}`)
   if (unchanged || bytes === null) return
   const rustBytes = rust.blobs[0]
   if (!rustBytes) {

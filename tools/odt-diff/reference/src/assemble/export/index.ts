@@ -37,7 +37,7 @@ import { regionInnerXml } from '../../page/hf'
 import { startStyle } from '../../page/register'
 import { editStyleXml } from '../../text/style-xml'
 import { odtRegistry } from '../registry'
-import { type ConversionReport, ReportBuilder } from '../report'
+import { type ConversionReport, ReportBuilder, hiddenFromAiMarks } from '../report'
 import { type ZipEntryInput, writeZip } from '../zip'
 import { BlockNormaliser } from './blocks'
 import { headingsAsParagraphs } from './headings'
@@ -177,6 +177,7 @@ export async function docxToOdt(
     const target = rels.get(rId)
     if (target) hfXml.push(await readPart(zip, target))
   }
+  report.add('dropped', 'hidden_from_ai', await hiddenFromAiMarks(zip))
   report.add(
     'converted',
     'theme',

@@ -9,6 +9,7 @@
  * The bridge map is deep-copied first: the page and objects pre-steps edit
  * the map they are given.
  */
+import JSZip from 'jszip'
 import { parseDocx } from '../../../../docx-diff/reference/index'
 import {
   type BridgeMap,
@@ -31,7 +32,7 @@ import {
   scrubMetaXml,
 } from './meta'
 import { odtRegistry } from './registry'
-import { type ConversionReport, odtToDocxReport } from './report'
+import { type ConversionReport, ReportBuilder, hiddenFromAiMarks, odtToDocxReport } from './report'
 import { type ZipEntryInput, writeZip } from './zip'
 
 /** The assembly's own slot in the bridge map. */
@@ -83,6 +84,13 @@ export interface SaveOdtInput {
   editedDocx: Uint8Array
 }
 
+export interface SaveOdtResult {
+  /** the saved ODT: the original bytes when nothing changed */
+  odtBytes: Uint8Array
+  /** what the saved ODT does not keep of the edited docx */
+  report: ConversionReport
+}
+
 const encoder = new TextEncoder()
 
 /**
@@ -90,11 +98,14 @@ const encoder = new TextEncoder()
  * rewritten, every untouched part keeps its bytes. With nothing changed the
  * original bytes come back as they are.
  */
-export async function saveOdt(input: SaveOdtInput): Promise<Uint8Array> {
+export async function saveOdt(input: SaveOdtInput): Promise<SaveOdtResult> {
   const { originalOdt, editedDocx } = input
   const doc = await openOdt(originalOdt)
   const map = JSON.parse(JSON.stringify(input.bridge)) as BridgeMap
   const edited = await parseDocx(editedDocx)
+  const report = new ReportBuilder()
+    .add('dropped', 'hidden_from_ai', await hiddenFromAiMarks(await JSZip.loadAsync(editedDocx)))
+    .build()
   const editedStylesXml = await readDocxPart(editedDocx, 'word/styles.xml')
   const rctx = new OoxmlToOdfContext(doc, map, edited, odtRegistry(), { editedStylesXml })
   prepareObjectWriteBack(rctx)
@@ -123,8 +134,9 @@ export async function saveOdt(input: SaveOdtInput): Promise<Uint8Array> {
       if (scrubbed !== doc.metaXml) replaced.set('meta.xml', scrubbed)
     }
   }
-  if (!replaced.size && !changes.add.length && !changes.remove.length) return originalOdt
-  return repackOdt(doc, replaced, changes)
+  if (!replaced.size && !changes.add.length && !changes.remove.length)
+    return { odtBytes: originalOdt, report }
+  return { odtBytes: await repackOdt(doc, replaced, changes), report }
 }
 
 /**

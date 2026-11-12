@@ -41,7 +41,7 @@ const save: SaveBlock[] = blocks.map((b, i) =>
     : { kind: 'original', docxIndex: b.docxIndex as number },
 )
 const editedDocx = await saveDocx(parsed, save)
-const odt = await saveOdt({ originalOdt, bridge, editedDocx })
+const { odtBytes: odt } = await saveOdt({ originalOdt, bridge, editedDocx })
 writeFileSync(output, odt)
 const name = /name="(odt-pic:[^"]+)"/.exec(blocks[target]!.originalXml as string)?.[1]
 console.log(JSON.stringify({ status: 'ok', block: target, name }))

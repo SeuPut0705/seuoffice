@@ -74,8 +74,10 @@ export async function openOdtBytes(
 
 /** The edited bridge docx written back into the received ODT (original bytes when nothing changed). */
 export function saveOdtBytes(origin: OdtOrigin, editedDocx: Uint8Array): Promise<Uint8Array> {
-  return mapped(() =>
-    saveOdt({ originalOdt: origin.originalOdt, bridge: origin.bridge, editedDocx }),
+  return mapped(
+    async () =>
+      (await saveOdt({ originalOdt: origin.originalOdt, bridge: origin.bridge, editedDocx }))
+        .odtBytes,
   )
 }
 
@@ -108,6 +110,7 @@ const FEATURE_LABEL: Record<ReportFeature, string> = {
   protection: 'protection setting(s)',
   form_field: 'form field(s)',
   object: 'embedded object(s)',
+  hidden_from_ai: 'hidden-from-AI mark(s)',
 }
 
 /**

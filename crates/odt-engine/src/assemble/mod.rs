@@ -19,7 +19,9 @@ pub mod zip;
 pub const ODT_MIMETYPE: &str = "application/vnd.oasis.opendocument.text";
 
 pub use export::{DocxToOdtResult, RenderedObject, docx_to_odt};
-pub use odt::{OdtToDocxResult, Replacement, SavedOdt, odt_to_docx, repack_odt, save_odt};
+pub use odt::{
+    OdtToDocxResult, Replacement, SaveOdtResult, SavedOdt, odt_to_docx, repack_odt, save_odt,
+};
 pub use report::{
     ConversionReport, REPORT_FEATURES, ReportFeature, ReportItem, ReportKind, odt_to_docx_report,
 };

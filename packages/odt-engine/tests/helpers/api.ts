@@ -24,7 +24,7 @@ export async function roundTrip(
 ): Promise<{ saved: Uint8Array; bridge: BridgeMap; docx: Uint8Array; edited: Uint8Array }> {
   const { docxBytes, bridge } = await odtToDocx(odt)
   const { bytes } = await editorSave(docxBytes, ops, options)
-  const saved = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
+  const { odtBytes: saved } = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
   return { saved, bridge, docx: docxBytes, edited: bytes }
 }
 

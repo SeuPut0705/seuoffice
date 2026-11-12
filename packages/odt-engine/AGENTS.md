@@ -25,7 +25,7 @@ OpenDocument Text(`.odt`)를 워드 편집기가 다루는 docx로 바꾸고, �
 - docx의 해석과 저장은 `packages/docx-engine`이 한다. 이 패키지는 그 엔진을 고치지 않고 공개 API만 쓴다.
 - 편집 화면, 저장 창, 꺼 둔 기능의 안내는 `apps/docs`가 한다.
 - 층끼리는 처리기 등록으로만 만난다. 바깥(편집기, 명령줄, MCP)은 `src/index.ts`의 공개 API만 쓴다.
-- AI에 보내기 전 가리기(redaction)는 이 패키지가 하지 않는다.
+- AI에 보내기 전 가리기(redaction)는 이 패키지가 하지 않는다. ODT에는 "AI에게 가림" 표시를 둘 자리가 없어서 `docxToOdt`·`saveOdt`가 표시를 버리고 글만 쓴다. 그 수를 `dropped`/`hidden_from_ai`로 알리므로, 부르는 쪽(저장 창, 명령줄)은 이 항목이 있으면 쓰지 않고 거절한다.
 - 원본(GenOffice)에서 받아오는 문서 엔진과 달리 이 패키지는 이 프로젝트가 만들었다. 고칠 때 사람에게 먼저 묻지 않아도 된다. 다만 아래 규칙과 docx 엔진을 바꾸지 않는다는 규칙은 지킨다.
 
 ## 항상 지켜야 하는 것
@@ -389,7 +389,7 @@ const patches = rctx.finish()
 
 ```ts
 odtToDocx(odtBytes: Uint8Array): Promise<{ docxBytes: Uint8Array; bridge: BridgeMap; report: ConversionReport }>
-saveOdt(input: { originalOdt: Uint8Array; bridge: BridgeMap; editedDocx: Uint8Array }): Promise<Uint8Array>
+saveOdt(input: { originalOdt: Uint8Array; bridge: BridgeMap; editedDocx: Uint8Array }): Promise<{ odtBytes: Uint8Array; report: ConversionReport }>
 docxToOdt(docxBytes: Uint8Array, options?: { renderedObjects?: Record<string, RenderedObject> | ReadonlyMap<string, RenderedObject> }): Promise<{ odtBytes: Uint8Array; report: ConversionReport }>
 odtToText(odtBytes: Uint8Array): Promise<string>
 
@@ -398,7 +398,7 @@ type ConversionReport = ReportItem[]
 interface ReportItem { kind: 'converted' | 'dropped'; feature: ReportFeature; count: number }
 type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'columns' | 'citation' | 'cross_reference'
   | 'page_color' | 'mirror_margins' | 'theme' | 'comment' | 'revision' | 'ink' | 'watermark' | 'password'
-  | 'protection' | 'form_field' | 'object'
+  | 'protection' | 'form_field' | 'object' | 'hidden_from_ai'
 ```
 
 - 여는 오류는 `OdtOpenError`(`code`: `encrypted` | `not-odt-text` | `zip-rejected` | `corrupt`)와 그 하위 `OdtEncryptedError`, `OdtNotTextError`다. `isOdtOpenError(err, 'encrypted')`로 가려 "암호를 푼 뒤 열어 달라"고 안내한다. `odtToDocx`, `saveOdt`(원본을 다시 연다), `odtToText`가 같은 오류를 던진다. `docxToOdt`는 docx가 아니면 docx 엔진의 오류를 그대로 던진다.
@@ -456,6 +456,7 @@ type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'colum
 - ODT → docx(`odtToDocx`): 잠긴 개체 자리 표시를 종류별로(`toc`, `chart`, `equation`, `shape`, `textbox`, 그 밖은 `object`) `converted`, 변경 기록 범위(`text:changed-region` 수와 잠긴 범위 중 큰 쪽) `revision` `converted`, 누름틀(시작·점 책갈피 수) `form_field` `converted`, 잠긴 칸과 보호된 구역 `protection` `dropped`.
 - docx → ODT(`docxToOdt`): 차례 수(`toc`), 개체 종류별(`chart`/`equation`/`shape`/`textbox`), 너비가 다른 단(`columns`), 인용·참고 문헌 필드(`citation`), 상호 참조·캡션 필드(`cross_reference`, 차례의 `PAGEREF _Toc`는 빼고), 테마가 답하지 못하는 테마 참조(`theme`)는 `converted`. 거울 여백은 `style:page-usage="mirrored"`로 그대로 남으므로 보고하지 않는다(`mirror_margins`는 목록에만 남는다).
 - 테마(`export/theme.ts`): 엔진이 읽으면서 테마 글꼴(`w:asciiTheme` 등, 비어 있는 동아시아·복합 문자 칸 포함)과 테마 색(`w:themeColor`/`w:themeFill`, 밝기·어둡기 포함)을 실제 값으로 풀고, 편집기와 ODT가 같은 값을 쓴다. 보이는 것이 같고 테마와의 연결만 없어지므로 보고하지 않는다. 테마 부분이 있다는 것만으로도 보고하지 않는다. 내보내는 내용(본문, 머리글·바닥글, 그것들이 쓰는 스타일과 그 부모, 문서 기본값)의 테마 참조 가운데 테마가 답하지 못하는 것만 하나씩 센다: 테마 부분이 없거나 읽히지 않는데 글꼴 테마를 가리킴, 가리킨 라틴 글꼴 칸이 비어 있음, 테마에 없는 색 칸을 가리킴(`dk1`/`lt1`은 엔진의 기본값이 있어 빼고). 이때 엔진과 ODT는 Word가 곁에 저장해 둔 값(`w:val`, 글꼴 이름)을 쓰는데, Word라면 테마의 값으로 바꿔 보였을 것이다. 쪽 색(`page_color`), 메모(`comment`), 변경 기록(`revision`, 표시 수), 잉크(`ink`), 워터마크(`watermark`), 암호 해시(`password`), 편집 제한·읽기 전용 권장(`protection`)은 `dropped`.
+- "AI에게 가림" 표시(`hidden_from_ai`, `dropped`): `docxToOdt`는 받은 docx, `saveOdt`는 편집된 docx에서 모든 XML 부분의 표시를 센다. 표시는 docx 엔진이 읽는 대로 앞붙이 없이도 어떤 앞붙이로도 `redact` 요소다(`<(?:[\w.-]+:)?redact\b`, 주석 안의 것도 센다). ODT는 표시를 하나도 지니지 못하므로 숨긴 글이 ODT를 여는 모든 것(AI 첨부, 명령줄 `docs read`, MCP)에 그대로 보인다. `saveOdt`의 목록은 이 항목만 담는다.
 - 개수가 0인 항목은 넣지 않는다. 순서는 `REPORT_FEATURES` 순서다.
 
 ### 알려진 한계

@@ -23,7 +23,13 @@ export {
   type ReportFeature,
   type ReportItem,
 } from './assemble/report'
-export { type OdtToDocxResult, type SaveOdtInput, odtToDocx, saveOdt } from './assemble/odt'
+export {
+  type OdtToDocxResult,
+  type SaveOdtInput,
+  type SaveOdtResult,
+  odtToDocx,
+  saveOdt,
+} from './assemble/odt'
 export { odtToText } from './assemble/text'
 export {
   type DocxToOdtOptions,

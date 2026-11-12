@@ -34,6 +34,7 @@ export {
   type ReportFeature,
   type ReportItem,
   type SaveOdtInput,
+  type SaveOdtResult,
 } from './types'
 export {
   docxToOdt,

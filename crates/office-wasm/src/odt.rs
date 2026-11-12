@@ -4,7 +4,7 @@
 //! the edited docx) are read as the TypeScript reads them, as `invoke` does.
 
 use jscompat::{JsMap, reading_leniently};
-use odt_engine::assemble::{self, RenderedObject, SavedOdt};
+use odt_engine::assemble::{self, RenderedObject, SaveOdtResult, SavedOdt};
 use odt_engine::core::{HostNow, OdtError};
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -72,7 +72,7 @@ pub fn odt_to_docx(blobs: &[&[u8]], now: WireNow, reply_blobs: &mut Vec<Vec<u8>>
 }
 
 /// `saveOdt`: blobs the ODT, the bridge JSON, the edited docx. Reply
-/// `{ unchanged }`, blob 0 the ODT unless unchanged.
+/// `{ unchanged, report }`, blob 0 the ODT unless unchanged.
 pub fn save_odt(blobs: &[&[u8]], now: WireNow, reply_blobs: &mut Vec<Vec<u8>>) -> Value {
     let inputs = blob(blobs, 0).and_then(|odt| Ok((odt, blob(blobs, 1)?, blob(blobs, 2)?)));
     let (odt, bridge, edited) = match inputs {
@@ -84,10 +84,16 @@ pub fn save_odt(blobs: &[&[u8]], now: WireNow, reply_blobs: &mut Vec<Vec<u8>>) -
         Err(error) => return invalid(format!("bridge: {error}")),
     };
     match reading_leniently(|| assemble::save_odt(odt, &bridge, edited, now.into())) {
-        Ok(SavedOdt::Unchanged) => json!({ "unchanged": true }),
-        Ok(SavedOdt::Bytes(bytes)) => {
+        Ok(SaveOdtResult {
+            saved: SavedOdt::Unchanged,
+            report,
+        }) => json!({ "unchanged": true, "report": report }),
+        Ok(SaveOdtResult {
+            saved: SavedOdt::Bytes(bytes),
+            report,
+        }) => {
             reply_blobs.push(bytes);
-            json!({ "unchanged": false })
+            json!({ "unchanged": false, "report": report })
         }
         Err(error) => failure(error),
     }

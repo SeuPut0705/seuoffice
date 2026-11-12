@@ -4,11 +4,14 @@
 //!
 //! - ODT to docx (`odtToDocx`): what changes if this ODT is saved as docx.
 //! - docx to ODT (`docxToOdt`): what the ODT will not keep as it was.
+//! - edited docx to ODT (`saveOdt`): the same, for what the edit brought in.
 
 use jscompat::js_regex;
 use serde::Serialize;
 
-use crate::core::{BridgeMap, BridgeMarkerKind, OdtDocument};
+use ooxml_pkg::Package;
+
+use crate::core::{BridgeMap, BridgeMarkerKind, OdtDocument, OdtError};
 
 /// `ReportFeature`
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -51,10 +54,12 @@ pub enum ReportFeature {
     FormField,
     #[serde(rename = "object")]
     Object,
+    #[serde(rename = "hidden_from_ai")]
+    HiddenFromAi,
 }
 
 /// `REPORT_FEATURES`
-pub const REPORT_FEATURES: [ReportFeature; 19] = [
+pub const REPORT_FEATURES: [ReportFeature; 20] = [
     ReportFeature::Toc,
     ReportFeature::Chart,
     ReportFeature::Equation,
@@ -74,6 +79,7 @@ pub const REPORT_FEATURES: [ReportFeature; 19] = [
     ReportFeature::Protection,
     ReportFeature::FormField,
     ReportFeature::Object,
+    ReportFeature::HiddenFromAi,
 ];
 
 impl ReportFeature {
@@ -99,6 +105,7 @@ impl ReportFeature {
             Self::Protection => "protection",
             Self::FormField => "form_field",
             Self::Object => "object",
+            Self::HiddenFromAi => "hidden_from_ai",
         }
     }
 
@@ -176,6 +183,28 @@ impl ReportBuilder {
         }
         out
     }
+}
+
+/// `hiddenFromAiMarks`: the "hidden from AI" marks of a docx package,
+/// counted in every XML part. The mark is matched under any prefix or none, as
+/// the docx engine reads it (the editor writes `<go:redact w:label="..."/>` in
+/// a run's rPr). An ODT has no place for the mark, so a conversion to ODT
+/// keeps none of them and the text they hid reads as plain text to anything
+/// that opens the ODT; a caller refuses on `dropped`/`hidden_from_ai`.
+pub fn hidden_from_ai_marks(zip: &Package) -> Result<usize, OdtError> {
+    let mut count = 0;
+    for part in zip.parts() {
+        if part.is_dir || !part.name.as_str().ends_with(".xml") {
+            continue;
+        }
+        let text = part
+            .text()
+            .map_err(|error| OdtError::thrown(error.to_string()))?;
+        count += js_regex!(r"<(?:[\w.-]+:)?redact\b", "g")
+            .find_iter(text)
+            .count();
+    }
+    Ok(count)
 }
 
 /// `odtToDocxReport`: what saving the opened ODT as docx changes: locked
