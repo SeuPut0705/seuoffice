@@ -312,10 +312,12 @@ fn glyph_runs(
 
 fn checkbox_glyphs(xml: &str) -> (char, char) {
     let state = |name: &str, fallback: char| {
-        let pattern = format!(r#"<w14:{name}\b[^>]*\bw14:val=(?:"([^"]*)"|'([^']*)')"#);
-        let value = jscompat::JsRegex::new(&pattern, "")
-            .ok()
-            .and_then(|re| re.exec(xml).and_then(|m| m.get(1).or_else(|| m.get(2))));
+        let value = jscompat::JsRegex::new(
+            &format!(r#"<w14:{name}\b[^>]*\bw14:val=(?:"([^"]*)"|'([^']*)')"#),
+            "",
+        )
+        .ok()
+        .and_then(|re| re.exec(xml).and_then(|m| m.get(1).or_else(|| m.get(2))));
         let code = parse_int(value.unwrap_or_default(), Radix::Sixteen);
         if code.is_finite() && code > 0.0 && code <= 0x10ffff as f64 {
             char::from_u32(code as u32).unwrap_or(fallback)

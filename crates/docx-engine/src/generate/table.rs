@@ -714,7 +714,10 @@ fn sum(values: impl Iterator<Item = f64>) -> f64 {
     values.fold(0.0, |total, value| total + value)
 }
 
-const EMPTY_TR_PR: &str = r"^<w:trPr(?:\s[^>]*)?>\s*<\/w:trPr>$";
+/// A `w:trPr` that holds nothing any more.
+fn is_empty_tr_pr(tr_pr: &str) -> bool {
+    js_regex!(r"^<w:trPr(?:\s[^>]*)?>\s*<\/w:trPr>$").test(tr_pr)
+}
 
 /// `values?.[ri]` of a per-row text array (null and absent alike: the caller writes `?? ''`)
 fn row_text(values: &Option<Vec<Option<String>>>, ri: usize) -> Option<&str> {
@@ -826,7 +829,7 @@ fn row_xml(
             })?;
             tr_pr = insert_at(&tr_pr, Some(head), &edge_xml);
         }
-    } else if js_regex!(EMPTY_TR_PR).test(&tr_pr) {
+    } else if is_empty_tr_pr(&tr_pr) {
         tr_pr = String::new();
     }
     if let Some(repeat_header) = row_flag(&model.repeat_header_rows, ri) {
@@ -839,7 +842,7 @@ fn row_xml(
             } else {
                 tr_pr.replacen("</w:trPr>", &format!("{tag}</w:trPr>"), 1)
             };
-        } else if js_regex!(EMPTY_TR_PR).test(&tr_pr) {
+        } else if is_empty_tr_pr(&tr_pr) {
             tr_pr = String::new();
         }
     }
@@ -857,7 +860,7 @@ fn row_xml(
                     .map(|m| m.start());
                 insert_at(&tr_pr, at, tag)
             };
-        } else if js_regex!(EMPTY_TR_PR).test(&tr_pr) {
+        } else if is_empty_tr_pr(&tr_pr) {
             tr_pr = String::new();
         }
     }
@@ -891,7 +894,7 @@ fn row_xml(
         }
         _ if !tr_pr.is_empty() => {
             tr_pr = replace_first(js_regex!(r"<w:trHeight[^>]*\/>"), &tr_pr, "");
-            if js_regex!(EMPTY_TR_PR).test(&tr_pr) {
+            if is_empty_tr_pr(&tr_pr) {
                 tr_pr = String::new();
             }
         }
