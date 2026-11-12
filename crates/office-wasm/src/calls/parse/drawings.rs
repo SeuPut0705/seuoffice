@@ -107,7 +107,7 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
             )?)
         },
         "pictureColumnGeom" => |text, args| {
-            optional(picture::picture_column_geom(
+            value(picture::picture_column_geom(
                 &meta_of(args)?,
                 text,
                 section_arg(args)?.as_ref(),
@@ -141,18 +141,16 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
         },
         "blipEffectsOf" => |text, _| optional(image::blip_effects_of(text)?),
         "extractDiagramText" => |text, args| {
-            with_build_ctx(args, |ctx| {
-                optional(diagram::extract_diagram_text(text, ctx)?)
-            })
+            with_build_ctx(args, |ctx| value(diagram::extract_diagram_text(text, ctx)?))
         },
         "extractLockedCanvas" => |text, args| {
             with_build_ctx(args, |ctx| {
-                optional(diagram::extract_locked_canvas(text, ctx)?)
+                value(diagram::extract_locked_canvas(text, ctx)?)
             })
         },
         "extractDiagramDrawing" => |text, args| {
             with_build_ctx(args, |ctx| {
-                optional(diagram::extract_diagram_drawing(text, ctx)?)
+                value(diagram::extract_diagram_drawing(text, ctx)?)
             })
         },
         "imageMeta" => |text, args| {
@@ -207,11 +205,9 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
         "hasResolvablePicture" => |text, args| {
             with_build_ctx_media(args, |ctx| value(media::has_resolvable_picture(text, ctx)?))
         },
-        "paragraphStrayBox" => |text, args| {
-            with_build_ctx(args, |ctx| {
-                optional(textbox::paragraph_stray_box(text, ctx)?)
-            })
-        },
+        "paragraphStrayBox" => {
+            |text, args| with_build_ctx(args, |ctx| value(textbox::paragraph_stray_box(text, ctx)?))
+        }
         "textboxParagraphs" => |text, args| {
             with_build_ctx(args, |ctx| {
                 renumbered(value(textbox::textbox_paragraphs(&node_of(text)?, ctx)?))
@@ -245,7 +241,11 @@ fn node_of(text: &str) -> Result<XNode, String> {
         parse_ordered(text, XML_PARSER_MAX_NESTED_TAGS).map_err(|error| error.to_string())?;
     Ok(nodes
         .into_iter()
-        .find(|node| node.name().is_some())
+        // `nameOf(node) !== undefined`: an element named "" (a tag that starts
+        // with white space) counts, though `XNode::name` reads it as nameless
+        .find(|node| {
+            matches!(node, XNode::Element(element) if !matches!(&*element.name, ":@" | "#text"))
+        })
         .unwrap_or_else(XNode::empty))
 }
 

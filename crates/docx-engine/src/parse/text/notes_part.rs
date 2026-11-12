@@ -84,10 +84,9 @@ pub fn parse_notes_part(
     parse_notes_xml_with(xml, kind, &mut read)
 }
 
-/// `standaloneNoteParagraphReader`'s notes: a notes part on its own (no
-/// styles: builtin defaults; tests, tools).
-pub fn parse_notes_standalone(xml: &str, kind: NoteKind) -> Result<Vec<NoteInfo>, Thrown> {
-    let resolver = ResolveCtx {
+/// The resolver of `standaloneNoteParagraphReader`: no styles, builtin defaults.
+fn standalone_resolver() -> ResolveCtx {
+    ResolveCtx {
         styles: JsMap::new(),
         numbering: JsMap::new(),
         compat: ResolveCompat {
@@ -96,10 +95,23 @@ pub fn parse_notes_standalone(xml: &str, kind: NoteKind) -> Result<Vec<NoteInfo>
             indent_not_numbering_tab_stop: false,
         },
         ..ResolveCtx::default()
-    };
+    }
+}
+
+/// `standaloneNoteParagraphReader`'s notes: a notes part on its own (no
+/// styles: builtin defaults; tests, tools).
+pub fn parse_notes_standalone(xml: &str, kind: NoteKind) -> Result<Vec<NoteInfo>, Thrown> {
     let package = Package::default();
     let media = MediaEnv::new(&NoHost);
-    let ctx = BuildContext::bare(&package, Rc::new(resolver), &media);
+    let ctx = BuildContext::bare(&package, Rc::new(standalone_resolver()), &media);
     let mut read = note_paragraph_reader(&ctx);
     parse_notes_xml_with(xml, kind, &mut read)
+}
+
+/// `standaloneNoteParagraphReader()(pXml)`: one `<w:p>` slice read on its own.
+pub fn read_note_paragraph_standalone(p_xml: &str) -> Result<NoteParagraph, Thrown> {
+    let package = Package::default();
+    let media = MediaEnv::new(&NoHost);
+    let ctx = BuildContext::bare(&package, Rc::new(standalone_resolver()), &media);
+    note_paragraph_reader(&ctx)(p_xml)
 }

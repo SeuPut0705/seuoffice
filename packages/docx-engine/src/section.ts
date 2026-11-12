@@ -66,7 +66,14 @@ export function lineNumberingOf(xml: string): LineNumbering | undefined {
 }
 /** Read page setup from the trailing (hidden) w:sectPr. */
 export function readSectionSettings(parsed: ParsedDoc): SectionSettings {
-  return invoke('readSectionSettings', [parsed.blocks.map((b) => ({ hidden: b.hidden, originalXml: b.originalXml, docxIndex: b.docxIndex })), parsed.gutterAtTop]) as never
+  return invoke('readSectionSettings', [
+    parsed.blocks.map((b) => ({
+      hidden: b.hidden,
+      originalXml: b.originalXml,
+      docxIndex: b.docxIndex,
+    })),
+    parsed.gutterAtTop,
+  ]) as never
 }
 /** On/off flag element (w:titlePg, w:evenAndOddHeaders, …) present and not switched
  *  off: matches self-closing and paired forms, w:val="0|false|off" counts as off. */
@@ -97,7 +104,12 @@ export function sectionFromSectPr(
   lastBlockIndex: number,
   gutterAtTop?: boolean,
 ): SectionInfo {
-  return invoke('sectionFromSectPr', [sectPrXml, firstBlockIndex, lastBlockIndex, gutterAtTop]) as never
+  return invoke('sectionFromSectPr', [
+    sectPrXml,
+    firstBlockIndex,
+    lastBlockIndex,
+    gutterAtTop,
+  ]) as never
 }
 /**
  * Rewrite the sectPr page numbering w:pgNumType (fmt = number format, start = starting
@@ -125,7 +137,14 @@ export function injectIntoSectPr(xml: string, tag: string): string {
  * Block ranges use docxIndex (body child order), boundaries inclusive.
  */
 export function readSections(parsed: ParsedDoc): SectionInfo[] {
-  return invoke('readSections', [parsed.blocks.map((b) => ({ hidden: b.hidden, originalXml: b.originalXml, docxIndex: b.docxIndex })), parsed.gutterAtTop]) as never
+  return invoke('readSections', [
+    parsed.blocks.map((b) => ({
+      hidden: b.hidden,
+      originalXml: b.originalXml,
+      docxIndex: b.docxIndex,
+    })),
+    parsed.gutterAtTop,
+  ]) as never
 }
 /**
  * w:pgBorders for pageBorderProps. Without props the legacy single-line box

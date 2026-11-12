@@ -62,6 +62,7 @@ import { revisionDateBefore } from './reference/revision-xml'
 import { parseLazyMediaUrl } from './reference/lazy-media'
 import { patchZoteroDocumentDataXml } from './reference/zotero-doc-props'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
+import { compareCharAstral, mergeFileNameLongAstral } from './listed'
 
 /** The value as it crosses the wire. */
 const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
@@ -213,14 +214,14 @@ const COMPARE_BUILT: Input[] = [
     [
       para('keep'),
       para(
-        { text: '', image: { xml: '<w:drawing/>', dataUrl: 'data:image/png;base64,AAAA' } },
+        { text: '', image: { dataUrl: 'data:image/png;base64,AAAA', xml: '<w:drawing/>' } },
         ' and text',
       ),
     ],
     [
       para('keep'),
       para(
-        { text: '', image: { xml: '<w:drawing/>', dataUrl: 'data:image/png;base64,AAAA' } },
+        { text: '', image: { dataUrl: 'data:image/png;base64,AAAA', xml: '<w:drawing/>' } },
         ' and more text',
       ),
     ],
@@ -239,6 +240,11 @@ const COMPARE_BUILT: Input[] = [
       {
         ...para('control'),
         sdtShell: {
+          alias: '',
+          tag: '',
+          controlType: 'text',
+          lock: '',
+          id: '',
           openXml: '<w:sdt><w:sdtPr/><w:sdtContent>',
           closeXml: '</w:sdtContent></w:sdt>',
         },
@@ -334,6 +340,7 @@ const compareSpec: CallSpec = {
       args.options as CompareOptions | undefined,
     )
   },
+  listed: compareCharAstral,
   fromModel: compareInputs,
   built: COMPARE_BUILT,
   mutation: 'none',
@@ -428,7 +435,7 @@ const MERGE_BLOCKS: Block[] = [
   { id: 'norun', type: 'paragraph', docxIndex: 9, originalXml: null, runs: [] } as Block,
   para(
     { text: 'plain' },
-    { text: '', image: { xml: '<w:drawing/>' } },
+    { text: '', image: { dataUrl: 'data:image/png;base64,AAAA', xml: '<w:drawing/>' } },
     { text: '', instrField: 'IF «Age» "x" ""' },
   ),
   {
@@ -442,7 +449,7 @@ const MERGE_BLOCKS: Block[] = [
         },
       ],
     }),
-    inlineContentControls: [{ kind: 'text' }],
+    inlineContentControls: [{ tag: '', title: '', lock: '', id: '', text: 'in sdt' }],
   } as unknown as Block,
   {
     id: 'table',
@@ -564,6 +571,7 @@ const mailMergeSpecs: CallSpec[] = [
     fn: 'save.mergeOutputFileName',
     call: (text, args) =>
       mergeOutputFileName(text, args.record as MergeRecord, args.fields as string[]),
+    listed: mergeFileNameLongAstral,
     built: FILE_NAME_PATTERNS.flatMap((text) =>
       RECORDS.flatMap((record) =>
         [['Name', 'First'], [], ['Postal Address']].map((fields) => ({
@@ -1079,7 +1087,7 @@ const CHART_PATCHES: ChartPatch[] = [
   {},
 ]
 
-let WORKBOOKS: string[] = []
+let WORKBOOKS: string[]
 let WORKBOOK_ARGS: Array<{
   categories: string[]
   series: Array<{ name: string; values: Array<number | null> }>

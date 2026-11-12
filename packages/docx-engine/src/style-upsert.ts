@@ -66,7 +66,10 @@ export function pendingHeadingLevel(
   existing: (id: string) => StyleHeadingInfo | undefined,
   seen: Set<string> = new Set(),
 ): number | undefined {
-  return invoke('pendingHeadingLevel', [styleId, pending, existing, seen], { names: ["styleId","pending","existing","seen"], undef: true }) as never
+  return invoke('pendingHeadingLevel', [styleId, pending, existing, seen], {
+    names: ['styleId', 'pending', 'existing', 'seen'],
+    undef: true,
+  }) as never
 }
 export interface StyleUpsert {
   styleId: string

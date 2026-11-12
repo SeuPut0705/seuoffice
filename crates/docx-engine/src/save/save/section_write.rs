@@ -118,15 +118,18 @@ pub fn page_borders_xml(props: Option<&SectionSettingsPageBorderProps>) -> Strin
         );
     };
     let mut out = String::from("<w:pgBorders");
-    if props.z_order.map(|z| z.as_str()) == Some("back") {
+    if props.z_order.as_ref().map(|z| z.as_str()) == Some("back") {
         out.push_str(" w:zOrder=\"back\"");
     }
-    if let Some(display) = props.display {
+    if let Some(display) = &props.display {
         out.push_str(&format!(" w:display=\"{}\"", display.as_str()));
     }
     out.push_str(&format!(
         " w:offsetFrom=\"{}\">",
-        props.offset_from.map_or("text", |from| from.as_str())
+        props
+            .offset_from
+            .as_ref()
+            .map_or("text", |from| from.as_str())
     ));
     for (name, side) in [
         ("top", &sides.top),

@@ -35,9 +35,12 @@ import {
   splitPagesBytes,
   splitPdfBytes,
 } from '../src/main/save-pdf'
-import { VISUAL_SIGNATURE_CONTENT_PREFIX } from '../src/shared/ipc'
+import { OLD_VISUAL_SIGNATURE_CONTENT_PREFIXES } from '../src/shared/old-names'
 import { PDFJS_ANNOT_TEXT } from '../src/renderer/note-threads'
 import type { SavePdfRequest } from '../src/shared/ipc'
+
+/** what an earlier version reads as a visual signature's field (decision 0024) */
+const WRITTEN_PREFIX = OLD_VISUAL_SIGNATURE_CONTENT_PREFIXES[0]!
 
 /** pdf.js AnnotationType.POPUP — a note's popup must never surface as its own entry */
 
@@ -788,8 +791,9 @@ describe('applySaveRequest', () => {
       expect(
         annots[index]!.lookup(PDFName.of('GenOfficeFormField'), PDFHexString).decodeText(),
       ).toBe(fieldName)
+      // the prefix 0.12.37 reads: a field signed here stays signed when the file is opened there
       expect(annots[index]!.lookup(PDFName.of('Contents'), PDFHexString).decodeText()).toBe(
-        `${VISUAL_SIGNATURE_CONTENT_PREFIX}${fieldName}`,
+        `${WRITTEN_PREFIX}${fieldName}`,
       )
     }
 
@@ -798,8 +802,8 @@ describe('applySaveRequest', () => {
       const pdfJsDoc = await loadingTask.promise
       const pdfJsAnnotations = await (await pdfJsDoc.getPage(1)).getAnnotations()
       expect(pdfJsAnnotations.map((annotation) => annotation.contentsObj?.str)).toEqual([
-        `${VISUAL_SIGNATURE_CONTENT_PREFIX}signature.image`,
-        `${VISUAL_SIGNATURE_CONTENT_PREFIX}signature.ink`,
+        `${WRITTEN_PREFIX}signature.image`,
+        `${WRITTEN_PREFIX}signature.ink`,
       ])
     } finally {
       await loadingTask.destroy()

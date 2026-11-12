@@ -323,13 +323,13 @@ pub fn hf_group_pictures(
         image.pos_y_px.set(JsNum(
             anchor_y.0 + math_round((attr_num(off, "y").unwrap_or(0.0) * sy + ty) / EMU_PER_PX),
         ));
-        image.pos_h_rel.assign(*anchor.pos_h_rel);
-        image.pos_v_rel.assign(*anchor.pos_v_rel);
+        image.pos_h_rel.assign((*anchor.pos_h_rel).clone());
+        image.pos_v_rel.assign((*anchor.pos_v_rel).clone());
         if behind {
             image.behind.set(true);
         }
-        if let Some(wrap) = wrap {
-            image.wrap.set(wrap);
+        if let Some(wrap) = &wrap {
+            image.wrap.set(wrap.clone());
         }
         if let Some(src_rect) = js_regex!(r"<a:srcRect\s[^>]*\/>").exec(pic)
             && let Some(crop) = crop_of(src_rect.as_str())?

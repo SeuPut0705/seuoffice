@@ -99,6 +99,51 @@ describe('Zotero fields inside notes', () => {
   })
 })
 
+describe('the paragraph reader of parseNotesXml', () => {
+  const TWO_PARAS =
+    XML_DECL +
+    '<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+    '<w:footnote w:id="2"><w:p><w:r><w:footnoteRef/></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>bold</w:t></w:r></w:p>' +
+    '<w:p><w:r><w:t>second</w:t></w:r></w:p></w:footnote>' +
+    '</w:footnotes>'
+
+  it('the standalone reader reads one paragraph on its own', () => {
+    const read = standaloneNoteParagraphReader()
+    const para = read('<w:p><w:r><w:rPr><w:i/></w:rPr><w:t>slanted</w:t></w:r></w:p>')
+    expect(para.runs).toEqual([expect.objectContaining({ text: 'slanted', italic: true })])
+    expect(para.spacing).toEqual(expect.objectContaining({ beforeTwips: expect.any(Number) }))
+  })
+
+  it('without a reader the notes carry their text only', () => {
+    const [note] = parseNotesXml(TWO_PARAS, 'footnote')
+    expect(note!.text).toContain('bold')
+    expect(note!.richParas ?? []).toEqual([])
+  })
+
+  it('a reader of the caller is called once per paragraph and its runs are the note', () => {
+    const seen: string[] = []
+    const [note] = parseNotesXml(TWO_PARAS, 'footnote', (pXml) => {
+      seen.push(pXml)
+      return {
+        runs: [{ text: ` read ${seen.length}` }],
+        spacing: { beforeTwips: 0, afterTwips: 0 },
+      }
+    })
+    expect(seen).toHaveLength(2)
+    expect(seen[1]).toContain('second')
+    // the first paragraph's leading space before the reference mark is dropped
+    expect(note!.richParas).toEqual([[{ text: 'read 1' }], [{ text: ' read 2' }]])
+  })
+
+  it('what a reader of the caller throws is what parseNotesXml throws', () => {
+    expect(() =>
+      parseNotesXml(TWO_PARAS, 'footnote', () => {
+        throw new Error('reader refused')
+      }),
+    ).toThrow('reader refused')
+  })
+})
+
 describe('footnotes / endnotes', () => {
   it('parses word/footnotes.xml and keeps the reference paragraph editable', async () => {
     const doc = await parseDocx(await buildFootnoteDocx())

@@ -33,6 +33,7 @@ pub mod save;
 pub mod scan;
 pub mod sdt;
 pub mod section;
+pub mod sequences;
 pub mod settings;
 pub mod sources;
 pub mod styles;

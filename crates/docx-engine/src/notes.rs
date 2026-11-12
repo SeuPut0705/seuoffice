@@ -96,11 +96,13 @@ pub fn parse_notes_xml(xml: &str, kind: NoteKind) -> Vec<NoteInfo> {
 
 /// `NoteParagraph`: one note paragraph read through the document's run
 /// extraction and property resolver.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NoteParagraph {
     /// display runs, the self-reference mark run excluded
     pub runs: Vec<crate::model::NoteRun>,
     /// w:pStyle of the paragraph
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub style_id: Option<String>,
     /// before / after / line resolved through the style chain and docDefaults
     pub spacing: crate::model::NoteInfoSpacing,

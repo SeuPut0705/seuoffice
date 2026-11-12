@@ -60,7 +60,7 @@ export interface VmlOrigin {
 }
 /** v:shapetype templates of an XML part, by id (shapes point at them with type="#id") */
 export function vmlShapeTypeTable(xml: string): Map<string, Record<string, string>> {
-  return invoke('vmlShapeTypeTable', [xml], { shape: {"k":"map"} }) as never
+  return invoke('vmlShapeTypeTable', [xml], { shape: { k: 'map' } }) as never
 }
 /**
  * Textless VML shape (v:oval / v:rect / v:roundrect / straight-path v:shape)

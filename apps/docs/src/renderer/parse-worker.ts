@@ -1,6 +1,6 @@
-// this worker's own engine instance
-import './engine-init'
 import { parseDocx } from '@seuoffice/docx-engine'
+import engineUrl from '@seuoffice/docx-engine/engine-url'
+import { initDocxEngine } from '@seuoffice/docx-engine/init'
 import { odtToDocx } from '@seuoffice/odt-engine'
 import type { ParseWorkerRequest, ParseWorkerResponse } from './parse-off-thread'
 
@@ -9,9 +9,15 @@ import type { ParseWorkerRequest, ParseWorkerResponse } from './parse-off-thread
 const post = (msg: ParseWorkerResponse, transfer: Transferable[] = []) =>
   (self as unknown as Worker).postMessage(msg, transfer)
 
+// this worker's own engine instance. Not a top-level await: the request is
+// posted as the worker starts, and a message that arrives while the module is
+// still evaluating finds no handler and is dropped
+const engineStarted = initDocxEngine(engineUrl)
+
 self.onmessage = async (e: MessageEvent<ParseWorkerRequest>) => {
   const { id, bytes, format } = e.data
   try {
+    await engineStarted
     // an ODT converts to its bridge docx first; the caller kept its own copy
     const odt = format === 'odt' ? await odtToDocx(new Uint8Array(bytes)) : null
     const parsed = await parseDocx(odt ? odt.docxBytes : new Uint8Array(bytes))

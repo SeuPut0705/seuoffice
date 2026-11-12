@@ -126,7 +126,7 @@ import type { AiStyleInfo } from './ai/style-ops'
 import { applyResolvedPageSetup, describeSection, type AiPageSetupAccess } from './ai/page-setup'
 import { patchPendingSectPr, sectionIndexAtBlock } from './ai/pending-sections'
 import { protectedNoteMarkBlock, type AiNotesAccess } from './ai/note-ops'
-import { applyHfText, hfEditText } from './editor/hf-text'
+import { applyHfModelText, hfModelText } from './editor/hf-text'
 import {
   insertHfField,
   insertHfInstrField,
@@ -7536,7 +7536,7 @@ export function App() {
         const ctx = aiHfCtxRef.current
         const textOf = (kind: 'header' | 'footer', view: HfView) => {
           const value = ctx.valueOf(kind, view)
-          return value ? hfEditText(value) : ''
+          return value ? hfModelText(value) : ''
         }
         return {
           header: textOf('header', 'default'),
@@ -7553,6 +7553,8 @@ export function App() {
       set: (kind, view, text) => {
         const ctx = aiHfCtxRef.current
         if (ctx.locked) return 'the document is read-only; headers/footers cannot be edited'
+        const next = applyHfModelText(ctx.valueOf(kind, view), text)
+        if (typeof next === 'string') return next
         if (view === 'first' && !ctx.titlePg) {
           setTitlePg(true)
           setTitlePgDirty(true)
@@ -7563,7 +7565,6 @@ export function App() {
           setEvenOddHfDirty(true)
           ctx.evenOddHf = true
         }
-        const next = applyHfText(ctx.valueOf(kind, view), text)
         ctx.commit(kind, next, view)
         ctx.overlay.set(`${kind}:${view}`, next)
         return null

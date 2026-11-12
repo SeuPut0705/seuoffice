@@ -457,7 +457,7 @@ impl Saver<'_> {
                     if let Some(replace) = replace_image {
                         let r_id = self.embed_image_media(&MediaSource {
                             base64: &replace.base64,
-                            mime: replace.mime,
+                            mime: replace.mime.clone(),
                             source_part: None,
                         });
                         xml = retarget_image_blip(&xml, &r_id)?;

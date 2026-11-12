@@ -21,6 +21,16 @@ describe('environment variables a person was told to set under the old prefix', 
     for (const name of OLD_ENV_NAMES) expect(env[`SEUOFFICE_${name}`]).toBe(`value of ${name}`)
   })
 
+  it('include the home and language a person set for the command and the app (docs/operations.md)', () => {
+    const env: Record<string, string | undefined> = {
+      GENOFFICE_HOME: '/Users/kim/agent-home',
+      GENOFFICE_LANG: 'ko',
+    }
+    expect(adoptOldEnv(env).sort()).toEqual(['SEUOFFICE_HOME', 'SEUOFFICE_LANG'])
+    expect(env.SEUOFFICE_HOME).toBe('/Users/kim/agent-home')
+    expect(env.SEUOFFICE_LANG).toBe('ko')
+  })
+
   it('never override a value set under the new name, even an empty one', () => {
     const env: Record<string, string | undefined> = {
       GENOFFICE_AUDIT_LOG: '/old/audit.jsonl',
@@ -41,7 +51,6 @@ describe('environment variables a person was told to set under the old prefix', 
 
   it('do not include the build, development and test variables, which were only renamed', () => {
     const env: Record<string, string | undefined> = {
-      GENOFFICE_LANG: 'ko',
       GENOFFICE_FAKE_UPDATE: '1',
       GENOFFICE_WIN_ARM64: '1',
       GENOFFICE_NODE: '/usr/bin/node',

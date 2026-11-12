@@ -96,12 +96,12 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
             blob(0)?,
             option(args, 1, "maxChars")?,
         )),
-        "docToText" => string_out(
-            file_parse::doc::doc_to_text(blob(0)?).map_err(|error| error.message),
-        ),
-        "pptToText" => string_out(
-            file_parse::ppt::ppt_to_text(blob(0)?).map_err(|error| error.message),
-        ),
+        "docToText" => {
+            string_out(file_parse::doc::doc_to_text(blob(0)?).map_err(|error| error.message))
+        }
+        "pptToText" => {
+            string_out(file_parse::ppt::ppt_to_text(blob(0)?).map_err(|error| error.message))
+        }
         "pptxToText" => string_out(file_parse::pptx::pptx_to_text(blob(0)?)),
         "xlsxToText" => string_out(file_parse::xlsx::xlsx_to_text(
             blob(0)?,
@@ -191,6 +191,9 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
                 "formula": output.formula,
             })))
         }
+        "redactPptxPartXml" => string_out(file_parse::pptx_redaction::redact_pptx_part_xml(text(
+            args, 0,
+        )?)),
         // the constants the binding keeps as TypeScript literals, for its parity test
         "constants" => Ok(Some(json!({
             "ATTACHABLE_EXTS": attachable::ATTACHABLE_EXTS,

@@ -14,4 +14,4 @@ export {
   type OwnedAssetManifest,
   type OwnedAssetRecord,
 } from './manifest'
-export { OLD_ASSET_MANIFEST_FILENAMES } from '../old-names'
+export { ASSET_MANIFEST_FILENAME_WRITTEN, OLD_ASSET_MANIFEST_FILENAMES } from '../old-names'

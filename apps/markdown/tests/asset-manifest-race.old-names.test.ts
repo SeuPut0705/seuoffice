@@ -5,8 +5,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const OLD_MANIFEST = '.genoffice-assets.json'
-const NEW_MANIFEST = '.seuoffice-assets.json'
+// a fresh assets folder keeps the name 0.12.37 reads; the other name is the newer one
+const WRITTEN_MANIFEST = '.genoffice-assets.json'
+const OTHER_MANIFEST = '.seuoffice-assets.json'
 
 const afterRead = vi.hoisted(() => ({ current: null as ((path: string) => void) | null }))
 
@@ -40,15 +41,15 @@ describe('a list under the other name appearing during an update', () => {
 
     const planted = '{"planted":true}'
     afterRead.current = (path) => {
-      if (!path.endsWith(NEW_MANIFEST)) return
+      if (!path.endsWith(WRITTEN_MANIFEST)) return
       afterRead.current = null
-      writeFileSync(join(directory, 'assets', OLD_MANIFEST), planted)
+      writeFileSync(join(directory, 'assets', OTHER_MANIFEST), planted)
     }
     await writeImageIntoOwnedAssets(documentPath, 'second.png', Buffer.from('second'))
 
     expect(afterRead.current).toBeNull()
-    expect(await readFile(join(directory, 'assets', OLD_MANIFEST), 'utf8')).toBe(planted)
-    const manifest = JSON.parse(await readFile(join(directory, 'assets', NEW_MANIFEST), 'utf8'))
+    expect(await readFile(join(directory, 'assets', OTHER_MANIFEST), 'utf8')).toBe(planted)
+    const manifest = JSON.parse(await readFile(join(directory, 'assets', WRITTEN_MANIFEST), 'utf8'))
     expect(manifest.files.map((file: { name: string }) => file.name).sort()).toEqual([
       'first.png',
       'second.png',
