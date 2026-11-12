@@ -10,6 +10,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { LANGS } from '@genoffice/i18n'
 
 import { formulaViewSheets } from '../src/renderer/formula-view'
 import type { LazyWorkbookState } from '../src/renderer/univer-state'
@@ -56,7 +57,7 @@ describe('formula view indicator', () => {
   it('every language carries the wording', () => {
     const dir = join(here, '..', 'src/renderer/i18n/app')
     const files = readdirSync(dir).filter((f) => f.endsWith('.ts'))
-    expect(files.length).toBeGreaterThanOrEqual(21)
+    expect(files.sort()).toEqual(LANGS.map((lang) => `${lang}.ts`).sort())
     for (const file of files) {
       expect(readFileSync(join(dir, file), 'utf8'), file).toContain('appShowingFormulasActive')
     }
