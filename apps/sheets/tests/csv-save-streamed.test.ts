@@ -13,15 +13,15 @@ import { buildRedactionIndex, type RedactionIndex } from '../src/renderer/ai/red
 const saveWorkbookEdits = vi.fn()
 const writeWorkbookRecovery = vi.fn()
 const confirmCsvSave = vi.fn()
-const refuseWithheldCsv = vi.fn()
+const askWithheldCsv = vi.fn()
 
 beforeEach(() => {
   saveWorkbookEdits.mockReset().mockResolvedValue({ canceled: true })
   writeWorkbookRecovery.mockReset().mockResolvedValue({ ok: true })
   confirmCsvSave.mockReset()
-  refuseWithheldCsv.mockReset()
+  askWithheldCsv.mockReset()
   ;(globalThis as unknown as { window: unknown }).window = {
-    desktopApi: { saveWorkbookEdits, writeWorkbookRecovery, confirmCsvSave, refuseWithheldCsv },
+    desktopApi: { saveWorkbookEdits, writeWorkbookRecovery, confirmCsvSave, askWithheldCsv },
   }
 })
 
@@ -136,12 +136,12 @@ describe('handleSave on a CSV session whose sheet holds a cell hidden from the A
     [{ id: 'sheet-1', name: 'Sheet1' }],
   )
 
-  it('writes no CSV, and offers .xlsx through Save As', async () => {
+  it('writes no CSV and goes to Save As when the person asks for .xlsx', async () => {
     confirmCsvSave.mockResolvedValue('csv')
-    refuseWithheldCsv.mockResolvedValue('xlsx')
+    askWithheldCsv.mockResolvedValue('xlsx')
     const { ctx } = csvCtx({ preloadComplete: true, redactions: HIDDEN_A1 })
     await handleSave(ctx, 'save')
-    expect(refuseWithheldCsv).toHaveBeenCalledTimes(1)
+    expect(askWithheldCsv).toHaveBeenCalledTimes(1)
     // the one write is the Save As that follows, never a CSV
     expect(saveWorkbookEdits).toHaveBeenCalledTimes(1)
     const payload = saveWorkbookEdits.mock.calls[0]![0] as Record<string, unknown>
@@ -149,9 +149,21 @@ describe('handleSave on a CSV session whose sheet holds a cell hidden from the A
     expect(payload.csvContent).toBeUndefined()
   })
 
+  it('writes the CSV with the real values when the person asks for it without the marks', async () => {
+    confirmCsvSave.mockResolvedValue('csv')
+    askWithheldCsv.mockResolvedValue('export')
+    const { ctx } = csvCtx({ preloadComplete: true, redactions: HIDDEN_A1 })
+    await handleSave(ctx, 'save')
+    expect(askWithheldCsv).toHaveBeenCalledTimes(1)
+    expect(saveWorkbookEdits).toHaveBeenCalledTimes(1)
+    const payload = saveWorkbookEdits.mock.calls[0]![0] as Record<string, unknown>
+    expect(payload.mode).toBe('save')
+    expect(payload.csvContent).toBe('x\r\n')
+  })
+
   it('writes nothing when the person cancels', async () => {
     confirmCsvSave.mockResolvedValue('csv')
-    refuseWithheldCsv.mockResolvedValue('cancel')
+    askWithheldCsv.mockResolvedValue('cancel')
     const { ctx, messages } = csvCtx({ preloadComplete: true, redactions: HIDDEN_A1 })
     await handleSave(ctx, 'save')
     expect(saveWorkbookEdits).not.toHaveBeenCalled()

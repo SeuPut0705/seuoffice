@@ -615,14 +615,14 @@ describe('ODS export', () => {
       },
     ])
 
-  it('refuses a workbook that hides cells from the AI, before anything is converted or written', async () => {
+  it('asks about a workbook that hides cells from the AI, and Cancel converts and writes nothing', async () => {
     const path = writeWorkbook('Budget.xlsx')
     const tab = newTab()
     const opened = await openWorkbook(tab, path)
     const target = join(dir, 'Budget.ods')
     redactionPart.text = MARKED()
     saveDialogAnswers.push(target)
-    messageAnswers.push(1)
+    messageAnswers.push(2)
 
     const refused = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
 
@@ -632,14 +632,18 @@ describe('ODS export', () => {
     expect(convertOdsCalls).toHaveLength(0)
     expect(messageBoxes).toHaveLength(1)
     expect(messageBoxes[0]?.message).toMatch(/can't keep the cells hidden from the AI/)
-    expect(messageBoxes[0]?.buttons).toEqual(['Save as .xlsx', 'Cancel'])
-    expect(messageBoxes[0]?.detail).toMatch(/Save the workbook as \.xlsx/)
-    expect(messageBoxes[0]?.detail).toMatch(/stop hiding the cells/)
+    expect(messageBoxes[0]?.buttons).toEqual([
+      'Save as .xlsx',
+      'Export ODS without the marks',
+      'Cancel',
+    ])
+    expect(messageBoxes[0]?.detail).toMatch(/Save as \.xlsx keeps the marks/)
+    expect(messageBoxes[0]?.detail).toMatch(/without the marks writes the real values/)
     // the labels are the model's to see, not the dialog's to repeat
     expect(messageBoxes[0]?.detail).not.toContain('client phone')
   })
 
-  it('offers .xlsx instead, which the renderer takes into Save As', async () => {
+  it('takes the person to Save As .xlsx when they choose it, writing nothing', async () => {
     const path = writeWorkbook('Budget.xlsx')
     const tab = newTab()
     const opened = await openWorkbook(tab, path)
@@ -653,16 +657,33 @@ describe('ODS export', () => {
     expect(existsSync(join(dir, 'Budget.ods'))).toBe(false)
   })
 
+  it('writes the copy without the marks only when the person asks for that', async () => {
+    const path = writeWorkbook('Budget.xlsx')
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    const target = join(dir, 'Budget.ods')
+    redactionPart.text = MARKED()
+    saveDialogAnswers.push(target)
+    messageAnswers.push(1)
+
+    const exported = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
+
+    expect((exported as { canceled: boolean }).canceled).toBe(false)
+    expect(readFileSync(target, 'utf8')).toBe(ODS_BYTES)
+    // asked once, and no second warning about the marks
+    expect(messageBoxes).toHaveLength(1)
+  })
+
   it.each([
     ['the record of hidden cells is damaged', () => (redactionPart.text = '{"version":1,')],
     ['the package cannot be listed', () => (redactionPart.manifestFails = true)],
-  ])('refuses when %s: not knowing what is hidden is not nothing hidden', async (_name, damage) => {
+  ])('asks when %s: not knowing what is hidden is not nothing hidden', async (_name, damage) => {
     const path = writeWorkbook('Budget.xlsx')
     const tab = newTab()
     const opened = await openWorkbook(tab, path)
     damage()
     saveDialogAnswers.push(join(dir, 'Budget.ods'))
-    messageAnswers.push(1)
+    messageAnswers.push(2)
 
     const refused = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
 
@@ -680,12 +701,12 @@ describe('ODS export', () => {
     for (const lang of LANGS) {
       setUiLang(lang)
       saveDialogAnswers.push(join(dir, `Budget-${lang}.ods`))
-      messageAnswers.push(1)
+      messageAnswers.push(2)
       await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
       const box = messageBoxes.at(-1)
       expect(box?.message, lang).toContain('ODS')
       expect(box?.detail, lang).toContain('.xlsx')
-      expect(box?.buttons, lang).toHaveLength(2)
+      expect(box?.buttons, lang).toHaveLength(3)
       lines.add(`${box?.message}|${box?.detail}|${box?.buttons?.join()}`)
     }
     // a language without its own text would repeat another's

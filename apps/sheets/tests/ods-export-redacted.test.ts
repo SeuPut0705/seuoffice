@@ -45,7 +45,7 @@ async function bookOn(disk: string, record: 'part' | 'mirror' | 'both'): Promise
 
 describe('exporting a workbook that hides cells from the AI as ODS', () => {
   it.each(['part', 'mirror', 'both'] as const)(
-    'writes nothing, and asks for nothing to be confirmed (record: %s)',
+    'asks first, and Cancel writes nothing (record: %s)',
     async (record) => {
       const sourcePath = await bookOn(directory, record)
       const targetPath = join(directory, 'copy.ods')
@@ -54,21 +54,21 @@ describe('exporting a workbook that hides cells from the AI as ODS', () => {
         sidecar: client,
         sourcePath,
         targetPath,
-        // a loss the person may accept is not what a mark is: nothing is asked
-        confirmLoss: async () => {
+        confirmLoss: async () => true,
+        confirmHidden: async () => {
           asked = true
-          return true
+          return 'cancel'
         },
       })
-      expect(outcome).toEqual({ status: 'redacted' })
-      expect(asked).toBe(false)
+      expect(outcome).toEqual({ status: 'redacted', choice: 'cancel' })
+      expect(asked).toBe(true)
       expect(existsSync(targetPath)).toBe(false)
       // and no half-written copy is left beside it
       expect(await readdir(directory)).toEqual([`${record}.xlsx`])
     },
   )
 
-  it('refuses a record it cannot read, which hides everything', async () => {
+  it('asks about a record it cannot read, which hides everything', async () => {
     const sourcePath = await bookOn(directory, 'part')
     const zip = await JSZip.loadAsync(await readFile(sourcePath))
     zip.file('xl/gxRedactions.json', '{"version":1,')
@@ -80,10 +80,35 @@ describe('exporting a workbook that hides cells from the AI as ODS', () => {
       sourcePath: damaged,
       targetPath,
       confirmLoss: async () => true,
+      confirmHidden: async () => 'xlsx',
     })
-    expect(outcome).toEqual({ status: 'redacted' })
+    expect(outcome).toEqual({ status: 'redacted', choice: 'xlsx' })
     expect(existsSync(targetPath)).toBe(false)
   })
+
+  it.each(['part', 'mirror', 'both'] as const)(
+    'writes the real values and no mark of any kind when asked to export without the marks (record: %s)',
+    async (record) => {
+      const sourcePath = await bookOn(directory, record)
+      const targetPath = join(directory, 'copy.ods')
+      const outcome = await exportWorkbookAsOds({
+        sidecar: client,
+        sourcePath,
+        targetPath,
+        confirmLoss: async () => true,
+        confirmHidden: async () => 'export',
+      })
+      expect(outcome.status).toBe('exported')
+      const ods = await JSZip.loadAsync(await readFile(targetPath))
+      expect(await ods.file('content.xml')!.async('string')).toContain(SECRET)
+      // no part, no defined name, no label: the file does not say anything was hidden
+      for (const path of Object.keys(ods.files)) {
+        expect(path).not.toMatch(/redact|gx/i)
+        const text = await ods.file(path)?.async('string')
+        expect(text ?? '', path).not.toMatch(/gxRedaction|client phone/)
+      }
+    },
+  )
 
   it('still writes the copy of a workbook that hides nothing', async () => {
     const zip = await JSZip.loadAsync(await readFile(await bookOn(directory, 'part')))
@@ -97,6 +122,9 @@ describe('exporting a workbook that hides cells from the AI as ODS', () => {
       sourcePath: plain,
       targetPath,
       confirmLoss: async () => true,
+      confirmHidden: async () => {
+        throw new Error('nothing is hidden: nothing to ask')
+      },
     })
     expect(outcome.status).toBe('exported')
     const ods = await JSZip.loadAsync(await readFile(targetPath))
