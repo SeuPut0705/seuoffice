@@ -10,8 +10,8 @@ use std::f64::consts::PI;
 use std::fmt::Write;
 
 use jscompat::{
-    JsObject, js_regex, math_atan2, math_cos, math_max, math_min, math_round, math_sign, math_sin,
-    math_tan, number_to_string, to_number, trim, truthy, value_to_string,
+    JsObject, RegexLimit, js_regex, math_atan2, math_cos, math_max, math_min, math_round, math_sign, math_sin,
+    math_tan, number_to_string, to_number, trim, truthy, try_js_regex, value_to_string,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -222,9 +222,19 @@ pub struct CustomGeometry {
 /// Extract and parse `<a:custGeom>` from a shape's raw XML.
 /// `shape_w`/`shape_h`: element box in EMU (basis for guide evaluation;
 /// fallback space when a path declares no w/h).
-pub fn parse_cust_geom(shape_xml: &str, shape_w: f64, shape_h: f64) -> Option<CustomGeometry> {
-    let start = shape_xml.find("<a:custGeom")?;
-    let end = start + shape_xml[start..].find("</a:custGeom>")?;
+/// `RegexLimit` where the tag search passed the bound: a tag of millions of
+/// characters outside quotes.
+pub fn parse_cust_geom(
+    shape_xml: &str,
+    shape_w: f64,
+    shape_h: f64,
+) -> Result<Option<CustomGeometry>, RegexLimit> {
+    let Some(start) = shape_xml.find("<a:custGeom") else {
+        return Ok(None);
+    };
+    let Some(end) = shape_xml[start..].find("</a:custGeom>").map(|at| start + at) else {
+        return Ok(None);
+    };
     let xml = &shape_xml[start..end];
 
     let mut gds: Vec<Guide> = Vec::new();
@@ -233,7 +243,8 @@ pub fn parse_cust_geom(shape_xml: &str, shape_w: f64, shape_h: f64) -> Option<Cu
     let mut cur: Option<RawPath<'_>> = None;
     let mut pending: Option<Pending<'_>> = None;
 
-    for found in js_regex!(r#"<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>"#).find_iter(xml) {
+    for found in try_js_regex!(r#"<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>"#).try_find_iter(xml) {
+        let found = found?;
         let tag = found.as_str();
         if tag.starts_with("<!--") || tag.starts_with("<![") || tag.starts_with("<?") {
             continue;
@@ -396,7 +407,7 @@ pub fn parse_cust_geom(shape_xml: &str, shape_w: f64, shape_h: f64) -> Option<Cu
         fill_path: joined(fill_bucket),
         stroke_path: joined(stroke_bucket),
     };
-    (out.path.is_some() || out.fill_path.is_some() || out.stroke_path.is_some()).then_some(out)
+    Ok((out.path.is_some() || out.fill_path.is_some() || out.stroke_path.is_some()).then_some(out))
 }
 
 struct AbsCmd {

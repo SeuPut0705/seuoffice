@@ -393,8 +393,24 @@ const EXT_TAIL = '<p:extLst><p:ext uri="{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E}"/
 const RICH = suffix(PPT_RICH)
 const RICH_READ = readSlideTimingXml(RICH)
 
+// A presetClass value that holds `/></p:cTn>`: the balanced scan reads the
+// cTn as self-closing and ends the first effect's body inside that value, and
+// the cTn's own match runs on over the next effect's open tag, which the
+// search from the body's end still finds.
+const STRADDLE =
+  '<p:par><p:cTn id="3" fill="hold"><p:stCondLst><p:cond delay="indefinite"/></p:stCondLst><p:childTnLst>' +
+  '<p:par><p:cTn id="4" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>' +
+  '<p:par><p:cTn id="5" presetID="1" presetClass="entr" presetSubtype="0" fill="hold" nodeType="clickEffect">' +
+  '<p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>' +
+  '<p:set><p:cBhvr><p:cTn id="6" dur="1"/><p:tgtEl><p:spTgt spid="2"/></p:tgtEl></p:cBhvr></p:set>' +
+  '<p:cTn id="7" presetClass="x/></p:cTn><p:cTn id="9" presetID="1" presetClass="entr" nodeType="withEffect">' +
+  '<p:childTnLst><p:set><p:cBhvr><p:cTn id="10" dur="1"/><p:tgtEl><p:spTgt spid="3"/></p:tgtEl></p:cBhvr></p:set>' +
+  '</p:childTnLst></p:cTn></p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn></p:par>' +
+  '</p:childTnLst></p:cTn></p:par>'
+
 const READ_EDGES: string[] = [
   '',
+  root(mainSeq(STRADDLE)),
   suffix(''),
   '<p:timing/>',
   suffix('<p:timing xmlns:p="urn:x"/>'),

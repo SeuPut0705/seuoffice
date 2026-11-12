@@ -5,6 +5,7 @@
 //! approximates them differs on real documents, so every such operation goes
 //! through this crate and nowhere else.
 
+mod atob;
 mod date;
 mod json;
 mod json_value;
@@ -21,6 +22,7 @@ mod string;
 mod uri;
 mod value;
 
+pub use atob::{InvalidCharacterError, atob};
 pub use date::utc_date_parts;
 pub use json::{JsNum, json_to_string};
 pub use json_value::{

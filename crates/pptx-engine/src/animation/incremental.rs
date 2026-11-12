@@ -2,12 +2,12 @@
 //! from `animEq` to `getSlideAnimations`).
 
 use jscompat::{
-    JsMap, JsRegex, index_of, js_regex, last_index_of, math_max, math_round, number_to_string,
+    JsMap, index_of, js_regex, last_index_of, math_max, math_round, number_to_string,
     to_number,
 };
 
 use super::model::{AnimTrigger, IdGen, Slide, SlideAnimation, is_media_effect};
-use super::read::{find_ctn_end, read_slide_timing_xml};
+use super::read::{EffectCtns, find_ctn_end, read_slide_timing_xml};
 use super::write::{
     Placed, append_missing_media_nodes, effect_par_xml, group_par_xml, main_seq_span,
     patch_slide_timing_xml, place_anims, spid_key, timing_re,
@@ -35,28 +35,91 @@ pub(super) enum Balanced {
 }
 
 impl Balanced {
-    /// `new RegExp(`<${tag}\\b[^>]*?(/?)>|</${tag}>`, 'g')`
-    fn regex(self) -> &'static JsRegex {
+    /// `<tag` and `</tag>`, for [`tag_matches`].
+    fn tags(self) -> (&'static str, &'static str) {
         match self {
-            Self::Par => js_regex!(r"<p:par\b[^>]*?(/?)>|</p:par>"),
-            Self::ChildTnLst => js_regex!(r"<p:childTnLst\b[^>]*?(/?)>|</p:childTnLst>"),
-            Self::Seq => js_regex!(r"<p:seq\b[^>]*?(/?)>|</p:seq>"),
-            Self::BldLst => js_regex!(r"<p:bldLst\b[^>]*?(/?)>|</p:bldLst>"),
+            Self::Par => ("<p:par", "</p:par>"),
+            Self::ChildTnLst => ("<p:childTnLst", "</p:childTnLst>"),
+            Self::Seq => ("<p:seq", "</p:seq>"),
+            Self::BldLst => ("<p:bldLst", "</p:bldLst>"),
         }
     }
+}
+
+/// One match of `<tag\b[^>]*?(/?)>|</tag>`.
+pub(super) struct TagMatch {
+    pub(super) start: usize,
+    pub(super) closing: bool,
+    pub(super) self_closing: bool,
+}
+
+/// The matches of `new RegExp(`<${tag}\\b[^>]*?(/?)>|</${tag}>`, 'g')` after
+/// `lastIndex = from`, written out. The class `[^>]` makes every regex search
+/// read the rest of the text first, and the balanced scans run once per
+/// effect: through the regex they cost the number of effects times the
+/// length of the timing. `open` is `<tag`, `close` is `</tag>`; the tag ends
+/// in a word character.
+pub(super) fn tag_matches<'t>(
+    xml: &'t str,
+    from: usize,
+    open: &'static str,
+    close: &'static str,
+) -> impl Iterator<Item = TagMatch> + 't {
+    let mut pos = from;
+    std::iter::from_fn(move || {
+        loop {
+            let rest = xml.get(pos..)?;
+            let (at, closing) = match (rest.find(open), rest.find(close)) {
+                (None, None) => return None,
+                (Some(o), Some(c)) if c < o => (c, true),
+                (Some(o), _) => (o, false),
+                (None, Some(c)) => (c, true),
+            };
+            let start = pos + at;
+            if closing {
+                pos = start + close.len();
+                return Some(TagMatch {
+                    start,
+                    closing: true,
+                    self_closing: false,
+                });
+            }
+            let after = start + open.len();
+            let tail = xml.get(after..).unwrap_or_default();
+            // `\b` after the name: the next character is not [A-Za-z0-9_]
+            let boundary = tail
+                .chars()
+                .next()
+                .is_none_or(|ch| !(ch.is_ascii_alphanumeric() || ch == '_'));
+            if boundary {
+                // `[^>]*?(\/?)>` ends at the first `>`; no `>` after this
+                // tag leaves no match for either alternative
+                let gt = tail.find('>')?;
+                pos = after + gt + 1;
+                return Some(TagMatch {
+                    start,
+                    closing: false,
+                    self_closing: gt > 0 && tail.as_bytes()[gt - 1] == b'/',
+                });
+            }
+            // `<` is one byte: the next search starts on a character
+            pos = start + 1;
+        }
+    })
 }
 
 /// Balanced scan for the matching close tag: `open_start` is the `<` of the
 /// open tag; the start of the close tag, or `None`.
 pub(super) fn find_balanced_close(xml: &str, open_start: usize, tag: Balanced) -> Option<usize> {
     let mut depth: i64 = 0;
-    for m in tag.regex().find_from(xml, open_start) {
-        if m.as_str().starts_with("</") {
+    let (open, close) = tag.tags();
+    for m in tag_matches(xml, open_start, open, close) {
+        if m.closing {
             depth -= 1;
             if depth == 0 {
-                return Some(m.start());
+                return Some(m.start);
             }
-        } else if m.get(1) != Some("/") {
+        } else if !m.self_closing {
             depth += 1;
         }
     }
@@ -73,16 +136,16 @@ pub(super) fn find_balanced_close(xml: &str, open_start: usize, tag: Balanced) -
 /// leaves out is not counted.
 fn nth_effect_par_span(timing: &str, n: usize) -> Option<(usize, usize)> {
     let (seq_start, seq_end) = main_seq_span(timing)?;
-    let re = js_regex!(r#"<p:cTn\b[^>]*\bpresetClass="[^"]*"[^>]*>"#);
+    let mut ctns = EffectCtns::new(timing, seq_start);
     let mut last_index = seq_start;
     let mut i = 0;
-    while let Some(m) = re.find_from(timing, last_index).next() {
-        if m.start() >= seq_end {
+    while let Some(m) = ctns.next_from(last_index) {
+        if m.start >= seq_end {
             break;
         }
-        let body_end = find_ctn_end(timing, m.end());
+        let body_end = find_ctn_end(timing, m.end);
         let targeted = js_regex!(r#"<p:spTgt\s[^>]*\bspid="(\d+)""#)
-            .test(timing.get(m.end()..body_end).unwrap_or_default());
+            .test(timing.get(m.end..body_end).unwrap_or_default());
         if !targeted {
             last_index = body_end;
             continue;
@@ -93,7 +156,7 @@ fn nth_effect_par_span(timing: &str, n: usize) -> Option<(usize, usize)> {
             last_index = body_end;
             continue;
         }
-        let par_start = last_index_of(timing, "<p:par", m.start() as i64)?;
+        let par_start = last_index_of(timing, "<p:par", m.start as i64)?;
         let close_at = find_balanced_close(timing, par_start, Balanced::Par)?;
         return Some((par_start, close_at + "</p:par>".len()));
     }

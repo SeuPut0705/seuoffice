@@ -645,18 +645,31 @@ fn patch_all_tc_pr(xml: &str, edit: &TableStyleEdit) -> String {
     out
 }
 
+/// The element `nth_span` looks for.
+#[derive(Clone, Copy)]
+enum TableTag {
+    /// `/<a:tr[\s>]/g`
+    Row,
+    /// `/<a:tc[\s>]/g`
+    Cell,
+}
+
 /// Span of the nth element `open` finds in [from,to), up to the first `close`
 /// after it; only for tags that cannot nest (a:tr / a:tc).
 fn nth_span(
     xml: &str,
-    open: &JsRegex,
+    open: TableTag,
     close: &str,
     n: f64,
     from: usize,
     to: usize,
 ) -> Option<(usize, usize)> {
     let mut i = 0.0;
-    for found in open.find_from(xml, from) {
+    let found_from = match open {
+        TableTag::Row => js_regex!(r"<a:tr[\s>]").find_from(xml, from),
+        TableTag::Cell => js_regex!(r"<a:tc[\s>]").find_from(xml, from),
+    };
+    for found in found_from {
         if found.start() >= to {
             break;
         }
@@ -691,13 +704,13 @@ fn patch_cells_tc_pr(xml: &str, cells: &[CellRef], edit: &TableStyleEdit) -> Str
             continue;
         }
         let Some((tr_start, tr_end)) =
-            nth_span(&xml, js_regex!(r"<a:tr[\s>]"), "</a:tr>", row, 0, xml.len())
+            nth_span(&xml, TableTag::Row, "</a:tr>", row, 0, xml.len())
         else {
             continue;
         };
         let Some((tc_start, tc_end)) = nth_span(
             &xml,
-            js_regex!(r"<a:tc[\s>]"),
+            TableTag::Cell,
             "</a:tc>",
             col,
             tr_start,
