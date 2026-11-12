@@ -102,8 +102,13 @@ async function agreesToNoUndo(
 export interface PendingEdits {
   /** the file's size as the document was read: what the person is asked about before the save */
   fileBytes: number
-  /** writes them to the file; false when that failed */
-  save(): Promise<boolean>
+  /**
+   * Writes them to the file. Resolves to where the document is afterwards: a
+   * save can move it (the first save of an untitled copy asks where it goes, a
+   * blank PDF takes its name from its content), and the main process then
+   * grants only the new path. Null when nothing was saved.
+   */
+  save(): Promise<string | null>
 }
 
 export type InPlaceWrite<R> =
@@ -112,34 +117,39 @@ export type InPlaceWrite<R> =
   | { status: 'declined'; flushed: boolean }
   /** the pending edits could not be saved: `write` was not called */
   | { status: 'unsaved' }
-  /** `before`: the file from before the change, null when it was too large to keep */
-  | { status: 'run'; result: R; before: Uint8Array | null }
+  /** `path`: where the document is now, and where `write` was told to write. `before`: the
+   *  file from before the change, null when it was too large to keep */
+  | { status: 'run'; path: string; result: R; before: Uint8Array | null }
 
 /**
  * Writes a change to the file in place, after the pending edits are saved to
  * it. The file as it is then is read first, for Undo; when it is too large to
  * keep, nothing is written unless the person agrees to a change that cannot
  * be undone. With edits pending they are asked before the save, so that
- * Cancel leaves the file as it is.
+ * Cancel leaves the file as it is. `path` is where the document is when the
+ * operation starts: the read and the write go to where the save leaves it.
  */
 export async function writeInPlace<R>(
   api: PdfFileChunkApi,
   path: string,
-  write: () => Promise<R>,
+  write: (path: string) => Promise<R>,
   gate: NoUndoGate,
   pending?: PendingEdits,
 ): Promise<InPlaceWrite<R>> {
+  let at = path
   if (pending) {
     if (!(await agreesToNoUndo(pending.fileBytes, gate))) {
       return { status: 'declined', flushed: false }
     }
-    if (!(await pending.save())) return { status: 'unsaved' }
+    const saved = await pending.save()
+    if (saved === null) return { status: 'unsaved' }
+    at = saved
   }
-  const kept = await readFileWithin(api, path, (gate.limits ?? DEFAULT_LIMITS).bytes)
+  const kept = await readFileWithin(api, at, (gate.limits ?? DEFAULT_LIMITS).bytes)
   if (kept.bytes === null && !(await agreesToNoUndo(kept.fileSize, gate))) {
     return { status: 'declined', flushed: pending !== undefined }
   }
-  return { status: 'run', result: await write(), before: kept.bytes }
+  return { status: 'run', path: at, result: await write(at), before: kept.bytes }
 }
 
 /**

@@ -580,6 +580,16 @@ export default function App() {
   })
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
   const [filePath, setFilePath] = useState('')
+  /** Where the document is, for work that goes on after a save. A save can move the document
+      (the first save of an untitled copy, a blank PDF named from its content), and the main
+      process then grants only the new path, while the closure that started the work still
+      holds the path from before */
+  const filePathRef = useRef(filePath)
+  filePathRef.current = filePath
+  const documentMovedTo = (path: string) => {
+    filePathRef.current = path
+    setFilePath(path)
+  }
   /** this tab shows an untitled copy (a skill template's): its first save asks where */
   const untitledCopyRef = useRef(false)
   useEffect(() => {
@@ -5714,7 +5724,7 @@ export default function App() {
   const openInPdfTools = async (tool: PdfToolsHandoffTool) => {
     setPdfToolsOpen(false)
     if (!filePath) return
-    const opened = await flushThen(() => window.pdfApi.openInPdfTools(filePath, tool))
+    const opened = await flushThen((path) => window.pdfApi.openInPdfTools(path, tool))
     if (opened === false) showNotice(t('pdfToolsOpenFailed'))
   }
 
@@ -5972,7 +5982,7 @@ export default function App() {
       if (nameCandidate) {
         try {
           const renamed = await window.pdfApi.autoRename(filePath, nameCandidate)
-          if (renamed.renamed && renamed.path) setFilePath(renamed.path)
+          if (renamed.renamed && renamed.path) documentMovedTo(renamed.path)
         } catch {
           /* naming is best-effort; the save itself already succeeded */
         }
@@ -6007,7 +6017,7 @@ export default function App() {
       .catch(() => null)
     if (!target) return false
     untitledCopyRef.current = false
-    setFilePath(target)
+    documentMovedTo(target)
     return true
   }
 
@@ -7771,11 +7781,15 @@ export default function App() {
 
   /** Extract/insert work on the file on disk — flush unsaved changes first; undefined = the save failed */
   // `onShown`: the work reads the file through collabRef's shownFile when co-editing, and goes on
-  const flushThen = async <T,>(fn: () => Promise<T>, onShown = false): Promise<T | undefined> => {
-    if (onShown && redactions.length === 0 && collabRef.current) return fn()
+  // The work gets the path the document is at after the flush, which can have moved it
+  const flushThen = async <T,>(
+    fn: (path: string) => Promise<T>,
+    onShown = false,
+  ): Promise<T | undefined> => {
+    if (onShown && redactions.length === 0 && collabRef.current) return fn(filePath)
     if (fileWorkRefused()) return undefined
     if (dirty && !(await save(false, true))) return undefined
-    return fn()
+    return fn(filePathRef.current)
   }
 
   // File-level page operations shared by the ribbon dialogs and the AI tools. The
@@ -7784,7 +7798,7 @@ export default function App() {
   const FLUSH_FAILED = { ok: false, error: 'saving the pending edits failed' } as const
   // A canceled picker still comes after the flush, so the caller learns whether the save happened
   const runFileOp = async <R extends { ok: true } | { ok: false; error: string }>(
-    run: () => Promise<R>,
+    run: (path: string) => Promise<R>,
   ): Promise<Exclude<R, { canceled: true }> | FileOpCanceled | typeof FLUSH_FAILED> => {
     const flushed = dirty
     const result = await flushThen(run)
@@ -7793,14 +7807,14 @@ export default function App() {
     else if ('canceled' in result) return { ok: true, canceled: true, flushed }
     return result as Exclude<R, { canceled: true }>
   }
-  /** Reloads the file a change just wrote, and keeps the file from *before* it as an Undo step
-      (null: too large to keep, which ends the steps before it too) */
-  const reloadWritten = async (before: Uint8Array | null): Promise<number> => {
+  /** Reloads the file a change just wrote at `path`, and keeps the file from *before* it as an
+      Undo step (null: too large to keep, which ends the steps before it too) */
+  const reloadWritten = async (path: string, before: Uint8Array | null): Promise<number> => {
     // the reload below empties the steps
     const kept = writtenRef.current
     // the stored AI results of the kept pages follow the rewritten file before it is read again
     await aiReadRef.current?.afterPageOperation().catch(() => null)
-    const pageCount = await loadDoc(filePath, doc)
+    const pageCount = await loadDoc(path, doc)
     setWritten(recordWritten(kept, before))
     return pageCount
   }
@@ -7854,10 +7868,17 @@ export default function App() {
 
   /** The pending edits, which a change written in place saves first (as flushThen does) */
   const pendingEdits = (): PendingEdits | undefined =>
-    dirty ? { fileBytes: fileSize, save: () => save(false, true) } : undefined
+    dirty
+      ? {
+          fileBytes: fileSize,
+          save: async () => ((await save(false, true)) ? filePathRef.current : null),
+        }
+      : undefined
 
   const rewriteInPlace = async (
-    run: () => Promise<{ ok: true } | { ok: true; canceled: true } | { ok: false; error: string }>,
+    run: (
+      path: string,
+    ) => Promise<{ ok: true } | { ok: true; canceled: true } | { ok: false; error: string }>,
   ): Promise<FileOpResult> => {
     if (fileWorkRefused()) return FLUSH_FAILED
     const flushed = dirty
@@ -7867,38 +7888,38 @@ export default function App() {
     if (change.status === 'declined') {
       return { ok: true, canceled: true, flushed: change.flushed }
     }
-    const { result, before } = change
+    const { path, result, before } = change
     if (!result.ok) {
       opFailed(result.error)
       return result
     }
     if ('canceled' in result) return { ok: true, canceled: true, flushed }
-    if (before) return { ok: true, pageCount: await reloadWritten(before) }
+    if (before) return { ok: true, pageCount: await reloadWritten(path, before) }
     // too large to keep as an Undo step: a plain reload, which leaves no step at all.
     // The stored AI results of the kept pages follow the rewritten file before it is read again
     await aiReadRef.current?.afterPageOperation().catch(() => null)
-    return { ok: true, pageCount: await loadDoc(filePath, doc) }
+    return { ok: true, pageCount: await loadDoc(path, doc) }
   }
   const baseName = () => fileName.replace(/\.pdf$/i, '')
 
   const extractPagesToFile = (visIdxs: number[]) =>
-    runFileOp(() =>
+    runFileOp((path) =>
       window.pdfApi.extractPages({
-        path: filePath,
+        path,
         pages: visIdxs,
         suggestedName: `${baseName()}-p${formatPageRanges(visIdxs.map((i) => i + 1))}.pdf`,
       }),
     )
   const splitPdfToFolder = (chunkSize: number) =>
-    runFileOp(() => window.pdfApi.splitPdf({ path: filePath, chunkSize, baseName: baseName() }))
+    runFileOp((path) => window.pdfApi.splitPdf({ path, chunkSize, baseName: baseName() }))
   const mergePagesToFile = (
     perSheet: number,
     direction: 'horizontal' | 'vertical',
     separator: boolean,
   ) =>
-    runFileOp(() =>
+    runFileOp((path) =>
       window.pdfApi.mergePages({
-        path: filePath,
+        path,
         perSheet,
         direction,
         separator,
@@ -7906,19 +7927,19 @@ export default function App() {
       }),
     )
   const replacePagesOnDisk = (visIdxs: number[]) =>
-    rewriteInPlace(() => window.pdfApi.replacePages({ path: filePath, pages: visIdxs }))
+    rewriteInPlace((path) => window.pdfApi.replacePages({ path, pages: visIdxs }))
   const resizePages = (width: number, height: number) =>
-    rewriteInPlace(() => window.pdfApi.setPageSize({ path: filePath, width, height }))
+    rewriteInPlace((path) => window.pdfApi.setPageSize({ path, width, height }))
   const splitPagesToFile = (perPage: 2 | 4 | 9) =>
-    runFileOp(() =>
+    runFileOp((path) =>
       window.pdfApi.splitPages({
-        path: filePath,
+        path,
         perPage,
         suggestedName: `${baseName()}-split.pdf`,
       }),
     )
   const cropPagesOnDisk = (visIdxs: number[], rect: CropRect) =>
-    rewriteInPlace(() => window.pdfApi.cropPages({ path: filePath, pages: visIdxs, rect }))
+    rewriteInPlace((path) => window.pdfApi.cropPages({ path, pages: visIdxs, rect }))
 
   const extractPages = (origIdxs: number[]) =>
     extractPagesToFile(origIdxs.map((p) => visList.indexOf(p)).sort((a, b) => a - b))
@@ -7965,17 +7986,17 @@ export default function App() {
     const change = await writeInPlace(
       window.pdfApi,
       filePath,
-      () => window.pdfApi.insertPdf({ path: filePath, afterPageIndex }),
+      (path) => window.pdfApi.insertPdf({ path, afterPageIndex }),
       noUndoGate(),
       pendingEdits(),
     )
     if (change.status !== 'run') return
-    const { result, before } = change
+    const { path, result, before } = change
     if (!result.ok) {
       opFailed(result.error)
       return
     }
-    if (!('canceled' in result)) await reloadWritten(before)
+    if (!('canceled' in result)) await reloadWritten(path, before)
   }
 
   // ── Page clipboard (thumbnail sidebar) ──
@@ -8065,12 +8086,12 @@ export default function App() {
       }
       return
     }
-    if (pasted.before) await reloadWritten(pasted.before)
+    if (pasted.before) await reloadWritten(pasted.path, pasted.before)
     else {
       // too large to keep as an Undo step: a plain reload, which leaves no step at all.
       // The stored AI results of the kept pages follow the rewritten file before it is read again
       await aiReadRef.current?.afterPageOperation().catch(() => null)
-      await loadDoc(filePath, doc)
+      await loadDoc(pasted.path, doc)
     }
     // the reloaded file is in visible order: the pasted pages follow the anchor
     const first = afterPageIndex + 1
@@ -8123,10 +8144,10 @@ export default function App() {
   }
 
   const mergePdf = () =>
-    flushThen(async () => {
+    flushThen(async (path) => {
       const base = fileName.replace(/\.pdf$/i, '')
       const result = await window.pdfApi.mergePdf({
-        path: filePath,
+        path,
         suggestedName: `${base}-merged.pdf`,
       })
       if (!result.ok) opFailed(result.error)
@@ -8234,11 +8255,11 @@ export default function App() {
     if (printBusyRef.current) return
     printBusyRef.current = true
     try {
-      await flushThen(async () => {
+      await flushThen(async (path) => {
         setPrinting(true)
         try {
           const data =
-            (await collabRef.current?.shownFile()) ?? (await readFileBytes(window.pdfApi, filePath))
+            (await collabRef.current?.shownFile()) ?? (await readFileBytes(window.pdfApi, path))
           const pdoc = await getDocument({ data, ...DOC_OPTS }).promise
           try {
             await printPdf(pdoc, pages, { includeAnnotations })

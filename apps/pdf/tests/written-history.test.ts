@@ -329,7 +329,7 @@ describe('a page operation on a file too large to keep for Undo', () => {
     })
 
     expect(asked).toEqual([{ fileBytes: 6, limitBytes: 4, writesSoFar: 0 }])
-    expect(out).toEqual({ status: 'run', result: 'written', before: null })
+    expect(out).toEqual({ status: 'run', path: PATH, result: 'written', before: null })
     expect([...file.disk]).toEqual([9])
   })
 
@@ -435,7 +435,7 @@ function pendingEdits(file: FakeFile, saved: Uint8Array, works = true) {
     save: async () => {
       pending.saves += 1
       if (works) file.disk = saved
-      return works
+      return works ? PATH : null
     },
   }
   return pending
@@ -498,7 +498,7 @@ describe('a page operation while edits are waiting to be saved', () => {
       pending,
     )
 
-    expect(out).toEqual({ status: 'run', result: 'written', before: null })
+    expect(out).toEqual({ status: 'run', path: PATH, result: 'written', before: null })
     expect(user.asked).toHaveLength(1)
     expect([pending.saves, op.writes]).toEqual([1, 1])
   })

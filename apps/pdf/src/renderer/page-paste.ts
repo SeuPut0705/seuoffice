@@ -19,8 +19,9 @@ export type PagePaste =
   | { pasted: false; why: 'empty' | 'declined' | 'unsaved' }
   /** `protected`: the file is password-protected or encrypted */
   | { pasted: false; why: 'failed'; error: string; protected: boolean }
-  /** `before`: the file from before the paste, null when it was too large to keep for Undo */
-  | { pasted: true; count: number; before: Uint8Array | null }
+  /** `path`: where the document is now, and where the pages were pasted. `before`: the file
+   *  from before the paste, null when it was too large to keep for Undo */
+  | { pasted: true; count: number; path: string; before: Uint8Array | null }
 
 /** Pastes the copied pages after a page of the file as saved; -1 = front of the document */
 export async function pasteCopiedPages(
@@ -35,7 +36,8 @@ export async function pasteCopiedPages(
   const change = await writeInPlace(
     api,
     path,
-    () => api.pastePages({ path, afterPageIndex }),
+    // where the save of the pending edits left the document, not where the paste started
+    (at) => api.pastePages({ path: at, afterPageIndex }),
     gate,
     pending,
   )
@@ -51,5 +53,5 @@ export async function pasteCopiedPages(
   }
   // the copied pages went away meanwhile: the file was not written, there is no step to keep
   if (result.insertedCount === 0) return { pasted: false, why: 'empty' }
-  return { pasted: true, count: result.insertedCount, before }
+  return { pasted: true, count: result.insertedCount, path: change.path, before }
 }

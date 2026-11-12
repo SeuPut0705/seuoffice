@@ -177,6 +177,7 @@ describe('pasting copied pages into the file', () => {
     expect(await pasteCopiedPages(b.api, b.path, 0, user.gate)).toEqual({
       pasted: true,
       count: 1,
+      path: b.path,
       before: null,
     })
     expect(await pasteCopiedPages(b.api, b.path, 0, user.gate)).toMatchObject({ pasted: true })
