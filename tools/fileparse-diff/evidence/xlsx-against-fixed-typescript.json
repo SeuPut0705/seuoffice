@@ -1,0 +1,120 @@
+{
+  "what": "Rust xlsxToText against packages/file-parse/src/xlsx.ts of the reference commit, over the built inputs of xlsx-cases.ts that are not isolated; rows are the inputs where the two differ",
+  "reference": "origin/sync/genoffice-20261111 at 6acc1a2539f97a6e29d7a83967a986374c62fdbd",
+  "node": "v22.23.5",
+  "wasmSha256": "3c645aa7cf36af5391ee14f6915775af551c15b3f30a6bf2d7fd7758afc7a9be",
+  "compared": 135,
+  "rows": [
+    {
+      "label": "dates 1900",
+      "fixed": {
+        "value": "# Dates\n45292 | 2024-01-01 | 42:00 | 3.14159 | 2024-01-01 06:00 | 12:00 | 2024-01-01 00:00 | 12:00:00\n2024-01-01 | 2024-01-01 | 00:00 | 45292 | 2024-01-01 |  |   | abc\n1900-02-29 | 0 | -1 | 1e20 | 2958466 | =TODAY() | 45292"
+      },
+      "rust": {
+        "value": "# Dates\n45292 | 2024-01-01 | 42:00 | 3.14159 | 2024-01-01 06:00 | 12:00 | 2024-01-01 00:00 | 12:00:00\n2024-01-01 | 2024-01-01 | 00:00 | 45292 | 2024-01-01 |  |   | abc\n1900-02-29 | 0 | -1 | 0NaN-NaN-NaN | 10000-01-01 | =TODAY() | 45292"
+      }
+    },
+    {
+      "label": "dates 1904 one",
+      "fixed": {
+        "value": "# Dates\n45292 | 2028-01-02 | 42:00 | 3.14159 | 2028-01-02 06:00 | 12:00 | 2028-01-02 00:00 | 12:00:00\n2028-01-02 | 2028-01-02 | 00:00 | 45292 | 2028-01-02 |  |   | abc\n1904-03-01 | 1904-01-01 | -1 | 1e20 | 2958466 | =TODAY() | 45292"
+      },
+      "rust": {
+        "value": "# Dates\n45292 | 2028-01-02 | 42:00 | 3.14159 | 2028-01-02 06:00 | 12:00 | 2028-01-02 00:00 | 12:00:00\n2028-01-02 | 2028-01-02 | 00:00 | 45292 | 2028-01-02 |  |   | abc\n1904-03-01 | 1904-01-01 | -1 | 0NaN-NaN-NaN | 10004-01-02 | =TODAY() | 45292"
+      }
+    },
+    {
+      "label": "dates 1904 true",
+      "fixed": {
+        "value": "# Dates\n45292 | 2028-01-02 | 42:00 | 3.14159 | 2028-01-02 06:00 | 12:00 | 2028-01-02 00:00 | 12:00:00\n2028-01-02 | 2028-01-02 | 00:00 | 45292 | 2028-01-02 |  |   | abc\n1904-03-01 | 1904-01-01 | -1 | 1e20 | 2958466 | =TODAY() | 45292"
+      },
+      "rust": {
+        "value": "# Dates\n45292 | 2028-01-02 | 42:00 | 3.14159 | 2028-01-02 06:00 | 12:00 | 2028-01-02 00:00 | 12:00:00\n2028-01-02 | 2028-01-02 | 00:00 | 45292 | 2028-01-02 |  |   | abc\n1904-03-01 | 1904-01-01 | -1 | 0NaN-NaN-NaN | 10004-01-02 | =TODAY() | 45292"
+      }
+    },
+    {
+      "label": "dates 1904 false",
+      "fixed": {
+        "value": "# Dates\n45292 | 2024-01-01 | 42:00 | 3.14159 | 2024-01-01 06:00 | 12:00 | 2024-01-01 00:00 | 12:00:00\n2024-01-01 | 2024-01-01 | 00:00 | 45292 | 2024-01-01 |  |   | abc\n1900-02-29 | 0 | -1 | 1e20 | 2958466 | =TODAY() | 45292"
+      },
+      "rust": {
+        "value": "# Dates\n45292 | 2024-01-01 | 42:00 | 3.14159 | 2024-01-01 06:00 | 12:00 | 2024-01-01 00:00 | 12:00:00\n2024-01-01 | 2024-01-01 | 00:00 | 45292 | 2024-01-01 |  |   | abc\n1900-02-29 | 0 | -1 | 0NaN-NaN-NaN | 10000-01-01 | =TODAY() | 45292"
+      }
+    },
+    {
+      "label": "dates 1904 zero",
+      "fixed": {
+        "value": "# Dates\n45292 | 2024-01-01 | 42:00 | 3.14159 | 2024-01-01 06:00 | 12:00 | 2024-01-01 00:00 | 12:00:00\n2024-01-01 | 2024-01-01 | 00:00 | 45292 | 2024-01-01 |  |   | abc\n1900-02-29 | 0 | -1 | 1e20 | 2958466 | =TODAY() | 45292"
+      },
+      "rust": {
+        "value": "# Dates\n45292 | 2024-01-01 | 42:00 | 3.14159 | 2024-01-01 06:00 | 12:00 | 2024-01-01 00:00 | 12:00:00\n2024-01-01 | 2024-01-01 | 00:00 | 45292 | 2024-01-01 |  |   | abc\n1900-02-29 | 0 | -1 | 0NaN-NaN-NaN | 10000-01-01 | =TODAY() | 45292"
+      }
+    },
+    {
+      "label": "dates 1904 two prs",
+      "fixed": {
+        "value": "# Dates\n45292 | 2024-01-01 | 42:00 | 3.14159 | 2024-01-01 06:00 | 12:00 | 2024-01-01 00:00 | 12:00:00\n2024-01-01 | 2024-01-01 | 00:00 | 45292 | 2024-01-01 |  |   | abc\n1900-02-29 | 0 | -1 | 1e20 | 2958466 | =TODAY() | 45292"
+      },
+      "rust": {
+        "value": "# Dates\n45292 | 2024-01-01 | 42:00 | 3.14159 | 2024-01-01 06:00 | 12:00 | 2024-01-01 00:00 | 12:00:00\n2024-01-01 | 2024-01-01 | 00:00 | 45292 | 2024-01-01 |  |   | abc\n1900-02-29 | 0 | -1 | 0NaN-NaN-NaN | 10000-01-01 | =TODAY() | 45292"
+      }
+    },
+    {
+      "label": "styles found through rels",
+      "fixed": {
+        "value": "# Dates\n45292 | 2024-01-01 | 42:00 | 3.14159 | 2024-01-01 06:00 | 12:00 | 2024-01-01 00:00 | 12:00:00\n2024-01-01 | 2024-01-01 | 00:00 | 45292 | 2024-01-01 |  |   | abc\n1900-02-29 | 0 | -1 | 1e20 | 2958466 | =TODAY() | 45292"
+      },
+      "rust": {
+        "value": "# Dates\n45292 | 2024-01-01 | 42:00 | 3.14159 | 2024-01-01 06:00 | 12:00 | 2024-01-01 00:00 | 12:00:00\n2024-01-01 | 2024-01-01 | 00:00 | 45292 | 2024-01-01 |  |   | abc\n1900-02-29 | 0 | -1 | 0NaN-NaN-NaN | 10000-01-01 | =TODAY() | 45292"
+      }
+    },
+    {
+      "label": "workbook doctype",
+      "fixed": {
+        "value": ""
+      },
+      "rust": {
+        "error": {
+          "name": "Error",
+          "message": "document type declarations are not supported"
+        }
+      }
+    },
+    {
+      "label": "withheld: part number beyond double range in an ignored key",
+      "fixed": {
+        "value": "# Pay\na1 | b1 | c1 | d1\na2 | {{Big}} | secret c2 | d2\na3 | secret b3 | 42 | d3\na4 | lower ref | {{private}} | {{private}} | TRUE\n\n# Other\nother a1 | other b1\n(16383 empty) | far right"
+      },
+      "rust": {
+        "error": {
+          "name": "RedactionMarkError",
+          "message": "Redaction marks in this file could not be processed (the record of the cells withheld in this workbook cannot be read); the file was not read"
+        }
+      }
+    },
+    {
+      "label": "withheld: part lone surrogate label",
+      "fixed": {
+        "value": "# Pay\na1 | b1 | c1 | d1\na2 | {{\ud800x}} | secret c2 | d2\na3 | secret b3 | 42 | d3\na4 | lower ref | {{private}} | {{private}} | TRUE\n\n# Other\nother a1 | other b1\n(16383 empty) | far right"
+      },
+      "rust": {
+        "error": {
+          "name": "RedactionMarkError",
+          "message": "Redaction marks in this file could not be processed (the record of the cells withheld in this workbook cannot be read); the file was not read"
+        }
+      }
+    },
+    {
+      "label": "withheld: part nested deeper than 128",
+      "fixed": {
+        "value": "# Pay\na1 | b1 | c1 | d1\na2 | {{Deep}} | secret c2 | d2\na3 | secret b3 | 42 | d3\na4 | lower ref | {{private}} | {{private}} | TRUE\n\n# Other\nother a1 | other b1\n(16383 empty) | far right"
+      },
+      "rust": {
+        "error": {
+          "name": "RedactionMarkError",
+          "message": "Redaction marks in this file could not be processed (the record of the cells withheld in this workbook cannot be read); the file was not read"
+        }
+      }
+    }
+  ]
+}
