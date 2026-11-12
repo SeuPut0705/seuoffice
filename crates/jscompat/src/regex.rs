@@ -26,6 +26,8 @@
 //! from where the search starts (over the whole text for a pattern with a
 //! lookbehind). A loop that calls [`JsRegex::find_from`] once per match of a
 //! large text pays that pass every time; [`JsRegex::find_iter`] pays it once.
+//! Where such a loop is needed, the fix is a handle that prepares the text
+//! once (its units, its shadow) and is searched many times; none exists yet.
 //!
 //! Under `i` without `u` JavaScript maps each UTF-16 unit to upper case and
 //! never gives a character outside ASCII an ASCII letter. `regress` folds as
@@ -581,6 +583,16 @@ impl JsRegex {
                 next: Some(text[base..start].encode_utf16().count()),
             }),
         }
+    }
+
+    /// Whether a search reads the text from its start on before it searches:
+    /// the regex is under `i` without `u`, or its pattern can tell a
+    /// character outside the BMP from its two units. A loop that calls
+    /// [`JsRegex::find_from`] once per match with such a regex reads the rest
+    /// of the text every time; `jscompat/tests/sites.rs` lists the calls
+    /// that do.
+    pub fn reads_ahead(&self) -> bool {
+        self.shadows || self.counts_units
     }
 
     /// `regex.test(text)`
