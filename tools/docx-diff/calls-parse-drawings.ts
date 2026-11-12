@@ -28,7 +28,6 @@ import {
   type XNode,
 } from './reference/xml-utils'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
-import { custgeomInheritedGuide } from './listed'
 import { parseInternals } from './parse-internals'
 
 const internals = await parseInternals()
@@ -747,14 +746,11 @@ const WAVE0: CallSpec[] = [
   {
     fn: 'parse.hfShapeDrawingSvg',
     call: (text) => internals.hfShapeDrawingSvg!(text),
-    listed: custgeomInheritedGuide,
     fromParse: {
       fn: 'hfShapeDrawingSvg',
       input: ([frag]) => (typeof frag === 'string' ? { text: frag } : undefined),
     },
-    built: SVG_FRAGS.map((text): Input =>
-      custgeomInheritedGuide(text, {}) ? { text, seed: false } : { text },
-    ),
+    built: SVG_FRAGS.map((text): Input => ({ text })),
   },
   {
     fn: 'parse.vmlLengthPx',
