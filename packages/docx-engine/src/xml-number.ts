@@ -11,6 +11,16 @@ export function xmlInt(n: number): string | null {
   return Number.isSafeInteger(rounded) ? String(rounded) : null
 }
 
+/** `n` rounded, as plain digits, when it lies in [min, max]; else null. */
+function xmlIntIn(n: number, min: number, max: number): string | null {
+  const rounded = Math.round(n)
+  return Number.isSafeInteger(rounded) && rounded >= min && rounded <= max ? String(rounded) : null
+}
+
+/** wp:posOffset (ST_PositionOffset, an xsd:int), in EMU */
+export const xmlPositionOffset = (emu: number): string | null =>
+  xmlIntIn(emu, -2147483648, 2147483647)
+
 /**
  * An id must already be an integer: rounding 2.5 to a neighbour could
  * duplicate an id the part already holds.
