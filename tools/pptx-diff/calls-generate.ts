@@ -110,10 +110,25 @@ const FILLS: FillPatch[] = [
   'red',
   '#00FF00FF',
   '$&',
-  { stops: [{ pos: 0, color: '#FF0000' }, { pos: 1, color: '#0000FF80' }], angle: 5400000 },
-  { stops: [{ pos: -1, color: '#FF0000' }, { pos: 2, color: '#0000FF' }] },
+  {
+    stops: [
+      { pos: 0, color: '#FF0000' },
+      { pos: 1, color: '#0000FF80' },
+    ],
+    angle: 5400000,
+  },
+  {
+    stops: [
+      { pos: -1, color: '#FF0000' },
+      { pos: 2, color: '#0000FF' },
+    ],
+  },
   { stops: [{ pos: 0.5, color: '#123456' }], radial: true },
-  { stops: [{ pos: 0, color: '#123456' }], path: 'rect', fillTo: { l: 0.1, t: 0.2, r: 0.3, b: 0.4 } },
+  {
+    stops: [{ pos: 0, color: '#123456' }],
+    path: 'rect',
+    fillTo: { l: 0.1, t: 0.2, r: 0.3, b: 0.4 },
+  },
   { stops: [{ pos: 0, color: '#123456' }], path: 'shape' },
   { stops: [{ pos: 0, color: '#123456' }], path: 'circle', angle: 1 },
   { stops: [], angle: 0 },
@@ -132,7 +147,13 @@ const STROKES: Array<StrokePatch | null> = [
   {
     color: '#0000FF',
     widthEmu: 9525,
-    gradient: { stops: [{ pos: 0, color: '#FF0000' }, { pos: 1, color: '#00FF00' }], angle: 2700000 },
+    gradient: {
+      stops: [
+        { pos: 0, color: '#FF0000' },
+        { pos: 1, color: '#00FF00' },
+      ],
+      angle: 2700000,
+    },
   },
   { color: '#0000FF', widthEmu: 100, dash: 'a"<b', join: 'bevel' },
 ]
@@ -141,7 +162,13 @@ const BACKGROUNDS: BackgroundFillPatch[] = [
   '#FF0000',
   'none',
   '#11223380',
-  { stops: [{ pos: 0, color: '#FF0000' }, { pos: 1, color: '#0000FF' }], angle: 5400000 },
+  {
+    stops: [
+      { pos: 0, color: '#FF0000' },
+      { pos: 1, color: '#0000FF' },
+    ],
+    angle: 5400000,
+  },
   { stops: [{ pos: 0, color: '#FF0000' }], path: 'circle' },
   { imageRid: 'rId2' },
   { imageRid: 'rId3', tile: true },
@@ -153,17 +180,52 @@ const PARAGRAPHS: Paragraph[] = wire([
   { runs: [{ text: 'plain' }], align: 'left' },
   {
     runs: [
-      { text: 'bold', bold: true, italic: true, underline: true, underlineStyle: 'dbl', strike: true, strikeStyle: 'dblStrike' },
+      {
+        text: 'bold',
+        bold: true,
+        italic: true,
+        underline: true,
+        underlineStyle: 'dbl',
+        strike: true,
+        strikeStyle: 'dblStrike',
+      },
       { text: '\n' },
       { text: 'a\r\nb\rc\nd' },
       { text: '', fontSize: 18 },
-      { text: 'x', fontSize: 1e9, color: '#FF0000', highlight: '#00FF00', fontFamily: 'Arial', kern: 12, letterSpacing: 1.5, baseline: 30, capExplicit: 'all' },
-      { text: 'link', hyperlinkRId: 'rId9', hyperlinkAction: 'ppaction://hlinkshowjump?jump=nextslide', hyperlinkTooltip: 'tip "q"' },
+      {
+        text: 'x',
+        fontSize: 1e9,
+        color: '#FF0000',
+        highlight: '#00FF00',
+        fontFamily: 'Arial',
+        kern: 12,
+        letterSpacing: 1.5,
+        baseline: 30,
+        capExplicit: 'all',
+      },
+      {
+        text: 'link',
+        hyperlinkRId: 'rId9',
+        hyperlinkAction: 'ppaction://hlinkshowjump?jump=nextslide',
+        hyperlinkTooltip: 'tip "q"',
+      },
       { text: '7', field: 'slidenum', color: '#112233' },
       { text: 'raw', rawXml: '<a:r><a:t>raw</a:t></a:r>' },
       { text: 'o', outline: { color: '#010203', widthEmu: 12700.4 }, redact: 'secret' },
-      { text: 'f', latinFont: 'Calibri', eaFont: 'MS Gothic', csFont: 'Arial', colorNodeXml: '<a:schemeClr val="accent1"/>' },
-      { text: '\u{1F600}\uD55C', underlineExplicitNone: true, strikeExplicitNone: true, boldImplicit: true, bold: false },
+      {
+        text: 'f',
+        latinFont: 'Calibri',
+        eaFont: 'MS Gothic',
+        csFont: 'Arial',
+        colorNodeXml: '<a:schemeClr val="accent1"/>',
+      },
+      {
+        text: '\u{1F600}\uD55C',
+        underlineExplicitNone: true,
+        strikeExplicitNone: true,
+        boldImplicit: true,
+        bold: false,
+      },
     ],
     align: 'justify',
     rtl: true,
@@ -180,14 +242,29 @@ const PARAGRAPHS: Paragraph[] = wire([
     spaceAfterPct: 20,
     bullet: { type: 'char', char: '\u2022', color: '#FF0000', font: 'Arial', sizePct: 80 },
     tabStops: [{ pos: 914400, algn: 'l' }, { pos: 1828800 }],
-    defRPr: { fontSize: 12, bold: true, italic: false, cap: 'small', color: '#334455', latinFont: 'Arial', eaFont: 'X', csFont: 'Y' },
+    defRPr: {
+      fontSize: 12,
+      bold: true,
+      italic: false,
+      cap: 'small',
+      color: '#334455',
+      latinFont: 'Arial',
+      eaFont: 'X',
+      csFont: 'Y',
+    },
   },
   {
     runs: [{ text: 'n', color: '#abc' }],
     lineExact: 14,
     spaceBeforePct: 50,
     spaceAfter: 3,
-    bullet: { type: 'number', numType: 'arabicPeriod', startAt: 3, sizePt: 12, colorNodeXml: '<a:schemeClr val="tx1"/>' },
+    bullet: {
+      type: 'number',
+      numType: 'arabicPeriod',
+      startAt: 3,
+      sizePt: 12,
+      colorNodeXml: '<a:schemeClr val="tx1"/>',
+    },
     pPrExplicit: { align: false, lnSpc: true, bullet: true, marL: true },
     marL: 1,
     align: 'center',
@@ -214,27 +291,45 @@ const PARAGRAPHS: Paragraph[] = wire([
 
 // ── Fragments ──────────────────────────────────────────────────────────
 
-const NS = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"'
+const NS =
+  'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"'
 
 const sp = (spPr: string, tail = ''): string =>
   `<p:sp ${NS}><p:nvSpPr><p:cNvPr id="2" name="S"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>${spPr}${tail}</p:sp>`
 
-const TX_BODY = (paras: string): string =>
-  `<p:txBody><a:bodyPr/><a:lstStyle/>${paras}</p:txBody>`
+const TX_BODY = (paras: string): string => `<p:txBody><a:bodyPr/><a:lstStyle/>${paras}</p:txBody>`
 
 const R = (text: string, rPr = ''): string => `<a:r>${rPr}<a:t>${text}</a:t></a:r>`
 
 const SHAPES: string[] = [
-  sp('<p:spPr><a:xfrm><a:off x="1" y="2"/><a:ext cx="3" cy="4"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>', TX_BODY(`<a:p>${R('one')}</a:p>`)),
-  sp('<p:spPr/>', TX_BODY(`<a:p>${R('one', '<a:rPr lang="en-US" b="1"/>')}<a:br/>${R('two', '<a:rPr sz="1800"><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill><a:latin typeface="Arial"/></a:rPr>')}</a:p><a:p><a:pPr algn="ctr"><a:lnSpc><a:spcPct val="100000"/></a:lnSpc><a:buChar char="x"/></a:pPr>${R('three')}</a:p>`)),
-  sp('<p:spPr><a:prstGeom prst="rect"/><a:solidFill><a:srgbClr val="FF0000"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:ln w="9525" cap="rnd" cmpd="dbl"><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill><a:prstDash val="dash"/><a:round/><a:headEnd/></a:ln></p:spPr>'),
-  sp('<p:spPr><a:xfrm rot="5400000" flipH="1"><a:off x="1" y="2"/><a:ext cx="3" cy="4"/><a:chOff x="0" y="0"/></a:xfrm><a:gradFill rotWithShape="0"><a:gsLst><a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs></a:gsLst><a:lin ang="100" scaled="0"/></a:gradFill><a:ln><a:gradFill><a:gsLst/><a:path path="rect"><a:fillToRect l="1"/></a:path></a:gradFill></a:ln></p:spPr>'),
-  sp('<p:spPr><a:custGeom/><a:gradFill><a:gsLst/><a:path path="circle"/><a:tileRect/></a:gradFill><a:ln w="1"><a:noFill/></a:ln><a:effectLst/></p:spPr>'),
+  sp(
+    '<p:spPr><a:xfrm><a:off x="1" y="2"/><a:ext cx="3" cy="4"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>',
+    TX_BODY(`<a:p>${R('one')}</a:p>`),
+  ),
+  sp(
+    '<p:spPr/>',
+    TX_BODY(
+      `<a:p>${R('one', '<a:rPr lang="en-US" b="1"/>')}<a:br/>${R('two', '<a:rPr sz="1800"><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill><a:latin typeface="Arial"/></a:rPr>')}</a:p><a:p><a:pPr algn="ctr"><a:lnSpc><a:spcPct val="100000"/></a:lnSpc><a:buChar char="x"/></a:pPr>${R('three')}</a:p>`,
+    ),
+  ),
+  sp(
+    '<p:spPr><a:prstGeom prst="rect"/><a:solidFill><a:srgbClr val="FF0000"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:ln w="9525" cap="rnd" cmpd="dbl"><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill><a:prstDash val="dash"/><a:round/><a:headEnd/></a:ln></p:spPr>',
+  ),
+  sp(
+    '<p:spPr><a:xfrm rot="5400000" flipH="1"><a:off x="1" y="2"/><a:ext cx="3" cy="4"/><a:chOff x="0" y="0"/></a:xfrm><a:gradFill rotWithShape="0"><a:gsLst><a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs></a:gsLst><a:lin ang="100" scaled="0"/></a:gradFill><a:ln><a:gradFill><a:gsLst/><a:path path="rect"><a:fillToRect l="1"/></a:path></a:gradFill></a:ln></p:spPr>',
+  ),
+  sp(
+    '<p:spPr><a:custGeom/><a:gradFill><a:gsLst/><a:path path="circle"/><a:tileRect/></a:gradFill><a:ln w="1"><a:noFill/></a:ln><a:effectLst/></p:spPr>',
+  ),
   sp('<p:spPr><a:noFill/><a:ln/></p:spPr>'),
   sp('<p:spPr><a:gradFill/><a:ln w="5"/></p:spPr>'),
-  sp('<p:spPr><a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"/></a:gsLst></a:gradFill></p:spPr>'),
+  sp(
+    '<p:spPr><a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"/></a:gsLst></a:gradFill></p:spPr>',
+  ),
   sp('<p:spPr><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></p:spPr>'),
-  sp('<p:spPr><a:pattFill prst="pct5"/><a:ln><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:miter lim="1"/><a:prstDash val="sysDot"/></a:ln></p:spPr>'),
+  sp(
+    '<p:spPr><a:pattFill prst="pct5"/><a:ln><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:miter lim="1"/><a:prstDash val="sysDot"/></a:ln></p:spPr>',
+  ),
   sp('<p:spPr xmlns:x="y"/>', '<p:style/>'),
   sp('<p:spPr xmlns:x="y"/>', '<p:style></p:style>'),
   '<p:cxnSp><p:nvCxnSpPr/><p:spPr/></p:cxnSp>',
@@ -320,7 +415,7 @@ const AC_BLOCKS: string[] = [
 const CHILDREN: string[] = [
   '<a:r><a:rPr b="1"/><a:t>x</a:t></a:r>',
   '<a:a><a:b/><a:c></a:c></a:a><a:d x=">"/>',
-  '<a:a x=\'<\'>t</a:a>',
+  "<a:a x='<'>t</a:a>",
   '<a:a><a:a></a:a>',
   '</a:a><a:b/>',
   '<?x?><!--c--><a:a/>',
@@ -351,7 +446,7 @@ const RUN_FONTS: string[] = [
   '<a:r><a:rPr><a:hlinkClick r:id = \'rId9\' action="x"/></a:rPr><a:t>x</a:t></a:r>',
   '<a:r><a:rPr><a:hlinkClick r:id="rId&#57;"/></a:rPr><a:t>x</a:t></a:r>',
   '<a:r><a:rPr><a:hlinkClick r:id="" action="ppaction://hlinkshowjump?jump=lastslide"/></a:rPr><a:t>x</a:t></a:r>',
-  '<a:r><a:rPr><a:hlinkClick action=\'ppaction://hlinkshowjump?jump=lastslide\' r:id=\'\'/></a:rPr><a:t>x</a:t></a:r>',
+  "<a:r><a:rPr><a:hlinkClick action='ppaction://hlinkshowjump?jump=lastslide' r:id=''/></a:rPr><a:t>x</a:t></a:r>",
   '<a:r><a:rPr><a:hlinkClick note="a>b" r:id="rId9"/></a:rPr><a:t>x</a:t></a:r>',
   '<a:r><a:rPr><a:hlinkClick/></a:rPr><a:t>x</a:t></a:r>',
 ]
@@ -359,21 +454,81 @@ const RUN_FONTS: string[] = [
 const RUNS: Array<Args> = wire([
   { text: 'new' },
   { text: '' },
-  { text: 'a<b>&"\'$&', bold: true, italic: false, underline: false, strike: false, baseline: 0, fontSize: 24, letterSpacingEdited: true, letterSpacing: 0 },
-  { text: 'c', underline: true, underlineStyle: 'wavy', strike: true, strikeStyle: 'dblStrike', baseline: 30, letterSpacingEdited: true, letterSpacing: 2.5 },
-  { text: 'c', underlineImplicit: true, underline: true, boldImplicit: true, bold: true, italicImplicit: true, italic: true, fontSizeImplicit: true, fontSize: 9 },
+  {
+    text: 'a<b>&"\'$&',
+    bold: true,
+    italic: false,
+    underline: false,
+    strike: false,
+    baseline: 0,
+    fontSize: 24,
+    letterSpacingEdited: true,
+    letterSpacing: 0,
+  },
+  {
+    text: 'c',
+    underline: true,
+    underlineStyle: 'wavy',
+    strike: true,
+    strikeStyle: 'dblStrike',
+    baseline: 30,
+    letterSpacingEdited: true,
+    letterSpacing: 2.5,
+  },
+  {
+    text: 'c',
+    underlineImplicit: true,
+    underline: true,
+    boldImplicit: true,
+    bold: true,
+    italicImplicit: true,
+    italic: true,
+    fontSizeImplicit: true,
+    fontSize: 9,
+  },
   { text: 'c', underlineExplicitNone: true },
   { text: 'd', color: '#FF0000', fontFamily: 'Segoe', hyperlinkRId: 'rId9' },
-  { text: 'd', color: '#FF0000', colorFollowsTheme: true, fontFamily: 'Segoe', latinFont: 'L', hyperlinkRId: '', hyperlinkAction: 'ppaction://hlinkshowjump?jump=lastslide', hyperlinkTooltip: 't' },
-  { text: 'd', color: '#FF0000', colorInherited: true, fontFamily: 'Segoe', fontImplicit: true, highlight: '#00FF00', highlightEdited: true },
+  {
+    text: 'd',
+    color: '#FF0000',
+    colorFollowsTheme: true,
+    fontFamily: 'Segoe',
+    latinFont: 'L',
+    hyperlinkRId: '',
+    hyperlinkAction: 'ppaction://hlinkshowjump?jump=lastslide',
+    hyperlinkTooltip: 't',
+  },
+  {
+    text: 'd',
+    color: '#FF0000',
+    colorInherited: true,
+    fontFamily: 'Segoe',
+    fontImplicit: true,
+    highlight: '#00FF00',
+    highlightEdited: true,
+  },
   { text: 'd', highlightEdited: true },
   { text: 'e', redact: 'why', colorNodeXml: '<a:schemeClr val="bg1"/>', fontFamily: 'A&B' },
   { text: '', paraMark: true },
   { text: 'x', paraMark: true, color: '#010101' },
   { text: 'x', fontSize: 1e999, baseline: 1e999, letterSpacing: 1e12, letterSpacingEdited: true },
-  { text: '\u{1F600}', kern: 1.234, capExplicit: 'small', letterSpacing: 0.005, baseline: 0.0004, fontSize: 0.005 },
+  {
+    text: '\u{1F600}',
+    kern: 1.234,
+    capExplicit: 'small',
+    letterSpacing: 0.005,
+    baseline: 0.0004,
+    fontSize: 0.005,
+  },
   // text the deck or the user typed, with the `$` forms of a replacement string
-  { text: 'f', fontFamily: 'A$&B$1$$', latinFont: "$'$`", underline: true, underlineStyle: '$&', lang: 'x$&y' },
+  {
+    text: 'f',
+    fontFamily: 'A$&B$1$$',
+    latinFont: "$'$`",
+    underline: true,
+    underlineStyle: '$&',
+    lang: 'x$&y',
+  },
   { text: 'g', hyperlinkRId: '', hyperlinkAction: 'ppaction://hlinkshowjump?jump=firstslide' },
 ])
 
@@ -476,7 +631,11 @@ export const GENERATE: CallSpec[] = [
         const body = wire(el.text)
         const moved: Input[] = [{ text: xml, args: textArgs(body, { textMoved: true }) }]
         const fewer = { ...body, paragraphs: body.paragraphs.slice(0, -1) }
-        return [{ text: xml, args: textArgs(body) }, ...moved, { text: xml, args: textArgs(wire(fewer)) }]
+        return [
+          { text: xml, args: textArgs(body) },
+          ...moved,
+          { text: xml, args: textArgs(wire(fewer)) },
+        ]
       }),
     built: [
       ...SHAPES.flatMap((xml) =>
@@ -493,7 +652,10 @@ export const GENERATE: CallSpec[] = [
         text: xml,
         args: textArgs({ paragraphs: PARAGRAPHS.slice(1, 2) }, { textMoved: true }),
       })),
-      ...SHAPES.slice(0, 2).map((xml): Input => ({ text: xml, args: textArgs({ paragraphs: [] }) })),
+      ...SHAPES.slice(0, 2).map((xml): Input => ({
+        text: xml,
+        args: textArgs({ paragraphs: [] }),
+      })),
       ...SHAPES.slice(0, 2).map((xml): Input => ({ text: xml, args: {} })),
       // every run of RUNS written into a one-run paragraph of a one-run shape, each in place
       ...RUN_FONTS.flatMap((run) =>
@@ -504,7 +666,10 @@ export const GENERATE: CallSpec[] = [
       ),
       // paragraph layout differs from the original while the flattened run count is the same
       {
-        text: sp('<p:spPr/>', TX_BODY(`<a:p>${R('a')}${R('b')}</a:p><a:p>${R('c')}${R('d')}</a:p>`)),
+        text: sp(
+          '<p:spPr/>',
+          TX_BODY(`<a:p>${R('a')}${R('b')}</a:p><a:p>${R('c')}${R('d')}</a:p>`),
+        ),
         args: textArgs({ paragraphs: [1, 2, 3, 4].map((i) => ({ runs: [{ text: `t${i}` }] })) }),
       },
       {
@@ -516,35 +681,54 @@ export const GENERATE: CallSpec[] = [
         args: textArgs({ paragraphs: [{ runs: [{ text: 'a' }, { text: '\n' }, { text: 'z' }] }] }),
       },
       {
-        text: sp('<p:spPr/>', TX_BODY('<a:p><a:r><a:t>a</a:t></a:r><mc:AlternateContent><mc:Choice Requires="a14"><a14:m/></mc:Choice></mc:AlternateContent></a:p>')),
-        args: textArgs({ paragraphs: [{ runs: [{ text: 'a' }, { text: 'm', rawXml: '<a14:m>raw</a14:m>' }] }] }),
+        text: sp(
+          '<p:spPr/>',
+          TX_BODY(
+            '<a:p><a:r><a:t>a</a:t></a:r><mc:AlternateContent><mc:Choice Requires="a14"><a14:m/></mc:Choice></mc:AlternateContent></a:p>',
+          ),
+        ),
+        args: textArgs({
+          paragraphs: [{ runs: [{ text: 'a' }, { text: 'm', rawXml: '<a14:m>raw</a14:m>' }] }],
+        }),
       },
       {
-        text: sp('<p:spPr/>', TX_BODY('<a:p><a:r><a:t>a</a:t></a:r><mc:AlternateContent><mc:Choice Requires="a14"><a14:m/></mc:Choice></mc:AlternateContent></a:p>')),
+        text: sp(
+          '<p:spPr/>',
+          TX_BODY(
+            '<a:p><a:r><a:t>a</a:t></a:r><mc:AlternateContent><mc:Choice Requires="a14"><a14:m/></mc:Choice></mc:AlternateContent></a:p>',
+          ),
+        ),
         args: textArgs({ paragraphs: [{ runs: [{ text: 'a' }, { text: 'm' }] }] }),
       },
       {
         text: '<a:p><a:r><a:t>a</a:t></a:r><mc:AlternateContent><mc:Choice><p:sp/></mc:Choice></mc:AlternateContent></a:p>',
         args: textArgs({ paragraphs: [{ runs: [{ text: 'a' }] }] }),
       },
-      { text: '<a:p><a:r><a:t>a</a:t>', args: textArgs({ paragraphs: [{ runs: [{ text: 'a' }] }] }) },
+      {
+        text: '<a:p><a:r><a:t>a</a:t>',
+        args: textArgs({ paragraphs: [{ runs: [{ text: 'a' }] }] }),
+      },
       { text: '<a:p><a:br>', args: textArgs({ paragraphs: [{ runs: [{ text: '\n' }] }] }) },
-      { text: '<a:p><a:r><a:t>a</a:t></a:r></a:p>', args: textArgs({ paragraphs: [{ runs: [{ text: 'b' }] }] }) },
-      { text: '<a:p><a:r><a:t>a</a:t></a:r><a:t/></a:p>', args: textArgs({ paragraphs: [{ runs: [{ text: 'b' }] }] }) },
+      {
+        text: '<a:p><a:r><a:t>a</a:t></a:r></a:p>',
+        args: textArgs({ paragraphs: [{ runs: [{ text: 'b' }] }] }),
+      },
+      {
+        text: '<a:p><a:r><a:t>a</a:t></a:r><a:t/></a:p>',
+        args: textArgs({ paragraphs: [{ runs: [{ text: 'b' }] }] }),
+      },
     ],
   },
   {
     fn: 'pptxGenerate.generate.patchParagraphPPrXml',
-    call: (text, args) =>
-      patchParagraphPPrXml(text, args.p as Paragraph, args.which as PPrDirty),
+    call: (text, args) => patchParagraphPPrXml(text, args.p as Paragraph, args.which as PPrDirty),
     built: PPR_PARAS.flatMap((xml) =>
       PARAGRAPHS.flatMap((p) => WHICH.map((which): Input => ({ text: xml, args: { p, which } }))),
     ),
   },
   {
     fn: 'pptxGenerate.generate.patchElementPPr',
-    call: (text, args) =>
-      patchElementPPr(modelElement(args), text, args.which as PPrDirty),
+    call: (text, args) => patchElementPPr(modelElement(args), text, args.which as PPrDirty),
     fromDocument: (parts) =>
       corpusElements(parts).flatMap((el): Input[] => {
         if (!isText(el) || !el.text) return []
@@ -570,9 +754,9 @@ export const GENERATE: CallSpec[] = [
     fn: 'pptxGenerate.generate.szAttr',
     call: (_t, args) => szAttr(args.pt as number),
     mutation: 'none',
-    built: [0, 1, 12, 12.5, 18.004, 0.5, -3, 4000, 4000.5, 1e9, 99.999].map(
-      (pt): Input => ({ args: { pt } }),
-    ),
+    built: [0, 1, 12, 12.5, 18.004, 0.5, -3, 4000, 4000.5, 1e9, 99.999].map((pt): Input => ({
+      args: { pt },
+    })),
   },
   {
     fn: 'pptxGenerate.generate.clampInt',
@@ -593,23 +777,34 @@ export const GENERATE: CallSpec[] = [
     fn: 'pptxGenerate.generate.clampEmu',
     call: (_t, args) => clampEmu(args.v as number),
     mutation: 'none',
-    built: [0, 1.5, -1.5, COORD_MAX, COORD_MAX + 1e6, -COORD_MAX * 2, 1e300].map(
-      (v): Input => ({ args: { v } }),
-    ),
+    built: [0, 1.5, -1.5, COORD_MAX, COORD_MAX + 1e6, -COORD_MAX * 2, 1e300].map((v): Input => ({
+      args: { v },
+    })),
   },
   {
     fn: 'pptxGenerate.generate.clampPosEmu',
     call: (_t, args) => clampPosEmu(args.v as number),
     mutation: 'none',
-    built: [0, 1.5, -1.5, COORD_MAX, COORD_MAX + 1e6, -COORD_MAX * 2, 1e300].map(
-      (v): Input => ({ args: { v } }),
-    ),
+    built: [0, 1.5, -1.5, COORD_MAX, COORD_MAX + 1e6, -COORD_MAX * 2, 1e300].map((v): Input => ({
+      args: { v },
+    })),
   },
   {
-    fn: 'pptxGenerate.generate.COORD_MAX',
-    call: () => COORD_MAX,
+    // the exported constants, by name: one function with more than one result
+    fn: 'pptxGenerate.generate.constants',
+    call: (_text, args) => {
+      const constants: Record<string, unknown> = {
+        COORD_MAX,
+        TRANSITION_KINDS: [...TRANSITION_KINDS],
+      }
+      const name = String(args.name)
+      if (!Object.hasOwn(constants, name)) throw new Error(`no constant ${name}`)
+      return constants[name]
+    },
     mutation: 'none',
-    built: [{ args: {} }],
+    built: ['COORD_MAX', 'TRANSITION_KINDS', 'nothing', '__proto__'].map((name): Input => ({
+      args: { name },
+    })),
   },
   {
     fn: 'pptxGenerate.generate.isConnectorXml',
@@ -647,7 +842,10 @@ export const GENERATE: CallSpec[] = [
         args: textArgs({ paragraphs: [{ runs: [{ text: 'k' }] }], anchor: 'top' }),
       })),
       {
-        text: sp('<p:spPr/>', '<p:txBody><a:bodyPr wrap="none"><a:spAutoFit/></a:bodyPr><a:lstStyle><a:lvl1pPr/></a:lstStyle><a:p/>'),
+        text: sp(
+          '<p:spPr/>',
+          '<p:txBody><a:bodyPr wrap="none"><a:spAutoFit/></a:bodyPr><a:lstStyle><a:lvl1pPr/></a:lstStyle><a:p/>',
+        ),
         args: textArgs({ paragraphs: [{ runs: [{ text: 'k' }] }] }),
       },
       {
@@ -704,7 +902,10 @@ export const GENERATE: CallSpec[] = [
     call: (text, args) => patchElementStroke(text, (args.stroke ?? null) as StrokePatch | null),
     fromDocument: (parts) =>
       corpusElements(parts).flatMap((el): Input[] =>
-        STROKES.slice(0, 5).map((stroke): Input => ({ text: el.anchor.originalXml, args: { stroke } })),
+        STROKES.slice(0, 5).map((stroke): Input => ({
+          text: el.anchor.originalXml,
+          args: { stroke },
+        })),
       ),
     built: SHAPES.flatMap((text) => STROKES.map((stroke): Input => ({ text, args: { stroke } }))),
   },
@@ -751,12 +952,6 @@ export const GENERATE: CallSpec[] = [
     ),
   },
   {
-    fn: 'pptxGenerate.generate.TRANSITION_KINDS',
-    call: () => [...TRANSITION_KINDS],
-    mutation: 'none',
-    built: [{ args: {} }],
-  },
-  {
     fn: 'pptxGenerate.generate.patchSlideTransitionXml',
     call: (text, args) => patchSlideTransitionXml(text, args.kind as never),
     built: BODY_SUFFIXES.flatMap((text) =>
@@ -783,9 +978,7 @@ export const GENERATE: CallSpec[] = [
   {
     fn: 'pptxGenerate.generate.patchSlideAdvanceTimeXml',
     call: (text, args) => patchSlideAdvanceTimeXml(text, (args.ms ?? null) as number | null),
-    built: BODY_SUFFIXES.flatMap((text) =>
-      ADV_TIMES.map((ms): Input => ({ text, args: { ms } })),
-    ),
+    built: BODY_SUFFIXES.flatMap((text) => ADV_TIMES.map((ms): Input => ({ text, args: { ms } }))),
   },
   {
     fn: 'pptxGenerate.generate.readSlideAdvanceTimeXml',
@@ -794,7 +987,7 @@ export const GENERATE: CallSpec[] = [
       ...BODY_SUFFIXES.map((text): Input => ({ text })),
       { text: '<p:transition advTm="99999999999999999999999"/>' },
       { text: '<p:transition advTm="007"/>' },
-      { text: '<p:transition advTm=\'5\'/>' },
+      { text: "<p:transition advTm='5'/>" },
       { text: '<p:transition advTm="-5"/>' },
     ],
   },
@@ -821,7 +1014,9 @@ export const GENERATE: CallSpec[] = [
     mutation: 'none',
     argMutation: true,
     built: TRANSFORMS().flatMap((t) =>
-      [undefined, 'p:xfrm', 'a:xfrm'].map((tag): Input => ({ args: { t, ...(tag ? { tag } : {}) } })),
+      [undefined, 'p:xfrm', 'a:xfrm'].map((tag): Input => ({
+        args: { t, ...(tag ? { tag } : {}) },
+      })),
     ),
   },
   {
@@ -852,9 +1047,10 @@ export const GENERATE: CallSpec[] = [
       ),
       ...FRAMES.flatMap((text) =>
         TRANSFORMS().flatMap((transform) =>
-          ['table', 'chart', 'passthrough', 'text'].map(
-            (type): Input => ({ text, args: { type, transform } }),
-          ),
+          ['table', 'chart', 'passthrough', 'text'].map((type): Input => ({
+            text,
+            args: { type, transform },
+          })),
         ),
       ),
     ],
@@ -889,7 +1085,15 @@ export const GENERATE: CallSpec[] = [
 ]
 
 function TRANSFORMS(): Array<Record<string, unknown>> {
-  const t = (x: number, y: number, cx: number, cy: number, rot = 0, flipH = false, flipV = false) => ({
+  const t = (
+    x: number,
+    y: number,
+    cx: number,
+    cy: number,
+    rot = 0,
+    flipH = false,
+    flipV = false,
+  ) => ({
     offset: { x, y, cx, cy },
     rot,
     flipH,

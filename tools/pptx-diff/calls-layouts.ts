@@ -54,7 +54,10 @@ function archiveOf(text: string, args: Args): PackageArchive {
 function afterCall(archive: PackageArchive, value: unknown): unknown {
   return {
     value,
-    entries: [...archive.entries].map(([name, bytes]) => [name, Buffer.from(bytes).toString('utf8')]),
+    entries: [...archive.entries].map(([name, bytes]) => [
+      name,
+      Buffer.from(bytes).toString('utf8'),
+    ]),
   }
 }
 
@@ -166,10 +169,7 @@ const DECK: Parts = [
   ['ppt/media/image1.png', 'PNG\u0001data'],
   ['ppt/notesSlides/notesSlide1.xml', '<p:notes/>'],
   ['ppt/charts/chart1.xml', '<c:chartSpace/>'],
-  [
-    'ppt/charts/_rels/chart1.xml.rels',
-    rels(rel('rId1', 'package', '../embeddings/book1.xlsx')),
-  ],
+  ['ppt/charts/_rels/chart1.xml.rels', rels(rel('rId1', 'package', '../embeddings/book1.xlsx'))],
   ['ppt/embeddings/book1.xlsx', 'xlsx-bytes'],
   [LAYOUT_1, TITLE_LAYOUT],
   [
@@ -288,7 +288,14 @@ const LAYOUT_DECK_ENTRIES: Parts = [
 
 // ── builtin-layouts.ts ───────────────────────────────────────────────────────
 
-const BUILTIN_KEYS = ['titleSlide', 'titleContent', 'sectionHeader', 'twoContent', 'titleOnly', 'blank']
+const BUILTIN_KEYS = [
+  'titleSlide',
+  'titleContent',
+  'sectionHeader',
+  'twoContent',
+  'titleOnly',
+  'blank',
+]
 
 const sizes: Array<{ cx: number; cy: number }> = [
   SIZE_169,
@@ -386,7 +393,10 @@ const ENSURE: Input[] = [
       parts: [
         [CT, types(dflt('xml', 'application/xml'))],
         ['ppt/slideMasters/m&1$&.xml', masterXml(LAYOUT_IDS([2147483649, 'rId1']))],
-        ['ppt/slideMasters/_rels/m&1$&.xml.rels', rels(rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'))],
+        [
+          'ppt/slideMasters/_rels/m&1$&.xml.rels',
+          rels(rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml')),
+        ],
         [LAYOUT_1, layoutXml('Foreign', 'custom', '')],
         [
           'ppt/slideLayouts/_rels/slideLayout1.xml.rels',
@@ -489,7 +499,10 @@ const ENSURE: Input[] = [
   },
   {
     args: {
-      parts: adding(bareDeck(), ['ppt/slideLayouts/slideLayout12.xml', layoutXml('Twelve', 'x', '')]),
+      parts: adding(bareDeck(), [
+        'ppt/slideLayouts/slideLayout12.xml',
+        layoutXml('Twelve', 'x', ''),
+      ]),
       size: SIZE_169,
       key: 'titleOnly',
     },
@@ -497,16 +510,17 @@ const ENSURE: Input[] = [
   // text of the master is what mutations change
   split(bareDeck(), MASTER_1, { size: SIZE_169, key: 'sectionHeader' }),
   split(bareDeck(), CT, { size: SIZE_169, key: 'sectionHeader' }),
-  split(bareDeck(), 'ppt/slideMasters/_rels/slideMaster1.xml.rels', { size: SIZE_169, key: 'twoContent' }),
+  split(bareDeck(), 'ppt/slideMasters/_rels/slideMaster1.xml.rels', {
+    size: SIZE_169,
+    key: 'twoContent',
+  }),
 ]
 
 // ── slide-transfer.ts ────────────────────────────────────────────────────────
 
-const collectInput = (
-  parts: Parts,
-  partPath: string,
-  extra: Args = {},
-): Input => ({ args: { parts, partPath, ...extra } })
+const collectInput = (parts: Parts, partPath: string, extra: Args = {}): Input => ({
+  args: { parts, partPath, ...extra },
+})
 
 const CYCLE: Parts = [
   [CT, types(dflt('xml', 'application/xml'))],
@@ -542,9 +556,22 @@ const ODD_NAMES: Parts = [
   ['constructor', 'cc'],
   ['__proto__', 'pp'],
   ['toString', 'ts'],
-  ['ppt/_rels/a.xml.rels', rels(rel('rId1', 'x', 'a.constructor'), rel('rId2', 'x', 'a.__proto__'))],
+  [
+    'ppt/_rels/a.xml.rels',
+    rels(rel('rId1', 'x', 'a.constructor'), rel('rId2', 'x', 'a.__proto__')),
+  ],
   ['ppt/a.xml', 'a'],
-  ['ppt/_rels/ov.xml.rels', rels(rel('rId1', 'x', '../constructor'), rel('rId2', 'x', '../toString'), rel('rId3', 'x', '../__proto__'), rel('rId4', 'x', 'a.PNG'), rel('rId5', 'x', 'noext'), rel('rId6', 'x', 'a.'))],
+  [
+    'ppt/_rels/ov.xml.rels',
+    rels(
+      rel('rId1', 'x', '../constructor'),
+      rel('rId2', 'x', '../toString'),
+      rel('rId3', 'x', '../__proto__'),
+      rel('rId4', 'x', 'a.PNG'),
+      rel('rId5', 'x', 'noext'),
+      rel('rId6', 'x', 'a.'),
+    ),
+  ],
   ['ppt/_rels/o.v.xml.rels', rels(rel('rId1', 'x', 'ovxxml'), rel('rId2', 'x', 'b[1].xml'))],
 ]
 
@@ -570,8 +597,8 @@ const COLLECT_INPUTS: Input[] = [
   collectInput(DECK, 'ppt/charts/chart1.xml'),
   collectInput(DECK, LAYOUT_1),
   collectInput(DECK, MASTER_1),
-  ...['ppt/q&a.xml', 'ppt/note.xml', 'ppt/a.bin', 'ppt/a.__proto__', 'ppt/a.constructor'].map((path) =>
-    collectInput(NEW_FORMS, path),
+  ...['ppt/q&a.xml', 'ppt/note.xml', 'ppt/a.bin', 'ppt/a.__proto__', 'ppt/a.constructor'].map(
+    (path) => collectInput(NEW_FORMS, path),
   ),
   collectInput(DECK, 'ppt/missing.xml'),
   collectInput(DECK, ''),
@@ -745,10 +772,20 @@ const SLIDE_VARIANTS: Array<[string, Parts]> = [
     'layout without a name',
     replacing(DECK, LAYOUT_1, '<p:sldLayout><p:cSld><p:spTree/></p:cSld></p:sldLayout>'),
   ],
-  ['layout with an empty name', replacing(DECK, LAYOUT_1, layoutXml('', 'x', '').replace('<p:cSld>', '<p:cSld name="">'))],
+  [
+    'layout with an empty name',
+    replacing(DECK, LAYOUT_1, layoutXml('', 'x', '').replace('<p:cSld>', '<p:cSld name="">')),
+  ],
   ['empty layout', replacing(DECK, LAYOUT_1, '')],
   ['no master rel', without(DECK, 'ppt/slideLayouts/_rels/slideLayout1.xml.rels')],
-  ['no theme rel', replacing(DECK, 'ppt/slideMasters/_rels/slideMaster1.xml.rels', rels(rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml')))],
+  [
+    'no theme rel',
+    replacing(
+      DECK,
+      'ppt/slideMasters/_rels/slideMaster1.xml.rels',
+      rels(rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml')),
+    ),
+  ],
   [
     'rels with an absolute target',
     replacing(
@@ -821,7 +858,9 @@ const IMPORT_CLIP_INPUTS: Input[] = [
       clip: {
         parts: {
           'ppt/media/image1.png': 'AAEC',
-          'ppt/media/_rels/image1.png.rels': Buffer.from(rels(rel('rId1', 'x', 'image2.png'))).toString('base64'),
+          'ppt/media/_rels/image1.png.rels': Buffer.from(
+            rels(rel('rId1', 'x', 'image2.png')),
+          ).toString('base64'),
           'ppt/media/image2.png': '',
           'ppt/media/image3': 'Zm9v',
           'ppt/new.bin': 'Zm9v-_',
@@ -851,7 +890,12 @@ const IMPORT_CLIP_INPUTS: Input[] = [
           'ppt/charts/_rels/chart1.xml.rels': Buffer.from(
             rels(
               rel('rId1', 'image', '../media/image1.png'),
-              rel('rId2', 'hyperlink', 'https://example.com/?a=1&amp;b=2', ' TargetMode="External"'),
+              rel(
+                'rId2',
+                'hyperlink',
+                'https://example.com/?a=1&amp;b=2',
+                ' TargetMode="External"',
+              ),
               rel('rId3', 'x', 'mailto:a@b.c'),
               rel('rId4', 'x', '../media/missing.png'),
               rel('rId5', 'x', '../charts/chart1.xml'),
@@ -883,7 +927,7 @@ const IMPORT_CLIP_INPUTS: Input[] = [
           'ppt/media/img.2.png': 'AQID',
           'ppt/media/image1.png': 'AQID',
           'ppt/media/.hidden': 'AQID',
-          'p2': 'AQID',
+          p2: 'AQID',
           'ppt/media/noext5': 'AQID',
         },
         contentTypes: { png: 'image/png' },
@@ -915,8 +959,15 @@ const IMPORT_CLIP_INPUTS: Input[] = [
   },
   {
     args: {
-      parts: replacing(TARGET, CT, `<Types><Default Extension='png' ContentType='image/png'/></Types>`),
-      clip: { parts: { 'ppt/media/new.png': 'AQID' }, contentTypes: { png: 'image/png', jpg: 'image/jpeg', 'ppt/media/new.png': 'image/x' } },
+      parts: replacing(
+        TARGET,
+        CT,
+        `<Types><Default Extension='png' ContentType='image/png'/></Types>`,
+      ),
+      clip: {
+        parts: { 'ppt/media/new.png': 'AQID' },
+        contentTypes: { png: 'image/png', jpg: 'image/jpeg', 'ppt/media/new.png': 'image/x' },
+      },
     },
   },
   // an inherited name as a dependency of an identical part: the TypeScript throws
@@ -931,7 +982,9 @@ const IMPORT_CLIP_INPUTS: Input[] = [
       clip: {
         parts: {
           'ppt/a.bin': Buffer.from('AAA').toString('base64'),
-          'ppt/_rels/a.bin.rels': Buffer.from(rels(rel('rId1', 'x', '../constructor'))).toString('base64'),
+          'ppt/_rels/a.bin.rels': Buffer.from(rels(rel('rId1', 'x', '../constructor'))).toString(
+            'base64',
+          ),
         },
         contentTypes: {},
       },
@@ -950,7 +1003,9 @@ const IMPORT_CLIP_INPUTS: Input[] = [
       clip: {
         parts: {
           'ppt/a.bin': Buffer.from('AAA').toString('base64'),
-          'ppt/_rels/a.bin.rels': Buffer.from(rels(rel('rId1', 'x', '../b.bin'))).toString('base64'),
+          'ppt/_rels/a.bin.rels': Buffer.from(rels(rel('rId1', 'x', '../b.bin'))).toString(
+            'base64',
+          ),
           'ppt/b.bin': Buffer.from('BBB').toString('base64'),
           'ppt/_rels/b.bin.rels': Buffer.from(rels(rel('rId1', 'x', 'a.bin'))).toString('base64'),
         },
@@ -962,23 +1017,41 @@ const IMPORT_CLIP_INPUTS: Input[] = [
 
 const MATERIALIZE_INPUTS: Input[] = [
   bundleInputs(BUNDLE, TARGET, { slidePath: 'ppt/slides/slide1.xml', layoutPath: LAYOUT_1 }),
-  bundleInputs(BUNDLE, DECK, { slidePath: 'ppt/slides/slide3.xml', layoutPath: 'ppt/slideLayouts/slideLayout2.xml' }),
-  bundleInputs(BUNDLE, without(TARGET, CT), { slidePath: 'ppt/slides/slide1.xml', layoutPath: LAYOUT_1 }),
-  bundleInputs(BUNDLE, TARGET, { slidePath: 'ppt/slides/sub/slide1.xml', layoutPath: 'ppt/a&b<c>"d".xml' }),
+  bundleInputs(BUNDLE, DECK, {
+    slidePath: 'ppt/slides/slide3.xml',
+    layoutPath: 'ppt/slideLayouts/slideLayout2.xml',
+  }),
+  bundleInputs(BUNDLE, without(TARGET, CT), {
+    slidePath: 'ppt/slides/slide1.xml',
+    layoutPath: LAYOUT_1,
+  }),
+  bundleInputs(BUNDLE, TARGET, {
+    slidePath: 'ppt/slides/sub/slide1.xml',
+    layoutPath: 'ppt/a&b<c>"d".xml',
+  }),
   bundleInputs(BUNDLE, TARGET, { slidePath: 'slide.xml', layoutPath: 'layout.xml' }),
   bundleInputs(BUNDLE, TARGET, { slidePath: 'ppt/slides/slide1.xml', layoutPath: '' }),
-  bundleInputs(
-    { ...BUNDLE, rels: [], parts: {}, contentTypes: {} },
-    TARGET,
-    { slidePath: 'ppt/slides/slide1.xml', layoutPath: LAYOUT_1 },
-  ),
+  bundleInputs({ ...BUNDLE, rels: [], parts: {}, contentTypes: {} }, TARGET, {
+    slidePath: 'ppt/slides/slide1.xml',
+    layoutPath: LAYOUT_1,
+  }),
   bundleInputs(
     {
       ...BUNDLE,
       rels: [
-        { id: 'rId1', type: `${REL}/hyperlink`, target: 'https://e.com/?a=1&b=<2>"3"', external: true },
+        {
+          id: 'rId1',
+          type: `${REL}/hyperlink`,
+          target: 'https://e.com/?a=1&b=<2>"3"',
+          external: true,
+        },
         { id: 'rId2', type: `${REL}/image`, target: 'ppt/media/not-in-parts.png' },
-        { id: 'rId3', type: `${REL}/slideLayout`, target: 'ppt/slideLayouts/slideLayout1.xml', layout: true },
+        {
+          id: 'rId3',
+          type: `${REL}/slideLayout`,
+          target: 'ppt/slideLayouts/slideLayout1.xml',
+          layout: true,
+        },
         { id: 'rId4', type: `${REL}/image`, target: 'ppt/media/image1.png' },
       ],
     },
@@ -991,25 +1064,46 @@ const MATERIALIZE_INPUTS: Input[] = [
       ...BUNDLE,
       rels: [
         { id: 'a&b"<c>', type: `${REL}/hyperlink`, target: 'https://e.com/', external: true },
-        { id: "i'd", type: `${REL}/slideLayout`, target: 'ppt/slideLayouts/slideLayout1.xml', layout: true },
+        {
+          id: "i'd",
+          type: `${REL}/slideLayout`,
+          target: 'ppt/slideLayouts/slideLayout1.xml',
+          layout: true,
+        },
         { id: 'rId4', type: `${REL}/image`, target: 'ppt/media/image1.png' },
       ],
-      parts: { 'ppt/media/image1.png': 'AQID', 'ppt/media/new$&.x&y': 'AQID', 'ppt/z.a$&b': 'AQID' },
+      parts: {
+        'ppt/media/image1.png': 'AQID',
+        'ppt/media/new$&.x&y': 'AQID',
+        'ppt/z.a$&b': 'AQID',
+      },
       contentTypes: { 'ppt/media/new$&.x&y': 'image/x&y"<z>', 'a$&b': 'text/$&"q"', 'x&y': 'a/b' },
     },
     TARGET,
     { slidePath: 'ppt/slides/slide1.xml', layoutPath: LAYOUT_1 },
   ),
   bundleInputs(
-    { ...BUNDLE, contentTypes: { png: 'image/png', 'a$&b': 'text/$$' }, parts: { ...BUNDLE.parts, 'ppt/z.a$&b': 'AQID' } },
-    replacing(TARGET, CT, `<Types><Default Extension = 'png' ContentType='image/png'/><Default Extension="BIN" ContentType="x/y"/></Types>`),
+    {
+      ...BUNDLE,
+      contentTypes: { png: 'image/png', 'a$&b': 'text/$$' },
+      parts: { ...BUNDLE.parts, 'ppt/z.a$&b': 'AQID' },
+    },
+    replacing(
+      TARGET,
+      CT,
+      `<Types><Default Extension = 'png' ContentType='image/png'/><Default Extension="BIN" ContentType="x/y"/></Types>`,
+    ),
     { slidePath: 'ppt/slides/slide1.xml', layoutPath: LAYOUT_1 },
   ),
   // the bundle holds a name the target already has, a root part, an empty rels part
   bundleInputs(
     {
       ...BUNDLE,
-      parts: { 'ppt/media/image1.png': 'AQID', 'ppt/media/_rels/image1.png.rels': '', '_rels/.rels': 'AQID' },
+      parts: {
+        'ppt/media/image1.png': 'AQID',
+        'ppt/media/_rels/image1.png.rels': '',
+        '_rels/.rels': 'AQID',
+      },
       contentTypes: { png: 'image/png' },
       rels: [{ id: 'rId1', type: `${REL}/image`, target: 'ppt/media/image1.png' }],
     },
@@ -1017,7 +1111,6 @@ const MATERIALIZE_INPUTS: Input[] = [
     { slidePath: 'ppt/slides/slide1.xml', layoutPath: LAYOUT_1 },
   ),
 ]
-
 
 const IMPORT_SOURCE_INPUTS: Input[] = [
   bundleInputs(BUNDLE, DECK),
@@ -1032,12 +1125,21 @@ const IMPORT_SOURCE_INPUTS: Input[] = [
     replacing(
       TARGET,
       'ppt/presentation.xml',
-      presentation('<p:sldMasterId id="2147483700" r:id="rId1"/><p:sldMasterId id="5" r:id="rId9"/>'),
+      presentation(
+        '<p:sldMasterId id="2147483700" r:id="rId1"/><p:sldMasterId id="5" r:id="rId9"/>',
+      ),
     ),
   ),
   bundleInputs(
     BUNDLE,
-    replacing(TARGET, PRES_RELS, rels(rel('rId1', 'slideMaster', 'slideMasters/slideMaster1.xml'), rel('rId99999999999999999999999', 'x', 'y'))),
+    replacing(
+      TARGET,
+      PRES_RELS,
+      rels(
+        rel('rId1', 'slideMaster', 'slideMasters/slideMaster1.xml'),
+        rel('rId99999999999999999999999', 'x', 'y'),
+      ),
+    ),
   ),
   // no chain, no theme, a chain part missing, a chain that is an inherited name
   { args: { parts: TARGET, bundle: { ...BUNDLE, chain: undefined } } },
@@ -1055,15 +1157,30 @@ const IMPORT_SOURCE_INPUTS: Input[] = [
   bundleInputs(BUNDLE, replacing(DECK, 'ppt/theme/theme1.xml', '<a:theme name="Changed"/>')),
   bundleInputs(
     BUNDLE,
-    replacing(DECK, 'ppt/slideMasters/_rels/slideMaster1.xml.rels', rels(rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'))),
+    replacing(
+      DECK,
+      'ppt/slideMasters/_rels/slideMaster1.xml.rels',
+      rels(rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml')),
+    ),
   ),
   bundleInputs(
     BUNDLE,
-    replacing(DECK, 'ppt/slideMasters/_rels/slideMaster1.xml.rels', rels(rel('rId1', 'theme', '../theme/none.xml'), rel('rId2', 'slideLayout', '../slideLayouts/slideLayout1.xml'))),
+    replacing(
+      DECK,
+      'ppt/slideMasters/_rels/slideMaster1.xml.rels',
+      rels(
+        rel('rId1', 'theme', '../theme/none.xml'),
+        rel('rId2', 'slideLayout', '../slideLayouts/slideLayout1.xml'),
+      ),
+    ),
   ),
   bundleInputs(
     BUNDLE,
-    replacing(DECK, 'ppt/slideMasters/_rels/slideMaster1.xml.rels', rels(rel('rId1', 'theme', 'https://e.com/t.xml', ' TargetMode="External"'))),
+    replacing(
+      DECK,
+      'ppt/slideMasters/_rels/slideMaster1.xml.rels',
+      rels(rel('rId1', 'theme', 'https://e.com/t.xml', ' TargetMode="External"')),
+    ),
   ),
   // the master text is what mutations change
   split(TARGET, MASTER_1, { bundle: BUNDLE }),
@@ -1075,7 +1192,9 @@ const CHOOSE_INPUTS: Input[] = [
   bundleInputs(BUNDLE, DECK),
   bundleInputs(BUNDLE_BY_NAME, DECK),
   bundleInputs({ ...BUNDLE, layoutName: 'Title Slide' }, DECK),
-  bundleInputs({ ...BUNDLE, layoutName: 'Title Slide' }, DECK, { neighbour: 'ppt/slides/slide2.xml' }),
+  bundleInputs({ ...BUNDLE, layoutName: 'Title Slide' }, DECK, {
+    neighbour: 'ppt/slides/slide2.xml',
+  }),
   bundleInputs({ ...BUNDLE, layoutName: 'Missing' }, DECK, { neighbour: 'ppt/slides/slide2.xml' }),
   bundleInputs({ ...BUNDLE, layoutName: 'Missing' }, DECK, { neighbour: 'ppt/slides/none.xml' }),
   bundleInputs({ ...BUNDLE, layoutName: '' }, DECK, { neighbour: '' }),
@@ -1083,7 +1202,9 @@ const CHOOSE_INPUTS: Input[] = [
   bundleInputs(BUNDLE, [[CT, types()]]),
   bundleInputs(BUNDLE, [[CT, types()]], { neighbour: SLIDE_PATH }),
   bundleInputs(BUNDLE, without(DECK, 'ppt/presentation.xml'), { neighbour: 'ppt/slides/none.xml' }),
-  bundleInputs(BUNDLE, replacing(DECK, 'ppt/slides/_rels/slide2.xml.rels', '<Relationships'), { neighbour: 'ppt/slides/slide2.xml' }),
+  bundleInputs(BUNDLE, replacing(DECK, 'ppt/slides/_rels/slide2.xml.rels', '<Relationships'), {
+    neighbour: 'ppt/slides/slide2.xml',
+  }),
   // layouts without a name (name undefined), and with an empty one
   bundleInputs({ ...BUNDLE, layoutName: 'Two' }, adding(LAYOUT_DECK_ENTRIES)),
   bundleInputs({ ...BUNDLE, layoutName: 'Ten' }, adding(LAYOUT_DECK_ENTRIES)),
@@ -1102,13 +1223,16 @@ const partsOf = (parts: ReadonlyMap<string, string>, name: RegExp): Array<[strin
 const LAYOUT_PART = /^ppt\/slide(?:Layouts|Masters)\/[^/]+\.xml$/
 
 /** presentation.xml of the blank deck written so the slide list can or cannot take a new slide. */
-const BLANK_PRES = (await PackageArchive.open(Buffer.from(deckNamed('blank deck'), 'base64'))).readText(
-  'ppt/presentation.xml',
-)!
+const BLANK_PRES = (
+  await PackageArchive.open(Buffer.from(deckNamed('blank deck'), 'base64'))
+).readText('ppt/presentation.xml')!
 const PRES_FORMS: string[] = [
   BLANK_PRES.replace('<p:sldIdLst>', '<p:sldIdLst xmlns:q="x">'),
   BLANK_PRES.replace(/<(\/?)p:(sldIdLst|sldId)\b/g, '<$1$2'),
-  BLANK_PRES.replace(/<p:sldId\b([^>]*?)\/>/g, '<p:sldId$1><p:extLst><p:ext uri="x"/></p:extLst></p:sldId>'),
+  BLANK_PRES.replace(
+    /<p:sldId\b([^>]*?)\/>/g,
+    '<p:sldId$1><p:extLst><p:ext uri="x"/></p:extLst></p:sldId>',
+  ),
   BLANK_PRES.replace(/ r:id="(rId\d+)"/, " r:id = '$1'"),
   BLANK_PRES.replace('<p:sldIdLst>', '<p:sldIdLst >'),
   BLANK_PRES.replace('</p:sldIdLst>', '</p:sldIdLst >'),
@@ -1133,10 +1257,7 @@ export const LAYOUTS: CallSpec[] = [
       partsOf(parts, LAYOUT_PART)
         .slice(0, 40)
         .map(([, text]) => ({ text })),
-    built: [
-      ...PLACEHOLDER_TEXTS.map((text) => ({ text })),
-      { text: INHERITED_HINT_TEXT },
-    ],
+    built: [...PLACEHOLDER_TEXTS.map((text) => ({ text })), { text: INHERITED_HINT_TEXT }],
   },
   {
     fn: 'pptxLayouts.layout.listSlideLayouts',
@@ -1145,9 +1266,7 @@ export const LAYOUTS: CallSpec[] = [
       {
         text: parts.get('ppt/slideLayouts/slideLayout1.xml') ?? '',
         args: {
-          parts: [...parts].filter(
-            ([name]) => name !== 'ppt/slideLayouts/slideLayout1.xml',
-          ),
+          parts: [...parts].filter(([name]) => name !== 'ppt/slideLayouts/slideLayout1.xml'),
           textPart: 'ppt/slideLayouts/slideLayout1.xml',
         },
       },
@@ -1162,7 +1281,10 @@ export const LAYOUTS: CallSpec[] = [
         args: { parts: [], textPart: 'ppt/slideLayouts/slideLayout1.xml' },
       })),
       { text: '', args: { parts: [], textPart: 'ppt/slideLayouts/slideLayout1.xml' } },
-      { text: '\uFEFF<p:cSld name="Bom"/>', args: { parts: [], textPart: 'ppt/slideLayouts/slideLayout1.xml' } },
+      {
+        text: '\uFEFF<p:cSld name="Bom"/>',
+        args: { parts: [], textPart: 'ppt/slideLayouts/slideLayout1.xml' },
+      },
     ],
   },
   {
@@ -1306,15 +1428,26 @@ export const LAYOUTS: CallSpec[] = [
       deckInput(
         'blank deck',
         { sourceIndex: 0, layoutPath: 'ppt/slideLayouts/slideLayout1.xml' },
-        { part: CT, text: '<Types><Override PartName="/ppt/slides/slide2.xml" ContentType="x"/></Types>' },
+        {
+          part: CT,
+          text: '<Types><Override PartName="/ppt/slides/slide2.xml" ContentType="x"/></Types>',
+        },
       ),
     ],
   },
   {
-    fn: 'pptxLayouts.builtin-layouts.BUILTIN_LAYOUTS',
-    call: () => BUILTIN_LAYOUTS,
+    // the exported constants, by name: one function with more than one result
+    fn: 'pptxLayouts.constants',
+    call: (_text, args) => {
+      const constants: Record<string, unknown> = { BUILTIN_LAYOUTS, BLANK_SLIDE_XML }
+      const name = String(args.name)
+      if (!Object.hasOwn(constants, name)) throw new Error(`no constant ${name}`)
+      return constants[name]
+    },
     mutation: 'none',
-    built: [{ args: {} }],
+    built: ['BUILTIN_LAYOUTS', 'BLANK_SLIDE_XML', 'nothing', '__proto__'].map((name): Input => ({
+      args: { name },
+    })),
   },
   {
     fn: 'pptxLayouts.builtin-layouts.shouldOfferBuiltinLayouts',
@@ -1347,7 +1480,11 @@ export const LAYOUTS: CallSpec[] = [
           })),
         },
       },
-      { args: { layouts: [{ path: 'b', name: 'title slide', layoutType: 'x', placeholders: [ph1] }] } },
+      {
+        args: {
+          layouts: [{ path: 'b', name: 'title slide', layoutType: 'x', placeholders: [ph1] }],
+        },
+      },
     ],
   },
   {
@@ -1371,7 +1508,11 @@ export const LAYOUTS: CallSpec[] = [
     fn: 'pptxLayouts.builtin-layouts.ensureBuiltinLayout',
     call: (text, args) => {
       const archive = archiveOf(text, args)
-      const value = ensureBuiltinLayout(archive, args.size as { cx: number; cy: number }, args.key as string)
+      const value = ensureBuiltinLayout(
+        archive,
+        args.size as { cx: number; cy: number },
+        args.key as string,
+      )
       return afterCall(archive, value)
     },
     built: ENSURE,
@@ -1414,7 +1555,10 @@ export const LAYOUTS: CallSpec[] = [
     ],
     built: [
       ...COLLECT_BUNDLE_INPUTS,
-      split(DECK, 'ppt/slides/_rels/slide1.xml.rels', { slidePath: SLIDE_PATH, slideXml: '<p:sld/>' }),
+      split(DECK, 'ppt/slides/_rels/slide1.xml.rels', {
+        slidePath: SLIDE_PATH,
+        slideXml: '<p:sld/>',
+      }),
       split(DECK, 'ppt/presentation.xml', { slidePath: SLIDE_PATH, slideXml: '<p:sld/>' }),
       split(DECK, LAYOUT_1, { slidePath: SLIDE_PATH, slideXml: '<p:sld/>' }),
     ],
@@ -1438,7 +1582,10 @@ export const LAYOUTS: CallSpec[] = [
     fn: 'pptxLayouts.slide-transfer.importClipboardParts',
     call: (text, args) => {
       const archive = archiveOf(text, args)
-      const clip = args.clip as { parts: Record<string, string>; contentTypes: Record<string, string> }
+      const clip = args.clip as {
+        parts: Record<string, string>
+        contentTypes: Record<string, string>
+      }
       const value = importClipboardParts(archive, clip.parts, clip.contentTypes)
       return afterCall(archive, value)
     },
@@ -1478,19 +1625,16 @@ export const LAYOUTS: CallSpec[] = [
     built: CHOOSE_INPUTS,
   },
   {
-    fn: 'pptxLayouts.blank.BLANK_SLIDE_XML',
-    call: () => BLANK_SLIDE_XML,
-    mutation: 'none',
-    built: [{ args: {} }],
-  },
-  {
-    // the zip is not compared, its entries are: path and text, in archive order
+    // the zip is not compared, its entries are: path and text of the entry
+    // at index `at` in archive order (null past the end), and their count
     fn: 'pptxLayouts.blank.createBlankPptx',
-    call: async () => {
+    call: async (_text, args) => {
       const archive = await PackageArchive.open(await createBlankPptx())
-      return [...archive.entries].map(([name, bytes]) => [name, Buffer.from(bytes).toString('utf8')])
+      const entries = [...archive.entries]
+      const entry = entries[args.at as number]
+      return [entries.length, entry ? [entry[0], Buffer.from(entry[1]).toString('utf8')] : null]
     },
     mutation: 'none',
-    built: [{ args: {} }],
+    built: Array.from({ length: 24 }, (_, at): Input => ({ args: { at } })),
   },
 ]

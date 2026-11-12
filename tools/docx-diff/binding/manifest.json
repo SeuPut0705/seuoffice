@@ -821,7 +821,8 @@
         "ret": "CharClass",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -845,16 +846,9 @@
         "bytes": false
       },
       "required": ["index", "package", "test"],
-      "rust": {
-        "path": "docx_engine::char_class::is_hangul_char",
-        "file": "crates/docx-engine/src/char_class.rs",
-        "name": "is_hangul_char",
-        "vis": "pub",
-        "params": ["cp: u32"],
-        "ret": "bool",
-        "reachable": true
-      },
-      "route": "table"
+      "rust": null,
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -882,12 +876,13 @@
         "path": "docx_engine::char_class::is_east_asian_char",
         "file": "crates/docx-engine/src/char_class.rs",
         "name": "is_east_asian_char",
-        "vis": "pub",
+        "vis": "",
         "params": ["cp: u32"],
         "ret": "bool",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -920,7 +915,8 @@
         "ret": "bool",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -944,16 +940,9 @@
         "bytes": false
       },
       "required": ["index", "package", "test"],
-      "rust": {
-        "path": "docx_engine::char_class::is_cjk_letter_char",
-        "file": "crates/docx-engine/src/char_class.rs",
-        "name": "is_cjk_letter_char",
-        "vis": "pub",
-        "params": ["cp: u32"],
-        "ret": "bool",
-        "reachable": true
-      },
-      "route": "table"
+      "rust": null,
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -977,16 +966,9 @@
         "bytes": false
       },
       "required": ["index"],
-      "rust": {
-        "path": "docx_engine::char_class::is_latin_alnum_char",
-        "file": "crates/docx-engine/src/char_class.rs",
-        "name": "is_latin_alnum_char",
-        "vis": "pub",
-        "params": ["cp: u32"],
-        "ret": "bool",
-        "reachable": true
-      },
-      "route": "table"
+      "rust": null,
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -1010,16 +992,9 @@
         "bytes": false
       },
       "required": ["index", "package", "test"],
-      "rust": {
-        "path": "docx_engine::char_class::text_has_east_asian",
-        "file": "crates/docx-engine/src/char_class.rs",
-        "name": "text_has_east_asian",
-        "vis": "pub",
-        "params": ["text: &str"],
-        "ret": "bool",
-        "reachable": true
-      },
-      "route": "table"
+      "rust": null,
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -1043,16 +1018,9 @@
         "bytes": false
       },
       "required": ["index"],
-      "rust": {
-        "path": "docx_engine::char_class::text_has_hangul_chars",
-        "file": "crates/docx-engine/src/char_class.rs",
-        "name": "text_has_hangul_chars",
-        "vis": "pub",
-        "params": ["text: &str"],
-        "ret": "bool",
-        "reachable": true
-      },
-      "route": "table"
+      "rust": null,
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",
@@ -1092,7 +1060,8 @@
         "ret": "bool",
         "reachable": true
       },
-      "route": "table"
+      "route": "ts",
+      "reason": "a per-character predicate of the layout: through the wasm binding the render benchmark was over 5% slower"
     },
     {
       "module": "char-class",

@@ -405,25 +405,46 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
     '                        return Err(A::Error::duplicate_field(key.name()));',
     '                    }',
     '                    match key {',
-    ...fields.map((field) =>
-      field.slot
-        ? `                        ${key}::${field.variant} => ${slotOf(field)}.set(map.next_value()?),`
-        : `                        ${key}::${field.variant} => ${field.local} = Some(map.next_value()?),`,
-    ),
+    ...fields.map((field) => {
+      // a value the TypeScript holds as undefined: null where the type has no null
+      const plain =
+        field.optional && !field.slot ? field.type.slice('Option<'.length, -1) : field.type
+      const absentable = !/^Option</.test(plain) && plain !== 'JsNum'
+      if (field.slot)
+        return absentable
+          ? `                        ${key}::${field.variant} => if let Some(value) = map.next_value::<wire::OrAbsent<${plain}>>()?.0 { ${slotOf(field)}.set(value) },`
+          : `                        ${key}::${field.variant} => ${slotOf(field)}.set(map.next_value()?),`
+      return absentable
+        ? `                        ${key}::${field.variant} => ${field.local} = map.next_value::<wire::OrAbsent<${plain}>>()?.0,`
+        : `                        ${key}::${field.variant} => ${field.local} = Some(map.next_value()?),`
+    }),
     '                    }',
     '                }',
   )
   for (const field of fields.filter((candidate) => candidate.slot && !candidate.optional)) {
     lines.push(
-      `                if !${slotOf(field)}.has_key() {`,
+      // read leniently, an absent key is the TypeScript's undefined: the slot stays unset
+      `                if !${slotOf(field)}.has_key() && !jscompat::lenient() {`,
       `                    return Err(A::Error::missing_field(${field.key}));`,
       '                }',
     )
   }
-  const value = (field: (typeof fields)[number]): string =>
-    field.optional
-      ? field.local
-      : `${field.local}.ok_or_else(|| A::Error::missing_field(${field.key}))?`
+  // the TypeScript's undefined where a type has a value that reads as it: NaN, '', false, []
+  const standIn = (type: string): string | null =>
+    type === 'JsNum'
+      ? 'JsNum(f64::NAN)'
+      : type === 'String' || type === 'bool' || /^Vec</.test(type)
+        ? 'Default::default()'
+        : null
+  const value = (field: (typeof fields)[number]): string => {
+    if (field.optional) return field.local
+    // a key whose value may be undefined (`payload: string | undefined`): JSON.stringify drops it
+    if (/^Option</.test(field.type)) return `${field.local}.flatten()`
+    const stand = standIn(field.type)
+    return stand === null
+      ? `${field.local}.ok_or_else(|| A::Error::missing_field(${field.key}))?`
+      : `${field.local}.map_or_else(|| wire::absent(${field.key}).map(|()| ${stand}), Ok)?`
+  }
   /** a level as an expression: the local of a `js_object!`, else a struct expression with its bases nested */
   const expression = (at: number): string => {
     const level = levels[at]!
@@ -465,7 +486,8 @@ function enumCode(definition: Extract<TypeDef, { kind: 'enum' }>): string {
     '#[derive(Debug, Clone, PartialEq, Eq, Hash)]',
     `pub enum ${name} {`,
     ...variants.map(({ variant }) => `    ${variant},`),
-    '    Unlisted(std::sync::Arc<str>),',
+    // a thin pointer: the enum stays one word beside the variants without data
+    '    Unlisted(std::sync::Arc<String>),',
     '}',
     '',
     `impl ${name} {`,
