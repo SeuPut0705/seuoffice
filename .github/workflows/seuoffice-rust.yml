@@ -13,7 +13,30 @@ name: seuoffice rust
 on:
   push:
     branches: [main]
-    paths: ['crates/**', 'tools/docx-diff/**', 'packages/docx-engine/src/**']
+    paths:
+      - 'crates/**'
+      - 'tools/docx-diff/**'
+      - 'tools/fileparse-diff/**'
+      - 'tools/epub-diff/**'
+      - 'packages/docx-engine/src/**'
+      - 'packages/file-parse/**'
+      - 'packages/epub-engine/src/**'
+      - 'packages/agent-core/src/redact-*.ts'
+      - 'packages/zip-gate/src/**'
+      - 'packages/drawio-model/src/**'
+      - 'packages/pptx-engine/src/redaction-xml.ts'
+      - 'package-lock.json'
+      - '.github/workflows/seuoffice-rust.yml'
+      - '**/*.docx'
+      - '**/*.pptx'
+      - '**/*.xlsx'
+      - '**/*.xlsm'
+      - '**/*.epub'
+      - '**/*.hwpx'
+      - '**/*.odt'
+      - '**/*.xmind'
+      - '**/*.doc'
+      - '**/*.ppt'
   workflow_dispatch:
 
 concurrency:
@@ -92,3 +115,149 @@ jobs:
           name: docx-diff-out
           path: tools/docx-diff/out
           if-no-files-found: ignore
+
+  fileparse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Is the attachment gate in this tree
+        id: has
+        run: |
+          if [ -f tools/fileparse-diff/package.json ]; then echo "gate=true" >> "$GITHUB_OUTPUT"; else echo "gate=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Rust toolchain with the WASI target
+        if: steps.has.outputs.gate == 'true'
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-wasip1
+      - uses: actions/cache@v4
+        if: steps.has.outputs.gate == 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: seuoffice-fileparse-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: seuoffice-fileparse-${{ runner.os }}-
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.gate == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        if: steps.has.outputs.gate == 'true'
+        run: npm ci
+      - name: Attachment gate typecheck
+        if: steps.has.outputs.gate == 'true'
+        run: npm --prefix tools/fileparse-diff run typecheck
+      - name: Attachment parity gate
+        if: steps.has.outputs.gate == 'true'
+        run: npm --prefix tools/fileparse-diff run gate -- --save out/ci.json
+      - name: Keep the attachment gate output
+        if: always() && steps.has.outputs.gate == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fileparse-diff-out
+          path: tools/fileparse-diff/out
+          if-no-files-found: error
+
+  fileparse_faults:
+    needs: fileparse
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Is the attachment fault gate in this tree
+        id: has
+        run: |
+          if [ -f tools/fileparse-diff/faults.json ]; then echo "gate=true" >> "$GITHUB_OUTPUT"; else echo "gate=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Rust toolchain with the WASI target
+        if: steps.has.outputs.gate == 'true'
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-wasip1
+      - uses: actions/cache@v4
+        if: steps.has.outputs.gate == 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: seuoffice-fileparse-faults-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: seuoffice-fileparse-${{ runner.os }}-
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.gate == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        if: steps.has.outputs.gate == 'true'
+        run: npm ci
+      - name: Build the clean attachment gate
+        if: steps.has.outputs.gate == 'true'
+        run: node crates/office-wasm/build.mjs
+      - name: Attachment seeded faults
+        if: steps.has.outputs.gate == 'true'
+        run: npm --prefix tools/fileparse-diff run faults
+      - name: Keep the fault evidence
+        if: always() && steps.has.outputs.gate == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fileparse-faults-out
+          path: |
+            tools/fileparse-diff/out/faults-*/summary.json
+            tools/fileparse-diff/out/faults-*/*.json
+          if-no-files-found: error
+
+  epub:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Is the EPUB gate in this tree
+        id: has
+        run: |
+          if [ -f tools/epub-diff/package.json ]; then echo "gate=true" >> "$GITHUB_OUTPUT"; else echo "gate=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Rust toolchain with the WASI target
+        if: steps.has.outputs.gate == 'true'
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-wasip1
+      - uses: actions/cache@v4
+        if: steps.has.outputs.gate == 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: seuoffice-epub-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: seuoffice-fileparse-${{ runner.os }}-
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.gate == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        if: steps.has.outputs.gate == 'true'
+        run: npm ci
+      - name: EPUB gate typecheck
+        if: steps.has.outputs.gate == 'true'
+        run: npm --prefix tools/epub-diff run typecheck
+      - name: EPUB parity gate
+        if: steps.has.outputs.gate == 'true'
+        run: npm --prefix tools/epub-diff run gate -- --save out/ci.json
+      - name: EPUB seeded faults
+        if: steps.has.outputs.gate == 'true'
+        run: npm --prefix tools/epub-diff run faults
+      - name: Keep the EPUB gate output
+        if: always() && steps.has.outputs.gate == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: epub-diff-out
+          path: |
+            tools/epub-diff/out/ci.json
+            tools/epub-diff/out/faults-*/*.json
+          if-no-files-found: error
