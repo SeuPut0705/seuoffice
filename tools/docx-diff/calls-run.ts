@@ -1,6 +1,7 @@
 // Comparison (f): the functions of the modules ported after the property
 // readers, each called by name on both sides: over the corpus, over built
 // inputs and over seeded mutations of both.
+import { isDeepStrictEqual } from 'node:util'
 import { ALTCHUNK } from './calls-altchunk'
 import { BLANK } from './calls-blank'
 import { CHECKBOX } from './calls-checkbox'
@@ -118,6 +119,12 @@ function wellFormed(value: unknown): boolean {
   return Object.entries(value).every(([key, item]) => wellFormed(key) && wellFormed(item))
 }
 
+/**
+ * The classes of divergences.json the specs name (`CallSpec.listed`): how many
+ * inputs fell in each and how many of those differed.
+ */
+export const listedClasses = new Map<string, { inputs: number; differ: number }>()
+
 async function check(
   comparison: Comparison,
   where: string,
@@ -130,6 +137,18 @@ async function check(
     throw new Error(`${where}: ${spec.fn}: the input holds a lone surrogate`)
   }
   const outcome = await typescriptOutcome(spec, text, args)
+  const id = spec.listed?.(text, args)
+  if (id !== undefined) {
+    const rust = rustOutcome(spec.fn, text, args)
+    const same = 'error' in outcome ? 'error' in rust : isDeepStrictEqual(outcome, rust)
+    const count = listedClasses.get(id) ?? { inputs: 0, differ: 0 }
+    listedClasses.set(id, count)
+    count.inputs++
+    if (!same) {
+      count.differ++
+      return
+    }
+  }
   checkOutcome(comparison, `${where}: ${spec.fn}`, spec.fn, text, args, () => outcome)
 }
 
@@ -201,5 +220,10 @@ export function reportCalls(): void {
           `TypeScript threw ${tally?.threw ?? 0}`,
       )
     }
+  }
+  for (const [id, { inputs, differ }] of listedClasses) {
+    console.log(
+      `(f) listed class ${id}: ${inputs} inputs, ${differ} differ as listed and are not counted above`,
+    )
   }
 }

@@ -7,6 +7,11 @@
 // the Rust hold the answers of one Node major, so the gate stops on another.
 import { createInflateRaw } from 'node:zlib'
 
+// `Date.parse` reads a date-time without a zone as local time, so the engine
+// answers with the zone of its host there: the gate runs in UTC, as the
+// runners do, and an entry of divergences.json names another zone itself.
+process.env.TZ = 'UTC'
+
 const NODE_MAJOR = 22
 if (Number(process.versions.node.split('.')[0]) !== NODE_MAJOR) {
   console.error(
