@@ -468,6 +468,8 @@ const GEOM_TEXTS: Array<[string, number, number]> = [
   [geom(path(' w="0x10" h=" 5 "', mv(10, 10) + ln(16, 5))), 100, 200],
   [geom(path(' w="" h="1e400"', mv(10, 10) + ln(16, 5))), 100, 200],
   [geom(path(' w="-100" h="0.5"', mv(10, 0.25) + ln(-50, 1))), 100, 200],
+  // -1/64 and -3/64 are -1562.5 and -4687.5 hundred-thousandths: Math.round goes up
+  [geom(path(' w="64" h="64"', mv(-1, -3) + ln(-5, 7) + ln(1, 3))), 100, 200],
   [
     geom(
       path(

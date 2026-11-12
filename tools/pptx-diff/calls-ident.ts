@@ -193,6 +193,11 @@ const ELEMENT_TEXTS: string[] = [
   shape(cNvPr('id="5" name="Title 1"')),
   shape(cNvPr('id="5" name="Title 1" ')),
   cNvPr('id="5" name="Alone"'),
+  // the group's own cNvPr is a pair without a creationId; a child has one
+  group(
+    cNvPr('id="20" name="Group"', '<a:hlinkClick r:id=""/>'),
+    shape(cNvPr('id="21" name="Child"', `<a:extLst>${creation()}</a:extLst>`)),
+  ),
   shape(cNvPr('id="6" name="A"', `<a:extLst>${creation()}</a:extLst>`)),
   shape(
     cNvPr(
@@ -575,6 +580,12 @@ const LABEL_INPUTS: Input[] = [
 
 const SET_INPUTS: Input[] = [
   ...PROPS.flatMap((text) => LABELS.map((label) => ({ text, args: { label } }))),
+  // two nodes of the name: the closing tag is the last one
+  { text: '<a:rPr lang="en-US"></a:rPr><a:rPr></a:rPr>', args: { label: 'Name' } },
+  {
+    text: '<a:rPr lang="en-US"><a:latin typeface="x"/></a:rPr><a:t>w</a:t><a:rPr/>',
+    args: { label: 'Name' },
+  },
   // ledger redact-label-dollar: `$$`, `$&`, `` $` ``, `$'` in the label are read as replacement patterns by the TypeScript
   ...DOLLAR_PROPS().flatMap((text) =>
     DOLLAR_LABELS.map((label): Input => ({ text, args: { label }, seed: false })),

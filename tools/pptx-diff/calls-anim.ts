@@ -756,6 +756,9 @@ const PATCH_INPUTS: Input[] = [
   { text: BUILT1, args: { anims: [...OLD1.slice(0, 2), anim(9, 'fade'), ...OLD1.slice(2)] } },
   // incremental: B. one item changed
   { text: BUILT1, args: { anims: edit(OLD1, 3, { durationMs: 900 }) } },
+  // only the direction of one effect differs: a list that is not the same list
+  { text: BUILT1, args: { anims: edit(OLD1, 1, { direction: 'right' }) } },
+  { text: BUILT1, args: { anims: edit(OLD1, 1, { direction: 'top' }) } },
   { text: BUILT1, args: { anims: edit(OLD1, 3, { motionPath: 'M 0 0 L 0 1' }) } },
   { text: BUILT1, args: { anims: edit(OLD1, 0, { durationMs: 900 }) } },
   { text: BUILT1, args: { anims: edit(OLD1, 2, { delayMs: 100, effect: 'spin' }) } },
