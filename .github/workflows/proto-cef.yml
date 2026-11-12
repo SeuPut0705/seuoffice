@@ -227,6 +227,14 @@ jobs:
           cat "$RUNNER_TEMP/cef-mirror.log"
           export CEF_DOWNLOAD_URL=http://127.0.0.1:8099
           start=$(date +%s)
+          npx tauri build --no-bundle --verbose
+          # tauri-bundler 3.0.0-alpha.5 copies libEGL.dll and libGLESv2.dll, which the
+          # CEF 154 distribution no longer ships (ANGLE is inside libcef.dll). Empty
+          # stand-ins let the bundler through; nothing loads them.
+          cefdir=$(dirname "$(find "$CEF_PATH" -name libcef.dll | head -1)")
+          echo "CEF dir: $cefdir"
+          ls "$cefdir"
+          for f in libEGL.dll libGLESv2.dll; do [ -e "$cefdir/$f" ] || : > "$cefdir/$f"; done
           npx tauri build --bundles nsis --verbose
           echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
 
