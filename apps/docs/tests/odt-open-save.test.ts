@@ -6,13 +6,20 @@
  * process is a stub that records what would be written.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { blocksToPmDoc } from '../src/renderer/editor/convert'
+import { modelTextOf, type RedactableNode } from '../src/renderer/ai/redact-view'
 import { Editor } from '@tiptap/core'
-import { buildBlankDocx, docxHoldsHiddenContent, readDocxPartBase64 } from '@seuoffice/docx-engine'
+import {
+  buildBlankDocx,
+  docxHoldsHiddenContent,
+  parseDocx,
+  readDocxPartBase64,
+} from '@seuoffice/docx-engine'
 import { docxToOdt, odtToDocx } from '@seuoffice/odt-engine'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import type { DocState } from '../src/renderer/doc-state'
 import { isOdtDoc } from '../src/renderer/doc-state'
-import type { OpenDocxResult } from '../src/shared/ipc'
+import type { OpenDocxResult, OpenFileResult } from '../src/shared/ipc'
 import { setFormatChangeHost } from '../src/renderer/components/format-change-bus'
 import { zipEntryNames } from '../src/main/doc-format'
 import { undoDepth } from '@tiptap/pm/history'
@@ -928,10 +935,79 @@ describe('an ODT tab holding content hidden from AI', () => {
     expect(desktop.confirmMarkedOdt).not.toHaveBeenCalled()
   })
 
-  it('writes no recovery copy: an ODT copy would hold the hidden words as plain text', async () => {
-    const ctx = await markedOdtTab()
-    expect(await writeRecoveryCopy(ctx)).toBe('failed')
-    expect(written).toHaveLength(0)
+  describe('crash recovery', () => {
+    interface RecoveryCall {
+      path: string | null
+      bytes: Uint8Array
+      meta: unknown
+    }
+    let recovery: RecoveryCall[] = []
+    beforeEach(() => {
+      recovery = []
+      desktop.writeRecoveryCopy.mockImplementation(
+        async (path: string | null, data: ArrayBuffer, meta?: unknown) => {
+          recovery.push({ path, bytes: new Uint8Array(data), meta })
+          return { ok: true }
+        },
+      )
+    })
+
+    it('writes its docx, marks kept, into an untitled slot that names the ODT', async () => {
+      const ctx = await markedOdtTab()
+      expect(await writeRecoveryCopy(ctx)).toBe('written')
+      expect(written).toHaveLength(0)
+      expect(recovery).toHaveLength(1)
+      expect(recovery[0].path).toBeNull()
+      expect(recovery[0].meta).toEqual({
+        title: 'form.odt',
+        format: 'docx',
+        originalPath: '/docs/form.odt',
+      })
+      const copy = recovery[0].bytes
+      expect(isOdtBytes(copy)).toBe(false)
+      expect(await docxHoldsHiddenContent(copy)).toBe(true)
+      const parsed = await parseDocx(copy)
+      const doc = blocksToPmDoc(parsed.blocks)
+      expect(modelTextOf(doc as RedactableNode)).not.toContain(SECRET)
+      expect(modelTextOf(doc as RedactableNode)).toContain(`{{${LABEL}}}`)
+      expect(atob((await readDocxPartBase64(copy, 'word/document.xml')) ?? '')).toContain(LABEL)
+    })
+
+    it('reopens as a docx draft of that tab; saving over the .odt meets the marked-ODT refusal', async () => {
+      const ctx = await markedOdtTab()
+      await writeRecoveryCopy(ctx)
+      const restored = makeCtx()
+      const opened = {
+        ...(openResult('form.docx', recovery[0].bytes, true) as OpenFileResult),
+        untitledCopy: true,
+        saveAsDefaultPath: '/docs/form.odt',
+      }
+      expect(await loadFile(restored, opened)).toBe('ok')
+      expect(docOf(restored).format).toBe('docx')
+      expect(docOf(restored).filePath).toBeNull()
+      expect(docOf(restored).fileName).toBe('form.docx')
+      expect(docOf(restored).saveAsDefaultPath).toBe('/docs/form.odt')
+      expect(restored.dirtyRef.current).toBe(true)
+      expect(JSON.stringify((restored.editor as Editor).state.doc.toJSON())).toContain('redaction')
+
+      desktop.pickSaveAsPath.mockImplementation(async () => ({ path: '/docs/form.odt' }))
+      answer('cancel')
+      expect(await save(restored, false)).toBe(false)
+      expect(desktop.confirmMarkedOdt).toHaveBeenCalledTimes(1)
+      expect(written).toHaveLength(0)
+    })
+
+    it('an unmarked ODT tab keeps its ODT copy under the file', async () => {
+      const ctx = makeCtx()
+      await loadFile(ctx, openResult('/docs/form.odt', await blankOdt()))
+      setParagraphs(ctx.editor as Editor, ['Plain work'])
+      ctx.dirtyRef.current = true
+      expect(await writeRecoveryCopy(ctx)).toBe('written')
+      expect(recovery).toHaveLength(1)
+      expect(recovery[0].path).toBe('/docs/form.odt')
+      expect(recovery[0].meta).toBeUndefined()
+      expect(isOdtBytes(recovery[0].bytes)).toBe(true)
+    })
   })
 
   it('gives no template copy', async () => {
