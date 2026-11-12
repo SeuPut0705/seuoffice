@@ -1,0 +1,104 @@
+import { readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import JSZip from 'jszip'
+import { describe, expect, it } from 'vitest'
+import { hiddenStoriesDocx, NAMESPACES, PLACEHOLDER, SECRET } from './hidden-text-fixtures'
+import { run, tempDir } from './helpers'
+
+async function part(file: string, path: string): Promise<string> {
+  return (await JSZip.loadAsync(readFileSync(file))).file(path)!.async('string')
+}
+
+function opsFile(dir: string, ops: unknown[]): string {
+  const path = join(dir, `ops-${Math.random().toString(36).slice(2)}.json`)
+  writeFileSync(path, JSON.stringify(ops))
+  return path
+}
+
+describe('docs read: header, footer, comment and note text hidden from AI', () => {
+  it.each(NAMESPACES)('reads as its placeholder when the label is under %s', async (_n, ns) => {
+    const file = await hiddenStoriesDocx(tempDir(), ns)
+    const read = await run([
+      'docs',
+      'read',
+      file,
+      '--header-footer',
+      '--comments',
+      '--notes',
+      '--json',
+    ])
+    expect(read.code).toBe(0)
+    expect(read.stdout).not.toContain(SECRET)
+    const detail = read.json().detail
+    expect(detail.headerFooter.header).toBe(`Head ${PLACEHOLDER}`)
+    expect(detail.headerFooter.footer).toBe(`Foot ${PLACEHOLDER}`)
+    expect(detail.headerFooter.sections[0].header).toBe(`Head ${PLACEHOLDER}`)
+    expect(detail.comments[0].text).toBe(`Note: ${PLACEHOLDER}`)
+    expect(detail.notes[0].text).toBe(`See ${PLACEHOLDER}`)
+  })
+})
+
+describe('docs apply: a header or note holding text hidden from AI', () => {
+  const ns = NAMESPACES[1]![1]
+
+  it('set_header_footer keeps the hidden words where the model kept their placeholder', async () => {
+    const dir = tempDir()
+    const file = await hiddenStoriesDocx(dir, ns)
+    const r = await run([
+      'docs',
+      'apply',
+      file,
+      '--ops',
+      opsFile(dir, [{ op: 'set_header_footer', kind: 'header', text: `Report ${PLACEHOLDER}` }]),
+      '--json',
+    ])
+    expect(r.code).toBe(0)
+    const header = await part(file, 'word/header1.xml')
+    expect(header).toContain('Report ')
+    expect(header).toContain(`${SECRET}H`)
+    expect(header).toContain('go:redact')
+    expect(header).not.toContain(PLACEHOLDER)
+    const read = await run(['docs', 'read', file, '--header-footer', '--json'])
+    expect(read.json().detail.headerFooter.header).toBe(`Report ${PLACEHOLDER}`)
+  })
+
+  it('set_header_footer that drops the placeholder is refused and writes nothing', async () => {
+    const dir = tempDir()
+    const file = await hiddenStoriesDocx(dir, ns)
+    const before = readFileSync(file)
+    const r = await run([
+      'docs',
+      'apply',
+      file,
+      '--ops',
+      opsFile(dir, [{ op: 'set_header_footer', kind: 'header', text: 'Report' }]),
+      '--json',
+    ])
+    expect(r.code).not.toBe(0)
+    expect(r.stdout).toContain('placeholder')
+    expect(readFileSync(file)).toEqual(before)
+  })
+
+  it('edit_note on a note holding hidden text is refused alike, whatever it looks for', async () => {
+    const dir = tempDir()
+    const file = await hiddenStoriesDocx(dir, ns)
+    const before = readFileSync(file)
+    const messages: string[] = []
+    for (const find of ['See', SECRET.slice(0, 4), 'absent']) {
+      const r = await run([
+        'docs',
+        'apply',
+        file,
+        '--ops',
+        opsFile(dir, [{ op: 'edit_note', kind: 'footnote', id: '1', find, replace: 'x' }]),
+        '--json',
+      ])
+      expect(r.code).not.toBe(0)
+      expect(r.stdout).not.toContain(SECRET)
+      messages.push(r.json().message)
+    }
+    // the same answer whether or not the hidden words contain what it looked for
+    expect(new Set(messages).size).toBe(1)
+    expect(readFileSync(file)).toEqual(before)
+  })
+})

@@ -120,3 +120,63 @@ export async function hiddenXlsx(dir: string, name = 'hidden.xlsx'): Promise<str
   writeFileSync(file, await zip.generateAsync({ type: 'uint8array' }))
   return file
 }
+
+const W_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+
+/** A run marked hidden from AI the way the document editor writes one, its prefix bound on the element. */
+function hiddenRun(ns: string, text: string): string {
+  return (
+    '<w:r><w:rPr><w:bdr w:val="single" w:sz="6" w:color="6B4FC0"/>' +
+    `<go:redact xmlns:go="${ns}" w:label="${LABEL}"/></w:rPr><w:t>${text}</w:t></w:r>`
+  )
+}
+
+function plainRun(text: string): string {
+  return `<w:r><w:t xml:space="preserve">${text}</w:t></w:r>`
+}
+
+/**
+ * A docx whose header, footer, comment and footnote each hold a run marked
+ * hidden from AI: `${SECRET}` followed by H, F, C or N, after a plain lead-in
+ * (`Head `, `Foot `, `Note: `, `See `).
+ */
+export async function hiddenStoriesDocx(
+  dir: string,
+  ns: string,
+  name = 'stories.docx',
+): Promise<string> {
+  const bytes = await buildDocx({
+    bodyXml:
+      '<w:p><w:commentRangeStart w:id="1"/>' +
+      plainRun('Body text') +
+      '<w:commentRangeEnd w:id="1"/><w:r><w:commentReference w:id="1"/></w:r>' +
+      '<w:r><w:footnoteReference w:id="1"/></w:r></w:p>',
+    headerXml: `<w:p>${plainRun('Head ')}${hiddenRun(ns, `${SECRET}H`)}</w:p>`,
+    footerXml: `<w:p>${plainRun('Foot ')}${hiddenRun(ns, `${SECRET}F`)}</w:p>`,
+    extraRels:
+      '<Relationship Id="rIdFn" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>',
+    extraParts: [
+      {
+        path: 'word/comments.xml',
+        xml:
+          `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:comments ${W_NS}>` +
+          `<w:comment w:id="1" w:author="Kim"><w:p>${plainRun('Note: ')}${hiddenRun(ns, `${SECRET}C`)}</w:p></w:comment>` +
+          '</w:comments>',
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml',
+      },
+      {
+        path: 'word/footnotes.xml',
+        xml:
+          `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:footnotes ${W_NS}>` +
+          '<w:footnote w:type="separator" w:id="-1"><w:p><w:r><w:separator/></w:r></w:p></w:footnote>' +
+          '<w:footnote w:type="continuationSeparator" w:id="0"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote>' +
+          `<w:footnote w:id="1"><w:p><w:r><w:footnoteRef/></w:r>${plainRun(' See ')}${hiddenRun(ns, `${SECRET}N`)}</w:p></w:footnote>` +
+          '</w:footnotes>',
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml',
+      },
+    ],
+  })
+  const file = join(dir, name)
+  writeFileSync(file, bytes)
+  return file
+}
