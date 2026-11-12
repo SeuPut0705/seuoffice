@@ -96,11 +96,24 @@ jobs:
         if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
         run: cargo test --manifest-path crates/Cargo.toml --workspace
 
+      # the vendored regex engine carries patches of its own: its suite runs as published
+      - name: Vendored regress tests
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        run: cargo test --manifest-path crates/vendor/regress/Cargo.toml --features utf16
+
       - uses: actions/setup-node@v4
         if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
         with:
           node-version: 22
           cache: npm
+
+      # a search past the backtrack bound refuses on wasm32 too, where an
+      # unbounded stack traps the module
+      - name: Regex bound on wasm32
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        run: |
+          cargo build --manifest-path crates/Cargo.toml -p jscompat --example limit_wasm --target wasm32-wasip1 --release
+          node --no-warnings crates/jscompat/examples/limit_wasm.mjs crates/target/wasm32-wasip1/release/examples/limit_wasm.wasm 25000000
 
       - name: Install
         if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
