@@ -24,14 +24,16 @@ pub fn override_tags() -> &'static TryJsRegex {
 }
 
 /// `decodeXmlEntities`: character references, then the five named entities.
-/// A reference to half of a surrogate pair reads as U+FFFD (a Rust string has
-/// no lone surrogate; remove-parts.ts replaces one the same way).
+/// A reference to half of a surrogate pair is left in place by the two regex
+/// passes and settled by `pair_surrogate_references`: a high half directly
+/// followed by a low half is the one astral character `String.fromCodePoint`
+/// makes by concatenation; a lone half reads as U+FFFD (a Rust string has no
+/// lone surrogate; remove-parts.ts replaces one the same way).
 pub fn decode_xml_entities(value: &str) -> String {
     fn code_point(whole: &str, raw: &str, radix: Radix) -> String {
         let value = parse_int(raw, radix);
         if value.fract() == 0.0 && (0.0..=1_114_111.0).contains(&value) {
-            return char::from_u32(value as u32)
-                .map_or_else(|| "\u{FFFD}".to_owned(), String::from);
+            return char::from_u32(value as u32).map_or_else(|| whole.to_owned(), String::from);
         }
         whole.to_owned()
     }
@@ -45,12 +47,69 @@ pub fn decode_xml_entities(value: &str) -> String {
     let decimal = js_regex!(r"&#(\d+);", "g").replace_all(&hex, |found| {
         code_point(found.as_str(), found.get(1).unwrap_or_default(), Radix::Ten)
     });
-    decimal
+    pair_surrogate_references(&decimal)
         .replace("&quot;", "\"")
         .replace("&apos;", "'")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
         .replace("&amp;", "&")
+}
+
+/// The value of a numeric character reference at the start of `text` and its
+/// length, when it is a (hex or decimal) reference to a UTF-16 surrogate.
+fn surrogate_reference(text: &str) -> Option<(u32, usize)> {
+    let bytes = text.as_bytes();
+    if !text.starts_with("&#") {
+        return None;
+    }
+    let (radix, mut at) = match bytes.get(2) {
+        Some(b'x' | b'X') => (16u64, 3),
+        _ => (10u64, 2),
+    };
+    let digits_from = at;
+    let mut value = 0u64;
+    while let Some(digit) = bytes
+        .get(at)
+        .and_then(|byte| char::from(*byte).to_digit(radix as u32))
+    {
+        value = (value * radix + u64::from(digit)).min(0x1F_FFFF);
+        at += 1;
+    }
+    if at == digits_from || bytes.get(at) != Some(&b';') {
+        return None;
+    }
+    (0xD800..=0xDFFF)
+        .contains(&value)
+        .then_some((value as u32, at + 1))
+}
+
+/// The surrogate references the regex passes left: a high half and a low half
+/// side by side become their character, any other half becomes U+FFFD.
+fn pair_surrogate_references(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = rest.find("&#") {
+        out.push_str(&rest[..at]);
+        rest = &rest[at..];
+        let Some((first, length)) = surrogate_reference(rest) else {
+            out.push_str("&#");
+            rest = &rest[2..];
+            continue;
+        };
+        rest = &rest[length..];
+        if (0xD800..0xDC00).contains(&first)
+            && let Some((second, length)) = surrogate_reference(rest)
+            && (0xDC00..=0xDFFF).contains(&second)
+        {
+            let code = 0x10000 + ((first - 0xD800) << 10) + (second - 0xDC00);
+            out.push(char::from_u32(code).unwrap_or('\u{FFFD}'));
+            rest = &rest[length..];
+        } else {
+            out.push('\u{FFFD}');
+        }
+    }
+    out.push_str(rest);
+    out
 }
 
 /// `xmlAttr`: an attribute of a tag by its name, both quote styles.
@@ -122,4 +181,30 @@ pub fn relationship_part_path(part_path: &str) -> String {
 /// `decodePartUri`
 pub fn decode_part_uri(uri: &str) -> String {
     decode_uri_component(uri).unwrap_or_else(|_| uri.to_owned())
+}
+
+#[cfg(test)]
+mod surrogate_tests {
+    use super::decode_xml_entities;
+
+    #[test]
+    fn adjacent_surrogate_references_make_one_character() {
+        assert_eq!(decode_xml_entities("&#xD83D;&#xDE00;"), "\u{1F600}");
+        assert_eq!(decode_xml_entities("&#55357;&#56832;"), "\u{1F600}");
+        assert_eq!(decode_xml_entities("&#xD83D;&#56832;"), "\u{1F600}");
+        assert_eq!(decode_xml_entities("a&#xd83d;&#xde00;b"), "a\u{1F600}b");
+    }
+
+    #[test]
+    fn lone_surrogate_references_read_as_replacement_characters() {
+        assert_eq!(decode_xml_entities("&#xD83D;"), "\u{FFFD}");
+        assert_eq!(decode_xml_entities("&#xDE00;&#xD83D;"), "\u{FFFD}\u{FFFD}");
+        // a lone high half, then a whole pair
+        assert_eq!(
+            decode_xml_entities("&#xD83D;&#xD83D;&#xDE00;"),
+            "\u{FFFD}\u{1F600}"
+        );
+        // a named entity never turns into a reference
+        assert_eq!(decode_xml_entities("&amp;#xD83D;"), "&#xD83D;");
+    }
 }

@@ -605,7 +605,40 @@ fn rewrap(xml: &str, children: &[String]) -> String {
     format!("{}{}{}", open_of(xml), children.concat(), close_of(xml))
 }
 
-/// `patchSdt`: a block control's tables patched, through nested controls.
+/// Nested block controls `patch_sdt` follows. The TypeScript recurses and hits
+/// its own stack limit (a RangeError, with no catch around it) at some depth
+/// of thousands; past this bound the engine returns the same error.
+const MAX_SDT_DEPTH: usize = 1000;
+
+type Children = std::vec::IntoIter<(String, String)>;
+
+/// One level of `patch_sdt`'s walk: a control (`Sdt`) or its `w:sdtContent`.
+enum SdtFrame {
+    Sdt {
+        xml: String,
+        done: Vec<String>,
+        rest: Children,
+    },
+    Content {
+        xml: String,
+        inner: Vec<String>,
+        rest: Children,
+    },
+}
+
+fn sdt_frame(xml: String) -> Result<SdtFrame, String> {
+    let rest = split_xml_children(inner_xml(&xml))
+        .map_err(thrown)?
+        .into_iter();
+    Ok(SdtFrame::Sdt {
+        xml,
+        done: Vec::new(),
+        rest,
+    })
+}
+
+/// `patchSdt`: a block control's tables patched, through nested controls. An
+/// explicit stack, not a recursion: a document drives the nesting depth.
 fn patch_sdt(
     writer: &mut HfRuns<'_>,
     paras: &[HfParagraph],
@@ -613,21 +646,52 @@ fn patch_sdt(
     sdt_xml: &str,
     controls: &ContentControlPart,
 ) -> Result<String, String> {
-    let mut children: Vec<String> = Vec::new();
-    for (name, xml) in split_xml_children(inner_xml(sdt_xml)).map_err(thrown)? {
-        if name != "w:sdtContent" {
-            children.push(xml);
-            continue;
+    let mut stack: Vec<SdtFrame> = vec![sdt_frame(sdt_xml.to_owned())?];
+    loop {
+        let Some(top) = stack.last_mut() else {
+            unreachable!("the walk returns when the outermost control is finished");
+        };
+        match top {
+            SdtFrame::Sdt { xml, done, rest } => match rest.next() {
+                Some((name, child)) if name == "w:sdtContent" => {
+                    let inner = split_xml_children(inner_xml(&child))
+                        .map_err(thrown)?
+                        .into_iter();
+                    stack.push(SdtFrame::Content {
+                        xml: child,
+                        inner: Vec::new(),
+                        rest: inner,
+                    });
+                }
+                Some((_, child)) => done.push(child),
+                None => {
+                    let result = rewrap(xml, done);
+                    stack.pop();
+                    match stack.last_mut() {
+                        Some(SdtFrame::Content { inner, .. }) => inner.push(result),
+                        _ => return Ok(result),
+                    }
+                }
+            },
+            SdtFrame::Content { xml, inner, rest } => match rest.next() {
+                Some((name, child)) => match name.as_str() {
+                    "w:tbl" => inner.push(patch_table(writer, paras, tbl_index, &child, controls)?),
+                    "w:sdt" => {
+                        if stack.len() >= MAX_SDT_DEPTH * 2 {
+                            return Err("RangeError: Maximum call stack size exceeded".to_owned());
+                        }
+                        stack.push(sdt_frame(child)?);
+                    }
+                    _ => inner.push(child),
+                },
+                None => {
+                    let result = rewrap(xml, inner);
+                    stack.pop();
+                    if let Some(SdtFrame::Sdt { done, .. }) = stack.last_mut() {
+                        done.push(result);
+                    }
+                }
+            },
         }
-        let mut inner: Vec<String> = Vec::new();
-        for (child_name, child_xml) in split_xml_children(inner_xml(&xml)).map_err(thrown)? {
-            inner.push(match child_name.as_str() {
-                "w:tbl" => patch_table(writer, paras, tbl_index, &child_xml, controls)?,
-                "w:sdt" => patch_sdt(writer, paras, tbl_index, &child_xml, controls)?,
-                _ => child_xml,
-            });
-        }
-        children.push(rewrap(&xml, &inner));
     }
-    Ok(rewrap(sdt_xml, &children))
 }

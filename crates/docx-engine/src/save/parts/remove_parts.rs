@@ -559,9 +559,7 @@ fn remove_empty_folders(zip: &mut Package) {
         })
         .map(|(name, _)| name.clone())
         .collect();
-    for name in empty {
-        zip.remove(&name);
-    }
+    zip.remove_all(empty.iter().map(|name| name.as_str()));
 }
 
 /// `removePartsFromZip`
@@ -570,9 +568,7 @@ fn remove_parts_from_zip(zip: &mut Package, removed_paths: &[String]) -> Result<
     for path in removed_paths {
         removed.add(path.clone());
     }
-    for path in &removed.0 {
-        zip.remove(path);
-    }
+    zip.remove_all(&removed.0);
     drop_dangling_relationships(zip, &removed)?;
     clean_content_types(zip, &removed)?;
     remove_empty_folders(zip);
