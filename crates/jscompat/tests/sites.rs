@@ -157,6 +157,9 @@ struct Sites {
     lazy_walks: usize,
     /// Regexes built as a `TryJsRegex`.
     fallible: usize,
+    /// Patterns a macro writes with `concat!`, read at each use with the
+    /// literal it is given (also counted in `read`).
+    from_macros: usize,
 }
 
 /// The loops of a regex. Whether one keeps stack entries per turn without a
@@ -211,6 +214,100 @@ fn loops_of(regex: &JsRegex, pattern: &str) -> (bool, bool) {
     (grows, lazy)
 }
 
+/// The arguments of a call whose source starts after its `(`, as written.
+fn arguments_of(call: &str) -> Vec<&str> {
+    let bytes = call.as_bytes();
+    let (mut depth, mut at, mut start) = (0usize, 0, 0);
+    let mut arguments = Vec::new();
+    while at < bytes.len() {
+        let ident_before =
+            at > 0 && (bytes[at - 1].is_ascii_alphanumeric() || bytes[at - 1] == b'_');
+        match bytes[at] {
+            b'"' => {
+                at += 1;
+                while at < bytes.len() && bytes[at] != b'"' {
+                    at += if bytes[at] == b'\\' { 2 } else { 1 };
+                }
+            }
+            b'r' if !ident_before && matches!(bytes.get(at + 1), Some(b'"' | b'#')) => {
+                let hashes = bytes[at + 1..]
+                    .iter()
+                    .take_while(|byte| **byte == b'#')
+                    .count();
+                let close = format!("\"{}", "#".repeat(hashes));
+                let open = at + 2 + hashes;
+                at = open + call[open..].find(&close).unwrap() + close.len() - 1;
+            }
+            // a character literal, not a lifetime
+            b'\'' if bytes.get(at + 2) == Some(&b'\'') => at += 2,
+            b'\'' if bytes.get(at + 1) == Some(&b'\\') => {
+                at += call[at + 2..].find('\'').unwrap() + 2;
+            }
+            b'(' | b'[' | b'{' => depth += 1,
+            b')' | b']' | b'}' if depth == 0 => break,
+            b')' | b']' | b'}' => depth -= 1,
+            b',' if depth == 0 => {
+                arguments.push(call[start..at].trim());
+                start = at + 1;
+            }
+            _ => {}
+        }
+        at += 1;
+    }
+    arguments.push(call[start..at.min(call.len())].trim());
+    arguments.retain(|argument| !argument.is_empty());
+    arguments
+}
+
+/// The text of an argument that is one string literal.
+fn literal_of(argument: &str) -> Option<String> {
+    if !(argument.starts_with('"') || argument.starts_with("r\"") || argument.starts_with("r#")) {
+        return None;
+    }
+    let (literals, ends_in_a_literal, _) = literals_of_call(&format!("{argument})"));
+    match &literals[..] {
+        [(literal, true)] if ends_in_a_literal => Some(literal.clone()),
+        _ => None,
+    }
+}
+
+/// A pattern written in a `macro_rules!` as `concat!` of literals and one
+/// literal parameter of the macro: read at each use of the macro.
+struct MacroPattern {
+    name: String,
+    /// The pieces of the `concat!`, `None` where the parameter goes.
+    pieces: Vec<Option<String>>,
+    flags: String,
+    fallible: bool,
+}
+
+/// The pieces of `concat!(...)`, whose source starts after its `(`; `None`
+/// unless each is a literal or the one parameter of the macro.
+fn concat_pieces(call: &str) -> Option<Vec<Option<String>>> {
+    let mut parameter: Option<&str> = None;
+    let mut pieces = Vec::new();
+    for argument in arguments_of(call) {
+        if let Some(name) = argument.strip_prefix('$') {
+            if parameter.is_some_and(|known| known != name) {
+                return None;
+            }
+            parameter = Some(name);
+            pieces.push(None);
+        } else {
+            pieces.push(Some(literal_of(argument)?));
+        }
+    }
+    Some(pieces)
+}
+
+/// The name of the `macro_rules!` that `at` is inside.
+fn macro_around(source: &str, at: usize) -> Option<String> {
+    let defined = source[..at].rfind("macro_rules!")?;
+    let name = source[defined + "macro_rules!".len()..].trim_start();
+    let end = name.find(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))?;
+    Some(name[..end].to_owned())
+}
+
 /// The literal a `const NAME: &str = ...;` of `source` holds, for a call whose
 /// pattern is the name of a constant of the same file.
 fn constant(source: &str, call: &str) -> Option<String> {
@@ -241,6 +338,9 @@ fn every_site_of_the_workspace_builds() {
     // calls whose searches cannot fail, with a pattern that can pass the bound or that is not read here
     let mut infallible_growing: Vec<String> = Vec::new();
     let mut infallible_unread: Vec<String> = Vec::new();
+    let mut rejected: Vec<(String, usize)> = Vec::new();
+    let mut macros: Vec<MacroPattern> = Vec::new();
+    let mut sources: Vec<(String, String)> = Vec::new();
     let mut restarts: Vec<(String, usize)> = Vec::new();
     // G: a loop that grows the stack per turn; L: a lazy loop that walks ahead
     let mut loops: Vec<String> = Vec::new();
@@ -285,7 +385,34 @@ fn every_site_of_the_workspace_builds() {
                 let (mut literals, ends_in_a_literal, call_length) =
                     literals_of_call(&source[call_start..]);
                 // a pattern held in a constant of the file
-                if let Some(literal) = constant(&source, &source[call_start..]) {
+                let held = constant(&source, &source[call_start..]);
+                let first = source[call_start..].trim_start();
+                // `js_regex!(concat!(.., $key, ..))` in a macro: read at each use
+                if let Some(concat) = first.strip_prefix("concat!(")
+                    && let (Some(pieces), Some(macro_name)) =
+                        (concat_pieces(concat), macro_around(&source, start))
+                    && pieces.iter().any(Option::is_none)
+                {
+                    let flags = arguments_of(&source[call_start..])
+                        .get(1)
+                        .and_then(|flags| literal_of(flags))
+                        .unwrap_or_default();
+                    macros.push(MacroPattern {
+                        name: macro_name,
+                        pieces,
+                        flags,
+                        fallible,
+                    });
+                    continue;
+                }
+                // a macro whose first argument is neither a literal nor such a
+                // constant would read its flags as its pattern
+                let unreadable_macro = opener.ends_with("!(")
+                    && held.is_none()
+                    && !(first.starts_with('"')
+                        || first.starts_with("r\"")
+                        || first.starts_with("r#"));
+                if let Some(literal) = held {
                     literals.insert(0, (literal, true));
                 }
                 // `js_regex!(...).find_from(`: the regex of a restart, read here
@@ -307,11 +434,15 @@ fn every_site_of_the_workspace_builds() {
                     _ => ("", &literals[..]),
                 };
                 sites.fallible += usize::from(fallible);
-                if patterns.is_empty() {
-                    // the regex module passes on the patterns of its callers
-                    if !fallible && name != "jscompat/src/regex.rs" {
-                        infallible_unread.push(format!("{name}:{line}"));
-                    }
+                // a `format!` template: what goes into it is not read here, and a
+                // value from the document can be a loop that passes the bound
+                let templated = patterns.iter().any(|(_, own)| !own);
+                let unread = patterns.is_empty() || unreadable_macro;
+                // the regex module passes on the patterns of its callers
+                if (unread || templated) && !fallible && name != "jscompat/src/regex.rs" {
+                    infallible_unread.push(format!("{name}:{line}"));
+                }
+                if unread || (templated && !fallible) {
                     continue;
                 }
                 let without_u = !flags.contains(['u', 'v']);
@@ -352,7 +483,10 @@ fn every_site_of_the_workspace_builds() {
                         Err(error) if error.to_string().contains("as JavaScript matches it") => {
                             panic!("{name}: {error}")
                         }
-                        Err(_) => sites.rejected += 1,
+                        Err(_) => {
+                            sites.rejected += 1;
+                            count_in(&mut rejected, &name, 1);
+                        }
                     }
                 }
                 sites.counted += usize::from(without_u && counted);
@@ -369,6 +503,53 @@ fn every_site_of_the_workspace_builds() {
             }
         }
         count_in(&mut restarts, &name, restarts_here);
+        sources.push((name, source));
+    }
+    // each use of a macro that writes its pattern with `concat!`, with the
+    // literal it is given
+    for pattern in &macros {
+        let call = format!("{}!(", pattern.name);
+        for (name, source) in &sources {
+            for (start, _) in source.match_indices(&call) {
+                if source[..start].ends_with(|c: char| c.is_ascii_alphanumeric() || c == '_') {
+                    continue;
+                }
+                let line = source[..start].matches('\n').count() + 1;
+                let values: Vec<String> = arguments_of(&source[start + call.len()..])
+                    .into_iter()
+                    .filter_map(literal_of)
+                    .collect();
+                if values.is_empty() && !pattern.fallible {
+                    infallible_unread.push(format!("{name}:{line}"));
+                }
+                for value in values {
+                    let text: String = pattern
+                        .pieces
+                        .iter()
+                        .map(|piece| piece.as_deref().unwrap_or(&value))
+                        .collect();
+                    sites.read += 1;
+                    sites.from_macros += 1;
+                    match JsRegex::new(&text, &pattern.flags) {
+                        Ok(regex) => {
+                            let (grows, lazy) = loops_of(&regex, &text);
+                            sites.grows_per_turn += usize::from(grows);
+                            sites.lazy_walks += usize::from(lazy);
+                            if grows && !pattern.fallible {
+                                infallible_growing.push(format!("{name}:{line}"));
+                            }
+                        }
+                        Err(error) if error.to_string().contains("as JavaScript matches it") => {
+                            panic!("{name}:{line}: {error}")
+                        }
+                        Err(_) => {
+                            sites.rejected += 1;
+                            count_in(&mut rejected, name, 1);
+                        }
+                    }
+                }
+            }
+        }
     }
     println!("{sites:?}");
     println!("{restarts:?}");
@@ -381,6 +562,8 @@ fn every_site_of_the_workspace_builds() {
             .collect()
     };
     assert_eq!(restarts, listed(RESTARTS_THAT_MAY_READ_AHEAD));
+    // a call read wrong builds a piece of a pattern, which is refused too
+    assert_eq!(rejected, listed(&[("jscompat/src/regex.rs", 2)]));
     assert!(
         infallible_growing.is_empty(),
         "a JsRegex whose search can pass the bound; build it as a TryJsRegex: {infallible_growing:?}"
@@ -390,4 +573,16 @@ fn every_site_of_the_workspace_builds() {
         "a JsRegex whose pattern this test cannot read; write it at the call or in a const of the file, or build a TryJsRegex: {infallible_unread:?}"
     );
     assert!(sites.read > 0);
+}
+
+/// The growth rule reads the `Debug` text of `regress`; a release that names
+/// its instructions otherwise would read every loop as small.
+#[test]
+fn the_growth_rule_reads_the_program() {
+    let loops = |pattern: &str| loops_of(&JsRegex::new(pattern, "").unwrap(), pattern);
+    assert_eq!(loops("(?:a|b)*"), (true, false));
+    assert_eq!(loops("(?:a|b){2}(?:c|d){2}"), (false, false));
+    assert_eq!(loops("(?:(?:a|b){100}){100}"), (true, false));
+    assert_eq!(loops("[^>]*"), (false, false));
+    assert_eq!(loops("[\\s\\S]*?x"), (false, true));
 }
