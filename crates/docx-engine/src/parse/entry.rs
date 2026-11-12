@@ -547,12 +547,14 @@ fn parse_docx_with(
     );
     doc.insert("properties".to_owned(), properties);
     doc.insert("comments".to_owned(), json(&comments));
-    if let Some(protection) = &protection {
-        doc.insert("protection".to_owned(), json(protection));
-    }
-    if let Some(write_protection) = &write_protection {
-        doc.insert("writeProtection".to_owned(), json(write_protection));
-    }
+    doc.insert(
+        "protection".to_owned(),
+        protection.as_ref().map_or(Value::Null, json),
+    );
+    doc.insert(
+        "writeProtection".to_owned(),
+        write_protection.as_ref().map_or(Value::Null, json),
+    );
     doc.insert(
         "removePersonalInfo".to_owned(),
         Value::Bool(remove_personal_info),
