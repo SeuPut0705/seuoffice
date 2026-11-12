@@ -24,3 +24,11 @@ anything was fixed: the measure of the port (decision 0030, crates/README.md).
   `single` waiver. `node-fs-windows-gate.txt`: the same run's group `node-fs`
   on windows-latest, 61 checks, 47 differences. The porters compared nothing
   before this run.
+- `b4-b5-gate.txt`: batches 4 (Electron-free modules of the apps) and 5 (the
+  AI settings layer of packages/ai-provider and the modules over it), run
+  43282252889 of `seuoffice rust` at 4c18ad882, 2026-11-13. 33,202 checks
+  over 969 functions, 33,104 equal, 91 differences in 15 modules, 2 functions
+  with a single answer. One change preceded it: the cases of
+  `registerHtmlHandoffIpc` became a getter, because the spec read them before
+  its builders were defined and no group could load (no case and no Rust
+  changed). The porters compared nothing before this run.

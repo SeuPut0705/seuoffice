@@ -1,0 +1,1258 @@
+
+> main-diff@0.1.0 gate
+> node build.mjs && tsx main.ts --show 40
+
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling cfg-if v1.0.5
+   Compiling stable_deref_trait v1.2.1
+   Compiling smallvec v1.16.5
+   Compiling libc v0.2.191
+   Compiling siphasher v1.0.4
+   Compiling writeable v0.6.4
+   Compiling serde_core v1.0.229
+   Compiling phf_shared v0.14.0
+   Compiling fastrand v2.5.0
+   Compiling phf_generator v0.14.0
+   Compiling syn v3.0.10
+   Compiling litemap v0.8.3
+   Compiling scopeguard v1.2.0
+   Compiling version_check v0.9.5
+   Compiling memchr v2.8.3
+   Compiling utf_types v1.0.0
+   Compiling parking_lot_core v0.9.12
+   Compiling serde v1.0.229
+   Compiling generic-array v0.14.7
+   Compiling utf8_iter v1.1.0
+   Compiling lock_api v0.4.14
+   Compiling string_cache_codegen v0.11.2
+   Compiling phf_codegen v0.14.0
+   Compiling icu_properties_data v2.4.0
+   Compiling new_debug_unreachable v1.0.6
+   Compiling typenum v1.20.1
+   Compiling icu_normalizer_data v2.4.0
+   Compiling web_atoms v0.3.0
+   Compiling parking_lot v0.12.5
+   Compiling precomputed-hash v0.1.1
+   Compiling phf v0.14.0
+   Compiling utf16_iter v1.1.0
+   Compiling write16 v1.0.0
+   Compiling rustversion v1.0.23
+   Compiling tendril v0.5.1
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling icu_locale_fallback_data v2.4.0
+   Compiling synstructure v0.14.0
+   Compiling zmij v1.0.23
+   Compiling log v0.4.35
+   Compiling futures-core v0.3.34
+   Compiling napi-build v2.6.0
+   Compiling futures-sink v0.3.34
+   Compiling futures-channel v0.3.34
+   Compiling digest v0.10.7
+   Compiling futures-io v0.3.34
+   Compiling equivalent v1.0.3
+   Compiling pin-project-lite v0.2.17
+   Compiling icu_collator_data v2.4.0
+   Compiling slab v0.4.12
+   Compiling hashbrown v0.17.1
+   Compiling cpufeatures v0.2.17
+   Compiling serde_json v1.0.154
+   Compiling getrandom v0.4.3
+   Compiling futures-task v0.3.34
+   Compiling libm v0.2.16
+   Compiling encoding_rs v0.8.44
+   Compiling napi-sys v3.4.1
+   Compiling percent-encoding v2.3.2
+   Compiling indexmap v2.14.2
+   Compiling foldhash v0.2.0
+   Compiling unicode-segmentation v1.13.3
+   Compiling itoa v1.0.19
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling serde_derive v1.0.229
+   Compiling futures-macro v0.3.34
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.4
+   Compiling zerovec v0.11.9
+   Compiling zerotrie v0.2.5
+   Compiling tinystr v0.8.5
+   Compiling icu_locale_core v2.4.0
+   Compiling potential_utf v0.1.6
+   Compiling icu_collections v2.4.0
+   Compiling futures-util v0.3.34
+   Compiling convert_case v0.12.0
+   Compiling icu_provider v2.4.0
+   Compiling icu_normalizer v2.4.0
+   Compiling string_cache v0.11.0
+   Compiling icu_properties v2.4.0
+   Compiling markup5ever v0.40.0
+   Compiling html5ever v0.40.1
+   Compiling xml5ever v0.40.0
+   Compiling futures-executor v0.3.34
+   Compiling icu_locale_fallback v2.4.0
+   Compiling form_urlencoded v1.2.2
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling sha1 v0.10.7
+   Compiling napi v3.16.2
+   Compiling regress v0.12.0 (/home/runner/work/seuoffice/seuoffice/crates/vendor/regress)
+   Compiling libloading v0.9.0
+   Compiling ryu v1.0.23
+   Compiling multiversion_no_op v1.0.0
+   Compiling semver v1.0.28
+   Compiling zlib-rs v0.6.8
+   Compiling simdutf8 v0.1.5
+   Compiling core_detect v1.0.0
+   Compiling napi-derive-backend v7.0.1
+   Compiling jscompat v0.1.0 (/home/runner/work/seuoffice/seuoffice/crates/jscompat)
+   Compiling flate2 v1.1.11
+   Compiling url v2.5.8
+   Compiling icu_collator v2.4.0
+   Compiling markup5ever_rcdom v0.40.1+unofficial
+   Compiling futures v0.3.34
+   Compiling sha2 v0.10.9
+   Compiling main-node v0.1.0 (/home/runner/work/seuoffice/seuoffice/crates/main-node)
+   Compiling nohash-hasher v0.2.0
+   Compiling ctor v1.0.13
+   Compiling rustc-hash v2.1.3
+   Compiling bitflags v2.13.2
+   Compiling napi-derive v3.7.1
+   Compiling main-core v0.1.0 (/home/runner/work/seuoffice/seuoffice/crates/main-core)
+    Finished `node` profile [optimized] target(s) in 58.96s
+(node:10302) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+path.posix.sep: 1 checks, 0 differences, 0 listed, 1 distinct
+path.posix.delimiter: 1 checks, 0 differences, 0 listed, 1 distinct
+path.posix.resolve: 689 checks, 0 differences, 0 listed, 472 distinct
+path.posix.normalize: 519 checks, 0 differences, 0 listed, 415 distinct
+path.posix.isAbsolute: 511 checks, 0 differences, 0 listed, 10 distinct
+path.posix.dirname: 511 checks, 0 differences, 0 listed, 93 distinct
+path.posix.extname: 511 checks, 0 differences, 0 listed, 79 distinct
+path.posix.parse: 511 checks, 0 differences, 0 listed, 405 distinct
+path.posix.join: 915 checks, 0 differences, 0 listed, 752 distinct
+path.posix.relative: 736 checks, 0 differences, 1 listed, 387 distinct
+path.posix.toNamespacedPath: 209 checks, 0 differences, 0 listed, 183 distinct
+path.posix.basename: 1782 checks, 0 differences, 0 listed, 346 distinct
+path.posix.format: 1118 checks, 0 differences, 3 listed, 661 distinct
+path.win32.sep: 1 checks, 0 differences, 0 listed, 1 distinct
+path.win32.delimiter: 1 checks, 0 differences, 0 listed, 1 distinct
+path.win32.resolve: 1277 checks, 0 differences, 0 listed, 479 distinct
+path.win32.normalize: 519 checks, 0 differences, 0 listed, 387 distinct
+path.win32.isAbsolute: 511 checks, 0 differences, 0 listed, 10 distinct
+path.win32.dirname: 511 checks, 0 differences, 0 listed, 200 distinct
+path.win32.extname: 511 checks, 0 differences, 0 listed, 48 distinct
+path.win32.parse: 511 checks, 0 differences, 0 listed, 406 distinct
+path.win32.join: 915 checks, 0 differences, 0 listed, 721 distinct
+path.win32.relative: 784 checks, 0 differences, 0 listed, 271 distinct
+path.win32.toNamespacedPath: 359 checks, 0 differences, 0 listed, 303 distinct
+path.win32.basename: 1782 checks, 0 differences, 0 listed, 253 distinct
+path.win32.format: 1118 checks, 0 differences, 2 listed, 687 distinct
+update-attempt.INSTALL_ATTEMPT_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+update-attempt.nextAttemptTries: 9 checks, 0 differences, 0 listed, 6 distinct
+update-attempt.recordInstallAttempt: 9 checks, 0 differences, 0 listed, 9 distinct
+update-attempt.readInstallAttempt: 27 checks, 0 differences, 0 listed, 27 distinct
+update-attempt.clearInstallAttempt: 4 checks, 0 differences, 0 listed, 3 distinct
+update-attempt.installDidNotApply: 6 checks, 0 differences, 0 listed, 2 distinct
+update-attempt.installFailureLevel: 8 checks, 0 differences, 0 listed, 3 distinct
+update-attempt.installDirWritable: 11 checks, 0 differences, 0 listed, 7 distinct
+update-cache.pruneUpdateCache: 33 checks, 0 differences, 0 listed, 25 distinct
+update-build-channel.buildChannelFromAppUpdateYml: 29 checks, 0 differences, 0 listed, 2 distinct
+update-build-channel.packagedUpdateChannel: 9 checks, 0 differences, 0 listed, 8 distinct
+update-log.UPDATE_LOG_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+update-log.UPDATE_LOG_MAX_BYTES: 2 checks, 0 differences, 0 listed, 2 distinct
+update-log.createUpdateLog: 46 checks, 0 differences, 0 listed, 38 distinct
+update-log.createUpdateSteps: 24 checks, 0 differences, 0 listed, 24 distinct
+update-log.fileBytes: 11 checks, 0 differences, 0 listed, 7 distinct
+launch-paths.LAUNCHABLE_EXTS: 2 checks, 0 differences, 0 listed, 2 distinct
+launch-paths.LAUNCHABLE_DOUBLE_EXTS: 2 checks, 0 differences, 0 listed, 2 distinct
+launch-paths.LAUNCHABLE_UNCLAIMED_EXTS: 2 checks, 0 differences, 0 listed, 2 distinct
+launch-paths.collectLaunchPaths: 36 checks, 0 differences, 0 listed, 22 distinct
+states.normalizeUserSkillSettings: 16 checks, 0 differences, 0 listed, 9 distinct
+folder-api.isValidProjectId: 19 checks, 0 differences, 0 listed, 2 distinct
+app-settings.readAppSettings: 18 checks, 0 differences, 0 listed, 17 distinct
+app-settings.writeAppSettings: 26 checks, 0 differences, 0 listed, 19 distinct
+app-settings.writeAppSetting: 12 checks, 0 differences, 0 listed, 11 distinct
+app-settings.writeAppSettingThen: 5 checks, 0 differences, 0 listed, 5 distinct
+app-settings.SKILLS_SETTING_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.AGENT_SKILL_NOTICE_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.AGENT_PROJECT_PREFS_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.PROJECTS_SETTING_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.DEFAULT_AGENT_PROJECT_PREF: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.readSkillSettings: 6 checks, 0 differences, 0 listed, 6 distinct
+app-settings.writeSkillSettings: 7 checks, 0 differences, 0 listed, 7 distinct
+app-settings.updateSkillSettings: 9 checks, 0 differences, 0 listed, 8 distinct
+app-settings.agentSkillNoticeDue: 16 checks, 0 differences, 0 listed, 16 distinct
+app-settings.markAgentSkillNoticeSeen: 4 checks, 0 differences, 0 listed, 4 distinct
+app-settings.writeAgentPrefs: 10 checks, 0 differences, 0 listed, 9 distinct
+app-settings.normalizeAgentProjectPrefs: 6 checks, 0 differences, 0 listed, 2 distinct
+app-settings.readAgentProjectPref: 11 checks, 0 differences, 0 listed, 7 distinct
+app-settings.writeAgentProjectPref: 10 checks, 0 differences, 0 listed, 9 distinct
+app-settings.normalizeProjectsSettings: 13 checks, 0 differences, 0 listed, 6 distinct
+app-settings.readProjectsSettings: 4 checks, 0 differences, 0 listed, 4 distinct
+app-settings.writeProjectsSettings: 14 checks, 0 differences, 0 listed, 7 distinct
+app-settings.updateProjectsSettings: 15 checks, 0 differences, 0 listed, 13 distinct
+folder-roots.FOLDER_ROOTS_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+folder-roots.readExtraRoots: 8 checks, 0 differences, 0 listed, 6 distinct
+folder-roots.withExtraRoot: 6 checks, 0 differences, 0 listed, 4 distinct
+folder-roots.withoutExtraRoot: 5 checks, 0 differences, 0 listed, 4 distinct
+folder-roots.describeExtraRoot: 13 checks, 0 differences, 0 listed, 13 distinct
+split-memory.SPLIT_MEMORY_SETTING_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+split-memory.readSplitMemory: 27 checks, 0 differences, 0 listed, 27 distinct
+split-memory.writeSplitMemory: 23 checks, 0 differences, 0 listed, 15 distinct
+split-memory.clearSplitMemory: 5 checks, 0 differences, 0 listed, 4 distinct
+window-bounds.WINDOW_BOUNDS_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.SHELL_WINDOW_DEFAULT_WIDTH: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.SHELL_WINDOW_DEFAULT_HEIGHT: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.SHELL_WINDOW_MIN_WIDTH: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.SHELL_WINDOW_MIN_HEIGHT: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.WINDOW_BOUNDS_SAVE_DEBOUNCE_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.WINDOW_BOUNDS_SETTLE_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.parseShellWindowState: 23 checks, 0 differences, 0 listed, 10 distinct
+window-bounds.isShellWindowVisible: 22 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.readShellWindowState: 9 checks, 0 differences, 0 listed, 9 distinct
+window-bounds.applyShellWindowState: 5 checks, 0 differences, 0 listed, 5 distinct
+window-bounds.installShellWindowBoundsPersistence: 21 checks, 0 differences, 0 listed, 12 distinct
+app-routing.DOCX_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.ODT_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.WORD97_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.ODS_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.XLSX_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.PPTX_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.PDF_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.HTML_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.MINDMAP_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.HWP_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.EPUB_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.DIAGRAM_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.TEXT_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.documentExtension: 61 checks, 0 differences, 0 listed, 50 distinct
+app-routing.appForPath: 56 checks, 0 differences, 0 listed, 11 distinct
+app-routing.renameStaysInApp: 40 checks, 0 differences, 0 listed, 2 distinct
+recent-files.STAT_PATHS_MAX: 2 checks, 0 differences, 0 listed, 2 distinct
+recent-files.EXT_FAMILY: 2 checks, 0 differences, 0 listed, 2 distinct
+recent-files.statPathEntries: 5 checks, 0 differences, 0 listed, 5 distinct
+recent-files.statPathEntriesAsync: 5 checks, 0 differences, 0 listed, 5 distinct
+recent-files.capStatPaths: 7 checks, 0 differences, 0 listed, 5 distinct
+recent-files.normalizeRecentQuery: 32 checks, 0 differences, 0 listed, 16 distinct
+recent-files.matchesExtFamily: 21 checks, 0 differences, 0 listed, 3 distinct
+recent-files.pageRecentPaths: 18 checks, 0 differences, 0 listed, 15 distinct
+rename-validation.RENAME_ILLEGAL_NAME_CHARS: 17 checks, 0 differences, 0 listed, 2 distinct
+rename-validation.isValidRawRenameName: 58 checks, 0 differences, 0 listed, 2 distinct
+rename-validation.isValidRenameName: 58 checks, 0 differences, 0 listed, 2 distinct
+rename-validation.isSameFile: 13 checks, 0 differences, 0 listed, 9 distinct
+rename-validation.pdfSaveAsTarget: 10 checks, 0 differences, 0 listed, 7 distinct
+crash-log.CRASH_LOG_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+crash-log.CRASH_LOG_MAX_BYTES: 2 checks, 0 differences, 0 listed, 2 distinct
+crash-log.crashLine: 32 checks, 0 differences, 0 listed, 23 distinct
+crash-log.errorReason: 17 checks, 0 differences, 0 listed, 11 distinct
+crash-log.appendCrashLog: 17 checks, 0 differences, 0 listed, 16 distinct
+crash-heartbeat.HEARTBEAT_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+crash-heartbeat.HEARTBEAT_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+crash-heartbeat.heartbeatPath: 7 checks, 0 differences, 0 listed, 7 distinct
+crash-heartbeat.parseHeartbeat: 28 checks, 0 differences, 0 listed, 10 distinct
+crash-heartbeat.goneEntryFrom: 8 checks, 0 differences, 0 listed, 6 distinct
+crash-heartbeat.startHeartbeat: 17 checks, 0 differences, 0 listed, 12 distinct
+atomic-write.isSaveTempName: 22 checks, 0 differences, 0 listed, 2 distinct
+atomic-write.tempPathBeside: 12 checks, 0 differences, 0 listed, 10 distinct
+atomic-write.atomicWriteFile: 13 checks, 0 differences, 0 listed, 10 distinct
+atomic-write.atomicCopyFile: 9 checks, 0 differences, 0 listed, 8 distinct
+atomic-write.atomicMoveFile: 8 checks, 0 differences, 0 listed, 7 distinct
+atomic-write.atomicWriteVia: 7 checks, 0 differences, 0 listed, 5 distinct
+atomic-write.writeJsonAtomic: 18 checks, 0 differences, 0 listed, 17 distinct
+node-fs.readFileSync: 8 checks, 0 differences, 0 listed, 8 distinct
+node-fs.writeFileSync: 13 checks, 0 differences, 0 listed, 13 distinct
+node-fs.mkdirSync: 7 checks, 0 differences, 0 listed, 7 distinct
+node-fs.rmdirSync: 5 checks, 0 differences, 0 listed, 5 distinct
+node-fs.renameSync: 8 checks, 0 differences, 0 listed, 8 distinct
+node-fs.unlinkSync: 6 checks, 0 differences, 0 listed, 6 distinct
+node-fs.openSync: 6 checks, 0 differences, 0 listed, 6 distinct
+node-fs.readdirSync: 6 checks, 0 differences, 0 listed, 6 distinct
+node-fs.rmdirAsCwd: 3 checks, 0 differences, 0 listed, 3 distinct
+node-fs.readThroughLinks: 2 checks, 0 differences, 0 listed, 2 distinct
+i18n.LANGS: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.isLang: 11 checks, 0 differences, 0 listed, 2 distinct
+i18n.normalizeLang: 19 checks, 0 differences, 0 listed, 2 distinct
+i18n.requestedLanguage: 11 checks, 0 differences, 0 listed, 6 distinct
+i18n.installLang: 8 checks, 0 differences, 0 listed, 2 distinct
+i18n.htmlLang: 2 checks, 0 differences, 0 listed, 2 distinct
+i18n.isRtlLang: 8 checks, 0 differences, 0 listed, 2 distinct
+i18n.htmlDir: 8 checks, 0 differences, 0 listed, 2 distinct
+i18n.macShortcutsToWin: 30 checks, 0 differences, 0 listed, 29 distinct
+i18n.platformShortcuts: 30 checks, 0 differences, 0 listed, 29 distinct
+i18n.format: 22 checks, 0 differences, 0 listed, 20 distinct
+i18n.createI18n: 9 checks, 0 differences, 0 listed, 8 distinct
+i18n.documentLocaleFor: 36 checks, 0 differences, 0 listed, 13 distinct
+i18n.documentLocale: 7 checks, 0 differences, 0 listed, 5 distinct
+i18n.productName: 8 checks, 0 differences, 0 listed, 1 distinct
+i18n.UPSTREAM_PRODUCT_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.PRODUCT_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.USER_DATA_DIR_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.DEV_USER_DATA_DIR_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.PRODUCT_REPO_OWNER: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.PRODUCT_REPO_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.PRODUCT_REPO_SLUG: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_ENV_PREFIX: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.ENV_PREFIX: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_ENV_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.adoptOldEnv: 7 checks, 0 differences, 0 listed, 7 distinct
+i18n.OLD_HOME_DIR_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_PROJECT_DATA_DIR_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_CLI_COMMANDS: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_CLI_BUNDLE_FILES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_MCP_SERVER_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_APP_MCP_SERVER_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_SKILL_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_MCP_TOOL_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.existingOrCurrent: 7 checks, 0 differences, 0 listed, 5 distinct
+user-skills-channels.USER_SKILLS_BRIDGE_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.USER_SKILLS_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.USER_SKILL_PREVIEW_TEXT_MAX_CHARS: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.skillIdOf: 13 checks, 0 differences, 0 listed, 5 distinct
+user-skills-channels.invokeOf: 8 checks, 0 differences, 0 listed, 3 distinct
+user-skills-channels.editorsValueOf: 16 checks, 0 differences, 0 listed, 8 distinct
+user-skills-channels.statePatchOf: 13 checks, 0 differences, 0 listed, 6 distinct
+user-skills-channels.USER_SKILL_BODY_MAX: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.saveInputOf: 22 checks, 0 differences, 0 listed, 9 distinct
+user-skills-channels.USER_SKILL_TEMPLATE_MAX_BYTES: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.cardSaveInputOf: 24 checks, 0 differences, 0 listed, 7 distinct
+user-skills-channels.USER_SKILL_PASTE_MAX_CHARS: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.importTextOf: 9 checks, 0 differences, 0 listed, 5 distinct
+user-skills-channels.USER_SKILL_BUNDLE_MAX: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.skillIdListOf: 12 checks, 0 differences, 0 listed, 4 distinct
+user-skills-channels.installRequestOf: 17 checks, 0 differences, 0 listed, 8 distinct
+user-skills-channels.skillViewsOf: 6 checks, 0 differences, 0 listed, 3 distinct
+user-skills-channels.skillsResultOf: 9 checks, 0 differences, 0 listed, 4 distinct
+user-skills-channels.USER_SKILL_HANDOFF_TEXT_MAX: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.templateOpenInputOf: 18 checks, 0 differences, 0 listed, 7 distinct
+user-skills-channels.previewInputOf: 17 checks, 0 differences, 0 listed, 5 distinct
+user-skills-channels.handoffTargetOf: 11 checks, 0 differences, 0 listed, 5 distinct
+user-skills-channels.previewEndedOf: 14 checks, 0 differences, 0 listed, 6 distinct
+mcp-tools-channels.MCP_TOOLS_BRIDGE_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+mcp-tools-channels.MCP_TOOLS_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+mcp-tools-channels.mcpServerNameOf: 9 checks, 0 differences, 0 listed, 4 distinct
+mcp-tools-channels.mcpCallIdOf: 9 checks, 0 differences, 0 listed, 4 distinct
+mcp-tools-channels.mcpToolCallRequestOf: 17 checks, 0 differences, 0 listed, 5 distinct
+outbound-channels.OUTBOUND_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+outbound-channels.MAX_CONFIRM_ADDRESSES: 1 checks, 0 differences, 0 listed, 1 distinct
+outbound-channels.MAX_CONFIRM_ADDRESS_LENGTH: 1 checks, 0 differences, 0 listed, 1 distinct
+outbound-channels.confirmRequestOf: 27 checks, 0 differences, 0 listed, 8 distinct
+doc-attach-channels.DOC_ATTACH_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+doc-attach-channels.DOC_ATTACH_BRIDGE_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+folder-api.PROJECT_FOLDER_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+folder-api.PROJECT_FOLDER_EVENTS: 1 checks, 0 differences, 0 listed, 1 distinct
+folder-api.PROJECT_FOLDER_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+folder-api.PROJECT_FOLDER_LISTEN_CHANNEL: 1 checks, 0 differences, 0 listed, 1 distinct
+folder-api.PROJECT_FOLDER_BRIDGE_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+project-folder-bridge.PROJECT_FOLDER_BRIDGE_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+project-folder-bridge.projectFolderBridge: 9 checks, 0 differences, 0 listed, 9 distinct
+split-pane-bridge.SPLIT_PANE_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+split-pane-bridge.SPLIT_PANE_BRIDGE_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+split-pane-bridge.splitPaneBridge: 8 checks, 0 differences, 0 listed, 6 distinct
+default-save-dir.DEFAULT_SAVE_DIR_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+default-save-dir.readDefaultSaveDirSetting: 12 checks, 0 differences, 0 listed, 12 distinct
+default-save-dir.createDirLevels: 7 checks, 0 differences, 0 listed, 6 distinct
+default-save-dir.isUsableSaveDir: 6 checks, 0 differences, 0 listed, 4 distinct
+default-save-dir.resolveDefaultSaveDir: 13 checks, 0 differences, 0 listed, 12 distinct
+default-save-dir.defaultSaveDirFallback: 13 checks, 0 differences, 0 listed, 12 distinct
+default-save-dir.documentsDirOrFallback: 7 checks, 0 differences, 0 listed, 4 distinct
+default-save-dir.configuredDefaultSaveDir: 10 checks, 0 differences, 0 listed, 10 distinct
+dialog-memory.showOpenDialogWithMemory: 17 checks, 0 differences, 0 listed, 17 distinct
+dialog-memory.showSaveDialogWithMemory: 13 checks, 0 differences, 0 listed, 12 distinct
+dialog-memory.saveAsSuggestion: 7 checks, 0 differences, 0 listed, 5 distinct
+author-name.AUTHOR_NAME_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+author-name.AUTHOR_NAME_MAX: 1 checks, 0 differences, 0 listed, 1 distinct
+author-name.sanitizeAuthorName: 16 checks, 0 differences, 0 listed, 9 distinct
+author-name.readAuthorNameSetting: 10 checks, 0 differences, 0 listed, 10 distinct
+author-name.systemAuthorName: 7 checks, 0 differences, 0 listed, 5 distinct
+author-name.resolveAuthorName: 6 checks, 0 differences, 0 listed, 5 distinct
+author-name.configuredAuthorName: 4 checks, 0 differences, 0 listed, 4 distinct
+font-store.installLocalFontFiles: 13 checks, 0 differences, 0 listed, 13 distinct
+github-menu.GITHUB_REPO_OWNER: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_REPO_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_REPO_SLUG: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_REPO_URL: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_REPO_DISPLAY: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_ISSUES_URL: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_NEW_ISSUE_URL: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_RELEASES_URL: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_LATEST_RELEASE_URL: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.githubReleaseTagUrl: 8 checks, 0 differences, 0 listed, 6 distinct
+hwp-default-format.HWP_DEFAULT_FORMAT_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+hwp-default-format.normalizeHwpDefaultFormat: 9 checks, 0 differences, 0 listed, 2 distinct
+hwp-default-format.readHwpDefaultFormat: 8 checks, 0 differences, 0 listed, 7 distinct
+numbered-export-paths.numberedExportPaths: 29 checks, 0 differences, 0 listed, 22 distinct
+template-font-response.templateFontResponse: 11 checks, 0 differences, 0 listed, 10 distinct
+template-fonts.TEMPLATE_FONT_SCHEME: 1 checks, 0 differences, 0 listed, 1 distinct
+template-fonts.TEMPLATE_FONT_HOST: 1 checks, 0 differences, 0 listed, 1 distinct
+template-fonts.TEMPLATE_FONT_FILES: 1 checks, 0 differences, 0 listed, 1 distinct
+template-fonts.templateFontFileOf: 68 checks, 0 differences, 0 listed, 4 distinct
+template-fonts-dir.TEMPLATE_FONTS_DIR_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+template-fonts-dir.TEMPLATE_FONTS_REPO_DIR: 1 checks, 0 differences, 0 listed, 1 distinct
+template-fonts-dir.templateFontsDir: 7 checks, 0 differences, 0 listed, 5 distinct
+abort-on-destroyed.abortOnDestroyed: 25 checks, 0 differences, 0 listed, 10 distinct
+recovery-contract.registerRecoveryEditor: 3 checks, 0 differences, 0 listed, 3 distinct
+recovery-contract.recoveryEditor: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-contract.recoveryEditors: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-labels.RECOVERY_PROMPT_STRINGS: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-labels.recoveryPromptLabels: 35 checks, 0 differences, 0 listed, 16 distinct
+recovery-labels.unprotectableNoticeText: 19 checks, 0 differences, 0 listed, 2 distinct
+save-conflict-labels.SAVE_CONFLICT_STRINGS: 2 checks, 0 differences, 0 listed, 2 distinct
+save-conflict-labels.saveConflictLabels: 19 checks, 0 differences, 0 listed, 2 distinct
+recovery-prompt.promptRecoveryForFile: 11 checks, 0 differences, 0 listed, 6 distinct
+recovery-prompt.resolveRecoveryOnOpen: 15 checks, 0 differences, 0 listed, 14 distinct
+recovery-store.RECOVERY_EDITOR_KINDS: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.RECOVERY_COPY_MAX_AGE_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.recoveryFolderName: 6 checks, 0 differences, 0 listed, 6 distinct
+recovery-store.isRecoveryEditorKind: 17 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.isUntitledIdentity: 7 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.createRecoveryStore: 33 checks, 0 differences, 0 listed, 33 distinct
+recovery-store.recoveryRunId: 3 checks, 0 differences, 0 listed, 3 distinct
+recovery-store.markAppShuttingDown: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.resetAppShuttingDown: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.isAppShuttingDown: 3 checks, 0 differences, 0 listed, 3 distinct
+recovery-store.resumeDiscardedCopies: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.newUntitledRecoveryId: 3 checks, 0 differences, 0 listed, 3 distinct
+unsaved-files.UNSAVED_CHANGES_MESSAGE: 2 checks, 0 differences, 0 listed, 2 distinct
+unsaved-files.setOpenFilesSource: 6 checks, 0 differences, 0 listed, 2 distinct
+unsaved-files.fileHasUnsavedChanges: 23 checks, 0 differences, 0 listed, 2 distinct
+unsaved-files.assertFileSaved: 23 checks, 0 differences, 0 listed, 2 distinct
+unsaved-files.withoutUnsavedFiles: 7 checks, 0 differences, 0 listed, 4 distinct
+legacy-import-prefs.LEGACY_IMPORT_SKIP_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+legacy-import-prefs.LEGACY_IMPORT_KINDS: 2 checks, 0 differences, 0 listed, 2 distinct
+legacy-import-prefs.readLegacyImportSkip: 14 checks, 0 differences, 0 listed, 10 distinct
+legacy-import-prefs.writeLegacyImportSkip: 61 checks, 0 differences, 0 listed, 31 distinct
+legacy-import-prefs.readLegacyImportPrompt: 15 checks, 0 differences, 0 listed, 15 distinct
+legacy-import-prefs.writeLegacyImportPrompt: 31 checks, 0 differences, 0 listed, 11 distinct
+safe-remote-url.isFakeIpDnsArtifact: 96 checks, 0 differences, 0 listed, 2 distinct
+safe-remote-url.isBlockedAddress: 96 checks, 0 differences, 0 listed, 2 distinct
+safe-remote-url.isIP: 96 checks, 0 differences, 0 listed, 3 distinct
+safe-remote-url.resolveSafeRemoteTarget: 88 checks, 0 differences, 0 listed, 32 distinct
+safe-remote-url.isSafeRemoteUrl: 84 checks, 0 differences, 0 listed, 21 distinct
+safe-remote-url.pinnedLookup: 35 checks, 0 differences, 0 listed, 12 distinct
+safe-remote-url.fetchWithSsrfGuard: 61 checks, 0 differences, 0 listed, 46 distinct
+remote-image.MAX_REMOTE_IMAGE_BYTES: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-image.ResponseTooLargeError: 13 checks, 0 differences, 0 listed, 13 distinct
+remote-image.readBodyCapped: 25 checks, 0 differences, 0 listed, 10 distinct
+remote-image.remoteImageHeaders: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-image.fetchRemoteImage: 25 checks, 0 differences, 0 listed, 20 distinct
+fetch-image-bytes.fetchImageBytes: 23 checks, 0 differences, 0 listed, 16 distinct
+generated-images.GENERATED_IMAGE_DIR: 1 checks, 0 differences, 0 listed, 1 distinct
+generated-images.MAX_GENERATED_IMAGE_BYTES: 1 checks, 0 differences, 0 listed, 1 distinct
+generated-images.storeGeneratedImage: 42 checks, 0 differences, 0 listed, 15 distinct
+generated-images.readGeneratedImage: 37 checks, 0 differences, 0 listed, 6 distinct
+remote-table.MAX_REMOTE_TABLE_BYTES: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-table.MAX_REMOTE_TABLE_ROWS: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-table.MAX_REMOTE_TABLE_COLUMNS: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-table.MAX_REMOTE_TABLE_CELL_CHARS: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-table.REMOTE_TABLE_TIMEOUT_MS: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-table.parseHtmlTable: 59 checks, 0 differences, 1 listed, 46 distinct
+remote-table.detectDelimiter: 36 checks, 0 differences, 0 listed, 3 distinct
+remote-table.parseDelimitedRow: 33 checks, 0 differences, 0 listed, 22 distinct
+remote-table.parseDelimitedTable: 42 checks, 0 differences, 0 listed, 34 distinct
+remote-table.fetchRemoteTable: 51 checks, 0 differences, 0 listed, 26 distinct
+main-proxy.mergeNoProxy: 10 checks, 0 differences, 0 listed, 9 distinct
+main-proxy.createMainProcessProxyDispatcher: 51 checks, 0 differences, 0 listed, 12 distinct
+main-proxy.EnvHttpProxyAgent: 30 checks, 0 differences, 0 listed, 9 distinct
+safe-external-url.safeExternalUrl: 122 checks, 0 differences, 0 listed, 23 distinct
+navigation-guard.installNavigationGuard: 7 checks, 0 differences, 0 listed, 6 distinct
+renderer-scheme.RENDERER_SCHEME: 1 checks, 0 differences, 0 listed, 1 distinct
+renderer-scheme.RENDERER_SCHEME_PRIVILEGE: 1 checks, 0 differences, 0 listed, 1 distinct
+renderer-scheme.DOCX_MEDIA_SCHEME_PRIVILEGE: 1 checks, 0 differences, 0 listed, 1 distinct
+renderer-scheme.SLIDE_MEDIA_SCHEME_PRIVILEGE: 1 checks, 0 differences, 0 listed, 1 distinct
+renderer-scheme.MAX_RENDERER_QUERY_ENTRIES: 1 checks, 0 differences, 0 listed, 1 distinct
+renderer-scheme.MAX_RENDERER_QUERY_CHARS: 1 checks, 0 differences, 0 listed, 1 distinct
+renderer-scheme.rendererUrl: 63 checks, 0 differences, 0 listed, 51 distinct
+renderer-scheme.resolveRendererFile: 79 checks, 0 differences, 0 listed, 28 distinct
+permission-guard.appPageOf: 109 checks, 0 differences, 0 listed, 22 distinct
+permission-guard.permissionAllowed: 141 checks, 0 differences, 0 listed, 6 distinct
+permission-guard.permissionRequestHandler: 312 checks, 0 differences, 0 listed, 4 distinct
+permission-guard.permissionCheckHandler: 310 checks, 0 differences, 0 listed, 4 distinct
+permission-guard.installPermissionGuard: 4 checks, 0 differences, 0 listed, 4 distinct
+printer-options.DRIVER_OPTION_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+printer-options.isValidOptionName: 22 checks, 0 differences, 0 listed, 2 distinct
+printer-options.isValidOptionValue: 22 checks, 0 differences, 0 listed, 2 distinct
+printer-options.parseLpOptions: 33 checks, 0 differences, 0 listed, 19 distinct
+printer-options.queryPrinterOptions: 11 checks, 0 differences, 0 listed, 6 distinct
+print-cups.lpArgumentsFor: 20 checks, 0 differences, 0 listed, 18 distinct
+print-cups.printToPdfOptionsFor: 18 checks, 0 differences, 0 listed, 13 distinct
+print-cups.printPdfViaCups: 14 checks, 0 differences, 0 listed, 13 distinct
+print-job.printJobOptions: 55 checks, 0 differences, 0 listed, 22 distinct
+print-job.printOutcome: 17 checks, 0 differences, 0 listed, 6 distinct
+print-window.PRINT_READY_SCRIPT: 1 checks, 0 differences, 0 listed, 1 distinct
+print-window.loadPrintHtml: 10 checks, 0 differences, 0 listed, 10 distinct
+print-window.printHtmlDocument: 25 checks, 0 differences, 0 listed, 20 distinct
+print-html-pdf.sanitizePrintableBody: 145 checks, 0 differences, 0 listed, 100 distinct
+print-html-pdf.buildPrintableHtml: 40 checks, 0 differences, 0 listed, 36 distinct
+print-html-pdf.printHtmlToPdf: 8 checks, 0 differences, 0 listed, 8 distinct
+print-html-pdf.parseSerialize: 188 checks, 0 differences, 0 listed, 178 distinct
+headless-mode.setHeadlessMode: 2 checks, 0 differences, 0 listed, 2 distinct
+headless-mode.isHeadlessMode: 2 checks, 0 differences, 0 listed, 2 distinct
+handoff-editors.HANDOFF_EDITORS: 1 checks, 0 differences, 0 listed, 1 distinct
+handoff-editors.isHandoffEditor: 29 checks, 0 differences, 0 listed, 2 distinct
+handoff-editors.HANDOFF_ATTACH_EDITORS: 1 checks, 0 differences, 0 listed, 1 distinct
+handoff-editors.handoffEditorTakesAttachments: 18 checks, 0 differences, 0 listed, 2 distinct
+headless-export.DIAGRAM_FILE_TARGETS: 1 checks, 0 differences, 0 listed, 1 distinct
+headless-export.DIAGRAM_BATCH_MODES: 1 checks, 0 differences, 0 listed, 1 distinct
+headless-export.HEADLESS_TARGETS: 1 checks, 0 differences, 0 listed, 1 distinct
+headless-export.isDiagramFileTarget: 17 checks, 0 differences, 0 listed, 2 distinct
+headless-export.HEADLESS_EXPORT_FLAG: 1 checks, 0 differences, 0 listed, 1 distinct
+headless-export.HEADLESS_EXIT: 1 checks, 0 differences, 0 listed, 1 distinct
+headless-export.headlessModuleFor: 42 checks, 0 differences, 0 listed, 8 distinct
+headless-export.HEADLESS_SUPPORTED_EXTENSIONS: 1 checks, 0 differences, 0 listed, 1 distinct
+headless-export.parseHeadlessExportArgv: 70 checks, 0 differences, 0 listed, 55 distinct
+headless-export.headlessSummary: 18 checks, 0 differences, 0 listed, 13 distinct
+headless-export.formatHeadlessEnvelope: 36 checks, 0 differences, 0 listed, 28 distinct
+headless-export.headlessExitCode: 20 checks, 0 differences, 0 listed, 4 distinct
+headless-export.headlessSleep: 6 checks, 0 differences, 0 listed, 6 distinct
+headless-export.pollUntilReady: 14 checks, 0 differences, 0 listed, 13 distinct
+headless-export.documentFontsSettled: 7 checks, 0 differences, 0 listed, 5 distinct
+headless-export.runHeadlessRendererExport: 9 checks, 0 differences, 0 listed, 8 distinct
+generate-handoff.handoffEditorForFile: 45 checks, 0 differences, 0 listed, 9 distinct
+generate-handoff.HANDOFF_EDITORS: 1 checks, 0 differences, 0 listed, 1 distinct
+generate-handoff.isHandoffEditor: 8 checks, 0 differences, 0 listed, 2 distinct
+generate-handoff.handoffEditorTakesAttachments: 7 checks, 0 differences, 0 listed, 2 distinct
+generate-handoff.queueGenerateHandoff: 12 checks, 0 differences, 0 listed, 12 distinct
+generate-handoff.queueGenerateHandoffFor: 6 checks, 0 differences, 0 listed, 6 distinct
+generate-handoff.takeGenerateHandoff: 13 checks, 0 differences, 0 listed, 7 distinct
+generate-handoff.dropGenerateHandoff: 6 checks, 0 differences, 0 listed, 4 distinct
+generate-handoff.queueSkillHandoff: 7 checks, 0 differences, 0 listed, 7 distinct
+generate-handoff.queueSkillHandoffFor: 5 checks, 0 differences, 0 listed, 5 distinct
+generate-handoff.takeSkillHandoff: 10 checks, 0 differences, 0 listed, 6 distinct
+generate-handoff.queuedSkillHandoffs: 4 checks, 0 differences, 0 listed, 4 distinct
+generate-handoff.queuedGenerateHandoffs: 5 checks, 0 differences, 0 listed, 5 distinct
+generate-handoff.setGenerateTabIdResolver: 5 checks, 0 differences, 0 listed, 2 distinct
+generate-handoff.reportGenerateRunStarted: 32 checks, 0 differences, 0 listed, 16 distinct
+generate-handoff.generateRunStartedEvents: 5 checks, 0 differences, 0 listed, 5 distinct
+generate-handoff.recordGenerateConverted: 13 checks, 0 differences, 0 listed, 13 distinct
+generate-handoff.generateConvertedEvents: 5 checks, 0 differences, 0 listed, 5 distinct
+generate-handoff.resetGenerateHandoffsForTest: 3 checks, 0 differences, 0 listed, 1 distinct
+session-record.SESSION_RECORD_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.SESSION_RECORD_WRITE_DELAY_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.CRASH_LOOP_WINDOW_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.sessionSnapshotFrom: 19 checks, 0 differences, 0 listed, 14 distinct
+session-record.parseSessionRecord: 44 checks, 0 differences, 0 listed, 17 distinct
+session-record.sessionRecordPath: 7 checks, 0 differences, 0 listed, 6 distinct
+session-record.readSessionRecord: 11 checks, 0 differences, 0 listed, 11 distinct
+session-record.judgePreviousExit: 16 checks, 0 differences, 0 listed, 8 distinct
+session-record.sessionRestoreLayout: 5 checks, 0 differences, 0 listed, 5 distinct
+session-record.createSessionRecorder: 16 checks, 0 differences, 0 listed, 16 distinct
+session-record.initSessionRecord: 3 checks, 0 differences, 0 listed, 3 distinct
+session-record.sessionRecorder: 3 checks, 0 differences, 0 listed, 3 distinct
+session-record.noteSessionChanged: 4 checks, 0 differences, 0 listed, 4 distinct
+session-record.markSessionCleanExit: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.holdSessionTabsForUpdateRestart: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.markSessionUpdateRestart: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.markSessionClosedToTray: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.markSessionOsEnd: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.resetSessionRecordForTests: 2 checks, 0 differences, 0 listed, 2 distinct
+tab-lifecycle.MAX_RECENTLY_CLOSED: 2 checks, 0 differences, 0 listed, 2 distinct
+tab-lifecycle.closeTabsInOrder: 8 checks, 0 differences, 0 listed, 6 distinct
+tab-lifecycle.createRecentlyClosedTracker: 14 checks, 0 differences, 0 listed, 14 distinct
+tab-duplicate.duplicateDocumentFile: 12 checks, 0 differences, 0 listed, 12 distinct
+tab-document-actions.runTabDocumentAction: 44 checks, 0 differences, 0 listed, 36 distinct
+tab-menu.isProgramFile: 29 checks, 0 differences, 0 listed, 2 distinct
+tab-menu.baseName: 10 checks, 0 differences, 0 listed, 5 distinct
+tab-menu.pathLabel: 9 checks, 0 differences, 0 listed, 8 distinct
+tab-menu.tabMenuTemplate: 13 checks, 0 differences, 0 listed, 13 distinct
+tab-shortcuts.tabShortcutOf: 100 checks, 0 differences, 0 listed, 4 distinct
+tab-shortcuts.handleTabShortcut: 13 checks, 0 differences, 0 listed, 9 distinct
+split-layout.SPLIT_EVEN_RATIO: 2 checks, 0 differences, 0 listed, 2 distinct
+split-layout.splitAvailablePx: 28 checks, 0 differences, 0 listed, 14 distinct
+split-layout.splitRatioLimits: 28 checks, 0 differences, 0 listed, 10 distinct
+split-layout.clampSplitRatio: 100 checks, 0 differences, 0 listed, 12 distinct
+split-layout.paneRects: 100 checks, 0 differences, 0 listed, 75 distinct
+split-layout.splitDropZone: 20 checks, 0 differences, 0 listed, 3 distinct
+split-layout.decideSplitDrop: 14 checks, 0 differences, 0 listed, 9 distinct
+split-layout.activationMode: 16 checks, 0 differences, 0 listed, 4 distinct
+split-layout.splitSurvivor: 5 checks, 0 differences, 0 listed, 3 distinct
+split-layout.oppositeDocumentId: 11 checks, 0 differences, 0 listed, 3 distinct
+open-documents.OPEN_DOCUMENTS_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+open-documents.publishOpenDocuments: 10 checks, 0 differences, 0 listed, 10 distinct
+open-documents.clearOpenDocuments: 3 checks, 0 differences, 0 listed, 2 distinct
+window-background.SHELL_BACKGROUND_LIGHT: 2 checks, 0 differences, 0 listed, 2 distinct
+window-background.SHELL_BACKGROUND_DARK: 2 checks, 0 differences, 0 listed, 2 distinct
+window-background.shellWindowBackground: 2 checks, 0 differences, 0 listed, 2 distinct
+title-bar-overlay.tabStripOverlay: 12 checks, 0 differences, 0 listed, 11 distinct
+skill-target.isInstallableSkillDir: 19 checks, 0 differences, 0 listed, 2 distinct
+file-targets.isUserVisibleFile: 15 checks, 0 differences, 0 listed, 12 distinct
+file-targets.isMoveSource: 15 checks, 0 differences, 0 listed, 12 distinct
+result-store-ipc.registerResultStoreIpc: 12 checks, 0 differences, 0 listed, 10 distinct
+window-close-guard.installShellCloseGuard: 16 checks, 0 differences, 0 listed, 16 distinct
+update-restart.requestUpdateRestart: 4 checks, 0 differences, 0 listed, 2 distinct
+update-restart.cancelUpdateRestart: 4 checks, 0 differences, 0 listed, 2 distinct
+update-restart.updateRestartRequested: 4 checks, 0 differences, 0 listed, 2 distinct
+update-restart.reopenedByInstaller: 6 checks, 0 differences, 0 listed, 2 distinct
+update-notes.normalizeReleaseNotes: 91 checks, 0 differences, 0 listed, 75 distinct
+update-resume.installResumeDownload: 66 checks, 0 differences, 0 listed, 39 distinct
+mac-update.macAppBundle: 13 checks, 0 differences, 0 listed, 5 distinct
+mac-update.macStagingDir: 5 checks, 0 differences, 0 listed, 4 distinct
+mac-update.macPreviousDir: 5 checks, 0 differences, 0 listed, 4 distinct
+mac-update.macSelfUpdateBlock: 9 checks, 0 differences, 0 listed, 8 distinct
+mac-update.removeMacLeftovers: 5 checks, 0 differences, 0 listed, 4 distinct
+mac-update.runProgram: 8 checks, 0 differences, 0 listed, 8 distinct
+mac-update.stageMacUpdate: 16 checks, 0 differences, 0 listed, 14 distinct
+mac-update.installMacStaging: 8 checks, 0 differences, 0 listed, 5 distinct
+mac-update.MAC_SWAP_SCRIPT: 1 checks, 0 differences, 0 listed, 1 distinct
+mac-update.startMacSwap: 11 checks, 0 differences, 0 listed, 9 distinct
+shell-atomic-write.atomicWriteFile: 10 checks, 0 differences, 0 listed, 9 distinct
+shell-atomic-write.atomicCopyFile: 6 checks, 0 differences, 0 listed, 5 distinct
+control-protocol.CONTROL_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+control-protocol.CONTROL_PROTOCOL: 2 checks, 0 differences, 0 listed, 2 distinct
+control-protocol.CONTROL_MAX_REQUEST_BYTES: 2 checks, 0 differences, 0 listed, 2 distinct
+csv-import-limit.csvImportLimitMb: 17 checks, 0 differences, 0 listed, 3 distinct
+feedback.FEEDBACK_SURVEY_URL: 2 checks, 0 differences, 0 listed, 2 distinct
+feedback.FEEDBACK_STRINGS: 2 checks, 0 differences, 0 listed, 2 distinct
+feedback.feedbackText: 20 checks, 0 differences, 0 listed, 17 distinct
+feedback.platformLabel: 12 checks, 0 differences, 0 listed, 12 distinct
+feedback.feedbackDetails: 6 checks, 0 differences, 0 listed, 6 distinct
+pdf-save-as-formats.pdfSaveAsFilters: 3 checks, 0 differences, 0 listed, 3 distinct
+pdf-save-as-formats.pdfSaveAsDefaultPath: 41 checks, 0 differences, 0 listed, 37 distinct
+pdf-save-as-formats.pdfSaveAsPickedPath: 41 checks, 0 differences, 0 listed, 39 distinct
+pdf-save-as-formats.pdfSaveAsFormatOf: 41 checks, 0 differences, 0 listed, 7 distinct
+control-server.controlEndpointPath: 24 checks, 0 differences, 0 listed, 15 distinct
+control-server.parseEnvelope: 39 checks, 0 differences, 0 listed, 12 distinct
+control-server.startControlServer: 5 checks, 0 differences, 0 listed, 4 distinct
+control-server.serve: 36 checks, 0 differences, 0 listed, 14 distinct
+control-handlers.controlHandler: 29 checks, 0 differences, 0 listed, 29 distinct
+default-app.OFFICE_TYPES: 2 checks, 0 differences, 0 listed, 2 distinct
+default-app.execFileRunner: 11 checks, 0 differences, 0 listed, 11 distinct
+default-app.macAppBundlePath: 20 checks, 0 differences, 0 listed, 6 distinct
+default-app.parseMacStatus: 32 checks, 0 differences, 0 listed, 19 distinct
+default-app.parseLinuxStatus: 11 checks, 0 differences, 0 listed, 8 distinct
+default-app.parseRegValue: 27 checks, 0 differences, 0 listed, 15 distinct
+default-app.createDefaultAppService: 33 checks, 0 differences, 0 listed, 25 distinct
+diagram-open-gate.openDiagramChecked: 15 checks, 0 differences, 0 listed, 15 distinct
+diagram-open-gate.diagramOpenChecking: 15 checks, 0 differences, 0 listed, 15 distinct
+document-password-prompt.createDocumentPasswordPrompt: 15 checks, 0 differences, 0 listed, 14 distinct
+pdf-convert-ui-handlers.createPdfConvertUiHandlers: 19 checks, 0 differences, 0 listed, 15 distinct
+pdf-note-tabs.isNoteFile: 16 checks, 0 differences, 0 listed, 2 distinct
+pdf-note-tabs.openNoteTab: 24 checks, 0 differences, 0 listed, 6 distinct
+pdf-note-tabs.insertIntoNoteTab: 84 checks, 0 differences, 0 listed, 9 distinct
+document-links.DOCUMENT_LINKS_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+document-links.linkPathKey: 21 checks, 0 differences, 0 listed, 13 distinct
+document-links.parseDocumentLinks: 38 checks, 0 differences, 0 listed, 17 distinct
+document-links.readDocumentLinksFile: 9 checks, 0 differences, 0 listed, 4 distinct
+document-links.handoffStoreEvents: 7 checks, 0 differences, 0 listed, 7 distinct
+document-links.watchMakeEvents: 5 checks, 0 differences, 0 listed, 5 distinct
+document-links.isFreshlySavedPath: 12 checks, 0 differences, 0 listed, 6 distinct
+document-links.DocumentLinks: 26 checks, 0 differences, 0 listed, 26 distinct
+document-links.documentLinksAt: 9 checks, 0 differences, 0 listed, 9 distinct
+document-links.documentLinkMenuModel: 8 checks, 0 differences, 0 listed, 7 distinct
+document-links-menu.documentLinkMenuItems: 16 checks, 0 differences, 0 listed, 14 distinct
+docs/atomic-write.looksLikeZip: 9 checks, 0 differences, 0 listed, 2 distinct
+docs/atomic-write.atomicWriteFile: 8 checks, 0 differences, 0 listed, 7 distinct
+byte-handoff.handOffBytes: 11 checks, 0 differences, 0 listed, 11 distinct
+byte-handoff.takeHandoff: 16 checks, 0 differences, 0 listed, 9 distinct
+byte-handoff.pendingHandoffCount: 9 checks, 0 differences, 0 listed, 9 distinct
+copy-image-guard.MAX_COPY_IMAGE_DATA_URL: 1 checks, 0 differences, 0 listed, 1 distinct
+copy-image-guard.validCopyImageDataUrl: 32 checks, 0 differences, 0 listed, 2 distinct
+copy-image-guard.copyImageDisplaySize: 36 checks, 0 differences, 0 listed, 14 distinct
+doc-format.docFormatOfPath: 18 checks, 0 differences, 0 listed, 3 distinct
+doc-format.zipEntryNames: 23 checks, 0 differences, 0 listed, 12 distinct
+doc-format.isOdtPackage: 25 checks, 0 differences, 0 listed, 2 distinct
+doc-format.withDocExtension: 10 checks, 0 differences, 0 listed, 8 distinct
+doc-format.recoveryExtFor: 9 checks, 0 differences, 0 listed, 2 distinct
+doc-format.prepareSaveBytes: 15 checks, 0 differences, 0 listed, 11 distinct
+doc-format.prepareRecoveryBytes: 10 checks, 0 differences, 0 listed, 7 distinct
+external-change.isExternallyModified: 18 checks, 0 differences, 0 listed, 4 distinct
+hwp-export.convertInWorker: 15 checks, 0 differences, 0 listed, 15 distinct
+hwp-export.HwpExportFailure: 3 checks, 0 differences, 0 listed, 3 distinct
+hwp-export.exportHwp: 30 checks, 0 differences, 0 listed, 28 distinct
+hwp-export.hwpLossMessageBox: 16 checks, 0 differences, 0 listed, 16 distinct
+hwp-export-strings.HWP_EXPORT_STRINGS: 1 checks, 0 differences, 0 listed, 1 distinct
+lazy-media-inline.inlineLazyMediaInHtml: 28 checks, 0 differences, 0 listed, 27 distinct
+merge-output.mergeOutputFileName: 31 checks, 0 differences, 0 listed, 20 distinct
+merge-output.mergeOutputPath: 17 checks, 0 differences, 0 listed, 16 distinct
+print-args.validPrintDim: 21 checks, 0 differences, 0 listed, 2 distinct
+print-args.validPrintScale: 16 checks, 0 differences, 0 listed, 2 distinct
+print-args.validPrintGeometry: 15 checks, 0 differences, 0 listed, 2 distinct
+print-args.printScaleOption: 16 checks, 0 differences, 0 listed, 6 distinct
+print-args.validPrintPaper: 20 checks, 0 differences, 0 listed, 3 distinct
+print-args.printPaperOption: 14 checks, 0 differences, 0 listed, 8 distinct
+print-args.printJobOptions: 19 checks, 0 differences, 0 listed, 7 distinct
+read-url-ipc.unexpectedReadUrlFailure: 1 checks, 0 differences, 0 listed, 1 distinct
+read-url-ipc.normalizeReadUrlRequest: 25 checks, 0 differences, 0 listed, 12 distinct
+docs/save-as-formats.saveAsFilters: 4 checks, 0 differences, 0 listed, 4 distinct
+docs/save-as-formats.saveAsDefaultPath: 15 checks, 0 differences, 0 listed, 11 distinct
+docs/save-as-formats.saveAsTarget: 30 checks, 0 differences, 0 listed, 27 distinct
+docs/save-as-formats.hwpExportFilters: 2 checks, 0 differences, 0 listed, 2 distinct
+docs/save-as-formats.hwpExportTarget: 16 checks, 0 differences, 0 listed, 13 distinct
+starred-files.parseStarredItems: 32 checks, 0 differences, 0 listed, 13 distinct
+starred-files.readStarredItems: 14 checks, 0 differences, 0 listed, 14 distinct
+starred-files.writeStarredItems: 9 checks, 0 differences, 0 listed, 9 distinct
+starred-files.toggleStarredItem: 10 checks, 0 differences, 0 listed, 6 distinct
+starred-files.dropStarredItems: 10 checks, 0 differences, 0 listed, 3 distinct
+starred-files.assignStarredGroup: 16 checks, 0 differences, 0 listed, 7 distinct
+starred-files.renameStarredItem: 10 checks, 0 differences, 0 listed, 9 distinct
+starred-files.starredGroupNames: 9 checks, 0 differences, 0 listed, 8 distinct
+starred-files.starredGroupMap: 8 checks, 0 differences, 0 listed, 6 distinct
+stream-coalesce.STREAM_COALESCE_MS: 1 checks, 0 differences, 0 listed, 1 distinct
+stream-coalesce.createChunkCoalescer: 24 checks, 7 differences, 0 listed, 23 distinct
+zotero-wire.ZOTERO_INTEGRATION_HOST: 1 checks, 0 differences, 0 listed, 1 distinct
+zotero-wire.ZOTERO_INTEGRATION_PORT: 1 checks, 0 differences, 0 listed, 1 distinct
+zotero-wire.encodeZoteroFrame: 25 checks, 0 differences, 0 listed, 15 distinct
+zotero-wire.ZoteroFrameDecoder: 22 checks, 0 differences, 0 listed, 16 distinct
+zotero-wire.ZoteroWireClient: 28 checks, 1 differences, 0 listed, 25 distinct
+drawio-protocol.DRAWIO_SCHEME_PRIVILEGE: 1 checks, 0 differences, 0 listed, 1 distinct
+drawio-protocol.drawioCsp: 5 checks, 0 differences, 0 listed, 5 distinct
+drawio-protocol.PRINT_PAGE_CSP: 1 checks, 0 differences, 0 listed, 1 distinct
+drawio-protocol.contentTypeOf: 46 checks, 0 differences, 0 listed, 19 distinct
+drawio-protocol.resolveDrawioRequest: 76 checks, 0 differences, 0 listed, 26 distinct
+drawio-protocol.injectBridge: 24 checks, 0 differences, 0 listed, 17 distinct
+drawio-protocol.responseHeaders: 5 checks, 0 differences, 0 listed, 5 distinct
+export-paths.pageFilePaths: 34 checks, 0 differences, 0 listed, 28 distinct
+network-guard.DIAGRAM_PARTITION: 1 checks, 0 differences, 0 listed, 1 distinct
+network-guard.devServerOrigins: 28 checks, 0 differences, 0 listed, 10 distinct
+network-guard.isAllowedDiagramRequest: 41 checks, 0 differences, 0 listed, 2 distinct
+network-guard.windowOpenAction: 1 checks, 0 differences, 0 listed, 1 distinct
+network-guard.isAllowedNavigation: 21 checks, 0 differences, 0 listed, 2 distinct
+network-guard.REFUSED_ADDRESSES_KEPT: 1 checks, 0 differences, 0 listed, 1 distinct
+network-guard.newRequestLog: 1 checks, 0 differences, 0 listed, 1 distinct
+network-guard.screenRequest: 18 checks, 0 differences, 0 listed, 17 distinct
+diagram/print-document.isPrintPage: 32 checks, 0 differences, 0 listed, 2 distinct
+diagram/print-document.inertSvg: 35 checks, 0 differences, 0 listed, 18 distinct
+diagram/print-document.buildPrintHtml: 24 checks, 0 differences, 0 listed, 21 distinct
+diagram/print-document.isPrintCancel: 22 checks, 0 differences, 0 listed, 2 distinct
+diagram/print-document.holdPrintDocument: 5 checks, 0 differences, 0 listed, 5 distinct
+diagram/print-document.takePrintDocument: 10 checks, 0 differences, 0 listed, 8 distinct
+diagram/print-document.dropPrintDocument: 6 checks, 0 differences, 0 listed, 6 distinct
+mindmap/atomic-write.atomicWriteFile: 8 checks, 0 differences, 0 listed, 7 distinct
+mindmap/save-as-formats.saveAsFilters: 2 checks, 0 differences, 0 listed, 2 distinct
+mindmap/save-as-formats.saveAsDefaultPath: 15 checks, 0 differences, 0 listed, 12 distinct
+mindmap/save-as-formats.saveAsTarget: 31 checks, 0 differences, 0 listed, 25 distinct
+sheets/atomic-write.atomicWriteFile: 7 checks, 0 differences, 0 listed, 5 distinct
+close-guard.closeGuardDecision: 10 checks, 0 differences, 0 listed, 2 distinct
+close-guard.ShutdownLatch: 5 checks, 0 differences, 0 listed, 5 distinct
+csv-digest.refreshCsvDigest: 7 checks, 0 differences, 0 listed, 7 distinct
+sheets/csv-import-limit.delimitedImportLimit: 8 checks, 0 differences, 0 listed, 7 distinct
+sheets/csv-import-limit.setDelimitedImportLimit: 8 checks, 0 differences, 0 listed, 8 distinct
+document-locale.legacyCsvCharset: 11 checks, 7 differences, 0 listed, 1 distinct  FLOOR: fewer than two distinct answers
+xlsx-gateway/csv-limits.CSV_IMPORT_DEFAULT_LIMIT_MB: 2 checks, 0 differences, 0 listed, 2 distinct
+xlsx-gateway/document-locale.legacyCsvCharsetFor: 10 checks, 0 differences, 0 listed, 5 distinct
+import-registry.ImportRegistry: 7 checks, 0 differences, 0 listed, 7 distinct
+pdf-page-variants.variantForPage: 40 checks, 0 differences, 0 listed, 3 distinct
+pdf-page-variants.evenPageRanges: 11 checks, 0 differences, 0 listed, 5 distinct
+pdf-page-variants.stitchPlan: 32 checks, 0 differences, 0 listed, 15 distinct
+print-options.MICRONS_PER_INCH: 2 checks, 0 differences, 0 listed, 2 distinct
+print-options.CSS_PX_PER_INCH: 2 checks, 0 differences, 0 listed, 2 distinct
+print-options.printOptionsFor: 12 checks, 0 differences, 0 listed, 10 distinct
+sheets/save-as-formats.sheetsSaveAsFilters: 6 checks, 0 differences, 0 listed, 6 distinct
+sheets/save-as-formats.sheetsSaveAsSuggestion: 18 checks, 0 differences, 0 listed, 12 distinct
+sheets/save-as-formats.resolveSheetsSaveAsPick: 80 checks, 0 differences, 0 listed, 47 distinct
+sheets/save-as-formats.SaveAsExportTargets: 7 checks, 0 differences, 0 listed, 7 distinct
+save-edits-transfer.SaveEditsTransferStore: 14 checks, 0 differences, 0 listed, 14 distinct
+save-failure-log.SAVE_FAILURE_LOG_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+save-failure-log.SAVE_FAILURE_LOG_MAX_BYTES: 2 checks, 0 differences, 0 listed, 2 distinct
+save-failure-log.scrubDetail: 27 checks, 0 differences, 0 listed, 27 distinct
+save-failure-log.describeReopenFailure: 32 checks, 0 differences, 0 listed, 32 distinct
+save-failure-log.reopenFailureNote: 4 checks, 0 differences, 0 listed, 4 distinct
+save-failure-log.sessionSourceFormat: 26 checks, 0 differences, 0 listed, 13 distinct
+save-failure-log.appendSaveFailure: 15 checks, 0 differences, 0 listed, 10 distinct
+session-rename.xlsxSiblingOf: 15 checks, 0 differences, 0 listed, 13 distinct
+session-rename.sessionAfterRename: 15 checks, 0 differences, 0 listed, 12 distinct
+session-reopen.sessionToContinue: 17 checks, 0 differences, 0 listed, 11 distinct
+session-reopen.continuedOpenOptions: 4 checks, 0 differences, 0 listed, 3 distinct
+temp-files.PASTED_FILE_TTL_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+temp-files.cleanupSessionResources: 18 checks, 0 differences, 0 listed, 9 distinct
+temp-files.cleanupImportTempDirectory: 10 checks, 0 differences, 0 listed, 4 distinct
+temp-files.cleanupExpiredPastedFiles: 6 checks, 0 differences, 0 listed, 6 distinct
+workbook-save-resolve.resolveWorkbookSave: 53 checks, 0 differences, 0 listed, 34 distinct
+xlsx-sidecar-client.XlsxSidecarClient: 41 checks, 1 differences, 0 listed, 41 distinct
+cfb-sniff.isCfbHeader: 6 checks, 0 differences, 0 listed, 2 distinct
+cfb-sniff.cfbKind: 41 checks, 0 differences, 0 listed, 4 distinct
+slides/export-images.buildExportImagePaths: 14 checks, 0 differences, 0 listed, 11 distinct
+font-scan.scanFontDirs: 6 checks, 0 differences, 0 listed, 6 distinct
+generated-page-temp.GENERATED_PAGE_TTL_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+generated-page-temp.cleanupExpiredGeneratedPages: 6 checks, 0 differences, 0 listed, 6 distinct
+jpeg-orientation.neutralizeJpegOrientation: 27 checks, 0 differences, 0 listed, 26 distinct
+media-mime.sniffImageMime: 21 checks, 0 differences, 0 listed, 9 distinct
+media-mime.rasterImageExt: 21 checks, 0 differences, 0 listed, 4 distinct
+media-mime.displayMime: 35 checks, 0 differences, 0 listed, 11 distinct
+metafile-fonts.MAX_METAFILE_GUNZIP_BYTES: 2 checks, 0 differences, 0 listed, 2 distinct
+metafile-fonts.scanMetafileFonts: 59 checks, 0 differences, 0 listed, 23 distinct
+metafile-fonts.listMetafileFonts: 5 checks, 0 differences, 0 listed, 5 distinct
+mp4-audio-sniff.audioSampleFormats: 34 checks, 0 differences, 0 listed, 11 distinct
+mp4-audio-sniff.mp4VideoSize: 34 checks, 0 differences, 0 listed, 8 distinct
+mp4-audio-sniff.unplayableAudioCodec: 34 checks, 0 differences, 0 listed, 8 distinct
+paste-cascade.newPasteCascade: 4 checks, 0 differences, 0 listed, 4 distinct
+paste-cascade.pageKey: 8 checks, 0 differences, 0 listed, 8 distinct
+paste-cascade.pasteShiftPx: 12 checks, 0 differences, 0 listed, 4 distinct
+paste-cascade.recordPaste: 7 checks, 0 differences, 0 listed, 7 distinct
+slides/pdf-export.buildPdfLinkOverlays: 11 checks, 0 differences, 0 listed, 10 distinct
+slides/pdf-export.buildPdfExportHtml: 10 checks, 0 differences, 0 listed, 10 distinct
+slides/pdf-export.PRINT_READY_SCRIPT: 2 checks, 0 differences, 0 listed, 2 distinct
+slides/pdf-export.PDF_EXPORT_HEIGHT_IN: 2 checks, 0 differences, 0 listed, 2 distinct
+slides/pdf-export.PDF_EXPORT_TIMEOUT_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+slides/pdf-export.exportPageWidthIn: 17 checks, 0 differences, 0 listed, 6 distinct
+slides/pdf-export.exportSlidesPdf: 15 checks, 0 differences, 0 listed, 15 distinct
+picture-frame.DEFAULT_PICTURE_DPI: 2 checks, 0 differences, 0 listed, 2 distinct
+picture-frame.pictureFrame: 19 checks, 0 differences, 0 listed, 13 distinct
+slides/save-as-formats.slidesSaveAsFilters: 3 checks, 0 differences, 0 listed, 3 distinct
+slides/save-as-formats.slidesSaveAsSuggestion: 13 checks, 0 differences, 0 listed, 11 distinct
+slides/save-as-formats.resolveSlidesSaveAsPick: 23 checks, 0 differences, 0 listed, 22 distinct
+slides/save-as-formats.SaveAsImageTargets: 10 checks, 0 differences, 0 listed, 10 distinct
+seed-queue.queueSlidesSeedFor: 13 checks, 0 differences, 0 listed, 13 distinct
+seed-queue.takeSlidesSeed: 9 checks, 0 differences, 0 listed, 9 distinct
+seed-queue.takeSlidesSeedEntry: 12 checks, 0 differences, 0 listed, 12 distinct
+template-selection-store.TEMPLATE_SELECTION_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+template-selection-store.TEMPLATE_SELECTION_MAX_DOCUMENTS: 2 checks, 0 differences, 0 listed, 2 distinct
+template-selection-store.TEMPLATE_SELECTION_TOUCH_INTERVAL_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+template-selection-store.TemplateSelectionStore: 31 checks, 1 differences, 0 listed, 28 distinct
+template-selection-store.TemplateSelectionMemory: 7 checks, 1 differences, 0 listed, 7 distinct
+video-size.videoSize: 125 checks, 0 differences, 0 listed, 20 distinct
+video-size.videoFrame: 13 checks, 0 differences, 0 listed, 9 distinct
+video-size.audioFrame: 5 checks, 0 differences, 0 listed, 5 distinct
+markdown/old-names.OLD_ASSET_MANIFEST_FILENAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+markdown/old-names.OLD_CONVERSION_SESSION_MARKERS: 1 checks, 0 differences, 0 listed, 1 distinct
+markdown/atomic-write.atomicWriteFile: 6 checks, 0 differences, 0 listed, 4 distinct
+conversion-lifecycle.MARKDOWN_CONVERSION_TTL_MS: 1 checks, 0 differences, 0 listed, 1 distinct
+conversion-lifecycle.cleanupStaleMarkdownConversions: 7 checks, 0 differences, 0 listed, 7 distinct
+conversion-lifecycle.createMarkdownConversionSession: 16 checks, 0 differences, 0 listed, 13 distinct
+conversion-lifecycle.writeMarkdownConversion: 20 checks, 0 differences, 0 listed, 18 distinct
+image-export.ImageExportSessions: 19 checks, 0 differences, 0 listed, 19 distinct
+image-host.normalizeImageHostConfig: 34 checks, 0 differences, 0 listed, 11 distinct
+image-host.isImageHostUsable: 34 checks, 0 differences, 0 listed, 2 distinct
+image-host.imageObjectKey: 17 checks, 0 differences, 0 listed, 15 distinct
+image-host.sigV4: 14 checks, 0 differences, 0 listed, 14 distinct
+image-host.uploadImageToHost: 82 checks, 0 differences, 0 listed, 61 distinct
+wiki-resolve.SKIP_DIRS: 1 checks, 0 differences, 0 listed, 1 distinct
+wiki-resolve.MAX_DEPTH: 1 checks, 0 differences, 0 listed, 1 distinct
+wiki-resolve.splitTarget: 13 checks, 0 differences, 0 listed, 10 distinct
+wiki-resolve.nodeFs: 6 checks, 0 differences, 0 listed, 6 distinct
+wiki-resolve.resolveWikiLinks: 27 checks, 0 differences, 0 listed, 27 distinct
+wiki-notes.MAX_NOTES: 1 checks, 0 differences, 0 listed, 1 distinct
+wiki-notes.listWikiNotes: 16 checks, 0 differences, 0 listed, 11 distinct
+wiki-create.createWikiNote: 49 checks, 0 differences, 0 listed, 27 distinct
+wiki-heads.MAX_HEAD_ENTRIES_PER_KIND: 1 checks, 0 differences, 0 listed, 1 distinct
+wiki-heads.parseWikiHeads: 50 checks, 0 differences, 0 listed, 30 distinct
+wiki-heads.wikiHeads: 14 checks, 0 differences, 0 listed, 14 distinct
+wiki-index.MAX_INDEX_FILES: 1 checks, 0 differences, 0 listed, 1 distinct
+wiki-index.MAX_GRAPH_NODES: 1 checks, 0 differences, 0 listed, 1 distinct
+wiki-index.extractWikiTargets: 31 checks, 0 differences, 0 listed, 20 distinct
+wiki-index.extractTags: 34 checks, 0 differences, 0 listed, 28 distinct
+wiki-index.nodeVaultFs: 2 checks, 1 differences, 0 listed, 2 distinct
+wiki-index.wikiBacklinks: 14 checks, 0 differences, 0 listed, 14 distinct
+wiki-index.wikiTags: 8 checks, 0 differences, 0 listed, 8 distinct
+wiki-index.wikiGraph: 7 checks, 0 differences, 0 listed, 7 distinct
+wiki-index.warmWikiIndex: 4 checks, 0 differences, 0 listed, 4 distinct
+wiki-fragment.rememberWikiFragment: 12 checks, 0 differences, 0 listed, 10 distinct
+wiki-fragment.takeWikiFragment: 12 checks, 0 differences, 0 listed, 10 distinct
+markdown/asset-lifecycle.ASSET_MANIFEST_FILENAME: 1 checks, 0 differences, 0 listed, 1 distinct
+markdown/asset-lifecycle.copyImageIntoOwnedAssets: 22 checks, 0 differences, 0 listed, 22 distinct
+markdown/asset-lifecycle.writeImageIntoOwnedAssets: 19 checks, 0 differences, 0 listed, 17 distinct
+markdown/asset-lifecycle.resolveSafeRelativeImagePath: 35 checks, 0 differences, 0 listed, 5 distinct
+markdown/asset-lifecycle.resolveSafeVaultImagePath: 17 checks, 0 differences, 0 listed, 3 distinct
+markdown/asset-lifecycle.extractMarkdownImageSources: 150 checks, 0 differences, 0 listed, 54 distinct
+markdown/asset-lifecycle.isInDocDir: 20 checks, 0 differences, 0 listed, 2 distinct
+markdown/asset-lifecycle.rewriteMarkdownImageSources: 22 checks, 0 differences, 0 listed, 21 distinct
+markdown/asset-lifecycle.prepareAssetsForSaveAs: 20 checks, 0 differences, 0 listed, 20 distinct
+markdown/asset-lifecycle.rollbackPreparedSaveAsAssets: 12 checks, 0 differences, 0 listed, 11 distinct
+markdown/asset-lifecycle.pendingOwnedAssetsForDocument: 7 checks, 0 differences, 0 listed, 7 distinct
+markdown/asset-lifecycle.discardPendingOwnedAssets: 17 checks, 0 differences, 0 listed, 17 distinct
+markdown/asset-lifecycle.resolveSourcePendingAfterSaveAs: 6 checks, 0 differences, 0 listed, 6 distinct
+markdown/asset-lifecycle.reconcileOwnedAssets: 74 checks, 0 differences, 0 listed, 71 distinct
+markdown/asset-lifecycle.renameOwnedAssetDocument: 15 checks, 0 differences, 0 listed, 12 distinct
+markdown/asset-lifecycle.readOwnedAssetManifest: 11 checks, 0 differences, 0 listed, 11 distinct
+html/asset-lifecycle.ASSET_MANIFEST_FILENAME: 1 checks, 0 differences, 0 listed, 1 distinct
+html/asset-lifecycle.isInDocDir: 19 checks, 0 differences, 0 listed, 2 distinct
+html/asset-lifecycle.extractHtmlImageSources: 84 checks, 0 differences, 0 listed, 41 distinct
+html/asset-lifecycle.extractDocumentImageSources: 84 checks, 0 differences, 0 listed, 22 distinct
+html/asset-lifecycle.scanCssUrls: 45 checks, 0 differences, 0 listed, 24 distinct
+html/asset-lifecycle.extractHtmlAssetReferences: 119 checks, 0 differences, 0 listed, 48 distinct
+html/asset-lifecycle.rewriteHtmlImageSources: 92 checks, 0 differences, 0 listed, 89 distinct
+html/asset-lifecycle.rewriteDocumentImageSources: 90 checks, 0 differences, 0 listed, 88 distinct
+html/asset-lifecycle.resolveSafeRelativeImagePath: 41 checks, 0 differences, 0 listed, 5 distinct
+html/asset-lifecycle.copyImageIntoOwnedAssets: 20 checks, 0 differences, 0 listed, 20 distinct
+html/asset-lifecycle.writeImageIntoOwnedAssets: 35 checks, 0 differences, 0 listed, 30 distinct
+html/asset-lifecycle.prepareAssetsForSaveAs: 19 checks, 0 differences, 0 listed, 18 distinct
+html/asset-lifecycle.rollbackPreparedSaveAsAssets: 12 checks, 0 differences, 0 listed, 10 distinct
+html/asset-lifecycle.pendingOwnedAssetsForDocument: 9 checks, 0 differences, 0 listed, 9 distinct
+html/asset-lifecycle.discardPendingOwnedAssets: 29 checks, 0 differences, 0 listed, 29 distinct
+html/asset-lifecycle.resolveSourcePendingAfterSaveAs: 8 checks, 0 differences, 0 listed, 6 distinct
+html/asset-lifecycle.reconcileOwnedAssets: 74 checks, 0 differences, 0 listed, 70 distinct
+html/asset-lifecycle.renameOwnedAssetDocument: 13 checks, 0 differences, 0 listed, 11 distinct
+html/asset-lifecycle.readOwnedAssetManifest: 52 checks, 0 differences, 0 listed, 52 distinct
+asset-mime.PREVIEW_ASSET_EXTS: 1 checks, 0 differences, 0 listed, 1 distinct
+asset-mime.ASSET_SNIFF_BYTES: 1 checks, 0 differences, 0 listed, 1 distinct
+asset-mime.sniffBinaryAssetMime: 46 checks, 0 differences, 0 listed, 17 distinct
+asset-mime.slotFromAccept: 18 checks, 0 differences, 0 listed, 3 distinct
+asset-mime.extensionlessAssetMime: 211 checks, 0 differences, 0 listed, 20 distinct
+asset-mime.editableImageMime: 46 checks, 0 differences, 0 listed, 4 distinct
+html/atomic-write.atomicWriteFile: 8 checks, 0 differences, 0 listed, 7 distinct
+html/old-names.OLD_ASSET_MANIFEST_FILENAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+html/generate-handoff-ipc.registerHtmlHandoffIpc: 22 checks, 0 differences, 0 listed, 18 distinct
+preview-document.PREVIEW_SCHEME: 1 checks, 0 differences, 0 listed, 1 distinct
+preview-document.ASSET_SCHEME: 1 checks, 0 differences, 0 listed, 1 distinct
+preview-document.assetBaseHref: 20 checks, 0 differences, 0 listed, 15 distinct
+preview-document.buildPreviewDocument: 60 checks, 0 differences, 0 listed, 59 distinct
+preview-document.previewUrlFor: 12 checks, 0 differences, 0 listed, 12 distinct
+single-file-html.singleFileExportBaseName: 13 checks, 0 differences, 0 listed, 10 distinct
+single-file-html.inlineImagesForSingleFile: 31 checks, 0 differences, 0 listed, 28 distinct
+epub/atomic-write.atomicWriteFile: 8 checks, 0 differences, 0 listed, 7 distinct
+reading-state.READING_STATE_FILE: 1 checks, 0 differences, 0 listed, 1 distinct
+reading-state.MAX_POSITIONS: 1 checks, 0 differences, 0 listed, 1 distinct
+reading-state.viewPrefsOf: 25 checks, 0 differences, 0 listed, 13 distinct
+reading-state.readPositionOf: 22 checks, 0 differences, 0 listed, 7 distinct
+reading-state.createReadingState: 45 checks, 0 differences, 0 listed, 44 distinct
+result-paths.pathKey: 45 checks, 0 differences, 0 listed, 14 distinct
+result-paths.samePath: 11 checks, 0 differences, 0 listed, 2 distinct
+result-paths.checkResultPath: 67 checks, 0 differences, 0 listed, 15 distinct
+store-handlers.createEpubStoreHandlers: 61 checks, 3 differences, 0 listed, 51 distinct
+pdf-structure/job-keys.isTranslationMode: 11 checks, 0 differences, 0 listed, 2 distinct
+pdf-structure/job-keys.jobKeyOf: 13 checks, 0 differences, 0 listed, 6 distinct
+pdf-structure/files.StoreWriteError: 10 checks, 0 differences, 0 listed, 7 distinct
+annot-delete.applyAnnotDeletes: 19 checks, 0 differences, 0 listed, 17 distinct
+annot-delete.removeMatchingAnnots: 5 checks, 0 differences, 0 listed, 5 distinct
+annot-flatten.flattenAnnotsBytes: 8 checks, 0 differences, 0 listed, 8 distinct
+pdf/atomic-write.writePdfAtomically: 5 checks, 0 differences, 0 listed, 5 distinct
+blank-pages.RENDER_LONG_SIDE: 2 checks, 0 differences, 0 listed, 2 distinct
+blank-pages.THUMB_LONG_SIDE: 2 checks, 0 differences, 0 listed, 2 distinct
+blank-pages.MAX_THUMBS: 2 checks, 0 differences, 0 listed, 2 distinct
+blank-pages.isNearlyWhite: 11 checks, 0 differences, 0 listed, 2 distinct
+blank-pages.shrinkBitmap: 8 checks, 0 differences, 0 listed, 8 distinct
+blank-pages.findBlankPages: 7 checks, 0 differences, 0 listed, 7 distinct
+disk-watch.DISK_WATCH_MAX_WAITS: 2 checks, 0 differences, 0 listed, 2 distinct
+disk-watch.DISK_WATCH_MISSING_CONFIRMATIONS: 2 checks, 0 differences, 0 listed, 2 distinct
+disk-watch.endsLikeWholePdf: 8 checks, 0 differences, 0 listed, 2 distinct
+disk-watch.watchDiskFile: 20 checks, 0 differences, 0 listed, 19 distinct
+pdf/export-images.isValidExportPageNumber: 11 checks, 0 differences, 0 listed, 2 distinct
+pdf/export-images.hasValidExportPageNumbers: 11 checks, 0 differences, 0 listed, 2 distinct
+pdf/export-images.buildExportImagePaths: 17 checks, 0 differences, 0 listed, 12 distinct
+pdf/export-images.buildSaveAsImagePaths: 10 checks, 0 differences, 0 listed, 8 distinct
+font-cmap.fontCoversText: 21 checks, 0 differences, 0 listed, 2 distinct
+font-locate.isTruetype: 5 checks, 0 differences, 0 listed, 2 distinct
+font-locate.findSystemFont: 6 checks, 0 differences, 0 listed, 1 distinct  FLOOR: fewer than two distinct answers
+font-locate.findFontCovering: 5 checks, 0 differences, 0 listed, 3 distinct
+font-similar.os2Traits: 15 checks, 0 differences, 0 listed, 7 distinct
+font-similar.sourceTraits: 17 checks, 0 differences, 0 listed, 12 distinct
+font-similar.similarFontFor: 7 checks, 0 differences, 0 listed, 6 distinct
+font-subset.identityCffCharset: 28 checks, 0 differences, 0 listed, 23 distinct
+font-subset.subsetTtf: 6 checks, 0 differences, 0 listed, 6 distinct
+generated-output.uniqueGeneratedPdfPath: 23 checks, 0 differences, 0 listed, 18 distinct
+note-link.pdfLinkFromNote: 12 checks, 0 differences, 0 listed, 12 distinct
+note-link.noteInsertText: 12 checks, 0 differences, 0 listed, 11 distinct
+note-link.parseNoteInsertRequest: 29 checks, 0 differences, 0 listed, 10 distinct
+note-link.parseNoteOpenRequest: 8 checks, 0 differences, 0 listed, 3 distinct
+note-link.defaultNotePath: 7 checks, 0 differences, 0 listed, 7 distinct
+note-link.NOTE_DIALOG_TEXT: 2 checks, 0 differences, 0 listed, 2 distinct
+note-link.noteDialogText: 8 checks, 0 differences, 0 listed, 4 distinct
+note-link.createNoteLinkService: 35 checks, 0 differences, 0 listed, 35 distinct
+ocr.ocrPagePng: 20 checks, 0 differences, 0 listed, 18 distinct
+read-text.readPdfText: 34 checks, 0 differences, 0 listed, 31 distinct
+redaction.MAX_REDACTION_REGIONS: 2 checks, 0 differences, 0 listed, 2 distinct
+redaction.validateRedactionRegions: 25 checks, 0 differences, 0 listed, 23 distinct
+redaction.redactPdf: 31 checks, 0 differences, 0 listed, 31 distinct
+signature-store.MAX_SAVED_SIGNATURES: 2 checks, 0 differences, 0 listed, 2 distinct
+signature-store.isSignatureData: 21 checks, 0 differences, 0 listed, 2 distinct
+signature-store.sanitizeSignatures: 7 checks, 0 differences, 0 listed, 5 distinct
+signature-store.addSignature: 12 checks, 0 differences, 0 listed, 12 distinct
+signature-store.removeSignature: 3 checks, 0 differences, 0 listed, 3 distinct
+signature-store.loadSignatures: 7 checks, 0 differences, 0 listed, 7 distinct
+signature-store.saveSignatures: 5 checks, 0 differences, 0 listed, 5 distinct
+system-certificates.SystemStoreError: 3 checks, 0 differences, 0 listed, 3 distinct
+system-certificates.runCommand: 8 checks, 0 differences, 0 listed, 8 distinct
+system-certificates.nssDatabaseDirs: 4 checks, 0 differences, 0 listed, 4 distinct
+system-certificates.parseNssKeyList: 8 checks, 0 differences, 0 listed, 5 distinct
+system-certificates.WINDOWS_LIST_SCRIPT: 2 checks, 0 differences, 0 listed, 2 distinct
+system-certificates.WINDOWS_CHAIN_SCRIPT: 2 checks, 0 differences, 0 listed, 2 distinct
+system-certificates.WINDOWS_SIGN_SCRIPT: 2 checks, 0 differences, 0 listed, 2 distinct
+system-certificates.parseWindowsCertificates: 8 checks, 0 differences, 0 listed, 6 distinct
+system-certificates.parseWindowsChain: 6 checks, 0 differences, 0 listed, 5 distinct
+system-certificates.listSystemCertificates: 14 checks, 1 differences, 0 listed, 12 distinct
+system-certificates.openSystemSigner: 19 checks, 0 differences, 0 listed, 16 distinct
+wasm-path.pdfiumWasmPath: 6 checks, 0 differences, 0 listed, 6 distinct
+wasm-path.qpdfWasmPath: 4 checks, 0 differences, 0 listed, 4 distinct
+wasm-path.hbSubsetWasmPath: 5 checks, 0 differences, 0 listed, 5 distinct
+hwp/atomic-write.atomicWriteFile: 6 checks, 0 differences, 0 listed, 5 distinct
+dialog-strings.tm: 69 checks, 29 differences, 0 listed, 37 distinct
+field-kinds.fieldKindsOf: 18 checks, 0 differences, 0 listed, 4 distinct
+field-kinds.restoreFieldKinds: 17 checks, 0 differences, 0 listed, 15 distinct
+hwp/print-document.sideMm: 24 checks, 0 differences, 0 listed, 17 distinct
+hwp/print-document.ownIds: 13 checks, 0 differences, 0 listed, 13 distinct
+hwp/print-document.imageFile: 32 checks, 0 differences, 0 listed, 21 distinct
+hwp/print-document.badJob: 52 checks, 0 differences, 0 listed, 8 distinct
+hwp/print-document.printableHtml: 7 checks, 0 differences, 0 listed, 7 distinct
+hwp/print-document.printJobToPdf: 9 checks, 0 differences, 0 listed, 9 distinct
+hwp/print-document.printJobToPrinter: 12 checks, 0 differences, 0 listed, 10 distinct
+hwp/save-as-formats.saveAsFilters: 4 checks, 0 differences, 0 listed, 4 distinct
+hwp/save-as-formats.saveAsDefaultPath: 19 checks, 0 differences, 0 listed, 14 distinct
+hwp/save-as-formats.saveAsTarget: 16 checks, 0 differences, 0 listed, 13 distinct
+save-plan.backupPathFor: 5 checks, 0 differences, 0 listed, 5 distinct
+save-plan.needsBackup: 7 checks, 0 differences, 0 listed, 2 distinct
+save-plan.bytesMatchFormat: 13 checks, 0 differences, 0 listed, 2 distinct
+save-plan.withFormatExtension: 14 checks, 0 differences, 0 listed, 11 distinct
+section-tails.sectionTailsOf: 31 checks, 0 differences, 0 listed, 14 distinct
+section-tails.restoreSectionTails: 35 checks, 0 differences, 0 listed, 34 distinct
+tab-widths.MAX_NEW_TABS: 1 checks, 0 differences, 0 listed, 1 distinct
+tab-widths.hwpxMemoCountOf: 12 checks, 0 differences, 0 listed, 3 distinct
+tab-widths.newTabsOf: 28 checks, 0 differences, 0 listed, 7 distinct
+tab-widths.writeTabWidths: 81 checks, 0 differences, 0 listed, 33 distinct
+save-fixes.applySaveFixes: 20 checks, 0 differences, 0 listed, 17 distinct
+ai-provider/providers.AI_PROVIDERS: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-provider/providers.AI_SUBSCRIPTION_NOTICE_VERSION: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-provider/providers.withMigratedSubscriptionNoticeVersion: 14 checks, 0 differences, 0 listed, 4 distinct
+ai-provider/providers.maxOutputTokensOf: 13 checks, 0 differences, 0 listed, 4 distinct
+ai-provider/providers.clampMaxOutputTokens: 8 checks, 0 differences, 0 listed, 5 distinct
+ai-provider/providers.defaultAiSettings: 3 checks, 0 differences, 0 listed, 3 distinct
+ai-provider/providers.subscriptionNoticeVersionOf: 10 checks, 0 differences, 0 listed, 3 distinct
+ai-provider/providers.headlessConsentVersionOf: 8 checks, 0 differences, 0 listed, 4 distinct
+ai-provider/providers.headlessSubscriptionOn: 6 checks, 0 differences, 0 listed, 2 distinct
+ai-provider/providers.sanitizeMeteredAccepted: 6 checks, 0 differences, 0 listed, 3 distinct
+ai-provider/providers.sanitizeSubscriptionOff: 6 checks, 0 differences, 0 listed, 3 distinct
+ai-provider/providers.readUrlSettingsOf: 9 checks, 0 differences, 0 listed, 3 distinct
+ai-provider/providers.listedModelsOf: 9 checks, 0 differences, 0 listed, 5 distinct
+ai-provider/provider-selection.isSubscriptionProvider: 9 checks, 0 differences, 0 listed, 2 distinct
+ai-provider/provider-selection.selectAiProvider: 38 checks, 0 differences, 0 listed, 24 distinct
+ai-provider/provider-selection.providerSelectionOf: 6 checks, 0 differences, 0 listed, 3 distinct
+ai-provider/provider-selection.isKeyProviderConfigured: 7 checks, 0 differences, 0 listed, 2 distinct
+ai-provider/provider-selection.subscriptionStateOf: 5 checks, 0 differences, 0 listed, 3 distinct
+ai-provider/provider-selection.subscriptionOffIn: 6 checks, 0 differences, 0 listed, 2 distinct
+ai-provider/provider-selection.subscriptionConnection: 7 checks, 0 differences, 0 listed, 3 distinct
+ai-provider/legacy-settings.DEFAULT_AI_PROVIDER_SELECTION: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-provider/legacy-settings.DEFAULT_AI_IMAGE_PROVIDER: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-provider/legacy-settings.DEFAULT_AI_ANALYSIS_PROVIDER: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-provider/legacy-settings.DEFAULT_AI_VIDEO_ANALYSIS_PROVIDER: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-provider/legacy-settings.DEFAULT_AI_SEARCH_PROVIDER: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-provider/legacy-settings.normalizeAiSettings: 68 checks, 1 differences, 0 listed, 48 distinct
+ai-provider/ai-settings-guard.sanitizeAiSettings: 69 checks, 0 differences, 0 listed, 36 distinct
+ai-provider/ai-settings-guard.validCliPath: 11 checks, 0 differences, 0 listed, 4 distinct
+ai-provider/ai-settings-guard.sanitizeCliPath: 6 checks, 0 differences, 0 listed, 4 distinct
+ai-provider/settings-secrets.SEALED_PREFIX: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-provider/settings-secrets.isSealedSecret: 8 checks, 0 differences, 0 listed, 2 distinct
+ai-provider/settings-secrets.mapAiSecrets: 11 checks, 0 differences, 0 listed, 11 distinct
+ai-provider/settings-secrets.sealedAiSecretsIn: 3 checks, 0 differences, 0 listed, 2 distinct
+ai-provider/settings-secrets.openSecretValue: 9 checks, 0 differences, 0 listed, 4 distinct
+ai-provider/settings-secrets.sealSecretValue: 7 checks, 0 differences, 0 listed, 7 distinct
+ai-provider/settings-secrets.openAiSecrets: 3 checks, 0 differences, 0 listed, 3 distinct
+ai-provider/settings-secrets.sealAiSecrets: 4 checks, 0 differences, 0 listed, 4 distinct
+ai-provider/run-error.aiStreamErrorFields: 67 checks, 0 differences, 0 listed, 13 distinct
+ai-provider/overload-error.isAiOverloadedError: 67 checks, 0 differences, 0 listed, 2 distinct
+ai-provider/network-error.isAiNetworkError: 67 checks, 0 differences, 0 listed, 2 distinct
+ai-provider/free-ai.isFreeTierModelRefusal: 67 checks, 0 differences, 0 listed, 2 distinct
+ai-provider/free-ai.freeLimitOf: 67 checks, 0 differences, 0 listed, 4 distinct
+ai-provider/free-ai.nextPacificMidnight: 27 checks, 0 differences, 0 listed, 25 distinct
+ai-provider/watchdog.normalizeWatchdogTimeout: 12 checks, 0 differences, 0 listed, 5 distinct
+ai-provider/registry.normalizeBaseUrl: 22 checks, 0 differences, 0 listed, 14 distinct
+ai-provider/effort.aiEffortOf: 9 checks, 0 differences, 0 listed, 5 distinct
+ai-provider/effort.aiEffortsOf: 6 checks, 0 differences, 0 listed, 2 distinct
+ai-provider/effort.aiModelEffortOf: 8 checks, 0 differences, 0 listed, 4 distinct
+ai-provider/effort.aiModelEffortsOf: 9 checks, 0 differences, 0 listed, 7 distinct
+ai-provider/search-settings.defaultAiSearchSettings: 2 checks, 0 differences, 0 listed, 1 distinct
+ai-provider/search-settings.resolveAiSearchSettings: 9 checks, 0 differences, 0 listed, 5 distinct
+ai-provider/media.defaultAiMediaSettings: 2 checks, 0 differences, 0 listed, 1 distinct
+ai-provider/media.resolveAiMediaSettings: 16 checks, 0 differences, 0 listed, 11 distinct
+ai-provider/local-profile.localEndpointFieldsOf: 12 checks, 0 differences, 0 listed, 6 distinct
+ai-provider/custom-endpoints.resolveCustomEndpoints: 11 checks, 0 differences, 0 listed, 11 distinct
+docs/ai-run.AI_INVALID_SETTINGS_ERROR: 1 checks, 0 differences, 0 listed, 1 distinct
+docs/ai-run.resolveAiRun: 23 checks, 1 differences, 0 listed, 18 distinct
+docs/ai-run.subscriptionStreamCallbacks: 3 checks, 0 differences, 0 listed, 3 distinct
+docs/ai-run.aiStreamErrorChunk: 34 checks, 10 differences, 0 listed, 34 distinct
+docs/ai-run.aiChatFailure: 12 checks, 3 differences, 0 listed, 11 distinct
+docs/ai-run.withMeteredAccepted: 5 checks, 1 differences, 0 listed, 5 distinct
+docs/ai-run.withSubscriptionOff: 6 checks, 0 differences, 0 listed, 5 distinct
+sheets/ai-run.aiSettingsFromStored: 4 checks, 1 differences, 0 listed, 4 distinct
+sheets/ai-run.resolveAiRunTarget: 10 checks, 1 differences, 0 listed, 9 distinct
+sheets/ai-run.aiRunBlockChunk: 3 checks, 0 differences, 0 listed, 3 distinct
+sheets/ai-run.aiStreamErrorChunk: 20 checks, 10 differences, 0 listed, 20 distinct
+sheets/ai-run.subscriptionStreamCallbacks: 3 checks, 0 differences, 0 listed, 3 distinct
+sheets/ai-run.withMeteredAccepted: 5 checks, 1 differences, 0 listed, 5 distinct
+ai-keepalive.AI_KEEPALIVE_INTERVAL_MS: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-keepalive.startAiKeepalive: 4 checks, 0 differences, 0 listed, 4 distinct
+ai-keepalive.startFirstChunkKeepalive: 4 checks, 0 differences, 0 listed, 4 distinct
+free-ai-strings.FREE_AI_PAGE_STRINGS: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-default-fonts.TITLE_ROLE_MIN_PT: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-default-fonts.readSlidesAiFonts: 11 checks, 0 differences, 0 listed, 10 distinct
+ai-default-fonts.fillMissingRunFonts: 5 checks, 0 differences, 0 listed, 5 distinct
+ai-default-fonts.parseFontRoles: 10 checks, 0 differences, 0 listed, 3 distinct
+slides-ai-fonts.SLIDES_AI_FONTS_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+slides-ai-fonts.defaultSlidesAiFonts: 5 checks, 0 differences, 0 listed, 2 distinct
+slides-ai-fonts.normalizeSlidesAiFonts: 12 checks, 0 differences, 0 listed, 7 distinct
+ai-naming-provider.resolveNamingProvider: 13 checks, 1 differences, 0 listed, 8 distinct
+ai-naming.sanitizeFileStem: 58 checks, 0 differences, 0 listed, 50 distinct
+ai-naming.buildNamingInstruction: 4 checks, 0 differences, 0 listed, 4 distinct
+ai-naming.excerptForNaming: 13 checks, 1 differences, 0 listed, 13 distinct
+ai-secrets.REVEAL_FLAG: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-secrets.MAX_REVEAL_VALUES: 1 checks, 0 differences, 0 listed, 1 distinct
+ai-secrets.linuxKeyringSeals: 7 checks, 0 differences, 0 listed, 2 distinct
+ai-secrets.platformSeals: 8 checks, 0 differences, 0 listed, 2 distinct
+ai-secrets.sealingKeyOnDisk: 10 checks, 0 differences, 0 listed, 9 distinct
+ai-secrets.safeStorageCodec: 22 checks, 0 differences, 0 listed, 6 distinct
+ai-secrets.holdsPlainSecrets: 9 checks, 0 differences, 0 listed, 2 distinct
+ai-secrets.sealStoredAiSettings: 11 checks, 3 differences, 0 listed, 11 distinct
+ai-secrets.openFileSearchKeys: 9 checks, 3 differences, 0 listed, 9 distinct
+ai-secrets.sealFileSearchKeys: 3 checks, 2 differences, 0 listed, 3 distinct
+ai-secrets.fileSearchHoldsPlainKeys: 9 checks, 0 differences, 0 listed, 2 distinct
+ai-secrets.revealRequestOf: 13 checks, 0 differences, 0 listed, 6 distinct
+ai-secrets.revealAnswer: 8 checks, 0 differences, 0 listed, 6 distinct
+ai-secrets.runRevealEntry: 16 checks, 0 differences, 0 listed, 5 distinct
+ai-run-guard.aiRunRefusal: 7 checks, 0 differences, 0 listed, 5 distinct
+ai-run-guard.setAiRunGuard: 3 checks, 0 differences, 0 listed, 3 distinct
+drive-ai-channels.DRIVE_AI_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+drive-ai-channels.driveConnectedOf: 7 checks, 0 differences, 0 listed, 2 distinct
+drive-ai-channels.driveAiOn: 8 checks, 0 differences, 0 listed, 2 distinct
+
+DIFF stream-coalesce.createChunkCoalescer case 5
+  typescript: {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":true},{\"op\":\"push\",\"timer\":false},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":\"a\"}],[\"send\",{\"requestId\":\"r1\",\"type\":\"done\"}],[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":\"b\"}]]}","files":{}}
+  rust:       {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":true},{\"op\":\"push\",\"timer\":false},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":\"a\"}],[\"send\",{\"requestId\":\"r1\",\"type\":\"done\"}]]}","files":{}}
+
+DIFF stream-coalesce.createChunkCoalescer case 7
+  typescript: {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":false},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":5}],[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":\"b\"}]]}","files":{}}
+  rust:       {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":false},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":5}]]}","files":{}}
+
+DIFF stream-coalesce.createChunkCoalescer case 8
+  typescript: {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":false},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":null}],[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":\"b\"}]]}","files":{}}
+  rust:       {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":false},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":null}]]}","files":{}}
+
+DIFF stream-coalesce.createChunkCoalescer case 9
+  typescript: {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":false},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\"}],[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":\"b\"}]]}","files":{}}
+  rust:       {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":false},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\"}]]}","files":{}}
+
+DIFF stream-coalesce.createChunkCoalescer case 10
+  typescript: {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":false},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\"}],[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":\"b\"}]]}","files":{}}
+  rust:       {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":false},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\"}]]}","files":{}}
+
+DIFF stream-coalesce.createChunkCoalescer case 16
+  typescript: {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":true},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":\"ab\"}]]}","files":{}}
+  rust:       {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":true},{\"op\":\"push\",\"timer\":true}]}","files":{}}
+
+DIFF stream-coalesce.createChunkCoalescer case 18
+  typescript: {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":true},{\"op\":\"push\",\"timer\":true},{\"op\":\"advance\",\"timer\":false},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":\"ab\"}],[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":\"c\"}]]}","files":{}}
+  rust:       {"answer":"{\"value\":[{\"op\":\"push\",\"timer\":true},{\"op\":\"push\",\"timer\":true},{\"op\":\"advance\",\"timer\":false},{\"op\":\"push\",\"timer\":true}],\"logs\":[[\"send\",{\"requestId\":\"r1\",\"type\":\"delta\",\"text\":\"ab\"}]]}","files":{}}
+
+DIFF zotero-wire.ZoteroWireClient case 10
+  typescript: {"answer":"{\"value\":{\"active\":true},\"logs\":[[\"connect\",\"127.0.0.1\",23116],[\"write\",1,\"00000000000000237b22636f6d6d616e64223a2278222c2274656d706c61746556657273696f6e223a317d\"],[\"write\",1,\"00000001000000404552523a556e657870656374656420746f6b656e20276f272c20226e6f7420612072657175657374206c69737422206973206e6f742076616c6964204a534f4e\"],[\"active\",true]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"active\":true},\"logs\":[[\"connect\",\"127.0.0.1\",23116],[\"write\",1,\"00000000000000237b22636f6d6d616e64223a2278222c2274656d706c61746556657273696f6e223a317d\"],[\"write\",1,\"00000001000000194552523a53796e7461784572726f723a206e6f74204a534f4e\"],[\"active\",true]]}","files":{}}
+
+DIFF document-locale.legacyCsvCharset case 0
+  typescript: {"answer":"{}","files":{}}
+  rust:       {"answer":"{\"value\":\"gb18030\"}","files":{}}
+
+DIFF document-locale.legacyCsvCharset case 1
+  typescript: {"answer":"{}","files":{}}
+  rust:       {"answer":"{\"value\":\"gb18030\"}","files":{}}
+
+DIFF document-locale.legacyCsvCharset case 2
+  typescript: {"answer":"{}","files":{}}
+  rust:       {"answer":"{\"value\":\"big5\"}","files":{}}
+
+DIFF document-locale.legacyCsvCharset case 3
+  typescript: {"answer":"{}","files":{}}
+  rust:       {"answer":"{\"value\":\"big5\"}","files":{}}
+
+DIFF document-locale.legacyCsvCharset case 4
+  typescript: {"answer":"{}","files":{}}
+  rust:       {"answer":"{\"value\":\"shift_jis\"}","files":{}}
+
+DIFF document-locale.legacyCsvCharset case 5
+  typescript: {"answer":"{}","files":{}}
+  rust:       {"answer":"{\"value\":\"euc-kr\"}","files":{}}
+
+DIFF document-locale.legacyCsvCharset case 10
+  typescript: {"answer":"{}","files":{}}
+  rust:       {"answer":"{\"value\":\"euc-kr\"}","files":{}}
+
+DIFF xlsx-sidecar-client.XlsxSidecarClient case 3 (odd timeouts)
+  typescript: {"answer":"{\"value\":{\"results\":[null,null],\"outcomes\":{\"a\":\"pending\",\"b\":\"pending\"}},\"logs\":[[\"spawn\",\"/bin/sidecar\"],[\"setTimeout\",null],[\"write\",\"{\\\"version\\\":1,\\\"requestId\\\":\\\"uuid-1\\\",\\\"command\\\":\\\"open\\\",\\\"path\\\":\\\"/a/b.xlsx\\\",\\\"locale\\\":\\\"zh\\\"}\\n\",true],[\"setTimeout\",0],[\"write\",\"{\\\"version\\\":1,\\\"requestId\\\":\\\"uuid-2\\\",\\\"command\\\":\\\"open\\\",\\\"path\\\":\\\"/a/b.xlsx\\\",\\\"locale\\\":\\\"zh\\\"}\\n\",true]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"results\":[null,null],\"outcomes\":{\"a\":\"pending\",\"b\":\"pending\"}},\"logs\":[[\"spawn\",\"/bin/sidecar\"],[\"setTimeout\",30000],[\"write\",\"{\\\"version\\\":1,\\\"requestId\\\":\\\"uuid-1\\\",\\\"command\\\":\\\"open\\\",\\\"path\\\":\\\"/a/b.xlsx\\\",\\\"locale\\\":\\\"zh\\\"}\\n\",true],[\"setTimeout\",0],[\"write\",\"{\\\"version\\\":1,\\\"requestId\\\":\\\"uuid-2\\\",\\\"command\\\":\\\"open\\\",\\\"path\\\":\\\"/a/b.xlsx\\\",\\\"locale\\\":\\\"zh\\\"}\\n\",true]]}","files":{}}
+
+DIFF template-selection-store.TemplateSelectionStore case 14 (a read rewrites the file once a minute)
+  typescript: {"answer":"{\"value\":[{\"kind\":\"builtin\",\"key\":\"one\",\"adjustments\":[],\"updatedAt\":1794452400000},{\"kind\":\"builtin\",\"key\":\"two\",\"adjustments\":[],\"updatedAt\":1794452400002},null,{\"kind\":\"builtin\",\"key\":\"one\",\"adjustments\":[],\"updatedAt\":1794452400000},null,{\"kind\":\"builtin\",\"key\":\"one\",\"adjustments\":[],\"updatedAt\":1794452400000},{\"kind\":\"builtin\",\"key\":\"two\",\"adjustments\":[],\"updatedAt\":1794452400002}]}","files":{"ud":"dir 755","ud/slides-template-selections.json":"file 644 \"{\\n  \\\"version\\\": 1,\\n  \\\"documents\\\": {\\n    \\\"/d/1\\\": {\\n      \\\"kind\\\": \\\"builtin\\\",\\n      \\\"key\\\": \\\"one\\\",\\n      \\\"adjustments\\\": [],\\n      \\\"updatedAt\\\": 1794452400000,\\n      \\\"usedAt\\\": 1794452519995\\n    },\\n    \\\"/d/2\\\": {\\n      \\\"kind\\\": \\\"builtin\\\",\\n      \\\"key\\\": \\\"two\\\",\\n      \\\"adjustments\\\": [],\\n      \\\"updatedAt\\\": 1794452400002,\\n      \\\"usedAt\\\": 1794452519996\\n    }\\n  }\\n}\""}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"unsupported argument: an op\"}}","files":{"ud":"dir 755","ud/slides-template-selections.json":"file 644 \"{\\n  \\\"version\\\": 1,\\n  \\\"documents\\\": {\\n    \\\"/d/1\\\": {\\n      \\\"kind\\\": \\\"builtin\\\",\\n      \\\"key\\\": \\\"one\\\",\\n      \\\"adjustments\\\": [],\\n      \\\"updatedAt\\\": 1794452400000,\\n      \\\"usedAt\\\": 1794452400001\\n    },\\n    \\\"/d/2\\\": {\\n      \\\"kind\\\": \\\"builtin\\\",\\n      \\\"key\\\": \\\"two\\\",\\n      \\\"adjustments\\\": [],\\n      \\\"updatedAt\\\": 1794452400002,\\n      \\\"usedAt\\\": 1794452400003\\n    }\\n  }\\n}\""}}
+
+DIFF template-selection-store.TemplateSelectionMemory case 6 (the cap and the clock)
+  typescript: {"answer":"{\"value\":[{\"kind\":\"builtin\",\"key\":\"one\",\"adjustments\":[],\"updatedAt\":1794452400000},{\"kind\":\"builtin\",\"key\":\"two\",\"adjustments\":[],\"updatedAt\":1794452400002},null,null,{\"kind\":\"builtin\",\"key\":\"two\",\"adjustments\":[],\"updatedAt\":1794452400002}]}","files":{"ud":"dir 755","ud/slides-template-selections.json":"file 644 \"{\\n  \\\"version\\\": 1,\\n  \\\"documents\\\": {\\n    \\\"/no/such/dir/b.pptx\\\": {\\n      \\\"kind\\\": \\\"builtin\\\",\\n      \\\"key\\\": \\\"two\\\",\\n      \\\"adjustments\\\": [],\\n      \\\"updatedAt\\\": 1794452400002,\\n      \\\"usedAt\\\": 1794452500004\\n    }\\n  }\\n}\""}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"unsupported argument: an op\"}}","files":{"ud":"dir 755","ud/slides-template-selections.json":"file 644 \"{\\n  \\\"version\\\": 1,\\n  \\\"documents\\\": {\\n    \\\"/no/such/dir/b.pptx\\\": {\\n      \\\"kind\\\": \\\"builtin\\\",\\n      \\\"key\\\": \\\"two\\\",\\n      \\\"adjustments\\\": [],\\n      \\\"updatedAt\\\": 1794452400002,\\n      \\\"usedAt\\\": 1794452400003\\n    }\\n  }\\n}\""}}
+
+DIFF wiki-index.nodeVaultFs case 1 (a file nobody may read)
+  typescript: {"answer":"{\"value\":[{\"error\":{\"code\":\"EACCES\",\"message\":\"EACCES: permission denied, open '$DIR/secret.md'\"}},1794509248839.361]}","files":{"secret.md":"file 0 \"x\""}}
+  rust:       {"answer":"{\"value\":[{\"error\":{\"code\":\"EACCES\",\"message\":\"EACCES: permission denied, open '$DIR/secret.md'\"}},1794509248839.6782]}","files":{"secret.md":"file 0 \"x\""}}
+
+DIFF store-handlers.createEpubStoreHandlers case 13
+  typescript: {"answer":"{\"value\":[{\"ok\":{\"ok\":false,\"error\":\"failed\",\"message\":\"result store write failed (ENOSPC): /x/y\"}}],\"logs\":[[\"knows\",1,\"abc123_-\"],[\"store\"],[\"listTranslations\",\"abc123_-\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":[{\"ok\":{\"ok\":false,\"error\":\"store-write-failed\",\"message\":\"result store write failed (ENOSPC): /x/y\"}}],\"logs\":[[\"knows\",1,\"abc123_-\"],[\"store\"],[\"listTranslations\",\"abc123_-\"]]}","files":{}}
+
+DIFF store-handlers.createEpubStoreHandlers case 25
+  typescript: {"answer":"{\"value\":[{\"ok\":{\"ok\":false,\"error\":\"failed\",\"message\":\"result store write failed (ENOSPC): /x/y\"}}],\"logs\":[[\"knows\",1,\"abc123_-\"],[\"store\"],[\"readTranslation\",\"abc123_-\",\"ko\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":[{\"ok\":{\"ok\":false,\"error\":\"store-write-failed\",\"message\":\"result store write failed (ENOSPC): /x/y\"}}],\"logs\":[[\"knows\",1,\"abc123_-\"],[\"store\"],[\"readTranslation\",\"abc123_-\",\"ko\"]]}","files":{}}
+
+DIFF store-handlers.createEpubStoreHandlers case 53
+  typescript: {"answer":"{\"value\":[{\"ok\":{\"ok\":false,\"error\":\"failed\",\"message\":\"result store write failed (ENOSPC): /x/y\"}}],\"logs\":[[\"knows\",1,\"abc123_-\"],[\"store\"],[\"writeTranslationMeta\",\"abc123_-\",\"ko\",{\"provider\":\"p\",\"model\":\"m\"}]]}","files":{}}
+  rust:       {"answer":"{\"value\":[{\"ok\":{\"ok\":false,\"error\":\"store-write-failed\",\"message\":\"result store write failed (ENOSPC): /x/y\"}}],\"logs\":[[\"knows\",1,\"abc123_-\"],[\"store\"],[\"writeTranslationMeta\",\"abc123_-\",\"ko\",{\"provider\":\"p\",\"model\":\"m\"}]]}","files":{}}
+
+DIFF system-certificates.listSystemCertificates case 13 (broken JSON: the call fails)
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"Expected property name or '}' in JSON at position 1 (line 1 column 2)\"},\"logs\":[[\"run powershell.exe [\\\"-NoProfile\\\",\\\"-NonInteractive\\\",\\\"-Command\\\",\\\"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; @(Get-ChildItem Cert:\\\\\\\\CurrentUser\\\\\\\\My | Where-Object { $_.HasPrivateKey } | ForEach-Object { [pscustomobject]@{ Thumbprint = $_.Thumbprint; Subject = $_.Subject; Der = ([Convert]::ToBase64String($_.RawData)) } }) | ConvertTo-Json -Compress\\\"] null\"]]}","files":{}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"SyntaxError\"},\"logs\":[[\"run powershell.exe [\\\"-NoProfile\\\",\\\"-NonInteractive\\\",\\\"-Command\\\",\\\"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; @(Get-ChildItem Cert:\\\\\\\\CurrentUser\\\\\\\\My | Where-Object { $_.HasPrivateKey } | ForEach-Object { [pscustomobject]@{ Thumbprint = $_.Thumbprint; Subject = $_.Subject; Der = ([Convert]::ToBase64String($_.RawData)) } }) | ConvertTo-Json -Compress\\\"] null\"]]}","files":{}}
+
+DIFF dialog-strings.tm case 26
+  typescript: {"answer":"{\"value\":\"Save HWP Document\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"한글 문서 저장\"}","files":{}}
+
+DIFF dialog-strings.tm case 27
+  typescript: {"answer":"{\"value\":\"Untitled\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"제목 없음\"}","files":{}}
+
+DIFF dialog-strings.tm case 28
+  typescript: {"answer":"{\"value\":\"Export as PDF\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"PDF로 내보내기\"}","files":{}}
+
+DIFF dialog-strings.tm case 29
+  typescript: {"answer":"{\"value\":\"HWP Documents (HWP)\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"한글 문서 (HWP)\"}","files":{}}
+
+DIFF dialog-strings.tm case 30
+  typescript: {"answer":"{\"value\":\"HWP Documents (HWPX)\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"한글 문서 (HWPX)\"}","files":{}}
+
+DIFF dialog-strings.tm case 31
+  typescript: {"answer":"{\"value\":\"PDF Documents\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"PDF 문서\"}","files":{}}
+
+DIFF dialog-strings.tm case 32
+  typescript: {"answer":"{\"value\":\"This document has unsaved changes.\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"이 문서에 저장하지 않은 변경 사항이 있습니다.\"}","files":{}}
+
+DIFF dialog-strings.tm case 33
+  typescript: {"answer":"{\"value\":\"Do you want to save them before closing?\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"닫기 전에 저장하시겠습니까?\"}","files":{}}
+
+DIFF dialog-strings.tm case 34
+  typescript: {"answer":"{\"value\":\"Save\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"저장\"}","files":{}}
+
+DIFF dialog-strings.tm case 35
+  typescript: {"answer":"{\"value\":\"Don't Save\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"저장 안 함\"}","files":{}}
+
+DIFF dialog-strings.tm case 36
+  typescript: {"answer":"{\"value\":\"Cancel\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"취소\"}","files":{}}
+
+DIFF dialog-strings.tm case 37
+  typescript: {"answer":"{\"value\":\"A memo you are writing is still open.\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"작성 중인 메모 창이 열려 있습니다.\"}","files":{}}
+
+DIFF dialog-strings.tm case 38
+  typescript: {"answer":"{\"value\":\"Its text is not in the document yet. Discard it, along with any unsaved changes, and close?\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"메모 내용은 아직 문서에 들어가지 않았습니다. 메모와 저장하지 않은 변경 사항을 버리고 닫을까요?\"}","files":{}}
+
+DIFF dialog-strings.tm case 39
+  typescript: {"answer":"{\"value\":\"Discard and Close\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"버리고 닫기\"}","files":{}}
+
+DIFF dialog-strings.tm case 40
+  typescript: {"answer":"{\"value\":\"Add Attachments\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"첨부 파일 추가\"}","files":{}}
+
+DIFF dialog-strings.tm case 41
+  typescript: {"answer":"{\"value\":\"Supported Files\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"지원되는 파일\"}","files":{}}
+
+DIFF dialog-strings.tm case 42
+  typescript: {"answer":"{\"value\":\"All Files\"}","files":{}}
+  rust:       {"answer":"{\"value\":\"모든 파일\"}","files":{}}
+
+33202 checks, 33104 equal, 91 differences, 7 listed, 969 functions
