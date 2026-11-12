@@ -48,6 +48,12 @@
 - `.hwp`는 엔진이 쓴 파일을 다시 읽어 쪽 수가 같을 때만 쓴다(한글 편집기의 `.hwp` 저장 규칙). 다르면 파일을 쓰지 않고 종료 코드 3, `error: "conversion_failed"`, `detail.reason: "hwp-readback"`, `--to hwpx`로 다시 하라는 `suggestion`으로 답한다.
 - 워드 문서로 읽히지 않는 파일(zip이 아닌 파일, 깨진 파일)은 종료 코드 3, `conversion_failed`, `detail.reason: "not-docx"`다. 엔진이 WebAssembly 메모리를 만들지 못하면 다른 WebAssembly 명령처럼 종료 코드 3, `resource_limit`이다.
 
+**워드 문서의 추가 연산과 만들기 옵션.**
+
+- `docs apply`의 `set_properties`는 문서 속성을 바꾼다. `core`(title, subject, creator 등)와 `app`(company, template 등)은 키별로 문자열이면 값을 넣고 `null`이면 지우며, `custom`은 이름별로 쓴다. 숫자와 참거짓은 `custom`에서 자료형(`i4`·`bool` 등)으로 저장된다. `clear: "all"`은 세 부분을 모두 비운다. 본문은 바뀌지 않는다(`packages/cli/src/formats/docx.ts`의 `setDocumentProperties`).
+- `docs apply`의 `remove_parts`는 저장할 때 메타데이터를 담은 패키지 부품을 뺀다. `kinds`(`customXml`·`webExtensions`)나 `paths`(패키지 상대 경로)로 고른다. `dataBinding`이 `refuse`(기본)이고 빠질 `customXml`을 쓰는 내용 컨트롤이 있으면 배치 전체를 거절하고 컨트롤 이름을 알린다. `strip`이면 연결만 끊고 컨트롤과 글은 남긴다. 없는 경로와 글롭·폴더는 거절한다(`parseRemovePartsOp`, `setRemoveParts`).
+- `create --type docx --from <파일> --out <경로> --no-generator-fields`는 `docProps/app.xml`의 Application·AppVersion 필드를 쓰지 않는다. Word 기본 Template은 그대로 둔다(`packages/cli/src/commands/create.ts`의 `no-generator-fields` 옵션).
+
 **옛 한글 문서(`.hwp`·`.hwpx` → `.docx`).**
 
 - `convert <file.hwp|.hwpx> --to docx [--out <경로>] [--force]`는 앱을 띄우지 않고 명령 안에서 바꾼다. 바꾸며 빠진 것은 `detail.dropped`에 적는다. 변환이 실패하면 종료 코드 3이고 `detail.reason`에 변환기의 이유 코드가 온다.
