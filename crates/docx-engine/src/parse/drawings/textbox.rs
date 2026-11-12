@@ -23,7 +23,7 @@ use crate::drawing_geometry::fill::{color_node_hex, grad_fill_approx_hex, solid_
 use crate::drawing_geometry::line_box::line_box_of;
 use crate::list_markers::{ListItemRef, compute_list_marker_infos};
 use crate::model::{
-    ParaAlign, Run, SectionSettings, TextboxDisplay, TextboxDisplayBorderDash,
+    ParaAlign, Run, SectionSettings, SharedStr, TextboxDisplay, TextboxDisplayBorderDash,
     TextboxDisplayPageRelVFrom, TextboxDisplayPageRelXFrom, TextboxDisplayPathData,
     TextboxDisplayVAlign, TextboxDisplayWrapDistPx, TextboxDisplayWrapSide, TextboxListMarker,
     TextboxListMarkerKind, TextboxParaDisplay,
@@ -880,7 +880,7 @@ fn extent_px_pair(frag: &str) -> (f64, f64) {
 /// The picture box skeleton: read-only, inkless insets.
 fn picture_box(
     shape_id: Option<&str>,
-    data_url: String,
+    data_url: SharedStr,
     width_px: f64,
     height_px: f64,
 ) -> TextboxDisplay {
@@ -902,7 +902,7 @@ fn picture_box(
 }
 
 /// `ctx.mediaByRid?.get(rId)`, an empty URL being no URL.
-fn media_of(ctx: &BuildContext<'_>, r_id: Option<&str>) -> Option<String> {
+fn media_of(ctx: &BuildContext<'_>, r_id: Option<&str>) -> Option<SharedStr> {
     let r_id = r_id?;
     ctx.media_by_rid
         .as_ref()
@@ -1685,7 +1685,7 @@ impl<'a, 'c> Textboxes<'a, 'c> {
             let mut b = TextboxDisplay::default();
             b.paras.set(Vec::new());
             b.read_only.set(true);
-            b.fill_image_data_url.set(svg.data_url);
+            b.fill_image_data_url.set(svg.data_url.into());
             b.width_px.set(svg.width_px);
             b.height_px.set(svg.height_px);
             b.inset_top_px.set(JsNum(0.0));

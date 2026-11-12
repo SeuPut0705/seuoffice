@@ -532,6 +532,33 @@ fn js_slice_from(text: &str, from: usize, to: Option<usize>) -> &str {
     text.get(from..end).unwrap_or("")
 }
 
+/// The depth of content `extract_table` follows. The deep parser admits
+/// 100 000 levels, and the model extraction recurses once per level of a
+/// paragraph's content (runs inside revisions, fields, links). Measured on
+/// the wasm build, a 1 MiB stack runs out at about 700 levels of the
+/// heaviest; real content nests under a dozen. The structure of tables
+/// (`w:tbl`, `w:tr`, `w:tc`) does not count: nested tables are flattened past
+/// `MAX_TABLE_NEST_DEPTH` without recursion.
+const MAX_TABLE_READ_DEPTH: usize = 256;
+
+/// Whether the tree holds content nested more than `limit` levels, counted
+/// without recursion (the tree itself may be 100 000 levels deep).
+fn nests_deeper_than(nodes: &[XNode], limit: usize) -> bool {
+    let mut pending: Vec<(&XNode, usize)> = nodes.iter().map(|node| (node, 0)).collect();
+    while let Some((node, depth)) = pending.pop() {
+        let XNode::Element(element) = node else {
+            continue;
+        };
+        let depth =
+            depth + usize::from(!matches!(element.name.as_str(), "w:tbl" | "w:tr" | "w:tc"));
+        if depth > limit {
+            return true;
+        }
+        pending.extend(element.children.iter().map(|child| (child, depth)));
+    }
+    false
+}
+
 /// `extractTable`: display-only table structure. Nested tables render as
 /// read-only sub-tables inside their cell; the exact original bytes are what
 /// get saved, so lossiness here only affects on-screen rendering.
@@ -539,9 +566,13 @@ fn js_slice_from(text: &str, from: usize, to: Option<usize>) -> &str {
 /// `doc_offset` is the table's document.xml offset: cell paragraphs resolve
 /// their character-unit indents under that section's document grid.
 ///
-/// The TypeScript wraps the whole read in a `try`, so a table it cannot
-/// build (hostile depth inside a cell paragraph) degrades to `None`, not a
-/// failed document: so does every refusal here.
+/// The TypeScript wraps the whole read in a `try`: a table it cannot build
+/// degrades to `undefined`, a protected block, not a failed document. Hostile
+/// depth inside a cell paragraph overflows its run-extraction recursion (a
+/// RangeError, caught there). The wasm stack overflows the Rust recursion at
+/// a depth of its own, so the Rust bounds it at a fixed one instead: past
+/// `MAX_TABLE_READ_DEPTH` the table is `None` before any model is extracted,
+/// as the caught RangeError gives.
 pub fn extract_table(
     xml: &str,
     ctx: &BuildContext<'_>,
@@ -550,6 +581,9 @@ pub fn extract_table(
     let Ok(parsed) = parse_ordered(xml, DEEP_XML_PARSER_MAX_NESTED_TAGS) else {
         return Ok(None);
     };
+    if nests_deeper_than(&parsed, MAX_TABLE_READ_DEPTH) {
+        return Ok(None);
+    }
     let parsed = Rc::new(parsed);
     let Some(tbl_at) = parsed.iter().position(|node| node.name() == Some("w:tbl")) else {
         return Ok(None);

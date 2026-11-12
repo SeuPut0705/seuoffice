@@ -2,7 +2,9 @@
 //! NUMPAGES and SECTIONPAGES become private-use markers.
 //! Offsets are byte offsets of the part text.
 
-use jscompat::{RegexLimit, js_regex};
+use jscompat::js_regex;
+
+use crate::package::Thrown;
 
 /// `TOTAL_PAGES_MARK`: placeholder for NUMPAGES (total pages) fields.
 pub const TOTAL_PAGES_MARK: char = '\u{E000}';
@@ -10,6 +12,18 @@ pub const TOTAL_PAGES_MARK: char = '\u{E000}';
 pub const PAGE_MARK: char = '\u{E001}';
 /// `SECTION_PAGES_MARK`
 pub const SECTION_PAGES_MARK: char = '\u{E002}';
+
+/// How many fields deep a result may hold fields that render. The field
+/// markers of a part are siblings in the XML, so no XML depth limit applies,
+/// and the TypeScript recurses once per level until V8's stack runs out, a
+/// RangeError nothing catches: the part, and with it the document, fails. A
+/// real part nests two or three. The wasm stack runs out at about 3 000
+/// levels, so the Rust recursion stops at this bound and fails with that same
+/// error instead.
+const MAX_FIELD_RENDER_DEPTH: usize = 500;
+
+/// What V8 throws when a recursion outgrows its stack.
+const STACK_OVERFLOW: &str = "RangeError: Maximum call stack size exceeded";
 
 /// `FieldFrame`: a complex field in the part XML: its own span, its own
 /// instruction text and the fields nested inside it (by index into the
@@ -123,7 +137,8 @@ fn js_slice(xml: &str, from: isize, to: isize) -> &str {
 }
 
 /// `renderFieldRegion`: a region of the part with the fields inside it
-/// rewritten: every nested field is replaced by its display text.
+/// rewritten: every nested field is replaced by its display text. `depth` is
+/// the number of fields being rendered around the region.
 pub fn render_field_region(
     xml: &str,
     from: isize,
@@ -131,7 +146,8 @@ pub fn render_field_region(
     children: &[usize],
     tree: &FieldTree,
     page: &mut bool,
-) -> Result<String, RegexLimit> {
+    depth: usize,
+) -> Result<String, Thrown> {
     let mut text = String::new();
     let mut pos = from;
     for &child in children {
@@ -140,7 +156,7 @@ pub fn render_field_region(
             continue;
         }
         text.push_str(js_slice(xml, pos, frame.start as isize));
-        text.push_str(&render_field(xml, frame, tree, page)?);
+        text.push_str(&render_field(xml, frame, tree, page, depth)?);
         pos = frame.end;
     }
     text.push_str(js_slice(xml, pos, to));
@@ -157,12 +173,18 @@ fn without_fld_chars(text: &str) -> String {
 /// PAGE/NUMPAGES field, its cached result for anything else. A field's
 /// instruction is field code and never displays, so the nested fields inside
 /// it drop out with it: only the ones inside the cached result are rewritten.
+/// `depth` is the number of fields being rendered around this one (0 for a
+/// field outside any other).
 pub fn render_field(
     xml: &str,
     field: &FieldFrame,
     tree: &FieldTree,
     page: &mut bool,
-) -> Result<String, RegexLimit> {
+    depth: usize,
+) -> Result<String, Thrown> {
+    if depth >= MAX_FIELD_RENDER_DEPTH {
+        return Err(STACK_OVERFLOW.to_owned());
+    }
     let span = js_slice(xml, field.start as isize, field.end);
     let cached = if field.separate_end < 0 {
         ""
@@ -226,6 +248,7 @@ pub fn render_field(
         &field.children,
         tree,
         page,
+        depth + 1,
     )?;
     Ok(instruction + &without_fld_chars(&result))
 }

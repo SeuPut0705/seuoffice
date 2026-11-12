@@ -14,7 +14,7 @@ use super::{EMU_PER_PT, EMU_PER_PX, EMU_PER_TWIP};
 use crate::drawing_geometry::anchor::{IDENTITY_CTM, MIN_WRAP_SLIVER_EMU, compose_group_ctm};
 use crate::model::{
     Block, HfImage, HfImagePosH, HfImagePosHRel, HfImagePosV, HfImagePosVRel, HfTextBox,
-    HfTextBoxVAlign, ImageWrap, RunImageBorder, RunImageLayersItem, SectionSettings,
+    HfTextBoxVAlign, ImageWrap, RunImageBorder, RunImageLayersItem, SectionSettings, SharedStr,
     TextboxParaDisplay,
 };
 use crate::parse::text::FloatTableAhead;
@@ -399,7 +399,7 @@ fn first_node<'a>(root: &'a XNode, name: &str) -> Option<&'a XNode> {
 /// first. `None` (null) for a group with shapes, nesting or turned pictures.
 pub fn group_picture_layers(
     drawing: &XNode,
-    media_by_rid: &JsMap<String>,
+    media_by_rid: &JsMap<SharedStr>,
 ) -> Option<Vec<RunImageLayersItem>> {
     let group = first_node(drawing, "wpg:wgp")?;
     let mut pics = Vec::new();

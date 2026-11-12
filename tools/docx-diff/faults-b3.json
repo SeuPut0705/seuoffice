@@ -1,0 +1,172 @@
+{
+ "faults": [
+  {
+   "name": "porter: nextFreeRelId starts its search at rId0 instead of rId1",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/save/helpers.rs",
+   "old": "let mut n = 1u64;",
+   "new": "let mut n = 0u64;"
+  },
+  {
+   "name": "porter: applySectionSettings writes the last column with a gap (i <= last, not i < last)",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/save/section_write.rs",
+   "old": "if i < last {",
+   "new": "if i <= last {"
+  },
+  {
+   "name": "porter: buildNotesXml no longer escapes the text of a rich note run (& and <)",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/save/notes_write.rs",
+   "old": "text(&run.text)",
+   "new": "&run.text"
+  },
+  {
+   "name": "porter: xmlTagEnd ends the tag one byte early (before the >)",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/markup.rs",
+   "old": "b'>' => return start + 1 + offset + 1,",
+   "new": "b'>' => return start + 1 + offset,"
+  },
+  {
+   "name": "porter: normalizeItemId no longer trims the GUID text",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/remove_parts.rs",
+   "old": "jscompat::trim(&value.replace(['{', '}'], \"\")).to_uppercase()",
+   "new": "value.replace(['{', '}'], \"\").to_uppercase()"
+  },
+  {
+   "name": "porter: STYLE_CHILD_ORDER puts w:next before w:basedOn",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/style_upsert.rs",
+   "old": "    \"w:basedOn\",\n    \"w:next\",\n",
+   "new": "    \"w:next\",\n    \"w:basedOn\",\n"
+  },
+  {
+   "name": "porter: protection cryptAlgorithmSid defaults to 15, not 14",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/settings.rs",
+   "old": "jscompat::number_to_string(sid.unwrap_or(14.0))",
+   "new": "jscompat::number_to_string(sid.unwrap_or(15.0))"
+  },
+  {
+   "name": "porter: commentsExtended writes the parent link as w15:parentId, not w15:paraIdParent",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/comments.rs",
+   "old": "w15:paraIdParent=",
+   "new": "w15:parentId="
+  },
+  {
+   "name": "porter: setAppElement skips only elements before its own slot (index < at, not <=)",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/doc_properties_write.rs",
+   "old": "if at.is_some_and(|at| index <= at) {",
+   "new": "if at.is_some_and(|at| index < at) {"
+  },
+  {
+   "name": "porter: mergeOutputFileName fills {Column} without trimming the column name",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/mail_merge.rs",
+   "old": "value_of(record, trim(found.get(1).unwrap_or_default())).to_owned()",
+   "new": "value_of(record, found.get(1).unwrap_or_default()).to_owned()"
+  },
+  {
+   "name": "porter: buildContentControlXml attribute escape drops the < to &lt; replacement",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/content_control.rs",
+   "old": ".replace('<', \"&lt;\")",
+   "new": ".replace('<', \"<\")"
+  },
+  {
+   "name": "porter: chart tag_range ends one byte short of the closing tag",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/chart_write.rs",
+   "old": "end: end + tag.len() + 3,",
+   "new": "end: end + tag.len() + 2,"
+  },
+  {
+   "name": "independent: replaceAbstractNumLevel inserts a missing level before the first lower level",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/save/helpers.rs",
+   "old": "if parse_int(found.get(1).unwrap_or_default(), Radix::Ten) > ilvl {",
+   "new": "if parse_int(found.get(1).unwrap_or_default(), Radix::Ten) < ilvl {"
+  },
+  {
+   "name": "independent: pageBordersXml sizes a border line in quarter points (x4, not x8)",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/save/section_write.rs",
+   "old": "math_round(side.width_pt.0 * 8.0)",
+   "new": "math_round(side.width_pt.0 * 4.0)"
+  },
+  {
+   "name": "independent: patchRunPictureXml positions a new horizontal offset from page, not column",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/save/run_picture.rs",
+   "old": "rel_h.unwrap_or(\"column\"),",
+   "new": "rel_h.unwrap_or(\"page\"),"
+  },
+  {
+   "name": "independent: writeZip counts the local header as 29 bytes, so central offsets are one short per entry",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/zip_splice.rs",
+   "old": "offset += 30 + meta.name_bytes.len() as u64 + data.len() as u64;",
+   "new": "offset += 29 + meta.name_bytes.len() as u64 + data.len() as u64;"
+  },
+  {
+   "name": "independent: cleanupDocxOwnedResources treats an edge from inside the candidates as shared",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/resource_cleanup.rs",
+   "old": "if candidates.contains(&edge.target) && !candidates.contains(&edge.source) {",
+   "new": "if candidates.contains(&edge.target) && candidates.contains(&edge.source) {"
+  },
+  {
+   "name": "independent: removeHfReference no longer counts the odd variant as the default",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/hf_parts.rs",
+   "old": "matches!(kind_of, None | Some(\"default\") | Some(\"odd\"))",
+   "new": "matches!(kind_of, None | Some(\"default\"))"
+  },
+  {
+   "name": "independent: scrubPersonalMetadata leaves docProps/app.xml Company alone",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/scrub.rs",
+   "old": "&[\"Manager\", \"Company\"],",
+   "new": "&[\"Manager\"],"
+  },
+  {
+   "name": "independent: buildChartPartXml category reference stops one row short",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/chart_write.rs",
+   "old": "&format!(\"Sheet1!$A$2:$A${}\", rows + 1)",
+   "new": "&format!(\"Sheet1!$A$2:$A${}\", rows)"
+  },
+  {
+   "name": "independent: mail merge IF with a bare operand 0 counts as true",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/mail_merge.rs",
+   "old": "Ok(!value.is_empty() && value != \"0\")",
+   "new": "Ok(!value.is_empty())"
+  },
+  {
+   "name": "independent: buildThemeXml writes the lt2 colour into dk2 when the caller gives none",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/theme_write.rs",
+   "old": "\"dk2\" => office.dk2.clone(),",
+   "new": "\"dk2\" => office.lt2.clone(),"
+  },
+  {
+   "name": "independent: compare similarity counts the common words once, not twice",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/compare.rs",
+   "old": "(2 * common) as f64 / (left.len() + right.len()) as f64",
+   "new": "common as f64 / (left.len() + right.len()) as f64"
+  },
+  {
+   "name": "independent: buildSourcesXml writes an InternetSite's publisher as b:Publisher",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/sources_write.rs",
+   "old": "\"InternetSite\" => \"InternetSiteTitle\",",
+   "new": "\"InternetSite\" => \"Publisher\","
+  }
+ ]
+}

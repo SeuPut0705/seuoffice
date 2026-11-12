@@ -9,7 +9,10 @@
 //! the key, inner: null). Numbers are [`jscompat::JsNum`], which reads null
 //! as NaN (`JSON.stringify` writes NaN and the infinities as null), `Record`
 //! is [`jscompat::JsObject`] ([`NumberRecord`] where its keys are numbers),
-//! `Map` is [`MapEntries`], `Uint8Array` is [`Bytes`]. Reading an object type
+//! `Map` is [`MapEntries`], `Uint8Array` is [`Bytes`], and the data URL of a
+//! media part (`Block.imageDataUrl`, `Run.image.dataUrl`...) is a
+//! [`SharedStr`], one allocation for every image that shows the part, as the
+//! TypeScript has one string. Reading an object type
 //! is strict: an unknown key, a key twice, a missing required key, null where
 //! the type has none, a value of another JSON kind and a string no enum holds
 //! are refused. Three limits, none reachable from what `JSON.stringify`
@@ -38,4 +41,4 @@ mod generated;
 mod wire;
 
 pub use generated::*;
-pub use wire::{Bytes, False, FieldKey, MapEntries, NumberRecord, True};
+pub use wire::{Bytes, False, FieldKey, MapEntries, NumberRecord, SharedStr, True};

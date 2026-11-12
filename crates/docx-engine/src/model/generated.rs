@@ -10,7 +10,7 @@ use serde::de::{Error as _, MapAccess, Visitor};
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::wire::{self, FieldKey, Key, Seen, Bytes, False, MapEntries, NumberRecord, True};
+use super::wire::{self, FieldKey, Key, Seen, Bytes, False, MapEntries, NumberRecord, SharedStr, True};
 
 /// `PictureWatermarkInfo`
 #[derive(Debug, Clone, PartialEq)]
@@ -2511,7 +2511,7 @@ impl<'de> Deserialize<'de> for RunRuby {
 /// `Run.image`
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct RunImage {
-    pub data_url: String,
+    pub data_url: SharedStr,
     pub xml: String,
     pub width_px: Option<JsNum>,
     pub height_px: Option<JsNum>,
@@ -3006,7 +3006,7 @@ impl<'de> Deserialize<'de> for RunImageBorder {
 /// `Run.image.layers[]`
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunImageLayersItem {
-    pub data_url: String,
+    pub data_url: SharedStr,
     pub x: JsNum,
     pub y: JsNum,
     pub w: JsNum,
@@ -8925,7 +8925,7 @@ jscompat::js_object! {
     /// `HfImage`: the keys go out in the order they were set
     #[derive(Debug, Clone, PartialEq)]
     pub struct HfImage {
-        pub data_url: String,
+        pub data_url: SharedStr,
         pub width_px: JsNum,
         pub height_px: JsNum,
         pub floating: bool,
@@ -13418,7 +13418,7 @@ jscompat::js_object! {
         pub fill_hex: String,
         pub ln_hex: String,
         pub ln_w_px: JsNum,
-        pub image_data_url: String,
+        pub image_data_url: SharedStr,
         pub fill_rect: DiagramShapeFillRect,
         pub texts: Vec<String>,
         pub font_size_pt: JsNum,
@@ -15668,7 +15668,7 @@ jscompat::js_object! {
         pub rot_deg: JsNum,
         pub border_width_px: JsNum,
         pub border_dash: TextboxDisplayBorderDash,
-        pub fill_image_data_url: String,
+        pub fill_image_data_url: SharedStr,
         pub fill_tile: bool,
         pub line_diag: bool,
         pub flip_h: bool,
@@ -17493,7 +17493,7 @@ jscompat::js_object! {
         pub runs: Vec<Run>,
         pub label: String,
         pub preview_text: String,
-        pub image_data_url: String,
+        pub image_data_url: SharedStr,
         pub ole_prog_id: String,
         pub image_width_px: JsNum,
         pub image_height_px: JsNum,

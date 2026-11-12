@@ -5,7 +5,7 @@
 //! after the call.
 
 use docx_engine::model::{
-    Block, HfImage, HfTextBox, SectionSettings, TextboxDisplay, TextboxParaDisplay,
+    Block, HfImage, HfTextBox, SectionSettings, SharedStr, TextboxDisplay, TextboxParaDisplay,
 };
 use docx_engine::numbering::parse_numbering;
 use docx_engine::package::RelInfo;
@@ -343,7 +343,7 @@ fn read_body_pr(text: &str, args: &Value) -> Returned {
 }
 
 fn group_picture_layers(text: &str, args: &Value) -> Returned {
-    let media_by_rid = map_of::<String>(args, "mediaByRid")?;
+    let media_by_rid = map_of::<SharedStr>(args, "mediaByRid")?;
     value(picture::group_picture_layers(
         &node_of(text)?,
         &media_by_rid,
@@ -530,7 +530,7 @@ fn with_build_ctx(args: &Value, call: impl FnOnce(&BuildContext<'_>) -> Returned
             ctx.chart_parts = RefCell::new(chart_parts);
         }
         if args.get("mediaByRid").is_some_and(|media| !media.is_null()) {
-            ctx.media_by_rid = Some(RefCell::new(map_of::<String>(args, "mediaByRid")?));
+            ctx.media_by_rid = Some(RefCell::new(map_of::<SharedStr>(args, "mediaByRid")?));
         }
         if args
             .get("externalTxbxByRid")
@@ -580,7 +580,7 @@ fn with_build_ctx_media(
         #[serde(skip_serializing_if = "Option::is_none")]
         value: Option<Value>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        media_by_rid: Option<JsMap<String>>,
+        media_by_rid: Option<JsMap<SharedStr>>,
     }
     with_build_ctx(args, |ctx| {
         let answered = call(ctx)?;

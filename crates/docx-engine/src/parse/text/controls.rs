@@ -1,5 +1,8 @@
 //! Run-level content controls and Zotero fields across paragraphs.
 
+use std::collections::{HashMap, HashSet};
+use std::ops::Deref;
+
 use jscompat::{RegexLimit, js_regex, trim};
 use serde::Serialize;
 
@@ -48,14 +51,49 @@ struct OpenField {
     paragraph_starts: Vec<usize>,
 }
 
+/// The `Map<number, ZoteroFieldParagraph>` of `crossParagraphZoteroFields`:
+/// the entries in the order a `Map` keeps them (as a slice), and a lookup by
+/// the start of a paragraph.
+#[derive(Debug, Default)]
+pub struct ZoteroFields {
+    entries: Vec<(usize, ZoteroFieldParagraph)>,
+    /// the place in `entries` of each start
+    at: HashMap<usize, usize>,
+}
+
+impl ZoteroFields {
+    /// `map.get(start)`
+    pub fn get(&self, start: usize) -> Option<&ZoteroFieldParagraph> {
+        self.at.get(&start).map(|&index| &self.entries[index].1)
+    }
+
+    /// `map.set(start, field)`: a key set again keeps its place.
+    fn set(&mut self, start: usize, field: ZoteroFieldParagraph) {
+        match self.at.get(&start) {
+            Some(&index) => self.entries[index].1 = field,
+            None => {
+                self.at.insert(start, self.entries.len());
+                self.entries.push((start, field));
+            }
+        }
+    }
+}
+
+impl Deref for ZoteroFields {
+    type Target = [(usize, ZoteroFieldParagraph)];
+
+    fn deref(&self) -> &Self::Target {
+        &self.entries
+    }
+}
+
 /// `crossParagraphZoteroFields`: the complex Zotero fields whose cached
-/// result crosses top-level paragraphs, by the start of each paragraph, in
-/// the order a `Map` keeps them.
+/// result crosses top-level paragraphs, by the start of each paragraph.
 pub fn cross_paragraph_zotero_fields(
     body_elements: &[BodyElement<'_>],
     document_xml: &str,
-) -> Vec<(usize, ZoteroFieldParagraph)> {
-    let mut result: Vec<(usize, ZoteroFieldParagraph)> = Vec::new();
+) -> ZoteroFields {
+    let mut result = ZoteroFields::default();
     let mut next_id = 1;
     let mut active: Option<OpenField> = None;
     let token_re = js_regex!(
@@ -98,12 +136,13 @@ pub fn cross_paragraph_zotero_fields(
                     open.depth -= 1;
                     if open.depth == 0 {
                         // `[...new Set(starts)]`
-                        let mut paragraphs: Vec<usize> = Vec::new();
-                        for start in &open.paragraph_starts {
-                            if !paragraphs.contains(start) {
-                                paragraphs.push(*start);
-                            }
-                        }
+                        let mut seen: HashSet<usize> = HashSet::new();
+                        let paragraphs: Vec<usize> = open
+                            .paragraph_starts
+                            .iter()
+                            .copied()
+                            .filter(|start| seen.insert(*start))
+                            .collect();
                         let instruction = trim(&open.instruction).to_owned();
                         if paragraphs.len() > 1 && zotero_inline_field().test(&instruction) {
                             let id = next_id;
@@ -122,11 +161,7 @@ pub fn cross_paragraph_zotero_fields(
                                     instruction: instruction.clone(),
                                     part,
                                 };
-                                // `result.set(start, ...)`: a key set again keeps its place
-                                match result.iter_mut().find(|(key, _)| *key == start) {
-                                    Some((_, value)) => *value = field,
-                                    None => result.push((start, field)),
-                                }
+                                result.set(start, field);
                             }
                         }
                         active = None;

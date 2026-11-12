@@ -4,6 +4,7 @@
 
 use std::fmt;
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use jscompat::JsObject;
 use serde::de::{DeserializeOwned, Error as _, MapAccess, Unexpected, Visitor};
@@ -166,6 +167,107 @@ pub struct MapEntries<K, V>(pub Vec<(K, V)>);
 impl<K, V> Default for MapEntries<K, V> {
     fn default() -> Self {
         Self(Vec::new())
+    }
+}
+
+/// A string held once however many values refer to it: the data URL of a media
+/// part. The TypeScript has one string per part and every image points at
+/// it; cloning this clones the pointer, and the JSON it writes and reads is the
+/// plain string.
+#[derive(Clone, Default, PartialEq, Eq, Hash)]
+pub struct SharedStr(Arc<str>);
+
+impl SharedStr {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Whether both values are the one allocation.
+    pub fn ptr_eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+
+    /// How many values hold this allocation.
+    pub fn holders(&self) -> usize {
+        Arc::strong_count(&self.0)
+    }
+}
+
+impl std::ops::Deref for SharedStr {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl AsRef<str> for SharedStr {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for SharedStr {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(&*self.0, formatter)
+    }
+}
+
+impl fmt::Display for SharedStr {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&*self.0, formatter)
+    }
+}
+
+impl From<String> for SharedStr {
+    fn from(text: String) -> Self {
+        Self(Arc::from(text))
+    }
+}
+
+impl From<&str> for SharedStr {
+    fn from(text: &str) -> Self {
+        Self(Arc::from(text))
+    }
+}
+
+impl PartialEq<str> for SharedStr {
+    fn eq(&self, other: &str) -> bool {
+        &*self.0 == other
+    }
+}
+
+impl PartialEq<&str> for SharedStr {
+    fn eq(&self, other: &&str) -> bool {
+        &*self.0 == *other
+    }
+}
+
+impl Serialize for SharedStr {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for SharedStr {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Text;
+        impl Visitor<'_> for Text {
+            type Value = SharedStr;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a string")
+            }
+
+            fn visit_str<E: serde::de::Error>(self, text: &str) -> Result<SharedStr, E> {
+                Ok(SharedStr::from(text))
+            }
+
+            fn visit_string<E: serde::de::Error>(self, text: String) -> Result<SharedStr, E> {
+                Ok(SharedStr::from(text))
+            }
+        }
+        deserializer.deserialize_str(Text)
     }
 }
 

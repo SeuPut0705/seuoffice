@@ -3109,6 +3109,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.collectTxbxParas',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const out: Array<{ para?: unknown }> = []
       const items: Array<{ para: unknown; ref: unknown; textSizeHalf: number }> = []

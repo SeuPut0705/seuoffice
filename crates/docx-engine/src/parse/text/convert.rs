@@ -7,7 +7,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Map, Value};
 
-use crate::model;
+use crate::model::{self, Run, SharedStr};
 use crate::package::Thrown;
 use crate::resolve;
 
@@ -29,6 +29,39 @@ pub fn bridge<T: Serialize, U: DeserializeOwned>(value: &T) -> Result<U, Thrown>
 /// A JSON value read as a model type.
 pub fn model_of<U: DeserializeOwned>(value: Value) -> Result<U, Thrown> {
     serde_json::from_value(value).map_err(|error| error.to_string())
+}
+
+/// The data URLs of a run's picture and of its layers. A JSON value would copy
+/// each string, so a run that takes a trip through JSON leaves them out and has
+/// them put back.
+pub struct PictureUrls {
+    pub image: SharedStr,
+    pub layers: Vec<SharedStr>,
+}
+
+/// The picture URLs of `run`, which stand empty in the run afterwards.
+pub fn take_picture_urls(run: &mut Run) -> Option<PictureUrls> {
+    let image = run.image.as_mut()?;
+    Some(PictureUrls {
+        image: std::mem::take(&mut image.data_url),
+        layers: image
+            .layers
+            .iter_mut()
+            .flatten()
+            .map(|layer| std::mem::take(&mut layer.data_url))
+            .collect(),
+    })
+}
+
+/// Puts the URLs `take_picture_urls` took back into the picture of `run`.
+pub fn put_picture_urls(run: &mut Run, urls: PictureUrls) {
+    let Some(image) = run.image.as_mut() else {
+        return;
+    };
+    image.data_url = urls.image;
+    for (layer, url) in image.layers.iter_mut().flatten().zip(urls.layers) {
+        layer.data_url = url;
+    }
 }
 
 /// The object of a JSON value (an empty one where it is none).

@@ -20,7 +20,7 @@ use crate::model::{
     CellBorder, CellBorders, CellMargins, HfCellParaProps, HfParagraph, HfParagraphFrameXAlign,
     HfParagraphPtabAlignsItem, HfTableCell, HfTableCellVAlign, HfTableRow, HfTableRowAlign,
     HfTableRowHeightRule, HfTableRowSource, HfTableRowTabOverflow, ParaAlign, ParaFormat,
-    ParaFormatLineRule, Run, TableBorders, True,
+    ParaFormatLineRule, Run, SharedStr, TableBorders, True,
 };
 use crate::package::Thrown;
 use crate::parse::drawings::host::MediaEnv;
@@ -770,7 +770,7 @@ pub fn hf_paragraphs(
     part_xml: &str,
     zip: &Package,
     resolver: &Rc<ResolveCtx>,
-    table_media: Option<&JsMap<String>>,
+    table_media: Option<&JsMap<SharedStr>>,
     compatibility_mode: f64,
     media: &MediaEnv<'_>,
 ) -> Result<HfParaList, Thrown> {
@@ -1025,7 +1025,7 @@ pub fn hf_paragraphs(
 }
 
 /// A copy of a map of strings.
-fn clone_map(map: &JsMap<String>) -> JsMap<String> {
+fn clone_map(map: &JsMap<SharedStr>) -> JsMap<SharedStr> {
     map.iter()
         .map(|(key, value)| (key.to_owned(), value.clone()))
         .collect()

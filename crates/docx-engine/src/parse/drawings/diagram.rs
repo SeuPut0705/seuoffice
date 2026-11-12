@@ -3,6 +3,7 @@
 //! canvas of the paragraph itself.
 
 use std::cmp::Ordering;
+use std::collections::HashSet;
 
 use jscompat::{JsMap, JsNum, Radix, Slot, js_regex, math_max, math_round, parse_int, trim};
 use ooxml_xml::{XNode, parse_ordered, serialize};
@@ -12,7 +13,7 @@ use super::media::{image_part_mime, media_part_src, rel_part_path_of};
 use super::picture::rect_frac;
 use crate::drawing_geometry::fill::{color_node_hex, grad_fill_approx_hex};
 use crate::image_kinds::is_metafile_mime;
-use crate::model::{DiagramDisplay, DiagramShape, DiagramShapeFillRect};
+use crate::model::{DiagramDisplay, DiagramShape, DiagramShapeFillRect, SharedStr};
 use crate::package::{Thrown, parse_rels, part_text, resolve_relationship_target_path};
 use crate::parse::text::{BuildContext, emu_to_px};
 use crate::props::{XML_PARSER_MAX_NESTED_TAGS, collect_nodes};
@@ -134,7 +135,7 @@ pub fn extract_diagram_text(xml: &str, ctx: &BuildContext<'_>) -> Result<Option<
     // parent-child edges: cxns without an explicit type (default parOf); typed
     // cxns (presOf/presParOf...) are layout wiring, not the content tree
     let mut children: JsMap<Vec<(f64, String)>> = JsMap::new();
-    let mut has_parent: Vec<String> = Vec::new();
+    let mut has_parent: HashSet<String> = HashSet::new();
     for found in js_regex!(r"<dgm:cxn [^>]*\/?>").find_iter(data_xml) {
         let tag = found.as_str();
         if js_regex!(r#"type="(?!parOf")"#).test(tag) {
@@ -162,21 +163,20 @@ pub fn extract_diagram_text(xml: &str, ctx: &BuildContext<'_>) -> Result<Option<
         if let Some(list) = children.get_mut(src) {
             list.push((ord, dst.to_owned()));
         }
-        has_parent.push(dst.to_owned());
+        has_parent.insert(dst.to_owned());
     }
     let mut texts: Vec<String> = Vec::new();
-    let mut seen: Vec<String> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
     for root in children.keys() {
-        if has_parent.iter().any(|id| id == root) {
+        if has_parent.contains(root) {
             continue;
         }
         // `visit(id)`, depth first, children in srcOrd order
         let mut stack = vec![root.to_owned()];
         while let Some(id) = stack.pop() {
-            if seen.contains(&id) {
+            if !seen.insert(id.clone()) {
                 continue;
             }
-            seen.push(id.clone());
             if let Some(text) = pt_texts.get(&id) {
                 texts.push(text.clone());
             }
@@ -189,7 +189,7 @@ pub fn extract_diagram_text(xml: &str, ctx: &BuildContext<'_>) -> Result<Option<
     }
     // isolated points (no tree info) keep file order
     for (id, text) in pt_texts.iter() {
-        if !seen.iter().any(|known| known == id) {
+        if !seen.contains(id) {
             texts.push(text.clone());
         }
     }
@@ -545,7 +545,7 @@ pub fn extract_diagram_drawing(
         format!("_rels/{}.rels", found.get(1).unwrap_or(""))
     });
     let rels = parse_rels(ctx.zip, &rels_path)?;
-    let media_of = |r_id: &str| -> Result<Option<String>, Thrown> {
+    let media_of = |r_id: &str| -> Result<Option<SharedStr>, Thrown> {
         let Some(rel) = rels.get(r_id) else {
             return Ok(None);
         };
@@ -563,9 +563,13 @@ pub fn extract_diagram_drawing(
         };
         if is_metafile_mime(Some(&mime)) {
             let bytes = f.bytes().map_err(|error| error.to_string())?;
-            return Ok(ctx.media.host.metafile_to_data_url(bytes, &mime));
+            return Ok(ctx
+                .media
+                .host
+                .metafile_to_data_url(bytes, &mime)
+                .map(SharedStr::from));
         }
-        media_part_src(f, &path, &mime, ctx.media).map(Some)
+        media_part_src(f, &path, &mime, ctx.media).map(|src| Some(SharedStr::from(src)))
     };
     let theme = ctx.resolver.theme_colors.as_ref();
     let mut sps: Vec<&XNode> = Vec::new();
