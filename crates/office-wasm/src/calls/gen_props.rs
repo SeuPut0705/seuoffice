@@ -17,17 +17,18 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let format: Option<ParaFormat> = arg(args, "format")?;
             let original: Option<ParaFormat> = arg(args, "original")?;
             let only: Option<Vec<String>> = arg(args, "onlyTags")?;
-            value(merge_p_pr_format(
-                text,
-                format.as_ref(),
-                original.as_ref(),
-                only.as_deref(),
-            ))
+            value(
+                merge_p_pr_format(text, format.as_ref(), original.as_ref(), only.as_deref())
+                    .map_err(|limit| limit.to_string())?,
+            )
         }
         "mergeCellParaFormat" => {
             let format: ParaFormat = required(args, "format")?;
             let original: Option<ParaFormat> = arg(args, "original")?;
-            value(merge_cell_para_format(text, &format, original.as_ref()))
+            value(
+                merge_cell_para_format(text, &format, original.as_ref())
+                    .map_err(|limit| limit.to_string())?,
+            )
         }
         "paraMarkColor" => optional(para_mark_color(text)),
         "stripParaMarkColor" => value(strip_para_mark_color(text)),
@@ -61,6 +62,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         }
         "splitXmlChildren" => value(
             split_xml_children(text)
+                .map_err(|limit| limit.to_string())?
                 .into_iter()
                 .map(|(name, xml)| json!({ "name": name, "xml": xml }))
                 .collect::<Vec<_>>(),

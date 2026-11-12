@@ -2,7 +2,9 @@
 //! editable model, keeping what the original tblPr / trPr / tcPr carried) and
 //! `generateTableXml` (a fresh self-contained table).
 
-use jscompat::{JsNum, js_regex, math_round, number_to_string, pad_start, to_string_radix16, trim};
+use jscompat::{
+    JsNum, RegexLimit, js_regex, math_round, number_to_string, pad_start, to_string_radix16, trim,
+};
 
 use super::props::merge_p_pr_format;
 use super::runs::runs_xml;
@@ -15,7 +17,8 @@ use crate::model::{
 };
 
 /// What `generateTableModelXml` throws: a trPr whose head the edge insertion
-/// cannot find (`head` is null and the TypeScript reads `head[0]`).
+/// cannot find (`head` is null and the TypeScript reads `head[0]`), or a
+/// search past the regex bound.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TableXmlError(pub String);
 
@@ -26,6 +29,12 @@ impl std::fmt::Display for TableXmlError {
 }
 
 impl std::error::Error for TableXmlError {}
+
+impl From<RegexLimit> for TableXmlError {
+    fn from(limit: RegexLimit) -> Self {
+        Self(limit.to_string())
+    }
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct TableGenOptions {
@@ -417,7 +426,11 @@ fn cell_merge_xml(record: &PropChangeInfo) -> String {
     )
 }
 
-fn paragraph_xml(format: &ParaFormat, runs: &[Run], list: Option<&TableParagraphList>) -> String {
+fn paragraph_xml(
+    format: &ParaFormat,
+    runs: &[Run],
+    list: Option<&TableParagraphList>,
+) -> Result<String, TableXmlError> {
     let num_pr = list.map_or_else(String::new, |list| {
         format!(
             "<w:numPr><w:ilvl w:val=\"{}\"/><w:numId w:val=\"{}\"/></w:numPr>",
@@ -431,8 +444,8 @@ fn paragraph_xml(format: &ParaFormat, runs: &[Run], list: Option<&TableParagraph
         Some(format),
         None,
         None,
-    );
-    format!("<w:p>{p_pr}{}</w:p>", runs_xml(runs, None))
+    )?;
+    Ok(format!("<w:p>{p_pr}{}</w:p>", runs_xml(runs, None)?))
 }
 
 /// `items.splice(at, 0, …)` index for `at = Math.min(anchor, length)`.
@@ -470,7 +483,7 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
         "",
     );
     let mut children = if raw_tc_pr.ends_with("</w:tcPr>") {
-        split_xml_children(&raw_inner)
+        split_xml_children(&raw_inner)?
     } else {
         Vec::new()
     };
@@ -560,7 +573,7 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
         Some(rich) => rich
             .iter()
             .map(|p| paragraph_xml(&p.para_format, &p.runs, p.list.as_ref()))
-            .collect(),
+            .collect::<Result<_, _>>()?,
         None => {
             let empty = [String::new()];
             let paras = cell.paras.as_deref().unwrap_or_default();
@@ -581,7 +594,7 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
                     };
                     paragraph_xml(&format, &runs, None)
                 })
-                .collect()
+                .collect::<Result<_, _>>()?
         }
     };
     // nested tables are regenerated from the model at their paragraph anchors (reverse
@@ -630,14 +643,14 @@ const TBL_PR_ORDER: [&str; 17] = [
 ];
 
 /// Replace/remove/insert one tblPr child while keeping the OOXML schema order.
-fn set_tbl_pr_child(tbl_pr: &str, name: &str, xml: Option<&str>) -> String {
+fn set_tbl_pr_child(tbl_pr: &str, name: &str, xml: Option<&str>) -> Result<String, TableXmlError> {
     let self_closing = js_regex!(r"^<w:tblPr(?:\s[^>]*)?\/>$").test(tbl_pr);
     let open = if self_closing {
         replace_first(js_regex!(r"\/>$"), tbl_pr, ">")
     } else {
         match js_regex!(r"^<w:tblPr(?:\s[^>]*)?>").exec(tbl_pr) {
             Some(open) => open.as_str().to_owned(),
-            None => return tbl_pr.to_owned(),
+            None => return Ok(tbl_pr.to_owned()),
         }
     };
     let inner = if self_closing {
@@ -653,7 +666,7 @@ fn set_tbl_pr_child(tbl_pr: &str, name: &str, xml: Option<&str>) -> String {
             ""
         }
     };
-    let mut children: Vec<(String, String)> = split_xml_children(inner)
+    let mut children: Vec<(String, String)> = split_xml_children(inner)?
         .into_iter()
         .filter(|(child, _)| child != name)
         .collect();
@@ -668,7 +681,7 @@ fn set_tbl_pr_child(tbl_pr: &str, name: &str, xml: Option<&str>) -> String {
         children.insert(at, (name.to_owned(), xml.to_owned()));
     }
     let body: String = children.into_iter().map(|(_, xml)| xml).collect();
-    format!("{open}{body}</w:tblPr>")
+    Ok(format!("{open}{body}</w:tblPr>"))
 }
 
 fn table_look_xml(look: &TableLook) -> String {
@@ -692,19 +705,23 @@ fn table_look_xml(look: &TableLook) -> String {
 }
 
 /// the table's own <w:tblPr> (depth-aware: a w:tblPrChange nests another tblPr inside it)
-fn original_tbl_pr_of(table_xml: &str) -> Option<String> {
-    let open = js_regex!(r"<w:tbl[\s>]").exec(table_xml)?;
+fn original_tbl_pr_of(table_xml: &str) -> Result<Option<String>, TableXmlError> {
+    let Some(open) = js_regex!(r"<w:tbl[\s>]").exec(table_xml) else {
+        return Ok(None);
+    };
     let inner_start = table_xml[open.start()..]
         .find('>')
         .map_or(0, |at| open.start() + at + 1);
-    let inner_end = table_xml.rfind("</w:tbl>")?;
+    let Some(inner_end) = table_xml.rfind("</w:tbl>") else {
+        return Ok(None);
+    };
     if inner_start == 0 || inner_end < inner_start {
-        return None;
+        return Ok(None);
     }
-    split_xml_children(&table_xml[inner_start..inner_end])
+    Ok(split_xml_children(&table_xml[inner_start..inner_end])?
         .into_iter()
         .find(|(name, _)| name == "w:tblPr")
-        .map(|(_, xml)| xml)
+        .map(|(_, xml)| xml))
 }
 
 fn sum(values: impl Iterator<Item = f64>) -> f64 {
@@ -1001,7 +1018,9 @@ pub fn generate_table_model_xml(
     }
     let original_tbl_pr = original_table_xml
         .filter(|xml| !xml.is_empty())
-        .and_then(original_tbl_pr_of);
+        .map(original_tbl_pr_of)
+        .transpose()?
+        .flatten();
     let tbl_ind = match model.indent_twips {
         Some(indent) if truthy_num(Some(indent)) && math_round(indent.0) != 0.0 => {
             format!(
@@ -1028,7 +1047,7 @@ pub fn generate_table_model_xml(
             &tbl_pr,
             "w:tblStyle",
             (!style.is_empty()).then_some(tag.as_str()),
-        );
+        )?;
     }
     // Floating positioning + wrapping. null returns the table to the text flow;
     // undefined leaves an imported tblpPr intact.
@@ -1044,8 +1063,8 @@ pub fn generate_table_model_xml(
     if requested.is_some() || (original_tbl_pr.is_none() && model.float_pos.is_some()) {
         match requested.flatten() {
             None => {
-                tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblpPr", None);
-                tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblOverlap", None);
+                tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblpPr", None)?;
+                tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblOverlap", None)?;
             }
             Some(side) => {
                 let (x, y, distance, vert, horz) = match &model.float_pos {
@@ -1082,12 +1101,12 @@ pub fn generate_table_model_xml(
                     num(math_round(x)),
                     num(math_round(y))
                 );
-                tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblpPr", Some(&tag));
+                tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblpPr", Some(&tag))?;
                 tbl_pr = set_tbl_pr_child(
                     &tbl_pr,
                     "w:tblOverlap",
                     Some("<w:tblOverlap w:val=\"overlap\"/>"),
-                );
+                )?;
             }
         }
     }
@@ -1108,7 +1127,7 @@ pub fn generate_table_model_xml(
                 format!("<w:tblW w:w=\"{}\" w:type=\"dxa\"/>", num(total_width))
             }
         };
-        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblW", Some(&tbl_w));
+        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblW", Some(&tbl_w))?;
         let layout = if fit == TableAutoFitMode::Fixed {
             "fixed"
         } else {
@@ -1118,13 +1137,13 @@ pub fn generate_table_model_xml(
             &tbl_pr,
             "w:tblLayout",
             Some(&format!("<w:tblLayout w:type=\"{layout}\"/>")),
-        );
+        )?;
     }
     if model.cell_mar_twips.is_some() {
-        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblCellMar", Some(&cell_mar));
+        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblCellMar", Some(&cell_mar))?;
     }
     if let Some(look) = &model.table_look {
-        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblLook", Some(&table_look_xml(look)));
+        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblLook", Some(&table_look_xml(look)))?;
     } else if model
         .tbl_style_id
         .as_deref()
@@ -1139,7 +1158,7 @@ pub fn generate_table_model_xml(
             banded_rows: true,
             banded_columns: false,
         };
-        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblLook", Some(&table_look_xml(&look)));
+        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblLook", Some(&table_look_xml(&look)))?;
     }
     // Table alignment (w:jc): explicit align replaces/removes the original
     if let Some(align) = model.align {
@@ -1148,7 +1167,7 @@ pub fn generate_table_model_xml(
             &tbl_pr,
             "w:jc",
             (align != TableModelAlign::Left).then_some(jc.as_str()),
-        );
+        )?;
     }
     if let Some(caption) = &model.caption {
         let tag = format!("<w:tblCaption w:val=\"{}\"/>", escape_xml_attr(caption));
@@ -1156,7 +1175,7 @@ pub fn generate_table_model_xml(
             &tbl_pr,
             "w:tblCaption",
             (!caption.is_empty()).then_some(tag.as_str()),
-        );
+        )?;
     }
     if let Some(description) = &model.description {
         let tag = format!(
@@ -1167,7 +1186,7 @@ pub fn generate_table_model_xml(
             &tbl_pr,
             "w:tblDescription",
             (!description.is_empty()).then_some(tag.as_str()),
-        );
+        )?;
     }
     Ok(format!("<w:tbl>{tbl_pr}{grid}{rows}</w:tbl>"))
 }

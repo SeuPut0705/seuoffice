@@ -1,5 +1,5 @@
 use crate::model::{RevisionInfo, Run};
-use jscompat::{JsMap, Radix, js_regex, parse_int};
+use jscompat::{JsMap, Radix, RegexLimit, js_regex, parse_int};
 use std::collections::HashSet;
 
 use super::rpr::run_r_pr_xml;
@@ -8,11 +8,11 @@ use super::{escape_xml_attr as attr, escape_xml_text as text};
 type Allocator<'a> = Option<&'a mut dyn FnMut(&str) -> String>;
 type RevisionAllocator<'a> = Option<&'a mut dyn FnMut() -> String>;
 
-pub fn inline_runs_xml(runs: &[Run]) -> String {
+pub fn inline_runs_xml(runs: &[Run]) -> Result<String, RegexLimit> {
     runs_xml(runs, None)
 }
 
-pub(crate) fn runs_xml(runs: &[Run], allocate: Allocator<'_>) -> String {
+pub(crate) fn runs_xml(runs: &[Run], allocate: Allocator<'_>) -> Result<String, RegexLimit> {
     runs_xml_with_revisions(runs, allocate, None)
 }
 
@@ -20,7 +20,7 @@ pub(crate) fn runs_xml_with_revisions(
     runs: &[Run],
     allocate: Allocator<'_>,
     allocate_revision: RevisionAllocator<'_>,
-) -> String {
+) -> Result<String, RegexLimit> {
     let mut emitter = Emitter {
         runs,
         allocate,
@@ -103,7 +103,7 @@ impl Emitter<'_, '_, '_> {
             }
         }
     }
-    fn emit_range(&mut self, from: usize, to: usize, out: &mut String) {
+    fn emit_range(&mut self, from: usize, to: usize, out: &mut String) -> Result<(), RegexLimit> {
         let mut i = from;
         while i < to {
             let run = &self.runs[i];
@@ -136,7 +136,7 @@ impl Emitter<'_, '_, '_> {
                 if let Some(anchor) = href.strip_prefix('#') {
                     out.push_str(&format!("<w:hyperlink w:anchor=\"{}\"{tip}>", attr(anchor)));
                     for run in &self.runs[start..i] {
-                        out.push_str(&run_fragment_xml(run, true));
+                        out.push_str(&run_fragment_xml(run, true)?);
                     }
                     out.push_str("</w:hyperlink>");
                 } else {
@@ -150,7 +150,7 @@ impl Emitter<'_, '_, '_> {
                         out.push_str(&format!("<w:hyperlink r:id=\"{}\"{tip}>", attr(rid)));
                     }
                     for run in &self.runs[start..i] {
-                        out.push_str(&run_fragment_xml(run, final_rid.is_some()));
+                        out.push_str(&run_fragment_xml(run, final_rid.is_some())?);
                     }
                     if final_rid.is_some() {
                         out.push_str("</w:hyperlink>");
@@ -161,11 +161,12 @@ impl Emitter<'_, '_, '_> {
                 }
             } else {
                 self.starts_at(i, out);
-                out.push_str(&run_fragment_xml(run, false));
+                out.push_str(&run_fragment_xml(run, false)?);
                 self.ends_at(i, out);
                 i += 1;
             }
         }
+        Ok(())
     }
     fn mint_id(&mut self) -> String {
         if let Some(allocate) = self.allocate_revision.as_mut() {
@@ -203,7 +204,7 @@ impl Emitter<'_, '_, '_> {
         }
         out
     }
-    fn emit(&mut self) -> String {
+    fn emit(&mut self) -> Result<String, RegexLimit> {
         let mut out = String::new();
         let mut g = 0;
         let mut open_range: Option<(&str, String)> = None;
@@ -214,7 +215,7 @@ impl Emitter<'_, '_, '_> {
             }
             let run = &self.runs[g];
             if revision_key(run).is_none() {
-                self.emit_range(g, end, &mut out);
+                self.emit_range(g, end, &mut out)?;
             } else {
                 let movement = move_of(Some(run));
                 if let Some((side, name)) = movement.filter(|movement| {
@@ -266,7 +267,7 @@ impl Emitter<'_, '_, '_> {
                 if let Some(info) = &*run.del {
                     out.push_str(&format!("<{del_tag}{}>", self.revision_attrs(info)));
                 }
-                self.emit_range(g, end, &mut out);
+                self.emit_range(g, end, &mut out)?;
                 if run.del.is_some() {
                     out.push_str(&format!("</{del_tag}>"));
                 }
@@ -282,33 +283,33 @@ impl Emitter<'_, '_, '_> {
             }
             g = end;
         }
-        out
+        Ok(out)
     }
 }
 
 fn glyph_runs(
     run: &Run,
     is_glyph: impl Fn(char) -> bool,
-    glyph: impl Fn(char) -> String,
-    plain: impl Fn(&str) -> String,
-) -> String {
+    glyph: impl Fn(char) -> Result<String, RegexLimit>,
+    plain: impl Fn(&str) -> Result<String, RegexLimit>,
+) -> Result<String, RegexLimit> {
     let mut out = String::new();
     let mut buffer = String::new();
     for ch in run.text.as_deref().unwrap_or_default().chars() {
         if is_glyph(ch) {
             if !buffer.is_empty() {
-                out.push_str(&plain(&buffer));
+                out.push_str(&plain(&buffer)?);
                 buffer.clear();
             }
-            out.push_str(&glyph(ch));
+            out.push_str(&glyph(ch)?);
         } else {
             buffer.push(ch);
         }
     }
     if !buffer.is_empty() {
-        out.push_str(&plain(&buffer));
+        out.push_str(&plain(&buffer)?);
     }
-    out
+    Ok(out)
 }
 
 fn checkbox_glyphs(xml: &str) -> (char, char) {
@@ -350,47 +351,47 @@ fn sync_checkbox(xml: &str, checked: bool) -> String {
     }
 }
 
-fn run_fragment_xml(run: &Run, inside_link: bool) -> String {
+fn run_fragment_xml(run: &Run, inside_link: bool) -> Result<String, RegexLimit> {
     let run_text = run.text.as_deref().unwrap_or_default();
     if let Some(math) = &*run.math {
-        return if math.display.unwrap_or(false) {
+        return Ok(if math.display.unwrap_or(false) {
             format!("<m:oMathPara>{}</m:oMathPara>", math.omml)
         } else {
             math.omml.clone()
-        };
+        });
     }
     if let Some(ruby) = &*run.ruby {
-        return format!("<w:r>{}</w:r>", ruby.xml);
+        return Ok(format!("<w:r>{}</w:r>", ruby.xml));
     }
     if let Some(image) = &*run.image {
-        return format!(
+        return Ok(format!(
             "{}<w:r>{}{}</w:r>",
             if run_text.is_empty() {
                 String::new()
             } else {
-                generate_run_xml(run, run_text, inside_link)
+                generate_run_xml(run, run_text, inside_link)?
             },
             run.raw_r_pr.as_deref().unwrap_or_default(),
             image.xml
-        );
+        ));
     }
     if let Some(sym) = &*run.sym {
-        return format!(
+        return Ok(format!(
             "<w:r>{}<w:sym w:font=\"{}\" w:char=\"{}\"/></w:r>",
-            run_r_pr_xml(run, inside_link),
+            run_r_pr_xml(run, inside_link)?,
             attr(&sym.font),
             attr(&sym.char)
-        );
+        ));
     }
     if let Some(note) = &*run.note_ref {
-        return format!(
+        return Ok(format!(
             "<w:r>{}<w:{}Reference w:id=\"{}\"/></w:r>",
             run.raw_r_pr
                 .as_deref()
                 .unwrap_or("<w:rPr><w:vertAlign w:val=\"superscript\"/></w:rPr>"),
             note.kind.as_str(),
             attr(&note.id)
-        );
+        ));
     }
     let begin = || {
         format!(
@@ -406,12 +407,12 @@ fn run_fragment_xml(run: &Run, inside_link: bool) -> String {
     if let Some(reference) = &*run.ref_field {
         let default_instr = format!(" REF {} \\h ", reference.replace('"', ""));
         let instr = run.ref_instr.as_deref().unwrap_or(&default_instr);
-        return format!(
+        return Ok(format!(
             "{}<w:r><w:instrText xml:space=\"preserve\">{}</w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>{}{end}",
             begin(),
             text(instr),
-            generate_run_xml(run, run_text, inside_link)
-        );
+            generate_run_xml(run, run_text, inside_link)?
+        ));
     }
     if let Some(xml) = run
         .sdt_checkbox_xml
@@ -423,11 +424,11 @@ fn run_fragment_xml(run: &Run, inside_link: bool) -> String {
             run,
             |ch| ch == checked || ch == unchecked,
             |ch| {
-                format!(
+                Ok(format!(
                     "<w:sdt>{}<w:sdtContent>{}</w:sdtContent></w:sdt>",
                     sync_checkbox(xml, ch == checked),
-                    generate_run_xml(run, &ch.to_string(), inside_link)
-                )
+                    generate_run_xml(run, &ch.to_string(), inside_link)?
+                ))
             },
             |plain| generate_run_xml(run, plain, inside_link),
         );
@@ -443,14 +444,14 @@ fn run_fragment_xml(run: &Run, inside_link: bool) -> String {
             .map(|v| v.as_str())
             .filter(|v| *v != "single")
         {
-            let cached = generate_run_xml(run, run_text, inside_link);
-            return match part {
+            let cached = generate_run_xml(run, run_text, inside_link)?;
+            return Ok(match part {
                 "begin" => {
                     format!("<w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>{instr_xml}{cached}")
                 }
                 "end" => format!("{cached}{end}"),
                 _ => cached,
-            };
+            });
         }
         if let Some(begin_xml) = run.fld_begin_xml.as_deref().filter(|xml| !xml.is_empty()) {
             return glyph_runs(
@@ -472,29 +473,33 @@ fn run_fragment_xml(run: &Run, inside_link: bool) -> String {
                             &synced[m.end()..]
                         );
                     }
-                    format!("{synced}{instr_xml}{end}")
+                    Ok(format!("{synced}{instr_xml}{end}"))
                 },
                 |plain| generate_run_xml(run, plain, inside_link),
             );
         }
-        return format!(
+        return Ok(format!(
             "{}{instr_xml}{}{end}",
             begin(),
-            generate_run_xml(run, run_text, inside_link)
-        );
+            generate_run_xml(run, run_text, inside_link)?
+        ));
     }
     let mut xml = if run_text.is_empty() {
         String::new()
     } else {
-        generate_run_xml(run, run_text, inside_link)
+        generate_run_xml(run, run_text, inside_link)?
     };
     if let Some(term) = &*run.xe_term {
         xml.push_str(&format!("<w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:instrText xml:space=\"preserve\"> XE \"{}\" </w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"end\"/></w:r>",text(&term.replace('"',""))));
     }
-    xml
+    Ok(xml)
 }
 
-pub(crate) fn generate_run_xml(run: &Run, content: &str, inside_link: bool) -> String {
+pub(crate) fn generate_run_xml(
+    run: &Run,
+    content: &str,
+    inside_link: bool,
+) -> Result<String, RegexLimit> {
     let text_tag = if run.del.is_some() {
         "w:delText"
     } else {
@@ -530,5 +535,8 @@ pub(crate) fn generate_run_xml(run: &Run, content: &str, inside_link: bool) -> S
         }
     }
     flush(&mut segments, &mut buffer);
-    format!("<w:r>{}{segments}</w:r>", run_r_pr_xml(run, inside_link))
+    Ok(format!(
+        "<w:r>{}{segments}</w:r>",
+        run_r_pr_xml(run, inside_link)?
+    ))
 }

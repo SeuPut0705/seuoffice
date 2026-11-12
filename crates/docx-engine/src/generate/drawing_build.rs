@@ -353,7 +353,7 @@ pub struct AnchoredTextboxOptions {
     pub holder_page_break_before: Option<bool>,
 }
 
-fn content_para_xml(p: &TextboxContentParagraph) -> String {
+fn content_para_xml(p: &TextboxContentParagraph) -> Result<String, String> {
     let mut children = format_p_pr_children(p.format.as_ref());
     let rank = |name: &str| {
         PPR_CHILD_ORDER
@@ -373,7 +373,8 @@ fn content_para_xml(p: &TextboxContentParagraph) -> String {
                 .collect::<String>()
         )
     };
-    format!("<w:p>{p_pr}{}</w:p>", inline_runs_xml(&p.runs))
+    let runs = inline_runs_xml(&p.runs).map_err(|limit| limit.to_string())?;
+    Ok(format!("<w:p>{p_pr}{runs}</w:p>"))
 }
 
 /// `buildAnchoredTextboxParagraphXml`
@@ -411,7 +412,7 @@ pub fn build_anchored_textbox_paragraph_xml(
         opts.paragraphs
             .iter()
             .map(content_para_xml)
-            .collect::<String>()
+            .collect::<Result<String, _>>()?
     );
     // an infinite radius gives a valid 50000 or 0 in the TypeScript too
     let corner_radius_emu = opts.corner_radius_emu;

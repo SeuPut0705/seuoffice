@@ -3,7 +3,7 @@
 //! normalization, the column span of a floating table and the band of
 //! side-wrapped boxes before a table.
 
-use jscompat::{JsNum, JsRegex, js_regex, math_round, trim, truthy};
+use jscompat::{JsNum, JsRegex, RegexLimit, js_regex, math_round, trim, truthy, try_js_regex};
 use serde::Serialize;
 
 use crate::model::{
@@ -18,8 +18,9 @@ fn page_br_re() -> &'static JsRegex {
     js_regex!(r#"<w:br\s[^>]*w:type=(["'])page\1"#)
 }
 
-/// `hostParagraphBreaksBefore`
-fn host_paragraph_breaks_before(xml: &str) -> bool {
+/// `hostParagraphBreaksBefore`. A paragraph whose pPr runs past about a
+/// million characters passes the bound of one search.
+fn host_paragraph_breaks_before(xml: &str) -> Result<bool, RegexLimit> {
     // w:pPrChange holds the tracked-change *previous* pPr, not the live setting
     // (the TypeScript reads a self-closing record as the start of a paired one)
     let live = js_regex!(
@@ -27,12 +28,12 @@ fn host_paragraph_breaks_before(xml: &str) -> bool {
         "g"
     )
     .replace_all(xml, |_| String::new());
-    let head =
-        js_regex!(r"^<w:p(?:\s[^>]*)?>\s*<w:pPr>((?:(?!<\/w:pPr>)[\s\S])*)<\/w:pPr>").exec(&live);
+    let head = try_js_regex!(r"^<w:p(?:\s[^>]*)?>\s*<w:pPr>((?:(?!<\/w:pPr>)[\s\S])*)<\/w:pPr>")
+        .try_exec(&live)?;
     let p_pr = head.as_ref().and_then(|found| found.get(1));
-    p_pr.is_some_and(|p_pr| {
+    Ok(p_pr.is_some_and(|p_pr| {
         js_regex!(r#"<w:pageBreakBefore(?:\s+w:val="(?:1|true|on)")?\s*\/>"#).test(p_pr)
-    })
+    }))
 }
 
 /// What `applyProtectedLeadingBreaks` writes into one block.
@@ -44,24 +45,26 @@ enum LeadingBreak {
 }
 
 /// The tests of one block of `applyProtectedLeadingBreaks`, in its order.
-fn leading_break(b: &Block) -> Option<LeadingBreak> {
+fn leading_break(b: &Block) -> Result<Option<LeadingBreak>, RegexLimit> {
     if !matches!(*b.r#type, Some(BlockType::Image | BlockType::Passthrough))
         || b.format
             .as_ref()
             .is_some_and(|format| *format.page_break_before == Some(true))
     {
-        return None;
+        return Ok(None);
     }
-    let xml = truthy(b.original_xml.as_ref().and_then(Option::as_deref))?;
+    let Some(xml) = truthy(b.original_xml.as_ref().and_then(Option::as_deref)) else {
+        return Ok(None);
+    };
     if *b.hidden == Some(true) || b.label.as_deref() == Some("Section break paragraph") {
-        return None;
+        return Ok(None);
     }
     // the anchor paragraph's own pPr is dropped with its runs
-    if host_paragraph_breaks_before(xml) {
-        return Some(LeadingBreak::PageBreakBefore);
+    if host_paragraph_breaks_before(xml)? {
+        return Ok(Some(LeadingBreak::PageBreakBefore));
     }
     if *b.r#type != Some(BlockType::Image) {
-        return None;
+        return Ok(None);
     }
     let drawing = js_regex!(r"<w:drawing[\s>]|<w:pict[\s>]|<w:object[\s>]")
         .exec(xml)
@@ -72,26 +75,26 @@ fn leading_break(b: &Block) -> Option<LeadingBreak> {
             .find_iter(&head[..br])
             .map(|found| found.get(1).unwrap_or(""))
             .collect();
-        return trim(&text_before)
+        return Ok(trim(&text_before)
             .is_empty()
-            .then_some(LeadingBreak::PageBreakBefore);
+            .then_some(LeadingBreak::PageBreakBefore));
     }
     // a page-break run after the drawing turns the page below the picture
     if let Some(drawing) = drawing
         && b.field_display.is_none()
         && page_br_re().test(&strip_textboxes(&xml[drawing..]))
     {
-        return Some(LeadingBreak::FieldPageBreak);
+        return Ok(Some(LeadingBreak::FieldPageBreak));
     }
-    None
+    Ok(None)
 }
 
 /// `applyProtectedLeadingBreaks`: a protected image block swallows the
 /// paragraph's runs and pPr, so a page break before the drawing becomes the
 /// block's pageBreakBefore, and one after it a pageBreak field display.
-pub fn apply_protected_leading_breaks(blocks: &mut [Block]) {
+pub fn apply_protected_leading_breaks(blocks: &mut [Block]) -> Result<(), RegexLimit> {
     for b in blocks.iter_mut() {
-        match leading_break(b) {
+        match leading_break(b)? {
             Some(LeadingBreak::PageBreakBefore) => {
                 let mut format = b.format.as_ref().cloned().unwrap_or_default();
                 format.page_break_before.set(true);
@@ -133,6 +136,7 @@ pub fn apply_protected_leading_breaks(blocks: &mut [Block]) {
             None => {}
         }
     }
+    Ok(())
 }
 
 /// `SINGLE_SPACING_HANGUL_KANA_FONTS`: Word probe (2026-09-03), Han and

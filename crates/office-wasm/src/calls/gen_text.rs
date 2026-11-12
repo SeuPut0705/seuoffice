@@ -73,11 +73,17 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         }
         "patchTableCellTexts" => {
             let texts: Vec<Option<Vec<Option<CellTextsPatch>>>> = required(args, "texts")?;
-            value(text_patch::patch_table_cell_texts(text, &texts))
+            value(
+                text_patch::patch_table_cell_texts(text, &texts)
+                    .map_err(|limit| limit.to_string())?,
+            )
         }
         "patchTextboxParas" => {
             let patches: TextboxParasPatchSet = required(args, "patches")?;
-            value(text_patch::patch_textbox_paras(text, &patches))
+            value(
+                text_patch::patch_textbox_paras(text, &patches)
+                    .map_err(|limit| limit.to_string())?,
+            )
         }
         _ => Err(format!("unknown function {function}")),
     }

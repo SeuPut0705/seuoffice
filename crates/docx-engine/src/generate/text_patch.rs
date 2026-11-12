@@ -5,7 +5,9 @@
 //! its UTF-16 length (`distributeText`, the splice of `replaceTextNodes`) the
 //! port does so in UTF-16 code units too.
 
-use jscompat::{JsNum, Radix, is_js_space, js_regex, number_to_string, parse_int, to_number, trim};
+use jscompat::{
+    JsNum, Radix, RegexLimit, is_js_space, js_regex, number_to_string, parse_int, to_number, trim,
+};
 use ooxml_xml::Utf16Map;
 use serde::{Deserialize, Deserializer};
 
@@ -361,7 +363,7 @@ fn media_r_ids(xml: &str) -> Vec<&str> {
 const DRAWING_TAGS: [&str; 4] = ["mc:AlternateContent", "w:drawing", "w:pict", "w:object"];
 
 /// Drawing payloads of a paragraph the run model cannot re-emit, carried over.
-fn carried_runs_of(p_xml: &str, emitted_media: &[&str]) -> String {
+fn carried_runs_of(p_xml: &str, emitted_media: &[&str]) -> Result<String, RegexLimit> {
     // a payload is a twin of an emitted image when all its media is already
     // re-emitted and it carries no textbox text of its own
     let is_twin = |payload: &str| {
@@ -375,32 +377,38 @@ fn carried_runs_of(p_xml: &str, emitted_media: &[&str]) -> String {
         .filter(|r| js_regex!(r"<wp:anchor[\s>]|<w:pict[\s>]|<w:object[\s>]").test(r))
         .map(|r| {
             let Some(open) = js_regex!(r"^<w:r(?:\s[^>]*)?>").exec(r) else {
-                return String::new();
+                return Ok(String::new());
             };
             let from = open.end();
             let to = r.len().saturating_sub("</w:r>".len());
             let inner = if to > from { &r[from..to] } else { "" };
-            let kept: String = split_xml_children(inner)
+            let kept: String = split_xml_children(inner)?
                 .into_iter()
                 .filter(|(name, xml)| DRAWING_TAGS.contains(&name.as_str()) && !is_twin(xml))
                 .map(|(_, xml)| xml)
                 .collect();
-            if kept.is_empty() {
+            Ok(if kept.is_empty() {
                 String::new()
             } else {
                 format!("<w:r>{kept}</w:r>")
-            }
+            })
         })
         .collect()
 }
 
 /// Rebuild one cell's paragraphs, keeping tcPr. `None` when the cell is too
 /// complex to patch safely (nested table).
-fn patch_cell_xml(tc_xml: &str, paras: &[Option<CellParaPatch>]) -> Option<String> {
+fn patch_cell_xml(
+    tc_xml: &str,
+    paras: &[Option<CellParaPatch>],
+) -> Result<Option<String>, RegexLimit> {
     if index_of(tc_xml, "<w:tbl", 1).is_some() {
-        return None;
+        return Ok(None);
     }
-    let open_tag = js_regex!(r"^<w:tc(?: [^>]*)?>").exec(tc_xml)?.as_str();
+    let Some(open_tag) = js_regex!(r"^<w:tc(?: [^>]*)?>").exec(tc_xml) else {
+        return Ok(None);
+    };
+    let open_tag = open_tag.as_str();
     let tc_pr = first_match(
         js_regex!(r"<w:tcPr[\s\S]*?<\/w:tcPr>|<w:tcPr[^>]*\/>"),
         tc_xml,
@@ -443,22 +451,22 @@ fn patch_cell_xml(tc_xml: &str, paras: &[Option<CellParaPatch>]) -> Option<Strin
                 };
                 let p_pr = match &rich.format {
                     Some(format) => {
-                        merge_cell_para_format(p_pr_of(template), format, rich.original.as_ref())
+                        merge_cell_para_format(p_pr_of(template), format, rich.original.as_ref())?
                     }
                     None => p_pr_of(template).to_owned(),
                 };
                 let emitted = match &rich.xml {
                     Some(xml) => xml.clone(),
-                    None => runs_xml(&rich.runs, None),
+                    None => runs_xml(&rich.runs, None)?,
                 };
                 let emitted_media = media_r_ids(&emitted);
                 let keep = if aligned {
-                    carried_runs_of(template, &emitted_media)
+                    carried_runs_of(template, &emitted_media)?
                 } else if i == 0 {
                     originals
                         .iter()
                         .map(|p| carried_runs_of(p, &emitted_media))
-                        .collect()
+                        .collect::<Result<_, _>>()?
                 } else {
                     String::new()
                 };
@@ -466,7 +474,7 @@ fn patch_cell_xml(tc_xml: &str, paras: &[Option<CellParaPatch>]) -> Option<Strin
             }
         }
     }
-    Some(format!("{open_tag}{tc_pr}{body}</w:tc>"))
+    Ok(Some(format!("{open_tag}{tc_pr}{body}</w:tc>")))
 }
 
 /// Cell paragraph texts carry tabs/breaks as control chars; they go back as
@@ -548,7 +556,7 @@ pub struct NestedCellTexts {
 pub fn patch_table_cell_texts(
     table_xml: &str,
     texts: &[Option<Vec<Option<CellTextsPatch>>>],
-) -> String {
+) -> Result<String, RegexLimit> {
     let mut out = String::new();
     let mut cursor = 0;
     for (r, tr) in xml_segments(table_xml, "w:tr", 0, table_xml.len())
@@ -567,9 +575,9 @@ pub fn patch_table_cell_texts(
             };
             let tc_xml = &table_xml[tc.start..tc.end];
             let patched = match entry {
-                CellTextsPatch::Paras(paras) => patch_cell_xml(tc_xml, paras),
+                CellTextsPatch::Paras(paras) => patch_cell_xml(tc_xml, paras)?,
                 CellTextsPatch::Nested(nested) => {
-                    patch_nested_in_cell(tc_xml, nested.nested.as_deref())
+                    patch_nested_in_cell(tc_xml, nested.nested.as_deref())?
                 }
             };
             let Some(patched) = patched else { continue };
@@ -579,16 +587,23 @@ pub fn patch_table_cell_texts(
         }
     }
     out.push_str(&table_xml[cursor..]);
-    out
+    Ok(out)
 }
 
 /// Patch the cell's direct nested tables' cell texts.
-fn patch_nested_in_cell(tc_xml: &str, nested: Option<&[Option<TableTexts>]>) -> Option<String> {
-    let nested = nested.filter(|nested| !nested.is_empty())?;
-    let open_tag = js_regex!(r"^<w:tc(?: [^>]*)?>").exec(tc_xml)?.as_str();
-    let tbl_segs = xml_segments(tc_xml, "w:tbl", open_tag.len(), tc_xml.len());
+fn patch_nested_in_cell(
+    tc_xml: &str,
+    nested: Option<&[Option<TableTexts>]>,
+) -> Result<Option<String>, RegexLimit> {
+    let Some(nested) = nested.filter(|nested| !nested.is_empty()) else {
+        return Ok(None);
+    };
+    let Some(open_tag) = js_regex!(r"^<w:tc(?: [^>]*)?>").exec(tc_xml) else {
+        return Ok(None);
+    };
+    let tbl_segs = xml_segments(tc_xml, "w:tbl", open_tag.as_str().len(), tc_xml.len());
     if tbl_segs.is_empty() {
-        return None;
+        return Ok(None);
     }
     let mut out = String::new();
     let mut cursor = 0;
@@ -597,11 +612,11 @@ fn patch_nested_in_cell(tc_xml: &str, nested: Option<&[Option<TableTexts>]>) -> 
             continue;
         };
         out.push_str(&tc_xml[cursor..seg.start]);
-        out.push_str(&patch_table_cell_texts(&tc_xml[seg.start..seg.end], grid));
+        out.push_str(&patch_table_cell_texts(&tc_xml[seg.start..seg.end], grid)?);
         cursor = seg.end;
     }
     out.push_str(&tc_xml[cursor..]);
-    Some(out)
+    Ok(Some(out))
 }
 
 // ---- textbox paragraph patching ----
@@ -790,15 +805,18 @@ fn p_pr_with_jc(p_pr: &str, align: Option<TextboxAlign>) -> String {
 }
 
 /// Rebuild the paragraphs of one w:txbxContent.
-fn patch_txbx_content(seg_xml: &str, paras: &[Option<TextboxParaPatch>]) -> String {
+fn patch_txbx_content(
+    seg_xml: &str,
+    paras: &[Option<TextboxParaPatch>],
+) -> Result<String, RegexLimit> {
     let Some(open) = js_regex!(r"^<w:txbxContent(?: [^>]*)?>").exec(seg_xml) else {
-        return seg_xml.to_owned();
+        return Ok(seg_xml.to_owned());
     };
     let open = open.as_str();
     let to = seg_xml.len().saturating_sub("</w:txbxContent>".len());
     let originals = segment_texts(seg_xml, "w:p", open.len(), to);
     if originals.is_empty() {
-        return seg_xml.to_owned();
+        return Ok(seg_xml.to_owned());
     }
     let mut out = String::from(open);
     for (i, patch) in paras.iter().enumerate() {
@@ -820,10 +838,13 @@ fn patch_txbx_content(seg_xml: &str, paras: &[Option<TextboxParaPatch>]) -> Stri
             p_pr = p_pr_with_jc(&p_pr, align);
         }
         // no rel allocation inside textboxes
-        out.push_str(&format!("<w:p>{p_pr}{}</w:p>", runs_xml(&patch.runs, None)));
+        out.push_str(&format!(
+            "<w:p>{p_pr}{}</w:p>",
+            runs_xml(&patch.runs, None)?
+        ));
     }
     out.push_str("</w:txbxContent>");
-    out
+    Ok(out)
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -845,7 +866,10 @@ pub struct TextboxParasPatchSet {
 
 /// Replace textbox paragraphs inside a paragraph fragment; fallback twins
 /// take the patch of the preceding visible box.
-pub fn patch_textbox_paras(paragraph_xml: &str, patches: &TextboxParasPatchSet) -> String {
+pub fn patch_textbox_paras(
+    paragraph_xml: &str,
+    patches: &TextboxParasPatchSet,
+) -> Result<String, RegexLimit> {
     let by_index = patches.by_index.as_deref().unwrap_or_default();
     let segs = xml_segments(paragraph_xml, "w:txbxContent", 0, paragraph_xml.len());
     let mut xml = paragraph_xml.to_owned();
@@ -874,20 +898,20 @@ pub fn patch_textbox_paras(paragraph_xml: &str, patches: &TextboxParasPatchSet) 
             out.push_str(&patch_txbx_content(
                 &paragraph_xml[seg.start..seg.end],
                 paras,
-            ));
+            )?);
             cursor = seg.end;
         }
         out.push_str(&paragraph_xml[cursor..]);
         xml = out;
     }
     for entry in patches.inject.as_deref().unwrap_or_default() {
-        xml = inject_shape_text(&xml, entry);
+        xml = inject_shape_text(&xml, entry)?;
     }
-    xml
+    Ok(xml)
 }
 
 /// First text on a shape that has no <w:txbxContent>.
-fn inject_shape_text(paragraph_xml: &str, entry: &ShapeTextInject) -> String {
+fn inject_shape_text(paragraph_xml: &str, entry: &ShapeTextInject) -> Result<String, RegexLimit> {
     for seg in xml_segments(paragraph_xml, "wps:wsp", 0, paragraph_xml.len()) {
         let mut shape_xml = paragraph_xml[seg.start..seg.end].to_owned();
         let id = js_regex!(r#"<wps:cNvPr\b[^>]*\bid="([^"]+)""#)
@@ -901,14 +925,14 @@ fn inject_shape_text(paragraph_xml: &str, entry: &ShapeTextInject) -> String {
                 .into_iter()
                 .next()
             else {
-                return paragraph_xml.to_owned();
+                return Ok(paragraph_xml.to_owned());
             };
             let paras: Vec<Option<TextboxParaPatch>> =
                 entry.paras.iter().cloned().map(Some).collect();
             shape_xml = format!(
                 "{}{}{}",
                 &shape_xml[..content.start],
-                patch_txbx_content(&shape_xml[content.start..content.end], &paras),
+                patch_txbx_content(&shape_xml[content.start..content.end], &paras)?,
                 &shape_xml[content.end..]
             );
         } else {
@@ -920,9 +944,9 @@ fn inject_shape_text(paragraph_xml: &str, entry: &ShapeTextInject) -> String {
                         &p_pr_with_ind_left("", p.indent_left.flatten().map(|n| n.0)),
                         p.align.flatten(),
                     );
-                    format!("<w:p>{p_pr}{}</w:p>", runs_xml(&p.runs, None))
+                    Ok(format!("<w:p>{p_pr}{}</w:p>", runs_xml(&p.runs, None)?))
                 })
-                .collect();
+                .collect::<Result<_, RegexLimit>>()?;
             let txbx = format!("<wps:txbx><w:txbxContent>{body}</w:txbxContent></wps:txbx>");
             shape_xml = match js_regex!(r"<wps:bodyPr[\s/>]")
                 .exec(&shape_xml)
@@ -944,11 +968,11 @@ fn inject_shape_text(paragraph_xml: &str, entry: &ShapeTextInject) -> String {
                 ),
             };
         }
-        return format!(
+        return Ok(format!(
             "{}{shape_xml}{}",
             &paragraph_xml[..seg.start],
             &paragraph_xml[seg.end..]
-        );
+        ));
     }
-    paragraph_xml.to_owned()
+    Ok(paragraph_xml.to_owned())
 }

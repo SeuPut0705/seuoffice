@@ -2,8 +2,8 @@
 //! `setPPrChange`.
 
 use jscompat::{
-    JsNum, Radix, get_substitution, js_regex, math_max, math_min, math_round, number_to_string,
-    parse_int, replace_first_string, to_number, trim,
+    JsNum, Radix, RegexLimit, get_substitution, js_regex, math_max, math_min, math_round,
+    number_to_string, parse_int, replace_first_string, to_number, trim,
 };
 use serde_json::Value;
 
@@ -464,7 +464,7 @@ fn strip_first(re: &jscompat::JsRegex, s: &str) -> String {
 
 type LineKey = (Option<String>, Option<JsNum>, Option<JsNum>);
 
-fn raw_p_bdr_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
+fn raw_p_bdr_unchanged(raw: Option<&str>, f: &ParaFormat) -> Result<bool, RegexLimit> {
     let mut raw_borders = String::new();
     let mut raw_lines: [LineKey; 4] = Default::default();
     let index = |ch: char| match ch {
@@ -476,7 +476,7 @@ fn raw_p_bdr_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
     if let Some(raw) = raw.filter(|r| !r.is_empty()) {
         let inner = strip_first(js_regex!(r"^<w:pBdr[^>]*>"), raw);
         let inner = strip_first(js_regex!(r"<\/w:pBdr>$"), &inner);
-        let kids = split_xml_children(&inner);
+        let kids = split_xml_children(&inner)?;
         for (side, ch) in [("top", 't'), ("bottom", 'b'), ("left", 'l'), ("right", 'r')] {
             let tag = format!("w:{side}");
             let Some((_, el)) = kids.iter().find(|(name, _)| *name == tag) else {
@@ -514,7 +514,7 @@ fn raw_p_bdr_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
         seen.into_iter().collect()
     };
     if norm(Some(&raw_borders)) != norm(f.borders.as_deref()) {
-        return false;
+        return Ok(false);
     }
     let model_lines: [LineKey; 4] = ['t', 'b', 'l', 'r'].map(|ch| {
         border_line(f, ch).map_or((None, None, None), |l| {
@@ -522,16 +522,16 @@ fn raw_p_bdr_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
         })
     });
     // JSON.stringify of both: NaN prints as null
-    serde_json::to_string(&raw_lines).ok() == serde_json::to_string(&model_lines).ok()
+    Ok(serde_json::to_string(&raw_lines).ok() == serde_json::to_string(&model_lines).ok())
 }
 
-fn raw_tabs_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
+fn raw_tabs_unchanged(raw: Option<&str>, f: &ParaFormat) -> Result<bool, RegexLimit> {
     let stops = real_stops(f);
     let mut raw_stops: Vec<(f64, String, Option<String>)> = Vec::new();
     if let Some(raw) = raw.filter(|r| !r.is_empty()) {
         let inner = strip_first(js_regex!(r"^<w:tabs[^>]*>"), raw);
         let inner = strip_first(js_regex!(r"<\/w:tabs>$"), &inner);
-        for (name, xml) in split_xml_children(&inner) {
+        for (name, xml) in split_xml_children(&inner)? {
             if name != "w:tab" {
                 continue;
             }
@@ -551,9 +551,9 @@ fn raw_tabs_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
         }
     }
     if raw_stops.len() != stops.len() {
-        return false;
+        return Ok(false);
     }
-    raw_stops
+    Ok(raw_stops
         .iter()
         .zip(stops)
         .all(|((pos, val, leader), stop)| {
@@ -565,7 +565,7 @@ fn raw_tabs_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
                         .as_ref()
                         .map(|l| l.as_str())
                         .filter(|l| *l != "none")
-        })
+        }))
 }
 
 fn raw_frame_pr_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
@@ -630,8 +630,8 @@ fn ppr_group_unchanged(
     raw: Option<&str>,
     f: &ParaFormat,
     original: Option<&ParaFormat>,
-) -> bool {
-    match tag {
+) -> Result<bool, RegexLimit> {
+    Ok(match tag {
         "w:pageBreakBefore" => raw_bool(raw) == (*f.page_break_before == Some(true)),
         "w:keepNext"
         | "w:keepLines"
@@ -660,20 +660,20 @@ fn ppr_group_unchanged(
         "w:ind" => {
             if let Some(original) = original {
                 if same_indent(original, f) {
-                    return true;
+                    return Ok(true);
                 }
                 if original.char_indents.is_some() {
-                    return false;
+                    return Ok(false);
                 }
             }
             raw_ind_unchanged(raw, f)
         }
-        "w:pBdr" => raw_p_bdr_unchanged(raw, f),
+        "w:pBdr" => raw_p_bdr_unchanged(raw, f)?,
         "w:shd" => {
             let fill = raw_attr(raw, "w:fill").filter(|f| !f.is_empty() && *f != "auto");
             fill == f.shading_fill.as_deref()
         }
-        "w:tabs" => raw_tabs_unchanged(raw, f),
+        "w:tabs" => raw_tabs_unchanged(raw, f)?,
         "w:framePr" => raw_frame_pr_unchanged(raw, f),
         "w:rPr" => {
             let m = raw
@@ -685,7 +685,7 @@ fn ppr_group_unchanged(
             )
         }
         _ => false,
-    }
+    })
 }
 
 /// pPr groups a header/footer cell paragraph models, by the format fields that feed them
@@ -801,7 +801,7 @@ fn merge_cell_element_attrs(
     tag: &str,
     fresh_el: Option<&str>,
     rebuilt: &[&str],
-) -> String {
+) -> Result<String, RegexLimit> {
     let el_re = jscompat::JsRegex::new(&format!(r"<{tag}(?:\s[^>]*)?/>"), "")
         .expect("w:spacing and w:ind compile");
     let raw_el = el_re.exec(p_pr).map(|m| m.as_str().to_owned());
@@ -819,14 +819,14 @@ fn merge_cell_element_attrs(
         .map(|(n, v)| format!("{n}=\"{v}\""))
         .collect();
     if attrs.is_empty() {
-        return match raw_el {
+        return Ok(match raw_el {
             Some(raw_el) => replace_first_string(p_pr, &raw_el, ""),
             None => p_pr.to_owned(),
-        };
+        });
     }
     let merged = format!("<{tag} {}/>", attrs.join(" "));
     if let Some(raw_el) = raw_el {
-        return replace_first_string(p_pr, &raw_el, &merged);
+        return Ok(replace_first_string(p_pr, &raw_el, &merged));
     }
     let open = js_regex!(r"^<w:pPr(?: [^>]*)?>")
         .exec(p_pr)
@@ -840,14 +840,14 @@ fn merge_cell_element_attrs(
     } else {
         String::new()
     };
-    let kids = split_xml_children(&inner);
+    let kids = split_xml_children(&inner)?;
     let mut children: Vec<String> = kids.iter().map(|(_, xml)| xml.clone()).collect();
     let at = kids
         .iter()
         .position(|(name, _)| rank(name) > rank(tag))
         .unwrap_or(children.len());
     children.insert(at, merged);
-    format!("{open}{}</w:pPr>", children.concat())
+    Ok(format!("{open}{}</w:pPr>", children.concat()))
 }
 
 /// Paragraph format edit inside a layout-table cell
@@ -855,7 +855,7 @@ pub fn merge_cell_para_format(
     raw_p_pr: &str,
     format: &ParaFormat,
     original: Option<&ParaFormat>,
-) -> String {
+) -> Result<String, RegexLimit> {
     let differs = |k: &str| field_json(Some(format), k) != field_json(original, k);
     let mut tags: Vec<&str> = CELL_PPR_GROUPS
         .iter()
@@ -863,7 +863,7 @@ pub fn merge_cell_para_format(
         .map(|(tag, _)| *tag)
         .collect();
     if tags.is_empty() {
-        return raw_p_pr.to_owned();
+        return Ok(raw_p_pr.to_owned());
     }
     let mut out = if raw_p_pr.is_empty() || js_regex!(r"^<w:pPr(?:\s[^>]*)?\/>$").test(raw_p_pr) {
         "<w:pPr></w:pPr>".to_owned()
@@ -884,7 +884,7 @@ pub fn merge_cell_para_format(
         .map(|t| (*t).to_owned())
         .collect();
     if !via_merge.is_empty() {
-        out = merge_p_pr_format(&out, Some(format), None, Some(&via_merge));
+        out = merge_p_pr_format(&out, Some(format), None, Some(&via_merge))?;
         if out.is_empty() {
             out = "<w:pPr></w:pPr>".to_owned();
         }
@@ -903,13 +903,13 @@ pub fn merge_cell_para_format(
             .iter()
             .find(|(name, _)| name == tag)
             .map(|(_, xml)| xml.as_str());
-        out = merge_cell_element_attrs(&out, tag, fresh_el, &rebuilt);
+        out = merge_cell_element_attrs(&out, tag, fresh_el, &rebuilt)?;
     }
-    if js_regex!(r"^<w:pPr(?: [^>]*)?><\/w:pPr>$").test(&out) {
+    Ok(if js_regex!(r"^<w:pPr(?: [^>]*)?><\/w:pPr>$").test(&out) {
         String::new()
     } else {
         out
-    }
+    })
 }
 
 /// Merge format-model changes into an original <w:pPr> slice
@@ -918,7 +918,7 @@ pub fn merge_p_pr_format(
     format: Option<&ParaFormat>,
     original: Option<&ParaFormat>,
     only_tags: Option<&[String]>,
-) -> String {
+) -> Result<String, RegexLimit> {
     let open = js_regex!(r"^<w:pPr(?: [^>]*)?>")
         .exec(raw_p_pr)
         .map(|m| m.as_str());
@@ -944,10 +944,10 @@ pub fn merge_p_pr_format(
     let Some(open) = open else {
         fresh.sort_by_key(|(name, _)| rank(name));
         if fresh.is_empty() {
-            return String::new();
+            return Ok(String::new());
         }
         let joined: String = fresh.iter().map(|(_, xml)| xml.as_str()).collect();
-        return format!("<w:pPr>{joined}</w:pPr>");
+        return Ok(format!("<w:pPr>{joined}</w:pPr>"));
     };
     let inner = js_slice(
         raw_p_pr,
@@ -982,17 +982,19 @@ pub fn merge_p_pr_format(
     if let Some(only) = only_tags {
         managed.retain(|tag| only.iter().any(|o| o == tag));
     }
-    let raw_children = split_xml_children(&inner);
+    let raw_children = split_xml_children(&inner)?;
     let raw_of = |tag: &str| {
         raw_children
             .iter()
             .find(|(name, _)| name == tag)
             .map(|(_, xml)| xml.as_str())
     };
-    let rebuilt: Vec<&str> = managed
-        .into_iter()
-        .filter(|tag| !ppr_group_unchanged(tag, raw_of(tag), f, original))
-        .collect();
+    let mut rebuilt: Vec<&str> = Vec::new();
+    for tag in managed {
+        if !ppr_group_unchanged(tag, raw_of(tag), f, original)? {
+            rebuilt.push(tag);
+        }
+    }
     let mut fresh_out: Vec<(String, String)> = fresh
         .into_iter()
         .filter(|(name, _)| rebuilt.contains(&name.as_str()))
@@ -1026,9 +1028,9 @@ pub fn merge_p_pr_format(
         any = true;
     }
     if !any {
-        return String::new();
+        return Ok(String::new());
     }
-    format!("{open}{parts}</w:pPr>")
+    Ok(format!("{open}{parts}</w:pPr>"))
 }
 
 /// (live, tail): the pPr before its first `<w:pPrChange`, and the rest

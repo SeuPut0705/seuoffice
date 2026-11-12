@@ -1,7 +1,7 @@
 //! The run property builders of generate.ts: `RPR_CHILD_ORDER` through
 //! `mergeRPrModel`, and `runRPrXml`.
 
-use jscompat::{JsNum, Radix, js_regex, number_to_string, parse_int};
+use jscompat::{JsNum, Radix, RegexLimit, js_regex, number_to_string, parse_int};
 
 use super::{escape_xml_attr, split_xml_children};
 use crate::model::Run;
@@ -511,22 +511,26 @@ fn rank(name: &str) -> i64 {
 }
 
 /// Merge the raw rPr slice with the run model
-pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String {
+pub fn merge_r_pr_model(
+    raw_r_pr: &str,
+    run: &Run,
+    inside_link: bool,
+) -> Result<String, RegexLimit> {
     let open = js_regex!(r"^<w:rPr(?: [^>]*)?>")
         .exec(raw_r_pr)
         .map(|m| m.as_str());
     let fresh = model_r_pr_children(run, inside_link);
     let Some(open) = open else {
         if fresh.is_empty() {
-            return String::new();
+            return Ok(String::new());
         }
         let joined: String = fresh.iter().map(|c| c.xml.as_str()).collect();
-        return format!("<w:rPr>{joined}</w:rPr>");
+        return Ok(format!("<w:rPr>{joined}</w:rPr>"));
     };
     let open_len = open.encode_utf16().count() as i64;
     let raw_len = raw_r_pr.encode_utf16().count() as i64;
     let inner = js_slice(raw_r_pr, open_len, raw_len - "</w:rPr>".len() as i64);
-    let raw_children = split_xml_children(&inner);
+    let raw_children = split_xml_children(&inner)?;
     let raw_of = |tag: &str| -> Option<&str> {
         raw_children
             .iter()
@@ -695,12 +699,12 @@ pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String 
         any = true;
     }
     if !any {
-        return String::new();
+        return Ok(String::new());
     }
-    format!("{open}{parts}</w:rPr>")
+    Ok(format!("{open}{parts}</w:rPr>"))
 }
 
-pub(crate) fn run_r_pr_xml(run: &Run, inside_link: bool) -> String {
+pub(crate) fn run_r_pr_xml(run: &Run, inside_link: bool) -> Result<String, RegexLimit> {
     if let Some(raw) = run.raw_r_pr.as_deref() {
         return merge_r_pr_model(raw, run, inside_link);
     }
@@ -708,9 +712,9 @@ pub(crate) fn run_r_pr_xml(run: &Run, inside_link: bool) -> String {
         .iter()
         .map(|c| c.xml.as_str())
         .collect();
-    if props.is_empty() {
+    Ok(if props.is_empty() {
         String::new()
     } else {
         format!("<w:rPr>{props}</w:rPr>")
-    }
+    })
 }

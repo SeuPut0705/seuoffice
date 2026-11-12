@@ -40,13 +40,16 @@ pub fn generate_paragraph_xml(
     for id in block.comment_starts.as_deref().unwrap_or_default() {
         content.push_str(&format!("<w:commentRangeStart w:id=\"{}\"/>", attr(id)));
     }
-    content.push_str(&runs::runs_xml_with_revisions(
-        &block.runs,
-        Some(&mut *ctx.allocate_hyperlink_rel),
-        ctx.allocate_revision_id
-            .as_mut()
-            .map(|callback| &mut **callback as &mut dyn FnMut() -> String),
-    ));
+    content.push_str(
+        &runs::runs_xml_with_revisions(
+            &block.runs,
+            Some(&mut *ctx.allocate_hyperlink_rel),
+            ctx.allocate_revision_id
+                .as_mut()
+                .map(|callback| &mut **callback as &mut dyn FnMut() -> String),
+        )
+        .map_err(|limit| limit.to_string())?,
+    );
     for id in block.comment_ends.as_deref().unwrap_or_default() {
         content.push_str(&format!(
             "<w:commentRangeEnd w:id=\"{0}\"/><w:r><w:commentReference w:id=\"{0}\"/></w:r>",

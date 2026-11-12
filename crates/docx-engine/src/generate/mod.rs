@@ -1,6 +1,6 @@
 //! XML builders ported from packages/docx-engine/src/generate.ts.
 
-use jscompat::js_regex;
+use jscompat::{RegexLimit, js_regex, try_js_regex};
 
 pub mod drawing_build;
 pub mod drawing_patch;
@@ -26,17 +26,20 @@ pub(crate) fn escape_xml_attr(text: &str) -> String {
 }
 
 /// Top-level XML children, preserving the original bytes and the TypeScript scanner's quirks.
-pub fn split_xml_children(xml: &str) -> Vec<(String, String)> {
+/// A tag with more than about a million characters of attributes passes the
+/// bound of one search.
+pub fn split_xml_children(xml: &str) -> Result<Vec<(String, String)>, RegexLimit> {
     let mut out = Vec::new();
     let mut depth = 0i64;
     let mut start = None;
     let mut name = String::new();
-    for found in js_regex!(
+    for found in try_js_regex!(
         r#"<(\/?)([A-Za-z0-9:._-]+)((?:"[^"]*"|'[^']*'|[^"'>])*)>"#,
         "g"
     )
-    .find_iter(xml)
+    .try_find_iter(xml)
     {
+        let found = found?;
         let closing = found.get(1) == Some("/");
         let self_closing = found.get(3).is_some_and(|attrs| attrs.ends_with('/'));
         if closing {
@@ -62,5 +65,5 @@ pub fn split_xml_children(xml: &str) -> Vec<(String, String)> {
             depth += 1;
         }
     }
-    out
+    Ok(out)
 }

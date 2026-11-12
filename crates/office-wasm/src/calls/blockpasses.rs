@@ -12,7 +12,8 @@ pub fn dispatch(function: &str, _text: &str, args: &Value) -> Returned {
     match function {
         "applyProtectedLeadingBreaks" => {
             let mut blocks = required::<Vec<Block>>(args, "blocks")?;
-            block_passes::apply_protected_leading_breaks(&mut blocks);
+            block_passes::apply_protected_leading_breaks(&mut blocks)
+                .map_err(|limit| limit.to_string())?;
             value(blocks)
         }
         "applyBalancedDbcsSpacing" => {

@@ -6,7 +6,10 @@ use super::{Returned, required, value};
 
 pub fn dispatch(function: &str, _text: &str, args: &Value) -> Returned {
     match function {
-        "inlineRunsXml" => value(inline_runs_xml(&required::<Vec<Run>>(args, "runs")?)),
+        "inlineRunsXml" => value(
+            inline_runs_xml(&required::<Vec<Run>>(args, "runs")?)
+                .map_err(|limit| limit.to_string())?,
+        ),
         _ => Err(format!("unknown function {function}")),
     }
 }
