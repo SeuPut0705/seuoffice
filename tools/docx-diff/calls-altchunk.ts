@@ -287,6 +287,11 @@ const MHT_BYTES: number[][] = [
     { headers: ['Content-Location: style.css', 'Content-Type: text/css'], body: bin('p{}') },
     image(['Content-Type: image/png']),
   ]),
+  // U+017F is an s only under Unicode case folding: its attribute is no src
+  mime(related('g'), 'g', [
+    html('<img x\u017frc="a.png"><img src="a.png"><img X\u017fRC=a.png>'),
+    image(['Content-Location: a.png', 'Content-Type: image/png']),
+  ]),
   // no text/html part, and an html part inside a nested multipart
   mime(related('f'), 'f', [image(['Content-Location: a.png', 'Content-Type: image/png'])]),
   mime(related('outer'), 'outer', [
