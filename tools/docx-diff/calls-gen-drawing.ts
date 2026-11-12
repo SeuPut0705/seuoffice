@@ -21,6 +21,7 @@ import {
 } from '../../packages/docx-engine/src/generate'
 import type { ImageWrap } from '../../packages/docx-engine/src/types'
 import type { CallSpec, Input } from './calls-spec'
+import { nonFiniteNumber } from './listed'
 
 const n = (v: unknown): number => (typeof v === 'string' ? Number(v) : (v as number))
 /** undefined stays undefined, null stays null */
@@ -480,3 +481,12 @@ export const NON_FINITE_DRAWING: Array<{ fn: string; text: string; args: Record<
   { fn: 'genDrawing.resizeAnchoredPictureXml', text: NF_ANCHOR, args: { widthPx: 'Infinity', heightPx: 50 } },
   { fn: 'genDrawing.resizeAnchoredPictureXml', text: NF_ANCHOR, args: { widthPx: 100, heightPx: 'Infinity' } },
 ]
+
+// The inputs of divergences.json are inputs of the comparison too: each falls
+// in the listed class, and the mutations carry its numbers to other places.
+for (const spec of GEN_DRAWING) {
+  const listed = NON_FINITE_DRAWING.filter(({ fn }) => fn === spec.fn)
+  if (listed.length === 0) continue
+  spec.built.push(...listed.map(({ text, args }) => ({ text, args })))
+  spec.listed = nonFiniteNumber
+}

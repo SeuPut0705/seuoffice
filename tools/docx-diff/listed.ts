@@ -71,3 +71,19 @@ export function legacyCharset(text: string, args: Args): string | undefined {
   }
   return undefined
 }
+
+export const NON_FINITE_NUMBER = 'non-finite-number-in-a-drawing'
+
+function holdsNonFinite(value: unknown): boolean {
+  if (typeof value === 'string') return /^-?(?:NaN|Infinity)$/.test(value)
+  return typeof value === 'object' && value !== null && Object.values(value).some(holdsNonFinite)
+}
+
+/**
+ * A drawing function given a NaN or an infinity (crossing as the text 'NaN',
+ * 'Infinity', '-Infinity'): the TypeScript writes it into the XML, the Rust
+ * never does. Where the TypeScript writes none the two agree.
+ */
+export function nonFiniteNumber(_text: string, args: Args): string | undefined {
+  return holdsNonFinite(args) ? NON_FINITE_NUMBER : undefined
+}

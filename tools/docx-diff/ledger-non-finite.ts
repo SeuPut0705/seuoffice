@@ -2,7 +2,8 @@
 // non-finite number into the XML on the TypeScript side: one per input of
 // NON_FINITE_DRAWING and NON_FINITE_DRAWING_BUILD, with what each side gives
 // now. An input both sides agree on, or one where the TypeScript writes no
-// NaN or Infinity, is no such divergence: the tool stops on it.
+// NaN or Infinity, is no such divergence: the tool stops on it. The first
+// entry is the class `CallSpec.listed` names for every such input.
 //
 //   npx tsx tools/docx-diff/ledger-non-finite.ts          rewrite the entries
 //   npx tsx tools/docx-diff/ledger-non-finite.ts --check  exit 1 when they would change
@@ -13,6 +14,7 @@ import { NON_FINITE_DRAWING } from './calls-gen-drawing'
 import { NON_FINITE_DRAWING_BUILD } from './calls-gen-drawing-build'
 import { callOutcomes } from './calls-run'
 import { toolDir } from './harness'
+import { NON_FINITE_NUMBER } from './listed'
 
 const PREFIX = 'non-finite-'
 const NON_FINITE = /^-?(?:NaN|Infinity)$/
@@ -36,7 +38,8 @@ const ids = new Set<string>()
 for (const { fn, text, args } of [...NON_FINITE_DRAWING, ...NON_FINITE_DRAWING_BUILD]) {
   const at = nonFiniteAt(args, '')
   if (at.length === 0) throw new Error(`${fn}: no non-finite argument in ${JSON.stringify(args)}`)
-  const id = `${PREFIX}${fn}-${at.join('-')}`
+  // the first entry carries the id of the class the specs list (listed.ts)
+  const id = entries.length === 0 ? NON_FINITE_NUMBER : `${PREFIX}${fn}-${at.join('-')}`
   if (ids.has(id)) throw new Error(`${id}: listed twice`)
   ids.add(id)
   const { typescript, rust } = await callOutcomes(fn, text, args)
