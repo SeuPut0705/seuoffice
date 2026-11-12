@@ -7,6 +7,7 @@
 //   tsx model-gen.ts --observe-orders FILE.ndjson...
 //                                    derive model-orders.json from captured parse results
 //                                    (ModelInput lines); report in out/model-orders-report.json
+//   tsx model-gen.ts --out PATH      write the Rust model to PATH instead of generated.rs
 //   tsx model-gen.ts --check         write nothing; exit 1 when generated.rs is stale or the
 //                                    inline-wrappers overlay drifted from its branch
 // Every run refuses a model-orders.json that does not list each object type's fields once.
@@ -78,14 +79,20 @@ function typeName(schemaName: string): string {
     .join('')
 }
 
-/** `rawRPr` is `raw_r_pr`, `useFELayout` is `use_fe_layout`, `type` is `r#type`. */
+/**
+ * `rawRPr` is `raw_r_pr`, `type` is `r#type`. A key the usual snake case would
+ * not give back in camel case (`autoSpaceDE` as `auto_space_de`) breaks before
+ * every capital instead (`auto_space_d_e`), as serde's `rename_all` reads it.
+ */
 function fieldName(key: string): string {
   if (!IDENTIFIER.test(key)) throw new Error(`the key ${key} is no identifier`)
-  const snake = key
+  const usual = key
     .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
     .replace(/([A-Z])([A-Z][a-z])/g, '$1_$2')
     .toLowerCase()
-  if (UNRAWABLE.has(snake) || snake === 'key_order') throw new Error(`the key ${key} is reserved`)
+  const snake = macroKey(usual) === key ? usual : key.replace(/([A-Z])/g, '_$1').toLowerCase()
+  if (macroKey(snake) !== key) throw new Error(`the key ${key} has no snake case that gives it back`)
+  if (UNRAWABLE.has(snake)) throw new Error(`the key ${key} is reserved`)
   return RUST_KEYWORDS.has(snake) ? `r#${snake}` : snake
 }
 
@@ -152,11 +159,12 @@ interface Level {
   key: string
   /** how many fields of the outermost type this level holds: its own and its bases' */
   count: number
+  /** a `js_object!`: its order follows the path the TypeScript took, every field a `Slot` */
   input: boolean
   /** the field of the level above that holds this one */
   field: string
-  /** the local the deserializer collects this level's key order in */
-  order: string
+  /** the local the deserializer builds a `js_object!` level in */
+  local: string
 }
 
 function levelsOf(definition: ObjectDef, schema: ModelSchema, orders: OrderTable): Level[] {
@@ -170,9 +178,10 @@ function levelsOf(definition: ObjectDef, schema: ModelSchema, orders: OrderTable
       count: at.fields.length,
       input: orderOf(at, orders) === 'input',
       field: fieldName(name[0]!.toLowerCase() + name.slice(1)),
-      order: levels.length === 0 ? 'key_order' : `base_order_${levels.length}`,
+      local: `b_${levels.length}`,
     })
     if (at.base === undefined) break
+    if (levels.at(-1)!.input) throw new Error(`${at.name}: a type with an input order has a base`)
     const base = schema.types.get(at.base)
     if (base?.kind !== 'object') throw new Error(`${at.name}: the base ${at.base} is no object type`)
     if (base.fields.some((field, i) => at!.fields[i]?.name !== field.name)) {
@@ -183,6 +192,10 @@ function levelsOf(definition: ObjectDef, schema: ModelSchema, orders: OrderTable
   return levels
 }
 
+/** The key `js_object!` writes for a field: its name in camel case, without `r#`. */
+const macroKey = (rust: string): string =>
+  rust.replace(/^r#/, '').replace(/_(.)/g, (_, letter: string) => letter.toUpperCase())
+
 function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTable): string {
   const levels = levelsOf(definition, schema, orders)
   const { name, key, input } = levels[0]!
@@ -191,18 +204,19 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
   const fields = definition.fields.map((field, at) => {
     const rust = fieldName(field.name)
     const holders = levels.slice(1).filter((level) => at < level.count)
+    const holder = holders.at(-1) ?? levels[0]!
+    const plain = rustType(field.type)
     return {
       ...field,
       rust,
       variant: pascal(field.name),
       key: rustString(field.name),
-      type: field.optional ? `Option<${rustType(field.type)}>` : rustType(field.type),
+      /** a field of a `js_object!` is a `Slot` of its type: no key is an unset slot */
+      slot: holder.input,
+      holder,
+      type: holder.input || !field.optional ? plain : `Option<${plain}>`,
       /** the place of the field, through the bases that hold it */
       access: [...holders.map((level) => level.field), rust].join('.'),
-      /** the key-order pushes of the bases that hold it and keep an input order */
-      pushes: holders
-        .filter((level) => level.input)
-        .map((level) => `${level.order}.push(${level.key}::${pascal(field.name)});`),
       // `v_` keeps a field named `key` or `map` from shadowing the visitor's own
       local: `v_${rust.replace(/^r#/, '')}`,
     }
@@ -217,34 +231,39 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
   )
   const order = orderOf(definition, orders)
   const byName = new Map(fields.map((field) => [field.name, field]))
-  const written =
-    order === 'input'
-      ? 'wire::input_order(&self.key_order)'
-      : `[${order.map((field) => `${key}::${byName.get(field)!.variant}`).join(', ')}]`
   const base = levels[1]
   const lines: string[] = []
-  // a type whose required keys are all strings or arrays has an empty value:
-  // `{}`, or `{ text: "" }` for a Run. Its base passes the same test, its
-  // fields leading these
-  const empty = definition.fields.every(
-    (field) => field.optional || field.type.kind === 'string' || field.type.kind === 'array',
-  )
-  const derives = empty ? 'Debug, Clone, Default, PartialEq' : 'Debug, Clone, PartialEq'
-  lines.push(`/// \`${definition.name}\``, `#[derive(${derives})]`, `pub struct ${name} {`)
-  if (base) {
-    lines.push(
-      `    /// the fields of \`${base.definition.name}\`, which \`${definition.name}\` extends`,
-      `    pub ${base.field}: ${base.name},`,
-    )
-  }
-  lines.push(...fields.slice(own).map((field) => `    pub ${field.rust}: ${field.type},`))
   if (input) {
     lines.push(
-      '    /// `Object.keys` as read: the keys go out in this order, then any other in declaration order',
-      `    pub key_order: Vec<${key}>,`,
+      'jscompat::js_object! {',
+      `    /// \`${definition.name}\`: the keys go out in the order they were set`,
+      '    #[derive(Debug, Clone, PartialEq)]',
+      `    pub struct ${name} {`,
+      ...fields.map((field) => `        pub ${field.rust}: ${field.type},`),
+      '    }',
+      '}',
+      '',
     )
+  } else {
+    // a plain struct declares its own fields in the order it writes them
+    const written = order === 'input' ? [] : order.map((field) => byName.get(field)!)
+    const ownFields = written.filter((field) => definition.fields.findIndex((other) => other.name === field.name) >= own)
+    // a type whose required keys are all strings or arrays has an empty value:
+    // `{}`, or `{ text: "" }` for a Run. Its base passes the same test, its
+    // fields leading these
+    const empty = definition.fields.every(
+      (field) => field.optional || field.type.kind === 'string' || field.type.kind === 'array',
+    )
+    const derives = empty ? 'Debug, Clone, Default, PartialEq' : 'Debug, Clone, PartialEq'
+    lines.push(`/// \`${definition.name}\``, `#[derive(${derives})]`, `pub struct ${name} {`)
+    if (base) {
+      lines.push(
+        `    /// the fields of \`${base.definition.name}\`, which \`${definition.name}\` extends`,
+        `    pub ${base.field}: ${base.name},`,
+      )
+    }
+    lines.push(...ownFields.map((field) => `    pub ${field.rust}: ${field.type},`), '}', '')
   }
-  lines.push('}', '')
   if (base) {
     lines.push(
       `impl std::ops::Deref for ${name} {`,
@@ -272,7 +291,6 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
     '',
     `impl FieldKey for ${key} {`,
     `    const NAMES: &'static [&'static str] = &[${fields.map((field) => field.key).join(', ')}];`,
-    `    const ALL: &'static [Self] = &[${fields.map((field) => `Self::${field.variant}`).join(', ')}];`,
     '',
     '    fn from_name(name: &str) -> Option<Self> {',
     '        match name {',
@@ -288,39 +306,27 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
     '',
     `const _: () = assert!(${key}::NAMES.len() <= wire::MAX_KEYS);`,
     '',
-    `impl ${name} {`,
-    `    fn write_key<M: SerializeMap>(&self, key: ${key}, map: &mut M) -> Result<(), M::Error> {`,
-    '        match key {',
   )
-  for (const field of fields) {
-    if (field.optional) {
-      lines.push(
-        `            ${key}::${field.variant} => match &self.${field.access} {`,
-        `                Some(value) => map.serialize_entry(${field.key}, value),`,
-        '                None => Ok(()),',
-        '            },',
-      )
-    } else {
-      lines.push(
-        `            ${key}::${field.variant} => map.serialize_entry(${field.key}, &self.${field.access}),`,
-      )
+  if (order !== 'input') {
+    lines.push(
+      `impl Serialize for ${name} {`,
+      '    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {',
+      '        let mut map = serializer.serialize_map(None)?;',
+    )
+    for (const field of order.map((written) => byName.get(written)!)) {
+      if (field.slot || field.optional) {
+        lines.push(
+          `        if let Some(value) = ${field.slot ? '&*' : '&'}self.${field.access} {`,
+          `            map.serialize_entry(${field.key}, value)?;`,
+          '        }',
+        )
+      } else {
+        lines.push(`        map.serialize_entry(${field.key}, &self.${field.access})?;`)
+      }
     }
+    lines.push('        map.end()', '    }', '}', '')
   }
   lines.push(
-    '        }',
-    '    }',
-    '}',
-    '',
-    `impl Serialize for ${name} {`,
-    '    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {',
-    '        let mut map = serializer.serialize_map(None)?;',
-    `        for key in ${written} {`,
-    '            self.write_key(key, &mut map)?;',
-    '        }',
-    '        map.end()',
-    '    }',
-    '}',
-    '',
     `impl<'de> Deserialize<'de> for ${name} {`,
     "    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {",
     '        struct Fields;',
@@ -335,45 +341,43 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
     '                let mut seen = Seen::default();',
     ...levels
       .filter((level) => level.input)
-      .map((level) => `                let mut ${level.order} = Vec::new();`),
-    ...fields.map((field) => `                let mut ${field.local} = None;`),
+      .map((level) => `                let mut ${level.local} = ${level.name}::default();`),
+    ...fields.filter((field) => !field.slot).map((field) => `                let mut ${field.local} = None;`),
     `                while let Some(Key(key)) = map.next_key::<Key<${key}>>()? {`,
     '                    if !seen.insert(key.index()) {',
     '                        return Err(A::Error::duplicate_field(key.name()));',
     '                    }',
+    '                    match key {',
+    ...fields.map((field) =>
+      field.slot
+        ? `                        ${key}::${field.variant} => ${field.holder.local}.${field.rust}.set(map.next_value()?),`
+        : `                        ${key}::${field.variant} => ${field.local} = Some(map.next_value()?),`,
+    ),
+    '                    }',
+    '                }',
   )
-  if (input) lines.push('                    key_order.push(key);')
-  lines.push('                    match key {')
-  for (const field of fields) {
-    const read = `${field.local} = Some(map.next_value()?)`
+  for (const field of fields.filter((candidate) => candidate.slot && !candidate.optional)) {
     lines.push(
-      field.pushes.length === 0
-        ? `                        ${key}::${field.variant} => ${read},`
-        : `                        ${key}::${field.variant} => { ${read}; ${field.pushes.join(' ')} }`,
+      `                if !${field.holder.local}.${field.rust}.has_key() {`,
+      `                    return Err(A::Error::missing_field(${field.key}));`,
+      '                }',
     )
   }
   const value = (field: (typeof fields)[number]): string =>
-    field.optional
-      ? field.local
-      : `${field.local}.ok_or_else(|| A::Error::missing_field(${field.key}))?`
-  /** the fields of a level as a struct expression, its bases nested on one line */
-  const entries = (at: number): string[] => {
+    field.optional ? field.local : `${field.local}.ok_or_else(|| A::Error::missing_field(${field.key}))?`
+  /** a level as an expression: the local of a `js_object!`, else a struct expression with its bases nested */
+  const expression = (at: number): string => {
     const level = levels[at]!
+    if (level.input) return level.local
     const inner = levels[at + 1]
-    return [
-      ...(inner ? [`${inner.field}: ${inner.name} { ${entries(at + 1).join(', ')} }`] : []),
-      ...fields
-        .slice(inner?.count ?? 0, level.count)
-        .map((field) => `${field.rust}: ${value(field)}`),
-      ...(level.input ? [`key_order: ${level.order}`] : []),
+    const entries = [
+      ...(inner ? [`${inner.field}: ${expression(at + 1)}`] : []),
+      ...fields.slice(inner?.count ?? 0, level.count).map((field) => `${field.rust}: ${value(field)}`),
     ]
+    return `${level.name} { ${entries.join(', ')} }`
   }
   lines.push(
-    '                    }',
-    '                }',
-    `                Ok(${name} {`,
-    ...entries(0).map((entry) => `                    ${entry},`),
-    '                })',
+    `                Ok(${expression(0)})`,
     '            }',
     '        }',
     '        deserializer.deserialize_map(Fields)',
@@ -761,16 +765,20 @@ async function observeOrders(schema: ModelSchema, paths: readonly string[]): Pro
 async function main(): Promise<void> {
   const argv = process.argv.slice(2)
   const observeAt = argv.indexOf('--observe-orders')
-  const observed = observeAt < 0 ? [] : argv.slice(observeAt + 1).filter((arg) => !arg.startsWith('--'))
+  const after = observeAt < 0 ? [] : argv.slice(observeAt + 1)
+  const end = after.findIndex((arg) => arg.startsWith('--'))
+  const observed = end < 0 ? after : after.slice(0, end)
+  const outAt = argv.indexOf('--out')
+  const out = outAt < 0 ? GENERATED_PATH : resolve(argv[outAt + 1] ?? '')
+  if (outAt >= 0 && argv[outAt + 1] === undefined) throw new Error('--out takes a path')
   for (const arg of argv) {
-    if (!['--check', '--sync-orders', '--observe-orders', ...observed].includes(arg)) {
-      throw new Error(`unknown option ${arg}`)
-    }
+    const known = ['--check', '--sync-orders', '--observe-orders', '--out', ...observed]
+    if (!known.includes(arg) && arg !== argv[outAt + 1]) throw new Error(`unknown option ${arg}`)
   }
   if (observeAt >= 0 && observed.length === 0) throw new Error('--observe-orders takes the model input files')
   const args = new Set(argv)
   const check = args.has('--check')
-  if (check && observeAt >= 0) throw new Error('--check writes nothing: leave out --observe-orders')
+  if (check && (observeAt >= 0 || outAt >= 0)) throw new Error('--check writes nothing: leave out --observe-orders and --out')
   const schema = extractModelSchema()
   const stale: string[] = []
 
@@ -801,7 +809,8 @@ async function main(): Promise<void> {
       stale.push(`INLINE_WRAPPERS no longer reads as types.ts of ${INLINE_WRAPPERS.commit} does`)
     }
   } else {
-    writeFileSync(GENERATED_PATH, source)
+    mkdirSync(dirname(out), { recursive: true })
+    writeFileSync(out, source)
   }
   if (stale.length > 0) {
     console.error(stale.join('\n'))

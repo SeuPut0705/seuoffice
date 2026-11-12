@@ -27,8 +27,8 @@ export type SchemaNode =
   | { kind: 'map'; key: 'string' | 'number'; value: SchemaNode }
   /** `Uint8Array`: on the wire `{ "$bytes": base64 }` */
   | { kind: 'bytes' }
-  /** any JSON value: the resolver's types until resolve-props.ts is ported, and `unknown` */
-  | { kind: 'opaque'; name: 'EffectivePPr' | 'EffectiveRPr' | 'unknown' }
+  /** any JSON value: a field declared `unknown` */
+  | { kind: 'opaque'; name: 'unknown' }
   /** a union that is neither nullable nor all string literals; exactly one variant matches a value */
   | { kind: 'union'; variants: SchemaNode[] }
 
@@ -97,10 +97,6 @@ export interface InlineWrap {
 const PARSE_PATH = join(ENGINE_SRC, 'parse.ts')
 const PARSE_FUNCTION = 'parseDocx'
 
-/** Types read as any JSON value, by the module that declares them. */
-const OPAQUE: Record<string, readonly ('EffectivePPr' | 'EffectiveRPr')[]> = {
-  [join(ENGINE_SRC, 'resolve-props.ts')]: ['EffectivePPr', 'EffectiveRPr'],
-}
 /** Fields declared `unknown`, read as any JSON value. */
 const UNKNOWN_FIELDS = new Set(['ResolveDiff.old', 'ResolveDiff.eff'])
 
@@ -174,6 +170,8 @@ class Extractor {
   private readonly declaredIn = new Map<string, string>()
   /** overlay members of an interface types.ts declares, after the member named */
   private readonly spliced = new Map<string, { after: string; members: ts.TypeElement[] }>()
+  /** each member is read once: an indexed access may read it before its interface does */
+  private readonly fields = new Map<ts.TypeElement, Field | null>()
 
   constructor(private readonly sources: Map<string, string>) {}
 
@@ -248,7 +246,7 @@ class Extractor {
       merge(fields, this.members(module, declaration, name), declaration)
       const only = bases.length === 1 ? referenceOf(bases[0]!) : undefined
       const resolved = only && only.args.length === 0 && this.resolve(module, only.name, declaration)
-      const base = resolved && 'declaration' in resolved ? resolved.declaration.name.text : undefined
+      const base = resolved ? resolved.declaration.name.text : undefined
       this.types.set(name, { kind: 'object', name, fields, ...(base === undefined ? {} : { base }) })
       return name
     }
@@ -270,7 +268,32 @@ class Extractor {
     return members.map((member) => this.field(module, member, path))
   }
 
+  /**
+   * `X['key']` while X is still being read (`EffectiveRPr.bdr: Run['bdr']`
+   * read from `Run.effective`): the field of that member, read once.
+   */
+  private pendingMember(module: Module, node: ts.TypeNode, key: string): Field | undefined {
+    const reference = referenceOf(node)
+    const resolved = reference && reference.args.length === 0 && this.resolve(module, reference.name, node)
+    if (!resolved || !ts.isInterfaceDeclaration(resolved.declaration)) return undefined
+    const name = resolved.declaration.name.text
+    if (this.types.get(name) !== null) return undefined
+    const members = [...resolved.declaration.members, ...(this.spliced.get(name)?.members ?? [])]
+    const member = members.find((candidate) => candidate.name?.getText() === key)
+    return member && this.field(resolved.module, member, name)
+  }
+
   private field(module: Module, member: ts.TypeElement, path: string): Field {
+    const known = this.fields.get(member)
+    if (known === null) fail(member, 'a field whose type reads itself')
+    if (known) return known
+    this.fields.set(member, null)
+    const field = this.readField(module, member, path)
+    this.fields.set(member, field)
+    return field
+  }
+
+  private readField(module: Module, member: ts.TypeElement, path: string): Field {
     if (!ts.isPropertySignature(member) || !member.type) fail(member, 'not a property')
     if (!ts.isIdentifier(member.name) && !ts.isStringLiteral(member.name)) {
       fail(member, 'a computed key')
@@ -306,13 +329,11 @@ class Extractor {
     module: Module,
     name: string,
     at: ts.Node,
-  ): { module: Module; declaration: Declaration } | SchemaNode | undefined {
+  ): { module: Module; declaration: Declaration } | undefined {
     const local = module.declarations.get(name)
     if (local) return { module, declaration: local }
     const imported = module.imports.get(name)
     if (!imported) return undefined
-    const opaque = OPAQUE[imported.from]?.find((type) => type === imported.name)
-    if (opaque) return { kind: 'opaque', name: opaque }
     const target = this.module(imported.from)
     const declaration = target.declarations.get(imported.name)
     if (!declaration) fail(at, `${relative(REPO_ROOT, imported.from)} declares no ${imported.name}`)
@@ -331,7 +352,7 @@ class Extractor {
     }
     const reference = referenceOf(node)
     const resolved = reference && this.resolve(module, reference.name, node)
-    if (resolved && 'declaration' in resolved && ts.isTypeAliasDeclaration(resolved.declaration)) {
+    if (resolved && ts.isTypeAliasDeclaration(resolved.declaration)) {
       return this.keys(resolved.module, resolved.declaration.type) ?? fail(node, 'not finite keys')
     }
     return fail(node, 'not a key type')
@@ -374,7 +395,7 @@ class Extractor {
       const type = this.node(module, reference.args[1]!, `${path}{}`, 'other')
       return keys.map((name) => ({ name, optional: false, type }))
     }
-    if (resolved === undefined || !('declaration' in resolved)) {
+    if (resolved === undefined) {
       return fail(node, 'not an object type')
     }
     if (reference.args.length > 0) fail(node, 'type arguments')
@@ -424,8 +445,10 @@ class Extractor {
     if (ts.isUnionTypeNode(node)) return this.union(module, node, path, where)
     if (ts.isIndexedAccessTypeNode(node)) {
       const key = stringLiteral(node.indexType) ?? fail(node, 'an index that is no string literal')
-      const fields = this.shapeFields(module, node.objectType, path)
-      const field = fields.find((candidate) => candidate.name === key) ?? fail(node, `no field ${key}`)
+      const field =
+        this.pendingMember(module, node.objectType, key) ??
+        this.shapeFields(module, node.objectType, path).find((candidate) => candidate.name === key) ??
+        fail(node, `no field ${key}`)
       if (field.optional && where !== 'optionalField') {
         fail(node, 'an optional field read where undefined is not allowed')
       }
@@ -435,7 +458,6 @@ class Extractor {
     const resolved = this.resolve(module, reference.name, node)
     if (resolved !== undefined) {
       if (reference.args.length > 0) fail(node, 'type arguments')
-      if (!('declaration' in resolved)) return resolved
       return { kind: 'ref', name: this.named(resolved.module, resolved.declaration) }
     }
     const [first, second] = reference.args

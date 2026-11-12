@@ -43,7 +43,7 @@ struct Emitter<'r, 'h, 'v> {
 }
 
 fn revision_key(run: &Run) -> Option<(&Option<RevisionInfo>, &Option<RevisionInfo>)> {
-    (run.ins.is_some() || run.del.is_some()).then_some((&run.ins, &run.del))
+    (run.ins.is_some() || run.del.is_some()).then_some((&*run.ins, &*run.del))
 }
 
 fn same_info(a: &RevisionInfo, b: &RevisionInfo) -> bool {
@@ -79,7 +79,7 @@ impl Emitter<'_, '_, '_> {
         let mut i = from;
         while i < to {
             let run = &self.runs[i];
-            if let Some(link) = &run.link {
+            if let Some(link) = &*run.link {
                 let start = i;
                 let href = &link.href;
                 let mut rid = link.r_id.as_deref();
@@ -141,8 +141,8 @@ impl Emitter<'_, '_, '_> {
                 }
                 let ins_tag = if run.ins.as_ref().and_then(|info| info.r#move.as_deref()).is_some_and(|v| !v.is_empty()) { "w:moveTo" } else { "w:ins" };
                 let del_tag = if run.del.as_ref().and_then(|info| info.r#move.as_deref()).is_some_and(|v| !v.is_empty()) { "w:moveFrom" } else { "w:del" };
-                if let Some(info) = &run.ins { out.push_str(&format!("<{ins_tag}{}>", self.revision_attrs(info))); }
-                if let Some(info) = &run.del { out.push_str(&format!("<{del_tag}{}>", self.revision_attrs(info))); }
+                if let Some(info) = &*run.ins { out.push_str(&format!("<{ins_tag}{}>", self.revision_attrs(info))); }
+                if let Some(info) = &*run.del { out.push_str(&format!("<{del_tag}{}>", self.revision_attrs(info))); }
                 self.emit_range(g, end, &mut out);
                 if run.del.is_some() { out.push_str(&format!("</{del_tag}>")); }
                 if run.ins.is_some() { out.push_str(&format!("</{ins_tag}>")); }
@@ -158,7 +158,7 @@ impl Emitter<'_, '_, '_> {
 
 fn glyph_runs(run: &Run, is_glyph: impl Fn(char) -> bool, glyph: impl Fn(char) -> String, plain: impl Fn(&str) -> String) -> String {
     let mut out=String::new(); let mut buffer=String::new();
-    for ch in run.text.chars() {
+    for ch in run.text.as_deref().unwrap_or_default().chars() {
         if is_glyph(ch) { if !buffer.is_empty() { out.push_str(&plain(&buffer)); buffer.clear(); } out.push_str(&glyph(ch)); } else { buffer.push(ch); }
     }
     if !buffer.is_empty() { out.push_str(&plain(&buffer)); }
@@ -186,26 +186,27 @@ fn sync_checkbox(xml:&str,checked:bool)->String {
 }
 
 fn run_fragment_xml(run:&Run,inside_link:bool)->String {
-    if let Some(math)=&run.math { return if math.display.unwrap_or(false) { format!("<m:oMathPara>{}</m:oMathPara>",math.omml) } else { math.omml.clone() }; }
-    if let Some(ruby)=&run.ruby { return format!("<w:r>{}</w:r>",ruby.xml); }
-    if let Some(image)=&run.image { return format!("{}<w:r>{}{}</w:r>",if run.text.is_empty(){String::new()}else{generate_run_xml(run,&run.text,inside_link)},run.raw_r_pr.as_deref().unwrap_or_default(),image.xml); }
-    if let Some(sym)=&run.sym { return format!("<w:r>{}<w:sym w:font=\"{}\" w:char=\"{}\"/></w:r>",run_r_pr_xml(run,inside_link),attr(&sym.font),attr(&sym.char)); }
-    if let Some(note)=&run.note_ref { return format!("<w:r>{}<w:{}Reference w:id=\"{}\"/></w:r>",run.raw_r_pr.as_deref().unwrap_or("<w:rPr><w:vertAlign w:val=\"superscript\"/></w:rPr>"),note.kind.as_str(),attr(&note.id)); }
+    let run_text = run.text.as_deref().unwrap_or_default();
+    if let Some(math)=&*run.math { return if math.display.unwrap_or(false) { format!("<m:oMathPara>{}</m:oMathPara>",math.omml) } else { math.omml.clone() }; }
+    if let Some(ruby)=&*run.ruby { return format!("<w:r>{}</w:r>",ruby.xml); }
+    if let Some(image)=&*run.image { return format!("{}<w:r>{}{}</w:r>",if run_text.is_empty(){String::new()}else{generate_run_xml(run,run_text,inside_link)},run.raw_r_pr.as_deref().unwrap_or_default(),image.xml); }
+    if let Some(sym)=&*run.sym { return format!("<w:r>{}<w:sym w:font=\"{}\" w:char=\"{}\"/></w:r>",run_r_pr_xml(run,inside_link),attr(&sym.font),attr(&sym.char)); }
+    if let Some(note)=&*run.note_ref { return format!("<w:r>{}<w:{}Reference w:id=\"{}\"/></w:r>",run.raw_r_pr.as_deref().unwrap_or("<w:rPr><w:vertAlign w:val=\"superscript\"/></w:rPr>"),note.kind.as_str(),attr(&note.id)); }
     let begin=||format!("<w:r><w:fldChar w:fldCharType=\"begin\"{}/></w:r>",if run.fld_dirty.is_some(){" w:dirty=\"true\""}else{""});
     let end="<w:r><w:fldChar w:fldCharType=\"end\"/></w:r>";
-    if let Some(reference)=&run.ref_field {
+    if let Some(reference)=&*run.ref_field {
         let default_instr=format!(" REF {} \\h ",reference.replace('"',""));
         let instr=run.ref_instr.as_deref().unwrap_or(&default_instr);
-        return format!("{}<w:r><w:instrText xml:space=\"preserve\">{}</w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>{}{end}",begin(),text(instr),generate_run_xml(run,&run.text,inside_link));
+        return format!("{}<w:r><w:instrText xml:space=\"preserve\">{}</w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>{}{end}",begin(),text(instr),generate_run_xml(run,run_text,inside_link));
     }
     if let Some(xml)=run.sdt_checkbox_xml.as_deref().filter(|xml|!xml.is_empty()) {
         let (checked,unchecked)=checkbox_glyphs(xml);
         return glyph_runs(run,|ch|ch==checked||ch==unchecked,|ch|format!("<w:sdt>{}<w:sdtContent>{}</w:sdtContent></w:sdt>",sync_checkbox(xml,ch==checked),generate_run_xml(run,&ch.to_string(),inside_link)),|plain|generate_run_xml(run,plain,inside_link));
     }
-    if let Some(instr)=&run.instr_field {
+    if let Some(instr)=&*run.instr_field {
         let instr_xml=format!("<w:r><w:instrText xml:space=\"preserve\"> {} </w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>",text(instr));
         if let Some(part)=run.zotero_field_part.as_ref().map(|v|v.as_str()).filter(|v|*v!="single") {
-            let cached=generate_run_xml(run,&run.text,inside_link);
+            let cached=generate_run_xml(run,run_text,inside_link);
             return match part { "begin"=>format!("<w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>{instr_xml}{cached}"),"end"=>format!("{cached}{end}"),_=>cached };
         }
         if let Some(begin_xml)=run.fld_begin_xml.as_deref().filter(|xml|!xml.is_empty()) {
@@ -217,10 +218,10 @@ fn run_fragment_xml(run:&Run,inside_link:bool)->String {
                 format!("{synced}{instr_xml}{end}")
             },|plain|generate_run_xml(run,plain,inside_link));
         }
-        return format!("{}{instr_xml}{}{end}",begin(),generate_run_xml(run,&run.text,inside_link));
+        return format!("{}{instr_xml}{}{end}",begin(),generate_run_xml(run,run_text,inside_link));
     }
-    let mut xml=if run.text.is_empty(){String::new()}else{generate_run_xml(run,&run.text,inside_link)};
-    if let Some(term)=&run.xe_term { xml.push_str(&format!("<w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:instrText xml:space=\"preserve\"> XE \"{}\" </w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"end\"/></w:r>",text(&term.replace('"',"")))); }
+    let mut xml=if run_text.is_empty(){String::new()}else{generate_run_xml(run,run_text,inside_link)};
+    if let Some(term)=&*run.xe_term { xml.push_str(&format!("<w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:instrText xml:space=\"preserve\"> XE \"{}\" </w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"end\"/></w:r>",text(&term.replace('"',"")))); }
     xml
 }
 

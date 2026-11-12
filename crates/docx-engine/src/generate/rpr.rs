@@ -391,15 +391,15 @@ fn model_r_pr_children(run: &Run, inside_link: bool) -> Vec<Child> {
             ),
         ));
     }
-    if run.bold == Some(true) {
+    if *run.bold == Some(true) {
         out.push(child("w:b", "<w:b/>"));
         out.push(child("w:bCs", "<w:bCs/>"));
     }
-    if run.italic == Some(true) {
+    if *run.italic == Some(true) {
         out.push(child("w:i", "<w:i/>"));
         out.push(child("w:iCs", "<w:iCs/>"));
     }
-    if run.strike == Some(true) {
+    if *run.strike == Some(true) {
         out.push(child("w:strike", "<w:strike/>"));
     }
     match run.caps.as_ref().map(|c| c.as_str()) {
@@ -411,10 +411,10 @@ fn model_r_pr_children(run: &Run, inside_link: bool) -> Vec<Child> {
         }
         _ => {}
     }
-    if let Some(d) = run.dstrike {
+    if let Some(d) = *run.dstrike {
         out.push(child("w:dstrike", on_off_xml("w:dstrike", d)));
     }
-    if let Some(v) = run.vanish_own {
+    if let Some(v) = *run.vanish_own {
         out.push(child("w:vanish", on_off_xml("w:vanish", v)));
     }
     if let Some(c) = run.color.as_deref().filter(|c| !c.is_empty()) {
@@ -423,19 +423,19 @@ fn model_r_pr_children(run: &Run, inside_link: bool) -> Vec<Child> {
             format!("<w:color w:val=\"{}\"/>", escape_xml_attr(c)),
         ));
     }
-    if let Some(s) = run.char_spacing_twips {
+    if let Some(s) = *run.char_spacing_twips {
         out.push(child("w:spacing", format!("<w:spacing w:val=\"{}\"/>", num(s))));
     }
-    if num_truthy(run.char_scale_pct) {
+    if num_truthy(*run.char_scale_pct) {
         out.push(child(
             "w:w",
             format!("<w:w w:val=\"{}\"/>", num(run.char_scale_pct.unwrap())),
         ));
     }
-    if let Some(k) = run.kern_half_points {
+    if let Some(k) = *run.kern_half_points {
         out.push(child("w:kern", format!("<w:kern w:val=\"{}\"/>", num(k))));
     }
-    if num_truthy(run.position_half_points) {
+    if num_truthy(*run.position_half_points) {
         out.push(child(
             "w:position",
             format!(
@@ -444,7 +444,7 @@ fn model_r_pr_children(run: &Run, inside_link: bool) -> Vec<Child> {
             ),
         ));
     }
-    if num_truthy(run.size_half_points) {
+    if num_truthy(*run.size_half_points) {
         let size = num(run.size_half_points.unwrap());
         out.push(child("w:sz", format!("<w:sz w:val=\"{size}\"/>")));
         out.push(child("w:szCs", format!("<w:szCs w:val=\"{size}\"/>")));
@@ -455,7 +455,7 @@ fn model_r_pr_children(run: &Run, inside_link: bool) -> Vec<Child> {
             format!("<w:highlight w:val=\"{}\"/>", escape_xml_attr(h)),
         ));
     }
-    if run.underline == Some(true) {
+    if *run.underline == Some(true) {
         out.push(child("w:u", "<w:u w:val=\"single\"/>"));
     }
     if let Some(s) = run.shading.as_deref().filter(|s| !s.is_empty()) {
@@ -473,7 +473,7 @@ fn model_r_pr_children(run: &Run, inside_link: bool) -> Vec<Child> {
             format!("<w:vertAlign w:val=\"{}\"/>", v.as_str()),
         ));
     }
-    if run.rtl == Some(true) {
+    if *run.rtl == Some(true) {
         out.push(child("w:rtl", "<w:rtl/>"));
     }
     if let Some(change) = revision_r_pr_change_xml(run) {
@@ -524,7 +524,7 @@ pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String 
             .find(|(name, _)| name == tag)
             .map(|(_, xml)| xml.as_str())
     };
-    let cs = run.cs == Some(true) || raw_bool(raw_of("w:rtl"));
+    let cs = *run.cs == Some(true) || raw_bool(raw_of("w:rtl"));
 
     let mut fresh_by_group: Vec<Vec<Child>> = RUN_MANAGED_GROUPS.iter().map(|_| Vec::new()).collect();
     for f in fresh {
@@ -568,37 +568,37 @@ pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String 
                         || run.east_asia_font.as_deref() == theme_font)
                     && (run.font_cs.is_none() || raw_attr(attrs, "w:cs") == run.font_cs.as_deref())
             }
-            Group::Bold => raw_bool(raw_of(if cs { "w:bCs" } else { "w:b" })) == (run.bold == Some(true)),
+            Group::Bold => raw_bool(raw_of(if cs { "w:bCs" } else { "w:b" })) == (*run.bold == Some(true)),
             Group::Italic => {
-                raw_bool(raw_of(if cs { "w:iCs" } else { "w:i" })) == (run.italic == Some(true))
+                raw_bool(raw_of(if cs { "w:iCs" } else { "w:i" })) == (*run.italic == Some(true))
             }
-            Group::Strike => raw_bool(raw_of("w:strike")) == (run.strike == Some(true)),
+            Group::Strike => raw_bool(raw_of("w:strike")) == (*run.strike == Some(true)),
             Group::Caps => {
                 raw_caps(raw_of("w:caps"), raw_of("w:smallCaps"))
                     == run.caps.as_ref().map(|c| c.as_str())
             }
-            Group::Dstrike => raw_bool(raw_of("w:dstrike")) == (run.dstrike == Some(true)),
-            Group::Vanish => run.vanish_own.is_none() || raw_on_off(raw_of("w:vanish")) == run.vanish_own,
-            Group::Spacing => num_eq(raw_int(raw_of("w:spacing")), run.char_spacing_twips),
+            Group::Dstrike => raw_bool(raw_of("w:dstrike")) == (*run.dstrike == Some(true)),
+            Group::Vanish => run.vanish_own.is_none() || raw_on_off(raw_of("w:vanish")) == *run.vanish_own,
+            Group::Spacing => num_eq(raw_int(raw_of("w:spacing")), *run.char_spacing_twips),
             Group::Scale => {
                 let raw = raw_int(raw_of("w:w")).filter(|r| *r != 0.0 && *r != 100.0);
-                num_eq(raw, run.char_scale_pct)
+                num_eq(raw, *run.char_scale_pct)
             }
             Group::Kern => {
                 let raw = raw_attr(raw_of("w:kern"), "w:val").map(|r| {
                     let n = parse_int(r, Radix::Ten);
                     if n.is_nan() || n == 0.0 { 0.0 } else { n }
                 });
-                num_eq(raw, run.kern_half_points)
+                num_eq(raw, *run.kern_half_points)
             }
             Group::Position => num_eq(
                 raw_int(raw_of("w:position")).filter(|n| *n != 0.0),
-                run.position_half_points,
+                *run.position_half_points,
             ),
             Group::Color => {
                 let raw = raw_attr(raw_of("w:color"), "w:val");
                 raw == run.color.as_deref()
-                    || (run.theme_color.is_some() && run.color == run.theme_color)
+                    || (run.theme_color.is_some() && *run.color == *run.theme_color)
             }
             Group::Size => {
                 let raw = raw_attr(raw_of(if cs { "w:szCs" } else { "w:sz" }), "w:val");
@@ -606,7 +606,7 @@ pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String 
                     let n = parse_int(r, Radix::Ten);
                     if n.is_nan() || n == 0.0 { None } else { Some(n) }
                 });
-                num_eq(raw, run.size_half_points)
+                num_eq(raw, *run.size_half_points)
             }
             Group::Highlight => {
                 let raw = raw_attr(raw_of("w:highlight"), "w:val").filter(|r| *r != "none");
@@ -618,14 +618,14 @@ pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String 
             }
             Group::Underline => {
                 let val = raw_attr(raw_of("w:u"), "w:val");
-                (val.is_some() && val != Some("none")) == (run.underline == Some(true))
+                (val.is_some() && val != Some("none")) == (*run.underline == Some(true))
             }
             Group::VertAlign => {
                 let raw = raw_attr(raw_of("w:vertAlign"), "w:val");
                 let modeled = raw.filter(|r| *r == "superscript" || *r == "subscript");
                 modeled == run.vert_align.as_ref().map(|v| v.as_str())
             }
-            Group::Rtl => raw_bool(raw_of("w:rtl")) == (run.rtl == Some(true)),
+            Group::Rtl => raw_bool(raw_of("w:rtl")) == (*run.rtl == Some(true)),
             Group::RPrChange => truthy(raw_of("w:rPrChange")) == run.r_pr_change.is_some(),
         }
     };

@@ -21,10 +21,17 @@
 //! a table nested about 25 deep in its cells reaches.
 //!
 //! An object writes its keys in the order `tools/docx-diff/model-orders.json`
-//! commits for its type. A type marked `"input"` there writes them in the
-//! order the TypeScript set them, which depends on the path its code took:
-//! the struct has a `key_order` field, filled when read, and writes the keys
-//! it lists first and any other it holds after them in declaration order.
+//! commits for its type, which is the order its struct declares its own
+//! fields in. A type marked `"input"` there is one whose key order follows
+//! the path the TypeScript took: it is declared with [`jscompat::js_object!`],
+//! every field a [`jscompat::Slot`] (`T | null` is `Slot<Option<T>>`), it
+//! writes its keys in the order they were set, and reading one sets them in
+//! the order of the input. A type composed over such a base (`HfParagraph`
+//! over `ParaFormat`) writes in its own committed order.
+//!
+//! The resolver's `EffectivePPr` and `EffectiveRPr` are model types like any
+//! other, read from `resolve-props.ts`; only fields declared `unknown` are
+//! held as JSON values.
 
 #[rustfmt::skip]
 mod generated;

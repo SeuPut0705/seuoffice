@@ -296,7 +296,7 @@ fn cell_borders_xml(borders: &CellBorders) -> String {
 /// w:tcMar / w:tblCellMar with only the declared sides; None when nothing is declared
 fn cell_margins_xml(tag: &str, margins: Option<&CellMargins>) -> Option<String> {
     let margins = margins?;
-    let sides: String = [("top", margins.top), ("left", margins.left), ("bottom", margins.bottom), ("right", margins.right)]
+    let sides: String = [("top", *margins.top), ("left", *margins.left), ("bottom", *margins.bottom), ("right", *margins.right)]
         .into_iter()
         .filter_map(|(side, value)| {
             value.map(|value| format!("<w:{side} w:w=\"{}\" w:type=\"dxa\"/>", num(js_max(0.0, math_round(value.0)))))
@@ -444,14 +444,19 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
         None => {
             let empty = [String::new()];
             let texts: &[String] = if cell.paras.is_empty() { &empty } else { &cell.paras };
-            let format = ParaFormat { align: cell.align, ..ParaFormat::default() };
+            let mut format = ParaFormat::default();
+            format.align.assign(cell.align);
             texts
                 .iter()
                 .map(|text| {
                     let runs = if text.is_empty() {
                         Vec::new()
                     } else {
-                        vec![Run { text: text.clone(), bold: cell.bold, color: cell.color.clone(), ..Run::default() }]
+                        let mut run = Run::default();
+                        run.text.set(text.clone());
+                        run.bold.assign(cell.bold);
+                        run.color.assign(cell.color.clone());
+                        vec![run]
                     };
                     paragraph_xml(&format, &runs, None)
                 })
@@ -762,10 +767,10 @@ pub fn generate_table_model_xml(model: &TableModel, original_table_xml: Option<&
         };
         format!(
             "<w:tblCellMar>{}{}{}{}</w:tblCellMar>",
-            side("top", mar.top),
-            side("left", mar.left),
-            side("bottom", mar.bottom),
-            side("right", mar.right)
+            side("top", *mar.top),
+            side("left", *mar.left),
+            side("bottom", *mar.bottom),
+            side("right", *mar.right)
         )
     });
     let grid_record = match &model.tbl_grid_change {
@@ -835,10 +840,10 @@ pub fn generate_table_model_xml(model: &TableModel, original_table_xml: Option<&
                 };
                 let tag = format!(
                     "<w:tblpPr{}{}{}{} w:vertAnchor=\"{vert}\" w:horzAnchor=\"{horz}\" w:tblpX=\"{}\" w:tblpY=\"{}\"/>",
-                    attr("leftFromText", distance.and_then(|d| d.left)),
-                    attr("rightFromText", distance.and_then(|d| d.right)),
-                    attr("topFromText", distance.and_then(|d| d.top)),
-                    attr("bottomFromText", distance.and_then(|d| d.bottom)),
+                    attr("leftFromText", distance.and_then(|d| *d.left)),
+                    attr("rightFromText", distance.and_then(|d| *d.right)),
+                    attr("topFromText", distance.and_then(|d| *d.top)),
+                    attr("bottomFromText", distance.and_then(|d| *d.bottom)),
                     num(math_round(x)),
                     num(math_round(y))
                 );

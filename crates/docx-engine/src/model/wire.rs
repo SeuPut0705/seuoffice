@@ -15,8 +15,6 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 pub trait FieldKey: Copy + 'static {
     /// The keys as the TypeScript writes them, in declaration order.
     const NAMES: &'static [&'static str];
-    /// Every key, in declaration order.
-    const ALL: &'static [Self];
 
     fn from_name(name: &str) -> Option<Self>;
 
@@ -67,18 +65,6 @@ impl Seen {
         self.0[word] |= bit;
         new
     }
-}
-
-/// The keys of an object whose order follows the path the TypeScript took:
-/// those of `key_order` first, then every other in declaration order, each
-/// once. The object writes those it holds.
-pub(super) fn input_order<K: FieldKey>(key_order: &[K]) -> impl Iterator<Item = K> + '_ {
-    let mut written = Seen::default();
-    key_order
-        .iter()
-        .chain(K::ALL)
-        .copied()
-        .filter(move |key| written.insert(key.index()))
 }
 
 /// The one candidate a union value reads as.

@@ -134,10 +134,10 @@ encoding for media and `internal.originalBytes`. Keep Map entries unless a
 replacement preserves key type, entries and order. The wire version must
 identify whichever product representation is chosen.
 
-The model holds `EffectivePPr`, `EffectiveRPr` and fields declared `unknown`
-as ordered JSON until the resolver port is integrated. This unit does not
-verify their field types. Byte comparison still checks their values and
-written key order.
+The model reads `EffectivePPr`, `EffectiveRPr` and the types they name from
+`resolve-props.ts` and types them like the rest; only fields declared
+`unknown` are held as JSON values. Their key orders come from the parse
+results and equal the field orders of the structs in `resolve.rs`.
 
 ## The gate: tools/docx-diff
 

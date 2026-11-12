@@ -90,11 +90,11 @@ const PPR_FLAG_TAGS: [&str; 5] = [
 
 fn flag(format: &ParaFormat, tag: &str) -> Option<bool> {
     match tag {
-        "w:keepNext" => format.keep_next,
-        "w:keepLines" => format.keep_lines,
-        "w:widowControl" => format.widow_control,
-        "w:suppressLineNumbers" => format.suppress_line_numbers,
-        "w:contextualSpacing" => format.contextual_spacing,
+        "w:keepNext" => *format.keep_next,
+        "w:keepLines" => *format.keep_lines,
+        "w:widowControl" => *format.widow_control,
+        "w:suppressLineNumbers" => *format.suppress_line_numbers,
+        "w:contextualSpacing" => *format.contextual_spacing,
         _ => None,
     }
 }
@@ -122,23 +122,23 @@ fn border_line(format: &ParaFormat, ch: char) -> Option<&ParaBorderLine> {
 /// w:spacing element for a ParaFormat ('' when nothing is set)
 fn para_spacing_xml(format: &ParaFormat) -> String {
     let mut attrs: Vec<String> = Vec::new();
-    if let Some(before) = n(format.space_before).filter(|b| *b > 0.0) {
+    if let Some(before) = n(*format.space_before).filter(|b| *b > 0.0) {
         attrs.push(format!("w:before=\"{}\"", round(before)));
     }
-    if let Some(auto) = format.space_before_auto {
+    if let Some(auto) = *format.space_before_auto {
         attrs.push(format!("w:beforeAutospacing=\"{}\"", u8::from(auto)));
     }
-    if let Some(after) = n(format.space_after).filter(|a| *a >= 0.0) {
+    if let Some(after) = n(*format.space_after).filter(|a| *a >= 0.0) {
         attrs.push(format!("w:after=\"{}\"", round(after)));
     }
-    if let Some(auto) = format.space_after_auto {
+    if let Some(auto) = *format.space_after_auto {
         attrs.push(format!("w:afterAutospacing=\"{}\"", u8::from(auto)));
     }
     let rule = format.line_rule.as_ref().map(|r| r.as_str());
-    if (rule == Some("exact") || rule == Some("atLeast")) && num_truthy(format.line_raw_twips) {
+    if (rule == Some("exact") || rule == Some("atLeast")) && num_truthy(*format.line_raw_twips) {
         attrs.push(format!("w:line=\"{}\"", round(format.line_raw_twips.unwrap().0)));
         attrs.push(format!("w:lineRule=\"{}\"", rule.unwrap()));
-    } else if let Some(spacing) = n(format.line_spacing).filter(|s| *s > 0.0) {
+    } else if let Some(spacing) = n(*format.line_spacing).filter(|s| *s > 0.0) {
         attrs.push(format!("w:line=\"{}\"", round(spacing * 240.0)));
         attrs.push("w:lineRule=\"auto\"".to_owned());
     }
@@ -156,7 +156,7 @@ pub(crate) fn format_p_pr_children(format: Option<&ParaFormat>) -> Vec<(String, 
     };
     let mut out: Vec<(String, String)> = Vec::new();
     let mut push = |name: &str, xml: String| out.push((name.to_owned(), xml));
-    if format.page_break_before == Some(true) {
+    if *format.page_break_before == Some(true) {
         push("w:pageBreakBefore", "<w:pageBreakBefore/>".to_owned());
     }
     for tag in PPR_FLAG_TAGS {
@@ -224,7 +224,7 @@ pub(crate) fn format_p_pr_children(format: Option<&ParaFormat>) -> Vec<(String, 
             ),
         );
     }
-    if format.bidi == Some(true) {
+    if *format.bidi == Some(true) {
         push("w:bidi", "<w:bidi/>".to_owned());
     }
     let spacing = para_spacing_xml(format);
@@ -232,10 +232,10 @@ pub(crate) fn format_p_pr_children(format: Option<&ParaFormat>) -> Vec<(String, 
         push("w:spacing", spacing);
     }
     let mut ind: Vec<String> = Vec::new();
-    if let Some(left) = n(format.indent_left) {
+    if let Some(left) = n(*format.indent_left) {
         ind.push(format!("w:left=\"{}\"", round(left)));
     }
-    if let Some(right) = n(format.indent_right) {
+    if let Some(right) = n(*format.indent_right) {
         ind.push(format!("w:right=\"{}\"", round(right)));
     }
     if let Some(first) = format.char_indents.as_ref().and_then(|c| c.first_line)
@@ -243,7 +243,7 @@ pub(crate) fn format_p_pr_children(format: Option<&ParaFormat>) -> Vec<(String, 
     {
         ind.push(format!("w:firstLineChars=\"{}\"", round(first.0)));
     }
-    if let Some(first) = n(format.indent_first_line) {
+    if let Some(first) = n(*format.indent_first_line) {
         if first >= 0.0 {
             ind.push(format!("w:firstLine=\"{}\"", round(first)));
         } else {
@@ -258,7 +258,7 @@ pub(crate) fn format_p_pr_children(format: Option<&ParaFormat>) -> Vec<(String, 
             "justify" => "both",
             other => other,
         };
-        if (format.bidi == Some(true) || format.bidi_inherited == Some(true))
+        if (*format.bidi == Some(true) || *format.bidi_inherited == Some(true))
             && (jc == "left" || jc == "right")
         {
             jc = if jc == "left" { "right" } else { "left" };
@@ -301,7 +301,7 @@ pub(crate) fn format_p_pr_children(format: Option<&ParaFormat>) -> Vec<(String, 
             ),
         );
     }
-    if num_truthy(format.empty_run_size_half_points) {
+    if num_truthy(*format.empty_run_size_half_points) {
         let sz = round(format.empty_run_size_half_points.unwrap().0);
         push(
             "w:rPr",
@@ -390,25 +390,25 @@ fn raw_spacing_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
     let after = parse_int(after_str.unwrap_or(""), Radix::Ten);
     let raw_before = (before > 0.0).then_some(before);
     let raw_after = (after_str.is_some() && after >= 0.0).then_some(after);
-    let f_before = n(f.space_before).filter(|b| *b > 0.0).map(math_round);
-    let f_after = n(f.space_after).filter(|a| *a >= 0.0).map(math_round);
+    let f_before = n(*f.space_before).filter(|b| *b > 0.0).map(math_round);
+    let f_after = n(*f.space_after).filter(|a| *a >= 0.0).map(math_round);
     if !same(raw_before, f_before) || !same(raw_after, f_after) {
         return false;
     }
     let raw_auto = |v: Option<&str>| v.map(|v| v == "1" || v == "true");
-    if raw_auto(raw_attr(raw, "w:beforeAutospacing")) != f.space_before_auto {
+    if raw_auto(raw_attr(raw, "w:beforeAutospacing")) != *f.space_before_auto {
         return false;
     }
-    if raw_auto(raw_attr(raw, "w:afterAutospacing")) != f.space_after_auto {
+    if raw_auto(raw_attr(raw, "w:afterAutospacing")) != *f.space_after_auto {
         return false;
     }
     let f_rule = f.line_rule.as_ref().map(|r| r.as_str());
-    if (f_rule == Some("exact") || f_rule == Some("atLeast")) && num_truthy(f.line_raw_twips) {
+    if (f_rule == Some("exact") || f_rule == Some("atLeast")) && num_truthy(*f.line_raw_twips) {
         return line > 0.0
             && Some(rule) == f_rule
             && line == math_round(f.line_raw_twips.unwrap().0);
     }
-    if let Some(spacing) = n(f.line_spacing).filter(|s| *s > 0.0) {
+    if let Some(spacing) = n(*f.line_spacing).filter(|s| *s > 0.0) {
         return line > 0.0 && rule == "auto" && math_round((line / 240.0) * 100.0) / 100.0 == spacing;
     }
     !(line > 0.0)
@@ -434,9 +434,9 @@ fn raw_ind_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
     } else {
         None
     };
-    same(finite(left), n(f.indent_left).map(math_round))
-        && same(finite(right), n(f.indent_right).map(math_round))
-        && same(raw_first, n(f.indent_first_line).map(math_round))
+    same(finite(left), n(*f.indent_left).map(math_round))
+        && same(finite(right), n(*f.indent_right).map(math_round))
+        && same(raw_first, n(*f.indent_first_line).map(math_round))
 }
 
 /// `s.replace(re, '')` for a regex anchored at one end, without the g flag
@@ -562,9 +562,9 @@ fn raw_frame_pr_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
 
 fn same_indent(a: &ParaFormat, b: &ParaFormat) -> bool {
     let norm = |v: Option<JsNum>| n(v).map(math_round);
-    same(norm(a.indent_left), norm(b.indent_left))
-        && same(norm(a.indent_right), norm(b.indent_right))
-        && same(norm(a.indent_first_line), norm(b.indent_first_line))
+    same(norm(*a.indent_left), norm(*b.indent_left))
+        && same(norm(*a.indent_right), norm(*b.indent_right))
+        && same(norm(*a.indent_first_line), norm(*b.indent_first_line))
 }
 
 fn char_indent_cancel_attrs(original: &CharIndents, format: Option<&ParaFormat>) -> Vec<&'static str> {
@@ -597,17 +597,17 @@ fn ppr_group_unchanged(
     original: Option<&ParaFormat>,
 ) -> bool {
     match tag {
-        "w:pageBreakBefore" => raw_bool(raw) == (f.page_break_before == Some(true)),
+        "w:pageBreakBefore" => raw_bool(raw) == (*f.page_break_before == Some(true)),
         "w:keepNext" | "w:keepLines" | "w:widowControl" | "w:suppressLineNumbers"
         | "w:contextualSpacing" => match flag(f, tag) {
             None => original.and_then(|o| flag(o, tag)).is_none(),
             Some(v) => raw.is_some() && raw_bool(raw) == v,
         },
-        "w:bidi" => raw_bool(raw) == (f.bidi == Some(true)),
+        "w:bidi" => raw_bool(raw) == (*f.bidi == Some(true)),
         "w:jc" => {
             let val = raw_attr(raw, "w:val");
             let mut raw_align = val.filter(|v| !v.is_empty()).and_then(jc_to_align);
-            if (f.bidi == Some(true) || f.bidi_inherited == Some(true))
+            if (*f.bidi == Some(true) || *f.bidi_inherited == Some(true))
                 && (raw_align == Some("left") || raw_align == Some("right"))
             {
                 raw_align = Some(if raw_align == Some("left") { "right" } else { "left" });
@@ -639,7 +639,7 @@ fn ppr_group_unchanged(
                 .and_then(|r| js_regex!(r#"<w:sz\b[^>]*w:val="(\d+)""#).exec(r));
             same(
                 m.map(|m| parse_int(m.get(1).unwrap_or_default(), Radix::Ten)),
-                n(f.empty_run_size_half_points),
+                n(*f.empty_run_size_half_points),
             )
         }
         _ => false,
@@ -683,15 +683,15 @@ fn field_json(format: Option<&ParaFormat>, key: &str) -> String {
         return "null".to_owned();
     };
     match key {
-        "align" => json(serde_json::to_string(&f.align)),
-        "spaceBefore" => json(serde_json::to_string(&f.space_before)),
-        "spaceAfter" => json(serde_json::to_string(&f.space_after)),
-        "lineSpacing" => json(serde_json::to_string(&f.line_spacing)),
-        "lineRule" => json(serde_json::to_string(&f.line_rule)),
-        "lineRawTwips" => json(serde_json::to_string(&f.line_raw_twips)),
-        "indentLeft" => json(serde_json::to_string(&f.indent_left)),
-        "indentFirstLine" => json(serde_json::to_string(&f.indent_first_line)),
-        _ => json(serde_json::to_string(&f.tab_stops)),
+        "align" => json(serde_json::to_string(&*f.align)),
+        "spaceBefore" => json(serde_json::to_string(&*f.space_before)),
+        "spaceAfter" => json(serde_json::to_string(&*f.space_after)),
+        "lineSpacing" => json(serde_json::to_string(&*f.line_spacing)),
+        "lineRule" => json(serde_json::to_string(&*f.line_rule)),
+        "lineRawTwips" => json(serde_json::to_string(&*f.line_raw_twips)),
+        "indentLeft" => json(serde_json::to_string(&*f.indent_left)),
+        "indentFirstLine" => json(serde_json::to_string(&*f.indent_first_line)),
+        _ => json(serde_json::to_string(&*f.tab_stops)),
     }
 }
 
