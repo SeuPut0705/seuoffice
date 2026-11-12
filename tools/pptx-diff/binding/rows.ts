@@ -8,7 +8,7 @@ import { classify } from './kinds'
 import { overrideOf } from './overrides'
 
 const rowHead = (fn: string): string =>
-  `fn ${fn}(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {\n    `
+  `fn ${fn}(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {\n    `
 
 export function pptxRow(
   e: ExportInfo,

@@ -16,7 +16,6 @@
 //!   the engine read their bytes fields through `pptx_engine::json_bytes`,
 //!   which takes base64 (the smallest form of bytes a JSON value holds).
 
-use std::borrow::Cow;
 use std::cell::Cell;
 use std::collections::HashMap;
 
@@ -27,7 +26,7 @@ use pptx_engine::types::SlideDeck;
 use pptx_engine::zip::PackageArchive;
 use serde_json::{Map, Value};
 
-use super::InvokeEnv;
+use super::{Args, InvokeEnv};
 
 thread_local! {
     /// `uidCounter` of parse.ts: one counter for every slide parsed in this
@@ -165,7 +164,8 @@ pub fn answer_opened(env: &mut InvokeEnv<'_>, sent: SentOpened<'_>) -> Result<Va
     let mut out = Map::new();
     out.insert(
         "deck".to_owned(),
-        serde_json::to_value(&opened.deck).map_err(|error| error.to_string())?,
+        jscompat::writing_for_host(|| serde_json::to_value(&opened.deck))
+            .map_err(|error| error.to_string())?,
     );
     out.insert(
         "archive".to_owned(),
@@ -220,7 +220,8 @@ pub fn answer_new_opened(env: &mut InvokeEnv<'_>, opened: &OpenedPptx) -> Result
     let mut out = Map::new();
     out.insert(
         "deck".to_owned(),
-        serde_json::to_value(&opened.deck).map_err(|error| error.to_string())?,
+        jscompat::writing_for_host(|| serde_json::to_value(&opened.deck))
+            .map_err(|error| error.to_string())?,
     );
     out.insert(
         "archive".to_owned(),
@@ -232,10 +233,11 @@ pub fn answer_new_opened(env: &mut InvokeEnv<'_>, opened: &OpenedPptx) -> Result
 /// `args` with every `{"$blob": n}` below the top level of an argument written
 /// as the base64 text of the blob. An archive (`entries` and `originalHash`)
 /// keeps its blobs: `read_archive` reads them.
-pub fn inline_blobs<'v>(
+pub fn inline_blobs<'s>(
     env: &InvokeEnv<'_>,
-    args: &'v [Value],
-) -> Result<Cow<'v, [Value]>, String> {
+    args: Args<'s>,
+    store: &'s mut Option<Vec<Value>>,
+) -> Result<Args<'s>, String> {
     fn holds_blob(value: &Value) -> bool {
         match value {
             Value::Object(map)
@@ -276,7 +278,7 @@ pub fn inline_blobs<'v>(
         other => holds_blob(other),
     };
     if !args.iter().any(nested) {
-        return Ok(Cow::Borrowed(args));
+        return Ok(args);
     }
     let mut out = args.to_vec();
     for arg in &mut out {
@@ -284,7 +286,11 @@ pub fn inline_blobs<'v>(
             inline(env, arg)?;
         }
     }
-    Ok(Cow::Owned(out))
+    // a top-level `{"$text": n}` is left for `Args::text` to read in place
+    Ok(Args {
+        values: store.insert(out),
+        blobs: args.blobs,
+    })
 }
 
 /// What a row answers: the value, and the arguments the engine changed by index.

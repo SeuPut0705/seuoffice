@@ -20,7 +20,8 @@ use super::{InvokeEnv, pptx};
 pub type Out = Result<Option<Value>, String>;
 
 fn reply(value: impl Serialize) -> Out {
-    let value = serde_json::to_value(value).map_err(|error| error.to_string())?;
+    let value = jscompat::writing_for_host(|| serde_json::to_value(value))
+        .map_err(|error| error.to_string())?;
     Ok(Some(pptx::answer(Some(value), Vec::new())))
 }
 
