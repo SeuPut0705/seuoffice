@@ -210,14 +210,15 @@ function SavedCard({
  * The fonts a deck generated without a template gets (Settings › General, decision
  * 0115), read when the gallery shows and again when the window comes back, since the
  * setting is changed on the Home tab. Null until read, or where the main process does
- * not answer (a standalone app without the handler).
+ * not answer (a standalone app without the handler). Read again when the UI language
+ * changes: a language chosen in Settings is the one documents are read for from then on.
  */
 function useDefaultFonts(lang: string): SlidesAiFontRoles | null | undefined {
   const [roles, setRoles] = useState<SlidesAiFontRoles | null | undefined>(undefined)
   useEffect(() => {
     let alive = true
     const read = () => {
-      void Promise.resolve(window.slidesApi.getAiDefaultFonts?.(lang))
+      void Promise.resolve(window.slidesApi.getAiDefaultFonts?.())
         .then((fonts) => {
           if (alive) setRoles(fonts ? slidesAiFontRoles(fonts) : undefined)
         })

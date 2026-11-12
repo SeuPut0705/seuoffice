@@ -1382,7 +1382,7 @@ export function AiPanel({
       // pptx with pptx-engine primitives — no HTML intermediate.
       // Settings › General fonts as title/body families (null for "auto"); read per generation
       getAiDefaultFonts: async () => {
-        const fonts = await window.slidesApi.getAiDefaultFonts?.(langRef.current)
+        const fonts = await window.slidesApi.getAiDefaultFonts?.()
         return fonts ? slidesAiFontRoles(fonts) : null
       },
       generatePageLocal: async (args) => {

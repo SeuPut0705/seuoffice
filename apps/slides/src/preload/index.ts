@@ -576,7 +576,7 @@ const api: SlidesApi = {
   listStyleTemplates: () => ipcRenderer.invoke('ai:list-style-templates'),
   loadStyleTemplate: (name: string) => ipcRenderer.invoke('ai:load-style-template', name),
   getTemplateSelection: () => ipcRenderer.invoke('slides:ai-template-selection-get'),
-  getAiDefaultFonts: (lang: string) => ipcRenderer.invoke('slides:ai-default-fonts', lang),
+  getAiDefaultFonts: () => ipcRenderer.invoke('slides:ai-default-fonts'),
   openFontSettings: () => ipcRenderer.invoke('slides:open-font-settings'),
   setTemplateSelection: (selection: TemplateSelectionInput | null) =>
     ipcRenderer.invoke('slides:ai-template-selection-set', selection),

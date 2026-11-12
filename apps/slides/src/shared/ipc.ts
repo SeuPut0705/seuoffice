@@ -1989,8 +1989,8 @@ export interface SlidesApi {
   }>
   /** The design template remembered for this window's document, on this PC only; null when there is none */
   getTemplateSelection: () => Promise<TemplateSelection | null>
-  /** The fonts AI generation uses when the request names none (Settings › General); `lang` picks the default before a choice is stored */
-  getAiDefaultFonts?: (lang: string) => Promise<SlidesAiFonts>
+  /** The fonts AI generation uses when the request names none (Settings › General); the language documents are read for picks the default before a choice is stored */
+  getAiDefaultFonts?: () => Promise<SlidesAiFonts>
   /** Open Settings › General at the AI slide fonts (the shell answers; a standalone app does not) */
   openFontSettings?: () => Promise<void>
   /** Remember a selection for this window's document (null forgets it; malformed input is ignored). Answers with what is stored afterwards */

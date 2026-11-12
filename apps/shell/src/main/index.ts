@@ -72,6 +72,7 @@ import menuHomeIcon1x from './assets/menu-home.png?asset'
 import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
 import {
   createI18n,
+  documentLocale,
   installLang,
   isLang,
   normalizeLang,
@@ -1080,6 +1081,12 @@ function currentLang(): Lang {
   uiLang = installLang(stored, app.getLocale())
   setUiLang(uiLang, requestedLanguage(stored, app.getLocale()))
   return uiLang
+}
+
+/** the language documents are read for; currentLang() is what first records the request */
+function currentDocumentLocale(): string {
+  currentLang()
+  return documentLocale()
 }
 
 function persistLang(lang: Lang): void {
@@ -4009,11 +4016,11 @@ function registerHomeIpc(): void {
   ipcMain.handle(HOME_CHANNELS.getSlidesAiFonts, () =>
     normalizeSlidesAiFonts(
       readAppSettings(APP_SETTINGS_PATH())[SLIDES_AI_FONTS_KEY],
-      currentLang(),
+      currentDocumentLocale(),
     ),
   )
   ipcMain.handle(HOME_CHANNELS.setSlidesAiFonts, (_event, fonts: unknown) => {
-    const next = normalizeSlidesAiFonts(fonts, currentLang())
+    const next = normalizeSlidesAiFonts(fonts, currentDocumentLocale())
     writeAppSetting(APP_SETTINGS_PATH(), SLIDES_AI_FONTS_KEY, next)
     return next
   })

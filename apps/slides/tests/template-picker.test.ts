@@ -353,7 +353,7 @@ describe('template gallery', () => {
       expect(fontsLine(root)?.textContent).toContain(
         str('en', 'aiTplFontsOne', { font: 'Pretendard' }),
       )
-      expect(fake.api.getAiDefaultFonts).toHaveBeenCalledWith('en')
+      expect(fake.api.getAiDefaultFonts).toHaveBeenCalled()
 
       withFonts({ mode: 'serifTitle', sans: 'Pretendard', serif: 'Batang' })
       root = mount(createElement(TemplateGallery, { state: freshState() }))
