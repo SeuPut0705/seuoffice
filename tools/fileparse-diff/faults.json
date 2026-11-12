@@ -29,5 +29,13 @@
   {"id":"csv-utf16-tie-order","group":"csv","file":"crates/file-parse/src/csv.rs","from":"Some(if odd_nul >= even_nul {","to":"Some(if odd_nul > even_nul {"},
   {"id":"csv-score-tie","group":"csv","file":"crates/file-parse/src/csv.rs","from":"if candidate_score > best_score {","to":"if candidate_score >= best_score {"},
   {"id":"integrator-csv-bom-kept","group":"csv","file":"crates/file-parse/src/csv.rs","from":"let (text, had_errors) = encoding.decode_with_bom_removal(bytes);","to":"let (text, had_errors) = encoding.decode_without_bom_handling(bytes);"},
-  {"id":"integrator-csv-replacement-label","group":"csv","file":"crates/file-parse/src/csv.rs","from":".filter(|found| *found != REPLACEMENT)","to":".filter(|_| true)"}
+  {"id":"integrator-csv-replacement-label","group":"csv","file":"crates/file-parse/src/csv.rs","from":".filter(|found| *found != REPLACEMENT)","to":".filter(|_| true)"},
+  {"id":"html-code-span-start","group":"html","file":"crates/file-parse/src/html.rs","from":"return Some([i + 1, j]);","to":"return Some([i, j]);"},
+  {"id":"ppt-record-header-endianness","group":"legacy","file":"crates/file-parse/src/ppt.rs","from":"let value = match (self.byte(self.l), self.byte(self.l + 1.0)) {","to":"let value = match (self.byte(self.l + 1.0), self.byte(self.l)) {"},
+  {"id":"compound-gate-magic-ignored","group":"legacy","file":"crates/file-parse/src/compound_gate.rs","from":"bytes.len() >= OLE2_MAGIC.len() && bytes[..OLE2_MAGIC.len()] == OLE2_MAGIC","to":"bytes.len() >= OLE2_MAGIC.len()"},
+  {"id":"hwp-two-column-rows","group":"hwp","file":"crates/file-parse/src/hwp.rs","from":"let as_rows = dims.col_count >= 2","to":"let as_rows = dims.col_count >= 3"},
+  {"id":"hwp-row-cell-paragraph-limit","group":"hwp","file":"crates/file-parse/src/hwp.rs","from":".all(|cell| cell.paragraphs.len() <= MAX_ROW_CELL_PARAGRAPHS);","to":".all(|cell| cell.paragraphs.len() < MAX_ROW_CELL_PARAGRAPHS);"},
+  {"id":"dispatch-extension-keeps-dot","group":"parse","file":"crates/file-parse/src/parse.rs","from":"Some(at) => &name[at + 1..],","to":"Some(at) => &name[at..],"},
+  {"id":"dispatch-jpeg-mime","group":"parse","file":"crates/file-parse/src/parse.rs","from":"\"jpg\" | \"jpeg\" => \"image/jpeg\",","to":"\"jpg\" => \"image/jpeg\","},
+  {"id":"epub-chapter-number","group":"epub","file":"crates/file-parse/src/epub.rs","from":"item.index + 1,","to":"item.index,"}
 ]

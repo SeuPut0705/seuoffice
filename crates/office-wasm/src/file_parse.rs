@@ -3,6 +3,8 @@
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::invoke::file_parse::js_error_name;
+
 #[derive(Serialize)]
 struct Failure<'a> {
     name: &'a str,
@@ -26,8 +28,7 @@ fn number(value: f64) -> Value {
 
 /// What a reader written to answer `Option<Result<Value, String>>` threw, as
 /// `{ name, message }`: the legacy readers write `name\u{1}message`, the HWP
-/// reader only the message, whose name is `DamagedFileError` for the gate's
-/// refusal and `Error` otherwise.
+/// reader only the message, named as the binding names it.
 fn delegated(function: &str, text: &str, bytes: &[u8], args: &Value) -> Option<Result<Value, (String, String)>> {
     if function == "epubToText" {
         return crate::epub_xml::run_named(function, text, bytes, args);
@@ -39,10 +40,7 @@ fn delegated(function: &str, text: &str, bytes: &[u8], args: &Value) -> Option<R
         }));
     }
     let result = crate::file_parse_hwp::run(function, text, bytes, args)?;
-    Some(result.map_err(|message| {
-        let name = if message.starts_with("The file is damaged or is not a valid ") { "DamagedFileError" } else { "Error" };
-        (name.to_owned(), message)
-    }))
+    Some(result.map_err(|message| (js_error_name(&message).to_owned(), message)))
 }
 
 pub fn run(function: &str, text: &str, bytes: &[u8], args: &Value) -> Vec<u8> {
@@ -146,21 +144,7 @@ pub fn run(function: &str, text: &str, bytes: &[u8], args: &Value) -> Vec<u8> {
         Ok(value) => Outcome::Value { value },
         Err(message) => Outcome::Error {
             error: Failure {
-                name: if message.starts_with("Redaction marks in this file") {
-                    "RedactionMarkError"
-                } else if message.starts_with("Invalid code point ")
-                    || message.starts_with("Invalid column index: ")
-                {
-                    "RangeError"
-                } else if message.starts_with("Cannot read properties of undefined ")
-                    || message.starts_with("Cannot set properties of undefined ")
-                    || message.starts_with("undefined is not iterable")
-                    || message.starts_with("cellRef.toUpperCase is not a function")
-                {
-                    "TypeError"
-                } else {
-                    "Error"
-                },
+                name: js_error_name(&message),
                 message,
             },
         },
