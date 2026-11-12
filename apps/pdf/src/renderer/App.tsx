@@ -7819,7 +7819,11 @@ export default function App() {
       return run()
     })
     if (!result.ok || 'canceled' in result) return result
-    return { ok: true, pageCount: await reloadWritten(held.before) }
+    if (held.before) return { ok: true, pageCount: await reloadWritten(held.before) }
+    // too large to keep as an Undo step: a plain reload, which leaves no step at all.
+    // The stored AI results of the kept pages follow the rewritten file before it is read again
+    await aiReadRef.current?.afterPageOperation().catch(() => null)
+    return { ok: true, pageCount: await loadDoc(filePath, doc) }
   }
   const baseName = () => fileName.replace(/\.pdf$/i, '')
 
