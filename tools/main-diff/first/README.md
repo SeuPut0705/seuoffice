@@ -14,4 +14,4 @@ anything was fixed: the measure of the port (decision 0029, crates/README.md).
     (1, fixed);
   - the dispatcher refusing `writeProjectsSettings(path, undefined)`, which the
     TypeScript normalizes to an empty registry (1, fixed).
-  The porters compared nothing before this run.
+    The porters compared nothing before this run.

@@ -1,1 +1,86 @@
-[]
+[
+  {
+    "id": "relative-cuts-a-surrogate-pair-posix-6",
+    "fn": "path.posix.relative",
+    "case": 6,
+    "typescript": {
+      "answer": "{\"value\":\"\\ude00/😀.x\"}",
+      "files": {}
+    },
+    "rust": {
+      "answer": "{\"value\":\"�/😀.x\"}",
+      "files": {}
+    },
+    "reason": "path.posix.relative uses JavaScript slices of UTF-16 units, so a cut between the two halves of a pair returns a lone surrogate. A Rust String cannot hold one; the Rust answer holds U+FFFD there, which is also what Node writes when it hands that string to the file system (UTF-8 with replacement). The input is case 6 of the seeded generator, astral characters among separators. Final."
+  },
+  {
+    "id": "format-field-not-a-string-posix-92",
+    "fn": "path.posix.format",
+    "case": 92,
+    "typescript": {
+      "answer": "{\"value\":true}",
+      "files": {}
+    },
+    "rust": {
+      "answer": "{\"value\":\"true\"}",
+      "files": {}
+    },
+    "reason": "path.format given a field that is not a string (true, 1.5): Node returns the field itself when it is the whole answer (format reads `pathObject.base || ...` and returns base when there is no dir). The Rust API takes a typed ParsedPath whose fields are strings, so the dispatcher prints the value as text. Outside the TypeScript type of the argument (ParsedPath of @types/node); no caller passes one. Final."
+  },
+  {
+    "id": "format-field-not-a-string-posix-304",
+    "fn": "path.posix.format",
+    "case": 304,
+    "typescript": {
+      "answer": "{\"value\":true}",
+      "files": {}
+    },
+    "rust": {
+      "answer": "{\"value\":\"true\"}",
+      "files": {}
+    },
+    "reason": "path.format given a field that is not a string (true, 1.5): Node returns the field itself when it is the whole answer (format reads `pathObject.base || ...` and returns base when there is no dir). The Rust API takes a typed ParsedPath whose fields are strings, so the dispatcher prints the value as text. Outside the TypeScript type of the argument (ParsedPath of @types/node); no caller passes one. Final."
+  },
+  {
+    "id": "format-field-not-a-string-posix-389",
+    "fn": "path.posix.format",
+    "case": 389,
+    "typescript": {
+      "answer": "{\"value\":1.5}",
+      "files": {}
+    },
+    "rust": {
+      "answer": "{\"value\":\"1.5\"}",
+      "files": {}
+    },
+    "reason": "path.format given a field that is not a string (true, 1.5): Node returns the field itself when it is the whole answer (format reads `pathObject.base || ...` and returns base when there is no dir). The Rust API takes a typed ParsedPath whose fields are strings, so the dispatcher prints the value as text. Outside the TypeScript type of the argument (ParsedPath of @types/node); no caller passes one. Final."
+  },
+  {
+    "id": "format-field-not-a-string-win32-136",
+    "fn": "path.win32.format",
+    "case": 136,
+    "typescript": {
+      "answer": "{\"value\":1.5}",
+      "files": {}
+    },
+    "rust": {
+      "answer": "{\"value\":\"1.5\"}",
+      "files": {}
+    },
+    "reason": "path.format given a field that is not a string (true, 1.5): Node returns the field itself when it is the whole answer (format reads `pathObject.base || ...` and returns base when there is no dir). The Rust API takes a typed ParsedPath whose fields are strings, so the dispatcher prints the value as text. Outside the TypeScript type of the argument (ParsedPath of @types/node); no caller passes one. Final."
+  },
+  {
+    "id": "format-field-not-a-string-win32-221",
+    "fn": "path.win32.format",
+    "case": 221,
+    "typescript": {
+      "answer": "{\"value\":1.5}",
+      "files": {}
+    },
+    "rust": {
+      "answer": "{\"value\":\"1.5\"}",
+      "files": {}
+    },
+    "reason": "path.format given a field that is not a string (true, 1.5): Node returns the field itself when it is the whole answer (format reads `pathObject.base || ...` and returns base when there is no dir). The Rust API takes a typed ParsedPath whose fields are strings, so the dispatcher prints the value as text. Outside the TypeScript type of the argument (ParsedPath of @types/node); no caller passes one. Final."
+  }
+]
