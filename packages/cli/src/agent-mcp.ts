@@ -570,7 +570,9 @@ const LAUNCHER_NAMES = new Set(
 )
 
 const OLD_LAUNCHER_NAMES = new Set(
-  OLD_CLI_COMMANDS.flatMap((command) => [command, `${command}.cmd`]).map((n) => n.toLowerCase()),
+  [...OLD_CLI_COMMANDS, ...OLD_MCP_SERVER_NAMES]
+    .flatMap((command) => [command, `${command}.cmd`])
+    .map((n) => n.toLowerCase()),
 )
 
 /** What an upstream entry starts: its launcher scripts, or its app binary run as Node on its bundle. */
@@ -581,7 +583,8 @@ const UPSTREAM_LAUNCHER_NAMES = new Set(['genoffice', 'genoffice.cmd', 'genoffic
  * ours to update): the launcher scripts, or our app run as Node on the CLI
  * bundle. Another app registers the names this product used before, so a
  * launcher under an old command name is ours only when it sits in an install
- * of this product (a bare name: where PATH takes it), and an old bundle name
+ * of this product (a bare name: where PATH takes it; a bare `<old name> mcp`
+ * that PATH does not know at all is ours too), and an old bundle name
  * proves nothing: the binary that runs it decides.
  */
 export function isSeuofficeLauncher(
@@ -593,8 +596,11 @@ export function isSeuofficeLauncher(
   const program = fileName(command)
   if (LAUNCHER_NAMES.has(program)) return true
   if (OLD_LAUNCHER_NAMES.has(program)) {
-    const launcher = /[\\/]/.test(command) ? command : onPath(command, env)
-    return launcher !== null && inOurInstall(launcher)
+    if (/[\\/]/.test(command)) return inOurInstall(command)
+    const launcher = onPath(command, env)
+    // `<old name> mcp` that PATH does not know: no other program owns it
+    if (launcher === null) return args.length === 1 && args[0] === 'mcp'
+    return inOurInstall(launcher)
   }
   if (UPSTREAM_LAUNCHER_NAMES.has(program)) return false
   return args.some((a) => fileName(a) === CLI_BUNDLE_FILE)
