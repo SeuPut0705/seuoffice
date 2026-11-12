@@ -141,25 +141,62 @@ function noteParagraphsOf(entryXml: string): string[] {
   return entryXml.match(/<w:p(?:\s[^>]*)?\/>|<w:p[\s>][\s\S]*?<\/w:p>/g) ?? []
 }
 
-/** typeless (real) note entries with their exact XML slice + plain text */
+/**
+ * Every entry of a notes part with its exact XML slice, found the way the
+ * parser finds them: any quotes, white space around = and before >, `>` or
+ * `/>` inside a value, and nothing inside a comment or CDATA taken for a tag.
+ * The save keeps an entry's bytes only when it finds it here; one it misses
+ * is written anew from plain text and loses its runs, a hidden-from-AI mark
+ * among them.
+ */
+function noteSlicesOf(
+  xml: string,
+  kind: NoteKind,
+): Array<{ id: string | undefined; typed: boolean; xml: string }> {
+  const out: Array<{ id: string | undefined; typed: boolean; xml: string }> = []
+  const tokens = new RegExp(
+    `<!--[\\s\\S]*?-->|<!\\[CDATA\\[[\\s\\S]*?\\]\\]>|<\\?[\\s\\S]*?\\?>|` +
+      `<(/?)${ENTRY[kind]}\\b((?:[^>"']|"[^"]*"|'[^']*')*?)(/?)>`,
+    'g',
+  )
+  let open: { start: number; attrs: string } | null = null
+  let m: RegExpExecArray | null
+  while ((m = tokens.exec(xml)) !== null) {
+    if (m[2] === undefined) continue // a comment, CDATA or a processing instruction
+    if (m[1] !== '/') {
+      // a self-closing entry has no body: it is no note, and nothing to keep
+      if (m[3] !== '/') open = { start: m.index, attrs: m[2] }
+      continue
+    }
+    if (!open) continue
+    const attr = (name: string) => {
+      const v = new RegExp(`(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`).exec(open!.attrs)
+      return v ? decodeEntities(v[1] ?? v[2]!) : undefined
+    }
+    out.push({
+      id: attr('w:id'),
+      typed: attr('w:type') !== undefined,
+      xml: xml.slice(open.start, tokens.lastIndex),
+    })
+    open = null
+  }
+  return out
+}
+
+/** typeless (real) note entries with their exact XML slice and their text as the parser reads it */
 function noteEntriesOf(
   xml: string,
   kind: NoteKind,
 ): Array<{ id: string; text: string; xml: string }> {
-  const out: Array<{ id: string; text: string; xml: string }> = []
-  const entry = ENTRY[kind]
-  // the attribute run must not end in "/" so a self-closing empty entry
-  // ("<w:footnote w:id="1"/>") is not read as an open tag over the next entry
-  const re = new RegExp(`<${entry}(\\s[^>]*[^/>])?>([\\s\\S]*?)</${entry}>`, 'g')
-  let m: RegExpExecArray | null
-  while ((m = re.exec(xml)) !== null) {
-    const attrs = m[1] ?? ''
-    if (/w:type=(?:"[^"]*"|'[^']*')/.test(attrs)) continue // separator / continuation entries
-    const id = /w:id=(?:"([^"]+)"|'([^']+)')/.exec(attrs)?.slice(1, 3).find(Boolean)
-    if (!id) continue
-    out.push({ id, text: noteEntryPlainText(m[2]), xml: m[0] })
-  }
-  return out
+  return noteSlicesOf(xml, kind).flatMap(({ id, typed, xml: entryXml }) =>
+    typed || !id ? [] : [{ id, text: entryText(entryXml), xml: entryXml }],
+  )
+}
+
+/** a note slice's text as the parser reads it (the pattern's reading when it does not parse) */
+function entryText(entryXml: string): string {
+  const node = parseEntry(entryXml)
+  return node ? noteTreeText(node) : noteEntryPlainText(entryXml)
 }
 
 /** a parsed note's text: its paragraphs' run text, the first one's leading spacer dropped */
@@ -307,15 +344,13 @@ export function buildNotesXml(
   notes: NoteInfo[],
   originalXml: string | null,
 ): string {
-  const entry = ENTRY[kind]
   let structural = ''
   const originals = new Map<string, { text: string; xml: string }>()
   if (originalXml) {
-    const re = new RegExp(
-      `<${entry}\\s[^>]*w:type=(?:"[^"]*"|'[^']*')[^>]*>[\\s\\S]*?</${entry}>`,
-      'g',
-    )
-    structural = (originalXml.match(re) ?? []).join('')
+    structural = noteSlicesOf(originalXml, kind)
+      .filter((e) => e.typed)
+      .map((e) => e.xml)
+      .join('')
     for (const e of noteEntriesOf(originalXml, kind)) originals.set(e.id, e)
   }
   if (!structural) structural = separatorEntries(kind)
@@ -326,8 +361,7 @@ export function buildNotesXml(
       if (!orig) return noteEntryXml(kind, n, revAttrs)
       if (n.revisionsResolved?.length) {
         const xml = applyRevisionResolutions(orig.xml, n.revisionsResolved)
-        const inner = new RegExp(`^<${entry}[^>]*>([\\s\\S]*)</${entry}>$`).exec(xml)?.[1] ?? ''
-        orig = { text: noteEntryPlainText(inner), xml }
+        orig = { text: entryText(xml), xml }
       }
       if (orig.text === n.text) return orig.xml
       const patched = patchParagraphTexts(orig.xml, n.text, {
