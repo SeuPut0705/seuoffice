@@ -11,6 +11,15 @@ describe('engineLocaleFor', () => {
     expect(engineLocaleFor(' NL-nl ')).toBe('nl')
   })
 
+  it('reads the tags a browser reports, region and all', () => {
+    expect(engineLocaleFor('ko-KR')).toBe('ko')
+    expect(engineLocaleFor('en-US')).toBe('en')
+    expect(engineLocaleFor('ja-JP')).toBe('ja')
+    expect(engineLocaleFor('zh-CN')).toBe('zh')
+    expect(engineLocaleFor('zh-TW')).toBe('zh-TW')
+    expect(engineLocaleFor('xx-XX')).toBe('en')
+  })
+
   it('tells traditional-script Chinese from simplified', () => {
     expect(engineLocaleFor('zh-CN')).toBe('zh')
     expect(engineLocaleFor('zh')).toBe('zh')
