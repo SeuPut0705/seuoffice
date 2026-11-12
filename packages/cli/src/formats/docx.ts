@@ -184,6 +184,8 @@ interface SideState {
   properties?: PropertyChanges
   /** remove_parts package scrub applied in the final save pass */
   removeParts?: RemovePartsOptions
+  /** accept_changes / reject_changes found only orphan move-range markers: the save strips them */
+  dropOrphanMoveRanges?: true
 }
 
 export interface OpenDocument {
@@ -309,6 +311,7 @@ export async function saveDocument(doc: OpenDocument): Promise<Uint8Array> {
     footnotes: side.notesDirty ? side.footnotes : undefined,
     endnotes: side.notesDirty ? side.endnotes : undefined,
     removeParts: side.removeParts,
+    dropOrphanMoveRanges: side.dropOrphanMoveRanges,
     contentControls: side.contentControls,
     properties: side.properties,
     ...(await chartPartPatches(doc, plan.chartPatches)),
@@ -501,14 +504,17 @@ async function applyRevisionOp(
   }
   if ('error' in body && elsewhere === 0) {
     // A file whose only tracked-change markup is orphan move-range markers
-    // reports no pending changes, but the save already drops those markers
-    // (genoffice#2349): accepting / rejecting such a file should succeed and
-    // let the save clean them instead of rejecting it (genoffice#2554 case 3).
+    // reports no pending changes: accepting / rejecting such a file should
+    // succeed and have the save drop them instead of rejecting it
+    // (genoffice#2554 case 3). The save strips them only when it is told to:
+    // with no other change it would return the file as it was opened.
     const orphans = await countOrphanMoveRangeMarkers(doc)
-    if (orphans > 0)
+    if (orphans > 0) {
+      doc.side.dropOrphanMoveRanges = true
       return {
         output: `No tracked changes remain. ${orphans} orphan move-range marker(s) will be dropped when the document is saved.`,
       }
+    }
     return { error: body.error }
   }
   const verb = mode === 'accept' ? 'Accepted' : 'Rejected'
