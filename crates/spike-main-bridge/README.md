@@ -35,14 +35,14 @@ process.
 Mac mini (darwin-arm64), 2026-11-12, release build, 5 rounds, the machine
 shared with one other heavy job. Microseconds.
 
-| What                                 | Node 22.22.0 napi | sidecar | Electron 43.8.3 napi | sidecar |
-| ------------------------------------ | ----------------: | ------: | -------------------: | ------: |
-| JS to Rust, 1 KB JSON, median        |              10.9 |    21.2 |                  9.6 |    23.4 |
-| JS to Rust, 1 MiB bytes, median      |              88.3 |   1,146 |                  159 |   1,521 |
-| Rust to JS and back, median          |               7.0 |    13.8 |                  4.5 |     7.3 |
-| Rust to JS and back, p99             |              21.3 |    29.6 |                 90.3 |    44.5 |
-| Start, steady (6 fresh processes)    |      1,414-2,454 | 2,910-4,252 |            792-1,212 | 2,515-2,871 |
-| Start, first after a build           |            20,164 |  21,586 |               23,740 |  18,361 |
+| What                              | Node 22.22.0 napi |     sidecar | Electron 43.8.3 napi |     sidecar |
+| --------------------------------- | ----------------: | ----------: | -------------------: | ----------: |
+| JS to Rust, 1 KB JSON, median     |              10.9 |        21.2 |                  9.6 |        23.4 |
+| JS to Rust, 1 MiB bytes, median   |              88.3 |       1,146 |                  159 |       1,521 |
+| Rust to JS and back, median       |               7.0 |        13.8 |                  4.5 |         7.3 |
+| Rust to JS and back, p99          |              21.3 |        29.6 |                 90.3 |        44.5 |
+| Start, steady (6 fresh processes) |       1,414-2,454 | 2,910-4,252 |            792-1,212 | 2,515-2,871 |
+| Start, first after a build        |            20,164 |      21,586 |               23,740 |      18,361 |
 
 The first `bench.mjs` run reported 297 ms (Node) and 318 ms (Electron) to
 load the addon, and 267 ms to the sidecar's first answer. It copies the
