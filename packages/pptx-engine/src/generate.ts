@@ -378,6 +378,11 @@ function patchRun(runXml: string, run: TextRun): string {
 function patchRunProps(runXml: string, run: TextRun): string {
   const attrPatch = (rprOpen: string): string => {
     let tag = rprOpen
+    // A language the model gained (tagHangulRun on text written into an untagged run) is
+    // written; one that is already in the bytes is never replaced
+    if (run.lang != null && !/\slang\s*=/.test(tag)) {
+      tag = tag.replace(/^<a:rPr/, `<a:rPr lang="${escapeXmlAttr(run.lang)}"`)
+    }
     tag = setBoolAttr(tag, 'b', run.boldImplicit ? undefined : run.bold)
     tag = setBoolAttr(tag, 'i', run.italicImplicit ? undefined : run.italic)
     // Underline: keep the original style (dbl/wavy… not collapsed to sng); on removal
@@ -754,6 +759,44 @@ function patchRunColor(runXml: string, color: string): string {
   }
   const at = children.find((c) => c.name === 'a:ln')?.end ?? innerStart
   return runXml.slice(0, at) + fill + runXml.slice(at)
+}
+
+/** Hangul syllables, jamo and compatibility jamo: what the layout wraps by word in a Korean run. */
+const HANGUL_RE = /[\u1100-\u11ff\u3130-\u318f\ua960-\ua97f\uac00-\ud7a3\ud7b0-\ud7ff]/
+
+/**
+ * The language tag for text written without one: `ko-KR` when it holds Hangul (alone or mixed
+ * with Latin), which is what PowerPoint writes for a Korean user's typing. PowerPoint and the
+ * layout keep a space-delimited Hangul word whole only in a Korean-tagged run and break an
+ * untagged one per syllable, so untagged Korean text breaks inside words.
+ */
+export function hangulLang(text: string): 'ko-KR' | undefined {
+  return HANGUL_RE.test(text) ? 'ko-KR' : undefined
+}
+
+/**
+ * A run as an authoring writer stores it (the deck builder, the text ops, the editor's commit):
+ * tagged per `hangulLang` unless it already carries a language, which is never replaced. The
+ * model gets what a reparse of the written `lang` gives (line-breaking language, substitution
+ * script), so the canvas wraps the text the way the saved file will. Importers do not call
+ * this: a source run that had no language stays untagged.
+ */
+export function tagHangulRun(run: TextRun): TextRun {
+  if (run.lang != null || run.altLang != null || run.rawXml) return run
+  const lang = hangulLang(run.text)
+  return lang ? { ...run, lang, eaLang: 'ko', fontScriptHint: 'ko' } : run
+}
+
+/** `tagHangulRun` over every run; the same array when no run needed a tag. */
+export function tagHangulParagraphs(paragraphs: Paragraph[]): Paragraph[] {
+  let changed = false
+  const out = paragraphs.map((p) => {
+    const runs = p.runs.map(tagHangulRun)
+    if (runs.every((run, i) => run === p.runs[i])) return p
+    changed = true
+    return { ...p, runs }
+  })
+  return changed ? out : paragraphs
 }
 
 function buildRPrAttrs(run: TextRun): string {

@@ -27,6 +27,7 @@ import { nextSlideId } from './slide-ids'
 import {
   alternateContentBranches,
   generateParagraphXml,
+  hangulLang,
   patchElementFill,
   patchElementPPr,
   patchElementStroke,
@@ -43,6 +44,7 @@ import {
   readSlideHiddenXml,
   readSlideTransitionXml,
   removeSlideBackgroundXml,
+  tagHangulRun,
   topLevelChildren,
   type FillPatch,
   type GradientFillPatch,
@@ -173,6 +175,8 @@ export {
   generateParagraphXml,
   generateXfrmXml,
   isConnectorXml,
+  tagHangulParagraphs,
+  tagHangulRun,
   TRANSITION_KINDS,
   type GradientFillPatch,
   type BackgroundImagePatch,
@@ -3328,6 +3332,7 @@ export function replaceAllInDeck(
   let budget = opts.firstOnly ? 1 : Infinity
   let count = 0
   const changed = new Set<number>()
+  const koreanReplace = hangulLang(replace) !== undefined
 
   // A field run or an <a:br/> soft-break sentinel is a hard barrier: matches may
   // only span the consecutive plain runs between them.
@@ -3383,18 +3388,23 @@ export function replaceAllInDeck(
     re.lastIndex = 0
     let cursor = 0
     let n = 0
+    const landed = new Set<number>()
     let m: RegExpExecArray | null
     while (budget > 0 && (m = re.exec(full)) !== null) {
       n++
       budget--
       keep(cursor, m.index)
-      out[runAt(m.index)] += replace
+      const at = runAt(m.index)
+      out[at] += replace
+      landed.add(at)
       cursor = m.index + m[0].length
     }
     if (n > 0) {
       keep(cursor, full.length)
       for (let i = 0; i < runs.length; i++) {
         if (runs[i]!.text !== out[i]) runs[i]!.text = out[i]!
+        // Hangul written into a run with no language of its own gets PowerPoint's ko-KR
+        if (koreanReplace && landed.has(i)) Object.assign(runs[i]!, tagHangulRun(runs[i]!))
       }
       count += n
       hit = true
