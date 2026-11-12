@@ -4190,7 +4190,7 @@ export function inlineToRuns(content: PmNode[]): Run[] {
       if (node.marks?.length) runs.push(runFromMarks(ch, node.marks))
       // an unformatted break joins a plain run only: folding it into a
       // formatted neighbour re-authors a bare <w:br/> run as bold (genoffice#524)
-      else if (prev && !prevAtomic && runStyleKey(prev) === PLAIN_RUN_KEY) prev.text += ch
+      else if (prev && !prevAtomic && runMergeKey(prev) === PLAIN_RUN_KEY) prev.text += ch
       else runs.push({ text: ch })
       continue
     }
@@ -4455,9 +4455,7 @@ function mergeRuns(runs: Run[]): Run[] {
       prev?.image
     // runs written as one keep the first run's fields: they must differ in
     // nothing but text, and sit in the same wrappers
-    const key = ownAtomic
-      ? null
-      : `${runContentKey(run)}|${JSON.stringify(inlineStructureKey(run))}`
+    const key = ownAtomic ? null : runMergeKey(run)
     if (prev && !atomic && key === lastKey) prev.text += run.text
     else {
       merged.push({ ...run })
@@ -4465,6 +4463,11 @@ function mergeRuns(runs: Run[]): Run[] {
     }
   }
   return merged
+}
+
+/** what two neighbouring runs must share to be written as one: their content and their wrappers */
+function runMergeKey(run: Run): string {
+  return `${runContentKey(run)}|${JSON.stringify(inlineStructureKey(run))}`
 }
 
 // ---- run content: what makes two runs the same formatted text ----
@@ -4542,7 +4545,7 @@ function sortedJson(value: unknown): string {
   )
 }
 
-const PLAIN_RUN_KEY = runStyleKey({ text: '' })
+const PLAIN_RUN_KEY = runMergeKey({ text: '' })
 
 function revisionKey(run: Run): string | null {
   if (!run.ins && !run.del) return null
