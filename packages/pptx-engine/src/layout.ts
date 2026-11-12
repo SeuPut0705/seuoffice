@@ -244,7 +244,7 @@ export function prepareInsertSlideWithLayout(
       Buffer.from(
         ct.replace(
           '</Types>',
-          `<Override PartName="/${newPath}" ContentType="${SLIDE_CONTENT_TYPE}"/></Types>`,
+          () => `<Override PartName="/${newPath}" ContentType="${SLIDE_CONTENT_TYPE}"/></Types>`,
         ),
         'utf8',
       ),

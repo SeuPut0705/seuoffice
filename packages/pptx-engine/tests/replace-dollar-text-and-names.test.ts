@@ -78,6 +78,27 @@ describe('the in-place run patch keeps $ sequences', () => {
     expect(rPr['@_u']).toBe(DOLLAR)
     expect(rPr['@_sz']).toBe('1800')
   })
+
+  // a comment makes the run unscannable, which sends the font through the regex fallback
+  for (const [form, rPr] of [
+    [
+      'an rPr that already names a Latin font',
+      '<a:rPr sz="1800"><a:latin typeface="Old"/></a:rPr>',
+    ],
+    ['a self-closing rPr', '<a:rPr sz="1800"/>'],
+    ['a paired rPr without fonts', '<a:rPr sz="1800"><a:noFill/></a:rPr>'],
+  ]) {
+    it(`a font name written through the fallback onto ${form}`, () => {
+      const out = patchTextElementXml(
+        el({ text: 'x', fontFamily: DOLLAR }),
+        sp(`<a:r>${rPr}<!-- note --><a:t>x</a:t></a:r>`),
+      )
+      const read = rPrOf(out)
+      expect(read['a:latin']['@_typeface']).toBe(DOLLAR)
+      expect(read['a:ea']['@_typeface']).toBe(DOLLAR)
+      expect(read['@_sz']).toBe('1800')
+    })
+  }
 })
 
 describe('setElementName keeps $ sequences in the name the user typed', () => {

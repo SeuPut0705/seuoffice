@@ -1260,7 +1260,7 @@ function swapAvLstXml(xml: string, adjust: Record<string, number>): string | nul
   const innerStart = open.index + open[0].length
   const inner = xml.slice(innerStart, end)
   const avRe = /<a:avLst\b[^>]*\/>|<a:avLst\b[\s\S]*?<\/a:avLst>/
-  const newInner = avRe.test(inner) ? inner.replace(avRe, av) : av + inner
+  const newInner = avRe.test(inner) ? inner.replace(avRe, () => av) : av + inner
   return xml.slice(0, innerStart) + newInner + xml.slice(end)
 }
 
@@ -1321,7 +1321,7 @@ export function setElementTextAnchor(
   const m = /<a:bodyPr\b[^>]*?\/?>/.exec(xml)
   if (!m) return false
   let tag = m[0].replace(/\s+anchor="[^"]*"/, '')
-  tag = tag.replace(/^<a:bodyPr/, `<a:bodyPr anchor="${val}"`)
+  tag = tag.replace(/^<a:bodyPr/, () => `<a:bodyPr anchor="${val}"`)
   xml = xml.slice(0, m.index) + tag + xml.slice(m.index + m[0].length)
   el.dirty = el.dirtyTransform = el.dirtyFill = el.dirtyStroke = false
   el.dirtyPPr = undefined
@@ -1389,7 +1389,7 @@ export function setElementTextBodyProps(
 
   const setAttr = (name: string, value: string | null) => {
     openTag = openTag.replace(new RegExp(`\\s+${name}="[^"]*"`), '')
-    if (value != null) openTag = openTag.replace(/^<a:bodyPr/, `<a:bodyPr ${name}="${value}"`)
+    if (value != null) openTag = openTag.replace(/^<a:bodyPr/, () => `<a:bodyPr ${name}="${value}"`)
   }
 
   if (patch.vert !== undefined) setAttr('vert', patch.vert === 'horz' ? null : patch.vert)
@@ -1845,9 +1845,12 @@ export function setPictureOpacity(slide: Slide, sourceId: string, opacity: numbe
   if (v < 0.999) {
     const amt = `<a:alphaModFix amt="${Math.round(v * 100000)}"/>`
     if (/<a:blip\b[^>]*\/>/.test(xml)) {
-      xml = xml.replace(/<a:blip\b([^>]*)\/>/, `<a:blip$1>${amt}</a:blip>`)
+      xml = xml.replace(
+        /<a:blip\b([^>]*)\/>/,
+        (_all, attrs: string) => `<a:blip${attrs}>${amt}</a:blip>`,
+      )
     } else if (/<a:blip\b[^>]*>/.test(xml)) {
-      xml = xml.replace(/(<a:blip\b[^>]*>)/, `$1${amt}`)
+      xml = xml.replace(/<a:blip\b[^>]*>/, (open) => `${open}${amt}`)
     } else {
       return false
     }
@@ -1893,15 +1896,17 @@ export function replacePictureBytes(
   // A coexisting r:link ("insert and link" pictures) would keep refreshing from
   // the old external file, so it is dropped once the embed points at new bytes
   if (/r:embed="/.test(tag))
-    tag = tag.replace(/r:embed="[^"]*"/, `r:embed="${added.rid}"`).replace(/\s+r:link="[^"]*"/, '')
-  else if (/r:link="/.test(tag)) tag = tag.replace(/r:link="[^"]*"/, `r:embed="${added.rid}"`)
-  else tag = tag.replace(/<a:blip\b/, `<a:blip r:embed="${added.rid}"`)
+    tag = tag
+      .replace(/r:embed="[^"]*"/, () => `r:embed="${added.rid}"`)
+      .replace(/\s+r:link="[^"]*"/, '')
+  else if (/r:link="/.test(tag)) tag = tag.replace(/r:link="[^"]*"/, () => `r:embed="${added.rid}"`)
+  else tag = tag.replace(/<a:blip\b/, () => `<a:blip r:embed="${added.rid}"`)
   xml = xml.slice(0, blip.index) + tag + xml.slice(blip.index + blip[0].length)
   // A 3D model's Choice caches the same rendering (am3d:raster), which PowerPoint shows
   if (pic.model3d && previousRId) {
     xml = xml.replace(
       new RegExp(`(<am3d:blip\\b[^>]*\\br:embed=")${previousRId}"`),
-      `$1${added.rid}"`,
+      (_all, head: string) => `${head}${added.rid}"`,
     )
   }
   // The replacement is always raster (IMAGE_MIME gate), and PowerPoint prefers a
@@ -2272,7 +2277,7 @@ export function mergeSlideFromSource(
       // Rewrite r:embed / r:link references in the slide XML to the new rId
       slideXml = slideXml.replace(
         new RegExp(`(r:(?:embed|link)=")${oldRid}(")`, 'g'),
-        `$1${newRid}$2`,
+        (_all, head: string, tail: string) => `${head}${newRid}${tail}`,
       )
       const relTarget = '../media/' + destPath.slice('ppt/media/'.length)
       newRelsLines.push(
@@ -2682,7 +2687,9 @@ export function setSlideSize(opened: OpenedPptx, cx: number, cy: number): boolea
   const hasCy = /\bcy=["']\d+["']/.test(sldSz)
   if (!hasCx && !hasCy) return false
   const next = pres.replace(sldSz, () =>
-    sldSz.replace(/\bcx=["']\d+["']/, `cx="${cx}"`).replace(/\bcy=["']\d+["']/, `cy="${cy}"`),
+    sldSz
+      .replace(/\bcx=["']\d+["']/, () => `cx="${cx}"`)
+      .replace(/\bcy=["']\d+["']/, () => `cy="${cy}"`),
   )
   archive.entries.set(presPath, Buffer.from(next, 'utf8'))
   deck.size = { cx, cy }
@@ -2892,7 +2899,8 @@ export function ensureTableStylePart(
       Buffer.from(
         ct.replace(
           '</Types>',
-          `<Override PartName="/${path}" ContentType="application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"/></Types>`,
+          () =>
+            `<Override PartName="/${path}" ContentType="application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"/></Types>`,
         ),
         'utf8',
       ),
@@ -2905,7 +2913,10 @@ export function ensureTableStylePart(
     const rel = `<Relationship Id="rId${maxRid + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles" Target="tableStyles.xml"/>`
     archive.entries.set(
       presRelsPath,
-      Buffer.from(presRels.replace('</Relationships>', rel + '</Relationships>'), 'utf8'),
+      Buffer.from(
+        presRels.replace('</Relationships>', () => rel + '</Relationships>'),
+        'utf8',
+      ),
     )
   }
 }
@@ -3883,7 +3894,7 @@ function setTcAttrXml(tcXml: string, name: string, val: number | null): string {
   return tcXml.replace(/<a:tc(\s[^>]*)?>/, (open) => {
     const cleaned = open.replace(new RegExp(`\\s${name}="[^"]*"`), '')
     if (val == null) return cleaned
-    return cleaned.replace(/^<a:tc/, `<a:tc ${name}="${val}"`)
+    return cleaned.replace(/^<a:tc/, () => `<a:tc ${name}="${val}"`)
   })
 }
 
@@ -4023,7 +4034,7 @@ export function setTableColWidth(
   el.dirty = el.dirtyTransform = el.dirtyFill = el.dirtyStroke = false
   el.dirtyPPr = undefined
   const w = Math.max(1, Math.round(wEmu))
-  const patched = gc.open.replace(/\bw="-?\d+"/, `w="${w}"`)
+  const patched = gc.open.replace(/\bw="-?\d+"/, () => `w="${w}"`)
   xml = xml.slice(0, gc.start) + patched + xml.slice(gc.start + gc.open.length)
 
   const dxRtl = table.rtl ? w - table.colWidths[col]! : 0
@@ -4071,8 +4082,8 @@ export function setTableRowHeight(
   const h = Math.max(1, Math.round(hEmu))
   const trOpen = /<a:tr(\s[^>]*)?>/.exec(xml.slice(tr.start, tr.end))![0]
   const patchedOpen = /\bh="-?\d+"/.test(trOpen)
-    ? trOpen.replace(/\bh="-?\d+"/, `h="${h}"`)
-    : trOpen.replace(/^<a:tr/, `<a:tr h="${h}"`)
+    ? trOpen.replace(/\bh="-?\d+"/, () => `h="${h}"`)
+    : trOpen.replace(/^<a:tr/, () => `<a:tr h="${h}"`)
   xml = xml.slice(0, tr.start) + patchedOpen + xml.slice(tr.start + trOpen.length)
 
   table.rowHeights[row] = h
@@ -4119,7 +4130,7 @@ export function resizeTable(slide: Slide, elementId: string, cx: number, cy: num
   let ci = 0
   // Opening tags only — paired-form gridCols (extLst children) must scale too
   xml = xml.replace(/<a:gridCol\b[^>]*>/g, (m) =>
-    ci < widths.length ? m.replace(/\bw="-?\d+"/, `w="${widths[ci++]}"`) : m,
+    ci < widths.length ? m.replace(/\bw="-?\d+"/, () => `w="${widths[ci++]}"`) : m,
   )
 
   const heights = scaleToSum(table.rowHeights, targetCy)
@@ -4128,8 +4139,8 @@ export function resizeTable(slide: Slide, elementId: string, cx: number, cy: num
     if (ri >= heights.length) return m
     const h = heights[ri++]!
     return /\bh="-?\d+"/.test(m)
-      ? m.replace(/\bh="-?\d+"/, `h="${h}"`)
-      : m.replace(/^<a:tr/, `<a:tr h="${h}"`)
+      ? m.replace(/\bh="-?\d+"/, () => `h="${h}"`)
+      : m.replace(/^<a:tr/, () => `<a:tr h="${h}"`)
   })
 
   const sumW = widths.reduce((a, b) => a + b, 0)
@@ -4177,10 +4188,10 @@ export function setTableCellAnchor(
   const tcPr = /<a:tcPr(\s[^>]*)?\/?>/.exec(tcXml)
   if (tcPr) {
     let tag = tcPr[0].replace(/\s+anchor="[^"]*"/, '')
-    tag = tag.replace(/^<a:tcPr/, `<a:tcPr anchor="${val}"`)
+    tag = tag.replace(/^<a:tcPr/, () => `<a:tcPr anchor="${val}"`)
     tcXml = tcXml.slice(0, tcPr.index) + tag + tcXml.slice(tcPr.index + tcPr[0].length)
   } else {
-    tcXml = tcXml.replace(/<\/a:tc>$/, `<a:tcPr anchor="${val}"/></a:tc>`)
+    tcXml = tcXml.replace(/<\/a:tc>$/, () => `<a:tcPr anchor="${val}"/></a:tc>`)
   }
   trXml = trXml.slice(0, tc.start) + tcXml + trXml.slice(tc.end)
   xml = xml.slice(0, tr.start) + trXml + xml.slice(tr.end)
@@ -4316,7 +4327,10 @@ export function pasteElements(
         byKey.set(key, rid)
       }
       if (rid !== rel.rid) {
-        xml = xml.replace(new RegExp(`\\br:(embed|link|id)="${rel.rid}"`, 'g'), `r:$1="${rid}"`)
+        xml = xml.replace(
+          new RegExp(`\\br:(embed|link|id)="${rel.rid}"`, 'g'),
+          (_all, attr: string) => `r:${attr}="${rid}"`,
+        )
       }
     }
     xml = xml.replace(

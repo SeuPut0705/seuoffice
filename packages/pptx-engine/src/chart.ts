@@ -1293,13 +1293,13 @@ function formatDateSerial(serial: number, fmt: string, date1904: boolean): strin
   ]
   return fmt
     .replace(/\\/g, '')
-    .replace(/yyyy/gi, String(yyyy))
-    .replace(/yy/gi, String(yyyy % 100).padStart(2, '0'))
-    .replace(/mmm/gi, MONTHS[d.getUTCMonth()]!)
-    .replace(/mm/gi, String(mNum).padStart(2, '0'))
-    .replace(/(?<![a-z])m(?![a-z])/gi, String(mNum))
-    .replace(/dd/gi, String(dayNum).padStart(2, '0'))
-    .replace(/(?<![a-z])d(?![a-z])/gi, String(dayNum))
+    .replace(/yyyy/gi, () => String(yyyy))
+    .replace(/yy/gi, () => String(yyyy % 100).padStart(2, '0'))
+    .replace(/mmm/gi, () => MONTHS[d.getUTCMonth()]!)
+    .replace(/mm/gi, () => String(mNum).padStart(2, '0'))
+    .replace(/(?<![a-z])m(?![a-z])/gi, () => String(mNum))
+    .replace(/dd/gi, () => String(dayNum).padStart(2, '0'))
+    .replace(/(?<![a-z])d(?![a-z])/gi, () => String(dayNum))
 }
 
 /** c:pt list → value array ordered by idx. */

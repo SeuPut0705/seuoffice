@@ -428,7 +428,7 @@ function patchCellsTcPr(xml: string, edit: TableStyleEdit): string {
         tcXml.slice(m.index + m[0].length)
     } else {
       // tcPr follows txBody in CT_TableCell
-      tcXml = tcXml.replace(/<\/a:tc>$/, `<a:tcPr>${applyTcPrEdit('', edit)}</a:tcPr></a:tc>`)
+      tcXml = tcXml.replace(/<\/a:tc>$/, () => `<a:tcPr>${applyTcPrEdit('', edit)}</a:tcPr></a:tc>`)
     }
     xml = xml.slice(0, tc.start) + tcXml + xml.slice(tc.end)
   }
