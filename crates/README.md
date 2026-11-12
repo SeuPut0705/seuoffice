@@ -176,15 +176,23 @@ Do not edit it; `npm --prefix tools/docx-diff run model-gen` writes it and
 - **Key order.** `tools/docx-diff/model-orders.json` commits, per object
   type, the order its keys are written in. A fixed order is a struct that
   declares and writes its fields in that order. A type marked `"input"`
-  (Run, ParaFormat, CellMargins, TextboxDisplay, Block, StyleDisplay,
-  DocDefaults) follows the path the TypeScript took: it is a `js_object!`,
-  every field a `Slot`, and reading it sets the slots in the order of the
-  input. `model-gen.ts --observe-orders FILE.ndjson` derives the table from
-  captured parse results. **Only parse results vote**: values built from the
-  schema set their keys in whatever order the builder chose, and 32 types
-  were once marked `"input"` by them alone. 68 orders are fixed by evidence,
-  81 are the declaration order of a type no parse result holds with two
-  keys in question.
+  (Run, ParaFormat, HfParagraph, HfTextBox, HfImage, CellBorders,
+  CellMargins, TableCell, TextboxDisplay, Block, StyleDisplay,
+  TableStyleDisplay, DocDefaults) follows the path the TypeScript took: it
+  is a `js_object!`, every field a `Slot` (HfParagraph, composed over
+  ParaFormat, is a struct of slots ordered across both), and reading it sets
+  the slots in the order of the input. `model-gen.ts --observe-orders
+  FILE.ndjson` derives the table from captured parse results. **Only parse
+  results vote**: values built from the schema set their keys in whatever
+  order the builder chose, and 32 types were once marked `"input"` by them
+  alone. 82 orders are fixed by evidence, 61 are the declaration order of a
+  type no parse result holds with two keys in question. Fixed by evidence
+  means no parse result contradicts it: the four documents of
+  `model-bodies.ts`, built to reach producers the corpus does not, corrected
+  15 such orders and 4 declaration orders and made 6 types path-ordered.
+  `model-producers.ts` reads the producers in the TypeScript source for the
+  orders no document shows, and exits 1 on a producer that contradicts a
+  committed fixed order.
 - **Strict reading.** An unknown key, a key twice, a missing required key,
   null where the type has none, a value of another JSON kind, a string no
   enum holds, an enum written as an object, a `Record<number>` key that is
@@ -194,7 +202,7 @@ Do not edit it; `npm --prefix tools/docx-diff run model-gen` writes it and
   remain.
 - **Evidence per field.** `model-field-floors.json` holds, for each of the
   1,663 fields, how many values the parse results held and how many the
-  schema-built values did, apart: 675 fields are seen in parse results, 988
+  schema-built values did, apart: 934 fields are seen in parse results, 729
   only in built values. A built value proves that the Rust reads and writes
   what the schema says, not that the parser ever produces it.
   `model-full.ts --write-field-floors` rewrites the file from the gate's own
@@ -325,11 +333,18 @@ main fixes the TypeScript, the fix is merged here, the entry and its class
 are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
 `zone` runs its TypeScript side in that zone.
 
-The entries named `non-finite-...` are written by
+A class may also be compared under a mask instead of set aside
+(`CallSpec.masked`, `maskNonFinite` of `listed.ts`): each value where the
+TypeScript wrote a non-finite number is replaced by a placeholder on both
+sides, an attribute the TypeScript inserted with such a value and the Rust
+left out is taken out, and the rest is compared exactly, so a second defect
+in such an input shows. `CallSpec.maskedRefuses` says the Rust must refuse
+the call instead. The class `non-finite-number-in-a-drawing` is compared so;
+its entries (`non-finite-...`, one per function and argument, the rule the
+Rust follows in the reason of the first) are written by
 `tools/docx-diff/ledger-non-finite.ts` from the inputs the drawing specs
-export, one per function and argument; their class is
-`non-finite-number-in-a-drawing`. Run the tool after a change to those
-functions; `-- --check` says whether the entries would change.
+export. Run the tool after a change to those functions; `-- --check` says
+whether the entries would change.
 
 ## Known debt
 
@@ -470,9 +485,14 @@ Those first runs were local, on Node 22, before anything was fixed, and are
 in `crates/fixtures/generate-first/`; the porting agents compared nothing
 before them. All 297 differences are one class: a NaN or an infinity among
 the arguments, which the TypeScript writes into an integer attribute. Rust
-never writes one (main's decision); where the TypeScript result holds none,
-Rust gives the TypeScript result. Mutated arguments added 48,000 checks to
-the first run and 23 differences of the same class.
+never writes one (main's decision): a patch keeps what the attribute held,
+a builder refuses; where the TypeScript result holds none, Rust gives the
+TypeScript result. Mutated arguments added 48,000 checks to the first run
+and 23 differences of the same class. Compared under the mask (first masked
+run in `crates/fixtures/regenerated-first/`), 1,314 such inputs showed 3
+differences outside the masked values, one defect of the Rust: it wrote the
+height of an `a:ext` whose width the TypeScript had just made NaN, which
+stops the TypeScript's own height pattern. Fixed; 0 since.
 
 27 faults, each switched on alone in one build: 20 showed at once. Five of
 the seven misses named inputs that are now there (an `rFonts` with
@@ -489,15 +509,24 @@ loop.
 
 Not verified, and not ported:
 
-- The order of 81 object types and 988 fields rests on schema-built values
+- The order of 61 object types and 729 fields rests on schema-built values
   alone.
 - A model number that is NaN on the save side: a number crosses the wire as
   `null`, which the TypeScript side reads as `null` and the Rust as NaN, so
   no spec sends one outside the drawing functions, where numbers cross as
   text.
 - `generateIndexFieldXml` sorts with ICU4X (`icu_collator` 2.4, CLDR 49)
-  where Node 22.23.5 has ICU 78 (CLDR 48): equal over 192 corpus and built
-  term lists and 1,500 mutated ones, not proven for every string.
+  where Node 22.23.5 has ICU 78 (CLDR 48): equal over the corpus lists, 33
+  built ones (13 of them Korean and Japanese: syllables against jamo,
+  hiragana against katakana, half-width kana, voiced marks combined and
+  precomposed, kana against kanji, Japanese-only kanji) and 4,500 mutated
+  ones; evidence, not proof. The collation data is about 1.5 MB of the wasm
+  (measured: 6,059,696 bytes with it, 4,538,991 bytes with the sort replaced
+  by a code point sort, the rest the same).
+- `floatTableColumnSpan` reads a missing `w:horzAnchor` of `w:tblpPr` as
+  page-relative, as the TypeScript does. The schema
+  (`ISO-IEC29500-4_2016/wml.xsd`, `CT_TblPPr`) declares the attribute
+  without a default, so that reading is not verified by the schema.
 - The `fix/inline-wrappers` changes of `generate.ts` (`Run.wrap`,
   `Run.opaqueXml` on the save side) are not on this branch's TypeScript; the
   model has the two fields.
