@@ -17,6 +17,8 @@ import tempfile
 import time
 import zlib
 
+sys.stdout.reconfigure(encoding="utf-8")
+
 exe, out_dir = sys.argv[1], os.path.abspath(sys.argv[2])
 shell = sys.argv[3] if len(sys.argv) > 3 else "tauri2"
 here = os.path.dirname(os.path.abspath(__file__))
