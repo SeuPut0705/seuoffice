@@ -428,12 +428,12 @@ async function readWithheldCells(
  * A reader for the cells of a workbook that its sheet editor withholds from a
  * model: `marker(sheet, ref, hasFormula)` is the placeholder to give instead
  * of the cell's value and formula, or null when the cell reads as itself. A
- * workbook that withholds nothing gives a reader that always answers null;
- * one whose record cannot be read throws RedactionMarkError.
+ * workbook that withholds nothing gives null; one whose record cannot be read
+ * throws RedactionMarkError.
  */
 export async function xlsxWithheldCells(
   bytes: Uint8Array,
-): Promise<(sheet: string, ref: string, hasFormula: boolean) => string | null> {
+): Promise<((sheet: string, ref: string, hasFormula: boolean) => string | null) | null> {
   await assertZipInflatesWithinLimits(bytes)
   const zip = await JSZip.loadAsync(bytes)
   assertZipWithinLimits(zip)
@@ -445,7 +445,7 @@ export async function xlsxWithheldCells(
     relTargets,
     FORMULA_SCAN_MAX_BYTES,
   )
-  if (redactions.size === 0) return () => null
+  if (redactions.size === 0) return null
   return (sheet, ref, hasFormula) => {
     const index = sheetNames.indexOf(sheet)
     return withheldCellMarker(redactions.get(sheet), ref, derived?.[index], hasFormula)
