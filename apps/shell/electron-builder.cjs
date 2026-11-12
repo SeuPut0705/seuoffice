@@ -1171,7 +1171,7 @@ if (winSignMode) {
   }
 }
 
-// This product's macOS builds carry no Apple Developer ID (docs/tracking/
+// This product's macOS builds carry no Apple Developer ID (docs/archive/ieum/tracking/
 // decisions/0031-unsigned-mac-beta.md): the app is signed ad hoc, which
 // Apple Silicon needs before it runs a binary at all, and nothing is
 // notarized. Hardened runtime is off because, signed ad hoc, its library

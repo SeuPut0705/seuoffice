@@ -198,7 +198,7 @@ export class XmindDocument {
    * alone: guessing at its shape would break the file more than a picture the
    * reader has to find by its reference. `manifest.json` is otherwise never
    * rewritten, so an unchanged map keeps its bytes; this is the one case that
-   * adds an entry (recorded in `docs/tracking/decisions/0070-*.md`).
+   * adds an entry (recorded in `docs/archive/ieum/tracking/decisions/0070-*.md`).
    */
   async #manifestWithAdded(): Promise<Uint8Array | null> {
     if (this.#added.size === 0) return null

@@ -535,7 +535,7 @@ metadata:
 
 **이 PC에만 두는 것.** 고정·최근 목록, 믿음 기록(프로젝트 id마다 `use`·`without`과, 앱이 마지막으로 보거나 쓴 `instructions.md`·`memory.md`·`AGENTS.md`·`CLAUDE.md`의 해시), 문서마다 고른 프로젝트와 마지막 대화, "프로젝트 없이"로 바꾼 문서, 프로젝트별 설정(기억 쌓기, 루트 `AGENTS.md`·`CLAUDE.md` 읽기), `installId`는 폴더가 아니라 데이터 폴더의 `app-settings.json`(`projects`)에 있다. 앱만 읽고 쓴다.
 
-**누가 쓰나.** 앱에서는 껍데기 앱 뒷단의 프로젝트 길잡이만 쓴다. 터미널 명령어와 MCP는 이 폴더를 읽지도 쓰지도 않는다. 에이전트 모드의 프로그램은 프로젝트 폴더에 쓸 수 있으므로 이 파일들을 바꿀 수 있다(`docs/tracking/findings.md`).
+**누가 쓰나.** 앱에서는 껍데기 앱 뒷단의 프로젝트 길잡이만 쓴다. 터미널 명령어와 MCP는 이 폴더를 읽지도 쓰지도 않는다. 에이전트 모드의 프로그램은 프로젝트 폴더에 쓸 수 있으므로 이 파일들을 바꿀 수 있다(`docs/archive/ieum/tracking/findings.md`).
 
 ## Google 드라이브 (결정 0033, 0085)
 

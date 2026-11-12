@@ -48,7 +48,7 @@ import { normalizeReleaseNotes } from './update-notes'
  * repository.
  *
  * A release carries the versioned installer and its `latest.yml`
- * (docs/releasing.ko.md is the procedure). The packaged app reads the
+ * (docs/archive/ieum/releasing.ko.md is the procedure). The packaged app reads the
  * repository from resources/app-update.yml, which electron-builder bakes in
  * from the `publish` config in apps/shell/electron-builder.cjs (provider
  * `github`); nothing is injected at build time and no token is involved. A
@@ -911,7 +911,7 @@ export function initAutoUpdater(
   selectChannel(channel)
   autoUpdater.autoDownload = false
   // The window shows what changed before the user starts the download
-  // (docs/plans/update-details.md). The full changelog collects the bodies of
+  // (docs/archive/ieum/plans/update-details.md). The full changelog collects the bodies of
   // every release newer than this install from the feed request the GitHub
   // provider already makes — no extra network call.
   autoUpdater.fullChangelog = true
