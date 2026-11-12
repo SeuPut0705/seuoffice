@@ -116,6 +116,16 @@ type Settable = {
     : never
 }[keyof FileActionContext]
 
+/**
+ * Whether the document tracks changes (settings.xml `w:trackRevisions`). Its
+ * entry exists only once someone switched it: until then every page holds the
+ * opened file's own value. The App also turns the recorder on by itself under
+ * a tracked-changes restriction, after the document opened; each page works
+ * that out from the synced protection, and as an entry it would differ between
+ * two pages for as long as one of them has not run that effect yet.
+ */
+const TRACKING = 'tracking'
+
 /** Fields written together as one entry */
 const GROUPS: Record<string, readonly Settable[]> = {
   section: ['section', 'sectionDirty'],
@@ -138,6 +148,7 @@ const GROUPS: Record<string, readonly Settable[]> = {
   protection: ['protection', 'protectionDirty'],
   writeProtection: ['writeProtection', 'writeProtectionDirty'],
   removePersonalInfo: ['removePersonalInfo', 'removePersonalInfoDirty'],
+  [TRACKING]: ['trackChanges', 'trackRevisionsDirty'],
 }
 
 /** Lists synced item by item; `dirty` is true once the list differs from the opened file's */
@@ -272,6 +283,8 @@ function fieldsOf(
   base: Record<ListName, string>,
 ): Record<string, unknown> {
   const fields: Record<string, unknown> = {}
+  // nobody switched tracking: the file keeps its own flag, whatever this page's App holds
+  if (!entries.has(TRACKING)) fields.trackRevisionsDirty = false
   for (const [group, names] of Object.entries(GROUPS)) {
     const value = entries.get(group)
     if (!value || typeof value !== 'object' || Array.isArray(value)) continue
@@ -407,6 +420,7 @@ export function docsSide({ editor, context }: DocsCollabHandles): DocsSide {
   const read = (ctx: FileActionContext): Map<string, Json> => {
     const entries = new Map<string, Json>()
     for (const [group, names] of Object.entries(GROUPS)) {
+      if (group === TRACKING && !ctx.trackRevisionsDirty) continue
       const value: Record<string, Json> = {}
       for (const name of names) if (ctx[name] !== undefined) value[name] = plain(ctx[name])
       entries.set(group, value)

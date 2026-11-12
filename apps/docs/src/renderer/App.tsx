@@ -1141,11 +1141,14 @@ export function App() {
   // only the document toggle (ribbon / status bar / shortcut) maps to w:trackRevisions
   const [trackRevisionsDirty, setTrackRevisionsDirty] = useState(false)
   const setTrackChangesByUser = useCallback((on: boolean) => {
+    // the document's setting, which every co-editor's page follows: not a viewer's to switch
+    if (WEB_VIEW_LOCKED) return
     if (on && refuseInOdt('trackChanges')) return
     setTrackChanges(on)
     setTrackRevisionsDirty(true)
   }, [])
   const toggleTrackChangesByUser = useCallback(() => {
+    if (WEB_VIEW_LOCKED) return
     // tracking is never on in an ODT document, so a toggle there turns it on
     if (refuseInOdt('trackChanges')) return
     setTrackChanges((v) => !v)
@@ -8991,7 +8994,7 @@ export function App() {
                     className={`status-item status-btn status-track${trackChanges ? ' on' : ''}`}
                     data-tip={t('ribbonTrackChangesTip')}
                     aria-pressed={trackChanges}
-                    disabled={isProtected || trackChangesForced}
+                    disabled={isProtected || trackChangesForced || WEB_VIEW_LOCKED}
                     {...odtOffProps(odtDoc)}
                     onClick={toggleTrackChangesByUser}
                   >
@@ -9165,7 +9168,7 @@ export function App() {
             onResolve: (id) => resolveComment(id, true),
           }}
           trackChanges={
-            isProtected || trackChangesForced
+            isProtected || trackChangesForced || WEB_VIEW_LOCKED
               ? null
               : { on: trackChanges, onToggle: toggleTrackChangesByUser }
           }
