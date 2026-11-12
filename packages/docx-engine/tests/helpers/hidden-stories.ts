@@ -133,6 +133,7 @@ export const TAG_MUTATIONS = {
     xml
       .replace(/(<w:r(?:\s[^>]*)?>)/g, '$1<!-- </w:r></w:p> <go:redact w:label="x"/> -->')
       .replace(/<\/w:t>/g, '<!-- </w:t> --></w:t>'),
+  'space before > in end tags': (xml: string) => xml.replace(/<\/([\w:.-]+)>/g, '</$1 >'),
   CDATA: (xml: string) =>
     xml.replace(
       new RegExp(`<w:t([^>]*)>(${SECRET}[A-Z]?)</w:t>`, 'g'),
@@ -156,6 +157,7 @@ function mutate(xml: string, mutation: TagMutation): string {
     'CDATA',
     'comments',
     '> and /> inside values',
+    'space before > in end tags',
   ]
   return order.reduce((out, name) => TAG_MUTATIONS[name](out), xml)
 }

@@ -37,7 +37,7 @@ describe.each(TAG_MUTATION_NAMES)('tags rewritten: %s', (mutation) => {
       content: blocksToPmDoc(parsed.blocks),
     })
     editors.add(editor)
-    const hf = (paras: HeaderFooter['paras'], text: string | undefined) =>
+    const hf = (paras: HeaderFooter['paras'], text: string | null | undefined) =>
       paras ? hfModelText({ text: text ?? '', paras }) : ''
     const outputs = [
       modelTextOf(editor.state.doc.toJSON()),
