@@ -58,5 +58,9 @@
   "callsTablestyleCorpus": 85,
   "callsTablestyleBuilt": 15764,
   "callsTablestyleMutated": 900,
-  "callsTablestyleFunctions": 8
+  "callsTablestyleFunctions": 8,
+  "callsChartCorpus": 107,
+  "callsChartBuilt": 680,
+  "callsChartMutated": 599,
+  "callsChartFunctions": 2
 }

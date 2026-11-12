@@ -2,7 +2,9 @@
 
 pub mod align;
 pub mod animation;
+pub mod chart;
 pub mod chart_workbook;
+pub mod chartex;
 pub mod color;
 pub mod crc32;
 pub mod custgeom;

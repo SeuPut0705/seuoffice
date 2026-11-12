@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
-import { callOutcomes } from './calls-run'
+import { callOutcomes, listedClasses } from './calls-run'
 import { failGate } from '../docx-diff/harness'
 import { keyOrderDifferences, parseKeepingOrder } from '../docx-diff/key-order'
 import { registerDifferences, type ObservedDifference } from '../docx-diff/known-differences'
@@ -46,6 +46,11 @@ export async function reportDivergences(): Promise<void> {
       )
         stale.push(`${entry.id}:${index}: both sides now agree`)
     }
+  }
+  // a class a spec names (`CallSpec.listed`) has its entry here, and an input of it still differs
+  for (const [id, { inputs, differ }] of listedClasses) {
+    if (!ledger.some((entry) => entry.id === id)) stale.push(`${id}: a spec lists it, no entry`)
+    else if (differ === 0) stale.push(`${id}: none of the ${inputs} inputs of the class differs`)
   }
   console.log(
     `divergences.json: ${ledger.length} classes, ${ledger.reduce((n, entry) => n + entry.cases.length, 0)} exact inputs, ${stale.length} no longer reproduce`,

@@ -18,6 +18,7 @@ mod markers;
 mod math;
 mod pptx_anim;
 mod pptx_bytes;
+mod pptx_chart;
 mod pptx_geom;
 mod pptx_ident;
 mod pptx_layout;
@@ -90,6 +91,7 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "section" => Some(section::dispatch(function, text, args)),
         "pptxAnim" => Some(pptx_anim::dispatch(function, text, args)),
         "pptxBytes" => Some(pptx_bytes::dispatch(function, text, args)),
+        "pptxChart" => Some(pptx_chart::dispatch(function, text, args)),
         "pptxGeom" => Some(pptx_geom::dispatch(function, text, args)),
         "pptxIdent" => Some(pptx_ident::dispatch(function, text, args)),
         "pptxLayout" => Some(pptx_layout::dispatch(function, text, args)),
