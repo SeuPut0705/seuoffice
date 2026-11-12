@@ -11,8 +11,9 @@
 ; as unknown words on $CMDLINE, which this file reads itself.
 ;
 ;  * the electron-builder install is the HKCU Uninstall key whose DisplayName
-;    is the product name and whose name is not the one Tauri writes
-;    (Uninstall\SeuOffice); its InstallLocation is where we install
+;    starts with the product name ("SeuOffice 0.12.37") and whose name is not
+;    the one Tauri writes (Uninstall\SeuOffice); its InstallLocation is where
+;    we install
 ;  * its own uninstaller removes the Electron files and the registrations it
 ;    wrote (/KEEP_APP_DATA: %APPDATA%\seuoffice is the userData folder and is
 ;    never touched here), then the old uninstall key is gone and Tauri writes
@@ -46,7 +47,10 @@ Var ElectronOwnUninstaller
     StrCmp $1 "" electron_scan_done
     IntOp $0 $0 + 1
     StrCmp $1 "${PRODUCTNAME}" electron_scan
+    ; electron-builder names the entry "<product> <version>"
     ReadRegStr $2 HKCU "${SEUOFFICE_UNINSTALL_ROOT}\$1" "DisplayName"
+    StrLen $4 "${PRODUCTNAME}"
+    StrCpy $2 $2 $4
     StrCmp $2 "${PRODUCTNAME}" 0 electron_scan
     ReadRegStr $3 HKCU "${SEUOFFICE_UNINSTALL_ROOT}\$1" "InstallLocation"
     StrCmp $3 "" electron_scan

@@ -21,7 +21,7 @@ function Dump-Registry($label) {
   $lines.Add("===== $label =====")
   Get-ChildItem $uninstallRoot -ErrorAction SilentlyContinue | ForEach-Object {
     $p = Get-ItemProperty $_.PSPath
-    if ($p.DisplayName -eq 'SeuOffice') {
+    if ($p.DisplayName -like 'SeuOffice*') {
       $lines.Add("[Uninstall\$($_.PSChildName)]")
       $p.PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' } | ForEach-Object { $lines.Add("  $($_.Name) = $($_.Value)") }
     }
@@ -52,7 +52,7 @@ Write-Host "per-user dir present: $(Test-Path $defaultDir); Program Files dir pr
 foreach ($root in @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall')) {
   Get-ChildItem $root -ErrorAction SilentlyContinue | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like '*SeuOffice*' } | ForEach-Object { Write-Host "uninstall key: $($_.Name)" }
 }
-$oldKey = Get-ChildItem $uninstallRoot | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -eq 'SeuOffice' } | Select-Object -First 1
+$oldKey = Get-ChildItem $uninstallRoot | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like 'SeuOffice*' } | Select-Object -First 1
 if (-not $oldKey) { throw 'the Electron installer left no uninstall key with DisplayName SeuOffice' }
 $oldProps = Get-ItemProperty $oldKey.PSPath
 Write-Host "Electron uninstall key: $($oldKey.PSChildName) InstallLocation=$($oldProps.InstallLocation) Version=$($oldProps.DisplayVersion)"
@@ -89,7 +89,7 @@ Get-Process -Name SeuOffice -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Seconds 3
 
 # 4. what the contract asks
-$new = Get-ChildItem $uninstallRoot | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -eq 'SeuOffice' }
+$new = Get-ChildItem $uninstallRoot | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like 'SeuOffice*' }
 if (@($new).Count -ne 1) { Fail "expected one SeuOffice uninstall key, found $(@($new).Count)" }
 if (@($new).Count -ge 1) {
   $np = Get-ItemProperty @($new)[0].PSPath
