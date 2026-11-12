@@ -331,10 +331,9 @@ fn runs_like(
                 return model.char_sets[k];
             }
         }
-        for k in idx..model.char_sets.len() {
-            if model.char_sets[k] >= 0 {
-                return model.char_sets[k];
-            }
+        // `skip`: an index past the end finds nothing, as the loop did
+        if let Some(&set) = model.char_sets.iter().skip(idx).find(|&&set| set >= 0) {
+            return set;
         }
         model.empty_set as i64
     };

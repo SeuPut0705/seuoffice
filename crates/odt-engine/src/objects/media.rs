@@ -1,7 +1,7 @@
 //! `objects/media.ts`: picture bytes, format sniffing, base64 and data URLs,
 //! and the neutral placeholder picture.
 
-use jscompat::js_regex;
+use jscompat::{js_regex, try_js_regex};
 use serde::Serialize;
 
 /// `ImageFormat`
@@ -77,7 +77,11 @@ pub fn sniff_image(bytes: &[u8]) -> Option<ImageFormat> {
         .iter()
         .map(|&b| char::from(b))
         .collect();
-    if js_regex!(r"^\s*(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*<svg[\s>]").test(&head) {
+    // at most 512 characters: a search over them stays far inside the bound
+    if try_js_regex!(r"^\s*(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*<svg[\s>]")
+        .try_test(&head)
+        .expect("a search over 512 characters stays inside the regex bound")
+    {
         return Some(ImageFormat::of("svg", "image/svg+xml"));
     }
     None

@@ -139,10 +139,14 @@ impl TextAlignment {
             }
             return U16(0);
         }
-        for k in o..self.original_len {
-            if self.late[k] >= 0 {
-                return U16(self.late[k] as u32);
-            }
+        if let Some(&at) = self
+            .late
+            .iter()
+            .take(self.original_len)
+            .skip(o)
+            .find(|&&at| at >= 0)
+        {
+            return U16(at as u32);
         }
         U16(self.edited_len as u32)
     }

@@ -15,9 +15,12 @@
 
 use docx_engine::blank::{CustomNumberingLevel, custom_level_xml};
 use docx_engine::model::{GeneratedBlockListKind, NumberingDef, NumberingLevelSuff};
-use jscompat::{JsMap, JsNum, Radix, js_regex, math_max, math_min, number_to_string, parse_int};
+use jscompat::{
+    JsMap, JsNum, Radix, RegexLimit, math_max, math_min, number_to_string, parse_int, try_js_regex,
+};
 
 use crate::core::convert::{BridgeList, OdfToOoxmlContext, OoxmlToOdfContext};
+use crate::core::errors::OdtError;
 use crate::core::styles::{OdtListLevel, OdtListLevelKind, OdtStylePart, OdtStyleScope};
 use crate::core::xml::escape_xml_attr;
 
@@ -339,16 +342,19 @@ pub fn list_instance(
 // Reverse
 
 /// `listStyleFromNumbering`: a new automatic list style from an edited docx
-/// numbering definition; returns its name.
+/// numbering definition; returns its name. A level text the search of its
+/// placeholders cannot finish within the regex bound is an `Err`, where the
+/// TypeScript ran on.
 pub fn list_style_from_numbering(
     rctx: &mut OoxmlToOdfContext,
     def: Option<&NumberingDef>,
-) -> String {
+) -> Result<String, OdtError> {
     let key = format!(
         "list:{}",
         def.map_or("none", |d| d.abstract_num_id.as_str())
     );
-    rctx.derived_style(OdtStylePart::ContentXml, &key, "L", |name| {
+    let mut limit: Option<RegexLimit> = None;
+    let name = rctx.derived_style(OdtStylePart::ContentXml, &key, "L", |name| {
         let mut levels = String::new();
         for i in 0..9usize {
             let l = def.and_then(|d| d.levels.get(&i.to_string()));
@@ -376,7 +382,15 @@ pub fn list_style_from_numbering(
                 ));
                 continue;
             };
-            let m = js_regex!(r"^([\s\S]*?)((?:%\d)(?:\.%\d)*)([\s\S]*)$").exec(&l.lvl_text);
+            let m = match try_js_regex!(r"^([\s\S]*?)((?:%\d)(?:\.%\d)*)([\s\S]*)$")
+                .try_exec(&l.lvl_text)
+            {
+                Ok(m) => m,
+                Err(error) => {
+                    limit.get_or_insert(error);
+                    None
+                }
+            };
             let prefix = m.as_ref().map_or("", |m| m.get(1).unwrap_or(""));
             let suffix = m.as_ref().map_or(l.lvl_text.as_str(), |m| m.get(3).unwrap_or(""));
             let display = m
@@ -403,5 +417,9 @@ pub fn list_style_from_numbering(
             "<text:list-style style:name=\"{}\">{levels}</text:list-style>",
             escape_xml_attr(name)
         )
-    })
+    });
+    match limit {
+        Some(limit) => Err(OdtError::thrown(limit.to_string())),
+        None => Ok(name),
+    }
 }

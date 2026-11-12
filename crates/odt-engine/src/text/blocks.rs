@@ -221,7 +221,7 @@ fn write_list(
                 .iter()
                 .find(|(k, _)| k == num_id)
                 .map(|(_, v)| v);
-            let name = list_style_from_numbering(rctx, def);
+            let name = list_style_from_numbering(rctx, def)?;
             format!("<text:list text:style-name=\"{name}\">")
         }
     };
