@@ -80,6 +80,7 @@ import {
   writeLegacyImportSkip,
 } from '@genoffice/electron-utils'
 import { createMainProcessProxyDispatcher } from '@genoffice/electron-utils/main-proxy'
+import { installPermissionGuard } from '../../../../packages/electron-utils/src/permission-guard'
 import {
   resolveGroupChildId,
   runTxn,
@@ -477,12 +478,16 @@ export function trackSlidesWebContents(wc: WebContents): void {
     const session = sessions.get(wc.id)
     if (session) dropAiRunOf(session, wc.id)
   }
-  wc.on('render-process-gone', dropAiRun)
+  const endRendererRun = () => {
+    dropAiRun()
+    closeNarrationMicrophone(wc.id)
+  }
+  wc.on('render-process-gone', endRendererRun)
   wc.on('did-start-navigation', (details: { isMainFrame: boolean; isSameDocument: boolean }) => {
-    if (details.isMainFrame && !details.isSameDocument) dropAiRun()
+    if (details.isMainFrame && !details.isSameDocument) endRendererRun()
   })
   wc.once('destroyed', () => {
-    dropAiRun()
+    endRendererRun()
     releaseSlidesRecovery(wc.id)
     sessions.delete(wc.id)
     pendingByWc.delete(wc.id)
@@ -493,6 +498,29 @@ export function trackSlidesWebContents(wc: WebContents): void {
     saveAsImageTargets.forget(wc.id)
     if (windowRefs.activeWebContents === wc) windowRefs.activeWebContents = null
   })
+}
+
+/** The main process bounds an allowance even if the recording never reports its end. */
+const NARRATION_MICROPHONE_MAX_MS = 4 * 60 * 60 * 1000
+
+interface NarrationMicrophone {
+  timer: ReturnType<typeof setTimeout> | undefined
+}
+
+/** A pending OS question or a recording, owned by one slides editor. */
+const narrationMicrophones = new Map<number, NarrationMicrophone>()
+
+function closeNarrationMicrophone(wcId: number): void {
+  clearTimeout(narrationMicrophones.get(wcId)?.timer)
+  narrationMicrophones.delete(wcId)
+}
+
+/**
+ * True from the moment this editor's narration recording was let start until
+ * it stops: the only time the permission guard lets a page open the microphone.
+ */
+export function slidesMicrophoneOpen(wcId: number): boolean {
+  return narrationMicrophones.get(wcId)?.timer !== undefined
 }
 
 /** Save As › PNG names the dialog returned, accepted once by the image export */
@@ -4539,6 +4567,7 @@ export function registerSlidesIpc(): void {
 
   // ── Slide Show > Record: narration per slide plus its advance time, one undo step ──
   ipcMain.handle('slides:save-recording', (e, op: SaveRecordingOp) => {
+    closeNarrationMicrophone(e.sender.id)
     const session = sessions.get(e.sender.id)
     if (!session) return null
     const slides = session.opened.deck.slides
@@ -4571,11 +4600,29 @@ export function registerSlidesIpc(): void {
     return r ? slides.map((_, i) => rebuildSlide(session, i)) : null
   })
 
-  ipcMain.handle('slides:microphone-access', async () => {
-    if (process.platform !== 'darwin') return true
-    if (systemPreferences.getMediaAccessStatus('microphone') === 'granted') return true
-    return systemPreferences.askForMediaAccess('microphone')
+  ipcMain.handle('slides:microphone-access', async (e) => {
+    const wcId = e.sender.id
+    // only an editor with a deck open records
+    if (!sessions.has(wcId)) return false
+    closeNarrationMicrophone(wcId)
+    const recording: NarrationMicrophone = { timer: undefined }
+    narrationMicrophones.set(wcId, recording)
+    const granted =
+      process.platform !== 'darwin' ||
+      systemPreferences.getMediaAccessStatus('microphone') === 'granted' ||
+      (await systemPreferences.askForMediaAccess('microphone'))
+    // Stop, navigation or a newer recording invalidates this OS question.
+    if (narrationMicrophones.get(wcId) !== recording) return false
+    if (!granted || !sessions.has(wcId)) {
+      closeNarrationMicrophone(wcId)
+      return false
+    }
+    recording.timer = setTimeout(() => closeNarrationMicrophone(wcId), NARRATION_MICROPHONE_MAX_MS)
+    recording.timer.unref()
+    return true
   })
+
+  ipcMain.on('slides:microphone-release', (e) => closeNarrationMicrophone(e.sender.id))
 
   // ── Shape animations (<p:timing>; the spid <-> temporary element id mapping happens here) ──
   ipcMain.handle('slides:get-animations', (e, slideIndex: number): AnimationItem[] => {
@@ -5753,6 +5800,10 @@ async function applyMainProcessProxy(): Promise<void> {
 export function startSlidesStandalone(): void {
   registerRendererScheme()
   installNavigationGuard(app)
+  installPermissionGuard(app, electronSession, {
+    pages: { devUrls: { slides: runtime.rendererDevUrl } },
+    microphoneOpen: slidesMicrophoneOpen,
+  })
   installContextMenu(app, () => contextMenuLabels(getUiLang()))
   // Optional debug switch: enable CDP only in dev with SLIDES_CDP_PORT explicitly set (for
   // automated testing/troubleshooting); packaged builds (isPackaged) are unaffected.

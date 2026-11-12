@@ -40,6 +40,7 @@ import { registerAiNamingIpc } from './ai-naming-service'
 import { tabStripOverlay } from './title-bar-overlay'
 import { shellWindowBackground } from './window-background'
 import { installPointerSize } from './pointer-size'
+import { installShellPermissionGuard } from './permission-guard'
 import {
   applyUiScaleTo,
   applyUiScaleToAll,
@@ -272,6 +273,7 @@ import {
   setSlidesShellWindow,
   setSlidesShowBleed,
   slidesFileRenamed,
+  slidesMicrophoneOpen,
 } from '../../../slides/src/main/slides-main'
 import { moveSlidesTemplateSelection } from '../../../slides/src/main/template-selection-ipc'
 import {
@@ -9611,6 +9613,11 @@ app.on('second-instance', (_event, argv, _cwd, additionalData) => {
 })
 
 installNavigationGuard(app)
+// before app ready: no session, the default one included, exists without its answer
+installShellPermissionGuard({
+  microphoneOpen: slidesMicrophoneOpen,
+  rendererDir: join(__dirname, '../renderer'),
+})
 installContextMenu(app, () => contextMenuLabels(currentLang()))
 registerAiIpc()
 ipcMain.handle('ai:open-model-settings', () => {

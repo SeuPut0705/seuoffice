@@ -1711,8 +1711,13 @@ export interface SlidesApi {
   /** Replaces the recorded slides' narration and advance time in one undo step; the whole deck back. */
   saveRecording: (op: SaveRecordingOp) => Promise<RenderSlide[] | null>
   clearNarration: (slideIndexes: number[]) => Promise<RenderSlide[] | null>
-  /** Asks the OS for the microphone where it gates it (macOS); false when refused. */
+  /**
+   * Asks the OS for the microphone where it gates it (macOS); false when refused. A yes lets this
+   * editor open the microphone until `microphoneRelease`.
+   */
   microphoneAccess: () => Promise<boolean>
+  /** The narration recording stopped: the editor may no longer open the microphone. */
+  microphoneRelease: () => void
   /** The current page's animation list (read by the Animations tab / during shows) */
   getAnimations: (slideIndex: number) => Promise<AnimationItem[]>
   /** Morph pairing keys of the current page's elements (matched against same-name/same-id elements on the previous page during morph tweening) */

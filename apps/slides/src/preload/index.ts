@@ -396,6 +396,7 @@ const api: SlidesApi = {
   clearNarration: (slideIndexes: number[]) =>
     ipcRenderer.invoke('slides:clear-narration', slideIndexes),
   microphoneAccess: () => ipcRenderer.invoke('slides:microphone-access'),
+  microphoneRelease: () => ipcRenderer.send('slides:microphone-release'),
   getAnimations: (slideIndex: number) => ipcRenderer.invoke('slides:get-animations', slideIndex),
   getShapeKeys: (slideIndex: number) => ipcRenderer.invoke('slides:get-shape-keys', slideIndex),
   setAnimations: (op: SetAnimationsOp) => ipcRenderer.invoke('slides:set-animations', op),

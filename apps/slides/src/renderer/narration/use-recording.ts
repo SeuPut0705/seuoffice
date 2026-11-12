@@ -34,13 +34,17 @@ export function useNarrationRecording(
     void (async () => {
       try {
         if (!(await window.slidesApi.microphoneAccess())) throw new Error('microphone refused')
+        if (cancelled) return
         const recorder = await NarrationRecorder.start()
         if (cancelled) return recorder.dispose()
         recorderRef.current = recorder
         marksRef.current = [{ slideIndex: markIndexRef.current ?? 0, atMs: 0 }]
         setPhase('recording')
       } catch {
-        if (!cancelled) setPhase('failed')
+        if (cancelled) return
+        // nothing records: the main process need not keep the microphone open to this page
+        window.slidesApi.microphoneRelease()
+        setPhase('failed')
       }
     })()
     const tick = window.setInterval(() => setTick((n) => n + 1), 500)
@@ -49,6 +53,7 @@ export function useNarrationRecording(
       window.clearInterval(tick)
       recorderRef.current?.dispose()
       recorderRef.current = null
+      window.slidesApi.microphoneRelease()
     }
   }, [active])
 
@@ -70,9 +75,13 @@ export function useNarrationRecording(
   const finish = useCallback(async (): Promise<NarrationTake | null> => {
     const recorder = recorderRef.current
     recorderRef.current = null
-    if (!recorder) return null
-    const { audio, endMs } = await recorder.stop()
-    return { audio, marks: marksRef.current, endMs }
+    try {
+      if (!recorder) return null
+      const { audio, endMs } = await recorder.stop()
+      return { audio, marks: marksRef.current, endMs }
+    } finally {
+      window.slidesApi.microphoneRelease()
+    }
   }, [])
 
   const elapsedMs = recorderRef.current?.elapsedMs() ?? 0
