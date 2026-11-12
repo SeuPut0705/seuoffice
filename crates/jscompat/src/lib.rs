@@ -24,7 +24,9 @@ pub use number::{
     to_string_radix16,
 };
 pub use object::{JsObject, Slot, array_index, camel, camel_len};
-pub use regex::{JsMatch, JsRegex, RegexSyntaxError};
+pub use regex::{
+    BACKTRACK_LIMIT, JsMatch, JsMatches, JsRegex, RegexLimit, RegexSyntaxError, TryJsRegex,
+};
 pub use replace::{get_substitution, replace_first_string};
 pub use space::{is_js_space, trim, trim_start};
 pub use string::{pad_start, truthy};
