@@ -24,7 +24,6 @@ import {
   isGoogleNative,
   type DriveConnectionState,
   type DriveFile,
-  type FetchLike,
   type GoogleClient,
   type GoogleSignInOptions,
 } from '@genoffice/google-drive'
@@ -48,6 +47,7 @@ import { DriveFiles, type SyncAnswer, type SyncNotice, type SyncQuestion } from 
 import { copyFileName, driveText } from './drive-strings'
 import { createDriveVault, driveTokenSeals } from './drive-vault'
 import { isFreeAi } from './drive-consent'
+import { driveFetchOver } from './drive-fetch'
 import { setAiRunGuard } from '@genoffice/electron-utils/ai-run-guard'
 
 declare const __GENOFFICE_GOOGLE_CLIENT_ID__: string
@@ -106,7 +106,7 @@ const FREE_AI_REFUSAL =
   'Drive files are not given to the AI in use: it is a free connection that may use what it receives to train models. Tell the person to choose another AI to work with Drive files.'
 
 export function registerDriveIpc(deps: DriveIpcDeps): DriveService {
-  const fetch: FetchLike = (url, init) => net.fetch(url, init)
+  const fetch = driveFetchOver((url, init) => net.fetch(url, init))
   const connection = new DriveConnection({
     client: buildGoogleClient(),
     vault: createDriveVault(join(deps.userData(), 'google-drive.json'), {
