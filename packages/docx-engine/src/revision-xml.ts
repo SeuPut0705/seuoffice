@@ -415,11 +415,27 @@ export function countTrackedChangesXml(xml: string): number {
   return n
 }
 
+/**
+ * A filter's `before` the engine can compare against: a string that is a date.
+ * Anything else is refused here, by name, before a part is touched: the
+ * filter comes from callers (the AI tools, the API) the types do not hold.
+ */
+function checkFilter(filter: RevisionXmlFilter | undefined): void {
+  const before: unknown = filter?.before
+  if (before === undefined) return
+  if (typeof before !== 'string' || Number.isNaN(revisionDateMs(before))) {
+    throw new Error(
+      `revision filter: before must be an ISO date such as 2026-09-01 or 2026-09-01T12:00:00Z, got ${JSON.stringify(before)}`,
+    )
+  }
+}
+
 export function applyTrackedChangesXml(
   xml: string,
   mode: RevisionXmlMode,
   filter?: RevisionXmlFilter,
 ): RevisionXmlResult {
+  checkFilter(filter)
   if (countTrackedChangesXml(xml) === 0) {
     // nothing countable is left, but a part whose move markup lost its partner
     // (the move was resolved earlier, e.g. in the body) still gets the orphan

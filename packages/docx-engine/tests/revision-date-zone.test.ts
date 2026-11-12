@@ -82,3 +82,17 @@ describe.each(ZONES)('dates that are not an ISO date-time, with the machine in %
     expect(kept(['someday', '2026-01-14T00:00:00Z'], '2026-01-15T00:00:00Z')).toEqual(['someday'])
   })
 })
+
+describe('a before that is no date', () => {
+  const xml = hdr(`<w:p>${ins(1, '2026-01-14T00:00:00Z', 'kept')}</w:p>`)
+
+  it.each([['someday'], [''], [20260115], [null], [{}]])(
+    'refuses %j with its own error, and changes nothing',
+    (before) => {
+      const run = () =>
+        applyTrackedChangesXml(xml, 'reject', { before } as unknown as { before: string })
+      expect(run).toThrow(/before/)
+      expect(run).not.toThrow(TypeError)
+    },
+  )
+})
