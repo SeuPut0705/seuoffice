@@ -73,7 +73,7 @@ import {
   type TableStyleFlags,
 } from './table-style'
 import { ownValue, setOwn } from './own-value'
-import { asXmlNode, decodeXml, percentFraction } from './xml-utils'
+import { asXmlNode, canonicalXml, decodeXml, percentFraction } from './xml-utils'
 import { readRedactLabel } from './redaction-xml'
 
 const parser = xmlParser({
@@ -178,7 +178,8 @@ function uid(prefix: string): string {
 }
 
 export function parseSlide(input: SlideParseInput): Slide {
-  const { slideXml, path, layoutPath, masterPath, ctx } = input
+  const { path, layoutPath, masterPath, ctx } = input
+  const slideXml = canonicalXml(input.slideXml)
   const scan = scanSlide(slideXml)
 
   // Parse each shape's XML fragment with fast-xml-parser (independent parses, naturally aligned with scan order)
