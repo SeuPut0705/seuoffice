@@ -61,6 +61,19 @@ export function patchParagraphTexts(
   return check.join('\n') === newText ? out : null
 }
 
+/** a tag's attributes, quoted values free to hold `>` and `/>` */
+const ATTRS = `(?:[^>"']|"[^"]*"|'[^']*')*`
+/** an open or self-closing `name` tag, or its end tag (space allowed before `>`) */
+function tagPattern(name: string): RegExp {
+  return new RegExp(`<${name}(?=[\\s/>])${ATTRS}>|<\\/${name}\\s*>`, 'g')
+}
+const P_TAGS = tagPattern('w:p')
+const R_TAGS = tagPattern('w:r')
+const T_TAGS = tagPattern('w:t')
+const RUN_RPR = new RegExp(
+  `^<w:r${ATTRS}>\\s*(<w:rPr(?=[\\s/>])${ATTRS}\\/>|<w:rPr(?=[\\s/>])${ATTRS}>[\\s\\S]*?<\\/w:rPr\\s*>)?`,
+)
+
 interface ParaSlice {
   start: number
   end: number
@@ -72,7 +85,7 @@ function paragraphSlices(xml: string): ParaSlice[] {
   // textbox content (w:txbxContent), so a lazy open-to-first-close match would
   // truncate the outer paragraph
   const out: ParaSlice[] = []
-  const re = /<w:p(?:\s[^>]*)?\/>|<w:p(?:\s[^>]*)?>|<\/w:p>/g
+  const re = new RegExp(P_TAGS)
   // tags are found where comments and CDATA cannot fake one
   const masked = maskOpaque(xml)
   let m: RegExpExecArray | null
@@ -80,7 +93,7 @@ function paragraphSlices(xml: string): ParaSlice[] {
   let start = -1
   while ((m = re.exec(masked)) !== null) {
     const token = m[0]
-    if (token === '</w:p>') {
+    if (token.startsWith('</')) {
       if (depth === 0) continue
       depth--
       if (depth === 0 && start !== -1) {
@@ -107,6 +120,8 @@ interface TSlice {
   /** offsets of the inner content within the paragraph XML */
   innerStart: number
   innerEnd: number
+  /** offset just past the closing </w:t> */
+  closeEnd: number
   /** offset of the opening <w:t ...> tag */
   tagStart: number
   text: string
@@ -114,19 +129,24 @@ interface TSlice {
 
 function tSlices(paraXml: string): TSlice[] {
   const out: TSlice[] = []
-  const re = /<w:t(\s[^>]*)?>([\s\S]*?)<\/w:t>/g
+  const re = new RegExp(T_TAGS)
   // a w:t is found where a CDATA section or a comment cannot fake its end tag
   const masked = maskOpaque(paraXml)
+  let open: RegExpExecArray | null = null
   let m: RegExpExecArray | null
   while ((m = re.exec(masked)) !== null) {
-    const innerStart = m.index + m[0].length - m[2]!.length - '</w:t>'.length
-    const innerEnd = innerStart + m[2]!.length
-    out.push({
-      tagStart: m.index,
-      innerStart,
-      innerEnd,
-      text: wtText(paraXml.slice(innerStart, innerEnd)),
-    })
+    if (m[0].startsWith('</')) {
+      if (!open) continue
+      const innerStart = open.index + open[0].length
+      out.push({
+        tagStart: open.index,
+        innerStart,
+        innerEnd: m.index,
+        closeEnd: m.index + m[0].length,
+        text: wtText(paraXml.slice(innerStart, m.index)),
+      })
+      open = null
+    } else if (!m[0].endsWith('/>')) open = m
   }
   return out
 }
@@ -224,11 +244,10 @@ function patchOneParagraph(paraXml: string, newText: string, skipLeading: boolea
   let out = paraXml
   for (let i = last; i >= first; i--) {
     const s = slices[i]
-    const closeEnd = s.innerEnd + '</w:t>'.length
     out =
       out.slice(0, s.tagStart) +
       `<w:t xml:space="preserve">${newInner[i - first]}</w:t>` +
-      out.slice(closeEnd)
+      out.slice(s.closeEnd)
   }
   return out
 }
@@ -240,14 +259,12 @@ function patchOneParagraph(paraXml: string, newText: string, skipLeading: boolea
  */
 function sliceHidden(maskedPara: string, tagStart: number): boolean {
   const open: number[] = []
-  for (const m of maskedPara.slice(0, tagStart).matchAll(/<w:r(?=[\s>/])[^>]*?(\/?)>|<\/w:r>/g)) {
-    if (m[0] === '</w:r>') open.pop()
-    else if (!m[1]) open.push(m.index!)
+  for (const m of maskedPara.slice(0, tagStart).matchAll(R_TAGS)) {
+    if (m[0].startsWith('</')) open.pop()
+    else if (!m[0].endsWith('/>')) open.push(m.index)
   }
   return open.some((start) => {
-    const rPr = /^<w:r\b[^>]*>\s*(<w:rPr\b[^>]*\/>|<w:rPr\b[^>]*>[\s\S]*?<\/w:rPr>)?/.exec(
-      maskedPara.slice(start, tagStart),
-    )?.[1]
+    const rPr = RUN_RPR.exec(maskedPara.slice(start, tagStart))?.[1]
     return rPr !== undefined && hasWithheldTrace(rPr)
   })
 }
