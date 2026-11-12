@@ -103,6 +103,7 @@ import {
   type EditQueueItem,
 } from './edit-queue'
 import { DOC_NAV_SCHEME, navigateToBlock, parseDocNavHref } from './doc-nav'
+import { isRtlLang } from '@genoffice/i18n'
 
 /** Another editor's tool records on a reopened message, shown as one line */
 type OtherEditorTools = NonNullable<ProjectChatEntry['otherEditorTools']>
@@ -1254,7 +1255,7 @@ export function AiPanel({
       ref={asideRef}
       className={`copilot${resizing ? ' ai-panel-resizing' : ''}`}
       style={{ width: '100%' }}
-      dir={lang === 'ar' || lang === 'he' ? 'rtl' : undefined}
+      dir={isRtlLang(lang) ? 'rtl' : undefined}
     >
       <div
         className="ai-panel-resizer"

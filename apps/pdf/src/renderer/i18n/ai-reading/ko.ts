@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   airSuggested: '추천 질문',
@@ -40,4 +40,4 @@ export const ko = {
   airOverviewStart: '시작',
   airOverviewRunning: '개요를 만드는 중({done}/{total})',
   airOverviewStopped: '멈췄습니다. 다시 누르면 처음부터 만듭니다.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

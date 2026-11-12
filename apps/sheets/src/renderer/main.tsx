@@ -21,6 +21,7 @@ import {
   registerTextDingbatsFace,
   untilCellFontsLoaded,
 } from './cell-font-fallback'
+import { setDocumentLocale } from './document-locale'
 import { LocaleProvider, setModuleLang } from './i18n/locale'
 import { registerTemplateFonts } from './template-fonts'
 import type { DocTheme, UiTheme } from '../shared/desktop-api'
@@ -69,21 +70,29 @@ async function loadCellFonts(): Promise<void> {
 }
 
 async function bootstrap(): Promise<void> {
-  let lang: Lang = 'zh'
+  let lang: Lang = 'en'
   let theme: UiTheme = 'system'
   let docTheme: DocTheme = 'follow'
+  let documentLocale: string | undefined
   try {
     // per-promise catch: standalone runs have no app:get-theme handler, and
     // that rejection must not drop a resolved language
-    ;[lang, theme, docTheme] = await Promise.all([
-      window.desktopApi.getLanguage().catch(() => 'zh' as const),
+    ;[lang, theme, docTheme, documentLocale] = await Promise.all([
+      window.desktopApi.getLanguage().catch(() => 'en' as const),
       window.desktopApi.getTheme().catch(() => 'system' as const),
       window.desktopApi.getDocumentTheme?.().catch(() => 'follow' as const),
+      window.desktopApi.getDocumentLocale().catch(() => undefined),
     ])
   } catch {
     /* dev renderer without the preload bridge */
   }
   setModuleLang(lang)
+  // without an answer, documents are read for the UI language
+  setDocumentLocale(documentLocale ?? lang)
+  // Registered before anything renders, so it runs ahead of every later
+  // listener of the same event: a language chosen in Settings is the language
+  // documents are read for from then on, and those listeners redraw with it.
+  window.desktopApi?.onLanguageChanged(setDocumentLocale)
   document.documentElement.lang = htmlLang(lang)
   document.documentElement.dir = htmlDir(lang)
   applyTheme(theme)

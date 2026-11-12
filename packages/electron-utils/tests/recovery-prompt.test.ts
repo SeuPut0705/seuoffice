@@ -138,11 +138,10 @@ describe('promptRecoveryForFile', () => {
 
 describe('recovery strings', () => {
   const keys = Object.keys(
-    RECOVERY_PROMPT_STRINGS.zh,
-  ) as (keyof typeof RECOVERY_PROMPT_STRINGS.zh)[]
+    RECOVERY_PROMPT_STRINGS.en,
+  ) as (keyof typeof RECOVERY_PROMPT_STRINGS.en)[]
 
-  it('covers all 21 UI languages with every key filled', () => {
-    expect(LANGS).toHaveLength(21)
+  it('covers every UI language with every key filled', () => {
     for (const lang of LANGS) {
       const dict = RECOVERY_PROMPT_STRINGS[lang] as Record<string, string>
       expect(Object.keys(dict).sort(), lang).toEqual([...keys].sort())

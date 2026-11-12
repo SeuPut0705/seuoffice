@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   noticeText:
@@ -23,4 +23,4 @@ export const ko = {
   installDismissed: '설치하지 않음',
   installCancel: '취소',
   actProposeSkill: '스킬 제안',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

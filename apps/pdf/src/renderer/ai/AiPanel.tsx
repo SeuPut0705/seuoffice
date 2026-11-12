@@ -87,6 +87,7 @@ import { useSubscriptionConnection } from './useSubscriptionConnection'
 import { PDF_NAV_SCHEME, parsePdfNavHref, type PdfNavTarget } from './pdf-nav'
 import type { FileOpConfirm, PdfAiDeps, PdfAppDeps } from './tools'
 import { withFollowUp, type FollowUpSelection } from '../reading/passage-cards'
+import { isRtlLang } from '@genoffice/i18n'
 
 /** Another editor's tool records on a reopened message, shown as one line */
 type OtherEditorTools = NonNullable<ProjectChatEntry['otherEditorTools']>
@@ -1112,7 +1113,7 @@ export function AiPanel({
       ref={asideRef}
       className={`copilot${resizing ? ' ai-panel-resizing' : ''}`}
       style={{ width: '100%' }}
-      dir={lang === 'ar' || lang === 'he' ? 'rtl' : undefined}
+      dir={isRtlLang(lang) ? 'rtl' : undefined}
     >
       <div
         className="ai-panel-resizer"

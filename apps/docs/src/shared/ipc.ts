@@ -435,15 +435,14 @@ export const MARKDOWN_MEDIA_DIR_TOKEN = '__genoffice_media__'
 
 export interface DesktopApi {
   /** current UI language (persisted by the shell in app-settings.json) */
-  getLanguage(): Promise<'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar'>
+  getLanguage(): Promise<'en' | 'ko'>
+  /** the language documents are read and drawn for (a documentLocaleFor code): date and
+   *  time fields, the order of a generated index. It names more languages than the UI has */
+  getDocumentLocale(): Promise<string>
   /** OS regional-settings locale (BCP 47); Word derives the new-document paper size from it */
   getSystemLocale(): Promise<string>
   /** language switched from the shell home page */
-  onLanguageChanged(
-    handler: (
-      lang: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar',
-    ) => void,
-  ): () => void
+  onLanguageChanged(handler: (lang: 'en' | 'ko') => void): () => void
   /** current UI theme preference (persisted by the shell in app-settings.json) */
   getTheme(): Promise<UiTheme>
   /** theme switched from the shell home page */

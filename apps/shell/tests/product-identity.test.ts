@@ -118,7 +118,7 @@ describe('one product name', () => {
 
 describe('the name in the shell UI', () => {
   const t = createI18n(strings)
-  type Key = keyof typeof strings.zh
+  type Key = keyof typeof strings.en
 
   it('acknowledges the upstream project by its real name in every language', () => {
     for (const lang of LANGS) {
@@ -133,7 +133,7 @@ describe('the name in the shell UI', () => {
 
   it('shows the upstream name nowhere else', () => {
     for (const lang of LANGS) {
-      for (const key of Object.keys(strings.zh) as Key[]) {
+      for (const key of Object.keys(strings.en) as Key[]) {
         if (key === 'setBasedOn') continue
         expect(t(lang, key), `${lang}.${key}`).not.toContain(UPSTREAM_PRODUCT_NAME)
       }
@@ -145,7 +145,7 @@ describe('the name in the shell UI', () => {
   it('names the product in the manual: titles and bodies', async () => {
     expect(topicTitle('install', 'en')).toBe(`Installing ${PRODUCT_NAME}`)
     expect(topicTitle('install', 'ko')).toBe(`${PRODUCT_NAME} 설치`)
-    for (const lang of ['en', 'ko', 'ja'] as const) {
+    for (const lang of LANGS) {
       for (const topic of HELP_TOPICS) {
         expect(topicTitle(topic.id, lang)).not.toContain(UPSTREAM_PRODUCT_NAME)
         const body = (await helpBody(topic.id, lang)) ?? ''

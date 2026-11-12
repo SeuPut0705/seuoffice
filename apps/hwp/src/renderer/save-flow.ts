@@ -7,6 +7,7 @@ import type {
   TabMeasure,
   TabSpot,
 } from '../shared/ipc'
+import type { StringKey } from './i18n/locale'
 
 /** The part of the embedded editor a save needs. */
 export interface SaveEditorPort {
@@ -61,6 +62,38 @@ export type SaveOutcome =
       reason: 'protected' | 'tracked' | 'unverified' | 'verify' | 'export' | 'write' | 'ai'
       detail?: string
     }
+
+/** What the page can do with a document besides replacing the file it opened (`HwpApi.noSaveAs`). */
+type SaveSurface = Pick<HwpApi, 'noSaveAs'>
+
+/**
+ * The notice for a document opened although the structure of its file could not be
+ * checked. That file is not saved over, so the notice says how the document can be kept:
+ * with Save As where there is one, and elsewhere that it cannot be kept from this page.
+ */
+export function openedUnverifiedKey(host: SaveSurface): StringKey {
+  return host.noSaveAs ? 'openedUnverifiedNoCopy' : 'openedUnverified'
+}
+
+/** The notice for a save that wrote nothing; an AI run's hold has notices of its own. */
+export function saveFailureKey(
+  reason: Exclude<Extract<SaveOutcome, { kind: 'failed' }>['reason'], 'ai'>,
+  host: SaveSurface,
+): StringKey {
+  switch (reason) {
+    case 'protected':
+      return 'saveProtected'
+    case 'tracked':
+      return 'saveTracked'
+    case 'unverified':
+      return host.noSaveAs ? 'saveUnverifiedNoCopy' : 'saveUnverified'
+    case 'verify':
+      return 'saveVerifyFailed'
+    case 'export':
+    case 'write':
+      return 'saveFailed'
+  }
+}
 
 const fileNameOf = (path: string) => path.split(/[\\/]/).pop() ?? path
 

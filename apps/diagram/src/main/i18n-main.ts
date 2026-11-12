@@ -8,7 +8,7 @@ import { appStrings } from '../renderer/i18n/strings-app'
 
 const translate = createI18n(appStrings)
 
-export type MainStringKey = keyof typeof appStrings.zh
+export type MainStringKey = keyof typeof appStrings.en
 
 export function tm(key: MainStringKey, params?: Params): string {
   return translate(getUiLang(), key, params)

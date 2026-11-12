@@ -12,6 +12,12 @@ import {
 } from './xlsx-dates'
 import { decodeXlsxEscapes } from '@genoffice/xlsx-gateway/gateway/xlsx-escapes'
 import { readXlsxRedactions, withheldCellMarker } from './xlsx-redaction'
+import {
+  FORMULA_SCAN_MAX_BYTES,
+  pivotOutputOf,
+  readDerivedCells,
+  type PivotOutput,
+} from './xlsx-formula-redaction'
 
 function stripNamespacePrefix(name: string): string {
   const separator = name.indexOf(':')
@@ -300,6 +306,10 @@ export interface XlsxTextOptions {
   /// Sheet XML past this many extracted characters is not even parsed: the DOM
   /// of a 100k-row sheet costs ~1 GB of heap for text nobody keeps (genoffice#2011).
   maxChars?: number
+  /// In a workbook that withholds cells, every sheet is scanned for the
+  /// formulas that depend on them; a sheet whose XML is larger than this is
+  /// withheld whole instead (see `xlsx-formula-redaction`).
+  formulaScanMaxBytes?: number
 }
 
 const XML_BYTES_PER_TEXT_CHAR = 8
@@ -374,15 +384,37 @@ export async function xlsxToText(bytes: Uint8Array, opts: XlsxTextOptions = {}):
   }
   // Read before any cell is: a record of withheld cells that cannot be read
   // fails the whole workbook, and no sheet is handed over without its marks.
-  const redactions = await readXlsxRedactions(
-    zip,
-    sheets.map((sheet) => String(sheet['@_name'] ?? '')),
-  )
+  const sheetNames = sheets.map((sheet) => String(sheet['@_name'] ?? ''))
+  const redactions = await readXlsxRedactions(zip, sheetNames)
+  // Nor without the formulas that compute from those cells, which may sit on
+  // any sheet and reach the cell through any other.
+  const scanLimit = opts.formulaScanMaxBytes ?? FORMULA_SCAN_MAX_BYTES
+  const derived =
+    redactions.size === 0
+      ? undefined
+      : await readDerivedCells(
+          sheets.map((sheet, index) => {
+            const part = relTargets.get(relationshipId(sheet))
+            return {
+              name: sheetNames[index]!,
+              xml: part ? () => zipTextPrefix(zip, part, scanLimit) : undefined,
+              marks: redactions.get(sheetNames[index]!) ?? [],
+              pivots: part ? () => sheetPivotOutputs(zip, part) : undefined,
+            }
+          }),
+          (
+            asArray(workbook.workbook?.definedNames?.definedName) as Array<Record<string, unknown>>
+          ).flatMap((defined) =>
+            typeof defined === 'object' && defined['@_name'] !== undefined
+              ? [{ name: String(defined['@_name']), formula: textOf(defined) }]
+              : [],
+          ),
+        )
 
   const sections: string[] = []
   let sheetsWithData = 0
   let imageOnlySheets = 0
-  for (const sheet of sheets) {
+  for (const [sheetIndex, sheet] of sheets.entries()) {
     if (used >= maxChars) break
     const path = relTargets.get(relationshipId(sheet))
     const budget = maxChars - used
@@ -391,8 +423,9 @@ export async function xlsxToText(bytes: Uint8Array, opts: XlsxTextOptions = {}):
     const sheetXml =
       maxChars === Infinity ? raw.text : clipSheetXml(raw.text, budget, raw.truncated)
     const worksheet = parser.parse(sheetXml) as Record<string, any>
-    const sheetName = String(sheet['@_name'] ?? '')
+    const sheetName = sheetNames[sheetIndex]!
     const marks = redactions.get(sheetName)
+    const derivedCells = derived?.[sheetIndex]
     const lines: string[] = [`# ${sheetName}`]
     let sheetChars = lines[0].length
     const rows = asArray(worksheet.worksheet?.sheetData?.row) as Array<Record<string, unknown>>
@@ -407,9 +440,10 @@ export async function xlsxToText(bytes: Uint8Array, opts: XlsxTextOptions = {}):
       for (const cell of asArray(row.c as Cell | Cell[])) {
         const ref = cell['@_r']
         // A withheld cell is its marker and nothing else: neither its cached
-        // value nor its formula is read into the row.
+        // value nor its formula is read into the row. The same goes for a
+        // formula that computes from one.
         const text =
-          withheldCellMarker(marks, ref) ??
+          withheldCellMarker(marks, ref, derivedCells, cell.f !== undefined) ??
           cellText(cell, shared, dateStyles, date1904, sharedFormulas)
         // A malformed ref (no leading column letters) yields -1; append in
         // document order instead of writing slots[-1] which would drop text.
@@ -491,4 +525,42 @@ async function countDrawingPictures(
     return drawingXml ? countElements(parser.parse(drawingXml), 'pic') : 0
   }
   return 0
+}
+
+/// A pivot part opens with its `<location>` and a cache definition with its
+/// `<cacheSource>`; the member lists that follow can run to megabytes.
+const PIVOT_PART_HEAD_BYTES = 1024 * 1024
+
+/** the relationships of one kind a part declares, as part paths; external ones are left out */
+async function relatedParts(zip: JSZip, partPath: string, kind: string): Promise<string[]> {
+  const relsXml = await zipText(zip, partPath.replace(/([^/]+)$/, '_rels/$1.rels'))
+  if (!relsXml) return []
+  const rels = parser.parse(relsXml) as Record<string, any>
+  return (asArray(rels.Relationships?.Relationship) as Array<Record<string, unknown>>).flatMap(
+    (rel) => {
+      const target = String(rel['@_Target'] ?? '')
+      return String(rel['@_Type'] ?? '').endsWith(`/${kind}`) &&
+        String(rel['@_TargetMode'] ?? '').toLowerCase() !== 'external' &&
+        target.trim() !== ''
+        ? [resolveTarget(partPath, target)]
+        : []
+    },
+  )
+}
+
+/** every PivotTable whose output is on this sheet, with the source its cache names */
+async function sheetPivotOutputs(zip: JSZip, sheetPath: string): Promise<PivotOutput[]> {
+  const outputs: PivotOutput[] = []
+  for (const pivotPath of await relatedParts(zip, sheetPath, 'pivotTable')) {
+    const [cachePath] = await relatedParts(zip, pivotPath, 'pivotCacheDefinition')
+    outputs.push(
+      pivotOutputOf(
+        (await zipTextPrefix(zip, pivotPath, PIVOT_PART_HEAD_BYTES))?.text,
+        cachePath === undefined
+          ? undefined
+          : (await zipTextPrefix(zip, cachePath, PIVOT_PART_HEAD_BYTES))?.text,
+      ),
+    )
+  }
+  return outputs
 }

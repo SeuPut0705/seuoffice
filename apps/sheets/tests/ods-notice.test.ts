@@ -49,10 +49,6 @@ describe('the .ods conversion notice', () => {
 describe('the .ods notice strings', () => {
   const languages = Object.keys(strings) as Lang[]
 
-  it('cover all 21 languages', () => {
-    expect(languages).toHaveLength(21)
-  })
-
   it('every language defines both keys with the count placeholder', () => {
     for (const lang of languages) {
       const values: Record<string, string> = strings[lang]

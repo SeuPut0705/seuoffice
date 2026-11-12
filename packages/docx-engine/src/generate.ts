@@ -3112,11 +3112,13 @@ export function generateCaptionXml(label: string, number: number, text: string):
 /**
  * INDEX field as one w:p per cached entry line, alphabetically sorted. The
  * begin fldChar is dirty so Word rebuilds entries and page numbers on open.
+ * `locale` is the collation of the document's language; a caller that shows the
+ * entries itself sorts them the same way, line for line.
  */
-export function generateIndexFieldXml(terms: string[]): string[] {
+export function generateIndexFieldXml(terms: string[], locale = 'zh-CN'): string[] {
   const unique = [...new Set(terms.map((t) => t.trim()).filter(Boolean))]
   if (unique.length === 0) return []
-  unique.sort((a, b) => a.localeCompare(b, 'zh-CN'))
+  unique.sort((a, b) => a.localeCompare(b, locale))
   const begin =
     '<w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r>' +
     '<w:r><w:instrText xml:space="preserve"> INDEX \\c "2" </w:instrText></w:r>' +

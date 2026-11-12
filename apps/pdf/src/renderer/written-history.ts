@@ -1,13 +1,14 @@
 /**
  * Undo and Redo of a change written to the file at once (Replace pages, Page
- * size, Crop, Insert PDF): the file as it was is kept, and stepping writes it
- * back. Every kept file is a whole copy of the document in this renderer, so
- * they arrive in slices and their total is bounded; a step that no longer fits
- * is dropped, and what is left is what the Undo and Redo buttons offer. A file
- * too large to keep at all is the one case the person is asked about first.
+ * size, Crop, Insert PDF, Paste pages): the file as it was is kept, and
+ * stepping writes it back. Every kept file is a whole copy of the document in
+ * this renderer, so they arrive in slices and their total is bounded; a step
+ * that no longer fits is dropped, and what is left is what the Undo and Redo
+ * buttons offer. A file too large to keep at all is the one case the person is
+ * asked about first: the change, or the Undo, that follows cannot be taken back.
  */
 import type { RestoreFileRequest, RestoreFileResult } from '../shared/ipc'
-import { readFileBytesWithin, readFileWithin, type PdfFileChunkApi } from './file-bytes'
+import { readFileWithin, type BoundedFileRead, type PdfFileChunkApi } from './file-bytes'
 
 export interface WrittenHistoryApi extends PdfFileChunkApi {
   restoreFile(request: RestoreFileRequest): Promise<RestoreFileResult>
@@ -54,22 +55,29 @@ function fit(steps: WrittenSteps, limits: WrittenLimits): WrittenSteps {
   return { undo, redo }
 }
 
-/** Whether the person agreed, for the open document, to changes that cannot be undone */
+/** Whether the person agreed, for the open document, to what one question asks */
 export interface NoUndoConsent {
   given: boolean
 }
 
-/** What the person is asked before a change that cannot be undone */
+/** What the person is asked before a write that cannot be taken back */
 export interface NoUndoQuestion {
+  /** the file that is too large to keep */
   fileBytes: number
-  /** the largest file kept as an Undo step */
+  /** the largest file kept as a step */
   limitBytes: number
 }
 
+/**
+ * The question before a write that cannot be taken back, and its answer. A
+ * change that cannot be undone and an Undo that cannot be redone are two
+ * questions: each has its own gate, so that agreeing to one is not taken for
+ * the other.
+ */
 export interface NoUndoGate {
   /** one per open document: set here once the person agrees, so they are asked once */
   consent: NoUndoConsent
-  /** false cancels the change */
+  /** false cancels the write */
   confirm(question: NoUndoQuestion): boolean | Promise<boolean>
   limits?: WrittenLimits
 }
@@ -80,7 +88,7 @@ export interface NoUndoGate {
  * is asked first, once per document. A file that fits is never asked about;
  * its oldest step falling off the bound is ordinary Undo depth.
  */
-export async function agreesToNoUndo(
+async function agreesToNoUndo(
   fileBytes: number,
   { consent, confirm, limits = DEFAULT_LIMITS }: NoUndoGate,
 ): Promise<boolean> {
@@ -90,28 +98,58 @@ export async function agreesToNoUndo(
   return true
 }
 
+/** Edits not in the file yet: they are saved to it before a change is written in place */
+export interface PendingEdits {
+  /** the file's size as the document was read: what the person is asked about before the save */
+  fileBytes: number
+  /**
+   * Writes them to the file. Resolves to where the document is afterwards: a
+   * save can move it (the first save of an untitled copy asks where it goes, a
+   * blank PDF takes its name from its content), and the main process then
+   * grants only the new path. Null when nothing was saved.
+   */
+  save(): Promise<string | null>
+}
+
 export type InPlaceWrite<R> =
-  /** the person chose not to go on: `write` was not called */
-  | { declined: true }
-  /** `before`: the file from before the change, null when it was too large to keep */
-  | { declined: false; result: R; before: Uint8Array | null }
+  /** the person chose not to go on: `write` was not called. `flushed`: the pending edits
+   *  were saved all the same, because only their save made the file too large */
+  | { status: 'declined'; flushed: boolean }
+  /** the pending edits could not be saved: `write` was not called */
+  | { status: 'unsaved' }
+  /** `path`: where the document is now, and where `write` was told to write. `before`: the
+   *  file from before the change, null when it was too large to keep */
+  | { status: 'run'; path: string; result: R; before: Uint8Array | null }
 
 /**
- * Writes a change to the file in place. The file as it is now is read first,
- * for Undo; when it is too large to keep, nothing is written unless the
- * person agrees to a change that cannot be undone.
+ * Writes a change to the file in place, after the pending edits are saved to
+ * it. The file as it is then is read first, for Undo; when it is too large to
+ * keep, nothing is written unless the person agrees to a change that cannot
+ * be undone. With edits pending they are asked before the save, so that
+ * Cancel leaves the file as it is. `path` is where the document is when the
+ * operation starts: the read and the write go to where the save leaves it.
  */
 export async function writeInPlace<R>(
   api: PdfFileChunkApi,
   path: string,
-  write: () => Promise<R>,
+  write: (path: string) => Promise<R>,
   gate: NoUndoGate,
+  pending?: PendingEdits,
 ): Promise<InPlaceWrite<R>> {
-  const kept = await readFileWithin(api, path, (gate.limits ?? DEFAULT_LIMITS).bytes)
-  if (kept.bytes === null && !(await agreesToNoUndo(kept.fileSize, gate))) {
-    return { declined: true }
+  let at = path
+  if (pending) {
+    if (!(await agreesToNoUndo(pending.fileBytes, gate))) {
+      return { status: 'declined', flushed: false }
+    }
+    const saved = await pending.save()
+    if (saved === null) return { status: 'unsaved' }
+    at = saved
   }
-  return { declined: false, result: await write(), before: kept.bytes }
+  const kept = await readFileWithin(api, at, (gate.limits ?? DEFAULT_LIMITS).bytes)
+  if (kept.bytes === null && !(await agreesToNoUndo(kept.fileSize, gate))) {
+    return { status: 'declined', flushed: pending !== undefined }
+  }
+  return { status: 'run', path: at, result: await write(at), before: kept.bytes }
 }
 
 /**
@@ -132,40 +170,50 @@ export type WrittenStepResult =
   | { ok: true; steps: WrittenSteps }
   /** nothing was written: another program changed or removed the file the step was taken from */
   | { ok: false; reason: 'disk-changed' }
+  /** nothing was written: the step could not be taken back, and the person chose not to take it */
+  | { ok: false; reason: 'declined' }
   | { ok: false; reason: 'failed'; error: string }
 
 export interface WrittenStepOptions {
   /** the notice that another program changed or removed the file is up */
   diskChanged: boolean
-  limits?: WrittenLimits
+  /** asked before a step that cannot be taken back: the file as it is now is too large to keep */
+  gate: NoUndoGate
 }
 
 /**
  * Undo or Redo one step: the file as it is now becomes the step for the way
- * back, then the kept file is written over it. The kept file holds nothing
- * another program wrote since, so nothing is asked for while that is known,
- * and the main process refuses (`external-modified`) when it finds out first.
- * The caller offers the step only when there is one.
+ * back, then the kept file is written over it. A file too large to keep leaves
+ * no way back (an Undo that cannot be redone), so the person is asked first,
+ * once per document. The kept file holds nothing another program wrote since,
+ * so nothing is asked for while that is known, and the main process refuses
+ * (`external-modified`) when it finds out first. The caller offers the step
+ * only when there is one.
  */
 export async function stepWrittenFile(
   api: WrittenHistoryApi,
   path: string,
   steps: WrittenSteps,
   direction: 'undo' | 'redo',
-  { diskChanged, limits = DEFAULT_LIMITS }: WrittenStepOptions,
+  { diskChanged, gate }: WrittenStepOptions,
 ): Promise<WrittenStepResult> {
+  const limits = gate.limits ?? DEFAULT_LIMITS
   const from = direction === 'undo' ? steps.undo : steps.redo
   const back = direction === 'undo' ? steps.redo : steps.undo
   const bytes = from[from.length - 1]
   if (!bytes) return { ok: false, reason: 'failed', error: `pdf: nothing to ${direction}` }
   if (diskChanged) return { ok: false, reason: 'disk-changed' }
-  let current: Uint8Array | null
+  let now: BoundedFileRead
   try {
-    current = await readFileBytesWithin(api, path, limits.bytes)
+    now = await readFileWithin(api, path, limits.bytes)
   } catch {
     // it could be read when the step was taken: gone or locked is another program's doing
     return { ok: false, reason: 'disk-changed' }
   }
+  if (now.bytes === null && !(await agreesToNoUndo(now.fileSize, gate))) {
+    return { ok: false, reason: 'declined' }
+  }
+  const current = now.bytes
   // the slices were copied into a buffer of the reported size: send exactly the file
   const whole = bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
   const result = await api.restoreFile({

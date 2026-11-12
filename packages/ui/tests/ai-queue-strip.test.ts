@@ -262,7 +262,7 @@ it('localizes the strip labels', () => {
     root.render(
       createElement(AiQueueStrip, {
         items: [{ id: 'q1', text: 'x' }],
-        labels: AI_QUEUE_LABELS.zh,
+        labels: AI_QUEUE_LABELS.ko,
         onUpdate: () => {},
         onRemove: () => {},
         onClear: () => {},
@@ -270,7 +270,7 @@ it('localizes the strip labels', () => {
     ),
   )
   expect(host.querySelector('.ai-queue-toggle')!.textContent).toContain(
-    '1 \u6761\u6392\u961f\u4e2d',
+    AI_QUEUE_LABELS.ko.queuedCount(1),
   )
 })
 

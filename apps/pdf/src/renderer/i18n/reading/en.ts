@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   rdWithKey: '{label} ({key})',
   rdExplain: 'AI explanation',
@@ -26,4 +24,4 @@ export const en = {
   rdUnderlinesTip: 'Shows a faint dotted line under passages that have a card',
   rdOpenCard: 'Open passage card: {excerpt}',
   rdCardLabel: 'Passage card',
-} satisfies Record<keyof typeof zh, string>
+}

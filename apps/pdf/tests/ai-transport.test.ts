@@ -98,8 +98,8 @@ describe('pdf AI transport', () => {
     ] as const) {
       const turn = startTurn()
       turn.push({ type: 'error', error: 'raw', errorCode: code })
-      // the module-level language of the pdf renderer is zh until a provider mounts
-      expect(turn.errors).toEqual([strings.zh[key]])
+      // the module-level language of the pdf renderer is en until a provider mounts
+      expect(turn.errors).toEqual([strings.en[key]])
       expect(turn.streamErrors[0]?.kind).toBe(code)
     }
   })

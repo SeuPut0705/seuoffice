@@ -54,7 +54,7 @@ export async function convertLegacyWorkbook(
   if ((await stat(source)).size > MAX_HTML_IMPORT_BYTES) {
     return { kind: 'html-too-large', formulasDropped: 0 }
   }
-  const html = decodeHtmlBuffer(await readFile(source), preferredCharset)
+  const html = await decodeHtmlBuffer(await readFile(source), preferredCharset)
   const tables = parseHtmlTables(html)
   if (tables.length === 0) return { kind: 'html-no-table', formulasDropped: 0 }
   await writeFile(target, await htmlTablesToXlsxBuffer(tables))

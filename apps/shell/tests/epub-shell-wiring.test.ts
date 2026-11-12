@@ -145,7 +145,6 @@ describe('the book menu', () => {
   })
 
   it('names its items and the dialog filter in every language', () => {
-    expect(LANGS).toHaveLength(21)
     const keys = ['filterEpub', 'menuFind', 'menuReplace', 'menuTranslateBook']
     const english = localeBlock('en')
     const valueIn = (block: string, key: string) =>

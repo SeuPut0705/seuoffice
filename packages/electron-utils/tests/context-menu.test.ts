@@ -103,18 +103,14 @@ describe('buildContextMenuItems', () => {
 })
 
 describe('contextMenuLabels', () => {
-  it('covers every language and falls back to English', () => {
-    expect(contextMenuLabels('zh').copy).toBe('复制')
-    expect(contextMenuLabels('zh-TW').paste).toBe('貼上')
+  it('falls back to English for a language it has no labels for', () => {
     expect(contextMenuLabels('xx')).toEqual(contextMenuLabels('en'))
   })
 
   it('falls back to the base language for regional variants', () => {
-    expect(contextMenuLabels('pt-BR').copy).toBe(contextMenuLabels('pt').copy)
-    expect(contextMenuLabels('zh-Hant').copy).toBe(contextMenuLabels('zh').copy)
-    expect(contextMenuLabels('de-AT').copy).toBe(contextMenuLabels('de').copy)
-    expect(appMenuLabels('pt-BR').window).toBe(appMenuLabels('pt').window)
-    expect(appMenuLabels('zh-Hant').window).toBe(appMenuLabels('zh').window)
+    expect(contextMenuLabels('ko-KR').copy).toBe(contextMenuLabels('ko').copy)
+    expect(contextMenuLabels('ko-KR').copy).not.toBe(contextMenuLabels('en').copy)
+    expect(appMenuLabels('ko-KR').window).toBe(appMenuLabels('ko').window)
   })
 })
 

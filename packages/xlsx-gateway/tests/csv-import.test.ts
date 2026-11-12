@@ -133,27 +133,27 @@ describe('resolveImportDelimiter', () => {
 })
 
 describe('decodeCsvBuffer', () => {
-  it('passes ASCII bytes through', () => {
+  it('passes ASCII bytes through', async () => {
     const bytes = new TextEncoder().encode('a,b\n1,2')
-    expect(decodeCsvBuffer(bytes)).toBe('a,b\n1,2')
+    expect(await decodeCsvBuffer(bytes)).toBe('a,b\n1,2')
   })
 
-  it('strips a UTF-8 BOM', () => {
+  it('strips a UTF-8 BOM', async () => {
     const body = new TextEncoder().encode('a,b')
     const bytes = new Uint8Array([0xef, 0xbb, 0xbf, ...body])
-    expect(decodeCsvBuffer(bytes)).toBe('a,b')
+    expect(await decodeCsvBuffer(bytes)).toBe('a,b')
   })
 
-  it('decodes UTF-16LE with a BOM', () => {
+  it('decodes UTF-16LE with a BOM', async () => {
     const bytes = new Uint8Array([0xff, 0xfe, ...utf16leBytes('a,b\n1,2')])
-    expect(decodeCsvBuffer(bytes)).toBe('a,b\n1,2')
+    expect(await decodeCsvBuffer(bytes)).toBe('a,b\n1,2')
   })
 
-  it('decodes UTF-16LE without a BOM from the NUL pattern', () => {
-    expect(decodeCsvBuffer(utf16leBytes('a,b'))).toBe('a,b')
+  it('decodes UTF-16LE without a BOM from the NUL pattern', async () => {
+    expect(await decodeCsvBuffer(utf16leBytes('a,b'))).toBe('a,b')
   })
 
-  it('decodes BOM-less UTF-16 CJK-only text in either byte order', () => {
+  it('decodes BOM-less UTF-16 CJK-only text in either byte order', async () => {
     const text = Array(6)
       .fill(
         '\u59d3\u540d\u90e8\u95e8\u804c\u4f4d\u5de5\u53f7\u5907\u6ce8\u90ae\u7bb1\u7535\u8bdd\u5730',
@@ -165,9 +165,9 @@ describe('decodeCsvBuffer', () => {
       be[i] = le[i + 1]!
       be[i + 1] = le[i]!
     }
-    expect(decodeCsvBuffer(le)).toBe(text)
-    expect(decodeCsvBuffer(be)).toBe(text)
-    expect(decodeCsvBuffer(le, 'gb18030')).toBe(text)
+    expect(await decodeCsvBuffer(le)).toBe(text)
+    expect(await decodeCsvBuffer(be)).toBe(text)
+    expect(await decodeCsvBuffer(le, 'gb18030')).toBe(text)
   })
 })
 
@@ -240,23 +240,23 @@ describe('decodeCsvBuffer: Korean code page 949 detected from the bytes', () => 
     198, 183, 195, 251, 44, 188, 219, 184, 241, 10, 191, 167, 183, 200, 44, 53, 48, 48, 10,
   ])
 
-  it('reads Korean without any locale hint', () => {
-    expect(decodeCsvBuffer(CP949)).toBe('품목,금액\n라떼,5000\n')
-    expect(decodeCsvBuffer(CP949, 'euc-kr')).toBe('품목,금액\n라떼,5000\n')
+  it('reads Korean without any locale hint', async () => {
+    expect(await decodeCsvBuffer(CP949)).toBe('품목,금액\n라떼,5000\n')
+    expect(await decodeCsvBuffer(CP949, 'euc-kr')).toBe('품목,금액\n라떼,5000\n')
   })
 
-  it('keeps Japanese and Chinese files as they were', () => {
+  it('keeps Japanese and Chinese files as they were', async () => {
     // without a hint these bytes were never Korean; they must not become Korean now
-    expect(decodeCsvBuffer(SJIS)).not.toMatch(/[\uac00-\ud7a3]/)
-    expect(decodeCsvBuffer(SJIS, 'shift_jis')).toBe('品名,価格\nコーヒー,500\n')
-    expect(decodeCsvBuffer(GBK)).toBe('品名,价格\n咖啡,500\n')
-    expect(decodeCsvBuffer(GBK, 'gb18030')).toBe('品名,价格\n咖啡,500\n')
+    expect(await decodeCsvBuffer(SJIS)).not.toMatch(/[\uac00-\ud7a3]/)
+    expect(await decodeCsvBuffer(SJIS, 'shift_jis')).toBe('品名,価格\nコーヒー,500\n')
+    expect(await decodeCsvBuffer(GBK)).toBe('品名,价格\n咖啡,500\n')
+    expect(await decodeCsvBuffer(GBK, 'gb18030')).toBe('品名,价格\n咖啡,500\n')
   })
 
-  it('leaves UTF-8 alone', () => {
+  it('leaves UTF-8 alone', async () => {
     const utf8 = new TextEncoder().encode('품목,금액\n라떼,5000\n')
-    expect(decodeCsvBuffer(utf8)).toBe('품목,금액\n라떼,5000\n')
-    expect(decodeCsvBuffer(utf8, 'gb18030')).toBe('품목,금액\n라떼,5000\n')
+    expect(await decodeCsvBuffer(utf8)).toBe('품목,금액\n라떼,5000\n')
+    expect(await decodeCsvBuffer(utf8, 'gb18030')).toBe('품목,금액\n라떼,5000\n')
   })
 })
 

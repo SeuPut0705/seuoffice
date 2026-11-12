@@ -161,7 +161,7 @@ async function render(initial: {
     lang: 'en',
     t,
     api: structureApi(),
-    prepare: async () => true,
+    prepare: async () => 'C:\\docs\\ferns.pdf',
     pageText,
     onClose: () => {},
   }

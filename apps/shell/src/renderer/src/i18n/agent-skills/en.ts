@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   noticeText:
     'Skills are now turned on and off in Settings → Skills. Skills in the Claude and Codex skill folders start turned off.',
@@ -23,4 +21,4 @@ export const en = {
   installDismissed: 'Not installed',
   installCancel: 'Cancel',
   actProposeSkill: 'Suggest a skill',
-} satisfies Record<keyof typeof zh, string>
+}

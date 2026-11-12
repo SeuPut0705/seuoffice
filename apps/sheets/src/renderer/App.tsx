@@ -227,11 +227,16 @@ import { cfRuleUnsaveableReason, iconSetSaveable } from '@genoffice/xlsx-gateway
 import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { markPlaceInFile, sessionRedactionIndex, type MarkPlace } from './redact-session'
 import {
+  createDerivedCells,
+  installDerivedCellsInvalidation,
+  type DerivedCells,
+} from './redact-derived'
+import {
   installRedactMoveGuard,
   installRedactPasteGuard,
-  pasteSourceHoldsHidden,
   type RedactMoveGuardDeps,
 } from './redact-move-guard'
+import { installWithheldCopyMark } from './redact-clipboard'
 import { installLazyFindBridge } from './lazy-find'
 import { startFullLoad } from './full-load'
 import { opensInFormulaMode, workbookCellCounts } from './load-budget'
@@ -570,7 +575,7 @@ import { installCopyMaterialize } from './copy-materialize'
 import { installCopyPicture } from './copy-picture'
 import {
   applyPasteSpecial,
-  pasteTypeCarriesValues,
+  pasteSpecialCarriesWithheld,
   readPasteSpecialSource,
   type PasteSpecialOptions,
   type PasteSpecialSource,
@@ -799,6 +804,21 @@ export function App({
   function currentRedactions(): RedactionIndex {
     return redactionIndexOf(redactionLoadRef.current)
   }
+  /**
+   * The marks alone, as the last rebuild placed them on screen. The index in
+   * `redactionLoadRef` adds the formula cells that compute from them, which is
+   * what a model must not read; a save reads the grid for the file's own
+   * cached results and has to see those.
+   */
+  const markIndexRef = useRef<RedactionIndex | null>(null)
+  /** The formula cells that show a value computed from a marked cell (redact-derived.ts). */
+  const derivedCellsRef = useRef<DerivedCells | null>(null)
+  derivedCellsRef.current ??= createDerivedCells({
+    runtime: () => univerRef.current,
+    state: () => lazyWorkbookRef.current,
+    readFormulas: (sessionId, sheetId) =>
+      window.desktopApi.readWorkbookFormulas({ sessionId, sheetId }),
+  })
   /**
    * The same marks, in the shape the save takes (keyed by sheet name, as the
    * package part is). Held here so a save can carry them even when nothing
@@ -1449,7 +1469,18 @@ export function App({
       setMessage,
       openLazyWorkbook: (file, opts) => openLazyWorkbook(file, { ...opts, afterSave: true }),
       setPendingEdits,
-      readCells: (addresses, sheetId) => readCellsImpl(readContext(), addresses, sheetId),
+      // With the marks only: a formula that computes from a hidden cell is
+      // withheld from a model, and its result still belongs in the file.
+      readCells: (addresses, sheetId) => {
+        const marks = markIndexRef.current
+        return readCellsImpl(
+          marks !== null && redactionLoadRef.current.status === 'loaded'
+            ? { ...readContext(), redactionLoadRef: { current: loadedRedactions(marks) } }
+            : readContext(),
+          addresses,
+          sheetId,
+        )
+      },
       // null until the file's own part has been read: an empty array means
       // "clear the part" to the gateway, and a save that lands before the read
       // would wipe the withheld-cell marks the file already carries.
@@ -2434,8 +2465,15 @@ export function App({
     if (redactionLoadRef.current.status !== 'loaded') return
     const state = lazyWorkbookRef.current
     if (!state) return
+    const marks = sessionRedactionIndex(
+      redactionStatesRef.current,
+      state.file.sheets,
+      state.editJournal,
+    )
+    markIndexRef.current = marks
+    // Readers also get the formula cells that compute from a marked cell.
     redactionLoadRef.current = loadedRedactions(
-      sessionRedactionIndex(redactionStatesRef.current, state.file.sheets, state.editJournal),
+      derivedCellsRef.current ? derivedCellsRef.current.indexOver(marks) : marks,
     )
   }
 
@@ -2963,6 +3001,11 @@ export function App({
       },
     }
     const redactMoveGuardDisposable = installRedactMoveGuard(runtime, redactMoveGuardDeps)
+    // A formula that computes from a hidden cell is withheld too; what depends
+    // on what is worked out again after any change to the workbook.
+    const derivedCellsDisposable = derivedCellsRef.current
+      ? installDerivedCellsInvalidation(runtime, derivedCellsRef.current)
+      : null
     // A context-menu submenu re-hovered within Univer's close delay stays
     // invisible; re-trigger its positioning (genoffice#337).
     const contextSubmenuReopenDisposable = installContextSubmenuReopenFix()
@@ -3024,6 +3067,11 @@ export function App({
     // Range copies also carry a picture of the cells, as Excel's do, so chat
     // apps that paste images (KakaoTalk) get the table as a photo.
     const copyPictureDisposable = installCopyPicture(runtime)
+    // A copy that holds cells hidden from AI says so on the clipboard, and no
+    // paste in the app takes such a copy: in another tab or window the cells
+    // would arrive without their marks (redact-clipboard.ts). Layered over
+    // copy-picture's clipboard write, so it is taken off first.
+    const withheldCopyDisposable = installWithheldCopyMark(runtime, redactMoveGuardDeps)
     statusBarStatsFilterRef.current = installStatusBarStatsFilter(
       runtime,
       () => statusBarFuncsRef.current,
@@ -4338,6 +4386,9 @@ export function App({
       ctrlDragFillDisposable.dispose()
       redactMenuDisposable.dispose()
       redactMoveGuardDisposable.dispose()
+      derivedCellsDisposable?.dispose()
+      // outermost layer on the clipboard write and on the internal paste: off first
+      withheldCopyDisposable.dispose()
       redactPasteGuardDisposable.dispose()
       contextSubmenuReopenDisposable.dispose()
       multiRowAutofitDisposable.dispose()
@@ -5206,14 +5257,9 @@ export function App({
   ): Promise<string | null> {
     const runtime = univerRef.current
     if (!runtime) return t('dlgPasteSpecialNothing')
-    // The dialog's own paste layer reads the copied cells itself; a hidden
-    // value must not reach another cell that way either, as a value or as a
-    // link to it.
-    if (
-      source.kind === 'internal' &&
-      (source.cut || options.link || pasteTypeCarriesValues(options.type)) &&
-      pasteSourceHoldsHidden(currentRedactions(), source)
-    ) {
+    // The dialog's own paste layer reads the copied cells itself; a value
+    // withheld from AI must not reach another cell that way either.
+    if (pasteSpecialCarriesWithheld(currentRedactions(), source, options)) {
       return t('redactMoveRefused')
     }
     const result = await applyPasteSpecial(runtime, source, options)
@@ -5695,6 +5741,7 @@ export function App({
       closure: { status: 'idle', pinned: new Map() },
       formulaText: new Map(),
       formulaTextTruncated: new Set(),
+      fileArrayRefs: new Map(),
       sharedFormulaGroups: new Map(),
       cachedFormulaValues: new Map(),
       pivotDefinitions: new Map(),
@@ -5738,6 +5785,8 @@ export function App({
     // cannot be read (see ai/redact-load.ts). A save reopens the workbook, so
     // this is also the state right after every save.
     redactionStatesRef.current = []
+    markIndexRef.current = null
+    derivedCellsRef.current?.reset()
     loadedRedactionStatesRef.current = null
     const redactionsReady = followRedactionRead(
       redactionLoadRef,
@@ -5750,6 +5799,9 @@ export function App({
         onSettled: (result, session) => {
           redactionStatesRef.current = result.status === 'ok' ? result.states : []
           watchStructuralEditsForMarks()
+          // The index the read installed knows the marks only; this one adds
+          // the formula cells that compute from them.
+          rebuildRedactionIndex()
           // What the file holds is the baseline a later edit is measured against;
           // an unreadable part has no baseline, and saves leave it in place.
           loadedRedactionStatesRef.current =

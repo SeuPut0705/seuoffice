@@ -13,6 +13,7 @@ import { parseClrMap, parseTheme } from './theme'
 import { parseSlide, parseDecorations, type ParseContext } from './parse'
 import { parsePlaceholderMap, parseMasterTextStyles } from './placeholder'
 import type { Slide } from './types'
+import { cSldNameOf } from './xml-utils'
 
 export interface MasterPartInfo {
   /** Path inside the zip, e.g. ppt/slideMasters/slideMaster1.xml */
@@ -25,8 +26,7 @@ export interface MasterPartInfo {
 const partNum = (p: string) => parseInt(/(\d+)\.xml$/.exec(p)?.[1] ?? '0', 10)
 
 function cSldName(xml: string | null | undefined, fallback: string): string {
-  const m = xml ? /<p:cSld\s[^>]*name="([^"]*)"/.exec(xml) : null
-  return m?.[1] || fallback
+  return (xml ? cSldNameOf(xml) : undefined) || fallback
 }
 
 /** Enumerate parts for the master edit view: each master first, followed by its layouts. */

@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   aiInputPlaceholderGen: '만들 프레젠테이션을 설명하거나 질문하세요',
@@ -275,4 +275,4 @@ export const ko = {
   aiTplDesc_emerald_editorial:
     '선명한 초록과 남색, 종이색. 두 줄 장식선과 굵은 명조풍 제목의 잡지 표지풍',
   aiTplDesc_vellum: '짙은 남색 바탕에 따뜻한 노란빛 명조풍 글씨, 탁한 청록 포인트. 조용하고 학구적',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

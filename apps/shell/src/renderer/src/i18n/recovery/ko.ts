@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   title: '저장하지 않은 내용이 남아 있는 문서',
@@ -19,4 +19,4 @@ export const ko = {
   missing: '원본 파일을 찾을 수 없습니다',
   missingNote: '되살리면 제목 없는 새 문서로 열립니다. 저장할 때 원래 위치를 먼저 제안합니다.',
   choiceLabel: '{name} 처리',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

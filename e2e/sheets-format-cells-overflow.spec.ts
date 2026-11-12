@@ -16,10 +16,10 @@ async function waitForWorkbook(page: Page, sheetName = 'Sheet1'): Promise<void> 
 
 // The dialog card is a single-column grid: the tab row cannot compress below
 // its labels, so the column track — and with it every row — used to outgrow
-// the fixed-width card in locales with long tab labels (fr needs ~490px vs
-// the 420px base; even en overflowed by a few px). The card now sizes to its
-// widest incompressible row, so nothing may paint past its padding edge.
-for (const lang of ['fr', 'en']) {
+// the fixed-width card in locales with long tab labels (even en overflowed the
+// 420px base by a few px). The card now sizes to its widest incompressible
+// row, so nothing may paint past its padding edge.
+for (const lang of ['ko', 'en']) {
   test(`sheets: Format Cells dialog content stays inside the card (${lang})`, async () => {
     const scratch = await mkdtemp(join(tmpdir(), 'genoffice-fmtcells-e2e-'))
     const workbook = join(scratch, 'format-cells.xlsx')

@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   docPickTitle: 'Attach from GenOffice documents',
   docPickPane: 'Other pane',
@@ -15,4 +13,4 @@ export const en = {
   docPickAttach: 'Attach',
   docPickCancel: 'Cancel',
   docPickWorking: 'Attaching…',
-} satisfies Record<keyof typeof zh, string>
+}

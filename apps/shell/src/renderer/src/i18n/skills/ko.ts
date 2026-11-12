@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   navLabel: '스킬',
@@ -177,4 +177,4 @@ export const ko = {
   builtinBodyNote: '아래 본문은 AI에게 주는 지시문입니다. 적힌 그대로 보여서 영어일 수 있습니다',
   pasteUnclosed:
     '앞머리를 닫는 --- 줄이 없습니다. 글이 중간에서 잘렸을 수 있으니 처음부터 끝까지 다시 복사해 붙여 넣으세요.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

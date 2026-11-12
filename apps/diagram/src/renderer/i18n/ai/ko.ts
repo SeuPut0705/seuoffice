@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   aiOpenAssistant: 'AI 도우미 열기',
@@ -57,4 +57,4 @@ export const ko = {
   aiSumReadAttachment: '첨부 파일 읽기',
   aiSumImageAttachment: '이미지 첨부 {name}',
   aiSumReadAttachmentName: '첨부 파일 {name} 읽기',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

@@ -53,7 +53,7 @@ PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로
 - 프롬프트 파일(`src/renderer/ai/prompts/*.md`)은 Prettier 대상이 아니다. Prettier가 강조 표식과 목록 들여쓰기를 바꾸면 모델이 읽는 글이 달라진다. 이 파일들을 포매터에 넣지 않는다.
 - 메인 프로세스의 Node `fetch`는 시스템 프록시를 쓰지 않아 `applyMainProcessProxy`가 환경 변수나 시스템 설정의 프록시를 전역 디스패처에 건다. 이 프록시는 구독 프로그램에는 전달되지 않는다(그쪽은 물려받은 환경 변수만 본다).
 - 메모(클래식 검토 댓글)는 `slides:get-comments`(현재 페이지)와 `slides:get-all-comments`(전 덱, 읽기 전용)로 읽는다. 메모 창은 현재 페이지/모든 페이지 두 보기를 쓰고(순수 함수는 `comments-view.ts`), AI는 `read_comments` 도구와 덱 문맥의 메모 힌트로 읽는다. 메모는 가리기 표식 대상이 아니며, 저장은 기존 댓글 경로 그대로다.
-- 문자열은 `src/renderer/i18n/`의 언어별 조각(`ai/`, `app/`, `panes/`, `ribbon/`)이고 `zh.ts`가 키 집합을 정한다. 21개 언어 모두에 넣는다. 구독 연결 문장은 `@genoffice/ui`의 것을 쓴다.
+- 문자열은 `src/renderer/i18n/`의 언어별 조각(`ai/`, `app/`, `panes/`, `ribbon/`)이고 `en.ts`가 키 집합을 정한다. 두 언어 모두에 넣는다. 구독 연결 문장은 `@genoffice/ui`의 것을 쓴다.
 - 렌더러에서 문서의 템플릿 선택과 덧붙인 요청은 `src/renderer/ai/template-selection-state.ts` 하나가 쥔다. 기억된 키가 더 이상 풀리지 않으면(지운 저장 스타일 등) 선택 없음으로 읽는다. 템플릿 자료는 `@genoffice/pipelines/slides/templates`에서 가져온다(렌더러에서 써도 되는 하위 경로).
 - 템플릿 글꼴: `src/main/template-fonts.ts`가 `templateFontsDir`로 공용 폴더를 찾고, `fonts.ts`가 그 폴더를 사용자 글꼴 저장소 다음의 두 번째 읽기 전용 개인 글꼴로 색인한다. 같은 패밀리가 PC에 설치되어 있으면 그것이 먼저다. 캔버스, PDF 내보내기, 인쇄가 이 글꼴로 그린다. 발표 화면의 청중 창은 따로 된 문서라서 그리기 전에 개인 글꼴을 따로 등록한다. 폴더 열기 채널 `slides:open-template-fonts-folder`는 shell이 부르는 `registerSlidesIpc`에 있고, 정확히 그 폴더만 연다.
 - 서식 복사(`format-brush.ts`, `clipboard-actions.ts`)는 기존 연산(`editFill`·`editStroke`·`setEffects`·`setElementFont`·`setElementParagraphFormat`)만 부르고, 여러 호출을 `history-batch.ts`의 `batched`로 실행 취소 한 번에 묶는다. 글을 다시 쓰는 `editText`로 서식을 칠하지 않는다(줄바꿈에 삼킨 공백과 링크를 잃는다). 편집 중 선택한 글자가 있으면 그 글자의 서식을 집고, 붓이 켜진 채 마우스로 고른 글자에 칠한다.

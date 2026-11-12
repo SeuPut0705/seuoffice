@@ -99,6 +99,7 @@ import {
   type InkTool,
 } from './editor/ink'
 import { t, getLang } from './i18n/locale'
+import { getDocumentLocale } from './document-locale'
 import { isBlankDocument, parseHtmlFragment, replaceBlockRange } from './ai/protocol'
 import { carryDocSeen } from './ai/tools'
 import { isDocDirty, resetCrossDocEditState } from './doc-dirty'
@@ -696,9 +697,10 @@ async function systemLocale(): Promise<string> {
   }
 }
 
-async function blankDocxBytes(): Promise<Uint8Array> {
+/** the bytes of a new blank document */
+export async function blankDocxBytes(): Promise<Uint8Array> {
   return buildBlankDocx({
-    eastAsiaFont: defaultEastAsiaFontFor(getLang()),
+    eastAsiaFont: defaultEastAsiaFontFor(getDocumentLocale()),
     paperSize: paperSizeForLocale(await systemLocale()),
   })
 }
@@ -2029,7 +2031,8 @@ export async function exportHtml(ctx: FileActionContext, outPath?: string): Prom
   )
   const html = buildStandaloneHtml(root, {
     title: doc.fileName.replace(/\.(?:docx|odt)$/i, ''),
-    lang: getLang(),
+    // the exported page's language picks its fonts in a browser: the document's, not the UI's
+    lang: getDocumentLocale(),
     textWidthPx: Number.isFinite(textWidthPx) ? textWidthPx : root.clientWidth,
   })
   const result = await window.desktop.exportHtml(doc.fileName, html, outPath)

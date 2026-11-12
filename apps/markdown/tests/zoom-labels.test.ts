@@ -4,7 +4,7 @@ import { strings } from '../src/renderer/i18n/strings'
 
 /**
  * Status-bar zoom controls (App.tsx) must speak the UI language like the
- * PDF app does — never hardcoded English aria-labels. zh defines the key
+ * PDF app does — never hardcoded English aria-labels. en defines the key
  * set; every locale carries real zoom/zoomIn/zoomOut content.
  */
 

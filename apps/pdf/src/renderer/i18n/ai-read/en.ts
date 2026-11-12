@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   arButton: 'AI page reading',
   arButtonTip:
@@ -80,4 +78,4 @@ export const en = {
   jobResumeLater: 'Later',
   searchAiRead: 'Found in AI-read text',
   searchAiReadTip: 'AI-read text has no positions, so this only goes to the page',
-} satisfies Record<keyof typeof zh, string>
+}

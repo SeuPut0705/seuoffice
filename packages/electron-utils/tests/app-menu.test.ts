@@ -28,6 +28,7 @@ import {
   appMenuPopupTemplate,
   appMenuTemplate,
   checkUpdatesMenuItem,
+  contextMenuLabels,
   editMenuTemplate,
   helpCheckUpdatesItems,
   helpMenuTemplate,
@@ -39,29 +40,7 @@ import {
   type AppMenuLabels,
 } from '../src/index'
 
-const LANGS = [
-  'zh',
-  'en',
-  'ja',
-  'ko',
-  'fr',
-  'de',
-  'es',
-  'th',
-  'id',
-  'ru',
-  'ar',
-  'pt',
-  'it',
-  'pl',
-  'cs',
-  'nl',
-  'ms',
-  'he',
-  'hi',
-  'vi',
-  'zh-TW',
-] as const
+const LANGS = ['en', 'ko'] as const
 
 const en = appMenuLabels('en')
 
@@ -75,7 +54,7 @@ beforeEach(() => {
 })
 
 describe('appMenuLabels', () => {
-  it('covers all 20 languages with every key non-empty', () => {
+  it('covers every ui language with every key non-empty', () => {
     const keys = Object.keys(en) as (keyof AppMenuLabels)[]
     for (const lang of LANGS) {
       const labels = appMenuLabels(lang)
@@ -85,7 +64,6 @@ describe('appMenuLabels', () => {
 
   it('carries the AI naming label', () => {
     expect(en.nameWithAi).toBe('Name with AI…')
-    expect(appMenuLabels('zh').nameWithAi).toBe('\u7528 AI \u547d\u540d\u2026')
   })
 
   it('falls back to English for unknown languages', () => {
@@ -93,9 +71,10 @@ describe('appMenuLabels', () => {
   })
 
   it('merges the context-menu clipboard labels', () => {
-    const zh = appMenuLabels('zh')
-    expect(zh.copy).toBe('\u590d\u5236')
-    expect(zh.selectAll).toBe('\u5168\u9009')
+    const ko = appMenuLabels('ko')
+    expect(ko.copy).toBe(contextMenuLabels('ko').copy)
+    expect(ko.selectAll).toBe(contextMenuLabels('ko').selectAll)
+    expect(ko.copy).not.toBe(en.copy)
   })
 })
 
@@ -119,9 +98,11 @@ describe('windowMenuTemplate', () => {
   })
 
   it('localizes the Windows submenu', () => {
-    const items = submenuOf(windowMenuTemplate('win32', appMenuLabels('zh')))
-    expect(items[0]!.label).toBe('\u6700\u5c0f\u5316')
-    expect(items[2]!.label).toBe('\u5173\u95ed\u7a97\u53e3')
+    const ko = appMenuLabels('ko')
+    const items = submenuOf(windowMenuTemplate('win32', ko))
+    expect(items[0]!.label).toBe(ko.minimize)
+    expect(items[2]!.label).toBe(ko.closeWindow)
+    expect(ko.minimize).not.toBe(en.minimize)
   })
 })
 
@@ -283,7 +264,6 @@ describe('checkUpdatesMenuItem / manual update check wiring', () => {
   it('names the product in the About entry of every language', () => {
     expect(en.about).toBe('About SeuOffice')
     expect(appMenuLabels('ko').about).toBe('SeuOffice 정보')
-    expect(appMenuLabels('ja').about).toBe('SeuOffice について')
     for (const lang of [...LANGS, 'vi']) {
       const about = appMenuLabels(lang).about
       expect(about, lang).not.toContain('GenOffice')
@@ -308,7 +288,7 @@ describe('checkUpdatesMenuItem / manual update check wiring', () => {
         message: PRODUCT_NAME,
       })
     } finally {
-      setUiLang('zh')
+      setUiLang('en')
     }
   })
 })
@@ -347,7 +327,9 @@ describe('settingsMenuItem', () => {
   })
 
   it('is localized', () => {
-    expect((settingsMenuItem(appMenuLabels('zh')) as Item).label).toBe('\u8bbe\u7f6e…')
+    const ko = appMenuLabels('ko')
+    expect((settingsMenuItem(ko) as Item).label).toBe(ko.settings)
+    expect(ko.settings).not.toBe(en.settings)
   })
 })
 

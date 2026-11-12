@@ -109,7 +109,7 @@ async function render(overrides: Partial<ConvertDialogProps> & Pick<ConvertDialo
     password: undefined,
     lang: 'en',
     t,
-    prepare: vi.fn(async () => true),
+    prepare: vi.fn(async (): Promise<string | null> => SOURCE),
     pageText: async () => '',
     onClose: vi.fn(),
     ...overrides,
@@ -215,7 +215,7 @@ describe('conversion dialog: the form', () => {
 
   it('stops when the pending edits could not be saved', async () => {
     const fake = fakeApi(TARGET_MD)
-    const { el } = await render({ api: fake.api, prepare: vi.fn(async () => false) })
+    const { el } = await render({ api: fake.api, prepare: vi.fn(async () => null) })
     await click(q(el, '[data-action="convert"]'))
     expect(fake.api.pickTarget).not.toHaveBeenCalled()
     expect(fake.api.convert).not.toHaveBeenCalled()

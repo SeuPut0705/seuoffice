@@ -64,16 +64,7 @@ const HEADER_FOOTER_FONT_SIZE_PT = 9
 
 /** UI-language CJK fallback for the print stack (mirrors the :lang() variables in styles.css) */
 function printCjkFonts(lang: Lang): string {
-  switch (lang) {
-    case 'ja':
-      return "'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo'"
-    case 'ko':
-      return "'Apple SD Gothic Neo', 'Malgun Gothic'"
-    case 'zh-TW':
-      return "'PingFang TC', 'Microsoft JhengHei'"
-    default:
-      return "'PingFang SC'"
-  }
+  return lang === 'ko' ? "'Apple SD Gothic Neo', 'Malgun Gothic'" : "'PingFang SC'"
 }
 
 const MAX_PRINT_CELLS = 50_000

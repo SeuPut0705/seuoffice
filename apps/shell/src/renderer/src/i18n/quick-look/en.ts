@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   windowTitle: 'Quick Look',
   openInEditor: 'Open in GenOffice',
@@ -32,4 +30,4 @@ export const en = {
     'Keeps GenOffice ready in the background so Spacebar preview works in File Explorer even after closing the main window.',
   trayOpen: 'Open GenOffice',
   trayQuit: 'Quit GenOffice',
-} satisfies Record<keyof typeof zh, string>
+}

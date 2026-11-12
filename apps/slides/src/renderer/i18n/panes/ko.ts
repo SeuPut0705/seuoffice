@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   paneCancel: '취소',
@@ -315,4 +315,4 @@ export const ko = {
   paneSelHide: '숨기기',
   paneSelShow: '표시',
   paneSelRenameTip: '두 번 클릭하면 이름을 바꿉니다',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

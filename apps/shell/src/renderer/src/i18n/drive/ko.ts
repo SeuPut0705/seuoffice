@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   driveNav: 'Google 드라이브',
@@ -60,4 +60,4 @@ export const ko = {
     'Google은 드라이브 파일을 모델 학습에 쓰는 AI 서비스로 보내는 것을 허락하지 않습니다. Claude·ChatGPT·Codex 개인 요금제는 끄지 않으면 대화를 학습에 쓸 수 있습니다. Claude는 설정 → 개인정보 보호에서, ChatGPT는 설정 → 데이터 제어의 “모두를 위한 모델 개선”에서 끄세요. API 키 제공자는 기본적으로 API로 받은 내용을 학습에 쓰지 않습니다. 무료 AI 연결에는 드라이브 파일을 보내지 않습니다.',
   driveTrainingAck: '드라이브 파일과 함께 쓰는 AI 계정에서 모델 학습을 껐습니다',
   driveFailTraining: '위의 모델 학습 항목에 먼저 체크하세요.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

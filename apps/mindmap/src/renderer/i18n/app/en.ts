@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   loading: 'Loading…',
   loadFailed: 'Could not open the file',
@@ -243,4 +241,4 @@ export const en = {
   themeLines: 'Lines',
   themeTapered: 'Tapered lines',
   themeRainbow: 'A different color for each branch',
-} satisfies Record<keyof typeof zh, string>
+}

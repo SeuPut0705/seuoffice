@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   redactMenuLabel: '선택한 부분을 AI에서 숨기기',
@@ -284,4 +284,4 @@ export const ko = {
   appStatusMergeUnsupported:
     '이 도형은 병합할 수 없습니다(선, 그림, 표, 차트와 일부 도형은 제외됩니다)',
   appStatusMergeEmpty: '병합한 결과가 비어 있습니다(겹치는 부분이 없습니다)',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

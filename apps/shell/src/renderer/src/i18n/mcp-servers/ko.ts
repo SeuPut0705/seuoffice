@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   title: 'MCP 서버',
@@ -195,4 +195,4 @@ export const ko = {
   permPaused: '바뀐 내용을 승인할 때까지 쓰지 않음(승인하면: {perm})',
   permUnusable: '켤 수 없음',
   direction: '여기서는 GenOffice의 AI가 바깥 서버의 도구를 씁니다.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

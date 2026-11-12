@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   trButton: 'Translate Document',
   trButtonTip: 'Translate the whole document with AI and save it as a PDF, Markdown or EPUB file',
@@ -111,4 +109,4 @@ export const en = {
   trEasyRunning: 'Writing the {language} plain-language explanation… {done}/{total} blocks',
   trEasyDone: 'The {language} plain-language explanation is finished ({count} blocks).',
   trResumeEasy: 'Unfinished plain-language explanation ({language}) {percent}%. Continue?',
-} satisfies Record<keyof typeof zh, string>
+}

@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   mathInsert: '수식 삽입',
@@ -191,4 +191,4 @@ export const ko = {
   presentInTab: '현재 탭에서',
   presentFullscreen: '전체 화면',
   presentNewTab: '새 탭',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

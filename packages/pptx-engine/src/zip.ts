@@ -9,11 +9,11 @@
 import JSZip from 'jszip'
 import { assertZipInflatesWithinLimits } from '@genoffice/zip-gate'
 import { createHash } from 'node:crypto'
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from './xml-parser'
 import type { SlideSize } from './types'
-import { asXmlNode, xmlArray } from './xml-utils'
+import { asXmlNode, attributeOf, xmlArray } from './xml-utils'
 
-const relsParser = new XMLParser({
+const relsParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   isArray: (name) => name === 'Relationship' || name === 'sldId' || name === 'Override',
@@ -134,10 +134,10 @@ export class PackageArchive {
     const presXml = this.readText('ppt/presentation.xml')
     if (!presXml) throw new Error('pptx: missing ppt/presentation.xml')
 
-    const parser = new XMLParser({
+    const parser = xmlParser({
       ignoreAttributes: false,
       attributeNamePrefix: '@_',
-      isArray: (name) => name === 'p:sldId',
+      isArray: (name) => name === 'p:sldId' || name === 'sldId',
     })
     const pres = asXmlNode(parser.parse(presXml))
     const rootRaw = pres['p:presentation'] ?? pres.presentation
@@ -158,11 +158,13 @@ export class PackageArchive {
       cy: sz ? emuOr(sz['@_cy'], 6858000) : 6858000,
     }
 
-    // Slide order: presentation.xml.rels maps r:id to slide parts
+    // Slide order: presentation.xml.rels maps r:id to slide parts. The list is read with or
+    // without the `p` prefix, like the root and the slide size: a presentation.xml written in
+    // the default namespace lists the same slides.
     const rels = this.readRels('ppt/presentation.xml')
     const sldIdLst = asXmlNode(root['p:sldIdLst'] ?? root.sldIdLst)
     const slidePaths: string[] = []
-    for (const id of xmlArray(sldIdLst['p:sldId'])) {
+    for (const id of xmlArray(sldIdLst['p:sldId'] ?? sldIdLst.sldId)) {
       const rId = id['@_r:id'] ?? id['@_id']
       if (!rId) continue
       const rel = rels.get(String(rId))
@@ -222,7 +224,8 @@ export class PackageArchive {
     const presXml = this.readText('ppt/presentation.xml')
     if (!presXml) return undefined
     const presRels = this.readRels('ppt/presentation.xml')
-    const masterRid = /<p:sldMasterId\b[^>]*\br:id="([^"]+)"/.exec(presXml)?.[1]
+    const masterTag = /<p:sldMasterId\b[^>]*>/.exec(presXml)?.[0]
+    const masterRid = masterTag ? attributeOf(masterTag, 'r:id') : undefined
     const masterRel = masterRid
       ? presRels.get(masterRid)
       : [...presRels.values()].find((r) => r.type.endsWith('/slideMaster'))
@@ -232,8 +235,9 @@ export class PackageArchive {
     if (!masterXml) return undefined
     const masterRels = this.readRels(masterPath)
     const layouts: string[] = []
-    for (const m of masterXml.matchAll(/<p:sldLayoutId\b[^>]*\br:id="([^"]+)"/g)) {
-      const rel = masterRels.get(m[1]!)
+    for (const m of masterXml.matchAll(/<p:sldLayoutId\b[^>]*>/g)) {
+      const rid = attributeOf(m[0], 'r:id')
+      const rel = rid === undefined ? undefined : masterRels.get(rid)
       if (rel) layouts.push(resolveTarget(masterPath, rel.target))
     }
     if (!layouts.length)

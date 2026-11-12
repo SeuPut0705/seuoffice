@@ -1044,10 +1044,10 @@ describe('macOS: the app installs its own update (decision 0097)', () => {
     updaterState.listeners.get('update-available')!({ version: '0.2.0' })
     const state = lastShownState()
     expect(state.phase).toBe('available')
-    // the UI language of these tests is zh: "replaced with the new version",
+    // the UI language of these tests is en: "replaced with the new version",
     // not the Windows "an installer window shows the progress"
-    expect(state.strings.restartDesc).toContain('替换为新版本')
-    expect(state.strings.restartDesc).not.toContain('安装进度')
+    expect(state.strings.restartDesc).toContain('replaced with the new version')
+    expect(state.strings.restartDesc).not.toContain('installer window')
   })
 
   it('clears what an interrupted update left beside the app', async () => {

@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   windowTitle: '에이전트',
@@ -100,4 +100,4 @@ export const ko = {
   connOff: '이 앱에서 꺼 두었습니다. 설정 → AI에서 다시 쓸 수 있습니다.',
   errOffInApp:
     '이 프로그램을 이 앱에서 꺼 두어 더 보내지 않았습니다. 설정 → AI에서 다시 쓸 수 있습니다.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

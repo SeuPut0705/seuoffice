@@ -5,6 +5,7 @@
 // SM.MS, GitHub — and all run in the main process, so no renderer CORS
 // applies and the credentials never enter a web context.
 import { createHash, createHmac } from 'node:crypto'
+import { AiRedirectRefusedError, keyedFetch, type KeyedFetchBase } from '@genoffice/ai-provider'
 import type { ImageHostConfig, ImageUploadResult, ImageHostKind } from '../shared/ipc'
 
 const UPLOAD_TIMEOUT_MS = 20_000
@@ -294,15 +295,30 @@ export async function uploadImageToHost(
     return { ok: false, error: `image exceeds ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB` }
   const baseFetch = input.fetchImpl ?? (fetch as unknown as FetchLike)
   // a wedged host must not hang the paste path: every adapter call carries the
-  // same abort deadline (covers connect, body streaming and response read)
+  // same abort deadline (covers connect, body streaming and response read).
+  // Each also carries the host's credential (an S3 signature, a token), so none
+  // follows a redirect: that would repeat the upload, credential and picture,
+  // at whatever address the answer names.
   const fetchImpl: FetchLike = (url, init) =>
-    baseFetch(url, { ...init, signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS) })
+    keyedFetch(
+      url,
+      { ...init, signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS) } as RequestInit,
+      undefined,
+      baseFetch as unknown as KeyedFetchBase,
+    )
   const now = input.now ?? new Date()
   const run =
     normalized.kind === 's3' ? uploadS3 : normalized.kind === 'smms' ? uploadSmms : uploadGithub
   try {
     return await run(normalized, input.bytes, input.ext, now, fetchImpl)
   } catch (error) {
+    if (error instanceof AiRedirectRefusedError && normalized.kind === 'github') {
+      // GitHub redirects the address of a repository that was renamed or moved
+      return {
+        ok: false,
+        error: `GitHub: the repository may have been renamed or moved; check the owner and repository of the image host. ${error.message}`,
+      }
+    }
     return {
       ok: false,
       error: error instanceof Error ? error.message : 'upload failed',
