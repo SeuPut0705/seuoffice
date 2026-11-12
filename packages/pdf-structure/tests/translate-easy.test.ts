@@ -16,7 +16,6 @@ import {
   startTranslationJob,
   type TranslationJobItem,
 } from '../src/jobs'
-import { LANGS } from '../../i18n/src/index'
 import { ResultStore, translationBlockKeys } from '../src/store'
 import { sha256Hex, type DocumentTree, type InlineRun, type TextUnit } from '../src/tree'
 import {
@@ -520,7 +519,7 @@ describe('the default target language', () => {
 
 describe('easyExplanationLabel', () => {
   it('has words for all 21 languages, each its own', () => {
-    const labels = LANGS.map((l) => easyExplanationLabel(l))
+    const labels = TRANSLATION_LANGUAGES.map((l) => easyExplanationLabel(l))
     expect(labels).toHaveLength(21)
     for (const label of labels) expect(label.trim()).not.toBe('')
     expect(new Set(labels).size).toBe(21)
@@ -528,7 +527,7 @@ describe('easyExplanationLabel', () => {
     expect(easyExplanationLabel('en')).toBe('Plain-language version')
   })
 
-  it('reads other tags the way the UI does', () => {
+  it('reads other tags as locales', () => {
     expect(easyExplanationLabel('zh-Hant')).toBe(easyExplanationLabel('zh-TW'))
     expect(easyExplanationLabel('ko-KR')).toBe('쉬운 풀이')
     expect(easyExplanationLabel('xx')).toBe(easyExplanationLabel('en'))

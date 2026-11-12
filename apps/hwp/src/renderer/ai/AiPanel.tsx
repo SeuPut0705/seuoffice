@@ -105,6 +105,7 @@ import {
   type HoldState,
   type TurnProposal,
 } from './turn-proposal'
+import { isRtlLang } from '@genoffice/i18n'
 
 const PANEL_WIDTH_KEY = 'hwp-ai-panel-width'
 const PANEL_WIDTH_DEFAULT = 360
@@ -1465,7 +1466,7 @@ export function AiPanel({
       ref={asideRef}
       className={`copilot${resizing ? ' ai-panel-resizing' : ''}${dragOver ? ' ai-panel-dragover' : ''}`}
       style={{ width: '100%' }}
-      dir={lang === 'ar' || lang === 'he' ? 'rtl' : undefined}
+      dir={isRtlLang(lang) ? 'rtl' : undefined}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('Files')) {
           e.preventDefault()
@@ -1791,7 +1792,7 @@ export function AiPanel({
             role="dialog"
             aria-modal="true"
             aria-labelledby={memoApprovalTitleId}
-            dir={lang === 'ar' || lang === 'he' ? 'rtl' : undefined}
+            dir={isRtlLang(lang) ? 'rtl' : undefined}
           >
             <div className="memo-modal-head">
               <span id={memoApprovalTitleId} className="memo-modal-title">

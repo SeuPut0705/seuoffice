@@ -8,7 +8,7 @@ The row at the bottom left of Home opens the settings panel (it reads Connect AI
 
 ## Language
 
-- The settings offer **21 UI languages**: English, Simplified Chinese, Japanese, Korean, French, German, Spanish, Thai, Indonesian, Russian, Arabic, Portuguese, Italian, Polish, Czech, Dutch, Malay, Hebrew, Hindi, Traditional Chinese, Vietnamese.
+- The settings offer **two UI languages**: English and Korean.
 - Switching applies immediately and persists; the native menu bar rebuilds with the language.
 
 ## Theme

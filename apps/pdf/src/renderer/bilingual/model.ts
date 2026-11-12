@@ -13,7 +13,6 @@
  *
  * Nothing in this file sends anything or writes to the store.
  */
-import type { Lang } from '@genoffice/i18n'
 import {
   blockKeyString,
   translationBlockKeys,
@@ -428,7 +427,7 @@ export function pendingUnits(page: BilingualPage | undefined): BilingualUnit[] {
  */
 export function chooseBilingualLanguage(
   recency: readonly PdfTranslationRecency[] | null,
-  fallback: Lang,
+  fallback: string,
 ): string {
   let best: PdfTranslationRecency | null = null
   for (const r of recency ?? []) {

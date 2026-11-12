@@ -6,12 +6,6 @@
 import type { Lang } from '@genoffice/i18n'
 import { DRAWIO_ORIGIN } from './bridge-protocol'
 
-/** draw.io's language code for each app language (draw.io ships all 21). */
-export function drawioLang(lang: Lang): string {
-  if (lang === 'zh-TW') return 'zh-tw'
-  return lang
-}
-
 /**
  * The editor page's address. Embed mode with the JSON protocol, offline,
  * stealth (no outside services), lockdown (no outside data), no exit button,
@@ -26,7 +20,7 @@ export function drawioStartUrl(options: { lang: Lang; dark: boolean }): string {
     ['offline', '1'],
     ['stealth', '1'],
     ['lockdown', '1'],
-    ['lang', drawioLang(options.lang)],
+    ['lang', options.lang],
     ['noExitBtn', '1'],
     ['saveAndExit', '0'],
     ['browser', '0'],

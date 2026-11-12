@@ -9,7 +9,7 @@ import {
   splitHangulFamilies,
   systemFamiliesBesidesCandidates,
 } from '../font-list'
-import { fontSizeLabel, fontSizeOptions, parseFontSize } from '../font-sizes'
+import { fontSizeOptions, parseFontSize } from '../font-sizes'
 import { useSystemFontFamilies } from '../system-fonts'
 import { charScaleEm, cssFontFamily, wordKerns } from '../line-metrics'
 import { useModalKeys } from './modal-keys'
@@ -186,7 +186,7 @@ export function FontDialog({
   const { t, lang } = useI18n()
   const modalKeys = useModalKeys(onClose)
   const fontFamilies = fontFamiliesFor(lang)
-  const sizeOptions = fontSizeOptions(lang)
+  const sizeOptions = fontSizeOptions()
   const {
     families: allSystemFontFamilies,
     info: fontInfo,
@@ -370,16 +370,14 @@ export function FontDialog({
         <label>
           {t('appFontSizeLabel')}
           <Dropdown
-            value={fontSizeLabel(size, lang)}
+            value={String(size)}
             ariaLabel={t('appFontSizeLabel')}
             options={[
-              ...(sizeOptions.some((o) => o.name === fontSizeLabel(size, lang))
-                ? []
-                : [fontSizeLabel(size, lang)]),
+              ...(sizeOptions.some((o) => o.name === String(size)) ? [] : [String(size)]),
               ...sizeOptions.map((o) => o.name),
             ].map((s) => ({ value: s, label: s }))}
             onPick={(v) => {
-              const pt = parseFontSize(v, lang)
+              const pt = parseFontSize(v)
               if (pt !== null) field('size', setSize)(pt)
             }}
           />

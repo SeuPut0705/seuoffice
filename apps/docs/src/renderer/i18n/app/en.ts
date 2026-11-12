@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   appScTitle: 'Keyboard Shortcuts',
   appScFilter: 'Search shortcuts',
@@ -631,4 +629,4 @@ export const en = {
   appCtxResolveComment: 'Resolve Comment',
   appRevisionsAcceptedN: '{n} changes accepted',
   appRevisionsRejectedN: '{n} changes rejected',
-} satisfies Record<keyof typeof zh, string>
+}

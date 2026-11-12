@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   toolMerge: 'Merge PDF',
   toolSplit: 'Split PDF',
@@ -187,4 +185,4 @@ export const en = {
   errWrongPassword: 'The password is not correct.',
   rejectNotEncrypted: '{name}: this PDF has no password.',
   close: 'Close',
-} satisfies Record<keyof typeof zh, string>
+}

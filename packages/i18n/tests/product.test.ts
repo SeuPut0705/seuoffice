@@ -100,8 +100,7 @@ describe('brandText', () => {
 })
 
 describe('createI18n product name', () => {
-  const dicts = {
-    zh: { about: '关于 GenOffice', ack: '基于 {{GenOffice}}', open: '用 GenOffice 打开 {name}' },
+  const dicts: LangDicts<{ about: string; ack: string; open: string }> = {
     en: {
       about: 'About GenOffice',
       ack: 'Based on {{GenOffice}}',
@@ -112,18 +111,16 @@ describe('createI18n product name', () => {
       ack: '{{GenOffice}} 기반',
       open: 'GenOffice에서 {name} 열기',
     },
-  } as unknown as LangDicts<{ about: string; ack: string; open: string }>
+  }
   const t = createI18n(dicts)
 
   it('renders the product name of the requested language', () => {
     expect(t('en', 'about')).toBe('About SeuOffice')
-    expect(t('zh', 'about')).toBe('关于 SeuOffice')
     expect(t('ko', 'about')).toBe('SeuOffice 정보')
   })
 
   it('keeps the upstream name in the acknowledgement', () => {
     expect(t('en', 'ack')).toBe('Based on GenOffice')
-    expect(t('zh', 'ack')).toBe('基于 GenOffice')
     expect(t('ko', 'ack')).toBe('GenOffice 기반')
   })
 
@@ -132,10 +129,6 @@ describe('createI18n product name', () => {
       'Open GenOffice notes.docx in SeuOffice',
     )
     expect(t('ko', 'open', { name: 'GenOffice.docx' })).toBe('SeuOffice에서 GenOffice.docx 열기')
-  })
-
-  it('brands the fallback text of a language without its own entry', () => {
-    expect(t('fr', 'about')).toBe('About SeuOffice')
   })
 })
 

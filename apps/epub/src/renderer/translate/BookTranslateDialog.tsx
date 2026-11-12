@@ -2,7 +2,7 @@
  * The book translation window (spec §8): the choices, then the pre-start
  * confirmation.
  *
- * - Choices: the target language (one of the 21 UI languages; the default is
+ * - Choices: the target language (one of the 21 target languages; the default is
  *   the UI language, or English when the book is in it), the chapters (spine
  *   order with their contents titles, all chosen by default; damaged and
  *   fixed-layout chapters cannot be chosen and say why), and the results (a

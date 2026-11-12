@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   airSuggested: 'Suggested questions',
   airQuestion1: 'Summarize the key points',
@@ -41,4 +39,4 @@ export const en = {
   airOverviewStart: 'Start',
   airOverviewRunning: 'Creating the overview ({done}/{total})',
   airOverviewStopped: 'Stopped. Pressing again starts over.',
-} satisfies Record<keyof typeof zh, string>
+}

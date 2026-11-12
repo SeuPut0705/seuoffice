@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   appName: 'Diagram',
   untitled: 'Untitled Diagram',
@@ -55,4 +53,4 @@ export const en = {
   exportReplaceMsg: 'Files with these names that already exist: {count}.',
   exportReplaceDetail: 'Do you want to replace them?',
   btnReplace: 'Replace',
-} satisfies Record<keyof typeof zh, string>
+}

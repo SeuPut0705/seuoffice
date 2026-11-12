@@ -6,8 +6,8 @@ import {
   type ProjectPanelStringKey,
 } from '../src/strings-project-panel'
 
-const KEYS = Object.keys(PROJECT_PANEL_STRINGS.zh) as ProjectPanelStringKey[]
-const NON_LATIN: readonly Lang[] = ['zh', 'ja', 'ko', 'th', 'ru', 'ar', 'he', 'hi', 'zh-TW']
+const KEYS = Object.keys(PROJECT_PANEL_STRINGS.en) as ProjectPanelStringKey[]
+const NON_LATIN: readonly Lang[] = ['ko']
 /** Format names that read the same in every script */
 const SAME_EVERYWHERE = new Set<ProjectPanelStringKey>([
   'editorPdf',
@@ -21,8 +21,7 @@ const placeholders = (text: string): string[] =>
   [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort()
 
 describe('PROJECT_PANEL_STRINGS', () => {
-  it('has every key, non-empty, in all 21 languages', () => {
-    expect(LANGS).toHaveLength(21)
+  it('has every key, non-empty, in every language', () => {
     expect(Object.keys(PROJECT_PANEL_STRINGS).sort()).toEqual([...LANGS].sort())
     for (const lang of LANGS) {
       const dict = PROJECT_PANEL_STRINGS[lang] as Record<string, string>
@@ -33,7 +32,7 @@ describe('PROJECT_PANEL_STRINGS', () => {
 
   it('keeps the same placeholders in every language', () => {
     for (const key of KEYS) {
-      const expected = placeholders(PROJECT_PANEL_STRINGS.zh[key])
+      const expected = placeholders(PROJECT_PANEL_STRINGS.en[key])
       for (const lang of LANGS) {
         expect(placeholders(PROJECT_PANEL_STRINGS[lang][key]), `${lang}.${key}`).toEqual(expected)
       }

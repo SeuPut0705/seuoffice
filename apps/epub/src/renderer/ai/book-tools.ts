@@ -14,12 +14,12 @@
  * only the first one the main process would meet.
  */
 import type { BlockKind, ChapterBlock, NotationContext, OpenChapter } from '@genoffice/epub-engine'
-import { isLang, LANGS, type Lang } from '@genoffice/i18n'
 import { findInText } from '@genoffice/ui'
 import type { EpubBookSummary, EpubChapterResult, EpubReadOnlyReason } from '../../shared/ipc'
 import type { EditGroup, EditGroupsOutcome, FailedEdit, OkEdit } from '../edit/controller'
 import { blockReadingText } from '../edit/block-text'
 import { normalizeQuery } from '../reader/book-search'
+import { TRANSLATION_LANGUAGES, isTranslationLanguage } from '../translate/engine'
 import {
   blockNotation,
   blockPlainText,
@@ -55,8 +55,8 @@ export interface BookAiView {
 
 /** A request to open the book-translation window. */
 export interface BookTranslationRequest {
-  /** the target language */
-  lang: Lang
+  /** the target language: one of the translation targets, not a UI language */
+  lang: string
   /** spine indices (from 0) the user named; null for the whole book */
   chapters: number[] | null
 }
@@ -631,9 +631,9 @@ export class BookTools {
     const book = this.openBook()
     if (!book) return err('no book is open')
     const lang = input.lang
-    if (typeof lang !== 'string' || !isLang(lang)) {
+    if (typeof lang !== 'string' || !isTranslationLanguage(lang)) {
       return err(
-        `lang must be one of ${LANGS.join(', ')}; tell the user which languages are available`,
+        `lang must be one of ${TRANSLATION_LANGUAGES.join(', ')}; tell the user which languages are available`,
       )
     }
     if (book.fixedLayout) {

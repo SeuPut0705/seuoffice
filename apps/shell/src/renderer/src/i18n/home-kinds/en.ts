@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   setHomeKinds: 'New documents on Home',
   setHomeKindsDesc:
@@ -7,4 +5,4 @@ export const en = {
   homeKindUp: 'Move {name} up',
   homeKindDown: 'Move {name} down',
   homeKindsReset: 'Restore original order',
-} satisfies Record<keyof typeof zh, string>
+}

@@ -8,14 +8,13 @@
  * a translation, and an easy explanation ('easy'), whose results, names,
  * remembered choices and resume offers are kept apart from the translation's.
  */
-import type { Lang } from '@genoffice/i18n'
 import type {
   EpubSkippedChapter,
   EpubTranslationOutputKind,
   EpubTranslationReport,
   EpubTranslationUnit,
 } from '@genoffice/epub-engine'
-import type { TranslationMode } from '@genoffice/pdf-structure'
+import type { TranslationLanguage, TranslationMode } from '@genoffice/pdf-structure'
 import type { JobProgress, JobStatus } from '@genoffice/pdf-structure/store'
 import { defaultResultName } from '../../shared/asset-url'
 import type { EpubBookSummary } from '../../shared/ipc'
@@ -32,7 +31,7 @@ export const KIND_KEYS: Record<TranslationMode, Record<EpubTranslationOutputKind
 }
 
 /** each language's name in itself, when the platform cannot name it */
-const AUTONYMS: Record<Lang, string> = {
+const AUTONYMS: Record<TranslationLanguage, string> = {
   zh: '简体中文',
   en: 'English',
   ja: '日本語',

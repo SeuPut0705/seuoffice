@@ -11,21 +11,19 @@ describe('documentSkeleton', () => {
   })
 
   it('declares the document language as the UI language', () => {
-    expect(documentSkeleton('zh')).toContain('<html lang="zh-CN">')
+    expect(documentSkeleton('ko')).toContain('<html lang="ko-KR">')
     expect(documentSkeleton('en')).toContain('<html lang="en-US">')
-    // a region-less tag would be wrong for a locale that has one
-    expect(documentSkeleton('zh-TW')).toContain('<html lang="zh-TW">')
   })
 
   it('declares the encoding before any content', () => {
     // a charset that arrives after the first bytes are decoded is mojibake
-    const html = documentSkeleton('ja')
+    const html = documentSkeleton('ko')
     expect(html).toContain('<meta charset="UTF-8">')
     expect(html.indexOf('<meta charset')).toBeLessThan(html.indexOf('<title>'))
   })
 
   it('carries the three structural elements a page needs', () => {
-    const html = documentSkeleton('de')
+    const html = documentSkeleton('ko')
     expect(html).toContain('<head>')
     expect(html).toContain('<title></title>')
     expect(html).toContain('<body></body>')
@@ -38,9 +36,9 @@ describe('documentSkeleton', () => {
   })
 
   it('differs only in the lang tag across languages', () => {
-    const zh = documentSkeleton('zh')
-    const fr = documentSkeleton('fr')
-    expect(zh.replace('zh-CN', 'LANG')).toBe(fr.replace('fr-FR', 'LANG'))
+    const ko = documentSkeleton('ko')
+    const en = documentSkeleton('en')
+    expect(ko.replace('ko-KR', 'LANG')).toBe(en.replace('en-US', 'LANG'))
   })
 
   it('ends with a newline, so appending to it does not join lines', () => {
