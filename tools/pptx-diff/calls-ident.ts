@@ -1,7 +1,6 @@
 // Group `ident` of comparison (f): identity.ts, redaction-xml.ts and model3d.ts
 // of packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_ident.rs to `pptxIdent.<module>.<TypeScript name>`.
-import { XMLParser } from 'fast-xml-parser'
 import type { GlbBounds } from '../../packages/pptx-engine/src/glb-bounds'
 import {
   elementCNvPrId,
@@ -10,6 +9,7 @@ import {
   groupChildDurableId,
   matchesElementRef,
   slideDurableId,
+  withFreshCreationIds,
 } from '../../packages/pptx-engine/src/identity'
 import {
   AM3D_NS,
@@ -32,7 +32,7 @@ import {
   readRedactLabel,
   REDACT_EL,
   REDACT_EXT_URI,
-  REDACT_NS,
+  REDACT_NS_WRITTEN,
   REDACT_PREFIX,
   redactExtXml,
   setRedactExt,
@@ -40,6 +40,7 @@ import {
   syncRedactExt,
 } from '../../packages/pptx-engine/src/redaction-xml'
 import { scanSlide } from '../../packages/pptx-engine/src/scan'
+import { xmlParser } from '../../packages/pptx-engine/src/xml-parser'
 import type { EmuRect, Slide, SlideElement } from '../../packages/pptx-engine/src/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { withUuid } from './calls-leaves'
@@ -119,7 +120,7 @@ const constantOf = (table: Record<string, unknown>, args: Args): unknown => {
 const REDACTION_CONSTANTS: Record<string, unknown> = {
   REDACT_EXT_URI,
   REDACT_EL,
-  REDACT_NS,
+  REDACT_NS_WRITTEN,
   REDACT_PREFIX,
 }
 
@@ -142,7 +143,7 @@ const OTHER_NAMES = ['nothing', 'constructor', 'toString']
  * and `<p:spPr>` nodes readRedactLabel is given. The Rust dispatch holds the
  * same list.
  */
-const parseTsParser = new XMLParser({
+const parseTsParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   trimValues: false,
@@ -264,15 +265,38 @@ const ELEMENT_TEXTS: string[] = [
   shape(cNvPr('id="17"\nname="M"\t', `\n<a:extLst>${OTHER_EXT}</a:extLst>\n`)),
 ]
 
-/**
- * ledger cnvpr-own-extlst-forms: cNvPr's own extLst written self-closing or
- * with white space before the `>` of its closing tag. The TypeScript's
- * ensureCreationId adds a second extLst there; the Rust merges into it.
- */
+/** cNvPr's own extLst written self-closing, with attributes, or with white space in its tags. */
 const OWN_EXTLST_FORMS: string[] = [
   '<p:cNvPr id="16" name="M"><a:extLst/></p:cNvPr>',
   `<p:cNvPr id="17" name="N"><a:extLst>${OTHER_EXT}</a:extLst ></p:cNvPr>`,
   shape(cNvPr('id="18" name="O"', '<a:hlinkClick r:id=""/><a:extLst xmlns:x="urn:x" />')),
+  `<p:cNvPr id="19" name="P"><a:extLst >${OTHER_EXT}</a:extLst ></p:cNvPr>`,
+  `<p:cNvPr id="19" name="P"><a:extLst a="b>c">${OTHER_EXT}</a:extLst></p:cNvPr>`,
+  `<p:cNvPr id="19" name="P"><a:extLst></a:extLst></p:cNvPr>`,
+]
+
+/** Creation ids as XML allows them to be written: quotes, spacing, prefix, references, other uris. */
+const CREATION_FORMS: string[] = [
+  `<p:cNvPr id="30" name="A"><a:extLst><a:ext uri='{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}'><a16:creationId ${A16} id='${GUID}'/></a:ext></a:extLst></p:cNvPr>`,
+  `<p:cNvPr id="30" name="A"><a:extLst><a:ext uri = "{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"><a16:creationId ${A16} id = "${GUID}"/></a:ext></a:extLst></p:cNvPr>`,
+  `<p:cNvPr id="30" name="A"><a:extLst><a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"><x:creationId xmlns:x="http://schemas.microsoft.com/office/drawing/2014/main" id="${GUID}"/></a:ext></a:extLst></p:cNvPr>`,
+  `<p:cNvPr id="30" name="A"><a:extLst><a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"><creationId xmlns="http://schemas.microsoft.com/office/drawing/2014/main" id="${GUID}"/></a:ext></a:extLst></p:cNvPr>`,
+  `<p:cNvPr id="30" name="A"><a:extLst><a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"><a16:creationId ${A16} id="&#123;3A8B1C2D-4E5F-4061-8273-94A5B6C7D8E9&#125;"/></a:ext></a:extLst></p:cNvPr>`,
+  `<p:cNvPr id="30" name="A"><a:extLst><a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"><a16:creationId ${A16} descr="a>b" id="${GUID}"/></a:ext></a:extLst></p:cNvPr>`,
+  `<p:cNvPr id="30" name="A"><a:extLst><a:ext uri="{OTHER}"><a16:creationId ${A16} id="${GUID}"/></a:ext></a:extLst></p:cNvPr>`,
+  `<p:cNvPr id="30" name="A"><a:extLst><a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"/><a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"><a16:creationId ${A16} id="${GUID}"/></a:ext></a:extLst></p:cNvPr>`,
+  `<p:cNvPr id="30" name="A"><a:extLst><a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"><a16:creationId ${A16} id="not a guid"/><a16:creationId ${A16} id="${GUID}"/></a:ext></a:extLst></p:cNvPr>`,
+  `<p:cNvPr id="30" name="A"><a:extLst><a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"><a16:creationIdX ${A16} id="${GUID}"/></a:ext></a:extLst></p:cNvPr>`,
+  `<p:cNvPr id="30" name="A"><a:extLst><a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"><a16:creationId ${A16} id="${GUID}"/></a:extLst></p:cNvPr>`,
+  `<p:cNvPr id = '31' name="B"/>`,
+  `<p:cNvPr id="&#51;2" name="B"/>`,
+  `<p:cNvPr id="3&#x32;" name="B"></p:cNvPr>`,
+  `<p:cNvPr  name="B"  id  =  "33"  />`,
+  `<p:cNvPr id="34" name="B"><a:extLst><a:ext uri="{x}"/></a:extLst ></p:cNvPr>\n`,
+  `<p:cNvPr id="35" descr="a>b" name="B"/>`,
+  `<p:cNvPr id="36" name="B"><p:cNvPr id="37"/></p:cNvPr>`,
+  `<p:cNvPr id="38" name="B"><a:hlinkClick r:id=""><a:extLst/></a:hlinkClick></p:cNvPr>`,
+  `<p:cNvPr id="39" name="B"><a:hlinkClick r:id=""><a:extLst></a:extLst></a:hlinkClick></p:cNvPr>`,
 ]
 
 /** An element without a slice of its own, as a group child is, named by nvId. */
@@ -294,6 +318,7 @@ const ELEMENT_INPUTS: Input[] = [
   ...ELEMENT_TEXTS.slice(2, 8).map((text) => ({ text, args: { nvId: '99' } })),
   ...NV_ID_INPUTS,
   ...OWN_EXTLST_FORMS.map((text) => ({ text })),
+  ...CREATION_FORMS.map((text) => ({ text })),
 ]
 
 /** Shapes, cNvPr elements and nvId-only elements of the corpus. */
@@ -395,17 +420,24 @@ const GROUP_CHILD_INPUTS: Input[] = [
     text: `${'x'.repeat(30)}<p:cNvPr id="21"><a:extLst>${creation()}</a:extLst>`,
     args: { nvId: '21' },
   },
-  // ledger group-child-nvid-pattern: the TypeScript pastes the nvId into a pattern unescaped
-  ...['2.', '2[12]', '+21', '21|x', '2\\d', '(', '[', ']', '{', '2{2}', '\\'].map(
-    (nvId): Input => ({ text: GROUP, args: { nvId }, seed: false }),
+  // an nvId is text, never a pattern
+  ...['2.', '2[12]', '+21', '21|x', '2\\d', '(', '[', ']', '{', '2{2}', '\\', '&#50;1', '2&amp;1'].map(
+    (nvId): Input => ({ text: GROUP, args: { nvId } }),
   ),
+  ...CREATION_FORMS.flatMap((creation) => [
+    {
+      text: group(cNvPr('id="20" name="Group"'), creation),
+      args: { nvId: '30' },
+    },
+    { text: group(cNvPr('id="20" name="Group"'), creation), args: { nvId: '32' } },
+    { text: group(cNvPr('id="20" name="Group"'), creation), args: { nvId: '33' } },
+  ]),
   {
     text: group(
       cNvPr('id="20" name="Group"'),
       shape(cNvPr('id="+21" name="Child"', `<a:extLst>${creation()}</a:extLst>`)),
     ),
     args: { nvId: '+21' },
-    seed: false,
   },
 ]
 
@@ -415,18 +447,6 @@ function groupChildrenOfDocument(parts: Parts): Input[] {
     .filter((text) => text.startsWith('<p:grpSp'))
     .flatMap((text) => cNvPrIdsIn(text).map((nvId) => ({ text, args: { nvId } })))
 }
-
-/**
- * ledger redact-strip-drops-extlst-attributes and
- * redact-self-closing-ext-swallows-next: a list with attributes that still
- * holds something once our extension is gone, and a self-closing extension
- * of ours before another one. The TypeScript drops the attributes of the
- * first and takes the neighbour of the second; neither seeds a mutation.
- */
-const LISTED_SHAPE =
-  /<a:extLst\s[^>]*[^/>]>|<a:ext\b[^>]*\buri="\{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D\}"[^>]*\/>[\s\S]*<\/a:ext>/
-const unseeded = (inputs: Input[]): Input[] =>
-  inputs.map((input) => (LISTED_SHAPE.test(input.text ?? '') ? { ...input, seed: false } : input))
 
 // ---- redaction-xml.ts
 
@@ -452,7 +472,7 @@ const PROPS: string[] = [
   `<a:rPr lang="en-US"><a:extLst>\r\n${OURS}\r\n</a:extLst>  </a:rPr>`,
   `<a:rPr lang="en-US"><a:extLst><a:ext uri="${REDACT_EXT_URI}"/>${OTHER}</a:extLst></a:rPr>`,
   `<a:rPr lang="en-US"><a:extLst><a:ext uri="${REDACT_EXT_URI}"/></a:extLst></a:rPr>`,
-  `<a:rPr lang="en-US"><a:extLst><a:ext xmlns:go="${REDACT_NS}" uri="${REDACT_EXT_URI}"><go:redact label="x"/></a:ext></a:extLst></a:rPr>`,
+  `<a:rPr lang="en-US"><a:extLst><a:ext xmlns:go="${REDACT_NS_WRITTEN}" uri="${REDACT_EXT_URI}"><go:redact label="x"/></a:ext></a:extLst></a:rPr>`,
   `<a:rPr lang="en-US"><a:extLst><a:ext uri='${REDACT_EXT_URI}'><go:redact label="x"/></a:ext></a:extLst></a:rPr>`,
   `<a:rPr lang="en-US"><a:extLst><a:ext uri="${REDACT_EXT_URI.toLowerCase()}"><go:redact label="x"/></a:ext></a:extLst></a:rPr>`,
   `<a:rPr lang="en-US"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill><a:latin typeface="+mn-lt"/><a:extLst>${OURS}</a:extLst></a:rPr>`,
@@ -471,13 +491,31 @@ const PROPS: string[] = [
   `<a:rPr lang="en-US"><a:extLst>${redactExtXml('<&>"\u{1F600}')}</a:extLst></a:rPr>`,
 ]
 
+/** Marks and lists as XML allows them to be written, and nodes holding several lists. */
+const REDACT_FORMS: string[] = [
+  `<a:rPr lang="en-US"><a:extLst><a:ext uri = '${REDACT_EXT_URI}'><go:redact label="x"/></a:ext></a:extLst></a:rPr>`,
+  `<a:rPr lang="en-US"><a:extLst><a:ext xmlns:go="${REDACT_NS_WRITTEN}" uri="&#123;9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D&#125;"><go:redact label="x"/></a:ext></a:extLst></a:rPr>`,
+  `<a:rPr lang="en-US"><a:extLst><a:ext uri="${REDACT_EXT_URI}" /><a:ext uri="{X}"/></a:extLst></a:rPr>`,
+  `<a:rPr lang="en-US"><a:extLst><a:ext uri="${REDACT_EXT_URI}"/></a:extLst ></a:rPr>`,
+  `<a:rPr lang="en-US"><a:extLst a="1"><a:ext uri="${REDACT_EXT_URI}"/></a:extLst></a:rPr>`,
+  `<a:rPr lang="en-US"><a:extLst a="1">${OTHER}${OURS}</a:extLst></a:rPr>`,
+  `<a:rPr lang="en-US"><a:extLst>${OURS}</a:extLst><a:extLst>${OTHER}</a:extLst></a:rPr>`,
+  `<a:rPr lang="en-US"><a:extLst>${OTHER}</a:extLst><a:extLst/></a:rPr>`,
+  `<a:rPr lang="en-US"><a:extLst/></a:rPr>  `,
+  `<a:rPr lang="en-US"><a:hlinkClick r:id=""><a:extLst>${OTHER}</a:extLst></a:hlinkClick></a:rPr>`,
+  `<a:rPr lang="en-US"><a:hlinkClick r:id=""><a:extLst>${OURS}</a:extLst></a:hlinkClick></a:rPr>`,
+  `<a:rPr lang="en-US"><a:hlinkClick r:id=""><a:extLst>${OTHER}</a:extLst></a:hlinkClick><a:extLst>${OTHER}</a:extLst></a:rPr>`,
+  `<a:rPr lang="en-US"><a:hlinkClick r:id=""><a:extLst>${OTHER}</a:extLst></a:hlinkClick><a:extLst/></a:rPr>`,
+  `<p:spPr>${SP_PR}<a:ln><a:extLst>${OTHER}</a:extLst></a:ln></p:spPr>`,
+  `<p:spPr>${SP_PR}<a:ln><a:extLst>${OTHER}</a:extLst></a:ln><a:extLst>${OURS}</a:extLst></p:spPr>`,
+  `<a:rPr lang="en-US"><a:extLst>${OURS}<!-- </a:extLst> --></a:extLst></a:rPr>`,
+  `<a:rPr lang="en-US"><a:extLst><a:ext uri="${REDACT_EXT_URI}"></a:ext>${OURS}</a:extLst></a:rPr>`,
+  `<a:rPr><a:ext uri="${REDACT_EXT_URI}"><a:ext uri="${REDACT_EXT_URI}"/></a:ext></a:rPr>`,
+]
+
 const LABELS = ['Name', 'Other label', '', '<&>"\'', '\u{1F600}\uD55C', 'toString']
 
-/**
- * ledger redact-label-dollar: a label holding `$$`, `$&`, `` $` `` or `$'`,
- * set where the props already hold an `<a:extLst>`. The TypeScript reads it as
- * a replacement pattern; the Rust writes it as given.
- */
+/** A label holding `$$`, `$&`, `` $` `` or `$'`, set where the props already hold an `<a:extLst>`. */
 const DOLLAR_LABELS = ['a$$b', 'a$&b', 'a$`b', "a$'b", '$1']
 
 /** Props with our mark, with another extension, and with a self-closing list: both replace sites. */
@@ -510,17 +548,19 @@ const SYNC_INPUTS: Input[] = [
     { text, args: { tag, label: '' } },
     { text, args: { tag, label: null } },
   ]),
+  ...REDACT_FORMS.flatMap((rPr) => [
+    { text: runShape(rPr), args: { tag: 'a:rPr', label: 'Name' } },
+    { text: runShape(rPr), args: { tag: 'a:rPr' } },
+  ]),
   // the tag goes into a pattern unescaped
   ...['(', 'a:rPr|p:spPr', 'a:r.r'].map((tag) => ({
     text: runShape(PROPS[4]!),
     args: { tag, label: 'Name' },
   })),
-  // ledger redact-label-dollar: `$$`, `$&`, `` $` ``, `$'` in the label are read as replacement patterns by the TypeScript
   ...DOLLAR_PROPS().flatMap((rPr) =>
     DOLLAR_LABELS.map((label): Input => ({
       text: runShape(rPr),
       args: { tag: 'a:rPr', label },
-      seed: false,
     })),
   ),
 ]
@@ -553,7 +593,7 @@ const LABEL_INPUTS: Input[] = [
     '<redact label="x"/>',
     '<toString label="x"/><go:redact label="y"/>',
   ].map((redact) => ({
-    text: `<a:rPr lang="en-US"><a:extLst><a:ext uri="${REDACT_EXT_URI}" xmlns:go="${REDACT_NS}">${redact}</a:ext></a:extLst></a:rPr>`,
+    text: `<a:rPr lang="en-US"><a:extLst><a:ext uri="${REDACT_EXT_URI}" xmlns:go="${REDACT_NS_WRITTEN}">${redact}</a:ext></a:extLst></a:rPr>`,
     args: { name: 'a:rPr' },
   })),
   ...PROPS.map((text) => ({ text, args: { name: 'a:rPr' } })),
@@ -570,6 +610,8 @@ const LABEL_INPUTS: Input[] = [
     text: `<a:rPr><a:extLst>${redactExtXml('First')}</a:extLst></a:rPr><a:rPr/>`,
     args: { name: 'a:rPr' },
   },
+  ...REDACT_FORMS.map((text) => ({ text, args: { name: 'a:rPr' } })),
+  ...REDACT_FORMS.map((text) => ({ text, args: { name: 'p:spPr' } })),
   { text: labelled('Name'), args: { name: 'p:spPr' } },
   { text: labelled('Name'), args: { name: 'a:r' } },
   // texts the parser refuses
@@ -586,10 +628,8 @@ const SET_INPUTS: Input[] = [
     text: '<a:rPr lang="en-US"><a:latin typeface="x"/></a:rPr><a:t>w</a:t><a:rPr/>',
     args: { label: 'Name' },
   },
-  // ledger redact-label-dollar: `$$`, `$&`, `` $` ``, `$'` in the label are read as replacement patterns by the TypeScript
-  ...DOLLAR_PROPS().flatMap((text) =>
-    DOLLAR_LABELS.map((label): Input => ({ text, args: { label }, seed: false })),
-  ),
+  ...DOLLAR_PROPS().flatMap((text) => DOLLAR_LABELS.map((label): Input => ({ text, args: { label } }))),
+  ...REDACT_FORMS.flatMap((text) => LABELS.map((label) => ({ text, args: { label } }))),
 ]
 
 // ---- model3d.ts
@@ -824,8 +864,27 @@ export const IDENT: CallSpec[] = [
         args: { uuid: UUIDS[index % UUIDS.length] },
       })),
       { args: { uuid: UUID, noAnchor: true } },
-      // ledger cnvpr-own-extlst-forms: the TypeScript adds a second extLst to cNvPr, the Rust merges into its own
-      ...OWN_EXTLST_FORMS.map((text): Input => ({ text, args: { uuid: UUIDS[1] }, seed: false })),
+      ...OWN_EXTLST_FORMS.map((text): Input => ({ text, args: { uuid: UUIDS[1] } })),
+      ...CREATION_FORMS.map((text) => ({ text, args: { uuid: UUIDS[2] } })),
+    ],
+  },
+  {
+    fn: 'pptxIdent.identity.withFreshCreationIds',
+    call: (text, args) => withUuid(args.uuid as string, () => withFreshCreationIds(text)),
+    fromDocument: (parts) =>
+      [...shapesOf(parts), ...elementsOf(parts, CNVPR)].map((text) => ({
+        text,
+        args: { uuid: UUID },
+      })),
+    built: [
+      ...ELEMENT_TEXTS.map((text, index) => ({
+        text,
+        args: { uuid: UUIDS[index % UUIDS.length] },
+      })),
+      ...CREATION_FORMS.map((text) => ({ text, args: { uuid: UUIDS[2] } })),
+      ...OWN_EXTLST_FORMS.map((text) => ({ text, args: { uuid: UUIDS[1] } })),
+      { text: `${creation()}${creation(GUID, "'")}`, args: { uuid: UUID } },
+      { text: `<a16:creationId id="${GUID}" id='{x}'/>`, args: { uuid: UUID } },
     ],
   },
   {
@@ -861,7 +920,7 @@ export const IDENT: CallSpec[] = [
     call: (text) => hasRedactExtIn(text),
     fromDocument: (parts) =>
       [...shapesOf(parts), ...elementsOf(parts, RPR)].map((text) => ({ text })),
-    built: [...PROPS, ...SYNC_TEXTS.map(([text]) => text)].map((text) => ({ text })),
+    built: [...PROPS, ...REDACT_FORMS, ...SYNC_TEXTS.map(([text]) => text)].map((text) => ({ text })),
   },
   {
     fn: 'pptxIdent.redaction-xml.syncRedactExt',
@@ -878,7 +937,7 @@ export const IDENT: CallSpec[] = [
               { text, args: { tag: 'a:rPr' } },
             ],
       ),
-    built: unseeded(SYNC_INPUTS),
+    built: SYNC_INPUTS,
   },
   {
     fn: 'pptxIdent.redaction-xml.readRedactLabel',
@@ -895,10 +954,13 @@ export const IDENT: CallSpec[] = [
     call: (text) => stripRedactExt(text),
     fromDocument: (parts) =>
       [...elementsOf(parts, RPR), ...shapesOf(parts)].map((text) => ({ text })),
-    built: unseeded(
-      [...PROPS, ...SYNC_TEXTS.map(([text]) => text), `<a:t> </a:t><a:b></a:c>`].map((text) => ({
-        text,
-      })),
+    built: [
+      ...PROPS,
+      ...REDACT_FORMS,
+      ...SYNC_TEXTS.map(([text]) => text),
+      `<a:t> </a:t><a:b></a:c>`,
+    ].map(
+      (text) => ({ text }),
     ),
   },
   {
@@ -909,7 +971,7 @@ export const IDENT: CallSpec[] = [
         text,
         args: { label: 'Name' },
       })),
-    built: unseeded(SET_INPUTS),
+    built: SET_INPUTS,
   },
   {
     fn: 'pptxIdent.model3d.constants',

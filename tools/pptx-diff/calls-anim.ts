@@ -787,8 +787,7 @@ const PATCH_INPUTS: Input[] = [
   { text: RICH, args: { anims: edit(RICH_READ, RICH_READ.length - 1, { durationMs: 10 }) } },
   { text: NO_BLD, args: { anims: edit(OLD_NO_BLD, 1, { effect: 'flipIn' }) } },
   { text: AUTO, args: { anims: edit(OLD_AUTO, 2, { durationMs: 3000 }) } },
-  // ledger anim-nth-par-skips-untargeted: the TypeScript replaces the ink effect's <p:par>
-  { text: INK, args: { anims: edit(OLD_INK, 0, { durationMs: 900 }) }, seed: false },
+  { text: INK, args: { anims: edit(OLD_INK, 0, { durationMs: 900 }) } },
   { text: INK, args: { anims: [...OLD_INK, anim(3, 'fade')] } },
   { text: suffix(PPT_INTERACTIVE_ONLY), args: { anims: [anim(4, 'fade')] } },
 ]
@@ -840,8 +839,7 @@ const PRUNE_INPUTS: Input[] = [
     text: suffix(root(interactive(11, 4, 60, ` x="${filler}"`))),
     args: { spids: [11] },
   })),
-  // ledger anim-prune-dollar-patterns: the TypeScript reads `$&` and `$$` of the kept timing as patterns
-  { text: suffix(PPT_DOLLAR), args: { spids: [2] }, seed: false },
+  { text: suffix(PPT_DOLLAR), args: { spids: [2] } },
   { text: suffix(PPT_DOLLAR), args: { spids: [3] } },
 ]
 

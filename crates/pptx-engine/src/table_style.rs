@@ -6,12 +6,13 @@
 
 use std::sync::LazyLock;
 
+use crate::xml_utils::xml_parse_object as parse_object;
 use jscompat::{
     JsNum, Radix, Slot, js_object, js_regex, math_round, number_to_string, number_truthy,
     pad_start, parse_int, slice_utf16, to_number, to_string_radix16, trim, truthy, value_to_string,
     value_truthy,
 };
-use ooxml_xml::{ObjectOptions, parse_object};
+use ooxml_xml::ObjectOptions;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -114,7 +115,7 @@ pub struct TblBgRef {
 /// `TableStyleFlags`: the region toggles of `a:tblPr`. A flag the caller
 /// leaves out reads as off, as an `undefined` one does in the TypeScript.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", default)]
+#[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct TableStyleFlags {
     pub first_row: bool,
     pub last_row: bool,
@@ -997,11 +998,8 @@ fn builtin_style(
 }
 
 /// `resolveTableStyle`: a style id as its definition, from tableStyles.xml
-/// first, then the built-in gallery. ledger inherited-key-table-style-477:
-/// the TypeScript's `BUILTIN[styleId]` finds `constructor`, `toString`,
-/// `__proto__`, `hasOwnProperty`... on the prototype, `builtinStyle` falls
-/// out of its switch with `undefined`, and reading `def.wholeTbl` throws a
-/// TypeError; here such an id is an unknown id.
+/// first, then the built-in gallery (`ownValue(BUILTIN, styleId)`: such an id
+/// as `constructor` is an unknown id).
 pub fn resolve_table_style(
     style_id: Option<&str>,
     table_styles_xml: Option<&str>,

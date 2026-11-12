@@ -22,7 +22,7 @@ use crate::placeholder::{
 use crate::resource_cleanup::cleanup_superseded_slide_resources;
 use crate::theme::{Theme, parse_clr_map, parse_theme};
 use crate::types::{Fill, GradientFill, GradientPath, GradientStop, ImageFill, ImageMode, Slide};
-use crate::xml_utils::max_relationship_id_number;
+use crate::xml_utils::{escape_xml_attr, max_relationship_id_number};
 use crate::zip::{PackageArchive, rels_path_for, resolve_target};
 
 /// `fill: string | GradientFillPatch` of `setSlideBackground`.
@@ -38,7 +38,11 @@ pub enum SlideBackgroundFill {
 #[serde(untagged)]
 pub enum BackgroundImageSource {
     #[serde(rename_all = "camelCase")]
-    Bytes { bytes: Vec<u8>, ext: String },
+    Bytes {
+        #[serde(deserialize_with = "crate::json_bytes::bytes")]
+        bytes: Vec<u8>,
+        ext: String,
+    },
     #[serde(rename_all = "camelCase")]
     MediaPath { media_path: String },
 }
@@ -204,7 +208,8 @@ pub(crate) fn image_rel_for(
         None => media_path.to_owned(),
     };
     let rel_xml = format!(
-        "<Relationship Id=\"{rid}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"{target}\"/>"
+        "<Relationship Id=\"{rid}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"{}\"/>",
+        escape_xml_attr(&target)
     );
     // a function replacement in the TypeScript: the value goes in as written
     let updated = match rels.find("</Relationships>") {

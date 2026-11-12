@@ -3,14 +3,12 @@
 //! `addContentTypeOverride`, `unescapeXml`) the comments and the media modules
 //! share.
 
-use jscompat::{
-    js_regex, number_to_string, replace_first_string, replace_first_with, slice_utf16, to_number,
-};
+use jscompat::{js_regex, number_to_string, slice_utf16, to_number};
 
 use crate::deck::OpenedPptx;
 use crate::xml_utils::{
-    decode_numeric_char_refs, escape_xml_text, has_content_type_override,
-    max_relationship_id_number,
+    attribute_of, element_range, escape_xml_attr, escape_xml_text, has_content_type_override,
+    max_relationship_id_number, root_prefix_of,
 };
 use crate::zip::{PackageArchive, rels_path_for, resolve_target};
 
@@ -52,27 +50,10 @@ pub(crate) fn replace_literal(text: &str, needle: &str, replacement: &str) -> St
     }
 }
 
-/// `unescapeXml`: unescape XML text (for reading `<a:t>`).
-///
-/// ledger notes-unescape-numeric-entity: the TypeScript decodes the numeric
-/// references first and the five named entities after, so `&#38;lt;` (the
-/// text `&lt;`) comes out as `<`: a reference it produced is read again. This
-/// reads the text once, left to right, so a decoded character is never
-/// decoded a second time. Every other input gives what the TypeScript gives.
-pub fn unescape_xml(s: &str) -> String {
-    js_regex!(
-        r"&#(?:x([0-9a-fA-F]+)|(\d+));|&(?:lt|gt|quot|apos|amp);",
-        "g"
-    )
-    .replace_all(s, |m| match m.as_str() {
-        "&lt;" => "<".to_owned(),
-        "&gt;" => ">".to_owned(),
-        "&quot;" => "\"".to_owned(),
-        "&apos;" => "'".to_owned(),
-        "&amp;" => "&".to_owned(),
-        numeric => decode_numeric_char_refs(numeric),
-    })
-}
+/// `unescapeXml`: text or an attribute value read off raw XML, as XML reads it (`decodeXml`):
+/// one pass, so `&amp;lt;` is the four characters `&lt;`. Never applied to a value the parser
+/// returned.
+pub use crate::xml_utils::decode_xml as unescape_xml;
 
 /// `notesPathForSlide`: path of the slide's notesSlide part (`None` if there
 /// is no notes slide).
@@ -88,6 +69,18 @@ pub fn notes_path_for_slide(
     Ok(None)
 }
 
+/// `notesPrefixes`: the prefixes a notes slide part binds PresentationML and DrawingML to
+/// (`p:` and `a:` as this engine writes them, '' for a default namespace, or any other); `None`
+/// when it binds either to none at its root, and the part is then neither read nor written.
+fn notes_prefixes(xml: &str) -> Result<Option<(String, String)>, String> {
+    let p = root_prefix_of(xml, NS_P)?;
+    let a = root_prefix_of(xml, NS_A)?;
+    Ok(match (p, a) {
+        (Some(p), Some(a)) => Some((p, a)),
+        _ => None,
+    })
+}
+
 /// The body placeholder `<p:sp>` block of a notesSlide xml.
 struct BodySp<'a> {
     xml: &'a str,
@@ -96,19 +89,40 @@ struct BodySp<'a> {
 }
 
 /// `findBodySp`
-fn find_body_sp(xml: &str) -> Option<BodySp<'_>> {
-    let body = js_regex!(r#"<p:ph\b[^>]*\btype=["']body["']"#);
-    for m in js_regex!(r"<p:sp>[\s\S]*?<\/p:sp>", "g").find_iter(xml) {
-        // quote-agnostic: a deck written with type='body' is still a body placeholder
-        if body.test(m.as_str()) {
-            return Some(BodySp {
-                xml: m.as_str(),
-                start: m.start(),
-                end: m.end(),
-            });
+fn find_body_sp<'a>(xml: &'a str, p: &str) -> Result<Option<BodySp<'a>>, String> {
+    let sp_name = format!("{p}sp");
+    let ph_name = format!("{p}ph");
+    let mut from = 0;
+    while let Some(sp) = element_range(xml, &sp_name, from)? {
+        let sp_xml = xml.get(sp.start..sp.end).unwrap_or_default();
+        if let Some(ph) = element_range(sp_xml, &ph_name, 0)?
+            && attribute_of(sp_xml.get(ph.start..ph.end).unwrap_or_default(), "type").as_deref()
+                == Some("body")
+        {
+            return Ok(Some(BodySp {
+                xml: sp_xml,
+                start: sp.start,
+                end: sp.end,
+            }));
         }
+        from = sp.end;
     }
-    None
+    Ok(None)
+}
+
+/// `contentsOf`: the content of each element named `name` in `xml`, in document order.
+fn contents_of(xml: &str, name: &str) -> Result<Vec<String>, String> {
+    let mut out = Vec::new();
+    let mut from = 0;
+    while let Some(at) = element_range(xml, name, from)? {
+        out.push(
+            xml.get(at.content_start..at.content_end)
+                .unwrap_or_default()
+                .to_owned(),
+        );
+        from = at.end;
+    }
+    Ok(out)
 }
 
 /// `getSlideNotes`: notes as plain text (body placeholder paragraphs joined
@@ -123,26 +137,28 @@ pub fn get_slide_notes(archive: &PackageArchive, slide_path: &str) -> Result<Str
     let Some(xml) = archive.read_text(&notes_path).filter(|xml| !xml.is_empty()) else {
         return Ok(String::new());
     };
-    let Some(body) = find_body_sp(&xml) else {
+    let Some((p, a)) = notes_prefixes(&xml)? else {
         return Ok(String::new());
     };
-    let Some(tx) = js_regex!(r"<p:txBody>([\s\S]*?)<\/p:txBody>")
-        .exec(body.xml)
-        .and_then(|m| m.get(1))
+    let Some(body) = find_body_sp(&xml, &p)? else {
+        return Ok(String::new());
+    };
+    let Some(tx) = contents_of(body.xml, &format!("{p}txBody"))?
+        .into_iter()
+        .next()
         .filter(|tx| !tx.is_empty())
     else {
         return Ok(String::new());
     };
-    let text_run = js_regex!(r"<a:t(?:\s[^>]*[^/>])?>([\s\S]*?)<\/a:t>", "g");
-    let mut paras: Vec<String> = js_regex!(r"<a:p>([\s\S]*?)<\/a:p>", "g")
-        .find_iter(tx)
-        .map(|p| {
-            text_run
-                .find_iter(p.get(1).unwrap_or_default())
-                .map(|t| unescape_xml(t.get(1).unwrap_or_default()))
-                .collect::<String>()
-        })
-        .collect();
+    let text_name = format!("{a}t");
+    let mut paras: Vec<String> = Vec::new();
+    for para in contents_of(&tx, &format!("{a}p"))? {
+        let mut text = String::new();
+        for t in contents_of(&para, &text_name)? {
+            text.push_str(&unescape_xml(&t));
+        }
+        paras.push(text);
+    }
     // Drop trailing empty paragraphs (PowerPoint templates often carry an empty placeholder paragraph)
     while paras.last().is_some_and(String::is_empty) {
         paras.pop();
@@ -150,39 +166,46 @@ pub fn get_slide_notes(archive: &PackageArchive, slide_path: &str) -> Result<Str
     Ok(paras.join("\n"))
 }
 
-/// `buildNotesTxBody`: text (`\n`-separated) to a notes txBody.
-fn build_notes_tx_body(text: &str) -> String {
-    const EMPTY_PARA: &str = "<a:p><a:endParaRPr lang=\"zh-CN\"/></a:p>";
+/// `buildNotesTxBody`: text (`\n`-separated) to a notes txBody, under the part's prefixes.
+fn build_notes_tx_body(text: &str, p: &str, a: &str) -> String {
+    let empty = format!("<{a}p><{a}endParaRPr lang=\"zh-CN\"/></{a}p>");
     let lines = js_regex!(r"\r\n|\r|\n").split(text);
     let paras = if lines.iter().all(|line| line.is_empty()) {
-        EMPTY_PARA.to_owned()
+        empty
     } else {
         lines
             .iter()
             .map(|line| {
                 if line.is_empty() {
-                    EMPTY_PARA.to_owned()
+                    empty.clone()
                 } else {
                     format!(
-                        "<a:p><a:r><a:rPr lang=\"zh-CN\" dirty=\"0\"/><a:t>{}</a:t></a:r></a:p>",
+                        "<{a}p><{a}r><{a}rPr lang=\"zh-CN\" dirty=\"0\"/><{a}t>{}</{a}t></{a}r></{a}p>",
                         escape_xml_text(line)
                     )
                 }
             })
             .collect::<String>()
     };
-    format!("<p:txBody><a:bodyPr/><a:lstStyle/>{paras}</p:txBody>")
+    format!("<{p}txBody><{a}bodyPr/><{a}lstStyle/>{paras}</{p}txBody>")
 }
 
-const NOTES_BODY_SP_OPEN: &str = concat!(
-    "<p:sp><p:nvSpPr><p:cNvPr id=\"3\" name=\"Notes Placeholder\"/>",
-    "<p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr>",
-    "<p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr/>"
-);
+/// `notesBodySp`: the body placeholder of a notes slide, holding `txBody`, under the part's
+/// prefixes.
+fn notes_body_sp(p: &str, a: &str, tx_body: &str) -> String {
+    format!(
+        "<{p}sp><{p}nvSpPr><{p}cNvPr id=\"3\" name=\"Notes Placeholder\"/>\
+         <{p}cNvSpPr><{a}spLocks noGrp=\"1\"/></{p}cNvSpPr>\
+         <{p}nvPr><{p}ph type=\"body\" idx=\"1\"/></{p}nvPr></{p}nvSpPr><{p}spPr/>\
+         {tx_body}</{p}sp>"
+    )
+}
 
 /// `setSlideNotes`: write notes (overwrite): patch the existing notesSlide's
 /// body txBody; if there is no notesSlide, create the part (with a
-/// notesMaster if needed).
+/// notesMaster if needed). A notes slide part is written under the prefixes it binds its
+/// namespaces to; `false`, and nothing written to it, when it binds them to none or has no
+/// shape tree to hold the body.
 pub fn set_slide_notes(
     opened: &mut OpenedPptx,
     slide_index: usize,
@@ -195,7 +218,7 @@ pub fn set_slide_notes(
     let archive = &mut opened.archive;
     let notes_path = match notes_path_for_slide(archive, &slide_path)? {
         Some(path) => path,
-        None => match create_notes_slide(archive, &slide_path) {
+        None => match create_notes_slide(archive, &slide_path)? {
             Some(path) => path,
             None => return Ok(false),
         },
@@ -210,14 +233,28 @@ pub fn set_slide_notes(
     else {
         return Ok(false);
     };
+    let Some((p, a)) = notes_prefixes(&xml)? else {
+        return Ok(false);
+    };
 
-    let tx_body = build_notes_tx_body(text);
-    let next = match find_body_sp(&xml) {
+    let tx_body = build_notes_tx_body(text, &p, &a);
+    let next = match find_body_sp(&xml, &p)? {
         Some(body) => {
-            let patched = replace_first_with(
-                js_regex!(r"<p:txBody>[\s\S]*?<\/p:txBody>"),
-                body.xml,
-                |_| tx_body.clone(),
+            let (start, end) = match element_range(body.xml, &format!("{p}txBody"), 0)? {
+                Some(old) => (old.start, old.end),
+                None => {
+                    // a body placeholder holds its own end tag, so this is always found
+                    let at = body
+                        .xml
+                        .rfind("</")
+                        .ok_or_else(|| "notes body placeholder has no end tag".to_owned())?;
+                    (at, at)
+                }
+            };
+            let patched = format!(
+                "{}{tx_body}{}",
+                body.xml.get(..start).unwrap_or_default(),
+                body.xml.get(end..).unwrap_or_default()
             );
             format!(
                 "{}{patched}{}",
@@ -225,11 +262,20 @@ pub fn set_slide_notes(
                 xml.get(body.end..).unwrap_or_default()
             )
         }
-        None => replace_literal(
-            &xml,
-            "</p:spTree>",
-            &format!("{NOTES_BODY_SP_OPEN}{tx_body}</p:sp></p:spTree>"),
-        ),
+        None => {
+            let Some(tree) = element_range(&xml, &format!("{p}spTree"), 0)? else {
+                return Ok(false);
+            };
+            if tree.content_start == tree.end {
+                return Ok(false);
+            }
+            format!(
+                "{}{}{}",
+                xml.get(..tree.content_end).unwrap_or_default(),
+                notes_body_sp(&p, &a, &tx_body),
+                xml.get(tree.content_end..).unwrap_or_default()
+            )
+        }
     };
     set_entry(archive, &notes_path, next);
     Ok(true)
@@ -278,12 +324,14 @@ pub fn append_relationship(
     };
     let max_rid = max_relationship_id_number(&xml);
     let rid = format!("rId{}", number_to_string(max_rid + 1.0));
-    // a string replacement: the `$` patterns of the type and target apply
-    let xml = replace_first_string(
+    // A function replacement, escaped: the target can be a part name the deck chose, and may
+    // hold `$&`, `$$` or `&`.
+    let xml = replace_literal(
         &xml,
         "</Relationships>",
         &format!(
-            "<Relationship Id=\"{rid}\" Type=\"{type}\" Target=\"{target}\"/></Relationships>"
+            "<Relationship Id=\"{rid}\" Type=\"{type}\" Target=\"{}\"/></Relationships>",
+            escape_xml_attr(target)
         ),
     );
     set_entry(archive, &rels_path, xml);
@@ -300,12 +348,94 @@ fn first_notes_master(archive: &PackageArchive) -> Option<String> {
         .map(str::to_owned)
 }
 
-/// `ensureNotesMaster`: ensure a notesMaster exists and return its part
-/// path. Created and registered in the presentation if missing.
-fn ensure_notes_master(archive: &mut PackageArchive) -> String {
-    if let Some(path) = first_notes_master(archive) {
-        return path;
+/// The place `notesMasterLister` found: presentation.xml with `[start, end)` replaced by the
+/// list of one notes master.
+struct NotesMasterLister {
+    pres: String,
+    p: String,
+    id_name: String,
+    start: usize,
+    end: usize,
+}
+
+impl NotesMasterLister {
+    fn apply(&self, rid: &str) -> String {
+        let p = &self.p;
+        format!(
+            "{}<{p}notesMasterIdLst><{p}notesMasterId {}=\"{}\"/></{p}notesMasterIdLst>{}",
+            self.pres.get(..self.start).unwrap_or_default(),
+            self.id_name,
+            escape_xml_attr(rid),
+            self.pres.get(self.end..).unwrap_or_default()
+        )
     }
+}
+
+/// `notesMasterLister`: lists a notes master in presentation.xml, under the prefixes the part
+/// binds PresentationML and the relationships namespace to: the list goes where the schema puts
+/// it, right after `sldMasterIdLst` (before `handoutMasterIdLst`, `sldIdLst`, `sldSz`,
+/// `notesSz`), and replaces a list already there (it holds one entry at most). `None` when
+/// there is nowhere to put it, and the caller then writes nothing.
+fn notes_master_lister(pres: &str) -> Result<Option<NotesMasterLister>, String> {
+    let Some(p) = root_prefix_of(pres, NS_P)? else {
+        return Ok(None);
+    };
+    // an unprefixed attribute is in no namespace, so `r:` is declared where it is not bound
+    let id_name = match root_prefix_of(pres, NS_R)?.filter(|r| !r.is_empty()) {
+        Some(r) => format!("{r}id"),
+        None => format!("xmlns:r=\"{NS_R}\" r:id"),
+    };
+    let (start, end) =
+        if let Some(existing) = element_range(pres, &format!("{p}notesMasterIdLst"), 0)? {
+            (existing.start, existing.end)
+        } else {
+            let mut at = element_range(pres, &format!("{p}sldMasterIdLst"), 0)?.map(|r| r.end);
+            for next in ["handoutMasterIdLst", "sldIdLst", "sldSz", "notesSz"] {
+                if at.is_none() {
+                    at = element_range(pres, &format!("{p}{next}"), 0)?.map(|r| r.start);
+                }
+            }
+            let Some(at) = at else {
+                return Ok(None);
+            };
+            (at, at)
+        };
+    Ok(Some(NotesMasterLister {
+        pres: pres.to_owned(),
+        p,
+        id_name,
+        start,
+        end,
+    }))
+}
+
+/// `ensureNotesMaster`: ensure a notesMaster exists and return its part
+/// path. Created and registered in the presentation if missing; `None` when the presentation
+/// has nowhere to list it (nothing is written then).
+fn ensure_notes_master(archive: &mut PackageArchive) -> Result<Option<String>, String> {
+    let pres_path = "ppt/presentation.xml";
+    for rel in archive.read_rels(pres_path)?.values() {
+        if rel.r#type != NOTES_MASTER_REL {
+            continue;
+        }
+        let listed = resolve_target(pres_path, &rel.target);
+        if archive.has(&listed) {
+            return Ok(Some(listed));
+        }
+    }
+    if let Some(path) = first_notes_master(archive) {
+        return Ok(Some(path));
+    }
+    // decided before anything is written: a deck that cannot list the master is left as it was
+    let pres = archive.read_text(pres_path).map(|pres| pres.into_owned());
+    let listed = match pres {
+        Some(pres) => notes_master_lister(&pres)?,
+        None => None,
+    };
+    let Some(listed) = listed else {
+        return Ok(None);
+    };
+
     let path = "ppt/notesMasters/notesMaster1.xml";
     let empty_tree = concat!(
         "<p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>",
@@ -332,50 +462,26 @@ fn ensure_notes_master(archive: &mut PackageArchive) -> String {
         let target = format!("../{}", slice_utf16(&theme, 4.0, None));
         append_relationship(archive, path, THEME_REL, &target);
     }
-    // Register notesMasterIdLst in presentation.xml
-    let pres_path = "ppt/presentation.xml";
-    let pres = archive
-        .read_text(pres_path)
-        .filter(|pres| !pres.is_empty())
-        .map(|pres| pres.into_owned());
-    if let Some(pres) = pres {
-        let existing_list =
-            js_regex!(r"<p:notesMasterIdLst\b[^>]*(?:\/>|>[\s\S]*?<\/p:notesMasterIdLst>)")
-                .exec(&pres)
-                .map(|m| m.as_str().to_owned());
-        if existing_list
-            .as_deref()
-            .is_none_or(|list| list.ends_with("/>"))
-        {
-            let rid = append_relationship(
-                archive,
-                pres_path,
-                NOTES_MASTER_REL,
-                "notesMasters/notesMaster1.xml",
-            );
-            let list = format!(
-                "<p:notesMasterIdLst><p:notesMasterId r:id=\"{rid}\"/></p:notesMasterIdLst>"
-            );
-            let next = match &existing_list {
-                Some(existing) => replace_literal(&pres, existing, &list),
-                None if pres.contains("</p:sldMasterIdLst>") => replace_literal(
-                    &pres,
-                    "</p:sldMasterIdLst>",
-                    &format!("</p:sldMasterIdLst>{list}"),
-                ),
-                None => replace_literal(&pres, "<p:sldIdLst>", &format!("{list}<p:sldIdLst>")),
-            };
-            set_entry(archive, pres_path, next);
-        }
-    }
-    path.to_owned()
+    let rid = append_relationship(
+        archive,
+        pres_path,
+        NOTES_MASTER_REL,
+        "notesMasters/notesMaster1.xml",
+    );
+    set_entry(archive, pres_path, listed.apply(&rid));
+    Ok(Some(path.to_owned()))
 }
 
 /// `createNotesSlide`: create an empty notesSlide for a slide (part + rels +
-/// CT + slide rels); returns the part path. `ensureNotesMaster` never answers
-/// null, so neither does this; the `Option` keeps the TypeScript's type.
-fn create_notes_slide(archive: &mut PackageArchive, slide_path: &str) -> Option<String> {
-    ensure_notes_master(archive);
+/// CT + slide rels); returns the part path (`None` when the presentation cannot list a notes
+/// master).
+fn create_notes_slide(
+    archive: &mut PackageArchive,
+    slide_path: &str,
+) -> Result<Option<String>, String> {
+    let Some(master) = ensure_notes_master(archive)? else {
+        return Ok(None);
+    };
 
     let number_pattern = js_regex!(r"^ppt\/notesSlides\/notesSlide(\d+)\.xml$");
     let mut max_num = 0.0_f64;
@@ -389,6 +495,11 @@ fn create_notes_slide(archive: &mut PackageArchive, slide_path: &str) -> Option<
         number_to_string(max_num + 1.0)
     );
 
+    let body_sp = notes_body_sp(
+        "p:",
+        "a:",
+        "<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang=\"zh-CN\"/></a:p></p:txBody>",
+    );
     let xml = format!(
         "{XMLDECL}<p:notes xmlns:a=\"{NS_A}\" xmlns:r=\"{NS_R}\" xmlns:p=\"{NS_P}\">\
          <p:cSld><p:spTree>\
@@ -398,15 +509,13 @@ fn create_notes_slide(archive: &mut PackageArchive, slide_path: &str) -> Option<
          <p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Slide Image Placeholder\"/>\
          <p:cNvSpPr><a:spLocks noGrp=\"1\" noRot=\"1\" noChangeAspect=\"1\"/></p:cNvSpPr>\
          <p:nvPr><p:ph type=\"sldImg\"/></p:nvPr></p:nvSpPr><p:spPr/></p:sp>\
-         {NOTES_BODY_SP_OPEN}\
-         <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang=\"zh-CN\"/></a:p></p:txBody></p:sp>\
+         {body_sp}\
          </p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:notes>"
     );
     set_entry(archive, &notes_path, xml);
     add_content_type_override(archive, &notes_path, NOTES_SLIDE_CT);
 
     // notesSlide rels: notesMaster + owning slide
-    let master = first_notes_master(archive).unwrap_or_default();
     append_relationship(
         archive,
         &notes_path,
@@ -427,5 +536,5 @@ fn create_notes_slide(archive: &mut PackageArchive, slide_path: &str) -> Option<
         NOTES_SLIDE_REL,
         &format!("../{}", slice_utf16(&notes_path, 4.0, None)),
     );
-    Some(notes_path)
+    Ok(Some(notes_path))
 }
