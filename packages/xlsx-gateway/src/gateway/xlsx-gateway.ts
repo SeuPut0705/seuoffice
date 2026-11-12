@@ -1422,8 +1422,8 @@ export async function planCellEditsToXlsx(
     spillEdits.length > 0 ? await ensureDynamicArrayMetadata(pkg, touchedEntries) : null
 
   // Withheld cells travel in a package part of their own, so they are written
-  // here rather than with the worksheets. A sheet renamed or removed in this
-  // same save takes its marks with it first — see rekeyRedactionStates.
+  // here rather than with the worksheets. A sheet renamed, removed or copied
+  // in this same save takes its marks with it first — see rekeyRedactionStates.
   // An empty list clears the part (the reader un-hid everything); null leaves
   // it untouched, because a caller that never loaded the marks must not drop
   // them.
@@ -1435,6 +1435,7 @@ export async function planCellEditsToXlsx(
           sheetPlan?.renames ?? [],
           sheetPlan?.removals ?? [],
           structuralOps,
+          sheetPlan?.additions ?? [],
         )
   if (rekeyed !== null) await applyRedactionPart(pkg, touchedEntries, rekeyed)
 

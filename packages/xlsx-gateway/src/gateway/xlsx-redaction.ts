@@ -219,6 +219,14 @@ export function serializeRedactionPart(states: readonly SheetRedactionState[]): 
  * is keyed by name, the new name carries no marks, and the reader's withheld
  * values would silently become visible to the model. A removed sheet's marks go
  * with it — the cells they described no longer exist.
+ *
+ * A sheet added as a copy of another takes that sheet's marks with it. The
+ * save seeds the copy's part from the source sheet as the file holds it and
+ * replays the row and column ops addressed to the copy on top, so the copy's
+ * marks are the source's marks in file coordinates moved through the copy's
+ * own ops — not the source's, which describe what happened to the source
+ * after the copy was taken. The source is looked up by its name in the file,
+ * so a source renamed or removed in the same save still hands its marks over.
  */
 export function rekeyRedactionStates(
   states: readonly SheetRedactionState[],
@@ -228,29 +236,69 @@ export function rekeyRedactionStates(
     readonly sheetName: string
     readonly ops: readonly StructuralOp[]
   }[] = [],
+  additions: readonly {
+    readonly name: string
+    readonly sourceSheetName?: string | undefined
+  }[] = [],
 ): SheetRedactionState[] {
   const renamed = new Map(renames.map((rename) => [rename.sheetName, rename.newName]))
   const removed = new Set(removals)
-  return states
+  const added = new Set(additions.map((addition) => addition.name))
+  // A state names a sheet of the file by its name there. Only a name no file
+  // sheet can answer to in this save — not renamed away, not removed — is a
+  // state the caller listed for a sheet this save adds.
+  const listedForAdded = new Set(
+    states.filter(
+      (state) =>
+        added.has(state.sheetName) &&
+        !removed.has(state.sheetName) &&
+        !renamed.has(state.sheetName),
+    ),
+  )
+  const fileStates = states.filter((state) => !listedForAdded.has(state))
+  // The marks name cells the file is about to move: this same save applies
+  // the ops to the grid XML, so a rectangle left where it was would end up
+  // describing whatever shifted into its place. A mark whose row or column
+  // the ops delete goes with them — the cell it withheld is no longer there
+  // to withhold.
+  const moved = (marks: readonly RedactionMark[], sheetName: string): RedactionMark[] => {
+    const ops = structuralOps.find((entry) => entry.sheetName === sheetName)?.ops
+    if (!ops || ops.length === 0) return [...marks]
+    return marks.flatMap((mark) => {
+      const area = shiftCellArea(mark, ops)
+      return area === null ? [] : [{ ...mark, ...area }]
+    })
+  }
+  const rekeyed: SheetRedactionState[] = fileStates
     .filter((state) => !removed.has(state.sheetName))
-    .map((state) => {
-      const newName = renamed.get(state.sheetName)
-      const renamedState = newName === undefined ? state : { ...state, sheetName: newName }
+    .map((state) => ({
       // Structural ops address the source file, not the renamed output. Looking
       // them up by the new name skips the shift (or selects another sheet's).
-      const ops = structuralOps.find((entry) => entry.sheetName === state.sheetName)?.ops
-      if (!ops || ops.length === 0) return renamedState
-      // The marks name cells the file is about to move: this same save
-      // applies the ops to the grid XML, so a rectangle left where it was
-      // would end up describing whatever shifted into its place. A mark whose
-      // row or column the ops delete goes with them — the cell it withheld is
-      // no longer there to withhold.
-      const marks = renamedState.marks.flatMap((mark) => {
-        const moved = shiftCellArea(mark, ops)
-        return moved === null ? [] : [{ ...mark, ...moved }]
-      })
-      return { ...renamedState, marks }
-    })
+      sheetName: renamed.get(state.sheetName) ?? state.sheetName,
+      marks: moved(state.marks, state.sheetName),
+    }))
+  for (const addition of additions) {
+    const inherited =
+      addition.sourceSheetName === undefined
+        ? []
+        : fileStates.filter((state) => state.sheetName === addition.sourceSheetName)
+    const listed = [...listedForAdded].filter((state) => state.sheetName === addition.name)
+    // The same rectangle listed twice is one mark, not two.
+    const marks = new Map<string, RedactionMark>()
+    for (const mark of [...inherited, ...listed].flatMap((state) => state.marks)) {
+      const key = JSON.stringify([
+        mark.startRow,
+        mark.endRow,
+        mark.startColumn,
+        mark.endColumn,
+        mark.label,
+      ])
+      if (!marks.has(key)) marks.set(key, mark)
+    }
+    if (marks.size === 0) continue
+    rekeyed.push({ sheetName: addition.name, marks: moved([...marks.values()], addition.name) })
+  }
+  return rekeyed
 }
 
 /**

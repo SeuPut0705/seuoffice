@@ -22,6 +22,11 @@ import {
   type RedactionMark,
   type SheetRedactionState,
 } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+import {
+  applyCellEditsToXlsx,
+  type SheetStructuralOps,
+} from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+import type { SheetEditPlan } from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
 
 /**
  * A file read as another file's material (attachment, knowledge base, search
@@ -706,6 +711,13 @@ async function book(sheets: readonly BookSheet[], marks: BookMarks = {}): Promis
       '</Relationships>',
   )
   zip.file(
+    '[Content_Types].xml',
+    `${XML_DECL}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '</Types>',
+  )
+  zip.file(
     'xl/sharedStrings.xml',
     `${XML_DECL}<sst xmlns="${SHEET_NS}">${marks.sharedStrings ?? ''}</sst>`,
   )
@@ -894,5 +906,114 @@ describe('xlsx: marks that cannot be processed fail the read', () => {
 
   it('throws from xlsxToText itself, for a caller that reads the file on its own', async () => {
     await expect(xlsxToText(await book([CLIENTS], { part: 'x' }))).rejects.toThrow(/redaction/i)
+  })
+})
+
+interface GatewaySave {
+  plan?: SheetEditPlan
+  ops?: readonly SheetStructuralOps[]
+  /** the marks the caller knows, or null when it never read them */
+  states: readonly SheetRedactionState[] | null
+}
+
+/** the file a save through the workbook gateway writes over `source` */
+async function gatewaySave(source: Promise<Uint8Array>, save: GatewaySave): Promise<Uint8Array> {
+  const saved = await applyCellEditsToXlsx(
+    Buffer.from(await source),
+    [],
+    save.ops ?? [],
+    [],
+    save.plan,
+    [],
+    [],
+    [],
+    [],
+    [],
+    null,
+    [],
+    [],
+    [],
+    save.states,
+  )
+  return saved.buffer
+}
+
+const STOCK: BookSheet = { name: 'Stock', rows: `<row r="1">${inline('A1', 'Item')}</row>` }
+const CLIENT_MARKS: readonly SheetRedactionState[] = [{ sheetName: 'Clients', marks: [mark('B2')] }]
+const WITHHELD_CLIENTS = `Name | Phone\nKim | ${MARKER}`
+
+describe('xlsx: a sheet duplicated by a save keeps its cells withheld', () => {
+  const copyOfClients = (name: string) => ({ name, sourceSheetName: 'Clients' })
+
+  it('reads the copy of a withheld cell as its marker', async () => {
+    const saved = await gatewaySave(savedBook([CLIENTS, STOCK], CLIENT_MARKS), {
+      plan: {
+        renames: [],
+        removals: [],
+        additions: [copyOfClients('Clients (2)')],
+        order: ['Clients', 'Stock', 'Clients (2)'],
+      },
+      states: CLIENT_MARKS,
+    })
+    expect(await xlsxToText(saved)).toBe(
+      `# Clients\n${WITHHELD_CLIENTS}\n\n# Stock\nItem\n\n# Clients (2)\n${WITHHELD_CLIENTS}`,
+    )
+  })
+
+  it('follows the rows and columns each of two copies went through', async () => {
+    // a copy of a copy is saved as two copies of the file's sheet, each with
+    // the row and column edits made on it
+    const saved = await gatewaySave(savedBook([CLIENTS, STOCK], CLIENT_MARKS), {
+      plan: {
+        renames: [],
+        removals: [],
+        additions: [copyOfClients('Clients (2)'), copyOfClients('Clients (3)')],
+        order: ['Clients', 'Stock', 'Clients (2)', 'Clients (3)'],
+      },
+      ops: [
+        { sheetName: 'Clients (2)', ops: [{ kind: 'insert-rows', index: 0, count: 1 }] },
+        {
+          sheetName: 'Clients (3)',
+          ops: [
+            { kind: 'insert-rows', index: 0, count: 1 },
+            { kind: 'insert-cols', index: 0, count: 1 },
+          ],
+        },
+      ],
+      states: CLIENT_MARKS,
+    })
+    expect(await xlsxToText(saved)).toBe(
+      `# Clients\n${WITHHELD_CLIENTS}\n\n# Stock\nItem\n\n` +
+        `# Clients (2)\n${WITHHELD_CLIENTS}\n\n` +
+        `# Clients (3)\n | Name | Phone\n | Kim | ${MARKER}`,
+    )
+  })
+
+  it('reads the copy as its marker when the source is renamed in the same save', async () => {
+    const saved = await gatewaySave(savedBook([CLIENTS, STOCK], CLIENT_MARKS), {
+      plan: {
+        renames: [{ sheetName: 'Clients', newName: 'Customers' }],
+        removals: [],
+        additions: [copyOfClients('Clients (2)')],
+        order: ['Customers', 'Stock', 'Clients (2)'],
+      },
+      states: CLIENT_MARKS,
+    })
+    expect(await xlsxToText(saved)).toBe(
+      `# Customers\n${WITHHELD_CLIENTS}\n\n# Stock\nItem\n\n# Clients (2)\n${WITHHELD_CLIENTS}`,
+    )
+  })
+
+  it('reads the copy as its marker when the source is removed in the same save', async () => {
+    const saved = await gatewaySave(savedBook([CLIENTS, STOCK], CLIENT_MARKS), {
+      plan: {
+        renames: [],
+        removals: ['Clients'],
+        additions: [copyOfClients('Kept copy')],
+        order: ['Stock', 'Kept copy'],
+      },
+      states: CLIENT_MARKS,
+    })
+    expect(await xlsxToText(saved)).toBe(`# Stock\nItem\n\n# Kept copy\n${WITHHELD_CLIENTS}`)
   })
 })

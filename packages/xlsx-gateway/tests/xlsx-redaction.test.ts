@@ -274,6 +274,40 @@ describe('rekeying for sheet edits done in the same save', () => {
       STATES,
     )
   })
+
+  it('gives a copied sheet its source’s marks, moved by the copy’s own ops', () => {
+    // The copy's part is the source as the file holds it plus the ops recorded
+    // on the copy, so the source's later ops must not move the copy's marks.
+    expect(
+      rekeyRedactionStates(
+        STATES,
+        [{ sheetName: 'Sheet1', newName: 'Q3' }],
+        [],
+        [
+          { sheetName: 'Sheet1', ops: [{ kind: 'insert-rows', index: 0, count: 2 }] },
+          { sheetName: 'Copy', ops: [{ kind: 'insert-cols', index: 0, count: 1 }] },
+        ],
+        [{ name: 'Copy', sourceSheetName: 'Sheet1' }, { name: 'Blank' }],
+      ),
+    ).toEqual([
+      { sheetName: 'Q3', marks: [{ ...MARK, startRow: 3, endRow: 5 }] },
+      { sheetName: 'Copy', marks: [{ ...MARK, startColumn: 3, endColumn: 3 }] },
+    ])
+  })
+
+  it('keeps a renamed sheet’s marks off the new sheet that takes its old name', () => {
+    // "Sheet1" in the states is the file's sheet, now "Q3": the blank sheet
+    // that takes the name afterwards holds none of its values.
+    expect(
+      rekeyRedactionStates(
+        STATES,
+        [{ sheetName: 'Sheet1', newName: 'Q3' }],
+        [],
+        [],
+        [{ name: 'Sheet1' }],
+      ),
+    ).toEqual([{ sheetName: 'Q3', marks: [MARK] }])
+  })
 })
 
 describe('writing the part into the package', () => {
