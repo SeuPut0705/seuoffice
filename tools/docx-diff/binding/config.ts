@@ -44,6 +44,11 @@ export interface EngineConfig {
   plumbing: string[]
   /** `engine-shapes.ts`, the table of reply shapes, is written */
   shapesModule: boolean
+  /**
+   * Exported types whose shape `engine-type-shapes.ts` holds: the model values
+   * the engine answers for the binding to write back into the caller's objects.
+   */
+  typeShapes?: readonly string[]
   /** a module of the package.json exports that is no engine module */
   pluginModule(module: string): boolean
   overrideOf(name: string): Override | undefined

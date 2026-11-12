@@ -101,12 +101,13 @@ function shapeOf(
   type: ts.Type,
   depth: number,
   stack: Set<number>,
+  limit = 7,
 ): Shape | null {
-  if (depth > 7) return null
+  if (depth > limit) return null
   if (type.isUnion()) {
     for (const member of type.types) {
       if (member.flags & (ts.TypeFlags.Null | ts.TypeFlags.Undefined)) continue
-      const shape = shapeOf(checker, member, depth, stack)
+      const shape = shapeOf(checker, member, depth, stack, limit)
       if (shape) return shape
     }
     return null
@@ -114,7 +115,7 @@ function shapeOf(
   if (type.isIntersection()) {
     const fields: Record<string, Shape> = {}
     for (const member of type.types) {
-      const shape = shapeOf(checker, member, depth, stack)
+      const shape = shapeOf(checker, member, depth, stack, limit)
       if (shape?.k === 'obj') Object.assign(fields, shape.f)
       else if (shape) return shape
     }
@@ -125,8 +126,8 @@ function shapeOf(
   if (name === 'Map' || name === 'ReadonlyMap')
     return {
       k: 'map',
-      ...(args[1] && shapeOf(checker, args[1], depth + 1, stack)
-        ? { v: shapeOf(checker, args[1], depth + 1, stack)! }
+      ...(args[1] && shapeOf(checker, args[1], depth + 1, stack, limit)
+        ? { v: shapeOf(checker, args[1], depth + 1, stack, limit)! }
         : {}),
     }
   if (name === 'Set' || name === 'ReadonlySet') return { k: 'set' }
@@ -137,7 +138,7 @@ function shapeOf(
   try {
     if (checker.isArrayType(type)) {
       const element = checker.getTypeArguments(type as ts.TypeReference)[0]!
-      const item = shapeOf(checker, element, depth + 1, stack)
+      const item = shapeOf(checker, element, depth + 1, stack, limit)
       // `Array<X | undefined>`: JSON writes the holes as null, the TypeScript held undefined
       const holes =
         element.isUnion() &&
@@ -149,7 +150,7 @@ function shapeOf(
     if (checker.isTupleType(type)) {
       const items = checker
         .getTypeArguments(type as ts.TypeReference)
-        .map((t) => shapeOf(checker, t, depth + 1, stack))
+        .map((t) => shapeOf(checker, t, depth + 1, stack, limit))
       return items.some(Boolean) ? { k: 'tuple', items } : null
     }
     if (type.flags & ts.TypeFlags.Object) {
@@ -162,12 +163,13 @@ function shapeOf(
           checker.getTypeOfSymbolAtLocation(prop, decl),
           depth + 1,
           stack,
+          limit,
         )
         if (shape) fields[prop.getName()] = shape
       }
       const index = checker.getIndexInfoOfType(type, ts.IndexKind.String)
       if (index) {
-        const shape = shapeOf(checker, index.type, depth + 1, stack)
+        const shape = shapeOf(checker, index.type, depth + 1, stack, limit)
         if (shape && !Object.keys(fields).length) return { k: 'rec', v: shape }
       }
       return Object.keys(fields).length ? { k: 'obj', f: fields } : null
@@ -236,6 +238,10 @@ function typescriptExports(): ExportInfo[] {
         rust: null,
         route: 'none',
       }
+      // a model type whose values the binding writes back into the caller's objects:
+      // deeper than a reply, since a deck holds its charts four levels further down
+      if (kind === 'type' && config.typeShapes?.includes(info.name))
+        info.ret.shape = shapeOf(checker, checker.getDeclaredTypeOfSymbol(target), 0, new Set(), 12)
       if (kind === 'function') {
         const signatures = checker.getTypeOfSymbolAtLocation(target, decl).getCallSignatures()
         const signature = signatures[0]
