@@ -182,7 +182,10 @@ export default function App() {
     (taken: AiPrefill) => setAiPrefill((current) => afterPrefillTaken(current, taken)),
     [],
   )
-  /** counts changes made through the bridge, so the check panel can read the document again */
+  /**
+   * counts the bridge calls after which the saved file could differ (recovery-flow.ts
+   * `withChangeNotes`), so the check panel can read the document again
+   */
   const [docRevision, setDocRevision] = useState(0)
   /** the memo column beside the document: out or not, independent of the AI dock */
   const [memoOpen, setMemoOpen] = useState(memoPanelInitiallyOpen)
