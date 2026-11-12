@@ -25,18 +25,20 @@ const W_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/m
  * mark: another prefix, no prefix with the namespace declared on the mark,
  * and no prefix with the namespace declared on the rPr around it.
  */
-export type MarkSpelling = 'go' | 'other prefix' | 'unprefixed' | 'unprefixed, inherited'
+export type MarkSpelling = 'go' | 'other prefix' | 'unprefixed' | 'unprefixed, inherited' | 'spaced'
 export const MARK_SPELLINGS: MarkSpelling[] = [
   'go',
   'other prefix',
   'unprefixed',
   'unprefixed, inherited',
+  'spaced',
 ]
 
 function markedRPr(ns: string, spelling: MarkSpelling): string {
   const bdr = '<w:bdr w:val="single" w:sz="6" w:color="6B4FC0"/>'
   switch (spelling) {
     case 'go':
+    case 'spaced':
       return `<w:rPr>${bdr}<go:redact xmlns:go="${ns}" w:label="${LABEL}"/></w:rPr>`
     case 'other prefix':
       return `<w:rPr>${bdr}<gx:redact xmlns:gx="${ns}" w:label="${LABEL}"/></w:rPr>`
@@ -49,6 +51,10 @@ function markedRPr(ns: string, spelling: MarkSpelling): string {
 
 /** A run marked hidden from AI. */
 function hiddenRunOf(ns: string, text: string, spelling: MarkSpelling = 'go'): string {
+  // pretty-printed XML: white space and a comment between the run and its properties
+  if (spelling === 'spaced') {
+    return `<w:r>\n  <!-- marked -->\n  ${markedRPr(ns, 'go')}\n  <w:t>${text}</w:t>\n</w:r>`
+  }
   return `<w:r>${markedRPr(ns, spelling)}<w:t>${text}</w:t></w:r>`
 }
 

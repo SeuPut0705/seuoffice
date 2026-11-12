@@ -31,4 +31,24 @@ describe('withheldAsPlaceholders', () => {
       `${plain('inner words')}</w:p></w:txbxContent></w:drawing></w:r>${plain('tail')}</w:p>`
     expect(withheldAsPlaceholders(xml)).toBe(`<w:p>${placeholder('logo')}${plain('tail')}</w:p>`)
   })
+
+  it('finds the properties of a run past white space and a comment', () => {
+    const xml = `<w:p><w:r>\n  <!-- c -->\n  <w:rPr><go:redact w:label="phone"/></w:rPr><w:t>secret</w:t></w:r></w:p>`
+    expect(withheldAsPlaceholders(xml)).toBe(`<w:p>${placeholder('phone')}</w:p>`)
+  })
+
+  it('takes a mark on a paragraph mark as understood: it has no words', () => {
+    const xml = `<w:p><w:pPr><w:rPr><go:redact w:label="phone"/></w:rPr></w:pPr>${plain('open')}</w:p>`
+    expect(withheldAsPlaceholders(xml)).toBe(xml)
+  })
+
+  it('gives null for a mark no run accounts for, so the reader withholds the whole entry', () => {
+    for (const xml of [
+      `<w:p><w:r><w:t>secret</w:t><go:redact w:label="phone"/></w:r></w:p>`,
+      `<w:p><go:redact w:label="phone"/>${plain('secret')}</w:p>`,
+      `<w:p><w:r><?pi?><w:rPr><go:redact w:label="phone"/></w:rPr><w:t>secret</w:t></w:r></w:p>`,
+    ]) {
+      expect(withheldAsPlaceholders(xml)).toBeNull()
+    }
+  })
 })

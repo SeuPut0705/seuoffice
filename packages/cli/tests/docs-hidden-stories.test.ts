@@ -63,6 +63,7 @@ describe('docs read: the mark however its namespace is written', () => {
     const detail = read.json().detail
     expect(detail.items[0].text).toBe(`Body text and ${PLACEHOLDER}`)
     expect(detail.headerFooter.header).toBe(`Head ${PLACEHOLDER}`)
+    expect(detail.headerFooter.footer).toBe(`Foot ${PLACEHOLDER}`)
     expect(detail.comments[0].text).toBe(`Note: ${PLACEHOLDER}`)
     expect(detail.notes[0].text).toBe(`See ${PLACEHOLDER}`)
   })
@@ -134,6 +135,26 @@ describe('docs apply: a header or note holding text hidden from AI', () => {
 })
 
 describe('docs read: a content control holding text hidden from AI', () => {
+  it('reports a pretty-printed control the same way', async () => {
+    const dir = tempDir()
+    const file = join(dir, 'control-spaced.docx')
+    writeFileSync(
+      file,
+      await buildDocx({
+        docRootExtraAttrs: `xmlns:go="${NAMESPACES[1]![1]}"`,
+        bodyXml:
+          '<w:p><w:r><w:t xml:space="preserve">Call </w:t></w:r>' +
+          '<w:sdt><w:sdtPr><w:tag w:val="phone"/></w:sdtPr><w:sdtContent>' +
+          `<w:r>\n  <w:rPr><go:redact w:label="client phone"/></w:rPr>\n  <w:t>${SECRET}</w:t>\n</w:r>` +
+          '</w:sdtContent></w:sdt></w:p>',
+      }),
+    )
+    const read = await run(['docs', 'read', file, '--full', '--json'])
+    expect(read.code).toBe(0)
+    expect(read.stdout).not.toContain(SECRET)
+    expect(read.json().detail.items[0].inlineContentControls[0].text).toBe(PLACEHOLDER)
+  })
+
   it('reports the control text with the placeholder', async () => {
     const dir = tempDir()
     const file = join(dir, 'control.docx')
