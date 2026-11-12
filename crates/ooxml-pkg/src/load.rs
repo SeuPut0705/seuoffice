@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use jscompat::js_regex;
 
+use crate::gate::ZipLimits;
 use crate::gate::{
     DEFAULT_ZIP_LIMITS, DeclaredPart, assert_declared_sizes_within_limits,
     assert_zip_inflates_within_limits,
@@ -125,10 +126,36 @@ pub fn load_docx_package(bytes: &[u8]) -> Result<Package, String> {
     Ok(package)
 }
 
-/// Metered zip loading with JSZip's names and no Word-only normalization.
-pub fn load_zip_package(bytes: &[u8]) -> Result<Package, String> {
-    assert_zip_inflates_within_limits(bytes, &DEFAULT_ZIP_LIMITS)?;
-    let entries = jszip::load(bytes)?;
+/// Which of the three checks of a load refused the archive, with the message
+/// of the TypeScript: `openEpub` names the refusal by the stage.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LoadFailure {
+    /// `assertZipInflatesWithinLimits`
+    Gate(String),
+    /// `JSZip.loadAsync`
+    Archive(String),
+    /// `assertDeclaredSizesWithinLimits` over the loaded entries
+    Declared(String),
+}
+
+impl LoadFailure {
+    pub fn into_message(self) -> String {
+        match self {
+            Self::Gate(message) | Self::Archive(message) | Self::Declared(message) => message,
+        }
+    }
+}
+
+/// The gate, JSZip's load and the declared-size gate, one after the other,
+/// each failure named. With `keep_raw` every part also keeps its record
+/// (`Part::raw`), which a save that copies entries through needs.
+pub fn load_zip_package_staged(
+    bytes: &[u8],
+    limits: &ZipLimits,
+    keep_raw: bool,
+) -> Result<Package, LoadFailure> {
+    assert_zip_inflates_within_limits(bytes, limits).map_err(LoadFailure::Gate)?;
+    let entries = jszip::load(bytes, keep_raw).map_err(LoadFailure::Archive)?;
     let mut package = Package::default();
     // what `assertZipWithinLimits` reads from the zip object: a later entry of
     // the same name replaces the earlier one
@@ -138,10 +165,11 @@ pub fn load_zip_package(bytes: &[u8]) -> Result<Package, String> {
         is_dir,
         uncompressed_size,
         content,
+        raw,
     } in entries
     {
         declared.insert(name.clone(), uncompressed_size.unwrap_or(0.0));
-        package.set(Part::new(name, is_dir, content));
+        package.set(Part::new(name, is_dir, content).with_raw(raw));
     }
     {
         let parts: Vec<DeclaredPart<'_>> = package
@@ -153,7 +181,12 @@ pub fn load_zip_package(bytes: &[u8]) -> Result<Package, String> {
                 usize: declared[&part.name],
             })
             .collect();
-        assert_declared_sizes_within_limits(&parts, &DEFAULT_ZIP_LIMITS)?;
+        assert_declared_sizes_within_limits(&parts, limits).map_err(LoadFailure::Declared)?;
     }
     Ok(package)
+}
+
+/// Metered zip loading with JSZip's names and no Word-only normalization.
+pub fn load_zip_package(bytes: &[u8]) -> Result<Package, String> {
+    load_zip_package_staged(bytes, &DEFAULT_ZIP_LIMITS, false).map_err(LoadFailure::into_message)
 }

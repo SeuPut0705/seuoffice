@@ -98,7 +98,7 @@ fn rust_files(dir: &Path, found: &mut Vec<std::path::PathBuf>) {
             // build output, and third-party source that is not ported code
             if path
                 .file_name()
-                .is_some_and(|name| name != "target" && name != "vendor")
+                .is_some_and(|name| name != "target" && name != "vendor" && name != ".rhwp-source")
             {
                 rust_files(&path, found);
             }

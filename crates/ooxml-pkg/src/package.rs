@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::fmt;
 
 use crate::decode_text;
+use crate::jszip::RawRecord;
 
 /// What reading a damaged part throws in the TypeScript engine. JSZip inflates
 /// a part when it is read, so the damage shows at the reader that asks for it.
@@ -28,6 +29,7 @@ pub struct Part {
     pub is_dir: bool,
     content: Result<Vec<u8>, String>,
     text: OnceCell<String>,
+    raw: Option<RawRecord>,
 }
 
 impl Part {
@@ -37,7 +39,20 @@ impl Part {
             is_dir,
             content,
             text: OnceCell::new(),
+            raw: None,
         }
+    }
+
+    /// The part with what the zip reader kept of its record.
+    pub(crate) fn with_raw(mut self, raw: Option<RawRecord>) -> Self {
+        self.raw = raw;
+        self
+    }
+
+    /// What `loadAsync` kept of the entry besides its content, where the
+    /// package was loaded to keep it (`load_zip_package_staged`).
+    pub fn raw(&self) -> Option<&RawRecord> {
+        self.raw.as_ref()
     }
 
     /// `file.async('uint8array')`

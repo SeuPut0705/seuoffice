@@ -60,11 +60,48 @@ pub struct Stream {
 
 /// `CFB.read(bytes).FileIndex` filtered to streams, each as `{ name, bytes }`.
 pub fn read_streams(bytes: &[u8]) -> Result<Vec<Stream>, String> {
+    let (mut reader, header) = open(bytes)?;
+    let (links, streams, _) = reader.read_directory(&header)?;
+    check_links(&links)?;
+    reader.stream_bytes(streams, bytes.len())
+}
+
+/// One entry of `CFB.read(bytes).FileIndex`, with its `FullPaths` string.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IndexEntry {
+    /// cfb's `type`: 1 storage, 2 stream, 5 root, 0 an entry cfb cleared.
+    pub kind: Option<u8>,
+    /// `FullPaths[i]`: a storage ends with `/`, a stream does not.
+    pub full_path: String,
+    /// `content`; `None` is `undefined`.
+    pub content: Option<Vec<u8>>,
+}
+
+/// `CFB.read(bytes)`: every entry of `FileIndex`, in directory order.
+pub fn read_index(bytes: &[u8]) -> Result<Vec<IndexEntry>, String> {
+    let (mut reader, header) = open(bytes)?;
+    let (links, _, contents) = reader.read_directory(&header)?;
+    let paths = check_links(&links)?;
+    let contents = reader.materialize(contents, bytes.len())?;
+    Ok(links
+        .into_iter()
+        .zip(paths)
+        .zip(contents)
+        .map(|((link, full_path), content)| IndexEntry {
+            kind: link.kind,
+            full_path,
+            content,
+        })
+        .collect())
+}
+
+/// cfb's `parse` up to `read_directory`.
+fn open(bytes: &[u8]) -> Result<(Reader<'_>, Header), String> {
     let mut header = read_header(bytes)?;
     let sectors = Sectors::new(bytes, header.sector_size);
     let mut fat = std::mem::take(&mut header.fat);
     read_difat(&sectors, header.difat_start, header.difat_count, &mut fat)?;
-    let mut reader = Reader::new(sectors, fat, header.dir_start)?;
+    let reader = Reader::new(sectors, fat, header.dir_start)?;
     let first_fat = match reader.fat.first() {
         Some(Some(location)) => Some(i64::from(*location)),
         _ => None,
@@ -77,9 +114,7 @@ pub fn read_streams(bytes: &[u8]) -> Result<Vec<Stream>, String> {
     {
         return Err(SET_NAME.into());
     }
-    let (links, streams) = reader.read_directory(&header)?;
-    check_links(&links)?;
-    reader.stream_bytes(streams, bytes.len())
+    Ok((reader, header))
 }
 
 struct Header {
@@ -339,6 +374,7 @@ impl Chain {
 }
 
 /// What a stream entry's `content` is when cfb's `read_directory` is done.
+#[derive(Clone, Copy)]
 enum Content {
     /// `undefined`, which the reader of a legacy document takes as no bytes.
     Missing,
@@ -354,11 +390,13 @@ enum Content {
     },
 }
 
-/// What `read_directory` gives: every entry's links, and the stream entries.
-type Directory = (Vec<Link>, Vec<(String, Content)>);
+/// What `read_directory` gives: every entry's links, the stream entries, and
+/// the content of every entry.
+type Directory = (Vec<Link>, Vec<(String, Content)>, Vec<Content>);
 
 /// The fields of a directory entry cfb's `build_full_paths` reads.
 struct Link {
+    name: String,
     kind: Option<u8>,
     left: Int,
     right: Int,
@@ -557,7 +595,7 @@ impl<'a> Reader<'a> {
     /// lookups and walks it makes, in the same order.
     fn read_directory(&mut self, header: &Header) -> Result<Directory, String> {
         let directory = self.chain(Some(i64::from(header.dir_start)))?.clone();
-        let (mut links, mut streams) = (Vec::new(), Vec::new());
+        let (mut links, mut streams, mut every) = (Vec::new(), Vec::new(), Vec::new());
         let mut store: Int = Some(0);
         let mut at = 0;
         while at < directory.len {
@@ -614,17 +652,19 @@ impl<'a> Reader<'a> {
             } else {
                 Content::Missing
             };
+            every.push(content);
             if kind == Some(2) {
-                streams.push((name, content));
+                streams.push((name.clone(), content));
             }
             links.push(Link {
+                name,
                 kind,
                 left: int32_at(&blob, 68),
                 right: int32_at(&blob, 72),
                 child: int32_at(&blob, 76),
             });
         }
-        Ok((links, streams))
+        Ok((links, streams, every))
     }
 
     /// cfb's `get_mfat_entry`, refusing a mini sector met twice.
@@ -675,6 +715,25 @@ impl<'a> Reader<'a> {
         streams: Vec<(String, Content)>,
         file_len: usize,
     ) -> Result<Vec<Stream>, String> {
+        let (names, contents): (Vec<String>, Vec<Content>) = streams.into_iter().unzip();
+        let bytes = self.materialize(contents, file_len)?;
+        Ok(names
+            .into_iter()
+            .zip(bytes)
+            .map(|(name, bytes)| Stream {
+                name,
+                bytes: bytes.unwrap_or_default(),
+            })
+            .collect())
+    }
+
+    /// The bytes of each content, `None` where cfb has none, refused once
+    /// they add up to more than the file.
+    fn materialize(
+        &mut self,
+        contents: Vec<Content>,
+        file_len: usize,
+    ) -> Result<Vec<Option<Vec<u8>>>, String> {
         let limit = file_len as u64;
         let mut total: u64 = 0;
         let mut admit = |len: u64| -> Result<usize, String> {
@@ -684,17 +743,17 @@ impl<'a> Reader<'a> {
                 .ok_or("compound: the streams hold more bytes than the file")?;
             usize::try_from(len).map_err(|_| "compound: a stream does not fit in memory".to_owned())
         };
-        let mut out = Vec::with_capacity(streams.len());
-        for (name, content) in streams {
+        let mut out = Vec::with_capacity(contents.len());
+        for content in contents {
             let bytes = match content {
-                Content::Missing => Vec::new(),
+                Content::Missing => None,
                 Content::Fat { key, size } => {
                     let sectors = self.sectors;
                     let chain = self.chain(key)?;
                     let len = size.min(chain.len);
                     let mut bytes = Vec::with_capacity(admit(len)?);
                     chain.copy_into(&sectors, 0, len, &mut bytes);
-                    bytes
+                    Some(bytes)
                 }
                 Content::Mini {
                     store,
@@ -704,10 +763,10 @@ impl<'a> Reader<'a> {
                 } => {
                     let bytes = self.mini(store, table, start, size)?;
                     admit(bytes.len() as u64)?;
-                    bytes
+                    Some(bytes)
                 }
             };
-            out.push(Stream { name, bytes });
+            out.push(bytes);
         }
         Ok(out)
     }
@@ -787,8 +846,9 @@ impl Parents {
 }
 
 /// The control flow of cfb's `build_full_paths`, which throws or never
-/// returns on some links. The paths it builds are not read here.
-fn check_links(links: &[Link]) -> Result<(), String> {
+/// returns on some links, and the `FullPaths` it builds.
+fn check_links(links: &[Link]) -> Result<Vec<String>, String> {
+    let mut paths: Vec<String> = links.iter().map(|link| link.name.clone()).collect();
     let count = links.len() as u64;
     let mut steps = count
         .saturating_add(1)
@@ -876,6 +936,11 @@ fn check_links(links: &[Link]) -> Result<(), String> {
                 if !visited.insert(j) {
                     return Err("compound: the directory parents form a cycle".into());
                 }
+                let parent = j
+                    .index(paths.len())
+                    .map_or("undefined", |at| paths[at].as_str())
+                    .to_owned();
+                paths[index] = format!("{parent}/{}", paths[index]);
                 if same(j, Js::Int(0)) || same(NOSTREAM, dad.get(j)) || same(j, dad.get(j)) {
                     break;
                 }
@@ -883,7 +948,15 @@ fn check_links(links: &[Link]) -> Result<(), String> {
         }
         dad.set(i, NOSTREAM);
     }
-    Ok(())
+    if let Some(root) = paths.first_mut() {
+        root.push('/');
+    }
+    for (index, link) in links.iter().enumerate().skip(1) {
+        if link.kind != Some(2) {
+            paths[index].push('/');
+        }
+    }
+    Ok(paths)
 }
 
 #[cfg(test)]

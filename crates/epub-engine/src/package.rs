@@ -1,15 +1,18 @@
 //! The tree readers of `package.ts` (container, encryption list, package
 //! document) and `toc.ts` (navigation document, NCX), with the helpers of
 //! `xml.ts` they use. Each takes an element tree in the shape `xml.ts` builds;
-//! the parsers that build it (`parseXml`, `parseHtml`) are not ported here.
+//! the parsers that build it (`parseXml`, `parseHtml`) are in `xml.rs`.
 
 use jscompat::{Radix, parse_int, trim, truthy};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::primitives::{is_font_obfuscation_algorithm, resolve_href};
+use crate::xml_positions_types::{MAX_DEPTH, Thrown};
 
 pub const CONTAINER_PATH: &str = "META-INF/container.xml";
+pub const RIGHTS_PATH: &str = "META-INF/rights.xml";
+pub const ENCRYPTION_PATH: &str = "META-INF/encryption.xml";
 
 const OPF_MEDIA_TYPE: &str = "application/oebps-package+xml";
 const DC_NS: &str = "http://purl.org/dc/elements/1.1/";
@@ -17,7 +20,7 @@ const OPF_NS: &str = "http://www.idpf.org/2007/opf";
 const OPS_NS: &str = "http://www.idpf.org/2007/ops";
 const SKIP_IN_TITLES: &[&str] = &["rt", "rp"];
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct XmlAttribute {
     pub name: String,
@@ -26,7 +29,7 @@ pub struct XmlAttribute {
     pub value: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct XmlElement {
     pub name: String,
@@ -36,7 +39,20 @@ pub struct XmlElement {
     pub children: Vec<XmlNode>,
 }
 
-#[derive(Debug, Deserialize)]
+/// A tree as deep as a hostile file makes it must not overflow the stack
+/// when it is dropped: the children are taken down level by level.
+impl Drop for XmlElement {
+    fn drop(&mut self) {
+        let mut pending = std::mem::take(&mut self.children);
+        while let Some(node) = pending.pop() {
+            if let XmlNode::Element(mut element) = node {
+                pending.append(&mut element.children);
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum XmlNode {
     Text(String),
@@ -49,18 +65,18 @@ pub struct NotEpubError(pub String);
 
 /// `el.local.toLowerCase() === ascii`. Final sigma and other context rules
 /// cannot make a string equal to an ASCII one, so lowering char by char agrees.
-fn lower_is(text: &str, ascii: &str) -> bool {
+pub fn lower_is(text: &str, ascii: &str) -> bool {
     text.chars().flat_map(char::to_lowercase).eq(ascii.chars())
 }
 
-fn child_elements(element: &XmlElement) -> impl Iterator<Item = &XmlElement> {
+pub fn child_elements(element: &XmlElement) -> impl Iterator<Item = &XmlElement> {
     element.children.iter().filter_map(|node| match node {
         XmlNode::Element(child) => Some(child),
         XmlNode::Text(_) => None,
     })
 }
 
-fn children_named<'a>(
+pub fn children_named<'a>(
     element: &'a XmlElement,
     local: &'a str,
 ) -> impl Iterator<Item = &'a XmlElement> {
@@ -68,14 +84,14 @@ fn children_named<'a>(
 }
 
 /// `walk`: depth first, document order, `element` itself first.
-fn walk(element: &XmlElement) -> Walk<'_> {
+pub fn walk(element: &XmlElement) -> Walk<'_> {
     Walk {
         first: Some(element),
         stack: Vec::new(),
     }
 }
 
-struct Walk<'a> {
+pub struct Walk<'a> {
     first: Option<&'a XmlElement>,
     stack: Vec<std::slice::Iter<'a, XmlNode>>,
 }
@@ -104,7 +120,7 @@ impl<'a> Iterator for Walk<'a> {
 }
 
 /// `attr`: by local name; without `uri` the attribute must have none.
-fn attr<'a>(element: &'a XmlElement, local: &str, uri: Option<&str>) -> Option<&'a str> {
+pub fn attr<'a>(element: &'a XmlElement, local: &str, uri: Option<&str>) -> Option<&'a str> {
     element
         .attributes
         .iter()
@@ -112,7 +128,7 @@ fn attr<'a>(element: &'a XmlElement, local: &str, uri: Option<&str>) -> Option<&
         .map(|a| a.value.as_str())
 }
 
-fn attr_by_name<'a>(element: &'a XmlElement, name: &str) -> Option<&'a str> {
+pub fn attr_by_name<'a>(element: &'a XmlElement, name: &str) -> Option<&'a str> {
     element
         .attributes
         .iter()
@@ -120,23 +136,25 @@ fn attr_by_name<'a>(element: &'a XmlElement, name: &str) -> Option<&'a str> {
         .map(|a| a.value.as_str())
 }
 
-fn text_content(element: &XmlElement, skip: &[&str]) -> String {
+/// `textContent`: all descendant text, joined, without the elements `skip`
+/// names (by lower-cased local name).
+pub fn text_content(element: &XmlElement, skip: &[&str]) -> String {
     let mut out = String::new();
-    push_text(element, skip, &mut out);
-    out
-}
-
-fn push_text(element: &XmlElement, skip: &[&str], out: &mut String) {
-    for child in &element.children {
-        match child {
-            XmlNode::Text(text) => out.push_str(text),
-            XmlNode::Element(child) => {
+    let mut stack = vec![element.children.iter()];
+    while let Some(children) = stack.last_mut() {
+        match children.next() {
+            Some(XmlNode::Text(text)) => out.push_str(text),
+            Some(XmlNode::Element(child)) => {
                 if !skip.iter().any(|local| lower_is(&child.local, local)) {
-                    push_text(child, skip, out);
+                    stack.push(child.children.iter());
                 }
+            }
+            None => {
+                stack.pop();
             }
         }
     }
+    out
 }
 
 fn is_xml_space(c: char) -> bool {
@@ -145,7 +163,7 @@ fn is_xml_space(c: char) -> bool {
 
 /// `collapseWhitespace`: runs of XML white space become one space, then one
 /// space is dropped at each end.
-fn collapse_whitespace(text: &str) -> String {
+pub fn collapse_whitespace(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut in_run = false;
     for c in text.chars() {
@@ -168,7 +186,7 @@ fn collapse_whitespace(text: &str) -> String {
     out
 }
 
-fn tokens(value: Option<&str>) -> impl Iterator<Item = &str> {
+pub fn tokens(value: Option<&str>) -> impl Iterator<Item = &str> {
     value
         .into_iter()
         .flat_map(|v| v.split(is_xml_space))
@@ -475,7 +493,7 @@ pub struct RawEntry {
     pub depth: u32,
 }
 
-fn title_of(el: &XmlElement) -> String {
+pub fn title_of(el: &XmlElement) -> String {
     collapse_whitespace(&text_content(el, SKIP_IN_TITLES))
 }
 
@@ -513,7 +531,17 @@ fn label_title(label: &XmlElement) -> String {
         .to_owned()
 }
 
-fn nav_list(ol: &XmlElement, nav_path: &str, depth: u32, out: &mut Vec<RawEntry>) {
+/// `navList`. A list nested deeper than `MAX_DEPTH` is the stack overflow of
+/// the TypeScript.
+fn nav_list(
+    ol: &XmlElement,
+    nav_path: &str,
+    depth: u32,
+    out: &mut Vec<RawEntry>,
+) -> Result<(), Thrown> {
+    if depth as usize > MAX_DEPTH {
+        return Err(Thrown::stack_overflow());
+    }
     for li in child_elements(ol) {
         if !lower_is(&li.local, "li") {
             continue;
@@ -532,13 +560,14 @@ fn nav_list(ol: &XmlElement, nav_path: &str, depth: u32, out: &mut Vec<RawEntry>
             }
         }
         if let Some(nested) = child_elements(li).find(|el| lower_is(&el.local, "ol")) {
-            nav_list(nested, nav_path, depth + 1, out);
+            nav_list(nested, nav_path, depth + 1, out)?;
         }
     }
+    Ok(())
 }
 
 /// `navTocEntries`.
-pub fn nav_toc_entries(root: &XmlElement, nav_path: &str) -> Vec<RawEntry> {
+pub fn nav_toc_entries(root: &XmlElement, nav_path: &str) -> Result<Vec<RawEntry>, Thrown> {
     for el in walk(root) {
         if !lower_is(&el.local, "nav") {
             continue;
@@ -549,14 +578,22 @@ pub fn nav_toc_entries(root: &XmlElement, nav_path: &str) -> Vec<RawEntry> {
         }
         let mut out = Vec::new();
         if let Some(ol) = walk(el).find(|child| lower_is(&child.local, "ol")) {
-            nav_list(ol, nav_path, 1, &mut out);
+            nav_list(ol, nav_path, 1, &mut out)?;
         }
-        return out;
+        return Ok(out);
     }
-    Vec::new()
+    Ok(Vec::new())
 }
 
-fn ncx_points(parent: &XmlElement, ncx_path: &str, depth: u32, out: &mut Vec<RawEntry>) {
+fn ncx_points(
+    parent: &XmlElement,
+    ncx_path: &str,
+    depth: u32,
+    out: &mut Vec<RawEntry>,
+) -> Result<(), Thrown> {
+    if depth as usize > MAX_DEPTH {
+        return Err(Thrown::stack_overflow());
+    }
     for point in child_elements(parent) {
         if !lower_is(&point.local, "navpoint") {
             continue;
@@ -574,17 +611,18 @@ fn ncx_points(parent: &XmlElement, ncx_path: &str, depth: u32, out: &mut Vec<Raw
         if !item.title.is_empty() || item.path.is_some() {
             out.push(item);
         }
-        ncx_points(point, ncx_path, depth + 1, out);
+        ncx_points(point, ncx_path, depth + 1, out)?;
     }
+    Ok(())
 }
 
 /// `ncxEntries`.
-pub fn ncx_entries(root: &XmlElement, ncx_path: &str) -> Vec<RawEntry> {
+pub fn ncx_entries(root: &XmlElement, ncx_path: &str) -> Result<Vec<RawEntry>, Thrown> {
     let mut out = Vec::new();
     if let Some(nav_map) = walk(root).find(|el| lower_is(&el.local, "navmap")) {
-        ncx_points(nav_map, ncx_path, 1, &mut out);
+        ncx_points(nav_map, ncx_path, 1, &mut out)?;
     }
-    out
+    Ok(out)
 }
 
 /// The `findEntry` the gate gives `parsePackage`: `Archive.find` of `open.ts`
@@ -674,8 +712,14 @@ pub fn call(function: &str, _text: &str, _bytes: &[u8], args: &Value) -> Result<
                     .map_err(not_epub)?,
             )
         }
-        "navTocEntries" => json(nav_toc_entries(&tree()?, string("navPath")?)),
-        "ncxEntries" => json(ncx_entries(&tree()?, string("ncxPath")?)),
+        "navTocEntries" => json(
+            nav_toc_entries(&tree()?, string("navPath")?)
+                .map_err(|error| (error.name, error.message))?,
+        ),
+        "ncxEntries" => json(
+            ncx_entries(&tree()?, string("ncxPath")?)
+                .map_err(|error| (error.name, error.message))?,
+        ),
         _ => Err(bad_argument(format!(
             "unknown epub package function: {function}"
         ))),
