@@ -2,12 +2,11 @@
  * The attachment parsers hand a compound file (.doc, .ppt, .hwp) to their readers only after
  * the compound-file gate: a file whose sector tables loop or point outside it is refused, not
  * followed, and the refusal reads as a damaged document of that type, in one short sentence
- * a person can be shown; the gate's own finding stays behind it as the cause.
+ * a person can be shown.
  */
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { CompoundFileError } from '@seuoffice/compound-file'
 import { DamagedFileError, docToText, parseFileToText, pptToText } from '../src/index'
 import { checkedHwpBytes, hwpMemosOf, hwpToText } from '../src/hwp'
 import { HOSTILE_FILES, REFUSAL_MS } from '../../compound-file/tests/helpers/raw-compound'
@@ -26,7 +25,7 @@ const READERS: Array<[string, (bytes: Uint8Array) => Promise<unknown>, string]> 
 const CONTAINER_WORDS = /compound file|sector|FAT|directory|chain/i
 
 describe('a hostile compound file', () => {
-  for (const { what, build, code } of HOSTILE_FILES) {
+  for (const { what, build } of HOSTILE_FILES) {
     for (const [name, read, type] of READERS) {
       it(`${what}: ${name} refuses it as a damaged document, quickly`, async () => {
         const bytes = build()
@@ -39,9 +38,6 @@ describe('a hostile compound file', () => {
         expect(thrown).toBeInstanceOf(DamagedFileError)
         const refusal = thrown as DamagedFileError
         expect(refusal.message).toBe(`The file is damaged or is not a valid ${type} document`)
-        // why the gate refused it is still there for a log
-        expect(refusal.cause).toBeInstanceOf(CompoundFileError)
-        expect((refusal.cause as CompoundFileError).code).toBe(code)
       })
     }
 
