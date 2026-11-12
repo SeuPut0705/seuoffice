@@ -75,21 +75,32 @@ function setUp(dir: string, files: Record<string, FileSpec> | undefined): void {
 /** The folder after the call: each entry with its kind, mode and contents. */
 function snapshot(dir: string): Record<string, string> {
   const out: Record<string, string> = {}
+  // a case may leave an entry its owner cannot read (mode 0 or write-only):
+  // its mode is recorded first, then lifted while it is read and put back
+  const readable = <T>(path: string, mode: number, read: () => T): T => {
+    if ((mode & 0o500) === 0o500) return read()
+    chmodSync(path, mode | 0o700)
+    try {
+      return read()
+    } finally {
+      chmodSync(path, mode)
+    }
+  }
   const walk = (at: string): void => {
     for (const name of readdirSync(at).sort()) {
       const path = join(at, name)
       const rel = relative(dir, path)
       const st = statSync(path)
-      const mode = (st.mode & 0o777).toString(8)
+      const mode = st.mode & 0o777
       if (st.isDirectory()) {
-        out[rel] = `dir ${mode}`
-        walk(path)
+        out[rel] = `dir ${mode.toString(8)}`
+        readable(path, mode, () => walk(path))
       } else {
-        const bytes = readFileSync(path)
+        const bytes = readable(path, mode, () => readFileSync(path))
         const text = bytes.toString('utf8')
         out[rel] = Buffer.from(text, 'utf8').equals(bytes)
-          ? `file ${mode} ${JSON.stringify(text)}`
-          : `file ${mode} hex:${bytes.toString('hex')}`
+          ? `file ${mode.toString(8)} ${JSON.stringify(text)}`
+          : `file ${mode.toString(8)} hex:${bytes.toString('hex')}`
       }
     }
   }
