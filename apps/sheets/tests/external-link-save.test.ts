@@ -8,6 +8,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 import { handleSave, type SaveContext } from '../src/renderer/save-actions'
 import { createEditJournal } from '../src/renderer/edit-journal'
+import { resolveWorkbookSave } from '../src/main/workbook-save-resolve'
 import {
   externalLinksRequestSchema,
   workbookSaveRequestSchema,
@@ -75,6 +76,47 @@ describe('a save carrying only external-link ops', () => {
     expect(saveWorkbookEdits).not.toHaveBeenCalled()
     // the "nothing to save" status, in whatever locale the test run uses
     expect(messages).toHaveLength(1)
+  })
+})
+
+describe('a save carrying only refreshed external-link values', () => {
+  /** the panel's Update applied one value and nothing else is pending */
+  function updated(): SaveContext {
+    const context = ctx(null)
+    const recalc = context.lazyWorkbookRef.current!.recalc as unknown as {
+      externalOverlay: Map<string, Map<string, { v: number }>>
+    }
+    recalc.externalOverlay = new Map([['sheet-1', new Map([['1:2', { v: 20 }]])]])
+    return context
+  }
+
+  async function sentRequest(): Promise<unknown> {
+    await handleSave(updated(), 'save')
+    expect(saveWorkbookEdits).toHaveBeenCalledTimes(1)
+    return saveWorkbookEdits.mock.calls[0]![0]
+  }
+
+  it('is a request the save schema accepts', async () => {
+    const parsed = workbookSaveRequestSchema.safeParse(await sentRequest())
+    expect(parsed.error?.issues.map((issue) => issue.message) ?? []).toEqual([])
+    expect(parsed.data?.edits).toEqual([])
+  })
+
+  it('reaches the file write with the values, through the parse the main process runs', async () => {
+    // the same two steps the save handler takes before it writes
+    const request = workbookSaveRequestSchema.parse(await sentRequest())
+    const save = resolveWorkbookSave(new Map([['sheet-1', 'Sheet1']]), request)
+    expect(save.formulaValues).toEqual([
+      { sheetName: 'Sheet1', cells: [{ row: 1, column: 2, value: 20 }] },
+    ])
+  })
+
+  it('still refuses a request with no values and no edits', async () => {
+    const request = (await sentRequest()) as Record<string, unknown>
+    const parsed = workbookSaveRequestSchema.safeParse({ ...request, formulaValues: [] })
+    expect(parsed.error?.issues.map((issue) => issue.message)).toEqual([
+      'A save needs at least one edit.',
+    ])
   })
 })
 

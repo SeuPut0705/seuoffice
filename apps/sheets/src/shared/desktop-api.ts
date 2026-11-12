@@ -2430,7 +2430,10 @@ export const workbookSaveRequestSchema = z
       request.sparklineAdditions.length > 0 ||
       request.slicerState !== null ||
       (request.redactionStates?.length ?? 0) > 0 ||
-      request.externalLinkOps !== null,
+      request.externalLinkOps !== null ||
+      // Cached values alone are a file change: the links panel's Update saves
+      // nothing but the values it re-read, and a refusal here loses them.
+      request.formulaValues.length > 0,
     { message: 'A save needs at least one edit.' },
   )
   .refine((request) => request.sheetOps.length === 0 || request.sheetOrder.length > 0, {
