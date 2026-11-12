@@ -12,7 +12,12 @@ import {
 } from './xlsx-dates'
 import { decodeXlsxEscapes } from '@genoffice/xlsx-gateway/gateway/xlsx-escapes'
 import { readXlsxRedactions, withheldCellMarker } from './xlsx-redaction'
-import { FORMULA_SCAN_MAX_BYTES, readDerivedCells } from './xlsx-formula-redaction'
+import {
+  FORMULA_SCAN_MAX_BYTES,
+  pivotOutputOf,
+  readDerivedCells,
+  type PivotOutput,
+} from './xlsx-formula-redaction'
 
 function stripNamespacePrefix(name: string): string {
   const separator = name.indexOf(':')
@@ -394,6 +399,7 @@ export async function xlsxToText(bytes: Uint8Array, opts: XlsxTextOptions = {}):
               name: sheetNames[index]!,
               xml: part ? () => zipTextPrefix(zip, part, scanLimit) : undefined,
               marks: redactions.get(sheetNames[index]!) ?? [],
+              pivots: part ? () => sheetPivotOutputs(zip, part) : undefined,
             }
           }),
           (
@@ -519,4 +525,42 @@ async function countDrawingPictures(
     return drawingXml ? countElements(parser.parse(drawingXml), 'pic') : 0
   }
   return 0
+}
+
+/// A pivot part opens with its `<location>` and a cache definition with its
+/// `<cacheSource>`; the member lists that follow can run to megabytes.
+const PIVOT_PART_HEAD_BYTES = 1024 * 1024
+
+/** the relationships of one kind a part declares, as part paths; external ones are left out */
+async function relatedParts(zip: JSZip, partPath: string, kind: string): Promise<string[]> {
+  const relsXml = await zipText(zip, partPath.replace(/([^/]+)$/, '_rels/$1.rels'))
+  if (!relsXml) return []
+  const rels = parser.parse(relsXml) as Record<string, any>
+  return (asArray(rels.Relationships?.Relationship) as Array<Record<string, unknown>>).flatMap(
+    (rel) => {
+      const target = String(rel['@_Target'] ?? '')
+      return String(rel['@_Type'] ?? '').endsWith(`/${kind}`) &&
+        String(rel['@_TargetMode'] ?? '').toLowerCase() !== 'external' &&
+        target.trim() !== ''
+        ? [resolveTarget(partPath, target)]
+        : []
+    },
+  )
+}
+
+/** every PivotTable whose output is on this sheet, with the source its cache names */
+async function sheetPivotOutputs(zip: JSZip, sheetPath: string): Promise<PivotOutput[]> {
+  const outputs: PivotOutput[] = []
+  for (const pivotPath of await relatedParts(zip, sheetPath, 'pivotTable')) {
+    const [cachePath] = await relatedParts(zip, pivotPath, 'pivotCacheDefinition')
+    outputs.push(
+      pivotOutputOf(
+        (await zipTextPrefix(zip, pivotPath, PIVOT_PART_HEAD_BYTES))?.text,
+        cachePath === undefined
+          ? undefined
+          : (await zipTextPrefix(zip, cachePath, PIVOT_PART_HEAD_BYTES))?.text,
+      ),
+    )
+  }
+  return outputs
 }

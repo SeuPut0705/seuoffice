@@ -33,6 +33,9 @@ import {
  *   text, and every cell of a what-if data table are withheld;
  * - a formula cell the worksheet parser sees and this scan did not is withheld
  *   (`knownFormula`), so the two can never disagree in the open direction.
+ *
+ * The output of a PivotTable is traced the same way (`pivotOutputOf`): its
+ * cells are constants, but they are the labels and totals of its source.
  */
 
 /** Sheet XML above this size is not scanned; the sheet is withheld whole instead. */
@@ -198,11 +201,84 @@ export interface DerivedSheet {
   readonly knownFormula: (row: number, column: number) => boolean
 }
 
+/**
+ * The cells one PivotTable fills on a sheet. They are plain cells holding the
+ * labels and totals of the pivot's source, so they are traced like a formula
+ * that reads the source; `formula` is null when the source cannot be told, and
+ * the cells are then withheld untraced.
+ */
+export interface PivotOutput {
+  readonly area: RangeBounds
+  readonly formula: string | null
+}
+
+const element = (name: string): RegExp => new RegExp(`<(?:[\\w.-]+:)?${name}(?=[\\s/>])([^>]*)>`)
+const LOCATION = element('location')
+const CACHE_SOURCE = element('cacheSource')
+const WORKSHEET_SOURCE = element('worksheetSource')
+const PAGE_FIELD = /<(?:[\w.-]+:)?pageField(?=[\s/>])/g
+
+/**
+ * Where a pivot's output is and what it was computed from, read off the start
+ * of its `pivotTableDefinition` part and of its cache definition (undefined
+ * when that part is missing).
+ *
+ * The source is followed when it is a range of a sheet of this workbook, or a
+ * name (a defined name is resolved by the trace; a table name is not one, and
+ * is withheld there). Anything else cannot be told: another workbook
+ * (`r:id`), a connection, consolidated ranges, a cache that is not there. A
+ * pivot that does not say where its output is withholds its whole sheet.
+ */
+export function pivotOutputOf(
+  pivotXml: string | undefined,
+  cacheXml: string | undefined,
+): PivotOutput {
+  const location = LOCATION.exec(pivotXml ?? '')?.[1]
+  const output = rangeAt(location === undefined ? undefined : attribute(location, 'ref'))
+  if (location === undefined || output === null) return { area: WHOLE_SHEET, formula: null }
+  // Report filters sit above the output: a label and the chosen item per
+  // field, then a blank row; several per row when the person wrapped them.
+  const pageRows =
+    Number(attribute(location, 'rowPageCount')) || (pivotXml ?? '').match(PAGE_FIELD)?.length || 0
+  const pageColumns = Math.max(1, Number(attribute(location, 'colPageCount')) || 1)
+  const area: RangeBounds =
+    pageRows === 0
+      ? output
+      : {
+          ...output,
+          startRow: Math.max(0, output.startRow - pageRows - 1),
+          endColumn: Math.max(output.endColumn, output.startColumn + pageColumns * 3 - 2),
+        }
+  return { area, formula: pivotSourceFormula(cacheXml) }
+}
+
+function pivotSourceFormula(cacheXml: string | undefined): string | null {
+  const cacheSource = CACHE_SOURCE.exec(cacheXml ?? '')?.[1]
+  const source = WORKSHEET_SOURCE.exec(cacheXml ?? '')?.[1]
+  if (cacheSource === undefined || source === undefined) return null
+  if (attribute(cacheSource, 'type') !== 'worksheet') return null
+  // a relationship on the source: the range is in another workbook
+  if (/(?:^|\s)[\w.-]+:id\s*=/.test(source)) return null
+  const ref = attribute(source, 'ref')
+  const sheet = attribute(source, 'sheet')
+  const name = attribute(source, 'name')
+  if (ref !== undefined && sheet !== undefined) {
+    if (rangeAt(ref) === null) return null
+    return `='${decodeEntities(sheet).replaceAll("'", "''")}'!${ref.replaceAll('$', '')}`
+  }
+  if (ref === undefined && sheet === undefined && name !== undefined) {
+    return `=${decodeEntities(name)}`
+  }
+  return null
+}
+
 export interface DerivedInput {
   readonly name: string
   /** the sheet's XML up to the scan limit, or undefined when the part is missing */
   readonly xml: (() => Promise<{ text: string; truncated: boolean } | undefined>) | undefined
   readonly marks: readonly RangeBounds[]
+  /** the PivotTables that put their output on this sheet */
+  readonly pivots?: (() => Promise<readonly PivotOutput[]>) | undefined
 }
 
 /**
@@ -216,12 +292,29 @@ export async function readDerivedCells(
   const scanned: SheetFormulas[] = []
   for (const sheet of sheets) {
     const raw = await sheet.xml?.()
-    scanned.push(
+    const found =
       raw === undefined
-        ? { formulas: [], unknown: [], formulaCells: new Set() }
+        ? { formulas: [], unknown: [], formulaCells: new Set<number>() }
         : raw.truncated
           ? UNSCANNED
-          : scanSheetFormulas(raw.text),
+          : scanSheetFormulas(raw.text)
+    const pivots = (await sheet.pivots?.()) ?? []
+    scanned.push(
+      pivots.length === 0
+        ? found
+        : {
+            formulaCells: found.formulaCells,
+            unknown: [
+              ...found.unknown,
+              ...pivots.flatMap((pivot) => (pivot.formula === null ? [pivot.area] : [])),
+            ],
+            formulas: [
+              ...found.formulas,
+              ...pivots.flatMap((pivot) =>
+                pivot.formula === null ? [] : [{ area: pivot.area, formula: pivot.formula }],
+              ),
+            ],
+          },
     )
   }
   const traced = cellsDerivedFromWithheld(

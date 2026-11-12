@@ -1335,3 +1335,136 @@ describe('xlsx: a formula that depends on a withheld cell is withheld too', () =
     expect(elapsed).toBeLessThan(2000)
   })
 })
+
+const PKG_RELS = 'http://schemas.openxmlformats.org/package/2006/relationships'
+/** The second sheet of these books: a pivot's output at A3:B4, a label beside it, a formula over it. */
+const pivotReport = (extra = ''): BookSheet => ({
+  name: 'Report',
+  rows:
+    extra +
+    `<row r="3">${inline('A3', 'Phone')}${inline('B3', 'Total')}${inline('D3', 'beside')}</row>` +
+    `<row r="4"><c r="A4"><v>${SECRET}</v></c><c r="B4"><v>10</v></c></row>`,
+})
+const REPORT_SHOWN = `# Report\nPhone | Total |  | beside\n${SECRET} | 10`
+const REPORT_WITHHELD = `# Report\n${PRIVATE} | ${PRIVATE} |  | beside\n${PRIVATE} | ${PRIVATE}`
+
+/**
+ * Add a PivotTable to sheet 2 the way Excel writes one: the sheet points at
+ * the pivot part, the pivot part says where its output is and points at its
+ * cache, and the cache says where the data came from.
+ */
+async function withPivot(
+  bytes: Promise<Uint8Array>,
+  pivot: {
+    /** the content of `<cacheSource>`; undefined = the cache part is missing */
+    source: string | undefined
+    /** the pivot part's body; the output's location by default */
+    body?: string
+  },
+): Promise<Uint8Array> {
+  const zip = await JSZip.loadAsync(await bytes)
+  const rels = (type: string, target: string) =>
+    `${XML_DECL}<Relationships xmlns="${PKG_RELS}"><Relationship Id="rId1" Type="${REL_NS}/${type}" Target="${target}"/></Relationships>`
+  zip.file(
+    'xl/worksheets/_rels/sheet2.xml.rels',
+    rels('pivotTable', '../pivotTables/pivotTable1.xml'),
+  )
+  zip.file(
+    'xl/pivotTables/pivotTable1.xml',
+    `${XML_DECL}<pivotTableDefinition xmlns="${SHEET_NS}" name="PivotTable1" cacheId="1">` +
+      (pivot.body ??
+        '<location ref="A3:B4" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/>') +
+      '</pivotTableDefinition>',
+  )
+  zip.file(
+    'xl/pivotTables/_rels/pivotTable1.xml.rels',
+    rels('pivotCacheDefinition', '../pivotCache/pivotCacheDefinition1.xml'),
+  )
+  if (pivot.source !== undefined) {
+    zip.file(
+      'xl/pivotCache/pivotCacheDefinition1.xml',
+      `${XML_DECL}<pivotCacheDefinition xmlns="${SHEET_NS}" xmlns:r="${REL_NS}">${pivot.source}</pivotCacheDefinition>`,
+    )
+  }
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
+}
+
+const worksheetSource = (attributes: string) =>
+  `<cacheSource type="worksheet"><worksheetSource ${attributes}/></cacheSource>`
+
+describe('xlsx: the output of a PivotTable built from a withheld cell is withheld too', () => {
+  const read = async (
+    pivot: Parameters<typeof withPivot>[1],
+    report = pivotReport(),
+    marks: BookMarks = { part: serializeRedactionPart(CLIENT_MARKS) },
+  ) => xlsxToText(await withPivot(book([CLIENTS, report], marks), pivot))
+
+  it('withholds the labels and totals when the source range holds the cell', async () => {
+    const text = await read({ source: worksheetSource('ref="A1:B2" sheet="Clients"') })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_WITHHELD}`)
+  })
+
+  it('shows the output of a pivot whose source range holds none', async () => {
+    const text = await read({ source: worksheetSource('ref="A1:A2" sheet="Clients"') })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_SHOWN}`)
+  })
+
+  it('withholds a formula that reads the output', async () => {
+    const text = await read(
+      { source: worksheetSource('ref="A1:B2" sheet="Clients"') },
+      pivotReport(`<row r="1">${formula('F1', 'A4', SECRET)}</row>`),
+    )
+    expect(text).not.toContain(SECRET)
+    expect(text).toContain(`# Report\n |  |  |  |  | ${PRIVATE}`)
+  })
+
+  it('withholds the report-filter cells above the output', async () => {
+    const text = await read(
+      {
+        source: worksheetSource('ref="A1:B2" sheet="Clients"'),
+        body:
+          '<location ref="A3:B4" firstHeaderRow="1" firstDataRow="1" firstDataCol="1" rowPageCount="1" colPageCount="1"/>' +
+          '<pageFields count="1"><pageField fld="1" item="0" hier="-1"/></pageFields>',
+      },
+      pivotReport(`<row r="1">${inline('A1', 'Phone')}<c r="B1"><v>${SECRET}</v></c></row>`),
+    )
+    expect(text).not.toContain(SECRET)
+  })
+
+  it('follows a source given as a defined name', async () => {
+    const named = (range: string): BookMarks => ({
+      part: serializeRedactionPart(CLIENT_MARKS),
+      definedNames: `<definedName name="ClientData">Clients!${range}</definedName>`,
+    })
+    const source = { source: worksheetSource('name="ClientData"') }
+    expect(await read(source, pivotReport(), named('$A$1:$B$2'))).toContain(REPORT_WITHHELD)
+    expect(await read(source, pivotReport(), named('$A$1:$A$2'))).toContain(REPORT_SHOWN)
+  })
+
+  it.each([
+    ['is a table or a name the workbook does not define', worksheetSource('name="Table1"')],
+    ['is in another workbook', worksheetSource('ref="A1:A2" sheet="Clients" r:id="rId1"')],
+    ['is a database connection', '<cacheSource type="external" connectionId="1"/>'],
+    [
+      'is several ranges consolidated',
+      '<cacheSource type="consolidation"><consolidation/></cacheSource>',
+    ],
+    ['names a sheet the workbook does not have', worksheetSource('ref="A1:A2" sheet="Gone"')],
+    ['has no range', worksheetSource('sheet="Clients"')],
+    ['cannot be read: the cache part is missing', undefined],
+  ])('withholds the output when the source %s', async (_why, source) => {
+    const text = await read({ source })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_WITHHELD}`)
+  })
+
+  it('withholds the whole sheet when a pivot on it does not say where its output is', async () => {
+    const text = await read({ source: worksheetSource('ref="A1:A2" sheet="Clients"'), body: '' })
+    expect(text).not.toContain(SECRET)
+    expect(text).not.toContain('beside')
+  })
+
+  it('changes nothing in a workbook that withholds nothing', async () => {
+    const text = await read({ source: undefined }, pivotReport(), {})
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${SECRET}\n\n${REPORT_SHOWN}`)
+  })
+})
