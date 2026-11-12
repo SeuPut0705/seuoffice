@@ -1,0 +1,1311 @@
+(node:84276) ExperimentalWarning: WASI is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(memory) 582 MB after props, request 58241771 bytes
+styles.xml unparseable, styles degraded to empty: Error: Comment is not closed.
+    at findClosingIndex (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js:705:11)
+    at OrderedObjParser.parseXml (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js:372:26)
+    at XMLParser.parse (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/XMLParser.js:36:48)
+    at parseStyles (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\reference\parse-styles.ts:159:24)
+    at async attempt (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:109:19)
+    at async typescriptModel (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:272:18)
+    at async typescriptOpen (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:340:58)
+    at async comparePackage (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:543:22)
+    at async packageAfterCorpus (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\package-run.ts:108:24)
+    at async <anonymous> (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\main.ts:169:1)
+styles.xml unparseable, styles degraded to empty: Error: Pi Tag is not closed.
+    at OrderedObjParser.parseXml (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js:345:29)
+    at XMLParser.parse (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/XMLParser.js:36:48)
+    at parseStyles (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\reference\parse-styles.ts:159:24)
+    at async attempt (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:109:19)
+    at async typescriptModel (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:272:18)
+    at async typescriptOpen (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:340:58)
+    at async comparePackage (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:543:22)
+    at async packageAfterCorpus (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\package-run.ts:134:24)
+    at async <anonymous> (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\main.ts:169:1)
+styles.xml unparseable, styles degraded to empty: Error: Pi Tag is not closed.
+    at OrderedObjParser.parseXml (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js:345:29)
+    at XMLParser.parse (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/XMLParser.js:36:48)
+    at parseStyles (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\reference\parse-styles.ts:159:24)
+    at async attempt (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:109:19)
+    at async typescriptModel (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:272:18)
+    at async packageAfterCorpus (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\package-run.ts:155:7)
+    at async <anonymous> (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\main.ts:169:1)
+styles.xml unparseable, styles degraded to empty: Error: readTagExp returned undefined at position 1190. Context: "" w:styleId="Heading3"><w:name w:val="heading 3"/><w:base"dOn w:val="Normal"/><w:next w:val="Normal""
+    at OrderedObjParser.parseXml (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js:413:17)
+    at XMLParser.parse (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/XMLParser.js:36:48)
+    at parseStyles (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\reference\parse-styles.ts:159:24)
+    at async attempt (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:109:19)
+    at async typescriptModel (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:272:18)
+    at async packageAfterCorpus (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\package-run.ts:155:7)
+    at async <anonymous> (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\main.ts:169:1)
+styles.xml unparseable, styles degraded to empty: Error: readTagExp returned undefined at position 405. Context: "le="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragrapdefault="1" w:styleId="No"
+    at OrderedObjParser.parseXml (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js:413:17)
+    at XMLParser.parse (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/XMLParser.js:36:48)
+    at parseStyles (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\reference\parse-styles.ts:159:24)
+    at async attempt (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:109:19)
+    at async typescriptModel (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:272:18)
+    at async packageAfterCorpus (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\package-run.ts:155:7)
+    at async <anonymous> (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\main.ts:169:1)
+styles.xml unparseable, styles degraded to empty: Error: readTagExp returned undefined at position 887. Context: "" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normaw:next w:val="Normal"/><w:q"
+    at OrderedObjParser.parseXml (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/OrderedObjParser.js:413:17)
+    at XMLParser.parse (file:///C:/Users/admin/.omp/work/seuoffice-rust-b/node_modules/fast-xml-parser/src/xmlparser/XMLParser.js:36:48)
+    at parseStyles (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\reference\parse-styles.ts:159:24)
+    at async attempt (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:109:19)
+    at async typescriptModel (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\compare-package.ts:272:18)
+    at async packageAfterCorpus (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\package-run.ts:155:7)
+    at async <anonymous> (C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\main.ts:169:1)
+(h) test capture: 60 calls, 40 distinct results, 0 refusals
+docx-diff: 205 tracked .docx (floor    185); skipped 2 encrypted, 0 refused by loadDocxZip, 0 without a main part
+  skipped encrypted: apps/docs/tests/encrypted-fixtures/office-agile-password.docx
+  skipped encrypted: apps/docs/tests/encrypted-fixtures/office-standard-password.docx
+(a) scanBody, corpus documents                 compared    203  floor    183  differences 0
+(a) scanBody, synthetic                        compared     37  floor     37  differences 0
+(b) w:rPr round trip, corpus fragments         compared  11377  floor  10016  differences 0
+(b) round trip, synthetic fragments            compared    101  floor    101  differences 0  (TypeScript threw in 28: Rust must refuse those too)
+(b+) body element round trip, corpus           compared   4591  floor   4084  differences 0
+(b+) round trip, seeded mutations              compared   2000  floor   2000  differences 0  (TypeScript threw in 412: Rust must refuse those too)
+(c) zip entry text, corpus entries             compared   1511  floor   1343  differences 0
+(c) of which .xml and .rels entries            compared   1379  floor   1224  differences 0
+(c) zip entry text, synthetic entries          compared     96  floor     96  differences 0
+(d) w:pPr readers, checks                      compared  74825  floor  65543  differences 0
+(d) w:rPr readers, checks                      compared 409794  floor 350732  differences 0  (TypeScript threw in 79639: Rust must refuse those too)
+(d) paragraph and run readers, checks          compared 238877  floor 209278  differences 0  (TypeScript threw in 6566: Rust must refuse those too)
+(d) table readers, checks                      compared  22917  floor  22656  differences 0
+(d) helpers on attribute values, checks        compared  38720  floor  34872  differences 0
+(d) readers on synthetic texts, checks         compared  63042  floor 250000  BELOW FLOOR  differences 0  (TypeScript threw in 4298: Rust must refuse those too)
+(d) readers on elements broken at the root     compared  68634  floor  60000  differences 0  (TypeScript threw in 33737: Rust must refuse those too)
+(d) model functions, checks                    compared  33114  floor  30000  differences 0
+(d+) readers on mutated fragments, checks      compared  46010  floor 400000  BELOW FLOOR  differences 0  (TypeScript threw in 5665: Rust must refuse those too)
+(e) packages opened, corpus documents          compared    203  floor    183  differences 0
+(e) package values, corpus, checks             compared   3283  floor   2953  differences 0
+(e) normalizeOoxmlXml, corpus parts            compared   1379  floor   1224  differences 0
+(e) normalizeOoxmlXml, strict and odd parts    compared   1411  floor   1250  differences 0
+(e) built containers: refusals and oddities    compared    101  floor     97  differences 0  (TypeScript threw in 57: Rust must refuse those too)
+(e) package values, built containers, checks   compared    634  floor    634  differences 0  (TypeScript threw in 5: Rust must refuse those too)
+(e+) mutated containers                        compared    300  floor    300  differences 0  (TypeScript threw in 213: Rust must refuse those too)
+(e+) package values, mutated containers, checks compared   1381  floor  14000  BELOW FLOOR  differences 0  (TypeScript threw in 19: Rust must refuse those too)
+(e+) package values, mutated parts, checks     compared   2383  floor  23000  BELOW FLOOR  differences 0  (TypeScript threw in 14: Rust must refuse those too)
+(e+) normalizeOoxmlXml, mutated parts          compared    200  floor   1500  BELOW FLOOR  differences 0
+(f) altchunk on the corpus, checks             compared   4241  floor   3758  differences 0
+(f) altchunk on built inputs, checks           compared    501  floor    480  differences 0  (TypeScript threw in 4: Rust must refuse those too)
+(f+) altchunk on mutated texts, checks         compared    120  floor   1100  BELOW FLOOR  differences 0
+(f) blank on the corpus, checks                compared    100  floor    100  differences 0
+(f) blank on built inputs, checks              compared   2397  floor   2300  differences 0  (TypeScript threw in 9: Rust must refuse those too)
+(f+) blank on mutated texts, checks            compared    150  floor   1400  BELOW FLOOR  differences 0  (TypeScript threw in 9: Rust must refuse those too)
+(f) blockpasses on the corpus, checks          compared    500  floor    433  differences 0
+(f) blockpasses on built inputs, checks        compared    210  floor    208  differences 0
+(f+) blockpasses on mutated texts, checks      compared      0  floor      0  differences 0
+(f+) blockpasses on mutated arguments, checks  compared    900  floor   8500  BELOW FLOOR  differences 0
+(f) chart on the corpus, checks                compared      0  floor      0  differences 0
+(f) chart on built inputs, checks              compared   2216  floor   2215  differences 0  (TypeScript threw in 1: Rust must refuse those too)
+(f+) chart on mutated texts, checks            compared     30  floor    280  BELOW FLOOR  differences 0  (TypeScript threw in 5: Rust must refuse those too)
+(f+) chart on mutated arguments, checks        compared    600  floor   5500  BELOW FLOOR  differences 0
+(f) charclass on the corpus, checks            compared   6272  floor   6000  differences 0
+(f) charclass on built inputs, checks          compared    764  floor    700  differences 0
+(f+) charclass on mutated texts, checks        compared     60  floor    550  BELOW FLOOR  differences 0
+(f) checkbox on the corpus, checks             compared      0  floor      0  differences 0
+(f) checkbox on built inputs, checks           compared   1407  floor   1400  differences 0  (TypeScript threw in 3: Rust must refuse those too)
+(f+) checkbox on mutated texts, checks         compared    150  floor   1400  BELOW FLOOR  differences 0  (TypeScript threw in 3: Rust must refuse those too)
+(f) docprops on the corpus, checks             compared     41  floor     32  differences 0
+(f) docprops on built inputs, checks           compared    180  floor    170  differences 0  (TypeScript threw in 19: Rust must refuse those too)
+(f+) docprops on mutated texts, checks         compared    360  floor   3400  BELOW FLOOR  differences 0  (TypeScript threw in 43: Rust must refuse those too)
+(f) drawing on the corpus, checks              compared   1634  floor   1342  differences 0
+(f) drawing on built inputs, checks            compared   3166  floor   3165  differences 0  (TypeScript threw in 10: Rust must refuse those too)
+(f+) drawing on mutated texts, checks          compared    330  floor   3100  BELOW FLOOR  differences 0  (TypeScript threw in 44: Rust must refuse those too)
+(f) fielddisplay on the corpus, checks         compared   1350  floor   1185  differences 0
+(f) fielddisplay on built inputs, checks       compared    640  floor    600  differences 0  (TypeScript threw in 2: Rust must refuse those too)
+(f+) fielddisplay on mutated texts, checks     compared     30  floor    250  BELOW FLOOR  differences 0
+(f) fields on the corpus, checks               compared    933  floor    788  differences 0
+(f) fields on built inputs, checks             compared   1449  floor   1400  differences 0  (TypeScript threw in 7: Rust must refuse those too)
+(f+) fields on mutated texts, checks           compared    420  floor   4100  BELOW FLOOR  differences 0
+(f) images on the corpus, checks               compared      0  floor      0  differences 0
+(f) images on built inputs, checks             compared    905  floor    900  differences 0  (TypeScript threw in 1: Rust must refuse those too)
+(f+) images on mutated texts, checks           compared     60  floor    550  BELOW FLOOR  differences 0
+(f) ink on the corpus, checks                  compared  19157  floor  16774  differences 0
+(f) ink on built inputs, checks                compared    133  floor    133  differences 0  (TypeScript threw in 25: Rust must refuse those too)
+(f+) ink on mutated texts, checks              compared    150  floor   1400  BELOW FLOOR  differences 0
+(f+) ink on mutated arguments, checks          compared    150  floor   1400  BELOW FLOOR  differences 0  (TypeScript threw in 101: Rust must refuse those too)
+(f) parse on the corpus, checks                compared  29079  floor  16000  differences 1142
+    - apps/docs/tests/encrypted-fixtures/office-agile-plain.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:cx=\"http://schemas.microsoft.com/office/drawing/2014/chartex\" xmlns:cx1=\"http://schemas.microsoft.com/office/drawing/2015/9/8/charte, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/webSe)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/encrypted-fixtures/office-agile-plain.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:cx=\"http://schemas.microsoft.com/office/drawing/2014/chartex\" xmlns:cx1=\"http://schemas.microsoft.com/office/drawing/2015/9/8/charte, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/webSe)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/encrypted-fixtures/office-agile-plain.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:cx=\"http://schemas.microsoft.com/office/drawing/2014/chartex\" xmlns:cx1=\"http://schemas.microsoft.com/office/drawing/2015/9/8/charte, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/webSe)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/encrypted-fixtures/office-agile-plain.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:cx=\"http://schemas.microsoft.com/office/drawing/2014/chartex\" xmlns:cx1=\"http://schemas.microsoft.com/office/drawing/2015/9/8/charte, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/webSe)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/encrypted-fixtures/office-agile-plain.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:cx=\"http://schemas.microsoft.com/office/drawing/2014/chartex\" xmlns:cx1=\"http://schemas.microsoft.com/office/drawing/2015/9/8/charte, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/webSe)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/encrypted-fixtures/office-agile-plain.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:cx=\"http://schemas.microsoft.com/office/drawing/2014/chartex\" xmlns:cx1=\"http://schemas.microsoft.com/office/drawing/2015/9/8/charte, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/webSe)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/encrypted-fixtures/office-standard-plain.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:document xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordpr, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.x)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/encrypted-fixtures/office-standard-plain.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:document xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordpr, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.x)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/encrypted-fixtures/office-standard-plain.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:document xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordpr, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.x)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/encrypted-fixtures/office-standard-plain.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:document xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordpr, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.x)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/encrypted-fixtures/office-standard-plain.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:document xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordpr, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.x)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/encrypted-fixtures/office-standard-plain.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:document xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordpr, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.x)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/pagination-corpus/docx/01-simple-english.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordproce, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/style)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/pagination-corpus/docx/01-simple-english.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordproce, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/style)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/pagination-corpus/docx/01-simple-english.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordproce, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/style)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/pagination-corpus/docx/01-simple-english.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordproce, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/style)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/pagination-corpus/docx/01-simple-english.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordproce, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/style)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/pagination-corpus/docx/01-simple-english.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordproce, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/style)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/pagination-corpus/docx/02-chinese-long-docgrid.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordproce, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/style)
+      typescript {"value":null}
+      rust       {}
+    - apps/docs/tests/pagination-corpus/docx/02-chinese-long-docgrid.docx parse: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordproce, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/style)
+      typescript {"value":null}
+      rust       {}
+    ... 1122 more (--show N)
+(f) parse on built inputs, checks              compared  17660  floor   3800  differences 1311  (key order only: 3)  (TypeScript threw in 359: Rust must refuse those too)
+    - built 1: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val=\"22\"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:bidi/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type=\"paragraph\" w:styleId)
+      typescript {"value":{"table":{"cond":[{"type":"firstRow"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 2: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val=\"22\"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:bidi/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type=\"paragraph\" w:styleId)
+      typescript {"value":{"table":{"cond":[{"type":"band1Horz"},{"type":"lastCol"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 4: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val=\"22\"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:bidi/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type=\"paragraph\" w:styleId)
+      typescript {"value":{"table":{"cond":[{"type":"firstRow"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 5: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val=\"22\"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:bidi/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type=\"paragraph\" w:styleId)
+      typescript {"value":{"table":{"cond":[{"type":"band1Horz"},{"type":"lastCol"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 7: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val=\"22\"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:bidi/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type=\"paragraph\" w:styleId)
+      typescript {"value":{"table":{"styleId":"TableGrid","cond":[{"type":"firstRow"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 8: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val=\"22\"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:bidi/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type=\"paragraph\" w:styleId)
+      typescript {"value":{"table":{"styleId":"TableGrid","cond":[{"type":"band1Horz"},{"type":"lastCol"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 10: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val=\"22\"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:bidi/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type=\"paragraph\" w:styleId)
+      typescript {"value":{"table":{"styleId":"constructor","cond":[{"type":"firstRow"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 11: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:docDefaults><w:rPrDefault><w:rPr><w:sz w:val=\"22\"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:bidi/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type=\"paragraph\" w:styleId)
+      typescript {"value":{"table":{"styleId":"constructor","cond":[{"type":"band1Horz"},{"type":"lastCol"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 13: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:style w:type=\"paragraph\" w:styleId=\"Body\"><w:name w:val=\"Body\"/><w:rPr><w:sz w:val=\"28\"/></w:rPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Heading1\"><w:name w:val=\")
+      typescript {"value":{"table":{"cond":[{"type":"firstRow"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 14: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:style w:type=\"paragraph\" w:styleId=\"Body\"><w:name w:val=\"Body\"/><w:rPr><w:sz w:val=\"28\"/></w:rPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Heading1\"><w:name w:val=\")
+      typescript {"value":{"table":{"cond":[{"type":"band1Horz"},{"type":"lastCol"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 16: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:style w:type=\"paragraph\" w:styleId=\"Body\"><w:name w:val=\"Body\"/><w:rPr><w:sz w:val=\"28\"/></w:rPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Heading1\"><w:name w:val=\")
+      typescript {"value":{"table":{"cond":[{"type":"firstRow"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 17: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:style w:type=\"paragraph\" w:styleId=\"Body\"><w:name w:val=\"Body\"/><w:rPr><w:sz w:val=\"28\"/></w:rPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Heading1\"><w:name w:val=\")
+      typescript {"value":{"table":{"cond":[{"type":"band1Horz"},{"type":"lastCol"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 19: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:style w:type=\"paragraph\" w:styleId=\"Body\"><w:name w:val=\"Body\"/><w:rPr><w:sz w:val=\"28\"/></w:rPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Heading1\"><w:name w:val=\")
+      typescript {"value":{"table":{"styleId":"TableGrid","cond":[{"type":"firstRow"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 20: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:style w:type=\"paragraph\" w:styleId=\"Body\"><w:name w:val=\"Body\"/><w:rPr><w:sz w:val=\"28\"/></w:rPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Heading1\"><w:name w:val=\")
+      typescript {"value":{"table":{"styleId":"TableGrid","cond":[{"type":"band1Horz"},{"type":"lastCol"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 22: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:style w:type=\"paragraph\" w:styleId=\"Body\"><w:name w:val=\"Body\"/><w:rPr><w:sz w:val=\"28\"/></w:rPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Heading1\"><w:name w:val=\")
+      typescript {"value":{"table":{"styleId":"constructor","cond":[{"type":"firstRow"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 23: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[["word/styles.xml","<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:style w:type=\"paragraph\" w:styleId=\"Body\"><w:name w:val=\"Body\"/><w:rPr><w:sz w:val=\"28\"/></w:rPr></w:style><w:style w:type=\"paragraph\" w:styleId=\"Heading1\"><w:name w:val=\")
+      typescript {"value":{"table":{"styleId":"constructor","cond":[{"type":"band1Horz"},{"type":"lastCol"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 25: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[],"compat":{"compatibilityMode":15},"cond":[{"type":"firstRow"}]})
+      typescript {"value":{"table":{"cond":[{"type":"firstRow"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 26: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[],"compat":{"compatibilityMode":15},"cond":[{"type":"band1Horz"},{"type":"lastCol"}]})
+      typescript {"value":{"table":{"cond":[{"type":"band1Horz"},{"type":"lastCol"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 28: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[],"compat":{"compatibilityMode":15},"cond":[{"type":"firstRow"}],"tableStyleId":""})
+      typescript {"value":{"table":{"cond":[{"type":"firstRow"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    - built 29: parse.cellResolverOf: parse.cellResolverOf("", {"parts":[],"compat":{"compatibilityMode":15},"cond":[{"type":"band1Horz"},{"type":"lastCol"}],"tableStyleId":""})
+      typescript {"value":{"table":{"cond":[{"type":"band1Horz"},{"type":"lastCol"}]},"compat":{"mode":15,"additiveParaSpacing":false,"indentNotNumberingTabStop":false}}}
+      rust       {"error":"the cond argument: unknown variant `type`, expected one of `firstRow`, `lastRow`, `firstCol`, `lastCol`"}
+    ... 1291 more (--show N)
+(f+) parse on mutated texts, checks            compared   2850  floor  12500  BELOW FLOOR  differences 173  (key order only: 2)  (TypeScript threw in 251: Rust must refuse those too)
+    - mutation 6: parse.flattenedTableModel: parse.flattenedTableModel("<>two</w:r><w:p> a=\"b\"one<w:r>two</w:r></w:p>", {})
+      typescript {}
+      rust       {"value":{"rows":[[{"paras":[" a=\"b\"onetwo"],"richParas":[{"runs":[{"text":" a=\"b\"onetwo"}]}]}]],"autoLayout":true}}
+    - mutation 29: parse.hfEmptyMarkFont: parse.hfEmptyMarkFont("<w:pPr><w:rPr><w:rFonts w:hint=\"eastAsia\" w:eastAsia=\"Batang\" w:asci&#0;i=\"Arial\"/><w:lang w:eastAsia=\"ko-KR\"/></w:rPr></w:pPr>", {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":"Batang"}
+      rust       {"value":"Calibri"}
+    - mutation 3: parse.hfParagraphs: parse.hfParagraphs("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:ftr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p><w:pPr><w:pStyle w:val=\"Footer\"/><w:jc w:val=\"center\"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\"/><w:sz w:val=\"18\"/><w:, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" )
+      typescript {"value":{"paras":[{"align":"center","lineRule":"auto","lineRawTwips":240,"lineSpacing":1,"tabStops":[{"pos":4680,"val":"center"},{"pos":9360,"val":"right"}],"runs":[{"text":"Page ","rawRPr":"<w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr
+      rust       {"value":{"paras":[{"align":"center","lineRule":"auto","lineRawTwips":240,"lineSpacing":1,"tabStops":[{"pos":4680,"val":"center"},{"pos":9360,"val":"right"}],"runs":[{"text":"Page ","rawRPr":"<w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr
+    - mutation 24: parse.hfParagraphs: parse.hfParagraphs("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:ftr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p><w:pPr><w:pStyle w:val=\"Footer\"/><w:jc w:val=\"center\"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\"/><w:sz w:val=\"18\"/><w:, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" )
+      typescript {"value":{"paras":[{"align":"center","lineRule":"auto","lineRawTwips":240,"lineSpacing":1,"tabStops":[{"pos":4680,"val":"center"},{"pos":9360,"val":"right"}],"runs":[{"text":"Page ","rawRPr":"<w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr
+      rust       {"value":{"paras":[{"align":"center","lineRule":"auto","lineRawTwips":240,"lineSpacing":1,"tabStops":[{"pos":4680,"val":"center"},{"pos":9360,"val":"right"}],"runs":[{"text":"Page ","rawRPr":"<w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr
+    - mutation 1: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordproce, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/style)
+      typescript {"value":null}
+      rust       {}
+    - mutation 2: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.op, {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":null}
+      rust       {}
+    - mutation 3: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:cx=\"http://schemas.microsoft.com/office/drawing/2014/cartex\" xmlns:cx1=\"http://schemas.microsoft.com/office/drawing/2015/9/8/chartex, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/webSe)
+      typescript {"value":null}
+      rust       {}
+    - mutation 4: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.op, {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":null}
+      rust       {}
+    - mutation 5: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relation&quot;ships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/20<06/wordprocessingDrawing\" xmlns:a=\"http://sch, {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":null}
+      rust       {}
+    - mutation 6: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.op, {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":null}
+      rust       {}
+    - mutation 7: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.op, {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":null}
+      rust       {}
+    - mutation 8: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemasopenxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.ope, {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":null}
+      rust       {}
+    - mutation 9: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.op, {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":null}
+      rust       {}
+    - mutation 10: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:w=/\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordproc, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/style)
+      typescript {"value":null}
+      rust       {}
+    - mutation 11: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.op, {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":null}
+      rust       {}
+    - mutation 12: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schedy><w:sectmas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://, {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":null}
+      rust       {}
+    - mutation 13: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.op, {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":null}
+      rust       {}
+    - mutation 14: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0&#xD800;\"?><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas. a=\"b\"openxmlformats.o\"rg/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\, {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":null}
+      rust       {}
+    - mutation 15: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\"?><w:document xmlns:w=\"http://schemas.openxmlformats\".org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas., {"parts":[["word/styles.xml","<?xml version=\"1.0\"?><w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" )
+      typescript {"value":null}
+      rust       {}
+    - mutation 16: parse.readHeaderFooterPart: parse.readHeaderFooterPart("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordproce, {"parts":[["word/_rels/document.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/style)
+      typescript {"value":null}
+      rust       {}
+    ... 153 more (--show N)
+(f+) parse on mutated arguments, checks        compared   7350  floor  35000  BELOW FLOOR  differences 195  (TypeScript threw in 147: Rust must refuse those too)
+    - argument mutation 35: parse.resolvedParaFormat: parse.resolvedParaFormat("<w:pPr><w:jc w:val=\"both\"/></w:pPr>", {"eff":{"align":"center","bidi":false,"indent":{"left":0,"right":0,"firstLine":0},"spacing":{"before":0,"after":160,"beforeAuto":false,"afterAuto":false,"line":{"rule":"auto","raw":259}},"keepNext":false,"keepLines":false,"pageBreakBefore":false,"widowControl":true,"contextualSpacing":false,"suppres)
+      typescript {"value":{"align":"center"}}
+      rust       {}
+    - argument mutation 58: parse.resolvedParaFormat: parse.resolvedParaFormat("<w:pPr><w:pStyle w:val=\"a7\"/><w:spacing w:before=\"120\" w:beforeAutospacing=\"0\" w:after=\"120\" w:afterAutospacing=\"0\"/><w:jc w:val=\"both\"/><w:rPr><w:sz w:val=\"22\"/><w:szCs w:val=\"22\"/></w:rPr></w:pPr>", {"eff":{"styleId":"a7","align":"justify","bidi":false,"indent":{"left":0,"right":0,"firstLine":0},"spacing":{"before":120,"after":120,"beforeAuto":false,"afterAuto":false,"line":{"rule":"auto","raw":240}},"keepNext":false,"keepLines":false,"pageBreakBefore":false,"widowControl":true,"contextualSpaci)
+      typescript {"value":{"align":"justify","spaceBeforeAuto":false,"spaceAfterAuto":false,"spaceBefore":120,"spaceAfter":120}}
+      rust       {"value":{"spaceBeforeAuto":false,"spaceAfterAuto":false,"spaceBefore":120,"spaceAfter":120}}
+    - argument mutation 0: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt a=\"&#x41;&#65;&amp;\"><w:sdtContent>","close":"</w:sdtContent></w:p>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 2: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt a=\"&bogus;\"><w:sdtContent>","close":"</w:sdtContent></w:sdt>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 3: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt><w:sdtPr><w:r/></w:sdtPr><w:sdtContent>","close":"</w:sdtContent></w:sdt>","inside":"revision"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 5: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt><w:sdtContent>text","close":"</w:sdtContent></w:sdt>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 6: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:p><w:sdtContent>","close":"</w:sdtContent></w:p>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 7: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt a=\"&bogus;\"><w:sdtContent>","close":"</w:sdtContent></w:sdt>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 9: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt><w:sdtContent><!-- c -->","close":"</w:sdtContent></w:sdt>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 10: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt a=\"1\" a=\"2\"><w:sdtContent>","close":"</w:sdtContent></w:p>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 11: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt><w:sdtContent>","close":"</w:sdtContent></w:sdt><w:sdt/>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 12: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt><w:sdtContent><!-- c -->","close":"</w:sdtContent></w:sdt>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 16: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt><w:sdtPr><w:alias w:val=\"a\"/><w:id w:val=\"5\"/></w:sdtPr><w:sdtContent>","close":"</w:sdtContent></w:p>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 19: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt xmlns:w=\"other\"><w:sdtContent>","close":"</w:sdtContent></w:sdt>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 22: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:bdo w:val=\"ltr\">","close":"</w:sdtContent></w:sdt>","text":"x"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 23: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt a=\"&bogus;\"><w:sdtContent>","close":"</w:sdtContent></w:sdt>","inside":"link"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 24: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt a=\"1\" a=\"2\"><w:sdtContent>","close":"</w:customXml>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 25: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt><w:sdtPr><w:r/></w:sdtPr><w:sdtContent>","close":"</w:bdo>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 27: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:bdo w:val=\"ltr\">","close":"</w:sdtContent></w:sdt>"}})
+      typescript {"value":null}
+      rust       {}
+    - argument mutation 31: parse.inlineWrapPrefixes: parse.inlineWrapPrefixes("", {"wrap":{"seq":1,"open":"<w:sdt><w:sdtPr><w:lock w:val=\"sdtContentLocked\"/></w:sdtPr><w:sdtContent>","close":"</w:smartTag>"}})
+      typescript {"value":null}
+      rust       {}
+    ... 175 more (--show N)
+(f) markers on the corpus, checks              compared    984  floor    910  differences 0
+(f) markers on built inputs, checks            compared  37642  floor  37000  differences 0  (TypeScript threw in 3: Rust must refuse those too)
+(f+) markers on mutated texts, checks          compared    420  floor   4100  BELOW FLOOR  differences 0  (TypeScript threw in 27: Rust must refuse those too)
+(f) math on the corpus, checks                 compared     72  floor     72  differences 0
+(f) math on built inputs, checks               compared  31929  floor  31000  differences 0  (TypeScript threw in 2426: Rust must refuse those too)
+(f+) math on mutated texts, checks             compared    300  floor   2900  BELOW FLOOR  differences 0  (TypeScript threw in 62: Rust must refuse those too)
+(f) resolve on the corpus, checks              compared  24725  floor  20122  differences 0
+(f) resolve on built inputs, checks            compared   2555  floor   2400  differences 0  (TypeScript threw in 27: Rust must refuse those too)
+(f+) resolve on mutated texts, checks          compared    240  floor   2300  BELOW FLOOR  differences 0  (TypeScript threw in 20: Rust must refuse those too)
+(f) revision on the corpus, checks             compared   1770  floor   1572  differences 0
+(f) revision on built inputs, checks           compared   4003  floor   2900  differences 0  (TypeScript threw in 69: Rust must refuse those too)
+(f+) revision on mutated texts, checks         compared    180  floor   1700  BELOW FLOOR  differences 0  (TypeScript threw in 7: Rust must refuse those too)
+(f) save on the corpus, checks                 compared   8869  floor missing  BELOW FLOOR  differences 0
+(f) save on built inputs, checks               compared   5461  floor missing  BELOW FLOOR  differences 129  (key order only: 70)  (TypeScript threw in 88: Rust must refuse those too)
+    - built 2: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - built 3: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/png","widthPx":1e+300,"heightPx":3,"posOffsetEmu":{"x":5,"y":6,"relativeTo":"page"},"paraSpacing":{"beforeTwips":1e+300,"afterTwips":12,"lineTwips":240,"lineRule":"auto"}}})
+      typescript {"value":{"base64":"AA","mime":"image/png","widthPx":96,"heightPx":96,"posOffsetEmu":{"x":5,"y":6,"relativeTo":"page"},"paraSpacing":{"afterTwips":12,"lineTwips":240,"lineRule":"auto"}}}
+      rust       {"error":"the image argument: invalid value: string \"auto\", expected a string of NewImage.paraSpacing.lineRule"}
+    - built 4: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><dcterms:modified/><cp:revision>x</cp:revision></cp:coreProperties>", {"savedAt":"2024-05-06T07:08:09.123Z"})
+      typescript {"value":null}
+      rust       {}
+    - built 5: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><dcterms:modified/><cp:revision>x</cp:revision></cp:coreProperties>", {"savedAt":"2024-05-06T07:08:09Z"})
+      typescript {"value":null}
+      rust       {}
+    - built 6: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><dcterms:modified/><cp:revision>x</cp:revision></cp:coreProperties>", {"savedAt":"$&-$1"})
+      typescript {"value":null}
+      rust       {}
+    - built 7: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><dcterms:modified/><cp:revision>x</cp:revision></cp:coreProperties>", {"savedAt":"text"})
+      typescript {"value":null}
+      rust       {}
+    - built 8: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties/>", {"savedAt":"2024-05-06T07:08:09.123Z"})
+      typescript {"value":null}
+      rust       {}
+    - built 9: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties/>", {"savedAt":"2024-05-06T07:08:09Z"})
+      typescript {"value":null}
+      rust       {}
+    - built 10: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties/>", {"savedAt":"$&-$1"})
+      typescript {"value":null}
+      rust       {}
+    - built 11: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties/>", {"savedAt":"text"})
+      typescript {"value":null}
+      rust       {}
+    - built 46: save.headerFooterPartXml: save.headerFooterPartXml("header", {"hf":{"text":"","paras":[{"runs":[{"text":"One","wrap":[{"open":"<w:smartTag w:uri=\"urn:x\" w:element=\"e\">","close":"</w:smartTag>"}]},{"text":"Two"}]}]},"originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessin)
+      typescript {"value":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:p><w:r><w:pict><v:shape xmlns:v=\"urn:schemas-microsoft-com:vml\
+      rust       {"error":"the hf argument: missing field `seq`"}
+    - built 47: save.headerFooterPartXml: save.headerFooterPartXml("header", {"hf":{"text":"","paras":[{"runs":[{"text":"One","wrap":[{"open":"<w:smartTag w:uri=\"urn:x\" w:element=\"e\">","close":"</w:smartTag>"}]},{"text":"Two"}]}]}})
+      typescript {"value":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-mic
+      rust       {"error":"the hf argument: missing field `seq`"}
+    - built 54: save.headerFooterPartXml: save.headerFooterPartXml("header", {"hf":{"text":"","paras":[{"runs":[{"text":"x"}],"alignOriginal":"left"}],"revisionsResolved":[]},"originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:sdt/></w:hdr>","pageCount":4})
+      typescript {"value":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p><w:r><w:t xml:space=\"preserve\">x</w:t></w:r></w:p><w:sdt/></w:hdr>"}
+      rust       {"error":"the hf argument: unknown field `alignOriginal`, expected one of `align`, `lineSpacing`, `lineRule`, `lineRawTwips`, `indentLeft`, `indentRight`, `indentFirstLine`, `charIndents`, `directCharIndents`, `spaceBefore`, `spaceAfter`, `spaceBeforeAuto`, `spaceAfterAuto`, `pageBreakBefore`, `keep
+    - built 55: save.headerFooterPartXml: save.headerFooterPartXml("header", {"hf":{"text":"","paras":[{"runs":[{"text":"x"}],"alignOriginal":"left"}],"revisionsResolved":[]}})
+      typescript {"value":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-mic
+      rust       {"error":"the hf argument: unknown field `alignOriginal`, expected one of `align`, `lineSpacing`, `lineRule`, `lineRawTwips`, `indentLeft`, `indentRight`, `indentFirstLine`, `charIndents`, `directCharIndents`, `spaceBefore`, `spaceAfter`, `spaceBeforeAuto`, `spaceAfterAuto`, `pageBreakBefore`, `keep
+    - built 102: save.headerFooterPartXml: save.headerFooterPartXml("footer", {"hf":{"text":"","paras":[{"runs":[{"text":"One","wrap":[{"open":"<w:smartTag w:uri=\"urn:x\" w:element=\"e\">","close":"</w:smartTag>"}]},{"text":"Two"}]}]},"originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessin)
+      typescript {"value":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:ftr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-mic
+      rust       {"error":"the hf argument: missing field `seq`"}
+    - built 103: save.headerFooterPartXml: save.headerFooterPartXml("footer", {"hf":{"text":"","paras":[{"runs":[{"text":"One","wrap":[{"open":"<w:smartTag w:uri=\"urn:x\" w:element=\"e\">","close":"</w:smartTag>"}]},{"text":"Two"}]}]}})
+      typescript {"value":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:ftr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-mic
+      rust       {"error":"the hf argument: missing field `seq`"}
+    - built 110: save.headerFooterPartXml: save.headerFooterPartXml("footer", {"hf":{"text":"","paras":[{"runs":[{"text":"x"}],"alignOriginal":"left"}],"revisionsResolved":[]},"originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:sdt/></w:hdr>","pageCount":4})
+      typescript {"value":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:ftr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-mic
+      rust       {"error":"the hf argument: unknown field `alignOriginal`, expected one of `align`, `lineSpacing`, `lineRule`, `lineRawTwips`, `indentLeft`, `indentRight`, `indentFirstLine`, `charIndents`, `directCharIndents`, `spaceBefore`, `spaceAfter`, `spaceBeforeAuto`, `spaceAfterAuto`, `pageBreakBefore`, `keep
+    - built 111: save.headerFooterPartXml: save.headerFooterPartXml("footer", {"hf":{"text":"","paras":[{"runs":[{"text":"x"}],"alignOriginal":"left"}],"revisionsResolved":[]}})
+      typescript {"value":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:ftr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-mic
+      rust       {"error":"the hf argument: unknown field `alignOriginal`, expected one of `align`, `lineSpacing`, `lineRule`, `lineRawTwips`, `indentLeft`, `indentRight`, `indentFirstLine`, `charIndents`, `directCharIndents`, `spaceBefore`, `spaceAfter`, `spaceBeforeAuto`, `spaceAfterAuto`, `pageBreakBefore`, `keep
+    - built 4: save.hfOriginalXml: save.hfOriginalXml("", {"hf":{"text":"","revisionsResolved":[{"id":"1","action":"accept"}]},"originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relations)
+      typescript {"value":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:p><w:r><w:t>new</w:t></w:r><w:r><w:delText>gone</w:delText></w:r
+      rust       {"error":"the hf argument: unknown field `id`, expected `mode` or `filter`"}
+    - built 5: save.hfOriginalXml: save.hfOriginalXml("", {"hf":{"text":"","revisionsResolved":[{"id":"2","action":"reject"},{"id":"1","action":"reject"}]},"originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/)
+      typescript {"value":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:p><w:r><w:t>new</w:t></w:r><w:r><w:delText>gone</w:delText></w:r
+      rust       {"error":"the hf argument: unknown field `id`, expected `mode` or `filter`"}
+    ... 109 more (--show N)
+(f+) save on mutated texts, checks             compared   1950  floor missing  BELOW FLOOR  differences 27  (TypeScript threw in 9: Rust must refuse those too)
+    - mutation 2: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><cp:revision>999999999999999999<w:x/></cp:revision></cp:coreProperties>", {"savedAt":"2024-05-06T07:08:09.123Z"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 3: save.patchCoreProps: save.patchCoreProps("<cp:corePropies/>", {"savedAt":"text"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 4: save.patchCoreProps: save.patchCoreProps("<cp:core\u0001Propertertiies/<w:x/>>", {"savedAt":"$&-$1"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 5: save.patchCoreProps: save.patchCoreProps("<cp:corePr/><?><?operties/><?", {"savedAt":"$&-$1"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 6: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><dcterms:modifie😀d/><cp:revision>x</cp:revision></cp:coreProperties>", {"savedAt":"$&-$1"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 7: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><cp:revision>99999999999999999999</cp:<![CDATA[revision></cp:corePro>pert:revision>ies>", {"savedAt":"2024-05-06T07:08:09Z"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 8: save.patchCoreProps: save.patchCoreProps("<cp:__proto__core\rProperties/>", {"savedAt":"2024-05-06T07:08:09.123Z"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 10: save.patchCoreProps: save.patchCoreProps("<cp:coresProperties", {"savedAt":"2024-05-06T07:08:09.123Z"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 11: save.patchCoreProps: save.patchCoreProps("<c\r&quot;p:coreProperties/>", {"savedAt":"2024-05-06T07:08:09.123Z"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 12: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><d<?cterms:modified/><cp:revision>x</cp:revisip:corePropies>", {"savedAt":"2024-05-06T07:08:09.123Z"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 14: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><crevision>9999999999999😀9999999</cp:revision></cp:coreProperties>", {"savedAt":"2024-05-06T07:08:09.123Z"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 15: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><cp:revision>9999<![9999999999999999</cp:revision></cp:coreProperties>", {"savedAt":"$&-$1"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 16: save.patchCoreProps: save.patchCoreProps("<cp﻿:coreProperties><dcterms:modified xsi:type=\"dcterms:W3CDTF\"020-01-01T00:00:00Z</dcterms:modified><cp:revision>4</cp:revisi\r\non></cp:coreProperties>", {"savedAt":"2024-05-06T07:08:09Z"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 17: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><dcterms:dified/><cp:revision>x</cp:revision></cp:coreProperties>", {"savedAt":"2024-05-06T07:08:09.123Z"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 18: save.patchCoreProps: save.patchCoreProps("<cp:<?coreProperties><cp:revision>99999999999999999999es><cp:r</cp:revision></cp:coreProperties>", {"savedAt":"2024-05-06T07:08:09Z"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 19: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><cp:revision>99999999999999999999</c]]>p:revision></cp:coreProperties>", {"savedAt":"2024-05-06T07:08:09Z"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 20: save.patchCoreProps: save.patchCoreProps("=<cp:coreProperties><dcterms:modified/><cp:revision>x</cp:revision></cp:coreProperties>", {"savedAt":"$&-$1"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 21: save.patchCoreProps: save.patchCoreProps("<cp:coreProperties><cp:revision>99999999999999999999</cp:recorvision></cp:coreProperties>", {"savedAt":"2024-05-06T07:08:09Z"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 22: save.patchCoreProps: save.patchCoreProps("<oreProperties><dcterms:modified/><cp:revision>x</cp:revision></cp:coreProperties>", {"savedAt":"$&-$1"})
+      typescript {"value":null}
+      rust       {}
+    - mutation 23: save.patchCoreProps: save.patchCoreProps("<cp:corePropertPropies><cp:revision>99999999999999999999</cp:revisiop:copertoreProperties>", {"savedAt":"$&-$1"})
+      typescript {"value":null}
+      rust       {}
+    ... 7 more (--show N)
+(f+) save on mutated arguments, checks         compared   5700  floor missing  BELOW FLOOR  differences 114  (key order only: 32)  (TypeScript threw in 109: Rust must refuse those too)
+    - argument mutation 5: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0,"relativeTo":"page"}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 8: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 10: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/jpeg","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":6}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 12: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 13: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":5,"y":0}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder, posOffsetEmu
+      rust       base64, mime, widthPx, heightPx, posOffsetEmu, zOrder, rotDeg
+    - argument mutation 20: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 25: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 34: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 36: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AAAA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 38: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":8,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0,"relativeTo":"page"}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 54: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 60: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 61: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 68: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":3,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 82: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 83: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 85: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 87: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0,"relativeTo":"page"}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 90: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2,"posOffsetEmu":{"x":1e+300,"y":0}}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    - argument mutation 98: save.usableNewImage: save.usableNewImage("", {"image":{"base64":"AA","mime":"image/gif","widthPx":-3,"heightPx":4,"rotDeg":45,"zOrder":2}})
+      key order at /value
+      typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+      rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+    ... 94 more (--show N)
+(f) section on the corpus, checks              compared   4624  floor   4062  differences 0
+(f) section on built inputs, checks            compared   6836  floor   6700  differences 0  (TypeScript threw in 414: Rust must refuse those too)
+(f+) section on mutated texts, checks          compared    780  floor   7700  BELOW FLOOR  differences 0  (TypeScript threw in 14: Rust must refuse those too)
+(f) vml on the corpus, checks                  compared     78  floor     48  differences 0
+(f) vml on built inputs, checks                compared   1127  floor   1125  differences 0  (TypeScript threw in 15: Rust must refuse those too)
+(f+) vml on mutated texts, checks              compared    270  floor   2500  BELOW FLOOR  differences 0  (TypeScript threw in 21: Rust must refuse those too)
+(f) xmltag on the corpus, checks               compared   1689  floor   1600  differences 0
+(f) xmltag on built inputs, checks             compared    510  floor    500  differences 0
+(f+) xmltag on mutated texts, checks           compared     60  floor    550  BELOW FLOOR  differences 0
+(f) genRpr on the corpus, checks               compared  16342  floor  14488  differences 0
+(f) genRpr on built inputs, checks             compared   2380  floor   2380  differences 0
+(f+) genRpr on mutated texts, checks           compared     30  floor    280  BELOW FLOOR  differences 0
+(f+) genRpr on mutated arguments, checks       compared    150  floor   1400  BELOW FLOOR  differences 0
+(f) genProps on the corpus, checks             compared  46480  floor  40876  differences 0
+(f) genProps on built inputs, checks           compared   4793  floor   4793  differences 0  (TypeScript threw in 16: Rust must refuse those too)
+(f+) genProps on mutated texts, checks         compared    330  floor   3100  BELOW FLOOR  differences 0  (TypeScript threw in 2: Rust must refuse those too)
+(f+) genProps on mutated arguments, checks     compared    300  floor   2800  BELOW FLOOR  differences 0
+(f) genDrawing on the corpus, checks           compared   3581  floor   2751  differences 0
+(f) genDrawing on built inputs, checks         compared   1686  floor   1652  differences 0
+(f+) genDrawing on mutated texts, checks       compared    360  floor   3300  BELOW FLOOR  differences 0
+(f+) genDrawing on mutated arguments, checks   compared   1800  floor  15800  BELOW FLOOR  differences 0
+(f) genDrawingBuild on the corpus, checks      compared    216  floor    132  differences 0
+(f) genDrawingBuild on built inputs, checks    compared    212  floor    185  differences 0  (TypeScript threw in 101: Rust must refuse those too)
+(f+) genDrawingBuild on mutated texts, checks  compared     30  floor    280  BELOW FLOOR  differences 0
+(f+) genDrawingBuild on mutated arguments, checks compared    900  floor   7500  BELOW FLOOR  differences 0  (TypeScript threw in 201: Rust must refuse those too)
+(f) genText on the corpus, checks              compared   3935  floor   3462  differences 0
+(f) genText on built inputs, checks            compared    501  floor    501  differences 0
+(f+) genText on mutated texts, checks          compared    150  floor   1400  BELOW FLOOR  differences 0
+(f+) genText on mutated arguments, checks      compared    600  floor   5700  BELOW FLOOR  differences 0
+(f) genTable on the corpus, checks             compared   1040  floor    928  differences 0
+(f) genTable on built inputs, checks           compared    100  floor    100  differences 0  (TypeScript threw in 9: Rust must refuse those too)
+(f+) genTable on mutated texts, checks         compared     30  floor    280  BELOW FLOOR  differences 0  (TypeScript threw in 6: Rust must refuse those too)
+(f+) genTable on mutated arguments, checks     compared    300  floor   2800  BELOW FLOOR  differences 0  (TypeScript threw in 2: Rust must refuse those too)
+(f) genFields on the corpus, checks            compared   1258  floor   1127  differences 0
+(f) genFields on built inputs, checks          compared     81  floor     20  differences 0  (TypeScript threw in 8: Rust must refuse those too)
+(f+) genFields on mutated texts, checks        compared     30  floor    280  BELOW FLOOR  differences 0
+(f+) genFields on mutated arguments, checks    compared    450  floor   4200  BELOW FLOOR  differences 0  (TypeScript threw in 10: Rust must refuse those too)
+(f) genRuns on the corpus, checks              compared   5648  floor   4933  differences 0
+(f) genRuns on built inputs, checks            compared     28  floor     28  differences 0
+(f+) genRuns on mutated texts, checks          compared      0  floor      0  differences 0
+(f+) genRuns on mutated arguments, checks      compared    150  floor   1400  BELOW FLOOR  differences 0
+(f) genParagraph on the corpus, checks         compared   6783  floor   5913  differences 0
+(f) genParagraph on built inputs, checks       compared     48  floor     48  differences 0
+(f+) genParagraph on mutated texts, checks     compared      0  floor      0  differences 0
+(f+) genParagraph on mutated arguments, checks compared    150  floor   1400  BELOW FLOOR  differences 0
+(g) zips written: blank documents and packages compared   1716  floor   1716  differences 0
+(h) typed model, corpus documents              compared    203  floor    183  differences 1  (key order only: 1)
+    - e2e/assets/cover-photo-with-textboxes.docx (ParsedDocFull): first difference at code unit 517873 (lengths 988430 and 988430)
+      typescript "opTwips\":420,\"balanceDbcsSpacing\":true,\"useFELayout\":true,\"compressPunctuation\":"
+      rust       "opTwips\":420,\"balanceDbcsSpacing\":true,\"compressPunctuation\":true,\"adjustLineHei"
+(h) typed model, built documents               compared    233  floor    233  differences 0
+(h) typed model, captured test results         compared     40  floor     40  differences 0
+(h) typed model, independently built values    compared   5156  floor   5156  differences 0
+(h) typed model, invalid values refused        compared  13976  floor  13976  differences 0
+(h) typed model, paragraph blocks              compared   4160  floor   3704  differences 0
+(h) typed model, passthrough blocks            compared    696  floor    663  differences 0
+(h) typed model, heading blocks                compared    122  floor    122  differences 0
+(h) typed model, table blocks                  compared    158  floor    144  differences 0
+(h) typed model, listItem blocks               compared    145  floor    145  differences 0
+(h) typed model, image blocks                  compared     25  floor     21  differences 0
+key order: 87 results equal as JSON differ in the order of their keys, in 5 places
+         68  save.builtInHeadingStyleUpsert /value
+             typescript styleId, type, name, quickFormat, builtIn, pPr, rPr
+             rust       styleId, type, name, quickFormat, builtIn, rPr, pPr
+         68  save.builtInHeadingStyleUpsert /value/pPr
+             typescript keepNext, spaceBeforeTwips, spaceAfterTwips, outlineLevel
+             rust       spaceBeforeTwips, spaceAfterTwips, keepNext, outlineLevel
+         13  save.usableNewImage /value
+             typescript base64, mime, widthPx, heightPx, rotDeg, zOrder
+             rust       base64, mime, widthPx, heightPx, zOrder, rotDeg
+          5  parse.extractDiagramDrawing /value/shapes/*
+             typescript xPx, yPx, wPx, hPx, prst, lnHex, lnWPx, fillHex, texts, fontSizePt, textColorHex
+             rust       xPx, yPx, wPx, hPx, lnHex, lnWPx, prst, fillHex, texts, fontSizePt, textColorHex
+          1  save.compareBlocks /value/blocks/*/block/runs/*/image
+             typescript xml, dataUrl
+             rust       dataUrl, xml
+(d) w:pPr fragments the readers were called on: 5717 (floor   5007)
+(d) w:rPr fragments the readers were called on: 11377 (floor  10016)
+(d+) mutated fragments: 400 (floor   4000  BELOW FLOOR)
+(d) functions compared: 69 (floor     69); with a single distinct result, so not really compared: 0
+(d) readers over a parsed element: 26; never called on a text the TypeScript parser refuses: 0
+    activeCharIndents          checks      306  differences       0  equal 100.000%  distinct results 229  TypeScript threw 0
+    allRunsVanished            checks     7058  differences       0  equal 100.000%  distinct results 3  TypeScript threw 431
+    autoColorOf                checks    12404  differences       0  equal 100.000%  distinct results 3  TypeScript threw 431
+    autoSpaceFlagsOf           checks     6583  differences       0  equal 100.000%  distinct results 9  TypeScript threw 431
+    autoSpaceMode              checks        9  differences       0  equal 100.000%  distinct results 5  TypeScript threw 0
+    bookmarkNamesOf            checks     7058  differences       0  equal 100.000%  distinct results 4  TypeScript threw 0
+    breakOnlyRuns              checks     8236  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    cellMarginsOf              checks     2054  differences       0  equal 100.000%  distinct results 16  TypeScript threw 862
+    charIndentsOf              checks      870  differences       0  equal 100.000%  distinct results 8  TypeScript threw 431
+    checkboxStateOf            checks     8951  differences       0  equal 100.000%  distinct results 4  TypeScript threw 431
+    collectNodes               checks    21174  differences       0  equal 100.000%  distinct results 7481  TypeScript threw 1293
+    collectTopNodes            checks    21174  differences       0  equal 100.000%  distinct results 10287  TypeScript threw 1293
+    colorFrom                  checks    24808  differences       0  equal 100.000%  distinct results 47  TypeScript threw 862
+    convertibleHyperlink       checks      231  differences       0  equal 100.000%  distinct results 4  TypeScript threw 0
+    crossParaCommentMarkers    checks     7058  differences       0  equal 100.000%  distinct results 6  TypeScript threw 0
+    decodeEntities             checks     9854  differences       0  equal 100.000%  distinct results 2234  TypeScript threw 0
+    decodeNumericCharRefs      checks     9854  differences       0  equal 100.000%  distinct results 2234  TypeScript threw 0
+    EA_LANG_DEFAULT_FONT       checks     9623  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    emptyParaMarkFont          checks    21174  differences       0  equal 100.000%  distinct results 106  TypeScript threw 1293
+    emptyParaSizeHalfPoints    checks    28232  differences       0  equal 100.000%  distinct results 21  TypeScript threw 1724
+    fieldCharsBalanced         checks     7058  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    fieldInstructions          checks     7058  differences       0  equal 100.000%  distinct results 31  TypeScript threw 0
+    hasLayoutRunContent        checks    14116  differences       0  equal 100.000%  distinct results 3  TypeScript threw 862
+    hostPageBreak              checks     7058  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    indentTwipsOf              checks      870  differences       0  equal 100.000%  distinct results 53  TypeScript threw 431
+    isInvisibleEmptyShape      checks     7058  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    isInvisibleVmlPict         checks     7058  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    isOn                       checks     9623  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    isThinRule                 checks     7058  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    JC_ALIGN                   checks     9623  differences       0  equal 100.000%  distinct results 6  TypeScript threw 0
+    jsPrimitives               checks     9623  differences       0  equal 100.000%  distinct results 1463  TypeScript threw 0
+    lineTwipsOf                checks     9623  differences       0  equal 100.000%  distinct results 502  TypeScript threw 0
+    mathTokens                 checks     7058  differences       0  equal 100.000%  distinct results 6  TypeScript threw 0
+    mergeCharIndents           checks      612  differences       0  equal 100.000%  distinct results 404  TypeScript threw 0
+    mergedBorderLinesOf        checks    12642  differences       0  equal 100.000%  distinct results 172  TypeScript threw 862
+    MERGEFIELD_INSTR_RE        checks      231  differences       0  equal 100.000%  distinct results 4  TypeScript threw 0
+    mergeRuns                  checks     8236  differences       0  equal 100.000%  distinct results 2579  TypeScript threw 0
+    mergeStyleBorders          checks     1216  differences       0  equal 100.000%  distinct results 596  TypeScript threw 0
+    onlyOleFields              checks     7058  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    onlyXeFields               checks     7058  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    onOffOf                    checks   170883  differences       0  equal 100.000%  distinct results 4  TypeScript threw 7758
+    onOffTagIn                 checks   272888  differences       0  equal 100.000%  distinct results 4  TypeScript threw 86828
+    paraBorderSidesOf          checks    13166  differences       0  equal 100.000%  distinct results 10  TypeScript threw 862
+    paraBordersOf              checks      408  differences       0  equal 100.000%  distinct results 402  TypeScript threw 0
+    partXmlSpacePreserve       checks    52756  differences       0  equal 100.000%  distinct results 3  TypeScript threw 16786
+    plainText                  checks     7836  differences       0  equal 100.000%  distinct results 2885  TypeScript threw 0
+    ptabDisplayStops           checks     7058  differences       0  equal 100.000%  distinct results 5  TypeScript threw 431
+    rawPPrOf                   checks     7058  differences       0  equal 100.000%  distinct results 574  TypeScript threw 0
+    resolveCharIndents         checks     1530  differences       0  equal 100.000%  distinct results 810  TypeScript threw 0
+    resolveThemeColor          checks     4000  differences       0  equal 100.000%  distinct results 269  TypeScript threw 0
+    rowBandSizeOf              checks     5979  differences       0  equal 100.000%  distinct results 5  TypeScript threw 431
+    rubyFragmentsOf            checks     7058  differences       0  equal 100.000%  distinct results 17  TypeScript threw 0
+    rubyPartText               checks     1228  differences       0  equal 100.000%  distinct results 7  TypeScript threw 862
+    ruleDisplayOf              checks     7058  differences       0  equal 100.000%  distinct results 27  TypeScript threw 0
+    runBorderOf                checks      614  differences       0  equal 100.000%  distinct results 7  TypeScript threw 431
+    shdDisplayFill             checks     9000  differences       0  equal 100.000%  distinct results 142  TypeScript threw 862
+    SIMPLE_INLINE_FIELD_RE     checks      231  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    spaceOnlyRuns              checks     8236  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    splitImageRun              checks     8951  differences       0  equal 100.000%  distinct results 4385  TypeScript threw 431
+    splitSymRun                checks     8951  differences       0  equal 100.000%  distinct results 4403  TypeScript threw 431
+    staysVanished              checks     7058  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+    stripHash                  checks     9623  differences       0  equal 100.000%  distinct results 2129  TypeScript threw 0
+    stripTextboxes             checks     7058  differences       0  equal 100.000%  distinct results 4362  TypeScript threw 0
+    tableLookOf                checks     5979  differences       0  equal 100.000%  distinct results 8  TypeScript threw 431
+    tabStopsOf                 checks     6583  differences       0  equal 100.000%  distinct results 17  TypeScript threw 431
+    themedRFonts               checks    16898  differences       0  equal 100.000%  distinct results 218  TypeScript threw 862
+    themeLangEaSlotFont        checks      325  differences       0  equal 100.000%  distinct results 12  TypeScript threw 0
+    txbxHasStructuredContent   checks      641  differences       0  equal 100.000%  distinct results 3  TypeScript threw 431
+    ZOTERO_INLINE_FIELD_RE     checks      231  differences       0  equal 100.000%  distinct results 2  TypeScript threw 0
+(e) readers copied from parse.ts because it does not export them: 4; no longer the text parse.ts holds: 0
+(e) package values that differ: 0, at 0 paths, every one in C:\Users\admin\.omp\work\seuoffice-rust-b\tools\docx-diff\out\package-paths.json
+(e) distinct refusals of the TypeScript loader among the built containers: 23 (floor     23)
+(e+) mutated containers the TypeScript loader refused: 213 of 300 (floor   1900  BELOW FLOOR)
+(f) altchunk: 5 functions (floor      5); with a single distinct result, so not really compared: 0; never threw in TypeScript: 3 of 5
+    altchunk.altChunkKind                    checks    1574  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    altchunk.decodeHtmlBytes                 checks    1043  differences      0  key order only      0  distinct results   547  TypeScript threw 0
+    altchunk.decodeQuotedPrintable           checks    1000  differences      0  key order only      0  distinct results   503  TypeScript threw 0
+    altchunk.decodeMhtToHtml                 checks     292  differences      0  key order only      0  distinct results   221  TypeScript threw 4
+    altchunk.altChunkPartPath                checks     953  differences      0  key order only      0  distinct results    31  TypeScript threw 0
+(f) blank: 10 functions (floor     10); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 10
+    blank.customLevelXml                     checks     119  differences      0  key order only      0  distinct results   108  TypeScript threw 2
+    blank.mergeLevelXml                      checks     250  differences      0  key order only      0  distinct results   175  TypeScript threw 2
+    blank.abstractNumXml                     checks      31  differences      0  key order only      0  distinct results    16  TypeScript threw 1
+    blank.numPicBulletXml                    checks      21  differences      0  key order only      0  distinct results    21  TypeScript threw 0
+    blank.customLevelFromNumberingLevel      checks      50  differences      0  key order only      0  distinct results    27  TypeScript threw 9
+    blank.numberingLevelFromCustom           checks     118  differences      0  key order only      0  distinct results   107  TypeScript threw 1
+    blank.paperSizeForRegion                 checks      60  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    blank.paperSizeForLocale                 checks     145  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    blank.buildBlankDocx                     checks    1728  differences      0  key order only      0  distinct results   696  TypeScript threw 3
+    blank.pageSizeTag                        checks     125  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+(f+) blockpasses: 29 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) blockpasses: 6 functions (floor      6); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 6
+    blockpasses.applyProtectedLeadingBreaks  checks     541  differences      0  key order only      0  distinct results   359  TypeScript threw 0
+    blockpasses.applyBalancedDbcsSpacing     checks     182  differences      0  key order only      0  distinct results   126  TypeScript threw 0
+    blockpasses.blockRunGroups               checks     300  differences      0  key order only      0  distinct results   135  TypeScript threw 0
+    blockpasses.normalizeImageZOrders        checks     165  differences      0  key order only      0  distinct results   143  TypeScript threw 0
+    blockpasses.floatTableColumnSpan         checks     250  differences      0  key order only      0  distinct results    54  TypeScript threw 0
+    blockpasses.bandWrappedBoxesBeforeTables checks     172  differences      0  key order only      0  distinct results   115  TypeScript threw 0
+(f+) chart: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) chart: 5 functions (floor      5); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 5
+    chart.constants                          checks       6  differences      0  key order only      0  distinct results     6  TypeScript threw 1
+    chart.parseChartPartXml                  checks    1562  differences      0  key order only      0  distinct results  1049  TypeScript threw 5
+    chart.shadeHex                           checks     449  differences      0  key order only      0  distinct results   156  TypeScript threw 0
+    chart.tintHex                            checks     449  differences      0  key order only      0  distinct results   151  TypeScript threw 0
+    chart.lumHex                             checks     380  differences      0  key order only      0  distinct results   100  TypeScript threw 0
+(f) charclass: 9 functions (floor      9); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 9
+    charclass.charClass                      checks     118  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    charclass.isHangulChar                   checks     118  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    charclass.isEastAsianChar                checks     118  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    charclass.isDoubleByteChar               checks     118  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    charclass.isCjkLetterChar                checks     118  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    charclass.isLatinAlnumChar               checks     118  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    charclass.textHasEastAsian               checks    3138  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    charclass.textHasHangulChars             checks    3138  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    charclass.isEastAsianLangTag             checks     112  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+(f) checkbox: 5 functions (floor      5); with a single distinct result, so not really compared: 0; never threw in TypeScript: 4 of 5
+    checkbox.isOn                            checks      49  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    checkbox.sdtCheckboxGlyphs               checks     101  differences      0  key order only      0  distinct results    15  TypeScript threw 0
+    checkbox.sdtCheckboxControl              checks     118  differences      0  key order only      0  distinct results    71  TypeScript threw 6
+    checkbox.sdtCheckboxIsChecked            checks    1095  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    checkbox.syncSdtCheckbox                 checks     194  differences      0  key order only      0  distinct results   148  TypeScript threw 0
+(f) docprops: 18 functions (floor     18); with a single distinct result, so not really compared: 0; never threw in TypeScript: 8 of 18
+    docprops.constants                       checks      17  differences      0  key order only      0  distinct results    17  TypeScript threw 1
+    docprops.parseCorePropertiesXml          checks      47  differences      0  key order only      0  distinct results    30  TypeScript threw 0
+    docprops.parseAppPropertiesXml           checks      42  differences      0  key order only      0  distinct results    26  TypeScript threw 0
+    docprops.parseCustomPropertiesXml        checks      43  differences      0  key order only      0  distinct results    25  TypeScript threw 0
+    docprops.parseCustomPropertyTypesXml     checks      43  differences      0  key order only      0  distinct results    23  TypeScript threw 0
+    docprops.readDocumentProperties          checks      13  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    docprops.parseZoteroDocumentDataXml      checks      43  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    docprops.readZoteroDocumentData          checks      13  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    docprops.decodeXmlText                   checks      34  differences      0  key order only      0  distinct results    33  TypeScript threw 0
+    docprops.attrValue                       checks      38  differences      0  key order only      0  distinct results     9  TypeScript threw 6
+    docprops.propertyText                    checks      34  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    docprops.findSourcesPart                 checks       9  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    docprops.parseSourcesXml                 checks      39  differences      0  key order only      0  distinct results    17  TypeScript threw 0
+    docprops.citationText                    checks       7  differences      0  key order only      0  distinct results     7  TypeScript threw 1
+    docprops.bibliographyLine                checks       7  differences      0  key order only      0  distinct results     7  TypeScript threw 1
+    docprops.resolveSpinCount                checks      52  differences      0  key order only      0  distinct results     9  TypeScript threw 33
+    docprops.hashProtectionPassword          checks      40  differences      0  key order only      0  distinct results    29  TypeScript threw 10
+    docprops.verifyProtectionPassword        checks      60  differences      0  key order only      0  distinct results     3  TypeScript threw 10
+(f) drawing: 12 functions (floor     12); with a single distinct result, so not really compared: 0; never threw in TypeScript: 4 of 12
+    drawing.constants                        checks       8  differences      0  key order only      0  distinct results     7  TypeScript threw 2
+    drawing.colorNodeHex                     checks     545  differences      0  key order only      0  distinct results    64  TypeScript threw 16
+    drawing.solidFillAlpha                   checks     124  differences      0  key order only      0  distinct results     8  TypeScript threw 9
+    drawing.topLevelDrawings                 checks     190  differences      0  key order only      0  distinct results   167  TypeScript threw 0
+    drawing.drawingAnchorMeta                checks     227  differences      0  key order only      0  distinct results   169  TypeScript threw 0
+    drawing.resolveAnchorPagePos             checks     941  differences      0  key order only      0  distinct results   105  TypeScript threw 0
+    drawing.resolveAnchorPageYEmu            checks     941  differences      0  key order only      0  distinct results    41  TypeScript threw 0
+    drawing.gradFillApproxHex                checks      96  differences      0  key order only      0  distinct results    16  TypeScript threw 4
+    drawing.w14TextFillHex                   checks     852  differences      0  key order only      0  distinct results    55  TypeScript threw 3
+    drawing.w14GlowOf                        checks     567  differences      0  key order only      0  distinct results    21  TypeScript threw 5
+    drawing.composeGroupCtm                  checks      81  differences      0  key order only      0  distinct results    31  TypeScript threw 11
+    drawing.lineBoxOf                        checks     558  differences      0  key order only      0  distinct results    80  TypeScript threw 4
+(f) fielddisplay: 1 functions (floor      1); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 1
+    fielddisplay.fieldDisplayOf              checks    2020  differences      0  key order only      0  distinct results  1079  TypeScript threw 2
+(f) fields: 18 functions (floor     18); with a single distinct result, so not really compared: 0; never threw in TypeScript: 12 of 18
+    fields.rPrNodeOf                         checks     105  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    fields.tocLevelOf                        checks     168  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    fields.tagAttr                           checks     119  differences      0  key order only      0  distinct results    14  TypeScript threw 2
+    fields.directParaGeometry                checks      77  differences      0  key order only      0  distinct results     9  TypeScript threw 1
+    fields.directLineOf                      checks      77  differences      0  key order only      0  distinct results    12  TypeScript threw 1
+    fields.additiveSpacingOf                 checks     206  differences      0  key order only      0  distinct results     3  TypeScript threw 1
+    fields.fieldStackAfter                   checks     429  differences      0  key order only      0  distinct results    20  TypeScript threw 1
+    fields.markInsideFieldCode               checks      13  differences      0  key order only      0  distinct results     3  TypeScript threw 1
+    fields.loneFieldEnd                      checks      89  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    fields.fieldLabel                        checks      89  differences      0  key order only      0  distinct results    18  TypeScript threw 0
+    fields.eqFieldToOmml                     checks     124  differences      0  key order only      0  distinct results    73  TypeScript threw 0
+    fields.inlineEqFieldResults              checks     110  differences      0  key order only      0  distinct results   107  TypeScript threw 0
+    fields.sdtRanges                         checks     414  differences      0  key order only      0  distinct results    60  TypeScript threw 0
+    fields.parseSdtBlock                     checks      95  differences      0  key order only      0  distinct results    73  TypeScript threw 0
+    fields.sdtMeta                           checks      95  differences      0  key order only      0  distinct results    23  TypeScript threw 0
+    fields.splitSdtParts                     checks      95  differences      0  key order only      0  distinct results    17  TypeScript threw 0
+    fields.sdtTableXml                       checks      95  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    fields.balanceFieldChars                 checks     402  differences      0  key order only      0  distinct results   372  TypeScript threw 0
+(f) images: 4 functions (floor      4); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 4
+    images.constants                         checks       2  differences      0  key order only      0  distinct results     2  TypeScript threw 1
+    images.isTiffMime                        checks      57  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    images.tiffDimsOk                        checks     849  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    images.isMetafileMime                    checks      57  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+(f+) ink: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) ink: 7 functions (floor      7); with a single distinct result, so not really compared: 0; never threw in TypeScript: 5 of 7
+    ink.constants                            checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 1
+    ink.INK_REL_RE                           checks     478  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    ink.INK_MEDIA_PATH_RE                    checks    1419  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    ink.anchoredInkRunXml                    checks     192  differences      0  key order only      0  distinct results    54  TypeScript threw 125
+    ink.stripInkRuns                         checks    5828  differences      0  key order only      0  distinct results  3501  TypeScript threw 0
+    ink.findInkRuns                          checks    5828  differences      0  key order only      0  distinct results    19  TypeScript threw 0
+    ink.injectInkRunsIntoParagraph           checks    5842  differences      0  key order only      0  distinct results  3497  TypeScript threw 0
+(f+) parse: 1531 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) parse: 160 functions (floor     74); with a single distinct result, so not really compared: 2 (parse.hfImages, parse.hfGroupPictures); never threw in TypeScript: 53 of 160
+    parse.breakCharOf                        checks     163  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    parse.wtText                             checks    3178  differences      0  key order only      0  distinct results  3145  TypeScript threw 0
+    parse.emuToPx                            checks     166  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    parse.listRefOf                          checks     900  differences      0  key order only      0  distinct results    13  TypeScript threw 25
+    parse.listKindOf                         checks     168  differences      0  key order only      0  distinct results     3  TypeScript threw 72
+    parse.headingLevelOf                     checks     822  differences      0  key order only      0  distinct results     8  TypeScript threw 20
+    parse.styleBidiOf                        checks     447  differences      0  key order only      0  distinct results     4  TypeScript threw 213
+    parse.normalSizeHalfPoints               checks      13  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    parse.paraStyleDisplay                   checks     266  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    parse.defaultParaStyle                   checks       9  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    parse.inlineContentControlsOf            checks    2249  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    parse.crossParagraphZoteroFields         checks     195  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    parse.mathParaAlign                      checks      43  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    parse.mathSizeHalfPoints                 checks     195  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    parse.mathSourceXmlOf                    checks    2181  differences      0  key order only      0  distinct results  2180  TypeScript threw 0
+    parse.effectiveRunOf                     checks     787  differences      0  key order only      0  distinct results   289  TypeScript threw 11
+    parse.markSizeOf                         checks     291  differences      0  key order only      0  distinct results    14  TypeScript threw 3
+    parse.foldEffectiveFormat                checks     637  differences      0  key order only      0  distinct results   537  TypeScript threw 8
+    parse.legacyDirectRunFormat              checks      50  differences      0  key order only      0  distinct results    19  TypeScript threw 14
+    parse.frameBoxOf                         checks     437  differences      0  key order only      0  distinct results     7  TypeScript threw 12
+    parse.paraFrameOf                        checks     162  differences      0  key order only      0  distinct results    84  TypeScript threw 0
+    parse.propChangeInfo                     checks     372  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    parse.mergeTabStops                      checks     178  differences      0  key order only      0  distinct results    67  TypeScript threw 0
+    parse.noteRunOf                          checks     211  differences      0  key order only      0  distinct results    97  TypeScript threw 0
+    parse.noteNumbersOf                      checks     382  differences      0  key order only      0  distinct results    73  TypeScript threw 0
+    parse.outlineOnlyHeading                 checks     474  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.inheritedCsFont                    checks     128  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.paraCsSize                         checks      78  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    parse.paraTextSizeHalfPoints             checks     291  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    parse.charUnitsOf                        checks     290  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    parse.extractParaFormat                  checks     107  differences      0  key order only      0  distinct results    25  TypeScript threw 0
+    parse.pPrOnlyFormat                      checks     534  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    parse.resolvedParaFormat                 checks     676  differences     20  key order only      0  distinct results   126  TypeScript threw 0
+    parse.anchorLineOf                       checks      54  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    parse.strayAnchorLine                    checks      54  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    parse.anchoredRuleOverlays               checks      54  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.cellResolverOf                     checks     243  differences     24  key order only      0  distinct results    42  TypeScript threw 0
+    parse.attachInlineContentControls        checks    3305  differences     60  key order only      0  distinct results  3204  TypeScript threw 0
+    parse.extractRuns                        checks     122  differences      4  key order only      0  distinct results    82  TypeScript threw 4
+    parse.buildTextParagraph                 checks     108  differences      4  key order only      0  distinct results    45  TypeScript threw 0
+    parse.standaloneNoteParagraphReader      checks      42  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    parse.tableSummary                       checks     151  differences      0  key order only      0  distinct results    88  TypeScript threw 0
+    parse.tableLacksTcW                      checks      48  differences      0  key order only      0  distinct results     3  TypeScript threw 6
+    parse.rowGridEdges                       checks     505  differences      0  key order only      0  distinct results     5  TypeScript threw 6
+    parse.reconcileGridColumns               checks     287  differences      0  key order only      0  distinct results   228  TypeScript threw 2
+    parse.flattenedTableModel                checks      39  differences      1  key order only      0  distinct results    18  TypeScript threw 3
+    parse.usableTableWidths                  checks     179  differences      0  key order only      0  distinct results    68  TypeScript threw 0
+    parse.isUniformGrid                      checks     207  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.rowRevisionOf                      checks      56  differences      0  key order only      0  distinct results     8  TypeScript threw 9
+    parse.tblLookFlags                       checks     111  differences      0  key order only      0  distinct results     6  TypeScript threw 8
+    parse.cellConds                          checks     884  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    parse.hfMovablePictureFrag               checks      59  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.anchorDocPrIds                     checks      43  differences      0  key order only      0  distinct results     5  TypeScript threw 4
+    parse.hasDeepChildOutside                checks    5253  differences      0  key order only      0  distinct results     3  TypeScript threw 3
+    parse.hfPartInfo                         checks     155  differences      0  key order only      0  distinct results    38  TypeScript threw 0
+    parse.bindHfImageAnchors                 checks     185  differences      0  key order only      0  distinct results    97  TypeScript threw 0
+    parse.stripHfDeletions                   checks     125  differences      0  key order only      0  distinct results   125  TypeScript threw 0
+    parse.hfTblRanges                        checks      63  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    parse.hfCellColumnLeftPx                 checks      43  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    parse.hfOnlyEmptyRuns                    checks      51  differences      0  key order only      0  distinct results     3  TypeScript threw 5
+    parse.hfLine                             checks     159  differences      0  key order only      0  distinct results    21  TypeScript threw 0
+    parse.hfTableFloatOf                     checks      45  differences      0  key order only      0  distinct results    16  TypeScript threw 9
+    parse.withoutResolvedGeometry            checks     175  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    parse.tcwColumnWidths                    checks     177  differences      0  key order only      0  distinct results    52  TypeScript threw 6
+    parse.tablePropExceptionsOf              checks      38  differences      0  key order only      0  distinct results    10  TypeScript threw 9
+    parse.applyRowPropExceptions             checks     261  differences      0  key order only      0  distinct results   218  TypeScript threw 0
+    parse.applyTableStyleDisplay             checks     303  differences      0  key order only      0  distinct results   198  TypeScript threw 12
+    parse.attachRawTablePr                   checks     303  differences      0  key order only      0  distinct results   245  TypeScript threw 0
+    parse.extractTable                       checks     165  differences      0  key order only      0  distinct results   139  TypeScript threw 0
+    parse.extractTableModel                  checks     177  differences      0  key order only      0  distinct results   145  TypeScript threw 8
+    parse.extractCell                        checks    1224  differences      0  key order only      0  distinct results   732  TypeScript threw 6
+    parse.hfEmptyMarkFont                    checks      49  differences      2  key order only      0  distinct results    10  TypeScript threw 3
+    parse.hfParaStyleLayers                  checks     158  differences      0  key order only      0  distinct results    28  TypeScript threw 6
+    parse.hfStyledParaFormat                 checks     159  differences      0  key order only      0  distinct results    30  TypeScript threw 8
+    parse.hfCellBorders                      checks     161  differences      0  key order only      0  distinct results    15  TypeScript threw 33
+    parse.hfVSpanOf                          checks     159  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    parse.hfTableMedia                       checks     130  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.hfCellContent                      checks      54  differences      0  key order only      0  distinct results    30  TypeScript threw 6
+    parse.hfTableRowParagraphs               checks      41  differences      0  key order only      0  distinct results    30  TypeScript threw 5
+    parse.hfParagraphs                       checks     138  differences      3  key order only      0  distinct results    96  TypeScript threw 0
+    parse.hfContentFromXml                   checks     149  differences      1  key order only      0  distinct results   105  TypeScript threw 0
+    parse.readHeaderFooterPart               checks    1200  differences   1168  key order only      0  distinct results    27  TypeScript threw 0
+    parse.parseAllHfParts                    checks     198  differences      1  key order only      0  distinct results    28  TypeScript threw 0
+    parse.hfImages                           checks     128  differences      0  key order only      0  distinct results     1  TypeScript threw 0
+    parse.hfGroupPictures                    checks      38  differences     38  key order only      0  distinct results     1  TypeScript threw 0
+    parse.parseFieldTree                     checks      41  differences      8  key order only      0  distinct results    27  TypeScript threw 0
+    parse.partNamespaces                     checks      38  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    parse.isInlineWrapper                    checks      10  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.inlineWrapPrefixes                 checks     181  differences    114  key order only      0  distinct results     5  TypeScript threw 0
+    parse.validInlineWrap                    checks     243  differences      9  key order only      0  distinct results     2  TypeScript threw 0
+    parse.rawElements                        checks      50  differences      3  key order only      0  distinct results    12  TypeScript threw 0
+    parse.inlineWrapperShell                 checks      60  differences      2  key order only      0  distinct results    25  TypeScript threw 7
+    parse.sameInlineWrap                     checks     157  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.inlineWrapKey                      checks     158  differences      0  key order only      0  distinct results    27  TypeScript threw 0
+    parse.sameInlineWrapChain                checks     156  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.inlineWrapContentLocked            checks     181  differences      3  key order only      0  distinct results     2  TypeScript threw 0
+    parse.inlineWrapWritesOnce               checks     181  differences      3  key order only      0  distinct results     2  TypeScript threw 0
+    parse.sdtFollowsItsText                  checks      65  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.inlineWrapTextOf                   checks     155  differences     11  key order only      0  distinct results    12  TypeScript threw 11
+    parse.sdtOpenForChangedText              checks      36  differences      0  key order only      0  distinct results    33  TypeScript threw 0
+    parse.placeInlineWraps                   checks     160  differences      0  key order only      0  distinct results    93  TypeScript threw 0
+    parse.runCopiedElsewhere                 checks     163  differences      0  key order only      0  distinct results    87  TypeScript threw 0
+    parse.alignedPictureXEmu                 checks    1296  differences      0  key order only      0  distinct results    31  TypeScript threw 0
+    parse.vmlHrRule                          checks      42  differences      0  key order only      0  distinct results    22  TypeScript threw 0
+    parse.txbxParaVisible                    checks     163  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.hasFloatingVmlGeometry             checks      61  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.vmlPictsInlineOnly                 checks      62  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.vmlFlagOff                         checks      14  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.vmlStrokeWeightPx                  checks      17  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    parse.applyVmlMsoPosition                checks     324  differences      0  key order only      0  distinct results    88  TypeScript threw 0
+    parse.readAnchorPos                      checks     572  differences      0  key order only      0  distinct results   200  TypeScript threw 0
+    parse.hfShapeDrawingSvg                  checks      53  differences      0  key order only      0  distinct results    12  TypeScript threw 0
+    parse.vmlLengthPx                        checks      17  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    parse.readBodyPr                         checks     195  differences      0  key order only      0  distinct results    74  TypeScript threw 6
+    parse.rectFrac                           checks      80  differences      0  key order only      0  distinct results    10  TypeScript threw 10
+    parse.picBorderOf                        checks     141  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    parse.groupPictureLayers                 checks     118  differences      0  key order only      0  distinct results     3  TypeScript threw 5
+    parse.picTransformOf                     checks     141  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    parse.vmlImageMeta                       checks      38  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    parse.relPartPath                        checks     198  differences      0  key order only      0  distinct results    17  TypeScript threw 0
+    parse.parseCompatibilityMode             checks      24  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    parse.parseLayoutSettings                checks      24  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    parse.parseNoteProps                     checks     253  differences      0  key order only      0  distinct results    15  TypeScript threw 0
+    parse.parseSettingsFlag                  checks     114  differences      0  key order only      0  distinct results     3  TypeScript threw 5
+    parse.parseSources                       checks       7  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.readThemeFontLang                  checks      13  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    parse.mediaPartSrc                       checks     160  differences      0  key order only      0  distinct results    17  TypeScript threw 105
+    parse.externalTxbxParts                  checks     218  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.extractChart                       checks     204  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    parse.imagePartMime                      checks      89  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    parse.pictureColumnGeom                  checks    1801  differences   1186  key order only      0  distinct results    57  TypeScript threw 0
+    parse.pictureBesideFloatTable            checks    5172  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.pictureOverhangsColumn             checks    1801  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    parse.vmlStrokeChildOff                  checks      41  differences      0  key order only      0  distinct results     3  TypeScript threw 7
+    parse.hasDeepChild                       checks    1646  differences      0  key order only      0  distinct results     3  TypeScript threw 4
+    parse.hasFloatingVmlPicture              checks     104  differences      0  key order only      0  distinct results     3  TypeScript threw 3
+    parse.hfTextBoxOfAnchor                  checks      61  differences      0  key order only      0  distinct results    20  TypeScript threw 5
+    parse.hfTextBoxOfVml                     checks     101  differences      0  key order only      0  distinct results    64  TypeScript threw 5
+    parse.readVmlInset                       checks     220  differences      0  key order only      0  distinct results   102  TypeScript threw 6
+    parse.blipEffectsOf                      checks     143  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    parse.runPictureAnchorOf                 checks     349  differences      0  key order only      0  distinct results   188  TypeScript threw 0
+    parse.imageMeta                          checks    1274  differences      0  key order only      0  distinct results   552  TypeScript threw 0
+    parse.readMediaPartDataUrl               checks     129  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    parse.mediaPartDataUrl                   checks     129  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    parse.mediaDataUrl                       checks     129  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    parse.extractImage                       checks     160  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    parse.resolvePicBullets                  checks       6  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    parse.tableBlipMedia                     checks     125  differences      0  key order only      0  distinct results     5  TypeScript threw 11
+    parse.resolveBlipMedia                   checks     139  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    parse.hasResolvablePicture               checks     135  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    parse.oleDisplay                         checks      46  differences      0  key order only      0  distinct results    15  TypeScript threw 0
+    parse.extractDiagramText                 checks      42  differences     20  key order only      0  distinct results     3  TypeScript threw 0
+    parse.extractLockedCanvas                checks      66  differences     33  key order only      0  distinct results    15  TypeScript threw 0
+    parse.extractDiagramDrawing              checks      66  differences     66  key order only      5  distinct results     3  TypeScript threw 0
+    parse.paragraphStrayBox                  checks      50  differences     28  key order only      0  distinct results     8  TypeScript threw 0
+    parse.textboxParagraphs                  checks     326  differences      0  key order only      0  distinct results    78  TypeScript threw 4
+    parse.txbxTableParas                     checks      42  differences      0  key order only      0  distinct results    16  TypeScript threw 5
+    parse.collectTxbxParas                   checks      72  differences      4  key order only      0  distinct results    42  TypeScript threw 6
+    parse.txbxContentParas                   checks     132  differences      3  key order only      0  distinct results    38  TypeScript threw 6
+    parse.extractTextboxes                   checks     464  differences      2  key order only      0  distinct results   235  TypeScript threw 7
+(f) markers: 15 functions (floor     15); with a single distinct result, so not really compared: 0; never threw in TypeScript: 11 of 15
+    markers.isSymbolFont                     checks     384  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    markers.decodeSymbolChar                 checks    7380  differences      0  key order only      0  distinct results   644  TypeScript threw 0
+    markers.symbolPuaChar                    checks     300  differences      0  key order only      0  distinct results   257  TypeScript threw 0
+    markers.symbolGlyph                      checks    6442  differences      0  key order only      0  distinct results   875  TypeScript threw 0
+    markers.toSymbolPua                      checks     304  differences      0  key order only      0  distinct results   266  TypeScript threw 0
+    markers.decodeSymbolText                 checks   15016  differences      0  key order only      0  distinct results   706  TypeScript threw 0
+    markers.customEnumItems                  checks      44  differences      0  key order only      0  distinct results    26  TypeScript threw 0
+    markers.formatNumber                     checks    4614  differences      0  key order only      0  distinct results  1528  TypeScript threw 0
+    markers.substituteBullet                 checks      74  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    markers.SEGOE_UI_SYMBOL_RE               checks     372  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    markers.markerFallbackFace               checks     637  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    markers.computeListMarkerInfos           checks      93  differences      0  key order only      0  distinct results    44  TypeScript threw 13
+    markers.computeListValues                checks      93  differences      0  key order only      0  distinct results    31  TypeScript threw 9
+    markers.computeListMarkers               checks      93  differences      0  key order only      0  distinct results    44  TypeScript threw 8
+    markers.markerTabAdvance                 checks    3200  differences      0  key order only      0  distinct results    44  TypeScript threw 0
+(f) math: 10 functions (floor     10); with a single distinct result, so not really compared: 0; never threw in TypeScript: 6 of 10
+    math.ommlFragmentsOf                     checks    1286  differences      0  key order only      0  distinct results  1029  TypeScript threw 0
+    math.ommlEndsWithBreak                   checks    1683  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    math.mathTokensOf                        checks    1683  differences      0  key order only      0  distinct results  1509  TypeScript threw 0
+    math.ommlToMathML                        checks    5418  differences      0  key order only      0  distinct results  4754  TypeScript threw 0
+    math.ommlToLatex                         checks    5418  differences      0  key order only      0  distinct results  2530  TypeScript threw 0
+    math.latexToOmml                         checks    3555  differences      0  key order only      0  distinct results  2536  TypeScript threw 804
+    math.mathParagraphXml                    checks     730  differences      0  key order only      0  distinct results   720  TypeScript threw 0
+    math.roundTripFromOmml                   checks    5418  differences      0  key order only      0  distinct results  2453  TypeScript threw 74
+    math.roundTripFromLatex                  checks    3555  differences      0  key order only      0  distinct results  1812  TypeScript threw 809
+    math.mathMLFromLatex                     checks    3555  differences      0  key order only      0  distinct results  2524  TypeScript threw 801
+(f) resolve: 13 functions (floor     13); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 13
+    resolve.constants                        checks       2  differences      0  key order only      0  distinct results     2  TypeScript threw 1
+    resolve.resolveCtxOf                     checks     226  differences      0  key order only      0  distinct results   105  TypeScript threw 1
+    resolve.resolveParagraphProps            checks    3264  differences      0  key order only      0  distinct results   609  TypeScript threw 10
+    resolve.resolveParagraphPropsXml         checks    3264  differences      0  key order only      0  distinct results   606  TypeScript threw 2
+    resolve.resolveRunProps                  checks    3156  differences      0  key order only      0  distinct results   387  TypeScript threw 14
+    resolve.directParaFormat                 checks    3264  differences      0  key order only      0  distinct results   131  TypeScript threw 2
+    resolve.directRunFormat                  checks    3156  differences      0  key order only      0  distinct results   211  TypeScript threw 9
+    resolve.shadowCompare                    checks      39  differences      0  key order only      0  distinct results    37  TypeScript threw 2
+    resolve.autoSpacingTwips                 checks     208  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    resolve.effectiveSpacingTwips            checks    3264  differences      0  key order only      0  distinct results    45  TypeScript threw 2
+    resolve.effectiveLineFormat              checks    1149  differences      0  key order only      0  distinct results    40  TypeScript threw 0
+    resolve.hfLineSources                    checks    3264  differences      0  key order only      0  distinct results     5  TypeScript threw 2
+    resolve.effectiveParaFormat              checks    3264  differences      0  key order only      0  distinct results   275  TypeScript threw 2
+(f) revision: 6 functions (floor      6); with a single distinct result, so not really compared: 0; never threw in TypeScript: 4 of 6
+    revision.countTrackedChangesXml          checks     404  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    revision.applyTrackedChangesXml          checks    1390  differences      0  key order only      0  distinct results   438  TypeScript threw 23
+    revision.applyRevisionResolutions        checks     544  differences      0  key order only      0  distinct results   361  TypeScript threw 53
+    revision.readPropChangeXml               checks     830  differences      0  key order only      0  distinct results    23  TypeScript threw 0
+    revision.resolvePropChangeXml            checks    2430  differences      0  key order only      0  distinct results    89  TypeScript threw 0
+    revision.cleanMoveRangeMarkers           checks     355  differences      0  key order only      0  distinct results   330  TypeScript threw 0
+(f+) save: 1027 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) save: 117 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 2 (save.hasOrphanMoveRanges, save.buildSourcesItemPropsXml); never threw in TypeScript: 63 of 117
+    save.applyPageNumType                    checks      75  differences      0  key order only      0  distinct results    67  TypeScript threw 0
+    save.injectIntoSectPr                    checks      52  differences      0  key order only      0  distinct results    48  TypeScript threw 0
+    save.pageBordersXml                      checks     164  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    save.applySectionSettings                checks     306  differences      0  key order only      0  distinct results   162  TypeScript threw 0
+    save.applySectionStartType               checks      75  differences      0  key order only      0  distinct results    67  TypeScript threw 0
+    save.applyTitlePg                        checks      48  differences      0  key order only      0  distinct results    46  TypeScript threw 0
+    save.buildNotesXml                       checks     228  differences      0  key order only      0  distinct results   118  TypeScript threw 0
+    save.patchHfPicturesXml                  checks     186  differences      0  key order only      0  distinct results    55  TypeScript threw 0
+    save.patchRunPictureXml                  checks     240  differences      0  key order only      0  distinct results    80  TypeScript threw 0
+    save.usableNumber                        checks     186  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    save.usablePictureSize                   checks     210  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    save.usablePositionOffset                checks     174  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    save.nextFreeRelId                       checks      35  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    save.occupiedRelIds                      checks      35  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    save.missingHeadingLevels                checks     174  differences      0  key order only      0  distinct results    12  TypeScript threw 0
+    save.usableNewImage                      checks     155  differences     34  key order only     33  distinct results    58  TypeScript threw 0
+    save.saveBlockDocxIndex                  checks       8  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    save.replaceAbstractNumLevel             checks     276  differences      0  key order only      0  distinct results    55  TypeScript threw 0
+    save.patchCoreProps                      checks      46  differences     32  key order only      0  distinct results    11  TypeScript threw 0
+    save.defaultParagraphStyleId             checks     154  differences      3  key order only      0  distinct results     4  TypeScript threw 0
+    save.insertBeforeClosingTag              checks      40  differences      0  key order only      0  distinct results    40  TypeScript threw 0
+    save.markParagraphRevision               checks      48  differences      0  key order only      0  distinct results    46  TypeScript threw 0
+    save.fillRevisionIds                     checks      39  differences      0  key order only      0  distinct results    35  TypeScript threw 0
+    save.maxBookmarkId                       checks      34  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    save.maxRelId                            checks      36  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    save.maxDocPrId                          checks      34  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    save.nextImageSeq                        checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    save.nextDocPrSeq                        checks      39  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    save.retargetImageBlip                   checks      40  differences      0  key order only      0  distinct results    37  TypeScript threw 0
+    save.carriesMoveRanges                   checks      10  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    save.hasOrphanMoveRanges                 checks       3  differences      0  key order only      0  distinct results     1  TypeScript threw 0
+    save.cleanStoryMoveRanges                checks       2  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    save.nextRevisionIdAllocator             checks       9  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    save.nextBookmarkIdAllocator             checks      33  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    save.storyPartsXml                       checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    save.settingsChildRank                   checks      11  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    save.insertSettingsChild                 checks     332  differences      0  key order only      0  distinct results   165  TypeScript threw 0
+    save.applySettingsFlag                   checks     348  differences      0  key order only      0  distinct results   130  TypeScript threw 0
+    save.applyEvenAndOddHeaders              checks     220  differences      0  key order only      0  distinct results    75  TypeScript threw 0
+    save.applyPageColor                      checks     261  differences      0  key order only      0  distinct results   226  TypeScript threw 0
+    save.applyProtection                     checks     332  differences      0  key order only      0  distinct results   154  TypeScript threw 0
+    save.applyWriteProtection                checks     316  differences      0  key order only      0  distinct results   115  TypeScript threw 0
+    save.applyRemovePersonalInfo             checks     220  differences      0  key order only      0  distinct results    76  TypeScript threw 0
+    save.opaqueMarkupEnd                     checks      13  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    save.xmlTagEnd                           checks       5  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    save.namespacePrefixes                   checks     268  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    save.mapXmlStartTags                     checks      78  differences      0  key order only      0  distinct results    71  TypeScript threw 0
+    save.replaceQualifiedAttributes          checks      74  differences      0  key order only      0  distinct results    51  TypeScript threw 0
+    save.replaceUnqualifiedAttributes        checks      63  differences      0  key order only      0  distinct results    44  TypeScript threw 0
+    save.clearQualifiedElements              checks      72  differences      0  key order only      0  distinct results    47  TypeScript threw 0
+    save.scrubWordprocessingMetadata         checks     336  differences      0  key order only      0  distinct results   311  TypeScript threw 0
+    save.scrubPeopleMetadata                 checks      42  differences      0  key order only      0  distinct results    40  TypeScript threw 0
+    save.scrubPersonalMetadata               checks     206  differences      0  key order only      0  distinct results   197  TypeScript threw 0
+    save.regexEscape                         checks       9  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    save.headerFooterPartXml                 checks     593  differences     10  key order only      0  distinct results   275  TypeScript threw 0
+    save.withWatermarkNs                     checks      38  differences      0  key order only      0  distinct results    37  TypeScript threw 0
+    save.hfOriginalXml                       checks      97  differences      4  key order only      0  distinct results    90  TypeScript threw 0
+    save.patchWatermarkInPart                checks     145  differences      0  key order only      0  distinct results   119  TypeScript threw 0
+    save.removeHfReference                   checks     269  differences      0  key order only      0  distinct results   224  TypeScript threw 0
+    save.buildCommentsXml                    checks     224  differences      0  key order only      0  distinct results   120  TypeScript threw 0
+    save.buildCommentsExtendedXml            checks     160  differences      0  key order only      0  distinct results    26  TypeScript threw 0
+    save.commentPlainText                    checks      40  differences      0  key order only      0  distinct results    18  TypeScript threw 0
+    save.removeDeletedCommentMarkers         checks     666  differences      0  key order only      0  distinct results   225  TypeScript threw 0
+    save.mergeStyleXml                       checks    1148  differences      0  key order only      0  distinct results   363  TypeScript threw 4
+    save.upsertStyleXml                      checks     502  differences      0  key order only      0  distinct results   236  TypeScript threw 1
+    save.mergeDefaultFontsXml                checks     436  differences      0  key order only      0  distinct results   182  TypeScript threw 25
+    save.builtInHeadingStyleUpsert           checks      68  differences     68  key order only     68  distinct results    24  TypeScript threw 0
+    save.pendingHeadingLevel                 checks     166  differences     87  key order only      0  distinct results     7  TypeScript threw 0
+    save.planRemoveParts                     checks     621  differences      0  key order only      0  distinct results    44  TypeScript threw 0
+    save.applyRemoveParts                    checks     421  differences      0  key order only      0  distinct results   308  TypeScript threw 31
+    save.removePartsRefusalMessage           checks     153  differences      0  key order only      0  distinct results    43  TypeScript threw 0
+    save.removePartsRefusalMessageFor        checks     154  differences      0  key order only      0  distinct results    55  TypeScript threw 0
+    save.referencedRelationshipIds           checks     736  differences      0  key order only      0  distinct results    27  TypeScript threw 0
+    save.cleanupDocxOwnedResources           checks     418  differences      0  key order only      0  distinct results   205  TypeScript threw 0
+    save.readZipEntries                      checks      24  differences      0  key order only      0  distinct results    11  TypeScript threw 13
+    save.writeZip                            checks       4  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    save.slimDocx                            checks      39  differences      0  key order only      0  distinct results     9  TypeScript threw 2
+    save.lazyMediaHashesIn                   checks      24  differences      0  key order only      0  distinct results     3  TypeScript threw 13
+    save.materializeDocx                     checks       9  differences      0  key order only      0  distinct results     6  TypeScript threw 4
+    save.parseLazyMediaUrl                   checks      44  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    save.revisionDateBefore                  checks      84  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    save.compareBlocks                       checks    1850  differences      3  key order only      1  distinct results   604  TypeScript threw 0
+    save.splitInstruction                    checks      75  differences      0  key order only      0  distinct results    72  TypeScript threw 0
+    save.mergeFieldName                      checks      75  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    save.placeholderText                     checks      34  differences      0  key order only      0  distinct results    26  TypeScript threw 0
+    save.mergeFieldInstruction               checks      35  differences      0  key order only      0  distinct results    27  TypeScript threw 0
+    save.mergeOutputFileName                 checks     285  differences      1  key order only      0  distinct results    48  TypeScript threw 0
+    save.mergeFieldSwitches                  checks      75  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    save.mergeFieldText                      checks     255  differences      0  key order only      0  distinct results    19  TypeScript threw 0
+    save.valueOf                             checks      65  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    save.compareOperands                     checks     810  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    save.conditionHolds                      checks     255  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    save.ifBranch                            checks     255  differences      0  key order only      0  distinct results    37  TypeScript threw 0
+    save.controlEffect                       checks     255  differences      0  key order only      0  distinct results    29  TypeScript threw 0
+    save.mergeRecords                        checks     222  differences     20  key order only      0  distinct results   193  TypeScript threw 0
+    save.mergeBlockTree                      checks     214  differences      8  key order only      0  distinct results   190  TypeScript threw 0
+    save.mergeDataFromRows                   checks       5  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    save.buildContentControlXml              checks     158  differences      0  key order only      0  distinct results    49  TypeScript threw 0
+    save.nextContentControlId                checks     239  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    save.isContentControlLock                checks      11  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    save.patchZoteroDocumentDataXml          checks      80  differences      0  key order only      0  distinct results    71  TypeScript threw 0
+    save.patchCorePropertiesXml              checks     236  differences      0  key order only      0  distinct results   109  TypeScript threw 0
+    save.patchAppPropertiesXml               checks     228  differences      0  key order only      0  distinct results    92  TypeScript threw 0
+    save.patchCustomPropertiesXml            checks     210  differences      0  key order only      0  distinct results   123  TypeScript threw 0
+    save.parsePropertyChanges                checks     173  differences      0  key order only      0  distinct results    28  TypeScript threw 113
+    save.applyPropertyChanges                checks     388  differences      0  key order only      0  distinct results   157  TypeScript threw 0
+    save.buildChartPartXml                   checks     174  differences      0  key order only      0  distinct results   130  TypeScript threw 0
+    save.patchChartPartXml                   checks     250  differences      0  key order only      0  distinct results    96  TypeScript threw 0
+    save.buildChartWorkbookXlsxBase64        checks     154  differences      0  key order only      0  distinct results   121  TypeScript threw 0
+    save.patchChartWorkbookXlsxBase64        checks      19  differences      0  key order only      0  distinct results    17  TypeScript threw 0
+    save.buildSourcesXml                     checks     213  differences      0  key order only      0  distinct results   110  TypeScript threw 0
+    save.buildSourcesItemPropsXml            checks       1  differences      0  key order only      0  distinct results     1  TypeScript threw 0
+    save.applyThemeFonts                     checks     226  differences      0  key order only      0  distinct results   132  TypeScript threw 0
+    save.applyThemeColors                    checks     221  differences      0  key order only      0  distinct results    68  TypeScript threw 0
+    save.buildThemeXml                       checks     175  differences      0  key order only      0  distinct results    82  TypeScript threw 0
+    save.watermarkParagraphXml               checks     160  differences      0  key order only      0  distinct results    73  TypeScript threw 0
+    save.pictureWatermarkParagraphXml        checks     210  differences      0  key order only      0  distinct results    61  TypeScript threw 0
+(f) section: 33 functions (floor     33); with a single distinct result, so not really compared: 0; never threw in TypeScript: 23 of 33
+    section.sectionSettingsFromXml           checks    1109  differences      0  key order only      0  distinct results   180  TypeScript threw 0
+    section.notePropsFromXml                 checks    1824  differences      0  key order only      0  distinct results    18  TypeScript threw 0
+    section.lineNumberingOf                  checks     724  differences      0  key order only      0  distinct results    17  TypeScript threw 0
+    section.readSectionSettings              checks     224  differences      0  key order only      0  distinct results    38  TypeScript threw 0
+    section.xmlFlagOn                        checks    2670  differences      0  key order only      0  distinct results     3  TypeScript threw 393
+    section.hfReferenceTags                  checks    1418  differences      0  key order only      0  distinct results    35  TypeScript threw 0
+    section.hfReferenceType                  checks     127  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    section.hfReferenceRId                   checks     127  differences      0  key order only      0  distinct results    32  TypeScript threw 0
+    section.sectionFromSectPr                checks    1109  differences      0  key order only      0  distinct results   911  TypeScript threw 0
+    section.readSections                     checks     224  differences      0  key order only      0  distinct results   115  TypeScript threw 0
+    section.readPageColor                    checks     243  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    section.readWatermarkText                checks     275  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    section.readWatermarkShape               checks     186  differences      0  key order only      0  distinct results    34  TypeScript threw 0
+    section.isPictureWatermark               checks       7  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    section.isWatermarkChild                 checks     451  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    section.isPictureWatermarkShape          checks     275  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    section.readPictureWatermark             checks     275  differences      0  key order only      0  distinct results    15  TypeScript threw 0
+    section.pictureWatermarkPreviewImage     checks      32  differences      0  key order only      0  distinct results    12  TypeScript threw 0
+    section.textWatermarkBoxPt               checks       7  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    section.textWatermarkPreviewImage        checks       7  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    section.pictureWatermarkBoxPt            checks      32  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    section.vmlLengthPx                      checks      69  differences      0  key order only      0  distinct results    34  TypeScript threw 0
+    section.vmlStyleProp                     checks     171  differences      0  key order only      0  distinct results    51  TypeScript threw 13
+    section.vmlStyleDimPx                    checks      96  differences      0  key order only      0  distinct results    31  TypeScript threw 0
+    section.vmlRotationDeg                   checks      59  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    section.anchorRelH                       checks      50  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    section.anchorRelV                       checks      50  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    section.vmlFloatAnchor                   checks      69  differences      0  key order only      0  distinct results    24  TypeScript threw 0
+    section.vmlFraction                      checks      40  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    section.vmlColorHex                      checks      53  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    section.parseNotesXml                    checks      48  differences      0  key order only      0  distinct results    26  TypeScript threw 0
+    section.nextNoteId                       checks      48  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    section.rootAttributes                   checks     141  differences      0  key order only      0  distinct results    15  TypeScript threw 22
+(f) vml: 10 functions (floor     10); with a single distinct result, so not really compared: 0; never threw in TypeScript: 7 of 10
+    vml.constants                            checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 1
+    vml.VML_WORDART_RE                       checks      59  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    vml.VML_PICT_RID_RE                      checks      59  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    vml.vmlGroupScale                        checks     120  differences      0  key order only      0  distinct results    12  TypeScript threw 29
+    vml.vmlCoordPx                           checks     102  differences      0  key order only      0  distinct results    31  TypeScript threw 0
+    vml.vmlPathToNormD                       checks     310  differences      0  key order only      0  distinct results    75  TypeScript threw 0
+    vml.vmlShapeDimPx                        checks     166  differences      0  key order only      0  distinct results    43  TypeScript threw 0
+    vml.vmlShapeTypeTable                    checks      43  differences      0  key order only      0  distinct results    28  TypeScript threw 0
+    vml.vmlShapeSvg                          checks     419  differences      0  key order only      0  distinct results   161  TypeScript threw 0
+    vml.vmlWordArtBox                        checks     194  differences      0  key order only      0  distinct results   121  TypeScript threw 6
+(f) xmltag: 2 functions (floor      2); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 2
+    xmltag.findStartTag                      checks    2169  differences      0  key order only      0  distinct results   204  TypeScript threw 0
+    xmltag.removeElements                    checks      90  differences      0  key order only      0  distinct results    53  TypeScript threw 0
+(f+) genRpr: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) genRpr: 1 functions (floor      1); with a single distinct result, so not really compared: 0; never threw in TypeScript: 1 of 1
+    genRpr.mergeRPrModel                     checks   18902  differences      0  key order only      0  distinct results  3008  TypeScript threw 0
+(f+) genProps: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) genProps: 11 functions (floor     11); with a single distinct result, so not really compared: 0; never threw in TypeScript: 10 of 11
+    genProps.mergePPrFormat                  checks   20206  differences      0  key order only      0  distinct results  4486  TypeScript threw 0
+    genProps.mergeCellParaFormat             checks   23910  differences      0  key order only      0  distinct results  3455  TypeScript threw 0
+    genProps.paraMarkColor                   checks     748  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    genProps.stripParaMarkColor              checks     748  differences      0  key order only      0  distinct results   498  TypeScript threw 0
+    genProps.paraMarkRevisionXml             checks      58  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    genProps.setParaMarkRevision             checks     862  differences      0  key order only      0  distinct results   634  TypeScript threw 0
+    genProps.stripParaMarkRevision           checks    1466  differences      0  key order only      0  distinct results   502  TypeScript threw 0
+    genProps.resolveParaMarkRPrChange        checks    1466  differences      0  key order only      0  distinct results   500  TypeScript threw 0
+    genProps.stripPPrChange                  checks     748  differences      0  key order only      0  distinct results   499  TypeScript threw 0
+    genProps.setPPrChange                    checks     940  differences      0  key order only      0  distinct results   672  TypeScript threw 18
+    genProps.splitXmlChildren                checks     751  differences      0  key order only      0  distinct results   491  TypeScript threw 0
+(f+) genDrawing: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) genDrawing: 12 functions (floor     12); with a single distinct result, so not really compared: 0; never threw in TypeScript: 12 of 12
+    genDrawing.patchImageParagraphXml        checks    1548  differences      0  key order only      0  distinct results   769  TypeScript threw 0
+    genDrawing.applyImageZOrder              checks     451  differences      0  key order only      0  distinct results   292  TypeScript threw 0
+    genDrawing.applyImageWrap                checks     783  differences      0  key order only      0  distinct results   505  TypeScript threw 0
+    genDrawing.applyShapeZOrderAt            checks     426  differences      0  key order only      0  distinct results   179  TypeScript threw 0
+    genDrawing.applyShapeWrapAt              checks     733  differences      0  key order only      0  distinct results   221  TypeScript threw 0
+    genDrawing.swapAnchorWrap                checks     511  differences      0  key order only      0  distinct results   333  TypeScript threw 0
+    genDrawing.patchTextboxHeights           checks     477  differences      0  key order only      0  distinct results   212  TypeScript threw 0
+    genDrawing.patchTextboxSizes             checks     483  differences      0  key order only      0  distinct results   241  TypeScript threw 0
+    genDrawing.patchShapeStyles              checks     630  differences      0  key order only      0  distinct results   264  TypeScript threw 0
+    genDrawing.patchDrawingExtent            checks     421  differences      0  key order only      0  distinct results   350  TypeScript threw 0
+    genDrawing.resizeInlinePictureXml        checks     482  differences      0  key order only      0  distinct results   179  TypeScript threw 0
+    genDrawing.resizeAnchoredPictureXml      checks     482  differences      0  key order only      0  distinct results   292  TypeScript threw 0
+(f+) genDrawingBuild: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) genDrawingBuild: 7 functions (floor      7); with a single distinct result, so not really compared: 0; never threw in TypeScript: 1 of 7
+    genDrawingBuild.LINE_KINDS               checks      39  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    genDrawingBuild.buildLineParagraphXml    checks     231  differences      0  key order only      0  distinct results   144  TypeScript threw 58
+    genDrawingBuild.inlinePictureDrawingXml  checks     234  differences      0  key order only      0  distinct results   149  TypeScript threw 54
+    genDrawingBuild.buildTextboxParagraphXml checks     197  differences      0  key order only      0  distinct results   134  TypeScript threw 26
+    genDrawingBuild.buildAnchoredTextboxParagraphXml checks     207  differences      0  key order only      0  distinct results   130  TypeScript threw 56
+    genDrawingBuild.buildShapeParagraphXml   checks     225  differences      0  key order only      0  distinct results   154  TypeScript threw 56
+    genDrawingBuild.buildWordArtParagraphXml checks     225  differences      0  key order only      0  distinct results   144  TypeScript threw 52
+(f+) genText: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) genText: 5 functions (floor      5); with a single distinct result, so not really compared: 0; never threw in TypeScript: 5 of 5
+    genText.xmlSegments                      checks    3880  differences      0  key order only      0  distinct results  1612  TypeScript threw 0
+    genText.patchFieldParagraphXml           checks     282  differences      0  key order only      0  distinct results   178  TypeScript threw 0
+    genText.patchMathTokens                  checks     202  differences      0  key order only      0  distinct results    61  TypeScript threw 0
+    genText.patchTableCellTexts              checks     520  differences      0  key order only      0  distinct results   400  TypeScript threw 0
+    genText.patchTextboxParas                checks     302  differences      0  key order only      0  distinct results   125  TypeScript threw 0
+(f+) genTable: 24 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) genTable: 2 functions (floor      2); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 2
+    genTable.generateTableModelXml           checks    1302  differences      0  key order only      0  distinct results   344  TypeScript threw 17
+    genTable.generateTableXml                checks     168  differences      0  key order only      0  distinct results    37  TypeScript threw 0
+(f+) genFields: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) genFields: 3 functions (floor      3); with a single distinct result, so not really compared: 0; never threw in TypeScript: 1 of 3
+    genFields.generateTocFieldXml            checks     358  differences      0  key order only      0  distinct results   133  TypeScript threw 0
+    genFields.generateCaptionXml             checks    1038  differences      0  key order only      0  distinct results   795  TypeScript threw 0
+    genFields.generateIndexFieldXml          checks     423  differences      0  key order only      0  distinct results   257  TypeScript threw 18
+(f+) genRuns: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) genRuns: 1 functions (floor      1); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 1
+    genRuns.inlineRunsXml                    checks    5826  differences      0  key order only      0  distinct results  3240  TypeScript threw 0
+(f+) genParagraph: 27 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) genParagraph: 1 functions (floor      1); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 1
+    genParagraph.generateParagraphXml        checks    6981  differences      0  key order only      0  distinct results  2008  TypeScript threw 0
+(f) listed class custgeom-inherited-guide: 2 inputs, 0 differ as listed and are not counted above
+(h) fields: 1021/1680 from parser results; 0 below field floors; 0 schema refusals; built document refusals 2 (floor      2)
+(g) raw zip fields that differ between the two writers, each following from the deflate stream: local.compressedSize 13066, local.data 13523, central.compressedSize 13066, central.localHeaderOffset 17690, end.directoryOffset 1693
+offsets: 80 of 203 main parts hold non-ASCII text, where a byte offset is not a string index (floor     72)
+hosts without Buffer: JSZip would decode 19 of 1398 corpus entries differently; 0 of them are .xml or .rels
+divergences.json: 7 listed, 3 no longer reproduce
+    - custgeom-inherited-guide: typescript now gives {"value":"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200%200.01%20L%200%200%20C%200%200%200%200.01%200%200.01%20L%200%200.01%22%20fill%3D%22%231f497d%22%2F%3E%3C%2Fsvg%3E"}, listed {"value":"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%20NaN%20NaN%20L%20NaN%20NaN%20L%20NaN%200.01%22%20fill%3D%22%231f497d%22%2F%3E%3C%2Fsvg%3E"}
+    - custgeom-inherited-guide: both sides now agree
+    - custgeom-inherited-guide: none of the 2 inputs of the class differs

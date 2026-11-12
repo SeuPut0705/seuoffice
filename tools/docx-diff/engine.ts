@@ -42,6 +42,9 @@ const collatorOf = (locale: string): Intl.Collator | null => {
 }
 
 export class Engine {
+  /** Megabytes of wasm memory last reported; the memory never shrinks. */
+  private reportedMegabytes = 256
+
   private constructor(private readonly exports: EngineExports) {}
 
   static load(wasmPath: string): Engine {
@@ -66,6 +69,8 @@ export class Engine {
             decoder.decode(new Uint8Array(buffer, b, bLength)),
           )
         },
+        // the gate's calls register no callback: every slot answers "none"
+        host_callback: (): bigint => 0xffff_ffff_ffff_ffffn,
       },
     })
     const exports = instance.exports as unknown as EngineExports
@@ -96,6 +101,12 @@ export class Engine {
     seu_free(request, size)
     const pointer = Number(packed >> 32n)
     const length = Number(packed & 0xffff_ffffn)
+    const megabytes = memory.buffer.byteLength / 2 ** 20
+    if (megabytes >= this.reportedMegabytes + 256) {
+      this.reportedMegabytes = megabytes
+      const name = (command as { cmd?: unknown; fn?: unknown }).fn ?? (command as { cmd?: unknown }).cmd
+      console.error(`(memory) ${megabytes.toFixed(0)} MB after ${String(name)}, request ${size} bytes`)
+    }
     // the call may have grown the memory: take the buffer again
     const reply = new Uint8Array(memory.buffer, pointer, length).slice()
     seu_free(pointer, length)
