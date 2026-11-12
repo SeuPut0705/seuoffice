@@ -18,6 +18,8 @@ A session that picks this work up starts at
 | `ooxml-pkg`          | A docx as `loadDocxZip` opens it: the zip gate, the JSZip reader, Strict normalization, `Package`; the zip as JSZip writes it (`write`)                                                                                                                                | `zip-load.ts`, `packages/zip-gate`, JSZip 3.10.1, `ooxml-normalize.ts`                                                                                                                                                                                                                                                                                                                                                                        |
 | `docx-engine`        | Body scan, property readers, relationships, content types, theme, font table, styles, numbering, comments, protection and its hash, document properties, sources, sections, watermarks, notes, fields, EQ fields, SDTs, list markers, symbol fonts, the blank document | `scan.ts`, `parse-props.ts`, `parse-xml-text.ts`, `parse-package.ts`, `theme.ts`, `font-table.ts`, `parse-styles.ts`, parts of `parse.ts`; the read side of `doc-properties.ts`, `zotero-doc-props.ts`, `sources.ts`, `protection.ts`, `section.ts`, `watermark.ts`, `notes.ts`; `parse-fields.ts` without what needs `resolve-props.ts`, `eq-field.ts`, `parse-sdt.ts`, `field-balance.ts`, `list-markers.ts`, `symbol-fonts.ts`, `blank.ts` |
 | `omml`               | Office Math: OMML to LaTeX and to MathML, LaTeX to OMML. Depends on no engine                                                                                                                                                                                          | `math.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `file-parse`         | Attachment readers: docx, pptx and xlsx as text, the Markdown and slide redactors, the zip text copy, a bounded compound file reader, relationship targets, attachable extensions, spreadsheet date formats                                                            | `packages/file-parse`: `docx.ts`, `pptx.ts`, `xlsx.ts`, `markdown-redaction.ts`, `pptx-redaction.ts`, `zip-text-parts.ts`, `opc.ts`, `attachable.ts`, `xlsx-dates.ts`; the reading of `cfb`                                                                                                                                                                                                                                                   |
+| `epub-engine`        | The EPUB functions that take values and typed trees: paths, font obfuscation, SHA-1, entry encodings, replacement ranges, the vertical writing test, container, encryption, package, nav and NCX readers                                                               | `packages/epub-engine`: `paths.ts`, `fonts.ts`, `sha1.ts`, `encoding.ts`, `ranges.ts`, `writing-mode.ts`; the tree readers of `open.ts`, `package.ts` and `toc.ts`                                                                                                                                                                                                                                                                            |
 | `office-wasm`        | The one entry point JavaScript calls, built for `wasm32-wasip1`                                                                                                                                                                                                        | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `spike-one-run-save` | An experiment, not part of the engine: see its README                                                                                                                                                                                                                  | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
@@ -72,6 +74,15 @@ are the ones that bit, each with an input where the two disagree:
 `regress` walks UTF-8 characters where JavaScript without the `u` flag walks
 UTF-16 code units. It shows only in a pattern that counts characters outside
 the BMP (`.{2}`); no ported pattern does.
+
+Under `i` without `u` JavaScript never matches a character outside ASCII as an
+ASCII letter; `regress` does for U+0131 (`i`), U+017F (`s`) and U+212A (`k` in
+a class, and `\w`). `JsRegex` searches a copy of the text without those three,
+so a pattern that names only ASCII is copied as it is. A pattern that names a
+cased character outside ASCII under `i` without `u` does not build
+(`/\u0131/i` matches `I` in `regress`): `JsRegex::new` returns an error, and
+`jscompat/tests/icase.rs` reads every site of the workspace so that no literal
+one reaches that error at run time. Its 161 expected answers are Node 22's.
 
 Sizes and offsets read from a file are `u64` or `i64`, never `usize`: the wasm
 target is 32-bit and sums of 32-bit fields wrap.
@@ -215,6 +226,84 @@ that is the price, so a class stays narrow and goes with its entry when the
 TypeScript is fixed. The gate fails on a class without an entry and on a
 class none of whose inputs differs any more. The gate runs in UTC
 (`host.ts`); an entry with `zone` runs its TypeScript side in that zone.
+
+## The other gates: tools/fileparse-diff and tools/epub-diff
+
+`file-parse` and `epub-engine` have a gate each, built on one runner
+(`tools/fileparse-diff/runner.ts`) that imports the engine, the comparison and
+the key-order check of `tools/docx-diff`. Nothing in the product calls either
+crate.
+
+```
+npm --prefix tools/fileparse-diff run gate      # build the wasm, compare, exit 1 on any failure
+npm --prefix tools/fileparse-diff run compare -- --group xlsx --save out/x.json
+npm --prefix tools/fileparse-diff run faults    # every fault of faults.json, in a scratch copy of crates/
+npm --prefix tools/epub-diff run gate
+npm --prefix tools/epub-diff run faults
+```
+
+A function is one `Spec` in a `*-cases.ts` file: the TypeScript reference, the
+inputs built for it, and how its inputs are mutated. The runner compares three
+populations per function, each with a floor in `floors.json`:
+
+- **corpus**: every tracked file with one of the spec's extensions.
+- **built**: the inputs the spec builds, hostile ones included.
+- **mutated**: 100 seeded mutants of the corpus and built inputs, one seed per
+  function. An input the ledger lists seeds none.
+
+It fails on a difference that is not listed, a key order that differs, a
+missing or unknown floor, a function with fewer than two distinct TypeScript
+results, a ledger entry that no longer reproduces, and any input where a
+reader did not answer (a trap, a host error, a child that died or timed out).
+An error is compared as its name and message; the message is compared up to
+`cannot be inflated:`, as in `tools/docx-diff`.
+
+What is particular to these gates:
+
+- **Every reader of bytes goes through the zip gate before it opens the
+  archive** (`ooxml_pkg::load_zip_package`, or `assert_zip_inflates_within_limits`
+  for the copy). The TypeScript `readZipTextParts` has no gate, so it is
+  compared twice: the bare export over built inputs, each difference listed,
+  and the TypeScript gate followed by the copy (`gatedReadZipTextParts`) over
+  corpus, built and mutated inputs, with no difference.
+- **A compound file is read with bounds.** `file_parse::compound` follows what
+  `cfb` reads, and refuses a FAT, MiniFAT or DIFAT chain that returns to a
+  sector, links that do not end, and streams that hold more than the file.
+  Every compound input, and every hostile zip, runs in a child process with a
+  30 second limit: `cfb` never returns from some cycles. The cycles `cfb`
+  never leaves are built only by the tests of `compound.rs` and never reach
+  `CFB.read`.
+- **`faults.json`** names one replacement in one source file per fault. The
+  fault runner applies each in a copy of `crates/` under `out/`, rebuilds, and
+  runs the fault's group: DETECTED when the gate fails with a difference or a
+  stale ledger entry, otherwise MISSED, INVALID, CRASHED or TIMEOUT. A source
+  line that `cargo fmt` rewraps makes its fault INVALID, so check the file
+  after formatting.
+- **First runs** are kept in `evidence/`, untouched; those above 200 KB are
+  gzip-compressed. `decisions.tsv` is the trail.
+
+Not ported, each for the parser or library it needs:
+
+- `file-parse`: `html-redaction.ts` (parse5), `pdf.ts`, `hwp.ts`, `doc.ts` and
+  `ppt.ts` (their extractors; only the compound reader under them is here),
+  `odt.ts`, `xmind.ts`, `diagram.ts`, `epub.ts`, the dispatcher `parse.ts`,
+  CSV decoding.
+- `epub-engine`: everything that parses text with saxes or parse5
+  (`parseXml`, `parseHtml`, `openEpub`, chapter text, blocks, notation, edits,
+  save, `buildToc`) and `translate/`. The tree readers here take the tree the
+  TypeScript parser gives, so the parsers themselves are not compared.
+
+Open on these crates:
+
+- `xlsxToText` withholds the cells marked hidden from the model, as upstream
+  `9fd49c8fb` does; the TypeScript of this branch does not yet, so 43 inputs
+  are listed. When that fix arrives: delete those entries, and follow the
+  later upstream change of `xlsx-dates.ts` (a serial past 2958465 gives no
+  date), which `xlsx_dates.rs` does not have.
+- `xlsx.rs` holds a copy of the fast-xml-parser dialect of `pptx.rs` (`mod
+  fxp`); the two should share one module.
+- `office-wasm` maps an error to its JavaScript name by the start of its
+  message (`file_parse.rs`). A typed error from the readers would replace it.
 
 ## Known debt
 
