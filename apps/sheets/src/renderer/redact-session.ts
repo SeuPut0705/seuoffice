@@ -20,13 +20,32 @@ import {
   type RedactionIndex,
   type SheetRefLike,
 } from './ai/redact'
-import type { EditJournal } from './edit-journal'
+import { resolveDuplicateSource, type EditJournal } from './edit-journal'
 import type { MarkKey } from './redact-actions'
 import { shiftMarksThroughOps } from './redact-marks-shift'
 import { screenToFile } from './view-transform'
 
-/** The slice of the edit journal the marks follow. */
-export type MarkJournal = Pick<EditJournal, 'structuralOps' | 'sheets'>
+/**
+ * The file sheet whose part a copy made this session will be cloned from
+ * (through copies of copies), for every copy still on screen.
+ *
+ * A copy holds its source's values, so it answers with its source's marks: the
+ * marks the store holds for the source now, moved through the copy's own row
+ * and column ops (the journal hands a copy its source's pending ops when it is
+ * made, and records the copy's later ones). That is exactly what the save
+ * writes for it — the gateway gives a sheet added as a copy the marks of
+ * `sourceSheetName`, shifted by the ops addressed to the copy — so the store
+ * never holds an entry for a copy, and the save cannot apply one twice.
+ */
+function unsavedCopies(journal: EditJournal): { copyId: string; sourceId: string }[] {
+  const copies: { copyId: string; sourceId: string }[] = []
+  for (const [copyId, added] of journal.sheets.added) {
+    if (added.sourceSheetId === undefined || journal.sheets.removed.has(copyId)) continue
+    const sourceId = resolveDuplicateSource(journal, copyId)
+    if (sourceId !== undefined) copies.push({ copyId, sourceId })
+  }
+  return copies
+}
 
 /**
  * The index every reader asks, for the session as it stands now.
@@ -37,7 +56,7 @@ export type MarkJournal = Pick<EditJournal, 'structuralOps' | 'sheets'>
 export function sessionRedactionIndex(
   states: readonly SheetRedactionState[],
   fileSheets: readonly SheetRefLike[],
-  journal: MarkJournal,
+  journal: EditJournal,
 ): RedactionIndex {
   const marksByFileName = new Map<string, readonly CellMark[]>()
   for (const state of states) {
@@ -47,12 +66,19 @@ export function sessionRedactionIndex(
     ])
   }
   const onScreen = new Map<string, CellMark[]>()
+  const place = (sheetId: string, fileName: string | undefined): void => {
+    const marks = fileName === undefined ? undefined : marksByFileName.get(fileName)
+    if (!marks || marks.length === 0) return
+    const placed = shiftMarksThroughOps(marks, journal.structuralOps.get(sheetId) ?? [])
+    if (placed.length > 0) onScreen.set(sheetId, placed)
+  }
+  const fileNameById = new Map(fileSheets.map((sheet) => [sheet.id, sheet.name]))
   for (const sheet of fileSheets) {
-    if (journal.sheets.removed.has(sheet.id)) continue
-    const marks = marksByFileName.get(sheet.name)
-    if (!marks || marks.length === 0) continue
-    const placed = shiftMarksThroughOps(marks, journal.structuralOps.get(sheet.id) ?? [])
-    if (placed.length > 0) onScreen.set(sheet.id, placed)
+    if (!journal.sheets.removed.has(sheet.id)) place(sheet.id, sheet.name)
+  }
+  // A deleted source still hands its marks to the copies made from it.
+  for (const { copyId, sourceId } of unsavedCopies(journal)) {
+    place(copyId, fileNameById.get(sourceId))
   }
   return redactionIndexBySheetId(onScreen)
 }
@@ -66,19 +92,26 @@ export function sessionRedactionIndex(
  * shifts them). A row or a sheet created this session has neither, so the
  * person is asked to save first rather than handed a mark the save would
  * misplace.
+ *
+ * A sheet with a copy that is not in the file yet waits for the save too: the
+ * copy answers with this sheet's marks, so showing a cell here would show the
+ * same value on the copy, where the person never asked for it.
  */
 export type MarkPlace =
   | { readonly ok: true; readonly sheetName: string; readonly area: MarkKey }
-  | { readonly ok: false; readonly reason: 'unsaved-row' | 'unsaved-sheet' }
+  | { readonly ok: false; readonly reason: 'unsaved-row' | 'unsaved-sheet' | 'unsaved-copy' }
 
 export function markPlaceInFile(
   fileSheets: readonly SheetRefLike[],
-  journal: MarkJournal,
+  journal: EditJournal,
   sheetId: string,
   screen: MarkKey,
 ): MarkPlace {
   const sheet = fileSheets.find((candidate) => candidate.id === sheetId)
   if (!sheet || journal.sheets.removed.has(sheetId)) return { ok: false, reason: 'unsaved-sheet' }
+  if (unsavedCopies(journal).some((copy) => copy.sourceId === sheetId)) {
+    return { ok: false, reason: 'unsaved-copy' }
+  }
   const ops = journal.structuralOps.get(sheetId) ?? []
   const startRow = screenToFile(ops, 'row', screen.startRow)
   const endRow = screenToFile(ops, 'row', screen.endRow)

@@ -3378,6 +3378,15 @@ export function App({
               renameChartRefsForSheet(state, previousName, params.name)
             }
           }
+          // A copy holds its source's hidden values from the moment it exists,
+          // and a sheet brought back by undo holds its own again: the index is
+          // derived from the sheets the journal knows, so it follows them here.
+          if (
+            event.id === 'sheet.mutation.insert-sheet' ||
+            event.id === 'sheet.mutation.remove-sheet'
+          ) {
+            rebuildRedactionIndex()
+          }
           setPendingEdits(journalSize(state.editJournal))
           return
         }
