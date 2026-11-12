@@ -1,3 +1,4 @@
+#![allow(dead_code)] // the mac and the win half are each unused on the other OS
 //! Chromium OSCrypt `v10` blobs, the format Electron `safeStorage` writes.
 //!
 //! macOS:   `v10` + AES-128-CBC(PKCS7), key = PBKDF2-HMAC-SHA1(keychain

@@ -7,6 +7,7 @@ REPO=$PWD
 WORK=${RUNNER_TEMP:-/tmp}/secrets-proof
 OUT=$WORK/out
 SVC='seuoffice Safe Storage'
+ACCT='seuoffice Key'
 mkdir -p "$OUT" "$WORK"
 F=$OUT/findings.txt
 : > "$F"
@@ -117,15 +118,14 @@ check "T1 open-sealed" "$WORK/t1.out"
 cp "$WORK/t1.err" "$OUT/t1.err"
 
 hdr "T1b the same with the item probe (macOS key read only)"
-run_to 60 "$OPEN" --probe --service "$SVC" --account seuoffice > "$WORK/t1b.out" 2> "$WORK/t1b.err"
+run_to 60 "$OPEN" --probe --service "$SVC" --account "$ACCT" > "$WORK/t1b.out" 2> "$WORK/t1b.err"
 say "T1b exit=$? stdout=$(cat "$WORK/t1b.out") stderr=$(cat "$WORK/t1b.err")"
 
-hdr "T2 open-sealed with the prompt allowed (what a user would see)"
-( run_to 45 "$OPEN" --allow-interaction --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t2.out" 2> "$WORK/t2.err"; echo "T2 exit=$? stdout=$(cat "$WORK/t2.out") stderr=$(cat "$WORK/t2.err")" > "$WORK/t2.res" ) &
-T2PID=$!
-sleep 15; watch_prompt t2-prompt
-wait $T2PID; cat "$WORK/t2.res" | tee -a "$F"
-pkill -f SecurityAgent 2>/dev/null; sleep 2
+# answer_prompt <label> <button> <seconds to wait first>: press a button in the keychain prompt
+answer_prompt() {
+  sleep "$3"; watch_prompt "$1"
+  osascript "$REPO/proto/secrets/ci/click-prompt.applescript" "$KCPW" "$2" 2>&1 | tee "$OUT/$1-ui.txt" | sed "s/^/[$1] ui: /" | tee -a "$F"
+}
 
 hdr "T3 an updated ad hoc build of Electron (cdhash changes) asks for the same item"
 cp -R "$WORK/A/Electron.app" "$WORK/A2.app"
@@ -139,12 +139,41 @@ mkdir -p "$WORK/B"; ditto "$WORK/A/Electron.app" "$WORK/B/Electron.app"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 43.8.3-build2' -c 'Set :CFBundleShortVersionString 43.8.3' "$WORK/B/Electron.app/Contents/Info.plist"
 codesign -f -s - --deep "$WORK/B/Electron.app" 2>&1 | tail -1
 say "T3b updated build (Info.plist changed, re-signed ad hoc): $(cdhash "$WORK/B/Electron.app")"
-( SEED_MODE=decrypt SEED_RESULT="$WORK/b-dec.json" run_to 60 "$WORK/B/Electron.app/Contents/MacOS/Electron" "$SEED_DIR" > "$WORK/b.log" 2>&1; echo "T3b exit=$?" > "$WORK/b.res" ) &
+EL_B=$WORK/B/Electron.app/Contents/MacOS/Electron
+( SEED_MODE=decrypt SEED_RESULT="$WORK/b-dec.json" run_to 40 "$EL_B" "$SEED_DIR" > "$WORK/b.log" 2>&1; echo "T3b exit=$?" > "$WORK/b.res" ) &
 BPID=$!
 sleep 20; watch_prompt t3b-prompt
 wait $BPID; cat "$WORK/b.res" | tee -a "$F"; tail -2 "$WORK/b.log" | tee -a "$F"
-check "T3b updated Electron" "$WORK/b-dec.json"
+check "T3b updated Electron, nobody answers the prompt" "$WORK/b-dec.json"
 pkill -f SecurityAgent 2>/dev/null; sleep 2
+
+hdr "T3c the same updated Electron, the user types the password and presses Always Allow"
+rm -f "$WORK/b-dec.json"
+( SEED_MODE=decrypt SEED_RESULT="$WORK/b-dec.json" run_to 60 "$EL_B" "$SEED_DIR" > "$WORK/b2.log" 2>&1; echo "T3c exit=$?" > "$WORK/b2.res" ) &
+BPID=$!
+answer_prompt t3c-click "Always Allow" 15
+wait $BPID; cat "$WORK/b2.res" | tee -a "$F"; tail -1 "$WORK/b2.log" | tee -a "$F"
+check "T3c updated Electron after Always Allow" "$WORK/b-dec.json"
+say "T3c again, nothing to click:"
+SEED_MODE=decrypt SEED_RESULT="$WORK/b-dec2.json" run_to 40 "$EL_B" "$SEED_DIR" > /dev/null 2>&1; say "exit=$?"; check "T3c second run" "$WORK/b-dec2.json"
+pkill -f SecurityAgent 2>/dev/null; sleep 1
+say "the old build A (not updated) still opens it:"
+rm -f "$WORK/a-dec2.json"; SEED_MODE=decrypt SEED_RESULT="$WORK/a-dec2.json" run_to 40 "$EL_A" "$SEED_DIR" > /dev/null 2>&1; say "exit=$?"; check "T3c old build A" "$WORK/a-dec2.json"
+
+hdr "T2 open-sealed with the prompt allowed, the user presses Always Allow once"
+( run_to 60 "$OPEN" --allow-interaction --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t2.out" 2> "$WORK/t2.err"; echo "T2 exit=$? stdout=$(cat "$WORK/t2.out") stderr=$(cat "$WORK/t2.err")" > "$WORK/t2.res" ) &
+T2PID=$!
+answer_prompt t2-click "Always Allow" 12
+wait $T2PID; cat "$WORK/t2.res" | tee -a "$F"
+pkill -f SecurityAgent 2>/dev/null; sleep 1
+check "T2 open-sealed after Always Allow" "$WORK/t2.out"
+hdr "T4 open-sealed again, interaction disabled: no more prompt after the one click"
+run_to 60 "$OPEN" --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t4.out" 2> "$WORK/t4.err"
+say "T4 exit=$? stderr=$(cat "$WORK/t4.err")"; check "T4 open-sealed non-interactive" "$WORK/t4.out"
+say "T4b a rebuilt Rust binary (new cdhash) non-interactive:"
+mkdir -p "$WORK/open4" && cp "$OPEN" "$WORK/open4/open-sealed" && codesign -f -s - -i com.seuput.seuoffice.rebuilt2 "$WORK/open4/open-sealed" 2>&1 | tail -1
+run_to 60 "$WORK/open4/open-sealed" --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t4b.out" 2> "$WORK/t4b.err"
+say "T4b exit=$? stderr=$(cat "$WORK/t4b.err")"
 
 hdr "ACL after the tests (did any run change it)"
 item_block "$SVC" "$KC" | tee -a "$F"
@@ -168,7 +197,7 @@ run_to 30 "$OPEN" --probe --service 'seuoffice-rust any-app key' --account seuof
 
 hdr "R3 partition list of the Electron item widened with the keychain password (security set-generic-password-partition-list)"
 OPEN_HASH=$(codesign -dvvv "$OPEN" 2>&1 | sed -n 's/^CDHash=//p')
-security set-generic-password-partition-list -S "apple-tool:,apple:,cdhash:$OPEN_HASH" -k "$KCPW" -s "$SVC" -a seuoffice "$KC" 2>&1 | tail -2 | tee -a "$F"
+security set-generic-password-partition-list -S "apple-tool:,apple:,cdhash:$OPEN_HASH" -k "$KCPW" -s "$SVC" -a "$ACCT" "$KC" 2>&1 | tail -2 | tee -a "$F"
 item_block "$SVC" "$KC" | tee -a "$F"
 run_to 30 "$OPEN" --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/r3.out" 2> "$WORK/r3.err"
 say "R3 exit=$? stderr=$(cat "$WORK/r3.err")"; check "R3 after partition list" "$WORK/r3.out"

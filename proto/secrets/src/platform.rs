@@ -4,7 +4,7 @@ use crate::{format, OpenError, Options};
 use std::path::Path;
 
 pub const KEYCHAIN_SERVICE: &str = "seuoffice Safe Storage";
-pub const KEYCHAIN_ACCOUNT: &str = "seuoffice";
+pub const KEYCHAIN_ACCOUNT: &str = "seuoffice Key";
 
 #[cfg(target_os = "macos")]
 mod imp {
