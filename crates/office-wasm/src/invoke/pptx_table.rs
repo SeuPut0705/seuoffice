@@ -655,7 +655,7 @@ fn r_build_table_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 }
 
 fn r_build_timing_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
-    let p0: Vec<pptx_engine::animation::model::SlideAnimation> = req(args, 0)?;
+    let p0: Vec<pptx_engine::animation::SlideAnimation> = req(args, 0)?;
     let r = pptx_engine::animation::build_timing_xml(&p0).map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
@@ -689,15 +689,15 @@ fn r_can_list_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 }
 
 fn r_chart_workbook_parts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
-    let p0: pptx_engine::chart_workbook::ChartWorkbookData = req(args, 0)?;
-    let r = pptx_engine::chart_workbook::chart_workbook_parts(&p0);
+    let data = pptx_routes::workbook_data(at(args, 0))?;
+    let r = pptx_engine::chart_workbook::chart_workbook_parts(&data);
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
 
 fn r_chart_workbook_xlsx(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
-    let p0: pptx_engine::chart_workbook::ChartWorkbookData = req(args, 0)?;
-    let r = pptx_engine::chart_workbook::chart_workbook_xlsx(&p0).map_err(|error| error.to_string())?;
+    let data = pptx_routes::workbook_data(at(args, 0))?;
+    let r = pptx_engine::chart_workbook::chart_workbook_xlsx(&data).map_err(|error| error.to_string())?;
     Ok(Some(pptx::answer(Some(env.put_blob(r)), vec![])))
 }
 
@@ -1221,9 +1221,18 @@ fn r_group_child_durable_id(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_group_child_slices(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let r = pptx_engine::deck::groups::group_child_slices(&p0).map_err(|error| error.to_string())?;
-    let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![])))
+    let r = pptx_engine::deck::groups::group_child_slices(&p0);
+    let slices: Vec<Value> = r?
+        .iter()
+        .map(|slice| {
+            let mut out = json!({ "start": slice.start, "end": slice.end, "xml": slice.xml });
+            if let Some(id) = &slice.nv_id {
+                out["nvId"] = json!(id);
+            }
+            out
+        })
+        .collect();
+    reply(slices)
 }
 
 fn r_group_elements(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1891,7 +1900,7 @@ fn r_patch_slide_show_master_sp_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> 
 
 fn r_patch_slide_timing_incremental_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let p1: Vec<pptx_engine::animation::model::SlideAnimation> = req(args, 1)?;
+    let p1: Vec<pptx_engine::animation::SlideAnimation> = req(args, 1)?;
     let r = pptx_engine::animation::patch_slide_timing_incremental_xml(&p0, &p1);
     match r {
         None => Ok(Some(pptx::answer(Some(Value::Null), Vec::new()))),
@@ -1901,7 +1910,7 @@ fn r_patch_slide_timing_incremental_xml(env: &mut InvokeEnv<'_>, args: &[Value])
 
 fn r_patch_slide_timing_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let p1: Vec<pptx_engine::animation::model::SlideAnimation> = req(args, 1)?;
+    let p1: Vec<pptx_engine::animation::SlideAnimation> = req(args, 1)?;
     let r = pptx_engine::animation::patch_slide_timing_xml(&p0, &p1).map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
@@ -2539,7 +2548,7 @@ fn r_set_slide_advance_time(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_set_slide_animations(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
-    let p1: Vec<pptx_engine::animation::model::SlideAnimation> = req(args, 1)?;
+    let p1: Vec<pptx_engine::animation::SlideAnimation> = req(args, 1)?;
     let r = pptx_engine::animation::set_slide_animations(&mut p0, &p1).map_err(|error| error.to_string())?;
     Ok(Some(pptx::answer(None, vec![(0, to_json(&p0)?)])))
 }

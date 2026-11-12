@@ -130,6 +130,23 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
     lines: 'let p2 = pptx_routes::byte_list(at(args, 2))?;',
   },
 
+  // ---- a struct the model does not read from JSON
+  chartWorkbookParts: { pass: { 0: '&data' }, lines: 'let data = pptx_routes::workbook_data(at(args, 0))?;' },
+  chartWorkbookXlsx: { pass: { 0: '&data' }, lines: 'let data = pptx_routes::workbook_data(at(args, 0))?;' },
+  groupChildSlices: {
+    ret: `let slices: Vec<Value> = r?
+        .iter()
+        .map(|slice| {
+            let mut out = json!({ "start": slice.start, "end": slice.end, "xml": slice.xml });
+            if let Some(id) = &slice.nv_id {
+                out["nvId"] = json!(id);
+            }
+            out
+        })
+        .collect();
+    reply(slices)`,
+  },
+
   // ---- a Rust value that is a function of two layers, an option or an iterator
   patchSlideTimingIncrementalXml: {
     ret: `match r {
@@ -462,6 +479,8 @@ export const PPTX_REPLACE: Readonly<Record<string, Readonly<Record<string, strin
   },
   index: {
     savePptxToFile: `export async function savePptxToFile(opened: OpenedPptx, filePath: string): Promise<void> {
+  // The engine builds the zip whole (savePptx); the file is written from that buffer through
+  // the same stream, so a stream error still reaches the promise and still drops the snapshot.
   const bytes = await savePptx(opened)
   const { createWriteStream } = await import('node:fs')
   const { Readable } = await import('node:stream')

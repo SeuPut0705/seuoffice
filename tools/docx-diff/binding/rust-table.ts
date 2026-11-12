@@ -2,7 +2,7 @@
 // export that has a row, reading its Rust arguments from the positional JSON
 // the binding sends (by the Rust parameter types) and answering by the Rust
 // return type. Written by gen.ts.
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { ROOT, config } from './config'
 import { type ExportInfo, pathOf } from './manifest'
@@ -106,6 +106,23 @@ function itemPath(file: string, name: string): string {
   return pathOf(file, name).path
 }
 
+/**
+ * The path of a `use`d item as office-wasm can name it: a file that reaches a
+ * type through a private module of its own (`super::model::T`) is named by the
+ * public path the crate re-exports it at.
+ */
+function publicPath(path: string): string {
+  const parts = path.split('::')
+  const crate = CRATE_OF_DIR.find((c) => c.crate === parts[0])
+  const name = parts.at(-1)!
+  if (!crate || parts.length < 3) return path
+  const modules = parts.slice(1, -1)
+  const file = [`${crate.dir}/${modules.join('/')}.rs`, `${crate.dir}/${modules.join('/')}/mod.rs`].find((f) => existsSync(join(ROOT, f)))
+  if (!file) return path
+  const found = pathOf(file, name)
+  return found.reachable ? found.path : path
+}
+
 /** `type` with every type name written out as an absolute path; null names the first that cannot be resolved */
 export function qualify(type: string, file: string): { text: string; missing: string | null } {
   const scope = scopeOf(file)
@@ -122,7 +139,7 @@ export function qualify(type: string, file: string): { text: string; missing: st
   text = text.replace(/(?<![:\w])([A-Z][A-Za-z0-9_]*)\b(?!::)/g, (match, id: string) => {
     if (PRELUDE.has(id)) return match
     const used = scope.uses.get(id)
-    if (used) return used
+    if (used) return publicPath(used)
     if (scope.items.has(id)) return itemPath(file, id)
     missing ??= id
     return match

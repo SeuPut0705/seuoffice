@@ -199,7 +199,7 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
     }
     const replacement = piece.names.map((n) => config.replace[name]?.[n]).find((text) => text !== undefined)
     if (replacement !== undefined) {
-      piece.text = `\n\n${replacement}`
+      piece.text = `${text.slice(stmt.getFullStart(), stmt.getStart(sf))}${replacement}`
       piece.replaced = true
     }
     if (piece.wrapped || piece.replaced) {

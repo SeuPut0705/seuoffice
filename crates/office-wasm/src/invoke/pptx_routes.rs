@@ -7,6 +7,7 @@
 use std::cell::RefCell;
 
 use jscompat::JsNum;
+use pptx_engine::chart_workbook::{ChartWorkbookData, ChartWorkbookSeries};
 use pptx_engine::deck::{MergeSlideChainPart, MergeSlideMedia, MergeSlideSource};
 use pptx_engine::embedded_fonts::{GlyphDemand, GlyphSet};
 use pptx_engine::model3d::Model3dXmlOptions;
@@ -251,5 +252,36 @@ pub fn merge_source(value: &Value) -> Result<MergeSlideSource, String> {
                 })
             })
             .collect::<Result<_, String>>()?,
+    })
+}
+
+/// `ChartWorkbookData` as the binding sends it.
+pub fn workbook_data(value: &Value) -> Result<ChartWorkbookData, String> {
+    #[derive(Deserialize)]
+    struct Series {
+        name: String,
+        values: Vec<Option<JsNum>>,
+    }
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Data {
+        categories: Vec<String>,
+        series: Vec<Series>,
+        #[serde(default)]
+        x_values: Option<Vec<JsNum>>,
+    }
+    let data: Data =
+        serde_json::from_value(value.clone()).map_err(|error| format!("TypeError: {error}"))?;
+    Ok(ChartWorkbookData {
+        categories: data.categories,
+        series: data
+            .series
+            .into_iter()
+            .map(|series| ChartWorkbookSeries {
+                name: series.name,
+                values: series.values,
+            })
+            .collect(),
+        x_values: data.x_values,
     })
 }
