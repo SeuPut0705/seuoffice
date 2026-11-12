@@ -406,17 +406,18 @@ export function cellsDerivedFromWithheld(
     return result
   }
 
-  interface Node {
+  /** a place a value comes from: a withheld area, or a formula cell found to depend on one */
+  interface Source {
     readonly sheet: number
     readonly area: RangeBounds
   }
-  const nodes: Node[] = []
+  const nodes: Source[] = []
   const tainted: boolean[] = []
-  const pending: number[] = []
+  const pending: Source[] = []
   const taint = (node: number): void => {
     if (tainted[node]) return
     tainted[node] = true
-    pending.push(node)
+    pending.push(nodes[node]!)
   }
   /** per sheet: the references into it, by the row buckets they cover */
   const buckets = sheets.map(() => new Map<number, PlacedRead[]>())
@@ -451,17 +452,8 @@ export function cellsDerivedFromWithheld(
         taint(node)
         continue
       }
-      for (const { target, read } of placed) {
-        const source = sheets[target]!
-        if (
-          source.marks.some((mark) => intersects(mark, read)) ||
-          source.unknown.some((area) => intersects(area, read))
-        ) {
-          taint(node)
-          break
-        }
-      }
-      if (tainted[node]) continue
+      // Its reads are kept even when one already lies on a mark: the trace
+      // below finds that, in one pass over the marks instead of one per read.
       for (const { target, read } of placed) {
         const entry: PlacedRead = { ...read, owner: node }
         const first = Math.floor(read.startRow / BUCKET_ROWS)
@@ -479,13 +471,18 @@ export function cellsDerivedFromWithheld(
     }
   })
 
+  // The marks and the unlisted areas are where the trace starts.
+  sheets.forEach((sheet, index) => {
+    for (const area of sheet.marks) pending.push({ sheet: index, area })
+    for (const area of sheet.unknown) pending.push({ sheet: index, area })
+  })
   let checks = 0
   const reach = (reads: readonly PlacedRead[], area: RangeBounds): void => {
     checks += reads.length
     for (const read of reads) if (!tainted[read.owner] && intersects(read, area)) taint(read.owner)
   }
   while (pending.length > 0 && checks <= budget) {
-    const { sheet, area } = nodes[pending.pop()!]!
+    const { sheet, area } = pending.pop()!
     reach(tall[sheet]!, area)
     const first = Math.floor(area.startRow / BUCKET_ROWS)
     const last = Math.floor(area.endRow / BUCKET_ROWS)
