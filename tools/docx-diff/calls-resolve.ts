@@ -480,6 +480,9 @@ const PARAS: string[] = [
   para(
     '<w:pStyle w:val="Base"/><w:snapToGrid/><w:autoSpaceDN/><w:rPr><w:vanish/><w:specVanish/></w:rPr>',
   ),
+  // a specVanish that is there but off: the mark stays hidden
+  para('<w:pStyle w:val="Base"/><w:rPr><w:vanish/><w:specVanish w:val="0"/></w:rPr>'),
+  para('<w:rPr><w:specVanish w:val="false"/><w:vanish w:val="1"/></w:rPr>'),
   para(
     '<w:pStyle w:val="GrandChild"/><w:rPr><w:rStyle w:val="Emph"/><w:vanish w:val="0"/></w:rPr>',
   ),
@@ -539,6 +542,8 @@ const RPRS: string[] = [
   '<w:rPr></w:rPr>',
   '<w:rPr><w:rStyle w:val="Emph"/></w:rPr>',
   '<w:rPr><w:rStyle w:val="Emph"/><w:b w:val="0"/><w:vanish/><w:specVanish/></w:rPr>',
+  '<w:rPr><w:vanish/><w:specVanish w:val="0"/></w:rPr>',
+  '<w:rPr><w:rStyle w:val="Emph"/><w:specVanish w:val="off"/><w:vanish w:val="true"/></w:rPr>',
   '<w:rPr><w:rStyle w:val="Emph"/><w:strike/><w:i w:val="1"/></w:rPr>',
   '<w:rPr><w:rStyle w:val="CsChar"/></w:rPr>',
   '<w:rPr><w:rStyle w:val="CsChar"/><w:rtl w:val="0"/></w:rPr>',
