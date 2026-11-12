@@ -222,11 +222,8 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
         "txbxContentParas" => |text, args| {
             let doc_offset: Option<usize> = arg(args, "docOffset")?;
             with_build_ctx(args, |ctx| {
-                value(textbox::txbx_content_paras(
-                    &node_of(text)?,
-                    ctx,
-                    doc_offset,
-                )?)
+                let paras = textbox::txbx_content_paras(&node_of(text)?, ctx, doc_offset)?;
+                value(paras.iter().map(in_assignment_order).collect::<Vec<_>>())
             })
         },
         "extractTextboxes" => extract_textboxes,
@@ -622,6 +619,43 @@ fn table_blip_media(text: &str, args: &Value) -> Returned {
     )?)
 }
 
+/// A textbox paragraph with its keys in the order the TypeScript assigns them:
+/// `runs`, the keys of its paragraph format as they were set (which depends on
+/// the paragraph: `w:left` before `w:firstLine`, or character units after it),
+/// `styleId`, `emptyRunSizeHalfPoints`, then the list marker, cells and row.
+/// The model type writes one fixed order.
+fn in_assignment_order(para: &TextboxParaDisplay) -> Value {
+    let mut format = match serde_json::to_value(&para.para_format) {
+        Ok(Value::Object(map)) => map,
+        _ => serde_json::Map::new(),
+    };
+    let empty_run = format.shift_remove("emptyRunSizeHalfPoints");
+    let mut out = serde_json::Map::new();
+    out.insert(
+        "runs".to_owned(),
+        serde_json::to_value(&para.runs).unwrap_or(Value::Null),
+    );
+    out.extend(format);
+    if let Some(style_id) = &para.style_id {
+        out.insert("styleId".to_owned(), Value::from(style_id.as_str()));
+    }
+    if let Some(empty_run) = empty_run {
+        out.insert("emptyRunSizeHalfPoints".to_owned(), empty_run);
+    }
+    for (key, extra) in [
+        ("listMarker", serde_json::to_value(&para.list_marker)),
+        ("cells", serde_json::to_value(&para.cells)),
+        ("row", serde_json::to_value(&para.row)),
+    ] {
+        if let Ok(extra) = extra
+            && !extra.is_null()
+        {
+            out.insert(key.to_owned(), extra);
+        }
+    }
+    Value::Object(out)
+}
+
 /// `collectTxbxParas` over a fresh output: the paragraphs, and the list items
 /// by the index of their paragraph.
 fn collect_txbx_paras(text: &str, args: &Value) -> Returned {
@@ -635,7 +669,7 @@ fn collect_txbx_paras(text: &str, args: &Value) -> Returned {
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
     struct Collected {
-        out: Vec<TextboxParaDisplay>,
+        out: Vec<Value>,
         list_items: Vec<Item>,
     }
     let doc_offset: Option<usize> = arg(args, "docOffset")?;
@@ -644,7 +678,7 @@ fn collect_txbx_paras(text: &str, args: &Value) -> Returned {
         let mut items = Vec::new();
         textbox::collect_txbx_paras(&node_of(text)?, ctx, doc_offset, &mut out, &mut items)?;
         value(Collected {
-            out,
+            out: out.iter().map(in_assignment_order).collect(),
             list_items: items
                 .into_iter()
                 .map(|item| Item {

@@ -29,6 +29,7 @@ import {
 } from './reference/xml-utils'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { parseInternals } from './parse-internals'
+import { lineRuleOutsideItsType } from './listed'
 
 const internals = await parseInternals()
 
@@ -3139,6 +3140,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.txbxContentParas',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) =>
       internals.txbxContentParas!(nodeOf(text), await buildCtx(args), args.docOffset),
     fromParse: {

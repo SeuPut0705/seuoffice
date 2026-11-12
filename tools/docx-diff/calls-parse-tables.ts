@@ -1011,6 +1011,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.extractTable',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => internals.extractTable!(text, await buildCtx(args), args.docOffset),
     fromParse: {
       fn: 'extractTable',
@@ -1102,6 +1103,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfStyledParaFormat',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => internals.hfStyledParaFormat!(elementOf(text), await buildCtx(args)),
     fromParse: { fn: 'hfStyledParaFormat', input: ctxNodeInput(() => ({})) },
     built: [
@@ -1189,6 +1191,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfTableRowParagraphs',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const paras = internals.hfTableRowParagraphs!(elementOf(text), await buildCtx(args), args.compatibilityMode, args.tblIndex) as object[]
       return { paras, rowAnchorIds: paras.map((p) => weakMaps.hfRowAnchorIds!.get(p) ?? null) }
@@ -1241,6 +1244,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfContentFromXml',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const doc = await docOf(args)
       return internals.hfContentFromXml!(
@@ -1368,7 +1372,7 @@ const BATCH2: CallSpec[] = [
           : undefined
       },
     },
-    built: HF_PARTS().map((text) => ({ text, args: { parts: hfParts(text), partPath: 'word/header1.xml', runImageIds: ['8'] } })),
+    built: HF_PARTS().map((text) => ({ text, args: { parts: hfParts(text, '', [['word/media/logo.png', 'logo bytes']]), partPath: 'word/header1.xml', runImageIds: ['8'] } })),
   },
   {
     fn: 'parse.hfGroupPictures',
@@ -1396,7 +1400,7 @@ const BATCH2: CallSpec[] = [
         grp(pic('x="0" y="0"', 'cx="500000" cy="250000"'), undefined, '<a:off x="5" y="5"/>'),
         grp('<pic:pic><pic:blipFill><a:blip r:embed="rId404"/></pic:blipFill></pic:pic>'),
         grp(''),
-      ].map((text) => ({ text, args: { parts: miniParts(), sourcePath: 'word/document.xml' } }))
+      ].map((text) => ({ text, args: { parts: miniParts([['word/media/image1.png', 'picture bytes']]), sourcePath: 'word/document.xml' } }))
     })(),
   },
   {

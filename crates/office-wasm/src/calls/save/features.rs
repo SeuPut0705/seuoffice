@@ -211,7 +211,10 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Option<Returned> {
                 (absent != Some(true)).then_some(text),
             )?)
         },
-        "buildSourcesItemPropsXml" => |_, _| value(sources_write::build_sources_item_props_xml()),
+        "constants" => |_, args| match required::<String>(args, "name")?.as_str() {
+            "buildSourcesItemPropsXml" => value(sources_write::build_sources_item_props_xml()),
+            name => Err(format!("no constant {name}")),
+        },
         "applyThemeFonts" => |text, args| {
             value(theme_write::apply_theme_fonts(
                 text,

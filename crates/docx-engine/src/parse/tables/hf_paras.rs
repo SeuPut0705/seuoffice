@@ -427,11 +427,11 @@ pub fn hf_cell_content(
             None
         });
         if let Some(rule) = line.line_rule.as_deref() {
-            props.line_rule = Some(match rule {
-                "atLeast" => ParaFormatLineRule::AtLeast,
-                "exact" => ParaFormatLineRule::Exact,
-                _ => ParaFormatLineRule::Auto,
-            });
+            // the TypeScript stores whatever the attribute holds; the model type refuses what is none of the three
+            props.line_rule = Some(
+                serde_json::from_value::<ParaFormatLineRule>(serde_json::Value::from(rule))
+                    .map_err(|error| error.to_string())?,
+            );
             any = true;
         }
         if let Some(raw) = line.line_raw_twips {

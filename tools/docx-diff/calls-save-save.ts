@@ -403,7 +403,7 @@ export const SAVE_SAVE: CallSpec[] = [
   {
     fn: 'save.hasOrphanMoveRanges',
     call: (_text, args) => internals.hasOrphanMoveRanges!(zipOf(args.parts), args.documentPath),
-    built: [STORY_PARTS, STORY_PARTS.slice(2), STORY_PARTS.slice(4)].map((parts) => ({ args: { parts, documentPath: 'word/document.xml' } })),
+    built: [STORY_PARTS, STORY_PARTS.slice(2), STORY_PARTS.slice(4), STORY_PARTS.slice(2, 5)].map((parts) => ({ args: { parts, documentPath: 'word/document.xml' } })),
     mutation: 'none',
   },
   {
