@@ -70,6 +70,7 @@ docx 한 파일의 읽기와 쓰기 전부를 맡는다.
 - **수정 기록의 `before` 거르개는 시간대 표시가 없는 날짜를 UTC로 읽는다.** `Date.parse`는 그런 날짜를 컴퓨터의 현지 시각으로 읽어, 같은 파일의 같은 요청이 서울과 로스앤젤레스에서 다른 변경을 골랐다. 파트의 `w:date`와 거르개의 `before` 둘 다 그렇게 읽고, `Z`나 `+09:00`이 붙은 값은 뜻이 그대로다. 편집기 본문의 같은 거르개(`apps/docs`의 `revision-ops.ts`)는 따로 있고 아직 현지 시각으로 읽는다. 시험: `tests/revision-date-zone.test.ts`.
 - **문서에 없는 스타일을 가리키는 문단은 글자도 기본 문단 스타일로 읽는다.** `w:pStyle`이 없는 스타일이면 문단 속성은 기본 문단 스타일로 내려갔지만 런은 내려가지 않아, 글자가 Normal의 크기·기울임 대신 내장 10pt로 보였다. `resolveRunProps`도 `resolveParagraphProps`와 같은 대체를 한다. 시험: `tests/missing-paragraph-style.test.ts`.
 - **떠 있는 개체의 감싸기는 자기 감싸기 요소로만 정한다.** `noWrap`을 조각 전체에서 `<wp:wrapNone`을 찾아 정해서, 사각 감싸기인 글상자 안에 "텍스트 앞" 그림이 들어 있으면 바깥 글상자까지 글자 위에 놓였다. `drawingAnchorMeta`는 `a:graphic` 앞의 자기 요소만 본다. 시험: `tests/nested-drawing-wrap.test.ts`.
+- **VML의 분수 값은 퍼센트로 쓰여도 읽는다.** `<v:fill opacity="50%"/>`가 버려져 반투명 도형과 워터마크가 불투명하게 그려졌다(`.5`와 `32768f`는 읽혔다). `vmlFraction`이 세 표기를 모두 읽으므로 같은 함수를 쓰는 `arcsize`, `gain`, `blacklevel`도 퍼센트를 받는다. 시험: `tests/vml-percent-fraction.test.ts`.
 
 ## 테스트
 
