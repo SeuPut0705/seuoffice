@@ -357,8 +357,8 @@ functions; `-- --check` says whether the entries would change.
   (`preserve_order`), so `resolveCharIndents` sees its `format` as the
   TypeScript does. A typed argument (`CharIndents`) is read with
   `deserialize;`, which sets the keys in the order of the input.
-- `cargo-deny` is configured (`deny.toml`) but was not installed on the
-  machine these crates were written on, so it has not run.
+- `cargo-deny` runs on the runner against `deny.toml` (licences only); it
+  is not installed on the machine these crates were written on.
 - Helpers written more than once, to move down: `Math.max`/`Math.min` with
   JavaScript's NaN and zero rules (`list_markers.rs`, `vml.rs`), text escapes
   (`eq_field.rs`, `blank.rs`, `omml/src/xml.rs`, and private in `ooxml-xml`),
@@ -367,10 +367,17 @@ functions; `-- --check` says whether the entries would change.
   copies of their own), `atob` (`protection.rs`),
   the `Date` readers (`ooxml-pkg/src/write.rs`, `blank.rs`), the new document
   properties (`blank.rs`; `doc_properties.rs` holds the read side only).
-- `fields.rs` takes what `resolve-props.ts` computes as arguments
-  (`EffectivePPr`, `ResolveCtx`, `ResolveCompat` hold only the fields read
-  here). `fieldDisplayOf` waits for that port; `applyTocEntryNumbers` works
-  on the block model and waits for `parse.ts`.
+- `applyTocEntryNumbers` of `parse-fields.ts` works on the block model and
+  waits for `parse.ts`.
+- A listed class is counted by its id over every spec that names it, and
+  the gate fails when no input of the id differs. A spec whose inputs of the
+  class never differ is not told apart, so a class can stay on a function
+  that has no such defect. `legacyCharsetOfMht` is wider than its defect by
+  design; the others read the input as their function does.
+- `tools/docx-diff/out/` is ignored by git. What must outlive a machine and
+  the retention of GitHub artifacts is in `crates/docs/trail/`: the decision
+  trail of unit 2, its first comparisons and its fault results, unedited,
+  with their checksums. A unit adds its own there.
 - `parseNotesXml` is ported without its paragraph reader callback, which
   `parse.ts` supplies.
 - `blank/locale.rs` answers `paperSizeForLocale` from a table of likely
@@ -395,13 +402,15 @@ functions; `-- --check` says whether the entries would change.
 ## Next session starts here
 
 State on 2026-11-12. The docx work is on `feat/rust-docx-model` from here
-on: the stream that wrote `feat/rust-docx-u1` handed over at 8a6a177bf,
+on: the stream that wrote `feat/rust-docx-u1` handed over at bebd7550f,
 which is merged here (merged, never rebased). The branch is on origin and is
 pushed at every unit boundary (never forced, never to main).
 
-- What is on it: everything of `feat/rust-docx-u1` (the gate was green there
-  on a runner, run 43159621371: 1,733,886 checks, 0 differences, 14 ledger
-  entries in six classes), the model, the builders of `generate.ts`, and
+- What is on it: everything of `feat/rust-docx-u1` up to its last head
+  bebd7550f (the gate was green there on a runner, run 43163832961:
+  1,734,153 checks, 0 differences, 14 ledger entries in six classes; its
+  decision trail and first comparisons are in `crates/docs/trail/`), the
+  model, the builders of `generate.ts`, and
   stream D's fix of counted quantifiers over text outside the BMP. The
   runner result for this head is in the unit report to main.
 - main is ahead (e743228a9 when this was written). Do not merge it until
@@ -527,8 +536,24 @@ named inputs that are now there (a `w:specVanish` that is present but off,
 default) and three cannot be seen by any input, because the TypeScript
 readers never produce the value (`eaSlotEmpty: false`, an empty conditional
 colour, a level with `hanging` 0). Of 43 faults in the leaves (the porters'
-35 and eight of the integrator's, all eight caught) 34 were caught at once
-(run 43153584303). Four of the nine misses named inputs that are now there
+35 and eight of the integrator's, all eight caught) 33 were caught at once
+(run 43153584303) and one was only set aside: the fault that drops the 4096
+byte cap of `decodeHtmlBytes` moved its inputs into the legacy charset
+class, whose predicate was wider than the function reads, and the first
+verdict of `faults.py` took any changed line for a catch. Both are narrowed
+since (a report that changed in nothing but counts and class lines is SET
+ASIDE, a miss), and the 22 faults of the groups with classes were run again
+by that rule (run 43161902762): 18 caught, two equivalent, and two that the
+classes cost. `tblGrid exclusion dropped` had only ever been caught by one
+mutated text; it has built inputs of its own now (a grid change whose old
+grid is empty, in tables without another change). `edits sort drops end
+tiebreak` is NOT compared: the one input that showed it is the paragraph
+change that opens its `w:pPr`, which the Rust now answers with a single edit
+and which sits in a class. Look there first: a zero-length insertion at the
+start of a `w:pPr` can also meet the removal of a paragraph-mark `w:rPr` that
+stands first (`<w:pPr><w:rPr><w:ins/></w:rPr><w:pPrChange>`), which was not
+measured and may lose the old properties in the TypeScript the same way.
+Four of the nine first misses named inputs that are now there
 and are caught (run 43157250362): text outside ASCII before a rewritten
 `w:delText`, a property change that is the first child of its holder, two
 range starts sharing an id under a filter, a tab stop at a negative
@@ -547,9 +572,10 @@ falls back to the default paragraph style for the runs of a paragraph whose
 style is missing, reads the wrap of the outer anchor only, reads revision
 attributes in either quote, reads a `v:fill` opacity in percent, stays on
 the Encoding Standard, reads a `w:date` without a zone as UTC, and restores
-the old properties on that reject. Each is
-an entry of `divergences.json` with its class (see "Divergences"). When
-main's fix is merged the entry and its class go stale, and both go.
+the old properties on that reject. Each is an entry of `divergences.json`;
+all but the date without a zone, which one pinned entry covers, have a
+class (see "Divergences"). When main's fix is merged the entry and its class
+go stale, and both go.
 
 **The machine.** Nothing heavier than `cargo check -p` runs here any more
 (see "Standing rules"); first comparisons and faults are runner jobs, and
@@ -730,7 +756,7 @@ From the owner, for every unit:
   is the evidence. That crate stays.
 - Each unit ends with a report to main: equality before fixing, the classes
   of difference, what cannot be reproduced, the rate, and what was not
-  checked. `cargo-deny` is not installed here: say it did not run.
+  checked.
 - `packages/docx-engine` moves underneath: another session merges upstream
   commits. `compare-package.ts` holds four readers copied from `parse.ts`
   and the gate fails when `parse.ts` no longer holds that text.

@@ -12,7 +12,7 @@ import {
 } from '../../packages/docx-engine/src/revision-xml'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
-import { revisionClass } from './listed'
+import { revisionClass, singleQuotedRevisionAttribute } from './listed'
 
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 
@@ -108,6 +108,15 @@ const TABLE_CHANGES =
   `<w:tr><w:trPr><w:trPrChange${at('86')}><w:trPr/></w:trPrChange></w:trPr>` +
   `${tc('<w:tcPr><w:tcPrChange' + at('87') + '/></w:tcPr>', 'd')}</w:tr></w:tbl>`
 
+// a grid change whose old grid is empty: the grid stays on reject, where any
+// other holder with nothing to restore is removed. Tables of their own, with
+// no other change in them, so that no listed class sets them aside.
+const EMPTY_GRID_CHANGES = ['<w:tblGrid/>', '<w:tblGrid> </w:tblGrid>'].map(
+  (old) =>
+    `<w:tbl><w:tblGrid><w:gridCol w:w="10"/><w:tblGridChange w:id="88">${old}</w:tblGridChange></w:tblGrid>` +
+    `<w:tr>${tc('', 'g')}</w:tr></w:tbl>`,
+)
+
 const NESTED = [
   para(`<w:del${at('90')}><w:ins${at('91', 'lee')}>${run('both')}</w:ins></w:del>`),
   para(
@@ -168,6 +177,7 @@ const BEFORE_DEL_TEXT = [
 ]
 
 const XMLS: string[] = [
+  ...EMPTY_GRID_CHANGES.map(doc),
   doc(para(INS + run('old')) + para(DEL)),
   doc(MOVE),
   ...PARA_MARKS(`<w:ins${at('20')}/>`).map(doc),
@@ -348,6 +358,7 @@ const ODD_NAMES = ['constructor', 'toString', '__proto__', 'w:(', '', 'w:ins']
 const PROP_FRAGMENTS: string[] = [
   ...elementFragments(TABLE_CHANGES, 'w:tblPr'),
   ...elementFragments(TABLE_CHANGES, 'w:tblGrid'),
+  ...EMPTY_GRID_CHANGES.flatMap((table) => elementFragments(table, 'w:tblGrid')),
   ...elementFragments(TABLE_CHANGES, 'w:tblPrEx'),
   ...elementFragments(TABLE_CHANGES, 'w:trPr'),
   ...elementFragments(TABLE_CHANGES, 'w:tcPr'),
@@ -444,7 +455,7 @@ export const REVISION: CallSpec[] = [
   {
     fn: 'revision.readPropChangeXml',
     call: (text, args) => readPropChangeXml(text, args.changeName as string),
-    listed: revisionClass,
+    listed: singleQuotedRevisionAttribute,
     fromDocument: fragmentInputs,
     built: PROP_FRAGMENTS.flatMap((text) =>
       FRAGMENT_NAMES.map((changeName) => ({ text, args: { changeName } })),
