@@ -1,4 +1,5 @@
 import JSZip from 'jszip'
+import { RedactionMarkError, xlsxWithheldCells } from '@seuoffice/file-parse/redaction'
 import { assertZipInflatesWithinLimits } from '@seuoffice/docx-engine'
 import * as numfmt from 'numfmt'
 import {
@@ -462,8 +463,29 @@ function parseRangeChecked(range: string): Bounds {
   }
 }
 
+/**
+ * Which cells of a workbook the sheet editor withholds from a model (see
+ * file-parse's xlsx reader, which this shares). A file that cannot carry the
+ * record withholds nothing; one whose record cannot be read is not read.
+ */
+async function withheldCellsOf(
+  path: string,
+): Promise<(sheet: string, ref: string, hasFormula: boolean) => string | null> {
+  if (!/\.xls[xm]$/i.test(path)) return () => null
+  const bytes = new Uint8Array(await readFile(path))
+  // not a package at all: it carries no record, and the engine rejects it as it always did
+  if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) return () => null
+  try {
+    return await xlsxWithheldCells(bytes)
+  } catch (err) {
+    if (!(err instanceof RedactionMarkError)) throw err
+    throw new CliError(EXIT.conversion, err.message, undefined, { reason: 'conversion_failed' })
+  }
+}
+
 export async function readSheet(path: string, opts: ReadOptions): Promise<SheetRead> {
   const cols = opts.cols ? parseCols(opts.cols) : undefined
+  const withheld = await withheldCellsOf(path)
   return withOpenWorkbook(path, async (client, wb) => {
     const meta = pickSheet(wb, opts.sheet)
     const bounds = opts.range
@@ -508,6 +530,15 @@ export async function readSheet(path: string, opts: ReadOptions): Promise<SheetR
           },
       true,
     )
+    // a cell hidden from AI reads as its placeholder, and neither its value nor
+    // its formula travels: everything below (rows, formulas, matches, stats)
+    // is built from these cells
+    for (const c of result.cells) {
+      const marker = withheld(meta.name, `${columnLabel(c.column)}${c.row + 1}`, !!c.formula)
+      if (marker === null) continue
+      c.value = marker
+      delete c.formula
+    }
     if (empty) {
       // the A1 probe only serves the sheet-wide fields; nothing per-range belongs to the asked area
       result.cells = []

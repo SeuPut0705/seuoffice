@@ -4,3 +4,5 @@
  * subpath of its own so such a reader does not load every format parser.
  */
 export { redactPptxPartXml } from './pptx-redaction'
+export { xlsxWithheldCells } from './xlsx'
+export { RedactionMarkError } from './redaction-error'
