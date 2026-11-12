@@ -133,29 +133,23 @@ const sameArea = (a: RangeBounds, b: RangeBounds): boolean =>
   a.endColumn === b.endColumn
 
 /**
- * The pivot outputs of every sheet, by sheet id. Ranges are taken as the rest
- * of the session takes them (the refresh reads the source at these addresses);
- * on a sheet with rows or columns inserted this session the range as it was in
- * the file is counted as well, since the file's output was computed from that.
- * A file pivot names its source sheet as the file did, so that name is looked
- * up among the file's sheets (`pivotSourceSheetId`), never among the names
- * the sheets carry now.
+ * The pivot outputs of every sheet the file or this session put a pivot on,
+ * by that sheet's id, before they are placed on a grid sheet (`placePivots`).
+ * Ranges are taken as the rest of the session takes them (the refresh reads
+ * the source at these addresses). A file pivot names its source sheet as the
+ * file did, so that name is looked up among the file's sheets
+ * (`pivotSourceSheetId`), never among the names the sheets carry now.
  */
 function pivotOutputsOf(
   state: LazyWorkbookState,
   sheetNames: ReadonlyMap<string, string>,
 ): Map<string, PivotOutput[]> {
   const journal = state.editJournal
-  const onScreen = (sheetId: string, range: RangeBounds): RangeBounds[] => {
-    const ops = journal.structuralOps.get(sheetId) ?? []
-    const moved = ops.length === 0 ? null : fileRangeToScreenRange(ops, range)
-    return moved && !sameArea(moved, range) ? [range, moved] : [range]
-  }
   const sourceFormula = (sheetId: string | undefined, range: RangeBounds | null): string | null => {
     const name = sheetId === undefined ? undefined : sheetNames.get(sheetId)
     if (name === undefined || range === null) return null
     const sheet = `'${name.replaceAll("'", "''")}'!`
-    return `=${onScreen(sheetId!, range)
+    return `=${onScreenRanges(journal, sheetId!, range)
       .map((part) => sheet + a1Of(part))
       .join('+')}`
   }
@@ -168,9 +162,7 @@ function pivotOutputsOf(
   }
   const out = new Map<string, PivotOutput[]>()
   const add = (sheetId: string, area: RangeBounds, formula: string | null): void => {
-    const list = out.get(sheetId) ?? []
-    for (const part of onScreen(sheetId, area)) list.push({ area: part, formula })
-    out.set(sheetId, list)
+    out.set(sheetId, [...(out.get(sheetId) ?? []), { area, formula }])
   }
   for (const sheet of state.file.sheets) {
     const resolved: RangeBounds[] = []
@@ -209,6 +201,40 @@ function pivotOutputsOf(
     )
   }
   return out
+}
+
+/**
+ * Where a range the file (or the sheet as it was) gives is on a grid sheet now,
+ * after the rows and columns inserted or removed there this session. The range
+ * as given is counted as well, since the file's output was computed from that.
+ */
+function onScreenRanges(
+  journal: LazyWorkbookState['editJournal'],
+  sheetId: string,
+  range: RangeBounds,
+): RangeBounds[] {
+  const ops = journal.structuralOps.get(sheetId) ?? []
+  const moved = ops.length === 0 ? null : fileRangeToScreenRange(ops, range)
+  return moved && !sameArea(moved, range) ? [range, moved] : [range]
+}
+
+/**
+ * The pivot outputs on one grid sheet. A copy of a sheet made this session
+ * holds the same cells as its source (Univer copies the values, the copy is
+ * no live pivot), so it takes the outputs of the sheet at the root of its
+ * copy chain, placed through its own structural journal (which starts as a
+ * copy of the source's: `recordSheetDuplicate`).
+ */
+function placePivots(
+  journal: LazyWorkbookState['editJournal'],
+  outputs: ReadonlyMap<string, readonly PivotOutput[]>,
+  sheetId: string,
+  rootId: string | undefined,
+): PivotOutput[] {
+  const own = rootId === undefined ? undefined : outputs.get(rootId)
+  return (own ?? []).flatMap((pivot) =>
+    onScreenRanges(journal, sheetId, pivot.area).map((area) => ({ area, formula: pivot.formula })),
+  )
 }
 
 /** Rows of report filters above a pivot's output, and filters side by side in a row. */
@@ -396,6 +422,8 @@ export function createDerivedCells(deps: DerivedCellsDeps): DerivedCells {
       state,
       new Map(workbook.getSheets().map((sheet) => [sheet.getSheetId(), sheet.getSheetName()])),
     )
+    /** each grid sheet's pivot outputs, a copy's included */
+    const placedPivots = new Map<string, PivotOutput[]>()
 
     const ids: string[] = []
     /** sheets taken whole for a pivot whose output could not be located */
@@ -493,7 +521,9 @@ export function createDerivedCells(deps: DerivedCellsDeps): DerivedCells {
         }
       }
       unknown.push(...columnRuns(unknownCells))
-      for (const pivot of pivots.get(id) ?? []) {
+      const placed = placePivots(journal, pivots, id, fileSheetId)
+      placedPivots.set(id, placed)
+      for (const pivot of placed) {
         if (pivot.formula === null) unknown.push(pivot.area)
         else formulas.push({ area: pivot.area, formula: pivot.formula })
       }
@@ -513,7 +543,7 @@ export function createDerivedCells(deps: DerivedCellsDeps): DerivedCells {
         id,
         [
           ...(unlocated.has(id) ? [WHOLE_SHEET] : []),
-          ...(pivots.get(id) ?? []).map((pivot) => pivot.area),
+          ...(placedPivots.get(id) ?? []).map((pivot) => pivot.area),
         ]
           // an output is withheld whole or not at all
           .filter((area) => lookups.get(id)!.has(area.startRow, area.startColumn)),

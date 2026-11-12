@@ -31,6 +31,7 @@ import { redactionIndexOf } from '../src/renderer/ai/redact-load'
 import {
   createEditJournal,
   recordSetRangeValues,
+  recordSheetDuplicate,
   recordSheetRename,
 } from '../src/renderer/edit-journal'
 import {
@@ -744,6 +745,82 @@ describe('what the in-app AI reads from the output of a PivotTable', () => {
     const session = withUnlocatedPivot(open(CLIENTS, OUTPUT))
     session.mark([])
     expect(session.read('s2', 'E4')).toBe(SECRET)
+  })
+
+  /**
+   * Duplicate Report as Univer does it (the copy holds the cells as values) and
+   * record it as the app does when the copy-sheet command lands: the copy's
+   * sheet id against its source in `journal.sheets.added`.
+   */
+  function duplicate(session: Session, sourceId: string, name: string): string {
+    const workbook = session.runtime.univerAPI.getActiveWorkbook()!
+    const copy = workbook.duplicateSheet(workbook.getSheetBySheetId(sourceId)!)
+    copy.setName(name)
+    recordSheetDuplicate(session.state.editJournal, copy.getSheetId(), name, sourceId)
+    session.mark(HIDDEN_B2)
+    return copy.getSheetId()
+  }
+  const sessionPivotOnReport = (session: Session): void => {
+    session.state.editJournal.pivotAdds.push({
+      sheetId: 's2',
+      sourceSheetId: 's1',
+      sourceArea: { startRow: 0, endRow: 1, startColumn: 0, endColumn: 1 },
+      location: OUTPUT_AREA,
+    } as never)
+  }
+
+  it('withholds the output on a copy of the sheet made this session', async () => {
+    // A pivot made this session: the sheet it is on may be duplicated (a file
+    // pivot's sheet may not, see App's copy-sheet gate).
+    const session = open(CLIENTS, OUTPUT)
+    sessionPivotOnReport(session)
+    const copy = duplicate(session, 's2', 'Report (2)')
+    expect(session.read(copy, 'E4')).toBe(PRIVATE)
+    expect(session.read(copy, 'F4')).toBe(PRIVATE)
+    // and every other reader asks the same index
+    const found = await findWorkbookCells(session.ctx, {
+      query: '138',
+      regex: false,
+      lookIn: 'both',
+      errorsOnly: false,
+      maxResults: 10,
+    })
+    expect(found.matches).toEqual([])
+    const index = redactionIndexOf(session.ctx.redactionLoadRef!.current)
+    expect(pasteSourceHoldsHidden(index, { subUnitId: copy, rows: [3], cols: [4] })).toBe(true)
+  })
+
+  it('follows the copy through rows inserted in it afterwards, and a copy of the copy', () => {
+    const session = open(CLIENTS, OUTPUT)
+    sessionPivotOnReport(session)
+    const copy = duplicate(session, 's2', 'Report (2)')
+    const workbook = session.runtime.univerAPI.getActiveWorkbook()!
+    workbook.getSheetBySheetId(copy)!.insertRowsBefore(0, 1)
+    session.state.editJournal.structuralOps.set(copy, [{ kind: 'insert-rows', index: 0, count: 1 }])
+    session.mark(HIDDEN_B2)
+    expect(session.read(copy, 'E5')).toBe(PRIVATE)
+    const copyOfCopy = duplicate(session, copy, 'Report (3)')
+    expect(session.read(copyOfCopy, 'E5')).toBe(PRIVATE)
+  })
+
+  it('withholds the output of a file pivot on a copy too', () => {
+    // Not reachable today (duplicating such a sheet is refused) but the index
+    // must not depend on that.
+    const session = withPivot(open(CLIENTS, OUTPUT), { sourceSheet: 'Data', sourceRef: 'A1:B2' })
+    const copy = duplicate(session, 's2', 'Report (2)')
+    expect(session.read(copy, 'E4')).toBe(PRIVATE)
+  })
+
+  it('reads the copy as usual when the source holds nothing hidden', () => {
+    const session = open(CLIENTS, OUTPUT)
+    session.state.editJournal.pivotAdds.push({
+      sheetId: 's2',
+      sourceSheetId: 's1',
+      sourceArea: { startRow: 0, endRow: 1, startColumn: 0, endColumn: 0 },
+      location: OUTPUT_AREA,
+    } as never)
+    const copy = duplicate(session, 's2', 'Report (2)')
+    expect(session.read(copy, 'E4')).toBe(SECRET)
   })
 })
 
