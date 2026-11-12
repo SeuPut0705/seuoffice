@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { webLanguage } from '../src/document-store'
+import { webLanguage, webRequestedLanguage } from '../src/document-store'
 
 const at = (search: string): void => history.replaceState(null, '', `/docs/index.html${search}`)
 
@@ -23,5 +23,13 @@ describe('webLanguage', () => {
       at(`?lang=${lang}`)
       expect(webLanguage()).toBe('en')
     }
+  })
+
+  it('keeps the language the host asked for beside the UI language it narrows to', () => {
+    at('?lang=ja-JP')
+    expect(webLanguage()).toBe('en')
+    expect(webRequestedLanguage()).toBe('ja-JP')
+    at('?mode=view')
+    expect(webRequestedLanguage()).toBe('ko')
   })
 })

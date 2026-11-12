@@ -18,6 +18,7 @@ import {
   WebUnsupportedError,
   webAiSettings,
   webLanguage,
+  webRequestedLanguage,
   type PageCollab,
 } from '@seuoffice/web-platform'
 import {
@@ -303,7 +304,9 @@ const ai = createAiStreamBridge()
 
 const desktopApi: WebDesktopApi = {
   getLanguage: async () => webLanguage() as Awaited<ReturnType<DesktopApi['getLanguage']>>,
-  getDocumentLocale: async () => documentLocaleFor(navigator.language),
+  // number formats and the CSV code page guess follow the language the host asked
+  // for, as they did when it was also a UI language
+  getDocumentLocale: async () => documentLocaleFor(webRequestedLanguage()),
   onLanguageChanged: unsubscribe,
   getTheme: async () => 'system',
   onThemeChanged: unsubscribe,

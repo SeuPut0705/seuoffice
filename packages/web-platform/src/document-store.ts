@@ -44,7 +44,15 @@ export function editMode(): boolean {
   return new URLSearchParams(location.search).get('mode') === 'edit'
 }
 
+/**
+ * `?lang=` as the host wrote it; Korean when the host passes none. It names more
+ * languages than the UI has: what a document is drawn for follows this value.
+ */
+export function webRequestedLanguage(): string {
+  return new URLSearchParams(location.search).get('lang') || 'ko'
+}
+
 /** `?lang=` as a UI language; Korean when the host passes none */
 export function webLanguage(): Lang {
-  return normalizeLang(new URLSearchParams(location.search).get('lang') || 'ko')
+  return normalizeLang(webRequestedLanguage())
 }
