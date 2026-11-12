@@ -119,29 +119,57 @@ interface Moment {
   canRedo: boolean
   /** every transaction since the watch began that changed the document */
   changes: string[]
+  /** whether the editor has the focus, and what has it */
+  focus: string
+  /** every transaction since the watch began, offered and applied (selection moves too) */
+  offered: string[]
 }
 interface TracedEditor {
   can(): { undo(): boolean; redo(): boolean }
-  on(event: 'transaction', listener: (event: { transaction: TracedTransaction }) => void): void
+  on(
+    event: 'transaction' | 'beforeTransaction',
+    listener: (event: { transaction: TracedTransaction }) => void,
+  ): void
+  view: { hasFocus(): boolean }
   state: { doc: { textContent: string }; selection: { anchor: number; head: number } }
   commands: { focus(): boolean; setTextSelection(pos: number): boolean }
 }
 interface TracedTransaction {
   docChanged: boolean
+  selectionSet: boolean
+  selection: { anchor: number; head: number }
   steps: { toJSON(): unknown }[]
   meta?: Record<string, unknown>
 }
-type EditorWindow = Window & { __aidocs?: { editor: TracedEditor }; __changes?: string[] }
+type EditorWindow = Window & {
+  __aidocs?: { editor: TracedEditor }
+  __changes?: string[]
+  __offered?: string[]
+}
 
 /** from here on, every transaction that changes the document is written down */
 const watchChanges = (page: Page) =>
   page.evaluate(() => {
     const w = window as EditorWindow
     const changes: string[] = (w.__changes = [])
+    const offered: string[] = (w.__offered = [])
+    const describe = (tr: TracedTransaction) =>
+      `${tr.docChanged ? 'doc' : ''}${tr.selectionSet ? `sel ${tr.selection.anchor}-${tr.selection.head}` : ''} ` +
+      `[${Object.keys(tr.meta ?? {}).join(',')}]`
+    w.__aidocs!.editor.on('beforeTransaction', ({ transaction }) => {
+      offered.push(`offered ${describe(transaction)}`)
+    })
     w.__aidocs!.editor.on('transaction', ({ transaction }) => {
+      offered.push(`applied ${describe(transaction)}`)
       if (!transaction.docChanged) return
       const steps = JSON.stringify(transaction.steps.map((step) => step.toJSON())).slice(0, 400)
       changes.push(`${Object.keys(transaction.meta ?? {}).join(',')}: ${steps}`)
+    })
+    document.addEventListener('selectionchange', () => {
+      const s = window.getSelection()
+      offered.push(
+        `selectionchange ${JSON.stringify(s?.focusNode?.textContent ?? null)}@${s?.focusOffset ?? -1}`,
+      )
     })
   })
 
@@ -163,6 +191,8 @@ const moment = (page: Page, step: string): Promise<Moment> =>
       canUndo: can.undo(),
       canRedo: can.redo(),
       changes: [...(w.__changes ?? [])],
+      focus: `${editor.view.hasFocus()} ${document.activeElement?.tagName ?? ''}.${String(document.activeElement?.className ?? '').slice(0, 60)}`,
+      offered: [...(w.__offered ?? [])],
     }
   }, step)
 
@@ -186,7 +216,7 @@ const UNTOUCHED = (step: string) => ({
 })
 
 /** how the caret gets into the control: a click on it, or the editor putting it there */
-const WAYS_IN = ['a click', 'the caret set by the editor'] as const
+const WAYS_IN = ['a click', 'a click and a pause', 'the caret set by the editor'] as const
 
 test.describe('a document with a locked content control', () => {
   for (const way of WAYS_IN) {
@@ -214,7 +244,10 @@ test.describe('a document with a locked content control', () => {
         await note('opened')
 
         if (way === 'a click') await control.click()
-        else
+        else if (way === 'a click and a pause') {
+          await control.click()
+          await page.waitForTimeout(500)
+        } else
           await page.evaluate(() => {
             const editor = (window as EditorWindow).__aidocs!.editor
             editor.commands.focus()
