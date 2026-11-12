@@ -74,8 +74,12 @@ interface WithheldSpan {
 function modelPieces(runs: Run[]): Array<Run | WithheldSpan> {
   const pieces: Array<Run | WithheldSpan> = []
   let label: string | null = null
-  for (const run of runs) {
-    if (run.del) continue
+  for (const source of runs) {
+    if (source.del) continue
+    // a picture is no part of the text flow: hfPictureRuns gives it back on its own side of the
+    // text, so a span holding it as well would write the hidden picture twice
+    if (source.image && source.text === '') continue
+    const { image: _image, ...run } = source
     const mine = withheldLabelOf(run.rawRPr)
     const last = pieces[pieces.length - 1]
     if (mine !== null && mine === label && last && 'marker' in last) last.runs.push(run)
@@ -99,6 +103,31 @@ export function hfModelText(value: HeaderFooter): string {
       modelPieces(p.runs).map((piece) => ('marker' in piece ? piece.marker : piece.text)),
     ),
   )
+}
+
+/**
+ * The part's layout tables as a model may read them: one line per row, cells
+ * joined with " | " (a cell's paragraphs with a space), each run hidden from AI
+ * as its placeholder; "" when the part has none. Read-only: set_header_footer
+ * keeps the rows as they are.
+ */
+export function hfModelTableText(value: HeaderFooter): string {
+  return hfParasOf(value)
+    .flatMap((p) => (p.cells ? [p.cells] : []))
+    .map((cells) =>
+      cells
+        .map((cell) =>
+          cell.paras
+            .map((runs) =>
+              hfLinesText([
+                modelPieces(runs).map((piece) => ('marker' in piece ? piece.marker : piece.text)),
+              ]),
+            )
+            .join(' '),
+        )
+        .join(' | '),
+    )
+    .join('\n')
 }
 
 /**

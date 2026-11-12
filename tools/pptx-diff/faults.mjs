@@ -82,11 +82,11 @@ const faults = [
     '"{}"',
   ],
   [
-    'default-any-not-all',
+    'default-ext-not-lowered',
     'pptxLeaves.xml-utils.hasDefaultFor',
     leaf + 'xml_utils.rs',
-    '.any(|tag| re.test(tag.as_str()))',
-    '.all(|tag| re.test(tag.as_str()))',
+    'let wanted = ext.to_lowercase();',
+    'let wanted = ext.to_owned();',
   ],
   [
     'slide-ceiling-boundary',
@@ -457,8 +457,8 @@ const faults = [
     'anim-set-dirty',
     'pptxAnim.animation.setSlideAnimations',
     'crates/pptx-engine/src/animation/incremental.rs',
-    '        .unwrap_or_else(|| patch_slide_timing_xml(&slide.body_suffix, anims));\n    slide.structure_dirty = true;\n',
-    '        .unwrap_or_else(|| patch_slide_timing_xml(&slide.body_suffix, anims));\n',
+    '    slide.structure_dirty.set(true);\n    Ok(())',
+    '    Ok(())',
   ],
   [
     'anim-prune-byte-slice',
@@ -566,32 +566,32 @@ const faults = [
     '"_".to_owned()',
   ],
   [
-    'ident-cnvpr-wordbound',
+    'ident-cnvpr-number-empty',
     'pptxIdent.identity.elementCNvPrId',
     'crates/pptx-engine/src/identity.rs',
-    'js_regex!(r#"\\bid="(\\d+)""#).exec(open_tag)',
-    'js_regex!(r#"id="(\\d+)""#).exec(open_tag)',
+    '.filter(|id| !id.is_empty() && id.bytes().all(',
+    '.filter(|id| id.bytes().all(',
   ],
   [
     'ident-ref-id',
     'pptxIdent.identity.matchesElementRef',
     'crates/pptx-engine/src/identity.rs',
-    '    el.id == id\n        ||',
-    '    false\n        ||',
+    'Ok(el.id() == id\n        ||',
+    'Ok(false\n        ||',
   ],
   [
     'ident-creation-selfclose',
     'pptxIdent.identity.ensureCreationId',
     'crates/pptx-engine/src/identity.rs',
-    'tag.strip_suffix("/>").unwrap_or(tag),',
-    'tag,',
+    'format!("{}>", tag.strip_suffix("/>").unwrap_or(tag))',
+    'format!("{}>", tag)',
   ],
   [
-    'ident-group-open-cnvpr',
+    'ident-group-cnvpr-id-inverted',
     'pptxIdent.identity.groupChildDurableId',
     'crates/pptx-engine/src/identity.rs',
-    '        None => "",\n',
-    '        None => xml.get(from..).unwrap_or(""),\n',
+    'if attribute_of(open.as_str(), "id").as_deref() != Some(id) {',
+    'if attribute_of(open.as_str(), "id").as_deref() == Some(id) {',
   ],
   [
     'ident-redact-el',
@@ -608,11 +608,11 @@ const faults = [
     '        label\n',
   ],
   [
-    'ident-has-selfclose',
+    'ident-ours-ext-uri-inverted',
     'pptxIdent.redaction-xml.hasRedactExtIn',
     'crates/pptx-engine/src/redaction_xml.rs',
-    '(?:{ATTRIBUTES}/>|[^>]*(?:/>|>[\\s\\S]*?</a:ext>))"#',
-    '[^>]*>[\\s\\S]*?</a:ext>"#',
+    'if attribute_of(open.as_str(), "uri").as_deref() != Some(REDACT_EXT_URI) {',
+    'if attribute_of(open.as_str(), "uri").as_deref() == Some(REDACT_EXT_URI) {',
   ],
   [
     'ident-sync-truthy',
@@ -632,8 +632,8 @@ const faults = [
     'ident-strip-trim',
     'pptxIdent.redaction-xml.stripRedactExt',
     'crates/pptx-engine/src/redaction_xml.rs',
-    'Some(inner) if !trim(inner).is_empty() =>',
-    'Some(inner) if !inner.is_empty() =>',
+    'if !trim(all.get(3).unwrap_or_default()).is_empty() {',
+    'if !all.get(3).unwrap_or_default().is_empty() {',
   ],
   [
     'ident-set-first-close',
@@ -825,11 +825,11 @@ const faults = [
     '"_".repeat(other.as_str().len())',
   ],
   [
-    'independent-own-cnvpr-last-close',
+    'independent-own-cnvpr-block-unbounded',
     'pptxIdent.identity.elementDurableId',
     'crates/pptx-engine/src/identity.rs',
-    'rest.find(CNVPR_CLOSE)',
-    'rest.rfind(CNVPR_CLOSE)',
+    'let block = xml.get(own.start..own.end).unwrap_or_default();\n    if let Some(guid) = creation_guid_of(block)?',
+    'let block = xml.get(own.start..).unwrap_or_default();\n    if let Some(guid) = creation_guid_of(block)?',
   ],
   [
     'independent-glyph-flag-x-minus-256',
@@ -1248,8 +1248,8 @@ const faults = [
     'chart-rangax-default-eqone',
     'pptxChart.chart.parseChartXml',
     'crates/pptx-engine/src/chart/mod.rs',
-    'xsd_bool(get(v3, "c:rAngAx"), TsBoolRead::NotZero)',
-    'xsd_bool(get(v3, "c:rAngAx"), TsBoolRead::EqOne)',
+    'ct_boolean(get(v3, "c:rAngAx"), true, true)',
+    'ct_boolean(get(v3, "c:rAngAx"), true, false)',
   ],
   [
     'chart-overlap-nan-not-zeroed',
@@ -1450,8 +1450,8 @@ const faults = [
     'master-edit-empty-csld-name-kept',
     'pptxParse.master-edit.listMasterParts',
     leaf + 'master_edit.rs',
-    'match truthy(m.and_then(|m| m.get(1))) {',
-    'match m.and_then(|m| m.get(1)) {',
+    'match truthy(truthy(xml).and_then(c_sld_name_of).as_deref()) {',
+    'match truthy(xml).and_then(c_sld_name_of).as_deref() {',
   ],
   // calls-parse.ts: layoutA.xml has no cSld name
   [
@@ -1878,11 +1878,11 @@ const faults = [
     'if num_col >= 1.0 {',
   ],
   [
-    'parse-text-spcpct-nan',
+    'parse-text-spcpct-ratio-scale',
     'pptxParse.parse.parseSlide',
     leaf + 'parse/text.rs',
-    'Some(or0(int(Some(v))) / 1000.0)',
-    'Some(int(Some(v)) / 1000.0)',
+    'Some(ratio * 100.0)',
+    'Some(ratio)',
   ],
   [
     'parse-text-spcpts-nan',
@@ -2014,10 +2014,10 @@ const faults = [
   ],
   [
     'parse-fill-grad-percent-suffix',
-    'pptxParse.parse.parseSlide',
-    leaf + 'parse/fill.rs',
-    '                n / 100.0\n',
-    '                n / 100000.0\n',
+    'pptxLeaves.xml-utils.percentFraction',
+    leaf + 'xml_utils.rs',
+    '        n / 100.0\n    } else {',
+    '        n / 100_000.0\n    } else {',
   ],
   [
     'parse-fill-grad-empty-fill-to-rect',
@@ -2066,7 +2066,7 @@ const faults = [
     'parse-fill-attr-quote-unescaped',
     'pptxParse.parse.parseSlide',
     leaf + 'parse/fill.rs',
-    "        .replace('\"', \"&quot;\")",
+    '        .replace(\'"\', "&quot;")',
     '',
   ],
   [
@@ -2151,8 +2151,8 @@ const faults = [
     'master-edit-name-empty-fallback',
     'pptxParse.master-edit.listMasterParts',
     leaf + 'master_edit.rs',
-    '    match truthy(m.and_then(|m| m.get(1))) {',
-    '    match m.and_then(|m| m.get(1)) {',
+    '        Some(name) => name.to_owned(),\n        None => fallback,',
+    '        Some(name) => name.to_owned(),\n        None => String::new(),',
   ],
   [
     'parse-fill-bare-tile',
@@ -2187,7 +2187,7 @@ const faults = [
     'anim-tag-matches-self-closing',
     'pptxAnim.animation.readSlideTimingXml',
     leaf + 'animation/incremental.rs',
-    'self_closing: gt > 0 && tail.as_bytes()[gt - 1] == b\'/\',',
+    "self_closing: gt > 0 && tail.as_bytes()[gt - 1] == b'/',",
     'self_closing: false,',
   ],
   [
@@ -2205,7 +2205,7 @@ const env = {
   ...process.env,
   CARGO_BUILD_JOBS: '4',
   CARGO_TARGET_DIR: target,
-  SEUOFFICE_WASM: resolve(target, 'wasm32-wasip1/debug/office_wasm.wasm'),
+  SEUOFFICE_WASM: resolve(target, 'wasm32-wasip1/probe/office_wasm.wasm'),
 }
 if (process.argv.includes('--inventory')) {
   let stale = 0
@@ -2246,6 +2246,8 @@ const args = [
   resolve(workspace, 'crates/Cargo.toml'),
   '-p',
   'office-wasm',
+  '--profile',
+  'probe',
   '-j4',
 ]
 mkdirSync(out, { recursive: true })
@@ -2262,11 +2264,24 @@ const compareArgs = [
   '--calls-only',
   '--by-function',
 ]
+/** The calls group of a fault's function: `pptxParse.text.x` is `parse`. */
+const groupOf = (fn) => fn.split('.')[0].slice('pptx'.length).toLowerCase()
 const baselineBuild = run('cargo', args)
 if (baselineBuild.status !== 0) throw new Error(baselineBuild.stderr || String(baselineBuild.error))
-const baseline = run(process.execPath, compareArgs, { PPTX_DIFF_OUT: resolve(out, 'baseline') })
-writeFileSync(resolve(out, 'baseline.log'), (baseline.stdout ?? '') + (baseline.stderr ?? ''))
-if (baseline.status !== 0) throw new Error('fault baseline failed: out/faults/baseline.log')
+// The groups the selected faults are in, unfaulted: each must pass on its own
+// (every other group is the gate's), so a difference a probe finds is its fault's.
+for (const group of new Set(selected.map(([, fn]) => groupOf(fn)))) {
+  const baseline = run(process.execPath, [...compareArgs, '--group', group], {
+    PPTX_DIFF_OUT: resolve(out, `baseline-${group}`),
+  })
+  writeFileSync(
+    resolve(out, `baseline-${group}.log`),
+    (baseline.stdout ?? '') + (baseline.stderr ?? ''),
+  )
+  if (baseline.status !== 0)
+    throw new Error(`fault baseline failed: out/faults/baseline-${group}.log`)
+  console.log(`baseline ${group}: passed`)
+}
 const results = []
 for (const [id, fn, file, before, after, occurrences = 1] of selected) {
   const path = resolve(workspace, file)
@@ -2283,9 +2298,8 @@ for (const [id, fn, file, before, after, occurrences = 1] of selected) {
     )
     const build = run('cargo', args)
     if (build.status !== 0) throw new Error(build.stderr || String(build.error))
-    // Only the group of the faulted function: the baseline above compared them all.
-    const group = fn.split('.')[0].slice('pptx'.length).toLowerCase()
-    const compared = run(process.execPath, [...compareArgs, '--group', group], {
+    // Only the group of the faulted function: its baseline above passed.
+    const compared = run(process.execPath, [...compareArgs, '--group', groupOf(fn)], {
       PPTX_DIFF_OUT: resolve(out, id),
     })
     writeFileSync(resolve(out, `${id}.log`), (compared.stdout ?? '') + (compared.stderr ?? ''))

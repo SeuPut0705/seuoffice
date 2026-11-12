@@ -103,7 +103,9 @@ const group = (
     child
       ? `<a:xfrm${attrs}><a:off x="${box[0]}" y="${box[1]}"/><a:ext cx="${box[2]}" cy="${box[3]}"/>` +
         `<a:chOff x="${child[0]}" y="${child[1]}"/><a:chExt cx="${child[2]}" cy="${child[3]}"/></a:xfrm>`
-      : ''
+      : // an element child: an empty grpSpPr makes the TypeScript throw on the whole
+        // deck (ledger grpsppr-string-in), which would leave nothing compared
+        '<a:effectLst/>'
   }</p:grpSpPr>${inner}</p:grpSp>`
 
 const NESTED = group(
@@ -219,6 +221,25 @@ const ITEM_GROUP: ElementClipboardItem = {
   parts: { 'ppt/media/a.bin': 'AAEC', 'ppt/media/_rels/a.bin.rels': 'PFJlbGF0aW9uc2hpcHMvPg==' },
   contentTypes: { 'ppt/media/a.bin': 'application/x-gate', bin: 'application/octet-stream' },
 }
+/** Relationship ids that swap under the new numbering: renamed in one pass, not one after the other. */
+const ITEM_SWAP: ElementClipboardItem = {
+  xml:
+    pic(10, 'First', 1, 2).replace('rId77', 'rId3') +
+    pic(11, 'Second', 3, 4).replace('rId77', "rId2").replace('<a:blip r:embed="rId2"/>', '<a:blip r:embed = \'rId2\' r:link="rId&#51;"/>'),
+  rels: [
+    { rid: 'rId3', type: IMAGE, target: 'ppt/media/s1.png' },
+    { rid: 'rId2', type: IMAGE, target: 'ppt/media/s2.png' },
+  ],
+  parts: { 'ppt/media/s1.png': 'AAEC', 'ppt/media/s2.png': 'AwQF' },
+  contentTypes: { png: 'image/png' },
+}
+/** Dependency parts and content types keyed by an inherited name. */
+const ITEM_PROTO: ElementClipboardItem = {
+  xml: textSp(12, 'Proto', 1, 2, 'p'),
+  rels: [],
+  parts: JSON.parse('{"ppt/media/p.bin":"AAEC","__proto__":"AwQF"}') as Record<string, string>,
+  contentTypes: JSON.parse('{"bin":"application/x-p","__proto__":"x/y","constructor":"c/d"}') as Record<string, string>,
+}
 const ITEM_MISSING: ElementClipboardItem = {
   xml: '<p:sp><p:nvSpPr><p:cNvPr id=\'9\' name="x"/></p:nvSpPr><a:off x="1" y="2"/><a:off x="3" y="4"/></p:sp>',
   rels: [{ rid: 'rId3', type: IMAGE, target: 'ppt/media/missing.png' }],
@@ -243,7 +264,18 @@ export const DECKGROUPS: CallSpec[] = [
       const slide = opened.deck.slides[a.slide as number]!
       return copyElementData(opened, slide, slide.elements[a.element as number]!)
     },
-    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 40].map((element) => input({ slide: 0, element })),
+    [
+      ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 40].map((element) => input({ slide: 0, element })),
+      // the ids a slide may spell: other quotes, spaced `=`, a reference, ids of any shape
+      input(
+        { slide: 0, element: 0 },
+        slideXml('', undefined, textSp(2, 'Spelled', 1, 2, 'x', 'rId1').replace('r:id="rId1"', "r:id = 'rId&#49;'")),
+      ),
+      input(
+        { slide: 0, element: 0 },
+        slideXml('', undefined, textSp(2, 'Other id', 1, 2, 'x', 'Rx7').replace('</p:sp>', '<a:ext r:embed="rId1" r:link=\'rId1\'/></p:sp>')),
+      ),
+    ],
   ),
   spec(
     'pasteElements',
@@ -262,7 +294,9 @@ export const DECKGROUPS: CallSpec[] = [
       [ITEM_LINKS],
       [ITEM_GROUP],
       [ITEM_MISSING],
-      [ITEM_PLAIN, ITEM_PICTURE, ITEM_LINKS, ITEM_GROUP, ITEM_MISSING],
+      [ITEM_SWAP],
+      [ITEM_PROTO],
+      [ITEM_PLAIN, ITEM_PICTURE, ITEM_LINKS, ITEM_GROUP, ITEM_MISSING, ITEM_SWAP],
       [],
     ].map((items) => input({ slide: 0, items, shift: SHIFT })),
   ),
@@ -369,6 +403,8 @@ export const DECKGROUPS: CallSpec[] = [
       { text: '<p:grpSp><p:grpSpPr></p:grpSpPr><p:sp><p:nvSpPr><p:cNvPr id="4" name="x"/></p:nvSpPr>' },
       { text: '<p:sp><p:cNvPr id="1"/></p:sp><p:pic><p:cNvPr name="n" id="9"/></p:pic><p:spx/>' },
       { text: '<p:grpSp><p:grpSpPr/><mc:AlternateContent><mc:Choice><p:sp><p:cNvPr id="1"/></p:sp></mc:Choice></mc:AlternateContent><p:cxnSp><p:cNvPr id="2"/></p:cxnSp><p:graphicFrame/></p:grpSp>' },
+      // the id as the parser reads it: decoded, quoted either way, spaced, after other attributes
+      { text: '<p:grpSp><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id = \'k&amp;1\' name="x"/></p:nvSpPr></p:sp><p:sp><p:nvSpPr><p:cNvPr note="a>b" id="&#53;"/></p:nvSpPr></p:sp><p:sp><p:nvSpPr><p:cNvPr id=""/></p:nvSpPr></p:sp></p:grpSp>' },
       { text: '' },
     ],
   },
@@ -416,8 +452,12 @@ export const DECKGROUPS: CallSpec[] = [
     (opened, at, a) => {
       const slide = opened.deck.slides[a.slide as number]!
       const grp = groupOf(opened, a)
-      const child = grp?.children[a.child as number] as TextElement
-      return patchGroupChildText(slide, groupId(at, a), child)
+      const child = grp?.children[a.child as number]
+      // the Rust takes a TextElement: another child is refused before the call
+      if (child?.type !== 'text' && child?.type !== 'shape') {
+        throw new Error('the child is not a text element')
+      }
+      return patchGroupChildText(slide, groupId(at, a), child as TextElement)
     },
     [
       input({ slide: 0, element: 4, child: 0 }),

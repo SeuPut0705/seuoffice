@@ -5,9 +5,8 @@
 use std::sync::Arc;
 
 use jscompat::{
-    JsNum, JsObject, Slot, TryJsRegex, is_js_space, js_regex, math_max, math_min, math_round,
-    number_to_string, number_truthy, regex_escape, replace_first_with, trim,
-    try_replace_first_with,
+    JsMap, JsNum, JsObject, Slot, is_js_space, js_regex, math_max, math_min, math_round,
+    number_to_string, number_truthy, replace_first_with, trim,
 };
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -26,6 +25,7 @@ use crate::types::{
     Autofit, ElementType, Fill, GlowEffect, GradientFill, ImageFill, ImageMode, ImageTile, Insets,
     ReflectionEffect, ShadowEffect, Slide, SlideElement, TextAnchor, TextInsets, TextVert,
 };
+use crate::xml_utils::{attribute_of, with_relationship_ids};
 
 // ── Shared helpers ─────────────────────────────────────────────────────
 
@@ -1142,6 +1142,7 @@ pub fn set_element_fill(
 #[serde(untagged)]
 pub enum ImageFillSource {
     Bytes {
+        #[serde(deserialize_with = "crate::json_bytes::bytes")]
         bytes: Vec<u8>,
         ext: String,
     },
@@ -1363,18 +1364,20 @@ pub fn replace_picture_bytes(
     };
     let rid = &added.rid;
     let mut tag = blip_tag;
-    let previous_rid = js_regex!(r#"r:embed="([^"]*)""#)
-        .exec(&tag)
-        .and_then(|m| m.get(1).map(str::to_owned));
-    if js_regex!(r#"r:embed=""#).test(&tag) {
-        tag = replace_first_with(js_regex!(r#"r:embed="[^"]*""#), &tag, |_| {
-            format!("r:embed=\"{rid}\"")
-        });
-        tag = replace_first_with(js_regex!(r#"\s+r:link="[^"]*""#), &tag, |_| String::new());
-    } else if js_regex!(r#"r:link=""#).test(&tag) {
-        tag = replace_first_with(js_regex!(r#"r:link="[^"]*""#), &tag, |_| {
-            format!("r:embed=\"{rid}\"")
-        });
+    let previous_rid = attribute_of(&tag, "r:embed");
+    // A coexisting r:link ("insert and link" pictures) would keep refreshing from the old
+    // external file, so it is dropped once the embed points at new bytes
+    let embed = js_regex!(r#"\br:embed\s*=\s*(?:"[^"]*"|'[^']*')"#);
+    let link = js_regex!(r#"\br:link\s*=\s*(?:"[^"]*"|'[^']*')"#);
+    if embed.test(&tag) {
+        tag = replace_first_with(embed, &tag, |_| format!("r:embed=\"{rid}\""));
+        tag = replace_first_with(
+            js_regex!(r#"\s+r:link\s*=\s*(?:"[^"]*"|'[^']*')"#),
+            &tag,
+            |_| String::new(),
+        );
+    } else if link.test(&tag) {
+        tag = replace_first_with(link, &tag, |_| format!("r:embed=\"{rid}\""));
     } else {
         tag = replace_first_with(js_regex!(r"<a:blip\b"), &tag, |_| {
             format!("<a:blip r:embed=\"{rid}\"")
@@ -1386,19 +1389,11 @@ pub fn replace_picture_bytes(
         xml.get(blip_end..).unwrap_or_default()
     );
     if has_model3d && let Some(previous) = previous_rid.filter(|p| !p.is_empty()) {
-        // the id comes from the document: escaped, not pasted
-        let re = TryJsRegex::new(
-            &format!(
-                r#"(<am3d:blip\b[^>]*\br:embed="){}""#,
-                regex_escape(&previous)
-            ),
-            "",
-        )
-        .map_err(|error| error.to_string())?;
-        xml = try_replace_first_with(&re, &xml, |m| {
-            format!("{}{rid}\"", m.get(1).unwrap_or_default())
-        })
-        .map_err(|limit| limit.to_string())?;
+        let mut repointed: JsMap<String> = JsMap::new();
+        repointed.set(previous, rid.clone());
+        xml = js_regex!(r"<am3d:blip\b[^>]*>", "g").replace_all(&xml, |cached| {
+            with_relationship_ids(cached.as_str(), &["embed"], &repointed)
+        });
     }
     xml = replace_first_with(
         js_regex!(r"<a:ext\b[^>]*>\s*<\w+:svgBlip\b[\s\S]*?<\/a:ext>"),

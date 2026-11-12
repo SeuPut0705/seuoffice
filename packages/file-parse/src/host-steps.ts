@@ -169,6 +169,14 @@ export const HOST_STEPS: Readonly<Record<string, (input: unknown) => unknown>> =
       stringField(input, 'fileName'),
       new Uint8Array(Buffer.from(stringField(input, 'bytesBase64'), 'base64')),
     ),
+  // the host's zone east of UTC, in seconds, at an instant: the HWP reader writes memo dates in
+  // local time, as Hangul does, and WASI has no zone
+  'fileparse.localOffsetSeconds': (input) => {
+    const ms =
+      input !== null && typeof input === 'object' && 'ms' in input ? Number(input.ms) : Number.NaN
+    if (!Number.isFinite(ms)) throw new TypeError('host step input has no number ms')
+    return -new Date(ms).getTimezoneOffset() * 60
+  },
   'epub.parseHtml': parseHtmlFlat,
   'epub.parseFragmentText': parseFragmentText,
   'epub.chapterTextRoots': chapterTextRoots,

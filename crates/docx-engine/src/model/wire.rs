@@ -94,12 +94,12 @@ pub(super) fn one_of<T, E: serde::de::Error, const N: usize>(
 pub(super) fn string_enum<'de, D: Deserializer<'de>, T>(
     deserializer: D,
     name: &'static str,
-    unlisted: fn(std::sync::Arc<str>) -> T,
+    unlisted: fn(std::sync::Arc<String>) -> T,
     parse: fn(&str) -> Option<T>,
 ) -> Result<T, D::Error> {
     struct Text<T>(
         &'static str,
-        fn(std::sync::Arc<str>) -> T,
+        fn(std::sync::Arc<String>) -> T,
         fn(&str) -> Option<T>,
     );
     impl<T> Visitor<'_> for Text<T> {
@@ -112,12 +112,38 @@ pub(super) fn string_enum<'de, D: Deserializer<'de>, T>(
         fn visit_str<E: serde::de::Error>(self, text: &str) -> Result<T, E> {
             match (self.2)(text) {
                 Some(value) => Ok(value),
-                None if jscompat::lenient() => Ok((self.1)(text.into())),
+                None if jscompat::lenient() => Ok((self.1)(std::sync::Arc::new(text.to_owned()))),
                 None => Err(E::invalid_value(Unexpected::Str(text), &self)),
             }
         }
     }
     deserializer.deserialize_str(Text(name, unlisted, parse))
+}
+
+/// A value of a field whose type has no null: `None` where the JSON holds
+/// `null`, read inside `jscompat::reading_leniently` as the TypeScript holds
+/// it (a caller's object may carry null where the type says a string);
+/// outside it null is refused as the type's own reader refuses it.
+pub(super) struct OrAbsent<T>(pub Option<T>);
+
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for OrAbsent<T> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        if jscompat::lenient() {
+            Option::<T>::deserialize(deserializer).map(OrAbsent)
+        } else {
+            T::deserialize(deserializer).map(|value| OrAbsent(Some(value)))
+        }
+    }
+}
+
+/// A required field the object lacks: read leniently it is the TypeScript's
+/// undefined, which the caller stands in for; strictly it is refused.
+pub(super) fn absent<E: serde::de::Error>(key: &'static str) -> Result<(), E> {
+    if jscompat::lenient() {
+        Ok(())
+    } else {
+        Err(E::missing_field(key))
+    }
 }
 
 /// A `Record<number, V>`: a [`JsObject`] every key of which is a number as

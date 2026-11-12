@@ -11,8 +11,8 @@
 use std::collections::HashSet;
 
 use jscompat::{
-    JsNum, js_regex, math_max, math_round, number_to_string, replace_first, replace_first_string,
-    slice_utf16, to_number,
+    JsNum, js_regex, math_max, math_round, number_to_string, replace_first_with, slice_utf16,
+    to_number,
 };
 use serde::Serialize;
 
@@ -21,7 +21,7 @@ use crate::layout::{
     list_slide_layouts, placeholder_sp_xml, replace_literal,
 };
 use crate::types::SlideSize;
-use crate::xml_utils::{has_content_type_override, max_relationship_id_number};
+use crate::xml_utils::{escape_xml_attr, has_content_type_override, max_relationship_id_number};
 use crate::zip::{PackageArchive, rels_path_for, resolve_target};
 
 const XMLDECL: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n";
@@ -313,7 +313,11 @@ pub fn ensure_builtin_layout(
         "{XMLDECL}<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\
          <Relationship Id=\"rId1\" Type=\"{MASTER_REL_TYPE}\" Target=\"../slideMasters/{}\"/>\
          </Relationships>",
-        slice_utf16(&master_path, "ppt/slideMasters/".len() as f64, None)
+        escape_xml_attr(&slice_utf16(
+            &master_path,
+            "ppt/slideMasters/".len() as f64,
+            None
+        ))
     );
     archive
         .entries_mut()
@@ -326,7 +330,7 @@ pub fn ensure_builtin_layout(
         .map(|ct| ct.into_owned())
         && !has_content_type_override(&ct, &layout_path)
     {
-        let next = replace_first_string(
+        let next = replace_literal(
             &ct,
             "</Types>",
             &format!(
@@ -338,7 +342,7 @@ pub fn ensure_builtin_layout(
 
     let max_rid = max_relationship_id_number(&master_rels);
     let rid = format!("rId{}", number_to_string(max_rid + 1.0));
-    let next_rels = replace_first_string(
+    let next_rels = replace_literal(
         &master_rels,
         "</Relationships>",
         &format!(
@@ -368,12 +372,12 @@ pub fn ensure_builtin_layout(
             &format!("{id_tag}</p:sldLayoutIdLst>"),
         )
     } else {
-        replace_first(
-            js_regex!(r"(<p:clrMap\b[^>]*\/>)"),
-            1,
-            &master_xml,
-            &format!("$1<p:sldLayoutIdLst>{id_tag}</p:sldLayoutIdLst>"),
-        )
+        replace_first_with(js_regex!(r"<p:clrMap\b[^>]*\/>"), &master_xml, |clr_map| {
+            format!(
+                "{}<p:sldLayoutIdLst>{id_tag}</p:sldLayoutIdLst>",
+                clr_map.as_str()
+            )
+        })
     };
     archive
         .entries_mut()

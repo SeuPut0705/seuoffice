@@ -353,8 +353,13 @@ export interface CommentInfo {
   /** plain text, paragraphs joined with \n */
   text: string
   /** the text as a model may read it, each run hidden from AI as its placeholder;
-   *  absent when the comment hides nothing (then `text` is what a model reads) */
+   *  present exactly when the comment carries a hidden-from-AI mark, even if it reads
+   *  the same as `text` (a hidden run whose words are the placeholder); absent otherwise */
   modelText?: string
+  /** the comment's own XML as the file holds it, kept only when it carries a
+   *  hidden-from-AI mark: a person's edit of `text` is patched into it on save,
+   *  and `editedCommentModelText` reads what that will hide. Never shown or sent. */
+  markedXml?: string
   /** the picture the comment carries; absent for a text-only comment */
   image?: CommentImage
   /** Reply: the parent comment's w:id (resolved via the paraId relation in commentsExtended) */
@@ -447,7 +452,8 @@ export interface InlineContentControl {
   /** the plain text that sits inside the control */
   text: string
   /** that text as a model may read it, each run hidden from AI as its placeholder;
-   *  absent when the control hides nothing */
+   *  present exactly when the control carries a hidden-from-AI mark, even if it reads
+   *  the same as `text`; absent otherwise */
   modelText?: string
 }
 
@@ -1204,6 +1210,8 @@ export interface HfPartInfo {
 /** One display run of footnote/endnote body text (for page-bottom rendering; editing still uses plain text) */
 export interface NoteRun {
   text: string
+  /** the run is hidden from AI under this label (the mark rides in the run's rPr in the file) */
+  redact?: string
   bold?: boolean
   italic?: boolean
   underline?: boolean
@@ -1232,7 +1240,8 @@ export interface NoteInfo {
   /** plain text, paragraphs joined with \n */
   text: string
   /** the text as a model may read it, each run hidden from AI as its placeholder;
-   *  absent when the note hides nothing (then `text` is what a model reads) */
+   *  present exactly when the note carries a hidden-from-AI mark, even if it reads
+   *  the same as `text` (a hidden run whose words are the placeholder); absent otherwise */
   modelText?: string
   /** rich display runs (one group per paragraph); gone when an edit rebuilds the note as plain text */
   richParas?: NoteRun[][]
@@ -1879,6 +1888,9 @@ export interface Block {
   label?: string
   /** plain-text preview for protected blocks */
   previewText?: string
+  /** label of the mark hiding this whole-unit block (image, drawing) from AI: its picture sits in a
+   *  run marked hidden from AI, so its image, preview text and description are never handed to a model */
+  redact?: string
   /** data URL for inline display (type === 'image', or the packaged OLE preview on passthrough) */
   imageDataUrl?: string
   /** OLE embed ProgID (o:OLEObject), e.g. "Excel.Sheet.12"; drives the friendly type caption */

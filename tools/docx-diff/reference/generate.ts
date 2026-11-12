@@ -25,7 +25,7 @@ import type {
   TableModel,
 } from './types'
 import { EMPHASIS_MARKS, TEXT_EFFECTS } from './types'
-import { escapeXmlAttr, escapeXmlText } from './xml-utils'
+import { escapeXmlAttr, escapeXmlText, maskOpaque } from './xml-utils'
 import { resolvePropChangeXml } from './revision-xml'
 import { ownValue } from './own-value'
 import {
@@ -1678,18 +1678,21 @@ const FORMAT_MANAGED_TAGS = new Set([
 export function splitXmlChildren(xml: string): PPrChild[] {
   const out: PPrChild[] = []
   const tagRe = /<(\/?)([A-Za-z0-9:._-]+)((?:"[^"]*"|'[^']*'|[^"'>])*)>/g
+  // tags are found where comments and CDATA cannot fake one; bytes come from xml
+  const masked = maskOpaque(xml)
   let depth = 0
   let start = -1
   let name = ''
   let match: RegExpExecArray | null
-  while ((match = tagRe.exec(xml)) !== null) {
+  while ((match = tagRe.exec(masked)) !== null) {
     const closing = match[1] === '/'
     const selfClosing = match[3].endsWith('/')
     if (closing) {
       depth--
       if (depth === 0) out.push({ name, xml: xml.slice(start, match.index + match[0].length) })
     } else if (selfClosing) {
-      if (depth === 0) out.push({ name: match[2], xml: match[0] })
+      if (depth === 0)
+        out.push({ name: match[2], xml: xml.slice(match.index, match.index + match[0].length) })
     } else {
       if (depth === 0) {
         start = match.index

@@ -8,35 +8,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::chart::ChartKind;
 use crate::chart_insert::{
-    NewChartKind, NewChartOptions, NewChartSeries, build_chart_space_xml, write_chart_workbook,
+    NewChartKind, NewChartOptions, NewChartSeries, PointColors, build_chart_space_xml,
+    write_chart_workbook,
 };
 use crate::deck::OpenedPptx;
 use crate::types::{EmuRect, Slide, SlideElement};
 use crate::with_element;
-use crate::xml_utils::escape_xml_attr;
-use crate::zip::{rels_path_for, resolve_target};
+use crate::xml_utils::{attribute_of, escape_xml_attr};
+use crate::zip::resolve_target;
 
 /// The `descr` of a chart this app created: only those are rebuilt.
 const APP_CHART: &str = "aislides-chart";
-
-/// The largest series or point index a `pointColors` patch may reach. The
-/// TypeScript fills a sparse array; here the rows are dense.
-const MAX_POINT_INDEX: usize = 65_536;
-
-/// `escapeRegex`: escape RegExp special characters (`.*+?^${}()|[]\`).
-pub(crate) fn escape_regex(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if matches!(
-            c,
-            '.' | '*' | '+' | '?' | '^' | '$' | '{' | '}' | '(' | ')' | '|' | '[' | ']' | '\\'
-        ) {
-            out.push('\\');
-        }
-        out.push(c);
-    }
-    out
-}
 
 /// `patch` of `editChartElement`.
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -64,20 +46,10 @@ pub struct ChartEditPatch {
     pub point_colors: Option<JsObject<JsObject<Option<String>>>>,
 }
 
-/// `Number(key)` as the index of an array, when it is one.
-fn array_index_of(key: &str) -> Option<usize> {
+/// `Number(key)` as the index of an array (0 to 2^32 - 2), when it is one.
+fn array_index_of(key: &str) -> Option<u32> {
     let n = to_number(key);
-    (n.fract() == 0.0 && (0.0..4_294_967_295.0).contains(&n)).then_some(n as usize)
-}
-
-/// `array[index] = value` on a sparse array: the holes between are `None`.
-fn put<T>(items: &mut Vec<Option<T>>, index: usize, value: Option<T>) {
-    while items.len() <= index {
-        items.push(None);
-    }
-    if let Some(slot) = items.get_mut(index) {
-        *slot = value;
-    }
+    (n.fract() == 0.0 && (0.0..4_294_967_295.0).contains(&n)).then_some(n as u32)
 }
 
 fn truthy(s: Option<&str>) -> Option<&str> {
@@ -113,36 +85,27 @@ pub fn edit_chart_element(
         }
         let slide_path = slide.path.as_deref().unwrap_or("");
 
-        // Find the chart part path (looked up from the slide rels)
-        let rels = opened.archive.read_text(&rels_path_for(slide_path));
-        let Some(rels) = rels.filter(|r| !r.is_empty()) else {
-            return Ok(false);
-        };
-
-        // Find the r:id in originalXml
+        // The chart part: the relationship the frame's own <c:chart> names, looked up in the
+        // slide rels by its decoded id
         let xml: &str = chart_el
             .anchor
             .as_ref()
             .map(|a| &*a.original_xml)
             .unwrap_or("");
-        let Some(r_id_match) = js_regex!(r#"r:id=["']([^"']+)["']"#).exec(xml) else {
+        let chart_tag = js_regex!(r"<c:chart\b[^>]*>").exec(xml).map(|m| m.as_str());
+        let r_id = chart_tag.and_then(|tag| attribute_of(tag, "r:id"));
+        let chart_rel = match r_id {
+            Some(r_id) => opened
+                .archive
+                .read_rels(slide_path)?
+                .get(r_id.as_str())
+                .cloned(),
+            None => None,
+        };
+        let Some(chart_rel) = chart_rel else {
             return Ok(false);
         };
-        let r_id = r_id_match.get(1).unwrap_or("");
-
-        // Find the chart part path in the rels
-        let rel_re = TryJsRegex::new(
-            &format!(
-                r#"Id=["']{}["'][^>]*Target=["']([^"']+)["']"#,
-                escape_regex(r_id)
-            ),
-            "",
-        )
-        .map_err(|e| e.to_string())?;
-        let Some(rel_match) = rel_re.try_exec(&rels).map_err(|e| e.to_string())? else {
-            return Ok(false);
-        };
-        let chart_path = resolve_target(slide_path, rel_match.get(1).unwrap_or(""));
+        let chart_path = resolve_target(slide_path, &chart_rel.target);
 
         // Read existing chart data (used to fill unspecified fields)
         let Some(existing) = chart_el.chart.as_ref() else {
@@ -227,48 +190,40 @@ pub fn edit_chart_element(
                 .collect(),
         };
         // Per-point colors survive every rebuild (parsed <c:dPt> back-fill), with patch overrides on top
-        let mut point_colors: Vec<Option<Vec<Option<String>>>> =
-            series.iter().map(|s| (*s.point_colors).clone()).collect();
+        let mut point_colors = PointColors::default();
+        for (si, s) in series.iter().enumerate() {
+            for (pi, color) in (*s.point_colors).iter().flatten().enumerate() {
+                if let (Ok(si), Ok(pi), Some(color)) =
+                    (u32::try_from(si), u32::try_from(pi), color.as_ref())
+                {
+                    point_colors.set(si, pi, Some(color.clone()));
+                }
+            }
+        }
         if let Some(overrides) = &patch.point_colors {
             for (si, pts) in overrides.entries() {
                 let Some(si) = array_index_of(si) else {
                     continue; // a key that is no index is a property the builder never reads
                 };
-                if si > MAX_POINT_INDEX {
-                    return Err("pointColors: series index too large".to_owned());
-                }
-                while point_colors.len() <= si {
-                    point_colors.push(None);
-                }
-                let Some(row) = point_colors.get_mut(si) else {
-                    continue;
-                };
-                let row = row.get_or_insert_with(Vec::new);
                 for (pi, c) in pts.entries() {
                     let Some(pi) = array_index_of(pi) else {
                         continue;
                     };
-                    if pi > MAX_POINT_INDEX {
-                        return Err("pointColors: point index too large".to_owned());
-                    }
-                    put(row, pi, c.clone());
+                    point_colors.set(si, pi, c.clone());
                 }
             }
         }
         if patch.switch_row_col == Some(true) {
             let cats = std::mem::take(&mut categories);
             categories = series_out.iter().map(|s| s.name.clone()).collect();
-            let cell = |row: &Option<Vec<Option<String>>>, ci: usize| -> Option<String> {
-                row.as_ref().and_then(|r| r.get(ci)).cloned().flatten()
-            };
-            let transposed: Vec<Option<Vec<Option<String>>>> = (0..cats.len())
-                .map(|ci| {
-                    point_colors
-                        .iter()
-                        .any(|row| cell(row, ci).is_some())
-                        .then(|| point_colors.iter().map(|row| cell(row, ci)).collect())
-                })
-                .collect();
+            // transposed[ci][si] = colors[si][ci], for the categories there are
+            let bound = u32::try_from(cats.len()).unwrap_or(u32::MAX);
+            let mut transposed = PointColors::default();
+            for (si, row) in point_colors.rows() {
+                for (ci, color) in row.range(..bound) {
+                    transposed.set(*ci, si, Some(color.clone()));
+                }
+            }
             series_out = cats
                 .iter()
                 .enumerate()
@@ -355,10 +310,7 @@ pub fn edit_chart_element(
             val_axis_title: val_axis_title.filter(|t| !t.is_empty()),
             gap_width_pct,
             bar_dir: bar_dir.filter(|d| !d.is_empty()),
-            point_colors: point_colors
-                .iter()
-                .any(|row| row.as_ref().is_some_and(|r| r.iter().any(Option::is_some)))
-                .then_some(point_colors),
+            point_colors: (!point_colors.is_empty()).then_some(point_colors),
             color_scheme,
             hole_size_pct,
         };
@@ -431,8 +383,7 @@ pub fn mark_chart_editable(slide: &mut Slide, element_id: &str) -> bool {
 /// bytes: a group's nvGrpSpPr precedes its children). value None removes it.
 /// Returns false when the element or its cNvPr is missing; unchanged bytes stay as is.
 ///
-/// The TypeScript puts `value` into a replacement string, where `$&`, `$1`,
-/// `$$` expand; here it is written as given (ledger cnvpr-attr-dollar).
+/// `value` goes in as a function replacement: written as given, no `$` pattern expands.
 pub(crate) fn patch_own_c_nv_pr_attr(
     slide: &mut Slide,
     element_id: &str,

@@ -46,4 +46,5 @@ export const FILEPARSE_STEPS: Record<string, (input: unknown) => unknown> = {
   'fileparse.htmlSourceElements': HOST_STEPS['fileparse.htmlSourceElements']!,
   'fileparse.diagramFormatOf': HOST_STEPS['fileparse.diagramFormatOf']!,
   'fileparse.readDiagramText': HOST_STEPS['fileparse.readDiagramText']!,
+  'fileparse.localOffsetSeconds': HOST_STEPS['fileparse.localOffsetSeconds']!,
 }

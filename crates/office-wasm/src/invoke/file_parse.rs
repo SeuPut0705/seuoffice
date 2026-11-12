@@ -7,10 +7,24 @@
 //! parts from disk), the readers that await (PDF, mind maps, OpenDocument
 //! text: passed in as `hosted`), and the steps of `seu_host` (parse5, draw.io).
 
+use std::cell::RefCell;
+use std::collections::VecDeque;
+
 use serde_json::{Value, json};
 
 use super::InvokeEnv;
+use file_parse::xlsx::WithheldCells;
 use file_parse::{attachable, csv, opc, xlsx_dates, zip_text_parts};
+
+/// The records of withheld cells `xlsxWithheldCells` opened, newest last. The
+/// binding's closure asks by handle and opens the workbook again when its
+/// record was let go (`WithheldEvicted`), so a few are enough.
+const WITHHELD_KEPT: usize = 4;
+
+thread_local! {
+    static WITHHELD: RefCell<(u32, VecDeque<(u32, WithheldCells)>)> =
+        const { RefCell::new((0, VecDeque::new())) };
+}
 
 /// What a route answers: `None` is `undefined`.
 pub type Out = Result<Option<Value>, String>;
@@ -194,6 +208,39 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
         "redactPptxPartXml" => string_out(file_parse::pptx_redaction::redact_pptx_part_xml(text(
             args, 0,
         )?)),
+        // xlsxWithheldCells: a handle on the workbook's record, or null when it withholds nothing
+        "xlsxWithheldOpen" => {
+            let Some(cells) = file_parse::xlsx::xlsx_withheld_cells(blob(0)?).map_err(thrown)?
+            else {
+                return Ok(Some(Value::Null));
+            };
+            Ok(Some(Value::from(WITHHELD.with_borrow_mut(
+                |(next, kept)| {
+                    *next = next.wrapping_add(1);
+                    if kept.len() == WITHHELD_KEPT {
+                        kept.pop_front();
+                    }
+                    kept.push_back((*next, cells));
+                    *next
+                },
+            ))))
+        }
+        // the closure of xlsxWithheldCells: (handle, sheet, ref, hasFormula)
+        "xlsxWithheldMarker" => {
+            let handle = args
+                .first()
+                .and_then(Value::as_u64)
+                .ok_or("TypeError: argument 0 is not a handle")?;
+            let (sheet, cell_ref) = (text(args, 1)?, text(args, 2)?);
+            let has_formula = args.get(3).and_then(Value::as_bool).unwrap_or(false);
+            WITHHELD.with_borrow(|(_, kept)| {
+                let (_, cells) = kept
+                    .iter()
+                    .find(|(id, _)| u64::from(*id) == handle)
+                    .ok_or_else(|| format!("WithheldEvicted: record {handle} was let go"))?;
+                Ok(Some(json!(cells.marker(sheet, cell_ref, has_formula))))
+            })
+        }
         // the constants the binding keeps as TypeScript literals, for its parity test
         "constants" => Ok(Some(json!({
             "ATTACHABLE_EXTS": attachable::ATTACHABLE_EXTS,
@@ -202,6 +249,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
             "ATTACHABLE_IMAGE_MAX_BYTES": attachable::ATTACHABLE_IMAGE_MAX_BYTES,
             "WHOLE_ZIP_READ_MAX_BYTES": file_parse::parse::WHOLE_ZIP_READ_MAX_BYTES,
             "PPTX_REDACT_EXT_URI": file_parse::pptx_redaction::PPTX_REDACT_EXT_URI,
+            "UNKNOWN_CELL_MARKER": file_parse::xlsx::unknown_cell_marker(),
         }))),
         _ => Err(format!("no function fileParse.{name}")),
     }

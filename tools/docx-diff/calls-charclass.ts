@@ -1,17 +1,9 @@
 // Groups `charclass` and `xmltag` of comparison (f): char-class.ts, the one
 // character classification of the layout rules, and xml-tag.ts, start tags
 // read through their quoted attribute values.
-import {
-  charClass,
-  isCjkLetterChar,
-  isDoubleByteChar,
-  isEastAsianChar,
-  isEastAsianLangTag,
-  isHangulChar,
-  isLatinAlnumChar,
-  textHasEastAsian,
-  textHasHangulChars,
-} from './reference/char-class'
+// The other predicates of char-class.ts stay TypeScript only (the layout calls
+// them per character, too often for a wasm call each): no Rust to compare.
+import { charClass, isDoubleByteChar, isEastAsianLangTag } from './reference/char-class'
 import { findStartTag, removeElements } from './reference/xml-tag'
 import type { CallSpec, Input } from './calls-spec'
 
@@ -39,44 +31,26 @@ const pointSpec = (name: string, fn: (cp: number) => unknown): CallSpec => ({
   mutation: 'none',
 })
 
-const TEXTS = [
+const LANG_TAGS: unknown[] = [
+  null,
   '',
-  'abc 123',
-  '\u00e9\u00d7',
-  '\ud55c\uae00',
-  '\u3131\u314e',
-  '\u1100',
-  '\ud7b0',
-  '\u3042\u30a2\uff71',
-  '\uff71',
-  '\u6f22',
-  '\u3000',
-  '\u{20000}',
-  'a\u{1F600}b',
-  '\u3001',
+  'ko',
+  'ko-KR',
+  'KO_kr',
+  'ja',
+  'ja-JP',
+  'zh',
+  'zh-Hant',
+  'zhx',
+  'kor',
+  'en-US',
+  '-ko',
+  'ko-',
 ]
-
-const textSpec = (name: string, fn: (text: string) => unknown): CallSpec => ({
-  fn: `charclass.${name}`,
-  call: (text) => fn(text),
-  fromDocument: (parts) =>
-    [...(parts.get('word/document.xml') ?? '').matchAll(/<w:t(?:\s[^>]*)?>([^<]{1,200})<\/w:t>/g)]
-      .slice(0, 40)
-      .map((m) => ({ text: m[1]! })),
-  built: TEXTS.map((text) => ({ text })),
-})
-
-const LANG_TAGS: unknown[] = [null, '', 'ko', 'ko-KR', 'KO_kr', 'ja', 'ja-JP', 'zh', 'zh-Hant', 'zhx', 'kor', 'en-US', '-ko', 'ko-']
 
 export const CHARCLASS: CallSpec[] = [
   pointSpec('charClass', charClass),
-  pointSpec('isHangulChar', isHangulChar),
-  pointSpec('isEastAsianChar', isEastAsianChar),
   pointSpec('isDoubleByteChar', isDoubleByteChar),
-  pointSpec('isCjkLetterChar', isCjkLetterChar),
-  pointSpec('isLatinAlnumChar', isLatinAlnumChar),
-  textSpec('textHasEastAsian', textHasEastAsian),
-  textSpec('textHasHangulChars', textHasHangulChars),
   {
     fn: 'charclass.isEastAsianLangTag',
     call: (_text, args) =>
@@ -84,7 +58,13 @@ export const CHARCLASS: CallSpec[] = [
         ? isEastAsianLangTag(args.tag as string | null)
         : isEastAsianLangTag(args.tag as string | null, Boolean(args.korean)),
     fromDocument: (parts) =>
-      [...new Set([...(parts.get('word/styles.xml') ?? '').matchAll(/w:eastAsia="([^"]*)"/g)].map((m) => m[1]!))]
+      [
+        ...new Set(
+          [...(parts.get('word/styles.xml') ?? '').matchAll(/w:eastAsia="([^"]*)"/g)].map(
+            (m) => m[1]!,
+          ),
+        ),
+      ]
         .slice(0, 10)
         .map((tag) => ({ args: { tag } })),
     built: LANG_TAGS.flatMap((tag) => [{ args: { tag } }, { args: { tag, korean: false } }]),
@@ -111,31 +91,50 @@ const TAG_TEXTS = [
   '',
 ]
 
-const NAMES: unknown[] = ['w:pPrChange', 'w:settings', 'w:p', '_b', undefined, { regex: 'settingsRoot' }]
+const NAMES: unknown[] = [
+  'w:pPrChange',
+  'w:settings',
+  'w:p',
+  '_b',
+  undefined,
+  { regex: 'settingsRoot' },
+]
 
 /** The one RegExp the engine passes: the settings root of patch.ts, under any prefix. */
 const SETTINGS_ROOT = /^(?:[A-Za-z0-9._-]+:)?settings$/
 
 const regexOf = (name: unknown): string | RegExp | undefined => {
-  if (name && typeof name === 'object' && 'regex' in name && name.regex === 'settingsRoot') return SETTINGS_ROOT
+  if (name && typeof name === 'object' && 'regex' in name && name.regex === 'settingsRoot')
+    return SETTINGS_ROOT
   return typeof name === 'string' ? name : undefined
 }
 
 export const XMLTAG: CallSpec[] = [
   {
     fn: 'xmltag.findStartTag',
-    call: (text, args) => findStartTag(text, regexOf(args.name), args.from === undefined ? undefined : Number(args.from)),
+    call: (text, args) =>
+      findStartTag(
+        text,
+        regexOf(args.name),
+        args.from === undefined ? undefined : Number(args.from),
+      ),
     fromDocument: (parts) =>
       ['word/document.xml', 'word/settings.xml', 'word/styles.xml']
         .filter((name) => parts.has(name))
         .flatMap((name) =>
-          ['w:pPrChange', 'w:settings', 'w:pgSz'].map((tag) => ({ text: parts.get(name)!.slice(0, 60_000), args: { name: tag } })),
+          ['w:pPrChange', 'w:settings', 'w:pgSz'].map((tag) => ({
+            text: parts.get(name)!.slice(0, 60_000),
+            args: { name: tag },
+          })),
         ),
     built: TAG_TEXTS.flatMap((text) =>
       NAMES.flatMap((name) =>
         [undefined, 0, 1, 5, 40].map((from) => ({
           text,
-          args: { ...(name === undefined ? {} : { name }), ...(from === undefined ? {} : { from }) },
+          args: {
+            ...(name === undefined ? {} : { name }),
+            ...(from === undefined ? {} : { from }),
+          },
         })),
       ),
     ),
@@ -148,12 +147,21 @@ export const XMLTAG: CallSpec[] = [
         : removeElements(text, String(args.name), Number(args.limit)),
     fromDocument: (parts) =>
       [...parts]
-        .filter(([path, text]) => path.endsWith('.xml') && /<w:(?:pPr|rPr|tblPr|trPr|tcPr|sectPr)Change\b/.test(text))
+        .filter(
+          ([path, text]) =>
+            path.endsWith('.xml') && /<w:(?:pPr|rPr|tblPr|trPr|tcPr|sectPr)Change\b/.test(text),
+        )
         .flatMap(([, text]) =>
-          ['w:pPrChange', 'w:rPrChange', 'w:tcPrChange'].map((name) => ({ text: text.slice(0, 60_000), args: { name } })),
+          ['w:pPrChange', 'w:rPrChange', 'w:tcPrChange'].map((name) => ({
+            text: text.slice(0, 60_000),
+            args: { name },
+          })),
         ),
     built: TAG_TEXTS.flatMap((text) =>
-      ['w:pPrChange', 'w:p'].flatMap((name) => [{ text, args: { name } }, { text, args: { name, limit: 1 } }]),
+      ['w:pPrChange', 'w:p'].flatMap((name) => [
+        { text, args: { name } },
+        { text, args: { name, limit: 1 } },
+      ]),
     ),
   },
 ]

@@ -9,7 +9,7 @@ mod ordered;
 mod tag;
 mod utf16;
 
-pub use object::{ObjectOptions, parse_object};
+pub use object::{EntityDecoder, ObjectOptions, parse_object, parse_object_with};
 pub use ordered::{
     AttributeMode, ParseError, XElement, XNode, parse_ordered, parse_ordered_with_attributes,
     serialize, serialize_element,

@@ -34,6 +34,7 @@ import {
   type OpContext,
 } from './registry'
 import { normalizeLengthUnits } from './units'
+import { guardWithheld } from './withhold-guard'
 
 /** Resolve the slide the op is about to act on and stamp its durable id onto the
     record. Pre-apply resolution against the live mid-txn state is the truth; a
@@ -48,6 +49,7 @@ function applyStamped(op: Op, ctx: OpContext): OpRecord {
       // Non-standard slide addressing (op-specific semantics): leave unstamped.
     }
   }
+  if (ctx.withhold) guardWithheld(op, ctx)
   const rec = lookup(op.op).apply(op, ctx)
   return slideId ? { ...rec, slideId } : rec
 }
@@ -65,6 +67,8 @@ export interface TxnRequest {
    * ops validate before mutating.
    */
   parts?: Map<string, Slide>
+  /** The ops come from an agent: text hidden from AI stays out of reach of the ops (withhold-guard.ts). */
+  withhold?: boolean
   ops: Op[]
 }
 
@@ -164,7 +168,12 @@ export function runTxn(opened: OpenedPptx, req: TxnRequest): TxnResult {
       failures: [{ index: 0, op: { op: '(none)' }, error: 'ops must be a non-empty array.' }],
     }
   }
-  const ctx: OpContext = { opened, parts: new Map(req.parts ?? []), touchedParts: new Set() }
+  const ctx: OpContext = {
+    opened,
+    parts: new Map(req.parts ?? []),
+    touchedParts: new Set(),
+    ...(req.withhold ? { withhold: true } : {}),
+  }
   const isolation = req.isolation ?? 'atomic'
 
   // ── plan: validate everything up front (against the pre-transaction state) ──
@@ -178,6 +187,7 @@ export function runTxn(opened: OpenedPptx, req: TxnRequest): TxnResult {
       assertXmlSafeStrings(op)
       normalizeLengthUnits(op)
       lookup(op.op).validate(op, ctx)
+      if (ctx.withhold) guardWithheld(op, ctx)
       plan.push(planLine(i, op))
     } catch (e) {
       planFailures.push({ index: i, op, error: withUsage(op, message(e)) })

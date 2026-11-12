@@ -146,6 +146,7 @@ pub fn parse_notes_xml_with(
         out.push(crate::model::NoteInfo {
             id: entry.id.to_owned(),
             text: entry.text,
+            model_text: None,
             rich_paras: first.is_some().then_some(rich_paras),
             style_id: truthy(style_id.as_deref()).map(str::to_owned),
             zotero_field: js_regex!(r"ADDIN\s+(?:ZOTERO_|CSL_)")

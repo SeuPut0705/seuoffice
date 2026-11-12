@@ -12,6 +12,7 @@ use jscompat::{
     JsNum, js_regex, math_max, math_min, math_round, number_to_string, slice_utf16, to_number, trim,
 };
 use serde::Deserialize;
+use std::collections::BTreeMap;
 
 use crate::chart_workbook::{
     CHART_WORKBOOK_REL_TYPE, ChartWorkbookData, ChartWorkbookSeries, XLSX_CONTENT_TYPE,
@@ -24,7 +25,7 @@ use crate::notes::append_relationship;
 use crate::resource_cleanup::remove_relationship_and_collect_owned_target;
 use crate::types::EmuRect;
 use crate::xml_utils::{
-    creation_id_xml, escape_xml_attr, escape_xml_text, has_content_type_override,
+    attribute_of, creation_id_xml, escape_xml_attr, escape_xml_text, has_content_type_override,
     max_relationship_id_number,
 };
 use crate::zip::{rels_path_for, resolve_target};
@@ -63,6 +64,62 @@ pub struct NewChartSeries {
     pub values: Vec<f64>,
 }
 
+/// `pointColors` of `NewChartOptions`: `[seriesIdx][pointIdx]`, held as a JavaScript
+/// sparse array reads. Only entries that are not `undefined` are kept (a hole and an
+/// `undefined` read the same everywhere), in index order: memory follows the number of
+/// entries, never the index, which can be any array index up to 2^32 - 2.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct PointColors(BTreeMap<u32, BTreeMap<u32, String>>);
+
+impl PointColors {
+    /// `row[point] = color` on `colors[series]`, creating the row; `None` is `undefined`.
+    pub fn set(&mut self, series: u32, point: u32, color: Option<String>) {
+        match color {
+            Some(color) => {
+                self.0.entry(series).or_default().insert(point, color);
+            }
+            None => {
+                if let Some(row) = self.0.get_mut(&series) {
+                    row.remove(&point);
+                    if row.is_empty() {
+                        self.0.remove(&series);
+                    }
+                }
+            }
+        }
+    }
+
+    /// `colors[series]`: the entries of the row by point index; `None` for no row.
+    pub fn row(&self, series: usize) -> Option<&BTreeMap<u32, String>> {
+        self.0.get(&u32::try_from(series).ok()?)
+    }
+
+    /// Every row with its series index, in index order.
+    pub fn rows(&self) -> impl Iterator<Item = (u32, &BTreeMap<u32, String>)> {
+        self.0.iter().map(|(series, row)| (*series, row))
+    }
+
+    /// No entry that is not `undefined` anywhere (`!colors.some(row => row?.some(c => c != null))`).
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl<'de> Deserialize<'de> for PointColors {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let rows = Vec::<Option<Vec<Option<String>>>>::deserialize(deserializer)?;
+        let mut out = Self::default();
+        for (series, row) in rows.into_iter().enumerate() {
+            for (point, color) in row.into_iter().flatten().enumerate() {
+                if let (Ok(series), Ok(point)) = (u32::try_from(series), u32::try_from(point)) {
+                    out.set(series, point, color);
+                }
+            }
+        }
+        Ok(out)
+    }
+}
+
 fn values_or_nan<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<f64>, D::Error> {
     let values = Vec::<Option<f64>>::deserialize(d)?;
     Ok(values.into_iter().map(|v| v.unwrap_or(f64::NAN)).collect())
@@ -99,7 +156,7 @@ pub struct NewChartOptions {
     pub bar_dir: Option<String>,
     /// Per-point fills, [seriesIdx][pointIdx] (sparse; written as c:dPt, wins over the series color)
     #[serde(default)]
-    pub point_colors: Option<Vec<Option<Vec<Option<String>>>>>,
+    pub point_colors: Option<PointColors>,
     /// Per-series solid colors (#RRGGBB, cycled); line-like series color the stroke, others the fill
     #[serde(default)]
     pub color_scheme: Option<Vec<String>>,
@@ -264,19 +321,14 @@ pub fn build_chart_space_xml(opts: &NewChartOptions, external_data_r_id: Option<
     };
     // Per-point <c:dPt> fills (schema position: after tx/spPr, before dLbls/cat/val)
     let d_pt_xml = |i: usize| -> String {
-        let Some(colors) = opts
-            .point_colors
-            .as_ref()
-            .and_then(|p| p.get(i))
-            .and_then(|c| c.as_ref())
-        else {
+        let Some(colors) = opts.point_colors.as_ref().and_then(|p| p.row(i)) else {
             return String::new();
         };
         let mut out = String::new();
-        for (pi, c) in colors.iter().enumerate() {
-            let Some(c) = c.as_deref().filter(|c| !c.is_empty()) else {
+        for (pi, c) in colors {
+            if c.is_empty() {
                 continue;
-            };
+            }
             let hex = jscompat::replace_first_string(c, "#", "").to_uppercase();
             out.push_str(&format!(
                 "<c:dPt><c:idx val=\"{pi}\"/><c:bubble3D val=\"0\"/>\
@@ -492,7 +544,10 @@ pub fn build_chart_space_xml(opts: &NewChartOptions, external_data_r_id: Option<
     };
     let external = match external_data_r_id.filter(|r| !r.is_empty()) {
         Some(r) => {
-            format!("<c:externalData r:id=\"{r}\"><c:autoUpdate val=\"0\"/></c:externalData>")
+            format!(
+                "<c:externalData r:id=\"{}\"><c:autoUpdate val=\"0\"/></c:externalData>",
+                escape_xml_attr(r)
+            )
         }
         None => String::new(),
     };
@@ -584,12 +639,15 @@ pub fn write_chart_workbook(
         .read_text(chart_path)
         .map(|c| c.into_owned())
         .unwrap_or_default();
-    let linked_id = js_regex!(r#"<c:externalData\b[^>]*\br:id="([^"]+)""#)
+    let linked_tag = js_regex!(r"<c:externalData\b[^>]*>")
         .exec(&current)
-        .and_then(|m| m.get(1).map(str::to_owned));
+        .map(|m| m.as_str());
+    let linked_id = linked_tag
+        .and_then(|tag| attribute_of(tag, "r:id"))
+        .filter(|id| !id.is_empty());
     let archive = &mut opened.archive;
     let linked = match &linked_id {
-        Some(id) => archive.read_rels(chart_path)?.get(id).cloned(),
+        Some(id) => archive.read_rels(chart_path)?.get(id.as_str()).cloned(),
         None => None,
     };
     if let Some(linked) = linked

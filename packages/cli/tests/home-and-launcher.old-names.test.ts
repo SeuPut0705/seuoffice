@@ -163,6 +163,7 @@ describe.skipIf(process.platform === 'win32')('the standalone CLI archive', () =
       'wasm/pdfium.wasm',
       'wasm/rhwp_bg.wasm',
       'wasm/hb-subset.wasm',
+      'wasm/office_wasm.wasm',
       'native/xlsx-sidecar',
     ]) {
       mkdirSync(join(from, file, '..'), { recursive: true })

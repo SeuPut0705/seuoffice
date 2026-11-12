@@ -13,6 +13,7 @@ import {
 } from '../src/index'
 import { PPTX_REDACT_EXT_URI } from '../src/pptx-redaction'
 import { pivotOutputOf } from '../src/xlsx-formula-redaction'
+import { xlsxWithheldCells } from '../src/redaction'
 import { writeFixture } from './helpers/fixtures'
 // the workbook gateway's own writers: the part and its defined-name copy under
 // test are the ones a save really produces
@@ -872,6 +873,31 @@ describe('xlsx: a withheld cell reads as its marker', () => {
     for (const bytes of [book([CLIENTS]), book([CLIENTS], { definedNames: names })]) {
       expect((await readBook(bytes)).text).toBe(`# Clients\nName | Phone\nKim | ${SECRET}`)
     }
+  })
+})
+
+describe('xlsx: the withheld cells a reader outside this package asks about', () => {
+  it('answers each cell, and nothing for a workbook that withholds nothing', async () => {
+    const withheld = await xlsxWithheldCells(
+      await savedBook([CLIENTS], [{ sheetName: 'Clients', marks: [mark('B2')] }]),
+    )
+    expect(withheld?.('Clients', 'B2', false)).toBe(MARKER)
+    expect(withheld?.('Clients', 'A2', false)).toBeNull()
+    expect(await xlsxWithheldCells(await book([CLIENTS]))).toBeNull()
+  })
+
+  it('still answers after many other workbooks were opened since', async () => {
+    const first = await xlsxWithheldCells(
+      await savedBook([CLIENTS], [{ sheetName: 'Clients', marks: [mark('B2')] }]),
+    )
+    for (let i = 0; i < 8; i++) {
+      const other = await xlsxWithheldCells(
+        await savedBook([CLIENTS], [{ sheetName: 'Clients', marks: [mark('A2')] }]),
+      )
+      expect(other?.('Clients', 'A2', false)).toBe(MARKER)
+    }
+    expect(first?.('Clients', 'B2', false)).toBe(MARKER)
+    expect(first?.('Clients', 'A2', false)).toBeNull()
   })
 })
 

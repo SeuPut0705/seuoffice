@@ -54,9 +54,9 @@ const WRITES: Record<string, (op: Record<string, unknown>) => RangeBounds | null
   set_range: (op) => gridOf(op),
   clear_range: (op) => rangeOf(op.range),
   fill_range: (op) => rangeOf(op.target),
-  copy_range: (op) => rangeOf(op.target),
+  copy_range: (op) => pasteOf(op),
   // a move clears its source and writes its target; both are checked
-  move_range: (op) => rangeOf(op.target),
+  move_range: (op) => pasteOf(op),
   convert_to_values: (op) => rangeOf(op.range),
   sort_range: (op) => rangeOf(op.range),
   find_replace: (op) => rangeOf(op.range),
@@ -70,6 +70,13 @@ const WRITES: Record<string, (op: Record<string, unknown>) => RangeBounds | null
       : bounds
   },
   add_table: (op) => rangeOf(op.range),
+  // A pivot's output is a grid of aggregated cells down and to the right of
+  // its target cell, as large as the data makes it: nothing says how far, so
+  // every cell from the target on may be overwritten.
+  add_pivot: (op) => {
+    const from = cellOf(op.targetCell)
+    return from ? { ...from, endRow: MAX_ROW, endColumn: MAX_COLUMN } : null
+  },
   // Deleting rows/columns takes the withheld cells with them; the marks stay
   // where they are and would then describe whatever shifted into place.
   delete_rows: (op) => rowBand(op.row, op.count),
@@ -110,6 +117,11 @@ const READS: Record<string, (op: Record<string, unknown>) => ReadSite[]> = {
     const bounds = rangeOf(op.sourceRange)
     return bounds ? [{ bounds }] : []
   },
+}
+
+/// The sheet a write lands on when it is not the op's own.
+const WRITE_SHEET: Record<string, (op: Record<string, unknown>) => unknown> = {
+  add_pivot: (op) => op.targetSheetId,
 }
 
 function sourceOf(op: Record<string, unknown>): ReadSite[] {
@@ -193,6 +205,24 @@ function cellOf(address: unknown): RangeBounds | null {
     // swallow would also hide a genuine parse bug
     console.debug('[redact-guard] unparsable address', address, error)
     return null
+  }
+}
+
+/**
+ * Where a copy or a move lands. A target of one cell is the top-left corner of
+ * a block the size of the source (`copyTargetBounds` in the workbook DSL, which
+ * the executor pastes by): the cell alone would wave a paste through a mark
+ * one column or row on.
+ */
+function pasteOf(op: Record<string, unknown>): RangeBounds | null {
+  const target = rangeOf(op.target)
+  const source = rangeOf(op.source)
+  if (!target || !source) return target
+  if (target.startRow !== target.endRow || target.startColumn !== target.endColumn) return target
+  return {
+    ...target,
+    endRow: target.startRow + source.endRow - source.startRow,
+    endColumn: target.startColumn + source.endColumn - source.startColumn,
   }
 }
 
@@ -389,12 +419,14 @@ export function redactGuardForOps(
     if (!write) continue
     const bounds = write(op)
     if (!bounds) continue
-    for (const mark of withheldOn(index, sheetId)) {
+    const writeSheetId = WRITE_SHEET[name]?.(op)
+    const landsOn = typeof writeSheetId === 'string' && writeSheetId !== '' ? writeSheetId : sheetId
+    for (const mark of withheldOn(index, landsOn)) {
       if (!intersects(mark, bounds)) continue
       return refusalAt(
         mark,
         bounds,
-        sheetName,
+        sheetNameOf(landsOn),
         `${name} would write into a cell withheld from the model — it was never shown ` +
           `those values, so it cannot have meant to replace them; write around it instead`,
       )

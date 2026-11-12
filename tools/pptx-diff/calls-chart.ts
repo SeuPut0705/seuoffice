@@ -1717,24 +1717,6 @@ const withTheme = (theme: Theme | undefined): Args => (theme === undefined ? {} 
 
 // ── Specs ─────────────────────────────────────────────────────────────
 
-/**
- * ledger chart-xsd-boolean: a CT_Boolean element that the schema reads
- * otherwise than the TypeScript: `val="true"`, `val="false"`, or no `val`
- * (true). The parser keeps no attribute without a value, so `<c:delete x/>`
- * is that last form too, and a mutation can make one: the class is named by
- * this test, not by a list of texts. The names are those the Rust reads
- * through `xsd_bool` (crates/pptx-engine/src/chart).
- */
-const XSD_BOOLEAN_FORM = new RegExp(
-  '<c(?:15)?:(?:delete|showVal|showPercent|showSerName|showCatName|marker|smooth|' +
-    'showDataLabelsRange|rAngAx|varyColors|overlay|autoTitleDeleted|showKeys|showHorzBorder|' +
-    'showVertBorder|showOutline)' +
-    '(?:\\s(?![^<>]*\\bval\\s*=)[^<>]*?)?\\/>|' +
-    '<c(?:15)?:\\w+\\s[^<>]*\\bval="(?:true|false)"',
-)
-const xsdBooleanClass = (text: string): string | undefined =>
-  XSD_BOOLEAN_FORM.test(text) ? 'chart-xsd-boolean' : undefined
-
 export const CHART: CallSpec[] = [
   {
     fn: 'pptxChart.chart.parseChartXml',
@@ -1755,7 +1737,6 @@ export const CHART: CallSpec[] = [
       ),
     ],
     built: CHART_INPUTS,
-    listed: xsdBooleanClass,
   },
   {
     fn: 'pptxChart.chartex.parseChartExXml',

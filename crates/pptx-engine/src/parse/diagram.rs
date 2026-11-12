@@ -556,9 +556,9 @@ struct Fallback<'a> {
 }
 
 impl<'a> Fallback<'a> {
-    /// `colorOf`. Where the recorded slot holds no entry at the index (a
-    /// negative or infinite presStyleIdx) the TypeScript reads `undefined`
-    /// and throws in `dgmSp`; here the node takes the cycle color instead.
+    /// `colorOf`. A presStyleIdx that is no non-negative safe integer (-1, the
+    /// schema's "none", or one too long to be a number) names no slot, and the
+    /// node takes the color cycle like one with no recorded slot.
     fn color_of(&self, node: &'a DgmTreeNode<'a>, i: usize) -> DgmFill<'a> {
         if let Some(sp_pr) = node.sp_pr {
             return DgmFill::SpPr(sp_pr);
@@ -568,7 +568,9 @@ impl<'a> Fallback<'a> {
             && let Some(slot) = label_fills.get(lbl)
         {
             let k = idx % slot.len() as f64;
-            if k >= 0.0
+            if idx.fract() == 0.0
+                && *idx >= 0.0
+                && *idx <= 9_007_199_254_740_991.0
                 && let Some(color) = slot.get(k as usize)
             {
                 return DgmFill::Color(color);

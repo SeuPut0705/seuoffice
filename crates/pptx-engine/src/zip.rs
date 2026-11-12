@@ -3,24 +3,29 @@
 
 use std::borrow::Cow;
 
+use crate::xml_utils::xml_parse_object as parse_object;
 use jscompat::{
     JsMap, JsNum, Radix, decode_uri_component, js_regex, parse_int, value_to_string, value_truthy,
 };
 use ooxml_pkg::{DeclaredPart, ZipLimits, decode_text, load_package};
-use ooxml_xml::{ObjectOptions, parse_object};
-use serde::Serialize;
+use ooxml_xml::ObjectOptions;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use crate::xml_utils::{as_xml_node, xml_array};
+use crate::xml_utils::{as_xml_node, attribute_of, xml_array};
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Relationship {
     pub id: String,
     #[serde(rename = "type")]
     pub r#type: String,
     pub target: String,
-    #[serde(rename = "targetMode", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "targetMode",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub target_mode: Option<String>,
 }
 
@@ -206,7 +211,7 @@ impl PackageArchive {
             .read_text(PRESENTATION)
             .filter(|xml| !xml.is_empty())
             .ok_or("pptx: missing ppt/presentation.xml")?;
-        let pres = parse(&pres_xml, &["p:sldId"])?;
+        let pres = parse(&pres_xml, &["p:sldId", "sldId"])?;
         let pres = as_xml_node(Some(&pres));
         let root_raw = or_else(pres.get("p:presentation"), pres.get("presentation"));
         if !value_truthy(root_raw) {
@@ -280,10 +285,10 @@ impl PackageArchive {
             return Ok(None);
         };
         let pres_rels = self.read_rels(PRESENTATION)?;
-        let master_rid = js_regex!(r#"<p:sldMasterId\b[^>]*\br:id="([^"]+)""#)
+        let master_rid = js_regex!(r"<p:sldMasterId\b[^>]*>")
             .exec(&pres_xml)
-            .and_then(|found| found.get(1));
-        let master_rel = match master_rid {
+            .and_then(|tag| attribute_of(tag.as_str(), "r:id"));
+        let master_rel = match master_rid.as_deref().filter(|rid| !rid.is_empty()) {
             Some(rid) => pres_rels.get(rid),
             None => pres_rels
                 .values()
@@ -297,9 +302,9 @@ impl PackageArchive {
             return Ok(None);
         };
         let master_rels = self.read_rels(&master_path)?;
-        let mut layouts: Vec<String> = js_regex!(r#"<p:sldLayoutId\b[^>]*\br:id="([^"]+)""#, "g")
+        let mut layouts: Vec<String> = js_regex!(r"<p:sldLayoutId\b[^>]*>")
             .find_iter(&master_xml)
-            .filter_map(|found| master_rels.get(found.get(1)?))
+            .filter_map(|found| master_rels.get(&attribute_of(found.as_str(), "r:id")?))
             .map(|rel| resolve_target(&master_path, &rel.target))
             .collect();
         if layouts.is_empty() {

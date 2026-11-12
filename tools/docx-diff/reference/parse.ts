@@ -10,6 +10,7 @@ import { isTiffMime, tiffToDataUrlAsync } from './tiff'
 import { ommlEndsWithBreak, ommlFragmentsOf, ommlToLatex, ommlToMathML } from './math'
 import { splitXmlChildren } from './generate'
 import { readPropChangeXml } from './revision-xml'
+import { parseEntry, runsText, withheldLabelOf, withheldText } from './withheld'
 import { NOTE_PART_PATH, parseNotesXml, type NoteParagraphReader } from './notes'
 import { scanBody, type BodyElement } from './scan'
 import {
@@ -243,7 +244,7 @@ import {
   resolveMainDocumentPath,
   resolveRelationshipTargetPath,
 } from './parse-package'
-import { parseSdtBlock, sdtMeta, sdtRanges, sdtTableXml, splitSdtParts } from './parse-sdt'
+import { parseSdtBlock, sdtMeta, sdtTableXml, splitSdtParts } from './parse-sdt'
 import { sdtCheckboxControl } from './checkbox-control'
 import { hfKeptRoot, hfWrapNamespaces, type HfRootName } from './hf-root'
 import {
@@ -942,22 +943,51 @@ async function expandAltChunk(
  * (and therefore the run text/model) stay exactly as parsed.
  */
 function inlineContentControlsOf(xml: string): InlineContentControl[] {
+  // the controls as the parser finds them, outermost first: markup inside CDATA
+  // is text, not a control
+  const paragraph = parseEntry(xml)
+  if (!paragraph) return []
   const out: InlineContentControl[] = []
-  for (const range of sdtRanges(xml)) {
-    const content = xml.slice(range.openEnd, range.closeStart)
-    // a w:sdt holding a paragraph or a table is a block container, not a
-    // run-level control; the body/split paths already report those
-    if (/<w:p[\s/>]|<w:tbl[\s>]/.test(content)) continue
-    const meta = sdtMeta(xml.slice(range.openStart, range.closeEnd))
-    out.push({
-      tag: meta.tag,
-      title: meta.alias,
-      lock: meta.lock,
-      id: meta.id,
-      text: plainText(content),
-    })
+  const valOf = (sdtPr: XNode | undefined, name: string): string =>
+    (sdtPr && attrsOf(findChild(sdtPr, name) ?? {})['w:val']) ?? ''
+  const visit = (node: XNode): void => {
+    for (const child of childrenOf(node)) {
+      if (nameOf(child) === 'w:sdt') {
+        const content = findChild(child, 'w:sdtContent')
+        // a w:sdt holding a paragraph or a table is a block container, not a
+        // run-level control; the body/split paths already report those
+        if (content && !holdsBlock(content)) {
+          const sdtPr = findChild(child, 'w:sdtPr')
+          const text = controlText(content)
+          const modelText = withheldText(content, controlText)
+          out.push({
+            tag: valOf(sdtPr, 'w:tag'),
+            title: valOf(sdtPr, 'w:alias'),
+            lock: valOf(sdtPr, 'w:lock'),
+            id: valOf(sdtPr, 'w:id'),
+            text,
+            ...(modelText !== undefined ? { modelText } : {}),
+          })
+        }
+      }
+      visit(child)
+    }
   }
+  visit(paragraph)
   return out
+}
+
+/** an inline control's text, character references decoded as the body's are */
+function controlText(content: XNode): string {
+  return decodeNumericCharRefs(runsText(content))
+}
+
+/** whether a subtree holds a paragraph or a table */
+function holdsBlock(node: XNode): boolean {
+  return childrenOf(node).some((child) => {
+    const name = nameOf(child)
+    return name === 'w:p' || name === 'w:tbl' || holdsBlock(child)
+  })
 }
 
 /** attach the inline controls of a paragraph block, when it has any */
@@ -8306,6 +8336,8 @@ function noteParagraphReader(ctx: BuildContext): NoteParagraphReader {
 /** a note display run: the run's direct look over the paragraph's resolved base */
 function noteRunOf(run: Run, base: EffectiveRPr): NoteRun {
   const out: NoteRun = { text: run.text }
+  const redact = withheldLabelOf(run.rawRPr)
+  if (redact !== null) out.redact = redact
   const cs = run.effective?.cs ? run.effective : undefined
   if (run.bold ?? cs?.bold ?? base.bold) out.bold = true
   if (run.italic ?? cs?.italic ?? base.italic) out.italic = true
