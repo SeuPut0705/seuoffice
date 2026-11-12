@@ -78,3 +78,25 @@ describe('saving comments keeps a hidden run however the comment tag is spelled'
     },
   )
 })
+
+describe('an edited comment or note whose hidden run holds CDATA keeps its mark', () => {
+  it('a comment edited by a person', async () => {
+    const JSZip = (await import('jszip')).default
+    const zip = await JSZip.loadAsync(await commentedDocx('w:id="1" w:author="K"'))
+    const xml = await zip.file('word/comments.xml')!.async('string')
+    zip.file(
+      'word/comments.xml',
+      xml.replace(`<w:t>${SECRET}</w:t>`, `<w:t><![CDATA[${SECRET}]]></w:t>`),
+    )
+    const doc = await parseDocx(await zip.generateAsync({ type: 'uint8array' }))
+    expect(doc.comments[0]!.modelText).toBe(`Note: ${PLACEHOLDER}`)
+    const blocks = doc.blocks
+      .filter((block) => !block.hidden)
+      .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+    const edited = { ...doc.comments[0]!, text: `Later: ${SECRET}` }
+    const saved = await saveDocx(doc, blocks, { comments: [edited] })
+    const first = (await parseDocx(saved)).comments.find((c) => c.id === '1')!
+    expect(first.text).toBe(`Later: ${SECRET}`)
+    expect(first.modelText).toBe(`Later: ${PLACEHOLDER}`)
+  })
+})
