@@ -803,8 +803,11 @@ fn merge_cell_element_attrs(
     fresh_el: Option<&str>,
     rebuilt: &[&str],
 ) -> Result<String, RegexLimit> {
-    let el_re = jscompat::JsRegex::new(&format!(r"<{tag}(?:\s[^>]*)?/>"), "")
-        .expect("w:spacing and w:ind compile");
+    let el_re = match tag {
+        "w:spacing" => js_regex!(r"<w:spacing(?:\s[^>]*)?/>"),
+        "w:ind" => js_regex!(r"<w:ind(?:\s[^>]*)?/>"),
+        _ => unreachable!("merge_cell_element_attrs reads w:spacing and w:ind"),
+    };
     let raw_el = el_re.exec(p_pr).map(|m| m.as_str().to_owned());
     let fresh: Vec<(String, String)> = element_attrs(fresh_el.unwrap_or(""))
         .into_iter()

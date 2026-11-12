@@ -106,16 +106,18 @@ const TAG_TEXTS = [
   '<1a/><_b/><w:pPrChange a=">" b=\'"\'/>',
   '\u{1F600}<w:pPrChange/>\u{1F600}<w:pPrChange>x</w:pPrChange>',
   '<w:settings xmlns:w="urn:a>b"/>',
+  '<settings/><x:settings a=">"/><w:settingsX/>',
   '<w:pPrChange>no close',
   '',
 ]
 
-const NAMES: unknown[] = ['w:pPrChange', 'w:settings', 'w:p', '_b', undefined, { regex: '^w:pPr', flags: '' }, { regex: 'change$', flags: 'i' }]
+const NAMES: unknown[] = ['w:pPrChange', 'w:settings', 'w:p', '_b', undefined, { regex: 'settingsRoot' }]
+
+/** The one RegExp the engine passes: the settings root of patch.ts, under any prefix. */
+const SETTINGS_ROOT = /^(?:[A-Za-z0-9._-]+:)?settings$/
 
 const regexOf = (name: unknown): string | RegExp | undefined => {
-  if (name && typeof name === 'object' && 'regex' in name && 'flags' in name) {
-    return new RegExp(String(name.regex), String(name.flags))
-  }
+  if (name && typeof name === 'object' && 'regex' in name && name.regex === 'settingsRoot') return SETTINGS_ROOT
   return typeof name === 'string' ? name : undefined
 }
 

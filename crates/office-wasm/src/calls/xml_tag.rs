@@ -1,10 +1,11 @@
 //! `xmltag.*`: xml-tag.ts. `findStartTag` takes `args.name` (a string, or
-//! `{ "regex": source, "flags": flags }`, or absent for any element) and
+//! `{ "regex": "settingsRoot" }` for the one RegExp the engine passes, patch.ts
+//! `/^(?:[A-Za-z0-9._-]+:)?settings$/`, or absent for any element) and
 //! `args.from` in UTF-16 units, and answers its offsets in UTF-16 units;
 //! `removeElements` takes `args.name` and `args.limit` (absent: no limit).
 
 use docx_engine::xml_tag::{TagName, find_start_tag, remove_elements};
-use jscompat::JsRegex;
+use jscompat::js_regex;
 use ooxml_xml::Utf16Map;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -15,7 +16,7 @@ use super::{Returned, arg, required, value};
 #[serde(untagged)]
 enum Name {
     Exact(String),
-    Pattern { regex: String, flags: String },
+    Pattern { regex: String },
 }
 
 pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
@@ -30,11 +31,10 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
                     pattern = name;
                     TagName::Exact(&pattern)
                 }
-                Some(Name::Pattern { regex, flags }) => {
-                    let regex = JsRegex::new(&regex, &flags).map_err(|error| error.to_string())?;
-                    let found = find_start_tag(text, TagName::Matching(&regex), from);
-                    return value(found.map(|tag| tag_json(&map, &tag)));
+                Some(Name::Pattern { regex }) if regex == "settingsRoot" => {
+                    TagName::Matching(js_regex!(r"^(?:[A-Za-z0-9._-]+:)?settings$"))
                 }
+                Some(Name::Pattern { regex }) => return Err(format!("no pattern {regex}")),
             };
             value(find_start_tag(text, name, from).map(|tag| tag_json(&map, &tag)))
         }
