@@ -5,6 +5,7 @@
 //! approximates them differs on real documents, so every such operation goes
 //! through this crate and nowhere else.
 
+mod date;
 mod json;
 mod json_value;
 mod map;
@@ -20,6 +21,7 @@ mod string;
 mod uri;
 mod value;
 
+pub use date::utc_date_parts;
 pub use json::JsNum;
 pub use json_value::{
     JSON_MAX_DEPTH, JsTypeError, JsonSyntaxError, JsonValue, Primitive, json_parse,
