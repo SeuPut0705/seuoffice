@@ -9,6 +9,7 @@ import { MTX } from './calls-mtx'
 import { PACKAGE } from './calls-package'
 import { PLACEHOLDER } from './calls-placeholder'
 import { TABLES } from './calls-tables'
+import { TABLESTYLE } from './calls-tablestyle'
 import { THEME } from './calls-theme'
 import { XML_TREE } from './calls-xml-tree'
 
@@ -25,4 +26,5 @@ export const { callOutcomes, callsOnDocument, callsAfterCorpus, reportCalls } = 
   mtx: MTX,
   theme: THEME,
   placeholder: PLACEHOLDER,
+  tablestyle: TABLESTYLE,
 })

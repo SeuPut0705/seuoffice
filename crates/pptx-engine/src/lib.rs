@@ -20,6 +20,7 @@ pub mod slide_ids;
 pub mod smartart_layout;
 pub mod table_edit;
 pub mod table_grid;
+pub mod table_style;
 pub mod theme;
 pub mod theme_apply;
 pub mod types;

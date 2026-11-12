@@ -54,5 +54,9 @@
   "callsPlaceholderCorpus": 2820,
   "callsPlaceholderBuilt": 4889,
   "callsPlaceholderMutated": 3600,
-  "callsPlaceholderFunctions": 14
+  "callsPlaceholderFunctions": 14,
+  "callsTablestyleCorpus": 85,
+  "callsTablestyleBuilt": 15764,
+  "callsTablestyleMutated": 900,
+  "callsTablestyleFunctions": 8
 }

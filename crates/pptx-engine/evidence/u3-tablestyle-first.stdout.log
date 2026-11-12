@@ -1,0 +1,39 @@
+pptx-diff: 4 tracked .pptx (floor      4); 4 opened (floor      4); 15 slides (floor     15)
+(f) tablestyle on the corpus, checks           compared     85  floor missing  BELOW FLOOR  differences 0
+(f) tablestyle on built inputs, checks         compared  15764  floor missing  BELOW FLOOR  differences 14  (TypeScript threw in 14: Rust must refuse those too)
+    - built 583: pptxTablestyle.table-style.resolveTableStyle: pptxTablestyle.table-style.resolveTableStyle("", {"styleId":"constructor","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#)
+      typescript {"error":"TypeError: Cannot read properties of undefined (reading 'wholeTbl')"}
+      rust       {}
+    - built 584: pptxTablestyle.table-style.resolveTableStyle: pptxTablestyle.table-style.resolveTableStyle("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"></a:tblStyleLst>", {"styleId":"constructor"})
+      typescript {"error":"TypeError: Cannot read properties of undefined (reading 'wholeTbl')"}
+      rust       {}
+    - built 586: pptxTablestyle.table-style.resolveTableStyle: pptxTablestyle.table-style.resolveTableStyle("", {"styleId":"toString","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9)
+      typescript {"error":"TypeError: Cannot read properties of undefined (reading 'wholeTbl')"}
+      rust       {}
+    - built 587: pptxTablestyle.table-style.resolveTableStyle: pptxTablestyle.table-style.resolveTableStyle("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"></a:tblStyleLst>", {"styleId":"toString"})
+      typescript {"error":"TypeError: Cannot read properties of undefined (reading 'wholeTbl')"}
+      rust       {}
+    - built 588: pptxTablestyle.table-style.resolveTableStyle: pptxTablestyle.table-style.resolveTableStyle("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"><a:tblStyle styleId=\"constructor\" styleName=\"Custom\"><a:wholeTbl><a:tcStyle><a:fill><a:solidFill><a:srgb, {"styleId":"toString","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9)
+      typescript {"error":"TypeError: Cannot read properties of undefined (reading 'wholeTbl')"}
+      rust       {}
+    - built 589: pptxTablestyle.table-style.resolveTableStyle: pptxTablestyle.table-style.resolveTableStyle("", {"styleId":"__proto__","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B)
+      typescript {"error":"TypeError: Cannot read properties of undefined (reading 'wholeTbl')"}
+      rust       {}
+    - built 590: pptxTablestyle.table-style.resolveTableStyle: pptxTablestyle.table-style.resolveTableStyle("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"></a:tblStyleLst>", {"styleId":"__proto__"})
+      typescript {"error":"TypeError: Cannot read properties of undefined (reading 'wholeTbl')"}
+      rust       {}
+    - built 591: pptxTablestyle.table-style.resolveTableStyle: pptxTablestyle.table-style.resolveTableStyle("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"><a:tblStyle styleId=\"constructor\" styleName=\"Custom\"><a:wholeTbl><a:tcStyle><a:fill><a:solidFill><a:srgb, {"styleId":"__proto__","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B)
+      typescript {"error":"TypeError: Cannot read properties of undefined (reading 'wholeTbl')"}
+      rust       {}
+    ... 6 more (--show N)
+(f+) tablestyle on mutated texts, checks       compared    900  floor missing  BELOW FLOOR  differences 0
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+(f) tablestyle: 8 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 8
+    pptxTablestyle.table-style.BUILTIN_TABLE_STYLES checks      79  differences      0  key order only      0  distinct results    75  TypeScript threw 0
+    pptxTablestyle.table-style.BUILTIN_TABLE_STYLES.length checks      14  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    pptxTablestyle.table-style.LEGACY_NO_STYLE checks       3  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxTablestyle.table-style.builtinTableStyleName checks     431  differences      0  key order only      0  distinct results    75  TypeScript threw 0
+    pptxTablestyle.table-style.resolveBuiltinTableStyleId checks     673  differences      0  key order only      0  distinct results    75  TypeScript threw 0
+    pptxTablestyle.table-style.resolveTableStyle checks     917  differences     14  key order only      0  distinct results   261  TypeScript threw 14
+    pptxTablestyle.table-style.cellStyleBorders checks    7316  differences      0  key order only      0  distinct results   228  TypeScript threw 0
+    pptxTablestyle.table-style.cellPartStyle checks    7316  differences      0  key order only      0  distinct results    99  TypeScript threw 0

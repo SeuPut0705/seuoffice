@@ -1,0 +1,768 @@
+[
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "",
+    "args": {
+      "styleId": "constructor",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "fillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ],
+        "lnStyles": [
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "6350"
+            }
+          },
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "12700"
+            }
+          },
+          {
+            "a:ln": {
+              "@_w": "19050"
+            }
+          }
+        ],
+        "effectStyles": [
+          {
+            "a:effectStyle": {
+              "a:effectLst": ""
+            }
+          }
+        ],
+        "bgFillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "",
+    "args": {
+      "styleId": "toString",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "fillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ],
+        "lnStyles": [
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "6350"
+            }
+          },
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "12700"
+            }
+          },
+          {
+            "a:ln": {
+              "@_w": "19050"
+            }
+          }
+        ],
+        "effectStyles": [
+          {
+            "a:effectStyle": {
+              "a:effectLst": ""
+            }
+          }
+        ],
+        "bgFillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "",
+    "args": {
+      "styleId": "__proto__",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "fillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ],
+        "lnStyles": [
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "6350"
+            }
+          },
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "12700"
+            }
+          },
+          {
+            "a:ln": {
+              "@_w": "19050"
+            }
+          }
+        ],
+        "effectStyles": [
+          {
+            "a:effectStyle": {
+              "a:effectLst": ""
+            }
+          }
+        ],
+        "bgFillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "",
+    "args": {
+      "styleId": "hasOwnProperty",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "fillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ],
+        "lnStyles": [
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "6350"
+            }
+          },
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "12700"
+            }
+          },
+          {
+            "a:ln": {
+              "@_w": "19050"
+            }
+          }
+        ],
+        "effectStyles": [
+          {
+            "a:effectStyle": {
+              "a:effectLst": ""
+            }
+          }
+        ],
+        "bgFillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "",
+    "args": {
+      "styleId": "valueOf",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "fillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ],
+        "lnStyles": [
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "6350"
+            }
+          },
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "12700"
+            }
+          },
+          {
+            "a:ln": {
+              "@_w": "19050"
+            }
+          }
+        ],
+        "effectStyles": [
+          {
+            "a:effectStyle": {
+              "a:effectLst": ""
+            }
+          }
+        ],
+        "bgFillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"></a:tblStyleLst>",
+    "args": {
+      "styleId": "constructor"
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"></a:tblStyleLst>",
+    "args": {
+      "styleId": "toString"
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"></a:tblStyleLst>",
+    "args": {
+      "styleId": "__proto__"
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"></a:tblStyleLst>",
+    "args": {
+      "styleId": "hasOwnProperty"
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"></a:tblStyleLst>",
+    "args": {
+      "styleId": "valueOf"
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"><a:tblStyle styleId=\"constructor\" styleName=\"Custom\"><a:wholeTbl><a:tcStyle><a:fill><a:solidFill><a:srgbClr val=\"ABCDEF\"/></a:solidFill></a:fill></a:tcStyle></a:wholeTbl></a:tblStyle><a:tblStyle styleId=\"{A0000000-0000-4000-8000-000000000021}\" styleName=\"toString __proto__ hasOwnProperty valueOf\"><a:wholeTbl><a:tcTxStyle b=\"on\"/></a:wholeTbl></a:tblStyle></a:tblStyleLst>",
+    "args": {
+      "styleId": "toString",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "fillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ],
+        "lnStyles": [
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "6350"
+            }
+          },
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "12700"
+            }
+          },
+          {
+            "a:ln": {
+              "@_w": "19050"
+            }
+          }
+        ],
+        "effectStyles": [
+          {
+            "a:effectStyle": {
+              "a:effectLst": ""
+            }
+          }
+        ],
+        "bgFillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"><a:tblStyle styleId=\"constructor\" styleName=\"Custom\"><a:wholeTbl><a:tcStyle><a:fill><a:solidFill><a:srgbClr val=\"ABCDEF\"/></a:solidFill></a:fill></a:tcStyle></a:wholeTbl></a:tblStyle><a:tblStyle styleId=\"{A0000000-0000-4000-8000-000000000021}\" styleName=\"toString __proto__ hasOwnProperty valueOf\"><a:wholeTbl><a:tcTxStyle b=\"on\"/></a:wholeTbl></a:tblStyle></a:tblStyleLst>",
+    "args": {
+      "styleId": "__proto__",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "fillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ],
+        "lnStyles": [
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "6350"
+            }
+          },
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "12700"
+            }
+          },
+          {
+            "a:ln": {
+              "@_w": "19050"
+            }
+          }
+        ],
+        "effectStyles": [
+          {
+            "a:effectStyle": {
+              "a:effectLst": ""
+            }
+          }
+        ],
+        "bgFillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"><a:tblStyle styleId=\"constructor\" styleName=\"Custom\"><a:wholeTbl><a:tcStyle><a:fill><a:solidFill><a:srgbClr val=\"ABCDEF\"/></a:solidFill></a:fill></a:tcStyle></a:wholeTbl></a:tblStyle><a:tblStyle styleId=\"{A0000000-0000-4000-8000-000000000021}\" styleName=\"toString __proto__ hasOwnProperty valueOf\"><a:wholeTbl><a:tcTxStyle b=\"on\"/></a:wholeTbl></a:tblStyle></a:tblStyleLst>",
+    "args": {
+      "styleId": "hasOwnProperty",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "fillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ],
+        "lnStyles": [
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "6350"
+            }
+          },
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "12700"
+            }
+          },
+          {
+            "a:ln": {
+              "@_w": "19050"
+            }
+          }
+        ],
+        "effectStyles": [
+          {
+            "a:effectStyle": {
+              "a:effectLst": ""
+            }
+          }
+        ],
+        "bgFillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  },
+  {
+    "fn": "pptxTablestyle.table-style.resolveTableStyle",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"><a:tblStyle styleId=\"constructor\" styleName=\"Custom\"><a:wholeTbl><a:tcStyle><a:fill><a:solidFill><a:srgbClr val=\"ABCDEF\"/></a:solidFill></a:fill></a:tcStyle></a:wholeTbl></a:tblStyle><a:tblStyle styleId=\"{A0000000-0000-4000-8000-000000000021}\" styleName=\"toString __proto__ hasOwnProperty valueOf\"><a:wholeTbl><a:tcTxStyle b=\"on\"/></a:wholeTbl></a:tblStyle></a:tblStyleLst>",
+    "args": {
+      "styleId": "valueOf",
+      "theme": {
+        "colors": {
+          "dk1": "#000000",
+          "lt1": "#FFFFFF",
+          "dk2": "#44546A",
+          "lt2": "#E7E6E6",
+          "accent1": "#4472C4",
+          "accent2": "#ED7D31",
+          "accent3": "#A5A5A5",
+          "accent4": "#FFC000",
+          "accent5": "#5B9BD5",
+          "accent6": "#70AD47",
+          "hlink": "#0563C1",
+          "folHlink": "#954F72"
+        },
+        "fillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ],
+        "lnStyles": [
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "6350"
+            }
+          },
+          {
+            "a:ln": {
+              "a:solidFill": {
+                "a:schemeClr": {
+                  "@_val": "phClr"
+                }
+              },
+              "@_w": "12700"
+            }
+          },
+          {
+            "a:ln": {
+              "@_w": "19050"
+            }
+          }
+        ],
+        "effectStyles": [
+          {
+            "a:effectStyle": {
+              "a:effectLst": ""
+            }
+          }
+        ],
+        "bgFillStyles": [
+          {
+            "a:solidFill": {
+              "a:schemeClr": {
+                "@_val": "phClr"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "typescript": {
+      "error": "TypeError: Cannot read properties of undefined (reading 'wholeTbl')"
+    },
+    "rust": {}
+  }
+]
