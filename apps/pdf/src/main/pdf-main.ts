@@ -1414,13 +1414,21 @@ export async function requestPdfClose(
       : await dialog.showMessageBox(options)
   if (response === 2) return false
   if (response === 1) {
-    // "Don't Save" drops the unsaved edits, and with them their recovery copy: no new
-    // one is written while other tabs' prompts keep this view open
-    recovery.dontSave(contents.id, openPathByWc.get(contents.id))
-    if (!contents.isDestroyed()) contents.send(PDF_CHANNELS.recoveryDropped, true)
+    discardPdfRecovery(contents)
     return true
   }
   return await requestRendererSave(contents, true)
+}
+
+/**
+ * "Don't Save" for this view's document: the unsaved edits are given up, and
+ * with them their recovery copy. No new one is written while the view is
+ * still open (other tabs' prompts, or the tab on its way out). The close
+ * prompt ends here, and so does a tool that closes the tab without saving.
+ */
+export function discardPdfRecovery(contents: WebContents): void {
+  recovery.dontSave(contents.id, openPathByWc.get(contents.id))
+  if (!contents.isDestroyed()) contents.send(PDF_CHANNELS.recoveryDropped, true)
 }
 
 /**
