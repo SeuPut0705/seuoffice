@@ -15,7 +15,7 @@ import {
   NAMESPACES,
   PLACEHOLDER,
   SECRET,
-} from '../../../packages/cli/tests/hidden-text-fixtures'
+} from '../../../packages/docx-engine/tests/helpers/hidden-stories'
 
 const editors = new Set<Editor>()
 afterEach(() => {
