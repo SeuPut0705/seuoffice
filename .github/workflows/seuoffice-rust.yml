@@ -73,6 +73,12 @@ jobs:
         if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
         run: cargo test --manifest-path crates/Cargo.toml --workspace
 
+      - name: Licences of the dependencies
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        run: |
+          cargo install cargo-deny --locked
+          cd crates && cargo deny check licenses
+
       - uses: actions/setup-node@v4
         if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
         with:

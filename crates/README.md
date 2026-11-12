@@ -210,14 +210,28 @@ class of an input with `CallSpec.listed` (the predicates are in
 `tools/docx-diff/listed.ts`, each over the input alone). Such an input is
 still called on both sides: equal, it is a check like any other; different,
 it is counted on the line `(f) listed class <id>` and not as a difference.
-What else differs in an input that differs under its class is not seen:
-that is the price, so a class stays narrow and goes with its entry when the
-TypeScript is fixed. The gate fails on a class without an entry and on a
-class none of whose inputs differs any more. The gate runs in UTC
-(`host.ts`); an entry with `zone` runs its TypeScript side in that zone.
+**A second defect inside a listed input is invisible**: whatever else
+differs in an input that differs under its class is not seen until the
+TypeScript fix lands and the class goes. That is the price, so a class
+stays narrow, the gate prints for each how many inputs were set aside and
+how many of them differed, and it fails on a class without an entry and on
+a class none of whose inputs differs any more. The classes are short-lived:
+main fixes the TypeScript, the fix is merged here, the entry and its class
+are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
+`zone` runs its TypeScript side in that zone.
 
 ## Known debt
 
+- `encoding_rs` ((Apache-2.0 OR MIT) AND BSD-3-Clause) decodes the legacy
+  charsets of `alt_chunk.rs`. It has to appear in the third-party notices
+  when the crates are wired into the product. `crates/deny.toml` holds the
+  licences the workspace may depend on, and the runner checks it.
+- `JsRegex::new` refuses a pattern under `i` without `u` that names a cased
+  character outside ASCII. One site puts a caller's text into such a
+  pattern: `xml_text::on_off_tag_in(xml, name)`, whose callers pass the
+  constant `w:bidi`; a name like `w:é` is an `Err` there and an answer in
+  TypeScript. `settings.rs` puts the document's namespace prefixes into one,
+  and they are ASCII by the pattern that reads them (`[A-Za-z_][\w.-]*`).
 - `Package` holds every entry inflated; JSZip inflates on read. Fine for the
   gate, to be revisited when a caller flips.
 - The zip gate refuses every archive JSZip would read as ZIP64, so the ZIP64
