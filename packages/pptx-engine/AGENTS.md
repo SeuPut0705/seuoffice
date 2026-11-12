@@ -4,6 +4,16 @@
 
 pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 메모리에 올리고, 레이아웃·마스터·테마의 상속을 풀어 슬라이드마다 요소 트리를 만든다. 요소에는 원본 XML 조각(`ByteAnchor`)이 붙어 있고, 편집 함수가 모델과 변경 표시를 바꾸면 `savePptx`/`savePptxToFile`이 바뀐 요소만 다시 써서 zip을 묶는다. 슬라이드 추가·복제·덱 간 병합, 표·차트·그림·미디어 삽입, 애니메이션, 노트와 메모, 구역, 마스터 편집, 내장 글꼴 풀기, 쓰이지 않게 된 자원 정리, 빈 덱 템플릿이 여기 있다.
 
+## 엔진과 바인딩 (C2)
+
+구현은 Rust(`crates/pptx-engine`)이고, 이 패키지는 WASM(`crates/office-wasm`) 위의 얇은 바인딩이다. 내보낸 이름과 타입은 그대로이고 모델은 JS 객체로 남는다.
+
+- `src/*.ts`의 함수 본문은 `tools/docx-diff/binding/gen.ts --engine pptx`가 만든다. 손으로 고치지 않는다. 손으로 정할 것은 `tools/pptx-diff/binding/overrides.ts`, 인자 종류는 `kinds.ts`에 두고 생성기를 다시 돌린다. 생성기가 손대지 않는 것은 `engine.ts`, `engine-adopt.ts`, `engine-init.ts`, `engine-url.ts`, `src/node/**`다.
+- 엔진이 바꾸는 인자(`OpenedPptx`, `PackageArchive`, `Slide`, 요소)는 호출마다 통째로 건너가고, 엔진의 답이 부른 쪽 객체에 제자리로 되써진다(`engine-adopt.ts`). 요소는 `id`, 슬라이드는 `path`로 짝지어 같은 객체가 남는다. 아카이브는 바뀐 파트만 새 배열로 갈아 끼운다.
+- 엔진은 시작해야 쓴다. `node` 조건으로 가져오면 저절로 시작하고, 페이지·워커는 `@seuoffice/pptx-engine/init`의 `initPptxEngine(url)`을 한 번 기다린다. vitest 설정은 `setupFiles`에 `packages/engine-wasm/src/node.ts`를 둔다.
+- 비교의 기준인 TypeScript 엔진은 `tools/pptx-diff/reference/`에 얼려 두었다. 고치지 않는다.
+- TS로 남은 것: `savePptxToFile`(엔진에 파일 시스템이 없다), `ownValue`, `setOwn`, `xmlParser`, `xmlArray`, `sfntCmapLookup`, 데이터 상수, `PackageArchive`의 `has`/`readText`/`readBytes`.
+
 ## 맡지 않는 것 (경계)
 
 - 화면에 그리기 위한 계산(EMU→px, 텍스트 줄바꿈, 차트 도형)은 `packages/pptx-render`다. 엔진은 좌표를 EMU 그대로 둔다.
@@ -26,7 +36,7 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 - 예산을 넘는 입력은 버리지 않고 원본 바이트를 지닌 `passthrough`로 남긴다: 그룹 중첩 64단계, 한 슬라이드의 도형 10,000개. 그 밖의 상한은 차트 점 1,048,576개·계열 256개, chartEx 점 10,000개, 글자 크기 1pt 이상 4000pt 이하, 표 삽입 75×75다. 슬라이드 id는 256 이상 2147483647 이하에서만 낸다.
 - 관계 대상은 `resolveTarget`으로만 푼다. 스킴이 붙은 대상과 디코딩할 수 없는 대상은 빈 경로가 된다.
 - 자원 정리는 관계를 따라간다. 도형 하나가 그림을 안 쓰게 됐다고 파트를 지우지 않는다. 복제된 슬라이드가 같은 대상을 가리킬 수 있다. 먼저 쓰이지 않는 관계만 끊고, 그 결과 아무 데서도 닿지 않는 파트만 지운다.
-- 기본 진입점은 Node 전용이다(`node:crypto`, `Buffer`). 렌더러가 가져가는 것은 하위 경로 `./custgeom`, `./table-grid`, `./identity`, `./named-action`, `./background-promote`뿐이다. 이 파일들과 그 import 사슬에 Node 의존을 들이면 브라우저 빌드가 깨진다.
+- 기본 진입점의 `savePptxToFile`과 `PackageArchive.readText`는 Node에 기대고(`node:fs`, `Buffer`), 웹 앱은 별칭으로 채운다. 렌더러가 가져가는 것은 하위 경로 `./custgeom`, `./table-grid`, `./identity`, `./named-action`, `./background-promote`뿐이다. 이 파일들과 그 import 사슬에 Node 의존을 들이면 브라우저 빌드가 깨진다.
 - `@seuoffice/agent-core`에서는 `redact-range` 하위 경로만 import한다. 그 패키지의 기본 진입점은 Electron에 닿는다.
 - `src/vendor/`는 가져온 원본과 바이트가 같아야 한다.
 - 엔진 동작은 원본(GenOffice)의 수정이 병합될 때만 바뀐다. 파일 이동, 재포맷, 이름 변경을 하지 않는다. 예외는 아래 "원본과 다른 점"에 적은 것뿐이고, 더할 때는 사람이 정한다.
@@ -45,8 +55,8 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 - 의미 파싱(fast-xml-parser)과 바이트 위치 잡기(`scanSlide`)가 따로 돌고, 최상위 도형 순서로 일대일 대응한다. `spTree` 머리의 `nvGrpSpPr`/`grpSpPr`는 도형이 아니라 `bodyPrefix`에 들어간다.
 - `passthrough`는 모델이 다루지 않는 요소다. 표시용 미리보기만 싣고 원본 바이트로 저장한다.
 - 텍스트 패치는 두 갈래다. 모델과 XML의 런 수가 같으면 각 `a:t`만 제자리에서 고치고, 다르면 `rebuildTxBody`가 `a:txBody`를 모델에서 새로 만든다. 뒤쪽 경로에서는 모델이 싣지 않은 것이 사라진다. 런에 새 속성을 추가할 때는 파싱·모델·생성 세 곳을 함께 고쳐야 하는 이유다. 문단 속성 패치(`dirtyPPr`)도 문단 수가 어긋나면 전체 재생성으로 떨어진다.
-- 저장은 세 함수가 한 묶음이다. `savePptx`는 결과 전체를 한 버퍼에 만들기 때문에 큰 덱에서 메모리 할당 실패로 죽는다. 디스크에 쓸 때는 스트리밍하는 `savePptxToFile`을 쓴다. 저장이 성공한 뒤에만 `commitSaved`를 불러 변경 표시를 비운다. 저장 도중에 들어온 편집은 스냅샷과 달라서 표시가 남고 다음 저장에 실린다.
-- JSZip의 스트림 오류는 반환된 promise가 아니라 스트림의 `error` 이벤트로 나온다. 처리하지 않으면 잡히지 않은 예외로 프로세스가 죽는다.
+- 저장은 세 함수가 한 묶음이다. 엔진이 zip 전체를 한 버퍼에 만들고(WASM 메모리는 32비트라 4 GiB가 끝이고 한 번 늘면 줄지 않는다), `savePptxToFile`은 그 버퍼를 파일로 흘려 쓴다. TypeScript 시절처럼 파트를 흘려 묶지는 않는다. 저장이 성공한 뒤에만 `commitSaved`를 불러 변경 표시를 비운다. 저장 도중에 들어온 편집은 스냅샷과 달라서 표시가 남고 다음 저장에 실린다.
+- 파일 쓰기 스트림의 오류는 `pipeline`이 promise로 넘긴다. 실패하면 저장 스냅샷을 버린다(`forgetSnapshot`).
 - 저장할 때마다 `stripStaleEmbeddedFonts`가 돈다. 내장 글꼴 서브셋은 늘릴 수 없어서, 편집으로 서브셋에 없는 글자가 들어간 face는 떼어 낸다. 그대로 두면 서브셋을 엄격히 따르는 뷰어에서 글자가 보이지 않는다. 손대지 않은 덱은 영향이 없다.
 - 요소 영속 id는 요소 자신의 `p:cNvPr` 안에서만 찾는다. `a16:creationId`가 있으면 `e_<GUID 앞 8자>`, 없으면 `e_<cNvPr id>`다. 그룹 조각에는 자식의 바이트가 들어 있어서 범위를 좁히지 않으면 그룹이 자식의 GUID를 물려받는다. GUID를 새긴 뒤에도 예전 `e_<cNvPr id>` 형태는 별칭으로 계속 통한다.
 - 레이아웃 관계를 잃은 손상된 슬라이드는 열기를 거부하지 않고 첫 마스터의 레이아웃으로 그린다. 가운데 제목 자리표시자가 있으면 제목 레이아웃, 아니면 첫 레이아웃이다.
