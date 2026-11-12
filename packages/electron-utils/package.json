@@ -55,6 +55,7 @@
     "vitest": "^4.1.12"
   },
   "dependencies": {
+    "@genoffice/compound-file": "*",
     "parse5": "^8.0.1",
     "undici": "^6.29.1"
   }

@@ -20,6 +20,11 @@ import {
   setDocPassword,
   snapshotDocPassword,
 } from '../src/main/docx-encryption'
+import {
+  HOSTILE_FILES,
+  REFUSAL_MS,
+  fatCycleFile,
+} from '../../../packages/compound-file/tests/helpers/raw-compound'
 
 const plainDocx = () => readFileSync(join(__dirname, 'pagination-corpus/docx/kitchen-sink.docx'))
 
@@ -90,6 +95,46 @@ describe('real Office files', () => {
     expect(isEncryptedDocx(encrypted)).toBe(true)
     const decrypted = await decryptDocx(encrypted, 'Password1234_')
     expect(Buffer.compare(decrypted, fixture('office-standard-plain.docx'))).toBe(0)
+  })
+})
+
+describe('a hostile compound file', () => {
+  for (const { what, build } of HOSTILE_FILES) {
+    it(`${what}: decrypting it fails as unsupported, quickly`, async () => {
+      const bytes = Buffer.from(build())
+      const started = performance.now()
+      const err = await decryptDocx(bytes, 'pw').catch((e: unknown) => e)
+      expect(performance.now() - started).toBeLessThan(REFUSAL_MS)
+      expect(err).toBeInstanceOf(DocxDecryptError)
+      expect((err as DocxDecryptError).reason).toBe('unsupported')
+    })
+  }
+
+  it('that looks like an encrypted docx fails as unsupported for any password', async () => {
+    // the open path asks for a password on the EncryptedPackage name alone, then decrypts
+    const bytes = Buffer.from(fatCycleFile('EncryptedPackage'))
+    expect(isEncryptedDocx(bytes)).toBe(true)
+    const started = performance.now()
+    const err = await decryptDocx(bytes, 'pw').catch((e: unknown) => e)
+    expect(performance.now() - started).toBeLessThan(REFUSAL_MS)
+    expect(err).toBeInstanceOf(DocxDecryptError)
+    expect((err as DocxDecryptError).reason).toBe('unsupported')
+  })
+
+  it('kept as a recovery copy fails as unsupported instead of being read', async () => {
+    rememberDocPassword(31, '/looping.docx', 'pw')
+    const bytes = Buffer.from(fatCycleFile('EncryptedPackage'))
+    const err = await decryptRecoveryCopy(31, '/looping.docx', bytes).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(DocxDecryptError)
+    expect((err as DocxDecryptError).reason).toBe('unsupported')
+    forgetDocPasswords(31)
+  })
+})
+
+describe('bytes that are not a compound file', () => {
+  it('a plain docx comes back from decryptDocx as it was', async () => {
+    const docx = plainDocx()
+    expect(Buffer.compare(await decryptDocx(docx, 'pw'), docx)).toBe(0)
   })
 })
 

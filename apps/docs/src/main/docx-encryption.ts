@@ -10,6 +10,7 @@
  * AES-256/SHA-512), and both open either — so we decrypt both and re-encrypt
  * with Agile, matching Word 2013+ defaults.
  */
+import { assertCompoundFile, hasOle2Signature } from '@genoffice/compound-file'
 import officeCrypto from 'officecrypto-tool'
 
 const CFB_MAGIC = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])
@@ -38,10 +39,16 @@ export class DocxDecryptError extends Error {
 /**
  * Decrypt an encrypted docx into plain zip bytes. Throws DocxDecryptError with
  * reason 'wrong-password' (verifier mismatch — reprompt) or 'unsupported'
- * (exotic scheme, e.g. WPS account encryption or Extensible encryption).
+ * (exotic scheme, e.g. WPS account encryption or Extensible encryption, or a
+ * damaged container).
  */
 export async function decryptDocx(bytes: Buffer, password: string): Promise<Buffer> {
   try {
+    // The library reads a compound file with cfb on its own, and cfb follows a
+    // looping sector chain until memory runs out: the shared gate refuses such
+    // a file first, with a CompoundFileError. Bytes without the OLE2 signature
+    // are not the gate's to judge and reach the library as they always did.
+    if (hasOle2Signature(bytes)) assertCompoundFile(bytes)
     return await officeCrypto.decrypt(bytes, { password })
   } catch (err) {
     const message = String((err as Error)?.message ?? err)
