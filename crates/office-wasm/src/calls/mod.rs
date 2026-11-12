@@ -11,8 +11,15 @@ mod docprops;
 mod fields;
 mod markers;
 mod math;
+mod pptx_anim;
+mod pptx_bytes;
+mod pptx_geom;
+mod pptx_ident;
+mod pptx_layout;
 mod pptx_leaves;
+mod pptx_mtx;
 mod pptx_package;
+mod pptx_tables;
 mod pptx_xml;
 mod resolve;
 mod section;
@@ -65,8 +72,15 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "math" => Some(math::dispatch(function, text, args)),
         "resolve" => Some(resolve::dispatch(function, text, args)),
         "section" => Some(section::dispatch(function, text, args)),
+        "pptxAnim" => Some(pptx_anim::dispatch(function, text, args)),
+        "pptxBytes" => Some(pptx_bytes::dispatch(function, text, args)),
+        "pptxGeom" => Some(pptx_geom::dispatch(function, text, args)),
+        "pptxIdent" => Some(pptx_ident::dispatch(function, text, args)),
+        "pptxLayout" => Some(pptx_layout::dispatch(function, text, args)),
         "pptxLeaves" => Some(pptx_leaves::dispatch(function, text, args)),
+        "pptxMtx" => Some(pptx_mtx::dispatch(function, text, args)),
         "pptxPackage" => Some(pptx_package::dispatch(function, text, args)),
+        "pptxTables" => Some(pptx_tables::dispatch(function, text, args)),
         "pptxXml" => Some(pptx_xml::dispatch(function, text, args)),
         _ => None,
     }
