@@ -9,6 +9,7 @@
 //! ```
 
 use jscompat::{JsNum, JsObject, number_to_string, string_from_char_code};
+use serde::Deserialize;
 
 use crate::crc32::crc32;
 use crate::xml_utils::escape_xml_text;
@@ -33,16 +34,18 @@ pub fn col_letter(i: f64) -> String {
 }
 
 /// `ChartWorkbookData`.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChartWorkbookData {
     pub categories: Vec<String>,
     pub series: Vec<ChartWorkbookSeries>,
+    #[serde(default)]
     /// column A as numbers instead of category names: a scatter chart's x values
     pub x_values: Option<Vec<JsNum>>,
 }
 
 /// One entry of `ChartWorkbookData.series`.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 pub struct ChartWorkbookSeries {
     pub name: String,
     /// `None` for `null` and `undefined`.

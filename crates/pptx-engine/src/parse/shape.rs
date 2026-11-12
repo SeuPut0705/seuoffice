@@ -256,7 +256,10 @@ pub(super) fn parse_shape_fragment(
                         };
                         or0(n)
                     };
-                    let embed = value_to_string(get(Some(model), "@_r:embed"));
+                    let embed = match get(Some(model), "@_r:embed") {
+                        None | Some(Value::Null) => String::new(),
+                        raw => value_to_string(raw),
+                    };
                     let target = ctx
                         .model3d_rels
                         .and_then(|rels| rels.get(&embed))
@@ -950,8 +953,7 @@ pub(super) fn parse_av_lst(av_lst: Node<'_>) -> Option<JsObject<JsNum>> {
         if value_truthy(name)
             && let Some(m) = m
         {
-            // a guide named `__proto__` is an entry here; the TypeScript's
-            // plain assignment drops it (ledger avlst-proto)
+            // `setOwn`: a guide named `__proto__` is an entry like any other
             out.set(
                 value_to_string(name),
                 JsNum(parse_int(m.get(1).unwrap_or(""), Radix::Ten)),
@@ -1076,13 +1078,12 @@ fn parse_group(
     depth: u32,
     budget: &mut GroupParseBudget,
 ) -> Result<GroupElement, String> {
-    let empty = Value::Object(serde_json::Map::new());
-    let grp_sp_pr = Some(or_empty(node, "p:grpSpPr", &empty));
+    // `asXmlNode(node['p:grpSpPr'])`: an empty or text-only <p:grpSpPr> is a group
+    // without properties
+    let grp_sp_pr = Some(crate::xml_utils::as_xml_node(get(node, "p:grpSpPr")));
     let xfrm = get(grp_sp_pr, "a:xfrm");
     let transform = parse_xfrm(xfrm);
     let name = attr(get(get(node, "p:nvGrpSpPr"), "p:cNvPr"), "@_name").map(str::to_owned);
-    // `'a:grpFill' in grpSpPr` throws on a string grpSpPr (`<p:grpSpPr/>`);
-    // read as having no such key (ledger grpsppr-string-in)
     let own_fill = if has(grp_sp_pr, "a:grpFill") {
         None
     } else {

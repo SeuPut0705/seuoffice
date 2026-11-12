@@ -108,7 +108,11 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         "generate.clampPosEmu" => value(JsNum(generate::clamp_pos_emu(
             required::<JsNum>(args, "v")?.0,
         ))),
-        "generate.COORD_MAX" => value(JsNum(generate::COORD_MAX)),
+        "generate.constants" => match required::<String>(args, "name")?.as_str() {
+            "COORD_MAX" => value(JsNum(generate::COORD_MAX)),
+            "TRANSITION_KINDS" => value(generate::TRANSITION_KINDS),
+            name => Err(format!("no constant {name}")),
+        },
         "generate.isConnectorXml" => value(generate::is_connector_xml(text)),
         "generate.rebuildTxBody" => {
             // TypeScript reads `el.text!.paragraphs`: a missing model throws.
@@ -179,7 +183,6 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             text,
             required::<bool>(args, "hidden")?,
         )?),
-        "generate.TRANSITION_KINDS" => value(generate::TRANSITION_KINDS),
         "generate.patchSlideTransitionXml" => value(generate::patch_slide_transition_xml(
             text,
             required::<SlideTransitionKind>(args, "kind")?,

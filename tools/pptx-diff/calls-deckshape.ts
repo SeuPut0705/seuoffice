@@ -34,7 +34,7 @@ const pic = (id: number, blip: string, extra = ''): string =>
 const slideXml = (...shapes: string[]): string =>
   `<p:sld ${NS}><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>${shapes.join('')}</p:spTree></p:cSld></p:sld>`
 const grp = (id: number, child: string): string =>
-  `<p:grpSp><p:nvGrpSpPr><p:cNvPr id="${id}" name="G"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>${child}</p:grpSp>`
+  `<p:grpSp><p:nvGrpSpPr><p:cNvPr id="${id}" name="G"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:effectLst/></p:grpSpPr>${child}</p:grpSp>`
 
 const PNG = [137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3]
 const PNG2 = [137, 80, 78, 71, 13, 10, 26, 10, 9, 9, 9]
@@ -66,6 +66,20 @@ const PIC_TEXTS = [
       '<am3d:model3d r:embed="rId7"><am3d:raster rName="Office3DEngine" rVer="16.0.8326"><am3d:blip r:embed="rId9"/></am3d:raster></am3d:model3d>' +
       '</a:graphicData></a:graphic></p:graphicFrame></mc:Choice>' +
       `<mc:Fallback>${pic(2, BLIP)}</mc:Fallback></mc:AlternateContent>`,
+  ),
+  // the references as XML allows: spaced `=`, single quotes, a reference, an extra attribute first
+  slideXml(pic(2, "<a:blip r:embed = 'rId9' r:link = \"rId8\"/>")),
+  slideXml(pic(2, '<a:blip r:embed="rId&#57;"/>')),
+  slideXml(pic(2, "<a:blip note=\"a>b\" r:link = 'rId8'/>")),
+  slideXml(
+    '<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">' +
+      '<mc:Choice Requires="am3d" xmlns:am3d="http://schemas.microsoft.com/office/drawing/2017/model3d">' +
+      '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="2" name="3D"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>' +
+      '<p:xfrm><a:off x="0" y="0"/><a:ext cx="1" cy="1"/></p:xfrm><a:graphic>' +
+      '<a:graphicData uri="http://schemas.microsoft.com/office/drawing/2017/model3d">' +
+      '<am3d:model3d r:embed="rId7"><am3d:raster rName="Office3DEngine" rVer="16.0.8326"><am3d:blip r:embed = \'rId&#57;\'/><am3d:blip note="a>b" r:embed="rId9"/><am3d:blip r:embed="rId7"/></am3d:raster></am3d:model3d>' +
+      '</a:graphicData></a:graphic></p:graphicFrame></mc:Choice>' +
+      `<mc:Fallback>${pic(2, "<a:blip r:embed = 'rId&#57;'/>")}</mc:Fallback></mc:AlternateContent>`,
   ),
 ]
 const SHAPES = slideXml(

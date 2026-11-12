@@ -11,8 +11,8 @@
 use std::collections::HashSet;
 
 use jscompat::{
-    TryJsRegex, js_regex, math_max, math_min, math_round, number_to_string, number_truthy,
-    regex_escape, replace_first_string, replace_first_with, slice_utf16, to_number,
+    JsMap, js_regex, math_max, math_min, math_round, number_to_string, number_truthy,
+    replace_first_with, slice_utf16, to_number,
 };
 use serde::{Deserialize, Serialize};
 
@@ -27,13 +27,16 @@ use crate::layout::{
 use crate::master_edit::{list_master_parts, parse_master_part};
 use crate::resource_cleanup::remove_part_with_owned_resources;
 use crate::sections::move_slide;
-use crate::slide_ids::next_slide_id;
+use crate::slide_ids::{can_list_slide, with_slide_listed, with_slide_unlisted};
 use crate::slide_transfer::{
     SlideBundle, choose_layout, collect_slide_bundle, import_source_layout,
     materialize_slide_bundle,
 };
 use crate::types::{Paragraph, Slide, SlideElement, SlideSize, TextRun};
-use crate::xml_utils::{escape_xml_attr, max_relationship_id_number};
+use crate::xml_utils::{
+    attribute_of, escape_xml_attr, has_default_for, max_relationship_id_number,
+    with_relationship_ids,
+};
 use crate::zip::{PackageArchive, Relationship, rels_path_for, resolve_target};
 use jscompat::JsNum;
 
@@ -108,6 +111,13 @@ fn next_slide_path(archive: &PackageArchive) -> String {
     format!("ppt/slides/slide{}.xml", number_to_string(max_num + 1.0))
 }
 
+/// `canAddSlide`: whether a slide can be added to the deck: its slide list is one this engine
+/// can write to (`canListSlide`). Everything that adds a slide asks first, before it writes a
+/// part, so a deck that cannot take the slide is left exactly as it was.
+fn can_add_slide(archive: &PackageArchive) -> bool {
+    can_list_slide(archive.read_text(PRES_PATH).as_deref())
+}
+
 /// `registerNewSlide`: register a new slide part (already written into the
 /// archive) with the package and insert it into the deck after the slide at
 /// `source_index` (a number: a position that names no slide gives `None`).
@@ -129,6 +139,9 @@ fn register_new_slide(
     let Some(src) = deck.slides.get(source_at) else {
         return Ok(None);
     };
+    if !can_add_slide(archive) {
+        return Ok(None);
+    }
     let src_path = path_of(src);
 
     if let Some(ct) = read_nonempty(archive, CT_PATH) {
@@ -145,6 +158,17 @@ fn register_new_slide(
     };
     let max_rid = max_relationship_id_number(&pres_rels);
     let new_rid = format!("rId{}", number_to_string(max_rid + 1.0));
+    // Listed after the source slide; at the end of the list when that one is not found
+    let src_rid = archive
+        .read_rels(PRES_PATH)?
+        .values()
+        .find(|r| resolve_target(PRES_PATH, &r.target) == src_path)
+        .map(|r| r.id.clone());
+    let Some(next_pres) = with_slide_listed(&pres, &new_rid, src_rid.as_deref())
+        .map_err(|error| error.to_string())?
+    else {
+        return Ok(None);
+    };
     let rel_xml = format!(
         "<Relationship Id=\"{new_rid}\" Type=\"{SLIDE_REL_TYPE}\" Target=\"{}\"/>",
         slice_utf16(new_path, 4.0, None)
@@ -156,36 +180,6 @@ fn register_new_slide(
     );
     set_entry(archive, PRES_RELS_PATH, &next_rels);
 
-    let new_sld_id = format!(
-        "<p:sldId id=\"{}\" r:id=\"{new_rid}\"/>",
-        next_slide_id(&pres).map_err(|error| error.to_string())?
-    );
-    // Insert after the source slide's sldId; append to the end of the list when not found
-    let src_rid = archive
-        .read_rels(PRES_PATH)?
-        .values()
-        .find(|r| resolve_target(PRES_PATH, &r.target) == src_path)
-        .map(|r| r.id.clone())
-        .filter(|id| !id.is_empty());
-    let src_tag = match src_rid {
-        Some(rid) => TryJsRegex::new(
-            &format!("<p:sldId\\s[^>]*r:id=\"{}\"[^>]*/>", regex_escape(&rid)),
-            "",
-        )
-        .map_err(|error| error.to_string())?
-        .try_exec(&pres)
-        .map_err(|limit| limit.to_string())?
-        .map(|found| found.as_str().to_owned()),
-        None => None,
-    };
-    let next_pres = match src_tag {
-        Some(tag) => replace_literal(&pres, &tag, &format!("{tag}{new_sld_id}")),
-        None => replace_literal(
-            &pres,
-            "</p:sldIdLst>",
-            &format!("{new_sld_id}</p:sldIdLst>"),
-        ),
-    };
     set_entry(archive, PRES_PATH, &next_pres);
 
     let Some(slide) = parse_slide_from_archive(archive, new_path, uids)? else {
@@ -219,6 +213,9 @@ pub fn duplicate_slide(
         let Some(src) = deck.slides.get_mut(source_at) else {
             return Ok(None);
         };
+        if !can_add_slide(archive) {
+            return Ok(None);
+        }
         new_path = next_slide_path(archive);
         let xml = patch_slide_xml(src);
         set_entry(archive, &new_path, &xml);
@@ -300,7 +297,7 @@ pub fn paste_slide(
     let new_path;
     {
         let OpenedPptx { deck, archive, .. } = &mut *opened;
-        if deck.slides.is_empty() {
+        if deck.slides.is_empty() || !can_add_slide(archive) {
             return Ok(None);
         }
         anchor_index = math_min(math_max(after_index, -1.0), deck.slides.len() as f64 - 1.0);
@@ -354,6 +351,9 @@ pub fn insert_blank_slide(
         else {
             return Ok(None);
         };
+        if !can_add_slide(archive) {
+            return Ok(None);
+        }
         new_path = next_slide_path(archive);
         set_entry(archive, &new_path, BLANK_SLIDE_XML);
 
@@ -397,12 +397,7 @@ pub(crate) fn ensure_default_content_type(
     let Some(ct) = read_nonempty(archive, CT_PATH) else {
         return Ok(());
     };
-    let declared = TryJsRegex::new(
-        &format!("<Default\\s[^>]*Extension=\"{}\"", regex_escape(ext)),
-        "i",
-    )
-    .map_err(|error| error.to_string())?;
-    if declared.try_test(&ct).map_err(|limit| limit.to_string())? {
+    if has_default_for(&ct, ext) {
         return Ok(());
     }
     // Insert before </Types>, never after the XML declaration's closing angle bracket
@@ -439,23 +434,29 @@ pub struct MergeSlideOptions<'a> {
 }
 
 /// One referenced media file of a [`MergeSlideSource`].
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MergeSlideMedia {
     pub path: String,
+    #[serde(deserialize_with = "crate::json_bytes::bytes")]
     pub bytes: Vec<u8>,
 }
 
 /// One layout→master→theme chain part of a [`MergeSlideSource`].
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MergeSlideChainPart {
     pub path: String,
+    #[serde(deserialize_with = "crate::json_bytes::bytes")]
     pub bytes: Vec<u8>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "crate::json_bytes::optional_bytes",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub rels: Option<Vec<u8>>,
 }
 
 /// `MergeSlideSource`: a single-slide pptx reduced to the plain data the merge needs.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MergeSlideSource {
     pub src_slide_path: String,
@@ -545,6 +546,9 @@ pub fn merge_slide_from_source(
     let new_path;
     {
         let OpenedPptx { deck, archive, .. } = &mut *target;
+        if !can_add_slide(archive) {
+            return Ok(None);
+        }
         let mut slide_xml = source.slide_xml.clone();
 
         // Relative Target of an existing target slide's slideLayout (the appended slide reuses the same layout)
@@ -568,6 +572,8 @@ pub fn merge_slide_from_source(
             rid_seq += 1;
             format!("rId{rid_seq}")
         };
+        // source rId -> the rId the same media has in the new slide's rels
+        let mut rid_map: JsMap<String> = JsMap::new();
 
         for rel in &source.rels {
             if MEDIA_REL_SUFFIXES.iter().any(|s| rel.r#type.ends_with(s)) {
@@ -587,28 +593,11 @@ pub fn merge_slide_from_source(
                 let ext = if last.is_empty() { "png" } else { last }.to_lowercase();
                 let dest_path = next_media_path(archive, &ext);
                 archive.entries_mut().set(dest_path.clone(), bytes.to_vec());
-                ensure_default_content_type(
-                    archive,
-                    &ext,
-                    mime_by_ext(&ext).unwrap_or("application/octet-stream"),
-                )?;
+                // the extension is the source deck's: the table answers its own extensions only
+                let mime = mime_by_ext(&ext).unwrap_or("application/octet-stream");
+                ensure_default_content_type(archive, &ext, mime)?;
                 let new_rid = next_rid();
-                // Rewrite r:embed / r:link references in the slide XML to the new rId
-                let re = TryJsRegex::new(
-                    &format!("(r:(?:embed|link)=\")({})(\")", regex_escape(&rel.id)),
-                    "",
-                )
-                .map_err(|error| error.to_string())?;
-                let rewritten = re
-                    .try_replace_all(&slide_xml, |m| {
-                        format!(
-                            "{}{new_rid}{}",
-                            m.get(1).unwrap_or_default(),
-                            m.get(3).unwrap_or_default()
-                        )
-                    })
-                    .map_err(|limit| limit.to_string())?;
-                slide_xml = rewritten;
+                rid_map.set(rel.id.clone(), new_rid.clone());
                 let rel_target = format!("../media/{}", slice_utf16(&dest_path, 10.0, None));
                 new_rels_lines.push(format!(
                     "<Relationship Id=\"{new_rid}\" Type=\"{IMAGE_REL_TYPE}\" Target=\"{}\"/>",
@@ -629,6 +618,8 @@ pub fn merge_slide_from_source(
             }
             // notesSlide and others (e.g. comments) are dropped
         }
+        // Re-point the r:embed / r:link references in the slide XML at the new rIds
+        slide_xml = with_relationship_ids(&slide_xml, &["embed", "link"], &rid_map);
 
         // Write the new slide XML + rels
         set_entry(archive, &new_path, &slide_xml);
@@ -722,36 +713,19 @@ pub fn delete_slide(opened: &mut OpenedPptx, index: f64) -> Result<bool, String>
         return Ok(false);
     };
 
-    let escaped = regex_escape(&rid);
-    let Some(sld_tag) = TryJsRegex::new(
-        &format!("<p:sldId\\s[^>]*r:id=[\"']{escaped}[\"'][^>]*/>"),
-        "",
-    )
-    .map_err(|error| error.to_string())?
-    .try_exec(&pres)
-    .map_err(|limit| limit.to_string())?
-    .map(|found| found.as_str().to_owned()) else {
+    let Some(next_pres) = with_slide_unlisted(&pres, &rid) else {
         return Ok(false);
     };
-    set_entry(
-        archive,
-        PRES_PATH,
-        &replace_first_string(&pres, &sld_tag, ""),
-    );
-    let rel_tag = TryJsRegex::new(
-        &format!("<Relationship\\s[^>]*Id=[\"']{escaped}[\"'][^>]*/>"),
-        "",
-    )
-    .map_err(|error| error.to_string())?
-    .try_exec(&pres_rels)
-    .map_err(|limit| limit.to_string())?
-    .map(|found| found.as_str().to_owned());
-    if let Some(rel_tag) = rel_tag {
-        set_entry(
-            archive,
-            PRES_RELS_PATH,
-            &replace_first_string(&pres_rels, &rel_tag, ""),
-        );
+    set_entry(archive, PRES_PATH, &next_pres);
+    let next_rels = js_regex!(r"<Relationship\b[^>]*\/\s*>", "g").replace_all(&pres_rels, |tag| {
+        if attribute_of(tag.as_str(), "Id").as_deref() == Some(rid.as_str()) {
+            String::new()
+        } else {
+            tag.as_str().to_owned()
+        }
+    });
+    if next_rels != pres_rels {
+        set_entry(archive, PRES_RELS_PATH, &next_rels);
     }
 
     remove_part_with_owned_resources(archive, &slide_path)?;

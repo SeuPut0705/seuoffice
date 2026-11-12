@@ -55,9 +55,7 @@ pub fn resolve_color_node(
         let m = as_xml_node(n.get("a:prstClr"));
         mods = Some(m);
         let raw = string_or_empty(m.get("@_val"));
-        // ledger inherited-key-color-39 and inherited-key-color-41: the
-        // TypeScript table also answers for `constructor`, `toString`... and
-        // then throws; the table here answers for its own keys only.
+        // `ownValue`: the table answers its own color names only
         base = preset_color(&raw)
             .or_else(|| preset_color_lower(&raw.to_lowercase()))
             .or_else(|| preset_color(&lower_first(&raw)))

@@ -223,6 +223,27 @@ const SLIDE_RELS =
 const SLIDE_PART = 'ppt/slides/slide1.xml'
 const RELS_PART = 'ppt/slides/_rels/slide1.xml.rels'
 
+/** Links the way another producer may spell them: the id and the tooltip are the decoded values. */
+const ODD_LINKS = sld(
+  sp(2, '<p:cNvPr id="{id}" name="A"><a:hlinkClick r:id = "R7&#97;" tooltip=\'t &amp;amp; u\'/></p:cNvPr>') +
+    sp(3, '<p:cNvPr id="{id}" name="B"><a:hlinkClick r:id="a&amp;b"/></p:cNvPr>') +
+    sp(4, '<p:cNvPr id="{id}" name="C"><a:hlinkClick note="x>y" r:id="rId7" action = \'\' tooltip=""/></p:cNvPr>') +
+    sp(5, '<p:cNvPr id="{id}" name="D"><a:hlinkClick r:id="rId&#55;"/></p:cNvPr>') +
+    sp(
+      6,
+      '<p:cNvPr id="{id}" name="E"/>',
+      run('a', hl("r:id = 'R7a' tooltip = \"q&quot;\"")) +
+        run('b', hl('r:id="a&amp;b" action="ppaction://hlinksldjump"')) +
+        run('c', hl('r:id="" action=\'ppaction://hlinkshowjump?jump=lastslide\'')) +
+        run('d', hl('action="ppaction://hlinkshowjump?jump=nextslide"')),
+    ),
+)
+const ODD_RELS = SLIDE_RELS.replace(
+  '</Relationships>',
+  `<Relationship Id="R7a" Type="${REL_T}/hyperlink" Target="https://odd.example/" TargetMode="External"/>` +
+    `<Relationship Id="a&amp;b" Type="${REL_T}/slide" Target="slide2.xml"/></Relationships>`,
+)
+
 const SLIDE_TEXTS = [
   sld(PLAIN + PAIRED + LINKED + ACTION_LINKED + QUOTED + NO_CNVPR + RUNS + GROUP),
   sld(PLAIN),
@@ -238,6 +259,9 @@ const onSlide = (text: string, rest: Args = {}, deck = GENERATED): Input => ({
 /** The same, with the slide rels replaced (the deck reparsed before the call). */
 const withRels = (text: string, rest: Args = {}): Input =>
   onSlide(text, { setRels: SLIDE_RELS, ...rest })
+
+/** The same, with the extra relationships `ODD_LINKS` names. */
+const withOddRels = (rest: Args = {}): Input => onSlide(ODD_LINKS, { setRels: ODD_RELS, ...rest })
 
 /** What a call does first: the slide rels `args.setRels` written, the deck reparsed (as `reparse_deck` does). */
 const prepare = (opened: Parameters<typeof reparseDeck>[0], args: Args): void => {
@@ -337,6 +361,10 @@ const MEDIA_CASES: Args[] = [
   // an unknown extension and a missing slide answer null
   { opts: { kind: 'video', bytes: BYTES, ext: 'flv', offset: OFFSET } },
   { opts: { kind: 'video', bytes: BYTES, ext: '', offset: OFFSET } },
+  // the table answers its own extensions only
+  ...['constructor', 'toString', '__proto__', 'hasOwnProperty'].map((ext) => ({
+    opts: { kind: 'video', bytes: BYTES, ext, offset: OFFSET },
+  })),
   { slide: 9, opts: { kind: 'video', bytes: BYTES, ext: 'mp4', offset: OFFSET } },
   // fractional and huge geometry
   { opts: { kind: 'video', bytes: BYTES, ext: 'mp4', offset: { x: 0.5, y: -1, cx: 1e21, cy: 1e-7 } } },
@@ -598,6 +626,7 @@ export const MEDIA: CallSpec[] = [
       ...CHART_OPTS.map(chartInput),
       ...CHART_OPTS.slice(0, 3).map((opts): Input => ({ args: { ...opts, externalDataRId: 'rId3' } })),
       { args: { ...CHART_OPTS[0]!, externalDataRId: '' } },
+      { args: { ...CHART_OPTS[0]!, externalDataRId: 'r&Id"<1>' } },
     ],
     mutation: 'none',
   },
@@ -645,6 +674,21 @@ export const MEDIA: CallSpec[] = [
         chartRels: `<?xml version="1.0"?><Relationships xmlns="${RELS_NS}"><Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject" Target="../embeddings/o.bin"/></Relationships>`,
         entries: [['ppt/embeddings/o.bin', BYTES]],
       }),
+      // the id as XML reads it: single quotes, spaced `=`, a reference, other attributes before it
+      ...[
+        `<c:chartSpace><c:externalData r:id = 'rId1'/></c:chartSpace>`,
+        '<c:chartSpace><c:externalData note="a>b" r:id="rId&#49;"/></c:chartSpace>',
+        '<c:chartSpace><c:externalData r:id=""/></c:chartSpace>',
+        '<c:chartSpace><c:externalData/></c:chartSpace>',
+      ].map((chartText) =>
+        deckInput(GENERATED, {
+          ...CHART_OPTS[0]!,
+          chartPath: 'ppt/charts/chart1.xml',
+          chartText,
+          chartRels: `<?xml version="1.0"?><Relationships xmlns="${RELS_NS}"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/package" Target="../embeddings/Book.xlsx"/></Relationships>`,
+          entries: [['ppt/embeddings/Book.xlsx', BYTES]],
+        }),
+      ),
       // an id the rels do not have; names taken in the embeddings dir
       deckInput(GENERATED, {
         ...CHART_OPTS[0]!,
@@ -782,6 +826,7 @@ export const MEDIA: CallSpec[] = [
       withRels(SLIDE_TEXTS[0]!, { slide: 9 }),
       onSlide(SLIDE_TEXTS[0]!, { slide: 0 }),
       onSlide(SLIDE_TEXTS[1]!, { slide: 0 }),
+      withOddRels({ slide: 0 }),
       deckInput(BLANK, { slide: 0 }),
     ],
   },
@@ -798,6 +843,7 @@ export const MEDIA: CallSpec[] = [
         withRels(SLIDE_TEXTS[0]!, { slide: 0, element }),
       ),
       ...[0, 1].map((element) => withRels(SLIDE_TEXTS[2]!, { slide: 0, element })),
+      ...[0, 1, 2, 3, 4].map((element) => withOddRels({ slide: 0, element })),
       withRels(SLIDE_TEXTS[0]!, { slide: 9, element: 0 }),
       onSlide(SLIDE_TEXTS[0]!, { slide: 0, element: 2 }),
       onSlide(SLIDE_TEXTS[0]!, { slide: 0, element: 4 }),
@@ -815,6 +861,7 @@ export const MEDIA: CallSpec[] = [
       withRels(SLIDE_TEXTS[2]!, { slide: 0 }),
       withRels(SLIDE_TEXTS[3]!, { slide: 0 }),
       withRels(SLIDE_TEXTS[0]!, { slide: 9 }),
+      withOddRels({ slide: 0 }),
       onSlide(SLIDE_TEXTS[0]!, { slide: 0 }),
       deckInput(BLANK, { slide: 0 }),
     ],
@@ -853,6 +900,10 @@ function LINK_INPUTS(): Input[] {
   out.push(withRels(SLIDE_TEXTS[0]!, { slide: 0, element: 99, target: targets[1] }))
   // the deck's own slides, no rels part to extend
   out.push(deckInput(BLANK, { slide: 0, element: 0, target: targets[1] }))
+  // a link with a tooltip another producer spelled: kept as the value it reads
+  for (const element of [0, 1, 2]) {
+    for (const target of targets.slice(1, 5)) out.push(withOddRels({ slide: 0, element, target }))
+  }
   return out
 }
 

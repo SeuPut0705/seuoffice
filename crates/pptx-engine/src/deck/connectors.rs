@@ -246,9 +246,12 @@ pub fn update_connectors_for_moved(slide: &mut Slide, moved_ids: &[String]) -> f
 
 /// The patch of [`set_element_connection`]: per end, `None` leaves it
 /// unchanged (`undefined`), `Some(None)` detaches it (`null`), `Some(Some(end))` attaches it.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConnectionPatch {
+    #[serde(default, deserialize_with = "crate::types::present")]
     pub start: Option<Option<ConnectionEnd>>,
+    #[serde(default, deserialize_with = "crate::types::present")]
     pub end: Option<Option<ConnectionEnd>>,
 }
 
