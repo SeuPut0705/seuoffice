@@ -1,19 +1,19 @@
 // Comparison (e): a docx as loadDocxZip opens it, and every value parseDocx
 // reads from the package before it reaches the body.
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import JSZip from 'jszip'
 import {
   FONT_TABLE_PART_PATH,
   parseFontTable,
   readEmbeddedFonts,
-} from '../../packages/docx-engine/src/font-table'
+} from './reference/font-table'
 import {
   needsOoxmlNormalization,
   normalizeOoxmlXml,
-} from '../../packages/docx-engine/src/ooxml-normalize'
+} from './reference/ooxml-normalize'
 import {
   parseComments,
   parseNumbering,
@@ -23,25 +23,25 @@ import {
   parseWriteProtection,
   resolveMainDocumentPath,
   resolveRelationshipTargetPath,
-} from '../../packages/docx-engine/src/parse-package'
-import { parseStyles } from '../../packages/docx-engine/src/parse-styles'
+} from './reference/parse-package'
+import { parseStyles } from './reference/parse-styles'
 import {
   DEFAULT_THEME_COLORS,
   readThemeColors,
   readThemeFonts,
   THEME_PART_PATH,
-} from '../../packages/docx-engine/src/theme'
-import type { StyleInfo, ThemeColors, ThemeFonts } from '../../packages/docx-engine/src/types'
+} from './reference/theme'
+import type { StyleInfo, ThemeColors, ThemeFonts } from './reference/types'
 import {
   attrsOf,
   findChildren,
   nameOf,
   type XNode,
   xmlParser,
-} from '../../packages/docx-engine/src/xml-utils'
-import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
+} from './reference/xml-utils'
+import { loadDocxZip } from './reference/zip-load'
 import { failed } from './engine'
-import { type Comparison, describeTextDifference, engine, repoRoot, toolDir } from './harness'
+import { type Comparison, describeTextDifference, engine, repoRoot, SHOW, toolDir } from './harness'
 import { RAW_HOST_ENV } from './host'
 import { keyOrderDifference } from './key-order'
 
@@ -235,7 +235,7 @@ const PARSE_TS_SNIPPETS = [
 
 /** The copied readers that parse.ts no longer holds as copied. */
 export function driftedCopies(): number {
-  const parseTs = readFileSync(resolve(repoRoot, 'packages/docx-engine/src/parse.ts'), 'utf8')
+  const parseTs = readFileSync(resolve(repoRoot, 'tools/docx-diff/reference/parse.ts'), 'utf8')
   return PARSE_TS_SNIPPETS.filter((snippet) => !parseTs.includes(snippet)).length
 }
 
@@ -404,8 +404,30 @@ const brief = (value: unknown): string => {
   return text.length > 600 ? `${text.slice(0, 600)}... (${text.length} characters)` : text
 }
 
-/** Where two JSON values first differ, as a path and the two values there. */
-function firstDifference(typescript: unknown, rust: unknown, path = ''): string {
+/** One place where two JSON values differ, and the two values there. */
+export interface PathDifference {
+  path: string
+  typescript: string
+  rust: string
+}
+
+/** A value of a package that differs, with every place it differs at. */
+export interface ValueDifference {
+  comparison: string
+  where: string
+  value: string
+  paths: PathDifference[]
+}
+
+/** Every differing value of the run, for the report file. */
+const pathReport: ValueDifference[] = []
+export const PATH_REPORT = resolve(toolDir, 'out/package-paths.json')
+
+/**
+ * Every place where two JSON values differ, as a path and the two values
+ * there, in the order of the keys. A key on one side only is one place.
+ */
+function differingPaths(typescript: unknown, rust: unknown, path = ''): PathDifference[] {
   if (
     typescript !== null &&
     rust !== null &&
@@ -414,12 +436,48 @@ function firstDifference(typescript: unknown, rust: unknown, path = ''): string 
     Array.isArray(typescript) === Array.isArray(rust)
   ) {
     const [left, right] = [new Map(Object.entries(typescript)), new Map(Object.entries(rust))]
-    for (const key of new Set([...left.keys(), ...right.keys()])) {
+    const inner = [...new Set([...left.keys(), ...right.keys()])].flatMap((key) => {
       const [a, b]: unknown[] = [left.get(key), right.get(key)]
-      if (!isDeepStrictEqual(a, b)) return firstDifference(a, b, `${path}/${key}`)
-    }
+      return isDeepStrictEqual(a, b) ? [] : differingPaths(a, b, `${path}/${key}`)
+    })
+    if (inner.length > 0) return inner
   }
-  return `at ${path || '/'}\n      typescript ${brief(typescript)}\n      rust       ${brief(rust)}`
+  return [{ path: path || '/', typescript: brief(typescript), rust: brief(rust) }]
+}
+
+/**
+ * A difference as the report prints it: the first place in full, then the
+ * count of places and the first SHOW of them. The report file holds all.
+ */
+function describeDifference(
+  comparison: Comparison,
+  where: string,
+  value: string,
+  typescript: unknown,
+  rust: unknown,
+): string {
+  const paths = differingPaths(typescript, rust)
+  pathReport.push({ comparison: comparison.label, where, value, paths })
+  const [first] = paths as [PathDifference]
+  const listed = paths.slice(0, SHOW).map(({ path }) => path)
+  const more = paths.length > SHOW ? `, ... ${paths.length - SHOW} more in ${PATH_REPORT}` : ''
+  return (
+    `${where}: ${value} at ${first.path}\n      typescript ${first.typescript}\n      rust       ${first.rust}` +
+    (paths.length > 1 ? `\n      ${paths.length} paths differ: ${listed.join(', ')}${more}` : '')
+  )
+}
+
+/** Writes every differing value of the run with all its places, and says where. */
+export function writePathReport(): void {
+  const paths = pathReport.reduce((sum, { paths }) => sum + paths.length, 0)
+  mkdirSync(dirname(PATH_REPORT), { recursive: true })
+  writeFileSync(
+    PATH_REPORT,
+    JSON.stringify({ values: pathReport.length, paths, differences: pathReport }, null, 2) + '\n',
+  )
+  console.log(
+    `(e) package values that differ: ${pathReport.length}, at ${paths} paths, every one in ${PATH_REPORT}`,
+  )
 }
 
 /** The values compared as one check each; `relationships` is one check per part. */
@@ -457,7 +515,7 @@ export function compareModels(
   const check = (name: string, left: unknown, right: unknown): void => {
     if (threw(left)) comparison.typescriptThrew += 1
     if (!sameOutcome(left, right)) {
-      comparison.record(`${where}: ${name} ${firstDifference(left, right)}`)
+      comparison.record(describeDifference(comparison, where, name, left, right))
       return
     }
     const order = threw(left) ? null : keyOrderDifference(`package ${name}`, left, right)
@@ -501,16 +559,17 @@ export async function comparePackage(
   // what reading a damaged entry throws is compared by presence
   const entryErrorsAsFlags = (entries: Entry[]): Entry[] =>
     entries.map((entry) => (entry.error === undefined ? entry : { ...entry, error: 'throws' }))
-  const same = isDeepStrictEqual(
+  const [typescriptFlagged, rustFlagged] = [
     entryErrorsAsFlags(typescript.entries),
     entryErrorsAsFlags(rust.entries),
-  )
+  ]
+  const same = isDeepStrictEqual(typescriptFlagged, rustFlagged)
   const order = same
     ? keyOrderDifference('package entries', typescript.entries, rust.entries)
     : null
   opened.record(
     !same
-      ? `${where}: entries ${firstDifference(typescript.entries, rust.entries)}`
+      ? describeDifference(opened, where, 'entries', typescriptFlagged, rustFlagged)
       : order === null
         ? null
         : `${where}: entries ${order}`,

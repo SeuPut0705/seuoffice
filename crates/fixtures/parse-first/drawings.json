@@ -1,0 +1,236 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "parse",
+      "argRefused": 6547,
+      "populations": {
+        "corpus": {
+          "compared": 698,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 2052,
+          "differences": [
+            "built 1: parse.hfShapeDrawingSvg: parse.hfShapeDrawingSvg(\"<w:drawing><wp:anchor><wp:extent cx=\\\"952500\\\" cy=\\\"476250\\\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\\\"100\\\" y=\\\"200\\\"/><a:ext cx=\\\"2000000\\\" cy=\\\"1000000\\\"/><a:chOff x=\\\"0\\\" y=\\\"0\\\"/><a:chExt cx=\\\"4000000\\\" cy=\\\"2000000\\\"/></a:xfrm></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm, {})\n      typescript {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025\n      rust       {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025"
+          ],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 4800,
+          "differences": [
+            "mutation 5: parse.hfShapeDrawingSvg: parse.hfShapeDrawingSvg(\"<w:drawing><wp:anchor><wp:extent cx=\\\"952500\\\" cy=\\\"476250\\\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\\\"100\\\" y=\\\"200\\\"/><a:ext cx=\\\"2000000\\\" cy=\\\"1000000\\\"/><a:chOff x=\\\"0\\\" y=\\\"0\\\"/><a:chExt cx=\\\"4000000\\\" cy=\\\"2000000\\\"/></a:xfrm></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm, {})\n      typescript {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025\n      rust       {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025",
+            "mutation 52: parse.hfShapeDrawingSvg: parse.hfShapeDrawingSvg(\"<w:drswAawing><wp:anchor><wp:extent cx=\\\"952500\\\" cy=\\\"476250\\\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\\\"100\\\" y=\\\"200\\\"/><a:ext cx=\\\"2000000\\\" cy=\\\"1000000\\\"/><a:chOff x=\\\"0\\\" y=\\\"0\\\"/><a:chExt cx=\\\"4000000\\\" cy=\\\"2000000\\\"/></a:xfrm></wpg:grpSpPr><wps:wsp><wps:spPr><a:x, {})\n      typescript {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2022.4%2018.77%2050.01%2018.77%20C%2077.62%2018.77%20100.01%2015.97%20100.01%2012.52%20C%20100.01%209.07%2077.62%206.27%2\n      rust       {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2022.4%2018.77%2050.01%2018.77%20C%2077.62%2018.77%20100.01%2015.97%20100.01%2012.52%20C%20100.01%209.07%2077.62%206.27%2",
+            "mutation 71: parse.hfShapeDrawingSvg: parse.hfShapeDrawingSvg(\"<w:drawing><wp:anchor><wp:extent cx=\\\"952500\\\" cy=\\\"476250\\\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\\\"100\\\" y=\\\"200\\\"/><a:ext cx=\\\"2000000\\\" cy=\\\"1000000\\\"/><a:chOff x=\\\"0\\\" y=\\\"0\\\"/><a:chExt cx=\\\"4000000\\\" cy=\\\"2000000\\\"/></a:xfrm></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm, {})\n      typescript {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025\n      rust       {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025",
+            "mutation 78: parse.hfShapeDrawingSvg: parse.hfShapeDrawingSvg(\"<w:drawing><wp:anchor><wp:extent cx=\\\"952500\\\" cy=\\\"476250\\\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\\\"100\\\" y=\\\"200\\\"/><a:ext cx=\\\"2000000\\\" cy=\\\"1000000\\\"/><a:chOff x=\\\"0\\\" y=\\\"0\\\"/><a:chExt cx=\\\"4000000\\\" cy=\\\"2000000\\\"/></a:xfrm></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm, {})\n      typescript {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20Q%2016.68%200.02%2050.01%2016.69%20C%2012.51%2025.02%200.01%20NaN%200.01%2025.02%20Z%20C%200.01%2026.33%20-11.18%2037.52%20-24.99%2037.52%\n      rust       {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20Q%2016.68%200.02%2050.01%2016.69%20C%2012.51%2025.02%200.01%200.02%200.01%2025.02%20Z%20C%200.01%2026.33%20-11.18%2037.52%20-24.99%2037.52",
+            "mutation 94: parse.hfShapeDrawingSvg: parse.hfShapeDrawingSvg(\"<w:drawing><wp:anchor><wp:extent cx=\\\"952500\\\" cy=\\\"476250\\\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\\\"100\\\" y=\\\"200\\\"/><a:ext cx=\\\"2000000\\\" cy=\\\"1000000\\\"/><a:chOff x=\\\"0\\\" y=\\\"0\\\"/><a:chExt cx=\\\"4000000\\\" cy=\\\"2000000\\\"/></a:xfrm></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm, {})\n      typescript {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025\n      rust       {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025",
+            "mutation 101: parse.hfShapeDrawingSvg: parse.hfShapeDrawingSvg(\"<w:drawing><wp:anchor><wp:extent cx=\\\"952500\\\" cy=\\\"476250\\\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\\\"100\\\" y=\\\"200\\\"/><a:ext cx=\\\"2000000\\\" cy=\\\"1000000\\\"/><a:chOff x=\\\"0\\\" y=\\\"0\\\"/><a:chExt cx=\\\"4000000\\\" cy=\\\"2000000\\\"/></a:xfrm></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm, {})\n      typescript {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025\n      rust       {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025",
+            "mutation 139: parse.hfShapeDrawingSvg: parse.hfShapeDrawingSvg(\"<w:drawing><wp:anchor><wp:extent cx=\\\"952500\\\" cy=\\\"476250\\\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\\\"100\\\" y=\\\"200\\\"/><a:ext cx=\\\"2000000\\\" cy=\\\"1000000\\\"/><a:chOff x=\\\"0\\\" y=\\\"0\\\"/><a:chExt cx=\\\"4000000\\\" cy=\\\"2000000\\\"/></a:xfrm></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm, {})\n      typescript {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025\n      rust       {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025",
+            "mutation 212: parse.hfShapeDrawingSvg: parse.hfShapeDrawingSvg(\"<w:drawing><wp:anchor><wp:extent cx=\\\"952500\\\" cy=\\\"476250\\\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\\\"100\\\" y=\\\"200\\\"/><a:ext cx=\\\"2000000\\\" cy=\\\"1000000\\\"/><a:chOff x=\\\"0\\\" y=\\\"0\\\"/><a:chExt cx=\\\"4000000\\\" cy=\\\"2000000\\\"/></a:xfrm></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm, {})\n      typescript {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025\n      rust       {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025",
+            "mutation 251: parse.hfShapeDrawingSvg: parse.hfShapeDrawingSvg(\"<w:drawing><wp:anchor><wp:extent cx=\\\"952500\\\" cy=\\\"476250\\\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\\\"100\\\" y=\\\"200\\\"/><a:ext cx=\\\"2000000\\\" cy=\\\"1000000\\\"/><a:chOff x=\\\"0\\\" y=\\\"0\\\"/><a:chExt cx=\\\"4000000\\\" cy=\\\"2000000\\\"/></a:xfrm></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm, {})\n      typescript {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025\n      rust       {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025",
+            "mutation 258: parse.hfShapeDrawingSvg: parse.hfShapeDrawingSvg(\"<w:drawing><wp:anchor><wp:extent cx=\\\"952500\\\" cy=\\\"476250\\\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\\\"100\\\" y=\\\"200\\\"/><a:ext cx=\\\"2000000\\\" cy=\\\"1000000\\\"/><a:chOff x=\\\"0\\\" y=\\\"0\\\"/><a:chExt cx=\\\"4000000\\\" cy=\\\"2000000\\\"/></a:xfrm></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm, {})\n      typescript {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025\n      rust       {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025",
+            "mutation 262: parse.hfShapeDrawingSvg: parse.hfShapeDrawingSvg(\"<w:drawing><wp:anchor><wp:extent cx=\\\"952500\\\" cy=\\\"476250\\\"/><a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\\\"100\\\" y=\\\"200\\\"/><a:ext cx=\\\"2000000\\\" cy=\\\"1000000\\\"/><a:chOff x=\\\"0\\\" y=\\\"0\\\"/><a:chExt cx=\\\"4000000\\\" cy=\\\"2000000\\\"/></a:xfrm></wpg:grpSpPr><wps:wsp><wps:spPr><a:xfrm, {})\n      typescript {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025\n      rust       {\"value\":\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200.01%2012.52%20C%200.01%2015.97%2011.2%2018.77%2025.01%2018.77%20C%2038.82%2018.77%2050.01%2015.97%2050.01%2012.52%20C%2050.01%209.07%2038.82%206.27%2025"
+          ],
+          "keyOrderOnly": 0
+        },
+        "argMutated": {
+          "compared": 12000,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "parse.alignedPictureXEmu",
+          "checks": 2916,
+          "differences": 0,
+          "distinctResults": 44,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.vmlHrRule",
+          "checks": 312,
+          "differences": 0,
+          "distinctResults": 51,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.txbxParaVisible",
+          "checks": 1509,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.hasFloatingVmlGeometry",
+          "checks": 331,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.vmlPictsInlineOnly",
+          "checks": 332,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.vmlFlagOff",
+          "checks": 12,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.vmlStrokeWeightPx",
+          "checks": 17,
+          "differences": 0,
+          "distinctResults": 7,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.applyVmlMsoPosition",
+          "checks": 1944,
+          "differences": 0,
+          "distinctResults": 259,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.readAnchorPos",
+          "checks": 2185,
+          "differences": 0,
+          "distinctResults": 490,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.hfShapeDrawingSvg",
+          "checks": 321,
+          "differences": 12,
+          "distinctResults": 28,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.vmlLengthPx",
+          "checks": 17,
+          "differences": 0,
+          "distinctResults": 11,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.readBodyPr",
+          "checks": 1815,
+          "differences": 0,
+          "distinctResults": 167,
+          "typescriptThrew": 58
+        },
+        {
+          "fn": "parse.rectFrac",
+          "checks": 350,
+          "differences": 0,
+          "distinctResults": 14,
+          "typescriptThrew": 39
+        },
+        {
+          "fn": "parse.picBorderOf",
+          "checks": 394,
+          "differences": 0,
+          "distinctResults": 5,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.groupPictureLayers",
+          "checks": 376,
+          "differences": 0,
+          "distinctResults": 3,
+          "typescriptThrew": 55
+        },
+        {
+          "fn": "parse.picTransformOf",
+          "checks": 394,
+          "differences": 0,
+          "distinctResults": 9,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.vmlImageMeta",
+          "checks": 308,
+          "differences": 0,
+          "distinctResults": 23,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.relPartPath",
+          "checks": 1548,
+          "differences": 0,
+          "distinctResults": 19,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.parseCompatibilityMode",
+          "checks": 21,
+          "differences": 0,
+          "distinctResults": 4,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.parseLayoutSettings",
+          "checks": 21,
+          "differences": 0,
+          "distinctResults": 10,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.parseNoteProps",
+          "checks": 505,
+          "differences": 0,
+          "distinctResults": 27,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.parseSettingsFlag",
+          "checks": 102,
+          "differences": 0,
+          "distinctResults": 3,
+          "typescriptThrew": 5
+        },
+        {
+          "fn": "parse.parseSources",
+          "checks": 6,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.readThemeFontLang",
+          "checks": 10,
+          "differences": 0,
+          "distinctResults": 4,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.mediaPartSrc",
+          "checks": 1510,
+          "differences": 0,
+          "distinctResults": 32,
+          "typescriptThrew": 1032
+        },
+        {
+          "fn": "parse.externalTxbxParts",
+          "checks": 470,
+          "differences": 0,
+          "distinctResults": 3,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.extractChart",
+          "checks": 1824,
+          "differences": 0,
+          "distinctResults": 11,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

@@ -59,13 +59,17 @@ pub fn auto_space_mode(de: Option<bool>, dn: Option<bool>) -> Option<AutoSpace> 
     })
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TabStop {
     pub pos: JsNum,
     pub val: String,
     /// Only a w:ptab stop has it, written before its leader.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rel: Option<&'static str>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "jscompat::wire::static_str_opt"
+    )]
+    pub rel: Option<jscompat::wire::StaticStr>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub leader: Option<String>,
 }
@@ -249,9 +253,16 @@ pub fn active_char_indents(chars: Option<&CharIndents>) -> Option<CharIndents> {
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct CharUnits {
     /// w:firstLineChars and w:hangingChars: the paragraph's first text run.
+    /// `null` is the NaN `JSON.stringify` wrote.
+    #[serde(deserialize_with = "nan_of_null")]
     pub run: f64,
     /// w:leftChars and w:rightChars: the default paragraph style's font size.
+    #[serde(deserialize_with = "nan_of_null")]
     pub normal: f64,
+}
+
+fn nan_of_null<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<f64, D::Error> {
+    Option::<f64>::deserialize(deserializer).map(|number| number.unwrap_or(f64::NAN))
 }
 
 fn number_field(format: &Map<String, Value>, key: &str) -> Option<f64> {
@@ -365,21 +376,23 @@ pub fn empty_para_size_half_points(
     mark_only: bool,
     cs_size_half_points: Option<f64>,
 ) -> Option<f64> {
-    // an rtl mark is sized by its Cs twin, the chain's szCs when it has none
-    let size_of = |r_pr: Option<&XNode>| -> Option<String> {
+    // an rtl mark, or the mark of a bidi paragraph, is sized by its Cs twin, the
+    // chain's szCs when it has none
+    let bidi = p_pr.is_some_and(|p_pr| on_off_of(p_pr, "w:bidi") == Some(true));
+    let size_of = |r_pr: Option<&XNode>, is_mark: bool| -> Option<String> {
         let r_pr = r_pr?;
         let val_of = |name| r_pr.find_child(name).and_then(|size| size.attr("w:val"));
-        if on_off_of(r_pr, "w:rtl") == Some(true) {
+        if (is_mark && bidi) || on_off_of(r_pr, "w:rtl") == Some(true) {
             return val_of("w:szCs")
                 .map(str::to_owned)
                 .or_else(|| cs_size_half_points.map(number_to_string));
         }
         val_of("w:sz").map(str::to_owned)
     };
-    let mut size = p_pr.and_then(|p_pr| size_of(p_pr.find_child("w:rPr")));
+    let mut size = p_pr.and_then(|p_pr| size_of(p_pr.find_child("w:rPr"), true));
     if truthy(size.as_deref()).is_none() && !mark_only {
         for run in p_node.find_children("w:r") {
-            let value = size_of(run.find_child("w:rPr"));
+            let value = size_of(run.find_child("w:rPr"), false);
             if truthy(value.as_deref()).is_some() {
                 size = value;
             }

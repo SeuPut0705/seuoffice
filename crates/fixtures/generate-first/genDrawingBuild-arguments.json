@@ -1,0 +1,82 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "genDrawingBuild",
+      "argRefused": 0,
+      "populations": {
+        "corpus": {
+          "compared": 132,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 185,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 300,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "argMutated": {
+          "compared": 9000,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "genDrawingBuild.LINE_KINDS",
+          "checks": 309,
+          "differences": 0,
+          "distinctResults": 6,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genDrawingBuild.buildLineParagraphXml",
+          "checks": 1564,
+          "differences": 0,
+          "distinctResults": 1013,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genDrawingBuild.inlinePictureDrawingXml",
+          "checks": 1567,
+          "differences": 0,
+          "distinctResults": 966,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genDrawingBuild.buildTextboxParagraphXml",
+          "checks": 1530,
+          "differences": 0,
+          "distinctResults": 922,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+          "checks": 1531,
+          "differences": 0,
+          "distinctResults": 1245,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genDrawingBuild.buildShapeParagraphXml",
+          "checks": 1558,
+          "differences": 0,
+          "distinctResults": 1133,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genDrawingBuild.buildWordArtParagraphXml",
+          "checks": 1558,
+          "differences": 0,
+          "distinctResults": 1005,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

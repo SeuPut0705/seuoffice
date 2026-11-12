@@ -1,0 +1,110 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "genProps",
+      "argRefused": 0,
+      "populations": {
+        "corpus": {
+          "compared": 40876,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 4783,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 3300,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "argMutated": {
+          "compared": 3000,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "genProps.mergePPrFormat",
+          "checks": 19612,
+          "differences": 0,
+          "distinctResults": 4623,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genProps.mergeCellParaFormat",
+          "checks": 22960,
+          "differences": 0,
+          "distinctResults": 3589,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genProps.paraMarkColor",
+          "checks": 935,
+          "differences": 0,
+          "distinctResults": 3,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genProps.stripParaMarkColor",
+          "checks": 935,
+          "differences": 0,
+          "distinctResults": 720,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genProps.paraMarkRevisionXml",
+          "checks": 328,
+          "differences": 0,
+          "distinctResults": 21,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genProps.setParaMarkRevision",
+          "checks": 1049,
+          "differences": 0,
+          "distinctResults": 853,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genProps.stripParaMarkRevision",
+          "checks": 1570,
+          "differences": 0,
+          "distinctResults": 723,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genProps.resolveParaMarkRPrChange",
+          "checks": 1570,
+          "differences": 0,
+          "distinctResults": 719,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genProps.stripPPrChange",
+          "checks": 935,
+          "differences": 0,
+          "distinctResults": 720,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genProps.setPPrChange",
+          "checks": 1127,
+          "differences": 0,
+          "distinctResults": 807,
+          "typescriptThrew": 29
+        },
+        {
+          "fn": "genProps.splitXmlChildren",
+          "checks": 938,
+          "differences": 0,
+          "distinctResults": 649,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1281 @@
+[
+  {
+    "fn": "pptxIdent.identity.ensureCreationId",
+    "text": "<p:cNvPr id=\"16\" name=\"M\"><a:extLst/></p:cNvPr>",
+    "args": {
+      "uuid": "00000000-0000-4000-8000-000000000000"
+    },
+    "typescript": {
+      "value": {
+        "originalXml": "<p:cNvPr id=\"16\" name=\"M\"><a:extLst/><a:extLst><a:ext uri=\"{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}\"><a16:creationId xmlns:a16=\"http://schemas.microsoft.com/office/drawing/2014/main\" id=\"{00000000-0000-4000-8000-000000000000}\"/></a:ext></a:extLst></p:cNvPr>"
+      }
+    },
+    "rust": {
+      "value": {
+        "originalXml": "<p:cNvPr id=\"16\" name=\"M\"><a:extLst><a:ext uri=\"{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}\"><a16:creationId xmlns:a16=\"http://schemas.microsoft.com/office/drawing/2014/main\" id=\"{00000000-0000-4000-8000-000000000000}\"/></a:ext></a:extLst></p:cNvPr>"
+      }
+    }
+  },
+  {
+    "fn": "pptxIdent.identity.ensureCreationId",
+    "text": "<p:cNvPr id=\"17\" name=\"N\"><a:extLst><a:ext uri=\"{C183D7F6-B498-43B3-948B-1728B52AA6E4}\"><adec:decorative xmlns:adec=\"http://schemas.microsoft.com/office/drawing/2017/decorative\" val=\"0\"/></a:ext></a:extLst ></p:cNvPr>",
+    "args": {
+      "uuid": "00000000-0000-4000-8000-000000000000"
+    },
+    "typescript": {
+      "value": {
+        "originalXml": "<p:cNvPr id=\"17\" name=\"N\"><a:extLst><a:ext uri=\"{C183D7F6-B498-43B3-948B-1728B52AA6E4}\"><adec:decorative xmlns:adec=\"http://schemas.microsoft.com/office/drawing/2017/decorative\" val=\"0\"/></a:ext></a:extLst ><a:extLst><a:ext uri=\"{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}\"><a16:creationId xmlns:a16=\"http://schemas.microsoft.com/office/drawing/2014/main\" id=\"{00000000-0000-4000-8000-000000000000}\"/></a:ext></a:extLst></p:cNvPr>"
+      }
+    },
+    "rust": {
+      "value": {
+        "originalXml": "<p:cNvPr id=\"17\" name=\"N\"><a:extLst><a:ext uri=\"{C183D7F6-B498-43B3-948B-1728B52AA6E4}\"><adec:decorative xmlns:adec=\"http://schemas.microsoft.com/office/drawing/2017/decorative\" val=\"0\"/></a:ext><a:ext uri=\"{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}\"><a16:creationId xmlns:a16=\"http://schemas.microsoft.com/office/drawing/2014/main\" id=\"{00000000-0000-4000-8000-000000000000}\"/></a:ext></a:extLst ></p:cNvPr>"
+      }
+    }
+  },
+  {
+    "fn": "pptxIdent.identity.ensureCreationId",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"18\" name=\"O\"><a:hlinkClick r:id=\"\"/><a:extLst xmlns:x=\"urn:x\" /></p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"/><a:t>x</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "uuid": "00000000-0000-4000-8000-000000000000"
+    },
+    "typescript": {
+      "value": {
+        "originalXml": "<p:sp><p:nvSpPr><p:cNvPr id=\"18\" name=\"O\"><a:hlinkClick r:id=\"\"/><a:extLst xmlns:x=\"urn:x\" /><a:extLst><a:ext uri=\"{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}\"><a16:creationId xmlns:a16=\"http://schemas.microsoft.com/office/drawing/2014/main\" id=\"{00000000-0000-4000-8000-000000000000}\"/></a:ext></a:extLst></p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"/><a:t>x</a:t></a:r></a:p></p:txBody></p:sp>"
+      }
+    },
+    "rust": {
+      "value": {
+        "originalXml": "<p:sp><p:nvSpPr><p:cNvPr id=\"18\" name=\"O\"><a:hlinkClick r:id=\"\"/><a:extLst xmlns:x=\"urn:x\" ><a:ext uri=\"{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}\"><a16:creationId xmlns:a16=\"http://schemas.microsoft.com/office/drawing/2014/main\" id=\"{00000000-0000-4000-8000-000000000000}\"/></a:ext></a:extLst></p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"/><a:t>x</a:t></a:r></a:p></p:txBody></p:sp>"
+      }
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst>b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext>b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext>b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext>b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst/></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst/></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a/>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst/></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLstb\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst/></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext>b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst>  </a:extLst></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst>  </a:extLst></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst>  </a:extLst></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst>  b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst>  </a:extLst></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst>\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext>\r\n</a:extLst>  </a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst>  </a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst>  </a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst>\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext>\r\n</a:extLst>  </a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst>  </a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst>  </a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst>\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext>\r\n</a:extLst>  </a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst>\r\n\r\nb\"/></a:ext></a:extLst>  </a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst>  </a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst>\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext>\r\n</a:extLst>  </a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst>  </a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst>  </a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\"/><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\"/><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\"/><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst>b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\"/><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\"/></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\"/></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\"/></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst>b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\"/></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\"><go:redact label=\"x\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\"><go:redact label=\"x\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\"><go:redact label=\"x\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst>b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\" uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\"><go:redact label=\"x\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext>b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri='{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext>b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d}\"><go:redact label=\"x\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst>b\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<a:rPr lang=\"en-US\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<a:rPr lang=\"en-US\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr>"
+    },
+    "rust": {
+      "value": "<a:rPr lang=\"en-US\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></p:spPr>",
+    "args": {
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></p:spPr>"
+    },
+    "rust": {
+      "value": "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></p:spPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></p:spPr>",
+    "args": {
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></p:spPr>"
+    },
+    "rust": {
+      "value": "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></p:spPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></p:spPr>",
+    "args": {
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst>b\"/></a:ext></a:extLst></p:spPr>"
+    },
+    "rust": {
+      "value": "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></p:spPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.setRedactExt",
+    "text": "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></p:spPr>",
+    "args": {
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></p:spPr>"
+    },
+    "rust": {
+      "value": "<p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></p:spPr>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst>b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext>b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext>b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext>b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{28A0092B-C50C-407E-A947-70E740481C1C}\"><a14:useLocalDpi xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" val=\"0\"/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst/></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst/></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a/>amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst/></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLstb\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst/></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext>b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst xmlns:x=\"urn:x\"><a:ext uri=\"{X}\"><x:y/></a:ext><a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>  </a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>  </a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>  </a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst>  b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>  </a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>  <a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst></a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext>\r\n</a:extLst>  </a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$$b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$b\"/></a:ext></a:extLst>  </a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$$b\"/></a:ext></a:extLst>  </a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext>\r\n</a:extLst>  </a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$&b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a</a:extLst>amp;b\"/></a:ext></a:extLst>  </a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$&amp;b\"/></a:ext></a:extLst>  </a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext>\r\n</a:extLst>  </a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$`b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a<a:extLst>\r\n\r\nb\"/></a:ext></a:extLst>  </a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$`b\"/></a:ext></a:extLst>  </a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  },
+  {
+    "fn": "pptxIdent.redaction-xml.syncRedactExt",
+    "text": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"Name\"/></a:ext>\r\n</a:extLst>  </a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>",
+    "args": {
+      "tag": "a:rPr",
+      "label": "a$'b"
+    },
+    "typescript": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"ab\"/></a:ext></a:extLst>  </a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    },
+    "rust": {
+      "value": "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"T\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:rPr lang=\"en-US\"><a:extLst>\r\n\r\n<a:ext uri=\"{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}\" xmlns:go=\"https://genspark.ai/genoffice/redaction/2026\"><go:redact label=\"a$'b\"/></a:ext></a:extLst>  </a:rPr><a:t>word</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t>word</a:t></a:r></a:p></p:txBody></p:sp>"
+    }
+  }
+]

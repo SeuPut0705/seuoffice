@@ -3,13 +3,14 @@
 
 use jscompat::{JsNum, Slot, js_object};
 use serde::ser::SerializeStruct;
-use serde::{Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::drawing_geometry::TextOutline;
 use crate::props::{Borders, CellMargins, CharIndents, ParaBorderSides, TabStop};
 use crate::styles::RunBorder;
 
 js_object! {
+    deserialize;
     /// Display-only formatting a paragraph or character style contributes.
     /// Its keys follow the code that made it: the basedOn spread, the
     /// docDefaults indent and border fill-in, the linked-style run fill.
@@ -119,6 +120,7 @@ pub(crate) fn run_keys_fill(own: Option<&StyleDisplay>, other: &StyleDisplay) ->
 }
 
 js_object! {
+    deserialize;
     /// `TableCondFormat['paraSpacing']`; mergeTableDisplay spreads it.
     #[derive(Debug, Clone, PartialEq)]
     pub struct TableParaSpacing {
@@ -131,6 +133,7 @@ js_object! {
 }
 
 js_object! {
+    deserialize;
     /// Run and cell formatting one w:tblStylePr condition contributes;
     /// mergeTableDisplay spreads it.
     #[derive(Debug, Clone, PartialEq)]
@@ -151,6 +154,7 @@ js_object! {
 }
 
 js_object! {
+    deserialize;
     /// `TableStyleDisplay['wholeTable']`; mergeTableDisplay spreads it.
     #[derive(Debug, Clone, PartialEq)]
     pub struct WholeTable {
@@ -163,6 +167,7 @@ js_object! {
 }
 
 js_object! {
+    deserialize;
     /// Display-only formatting a table style contributes. The conditions
     /// come in document order, and mergeTableDisplay spreads it.
     #[derive(Debug, Clone, PartialEq)]
@@ -175,6 +180,8 @@ js_object! {
         pub last_row: TableCondFormat,
         pub band1_fill: String,
         pub band2_fill: String,
+        pub band1_horz: TableCondFormat,
+        pub band2_horz: TableCondFormat,
         pub row_band_size: JsNum,
         pub borders: Borders,
         pub cell_mar_twips: CellMargins,
@@ -245,6 +252,12 @@ pub(crate) fn merge_table_display(
     if let Some(m) = deep_cond(a.last_row.as_ref(), b.last_row.as_ref()) {
         merged.last_row.set(m);
     }
+    if let Some(m) = deep_cond(a.band1_horz.as_ref(), b.band1_horz.as_ref()) {
+        merged.band1_horz.set(m);
+    }
+    if let Some(m) = deep_cond(a.band2_horz.as_ref(), b.band2_horz.as_ref()) {
+        merged.band2_horz.set(m);
+    }
     if let Some(m) = deep(
         a.para_spacing.as_ref(),
         b.para_spacing.as_ref(),
@@ -260,6 +273,25 @@ pub(crate) fn merge_table_display(
 pub enum NumPr {
     None,
     Num { num_id: String, ilvl: JsNum },
+}
+
+impl<'de> Deserialize<'de> for NumPr {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Wire {
+            Text(serde::de::IgnoredAny),
+            #[serde(rename_all = "camelCase")]
+            Num {
+                num_id: String,
+                ilvl: JsNum,
+            },
+        }
+        Ok(match Wire::deserialize(deserializer)? {
+            Wire::Text(_) => NumPr::None,
+            Wire::Num { num_id, ilvl } => NumPr::Num { num_id, ilvl },
+        })
+    }
 }
 
 impl Serialize for NumPr {
@@ -279,13 +311,13 @@ impl Serialize for NumPr {
 /// The fields in the order of the object literal parseStyles writes, then the
 /// two keys it adds later in the order it adds them; every other later write
 /// replaces a key the literal already holds.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StyleInfo {
     pub style_id: String,
     pub name: String,
-    #[serde(rename = "type")]
-    pub kind: &'static str,
+    #[serde(rename = "type", deserialize_with = "jscompat::wire::static_str")]
+    pub kind: jscompat::wire::StaticStr,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heading_level: Option<JsNum>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -317,6 +349,7 @@ pub struct StyleInfo {
 }
 
 js_object! {
+    deserialize;
     /// Document-wide defaults from styles.xml w:docDefaults. Its keys follow
     /// the code that made it: sizeHalfPoints and eastAsiaFont are each set at
     /// two places, and the built-in defaults are spread or assigned in.

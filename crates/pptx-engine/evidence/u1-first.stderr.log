@@ -1,0 +1,11 @@
+(node:40344) ExperimentalWarning: WASI is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+C:\Users\admin\Desktop\github\seuoffice-rust-c\tools\pptx-diff\built.ts:8
+  const deck = new PptxGenJS()
+               ^
+
+TypeError: PptxGenJS is not a constructor
+    at builtDecks (C:\Users\admin\Desktop\github\seuoffice-rust-c\tools\pptx-diff\built.ts:8:16)
+    at async <anonymous> (C:\Users\admin\Desktop\github\seuoffice-rust-c\tools\pptx-diff\main.ts:29:7)
+
+Node.js v22.23.5

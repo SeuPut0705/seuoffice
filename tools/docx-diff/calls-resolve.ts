@@ -2,9 +2,9 @@
 // properties. The context of a call is built on both sides from `args.parts`
 // (styles, numbering, theme) by the readers already ported, with the compat
 // values of `args.compat` and the table of `args.table` set on it.
-import type { CharUnits } from '../../packages/docx-engine/src/parse-props'
-import { parseNumbering } from '../../packages/docx-engine/src/parse-package'
-import { parseStyles } from '../../packages/docx-engine/src/parse-styles'
+import type { CharUnits } from './reference/parse-props'
+import { parseNumbering } from './reference/parse-package'
+import { parseStyles } from './reference/parse-styles'
 import {
   AUTO_SPACING_TWIPS,
   autoSpacingTwips,
@@ -25,16 +25,15 @@ import {
   type ResolveCtx,
   type ResolveParaOptions,
   type TableCond,
-} from '../../packages/docx-engine/src/resolve-props'
+} from './reference/resolve-props'
 import type {
   DocDefaults,
   NumberingDef,
   StyleInfo,
   ThemeColors,
   ThemeFonts,
-} from '../../packages/docx-engine/src/types'
-import { nameOf, xmlParser, type XNode } from '../../packages/docx-engine/src/xml-utils'
-import { missingParagraphStyle } from './listed'
+} from './reference/types'
+import { nameOf, xmlParser, type XNode } from './reference/xml-utils'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { parseTheme } from './compare-package'
 import { elementFragments, tagTokens } from './fragments'
@@ -114,8 +113,8 @@ async function effOf(text: string, args: Record<string, unknown>) {
 
 async function runEffOf(text: string, args: Record<string, unknown>) {
   const ctx = await ctxOf(args)
-  const para = { styleId: args.paraStyleId } as EffectivePPr
-  return resolveRunProps(nodeOf(text, args), para, ctx)
+  const para = { styleId: args.paraStyleId, bidi: args.paraBidi === true } as EffectivePPr
+  return resolveRunProps(nodeOf(text, args), para, ctx, args.mark === true)
 }
 
 // ---------------------------------------------------------------- the corpus
@@ -613,6 +612,9 @@ const RPRS: string[] = [
   '<w:rPr><w:b></w:rPr>',
   '<w:rPr><w:b',
   '<w:r><w:rPr><w:b/></w:rPr></w:r>',
+  '<w:rPr><w:cs/><w:bCs/><w:b w:val="0"/><w:sz w:val="40"/><w:szCs w:val="20"/></w:rPr>',
+  '<w:rPr><w:cs w:val="0"/><w:rtl w:val="0"/><w:b/><w:bCs w:val="0"/><w:sz w:val="40"/></w:rPr>',
+  '<w:rPr><w:rStyle w:val="Emph"/><w:cs w:val="true"/><w:i/><w:iCs/></w:rPr>',
   '',
 ]
 
@@ -696,6 +698,16 @@ function runBuilt(): Input[] {
     }
     for (const table of TABLES) inputs.push({ text, args: { parts: RICH, node: 'w:rPr', table } })
     for (const parts of PACKAGES) inputs.push({ text, args: { parts, node: 'w:rPr' } })
+  }
+  // the mark of a bidi paragraph reads the Cs twins with its own w:rtl off, any other run does not
+  for (const text of [RPRS[0]!, RPRS[2]!, RPRS[9]!, RPRS[10]!, ...RPRS.slice(-4, -1)]) {
+    for (const parts of [RICH, RTL]) {
+      for (const paraBidi of [false, true]) {
+        for (const mark of [false, true]) {
+          inputs.push({ text, args: { parts, node: 'w:rPr', paraBidi, mark } })
+        }
+      }
+    }
   }
   inputs.push({ text: RPRS[2]!, args: { parts: THROWS, node: 'w:rPr' } })
   // tableStyleRLayer reads the conditions with `?? []`: no throw without them
@@ -796,21 +808,18 @@ export const RESOLVE: CallSpec[] = [
     fn: 'resolve.resolveParagraphProps',
     call: async (text, args) =>
       resolveParagraphProps(nodeOf(text, args), await ctxOf(args), optsOf(args)),
-    listed: missingParagraphStyle,
     fromDocument: (parts) => paragraphInputs(parts, 'w:pPr'),
     built: paragraphBuilt('w:pPr'),
   },
   {
     fn: 'resolve.resolveParagraphPropsXml',
     call: async (text, args) => (await effOf(text, args)).eff,
-    listed: missingParagraphStyle,
     fromDocument: (parts) => paragraphInputs(parts),
     built: paragraphBuilt(),
   },
   {
     fn: 'resolve.resolveRunProps',
     call: (text, args) => runEffOf(text, args),
-    listed: missingParagraphStyle,
     fromDocument: runInputs,
     built: runBuilt(),
   },
@@ -823,7 +832,6 @@ export const RESOLVE: CallSpec[] = [
   {
     fn: 'resolve.directRunFormat',
     call: async (text, args) => directRunFormat(await runEffOf(text, args)),
-    listed: missingParagraphStyle,
     fromDocument: runInputs,
     built: runBuilt(),
   },

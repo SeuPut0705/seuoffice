@@ -1,7 +1,7 @@
 // Group `images` of comparison (f): the predicates of tiff.ts and metafile.ts
 // that need no canvas. The decoders stay with the host.
-import { isMetafileMime, MAX_METAFILE_GUNZIP_BYTES } from '../../packages/docx-engine/src/metafile'
-import { isTiffMime, tiffDimsOk } from '../../packages/docx-engine/src/tiff'
+import { isMetafileMime, MAX_METAFILE_GUNZIP_BYTES } from './reference/metafile'
+import { isTiffMime, tiffDimsOk } from './reference/tiff'
 import type { CallSpec, Input } from './calls-spec'
 
 /**

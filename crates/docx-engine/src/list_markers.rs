@@ -659,11 +659,8 @@ fn marker_info(
         }
         format_number(value, fmt, ref_def.and_then(|l| l.custom_format.as_deref()))
     });
-    // numFmt "none": an explicit empty marker (Word shows nothing) so renderer
-    // counter fallbacks don't kick in on the null
-    if marker.is_empty() && level.num_fmt() != "none" {
-        return None;
-    }
+    // numFmt "none" or an empty lvlText: an explicit empty marker (Word shows
+    // nothing) so renderer counter fallbacks don't kick in on the null
     Some(ListMarkerInfo {
         text: marker,
         value: counter(&c, lvl_index).map(JsNum),

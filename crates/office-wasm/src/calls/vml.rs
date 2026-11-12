@@ -7,8 +7,9 @@ use docx_engine::vml::shape::{
     self, Coord, VML_PICT_RID_RE, VML_PICT_RID_SOURCE, VML_WORDART_RE, VML_WORDART_SOURCE,
     VmlGroupScale, VmlOrigin,
 };
+use docx_engine::vml::word_art;
 use jscompat::JsNum;
-use ooxml_xml::parse_ordered;
+use ooxml_xml::{XNode, parse_ordered};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -76,6 +77,18 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let types: Option<String> = arg(args, "types")?;
             let table = types.as_deref().map(shape::vml_shape_type_table);
             value(shape::vml_shape_svg(text, table.as_ref()))
+        }
+        "vmlWordArtBox" => {
+            // `nodeOf(text, args) ?? {}`: the element `args.node` of `text`
+            let nodes = parse_ordered(text, XML_PARSER_MAX_NESTED_TAGS)
+                .map_err(|error| error.to_string())?;
+            let wanted: Option<String> = arg(args, "node")?;
+            let empty = XNode::empty();
+            let shape = wanted
+                .as_deref()
+                .and_then(|wanted| nodes.iter().find(|node| node.name() == Some(wanted)))
+                .unwrap_or(&empty);
+            value(word_art::vml_word_art_box(shape))
         }
         _ => Err(format!("unknown function {function}")),
     }

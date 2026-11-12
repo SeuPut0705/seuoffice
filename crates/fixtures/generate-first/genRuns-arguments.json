@@ -1,0 +1,40 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "genRuns",
+      "argRefused": 0,
+      "populations": {
+        "corpus": {
+          "compared": 4933,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 22,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 0,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "argMutated": {
+          "compared": 1500,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "genRuns.inlineRunsXml",
+          "checks": 6455,
+          "differences": 0,
+          "distinctResults": 3378,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

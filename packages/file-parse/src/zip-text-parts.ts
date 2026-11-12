@@ -1,4 +1,5 @@
 import { open, type FileHandle } from 'node:fs/promises'
+import { callEngine } from './engine'
 
 /**
  * A large zip-based document read for its words only.
@@ -26,27 +27,9 @@ const LOC_FIXED = 30
 /** general purpose flag: names are UTF-8 */
 const FLAG_UTF8 = 0x0800
 
-/** part name endings whose content is words or structure, never pictures */
-const TEXT_PART_EXTS = new Set([
-  'xml',
-  'rels',
-  'json',
-  'txt',
-  'html',
-  'htm',
-  'xhtml',
-  'xht',
-  'opf',
-  'ncx',
-  'hpf',
-])
-
-/** whether a part is read for text; a part with no extension (`mimetype`) is */
+/** whether a part is read for text (XML, relationships, JSON, HTML, plain text); a part with no extension (`mimetype`) is */
 export function isTextPart(name: string): boolean {
-  const last = name.slice(name.lastIndexOf('/') + 1)
-  const dot = last.lastIndexOf('.')
-  if (dot <= 0) return true
-  return TEXT_PART_EXTS.has(last.slice(dot + 1).toLowerCase())
+  return callEngine<boolean>('isTextPart', [name])
 }
 
 interface CentralEntry {

@@ -1,18 +1,19 @@
 import { isDeepStrictEqual } from 'node:util'
-import { charIndentsOf, paraBorderSidesOf } from '../../packages/docx-engine/src/parse-props'
-import { DEFAULT_THEME_COLORS } from '../../packages/docx-engine/src/theme'
+import { charIndentsOf, paraBorderSidesOf } from './reference/parse-props'
+import { DEFAULT_THEME_COLORS } from './reference/theme'
 import type {
   CharIndents,
   ParaBorderSides,
   ParaFormat,
   Run,
   ThemeFonts,
-} from '../../packages/docx-engine/src/types'
-import { nameOf, type XNode, xmlParser } from '../../packages/docx-engine/src/xml-utils'
+} from './reference/types'
+import { nameOf, type XNode, xmlParser } from './reference/xml-utils'
 import { failed } from './engine'
 import { tagTokens } from './fragments'
-import { type Comparison, engine } from './harness'
+import { type Comparison, engine, option } from './harness'
 import { keyOrderDifference } from './key-order'
+import { listedDifference } from './known-differences'
 import { type Args, MODEL_FUNCTIONS, type Population, READERS, type Themes } from './props-registry'
 
 export type Outcome = { value?: unknown } | { error: string }
@@ -46,12 +47,18 @@ const pending: Array<{ comparison: Comparison; where: string; key: string; fn: s
 /** Each distinct case reaches Rust once. `difference` is `null` for an equal case. */
 const settled = new Map<
   string,
-  { difference: string | null; keyOrderOnly: boolean; typescriptThrew: boolean; outcome: string }
+  {
+    difference: string | null
+    keyOrderOnly: boolean
+    typescriptThrew: boolean
+    outcome: string
+    listed: boolean
+  }
 >()
 const queued = new Map<string, Case>()
 
 function record(comparison: Comparison, fn: string, key: string, where: string): void {
-  const { difference, keyOrderOnly, typescriptThrew, outcome } = settled.get(key)!
+  const { difference, keyOrderOnly, typescriptThrew, outcome, listed } = settled.get(key)!
   const tally = byFunction.get(fn) ?? {
     checks: 0,
     differences: 0,
@@ -65,6 +72,7 @@ function record(comparison: Comparison, fn: string, key: string, where: string):
     tally.threw += 1
   }
   tally.outcomes.add(outcome)
+  if (listed) comparison.listed += 1
   if (difference !== null) tally.differences += 1
   if (keyOrderOnly) tally.keyOrderOnly += 1
   byFunction.set(fn, tally)
@@ -72,6 +80,8 @@ function record(comparison: Comparison, fn: string, key: string, where: string):
 }
 
 const BATCH_CHARS = 2_000_000
+/** `--chars N`: how much of a call and of each answer a difference shows; the whole input reproduces it. */
+export const SHOWN_CHARS = option('--chars', 300)
 
 /** Sends the queued cases to Rust, the calls on one text together, and records the waiting checks. */
 export function flush(): void {
@@ -97,20 +107,32 @@ export function flush(): void {
       cases.forEach(([key, { fn, text, args, typescript }], index) => {
         const rust = header.results[input]![index]!
         const same = 'error' in typescript ? 'error' in rust : isDeepStrictEqual(typescript, rust)
-        const call = `${fn}(${JSON.stringify(texts[text]).slice(0, 300)}, ${JSON.stringify(args).slice(0, 200)})`
+        const call = `${fn}(${JSON.stringify(texts[text]).slice(0, SHOWN_CHARS)}, ${JSON.stringify(args).slice(0, SHOWN_CHARS)})`
         const order =
           same && !('error' in typescript) ? keyOrderDifference(fn, typescript, rust) : null
+        const listed =
+          (!same || order !== null) &&
+          listedDifference({
+            fn,
+            text: texts[text]!,
+            args,
+            typescript,
+            rust,
+          }) !== null
         settled.set(key, {
           typescriptThrew: 'error' in typescript,
           outcome: 'error' in typescript ? 'error' : JSON.stringify(typescript),
-          keyOrderOnly: order !== null,
-          difference: !same
-            ? `${call}\n` +
-              `      typescript ${JSON.stringify(typescript).slice(0, 300)}\n` +
-              `      rust       ${JSON.stringify(rust).slice(0, 300)}`
-            : order === null
-              ? null
-              : `${call}\n      ${order}`,
+          keyOrderOnly: !listed && order !== null,
+          listed,
+          difference: listed
+            ? null
+            : !same
+              ? `${call}\n` +
+                `      typescript ${JSON.stringify(typescript).slice(0, SHOWN_CHARS)}\n` +
+                `      rust       ${JSON.stringify(rust).slice(0, SHOWN_CHARS)}`
+              : order === null
+                ? null
+                : `${call}\n      ${order}`,
         })
       })
     })

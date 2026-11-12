@@ -1,7 +1,8 @@
 name: seuoffice rust
 
-# The Rust document engine (crates/) and its parity gate against the TypeScript
-# engine (tools/docx-diff), on a GitHub runner. Decision 0025.
+# The Rust document engines (crates/) and their parity gates against the
+# TypeScript engines (tools/docx-diff, tools/pptx-diff, tools/fileparse-diff,
+# tools/epub-diff), on a GitHub runner. Decision 0025.
 #
 # crates/ lives on a branch until its first unit is merged, so this file does
 # nothing on main yet: start it on that branch by hand,
@@ -18,13 +19,14 @@ on:
       - 'tools/docx-diff/**'
       - 'tools/fileparse-diff/**'
       - 'tools/epub-diff/**'
+      - 'tools/pptx-diff/**'
       - 'packages/docx-engine/src/**'
       - 'packages/file-parse/**'
       - 'packages/epub-engine/src/**'
       - 'packages/agent-core/src/redact-*.ts'
       - 'packages/zip-gate/src/**'
       - 'packages/drawio-model/src/**'
-      - 'packages/pptx-engine/src/redaction-xml.ts'
+      - 'packages/pptx-engine/src/**'
       - 'package-lock.json'
       - '.github/workflows/seuoffice-rust.yml'
       - '**/*.docx'
@@ -55,9 +57,11 @@ jobs:
   crates:
     if: ${{ !inputs.faults }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # the hwp reader compiles rhwp from upstream v0.9.0 with vendor/rhwp-core's
       # patches; cargo resolves that path dependency on every call, so it is
@@ -107,6 +111,12 @@ jobs:
       - name: Unit tests
         if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
         run: cargo test --manifest-path crates/Cargo.toml --workspace
+
+      - name: Licences of the dependencies
+        if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        run: |
+          cargo install cargo-deny --locked
+          cd crates && cargo deny check licenses
 
       # the vendored regex engine carries patches of its own: its suite runs as published
       - name: Vendored regress tests
@@ -395,3 +405,141 @@ jobs:
             tools/epub-diff/out/ci.json
             tools/epub-diff/out/faults-*/*.json
           if-no-files-found: error
+
+  pptx:
+    if: ${{ !inputs.faults }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      # the hwp reader compiles rhwp from upstream v0.9.0 with vendor/rhwp-core's
+      # patches; cargo resolves that path dependency on every call, so it is
+      # prepared before any of them
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('vendor/rhwp-core/**', 'tools/build-rhwp-core.mjs') }}
+      - name: rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        run: node tools/build-rhwp-core.mjs --source-only
+
+      - name: Is the slides gate in this tree
+        id: has
+        run: |
+          if [ -f tools/pptx-diff/package.json ]; then echo "pptx=true" >> "$GITHUB_OUTPUT"; else echo "pptx=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Rust toolchain with the WASI target
+        if: steps.has.outputs.pptx == 'true'
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-wasip1
+
+      - uses: actions/cache@v4
+        if: steps.has.outputs.pptx == 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: seuoffice-rust-pptx-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: seuoffice-rust-${{ runner.os }}-
+
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.pptx == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.has.outputs.pptx == 'true'
+        run: npm ci
+
+      - name: Slides gate typecheck
+        if: steps.has.outputs.pptx == 'true'
+        run: npm --prefix tools/pptx-diff run typecheck
+
+      - name: Slides parity gate
+        if: steps.has.outputs.pptx == 'true'
+        run: npm --prefix tools/pptx-diff run gate
+
+      - name: Slides fault anchors
+        if: steps.has.outputs.pptx == 'true'
+        run: npm --prefix tools/pptx-diff run faults -- --inventory
+
+      - name: Keep the slides gate output
+        if: always() && steps.has.outputs.pptx == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pptx-diff-out
+          path: tools/pptx-diff/out
+          if-no-files-found: ignore
+
+  # One Rust fault at a time through the slides gate: each must be caught.
+  pptx-faults:
+    if: ${{ !inputs.faults }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+
+      # the hwp reader compiles rhwp from upstream v0.9.0 with vendor/rhwp-core's
+      # patches; cargo resolves that path dependency on every call, so it is
+      # prepared before any of them
+      - uses: actions/cache@v4
+        id: rhwp-source
+        with:
+          path: crates/.rhwp-source
+          key: rhwp-source-${{ hashFiles('vendor/rhwp-core/**', 'tools/build-rhwp-core.mjs') }}
+      - name: rhwp source
+        if: steps.rhwp-source.outputs.cache-hit != 'true'
+        run: node tools/build-rhwp-core.mjs --source-only
+
+      - name: Is the slides gate in this tree
+        id: has
+        run: |
+          if [ -f tools/pptx-diff/package.json ]; then echo "pptx=true" >> "$GITHUB_OUTPUT"; else echo "pptx=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Rust toolchain with the WASI target
+        if: steps.has.outputs.pptx == 'true'
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-wasip1
+
+      - uses: actions/cache@v4
+        if: steps.has.outputs.pptx == 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: seuoffice-rust-pptx-faults-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: seuoffice-rust-${{ runner.os }}-
+
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.pptx == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.has.outputs.pptx == 'true'
+        run: npm ci
+
+      - name: Slides fault probes
+        if: steps.has.outputs.pptx == 'true'
+        run: npm --prefix tools/pptx-diff run faults -- --shard ${{ matrix.shard }}/4
+
+      - name: Keep the fault probe output
+        if: always() && steps.has.outputs.pptx == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pptx-faults-out-${{ matrix.shard }}
+          path: tools/pptx-diff/out/faults
+          if-no-files-found: ignore

@@ -5,62 +5,35 @@
 
 type Args = Record<string, unknown>
 
-const partOf = (args: Args, name: string): string =>
-  (args.parts as Array<[string, string]> | undefined)?.find(([part]) => part === name)?.[1] ?? ''
+/** The names every plain object inherits from `Object.prototype`. */
+const OBJECT_PROTOTYPE_MEMBERS = new Set([
+  'constructor',
+  'toString',
+  'valueOf',
+  'hasOwnProperty',
+  'isPrototypeOf',
+  'propertyIsEnumerable',
+  'toLocaleString',
+  '__proto__',
+  '__defineGetter__',
+  '__defineSetter__',
+  '__lookupGetter__',
+  '__lookupSetter__',
+])
 
 /**
- * resolveRunProps takes no paragraph style where the paragraph names one the
- * document does not have; the Rust falls back to the default paragraph style.
- * `args.paraStyleId`, or the w:pStyle of the text, is no style of `args.parts`.
+ * An a:custGeom naming an `Object.prototype` member as a guide, in an a:gd
+ * name or formula or in a point or arc operand: parseCustGeom of the
+ * TypeScript reads that name off the prototype (tools/pptx-diff's class of
+ * the same id).
  */
-export function missingParagraphStyle(text: string, args: Args): string | undefined {
-  const named = /<w:pStyle\b[^>]*?\bw:val\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(text)
-  const id =
-    typeof args.paraStyleId === 'string' ? args.paraStyleId : (named?.[1] ?? named?.[2] ?? '')
-  if (id === '') return undefined
-  const styles = partOf(args, 'word/styles.xml')
-  return styles.includes(`w:styleId="${id}"`) || styles.includes(`w:styleId='${id}'`)
-    ? undefined
-    : 'run-of-a-paragraph-whose-style-is-missing'
-}
-
-/** A wp:wrapNone after the first a:graphic belongs to a nested drawing. */
-export function nestedWrapNone(text: string): string | undefined {
-  const graphicAt = text.indexOf('<a:graphic')
-  return graphicAt !== -1 && text.includes('<wp:wrapNone', graphicAt)
-    ? 'wrap-none-of-a-nested-drawing'
-    : undefined
-}
-
-/** An attribute the revision readers look for, in single quotes. */
-export function singleQuotedRevisionAttribute(text: string): string | undefined {
-  return /\s(?:w:author|w:date|w:id|w16du:dateUtc|w:vMerge|w:vMergeOrig)='/.test(text)
-    ? 'revision-attribute-in-single-quotes'
-    : undefined
-}
-
-/** A v:fill opacity given as a percentage. */
-export function percentOpacity(text: string, args: Args): string | undefined {
-  const types = typeof args.types === 'string' ? args.types : ''
-  return /\bopacity\s*=\s*(?:"[^"]*%\s*"|'[^']*%\s*')/.test(text + types)
-    ? 'vml-fill-opacity-in-percent'
-    : undefined
-}
-
-const SAME_ON_EVERY_HOST =
-  /^(?:utf-?8|utf-16(?:le|be)?|unicode|us-ascii|ascii|latin1|iso-8859-1|windows-1252|cp1252)$/i
-
-/**
- * Bytes that declare a legacy charset: `TextDecoder` is ICU's on Node and the
- * Encoding Standard's in Chromium and in the Rust, and they differ on bytes
- * outside the common tables.
- */
-export function legacyCharset(text: string, args: Args): string | undefined {
-  const head = Array.isArray(args.bytes)
-    ? String.fromCharCode(...(args.bytes as number[]).slice(0, 70_000))
-    : text
-  for (const found of head.matchAll(/(?:charset|encoding)\s*=\s*["']?\s*([\w-]+)/gi)) {
-    if (!SAME_ON_EVERY_HOST.test(found[1]!)) return 'legacy-charset-decoding-is-the-hosts'
+export function custgeomInheritedGuide(text: string, _args: Args): string | undefined {
+  for (const geom of text.matchAll(/<a:custGeom\b[\s\S]*?<\/a:custGeom>/g)) {
+    for (const attr of geom[0].matchAll(/\b(?:name|fmla|x|y|wR|hR|stAng|swAng)\s*=\s*"([^"]*)"/g)) {
+      if (attr[1]!.trim().split(/\s+/).some((token) => OBJECT_PROTOTYPE_MEMBERS.has(token))) {
+        return 'custgeom-inherited-guide'
+      }
+    }
   }
   return undefined
 }

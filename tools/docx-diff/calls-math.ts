@@ -13,14 +13,14 @@ import {
   ommlFragmentsOf,
   ommlToLatex,
   ommlToMathML,
-} from '../../packages/docx-engine/src/math'
-import { escapeXmlText } from '../../packages/docx-engine/src/xml-utils'
+} from './reference/math'
+import { escapeXmlText } from './reference/xml-utils'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
 import { mulberry32 } from './synthetic'
 
 const MATH_SOURCE = readFileSync(
-  fileURLToPath(new URL('../../packages/docx-engine/src/math.ts', import.meta.url)),
+  fileURLToPath(new URL('./reference/math.ts', import.meta.url)),
   'utf8',
 )
 

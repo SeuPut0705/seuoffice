@@ -5,7 +5,9 @@
 //! of the engine matches literally. It runs once per XML part at load, so the
 //! parser's offsets and the saved output see the same text.
 
-use jscompat::{JsRegex, js_regex, math_round, number_to_string, parse_float};
+use jscompat::{
+    JsRegex, RegexLimit, js_regex, math_round, number_to_string, parse_float, try_js_regex,
+};
 
 const S: &str = "http://purl.oclc.org/ooxml/";
 
@@ -238,9 +240,17 @@ fn xmlns_decl() -> &'static JsRegex {
     js_regex!(r#"xmlns(?::([A-Za-z_][\w.-]*))?\s*=\s*(["'])([^"']*)\2"#)
 }
 
+/// `hasUniversalMeasures`: a `w:` attribute holding a measure with a unit.
+pub fn has_universal_measures(xml: &str) -> bool {
+    js_regex!(r#"\sw:[A-Za-z]+="-?\d+(?:\.\d+)?(?:mm|cm|in|pt|pc|pi)""#).test(xml)
+}
+
 /// Cheap pre-check: `normalize_ooxml_xml` is only worth calling when this is true.
 pub fn needs_ooxml_normalization(xml: &str) -> bool {
     if xml.contains(S) {
+        return true;
+    }
+    if has_universal_measures(xml) {
         return true;
     }
     xmlns_decl().find_iter(xml).any(|found| {
@@ -596,4 +606,19 @@ pub fn normalize_ooxml_xml(xml: &str) -> String {
     }
     out.push_str(&xml[cursor..]);
     out
+}
+
+const DUP_STYLE_REF: &str = r"(?:<w:([pr])Style\b[^>]*\/>\s*)+(?=<w:\1Style\b[^>]*\/>)";
+
+/// `hasDuplicateStyleRefs`: cheap pre-check, `dedupe_style_refs` is only worth
+/// calling when this is true.
+pub fn has_duplicate_style_refs(xml: &str) -> Result<bool, RegexLimit> {
+    try_js_regex!(DUP_STYLE_REF, "g").try_test(xml)
+}
+
+/// `dedupeStyleRefs`: repeated `w:pStyle` / `w:rStyle` children of one
+/// property set: Word applies the last one, so the earlier siblings are
+/// dropped.
+pub fn dedupe_style_refs(xml: &str) -> Result<String, RegexLimit> {
+    try_js_regex!(DUP_STYLE_REF, "g").try_replace_all(xml, |_| String::new())
 }

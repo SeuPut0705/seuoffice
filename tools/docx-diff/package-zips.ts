@@ -465,6 +465,18 @@ function richPackages(): Record<string, EntrySpec[]> {
         data: settings('<w:removePersonalInformation w:val="fal\u017fe"/>'),
       },
     ],
+    // a prefix outside ASCII is none to the reader, whose prefix pattern is
+    // ASCII: the setting is not found on either side
+    'a package whose settings prefix is outside ASCII': [
+      ...common,
+      { name: 'word/styles.xml', data: STYLES },
+      {
+        name: 'word/settings.xml',
+        data:
+          `<\u00E9:settings xmlns:\u00E9="${W}" xmlns:w\u00E9="${W}"><\u00E9:removePersonalInformation \u00E9:val="0"/>` +
+          '<w\u00E9:removePersonalInformation w\u00E9:val="false"/></\u00E9:settings>',
+      },
+    ],
     'a package whose settings switch protection off': [
       ...common,
       { name: 'word/styles.xml', data: STYLES },
@@ -980,6 +992,12 @@ const STRICT_PACKAGE: Array<[string, string]> = [
   // the loader normalizes .xml and .rels in any case
   [
     'word/Header1.XML',
+    `<x:hdr xmlns:x="${STRICT_W}"><x:p><x:pPr><x:spacing x:after="6pt"/></x:pPr></x:p></x:hdr>`,
+  ],
+  // but not a name ending in U+017F, an s only under Unicode case folding,
+  // which /i without /u does not apply: this part stays Strict
+  [
+    'word/x.rel\u017f',
     `<x:hdr xmlns:x="${STRICT_W}"><x:p><x:pPr><x:spacing x:after="6pt"/></x:pPr></x:p></x:hdr>`,
   ],
   ['word/unchanged.xml', `<w:ftr xmlns:w="${W}"/>`],

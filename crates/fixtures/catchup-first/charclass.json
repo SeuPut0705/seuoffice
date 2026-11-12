@@ -1,0 +1,91 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "charclass",
+      "argRefused": 0,
+      "populations": {
+        "corpus": {
+          "compared": 6272,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 764,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 600,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "charclass.charClass",
+          "checks": 118,
+          "differences": 0,
+          "distinctResults": 16,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "charclass.isHangulChar",
+          "checks": 118,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "charclass.isEastAsianChar",
+          "checks": 118,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "charclass.isDoubleByteChar",
+          "checks": 118,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "charclass.isCjkLetterChar",
+          "checks": 118,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "charclass.isLatinAlnumChar",
+          "checks": 118,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "charclass.textHasEastAsian",
+          "checks": 3408,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "charclass.textHasHangulChars",
+          "checks": 3408,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "charclass.isEastAsianLangTag",
+          "checks": 112,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

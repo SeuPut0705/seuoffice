@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { createDeflateRaw, deflateRawSync } from 'node:zlib'
 import JSZip from 'jszip'
 import { assertZipInflatesWithinLimits } from '../../packages/zip-gate/src/index'
-import { isTextPart, readZipTextParts } from '../../packages/file-parse/src/zip-text-parts'
+import { isTextPart, readZipTextParts } from './reference/zip-text-parts'
 import type { Input, Spec } from './spec'
 
 const DATE = new Date(Date.UTC(2024, 0, 2, 3, 4, 6))

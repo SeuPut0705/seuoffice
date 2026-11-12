@@ -50,6 +50,8 @@ import { tmpdir } from 'node:os'
 import { delimiter, join, resolve } from 'node:path'
 
 import { HOME_DIR_NAME } from '../packages/cli/src/names'
+// the engine behind buildBlankDocx starts first (this script imports the source by path)
+import '../packages/engine-wasm/src/node'
 import { buildBlankDocx } from '../packages/docx-engine/src/blank'
 
 const REPO = resolve(__dirname, '..')

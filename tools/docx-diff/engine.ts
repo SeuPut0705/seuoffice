@@ -27,47 +27,74 @@ export function failed(header: object): header is EngineFailure {
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
+// the collators of generateIndexFieldXml's `a.localeCompare(b, locale)`, by locale;
+// null for a locale Intl refuses, which the import answers with i32::MIN
+const collators = new Map<string, Intl.Collator | null>()
+const collatorOf = (locale: string): Intl.Collator | null => {
+  if (!collators.has(locale)) {
+    try {
+      collators.set(locale, new Intl.Collator(locale))
+    } catch {
+      collators.set(locale, null)
+    }
+  }
+  return collators.get(locale) ?? null
+}
 
 export class Engine {
   private constructor(private readonly exports: EngineExports) {}
 
   /**
-   * `steps` answers the import `seu_host.host_call` of crates/seu-host: a step
-   * of the host by name, JSON in and JSON out. A step that throws answers
-   * `{ error: { name, message } }`.
+   * `steps` answers callback slot 0 of the import `seu_host.host_callback`,
+   * the steps of crates/seu-host: `{ name, input }` in, `{ ok }` or
+   * `{ error: { name, message } }` out; a step that throws answers the latter.
+   * Any other slot is refused, as the loader refuses a slot no call registered.
    */
   static load(wasmPath: string, steps: Record<string, (input: unknown) => unknown> = {}): Engine {
     const wasi = new WASI({ version: 'preview1' })
     const module = new WebAssembly.Module(readFileSync(wasmPath))
-    let memory: WebAssembly.Memory | undefined
-    let pending = new Uint8Array()
-    const text = (pointer: number, length: number): string => decoder.decode(new Uint8Array(memory!.buffer, pointer, length))
     const instance = new WebAssembly.Instance(module, {
       wasi_snapshot_preview1: wasi.wasiImport,
       seu_host: {
-        host_call: (namePointer: number, nameLength: number, inputPointer: number, inputLength: number): number => {
-          const name = text(namePointer, nameLength)
+        host_callback: (slot: number, pointer: number, length: number): bigint => {
+          if (slot !== 0) return 0xffff_ffff_ffff_ffffn
           let answer: unknown
           try {
+            const { name, input } = JSON.parse(decoder.decode(new Uint8Array(exports.memory.buffer, pointer, length))) as { name: string; input: unknown }
             const step = steps[name]
             if (step === undefined) throw Object.assign(new Error(`no host step ${name}`), { name: 'HostUnavailable' })
-            answer = { ok: step(JSON.parse(text(inputPointer, inputLength))) ?? null }
+            answer = { ok: step(input) ?? null }
           } catch (error) {
             const thrown = error instanceof Error ? error : new Error(String(error))
             answer = { error: { name: thrown.name, message: thrown.message } }
           }
-          pending = encoder.encode(JSON.stringify(answer))
-          return pending.length
+          const bytes = encoder.encode(JSON.stringify(answer))
+          const at = exports.seu_alloc(bytes.length)
+          // seu_alloc may have grown the memory: take the buffer after it
+          new Uint8Array(exports.memory.buffer, at, bytes.length).set(bytes)
+          return (BigInt(at) << 32n) | BigInt(bytes.length)
         },
-        host_take: (pointer: number): void => {
-          new Uint8Array(memory!.buffer, pointer, pending.length).set(pending)
-          pending = new Uint8Array()
+        host_collate: (
+          a: number,
+          aLength: number,
+          b: number,
+          bLength: number,
+          locale: number,
+          localeLength: number,
+        ): number => {
+          const { buffer } = exports.memory
+          const collator = collatorOf(decoder.decode(new Uint8Array(buffer, locale, localeLength)))
+          if (!collator) return -2147483648
+          return collator.compare(
+            decoder.decode(new Uint8Array(buffer, a, aLength)),
+            decoder.decode(new Uint8Array(buffer, b, bLength)),
+          )
         },
       },
     })
-    memory = (instance.exports as unknown as EngineExports).memory
+    const exports = instance.exports as unknown as EngineExports
     wasi.initialize(instance)
-    return new Engine(instance.exports as unknown as EngineExports)
+    return new Engine(exports)
   }
 
   call<Header extends object>(command: object, blobs: Uint8Array[] = []): Reply<Header> {

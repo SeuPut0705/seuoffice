@@ -1,10 +1,8 @@
 // Group `drawing` of comparison (f): parse-drawing-geometry.ts without
-// lineBoxOf (a model result) and w14TextOutlineOf (compared with the property
-// readers). A function over a node takes the XML text and the name of the
-// top-level element in `args.node`; the theme crosses as `args.theme`; a
-// section crosses as the w:sectPr text both sides read with
-// sectionSettingsFromXml.
-import { nestedWrapNone } from './listed'
+// w14TextOutlineOf (compared with the property readers). A function over a
+// node takes the XML text and the name of the top-level element in
+// `args.node`; the theme crosses as `args.theme`; a section crosses as the
+// w:sectPr text both sides read with sectionSettingsFromXml.
 import {
   colorNodeHex,
   composeGroupCtm,
@@ -13,6 +11,7 @@ import {
   EMU_PER_TWIP,
   gradFillApproxHex,
   IDENTITY_CTM,
+  lineBoxOf,
   LINE_PRSTS,
   LINE_PRSTS_RE,
   MIN_WRAP_SLIVER_EMU,
@@ -24,11 +23,11 @@ import {
   w14TextFillHex,
   type DrawingAnchorMeta,
   type GroupCtm,
-} from '../../packages/docx-engine/src/parse-drawing-geometry'
-import { sectionSettingsFromXml } from '../../packages/docx-engine/src/section'
-import { readThemeColors } from '../../packages/docx-engine/src/theme'
-import type { ThemeColors } from '../../packages/docx-engine/src/types'
-import { nameOf, xmlParser, type XNode } from '../../packages/docx-engine/src/xml-utils'
+} from './reference/parse-drawing-geometry'
+import { sectionSettingsFromXml } from './reference/section'
+import { readThemeColors } from './reference/theme'
+import type { ThemeColors } from './reference/types'
+import { nameOf, xmlParser, type XNode } from './reference/xml-utils'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
 
@@ -720,6 +719,143 @@ const GRAD_SP_PRS: string[] = [
   '',
 ]
 
+const WSP_STYLE_LN_REF = (inner: string): string =>
+  `<wps:style><a:lnRef idx="1">${inner}</a:lnRef></wps:style>`
+
+/** A wps:wsp line shape: `xfrm` and `ln` are inner XML of a:xfrm and the whole a:ln. */
+const lineShape = (
+  prst: string | undefined,
+  { xfrm, ln, style }: { xfrm?: string; ln?: string; style?: string } = {},
+): string =>
+  `<wps:wsp><wps:cNvCnPr/><wps:spPr>${xfrm ?? ''}${
+    prst === undefined ? '' : `<a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>`
+  }${ln ?? ''}</wps:spPr>${style ?? ''}<wps:bodyPr/></wps:wsp>`
+
+const xfrmOf = (attrs: string, cx?: string, cy?: string): string =>
+  `<a:xfrm${attrs}><a:off x="0" y="0"/>${
+    cx === undefined && cy === undefined
+      ? ''
+      : `<a:ext${cx === undefined ? '' : ` cx="${cx}"`}${cy === undefined ? '' : ` cy="${cy}"`}/>`
+  }</a:xfrm>`
+
+const lnOf = (attrs: string, inner = ''): string => `<a:ln${attrs}>${inner}</a:ln>`
+const srgbLn = (val: string): string => solid(`<a:srgbClr val="${val}"/>`)
+const ends = (head?: string, tail?: string): string =>
+  (head === undefined ? '' : `<a:headEnd type="${head}"/>`) +
+  (tail === undefined ? '' : `<a:tailEnd type="${tail}"/>`)
+
+const ARROW_TYPES: Array<string | undefined> = [undefined, 'none', '', 'triangle', 'arrow']
+
+/** Line shapes for every branch of lineBoxOf, each called under every theme of THEMES. */
+const LINE_SHAPES: string[] = [
+  '<wps:wsp><wps:bodyPr/></wps:wsp>',
+  '<wps:wsp><wps:spPr/></wps:wsp>',
+  '<wps:wsp><wps:spPr><a:prstGeom/></wps:spPr></wps:wsp>',
+  ...['', 'rect', 'Line', 'bentConnector5', 'curvedConnector', '__proto__', ' line'].map((prst) =>
+    lineShape(prst),
+  ),
+  // every preset, bare and with a slanted extent and both flips
+  ...[...LINE_PRSTS].flatMap((prst) => [
+    lineShape(prst),
+    lineShape(prst, {
+      xfrm: xfrmOf(' flipH="1" flipV="1"', '952500', '476250'),
+      ln: lnOf(' w="12700"', srgbLn('FF0000') + ends('triangle', undefined)),
+    }),
+  ]),
+  // the colour of the stroke: literal, empty, non-ASCII, scheme in the fill, theme lnRef
+  ...['4472C4', '', 'zz', '\u00e9\u00e8', 'ff00ff'].map((val) =>
+    lineShape('line', { ln: lnOf('', srgbLn(val)) }),
+  ),
+  lineShape('line', { ln: lnOf('', '<a:solidFill/>') }),
+  lineShape('line', { ln: lnOf('', '<a:solidFill><a:srgbClr/></a:solidFill>') }),
+  lineShape('line', {
+    ln: lnOf('', solid('<a:schemeClr val="accent2"/>')),
+    style: WSP_STYLE_LN_REF('<a:schemeClr val="accent1"><a:shade val="50000"/></a:schemeClr>'),
+  }),
+  lineShape('line', { ln: lnOf('', '<a:noFill/>') }),
+  ...[
+    '<a:schemeClr val="accent1"/>',
+    '<a:schemeClr val="tx1"/>',
+    '<a:schemeClr val="accent2"/>',
+    '<a:schemeClr val="phClr"/>',
+    '<a:srgbClr val="00FF00"/>',
+    '<a:srgbClr val="nope"/>',
+    '<a:prstClr val="blue"/>',
+    '<a:sysClr val="windowText"/>',
+    '',
+  ].flatMap((inner) => [
+    lineShape('straightConnector1', { style: WSP_STYLE_LN_REF(inner) }),
+    lineShape('straightConnector1', { ln: lnOf(' w="9525"'), style: WSP_STYLE_LN_REF(inner) }),
+  ]),
+  lineShape('line', {
+    ln: lnOf('', srgbLn('123456')),
+    style: WSP_STYLE_LN_REF('<a:schemeClr val="accent1"/>'),
+  }),
+  lineShape('line', { style: '<wps:style><a:fillRef idx="1"><a:srgbClr val="00FF00"/></a:fillRef></wps:style>' }),
+  // the arrow ends, alone, on each preset kind, and an end without its a:ln
+  ...ARROW_TYPES.flatMap((head) =>
+    ARROW_TYPES.map((tail) =>
+      lineShape('straightConnector1', {
+        xfrm: xfrmOf('', '952500', '0'),
+        ln: lnOf(' w="19050"', ends(head, tail)),
+      }),
+    ),
+  ),
+  lineShape('bentConnector3', { ln: lnOf('', ends('triangle', undefined)) }),
+  lineShape('curvedConnector3', { ln: lnOf('', ends(undefined, 'triangle')) }),
+  `<wps:wsp><wps:spPr><a:prstGeom prst="line"/>${ends('triangle', 'triangle')}</wps:spPr></wps:wsp>`,
+  // head-only arrows reverse the flips they had
+  ...['', ' flipH="1"', ' flipV="1"', ' flipH="1" flipV="1"'].flatMap((flips) =>
+    ['0', '76200', '114300', '123825'].map((cy) =>
+      lineShape('line', {
+        xfrm: xfrmOf(flips, '952500', cy),
+        ln: lnOf('', ends('triangle', 'none')),
+      }),
+    ),
+  ),
+  lineShape('line', { xfrm: xfrmOf(' flipH="1"', '952500', '0'), ln: lnOf('', ends(undefined, 'stealth')) }),
+  // extents: missing, zero, negative, fractional, not a number, the 12 px boundary
+  lineShape('line', { xfrm: '<a:xfrm/>' }),
+  lineShape('line', { xfrm: xfrmOf('') }),
+  lineShape('line', { xfrm: xfrmOf('', '952500') }),
+  lineShape('line', { xfrm: xfrmOf('', undefined, '114300') }),
+  ...[
+    ['0', '0'],
+    ['-9525', '-9525'],
+    ['4762', '4762'],
+    ['4763', '4763'],
+    ['14287.9', '14288'],
+    ['abc', ''],
+    [' 9525', '1e5'],
+    ['952500', '114300'],
+    ['952500', '114301'],
+    ['952500', '119062'],
+    ['952500', '119063'],
+    ['952500', '123825'],
+    ['1', '1'],
+  ].flatMap(([cx, cy]) =>
+    ['line', 'bentConnector2'].map((prst) => lineShape(prst, { xfrm: xfrmOf('', cx, cy) })),
+  ),
+  // flips: each spelling, on straight and on bent presets, at a low height
+  ...['flipH="1"', 'flipH="true"', 'flipH="0"', 'flipH="True"', 'flipV="1"', 'flipV="true"', 'flipV="false"'].flatMap(
+    (flip) =>
+      ['line', 'curvedConnector4'].map((prst) =>
+        lineShape(prst, { xfrm: xfrmOf(` ${flip}`, '952500', '9525') }),
+      ),
+  ),
+  // rotation in 60000ths of a degree
+  ...['5400000', '-30000', '30000', '29999', '-90000', '0', '-0', 'abc', '', '5400000.7', '21599999'].map(
+    (rot) => lineShape('line', { xfrm: xfrmOf(` rot="${rot}"`, '952500', '0') }),
+  ),
+  // a:ln widths in EMU
+  ...['12700', '9525', '0', '-1', '1', '95', '96', 'abc', '', '6350.7', '28575', '1e3'].map((w) =>
+    lineShape('line', { ln: lnOf(` w="${w}"`) }),
+  ),
+  lineShape('line', { ln: '<a:ln/>' }),
+  '<wps:wsp><wps:spPr><a:prstGeom prst="line"></wps:spPr></wps:wsp>',
+  '',
+]
+
 const constantsSpec: CallSpec = {
   fn: 'drawing.constants',
   call: (_text, args) => {
@@ -774,7 +910,6 @@ export const DRAWING: CallSpec[] = [
   {
     fn: 'drawing.drawingAnchorMeta',
     call: (text) => drawingAnchorMeta(text),
-    listed: nestedWrapNone,
     fromDocument: (parts) => drawingFragmentsOf(parts).map((text) => ({ text })),
     built: FRAGMENTS.map((text) => ({ text })),
   },
@@ -849,5 +984,27 @@ export const DRAWING: CallSpec[] = [
     built: GROUPS.flatMap(([node, text]) =>
       OUTERS.map((outer) => ({ text, args: { node, outer } })),
     ),
+  },
+  {
+    fn: 'drawing.lineBoxOf',
+    call: (text, args) => lineBoxOf(elementOf(text, args), themeArg(args)),
+    fromDocument: (parts) =>
+      nodeInputs(
+        parts,
+        [
+          ...fragmentsOf(parts, ['wps:wsp'], (f) => LINE_PRSTS_RE.test(f)),
+          ...fragmentsOf(parts, ['wps:wsp'], (f) => !LINE_PRSTS_RE.test(f), 3),
+        ],
+        true,
+      ),
+    built: [
+      ...withThemes('wps:wsp', LINE_SHAPES),
+      { text: lineShape('line'), args: { node: 'wps:spPr' } },
+      { text: lineShape('line') },
+      {
+        text: lineShape('line', { style: WSP_STYLE_LN_REF('<a:schemeClr val="accent1"/>') }),
+        args: { node: 'wps:wsp', theme: null },
+      },
+    ],
   },
 ]

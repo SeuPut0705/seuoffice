@@ -1,6 +1,8 @@
 /** Regenerate the checked-in Windows Explorer templates: npx tsx tools/gen-shell-new-templates.ts */
 import { mkdir, writeFile } from 'node:fs/promises'
 import JSZip from 'jszip'
+// the engine behind buildBlankDocx starts first (this script imports the source by path)
+import '../packages/engine-wasm/src/node'
 import { buildBlankDocx } from '../packages/docx-engine/src/blank'
 import { createBlankPptx } from '../packages/pptx-engine/src/blank'
 import { blankXlsxBuffer } from '../packages/xlsx-gateway/src/gateway/csv-import-xlsx'

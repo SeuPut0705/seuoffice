@@ -1,6 +1,6 @@
 import { OWN_REDACT_NS, REDACT_EL, REDACT_NS_WRITTEN as REDACT_NS } from '../../packages/agent-core/src/redact-range'
-import { redactMarkdownSource } from '../../packages/file-parse/src/markdown-redaction'
-import { PPTX_REDACT_EXT_URI, redactPptxPartXml } from '../../packages/file-parse/src/pptx-redaction'
+import { redactMarkdownSource } from './reference/markdown-redaction'
+import { PPTX_REDACT_EXT_URI, redactPptxPartXml } from './reference/pptx-redaction'
 import { redactExtXml, setRedactExt } from '../../packages/pptx-engine/src/redaction-xml'
 import type { Input, Spec } from './spec'
 

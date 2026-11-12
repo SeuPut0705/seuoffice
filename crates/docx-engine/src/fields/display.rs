@@ -354,29 +354,10 @@ fn result_runs(xml: &str, eff: &EffectivePPr, ctx: &ResolveCtx, deleted: bool) -
         let r_pr = r_pr_node_of(inner);
         out.push(ResultRun {
             text,
-            run: resolve_run_props(r_pr.as_ref(), eff.style_id.as_deref(), ctx),
+            run: resolve_run_props(r_pr.as_ref(), eff.style_id.as_deref(), eff.bidi, ctx, false),
         });
     }
     out
-}
-
-/// The text with each character outside the BMP written as two BMP
-/// characters of the same classes (not white space, not a tab), so that a
-/// pattern counting characters counts UTF-16 code units, as JavaScript does.
-// to jscompat: regress counts an astral character once where a JavaScript regex without `u` counts two units
-fn utf16_shaped(text: &str) -> Cow<'_, str> {
-    if text.chars().all(|c| u32::from(c) < 0x1_0000) {
-        return Cow::Borrowed(text);
-    }
-    let mut out = String::with_capacity(text.len() + 2);
-    for c in text.chars() {
-        if u32::from(c) < 0x1_0000 {
-            out.push(c);
-        } else {
-            out.push_str("\u{E000}\u{E000}");
-        }
-    }
-    Cow::Owned(out)
 }
 
 /// `fieldDisplayOf`: display-only rendering hint for a protected field
@@ -455,9 +436,8 @@ pub fn field_display_of(
         if segs.len() > 1 {
             let decoded = decode_entities(&segs[0]);
             let first = trim(&decoded);
-            let shaped = utf16_shaped(first);
-            if js_regex!(r"^\S{1,15}$").test(&shaped)
-                || (num_tab.is_some() && js_regex!(r"^\S(?:[^\t]{0,18}\S)?$").test(&shaped))
+            if js_regex!(r"^\S{1,15}$").test(first)
+                || (num_tab.is_some() && js_regex!(r"^\S(?:[^\t]{0,18}\S)?$").test(first))
             {
                 num = Some(first.to_owned());
                 segs.remove(0);

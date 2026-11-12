@@ -15,6 +15,8 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.test.ts'],
+    // the engine behind @seuoffice/docx-engine starts here: the alias skips the package's `node` entry
+    setupFiles: [fileURLToPath(new URL('../engine-wasm/src/node.ts', import.meta.url))],
     testTimeout: 20000,
   },
 })

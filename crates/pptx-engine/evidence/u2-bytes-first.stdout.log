@@ -1,0 +1,13 @@
+pptx-diff: 3 tracked .pptx (floor      3); 3 opened (floor      3); 7 slides (floor      7)
+(f) bytes on the corpus, checks                compared     15  floor missing  BELOW FLOOR  differences 0
+(f) bytes on built inputs, checks              compared   1102  floor missing  BELOW FLOOR  differences 0  (TypeScript threw in 23: Rust must refuse those too)
+(f+) bytes on mutated texts, checks            compared      0  floor missing  BELOW FLOOR  differences 0
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+(f) bytes: 7 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 7
+    pptxBytes.glb-bounds.glbJson             checks     520  differences      0  key order only      0  distinct results   271  TypeScript threw 0
+    pptxBytes.glb-bounds.glbBounds           checks     520  differences      0  key order only      0  distinct results    59  TypeScript threw 23
+    pptxBytes.chart-workbook.constant        checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    pptxBytes.chart-workbook.colLetter       checks      27  differences      0  key order only      0  distinct results    23  TypeScript threw 0
+    pptxBytes.chart-workbook.chartWorkbookParts checks      11  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    pptxBytes.chart-workbook.storedZip       checks      25  differences      0  key order only      0  distinct results    22  TypeScript threw 0
+    pptxBytes.chart-workbook.chartWorkbookXlsx checks      11  differences      0  key order only      0  distinct results    11  TypeScript threw 0

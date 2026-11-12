@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { clipSheetXml, sheetXmlByteLimit, xlsxToText } from '../../packages/file-parse/src/xlsx'
+import { clipSheetXml, sheetXmlByteLimit, xlsxToText } from './reference/xlsx'
 import { hostileZipInputs } from './hostile'
 import type { Input, Spec } from './spec'
 import { fixtureBytes } from './zip-fixture'

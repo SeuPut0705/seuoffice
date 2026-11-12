@@ -190,10 +190,26 @@ pub(crate) fn table_style_display_of(
                 };
                 slot.set(fmt);
             }
-        } else if kind == Some("band1Horz") && fill.is_some() {
-            display.band1_fill.set_some(fill);
-        } else if kind == Some("band2Horz") && fill.is_some() {
-            display.band2_fill.set_some(fill);
+        } else if let Some(kind @ ("band1Horz" | "band2Horz")) = kind {
+            let band_fill = if kind == "band1Horz" {
+                &mut display.band1_fill
+            } else {
+                &mut display.band2_fill
+            };
+            band_fill.set_some(fill);
+            let mut fmt = TableCondFormat::default();
+            let borders = merged_border_lines_of(tc_pr, "w:tcBorders", false);
+            fmt.borders.set_some(borders);
+            let tc_mar = cell_margins_of(tc_pr.and_then(|tc_pr| tc_pr.find_child("w:tcMar")));
+            fmt.cell_mar_twips.set_some(tc_mar);
+            if !fmt.has_no_key() {
+                let slot = if kind == "band1Horz" {
+                    &mut display.band1_horz
+                } else {
+                    &mut display.band2_horz
+                };
+                slot.set(fmt);
+            }
         }
     }
     let style_tbl_pr = style_node.find_child("w:tblPr");

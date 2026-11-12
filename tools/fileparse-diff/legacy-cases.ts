@@ -3,9 +3,9 @@ import { createHash } from 'node:crypto'
 import { deflateRawSync } from 'node:zlib'
 import { buildZip } from '../docx-diff/package-zips'
 import { assertCompoundFile } from '../../packages/compound-file/src/validate'
-import { assertSoundCompoundFile } from '../../packages/file-parse/src/damaged-file'
-import { docToText } from '../../packages/file-parse/src/doc'
-import { pptToText } from '../../packages/file-parse/src/ppt'
+import { assertSoundCompoundFile } from './reference/damaged-file'
+import { docToText } from './reference/doc'
+import { pptToText } from './reference/ppt'
 import type { Input, Spec } from './spec'
 
 const EMPTY = new Uint8Array()
