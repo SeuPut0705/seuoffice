@@ -10,7 +10,7 @@ import { isTiffMime, tiffToDataUrlAsync } from './tiff'
 import { ommlEndsWithBreak, ommlFragmentsOf, ommlToLatex, ommlToMathML } from './math'
 import { splitXmlChildren } from './generate'
 import { readPropChangeXml } from './revision-xml'
-import { parseEntry, runsText, withheldText } from './withheld'
+import { parseEntry, runsText, withheldLabelOf, withheldText } from './withheld'
 import { NOTE_PART_PATH, parseNotesXml, type NoteParagraphReader } from './notes'
 import { scanBody, type BodyElement } from './scan'
 import {
@@ -8336,6 +8336,8 @@ function noteParagraphReader(ctx: BuildContext): NoteParagraphReader {
 /** a note display run: the run's direct look over the paragraph's resolved base */
 function noteRunOf(run: Run, base: EffectiveRPr): NoteRun {
   const out: NoteRun = { text: run.text }
+  const redact = withheldLabelOf(run.rawRPr)
+  if (redact !== null) out.redact = redact
   const cs = run.effective?.cs ? run.effective : undefined
   if (run.bold ?? cs?.bold ?? base.bold) out.bold = true
   if (run.italic ?? cs?.italic ?? base.italic) out.italic = true

@@ -1651,6 +1651,8 @@ export interface HeaderFooterSectionState {
   footerFirst: string | null
   headerEven: string | null
   footerEven: string | null
+  /** layout tables of the section's variants in use, read-only; absent when none */
+  tables?: HfTables
 }
 
 export interface HeaderFooterState {
@@ -1671,6 +1673,30 @@ export interface HeaderFooterState {
   sections: HeaderFooterSectionState[]
   /** the default header's watermark: text, picture, or none; pending set_watermark results included */
   watermark: WatermarkState
+  /** layout tables of the variants in use, read-only (rows on lines, cells joined by " | "); absent when none */
+  tables?: HfTables
+}
+
+/** layout-table text per header/footer variant, as a model may read it */
+export type HfTables = Partial<Record<HfSlot, string>>
+
+/** the layout tables of the variants in use that have one, or undefined */
+function hfTables(
+  doc: OpenDocument,
+  valueOf: (slot: HfSlot) => HeaderFooter | null | undefined,
+  titlePg: boolean,
+  evenOddHf: boolean,
+): HfTables | undefined {
+  const tables: HfTables = {}
+  const slots: HfSlot[] = ['header', 'footer']
+  if (titlePg) slots.push('headerFirst', 'footerFirst')
+  if (evenOddHf) slots.push('headerEven', 'footerEven')
+  for (const slot of slots) {
+    const value = valueOf(slot)
+    const table = value ? doc.mods.hfText.hfModelTableText(value) : ''
+    if (table) tables[slot] = table
+  }
+  return Object.keys(tables).length > 0 ? tables : undefined
 }
 
 export type WatermarkState =
@@ -1789,9 +1815,30 @@ export function headerFooterState(doc: OpenDocument): HeaderFooterState {
       footerFirst: section.titlePg ? sectionHfText(doc, sections, index, 'footer', 'first') : null,
       headerEven: side.evenOddHf ? sectionHfText(doc, sections, index, 'header', 'even') : null,
       footerEven: side.evenOddHf ? sectionHfText(doc, sections, index, 'footer', 'even') : null,
+      ...tablesField(
+        hfTables(
+          doc,
+          (slot) => resolveSectionHf(doc, sections, index, slotKind(slot), slotView(slot)),
+          section.titlePg === true,
+          side.evenOddHf,
+        ),
+      ),
     })),
     watermark: watermarkState(doc),
+    ...tablesField(hfTables(doc, (slot) => side.hf[slot], side.titlePg, side.evenOddHf)),
   }
+}
+
+function tablesField(tables: HfTables | undefined): { tables?: HfTables } {
+  return tables ? { tables } : {}
+}
+
+function slotKind(slot: HfSlot): 'header' | 'footer' {
+  return slot.startsWith('header') ? 'header' : 'footer'
+}
+
+function slotView(slot: HfSlot): HfView {
+  return slot.endsWith('First') ? 'first' : slot.endsWith('Even') ? 'even' : 'default'
 }
 
 /** The default variant is written to the trailing section's part, as the app does for single-section documents. */
@@ -2089,7 +2136,8 @@ export interface CommentSummary extends CommentInfo {
 /** Every comment with the block its anchor sits in, ids as reply_comment / resolve_comment / delete_comment take them. */
 export function listComments(doc: OpenDocument): CommentSummary[] {
   const anchors = doc.mods.protocol.commentAnchors(doc.editor)
-  return doc.side.comments.map(({ modelText, ...c }) => {
+  // markedXml is the comment's own XML, hidden words included: never listed
+  return doc.side.comments.map(({ modelText, markedXml: _markedXml, ...c }) => {
     const a = anchors.get(c.parentId ?? c.id)
     // the text a model may read: a run hidden from AI reads as its placeholder
     const base = { ...c, text: modelText ?? c.text, done: c.done === true }

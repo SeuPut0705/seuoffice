@@ -179,6 +179,32 @@ describe('docs read: a content control holding text hidden from AI', () => {
   })
 })
 
+describe('docs read: a header layout table holding text hidden from AI', () => {
+  it('lists the table with each hidden cell run as its placeholder', async () => {
+    const ns = NAMESPACES[1]![1]
+    const dir = tempDir()
+    const file = join(dir, 'header-table.docx')
+    writeFileSync(
+      file,
+      await buildDocx({
+        bodyXml: '<w:p><w:r><w:t>Body</w:t></w:r></w:p>',
+        headerXml:
+          '<w:p><w:r><w:t>Title</w:t></w:r></w:p>' +
+          '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr><w:tblGrid><w:gridCol w:w="4000"/><w:gridCol w:w="4000"/></w:tblGrid>' +
+          '<w:tr><w:tc><w:p><w:r><w:t>Left</w:t></w:r></w:p></w:tc><w:tc><w:p>' +
+          `<w:r><w:rPr><go:redact xmlns:go="${ns}" w:label="client phone"/></w:rPr><w:t>${SECRET}</w:t></w:r>` +
+          '</w:p></w:tc></w:tr></w:tbl><w:p/>',
+      }),
+    )
+    const read = await run(['docs', 'read', file, '--header-footer', '--json'])
+    expect(read.code).toBe(0)
+    expect(read.stdout).not.toContain(SECRET)
+    const hf = read.json().detail.headerFooter
+    expect(hf.tables).toEqual({ header: `Left | ${PLACEHOLDER}` })
+    expect(hf.sections[0].tables).toEqual({ header: `Left | ${PLACEHOLDER}` })
+  })
+})
+
 describe('docs read: a comment whose open tag is spelled another valid way', () => {
   const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
   it.each([`w:id='1' w:author="K"`, `w:id = "1" w:author="K"`, `w:author="a/>b" w:id="1"`])(
