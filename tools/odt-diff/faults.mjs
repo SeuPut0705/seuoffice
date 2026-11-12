@@ -195,8 +195,8 @@ const faults = [
     'page-section-continuous',
     'saveOdt',
     leaf + 'page/reverse.rs',
-    'if self.ext.sections[c].continuous {',
-    'if !self.ext.sections[c].continuous {',
+    '&& self.ext.sections[c].continuous\n',
+    '&& !self.ext.sections[c].continuous\n',
   ],
   [
     'table-colspan-gt',
