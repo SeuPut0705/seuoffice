@@ -24,11 +24,9 @@ const inputs = (kind: 'deck' | 'slide' | 'element'): Input[] => {
   return values.map((value) => ({ text: JSON.stringify(value) }))
 }
 
-const same = (text: string): unknown => JSON.parse(text)
-
 export const ROUNDTRIP: CallSpec[] = (['deck', 'slide', 'element'] as const).map((kind) => ({
   fn: `pptxRoundtrip.${kind}`,
-  call: same,
+  call: (text: string): unknown => JSON.parse(text),
   built: inputs(kind),
   mutation: 'none',
 }))
