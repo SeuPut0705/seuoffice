@@ -14,7 +14,8 @@ export interface MarkedOdtText {
   title: string
   message: string
   detail: string
-  saveDocx: string
+  /** absent: the app's Word export cannot keep the hiding either, so Word is not offered */
+  saveDocx?: string
   clearMarks: string
   cancel: string
 }
@@ -24,26 +25,34 @@ export interface MarkedOdtBox {
   title: string
   message: string
   detail: string
-  buttons: [string, string, string]
+  buttons: string[]
   defaultId: 0
-  cancelId: 2
+  cancelId: number
   noLink: true
 }
 
 export function markedOdtBox(text: MarkedOdtText): MarkedOdtBox {
+  const buttons =
+    text.saveDocx === undefined
+      ? [text.clearMarks, text.cancel]
+      : [text.saveDocx, text.clearMarks, text.cancel]
   return {
     type: 'warning',
     title: text.title,
     message: text.message,
     detail: text.detail,
-    buttons: [text.saveDocx, text.clearMarks, text.cancel],
+    buttons,
     defaultId: 0,
-    cancelId: 2,
+    cancelId: buttons.length - 1,
     noLink: true,
   }
 }
 
-/** the button pressed in `markedOdtBox`; anything else (closing the box) is a cancel */
-export function markedOdtChoice(response: number): MarkedOdtChoice {
+/**
+ * the button pressed in `markedOdtBox` (`withDocx`: Word was offered); anything
+ * else (closing the box) is a cancel
+ */
+export function markedOdtChoice(response: number, withDocx = true): MarkedOdtChoice {
+  if (!withDocx) return response === 0 ? 'clear' : 'cancel'
   return response === 0 ? 'docx' : response === 1 ? 'clear' : 'cancel'
 }

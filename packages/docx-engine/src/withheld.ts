@@ -1,4 +1,4 @@
-import { placeholderSource } from '@seuoffice/agent-core/redact-core'
+import { placeholderSource, sanitizeLabel } from '@seuoffice/agent-core/redact-core'
 import { decodeEntities } from './parse-xml-text'
 import {
   attrsOf,
@@ -228,6 +228,20 @@ export function overWithheldModelText(text: string, label: string): string {
     .split('\n')
     .map((line) => (/\S/.test(line) ? placeholderSource(label) : line))
     .join('\n')
+}
+
+/**
+ * The run properties of a run a person hid from AI, as the Docs editor writes
+ * them: the character border Word draws and the mark carrying the label (the
+ * namespace is declared on the part's root when the document is saved). For
+ * the writers that export content hidden from AI into a .docx (Markdown, HTML)
+ * to give it the mark the readers withhold by.
+ */
+export function hiddenRunProperties(label: string): string {
+  return (
+    '<w:rPr><w:bdr w:val="single" w:sz="6" w:color="6B4FC0"/>' +
+    `<${REDACT_EL} w:label="${escapeXmlAttr(sanitizeLabel(label) || 'private')}"/></w:rPr>`
+  )
 }
 
 /** a run holds content when it has words, a picture, a drawing, an object or a symbol */

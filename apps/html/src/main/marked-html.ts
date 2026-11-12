@@ -1,10 +1,11 @@
 /**
  * Content a person marked "hidden from AI" in an HTML page (the redactor's three
  * marks: `data-gx-redact` on an element, `data-gx-redact-<attr>` beside an
- * attribute, `/*gx:redact:label*\/` before a script literal). An ODT cannot keep
- * the hiding, so the ODT export refuses marked pages and offers the two ways
- * out: Word instead, or the marks cleared for the copy that is exported (the
- * page itself keeps them).
+ * attribute, `/*gx:redact:label*\/` before a script literal). Neither an ODT
+ * nor the Word export can keep the hiding (the Word export reads the rendered
+ * page: attribute and script marks have no run to sit on, and an element's
+ * pixels are screenshotted), so both refuse marked pages and offer to write the
+ * copy with the marks cleared (the page itself keeps them).
  */
 
 /** the same test the redactor and the skill-template check start with */
@@ -24,23 +25,22 @@ export function clearHiddenMarks(html: string): string {
   return cleared
 }
 
-export type MarkedOdtChoice = 'docx' | 'clear' | 'cancel'
+export type MarkedExportChoice = 'clear' | 'cancel'
 
-export type MarkedOdtPlan =
-  { kind: 'write'; html: string } | { kind: 'save-as-docx' } | { kind: 'declined' }
+export type MarkedExportPlan = { kind: 'write'; html: string } | { kind: 'declined' }
 
 /**
- * What the ODT export may write for this page. `ask` null: nobody can be asked
- * (a headless export), so a marked page is declined.
+ * What an export that cannot keep the hiding (the ODT export; the Word export,
+ * which writes the page's words and no mark) may write for this page. `ask`
+ * null: nobody can be asked (a headless export), so a marked page is declined.
  */
-export async function planMarkedOdt(
+export async function planMarkedExport(
   html: string,
-  ask: (() => Promise<MarkedOdtChoice>) | null,
-): Promise<MarkedOdtPlan> {
+  ask: (() => Promise<MarkedExportChoice>) | null,
+): Promise<MarkedExportPlan> {
   if (!holdsHiddenMarks(html)) return { kind: 'write', html }
   if (!ask) return { kind: 'declined' }
-  const choice = await ask()
-  if (choice === 'docx') return { kind: 'save-as-docx' }
-  if (choice === 'clear') return { kind: 'write', html: clearHiddenMarks(html) }
-  return { kind: 'declined' }
+  return (await ask()) === 'clear'
+    ? { kind: 'write', html: clearHiddenMarks(html) }
+    : { kind: 'declined' }
 }

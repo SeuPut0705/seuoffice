@@ -162,7 +162,7 @@ const tOdt = createI18n({
     markedTitle: 'Content hidden from AI',
     markedMessage: 'This document has content hidden from AI, and an ODT file cannot keep that.',
     markedDetail:
-      'Exported as ODT, the hidden content would read as plain text to everyone, AI included. Export as Word (.docx) instead, or clear the marks for the ODT copy. This document keeps its marks either way.',
+      'Exported as ODT, the hidden content would read as plain text to everyone, AI included. Export as Word (.docx) instead, which keeps the hiding, or clear the marks for the ODT copy. This document keeps its marks either way.',
     markedDocx: 'Export as Word (.docx)',
     markedClear: 'Clear marks and export as ODT',
     markedRefused:
@@ -198,7 +198,7 @@ const tOdt = createI18n({
     markedTitle: 'AI에게 숨긴 내용',
     markedMessage: '이 문서에는 AI에게 숨긴 내용이 있는데, ODT 파일에는 이를 담을 수 없습니다.',
     markedDetail:
-      'ODT로 내보내면 숨긴 내용이 AI를 포함한 모두에게 일반 글자로 보입니다. 대신 Word(.docx)로 내보내거나, ODT 사본에서 표시를 지우세요. 어느 쪽이든 이 문서의 표시는 그대로 남습니다.',
+      'ODT로 내보내면 숨긴 내용이 AI를 포함한 모두에게 일반 글자로 보입니다. 대신 숨김이 유지되는 Word(.docx)로 내보내거나, ODT 사본에서 표시를 지우세요. 어느 쪽이든 이 문서의 표시는 그대로 남습니다.',
     markedDocx: 'Word(.docx)로 내보내기',
     markedClear: '표시 지우고 ODT로 내보내기',
     markedRefused:

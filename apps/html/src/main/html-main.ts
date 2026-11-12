@@ -22,7 +22,7 @@ import {
   shell,
   webContents,
 } from 'electron'
-import type { WebContents } from 'electron'
+import type { MessageBoxOptions, WebContents } from 'electron'
 import {
   configuredDefaultSaveDir,
   confirmOverwriteIfConflicted,
@@ -89,13 +89,13 @@ import {
 } from './asset-mime'
 import { buildPreviewDocument } from './preview-document'
 import {
-  askMarkedOdt,
+  askMarkedExport,
   confirmOdtReport,
   exportOdt,
-  markedOdtRefusal,
+  markedExportRefusal,
   odtFilterName,
 } from './odt-export'
-import { planMarkedOdt } from './marked-html'
+import { planMarkedExport } from './marked-html'
 import { inlineImagesForSingleFile, singleFileExportBaseName } from './single-file-html'
 import { registerHtmlHandoffIpc } from './generate-handoff-ipc'
 import { registerHtmlSeedIpc } from './seed-main'
@@ -636,7 +636,20 @@ async function writeHtmlDocx(
   html: string,
   docPath: string | undefined,
   target: string,
+  win?: BrowserWindow,
 ): Promise<ExportResult> {
+  // The Word export writes the page's words and no mark: a marked page is exported
+  // only with its marks cleared, when the person agrees; a headless export writes nothing.
+  const plan = await planMarkedExport(
+    html,
+    isHeadlessMode() ? null : () => askMarkedExport('docx', (options) => showBox(win, options)),
+  )
+  if (plan.kind === 'declined') {
+    return isHeadlessMode()
+      ? { ok: false, error: markedExportRefusal() }
+      : { ok: true, canceled: true }
+  }
+  html = plan.html
   if (docxExportPrepareHook && !(await docxExportPrepareHook(target))) {
     return { ok: true, canceled: true }
   }
@@ -653,6 +666,9 @@ async function writeHtmlDocx(
   }
 }
 
+const showBox = (win: BrowserWindow | undefined, options: MessageBoxOptions) =>
+  win ? dialog.showMessageBox(win, options) : dialog.showMessageBox(options)
+
 /** The ODT export: the Word export's bytes converted by docxToOdt, a change report confirmed. */
 async function writeHtmlOdt(
   html: string,
@@ -661,34 +677,14 @@ async function writeHtmlOdt(
   pickPath: () => Promise<string | null>,
   skipConfirm: boolean,
 ): Promise<ExportResult> {
-  // An ODT cannot keep content hidden from AI: a marked page is not exported as
-  // ODT. The person chooses Word instead, or the marks cleared for this copy;
-  // a headless export has no one to ask and writes nothing.
-  const plan = await planMarkedOdt(
+  // An ODT cannot keep content hidden from AI: a marked page is exported only with
+  // its marks cleared, when the person agrees; a headless export writes nothing.
+  const plan = await planMarkedExport(
     html,
-    skipConfirm
-      ? null
-      : () =>
-          askMarkedOdt((options) =>
-            win ? dialog.showMessageBox(win, options) : dialog.showMessageBox(options),
-          ),
+    skipConfirm ? null : () => askMarkedExport('odt', (options) => showBox(win, options)),
   )
   if (plan.kind === 'declined') {
-    return skipConfirm ? { ok: false, error: markedOdtRefusal() } : { ok: true, canceled: true }
-  }
-  if (plan.kind === 'save-as-docx') {
-    const stem = exportFileName(basename(docPath() ?? '', extname(docPath() ?? '')))
-    const picked = await showSaveDialogWithMemory(
-      dialog,
-      win,
-      {
-        defaultPath: `${stem}.docx`,
-        filters: [{ name: tm('filterWord'), extensions: ['docx'] }],
-      },
-      configuredDefaultSaveDir(app),
-    )
-    if (picked.canceled || !picked.filePath) return { ok: true, canceled: true }
-    return writeHtmlDocx(html, docPath(), picked.filePath)
+    return skipConfirm ? { ok: false, error: markedExportRefusal() } : { ok: true, canceled: true }
   }
   const outcome = await exportOdt({
     pickPath,
@@ -1301,7 +1297,7 @@ function registerHtmlIpc(): void {
             exportAs === 'pdf'
               ? await writeHtmlPdf(html, pathAtRequest, target)
               : exportAs === 'docx'
-                ? await writeHtmlDocx(html, pathAtRequest, target)
+                ? await writeHtmlDocx(html, pathAtRequest, target, win)
                 : await writeHtmlOdt(
                     html,
                     () => pathAtRequest,
@@ -1556,7 +1552,7 @@ function registerHtmlIpc(): void {
               configuredDefaultSaveDir(app),
             )
       if (picked.canceled || !picked.filePath) return { ok: true, canceled: true }
-      return writeHtmlDocx(request.html, savePathByWc.get(e.sender.id), picked.filePath)
+      return writeHtmlDocx(request.html, savePathByWc.get(e.sender.id), picked.filePath, win)
     },
   )
 
