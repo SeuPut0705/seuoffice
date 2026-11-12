@@ -342,6 +342,7 @@ const slidesApi: Partial<SlidesApi> = {
   presenterSync: noop,
   presenterInk: noop,
   audienceNav: noop,
+  microphoneRelease: noop,
   // menu, window and shell notifications that never arrive on the web
   onLanguageChanged: unsubscribe,
   onThemeChanged: unsubscribe,
