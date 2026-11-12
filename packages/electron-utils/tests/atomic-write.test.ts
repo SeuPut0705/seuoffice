@@ -15,6 +15,7 @@ import {
   atomicCopyFile,
   atomicWriteFile,
   atomicWriteVia,
+  isSaveTempName,
   tempPathBeside,
   writeJsonAtomic,
 } from '../src/atomic-write'
@@ -451,5 +452,48 @@ describe('tempPathBeside', () => {
     await atomicWriteFile(target, Buffer.from('new'))
     expect(readFileSync(target, 'utf-8')).toBe('new')
     expect(readdirSync(dir)).toEqual([basename(target)])
+  })
+})
+
+// Folder listings leave a save's own files out by this test, so it has to know
+// every name a save can put beside a document, and no other.
+describe('isSaveTempName', () => {
+  it('knows the staging temp of a short name and of a shortened one', () => {
+    for (const name of ['a.docx', 'no-extension', `${'가'.repeat(100)}😀.docx`]) {
+      expect(isSaveTempName(basename(tempPathBeside(join('dir', name)))), name).toBe(true)
+    }
+  })
+
+  it('knows the copy a failed save leaves beside the document', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'eu-aw-'))
+    const target = join(dir, 'a.docx')
+    writeFileSync(target, 'old')
+    vi.mocked(rename).mockRejectedValueOnce(errnoError('EEXIST'))
+    const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+    // call 1 writes the temp for real, call 2 is the in-place fallback (fails)
+    vi.mocked(writeFile).mockImplementationOnce((...args) =>
+      actual.writeFile(...(args as Parameters<typeof actual.writeFile>)),
+    )
+    vi.mocked(writeFile).mockRejectedValueOnce(errnoError('EACCES'))
+    await expect(atomicWriteFile(target, Buffer.from('new'))).rejects.toThrow('EACCES')
+    const leftovers = readdirSync(dir).filter((name) => name !== 'a.docx')
+    expect(leftovers).toHaveLength(1)
+    expect(isSaveTempName(leftovers[0]!)).toBe(true)
+  })
+
+  it('leaves the document and a .tmp file of the person alone', () => {
+    for (const name of [
+      'a.docx',
+      'notes.tmp',
+      'report.final.tmp',
+      'a.docx.tmp',
+      // one hex digit short of, and one past, the staging suffix
+      'a.docx.0123456789a.tmp',
+      'a.docx.0123456789abc.tmp',
+      'a.docx.0123456789ab.tmp.bak',
+      'unsaved.tmp',
+    ]) {
+      expect(isSaveTempName(name), name).toBe(false)
+    }
   })
 })

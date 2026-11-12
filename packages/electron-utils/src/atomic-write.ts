@@ -48,6 +48,27 @@ function nameHead(name: string, maxBytes: number): string {
   return head
 }
 
+/** random bytes in a staging temp's name (written as twice as many hex digits) */
+const TEMP_RANDOM_BYTES = 6
+const TEMP_EXT = 'tmp'
+/** what the rescue copy carries where a staging temp has its random part */
+const RESCUE_MARK = 'unsaved'
+
+const SAVE_TEMP_NAME_RE = new RegExp(
+  `^.+\\.(?:[0-9a-f]{${TEMP_RANDOM_BYTES * 2}}|${RESCUE_MARK})\\.${TEMP_EXT}$`,
+  'i',
+)
+
+/**
+ * Whether a file name is one a save can put beside a document: the staging
+ * temp or the rescue copy below. The pattern is made of the parts those two
+ * names are made of, so a folder listing that leaves a save's own files out
+ * keeps matching them.
+ */
+export function isSaveTempName(name: string): boolean {
+  return SAVE_TEMP_NAME_RE.test(name)
+}
+
 /**
  * a fresh `<name>.<12 hex>.tmp` path in the target's folder (a long name is cut short).
  * No leading dot: the macOS SMB client marks dot-files hidden and the flag
@@ -56,7 +77,7 @@ function nameHead(name: string, maxBytes: number): string {
 export const tempPathBeside = (filePath: string) =>
   join(
     dirname(filePath),
-    `${nameHead(basename(filePath), TEMP_NAME_MAX_BYTES)}.${randomBytes(6).toString('hex')}.tmp`,
+    `${nameHead(basename(filePath), TEMP_NAME_MAX_BYTES)}.${randomBytes(TEMP_RANDOM_BYTES).toString('hex')}.${TEMP_EXT}`,
   )
 
 /**
@@ -70,7 +91,10 @@ export const tempPathBeside = (filePath: string) =>
  * every attempt, and the user's folder fills with them (genoffice#2567).
  */
 const rescuePathFor = (filePath: string) =>
-  join(dirname(filePath), `${nameHead(basename(filePath), TEMP_NAME_MAX_BYTES)}.unsaved.tmp`)
+  join(
+    dirname(filePath),
+    `${nameHead(basename(filePath), TEMP_NAME_MAX_BYTES)}.${RESCUE_MARK}.${TEMP_EXT}`,
+  )
 
 /**
  * Park the new bytes beside the target, replacing the copy an earlier failed
