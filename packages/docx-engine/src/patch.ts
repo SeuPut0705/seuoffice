@@ -116,7 +116,8 @@ import {
   watermarkParagraphXml,
   type Watermark,
 } from './watermark'
-import { escapeXmlAttr, escapeXmlText } from './xml-utils'
+import { escapeXmlAttr, escapeXmlText, findChildren, maskOpaque } from './xml-utils'
+import { parseEntry, runsText } from './withheld'
 import {
   buildContentControlXml,
   nextContentControlId,
@@ -2880,12 +2881,14 @@ function commentEntries(xml: string): Array<{ id: string; xml: string }> {
   const out: Array<{ id: string; xml: string }> = []
   const open = /<w:comment\b((?:[^>"']|"[^"]*"|'[^']*')*?)(\/?)>/g
   const endTag = /<\/w:comment\s*>/g
+  // tags are found where comments and CDATA cannot fake one; bytes come from xml
+  const masked = maskOpaque(xml)
   let m: RegExpExecArray | null
-  while ((m = open.exec(xml)) !== null) {
+  while ((m = open.exec(masked)) !== null) {
     let close = open.lastIndex
     if (!m[2]) {
       endTag.lastIndex = open.lastIndex
-      if (!endTag.exec(xml)) break
+      if (!endTag.exec(masked)) break
       close = endTag.lastIndex
     }
     const id = /(?:^|\s)w:id\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(m[1]!)
@@ -2980,28 +2983,10 @@ function buildCommentsExtendedXml(comments: CommentInfo[]): string {
   )
 }
 
-/** Aligned with parseComments' textOf: each w:p's w:t text, '\n' between paragraphs */
+/** A comment's text as parseComments reads it, so an unchanged comment keeps its bytes */
 function commentPlainText(commentXml: string): string {
-  const paras: string[] = []
-  // the self-closing form first: the open-to-close alternative would swallow it
-  const pRe = /<w:p(?:\s[^>]*)?\/>|<w:p[\s>][\s\S]*?<\/w:p>/g
-  let p: RegExpExecArray | null
-  while ((p = pRe.exec(commentXml)) !== null) {
-    const texts: string[] = []
-    const tRe = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g
-    let t: RegExpExecArray | null
-    while ((t = tRe.exec(p[0])) !== null) texts.push(t[1])
-    paras.push(
-      texts
-        .join('')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-        .replace(/&amp;/g, '&'),
-    )
-  }
-  return paras.join('\n')
+  const node = parseEntry(commentXml)
+  return node ? findChildren(node, 'w:p').map(runsText).join('\n') : ''
 }
 
 /** set or remove <w:documentProtection> at its CT_Settings position */

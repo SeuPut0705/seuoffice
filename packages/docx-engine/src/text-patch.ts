@@ -1,5 +1,5 @@
 import { decodeEntities } from './parse-xml-text'
-import { escapeXmlText } from './xml-utils'
+import { escapeXmlText, maskOpaque } from './xml-utils'
 
 /**
  * Paragraph-level surgical text patch (saving edits to rich-text entries such as
@@ -72,10 +72,12 @@ function paragraphSlices(xml: string): ParaSlice[] {
   // truncate the outer paragraph
   const out: ParaSlice[] = []
   const re = /<w:p(?:\s[^>]*)?\/>|<w:p(?:\s[^>]*)?>|<\/w:p>/g
+  // tags are found where comments and CDATA cannot fake one
+  const masked = maskOpaque(xml)
   let m: RegExpExecArray | null
   let depth = 0
   let start = -1
-  while ((m = re.exec(xml)) !== null) {
+  while ((m = re.exec(masked)) !== null) {
     const token = m[0]
     if (token === '</w:p>') {
       if (depth === 0) continue
@@ -86,7 +88,12 @@ function paragraphSlices(xml: string): ParaSlice[] {
         start = -1
       }
     } else if (token.endsWith('/>')) {
-      if (depth === 0) out.push({ start: m.index, end: m.index + token.length, xml: token })
+      if (depth === 0)
+        out.push({
+          start: m.index,
+          end: m.index + token.length,
+          xml: xml.slice(m.index, m.index + token.length),
+        })
     } else {
       if (depth === 0) start = m.index
       depth++
