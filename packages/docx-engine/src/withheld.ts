@@ -19,6 +19,11 @@ import { escapeXmlText } from './xml-utils'
 const MARK_RE = /<(?:[\w.-]+:)?redact\b/
 const LABEL_RE = /<(?:[\w.-]+:)?redact\b[^>]*?\sw:label="([^"]*)"/
 
+/** Whether the XML holds any trace of the mark. */
+export function hasWithheldTrace(xml: string): boolean {
+  return MARK_RE.test(xml)
+}
+
 /** The label of a run whose rPr carries the mark, or null when the run reads as itself. */
 export function withheldLabelOf(rPrXml: string | undefined): string | null {
   if (!rPrXml || !MARK_RE.test(rPrXml)) return null

@@ -18,6 +18,7 @@ import type {
   TextboxDisplay,
   TextboxParaDisplay,
 } from '@seuoffice/docx-engine'
+import { noteModelText, WITHHELD_ENTRY_TEXT } from '@seuoffice/docx-engine'
 import type { Node as PmNode } from '@tiptap/pm/model'
 import type { HfView } from '../doc-state'
 import { editKey, ownHf, type HfKind, type HfSectionState } from '../hf-sections'
@@ -418,10 +419,16 @@ export function resolveNotes(
         mode,
       ),
     )
+    const text = noteText(richParas)
+    // what a model reads follows the runs; a note whose marks could not all be
+    // read stays withheld whole
+    const { modelText: was, ...rest } = note
+    const modelText = was === WITHHELD_ENTRY_TEXT ? was : noteModelText(richParas)
     return {
-      ...note,
+      ...rest,
       richParas,
-      text: noteText(richParas),
+      text,
+      ...(modelText !== undefined && modelText !== text ? { modelText } : {}),
       revisionsResolved: [...(note.revisionsResolved ?? []), ...resolutionOf(mine, mode, all)],
     }
   })

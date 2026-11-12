@@ -13,7 +13,8 @@ import {
   type XNode,
 } from './xml-utils'
 import { customEnumItems } from './list-markers'
-import { WITHHELD_ENTRY_TEXT, withheldAsPlaceholders } from './withheld'
+import { hasWithheldTrace, WITHHELD_ENTRY_TEXT, withheldAsPlaceholders } from './withheld'
+import { patchParagraphTexts } from './text-patch'
 import { decodeNumericCharRefs, onOffOf, type RelInfo } from './parse-xml-text'
 import type {
   CommentImage,
@@ -154,27 +155,39 @@ async function commentImageOf(zip: JSZip, comment: XNode): Promise<CommentImage 
 }
 
 /**
- * Each comment's text as a model may read it, by id, for the comments that
- * hide something; one whose marks cannot all be read is withheld whole.
+ * A comment's text as a model may read it, from its own `<w:comment>` XML:
+ * undefined when it hides nothing, the whole comment withheld when its marks
+ * cannot all be read.
  */
-function commentModelTexts(xml: string): Map<string, string> {
-  const texts = new Map<string, string>()
+function commentXmlModelText(entry: string): string | undefined {
+  const view = withheldAsPlaceholders(entry)
+  if (view === entry) return undefined
+  if (view === null) return WITHHELD_ENTRY_TEXT
+  const node = (xmlParser.parse(view) as XNode[]).find((n) => nameOf(n) === 'w:comment')
+  return node ? findChildren(node, 'w:p').map(resultTextOf).join('\n') : WITHHELD_ENTRY_TEXT
+}
+
+/** Each marked comment's own XML and its text as a model may read it, by id. */
+function markedComments(xml: string): Map<string, { xml: string; modelText?: string }> {
+  const out = new Map<string, { xml: string; modelText?: string }>()
   for (const entry of xml.matchAll(/<w:comment\b[^>]*?(?:\/>|>[\s\S]*?<\/w:comment>)/g)) {
-    const view = withheldAsPlaceholders(entry[0])
-    if (view === entry[0]) continue
+    if (!hasWithheldTrace(entry[0])) continue
     const id = /\sw:id="([^"]*)"/.exec(entry[0])?.[1]
-    if (id === undefined) continue
-    if (view === null) {
-      texts.set(id, WITHHELD_ENTRY_TEXT)
-      continue
-    }
-    const node = (xmlParser.parse(view) as XNode[]).find((n) => nameOf(n) === 'w:comment')
-    texts.set(
-      id,
-      node ? findChildren(node, 'w:p').map(resultTextOf).join('\n') : WITHHELD_ENTRY_TEXT,
-    )
+    if (id !== undefined) out.set(id, { xml: entry[0], modelText: commentXmlModelText(entry[0]) })
   }
-  return texts
+  return out
+}
+
+/**
+ * What a model reads of a marked comment once a person's edit has given it
+ * `text`: the save patches the text into the comment's own XML, keeping its
+ * runs and their marks, or writes it anew without them when the paragraphs no
+ * longer line up (patchParagraphTexts, as buildCommentsXml does).
+ */
+export function editedCommentModelText(markedXml: string, text: string): string | undefined {
+  const patched = patchParagraphTexts(markedXml, text)
+  const modelText = patched === null ? undefined : commentXmlModelText(patched)
+  return modelText === text ? undefined : modelText
 }
 
 /** the model's text of a comment, kept only where it differs from what the comment says */
@@ -190,8 +203,8 @@ export async function parseComments(zip: JSZip): Promise<CommentInfo[]> {
   const parsed = xmlParser.parse(xml) as XNode[]
   const root = parsed.find((n) => nameOf(n) === 'w:comments')
   if (!root) return []
-  // the same comments with every run hidden from AI as its placeholder
-  const modelTexts = commentModelTexts(xml)
+  // the comments that carry a hidden-from-AI mark, as a model may read them
+  const marked = markedComments(xml)
   const out: CommentInfo[] = []
   for (const node of findChildren(root, 'w:comment')) {
     const attrs = attrsOf(node)
@@ -206,7 +219,8 @@ export async function parseComments(zip: JSZip): Promise<CommentInfo[]> {
       initials: attrs['w:initials'],
       date: attrs['w:date'],
       text,
-      ...modelTextOf(modelTexts.get(attrs['w:id']), text),
+      ...modelTextOf(marked.get(attrs['w:id'])?.modelText, text),
+      ...(marked.has(attrs['w:id']) ? { markedXml: marked.get(attrs['w:id'])!.xml } : {}),
       ...(paraId ? { paraId } : {}),
       ...(image ? { image } : {}),
     })

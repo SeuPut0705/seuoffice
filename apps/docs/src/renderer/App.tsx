@@ -122,11 +122,12 @@ import { AiPanel } from './ai/AiPanel'
 import { AI_REVISION_AUTHOR } from './ai/revision-author'
 import { useAiDock } from './ai/use-ai-dock'
 import type { AiCommentsAccess, AiDocExtras, AiHeaderFooterAccess } from './ai/tools'
+import type { AiHfState, HfStateSlot } from './ai/protocol'
 import type { AiStyleInfo } from './ai/style-ops'
 import { applyResolvedPageSetup, describeSection, type AiPageSetupAccess } from './ai/page-setup'
 import { patchPendingSectPr, sectionIndexAtBlock } from './ai/pending-sections'
 import { protectedNoteMarkBlock, type AiNotesAccess } from './ai/note-ops'
-import { applyHfModelText, hfModelText } from './editor/hf-text'
+import { applyHfModelText, hfModelTableText, hfModelText } from './editor/hf-text'
 import {
   insertHfField,
   insertHfInstrField,
@@ -7538,6 +7539,17 @@ export function App() {
           const value = ctx.valueOf(kind, view)
           return value ? hfModelText(value) : ''
         }
+        const tables: NonNullable<AiHfState['tables']> = {}
+        const tableOf = (kind: 'header' | 'footer', view: HfView, slot: HfStateSlot) => {
+          const value = ctx.valueOf(kind, view)
+          const table = value ? hfModelTableText(value) : ''
+          if (table) tables[slot] = table
+        }
+        for (const kind of ['header', 'footer'] as const) {
+          tableOf(kind, 'default', kind)
+          if (ctx.titlePg) tableOf(kind, 'first', `${kind}First`)
+          if (ctx.evenOddHf) tableOf(kind, 'even', `${kind}Even`)
+        }
         return {
           header: textOf('header', 'default'),
           footer: textOf('footer', 'default'),
@@ -7548,6 +7560,7 @@ export function App() {
           titlePg: ctx.titlePg,
           evenOddHf: ctx.evenOddHf,
           multiSection: ctx.multiHf,
+          ...(Object.keys(tables).length > 0 ? { tables } : {}),
         }
       },
       set: (kind, view, text) => {

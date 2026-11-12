@@ -355,6 +355,10 @@ export interface CommentInfo {
   /** the text as a model may read it, each run hidden from AI as its placeholder;
    *  absent when the comment hides nothing (then `text` is what a model reads) */
   modelText?: string
+  /** the comment's own XML as the file holds it, kept only when it carries a
+   *  hidden-from-AI mark: a person's edit of `text` is patched into it on save,
+   *  and `editedCommentModelText` reads what that will hide. Never shown or sent. */
+  markedXml?: string
   /** the picture the comment carries; absent for a text-only comment */
   image?: CommentImage
   /** Reply: the parent comment's w:id (resolved via the paraId relation in commentsExtended) */
@@ -1204,6 +1208,8 @@ export interface HfPartInfo {
 /** One display run of footnote/endnote body text (for page-bottom rendering; editing still uses plain text) */
 export interface NoteRun {
   text: string
+  /** the run is hidden from AI under this label (the mark rides in the run's rPr in the file) */
+  redact?: string
   bold?: boolean
   italic?: boolean
   underline?: boolean

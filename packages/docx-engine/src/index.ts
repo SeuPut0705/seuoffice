@@ -9,7 +9,9 @@ export {
   sfntLineMetrics,
 } from './font-table'
 export { decodeEntities } from './parse-xml-text'
-export { withheldAsPlaceholders, withheldLabelOf } from './withheld'
+export { WITHHELD_ENTRY_TEXT, withheldAsPlaceholders, withheldLabelOf } from './withheld'
+export { editedCommentModelText } from './parse-package'
+export { noteModelText } from './notes'
 export { sdtCheckboxGlyphs, sdtCheckboxIsChecked } from './checkbox-control'
 export {
   inlineWrapContentLocked,
