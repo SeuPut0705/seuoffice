@@ -540,11 +540,10 @@ function ownRPr(runXml: string) {
 /** Sync <a:hlinkClick> in the rPr with the model: no-op when the rId already matches (keeping bytes). */
 function patchRunHlink(runXml: string, run: TextRun): string {
   const existing = /<a:hlinkClick\b[^>]*>/.exec(runXml)?.[0]
-  // decoded, like the model's id: the same id spelled another way is not a change
-  const existingRId = (existing && attributeOf(existing, 'r:id')) || undefined
-  const existingAction = existing
-    ? (/\baction=(?:"([^"]*)"|'([^']*)')/.exec(existing)?.slice(1, 3).find(Boolean) ?? undefined)
-    : undefined
+  // Read as the parser reads them into the model: decoded (the same value spelled another way
+  // is not a change), and an id that is present but empty is '', which a named action carries
+  const existingRId = existing ? (attributeOf(existing, 'r:id') ?? '') : undefined
+  const existingAction = (existing && attributeOf(existing, 'action')) || undefined
   if (existingRId === run.hyperlinkRId && existingAction === run.hyperlinkAction) return runXml
   // Strip the old one (self-closing or paired)
   runXml = runXml.replace(

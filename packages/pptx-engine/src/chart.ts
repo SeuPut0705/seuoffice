@@ -14,12 +14,12 @@
  * c:axId) carry secondaryAxis, with the secondary axis style/range parsed into
  * valAxis2.
  */
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from './xml-parser'
 import { resolveFontRef, type Theme } from './theme'
 import { applyColorMods, resolveColorNode, scaleLuminance } from './color'
 import type { Fill } from './types'
 
-const chartParser = new XMLParser({
+const chartParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   trimValues: false,

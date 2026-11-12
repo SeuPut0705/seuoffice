@@ -9,11 +9,11 @@
 import JSZip from 'jszip'
 import { assertZipInflatesWithinLimits } from '@genoffice/zip-gate'
 import { createHash } from 'node:crypto'
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from './xml-parser'
 import type { SlideSize } from './types'
-import { asXmlNode, attributeOf, parsedId, xmlArray } from './xml-utils'
+import { asXmlNode, attributeOf, xmlArray } from './xml-utils'
 
-const relsParser = new XMLParser({
+const relsParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   isArray: (name) => name === 'Relationship' || name === 'sldId' || name === 'Override',
@@ -116,8 +116,7 @@ export class PackageArchive {
     const doc = asXmlNode(relsParser.parse(xml))
     const list = asXmlNode(doc.Relationships).Relationship
     for (const r of xmlArray(list)) {
-      // decoded, so the id meets a reference to it however either part spells it
-      const id = parsedId(r['@_Id']) ?? ''
+      const id = String(r['@_Id'] ?? '')
       rels.set(id, {
         id,
         type: String(r['@_Type'] ?? ''),
@@ -135,7 +134,7 @@ export class PackageArchive {
     const presXml = this.readText('ppt/presentation.xml')
     if (!presXml) throw new Error('pptx: missing ppt/presentation.xml')
 
-    const parser = new XMLParser({
+    const parser = xmlParser({
       ignoreAttributes: false,
       attributeNamePrefix: '@_',
       isArray: (name) => name === 'p:sldId' || name === 'sldId',
@@ -166,9 +165,9 @@ export class PackageArchive {
     const sldIdLst = asXmlNode(root['p:sldIdLst'] ?? root.sldIdLst)
     const slidePaths: string[] = []
     for (const id of xmlArray(sldIdLst['p:sldId'] ?? sldIdLst.sldId)) {
-      const rId = parsedId(id['@_r:id'] ?? id['@_id'])
+      const rId = id['@_r:id'] ?? id['@_id']
       if (!rId) continue
-      const rel = rels.get(rId)
+      const rel = rels.get(String(rId))
       if (!rel) continue
       slidePaths.push(resolveTarget('ppt/presentation.xml', rel.target))
     }

@@ -24,11 +24,19 @@ const REFERENCE = /&(?:#x([0-9a-fA-F]+)|#(\d+)|(amp|lt|gt|quot|apos));/g
 const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
 
 /**
- * An attribute value as XML reads it: the five predefined entities and the numeric references
- * decoded, in one pass (so `&amp;#38;` is the five characters `&#38;`, not `&`). `r&amp;1`,
- * `r&#38;1` and `r&#x26;1` are one value, and `rId&#49;` is `rId1`.
+ * A value as XML reads it: the five predefined entities and the numeric references decoded, in
+ * ONE pass. `r&amp;1`, `r&#38;1` and `r&#x26;1` are one value and `rId&#49;` is `rId1`; and
+ * `X&amp;#38;1` is the seven characters `X&#38;1`, because what a reference decodes to is text,
+ * never read again.
+ *
+ * This is the engine's only decoder. The parsers use it (`xmlParser`) and so does every value
+ * read off a raw tag (`attributeOf`), so the two readings of one spelling agree and no value is
+ * decoded twice: never run a parsed value through it, or through any other decoder.
+ *
+ * A reference to NUL or to a C0 control XML 1.0 forbids is dropped; one that names no Unicode
+ * scalar value (a surrogate, or beyond U+10FFFF) stays as written.
  */
-export function decodeXmlAttr(raw: string): string {
+export function decodeXml(raw: string): string {
   if (!raw.includes('&')) return raw
   return raw.replace(
     REFERENCE,
@@ -40,36 +48,33 @@ export function decodeXmlAttr(raw: string): string {
     ) => {
       if (named !== undefined) return NAMED_ENTITIES[named]!
       const code = hex === undefined ? Number(decimal) : Number.parseInt(hex, 16)
-      return code <= 0x10ffff && (code < 0xd800 || code > 0xdfff)
-        ? String.fromCodePoint(code)
-        : reference
+      if (code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) return reference
+      if (code < 0x20 && code !== 0x09 && code !== 0x0a && code !== 0x0d) return ''
+      return String.fromCodePoint(code)
     },
   )
 }
 
 /**
  * What an element's open tag gives the attribute `name`, whatever its quotes and spacing: the
- * value, decoded (`decodeXmlAttr`), not its spelling. This is how a value from the deck (a
- * relationship id, an extension, an element id) is looked up. It is compared as text, never built
- * into a RegExp, where a `(` in it throws, a `.` matches any character and a `$` matches nothing;
- * and it is compared decoded, because two parts may spell one id differently. A value written
- * back into XML goes through `escapeXmlAttr`.
+ * value, decoded (`decodeXml`), not its spelling. This is how a value from the deck (a
+ * relationship id, an extension, an element id, a part name) is looked up. It is compared as
+ * text, never built into a RegExp, where a `(` in it throws, a `.` matches any character and a
+ * `$` matches nothing; and it is compared decoded, because two parts may spell one value
+ * differently. A value written back into XML goes through `escapeXmlAttr`, once.
  */
 export function attributeOf(element: string, name: string): string | undefined {
   const openTag = element.slice(0, element.indexOf('>') + 1)
   for (const attr of openTag.matchAll(ATTRIBUTE)) {
-    if (attr[1] === name) return decodeXmlAttr(attr[2] ?? attr[3]!)
+    if (attr[1] === name) return decodeXml(attr[2] ?? attr[3]!)
   }
   return undefined
 }
 
-/**
- * An id attribute as the XML parser hands it over, decoded. The parser decodes the named
- * entities and leaves numeric references as written, so `r&#38;1` would not meet the `r&1` that
- * `attributeOf` and the rels reader give for the same id.
- */
-export function parsedId(value: unknown): string | undefined {
-  return value == null ? undefined : decodeNumericCharRefs(String(value))
+/** The name a slide, layout or master part gives itself (`<p:cSld name>`), as the reader has it. */
+export function cSldNameOf(partXml: string): string | undefined {
+  const cSld = /<p:cSld\b[^>]*>/.exec(partXml)?.[0]
+  return cSld === undefined ? undefined : attributeOf(cSld, 'name')
 }
 
 const R_REFERENCE = /\br:(\w+)(\s*=\s*)(?:"([^"]*)"|'([^']*)')/g
@@ -89,7 +94,7 @@ export function withRelationshipIds(
   return xml.replace(
     R_REFERENCE,
     (all, name: string, equals: string, double: string | undefined, single: string | undefined) => {
-      const to = names.includes(name) ? ids.get(decodeXmlAttr(double ?? single ?? '')) : undefined
+      const to = names.includes(name) ? ids.get(decodeXml(double ?? single ?? '')) : undefined
       if (to === undefined) return all
       const value = escapeXmlAttr(to)
       return double === undefined
@@ -97,16 +102,6 @@ export function withRelationshipIds(
         : `r:${name}${equals}"${value}"`
     },
   )
-}
-
-/** Decode numeric references only when they name a Unicode scalar value. */
-export function decodeNumericCharRefs(text: string): string {
-  return text.replace(/&#(?:x([0-9a-fA-F]+)|(\d+));/g, (reference, hex, decimal) => {
-    const code = hex === undefined ? Number(decimal) : Number.parseInt(hex, 16)
-    return code <= 0x10ffff && (code < 0xd800 || code > 0xdfff)
-      ? String.fromCodePoint(code)
-      : reference
-  })
 }
 
 /**
@@ -156,24 +151,24 @@ const RELATIONSHIP_ID = /\bId\s*=\s*(?:"([^"]*)"|'([^']*)')/g
 export function maxRelationshipIdNumber(relsXml: string): number {
   let max = 0
   for (const match of relsXml.matchAll(RELATIONSHIP_ID)) {
-    const n = Number(/^rId(\d+)$/.exec(decodeXmlAttr(match[1] ?? match[2]!))?.[1] ?? 0)
+    const n = Number(/^rId(\d+)$/.exec(decodeXml(match[1] ?? match[2]!))?.[1] ?? 0)
     if (n > max) max = n
   }
   return max
 }
 
-const PART_NAME = /\bPartName\s*=\s*(["'])(.*?)\1/g
+const OVERRIDE_TAG = /<Override\b[^>]*>/g
 
 /**
- * Whether [Content_Types].xml already declares an Override for the part.
- * Quote-agnostic for the same reason as maxRelationshipIdNumber: an existing
- * single-quoted PartName must be recognized so no second Override is emitted
- * for the same part (PowerPoint offers to repair such a package).
+ * Whether [Content_Types].xml already declares an Override for the part. The PartName is read
+ * quote-agnostically and decoded, like every value from the deck: a single-quoted PartName, or
+ * one of a part whose name holds `&` (written `&amp;` or `&#38;`), must be recognized so no
+ * second Override is emitted for the same part (PowerPoint offers to repair such a package).
  */
 export function hasContentTypeOverride(contentTypes: string, partPath: string): boolean {
   const wanted = `/${partPath}`
-  for (const match of contentTypes.matchAll(PART_NAME)) {
-    if (match[2] === wanted) return true
+  for (const tag of contentTypes.matchAll(OVERRIDE_TAG)) {
+    if (attributeOf(tag[0], 'PartName') === wanted) return true
   }
   return false
 }

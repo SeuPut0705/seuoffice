@@ -10,7 +10,12 @@
 import { canListSlide, withSlideListed } from './slide-ids'
 import type { PackageArchive } from './zip'
 import { resolveTarget, relsPathFor } from './zip'
-import { escapeXmlAttr, hasContentTypeOverride, maxRelationshipIdNumber } from './xml-utils'
+import {
+  cSldNameOf,
+  escapeXmlAttr,
+  hasContentTypeOverride,
+  maxRelationshipIdNumber,
+} from './xml-utils'
 import type { SlideDeck } from './types'
 
 // ── Layout placeholder summary ─────────────────────────────────────────────
@@ -53,10 +58,8 @@ export const PH_HINT_MAP: Record<string, string> = {
 
 export const FUNCTION_TYPES = new Set(['ftr', 'sldNum', 'dt', 'pic'])
 
-/** Quick-parse the <p:cSld> name attribute from the layout XML */
 function parseLayoutName(xml: string, fallback: string): string {
-  const m = /<p:cSld\s[^>]*name="([^"]*)"/.exec(xml)
-  return m?.[1] || fallback
+  return cSldNameOf(xml) || fallback
 }
 
 /** Quick-parse the <p:sldLayout> type attribute from the layout XML */

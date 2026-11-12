@@ -11,6 +11,8 @@
 import { PackageArchive, relsPathFor, resolveTarget, type Relationship } from './zip'
 import {
   attributeOf,
+  cSldNameOf,
+  decodeXml,
   defaultContentTypeFor,
   hasContentTypeOverride,
   hasDefaultFor,
@@ -102,7 +104,7 @@ export function collectPart(
 
 function layoutNameOf(archive: PackageArchive, layoutPath: string): string | undefined {
   const xml = archive.readText(layoutPath)
-  return xml ? /<p:cSld[^>]*\sname="([^"]*)"/.exec(xml)?.[1] : undefined
+  return xml ? cSldNameOf(xml) : undefined
 }
 
 /**
@@ -254,7 +256,7 @@ function writeParts(
     // rewrite this part's own targets to wherever their parts landed
     relsXml = relsXml.replaceAll(/Target="([^"]+)"/g, (whole, target: string) => {
       if (/^[a-z]+:/i.test(target)) return whole
-      const absolute = resolveTarget(sourcePath, target)
+      const absolute = resolveTarget(sourcePath, decodeXml(target))
       const mapped = pathMap.get(absolute)
       return mapped ? `Target="${escapeAttr(relative(targetPath, mapped))}"` : whole
     })
@@ -364,7 +366,7 @@ function ensureContentTypes(
     if (key.includes('/')) {
       const targetPath = pathMap.get(key)
       if (!targetPath) continue
-      const override = `<Override PartName="/${targetPath}" ContentType="${escapeAttr(contentType)}"/>`
+      const override = `<Override PartName="/${escapeAttr(targetPath)}" ContentType="${escapeAttr(contentType)}"/>`
       if (!hasContentTypeOverride(ct, targetPath))
         ct = ct.replace('</Types>', () => `${override}</Types>`)
     } else if (!hasDefaultFor(ct, key)) {

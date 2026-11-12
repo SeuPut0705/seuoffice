@@ -18,7 +18,6 @@ import { relsPathFor, resolveTarget } from './zip'
 import { cleanupSupersededSlideResources } from './resource-cleanup'
 import { materializeSlide, patchedElementXml, patchSlideXml, type OpenedPptx } from './index'
 import { namedActionAttr, namedActionOf, type NamedAction } from './named-action'
-import { unescapeXml } from './notes'
 
 const HYPERLINK_REL_TYPE =
   'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink'
@@ -60,9 +59,7 @@ function appendRel(
 }
 
 function tooltipOf(tag: string | undefined): string | undefined {
-  if (!tag) return undefined
-  const raw = /\btooltip=(?:"([^"]*)"|'([^']*)')/.exec(tag)?.slice(1, 3).find(Boolean)
-  return raw === undefined ? undefined : unescapeXml(raw)
+  return (tag && attributeOf(tag, 'tooltip')) || undefined
 }
 
 /** Strip the hlinkClick inside the element XML's first cNvPr (keeping other children). */
@@ -256,9 +253,7 @@ function resolveLinkInXml(opened: OpenedPptx, slide: Slide, xml: string): LinkTa
   if (!tag) return null
   const tooltip = tooltipOf(tag)
   const tip = tooltip ? { tooltip } : {}
-  const action = namedActionOf(
-    /\baction=(?:"([^"]*)"|'([^']*)')/.exec(tag)?.slice(1, 3).find(Boolean),
-  )
+  const action = namedActionOf(attributeOf(tag, 'action') || undefined)
   if (action) return { kind: 'action', action, ...tip }
   // the id whatever its shape: only a named action has none
   const rid = attributeOf(tag, 'r:id')

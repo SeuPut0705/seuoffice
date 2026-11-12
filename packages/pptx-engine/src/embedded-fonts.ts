@@ -5,10 +5,10 @@
  * are usable directly; MicroType-Express-compressed EOTs (flag 0x4) inflate through the
  * vendored MTX decoder (vendor/mtx).
  */
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from './xml-parser'
 import { mtxToSfnt } from './vendor/mtx'
 import { PackageArchive, resolveTarget } from './zip'
-import { asXmlNode, attributeOf, parsedId, xmlArray } from './xml-utils'
+import { asXmlNode, attributeOf, xmlArray } from './xml-utils'
 import type { GroupElement, Slide, SlideElement, TableElement, TextElement, TextRun } from './types'
 
 export type EmbeddedFontStyle = 'regular' | 'bold' | 'italic' | 'boldItalic'
@@ -198,7 +198,7 @@ interface EmbeddedFontBlock {
 function embeddedFontBlocks(pres: string): EmbeddedFontBlock[] {
   const out: EmbeddedFontBlock[] = []
   for (const m of pres.matchAll(/<p:embeddedFont>[\s\S]*?<\/p:embeddedFont>/g)) {
-    const typeface = /<p:font\b[^>]*\btypeface="([^"]*)"/.exec(m[0])?.[1] ?? ''
+    const typeface = attributeOf(/<p:font\b[^>]*>/.exec(m[0])?.[0] ?? '', 'typeface') ?? ''
     const parts: EmbeddedFontBlock['parts'] = {}
     for (const r of m[0].matchAll(/<p:(regular|bold|italic|boldItalic)\b[^>]*>/g)) {
       const relId = attributeOf(r[0], 'r:id')
@@ -292,7 +292,7 @@ export function stripEmbeddedFonts(
       const isFont = /\bType=["'][^"']*\/font["']/.test(tag)
       const id = attributeOf(tag, 'Id') ?? ''
       if (!isFont || !(removeAll || relIds.has(id))) return tag
-      const target = /\bTarget=["']([^"']*)["']/.exec(tag)?.[1]
+      const target = attributeOf(tag, 'Target')
       if (target) parts.add(resolveTarget(presPath, target))
       return ''
     })
@@ -307,7 +307,7 @@ export function stripEmbeddedFonts(
   const ct = archive.readText(ctPath)
   if (ct) {
     let nextCt = ct.replace(/<Override\b[^>]*\/>/g, (tag) => {
-      const partName = /\bPartName=["']([^"']*)["']/.exec(tag)?.[1] ?? ''
+      const partName = attributeOf(tag, 'PartName') ?? ''
       return parts.has(partName.replace(/^\//, '')) ? '' : tag
     })
     if (removeAll)
@@ -339,7 +339,7 @@ export function stripStaleEmbeddedFonts(
 export function listEmbeddedFonts(archive: PackageArchive): EmbeddedFontFace[] {
   const presXml = archive.readText('ppt/presentation.xml')
   if (!presXml || !presXml.includes('embeddedFont')) return []
-  const parser = new XMLParser({
+  const parser = xmlParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
     isArray: (name) => name === 'p:embeddedFont',
@@ -358,9 +358,9 @@ export function listEmbeddedFonts(archive: PackageArchive): EmbeddedFontFace[] {
     if (!typeface) continue
     const styles: EmbeddedFontStyle[] = ['regular', 'bold', 'italic', 'boldItalic']
     for (const style of styles) {
-      const relId = parsedId(asXmlNode(asXmlNode(ef)[`p:${style}`] ?? {})['@_r:id'])
+      const relId = asXmlNode(asXmlNode(ef)[`p:${style}`] ?? {})['@_r:id']
       if (relId == null) continue
-      const rel = rels.get(relId)
+      const rel = rels.get(String(relId))
       if (!rel) continue
       const part = resolveTarget('ppt/presentation.xml', rel.target)
       const bytes = archive.readBytes(part)

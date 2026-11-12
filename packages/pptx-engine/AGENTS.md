@@ -31,7 +31,8 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 - `src/vendor/`는 가져온 원본과 바이트가 같아야 한다.
 - 엔진 동작은 원본(GenOffice)의 수정이 병합될 때만 바뀐다. 파일 이동, 재포맷, 이름 변경을 하지 않는다. 예외는 아래 "원본과 다른 점"에 적은 것뿐이고, 더할 때는 사람이 정한다.
 - `replace`/`replaceAll`의 둘째 인자는 `$`가 없는 문자열 리터럴이거나 함수(`() => text`)여야 한다. 변수나 템플릿 문자열을 그대로 넘기면 그 안의 `$&`, `$$`, `$1`, `` $` ``, `$'`가 치환 패턴으로 풀려서, 문서나 사용자가 쓴 글자에 `$`가 있을 때 파트가 깨진다. 시험: `tests/replace-dollar-*.test.ts`.
-- 문서에서 온 값(관계 id, 확장자, 요소 id)은 `RegExp`에 넣지 않고 글자로 비교한다. 관계 id는 만든 쪽이 정한 이름이라 어떤 모양이든 받는다(`rId7`만이 아니다). 같은 id를 두 파트가 다르게 적을 수 있으므로(`&amp;`와 `&#38;`) 풀어서 비교한다: 정규식으로 읽는 속성은 `attributeOf`, 파서가 준 값은 `parsedId`, rels는 `readRels`. 읽은 id를 XML에 다시 쓸 때는 `escapeXmlAttr`를 거친다. 시험: `tests/ids-as-text.test.ts`, `tests/relationship-id-*.test.ts`.
+- 문서에서 온 값(관계 id, 확장자, 요소 id, 파트 이름)은 `RegExp`에 넣지 않고 글자로 비교한다. 관계 id는 만든 쪽이 정한 이름이라 어떤 모양이든 받는다(`rId7`만이 아니다). 시험: `tests/ids-as-text.test.ts`, `tests/relationship-id-*.test.ts`.
+- XML의 값은 한 번만 푼다. 푸는 함수는 `decodeXml` 하나다. 파서는 `xmlParser`(`xml-parser.ts`)로만 만들고(`new XMLParser`를 직접 쓰지 않는다), 파서가 준 값은 이미 푼 값이므로 다시 풀지 않는다. 원문 태그에서 정규식으로 읽는 속성은 `attributeOf`로 읽는다(따옴표 종류와 무관하게 읽고, 한 번 푼다). 이렇게 해야 `&amp;`, `&#38;`, `&#x26;`가 같은 값이 되고, `X&amp;#38;1`은 `X&#38;1`로 남는다. 읽은 값을 XML에 다시 쓸 때는 `escapeXmlAttr`/`escapeXmlText`를 한 번 거친다. 시험: `tests/decode-once.test.ts`.
 
 ## 이 모듈의 방식
 

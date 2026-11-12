@@ -62,7 +62,7 @@ import {
 import { BLANK_SLIDE_XML } from './blank'
 import {
   attributeOf,
-  decodeXmlAttr,
+  decodeXml,
   escapeXmlAttr,
   hasContentTypeOverride,
   hasDefaultFor,
@@ -497,8 +497,9 @@ function parseSlideFromArchive(archive: PackageArchive, slidePath: string): Slid
           const imgRel = relid ? vmlRels.get(relid) : undefined
           if (!imgRel) continue
           const target = resolveTarget(vmlPath, imgRel.target)
+          // decoded: the slide's oleObj names the shape by the value, which the parser reads
           for (const key of ['id', 'o:spid']) {
-            const v = new RegExp(`\\b${key}="([^"]+)"`).exec(m[1]!)?.[1]
+            const v = attributeOf(m[0], key)
             if (v) vmlPreviews.set(v, target)
           }
         }
@@ -1054,7 +1055,7 @@ function imageRelFor(archive: PackageArchive, slide: Slide, mediaPath: string): 
   const rid = `rId${maxRid + 1}`
   // slide parts live in ppt/slides/, media in ppt/media/
   const target = mediaPath.replace(/^ppt\//, '../')
-  const relXml = `<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${target}"/>`
+  const relXml = `<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${escapeXmlAttr(target)}"/>`
   archive.entries.set(
     relsPath,
     Buffer.from(
@@ -4236,7 +4237,7 @@ export function copyElementData(
   const seen = new Set<string>()
   for (const m of xml.matchAll(RID_ATTR_RE)) {
     // decoded: the rels part may spell the same id another way
-    const rid = decodeXmlAttr(m[1] ?? m[2]!)
+    const rid = decodeXml(m[1] ?? m[2]!)
     if (seen.has(rid)) continue
     seen.add(rid)
     const rel = slideRels.get(rid)
@@ -4627,8 +4628,10 @@ export function groupChildSlices(grpXml: string): GroupChildSlice[] {
       continue
     }
     const xml = grpXml.slice(m.index, end)
-    const nvId = /<p:cNvPr\b[^>]*\bid="([^"]+)"/.exec(xml)?.[1]
-    slices.push({ start: m.index, end, xml, ...(nvId != null ? { nvId } : {}) })
+    // decoded, like the child's nvId the parser read
+    const cNvPr = /<p:cNvPr\b[^>]*>/.exec(xml)?.[0]
+    const nvId = (cNvPr && attributeOf(cNvPr, 'id')) || undefined
+    slices.push({ start: m.index, end, xml, ...(nvId !== undefined ? { nvId } : {}) })
     pos = end
   }
   return slices
