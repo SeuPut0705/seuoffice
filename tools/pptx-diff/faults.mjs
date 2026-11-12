@@ -1,7 +1,8 @@
 // One Rust fault at a time, through the same comparisons as the parity gate.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 if (Number(process.versions.node.split('.')[0]) !== 22)
@@ -223,10 +224,13 @@ const faults = [
   ],
 ]
 
+const out = resolve(here, 'out/faults')
+const target = resolve(root, 'crates/target/fault-probes')
 const env = {
   ...process.env,
   CARGO_BUILD_JOBS: '4',
-  SEUOFFICE_WASM: resolve(root, 'crates/target/wasm32-wasip1/debug/office_wasm.wasm'),
+  CARGO_TARGET_DIR: target,
+  SEUOFFICE_WASM: resolve(target, 'wasm32-wasip1/debug/office_wasm.wasm'),
 }
 if (process.argv.includes('--inventory')) {
   for (const [id, , file, before, , occurrences = 1] of faults) {
@@ -235,21 +239,38 @@ if (process.argv.includes('--inventory')) {
   }
   process.exit(0)
 }
+const onlyAt = process.argv.indexOf('--only')
+const only = onlyAt === -1 ? null : new Set(process.argv[onlyAt + 1].split(','))
+const selected = faults.filter(([id]) => only === null || only.has(id))
+if (only !== null && selected.length !== only.size) throw new Error('--only names an unknown fault')
+// A scratch copy: an interrupted probe leaves no fault in the working tree.
+const workspace = mkdtempSync(join(tmpdir(), 'pptx-faults-'))
+cpSync(resolve(root, 'crates'), resolve(workspace, 'crates'), {
+  recursive: true,
+  filter: (source) => {
+    const path = relative(resolve(root, 'crates'), source)
+    return path !== 'target' && !path.startsWith(`target${sep}`)
+  },
+})
 const args = [
   'build',
   '--locked',
   '--target',
   'wasm32-wasip1',
   '--manifest-path',
-  resolve(root, 'crates/Cargo.toml'),
+  resolve(workspace, 'crates/Cargo.toml'),
   '-p',
   'office-wasm',
   '-j4',
 ]
-const out = resolve(here, 'out/faults')
 mkdirSync(out, { recursive: true })
-const run = (program, args) =>
-  spawnSync(program, args, { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, env })
+const run = (program, args, extraEnv = {}) =>
+  spawnSync(program, args, {
+    cwd: root,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+    env: { ...env, ...extraEnv },
+  })
 const compareArgs = [
   resolve(root, 'node_modules/tsx/dist/cli.mjs'),
   resolve(here, 'main.ts'),
@@ -258,12 +279,12 @@ const compareArgs = [
 ]
 const baselineBuild = run('cargo', args)
 if (baselineBuild.status !== 0) throw new Error(baselineBuild.stderr || String(baselineBuild.error))
-const baseline = run(process.execPath, compareArgs)
+const baseline = run(process.execPath, compareArgs, { PPTX_DIFF_OUT: resolve(out, 'baseline') })
 writeFileSync(resolve(out, 'baseline.log'), (baseline.stdout ?? '') + (baseline.stderr ?? ''))
 if (baseline.status !== 0) throw new Error('fault baseline failed: out/faults/baseline.log')
 const results = []
-for (const [id, fn, file, before, after, occurrences = 1] of faults) {
-  const path = resolve(root, file)
+for (const [id, fn, file, before, after, occurrences = 1] of selected) {
+  const path = resolve(workspace, file)
   const original = readFileSync(path, 'utf8')
   const count = original.split(before).length - 1
   if (count !== occurrences)
@@ -273,7 +294,7 @@ for (const [id, fn, file, before, after, occurrences = 1] of faults) {
     writeFileSync(path, original.replace(before, after))
     const build = run('cargo', args)
     if (build.status !== 0) throw new Error(build.stderr || String(build.error))
-    const compared = run(process.execPath, compareArgs)
+    const compared = run(process.execPath, compareArgs, { PPTX_DIFF_OUT: resolve(out, id) })
     writeFileSync(resolve(out, `${id}.log`), (compared.stdout ?? '') + (compared.stderr ?? ''))
     const tally = (compared.stdout ?? '')
       .split('\n')
@@ -289,4 +310,5 @@ for (const [id, fn, file, before, after, occurrences = 1] of faults) {
   )
   writeFileSync(resolve(out, 'report.json'), JSON.stringify(results, null, 2) + '\n')
 }
+rmSync(workspace, { recursive: true, force: true })
 process.exit(results.every((result) => result.caught) ? 0 : 1)
