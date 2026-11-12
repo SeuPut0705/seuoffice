@@ -40,7 +40,6 @@ npm run check:theme-colors
 npm run check:english-comments
 npm run check:help-langs
 npm run check:skill-version
-npm run check:no-genspark
 ```
 
 테스트는 작업 공간별로 돌린다. `npm test`는 첫 실패에서 멈추는데, Windows에서는 원본 코드 그대로도 실패하는 테스트가 있기 때문이다.
@@ -150,6 +149,8 @@ Linux 패키지는 내지 않고, 만드는 워크플로도 없다.
 
 ## 원본의 개선 받아오기
 
+원본을 더 받지 않는다(seuoffice 결정 0024). 아래는 받던 때의 절차를 적은 기록이고, 그때 쓰던 `check:no-genspark` 검사는 지웠다.
+
 원본의 문서 엔진 쪽 커밋을 하나씩 골라 옮긴다. 원본 가지를 통째로 합치지 않는다. 통째로 합치면 걷어낸 제작사 연결과 화면이 한꺼번에 되돌아온다.
 
 ```bash
@@ -161,7 +162,6 @@ git log --oneline HEAD..upstream/main -- packages/docx-engine packages/pptx-engi
   packages/zip-gate packages/font-metrics apps/sheets/native
 git checkout -b sync/<날짜>
 git cherry-pick -x <커밋>                      # 하나씩. -x가 원본 커밋 번호를 커밋 글에 남긴다
-npm run check:no-genspark                      # 원본에서 다시 딸려 온 제작사 표기·연결을 여기서 잡는다
 npm run typecheck
 ```
 

@@ -23,7 +23,6 @@ jobs:
           cache: npm
       # no job here runs Electron: --ignore-scripts skips its 100 MB download (and its outages)
       - run: npm ci --ignore-scripts
-      - run: npm run check:no-genspark
       - run: npm run check:english-comments
 
   web:
