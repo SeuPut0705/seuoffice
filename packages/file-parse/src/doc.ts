@@ -1,5 +1,5 @@
 import WordExtractor from 'word-extractor'
-import { assertCompoundFile } from '@genoffice/compound-file'
+import { assertSoundCompoundFile } from './damaged-file'
 import './vendor'
 
 function normalizeText(text: string): string {
@@ -10,7 +10,7 @@ function normalizeText(text: string): string {
 export async function docToText(bytes: Uint8Array): Promise<string> {
   // the extractor reads a file that starts like this with a compound-file reader of its own,
   // which follows a looping sector chain until memory runs out
-  if (bytes[0] === 0xd0 && bytes[1] === 0xcf) assertCompoundFile(bytes)
+  if (bytes[0] === 0xd0 && bytes[1] === 0xcf) assertSoundCompoundFile(bytes, 'Word 97-2003')
   const document = await new WordExtractor().extract(Buffer.from(bytes))
   const body = document.getBody({ filterUnicode: false })
   const textboxes = document.getTextboxes({

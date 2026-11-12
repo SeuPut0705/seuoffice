@@ -1,6 +1,7 @@
 import { open, readFile, stat } from 'node:fs/promises'
 import { extname } from 'node:path'
 import { OdtNotTextError, isOdtOpenError } from '@genoffice/odt-engine'
+import { DamagedFileError } from './damaged-file'
 import { diagramFormatOf, readDiagramText } from './diagram'
 import { docToText } from './doc'
 import { docxToText } from './docx'
@@ -24,7 +25,13 @@ export interface ParsedFile {
   text?: string
   kind: ParsedFileKind
   mime?: string
+  /** why the read failed, in English: tools and the model read it as it is */
   error?: string
+  /**
+   * the file's container is damaged (`error` says so): a caller that shows the failure to a
+   * person in their language shows its own message for it, not `error`
+   */
+  damaged?: true
 }
 
 /** No text extraction for images: callers read raw bytes and go multimodal (see @genoffice/ai-provider images support) */
@@ -352,7 +359,12 @@ export async function parseFileToText(
         return { ok: true, kind: 'text', text: await epubToText(bytes) }
     }
   } catch (e) {
-    return { ok: false, kind: 'text', error: e instanceof Error ? e.message : String(e) }
+    return {
+      ok: false,
+      kind: 'text',
+      error: e instanceof Error ? e.message : String(e),
+      ...(e instanceof DamagedFileError ? { damaged: true as const } : {}),
+    }
   }
   return { ok: false, kind: 'unsupported', error: `Unsupported file type: .${ext || 'unknown'}` }
 }

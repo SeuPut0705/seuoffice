@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
-import { assertCompoundFile } from '@genoffice/compound-file'
+import { assertSoundCompoundFile } from './damaged-file'
 import { assertZipInflatesWithinLimits } from '@genoffice/docx-engine'
 
 /**
@@ -273,12 +273,12 @@ export interface HwpMemo {
 /**
  * The gates a container passes before the engine gets its bytes. The engine reads what it
  * finds: an HWPX is a zip it inflates itself, a Hangul 5 file a compound file whose sector
- * chains it follows.
+ * chains it follows. A compound file the gate refuses is reported as a damaged document.
  */
 async function assertContainerWithinLimits(bytes: Uint8Array): Promise<void> {
   if (bytes[0] === 0x50 && bytes[1] === 0x4b) await assertZipInflatesWithinLimits(bytes)
   if (bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0) {
-    assertCompoundFile(bytes)
+    assertSoundCompoundFile(bytes, 'HWP')
   }
 }
 
