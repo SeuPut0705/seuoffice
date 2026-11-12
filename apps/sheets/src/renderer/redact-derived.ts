@@ -398,6 +398,8 @@ export function createDerivedCells(deps: DerivedCellsDeps): DerivedCells {
     )
 
     const ids: string[] = []
+    /** sheets taken whole for a pivot whose output could not be located */
+    const unlocated = new Set<string>()
     const sheets: ReadsSheet[] = []
     for (const sheet of workbook.getSheets()) {
       const id = sheet.getSheetId()
@@ -450,6 +452,18 @@ export function createDerivedCells(deps: DerivedCellsDeps): DerivedCells {
 
       const unknown: RangeBounds[] = []
       const fileSheetId = fileSheetIds.has(id) ? id : resolveDuplicateSource(journal, id)
+      // A pivot part of the file sheet whose output range could not be read:
+      // its cells are somewhere on the sheet (and on a copy of it), holding
+      // the labels and totals of a source nobody can name. The whole sheet is
+      // that pivot's output.
+      const fileSheet =
+        fileSheetId === undefined
+          ? undefined
+          : state.file.sheets.find((meta) => meta.id === fileSheetId)
+      if (fileSheet !== undefined && fileSheet.pivotsUnlocated > 0) {
+        unknown.push(WHOLE_SHEET)
+        unlocated.add(id)
+      }
       if (fileSheetId !== undefined && !fileSheetIds.has(fileSheetId)) {
         // neither a file sheet nor one this session made: nothing is known about it
         unknown.push(WHOLE_SHEET)
@@ -497,9 +511,11 @@ export function createDerivedCells(deps: DerivedCellsDeps): DerivedCells {
     const computed = new Map(
       ids.map((id) => [
         id,
-        (pivots.get(id) ?? [])
-          .map((pivot) => pivot.area)
-          // the whole output is withheld or none of it
+        [
+          ...(unlocated.has(id) ? [WHOLE_SHEET] : []),
+          ...(pivots.get(id) ?? []).map((pivot) => pivot.area),
+        ]
+          // an output is withheld whole or not at all
           .filter((area) => lookups.get(id)!.has(area.startRow, area.startColumn)),
       ]),
     )

@@ -709,6 +709,42 @@ describe('what the in-app AI reads from the output of a PivotTable', () => {
     session.mark(HIDDEN_B2)
     expect(session.read('s2', 'E4')).toBe(SECRET)
   })
+
+  /**
+   * A pivot part of Report the reader could not place (no part, no location,
+   * a location that is not a range): its cells are somewhere on the sheet, and
+   * neither its output range nor its definition is listed.
+   */
+  function withUnlocatedPivot(session: Session): Session {
+    const file = session.state.file as unknown as { sheets: object[] }
+    file.sheets = FILE_SHEETS.map((sheet) => ({
+      ...sheet,
+      pivotRanges: [],
+      pivotTables: [],
+      pivotsUnlocated: sheet.id === 's2' ? 1 : 0,
+    }))
+    session.mark(HIDDEN_B2)
+    return session
+  }
+
+  it('withholds the whole sheet when a pivot on it could not be located', () => {
+    const session = withUnlocatedPivot(open(CLIENTS, { ...OUTPUT, A1: { v: 'Q1' } }))
+    expect(session.read('s2', 'E4')).toBe(PRIVATE)
+    expect(session.read('s2', 'A1')).toBe(PRIVATE)
+    expect(session.read('s2', 'J40')).toBe(PRIVATE)
+    // the other sheet is read as usual
+    expect(session.read('s1', 'A2')).toBe('Kim')
+    // and a person copying from it is copying what may be the hidden value
+    const index = redactionIndexOf(session.ctx.redactionLoadRef!.current)
+    expect(pasteSourceHoldsHidden(index, { subUnitId: 's2', rows: [0], cols: [0] })).toBe(true)
+    expect(pasteSourceHoldsHidden(index, { subUnitId: 's1', rows: [1], cols: [0] })).toBe(false)
+  })
+
+  it('reads such a sheet as usual in a workbook without hidden cells', () => {
+    const session = withUnlocatedPivot(open(CLIENTS, OUTPUT))
+    session.mark([])
+    expect(session.read('s2', 'E4')).toBe(SECRET)
+  })
 })
 
 /** Data becomes Report and Report becomes Data, by way of a third name. */
