@@ -419,10 +419,10 @@ Open on these crates:
   where the TypeScript withholds and answers. Listed; a JSON reader that
   follows `JSON.parse` would close it.
 - The compound reader is compared with `cfb` read directly. The TypeScript now
-  has a gate of its own (`@genoffice/compound-file`, `assertCompoundFile`):
+  has a gate of its own (`@seuoffice/compound-file`, `assertCompoundFile`):
   the refusals of `compound.rs` should be compared with it.
 - `xlsx.rs` holds a copy of the fast-xml-parser dialect of `pptx.rs` (`mod
-  fxp`); the two should share one module.
+fxp`); the two should share one module.
 - `office-wasm` maps an error to its JavaScript name by the start of its
   message (`file_parse.rs`). A typed error from the readers would replace it.
 
@@ -523,16 +523,16 @@ every unit boundary (never forced, never to main).
 **Unit 2: the resolver and the leaves without model types.** About 3,200
 TypeScript lines in 6,600 of Rust, eight groups of (f):
 
-| group | TypeScript | functions | first comparison |
-|---|---|---|---|
-| `resolve` | `resolve-props.ts`, whole | 13 | 24,840 checks, 0 differences |
-| `fielddisplay` | `fieldDisplayOf` of `parse-fields.ts` | 1 | 2,122, 0 |
-| `drawing` | `parse-drawing-geometry.ts` without `lineBoxOf` | 11 | 6,987, 0 |
-| `vml` | `parse-vml.ts` without `vmlWordArtBox` | 9 | 3,414, 0 |
-| `revision` | `revision-xml.ts`, whole | 6 | 6,348, 0 |
-| `altchunk` | `alt-chunk.ts` without the converter | 5 | 5,458, 12 |
-| `checkbox` | `checkbox-control.ts`, whole | 5 | 2,907, 0 |
-| `images` | the predicates of `tiff.ts` and `metafile.ts` | 4 | 1,505, 0 |
+| group          | TypeScript                                      | functions | first comparison             |
+| -------------- | ----------------------------------------------- | --------- | ---------------------------- |
+| `resolve`      | `resolve-props.ts`, whole                       | 13        | 24,840 checks, 0 differences |
+| `fielddisplay` | `fieldDisplayOf` of `parse-fields.ts`           | 1         | 2,122, 0                     |
+| `drawing`      | `parse-drawing-geometry.ts` without `lineBoxOf` | 11        | 6,987, 0                     |
+| `vml`          | `parse-vml.ts` without `vmlWordArtBox`          | 9         | 3,414, 0                     |
+| `revision`     | `revision-xml.ts`, whole                        | 6         | 6,348, 0                     |
+| `altchunk`     | `alt-chunk.ts` without the converter            | 5         | 5,458, 12                    |
+| `checkbox`     | `checkbox-control.ts`, whole                    | 5         | 2,907, 0                     |
+| `images`       | the predicates of `tiff.ts` and `metafile.ts`   | 4         | 1,505, 0                     |
 
 The first comparisons are runner artifacts (runs 43149479120 for `resolve`,
 43151626477 for the rest), taken before anything was fixed; no porter
@@ -574,7 +574,6 @@ head: read `headSha` of a run before using its result.
 character once in `regress` and twice in JavaScript without `/u`. That last
 one is a property of every `js_regex!` with a counted quantifier or a `.`
 over text outside the BMP and belongs with the case folding in `regex.rs`.
-
 
 **Before unit 2**
 
@@ -699,8 +698,7 @@ From the owner, for every unit:
 - Locally only `cargo check -p <crate>` and `cargo test -p <crate>` for the
   crate being ported, through `tools/docx-diff/heavy.sh <command>`, which
   hands the command to the machine's queue (`/tmp/heavy.sh`): one heavy
-  command at a time, none between 03:30 and 05:00 KST, and a refusal (exit
-  75) when three already wait. No clippy, no gate, no `calls --group` and no
+  command at a time, none between 03:30 and 05:00 KST, and a refusal (exit 75) when three already wait. No clippy, no gate, no `calls --group` and no
   wasm build here. Never remove `/tmp/heavy.lock` by hand and never kill by
   name. `tsc`, eslint, prettier and a single `tsx` script need no lock, on
   Node 22. At most two subagents at a time on this machine, each by the

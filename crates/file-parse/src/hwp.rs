@@ -11,7 +11,7 @@
 //! is never called: its `_native` function is, and its error is the
 //! `HwpError` text the wrapper would have thrown.
 //!
-//! `rhwpWasmPath`, `GENOFFICE_RHWP_WASM`, the Resources/wasm lookup and
+//! `rhwpWasmPath`, `SEUOFFICE_RHWP_WASM`, the Resources/wasm lookup and
 //! `loadEngine` have no counterpart here: the engine is linked, not loaded.
 //! `getTableDimensions` and `getCellInfo` are `pub(crate)` in rhwp; they are
 //! ported over `DocumentCore::document()` as they stand there.

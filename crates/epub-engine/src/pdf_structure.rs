@@ -1,5 +1,5 @@
 //! What the book translation of `packages/epub-engine/src/translate` imports
-//! from `@genoffice/pdf-structure` (and the one function it takes from
+//! from `@seuoffice/pdf-structure` (and the one function it takes from
 //! `packages/i18n`), and nothing else. Each item names its source.
 
 use jscompat::{js_regex, trim};
