@@ -18,6 +18,9 @@ function stripNamespacePrefix(name: string): string {
   return separator < 0 ? name : name.slice(separator + 1)
 }
 
+/** the path of a workbook's `<sheet>` element, with or without a namespace prefix */
+const SHEET_ELEMENT_PATH = /(?:^|[.:])sheet$/
+
 // Text fidelity: no trim (xml:space="preserve" runs carry the spaces between words),
 // no numeric coercion of tag values (otherwise <t>02139</t> becomes a number and loses characters)
 const parser = new XMLParser({
@@ -27,10 +30,13 @@ const parser = new XMLParser({
   parseTagValue: false,
   removeNSPrefix: false,
   transformTagName: stripNamespacePrefix,
-  // trimValues also governs attributes; nothing read here (r:id, Target, cell ref, sheet
-  // name) carries meaningful edge whitespace, and an untrimmed Target builds the wrong zip
-  // path, which silently drops the whole sheet
-  attributeValueProcessor: (_name, value) => value.trim(),
+  // trimValues also governs attributes; nothing else read here (r:id, Target, cell ref)
+  // carries meaningful edge whitespace, and an untrimmed Target builds the wrong zip
+  // path, which silently drops the whole sheet. A sheet's name is the exception: its
+  // edge spaces are part of the name, and the record of withheld cells is keyed by it
+  // as written, so a trimmed name finds no marks and fails the whole read.
+  attributeValueProcessor: (name, value, path) =>
+    name === 'name' && SHEET_ELEMENT_PATH.test(String(path)) ? value : value.trim(),
 })
 
 function asArray<T>(value: T | T[] | undefined): T[] {

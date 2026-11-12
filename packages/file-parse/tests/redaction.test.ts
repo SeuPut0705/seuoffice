@@ -857,6 +857,15 @@ describe('xlsx: a withheld cell reads as its marker', () => {
     expect(result.text).toBe(`# Clients\nName | Phone\nKim | ${MARKER}`)
   })
 
+  it('finds the marks of a sheet whose name starts and ends with a space', async () => {
+    // the spaces are part of the name: the editor keys the marks by it as written
+    const spaced: BookSheet = { ...CLIENTS, name: ' Data ' }
+    const text = await xlsxToText(
+      await savedBook([spaced, STOCK], [{ sheetName: ' Data ', marks: [mark('B2')] }]),
+    )
+    expect(text).toBe(`#  Data \nName | Phone\nKim | ${MARKER}\n\n# Stock\nItem`)
+  })
+
   it('reads a workbook with no marks as before', async () => {
     const names = '<definedName name="Phones">Clients!$B$2:$B$9</definedName>'
     for (const bytes of [book([CLIENTS]), book([CLIENTS], { definedNames: names })]) {
