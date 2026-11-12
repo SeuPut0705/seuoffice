@@ -61,3 +61,18 @@ export function compareCharAstral(_text: string, args: Args): string | undefined
     ? 'compare-char-granularity-cuts-a-surrogate-pair'
     : undefined
 }
+
+/**
+ * A w:spacing w:lineRule that is none of auto, atLeast, exact, in the text or
+ * in a part of the arguments: the TypeScript passes whatever the attribute
+ * holds into ParaFormat.lineRule against its declared type, which the generated
+ * Rust model refuses. Only a mutated or hand-broken document gets there.
+ */
+export function lineRuleOutsideItsType(text: string, args: Args): string | undefined {
+  for (const source of [text, JSON.stringify(args)]) {
+    for (const rule of source.matchAll(/w:lineRule\s*=\s*\\?["']([^"'\\]*)/g)) {
+      if (!['auto', 'atLeast', 'exact'].includes(rule[1]!)) return 'line-rule-outside-its-type'
+    }
+  }
+  return undefined
+}

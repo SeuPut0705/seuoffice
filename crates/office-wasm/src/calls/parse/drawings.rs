@@ -245,7 +245,11 @@ fn node_of(text: &str) -> Result<XNode, String> {
         parse_ordered(text, XML_PARSER_MAX_NESTED_TAGS).map_err(|error| error.to_string())?;
     Ok(nodes
         .into_iter()
-        .find(|node| node.name().is_some())
+        // `nameOf(node) !== undefined`: an element named "" (a tag that starts
+        // with white space) counts, though `XNode::name` reads it as nameless
+        .find(|node| {
+            matches!(node, XNode::Element(element) if !matches!(&*element.name, ":@" | "#text"))
+        })
         .unwrap_or_else(XNode::empty))
 }
 

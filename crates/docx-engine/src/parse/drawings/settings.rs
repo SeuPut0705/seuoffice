@@ -8,6 +8,7 @@ use serde::Serialize;
 use crate::model::{NoteProps, NotePropsNumRestart, NotePropsPos};
 use crate::package::{Thrown, part_text};
 use crate::section::{self, NotePrTag, note_props_from_xml, xml_flag_on};
+use crate::xml_tag::remove_elements;
 use crate::sources::{SourceInfo, find_sources_part, parse_sources_xml};
 
 const SETTINGS_PATH: &str = "word/settings.xml";
@@ -132,8 +133,7 @@ pub fn model_note_props(read: section::NoteProps) -> NoteProps {
 pub fn parse_note_props(zip: &Package, document_xml: &str) -> Result<DocNoteProps, Thrown> {
     let settings_xml = part_text(zip, SETTINGS_PATH)?.unwrap_or("");
     // a tracked w:sectPrChange embeds the previous sectPr after the live one
-    let body_xml = js_regex!(r"<w:sectPrChange\b[\s\S]*?<\/w:sectPrChange>")
-        .replace_all(document_xml, |_| String::new());
+    let body_xml = remove_elements(document_xml, "w:sectPrChange", None);
     let last_sect_pr = body_xml.rfind("<w:sectPr").map_or("", |at| &body_xml[at..]);
     let merged = |tag: NotePrTag| {
         let base = note_props_from_xml(settings_xml, tag).map(model_note_props);
