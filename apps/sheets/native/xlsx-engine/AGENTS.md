@@ -125,6 +125,7 @@
   - 인쇄 가운데 맞춤, 시작 쪽 번호, 인쇄 순서, 메모 인쇄는 세션 모델이 읽지 않는다. 내보내기가 시트 파트에서 `</sheetData>` 뒤만 따로 읽어 옮긴다(`read_print_extras`). 칸을 다시 훑지 않도록 압축을 풀면서 그 자리만 찾고, 못 읽으면 기본값으로 둔다. 시작 쪽 번호가 없으면 `continue`를 적는다(적지 않으면 판독기가 시트마다 1쪽부터 센다).
   - 옮기지 않는 것: 머리글 그림, 시트 보호 암호, 와일드카드·색·상위 N 필터 조건, 채우기 무늬.
   - 시험: `ods_export::tests` 전체, `ods_styles::tests` 전체, `ods_print::tests` 전체, `odf_formula::tests`의 `to_odf` 시험들, `main.rs`의 `convert_to_ods_reports_the_package_it_wrote`.
+- **출력 범위를 읽지 못한 피벗을 센다.** 시트의 `pivotTable` 관계 가운데 파트가 없거나, `<location>`이 없거나, `ref`가 없거나, `ref`가 범위가 아닌 것은 `pivotRanges`·`pivotTables`에 넣을 수 없다. 원본은 그냥 건너뛰었다. 그러면 편집기는 그 시트에 피벗이 있는 줄 모르고 출력 셀을 일반 셀로 읽어, 가린 셀로 만든 피벗의 값이 AI에 간다(`file-parse`는 이런 시트를 통째로 가린다). 건너뛰는 그 자리에서 세어 시트 메타데이터 `pivotsUnlocated`로 낸다(`visuals.rs`의 `read_pivot_tables`가 앞의 세 경우를, `lib.rs`가 범위가 아닌 `ref`를 센다). 0이면 직렬화하지 않으므로 그런 피벗이 없는 파일의 응답은 한 글자도 바뀌지 않는다. 웹의 엔진(`native/xlsx-wasm`)도 같은 코드다. 받는 쪽은 `desktop-api.ts`의 `pivotsUnlocated`(예전 실행 파일이면 0)이고, 0이 아니면 그 시트 전체를 피벗 출력으로 다뤄야 한다. 건너뛰는 갈래를 더하면 같이 센다. 시험: `tests.rs`의 `counts_pivots_whose_output_cannot_be_located`, `apps/sheets/tests/pivots-unlocated-wire.test.ts`.
 
 ## 테스트
 

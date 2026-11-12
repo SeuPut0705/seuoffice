@@ -46,6 +46,7 @@ import { cellKey, parseFormulaReferences } from './formula-closure'
 import { fillFormulaCostError, quadraticFormulaError, type FormulaCostSheet } from './formula-cost'
 import { t, type StringKey } from './i18n/locale'
 import { buildLazyChangePlan } from './lazy-plan'
+import { withholdsCells } from './redact-move-guard'
 import {
   lazyCellEditable,
   lazyRangeEditable,
@@ -381,9 +382,15 @@ export function proposeOperations(
           for (const pivot of sheetMeta.pivotTables) {
             const definition = state.pivotDefinitions.get(pivot.path)
             if (definition && definition.unsupported.length > 0) {
+              // The reasons quote field names, which are the text of header
+              // cells: left out when the workbook withholds cells from AI.
+              const runtime = ctx.univerRef.current
               return {
                 ok: false,
-                error: `Pivot table ${pivot.path} does not support recompute: ${definition.unsupported.join('; ')}`,
+                error:
+                  runtime && withholdsCells(runtime)
+                    ? `Pivot table ${pivot.path} does not support recompute.`
+                    : `Pivot table ${pivot.path} does not support recompute: ${definition.unsupported.join('; ')}`,
               }
             }
           }

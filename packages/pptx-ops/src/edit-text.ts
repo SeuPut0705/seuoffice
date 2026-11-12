@@ -38,7 +38,8 @@ const FONT_ALIAS: Record<string, string> = {
 }
 function fontKey(name?: string): string | undefined {
   if (!name) return undefined
-  return FONT_ALIAS[name] ?? name.toLowerCase()
+  // the name is the deck's or the editor's: only the table's own names are aliases
+  return Object.hasOwn(FONT_ALIAS, name) ? FONT_ALIAS[name] : name.toLowerCase()
 }
 
 /**

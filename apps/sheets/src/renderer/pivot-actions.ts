@@ -39,7 +39,7 @@ import {
 } from './pivot-field-model'
 import type { SlicerMember, SlicerUiState } from './SlicerPanel'
 import type { TimelineUiState } from './TimelinePanel'
-import { resolvePivotSource } from './pivot-source'
+import { pivotSourceSheetId, resolvePivotSource } from './pivot-source'
 import { holdsHiddenCells, WHOLE_SHEET } from './redact-move-guard'
 import type { LazyWorkbookState, UniverRuntime, UniverWorksheet } from './univer-state'
 import {
@@ -243,9 +243,9 @@ export function refreshPivotTables(ctx: PivotActionContext, sheetId: string): nu
     if (!definition) {
       throw new Error(t('appPivotDefNotLoaded'))
     }
-    const sourceSheet = workbook
-      .getSheets()
-      .find((sheet) => sheet.getSheetName() === definition.sourceSheet)
+    const sourceSheetId = pivotSourceSheetId(state, definition.sourceSheet)
+    const sourceSheet =
+      sourceSheetId === undefined ? undefined : workbook.getSheetBySheetId(sourceSheetId)
     if (!sourceSheet) {
       throw new Error(t('appPivotSourceSheetMissing', { name: definition.sourceSheet }))
     }
@@ -924,9 +924,9 @@ export function applySlicerSelection(
   if (!target) return t('appSlicerSheetMissing')
   const definition = state.pivotDefinitions.get(pivot.path)
   if (!definition) return t('appPivotDefNotLoaded')
-  const sourceSheet = workbook
-    .getSheets()
-    .find((sheet) => sheet.getSheetName() === definition.sourceSheet)
+  const sourceSheetId = pivotSourceSheetId(state, definition.sourceSheet)
+  const sourceSheet =
+    sourceSheetId === undefined ? undefined : workbook.getSheetBySheetId(sourceSheetId)
   if (!sourceSheet) return t('appPivotSourceSheetMissing', { name: definition.sourceSheet })
   try {
     const sourceValues = readPivotSourceGrid(

@@ -6,6 +6,7 @@ import {
   type NameDefinition,
   type ReadsSheet,
 } from '@genoffice/xlsx-gateway/gateway/formula-reads'
+import { relationshipIdOf } from '@genoffice/xlsx-gateway/gateway/xlsx-namespace'
 
 /**
  * The formula cells of a workbook whose value comes from a withheld cell.
@@ -219,30 +220,41 @@ const WORKSHEET_SOURCE = element('worksheetSource')
 const PAGE_FIELD = /<(?:[\w.-]+:)?pageField(?=[\s/>])/g
 
 /**
- * Where a pivot's output is and what it was computed from, read off the start
- * of its `pivotTableDefinition` part and of its cache definition (undefined
- * when that part is missing).
+ * Where a pivot's output is and what it was computed from, read off its
+ * `pivotTableDefinition` part (`truncated` when the part was larger than what
+ * was read) and off the start of its cache definition. Either is undefined
+ * when that part is missing.
  *
  * The source is followed when it is a range of a sheet of this workbook, or a
  * name (a defined name is resolved by the trace; a table name is not one, and
  * is withheld there). Anything else cannot be told: another workbook
- * (`r:id`), a connection, consolidated ranges, a cache that is not there. A
- * pivot that does not say where its output is withholds its whole sheet.
+ * (`r:id`), a connection, consolidated ranges, a cache that is not there or
+ * does not open with its source. A pivot that does not say where its output
+ * is withholds its whole sheet.
  */
 export function pivotOutputOf(
-  pivotXml: string | undefined,
+  pivot: { readonly text: string; readonly truncated: boolean } | undefined,
   cacheXml: string | undefined,
 ): PivotOutput {
-  const location = LOCATION.exec(pivotXml ?? '')?.[1]
+  const pivotXml = pivot?.text ?? ''
+  const location = LOCATION.exec(pivotXml)?.[1]
   const output = rangeAt(location === undefined ? undefined : attribute(location, 'ref'))
   if (location === undefined || output === null) return { area: WHOLE_SHEET, formula: null }
+  const upToOutputEnd = { ...output, startRow: 0, startColumn: 0, endColumn: WHOLE_SHEET.endColumn }
+  // The filters are listed after the fields and their items, megabytes into a
+  // large pivot. In a part that was not read to its end they may be in the
+  // rest, so their number is not known, and neither is whether the layout
+  // holds them all.
+  if (pivot?.truncated === true) {
+    return { area: upToOutputEnd, formula: pivotSourceFormula(cacheXml) }
+  }
   // Report filters sit above the output: per row of them a label and the chosen item for
   // each filter, a blank column between two filters, then a blank row. The location says
   // how many rows and how many side by side. Nothing declared and no filters: there are
   // none. A layout that is not two counts, or does not hold every filter, leaves their
   // extent unknown, and it is not guessed: every row from the top of the sheet down to the
   // end of the output is the pivot's, in every column.
-  const filters = (pivotXml ?? '').match(PAGE_FIELD)?.length ?? 0
+  const filters = pivotXml.match(PAGE_FIELD)?.length ?? 0
   const count = (name: string): number => {
     const value = Number(attribute(location, name) ?? '')
     return Number.isInteger(value) && value > 0 ? value : 0
@@ -253,7 +265,7 @@ export function pivotOutputOf(
     filters === 0 && pageRows === 0 && pageColumns === 0
       ? output
       : pageRows === 0 || pageColumns === 0 || pageRows * pageColumns < filters
-        ? { ...output, startRow: 0, startColumn: 0, endColumn: WHOLE_SHEET.endColumn }
+        ? upToOutputEnd
         : {
             ...output,
             startRow: Math.max(0, output.startRow - pageRows - 1),
@@ -267,11 +279,14 @@ export function pivotOutputOf(
 
 function pivotSourceFormula(cacheXml: string | undefined): string | null {
   const cacheSource = CACHE_SOURCE.exec(cacheXml ?? '')?.[1]
-  const source = WORKSHEET_SOURCE.exec(cacheXml ?? '')?.[1]
-  if (cacheSource === undefined || source === undefined) return null
+  const sourceElement = WORKSHEET_SOURCE.exec(cacheXml ?? '')
+  const source = sourceElement?.[1]
+  if (cacheSource === undefined || sourceElement === null || source === undefined) return null
   if (attribute(cacheSource, 'type') !== 'worksheet') return null
-  // a relationship on the source: the range is in another workbook
-  if (/(?:^|\s)[\w.-]+:id\s*=/.test(source)) return null
+  // A relationship on the source: the range is in another workbook. Told the
+  // way the workbook gateway tells it for the editor, so the two agree.
+  const before = (cacheXml ?? '').slice(0, sourceElement.index)
+  if (relationshipIdOf(sourceElement[0], before) !== undefined) return null
   const ref = attribute(source, 'ref')
   const sheet = attribute(source, 'sheet')
   const name = attribute(source, 'name')

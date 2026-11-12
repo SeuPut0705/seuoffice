@@ -18,6 +18,7 @@ import {
   hasDefaultFor,
   maxRelationshipIdNumber,
 } from './xml-utils'
+import { setOwn } from './own-value'
 
 const LAYOUT_REL = '/slideLayout'
 const NOTES_REL = '/notesSlide'
@@ -89,7 +90,8 @@ export function collectPart(
   else {
     const ext = extOf(partPath)
     const dflt = ct ? defaultContentTypeFor(ct, ext) : undefined
-    if (ext && dflt) contentTypes[ext] = dflt
+    // keyed by the part's extension, the document's: `__proto__` is an entry like any other
+    if (ext && dflt) setOwn(contentTypes, ext, dflt)
   }
 
   const relsPath = relsPathFor(partPath)

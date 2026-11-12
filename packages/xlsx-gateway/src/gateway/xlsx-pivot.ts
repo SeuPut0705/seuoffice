@@ -15,6 +15,7 @@ import {
   showDataAsNeedsBaseItem,
   type PivotShowDataAs,
 } from '../domain/pivot-value-modes'
+import { relationshipIdOf } from './xlsx-namespace'
 
 export class PivotParseError extends Error {}
 
@@ -219,7 +220,12 @@ export function parsePivotDefinition(
   // A relationship on the source means the sheet and range are those of
   // another workbook. This one may hold a sheet of the same name: refreshing
   // from it, or reading it as the pivot's source, would be wrong data.
-  const external = /\s[\w.-]+:id="/.test(worksheetSource ?? '')
+  const external =
+    worksheetSource !== null &&
+    relationshipIdOf(
+      worksheetSource,
+      cacheDefinitionXml.slice(0, cacheDefinitionXml.indexOf(worksheetSource)),
+    ) !== undefined
   const sourceSheet = external ? '' : decodeEntities(attr(worksheetSource ?? '', 'sheet') ?? '')
   const sourceRef = external ? '' : (attr(worksheetSource ?? '', 'ref') ?? '')
   if (external) {

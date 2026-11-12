@@ -8,6 +8,7 @@ import {
   type ToolExecution,
 } from '../src/renderer/ai/tools'
 import { createAiDocument, type AiCreateDocumentContext } from '../src/renderer/ai/create-document'
+import { buildRedactionIndex, type RedactionIndex } from '../src/renderer/ai/redact'
 import type { CsvWorksheet } from '../src/renderer/csv-export'
 import type { LazyWorkbookState, UniverRuntime } from '../src/renderer/univer-state'
 
@@ -183,6 +184,88 @@ describe('create_document tool (executor)', () => {
     const settled = result instanceof Promise ? await result : result
     expect(settled.isError).toBe(true)
     expect(settled.output).toContain('not available')
+  })
+})
+
+/**
+ * xlsx/csv write a whole sheet as it shows into a new file. That file carries
+ * no marks, and the AI can read it back (it is attached, indexed, opened in a
+ * tab): a hidden value written there is no longer hidden.
+ */
+describe('create_document tool: a sheet that holds cells hidden from AI', () => {
+  const SHEETS = [
+    { id: 'sheet-1', name: 'Sheet1' },
+    { id: 'sheet-2', name: 'ja' },
+  ]
+  /** B2 of Sheet1 is hidden; C2 beside it computes from it. */
+  const marks = buildRedactionIndex(
+    [
+      {
+        sheetName: 'Sheet1',
+        marks: [{ startRow: 1, endRow: 1, startColumn: 1, endColumn: 1, label: 'client phone' }],
+      },
+    ],
+    SHEETS,
+  )
+  const created = () =>
+    vi.fn(async (): Promise<CreateDocumentToolOutcome> => ({
+      ok: true,
+      name: 'x.csv',
+      path: '/tmp/x.csv',
+      sheetName: 'x',
+    }))
+  const run = async (
+    input: Record<string, unknown>,
+    redactions: RedactionIndex,
+    createDocument = created(),
+  ) => ({
+    result: await executeWorkbookTool(
+      call('create_document', input),
+      fakeDeps({ createDocument, redactions: () => redactions }),
+    ),
+    createDocument,
+  })
+
+  it.each(['csv', 'xlsx'])(
+    'refuses to write the sheet out as %s, naming the cell',
+    async (type) => {
+      const { result, createDocument } = await run({ type }, marks)
+      expect(result.isError).toBe(true)
+      expect(createDocument).not.toHaveBeenCalled()
+      expect(result.output).toContain('Sheet1!B2')
+      expect(result.output).toContain('{{client phone}}')
+    },
+  )
+
+  it('refuses a sheet whose only withheld cell is a formula that computes from a hidden one', async () => {
+    const derived: RedactionIndex = {
+      ...marks,
+      labelAt: marks.labelAt,
+      labelsFor: marks.labelsFor,
+      marksFor: marks.marksFor,
+      derivedFor: (sheetId) =>
+        sheetId === 'sheet-2' ? [{ startRow: 4, endRow: 4, startColumn: 0, endColumn: 0 }] : [],
+    }
+    const { result, createDocument } = await run({ type: 'csv', sheetId: 'sheet-2' }, derived)
+    expect(result.isError).toBe(true)
+    expect(createDocument).not.toHaveBeenCalled()
+    expect(result.output).toContain('ja!A5')
+    expect(result.output).toContain('{{private}}')
+  })
+
+  it('still writes out a sheet that holds none', async () => {
+    const { result, createDocument } = await run({ type: 'csv', sheetId: 'sheet-2' }, marks)
+    expect(result.isError).toBeUndefined()
+    expect(createDocument).toHaveBeenCalledOnce()
+  })
+
+  it('still creates a document from content the AI wrote itself', async () => {
+    const { result, createDocument } = await run(
+      { type: 'docx', title: 'Summary', content: '<p>Two clients this quarter.</p>' },
+      marks,
+    )
+    expect(result.isError).toBeUndefined()
+    expect(createDocument).toHaveBeenCalledOnce()
   })
 })
 

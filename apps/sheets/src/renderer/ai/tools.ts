@@ -22,8 +22,9 @@ import type {
 import { t } from '../i18n/locale'
 import { formatRangeAggregate, type RangeAggregate } from './aggregate'
 import { guideCatalogSummary, loadGuides } from './guides'
-import { modelCellValueAt, NO_REDACTIONS, type RedactionIndex } from './redact'
-import { redactGuardForOps } from './redact-guard'
+import { modelCellValueAt, NO_REDACTIONS, placeholderSource, type RedactionIndex } from './redact'
+import { UNKNOWN_REDACTION_LABEL } from './redact-load'
+import { redactGuardForOps, redactGuardForSheetExport } from './redact-guard'
 
 /**
  * The workbook DSL as an AgentSkill tool set: read-only context/reader tools
@@ -141,6 +142,12 @@ export interface TraceCellSample {
 export interface TraceRefInfo {
   /** display label like "B2:B9" or "Data!A1" */
   readonly label: string
+  /**
+   * The sheet the sampled cells are on. What may be shown of a cell is asked
+   * per sheet, so a reference without it is shown as withheld whenever the
+   * workbook withholds anything. Absent for an external reference.
+   */
+  readonly sheetId?: string | undefined
   readonly cellCount: number
   readonly samples: readonly TraceCellSample[]
   /** some sampled value is a formula error (#REF!, #DIV/0!, …) */
@@ -162,6 +169,8 @@ export interface TracePrecedentsOutcome {
 
 export interface TraceDependentInfo {
   readonly sheetName: string
+  /** the sheet of the dependent cell; without it the name is looked up */
+  readonly sheetId?: string | undefined
   readonly address: string
   readonly formula: string
   readonly value: CellScalar
@@ -638,20 +647,35 @@ function contentEchoError(content: string): string | null {
 
 /** Shared input validation for the two formula-audit tools. */
 /**
- * A reader that hands out a cell's value as the model may see it.
+ * A cell as the trace tools may print it.
  *
- * The trace tools print cell values, and a cell the reader withheld keeps its
- * real value on the sheet — that is the point of the feature. So every value
- * they print goes through here, and a workbook with no marks pays one property
- * read per cell.
+ * A cell withheld from the model keeps its real value on the sheet, and a
+ * formula's text can spell the value out, so a withheld cell (a hidden one, or
+ * a formula that computes from one) is printed the way every reader prints
+ * it: its placeholder, and neither value nor formula. Its address is printed:
+ * where the hidden cells are is not a secret, the readers name them too.
+ *
+ * The question is asked on the cell's own sheet. A cell whose sheet is not
+ * known cannot be asked about, and is withheld when the workbook withholds
+ * anything.
  */
-function cellProjector(
+function traceCellProjector(
   deps: SheetsSkillDeps,
+): (
   sheetId: string | undefined,
-): (address: string, value: CellScalar) => CellScalar {
+  cell: TraceCellSample,
+) => { readonly shown: string; readonly withheld: boolean } {
   const index = deps.redactions?.() ?? NO_REDACTIONS
-  const target = sheetId ?? deps.getActiveSheetInfo().sheetId
-  return (address, value) => modelCellValueAt(index, target, address, value)
+  return (sheetId, cell) => {
+    const marker = index.isEmpty
+      ? null
+      : sheetId === undefined
+        ? placeholderSource(UNKNOWN_REDACTION_LABEL)
+        : modelCellValueAt(index, sheetId, cell.address, null)
+    return marker === null
+      ? { shown: formatCellScalar(cell), withheld: false }
+      : { shown: String(marker), withheld: true }
+  }
 }
 
 function parseAuditAddress(
@@ -1257,45 +1281,51 @@ export function executeWorkbookTool(
     case 'trace_precedents': {
       const parsed = parseAuditAddress(call.input, t('aiToolTracePrecedents'))
       if ('fail' in parsed) return parsed.fail
-      const project = cellProjector(deps, parsed.sheetId)
+      const project = traceCellProjector(deps)
       const finish = (result: TracePrecedentsOutcome): ToolExecution => {
         if (result.error) return fail(t('aiToolTracePrecedents'), result.error)
         const summary = t('aiToolTracePrecedentsOf', { address: parsed.address })
+        const tracedSheetId = parsed.sheetId ?? deps.getActiveSheetInfo().sheetId
+        const traced = project(tracedSheetId, {
+          address: parsed.address,
+          value: result.value ?? null,
+          formula: result.formula,
+        })
         if (!result.formula) {
           return {
-            output: `${parsed.address} is not a formula cell; value: ${formatCellScalar({ value: project(parsed.address, result.value ?? null) })}. Nothing to trace upstream — use trace_dependents to see what reads it.`,
+            output: `${parsed.address} is not a formula cell; value: ${traced.shown}. Nothing to trace upstream — use trace_dependents to see what reads it.`,
             mutated: false,
             summary,
           }
         }
+        const refs = result.refs.map((ref) => ({
+          ref,
+          samples: ref.samples.map((sample) => ({
+            address: sample.address,
+            ...project(ref.sheetId, sample),
+          })),
+        }))
         // A formula's own value is its precedents' values added up, so a trace
         // that reaches a withheld cell has to withhold the result too — showing
         // `C10 = 42` when `B2` is the withheld number gives the number away
-        // just as plainly as printing `B2`.
-        const refValues = result.refs.flatMap((ref) => ref.samples)
-        const aPrecedentIsWithheld = refValues.some((s) => project(s.address, s.value) !== s.value)
+        // just as plainly as printing `B2`. Its text is withheld with it, as
+        // every reader withholds the formula of such a cell.
+        const readsWithheld = refs.some(({ samples }) => samples.some((sample) => sample.withheld))
         const lines = [
-          `${parsed.address} = ${formatCellScalar({
-            value: aPrecedentIsWithheld
-              ? `(${parsed.address} reads a cell withheld from the model; value not shown)`
-              : project(parsed.address, result.value ?? null),
-            formula: result.formula,
-          })}`,
+          traced.withheld || readsWithheld
+            ? `${parsed.address} = ${traced.withheld ? traced.shown : placeholderSource(UNKNOWN_REDACTION_LABEL)}` +
+              ` (${parsed.address} reads a cell withheld from the model; its value and formula are not shown)`
+            : `${parsed.address} = ${traced.shown}`,
           `Reads ${result.refs.length}${result.truncatedRefs ? '+' : ''} reference(s):`,
         ]
-        for (const ref of result.refs) {
+        for (const { ref, samples } of refs) {
           if (ref.external) {
             lines.push(
               `- ${ref.label}: external/unresolved reference (another workbook or unknown sheet)`,
             )
             continue
           }
-          const shown = ref.samples
-            .map(
-              (sample) =>
-                `${sample.address}=${formatCellScalar({ ...sample, value: project(sample.address, sample.value) })}`,
-            )
-            .join('; ')
+          const shown = samples.map((sample) => `${sample.address}=${sample.shown}`).join('; ')
           const rest = ref.cellCount - ref.samples.length
           lines.push(
             `- ${ref.label} (${ref.cellCount} cell(s))${ref.hasError ? ' ⚠️ contains error values' : ''}: ${shown}${rest > 0 ? `; …${rest} more` : ''}`,
@@ -1318,10 +1348,13 @@ export function executeWorkbookTool(
     case 'trace_dependents': {
       const parsed = parseAuditAddress(call.input, t('aiToolTraceDependents'))
       if ('fail' in parsed) return parsed.fail
-      const project = cellProjector(deps, parsed.sheetId)
+      const project = traceCellProjector(deps)
       // the cell being traced is withheld, so everything downstream of it is
       // too: `=B2` beside a withheld B2 shows B2's value
-      const tracedIsWithheld = project(parsed.address, null) !== null
+      const tracedIsWithheld = project(parsed.sheetId ?? deps.getActiveSheetInfo().sheetId, {
+        address: parsed.address,
+        value: null,
+      }).withheld
       const finish = (result: TraceDependentsOutcome): ToolExecution => {
         if (result.error) return fail(t('aiToolTraceDependents'), result.error)
         const summary = t('aiToolTraceDependentsOf', {
@@ -1336,23 +1369,16 @@ export function executeWorkbookTool(
             : [
                 `${result.dependents.length}${result.truncated ? '+' : ''} formula cell(s) read ${parsed.address}:`,
                 ...result.dependents.map((dep) => {
-                  const sheetId = deps
-                    .getActiveSheetInfo()
-                    .sheets.find((sh) => sh.name === dep.sheetName)?.id
-                  const withheld =
-                    tracedIsWithheld ||
-                    modelCellValueAt(
-                      deps.redactions?.() ?? NO_REDACTIONS,
-                      sheetId,
-                      dep.address,
-                      dep.value,
-                    ) !== dep.value
-                  return `- ${dep.sheetName}!${dep.address} = ${formatCellScalar({
-                    value: withheld
-                      ? '(reads a cell withheld from the model; value not shown)'
-                      : dep.value,
-                    formula: dep.formula,
-                  })}`
+                  const sheetId =
+                    dep.sheetId ??
+                    deps.getActiveSheetInfo().sheets.find((sh) => sh.name === dep.sheetName)?.id
+                  const cell = project(sheetId, dep)
+                  // neither the value nor the formula text of a cell that
+                  // computes from a withheld one, as every reader prints it
+                  return cell.withheld || tracedIsWithheld
+                    ? `- ${dep.sheetName}!${dep.address} = ${cell.withheld ? cell.shown : placeholderSource(UNKNOWN_REDACTION_LABEL)}` +
+                        ' (reads a cell withheld from the model)'
+                    : `- ${dep.sheetName}!${dep.address} = ${cell.shown}`
                 }),
               ]
         if (result.truncated) {
@@ -1534,6 +1560,17 @@ export function executeWorkbookTool(
         }
         const parsedSheet = parseReadSheetId(call.input, deps.getActiveSheetInfo(), summary)
         if ('fail' in parsedSheet) return parsedSheet.fail
+        // The export writes every cell of the sheet as it shows, into a file
+        // without marks that the model can read back.
+        const info = deps.getActiveSheetInfo()
+        const exportedId = parsedSheet.sheetId ?? info.sheetId
+        const refusal = redactGuardForSheetExport(
+          'create_document',
+          deps.redactions?.() ?? NO_REDACTIONS,
+          exportedId,
+          info.sheets.find((sheet) => sheet.id === exportedId)?.name,
+        )
+        if (refusal) return fail(summary, refusal.reason)
         return create({
           type: typeRaw,
           sheetId: parsedSheet.sheetId,

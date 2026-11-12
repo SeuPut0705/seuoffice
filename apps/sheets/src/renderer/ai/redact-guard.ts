@@ -297,6 +297,33 @@ function refusalAt(
 }
 
 /**
+ * Check a tool that writes a whole sheet's cells out of the workbook, into a
+ * file that carries no marks (`create_document` as xlsx or csv). The model
+ * can read that file back, so a withheld cell on the sheet (a hidden one, or a
+ * formula that computes from one) refuses the export, naming the first such
+ * cell. Null when the sheet may be written out.
+ */
+export function redactGuardForSheetExport(
+  tool: string,
+  index: RedactionIndex,
+  sheetId: string,
+  sheetName: string | undefined,
+): RedactionRefusal | null {
+  if (index.isEmpty) return null
+  const first = [...withheldOn(index, sheetId)].sort(
+    (a, b) => a.startRow - b.startRow || a.startColumn - b.startColumn,
+  )[0]
+  if (!first) return null
+  return refusalAt(
+    first,
+    ENTIRE_SHEET,
+    sheetName,
+    `${tool} would write a cell withheld from the model into a new file that carries no mark ` +
+      `for it, where its value is no longer hidden; export a sheet that holds no such cell`,
+  )
+}
+
+/**
  * Check one batch of proposed operations. Returns null when the batch may
  * proceed, or the first refusal to hand back.
  *
