@@ -492,6 +492,7 @@ dependencies = [
  "libc",
  "serde",
  "serde_json",
+ "windows-sys",
 ]
 
 [[package]]

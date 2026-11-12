@@ -42,26 +42,48 @@ pub fn is_valid_rename_name(name: &str) -> bool {
 }
 
 /// True when both paths resolve to the same on-disk file (same device +
-/// inode). A stat that fails answers false.
+/// inode, as `fs.statSync` reports them). A stat that fails answers false.
 pub fn is_same_file(a: &str, b: &str) -> bool {
-    let (Ok(sa), Ok(sb)) = (std::fs::metadata(a), std::fs::metadata(b)) else {
-        return false;
+    match (file_identity(a), file_identity(b)) {
+        (Some(ia), Some(ib)) => ia == ib,
+        _ => false,
+    }
+}
+
+/// `(stat.dev, stat.ino)` as Node hands them out: doubles.
+#[cfg(unix)]
+fn file_identity(path: &str) -> Option<(f64, f64)> {
+    use std::os::unix::fs::MetadataExt;
+    let meta = std::fs::metadata(path).ok()?;
+    Some((meta.dev() as f64, meta.ino() as f64))
+}
+
+/// `(stat.dev, stat.ino)` as libuv's `stat` reads them on Windows: the volume
+/// serial number and the 64-bit file index, from a handle opened for its
+/// attributes alone, following links, with backup semantics so a folder opens.
+/// Two hard links to one file answer alike, which a path comparison would not.
+#[cfg(windows)]
+fn file_identity(path: &str) -> Option<(f64, f64)> {
+    use std::os::windows::fs::OpenOptionsExt;
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Storage::FileSystem::{
+        BY_HANDLE_FILE_INFORMATION, FILE_FLAG_BACKUP_SEMANTICS, FILE_READ_ATTRIBUTES,
+        FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, GetFileInformationByHandle,
     };
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-        // Node hands out `dev` and `ino` as doubles
-        (sa.dev() as f64) == (sb.dev() as f64) && (sa.ino() as f64) == (sb.ino() as f64)
+    let file = std::fs::OpenOptions::new()
+        .access_mode(FILE_READ_ATTRIBUTES)
+        .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+        .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+        .open(path)
+        .ok()?;
+    // SAFETY: the handle is open for the duration of the call and `info` is a
+    // plain struct the call fills in
+    let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+    if unsafe { GetFileInformationByHandle(file.as_raw_handle(), &mut info) } == 0 {
+        return None;
     }
-    #[cfg(windows)]
-    {
-        // [INFERENCE] the volume serial and file index are unstable in std; the
-        // canonical path names the same file
-        match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
-            (Ok(ca), Ok(cb)) => ca == cb,
-            _ => false,
-        }
-    }
+    let index = (u64::from(info.nFileIndexHigh) << 32) | u64::from(info.nFileIndexLow);
+    Some((f64::from(info.dwVolumeSerialNumber), index as f64))
 }
 
 /// Save As target for an open PDF, or `None` when the dialog was cancelled or
