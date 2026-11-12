@@ -9,7 +9,7 @@ import {
   MAX_CSV_ROWS,
   decodeCsvBuffer,
   isNumericCell,
-  legacyCharsetDecoder,
+  decoderFor,
 } from './csv-import'
 import { xlsxBufferFromSheets } from './csv-import-xlsx'
 
@@ -141,7 +141,7 @@ export async function decodeHtmlBuffer(bytes: Uint8Array, preferred?: string): P
     const declared = /<meta\b[^>]*charset\s*=\s*["']?\s*([a-z0-9._:-]+)/i.exec(head)?.[1]
     if (declared !== undefined) {
       try {
-        const Decoder = await legacyCharsetDecoder()
+        const Decoder = await decoderFor(declared)
         const decoded = new Decoder(declared).decode(bytes)
         // A wrong declaration (a UTF-8 page labelled euc-kr or the reverse)
         // shows up as replacement characters; let the sniffer try instead.
