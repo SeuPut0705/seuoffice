@@ -17,7 +17,7 @@
  * and back, an edited `w:top`/`w:header` keeps the spacing and splits the
  * rest into margin and header height. Only values that changed are written.
  */
-import type { SectionSettings } from '@genoffice/docx-engine'
+import type { SectionSettings } from '@seuoffice/docx-engine'
 import type { OdtStyle } from '../core/styles'
 import type { AttrOverrides } from '../text/props'
 import { lengthToTwips, twipsToCm } from '../text/units'

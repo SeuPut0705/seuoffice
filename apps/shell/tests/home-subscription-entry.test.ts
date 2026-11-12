@@ -5,14 +5,14 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defaultAiSettings } from '@genoffice/ai-provider'
+import { defaultAiSettings } from '@seuoffice/ai-provider'
 import type {
   AiSettings,
   AiSubscriptionStatus,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
-import { LANGS } from '@genoffice/i18n'
-import { aiSubscriptionText } from '@genoffice/ui'
+} from '@seuoffice/ai-provider/browser'
+import { LANGS } from '@seuoffice/i18n'
+import { aiSubscriptionText } from '@seuoffice/ui'
 import type { HomeApi } from '../src/shared/home-api'
 import type { SubscriptionApi } from '../src/shared/subscription-api'
 import { Home } from '../src/renderer/src/Home'

@@ -11,7 +11,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest'
-import { setAiSecretCodec, type AiSettings } from '@genoffice/ai-provider'
+import { setAiSecretCodec, type AiSettings } from '@seuoffice/ai-provider'
 import { aiSettingsInputSchema } from '../src/shared/desktop-api'
 import { IPC_CHANNELS } from '../src/shared/ipc-channels'
 
@@ -67,8 +67,8 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
     onProcessExit(): void {}
   },
 }))
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))

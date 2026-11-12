@@ -125,7 +125,7 @@ import {
   newUntitledRecoveryId,
   recoveryEditor,
   type RecoveryStore,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import {
   configurePdfRuntime,
   createPdfView,

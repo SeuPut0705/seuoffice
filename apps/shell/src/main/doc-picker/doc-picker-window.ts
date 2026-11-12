@@ -13,13 +13,13 @@
 import { join } from 'node:path'
 import { BrowserWindow, ipcMain, shell } from 'electron'
 import type { IpcMainInvokeEvent } from 'electron'
-import { productName, type Lang } from '@genoffice/i18n'
-import { safeExternalUrl } from '@genoffice/electron-utils'
-import { DOC_ATTACH_CHANNELS } from '@genoffice/electron-utils/doc-attach-channels'
+import { productName, type Lang } from '@seuoffice/i18n'
+import { safeExternalUrl } from '@seuoffice/electron-utils'
+import { DOC_ATTACH_CHANNELS } from '@seuoffice/electron-utils/doc-attach-channels'
 import type {
   DocAttachResult,
   DocMentionListResult,
-} from '@genoffice/electron-utils/doc-attach-bridge'
+} from '@seuoffice/electron-utils/doc-attach-bridge'
 import {
   DOC_PICKER_CHANNELS,
   type DocListItem,

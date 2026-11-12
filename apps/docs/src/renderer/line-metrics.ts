@@ -30,7 +30,7 @@ import {
   isKoreanFaceName,
   KO_FACE_RE as KO_FONT_RE,
 } from './text-layout/face-info'
-import type { DocGrid } from '@genoffice/docx-engine'
+import type { DocGrid } from '@seuoffice/docx-engine'
 import {
   isCjkLetterChar,
   isDoubleByteChar,
@@ -38,12 +38,12 @@ import {
   isEastAsianLangTag,
   isHangulChar,
   textHasEastAsian,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import {
   arabicCodePage,
   latinSlotSubstitute,
   type ResolvedFace,
-} from '@genoffice/font-metrics/resolve'
+} from '@seuoffice/font-metrics/resolve'
 
 import {
   recordResolveDiff,

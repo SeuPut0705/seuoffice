@@ -10,7 +10,7 @@
  * page), not UI chrome: they are the same in both themes.
  */
 import type { Node as PmNode } from '@tiptap/pm/model'
-import type { ObjectKind } from '@genoffice/odt-engine'
+import type { ObjectKind } from '@seuoffice/odt-engine'
 import { keepOfNode, labelText } from './odt-gate'
 
 const FILL = '#F2F2F2'

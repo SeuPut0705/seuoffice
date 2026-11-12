@@ -3,14 +3,14 @@ import type { Dirent } from 'node:fs'
 import { lstat, mkdtemp, readdir, readFile, rm, rmdir, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { windowsSystemDir, windowsSystemTool } from '@genoffice/ai-provider/subscription'
+import { windowsSystemDir, windowsSystemTool } from '@seuoffice/ai-provider/subscription'
 
 /**
  * The session folders of agent mode (decision 0032) in the system's temporary
  * folder. Each carries a mark naming the process that made it, so that the
  * folders an app left when it did not quit normally (ended from Task Manager,
  * power lost) can be removed at the next start without touching the folders of
- * another IeumOffice that runs now: the installed app and a development run
+ * another SeuOffice that runs now: the installed app and a development run
  * share the temporary folder.
  */
 

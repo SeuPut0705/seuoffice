@@ -5,8 +5,9 @@
  *
  * The source PDF is only read. Results go to the target the user picked:
  * Markdown writes `<name>.md`, its pictures under `assets/` and the editor's
- * app-owned list `assets/.genoffice-assets.json` (merged, never replaced);
- * an `assets/` file the list does not own is never overwritten.
+ * app-owned list `assets/.seuoffice-assets.json`, or the list an earlier
+ * version left there under its old name (merged, never replaced); an
+ * `assets/` file the list does not own is never overwritten.
  *
  * Pages the user had read by AI (spec §7) replace their pages in Markdown,
  * EPUB, the structured text and the translated PDF: the stored readings of
@@ -19,8 +20,10 @@
  * finished blocks translated, the rest in the source language.
  */
 import { createHash } from 'node:crypto'
+import { existsSync } from 'node:fs'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
+import { existingOrCurrent } from '@seuoffice/i18n'
 import type { OcrEngine, PdfiumModule } from '../../../../../packages/pdf2docx/src'
 import { withPdfDocument } from '../../../../../packages/pdf2docx/src/extract/pdfium'
 import { renderPageByIndexPng } from '../../../../../packages/pdf2docx/src/extract'
@@ -44,6 +47,7 @@ import {
   extractDocumentTree,
   extractEmbeddedImages,
   mergeAssetManifest,
+  OLD_ASSET_MANIFEST_FILENAMES,
   PageRangeError,
   parseAssetManifest,
   translationReport,
@@ -265,14 +269,19 @@ export async function writeMarkdownOutput(
   conversion: MarkdownConversion,
 ): Promise<{ assetsWritten: number; assetsReused: number }> {
   const assetsDir = join(dirname(outPath), ASSETS_DIR)
-  const manifestPath = join(assetsDir, ASSET_MANIFEST_FILENAME)
+  const manifestName = existingOrCurrent(
+    ASSET_MANIFEST_FILENAME,
+    OLD_ASSET_MANIFEST_FILENAMES,
+    (old) => existsSync(join(assetsDir, old)),
+  )
+  const manifestPath = join(assetsDir, manifestName)
   const existingBuf = await readOptional(manifestPath)
   const existing = existingBuf === null ? null : existingBuf.toString('utf8')
   let owned: Map<string, string>
   try {
     owned = new Map(parseAssetManifest(existing).files.map((r) => [r.name, r.sha256]))
   } catch (err) {
-    throw new AssetConflictError(`${ASSETS_DIR}/${ASSET_MANIFEST_FILENAME} is unreadable`, {
+    throw new AssetConflictError(`${ASSETS_DIR}/${manifestName} is unreadable`, {
       cause: err,
     })
   }
@@ -302,10 +311,9 @@ export async function writeMarkdownOutput(
     try {
       manifestText = mergeAssetManifest(existing, basename(outPath), records)
     } catch (err) {
-      throw new AssetConflictError(
-        `${ASSETS_DIR}/${ASSET_MANIFEST_FILENAME} cannot take these pictures`,
-        { cause: err },
-      )
+      throw new AssetConflictError(`${ASSETS_DIR}/${manifestName} cannot take these pictures`, {
+        cause: err,
+      })
     }
   }
 

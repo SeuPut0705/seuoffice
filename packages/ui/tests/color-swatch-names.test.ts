@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { STANDARD_COLORS, THEME_COLORS } from '../src/color-picker'
 import { colorSwatchName, COLOR_SWATCH_NAMES } from '../src/strings-color-names'
 

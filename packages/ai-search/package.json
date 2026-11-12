@@ -1,5 +1,5 @@
 {
-  "name": "@genoffice/ai-search",
+  "name": "@seuoffice/ai-search",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": true,
@@ -14,9 +14,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@genoffice/ai-provider": "*",
-    "@genoffice/electron-utils": "*",
-    "@genoffice/i18n": "*",
+    "@seuoffice/ai-provider": "*",
+    "@seuoffice/electron-utils": "*",
+    "@seuoffice/i18n": "*",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "parse5": "^8.0.1"
   },

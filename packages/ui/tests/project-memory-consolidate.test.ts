@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AgentStreamRequest, AgentTransport } from '@genoffice/agent-core'
-import type { ProjectDetail } from '@genoffice/project-store'
+import type { AgentStreamRequest, AgentTransport } from '@seuoffice/agent-core'
+import type { ProjectDetail } from '@seuoffice/project-store'
 import type { AiSendGate } from '../src/ai-send-gate'
 import {
   consolidateProjectMemory,

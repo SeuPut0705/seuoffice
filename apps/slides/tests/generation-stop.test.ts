@@ -5,7 +5,7 @@
  * planning/regen retry ladders did the same.
  */
 import { describe, expect, it, vi } from 'vitest'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import { createSlidesSkill, type DeckAccess } from '../src/renderer/ai/slides-skill'
 import { isGenerationStopKind } from '../src/renderer/ai/generation-stop'
 

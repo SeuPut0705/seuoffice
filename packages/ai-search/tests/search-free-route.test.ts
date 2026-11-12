@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../src/parallel-mcp', () => ({ parallelMcpSearch: vi.fn() }))
 
-import { defaultAiSettings, normalizeAiSettings } from '@genoffice/ai-provider'
+import { defaultAiSettings, normalizeAiSettings } from '@seuoffice/ai-provider'
 import { aiToolCapabilities, imageSearch, readAiSettingsFile, webSearch } from '../src/index'
 import { parallelMcpSearch } from '../src/parallel-mcp'
 import { imageSearchTool, searchOptionsFromSettings, webSearchTool } from '../src/search-tools'

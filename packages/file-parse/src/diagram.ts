@@ -7,8 +7,8 @@ import {
   openDiagram,
   type DiagramFormat,
   type DiagramOpenFailure,
-} from '@genoffice/drawio-model'
-import { nodePageCodec } from '@genoffice/drawio-model/node'
+} from '@seuoffice/drawio-model'
+import { nodePageCodec } from '@seuoffice/drawio-model/node'
 import { ATTACHABLE_MAX_BYTES, diagramPictureExtOfName, type DiagramPictureExt } from './attachable'
 
 /** The diagram format of a file name; `null` for any other name, `.vsdx` included (not read here). */

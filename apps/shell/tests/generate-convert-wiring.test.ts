@@ -25,7 +25,7 @@ describe('a conversion never reaches an AI', () => {
     for (const path of CONVERT_PATH) {
       const text = src(path)
       expect(text, path).not.toMatch(
-        /@genoffice\/ai-provider|@genoffice\/agent-core|@genoffice\/ai-search|ai-ipc|ai-stream/,
+        /@seuoffice\/ai-provider|@seuoffice\/agent-core|@seuoffice\/ai-search|ai-ipc|ai-stream/,
       )
       expect(text, path).not.toMatch(/['"]ai:|subscription/i)
     }
@@ -37,7 +37,7 @@ describe('a conversion never reaches an AI', () => {
 
   it('reads the source only through the redaction-aware reader', () => {
     const text = src('../src/main/generate/convert.ts')
-    expect(text).toMatch(/import \{ parseFileToText[^}]*\} from '@genoffice\/file-parse'/)
+    expect(text).toMatch(/import \{ parseFileToText[^}]*\} from '@seuoffice\/file-parse'/)
     const convert = text.slice(
       text.indexOf('export async function convertSource('),
       text.indexOf('// ---- map → PPT skeleton ----'),

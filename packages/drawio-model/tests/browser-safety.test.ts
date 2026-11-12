@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 const SRC = fileURLToPath(new URL('../src', import.meta.url))
 
-/** The one Node-only module, published as `@genoffice/drawio-model/node`. */
+/** The one Node-only module, published as `@seuoffice/drawio-model/node`. */
 const NODE_ONLY = 'node-codec.ts'
 
 /**

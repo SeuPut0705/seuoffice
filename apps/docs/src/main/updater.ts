@@ -2,10 +2,10 @@ import { app, dialog } from 'electron'
 import type { BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import type { UpdateInfo } from 'electron-updater'
-import { createI18n, getUiLang } from '@genoffice/i18n'
+import { createI18n, getUiLang } from '@seuoffice/i18n'
 
 /**
- * Full-package auto-update for the standalone GenOffice Docs app.
+ * Full-package auto-update for the standalone SeuOffice Docs app.
  *
  * electron-builder bakes the publish config into resources/app-update.yml at
  * package time and emits the update feed (latest.yml on Windows,

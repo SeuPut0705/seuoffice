@@ -1,15 +1,21 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync } from 'node:fs'
-import { basename, dirname, isAbsolute, join } from 'node:path'
+import { basename, delimiter, dirname, isAbsolute, join } from 'node:path'
+import { OLD_CLI_COMMANDS, OLD_MCP_SERVER_NAMES } from '@seuoffice/i18n'
 import { agentConfigDir, type AgentId } from './agent-skills'
 import { realizedPath, writeOutput } from './fs'
 import { withCompactSchemas, type McpLaunch } from './mcp-launch'
 import { APP_BINARY_NAME, CLI_BUNDLE_FILE, CLI_COMMAND, MCP_SERVER_NAME } from './names'
 
 /**
- * Registering `ieumoffice mcp` (stdio) in each coding agent's MCP config, the
+ * Registering `seuoffice mcp` (stdio) in each coding agent's MCP config, the
  * MCP twin of agent-skills.ts. One key per file is set or removed; an entry
- * named ieumoffice that starts something other than an ieumoffice launcher is
+ * named seuoffice that starts something other than an seuoffice launcher is
  * never replaced unless forced. Paths and shapes follow each agent's docs.
+ * Our entry under a key this product used before (`OLD_MCP_SERVER_NAMES`)
+ * counts as ours: it is reported, moved to the current key by a write and
+ * removed by a remove; another program's entry under such a key is left alone.
+ * Another app registers those old names too, so an entry that uses one is
+ * ours only when it provably starts this product (`isSeuofficeLauncher`).
  * The upstream app's `genoffice` entry is another program's: never read as
  * ours, never replaced, never removed.
  */
@@ -17,13 +23,13 @@ import { APP_BINARY_NAME, CLI_BUNDLE_FILE, CLI_COMMAND, MCP_SERVER_NAME } from '
 export { MCP_SERVER_NAME }
 
 export type McpEntryStatus =
-  /** no ieumoffice entry in the file */
+  /** no seuoffice entry in the file */
   | 'absent'
-  /** ieumoffice entry starting our launcher, exactly as this CLI would write it */
+  /** seuoffice entry starting our launcher, exactly as this CLI would write it */
   | 'registered'
-  /** an ieumoffice launcher, but another path or extra fields */
+  /** an seuoffice launcher, but another path or extra fields */
   | 'stale'
-  /** an entry named ieumoffice that starts something else */
+  /** an entry named seuoffice that starts something else */
   | 'occupied'
   /** the file cannot be edited safely (unparsable, or a shape we do not know) */
   | 'manual'
@@ -170,7 +176,7 @@ export function mcpConfigFile(id: AgentId, opts: McpConfigOptions = {}): string 
 }
 
 function homeOf(env: NodeJS.ProcessEnv): string {
-  return env.GENOFFICE_HOME || env.HOME || env.USERPROFILE || ''
+  return env.SEUOFFICE_HOME || env.HOME || env.USERPROFILE || ''
 }
 
 /** What a person pastes when the file cannot be edited for them. */
@@ -185,7 +191,12 @@ export function mcpSnippet(id: AgentId, launch: McpLaunch): string {
   )
 }
 
-export function readMcpEntry(id: AgentId, file: string, launch: McpLaunch): McpEntryState {
+export function readMcpEntry(
+  id: AgentId,
+  file: string,
+  launch: McpLaunch,
+  env: NodeJS.ProcessEnv = process.env,
+): McpEntryState {
   const def = MCP_AGENTS.find((a) => a.id === id)!
   if (!existsSync(file)) {
     return def.shape.kind === 'json' && existsSync(jsoncTwin(file))
@@ -193,37 +204,88 @@ export function readMcpEntry(id: AgentId, file: string, launch: McpLaunch): McpE
       : { status: 'absent', command: null }
   }
   const text = readFileSync(file, 'utf-8')
-  if (def.shape.kind === 'toml') return tomlState(text, launch)
+  if (def.shape.kind === 'toml') return tomlState(text, launch, env)
   if (def.shape.kind === 'yaml-cordis') return cordisState(text, launch)
   if (!text.trim()) return { status: 'absent', command: null }
   const doc = parseJsonObject(text)
   if (!doc) return { status: 'manual', command: null }
-  const map = doc[def.shape.key]
+  const shape = def.shape
+  const map = doc[shape.key]
   if (map === undefined) return { status: 'absent', command: null }
   if (!isRecord(map)) return { status: 'manual', command: null }
   const entry = map[MCP_SERVER_NAME]
-  if (entry === undefined) return { status: 'absent', command: null }
-  const { command, args } = def.shape.launchOf(entry)
+  const old = ownOldKeys(map, shape.launchOf, env)[0]
+  return withOldEntry(
+    entry === undefined
+      ? { status: 'absent', command: null }
+      : jsonState(shape, entry, launch, env),
+    old === undefined ? undefined : shape.launchOf(map[old]),
+  )
+}
+
+function jsonState(
+  shape: JsonShape,
+  entry: unknown,
+  launch: McpLaunch,
+  env: NodeJS.ProcessEnv,
+): McpEntryState {
+  const { command, args } = shape.launchOf(entry)
   // an entry written with --compact-schemas is the same launch plus one env toggle
   for (const [compactSchemas, candidate] of [
     [false, launch],
     [true, withCompactSchemas(launch)],
   ] as const) {
-    if (JSON.stringify(entry) === JSON.stringify(def.shape.entry(candidate))) {
+    if (JSON.stringify(entry) === JSON.stringify(shape.entry(candidate))) {
       return compactSchemas
         ? { status: 'registered', command, compactSchemas: true }
         : { status: 'registered', command }
     }
   }
-  return { status: isGenofficeLauncher(command, args) ? 'stale' : 'occupied', command }
+  return { status: isSeuofficeLauncher(command, args, env) ? 'stale' : 'occupied', command }
 }
 
-/** Set the ieumoffice entry (replacing any existing one); the caller has already decided that is allowed. */
-export function writeMcpEntry(id: AgentId, file: string, launch: McpLaunch): void {
+/**
+ * Our entry under an old key needs a write: alone it reads as stale (never
+ * absent, so nobody adds a second one), and beside a current entry the agent
+ * would start the server twice, so the pair is not yet what this CLI writes.
+ */
+function withOldEntry(
+  current: McpEntryState,
+  old: { command: string | null } | undefined,
+): McpEntryState {
+  if (!old) return current
+  if (current.status === 'absent') return { status: 'stale', command: old.command }
+  if (current.status === 'registered') return { ...current, status: 'stale' }
+  return current
+}
+
+/** Old keys of `map` holding an entry that starts one of our launchers */
+function ownOldKeys(
+  map: Record<string, unknown>,
+  launchOf: JsonShape['launchOf'],
+  env: NodeJS.ProcessEnv,
+): string[] {
+  return OLD_MCP_SERVER_NAMES.filter((key) => {
+    if (map[key] === undefined) return false
+    const { command, args } = launchOf(map[key])
+    return isSeuofficeLauncher(command, args, env)
+  })
+}
+
+/**
+ * Set the seuoffice entry (replacing any existing one) and drop our entry under
+ * an old key in the same write; the caller has already decided that is allowed.
+ */
+export function writeMcpEntry(
+  id: AgentId,
+  file: string,
+  launch: McpLaunch,
+  env: NodeJS.ProcessEnv = process.env,
+): void {
   const def = MCP_AGENTS.find((a) => a.id === id)!
   const text = existsSync(file) ? readFileSync(file, 'utf-8') : ''
   if (def.shape.kind === 'toml') {
-    const stripped = removeTomlTable(text)
+    const stripped = removeTomlTables(text, [MCP_SERVER_NAME, ...ownOldTomlNames(text, env)])
     const body = stripped.length && !stripped.endsWith('\n') ? `${stripped}\n` : stripped
     save(file, `${body}${body.trim().length ? '\n' : ''}${tomlTable(launch)}`)
     return
@@ -235,17 +297,23 @@ export function writeMcpEntry(id: AgentId, file: string, launch: McpLaunch): voi
   const doc = text.trim() ? parseJsonObject(text) : {}
   if (!doc) throw new Error(`${file} is not a JSON object`)
   const map = isRecord(doc[def.shape.key]) ? (doc[def.shape.key] as Record<string, unknown>) : {}
-  doc[def.shape.key] = { ...map, [MCP_SERVER_NAME]: def.shape.entry(launch) }
+  const old = new Set(ownOldKeys(map, def.shape.launchOf, env))
+  const kept = Object.fromEntries(Object.entries(map).filter(([key]) => !old.has(key)))
+  doc[def.shape.key] = { ...kept, [MCP_SERVER_NAME]: def.shape.entry(launch) }
   save(file, `${JSON.stringify(doc, null, 2)}\n`)
 }
 
-/** Remove the ieumoffice entry; false when there was none. Other keys stay. */
-export function removeMcpEntry(id: AgentId, file: string): boolean {
+/** Remove the seuoffice entry and ours under an old key; false when there was none. Other keys stay. */
+export function removeMcpEntry(
+  id: AgentId,
+  file: string,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
   const def = MCP_AGENTS.find((a) => a.id === id)!
   if (!existsSync(file)) return false
   const text = readFileSync(file, 'utf-8')
   if (def.shape.kind === 'toml') {
-    const next = removeTomlTable(text)
+    const next = removeTomlTables(text, [MCP_SERVER_NAME, ...ownOldTomlNames(text, env)])
     if (next === text) return false
     save(file, next)
     return true
@@ -260,9 +328,11 @@ export function removeMcpEntry(id: AgentId, file: string): boolean {
   const doc = parseJsonObject(text)
   if (!doc) throw new Error(`${file} is not a JSON object`)
   const map = doc[def.shape.key]
-  if (!isRecord(map) || !(MCP_SERVER_NAME in map)) return false
-  const { [MCP_SERVER_NAME]: _dropped, ...rest } = map
-  doc[def.shape.key] = rest
+  if (!isRecord(map)) return false
+  const drop = new Set(ownOldKeys(map, def.shape.launchOf, env))
+  if (MCP_SERVER_NAME in map) drop.add(MCP_SERVER_NAME)
+  if (!drop.size) return false
+  doc[def.shape.key] = Object.fromEntries(Object.entries(map).filter(([key]) => !drop.has(key)))
   save(file, `${JSON.stringify(doc, null, 2)}\n`)
   return true
 }
@@ -405,7 +475,7 @@ function cordisState(text: string, launch: McpLaunch): McpEntryState {
     return { status: 'registered', command, compactSchemas: true }
   // ours, but written for another install path: stale, and ours to update.
   // A foreign command under our id is occupied — not ours to overwrite.
-  return { status: isGenofficeLauncher(command, args) ? 'stale' : 'occupied', command }
+  return { status: isSeuofficeLauncher(command, args) ? 'stale' : 'occupied', command }
 }
 
 function cordisEntryLines(launch: McpLaunch): string[] {
@@ -464,20 +534,68 @@ const LAUNCHER_NAMES = new Set(
   [CLI_COMMAND, `${CLI_COMMAND}.cmd`, `${APP_BINARY_NAME}.exe`].map((n) => n.toLowerCase()),
 )
 
-/** What an upstream entry starts: its launcher scripts, or its app binary run as Node on a bundle of the same file name as ours. */
+const OLD_LAUNCHER_NAMES = new Set(
+  OLD_CLI_COMMANDS.flatMap((command) => [command, `${command}.cmd`]).map((n) => n.toLowerCase()),
+)
+
+/** What an upstream entry starts: its launcher scripts, or its app binary run as Node on its bundle. */
 const UPSTREAM_LAUNCHER_NAMES = new Set(['genoffice', 'genoffice.cmd', 'genoffice.exe'])
 
 /**
- * Any ieumoffice launcher, whatever install it came from (an older app path is
- * ours to update): the launcher scripts, or the app run as Node on the CLI
- * bundle. The bundle keeps the upstream file name, so an entry running it on
- * the upstream binary is the upstream's, not ours.
+ * Any seuoffice launcher, whatever install it came from (an older app path is
+ * ours to update): the launcher scripts, or our app run as Node on the CLI
+ * bundle. Another app registers the names this product used before, so a
+ * launcher under an old command name is ours only when it sits in an install
+ * of this product (a bare name: where PATH takes it), and an old bundle name
+ * proves nothing: the binary that runs it decides.
  */
-export function isGenofficeLauncher(command: string | null, args: string[] = []): boolean {
-  const program = command ? fileName(command) : ''
+export function isSeuofficeLauncher(
+  command: string | null,
+  args: string[] = [],
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  if (!command) return false
+  const program = fileName(command)
   if (LAUNCHER_NAMES.has(program)) return true
+  if (OLD_LAUNCHER_NAMES.has(program)) {
+    const launcher = /[\\/]/.test(command) ? command : onPath(command, env)
+    return launcher !== null && inOurInstall(launcher)
+  }
   if (UPSTREAM_LAUNCHER_NAMES.has(program)) return false
   return args.some((a) => fileName(a) === CLI_BUNDLE_FILE)
+}
+
+/**
+ * `<install>/resources/cli/<launcher>`, the install folder named after this
+ * product (`<name>.app/Contents` on macOS). The shape of the path decides, not
+ * the disk: an entry outlives the install it names, and a config is read on
+ * machines where that path does not exist.
+ */
+function inOurInstall(launcher: string): boolean {
+  const [cli, resources, above, app] = launcher
+    .toLowerCase()
+    .split(/[\\/]+/)
+    .slice(-5, -1)
+    .reverse()
+  if (cli !== 'cli' || resources !== 'resources') return false
+  const name = APP_BINARY_NAME.toLowerCase()
+  return above === 'contents' ? app === `${name}.app` : above === name
+}
+
+/** The file a bare command name runs, found on PATH with its links followed; null when nothing is there */
+function onPath(command: string, env: NodeJS.ProcessEnv): string | null {
+  const names = process.platform === 'win32' ? [command, `${command}.cmd`] : [command]
+  for (const dir of (env.PATH ?? env.Path ?? '').split(delimiter)) {
+    for (const name of dir ? names : []) {
+      try {
+        lstatSync(join(dir, name))
+      } catch {
+        continue
+      }
+      return followLinks(join(dir, name))
+    }
+  }
+  return null
 }
 
 /** basename for either path flavour: Windows entries are read on any host */
@@ -530,10 +648,15 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === 'object' && !Array.isArray(v)
 }
 
-const TOML_HEADER =
-  /^\s*\[\s*mcp_servers\s*\.\s*(?:"ieumoffice"|'ieumoffice'|ieumoffice)\s*(\.[^\]]*)?\]/
+/** `[mcp_servers.<name>]` and its sub-tables (`[mcp_servers.<name>.env]`), the key bare or quoted */
+function tomlHeader(name: string): RegExp {
+  const key = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(
+    `^\\s*\\[\\s*mcp_servers\\s*\\.\\s*(?:"${key}"|'${key}'|${key})\\s*(\\.[^\\]]*)?\\]`,
+  )
+}
 
-/** `env` becomes the `[mcp_servers.ieumoffice.env]` sub-table Codex reads its `env` map from. */
+/** `env` becomes the `[mcp_servers.seuoffice.env]` sub-table Codex reads its `env` map from. */
 function tomlTable(launch: McpLaunch): string {
   const head = `[mcp_servers.${MCP_SERVER_NAME}]\ncommand = ${JSON.stringify(launch.command)}\nargs = ${JSON.stringify(launch.args)}\n`
   const env = Object.entries(launch.env ?? {})
@@ -542,11 +665,12 @@ function tomlTable(launch: McpLaunch): string {
   return `${head}\n[mcp_servers.${MCP_SERVER_NAME}.env]\n${body}\n`
 }
 
-/** The `[mcp_servers.ieumoffice]` table and its sub-tables (`[mcp_servers.ieumoffice.env]`), as line ranges. */
-function tomlTableLines(lines: string[]): Array<[number, number]> {
+/** The `[mcp_servers.<name>]` table and its sub-tables, as line ranges. */
+function tomlTableLines(lines: string[], name: string): Array<[number, number]> {
+  const header = tomlHeader(name)
   const out: Array<[number, number]> = []
   for (let i = 0; i < lines.length; i++) {
-    if (!TOML_HEADER.test(lines[i]!)) continue
+    if (!header.test(lines[i]!)) continue
     let end = i + 1
     while (end < lines.length && !/^\s*\[/.test(lines[end]!)) end++
     out.push([i, end])
@@ -555,15 +679,33 @@ function tomlTableLines(lines: string[]): Array<[number, number]> {
   return out
 }
 
+/** The lines of the `[mcp_servers.<name>]` table itself, without its sub-tables */
+function tomlMainBlock(lines: string[], name: string): string[] {
+  const header = tomlHeader(name)
+  const own = tomlTableLines(lines, name).find(([start]) => !header.exec(lines[start]!)?.[1])
+  return own ? lines.slice(own[0], own[1]) : []
+}
+
 const meaningful = (lines: string[]) =>
   lines.map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
 
-function tomlState(text: string, launch: McpLaunch): McpEntryState {
+function tomlState(text: string, launch: McpLaunch, env: NodeJS.ProcessEnv): McpEntryState {
   const lines = text.split('\n')
-  const ranges = tomlTableLines(lines)
+  const old = ownOldTomlNames(text, env)[0]
+  return withOldEntry(
+    currentTomlState(lines, launch, env),
+    old === undefined ? undefined : { command: tomlString(tomlMainBlock(lines, old), 'command') },
+  )
+}
+
+function currentTomlState(
+  lines: string[],
+  launch: McpLaunch,
+  env: NodeJS.ProcessEnv,
+): McpEntryState {
+  const ranges = tomlTableLines(lines, MCP_SERVER_NAME)
   if (!ranges.length) return { status: 'absent', command: null }
-  const own = ranges.find(([start]) => !TOML_HEADER.exec(lines[start]!)?.[1])
-  const block = own ? lines.slice(own[0], own[1]) : []
+  const block = tomlMainBlock(lines, MCP_SERVER_NAME)
   const command = tomlString(block, 'command')
   const written = ranges.flatMap(([s, e]) => meaningful(lines.slice(s, e))).join('\n')
   const tableText = (l: McpLaunch) => meaningful(tomlTable(l).split('\n')).join('\n')
@@ -572,7 +714,19 @@ function tomlState(text: string, launch: McpLaunch): McpEntryState {
   if (written === tableText(withCompactSchemas(launch)))
     return { status: 'registered', command, compactSchemas: true }
   const args = tomlStrings(block, 'args')
-  return { status: isGenofficeLauncher(command, args) ? 'stale' : 'occupied', command }
+  return { status: isSeuofficeLauncher(command, args, env) ? 'stale' : 'occupied', command }
+}
+
+/** Old keys whose table starts one of our launchers */
+function ownOldTomlNames(text: string, env: NodeJS.ProcessEnv): string[] {
+  const lines = text.split('\n')
+  return OLD_MCP_SERVER_NAMES.filter((name) => {
+    const block = tomlMainBlock(lines, name)
+    return (
+      block.length > 0 &&
+      isSeuofficeLauncher(tomlString(block, 'command'), tomlStrings(block, 'args'), env)
+    )
+  })
 }
 
 function tomlValue(block: string[], key: string): string | null {
@@ -602,9 +756,9 @@ function tomlStrings(block: string[], key: string): string[] {
   }
 }
 
-function removeTomlTable(text: string): string {
+function removeTomlTables(text: string, names: readonly string[]): string {
   const lines = text.split('\n')
-  const ranges = tomlTableLines(lines)
+  const ranges = names.flatMap((name) => tomlTableLines(lines, name)).sort((a, b) => a[0] - b[0])
   if (!ranges.length) return text
   const keep: string[] = []
   let i = 0

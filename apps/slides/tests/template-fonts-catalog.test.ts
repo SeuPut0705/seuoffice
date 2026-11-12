@@ -4,8 +4,8 @@
  * other here, the one place that sees both packages.
  */
 import { describe, expect, it } from 'vitest'
-import { listSlideTemplates, SLIDE_TEMPLATE_FONTS } from '@genoffice/pipelines/slides/templates'
-import { TEMPLATE_FONTS, TEMPLATE_FONT_FAMILY_NAMES } from '@genoffice/ui/template-fonts'
+import { listSlideTemplates, SLIDE_TEMPLATE_FONTS } from '@seuoffice/pipelines/slides/templates'
+import { TEMPLATE_FONTS, TEMPLATE_FONT_FAMILY_NAMES } from '@seuoffice/ui/template-fonts'
 
 const bundled = new Map(TEMPLATE_FONTS.map((f) => [f.family, f]))
 

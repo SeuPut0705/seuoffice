@@ -11,8 +11,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { WorkbookOperation } from '@genoffice/xlsx-gateway/domain/workbook-dsl'
-import type { ApplyOutcome, CellState } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { WorkbookOperation } from '@seuoffice/xlsx-gateway/domain/workbook-dsl'
+import type { ApplyOutcome, CellState } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import { buildRedactionIndex } from '../src/renderer/ai/redact'
 import {
   loadedRedactions,

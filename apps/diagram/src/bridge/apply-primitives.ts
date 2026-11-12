@@ -20,7 +20,7 @@
  * and inside the same one edit, so a call that mixes them is still one undo
  * step and still all or nothing.
  */
-import type { DiagramCell, DiagramGeometry, DiagramPrimitive } from '@genoffice/drawio-model'
+import type { DiagramCell, DiagramGeometry, DiagramPrimitive } from '@seuoffice/drawio-model'
 import type { DiagramApplyStep } from '../shared/bridge-protocol'
 
 /** The live diagram, as far as applying primitives needs it. */

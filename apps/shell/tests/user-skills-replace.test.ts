@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { GitHubSkillUpdateCheck } from '@genoffice/ai-provider'
+import type { GitHubSkillUpdateCheck } from '@seuoffice/ai-provider'
 import {
   createUserSkillsService,
   type UserSkillsService,
@@ -18,7 +18,7 @@ let root: string
 let home: string
 let service: UserSkillsService
 
-const appDir = () => join(home, '.ieumoffice', 'skills')
+const appDir = () => join(home, '.seuoffice', 'skills')
 
 function skillMd(name: string, extra = '', body = 'Do it.\n') {
   return `---\nname: ${name}\ndescription: About ${name}\n${extra}---\n${body}`

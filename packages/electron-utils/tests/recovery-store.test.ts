@@ -36,8 +36,8 @@ let store: RecoveryStore
 const sha16 = (value: string) => createHash('sha1').update(value).digest('hex').slice(0, 16)
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'genoffice-recovery-root-'))
-  userFolder = mkdtempSync(join(tmpdir(), 'genoffice-recovery-user-'))
+  root = mkdtempSync(join(tmpdir(), 'seuoffice-recovery-root-'))
+  userFolder = mkdtempSync(join(tmpdir(), 'seuoffice-recovery-user-'))
   store = createRecoveryStore({ userDataDir: root })
 })
 

@@ -1,10 +1,10 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { buildBlankDocx } from '@genoffice/docx-engine'
+import { buildBlankDocx } from '@seuoffice/docx-engine'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import { run, tempDir } from './helpers'
-const env = { ...process.env, GENOFFICE_AUDIT_LOG: 'off' }
+const env = { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' }
 const mark = (type: string) => `<w:r><w:fldChar w:fldCharType="${type}"/></w:r>`
 const instr = (text: string) => `<w:r><w:instrText xml:space="preserve">${text}</w:instrText></w:r>`
 const text = (value: string) => `<w:r><w:t xml:space="preserve">${value}</w:t></w:r>`

@@ -3,7 +3,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { JAPANESE_FAMILIES, KOREAN_FAMILIES } from '@genoffice/i18n'
+import { JAPANESE_FAMILIES, KOREAN_FAMILIES } from '@seuoffice/i18n'
 import { BUILTIN_FONT_FAMILIES, fontFamiliesFor, matchesFontQuery } from '../src/font-list'
 import {
   TEMPLATE_FONTS,
@@ -103,7 +103,7 @@ describe('template font faces and URLs', () => {
   it('names every listed file by URL and maps the URL back, the bracketed file included', () => {
     for (const file of fontFiles) expect(templateFontFileOf(templateFontUrl(file))).toBe(file)
     expect(templateFontUrl('PlayfairDisplay[wght].ttf')).toBe(
-      'genoffice-docx-media://template-fonts/PlayfairDisplay%5Bwght%5D.ttf',
+      'seuoffice-docx-media://template-fonts/PlayfairDisplay%5Bwght%5D.ttf',
     )
   })
 
@@ -112,10 +112,10 @@ describe('template font faces and URLs', () => {
       templateFontUrl('README.md'),
       templateFontUrl('Pretendard-OFL.txt'),
       templateFontUrl('../../package.json'),
-      'genoffice-docx-media://template-fonts/..%2F..%2Fpackage.json',
-      'genoffice-docx-media://template-fonts/%2E%2E/README.md',
-      'genoffice-docx-media://template-fonts/%E0%A4%A',
-      `genoffice-docx-media://${'a'.repeat(64)}/Pretendard-Bold.otf`,
+      'seuoffice-docx-media://template-fonts/..%2F..%2Fpackage.json',
+      'seuoffice-docx-media://template-fonts/%2E%2E/README.md',
+      'seuoffice-docx-media://template-fonts/%E0%A4%A',
+      `seuoffice-docx-media://${'a'.repeat(64)}/Pretendard-Bold.otf`,
       'genoffice-app://template-fonts/Pretendard-Bold.otf',
       'not a url',
     ])

@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { blankXlsxBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
+import { blankXlsxBuffer } from '@seuoffice/xlsx-gateway/gateway/csv-import-xlsx'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import { xlsxSidecarPath } from '../src/resources'
@@ -19,7 +19,7 @@ describe('limited sparse workbook reads with the release sidecar', () => {
       const before = readFileSync(file)
       const r = await run(
         ['sheet', 'read', file, '--range', 'A1:A100001', '--max-rows', '1', '--json'],
-        { env: { ...process.env, GENOFFICE_AUDIT_LOG: 'off' } },
+        { env: { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' } },
       )
       expect(r.code).toBe(0)
       expect(r.json().detail).toMatchObject({

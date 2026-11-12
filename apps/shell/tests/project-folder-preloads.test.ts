@@ -19,12 +19,12 @@ describe('project folder bridge in every preload', () => {
   for (const app of [...EDITORS, 'shell']) {
     it(`${app} exposes the shared bridge`, () => {
       const source = read(app, 'src', 'preload', 'index.ts')
-      expect(source).toContain("from '@genoffice/electron-utils/project-folder-bridge'")
+      expect(source).toContain("from '@seuoffice/electron-utils/project-folder-bridge'")
       expect(source).toContain(
         'contextBridge.exposeInMainWorld(PROJECT_FOLDER_BRIDGE_KEY, projectFolderBridge(ipcRenderer))',
       )
       // the preload never imports the project-store root (it carries Node's fs)
-      expect(source).not.toMatch(/^import \{[^}]*\} from '@genoffice\/project-store'/m)
+      expect(source).not.toMatch(/^import \{[^}]*\} from '@seuoffice\/project-store'/m)
     })
   }
 

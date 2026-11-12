@@ -1,9 +1,9 @@
-import { headlessSubscriptionOn } from '@genoffice/ai-provider'
+import { headlessSubscriptionOn } from '@seuoffice/ai-provider'
 import {
   aiToolCapabilities,
   headlessSubscriptionUsage,
   type AiToolCapability,
-} from '@genoffice/ai-search'
+} from '@seuoffice/ai-search'
 import { headlessCall } from '../cloud'
 import { pdfAiFeature, resolvePdfAiRoute } from '../pdf-ai'
 import type { CommandDef } from '../registry'
@@ -24,7 +24,7 @@ const SUMMARIZED = [
 ] as const
 
 /**
- * What the cloud commands can do on this machine, decided from GenOffice's
+ * What the cloud commands can do on this machine, decided from SeuOffice's
  * own settings without a network call and without asking a model: the routes
  * the search / image / media commands would start on as the automatic-call
  * path they are (the free search, a key the user entered, or a subscription
@@ -34,7 +34,7 @@ const SUMMARIZED = [
 export const capabilitiesCommand: CommandDef = {
   name: 'capabilities',
   summary:
-    'Report which cloud features (search, image search, image generation, image and video analysis, PDF AI page reading and translation) are available in GenOffice and by which route, and whether the app is installed.',
+    'Report which cloud features (search, image search, image generation, image and video analysis, PDF AI page reading and translation) are available in SeuOffice and by which route, and whether the app is installed.',
   usage: 'capabilities',
   async run(_args, ctx) {
     const { settingsPath, settings, context } = await headlessCall(ctx.env, 'capabilities')

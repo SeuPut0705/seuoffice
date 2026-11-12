@@ -1,4 +1,4 @@
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { McpServerService, DEFAULT_MCP_PORT, type McpToolDefinition } from './mcp-server'
 import { McpLogger } from './mcp-logger'
 import type { CliRunner } from './cli-runner'
@@ -38,7 +38,7 @@ export interface McpRuntimeDeps {
   slidesControl?: SlidesControl
   /** drive a visible sheets grid (renderer workbook session); absent in headless runs */
   sheetsControl?: SheetsControl
-  /** the bundled genoffice CLI, backing the headless create/read tools; absent when unavailable */
+  /** the bundled seuoffice CLI, backing the headless create/read tools; absent when unavailable */
   cliRunner?: CliRunner
   /**
    * documents the user has open (list/read/close); absent in headless runs,
@@ -154,7 +154,7 @@ function buildTools(): McpToolDefinition[] {
         // headless create_docx is opt-in: off by default so the default surface is
         // the visible document session
         background: currentSettings.background,
-        // open_in_genoffice reports ok only when the file routed to a tab
+        // open_in_seuoffice reports ok only when the file routed to a tab
         openInTab: (filePath) => {
           if (!deps) return
           const opened = deps.openPath(filePath)

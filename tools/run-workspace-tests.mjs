@@ -37,15 +37,15 @@ const WORKSPACES = testWorkspaces()
  * rebuilds the xlsx sidecar, which the cli tests execute: started together,
  * the cli could run a binary that cargo is still writing.
  */
-const AFTER = { '@genoffice/cli': ['@genoffice/sheets'] }
+const AFTER = { '@seuoffice/cli': ['@seuoffice/sheets'] }
 
 /** Started first: the longest workspaces, so none of them is left to run alone at the end */
 const FIRST = [
-  '@genoffice/docs',
-  '@genoffice/sheets',
-  '@genoffice/html2docx',
-  '@genoffice/slides',
-  '@genoffice/markdown',
+  '@seuoffice/docs',
+  '@seuoffice/sheets',
+  '@seuoffice/html2docx',
+  '@seuoffice/slides',
+  '@seuoffice/markdown',
 ]
 
 function jobCount() {

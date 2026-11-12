@@ -19,7 +19,7 @@ vi.mock('electron', () => ({
     removeListener: (channel: string) => removed.push(channel),
   },
 }))
-vi.mock('@genoffice/electron-utils/drop-open', () => ({ installDropOpenBridge: vi.fn() }))
+vi.mock('@seuoffice/electron-utils/drop-open', () => ({ installDropOpenBridge: vi.fn() }))
 
 describe('pdf preload: structure jobs and result store', () => {
   let api: PdfApi

@@ -19,7 +19,7 @@ const SHELL_DIR = join(tmpdir(), 'permission-guard-test', 'out', 'renderer')
 const SLIDES = 'genoffice-app://slides/index.html?mode=tab'
 const DOCS = 'genoffice-app://docs/index.html?mode=tab'
 const HOME = pathToFileURL(join(SHELL_DIR, 'index.html')).toString()
-const PRINTED = pathToFileURL(join(tmpdir(), 'genoffice-html-print-1', 'print.html')).toString()
+const PRINTED = pathToFileURL(join(tmpdir(), 'seuoffice-html-print-1', 'print.html')).toString()
 const PREVIEW = 'html-preview://7/index.html'
 const WEB = 'https://example.com/page'
 

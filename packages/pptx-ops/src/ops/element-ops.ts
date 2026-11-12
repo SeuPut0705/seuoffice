@@ -40,7 +40,7 @@ import {
   type ReorderDirection,
   type Slide,
   type SlideElement,
-} from '@genoffice/pptx-engine'
+} from '@seuoffice/pptx-engine'
 import {
   coerceBytes,
   dataUrlExt,

@@ -9,7 +9,7 @@ import {
   type AiSettings,
   type AiSubscriptionState,
   type SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import { jobProviderOptions, withJobProvider } from '../src/renderer/doc-jobs/JobProviderSelect'
 
 const status = (provider: 'claude-code' | 'chatgpt' | 'codex', state: AiSubscriptionState) => ({

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { parseSlide, setRedactExt } from '@genoffice/pptx-engine'
-import { buildRenderSlide, type RenderSlide } from '@genoffice/pptx-render'
+import { parseSlide, setRedactExt } from '@seuoffice/pptx-engine'
+import { buildRenderSlide, type RenderSlide } from '@seuoffice/pptx-render'
 
 // file-actions pulls export-render → pptx-render → konva → native `canvas`
 // (missing in CI). Mock the UI-only modules so this unit test exercises only
@@ -9,7 +9,7 @@ vi.mock('../src/renderer/export-render', () => ({ renderSlidesToPngBase64: vi.fn
 vi.mock('../src/renderer/components/toast-bus', () => ({ showToast: vi.fn() }))
 vi.mock('../src/renderer/i18n/locale', () => ({ t: (k: string) => k, getLang: () => 'en' }))
 
-import { fileNamingFailureText } from '@genoffice/ui'
+import { fileNamingFailureText } from '@seuoffice/ui'
 import { nameWithAi, save } from '../src/renderer/file-actions'
 import { showToast } from '../src/renderer/components/toast-bus'
 import type { ActionCtx } from '../src/renderer/action-context'

@@ -10,7 +10,7 @@ import {
   type ViewTopic,
   type XmindSheet,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import { MapController, type MapHost, type MapStrings } from '../src/renderer/map/controller'
 import { DocumentSession } from '../src/renderer/document/session'
 import { copyOf, documentOf, FISHBONE, IDS, plainSheet, richSheet, topic } from './helpers/fixtures'

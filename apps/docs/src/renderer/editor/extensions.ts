@@ -91,7 +91,7 @@ import {
   type TableModel,
   type TextboxDisplay,
   type TextboxListMarker,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import {
   substituteBullet,
   markerFallbackFace,
@@ -173,7 +173,7 @@ import {
   cellSpacingGridSharesTwips,
   inlineToRuns,
   runsToInline,
-  textboxParaSignature,
+  textboxParaSame,
   type PmNode as PmJson,
 } from './convert'
 import { inlineMathML } from './equation'
@@ -1366,7 +1366,7 @@ export const DocListItem = Node.create({
         }),
       },
       // our own clipboard HTML: renderHTML emits <div class="doc-li …">, which
-      // no rule matched before r117 — pasting a GenOffice list item degraded it
+      // no rule matched before r117 — pasting a SeuOffice list item degraded it
       // to plain text. kind/ilvl ride in data-para; classes are the fallback.
       {
         tag: 'div.doc-li',
@@ -3148,6 +3148,8 @@ export const DocTable = Node.create({
       tblGridChange: { default: null as Record<string, string> | null },
       originalStructure: { default: null as string | null },
       originalFormatting: { default: null as string | null },
+      /** JSON of the wrapper stretches the cells were opened with (`nodeWrapSpans`) */
+      originalWraps: { default: null as string | null },
       /** JSON of the merged-away (vMerge continue) cells: their own tcPr bytes
        *  and hidden text, keyed row:column (they have no node of their own) */
       continuationCells: { default: null as string | null },
@@ -5916,8 +5918,7 @@ function mountTextboxEditors(
         return box
       }
       const same =
-        paras.length === box.paras.length &&
-        paras.every((p, j) => textboxParaSignature(p) === textboxParaSignature(box.paras[j]))
+        paras.length === box.paras.length && paras.every((p, j) => textboxParaSame(p, box.paras[j]))
       const measuredHeight = minHeights[i] ? measuredHeights[i] : box.heightPx
       const sameHeight = measuredHeight === box.heightPx
       if (same && sameHeight) return box

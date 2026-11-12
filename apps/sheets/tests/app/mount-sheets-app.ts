@@ -4,8 +4,8 @@ import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { vi } from 'vitest'
 
-import { normalizeAiSettings } from '@genoffice/ai-provider/browser'
-import type { IpcStreamChunk } from '@genoffice/agent-core'
+import { normalizeAiSettings } from '@seuoffice/ai-provider/browser'
+import type { IpcStreamChunk } from '@seuoffice/agent-core'
 
 import { LocaleProvider, setModuleLang } from '../../src/renderer/i18n/locale'
 import { mounted } from './minimal-univer'

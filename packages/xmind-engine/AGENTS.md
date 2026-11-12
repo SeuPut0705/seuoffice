@@ -1,4 +1,4 @@
-# packages/xmind-engine (`@genoffice/xmind-engine`)
+# packages/xmind-engine (`@seuoffice/xmind-engine`)
 
 마인드맵 파일(`.xmind`)을 열고 저장하는 엔진이다. 원본 프로그램에서 온 것이 아니라 이 프로젝트가 직접 만든 패키지다. 화면 코드와 Node 전용 기능을 쓰지 않는 순수 코드라서 편집기 화면(`apps/mindmap`), `packages/file-parse`, 껍데기 앱이 같은 코드를 쓴다.
 
@@ -56,7 +56,7 @@
 
 ## 테스트
 
-- 실행: `npm run test -w @genoffice/xmind-engine`, `npm run typecheck -w @genoffice/xmind-engine`. Windows에서 전부 통과한다.
+- 실행: `npm run test -w @seuoffice/xmind-engine`, `npm run typecheck -w @seuoffice/xmind-engine`. Windows에서 전부 통과한다.
 - 시험 파일은 `tests/helpers.ts`가 손으로 그때그때 만든다. 다른 프로그램이 만든 파일·나무·테마·그림은 저장소에 없다.
 - 바꾸면 반드시 테스트하는 것: 열기의 다섯 결과(`tests/open.test.ts`), 바뀐 것 없는 저장의 바이트 일치와 제목 하나만 고친 저장에서 `content.json`만 다른 것(`tests/save.test.ts`), 모르는 값이 옮긴 토픽과 함께 가는 것과 지운 토픽 아래만 사라지는 것(`tests/reconcile*.test.ts`), 요약·경계의 순번(`tests/reconcile-ranges.test.ts`, `tests/reconcile-follow.test.ts`), 보존만 하는 요소의 수(`tests/preserved.test.ts`), 개요 글 형식과 왕복(`tests/outline.test.ts`, `tests/outline-parse.test.ts`), 96개 테마를 적고 다시 알아보는 것과 지금 적는 표의 고정(`tests/theme-table.test.ts`), 그림 항목 더하기·되돌리기와 매니페스트·다시 열기, 상태가 가리키는 그림 쓰기와 없는 항목 무시(`tests/resource-image.test.ts`), 글자 서식과 제목 조각을 읽고 이름 불린 토픽에만 쓰며 고친 제목의 옛 조각을 빼는 것(`tests/text-style.test.ts`), 선·연결선·요약·경계 값을 읽고 이름 불린 것에만 쓰며 곡선 저장·경계 더하기와 이름 불린 것만 지우기·원본 바이트(`tests/line-format.test.ts`), 지도 전체 두 설정을 적고 96개 테마를 계속 알아보는 것(`tests/theme-lines.test.ts`), 이름이 불린 토픽에서만 그림 지우기와 상자 폭 적기·지우기·거절(`tests/reconcile.test.ts`), 화면과 Node 양쪽에서 도는지(`tests/browser-safety.test.ts`).
 - 만든 파일이 원래 프로그램에서 열리는지는 자동 테스트로 확인하지 못한다. 실제 프로그램에 올려 확인한다.

@@ -39,7 +39,7 @@
 
 ## 테스트
 
-- `npm run test -w @genoffice/pptx-render`, 또는 패키지 폴더에서 `npx vitest run`. 이 패키지에는 픽스처 폴더가 없다. 일부 테스트가 `packages/pptx-engine/tests/fixtures/`의 pptx를 엔진으로 열어 쓰고, 나머지는 슬라이드 모델 객체를 직접 만든다. 글꼴 파일을 읽는 테스트는 없다. 정확한 메트릭 경로는 가짜 글꼴 객체로 검증한다.
+- `npm run test -w @seuoffice/pptx-render`, 또는 패키지 폴더에서 `npx vitest run`. 이 패키지에는 픽스처 폴더가 없다. 일부 테스트가 `packages/pptx-engine/tests/fixtures/`의 pptx를 엔진으로 열어 쓰고, 나머지는 슬라이드 모델 객체를 직접 만든다. 글꼴 파일을 읽는 테스트는 없다. 정확한 메트릭 경로는 가짜 글꼴 객체로 검증한다.
 - vitest 별칭이 `pptx-engine`과 그 하위 경로를 소스로 묶는다. 문자열 별칭은 접두 치환이라 하위 경로를 패키지 이름보다 먼저 적어야 한다. 엔진의 새 하위 경로를 쓰면 별칭도 추가한다.
 - 레이아웃 규칙을 바꾸면 좌표·줄 수·넘침 수치를 숫자로 단언하는 사례를 넣고, 방어 코드를 바꾸면 비정상 입력이 유한한 결과로 끝나는지를 넣는다.
 - Windows에서 원본 코드 그대로도 실패하는 테스트는 없다.

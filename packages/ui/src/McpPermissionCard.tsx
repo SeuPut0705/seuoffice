@@ -1,11 +1,11 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type {
   McpPermissionAnswer,
   McpPermissionRequest,
   McpPermissionStore,
   McpWindowState,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import { mcpDescriptionPreview, mcpInputPreview, mcpInputText } from './user-mcp-model'
 import { userMcpText } from './strings-user-mcp'
 import { resolveMcpWindowState, useMcpPermissionRequests } from './use-mcp-window'

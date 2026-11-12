@@ -5,7 +5,7 @@ import type {
   ProjectChatMessage,
   ProjectContextBundle,
   ProjectSelection,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 
 /**
  * A fake `window.projectFolderApi` for AI panel tests: every call is a mock,

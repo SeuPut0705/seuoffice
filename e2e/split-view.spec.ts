@@ -175,7 +175,7 @@ async function appendToMarkdown(page: Page, text: string): Promise<void> {
 
 test.describe('split view', () => {
   test('two documents split side by side; roles follow the focused pane', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-split-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-split-'))
     const aPath = join(dir, 'alpha.md')
     const bPath = join(dir, 'beta.md')
     await writeFile(aPath, '# Alpha\n\nfirst document.\n')
@@ -268,7 +268,7 @@ test.describe('split view', () => {
   })
 
   test('splitting the only document makes a same-document copy; the divider closes a side', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-split-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-split-'))
     const aPath = join(dir, 'solo.md')
     await writeFile(aPath, '# Solo\n\none document.\n')
 
@@ -323,7 +323,7 @@ test.describe('split view', () => {
   })
 
   test('a strip tab replaces the focused pane; Home covers the split and restores it', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-split-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-split-'))
     const aPath = join(dir, 'one.md')
     const bPath = join(dir, 'two.md')
     const cPath = join(dir, 'three.md')
@@ -384,7 +384,7 @@ test.describe('split view', () => {
   })
 
   test('restores the split arrangement on the next launch', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-split-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-split-'))
     const aPath = join(dir, 'restore-a.md')
     const bPath = join(dir, 'restore-b.md')
     await writeFile(aPath, '# Restore A\n')
@@ -430,7 +430,7 @@ test.describe('split view', () => {
   })
 
   test('the second save across same-document copies asks before overwriting', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-split-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-split-'))
     const soloPath = join(dir, 'guard.md')
     await writeFile(soloPath, '# Guard\n\nbase.\n')
 

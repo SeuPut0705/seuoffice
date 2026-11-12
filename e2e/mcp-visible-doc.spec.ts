@@ -92,12 +92,12 @@ async function waitForHealth(port: number, timeoutMs = 20_000): Promise<void> {
 test.describe('MCP visible document session', () => {
   test('creates, formats and saves a docx through a visible tab', async () => {
     const port = await freeMcpPort()
-    const outDir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-e2e-'))
+    const outDir = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-e2e-'))
     const outFile = join(outDir, 'mcp-visible.docx')
     // seed an app-settings.json that both skips onboarding and turns MCP on;
     // launchShell only writes its own file when onboardingSeen is requested,
     // so seed it here and leave that option off.
-    const userDataDir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-userdata-'))
+    const userDataDir = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-userdata-'))
     await writeFile(
       join(userDataDir, 'app-settings.json'),
       JSON.stringify({ onboardingSeen: true, mcpEnabled: true, mcpPort: port }),

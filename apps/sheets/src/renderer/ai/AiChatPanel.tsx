@@ -17,7 +17,7 @@ import {
   type ProjectMemoryLine,
   type SkillChipRef,
   type SkillUse,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import React, { useEffect, useRef, useState } from 'react'
 import {
   AiBlockedNotice,
@@ -40,17 +40,17 @@ import {
   aiSubscriptionText,
   useChatRunQueue,
   type AiComposerDocs,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type {
   AiProviderChoice,
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionStatuses,
   AiSubscriptionUsage,
-} from '@genoffice/ai-provider/browser'
-import { localModelCapabilities } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
+import { localModelCapabilities } from '@seuoffice/ai-provider/browser'
 import type { AiBlockedRun } from './subscription-state'
-import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { ChangePlan } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import { proposalPreview, type TurnProposal } from './turn-proposal'
 import { ATTACHMENT_IMAGE_EXTS, type AttachmentMeta } from '../../shared/desktop-api'
 import {
@@ -62,15 +62,15 @@ import {
   saveAiPanelWidth,
   SentAttachments,
   truncateCardName,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { useI18n, type TFunc } from '../i18n/locale'
-import { createFileNav, Markdown } from '@genoffice/ui'
+import { createFileNav, Markdown } from '@seuoffice/ui'
 import { SHEET_NAV_SCHEME } from './sheet-nav'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
 import attachIcon from '../assets/attach-icon.png'
-import { isRtlLang } from '@genoffice/i18n'
+import { isRtlLang } from '@seuoffice/i18n'
 
 /** Clipboard bitmap MIME → attachment extension (matches the main process's
  * ATTACHMENT_IMAGE_EXTS) */
@@ -141,7 +141,7 @@ export interface AiChatMessage {
   readonly otherEditorTools?: ProjectChatEntry['otherEditorTools'] | undefined
 }
 
-/** The project folder parts of the panel (built in App.tsx with `useProjectPanel` of @genoffice/ui) */
+/** The project folder parts of the panel (built in App.tsx with `useProjectPanel` of @seuoffice/ui) */
 export interface AiPanelProject {
   /** the chat menu beside the title; null without a chosen project */
   readonly chatMenu: React.ReactNode

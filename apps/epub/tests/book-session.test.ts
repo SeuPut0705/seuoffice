@@ -6,7 +6,7 @@
  * versions).
  */
 import { describe, expect, it } from 'vitest'
-import { applyReplacements } from '@genoffice/epub-engine'
+import { applyReplacements } from '@seuoffice/epub-engine'
 import {
   EpubBookSession,
   blockEditOf,

@@ -1,4 +1,4 @@
-import { parseDocx, type SectionInfo } from '@genoffice/docx-engine'
+import { parseDocx, type SectionInfo } from '@seuoffice/docx-engine'
 import { MAX_CHANGE_BYTES, type CollabAdapter } from '@seuoffice/collab/client'
 import { Editor } from '@tiptap/core'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'

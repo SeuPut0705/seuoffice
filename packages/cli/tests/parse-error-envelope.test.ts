@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { CommandRegistry } from '../src/registry'
 import { run } from './helpers'
 
-const env = { ...process.env, GENOFFICE_AUDIT_LOG: 'off' }
+const env = { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' }
 
 function probe() {
   const invoke = vi.fn(async () => ({ summary: 'invoked' }))

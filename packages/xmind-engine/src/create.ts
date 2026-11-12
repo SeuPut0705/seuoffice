@@ -1,4 +1,4 @@
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { buildArchive } from './archive'
 import { serializeSheets } from './content'
 import type { XmindDocument } from './document'

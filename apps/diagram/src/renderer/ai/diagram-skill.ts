@@ -9,8 +9,7 @@
  * the diagram is ever made for the model. The prompt is English and names
  * the product through `brandText`.
  */
-import type { AgentSkill } from '@genoffice/agent-core'
-import { brandText } from '@genoffice/i18n'
+import type { AgentSkill } from '@seuoffice/agent-core'
 import { t } from '../i18n/locale'
 import type { LivePageRead } from '../document/live-ops'
 import {
@@ -22,7 +21,7 @@ import {
 } from './diagram-tools'
 
 export const DIAGRAM_SYSTEM_PROMPT = [
-  'You are the assistant inside GenOffice Diagram, an editor for draw.io diagrams (.drawio files). A diagram has one or more pages; a page holds shapes (boxes, ellipses, diamonds, containers, …) and edges (connectors between two shapes).',
+  'You are the assistant inside SeuOffice Diagram, an editor for draw.io diagrams (.drawio files). A diagram has one or more pages; a page holds shapes (boxes, ellipses, diamonds, containers, …) and edges (connectors between two shapes).',
   '',
   '## Reading',
   '- You never see a picture of the diagram; you read it as text. Each request carries the page on screen between <diagram_page> tags: the page list ([current] marks the page on screen), then one line per shape (id | label | shape | x | y | width | height | parent | fill | stroke) and one line per edge (id | label | source | target | parent), and "Selected:" with the ids the user has selected there. Labels are shortened to 80 characters; "\\n" is a line break.',
@@ -84,7 +83,7 @@ export function createDiagramSkill(deps: DiagramSkillDeps): AgentSkill {
     id: 'diagram',
     // the prompt names the product: the upstream name is swapped for this product's
     get systemPrompt(): string {
-      return brandText(DIAGRAM_SYSTEM_PROMPT, 'en')
+      return DIAGRAM_SYSTEM_PROMPT
     },
     tools: [...DIAGRAM_TOOLS],
     buildContext: () => deps.context(),

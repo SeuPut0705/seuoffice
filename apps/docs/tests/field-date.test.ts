@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { documentLocale, normalizeLang, requestedLanguage, setUiLang } from '@genoffice/i18n'
+import { documentLocale, normalizeLang, requestedLanguage, setUiLang } from '@seuoffice/i18n'
 import { dateTimeFieldText } from '../src/renderer/field-date'
 
 // A date or time field shows the date the way the document's language writes it:

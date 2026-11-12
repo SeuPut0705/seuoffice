@@ -1,4 +1,4 @@
-import { mcpServerListOf, skillStepsNote } from '@genoffice/agent-core/skill-mcp-refs'
+import { mcpServerListOf, skillStepsNote } from '@seuoffice/agent-core/skill-mcp-refs'
 import type { AiSkillsBridge } from './skill-picker-model'
 
 /**

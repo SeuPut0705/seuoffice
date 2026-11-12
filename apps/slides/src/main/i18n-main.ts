@@ -1,5 +1,5 @@
-/** Main-process i18n strings for GenOffice Slides (dialogs, native menus, export). */
-import { createI18n, getUiLang } from '@genoffice/i18n'
+/** Main-process i18n strings for SeuOffice Slides (dialogs, native menus, export). */
+import { createI18n, getUiLang } from '@seuoffice/i18n'
 
 export const tMain = createI18n({
   en: {
@@ -36,7 +36,7 @@ export const tMain = createI18n({
     mediaAviBody:
       'The AVI format is not supported by the built-in player, so it cannot be played inside the app. The file is embedded as-is and still plays in PowerPoint after export.',
     pptImportDetail:
-      'GenOffice rebuilds the deck as editable text boxes, in the original slide order and size; shape geometry, images and text formatting are not carried over yet. The original file is never changed; the converted .pptx is a separate copy that later saves write to.',
+      'SeuOffice rebuilds the deck as editable text boxes, in the original slide order and size; shape geometry, images and text formatting are not carried over yet. The original file is never changed; the converted .pptx is a separate copy that later saves write to.',
     pptImportCopyName: '{stem} (text only).pptx',
     importOriginalTarget: 'Choose a different name to keep the original presentation unchanged.',
     pptImportFailedTitle: 'Cannot convert this .ppt',
@@ -44,7 +44,7 @@ export const tMain = createI18n({
     legacyPptTitle: 'Cannot open legacy .ppt',
     odpImportMsg: 'Convert this .{ext} presentation?',
     odpImportDetail:
-      'GenOffice edits .pptx, not ODF. Each page becomes a slide with its text boxes and pictures placed at their original positions; masters, placeholder layouts, tables and shape styling are not preserved. The original file is never changed; the converted .pptx is a separate copy that later saves write to.',
+      'SeuOffice edits .pptx, not ODF. Each page becomes a slide with its text boxes and pictures placed at their original positions; masters, placeholder layouts, tables and shape styling are not preserved. The original file is never changed; the converted .pptx is a separate copy that later saves write to.',
     odpImportConvertBtn: 'Convert and open',
     importSkipConfirm: 'Convert without asking next time',
     odpImportFailedTitle: 'Cannot convert this .odp',
@@ -154,7 +154,7 @@ export const tMain = createI18n({
     mediaAviBody:
       'AVI 형식은 내장 플레이어에서 지원되지 않아 앱 내에서 재생할 수 없습니다. 파일은 원본 그대로 삽입되며 내보낸 후 PowerPoint에서는 재생할 수 있습니다.',
     pptImportDetail:
-      'GenOffice는 데크를 원본 슬라이드 순서와 크기대로 편집 가능한 텍스트 상자로 다시 만듭니다. 도형 위치, 이미지, 텍스트 서식은 아직 옮겨지지 않습니다. 원본 파일은 변경되지 않으며, 변환된 .pptx는 이후 저장이 기록되는 별도의 사본입니다.',
+      'SeuOffice는 데크를 원본 슬라이드 순서와 크기대로 편집 가능한 텍스트 상자로 다시 만듭니다. 도형 위치, 이미지, 텍스트 서식은 아직 옮겨지지 않습니다. 원본 파일은 변경되지 않으며, 변환된 .pptx는 이후 저장이 기록되는 별도의 사본입니다.',
     pptImportCopyName: '{stem} (텍스트만).pptx',
     importOriginalTarget: '원본 프레젠테이션을 보존하려면 다른 이름을 선택하세요.',
     pptImportFailedTitle: '이 .ppt를 변환할 수 없습니다',
@@ -163,7 +163,7 @@ export const tMain = createI18n({
     legacyPptTitle: '.ppt 형식을 열 수 없음',
     odpImportMsg: '이 .{ext} 프레젠테이션을 변환할까요?',
     odpImportDetail:
-      'GenOffice는 ODF가 아니라 .pptx를 편집합니다. 각 페이지가 슬라이드가 되고 텍스트 상자와 이미지는 원래 위치에 배치됩니다. 마스터, 자리 표시자 레이아웃, 표, 도형 스타일은 유지되지 않습니다. 원본 파일은 변경되지 않으며, 변환된 .pptx는 이후 저장이 기록되는 독립적인 사본입니다.',
+      'SeuOffice는 ODF가 아니라 .pptx를 편집합니다. 각 페이지가 슬라이드가 되고 텍스트 상자와 이미지는 원래 위치에 배치됩니다. 마스터, 자리 표시자 레이아웃, 표, 도형 스타일은 유지되지 않습니다. 원본 파일은 변경되지 않으며, 변환된 .pptx는 이후 저장이 기록되는 독립적인 사본입니다.',
     odpImportConvertBtn: '변환 후 열기',
     importSkipConfirm: '다음부터 묻지 않고 변환',
     odpImportFailedTitle: '이 .odp를 변환할 수 없습니다',

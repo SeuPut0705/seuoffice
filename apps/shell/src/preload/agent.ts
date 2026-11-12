@@ -15,8 +15,8 @@ import {
   type AgentTemplateCheck,
   type AgentWindowApi,
 } from '../shared/agent-api'
-import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
-import type { UserSkillPreviewEnded } from '@genoffice/electron-utils/user-skills-channels'
+import type { UserSkillsBridge } from '@seuoffice/electron-utils/user-skills-bridge'
+import type { UserSkillPreviewEnded } from '@seuoffice/electron-utils/user-skills-channels'
 
 type Theme = 'light' | 'dark' | 'system'
 

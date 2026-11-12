@@ -19,7 +19,7 @@ import { describe, expect, it, beforeAll } from 'vitest'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parseDocx } from '@genoffice/docx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
 import { computeSectionedSlicesF2 } from '../src/renderer/pagination'
 import { buildCorpusBlocks } from './helpers/corpus-blocks'
 

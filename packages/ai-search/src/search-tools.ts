@@ -11,7 +11,7 @@ import {
   AI_SEARCH_PROVIDERS,
   type AiSearchProviderId,
   type AiSettings,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import { imageSearch, searchEnvKey, webSearch, type SearchOptions } from './index'
 import { readAiSettingsFile } from './media-tools'
 

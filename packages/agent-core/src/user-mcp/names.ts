@@ -3,13 +3,16 @@
  * spec 4.2, 6.1): `mcp__<server>__<tool>`, the shape skills written for coding
  * agents already call.
  *
- * A file with no imports, exported as `@genoffice/agent-core/user-mcp/names`:
- * the main process checks names when a server is registered and cannot load
- * the package root as it is.
+ * Imports only `../old-names` (no imports of its own), never the package
+ * root, exported as `@seuoffice/agent-core/user-mcp/names`: the main process
+ * checks names when a server is registered and cannot load the package root
+ * as it is.
  *
  * A server name holds no `__` and neither starts nor ends with `_`, so the
  * server part of a tool name is everything between `mcp__` and the next `__`.
  */
+
+import { OLD_APP_MCP_SERVER_NAMES } from '../old-names'
 
 export const MCP_TOOL_PREFIX = 'mcp__'
 export const MCP_NAME_SEPARATOR = '__'
@@ -20,9 +23,12 @@ export const MCP_SERVER_NAME_MAX = 24
 export const MCP_TOOL_NAME_MAX = 64
 
 /** The app's own MCP server; a user server may not take its name */
-export const APP_MCP_SERVER_NAME = 'ieumoffice-editor'
-/** Server names refused, compared without case */
-export const RESERVED_MCP_SERVER_NAMES: ReadonlySet<string> = new Set([APP_MCP_SERVER_NAME])
+export const APP_MCP_SERVER_NAME = 'seuoffice-editor'
+/** Server names refused, compared without case: the app's own, now and before */
+export const RESERVED_MCP_SERVER_NAMES: ReadonlySet<string> = new Set([
+  APP_MCP_SERVER_NAME,
+  ...OLD_APP_MCP_SERVER_NAMES,
+])
 
 export type ServerNameProblem =
   'empty' | 'too-long' | 'bad-char' | 'double-underscore' | 'edge-underscore' | 'reserved'

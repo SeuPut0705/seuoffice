@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import { USE_SKILL_TOOL, type SkillProposal } from '@genoffice/agent-core'
+import type { Lang } from '@seuoffice/i18n'
+import { USE_SKILL_TOOL, type SkillProposal } from '@seuoffice/agent-core'
 import {
   SAME_NAME_ON,
   initialSkillCardDraft,

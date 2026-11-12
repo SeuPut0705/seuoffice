@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { genofficeDevUserDataDir, genofficeUserDataDir, guiOpenDocuments } from '../src/gui'
+import { seuofficeDevUserDataDir, seuofficeUserDataDir, guiOpenDocuments } from '../src/gui'
 import { run, tempDir } from './helpers'
 
 function writeRegistry(dir: string, pid: number, paths: string[]): void {
@@ -14,7 +14,7 @@ function writeRegistry(dir: string, pid: number, paths: string[]): void {
 
 function registry(dir: string, pid: number, paths: string[]): Record<string, string> {
   writeRegistry(dir, pid, paths)
-  return { ...process.env, GENOFFICE_AUDIT_LOG: 'off', GENOFFICE_USER_DATA: dir }
+  return { ...process.env, SEUOFFICE_AUDIT_LOG: 'off', SEUOFFICE_USER_DATA: dir }
 }
 
 async function workbook(dir: string): Promise<string> {
@@ -22,7 +22,7 @@ async function workbook(dir: string): Promise<string> {
   writeFileSync(table, JSON.stringify([['a'], [1]]))
   const xlsx = join(dir, 't.xlsx')
   const r = await run(['create', '--type', 'xlsx', '--from', table, '--out', xlsx], {
-    env: { ...process.env, GENOFFICE_AUDIT_LOG: 'off' },
+    env: { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' },
   })
   expect(r.code).toBe(0)
   return xlsx
@@ -30,15 +30,15 @@ async function workbook(dir: string): Promise<string> {
 
 describe('GUI-open documents', () => {
   it('locates the shell userData directory and honours the override', () => {
-    expect(genofficeUserDataDir({ GENOFFICE_USER_DATA: '/u' })).toBe('/u')
-    expect(basename(genofficeUserDataDir({}))).toBe('seuoffice')
+    expect(seuofficeUserDataDir({ SEUOFFICE_USER_DATA: '/u' })).toBe('/u')
+    expect(basename(seuofficeUserDataDir({}))).toBe('seuoffice')
   })
 
   it("resolves this product's own folders, never the upstream app's", () => {
     const root = tempDir()
     const env = { APPDATA: root, HOME: root, XDG_CONFIG_HOME: root }
-    const packaged = genofficeUserDataDir(env)
-    const dev = genofficeDevUserDataDir(env)
+    const packaged = seuofficeUserDataDir(env)
+    const dev = seuofficeDevUserDataDir(env)
     expect(packaged.startsWith(root)).toBe(true)
     expect(basename(packaged)).toBe('seuoffice')
     // the unpacked shell keeps its profile beside the installed one (apps/shell/src/main/index.ts)
@@ -59,13 +59,13 @@ describe('GUI-open documents', () => {
 
   it('ignores a missing, malformed or crash-leftover registry', () => {
     const dir = tempDir()
-    expect(guiOpenDocuments({ GENOFFICE_USER_DATA: dir })).toEqual([])
+    expect(guiOpenDocuments({ SEUOFFICE_USER_DATA: dir })).toEqual([])
     writeFileSync(join(dir, 'open-documents.json'), '{not json')
-    expect(guiOpenDocuments({ GENOFFICE_USER_DATA: dir })).toEqual([])
+    expect(guiOpenDocuments({ SEUOFFICE_USER_DATA: dir })).toEqual([])
     registry(dir, 2 ** 22 + 12345, ['/x.docx'])
-    expect(guiOpenDocuments({ GENOFFICE_USER_DATA: dir })).toEqual([])
+    expect(guiOpenDocuments({ SEUOFFICE_USER_DATA: dir })).toEqual([])
     registry(dir, process.pid, ['/x.docx'])
-    expect(guiOpenDocuments({ GENOFFICE_USER_DATA: dir })).toEqual([
+    expect(guiOpenDocuments({ SEUOFFICE_USER_DATA: dir })).toEqual([
       { pid: process.pid, paths: ['/x.docx'] },
     ])
   })
@@ -79,16 +79,16 @@ describe('GUI-open documents', () => {
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       APPDATA: appRoot,
-      GENOFFICE_AUDIT_LOG: 'off',
+      SEUOFFICE_AUDIT_LOG: 'off',
       HOME: appRoot,
       XDG_CONFIG_HOME: appRoot,
     }
-    delete env.GENOFFICE_USER_DATA
-    const packagedDir = genofficeUserDataDir(env)
+    delete env.SEUOFFICE_USER_DATA
+    const packagedDir = seuofficeUserDataDir(env)
     // The in-process CLI must resolve userData from this env, never the real home directory.
     expect(packagedDir.startsWith(appRoot)).toBe(true)
     writeRegistry(packagedDir, process.pid, [join(dir, 'packaged.xlsx')])
-    writeRegistry(genofficeDevUserDataDir(env), process.pid, [xlsx])
+    writeRegistry(seuofficeDevUserDataDir(env), process.pid, [xlsx])
 
     const refused = await run(['sheet', 'apply', xlsx, '--ops', ops, '--json'], { env })
 

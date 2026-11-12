@@ -1,5 +1,5 @@
-import { productName } from '@genoffice/i18n'
-import type { ProjectMemoryOp, ProjectMemoryRefusal } from '@genoffice/project-store'
+import { productName } from '@seuoffice/i18n'
+import type { ProjectMemoryOp, ProjectMemoryRefusal } from '@seuoffice/project-store'
 
 /**
  * `memory.md` text (spec 3, 5.6): a comment line explaining the file, then one

@@ -25,8 +25,8 @@ import {
   type AiSubscriptionUsage,
   type AiUsageWindow,
   type SubscriptionStatusErrorKind,
-} from '@genoffice/ai-provider/browser'
-import { htmlLang, type Lang } from '@genoffice/i18n'
+} from '@seuoffice/ai-provider/browser'
+import { htmlLang, type Lang } from '@seuoffice/i18n'
 import { aiSubscriptionText, type AiSubscriptionStringKey } from './strings-ai-subscription'
 import { aiContextText } from './strings-ai-context'
 

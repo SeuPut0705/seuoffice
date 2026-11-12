@@ -6,11 +6,11 @@
  * unusable; any other failure keeps its plain message. Nothing moves to
  * another provider by itself. Shared by the passage cards and the overview.
  */
-import type { IpcStreamError } from '@genoffice/agent-core'
+import type { IpcStreamError } from '@seuoffice/agent-core'
 import {
   isSubscriptionProvider,
   type AiSubscriptionProviderId,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import { ModelCallError } from '../doc-jobs/model-call'
 import { aiBlockedRunOf, type AiBlockedRun } from './ai-connection'
 

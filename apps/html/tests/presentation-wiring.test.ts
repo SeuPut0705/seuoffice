@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * F5 / Ctrl+F5 wiring for the HTML presenter. The key classification is tested
- * in `@genoffice/ui`; the existing Present menu already covers the view itself,
+ * in `@seuoffice/ui`; the existing Present menu already covers the view itself,
  * so this pins the keyboard entry points to the same two kinds.
  */
 describe('HTML presentation wiring', () => {

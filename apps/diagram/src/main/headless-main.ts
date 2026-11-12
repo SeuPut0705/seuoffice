@@ -23,10 +23,10 @@ import type {
   HeadlessExportFormat,
   HeadlessExportProduct,
   HeadlessExportRequest,
-} from '@genoffice/electron-utils'
-import { atomicWriteFile } from '@genoffice/electron-utils/atomic-write'
-import { detectDiagramFormat, openDiagram, type DiagramFormat } from '@genoffice/drawio-model'
-import { nodePageCodec } from '@genoffice/drawio-model/node'
+} from '@seuoffice/electron-utils'
+import { atomicWriteFile } from '@seuoffice/electron-utils/atomic-write'
+import { detectDiagramFormat, openDiagram, type DiagramFormat } from '@seuoffice/drawio-model'
+import { nodePageCodec } from '@seuoffice/drawio-model/node'
 import { DIAGRAM_CHANNELS } from '../shared/ipc'
 import type { DiagramHeadlessJob, DiagramHeadlessReport, ExportFormat } from '../shared/ipc'
 import { diagramBaseName } from '../shared/formats'

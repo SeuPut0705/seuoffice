@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { Dropdown } from '@genoffice/ui'
+import { Dropdown } from '@seuoffice/ui'
 import type {
   PivotAggregation,
   PivotShowDataAs,
-} from '@genoffice/xlsx-gateway/domain/pivot-value-modes'
+} from '@seuoffice/xlsx-gateway/domain/pivot-value-modes'
 
 import { useI18n, type StringKey, type TFunc } from './i18n/locale'
 import { useModalDialog } from './modal-dialog'

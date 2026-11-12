@@ -10,7 +10,7 @@
  * `paragraphToOdf` with the original paragraph as origin. Non-paragraph
  * children of the region (tables, frames) keep their bytes and places.
  */
-import { type HfParagraph, PAGE_MARK, TOTAL_PAGES_MARK, parseDocx } from '@genoffice/docx-engine'
+import { type HfParagraph, PAGE_MARK, TOTAL_PAGES_MARK, parseDocx } from '@seuoffice/docx-engine'
 import JSZip from 'jszip'
 import type {
   BridgeParagraph,

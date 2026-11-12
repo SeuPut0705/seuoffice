@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LANGS, type Lang } from '@genoffice/i18n'
+import { LANGS, type Lang } from '@seuoffice/i18n'
 import { SKILL_CARD_STRINGS, type SkillCardStringKey } from '../src/strings-skill-card'
 
 const KEYS = Object.keys(SKILL_CARD_STRINGS.en) as SkillCardStringKey[]

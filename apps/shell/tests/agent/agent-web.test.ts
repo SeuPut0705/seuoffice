@@ -11,9 +11,9 @@ import type {
   AgentSession,
   AgentSessionEvent,
   AgentSessionOptions,
-} from '@genoffice/ai-provider/agent-session'
-import type { AiSubscriptionStatus } from '@genoffice/ai-provider'
-import { normalizeAiSettings } from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider/agent-session'
+import type { AiSubscriptionStatus } from '@seuoffice/ai-provider'
+import { normalizeAiSettings } from '@seuoffice/ai-provider'
 import { createAgentManager } from '../../src/main/agent/agent-sessions'
 import {
   DEFAULT_AGENT_PROJECT_PREFS,

@@ -4,7 +4,7 @@
  * both use them, so they agree on every address and name.
  */
 import { EPUB_ASSET_SCHEME } from './ipc'
-import type { EpubTranslationOutputKind } from '@genoffice/epub-engine'
+import type { EpubTranslationOutputKind } from '@seuoffice/epub-engine'
 
 /** The base address of one view's book: the token names the view, never a path. */
 export function epubAssetBase(token: string): string {

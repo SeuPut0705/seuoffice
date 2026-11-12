@@ -2,9 +2,9 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 
-import type * as AgentCore from '@genoffice/agent-core'
+import type * as AgentCore from '@seuoffice/agent-core'
 const agentHarness = vi.hoisted(() => ({
   events: null as null | {
     onDone?: (result: { text: string; cancelled: boolean; turnLimit: boolean }) => void
@@ -12,8 +12,8 @@ const agentHarness = vi.hoisted(() => ({
   run: vi.fn(),
 }))
 
-vi.mock('@genoffice/agent-core', async () => {
-  const actual = await vi.importActual<typeof AgentCore>('@genoffice/agent-core')
+vi.mock('@seuoffice/agent-core', async () => {
+  const actual = await vi.importActual<typeof AgentCore>('@seuoffice/agent-core')
   return {
     ...actual,
     AgentLoop: class MockAgentLoop {

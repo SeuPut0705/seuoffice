@@ -11,7 +11,7 @@ import {
   type ConversionReport,
   type ObjectsExt,
   type ReportFeature,
-} from '@genoffice/odt-engine'
+} from '@seuoffice/odt-engine'
 import type { CommandContext } from '../registry'
 import { CliError, EXIT } from '../result'
 

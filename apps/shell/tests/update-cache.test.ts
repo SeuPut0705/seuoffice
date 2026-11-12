@@ -50,14 +50,17 @@ afterEach(() => {
 })
 
 describe('pruneUpdateCache', () => {
-  it('removes both copies of the installer of the version now running', () => {
+  it('removes the download of the version now running, keeping the copies the next update builds on', () => {
     downloaded('SeuOffice-Setup-0.12.31-stable.exe')
     writeFileSync(join(cacheDir, 'installer.exe'), 'installer bytes')
+    writeFileSync(join(cacheDir, 'update.zip'), 'zip bytes')
 
-    pruneUpdateCache({ cacheDir, runningVersion: '0.12.31', log })
+    expect(pruneUpdateCache({ cacheDir, runningVersion: '0.12.31', log })).toBe(true)
 
     expect(pending()).toEqual([])
-    expect(existsSync(join(cacheDir, 'installer.exe'))).toBe(false)
+    // the base of the next differential download
+    expect(existsSync(join(cacheDir, 'installer.exe'))).toBe(true)
+    expect(existsSync(join(cacheDir, 'update.zip'))).toBe(true)
     expect(lines.join('\n')).toContain('0.12.31')
   })
 
@@ -79,13 +82,10 @@ describe('pruneUpdateCache', () => {
 
   it('keeps a downloaded update that is not installed yet', () => {
     downloaded('SeuOffice-Setup-0.12.32-stable.exe')
-    writeFileSync(join(cacheDir, 'installer.exe'), 'the running version, copied at its install')
 
     pruneUpdateCache({ cacheDir, runningVersion: '0.12.31', log })
 
     expect(pending()).toEqual(['SeuOffice-Setup-0.12.32-stable.exe', 'update-info.json'])
-    // the copy the installer left of itself is never the one waiting to run
-    expect(existsSync(join(cacheDir, 'installer.exe'))).toBe(false)
   })
 
   it('keeps a download it cannot place against a pre-release build', () => {

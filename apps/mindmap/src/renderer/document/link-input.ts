@@ -6,7 +6,7 @@
  * tells the user beforehand which kind an address is. It decides nothing about
  * opening.
  */
-import { isInternalLink } from '@genoffice/xmind-engine'
+import { isInternalLink } from '@seuoffice/xmind-engine'
 import { openableLink } from '../../shared/links'
 
 /**

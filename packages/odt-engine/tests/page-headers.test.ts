@@ -1,4 +1,4 @@
-import { PAGE_MARK } from '@genoffice/docx-engine'
+import { PAGE_MARK } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { buildOdt } from './helpers/build-odt'
 import { hCell, hFramedTable, hPara, hRow, hTable } from './helpers/hancom-fragments'

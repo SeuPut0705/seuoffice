@@ -13,7 +13,7 @@ import {
   previewInputOf,
   templateOpenInputOf,
   type UserSkillsFail,
-} from '@genoffice/electron-utils/user-skills-channels'
+} from '@seuoffice/electron-utils/user-skills-channels'
 import type { TemplateTabs } from './template-tabs'
 
 const invalid: UserSkillsFail = { ok: false, reason: 'invalid' }

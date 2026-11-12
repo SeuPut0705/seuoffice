@@ -4,7 +4,7 @@
  * the copy loses something; nothing written on cancel or for a closed tab.
  */
 import { describe, expect, it, vi } from 'vitest'
-import type { Loss } from '@genoffice/docx2hwp'
+import type { Loss } from '@seuoffice/docx2hwp'
 import {
   convertInWorker,
   exportHwp,

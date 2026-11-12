@@ -45,7 +45,7 @@ async function openInApp(
 }
 
 test('a PDF restricted by an owner password opens view-only', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-e2e-pdf-owner-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-e2e-pdf-owner-'))
   const file = join(dir, 'restricted.pdf')
   const { bytes } = await sixPages()
   await writeFile(
@@ -59,7 +59,7 @@ test('a PDF restricted by an owner password opens view-only', async () => {
 })
 
 test('a PDF with a lost page object opens with that page blank', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-e2e-pdf-damaged-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-e2e-pdf-damaged-'))
   const file = join(dir, 'damaged.pdf')
   const { bytes, lostObjNum } = await sixPages()
   const text = Buffer.from(bytes).toString('latin1')

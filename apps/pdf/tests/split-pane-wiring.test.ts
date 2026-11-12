@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { effectiveAiPanelOpen, onAiRailClick } from '@genoffice/ui'
+import { effectiveAiPanelOpen, onAiRailClick } from '@seuoffice/ui'
 
 const APP = process.cwd()
 const source = (path: string): string => readFileSync(join(APP, path), 'utf8')

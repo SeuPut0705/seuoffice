@@ -10,7 +10,7 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: /^@genoffice\/pdf-structure$/,
+        find: /^@seuoffice\/pdf-structure$/,
         replacement: fileURLToPath(
           new URL('./src/renderer/translate/pdf-structure-browser.ts', import.meta.url),
         ),

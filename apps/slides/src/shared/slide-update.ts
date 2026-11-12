@@ -1,4 +1,4 @@
-import type { RenderSlide } from '@genoffice/pptx-render'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import type { SlideUpdate } from './ipc'
 
 let refreshDeck: (() => void) | null = null

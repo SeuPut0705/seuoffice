@@ -1,7 +1,7 @@
 // Assembles the command line as a standalone archive for machines that do not
 // have the desktop app: agent sandboxes, servers, CI images. It carries the
 // same bundle, jsdom tree, wasm engines and xlsx sidecar the installed app
-// ships, so behaviour is identical to `ieumoffice` inside the app — only the
+// ships, so behaviour is identical to `seuoffice` inside the app — only the
 // Electron binary is gone.
 //
 // usage: node pack-tarball.mjs --from <app resources dir> [--out <dir>] [--platform linux] [--arch x64] [--notices <dir>]
@@ -16,26 +16,29 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, extname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(here, '../..')
-const ARCHIVE_ROOT = 'ieumoffice-cli'
+const ARCHIVE_ROOT = 'seuoffice-cli'
+/** Launchers and bundle under the names an earlier version registered; each hands over to the current file. */
+const OLD_NAMES_DIR = join(here, 'bin', 'old-names')
 
 /** Every entry the archive must carry; a missing one means a broken app build. */
 const REQUIRED = [
-  'cli/ieumoffice',
-  'cli/genoffice.cjs',
+  'cli/seuoffice',
+  'cli/seuoffice.cjs',
   'cli/package.json',
   'cli/node_modules/jsdom/package.json',
-  'cli/skills/ieumoffice/SKILL.md',
+  'cli/skills/seuoffice/SKILL.md',
   'wasm/pdfium.wasm',
   'wasm/rhwp_bg.wasm',
   'wasm/hb-subset.wasm',
@@ -61,12 +64,12 @@ function parseArgs(argv) {
 }
 
 export function archiveName(version, platform, arch) {
-  return `ieumoffice-cli_${version}_${platform}-${arch}.tar.gz`
+  return `seuoffice-cli_${version}_${platform}-${arch}.tar.gz`
 }
 
 /** The version the archive reports: CI injects the release version, a checkout reads the bundle's banner or the package's. */
 export function archiveVersion(env = process.env, bundle) {
-  const injected = (env.GENOFFICE_APP_VERSION ?? '').trim()
+  const injected = (env.SEUOFFICE_APP_VERSION ?? '').trim()
   if (injected) return injected
   if (bundle) {
     const line = readFileSync(bundle, 'utf8')
@@ -111,19 +114,24 @@ export function packTarball({ from, out, platform, arch, notices, env = process.
     if (!existsSync(notice)) throw new Error(`notice is missing: ${notice}`)
   }
 
-  const version = archiveVersion(env, join(from, 'cli/genoffice.cjs'))
+  const version = archiveVersion(env, join(from, 'cli/seuoffice.cjs'))
   const target = resolve(out ?? join(here, 'dist'))
   mkdirSync(target, { recursive: true })
   const archive = join(target, archiveName(version, platform, arch))
 
-  const staging = mkdtempSync(join(tmpdir(), 'ieumoffice-cli-'))
+  const staging = mkdtempSync(join(tmpdir(), 'seuoffice-cli-'))
   try {
     copyInto(staging, from, ['cli', 'wasm', 'native'])
     for (const notice of noticeFiles) {
       cpSync(notice, join(staging, ARCHIVE_ROOT, notice.split(/[\\/]/).pop()))
     }
     // the launcher resolves its own location through a PATH symlink, so it must stay executable
-    chmodSync(join(staging, ARCHIVE_ROOT, 'cli/ieumoffice'), 0o755)
+    chmodSync(join(staging, ARCHIVE_ROOT, 'cli/seuoffice'), 0o755)
+    for (const name of readdirSync(OLD_NAMES_DIR)) {
+      const file = join(staging, ARCHIVE_ROOT, 'cli', name)
+      cpSync(join(OLD_NAMES_DIR, name), file)
+      if (!extname(name)) chmodSync(file, 0o755)
+    }
     execFileSync('tar', ['-czf', archive, '-C', staging, ARCHIVE_ROOT], { stdio: 'inherit' })
   } finally {
     rmSync(staging, { recursive: true, force: true })

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { writeJsonAtomic } from '@genoffice/electron-utils/atomic-write'
-import type { RecoveryStore } from '@genoffice/electron-utils'
+import { writeJsonAtomic } from '@seuoffice/electron-utils/atomic-write'
+import type { RecoveryStore } from '@seuoffice/electron-utils'
 import type { DocumentTabKind } from '../shared/tabs-api'
 import type { SplitOrientation, SplitViewState } from '../shared/split-view-api'
 

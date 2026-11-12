@@ -32,7 +32,7 @@ import {
   type ISetRangeValuesMutationParams,
 } from '@univerjs/sheets'
 
-import { getSystemShortDate } from '@genoffice/xlsx-gateway/shared/short-date'
+import { getSystemShortDate } from '@seuoffice/xlsx-gateway/shared/short-date'
 import { getLang } from './i18n/locale'
 import type { UniverRuntime } from './univer-state'
 

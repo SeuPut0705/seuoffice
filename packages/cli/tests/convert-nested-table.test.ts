@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import JSZip from 'jszip'
-import { buildBlankDocx, generateTableModelXml, type TableModel } from '@genoffice/docx-engine'
+import { buildBlankDocx, generateTableModelXml, type TableModel } from '@seuoffice/docx-engine'
 import { afterEach, describe, expect, it } from 'vitest'
 import { run } from './helpers'
 
@@ -14,7 +14,7 @@ afterEach(() => {
 const table = (text: string): TableModel => ({ rows: [[{ paras: [text] }]] })
 
 async function convert(model: TableModel) {
-  const dir = mkdtempSync(join(tmpdir(), 'ieumoffice-nested-md-'))
+  const dir = mkdtempSync(join(tmpdir(), 'seuoffice-nested-md-'))
   dirs.push(dir)
   const zip = await JSZip.loadAsync(await buildBlankDocx())
   const xml = await zip.file('word/document.xml')!.async('string')

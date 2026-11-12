@@ -79,15 +79,15 @@ import {
   readHwpDefaultFormat,
   readLegacyImportSkip,
   writeLegacyImportSkip,
-} from '@genoffice/electron-utils'
-import { aiRunRefusal } from '@genoffice/electron-utils/ai-run-guard'
+} from '@seuoffice/electron-utils'
+import { aiRunRefusal } from '@seuoffice/electron-utils/ai-run-guard'
 import {
   configureExtraFontDirs,
   configureMetricsCache,
   familyAliases,
   familyInfoFor,
   familyVerticalMetrics,
-} from '@genoffice/font-metrics'
+} from '@seuoffice/font-metrics'
 import {
   createI18n,
   documentLocale,
@@ -95,12 +95,12 @@ import {
   normalizeLang,
   PRODUCT_NAME,
   setUiLang,
-} from '@genoffice/i18n'
-import { ProjectStore, type LegacyDocumentChat } from '@genoffice/project-store'
+} from '@seuoffice/i18n'
+import { ProjectStore, type LegacyDocumentChat } from '@seuoffice/project-store'
 import {
   aiChatGptSignInPages,
   aiSubscriptionLoginWindowText,
-} from '@genoffice/ui/ai-subscription-login-window'
+} from '@seuoffice/ui/ai-subscription-login-window'
 import type {
   IpcMainInvokeEvent,
   MenuItemConstructorOptions,
@@ -118,7 +118,7 @@ import {
   diagramPictureExtOf,
   diagramPictureExtOfName,
   rhwpWasmPath,
-} from '@genoffice/file-parse'
+} from '@seuoffice/file-parse'
 import { LEGACY_DOC_LIMITS, convertLegacyDocToDocx } from '../../../../packages/doc2docx/src'
 import { convertHtmlToDocx } from '../../../../packages/html2docx/src'
 import { ElectronBrowserDriver } from '../../../../packages/html2docx/src/drivers/electron'
@@ -155,16 +155,16 @@ import {
   type AiSubscriptionProviderId,
   sealAiSecrets,
   withMigratedSubscriptionNoticeVersion,
-} from '@genoffice/ai-provider'
-import { listCodexModels, shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
-import { listCustomModelsForIpc } from '@genoffice/ai-provider/custom-models'
-import { createKeyModelRefresher, withStoredMainFields } from '@genoffice/ai-provider/key-models'
+} from '@seuoffice/ai-provider'
+import { listCodexModels, shutdownCodexAppServers } from '@seuoffice/ai-provider/codex-app-server'
+import { listCustomModelsForIpc } from '@seuoffice/ai-provider/custom-models'
+import { createKeyModelRefresher, withStoredMainFields } from '@seuoffice/ai-provider/key-models'
 import {
   ensureSubscriptionIpc,
   initSubscriptionChildTracking,
   sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
-} from '@genoffice/ai-provider/subscription'
+} from '@seuoffice/ai-provider/subscription'
 import {
   abortMediaCalls,
   aiToolCapabilities,
@@ -180,7 +180,7 @@ import {
   withMediaCallSignal,
   type AiToolCallContext,
   type AiToolCapabilities,
-} from '@genoffice/ai-search'
+} from '@seuoffice/ai-search'
 import type {
   AiDocContent,
   AttachmentAddResult,
@@ -273,8 +273,8 @@ import {
   validPrintGeometry,
   validPrintPaper,
 } from './print-args'
-import { printPdfViaCups } from '@genoffice/electron-utils/print-cups'
-import { printOutcome } from '@genoffice/electron-utils/print-job'
+import { printPdfViaCups } from '@seuoffice/electron-utils/print-cups'
+import { printOutcome } from '@seuoffice/electron-utils/print-job'
 import { addPdfInternalLinks } from './pdf-links'
 import {
   assignStarredGroup,
@@ -308,7 +308,7 @@ const tMain = createI18n({
     importSkipConfirm: 'Convert without asking next time',
     docImportMsg: 'Convert this .{ext} document?',
     docImportDetail:
-      'GenOffice edits .docx, not Word 97-2003 documents. Body text, headings, lists, tables and images carry over; footnotes, comments and text boxes are not fully preserved. The original file is never changed; the converted .docx is a separate copy that later saves write to.',
+      'SeuOffice edits .docx, not Word 97-2003 documents. Body text, headings, lists, tables and images carry over; footnotes, comments and text boxes are not fully preserved. The original file is never changed; the converted .docx is a separate copy that later saves write to.',
     docImportConvertBtn: 'Convert and open',
     docImportOriginalTarget:
       'The original document cannot be overwritten. Choose a different name.',
@@ -453,7 +453,7 @@ const tMain = createI18n({
     importSkipConfirm: '다음부터 묻지 않고 변환',
     docImportMsg: '이 .{ext} 문서를 변환할까요?',
     docImportDetail:
-      'GenOffice 앱은 Word 97-2003(.doc) 문서가 아니라 .docx를 편집합니다. 본문, 제목, 목록, 표, 이미지는 변환되지만 각주, 메모, 텍스트 상자는 완전히 유지되지 않습니다. 원본 파일은 변경되지 않으며, 변환된 .docx는 이후 저장이 기록되는 독립적인 사본입니다.',
+      'SeuOffice 앱은 Word 97-2003(.doc) 문서가 아니라 .docx를 편집합니다. 본문, 제목, 목록, 표, 이미지는 변환되지만 각주, 메모, 텍스트 상자는 완전히 유지되지 않습니다. 원본 파일은 변경되지 않으며, 변환된 .docx는 이후 저장이 기록되는 독립적인 사본입니다.',
     docImportConvertBtn: '변환 후 열기',
     docImportOriginalTarget: '원본 문서는 덮어쓸 수 없습니다. 다른 이름을 선택하세요.',
     dlgSaveAs: '다른 이름으로 저장',
@@ -702,7 +702,7 @@ async function saveDialog(event: IpcMainInvokeEvent, options: SaveDialogOptions)
   return showSaveDialogWithMemory(dialog, dialogParent(event), options, defaultSaveDir)
 }
 
-/** default folder where new files land on their first (silent) save; shared with the other editors via shell. User-configurable (app-settings.json), falls back to <Documents>/GenOffice. */
+/** default folder where new files land on their first (silent) save; shared with the other editors via shell. User-configurable (app-settings.json), falls back to <Documents>/SeuOffice. */
 export function defaultSaveDir(): string {
   return configuredDefaultSaveDir(app)
 }
@@ -958,7 +958,7 @@ function rememberOpenDoc(wcId: number, filePath: string): void {
 }
 
 function docsMediaRoots(wcId: number): string[] {
-  return documentMediaRoots(openDocByWc.get(wcId), join(app.getPath('temp'), 'genoffice-pasted'))
+  return documentMediaRoots(openDocByWc.get(wcId), join(app.getPath('temp'), 'seuoffice-pasted'))
 }
 
 function allowDocWrite(wcId: number, filePath: string): void {
@@ -985,7 +985,7 @@ function allowPdfWrite(wcId: number, filePath: string): void {
 // Fidelity-harness escape hatch: headless runs have no save dialog to authorize
 // paths, so an explicitly configured directory (set only by our test scripts)
 // is treated as pre-authorized for PDF export.
-const testExportDir = process.env.GENOFFICE_TEST_EXPORT_DIR || null
+const testExportDir = process.env.SEUOFFICE_TEST_EXPORT_DIR || null
 
 function canPdfWrite(wcId: number, filePath: string): boolean {
   if (testExportDir && filePath.startsWith(testExportDir + '/')) return true
@@ -1075,9 +1075,10 @@ async function diskChangedExternally(wcId: number, filePath: string): Promise<bo
   })
 }
 
-/** A closed docs tab detaches without destroying its webContents (shell freeze
- * workaround), so the orphan must lose write access and stop its timers — otherwise
- * its 30s recovery loop resurrects content the user already discarded. */
+/** A closed docs tab detaches before its webContents is destroyed (shell freeze
+ * workaround: the shell ends the renderer first), so until then the orphan must
+ * lose write access and stop its timers — otherwise its 30s recovery loop
+ * resurrects content the user already discarded. */
 export function teardownDocsRenderer(contents: WebContents): void {
   teardownZoteroIpc(contents)
   tornDownWcIds.add(contents.id)
@@ -1622,7 +1623,7 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
         ? Buffer.from(data.buffer, data.byteOffset, data.byteLength)
         : null
   if (!bytes || bytes.byteLength === 0) return null
-  const dir = join(app.getPath('temp'), 'genoffice-pasted')
+  const dir = join(app.getPath('temp'), 'seuoffice-pasted')
   mkdirSync(dir, { recursive: true })
   prunePastedImages(dir)
   const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')
@@ -1631,7 +1632,7 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
   return filePath
 }
 
-/** parse an attachment to text via @genoffice/file-parse (docx/pdf/pptx/xlsx/plain text) */
+/** parse an attachment to text via @seuoffice/file-parse (docx/pdf/pptx/xlsx/plain text) */
 async function extractAttachmentText(filePath: string): Promise<string> {
   // a file open with unsaved changes is not read (before the cache): a
   // withholding mark only reaches the file on save
@@ -1661,7 +1662,7 @@ const TWIPS_PER_INCH = 1440
 
 // ---- AI settings + chat proxy (main process avoids renderer CORS) ----
 // provider metadata, settings defaults/migration, and per-provider streaming/chat
-// implementations live in @genoffice/ai-provider, shared with apps/sheets.
+// implementations live in @seuoffice/ai-provider, shared with apps/sheets.
 
 const SETTINGS_PATH = () => userDataPath('ai-settings.json')
 
@@ -1858,7 +1859,7 @@ export function registerAiIpc(): void {
   ipcMain.handle('ai:custom-models', (_event, input: unknown) => listCustomModelsForIpc(input))
 
   // local AI card: discovery, one model's server-reported profile, and the
-  // four-step connection test. Payload validation lives in @genoffice/ai-provider
+  // four-step connection test. Payload validation lives in @seuoffice/ai-provider
   // (local-ipc.ts), so a malformed payload answers shape and sends nothing.
   ipcMain.handle('ai:local-models', (_event, input: unknown) => listLocalModelsForIpc(input))
   ipcMain.handle('ai:local-inspect', (_event, input: unknown) => inspectLocalModelForIpc(input))
@@ -2486,7 +2487,7 @@ export function registerDocsIpc(): void {
     if (typeof html !== 'string' || !html.trim() || html.length > ALT_CHUNK_HTML_MAX_CHARS) {
       return null
     }
-    const workDir = await mkdtemp(join(tmpdir(), 'genoffice-altchunk-'))
+    const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-altchunk-'))
     let driver: ElectronBrowserDriver | null = null
     try {
       const htmlPath = join(workDir, 'chunk.html')
@@ -2973,7 +2974,7 @@ export function registerDocsIpc(): void {
         // page images: the PDF export writes a temp file that is rasterized
         // into the picked name, numbered per page beside it
         const dir = dirname(picked.path)
-        const pdfPath = join(tmpdir(), `genoffice-docs-images-${randomUUID()}.pdf`)
+        const pdfPath = join(tmpdir(), `seuoffice-docs-images-${randomUUID()}.pdf`)
         allowPdfWrite(wcId, pdfPath)
         imageExportTemps.set(wcId, (imageExportTemps.get(wcId) ?? new Set()).add(pdfPath))
         imageExportDirs.set(wcId, (imageExportDirs.get(wcId) ?? new Set()).add(dir))
@@ -3584,7 +3585,7 @@ export function registerDocsIpc(): void {
     }
     if (!dir) return null
     const wcId = event.sender.id
-    const pdfPath = join(tmpdir(), `genoffice-docs-images-${randomUUID()}.pdf`)
+    const pdfPath = join(tmpdir(), `seuoffice-docs-images-${randomUUID()}.pdf`)
     allowPdfWrite(wcId, pdfPath)
     imageExportTemps.set(wcId, (imageExportTemps.get(wcId) ?? new Set()).add(pdfPath))
     imageExportDirs.set(wcId, (imageExportDirs.get(wcId) ?? new Set()).add(dir))
@@ -3877,7 +3878,7 @@ interface DocsShellHooks {
   focusTab(id: string): void
   /** closes the calling tab instead of the whole shell window (Cmd+W / role:'close') */
   closeActiveTab(): void
-  /** Shell router used to open exported PDFs in a new GenOffice tab. */
+  /** Shell router used to open exported PDFs in a new SeuOffice tab. */
   openGeneratedPath?(path: string): boolean
   /**
    * Project folders (spec 6): the AI's new Word document opens in a blank tab
@@ -4795,7 +4796,7 @@ export function startDocsStandalone(): void {
   installContextMenu(app, () => contextMenuLabels(getUiLang()))
   // dev runs must not share the packaged app's userData (recent files, AI settings)
   // or its single-instance lock — otherwise `npm run dev` silently quits whenever
-  // the installed GenOffice Docs is open and forwards its argv there instead.
+  // the installed SeuOffice Docs is open and forwards its argv there instead.
   // AI_OFFICE_USER_DATA: E2E/screenshot runs isolate userData (and the
   // single-instance lock) so parallel automation sessions don't evict each other
   if (process.env.AI_OFFICE_USER_DATA) app.setPath('userData', process.env.AI_OFFICE_USER_DATA)
@@ -4832,7 +4833,7 @@ export function startDocsStandalone(): void {
     // subscription CLIs behind with nothing to end them at the next start.
     void initSubscriptionChildTracking(app.getPath('userData')).catch(() => undefined)
     installRendererProtocol({ docs: join(__dirname, '../renderer') })
-    const requestedLang = process.env.GENOFFICE_LANG ?? app.getLocale()
+    const requestedLang = process.env.SEUOFFICE_LANG ?? app.getLocale()
     setUiLang(normalizeLang(requestedLang), requestedLang)
     // packaged builds get the Dock icon from icon.icns; dev shows Electron's default
     if (isDev && process.platform === 'darwin') {

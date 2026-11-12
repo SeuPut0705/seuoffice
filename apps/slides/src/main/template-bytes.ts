@@ -5,7 +5,7 @@
  * and the deck's unsaved state is left as it is.
  */
 import type { IpcMain } from 'electron'
-import { savePptx, type OpenedPptx } from '@genoffice/pptx-engine'
+import { savePptx, type OpenedPptx } from '@seuoffice/pptx-engine'
 
 /**
  * Any redaction mark anywhere in the deck's slides: a run's or an element's

@@ -8,7 +8,7 @@
  * back to another provider, so naming never starts a paid run the reader did
  * not choose.
  *
- * And the same gate as every AI panel (`aiSendGate` in @genoffice/ui): nothing
+ * And the same gate as every AI panel (`aiSendGate` in @seuoffice/ui): nothing
  * goes to a subscription provider before the first-connection notice was
  * acknowledged in its current wording. Naming has no notice of its own, so it
  * refuses and the editor points the reader at the AI panel, which shows it.
@@ -18,14 +18,14 @@ import type {
   AiProviderId,
   AiRunErrorKind,
   AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   AI_SUBSCRIPTION_NOTICE_VERSION,
   isSubscriptionProvider,
   normalizeAiSettings,
   selectAiProvider,
   withMigratedSubscriptionNoticeVersion,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 
 /** Why no naming request goes out */
 export type NamingRefusal =

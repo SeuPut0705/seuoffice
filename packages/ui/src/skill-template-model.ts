@@ -1,4 +1,4 @@
-import { SKILL_EDITORS, skillEditorsOf, type SkillProposal } from '@genoffice/agent-core'
+import { SKILL_EDITORS, skillEditorsOf, type SkillProposal } from '@seuoffice/agent-core'
 import type { SkillCardDraft } from './skill-card-model'
 import { skillDisplayName, type SkillChipRef, type SkillChipView } from './skill-picker-model'
 

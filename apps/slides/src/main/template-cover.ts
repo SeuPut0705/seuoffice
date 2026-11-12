@@ -10,10 +10,10 @@
  * leaves memory. No open document is read or changed.
  */
 import { ipcMain } from 'electron'
-import { buildPagePptx, parsePageSpec } from '@genoffice/pipelines/slides'
-import { listSlideTemplates } from '@genoffice/pipelines/slides/templates'
-import { openPptx } from '@genoffice/pptx-engine'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import { buildPagePptx, parsePageSpec } from '@seuoffice/pipelines/slides'
+import { listSlideTemplates } from '@seuoffice/pipelines/slides/templates'
+import { openPptx } from '@seuoffice/pptx-engine'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import type { TemplateCoverLang } from '../shared/ipc'
 import { buildAllRenderSlides, getFontMetrics } from './session-state'
 

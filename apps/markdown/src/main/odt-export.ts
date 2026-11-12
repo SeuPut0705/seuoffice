@@ -9,13 +9,13 @@
  * (`dropped`), the user confirms before anything is written; cancel writes
  * nothing. The steps are injected so the flow is testable without Electron.
  */
-import { createI18n, getUiLang, type Lang } from '@genoffice/i18n'
+import { createI18n, getUiLang, type Lang } from '@seuoffice/i18n'
 import {
   docxToOdt,
   type ConversionReport,
   type DocxToOdtResult,
   type ReportFeature,
-} from '@genoffice/odt-engine'
+} from '@seuoffice/odt-engine'
 import type { MessageBoxOptions } from 'electron'
 
 export type OdtExportOutcome =

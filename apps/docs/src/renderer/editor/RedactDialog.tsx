@@ -1,5 +1,5 @@
 import { useI18n } from '../i18n/locale'
-import { useRedactLabelField } from '@genoffice/ui'
+import { useRedactLabelField } from '@seuoffice/ui'
 
 interface Props {
   /** the text the span covers, offered as a starting label */

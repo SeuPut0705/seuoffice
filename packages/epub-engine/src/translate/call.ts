@@ -29,7 +29,7 @@ import {
   type TranslationBlockResult,
   type TranslationJobItem,
   type TranslationModelCallOptions,
-} from '@genoffice/pdf-structure'
+} from '@seuoffice/pdf-structure'
 import { notationPlainText, parseBlockNotation } from '../notation'
 import { buildEpubTranslationRequest } from './prompt'
 import type { EpubTranslationUnit } from './units'

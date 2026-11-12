@@ -6,7 +6,7 @@
  * as a proposal the person accepts or rejects. The main process owns the snapshots and the
  * staleness check; this module owns the transitions and the preview, over an injected backend.
  */
-import type { RenderSlide } from '@genoffice/pptx-render'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import type { SlidesApi } from '../../shared/ipc'
 
 export interface ProposalBackend {

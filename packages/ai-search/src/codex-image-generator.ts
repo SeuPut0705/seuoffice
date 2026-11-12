@@ -6,7 +6,7 @@
  * "unavailable".
  */
 
-import type { MediaBlob } from '@genoffice/ai-provider'
+import type { MediaBlob } from '@seuoffice/ai-provider'
 
 export interface CodexImageRequest {
   /** the prompt as the tool received it, trimmed; any script, never transliterated */

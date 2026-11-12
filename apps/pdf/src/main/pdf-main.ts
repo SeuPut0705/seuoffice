@@ -35,16 +35,16 @@ import {
   registerRendererScheme,
   rendererUrl,
   registerRecoveryEditor,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import type {
   RecoveryEditorContract,
   RecoveryIdentity,
   RecoveryStore,
   SaveDiskState,
-} from '@genoffice/electron-utils'
-import { brandText, createI18n, getUiLang } from '@genoffice/i18n'
-import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@genoffice/ai-search'
-import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
+} from '@seuoffice/electron-utils'
+import { createI18n, getUiLang } from '@seuoffice/i18n'
+import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@seuoffice/ai-search'
+import { sharedSubscriptionStatuses } from '@seuoffice/ai-provider/subscription'
 import {
   PDF_CHANNELS,
   PDF_READ_CHUNK_BYTES,
@@ -248,7 +248,7 @@ interface RuntimePaths {
   preloadPath: string
   rendererUrl?: string
   rendererFile?: string
-  /** Shell router used to open generated PDFs in a new GenOffice tab. */
+  /** Shell router used to open generated PDFs in a new SeuOffice tab. */
   openGeneratedPath?: (path: string) => boolean
   /**
    * Host-owned cross-app document creator (the shell routes DOCX into Docs).
@@ -324,7 +324,7 @@ async function createStandaloneDocument(
   if (request.type === 'docx') {
     return {
       ok: false,
-      error: brandText('Creating DOCX files requires the GenOffice shell or Docs app.', 'en'),
+      error: 'Creating DOCX files requires the SeuOffice shell or Docs app.',
     }
   }
   const title = sanitizeGeneratedDocumentTitle(request.title)
@@ -788,7 +788,7 @@ const recovery = createPdfRecovery({
   lang: () => getUiLang(),
   isUntitledCopyPath: (path) => untitledCopyPdfPaths.has(path),
   // a restored untitled copy's working file, like a template copy's: never a user folder
-  workDir: () => join(tmpdir(), 'genoffice-pdf-recovery'),
+  workDir: () => join(tmpdir(), 'seuoffice-pdf-recovery'),
 })
 
 /**
@@ -2468,7 +2468,7 @@ function registerPdfIpc(): void {
           // pdf keeps its media (exported/edited images) beside the open file
           mediaRoots: documentMediaRoots(
             openPathByWc.get(e.sender.id),
-            join(app.getPath('temp'), 'genoffice-pasted'),
+            join(app.getPath('temp'), 'seuoffice-pasted'),
           ),
           // a user request from the AI panel: the connected subscription may be used
           context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
@@ -2805,7 +2805,7 @@ export function createPdfView(openPath?: string | null): WebContentsView {
   return view
 }
 
-/** Standalone window mode: `npm run dev -w @genoffice/pdf`, pdf path passed via argv */
+/** Standalone window mode: `npm run dev -w @seuoffice/pdf`, pdf path passed via argv */
 export function startPdfStandalone(): void {
   registerRendererScheme()
   installNavigationGuard(app)

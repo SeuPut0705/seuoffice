@@ -1,7 +1,7 @@
-import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
-import type { AiToolCapabilities, MediaToolErrorCode } from '@genoffice/ai-search'
-import type { Lang } from '@genoffice/i18n'
-import type { AiPanelPrefs, AutoSaveDefault } from '@genoffice/ui'
+import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@seuoffice/ai-provider'
+import type { AiToolCapabilities, MediaToolErrorCode } from '@seuoffice/ai-search'
+import type { Lang } from '@seuoffice/i18n'
+import type { AiPanelPrefs, AutoSaveDefault } from '@seuoffice/ui'
 import type { SubscriptionApi } from './subscription-api'
 
 export const HWP_CHANNELS = {

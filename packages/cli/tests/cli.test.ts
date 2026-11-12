@@ -9,15 +9,15 @@ const REPO = resolve(__dirname, '../../..')
 const DOCX = join(REPO, 'apps/docs/tests/pagination-corpus/docx/01-simple-english.docx')
 const PPTX = join(REPO, 'packages/pptx-engine/tests/fixtures/01_standard_business.pptx')
 
-describe('genoffice cli', () => {
+describe('seuoffice cli', () => {
   it('prints help and usage errors with the documented exit codes', async () => {
     expect((await run([])).code).toBe(1)
     expect((await run(['--help'])).code).toBe(0)
-    expect((await run(['help', 'convert'])).stdout).toContain('Usage: ieumoffice convert')
+    expect((await run(['help', 'convert'])).stdout).toContain('Usage: seuoffice convert')
     const unknown = await run(['frobnicate', '--json'])
     expect(unknown.code).toBe(1)
     expect(unknown.json()).toMatchObject({ status: 'error', code: 1, command: 'frobnicate' })
-    expect((await run(['--version'])).stdout).toMatch(/^ieumoffice \d/)
+    expect((await run(['--version'])).stdout).toMatch(/^seuoffice \d/)
   })
 
   it('reports a missing file as exit code 2', async () => {
@@ -86,7 +86,7 @@ describe('genoffice cli', () => {
 
   it('converts pdf to docx through the local engine', async () => {
     const dir = tempDir()
-    const pdf = writeMinimalPdf(join(dir, 'one.pdf'), 'Converted by genoffice')
+    const pdf = writeMinimalPdf(join(dir, 'one.pdf'), 'Converted by seuoffice')
     const r = await run([
       'convert',
       pdf,
@@ -102,7 +102,7 @@ describe('genoffice cli', () => {
     expect(existsSync(out)).toBe(true)
     const zip = await JSZip.loadAsync(readFileSync(out))
     const doc = await zip.file('word/document.xml')!.async('string')
-    expect(doc).toContain('Converted by genoffice')
+    expect(doc).toContain('Converted by seuoffice')
   })
 
   it.skipIf(!xlsxSidecarPath())('info reads workbook sheets through the xlsx sidecar', async () => {
@@ -113,14 +113,14 @@ describe('genoffice cli', () => {
   })
 
   it('open fails with exit code 4 when no app binary is available', async () => {
-    // A GenOffice already running on this machine publishes its control endpoint in the
+    // A SeuOffice already running on this machine publishes its control endpoint in the
     // user-data dir; `open` would then hand the file to that live instance and exit 0,
     // never reaching the missing-binary path. Isolate the lookup like control.test.ts does.
     const r = await run(['open', DOCX, '--json'], {
       env: {
-        GENOFFICE_APP_BIN: '/nonexistent/GenOffice',
-        GENOFFICE_USER_DATA: tempDir(),
-        GENOFFICE_AUDIT_LOG: 'off',
+        SEUOFFICE_APP_BIN: '/nonexistent/SeuOffice',
+        SEUOFFICE_USER_DATA: tempDir(),
+        SEUOFFICE_AUDIT_LOG: 'off',
       },
     })
     expect(r.code).toBe(4)

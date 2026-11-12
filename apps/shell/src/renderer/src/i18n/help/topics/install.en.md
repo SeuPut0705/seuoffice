@@ -1,4 +1,4 @@
-# Installing GenOffice
+# Installing SeuOffice
 
 Every version is published on the [Releases page](https://github.com/SeuPut0705/seuoffice/releases/latest) of the project on GitHub.
 
@@ -6,18 +6,18 @@ Every version is published on the [Releases page](https://github.com/SeuPut0705/
 
 | Platform               | Requirements                          | File                            |
 | ---------------------- | ------------------------------------- | ------------------------------- |
-| **Windows**            | Windows 10 or later, 64-bit Intel/AMD | `GenOffice-Setup-<version>.exe` |
-| **Mac**, Apple Silicon | macOS 12 or later, M1 or newer chip   | `GenOffice-<version>-arm64.dmg` |
+| **Windows**            | Windows 10 or later, 64-bit Intel/AMD | `SeuOffice-Setup-<version>.exe` |
+| **Mac**, Apple Silicon | macOS 12 or later, M1 or newer chip   | `SeuOffice-<version>-arm64.dmg` |
 
 The other files on the Releases page (`.zip`, `.yml`, `.blockmap`) are what the app itself uses to update; you do not need to download them. Older versions stay on the Releases page.
 
 ## On Windows
 
-1. Download `GenOffice-Setup-<version>.exe` from the Releases page.
+1. Download `SeuOffice-Setup-<version>.exe` from the Releases page.
 2. Run it. The installer is not code-signed, so Windows may first show a blue "Windows protected your PC" window. Choose **More info**, then **Run anyway**. The exact wording depends on your Windows version.
 3. Follow the installer to the end.
 
-It puts GenOffice in the Start menu and registers `.docx`, `.xlsx`, `.pptx`, `.pdf` and friends so double-clicking a file opens it.
+It puts SeuOffice in the Start menu and registers `.docx`, `.xlsx`, `.pptx`, `.pdf` and friends so double-clicking a file opens it.
 
 Because the installer is not signed, only run one you downloaded from the Releases page above.
 
@@ -50,9 +50,9 @@ When Windows 11's Smart App Control is on, it stops unsigned installers and offe
 
 You need macOS 12 (Monterey) or later. The Mac build has no Apple developer signature, so the first time you open it macOS says it cannot verify the app is free of malware and does not open it. Allow it once, as below.
 
-1. Open the dmg and drag `GenOffice.app` into the **Applications** folder.
-2. Open GenOffice from the Applications folder. When the warning appears, press **Done**.
-3. Open **System Settings ▸ Privacy & Security**. Near the bottom, next to the line saying GenOffice was blocked, press **Open Anyway** and enter your Mac password. The button shows for about an hour after you tried to open the app.
+1. Open the dmg and drag `SeuOffice.app` into the **Applications** folder.
+2. Open SeuOffice from the Applications folder. When the warning appears, press **Done**.
+3. Open **System Settings ▸ Privacy & Security**. Near the bottom, next to the line saying SeuOffice was blocked, press **Open Anyway** and enter your Mac password. The button shows for about an hour after you tried to open the app.
 4. In the window that appears again, press **Open**. From then on it opens without a warning.
 
 On macOS 12 the place is **System Preferences ▸ Security & Privacy ▸ General**, and the button is **Open Anyway** there.
@@ -60,10 +60,10 @@ On macOS 12 the place is **System Preferences ▸ Security & Privacy ▸ General
 If macOS says the app "is damaged and can't be opened", do not move it to the Trash. Run the line below in Terminal, then open the app again and allow it as above. It removes the mark macOS attaches to files downloaded from the internet.
 
 ```sh
-xattr -dr com.apple.quarantine /Applications/GenOffice.app
+xattr -dr com.apple.quarantine /Applications/SeuOffice.app
 ```
 
-If macOS says the app is not supported on this Mac, check **About This Mac**. GenOffice runs only on an Apple Silicon Mac (M1 or later) with macOS 12 or later; an Intel Mac or macOS 11 or earlier cannot run it.
+If macOS says the app is not supported on this Mac, check **About This Mac**. SeuOffice runs only on an Apple Silicon Mac (M1 or later) with macOS 12 or later; an Intel Mac or macOS 11 or earlier cannot run it.
 
 Also on a Mac:
 
@@ -72,11 +72,11 @@ Also on a Mac:
 
 ## Updates
 
-- GenOffice looks for a newer version on the same GitHub Releases page. When one is published, **Settings ▸ About** offers it: press **Update to …**, wait for the download, then press **Restart & install**. On Windows an installer window shows the progress; when it finishes, GenOffice opens again with the documents you had open. On a Mac the app closes, is swapped for the new version and opens again with the documents you had open. That works for an app in the Applications folder; one opened straight from the disk image points you to the download page instead. The update installs only when you press that button, never when you simply close the app.
+- SeuOffice looks for a newer version on the same GitHub Releases page. When one is published, **Settings ▸ About** offers it: press **Update to …**, wait for the download, then press **Restart & install**. On Windows an installer window shows the progress; when it finishes, SeuOffice opens again with the documents you had open. On a Mac the app closes, is swapped for the new version and opens again with the documents you had open. That works for an app in the Applications folder; one opened straight from the disk image points you to the download page instead. The update installs only when you press that button, never when you simply close the app.
 - **Menu (☰) ▸ Check for updates** checks whenever you ask. On a Mac it is **Help ▸ Check for updates**.
 - When the check fails — no network, or nothing published yet — nothing happens, and the app keeps working as before.
 - Updates are not code-signed either. Before installing one, the app checks the downloaded file against the checksum published with that release.
-- If **Restart & install** closes the app but the new version does not appear, the next launch says so and offers the update again. This time the installer opens in its own window, so you can follow it and answer an administrator prompt. If that does not work either, the update window points to the download page; installing from the file you get there keeps your settings and documents. What the updater did is written to `update-log.txt` in the app's data folder (type `%APPDATA%\GenOffice` into the File Explorer address bar to open it). Attach that file when you report the problem.
+- If **Restart & install** closes the app but the new version does not appear, the next launch says so and offers the update again. This time the installer opens in its own window, so you can follow it and answer an administrator prompt. If that does not work either, the update window points to the download page; installing from the file you get there keeps your settings and documents. What the updater did is written to `update-log.txt` in the app's data folder (type `%APPDATA%\SeuOffice` into the File Explorer address bar to open it). Attach that file when you report the problem.
 
 ## The build you are running
 
@@ -84,4 +84,4 @@ Also on a Mac:
 
 ## The command line comes with it
 
-Every install ships an `ieumoffice` command that talks to the same engines the window does, so the two never disagree about a file. `ieumoffice install-cli` puts it on your `PATH`. See [Command line and agents](help://cli) for what it can do.
+Every install ships an `seuoffice` command that talks to the same engines the window does, so the two never disagree about a file. `seuoffice install-cli` puts it on your `PATH`. See [Command line and agents](help://cli) for what it can do.

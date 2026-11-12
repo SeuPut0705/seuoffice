@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import JSZip from 'jszip'
-import { buildBlankDocx, generateTableModelXml, type TableModel } from '@genoffice/docx-engine'
+import { buildBlankDocx, generateTableModelXml, type TableModel } from '@seuoffice/docx-engine'
 import { afterEach, describe, expect, it } from 'vitest'
 import { run } from './helpers'
 
@@ -12,7 +12,7 @@ afterEach(() => {
 })
 
 async function template(outer = 'Company', deep = false) {
-  const dir = mkdtempSync(join(tmpdir(), 'ieumoffice-merge-nested-'))
+  const dir = mkdtempSync(join(tmpdir(), 'seuoffice-merge-nested-'))
   dirs.push(dir)
   const inside: TableModel = {
     rows: [

@@ -14,8 +14,8 @@
  * gate the AI's pictures use (`fetchImageBytes`), and only from a web address.
  */
 import { ipcMain } from 'electron'
-import { fetchImageBytes } from '@genoffice/electron-utils/fetch-image-bytes'
-import { fetchWithSsrfGuard } from '@genoffice/electron-utils/safe-remote-url'
+import { fetchImageBytes } from '@seuoffice/electron-utils/fetch-image-bytes'
+import { fetchWithSsrfGuard } from '@seuoffice/electron-utils/safe-remote-url'
 import { MINDMAP_CHANNELS, type LinkPreviewResult } from '../shared/ipc'
 
 /** How much of a page is read at most: the tags sit in its head, far before this. */

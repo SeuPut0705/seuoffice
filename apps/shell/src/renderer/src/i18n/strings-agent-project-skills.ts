@@ -1,4 +1,4 @@
-import { createI18n, defineStrings, type Lang, type Params } from '@genoffice/i18n'
+import { createI18n, defineStrings, type Lang, type Params } from '@seuoffice/i18n'
 
 /**
  * The agent window's start screen: a project folder's own skills and the

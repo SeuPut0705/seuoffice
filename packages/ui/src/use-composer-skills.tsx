@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import type { SkillEditorId } from '@genoffice/agent-core'
+import type { Lang } from '@seuoffice/i18n'
+import type { SkillEditorId } from '@seuoffice/agent-core'
 import {
   aiSkillsBridge,
   chipsAfterListChange,

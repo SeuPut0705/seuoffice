@@ -21,7 +21,7 @@ export const RENDERER_SCHEME_PRIVILEGE: CustomScheme = {
 /** docs' lazily served pictures (packages/docx-engine/src/lazy-media.ts); a
  * secure page may only load pictures from another secure scheme */
 export const DOCX_MEDIA_SCHEME_PRIVILEGE: CustomScheme = {
-  scheme: 'genoffice-docx-media',
+  scheme: 'seuoffice-docx-media',
   privileges: {
     standard: true,
     secure: true,
@@ -33,7 +33,7 @@ export const DOCX_MEDIA_SCHEME_PRIVILEGE: CustomScheme = {
 
 /** Slides serves archive pictures outside structured-clone IPC payloads. */
 export const SLIDE_MEDIA_SCHEME_PRIVILEGE: CustomScheme = {
-  scheme: 'genoffice-slide-media',
+  scheme: 'seuoffice-slide-media',
   privileges: {
     standard: true,
     secure: true,

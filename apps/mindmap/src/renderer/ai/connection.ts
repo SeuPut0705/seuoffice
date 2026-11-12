@@ -1,9 +1,9 @@
 // What a failed run says about its connection, and which usage reports are kept. What the
 // panel does with a request before it is sent is the send gate every editor shares
-// (`useAiSendGate` in @genoffice/ui).
-import type { IpcStreamError, IpcStreamErrorCause } from '@genoffice/agent-core'
-import type { AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
-import { isAiBlockedRunKind } from '@genoffice/ui'
+// (`useAiSendGate` in @seuoffice/ui).
+import type { IpcStreamError, IpcStreamErrorCause } from '@seuoffice/agent-core'
+import type { AiSubscriptionUsage } from '@seuoffice/ai-provider/browser'
+import { isAiBlockedRunKind } from '@seuoffice/ui'
 
 /** A failed turn whose connection cannot go on: shown as a blocked notice instead of an error line */
 export interface BlockedRun extends IpcStreamErrorCause {

@@ -13,12 +13,12 @@ import type {
   ChartElement,
   PassthroughElement,
   ArrowEnd,
-} from '@genoffice/pptx-engine'
+} from '@seuoffice/pptx-engine'
 // Subpath import: the renderer bundles this package, so pulling the engine's index
 // (Node-only imports like node:crypto) would break the browser build
-import { tableRowGridCols } from '@genoffice/pptx-engine/table-grid'
-import { elementDurableId, groupChildDurableId } from '@genoffice/pptx-engine/identity'
-import { isBackgroundLikeElement } from '@genoffice/pptx-engine/background-promote'
+import { tableRowGridCols } from '@seuoffice/pptx-engine/table-grid'
+import { elementDurableId, groupChildDurableId } from '@seuoffice/pptx-engine/identity'
+import { isBackgroundLikeElement } from '@seuoffice/pptx-engine/background-promote'
 import { buildChartNode } from './build-chart'
 import type {
   RenderSlide,
@@ -609,7 +609,7 @@ function buildPicture(
   const isMetafile =
     typeof dataUrl === 'string' &&
     (/^data:image\/(x-)?(emf|wmf|emz|wmz)[;,]/.test(dataUrl) ||
-      /^genoffice-slide-media:.*[?&]mime=image%2F(?:x-)?(emf|wmf)(?:&|$)/i.test(dataUrl))
+      /^seuoffice-slide-media:.*[?&]mime=image%2F(?:x-)?(emf|wmf)(?:&|$)/i.test(dataUrl))
   const node: PictureRenderNode = {
     id: `r_${el.id}`,
     type: 'picture',

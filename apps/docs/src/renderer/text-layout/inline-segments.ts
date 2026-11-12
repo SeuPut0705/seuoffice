@@ -9,7 +9,7 @@
  *   autospace pads, balanced spaces, Korean no-break seams, SimSun-gap line
  *   lifts, justification symbols, hinted East Asian curly quotes.
  */
-import { textHasEastAsian } from '@genoffice/docx-engine'
+import { textHasEastAsian } from '@seuoffice/docx-engine'
 import {
   asciiOnlyCjkFace,
   autospaceLatinFirst,

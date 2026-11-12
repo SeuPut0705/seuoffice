@@ -29,6 +29,11 @@ export interface InstallAttempt {
    * attemptTries)
    */
   tries?: number
+  /**
+   * when the installer or the Mac swap was started (ISO time); the next start
+   * logs how long the update took from there. Absent in older records.
+   */
+  startedAt?: string
 }
 
 function isInstallAttempt(value: unknown): value is InstallAttempt {
@@ -41,7 +46,8 @@ function isInstallAttempt(value: unknown): value is InstallAttempt {
     v.fromVersion.length > 0 &&
     typeof v.visible === 'boolean' &&
     (v.tries === undefined ||
-      (typeof v.tries === 'number' && Number.isInteger(v.tries) && v.tries >= 1))
+      (typeof v.tries === 'number' && Number.isInteger(v.tries) && v.tries >= 1)) &&
+    (v.startedAt === undefined || typeof v.startedAt === 'string')
   )
 }
 

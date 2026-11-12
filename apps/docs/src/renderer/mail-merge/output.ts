@@ -1,4 +1,4 @@
-import { mergeOutputFileName, type MergeRecord } from '@genoffice/docx-engine'
+import { mergeOutputFileName, type MergeRecord } from '@seuoffice/docx-engine'
 import type { MergeOutputMode } from '../../shared/ipc'
 import { buildDocBytes, type FileActionContext } from '../file-actions'
 import type { PmNode } from '../editor/convert'

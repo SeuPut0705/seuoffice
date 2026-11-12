@@ -1,5 +1,5 @@
 /**
- * Shared main-process state for GenOffice Slides, extracted from slides-main.ts so
+ * Shared main-process state for SeuOffice Slides, extracted from slides-main.ts so
  * the IPC modules (slides-main, ai-ipc, presenter-show) can share it:
  * per-renderer sessions, snapshot undo/redo history, runtime paths, window
  * references, and RenderSlide rebuild helpers.
@@ -8,7 +8,7 @@ import { BrowserWindow, webContents } from 'electron'
 import type { WebContents } from 'electron'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import type { RecoveryIdentity, SaveDiskState } from '@genoffice/electron-utils'
+import type { RecoveryIdentity, SaveDiskState } from '@seuoffice/electron-utils'
 import {
   materializeSlide,
   parseClrMap,
@@ -18,12 +18,12 @@ import {
   type Slide,
   type SlideElement,
   type TextElement,
-} from '@genoffice/pptx-engine'
+} from '@seuoffice/pptx-engine'
 import {
   buildRenderSlide,
   type FontMetricsProvider,
   type RenderSlide,
-} from '@genoffice/pptx-render'
+} from '@seuoffice/pptx-render'
 import { createSystemFontMetrics, resetFontRegistry } from './fonts'
 import { tiffToPng } from './tiff-decode'
 import { neutralizeJpegOrientation } from './jpeg-orientation'
@@ -35,7 +35,7 @@ export interface RuntimePaths {
   preloadPath: string
   rendererDevUrl?: string | undefined
   rendererFilePath?: string | undefined
-  /** Shell router used to open exported PDFs in a new GenOffice tab. */
+  /** Shell router used to open exported PDFs in a new SeuOffice tab. */
   openGeneratedPath?: (path: string) => boolean
   /**
    * Project folders (spec 6): the folder an untitled document's save dialog
@@ -76,7 +76,7 @@ export interface Session {
   fitWidthPx: number
   undoStack: HistorySnapshot[]
   redoStack: HistorySnapshot[]
-  /** Split-view save guard (@genoffice/electron-utils/save-conflict): the disk
+  /** Split-view save guard (@seuoffice/electron-utils/save-conflict): the disk
    *  snapshot of `path` this deck last read or wrote. Recorded at open and
    *  after every successful save. */
   diskState?: SaveDiskState
@@ -638,7 +638,7 @@ export function makeMediaResolver(opened: OpenedPptx, slidePath?: string) {
     const key = `${byteVersion(bytes)}:${mime}:${context}`
     let url = urls.get(key)
     if (!url) {
-      url = `genoffice-slide-media://archive/${randomUUID()}?mime=${encodeURIComponent(mime)}`
+      url = `seuoffice-slide-media://archive/${randomUUID()}?mime=${encodeURIComponent(mime)}`
       urls.set(key, url)
       mediaSources.set(url, {
         opened: new WeakRef(opened),

@@ -1,8 +1,8 @@
 import { app, ipcMain } from 'electron'
 import { join } from 'node:path'
 import { readFileSync } from 'node:fs'
-import { chatForProvider } from '@genoffice/ai-provider'
-import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
+import { chatForProvider } from '@seuoffice/ai-provider'
+import { sharedSubscriptionStatuses } from '@seuoffice/ai-provider/subscription'
 import { buildNamingInstruction, excerptForNaming, sanitizeFileStem } from './ai-naming'
 import { resolveNamingProvider, type NamingRefusal, type NamingTarget } from './ai-naming-provider'
 
@@ -31,7 +31,7 @@ const NAMING_TIMEOUT_MS = 30_000
 
 /**
  * What the channel answers: a name, or why there is none. The editor shows the
- * reason (`suggestFileName` in @genoffice/ui); a naming that ends without a
+ * reason (`suggestFileName` in @seuoffice/ui); a naming that ends without a
  * word looks like a broken command.
  */
 export type NamingReply =

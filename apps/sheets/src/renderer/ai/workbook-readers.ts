@@ -10,10 +10,10 @@ import {
   parseAddress,
   parseRange,
   type RangeBounds,
-} from '@genoffice/xlsx-gateway/domain/cell-address'
+} from '@seuoffice/xlsx-gateway/domain/cell-address'
 import { MAX_PATCH_ENTRY_BYTES } from '../../shared/desktop-api'
-import type { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
-import type { CellFormatState, CellScalar } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { InMemoryWorkbookAdapter } from '@seuoffice/xlsx-gateway/domain/in-memory-workbook'
+import type { CellFormatState, CellScalar } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import { planFileTableRegistrations } from '../file-tables'
 import { pivotSourceSheetId } from '../pivot-source'
 import { toSelectionFormat } from '../selection-format'

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import { IconCheck } from '@genoffice/ui/icons'
+import type { Lang } from '@seuoffice/i18n'
+import { IconCheck } from '@seuoffice/ui/icons'
 import type {
   DocItemGroup,
   DocItemState,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AI_PROVIDERS, defaultAiSettings } from '@genoffice/ai-provider'
+import { AI_PROVIDERS, defaultAiSettings } from '@seuoffice/ai-provider'
 import { withAiModelSelection } from '../src/ai-model-picker-options'
 
 const anthropicModels = AI_PROVIDERS.find((m) => m.id === 'anthropic')!.models

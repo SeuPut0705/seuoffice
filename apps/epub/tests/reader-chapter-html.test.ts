@@ -3,7 +3,7 @@
  * policy and base it gets, and the block ids it carries.
  */
 import { describe, expect, it } from 'vitest'
-import { openChapter } from '@genoffice/epub-engine'
+import { openChapter } from '@seuoffice/epub-engine'
 import {
   BLOCK_ATTR,
   FRAME_CSP,
@@ -192,7 +192,7 @@ describe('block markers', () => {
       // wrong: tag name differs
       { id: 'b3', tag: 'h3', outer: { start: 14 } },
     ])
-    expect(marked).toContain('<p data-genoffice-epub-block-mark="b1">a</p>')
+    expect(marked).toContain('<p data-seuoffice-epub-block-mark="b1">a</p>')
     expect(marked).toContain('<h2>b</h2>')
   })
 

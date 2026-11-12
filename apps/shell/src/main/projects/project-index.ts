@@ -1,5 +1,5 @@
 import { statSync } from 'node:fs'
-import type { ProjectId } from '@genoffice/project-store'
+import type { ProjectId } from '@seuoffice/project-store'
 import { readProjectsSettings } from '../app-settings'
 import { resolveCloudOnly as detectCloudOnly } from './cloud-files'
 import { isInsideFolder, relativeInside } from './paths'

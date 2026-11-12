@@ -14,7 +14,7 @@ import {
   RELATIONSHIP_SHAPE_PREFIX,
   SUMMARY_SHAPE_PREFIX,
   SUMMARY_SHAPES,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import {
   arrowMarker,
   borderPoint,

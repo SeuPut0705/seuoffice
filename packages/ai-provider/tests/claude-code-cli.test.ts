@@ -8,7 +8,7 @@ import { existsSync } from 'node:fs'
 import { PassThrough, Writable } from 'node:stream'
 import type { SpawnOptions } from 'node:child_process'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
+import type { AgentMessage, AgentToolCall, AgentToolDef } from '@seuoffice/agent-core'
 import {
   MAX_CLAUDE_CODE_IMAGES,
   buildClaudeCodeInput,
@@ -1812,7 +1812,7 @@ describe('Claude Code bridge: the model list', () => {
     expect(record.args).not.toContain('--model')
     expect(record.options?.shell).toBeUndefined()
     // an empty directory of its own, removed afterwards (checked by the afterEach above)
-    expect(String(record.options?.cwd)).toMatch(/genoffice-claude-code-/)
+    expect(String(record.options?.cwd)).toMatch(/seuoffice-claude-code-/)
     const env = record.options?.env as NodeJS.ProcessEnv
     expect(env.ANTHROPIC_API_KEY).toBeUndefined()
     expect(env.CLAUDE_CODE_USE_BEDROCK).toBeUndefined()

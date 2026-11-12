@@ -1,4 +1,4 @@
-import { parseDocx } from '@genoffice/docx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
 import { MAX_CHANGE_BYTES, type CollabAdapter, type Json } from '@seuoffice/collab/client'
 import { Editor, getSchema } from '@tiptap/core'
 import { Transform } from '@tiptap/pm/transform'

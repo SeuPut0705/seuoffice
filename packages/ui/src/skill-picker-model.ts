@@ -1,12 +1,12 @@
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import {
   RESERVED_USER_SKILL_NAMES,
   skillEditorsOf,
   skillStandsBack,
   skillUsedIn,
   type SkillEditorId,
-} from '@genoffice/agent-core'
-import { mcpServerListOf } from '@genoffice/agent-core/skill-mcp-refs'
+} from '@seuoffice/agent-core'
+import { mcpServerListOf } from '@seuoffice/agent-core/skill-mcp-refs'
 import { builtinSkillDesc, isBuiltinSkillName } from './strings-builtin-skills'
 import { skillPickerText } from './strings-skill-picker'
 

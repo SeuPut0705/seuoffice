@@ -74,7 +74,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('@genoffice/file-parse', () => ({
+vi.mock('@seuoffice/file-parse', () => ({
   hwpToText: vi.fn(async () => ''),
   parseFileToText: vi.fn(async () => ({ kind: 'text', text: '' })),
   ATTACHABLE_EXTS: new Set<string>(),
@@ -101,7 +101,7 @@ const HWPX = Uint8Array.from([0x50, 0x4b, 0x03, 0x04, 0x21, 0x22, 0x23])
 
 let dir: string
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-hwp-default-format-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-hwp-default-format-'))
   userData.dir = join(dir, 'userData')
   mkdirSync(userData.dir, { recursive: true })
   showSaveDialog.mockClear()

@@ -9,50 +9,50 @@ export default defineConfig({
   resolve: {
     alias: {
       // Subpath before the bare name: string aliases are prefix replacements
-      '@genoffice/pptx-engine/table-grid': resolve(
+      '@seuoffice/pptx-engine/table-grid': resolve(
         here,
         '../../packages/pptx-engine/src/table-grid.ts',
       ),
-      '@genoffice/pptx-engine/identity': resolve(
+      '@seuoffice/pptx-engine/identity': resolve(
         here,
         '../../packages/pptx-engine/src/identity.ts',
       ),
-      '@genoffice/pptx-engine/named-action': resolve(
+      '@seuoffice/pptx-engine/named-action': resolve(
         here,
         '../../packages/pptx-engine/src/named-action.ts',
       ),
-      '@genoffice/pptx-engine/background-promote': resolve(
+      '@seuoffice/pptx-engine/background-promote': resolve(
         here,
         '../../packages/pptx-engine/src/background-promote.ts',
       ),
-      '@genoffice/pptx-engine/custgeom': resolve(
+      '@seuoffice/pptx-engine/custgeom': resolve(
         here,
         '../../packages/pptx-engine/src/custgeom.ts',
       ),
-      '@genoffice/pptx-engine/model3d': resolve(here, '../../packages/pptx-engine/src/model3d.ts'),
-      '@genoffice/pptx-engine/chart-workbook': resolve(
+      '@seuoffice/pptx-engine/model3d': resolve(here, '../../packages/pptx-engine/src/model3d.ts'),
+      '@seuoffice/pptx-engine/chart-workbook': resolve(
         here,
         '../../packages/pptx-engine/src/chart-workbook.ts',
       ),
-      '@genoffice/pptx-engine': resolve(here, '../../packages/pptx-engine/src/index.ts'),
-      '@genoffice/pptx-ops/op-docs': resolve(here, '../../packages/pptx-ops/src/op-docs.ts'),
-      '@genoffice/pptx-ops/font-size': resolve(here, '../../packages/pptx-ops/src/font-size.ts'),
-      '@genoffice/pptx-ops': resolve(here, '../../packages/pptx-ops/src/index.ts'),
-      '@genoffice/pptx-render/preset-geometry': resolve(
+      '@seuoffice/pptx-engine': resolve(here, '../../packages/pptx-engine/src/index.ts'),
+      '@seuoffice/pptx-ops/op-docs': resolve(here, '../../packages/pptx-ops/src/op-docs.ts'),
+      '@seuoffice/pptx-ops/font-size': resolve(here, '../../packages/pptx-ops/src/font-size.ts'),
+      '@seuoffice/pptx-ops': resolve(here, '../../packages/pptx-ops/src/index.ts'),
+      '@seuoffice/pptx-render/preset-geometry': resolve(
         here,
         '../../packages/pptx-render/src/preset-geometry.ts',
       ),
-      '@genoffice/pptx-render': resolve(here, '../../packages/pptx-render/src/index.ts'),
-      '@genoffice/pipelines/slides/layout-audit': resolve(
+      '@seuoffice/pptx-render': resolve(here, '../../packages/pptx-render/src/index.ts'),
+      '@seuoffice/pipelines/slides/layout-audit': resolve(
         here,
         '../../packages/pipelines/src/slides/layout-audit.ts',
       ),
-      '@genoffice/pipelines/slides/templates': resolve(
+      '@seuoffice/pipelines/slides/templates': resolve(
         here,
         '../../packages/pipelines/src/slides/templates/index.ts',
       ),
-      '@genoffice/pipelines/slides': resolve(here, '../../packages/pipelines/src/slides/index.ts'),
-      '@genoffice/docx-engine/metafile': resolve(
+      '@seuoffice/pipelines/slides': resolve(here, '../../packages/pipelines/src/slides/index.ts'),
+      '@seuoffice/docx-engine/metafile': resolve(
         here,
         '../../packages/docx-engine/src/metafile.ts',
       ),

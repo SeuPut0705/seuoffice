@@ -22,7 +22,7 @@
  * block with ruby readings, without line breaks and without the content of
  * opaque elements (svg, math…).
  */
-import type { ChapterBlock, XmlElement, XmlNode } from '@genoffice/epub-engine'
+import type { ChapterBlock, XmlElement, XmlNode } from '@seuoffice/epub-engine'
 import { OPAQUE_ELEMENTS, escapeNotationText } from './engine'
 
 export type InlineRole =

@@ -6,14 +6,14 @@
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import {
   DEFAULT_THEME_ID,
   openXmind,
   recogniseSheetTheme,
   sheetLineSettings,
   type XmindSheet,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import App from '../src/renderer/App'
 import { LocaleProvider } from '../src/renderer/i18n/locale'
 import type {

@@ -15,7 +15,7 @@
  * greyed) and the AI panel's `@` list (`toMentionItems`, missing files hidden).
  */
 import { basename, dirname, extname, resolve } from 'node:path'
-import type { DocMentionItem } from '@genoffice/electron-utils/doc-attach-bridge'
+import type { DocMentionItem } from '@seuoffice/electron-utils/doc-attach-bridge'
 import type { DocListItem, DocListResult } from '../../shared/doc-picker-api'
 import type { DocAsker } from './doc-asker'
 
@@ -32,7 +32,7 @@ export interface RecentDocumentEntry {
   missing: boolean
 }
 
-/** the shared values from `@genoffice/file-parse`, injected by the caller */
+/** the shared values from `@seuoffice/file-parse`, injected by the caller */
 export interface AttachableFormats {
   ATTACHABLE_EXTS: ReadonlySet<string>
   ATTACHABLE_IMAGE_EXTS: ReadonlySet<string>

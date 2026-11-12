@@ -2,7 +2,7 @@
  * One turn on the ChatGPT plan over the Responses API (decision 0081). The
  * network is a fake fetch: no request reaches OpenAI and no plan is used.
  */
-import type { AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
+import type { AgentToolCall, AgentToolDef } from '@seuoffice/agent-core'
 import { describe, expect, it } from 'vitest'
 import { createChatGptConnectionMemoryStore } from '../src/chatgpt/credentials'
 import { createChatGptConnection, type ChatGptConnection } from '../src/chatgpt/connection'

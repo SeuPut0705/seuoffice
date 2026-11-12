@@ -9,7 +9,7 @@ import type { JobKind, JobStatus, ResultStore } from '../../../pdf-structure/src
 import { cloudNextStep, headlessCall, prepareCloud } from '../cloud'
 import { resolvePdfAiRoute, type PdfAiJob, type PdfAiRoute } from '../pdf-ai'
 import { CliError, EXIT } from '../result'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 
 export type AvailableRoute = Extract<PdfAiRoute, { available: true }>
 
@@ -126,7 +126,7 @@ export async function assertNoRunningJob(
         ...(running.progress ? { progress: running.progress } : {}),
       },
     },
-    { suggestion: `wait for it to end; \`ieumoffice ${statusCommand} <file>\` shows its progress` },
+    { suggestion: `wait for it to end; \`seuoffice ${statusCommand} <file>\` shows its progress` },
   )
 }
 

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import { SEALED_PREFIX, setAiSecretCodec } from '@genoffice/ai-provider'
+import { SEALED_PREFIX, setAiSecretCodec } from '@seuoffice/ai-provider'
 import { normalizeFileSearchSettings } from '../src/main/file-index/rerank'
 import {
   MAX_REVEAL_VALUES,

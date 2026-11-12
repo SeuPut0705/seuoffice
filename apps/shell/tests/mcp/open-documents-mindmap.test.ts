@@ -82,7 +82,7 @@ vi.mock('electron', () => ({
 }))
 
 import type { WebContents } from 'electron'
-import { createXmindDocument, openXmind } from '@genoffice/xmind-engine'
+import { createXmindDocument, openXmind } from '@seuoffice/xmind-engine'
 import {
   createMindmapView,
   mindmapIsDirty,
@@ -97,8 +97,8 @@ import { createOpenDocumentTools } from '../../src/main/mcp/tools/open-documents
 let dir: string
 let saveDir: string
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-mcp-mindmap-'))
-  saveDir = mkdtempSync(join(tmpdir(), 'genoffice-mcp-mindmap-default-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-mcp-mindmap-'))
+  saveDir = mkdtempSync(join(tmpdir(), 'seuoffice-mcp-mindmap-default-'))
   showSaveDialog.mockReset()
 })
 afterEach(() => {

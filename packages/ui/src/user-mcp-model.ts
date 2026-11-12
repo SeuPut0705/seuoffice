@@ -1,5 +1,5 @@
-import type { Lang } from '@genoffice/i18n'
-import type { McpServerView } from '@genoffice/agent-core'
+import type { Lang } from '@seuoffice/i18n'
+import type { McpServerView } from '@seuoffice/agent-core'
 import { userMcpText, type UserMcpStringKey } from './strings-user-mcp'
 
 /**

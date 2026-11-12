@@ -1,5 +1,5 @@
 import { Extension } from '@tiptap/core'
-import { isEastAsianChar, isEastAsianLangTag, isHangulChar } from '@genoffice/docx-engine'
+import { isEastAsianChar, isEastAsianLangTag, isHangulChar } from '@seuoffice/docx-engine'
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state'
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
@@ -143,10 +143,10 @@ export interface CjkPunctShrinkStorage {
 }
 
 /** dispatched on document after the doc-scoped <style> commits (App) */
-export const DOC_CSS_COMMITTED_EVENT = 'genoffice:doc-css'
+export const DOC_CSS_COMMITTED_EVENT = 'seuoffice:doc-css'
 /** the paginator applied per-block wrap widths (section widths, columns,
  *  letter-spacing): the line breaks the shrink loops measured are stale */
-export const WRAP_WIDTHS_COMMITTED_EVENT = 'genoffice:wrap-widths'
+export const WRAP_WIDTHS_COMMITTED_EVENT = 'seuoffice:wrap-widths'
 
 export function measuresAlignment(textAlign: string, legacyLayout: boolean): boolean {
   return textAlign === 'justify' || legacyLayout

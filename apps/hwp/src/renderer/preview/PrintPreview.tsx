@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { JSX } from 'react'
-import { IconChevronLeft, IconChevronRight } from '@genoffice/ui/icons'
+import { IconChevronLeft, IconChevronRight } from '@seuoffice/ui/icons'
 import type { AgentBridge } from '../ai/agent-bridge'
 import { useI18n } from '../i18n/locale'
 import type { PrintMode, PrintResult } from '../../shared/ipc'

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import { skillEditorsOf } from '@genoffice/agent-core/skill-editors'
-import { skillEditorsSummary, skillNameBeside } from '@genoffice/ui'
+import type { Lang } from '@seuoffice/i18n'
+import { skillEditorsOf } from '@seuoffice/agent-core/skill-editors'
+import { skillEditorsSummary, skillNameBeside } from '@seuoffice/ui'
 import type {
   UserSkillImportPreview,
   UserSkillInvokeValue,
   UserSkillView,
   UserSkillsFailReason,
-} from '@genoffice/electron-utils/user-skills-channels'
+} from '@seuoffice/electron-utils/user-skills-channels'
 import { useI18n } from '../locale'
 import { skillsText, type SkillsStringKey } from '../i18n/strings-skills'
 import { MenuButton } from './SkillDialog'

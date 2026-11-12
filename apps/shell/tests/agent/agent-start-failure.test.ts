@@ -6,8 +6,8 @@ import {
   AgentSandboxUnavailableError,
   AgentProgramError,
   type AgentSession,
-} from '@genoffice/ai-provider/agent-session'
-import { normalizeAiSettings, type AiSubscriptionStatus } from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider/agent-session'
+import { normalizeAiSettings, type AiSubscriptionStatus } from '@seuoffice/ai-provider'
 import { createAgentManager, type AgentManagerDeps } from '../../src/main/agent/agent-sessions'
 import {
   AGENT_WARNING_VERSION,

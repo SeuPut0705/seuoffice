@@ -1,4 +1,4 @@
-import { openXmind, sheetsToOutline } from '@genoffice/xmind-engine'
+import { openXmind, sheetsToOutline } from '@seuoffice/xmind-engine'
 
 /**
  * Mind map to the outline text every reader of a map shares (the engine's one

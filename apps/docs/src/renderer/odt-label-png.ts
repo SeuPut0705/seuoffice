@@ -4,7 +4,7 @@
  * file is needed (ODT → docx Save As). Its own module so tests can stand in for
  * the canvas, which jsdom does not implement.
  */
-import type { ObjectKind } from '@genoffice/odt-engine'
+import type { ObjectKind } from '@seuoffice/odt-engine'
 import { labelSvgDataUrl } from './odt-labels'
 
 const SCALE = 2

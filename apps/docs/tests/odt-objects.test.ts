@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Editor, type JSONContent } from '@tiptap/core'
-import type { Block } from '@genoffice/docx-engine'
+import type { Block } from '@seuoffice/docx-engine'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import {
   captureRenderedObjects,

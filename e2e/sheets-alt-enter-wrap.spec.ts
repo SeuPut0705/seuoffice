@@ -60,7 +60,7 @@ async function createBlankWorkbook(videoDir: string): Promise<{
   sheets: Page
   workbook: string
 }> {
-  const scratch = await mkdtemp(join(tmpdir(), `genoffice-${videoDir}-`))
+  const scratch = await mkdtemp(join(tmpdir(), `seuoffice-${videoDir}-`))
   const workbook = join(scratch, 'alt-enter.xlsx')
   const launched = await launchShell({ onboardingSeen: true, videoDir })
   const { app, page } = launched

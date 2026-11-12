@@ -6,8 +6,8 @@ import {
   encodeCompressedPage,
   openDiagram,
   readDiagramTable,
-} from '@genoffice/drawio-model'
-import { nodePageCodec } from '@genoffice/drawio-model/node'
+} from '@seuoffice/drawio-model'
+import { nodePageCodec } from '@seuoffice/drawio-model/node'
 import { defaultRegistry } from '../src/cli'
 import { loadTypedSchemas } from '../src/mcp/op-schemas'
 import { resolveTools, toolShape } from '../src/mcp/tools'
@@ -25,9 +25,9 @@ const NO_APP = 'C:/no/such/IeumOffice.exe'
 
 const env = (extra: Record<string, string> = {}) => ({
   ...process.env,
-  GENOFFICE_AUDIT_LOG: 'off',
-  GENOFFICE_USER_DATA: tempDir(),
-  GENOFFICE_APP_BIN: NO_APP,
+  SEUOFFICE_AUDIT_LOG: 'off',
+  SEUOFFICE_USER_DATA: tempDir(),
+  SEUOFFICE_APP_BIN: NO_APP,
   ...extra,
 })
 
@@ -278,7 +278,7 @@ describe('diagram apply on .drawio', () => {
       JSON.stringify({ pid: process.pid, paths: [file] }),
     )
     const open = await run(['diagram', 'apply', file, '--ops', ops, '--json'], {
-      env: env({ GENOFFICE_USER_DATA: userData }),
+      env: env({ SEUOFFICE_USER_DATA: userData }),
     })
     expect(open.code).toBe(2)
     expect(open.json()).toMatchObject({
@@ -286,7 +286,7 @@ describe('diagram apply on .drawio', () => {
       detail: { gui_pid: process.pid },
     })
     const anyway = await run(['diagram', 'apply', file, '--ops', ops, '--force'], {
-      env: env({ GENOFFICE_USER_DATA: userData }),
+      env: env({ SEUOFFICE_USER_DATA: userData }),
     })
     expect(anyway.code).toBe(0)
   })

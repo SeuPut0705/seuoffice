@@ -7,7 +7,7 @@
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { CompoundFileError } from '@genoffice/compound-file'
+import { CompoundFileError } from '@seuoffice/compound-file'
 import { DamagedFileError, docToText, parseFileToText, pptToText } from '../src/index'
 import { checkedHwpBytes, hwpMemosOf, hwpToText } from '../src/hwp'
 import { HOSTILE_FILES, REFUSAL_MS } from '../../compound-file/tests/helpers/raw-compound'

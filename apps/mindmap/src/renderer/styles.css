@@ -1,6 +1,6 @@
 /*
  * The editor's chrome: toolbar, card frame, sheet tabs, dialogs, notices.
- * Every colour here is a token from @genoffice/ui (tokens.css) and follows the
+ * Every colour here is a token from @seuoffice/ui (tokens.css) and follows the
  * app's light or dark setting. The map inside the card is document content
  * and has its own colours (map/look.ts, map.css); it does not follow the app.
  */
@@ -101,7 +101,7 @@ body,
   -webkit-app-region: drag;
 }
 
-html.genoffice-popover-open .ribbon-tabs {
+html.seuoffice-popover-open .ribbon-tabs {
   -webkit-app-region: no-drag;
 }
 

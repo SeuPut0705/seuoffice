@@ -12,7 +12,7 @@ import {
   mergePPrFormat,
   parseDocx,
   saveDocx,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import {
   type BridgeMap,
   ConversionRegistry,

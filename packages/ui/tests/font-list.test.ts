@@ -6,7 +6,7 @@
 // spellings literally would hide a font that is really installed — in either
 // direction, so both the localized-named and the English-named candidates are covered.
 import { describe, expect, it } from 'vitest'
-import { CJK_FAMILY_ALIASES, LANGS, SIMPLIFIED_CJK_FAMILIES } from '@genoffice/i18n'
+import { CJK_FAMILY_ALIASES, LANGS, SIMPLIFIED_CJK_FAMILIES } from '@seuoffice/i18n'
 import {
   BUILTIN_FONT_FAMILIES,
   familyForTypedName,

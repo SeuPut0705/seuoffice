@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LANGS, type Lang } from '@genoffice/i18n'
+import { LANGS, type Lang } from '@seuoffice/i18n'
 import { SKILL_PICKER_STRINGS, type SkillPickerStringKey } from '../src/strings-skill-picker'
 
 const KEYS = Object.keys(SKILL_PICKER_STRINGS.en) as SkillPickerStringKey[]

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   USER_SKILLS_BRIDGE_KEY,
   USER_SKILLS_CHANNELS,
-} from '@genoffice/electron-utils/user-skills-channels'
+} from '@seuoffice/electron-utils/user-skills-channels'
 
 /**
  * How the skills bridge reaches every window: one name in the nine editors'
@@ -50,7 +50,7 @@ describe('the skills bridge in every window', () => {
     (editor) => {
       const preload = src(`../../${editor}/src/preload/index.ts`)
       expect(preload).toMatch(/exposeInMainWorld\(USER_SKILLS_BRIDGE_KEY, userSkillsBridge\(\)\)/)
-      expect(preload).toContain("from '@genoffice/electron-utils/user-skills-bridge'")
+      expect(preload).toContain("from '@seuoffice/electron-utils/user-skills-bridge'")
     },
   )
 
@@ -165,7 +165,7 @@ describe('the main process wiring', () => {
     expect(index.match(/createTemplateTabs\(/g)).toHaveLength(1)
     expect(index).toMatch(/templateFileOf: \(id\) => userSkills\.templateFile\(id\)/)
     // copies go to a temp folder of their own, never next to the skill
-    expect(index).toMatch(/'ieumoffice-template-copies'/)
+    expect(index).toMatch(/'seuoffice-template-copies'/)
     // sheets opens its copy like "New spreadsheet": a backing workbook, first save asks
     expect(index).toMatch(/markSheetsUnsavedNew\(backingPath, suggestedPath, tempDir\)/)
   })

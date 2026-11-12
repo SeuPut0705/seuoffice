@@ -5,8 +5,8 @@ import {
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
   type AiSubscriptionUsage,
-} from '@genoffice/ai-provider/browser'
-import { aiSendGate, withAiContinueProvider, withAiSubscriptionNoticeSeen } from '@genoffice/ui'
+} from '@seuoffice/ai-provider/browser'
+import { aiSendGate, withAiContinueProvider, withAiSubscriptionNoticeSeen } from '@seuoffice/ui'
 import {
   aiBlockedRunOf,
   mergeSubscriptionUsage,
@@ -44,7 +44,7 @@ const withOpenAiKey = (settings: AiSettings): AiSettings => ({
   },
 })
 
-// The gate itself is the one every editor shares (@genoffice/ui); these pin it on the
+// The gate itself is the one every editor shares (@seuoffice/ui); these pin it on the
 // settings and statuses the pdf panel hands it.
 describe('aiSendGate', () => {
   it('starts from the automatic selection', () => {

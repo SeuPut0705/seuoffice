@@ -82,8 +82,8 @@ vi.mock('../src/main/shaped-metrics', () => ({
   shapedMeasure: () => ({ width: 0 }),
 }))
 
-import { createBlankPptx } from '@genoffice/pptx-engine'
-import { resetAppShuttingDown } from '@genoffice/electron-utils'
+import { createBlankPptx } from '@seuoffice/pptx-engine'
+import { resetAppShuttingDown } from '@seuoffice/electron-utils'
 import { registerSlidesIpc, runSlidesRecoveryPass, slidesIsDirty } from '../src/main/slides-main'
 import { sessions } from '../src/main/session-state'
 import {
@@ -124,9 +124,9 @@ beforeAll(async () => {
 
 beforeEach(() => {
   sessions.clear()
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-slides-save-as-'))
-  hoisted.userDataDir = mkdtempSync(join(tmpdir(), 'genoffice-slides-save-as-user-'))
-  hoisted.documentsDir = mkdtempSync(join(tmpdir(), 'genoffice-slides-save-as-docs-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-slides-save-as-'))
+  hoisted.userDataDir = mkdtempSync(join(tmpdir(), 'seuoffice-slides-save-as-user-'))
+  hoisted.documentsDir = mkdtempSync(join(tmpdir(), 'seuoffice-slides-save-as-docs-'))
   showSaveDialog.mockReset()
   showSaveDialog.mockResolvedValue({ canceled: true, filePath: undefined })
 })

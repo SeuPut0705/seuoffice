@@ -4,6 +4,8 @@
  * (and re-opens) stay anchored to it. Stored as JSON in a meta tag; the page
  * itself is expected to expose the palette/typography as --brief-* variables.
  */
+import { OLD_BRIEF_META_NAMES } from './old-names'
+
 export interface BriefStyle {
   /** short direction name shown on the style tile, e.g. "Editorial serif" */
   name?: string
@@ -37,9 +39,16 @@ export interface Brief {
   version: 1
 }
 
-export const BRIEF_META_NAME = 'genoffice:brief'
+export const BRIEF_META_NAME = 'seuoffice:brief'
 
-const META_RE = /<meta\s+[^>]*name\s*=\s*["']genoffice:brief["'][^>]*>/i
+/**
+ * The pinned brief under either name: a page saved before the rename keeps the
+ * old one until its brief is next pinned, which rewrites that tag in place.
+ */
+const META_RE = new RegExp(
+  `<meta\\s+[^>]*name\\s*=\\s*["'](?:${[BRIEF_META_NAME, ...OLD_BRIEF_META_NAMES].join('|')})["'][^>]*>`,
+  'i',
+)
 
 function decodeAttr(value: string): string {
   return value

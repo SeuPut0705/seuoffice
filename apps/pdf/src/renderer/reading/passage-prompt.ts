@@ -5,7 +5,7 @@
  * data, and the answer is kept as plain text: nothing in it is run, parsed as
  * markup or followed as an instruction.
  */
-import type { AgentStreamRequest } from '@genoffice/agent-core'
+import type { AgentStreamRequest } from '@seuoffice/agent-core'
 import { translationLanguageName } from '../../../../../packages/pdf-structure/src/translate/language'
 import { PASSAGE_EXCERPT_MAX_CHARS } from './passage-text'
 

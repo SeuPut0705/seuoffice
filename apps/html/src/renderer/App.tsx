@@ -27,11 +27,11 @@ import {
   useSplitPaneFocusPing,
   useSplitPaneRole,
   type TemplateDocument,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import {
   pollUntilReady,
   runHeadlessRendererExport,
-} from '@genoffice/electron-utils/headless-export'
+} from '@seuoffice/electron-utils/headless-export'
 import { useI18n } from './i18n/locale'
 import { parseDocText, serializeDocText, type Envelope } from './document/envelope'
 import {
@@ -73,7 +73,7 @@ import {
   type CanvasMode,
   type ViewMode,
 } from './components/Ribbon'
-import { AiMark, CropDialog, CutoutDialog, type ImageDialogLabels } from '@genoffice/ui'
+import { AiMark, CropDialog, CutoutDialog, type ImageDialogLabels } from '@seuoffice/ui'
 import { FloatToolbar } from './components/FloatToolbar'
 import { RedactDialog } from './components/RedactDialog'
 import { useMathExtension } from './extensions/math/useMathExtension'

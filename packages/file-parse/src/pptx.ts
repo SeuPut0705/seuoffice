@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { assertZipInflatesWithinLimits, assertZipWithinLimits } from '@genoffice/docx-engine'
+import { assertZipInflatesWithinLimits, assertZipWithinLimits } from '@seuoffice/docx-engine'
 import { resolveTarget } from './opc'
 import { XMLParser, XMLValidator } from 'fast-xml-parser'
 import { redactPptxPartXml } from './pptx-redaction'

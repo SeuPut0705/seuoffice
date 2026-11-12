@@ -3,17 +3,16 @@ import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
-import { GITHUB_REPO_NAME, GITHUB_REPO_OWNER, GITHUB_REPO_URL } from '@genoffice/electron-utils'
+import { GITHUB_REPO_NAME, GITHUB_REPO_OWNER, GITHUB_REPO_URL } from '@seuoffice/electron-utils'
 import {
   createI18n,
   DEV_USER_DATA_DIR_NAME,
   LANGS,
   PRODUCT_NAME,
-  UPSTREAM_NAME_LITERAL,
   UPSTREAM_PRODUCT_NAME,
   USER_DATA_DIR_NAME,
   productName,
-} from '@genoffice/i18n'
+} from '@seuoffice/i18n'
 import { OFFICE_TYPES } from '../src/main/default-app'
 import { HELP_TOPICS, helpBody } from '../src/renderer/src/i18n/help/help-registry'
 import { topicTitle } from '../src/renderer/src/i18n/help/help-titles'
@@ -122,11 +121,11 @@ describe('the name in the shell UI', () => {
 
   it('acknowledges the upstream project by its real name in every language', () => {
     for (const lang of LANGS) {
-      // the dictionary escapes the name, so the product-name swap leaves it alone
-      expect(strings[lang].setBasedOn, lang).toContain(UPSTREAM_NAME_LITERAL)
-      const shown = t(lang, 'setBasedOn')
+      // the dictionary takes the name as a parameter, so the literal stays in product.ts
+      expect(strings[lang].setBasedOn, lang).toContain('{upstream}')
+      const shown = t(lang, 'setBasedOn', { upstream: UPSTREAM_PRODUCT_NAME })
       expect(shown, lang).toContain(UPSTREAM_PRODUCT_NAME)
-      expect(shown, lang).not.toContain('{{')
+      expect(shown, lang).not.toContain('{')
       expect(shown, lang).not.toContain(productName(lang))
     }
   })
@@ -164,7 +163,7 @@ describe('coexistence with the upstream app on one machine', () => {
     expect(config.appId).not.toBe(UPSTREAM.appId)
     expect(config.productName).not.toBe(UPSTREAM.productName)
     expect(config.nsis.artifactName).toBe('${productName}-Setup-${version}.${ext}')
-    expect(loadBuilderConfig({ GENOFFICE_WIN_ARM64: '1' }).nsis.artifactName).toBe(
+    expect(loadBuilderConfig({ SEUOFFICE_WIN_ARM64: '1' }).nsis.artifactName).toBe(
       '${productName}-Setup-${version}-arm64.${ext}',
     )
     expect(shellPackage.desktopName).toBe('seuoffice.desktop')
@@ -201,7 +200,7 @@ describe('coexistence with the upstream app on one machine', () => {
     // electron-builder (NSIS) and electron-updater both use
     // <local app data>/<packaged package.json name>-updater
     const upstreamName = shellPackage.name
-    expect(upstreamName).toBe('@genoffice/shell')
+    expect(upstreamName).toBe('@seuoffice/shell')
     expect(config.extraMetadata.name).toBe('seuoffice')
     expect(config.extraMetadata.name).not.toBe(upstreamName)
     // a plain name survives electron-builder's file-name sanitizing unchanged
@@ -249,7 +248,7 @@ describe('coexistence with the upstream app on one machine', () => {
     for (const type of OFFICE_TYPES) expect(type.ext).not.toBe('xmind')
     // it is offered Open-With only by the installer, under this same ProgId
     const nsh = readFileSync(join(SHELL, 'build/installer.nsh'), 'utf8')
-    expect(nsh).toContain(`!define GENOFFICE_MINDMAP_PROGID "${progId}"`)
+    expect(nsh).toContain(`!define SEUOFFICE_MINDMAP_PROGID "${progId}"`)
   })
 
   it('names the book type within the ProgId rule, and keeps it off the Windows default path', () => {
@@ -267,7 +266,7 @@ describe('coexistence with the upstream app on one machine', () => {
     expect(winExts).not.toContain('epub')
     for (const type of OFFICE_TYPES) expect(type.ext).not.toBe('epub')
     const nsh = readFileSync(join(SHELL, 'build/installer.nsh'), 'utf8')
-    expect(nsh).toContain(`!define GENOFFICE_EPUB_PROGID "${progId}"`)
+    expect(nsh).toContain(`!define SEUOFFICE_EPUB_PROGID "${progId}"`)
   })
 
   it('names the Visio drawing type within the ProgId rule, and keeps it off the Windows default path', () => {
@@ -283,7 +282,7 @@ describe('coexistence with the upstream app on one machine', () => {
     expect(winExts).not.toContain('vsdx')
     for (const type of OFFICE_TYPES) expect(type.ext).not.toBe('vsdx')
     const nsh = readFileSync(join(SHELL, 'build/installer.nsh'), 'utf8')
-    expect(nsh).toContain(`!define GENOFFICE_VSDX_PROGID "${progId}"`)
+    expect(nsh).toContain(`!define SEUOFFICE_VSDX_PROGID "${progId}"`)
   })
 
   it('recognizes only its own ProgIds as "this app is the default"', () => {
@@ -300,8 +299,8 @@ describe('coexistence with the upstream app on one machine', () => {
     const nsh = readFileSync(join(SHELL, 'build/installer.nsh'), 'utf8')
     for (const ext of ['docx', 'xlsx', 'pptx']) {
       const progId = OFFICE_TYPES.find((type) => type.ext === ext)!.progId
-      expect(nsh).toContain(`!insertmacro GenOfficeRegisterShellNew "${ext}" "${progId}"`)
-      expect(nsh).toContain(`!insertmacro GenOfficeUnregisterShellNew "${ext}" "${progId}"`)
+      expect(nsh).toContain(`!insertmacro SeuOfficeRegisterShellNew "${ext}" "${progId}"`)
+      expect(nsh).toContain(`!insertmacro SeuOfficeUnregisterShellNew "${ext}" "${progId}"`)
     }
     for (const progId of UPSTREAM.progIds) expect(nsh).not.toContain(`"${progId}"`)
   })
@@ -313,7 +312,7 @@ describe('repository coordinates', () => {
       { provider: 'github', owner: GITHUB_REPO_OWNER, repo: GITHUB_REPO_NAME, channel: 'latest' },
     ])
     // no environment variable switches the feed on or moves it elsewhere
-    const withOldEnv = loadBuilderConfig({ GENOFFICE_UPDATE_URL: 'https://updates.example.test/x' })
+    const withOldEnv = loadBuilderConfig({ SEUOFFICE_UPDATE_URL: 'https://updates.example.test/x' })
     expect(withOldEnv.publish).toEqual(config.publish)
   })
 
@@ -364,9 +363,9 @@ describe('what the installer no longer carries', () => {
 
   it('injects no analytics keys or font server address into the packaged app', () => {
     const env = {
-      GENOFFICE_GA4_MEASUREMENT_ID: 'G-TEST',
-      GENOFFICE_GA4_API_SECRET: 'secret',
-      GENOFFICE_FONT_CDN_URL: 'https://fonts.example.test/v1',
+      SEUOFFICE_GA4_MEASUREMENT_ID: 'G-TEST',
+      SEUOFFICE_GA4_API_SECRET: 'secret',
+      SEUOFFICE_FONT_CDN_URL: 'https://fonts.example.test/v1',
     }
     expect(loadBuilderConfig(env).extraMetadata).toEqual({ name: 'seuoffice' })
     expect(builderSource).not.toMatch(/GA4|FONT_CDN|genofficeAnalytics|genofficeFontCdn/)

@@ -3,7 +3,7 @@
  * markup, tables inside sections are written inside the section, an empty
  * self-closing cell can be filled.
  */
-import { type Block, parseDocx } from '@genoffice/docx-engine'
+import { type Block, parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import type { TableExt } from '../src/table'
 import { editorSave, odtToBridge, writeBack } from './helpers/bridge'

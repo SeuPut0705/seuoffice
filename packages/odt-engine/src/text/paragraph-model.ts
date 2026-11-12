@@ -13,7 +13,7 @@
  * space/tab/CR/LF collapse to one space, leading white space of the paragraph
  * is dropped, `text:s` / `text:tab` / `text:line-break` are literal.
  */
-import { generateParagraphXml, type Run } from '@genoffice/docx-engine'
+import { generateParagraphXml, type Run } from '@seuoffice/docx-engine'
 import type { OdtStyleTable, OdtStylePart } from '../core/styles'
 import {
   type BridgeMarker,

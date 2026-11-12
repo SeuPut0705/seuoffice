@@ -25,7 +25,7 @@ const make = () =>
   })
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-epub-reading-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-epub-reading-'))
 })
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
 

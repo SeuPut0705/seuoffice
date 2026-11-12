@@ -87,7 +87,7 @@ interface Setup {
 function setup(): Setup {
   const base = temp()
   const home = join(base, 'home')
-  const app = join(home, '.ieumoffice', 'skills')
+  const app = join(home, '.seuoffice', 'skills')
   const tmp = join(base, 'tmp')
   mkdirSync(app, { recursive: true })
   return { base, home, app, tmp }
@@ -160,7 +160,7 @@ describe('prepareFolderImport', () => {
       'two/SKILL.md': skillMd('two'),
       'two/tool.ps1': 'Write-Host hi',
       'broken/SKILL.md': 'no front matter',
-      'ieumoffice/SKILL.md': skillMd('ieumoffice'),
+      'seuoffice/SKILL.md': skillMd('seuoffice'),
     })
     writeTree(app, { 'two/SKILL.md': skillMd('two') })
     const imported = await prepareFolderImport({ folder, appSkillsDir: app, homeDir: home })

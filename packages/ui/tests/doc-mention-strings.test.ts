@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LANGS, type Lang } from '@genoffice/i18n'
+import { LANGS, type Lang } from '@seuoffice/i18n'
 import { DOC_MENTION_STRINGS, type DocMentionStringKey } from '../src/strings-doc-mention'
 
 const KEYS = Object.keys(DOC_MENTION_STRINGS.en) as DocMentionStringKey[]

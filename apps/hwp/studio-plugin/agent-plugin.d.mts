@@ -1,9 +1,9 @@
 ﻿export declare const AGENT_PLUGIN_ID: 'ieum-agent'
 
-import type { DocumentProfile } from '@genoffice/doc-rules'
+import type { DocumentProfile } from '@seuoffice/doc-rules'
 
 /**
- * What the document is made of, for the format checks of `@genoffice/doc-rules`. The
+ * What the document is made of, for the format checks of `@seuoffice/doc-rules`. The
  * editor does not know the file's extension, so the app fills `format` in.
  */
 export type AgentDocumentProfile = Omit<DocumentProfile, 'format'>

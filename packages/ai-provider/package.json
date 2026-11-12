@@ -1,5 +1,5 @@
 {
-  "name": "@genoffice/ai-provider",
+  "name": "@seuoffice/ai-provider",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": true,
@@ -25,9 +25,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@genoffice/agent-core": "*",
-    "@genoffice/i18n": "*",
-    "@genoffice/zip-gate": "*",
+    "@seuoffice/agent-core": "*",
+    "@seuoffice/i18n": "*",
+    "@seuoffice/zip-gate": "*",
     "jszip": "^3.10.1",
     "tldts": "^7.4.9"
   },

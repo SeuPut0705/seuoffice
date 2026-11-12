@@ -114,8 +114,8 @@ vi.mock('../src/main/shaped-metrics', () => ({
 }))
 
 // pass-through spies: which serializer a recovery copy goes through
-vi.mock('@genoffice/pptx-engine', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@genoffice/pptx-engine')>()
+vi.mock('@seuoffice/pptx-engine', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@seuoffice/pptx-engine')>()
   return {
     ...actual,
     savePptx: vi.fn(actual.savePptx),
@@ -123,7 +123,7 @@ vi.mock('@genoffice/pptx-engine', async (importOriginal) => {
   }
 })
 
-import { createBlankPptx, openPptx, savePptx, savePptxToFile } from '@genoffice/pptx-engine'
+import { createBlankPptx, openPptx, savePptx, savePptxToFile } from '@seuoffice/pptx-engine'
 import {
   createRecoveryStore,
   markAppShuttingDown,
@@ -131,12 +131,12 @@ import {
   resetAppShuttingDown,
   resumeDiscardedCopies,
   type RecoveryIdentity,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import {
   decryptOfficeFile,
   encryptOoxml,
   isEncryptedOoxml,
-} from '@genoffice/electron-utils/office-encryption'
+} from '@seuoffice/electron-utils/office-encryption'
 import {
   discardSlidesRecovery,
   registerSlidesIpc,
@@ -201,9 +201,9 @@ beforeAll(async () => {
 
 beforeEach(() => {
   sessions.clear()
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-slides-recovery-'))
-  hoisted.userDataDir = mkdtempSync(join(tmpdir(), 'genoffice-slides-recovery-user-'))
-  hoisted.documentsDir = mkdtempSync(join(tmpdir(), 'genoffice-slides-recovery-docs-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-slides-recovery-'))
+  hoisted.userDataDir = mkdtempSync(join(tmpdir(), 'seuoffice-slides-recovery-user-'))
+  hoisted.documentsDir = mkdtempSync(join(tmpdir(), 'seuoffice-slides-recovery-docs-'))
   showMessageBox.mockReset()
   showMessageBox.mockResolvedValue({ response: 0 })
   showSaveDialog.mockReset()
@@ -252,7 +252,7 @@ async function fileWithCopy(): Promise<string> {
 describe('writing copies', () => {
   it('keeps an untitled deck in app data and creates nothing in the Documents folder', async () => {
     // a draft an earlier version left in the Documents folder stays as it was
-    const oldDrafts = join(hoisted.documentsDir, 'GenOffice')
+    const oldDrafts = join(hoisted.documentsDir, 'SeuOffice')
     mkdirSync(oldDrafts, { recursive: true })
     const oldDraft = join(oldDrafts, 'Untitled Presentation-20261001-101010.pptx')
     writeFileSync(oldDraft, blankBytes)

@@ -5,7 +5,7 @@
  * (`mc:Fallback`, an OLE preview), or a label box naming the kind. Plain
  * pictures stay pictures, read from the package by their relationship.
  */
-import type { Run } from '@genoffice/docx-engine'
+import type { Run } from '@seuoffice/docx-engine'
 import type { OoxmlToOdfContext, RunWriter } from '../../core/convert'
 import { escapeXmlAttr, escapeXmlText } from '../../core/xml'
 import { base64Encode, sniffImage } from '../../objects/media'

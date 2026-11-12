@@ -129,9 +129,9 @@
 
 ## 테스트
 
-- 빌드 PC의 PATH에는 `cargo`가 없다. Git Bash에서 `export PATH="$HOME/.cargo/bin:$PATH"`를 먼저 하고 이 폴더에서 `cargo test`를 돌린다. 저장소 어디서든 `npm run native:test -w @genoffice/sheets`로도 같다.
+- 빌드 PC의 PATH에는 `cargo`가 없다. Git Bash에서 `export PATH="$HOME/.cargo/bin:$PATH"`를 먼저 하고 이 폴더에서 `cargo test`를 돌린다. 저장소 어디서든 `npm run native:test -w @seuoffice/sheets`로도 같다.
 - 테스트는 `src/tests.rs`, `src/visuals/tests.rs`와 `archive.rs`·`main.rs`·`recalc.rs`·`find.rs` 등의 `mod tests`에 있다. 따로 둔 `tests/` 폴더나 픽스처 파일은 없다. 통합 문서는 `open_fixture(&[(항목 이름, XML)])`로 테스트 안에서 만든다.
-- `cargo test`는 `target/release`의 실행 파일을 다시 만들지 않는다. `apps/sheets/tests`의 사이드카 테스트(`xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts`, `xlsx-recalc.test.ts`, `xlsx-borders.test.ts`, `ole-roundtrip.test.ts`)는 `XLSX_SIDECAR_PATH`를 읽지 않고 `native/xlsx-engine/target/release/`의 실행 파일을 직접 연다. Rust를 고친 뒤 `cargo build --release`(또는 `npm run native:build -w @genoffice/sheets`) 없이 돌리면 예전 실행 파일을 시험하게 된다.
+- `cargo test`는 `target/release`의 실행 파일을 다시 만들지 않는다. `apps/sheets/tests`의 사이드카 테스트(`xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts`, `xlsx-recalc.test.ts`, `xlsx-borders.test.ts`, `ole-roundtrip.test.ts`)는 `XLSX_SIDECAR_PATH`를 읽지 않고 `native/xlsx-engine/target/release/`의 실행 파일을 직접 연다. Rust를 고친 뒤 `cargo build --release`(또는 `npm run native:build -w @seuoffice/sheets`) 없이 돌리면 예전 실행 파일을 시험하게 된다.
 - `XLSX_SIDECAR_PATH`를 읽는 곳은 둘이다. CLI의 `xlsxSidecarPath()`는 이 값을 가장 먼저 본다. 시트 뒷단의 `resolveSidecarPath()`는 주입된 `runtime.sidecarPath` 다음에 보는데, shell이 항상 경로를 주입하므로 통합 앱에서는 이 변수가 효과가 없고 시트 단독 실행에서만 적용된다.
 - `packages/cli/tests`의 사이드카 테스트는 실행 파일을 찾지 못하면 `skipIf`로 건너뛴다. 실패가 없다는 것만 보지 말고 건너뛴 수를 본다.
 - 바꾼 곳에 따라 반드시 덮는 것:

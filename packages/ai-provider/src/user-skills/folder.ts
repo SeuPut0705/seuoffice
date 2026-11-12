@@ -7,8 +7,8 @@ import { createHash } from 'node:crypto'
 import type { Dirent } from 'node:fs'
 import { lstat, readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { basename, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
-import { mcpServersOfSkill } from '@genoffice/agent-core/skill-mcp-refs'
-import { skillEditorsOf } from '@genoffice/agent-core/skill-editors'
+import { mcpServersOfSkill } from '@seuoffice/agent-core/skill-mcp-refs'
+import { skillEditorsOf } from '@seuoffice/agent-core/skill-editors'
 import {
   IEUM_SOURCE_FILE,
   IEUM_EDITORS_KEY,

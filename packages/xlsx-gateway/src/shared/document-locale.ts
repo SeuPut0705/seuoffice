@@ -1,7 +1,7 @@
 /// Excel writes a CSV in the system's legacy code page and marks nothing.
 /// Bytes that read cleanly in more than one of them (GBK and Shift_JIS both
 /// give plausible CJK) are settled by the language documents are read for
-/// (documentLocaleFor in @genoffice/i18n), never by the UI language.
+/// (documentLocaleFor in @seuoffice/i18n), never by the UI language.
 const LEGACY_CSV_CHARSETS: Partial<Record<string, string>> = {
   zh: 'gb18030',
   'zh-TW': 'big5',

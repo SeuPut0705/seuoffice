@@ -3,15 +3,15 @@ import { launchShell, closeAndSaveVideo, freeMcpPort } from './helpers'
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseDocx } from '@genoffice/docx-engine'
-import { openPptx } from '@genoffice/pptx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
+import { openPptx } from '@seuoffice/pptx-engine'
 import JSZip from 'jszip'
 import http from 'node:http'
 
 /**
  * MCP headless generation against the real built app.
  *
- * The headless tools delegate to the bundled `genoffice` CLI, which the app
+ * The headless tools delegate to the bundled `seuoffice` CLI, which the app
  * spawns on its own Node runtime (ELECTRON_RUN_AS_NODE) — this is the only test
  * that exercises that spawn path end to end: the app has to locate and run the
  * CLI, and the produced files are reparsed with the real engines.
@@ -48,8 +48,8 @@ test.describe('MCP headless generation', () => {
   test('spawns the bundled CLI to create docx/pptx/xlsx', async () => {
     test.setTimeout(120_000)
     const port = await freeMcpPort()
-    const outDir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-headless-'))
-    const userDataDir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-headless-userdata-'))
+    const outDir = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-headless-'))
+    const userDataDir = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-headless-userdata-'))
     // background generation must be ON to expose the create_* tools
     await writeFile(
       join(userDataDir, 'app-settings.json'),

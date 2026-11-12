@@ -5,8 +5,8 @@
  * Raw ops arrive as one transaction; the registry validates (guided errors), the executor
  * owns atomicity and rollback, and dry-run rehearses the plan without touching the deck.
  */
-import { materializeSlide, slideDurableId } from '@genoffice/pptx-engine'
-import { runTxn, type OpRecord, type TxnRequest, type TxnResult } from '@genoffice/pptx-ops'
+import { materializeSlide, slideDurableId } from '@seuoffice/pptx-engine'
+import { runTxn, type OpRecord, type TxnRequest, type TxnResult } from '@seuoffice/pptx-ops'
 import type { ApplyTxnOp, ApplyTxnResult } from '../shared/ipc'
 import { applyAutofitResize, syncAutofitScale } from './autofit-writeback'
 import {

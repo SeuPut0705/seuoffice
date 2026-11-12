@@ -2,7 +2,7 @@
  * Local-only run of the objects layer over real ODT files (never committed).
  * Skipped unless ODT_CORPUS points at a folder of `.odt` files (one level deep).
  *
- *   ODT_CORPUS=E:/github/odt-corpus npm run test -w @genoffice/odt-engine
+ *   ODT_CORPUS=E:/github/odt-corpus npm run test -w @seuoffice/odt-engine
  *
  * For every file: conversion with text + objects must not throw; every
  * picture, placeholder, note and comment reaches the bridge docx; paragraphs

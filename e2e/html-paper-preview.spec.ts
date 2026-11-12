@@ -30,7 +30,7 @@ body{margin:0;font:12pt/1.5 sans-serif}
 
 test.describe('html editor: paper preview', () => {
   test('the Printed page device lays the document out on its sheets and stays editable', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-html-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-html-'))
     const htmlPath = join(dir, 'handout.html')
     await writeFile(htmlPath, SOURCE)
 

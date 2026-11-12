@@ -8,8 +8,8 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { epubDocumentHash, epubTranslationUnits } from '@genoffice/epub-engine'
-import { blockKeyString, ResultStore } from '@genoffice/pdf-structure/store'
+import { epubDocumentHash, epubTranslationUnits } from '@seuoffice/epub-engine'
+import { blockKeyString, ResultStore } from '@seuoffice/pdf-structure/store'
 import { EpubBookSession } from '../src/main/book-session'
 import { saveBook, type MigrationStore, type SaveDeps } from '../src/main/save-pipeline'
 import { buildBook, entryBytes, entryText } from './helpers/book'
@@ -132,7 +132,7 @@ describe('saveBook', () => {
   })
 
   it('moves the stored translation of unchanged blocks only, not of the edited one', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'genoffice-epub-save-'))
+    const root = mkdtempSync(join(tmpdir(), 'seuoffice-epub-save-'))
     try {
       const realStore = new ResultStore(root)
       const { s } = await session()

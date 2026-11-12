@@ -13,7 +13,7 @@ import {
   openPptx,
   savePptx,
   type SlideElement,
-} from '@genoffice/pptx-engine'
+} from '@seuoffice/pptx-engine'
 import { expect, test, type Browser, type Frame, type Locator } from '@playwright/test'
 import { exportedFile, openCoEdited, settled, type CoEditor, type CoFile } from './collab'
 

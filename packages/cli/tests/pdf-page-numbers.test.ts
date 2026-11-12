@@ -4,12 +4,12 @@ import { run, tempDir, writeMinimalPdf } from './helpers'
 import { parsePageList, validatePageList } from '../src/formats/pdf-structure'
 
 const fakes = vi.hoisted(() => ({ detect: vi.fn(), stream: vi.fn() }))
-vi.mock('@genoffice/ai-provider/subscription', async (original) => ({
-  ...(await original<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (original) => ({
+  ...(await original<typeof import('@seuoffice/ai-provider/subscription')>()),
   detectSubscriptionLogin: fakes.detect,
 }))
-vi.mock('@genoffice/ai-provider', async (original) => ({
-  ...(await original<typeof import('@genoffice/ai-provider')>()),
+vi.mock('@seuoffice/ai-provider', async (original) => ({
+  ...(await original<typeof import('@seuoffice/ai-provider')>()),
   streamForProvider: fakes.stream,
 }))
 
@@ -61,9 +61,9 @@ describe('PDF page list integer validation', () => {
     const result = await run(['pdf', 'ai-read', pdf, '--pages', '1-9007199254740991', '--json'], {
       env: {
         ...process.env,
-        GENOFFICE_USER_DATA: dir,
-        GENOFFICE_AUDIT_LOG: 'off',
-        GENOFFICE_ALLOWED_ROOTS: '',
+        SEUOFFICE_USER_DATA: dir,
+        SEUOFFICE_AUDIT_LOG: 'off',
+        SEUOFFICE_ALLOWED_ROOTS: '',
       },
     })
     expect(result.code).toBe(1)

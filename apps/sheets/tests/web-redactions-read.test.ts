@@ -13,15 +13,15 @@ import {
   applyRedactionNameMirror,
   serializeRedactionPart,
   type SheetRedactionState,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { readRedactions } from '../src/web/xlsx-entries'
 
 const planner = vi.hoisted(() => (name: string) => () => {
   throw new Error(`the save planner was loaded on the read path (${name})`)
 })
 vi.mock('../src/web/xlsx-save', planner('web/xlsx-save'))
-vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-gateway', planner('gateway/xlsx-gateway'))
-vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', planner('gateway/xlsx-package-io'))
+vi.mock('@seuoffice/xlsx-gateway/gateway/xlsx-gateway', planner('gateway/xlsx-gateway'))
+vi.mock('@seuoffice/xlsx-gateway/gateway/xlsx-package-io', planner('gateway/xlsx-package-io'))
 
 const MARKS: SheetRedactionState[] = [
   {

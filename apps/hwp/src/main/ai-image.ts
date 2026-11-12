@@ -19,9 +19,9 @@ import {
   documentMediaRoots,
   generateImageTool,
   withMediaCallSignal,
-} from '@genoffice/ai-search'
-import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
-import { fetchImageBytes } from '@genoffice/electron-utils/fetch-image-bytes'
+} from '@seuoffice/ai-search'
+import { sharedSubscriptionStatuses } from '@seuoffice/ai-provider/subscription'
+import { fetchImageBytes } from '@seuoffice/electron-utils/fetch-image-bytes'
 import { HWP_CHANNELS } from '../shared/ipc'
 
 export interface HwpImageIpcOptions {
@@ -47,7 +47,7 @@ export function registerHwpImageIpc(options: HwpImageIpcOptions): void {
           {
             mediaRoots: documentMediaRoots(
               options.filePathOf(e.sender.id),
-              join(app.getPath('temp'), 'genoffice-pasted'),
+              join(app.getPath('temp'), 'seuoffice-pasted'),
             ),
             // screen path: the statuses of the process-wide subscription service decide the route
             context: { path: 'screen', statuses: sharedSubscriptionStatuses() },

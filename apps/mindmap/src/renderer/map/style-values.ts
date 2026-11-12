@@ -43,7 +43,7 @@ import {
   SUMMARY_SHAPES,
   type ViewRunStyle,
   type ViewTopicStyle,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 
 /** A colour as this app writes it: `#rrggbb` or `#rrggbbaa`, lower case. */
 export type SafeColor = `#${string}`

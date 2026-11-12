@@ -1,4 +1,3 @@
-import { brandText } from '@genoffice/i18n'
 import type { Editor } from '@tiptap/core'
 import type { Node as PmNode } from '@tiptap/pm/model'
 import type { Transaction } from '@tiptap/pm/state'
@@ -45,10 +44,7 @@ export function buildDocWriterRequest(
   langDirective: string,
 ): { system: string; user: string } {
   const system = [
-    brandText(
-      'You are the document writer of GenOffice Markdown, a markdown editor. You receive a plan (title, sections, key points, tone, length) and reference material, and you write the complete content.',
-      'en',
-    ),
+    'You are the document writer of SeuOffice Markdown, a markdown editor. You receive a plan (title, sections, key points, tone, length) and reference material, and you write the complete content.',
     '',
     '## Writing rules',
     '- Write the requested content in full: every section in the plan, real prose, no placeholders, no "[to be added]" notes.',

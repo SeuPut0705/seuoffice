@@ -7,9 +7,9 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { layoutText, makeViewport, HeuristicMetrics } from '@genoffice/pptx-render'
-import { openPptx, type Paragraph, type SlideElement } from '@genoffice/pptx-engine'
-import type { EditParagraph } from '@genoffice/pptx-ops'
+import { layoutText, makeViewport, HeuristicMetrics } from '@seuoffice/pptx-render'
+import { openPptx, type Paragraph, type SlideElement } from '@seuoffice/pptx-engine'
+import type { EditParagraph } from '@seuoffice/pptx-ops'
 import { extractParagraphs, populateEditorDom } from '../src/renderer/TextEditOverlay'
 import { decodeOp, encodeOp, unshareable } from '../src/web/collab-wire'
 

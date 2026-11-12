@@ -16,7 +16,7 @@ import { PRODUCT_NAME } from '../packages/i18n/src/product'
  */
 test.describe('sheets: new blank workbook', () => {
   test('quick-create saves the first edit through Save As and leaves the default folder empty', async () => {
-    const scratch = await mkdtemp(join(tmpdir(), 'genoffice-sheets-blank-'))
+    const scratch = await mkdtemp(join(tmpdir(), 'seuoffice-sheets-blank-'))
     const launched = await launchShell({ onboardingSeen: true, videoDir: 'sheets-new-blank' })
     try {
       const { app, page } = launched

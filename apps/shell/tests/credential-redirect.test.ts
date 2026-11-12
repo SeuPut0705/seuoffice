@@ -1,6 +1,6 @@
 import type { ServerResponse } from 'node:http'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { DriveApi, refreshGoogleToken, type FetchLike } from '@genoffice/google-drive'
+import { DriveApi, refreshGoogleToken, type FetchLike } from '@seuoffice/google-drive'
 import { driveFetches } from '../src/main/drive/drive-fetch'
 import { evaluate, type DecisionCallOptions } from '../src/main/file-index/decider'
 import {

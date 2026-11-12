@@ -9,8 +9,8 @@ import { run, tempDir } from './helpers'
 // read-url fetches the page itself; the tool is replaced so no test reaches the network.
 const fakes = vi.hoisted(() => ({ read: vi.fn() }))
 
-vi.mock('@genoffice/ai-search', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-search')>()),
+vi.mock('@seuoffice/ai-search', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-search')>()),
   readUrlTool: fakes.read,
 }))
 
@@ -28,10 +28,10 @@ function dataFolder(): { dir: string; env: NodeJS.ProcessEnv } {
       http_proxy: '',
       ALL_PROXY: '',
       all_proxy: '',
-      GENOFFICE_USER_DATA: dir,
-      GENOFFICE_AI_SETTINGS: '',
-      GENOFFICE_AUDIT_LOG: 'off',
-      GENOFFICE_ALLOWED_ROOTS: '',
+      SEUOFFICE_USER_DATA: dir,
+      SEUOFFICE_AI_SETTINGS: '',
+      SEUOFFICE_AUDIT_LOG: 'off',
+      SEUOFFICE_ALLOWED_ROOTS: '',
     },
   }
 }

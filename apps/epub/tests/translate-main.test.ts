@@ -58,8 +58,8 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { epubTranslationUnits, openEpub } from '@genoffice/epub-engine'
-import { ResultStore } from '@genoffice/pdf-structure/store'
+import { epubTranslationUnits, openEpub } from '@seuoffice/epub-engine'
+import { ResultStore } from '@seuoffice/pdf-structure/store'
 import { configureEpubRuntime, createEpubView } from '../src/main/epub-main'
 import { EPUB_CHANNELS } from '../src/shared/ipc'
 import type { EpubOpenFileResult } from '../src/shared/ipc'
@@ -68,11 +68,11 @@ import { buildBook } from './helpers/book'
 let dir: string
 const openInTab = new Set<string>()
 // the main process opens its result store once, under the first user data folder it is given
-const userDataRoot = mkdtempSync(join(tmpdir(), 'genoffice-epub-user-data-'))
+const userDataRoot = mkdtempSync(join(tmpdir(), 'seuoffice-epub-user-data-'))
 afterAll(() => rmSync(userDataRoot, { recursive: true, force: true }))
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-epub-pick-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-epub-pick-'))
   userData.dir = userDataRoot
   openInTab.clear()
   showSaveDialog.mockReset()

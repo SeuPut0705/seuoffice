@@ -7,8 +7,8 @@ import {
   type AiStreamChunk,
   type AiStreamRequest,
   type AiSubscriptionState,
-} from '@genoffice/ai-provider'
-import type { SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider'
+import type { SubscriptionStatusMap } from '@seuoffice/ai-provider/browser'
 import { AiPanel, type HtmlAiDeps } from '../src/renderer/ai/AiPanel'
 import { buildParseMap, type ParseMap } from '../src/renderer/document/parse-map'
 import type { AttachmentMeta, HtmlGenerateHandoff } from '../src/shared/ipc'

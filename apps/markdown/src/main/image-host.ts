@@ -5,7 +5,7 @@
 // SM.MS, GitHub — and all run in the main process, so no renderer CORS
 // applies and the credentials never enter a web context.
 import { createHash, createHmac } from 'node:crypto'
-import { AiRedirectRefusedError, keyedFetch, type KeyedFetchBase } from '@genoffice/ai-provider'
+import { AiRedirectRefusedError, keyedFetch, type KeyedFetchBase } from '@seuoffice/ai-provider'
 import type { ImageHostConfig, ImageUploadResult, ImageHostKind } from '../shared/ipc'
 
 const UPLOAD_TIMEOUT_MS = 20_000

@@ -8,7 +8,7 @@
  * same function only to tell the user beforehand that an address will not be
  * opened.
  */
-import { safeExternalUrl } from '@genoffice/electron-utils/safe-external-url'
+import { safeExternalUrl } from '@seuoffice/electron-utils/safe-external-url'
 
 /** `file:`, `javascript:` and app schemes are refused by `safeExternalUrl` whatever is listed here. */
 export const LINK_PROTOCOLS: readonly string[] = ['http:', 'https:', 'mailto:']

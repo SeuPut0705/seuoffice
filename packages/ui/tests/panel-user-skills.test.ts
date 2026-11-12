@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { Lang } from '@genoffice/i18n'
-import type { SkillProposal } from '@genoffice/agent-core'
+import type { Lang } from '@seuoffice/i18n'
+import type { SkillProposal } from '@seuoffice/agent-core'
 import { panelUserSkills } from '../src/use-skill-proposals'
 
 const bridge = (views: unknown[]) => ({

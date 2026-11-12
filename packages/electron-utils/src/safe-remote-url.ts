@@ -253,7 +253,7 @@ export interface FetchWithSsrfGuardOptions {
    * hop of its chain passes the same checks. This is how a request that
    * carries a credential rides the guard: what may travel to the next address
    * is decided by the caller's redirect rule (`keyedDownload` of
-   * `@genoffice/ai-provider`), not here. Defaults to `follow`.
+   * `@seuoffice/ai-provider`), not here. Defaults to `follow`.
    */
   redirect?: 'follow' | 'manual'
   headers?: Record<string, string>
@@ -275,7 +275,7 @@ export type ProxyRouting = (url: URL) => boolean
 
 // Symbol.for: one bundled copy of this package builds the dispatcher (the
 // shell's, or an editor's) and another may run the guarded fetch.
-const PROXY_ROUTING = Symbol.for('genoffice.dispatcher-proxy-routing')
+const PROXY_ROUTING = Symbol.for('seuoffice.dispatcher-proxy-routing')
 
 /**
  * Lets the code that builds a dispatcher state how it routes, so the guard

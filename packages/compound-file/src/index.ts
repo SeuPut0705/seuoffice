@@ -21,7 +21,7 @@ export {
 
 /**
  * The OLE2/CFB container opener shared by the legacy Office importers (the
- * .doc reader in @genoffice/doc2docx, the .ppt reader in @genoffice/ppt2pptx,
+ * .doc reader in @seuoffice/doc2docx, the .ppt reader in @seuoffice/ppt2pptx,
  * and any .xls reader that comes along), and the gate every other reader of a
  * compound file passes first (the HWP 5 readers, the attachment parsers).
  *

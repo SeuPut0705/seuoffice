@@ -8,7 +8,7 @@
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SkillProposal, UserSkillText } from '@genoffice/agent-core'
+import type { SkillProposal, UserSkillText } from '@seuoffice/agent-core'
 import { useSkillTemplates, type SkillTemplates } from '../src/use-skill-templates'
 import { useSkillProposals, type SkillProposals } from '../src/use-skill-proposals'
 import type { SkillUse } from '../src/use-composer-skills'

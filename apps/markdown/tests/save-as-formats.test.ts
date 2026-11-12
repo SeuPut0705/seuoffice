@@ -38,8 +38,8 @@ const { printMarkdownPdf, docxToOdt } = vi.hoisted(() => ({
   docxToOdt: vi.fn(),
 }))
 vi.mock('../src/main/print-pdf', () => ({ printMarkdownPdf }))
-vi.mock('@genoffice/odt-engine', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/odt-engine')>()),
+vi.mock('@seuoffice/odt-engine', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/odt-engine')>()),
   docxToOdt,
 }))
 

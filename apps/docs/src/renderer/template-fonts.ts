@@ -1,4 +1,4 @@
-import { TEMPLATE_FONT_FACE_REGISTRATIONS, templateFontUrl } from '@genoffice/ui/template-fonts'
+import { TEMPLATE_FONT_FACE_REGISTRATIONS, templateFontUrl } from '@seuoffice/ui/template-fonts'
 import { noteTemplateFontFamilies } from './line-metrics'
 
 /**

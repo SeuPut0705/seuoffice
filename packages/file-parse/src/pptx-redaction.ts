@@ -1,5 +1,5 @@
-import { placeholderSource } from '@genoffice/agent-core/redact-core'
-import { REDACT_EL, REDACT_NS } from '@genoffice/agent-core/redact-range'
+import { placeholderSource } from '@seuoffice/agent-core/redact-core'
+import { REDACT_EL, REDACT_NAMESPACES } from '@seuoffice/agent-core/redact-range'
 import { RedactionMarkError } from './redaction-error'
 
 /**
@@ -168,7 +168,11 @@ function propsOf(ext: XmlElement): XmlElement | null {
  * marker. A part with no trace of the mark is returned as it came, unparsed.
  */
 export function redactPptxPartXml(xml: string): string {
-  if (!xml.includes(PPTX_REDACT_EXT_URI) && !xml.includes(REDACT_EL) && !xml.includes(REDACT_NS)) {
+  if (
+    !xml.includes(PPTX_REDACT_EXT_URI) &&
+    !xml.includes(REDACT_EL) &&
+    !REDACT_NAMESPACES.some((ns) => xml.includes(ns))
+  ) {
     return xml
   }
   const runs = new Map<XmlElement, string>()
@@ -197,7 +201,7 @@ export function redactPptxPartXml(xml: string): string {
   if (
     countOf(xml, PPTX_REDACT_EXT_URI) !== understood ||
     countOf(xml, `<${REDACT_EL}`) !== understood ||
-    countOf(xml, REDACT_NS) > understood
+    REDACT_NAMESPACES.reduce((n, ns) => n + countOf(xml, ns), 0) > understood
   ) {
     throw new RedactionMarkError('a mark is written in a form that cannot be read')
   }

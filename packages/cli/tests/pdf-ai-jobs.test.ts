@@ -1,11 +1,11 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AiRunError, HEADLESS_SUBSCRIPTION_CONSENT_VERSION } from '@genoffice/ai-provider'
+import { AiRunError, HEADLESS_SUBSCRIPTION_CONSENT_VERSION } from '@seuoffice/ai-provider'
 import {
   detectSubscriptionLogin,
   type SubscriptionDetection,
-} from '@genoffice/ai-provider/subscription'
+} from '@seuoffice/ai-provider/subscription'
 import { ResultStore, blockKeyString, documentHash } from '../../pdf-structure/src/store'
 import { defaultRegistry } from '../src/cli'
 import { createContext, disposeContext, runWithInline } from '../src/mcp/run'
@@ -17,13 +17,13 @@ import { run, tempDir, writeMinimalPdf } from './helpers'
 // CLI or the network: the status check and the provider stream are fakes.
 const fakes = vi.hoisted(() => ({ detect: vi.fn(), stream: vi.fn() }))
 
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   detectSubscriptionLogin: fakes.detect,
 }))
 
-vi.mock('@genoffice/ai-provider', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider')>()),
+vi.mock('@seuoffice/ai-provider', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider')>()),
   streamForProvider: fakes.stream,
 }))
 
@@ -119,10 +119,10 @@ function dataFolder(settings: Record<string, unknown>): { dir: string; env: Node
     dir,
     env: {
       ...process.env,
-      GENOFFICE_USER_DATA: dir,
-      GENOFFICE_AI_SETTINGS: '',
-      GENOFFICE_AUDIT_LOG: 'off',
-      GENOFFICE_ALLOWED_ROOTS: '',
+      SEUOFFICE_USER_DATA: dir,
+      SEUOFFICE_AI_SETTINGS: '',
+      SEUOFFICE_AUDIT_LOG: 'off',
+      SEUOFFICE_ALLOWED_ROOTS: '',
     },
   }
 }

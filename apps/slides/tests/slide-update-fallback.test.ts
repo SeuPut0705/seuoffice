@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import {
   mergeBroadcastUpdate,
   mergeSlideUpdate,

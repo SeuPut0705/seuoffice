@@ -14,8 +14,8 @@
  */
 import type { Editor } from '@tiptap/core'
 import type { Node as PmNode } from '@tiptap/pm/model'
-import type { Block, ParsedDocFull, Run, TableModel } from '@genoffice/docx-engine'
-import type { RenderedObject } from '@genoffice/odt-engine'
+import type { Block, ParsedDocFull, Run, TableModel } from '@seuoffice/docx-engine'
+import type { RenderedObject } from '@seuoffice/odt-engine'
 
 export type ExportObjectKind = 'chart' | 'equation' | 'shape' | 'textbox'
 

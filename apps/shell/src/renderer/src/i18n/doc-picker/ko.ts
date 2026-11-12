@@ -1,7 +1,7 @@
 import type { en } from './en'
 
 export const ko = {
-  docPickTitle: 'GenOffice 문서에서 첨부',
+  docPickTitle: 'SeuOffice 문서에서 첨부',
   docPickPane: '옆 칸',
   docPickOpen: '열린 문서',
   docPickRecent: '최근 문서',

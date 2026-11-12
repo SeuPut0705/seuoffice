@@ -7,11 +7,11 @@
 import { EventEmitter } from 'node:events'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { USER_SKILLS_CHANNELS } from '@genoffice/electron-utils/user-skills-channels'
+import { USER_SKILLS_CHANNELS } from '@seuoffice/electron-utils/user-skills-channels'
 import {
   queuedSkillHandoffs,
   resetGenerateHandoffsForTest,
-} from '@genoffice/electron-utils/generate-handoff'
+} from '@seuoffice/electron-utils/generate-handoff'
 import {
   copyFileNameOf,
   createTemplateTabs,

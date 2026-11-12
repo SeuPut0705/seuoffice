@@ -20,7 +20,7 @@ import '@univerjs/sheets/facade'
 import { UniverSheetsFormulaPlugin } from '@univerjs/sheets-formula'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+import type { SheetRedactionState } from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 
 import { aggregateWorkbookRange } from '../src/renderer/ai/aggregate-range'
 import { loadedRedactions } from '../src/renderer/ai/redact-load'

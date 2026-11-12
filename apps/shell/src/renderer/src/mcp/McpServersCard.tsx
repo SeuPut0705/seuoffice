@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Params } from '@genoffice/i18n'
+import type { Params } from '@seuoffice/i18n'
 import type { McpServersSettingsView } from '../../../shared/mcp-servers-api'
 import { mcpServersText, type McpServersStringKey } from '../i18n/strings-mcp-servers'
 import { useI18n } from '../locale'

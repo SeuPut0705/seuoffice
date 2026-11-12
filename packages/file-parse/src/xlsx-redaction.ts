@@ -1,11 +1,11 @@
 import type JSZip from 'jszip'
-import { sanitizeLabel } from '@genoffice/agent-core/redact-core'
+import { sanitizeLabel } from '@seuoffice/agent-core/redact-core'
 import {
   REDACTION_PART_PATH,
   readRedactionRecord,
   type RedactionMark,
   type SheetRedactionState,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { RedactionMarkError } from './redaction-error'
 import type { DerivedSheet } from './xlsx-formula-redaction'
 

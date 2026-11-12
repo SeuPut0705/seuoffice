@@ -1,7 +1,7 @@
 /// Payload handling for OS file drops (installDropOpenBridge in preloads).
 /// Kept in its own module so the decision logic is unit-testable without
 /// booting the whole shell main process.
-import { partitionDropPayload } from '@genoffice/electron-utils'
+import { partitionDropPayload } from '@seuoffice/electron-utils'
 import type { DroppedSkillSource } from './user-skills'
 
 export interface DroppedFilesDeps {

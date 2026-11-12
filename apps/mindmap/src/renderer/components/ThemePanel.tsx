@@ -32,7 +32,7 @@ import {
   type ThemeParts,
   type ThemeSkeletonId,
   type ThemeVariantId,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import { type StringKey, useI18n } from '../i18n/locale'
 import { IconClose } from './icons'
 

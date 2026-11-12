@@ -5,8 +5,8 @@
  * reports. Nothing here saves, autosaves, copies for recovery or talks to
  * the AI; the app writes the files from the report.
  */
-import type { Lang } from '@genoffice/i18n'
-import { createDiagramFile, type DiagramFormat } from '@genoffice/drawio-model'
+import type { Lang } from '@seuoffice/i18n'
+import { createDiagramFile, type DiagramFormat } from '@seuoffice/drawio-model'
 import { drawioStartUrl } from '../shared/drawio-start'
 import { exportKindOf } from '../shared/formats'
 import type {

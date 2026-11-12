@@ -17,7 +17,7 @@ function paragraphText(block: { runs?: Array<{ text: string }> }): string {
   return (block.runs ?? []).map((run) => run.text).join('')
 }
 
-describe('ieumoffice convert legacy .doc import', () => {
+describe('seuoffice convert legacy .doc import', () => {
   it('converts .doc to .docx headlessly and keeps text, lists and hyperlinks', async () => {
     const dir = tempDir()
     const out = join(dir, 'legacy.docx')

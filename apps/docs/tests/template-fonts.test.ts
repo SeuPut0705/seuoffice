@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import {
   TEMPLATE_FONTS,
   TEMPLATE_FONT_FACE_REGISTRATIONS,
@@ -13,11 +13,11 @@ import {
   TEMPLATE_FONT_SCHEME,
   templateFontFileOf,
   templateFontUrl,
-} from '@genoffice/ui/template-fonts'
-import { LAZY_MEDIA_SCHEME } from '@genoffice/docx-engine/lazy-media'
-import { DOCX_MEDIA_SCHEME_PRIVILEGE } from '@genoffice/electron-utils/renderer-scheme'
-import { templateFontResponse } from '@genoffice/electron-utils/template-font-response'
-import { configureExtraFontDirs, familyVerticalMetrics } from '@genoffice/font-metrics'
+} from '@seuoffice/ui/template-fonts'
+import { LAZY_MEDIA_SCHEME } from '@seuoffice/docx-engine/lazy-media'
+import { DOCX_MEDIA_SCHEME_PRIVILEGE } from '@seuoffice/electron-utils/renderer-scheme'
+import { templateFontResponse } from '@seuoffice/electron-utils/template-font-response'
+import { configureExtraFontDirs, familyVerticalMetrics } from '@seuoffice/font-metrics'
 import { fontFamiliesFor } from '../src/renderer/font-list'
 import { checkMissingFonts } from '../src/renderer/font-check'
 import {
@@ -116,13 +116,13 @@ describe('template font URLs', () => {
       join(FOLDER, 'no-such-folder'),
     )
     expect(missing?.status).toBe(404)
-    expect(await templateFontResponse('genoffice-docx-media://handoff/x', FOLDER)).toBeNull()
+    expect(await templateFontResponse('seuoffice-docx-media://handoff/x', FOLDER)).toBeNull()
   })
 
   it('the renderer page may load fonts from the media scheme', () => {
     const html = readFileSync(join(DOCS, 'src/renderer/index.html'), 'utf8')
     const fontSrc = /font-src ([^;"]+)/.exec(html)?.[1] ?? ''
-    expect(fontSrc.split(/\s+/)).toContain('genoffice-docx-media:')
+    expect(fontSrc.split(/\s+/)).toContain('seuoffice-docx-media:')
   })
 })
 

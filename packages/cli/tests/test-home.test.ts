@@ -10,7 +10,7 @@ import { run, tempDir } from './helpers'
 // The runner gives every test process a throwaway home folder (vitest.config.ts
 // loads tools/test-home.ts), so a test that forgets to redirect a per-user path
 // cannot reach the folders of the person running the suite. Without it, each
-// run of this suite appended some 1,500 lines to the real ~/.ieumoffice audit
+// run of this suite appended some 1,500 lines to the real ~/.seuoffice audit
 // log and pushed it through its size rotation.
 
 function isInside(parent: string, child: string): boolean {

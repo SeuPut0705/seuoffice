@@ -1,19 +1,19 @@
 # Command line and agents
 
-Every install ships an `ieumoffice` command that drives the same engines the window does — the same parsers, the same writer, the same renderer. A file the app saves and a file the command writes are the same file, and a check the app's AI panel passes is a check the command passes.
+Every install ships an `seuoffice` command that drives the same engines the window does — the same parsers, the same writer, the same renderer. A file the app saves and a file the command writes are the same file, and a check the app's AI panel passes is a check the command passes.
 
 ```sh
-ieumoffice --help          # every command
-ieumoffice guide slides    # the op reference, for writing your own
+seuoffice --help          # every command
+seuoffice guide slides    # the op reference, for writing your own
 ```
 
-`ieumoffice --help` is the whole surface in one screen: every command with a line saying what it does, then the global options and the exit codes.
+`seuoffice --help` is the whole surface in one screen: every command with a line saying what it does, then the global options and the exit codes.
 
 ## Getting the command
 
-The command ships inside the app. To use it by name, run `ieumoffice install-cli` once: on Windows it adds the folder that holds the command to your user `PATH`, and terminals you open afterwards find it. **Settings ▸ Integrations** shows whether your terminal already finds the command and, if it does not, the exact line to run.
+The command ships inside the app. To use it by name, run `seuoffice install-cli` once: on Windows it adds the folder that holds the command to your user `PATH`, and terminals you open afterwards find it. **Settings ▸ Integrations** shows whether your terminal already finds the command and, if it does not, the exact line to run.
 
-Coding agents do not need that step. The app records where the command is in `~/.ieumoffice/launcher`, and they find it there.
+Coding agents do not need that step. The app records where the command is in `~/.seuoffice/launcher`, and they find it there.
 
 ## The commands worth knowing
 
@@ -32,18 +32,18 @@ Coding agents do not need that step. The app records where the command is in `~/
 | `merge`           | Fill `{{key}}` placeholders in a `.docx`, `.pptx` or `.xlsx` template.                                                                                                                                              |
 | `capabilities`    | Report which AI features (search, image generation, image and video analysis) are available on this machine, and by which route.                                                                                    |
 | `guide`           | The op reference and design guides, generated from the same definitions the executor validates against — so it cannot drift from what `apply` accepts. `--json` returns it with each op's schema.                   |
-| `install-cli`     | Put `ieumoffice` on the `PATH`.                                                                                                                                                                                     |
-| `skill`           | List the coding agents found on this machine and install or update the GenOffice skill in them.                                                                                                                     |
+| `install-cli`     | Put `seuoffice` on the `PATH`.                                                                                                                                                                                      |
+| `skill`           | List the coding agents found on this machine and install or update the SeuOffice skill in them.                                                                                                                     |
 | `mcp`             | Serve every command as a Model Context Protocol tool. See **Connecting a coding agent**.                                                                                                                            |
 
 ## Editing: docs, sheets, slides
 
-Each of `ieumoffice docs`, `ieumoffice sheet` and `ieumoffice slides` takes a sub-command first — `read`, `apply`, `check`, and for slides `audit`, `render`, `replace` — and goes through the same write path the app uses. They share one vocabulary: an **op** is a single edit, and a **spec** is a list of ops applied in order.
+Each of `seuoffice docs`, `seuoffice sheet` and `seuoffice slides` takes a sub-command first — `read`, `apply`, `check`, and for slides `audit`, `render`, `replace` — and goes through the same write path the app uses. They share one vocabulary: an **op** is a single edit, and a **spec** is a list of ops applied in order.
 
 ```sh
-ieumoffice sheet read report.xlsx
-ieumoffice slides apply deck.pptx --ops ops.json --dry-run
-ieumoffice docs apply brief.docx --ops ops.json
+seuoffice sheet read report.xlsx
+seuoffice slides apply deck.pptx --ops ops.json --dry-run
+seuoffice docs apply brief.docx --ops ops.json
 ```
 
 `--dry-run` reports what a batch would do and writes nothing, which is the cheap way to check a spec before it lands. The AI panel in the app runs on exactly these ops, so anything you can ask it to do you can script.
@@ -57,7 +57,7 @@ ieumoffice docs apply brief.docx --ops ops.json
 - `media` on a picture uses a key provider when one is set up. It uses your Claude or Codex subscription only when you have allowed that, and that is **off by default**; [Connecting a coding agent](help://mcp) explains the switch and its limits.
 - `media` on video or audio needs a key provider that supports video.
 
-`ieumoffice capabilities --json` reports all of this without calling any AI. Its `detail` holds:
+`seuoffice capabilities --json` reports all of this without calling any AI. Its `detail` holds:
 
 | Field                                                                            | What it says                                                                                                                                                                                                                              |
 | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -71,15 +71,15 @@ When `image` or `media` cannot run, the command exits with code 4 and `error: "a
 
 ## What it keeps on this PC
 
-Both files are in the `.ieumoffice` folder inside your user folder:
+Both files are in the `.seuoffice` folder inside your user folder:
 
-- `~/.ieumoffice/launcher` records where the app's command is, so a coding agent finds it even when it is not on your `PATH`.
-- `~/.ieumoffice/cli-audit.jsonl` gets one line for every command that was run — the command, its arguments and the result — so you can see afterwards what an agent did.
+- `~/.seuoffice/launcher` records where the app's command is, so a coding agent finds it even when it is not on your `PATH`.
+- `~/.seuoffice/cli-audit.jsonl` gets one line for every command that was run — the command, its arguments and the result — so you can see afterwards what an agent did.
 
 ## Model Context Protocol
 
-`ieumoffice mcp` serves every command as an MCP tool, and `ieumoffice mcp install <agent|all>` registers it in a coding agent's own config. See **Connecting a coding agent** for that side.
+`seuoffice mcp` serves every command as an MCP tool, and `seuoffice mcp install <agent|all>` registers it in a coding agent's own config. See **Connecting a coding agent** for that side.
 
 ## What the command does not do
 
-It reads and writes the file. It is not the app: there is no window, and the in-app update dialog does not apply. Anything that needs the window — the AI panel, the QC pass over a rendered slide — has to wait for you to open the file. `ieumoffice render` gets you the pixels without it, and `ieumoffice slides` audits a deck's layout on its own.
+It reads and writes the file. It is not the app: there is no window, and the in-app update dialog does not apply. Anything that needs the window — the AI panel, the QC pass over a rendered slide — has to wait for you to open the file. `seuoffice render` gets you the pixels without it, and `seuoffice slides` audits a deck's layout on its own.

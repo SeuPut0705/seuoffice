@@ -6,7 +6,7 @@ import {
   blockKeyString,
   translationBlockKeys,
   type TranslationBlockKey,
-} from '@genoffice/pdf-structure/store'
+} from '@seuoffice/pdf-structure/store'
 import { describe, expect, it } from 'vitest'
 import { openChapter } from '../src/blocks'
 import { checkNotation } from '../src/notation'

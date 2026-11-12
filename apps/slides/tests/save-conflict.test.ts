@@ -69,8 +69,8 @@ vi.mock('../src/main/shaped-metrics', () => ({
   shapedMeasure: () => ({ width: 0 }),
 }))
 
-import { createBlankPptx } from '@genoffice/pptx-engine'
-import { setOpenPathProbe } from '@genoffice/electron-utils'
+import { createBlankPptx } from '@seuoffice/pptx-engine'
+import { setOpenPathProbe } from '@seuoffice/electron-utils'
 import { registerSlidesIpc } from '../src/main/slides-main'
 import { sessions } from '../src/main/session-state'
 
@@ -104,8 +104,8 @@ beforeAll(async () => {
 
 beforeEach(() => {
   sessions.clear()
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-slides-conflict-'))
-  hoisted.userDataDir = mkdtempSync(join(tmpdir(), 'genoffice-slides-conflict-user-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-slides-conflict-'))
+  hoisted.userDataDir = mkdtempSync(join(tmpdir(), 'seuoffice-slides-conflict-user-'))
   showMessageBox.mockReset()
   showMessageBox.mockResolvedValue({ response: 0 })
   // the AutoSave preference lives per webContents; every test starts with it off

@@ -14,7 +14,7 @@ import { launchShell, closeAndSaveVideo, waitForPageWithUrl } from './helpers'
  */
 async function buildRubikFixture(): Promise<string> {
   const out = join(
-    await mkdtemp(join(tmpdir(), 'genoffice-font-manager-')),
+    await mkdtemp(join(tmpdir(), 'seuoffice-font-manager-')),
     'font-manager-rubik.pptx',
   )
   execFileSync('zip', ['-X', '-q', '-r', out, '.'], {

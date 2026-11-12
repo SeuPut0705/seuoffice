@@ -112,7 +112,7 @@ async function openToolsWindow(app: ElectronApplication, home: Page, card: RegEx
 test.describe('PDF tools window', () => {
   test('merge, split, refusing a source, and opening results and editor cards in tabs', async () => {
     test.setTimeout(180_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-tools-e2e-'))
     const a = join(dir, 'a.pdf')
     const b = join(dir, 'b.pdf')
     const bad = join(dir, 'bad.pdf')
@@ -219,7 +219,7 @@ test.describe('PDF tools window', () => {
 
   test('pictures to a PDF, and a PDF to text', async () => {
     test.setTimeout(180_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-tools-e2e-'))
     const wide = join(dir, 'wide.png')
     const tall = join(dir, 'tall.png')
     const notImage = join(dir, 'notes.png')
@@ -309,7 +309,7 @@ test.describe('PDF tools window', () => {
 
   test('padding files for two-sided printing', async () => {
     test.setTimeout(120_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-tools-e2e-'))
     const a = join(dir, 'a.pdf')
     const b = join(dir, 'b.pdf')
     const out = join(dir, 'print.pdf')
@@ -345,7 +345,7 @@ test.describe('PDF tools window', () => {
 
   test('a background behind every page, upright on a turned page', async () => {
     test.setTimeout(150_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-tools-e2e-'))
     const doc = join(dir, 'letter.pdf')
     const letterhead = join(dir, 'letterhead.pdf')
     const out = join(dir, 'letter-background.pdf')
@@ -398,7 +398,7 @@ test.describe('PDF tools window', () => {
 
   test('removing comments, keeping links, and nothing to remove', async () => {
     test.setTimeout(120_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-tools-e2e-'))
     const reviewed = join(dir, 'reviewed.pdf')
     const plain = join(dir, 'plain.pdf')
     const out = join(dir, 'reviewed-clean.pdf')
@@ -458,7 +458,7 @@ test.describe('PDF tools window', () => {
 
   test('finding blank pages in a job process, and removing only the picked ones', async () => {
     test.setTimeout(150_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-tools-e2e-'))
     const report = join(dir, 'scan.pdf')
     const out = join(dir, 'scan-no-blank.pdf')
     const doc = await PDFDocument.create()
@@ -521,7 +521,7 @@ test.describe('PDF tools window', () => {
 
   test("the PDF editor ribbon opens a task on the editor's own file", async () => {
     test.setTimeout(150_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-tools-e2e-'))
     const report = join(dir, 'report.pdf')
     const doc = await PDFDocument.create()
     const font = await doc.embedFont(StandardFonts.Helvetica)
@@ -567,7 +567,7 @@ test.describe('PDF tools window', () => {
 
   test('making a PDF with a large picture smaller', async () => {
     test.setTimeout(180_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-tools-e2e-'))
     const scan = join(dir, 'photo.pdf')
     const out = join(dir, 'photo-smaller.pdf')
     // a noisy 1600×1600 picture: Flate cannot shrink it, JPEG can
@@ -642,7 +642,7 @@ test.describe('PDF tools window', () => {
 
   test('adding a password, removing it, and repairing a file cut short', async () => {
     test.setTimeout(180_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-tools-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-tools-e2e-'))
     const plain = join(dir, 'minutes.pdf')
     const locked = join(dir, 'minutes-locked.pdf')
     const unlocked = join(dir, 'minutes-unlocked.pdf')

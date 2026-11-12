@@ -9,7 +9,7 @@
  * - a long document: each batch → a partial (summary notes and terms), then
  *   the partials → the overview.
  */
-import type { AgentStreamRequest } from '@genoffice/agent-core'
+import type { AgentStreamRequest } from '@seuoffice/agent-core'
 import { translationLanguageName } from '../../../../../../packages/pdf-structure/src/translate/language'
 
 /** what an overview holds besides who made it (InsightsEntry without its metadata) */

@@ -18,7 +18,7 @@
 import { randomUUID } from 'node:crypto'
 import { ipcMain } from 'electron'
 import type { WebContents } from 'electron'
-import type { DiagramReadResult } from '@genoffice/drawio-model'
+import type { DiagramReadResult } from '@seuoffice/drawio-model'
 import {
   DIAGRAM_CHANNELS,
   type DiagramApplyReply,

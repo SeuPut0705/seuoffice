@@ -21,13 +21,13 @@ import {
   useSplitPaneFocusPing,
   useSplitPaneRole,
   type TemplateDocument,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import {
   pollUntilReady,
   runHeadlessRendererExport,
-} from '@genoffice/electron-utils/headless-export'
+} from '@seuoffice/electron-utils/headless-export'
 import { EditorContent, useEditor } from '@tiptap/react'
-import { FindPanel, type FindFocusRequest, type FindPanelStrings } from '@genoffice/ui'
+import { FindPanel, type FindFocusRequest, type FindPanelStrings } from '@seuoffice/ui'
 import type { Editor } from '@tiptap/core'
 import { TextSelection } from '@tiptap/pm/state'
 import { exportImages } from './export/imageExport'

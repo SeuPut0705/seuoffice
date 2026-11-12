@@ -2,7 +2,7 @@
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { brandText, LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { DocAttachButton, docPickedOf } from '../src/DocAttachButton'
 import { DOC_ATTACH_STRINGS } from '../src/strings-doc-attach'
 
@@ -43,8 +43,8 @@ describe('doc-attach strings', () => {
       expect(DOC_ATTACH_STRINGS[lang].busy.trim().length, lang).toBeGreaterThan(0)
     }
     // the dictionary keeps the upstream token; the button produces the product name
-    expect(DOC_ATTACH_STRINGS.en.label).toBe('Attach from GenOffice documents')
-    expect(brandText(DOC_ATTACH_STRINGS.ko.label, 'ko')).toBe('SeuOffice 문서에서 첨부')
+    expect(DOC_ATTACH_STRINGS.en.label).toBe('Attach from SeuOffice documents')
+    expect(DOC_ATTACH_STRINGS.ko.label).toBe('SeuOffice 문서에서 첨부')
   })
 })
 

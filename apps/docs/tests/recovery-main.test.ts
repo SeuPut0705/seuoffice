@@ -60,18 +60,18 @@ vi.mock('electron', () => ({
 }))
 // this workspace's test aliases do not reach the rest of these packages, and
 // the handlers under test use none of them
-vi.mock('@genoffice/ai-search', async () => ({
+vi.mock('@seuoffice/ai-search', async () => ({
   ...(await import('../../../packages/ai-search/src/media-call-abort')),
   documentMediaRoots: () => [],
 }))
-vi.mock('@genoffice/ai-provider/subscription', () => ({
+vi.mock('@seuoffice/ai-provider/subscription', () => ({
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
-vi.mock('@genoffice/ai-provider/codex-app-server', () => ({
+vi.mock('@seuoffice/ai-provider/codex-app-server', () => ({
   shutdownCodexAppServers: () => {},
 }))
-vi.mock('@genoffice/ai-provider/custom-models', () => ({}))
+vi.mock('@seuoffice/ai-provider/custom-models', () => ({}))
 vi.mock('../src/main/lazy-media', () => ({
   registerLazyMediaProtocol: () => {},
   materializeLazyDocx: (bytes: Buffer) => h.materialize(bytes),
@@ -89,7 +89,7 @@ import {
   recoveryEditor,
   type RecoveryIdentity,
   type RecoveryStore,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import {
   authorizeMcpDocWrite,
   discardDocsRecovery,
@@ -98,8 +98,8 @@ import {
   setDocsShellHooks,
 } from '../src/main/docs-main'
 import { encryptDocx } from '../src/main/docx-encryption'
-import { buildBlankDocx } from '@genoffice/docx-engine'
-import { docxToOdt } from '@genoffice/odt-engine'
+import { buildBlankDocx } from '@seuoffice/docx-engine'
+import { docxToOdt } from '@seuoffice/odt-engine'
 
 interface FakeTab {
   id: number

@@ -7,7 +7,7 @@
  * fails at the network layer, the request is retried once over the Chromium
  * stack. Renderers never inject one (their fetch already is Chromium's).
  */
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { freeLimitOf, isFreeTierModelRefusal } from './free-ai'
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>

@@ -18,15 +18,15 @@ import {
   listSlideTemplates,
   type SlideTemplate,
   type SlideTemplateScheme,
-} from '@genoffice/pipelines/slides/templates'
-import type { RenderSlide } from '@genoffice/pptx-render'
+} from '@seuoffice/pipelines/slides/templates'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import type { TemplateCoverLang, TemplateSelectionKind } from '../../shared/ipc'
 import { SlideThumb } from '../SlideThumb'
 import { syncPrivateFonts } from '../doc-fonts'
 import { useI18n, type StringKey } from '../i18n/locale'
 import { strings } from '../i18n/strings'
 import { loadTemplateCover, templateCoverLang } from './template-cover'
-import { slidesAiFontRoles, type SlidesAiFontRoles } from '@genoffice/ui/slides-ai-fonts'
+import { slidesAiFontRoles, type SlidesAiFontRoles } from '@seuoffice/ui/slides-ai-fonts'
 import {
   templateSelectionState,
   useTemplateSelection,

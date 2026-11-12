@@ -20,7 +20,7 @@ import {
   parseDocx,
   readPageColor,
   readSections,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import JSZip from 'jszip'
 import {
   type AlignedItem,

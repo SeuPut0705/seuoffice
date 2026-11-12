@@ -2,10 +2,15 @@ import type { Editor } from '@tiptap/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { DATE_LOCALES, getLang, t, type StringKey } from '../i18n/locale'
 import type { PmNode } from './convert'
+import { OLD_COVER_END_MARKS, OLD_COVER_START_MARKS } from './old-names'
 
 /** hidden bookmarks that let "Remove Current Cover Page" find a gallery cover after a save/reopen */
-export const COVER_START_MARK = '_GenOfficeCoverPage'
-export const COVER_END_MARK = '_GenOfficeCoverPageEnd'
+export const COVER_START_MARK = '_SeuOfficeCoverPage'
+export const COVER_END_MARK = '_SeuOfficeCoverPageEnd'
+
+/** a cover saved by an earlier version keeps the bookmark names it was given */
+const COVER_START_MARKS = [COVER_START_MARK, ...OLD_COVER_START_MARKS]
+const COVER_END_MARKS = [COVER_END_MARK, ...OLD_COVER_END_MARKS]
 
 /**
  * Built-in cover page library (the preset gallery behind Insert → Cover
@@ -352,8 +357,8 @@ export function coverPageRange(doc: ProseMirrorNode): { from: number; to: number
   for (let i = 0; i < doc.childCount; i++) {
     const child = doc.child(i)
     const marks = child.attrs.hiddenBookmarks as string[] | null | undefined
-    if (from < 0 && marks?.includes(COVER_START_MARK)) from = pos
-    if (to < 0 && marks?.includes(COVER_END_MARK)) to = pos + child.nodeSize
+    if (from < 0 && marks?.some((m) => COVER_START_MARKS.includes(m))) from = pos
+    if (to < 0 && marks?.some((m) => COVER_END_MARKS.includes(m))) to = pos + child.nodeSize
     pos += child.nodeSize
   }
   return from >= 0 && to > from ? { from, to } : null

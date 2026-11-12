@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
-import { readBasicWorkbook } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+import { readBasicWorkbook } from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
 import { csvInfo } from '../src/formats/csv'
 import { run, tempDir } from './helpers'
 

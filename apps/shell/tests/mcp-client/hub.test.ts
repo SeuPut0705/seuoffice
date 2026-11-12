@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { mcpServersOf } from '@genoffice/agent-core'
+import { mcpServersOf } from '@seuoffice/agent-core'
 import { planFingerprint } from '../../src/main/mcp-client/fingerprint'
 import { createMcpHub, type McpHub, type McpHubDeps } from '../../src/main/mcp-client/hub'
 import {
@@ -844,7 +844,7 @@ describe('MCP hub: Settings', () => {
       detail: 'double-underscore',
     })
     expect(
-      await hub.add({ name: 'ieumoffice-editor', kind: 'remote', url: 'https://x.example' }),
+      await hub.add({ name: 'seuoffice-editor', kind: 'remote', url: 'https://x.example' }),
     ).toMatchObject({ ok: false, problem: 'name', detail: 'reserved' })
     expect(await hub.add({ name: 'pub', kind: 'remote', url: 'http://8.8.8.8/mcp' })).toEqual({
       ok: false,

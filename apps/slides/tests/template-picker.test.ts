@@ -7,8 +7,8 @@
 import { act, createElement, type ReactElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Lang } from '@genoffice/i18n'
-import { listSlideTemplates } from '@genoffice/pipelines/slides/templates'
+import type { Lang } from '@seuoffice/i18n'
+import { listSlideTemplates } from '@seuoffice/pipelines/slides/templates'
 
 // react-konva's node entry requires the native 'canvas' package; nothing here draws
 vi.mock('react-konva', () => {

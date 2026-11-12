@@ -1,5 +1,6 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { VISUAL_SIGNATURE_CONTENT_PREFIX } from '../shared/ipc'
+import { OLD_VISUAL_SIGNATURE_CONTENT_PREFIXES } from '../shared/old-names'
 import { dateFormatFromActions } from './date-format'
 
 export type FormWidgetKind = 'text' | 'checkbox' | 'radio' | 'choice' | 'signature'
@@ -274,9 +275,11 @@ export async function buildFormCatalog(doc: PDFDocumentProxy): Promise<FormCatal
 function visualSignatureFieldName(annotation: RawFormAnnotation): string | null {
   if (annotation.genOfficeFormField) return annotation.genOfficeFormField
   const contents = annotation.contentsObj?.str ?? annotation.contents
-  return contents?.startsWith(VISUAL_SIGNATURE_CONTENT_PREFIX)
-    ? contents.slice(VISUAL_SIGNATURE_CONTENT_PREFIX.length)
-    : null
+  if (!contents) return null
+  const prefix = [VISUAL_SIGNATURE_CONTENT_PREFIX, ...OLD_VISUAL_SIGNATURE_CONTENT_PREFIXES].find(
+    (candidate) => contents.startsWith(candidate),
+  )
+  return prefix === undefined ? null : contents.slice(prefix.length)
 }
 
 function rectsSubstantiallyOverlap(a: number[], b: number[]): boolean {

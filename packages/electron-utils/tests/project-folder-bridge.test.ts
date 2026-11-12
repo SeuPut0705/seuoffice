@@ -4,7 +4,7 @@ import {
   PROJECT_FOLDER_EVENTS,
   PROJECT_FOLDER_LISTEN_CHANNEL,
   type ProjectFolderApi,
-} from '@genoffice/project-store/folder-api'
+} from '@seuoffice/project-store/folder-api'
 import { projectFolderBridge, type ProjectFolderBridgeIpc } from '../src/project-folder-bridge'
 
 type Listener = (event: unknown, payload: unknown) => void

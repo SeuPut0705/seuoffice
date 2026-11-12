@@ -302,6 +302,15 @@ const SPECIFIER = /(?<![.\w])(?:from|import|require)\s*\(?\s*['"]([^'"\n]+)['"]/
 
 const IN_NODE_MODULES = /node_modules\/((?:@[^/]+\/)?[^/?]+)/
 
+/**
+ * Workspace packages are this product's own code and are not listed, with two
+ * exceptions kept from before every workspace shared one scope: these two were
+ * resolved like installed packages, which also lists what they depend on (the
+ * browser stand-ins buffer, events, base64-js, ieee754). Dropping them would
+ * drop those four notices, so the file stays as it was.
+ */
+const WORKSPACES_LISTED_WITH_THEIR_DEPENDENCIES = ['@seuoffice/collab', '@seuoffice/web-platform']
+
 /** 'foo/bar' -> 'foo'; '@a/b/c' -> '@a/b'; relative/builtin/workspace -> null */
 function bareName(spec) {
   if (!spec || spec.startsWith('node:')) return null
@@ -311,7 +320,9 @@ function bareName(spec) {
   if (spec.startsWith('.') || spec.startsWith('/')) return null
   const parts = spec.split('/')
   const name = spec.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]
-  if (BUILTIN.has(name) || name.startsWith('@genoffice/')) return null
+  const ownWorkspace =
+    name.startsWith('@seuoffice/') && !WORKSPACES_LISTED_WITH_THEIR_DEPENDENCIES.includes(name)
+  if (BUILTIN.has(name) || ownWorkspace) return null
   // the specifier regex also fires on prose inside string concatenations
   return NPM_NAME.test(name) ? name : null
 }

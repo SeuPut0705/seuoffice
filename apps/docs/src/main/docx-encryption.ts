@@ -10,7 +10,7 @@
  * AES-256/SHA-512), and both open either — so we decrypt both and re-encrypt
  * with Agile, matching Word 2013+ defaults.
  */
-import { assertCompoundFile, hasOle2Signature } from '@genoffice/compound-file'
+import { assertCompoundFile, hasOle2Signature } from '@seuoffice/compound-file'
 import officeCrypto from 'officecrypto-tool'
 
 const CFB_MAGIC = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])

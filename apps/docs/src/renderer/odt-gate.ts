@@ -14,13 +14,13 @@
  */
 import { useSyncExternalStore } from 'react'
 import type { Node as PmNode } from '@tiptap/pm/model'
-import type { ParsedDocFull } from '@genoffice/docx-engine'
+import type { ParsedDocFull } from '@seuoffice/docx-engine'
 import {
   parseKeepName,
   type BridgeMap,
   type ObjectKind,
   type ObjectsExt,
-} from '@genoffice/odt-engine'
+} from '@seuoffice/odt-engine'
 import { showToast } from './components/toast-bus'
 import { t, type StringKey } from './i18n/locale'
 

@@ -96,7 +96,7 @@ const aiRequests = (app: ElectronApplication) =>
 const handoffStore = (app: ElectronApplication) =>
   app.evaluate(() => {
     const store = (globalThis as Record<symbol, unknown>)[
-      Symbol.for('genoffice.generate-handoff')
+      Symbol.for('seuoffice.generate-handoff')
     ] as
       | {
           queued: Map<number, unknown>
@@ -161,7 +161,7 @@ const chipNames = (editor: Page, scope: string) =>
 
 test('make → a new HTML tab takes the request: blocked keeps it, a later send and an immediate run count', async () => {
   test.setTimeout(240_000)
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-html-handoff-e2e-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-html-handoff-e2e-'))
   const lesson = join(dir, 'lesson.txt')
   const notes = join(dir, 'notes.md')
   await writeFile(lesson, 'Photosynthesis turns light into chemical energy.\n')

@@ -5,13 +5,13 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defaultAiSettings } from '@genoffice/ai-provider'
+import { defaultAiSettings } from '@seuoffice/ai-provider'
 import type {
   AiSettings,
   AiStreamChunk,
   AiStreamRequest,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import type {
   AppendProjectChatArgs,
   ProjectChatAppendedEvent,
@@ -21,8 +21,8 @@ import type {
   ProjectListItem,
   ProjectNotice,
   ProjectSelection,
-} from '@genoffice/project-store'
-import { projectPanelText } from '@genoffice/ui'
+} from '@seuoffice/project-store'
+import { projectPanelText } from '@seuoffice/ui'
 import type { HomeApi } from '../src/shared/home-api'
 import { KbAskPanel } from '../src/renderer/src/KbAskPanel'
 import {

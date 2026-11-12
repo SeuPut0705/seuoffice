@@ -4,8 +4,8 @@
  * with openPptx and assert on the parsed model (true roundtrip, no mocks).
  */
 import { describe, it, expect } from 'vitest'
-import { openPptx, type TextElement, type PictureElement } from '@genoffice/pptx-engine'
-import { buildRenderSlide, EMU_PER_PX_96, HeuristicMetrics } from '@genoffice/pptx-render'
+import { openPptx, type TextElement, type PictureElement } from '@seuoffice/pptx-engine'
+import { buildRenderSlide, EMU_PER_PX_96, HeuristicMetrics } from '@seuoffice/pptx-render'
 import { parsePageSpec, buildPagePptx, type PageSpec } from '../src/slides/page-spec'
 
 // 1x1 red PNG

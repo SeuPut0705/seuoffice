@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { Editor } from '@tiptap/core'
-import type { ParsedDocFull, StyleInfo } from '@genoffice/docx-engine'
+import type { ParsedDocFull, StyleInfo } from '@seuoffice/docx-engine'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import { docStyleCss } from '../src/renderer/doc-style-css'
 import {

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import { windowMcpState, type UserSkillText } from '@genoffice/agent-core'
+import type { Lang } from '@seuoffice/i18n'
+import { windowMcpState, type UserSkillText } from '@seuoffice/agent-core'
 import type { SkillProposals } from './use-skill-proposals'
 import type { OnTemplateSkill, SkillUse } from './use-composer-skills'
 import { buildSkillRequest, readSkillsForRequest } from './skill-send'

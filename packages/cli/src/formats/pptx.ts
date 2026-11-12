@@ -17,7 +17,7 @@ import {
   type Paragraph,
   type Slide,
   type SlideElement,
-} from '@genoffice/pptx-engine'
+} from '@seuoffice/pptx-engine'
 import {
   elementDurableId,
   listSlideAnimations,
@@ -27,7 +27,7 @@ import {
   type Op,
   type OpFailure,
   type TxnResult,
-} from '@genoffice/pptx-ops'
+} from '@seuoffice/pptx-ops'
 import { refuseChartOp } from './pptx-chart-checks'
 import { refuseOp } from './pptx-op-checks'
 import { CliError, EXIT } from '../result'

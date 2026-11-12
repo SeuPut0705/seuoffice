@@ -13,9 +13,9 @@ import {
   type AiSettings,
   type AiStreamChunk,
   type AiStreamRequest,
-} from '@genoffice/ai-provider'
-import type { SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
-import { LANGS, PRODUCT_NAME, type Lang } from '@genoffice/i18n'
+} from '@seuoffice/ai-provider'
+import type { SubscriptionStatusMap } from '@seuoffice/ai-provider/browser'
+import { LANGS, PRODUCT_NAME, type Lang } from '@seuoffice/i18n'
 import { LocaleProvider } from '../src/renderer/i18n/locale'
 import { aiStrings } from '../src/renderer/i18n/strings-ai'
 import { AiPanel } from '../src/renderer/ai/AiPanel'

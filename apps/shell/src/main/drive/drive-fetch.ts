@@ -1,5 +1,5 @@
-import { fetchSeeingRedirects, keyedDownload, keyedFetch } from '@genoffice/ai-provider'
-import type { FetchLike } from '@genoffice/google-drive'
+import { fetchSeeingRedirects, keyedDownload, keyedFetch } from '@seuoffice/ai-provider'
+import type { FetchLike } from '@seuoffice/google-drive'
 
 /**
  * The two fetches of the Drive connection, over the app's network calls:

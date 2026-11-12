@@ -9,25 +9,25 @@ import {
   freeAiConnectResultOf,
   freeAiQuotaOf,
   getProviderAdapter,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import type {
   AiLocalDiscoveryResult,
   AiLocalInspectionResult,
   AiLocalTestResult,
   AiSettings,
   CodexModelCatalog,
-} from '@genoffice/ai-provider/browser'
-import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
-import { mcpToolsBridge } from '@genoffice/electron-utils/mcp-tools-bridge'
-import { outboundBridge } from '@genoffice/electron-utils/outbound-bridge'
-import { userSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
+} from '@seuoffice/ai-provider/browser'
+import { installDropOpenBridge } from '@seuoffice/electron-utils/drop-open'
+import { mcpToolsBridge } from '@seuoffice/electron-utils/mcp-tools-bridge'
+import { outboundBridge } from '@seuoffice/electron-utils/outbound-bridge'
+import { userSkillsBridge } from '@seuoffice/electron-utils/user-skills-bridge'
 import {
   PROJECT_FOLDER_BRIDGE_KEY,
   projectFolderBridge,
-} from '@genoffice/electron-utils/project-folder-bridge'
-import { USER_SKILLS_BRIDGE_KEY } from '@genoffice/electron-utils/user-skills-channels'
+} from '@seuoffice/electron-utils/project-folder-bridge'
+import { USER_SKILLS_BRIDGE_KEY } from '@seuoffice/electron-utils/user-skills-channels'
 import type { UpdateUiState } from '../shared/update-api'
-import { normalizeAiPanelPrefs } from '@genoffice/ui/ai-panel-prefs'
+import { normalizeAiPanelPrefs } from '@seuoffice/ui/ai-panel-prefs'
 import type {
   AuthorNameSetting,
   DefaultAppStatus,
@@ -46,7 +46,7 @@ import type {
 } from '../shared/home-api'
 import { HOME_CHANNELS } from '../shared/home-api'
 import { createInbox } from './inbox'
-import { normalizeSlidesAiFonts } from '@genoffice/ui/slides-ai-fonts'
+import { normalizeSlidesAiFonts } from '@seuoffice/ui/slides-ai-fonts'
 import { RECOVERY_LIST_CHANNELS } from '../shared/recovery-list-api'
 import type {
   RecoveryListApi,
@@ -668,7 +668,7 @@ contextBridge.exposeInMainWorld('aiOffice', homeApi)
  * Model file naming.
  *
  * The same channel the editor apps expose under this name, so the shared
- * client (`@genoffice/ui`) finds one bridge wherever it runs.
+ * client (`@seuoffice/ui`) finds one bridge wherever it runs.
  *
  * A global of its own rather than part of `aiOffice`: `aiOffice` is the
  * shell's home API, and an editor window that reused the name would shadow it

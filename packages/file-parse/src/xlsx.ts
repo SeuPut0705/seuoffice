@@ -1,7 +1,7 @@
 import JSZip from 'jszip'
-import { parseAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
-import { offsetFormulaRefs } from '@genoffice/xlsx-gateway/domain/formula-shift'
-import { assertZipInflatesWithinLimits, assertZipWithinLimits } from '@genoffice/docx-engine'
+import { parseAddress } from '@seuoffice/xlsx-gateway/domain/cell-address'
+import { offsetFormulaRefs } from '@seuoffice/xlsx-gateway/domain/formula-shift'
+import { assertZipInflatesWithinLimits, assertZipWithinLimits } from '@seuoffice/docx-engine'
 import { resolveTarget } from './opc'
 import { XMLParser } from 'fast-xml-parser'
 import {
@@ -10,7 +10,7 @@ import {
   formatSerial,
   type DateFormatParts,
 } from './xlsx-dates'
-import { decodeXlsxEscapes } from '@genoffice/xlsx-gateway/gateway/xlsx-escapes'
+import { decodeXlsxEscapes } from '@seuoffice/xlsx-gateway/gateway/xlsx-escapes'
 import { readXlsxRedactions, withheldCellMarker } from './xlsx-redaction'
 import {
   FORMULA_SCAN_MAX_BYTES,

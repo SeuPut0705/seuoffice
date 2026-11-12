@@ -1,4 +1,4 @@
-import { htmlLang, type Lang } from '@genoffice/i18n'
+import { htmlLang, type Lang } from '@seuoffice/i18n'
 
 /** a file size in the UI language: KB under 1 MB, MB above */
 export function formatBytes(bytes: number, lang: Lang): string {
