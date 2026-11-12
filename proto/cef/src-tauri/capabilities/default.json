@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "the measurement host page may use the core API",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

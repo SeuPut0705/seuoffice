@@ -1,0 +1,292 @@
+name: proto-cef
+
+# Throwaway shell prototype (proto/README.md, decision 0026): Tauri 3 alpha on
+# the CEF runtime. Builds, packages, smoke-tests and uploads proto-cef-<mac|win>.
+on:
+  push:
+    branches: [proto/rust-shell]
+    paths:
+      - 'proto/cef/**'
+      - 'proto/common/**'
+      - '.github/workflows/proto-cef.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proto-cef-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CEF_CRATE_VERSION: '154.5.0'
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: proto/cef
+    env:
+      GH_TOKEN: ${{ github.token }}
+      APPLE_SIGNING_IDENTITY: '-'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: proto/cef/src-tauri
+          cache-on-failure: true
+
+      # The cef crate downloads the CEF distribution (~1 GB) into CEF_PATH on
+      # the first build; one cache entry per CEF version serves later runs.
+      - name: CEF path
+        run: echo "CEF_PATH=$HOME/.cache/tauri-cef" >> "$GITHUB_ENV"
+      - name: restore the CEF cache
+        id: cef-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/tauri-cef
+          key: proto-cef-${{ runner.os }}-${{ runner.arch }}-${{ env.CEF_CRATE_VERSION }}
+
+      - name: tools
+        run: |
+          cmake --version
+          ninja --version || brew install ninja
+          rustc --version
+          cargo --version
+
+      - name: Tauri CLI
+        run: npm install --no-audit --no-fund
+      - name: stage the frontend (host page and the Word editor bundle)
+        working-directory: .
+        run: bash proto/common/stage-dist.sh proto/cef/dist
+      - name: icons
+        run: npx tauri icon src-tauri/app-icon.png
+
+      - name: build the app bundle
+        id: build
+        run: |
+          start=$(date +%s)
+          npx tauri build --bundles app --verbose
+          echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
+
+      - name: save the CEF cache
+        if: always() && steps.cef-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/tauri-cef
+          key: proto-cef-${{ runner.os }}-${{ runner.arch }}-${{ env.CEF_CRATE_VERSION }}
+
+      - name: zip and updater checks (codesign, Info.plist, document types)
+        id: package
+        run: |
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out"
+          app=$(find src-tauri/target/release/bundle/macos -maxdepth 1 -name '*.app' | head -1)
+          ls -la src-tauri/target/release/bundle/macos
+          set +e
+          ci/mac-package.sh "$app" "$out" 2>&1 | tee "$out/package.log"
+          status=${PIPESTATUS[0]}
+          echo "staged=$(cat "$out/staged-app-path.txt")" >> "$GITHUB_OUTPUT"
+          exit $status
+
+      - name: dmg (kept when the bundler can make one)
+        continue-on-error: true
+        run: |
+          npx tauri build --bundles dmg
+          dmg=$(find src-tauri/target/release/bundle/dmg -name '*.dmg' | head -1)
+          cp "$dmg" "$RUNNER_TEMP/out/SeuOffice-0.13.0-arm64.dmg"
+          ls -la "$RUNNER_TEMP/out"
+
+      - name: build-info.json
+        if: always() && steps.build.outcome == 'success'
+        run: |
+          python3 ci/build-info.py mac 'SeuOffice.app/Contents/MacOS/SeuOffice' "${{ steps.build.outputs.seconds }}" "$RUNNER_TEMP/out/build-info.json"
+
+      - name: upload proto-cef-mac
+        if: always() && steps.build.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: proto-cef-mac
+          path: |
+            ${{ runner.temp }}/out/SeuOffice-0.13.0-arm64-mac.zip
+            ${{ runner.temp }}/out/SeuOffice-0.13.0-arm64.dmg
+            ${{ runner.temp }}/out/build-info.json
+          if-no-files-found: error
+
+      - name: keychain before
+        if: always() && steps.package.outputs.staged != ''
+        run: |
+          mkdir -p "$RUNNER_TEMP/smoke"
+          security list-keychains | tee "$RUNNER_TEMP/smoke/keychains.txt"
+          security dump-keychain 2>/dev/null > "$RUNNER_TEMP/smoke/keychain-before.txt" || true
+          grep -E '"svce"|"labl"' "$RUNNER_TEMP/smoke/keychain-before.txt" | sort | uniq -c || true
+
+      - name: smoke (bench, pdf, OSCrypt probe)
+        id: smoke
+        if: always() && steps.package.outputs.staged != ''
+        run: |
+          python3 ../common/make-doc.py "$RUNNER_TEMP/bench-50p.docx"
+          exe="${{ steps.package.outputs.staged }}/Contents/MacOS/SeuOffice"
+          python3 ci/smoke.py "$exe" "$RUNNER_TEMP/bench-50p.docx" "$RUNNER_TEMP/smoke" --probe-oscrypt 50 2>&1 | tee "$RUNNER_TEMP/smoke/smoke.log"
+          exit ${PIPESTATUS[0]}
+
+      - name: which keychain item CEF's OSCrypt used (metadata only)
+        if: always() && steps.package.outputs.staged != ''
+        run: |
+          s="$RUNNER_TEMP/smoke"
+          security dump-keychain 2>/dev/null > "$s/keychain-after.txt" || true
+          echo '--- service / label / account lines that are new after the run'
+          diff <(grep -E '"svce"|"labl"|"acct"|"cdat"' "$s/keychain-before.txt" | sort) \
+               <(grep -E '"svce"|"labl"|"acct"|"cdat"' "$s/keychain-after.txt" | sort) || true
+          echo '--- every item that looks like Chromium / Electron / SeuOffice'
+          grep -B8 -A12 -E 'Safe Storage|Chromium|SeuOffice|seuoffice' "$s/keychain-after.txt" | grep -E 'class|"svce"|"labl"|"acct"|"cdat"|"mdat"|keychain:' || echo '(none)'
+          echo '--- CEF profile'
+          ls -la "$HOME/Library/Caches/com.seuput.seuoffice/cef" 2>&1 | head -30
+          ls -la "$HOME/Library/Application Support/seuoffice" 2>&1 | head
+          echo '--- Chromium process and codesign of the helpers'
+          codesign -dv "${{ steps.package.outputs.staged }}/Contents/Frameworks/Chromium Embedded Framework.framework" 2>&1 | head -8 || true
+
+      - name: upload proto-cef-mac-smoke
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: proto-cef-mac-smoke
+          path: |
+            ${{ runner.temp }}/smoke
+            ${{ runner.temp }}/out/package.log
+          if-no-files-found: warn
+
+  win:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+        working-directory: proto/cef
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: proto/cef/src-tauri
+          cache-on-failure: true
+
+      - name: CEF path
+        run: echo "CEF_PATH=${USERPROFILE}/.cache/tauri-cef" >> "$GITHUB_ENV"
+      - name: restore the CEF cache
+        id: cef-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/tauri-cef
+          key: proto-cef-${{ runner.os }}-${{ runner.arch }}-${{ env.CEF_CRATE_VERSION }}
+
+      - name: tools
+        run: |
+          cmake --version
+          ninja --version || choco install ninja -y
+          rustc --version
+          cargo --version
+          makensis /VERSION || true
+
+      - name: Tauri CLI
+        run: npm install --no-audit --no-fund
+      - name: stage the frontend (host page and the Word editor bundle)
+        working-directory: .
+        run: bash proto/common/stage-dist.sh proto/cef/dist
+      - name: icons
+        run: npx tauri icon src-tauri/app-icon.png
+
+      - name: build the NSIS installer
+        id: build
+        run: |
+          start=$(date +%s)
+          npx tauri build --bundles nsis --verbose
+          echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
+
+      - name: save the CEF cache
+        if: always() && steps.cef-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/tauri-cef
+          key: proto-cef-${{ runner.os }}-${{ runner.arch }}-${{ env.CEF_CRATE_VERSION }}
+
+      - name: SeuOffice-Setup-0.13.0.exe and build-info.json
+        id: package
+        run: |
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out"
+          ls -la src-tauri/target/release/bundle/nsis
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe "$out/SeuOffice-Setup-0.13.0.exe"
+          ls -la "$out"
+          python3 ci/build-info.py win 'SeuOffice.exe' "${{ steps.build.outputs.seconds }}" "$out/build-info.json"
+
+      - name: upload proto-cef-win
+        if: always() && steps.package.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: proto-cef-win
+          path: |
+            ${{ runner.temp }}/out/SeuOffice-Setup-0.13.0.exe
+            ${{ runner.temp }}/out/build-info.json
+          if-no-files-found: error
+
+      - name: take over the electron-builder install (silent, as electron-updater runs it)
+        id: takeover
+        if: always() && steps.package.outcome == 'success'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\smoke" | Out-Null
+          ./ci/win-takeover.ps1 -Installer "$env:RUNNER_TEMP\out\SeuOffice-Setup-0.13.0.exe" -OutDir "$env:RUNNER_TEMP\smoke" 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP\smoke\takeover.log"
+          exit $LASTEXITCODE
+
+      - name: smoke (bench, pdf, OSCrypt probe) on the installed app
+        id: smoke
+        if: always() && steps.package.outcome == 'success'
+        run: |
+          mkdir -p "$RUNNER_TEMP/smoke"
+          exe=$(cat "$RUNNER_TEMP/smoke/installed-exe.txt" 2>/dev/null || true)
+          [ -n "$exe" ] || { echo "no installed exe from the takeover step"; exit 1; }
+          python3 ../common/make-doc.py "$RUNNER_TEMP/bench-50p.docx"
+          python3 ci/smoke.py "$exe" "$RUNNER_TEMP/bench-50p.docx" "$RUNNER_TEMP/smoke" --probe-oscrypt 50 2>&1 | tee "$RUNNER_TEMP/smoke/smoke.log"
+          exit ${PIPESTATUS[0]}
+
+      - name: which Local State CEF's OSCrypt used
+        if: always() && steps.package.outcome == 'success'
+        shell: pwsh
+        run: |
+          $profile = Join-Path $env:LOCALAPPDATA 'com.seuput.seuoffice'
+          Write-Host "CEF profile root: $profile"
+          Get-ChildItem $profile -Recurse -Filter 'Local State' -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Host "Local State: $($_.FullName) ($($_.Length) bytes)"
+            $json = Get-Content $_.FullName -Raw | ConvertFrom-Json
+            if ($json.os_crypt) {
+              $keys = ($json.os_crypt.PSObject.Properties.Name) -join ','
+              Write-Host "  os_crypt keys: $keys"
+              if ($json.os_crypt.encrypted_key) {
+                $raw = [Convert]::FromBase64String($json.os_crypt.encrypted_key)
+                Write-Host ("  encrypted_key: {0} bytes, prefix '{1}'" -f $raw.Length, [Text.Encoding]::ASCII.GetString($raw[0..4]))
+              }
+            } else { Write-Host '  no os_crypt section' }
+          }
+          Get-ChildItem $profile -Recurse -Filter 'Cookies*' -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "cookie store: $($_.FullName) ($($_.Length) bytes)" }
+          $electron = Join-Path $env:APPDATA 'seuoffice\Local State'
+          Write-Host "Electron userData Local State still: $(Get-Content $electron -Raw)"
+
+      - name: upload proto-cef-win-smoke
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: proto-cef-win-smoke
+          path: ${{ runner.temp }}/smoke
+          if-no-files-found: warn

@@ -1,0 +1,34 @@
+[package]
+name = "seuoffice-cef-proto"
+version = "0.13.0"
+description = "Throwaway shell prototype: Tauri 3 alpha on the CEF (Chromium) runtime (decision 0026)"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+
+# Stand-alone: never part of another Cargo workspace.
+[workspace]
+
+# The executable is what the bundle ships, so it carries the product name.
+[[bin]]
+name = "SeuOffice"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = "=3.0.0-alpha.4"
+
+[dependencies]
+base64 = "0.22"
+dirs = "6"
+percent-encoding = "2"
+rfd = "0.15"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = "=3.0.0-alpha.6"
+# Depending on this crate is what selects CEF for tauri-build and the CLI.
+tauri-runtime-cef = "=3.0.0-alpha.7"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 16

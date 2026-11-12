@@ -1,0 +1,9 @@
+{
+  "name": "seuoffice-cef-proto",
+  "private": true,
+  "version": "0.13.0",
+  "description": "Throwaway: pins the Tauri 3 alpha CLI that bundles the CEF prototype",
+  "devDependencies": {
+    "@tauri-apps/cli": "3.0.0-alpha.6"
+  }
+}

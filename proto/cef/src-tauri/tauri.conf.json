@@ -1,0 +1,58 @@
+{
+  "productName": "SeuOffice",
+  "version": "0.13.0",
+  "identifier": "com.seuput.seuoffice",
+  "mainBinaryName": "SeuOffice",
+  "build": {
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": []
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "publisher": "SeuPut",
+    "shortDescription": "SeuOffice",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["docx"],
+        "name": "seuoffice.WordDocument",
+        "description": "Word Document",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      },
+      {
+        "ext": ["xlsx"],
+        "name": "seuoffice.ExcelWorkbook",
+        "description": "Excel Workbook",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      },
+      {
+        "ext": ["pptx"],
+        "name": "seuoffice.PowerPointPresentation",
+        "description": "PowerPoint Presentation",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+      }
+    ],
+    "macOS": {
+      "signingIdentity": "-"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "windows/hooks.nsh"
+      }
+    }
+  }
+}
