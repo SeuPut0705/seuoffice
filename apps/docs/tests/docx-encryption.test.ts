@@ -12,6 +12,7 @@ import {
   encryptDocx,
   forgetDocPasswords,
   isDiskEncrypted,
+  docxOpenKind,
   isEncryptedDocx,
   markDiskEncrypted,
   prepareRecoveryDocx,
@@ -110,15 +111,37 @@ describe('a hostile compound file', () => {
     })
   }
 
-  it('that looks like an encrypted docx fails as unsupported for any password', async () => {
-    // the open path asks for a password on the EncryptedPackage name alone, then decrypts
+  it('that carries the EncryptedPackage name is a damaged file, not a protected one', async () => {
+    // no password opens it, so the open path may not ask for one
     const bytes = Buffer.from(fatCycleFile('EncryptedPackage'))
-    expect(isEncryptedDocx(bytes)).toBe(true)
     const started = performance.now()
+    expect(isEncryptedDocx(bytes)).toBe(false)
+    expect(docxOpenKind(bytes)).toBe('damaged')
+    expect(performance.now() - started).toBeLessThan(REFUSAL_MS)
+    // and a caller that decrypts it all the same is refused, quickly
     const err = await decryptDocx(bytes, 'pw').catch((e: unknown) => e)
     expect(performance.now() - started).toBeLessThan(REFUSAL_MS)
     expect(err).toBeInstanceOf(DocxDecryptError)
     expect((err as DocxDecryptError).reason).toBe('unsupported')
+  })
+
+  for (const { what, build } of HOSTILE_FILES) {
+    it(`${what}: is damaged, not protected and not a document to hand on`, () => {
+      const bytes = Buffer.from(build())
+      expect(isEncryptedDocx(bytes)).toBe(false)
+      expect(docxOpenKind(bytes)).toBe('damaged')
+    })
+  }
+
+  it('made from a real protected docx by one wrong header field is damaged, not protected', () => {
+    const encrypted = readFileSync(
+      join(__dirname, 'encrypted-fixtures', 'office-agile-password.docx'),
+    )
+    expect(docxOpenKind(encrypted)).toBe('encrypted')
+    // the header counts one FAT sector more than the file lists
+    encrypted.writeUInt32LE(encrypted.readUInt32LE(44) + 1, 44)
+    expect(isEncryptedDocx(encrypted)).toBe(false)
+    expect(docxOpenKind(encrypted)).toBe('damaged')
   })
 
   it('kept as a recovery copy fails as unsupported instead of being read', async () => {
@@ -135,6 +158,12 @@ describe('bytes that are not a compound file', () => {
   it('a plain docx comes back from decryptDocx as it was', async () => {
     const docx = plainDocx()
     expect(Buffer.compare(await decryptDocx(docx, 'pw'), docx)).toBe(0)
+  })
+
+  it('are opened as they are, whatever they hold', () => {
+    expect(docxOpenKind(plainDocx())).toBe('plain')
+    expect(docxOpenKind(Buffer.from('not a docx at all'))).toBe('plain')
+    expect(docxOpenKind(Buffer.alloc(0))).toBe('plain')
   })
 })
 

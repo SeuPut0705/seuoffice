@@ -232,6 +232,7 @@ import {
   discardDocPasswordIntents,
   DocxDecryptError,
   docPasswordFor,
+  docxOpenKind,
   encryptDocx,
   forgetDocPasswords,
   isEncryptedDocx,
@@ -4016,11 +4017,12 @@ async function takeDocsUntitledCopy(
         ? '.odt'
         : '.docx'
   // an encrypted copy needs its file's password, which only opening that file
-  // can ask for: it stays where it is for when the file is back
+  // can ask for: it stays where it is for when the file is back. So does one
+  // whose container is damaged, which is no document to open
   const taken = await docsRecovery.takeUntitledCopy(contents.id, request.copy, {
     title: request.title,
     ext,
-    accept: (bytes) => !isEncryptedDocx(bytes),
+    accept: (bytes) => docxOpenKind(bytes) === 'plain',
   })
   if (!taken || contents.isDestroyed()) return null
   const suggested = request.saveAsDefaultPath ? basename(request.saveAsDefaultPath) : ''
@@ -4218,7 +4220,14 @@ async function loadDocx(
   // back a marker — the renderer prompts and retries via docs:open-decrypt.
   // No side effects (recents/write grant) until the password checks out.
   let plainBytes: Buffer = original
-  const encrypted = format === 'docx' && isEncryptedDocx(original)
+  const kind = format === 'docx' ? docxOpenKind(original) : 'plain'
+  if (kind === 'damaged') {
+    // a compound file whose container does not hold: no password opens it, so
+    // none is asked for, and it is no docx to hand to the renderer either
+    await showOpenError(wcId, `${basename(filePath)}: ${tm('errUnreadable')}`)
+    return null
+  }
+  const encrypted = kind === 'encrypted'
   if (encrypted) {
     const pwd = password ?? docPasswordFor(wcId, filePath)
     if (!pwd) return { needsPassword: true, path: filePath, name: basename(filePath) }
@@ -4249,7 +4258,7 @@ async function loadDocx(
   // docs:write-recovery); an unreadable copy falls back to the original. No
   // tab holds that copy then: it waits as "later" for the next open of the
   // file instead of staying undecided (which would judge every quit abnormal).
-  if (encrypted && isEncryptedDocx(bytes)) {
+  if (encrypted && docxOpenKind(bytes) !== 'plain') {
     try {
       bytes = await decryptRecoveryCopy(wcId, filePath, bytes)
     } catch {
