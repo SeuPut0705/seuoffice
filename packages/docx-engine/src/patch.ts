@@ -130,7 +130,7 @@ import {
 import { applyPropertyChanges, type PropertyChanges } from './doc-properties'
 import { patchHfPicturesXml } from './run-picture'
 import { ownValue } from './own-value'
-import { findStartTag } from './xml-tag'
+import { findStartTag, removeElements } from './xml-tag'
 import { EMU_PER_PX, usableNumber, usablePictureSize } from './xml-number'
 
 /**
@@ -3286,11 +3286,9 @@ function applyPageColor(documentXml: string, color: string | null): string {
   // self-closing form left the paired copy behind, so a save emitted two
   // w:background children; CT_Document admits one and Word then reports the
   // file as corrupt. Strip the pair whole, VML child included, and re-emit the
-  // canonical self-closing form, for the same reason stripElement() does.
-  let xml = documentXml.replace(
-    /<w:background[^>]*\/>|<w:background[^>]*>[\s\S]*?<\/w:background>/g,
-    '',
-  )
+  // canonical self-closing form, for the same reason stripElement() does. The
+  // start tag is read past a quoted > in an attribute value (findStartTag).
+  let xml = removeElements(documentXml, 'w:background')
   if (color) {
     const root = findStartTag(xml, 'w:document')
     if (root)
