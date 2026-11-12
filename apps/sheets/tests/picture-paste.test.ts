@@ -49,10 +49,17 @@ describe('pickTransferImage', () => {
   // A range copied in this editor carries a picture of the cells next to its
   // own table markup (copy-picture.ts), and that markup has no Excel marker.
   // Claiming the picture would float a bitmap where the cells should paste.
-  it("leaves this editor's own range copy (its markup plus the copy picture) to the cell paste", () => {
+  // The markup is what a paste reads back, not what the copy wrote: the
+  // clipboard hands it over inside a document or behind a charset tag.
+  it.each([
+    ['as written', ''],
+    ['inside the document the clipboard write wraps it in', '<html><head></head><body>'],
+    ["behind the pasteboard's charset tag", "<meta charset='utf-8'>"],
+  ])("leaves this editor's own range copy to the cell paste (%s)", (_name, prefix) => {
     const data = transfer([stringItem('text/plain'), stringItem('text/html'), imageItem()], {
       'text/plain': 'a\tb\tc',
       'text/html':
+        prefix +
         '<google-sheets-html-origin><table data-copy-id="copy-1" xmlns="http://www.w3.org/1999/xhtml" cellspacing="0" cellpadding="0" dir="ltr" style="table-layout:fixed">' +
         '<colgroup><col width="88" /><col width="88" /><col width="88" /></colgroup>\n' +
         '<tbody><tr style="height: 24px;"><td>a</td><td>b</td><td>c</td></tr></tbody></table>',
