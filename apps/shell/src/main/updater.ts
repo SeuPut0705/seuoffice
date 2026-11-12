@@ -418,10 +418,10 @@ export function initAutoUpdater(
   let latestSeenVersion: string | null = null
   // release notes of latestSeenVersion, converted once when the version lands
   let latestSeenNotes: UpdateReleaseNotes | null = null
-  // consecutive failed attempts for latestSeenVersion; a download can fail
-  // through the downloadUpdate() rejection OR only through the 'error' event
-  // (macOS: Squirrel.Mac reports signature/apply failures natively), so both
-  // paths funnel into failDownload() and the in-flight flag dedupes them
+  // consecutive failed attempts for latestSeenVersion. Every failed download
+  // rejects downloadUpdate() (electron-updater also emits 'error' for it, as
+  // it does for a failed check, so 'error' alone says nothing about the
+  // download); the in-flight flag keeps a late rejection from counting twice
   let failedAttempts = 0
   let downloadInFlight = false
   // where latestSeenVersion got to, so re-opening the window for the same
@@ -612,10 +612,9 @@ export function initAutoUpdater(
   }
 
   autoUpdater.on('error', (err) => {
-    // network failures during background checks are expected; only surface
-    // when the user is watching a download
+    // network failures during background checks are expected and shown
+    // nowhere; a failed download is reported by its own rejection (onDownload)
     log('error:', err?.message ?? err)
-    failDownload()
   })
 
   autoUpdater.on('update-available', (info: UpdateInfo) => {
@@ -721,6 +720,9 @@ export function initAutoUpdater(
   const check = (): void => {
     // turned off: only an explicit check (Help › Check for Updates…, a channel switch) asks the feed
     if (!autoCheckEnabled()) return
+    // a newer release found now would wait anyway (update-available above),
+    // and the request only competes with the download for the network
+    if (downloadInFlight || phase === 'downloaded') return
     step('check-start', { by: 'schedule' })
     autoUpdater
       .checkForUpdates()

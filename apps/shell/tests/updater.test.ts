@@ -667,6 +667,39 @@ describe('initAutoUpdater', () => {
     ])
   })
 
+  /** an update offered and its download started, which runs until the test ends */
+  async function downloadRunning(): Promise<void> {
+    downloadUpdate.mockImplementation(() => new Promise(() => {}))
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+    lastShownActions().onDownload()
+  }
+
+  it('asks the feed nothing on schedule while a download runs', async () => {
+    await downloadRunning()
+    vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS + RECHECK_INTERVAL_MS)
+    expect(checkForUpdates).not.toHaveBeenCalled()
+  })
+
+  it('asks the feed nothing on schedule while a finished download waits for the restart', async () => {
+    const { initAutoUpdater } = await loadUpdater()
+    initAutoUpdater(() => null)
+    updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+    lastShownActions().onDownload()
+    updaterState.listeners.get('update-downloaded')!({ version: '0.2.0' })
+    vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS + RECHECK_INTERVAL_MS)
+    expect(checkForUpdates).not.toHaveBeenCalled()
+  })
+
+  it('keeps a running download when a check made meanwhile fails', async () => {
+    await downloadRunning()
+    // electron-updater reports a failed check through the same 'error' event
+    updaterState.listeners.get('error')!(new Error('net::ERR_NETWORK_CHANGED'))
+    updaterState.listeners.get('download-progress')!({ percent: 40, transferred: 4, total: 10 })
+    expect(pushUpdateState).toHaveBeenLastCalledWith({ phase: 'downloading', percent: 40 })
+  })
+
   it('writes what it did to the update record in the data folder', async () => {
     const { initAutoUpdater } = await loadUpdater()
     initAutoUpdater(() => null)
