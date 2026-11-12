@@ -9508,9 +9508,11 @@ export default function App() {
     setConvertDialog({ format })
   }
 
-  /** Conversion jobs read the file on disk: save pending edits first */
-  const flushForStructureJob = async (): Promise<boolean> =>
-    (await flushThen(async () => true)) === true
+  /** Structure jobs (conversion, translated files, picture export) read the file on disk: save
+      pending edits first. Resolves to where the file is afterwards, which the job has to name
+      (the save can move the document); null when it was not saved */
+  const flushForStructureJob = async (): Promise<string | null> =>
+    (await flushThen(async (path) => path)) ?? null
 
   /** Text of a 1-based visible page as pdf.js extracts it (the AI fill of the EPUB dialog) */
   const visiblePageText = async (page: number): Promise<string> => {
@@ -9542,7 +9544,6 @@ export default function App() {
         onProgress: (handler) => window.pdfApi.structure.onProgress(handler),
         revealResult: (request) => window.pdfApi.revealConvertResult(request),
       },
-      filePath,
       password: passwordRef.current,
       baseName: fileName.replace(/\.pdf$/i, ''),
       t,
