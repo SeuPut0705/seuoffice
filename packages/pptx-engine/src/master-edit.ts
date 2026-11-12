@@ -31,5 +31,65 @@ export function listMasterParts(archive: PackageArchive): MasterPartInfo[] {
  *   master decoration layer is rendered underneath.
  */
 export function parseMasterPart(archive: PackageArchive, partPath: string): Slide | null {
-  return call('parseMasterPart', [archive, partPath], { shape: {"k":"obj","f":{"elements":{"k":"arr","v":{"k":"obj","f":{"chart":{"k":"obj","f":{"series":{"k":"arr","v":{"k":"obj","f":{"pointColors":{"k":"arr","u":true},"pointFills":{"k":"arr","u":true},"pointNoFill":{"k":"arr","u":true},"pointLines":{"k":"arr","u":true},"pointExplosionPct":{"k":"arr","u":true}}}},"sunburst":{"k":"obj","f":{"pointColors":{"k":"arr","u":true}}}}}}}},"decorations":{"k":"arr","v":{"k":"obj","f":{"chart":{"k":"obj","f":{"series":{"k":"arr","v":{"k":"obj","f":{"pointColors":{"k":"arr","u":true},"pointFills":{"k":"arr","u":true},"pointNoFill":{"k":"arr","u":true},"pointLines":{"k":"arr","u":true},"pointExplosionPct":{"k":"arr","u":true}}}},"sunburst":{"k":"obj","f":{"pointColors":{"k":"arr","u":true}}}}}}}}}} }) as never
+  return call('parseMasterPart', [archive, partPath], {
+    shape: {
+      k: 'obj',
+      f: {
+        elements: {
+          k: 'arr',
+          v: {
+            k: 'obj',
+            f: {
+              chart: {
+                k: 'obj',
+                f: {
+                  series: {
+                    k: 'arr',
+                    v: {
+                      k: 'obj',
+                      f: {
+                        pointColors: { k: 'arr', u: true },
+                        pointFills: { k: 'arr', u: true },
+                        pointNoFill: { k: 'arr', u: true },
+                        pointLines: { k: 'arr', u: true },
+                        pointExplosionPct: { k: 'arr', u: true },
+                      },
+                    },
+                  },
+                  sunburst: { k: 'obj', f: { pointColors: { k: 'arr', u: true } } },
+                },
+              },
+            },
+          },
+        },
+        decorations: {
+          k: 'arr',
+          v: {
+            k: 'obj',
+            f: {
+              chart: {
+                k: 'obj',
+                f: {
+                  series: {
+                    k: 'arr',
+                    v: {
+                      k: 'obj',
+                      f: {
+                        pointColors: { k: 'arr', u: true },
+                        pointFills: { k: 'arr', u: true },
+                        pointNoFill: { k: 'arr', u: true },
+                        pointLines: { k: 'arr', u: true },
+                        pointExplosionPct: { k: 'arr', u: true },
+                      },
+                    },
+                  },
+                  sunburst: { k: 'obj', f: { pointColors: { k: 'arr', u: true } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  }) as never
 }

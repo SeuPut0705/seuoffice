@@ -2,7 +2,14 @@
 // (tools/docx-diff/binding/config.ts).
 import type { EngineConfig } from '../../docx-diff/binding/config'
 import { MODEL_TYPES, decodable, wireParams } from './kinds'
-import { PPTX_APPEND, PPTX_HAND_ROUTES, PPTX_REPLACE, type PptxOverride, isHandRoute, overrideOf } from './overrides'
+import {
+  PPTX_APPEND,
+  PPTX_HAND_ROUTES,
+  PPTX_REPLACE,
+  type PptxOverride,
+  isHandRoute,
+  overrideOf,
+} from './overrides'
 import { pptxRow } from './rows'
 import { pptxWrapperBody } from './wrapper'
 
@@ -23,7 +30,11 @@ export const pptx: EngineConfig = {
   reference: 'tools/pptx-diff/reference',
   bindingDir: 'tools/pptx-diff/binding',
   manifest: 'tools/pptx-diff/binding/manifest.json',
-  table: { file: 'crates/office-wasm/src/invoke/pptx_table.rs', module: 'pptx_table', routes: 'pptx_routes' },
+  table: {
+    file: 'crates/office-wasm/src/invoke/pptx_table.rs',
+    module: 'pptx_table',
+    routes: 'pptx_routes',
+  },
   crates: [{ dir: 'crates/pptx-engine/src', crate: 'pptx_engine' }],
   plumbing: ['engine', 'engine-adopt'],
   shapesModule: false,
@@ -31,7 +42,10 @@ export const pptx: EngineConfig = {
   dropUnused: true,
   dropReexportRefs: true,
   pluginModule: (module) =>
-    module === 'index' || module.startsWith('node/') || module.startsWith('engine-') || module === 'init',
+    module === 'index' ||
+    module.startsWith('node/') ||
+    module.startsWith('engine-') ||
+    module === 'init',
   overrideOf,
   ownRow: (override) => !!(override as PptxOverride | undefined)?.pass,
   isHandRoute,
@@ -40,8 +54,13 @@ export const pptx: EngineConfig = {
   append: PPTX_APPEND,
   replace: PPTX_REPLACE,
   rustName: (name) =>
-    ({ elementCNvPrId: 'element_cnvpr_id', unescapeXml: 'unescape_xml', xmlParser: 'xml_parse_object' })[name],
-  rustModule: (module) => `crates/pptx-engine/src/${RUST_MODULE[module] ?? module.replaceAll('-', '_')}.rs`,
+    ({
+      elementCNvPrId: 'element_cnvpr_id',
+      unescapeXml: 'unescape_xml',
+      xmlParser: 'xml_parse_object',
+    })[name],
+  rustModule: (module) =>
+    `crates/pptx-engine/src/${RUST_MODULE[module] ?? module.replaceAll('-', '_')}.rs`,
   decodable,
   wireParams,
   wrapperBody: pptxWrapperBody,
@@ -82,4 +101,5 @@ fn reply(value: impl Serialize) -> Out {
 `,
   invokePrelude: '    let args = pptx::inline_blobs(env, args)?;\n    let args = &*args;\n',
   rustDocxHelpers: false,
+  prettier: true,
 }

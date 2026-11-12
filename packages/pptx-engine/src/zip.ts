@@ -24,12 +24,20 @@ export const PPTX_ZIP_LIMITS = {
 } as const
 /** Declared sizes from the central directory, checked before any part is inflated. */
 export function assertZipWithinLimits(zip: JSZip): void {
-  call('assertZipWithinLimits', [Object.values(zip.files)
-      .filter((f) => !f.dir)
-      .map((f) => ({
-        name: f.name,
-        usize: (f as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize ?? 0,
-      }))], { names: [""] })
+  call(
+    'assertZipWithinLimits',
+    [
+      Object.values(zip.files)
+        .filter((f) => !f.dir)
+        .map((f) => ({
+          name: f.name,
+          usize:
+            (f as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize ??
+            0,
+        })),
+    ],
+    { names: [''] },
+  )
 }
 export class PackageArchive {
   private constructor(
@@ -39,7 +47,10 @@ export class PackageArchive {
   ) {}
 
   /** An archive from what the engine answers: its entries in order, and the hash of the original. */
-  static fromWire(wire: { entries: Array<[string, Uint8Array]>; originalHash: string }): PackageArchive {
+  static fromWire(wire: {
+    entries: Array<[string, Uint8Array]>
+    originalHash: string
+  }): PackageArchive {
     return new PackageArchive(new Map(wire.entries), wire.originalHash)
   }
 
@@ -84,7 +95,9 @@ export class PackageArchive {
    */
   readPresentation(): { size: SlideSize; slidePaths: string[] } {
     return call('PackageArchive.readPresentation', [
-      this.parts((path) => path === 'ppt/presentation.xml' || path === 'ppt/_rels/presentation.xml.rels'),
+      this.parts(
+        (path) => path === 'ppt/presentation.xml' || path === 'ppt/_rels/presentation.xml.rels',
+      ),
     ]) as never
   }
 

@@ -30,7 +30,9 @@ export function addSlideComment(
   slideIndex: number,
   opts: { author: string; initials?: string; text: string },
 ): SlideComment | null {
-  return call('addSlideComment', [opened, slideIndex, opts, new Date().toISOString()], { mut: { 0: 'opened' } }) as never
+  return call('addSlideComment', [opened, slideIndex, opts, new Date().toISOString()], {
+    mut: { 0: 'opened' },
+  }) as never
 }
 /** Delete a comment (by authorId + idx). */
 export function deleteSlideComment(

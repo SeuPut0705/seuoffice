@@ -155,7 +155,9 @@ export function addImageMediaAndRel(
   bytes: Uint8Array,
   extRaw: string,
 ): { rid: string; mediaPath: string } | null {
-  return call('addImageMediaAndRel', [opened, slideIndex(opened, slide), bytes, extRaw], { mut: { 0: 'opened' } }) as never
+  return call('addImageMediaAndRel', [opened, slideIndex(opened, slide), bytes, extRaw], {
+    mut: { 0: 'opened' },
+  }) as never
 }
 export function addPicture(
   opened: OpenedPptx,
@@ -163,7 +165,9 @@ export function addPicture(
   opts: NewPictureOptions,
 ): PictureElement | null {
   const at = slideIndex(opened, slide)
-  return call('addPicture', [opened, at, opts], { mut: { 0: 'opened' } }) as never === null ? null : (opened.deck.slides[at]!.elements.at(-1) as PictureElement)
+  return (call('addPicture', [opened, at, opts], { mut: { 0: 'opened' } }) as never) === null
+    ? null
+    : (opened.deck.slides[at]!.elements.at(-1) as PictureElement)
 }
 /**
  * Delete by element id and collect relationships/resources no longer used by any
@@ -171,7 +175,9 @@ export function addPicture(
  * shared by other objects or slides.
  */
 export function deleteElement(opened: OpenedPptx, slide: Slide, elementId: string): boolean {
-  return call('deleteElement', [opened, slideIndex(opened, slide), elementId], { mut: { 0: 'opened' } }) as never
+  return call('deleteElement', [opened, slideIndex(opened, slide), elementId], {
+    mut: { 0: 'opened' },
+  }) as never
 }
 // ── Grouping (p:grpSp) ──────────────────────────────────────────────────────
 

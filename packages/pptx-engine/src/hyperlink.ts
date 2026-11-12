@@ -31,7 +31,11 @@ export function setElementLink(
   elementId: string,
   target: LinkTarget | null,
 ): Slide | null {
-  return call('setElementLink', [opened, slideIndex, elementId, target], { mut: { 0: 'opened' } }) as never ? opened.deck.slides[slideIndex]! : null
+  return (call('setElementLink', [opened, slideIndex, elementId, target], {
+    mut: { 0: 'opened' },
+  }) as never)
+    ? opened.deck.slides[slideIndex]!
+    : null
 }
 /** Parse a TextRun.hyperlink encoded target ("slide:N", "action:<name>" or url); null on bad input. */
 export function decodeRunLink(s: string): LinkTarget | null {
@@ -55,7 +59,9 @@ export function ensureRunLinkRels(
     runs: Array<{ hyperlink?: string; hyperlinkRId?: string; hyperlinkAction?: string }>
   }>,
 ): boolean {
-  return call('ensureRunLinkRels', [opened, slideIndex, paragraphs], { mut: { 0: 'opened', 2: 'Paragraph[]' } }) as never
+  return call('ensureRunLinkRels', [opened, slideIndex, paragraphs], {
+    mut: { 0: 'opened', 2: 'Paragraph[]' },
+  }) as never
 }
 /**
  * All run-level hyperlinks on a slide, resolved live against the rels (parse-time

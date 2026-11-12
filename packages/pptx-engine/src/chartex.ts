@@ -11,5 +11,25 @@ import type { ChartModel } from './chart'
 import { call } from './engine'
 
 export function parseChartExXml(xml: string, theme?: Theme): ChartModel | null {
-  return call('parseChartExXml', [xml, theme], { shape: {"k":"obj","f":{"series":{"k":"arr","v":{"k":"obj","f":{"pointColors":{"k":"arr","u":true},"pointFills":{"k":"arr","u":true},"pointNoFill":{"k":"arr","u":true},"pointLines":{"k":"arr","u":true},"pointExplosionPct":{"k":"arr","u":true}}}},"sunburst":{"k":"obj","f":{"pointColors":{"k":"arr","u":true}}}}} }) as never
+  return call('parseChartExXml', [xml, theme], {
+    shape: {
+      k: 'obj',
+      f: {
+        series: {
+          k: 'arr',
+          v: {
+            k: 'obj',
+            f: {
+              pointColors: { k: 'arr', u: true },
+              pointFills: { k: 'arr', u: true },
+              pointNoFill: { k: 'arr', u: true },
+              pointLines: { k: 'arr', u: true },
+              pointExplosionPct: { k: 'arr', u: true },
+            },
+          },
+        },
+        sunburst: { k: 'obj', f: { pointColors: { k: 'arr', u: true } } },
+      },
+    },
+  }) as never
 }

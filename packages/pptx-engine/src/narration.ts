@@ -31,7 +31,8 @@ export function addNarration(
   slideIndex: number,
   audio: NarrationAudio,
 ): { slide: Slide; elementId: string } | null {
-  const v = call('addNarration', [opened, slideIndex, audio], { mut: { 0: 'opened' } }) as never; return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
+  const v = call('addNarration', [opened, slideIndex, audio], { mut: { 0: 'opened' } }) as never
+  return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
 }
 /**
  * Sets presProps' `showNarration` (its schema default is off, so PowerPoint would not play the

@@ -38,7 +38,8 @@ export function addMedia(
   slideIndex: number,
   opts: NewMediaOptions,
 ): { slide: Slide; elementId: string } | null {
-  const v = call('addMedia', [opened, slideIndex, opts], { mut: { 0: 'opened' } }) as never; return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
+  const v = call('addMedia', [opened, slideIndex, opts], { mut: { 0: 'opened' } }) as never
+  return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
 }
 // ── 3D models ──────────────────────────────────────────────────────────
 
@@ -58,7 +59,8 @@ export function addModel3d(
   slideIndex: number,
   opts: NewModel3dOptions,
 ): { slide: Slide; elementId: string } | null {
-  const v = call('addModel3d', [opened, slideIndex, opts], { mut: { 0: 'opened' } }) as never; return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
+  const v = call('addModel3d', [opened, slideIndex, opts], { mut: { 0: 'opened' } }) as never
+  return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
 }
 /**
  * Turns a 3D model to `rot` and, with `poster`, replaces its rendering (the Fallback picture
@@ -70,7 +72,9 @@ export function setModel3dView(
   elementId: string,
   view: { rot: Model3dRotation; poster?: { bytes: Uint8Array; ext: string } },
 ): boolean {
-  return call('setModel3dView', [opened, slideIndex(opened, slide), elementId, view], { mut: { 0: 'opened' } }) as never
+  return call('setModel3dView', [opened, slideIndex(opened, slide), elementId, view], {
+    mut: { 0: 'opened' },
+  }) as never
 }
 /** The model part of a picture placeholder written before models were stored as am3d. */
 export function model3dPartOf(el: { descr?: string }): string | null {

@@ -101,7 +101,9 @@ export function sfntCmapLookup(sfnt: Uint8Array): ((cp: number) => boolean) | nu
  * demands it: unverifiable is not safe.
  */
 export function staleEmbeddedTypefaces(archive: PackageArchive, demand: GlyphDemand): string[] {
-  return call('staleEmbeddedTypefaces', [archive, demand], { names: ["archive","demand"] }) as never
+  return call('staleEmbeddedTypefaces', [archive, demand], {
+    names: ['archive', 'demand'],
+  }) as never
 }
 /**
  * Remove embedded faces from the package: their <p:embeddedFont> entries, font

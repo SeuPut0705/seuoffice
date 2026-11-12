@@ -102,7 +102,9 @@ export function layoutHierTree(
   walk(roots)
   return {
     boxes: r.boxes.map((b) => ({ ...b, node: nodes[b.node]! })),
-    lines: r.lines.map((l) => (l.to === undefined ? { x: l.x, y: l.y, cx: l.cx, cy: l.cy } : { ...l, to: nodes[l.to]! })),
+    lines: r.lines.map((l) =>
+      l.to === undefined ? { x: l.x, y: l.y, cx: l.cx, cy: l.cy } : { ...l, to: nodes[l.to]! },
+    ),
     boxW: r.boxW,
   }
 }

@@ -34,14 +34,14 @@ export function applyThemeToArchive(opened: OpenedPptx, spec: ThemeSpec): number
 }
 /** Count explicit srgbClr colors in a batch of slide XML (uppercase hex → occurrence count). */
 export function collectExplicitColors(xmls: string[]): Map<string, number> {
-  return call('collectExplicitColors', [xmls], { shape: {"k":"map"} }) as never
+  return call('collectExplicitColors', [xmls], { shape: { k: 'map' } }) as never
 }
 /**
  * Mapping table from explicit colors to new theme colors. Identity mappings are omitted.
  * Cluster assignment is deterministic: iterated by (occurrence count desc, hex asc).
  */
 export function buildColorMap(counts: Map<string, number>, spec: ThemeSpec): Map<string, string> {
-  return call('buildColorMap', [counts, spec], { shape: {"k":"map"} }) as never
+  return call('buildColorMap', [counts, spec], { shape: { k: 'map' } }) as never
 }
 /** Recolor a slide XML per the mapping table (only <a:srgbClr val> touched). */
 export function recolorXml(xml: string, map: Map<string, string>): string {
@@ -54,5 +54,7 @@ export function recolorXml(xml: string, map: Map<string, string>): string {
  * save. Returns the number of distinct colors mapped.
  */
 export function remapDeckColors(opened: OpenedPptx, spec: ThemeSpec): number {
-  return call('remapDeckColors', [opened.archive, opened.deck, spec], { mut: { 0: 'archive' } }) as never
+  return call('remapDeckColors', [opened.archive, opened.deck, spec], {
+    mut: { 0: 'archive' },
+  }) as never
 }

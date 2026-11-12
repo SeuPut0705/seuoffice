@@ -77,11 +77,72 @@ export interface SlideParseInput {
   ctx: ParseContext
 }
 export function parseSlide(input: SlideParseInput): Slide {
-  return call('parseSlide', [input], { names: ["input"], shape: {"k":"obj","f":{"elements":{"k":"arr","v":{"k":"obj","f":{"chart":{"k":"obj","f":{"series":{"k":"arr","v":{"k":"obj","f":{"pointColors":{"k":"arr","u":true},"pointFills":{"k":"arr","u":true},"pointNoFill":{"k":"arr","u":true},"pointLines":{"k":"arr","u":true},"pointExplosionPct":{"k":"arr","u":true}}}},"sunburst":{"k":"obj","f":{"pointColors":{"k":"arr","u":true}}}}}}}},"decorations":{"k":"arr","v":{"k":"obj","f":{"chart":{"k":"obj","f":{"series":{"k":"arr","v":{"k":"obj","f":{"pointColors":{"k":"arr","u":true},"pointFills":{"k":"arr","u":true},"pointNoFill":{"k":"arr","u":true},"pointLines":{"k":"arr","u":true},"pointExplosionPct":{"k":"arr","u":true}}}},"sunburst":{"k":"obj","f":{"pointColors":{"k":"arr","u":true}}}}}}}}}} }) as never
+  return call('parseSlide', [input], {
+    names: ['input'],
+    shape: {
+      k: 'obj',
+      f: {
+        elements: {
+          k: 'arr',
+          v: {
+            k: 'obj',
+            f: {
+              chart: {
+                k: 'obj',
+                f: {
+                  series: {
+                    k: 'arr',
+                    v: {
+                      k: 'obj',
+                      f: {
+                        pointColors: { k: 'arr', u: true },
+                        pointFills: { k: 'arr', u: true },
+                        pointNoFill: { k: 'arr', u: true },
+                        pointLines: { k: 'arr', u: true },
+                        pointExplosionPct: { k: 'arr', u: true },
+                      },
+                    },
+                  },
+                  sunburst: { k: 'obj', f: { pointColors: { k: 'arr', u: true } } },
+                },
+              },
+            },
+          },
+        },
+        decorations: {
+          k: 'arr',
+          v: {
+            k: 'obj',
+            f: {
+              chart: {
+                k: 'obj',
+                f: {
+                  series: {
+                    k: 'arr',
+                    v: {
+                      k: 'obj',
+                      f: {
+                        pointColors: { k: 'arr', u: true },
+                        pointFills: { k: 'arr', u: true },
+                        pointNoFill: { k: 'arr', u: true },
+                        pointLines: { k: 'arr', u: true },
+                        pointExplosionPct: { k: 'arr', u: true },
+                      },
+                    },
+                  },
+                  sunburst: { k: 'obj', f: { pointColors: { k: 'arr', u: true } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  }) as never
 }
 /** Extract the <p:bg> background fill from slide/layout/master XML (read-only). */
 export function parseBackground(xml: string, ctx: ParseContext): Fill | undefined {
-  return call('parseBackground', [xml, ctx], { names: ["xml","ctx"], undef: true }) as never
+  return call('parseBackground', [xml, ctx], { names: ['xml', 'ctx'], undef: true }) as never
 }
 /** Direct child fragments of a p:grpSp in document order (depth-aware: nested groups stay one slice). */
 export function sliceGroupChildXmls(grpXml: string): string[] {
@@ -103,7 +164,40 @@ export function layoutDiagramFallback(
   colorsXml?: string,
   layoutXml?: string,
 ): SlideElement[] {
-  return call('layoutDiagramFallback', [dataXml, ctx, frameCx, frameCy, layoutId, colorsXml, layoutXml], { names: ["dataXml","ctx","frameCx","frameCy","layoutId","colorsXml","layoutXml"], shape: {"k":"arr","v":{"k":"obj","f":{"chart":{"k":"obj","f":{"series":{"k":"arr","v":{"k":"obj","f":{"pointColors":{"k":"arr","u":true},"pointFills":{"k":"arr","u":true},"pointNoFill":{"k":"arr","u":true},"pointLines":{"k":"arr","u":true},"pointExplosionPct":{"k":"arr","u":true}}}},"sunburst":{"k":"obj","f":{"pointColors":{"k":"arr","u":true}}}}}}}} }) as never
+  return call(
+    'layoutDiagramFallback',
+    [dataXml, ctx, frameCx, frameCy, layoutId, colorsXml, layoutXml],
+    {
+      names: ['dataXml', 'ctx', 'frameCx', 'frameCy', 'layoutId', 'colorsXml', 'layoutXml'],
+      shape: {
+        k: 'arr',
+        v: {
+          k: 'obj',
+          f: {
+            chart: {
+              k: 'obj',
+              f: {
+                series: {
+                  k: 'arr',
+                  v: {
+                    k: 'obj',
+                    f: {
+                      pointColors: { k: 'arr', u: true },
+                      pointFills: { k: 'arr', u: true },
+                      pointNoFill: { k: 'arr', u: true },
+                      pointLines: { k: 'arr', u: true },
+                      pointExplosionPct: { k: 'arr', u: true },
+                    },
+                  },
+                },
+                sunburst: { k: 'obj', f: { pointColors: { k: 'arr', u: true } } },
+              },
+            },
+          },
+        },
+      },
+    },
+  ) as never
 }
 // ── master/layout decoration layer ───────────────────────────────────
 
@@ -130,6 +224,35 @@ export function parseDecorations(
   ctx: ParseContext,
   opts: DecorationOptions = {},
 ): SlideElement[] {
-  return call('parseDecorations', [xml, ctx, opts], { names: ["xml","ctx","opts"], shape: {"k":"arr","v":{"k":"obj","f":{"chart":{"k":"obj","f":{"series":{"k":"arr","v":{"k":"obj","f":{"pointColors":{"k":"arr","u":true},"pointFills":{"k":"arr","u":true},"pointNoFill":{"k":"arr","u":true},"pointLines":{"k":"arr","u":true},"pointExplosionPct":{"k":"arr","u":true}}}},"sunburst":{"k":"obj","f":{"pointColors":{"k":"arr","u":true}}}}}}}} }) as never
+  return call('parseDecorations', [xml, ctx, opts], {
+    names: ['xml', 'ctx', 'opts'],
+    shape: {
+      k: 'arr',
+      v: {
+        k: 'obj',
+        f: {
+          chart: {
+            k: 'obj',
+            f: {
+              series: {
+                k: 'arr',
+                v: {
+                  k: 'obj',
+                  f: {
+                    pointColors: { k: 'arr', u: true },
+                    pointFills: { k: 'arr', u: true },
+                    pointNoFill: { k: 'arr', u: true },
+                    pointLines: { k: 'arr', u: true },
+                    pointExplosionPct: { k: 'arr', u: true },
+                  },
+                },
+              },
+              sunburst: { k: 'obj', f: { pointColors: { k: 'arr', u: true } } },
+            },
+          },
+        },
+      },
+    },
+  }) as never
 }
 export { EMU_PER_PT }

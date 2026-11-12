@@ -27,7 +27,11 @@ export interface Model3dRotation {
 }
 export const NO_ROTATION: Model3dRotation = { ax: 0, ay: 0, az: 0 }
 /** How PowerPoint frames a model: scaled to one meter across, centred, the camera backed off to fit it. */
-export function model3dFraming(bounds: GlbBounds | null): { meterPerModelUnit: { n: number; d: number; }; preTrans: [number, number, number]; cameraZ: number; } {
+export function model3dFraming(bounds: GlbBounds | null): {
+  meterPerModelUnit: { n: number; d: number }
+  preTrans: [number, number, number]
+  cameraZ: number
+} {
   return call('model3dFraming', [bounds]) as never
 }
 /**
@@ -53,7 +57,7 @@ export interface Model3dXmlOptions {
 }
 /** The slide's mc:AlternateContent for a new model. */
 export function model3dXml(o: Model3dXmlOptions): string {
-  return call('model3dXml', [o], { names: ["o"] }) as never
+  return call('model3dXml', [o], { names: ['o'] }) as never
 }
 /**
  * Copies the Fallback picture's frame, which the editor moves and resizes, to the Choice:

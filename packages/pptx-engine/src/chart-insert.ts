@@ -85,5 +85,6 @@ export function addChart(
   slideIndex: number,
   opts: NewChartOptions,
 ): { slide: Slide; elementId: string } | null {
-  const v = call('addChart', [opened, slideIndex, opts], { mut: { 0: 'opened' } }) as never; return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
+  const v = call('addChart', [opened, slideIndex, opts], { mut: { 0: 'opened' } }) as never
+  return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
 }

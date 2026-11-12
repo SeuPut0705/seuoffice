@@ -204,5 +204,5 @@ export function pruneTimingForSpids(slide: Slide, spids: ReadonlySet<number>): b
 }
 /** Every cNvPr id inside an element's XML fragment (group children included). */
 export function cNvPrIdsInXml(xml: string): Set<number> {
-  return call('cNvPrIdsInXml', [xml], { shape: {"k":"set"} }) as never
+  return call('cNvPrIdsInXml', [xml], { shape: { k: 'set' } }) as never
 }

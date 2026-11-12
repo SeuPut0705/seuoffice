@@ -78,11 +78,7 @@ export interface EngineConfig {
   /** the Rust parameters that a wire argument stands for (the others are filled by the row) */
   wireParams(params: string[]): string[]
   /** the TypeScript wrapper of a routed export; undefined: the docx default of gen.ts */
-  wrapperBody?(
-    info: ExportInfo,
-    names: string[],
-    override: Override | undefined,
-  ): string | null
+  wrapperBody?(info: ExportInfo, names: string[], override: Override | undefined): string | null
   /** the import lines a module's wrappers need, from the text of the wrappers; undefined: the docx default of gen.ts */
   coreImports?(wrappers: string): string[]
   /** the Rust row of an export; undefined: rust-table.ts's one (docx) */
@@ -91,6 +87,8 @@ export interface EngineConfig {
   rustHead: string
   /** statements at the top of the table's `invoke`, before it matches the name (each line indented, newline-terminated) */
   invokePrelude: string
+  /** the TypeScript the generator writes is formatted by prettier with the repository's config (the format check of CI reads it) */
+  prettier?: boolean
   /** the table carries the docx-only helpers (spin counts, XNode arguments, package snapshots) */
   rustDocxHelpers: boolean
 }
@@ -99,5 +97,6 @@ const flag = process.argv.indexOf('--engine')
 const which = flag === -1 ? 'docx' : process.argv[flag + 1]
 const configs: Record<string, EngineConfig> = { docx, pptx }
 const picked = which ? configs[which] : undefined
-if (!picked) throw new Error(`--engine ${which}: expected one of ${Object.keys(configs).join(', ')}`)
+if (!picked)
+  throw new Error(`--engine ${which}: expected one of ${Object.keys(configs).join(', ')}`)
 export const config: EngineConfig = picked

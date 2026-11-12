@@ -48,7 +48,10 @@ export function collectPart(
   parts: Record<string, string>,
   contentTypes: Record<string, string>,
 ): void {
-  return call('collectPart', [archive, partPath, parts, contentTypes], { mut: { 2: 'json', 3: 'json' }, undef: true }) as never
+  return call('collectPart', [archive, partPath, parts, contentTypes], {
+    mut: { 2: 'json', 3: 'json' },
+    undef: true,
+  }) as never
 }
 /**
  * Snapshot a slide and its dependencies. `slideXml` is passed in so callers can
@@ -76,7 +79,10 @@ export function importClipboardParts(
   parts: Readonly<Record<string, string>>,
   contentTypes: Readonly<Record<string, string>>,
 ): Map<string, string> {
-  return call('importClipboardParts', [archive, parts, contentTypes], { mut: { 0: 'archive' }, shape: {"k":"map"} }) as never
+  return call('importClipboardParts', [archive, parts, contentTypes], {
+    mut: { 0: 'archive' },
+    shape: { k: 'map' },
+  }) as never
 }
 export function materializeSlideBundle(
   archive: PackageArchive,
@@ -84,7 +90,9 @@ export function materializeSlideBundle(
   slidePath: string,
   layoutPath: string,
 ): string {
-  return call('materializeSlideBundle', [archive, bundle, slidePath, layoutPath], { mut: { 0: 'archive' } }) as never
+  return call('materializeSlideBundle', [archive, bundle, slidePath, layoutPath], {
+    mut: { 0: 'archive' },
+  }) as never
 }
 /**
  * "Keep source formatting": land the bundled layout→master→theme chain in the

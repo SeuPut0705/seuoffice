@@ -82,5 +82,7 @@ export function prepareInsertSlideWithLayout(
   sourceIndex: number,
   layoutPath: string,
 ): string | null {
-  return call('prepareInsertSlideWithLayout', [archive, deck, sourceIndex, layoutPath], { mut: { 0: 'archive' } }) as never
+  return call('prepareInsertSlideWithLayout', [archive, deck, sourceIndex, layoutPath], {
+    mut: { 0: 'archive' },
+  }) as never
 }

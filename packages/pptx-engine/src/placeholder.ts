@@ -127,7 +127,17 @@ export function parsePlaceholderMap(
   theme?: Theme,
   mediaRels?: Map<string, string>,
 ): PlaceholderMap {
-  return call('parsePlaceholderMap', [layoutOrMasterXml, theme, mediaRels], { shape: {"k":"obj","f":{"entries":{"k":"arr","v":{"k":"obj","f":{"textStyle":{"k":"obj","f":{"levels":{"k":"arr","u":true}}}}}}}} }) as never
+  return call('parsePlaceholderMap', [layoutOrMasterXml, theme, mediaRels], {
+    shape: {
+      k: 'obj',
+      f: {
+        entries: {
+          k: 'arr',
+          v: { k: 'obj', f: { textStyle: { k: 'obj', f: { levels: { k: 'arr', u: true } } } } },
+        },
+      },
+    },
+  }) as never
 }
 /** <a:lvlNpPr> (including defRPr) → LevelTextStyle. */
 /** Where a list style lives: only the slide part's own rIds may be written back into slide XML. */
@@ -142,14 +152,21 @@ export function parseLstStyleLevels(
   theme?: Theme,
   src?: LstStyleSource,
 ): TextStyleLevels | undefined {
-  return call('parseLstStyleLevels', [lst, theme, src], { names: ["lst","theme","src"], shape: {"k":"obj","f":{"levels":{"k":"arr","u":true}}}, undef: true }) as never
+  return call('parseLstStyleLevels', [lst, theme, src], {
+    names: ['lst', 'theme', 'src'],
+    shape: { k: 'obj', f: { levels: { k: 'arr', u: true } } },
+    undef: true,
+  }) as never
 }
 /** presentation.xml <p:defaultTextStyle> → base defaults for non-placeholder text boxes. */
 export function parseDefaultTextStyle(
   presentationXml: string,
   theme?: Theme,
 ): TextStyleLevels | undefined {
-  return call('parseDefaultTextStyle', [presentationXml, theme], { shape: {"k":"obj","f":{"levels":{"k":"arr","u":true}}}, undef: true }) as never
+  return call('parseDefaultTextStyle', [presentationXml, theme], {
+    shape: { k: 'obj', f: { levels: { k: 'arr', u: true } } },
+    undef: true,
+  }) as never
 }
 /** master <p:txStyles> → default styles for the title/body/other families. */
 export function parseMasterTextStyles(
@@ -157,7 +174,16 @@ export function parseMasterTextStyles(
   theme?: Theme,
   mediaRels?: Map<string, string>,
 ): MasterTextStyles {
-  return call('parseMasterTextStyles', [masterXml, theme, mediaRels], { shape: {"k":"obj","f":{"title":{"k":"obj","f":{"levels":{"k":"arr","u":true}}},"body":{"k":"obj","f":{"levels":{"k":"arr","u":true}}},"other":{"k":"obj","f":{"levels":{"k":"arr","u":true}}}}} }) as never
+  return call('parseMasterTextStyles', [masterXml, theme, mediaRels], {
+    shape: {
+      k: 'obj',
+      f: {
+        title: { k: 'obj', f: { levels: { k: 'arr', u: true } } },
+        body: { k: 'obj', f: { levels: { k: 'arr', u: true } } },
+        other: { k: 'obj', f: { levels: { k: 'arr', u: true } } },
+      },
+    },
+  }) as never
 }
 /**
  * Resolve a placeholder's inherited bodyPr insets, merged per-attribute (layout wins
@@ -170,7 +196,10 @@ export function resolvePlaceholderInsets(
   type: string | undefined,
   idx: string | undefined,
 ): PlaceholderGeom['insets'] {
-  return call('resolvePlaceholderInsets', [layout, master, type, idx], { names: ["layout","master","type","idx"], undef: true }) as never
+  return call('resolvePlaceholderInsets', [layout, master, type, idx], {
+    names: ['layout', 'master', 'type', 'idx'],
+    undef: true,
+  }) as never
 }
 /** Resolve a placeholder's inherited vertical anchor: layout first, master as fallback. */
 export function resolvePlaceholderAnchor(
@@ -179,7 +208,10 @@ export function resolvePlaceholderAnchor(
   type: string | undefined,
   idx: string | undefined,
 ): PlaceholderGeom['anchor'] {
-  return call('resolvePlaceholderAnchor', [layout, master, type, idx], { names: ["layout","master","type","idx"], undef: true }) as never
+  return call('resolvePlaceholderAnchor', [layout, master, type, idx], {
+    names: ['layout', 'master', 'type', 'idx'],
+    undef: true,
+  }) as never
 }
 /**
  * Placeholder text style inheritance chain (highest priority first):
@@ -193,7 +225,10 @@ export function placeholderStyleChain(
   type: string | undefined,
   idx: string | undefined,
 ): TextStyleLevels[] {
-  return call('placeholderStyleChain', [layout, master, masterTx, type, idx], { names: ["layout","master","masterTx","type","idx"], shape: {"k":"arr","v":{"k":"obj","f":{"levels":{"k":"arr","u":true}}}} }) as never
+  return call('placeholderStyleChain', [layout, master, masterTx, type, idx], {
+    names: ['layout', 'master', 'masterTx', 'type', 'idx'],
+    shape: { k: 'arr', v: { k: 'obj', f: { levels: { k: 'arr', u: true } } } },
+  }) as never
 }
 /**
  * Merge one level's default style field by field along the inheritance chain
@@ -217,7 +252,10 @@ export function resolvePlaceholderFillSpPr(
   type: string | undefined,
   idx: string | undefined,
 ): { spPr: unknown; layer: 'layout' | 'master' } | undefined {
-  return call('resolvePlaceholderFillSpPr', [layout, master, type, idx], { names: ["layout","master","type","idx"], undef: true }) as never
+  return call('resolvePlaceholderFillSpPr', [layout, master, type, idx], {
+    names: ['layout', 'master', 'type', 'idx'],
+    undef: true,
+  }) as never
 }
 /**
  * Resolve placeholder geometry: layout first, master as fallback.
@@ -230,5 +268,8 @@ export function resolvePlaceholderTransform(
   type: string | undefined,
   idx: string | undefined,
 ): Transform | undefined {
-  return call('resolvePlaceholderTransform', [layout, master, type, idx], { names: ["layout","master","type","idx"], undef: true }) as never
+  return call('resolvePlaceholderTransform', [layout, master, type, idx], {
+    names: ['layout', 'master', 'type', 'idx'],
+    undef: true,
+  }) as never
 }

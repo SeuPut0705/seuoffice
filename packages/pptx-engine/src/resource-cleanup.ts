@@ -31,7 +31,11 @@ export function cleanupSupersededSlideResources(
   previousXml: string,
   currentXml: string,
 ): ResourceCleanupStats {
-  return call('cleanupSupersededSlideResources', [opened, slideIndex(opened as never, slide), previousXml, currentXml], { mut: { 0: 'opened' } }) as never
+  return call(
+    'cleanupSupersededSlideResources',
+    [opened, slideIndex(opened as never, slide), previousXml, currentXml],
+    { mut: { 0: 'opened' } },
+  ) as never
 }
 /**
  * Delete a package part and collect resource parts that were owned exclusively by
@@ -41,5 +45,7 @@ export function removePartWithOwnedResources(
   archive: PackageArchive,
   partPath: string,
 ): ResourceCleanupStats {
-  return call('removePartWithOwnedResources', [archive, partPath], { mut: { 0: 'archive' } }) as never
+  return call('removePartWithOwnedResources', [archive, partPath], {
+    mut: { 0: 'archive' },
+  }) as never
 }

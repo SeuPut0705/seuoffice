@@ -8,7 +8,16 @@ import { PackageArchive, type Relationship } from './zip'
 import { type CustGeomPath } from './custgeom'
 import { type GradientFillPatch, type SlideTransitionKind, type StrokePatch } from './generate'
 import { type NewTableOptions } from './insert'
-import type { Paragraph, PPrDirty, SlideDeck, Slide, SlideElement, TextElement, GroupElement, Stroke } from './types'
+import type {
+  Paragraph,
+  PPrDirty,
+  SlideDeck,
+  Slide,
+  SlideElement,
+  TextElement,
+  GroupElement,
+  Stroke,
+} from './types'
 import { type TableStyleEdit } from './table-edit'
 import { type NewChartKind } from './chart-insert'
 import { type SlideBundle } from './slide-transfer'
@@ -299,7 +308,10 @@ export interface OpenedPptx {
   archive: PackageArchive
 }
 export async function openPptx(bytes: Uint8Array): Promise<OpenedPptx> {
-  const o = call('openPptx', [bytes], { reply: 'opened' }) as never as { deck: SlideDeck; archive: Parameters<typeof PackageArchive.fromWire>[0] }
+  const o = call('openPptx', [bytes], { reply: 'opened' }) as never as {
+    deck: SlideDeck
+    archive: Parameters<typeof PackageArchive.fromWire>[0]
+  }
   return { deck: o.deck, archive: PackageArchive.fromWire(o.archive) }
 }
 /**
@@ -407,7 +419,9 @@ export function setSlideBackgroundImage(
   source: { bytes: Uint8Array; ext: string } | { mediaPath: string },
   tile?: boolean,
 ): string | null {
-  return call('setSlideBackgroundImage', [opened, slideIndex(opened, slide), source, tile], { mut: { 0: 'opened' } }) as never
+  return call('setSlideBackgroundImage', [opened, slideIndex(opened, slide), source, tile], {
+    mut: { 0: 'opened' },
+  }) as never
 }
 /**
  * Remove the slide's own <p:bg> override; the background falls back to the
@@ -421,7 +435,9 @@ export function resetSlideBackground(opened: OpenedPptx, slide: Slide): void {
  * slide's decoration layer so rendering reflects the change immediately.
  */
 export function setSlideBgGraphicsHidden(opened: OpenedPptx, slide: Slide, hidden: boolean): void {
-  call('setSlideBgGraphicsHidden', [opened, slideIndex(opened, slide), hidden], { mut: { 0: 'opened' } })
+  call('setSlideBgGraphicsHidden', [opened, slideIndex(opened, slide), hidden], {
+    mut: { 0: 'opened' },
+  })
 }
 /**
  * Update a picture element's srcRect crop (0..1 fractions, null = full image).
@@ -508,7 +524,9 @@ export function setElementTextBodyProps(
   elementId: string,
   patch: TextBodyPropsPatch,
 ): boolean {
-  return call('setElementTextBodyProps', [slide, elementId, patch], { mut: { 0: 'Slide' } }) as never
+  return call('setElementTextBodyProps', [slide, elementId, patch], {
+    mut: { 0: 'Slide' },
+  }) as never
 }
 /** Patch for setElementEffects; null clears an effect, undefined leaves it untouched. */
 export interface EffectsPatch {
@@ -554,7 +572,9 @@ export function setElementFill(
   fill: string | GradientFillPatch,
   opts: { groupId?: string } = {},
 ): boolean {
-  return call('setElementFill', [opened, slideIndex(opened, slide), elementId, fill, opts], { mut: { 0: 'opened' } }) as never
+  return call('setElementFill', [opened, slideIndex(opened, slide), elementId, fill, opts], {
+    mut: { 0: 'opened' },
+  }) as never
 }
 /**
  * Shape picture/texture fill (top-level or one-level group child): lands the
@@ -571,7 +591,9 @@ export function setElementImageFill(
   source: { bytes: Uint8Array; ext: string } | { mediaPath: string },
   opts: { tile?: boolean; groupId?: string } = {},
 ): string | null {
-  return call('setElementImageFill', [opened, slideIndex(opened, slide), elementId, source, opts], { mut: { 0: 'opened' } }) as never
+  return call('setElementImageFill', [opened, slideIndex(opened, slide), elementId, source, opts], {
+    mut: { 0: 'opened' },
+  }) as never
 }
 /**
  * Withhold a picture, video or audio shape from the model, or stop withholding it
@@ -614,7 +636,11 @@ export function replacePictureBytes(
   ext: string,
   opts?: { keepSrcRect?: boolean },
 ): boolean {
-  return call('replacePictureBytes', [opened, slideIndex(opened, slide), sourceId, bytes, ext, opts?.keepSrcRect ?? false], { mut: { 0: 'opened' } }) as never
+  return call(
+    'replacePictureBytes',
+    [opened, slideIndex(opened, slide), sourceId, bytes, ext, opts?.keepSrcRect ?? false],
+    { mut: { 0: 'opened' } },
+  ) as never
 }
 /**
  * Duplicate the sourceIndex slide as a new slide inserted after it; returns the
@@ -628,7 +654,9 @@ export function duplicateSlide(
   sourceIndex: number,
   opts?: { clearText?: boolean },
 ): Slide | null {
-  const i = call('duplicateSlide', [opened, sourceIndex, opts], { mut: { 0: 'opened' } }) as never as number | null
+  const i = call('duplicateSlide', [opened, sourceIndex, opts], {
+    mut: { 0: 'opened' },
+  }) as never as number | null
   return i === null ? null : opened.deck.slides[i]!
 }
 /**
@@ -652,7 +680,9 @@ export function pasteSlide(
   bundle: SlideBundle,
   opts?: { keepSourceFormatting?: boolean },
 ): Slide | null {
-  const i = call('pasteSlide', [opened, afterIndex, bundle, opts], { mut: { 0: 'opened' } }) as never as number | null
+  const i = call('pasteSlide', [opened, afterIndex, bundle, opts], {
+    mut: { 0: 'opened' },
+  }) as never as number | null
   return i === null ? null : opened.deck.slides[i]!
 }
 /**
@@ -661,7 +691,8 @@ export function pasteSlide(
  * background and decorations carry over, slide elements are empty.
  */
 export function insertBlankSlide(opened: OpenedPptx, sourceIndex: number): Slide | null {
-  const i = call('insertBlankSlide', [opened, sourceIndex], { mut: { 0: 'opened' } }) as never as number | null
+  const i = call('insertBlankSlide', [opened, sourceIndex], { mut: { 0: 'opened' } }) as never as
+    number | null
   return i === null ? null : opened.deck.slides[i]!
 }
 /**
@@ -683,7 +714,11 @@ export async function mergeSlideFromPptx(
   sourceBytes: Uint8Array,
   opts: MergeSlideOptions = {},
 ): Promise<Slide | null> {
-  const i = call('mergeSlideFromPptx', [target, sourceBytes, { layoutFrom: opts?.layoutFrom?.path }], { mut: { 0: 'opened' }, names: ["target","sourceBytes",""] }) as never as number | null
+  const i = call(
+    'mergeSlideFromPptx',
+    [target, sourceBytes, { layoutFrom: opts?.layoutFrom?.path }],
+    { mut: { 0: 'opened' }, names: ['target', 'sourceBytes', ''] },
+  ) as never as number | null
   return i === null ? null : target.deck.slides[i]!
 }
 export interface MergeSlideOptions {
@@ -716,7 +751,10 @@ export function mergeSlideFromSource(
   source: MergeSlideSource,
   opts: MergeSlideOptions = {},
 ): Slide | null {
-  const i = call('mergeSlideFromSource', [target, source, { layoutFrom: opts?.layoutFrom?.path }], { mut: { 0: 'opened' }, names: ["target","source",""] }) as never as number | null
+  const i = call('mergeSlideFromSource', [target, source, { layoutFrom: opts?.layoutFrom?.path }], {
+    mut: { 0: 'opened' },
+    names: ['target', 'source', ''],
+  }) as never as number | null
   return i === null ? null : target.deck.slides[i]!
 }
 /**
@@ -729,7 +767,9 @@ export function insertSlideWithLayout(
   sourceIndex: number,
   layoutPath: string,
 ): Slide | null {
-  const i = call('insertSlideWithLayout', [opened, sourceIndex, layoutPath], { mut: { 0: 'opened' } }) as never as number | null
+  const i = call('insertSlideWithLayout', [opened, sourceIndex, layoutPath], {
+    mut: { 0: 'opened' },
+  }) as never as number | null
   return i === null ? null : opened.deck.slides[i]!
 }
 /**
@@ -755,7 +795,9 @@ export function reorderElement(slide: Slide, elementId: string, dir: ReorderDire
  * the render tree for the whole slide.
  */
 export function materializeSlide(opened: OpenedPptx, slideIndex: number): Slide | null {
-  return call('materializeSlide', [opened, slideIndex], { mut: { 0: 'opened' } }) as never ? opened.deck.slides[slideIndex]! : null
+  return (call('materializeSlide', [opened, slideIndex], { mut: { 0: 'opened' } }) as never)
+    ? opened.deck.slides[slideIndex]!
+    : null
 }
 // ── Connector move-following ────────────────────────────────────────────
 
@@ -803,7 +845,9 @@ export function setSlideLayout(
   slideIndex: number,
   layoutPath: string,
 ): Slide | null {
-  const i = call('setSlideLayout', [opened, slideIndex, layoutPath], { mut: { 0: 'opened' } }) as never as number | null
+  const i = call('setSlideLayout', [opened, slideIndex, layoutPath], {
+    mut: { 0: 'opened' },
+  }) as never as number | null
   return i === null ? null : opened.deck.slides[i]!
 }
 /**
@@ -812,7 +856,8 @@ export function setSlideLayout(
  * position/size).
  */
 export function resetSlideLayout(opened: OpenedPptx, slideIndex: number): Slide | null {
-  const i = call('resetSlideLayout', [opened, slideIndex], { mut: { 0: 'opened' } }) as never as number | null
+  const i = call('resetSlideLayout', [opened, slideIndex], { mut: { 0: 'opened' } }) as never as
+    number | null
   return i === null ? null : opened.deck.slides[i]!
 }
 /**
@@ -832,7 +877,8 @@ export function appendRawElements(
   slideIndex: number,
   xmls: string[],
 ): { slide: Slide; elementIds: string[] } | null {
-  const v = call('appendRawElements', [opened, slideIndex, xmls], { mut: { 0: 'opened' } }) as never; return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementIds: v }
+  const v = call('appendRawElements', [opened, slideIndex, xmls], { mut: { 0: 'opened' } }) as never
+  return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementIds: v }
 }
 /** Insert a table: build a graphicFrame slice, append, and reparse. */
 export function addTable(
@@ -840,7 +886,8 @@ export function addTable(
   slideIndex: number,
   opts: NewTableOptions,
 ): { slide: Slide; elementId: string } | null {
-  const v = call('addTable', [opened, slideIndex, opts], { mut: { 0: 'opened' } }) as never; return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
+  const v = call('addTable', [opened, slideIndex, opts], { mut: { 0: 'opened' } }) as never
+  return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
 }
 /**
  * Rewrite table cell text: XML surgery (replacing the txBody paragraphs of the
@@ -854,7 +901,9 @@ export function editTableCellText(
   col: number,
   paragraphs: Paragraph[],
 ): boolean {
-  return call('editTableCellText', [slide, elementId, row, col, paragraphs], { mut: { 0: 'Slide' } }) as never
+  return call('editTableCellText', [slide, elementId, row, col, paragraphs], {
+    mut: { 0: 'Slide' },
+  }) as never
 }
 /**
  * Table style editing (surgical patch of a:tblPr + a:tcPr):
@@ -875,7 +924,10 @@ export function ensureTableStylePart(
   styleId: string,
   styleDefXml: string,
 ): void {
-  return call('ensureTableStylePart', [opened, styleId, styleDefXml], { mut: { 0: 'opened' }, undef: true }) as never
+  return call('ensureTableStylePart', [opened, styleId, styleDefXml], {
+    mut: { 0: 'opened' },
+    undef: true,
+  }) as never
 }
 /**
  * Chart editing (charts created by this app, rebuilding the chart part):
@@ -910,7 +962,9 @@ export function editChartElement(
     pointColors?: Record<number, Record<number, string | null>>
   },
 ): boolean {
-  return call('editChartElement', [opened, slideIndex, elementId, patch], { mut: { 0: 'opened' } }) as never
+  return call('editChartElement', [opened, slideIndex, elementId, patch], {
+    mut: { 0: 'opened' },
+  }) as never
 }
 /**
  * Mark a chart not created by this app as editable (cNvPr descr="aislides-chart"):
@@ -947,7 +1001,15 @@ export function getChartElementData(
   seriesColors: Array<string | undefined>
   pointColors: Array<Array<string | undefined> | undefined>
 } | null {
-  return call('getChartElementData', [slide, elementId], { shape: {"k":"obj","f":{"seriesColors":{"k":"arr","u":true},"pointColors":{"k":"arr","u":true,"v":{"k":"arr","u":true}}}} }) as never
+  return call('getChartElementData', [slide, elementId], {
+    shape: {
+      k: 'obj',
+      f: {
+        seriesColors: { k: 'arr', u: true },
+        pointColors: { k: 'arr', u: true, v: { k: 'arr', u: true } },
+      },
+    },
+  }) as never
 }
 /**
  * Elements without text (pictures/charts etc.) return false.
@@ -974,7 +1036,10 @@ export function setElementFont(
   patch: ElementFontPatch,
   sizeMap?: FontSizeMap,
 ): boolean {
-  return call('setElementFont', [slide, elementId, patch, sizeMap], { mut: { 0: 'Slide' }, names: ["slide","elementId","patch","sizeMap"] }) as never
+  return call('setElementFont', [slide, elementId, patch, sizeMap], {
+    mut: { 0: 'Slide' },
+    names: ['slide', 'elementId', 'patch', 'sizeMap'],
+  }) as never
 }
 // ── Find/replace ────────────────────────────────────────────────────────
 
@@ -1058,7 +1123,9 @@ export function setElementParagraphFormat(
   patch: ParagraphFormatPatch,
   paraIndices?: number[],
 ): boolean {
-  return call('setElementParagraphFormat', [slide, elementId, patch, paraIndices], { mut: { 0: 'Slide' } }) as never
+  return call('setElementParagraphFormat', [slide, elementId, patch, paraIndices], {
+    mut: { 0: 'Slide' },
+  }) as never
 }
 /** Paragraph formatting for a group child (same semantics as setGroupChildFont; the pPr patch is baked straight into the group bytes). */
 export function setGroupChildParagraphFormat(
@@ -1068,7 +1135,9 @@ export function setGroupChildParagraphFormat(
   patch: ParagraphFormatPatch,
   paraIndices?: number[],
 ): boolean {
-  return call('setGroupChildParagraphFormat', [slide, groupId, childId, patch, paraIndices], { mut: { 0: 'Slide' } }) as never
+  return call('setGroupChildParagraphFormat', [slide, groupId, childId, patch, paraIndices], {
+    mut: { 0: 'Slide' },
+  }) as never
 }
 // ── Table row/column structure editing ──────────────────────────────────
 
@@ -1091,7 +1160,10 @@ export function editTableStructure(
   elementId: string,
   op: TableStructureOp,
 ): { slide: Slide; elementId: string } | null {
-  const v = call('editTableStructure', [opened, slideIndex, elementId, op], { mut: { 0: 'opened' } }) as never; return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
+  const v = call('editTableStructure', [opened, slideIndex, elementId, op], {
+    mut: { 0: 'opened' },
+  }) as never
+  return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
 }
 // ── Table merge/split cells ─────────────────────────────────────────────
 
@@ -1111,7 +1183,10 @@ export function mergeTableCells(
   elementId: string,
   op: TableMergeOp,
 ): { slide: Slide; elementId: string } | null {
-  const v = call('mergeTableCells', [opened, slideIndex, elementId, op], { mut: { 0: 'opened' } }) as never; return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
+  const v = call('mergeTableCells', [opened, slideIndex, elementId, op], {
+    mut: { 0: 'opened' },
+  }) as never
+  return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v }
 }
 /**
  * Set a column's width (EMU): gridCol w + frame ext.cx synced, model updated in
@@ -1151,7 +1226,9 @@ export function setTableCellAnchor(
   col: number,
   anchor: 'top' | 'middle' | 'bottom',
 ): boolean {
-  return call('setTableCellAnchor', [slide, elementId, row, col, anchor], { mut: { 0: 'Slide' } }) as never
+  return call('setTableCellAnchor', [slide, elementId, row, col, anchor], {
+    mut: { 0: 'Slide' },
+  }) as never
 }
 // ── Element clipboard ───────────────────────────────────────────────────
 
@@ -1172,7 +1249,9 @@ export function copyElementData(
   el: SlideElement,
 ): ElementClipboardItem {
   const at = slideIndex(opened, slide)
-  return call('copyElementData', [opened, at, opened.deck.slides[at]!.elements.indexOf(el)], { mut: { 0: 'opened' } }) as never
+  return call('copyElementData', [opened, at, opened.deck.slides[at]!.elements.indexOf(el)], {
+    mut: { 0: 'opened' },
+  }) as never
 }
 /**
  * Paste: land bundled dependency parts (byte-identical ones already in the
@@ -1187,7 +1266,10 @@ export function pasteElements(
   items: ElementClipboardItem[],
   shiftEmu: { dx: number; dy: number },
 ): { slide: Slide; elementIds: string[] } | null {
-  const v = call('pasteElements', [opened, slideIndex, items, shiftEmu], { mut: { 0: 'opened' } }) as never; return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementIds: v }
+  const v = call('pasteElements', [opened, slideIndex, items, shiftEmu], {
+    mut: { 0: 'opened' },
+  }) as never
+  return v === null ? null : { slide: opened.deck.slides[slideIndex]!, elementIds: v }
 }
 // ── Slide transitions ───────────────────────────────────────────────────
 
@@ -1242,7 +1324,10 @@ export function groupElements(
   slideIndex: number,
   sourceIds: string[],
 ): { slide: Slide; groupId: string } | null {
-  const v = call('groupElements', [opened, slideIndex, sourceIds], { mut: { 0: 'opened' } }) as never; return v === null ? null : { slide: opened.deck.slides[slideIndex]!, groupId: v }
+  const v = call('groupElements', [opened, slideIndex, sourceIds], {
+    mut: { 0: 'opened' },
+  }) as never
+  return v === null ? null : { slide: opened.deck.slides[slideIndex]!, groupId: v }
 }
 /**
  * Ungroup: lift the group's children to the slide top level.
@@ -1266,7 +1351,9 @@ export function ungroupElement(
   slideIndex: number,
   sourceId: string,
 ): Slide | null {
-  return call('ungroupElement', [opened, slideIndex, sourceId], { mut: { 0: 'opened' } }) as never ? opened.deck.slides[slideIndex]! : null
+  return (call('ungroupElement', [opened, slideIndex, sourceId], { mut: { 0: 'opened' } }) as never)
+    ? opened.deck.slides[slideIndex]!
+    : null
 }
 export interface GroupChildSlice {
   start: number
@@ -1284,7 +1371,10 @@ export function patchGroupChildXml(
   child: SlideElement,
   patch: (xml: string) => string,
 ): boolean {
-  return call('patchGroupChildXml', [grp, child.nvId, patch], { mut: { 0: 'GroupElement' }, names: ["grp","","patch"] }) as never
+  return call('patchGroupChildXml', [grp, child.nvId, patch], {
+    mut: { 0: 'GroupElement' },
+    names: ['grp', '', 'patch'],
+  }) as never
 }
 /** Top-level group and its direct child (in-group editing goes one level; a nested subgroup is edited as a whole). */
 export function findGroupChild(
@@ -1305,7 +1395,9 @@ export function editGroupChildTransform(
   offset: { x: number; y: number; cx: number; cy: number },
   rotationDeg: number,
 ): boolean {
-  return call('editGroupChildTransform', [slide, groupId, childId, offset, rotationDeg], { mut: { 0: 'Slide' } }) as never
+  return call('editGroupChildTransform', [slide, groupId, childId, offset, rotationDeg], {
+    mut: { 0: 'Slide' },
+  }) as never
 }
 /** Group-child text editing: called after model paragraphs are updated; regenerates the slice's txBody. */
 export function patchGroupChildText(slide: Slide, groupId: string, child: TextElement): boolean {
@@ -1319,7 +1411,10 @@ export function setGroupChildFont(
   patch: ElementFontPatch,
   sizeMap?: FontSizeMap,
 ): boolean {
-  return call('setGroupChildFont', [slide, groupId, childId, patch, sizeMap], { mut: { 0: 'Slide' }, names: ["slide","groupId","childId","patch","sizeMap"] }) as never
+  return call('setGroupChildFont', [slide, groupId, childId, patch, sizeMap], {
+    mut: { 0: 'Slide' },
+    names: ['slide', 'groupId', 'childId', 'patch', 'sizeMap'],
+  }) as never
 }
 /** Group-child fill ('none' | #RRGGBB(AA) | gradient). */
 export function editGroupChildFill(
@@ -1328,7 +1423,9 @@ export function editGroupChildFill(
   childId: string,
   fill: string | GradientFillPatch,
 ): boolean {
-  return call('editGroupChildFill', [slide, groupId, childId, fill], { mut: { 0: 'Slide' } }) as never
+  return call('editGroupChildFill', [slide, groupId, childId, fill], {
+    mut: { 0: 'Slide' },
+  }) as never
 }
 /** StrokePatch → in-memory Stroke model (mirrors what patchLnXml writes into the XML). */
 export function strokePatchToModel(stroke: StrokePatch): Stroke {
@@ -1340,7 +1437,9 @@ export function editGroupChildStroke(
   childId: string,
   stroke: StrokePatch | null,
 ): boolean {
-  return call('editGroupChildStroke', [slide, groupId, childId, stroke], { mut: { 0: 'Slide' } }) as never
+  return call('editGroupChildStroke', [slide, groupId, childId, stroke], {
+    mut: { 0: 'Slide' },
+  }) as never
 }
 /** Group-child adjust values (same avLst-swap semantics as setShapeAdjustValues). */
 export function setGroupChildShapeAdjustValues(
@@ -1349,7 +1448,9 @@ export function setGroupChildShapeAdjustValues(
   childId: string,
   adjust: Record<string, number>,
 ): boolean {
-  return call('setGroupChildShapeAdjustValues', [slide, groupId, childId, adjust], { mut: { 0: 'Slide' } }) as never
+  return call('setGroupChildShapeAdjustValues', [slide, groupId, childId, adjust], {
+    mut: { 0: 'Slide' },
+  }) as never
 }
 /** Group-child "Change Shape" (same geometry-swap semantics as setShapePresetGeometry). */
 export function setGroupChildShapePresetGeometry(
@@ -1358,7 +1459,9 @@ export function setGroupChildShapePresetGeometry(
   childId: string,
   prst: string,
 ): boolean {
-  return call('setGroupChildShapePresetGeometry', [slide, groupId, childId, prst], { mut: { 0: 'Slide' } }) as never
+  return call('setGroupChildShapePresetGeometry', [slide, groupId, childId, prst], {
+    mut: { 0: 'Slide' },
+  }) as never
 }
 /** Group-child freeform geometry (same semantics as setShapeCustomGeometry). */
 export function setGroupChildShapeCustomGeometry(
@@ -1367,5 +1470,7 @@ export function setGroupChildShapeCustomGeometry(
   childId: string,
   geom: CustGeomPath,
 ): boolean {
-  return call('setGroupChildShapeCustomGeometry', [slide, groupId, childId, geom], { mut: { 0: 'Slide' } }) as never
+  return call('setGroupChildShapeCustomGeometry', [slide, groupId, childId, geom], {
+    mut: { 0: 'Slide' },
+  }) as never
 }

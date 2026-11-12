@@ -330,5 +330,26 @@ export function parseChartXml(
   /** DrawingML fill resolver (injected by parse.ts so chart-part blip rIds resolve correctly) */
   resolveFill?: (spPr: unknown) => Fill | undefined,
 ): ChartModel | null {
-  return call('parseChartXml', [xml, theme, resolveFill], { names: ["xml","theme","resolveFill"], shape: {"k":"obj","f":{"series":{"k":"arr","v":{"k":"obj","f":{"pointColors":{"k":"arr","u":true},"pointFills":{"k":"arr","u":true},"pointNoFill":{"k":"arr","u":true},"pointLines":{"k":"arr","u":true},"pointExplosionPct":{"k":"arr","u":true}}}},"sunburst":{"k":"obj","f":{"pointColors":{"k":"arr","u":true}}}}} }) as never
+  return call('parseChartXml', [xml, theme, resolveFill], {
+    names: ['xml', 'theme', 'resolveFill'],
+    shape: {
+      k: 'obj',
+      f: {
+        series: {
+          k: 'arr',
+          v: {
+            k: 'obj',
+            f: {
+              pointColors: { k: 'arr', u: true },
+              pointFills: { k: 'arr', u: true },
+              pointNoFill: { k: 'arr', u: true },
+              pointLines: { k: 'arr', u: true },
+              pointExplosionPct: { k: 'arr', u: true },
+            },
+          },
+        },
+        sunburst: { k: 'obj', f: { pointColors: { k: 'arr', u: true } } },
+      },
+    },
+  }) as never
 }

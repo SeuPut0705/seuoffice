@@ -29,6 +29,10 @@ export function addSmartArt(
   slideIndex: number,
   opts: NewSmartArtOptions,
 ): { slide: Slide; elementId: string } | null {
-  const v = call('addSmartArt', [opened, slideIndex, opts], { mut: { 0: 'opened' } }) as never as { elementId?: string } | null
-  return v === null || v.elementId === undefined ? null : { slide: opened.deck.slides[slideIndex]!, elementId: v.elementId }
+  const v = call('addSmartArt', [opened, slideIndex, opts], { mut: { 0: 'opened' } }) as never as {
+    elementId?: string
+  } | null
+  return v === null || v.elementId === undefined
+    ? null
+    : { slide: opened.deck.slides[slideIndex]!, elementId: v.elementId }
 }
