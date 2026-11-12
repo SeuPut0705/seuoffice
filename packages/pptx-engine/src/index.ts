@@ -4227,9 +4227,10 @@ export interface ElementClipboardItem {
   contentTypes?: Readonly<Record<string, string>>
 }
 
-// Quote-agnostic like the other relationship scanners: a slide written by a
-// producer that prefers single quotes still names its rIds.
-const RID_ATTR_RE = /\br:(?:embed|link|id)\s*=\s*(["'])(rId\d+)\1/g
+// The references an element carries with it. The id is taken whatever its shape: it is the name
+// the producer chose (`rId7`, `R7a3f`, `id5`), and one read only as `rId<number>` left the
+// relationships of a deck written another way behind. Quote-agnostic like the other scanners.
+const RID_ATTR_RE = /\br:(?:embed|link|id)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
 
 /** Copy: grab the element's current XML and the relationships it references (part paths that pictures/charts etc. point at). */
 export function copyElementData(
@@ -4244,7 +4245,7 @@ export function copyElementData(
   const contentTypes: Record<string, string> = {}
   const seen = new Set<string>()
   for (const m of xml.matchAll(RID_ATTR_RE)) {
-    const rid = m[2]!
+    const rid = m[1] ?? m[2]!
     if (seen.has(rid)) continue
     seen.add(rid)
     const rel = slideRels.get(rid)

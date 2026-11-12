@@ -12,7 +12,7 @@
  * current fragment, then reparse the whole slide (same path as appendRawElements).
  */
 import type { GroupElement, Slide } from './types'
-import { escapeXmlAttr, maxRelationshipIdNumber } from './xml-utils'
+import { attributeOf, escapeXmlAttr, maxRelationshipIdNumber } from './xml-utils'
 import { sliceGroupChildXmls } from './parse'
 import { relsPathFor, resolveTarget } from './zip'
 import { cleanupSupersededSlideResources } from './resource-cleanup'
@@ -260,9 +260,10 @@ function resolveLinkInXml(opened: OpenedPptx, slide: Slide, xml: string): LinkTa
     /\baction=(?:"([^"]*)"|'([^']*)')/.exec(tag)?.slice(1, 3).find(Boolean),
   )
   if (action) return { kind: 'action', action, ...tip }
-  const m = /\br:id=(?:"(rId\d+)"|'(rId\d+)')/.exec(tag)
-  if (!m) return null
-  const rel = opened.archive.readRels(slide.path).get(m[1] ?? m[2]!)
+  // the id whatever its shape: only a named action has none
+  const rid = attributeOf(tag, 'r:id')
+  if (!rid) return null
+  const rel = opened.archive.readRels(slide.path).get(rid)
   if (!rel) return null
   if (rel.type === HYPERLINK_REL_TYPE) return { kind: 'url', url: rel.target, ...tip }
   if (rel.type === SLIDE_REL_TYPE) {
