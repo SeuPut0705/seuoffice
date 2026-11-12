@@ -74,7 +74,10 @@ def run(mode, kind, timeout=180):
 
 def pdf_facts(path):
     data = open(path, "rb").read()
-    pages = len(re.findall(rb"/Type\s*/Page(?![a-z])", data))
+    leaves = len(re.findall(rb"/Type\s*/Page(?![a-z])", data))
+    # the root of the page tree carries the total as the largest /Count
+    counts = [int(c) for c in re.findall(rb"/Count\s+(\d+)", data)]
+    pages = max(counts) if counts else leaves
     text_ops = 0
     for m in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", data, re.S):
         try:
